@@ -41,4 +41,4 @@ typedef struct uRos_struct_s{
 }uRos_s;
 
 
-int uRos_init_wireless_node_int32(uRos_s setup, char *ssid, char *pass, char *ip, int port, char *nodeName);
+int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, std_msgs__msg__Int32 *msg, char *ssid, char *pass, char *ip, int port, char *nodeName);
