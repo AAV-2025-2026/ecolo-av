@@ -2,58 +2,37 @@
 
 #include "uRos_fns.h"
 
-int uRos_init_wireless_node(rcl_node_t node, rcl_allocator_t allocator, rclc_support_t support, char *ssid, char *pass, char *ip, int port, char *nodeName){
-    
-    rcl_ret_t status;
-    status = rclc_support_init(&support, 0, NULL, &allocator);
-    if(status != RCL_RET_OK){
-        Serial.print("uRos Support Init Error. ");
-        Serial.println(status);
-        return 0;
-    }
+int uRos_init_wireless_node_int32(uRos_s uRosStruct, rclc_subscription_callback_t subscription_callback, std_msgs__msg__Int32 msg, char *ssid, char *pass, char *ip, int port, char *nodeName){
 
+    set_microros_wifi_transports("BELL310", "376F57AF1739", "192.168.2.58", 8888);
+    Serial.println("WIFI");
+    Serial.println(WiFi.BSSIDstr());
 
-    status = rclc_node_init_default(&node, "micro_ros_arduino_wifi_node_car", "", &support);
-    if(status != RCL_RET_OK){
-        Serial.print("uRos node Init Error. ");
-        Serial.println(status);
-        return 0;
-    }
+    delay(2000);
 
-    return 1;
-}
+    uRosStruct.allocator = rcl_get_default_allocator();
 
+    // Create init_options
+    rclc_support_init(&uRosStruct.support, 0, NULL, &uRosStruct.allocator);
 
+    // Create node
+    rclc_node_init_default(&uRosStruct.node, "micro_ros_arduino_wifi_node_car", "", &uRosStruct.support);
 
-
-int uRos_create_subscriber_Int32(rcl_subscription_t subscriber, rcl_node_t node, char *topic_name){
-    rcl_ret_t status;
-
-    
+    //Create subscriber
     rclc_subscription_init_best_effort(
-    &subscriber,
-    &node,
+    &uRosStruct.subscriber,
+    &uRosStruct.node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    topic_name);
-
-    if(status != RCL_RET_OK){
-        Serial.print("uRos subscriber Init Error. ");
-        Serial.println(status);
-        return 0;
-    }
-    return 1;
+    "/throttle");
   
+  
+
+  // Create executor
+  rclc_executor_init(&uRosStruct.executor, &uRosStruct.support.context, 1, &uRosStruct.allocator);
+  rclc_executor_add_subscription(&uRosStruct.executor, &uRosStruct.subscriber, &msg, subscription_callback, ON_NEW_DATA);
+
 }
 
-
-int uRos_create_executor(rclc_executor_t *executor, rcl_subscription_t *subscriber, rclc_support_t support, 
-                         rcl_allocator_t *allocator, void *msg, rclc_subscription_callback_t subscription_callback){
-
-  rclc_executor_init(executor, &support.context, 1, allocator);
-  rclc_executor_add_subscription(executor, subscriber, &msg, subscription_callback, ON_NEW_DATA);
-
-  return 1;
-}
 
 
 
