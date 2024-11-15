@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "AutoCtrl_uRos",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.autoSave": "afterDelay"
+	}
+}

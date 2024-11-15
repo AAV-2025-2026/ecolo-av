@@ -2,7 +2,8 @@
 #include <Arduino.h>
 
 #include "../hardware_fns/hardware_config.h"
-#include <micro_ros_arduino.h>
+#include <micro_ros_platformio.h>
+//#include <micro_ros_arduino.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <rcl/rcl.h>
@@ -11,6 +12,7 @@
 #include <rclc/rclc.h>
 #include <rclc/init.h>
 #include <rclc/executor.h>
+#include <platform_code/micro_ros_platformio.h>
 
 
 
@@ -41,4 +43,6 @@ typedef struct uRos_struct_s{
 }uRos_s;
 
 
-int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, std_msgs__msg__Int32 *msg, char *ssid, char *pass, char *ip, int port, char *nodeName);
+int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, std_msgs__msg__Int32 *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
+
+void microROS_Task(void* parameter);
