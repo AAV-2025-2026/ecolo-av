@@ -5,6 +5,7 @@
 extern Adafruit_MCP4725 dac;
 
 
+extern int setpoint;
 
 void throttle_callback(const void * msgin){
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
@@ -57,6 +58,20 @@ void throttle_callback_joy(const void * msgin){
     
   }
 
+}
+void setPosition(int set){
+  setpoint = set;
+}
+
+void braking_callback(const void *msgin){
+  const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
+  //Serial.println(msg->data);
+  //Serial.println("recv");
+  if(msg != NULL){
+  setPosition(msg->data);
+  //Serial.print("Recevied position: ");
+  //Serial.println(msg->data);
+  }
 }
 
 

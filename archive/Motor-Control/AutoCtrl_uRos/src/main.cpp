@@ -3,14 +3,37 @@
 #include  "AAV_fns/AAV_fns.h"
 #include "./hardware_fns/hardware_config.h"
 #include "./uRos_fns/uRos_fns.h"
+#include "./SteeringBraking/Braking.h"
+
+// Target setpoint and integral value
+int setpoint = 0;
+float intval = 0;
+int maxPower = 3200;
+float real_power = 0;
+float power = 0;
+float prev_error = 0;
+unsigned long lastTime = 0;
+
+// Parameters that can be changed on the fly
+int P = 140;
+int I = 0.5;
+int D = 0;
+int integralLimit = 1000;
+int positionDeadzone = 1;
+int errorLimit = 2048;
+
+bool ros_enabled = true;
+
 Adafruit_MCP4725 dac;
 std_msgs__msg__Int32 msg_int32;
 sensor_msgs__msg__Joy msg_joy;
+uRos_s testSetup_throttle = uRos_s();  // Initialize the object properly if needed.
 uRos_s testSetup = uRos_s();  // Initialize the object properly if needed.
 
 
 TaskHandle_t TaskCore0;//Core 0 used for microROS, and other communication and soft(er) realtime things
 TaskHandle_t TaskCore1;//Core 1 used for signals, PID loops, Sensor reading, motor control. hard(er) realtime
+
 
 
 void setup() {
@@ -23,21 +46,46 @@ void setup() {
   //     1,              // Priority of the task
   //     &TaskCore0,     // Task handle
   //     0);             // Core 0
-
+  motor_controller_setup();
   xTaskCreatePinnedToCore(
-      microROS_Task_joy,          // Task function
+      microROS_Task_throttle,          // Task function
       "Task0",        // Name of task
       4096,           // Stack size in words
       NULL,           // Task input parameter
       1,              // Priority of the task
       &TaskCore0,     // Task handle
       0);             // Core 0
+
+      xTaskCreatePinnedToCore(
+      microROS_Task,          // Task function
+      "Task1",        // Name of task
+      4096,           // Stack size in words
+      NULL,           // Task input parameter
+      1,              // Priority of the task
+      &TaskCore0,     // Task handle
+      0);  
+
+    xTaskCreatePinnedToCore(
+     brakingPID_task,          // Task function
+    "Task0",        // Name of task
+    4096,           // Stack size in words
+    NULL,           // Task input parameter
+    1,              // Priority of the task
+    &TaskCore1,     // Task handle
+    1); 
   Serial.begin(115200);
   
   hardware_setup();
 
-  uRos_init_wireless_node_joy(&testSetup, &throttle_callback, &msg_joy, 
-                            "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "joy");
+  
+  uRos_init_wireless_node_int32(&testSetup, &braking_callback, &msg_int32, 
+                            "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/brake");
+  Serial.print("brakd init");
+
+
+  uRos_init_wireless_node_int32(&testSetup_throttle, &throttle_callback, &msg_int32, 
+                            "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/throttle_1");
+  Serial.print("THROTTLE init");
 
 
 

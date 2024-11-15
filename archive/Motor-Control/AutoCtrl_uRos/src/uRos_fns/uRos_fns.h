@@ -48,3 +48,4 @@ int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback
 int uRos_init_wireless_node_joy(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, sensor_msgs__msg__Joy *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
 void microROS_Task(void* parameter);
 void microROS_Task_joy(void* parameter);
+void microROS_Task_throttle(void* parameter);

@@ -3,6 +3,7 @@
 #include "uRos_fns.h"
 
 extern uRos_s testSetup;
+extern uRos_s testSetup_throttle;
 int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, std_msgs__msg__Int32 *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName){
   rcl_ret_t status;
   //192.168.1.126
@@ -236,12 +237,21 @@ int uRos_init_wireless_node_joy(uRos_s *uRosStruct, rclc_subscription_callback_t
 
 
 
+void microROS_Task_throttle(void* parameter) {
+    while (true) {
+        rclc_executor_spin_some(&testSetup_throttle.executor, RCL_MS_TO_NS(100));
+        vTaskDelay(10 / portTICK_PERIOD_MS); // Task delay
+    }
+}
+
 void microROS_Task(void* parameter) {
     while (true) {
         rclc_executor_spin_some(&testSetup.executor, RCL_MS_TO_NS(100));
         vTaskDelay(10 / portTICK_PERIOD_MS); // Task delay
     }
 }
+
+
 
 void microROS_Task_joy(void* parameter) {
     while (true) {
