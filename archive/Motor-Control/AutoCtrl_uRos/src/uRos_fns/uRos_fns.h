@@ -24,6 +24,7 @@
 
 
 
+
 /*_____________________________________MACROS_____________________________________________________
 
 
@@ -44,5 +45,6 @@ typedef struct uRos_struct_s{
 
 
 int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, std_msgs__msg__Int32 *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
-
+int uRos_init_wireless_node_joy(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, sensor_msgs__msg__Joy *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
 void microROS_Task(void* parameter);
+void microROS_Task_joy(void* parameter);

@@ -5,6 +5,7 @@
 #include "./uRos_fns/uRos_fns.h"
 Adafruit_MCP4725 dac;
 std_msgs__msg__Int32 msg_int32;
+sensor_msgs__msg__Joy msg_joy;
 uRos_s testSetup = uRos_s();  // Initialize the object properly if needed.
 
 
@@ -14,8 +15,17 @@ TaskHandle_t TaskCore1;//Core 1 used for signals, PID loops, Sensor reading, mot
 
 void setup() {
  
+  // xTaskCreatePinnedToCore(
+  //     microROS_Task,          // Task function
+  //     "Task0",        // Name of task
+  //     4096,           // Stack size in words
+  //     NULL,           // Task input parameter
+  //     1,              // Priority of the task
+  //     &TaskCore0,     // Task handle
+  //     0);             // Core 0
+
   xTaskCreatePinnedToCore(
-      microROS_Task,          // Task function
+      microROS_Task_joy,          // Task function
       "Task0",        // Name of task
       4096,           // Stack size in words
       NULL,           // Task input parameter
@@ -26,8 +36,8 @@ void setup() {
   
   hardware_setup();
 
-  uRos_init_wireless_node_int32(&testSetup, &throttle_callback, &msg_int32, 
-                            "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/throttle");
+  uRos_init_wireless_node_joy(&testSetup, &throttle_callback, &msg_joy, 
+                            "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "joy");
 
 
 

@@ -20,3 +20,5 @@
 
 
 void throttle_callback(const void * msgin);
+
+void throttle_callback_joy(const void * msgin);
