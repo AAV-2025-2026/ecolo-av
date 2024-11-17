@@ -26,12 +26,15 @@ bool ros_enabled = true;
 
 Adafruit_MCP4725 dac;
 std_msgs__msg__Int32 msg_int32;
+std_msgs__msg__Int32 msg_int32_2;
 sensor_msgs__msg__Joy msg_joy;
-uRos_s testSetup_throttle = uRos_s();  // Initialize the object properly if needed.
+//rcl_node_t node;
+//uRos_s testSetup_throttle = uRos_s();  // Initialize the object properly if needed.
 uRos_s testSetup = uRos_s();  // Initialize the object properly if needed.
 
 
 TaskHandle_t TaskCore0;//Core 0 used for microROS, and other communication and soft(er) realtime things
+TaskHandle_t TaskCore2;//Core 0 used for microROS, and other communication and soft(er) realtime things
 TaskHandle_t TaskCore1;//Core 1 used for signals, PID loops, Sensor reading, motor control. hard(er) realtime
 
 
@@ -47,6 +50,7 @@ void setup() {
   //     &TaskCore0,     // Task handle
   //     0);             // Core 0
   motor_controller_setup();
+
   xTaskCreatePinnedToCore(
       microROS_Task_throttle,          // Task function
       "Task0",        // Name of task
@@ -54,7 +58,7 @@ void setup() {
       NULL,           // Task input parameter
       1,              // Priority of the task
       &TaskCore0,     // Task handle
-      0);             // Core 0
+      1);             // Core 0
 
       xTaskCreatePinnedToCore(
       microROS_Task,          // Task function
@@ -62,12 +66,12 @@ void setup() {
       4096,           // Stack size in words
       NULL,           // Task input parameter
       1,              // Priority of the task
-      &TaskCore0,     // Task handle
-      0);  
+      &TaskCore2,     // Task handle
+      1);  
 
     xTaskCreatePinnedToCore(
      brakingPID_task,          // Task function
-    "Task0",        // Name of task
+    "Task2",        // Name of task
     4096,           // Stack size in words
     NULL,           // Task input parameter
     1,              // Priority of the task
@@ -77,22 +81,29 @@ void setup() {
   
   hardware_setup();
 
-  
-  uRos_init_wireless_node_int32(&testSetup, &braking_callback, &msg_int32, 
-                            "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/brake");
-  Serial.print("brakd init");
+  //I know I am not supposed to commit passwords but it is behind a vpn
+  //set_microros_wifi_transports("BELL310", "376F57AF1739", "192.168.2.58", 8888);
+  // uRos_init_wireless_node_int32_2(&testSetup, &braking_callback, &throttle_callback, &msg_int32, &msg_int32_2,
+  //                           "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/brake");
 
 
-  uRos_init_wireless_node_int32(&testSetup_throttle, &throttle_callback, &msg_int32, 
-                            "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/throttle_1");
-  Serial.print("THROTTLE init");
+  uRos_init_wireless_node_int32_2(&testSetup, &braking_callback, &throttle_callback, &msg_int32, &msg_int32_2,
+                            "BELL310", "376F57AF1739", "192.168.2.58", 8888, "micro_ros_arduino_wifi_node_car", "/brake");
+
+
+  // uRos_init_wireless_node_int32(&testSetup, &throttle_callback, &msg_int32, "BELL310", "376F57AF1739", "192.168.2.58", 8888, "micro_ros_arduino_wifi_node_car", "/brake" );
+  // Serial.print("init");
+
+
 
 
 
   
   
 }
-
+void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName ){
+  Serial.print("Stack overflow on: "); Serial.println(pcTaskName);
+}
 void loop() {
 
   //rclc_executor_spin_some(&(testSetup.executor), RCL_MS_TO_NS(800));

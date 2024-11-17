@@ -24,6 +24,7 @@ void exitSafeStart()
 // Speed should be in the range -3200 to 3200
 void setMotorSpeed(int speed)
 {
+  Serial.println("setMotorSpeed");
   // Handle negative speed (reverse)
   if (speed < 0)
   {
@@ -53,7 +54,7 @@ void motor_controller_setup(){
   Serial2.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
 
   // Initialize regular serial communication for debugging
-  Serial.begin(115200);
+ 
 
   // Delay to allow motor controller to initialize (5 ms minimum)
   delay(5);
@@ -82,8 +83,10 @@ extern int errorLimit;
 
 
 void brakingPID_task(void* parameter) {
-    while (true) {
-        float brakePos = getA1_scaled();
+  //Serial.println("startBrakeTask");
+  while (true) {
+    //Serial.println("runBrakeTask");
+  float brakePos = getA1_scaled();
   if(brakePos>1000){
     brakePos = 0;
   }
@@ -137,6 +140,6 @@ void brakingPID_task(void* parameter) {
   // Output the calculated motor power
   //Serial.print(",Power:");
   //Serial.println(power);
-  vTaskDelay(10 / portTICK_PERIOD_MS);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }

@@ -38,14 +38,19 @@ typedef struct uRos_struct_s{
     rcl_node_t node;
     rcl_allocator_t allocator;
     rclc_support_t support;
-    rcl_subscription_t subscriber;
+    rcl_subscription_t subscriber_1;
+    rcl_subscription_t subscriber_2;
     rclc_executor_t executor;
+    rclc_executor_t executor_2;
 
 }uRos_s;
 
 
 int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, std_msgs__msg__Int32 *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
 int uRos_init_wireless_node_joy(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, sensor_msgs__msg__Joy *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
+int uRos_init_wireless_node_int32_2(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback_1, 
+                                    rclc_subscription_callback_t subscription_callback_2, std_msgs__msg__Int32 *msg_1, std_msgs__msg__Int32 *msg_2, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
+
 void microROS_Task(void* parameter);
 void microROS_Task_joy(void* parameter);
 void microROS_Task_throttle(void* parameter);

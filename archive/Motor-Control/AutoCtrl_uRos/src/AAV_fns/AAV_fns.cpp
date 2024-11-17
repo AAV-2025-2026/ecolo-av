@@ -65,8 +65,8 @@ void setPosition(int set){
 
 void braking_callback(const void *msgin){
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
-  //Serial.println(msg->data);
-  //Serial.println("recv");
+  Serial.println(msg->data);
+  Serial.println("recv");
   if(msg != NULL){
   setPosition(msg->data);
   //Serial.print("Recevied position: ");
