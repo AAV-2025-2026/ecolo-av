@@ -51,14 +51,14 @@ void setup() {
   //     0);             // Core 0
   motor_controller_setup();
 
-  xTaskCreatePinnedToCore(
-      microROS_Task_throttle,          // Task function
-      "Task0",        // Name of task
-      4096,           // Stack size in words
-      NULL,           // Task input parameter
-      1,              // Priority of the task
-      &TaskCore0,     // Task handle
-      1);             // Core 0
+  // xTaskCreatePinnedToCore(
+  //     microROS_Task_throttle,          // Task function
+  //     "Task0",        // Name of task
+  //     4096,           // Stack size in words
+  //     NULL,           // Task input parameter
+  //     1,              // Priority of the task
+  //     &TaskCore0,     // Task handle
+  //     1);             // Core 0
 
       xTaskCreatePinnedToCore(
       microROS_Task,          // Task function
@@ -67,14 +67,14 @@ void setup() {
       NULL,           // Task input parameter
       1,              // Priority of the task
       &TaskCore2,     // Task handle
-      1);  
+      0);  
 
     xTaskCreatePinnedToCore(
      brakingPID_task,          // Task function
     "Task2",        // Name of task
     4096,           // Stack size in words
     NULL,           // Task input parameter
-    1,              // Priority of the task
+    2,              // Priority of the task
     &TaskCore1,     // Task handle
     1); 
   Serial.begin(115200);

@@ -10,6 +10,9 @@ extern int setpoint;
 void throttle_callback(const void * msgin){
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
   uint16_t msg_mag;
+
+  
+
   if (msg != NULL) {
     
     

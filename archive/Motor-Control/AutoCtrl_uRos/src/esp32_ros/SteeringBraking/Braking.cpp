@@ -83,7 +83,9 @@ extern int errorLimit;
 
 
 void brakingPID_task(void* parameter) {
-  //Serial.println("startBrakeTask");
+  Serial.println("startBrakeTask");
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  const TickType_t xFrequency = 10 / portTICK_PERIOD_MS; // 500 ms interval
   while (true) {
     //Serial.println("runBrakeTask");
   float brakePos = getA1_scaled();
@@ -140,6 +142,6 @@ void brakingPID_task(void* parameter) {
   // Output the calculated motor power
   //Serial.print(",Power:");
   //Serial.println(power);
-  vTaskDelay(100 / portTICK_PERIOD_MS);
+  vTaskDelayUntil(&xLastWakeTime, xFrequency); // Wait until next cycle  
     }
 }
