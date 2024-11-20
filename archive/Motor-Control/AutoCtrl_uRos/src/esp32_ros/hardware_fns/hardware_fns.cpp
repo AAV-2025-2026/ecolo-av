@@ -12,6 +12,7 @@ void hardware_setup(){
 
 
     Serial.println(dac.begin(0x62));
+    
     Serial.println("setup4");
 
     

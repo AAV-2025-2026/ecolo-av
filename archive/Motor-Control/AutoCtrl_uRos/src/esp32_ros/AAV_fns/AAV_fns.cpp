@@ -47,24 +47,20 @@ void throttle_callback_Drive(const void * msgin){
     
     
 
-
-
-    msg_mag = (uint16_t) (msg->throttle * -1);
-
     if(msg->dir){
-      digitalWrite(DIR_PIN, LOW);
-      digitalWrite(LED_PIN, LOW);
-    }else{
       digitalWrite(DIR_PIN, HIGH);
       digitalWrite(LED_PIN, HIGH);
+    }else{
+      digitalWrite(DIR_PIN, LOW);
+      digitalWrite(LED_PIN, LOW);
     }
       
      
 
     Serial.print("voltage level(drv): ");
     Serial.print( (int) msg->throttle);
-    // Serial.print("  dir: "); Serial.println((int) msg->dir);
-    dac.setVoltage((uint16_t) msg->throttle, false);
+    Serial.print("  dir: "); Serial.println((int) msg->dir);
+    dac.setVoltage((uint16_t)msg->throttle, false);
     
   }
 

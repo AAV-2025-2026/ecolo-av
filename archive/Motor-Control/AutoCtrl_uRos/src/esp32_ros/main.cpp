@@ -70,14 +70,14 @@ void setup() {
       &TaskCore2,     // Task handle
       0);  
 
-    xTaskCreatePinnedToCore(
-     brakingPID_task,          // Task function
-    "Task2",        // Name of task
-    4096,           // Stack size in words
-    NULL,           // Task input parameter
-    2,              // Priority of the task
-    &TaskCore1,     // Task handle
-    1); 
+    // xTaskCreatePinnedToCore(
+    //  brakingPID_task,          // Task function
+    // "Task2",        // Name of task
+    // 4096,           // Stack size in words
+    // NULL,           // Task input parameter
+    // 2,              // Priority of the task
+    // &TaskCore1,     // Task handle
+    // 1); 
   Serial.begin(115200);
   
   hardware_setup();

@@ -83,11 +83,11 @@ extern int errorLimit;
 
 
 void brakingPID_task(void* parameter) {
-  Serial.println("startBrakeTask");
+  //Serial.println("startBrakeTask");
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = 10 / portTICK_PERIOD_MS; // 500 ms interval
   while (true) {
-    Serial.println("runBrakeTask");
+    //Serial.println("runBrakeTask");
   float brakePos = getA1_scaled();
   if(brakePos>1000){
     brakePos = 0;

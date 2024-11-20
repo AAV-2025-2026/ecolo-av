@@ -161,18 +161,19 @@ int uRos_init_wireless_node_int32_2(uRos_s *uRosStruct, rclc_subscription_callba
   return status;
 }
 
-
-
+// #include "../hardware_fns/hardware_fns.h"
+// extern Adafruit_MCP4725 dac;
 
 void microROS_Task(void* parameter) {
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = 10 / portTICK_PERIOD_MS; // 500 ms interval
-  
+  //dac.setVoltage(1, false);
     
     while (true) {
         //Serial.println("braketask");
-        rclc_executor_spin_some(&testSetup.executor, RCL_MS_TO_NS(100));
+        rclc_executor_spin_some(&testSetup.executor, RCL_MS_TO_NS(500));
         vTaskDelayUntil(&xLastWakeTime, xFrequency); // Wait until next cycle  
+        
     }
 }
 
