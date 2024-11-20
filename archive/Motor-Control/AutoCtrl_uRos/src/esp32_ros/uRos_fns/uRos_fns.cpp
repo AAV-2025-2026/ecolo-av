@@ -57,7 +57,7 @@ int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback
 int uRos_init_wireless_node_drive(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, aav_drive_msg__msg__Drive *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName){
   rcl_ret_t status;
   //192.168.1.126
-  IPAddress local_IP(192, 168, 2, 58);
+  IPAddress local_IP(192, 168, 1, 126);
   set_microros_wifi_transports(ssid, pass, local_IP, (uint16_t) port);
   
   // set_microros_wifi_transports(ssid, pass, ip, (uint16_t) port);
@@ -75,7 +75,7 @@ int uRos_init_wireless_node_drive(uRos_s *uRosStruct, rclc_subscription_callback
     
     
   // Create node
-  status = rclc_node_init_default(&node, "micro_ros_arduino_wifi_node_car", "", &uRosStruct->support);
+  status = rclc_node_init_default(&uRosStruct->node, "micro_ros_arduino_wifi_node_car", "", &uRosStruct->support);
   Serial.print("node_init status: "); Serial.println(status);
   if(status != RCL_RET_OK){return 0;}
     

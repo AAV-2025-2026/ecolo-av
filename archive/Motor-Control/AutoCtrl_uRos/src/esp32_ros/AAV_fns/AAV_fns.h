@@ -19,6 +19,7 @@
 #include <aav_drive_msg/msg/drive.h>
 
 
+void throttle_callback_Drive(const void * msgin);
 
 void throttle_callback(const void * msgin);
 

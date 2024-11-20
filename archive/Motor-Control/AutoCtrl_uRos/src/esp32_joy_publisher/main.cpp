@@ -78,8 +78,17 @@ void setup() {
 
 void loop() {
     RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
-    msg.throttle = (uint16_t) analogRead(X_INPUT);
+    double val = analogRead(X_INPUT);
+    
+    
+    if(val < 1700){
+      msg.dir = 0;
+      msg.throttle = (uint16_t) (val-1700)*-1;
+    }else{
+      msg.dir = 1;
+      msg.throttle = (uint16_t) (val-1700);
+    }
     msg.steering = (uint16_t) analogRead(Y_INPUT);
-    Serial.print("throttle: "); Serial.println((int) msg.throttle);
+    Serial.print("throttle: "); Serial.print((int) msg.throttle);Serial.print("  dir: "); Serial.println((int)msg.dir);
     delay(10);
 }
