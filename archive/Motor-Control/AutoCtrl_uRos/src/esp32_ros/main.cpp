@@ -28,6 +28,7 @@ Adafruit_MCP4725 dac;
 std_msgs__msg__Int32 msg_int32;
 std_msgs__msg__Int32 msg_int32_2;
 sensor_msgs__msg__Joy msg_joy;
+aav_drive_msg__msg__Drive msg_drive;
 //rcl_node_t node;
 //uRos_s testSetup_throttle = uRos_s();  // Initialize the object properly if needed.
 uRos_s testSetup = uRos_s();  // Initialize the object properly if needed.
@@ -87,8 +88,8 @@ void setup() {
   //                           "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/brake");
 
 
-  uRos_init_wireless_node_int32_2(&testSetup, &braking_callback, &throttle_callback, &msg_int32, &msg_int32_2,
-                            "BELL310", "376F57AF1739", "192.168.2.58", 8888, "micro_ros_arduino_wifi_node_car", "/brake");
+  // uRos_init_wireless_node_int32_2(&testSetup, &braking_callback, &throttle_callback, &msg_int32, &msg_int32_2,
+  //                           "BELL310", "376F57AF1739", "192.168.2.58", 8888, "micro_ros_arduino_wifi_node_car", "/brake");
 
 
   // uRos_init_wireless_node_int32(&testSetup, &throttle_callback, &msg_int32, "BELL310", "376F57AF1739", "192.168.2.58", 8888, "micro_ros_arduino_wifi_node_car", "/brake" );
