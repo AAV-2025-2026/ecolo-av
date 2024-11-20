@@ -35,7 +35,7 @@ endif()
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/aav_drive_msg.msg"
+  "msg/MyMsg.msg"
  )
 
 ament_package()
