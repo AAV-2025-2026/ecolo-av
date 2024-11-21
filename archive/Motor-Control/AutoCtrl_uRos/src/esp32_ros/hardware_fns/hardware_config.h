@@ -6,6 +6,8 @@
 
 #define DIR_PIN 33
 #define LED_PIN 2
+
+
 #define I2C_SDA 23
 #define I2C_SCL 22
 

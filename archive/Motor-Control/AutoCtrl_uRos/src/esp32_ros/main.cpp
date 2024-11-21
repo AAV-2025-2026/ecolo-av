@@ -42,7 +42,7 @@ TaskHandle_t TaskCore1;//Core 1 used for signals, PID loops, Sensor reading, mot
 
 
 void setup() {
- 
+ Serial.begin(115200);
   // xTaskCreatePinnedToCore(
   //     microROS_Task,          // Task function
   //     "Task0",        // Name of task
@@ -51,28 +51,29 @@ void setup() {
   //     1,              // Priority of the task
   //     &TaskCore0,     // Task handle
   //     0);             // Core 0
-  motor_controller_setup();
+  //motor_controller_setup();
+  hardware_setup();
 
   xTaskCreatePinnedToCore(
       microROS_Task,          // Task function
       "Task1",        // Name of task
-      4096,           // Stack size in words
+      8192,           // Stack size in words
       NULL,           // Task input parameter
       2,              // Priority of the task
       &TaskCore2,     // Task handle
       0);  
 
-    // xTaskCreatePinnedToCore(
-    //  brakingPID_task,          // Task function
-    // "Task2",        // Name of task
-    // 4096,           // Stack size in words
-    // NULL,           // Task input parameter
-    // 2,              // Priority of the task
-    // &TaskCore1,     // Task handle
-    // 0); 
-  Serial.begin(115200);
+    xTaskCreatePinnedToCore(
+     brakingPID_task,          // Task function
+    "Task2",        // Name of task
+    4096,           // Stack size in words
+    NULL,           // Task input parameter
+    2,              // Priority of the task
+    &TaskCore1,     // Task handle
+    0); 
   
-  hardware_setup();
+  
+
 
   //I know I am not supposed to commit passwords but it is behind a vpn
   //set_microros_wifi_transports("BELL310", "376F57AF1739", "192.168.2.58", 8888);

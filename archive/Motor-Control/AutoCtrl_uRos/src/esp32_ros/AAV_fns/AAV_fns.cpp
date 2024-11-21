@@ -70,7 +70,7 @@ void throttle_callback_Drive(const void * msgin){
 void throttle_callback_ackermann(const void * msgin){
   const ackermann_msgs__msg__AckermannDrive * msg = (const ackermann_msgs__msg__AckermannDrive *)msgin;
 
-  Serial.println("recv");
+  //Serial.println("recv");
   
 
   if (msg != NULL) {
