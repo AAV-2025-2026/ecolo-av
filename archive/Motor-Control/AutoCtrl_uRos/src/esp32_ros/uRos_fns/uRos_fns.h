@@ -21,6 +21,7 @@
 #include <std_msgs/msg/int32.h>
 #include <sensor_msgs/msg/joy.h>
 #include <aav_drive_msg/msg/drive.h>
+#include <ackermann_msgs/msg/ackermann_drive.h>
 
 
 
@@ -45,7 +46,7 @@ typedef struct uRos_struct_s{
     rclc_executor_t executor_2;
 
 }uRos_s;
-
+int uRos_init_wireless_node_ackermann(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, ackermann_msgs__msg__AckermannDrive *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
 int uRos_init_wireless_node_drive(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, aav_drive_msg__msg__Drive *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
 int uRos_init_wireless_node_int32(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, std_msgs__msg__Int32 *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);
 int uRos_init_wireless_node_joy(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, sensor_msgs__msg__Joy *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName);

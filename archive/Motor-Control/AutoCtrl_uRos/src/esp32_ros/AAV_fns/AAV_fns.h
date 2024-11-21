@@ -17,8 +17,9 @@
 #include <std_msgs/msg/int32.h>
 #include <sensor_msgs/msg/joy.h>
 #include <aav_drive_msg/msg/drive.h>
+#include <ackermann_msgs/msg/ackermann_drive.h>
 
-
+void throttle_callback_ackermann(const void * msgin);
 void throttle_callback_Drive(const void * msgin);
 
 void throttle_callback(const void * msgin);

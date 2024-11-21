@@ -67,6 +67,41 @@ void throttle_callback_Drive(const void * msgin){
 }
 
 
+void throttle_callback_ackermann(const void * msgin){
+  const ackermann_msgs__msg__AckermannDrive * msg = (const ackermann_msgs__msg__AckermannDrive *)msgin;
+
+  Serial.println("recv");
+  
+
+  if (msg != NULL) {
+    
+    
+    uint16_t accelMag;
+    bool dir;
+    if(msg->acceleration > 0){
+      digitalWrite(DIR_PIN, HIGH);
+      digitalWrite(LED_PIN, HIGH);
+      accelMag = (uint16_t) msg->acceleration;
+      dir = true;
+    }else{
+      digitalWrite(DIR_PIN, LOW);
+      digitalWrite(LED_PIN, LOW);
+      accelMag = (uint16_t) msg->acceleration * -1;
+      dir = false;
+    }
+      
+     
+
+    Serial.print("voltage level(drv): ");
+    Serial.print( (int) accelMag);
+    Serial.print("  dir: "); Serial.println((int) dir);
+    dac.setVoltage((uint16_t) accelMag, false);
+    
+  }
+
+}
+
+
 void throttle_callback_joy(const void * msgin){
   const sensor_msgs__msg__Joy * msg = (const sensor_msgs__msg__Joy *)msgin;
   uint16_t msg_mag;
