@@ -96,9 +96,7 @@ void setup() {
   
   
 }
-void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName ){
-  Serial.print("Stack overflow on: "); Serial.println(pcTaskName);
-}
+
 void loop() {
 
   //rclc_executor_spin_some(&(testSetup.executor), RCL_MS_TO_NS(800));
