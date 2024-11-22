@@ -57,20 +57,20 @@ void setup() {
   xTaskCreatePinnedToCore(
       microROS_Task,          // Task function
       "Task1",        // Name of task
-      8192,           // Stack size in words
+      4096,           // Stack size in words
       NULL,           // Task input parameter
-      2,              // Priority of the task
+      1,              // Priority of the task
       &TaskCore2,     // Task handle
-      0);  
+      1);
 
     xTaskCreatePinnedToCore(
      brakingPID_task,          // Task function
     "Task2",        // Name of task
     4096,           // Stack size in words
     NULL,           // Task input parameter
-    2,              // Priority of the task
+    1,              // Priority of the task
     &TaskCore1,     // Task handle
-    0); 
+    0);
   
   
 
