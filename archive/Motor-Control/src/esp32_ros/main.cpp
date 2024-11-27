@@ -16,7 +16,7 @@ unsigned long lastTime = 0;
 
 // Parameters that can be changed on the fly
 int P = 140;
-int I = 0.5;
+float I = 0.5;
 int D = 0;
 int integralLimit = 1000;
 int positionDeadzone = 1;
@@ -42,26 +42,28 @@ TaskHandle_t TaskCore1;//Core 1 used for signals, PID loops, Sensor reading, mot
 
 
 void setup() {
- Serial.begin(115200);
-  // xTaskCreatePinnedToCore(
-  //     microROS_Task,          // Task function
-  //     "Task0",        // Name of task
-  //     4096,           // Stack size in words
-  //     NULL,           // Task input parameter
-  //     1,              // Priority of the task
-  //     &TaskCore0,     // Task handle
-  //     0);             // Core 0
-  motor_controller_setup();
-  hardware_setup();
 
-  xTaskCreatePinnedToCore(
+
+
+
+
+
+  Serial.begin(115200);
+  hardware_setup();
+  motor_controller_setup();
+
+  uRos_init_wireless_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann,
+                                    "BELL310", "376F57AF1739", "192.168.2.58", 8887, "micro_ros_arduino_wifi_node_car", "/driveData");
+
+  digitalWrite(GREEN_LED_PIN, LOW);
+    xTaskCreatePinnedToCore(
       microROS_Task,          // Task function
       "Task1",        // Name of task
       4096,           // Stack size in words
       NULL,           // Task input parameter
       1,              // Priority of the task
       &TaskCore2,     // Task handle
-      1);
+      0);
 
     xTaskCreatePinnedToCore(
      brakingPID_task,          // Task function
@@ -70,7 +72,7 @@ void setup() {
     NULL,           // Task input parameter
     1,              // Priority of the task
     &TaskCore1,     // Task handle
-    0);
+    1);
   
   
 
@@ -84,8 +86,6 @@ void setup() {
 //   uRos_init_wireless_node_drive(&testSetup, &throttle_callback_Drive, &msg_drive,
 //                             "AAVwifi", "aav@2023", "192.168.1.126", 8887, "micro_ros_arduino_wifi_node_car", "/driveData");
 
- uRos_init_wireless_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann,
-                            "AAVwifi", "aav@2023", "192.168.1.126", 8887, "micro_ros_arduino_wifi_node_car", "/driveData");
 
 //   // uRos_init_wireless_node_int32(&testSetup, &throttle_callback, &msg_int32, "BELL310", "376F57AF1739", "192.168.2.58", 8888, "micro_ros_arduino_wifi_node_car", "/brake" );
   // Serial.print("init");

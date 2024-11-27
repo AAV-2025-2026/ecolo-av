@@ -4,15 +4,33 @@
 extern Adafruit_MCP4725 dac;
 
 void hardware_setup(){
-    Serial.println("setup1");
+
+
+    pinMode(BLUE_LED_PIN, OUTPUT);
+    pinMode(RED_LED_PIN, OUTPUT);
+    pinMode(GREEN_LED_PIN, OUTPUT);
+
+    digitalWrite(BLUE_LED_PIN, HIGH);
+    digitalWrite(RED_LED_PIN, HIGH);
+    digitalWrite(GREEN_LED_PIN, HIGH);
+
     pinMode(LED_PIN, OUTPUT);
-    Serial.println("setup2");
     pinMode(DIR_PIN, OUTPUT);
-    Serial.println("setup3");
 
+    bool begin = false;
+    while(!begin){
+        digitalWrite(RED_LED_PIN, LOW);
+        begin = dac.begin(0x62);
+        if(!begin){
+            Serial.println("DAC CONNECTION FAIL");
+        }
+        //set write EEPROM
+        dac.setVoltage(0,true);
+        delay(250);
+        digitalWrite(RED_LED_PIN, HIGH);
+        delay(250);
+    }
 
-    Serial.println(dac.begin(0x62));
-    
     Serial.println("setup4");
 
     

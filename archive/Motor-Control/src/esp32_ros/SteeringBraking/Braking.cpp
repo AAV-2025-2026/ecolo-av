@@ -5,7 +5,7 @@
 int readByte()
 {
   char c;
-
+  Serial2.setTimeout(10);//set timeout for debugging if nothing is recieved
   if(Serial2.readBytes(&c, 1) == 0) 
   {
     return -1;  // Return -1 if no byte received
@@ -51,6 +51,7 @@ float getA1_scaled()
 
 void motor_controller_setup(){
   //  Initialize Serial2 with a baud rate of 9600 bps
+  
   Serial2.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
 
   // Initialize regular serial communication for debugging
@@ -88,7 +89,10 @@ void brakingPID_task(void* parameter) {
   const TickType_t xFrequency = 10 / portTICK_PERIOD_MS; // 500 ms interval
   while (true) {
     //Serial.println("runBrakeTask");
+
   float brakePos = getA1_scaled();
+
+
   if(brakePos>1000){
     brakePos = 0;
   }
@@ -99,6 +103,7 @@ void brakingPID_task(void* parameter) {
   lastTime = currentTime;
 
   float error = setpoint - brakePos;
+
   if(abs(error) < positionDeadzone){
     error = 0;
   }

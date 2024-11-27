@@ -79,13 +79,13 @@ void throttle_callback_ackermann(const void * msgin){
     uint16_t accelMag;
     bool dir;
     if(msg->acceleration > 0){
-      digitalWrite(DIR_PIN, HIGH);
-      digitalWrite(LED_PIN, HIGH);
+      digitalWrite(DIR_PIN, LOW);
+      digitalWrite(LED_PIN, LOW);
       accelMag = (uint16_t) msg->acceleration;
       dir = true;
     }else{
-      digitalWrite(DIR_PIN, LOW);
-      digitalWrite(LED_PIN, LOW);
+      digitalWrite(DIR_PIN, HIGH);
+      digitalWrite(LED_PIN, HIGH);
       accelMag = (uint16_t) msg->acceleration * -1;
       dir = false;
     }
