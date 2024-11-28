@@ -20,9 +20,11 @@ void hardware_setup(){
     bool begin = false;
     while(!begin){
         digitalWrite(RED_LED_PIN, LOW);
+        delay(100);
+        USER_SERIAL.println("CONNECTING TO DAC i2C");
         begin = dac.begin(0x62);
         if(!begin){
-            Serial.println("DAC CONNECTION FAIL");
+            USER_SERIAL.println("DAC CONNECTION FAIL");
         }
         //set write EEPROM
         dac.setVoltage(0,true);
@@ -31,7 +33,7 @@ void hardware_setup(){
         delay(250);
     }
 
-    Serial.println("setup4");
+    USER_SERIAL.println("DAC CONNECTION SUCCESS");
 
     
 }

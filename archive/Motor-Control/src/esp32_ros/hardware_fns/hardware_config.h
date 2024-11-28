@@ -1,6 +1,6 @@
 
 
-
+#define TRANSPORT_WIFI
 #ifndef HARDWARE_CONFIG_H
 #define HARDWARE_CONFIG_H
 
@@ -15,5 +15,10 @@
 #define RED_LED_PIN 18
 #define GREEN_LED_PIN 19
 
+#define ROS_SERIAL Serial1
+#define USER_SERIAL Serial
+#define CTRL_SERIAL Serial2
 
+#define RX_PIN_1 5
+#define TX_PIN_1 4
 #endif

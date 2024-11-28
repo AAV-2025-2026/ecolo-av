@@ -4,7 +4,7 @@
 #include "./hardware_fns/hardware_config.h"
 #include "./uRos_fns/uRos_fns.h"
 #include "./SteeringBraking/Braking.h"
-
+bool ackermann_recv;
 // Target setpoint and integral value
 int setpoint = 0;
 float intval = 0;
@@ -41,21 +41,26 @@ TaskHandle_t TaskCore1;//Core 1 used for signals, PID loops, Sensor reading, mot
 
 
 
+
 void setup() {
 
 
+    motor_controller_setup();
+    USER_SERIAL.begin(115200);
+
+    hardware_setup();
 
 
-
-
-  Serial.begin(115200);
-  hardware_setup();
-  motor_controller_setup();
-
-  uRos_init_wireless_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann,
-                                    "BELL310", "376F57AF1739", "192.168.2.58", 8887, "micro_ros_arduino_wifi_node_car", "/driveData");
-
-  digitalWrite(GREEN_LED_PIN, LOW);
+//  uRos_init_wireless_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann,
+//                                    "BELL310", "376F57AF1739", "192.168.2.58", 8887, "micro_ros_arduino_wifi_node_car", "/driveData");
+#ifdef TRANSPORT_WIFI
+    uRos_init_wireless_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann,
+                                      "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/driveData");
+#endif
+#ifdef TRANSPORT_SERIAL
+    uRos_init_serial_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann, "micro_ros_arduino_wifi_node_car", "/driveData");
+#endif
+    digitalWrite(GREEN_LED_PIN, LOW);
     xTaskCreatePinnedToCore(
       microROS_Task,          // Task function
       "Task1",        // Name of task
@@ -63,7 +68,7 @@ void setup() {
       NULL,           // Task input parameter
       1,              // Priority of the task
       &TaskCore2,     // Task handle
-      0);
+      1);
 
     xTaskCreatePinnedToCore(
      brakingPID_task,          // Task function

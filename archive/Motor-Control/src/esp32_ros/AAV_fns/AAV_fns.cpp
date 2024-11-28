@@ -3,7 +3,7 @@
 
 
 extern Adafruit_MCP4725 dac;
-
+extern bool ackermann_recv;
 
 extern int setpoint;
 
@@ -11,11 +11,11 @@ void throttle_callback(const void * msgin){
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
   uint16_t msg_mag;
 
-  
+
 
   if (msg != NULL) {
-    
-    
+
+
     if((int)msg->data < 0){
       digitalWrite(DIR_PIN, LOW);
       digitalWrite(LED_PIN, LOW);
@@ -28,10 +28,10 @@ void throttle_callback(const void * msgin){
 
     }
 
-    Serial.print("voltage level: ");
-    Serial.println( (int) msg_mag);
+    USER_SERIAL.print("voltage level: ");
+    USER_SERIAL.println( (int) msg_mag);
     dac.setVoltage(msg_mag, false);
-    
+
   }
 
 }
@@ -45,7 +45,7 @@ void throttle_callback_Drive(const void * msgin){
 
   if (msg != NULL) {
     
-    
+    ackermann_recv = true;
 
     if(msg->dir){
       digitalWrite(DIR_PIN, HIGH);
@@ -57,9 +57,9 @@ void throttle_callback_Drive(const void * msgin){
       
      
 
-    Serial.print("voltage level(drv): ");
-    Serial.print( (int) msg->throttle);
-    Serial.print("  dir: "); Serial.println((int) msg->dir);
+    USER_SERIAL.print("voltage level(drv): ");
+    USER_SERIAL.print( (int) msg->throttle);
+    USER_SERIAL.print("  dir: "); USER_SERIAL.println((int) msg->dir);
     dac.setVoltage((uint16_t)msg->throttle, false);
     
   }
@@ -70,9 +70,9 @@ void throttle_callback_Drive(const void * msgin){
 void throttle_callback_ackermann(const void * msgin){
   const ackermann_msgs__msg__AckermannDrive * msg = (const ackermann_msgs__msg__AckermannDrive *)msgin;
 
-  //Serial.println("recv");
+  //USER_SERIAL.println("recv");
   
-
+  digitalWrite(2, HIGH);
   if (msg != NULL) {
     
     
@@ -92,12 +92,13 @@ void throttle_callback_ackermann(const void * msgin){
       
      
     setpoint = (int) msg->steering_angle;
-    Serial.print("Steering Angle: "); Serial.print((int) msg->steering_angle);
-    Serial.print("   voltage level(drv): ");
-    Serial.print( (int) accelMag);
-    Serial.print("  dir: "); Serial.println((int) dir);
+    USER_SERIAL.print("Steering Angle: "); USER_SERIAL.print((int) msg->steering_angle);
+    USER_SERIAL.print("   voltage level(drv): ");
+    USER_SERIAL.print( (int) accelMag);
+    USER_SERIAL.print("  dir: "); USER_SERIAL.println((int) dir);
     dac.setVoltage((uint16_t) accelMag, false);
-    
+
+    digitalWrite(2,LOW);
   }
 
 }
@@ -121,8 +122,8 @@ void throttle_callback_joy(const void * msgin){
 
     }
 
-    Serial.print("voltage level: ");
-    Serial.println( (int) msg_mag);
+    USER_SERIAL.print("voltage level: ");
+    USER_SERIAL.println( (int) msg_mag);
     dac.setVoltage(msg_mag, false);
     
   }
@@ -134,12 +135,12 @@ void setPosition(int set){
 
 void braking_callback(const void *msgin){
   const std_msgs__msg__Int32 * msg = (const std_msgs__msg__Int32 *)msgin;
-  Serial.println(msg->data);
-  Serial.println("recv");
+  USER_SERIAL.println(msg->data);
+  USER_SERIAL.println("recv");
   if(msg != NULL){
   setPosition(msg->data);
-  //Serial.print("Recevied position: ");
-  //Serial.println(msg->data);
+  //USER_SERIAL.print("Recevied position: ");
+  //USER_SERIAL.println(msg->data);
   }
 }
 
