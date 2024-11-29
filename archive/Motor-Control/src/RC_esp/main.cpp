@@ -12,7 +12,7 @@
 
 // Pin definitions for RC inputs
 #define CH1 4  // Right joystick horizontal (steering)
-#define CH2 5  // Left joystick vertical (throttle/brake)
+#define CH3 5  // Left joystick vertical (throttle/brake)
 
 // Pin definition for status LED
 #define LED_PIN 2  // Adjusted for ESP32 onboard LED (default GPIO 2)
@@ -60,7 +60,7 @@ void setup() {
 
     // Initialize RC input pins
     pinMode(CH1, INPUT); // Right joystick horizontal
-    pinMode(CH2, INPUT); // Left joystick vertical
+    pinMode(CH3, INPUT); // Left joystick vertical
 
     allocator = rcl_get_default_allocator();
 
@@ -91,7 +91,7 @@ void setup() {
 
 void loop() {
     // Read joystick inputs
-    int leftVertical = readChannel(CH2, -255, 255, 0); // Left joystick vertical
+    int leftVertical = readChannel(CH3, -255, 255, 0); // Left joystick vertical
     int rightHorizontal = readChannel(CH1, -255, 255, 0); // Right joystick horizontal
 
     // Map left joystick vertical to throttle and brake
