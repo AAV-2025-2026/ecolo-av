@@ -14,13 +14,17 @@ float power = 0;
 float prev_error = 0;
 unsigned long lastTime = 0;
 
-// Parameters that can be changed on the fly
+
+// Parameters that can be changed on the fly for steering
 int P = 140;
 float I = 0.5;
 int D = 0;
 int integralLimit = 1000;
 int positionDeadzone = 1;
 int errorLimit = 2048;
+
+PID_vals steer_vals = PID_vals();
+PID_vals brake_vals = PID_vals();
 
 bool ros_enabled = true;
 
@@ -41,9 +45,38 @@ TaskHandle_t TaskCore1;//Core 1 used for signals, PID loops, Sensor reading, mot
 
 
 
-
 void setup() {
 
+
+    //this should be a constructor or basically anything but this
+    steer_vals.setpoint = 0;
+    steer_vals.intval = 0;
+    steer_vals.maxPower = 3200;
+    steer_vals.real_power = 0;
+    steer_vals.power = 0;
+    steer_vals.prev_error = 0;
+    steer_vals.lastTime = 0;
+    steer_vals.P = 140;
+    steer_vals.I = 0.5;
+    steer_vals.D = 0;
+    steer_vals.integralLimit = 1000;
+    steer_vals.positionDeadzone = 1;
+    steer_vals.errorLimit = 2048;
+
+    //this should be a constructor or basically anything but this
+    brake_vals.setpoint = 0;
+    brake_vals.intval = 0;
+    brake_vals.maxPower = 3200;
+    brake_vals.real_power = 0;
+    brake_vals.power = 0;
+    brake_vals.prev_error = 0;
+    brake_vals.lastTime = 0;
+    brake_vals.P = 140;
+    brake_vals.I = 0.5;
+    brake_vals.D = 0;
+    brake_vals.integralLimit = 1000;
+    brake_vals.positionDeadzone = 1;
+    brake_vals.errorLimit = 2048;
 
     motor_controller_setup();
     USER_SERIAL.begin(115200);
@@ -51,9 +84,9 @@ void setup() {
     hardware_setup();
 
 
-//  uRos_init_wireless_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann,
-//                                    "BELL310", "376F57AF1739", "192.168.2.58", 8887, "micro_ros_arduino_wifi_node_car", "/driveData");
 #ifdef TRANSPORT_WIFI
+    // uRos_init_wireless_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann,
+    //                                 "BELL310", "376F57AF1739", "192.168.2.58", 8887, "micro_ros_arduino_wifi_node_car", "/driveData");
     uRos_init_wireless_node_ackermann(&testSetup, &throttle_callback_ackermann, &msg_ackermann,
                                       "AAVwifi", "aav@2023", "192.168.1.126", 8888, "micro_ros_arduino_wifi_node_car", "/driveData");
 #endif

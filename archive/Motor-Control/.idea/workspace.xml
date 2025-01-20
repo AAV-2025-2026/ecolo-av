@@ -17,17 +17,13 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4ec08a51-5fb7-4109-8904-2a5522a96ea3" name="Changes" comment="add status led and dac EEPROM set zero">
+    <list default="true" id="4ec08a51-5fb7-4109-8904-2a5522a96ea3" name="Changes" comment="add serial macros">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/platformio.ini" beforeDir="false" afterPath="$PROJECT_DIR$/platformio.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/esp32_ros/AAV_fns/AAV_fns.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/esp32_ros/AAV_fns/AAV_fns.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/esp32_ros/SteeringBraking/Braking.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/esp32_ros/SteeringBraking/Braking.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/esp32_ros/SteeringBraking/Braking.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/esp32_ros/SteeringBraking/Braking.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/esp32_ros/hardware_fns/hardware_config.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/esp32_ros/hardware_fns/hardware_config.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/esp32_ros/hardware_fns/hardware_fns.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/esp32_ros/hardware_fns/hardware_fns.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/esp32_ros/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/esp32_ros/main.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/esp32_ros/uRos_fns/uRos_fns.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/esp32_ros/uRos_fns/uRos_fns.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/esp32_ros/uRos_fns/uRos_fns.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/esp32_ros/uRos_fns/uRos_fns.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -122,11 +118,16 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "CLionExternalConfigurable",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
     "structure.view.defaults.are.configured": "true",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/esp32_ros" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
       <method v="2">
@@ -155,7 +156,7 @@
       <workItem from="1732250922423" duration="16000" />
       <workItem from="1732251507825" duration="1497000" />
       <workItem from="1732253017464" duration="2744000" />
-      <workItem from="1732304228628" duration="63959000" />
+      <workItem from="1732304228628" duration="94547000" />
     </task>
     <task id="LOCAL-00001" summary="remove inner folder">
       <option name="closed" value="true" />
@@ -189,7 +190,15 @@
       <option name="project" value="LOCAL" />
       <updated>1732674981275</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="add serial macros">
+      <option name="closed" value="true" />
+      <created>1732816452535</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1732816452535</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -210,7 +219,8 @@
     <MESSAGE value="remove inner folder" />
     <MESSAGE value="added Rahul's RC controller code so it can use ackermann messages" />
     <MESSAGE value="add status led and dac EEPROM set zero" />
-    <option name="LAST_COMMIT_MESSAGE" value="add status led and dac EEPROM set zero" />
+    <MESSAGE value="add serial macros" />
+    <option name="LAST_COMMIT_MESSAGE" value="add serial macros" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

@@ -9,7 +9,7 @@ extern bool ackermann_recv;
 int uRos_init_wireless_node_ackermann(uRos_s *uRosStruct, rclc_subscription_callback_t subscription_callback, ackermann_msgs__msg__AckermannDrive *msg, char *ssid, char *pass, char *ip, int port, char *nodeName, char *topicName){
     rcl_ret_t status;
     //192.168.1.126
-    IPAddress local_IP(192, 168, 1, 147);
+    IPAddress local_IP(192, 168, 1, 126);
     //IPAddress local_IP(192, 168, 2, 58);
 
     String bssid = "";
@@ -244,7 +244,7 @@ int uRos_init_serial_node_ackermann(uRos_s *uRosStruct, rclc_subscription_callba
 // extern Adafruit_MCP4725 dac;
 
 void microROS_Task(void* parameter) {
-
+    pinMode(32, INPUT);
   TickType_t xLastWakeTime = xTaskGetTickCount();
   const TickType_t xFrequency = 10/ portTICK_PERIOD_MS; // 500 ms interval
   //dac.setVoltage(1, false);
@@ -254,7 +254,12 @@ void microROS_Task(void* parameter) {
         status = rclc_executor_spin_some(&testSetup.executor, RCL_MS_TO_NS(5));
         vTaskDelayUntil(&xLastWakeTime, xFrequency); // Wait until next cycle
 
-
+        if(digitalRead(32)){
+            USER_SERIAL.println("DRIVER ERROR");
+            digitalWrite(2, !digitalRead(2));
+        }else{
+            digitalWrite(2, LOW);
+        }
     }
 
 

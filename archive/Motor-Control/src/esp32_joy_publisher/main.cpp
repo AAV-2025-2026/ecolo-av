@@ -1,4 +1,4 @@
-#include <micro_ros_platformio.h>
+ #include <micro_ros_platformio.h>
 #include <Adafruit_BusIO_Register.h>
 //#include <micro_ros_arduino.h>
 #include <stdlib.h>
@@ -48,7 +48,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 
 void setup() {
   IPAddress local_IP(192, 168, 1, 126);
-  set_microros_wifi_transports("AAVwifi", "aav@2023", local_IP, (uint16_t) 8888);
+  set_microros_wifi_transports("AAVwifi", "aav@2023", local_IP, (uint16_t) 8887);
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);

@@ -1,6 +1,8 @@
 #include "Braking.h"
-#define TX_PIN 27
-#define RX_PIN 26
+
+
+extern PID_vals steer_vals;
+extern PID_vals brake_vals;
 
 int readByte()
 {

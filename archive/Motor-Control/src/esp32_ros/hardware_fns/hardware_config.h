@@ -1,5 +1,6 @@
 
 
+#undef TRANSPORT_SERIAL
 #define TRANSPORT_WIFI
 #ifndef HARDWARE_CONFIG_H
 #define HARDWARE_CONFIG_H
@@ -21,4 +22,7 @@
 
 #define RX_PIN_1 5
 #define TX_PIN_1 4
+
+#define TX_PIN 27
+#define RX_PIN 26
 #endif

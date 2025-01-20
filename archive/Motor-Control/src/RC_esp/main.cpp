@@ -51,7 +51,7 @@ void setup() {
     // Initialize serial communication and Wi-Fi transport
     Serial.begin(115200);
     IPAddress local_IP(192, 168, 1, 126);
-    set_microros_wifi_transports("AAVwifi", "aav@2023", local_IP, (uint16_t) 8888);
+    set_microros_wifi_transports("AAVwifi", "aav@2023", local_IP, (uint16_t) 8887);
 
 
     // Initialize LED
