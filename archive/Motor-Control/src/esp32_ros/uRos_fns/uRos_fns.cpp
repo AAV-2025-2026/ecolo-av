@@ -47,6 +47,9 @@ int uRos_init_wireless_node_ackermann(uRos_s *uRosStruct, rclc_subscription_call
         status = rclc_support_init(&uRosStruct->support, 0, NULL, &uRosStruct->allocator);
         USER_SERIAL.print("Support_init status: ");
         USER_SERIAL.println(status);
+        if(status){
+            USER_SERIAL.println("support error, this is likely caused by the agent");
+        }
         digitalWrite(RED_LED_PIN, HIGH);
         digitalWrite(GREEN_LED_PIN, HIGH);
         delay(1000);
@@ -243,6 +246,11 @@ int uRos_init_serial_node_ackermann(uRos_s *uRosStruct, rclc_subscription_callba
 // #include "../hardware_fns/hardware_fns.h"
 // extern Adafruit_MCP4725 dac;
 
+
+
+
+extern int setpoint;
+
 void microROS_Task(void* parameter) {
     pinMode(32, INPUT);
   TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -251,8 +259,11 @@ void microROS_Task(void* parameter) {
     rcl_ret_t status;
     while (true) {
         //USER_SERIAL.println("braketask");
+
+
         status = rclc_executor_spin_some(&testSetup.executor, RCL_MS_TO_NS(5));
         vTaskDelayUntil(&xLastWakeTime, xFrequency); // Wait until next cycle
+    
 
         if(digitalRead(32)){
             USER_SERIAL.println("DRIVER ERROR");

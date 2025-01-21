@@ -16,12 +16,12 @@ unsigned long lastTime = 0;
 
 
 // Parameters that can be changed on the fly for steering
-int P = 140;
-float I = 0.5;
+int P =  50;
+float I = 0;
 int D = 0;
-int integralLimit = 1000;
+int integralLimit = 320;
 int positionDeadzone = 1;
-int errorLimit = 2048;
+int errorLimit = 100;
 
 PID_vals steer_vals = PID_vals();
 PID_vals brake_vals = PID_vals();

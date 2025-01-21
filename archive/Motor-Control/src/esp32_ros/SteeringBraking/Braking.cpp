@@ -88,7 +88,7 @@ extern int errorLimit;
 void brakingPID_task(void* parameter) {
   //USER_SERIAL.println("startBrakeTask");
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xFrequency = 10 / portTICK_PERIOD_MS; // 500 ms interval
+  const TickType_t xFrequency =  10 / portTICK_PERIOD_MS; // 500 ms interval
   while (true) {
     //USER_SERIAL.println("runBrakeTask");
 
@@ -103,12 +103,14 @@ void brakingPID_task(void* parameter) {
   //Calculate the elapsed time
   float elapsedTime = (currentTime - lastTime) / 1000.0;
   lastTime = currentTime;
+  
 
-  float error = setpoint - brakePos;
+  float error =  brakePos - setpoint;
 
   if(abs(error) < positionDeadzone){
     error = 0;
   }
+
   error = constrain(error, -errorLimit, errorLimit);
 
   // Calculate the integral term (accumulates the error over time)
@@ -130,25 +132,37 @@ void brakingPID_task(void* parameter) {
   prev_error = error;
 
   // Calculate the motor power based on proportional and integral control
+  //real_power = propval + ival + dval;
+  ival = constrain(ival, -integralLimit, integralLimit);
   real_power = propval + ival + dval;
+
   power = real_power;
   // Constrain the power within the range of the 
   power = constrain(power, -maxPower, maxPower);
   // Set the motor speed based on the calculated power
   setMotorSpeed(power);
 
-  // Output the current sensor value
-  //USER_SERIAL.print("Pos:");
-  //USER_SERIAL.print(brakePos);
-  //Set point
-  //USER_SERIAL.print(",Setpoint");
-  //USER_SERIAL.print(setpoint);
-  // Print the real power value
-  //USER_SERIAL.print(",RealPower:");
-  //USER_SERIAL.print(real_power);
-  // Output the calculated motor power
-  //USER_SERIAL.print(",Power:");
-  //USER_SERIAL.println(power);
+  // // Output the current sensor value
+  // USER_SERIAL.print("Pos:");
+  // USER_SERIAL.print(brakePos);
+
+  // USER_SERIAL.print(",propval:");
+  // USER_SERIAL.print(propval);
+  
+  // USER_SERIAL.print(",ival:");
+  // USER_SERIAL.print(ival);
+
+  //  USER_SERIAL.print(",error:");
+  // USER_SERIAL.print(error);
+  // // Set point
+  // USER_SERIAL.print(",Setpoint");
+  // USER_SERIAL.print(setpoint);
+  // // Print the real power value
+  // USER_SERIAL.print(",RealPower:");
+  // USER_SERIAL.print(real_power);
+  // // Output the calculated motor power
+  // USER_SERIAL.print(",Power:");
+  // USER_SERIAL.println(power);
   vTaskDelayUntil(&xLastWakeTime, xFrequency); // Wait until next cycle  
     }
 }

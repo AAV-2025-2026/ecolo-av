@@ -54,7 +54,7 @@ void setup() {
   digitalWrite(LED_PIN, HIGH);
 
   delay(2000);
-    Serial.begin(115200);
+  Serial.begin(115200);
 
   pinMode(X_INPUT, INPUT);
   pinMode(Y_INPUT, INPUT);

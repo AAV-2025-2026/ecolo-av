@@ -37,3 +37,18 @@ void hardware_setup(){
 
     
 }
+
+
+// Function to read a channel and map its value to a given range
+int readChannel(int channelInput, int minLimit, int maxLimit, int defaultValue) {
+    int ch = pulseIn(channelInput, HIGH, 30000); // Read PWM signal
+    if (ch < 100) return defaultValue; // Default value if signal is invalid
+    return map(ch, 1000, 2000, minLimit, maxLimit);
+}
+
+// Read the switch channel and return a boolean value
+bool readSwitch(byte channelInput, bool defaultValue){
+  int intDefaultValue = (defaultValue)? 100: 0;
+  int ch = readChannel(channelInput, 0, 100, intDefaultValue);
+  return (ch > 50);
+}
