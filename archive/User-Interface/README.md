@@ -7,6 +7,5 @@ In this repo, add:
   - each car folder will contain subfolders for each car aspect (car sensors, car documentation, etc)
 
 * 1 folder for project documents (gantt chart, task delegation, project member activity, etc)
-* 1 folder for graphs
 
   Note: Add a README to each section
