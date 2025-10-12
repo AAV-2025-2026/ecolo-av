@@ -18,7 +18,7 @@ git add <file_path>
 git status		
 
 
-git commit -m "message_here"   
-git commit -a -m "messagege"
+git commit -m "message"   
+git commit -a -m "message"
 
 git push
