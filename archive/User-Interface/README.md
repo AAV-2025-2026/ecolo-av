@@ -1,11 +1,24 @@
-# Project
-Contains everything about the project (codes, documents, graphs, data)
+# User-Interface
+### This repo contains everything related to the UI and Database
 
-In this repo, add:
+### About the structure of this repo:
 
-* 2 folders, one focusing on each car
-  - each car folder will contain subfolders for each car aspect (car sensors, car documentation, etc)
+* Try to make sure there's a README.md file to explain anything that seems complicated for everyone else to to know, like this one for example explaining things...
 
-* 1 folder for project documents (gantt chart, task delegation, project member activity, etc)
 
-  Note: Add a README to each section
+## Important git commands:
+
+git clone [URL_of_repo]	 	  
+
+git pull
+
+git add . 
+git add <file_path>       	   	 
+
+git status		
+
+
+git commit -m "message_here"   
+git commit -a -m "messagege"
+
+git push
