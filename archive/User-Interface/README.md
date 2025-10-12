@@ -3,7 +3,7 @@
 
 ### About the structure of this repo:
 
-* Try to make sure there's a README.md file to explain anything that seems complicated for everyone else to to know, like this one for example explaining things...
+* Try to make sure there's a README.md file to explain anything that may seem complicated for anyone.
 
 
 ## Important git commands:
