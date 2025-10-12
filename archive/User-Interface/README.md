@@ -12,7 +12,7 @@ git clone [URL_of_repo]
 
 git pull
 
-git add . 
+git add . <br>
 git add <file_path>       	   	 
 
 git status		
