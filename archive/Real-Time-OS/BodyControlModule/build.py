@@ -20,9 +20,14 @@ def execute(command: str, output: bool = False) -> str:
 
 def build():
     qcc_path = shutil.which("qcc")
-    qxx_path = shutil.which("q++")
+    if (qcc_path is None):
+        print("qcc not found")
+        print("Make sure to have installed QNX 8")
+        print("And have run C:/Users/<username>/qnx800/qnxsdp-env.bat")
+        exit(1)
     flags = [
-        "-Vgcc_ntoaarch64le"
+        "-Vgcc_ntoaarch64le",
+        "-Wall"
     ]
 
     files_to_compile: list[str] = []
