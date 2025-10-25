@@ -8,9 +8,10 @@ def execute(command: str, output: bool = False) -> str:
     if output:
         print(f"Executing command: {command}")
     result = subprocess.run(
-        ["cmd", "/c", command],
+        command,
         capture_output=True,
         text=True,
+        shell=True
     )
     if result.returncode != 0:
         raise Exception(f"Command '{command}' failed with error: {result.stderr.strip()}")
