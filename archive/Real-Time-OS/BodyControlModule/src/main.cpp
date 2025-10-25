@@ -1,6 +1,6 @@
 #include <iostream>
 
 int main() {
-    std::cout << "Hello QNX! With CMake\n";
+    std::cout << "Hello QNX!\n";
     return 0;
 }
