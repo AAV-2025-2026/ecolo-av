@@ -1,60 +1,48 @@
 import subprocess
-import argparse
 import os
 import shutil
 
-def execute(command: str):
+binary_name = "BodyControlModule"
+
+def execute(command: str, output: bool = False) -> str:
+    if output:
+        print(f"Executing command: {command}")
     result = subprocess.run(
         ["cmd", "/c", command],
         capture_output=True,
         text=True,
     )
-
     if result.returncode != 0:
         raise Exception(f"Command '{command}' failed with error: {result.stderr.strip()}")
+    if output:
+        print(result.stdout)
     return result.stdout
 
-def build(clean: bool, platform: str):
-    if (clean and os.path.exists("build")):
-        shutil.rmtree("build")
+def build():
+    qcc_path = shutil.which("qcc")
+    qxx_path = shutil.which("q++")
+    flags = [
+        "-Vgcc_ntoaarch64le"
+    ]
 
-    compiler_path = None
-    if platform == "rpi":
-        compiler_path = shutil.which("qcc")
-    elif platform == "vm":
-        compiler_path = shutil.which("qcc")
-    elif platform == "windows":
-        compiler_path = shutil.which("cl") # Figure this out later
+    files_to_compile: list[str] = []
+    for (root, dirs, files) in os.walk("src"):
+        for file in files:
+            if file.endswith((".c", ".cpp")):
+                files_to_compile.append(os.path.join(root, file))
 
-    print(compiler_path)
+    command = f"{qcc_path} -o {binary_name} {' '.join(flags)} {' '.join(files_to_compile)}"
+    print(command)
 
-    print(execute("cmake -S . -B build"))
-    print(execute("cmake --build build"))
+    execute(f"{qcc_path} -o {binary_name} {' '.join(flags)} {' '.join(files_to_compile)}", output=True)
+    pass
 
 def main():
-    parser = argparse.ArgumentParser(description="Build script for BodyControlModule")
-    parser.add_argument(
-        "-p",
-        "--platform",
-        type=str.lower,
-        choices=["rpi", "vm", "windows"],
-        required=True,
-        help="Target platform: rpi, vm, or windows",
-    )
-    parser.add_argument(
-        "-c",
-        "--clean",
-        action="store_true",
-    )
-    args = parser.parse_args()
-    platform = args.platform
-    clean_build = args.clean
-
     if not os.getcwd().endswith("BodyControlModule"):
         print("Run this script from the BodyControlModule directory.")
         exit(1)
 
-    build(clean_build, platform)
+    build()
 
 if __name__ == "__main__":
     main()
