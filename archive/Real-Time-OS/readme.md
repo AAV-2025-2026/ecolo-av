@@ -4,4 +4,5 @@
 - Andrew Roberts
 - Hasan Suriya
 - Nick Fuda
+- Jad Mohi-El-Din
 ---
