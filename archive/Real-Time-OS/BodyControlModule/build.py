@@ -2,7 +2,7 @@ import subprocess
 import os
 import shutil
 
-binary_name = "BodyControlModule"
+BINARY_NAME = "BodyControlModule"
 
 def execute(command: str, output: bool = False) -> str:
     if output:
@@ -25,22 +25,19 @@ def build():
         print("Make sure to have installed QNX 8")
         print("And have run C:/Users/<username>/qnx800/qnxsdp-env.bat")
         exit(1)
+    # Flags to pass to the compiler, uses gcc flags
     flags = [
-        "-Vgcc_ntoaarch64le",
+        "-Vgcc_ntoaarch64le", # Sets it to compile for Raspberry Pi
         "-Wall"
     ]
-
+    # Find files to compile
     files_to_compile: list[str] = []
     for (root, dirs, files) in os.walk("src"):
         for file in files:
             if file.endswith((".c", ".cpp")):
                 files_to_compile.append(os.path.join(root, file))
 
-    command = f"{qcc_path} -o {binary_name} {' '.join(flags)} {' '.join(files_to_compile)}"
-    print(command)
-
-    execute(f"{qcc_path} -o {binary_name} {' '.join(flags)} {' '.join(files_to_compile)}", output=True)
-    pass
+    execute(f"{qcc_path} -o {BINARY_NAME} {' '.join(flags)} {' '.join(files_to_compile)}", output=True)
 
 def main():
     if not os.getcwd().endswith("BodyControlModule"):
