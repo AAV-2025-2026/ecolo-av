@@ -15,7 +15,6 @@ class CameraReceiver(Node):
         
         self.get_logger().info('Creating subscription to /camera/image_raw')
         
-        # Create QoS profile compatible with image publishers
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             history=HistoryPolicy.KEEP_LAST,
@@ -28,7 +27,7 @@ class CameraReceiver(Node):
             self.image_callback,
             qos_profile)
         
-        self.get_logger().info('Camera Receiver Node Started - Subscribed with BEST_EFFORT QoS!')
+        self.get_logger().info('Camera Receiver Node Started - Subscribed!')
         
     def image_callback(self, msg):
         try:
@@ -38,10 +37,12 @@ class CameraReceiver(Node):
             if self.frame_count % 30 == 0:
                 self.get_logger().info(f'Received {self.frame_count} frames - Size: {cv_image.shape}')
             
-            cv2.imshow('Received Camera Feed', cv_image)
+            # Display the image
+            cv2.imshow('Camera Feed from Pi', cv_image)
             cv2.waitKey(1)
+            
         except Exception as e:
-            self.get_logger().error(f'Error processing frame: {e}')
+            self.get_logger().error(f'Error: {e}')
 
 def main(args=None):
     rclpy.init(args=args)
@@ -51,10 +52,12 @@ def main(args=None):
         rclpy.spin(receiver)
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print(f"Error: {e}")
     finally:
         receiver.destroy_node()
-        rclpy.shutdown()
         cv2.destroyAllWindows()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
