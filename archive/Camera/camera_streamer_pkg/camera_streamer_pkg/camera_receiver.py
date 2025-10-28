@@ -4,7 +4,6 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
 class CameraReceiver(Node):
     def __init__(self):
@@ -15,21 +14,14 @@ class CameraReceiver(Node):
         
         self.get_logger().info('Creating subscription to /camera/image_raw')
         
-        # Try RELIABLE QoS first (matching most camera drivers)
-        qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.RELIABLE,
-            durability=DurabilityPolicy.VOLATILE,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=10
-        )
-        
+        # Use default QoS (same as ros2 topic echo)
         self.subscription = self.create_subscription(
             Image,
             '/camera/image_raw',
             self.image_callback,
-            qos_profile)
+            10)  # Just queue depth, no custom QoS
         
-        self.get_logger().info('Camera Receiver Node Started - Subscribed with RELIABLE QoS!')
+        self.get_logger().info('Camera Receiver Node Started - Subscribed with default QoS!')
         
     def image_callback(self, msg):
         try:
@@ -37,12 +29,12 @@ class CameraReceiver(Node):
             
             self.frame_count += 1
             
-            # Log first few frames
+            # Log first 10 frames to verify callback
             if self.frame_count <= 10:
-                self.get_logger().info(f'*** CALLBACK TRIGGERED! Frame {self.frame_count} ***')
+                self.get_logger().info(f'*** FRAME RECEIVED! #{self.frame_count} Size: {cv_image.shape} ***')
             
             if self.frame_count % 30 == 0:
-                self.get_logger().info(f'Received {self.frame_count} frames - Size: {cv_image.shape}')
+                self.get_logger().info(f'Received {self.frame_count} frames')
             
             # Display the image
             cv2.imshow('Camera Feed from Pi', cv_image)
@@ -50,6 +42,8 @@ class CameraReceiver(Node):
             
         except Exception as e:
             self.get_logger().error(f'Error in callback: {e}')
+            import traceback
+            self.get_logger().error(traceback.format_exc())
 
 def main(args=None):
     rclpy.init(args=args)
