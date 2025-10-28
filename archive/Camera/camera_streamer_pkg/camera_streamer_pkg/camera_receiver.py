@@ -4,6 +4,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 class CameraReceiver(Node):
     def __init__(self):
@@ -14,13 +15,20 @@ class CameraReceiver(Node):
         
         self.get_logger().info('Creating subscription to /camera/image_raw')
         
+        # Create QoS profile compatible with image publishers
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+        
         self.subscription = self.create_subscription(
             Image,
             '/camera/image_raw',
             self.image_callback,
-            10)
+            qos_profile)
         
-        self.get_logger().info('Camera Receiver Node Started - Subscribed!')
+        self.get_logger().info('Camera Receiver Node Started - Subscribed with BEST_EFFORT QoS!')
         
     def image_callback(self, msg):
         try:
