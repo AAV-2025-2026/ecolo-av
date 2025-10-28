@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'camera_receiver = camera_streamer_pkg.camera_receiver:main',
+            'network_receiver = camera_streamer_pkg.network_receiver:main',
         ],
     },
 )
