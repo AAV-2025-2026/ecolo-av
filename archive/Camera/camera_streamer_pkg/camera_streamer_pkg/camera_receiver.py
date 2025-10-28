@@ -4,7 +4,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
 class CameraReceiver(Node):
     def __init__(self):
@@ -15,8 +15,10 @@ class CameraReceiver(Node):
         
         self.get_logger().info('Creating subscription to /camera/image_raw')
         
+        # Try RELIABLE QoS first (matching most camera drivers)
         qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.VOLATILE,
             history=HistoryPolicy.KEEP_LAST,
             depth=10
         )
@@ -27,13 +29,18 @@ class CameraReceiver(Node):
             self.image_callback,
             qos_profile)
         
-        self.get_logger().info('Camera Receiver Node Started - Subscribed!')
+        self.get_logger().info('Camera Receiver Node Started - Subscribed with RELIABLE QoS!')
         
     def image_callback(self, msg):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
             
             self.frame_count += 1
+            
+            # Log first few frames
+            if self.frame_count <= 10:
+                self.get_logger().info(f'*** CALLBACK TRIGGERED! Frame {self.frame_count} ***')
+            
             if self.frame_count % 30 == 0:
                 self.get_logger().info(f'Received {self.frame_count} frames - Size: {cv_image.shape}')
             
@@ -42,7 +49,7 @@ class CameraReceiver(Node):
             cv2.waitKey(1)
             
         except Exception as e:
-            self.get_logger().error(f'Error: {e}')
+            self.get_logger().error(f'Error in callback: {e}')
 
 def main(args=None):
     rclpy.init(args=args)
@@ -52,8 +59,6 @@ def main(args=None):
         rclpy.spin(receiver)
     except KeyboardInterrupt:
         pass
-    except Exception as e:
-        print(f"Error: {e}")
     finally:
         receiver.destroy_node()
         cv2.destroyAllWindows()
