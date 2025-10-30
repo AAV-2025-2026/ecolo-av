@@ -1,6 +1,7 @@
 import subprocess
 import os
 import shutil
+import argparse
 
 BINARY_NAME = "BodyControlModule"
 
@@ -19,7 +20,7 @@ def execute(command: str, output: bool = False) -> str:
         print(result.stdout)
     return result.stdout
 
-def build():
+def build(rpi: bool):
     qcc_path = shutil.which("qcc")
     if (qcc_path is None):
         print("qcc not found")
@@ -28,9 +29,12 @@ def build():
         exit(1)
     # Flags to pass to the compiler, uses gcc flags
     flags = [
-        "-Vgcc_ntoaarch64le", # Sets it to compile for Raspberry Pi
         "-Wall"
     ]
+    if rpi:
+        flags.append("-Vgcc_ntoaarch64le")
+    else:
+        flags.append("-Vgcc_ntox86_64")
     # Find files to compile
     files_to_compile: list[str] = []
     for (root, dirs, files) in os.walk("src"):
@@ -41,11 +45,18 @@ def build():
     execute(f"{qcc_path} -o {BINARY_NAME} {' '.join(flags)} {' '.join(files_to_compile)}", output=True)
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--target',
+                        choices=['vm', 'rpi'],
+                        default='rpi',
+                        help='Build target: vm or rpi'
+                        )
+    args = parser.parse_args()
     if not os.getcwd().endswith("BodyControlModule"):
         print("Run this script from the BodyControlModule directory.")
         exit(1)
 
-    build()
+    build(args.target == 'rpi')
 
 if __name__ == "__main__":
     main()
