@@ -42,7 +42,7 @@ def build(rpi: bool):
             if file.endswith((".c", ".cpp")):
                 files_to_compile.append(os.path.join(root, file))
 
-    execute(f"{qcc_path} -o {BINARY_NAME} {' '.join(flags)} {' '.join(files_to_compile)}", output=True)
+    execute(f"{qcc_path} -o {BINARY_NAME}_{"rpi" if rpi else "vm"} {' '.join(flags)} {' '.join(files_to_compile)}", output=True)
 
 def main():
     parser = argparse.ArgumentParser()
