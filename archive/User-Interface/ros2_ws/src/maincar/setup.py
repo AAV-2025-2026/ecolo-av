@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            "ui_test_publish = maincar.ui_test:main"
+            "ui_test_publish = maincar.ui_test:main",
+            "ui_flask = maincar.ui_flask:main"
         ],
     },
 )

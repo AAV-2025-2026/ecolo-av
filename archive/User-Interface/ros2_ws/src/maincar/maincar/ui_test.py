@@ -7,6 +7,7 @@ Pretend the mocked data is car speed.
 
 import rclpy
 from rclpy.node import Node
+import random
 
 from std_msgs.msg import Float32
 # from geometry_msgs.msg import Twist
@@ -37,7 +38,9 @@ class MyNode(Node):
     def send_mock_velocity_command(self):
 
         msg = Float32()
-        msg.data = 5.0  # mock 5.0 velocity in m/s
+
+        # creates mock velocity between 4.0 and 6.0
+        msg.data = random.uniform(4.0, 6.0)
         self.get_logger().info("Sending Mock...")
 
 
