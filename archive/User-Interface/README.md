@@ -10,7 +10,7 @@
 
 git clone [URL_of_repo]	 	  
 
-git pull
+git pull   (use git pull often! To get latest changes)
 
 git add . <br>
 git add <file_path>       	   	 
