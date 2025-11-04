@@ -7,7 +7,7 @@ What you have after cloning the repo:
       - maincar (package name)
       - xo (package name) 
    
-<br>What you ultimately want to start executing nodes:
+<br>What you ultimately need to execute nodes:
 - **User-Interface**
   - **ros2_ws**
     - src
@@ -15,14 +15,15 @@ What you have after cloning the repo:
       - xo (package name)  
     - install
     - build
-<br>
-We always have to write ros2 code in the "src" folder. Each time we want to test it, we have to keep compiling the src folder, which always creates the "install" and "build" folder. We use a command called "colcon build" to automate that.<br>
+
 <br>Here's how we do that:<br><br>
 
-1. "ROS2: Humble" only works on Ubuntu 22.04, so make sure you have it by typing "lsb-version -a" in the terminal
-1. After cloning this git repo, use the terminal to navigate to /ros2_ws   
-2. while in /ros2_ws, type the command "colcon build" (this will compile the code for the UI nodes found in "src" folder by creating two new folders: "build" and "install")
-3. In the new "install" folder, there is a "setup.bash" file. Make sure you source that file within the terminal: <br>**$ source /ros2_ws/install/setup.bash**<br>(Recommended: adding that specific command in "bashrc" will ensure that we don't always have to manually source it each time we open a new terminal. you can use: <br>**$ gedit ~/.bashrc**<br> to open "bashrc").<br>
+1. "ROS2: Humble" only works on Ubuntu 22.04, so make sure you have it by typing "lsb-version -a" in the terminal<br>
+2. After cloning this git repo, use the terminal to navigate to /ros2_ws<br>
+3. while in /ros2_ws, type the command "colcon build" (this will compile the code found in the "src" folder by creating two new folders: "build" and "install")<br>
+4. In the new "install" folder, there is a "setup.bash" file. Make sure you source that file within the terminal: <br>**$ source /ros2_ws/install/setup.bash**<br>(Recommended: adding that specific command in "bashrc" will ensure that we don't always have to manually source it each time we open a new terminal. You can open "bashrc" with this command: <br>**$ gedit ~/.bashrc**).<br>
+
+**Note:** You must always repeat step #3 if you want to apply changes made to any code in "src". All the other steps you only need to do once.<br>
 
 ---
 
