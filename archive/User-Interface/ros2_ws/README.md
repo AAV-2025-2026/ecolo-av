@@ -1,5 +1,20 @@
 ## Steps to set up ros2 for UI after installing ros2
 
+What you have after cloning the repo:
+- **User-Interface**
+  - **ros2_ws**
+    - src
+   
+<br>What you ultimately want on your local machine:
+- **User-Interface**
+  - **ros2_ws**
+    - src
+    - install
+    - build
+
+
+<br>How to do that:
+
 1. "ROS2: Humble" only works on Ubuntu 22.04, so make sure you have it by typing "lsb-version -a" in the terminal
 1. After cloning this git repo, use the terminal to navigate to /ros2_ws   
 2. while in /ros2_ws, type the command "colcon build" (this will compile the code for the UI nodes found in "src" folder by creating two new folders: "build" and "install")
