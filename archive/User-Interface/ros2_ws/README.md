@@ -16,6 +16,9 @@ The following command shows all available nodes you can run in the package: <br>
 The following command will executed the desired node:<br>
 **$ ros2 run [package_name] [node_name]** 
 
+Example:
+(in terminal 1): **$ ros2 run maincar ui_flask**<br>
+(in terminal 2): **$ ros2 run maincar ui_test_publish**
 
 
 
