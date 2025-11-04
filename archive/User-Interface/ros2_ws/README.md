@@ -22,5 +22,5 @@ Example:<br>
 
 
 
-Note 1: our package name is called "maincar", for the Ecolo. When we get to XO, we could "xo" package <br>
+Note 1: our package name is called "maincar" for the Ecolo. When we get to work on the XO, we could call it the "xo" package <br>
 Note 2: where it says [node_name] should actually be [executable_name] since it is possible to have 1 execution that runs 2+ nodes, but currently the executables I made so far involve 1 command per 1 node (1 terminal per 1 node). This means eventually it will be possible to eventually have 1 terminal to run 2+ nodes.<br>
