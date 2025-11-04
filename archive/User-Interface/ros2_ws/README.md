@@ -13,7 +13,7 @@ To do so:<br>
 The following command shows all available nodes you can run in the package: <br>
 **$ ros2 pkg executables [package_name]**<br>
 
-The following command will executed the desired node:<br>
+The following command will execute the desired node:<br>
 **$ ros2 run [package_name] [node_name]**<br> 
 
 Example:<br>
@@ -22,5 +22,5 @@ Example:<br>
 
 
 
-Note 1: our package name is called "maincar", for the Ecolo <br>
+Note 1: our package name is called "maincar", for the Ecolo. When we get to XO, we could "xo" package <br>
 Note 2: where it says [node_name] should actually be [executable_name] since it is possible to have 1 execution that runs 2+ nodes, but currently the executables I made so far involve 1 command per 1 node (1 terminal per 1 node). This means eventually it will be possible to eventually have 1 terminal to run 2+ nodes.<br>
