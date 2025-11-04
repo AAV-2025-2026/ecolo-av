@@ -43,7 +43,7 @@ Example:<br>
 
 Result of the example:<br>
 the node "ui_test_publish" constantly sends a randomized Float32 value to the "/mock_speed" topic<br>
-the node "ui_flask" is actively keeps the flask server open and constantly fetches Float32 data from topic "/mock_speed"<br>
+the node "ui_flask" is actively keeping the flask server running and constantly fetches Float32 data from topic "/mock_speed"<br>
 
 ## Notes
 Note 1: Our package name is called "maincar" for the Ecolo. When we get to work on the XO, we could call it the "xo" package <br><br>
