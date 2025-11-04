@@ -14,7 +14,7 @@ export default function Speed() {
       });
 
       socket.on("speed_update", (data) => {
-        setTime(data.speed);
+        setSpeed(data.speed);
       });
 
       socket.on("disconnect", () => {
@@ -26,7 +26,7 @@ export default function Speed() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>{time}</Text>
+      <Text style={styles.text}>{speed}</Text>
     </View>
   );
 }
