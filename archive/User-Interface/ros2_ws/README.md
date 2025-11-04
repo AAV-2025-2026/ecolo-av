@@ -20,4 +20,4 @@ The following command will executed the desired node:<br>
 
 
 Note 1: our package name is called "maincar", for the Ecolo <br>
-Note 2: where it says [node_name] should actually be [executable_name] since it is possible to have 1 execution that runs 2+ nodes, but currently the executables I made so far is 1 command to execute 1 node. 
+Note 2: where it says [node_name] should actually be [executable_name] since it is possible to have 1 execution that runs 2+ nodes, but currently the executables I made so far involve 1 command per 1 node (1 terminal per 1 node). This means eventually it will be possible to eventually have 1 terminal to run 2+ nodes.
