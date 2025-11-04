@@ -12,8 +12,8 @@ What you have after cloning the repo:
     - install
     - build
 
-
-<br>How to do that:
+We always have to write ros2 code in the "src" folder, and each time we want to test it, we have to always build/compile it by creating the "install" and "build" folder, which is automatically done by using a command called "colcon build".
+<br>Here's how we do that:
 
 1. "ROS2: Humble" only works on Ubuntu 22.04, so make sure you have it by typing "lsb-version -a" in the terminal
 1. After cloning this git repo, use the terminal to navigate to /ros2_ws   
