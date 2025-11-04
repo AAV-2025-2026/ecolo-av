@@ -7,7 +7,7 @@ What you have after cloning the repo:
       - maincar (package name)
       - xo (package name) 
    
-<br>What you ultimately want before running nodes:
+<br>What you ultimately want to start executing nodes:
 - **User-Interface**
   - **ros2_ws**
     - src
