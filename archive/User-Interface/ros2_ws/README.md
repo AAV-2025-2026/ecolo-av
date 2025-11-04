@@ -7,7 +7,7 @@ What you have after cloning the repo:
       - maincar (package name)
       - xo (package name) 
    
-<br>What you ultimately want on your local machine:
+<br>What you ultimately want before running nodes:
 - **User-Interface**
   - **ros2_ws**
     - src
@@ -16,7 +16,7 @@ What you have after cloning the repo:
     - install
     - build
 <br>
-We always have to write ros2 code in the "src" folder, and each time we want to test it, we have to always build/compile it by creating the "install" and "build" folder, which is automatically done by using a command called "colcon build".<br>
+We always have to write ros2 code in the "src" folder. Each time we want to test it, we have to keep compiling the src folder, which always creates the "install" and "build" folder. We use a command called "colcon build" to automate that.<br>
 <br>Here's how we do that:<br><br>
 
 1. "ROS2: Humble" only works on Ubuntu 22.04, so make sure you have it by typing "lsb-version -a" in the terminal
