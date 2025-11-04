@@ -12,4 +12,8 @@ To do so:
 $ ros2 pkg executables [package_name] (this will show all available nodes you can run in the package) <br>
 $ ros2 run [package_name] [node_name] (this will execute the desired node in your package)
 
-Note: our package name is called "maincar", for the Ecolo
+
+
+
+Note 1: our package name is called "maincar", for the Ecolo
+Note 2: where it says [node_name] should actually be [executable_name] since it is possible to have 1 execution that runs 2+ nodes, but currently the executables I made so far is 1 command to execute 1 node. 
