@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import SearchBar from './components/SearchBar';
 import SearchResults from './components/SearchResults';
 import TopStatusBar from './components/TopStatusBar';
+import Speed from './components/Speed'
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <SearchBar style={{ marginBottom: 10 }} />
           <SearchResults />
         </View>
+        <Speed/>
       </View>
 
       <StatusBar style="auto" />
