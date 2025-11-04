@@ -10,7 +10,7 @@ Now you are able to run ros2 nodes!
 
 To do so:
 
-<span style="color:blue">The following command shows all available nodes you can run in the package: </span><br>
+The following command shows all available nodes you can run in the package: <br>
 **$ ros2 pkg executables [package_name]** 
 
 The following command will executed the desired node:<br>
