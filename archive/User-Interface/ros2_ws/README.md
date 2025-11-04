@@ -4,11 +4,13 @@ What you have after cloning the repo:
 - **User-Interface**
   - **ros2_ws**
     - src
+      - maincar (package name) 
    
 <br>What you ultimately want on your local machine:
 - **User-Interface**
   - **ros2_ws**
     - src
+      - maincar (package name)  
     - install
     - build
 <br>
