@@ -93,7 +93,11 @@ def _create_local_db_travel_data():
         print("Failed to open the local database", e)
 
 
-class Maincar():
+class CarLocalDB():
+    """
+    Manages the local database of the car
+    """
+
     def __init__(self):
         pass
 
@@ -113,12 +117,13 @@ class Maincar():
 
 
 
-    """
-    Do not use this function by itself (private function)
-    """
+
     def _store_location_test(self, 
                                cur_name:str, cur_lat:float, cur_lon:float,
                                dest_name:str, dest_lat:float, dest_lon:float):
+        """
+        Do not use this function by itself (private function)
+        """
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -137,8 +142,8 @@ class Maincar():
 
         pass
 
-
-    def test(self):
+    
+    def test_add_mock_data(self):
         """
             Execute this function to add mock data in 
             /home/pi/travel_data.db
@@ -184,8 +189,8 @@ def main():
     _create_local_db_travel_data()
 
     # Adds "test" data in "travel_data.db"
-    maincar = Maincar()
-    maincar.test()
+    maincar = CarLocalDB()
+    maincar.test_add_mock_data()
 
     
 
