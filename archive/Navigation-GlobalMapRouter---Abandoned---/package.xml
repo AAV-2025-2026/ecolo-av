@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>global_map_router</name>
+  <version>0.0.1</version>
+  <description>Global map route planner using GPS + Google API</description>
+
+  <maintainer email="ruangfafa@todo.todo">ruangfafa</maintainer>
+  <license>MIT</license>
+
+  <!-- ✅ Required for Python ROS2 package -->
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!-- ✅ ROS2 runtime dependencies -->
+  <exec_depend>rclpy</exec_depend>
+
+  <!-- ✅ Your Python library dependencies -->
+  <exec_depend>python3-requests</exec_depend>
+  <exec_depend>python3-dotenv</exec_depend>
+  <exec_depend>python3-colorlog</exec_depend>
+  <exec_depend>python3-certifi</exec_depend>
+  <exec_depend>python3-idna</exec_depend>
+  <exec_depend>python3-urllib3</exec_depend>
+  <exec_depend>python3-charset-normalizer</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
