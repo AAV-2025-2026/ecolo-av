@@ -1,0 +1,6 @@
+lidar_subscriber:
+  ros__parameters:
+    point_cloud_topic: "/velodyne_points"
+    max_range: 50.0
+    min_range: 0.5
+    log_frequency: 10  # Log stats every N frames
