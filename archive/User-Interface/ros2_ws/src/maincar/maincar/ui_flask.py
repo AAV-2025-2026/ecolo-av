@@ -4,11 +4,14 @@ import rclpy
 from rclpy.node import Node
 from flask import Flask
 from threading import Thread
-
+from flask_socketio import SocketIO
 from std_msgs.msg import Float32
 
 # creates flask app
 flask_app = Flask(__name__)
+
+#SocketIO setup
+socketio = SocketIO(flask_app, cors_allowed_origins="*")
 
 # variables
 speed = 0
@@ -43,6 +46,8 @@ class FlaskNode(Node):
         speed = round(float(msg.data), 2)
         self.get_logger().info(str(msg))  # prints received msg
         # can do whatever you want with the message
+
+        socketio.emit("speed_update", {"speed": speed})
 
 
 def main(args=None):
