@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:bitsdojo_window/bitsdojo_window.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  doWhenWindowReady(() {
+    appWindow.maximize();
+    appWindow.show();
+  });
   runApp(const MyApp());
 }
 
