@@ -1,5 +1,3 @@
-import os
-
 class LogMessageCons:
     LOGGER_GLOBAL_MAP_ROUTER="global_map_router"
     LINE_BREAK="================"
@@ -11,10 +9,14 @@ class LogMessageCons:
     SUC_GET_DESTINATION_COORDINATES="Destination: lat=%s, lon=%s"
     FAIL_GET_ROUTE="Failed to get route"
     SUC_GET_ROUTE="Route received: %s points"
-    PRT_ROUTE="   Point %s: lat=%s, lon=%s"
+    PRT_ROUTE_1="Received %d alternative routes"
+    PRT_ROUTE_2="Route #%d - %d points"
+    PRT_ROUTE_3="   [%d] lat=%.6f, lon=%.6f"
 
     FAIL_RECIVED_GEOCODER="Geocoder failed: %s"
     FAIL_RECIVED_DIRECTIONS="Directions API failed: %s"
+    SUC_GET_ROUTES="Route %d decoded (%d points)"
+    FAIL_GET_ROUTES="Failed to decode route %d: %s"
 
 class ApplicationCons:
     MAIN_MODUAL="__main__"
@@ -23,7 +25,7 @@ class ApplicationCons:
 
 class GoogleApiServiceCons:
     API_GEOCODE_URL="https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s"
-    API_Directions_URL = "https://maps.googleapis.com/maps/api/directions/json?origin=%s,%s&destination=%s,%s&key=%s"
+    API_Directions_URL = "https://maps.googleapis.com/maps/api/directions/json?origin=%s,%s&destination=%s,%s&alternatives=true&key=%s"
     RESP_STATUS="status"
     RESP_STATUS_OK="OK"
     RESP_RESULTS="results"
