@@ -1,25 +1,22 @@
 import requests
 
 from global_map_router.app.common.config_loader import GOOGLE_MAP_API_KEY
+from global_map_router.app.common.constant import LogMessageCons, GoogleApiServiceCons
 
 def get_coordinates(address: str, logger):
     """
     address -> latitude, longitude
     Using Google Geocoding API
     """
-    url = (
-        "https://maps.googleapis.com/maps/api/geocode/json"
-        f"?address={address}&key={GOOGLE_MAP_API_KEY}"
-    )
-
+    url = GoogleApiServiceCons.API_GEOCODE_URL % (address, GOOGLE_MAP_API_KEY)
     resp = requests.get(url).json()
 
-    if resp["status"] != "OK":
-        logger.error(f"❌ Geocoder failed: {resp['status']}")
+    if resp[GoogleApiServiceCons.RESP_STATUS] != GoogleApiServiceCons.RESP_STATUS_OK:
+        logger.error(LogMessageCons.FAIL_RECIVED_GEOCODER, resp[GoogleApiServiceCons.RESP_STATUS])
         return None, None
 
-    loc = resp["results"][0]["geometry"]["location"]
-    return loc["lat"], loc["lng"]
+    loc = resp[GoogleApiServiceCons.RESP_RESULTS][0][GoogleApiServiceCons.RESP_RESULTS_GEOMETRY][GoogleApiServiceCons.RESP_RESULTS_GEOMETRY_LOCATION]
+    return loc[GoogleApiServiceCons.RESP_RESULTS_GEOMETRY_LOCATION_LAT], loc[GoogleApiServiceCons.RESP_RESULTS_GEOMETRY_LOCATION_LON]
 
 def get_route(start, dest, logger):
     """
@@ -28,18 +25,15 @@ def get_route(start, dest, logger):
     s_lat, s_lon = start
     d_lat, d_lon = dest
 
-    url = (
-        "https://maps.googleapis.com/maps/api/directions/json"
-        f"?origin={s_lat},{s_lon}&destination={d_lat},{d_lon}&key={GOOGLE_MAP_API_KEY}"
-    )
+    url = GoogleApiServiceCons.API_Directions_URL % (s_lat, s_lon, d_lat, d_lon, GOOGLE_MAP_API_KEY)
 
     resp = requests.get(url).json()
 
-    if resp["status"] != "OK":
-        logger.error(f"❌ Directions API failed: {resp['status']}")
+    if resp[GoogleApiServiceCons.RESP_STATUS] != GoogleApiServiceCons.RESP_STATUS_OK:
+        logger.error(LogMessageCons.FAIL_RECIVED_DIRECTIONS, resp[GoogleApiServiceCons.RESP_STATUS])
         return None
 
-    encoded = resp["routes"][0]["overview_polyline"]["points"]
+    encoded = resp[GoogleApiServiceCons.RESP_ROUTES][0][GoogleApiServiceCons.RESP_ROUTES_OVERVIEW_POLILINE][GoogleApiServiceCons.RESP_ROUTES_OVERVIEW_POLILINE_POINTS]
     return decode_polyline(encoded)
 
 def decode_polyline(poly):
