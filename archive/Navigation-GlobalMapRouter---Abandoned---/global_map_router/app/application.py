@@ -31,15 +31,18 @@ class GlobalMapRouter(Node):
 
         logger.info(LogMessageCons.SUC_GET_DESTINATION_COORDINATES, dest_lat, dest_lon)
 
-        route = get_route((gps_lat, gps_lon), (dest_lat, dest_lon), logger)
-        if not route:
+        routes = get_route((gps_lat, gps_lon), (dest_lat, dest_lon), logger)
+        if not routes:
             logger.error(LogMessageCons.FAIL_GET_ROUTE)
             return
 
-        logger.info(LogMessageCons.SUC_GET_ROUTE, len(route))
+        logger.info(LogMessageCons.PRT_ROUTE_1, len(routes))
 
-        for i, pt in enumerate(route[:10]):
-            logger.info(LogMessageCons.PRT_ROUTE, i, pt[0], pt[1])
+        for i, route in enumerate(routes):
+            logger.info(LogMessageCons.PRT_ROUTE_2, i + 1, len(route))
+            for j, pt in enumerate(route):
+                logger.info(LogMessageCons.PRT_ROUTE_3, j + 1, pt[0], pt[1])
+
 
 def main(args=None):
     logger.info(LogMessageCons.SUC_INIT_GNN_1)

@@ -29,12 +29,25 @@ def get_route(start, dest, logger):
 
     resp = requests.get(url).json()
 
-    if resp[GoogleApiServiceCons.RESP_STATUS] != GoogleApiServiceCons.RESP_STATUS_OK:
-        logger.error(LogMessageCons.FAIL_RECIVED_DIRECTIONS, resp[GoogleApiServiceCons.RESP_STATUS])
-        return None
+    if resp.get(GoogleApiServiceCons.RESP_STATUS) != GoogleApiServiceCons.RESP_STATUS_OK:
+        logger.error(LogMessageCons.FAIL_RECIVED_DIRECTIONS, resp.get(GoogleApiServiceCons.RESP_STATUS))
+        return []
 
-    encoded = resp[GoogleApiServiceCons.RESP_ROUTES][0][GoogleApiServiceCons.RESP_ROUTES_OVERVIEW_POLILINE][GoogleApiServiceCons.RESP_ROUTES_OVERVIEW_POLILINE_POINTS]
-    return decode_polyline(encoded)
+    routes = resp.get(GoogleApiServiceCons.RESP_ROUTES, [])
+    decoded_routes = []
+
+    for i, route in enumerate(routes):
+        try:
+            encoded = route[GoogleApiServiceCons.RESP_ROUTES_OVERVIEW_POLILINE][
+                GoogleApiServiceCons.RESP_ROUTES_OVERVIEW_POLILINE_POINTS
+            ]
+            decoded = decode_polyline(encoded)
+            decoded_routes.append(decoded)
+            logger.info(LogMessageCons.SUC_GET_ROUTES, i + 1, len(decoded))
+        except Exception as e:
+            logger.error(LogMessageCons.FAIL_GET_ROUTES, i + 1, str(e))
+
+    return decoded_routes
 
 def decode_polyline(poly):
     """
