@@ -1,6 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialize window manager
+  await windowManager.ensureInitialized();
+
+  WindowOptions windowOptions = const WindowOptions(
+    size: Size(1920, 1080),
+    center: true,
+    backgroundColor: Colors.transparent,
+    skipTaskbar: false,
+    titleBarStyle: TitleBarStyle.hidden,
+  );
+
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
+    await windowManager.setFullScreen(true);
+    await windowManager.show();
+    await windowManager.focus();
+  });
   runApp(const MyApp());
 }
 
