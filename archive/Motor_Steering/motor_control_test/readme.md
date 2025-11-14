@@ -35,3 +35,14 @@ This lets us verify motor-control behaviour in different scenarios
       aav_drive_msg/
       my_custom_message/
       aav_motor_sim/
+## Autotest
+
+Terminal 1
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run aav_motor_sim motor_sim_node
+
+Terminal 2
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run aav_motor_sim motor_sim_tester
