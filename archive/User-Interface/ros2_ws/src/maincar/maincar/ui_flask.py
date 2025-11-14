@@ -33,7 +33,7 @@ def gps_page():
 
 def run_flask():
     # run Flask server. 0.0.0.0 means listen to all machines on same "network"
-    flask_app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    socketio.run(flask_app, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
 
 
 class FlaskNode(Node):
@@ -53,13 +53,13 @@ class FlaskNode(Node):
     # callback functions
     def callback_function_mock_speed_fetch(self, msg:Float32):
         # "global" means to use global variable "speed"
-        global speed
+        global mock_speed
         
-        speed = round(float(msg.data), 2)
+        mock_speed = round(float(msg.data), 2)
         self.get_logger().info("mock speed: "+str(msg))  # prints received msg
         # can do whatever you want with the message
 
-        socketio.emit("mock_speed_update", {"speed": mock_speed})
+        socketio.emit("mock_speed_update", {"mock_speed": mock_speed})
 
 
     def callback_function_mock_gps_fetch(self, msg:NavSatFix):
