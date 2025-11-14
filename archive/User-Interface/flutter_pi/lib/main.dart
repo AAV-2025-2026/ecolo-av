@@ -88,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // Listen for speed updates
     socket!.on('mock_speed_update', (data) {
       setState(() {
-        speed = (data['speed'] as num).toDouble();
+        speed = (data['mock_speed'] as num).toDouble();
       });
       print("📡 Received mock speed: $speed");
     });

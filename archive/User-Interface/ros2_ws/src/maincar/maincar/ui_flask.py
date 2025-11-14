@@ -33,7 +33,7 @@ def gps_page():
 
 def run_flask():
     # run Flask server. 0.0.0.0 means listen to all machines on same "network"
-    flask_app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    socketio.run(flask_app, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
 
 
 class FlaskNode(Node):
