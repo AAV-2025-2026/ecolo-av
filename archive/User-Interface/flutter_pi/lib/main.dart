@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'ROS2 Live Data Dashboard'),
+      home: const MyHomePage(title: 'UI Dashboard'),
     );
   }
 }
@@ -123,7 +123,7 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              '🚗 Live ROS2 Data Stream',
+              'Vehicle Status Module',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 26,
