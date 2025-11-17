@@ -1,10 +1,13 @@
 class LogMessageCons:
     LOGGER_GLOBAL_MAP_ROUTER="global_map_router"
     LINE_BREAK="================"
-    SUC_INIT_GNN_1="Starting Global Navigation Node"
-    SUC_INIT_GNN_2="Waiting for /target_address..."
+    SUC_INIT_GMRN_1="Starting Global Map Router Node"
+    SUC_INIT_GMRN_2="Waiting for /target_address..."
+    SUC_INIT_GMRN_3="Waiting for /current_coordinate..."
     SUC_RECEIVED_DESTINATION="Received destination: %s"
-    SUC_RECEIVED_GPS="Current GPS: lat=%s, lon=%s"
+    SUC_RECEIVED_GPS="Updated GPS -> lat=%.6f lon=%.6f"
+    FAIL_RECEIVED_GPS="Invalid /current_coordinate format, expected 'lat,lon'. Error: %s"
+    WARN_RECEIVED_GPS="No GPS yet, waiting for /current_coordinate ..."
     FAIL_GET_DESTINATION_COORDINATES="Failed to get destination coordinates"
     SUC_GET_DESTINATION_COORDINATES="Destination: lat=%s, lon=%s"
     FAIL_GET_ROUTE="Failed to get route"
@@ -21,6 +24,7 @@ class LogMessageCons:
 class ApplicationCons:
     MAIN_MODUAL="__main__"
     NODE_TARGET_ADDRESS="/target_address"
+    NODE_CURRENT_COORDINATE="/current_coordinate"
     NODE_GLOBAL_MAP_ROUTER="global_map_router"
 
 class GoogleApiServiceCons:
