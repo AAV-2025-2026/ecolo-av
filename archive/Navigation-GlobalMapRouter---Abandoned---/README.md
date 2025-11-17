@@ -1,8 +1,8 @@
 # 🛰️ Global Map Router (ROS 2 Node)
 
 `global_map_router` is a ROS 2 node that performs **global route planning** using the **Google Maps Directions API**.
-It subscribes to a destination topic (`/target_address`), retrieves the current GPS position (from `.env`), and computes one or more route alternatives.
-Each route’s polyline coordinates are decoded and printed to the console.
+It subscribes to a destination topic (`/target_address`), retrieves the current GPS position from /current_coordinate topic, and computes one or more route alternatives.
+Each route’s polyline coordinates are decoded and printed to the console. Routes are also published in JSON format to topic: /global_map_router
 
 ---
 
@@ -27,6 +27,7 @@ Requires a working ROS 2 installation (Humble, Iron, or Jazzy).
 Python dependencies (installed automatically during ROS build):
 
 ```
+json
 rclpy
 std_msgs
 requests
@@ -48,25 +49,23 @@ Example:
 
 ```bash
 GOOGLE_MAP_API_KEY=AIzaSyD**************
-CUR_POS_LAT_TEST=45.4231
-CUR_POS_LON_TEST=-75.6831
 ```
 
 | Variable                                | Description                                                                                                        |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `GOOGLE_MAP_API_KEY`                    | Your valid Google Maps API key. Enable **Geocoding API** and **Directions API**, and ensure **Billing** is active. |
-| `CUR_POS_LAT_TEST` / `CUR_POS_LON_TEST` | Default GPS location. Currently set to Carleton University (Ottawa).                                               |
 
 ---
 
 ## 🧭 Node Information
 
-| Field                | Value                                                                                |
-| -------------------- | ------------------------------------------------------------------------------------ |
-| **Node name**        | `global_map_router`                                                                  |
-| **Subscribed topic** | `/target_address`                                                                    |
-| **Message type**     | `std_msgs/String`                                                                    |
-| **Purpose**          | Receives destination text and computes a route plan using Google Maps Directions API |
+| Field                | Value                                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| **Node name**        | `global_map_router`                                                                           |
+| **Subscribed topics**| `/target_address` (destination text), `/current_coordinate` (live GPS)                        |
+| **Published topic**  | `/global_map_router` (JSON route output)                                                      |
+| **Message type**     | `std_msgs/String`                                                                             |
+| **Purpose**          | Computes one or more global navigation routes using Google Maps Directions API               |
 
 ---
 
@@ -141,6 +140,7 @@ You can test other destinations:
 
 ```bash
 ros2 topic pub /target_address std_msgs/String "data: Ottawa University"
+ros2 topic pub /current_coordinate std_msgs/String "data: 45.4231,-75.6831"
 ros2 topic pub /target_address std_msgs/String "data: Montreal Airport"
 ```
 
@@ -156,6 +156,25 @@ ros2 topic pub /target_address std_msgs/String "data: Montreal Airport"
 
 ---
 
+### 📦 Route Output Format (JSON)
+
+Each computed route is published as:
+
+```json
+{
+  "routes": [
+    {
+      "route_index": 0,
+      "points": [
+        {"lat": 45.4233, "lon": -75.68245},
+        ...
+      ],
+      "source": "GoogleDirections"
+    }
+  ]
+}
+```
+---
 ## 🧠 Author
 
 **Ruangfafa**
