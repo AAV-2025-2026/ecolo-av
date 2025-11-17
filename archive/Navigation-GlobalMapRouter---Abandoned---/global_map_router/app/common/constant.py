@@ -1,9 +1,9 @@
 class LogMessageCons:
     LOGGER_GLOBAL_MAP_ROUTER="global_map_router"
     LINE_BREAK="================"
-    SUC_INIT_GMRN_1="Starting Global Map Router Node"
-    SUC_INIT_GMRN_2="Waiting for /target_address..."
-    SUC_INIT_GMRN_3="Waiting for /current_coordinate..."
+    SUC_INIT_GMR_1="Starting /global_map_router"
+    SUC_INIT_GMR_2="Waiting for /target_address..."
+    SUC_INIT_GMR_3="Waiting for /current_coordinate..."
     SUC_RECEIVED_DESTINATION="Received destination: %s"
     SUC_RECEIVED_GPS="Updated GPS -> lat=%.6f lon=%.6f"
     FAIL_RECEIVED_GPS="Invalid /current_coordinate format, expected 'lat,lon'. Error: %s"
@@ -15,6 +15,7 @@ class LogMessageCons:
     PRT_ROUTE_1="Received %d alternative routes"
     PRT_ROUTE_2="Route #%d - %d points"
     PRT_ROUTE_3="   [%d] lat=%.6f, lon=%.6f"
+    PUB_ROUTE="Published %d routes, total %d points to /global_map_router"
 
     FAIL_RECIVED_GEOCODER="Geocoder failed: %s"
     FAIL_RECIVED_DIRECTIONS="Directions API failed: %s"
@@ -23,9 +24,17 @@ class LogMessageCons:
 
 class ApplicationCons:
     MAIN_MODUAL="__main__"
+    CLASS_GLOBAL_MAP_ROUTER="global_map_router"
     NODE_TARGET_ADDRESS="/target_address"
     NODE_CURRENT_COORDINATE="/current_coordinate"
-    NODE_GLOBAL_MAP_ROUTER="global_map_router"
+    NODE_GLOBAL_MAP_ROUTER="/global_map_router"
+    ROUTE_MSG_1="route_index"
+    ROUTE_MSG_2="points"
+    ROUTE_MSG_3="lat"
+    ROUTE_MSG_4="lon"
+    ROUTE_MSG_5="source"
+    ROUTE_MSG_6="Online[GoogleDirections]"
+    ROUTE_MSG_7="routes"
 
 class GoogleApiServiceCons:
     API_GEOCODE_URL="https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s"
