@@ -24,17 +24,19 @@ class LogMessageCons:
 
 class ApplicationCons:
     MAIN_MODUAL="__main__"
-    CLASS_GLOBAL_MAP_ROUTER="global_map_router"
-    NODE_TARGET_ADDRESS="/target_address"
-    NODE_CURRENT_COORDINATE="/current_coordinate"
-    NODE_GLOBAL_MAP_ROUTER="/global_map_router"
-    ROUTE_MSG_1="route_index"
-    ROUTE_MSG_2="points"
-    ROUTE_MSG_3="lat"
-    ROUTE_MSG_4="lon"
-    ROUTE_MSG_5="source"
-    ROUTE_MSG_6="Online[GoogleDirections]"
-    ROUTE_MSG_7="routes"
+
+class GlobalMapRouterCons:
+    CLASS_GLOBAL_MAP_ROUTER = "global_map_router"
+    NODE_TARGET_ADDRESS = "/target_address"
+    NODE_CURRENT_COORDINATE = "/current_coordinate"
+    NODE_GLOBAL_MAP_ROUTER = "/global_map_router"
+    ROUTE_MSG_1 = "route_index"
+    ROUTE_MSG_2 = "points"
+    ROUTE_MSG_3 = "lat"
+    ROUTE_MSG_4 = "lon"
+    ROUTE_MSG_5 = "source"
+    ROUTE_MSG_6 = "Online[GoogleDirections]"
+    ROUTE_MSG_7 = "routes"
 
 class GoogleApiServiceCons:
     API_GEOCODE_URL="https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s"
