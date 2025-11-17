@@ -1,3 +1,4 @@
+import json
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -10,16 +11,17 @@ logger = get_logger(LogMessageCons.LOGGER_GLOBAL_MAP_ROUTER)
 
 class GlobalMapRouter(Node):
     def __init__(self):
-        super().__init__(ApplicationCons.NODE_GLOBAL_MAP_ROUTER)
+        super().__init__(ApplicationCons.CLASS_GLOBAL_MAP_ROUTER)
 
         self.create_subscription(String, ApplicationCons.NODE_TARGET_ADDRESS, self.on_target_address, 10)
         self.create_subscription(String, ApplicationCons.NODE_CURRENT_COORDINATE, self.on_current_coordinate, 10)
+        self.route_pub = self.create_publisher(String, ApplicationCons.NODE_GLOBAL_MAP_ROUTER, 10)
 
         self.current_lat = None
         self.current_lon = None
 
-        logger.info(LogMessageCons.SUC_INIT_GMRN_2)
-        logger.info(LogMessageCons.SUC_INIT_GMRN_3)
+        logger.info(LogMessageCons.SUC_INIT_GMR_2)
+        logger.info(LogMessageCons.SUC_INIT_GMR_3)
 
     def on_current_coordinate(self, msg):
         try:
@@ -61,9 +63,30 @@ class GlobalMapRouter(Node):
             for j, pt in enumerate(route):
                 logger.info(LogMessageCons.PRT_ROUTE_3, j + 1, pt[0], pt[1])
 
+        self.publish_routes(routes)
+
+    def publish_routes(self, routes):
+        all_routes = []
+
+        for idx, route_points in enumerate(routes):
+            single_route = {
+                ApplicationCons.ROUTE_MSG_1: idx,
+                ApplicationCons.ROUTE_MSG_2: [
+                    {ApplicationCons.ROUTE_MSG_3: lat, ApplicationCons.ROUTE_MSG_4: lon}
+                    for lat, lon in route_points
+                ],
+                ApplicationCons.ROUTE_MSG_5: ApplicationCons.ROUTE_MSG_6
+            }
+            all_routes.append(single_route)
+
+        merged_msg = {ApplicationCons.ROUTE_MSG_7: all_routes}
+
+        self.route_pub.publish(String(data=json.dumps(merged_msg)))
+        logger.info(LogMessageCons.PUB_ROUTE, len(all_routes),
+                    sum(len(r[ApplicationCons.ROUTE_MSG_2]) for r in all_routes))
 
 def main(args=None):
-    logger.info(LogMessageCons.SUC_INIT_GMRN_1)
+    logger.info(LogMessageCons.SUC_INIT_GMR_1)
     rclpy.init(args=args)
     node = GlobalMapRouter()
     rclpy.spin(node)
