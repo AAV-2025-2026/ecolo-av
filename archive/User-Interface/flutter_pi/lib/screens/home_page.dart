@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../components/sockets/socket_services.dart';
+import 'map_page.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -114,6 +115,15 @@ class _MyHomePageState extends State<MyHomePage> {
             const Text(
               "Reading ROS2 Mock Data",
               style: TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MapPage()));
+              },
+              icon: const Icon(Icons.map),
+              label: const Text('Open Map'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple.shade600),
             ),
           ],
         ),
