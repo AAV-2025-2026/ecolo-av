@@ -97,7 +97,7 @@ class _MapPageState extends State<MapPage> {
 
     if (mounted && currentLocation == null) {
       setState(() {
-        currentLocation = LatLng(45.4215, -75.6919);
+        currentLocation = LatLng(45.385007, -75.698293);
       });
       try {
         mapController.move(currentLocation!, 13.0);
