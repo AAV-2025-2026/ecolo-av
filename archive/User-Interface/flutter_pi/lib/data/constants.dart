@@ -12,3 +12,5 @@ const kWindowConfig = WindowOptions(
 const kAppTitle = 'ROS2 + Flask + Flutter Demo';
 
 const kColorSchemeSeed = Colors.deepPurple;
+
+const kOsrmBaseUrl = 'http://localhost:5000';

@@ -37,6 +37,10 @@ dependencies:
   window_manager: ^0.5.1
   socket_io_client: ^2.0.3
   provider: ^6.1.2
+  flutter_map: ^4.0.0
+  latlong2: ^0.8.2
+  geolocator: ^9.0.2
+  http: ^0.13.5
 
 dev_dependencies:
   flutter_test:
