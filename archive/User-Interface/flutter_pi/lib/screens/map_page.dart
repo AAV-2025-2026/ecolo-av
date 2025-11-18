@@ -27,7 +27,6 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  // If running on an Android emulator and OSRM runs on the host -> use http://10.0.2.2:5000
   String osrmBaseUrl = kOsrmBaseUrl;
 
   final MapController mapController = MapController();
@@ -165,13 +164,15 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     final markers = <Marker>[];
     if (currentLocation != null) {
       markers.add(Marker(
         point: currentLocation!,
         width: 40,
         height: 40,
-        builder: (ctx) => const Icon(Icons.my_location, color: Colors.blue, size: 28),
+        builder: (ctx) => Icon(Icons.my_location, color: theme.colorScheme.primary, size: 28),
       ));
     }
     if (destination != null) {
@@ -179,7 +180,7 @@ class _MapPageState extends State<MapPage> {
         point: destination!,
         width: 40,
         height: 40,
-        builder: (ctx) => const Icon(Icons.location_on, color: Colors.red, size: 36),
+        builder: (ctx) => Icon(Icons.location_on, color: theme.colorScheme.secondary, size: 36),
       ));
     }
 
@@ -188,12 +189,16 @@ class _MapPageState extends State<MapPage> {
       polylines.add(Polyline(
         points: routePoints,
         strokeWidth: 5.0,
-        color: Colors.blueAccent,
+        color: theme.colorScheme.primary,
       ));
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('OSRM Map')),
+      appBar: AppBar(
+        title: const Text('OSRM Map'),
+        backgroundColor: theme.colorScheme.primaryContainer,
+        foregroundColor: theme.colorScheme.onPrimaryContainer,
+      ),
       body: Column(
         children: [
           Expanded(
@@ -217,7 +222,7 @@ class _MapPageState extends State<MapPage> {
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: Colors.grey[100],
+            color: theme.colorScheme.surfaceContainerHighest,
             child: Column(
               children: [
                 Row(children: [
@@ -268,7 +273,7 @@ class _MapPageState extends State<MapPage> {
                       label: const Text('Clear'),
                     ),
                     const SizedBox(width: 12),
-                    if (routing) const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                    if (routing) SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary)),
                     const SizedBox(width: 8),
                     if (currentLocation != null) Text('You: ${currentLocation!.latitude.toStringAsFixed(5)}, ${currentLocation!.longitude.toStringAsFixed(5)}'),
                   ],
