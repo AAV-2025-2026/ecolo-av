@@ -12,6 +12,75 @@ find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
+    libavcodec
+    libavformat
+    libavutil
+    libswscale
+)
+
+# Include directories
+include_directories(include)
+
+# Create library
+add_library(${PROJECT_NAME}_lib
+  src/nvdec_decoder.cpp
+  src/rtsp_handler.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}_lib
+  PkgConfig::LIBAV
+)
+
+ament_target_dependencies(${PROJECT_NAME}_lib
+  rclcpp
+  sensor_msgs
+  cv_bridge
+  OpenCV
+)
+
+# Create executable
+add_executable(camera_decode_node src/camera_decode_node.cpp)
+
+target_link_libraries(camera_decode_node
+  ${PROJECT_NAME}_lib
+)
+
+ament_target_dependencies(camera_decode_node
+  rclcpp
+  sensor_msgs
+  cv_bridge
+  image_transport
+  std_msgs
+  OpenCV
+)
+
+# Install targets
+install(TARGETS
+  camera_decode_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(TARGETS
+  ${PROJECT_NAME}_lib
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY
+  include/
+  DESTINATION include
+)
+
+install(DIRECTORY
+  launch
+  config
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
