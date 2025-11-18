@@ -164,15 +164,13 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
     final markers = <Marker>[];
     if (currentLocation != null) {
       markers.add(Marker(
         point: currentLocation!,
         width: 40,
         height: 40,
-        builder: (ctx) => Icon(Icons.my_location, color: theme.colorScheme.primary, size: 28),
+        builder: (ctx) => const Icon(Icons.my_location, color: Colors.white, size: 28),
       ));
     }
     if (destination != null) {
@@ -180,7 +178,7 @@ class _MapPageState extends State<MapPage> {
         point: destination!,
         width: 40,
         height: 40,
-        builder: (ctx) => Icon(Icons.location_on, color: theme.colorScheme.secondary, size: 36),
+        builder: (ctx) => Icon(Icons.location_on, color: Colors.deepPurple.shade300, size: 36),
       ));
     }
 
@@ -189,15 +187,16 @@ class _MapPageState extends State<MapPage> {
       polylines.add(Polyline(
         points: routePoints,
         strokeWidth: 5.0,
-        color: theme.colorScheme.primary,
+        color: Colors.deepPurple.shade300,
       ));
     }
 
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('OSRM Map'),
-        backgroundColor: theme.colorScheme.primaryContainer,
-        foregroundColor: theme.colorScheme.onPrimaryContainer,
+        backgroundColor: Colors.deepPurple.shade700,
+        foregroundColor: Colors.white,
       ),
       body: Column(
         children: [
@@ -222,14 +221,24 @@ class _MapPageState extends State<MapPage> {
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: theme.colorScheme.surfaceContainerHighest,
+            color: Colors.black,
             child: Column(
               children: [
                 Row(children: [
                   Expanded(
                     child: TextField(
                       controller: lonController,
-                      decoration: const InputDecoration(labelText: 'Longitude'),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Longitude',
+                        labelStyle: const TextStyle(color: Colors.white70),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.deepPurple.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.deepPurple.shade700),
+                        ),
+                      ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                     ),
                   ),
@@ -237,17 +246,38 @@ class _MapPageState extends State<MapPage> {
                   Expanded(
                     child: TextField(
                       controller: latController,
-                      decoration: const InputDecoration(labelText: 'Latitude'),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Latitude',
+                        labelStyle: const TextStyle(color: Colors.white70),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.deepPurple.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.deepPurple.shade700),
+                        ),
+                      ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ElevatedButton(onPressed: _onSetFromInput, child: const Text('Go')),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple.shade300,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: _onSetFromInput,
+                    child: const Text('Go'),
+                  ),
                 ]),
                 const SizedBox(height: 6),
                 Row(
                   children: [
                     ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple.shade300,
+                        foregroundColor: Colors.white,
+                      ),
                       onPressed: () async {
                         await _determinePosition();
                         if (currentLocation != null) {
@@ -261,6 +291,10 @@ class _MapPageState extends State<MapPage> {
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple.shade700,
+                        foregroundColor: Colors.white,
+                      ),
                       onPressed: () {
                         setState(() {
                           routePoints = [];
@@ -273,9 +307,13 @@ class _MapPageState extends State<MapPage> {
                       label: const Text('Clear'),
                     ),
                     const SizedBox(width: 12),
-                    if (routing) SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary)),
+                    if (routing) SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.deepPurple.shade300)),
                     const SizedBox(width: 8),
-                    if (currentLocation != null) Text('You: ${currentLocation!.latitude.toStringAsFixed(5)}, ${currentLocation!.longitude.toStringAsFixed(5)}'),
+                    if (currentLocation != null) 
+                      Text(
+                        'You: ${currentLocation!.latitude.toStringAsFixed(5)}, ${currentLocation!.longitude.toStringAsFixed(5)}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
                   ],
                 )
               ],
