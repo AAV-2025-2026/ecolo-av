@@ -123,7 +123,6 @@ class _MyHomePageState extends State<MyHomePage> {
               },
               icon: const Icon(Icons.map),
               label: const Text('Open Map'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple.shade600),
             ),
           ],
         ),
