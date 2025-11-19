@@ -13,7 +13,7 @@ Virtual simulation of AAV.
 # Instructions
 
 ## 1. Launch CARLA
-  - Open terminal and navigate to directory where Carla was downloaded and extracted
+  - Open terminal and navigate to directory where Carla was downloaded and extracted (Home directory if in Bay 4)
   - Use command ./CarlaUE4.sh --ros2 to launch the simulator
 
 ## 2. Set up ROS2 Environment
