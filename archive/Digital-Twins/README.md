@@ -13,14 +13,13 @@ Virtual simulation of AAV.
 # Instructions
 
 ## 1. Launch CARLA
-  - Open terminal and navigate to directory where Carla was downloaded and extracted (Home directory if in Bay 4)
+  - Open terminal and navigate to directory where Carla was downloaded and extracted (Home directory on Desktop in Bay 4)
   - Use command ./CarlaUE4.sh --ros2 to launch the simulator
 
 ## 2. Set up ROS2 Environment
-  - Open new terminal and navigate to directory where ROS2 was installed
+  - Open new terminal and navigate to directory where ROS2 was installed (Digital_Twins/ROS2-Brdige-Attempt2 on Desktop in Bay 4)
   - Write command source ./install/setup.bash
-  - If working in Bay 4, use directory Digital_Twins/ROS2-Brdige-Attempt2
-
+    
 ## 3. Spawn Example Vehicle
   - Using the same terminal, type command ros2 launch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch.py
 
