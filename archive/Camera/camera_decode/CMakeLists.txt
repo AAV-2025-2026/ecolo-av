@@ -22,8 +22,32 @@ pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
     libswscale
 )
 
+# Find NVIDIA Multimedia API
+find_path(NVMM_INCLUDE_DIR
+  NAMES NvVideoDecoder.h
+  PATHS /usr/src/jetson_multimedia_api/include
+)
+
+find_library(NVBUF_UTILS_LIB
+  NAMES nvbuf_utils
+  PATHS /usr/lib/aarch64-linux-gnu/tegra
+)
+
+find_library(NVBUFSURFACE_LIB
+  NAMES nvbufsurface
+  PATHS /usr/lib/aarch64-linux-gnu/tegra
+)
+
+find_library(NVBUFSURFTRANSFORM_LIB
+  NAMES nvbufsurftransform
+  PATHS /usr/lib/aarch64-linux-gnu/tegra
+)
+
 # Include directories
-include_directories(include)
+include_directories(
+  include
+  ${NVMM_INCLUDE_DIR}
+)
 
 # Create library
 add_library(${PROJECT_NAME}_lib
@@ -33,6 +57,9 @@ add_library(${PROJECT_NAME}_lib
 
 target_link_libraries(${PROJECT_NAME}_lib
   PkgConfig::LIBAV
+  ${NVBUF_UTILS_LIB}
+  ${NVBUFSURFACE_LIB}
+  ${NVBUFSURFTRANSFORM_LIB}
 )
 
 ament_target_dependencies(${PROJECT_NAME}_lib
