@@ -6,9 +6,9 @@ Virtual simulation of AAV.
 
 # Tools
 
-Ubuntu Distribution 22.0.4
-CARLA Simulator Version 0.9.16 
-ROS2 - Humble
+1. Ubuntu Distribution 22.0.4
+2. CARLA Simulator Version 0.9.16 
+3. ROS2 - Humble
 
 # Instructions
 
