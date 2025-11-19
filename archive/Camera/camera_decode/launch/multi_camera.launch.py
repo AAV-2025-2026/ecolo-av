@@ -17,14 +17,15 @@ def generate_launch_description():
             name='camera_decode_node_cam1',
             parameters=[config_file],
             output='screen'
-        ),
-        Node(
-            package='camera_decode',
-            executable='camera_decoder_node',
-            name='camera_decode_node_cam2',
-            parameters=[config_file],
-            output='screen'
         )
+        # ),
+        # Node(
+        #     package='camera_decode',
+        #     executable='camera_decoder_node',
+        #     name='camera_decode_node_cam2',
+        #     parameters=[config_file],
+        #     output='screen'
+        # )
         # Node(
         #     package='camera_decode',
         #     executable='camera_decoder_node',
