@@ -73,7 +73,7 @@ namespace camera_decode {
         frame_height_ = codec_params->height;
 
         // Find the decoder for the video stream
-        codec_ = avcodec_find_decoder_by_name("h264_nvv4l2dc");
+        codec_ = avcodec_find_decoder_by_name("h264_nvv4l2dec");
         if (!codec_)
         {
             std::cerr << "NVDEC decoder not available, falling back to software decoder." << std::endl;
