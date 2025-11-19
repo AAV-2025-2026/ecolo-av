@@ -52,7 +52,6 @@ include_directories(
 # Create library
 add_library(${PROJECT_NAME}_lib
   src/nvdec_decoder.cpp
-  src/rtsp_handler.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_lib
@@ -70,13 +69,13 @@ ament_target_dependencies(${PROJECT_NAME}_lib
 )
 
 # Create executable
-add_executable(camera_decode_node src/camera_decode_node.cpp)
+add_executable(camera_decoder_node src/camera_decoder_node.cpp)
 
-target_link_libraries(camera_decode_node
+target_link_libraries(camera_decoder_node
   ${PROJECT_NAME}_lib
 )
 
-ament_target_dependencies(camera_decode_node
+ament_target_dependencies(camera_decoder_node
   rclcpp
   sensor_msgs
   cv_bridge
@@ -87,7 +86,7 @@ ament_target_dependencies(camera_decode_node
 
 # Install targets
 install(TARGETS
-  camera_decode_node
+  camera_decoder_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
