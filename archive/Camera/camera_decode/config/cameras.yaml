@@ -1,0 +1,15 @@
+# Camera 1 Configuration
+camera_decode_node_cam1:
+  ros__parameters:
+    camera_name: "cam1"
+    rtsp_url: "rtsp://192.168.1.101:8554/cam1"
+    frame_rate: 30
+    decoder_type: "nvdec"  # Options: "nvdec" or "rtsp"
+
+# Camera 2 Configuration
+camera_decode_node_cam2:
+  ros__parameters:
+    camera_name: "cam2"
+    rtsp_url: "rtsp://192.168.1.101:8554/cam2"
+    frame_rate: 30
+    decoder_type: "nvdec"
