@@ -3,7 +3,7 @@
 #include "camera_decode/nvdec_decoder.hpp"
 
 namespace camera_decode {
-    NvdecDecoder::NvdecDecoder(const std::string& rtsp_url)
+    NvDecDecoder::NvDecDecoder(const std::string& rtsp_url)
     : rtsp_url_(rtsp_url)
     , is_opened_(false)
     , format_ctx_(nullptr)
@@ -68,12 +68,12 @@ namespace camera_decode {
         }
 
         // Get codec parameters
-        AVCodecParameters* codec_params = format_ctx_-> streams[video_stream_idx_]->codecpar;
+        AVCodecParameters* codec_params = format_ctx_->streams[video_stream_idx_]->codecpar;
         frame_width_ = codec_params->width;
         frame_height_ = codec_params->height;
 
         // Find the decoder for the video stream
-        codec_ = avcodec_find_decoder_by_name("h264_nvdec");
+        codec_ = avcodec_find_decoder_by_name("h264_nvv4l2dc");
         if (!codec_)
         {
             std::cerr << "NVDEC decoder not available, falling back to software decoder." << std::endl;
@@ -112,9 +112,9 @@ namespace camera_decode {
             return false;
         }
 
-        int num_bytes = av_image_get_buffer_size(AV_PIX_FMT_BGR24, frame_width_, frame_height_, 1); // num_bytes calculation
-        uint8_t* buffer = (uint8_t*)av_malloc(num_bytes * sizeof(uint8_t)); // buffer allocation
-        av_image_fill_arrays(frame_bgr_->data, frame_bgr_->linesize, buffer, AV_PIX_FMT_BGR24, frame_width_, frame_height_, 1); // fill frame_bgr_ with buffer
+        int num_bytes = av_image_get_buffer_size(AV_PIX_FMT_BGR24, frame_width_, frame_height_, 1);
+        uint8_t* buffer = (uint8_t*)av_malloc(num_bytes * sizeof(uint8_t));
+        av_image_fill_arrays(frame_bgr_->data, frame_bgr_->linesize, buffer, AV_PIX_FMT_BGR24, frame_width_, frame_height_, 1);
 
         sws_ctx_ = sws_getContext(frame_width_, frame_height_, codec_ctx_->pix_fmt,
                                     frame_width_, frame_height_, AV_PIX_FMT_BGR24,
@@ -168,6 +168,7 @@ namespace camera_decode {
         
         is_opened_ = false;
     }
+
     // Check if the decoder is opened
     bool NvDecDecoder::isOpened() const {
         return is_opened_;

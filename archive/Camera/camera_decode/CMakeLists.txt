@@ -28,19 +28,21 @@ find_path(NVMM_INCLUDE_DIR
   PATHS /usr/src/jetson_multimedia_api/include
 )
 
-find_library(NVBUF_UTILS_LIB
-  NAMES nvbuf_utils
-  PATHS /usr/lib/aarch64-linux-gnu/tegra
-)
-
+# Find NVIDIA buffer libraries (nvbuf_utils removed - deprecated in JetPack 5+)
 find_library(NVBUFSURFACE_LIB
   NAMES nvbufsurface
-  PATHS /usr/lib/aarch64-linux-gnu/tegra
+  PATHS 
+    /usr/lib/aarch64-linux-gnu/tegra
+    /usr/lib/aarch64-linux-gnu/nvidia
+    /usr/lib/aarch64-linux-gnu
 )
 
 find_library(NVBUFSURFTRANSFORM_LIB
   NAMES nvbufsurftransform
-  PATHS /usr/lib/aarch64-linux-gnu/tegra
+  PATHS 
+    /usr/lib/aarch64-linux-gnu/tegra
+    /usr/lib/aarch64-linux-gnu/nvidia
+    /usr/lib/aarch64-linux-gnu
 )
 
 # Include directories
@@ -56,7 +58,6 @@ add_library(${PROJECT_NAME}_lib
 
 target_link_libraries(${PROJECT_NAME}_lib
   PkgConfig::LIBAV
-  ${NVBUF_UTILS_LIB}
   ${NVBUFSURFACE_LIB}
   ${NVBUFSURFTRANSFORM_LIB}
 )
