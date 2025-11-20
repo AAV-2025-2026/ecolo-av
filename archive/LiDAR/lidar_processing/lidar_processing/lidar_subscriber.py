@@ -9,6 +9,8 @@ from sensor_msgs.msg import PointCloud2
 import sensor_msgs_py.point_cloud2 as pc2
 import numpy as np
 
+from lidar_processing.utils.pt_cloud_utility import filter_ptcloud
+
 class LidarSubscriber(Node):
 
     def __init__(self):
@@ -37,20 +39,6 @@ class LidarSubscriber(Node):
         self.get_logger().info(f'Range filter: {self.min_range}m - {self.max_range}m')
         self.get_logger().info('=================================')
 
-    def filter_ptcloud(self, points):
-        """
-        Filter point cloud by distance range.
-        
-        Args:
-            points: Nx4 numpy array (x, y, z, intensity)
-            
-        Returns:
-            Filtered numpy array
-        """
-        distances = np.sqrt(points[:, 0]**2 + points[:, 1]**2 + points[:, 2]**2)
-        mask = (distances >= self.min_range) & (distances <= self.max_range)
-        return points[mask]
-    
     def lidar_callback(self, msg):
         """
         Process incoming LiDAR point cloud message.
@@ -97,19 +85,6 @@ class LidarSubscriber(Node):
             self.get_logger().info(f'Intensity: [{filtered_points[:, 3].min():.0f}, {filtered_points[:, 3].max():.0f}]')
         
         self.get_logger().info(f'{"="*50}')    
-
-    def process_ptcloud(self, points):
-        """
-        Main processing function for point cloud.
-        Add your custom processing here (object detection, etc.)
-        
-        Args:
-            points: Nx4 numpy array of filtered points
-        """
-        # TODO: Add your processing logic here
-        # For now, just pass
-        pass
-
 
 def main(args=None):
     """Main function to run the node."""
