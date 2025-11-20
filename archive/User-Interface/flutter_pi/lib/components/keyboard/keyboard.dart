@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'input_manager.dart';
-import 'custom_button.dart';
+import 'keyboard_key.dart';
 
-class CustomKeyboard extends StatelessWidget {
-  const CustomKeyboard({super.key});
+class Keyboard extends StatelessWidget {
+  const Keyboard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class CustomKeyboard extends StatelessWidget {
             height: height ?? keyHeight,
             child: Padding(
               padding: const EdgeInsets.all(keyPadding),
-              child: CustomButton(
+              child: KeyboardKey(
                 onPressed: onTap,
                 child: Center(
                   child: Text(
@@ -52,17 +52,17 @@ class CustomKeyboard extends StatelessWidget {
             children: keys.map((key) {
               switch (key) {
                 case 'Backspace':
-                  return buildKey('←', flexMultiplier: backspaceFlex, onTap: input.backspace);
+                  return buildKey('←', flexMultiplier: backspaceFlex, onTap: () => input.backspace());
                 case 'Enter':
-                  return buildKey('Enter', flexMultiplier: 2, onTap: () => input.insert(' '));
+                  return buildKey('Enter', flexMultiplier: 2, onTap: () => input.clearActive());
                 case 'Space':
                   return buildKey(' ', flexMultiplier: 4.5, onTap: () => input.insert(' '));
                 case '<':
-                  return buildKey('<', flexMultiplier: 1, onTap: () => input.insert(' '));
+                  return buildKey('<', flexMultiplier: 1, onTap: () => input.moveCursorLeft());
                 case '>':
-                  return buildKey('>', flexMultiplier: 1, onTap: () => input.insert(' '));
+                  return buildKey('>', flexMultiplier: 1, onTap: () => input.moveCursorRight());
                 case 'Close':
-                  return buildKey('⬇', flexMultiplier: 1.5, onTap: () => input.insert(' '));
+                  return buildKey('⬇', flexMultiplier: 1.5, onTap: () => input.clearActive());
                 case 'Symbol':
                   return buildKey('?#&', flexMultiplier: 1.5, onTap: () => input.insert(' '));
                 case 'Keyboard Switch':
