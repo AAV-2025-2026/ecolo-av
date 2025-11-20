@@ -1,5 +1,9 @@
-# 🛰️ Global Map Router (ROS 2 Node)
+# 🛰️ Global Map Router`[Abandoned 2025/11/19]`
 
+## Why abandoned?
+Since this repo was originally planned to use the **Google Direction API** for navigation planning, but it lacked essential road surface information required for autonomous driving, we later switched to using the UI group’s **OSRM** for local deployment and generation of the global route.
+
+## Introduction
 `global_map_router` is a ROS 2 node that performs **global route planning** using the **Google Maps Directions API**.
 It subscribes to a destination topic (`/target_address`), retrieves the current GPS position from /current_coordinate topic, and computes one or more route alternatives.
 Each route’s polyline coordinates are decoded and printed to the console. Routes are also published in JSON format to topic: /global_map_router
