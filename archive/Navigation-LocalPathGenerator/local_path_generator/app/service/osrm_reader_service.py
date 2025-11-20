@@ -10,7 +10,7 @@ from local_path_generator.app.model.osrm.osrm_leg_model import OSRMLeg
 from local_path_generator.app.model.osrm.osrm_step_model import OSRMStep
 from local_path_generator.app.model.osrm.osrm_maneuver_model import OSRMManeuver
 from local_path_generator.app.model.osrm.osrm_intersection_model import OSRMIntersection
-from local_path_generator.app.model.osrm.osrm_lanes_model import OSRMLanes
+from local_path_generator.app.model.osrm.osrm_lane_model import OSRMLane
 from local_path_generator.app.model.osrm.osrm_waypoint_model import OSRMWaypoint
 
 class OSRMReader:
@@ -84,14 +84,14 @@ class OSRMReader:
     @staticmethod
     def _parse_intersection(i: dict) -> OSRMIntersection:
         loc = i.get("location", [0.0, 0.0])
-        lanes = None
+        lanes = []
         if "lanes" in i and isinstance(i["lanes"], list):
-            # 只解析第一个 lane（OSRM 可能会返回多个）
-            l = i["lanes"][0]
-            lanes = OSRMLanes(
-                valid=bool(l.get("valid", False)),
-                indications=[OSRMReader._parse_enum(OSRMIndication, ind) for ind in l.get("indications", [])]
-            )
+            for l in i["lanes"]:
+                lanes.append(OSRMLane(
+                    valid=bool(l.get("valid", False)),
+                    indications=[OSRMReader._parse_enum(OSRMIndication, ind) for ind in l.get("indications", [])]
+                ))
+
         return OSRMIntersection(
             location=(float(loc[0]), float(loc[1])),
             bearings=i.get("bearings", []),
