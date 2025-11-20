@@ -36,9 +36,9 @@ def numpy_to_pointcloud2(points, header):
     if points.shape[1] == 3:
         points = np.hstack([points, np.zeros((points.shape[0], 1), dtype=points.dtype)])
     fields = [
-        PointField('x', 0, PointField.FLOAT32, 1),
-        PointField('y', 4, PointField.FLOAT32, 1),
-        PointField('z', 8, PointField.FLOAT32, 1),
-        PointField('intensity', 12, PointField.FLOAT32, 1)
+        PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+        PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+        PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+        PointField(name='intensity', offset=12, datatype=PointField.FLOAT32, count=1)
     ]
     return pc2.create_cloud(header, fields, points)

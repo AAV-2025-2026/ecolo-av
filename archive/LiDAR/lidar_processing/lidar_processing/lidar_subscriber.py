@@ -16,7 +16,7 @@ class LidarSubscriber(Node):
         super().__init__('lidar_subscriber')
         self.declare_parameter('ptcloud2', '/velodyne_points')
         self.declare_parameter('max_range', 50.0)
-        self.declare_parameter('min_range', 0.5)
+        self.declare_parameter('min_range', 1.0)
         self.declare_parameter('logger_level', 10)
 
         self.topic = self.get_parameter('ptcloud2').value
