@@ -1,4 +1,4 @@
-import json
+import json, polyline
 
 from local_path_generator.app.common.enum import (
     OSRMCode, OSRMWeightName, OSRMMode, OSRMDrivingSide,
@@ -47,16 +47,18 @@ class OSRMReader:
 
     @staticmethod
     def _parse_step(s: dict) -> OSRMStep:
+        raw = s.get("geometry", "")
+        decoded = polyline.decode(raw) if raw else []
         return OSRMStep(
             distance=float(s.get("distance", 0.0)),
             duration=float(s.get("duration", 0.0)),
-            geometry=s.get("geometry", ""),
+            geometry = [(lon, lat) for (lat, lon) in decoded],
             weight=float(s.get("weight", 0.0)),
             name=s.get("name", ""),
             ref=s.get("ref", ""),
             pronunciation=s.get("pronunciation", ""),
             destinations=s.get("destinations", ""),
-            exits=s.get("exits", ""),
+            exits=str(s.get("exits", "")),
             mode=OSRMReader._parse_enum(OSRMMode, s.get("mode")),
             maneuver=OSRMReader._parse_maneuver(s.get("maneuver")),
             intersections=[OSRMReader._parse_intersection(i) for i in s.get("intersections", [])],

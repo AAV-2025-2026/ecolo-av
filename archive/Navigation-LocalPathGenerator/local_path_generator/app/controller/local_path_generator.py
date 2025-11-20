@@ -12,8 +12,6 @@ class LocalPathGenerator(Node):
         self.current_pose = None
         self.current_velocity = 0.0
 
-        self.route
-
         self.create_subscription(String, "/global_route", self.on_global_route, 10)
         self.create_subscription(PoseStamped, "/current_pose", self.on_current_pose, 10)
         self.create_subscription(TwistStamped, "/current_velocity", self.on_current_velocity, 10)
@@ -33,6 +31,7 @@ class LocalPathGenerator(Node):
     def on_current_velocity(self, msg: TwistStamped):
         self.current_velocity = msg.twist.linear.x
         self.logger.info_throttle(2000, "[/current_velocity] updated")
+
 
 
 
