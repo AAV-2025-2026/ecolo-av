@@ -86,7 +86,6 @@ class PathService:
                     best_segment = j
                     best_point = (cx, cy)
 
-        # fallback 全搜索
         if best_step is None or best_dist > tolerance:
             for i in range(len(steps)):
                 xy = PathService._get_xy_for_step(steps[i], gps)
