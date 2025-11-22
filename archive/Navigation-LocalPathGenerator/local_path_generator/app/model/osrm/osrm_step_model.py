@@ -23,3 +23,8 @@ class OSRMStep:
         self.rotary_name = rotary_name
         self.rotary_pronunciation = rotary_pronunciation
         self.driving_side = driving_side
+
+        self.step_index = None
+        self.is_last_step = False
+        self.maneuver_type = None
+        self.maneuver_modifier = None

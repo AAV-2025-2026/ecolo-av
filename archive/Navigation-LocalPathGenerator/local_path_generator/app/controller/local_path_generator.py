@@ -26,12 +26,7 @@ class LocalPathGenerator(Node):
     def on_current_pose(self, msg: PoseStamped):
         self.current_pose = msg
         self.logger.info_throttle(2000, "[/current_pose] updated")
-        self.generate_local_path()
 
     def on_current_velocity(self, msg: TwistStamped):
         self.current_velocity = msg.twist.linear.x
         self.logger.info_throttle(2000, "[/current_velocity] updated")
-
-
-
-

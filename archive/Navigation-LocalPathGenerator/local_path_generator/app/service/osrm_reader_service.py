@@ -26,7 +26,7 @@ class OSRMReader:
 
     @staticmethod
     def _parse_route(r: dict) -> OSRMRoute:
-        return OSRMRoute(
+        route = OSRMRoute(
             distance=float(r.get("distance", 0.0)),
             duration=float(r.get("duration", 0.0)),
             geometry=r.get("geometry", ""),
@@ -34,6 +34,22 @@ class OSRMReader:
             weight_name=OSRMReader._parse_enum(OSRMWeightName, r.get("weight_name")),
             legs=[OSRMReader._parse_leg(l) for l in r.get("legs", [])]
         )
+
+        steps_flat = []
+
+        for leg in route.legs:
+            for step in leg.steps:
+                steps_flat.append(step)
+
+        total = len(steps_flat)
+        for i, step in enumerate(steps_flat):
+            step.step_index = i
+            step.is_last_step = (i == total - 1)
+            if step.maneuver:
+                step.maneuver_type = step.maneuver.type
+                step.maneuver_modifier = step.maneuver.modifier
+
+        return route
 
     @staticmethod
     def _parse_leg(l: dict) -> OSRMLeg:
