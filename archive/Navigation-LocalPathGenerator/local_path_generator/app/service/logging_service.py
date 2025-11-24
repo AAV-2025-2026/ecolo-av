@@ -24,12 +24,11 @@ class DailyFileHandler(logging.FileHandler):
         self._update_log_file()
         if self.stream and self.stream.name != self.baseFilename:
             self.close()
-            self.baseFilename = self.stream.name
             self.stream = self._open()
         super().emit(record)
 
 
-def get_logger(log_dir: str = "logs"):
+def get_logger(log_dir: str = "logs", enable_file: bool = False):
     console_handler = colorlog.StreamHandler()
     console_formatter = colorlog.ColoredFormatter(
         "%(log_color)s%(asctime)s [%(levelname)s] %(message)s",
@@ -44,18 +43,20 @@ def get_logger(log_dir: str = "logs"):
     )
     console_handler.setFormatter(console_formatter)
 
-    file_handler = DailyFileHandler(log_dir=log_dir, encoding="utf-8")
-    file_formatter = logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    file_handler.setFormatter(file_formatter)
-
     logger = logging.getLogger()
 
     if not logger.handlers:
         logger.addHandler(console_handler)
-        logger.addHandler(file_handler)
+
+        if enable_file:
+            file_handler = DailyFileHandler(log_dir=log_dir, encoding="utf-8")
+            file_formatter = logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S"
+            )
+            file_handler.setFormatter(file_formatter)
+            logger.addHandler(file_handler)
+
         logger.setLevel(logging.INFO)
         logger.propagate = False
 
