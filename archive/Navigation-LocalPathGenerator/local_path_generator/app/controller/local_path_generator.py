@@ -1,7 +1,13 @@
+from typing import Tuple
+
 from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from nav_msgs.msg import Path
+
+from local_path_generator.app.service.osrm_reader_service import load
+from local_path_generator.app.service.path_service import get_current_step_by_coordinate
+
 
 class LocalPathGenerator(Node):
     def __init__(self, logger):
@@ -9,24 +15,47 @@ class LocalPathGenerator(Node):
         self.logger = logger
 
         self.global_route = None
-        self.current_pose = None
-        self.current_velocity = 0.0
+        self.leg_int = None
+        self.step_index = None
 
-        self.create_subscription(String, "/global_route", self.on_global_route, 10)
-        self.create_subscription(PoseStamped, "/current_pose", self.on_current_pose, 10)
-        self.create_subscription(TwistStamped, "/current_velocity", self.on_current_velocity, 10)
-        self.local_path_pub = self.create_publisher(Path, "/local_path", 10)
+        self.create_subscription(String, "/global_route_request", self.on_global_route_request, 10)
+        self.create_subscription(String, "/current_path_request", self.on_current_path_request, 10)
+        self.current_path_pub = self.create_publisher(Path, "/current_path", 10)
 
         self.logger.info("LocalPathGenerator initialized.")
 
-    def on_global_route(self, msg: String):
-        self.global_route = msg.data
-        self.logger.info("[/global_route] received route JSON.")
+    def on_global_route_request(self, msg: String):
+        global_route_json = msg.data
+        self.logger.info("[/global_route_request] received route JSON.")
+        try:
+            new_route = load(global_route_json)
+            self.global_route = new_route
+            self.logger.info("[/global_route_request] success build route model.")
+        except Exception as e:
+            self.logger.error("[/global_route_request] failed to parse route JSON: %s", e)
+            self.logger.warning("[/global_route_request] Keeping old route. Driving continues.")
 
-    def on_current_pose(self, msg: PoseStamped):
-        self.current_pose = msg
-        self.logger.info_throttle(2000, "[/current_pose] updated")
+    def on_current_path_request(self, msg: String):
+        try:
+            lon, lat, leg_int = map(float, msg.data.split(","))
+            current_coordinate = (float(lon), float(lat))
+            leg_int = int(leg_int)
+        except Exception:
+            self.logger.error("[/current_path_request] invalid message")
+            return
+        if self.leg_int != leg_int:
+            self.step_index = None
+            self.leg_int = leg_int
+        result = get_current_step_by_coordinate(current_coordinate, self.global_route.routes.legs[self.leg_int].steps, self.step_index)
 
-    def on_current_velocity(self, msg: TwistStamped):
-        self.current_velocity = msg.twist.linear.x
-        self.logger.info_throttle(2000, "[/current_velocity] updated")
+        if result is None:
+            self.logger.warning("[/current_path_request] Not on route or too far.")
+            return
+
+        self.step_index = result["step_index"]
+        best_segment = result["segment_index"]
+        best_point = result["closest_point"]
+        best_dist = result["distance"]
+
+        #有关返还后续再写
+        self.logger.info_throttle(2000, "[/current_path_request] Responded")

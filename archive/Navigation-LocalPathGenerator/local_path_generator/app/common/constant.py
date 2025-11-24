@@ -3,3 +3,4 @@ class LogMessageCons:
 
 class ApplicationCons:
     MAIN_MODUAL="__main__"
+
