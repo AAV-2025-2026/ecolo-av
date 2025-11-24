@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
 import '../data/constants.dart';
 
 void showAppMessage(BuildContext? context, String message) {
@@ -261,8 +262,12 @@ class _MapPageState extends State<MapPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
+                      child: OnscreenKeyboardTextField( 
                         controller: lonController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          signed: true,
+                          decimal: true,
+                        ),
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Longitude',
@@ -278,16 +283,16 @@ class _MapPageState extends State<MapPage> {
                             ),
                           ),
                         ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                          signed: true,
-                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: TextField(
+                      child: OnscreenKeyboardTextField( 
                         controller: latController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          signed: true,
+                          decimal: true,
+                        ),
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Latitude',
@@ -302,10 +307,6 @@ class _MapPageState extends State<MapPage> {
                               color: Colors.deepPurple.shade700,
                             ),
                           ),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                          signed: true,
                         ),
                       ),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
 import 'package:flutter_pi/data/constants.dart';
 import 'package:flutter_pi/screens/home_page.dart';
 import 'package:window_manager/window_manager.dart';
@@ -28,6 +29,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: kColorSchemeSeed),
         useMaterial3: true,
+      ),
+      builder: OnscreenKeyboard.builder(
+        layout: const DesktopKeyboardLayout(),
+        aspectRatio: 6
       ),
       home: const MyHomePage(title: 'UI Dashboard'),
     );
