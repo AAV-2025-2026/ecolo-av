@@ -32,10 +32,11 @@ If you don’t already have a ROS 2 workspace:
 mkdir -p ~/aav_ws/src
 cd ~/aav_ws/src
 
-
+```
 ---
 
 ## 3. Build the project
+```bash
 In every new terminal before building or running:
 
 source /opt/ros/foxy/setup.bash
@@ -103,3 +104,4 @@ ros2 topic echo /v_ref
 ros2 topic echo /speed_sim
 ros2 topic echo /imu_sim
 ros2 topic echo /motor_cmd
+```
