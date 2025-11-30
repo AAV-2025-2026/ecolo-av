@@ -8,8 +8,4 @@ ros2_ws/
 │   │   ├── setup.py
 │   │   └── package.xml             <--- contains 'colcon build' configuration for maincar package
 │   └── my_utils/
-│       ├── my_utils/
-│       │   ├── __init__.py
-│       │   └── imu_reader.py   <-- helpful modules if needed (not used, just used as reference)
-│       ├── setup.py
-│       └── package.xml
+│       └── imu_reader.py   <-- helpful modules if needed (not used, just used as reference)
