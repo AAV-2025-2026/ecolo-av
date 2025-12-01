@@ -9,6 +9,7 @@ from sensor_msgs.msg import Imu
 import smbus
 
 
+
 class Mpu9250ImuNode(Node):
     def __init__(self):
         super().__init__("sensor_mpu9250_imu_node")
@@ -104,6 +105,7 @@ class Mpu9250ImuNode(Node):
 
         self.publisher_.publish(msg)
 
+
         #Optional debug print (comment out if spammy)
         self.get_logger().info(
             f"Accel: {ax:.3f} {ay:.3f} {az:.3f} | Gyro: {gx:.3f} {gy:.3f} {gz:.3f}"
@@ -111,6 +113,7 @@ class Mpu9250ImuNode(Node):
 
 
 def main(args=None):
+
     rclpy.init(args=args)
     node = Mpu9250ImuNode()
     try:
@@ -120,6 +123,7 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
+
 
 
 if __name__ == "__main__":
