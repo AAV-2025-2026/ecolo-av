@@ -33,5 +33,11 @@ Virtual simulation of AAV.
   - Add PointCloud2, Topic lidar/PointCloud2
   - Add TF, Topic odometry/Odometry
 
+## 6. Open Simulated P7 Environment
+  - Have CARLA running on a separate terminal
+  - Open new terminal and navigate to cd Digital_Twins/CARLA/CARLA_0.9.15/PythonAPI/util
+  - Run this command python3 config.py --osm-path=/home/aav/Digital_Twins/p7.osm
+  - Zoom into environment using W on key board and mouse to view the map
+
     
 
