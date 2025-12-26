@@ -50,6 +50,8 @@ Create an empty folder and change directories into it
 
 Run `mkqnximage --extra-dirs=+rasppi --type=rasppi --part-sizes=256:256 --repos=%QNX_TARGET%:<path to firmware folder>:<path to bsp>/install/aarch64le`
 
+Ex. `mkqnximage --extra-dirs=+rasppi --type=rasppi --part-sizes=256:256 --repos=%QNX_TARGET%:../firmware:C:/Users/alexd/bsp_test/BSP_raspberrypi-bcm2711-rpi4_be-800_SVN1019295_JBN334/install/aarch64le`
+
 There should be a `.img` file in the `output` folder (likely name is system-image-256-256-BSD.img)
 
 Run balenaEtcher, select the .img, select the microSD card and flash
