@@ -117,13 +117,13 @@ class _MyHomePageState extends State<MyHomePage> {
               style: TextStyle(color: Colors.white70, fontSize: 16),
             ),
             const SizedBox(height: 10),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MapPage()));
-              },
-              icon: const Icon(Icons.map),
-              label: const Text('Open Map'),
-            ),
+            // ElevatedButton.icon(
+            //   onPressed: () {
+            //     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MapPage()));
+            //   },
+            //   icon: const Icon(Icons.map),
+            //   label: const Text('Open Map'),
+            // ),
           ],
         ),
       ),
