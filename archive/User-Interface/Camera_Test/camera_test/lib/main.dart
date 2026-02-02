@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'screens/blank_camera.dart';
+import 'screens/camera_test_stream.dart';
 
 void main() {
-  runApp(const CameraClientApp());
+  runApp(const CameraApp());
 }
 
-class CameraClientApp extends StatelessWidget {
-  const CameraClientApp({super.key});
+class CameraApp extends StatelessWidget {
+  const CameraApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: BlankCameraPage(),
+      home: CameraTestPage(),
     );
   }
 }
