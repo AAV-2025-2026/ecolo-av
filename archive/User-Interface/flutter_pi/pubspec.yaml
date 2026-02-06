@@ -43,6 +43,7 @@ dependencies:
   http: ^0.13.5
   flutter_onscreen_keyboard: ^0.4.1
   screen_retriever: ^0.2.0
+  flutter_typeahead: ^4.0.0
 
 dev_dependencies:
   flutter_test:

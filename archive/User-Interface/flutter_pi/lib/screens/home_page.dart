@@ -13,6 +13,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   late SocketService socketService;
+
   double speed = 0.0;
   double latitude = 0.0;
   double longitude = 0.0;
@@ -20,6 +21,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+
     socketService = SocketService();
     socketService.initSocketConnection(
       serverUrl: 'http://127.0.0.1:5000',
