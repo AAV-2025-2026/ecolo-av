@@ -26,7 +26,7 @@ public:
   {
     // --- params so you can change IP/port without changing code ---
     this->declare_parameter<std::string>("imu_topic", "/imu/data");
-    this->declare_parameter<std::string>("qnx_ip", "192.168.1.50"); // teammate QNX VPN IP
+    this->declare_parameter<std::string>("qnx_ip", "192.168.1.116"); // teammate QNX VPN IP
     this->declare_parameter<int>("qnx_port", 9000);
 
     const auto topic = this->get_parameter("imu_topic").as_string();
