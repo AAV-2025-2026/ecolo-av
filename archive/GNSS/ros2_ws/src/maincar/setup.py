@@ -26,7 +26,8 @@ setup(
         'console_scripts': [
             'sensor_imu = maincar.sensor_imu:main',
             'sensor_imu_two = maincar.sensor_imu_two:main',
-            'logger_imu = maincar.logger_imu:main'
+            'logger_imu = maincar.logger_imu:main',
+            'sensor_imu_mock = maincar.sensor_imu_mock:main'
         ],
     },
     
