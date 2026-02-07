@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../components/sockets/socket_services.dart';
 import 'map_page.dart';
+import 'camera_page.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -128,6 +129,17 @@ class _MyHomePageState extends State<MyHomePage> {
               },
               icon: const Icon(Icons.map),
               label: const Text('Open Map'),
+            ),
+            const SizedBox(height: 10),
+
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CameraPage()),
+                );
+              },
+              icon: const Icon(Icons.videocam),
+              label: const Text('Open Camera'),
             ),
           ],
         ),
