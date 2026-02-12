@@ -12,14 +12,17 @@ from local_path_generator.app.model.osrm.osrm_maneuver_model import OSRMManeuver
 from local_path_generator.app.model.osrm.osrm_intersection_model import OSRMIntersection
 from local_path_generator.app.model.osrm.osrm_lane_model import OSRMLane
 from local_path_generator.app.model.osrm.osrm_waypoint_model import OSRMWaypoint
+from local_path_generator.app.service.speed_planner import compute_reference_speeds
 
 def load(json_data: str) -> OSRMGlobalRoute:
     data = json.loads(json_data)
-    return OSRMGlobalRoute(
+    route = OSRMGlobalRoute(
         code=_parse_enum(OSRMCode, data.get("code")),
         routes=[_parse_route(r) for r in data.get("routes", [])],
         waypoints=[_parse_waypoint(w) for w in data.get("waypoints", [])]
     )
+    compute_reference_speeds(route)
+    return route
 
 def _parse_route(r: dict) -> OSRMRoute:
     route = OSRMRoute(

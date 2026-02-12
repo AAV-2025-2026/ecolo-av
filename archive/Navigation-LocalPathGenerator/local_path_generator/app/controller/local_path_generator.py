@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, TwistStamped
@@ -46,7 +44,7 @@ class LocalPathGenerator(Node):
         if self.leg_int != leg_int:
             self.step_index = None
             self.leg_int = leg_int
-        result = get_current_step_by_coordinate(current_coordinate, self.global_route.routes.legs[self.leg_int].steps, self.step_index)
+        result = get_current_step_by_coordinate(current_coordinate, self.global_route.routes[0].legs[self.leg_int].steps, self.step_index)
 
         if result is None:
             self.logger.warning("[/current_path_request] Not on route or too far.")
@@ -57,5 +55,18 @@ class LocalPathGenerator(Node):
         best_point = result["closest_point"]
         best_dist = result["distance"]
 
-        #有关返还后续再写
-        self.logger.info_throttle(2000, "[/current_path_request] Responded")
+        target_speed = self.global_route.routes[0].legs[self.leg_int].steps[self.step_index].reference_speeds[best_segment]
+
+        self.logger.info("[/current_path_request] Responded")
+        self.logger.info("%s %s %s %s",self.step_index, best_segment, best_point, best_dist)
+        self.logger.info(
+            "Target speed at current position: %.2f m/s (%.2f km/h)",
+            target_speed,
+            target_speed * 3.6
+        )
+        self.logger.info(
+            "step%s speed range: min=%.2f max=%.2f",
+            self.step_index,
+            min(self.global_route.routes[0].legs[self.leg_int].steps[self.step_index].reference_speeds),
+            max(self.global_route.routes[0].legs[self.leg_int].steps[self.step_index].reference_speeds)
+        )

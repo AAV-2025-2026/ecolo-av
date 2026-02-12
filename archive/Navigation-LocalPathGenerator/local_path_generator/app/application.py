@@ -7,7 +7,7 @@ from local_path_generator.app.service.logging_service import get_logger
 logger = get_logger()
 
 def main(args=None):
-    logger.info()
+    logger.info("LocalPathGenerator initialized")
     rclpy.init(args=args)
     node = LocalPathGenerator(logger)
     rclpy.spin(node)
