@@ -9,7 +9,7 @@ public:
     // Constructor
     CameraDecodeNode() : Node("camera_decode_node") {
         this->declare_parameter("camera_name", "cam1");
-        this->declare_parameter("rtsp_url", "rtsp://192.168.1.101:8554/cam1");
+        this->declare_parameter("rtsp_url", "rtsp://192.168.0.64:8554/cam1");
         this->declare_parameter("frame_rate", 30);
         
         // Get parameters
