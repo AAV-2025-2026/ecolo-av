@@ -5,15 +5,17 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+# Dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(vision_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(PkgConfig REQUIRED)
+find_package(CUDA REQUIRED)                         
 
 pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
     libavcodec
@@ -22,16 +24,15 @@ pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
     libswscale
 )
 
-# Find NVIDIA Multimedia API
+# NVIDIA Multimedia API 
 find_path(NVMM_INCLUDE_DIR
   NAMES NvVideoDecoder.h
   PATHS /usr/src/jetson_multimedia_api/include
 )
 
-# Find NVIDIA buffer libraries (nvbuf_utils removed - deprecated in JetPack 5+)
 find_library(NVBUFSURFACE_LIB
   NAMES nvbufsurface
-  PATHS 
+  PATHS
     /usr/lib/aarch64-linux-gnu/tegra
     /usr/lib/aarch64-linux-gnu/nvidia
     /usr/lib/aarch64-linux-gnu
@@ -39,27 +40,45 @@ find_library(NVBUFSURFACE_LIB
 
 find_library(NVBUFSURFTRANSFORM_LIB
   NAMES nvbufsurftransform
-  PATHS 
+  PATHS
     /usr/lib/aarch64-linux-gnu/tegra
     /usr/lib/aarch64-linux-gnu/nvidia
     /usr/lib/aarch64-linux-gnu
 )
 
+# TensorRT paths
+find_path(TRT_INCLUDE_DIR
+  NAMES NvInfer.h
+  PATHS
+    /usr/include/aarch64-linux-gnu
+    /usr/local/cuda/include
+)
+
+find_library(TRT_LIB       NAMES nvinfer       PATHS /usr/lib/aarch64-linux-gnu)
+find_library(TRT_PLUGIN_LIB NAMES nvinfer_plugin PATHS /usr/lib/aarch64-linux-gnu)
+
 # Include directories
 include_directories(
   include
   ${NVMM_INCLUDE_DIR}
+  ${TRT_INCLUDE_DIR}                           
+  ${CUDA_INCLUDE_DIRS}                               
 )
 
-# Create library
+# Shared lib (nvdec_decoder + yolo_detector)
 add_library(${PROJECT_NAME}_lib
   src/nvdec_decoder.cpp
+  src/yolo_detector.cpp                              
 )
 
 target_link_libraries(${PROJECT_NAME}_lib
   PkgConfig::LIBAV
   ${NVBUFSURFACE_LIB}
   ${NVBUFSURFTRANSFORM_LIB}
+  ${TRT_LIB}                                         
+  ${TRT_PLUGIN_LIB}                                  
+  ${CUDA_LIBRARIES}                                  
+  /usr/local/cuda-12.6/targets/aarch64-linux/lib/libcudart.so                                      
 )
 
 ament_target_dependencies(${PROJECT_NAME}_lib
@@ -69,7 +88,7 @@ ament_target_dependencies(${PROJECT_NAME}_lib
   OpenCV
 )
 
-# Create executable
+# camera_decoder_node 
 add_executable(camera_decoder_node src/camera_decoder_node.cpp)
 
 target_link_libraries(camera_decoder_node
@@ -83,11 +102,27 @@ ament_target_dependencies(camera_decoder_node
   image_transport
   std_msgs
   OpenCV
+  vision_msgs
 )
 
-# Install targets
+# stop_sign_node
+add_executable(stop_sign_node src/stop_sign_node.cpp)   
+
+target_link_libraries(stop_sign_node
+  ${PROJECT_NAME}_lib
+)
+
+ament_target_dependencies(stop_sign_node
+  rclcpp
+  std_msgs
+  vision_msgs
+  OpenCV
+)
+
+# Install
 install(TARGETS
   camera_decoder_node
+  stop_sign_node                                     
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -111,12 +146,7 @@ install(DIRECTORY
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # comment the line when a copyright and license is added to all source files
   set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # comment the line when this package is in a git repo and when
-  # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
