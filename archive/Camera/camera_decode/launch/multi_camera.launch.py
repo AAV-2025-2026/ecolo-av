@@ -38,7 +38,17 @@ def generate_launch_description():
         Node(
             package='camera_decode',
             executable='stop_sign_node',
-            name='stop_sign_node',
+            name='stop_sign_node1',
+            parameters=[
+                config_file,
+                {'show_window': LaunchConfiguration('show_window')}
+            ],
+            output='screen'
+        ),
+        Node(
+            package='camera_decode',
+            executable='stop_sign_node',
+            name='stop_sign_node2',
             parameters=[
                 config_file,
                 {'show_window': LaunchConfiguration('show_window')}

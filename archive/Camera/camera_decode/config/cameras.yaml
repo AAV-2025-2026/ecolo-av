@@ -13,3 +13,19 @@ camera_decode_node_cam2:
     rtsp_url: "rtsp://192.168.0.64:8554/cam2"
     frame_rate: 30
     decoder_type: "nvdec"
+
+# Stop Sign Detection Node 1 Configuration
+stop_sign_node1:
+  ros__parameters:
+    rtsp_url: "rtsp://192.168.0.64:8554/cam1"
+    engine_path: "/home/aavjetson/Desktop/aav/Camera/model/best.engine"
+    conf_thresh: 0.5
+    show_window: false
+
+# Stop Sign Detection Node 2 Configuration
+stop_sign_node2:
+  ros__parameters:
+    rtsp_url: "rtsp://192.168.0.64:8554/cam2"
+    engine_path: "/home/aavjetson/Desktop/aav/Camera/model/best.engine"
+    conf_thresh: 0.5
+    show_window: false
