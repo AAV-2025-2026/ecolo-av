@@ -36,9 +36,14 @@ namespace camera_decode {
 
         // Set FFMPEG options for RTSP over UDP
         AVDictionary* options = nullptr;
-        av_dict_set(&options, "rtsp_transport", "udp", 0); // Use UDP transport
-        av_dict_set(&options, "max_delay", "0", 0); // No delay
-        av_dict_set(&options, "fflags", "nobuffer", 0); // No buffering
+        av_dict_set(&options, "rtsp_transport", "udp", 0);      // Use UDP transport
+        av_dict_set(&options, "max_delay", "0", 0);             // No delay
+        av_dict_set(&options, "fflags", "nobuffer", 0);         // No buffering
+
+        av_dict_set(&options, "flags",          "low_delay", 0); 
+        av_dict_set(&options, "stimeout",       "1000000", 0);    // 1s timeout
+        av_dict_set(&options, "probesize",      "32", 0);         // min probe
+        av_dict_set(&options, "analyzeduration","0", 0);          // skip analysis
 
         // Try to open the input stream
         if (avformat_open_input(&format_ctx_, rtsp_url_.c_str(), nullptr, &options) < 0) {
