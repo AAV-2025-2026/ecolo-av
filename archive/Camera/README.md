@@ -5,7 +5,7 @@ The AAV Camera system handles real-time video streaming and object detection. It
 - **MTX Server** — MediaMTX RTSP/WebRTC stream broker running on the camera host
 - **Camera Decoder Node** — ROS2 C++ node that pulls RTSP streams via NVDEC hardware decoding and publishes frames
 - **Stop Sign Detector Node** — ROS2 C++ node that runs YOLOv8 TensorRT inference on decoded frames and publishes detection events
-
+```
 Camera (CSI) → MediaMTX (RTSP :8554) → NvDecDecoder → ROS2
 ↓
 YoloDetector (TensorRT FP16)
@@ -13,7 +13,7 @@ YoloDetector (TensorRT FP16)
 /aav/stop_sign_detected (Bool)
 /aav/stop_sign_confidence (Float32)
 /aav/stop_sign_detections (Detection2DArray)
-
+```
 ---
 
 ## Hardware Requirements
@@ -41,6 +41,7 @@ sudo apt install \
 ```
 
 ## Repository Structure
+```
 camera_decode/
 ├── include/camera_decode/
 │   ├── nvdec_decoder.hpp       # RTSP NVDEC decoder interface
@@ -62,6 +63,7 @@ model/
 ├── best.pt                 # YOLOv8 trained weights (PyTorch)
 ├── best.onnx               # Exported ONNX model
 └── best.engine             # TensorRT FP16 engine (generated on Jetson)
+```
 
 ## Model Export (One-Time Setup)
 The TensorRT engine must be generated on the Jetson - it is hardware-specific and cannot be cross-compiled.
