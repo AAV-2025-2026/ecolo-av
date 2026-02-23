@@ -64,6 +64,7 @@ def get_current_step_by_coordinate(
     best_dist = float("inf")
     best_segment = None
     best_point = None
+    best_t = 0.0
 
     search_range = (
         _get_search_range(prev_step_index, len(steps))
@@ -74,23 +75,25 @@ def get_current_step_by_coordinate(
     for i in search_range:
         xy = _get_xy_for_step(steps[i], coordinate)
         for j in range(len(xy) - 1):
-            d, (cx, cy), _ = _distance_to_segment((0, 0), xy[j], xy[j + 1])
+            d, (cx, cy), t = _distance_to_segment((0, 0), xy[j], xy[j + 1])
             if d < best_dist:
                 best_dist = d
                 best_step = i
                 best_segment = j
                 best_point = (cx, cy)
+                best_t = t
 
     if best_step is None or best_dist > tolerance:
         for i in range(len(steps)):
             xy = _get_xy_for_step(steps[i], coordinate)
             for j in range(len(xy) - 1):
-                d, (cx, cy), _ = _distance_to_segment((0, 0), xy[j], xy[j + 1])
+                d, (cx, cy), t = _distance_to_segment((0, 0), xy[j], xy[j + 1])
                 if d < best_dist:
                     best_dist = d
                     best_step = i
                     best_segment = j
                     best_point = (cx, cy)
+                    best_t = t
 
     if best_step is None or best_dist > tolerance:
         return None
@@ -99,5 +102,6 @@ def get_current_step_by_coordinate(
         "step_index": best_step,
         "segment_index": best_segment,
         "closest_point": best_point,
-        "distance": best_dist
+        "distance": best_dist,
+        "t": best_t
     }

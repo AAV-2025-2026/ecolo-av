@@ -11,7 +11,7 @@ class OSRMStep:
         self.distance = distance
         self.duration = duration
         self.geometry = geometry if geometry is not None else []
-        self.reference_speeds: List[float] = [0.0] * max(0, len(geometry) - 1)
+        self.reference_speeds: List[float] = [0.0] * len(self.geometry)
         self.weight = weight
         self.name = name
         self.ref = ref
