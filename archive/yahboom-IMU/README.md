@@ -49,7 +49,7 @@ source install/setup.bash
 ```
 3. Run the node:
 ```bash
-ros2 run yahboom_imu_cpp imu_node
+ros2 launch yahboom_imu_cpp imu.launch.py
 ```
 
 ## Topics Published
