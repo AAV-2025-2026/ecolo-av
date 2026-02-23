@@ -4,11 +4,11 @@ from local_path_generator.app.service.path_service import _to_xy
 
 TURN_TYPES = {"turn", "roundabout", "merge", "fork", "end of road"}
 
-def compute_reference_speeds(global_route, decel_dist=15.0):
+def compute_reference_speeds(global_route, decel_dist=15.0, v_turn=3.0):
     for route in global_route.routes:
         for leg in route.legs:
             for step in leg.steps:
-                n = max(0, len(step.geometry) - 1)
+                n = len(step.geometry)
                 if n == 0:
                     step.reference_speeds = []
                     continue
@@ -20,20 +20,37 @@ def compute_reference_speeds(global_route, decel_dist=15.0):
                 mt_val = getattr(mt, "value", None)
                 mt_str = (mt_val or str(mt or "")).lower()
                 need_decel = any(t in mt_str for t in TURN_TYPES)
-
                 if not need_decel:
                     continue
 
-                v_turn = min(3.0, base_speed * 0.5)
+                ref_lon, ref_lat = step.geometry[0]
+                xy = [
+                    _to_xy(lon, lat, ref_lon, ref_lat)
+                    for lon, lat in step.geometry
+                ]
 
-                remain = 0.0
-                for i in range(n - 1, -1, -1):
-                    lon1, lat1 = step.geometry[i]
-                    lon2, lat2 = step.geometry[i + 1]
-                    dx, dy = _to_xy(lon2, lat2, lon1, lat1)
-                    seg_len = math.hypot(dx, dy)
-                    remain += seg_len
-                    if remain > decel_dist:
+                n = len(step.geometry)
+                if n < 2:
+                    continue
+
+                dist_from_end = 0.0
+                start_idx = n - 1
+                for i in range(n - 2, -1, -1):
+                    x1, y1 = xy[i]
+                    x2, y2 = xy[i + 1]
+                    ds = math.hypot(x2 - x1, y2 - y1)
+                    dist_from_end += ds
+                    start_idx = i
+                    if dist_from_end >= decel_dist:
                         break
-                    ratio = max(0.0, min(1.0, remain / decel_dist))
-                    step.reference_speeds[i] = v_turn + (base_speed - v_turn) * ratio
+
+                # 2) 对 start_idx..n-1 做线性插值：从 base_speed 过渡到 v_turn
+                ramp_len = (n - 1) - start_idx
+                if ramp_len <= 0:
+                    step.reference_speeds[n - 1] = min(step.reference_speeds[n - 1], v_turn)
+                else:
+                    for k in range(start_idx, n):
+                        alpha = (k - start_idx) / ramp_len  # 0 -> 1
+                        v = (1.0 - alpha) * base_speed + alpha * v_turn
+                        # 更保守：取 min，避免加速
+                        step.reference_speeds[k] = min(step.reference_speeds[k], v)

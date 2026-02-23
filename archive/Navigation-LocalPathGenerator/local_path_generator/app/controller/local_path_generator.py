@@ -18,7 +18,9 @@ class LocalPathGenerator(Node):
 
         self.create_subscription(String, "/global_route_request", self.on_global_route_request, 10)
         self.create_subscription(String, "/current_path_request", self.on_current_path_request, 10)
+        self.create_subscription(String, "/current_dspeed_request", self.on_current_path_request_dspeed, 10)
         self.current_path_pub = self.create_publisher(Path, "/current_path", 10)
+        self.current_dspeed_pub = self.create_publisher(String, "/current_dspeed", 10)
 
         self.logger.info("LocalPathGenerator initialized.")
 
@@ -34,6 +36,9 @@ class LocalPathGenerator(Node):
             self.logger.warning("[/global_route_request] Keeping old route. Driving continues.")
 
     def on_current_path_request(self, msg: String):
+        if self.global_route is None:
+            self.logger.warning("[/current_path_request] No global route yet.")
+            return
         try:
             lon, lat, leg_int = map(float, msg.data.split(","))
             current_coordinate = (float(lon), float(lat))
@@ -54,11 +59,33 @@ class LocalPathGenerator(Node):
         best_segment = result["segment_index"]
         best_point = result["closest_point"]
         best_dist = result["distance"]
+        t = float(result.get("t", 0.0))
 
-        target_speed = self.global_route.routes[0].legs[self.leg_int].steps[self.step_index].reference_speeds[best_segment]
+        step = self.global_route.routes[0].legs[self.leg_int].steps[self.step_index]
+        v = step.reference_speeds
+        geom_n = len(step.geometry)
+        v_n = len(v)
+        seg = best_segment
+
+        if v_n == 0:
+            target_speed = 0.0
+
+        elif v_n == geom_n:
+            if seg >= v_n - 1:
+                target_speed = v[-1]
+            else:
+                v0 = v[seg]
+                v1 = v[seg + 1]
+                target_speed = v0 * (1.0 - t) + v1 * t
+
+        elif v_n == geom_n - 1:
+            target_speed = v[min(seg, v_n - 1)]
+
+        else:
+            target_speed = v[-1]
 
         self.logger.info("[/current_path_request] Responded")
-        self.logger.info("%s %s %s %s",self.step_index, best_segment, best_point, best_dist)
+        self.logger.info("%s %s t=%.3f %s %s", self.step_index, best_segment, t, best_point, best_dist)
         self.logger.info(
             "Target speed at current position: %.2f m/s (%.2f km/h)",
             target_speed,
@@ -70,3 +97,73 @@ class LocalPathGenerator(Node):
             min(self.global_route.routes[0].legs[self.leg_int].steps[self.step_index].reference_speeds),
             max(self.global_route.routes[0].legs[self.leg_int].steps[self.step_index].reference_speeds)
         )
+        self.logger.info("geom_n=%d v_n=%d", geom_n, v_n)
+
+    def on_current_path_request_dspeed(self, msg: String):
+        if self.global_route is None:
+            self.logger.warning("[/current_dspeed_request] No global route yet.")
+            return
+
+        try:
+            lon, lat, leg_int = map(float, msg.data.split(","))
+            current_coordinate = (float(lon), float(lat))
+            leg_int = int(leg_int)
+        except Exception:
+            self.logger.error("[/current_dspeed_request] invalid message")
+            return
+
+        if self.leg_int != leg_int:
+            self.step_index = None
+            self.leg_int = leg_int
+
+        result = get_current_step_by_coordinate(
+            current_coordinate,
+            self.global_route.routes[0].legs[self.leg_int].steps,
+            self.step_index
+        )
+
+        if result is None:
+            self.logger.warning("[/current_dspeed_request] Not on route or too far.")
+            return
+
+        self.step_index = result["step_index"]
+        best_segment = result["segment_index"]
+        best_point = result["closest_point"]
+        best_dist = result["distance"]
+        t = float(result.get("t", 0.0))
+
+        step = self.global_route.routes[0].legs[self.leg_int].steps[self.step_index]
+        v = step.reference_speeds
+        geom_n = len(step.geometry)
+        v_n = len(v)
+        seg = best_segment
+
+        if v_n == 0:
+            target_speed = 0.0
+
+        elif v_n == geom_n:
+            if seg >= v_n - 1:
+                target_speed = v[-1]
+            else:
+                v0 = v[seg]
+                v1 = v[seg + 1]
+                target_speed = v0 * (1.0 - t) + v1 * t
+
+        elif v_n == geom_n - 1:
+            target_speed = v[min(seg, v_n - 1)]
+
+        else:
+            target_speed = v[-1] if v_n > 0 else 0.0
+
+        out = String()
+        out.data = f"{target_speed:.3f},{target_speed * 3.6:.3f},{self.leg_int},{self.step_index},{seg},{t:.4f},{best_dist:.3f}"
+        self.current_dspeed_pub.publish(out)
+
+        self.logger.info("[/current_dspeed_request] Responded")
+        self.logger.info("%s %s t=%.3f %s %s", self.step_index, best_segment, t, best_point, best_dist)
+        self.logger.info(
+            "Target speed at current position: %.2f m/s (%.2f km/h)",
+            target_speed,
+            target_speed * 3.6
+        )
+        self.logger.info("geom_n=%d v_n=%d", geom_n, v_n)
