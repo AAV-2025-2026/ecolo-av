@@ -7,10 +7,11 @@
 #include "hardware/irq.h"
 
 // ======= SPI Pins ======
-#define SPI_PORT spi0   // SPI0 pins
-#define SPI_CLK_PIN 2   // SCK pin - pin 4
-#define SPI_MOSI_PIN 14 // MOSI pin - pin 19
-#define SPI_CS_PIN 13   // CS pin - pin 17
+#define SPI_PORT spi1   //Spi port 1
+#define SPI_CLK_PIN 14  // SPI clock pin - pin 14
+#define SPI_MOSI_PIN 15 // SPI MOSI pin - pin 16
+#define SPI_CS_PIN 13   // SPI chip select pin - pin 13
+
 
 // ======= I2C Pins ======
 #define I2C_PORT i2c0   // I2C0 pins
