@@ -35,14 +35,15 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(aav_display_driver aav_display_driver.cpp)
+add_executable(aav_display_driver aav_display_driver.cpp
+        lcd_display.cpp)
 
 pico_set_program_name(aav_display_driver "aav_display_driver")
 pico_set_program_version(aav_display_driver "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(aav_display_driver 0)
-pico_enable_stdio_usb(aav_display_driver 0)
+pico_enable_stdio_usb(aav_display_driver 1)
 
 # Add the standard library to the build
 target_link_libraries(aav_display_driver
@@ -55,8 +56,9 @@ target_include_directories(aav_display_driver PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(aav_display_driver 
+        hardware_pwm
+        hardware_gpio
         hardware_spi
-        hardware_i2c
         )
 
 pico_add_extra_outputs(aav_display_driver)
