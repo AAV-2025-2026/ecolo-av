@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-ZED-F9R-01B ROS 2 Node
+GNSS Node
 -------------------------
-A thread-safe, configurable ROS 2 driver for the u-blox ZED-F9R GNSS receiver.
+A thread-safe, configurable ROS 2 publisher for the u-blox ZED-F9R GNSS receiver.
 It handles serial communication, NTRIP/RTK correction injection, and parsing of
 NMEA datasets into standard ROS `NavSatFix` messages with covariance estimates.
 """
@@ -20,12 +20,12 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, NavSatStatus
 
-import gnss_self_test
+from aav_gnss import gnss_self_test
 
 # --- CONFIGURATION CONSTANTS ---
 
 # Serial Defaults
-DEFAULT_PORT = '/dev/ttyACM0'
+DEFAULT_PORT = '/dev/zed_f9r'
 DEFAULT_BAUD = 115200
 SERIAL_TIMEOUT_READ = 0.1  # Seconds
 
@@ -148,7 +148,7 @@ class GNSSPublisher(Node):
                             try:
                                 data = s.recv(RTK_BUFFER_SIZE)
                                 if not data:
-                                    self.get_logger().warn("RTK Stream closed by server.")
+                                    self.get_logger().warning("RTK Stream closed by server.")
                                     break
 
                                 # THREAD SAFETY: Acquire lock before writing
@@ -167,7 +167,7 @@ class GNSSPublisher(Node):
                         # Expected behavior if str2str hasn't started yet
                         pass
                     except OSError as e:
-                        self.get_logger().warn(f"Could not connect to RTK server: {e}")
+                        self.get_logger().warning(f"Could not connect to RTK server: {e}")
 
             except Exception as e:
                 self.get_logger().error(f"Unexpected RTK Worker Error: {e}")
@@ -204,7 +204,7 @@ class GNSSPublisher(Node):
                 self.get_logger().error(f"Serial Read Error (Device disconnected?): {e}")
             except UnicodeError as e:
                 # Fallback for very malformed data not caught by replace
-                self.get_logger().warn(f"Unicode Error ignored: {e}")
+                self.get_logger().warning(f"Unicode Error ignored: {e}")
             except Exception as e:
                 self.get_logger().error(f"Unexpected error in read_gps: {e}")
 
@@ -303,9 +303,9 @@ class GNSSPublisher(Node):
             )
 
         except ValueError as e:
-            self.get_logger().warn(f"Incomplete NMEA data (missing fields): {e}")
+            self.get_logger().warning(f"Incomplete NMEA data (missing fields): {e}")
         except pynmea2.ParseError as e:
-            self.get_logger().warn(f"Failed to parse NMEA checksum: {e}")
+            self.get_logger().warning(f"Failed to parse NMEA checksum: {e}")
         except Exception as e:
             self.get_logger().error(f"Critical error publishing fix: {e}")
 

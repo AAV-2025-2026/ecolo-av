@@ -1,3 +1,2 @@
 pyserial
 pynmea2
-str2str

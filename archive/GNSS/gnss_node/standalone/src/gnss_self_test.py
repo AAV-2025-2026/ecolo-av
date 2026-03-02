@@ -3,7 +3,7 @@
 GNSS Self-Test Module
 ---------------------
 Provides a blocking check to ensure the GPS receiver has a valid signal
-before the main driver operation begins.
+before the main publisher operation begins.
 """
 
 import time
@@ -75,7 +75,7 @@ def check_gps_ready(logger, serial_port, baud_rate, timeout_seconds):
                                 f"(HDOP={hdop}, Sats={sats})"
                             )
                         else:
-                            logger.warn(
+                            logger.warning(
                                 f"Waiting for stronger signal... "
                                 f"(Sats={sats}/{MIN_SATELLITES}, "
                                 f"HDOP={hdop}/{MAX_HDOP_THRESHOLD}, Qual={qual})"
@@ -88,10 +88,10 @@ def check_gps_ready(logger, serial_port, baud_rate, timeout_seconds):
                             break
 
                     except pynmea2.ParseError as e:
-                        logger.warn(f"Failed to parse NMEA sentence: {e}")
+                        logger.warning(f"Failed to parse NMEA sentence: {e}")
                         continue
                     except ValueError:
-                        logger.warn("Received malformed numerical data in NMEA string.")
+                        logger.warning("Received malformed numerical data in NMEA string.")
                         continue
                     except Exception as e:
                         logger.error(f"Error reading from GNSS sensor: {e}")
@@ -112,7 +112,7 @@ def check_gps_ready(logger, serial_port, baud_rate, timeout_seconds):
         # --- RETRY WAIT LOGIC ---
         # Test failed (Timeout or Exception).
         # Wait 15 seconds before the loop restarts, checking rclpy.ok() so exit is still possible
-        logger.warn(f"Retrying Self-Test in {RETRY_WAIT_SECONDS} seconds...")
+        logger.warning(f"Retrying Self-Test in {RETRY_WAIT_SECONDS} seconds...")
 
         for _ in range(RETRY_WAIT_SECONDS):
             if not rclpy.ok():

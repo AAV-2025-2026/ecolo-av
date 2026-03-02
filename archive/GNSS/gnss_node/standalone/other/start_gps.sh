@@ -31,8 +31,8 @@ cleanup() {
 # Trap the "Ctrl+C" signal (SIGINT) and call cleanup
 trap cleanup EXIT
 
-# 2. Start ROS 2 Driver (Foreground)
-echo "Starting ZED-F9R Driver..."
+# 2. Start GNSS Publisher (Foreground)
+echo "Starting GNSS Publisher..."
 
 # Source ROS 2 if not already sourced
 if [ -f /opt/ros/humble/setup.bash ]; then
