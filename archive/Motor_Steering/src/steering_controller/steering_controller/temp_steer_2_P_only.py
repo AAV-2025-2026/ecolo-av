@@ -8,7 +8,8 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Float32
 
-from I2CCommunication import I2CCommunication
+import serial
+import time
 
 
 class SteeringImuP(Node):
@@ -16,9 +17,12 @@ class SteeringImuP(Node):
     def __init__(self):
         super().__init__('steering_imu_p')
 
-        self.declare_parameter('esp_addr', 0x00)  # PLEASE CHANGE THIS, 0X00 IS TEMPORARY, CHANGE WITH REAL ADDRESS
+        #self.declare_parameter('esp_addr', 0x00)  # PLEASE CHANGE THIS, 0X00 IS TEMPORARY, CHANGE WITH REAL ADDRESS
+        #self.i2c_comm = I2CCommunication(self.esp_addr)
 
-        self.i2c_comm = I2CCommunication(self.esp_addr)
+        self.ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1))   #THIS NEEDS TO BE CHANGED TO REAL SPECS
+        time.sleep(2)
+
 
         # PARAMETERS (SI UNITS)
         self.declare_parameter('wheelbase', 1.57)  # [m]
@@ -110,7 +114,8 @@ class SteeringImuP(Node):
         byte_list[0] = (u_motor)
 
         self.cmd_pub.publish(msg)
-        self.i2c_comm.write_data(byte_list)
+        self.ser.write(bytes(byte_list))
+
 
 
 def main(args=None):
