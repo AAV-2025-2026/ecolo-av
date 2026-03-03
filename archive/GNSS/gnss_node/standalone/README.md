@@ -123,4 +123,3 @@ Press **`Ctrl+C`** to safely stop the stack. The cleanup function will automatic
 
 ## Author
 Tommy Csete - Localization Group
-ri
