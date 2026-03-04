@@ -1,0 +1,27 @@
+My temporary git token (Alexandre)
+I typed it here for now, it's for myself to refer:
+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
+
+
+Important Notes:
+
+Somehow Flutter crashes now when using
+"flutter run -d linux", no idea how or since
+when.
+Apparently doing this command before
+running flutter fixes that:
+"export GDK_BACKEND=x11"
+
+Then run flutter:
+Navigate to User-Interface/flutter_pi
+and run the command
+"flutter run -d linux"
+
+According to Ryan, OSRM needs to run alongside Flutter (both Flutter & OSRM need to run in parallel for routing to work).
+To run OSRM: 
+Navigate to Home/Downloads/Data
+and use the following command:
+"sudo docker run -t -i -p 5000:5000 -v "${PWD}:/data" ghcr.io/project-osrm/osrm-backend osrm-routed --algorithm mld /data/ontario-251116.osrm"
+
+(make sure the ontario-x.osrm" matches what's currently in the folder...)
+

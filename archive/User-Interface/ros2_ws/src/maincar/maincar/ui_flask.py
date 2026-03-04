@@ -2,12 +2,13 @@
 
 import rclpy
 from rclpy.node import Node
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify
 from threading import Thread
 from flask_socketio import SocketIO
 
 from std_msgs.msg import Float32
 from sensor_msgs.msg import NavSatFix
+from geometry_msgs.msg import Point
 
 # =========================
 # MediaMTX config (LAN)
@@ -36,6 +37,9 @@ socketio = SocketIO(flask_app, cors_allowed_origins="*", async_mode="threading")
 # =========================
 mock_speed = 0.0
 mock_gps_altitude = 0.0
+list_lastestRoute = ""
+tuple_destinationCoordinateLatLon = (0.0, 0.0) # default is 0.0, 0.0 until updated 
+
 
 
 # =========================
@@ -55,7 +59,16 @@ def stream_info():
     UI can call this to discover the MediaMTX URLs.
     """
     return jsonify(build_stream_info())
-
+    
+@flask_app.route('/receive', methods=['POST'])
+def receive_data():
+    # parses incoming HTTP request (the JSON) into a Python object:
+    data = request.json   					
+    print("Received from Flutter:", data)
+    list_lastestRoute = data
+    getDestination(data)
+    # print("Type: "+ str(type(data)) )
+    return jsonify({"status": "success", "received": data})
 
 # =========================
 # Socket.IO events
@@ -103,6 +116,10 @@ class FlaskNode(Node):
             NavSatFix, "/mock_gps", self.callback_function_mock_gps_fetch, 10
         )
 
+        # ROS2 publishers
+        self.publisher_destinationCoord = self.create_publisher(Point, '/destination_coordinate', 10)
+        self.timer1 = self.create_timer(0.5, self.callback_function_publish_destination) # timer1 will publish node at a rate of 0.5 Hz
+        
         self.get_logger().info("✅ Flask node hosting Flask-SocketIO server in a thread")
 
     def callback_function_mock_speed_fetch(self, msg: Float32):
@@ -126,6 +143,47 @@ class FlaskNode(Node):
         )
 
         socketio.emit("mock_gps_update", {"latitude": latitude, "longitude": longitude})
+        
+    def callback_function_publish_destination(self):
+        # publishes destination coordinate as a geometry_msg Point
+        global tuple_destinationCoordinateLatLon
+        
+        # Create Point message
+        point_msg = Point()
+        point_msg.x = tuple_destinationCoordinateLatLon[0] # latitude
+        point_msg.y = tuple_destinationCoordinateLatLon[1] # longitude
+        point_msg.z = 0.0
+        
+        print("debug: publishing DestinationCoordinate (" + str(point_msg.x)+", "+str(point_msg.y)+")")
+        # Publish
+        self.publisher_destinationCoord.publish(point_msg) # publishes "point_msg"
+        
+
+
+# =========================
+# Helper Functions
+# =========================
+def getDestination(route: list):
+    """
+    Takes a route (list of {'lat': ..., 'lon': ...})
+    and and takes last element and returns it as as a tuple (lat, lon)
+    """
+    global tuple_destinationCoordinateLatLon
+    if not route:  # empty list safety check
+        print("Route list is empty. getDestination() returns None.")
+        return None
+
+    last = route[-1]  # get last element
+
+    
+    point = (last["lat"], last["lon"])
+    print("Destination coordinate as a tuple (Latitude, Longitude):")
+    tuple_destinationCoordinateLatLon = point
+    print(point)
+    return point
+    
+    
+
 
 
 #Main
