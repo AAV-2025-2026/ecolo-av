@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pi/util/ipc.dart';
 import '../components/sockets/socket_services.dart';
-import 'map_page.dart';
-import 'camera_page.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -18,6 +17,8 @@ class _MyHomePageState extends State<MyHomePage> {
   double speed = 0.0;
   double latitude = 0.0;
   double longitude = 0.0;
+
+  bool _cameraOpen = false;
 
   @override
   void initState() {
@@ -121,25 +122,13 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             const SizedBox(height: 10),
 
-//             ElevatedButton.icon(
-//               onPressed: () {
-//                 Navigator.of(context).push(
-//                   MaterialPageRoute(builder: (_) => const MapPage()),
-//                 );
-//               },
-//               icon: const Icon(Icons.map),
-//               label: const Text('Open Map'),
-//             ),
-//             const SizedBox(height: 10),
-
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CameraPage()),
-                );
+                setState(() => _cameraOpen = !_cameraOpen);
+                sendCommand(_cameraOpen ? 'camera' : 'map');
               },
-              icon: const Icon(Icons.videocam),
-              label: const Text('Open Camera'),
+              icon: Icon(_cameraOpen ? Icons.videocam_off : Icons.videocam),
+              label: Text(_cameraOpen ? 'Close Camera' : 'Open Camera'),
             ),
           ],
         ),
