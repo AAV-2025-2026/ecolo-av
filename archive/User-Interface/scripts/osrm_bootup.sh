@@ -19,7 +19,10 @@ touch systemd_osrm_test.txt
 cd /home/aavui/Downloads/Data
 
 #sudo docker run -t -i -p 5001:5000 -v "${PWD}:/data" ghcr.io/project-osrm/osrm-backend osrm-routed --algorithm mld /data/ontario-251116.osrm &
-docker run --rm -p 5001:5000 \
+exec /snap/bin/docker.wrapper run --rm -p 5001:5000 \
 -v /home/aavui/Downloads/Data:/data \
 ghcr.io/project-osrm/osrm-backend \
 osrm-routed --algorithm mld /data/ontario-251116.osrm
+
+# some how the "sudo docker run -t -i -p" does not work via systemd... Find a way to execute OSRM with systemd to avoid error status=125 or error status=126... especially error status=126
+# doing "systemctl status ui_osrm.service" shows which error causes it to break.

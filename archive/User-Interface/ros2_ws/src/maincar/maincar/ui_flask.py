@@ -63,6 +63,7 @@ def stream_info():
 @flask_app.route('/receive', methods=['POST'])
 def receive_data():
     # parses incoming HTTP request (the JSON) into a Python object:
+    global list_latestRoute
     data = request.json   					
     print("Received from Flutter:", data)
     list_lastestRoute = data
@@ -173,7 +174,7 @@ def getDestination(route: list):
         print("Route list is empty. getDestination() returns None.")
         return None
 
-    last = route[-1]  # get last element
+    last = route[-1]  # get last element of route
 
     
     point = (last["lat"], last["lon"])
