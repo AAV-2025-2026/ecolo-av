@@ -340,7 +340,7 @@ int query_sensor_data(sqlite3 *db) {
         const char *sensor = (const char*)sqlite3_column_text(stmt, 2);
         const char *message = (const char*)sqlite3_column_text(stmt, 3);
 
-        printf("%-12s %-10s %-25s %s\n", date, time, sensor, message);
+        printf("%-12s %-10s %-20s %s\n", date, time, sensor, message);
     }
 
     sqlite3_finalize(stmt);
