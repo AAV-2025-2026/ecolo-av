@@ -66,11 +66,16 @@ int main(void) {
 
     printf("Database initialized successfully\n\n");
 
-    printf("\n=== Querying Sensor Data ===\n");
+    printf("\n=== Querying Sensor Table ===\n");
     query_sensor_data(db);
 
-    printf("\n=== Querying State Data ===\n");
+    printf("\n=== Querying State Table ===\n");
     query_state_data(db);
+
+    printf("\n=== Querying System Logs Table===\n");
+    query_syslogs_data(db);
+
+    printf("\n=== Database app running ===\n");
 
     //Keep db app running (for now)
     while (1) {
@@ -80,6 +85,7 @@ int main(void) {
     }
     // Close database
     sqlite3_close(db);
+    mq_close(mqd);
     return 0;
 }
 //---------------------------------------------------------------------------
@@ -196,7 +202,10 @@ void receive_and_store(sqlite3 *db, mqd_t mqd){
     } else if(strcmp(received.table, "logs")==0){
         //Insert into syslogs table
         insert_syslogs_data(db, received.id, received.msg);
-    }
+    } else {
+        //Unknown Table
+        fprintf(stderr, "Unknown table: %s\n", received.table);
+}
 }
 
 
@@ -322,7 +331,7 @@ int query_sensor_data(sqlite3 *db) {
     }
 
     printf("\n");
-    printf("%-12s %-10s %-25s %s\n", "Date", "Time", "Sensor", "Message");
+    printf("%-12s %-10s %-20s %s\n", "Date", "Time", "Sensor", "Message");
     printf("-------------------------------------------------------------------\n");
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
