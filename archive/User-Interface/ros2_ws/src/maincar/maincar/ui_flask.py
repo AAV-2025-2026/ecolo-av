@@ -6,8 +6,8 @@ from flask import Flask, request, jsonify
 from threading import Thread
 from flask_socketio import SocketIO
 
-from std_msgs.msg import Float32
-from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import Float32, Bool
+from sensor_msgs.msg import NavSatFix, Image
 from geometry_msgs.msg import Point
 
 # =========================
@@ -113,15 +113,37 @@ class FlaskNode(Node):
         self.subscriber_mock_speed = self.create_subscription(
             Float32, "/mock_speed", self.callback_function_mock_speed_fetch, 10
         )
+
         self.subscriber_mock_gps = self.create_subscription(
             NavSatFix, "/mock_gps", self.callback_function_mock_gps_fetch, 10
         )
 
+        self.subscriber_stop_sign_detector = self.create_subscription(
+            Bool, "/aav/stop_sign_detected", self.callback_stop_sign, 10
+        )
+
+        self.subscriber_cam1 = self.create_subscription(
+            Image, "/camera/cam1/image_raw", self.callback_cam1, 10
+        )
+
+        self.subscriber_cam2 = self.create_subscription(
+            Image, "/camera/cam2/image_raw", self.callback_cam2, 10
+        )
+
         # ROS2 publishers
-        self.publisher_destinationCoord = self.create_publisher(Point, '/destination_coordinate', 10)
-        self.timer1 = self.create_timer(0.5, self.callback_function_publish_destination) # timer1 will publish node at a rate of 0.5 Hz
+        self.publisher_destinationCoord = self.create_publisher(Point, '/aav/ui/flask/destination_coordinate', 10)
+
+
+        # timers
+        # subscription to topics are "event-driven"--subscribes when a msg is available. It's automatic.
+        # publishing to topics are "timer-driven". We have to create timers to execute a timer callback function that publish msgs
+
+        self.timer1 = self.create_timer(0.5, self.timer1_callback) # timer1 will execute timer1_callback() at a rate of 0.5 Hz
         
         self.get_logger().info("✅ Flask node hosting Flask-SocketIO server in a thread")
+
+
+    # ----- callback functions for subscribers -------
 
     def callback_function_mock_speed_fetch(self, msg: Float32):
         global mock_speed
@@ -131,6 +153,7 @@ class FlaskNode(Node):
 
         # IMPORTANT: your Flutter expects data['speed']
         socketio.emit("mock_speed_update", {"speed": mock_speed})
+
 
     def callback_function_mock_gps_fetch(self, msg: NavSatFix):
         global mock_gps_altitude
@@ -144,8 +167,21 @@ class FlaskNode(Node):
         )
 
         socketio.emit("mock_gps_update", {"latitude": latitude, "longitude": longitude})
-        
-    def callback_function_publish_destination(self):
+    
+    def callback_stop_sign(self, msg: Bool):
+        if (msg.data == True):
+            self.get_logger().info(f"stopsign detected!")
+
+    def callback_cam1(self, msg: Image):
+        self.get_logger().info(f"Cam1 image received: {msg.width}x{msg.height}, encoding: {msg.encoding}")
+
+    def callback_cam2(self, msg: Image):
+        self.get_logger().info(f"Cam2 image received: {msg.width}x{msg.height}, encoding: {msg.encoding}")
+
+
+    # ----  timer functions for publishers -----
+    def timer1_callback(self):
+
         # publishes destination coordinate as a geometry_msg Point
         global tuple_destinationCoordinateLatLon
         
