@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify
 from threading import Thread
 from flask_socketio import SocketIO
 
-from std_msgs.msg import Float32, Bool
+from std_msgs.msg import Float32, Bool, Uint8, String
 from sensor_msgs.msg import NavSatFix, Image
 from geometry_msgs.msg import Point
 
@@ -33,13 +33,20 @@ flask_app = Flask(__name__)
 socketio = SocketIO(flask_app, cors_allowed_origins="*", async_mode="threading")
 
 # =========================
-# Shared variables (ROS2 -> Flask routes)
+# Shared one-way variables (ROS2 -> Flask -> Flutter)
 # =========================
 mock_speed = 0.0
 mock_gps_altitude = 0.0
-list_lastestRoute = ""
-tuple_destinationCoordinateLatLon = (0.0, 0.0) # default is 0.0, 0.0 until updated 
 
+
+
+# =========================
+# Shared one-way variables (Flutter -> Flask -> ROS2)
+# =========================
+tuple_destinationCoordinateLatLon = (0.0, 0.0) # default is 0.0, 0.0 until updated
+tuple_startingCoordinateLatLon = (0.0, 0.0) # default is 0.0, 0.0 until updated
+list_lastestRoute = ""
+list_latestRoutePoints = []    # like list_latestRoute, except it's a list that contains Point() types only, but I think I'll make this a list of tuples, x,y with no z, more memory efficient.
 
 
 # =========================
@@ -122,6 +129,7 @@ class FlaskNode(Node):
             Bool, "/aav/stop_sign_detected", self.callback_stop_sign, 10
         )
 
+        """
         self.subscriber_cam1 = self.create_subscription(
             Image, "/camera/cam1/image_raw", self.callback_cam1, 10
         )
@@ -129,10 +137,23 @@ class FlaskNode(Node):
         self.subscriber_cam2 = self.create_subscription(
             Image, "/camera/cam2/image_raw", self.callback_cam2, 10
         )
+        """
+
+        self.subscriber_gear = self.create_subscription(
+            Uint8, "/rtos/gear", self.callback_gear, 10
+        )
+
+        self.subscriber_speed = self.create_subscription(
+            Float32, "/rtos/speed", self.callback_speed, 10
+        )
+
+        self.subscriber_gps = self.create_subscription(
+            NavSatFix, "/rtos/gps", self.callback_gps, 10
+        )
 
         # ROS2 publishers
-        self.publisher_destinationCoord = self.create_publisher(Point, '/aav/ui/flask/destination_coordinate', 10)
-
+        self.publisher_destinationCoord = self.create_publisher(Point, '/ui/destination_point', 10)
+        self.publisher_osrmRoute = self.create_publisher(String, "/ui/route", 10)
 
         # timers
         # subscription to topics are "event-driven"--subscribes when a msg is available. It's automatic.
@@ -172,16 +193,34 @@ class FlaskNode(Node):
         if (msg.data == True):
             self.get_logger().info(f"stopsign detected!")
 
+    """
     def callback_cam1(self, msg: Image):
         self.get_logger().info(f"Cam1 image received: {msg.width}x{msg.height}, encoding: {msg.encoding}")
 
     def callback_cam2(self, msg: Image):
         self.get_logger().info(f"Cam2 image received: {msg.width}x{msg.height}, encoding: {msg.encoding}")
+    """
+
+    def callback_gear(self, msg: Uint8):
+        if (msg.data == 0):    # 0 means "drive".
+            pass
+        elif (msg.data == 1):    # 1 means "parked" 
+            pass
+        elif (msg.data == 2):    # 2 means "reversed"
+            pass
+        else:
+            self.get_logger().warn(f"Non-valid gear value: Gear value is currently {msg.data}")
+
+    def callback_speed(self, msg: Float32):
+        if (msg.data == 1): 
+
+    def callback_gps(self, msg: NavSatFix):
 
 
     # ----  timer functions for publishers -----
     def timer1_callback(self):
 
+        #          ----  destination_point ----
         # publishes destination coordinate as a geometry_msg Point
         global tuple_destinationCoordinateLatLon
         
@@ -194,6 +233,11 @@ class FlaskNode(Node):
         print("debug: publishing DestinationCoordinate (" + str(point_msg.x)+", "+str(point_msg.y)+")")
         # Publish
         self.publisher_destinationCoord.publish(point_msg) # publishes "point_msg"
+
+
+        #              ---- user input osrm route -----
+
+
         
 
 
@@ -218,10 +262,8 @@ def getDestination(route: list):
     tuple_destinationCoordinateLatLon = point
     print(point)
     return point
-    
-    
 
-
+def getRouteArrayFromRouteList
 
 #Main
 def main(args=None):
