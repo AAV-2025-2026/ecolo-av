@@ -192,6 +192,7 @@ class FlaskNode(Node):
     def callback_stop_sign(self, msg: Bool):
         if (msg.data == True):
             self.get_logger().info(f"stopsign detected!")
+        socketio.emit("stop_sign_alert", {"detected": bool(msg.data), "message": "STOP"})
 
     """
     def callback_cam1(self, msg: Image):
