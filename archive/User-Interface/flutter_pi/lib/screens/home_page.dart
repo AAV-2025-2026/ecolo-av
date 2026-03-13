@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../components/sockets/socket_services.dart';
-import 'map_page.dart';
 import 'camera_page.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -19,6 +18,9 @@ class _MyHomePageState extends State<MyHomePage> {
   double latitude = 0.0;
   double longitude = 0.0;
 
+  bool stopSignDetected = false;
+  String stopMessage = "STOP";
+
   @override
   void initState() {
     super.initState();
@@ -35,6 +37,12 @@ class _MyHomePageState extends State<MyHomePage> {
         setState(() {
           latitude = lat;
           longitude = lon;
+        });
+      },
+      onStopSignAlert: (detected, message) {
+        setState(() {
+          stopSignDetected = detected;
+          stopMessage = message;
         });
       },
     );
@@ -55,94 +63,108 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Colors.deepPurple.shade700,
         foregroundColor: Colors.white,
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Vehicle Status Module',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Speed Display
-            Card(
-              color: Colors.deepPurple.shade300,
-              margin: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Text(
-                  'Speed: ${speed.toStringAsFixed(2)} m/s',
-                  style: const TextStyle(
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Vehicle Status Module',
+                  style: TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                Card(
+                  color: Colors.deepPurple.shade300,
+                  margin: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Text(
+                      'Speed: ${speed.toStringAsFixed(2)} m/s',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+
+                Card(
+                  color: Colors.deepPurple.shade300,
+                  margin: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Latitude: ${latitude.toStringAsFixed(5)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Longitude: ${longitude.toStringAsFixed(5)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+                const Text(
+                  "Reading ROS2 Mock Data",
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                const SizedBox(height: 10),
+
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const CameraPage()),
+                    );
+                  },
+                  icon: const Icon(Icons.videocam),
+                  label: const Text('Open Camera'),
+                ),
+              ],
+            ),
+          ),
+
+          if (stopSignDetected)
+            Positioned(
+              top: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.75),
+                  border: Border.all(color: Colors.red, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  stopMessage,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
                   ),
                 ),
               ),
             ),
-
-            // GPS Display
-            Card(
-              color: Colors.deepPurple.shade300,
-              margin: const EdgeInsets.symmetric(horizontal: 50, vertical: 10),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    Text(
-                      'Latitude: ${latitude.toStringAsFixed(5)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Longitude: ${longitude.toStringAsFixed(5)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 30),
-            const Text(
-              "Reading ROS2 Mock Data",
-              style: TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-            const SizedBox(height: 10),
-
-//             ElevatedButton.icon(
-//               onPressed: () {
-//                 Navigator.of(context).push(
-//                   MaterialPageRoute(builder: (_) => const MapPage()),
-//                 );
-//               },
-//               icon: const Icon(Icons.map),
-//               label: const Text('Open Map'),
-//             ),
-//             const SizedBox(height: 10),
-
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CameraPage()),
-                );
-              },
-              icon: const Icon(Icons.videocam),
-              label: const Text('Open Camera'),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
