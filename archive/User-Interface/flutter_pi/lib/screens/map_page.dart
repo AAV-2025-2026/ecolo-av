@@ -291,6 +291,9 @@ class _MapPageState extends State<MapPage> {
 
   // New helper to lock the route
   void _lockRoute() {
+    print("LOCK ROUTE CALLED");  // debug line
+    showAppMessage(context, 'debug: _lockRoute() called');
+  
     if (routePoints.isEmpty) {
       showAppMessage(context, 'No route to lock');
       return;
@@ -315,6 +318,9 @@ class _MapPageState extends State<MapPage> {
     print('Locked route JSON: $lastRouteJson');
     showAppMessage(context, 'Route locked and exported (${lockedRoutePoints.length} points)');
 
+    // send the new route to Flask
+    sendRouteToFlask(lastRouteJson!);
+    
     // Zoom to current position and start tracking
     try {
       mapController.move(currentLocation!, 16.0);
@@ -323,9 +329,48 @@ class _MapPageState extends State<MapPage> {
     _startTrackingAndPrune();
     setState(() {});
   }
+  
+  // Helper function to send the new route obtained from _lockRoute() to Flask 
+  Future<void> sendRouteToFlask(String jsonString) async {
+    // TODO: remove all "debug" lines in this function when done
+    // TODO: remove all Future.delayed() functions, the pauses were to help with debugging
+    
+    // request to send Flask (on port 5000, on this machine) some data
+    final url = Uri.parse('http://localhost:5000/receive');  
+    
+    // prompts on screen (for myself to debug)
+    showAppMessage(context, 'debug: sendRouteToFlask() called');        // debug
+    await Future.delayed(Duration(seconds: 3)); 			// debug
+    
+    try {
+    	showAppMessage(context, 'trying now...');			// debug
+    	await Future.delayed(Duration(seconds: 3)); 			// debug
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonString,
+      );
+  	
+  	showAppMessage(context, 'trying worked..');			 // debug
+  	await Future.delayed(Duration(seconds: 3));			 // debug
+  	
+      if (response.statusCode == 200) {
+        print("Successfully sent route to Flask: ${response.body}");
+        showAppMessage(context, "debug: Successfully sent route to Flask: ${response.body}");
+      } else {
+        print("Failed to send route. Status code: ${response.statusCode}");
+        showAppMessage(context, "debug: Failed to send route. Status code: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error sending route to Flask: $e");
+      showAppMessage(context, "debug: Error sending route to Flask: $e");
+    }
+  }
 
   // Unlock route and stop tracking
   void _unlockRoute() {
+    print('_unlockRoute() was called'); // debug line
+  
     routeLocked = false;
     _positionSub?.cancel();
     _positionSub = null;

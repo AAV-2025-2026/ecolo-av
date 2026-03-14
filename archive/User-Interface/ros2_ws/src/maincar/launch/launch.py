@@ -6,12 +6,14 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='maincar',
-            executable='ui_mock_publish',
-            namespace='ui_mock_publish_1',
+            namespace='ui',
+            executable='ui_flask',
+            name='flask_node'
         ),
         Node(
             package='maincar',
-            executable='ui_flask',
-            namespace='ui_flask_1',
-        ),
+            namespace='ui',
+            executable='ui_mock_publish',
+            name='mock_data_publishing_node'
+        )
     ])
