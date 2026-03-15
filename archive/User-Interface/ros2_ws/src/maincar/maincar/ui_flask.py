@@ -256,7 +256,7 @@ class FlaskNode(Node):
     def callback_sub_speed(self, msg: Float32):
         global real_speed
 
-        mock_speed = msg.data
+        real_speed = msg.data
         self.get_logger().info("real speed: " + str(real_speed))
 
         # IMPORTANT: Flutter expects data['real_speed']
