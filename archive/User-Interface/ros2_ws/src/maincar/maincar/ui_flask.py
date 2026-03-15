@@ -35,8 +35,30 @@ socketio = SocketIO(flask_app, cors_allowed_origins="*", async_mode="threading")
 # =========================
 # Shared one-way variables (ROS2 -> Flask -> Flutter)
 # =========================
+
+usingMockData = False   # if true, display mock data... If false, display real car data TODO: to implement it.
+
 mock_speed = 0.0
-mock_gps_altitude = 0.0
+
+mock_gps_x = 0.0
+mock_gps_y = 0.0
+mock_gps_z = 0.0
+
+mock_gear = 0   
+
+mock_stop_sign_detection = False
+
+# real values (from actual car, not mock)
+real_speed = 0
+
+real_gps_x = 0
+real_gps_y = 0
+real_gps_z = 0
+
+real_gear = 0   
+
+real_stop_sign_detection = False
+
 
 
 
@@ -125,8 +147,12 @@ class FlaskNode(Node):
             NavSatFix, "/mock_gps", self.callback_function_mock_gps_fetch, 10
         )
 
-        self.subscriber_stop_sign_detector = self.create_subscription(
-            Bool, "/aav/stop_sign_detected", self.callback_stop_sign, 10
+        self.subscriber_real_stop_sign_detector = self.create_subscription(
+            Bool, "/aav/stop_sign_detected", self.callback_real_stop_sign, 10
+        )
+
+        self.subscriber_mock_stop_sign_detector = self.create_subscription(
+            Bool, "/mock_stop_sign_detected", self.callback_mock_stop_sign, 10
         )
 
         """
@@ -159,7 +185,7 @@ class FlaskNode(Node):
         # subscription to topics are "event-driven"--subscribes when a msg is available. It's automatic.
         # publishing to topics are "timer-driven". We have to create timers to execute a timer callback function that publish msgs
 
-        self.timer1 = self.create_timer(0.5, self.timer1_callback) # timer1 will execute timer1_callback() at a rate of 0.5 Hz
+        self.timer1 = self.create_timer(0.5, self.timer1_callback) # timer1 will execute timer1_callback() every 0.5 seconds (2 Hz)
         
         self.get_logger().info("✅ Flask node hosting Flask-SocketIO server in a thread")
 
@@ -172,27 +198,35 @@ class FlaskNode(Node):
         mock_speed = round(float(msg.data), 2)
         self.get_logger().info("mock speed: " + str(mock_speed))
 
-        # IMPORTANT: your Flutter expects data['speed']
-        socketio.emit("mock_speed_update", {"speed": mock_speed})
+        # IMPORTANT: Flutter expects data['mock_speed']
+        socketio.emit("mock_speed_update", {"mock_speed": mock_speed})
 
 
     def callback_function_mock_gps_fetch(self, msg: NavSatFix):
-        global mock_gps_altitude
+        global mock_gps_x
+        global mock_gps_y
+        global mock_gps_z
 
-        mock_gps_altitude = float(msg.altitude)
-        latitude = float(msg.latitude)
-        longitude = float(msg.longitude)
+        
+        mock_gps_x = float(msg.latitude)
+        mock_gps_y = float(msg.longitude)
+        mock_gps_z = float(msg.altitude)
 
         self.get_logger().info(
-            f"Mock Latitude: {latitude}, Mock Longitude: {longitude}, Mock Altitude: {mock_gps_altitude}"
+            f"Mock Latitude: {mock_gps_x}, Mock Longitude: {mock_gps_y}, Mock Altitude: {mock_gps_z}"
         )
 
-        socketio.emit("mock_gps_update", {"latitude": latitude, "longitude": longitude})
+        socketio.emit("mock_gps_update", {"mock_latitude": mock_gps_x, "mock_longitude": mock_gps_y})
     
-    def callback_stop_sign(self, msg: Bool):
+    def callback_mock_stop_sign(self, msg: Bool):
+        if (msg.data == True):
+            self.get_logger().info(f"mock stopsign detected!")
+        socketio.emit("mock_stop_sign_alert", {"mock_sign_detected": bool(msg.data), "message": "mock STOP"})
+    
+    def callback_real_stop_sign(self, msg: Bool):
         if (msg.data == True):
             self.get_logger().info(f"stopsign detected!")
-        socketio.emit("stop_sign_alert", {"detected": bool(msg.data), "message": "STOP"})
+        socketio.emit("real_stop_sign_alert", {"real_sign_detected": bool(msg.data), "message": "STOP"})
 
     """
     def callback_cam1(self, msg: Image):
@@ -202,20 +236,50 @@ class FlaskNode(Node):
         self.get_logger().info(f"Cam2 image received: {msg.width}x{msg.height}, encoding: {msg.encoding}")
     """
 
-    def callback_gear(self, msg: Uint8):
+    def callback_sub_gear(self, msg: Uint8):
+        global real_gear
+        real_gear = -1  #  if -1 then data is invalid
+
         if (msg.data == 0):    # 0 means "drive".
-            pass
+            real_gear = 0
         elif (msg.data == 1):    # 1 means "parked" 
-            pass
+            real_gear = 1
         elif (msg.data == 2):    # 2 means "reversed"
-            pass
+            real_gear = 2
         else:
             self.get_logger().warn(f"Non-valid gear value: Gear value is currently {msg.data}")
 
-    def callback_speed(self, msg: Float32):
-        if (msg.data == 1): 
+        # Flutter expects data['real_gear']
+        socketio.emit("real_gear_update", {"real_gear": real_gear})
 
-    def callback_gps(self, msg: NavSatFix):
+
+    def callback_sub_speed(self, msg: Float32):
+        global real_speed
+
+        mock_speed = msg.data
+        self.get_logger().info("real speed: " + str(real_speed))
+
+        # IMPORTANT: Flutter expects data['real_speed']
+        socketio.emit("real_speed_update", {"real_speed": real_speed})
+
+
+
+    def callback_sub_gps(self, msg: NavSatFix):
+        global real_gps_x
+        global real_gps_y
+        global real_gps_z
+
+        
+        real_gps_x = float(msg.latitude)
+        real_gps_y = float(msg.longitude)
+        real_gps_z = float(msg.altitude)
+
+        self.get_logger().info(
+            f"Mock Latitude: {real_gps_x}, Mock Longitude: {real_gps_y}, Mock Altitude: {real_gps_z}"
+        )
+
+        socketio.emit("real_gps_update", {"real_latitude": real_gps_x, "real_longitude": real_gps_y})
+
 
 
     # ----  timer functions for publishers -----
@@ -264,7 +328,7 @@ def getDestination(route: list):
     print(point)
     return point
 
-def getRouteArrayFromRouteList
+#TODO: implement def getRouteArrayFromRouteList() to be sent to Nav
 
 #Main
 def main(args=None):

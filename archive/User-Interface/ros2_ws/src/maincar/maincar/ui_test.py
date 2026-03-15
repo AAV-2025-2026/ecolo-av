@@ -41,8 +41,8 @@ class MockNode(Node):
                                             "/mock_gps",            # topic name
                                             10)                     # QoS profile
         
-        self.pub_sign_detection_bool = self.create_publisher(Bool,
-                                                             "/aav/stop_sign_detected",
+        self.pub_mock_sign_detection_bool = self.create_publisher(Bool,
+                                                             "/mock_stop_sign_detected",
                                                              10)
         
 
@@ -99,7 +99,7 @@ class MockNode(Node):
         else:
             msgBool.data = False
 
-        self.pub_sign_detection_bool.publish(msgBool)
+        self.pub_mock_sign_detection_bool.publish(msgBool)
 
 
 
