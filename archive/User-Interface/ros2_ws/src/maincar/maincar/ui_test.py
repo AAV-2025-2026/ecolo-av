@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
-This node constantly sends mock data to the UI for testing purposes:
+This node constantly sends mock data to the UI front end (flutter) for testing purposes:
 
-Float32 speed
-GPS data
+it sends:
+    mock "Float32" speed
+    mock "NavSatFix" GPS data
+    mock "Bool" stop sign detection (0-no sign,  1-sign)
+
 
  value every second as mock data.
 It is for the UI (Flask server) to fetch and display for testing purposes.
@@ -14,7 +17,7 @@ import rclpy
 from rclpy.node import Node
 import random
 
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, Bool
 from sensor_msgs.msg import NavSatFix
 
 # from geometry_msgs.msg import Twist
@@ -38,11 +41,13 @@ class MockNode(Node):
                                             "/mock_gps",            # topic name
                                             10)                     # QoS profile
         
-
+        self.pub_sign_detection_bool = self.create_publisher(Bool,
+                                                             "/aav/stop_sign_detected",
+                                                             10)
         
 
         # set call function every x seconds
-        self.timer_vel = self.create_timer(1,                                   # amount of seconds to wait 
+        self.timer_vel = self.create_timer(0.5,                                   # Period (in seconds)  every 0.5 seconds (2 Hz)  
                                         self.send_mock_data)     # callback-function to call
         
 
@@ -60,7 +65,7 @@ class MockNode(Node):
         self.get_logger().info("Sending Mock Speed...")
         self.cmd_vel_pub_.publish(msg)  # publishes speed message
 
-        # === Mock Data for GPS to publish ===
+        # === Mock Data for GPS  ===
 
         # canada parliament: 45.42410246146506, -75.69894697494593   (0.00001 decimal places for degrees for 1.11 m)
         # carleton university parking: 45.38382089559656, -75.69658483653251
@@ -84,6 +89,19 @@ class MockNode(Node):
         self.coord_set += 1
         if (self.coord_set > 5): self.coord_set = 0
         self.get_logger().info("Sending Mock GPS... (coord set: +"+str(self.coord_set)+")")
+
+
+        # === Mock Data for Sign Detection ===
+        msgBool = Bool() 
+        randomVal = random.uniform(0.0, 2.0)
+        if (randomVal >= 1.0):
+            msgBool.data = True
+        else:
+            msgBool.data = False
+
+        self.pub_sign_detection_bool.publish(msgBool)
+
+
 
 
 def main(args=None):
