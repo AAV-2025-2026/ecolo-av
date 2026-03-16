@@ -11,6 +11,8 @@ find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(ackermann_msgs REQUIRED)
 
 add_executable(local_path_generator_node
   src/main.cpp
@@ -33,6 +35,8 @@ ament_target_dependencies(local_path_generator_node
   std_msgs
   nav_msgs
   geometry_msgs
+  sensor_msgs
+  ackermann_msgs
 )
 
 target_link_libraries(local_path_generator_node
