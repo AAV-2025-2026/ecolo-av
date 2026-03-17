@@ -166,15 +166,15 @@ class FlaskNode(Node):
         """
 
         self.subscriber_gear = self.create_subscription(
-            UInt8, "/rtos/gear", self.callback_gear, 10
+            UInt8, "/rtos/gear", self.callback_sub_gear, 10
         )
 
         self.subscriber_speed = self.create_subscription(
-            Float32, "/rtos/speed", self.callback_speed, 10
+            Float32, "/rtos/speed", self.callback_sub_speed, 10
         )
 
         self.subscriber_gps = self.create_subscription(
-            NavSatFix, "/rtos/gps", self.callback_gps, 10
+            NavSatFix, "/rtos/gps", self.callback_sub_gps, 10
         )
 
         # ROS2 publishers
