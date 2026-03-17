@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify
 from threading import Thread
 from flask_socketio import SocketIO
 
-from std_msgs.msg import Float32, Bool, Uint8, String
+from std_msgs.msg import Float32, Bool, UInt8, String
 from sensor_msgs.msg import NavSatFix, Image
 from geometry_msgs.msg import Point
 
@@ -166,7 +166,7 @@ class FlaskNode(Node):
         """
 
         self.subscriber_gear = self.create_subscription(
-            Uint8, "/rtos/gear", self.callback_gear, 10
+            UInt8, "/rtos/gear", self.callback_gear, 10
         )
 
         self.subscriber_speed = self.create_subscription(
@@ -236,7 +236,7 @@ class FlaskNode(Node):
         self.get_logger().info(f"Cam2 image received: {msg.width}x{msg.height}, encoding: {msg.encoding}")
     """
 
-    def callback_sub_gear(self, msg: Uint8):
+    def callback_sub_gear(self, msg: UInt8):
         global real_gear
         real_gear = -1  #  if -1 then data is invalid
 
