@@ -40,23 +40,22 @@ class SocketService {
       print("⚠️ Disconnected from Flask server");
     });
 
-    socket!.on('mock_speed_update', (data) {
-      final speed = (data['speed'] as num).toDouble();
-      onSpeedUpdate(speed);
-    });
+    socket!.on('mock_stop_sign_alert', (data) {        // ✅ matches Flask emit
+  final detected = (data['mock_sign_detected'] as bool?) ?? false;  // ✅
+  final message = data['message'] ?? 'STOP';
+  onStopSignAlert(detected, message);
+});
 
-    socket!.on('mock_gps_update', (data) {
-      final latitude = (data['latitude'] as num).toDouble();
-      final longitude = (data['longitude'] as num).toDouble();
-      onGpsUpdate(latitude, longitude);
-    });
+socket!.on('mock_speed_update', (data) {
+  final speed = (data['mock_speed'] as num).toDouble();   // ✅ was 'speed'
+  onSpeedUpdate(speed);
+});
 
-    socket!.on('stop_sign_alert', (data) {
-      final detected = data['detected'] ?? false;
-      final message = data['message'] ?? 'STOP';
-      onStopSignAlert(detected, message);
-    });
-  }
+socket!.on('mock_gps_update', (data) {
+  final latitude = (data['mock_latitude'] as num).toDouble();    // ✅ was 'latitude'
+  final longitude = (data['mock_longitude'] as num).toDouble();  // ✅ was 'longitude'
+  onGpsUpdate(latitude, longitude);
+});
 
   void dispose() {
     socket?.dispose();
