@@ -5,6 +5,10 @@
 #include <netinet/in.h>
 #include "command_pool.h"
 
+#include "dbstruct.h"
+#include <mqueue.h>
+#include <fcntl.h>
+
 /* -----------------------------------------------------------------------
  * MCULogic
  *
@@ -41,6 +45,6 @@ void mcu_stop(MCULogic *mcu);
 void mcu_destroy(MCULogic *mcu);
 
 //Message queue struct
-mqd_t mqd;
+extern mqd_t mqd;
 
 #endif /* MCU_LOGIC_H */

@@ -10,7 +10,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "dbstruct.h"
+// Define the global mqd
+mqd_t mqd;
 
 /* -----------------------------------------------------------------------
  * Wire-format helpers
@@ -29,7 +30,8 @@
 #define FRESHNESS_OFFSET ACKERMANN_PAYLOAD_SIZE
 #define PRIORITY_OFFSET (ACKERMANN_PAYLOAD_SIZE + 4u)
 
-static inline uint32_t read_u32_be(const uint8_t* p) {
+static inline uint32_t read_u32_be(const uint8_t *p)
+{
     return ((uint32_t)p[0] << 24) |
            ((uint32_t)p[1] << 16) |
            ((uint32_t)p[2] << 8) |
@@ -37,9 +39,11 @@ static inline uint32_t read_u32_be(const uint8_t* p) {
 }
 
 /* Add milliseconds to a timespec. */
-static void ts_add_ms(struct timespec* ts, uint32_t ms) {
+static void ts_add_ms(struct timespec *ts, uint32_t ms)
+{
     ts->tv_nsec += (long)ms * 1000000L;
-    if (ts->tv_nsec >= 1000000000L) {
+    if (ts->tv_nsec >= 1000000000L)
+    {
         ts->tv_sec += ts->tv_nsec / 1000000000L;
         ts->tv_nsec = ts->tv_nsec % 1000000000L;
     }
@@ -49,21 +53,25 @@ static void ts_add_ms(struct timespec* ts, uint32_t ms) {
  * Receive thread
  * ----------------------------------------------------------------------- */
 
-static void* interface_thread(void* arg) {
-    CommandInterface* iface = (CommandInterface*)arg;
+static void *interface_thread(void *arg)
+{
+    CommandInterface *iface = (CommandInterface *)arg;
     uint8_t buf[INBOUND_PACKET_SIZE];
 
     // Open message queue to write
     mqd = mq_open("/db_queue", O_WRONLY);
-    if (mqd == (mqd_t)-1) {
+    if (mqd == (mqd_t)-1)
+    {
         perror("mq_open");
-        return 1;
+        return NULL;
     }
 
-    while (iface->running) {
+    while (iface->running)
+    {
         ssize_t n = recv(iface->sock_fd, buf, sizeof(buf), 0);
 
-        if (n < 0) {
+        if (n < 0)
+        {
             if (errno == EINTR)
                 continue; /* interrupted — retry              */
             if (!iface->running)
@@ -72,7 +80,8 @@ static void* interface_thread(void* arg) {
             continue;
         }
 
-        if ((size_t)n != INBOUND_PACKET_SIZE) {
+        if ((size_t)n != INBOUND_PACKET_SIZE)
+        {
             fprintf(stderr,
                     "interface_thread: unexpected packet size %zd (expected %u), dropping\n",
                     n, (unsigned)INBOUND_PACKET_SIZE);
@@ -93,11 +102,21 @@ static void* interface_thread(void* arg) {
 
         // ADD DATABASE ENTRY HERE THAT WILL STORE CMD, PRIORITY, AND RECEIVE TIME
         DB_t msg;
-        strncpy(msg.table, "logs", sizeof(msg.table));  // "sensors", "states", or "logs"
+        strncpy(msg.table, "logs", sizeof(msg.table)); // "sensors", "states", or "logs"
         strncpy(msg.id, "cmd", sizeof(msg.id));
-        strncpy(msg.msg, "Command Received: ", sizeof(msg.msg));  // add details
+        snprintf(msg.msg, sizeof(msg.msg), "Command Received: Priority: %u Time: %ld.%09ld",
+                 priority,
+                 recv_time.tv_sec,
+                 recv_time.tv_nsec);
 
-        mq_send(mqd, (char*)&msg, sizeof(DB_t), 0);
+        if (mq_send(mqd, (char *)&msg, sizeof(DB_t), 0) == -1)
+        {
+            perror("mq_send");
+        }
+        else
+        {
+            printf("Sent to DB: table=%s id=%s msg=%s\n", msg.table, msg.id, msg.msg);
+        }
 
         /* --- Build the pool entry (ackermann bytes stay opaque). --- */
         PoolEntry entry;
@@ -105,11 +124,13 @@ static void* interface_thread(void* arg) {
         entry.priority = priority;
         entry.valid_until = valid_until;
 
-        if (pool_push(iface->pool, &entry) != 0) {
+        if (pool_push(iface->pool, &entry) != 0)
+        {
             fprintf(stderr, "interface_thread: pool_push failed, command dropped\n");
         }
     }
 
+    mq_close(mqd);
     return NULL;
 }
 
@@ -117,8 +138,9 @@ static void* interface_thread(void* arg) {
  * Public API
  * ----------------------------------------------------------------------- */
 
-int interface_init(CommandInterface* iface, uint16_t listen_port,
-                   CommandPool* pool) {
+int interface_init(CommandInterface *iface, uint16_t listen_port,
+                   CommandPool *pool)
+{
     if (!iface || !pool)
         return -1;
 
@@ -130,7 +152,8 @@ int interface_init(CommandInterface* iface, uint16_t listen_port,
 
     /* Open UDP socket. */
     iface->sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (iface->sock_fd < 0) {
+    if (iface->sock_fd < 0)
+    {
         perror("interface_init: socket");
         return -1;
     }
@@ -142,7 +165,8 @@ int interface_init(CommandInterface* iface, uint16_t listen_port,
     addr.sin_port = htons(listen_port);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if (bind(iface->sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    if (bind(iface->sock_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
         perror("interface_init: bind");
         close(iface->sock_fd);
         iface->sock_fd = -1;
@@ -152,7 +176,8 @@ int interface_init(CommandInterface* iface, uint16_t listen_port,
     return 0;
 }
 
-int interface_start(CommandInterface* iface) {
+int interface_start(CommandInterface *iface)
+{
     if (!iface || iface->sock_fd < 0)
         return -1;
 
@@ -174,7 +199,8 @@ int interface_start(CommandInterface* iface) {
     int rc = pthread_create(&iface->thread, &attr, interface_thread, iface);
     pthread_attr_destroy(&attr);
 
-    if (rc != 0) {
+    if (rc != 0)
+    {
         fprintf(stderr, "interface_start: pthread_create failed: %s\n",
                 strerror(rc));
         iface->running = 0;
@@ -184,7 +210,8 @@ int interface_start(CommandInterface* iface) {
     return 0;
 }
 
-void interface_stop(CommandInterface* iface) {
+void interface_stop(CommandInterface *iface)
+{
     if (!iface)
         return;
 
@@ -197,11 +224,13 @@ void interface_stop(CommandInterface* iface) {
     pthread_join(iface->thread, NULL);
 }
 
-void interface_destroy(CommandInterface* iface) {
+void interface_destroy(CommandInterface *iface)
+{
     if (!iface)
         return;
 
-    if (iface->sock_fd >= 0) {
+    if (iface->sock_fd >= 0)
+    {
         close(iface->sock_fd);
         iface->sock_fd = -1;
     }

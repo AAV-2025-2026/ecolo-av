@@ -10,14 +10,13 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "dbstruct.h"
-
 /* -----------------------------------------------------------------------
  * Internal helpers
  * ----------------------------------------------------------------------- */
 
 /* Returns 1 if timespec a is strictly after timespec b. */
-static inline int ts_after(const struct timespec* a, const struct timespec* b) {
+static inline int ts_after(const struct timespec *a, const struct timespec *b)
+{
     if (a->tv_sec != b->tv_sec)
         return a->tv_sec > b->tv_sec;
     return a->tv_nsec > b->tv_nsec;
@@ -27,37 +26,51 @@ static inline int ts_after(const struct timespec* a, const struct timespec* b) {
  * Forward the raw Ackermann bytes to the motor control team.
  * Returns 0 on success, -1 on error.
  */
-static int forward_command(MCULogic* mcu, const PoolEntry* cmd) {
+static int forward_command(MCULogic *mcu, const PoolEntry *cmd)
+{
     ssize_t sent = sendto(mcu->sock_fd,
                           cmd->ackermann_bytes,
                           ACKERMANN_PAYLOAD_SIZE,
                           0,
-                          (const struct sockaddr*)&mcu->mcu_addr,
+                          (const struct sockaddr *)&mcu->mcu_addr,
                           sizeof(mcu->mcu_addr));
 
     // Log send time for database entry
     struct timespec send_time;
     clock_gettime(CLOCK_MONOTONIC, &send_time);
 
-    if (sent < 0) {
+    if (sent < 0)
+    {
         perror("mcu: forward_command: sendto");
         return -1;
     }
 
-    if ((size_t)sent != ACKERMANN_PAYLOAD_SIZE) {
+    if ((size_t)sent != ACKERMANN_PAYLOAD_SIZE)
+    {
         fprintf(stderr, "mcu: forward_command: partial send (%zd / %u bytes)\n",
                 sent, (unsigned)ACKERMANN_PAYLOAD_SIZE);
         return -1;
     }
 
     // CMD SENT SUCCESSFULLY ADD INFO TO DATABASE cmd->ackermann_bytes, cmd->priority, cmd->valid_until, send_time
-    //Add to database
+    // Add to database
     DB_t msg;
-    strncpy(msg.table, "logs", sizeof(msg.table));  // "sensors", "states", or "logs"
+    strncpy(msg.table, "logs", sizeof(msg.table)); // "sensors", "states", or "logs"
     strncpy(msg.id, "cmd", sizeof(msg.id));
-    strncpy(msg.msg, "Forwarded source message", sizeof(msg.msg)); //add details
+    snprintf(msg.msg, sizeof(msg.msg), "Command Forwarded: Priority: %u Time: %ld.%09ld",
+             cmd->priority,
+             send_time.tv_sec,
+             send_time.tv_nsec);
 
-    mq_send(mqd, (char*)&msg, sizeof(DB_t), 0);
+    if (mq_send(mqd, (char *)&msg, sizeof(DB_t), 0) == -1)
+    {
+        perror("mq_send");
+    }
+    else
+    {
+        printf("Sent to DB: table=%s id=%s msg=%s\n", msg.table, msg.id, msg.msg);
+    }
+
     return 0;
 }
 
@@ -65,21 +78,25 @@ static int forward_command(MCULogic* mcu, const PoolEntry* cmd) {
  * Scheduling thread
  * ----------------------------------------------------------------------- */
 
-static void* mcu_thread(void* arg) {
-    MCULogic* mcu = (MCULogic*)arg;
+static void *mcu_thread(void *arg)
+{
+    MCULogic *mcu = (MCULogic *)arg;
 
     // Open message queue to write
     mqd = mq_open("/db_queue", O_WRONLY);
-    if (mqd == (mqd_t)-1) {
+    if (mqd == (mqd_t)-1)
+    {
         perror("mq_open");
-        return 1;
+        return NULL;
     }
 
-    while (mcu->running) {
+    while (mcu->running)
+    {
         /* --- 1. Block until the highest-priority valid command is available.
          *        pool_pop_best handles expiry and ordering internally.    --- */
         PoolEntry current;
-        if (pool_pop_best(mcu->pool, &current) != 0) {
+        if (pool_pop_best(mcu->pool, &current) != 0)
+        {
             fprintf(stderr, "mcu_thread: pool_pop_best error\n");
             continue;
         }
@@ -90,7 +107,8 @@ static void* mcu_thread(void* arg) {
          *        system task between the two calls.                       --- */
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
-        if (!ts_after(&current.valid_until, &now)) {
+        if (!ts_after(&current.valid_until, &now))
+        {
             continue;
         }
 
@@ -98,6 +116,7 @@ static void* mcu_thread(void* arg) {
         forward_command(mcu, &current);
     }
 
+    mq_close(mqd);
     return NULL;
 }
 
@@ -105,8 +124,9 @@ static void* mcu_thread(void* arg) {
  * Public API
  * ----------------------------------------------------------------------- */
 
-int mcu_init(MCULogic* mcu, CommandPool* pool,
-             const char* mcu_host, uint16_t mcu_port) {
+int mcu_init(MCULogic *mcu, CommandPool *pool,
+             const char *mcu_host, uint16_t mcu_port)
+{
     if (!mcu || !pool || !mcu_host)
         return -1;
 
@@ -117,7 +137,8 @@ int mcu_init(MCULogic* mcu, CommandPool* pool,
 
     /* Open outbound UDP socket (connectionless). */
     mcu->sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (mcu->sock_fd < 0) {
+    if (mcu->sock_fd < 0)
+    {
         perror("mcu_init: socket");
         return -1;
     }
@@ -127,7 +148,8 @@ int mcu_init(MCULogic* mcu, CommandPool* pool,
     mcu->mcu_addr.sin_family = AF_INET;
     mcu->mcu_addr.sin_port = htons(mcu_port);
 
-    if (inet_pton(AF_INET, mcu_host, &mcu->mcu_addr.sin_addr) != 1) {
+    if (inet_pton(AF_INET, mcu_host, &mcu->mcu_addr.sin_addr) != 1)
+    {
         fprintf(stderr, "mcu_init: invalid host address '%s'\n", mcu_host);
         close(mcu->sock_fd);
         mcu->sock_fd = -1;
@@ -137,7 +159,8 @@ int mcu_init(MCULogic* mcu, CommandPool* pool,
     return 0;
 }
 
-int mcu_start(MCULogic* mcu) {
+int mcu_start(MCULogic *mcu)
+{
     if (!mcu || mcu->sock_fd < 0)
         return -1;
 
@@ -160,7 +183,8 @@ int mcu_start(MCULogic* mcu) {
     int rc = pthread_create(&mcu->thread, &attr, mcu_thread, mcu);
     pthread_attr_destroy(&attr);
 
-    if (rc != 0) {
+    if (rc != 0)
+    {
         fprintf(stderr, "mcu_start: pthread_create failed: %s\n", strerror(rc));
         mcu->running = 0;
         return -1;
@@ -169,7 +193,8 @@ int mcu_start(MCULogic* mcu) {
     return 0;
 }
 
-void mcu_stop(MCULogic* mcu) {
+void mcu_stop(MCULogic *mcu)
+{
     if (!mcu)
         return;
 
@@ -181,11 +206,13 @@ void mcu_stop(MCULogic* mcu) {
     pthread_join(mcu->thread, NULL);
 }
 
-void mcu_destroy(MCULogic* mcu) {
+void mcu_destroy(MCULogic *mcu)
+{
     if (!mcu)
         return;
 
-    if (mcu->sock_fd >= 0) {
+    if (mcu->sock_fd >= 0)
+    {
         close(mcu->sock_fd);
         mcu->sock_fd = -1;
     }

@@ -1,3 +1,6 @@
+#ifndef DBSTRUCT_H
+#define DBSTRUCT_H
+
 //struct that includes message id and message, identifies table to enter into
 typedef struct{
     //The type of message coming through (determines table to insert into)
@@ -7,3 +10,5 @@ typedef struct{
     //The message to go into the table
     char msg[100]; //buffer of 100 characters for message
 } DB_t; //allows this to be referred to as DB_t, e.g. DB_t msgq;
+
+#endif
