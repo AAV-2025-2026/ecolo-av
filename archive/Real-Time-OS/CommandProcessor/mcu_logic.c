@@ -14,14 +14,6 @@
  * Internal helpers
  * ----------------------------------------------------------------------- */
 
-/* Returns 1 if timespec a is strictly after timespec b. */
-static inline int ts_after(const struct timespec *a, const struct timespec *b)
-{
-    if (a->tv_sec != b->tv_sec)
-        return a->tv_sec > b->tv_sec;
-    return a->tv_nsec > b->tv_nsec;
-}
-
 /*
  * Forward the raw Ackermann bytes to the motor control team.
  * Returns 0 on success, -1 on error.
@@ -34,10 +26,6 @@ static int forward_command(MCULogic *mcu, const PoolEntry *cmd)
                           0,
                           (const struct sockaddr *)&mcu->mcu_addr,
                           sizeof(mcu->mcu_addr));
-
-    // Log send time for database entry
-    struct timespec send_time;
-    clock_gettime(CLOCK_MONOTONIC, &send_time);
 
     if (sent < 0)
     {
@@ -52,7 +40,10 @@ static int forward_command(MCULogic *mcu, const PoolEntry *cmd)
         return -1;
     }
 
-    // CMD SENT SUCCESSFULLY ADD INFO TO DATABASE cmd->ackermann_bytes, cmd->priority, cmd->valid_until, send_time
+    // Log send time for database entry
+    struct timespec send_time;
+    clock_gettime(CLOCK_MONOTONIC, &send_time);
+
     // Add to database
     DB_t msg;
     strncpy(msg.table, "logs", sizeof(msg.table)); // "sensors", "states", or "logs"
@@ -101,18 +92,7 @@ static void *mcu_thread(void *arg)
             continue;
         }
 
-        /* --- 2. Guard against expiry in the gap between pop and send.
-         *        Normally negligible, but correct to check on an RTOS
-         *        where this thread could be preempted by a higher-priority
-         *        system task between the two calls.                       --- */
-        struct timespec now;
-        clock_gettime(CLOCK_MONOTONIC, &now);
-        if (!ts_after(&current.valid_until, &now))
-        {
-            continue;
-        }
-
-        /* --- 3. Forward the raw Ackermann payload to motor control. --- */
+        /* --- 2. Forward the raw Ackermann payload to motor control. --- */
         forward_command(mcu, &current);
     }
 

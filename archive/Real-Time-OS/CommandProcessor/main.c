@@ -2,13 +2,14 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <string.h>
+#include <mqueue.h>
+#include <fcntl.h>
 
 #include "command_pool.h"
 #include "command_interface.h"
 #include "mcu_logic.h"
 #include "dbstruct.h"
-#include <mqueue.h>
-#include <fcntl.h>
 
 /* -----------------------------------------------------------------------
  * Configuration — adjust these to match your deployment environment.

@@ -21,33 +21,12 @@ mqd_t mqd;
  *   Offset  Size  Field
  *   ------  ----  -----
  *   0       16    ackermann_payload  (opaque)
- *   16       4    freshness_ms       (uint32_t, milliseconds)
  *   20       1    priority           (uint8_t)
  *
- * Total: INBOUND_PACKET_SIZE (21) bytes.
+ * Total: INBOUND_PACKET_SIZE (17) bytes.
  * ----------------------------------------------------------------------- */
 
-#define FRESHNESS_OFFSET ACKERMANN_PAYLOAD_SIZE
-#define PRIORITY_OFFSET (ACKERMANN_PAYLOAD_SIZE + 4u)
-
-static inline uint32_t read_u32_be(const uint8_t *p)
-{
-    return ((uint32_t)p[0] << 24) |
-           ((uint32_t)p[1] << 16) |
-           ((uint32_t)p[2] << 8) |
-           (uint32_t)p[3];
-}
-
-/* Add milliseconds to a timespec. */
-static void ts_add_ms(struct timespec *ts, uint32_t ms)
-{
-    ts->tv_nsec += (long)ms * 1000000L;
-    if (ts->tv_nsec >= 1000000000L)
-    {
-        ts->tv_sec += ts->tv_nsec / 1000000000L;
-        ts->tv_nsec = ts->tv_nsec % 1000000000L;
-    }
-}
+#define PRIORITY_OFFSET ACKERMANN_PAYLOAD_SIZE
 
 /* -----------------------------------------------------------------------
  * Receive thread
@@ -92,13 +71,8 @@ static void *interface_thread(void *arg)
         struct timespec recv_time;
         clock_gettime(CLOCK_MONOTONIC, &recv_time);
 
-        /* --- Parse trailing metadata. --- */
-        uint32_t freshness_ms = read_u32_be(buf + FRESHNESS_OFFSET);
+        /* --- Parse priority. --- */
         uint8_t priority = buf[PRIORITY_OFFSET];
-
-        /* --- Compute valid_until = recv_time + freshness_ms. --- */
-        struct timespec valid_until = recv_time;
-        ts_add_ms(&valid_until, freshness_ms);
 
         // ADD DATABASE ENTRY HERE THAT WILL STORE CMD, PRIORITY, AND RECEIVE TIME
         DB_t msg;
@@ -122,7 +96,6 @@ static void *interface_thread(void *arg)
         PoolEntry entry;
         memcpy(entry.ackermann_bytes, buf, ACKERMANN_PAYLOAD_SIZE);
         entry.priority = priority;
-        entry.valid_until = valid_until;
 
         if (pool_push(iface->pool, &entry) != 0)
         {
