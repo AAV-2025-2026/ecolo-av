@@ -150,8 +150,25 @@ OSRMStep parse_step(const json & j)
     }
   }
 
-  if (j.contains("geometry") && j["geometry"].is_string()) {
-    step.geometry = decode_polyline(j["geometry"].get<std::string>());
+  if (j.contains("geometry") && !j["geometry"].is_null()) {
+    if (j["geometry"].is_string()) {
+      step.geometry = decode_polyline(j["geometry"].get<std::string>());
+    } else if (
+      j["geometry"].is_object() &&
+      j["geometry"].contains("coordinates") &&
+      j["geometry"]["coordinates"].is_array())
+    {
+      for (const auto & coord : j["geometry"]["coordinates"]) {
+        if (!coord.is_array() || coord.size() < 2) {
+          continue;
+        }
+
+        PointLL p;
+        p.lon = coord[0].get<double>();
+        p.lat = coord[1].get<double>();
+        step.geometry.push_back(p);
+      }
+    }
   }
 
   step.reference_speeds.assign(step.geometry.size(), 0.0);
