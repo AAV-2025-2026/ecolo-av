@@ -20,7 +20,7 @@ int create_tables(sqlite3 *db);
 mqd_t open_mqueue(); //For opening message queue on DB start
 
 //Insertion into db
-void receive_and_store(sqlite3 *db, mqd_t mqd); //For receiving from mqueue and storing in db
+int receive_and_store(sqlite3 *db, mqd_t mqd); //For receiving from mqueue and storing in db
 int insert_sensor_data(sqlite3 *db, const char *sensor, const char *message);
 int insert_state_data(sqlite3 *db, const char *state, const char *message);
 int insert_syslogs_data(sqlite3 *db, const char *source, const char *message);
@@ -79,13 +79,18 @@ int main(void) {
 
     //Keep db app running (for now)
     while (1) {
-        receive_and_store(db, mqd);
-        // placeholder for closing app.
-        // if(msgqueue id isclose){break;}
+        if(receive_and_store(db, mqd)==0){
+            printf("\nDatabase shutdown signal received\n");
+            break;
+        };
     }
     // Close database
-    sqlite3_close(db);
+    printf("Closing and unlinking message queue...\n");
     mq_close(mqd);
+    mq_unlink("/db_queue");
+    printf("Closing database...\n");
+    sqlite3_close(db);
+    printf("\n=== Database app closed. Goodbye! ===\n");
     return 0;
 }
 //---------------------------------------------------------------------------
@@ -182,14 +187,14 @@ mqd_t open_mqueue() {
 }
 
 //Receive from message queue and store into db
-void receive_and_store(sqlite3 *db, mqd_t mqd){
+int receive_and_store(sqlite3 *db, mqd_t mqd){
     DB_t received; //the struct from the mqueue
 
     ssize_t bytes = mq_receive(mqd, (char*)&received, sizeof(DB_t), NULL);
     //If error, print to console and return 
     if(bytes == -1) {
         perror("mq_receive");
-        return;
+        return 1;
     }
 
     //If message, we route to correct table (prototype with if, replace with switch)
@@ -202,10 +207,15 @@ void receive_and_store(sqlite3 *db, mqd_t mqd){
     } else if(strcmp(received.table, "logs")==0){
         //Insert into syslogs table
         insert_syslogs_data(db, received.id, received.msg);
+        //Check if shutdown
+        if(strcmp(received.id, "shutdown")== 0){
+            return 0;
+        }
     } else {
         //Unknown Table
         fprintf(stderr, "Unknown table: %s\n", received.table);
-}
+    }
+    return 1;
 }
 
 

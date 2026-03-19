@@ -62,6 +62,18 @@ int main(void) {
         printf("Sent unknown table message\n");
     }
 
+    //Test Shutdown
+    DB_t msg5;
+    strncpy(msg5.table, "logs", sizeof(msg5.table));
+    strncpy(msg5.id, "shutdown", sizeof(msg5.id));
+    strncpy(msg5.msg, "System Shutdown", sizeof(msg5.msg));
+
+    if (mq_send(mqd, (char*)&msg5, sizeof(DB_t), 0) == -1) {
+        perror("mq_send");
+    } else {
+        printf("Sent shutdown log message\n");
+    }
+
     mq_close(mqd);
     printf("Done\n");
     return 0;
