@@ -46,7 +46,11 @@ On QNX:
     - Run a while loop that waits to receive from the message queue
     - Insert messages from the queue into tables
 
+To shutdown the app:
 
+    The BCM will send a messag with id "Shutdown"
+    This will be checked for whenever a message goes to the logs table.
+    It will close the database and the message queue, cleaning up the app.
 
 
 ## Adding Senders;
