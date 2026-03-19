@@ -208,7 +208,7 @@ int receive_and_store(sqlite3 *db, mqd_t mqd){
         //Insert into syslogs table
         insert_syslogs_data(db, received.id, received.msg);
         //Check if shutdown
-        if(strcmp(received.id, "shutdown")== 0){
+        if(strcmp(received.id, "Shutdown")== 0){
             return 0;
         }
     } else {

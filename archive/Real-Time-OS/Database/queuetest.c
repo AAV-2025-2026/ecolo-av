@@ -65,7 +65,7 @@ int main(void) {
     //Test Shutdown
     DB_t msg5;
     strncpy(msg5.table, "logs", sizeof(msg5.table));
-    strncpy(msg5.id, "shutdown", sizeof(msg5.id));
+    strncpy(msg5.id, "Shutdown", sizeof(msg5.id));
     strncpy(msg5.msg, "System Shutdown", sizeof(msg5.msg));
 
     if (mq_send(mqd, (char*)&msg5, sizeof(DB_t), 0) == -1) {
