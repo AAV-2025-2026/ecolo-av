@@ -69,7 +69,7 @@ static void* mcu_thread(void* arg) {
     MCULogic* mcu = (MCULogic*)arg;
 
     // Open message queue to write
-    mqd_t mqd = mq_open("/db_queue", O_WRONLY);
+    mqd = mq_open("/db_queue", O_WRONLY);
     if (mqd == (mqd_t)-1) {
         perror("mq_open");
         return 1;
