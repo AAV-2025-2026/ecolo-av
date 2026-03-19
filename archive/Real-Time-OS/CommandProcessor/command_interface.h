@@ -39,4 +39,7 @@ void interface_stop(CommandInterface *iface);
 /* Release all resources. */
 void interface_destroy(CommandInterface *iface);
 
+//Message queue struct
+mqd_t mqd;
+
 #endif /* COMMAND_INTERFACE_H */

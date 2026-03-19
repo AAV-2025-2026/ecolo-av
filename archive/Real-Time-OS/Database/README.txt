@@ -54,9 +54,7 @@ On QNX:
 Add the following includes
 
 #include "dbstruct.h"
-
 #include <mqueue.h>
-
 #include <fcntl.h>
 
 Add this snippet to main

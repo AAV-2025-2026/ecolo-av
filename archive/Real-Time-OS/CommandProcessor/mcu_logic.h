@@ -40,4 +40,7 @@ void mcu_stop(MCULogic *mcu);
 /* Release all resources. */
 void mcu_destroy(MCULogic *mcu);
 
+//Message queue struct
+mqd_t mqd;
+
 #endif /* MCU_LOGIC_H */
