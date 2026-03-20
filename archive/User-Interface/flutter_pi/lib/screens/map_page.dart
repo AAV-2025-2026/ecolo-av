@@ -1,10 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_pi/screens/camera_page.dart';
-import 'package:flutter_pi/util/ipc.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -57,6 +54,9 @@ class _MapPageState extends State<MapPage> {
   List<LatLng> lockedRoutePoints = []; // original route when locked
   String? lastRouteJson; // exported JSON of lat/lon for ROS2 later
 
+  // Socket service for receiving GPS coordinates from Flask
+  late SocketService _socketService;
+
   // Simulation fields
   List<LatLng> _simPoints = [];
   int _simIndex = 0;
@@ -65,48 +65,36 @@ class _MapPageState extends State<MapPage> {
   double _simSpeedMultiplier = 1.0; // 1x, 2x, etc.
   int _simBaseIntervalMs = 1000; // base interval between points (ms)
 
-  // Socket service to receive GPS from Flask (Pi sends GPS to Flask)
-  late SocketService socketService;
-
-  // For pruning optimization
-  int _lastNearestIndex = 0;
-
   @override
   void initState() {
     super.initState();
 
-    // initialize socket service to receive GPS updates from Flask (same pattern as home_page.dart)
-    socketService = SocketService();
-    socketService.initSocketConnection(
+    // Connect to Flask via socket and update currentLocation on every GPS event
+    _socketService = SocketService();
+    _socketService.initSocketConnection(
       serverUrl: 'http://127.0.0.1:5000',
-      onSpeedUpdate: (_) {}, // optional: ignore or handle if you want
       onGpsUpdate: (lat, lon) {
         if (!mounted) return;
         setState(() {
           currentLocation = LatLng(lat, lon);
         });
-        try {
-          // move map to the new GPS position (preserve current zoom)
-          mapController.move(currentLocation!, mapController.zoom);
-        } catch (_) {}
       },
-      onStopSignAlert: (_, __) {}, // keep signature compatible; ignore here
+      // No-op callbacks for events map_page doesn't use
+      onSpeedUpdate: (_) {},
+      onStopSignAlert: (_, __) {},
     );
 
+    // Also attempt Geolocator as an initial fix (falls back to dummy if both fail)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Keep the existing _determinePosition() call so permissions and fallback still work.
-      // On the Pi there is no local GPS, so the socket feed is expected to provide coordinates.
       _determinePosition();
     });
   }
 
   @override
   void dispose() {
+    _socketService.dispose();
     _positionSub?.cancel();
     _simTimer?.cancel();
-    try {
-      socketService.dispose();
-    } catch (_) {}
     lonController.dispose();
     latController.dispose();
     searchController.dispose();
@@ -114,6 +102,9 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> _determinePosition() async {
+    // Only run Geolocator if the socket hasn't already given us a fix
+    if (currentLocation != null) return;
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -165,7 +156,7 @@ class _MapPageState extends State<MapPage> {
       if (mounted) showAppMessage(context, 'Location check failed: $e');
     }
 
-    // If socket didn't provide a location and Geolocator failed, use dummy fallback
+    // Final fallback: dummy coordinates
     if (mounted && currentLocation == null) {
       setState(() {
         currentLocation = LatLng(45.385007, -75.698293);
@@ -223,7 +214,6 @@ class _MapPageState extends State<MapPage> {
       if (mounted) {
         setState(() {
           routePoints = pts;
-          _lastNearestIndex = 0;
         });
       }
 
@@ -307,13 +297,9 @@ class _MapPageState extends State<MapPage> {
                 if (props['state'] != null) props['state']
               ].where((e) => e != null).join(', ');
 
-          final safeDisplay = (display is String && display.trim().isNotEmpty)
-              ? display.trim()
-              : (lat != null && lon != null ? '${lat.toStringAsFixed(5)}, ${lon.toStringAsFixed(5)}' : 'Unknown');
-
           if (lat != null && lon != null) {
             results.add({
-              'display': safeDisplay,
+              'display': display ?? 'Unknown',
               'lat': lat,
               'lon': lon,
               'raw': feature,
@@ -331,6 +317,9 @@ class _MapPageState extends State<MapPage> {
 
   // New helper to lock the route
   void _lockRoute() {
+    print("LOCK ROUTE CALLED");  // debug line
+    showAppMessage(context, 'debug: _lockRoute() called');
+  
     if (routePoints.isEmpty) {
       showAppMessage(context, 'No route to lock');
       return;
@@ -351,17 +340,13 @@ class _MapPageState extends State<MapPage> {
     lastRouteJson = json.encode(export);
 
     // Print and show a short message with the JSON (for debugging / later ROS2)
-    if (kDebugMode) {
-      // ignore: avoid_print
-      print('Locked route JSON: $lastRouteJson');
-    }
+    // ignore: avoid_print
+    print('Locked route JSON: $lastRouteJson');
     showAppMessage(context, 'Route locked and exported (${lockedRoutePoints.length} points)');
 
     // send the new route to Flask
-    if (lastRouteJson != null) {
-      sendRouteToFlask(lastRouteJson!);
-    }
-
+    sendRouteToFlask(lastRouteJson!);
+    
     // Zoom to current position and start tracking
     try {
       mapController.move(currentLocation!, 16.0);
@@ -370,45 +355,48 @@ class _MapPageState extends State<MapPage> {
     _startTrackingAndPrune();
     setState(() {});
   }
-
-  // Helper function to send the new route obtained from _lockRoute() to Flask
+  
+  // Helper function to send the new route obtained from _lockRoute() to Flask 
   Future<void> sendRouteToFlask(String jsonString) async {
-    final url = Uri.parse('http://localhost:5000/receive'); // keep local address; make configurable if needed
+    // TODO: remove all "debug" lines in this function when done
+    // TODO: remove all Future.delayed() functions, the pauses were to help with debugging
+    
+    // request to send Flask (on port 5000, on this machine) some data
+    final url = Uri.parse('http://localhost:5000/receive');  
+    
+    // prompts on screen (for myself to debug)
+    showAppMessage(context, 'debug: sendRouteToFlask() called');        // debug
+    await Future.delayed(Duration(seconds: 3)); 			// debug
+    
     try {
-      final response = await http
-          .post(
-            url,
-            headers: {"Content-Type": "application/json"},
-            body: jsonString,
-          )
-          .timeout(const Duration(seconds: 8));
-
+    	showAppMessage(context, 'trying now...');			// debug
+    	await Future.delayed(Duration(seconds: 3)); 			// debug
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonString,
+      );
+  	
+  	showAppMessage(context, 'trying worked..');			 // debug
+  	await Future.delayed(Duration(seconds: 3));			 // debug
+  	
       if (response.statusCode == 200) {
-        if (mounted) showAppMessage(context, 'Route sent to server');
-        if (kDebugMode) {
-          // ignore: avoid_print
-          print("Successfully sent route to Flask: ${response.body}");
-        }
+        print("Successfully sent route to Flask: ${response.body}");
+        showAppMessage(context, "debug: Successfully sent route to Flask: ${response.body}");
       } else {
-        if (mounted) showAppMessage(context, 'Failed to send route. Status: ${response.statusCode}');
-        if (kDebugMode) {
-          // ignore: avoid_print
-          print("Failed to send route. Status code: ${response.statusCode}");
-        }
+        print("Failed to send route. Status code: ${response.statusCode}");
+        showAppMessage(context, "debug: Failed to send route. Status code: ${response.statusCode}");
       }
-    } on TimeoutException {
-      if (mounted) showAppMessage(context, 'Sending route timed out');
     } catch (e) {
-      if (mounted) showAppMessage(context, 'Error sending route');
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print("Error sending route to Flask: $e");
-      }
+      print("Error sending route to Flask: $e");
+      showAppMessage(context, "debug: Error sending route to Flask: $e");
     }
   }
 
   // Unlock route and stop tracking
   void _unlockRoute() {
+    print('_unlockRoute() was called'); // debug line
+  
     routeLocked = false;
     _positionSub?.cancel();
     _positionSub = null;
@@ -468,29 +456,23 @@ class _MapPageState extends State<MapPage> {
   void _pruneRouteBehindCurrent() {
     if (currentLocation == null || routePoints.isEmpty) return;
 
-    // Start search from last known nearest index to avoid scanning from zero each time
+    // Find the index of the nearest route point to currentLocation
+    int nearestIndex = 0;
+    double nearestDist = double.infinity;
     final distCalc = Distance();
-    int nearestIndex = _lastNearestIndex.clamp(0, routePoints.length - 1);
-    double nearestDist = distCalc.distance(currentLocation!, routePoints[nearestIndex]);
 
-    // search forward only (route is ordered)
-    for (int i = nearestIndex + 1; i < routePoints.length; i++) {
+    for (int i = 0; i < routePoints.length; i++) {
       final d = distCalc.distance(currentLocation!, routePoints[i]);
       if (d < nearestDist) {
         nearestDist = d;
         nearestIndex = i;
-      } else {
-        // if distance starts increasing, break to avoid scanning whole list
-        break;
       }
     }
 
-    _lastNearestIndex = nearestIndex;
     // If nearestIndex is not the first point, drop all points before it
     if (nearestIndex > 0) {
       setState(() {
         routePoints = routePoints.sublist(nearestIndex);
-        _lastNearestIndex = 0;
       });
     }
   }
@@ -504,21 +486,22 @@ class _MapPageState extends State<MapPage> {
       final line = raw.trim();
       if (line.isEmpty) continue;
       // Try to find two numeric columns that look like lat,lon
-      final cols = line.split(RegExp(r'[,\t\s]+'));
+      final cols = line.split(',');
       for (int i = 0; i < cols.length - 1; i++) {
         final a = cols[i].trim();
         final b = cols[i + 1].trim();
-        final first = double.tryParse(a);
-        final second = double.tryParse(b);
-        if (first != null && second != null) {
-          // Heuristic: if first looks like lat (-90..90) and second looks like lon (-180..180)
-          if (first.abs() <= 90 && second.abs() <= 180) {
-            pts.add(LatLng(first, second));
+        final lat = double.tryParse(a);
+        final lon = double.tryParse(b);
+        if (lat != null && lon != null) {
+          if (lat.abs() <= 90 && lon.abs() <= 180) {
+            pts.add(LatLng(lat, lon));
             break;
           }
-          // If reversed order lat/lon, swap
-          if (second.abs() <= 90 && first.abs() <= 180) {
-            pts.add(LatLng(second, first));
+        } else {
+          final lon2 = double.tryParse(a);
+          final lat2 = double.tryParse(b);
+          if (lat2 != null && lon2 != null && lat2.abs() <= 90 && lon2.abs() <= 180) {
+            pts.add(LatLng(lat2, lon2));
             break;
           }
         }
@@ -831,18 +814,11 @@ class _MapPageState extends State<MapPage> {
                           foregroundColor: Colors.white,
                         ),
                         onPressed: () async {
-                          // Center on the latest known location (socket or fallback)
+                          await _determinePosition();
                           if (currentLocation != null) {
                             try {
                               mapController.move(currentLocation!, 15.0);
                             } catch (_) {}
-                          } else {
-                            await _determinePosition();
-                            if (currentLocation != null) {
-                              try {
-                                mapController.move(currentLocation!, 15.0);
-                              } catch (_) {}
-                            }
                           }
                         },
                         icon: const Icon(Icons.my_location),
@@ -865,84 +841,57 @@ class _MapPageState extends State<MapPage> {
                             _positionSub = null;
                             routeLocked = false;
                             lockedRoutePoints = [];
+                            lastRouteJson = null;
                           });
                         },
                         icon: const Icon(Icons.clear),
-                        label: const Text('Clear Route'),
+                        label: const Text('Clear'),
                       ),
+                      const SizedBox(width: 12),
+                      if (routing)
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.deepPurple.shade300,
+                          ),
+                        ),
                       const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: routeLocked ? Colors.grey : Colors.green,
-                          foregroundColor: Colors.white,
+                      if (currentLocation != null)
+                        Text(
+                          'You: ${currentLocation!.latitude.toStringAsFixed(5)}, ${currentLocation!.longitude.toStringAsFixed(5)}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
                         ),
-                        onPressed: () {
-                          if (routeLocked) {
-                            _unlockRoute();
-                          } else {
-                            _lockRoute();
-                          }
-                        },
-                        icon: Icon(routeLocked ? Icons.lock_open : Icons.lock),
-                        label: Text(routeLocked ? 'Unlock' : 'Lock'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Simulation controls row
-                  Row(
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple.shade300,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () async {
-                          // Show dialog to paste CSV/text
-                          final TextEditingController pasteCtrl = TextEditingController();
-                          await showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Paste CSV or lat,lon lines'),
-                              content: SizedBox(
-                                width: double.maxFinite,
-                                child: TextField(
-                                  controller: pasteCtrl,
-                                  maxLines: 10,
-                                  decoration: const InputDecoration(
-                                    hintText: 'lat,lon\nlat,lon\n...',
-                                  ),
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(ctx).pop();
-                                  },
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(ctx).pop(pasteCtrl.text);
-                                  },
-                                  child: const Text('Load'),
-                                ),
-                              ],
-                            ),
-                          ).then((value) {
-                            if (value is String && value.trim().isNotEmpty) {
-                              _loadSimulationFromCsv(value);
-                            }
-                          });
-                        },
-                        child: const Text('Load Simulation'),
-                      ),
                       const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _simPlaying ? Colors.orange : Colors.deepPurple.shade300,
-                          foregroundColor: Colors.white,
+                      // Lock / Unlock button
+                      if (routePoints.isNotEmpty && !routeLocked)
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.shade600,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: _lockRoute,
+                          icon: const Icon(Icons.lock),
+                          label: const Text('Lock Route'),
                         ),
+                      if (routeLocked)
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade700,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: _unlockRoute,
+                          icon: const Icon(Icons.lock_open),
+                          label: const Text('Unlock'),
+                        ),
+                      const SizedBox(width: 8),
+                      // Simulation controls (small icons)
+                      IconButton(
+                        icon: Icon(_simPlaying ? Icons.pause_circle : Icons.play_circle, color: Colors.white),
                         onPressed: () {
                           if (_simPlaying) {
                             _pauseSimulation();
@@ -950,55 +899,14 @@ class _MapPageState extends State<MapPage> {
                             _startSimulation();
                           }
                         },
-                        child: Text(_simPlaying ? 'Pause' : 'Play'),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
-                          foregroundColor: Colors.white,
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.stop, color: Colors.white),
                         onPressed: _stopSimulation,
-                        child: const Text('Stop'),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueGrey,
-                          foregroundColor: Colors.white,
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.skip_next, color: Colors.white),
                         onPressed: _stepSimulation,
-                        child: const Text('Step'),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            const Text('Speed', style: TextStyle(color: Colors.white70)),
-                            Expanded(
-                              child: Slider(
-                                value: _simSpeedMultiplier,
-                                min: 0.25,
-                                max: 4.0,
-                                divisions: 15,
-                                label: '${_simSpeedMultiplier.toStringAsFixed(2)}x',
-                                onChanged: (v) {
-                                  setState(() {
-                                    _simSpeedMultiplier = v;
-                                  });
-                                  // If playing, restart timer with new interval
-                                  if (_simPlaying) {
-                                    _pauseSimulation();
-                                    // small delay to avoid rapid restarts
-                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                      if (mounted) _startSimulation();
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                     ],
                   ),
@@ -1008,39 +916,83 @@ class _MapPageState extends State<MapPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.deepPurple.shade300,
+        icon: const Icon(Icons.playlist_play),
+        label: const Text('Simulate Trace'),
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (ctx) {
+              final TextEditingController csvController = TextEditingController();
+              return StatefulBuilder(builder: (ctx2, setStateDialog) {
+                return AlertDialog(
+                  title: const Text('Paste CSV / trace lines'),
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: csvController,
+                          maxLines: 10,
+                          decoration: const InputDecoration(
+                            hintText: 'Paste CSV lines here (type,date time,lat,lon,...)',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Text('Speed'),
+                            Expanded(
+                              child: Slider(
+                                value: _simSpeedMultiplier,
+                                min: 0.25,
+                                max: 8.0,
+                                divisions: 31,
+                                label: '${_simSpeedMultiplier.toStringAsFixed(2)}x',
+                                onChanged: (v) {
+                                  setStateDialog(() {
+                                    _simSpeedMultiplier = v;
+                                  });
+                                  setState(() {}); // update outer state too
+                                  // If playing, restart timer with new interval
+                                  if (_simPlaying) {
+                                    _pauseSimulation();
+                                    _startSimulation();
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text('Points loaded: ${_simPoints.length}'),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        // load CSV into sim buffer
+                        _loadSimulationFromCsv(csvController.text);
+                        setStateDialog(() {});
+                      },
+                      child: const Text('Load'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                      },
+                      child: const Text('Close'),
+                    ),
+                  ],
+                );
+              });
+            },
+          );
+        },
+      ),
     );
   }
-}
-
-class MapPageController extends StatefulWidget {
-  const MapPageController({super.key});
-  @override
-  State<MapPageController> createState() => _MapPageControllerState();
-}
-
-class _MapPageControllerState extends State<MapPageController> {
-  bool _showCamera = false;
-  late Timer _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(milliseconds: 300), (_) {
-      final cmd = readAndClearCommand();
-      if (cmd == 'camera') setState(() => _showCamera = true);
-      if (cmd == 'map') setState(() => _showCamera = false);
-    });
-  }
-
-  @override
-  void dispose() { _timer.cancel(); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context) => IndexedStack(
-    index: _showCamera ? 1 : 0,
-    children: const [
-      MapPage(),
-      CameraPage(),
-    ],
-  );
 }
