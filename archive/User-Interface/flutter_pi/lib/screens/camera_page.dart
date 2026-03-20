@@ -14,7 +14,7 @@ class CameraPage extends StatefulWidget {
 
 class _CameraPageState extends State<CameraPage> {
   static const String whepUrl =
-      'http://192.168.1.100:8889/cam1/whep'; // ✅ correct IP
+      'http://192.168.1.117:8889/cam1/whep'; // ✅ correct IP
 
   static const double _debugOpacity = 0.0; // set 0.8 to debug
 
