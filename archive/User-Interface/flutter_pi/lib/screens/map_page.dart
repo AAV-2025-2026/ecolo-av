@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_pi/screens/camera_page.dart';
+import 'package:flutter_pi/util/ipc.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -1008,4 +1010,37 @@ class _MapPageState extends State<MapPage> {
       ),
     );
   }
+}
+
+class MapPageController extends StatefulWidget {
+  const MapPageController({super.key});
+  @override
+  State<MapPageController> createState() => _MapPageControllerState();
+}
+
+class _MapPageControllerState extends State<MapPageController> {
+  bool _showCamera = false;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 300), (_) {
+      final cmd = readAndClearCommand();
+      if (cmd == 'camera') setState(() => _showCamera = true);
+      if (cmd == 'map') setState(() => _showCamera = false);
+    });
+  }
+
+  @override
+  void dispose() { _timer.cancel(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => IndexedStack(
+    index: _showCamera ? 1 : 0,
+    children: const [
+      MapPage(),
+      CameraPage(),
+    ],
+  );
 }

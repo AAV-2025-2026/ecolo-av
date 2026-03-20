@@ -72,7 +72,7 @@ class MyApp extends StatelessWidget {
         layout: const DesktopKeyboardLayout(),
         aspectRatio: 6
       ),
-      home: isMap ? const MapPage() : const MyHomePage(title: 'UI Dashboard'),
+      home: isMap ? const MapPageController() : const MyHomePage(title: 'UI Dashboard'),
     );
   }
 }
