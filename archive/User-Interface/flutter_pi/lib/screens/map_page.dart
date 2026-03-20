@@ -669,7 +669,7 @@ class _MapPageState extends State<MapPage> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'http://localhost:8080/styles/basic-preview',
+                  urlTemplate: 'http://localhost:8080/styles/basic-preview/{z}/{x}/{y}.png',
                   userAgentPackageName: 'org.example.osrm_flutter_gps',
                 ),
                 PolylineLayer(polylines: polylines),
