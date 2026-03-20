@@ -11,7 +11,7 @@ class CameraTestPage extends StatefulWidget {
 }
 
 class _CameraTestPageState extends State<CameraTestPage> {
-  static const String whepUrl = 'http://192.168.1.101:8889/cam1/whep';
+  static const String whepUrl = 'http://192.168.1.117:8889/cam1/whep';
 
   RTCPeerConnection? _pc;
   final RTCVideoRenderer _renderer = RTCVideoRenderer();

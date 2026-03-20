@@ -221,7 +221,7 @@ class FlaskNode(Node):
     def callback_mock_stop_sign(self, msg: Bool):
         if (msg.data == True):
             self.get_logger().info(f"mock stopsign detected!")
-        socketio.emit("mock_stop_sign_alert", {"mock_sign_detected": bool(msg.data), "message": "mock STOP"})
+        socketio.emit("mock_stop_sign_alert", {"mock_sign_detected": bool(msg.data), "message": "STOP"})
     
     def callback_real_stop_sign(self, msg: Bool):
         if (msg.data == True):
