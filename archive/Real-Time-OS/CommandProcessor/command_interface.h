@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include "command_pool.h"
 
+#include "dbstruct.h"
+#include <mqueue.h>
+#include <fcntl.h>
+
 /* -----------------------------------------------------------------------
  * CommandInterface
  *
@@ -40,6 +44,6 @@ void interface_stop(CommandInterface *iface);
 void interface_destroy(CommandInterface *iface);
 
 //Message queue struct
-mqd_t mqd;
+extern mqd_t mqd;
 
 #endif /* COMMAND_INTERFACE_H */

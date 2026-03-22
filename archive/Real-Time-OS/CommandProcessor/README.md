@@ -147,4 +147,84 @@ Add `-lsocket` to the `LIBS` line in the Makefile. On QNX, socket functions are 
 ## Not Yet Implemented
 
 - Watchdog pulse for the interface, pool, and mcu logic thread
-- ROS2 receive/send to replace udp
+
+## Command Processor and Database Communication (VM)
+
+### Prerequisites
+- **QNX Software Development Platform (SDP)** installed on Windows (provides `qcc` compiler and `make`).
+- **QNX VM** running (e.g., Oracle VirtualBox with QNX Neutrino, IP: 192.168.56.104).
+- **SSH access** to the VM (username: `root`, password as configured).
+- **Python** on Windows for testing (send_cmd.py).
+
+### Step-by-Step Setup and Run Guide
+
+#### 1. Build the Database App (DBapp)
+- Open the `qnx-terminal` in VS Code (this provides the QNX build environment).
+- Navigate to the Database folder (Example path, replace with real path):
+  ```
+  cd 'C:\Users\randr\Real-Time-OS\Database'
+  ```
+- Compile DBapp:
+  ```
+  qcc sqlite3.c database.c -o DBapp
+  ```
+- Verify: Check for `DBapp` in the current directory (no errors in output).
+
+#### 2. Build the Command Processor (command_processor)
+- In the same `qnx-terminal`:
+- Navigate to the CommandProcessor folder:
+  ```
+  cd 'C:\Users\randr\Real-Time-OS\CommandProcessor'
+  ```
+- Build using the Makefile:
+  ```
+  make
+  ```
+- Verify: Check for `build/x86_64-debug/command_processor` (no errors in output).
+
+#### 3. Transfer Executables to QNX VM
+- In the `qnx-terminal`:
+- Transfer DBapp: (Your VM IP may be different)
+  ```
+  scp -o MACs=hmac-sha2-256 C:\Users\randr\Real-Time-OS\Database\DBapp root@192.168.56.104:
+  ```
+- Transfer command_processor:
+  ```
+  scp -o MACs=hmac-sha2-256 C:\Users\randr\Real-Time-OS\CommandProcessor\build\x86_64-debug\command_processor root@192.168.56.104:
+  ```
+- Enter the VM's root password when prompted. Files will be in `/root/` on the VM.
+
+#### 4. Run on QNX VM
+- Open the SSH terminal in VS Code (`qnx-ssh-vbox-qnx800-x86_64`).
+- Make executables runnable:
+  ```
+  chmod +x DBapp
+  chmod +x command_processor
+  ```
+- Start DBapp in the background:
+  ```
+  ./DBapp &
+  ```
+- Start command_processor:
+  ```
+  ./command_processor
+  ```
+- Both should run indefinitely, listening for messages.
+
+#### 5. Test the Integration
+- On Windows, in a PowerShell terminal:
+- Navigate to the test folder:
+  ```
+  cd 'C:\Users\randr\Real-Time-OS\CommandProcessor\command_processor_test'
+  ```
+- Run the test script:
+  ```
+  python send_cmd.py
+  ```
+- Check the SSH terminal: You should see DBapp receiving and inserting messages (e.g., "Received from queue: ..." and "Inserted log: ...").
+
+#### Troubleshooting
+- If builds fail, ensure QNX SDP is properly installed and `qnx-terminal` is used.
+- If SCP fails, verify VM IP and SSH access.
+- If no messages in DBapp, check for errors in the SSH terminal (e.g., queue issues).
+
