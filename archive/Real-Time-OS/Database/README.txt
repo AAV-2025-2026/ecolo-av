@@ -63,7 +63,7 @@ Add the following includes
 
 Add this snippet to main
 
-mqd_t mqd = mq_open("/db_queue", O_WRONLY);
+mqd_t mqd = mq_open("/db_queue", O_WRONLY | O_NONBLOCK);
 if (mqd == (mqd_t)-1) {
 perror("mq_open");
 return 1;
@@ -145,3 +145,65 @@ Give it permissions to execute
 
 Then run it
 ./QueryDB
+
+--------------------------------------------------------------------------------
+Known Limitations / Bugs
+
+CRITICAL:
+
+HIGH:
+
+
+
+MEDIUM:
+
+No heartbeat on database for health program as the app blocks in receive_and_store.
+This is intended in this iteration to not use resources.
+
+    Suggested Fix: Change to wake up periodically if no message arrives to allow
+    health checks.
+
+No null termination guarantee in structs if string exactly fills buffer.
+
+    Suggested fix: Increase buffer size if necessary, or keep messages under 100
+    characters.
+
+LOW:
+Typo in table can cause it to be dropped silently as unknown:
+
+    Suggested fix: Senders need to label their tables correctly.
+
+Test Sender running before database app is ready will fail with ENOENT (no such
+file error) as there is no queue, may exit the program.
+    
+    Suggested Fix: Set up database app to run first in controlled boot sequence
+
+
+
+
+FIXED BUGS:
+
+CRITICAL:
+
+Currently, if the queue is full and the database app is not running, the sending
+program blocks until the queue can send. This can be an issue if it blocks a
+critical function.
+
+    Suggested fix: Have sending via the queue run on a different thread than the
+    main critical functions, or add O_NONBLOCK to the senders mq_open.
+
+    Fixed by: Adding O_NONBLOCK to senders during mq_open, fixed in readme.
+
+Shutdown message sent but database app not running can cause the app to open,
+insert messages up to the shutdown message, and then shut off the database.
+Under normal running, this should not happen, as the queue closes with the
+database, which closes with the shutdown command. So far, this has only happened
+running the test app  with an open queue and manually terminated database.
+
+    Suggested fix: terminate/empty the message queue if the database app is restarted
+    and restart from an empty queue
+
+    Fixed by: Adding a drain_queue functionality for messages pre-existing DB 
+    startup. This one should never happen in normal function, but happened in 
+    testing when manually closing the app, as the process is slain but the 
+    message queue stayed open.

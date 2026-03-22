@@ -2,14 +2,14 @@
 #define DATABASE_H
 
 #include "sqlite3.h"
-#include "mqueue.h"
-#include "fcntl.h"
+#include <mqueue.h>
 //Function prototypes
 //----------------------------------------
 // Initialization
 int init_database(sqlite3 **db);
 int create_tables(sqlite3 *db);
 mqd_t open_mqueue(); //For opening message queue on DB start
+void drain_queue(mqd_t mqd);
 
 //Insertion into db
 int receive_and_store(sqlite3 *db, mqd_t mqd); //For receiving from mqueue and storing in db

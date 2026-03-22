@@ -2,12 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sqlite3.h"
+#include "querydatabase.h"
 
 #define DB_FILE "database.db"
 
-void query_sensors(sqlite3 *db);
-void query_states(sqlite3 *db);
-void query_logs(sqlite3 *db);
 
 int main(void) {
     sqlite3 *db;
@@ -18,13 +16,13 @@ int main(void) {
         return 1;
     }
 
-    printf("\n\n=== Sensor Table ===\n");
+    printf("\n=== Sensor Table ===\n");
     query_sensors(db);
 
-    printf("\n\n=== States Table ===\n");
+    printf("\n=== States Table ===\n");
     query_states(db);
 
-    printf("\n\n=== System Logs Table ===\n");
+    printf("\n=== System Logs Table ===\n");
     query_logs(db);
 
     sqlite3_close(db);
@@ -51,7 +49,7 @@ void query_sensors(sqlite3 *db) {
         const char *message = (const char*)sqlite3_column_text(stmt, 3);
         printf("%-12s %-10s %-20s %s\n", date, time, sensor, message);
     }
-
+    printf("\n\n");
     sqlite3_finalize(stmt);
 }
 
@@ -75,7 +73,7 @@ void query_states(sqlite3 *db) {
         const char *message = (const char*)sqlite3_column_text(stmt, 3);
         printf("%-12s %-10s %-20s %s\n", date, time, state, message);
     }
-
+    printf("\n\n");
     sqlite3_finalize(stmt);
 }
 
@@ -99,6 +97,6 @@ void query_logs(sqlite3 *db) {
         const char *message = (const char*)sqlite3_column_text(stmt, 3);
         printf("%-12s %-10s %-20s %s\n", date, time, source, message);
     }
-
+    printf("\n\n");
     sqlite3_finalize(stmt);
 }

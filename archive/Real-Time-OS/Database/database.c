@@ -45,6 +45,9 @@ int main(void) {
     //Open queue
     mqd_t mqd = open_mqueue();
 
+    //Drain queue (prevents old shutdown message from preventing logging)
+    drain_queue(mqd);
+
     printf("Database initialized successfully\n\n");
 
     printf("\n=== Querying Sensor Table ===\n");
@@ -392,4 +395,23 @@ int query_syslogs_data(sqlite3 *db) {
 
     sqlite3_finalize(stmt);
     return SQLITE_OK;
+}
+
+void drain_queue(mqd_t mqd) {
+    DB_t discard;
+    // Switch to non-blocking temporarily
+    struct mq_attr nb_attr;
+    mq_getattr(mqd, &nb_attr);
+    nb_attr.mq_flags = O_NONBLOCK;
+    mq_setattr(mqd, &nb_attr, NULL);
+
+    // Read and discard until empty
+    while (mq_receive(mqd, (char*)&discard, sizeof(DB_t), NULL) != -1) {
+        fprintf(stderr, "Drained stale message from queue: table=%s id=%s\n", 
+                discard.table, discard.id);
+    }
+
+    // Restore blocking mode
+    nb_attr.mq_flags = 0;
+    mq_setattr(mqd, &nb_attr, NULL);
 }
