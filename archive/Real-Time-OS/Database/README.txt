@@ -126,3 +126,22 @@ To send:
     scp -o MACs=hmac-sha2-256 <filename> root@<ip>
 
     e.g. scp -o MACs=hmac-sha2-256 QTest root@192.168.56.102:
+
+
+--------------------------------------------------------------------------------
+
+The query program (querydatabase.c)
+
+A small query program that queries all tables upon running and shuts down. This 
+can exist because multiple readers are supported on SQLite. It can be run at any
+point for diagnosis.
+
+To compile:
+qcc sqlite3.c querydatabase.c -o QueryDB
+
+On QNX:
+Give it permissions to execute
+    chmod +x QueryDB
+
+Then run it
+./QueryDB
