@@ -125,4 +125,4 @@ To send:
 2. In windows, open cmd, navigate to your folder, and type:
     scp -o MACs=hmac-sha2-256 <filename> root@<ip>
 
-    e.g. scp -o MACs=hmac-sha2-256 QTest root@127.0.0.1:
+    e.g. scp -o MACs=hmac-sha2-256 QTest root@192.168.56.102:
