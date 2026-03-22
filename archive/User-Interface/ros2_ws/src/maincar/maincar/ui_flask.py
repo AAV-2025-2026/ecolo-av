@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# Disclosure: The use of AI was used to help improve the code.
+# Note: There is still room for improvement, for example: move all global variables into the node class' constructor
+#       while making sure it doesn't change the outcome.
+
 import rclpy
 from rclpy.node import Node
 from flask import Flask, request, jsonify
@@ -33,10 +37,14 @@ flask_app = Flask(__name__)
 socketio = SocketIO(flask_app, cors_allowed_origins="*", async_mode="threading")
 
 # =========================
-# Shared one-way variables (ROS2 -> Flask -> Flutter)
+# Shared one-way variables 
+# (ROS2 -> Flask -> Flutter) or
+# (external_hardware -> ROS2 -> Flask -> Flutter)
 # =========================
 
-usingMockData = False   # if true, display mock data... If false, display real car data TODO: to implement it.
+# TODO: All global variables should be a parameter/field in the node class "FlaskNode" instead.
+
+usingMockData = False   # if true, display mock data... If false, display real car data TODO: to implement.
 
 mock_speed = 0.0
 
@@ -134,6 +142,11 @@ class FlaskNode(Node):
     def __init__(self):
         super().__init__("flask_ros2_node")
 
+        # all global vars will be here instead... move them all at some point
+        self.nav_float32_distance = 0
+        self.nav_str_status = ""
+
+
         # Start Flask server in a separate thread
         self.flask_thread = Thread(target=run_flask, daemon=True)
         self.flask_thread.start()
@@ -175,6 +188,15 @@ class FlaskNode(Node):
 
         self.subscriber_gps = self.create_subscription(
             NavSatFix, "/rtos/gps", self.callback_sub_gps, 10
+        )
+
+        # these
+        self.subscriber_gps = self.create_subscription(
+            Float32, "/nav/path_distance", self.callback_sub_nav_PathDistance, 10
+        )
+
+        self.subscriber_gps = self.create_subscription(
+            String, "/nav/nav_status", self.callback_sub_nav_NavStatus, 10
         )
 
         # ROS2 publishers
@@ -280,7 +302,27 @@ class FlaskNode(Node):
 
         socketio.emit("real_gps_update", {"real_latitude": real_gps_x, "real_longitude": real_gps_y})
 
+    def callback_sub_nav_PathDistance(self, msg: Float32):
+        self.nav_float32_distance = msg.data
+        self.get_logger().info(f" Nav: Distance is {msg.data}")
+        self.emit_data()
 
+    def callback_sub_nav_NavStatus(self, msg: String):
+        self.nav_str_status = msg.data
+        self.get_logger().info(f" Nav: NavStatus is {msg.data}")
+        self.emit_data()
+        
+
+    # the data publishers emit
+    def emit_data(self):
+        socketio.emit("nav_state", {
+            "distance": self.nav_float32_distance,
+            "status": self.nav_str_status
+        })
+
+        # TODO: Make global parameters a node class parameter instead, and have a unified socketio.emit() for all data that gets publishes to Flutter
+        #socketio.emit("")
+        
 
     # ----  timer functions for publishers -----
     def timer1_callback(self):
