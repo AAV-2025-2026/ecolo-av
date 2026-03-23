@@ -66,6 +66,9 @@ class _MapPageState extends State<MapPage> {
   bool _simPlaying = false;
   double _simSpeedMultiplier = 1.0; // 1x, 2x, etc.
   int _simBaseIntervalMs = 1000; // base interval between points (ms)
+  
+  double navDistance = 0.0;
+  String navStatus = '';
 
   @override
   void initState() {
@@ -84,6 +87,13 @@ class _MapPageState extends State<MapPage> {
       // No-op callbacks for events map_page doesn't use
       onSpeedUpdate: (_) {},
       onStopSignAlert: (_, __) {},
+      onNavState: (distance, status) {
+    	if (!mounted) return;
+    	setState(() {
+      		navDistance = distance;
+      		navStatus = status;
+    	});
+	},
     );
 
     // Also attempt Geolocator as an initial fix (falls back to dummy if both fail)
@@ -733,6 +743,37 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           ),
+          
+          // Top-right nav state overlay
+	Positioned(
+	  top: 12,
+	  right: 12,
+	  child: SafeArea(
+	    child: Container(
+	      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+	      decoration: BoxDecoration(
+		color: Colors.black.withOpacity(0.7),
+		borderRadius: BorderRadius.circular(8),
+		border: Border.all(color: Colors.deepPurple.shade300, width: 1),
+	      ),
+	      child: Column(
+		crossAxisAlignment: CrossAxisAlignment.end,
+		children: [
+		  Text(
+		    'Distance: ${navDistance.toStringAsFixed(1)} m',
+		    style: const TextStyle(color: Colors.white, fontSize: 14),
+		  ),
+		  const SizedBox(height: 4),
+		  Text(
+		    'Status: ${navStatus.isNotEmpty ? navStatus : "N/A"}',
+		    style: const TextStyle(color: Colors.white70, fontSize: 13),
+		  ),
+		],
+	      ),
+	    ),
+	  ),
+	),
+
 
           // Bottom controls (keep them visible above the map)
           Positioned(
