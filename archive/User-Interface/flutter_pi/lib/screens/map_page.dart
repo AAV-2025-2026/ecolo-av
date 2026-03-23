@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_pi/models/place.dart';
+import 'package:flutter_pi/screens/camera_page.dart';
+import 'package:flutter_pi/services/database_service.dart';
+import 'package:flutter_pi/util/ipc.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 import '../data/constants.dart';
 import '../components/sockets/socket_services.dart';
 import 'package:flutter_pi/screens/camera_page.dart';
@@ -70,6 +73,9 @@ class _MapPageState extends State<MapPage> {
   double navDistance = 0.0;
   String navStatus = '';
 
+  //search bar
+  List<Place> _suggestions = [];
+  
   @override
   void initState() {
     super.initState();
@@ -261,72 +267,6 @@ class _MapPageState extends State<MapPage> {
     _routeTo(LatLng(lat, lon));
   }
 
-  /// Query Photon for suggestions. Returns a list of maps:
-  /// { 'display': String, 'lat': double, 'lon': double, 'raw': Map }
-  Future<List<Map<String, dynamic>>> _getPhotonSuggestions(String pattern) async {
-    if (pattern.trim().isEmpty) return [];
-    try {
-      final uri = Uri.parse('$photonBaseUrl?q=${Uri.encodeComponent(pattern)}&limit=6');
-      final resp = await http.get(uri).timeout(const Duration(seconds: 5));
-      if (resp.statusCode != 200) return [];
-      final jsonBody = json.decode(resp.body) as Map<String, dynamic>;
-      final features = (jsonBody['features'] as List<dynamic>? ?? []);
-      final List<Map<String, dynamic>> results = [];
-      for (final f in features) {
-        try {
-          final feature = f as Map<String, dynamic>;
-          final props = feature['properties'] as Map<String, dynamic>? ?? {};
-          final geom = feature['geometry'] as Map<String, dynamic>?;
-          double? lat;
-          double? lon;
-          if (geom != null && geom['coordinates'] is List && (geom['coordinates'] as List).length >= 2) {
-            final coords = geom['coordinates'] as List;
-            lon = (coords[0] as num).toDouble();
-            lat = (coords[1] as num).toDouble();
-          } else {
-            // fallback: some Photon builds may include extent or lat/lon in properties
-            if (props.containsKey('extent') && props['extent'] is List) {
-              final extent = props['extent'] as List;
-              // extent is [minLon, minLat, maxLon, maxLat] — use center
-              final minLon = (extent[0] as num).toDouble();
-              final minLat = (extent[1] as num).toDouble();
-              final maxLon = (extent[2] as num).toDouble();
-              final maxLat = (extent[3] as num).toDouble();
-              lon = (minLon + maxLon) / 2.0;
-              lat = (minLat + maxLat) / 2.0;
-            } else if (props.containsKey('lat') && props.containsKey('lon')) {
-              lat = (props['lat'] as num).toDouble();
-              lon = (props['lon'] as num).toDouble();
-            }
-          }
-
-          final display = props['name'] ??
-              props['label'] ??
-              [
-                if (props['housenumber'] != null) props['housenumber'],
-                if (props['street'] != null) props['street'],
-                if (props['city'] != null) props['city'],
-                if (props['state'] != null) props['state']
-              ].where((e) => e != null).join(', ');
-
-          if (lat != null && lon != null) {
-            results.add({
-              'display': display ?? 'Unknown',
-              'lat': lat,
-              'lon': lon,
-              'raw': feature,
-            });
-          }
-        } catch (_) {
-          // ignore malformed feature
-        }
-      }
-      return results;
-    } catch (_) {
-      return [];
-    }
-  }
-
   // New helper to lock the route
   void _lockRoute() {
     print("LOCK ROUTE CALLED");  // debug line
@@ -418,7 +358,24 @@ class _MapPageState extends State<MapPage> {
     showAppMessage(context, 'Route unlocked');
     setState(() {});
   }
-
+  IconData _getIcon(String? type) {
+    switch (type) {
+      case 'restaurant':
+      case 'cafe':
+      case 'fast_food':   return Icons.restaurant;
+      case 'hospital':    return Icons.local_hospital;
+      case 'school':
+      case 'university':  return Icons.school;
+      case 'bank':        return Icons.account_balance;
+      case 'pharmacy':    return Icons.local_pharmacy;
+      case 'park':        return Icons.park;
+      case 'primary':
+      case 'secondary':
+      case 'residential': return Icons.route;
+      case 'attraction':  return Icons.attractions;
+      default:            return Icons.place;
+    }
+  }
   // Start a position stream and prune routePoints behind current location
   void _startTrackingAndPrune() {
     _positionSub?.cancel();
@@ -686,57 +643,60 @@ class _MapPageState extends State<MapPage> {
                   color: Colors.white,
                   child: Padding(
                     padding: const EdgeInsets.all(6.0),
-                    child: TypeAheadField<Map<String, dynamic>>(
-                      textFieldConfiguration: TextFieldConfiguration(
-                        controller: searchController,
-                        style: const TextStyle(color: Colors.black87),
-                        decoration: InputDecoration(
-                          hintText: 'Search address or place',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              searchController.clear();
-                            },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OnscreenKeyboardTextField(
+                          controller: searchController,
+                          style: const TextStyle(color: Colors.black87),
+                          decoration: InputDecoration(
+                            hintText: 'Search places, streets, addresses...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                searchController.clear();
+                                setState(() => _suggestions = []);
+                              },
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                           ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                          onChanged: (value) async {
+                            final results = await DatabaseService.instance.search(value);
+                            setState(() {
+                              _suggestions = results;
+                            });
+                          },
                         ),
-                      ),
-                      suggestionsCallback: (pattern) => _getPhotonSuggestions(pattern),
-                      itemBuilder: (context, suggestion) {
-                        final raw = suggestion['raw'] as Map<String, dynamic>? ?? {};
-                        final props = raw['properties'] as Map<String, dynamic>? ?? {};
-                        final street = props['street'];
-                        final housenumber = props['housenumber'];
-                        final city = props['city'] ?? props['locality'] ?? props['district'];
-                        final state = props['state'];
-                        final subtitleParts = [
-                          if (housenumber != null) housenumber,
-                          if (street != null) street,
-                          if (city != null) city,
-                          if (state != null) state
-                        ].where((e) => e != null).join(', ');
-
-                        return ListTile(
-                          title: Text(suggestion['display'] ?? ''),
-                          subtitle: Text(subtitleParts.isNotEmpty
-                              ? subtitleParts
-                              : '${(suggestion['lat'] as double).toStringAsFixed(5)}, ${(suggestion['lon'] as double).toStringAsFixed(5)}'),
-                        );
-                      },
-                      onSuggestionSelected: (suggestion) {
-                        final lat = suggestion['lat'] as double;
-                        final lon = suggestion['lon'] as double;
-                        searchController.text = suggestion['display'] ?? '';
-                        _routeTo(LatLng(lat, lon));
-                      },
-                      debounceDuration: const Duration(milliseconds: 300),
-                      noItemsFoundBuilder: (context) => Container(
-                        padding: const EdgeInsets.all(12),
-                        child: const Text('No results'),
-                      ),
+                        if (_suggestions.isNotEmpty)
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 300),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                            ),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _suggestions.length,
+                              itemBuilder: (context, index) {
+                                final place = _suggestions[index];
+                                return ListTile(
+                                  leading: Icon(_getIcon(place.type)),
+                                  title: Text(place.displayTitle),
+                                  subtitle: Text(place.displaySubtitle),
+                                  onTap: () {
+                                    searchController.text = place.displayTitle;
+                                    setState(() => _suggestions = []);
+                                    _routeTo(LatLng(place.lat, place.lon));
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -1042,7 +1002,6 @@ class _MapPageState extends State<MapPage> {
 
 class MapPageController extends StatefulWidget {
   const MapPageController({super.key});
-
   @override
   State<MapPageController> createState() => _MapPageControllerState();
 }

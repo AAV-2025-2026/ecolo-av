@@ -6,6 +6,7 @@ import 'package:flutter_pi/screens/home_page.dart';
 import 'package:flutter_pi/screens/map_page.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:screen_retriever/screen_retriever.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
 
 Future<void> main(List<String> args) async {
@@ -33,6 +34,10 @@ Future<void> main(List<String> args) async {
     await windowManager.focus();
   });
 
+  // Required for desktop (Windows/Mac/Linux)
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+  
   runApp(MyApp(isMap: isMap));
 }
 
