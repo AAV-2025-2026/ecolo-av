@@ -1,65 +1,104 @@
-
-// basic headers that are needed when writing any publisher node
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <string>
+#include <thread>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
 
 #include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/imu.hpp" // needed to use the IMU message type when building the message and sending it to the topic
+#include "sensor_msgs/msg/imu.hpp"
 
-using namespace std::chrono_literals; // needed to set specfici durations for certain functionalities, ROS2 only understands 
-                                      // those setting those durations through chrono duration types
+using namespace std::chrono_literals;
 
-class QNXPublisher : public rclcpp::Node // public constructor, inherits everything from the Node class
-{ 
-                                          // used to build the node when you run the file
-  public:
-    QNXPublisher() : Node("test_Pub"), count_(0) // public constructor names the node "test_Pub" and initializes count_ to 0
-
+class QNXPublisher : public rclcpp::Node
+{
+public:
+    QNXPublisher() : Node("qnx_udp_imu_pub")
     {
-      publisher_ = this->create_publisher<sensor_msgs::msg::Imu>("qnx_imu", 10); // publisher initialized with IMU sensor message type
-                                                                                // the name of the topic, "qnx_imu"
-                                                                                // the limit amount of messages in the queue before we 
-                                                                                  // start discarding messages
-      timer_ = this->create_wall_timer(500ms, std::bind(&QNXPublisher::timer_callback, this)); // timer_ initialized,causing the 
-                                                                                              // timer_callback to be executed twice
+        publisher_ = this->create_publisher<sensor_msgs::msg::Imu>("qnx_imu", 10);
+
+        // Starts UDP listener thread
+        udp_thread_ = std::thread(&QNXPublisher::udp_listener, this);
     }
 
-  
-  private:
-    void timer_callback()
-      {
-        auto message = sensor_msgs::msg::Imu();
+    ~QNXPublisher()
+    {
+        if (udp_thread_.joinable()) {
+            udp_thread_.join();
+        }
+    }
 
-        message.header.stamp = this->get_clock()->now();
-        message.header.frame_id = "imu_link";
+private:
+    void udp_listener()
+    {
+        const int UDP_PORT = 49200;
+        int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+        if (sockfd < 0) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to create UDP socket");
+            return;
+        }
 
-        message.angular_velocity.x = static_cast<double>(std::rand() % 6);
-        message.angular_velocity.y = static_cast<double>(std::rand() % 6); 
-        message.angular_velocity.z = static_cast<double>(std::rand() % 6);
-        message.linear_acceleration.x = static_cast<double>(std::rand() % 6);
-        message.linear_acceleration.y = static_cast<double>(std::rand() % 6); 
-        message.linear_acceleration.z = static_cast<double>(std::rand() % 6);
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(UDP_PORT);
+        addr.sin_addr.s_addr = INADDR_ANY;
 
-        RCLCPP_INFO(this->get_logger(), "Publishing IMU: %zu  |  angular_velocity = [%.2f,%.2f,%.2f] linear_acceleration = [%.2f,%.2f,%.2f]", 
-        count_, message.angular_velocity.x, message.angular_velocity.y, message.angular_velocity.z, message.linear_acceleration.x, 
-        message.linear_acceleration.y, message.linear_acceleration.z);
+        if (bind(sockfd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to bind UDP socket");
+            close(sockfd);
+            return;
+        }
 
-        publisher_->publish(message);
-        count_++;
-      }
+        RCLCPP_INFO(this->get_logger(), "Listening for UDP on port %d", UDP_PORT);
 
-      rclcpp::TimerBase::SharedPtr timer_;
-      rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
-      size_t count_;
+        char buffer[1024];
+        while (rclcpp::ok()) {
+            sockaddr_in sender_addr{};
+            socklen_t addr_len = sizeof(sender_addr);
+            ssize_t len = recvfrom(sockfd, buffer, sizeof(buffer), 0,
+                                   (struct sockaddr*)&sender_addr, &addr_len);
+            if (len > 0) {
+                // Parses UDP payload into IMU data
+                // Assuming UDP data is 6 floats in ASCII: ax ay az gx gy gz
+                double ax, ay, az, gx, gy, gz;
+                int n = sscanf(buffer, "%lf %lf %lf %lf %lf %lf", &ax, &ay, &az, &gx, &gy, &gz);
+                if (n == 6) {
+                    auto msg = sensor_msgs::msg::Imu();
+                    msg.header.stamp = this->get_clock()->now();
+                    msg.header.frame_id = "imu_link";
+
+                    msg.linear_acceleration.x = ax;
+                    msg.linear_acceleration.y = ay;
+                    msg.linear_acceleration.z = az;
+
+                    msg.angular_velocity.x = gx;
+                    msg.angular_velocity.y = gy;
+                    msg.angular_velocity.z = gz;
+
+                    publisher_->publish(msg);
+
+                    RCLCPP_INFO(this->get_logger(),
+                                "Published IMU | linear_accel=[%.2f, %.2f, %.2f] "
+                                "angular_vel=[%.2f, %.2f, %.2f]",
+                                ax, ay, az, gx, gy, gz);
+                }
+            }
+        }
+
+        close(sockfd);
+    }
+
+    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
+    std::thread udp_thread_;
 };
 
 int main(int argc, char * argv[])
 {
-  rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<QNXPublisher>());
-  rclcpp::shutdown();
-  return 0;
-
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<QNXPublisher>();
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
 }
