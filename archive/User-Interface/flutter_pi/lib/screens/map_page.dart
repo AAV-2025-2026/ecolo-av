@@ -10,7 +10,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 import '../data/constants.dart';
 import '../components/sockets/socket_services.dart';
 
@@ -255,73 +254,6 @@ class _MapPageState extends State<MapPage> {
     }
     _routeTo(LatLng(lat, lon));
   }
-
-  /// Query Photon for suggestions. Returns a list of maps:
-  /// { 'display': String, 'lat': double, 'lon': double, 'raw': Map }
-  Future<List<Map<String, dynamic>>> _getPhotonSuggestions(String pattern) async {
-    if (pattern.trim().isEmpty) return [];
-    try {
-      final uri = Uri.parse('$photonBaseUrl?q=${Uri.encodeComponent(pattern)}&limit=6');
-      final resp = await http.get(uri).timeout(const Duration(seconds: 5));
-      if (resp.statusCode != 200) return [];
-      final jsonBody = json.decode(resp.body) as Map<String, dynamic>;
-      final features = (jsonBody['features'] as List<dynamic>? ?? []);
-      final List<Map<String, dynamic>> results = [];
-      for (final f in features) {
-        try {
-          final feature = f as Map<String, dynamic>;
-          final props = feature['properties'] as Map<String, dynamic>? ?? {};
-          final geom = feature['geometry'] as Map<String, dynamic>?;
-          double? lat;
-          double? lon;
-          if (geom != null && geom['coordinates'] is List && (geom['coordinates'] as List).length >= 2) {
-            final coords = geom['coordinates'] as List;
-            lon = (coords[0] as num).toDouble();
-            lat = (coords[1] as num).toDouble();
-          } else {
-            // fallback: some Photon builds may include extent or lat/lon in properties
-            if (props.containsKey('extent') && props['extent'] is List) {
-              final extent = props['extent'] as List;
-              // extent is [minLon, minLat, maxLon, maxLat] — use center
-              final minLon = (extent[0] as num).toDouble();
-              final minLat = (extent[1] as num).toDouble();
-              final maxLon = (extent[2] as num).toDouble();
-              final maxLat = (extent[3] as num).toDouble();
-              lon = (minLon + maxLon) / 2.0;
-              lat = (minLat + maxLat) / 2.0;
-            } else if (props.containsKey('lat') && props.containsKey('lon')) {
-              lat = (props['lat'] as num).toDouble();
-              lon = (props['lon'] as num).toDouble();
-            }
-          }
-
-          final display = props['name'] ??
-              props['label'] ??
-              [
-                if (props['housenumber'] != null) props['housenumber'],
-                if (props['street'] != null) props['street'],
-                if (props['city'] != null) props['city'],
-                if (props['state'] != null) props['state']
-              ].where((e) => e != null).join(', ');
-
-          if (lat != null && lon != null) {
-            results.add({
-              'display': display ?? 'Unknown',
-              'lat': lat,
-              'lon': lon,
-              'raw': feature,
-            });
-          }
-        } catch (_) {
-          // ignore malformed feature
-        }
-      }
-      return results;
-    } catch (_) {
-      return [];
-    }
-  }
-
 
   // New helper to lock the route
   void _lockRoute() {
