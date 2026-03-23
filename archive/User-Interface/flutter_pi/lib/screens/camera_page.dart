@@ -13,7 +13,7 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPageState extends State<CameraPage> {
-  static const String whepUrl = 'http://192.168.1.117:8889/cam1/whep';
+  static const String whepUrl = 'http://192.168.1.118:8889/cam1/whep';
 
   static const double _debugOpacity = 0.0; // set to 0.8 to debug
 
@@ -42,8 +42,8 @@ class _CameraPageState extends State<CameraPage> {
 
   Future<void> _init() async {
     await _renderer.initialize();
+    _startWatchdog(); // Start watchdog first — it drives all reconnection
     await _safeConnect();
-    _startWatchdog();
   }
 
   Future<void> _safeConnect() async {
@@ -55,7 +55,7 @@ class _CameraPageState extends State<CameraPage> {
         _status = 'connect_failed';
         _lastError = e.toString();
       });
-      _reconnect(reason: 'initial failure');
+      // Don't call _reconnect here — the watchdog will handle retrying
     }
   }
 
@@ -72,6 +72,10 @@ class _CameraPageState extends State<CameraPage> {
     });
 
     _renderer.srcObject = null;
+
+    // Reset frame tracking on every new connection attempt
+    _lastFrames = -1;
+    _lastFrameProgressAt = DateTime.now();
 
     try {
       await _pc?.close();
@@ -103,7 +107,6 @@ class _CameraPageState extends State<CameraPage> {
 
     pc.onIceConnectionState = (state) {
       if (!mounted) return;
-      // Extra safety: catch ICE-level failures
       if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
         _reconnect(reason: 'ICE failed');
       }
@@ -115,22 +118,19 @@ class _CameraPageState extends State<CameraPage> {
         if (!mounted) return;
         setState(() => _status = 'playing');
         _lastFrameProgressAt = DateTime.now();
+        // Reset retry count on successful stream
+        _retryCount = 0;
       }
     };
 
-    // Add AUDIO transceiver first — some WHEP servers (e.g. MediaMTX) expect it
     await pc.addTransceiver(
       kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
-      init: RTCRtpTransceiverInit(
-        direction: TransceiverDirection.RecvOnly,
-      ),
+      init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
     );
 
     await pc.addTransceiver(
       kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
-      init: RTCRtpTransceiverInit(
-        direction: TransceiverDirection.RecvOnly,
-      ),
+      init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
     );
 
     final offer = await pc.createOffer();
@@ -163,8 +163,6 @@ class _CameraPageState extends State<CameraPage> {
     final answer = RTCSessionDescription(resp.body, 'answer');
     await pc.setRemoteDescription(answer);
 
-    _retryCount = 0;
-
     if (!mounted) return;
     setState(() => _status = 'connected');
   }
@@ -174,7 +172,7 @@ class _CameraPageState extends State<CameraPage> {
     while (pc.iceGatheringState !=
         RTCIceGatheringState.RTCIceGatheringStateComplete) {
       if (DateTime.now().difference(start) > const Duration(seconds: 4)) {
-        break; // Timed out — send what we have
+        break;
       }
       await Future.delayed(const Duration(milliseconds: 50));
     }
@@ -218,21 +216,33 @@ class _CameraPageState extends State<CameraPage> {
     try {
       await _connect();
     } catch (e) {
-      if (mounted) setState(() => _lastError = e.toString());
+      if (mounted) {
+        setState(() {
+          _status = 'connect_failed';
+          _lastError = e.toString();
+        });
+      }
     } finally {
       _reconnecting = false;
     }
   }
 
   // ----------------------------------------------------
-  // WATCHDOG
+  // WATCHDOG — drives retrying when server is down
   // ----------------------------------------------------
 
   void _startWatchdog() {
     _watchdogTimer?.cancel();
     _watchdogTimer = Timer.periodic(_watchdogTick, (_) async {
-      if (!mounted || _pc == null || _reconnecting) return;
+      if (!mounted || _reconnecting) return;
 
+      // If we have no peer connection, try to reconnect
+      if (_pc == null) {
+        _reconnect(reason: 'no connection');
+        return;
+      }
+
+      // If we have a connection, check for stalled video
       try {
         final frames = await _getInboundFrames(_pc!);
 
@@ -265,8 +275,7 @@ class _CameraPageState extends State<CameraPage> {
       if (report.type != 'inbound-rtp') continue;
 
       final values = report.values;
-      final kind =
-          (values['kind'] ?? values['mediaType'])?.toString();
+      final kind = (values['kind'] ?? values['mediaType'])?.toString();
       if (kind != 'video') continue;
 
       final fd = values['framesDecoded'];
@@ -308,7 +317,10 @@ class _CameraPageState extends State<CameraPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => _reconnect(reason: 'manual'),
+            onPressed: () {
+              _retryCount = 0; // Reset backoff on manual refresh
+              _reconnect(reason: 'manual');
+            },
           ),
         ],
       ),
@@ -331,6 +343,19 @@ class _CameraPageState extends State<CameraPage> {
                           _status,
                           style: const TextStyle(color: Colors.white70),
                         ),
+                        if (_lastError.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              _lastError,
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 11),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -344,7 +369,7 @@ class _CameraPageState extends State<CameraPage> {
                 padding: const EdgeInsets.all(8),
                 color: Colors.black87,
                 child: Text(
-                  'Status: $_status\nError: $_lastError',
+                  'Status: $_status\nError: $_lastError\nRetries: $_retryCount',
                   style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ),
