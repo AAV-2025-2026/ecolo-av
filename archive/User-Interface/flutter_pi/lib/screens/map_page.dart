@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_pi/models/place.dart';
+import 'package:flutter_pi/screens/camera_page.dart';
+import 'package:flutter_pi/services/database_service.dart';
+import 'package:flutter_pi/util/ipc.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -65,6 +69,9 @@ class _MapPageState extends State<MapPage> {
   double _simSpeedMultiplier = 1.0; // 1x, 2x, etc.
   int _simBaseIntervalMs = 1000; // base interval between points (ms)
 
+  //search bar
+  List<Place> _suggestions = [];
+  
   @override
   void initState() {
     super.initState();
@@ -315,6 +322,7 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+
   // New helper to lock the route
   void _lockRoute() {
     print("LOCK ROUTE CALLED");  // debug line
@@ -406,7 +414,24 @@ class _MapPageState extends State<MapPage> {
     showAppMessage(context, 'Route unlocked');
     setState(() {});
   }
-
+  IconData _getIcon(String? type) {
+    switch (type) {
+      case 'restaurant':
+      case 'cafe':
+      case 'fast_food':   return Icons.restaurant;
+      case 'hospital':    return Icons.local_hospital;
+      case 'school':
+      case 'university':  return Icons.school;
+      case 'bank':        return Icons.account_balance;
+      case 'pharmacy':    return Icons.local_pharmacy;
+      case 'park':        return Icons.park;
+      case 'primary':
+      case 'secondary':
+      case 'residential': return Icons.route;
+      case 'attraction':  return Icons.attractions;
+      default:            return Icons.place;
+    }
+  }
   // Start a position stream and prune routePoints behind current location
   void _startTrackingAndPrune() {
     _positionSub?.cancel();
@@ -674,57 +699,60 @@ class _MapPageState extends State<MapPage> {
                   color: Colors.white,
                   child: Padding(
                     padding: const EdgeInsets.all(6.0),
-                    child: TypeAheadField<Map<String, dynamic>>(
-                      textFieldConfiguration: TextFieldConfiguration(
-                        controller: searchController,
-                        style: const TextStyle(color: Colors.black87),
-                        decoration: InputDecoration(
-                          hintText: 'Search address or place',
-                          prefixIcon: const Icon(Icons.search),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              searchController.clear();
-                            },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OnscreenKeyboardTextField(
+                          controller: searchController,
+                          style: const TextStyle(color: Colors.black87),
+                          decoration: InputDecoration(
+                            hintText: 'Search places, streets, addresses...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                searchController.clear();
+                                setState(() => _suggestions = []);
+                              },
+                            ),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                           ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                          onChanged: (value) async {
+                            final results = await DatabaseService.instance.search(value);
+                            setState(() {
+                              _suggestions = results;
+                            });
+                          },
                         ),
-                      ),
-                      suggestionsCallback: (pattern) => _getPhotonSuggestions(pattern),
-                      itemBuilder: (context, suggestion) {
-                        final raw = suggestion['raw'] as Map<String, dynamic>? ?? {};
-                        final props = raw['properties'] as Map<String, dynamic>? ?? {};
-                        final street = props['street'];
-                        final housenumber = props['housenumber'];
-                        final city = props['city'] ?? props['locality'] ?? props['district'];
-                        final state = props['state'];
-                        final subtitleParts = [
-                          if (housenumber != null) housenumber,
-                          if (street != null) street,
-                          if (city != null) city,
-                          if (state != null) state
-                        ].where((e) => e != null).join(', ');
-
-                        return ListTile(
-                          title: Text(suggestion['display'] ?? ''),
-                          subtitle: Text(subtitleParts.isNotEmpty
-                              ? subtitleParts
-                              : '${(suggestion['lat'] as double).toStringAsFixed(5)}, ${(suggestion['lon'] as double).toStringAsFixed(5)}'),
-                        );
-                      },
-                      onSuggestionSelected: (suggestion) {
-                        final lat = suggestion['lat'] as double;
-                        final lon = suggestion['lon'] as double;
-                        searchController.text = suggestion['display'] ?? '';
-                        _routeTo(LatLng(lat, lon));
-                      },
-                      debounceDuration: const Duration(milliseconds: 300),
-                      noItemsFoundBuilder: (context) => Container(
-                        padding: const EdgeInsets.all(12),
-                        child: const Text('No results'),
-                      ),
+                        if (_suggestions.isNotEmpty)
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 300),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                            ),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _suggestions.length,
+                              itemBuilder: (context, index) {
+                                final place = _suggestions[index];
+                                return ListTile(
+                                  leading: Icon(_getIcon(place.type)),
+                                  title: Text(place.displayTitle),
+                                  subtitle: Text(place.displaySubtitle),
+                                  onTap: () {
+                                    searchController.text = place.displayTitle;
+                                    setState(() => _suggestions = []);
+                                    _routeTo(LatLng(place.lat, place.lon));
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -995,4 +1023,37 @@ class _MapPageState extends State<MapPage> {
       ),
     );
   }
+}
+
+class MapPageController extends StatefulWidget {
+  const MapPageController({super.key});
+  @override
+  State<MapPageController> createState() => _MapPageControllerState();
+}
+
+class _MapPageControllerState extends State<MapPageController> {
+  bool _showCamera = false;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 300), (_) {
+      final cmd = readAndClearCommand();
+      if (cmd == 'camera') setState(() => _showCamera = true);
+      if (cmd == 'map') setState(() => _showCamera = false);
+    });
+  }
+
+  @override
+  void dispose() { _timer.cancel(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => IndexedStack(
+    index: _showCamera ? 1 : 0,
+    children: const [
+      MapPage(),
+      CameraPage(),
+    ],
+  );
 }
