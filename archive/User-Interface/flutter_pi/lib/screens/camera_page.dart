@@ -13,10 +13,9 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPageState extends State<CameraPage> {
-  static const String whepUrl =
-      'http://192.168.1.117:8889/cam1/whep'; // ✅ correct IP
+  static const String whepUrl = 'http://192.168.1.118:8889/cam1/whep';
 
-  static const double _debugOpacity = 0.0; // set 0.8 to debug
+  static const double _debugOpacity = 0.0; // set to 0.8 to debug
 
   RTCPeerConnection? _pc;
   final RTCVideoRenderer _renderer = RTCVideoRenderer();
@@ -43,19 +42,20 @@ class _CameraPageState extends State<CameraPage> {
 
   Future<void> _init() async {
     await _renderer.initialize();
+    _startWatchdog(); // Start watchdog first — it drives all reconnection
     await _safeConnect();
-    _startWatchdog();
   }
 
   Future<void> _safeConnect() async {
     try {
       await _connect();
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _status = 'connect_failed';
         _lastError = e.toString();
       });
-      _reconnect(reason: 'initial failure');
+      // Don't call _reconnect here — the watchdog will handle retrying
     }
   }
 
@@ -73,16 +73,23 @@ class _CameraPageState extends State<CameraPage> {
 
     _renderer.srcObject = null;
 
+    // Reset frame tracking on every new connection attempt
+    _lastFrames = -1;
+    _lastFrameProgressAt = DateTime.now();
+
     try {
       await _pc?.close();
     } catch (_) {}
     _pc = null;
 
     final config = <String, dynamic>{
-      "iceServers": [
-        {"urls": ["stun:stun.l.google.com:19302"]},
+      'iceServers': [
+        {
+          'urls': ['stun:stun.l.google.com:19302']
+        },
       ],
-      "sdpSemantics": "unified-plan",
+      'sdpSemantics': 'unified-plan',
+      'iceTransportPolicy': 'all',
     };
 
     final pc = await createPeerConnection(config);
@@ -93,9 +100,15 @@ class _CameraPageState extends State<CameraPage> {
       setState(() => _status = state.toString());
 
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state ==
-              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
-        _reconnect(reason: 'bad connection state');
+          state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+        _reconnect(reason: 'bad connection state: $state');
+      }
+    };
+
+    pc.onIceConnectionState = (state) {
+      if (!mounted) return;
+      if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
+        _reconnect(reason: 'ICE failed');
       }
     };
 
@@ -105,14 +118,19 @@ class _CameraPageState extends State<CameraPage> {
         if (!mounted) return;
         setState(() => _status = 'playing');
         _lastFrameProgressAt = DateTime.now();
+        // Reset retry count on successful stream
+        _retryCount = 0;
       }
     };
 
     await pc.addTransceiver(
+      kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
+      init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
+    );
+
+    await pc.addTransceiver(
       kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
-      init: RTCRtpTransceiverInit(
-        direction: TransceiverDirection.RecvOnly,
-      ),
+      init: RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly),
     );
 
     final offer = await pc.createOffer();
@@ -120,12 +138,11 @@ class _CameraPageState extends State<CameraPage> {
 
     await _waitForIce(pc);
 
-    // 🔴 IMPORTANT: Compatible way for older flutter_webrtc
     final localDesc = await pc.getLocalDescription();
     final sdpToSend = localDesc?.sdp ?? offer.sdp;
 
     if (sdpToSend == null || sdpToSend.isEmpty) {
-      throw Exception('SDP empty');
+      throw Exception('SDP is empty after ICE gathering');
     }
 
     final resp = await http
@@ -137,17 +154,14 @@ class _CameraPageState extends State<CameraPage> {
           },
           body: sdpToSend,
         )
-        .timeout(const Duration(seconds: 8));
+        .timeout(const Duration(seconds: 10));
 
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      throw HttpException(
-          'WHEP HTTP ${resp.statusCode}: ${resp.body}');
+      throw HttpException('WHEP HTTP ${resp.statusCode}: ${resp.body}');
     }
 
     final answer = RTCSessionDescription(resp.body, 'answer');
     await pc.setRemoteDescription(answer);
-
-    _retryCount = 0;
 
     if (!mounted) return;
     setState(() => _status = 'connected');
@@ -157,9 +171,8 @@ class _CameraPageState extends State<CameraPage> {
     final start = DateTime.now();
     while (pc.iceGatheringState !=
         RTCIceGatheringState.RTCIceGatheringStateComplete) {
-      if (DateTime.now().difference(start) >
-          const Duration(seconds: 3)) {
-        return;
+      if (DateTime.now().difference(start) > const Duration(seconds: 4)) {
+        break;
       }
       await Future.delayed(const Duration(milliseconds: 50));
     }
@@ -173,6 +186,11 @@ class _CameraPageState extends State<CameraPage> {
     if (_reconnecting) return;
     _reconnecting = true;
 
+    if (!mounted) {
+      _reconnecting = false;
+      return;
+    }
+
     setState(() {
       _status = 'reconnecting';
       _lastError = reason;
@@ -185,34 +203,48 @@ class _CameraPageState extends State<CameraPage> {
 
     _renderer.srcObject = null;
 
-    final delay =
-        (500 * (1 << _retryCount)).clamp(500, 5000);
+    final delay = (500 * (1 << _retryCount)).clamp(500, 5000);
     _retryCount = (_retryCount + 1).clamp(0, 6);
 
     await Future.delayed(Duration(milliseconds: delay));
 
+    if (!mounted) {
+      _reconnecting = false;
+      return;
+    }
+
     try {
       await _connect();
     } catch (e) {
-      setState(() => _lastError = e.toString());
+      if (mounted) {
+        setState(() {
+          _status = 'connect_failed';
+          _lastError = e.toString();
+        });
+      }
     } finally {
       _reconnecting = false;
     }
   }
 
   // ----------------------------------------------------
-  // WATCHDOG
+  // WATCHDOG — drives retrying when server is down
   // ----------------------------------------------------
 
   void _startWatchdog() {
     _watchdogTimer?.cancel();
-    _watchdogTimer =
-        Timer.periodic(_watchdogTick, (_) async {
-      if (!mounted || _pc == null || _reconnecting) return;
+    _watchdogTimer = Timer.periodic(_watchdogTick, (_) async {
+      if (!mounted || _reconnecting) return;
 
+      // If we have no peer connection, try to reconnect
+      if (_pc == null) {
+        _reconnect(reason: 'no connection');
+        return;
+      }
+
+      // If we have a connection, check for stalled video
       try {
-        final frames =
-            await _getInboundFrames(_pc!);
+        final frames = await _getInboundFrames(_pc!);
 
         if (frames != null) {
           if (_lastFrames == -1) {
@@ -227,29 +259,23 @@ class _CameraPageState extends State<CameraPage> {
             return;
           }
 
-          final stalled =
-              DateTime.now().difference(_lastFrameProgressAt);
-
+          final stalled = DateTime.now().difference(_lastFrameProgressAt);
           if (stalled >= _stallThreshold) {
-            await _reconnect(
-                reason: 'video stalled');
+            _reconnect(reason: 'video stalled (${stalled.inSeconds}s)');
           }
         }
       } catch (_) {}
     });
   }
 
-  Future<int?> _getInboundFrames(
-      RTCPeerConnection pc) async {
+  Future<int?> _getInboundFrames(RTCPeerConnection pc) async {
     final stats = await pc.getStats();
 
     for (final report in stats) {
       if (report.type != 'inbound-rtp') continue;
 
       final values = report.values;
-      final kind =
-          (values['kind'] ?? values['mediaType'])
-              ?.toString();
+      final kind = (values['kind'] ?? values['mediaType'])?.toString();
       if (kind != 'video') continue;
 
       final fd = values['framesDecoded'];
@@ -280,26 +306,21 @@ class _CameraPageState extends State<CameraPage> {
 
   @override
   Widget build(BuildContext context) {
-    final hasVideo =
-        _renderer.srcObject != null;
+    final hasVideo = _renderer.srcObject != null;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Colors.black,
       appBar: AppBar(
         title: const Text('Camera'),
-        backgroundColor:
-            Colors.deepPurple.shade700,
+        backgroundColor: Colors.deepPurple.shade700,
         foregroundColor: Colors.white,
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back),
-        //   onPressed: () =>
-        //       Navigator.of(context).pop(),
-        // ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                _reconnect(reason: 'manual'),
+            onPressed: () {
+              _retryCount = 0; // Reset backoff on manual refresh
+              _reconnect(reason: 'manual');
+            },
           ),
         ],
       ),
@@ -310,10 +331,34 @@ class _CameraPageState extends State<CameraPage> {
                 ? RTCVideoView(
                     _renderer,
                     objectFit:
-                        RTCVideoViewObjectFit
-                            .RTCVideoViewObjectFitContain,
+                        RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
                   )
-                : const SizedBox.expand(),
+                : Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.white),
+                        const SizedBox(height: 16),
+                        Text(
+                          _status,
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                        if (_lastError.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              _lastError,
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 11),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
           ),
           Positioned(
             left: 12,
@@ -321,17 +366,15 @@ class _CameraPageState extends State<CameraPage> {
             child: Opacity(
               opacity: _debugOpacity,
               child: Container(
-                padding:
-                    const EdgeInsets.all(8),
-                color: Colors.black,
+                padding: const EdgeInsets.all(8),
+                color: Colors.black87,
                 child: Text(
-                  'Status: $_status\nError: $_lastError',
-                  style: const TextStyle(
-                      color: Colors.white),
+                  'Status: $_status\nError: $_lastError\nRetries: $_retryCount',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
