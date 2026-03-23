@@ -12,8 +12,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
 import '../data/constants.dart';
 import '../components/sockets/socket_services.dart';
-import 'package:flutter_pi/screens/camera_page.dart';
-import 'package:flutter_pi/util/ipc.dart';
 
 void showAppMessage(BuildContext? context, String message) {
   if (context == null) {
