@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter_pi/util/ipc.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -55,9 +56,12 @@ class _CameraPageState extends State<CameraPage> {
         _status = 'connect_failed';
         _lastError = e.toString();
       });
-      // Don't call _reconnect here — the watchdog will handle retrying
+      try{
+        await _pc?.close();
+      } catch (_) {}
+      _pc = null;
+      }
     }
-  }
 
   // ----------------------------------------------------
   // CONNECT
@@ -314,11 +318,17 @@ class _CameraPageState extends State<CameraPage> {
         title: const Text('Camera'),
         backgroundColor: Colors.deepPurple.shade700,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            sendCommand('map');
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              _retryCount = 0; // Reset backoff on manual refresh
+              _retryCount = 0;
               _reconnect(reason: 'manual');
             },
           ),

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
 import 'package:flutter_pi/data/constants.dart';
@@ -8,6 +9,8 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
+
+
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,6 +77,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: kDebugMode,
       title: kAppTitle,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: kColorSchemeSeed),
