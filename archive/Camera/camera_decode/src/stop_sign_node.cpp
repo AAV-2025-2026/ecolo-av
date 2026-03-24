@@ -14,11 +14,13 @@
 class StopSignNode : public rclcpp::Node {
 public:
     StopSignNode() : Node("stop_sign_node"), running_(true) {
+        this->declare_parameter("camera_name",   "cam1");
         this->declare_parameter("rtsp_url",    "rtsp://192.168.0.64:8554/cam1");
         this->declare_parameter("engine_path", "/home/aavjetson/Desktop/aav/Camera/model/best.engine");
         this->declare_parameter("conf_thresh", 0.5);
         this->declare_parameter("show_window", false);
 
+        auto camera_name = this->get_parameter("camera_name").as_string();
         auto rtsp_url    = this->get_parameter("rtsp_url").as_string();
         auto engine_path = this->get_parameter("engine_path").as_string();
         float conf       = (float)this->get_parameter("conf_thresh").as_double();
@@ -26,13 +28,14 @@ public:
 
         decoder_ = std::make_unique<camera_decode::NvDecDecoder>(rtsp_url);
         yolo_    = std::make_unique<YoloDetector>(engine_path, conf);
+        camera_name_ = camera_name;
 
         bool_pub_ = this->create_publisher<std_msgs::msg::Bool>(
-            "/aav/stop_sign_detected", 10);
+            "/aav/" + camera_name_ + "/stop_sign_detected", 10);
         conf_pub_ = this->create_publisher<std_msgs::msg::Float32>(
-            "/aav/stop_sign_confidence", 10);
+            "/aav/" + camera_name_ + "/stop_sign_confidence", 10);
         bbox_pub_ = this->create_publisher<vision_msgs::msg::Detection2DArray>(
-            "/aav/stop_sign_detections", 10);
+            "/aav/" + camera_name_ + "/stop_sign_detections", 10);
 
         // ── Thread 1: Decoder — always overwrites latest frame (Fix 3) ──
         decoder_thread_ = std::thread([this]() {
@@ -82,6 +85,9 @@ public:
     }
 
 private:
+
+    std::string camera_name_;
+
     void timerCallback() {
         cv::Mat frame;
         std::vector<Detection> dets;
@@ -100,7 +106,7 @@ private:
         // ── Build Detection2DArray ────────────────────────────
         vision_msgs::msg::Detection2DArray bbox_msg;
         bbox_msg.header.stamp    = this->now();
-        bbox_msg.header.frame_id = "cam1";
+        bbox_msg.header.frame_id = camera_name_;
 
         for (auto& d : dets) {
             if (d.conf > best_conf) best_conf = d.conf;
