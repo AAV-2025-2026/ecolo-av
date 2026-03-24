@@ -191,11 +191,11 @@ class FlaskNode(Node):
         )
 
         # these
-        self.subscriber_gps = self.create_subscription(
+        self.subscriber_nav_path_distance = self.create_subscription(
             Float32, "/nav/path_distance", self.callback_sub_nav_PathDistance, 10
         )
 
-        self.subscriber_gps = self.create_subscription(
+        self.subscriber_nav_status = self.create_subscription(
             String, "/nav/nav_status", self.callback_sub_nav_NavStatus, 10
         )
 
