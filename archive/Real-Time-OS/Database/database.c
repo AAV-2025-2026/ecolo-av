@@ -6,32 +6,13 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <errno.h>
+
 #include "sqlite3.h"
 #include "dbstruct.h"
+#include "database.h"
 
 // Database file path
 #define DB_FILE "database.db"
-
-//Function prototypes
-//----------------------------------------
-// Initialization
-int init_database(sqlite3 **db);
-int create_tables(sqlite3 *db);
-mqd_t open_mqueue(); //For opening message queue on DB start
-
-//Insertion into db
-int receive_and_store(sqlite3 *db, mqd_t mqd); //For receiving from mqueue and storing in db
-int insert_sensor_data(sqlite3 *db, const char *sensor, const char *message);
-int insert_state_data(sqlite3 *db, const char *state, const char *message);
-int insert_syslogs_data(sqlite3 *db, const char *source, const char *message);
-
-//Read from DB
-int query_sensor_data(sqlite3 *db);
-int query_state_data(sqlite3 *db);
-int query_syslogs_data(sqlite3 *db);
-
-//-----------------------------------------
-
 
 //redefine msg queue attributes
 struct mq_attr attr = {
@@ -63,6 +44,9 @@ int main(void) {
 
     //Open queue
     mqd_t mqd = open_mqueue();
+
+    //Drain queue (prevents old shutdown message from preventing logging)
+    drain_queue(mqd);
 
     printf("Database initialized successfully\n\n");
 
@@ -411,4 +395,23 @@ int query_syslogs_data(sqlite3 *db) {
 
     sqlite3_finalize(stmt);
     return SQLITE_OK;
+}
+
+void drain_queue(mqd_t mqd) {
+    DB_t discard;
+    // Switch to non-blocking temporarily
+    struct mq_attr nb_attr;
+    mq_getattr(mqd, &nb_attr);
+    nb_attr.mq_flags = O_NONBLOCK;
+    mq_setattr(mqd, &nb_attr, NULL);
+
+    // Read and discard until empty
+    while (mq_receive(mqd, (char*)&discard, sizeof(DB_t), NULL) != -1) {
+        fprintf(stderr, "Drained stale message from queue: table=%s id=%s\n", 
+                discard.table, discard.id);
+    }
+
+    // Restore blocking mode
+    nb_attr.mq_flags = 0;
+    mq_setattr(mqd, &nb_attr, NULL);
 }
