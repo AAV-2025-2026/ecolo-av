@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_pi/models/place.dart';
@@ -10,6 +11,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
+import 'package:path_provider/path_provider.dart';
 import '../data/constants.dart';
 import '../components/sockets/socket_services.dart';
 
@@ -67,13 +69,13 @@ class _MapPageState extends State<MapPage> {
   bool _simPlaying = false;
   double _simSpeedMultiplier = 1.0; // 1x, 2x, etc.
   int _simBaseIntervalMs = 1000; // base interval between points (ms)
-  
+
   double navDistance = 0.0;
   String navStatus = '';
 
-  //search bar
+  // search bar
   List<Place> _suggestions = [];
-  
+
   @override
   void initState() {
     super.initState();
@@ -92,12 +94,12 @@ class _MapPageState extends State<MapPage> {
       onSpeedUpdate: (_) {},
       onStopSignAlert: (_, __) {},
       onNavState: (distance, status) {
-    	if (!mounted) return;
-    	setState(() {
-      		navDistance = distance;
-      		navStatus = status;
-    	});
-	},
+        if (!mounted) return;
+        setState(() {
+          navDistance = distance;
+          navStatus = status;
+        });
+      },
     );
 
     // Also attempt Geolocator as an initial fix (falls back to dummy if both fail)
@@ -183,6 +185,32 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Save raw OSRM JSON response to the Downloads folder (overwrites each time)
+  // ---------------------------------------------------------------------------
+  Future<void> _saveOsrmJsonToDownloads(String rawJson) async {
+    try {
+      Directory? dir = await getDownloadsDirectory();
+      dir ??= await getApplicationDocumentsDirectory();
+
+      final file = File('${dir.path}/osrm_route.json');
+      await file.writeAsString(rawJson);
+
+      // ignore: avoid_print
+      print('OSRM route JSON saved to: ${file.path}');
+      if (mounted) {
+        showAppMessage(context, 'OSRM JSON saved → ${file.path}');
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('Failed to save OSRM JSON: $e');
+      if (mounted) showAppMessage(context, 'Failed to save OSRM JSON: $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Routing
+  // ---------------------------------------------------------------------------
   Future<void> _routeTo(LatLng dest) async {
     if (currentLocation == null) {
       if (mounted) showAppMessage(context, 'Current location unknown');
@@ -211,6 +239,10 @@ class _MapPageState extends State<MapPage> {
         setState(() => routing = false);
         return;
       }
+
+      // ── Save raw OSRM JSON to Downloads (non-blocking) ────────────────────
+      unawaited(_saveOsrmJsonToDownloads(res.body));
+
       final body = json.decode(res.body) as Map<String, dynamic>;
       if (body['routes'] == null || (body['routes'] as List).isEmpty) {
         if (mounted) showAppMessage(context, 'No route found');
@@ -267,9 +299,9 @@ class _MapPageState extends State<MapPage> {
 
   // New helper to lock the route
   void _lockRoute() {
-    print("LOCK ROUTE CALLED");  // debug line
+    print("LOCK ROUTE CALLED"); // debug line
     showAppMessage(context, 'debug: _lockRoute() called');
-  
+
     if (routePoints.isEmpty) {
       showAppMessage(context, 'No route to lock');
       return;
@@ -292,11 +324,12 @@ class _MapPageState extends State<MapPage> {
     // Print and show a short message with the JSON (for debugging / later ROS2)
     // ignore: avoid_print
     print('Locked route JSON: $lastRouteJson');
-    showAppMessage(context, 'Route locked and exported (${lockedRoutePoints.length} points)');
+    showAppMessage(
+        context, 'Route locked and exported (${lockedRoutePoints.length} points)');
 
     // send the new route to Flask
     sendRouteToFlask(lastRouteJson!);
-    
+
     // Zoom to current position and start tracking
     try {
       mapController.move(currentLocation!, 16.0);
@@ -305,37 +338,39 @@ class _MapPageState extends State<MapPage> {
     _startTrackingAndPrune();
     setState(() {});
   }
-  
-  // Helper function to send the new route obtained from _lockRoute() to Flask 
+
+  // Helper function to send the new route obtained from _lockRoute() to Flask
   Future<void> sendRouteToFlask(String jsonString) async {
     // TODO: remove all "debug" lines in this function when done
     // TODO: remove all Future.delayed() functions, the pauses were to help with debugging
-    
+
     // request to send Flask (on port 5000, on this machine) some data
-    final url = Uri.parse('http://localhost:5000/receive');  
-    
+    final url = Uri.parse('http://localhost:5000/receive');
+
     // prompts on screen (for myself to debug)
-    showAppMessage(context, 'debug: sendRouteToFlask() called');        // debug
-    await Future.delayed(Duration(seconds: 3)); 			// debug
-    
+    showAppMessage(context, 'debug: sendRouteToFlask() called'); // debug
+    await Future.delayed(Duration(seconds: 3)); // debug
+
     try {
-    	showAppMessage(context, 'trying now...');			// debug
-    	await Future.delayed(Duration(seconds: 3)); 			// debug
+      showAppMessage(context, 'trying now...'); // debug
+      await Future.delayed(Duration(seconds: 3)); // debug
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonString,
       );
-  	
-  	showAppMessage(context, 'trying worked..');			 // debug
-  	await Future.delayed(Duration(seconds: 3));			 // debug
-  	
+
+      showAppMessage(context, 'trying worked..'); // debug
+      await Future.delayed(Duration(seconds: 3)); // debug
+
       if (response.statusCode == 200) {
         print("Successfully sent route to Flask: ${response.body}");
-        showAppMessage(context, "debug: Successfully sent route to Flask: ${response.body}");
+        showAppMessage(context,
+            "debug: Successfully sent route to Flask: ${response.body}");
       } else {
         print("Failed to send route. Status code: ${response.statusCode}");
-        showAppMessage(context, "debug: Failed to send route. Status code: ${response.statusCode}");
+        showAppMessage(context,
+            "debug: Failed to send route. Status code: ${response.statusCode}");
       }
     } catch (e) {
       print("Error sending route to Flask: $e");
@@ -346,7 +381,7 @@ class _MapPageState extends State<MapPage> {
   // Unlock route and stop tracking
   void _unlockRoute() {
     print('_unlockRoute() was called'); // debug line
-  
+
     routeLocked = false;
     _positionSub?.cancel();
     _positionSub = null;
@@ -356,24 +391,35 @@ class _MapPageState extends State<MapPage> {
     showAppMessage(context, 'Route unlocked');
     setState(() {});
   }
+
   IconData _getIcon(String? type) {
     switch (type) {
       case 'restaurant':
       case 'cafe':
-      case 'fast_food':   return Icons.restaurant;
-      case 'hospital':    return Icons.local_hospital;
+      case 'fast_food':
+        return Icons.restaurant;
+      case 'hospital':
+        return Icons.local_hospital;
       case 'school':
-      case 'university':  return Icons.school;
-      case 'bank':        return Icons.account_balance;
-      case 'pharmacy':    return Icons.local_pharmacy;
-      case 'park':        return Icons.park;
+      case 'university':
+        return Icons.school;
+      case 'bank':
+        return Icons.account_balance;
+      case 'pharmacy':
+        return Icons.local_pharmacy;
+      case 'park':
+        return Icons.park;
       case 'primary':
       case 'secondary':
-      case 'residential': return Icons.route;
-      case 'attraction':  return Icons.attractions;
-      default:            return Icons.place;
+      case 'residential':
+        return Icons.route;
+      case 'attraction':
+        return Icons.attractions;
+      default:
+        return Icons.place;
     }
   }
+
   // Start a position stream and prune routePoints behind current location
   void _startTrackingAndPrune() {
     _positionSub?.cancel();
@@ -467,7 +513,10 @@ class _MapPageState extends State<MapPage> {
         } else {
           final lon2 = double.tryParse(a);
           final lat2 = double.tryParse(b);
-          if (lat2 != null && lon2 != null && lat2.abs() <= 90 && lon2.abs() <= 180) {
+          if (lat2 != null &&
+              lon2 != null &&
+              lat2.abs() <= 90 &&
+              lon2.abs() <= 180) {
             pts.add(LatLng(lat2, lon2));
             break;
           }
@@ -565,9 +614,8 @@ class _MapPageState extends State<MapPage> {
           point: currentLocation!,
           width: 40,
           height: 40,
-          builder:
-              (ctx) =>
-                  const Icon(Icons.my_location, color: Colors.white, size: 28),
+          builder: (ctx) =>
+              const Icon(Icons.my_location, color: Colors.white, size: 28),
         ),
       );
     }
@@ -577,12 +625,11 @@ class _MapPageState extends State<MapPage> {
           point: destination!,
           width: 40,
           height: 40,
-          builder:
-              (ctx) => Icon(
-                Icons.location_on,
-                color: Colors.deepPurple.shade300,
-                size: 36,
-              ),
+          builder: (ctx) => Icon(
+            Icons.location_on,
+            color: Colors.deepPurple.shade300,
+            size: 36,
+          ),
         ),
       );
     }
@@ -619,7 +666,8 @@ class _MapPageState extends State<MapPage> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'http://localhost:8080/styles/basic-preview/{z}/{x}/{y}.png',
+                  urlTemplate:
+                      'http://localhost:8080/styles/basic-preview/{z}/{x}/{y}.png',
                   userAgentPackageName: 'org.example.osrm_flutter_gps',
                 ),
                 PolylineLayer(polylines: polylines),
@@ -634,7 +682,8 @@ class _MapPageState extends State<MapPage> {
             left: 12,
             child: SafeArea(
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.65),
+                constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.65),
                 child: Material(
                   elevation: 6,
                   borderRadius: BorderRadius.circular(8),
@@ -659,10 +708,12 @@ class _MapPageState extends State<MapPage> {
                             ),
                             border: InputBorder.none,
                             isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 10),
                           ),
                           onChanged: (value) async {
-                            final results = await DatabaseService.instance.search(value);
+                            final results =
+                                await DatabaseService.instance.search(value);
                             setState(() {
                               _suggestions = results;
                             });
@@ -670,11 +721,15 @@ class _MapPageState extends State<MapPage> {
                         ),
                         if (_suggestions.isNotEmpty)
                           Container(
-                            constraints: const BoxConstraints(maxHeight: 300),
+                            constraints:
+                                const BoxConstraints(maxHeight: 300),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                              boxShadow: [
+                                BoxShadow(
+                                    color: Colors.black26, blurRadius: 4)
+                              ],
                             ),
                             child: ListView.builder(
                               shrinkWrap: true,
@@ -701,37 +756,40 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
           ),
-          
-          // Top-right nav state overlay
-	Positioned(
-	  top: 12,
-	  right: 12,
-	  child: SafeArea(
-	    child: Container(
-	      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-	      decoration: BoxDecoration(
-		color: Colors.black.withOpacity(0.7),
-		borderRadius: BorderRadius.circular(8),
-		border: Border.all(color: Colors.deepPurple.shade300, width: 1),
-	      ),
-	      child: Column(
-		crossAxisAlignment: CrossAxisAlignment.end,
-		children: [
-		  Text(
-		    'Distance: ${navDistance.toStringAsFixed(1)} m',
-		    style: const TextStyle(color: Colors.white, fontSize: 14),
-		  ),
-		  const SizedBox(height: 4),
-		  Text(
-		    'Status: ${navStatus.isNotEmpty ? navStatus : "N/A"}',
-		    style: const TextStyle(color: Colors.white70, fontSize: 13),
-		  ),
-		],
-	      ),
-	    ),
-	  ),
-	),
 
+          // Top-right nav state overlay
+          Positioned(
+            top: 12,
+            right: 12,
+            child: SafeArea(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: Colors.deepPurple.shade300, width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Distance: ${navDistance.toStringAsFixed(1)} m',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 14),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Status: ${navStatus.isNotEmpty ? navStatus : "N/A"}',
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
           // Bottom controls (keep them visible above the map)
           Positioned(
@@ -739,7 +797,8 @@ class _MapPageState extends State<MapPage> {
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               color: Colors.black,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -749,23 +808,23 @@ class _MapPageState extends State<MapPage> {
                       Expanded(
                         child: OnscreenKeyboardTextField(
                           controller: lonController,
-                          keyboardType: const TextInputType.numberWithOptions(
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
                             signed: true,
                             decimal: true,
                           ),
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             labelText: 'Longitude',
-                            labelStyle: const TextStyle(color: Colors.white70),
+                            labelStyle:
+                                const TextStyle(color: Colors.white70),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                color: Colors.deepPurple.shade300,
-                              ),
+                                  color: Colors.deepPurple.shade300),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                color: Colors.deepPurple.shade700,
-                              ),
+                                  color: Colors.deepPurple.shade700),
                             ),
                           ),
                         ),
@@ -774,23 +833,23 @@ class _MapPageState extends State<MapPage> {
                       Expanded(
                         child: OnscreenKeyboardTextField(
                           controller: latController,
-                          keyboardType: const TextInputType.numberWithOptions(
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
                             signed: true,
                             decimal: true,
                           ),
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             labelText: 'Latitude',
-                            labelStyle: const TextStyle(color: Colors.white70),
+                            labelStyle:
+                                const TextStyle(color: Colors.white70),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                color: Colors.deepPurple.shade300,
-                              ),
+                                  color: Colors.deepPurple.shade300),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                color: Colors.deepPurple.shade700,
-                              ),
+                                  color: Colors.deepPurple.shade700),
                             ),
                           ),
                         ),
@@ -892,7 +951,11 @@ class _MapPageState extends State<MapPage> {
                       const SizedBox(width: 8),
                       // Simulation controls (small icons)
                       IconButton(
-                        icon: Icon(_simPlaying ? Icons.pause_circle : Icons.play_circle, color: Colors.white),
+                        icon: Icon(
+                            _simPlaying
+                                ? Icons.pause_circle
+                                : Icons.play_circle,
+                            color: Colors.white),
                         onPressed: () {
                           if (_simPlaying) {
                             _pauseSimulation();
@@ -906,7 +969,8 @@ class _MapPageState extends State<MapPage> {
                         onPressed: _stopSimulation,
                       ),
                       IconButton(
-                        icon: const Icon(Icons.skip_next, color: Colors.white),
+                        icon: const Icon(Icons.skip_next,
+                            color: Colors.white),
                         onPressed: _stepSimulation,
                       ),
                     ],
@@ -925,7 +989,8 @@ class _MapPageState extends State<MapPage> {
           showDialog(
             context: context,
             builder: (ctx) {
-              final TextEditingController csvController = TextEditingController();
+              final TextEditingController csvController =
+                  TextEditingController();
               return StatefulBuilder(builder: (ctx2, setStateDialog) {
                 return AlertDialog(
                   title: const Text('Paste CSV / trace lines'),
@@ -938,7 +1003,8 @@ class _MapPageState extends State<MapPage> {
                           controller: csvController,
                           maxLines: 10,
                           decoration: const InputDecoration(
-                            hintText: 'Paste CSV lines here (type,date time,lat,lon,...)',
+                            hintText:
+                                'Paste CSV lines here (type,date time,lat,lon,...)',
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -951,7 +1017,8 @@ class _MapPageState extends State<MapPage> {
                                 min: 0.25,
                                 max: 8.0,
                                 divisions: 31,
-                                label: '${_simSpeedMultiplier.toStringAsFixed(2)}x',
+                                label:
+                                    '${_simSpeedMultiplier.toStringAsFixed(2)}x',
                                 onChanged: (v) {
                                   setStateDialog(() {
                                     _simSpeedMultiplier = v;
