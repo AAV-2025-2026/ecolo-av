@@ -39,7 +39,7 @@ int main(void)
     signal(SIGTERM, signal_handler);
 
     /* --- Open message queue for logging startup. --- */
-    mqd_t mqd = mq_open("/db_queue", O_WRONLY);
+    mqd_t mqd = mq_open("/db_queue", O_WRONLY | O_NONBLOCK);
     if (mqd == (mqd_t)-1) {
         perror("main: mq_open");
         // Continue anyway
