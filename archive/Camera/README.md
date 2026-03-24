@@ -172,3 +172,6 @@ ros2 topic echo /aav/stop_sign_detections
 ## Troubleshooting
 OpenCV libopencv conflict warnings at build:
 - Safe to ignore — two OpenCV versions coexist on Jetson (ROS2 Humble ships 4.5d, system has 4.8)
+
+Camera not starting:
+- Check configs.yaml file for the right ip addr.
