@@ -8,19 +8,26 @@
 #include <cstring>
 
 #include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/imu.hpp"
+#include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/u_int8.hpp"
+#include "sensor_msgs/msg/nav_sat_fix.hpp"
+#include "sensor_msgs/msg/nav_sat_status.hpp"
+#include "message_structure.hpp"
 
 using namespace std::chrono_literals;
 
 class QNXPublisher : public rclcpp::Node
 {
 public:
-    QNXPublisher() : Node("qnx_udp_imu_pub")
+    QNXPublisher() : Node("qnx_udp_rtos_pub")
     {
-        publisher_ = this->create_publisher<sensor_msgs::msg::Imu>("qnx_imu", 10);
+        speed_publisher_ = this->create_publisher<std_msgs::msg::Float32>("/rtos/speed", 10);
+        gear_publisher_ = this->create_publisher<std_msgs::msg::UInt8>("/rtos/gear", 10);
+        gps_publisher_ = this->create_publisher<sensor_msgs::msg::NavSatFix>("/rtos/gps", 10);
 
-        // Starts UDP listener thread
         udp_thread_ = std::thread(&QNXPublisher::udp_listener, this);
+
+        RCLCPP_INFO(this->get_logger(), "QNX UDP RTOS publisher initialized.");
     }
 
     ~QNXPublisher()
@@ -60,29 +67,44 @@ private:
             ssize_t len = recvfrom(sockfd, buffer, sizeof(buffer), 0,
                                    (struct sockaddr*)&sender_addr, &addr_len);
             if (len > 0) {
-                // Parses UDP payload into IMU data
-                // Assuming UDP data is 6 floats in ASCII: ax ay az gx gy gz
-                double ax, ay, az, gx, gy, gz;
-                int n = sscanf(buffer, "%lf %lf %lf %lf %lf %lf", &ax, &ay, &az, &gx, &gy, &gz);
-                if (n == 6) {
-                    auto msg = sensor_msgs::msg::Imu();
-                    msg.header.stamp = this->get_clock()->now();
-                    msg.header.frame_id = "imu_link";
-
-                    msg.linear_acceleration.x = ax;
-                    msg.linear_acceleration.y = ay;
-                    msg.linear_acceleration.z = az;
-
-                    msg.angular_velocity.x = gx;
-                    msg.angular_velocity.y = gy;
-                    msg.angular_velocity.z = gz;
-
-                    publisher_->publish(msg);
-
-                    RCLCPP_INFO(this->get_logger(),
-                                "Published IMU | linear_accel=[%.2f, %.2f, %.2f] "
-                                "angular_vel=[%.2f, %.2f, %.2f]",
-                                ax, ay, az, gx, gy, gz);
+                MessageType message_type = static_cast<MessageType>(buffer[0]);
+                switch (message_type) {
+                    case MessageType::Speed: {
+                        SpeedStruct speed;
+                        memcpy(&speed, &buffer[1], sizeof(speed));
+                        std_msgs::msg::Float32 speed_msg;
+                        speed_msg.data = static_cast<float>(speed.speed);
+                        speed_publisher_->publish(speed_msg);
+                        RCLCPP_INFO(this->get_logger(), "Published /rtos/speed = %.3f", speed_msg.data);
+                        break;
+                    }
+                    case MessageType::Location: {
+                        LocationStruct location;
+                        memcpy(&location, &buffer[1], sizeof(location));
+                        sensor_msgs::msg::NavSatFix gps_msg;
+                        gps_msg.header.stamp = this->get_clock()->now();
+                        gps_msg.header.frame_id = "rtos_gps";
+                        gps_msg.status.status = sensor_msgs::msg::NavSatStatus::STATUS_FIX;
+                        gps_msg.status.service = sensor_msgs::msg::NavSatStatus::SERVICE_GPS;
+                        gps_msg.latitude = location.x;
+                        gps_msg.longitude = location.y;
+                        gps_msg.altitude = 0.0;
+                        gps_publisher_->publish(gps_msg);
+                        RCLCPP_INFO(this->get_logger(), "Published /rtos/gps: lat=%.6f lon=%.6f", gps_msg.latitude, gps_msg.longitude);
+                        break;
+                    }
+                    case MessageType::Gear: {
+                        Gear gear;
+                        memcpy(&gear, &buffer[1], sizeof(gear));
+                        std_msgs::msg::UInt8 gear_msg;
+                        gear_msg.data = static_cast<uint8_t>(gear);
+                        gear_publisher_->publish(gear_msg);
+                        RCLCPP_INFO(this->get_logger(), "Published /rtos/gear = %u", gear_msg.data);
+                        break;
+                    }
+                    default:
+                        RCLCPP_WARN(this->get_logger(), "Invalid message type received: %d", static_cast<int>(message_type));
+                        break;
                 }
             }
         }
@@ -90,7 +112,9 @@ private:
         close(sockfd);
     }
 
-    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr speed_publisher_;
+    rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr gear_publisher_;
+    rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr gps_publisher_;
     std::thread udp_thread_;
 };
 

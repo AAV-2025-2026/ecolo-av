@@ -7,6 +7,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 # Susbcriber executable
@@ -15,6 +16,7 @@ add_executable(ui_rtos_sub
 )
 ament_target_dependencies(ui_rtos_sub
   rclcpp
+  std_msgs
   sensor_msgs
 )
 
@@ -24,6 +26,7 @@ add_executable(ui_rtos_pub
 )
 ament_target_dependencies(ui_rtos_pub
   rclcpp
+  std_msgs
   sensor_msgs
 )
 
