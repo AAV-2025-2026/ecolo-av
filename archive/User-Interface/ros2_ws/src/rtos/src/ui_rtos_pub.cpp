@@ -67,9 +67,9 @@ private:
             ssize_t len = recvfrom(sockfd, buffer, sizeof(buffer), 0,
                                    (struct sockaddr*)&sender_addr, &addr_len);
             if (len > 0) {
-                MessageType message_type = static_cast<MessageType>(buffer[0]);
+                PublisherMessageType message_type = static_cast<PublisherMessageType>(buffer[0]);
                 switch (message_type) {
-                    case MessageType::Speed: {
+                    case PublisherMessageType::Speed: {
                         SpeedStruct speed;
                         memcpy(&speed, &buffer[1], sizeof(speed));
                         std_msgs::msg::Float32 speed_msg;
@@ -78,7 +78,7 @@ private:
                         RCLCPP_INFO(this->get_logger(), "Published /rtos/speed = %.3f", speed_msg.data);
                         break;
                     }
-                    case MessageType::Location: {
+                    case PublisherMessageType::Location: {
                         LocationStruct location;
                         memcpy(&location, &buffer[1], sizeof(location));
                         sensor_msgs::msg::NavSatFix gps_msg;
@@ -93,7 +93,7 @@ private:
                         RCLCPP_INFO(this->get_logger(), "Published /rtos/gps: lat=%.6f lon=%.6f", gps_msg.latitude, gps_msg.longitude);
                         break;
                     }
-                    case MessageType::Gear: {
+                    case PublisherMessageType::Gear: {
                         Gear gear;
                         memcpy(&gear, &buffer[1], sizeof(gear));
                         std_msgs::msg::UInt8 gear_msg;
