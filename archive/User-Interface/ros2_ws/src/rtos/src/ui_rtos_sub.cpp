@@ -45,7 +45,7 @@ class QNXSub : public rclcpp::Node
   double altitude_ = 0.0;
 
   public:
-    QNXSub(): Node("qnx_sub"), count_(0)
+    QNXSub(): Node("qnx_sub"), imu_count(0), gps_count(0)
     {
       subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
       "qnx_imu", 10, std::bind(&QNXSub::imu_callback, this, std::placeholders::_1));
@@ -75,37 +75,31 @@ class QNXSub : public rclcpp::Node
       packet.lin_acc_y = msg->linear_acceleration.y;
       packet.lin_acc_z = msg->linear_acceleration.z;
 
-      double Ang_Vel_x = msg->angular_velocity.x;
-      double Ang_Vel_y = msg->angular_velocity.y;
-      double Ang_Vel_z = msg->angular_velocity.z;
-      double Lin_Acc_x = msg->linear_acceleration.x;
-      double Lin_Acc_y = msg->linear_acceleration.y;
-      double Lin_Acc_z = msg->linear_acceleration.z;
       RCLCPP_INFO(this->get_logger(), "Publishing IMU: %zu  |  angular_velocity = [%.2f,%.2f,%.2f] linear_acceleration = [%.2f,%.2f,%.2f]",
-        count_, Ang_Vel_x, Ang_Vel_y, Ang_Vel_z, Lin_Acc_x,
-        Lin_Acc_y, Lin_Acc_z);
+        imu_count, packet.ang_vel_x, packet.ang_vel_y, packet.ang_vel_z, packet.lin_acc_x, packet.lin_acc_y, packet.lin_acc_z);
 
       sendto(sock, &packet, sizeof(packet), 0, (sockaddr*)&dest, sizeof(dest));
-      count_++;
+      imu_count++;
       return;
     }
 
     void gps_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg)
     {
       GPSPacket packet;
+      
       packet.latitude = msg->latitude;
       packet.longitude = msg->longitude;
       packet.altitude = msg->altitude;
-      RCLCPP_INFO(this->get_logger(), "Received GPS: latitude=%.6f, longitude=%.6f, altitude=%.2f",
-        packet.latitude, packet.longitude, packet.altitude);
+      RCLCPP_INFO(this->get_logger(), "Publishing GPS: %zu | latitude=%.6f, longitude=%.6f, altitude=%.2f",
+        gps_count, packet.latitude, packet.longitude, packet.altitude);
 
       sendto(sock, &packet, sizeof(packet), 0, (sockaddr*)&dest, sizeof(dest));
-      count_++;
+      gps_count++;
       return;
     }
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscription_;
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscription_gps_;
-    size_t count_;
+    size_t imu_count, gps_count;
 };
 
 int main(int argc, char * argv[])
