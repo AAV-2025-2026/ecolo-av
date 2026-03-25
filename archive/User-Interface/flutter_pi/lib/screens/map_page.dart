@@ -1098,11 +1098,11 @@ class _MapPageControllerState extends State<MapPageController> {
   }
 
   @override
-  Widget build(BuildContext context) => IndexedStack(
-        index: _showCamera ? 1 : 0,
-        children: const [
-          MapPage(),
-          CameraPage(),
-        ],
-      );
+@override
+    Widget build(BuildContext context) => Stack(
+      children: [
+        const MapPage(),
+        if (_showCamera) const CameraPage(),
+      ],
+    );
 }
