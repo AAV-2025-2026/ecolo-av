@@ -3,7 +3,8 @@
 GNSS Self-Test Module
 ---------------------
 Provides a blocking check to ensure the GPS receiver has a valid signal
-before the main publisher operation begins.
+before the main publisher operation begins. Continues to retry until a 
+fix is achieved.
 """
 
 import time
@@ -25,13 +26,13 @@ NMEA_HEADERS = ('$GNGGA', '$GPGGA')
 ENCODING = 'utf-8'
 
 # Retry Settings
-RETRY_WAIT_SECONDS = 15  # Time to wait before retrying after failure
+RETRY_WAIT_SECONDS = 15  # Time to wait before retrying a failed attempt
 
 
 def check_gps_ready(logger, serial_port, baud_rate, timeout_seconds):
     """
     Performs a blocking self-test on the GNSS receiver.
-    Retries indefinitely until the test passes or ROS shuts down.
+    Loops infinitely until the test passes or ROS shuts down.
 
     Args:
         logger: ROS 2 logger instance.
@@ -44,14 +45,13 @@ def check_gps_ready(logger, serial_port, baud_rate, timeout_seconds):
 
     # Outer loop for Infinite Retries
     while rclpy.ok():
-        logger.info(f"--- Starting Self-Test on {serial_port} ---")
+        logger.info(f"--- Starting Self-Test attempt on {serial_port} ---")
         start_time = time.time()
         consecutive_good_fixes = 0
-        test_passed = False
 
         try:
             with serial.Serial(serial_port, baud_rate, timeout=SERIAL_READ_TIMEOUT) as ser:
-                # Loop while ROS is ok AND we haven't timed out for this attempt
+                # Loop while ROS is ok AND we haven't timed out for this specific attempt
                 while rclpy.ok() and (time.time() - start_time < timeout_seconds):
                     try:
                         line = ser.readline().decode(ENCODING, errors="replace").strip()
@@ -84,8 +84,7 @@ def check_gps_ready(logger, serial_port, baud_rate, timeout_seconds):
 
                         if consecutive_good_fixes >= REQUIRED_CONSECUTIVE_FIXES:
                             logger.info("SELF-TEST PASSED. GPS is ready.")
-                            test_passed = True
-                            break
+                            return True
 
                     except pynmea2.ParseError as e:
                         logger.warning(f"Failed to parse NMEA sentence: {e}")
@@ -97,23 +96,16 @@ def check_gps_ready(logger, serial_port, baud_rate, timeout_seconds):
                         logger.error(f"Error reading from GNSS sensor: {e}")
                         continue
 
-            # If we broke out of the serial context:
-            if test_passed:
-                return True
-
-            # If we exhausted the time limit without passing
-            logger.error("Self-Test Timed Out.")
+            logger.warning(f"Self-Test attempt timed out after {timeout_seconds}s without a solid lock.")
 
         except serial.SerialException as e:
-            logger.fatal(f"Self-Test Connection Error (Port Access): {e}")
+            logger.error(f"Self-Test Connection Error (Port Access): {e}")
         except Exception as e:
-            logger.fatal(f"Self-Test Unexpected Error: {e}")
+            logger.error(f"Self-Test Unexpected Error: {e}")
 
-        # --- RETRY WAIT LOGIC ---
-        # Test failed (Timeout or Exception).
-        # Wait 15 seconds before the loop restarts, checking rclpy.ok() so exit is still possible
-        logger.warning(f"Retrying Self-Test in {RETRY_WAIT_SECONDS} seconds...")
-
+        # Wait for retry
+        logger.info(f"Retrying Self-Test in {RETRY_WAIT_SECONDS} seconds...")
+        
         for _ in range(RETRY_WAIT_SECONDS):
             if not rclpy.ok():
                 return False
