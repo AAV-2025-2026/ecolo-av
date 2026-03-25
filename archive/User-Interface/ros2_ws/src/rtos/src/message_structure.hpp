@@ -26,4 +26,21 @@ enum class SubscriberMessageType : uint8_t {
     GPS = 1
 };
 
+struct IMUPacket{
+  SubscriberMessageType message_type = SubscriberMessageType::IMU;
+  float ang_vel_x;
+  float ang_vel_y;
+  float ang_vel_z;
+  float lin_acc_x;
+  float lin_acc_y;
+  float lin_acc_z;
+};
+
+struct GPSPacket {
+  SubscriberMessageType message_type = SubscriberMessageType::GPS;
+  double latitude;
+  double longitude;
+  double altitude;
+};
+
 #endif

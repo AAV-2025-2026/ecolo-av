@@ -12,23 +12,6 @@
 
 #include "message_structure.hpp"
 
-struct IMUPacket{
-  SubscriberMessageType message_type = SubscriberMessageType::IMU;
-  float ang_vel_x;
-  float ang_vel_y;
-  float ang_vel_z;
-  float lin_acc_x;
-  float lin_acc_y;
-  float lin_acc_z;
-};
-
-struct GPSPacket {
-  SubscriberMessageType message_type = SubscriberMessageType::GPS;
-  double latitude;
-  double longitude;
-  double altitude;
-};
-
 
 class QNXSub : public rclcpp::Node
 {
@@ -86,7 +69,7 @@ class QNXSub : public rclcpp::Node
     void gps_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg)
     {
       GPSPacket packet;
-      
+
       packet.latitude = msg->latitude;
       packet.longitude = msg->longitude;
       packet.altitude = msg->altitude;
