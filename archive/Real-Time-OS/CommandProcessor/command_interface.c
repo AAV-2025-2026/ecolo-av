@@ -21,7 +21,7 @@ mqd_t mqd;
  *   Offset  Size  Field
  *   ------  ----  -----
  *   0       16    ackermann_payload  (opaque)
- *   20       1    priority           (uint8_t)
+ *   16       1    priority           (uint8_t)
  *
  * Total: INBOUND_PACKET_SIZE (17) bytes.
  * ----------------------------------------------------------------------- */
