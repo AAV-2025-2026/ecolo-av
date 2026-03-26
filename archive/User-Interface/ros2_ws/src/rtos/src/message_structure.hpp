@@ -22,10 +22,11 @@ enum class Gear : uint8_t {
 };
 
 enum class SubscriberMessageType : uint8_t {
-    IMU = 0,
-    GPS = 1
+    GPS = 0,
+    IMU = 1
 };
 
+#pragma pack(push, 1)
 struct IMUPacket{
   SubscriberMessageType message_type = SubscriberMessageType::IMU;
   float ang_vel_x;
@@ -35,12 +36,15 @@ struct IMUPacket{
   float lin_acc_y;
   float lin_acc_z;
 };
+#pragma pack(pop)
 
+#pragma pack(push, 1)
 struct GPSPacket {
   SubscriberMessageType message_type = SubscriberMessageType::GPS;
   double latitude;
   double longitude;
   double altitude;
 };
+#pragma pack(pop)
 
 #endif

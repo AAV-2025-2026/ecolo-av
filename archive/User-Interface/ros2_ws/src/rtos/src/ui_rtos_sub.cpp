@@ -22,11 +22,6 @@ class QNXSub : public rclcpp::Node
   struct sockaddr_in dest; //sockaddr_in is structure type of IPv4 socket address
                               //dest = instance of that structure
 
-  // Latest GPS data
-  double latitude_ = 0.0;
-  double longitude_ = 0.0;
-  double altitude_ = 0.0;
-
   public:
     QNXSub(): Node("qnx_sub"), imu_count(0), gps_count(0)
     {
