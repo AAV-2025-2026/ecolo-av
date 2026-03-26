@@ -68,7 +68,7 @@ The launch file requires two arguments to authenticate with the NTRIP caster:
 ros2 launch aav_gnss gnss.launch.py email:="your_email@example.com" mountpoint:="CanalTerris"
 ```
 
-Alternatively, you can use the provided helper script:
+Alternatively, you can use the provided helper script but you must change the launch path within:
 ```bash
 ./scripts/launch_gps.sh
 ```

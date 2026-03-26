@@ -49,6 +49,7 @@ if [ -f /opt/ros/humble/setup.bash ]; then
     source /opt/ros/humble/setup.bash
 fi
 
+# CHANGE PATH IF USING SCRIPT 
 python3 src/gnss_node.py --ros-args \
     -p port:=${SERIAL_PORT} \
     -p frame_id:=${FRAME_ID} \
