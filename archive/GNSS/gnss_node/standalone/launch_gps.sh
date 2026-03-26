@@ -35,7 +35,7 @@ cleanup() {
 trap cleanup EXIT
 
 # 4. Start gnss node
-echo "Starting Prototype ROS 2 GNSS Node..."
+echo "Starting ROS 2 GNSS Node..."
 
 if [ -f /opt/ros/humble/setup.bash ]; then
     source /opt/ros/humble/setup.bash

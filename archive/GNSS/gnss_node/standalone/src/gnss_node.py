@@ -37,7 +37,7 @@ RTK_RETRY_DELAY = 5  # Seconds to wait before retrying connection
 RTK_BUFFER_SIZE = 2048  # Bytes to read from TCP stream
 
 # ROS Publishing Settings
-ROS_TOPIC = '/gps/fix'
+ROS_TOPIC = '/aav/gps/fix'
 DEFAULT_FRAME_ID = 'gps_link'
 PUBLISH_RATE = 0.1  # Timer period in seconds (0.1s = 10Hz)
 QUEUE_SIZE = 10

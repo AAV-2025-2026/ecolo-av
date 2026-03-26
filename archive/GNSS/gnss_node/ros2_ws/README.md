@@ -73,7 +73,7 @@ Alternatively, you can use the provided helper script:
 ./scripts/launch_gps.sh
 ```
 
-The node will wait for a valid GPS lock (passing the self-test criteria) before it begins publishing `sensor_msgs/NavSatFix` messages to the `/gps/fix` topic.
+The node will wait for a valid GPS lock (passing the self-test criteria) before it begins publishing `sensor_msgs/NavSatFix` messages to the `/aav/gps/fix` topic.
 
 ## Systemd Deployment (Run on Boot)
 

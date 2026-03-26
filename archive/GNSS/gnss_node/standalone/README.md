@@ -18,7 +18,7 @@ This uses a **Sidecar Architecture** designed for high stability on the AAV. The
          |  (Reads NMEA)         (Writes RTCM3)
          |
          v
-[ ROS 2 Topic: /gps/fix ]
+[ ROS 2 Topic: /aav/gps/fix ]
 ```
 
 ## Directory Structure
@@ -92,7 +92,7 @@ Press **`Ctrl+C`** to safely stop the stack. The cleanup function will automatic
 
 | Topic | Type | Description |
 | :--- | :--- | :--- |
-| `/gps/fix` | `sensor_msgs/NavSatFix` | Current GNSS fix. See status map below. |
+| `/aav/gps/fix` | `sensor_msgs/NavSatFix` | Current GNSS fix. See status map below. |
 
 **Status Indicator Mapping:**
 * **`-1`**: No Fix (Invalid / Searching)

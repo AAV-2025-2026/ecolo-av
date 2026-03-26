@@ -59,7 +59,7 @@ Both versions publish to the exact same ROS 2 topics:
 
 | Topic | Type | Description |
 | :--- | :--- | :--- |
-| `/gps/fix` | `sensor_msgs/NavSatFix` | Real-time coordinate data. |
+| `/aav/gps/fix` | `sensor_msgs/NavSatFix` | Real-time coordinate data. |
 
 **Status Indicator Mapping:**
 * `-1`: No Fix (Invalid / Searching)

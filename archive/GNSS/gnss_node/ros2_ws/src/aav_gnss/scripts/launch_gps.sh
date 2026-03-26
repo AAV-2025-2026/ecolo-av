@@ -7,7 +7,7 @@ SERIAL_PORT="/dev/zed_f9r"
 FRAME_ID="gps"
 ENABLE_SELF_TEST="false"
 ENABLE_RTK="false"
-echo "Starting Prototype ROS 2 GNSS Node..."
+echo "Starting ROS 2 GNSS Node..."
 
 # 2. Start the rtk stream ONLY if enabled
 if [ "$ENABLE_RTK" = "true" ]; then
