@@ -23,6 +23,7 @@ class _CameraPageState extends State<CameraPage> {
 
   Timer? _watchdogTimer;
   bool _reconnecting = false;
+  bool _disposed = false;
 
   static const Duration _watchdogTick = Duration(seconds: 2);
   static const Duration _stallThreshold = Duration(seconds: 6);
@@ -43,7 +44,7 @@ class _CameraPageState extends State<CameraPage> {
 
   Future<void> _init() async {
     await _renderer.initialize();
-    _startWatchdog(); // Start watchdog first — it drives all reconnection
+    _startWatchdog();
     await _safeConnect();
   }
 
@@ -51,24 +52,24 @@ class _CameraPageState extends State<CameraPage> {
     try {
       await _connect();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || _disposed) return;
       setState(() {
         _status = 'connect_failed';
         _lastError = e.toString();
       });
-      try{
+      try {
         await _pc?.close();
       } catch (_) {}
       _pc = null;
-      }
     }
+  }
 
   // ----------------------------------------------------
   // CONNECT
   // ----------------------------------------------------
 
   Future<void> _connect() async {
-    if (!mounted) return;
+    if (!mounted || _disposed) return;
 
     setState(() {
       _status = 'connecting';
@@ -77,7 +78,6 @@ class _CameraPageState extends State<CameraPage> {
 
     _renderer.srcObject = null;
 
-    // Reset frame tracking on every new connection attempt
     _lastFrames = -1;
     _lastFrameProgressAt = DateTime.now();
 
@@ -85,6 +85,8 @@ class _CameraPageState extends State<CameraPage> {
       await _pc?.close();
     } catch (_) {}
     _pc = null;
+
+    if (_disposed) return;
 
     final config = <String, dynamic>{
       'iceServers': [
@@ -97,10 +99,16 @@ class _CameraPageState extends State<CameraPage> {
     };
 
     final pc = await createPeerConnection(config);
+
+    if (_disposed) {
+      await pc.close();
+      return;
+    }
+
     _pc = pc;
 
     pc.onConnectionState = (state) {
-      if (!mounted) return;
+      if (!mounted || _disposed) return;
       setState(() => _status = state.toString());
 
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
@@ -110,19 +118,19 @@ class _CameraPageState extends State<CameraPage> {
     };
 
     pc.onIceConnectionState = (state) {
-      if (!mounted) return;
+      if (!mounted || _disposed) return;
       if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
         _reconnect(reason: 'ICE failed');
       }
     };
 
     pc.onTrack = (event) {
+      if (_disposed) return;
       if (event.track.kind == 'video' && event.streams.isNotEmpty) {
         _renderer.srcObject = event.streams[0];
-        if (!mounted) return;
+        if (!mounted || _disposed) return;
         setState(() => _status = 'playing');
         _lastFrameProgressAt = DateTime.now();
-        // Reset retry count on successful stream
         _retryCount = 0;
       }
     };
@@ -142,6 +150,8 @@ class _CameraPageState extends State<CameraPage> {
 
     await _waitForIce(pc);
 
+    if (_disposed) return;
+
     final localDesc = await pc.getLocalDescription();
     final sdpToSend = localDesc?.sdp ?? offer.sdp;
 
@@ -160,6 +170,8 @@ class _CameraPageState extends State<CameraPage> {
         )
         .timeout(const Duration(seconds: 10));
 
+    if (_disposed) return;
+
     if (resp.statusCode < 200 || resp.statusCode >= 300) {
       throw HttpException('WHEP HTTP ${resp.statusCode}: ${resp.body}');
     }
@@ -167,7 +179,7 @@ class _CameraPageState extends State<CameraPage> {
     final answer = RTCSessionDescription(resp.body, 'answer');
     await pc.setRemoteDescription(answer);
 
-    if (!mounted) return;
+    if (!mounted || _disposed) return;
     setState(() => _status = 'connected');
   }
 
@@ -175,6 +187,7 @@ class _CameraPageState extends State<CameraPage> {
     final start = DateTime.now();
     while (pc.iceGatheringState !=
         RTCIceGatheringState.RTCIceGatheringStateComplete) {
+      if (_disposed) return;
       if (DateTime.now().difference(start) > const Duration(seconds: 4)) {
         break;
       }
@@ -187,10 +200,10 @@ class _CameraPageState extends State<CameraPage> {
   // ----------------------------------------------------
 
   Future<void> _reconnect({required String reason}) async {
-    if (_reconnecting) return;
+    if (_reconnecting || _disposed) return;
     _reconnecting = true;
 
-    if (!mounted) {
+    if (!mounted || _disposed) {
       _reconnecting = false;
       return;
     }
@@ -212,7 +225,8 @@ class _CameraPageState extends State<CameraPage> {
 
     await Future.delayed(Duration(milliseconds: delay));
 
-    if (!mounted) {
+    // Bail out if disposed during the delay
+    if (!mounted || _disposed) {
       _reconnecting = false;
       return;
     }
@@ -220,7 +234,7 @@ class _CameraPageState extends State<CameraPage> {
     try {
       await _connect();
     } catch (e) {
-      if (mounted) {
+      if (mounted && !_disposed) {
         setState(() {
           _status = 'connect_failed';
           _lastError = e.toString();
@@ -238,17 +252,17 @@ class _CameraPageState extends State<CameraPage> {
   void _startWatchdog() {
     _watchdogTimer?.cancel();
     _watchdogTimer = Timer.periodic(_watchdogTick, (_) async {
-      if (!mounted || _reconnecting) return;
+      if (!mounted || _reconnecting || _disposed) return;
 
-      // If we have no peer connection, try to reconnect
       if (_pc == null) {
         _reconnect(reason: 'no connection');
         return;
       }
 
-      // If we have a connection, check for stalled video
       try {
         final frames = await _getInboundFrames(_pc!);
+
+        if (_disposed) return;
 
         if (frames != null) {
           if (_lastFrames == -1) {
@@ -298,8 +312,11 @@ class _CameraPageState extends State<CameraPage> {
 
   @override
   void dispose() {
+    _disposed = true;
     _watchdogTimer?.cancel();
+    _watchdogTimer = null;
     _pc?.close();
+    _pc = null;
     _renderer.dispose();
     super.dispose();
   }
