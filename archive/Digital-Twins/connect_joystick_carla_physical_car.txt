@@ -1,0 +1,51 @@
+start Carla 
+
+cd Digital_Twins/CARLA/CARLA_0.9.15
+./CarlaUE4.sh
+
+
+Another terminal
+.
+cd (get out of carla dir)
+
+cd Digital_Twins/ros-bridge
+source ./install/setup.bash
+
+#Start the ROS bridge with RVIZ enabled:
+
+ros2 launch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch.py
+
+
+Step 1 — Run ONLY ONE joy_to_ackermann node
+
+ros2 run joy_teleop_ackerman joy_to_ackermann \
+  --ros-args -r /driveData:=/ackermann_cmd_unified
+  
+  
+Step 2 — Remap CARLA to listen to the unified topic  
+  
+  
+ ros2 launch carla_ackermann_control carla_ackermann_control.launch.py \
+  role_name:=hero \
+  ackermann_control_topic:=/ackermann_cmd_unified
+
+Step 3 — Remap your physical car to listen to the same topic
+--ros-args -r /driveData:=/ackermann_cmd_unified
+
+
+check if working:
+open new terminal 
+cd Digital_Twins/CARLA-0.9.15-ROS2-Bridge
+source ./install/setup.bash 
+ros2 topic echo /joy
+
+To check if values change when moving joystick
+open new terminal
+cd /Digital_Twins/CARLA-0.9.15-ROS2-Bridge/
+source ./install/setup.bash
+ros2 topic echo /carla/hero/ackermann_cmd
+
+ros2 topic echo /ackermann_cmd_unified
+
+
+
