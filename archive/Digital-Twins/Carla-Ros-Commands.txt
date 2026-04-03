@@ -1,0 +1,280 @@
+start Carla 
+source ~/carla-3.7/bin/activate
+
+cd Digital_Twins/CARLA/CARLA_0.9.15
+./CarlaUE4.sh
+
+if carla unistalls again
+export PYTHONPATH=media/aav/DataDrive1/Digital_Twins/CARLA/CARLA_0.9.15/PythonAPI/carla/dist/carla-0.9.15-py3.10-linux-x86_64.egg:$PYTHONPATH
+
+
+Another terminal
+.
+cd (get out of carla dir)
+
+cd Digital_Twins/ros-bridge
+source ./install/setup.bash
+
+#Start the ROS bridge with RVIZ enabled:
+
+ros2 launch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch.py
+
+Another terminal
+
+(while on ros2-bridge dir)
+
+ source ./install/setup.bash
+ 
+ To run vehicle using ROS Commands:
+ 
+ Open another terminal and go to cd Digital_Twins/CARLA.-0.9.15-ROS2-Bridge
+ 
+ ros2 run my_vehicle_control_pkg ego_control
+ 
+ another terminal:
+ 
+ source ./install/setup.bash
+ 
+ Start RVIZ::
+ rviz2
+ 
+ On rviz add
+ Image - topic rgb_front/camera
+ Lidar - PointCloud2 - topic lidar/PointCloud2
+ TF - topic odometry/Odometry
+
+ 
+ 
+ #For later 
+ Open a new terminal
+ cd Digital_Twins/ROS2-Bridge-Attempt2
+source ./install/setup.bash
+ 
+Spawn an Object:
+ros2 launch carla_spawn_objects carla_spawn_objects.launch.py
+
+open a new terminal...
+ros2 launch carla_manual_control carla_manual_control.launch.py
+
+
+
+Set car to true: press B
+
+Send command:
+ros2 topic pub /carla/hero/vehicle_control_cmd carla_msgs/msg/CarlaEgoVehicleControl "{throttle: 1.5, steer: 0.0, brake: 0.0, hand_brake: false, reverse: false, manual_gear_shift: false, gear: 0}" -r 10
+
+6. Observe Logs and ROS Topic Echo
+ros2 topic echo /carla/ego_vehicle/vehicle_control_cmd 
+
+
+View Frame
+ros2 run tf2_tools view_frames
+
+
+
+
+new terminal
+
+on Digital_twins dir
+
+list topics:
+
+ros2 topic list
+
+(make sure ackerman pkg is there)
+
+
+
+
+simulate parking lot 7
+
+click query, mouse icon, go to left and select the link of the area (fieldhouse), click export (top little left)
+
+cd Digital_Twins/CARLA/CARLA_0.9.15/PythonAPI/util
+
+
+
+python3 config.py --osm-path=/home/aav/Digital_Twins/p7.osm
+python3 config.py --xodr-path=/home/aav/Digital_Twins/p7.xodr
+
+to spawn a car in this environment
+
+cd Digital_Twins
+
+python3 spawn_vehicle_in_p7.py
+
+to spawn the hero vehicle:
+ros2 launch carla_ros_bridge copy_of_carla_ros_bridge_with_example_ego_vehicle.launch.py \
+    spawn_point_ego_vehicle:='282.414520,-439.868195,2.991179,0.000105,-2.588102,-97.114471'
+
+
+
+
+How to use Remote Control:
+
+0. Turn car on by flipping blue switch
+1. Click power button up
+2. Switch all silver buttons up
+3. left red button up down
+second last right middle, most right down
+left red (wheels up down)
+right red (wheels turn around)
+
+
+
+
+joystick:
+
+start Ackerman controller in new terminal
+cd ~/Digital_Twins/CARLA-0.9.15-ROS2-Bridge
+source ./install/setup.bash
+ros2 run joy_teleop_ackerman joy_to_ackermann \
+  --ros-args -r /driveData:=/carla/hero/ackermann_cmd
+  
+new terminal
+  
+source ./install/setup.bash
+
+ros2 run joy_teleop_ackerman joy_to_ackermann \ --ros-args -r /driveData:=/driveData
+
+new terminal
+
+source ./install/setup.bash
+  
+ros2 launch carla_ackermann_control carla_ackermann_control.launch.py role_name:=hero
+
+
+open new terminal 
+start joysttick driver + teletop node
+source ./install/setup.bash
+cd joy_teleop_ackerman-main/launch
+//do not run this it's already on this will run the joystick twice
+ros2 launch joy_teleop_ackerman joy_teleop.launch.py
+
+
+check if working:
+open new terminal 
+cd Digital_Twins/CARLA-0.9.15-ROS2-Bridge
+
+ros2 topic echo /joy
+
+To check if values change when moving joystick
+open new terminal
+cd /Digital_Twins/CARLA-0.9.15-ROS2-Bridge/
+
+ros2 topic echo /carla/hero/ackermann_cmd
+
+to view topics running:
+open new terminal
+ros2 topic echo /driveData
+
+
+
+
+
+ros2 topic list
+
+
+download zip
+source ./install/setup.bash
+ros2 topic echo /driveData
+
+How to control car with joystick
+
+cd /Downloads/joy_teleop_ackerman-main/joy_teleop_ackerman
+python3 joy_to_ackerman.py 
+
+
+ros2 launch carla_ros_bridge carla_ros_bridge.launch.py
+
+
+ros2 launch carla_spawn_objects carla_spawn_objects.launch.py \
+    objects_file:=/home/aav/Digital_Twins/CARLA-0.9.15-ROS2-Bridge/config/mini_cooper_config/mini_lidar.json
+    
+    python3 ~/Digital_Twins/CARLA/CARLA_0.9.15/PythonAPI/examples/manual_control.py
+    
+ config file is in Digital_Twins/ros-bridge/src/carla_spawn_objects/config/objects.json
+ 
+ 
+ 
+ 
+ //launch lidar publisher
+ ros2 run carla_publisher_pkg carla_lidar_publisher
+ 
+ //launch real lidar for carla
+ python3 velodyne_to_carla.py
+ 
+ ros2 topic hz /carla/lidar/points
+
+
+Connect to the lidar in the car:
+ ros2 launch velodyne_driver velodyne_driver_node-VLP16-launch.py
+ 
+ 
+ Run foxglove software:
+ ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+
+make pointscloud visible: 
+ros2 run velodyne_pointcloud velodyne_transform_node \
+  --ros-args -p calibration:=/opt/ros/humble/share/velodyne_pointcloud/params/VLP16db.yaml
+  
+  
+  to view real lidar in rviz2 through carla
+ ros2 launch foxglove_bridge foxglove_bridge_launch.xml
+  
+  //then set fixed frame to hero
+
+ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map hero
+
+
+
+
+// launch python for camera
+
+python3 camera_to_carla.py
+
+
+
+
+for the source carla setup
+cd carla_build/carla
+
+export UE4_ROOT=/media/aav/DataDrive1/UnrealEngine_4.26
+export CARLA_UE4_ROOT=/media/aav/DataDrive1/DigitalTwins/carla
+
+make setup
+
+./osm2world.sh --gui
+
+ctrl a, drag, e to rotate
+
+export UE4_ROOT=/media/aav/DataDrive1/DigitalTwins/UnrealEngine_4.26
+
+
+echo 'export UE4_ROOT=/media/aav/DataDrive1/DigitalTwins/UnrealEngine_4.26' >> ~/.bashrc
+source ~/.bashrc
+
+find /media/aav/DataDrive1 -type d -name "CarlaUE4"
+
+cd /media/aav/DataDrive1/DigitalTwins/
+git clone https://github.com/carla-simulator/carla.git carla_clean
+
+foxglove
+
+
+ros2 run tf2_ros static_transform_publisher \
+0 0 2.4 0 0 0 \
+ego_vehicle carla/hero/lidar
+
+cd ~/ros2_ws/src
+ros2 pkg create gps_tools --build-type ament_python
+
+ros2 topic echo /carla/hero/gnss
+
+
+
+
+
+
+
+
