@@ -29,7 +29,9 @@ def build(rpi: bool):
         exit(1)
     # Flags to pass to the compiler, uses gcc flags
     flags = [
-        "-Wall"
+        "-Wall",
+        "-Wextra",
+        "-lsocket"
     ]
     if rpi:
         flags.append("-Vgcc_ntoaarch64le")
