@@ -91,11 +91,3 @@ https://github.com/nhma20/iwr6843aop_pub
 lightinfection, "TI IWR6843AOP Driver," GitHub, 2024.  
 https://github.com/lightinfection/TI_IWR6843AOP
 
-
-## Contributing
-
-Pull requests and issues are welcome. Please open an issue first to discuss any significant changes to the detection or mapping pipeline.
-
-## License
-
-MIT - see [LICENSE](./LICENSE) for details.
