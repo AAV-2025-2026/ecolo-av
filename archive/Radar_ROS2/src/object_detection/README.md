@@ -9,10 +9,10 @@ https://github.com/lightinfection/TI_IWR6843AOP
 
 The IWR6843AOP outputs a raw point cloud — a set of 3D coordinates representing surfaces the radar detected. On its own this data is noisy and unstructured. This package processes that data through a pipeline:
 
-1. **Filter** — removes spurious points caused by noise, multipath reflections, or out-of-range returns ✅
-2. **Cluster** — groups nearby points together using DBSCAN so that a cluster represents a single physical object ⚠️
-3. **Track** — follows clusters across consecutive radar frames so you can determine an object's velocity and trajectory in 3D space ✅
-4. **Map** *(needs further testing)* — builds a persistent spatial map of clustered detections over time using ICP registration to align new frames to previously seen ones ⚠️
+1. **Filter** — removes spurious points caused by noise, multipath reflections, or out-of-range returns
+2. **Cluster** — groups nearby points together using DBSCAN so that a cluster represents a single physical object
+3. **Track** — follows clusters across consecutive radar frames so you can determine an object's velocity and trajectory in 3D space
+4. **Map** *(needs further testing)* — builds a persistent spatial map of clustered detections over time using ICP registration to align new frames to previously seen ones
 
 ## Status
 
