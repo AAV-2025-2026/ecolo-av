@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>radar_tracking_pkg</name>
+  <version>0.0.0</version>
+  <description>Radar tracking package</description>
+
+  <maintainer email="vaasujindal@cmail.carleton.ca">Vaasu Jindal</maintainer>
+  <license>MIT</license>
+
+  <!-- IMPORTANT: use Python build type -->
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>radar_msgs</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
+
