@@ -15,7 +15,7 @@ A ROS 2 driver for real-time **object detection and environment mapping** using 
 
 ## Before you start - flashing the sensor
 
-The IWR6843AOP must be flashed with the correct mmWave firmware before use. Special configuration files required for flashing are in the [`tools/`](./tools) folder of this repo.
+The IWR6843AOP must be flashed with the correct mmWave firmware before use. Special configuration files required for flashing are in the database sheet provided below.
 
 **Datasheet (DBS)** - full specs, pin diagrams, SOP boot modes:  
 https://www.ti.com/lit/ds/symlink/iwr6843aop.pdf?ts=1775563735084&ref_url=https%3A%2F%2Fwww.ti.com%2Fproduct%2FIWR6843AOP
