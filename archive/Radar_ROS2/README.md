@@ -52,7 +52,7 @@ colcon build --symlink-install
 source install/setup.bash
 
 # 4. Run (see src/ for launch files and config)
-ros2 launch src/radar.launch.py
+ros2 launch src/ros2 (which method you want).py
 ```
 
 
