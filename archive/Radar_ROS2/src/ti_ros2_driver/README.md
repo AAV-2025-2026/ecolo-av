@@ -9,8 +9,6 @@ https://github.com/lightinfection/TI_IWR6843AOP
 
 This package is fully complete. All launch modes, configurations, and publisher nodes are working.
 
----
-
 ## What this package does
 
 When you launch this driver it does the following:
@@ -72,8 +70,6 @@ ti_ros2_driver/
 └── README.md
 ```
 
----
-
 ## cfg/
 
 Chirp configuration files. These are the most important files for anyone setting up or tuning the sensor. Each `.cfg` file programs the IWR6843AOP with a complete set of radar parameters - without a valid config the sensor will not produce any data.
@@ -108,8 +104,6 @@ Defines validation rules that the driver checks the loaded `.cfg` against before
 
 ### `bin/`
 Contains compiled binary versions of certain config files or supporting tools used during the sensor initialisation sequence.
-
----
 
 ## debug/
 
@@ -199,14 +193,21 @@ The ROS 2 node that ties everything together. It instantiates `TI.py` to read fr
 Key responsibilities:
 - Initialises the ROS 2 node
 - Calls `TI.py` in a loop to fetch new frames
-- Converts parsed frame data into a `PointCloud2` message
+- Converts parsed frame data into `PointCloud2` messages
 - Publishes at the frame rate defined in the loaded `.cfg` file
+
+Two topics are published:
+
+| Topic | Type | Description |
+|---|---|---|
+| `/ti_radar_0/ti_mmwave_0` | `sensor_msgs/msg/PointCloud2` | Raw radar detections - many points per frame |
+| `/ti_radar_0/ti_mmwave_0_objects` | `sensor_msgs/msg/PointCloud2` | Processed output - one point per detected object |
 
 If downstream nodes are not receiving point cloud data, check that this node is running and publishing with:
 
 ```bash
 ros2 topic list
-ros2 topic echo /ti_radar_point_cloud
+ros2 topic echo /ti_radar_0/ti_mmwave_0
 ```
 
 ### `plotheatmap.py`
@@ -231,6 +232,7 @@ Tells the Python build tools where the entry points are - specifically which Pyt
 ## setup.py
 
 The Python package setup script. Works together with `setup.cfg` to define how the package is installed by colcon. Also specifies which non-Python files (like the contents of `cfg/`, `launch/`, and `resource/`) should be included in the install. If you add new config files or launch files and they are not being installed to `install/`, check that they are listed here.
+
 
 ## Choosing the right config file
 
