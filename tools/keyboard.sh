@@ -4,9 +4,21 @@
 # and the car stops within about a second. Keys: i forward, u/o forward left/right,
 # , reverse, k stop, q/z faster/slower.
 #
-# usage: tools/keyboard.sh [--sim]      --sim: use simulation time (Gazebo, replay)
+# usage: tools/keyboard.sh [--sim | --local]
+#   --sim    simulation time (Gazebo, replay), and stay on this computer
+#   --local  stay on this computer, on the wall clock (the bench, the turtle)
+#   neither  drive whatever shares this ROS domain: on the car's network, the car
 set -euo pipefail
 sim=false
-if [[ "${1:-}" == "--sim" ]]; then sim=true; fi
+here=false
+case "${1:-}" in
+  --sim) sim=true; here=true ;;
+  --local) here=true ;;
+esac
+if [[ "$here" == true && -z "${ROS_AUTOMATIC_DISCOVERY_RANGE:-}" ]]; then
+  # The same rule as tools/ros.sh --local.
+  export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+  unset ROS_STATIC_PEERS
+fi
 exec ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args \
   -p stamped:=true -p use_sim_time:=$sim -r cmd_vel:=/cmd_vel/remote

@@ -4,6 +4,10 @@ Every backend takes the same `/ego/actuator_cmd`, so the drivers, mux, ego and
 localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
 the ladder one rung at a time.
 
+`pixi run sim` and `pixi run turtle` stay on this computer: other terminals here see them,
+other computers don't. So a simulated car never meets the real one. To share one on
+purpose: `ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET pixi run sim`.
+
 ## The test ladder
 
 | Rung | Runs | Proves |

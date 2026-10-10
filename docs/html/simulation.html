@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">5 min read · 6 sections</div></header>
+<div class="meta">6 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -40,7 +40,10 @@
 <nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-next-year">CARLA: next year</a><a href="#when-nothing-moves">When nothing moves</a></nav>
 <div class="lead"><p>Every backend takes the same <code>/ego/actuator_cmd</code>, so the drivers, mux, ego and
 localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
-the ladder one rung at a time.</p></div>
+the ladder one rung at a time.</p>
+<p><code>pixi run sim</code> and <code>pixi run turtle</code> stay on this computer: other terminals here see them,
+other computers don't. So a simulated car never meets the real one. To share one on
+purpose: <code>ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET pixi run sim</code>.</p></div>
 <section class="card"><h2 id="the-test-ladder">The test ladder</h2>
 <div class="table-wrap"><table>
 <thead>

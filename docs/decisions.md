@@ -76,6 +76,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Flesh out the whole graph down to the sensors, and stub in what the hardware and firmware don't have yet: bench mode | Ben: "get as much done as we can and stub in the rest" |
 | PyTorch and YOLO live in a separate `ml` environment, so the default one stays small | a technical choice: see [Perception](perception.md) |
 | Camera images are subscribed reliably, not best effort | measured on the Mac: best effort lost every image |
+| The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before Claude joins the car's network: see [Simulation](simulation.md) |
 
 ## Open questions
 

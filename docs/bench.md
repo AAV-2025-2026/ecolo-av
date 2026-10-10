@@ -22,7 +22,9 @@ pixi run -e ml bench perception:=true   # add YOLO and the stop sign
 ```
 
 While it runs, in more terminals: `pixi run graph` (rqt_graph), `pixi run rviz`,
-`pixi run keyboard` (you drive, at the remote priority), or `pixi run check bench`.
+`pixi run keyboard --local` (you drive, at the remote priority), or `pixi run check bench`.
+The bench stays on this computer, like the sim: these terminals see it, other computers
+don't.
 
 | Argument | Default | Does |
 |---|---|---|

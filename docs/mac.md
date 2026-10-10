@@ -70,6 +70,12 @@ show up:
   and the Mac's IP on the Orin. This is Jazzy's way around blocked multicast.
 - Turn off the Mac's firewall for a minute, to see whether it's the cause.
 
+!!! note "The stand-ins stay on your Mac"
+  `pixi run turtle`, `sim`, `bench` and `view` only talk to this computer, whatever your
+  domain and peers say. So a pretend car never meets the real one. The keyboard, `estop`
+  and RViz do reach the car: that's their job. `pixi run keyboard --local` keeps the
+  keyboard on your Mac too.
+
 If RViz shows the car but drops data ("extrapolation" errors), or the doctor says the
 clock is off: the car's computers keep the time (the Orin serves it, see
 [Platforms](platforms.md)). Set the Mac from the Orin once with
