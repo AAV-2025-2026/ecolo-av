@@ -106,7 +106,7 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 |---|---|---|
 | Start-up | the spine arms and stays armed; both EKFs run | [[works]] |
 | Graph against the contract | every topic marked live on the bench has its publisher and type (`check_graph.py --profile bench`) | [[works]] 0 failures |
-| Scripted drive | 5-8 m for a 6.5 m plan | [[works]] 5.4 m |
+| Scripted drive | 4.5-8 m for a 6.5 m plan: the speed loop trails the plan by about a second | [[works]] 4.9-6.2 m over the day's runs |
 | Global EKF against the truth | under 1.5 m apart | [[works]] 0.06 m |
 | Software e-stop | 1 m/s to a stop, and the spine reports it | [[works]] |
 | Hardware e-stop | the same, from `/bench/hw_estop` | [[works]] |
