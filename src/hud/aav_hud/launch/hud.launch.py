@@ -5,6 +5,7 @@ The HUD's back end, for the touchscreen app (hud/flutter_pi).
   ros2 launch aav_hud hud.launch.py gps:=/gps/fix    # raw GPS: no localization running
 
 Then start the app: it connects to 127.0.0.1:5000. Parameters: config/hud_server.yaml.
+The camera, in a browser on the same computer: http://127.0.0.1:5000/camera/stream
 """
 
 from launch import LaunchDescription

@@ -8,12 +8,17 @@ into a Nav2 goal.
 Subscribes  /vehicle/status        aav_interfaces/VehicleStatus  speed, mode, e-stop, faults
             /gps/filtered          sensor_msgs/NavSatFix         the car on the map
             /perception/stop       std_msgs/Bool                 stopping for a stop sign
+            /camera/image_raw      sensor_msgs/Image             only while someone watches
 Calls       /follow_gps_waypoints  nav2_msgs/action/FollowGPSWaypoints  the locked route
 Publishes   nothing (the 2025-26 /ui/destination_point and /ui/route are gone)
 Serves      HTTP and Socket.IO on port 5000 (parameters host, port)
 
 The conversions live in events.py (messages to events), route.py (the route to GPS
-waypoints) and trip.py (the action's progress to nav_state).
+waypoints), trip.py (the action's progress to nav_state) and png.py (camera pictures).
+
+Camera pictures are big (about 1 MB each, several a second), and each one goes to every
+subscriber, across the network too. So the node only subscribes while someone fetches
+/camera/latest.png or /camera/stream, and stops camera_idle_timeout seconds after.
 
 Try it without a car:
   ros2 launch aav_hud hud.launch.py
@@ -25,7 +30,7 @@ from functools import partial
 import threading
 import time
 
-from aav_hud import events
+from aav_hud import events, png
 from aav_hud.route import quaternion
 from aav_hud.trip import NO_NAV2, Trip
 from aav_hud.web import HudWeb
@@ -36,13 +41,17 @@ import rclpy
 from rclpy.action import ActionClient
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import NavSatFix
+from rclpy.qos import HistoryPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import Image, NavSatFix
 from std_msgs.msg import Bool
 
 # Best effort takes both kinds of publisher: ublox publishes /gps/fix best effort,
 # the others are reliable. These messages are small, so losing one costs nothing.
 SMALL = qos_profile_sensor_data
+# Pictures: reliable, as best effort loses most big messages over UDP (aav_yolo measured
+# it on a Mac), and only the newest one.
+PICTURES = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
+                      reliability=ReliabilityPolicy.RELIABLE)
 
 
 def geo_pose(waypoint):
@@ -59,8 +68,8 @@ def geo_pose(waypoint):
 
 class HudServer(Node):
 
-    def __init__(self):
-        super().__init__('hud_server')
+    def __init__(self, **kwargs):
+        super().__init__('hud_server', **kwargs)
         param = self.declare_parameter
         self.host = param('host', '127.0.0.1').value
         self.port = param('port', 5000).value
@@ -70,7 +79,8 @@ class HudServer(Node):
                                     param('mediamtx_rtsp_port', 8554).value,
                                     param('stream_path', 'cam1').value)
         self.web = HudWeb(self, stream, param('route_tolerance', 1.0).value,
-                          param('waypoint_spacing', 5.0).value)
+                          param('waypoint_spacing', 5.0).value, param('camera_fps', 5.0).value)
+        self.camera_idle = param('camera_idle_timeout', 5.0).value
 
         # The web server's threads call follow() and cancel(); the executor the rest.
         self.lock = threading.Lock()
@@ -80,11 +90,16 @@ class HudServer(Node):
         self.trip_id = 0        # which goal is the newest; older answers are ignored
         self.goal = None        # the newest goal's handle, once Nav2 took it
         self.web_failed = False
+        self.camera = None              # the subscription, while someone watches
+        self.camera_wanted = None       # when the web side last asked for a picture
+        self.picture = None             # the newest Image
+        self.picture_png = (None, None)     # (Image, its PNG), so each is encoded once
 
         self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, SMALL)
         self.create_subscription(NavSatFix, '/gps/filtered', self.on_fix, SMALL)
         self.create_subscription(Bool, '/perception/stop', self.on_stop, SMALL)
         self.nav = ActionClient(self, FollowGPSWaypoints, '/follow_gps_waypoints')
+        self.create_timer(0.5, self.check_camera)
 
     def start_web(self):
         """Start the web server in a thread. If it fails, the node shuts down."""
@@ -122,10 +137,45 @@ class HudServer(Node):
                 self._send_nav_state()      # the distance left changed
 
     def on_stop(self, msg):
-        # Only changes: the detector may publish every camera frame.
+        # Only changes: the stop-sign watcher publishes it 10 times a second.
         if bool(msg.data) != self.stop_sign:
             self.stop_sign = bool(msg.data)
             self.web.send(events.STOP_SIGN, events.stop_sign_event(msg))
+
+    def on_image(self, msg):
+        with self.lock:
+            self.picture = msg
+
+    def check_camera(self):
+        """Subscribe to the camera while someone watches; stop when nobody does."""
+        with self.lock:
+            wanted = (self.camera_wanted is not None
+                      and time.monotonic() - self.camera_wanted < self.camera_idle)
+        if wanted and self.camera is None:
+            self.camera = self.create_subscription(Image, '/camera/image_raw', self.on_image,
+                                                   PICTURES)
+            self.get_logger().info('someone watches the camera: subscribed')
+        elif not wanted and self.camera is not None:
+            self.destroy_subscription(self.camera)
+            self.camera = None
+            with self.lock:
+                self.picture, self.picture_png = None, (None, None)
+            self.get_logger().info('nobody watches the camera: unsubscribed')
+
+    def camera_png(self):
+        """Return the newest picture as PNG, or None (web threads). Raise ValueError."""
+        with self.lock:
+            self.camera_wanted = time.monotonic()
+            picture, (encoded_for, encoded) = self.picture, self.picture_png
+        if picture is None:
+            return None
+        if picture is encoded_for:
+            return encoded
+        encoded = png.encode(picture.width, picture.height, picture.encoding, picture.step,
+                             picture.data)
+        with self.lock:
+            self.picture_png = (picture, encoded)
+        return encoded
 
     def _send_nav_state(self):
         # Call with self.lock held: the executor and the web threads both send this

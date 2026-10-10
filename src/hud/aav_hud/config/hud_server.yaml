@@ -6,6 +6,8 @@ hud_server:
     max_event_rate: 10.0      # Hz: the most speed, position and route updates per second
     route_tolerance: 1.0      # m: a route point this close to a straight line is dropped
     waypoint_spacing: 5.0     # m: the least distance between two GPS waypoints
+    camera_fps: 5.0           # Hz: the most pictures a second on /camera/stream
+    camera_idle_timeout: 5.0  # s: stop receiving /camera/image_raw this long after the last fetch
     # MediaMTX: the video the app's camera page plays (WebRTC). The app has this address
     # built in (camera_page.dart); the 2025-26 back end said 192.168.1.101.
     mediamtx_host: 192.168.1.118

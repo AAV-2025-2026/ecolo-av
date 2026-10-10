@@ -13,7 +13,7 @@ ros2_ws/src/maincar. On 2026-10-10 the package was renamed `aav_hud` and ported 
 | `aav_hud/__init__.py` | `maincar/__init__.py` | renamed (empty) |
 | `aav_hud/hud_server.py` | `maincar/ui_flask.py` | rewritten: the ROS node |
 | `aav_hud/web.py` | `maincar/ui_flask.py` | new: its Flask and Socket.IO part |
-| `aav_hud/events.py`, `route.py`, `trip.py` | none | new: the conversions, no ROS |
+| `aav_hud/events.py`, `route.py`, `trip.py`, `png.py` | none | new: the conversions, no ROS |
 | `launch/hud.launch.py` | `launch/launch.py` | rewritten |
 | `config/hud_server.yaml` | none | new: the parameters |
 | `test/` | none | new |
@@ -47,6 +47,11 @@ ros2_ws/src/maincar. On 2026-10-10 the package was renamed `aav_hud` and ported 
   - The MediaMTX address is now a parameter. Its default is `192.168.1.118`, as in the
     app's camera page; the old back end said `192.168.1.101`.
   - Werkzeug no longer logs every request: Socket.IO polling makes several a second.
+  - If the web server can't start (the port is taken), the node stops with exit code 1.
+    Before, it ran on with no server.
+  - The camera: `/camera/latest.png` and `/camera/stream` serve `/camera/image_raw` as
+    PNG pictures. The node subscribes only while someone fetches them. The old code had
+    `/camera/cam1/image_raw` and `/camera/cam2/image_raw` commented out.
 
 ## Port to the 2026-27 contract
 
@@ -58,6 +63,7 @@ Done on 2026-10-10. Each 2025-26 input, and what replaced it:
 | `/rtos/gear` | UInt8 | `/vehicle/status`: mode, armed, e-stop, sign of the speed |
 | `/rtos/gps` | NavSatFix | `/gps/filtered` (launch argument `gps:=/gps/fix` for the raw fix) |
 | `/aav/stop_sign_detected` | Bool | `/perception/stop` |
+| `/camera/cam1/image_raw`, `/camera/cam2/image_raw` (commented out) | Image | `/camera/image_raw`, served at `/camera/latest.png` and `/camera/stream` |
 | `/nav/path_distance`, `/nav/nav_status` | Float32, String | the feedback and result of the `/follow_gps_waypoints` goal |
 | `/ui/destination_point`, `/ui/route` (published) | Point, String | a `/follow_gps_waypoints` goal (nav2_msgs/action/FollowGPSWaypoints) |
 

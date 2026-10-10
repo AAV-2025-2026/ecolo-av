@@ -22,7 +22,8 @@ try:
     from rclpy.action import ActionServer, CancelResponse
     from rclpy.callback_groups import ReentrantCallbackGroup
     from rclpy.executors import MultiThreadedExecutor
-    from sensor_msgs.msg import NavSatFix
+    from rclpy.parameter import Parameter
+    from sensor_msgs.msg import Image, NavSatFix
     from std_msgs.msg import Bool
 except ImportError:
     HudServer = None
@@ -37,8 +38,10 @@ ROUTE = [{'lat': START[0], 'lon': START[1]}, {'lat': EAST_50[0], 'lon': EAST_50[
 class Ros:
     """The HUD node and a fake car node, spun by one executor in a thread."""
 
-    def __init__(self):
-        self.hud = HudServer()          # without its web server: test clients instead
+    def __init__(self, **params):
+        # Without its web server: Flask's and Flask-SocketIO's test clients instead.
+        self.hud = HudServer(parameter_overrides=[Parameter(k, value=v)
+                                                  for k, v in params.items()])
         self.car = rclpy.create_node('fake_car')
         self.executor = MultiThreadedExecutor()
         self.executor.add_node(self.hud)
@@ -62,10 +65,10 @@ class Ros:
 
 
 @pytest.fixture
-def ros():
+def ros(request):
     rclpy.init()
     try:
-        r = Ros()
+        r = Ros(**getattr(request, 'param', {}))
         yield r
         r.close()
     finally:
@@ -170,3 +173,22 @@ def test_without_nav2_the_route_is_refused(ros):
     reply = ros.http.post('/receive', json=ROUTE)
     assert reply.status_code == 503
     assert ros.hud.web.latest()[events.NAV_STATE]['status'] == 'nav2_not_running'
+
+
+@pytest.mark.parametrize('ros', [{'camera_idle_timeout': 1.0}], indirect=True)
+def test_the_camera_is_received_only_while_someone_watches(ros):
+    pub = ros.car.create_publisher(Image, '/camera/image_raw', 1)
+    assert pub.get_subscription_count() == 0
+    assert ros.http.get('/camera/latest.png').status_code == 503
+    picture = Image(width=2, height=1, encoding='bgr8', step=6, data=[255, 0, 0, 0, 0, 255])
+
+    def fetch():
+        pub.publish(picture)
+        reply = ros.http.get('/camera/latest.png')
+        return reply if reply.status_code == 200 else None
+
+    reply = wait_for(fetch)
+    assert reply.mimetype == 'image/png'
+    assert reply.data.startswith(b'\x89PNG')
+    assert pub.get_subscription_count() == 1
+    wait_for(lambda: pub.get_subscription_count() == 0)     # nobody watches any more

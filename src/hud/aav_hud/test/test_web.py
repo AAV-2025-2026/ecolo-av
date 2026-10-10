@@ -18,8 +18,9 @@ STREAM = {'name': 'cam1'}
 
 class FakeBackend:
 
-    def __init__(self, problem=None):
+    def __init__(self, problem=None, picture=None):
         self.problem = problem
+        self.picture = picture
         self.routes = []
         self.cancels = 0
 
@@ -31,9 +32,15 @@ class FakeBackend:
         self.cancels += 1
         return self.problem
 
+    def camera_png(self):
+        if isinstance(self.picture, Exception):
+            raise self.picture
+        return self.picture
 
-def make_web(problem=None):
-    return HudWeb(FakeBackend(problem), STREAM, tolerance=1.0, min_spacing=5.0)
+
+def make_web(problem=None, picture=None):
+    return HudWeb(FakeBackend(problem, picture), STREAM, tolerance=1.0, min_spacing=5.0,
+                  camera_fps=50.0)
 
 
 def test_a_locked_route_goes_to_the_backend():
@@ -109,3 +116,37 @@ def test_send_reaches_every_client():
             'name': 'mock_gps_update',
             'args': [{'mock_latitude': 45.0, 'mock_longitude': -75.0}],
             'namespace': '/'}]
+
+
+def test_the_newest_camera_picture():
+    web = make_web(picture=b'\x89PNG...')
+    reply = web.app.test_client().get('/camera/latest.png')
+    assert reply.status_code == 200
+    assert reply.mimetype == 'image/png'
+    assert reply.data == b'\x89PNG...'
+    assert reply.headers['Cache-Control'] == 'no-store'
+
+
+def test_no_camera_picture_yet():
+    reply = make_web().app.test_client().get('/camera/latest.png')
+    assert reply.status_code == 503
+    assert reply.headers['Retry-After'] == '1'
+
+
+def test_a_camera_encoding_it_cannot_show():
+    web = make_web(picture=ValueError("camera encoding 'yuv422' is not one of rgb8, ..."))
+    reply = web.app.test_client().get('/camera/latest.png')
+    assert reply.status_code == 415
+    assert b'yuv422' in reply.data
+
+
+def test_the_camera_stream_sends_each_new_picture():
+    web = make_web(picture=b'one')
+    pictures = web.pictures()
+    assert next(pictures) == (b'--picture\r\nContent-Type: image/png\r\n'
+                              b'Content-Length: 3\r\n\r\none\r\n')
+    web.backend.picture = b'two'
+    assert next(pictures).endswith(b'\r\n\r\ntwo\r\n')
+    reply = web.app.test_client().get('/camera/stream', buffered=False)
+    assert reply.content_type == 'multipart/x-mixed-replace; boundary=picture'
+    reply.close()
