@@ -48,6 +48,9 @@ Where Rust stands in October 2026:
 - **Message crates ship with Jazzy.** Our Pixi install already has them, for example
   `share/sensor_msgs/rust/`.
 - **`rclrs`**, the library for writing nodes, comes from crates.io and is still 0.x.
+- **It works here.** `examples/rust-listener` (`rclrs` 0.8, `ros-env` 0.3) built in 18
+  seconds with plain `cargo build`, and printed ego's commands live from the turtle run.
+  Untested on a Mac.
 
 ## Rust on the Pi and the ESP32
 
@@ -62,5 +65,5 @@ Where Rust stands in October 2026:
 | When | What |
 |---|---|
 | Now | Python for ROS nodes; Rust for the spine firmware (started: `spine-core`, 47 tests) |
-| Next | build one `rclrs` example in the Pixi environment, to learn the workflow |
+| Done | one `rclrs` node, built with Cargo in the Pixi environment: `pixi run rust-listener` |
 | Later | port a node where Rust pays off, such as ego, once the car drives |

@@ -43,8 +43,11 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
 - [x] **Naming and code style** for all code. Inherited code is ours to edit now.
       *Done: `docs/conventions.md`, `pixi run lint` passes. Renaming the inherited
       packages is proposed and waits for the team.*
-- [ ] **Rust:** pull `rclrs` and the message crates through cargo. Build one example in
+- [x] **Rust:** pull `rclrs` and the message crates through cargo. Build one example in
       the Pixi environment. Write down what a Rust rewrite would take (ESP32, Pi).
+      *Done: `examples/rust-listener` (rclrs 0.8 + ros-env 0.3 from crates.io; the
+      message code ships with Jazzy) builds in 18 s and printed ego's commands live.
+      `pixi run rust-listener`. The rewrite trade-offs are in docs/languages.md.*
 - [ ] **Design doc:** fix the ten "last year's", and update the tree, profiles and decisions.
 - [ ] **CLAUDE.md:** record tonight's decisions, so no session starts from scratch.
 

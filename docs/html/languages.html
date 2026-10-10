@@ -131,6 +131,9 @@ lets each program pick its own language, because programs only meet through mess
 <li><strong>Message crates ship with Jazzy.</strong> Our Pixi install already has them, for example
   <code>share/sensor_msgs/rust/</code>.</li>
 <li><strong><code>rclrs</code></strong>, the library for writing nodes, comes from crates.io and is still 0.x.</li>
+<li><strong>It works here.</strong> <code>examples/rust-listener</code> (<code>rclrs</code> 0.8, <code>ros-env</code> 0.3) built in 18
+  seconds with plain <code>cargo build</code>, and printed ego's commands live from the turtle run.
+  Untested on a Mac.</li>
 </ul>
 </section>
 <section class="card"><h2 id="rust-on-the-pi-and-the-esp32">Rust on the Pi and the ESP32</h2>
@@ -175,8 +178,8 @@ lets each program pick its own language, because programs only meet through mess
 <td>Python for ROS nodes; Rust for the spine firmware (started: <code>spine-core</code>, 47 tests)</td>
 </tr>
 <tr>
-<td>Next</td>
-<td>build one <code>rclrs</code> example in the Pixi environment, to learn the workflow</td>
+<td>Done</td>
+<td>one <code>rclrs</code> node, built with Cargo in the Pixi environment: <code>pixi run rust-listener</code></td>
 </tr>
 <tr>
 <td>Later</td>

@@ -26,6 +26,7 @@ estop = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /estop std_msgs/msg/Bool
 estop-clear = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /estop std_msgs/msg/Bool "{data: false}"', description = "Clear the e-stop" }
 gz-window = { cmd = "tools/ros.sh gz sim -g", description = "Gazebo's window, for a simulator started with gui:=false (Macs)" }
 doctor = { cmd = "tools/ros.sh python3 tools/doctor.py", description = "Can this computer join the car's ROS network? Says what to fix" }
+rust-listener = { cmd = "tools/ros.sh cargo run -q --manifest-path examples/rust-listener/Cargo.toml", description = "A Rust (rclrs) node: prints ego's commands" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"

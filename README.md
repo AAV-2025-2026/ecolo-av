@@ -31,7 +31,8 @@ Details, and what to do when it fails: [docs/run.md](docs/run.md).
 |---|---|
 | `src/` | ROS 2 packages, one folder per layer: sensors, localization, drivers, mux, ego, backends, plus the interfaces, the car description and the launch profiles |
 | `firmware/` | the CAN contract (`can/aav.dbc`), the Rust `spine-core`, and the inherited C++ firmware |
-| `tools/` | tests, keyboard, graph check, recording, the docs builder, the progress mailer |
+| `tools/` | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer |
+| `examples/` | small runnable examples: a first ROS node in Rust (`rust-listener`) |
 | `docs/` | the docs (markdown sources, the HTML in `docs/html/`), the topic contract, and the history |
 | `hud/` | the 2025-26 touchscreen app, not yet ported |
 
