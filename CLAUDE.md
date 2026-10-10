@@ -104,9 +104,15 @@ These are the conventions decided so far. They apply to people and to Claude ses
 
 ## Not ours
 
-These sit in `/home/ben/aav/` next to this repo and are not team code:
-- **Read-only clones of the 2025-26 repos:** survey them with
-  `grep -r --exclude-dir=ros2-src --exclude-dir=ros2-rust`.
-- **`ros2-src/`:** the Jazzy source, for looking things up.
-- **`ros2-rust/`:** the rclrs project.
-- **Ben's own course code:** `SYSC3313/`, `c_code_example/` and `simplied.c`.
+- **`vendor/`** (inside this repo, but not in git): other people's source, to look things
+  up. `vendor/ros2-src/` is ROS 2 Jazzy and the stock packages; `vendor/ros2-rust/` is
+  rclrs. `pixi run vendor` downloads them at the commits in `vendor/*.repos`. Never edit
+  or build them. Search them with `grep -r` or `rg -u`: most search tools skip folders
+  that git ignores.
+- **Next to this repo** (`~/Code/aav/` on Ben's Mac, `/home/ben/aav/` on oirp-spss), and
+  not team code. That folder's own `CLAUDE.md` says what each one is, and what moved into
+  `aav`:
+  - read-only clones of the 2025-26 repos: survey them with
+    `grep -r --exclude-dir=aav --exclude-dir=aav-linux-build-output`;
+  - Ben's own course code: `SYSC3313/`, `c_code_example/` and `simplied.c`;
+  - on oirp-spss only, `ros2-src/` and `ros2-rust/`, not yet moved into `vendor/`.

@@ -61,5 +61,11 @@ for flag in --sim --local; do
 done
 echo "they do"
 
+echo "== vendor/ stays out of the build"
+# Without COLCON_IGNORE, pixi run build would try to build all of ROS 2's source.
+[[ -f vendor/COLCON_IGNORE ]] || { echo "vendor/COLCON_IGNORE is missing"; exit 1; }
+python3 -c "import glob, yaml; [yaml.safe_load(open(f))['repositories'] for f in glob.glob('vendor/*.repos')]"
+echo "it does"
+
 echo "== docs/interfaces.md"
 python3 tools/gen_interfaces_md.py --check && echo "in sync"

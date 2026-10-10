@@ -54,6 +54,7 @@ pixi run keyboard    # terminal 2: hold i to drive, u or o to turn
 | `src/` | ROS 2 packages, one folder per layer of the picture |
 | `firmware/` | microcontroller code: the CAN contract, the Rust spine, today's ESP32 |
 | `tools/` | scripts: tests, keyboard, graph check, recording, these docs |
+| `vendor/` | other people's source, to look things up. Not ours, and not in git |
 | `docs/` | these pages. Edit a `.md` file, then run `pixi run docs`. |
 
 ## Where decisions live

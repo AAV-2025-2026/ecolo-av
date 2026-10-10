@@ -15,7 +15,7 @@ links to the page with the details. As of the evening of 10 October 2026.
 | Computers in the machine files | 4: `orin`, `motor_pi`, `laptop`, `all` |
 | Contracts | 3: the topics, the CAN frames, the car's measurements |
 | Tests | 153 in Python and 171 in Rust without ROS; 192 in `colcon test`; 7 bench checks |
-| Tools | 15 scripts and 22 `pixi run` tasks |
+| Tools | 16 scripts and 23 `pixi run` tasks |
 
 ## The folders
 
@@ -23,10 +23,12 @@ links to the page with the details. As of the evening of 10 October 2026.
 |---|---|---|
 | `src/` | the ROS 2 packages, one folder per layer | [Packages](packages.md) |
 | `firmware/` | the CAN contract, the Rust crates, and the 2025-26 C++ boards | [Firmware](firmware.md), [Rust firmware](rust-firmware.md) |
-| `hud/` | the 2025-26 touchscreen app (Flutter), not yet ported | [HUD](hud.md) |
+| `hud/` | the 2025-26 touchscreen app (Flutter). Its back end is ported, as `src/hud/aav_hud` | [HUD](hud.md) |
 | `tools/` | tests, the graph check, the doctor, recording, maps, the docs, the mailer | [Infrastructure](infrastructure.md) |
 | `examples/` | a first ROS node in Rust | |
 | `docs/` | these pages, the topic contract, and the history | |
+| `models/` | the YOLO models: `pixi run get-models` downloads them (not in git) | [Perception](perception.md) |
+| `vendor/` | other people's source, to look things up: ROS 2 Jazzy and rclrs. Not ours, and not in git: `pixi run vendor` downloads it | |
 | `pixi.toml`, `pixi.lock` | the whole environment: ROS 2 Jazzy, Gazebo, Nav2, Rust, compilers | [Infrastructure](infrastructure.md) |
 
 ## Our own code
