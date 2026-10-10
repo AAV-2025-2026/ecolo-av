@@ -59,9 +59,15 @@ folder downloaded, and moves into it as a fast-forward.
 - [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
 - [x] **The first-day steps in `README.md`** (Ben, 17:03).
 - [x] **`~/Code/aav/CLAUDE.md`:** every old folder, and what replaced it in `aav` (Ben, 17:03).
-- [ ] **An MCP server** (Ben, 17:03): read-only first, over stdio. *Proposed.*
+- [ ] **An MCP server** (Ben, 17:03): read-only, over stdio. *Ben said yes: next.*
+- [x] **On GitHub** (Ben): `git@github.com:zander1976/aav.git`, private. CI: Linux on every push, a
+      Mac every night. Commit messages give the intention, with no attribution lines; the
+      README's Credits section covers who did what.
+- [x] **Ben's Rust IMU driver** (`aav_imu_yahboom`, `imu_driver:=rust`): reviewed and
+      committed; its tests now run in `pixi run test`.
+- [x] **Cleaned up** (Ben approved): `~/aav`, the Linux build output and the old bundle.
 - [ ] **Slim per-machine Pixi environments** (Orin, Motor Pi, laptop): at Phase 0.
-- [ ] **Claude on the car's network** (Ben, 16:42: "at some point"): a read-only audit of
+- [ ] **An audit on the car's network** (Ben, 16:42: "at some point"): a read-only audit of
       the hardware. *Ready: the stand-ins stay on their own computer (`tools/ros.sh
       --local`, checked by `tools/test.sh`), so nothing pretend can reach the car.*
 
@@ -134,7 +140,7 @@ folder downloaded, and moves into it as a fast-forward.
 - Is `aav_turtlesim` different from the regular turtlesim?
 - What languages are used now, and should everything be Rust?
 - Can it compile on a Mac without Homebrew?
-- What does the claude.ai chat (fe09d020…) say? I can't open claude.ai chats, so Ben
+- What does the claude.ai chat (fe09d020…) say? It can't be opened from here, so Ben
   needs to paste the key parts.
 
 ## For the team to decide

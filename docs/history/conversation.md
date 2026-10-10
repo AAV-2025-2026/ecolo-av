@@ -1009,6 +1009,12 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - It didn't finish by itself: Claude stopped it at 16:13, in the middle of a file. It was copying the server's Linux build output, which a Mac can't use.
 - The half-copied file is in `~/Code/aav/aav-linux-build-output/`, with the rest of that output. Everything that matters came by rsync and was checked: 0 files missing, 0 different.
 
+### Where does the code live, and how are commits credited? (17:18 to 17:51)
+
+- **On GitHub:** `git@github.com:zander1976/aav.git`, private (Ben, Q25). CI runs `pixi run test` on Linux for every push, and on a Mac every night.
+- **A school project:** commit messages give the intention, with no attribution lines. The co-author line was stripped from the 100 earlier commits before the first push. The README's Credits section names the previous teams, the open-source projects, and Claude as the AI assistant.
+- **Before the push:** a scan of all 100 commits found no secrets. `~/aav`, the Linux build output and the old bundle were deleted, and Ben's Rust IMU driver was reviewed and committed.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
