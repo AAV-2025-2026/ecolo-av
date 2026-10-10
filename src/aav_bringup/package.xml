@@ -25,6 +25,7 @@
   <exec_depend>aav_spine_sim</exec_depend>
   <exec_depend>aav_object_detection</exec_depend>
   <exec_depend>aav_yolo</exec_depend>
+  <exec_depend>aav_hud</exec_depend>
   <exec_depend>imu_filter_madgwick</exec_depend>
   <exec_depend>foxglove_bridge</exec_depend>
   <exec_depend>rviz2</exec_depend>

@@ -56,9 +56,10 @@ def draw_stop_sign(im: np.ndarray, view: SignView) -> None:
     cv2.fillPoly(im, [octagon(r * 0.9)], (30, 30, 200), cv2.LINE_AA)
     scale = r / 48.0
     if scale > 0.15:
-        (w, h), _ = cv2.getTextSize('STOP', cv2.FONT_HERSHEY_DUPLEX, scale, max(1, int(scale * 3.4)))
-        cv2.putText(im, 'STOP', (int(view.u - w / 2), int(view.v + h / 2)), cv2.FONT_HERSHEY_DUPLEX,
-                    scale, (255, 255, 255), max(1, int(scale * 3.4)), cv2.LINE_AA)
+        font, thick = cv2.FONT_HERSHEY_DUPLEX, max(1, int(scale * 3.4))
+        (w, h), _ = cv2.getTextSize('STOP', font, scale, thick)
+        cv2.putText(im, 'STOP', (int(view.u - w / 2), int(view.v + h / 2)), font, scale,
+                    (255, 255, 255), thick, cv2.LINE_AA)
 
 
 def scene(cam: Camera, signs: Sequence[SignView]) -> np.ndarray:

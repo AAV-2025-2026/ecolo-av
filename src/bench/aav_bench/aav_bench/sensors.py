@@ -1,6 +1,8 @@
 """
-The pretend sensors, for bench mode. Each one stands where a real driver will, on the
-same topic, with the same message type and frame, so nothing downstream changes.
+The pretend sensors, for bench mode.
+
+Each one stands where a real driver will, on the same topic, with the same message type
+and frame, so nothing downstream changes.
 
   mock_imu      /bench/truth -> /imu/data_raw (Imu), /imu/mag (MagneticField)    imu_link
   mock_gps      /bench/truth -> /gps/fix (NavSatFix), 5 Hz                       gps_link

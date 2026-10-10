@@ -75,7 +75,7 @@ topics:
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter]
-    sub: []
+    sub: [hud_server]
     live: [sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.
   /vehicle/joint_states:
@@ -141,7 +141,7 @@ topics:
   /camera/image_raw:
     type: sensor_msgs/msg/Image
     pub: [usb_cam, mock_camera, test_camera]
-    sub: [yolo_detector]
+    sub: [yolo_detector, hud_server]
     live: [bench]
     note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. mock_camera draws the bench world; test_camera publishes a file.
   /camera/camera_info:
@@ -177,7 +177,7 @@ topics:
   /perception/stop:
     type: std_msgs/msg/Bool
     pub: [stop_sign_watcher]
-    sub: [twist_mux]
+    sub: [twist_mux, hud_server]
     note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence.
 
   # --- bench mode: the stand-ins' own topics ---
@@ -220,7 +220,7 @@ topics:
   /gps/filtered:
     type: sensor_msgs/msg/NavSatFix
     pub: [navsat_transform]
-    sub: []
+    sub: [hud_server]
     live: [sim, car, replay, bench]
     note: The global EKF's position as lat/lon, for maps in the HUD or Foxglove.
 
@@ -309,7 +309,7 @@ actions:
   /follow_gps_waypoints:
     type: nav2_msgs/action/FollowGPSWaypoints
     server: waypoint_follower
-    note: Lat/lon waypoints (the HUD's destination or OSRM route). Phase 2.
+    note: Lat/lon waypoints. The HUD (hud_server) sends its locked route here. Phase 2.
 
 frames:
   map: {parent: null, by: "ekf_global (map -> odom)", note: "x east, y north; origin = the navsat datum"}

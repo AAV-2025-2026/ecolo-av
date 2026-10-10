@@ -54,8 +54,10 @@ def geo_from_map(x: float, y: float, datum_lat: float, datum_lon: float) -> Tupl
             datum_lon + math.degrees(x / (normal * math.cos(phi))))
 
 
-def imu_reading(now: Truth, before: Optional[Truth]) -> Tuple[Tuple[float, float, float],
-                                                             Tuple[float, float, float]]:
+Vec3 = Tuple[float, float, float]
+
+
+def imu_reading(now: Truth, before: Optional[Truth]) -> Tuple[Vec3, Vec3]:
     """
     Return the IMU's (accel, gyro) in its own frame, without noise.
 
@@ -68,7 +70,7 @@ def imu_reading(now: Truth, before: Optional[Truth]) -> Tuple[Tuple[float, float
     return (ax, now.speed * now.yaw_rate, G), (0.0, 0.0, now.yaw_rate)
 
 
-def magnetic_field(yaw: float) -> Tuple[float, float, float]:
+def magnetic_field(yaw: float) -> Vec3:
     """Return the Earth's field in the car's frame (tesla): x forward, y left, z up."""
     return (FIELD_NORTH_T * math.sin(yaw), FIELD_NORTH_T * math.cos(yaw), -FIELD_DOWN_T)
 
@@ -80,7 +82,7 @@ def noisy(values: Sequence[float], stddev: float, rng: random.Random,
 
 
 def battery_voltage(hours_driven: float, full: float, empty: float, hours: float) -> float:
-    """Return a slow, steady drain from full to empty over `hours` of driving; never below empty."""
+    """Return a steady drain from full to empty over `hours` of driving, never below empty."""
     left = max(0.0, 1.0 - hours_driven / hours)
     return empty + (full - empty) * left
 
