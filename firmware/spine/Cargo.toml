@@ -1,13 +1,19 @@
 [workspace]
 resolver = "2"
-# spine-core and aav-inputs build and test on a laptop with `cargo test`.
-# The board crate for the ESP32 is generated separately (see README.md) and
-# depends on spine-core by path; it is not a workspace member because it needs
-# the ESP32 toolchain.
-members = ["crates/spine-core", "crates/aav-inputs"]
+# Every crate here is no_std, and builds and tests on a laptop with `cargo test`.
+# Logic: spine-core, aav-inputs. Drivers, against embedded-hal 1.0: jrk-g2.
+# A board crate (ESP32, Pico 2 or STM32) is not a member: it needs its chip's
+# toolchain, and waits on the board decision (Q10-Q13).
+members = ["crates/spine-core", "crates/aav-inputs", "crates/jrk-g2"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "TODO"
 publish = false
+
+[workspace.dependencies]
+embedded-hal = "1.0"
+# Tests only: plays the chips on a laptop. Clones of one mock share its list of
+# expected transfers, so one mock can stand in for a whole bus.
+embedded-hal-mock = { version = "0.11", default-features = false, features = ["eh1"] }

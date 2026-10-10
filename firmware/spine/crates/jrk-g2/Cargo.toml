@@ -1,0 +1,13 @@
+[package]
+name = "jrk-g2"
+description = "Pololu Jrk G2 motor controller over I2C: set the target, stop the motor, read feedback and error flags."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+embedded-hal.workspace = true
+
+[dev-dependencies]
+embedded-hal-mock.workspace = true
