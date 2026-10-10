@@ -1,11 +1,20 @@
 [workspace]
 resolver = "2"
 # Every crate here is no_std, and builds and tests on a laptop with `cargo test`.
-# Logic: spine-core, aav-inputs. Drivers, against embedded-hal 1.0: jrk-g2, ad5311,
-# pca9555.
 # A board crate (ESP32, Pico 2 or STM32) is not a member: it needs its chip's
 # toolchain, and waits on the board decision (Q10-Q13).
-members = ["crates/spine-core", "crates/aav-inputs", "crates/jrk-g2", "crates/ad5311", "crates/pca9555", "crates/ibus"]
+members = [
+    # Logic: no hardware, no dependencies.
+    "crates/spine-core",
+    "crates/aav-inputs",
+    # Drivers: the I2C chips against embedded-hal 1.0; ibus takes bytes.
+    "crates/jrk-g2",
+    "crates/ad5311",
+    "crates/pca9555",
+    "crates/ibus",
+    # The glue between spine-core and the drivers, for any board.
+    "crates/spine-board",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -15,6 +24,8 @@ publish = false
 
 [workspace.dependencies]
 embedded-hal = "1.0"
+# Serial bytes (the RC receiver). 0.7 is what rp235x-hal, embassy and esp-hal take.
+embedded-io = "0.7"
 # Tests only: plays the chips on a laptop. Clones of one mock share its list of
 # expected transfers, so one mock can stand in for a whole bus.
 embedded-hal-mock = { version = "0.11", default-features = false, features = ["eh1"] }

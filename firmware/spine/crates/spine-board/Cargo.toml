@@ -1,0 +1,20 @@
+[package]
+name = "spine-board"
+description = "The glue between spine-core and the car's devices, for any board: calibration, driving and reading the I2C devices, the RC receiver, and the Board trait a chip implements."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+spine-core = { path = "../spine-core" }
+aav-inputs = { path = "../aav-inputs" }
+jrk-g2 = { path = "../jrk-g2" }
+ad5311 = { path = "../ad5311" }
+pca9555 = { path = "../pca9555" }
+ibus = { path = "../ibus" }
+embedded-hal.workspace = true
+embedded-io.workspace = true
+
+[dev-dependencies]
+embedded-hal-mock.workspace = true
