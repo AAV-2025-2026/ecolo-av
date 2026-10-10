@@ -84,18 +84,18 @@ topic, its type, and who publishes and reads it.
 
 Stop the turtle first (Ctrl-C in each terminal).
 
-| On Linux | On a Mac |
-|---|---|
-| `pixi run sim` | terminal 1: `pixi run sim gui:=false` |
-| | terminal 2: `pixi run gz-window` |
-| | terminal 3: `pixi run rviz` |
+```bash
+pixi run sim      # the same on Linux and on a Mac
+```
 
 **You should see:**
-- **Gazebo:** the car on a grey ground plane.
+- **Gazebo:** the car, red and white, on a grey ground plane. The camera follows it.
 - **RViz:** the car model, the map, and the costmaps around the car.
 
-On a Mac, Gazebo's window has to run as a separate program, which is why it takes two
-terminals.
+![The car in Gazebo, driving a left curve](img/gazebo-car.png)
+
+On a Mac, Gazebo's window runs as a separate program, and `pixi run sim` starts it for you.
+If you close it, `pixi run gz-window` opens it again.
 
 Drive it with `pixi run keyboard --sim` in another terminal. Then run
 `pixi run check sim`: it should say `0 failed`.
@@ -127,7 +127,8 @@ For walls to plan around, start Gazebo with the test lot instead:
 | 2. Turtle, and driving it the keyboard's way | [[works]] | [[works]] (the real keys are [[untested]]) |
 | 3. rqt_graph, and the graph check | [[works]] | [[works]] the check. The window opened; a person still has to look at it |
 | 4. Gazebo without its window | [[works]] | [[works]] |
-| 4. Gazebo's window, and RViz | [[untested]] (no screen on oirp-spss) | [[untested]] both opened; a person still has to look |
+| 4. Gazebo's window | [[untested]] (no screen on oirp-spss) | [[works]] 10 Oct: the car drives in it, and the camera follows |
+| 4. RViz | [[untested]] (no screen on oirp-spss) | [[untested]] it opens; nobody has looked at it yet |
 | 5. A Nav2 goal | [[works]] | [[works]] from a terminal: 8 m in 13 s |
 
 ## Where next

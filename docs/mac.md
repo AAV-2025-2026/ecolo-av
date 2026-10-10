@@ -101,11 +101,13 @@ In either app: Open connection → Foxglove WebSocket → `ws://<the Orin's IP>:
 
 ## Gazebo on a Mac
 
-On macOS, Gazebo's window has to run as a separate program:
+On macOS, Gazebo's window has to run as a separate program from the simulator.
+`pixi run sim` starts both, and points the window's camera at the car:
 
 ```bash
-pixi run sim gui:=false    # terminal 1: the simulator, with no window
-pixi run gz-window         # terminal 2: Gazebo's window
+pixi run sim               # the simulator, its window, and RViz
+pixi run gz-window         # opens the window again, if you closed it
+pixi run sim follow:=false # a free camera instead of one that follows the car
 ```
 
 Cameras and lidars inside Gazebo can crash it on a Mac. Our simulated car has neither yet.
@@ -155,7 +157,8 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 | `pixi run test` on a Mac | [[works]] all green, after the `coreutils` fix above |
 | The turtle, driving it the keyboard's way, the scripted drive, the e-stop | [[works]] on Linux and the Mac. The real keyboard keys are [[untested]] on a Mac |
 | Gazebo without its window, and a Nav2 goal | [[works]] on the Mac, without `GZ_IP` |
-| Gazebo's window, RViz and rqt_graph on a Mac | [[untested]] they open without errors (RViz logs one shader warning); nobody has looked at them yet |
+| Gazebo's window on a Mac | [[works]] 10 Oct: `pixi run sim` opens it; the car drives in it (pictures in [Your first day](first-day.md)) |
+| RViz and rqt_graph on a Mac | [[untested]] they open without errors (RViz logs one shader warning); nobody has looked at them yet |
 | Recording a drive (`tools/record.sh`) | [[works]] on the Mac, after the `tools/ros.sh` fix above |
 | The Rust listener | [[works]] on the Mac: builds in 15 s |
 | Joystick on a Mac | [[untested]] An old macOS joystick bug is fixed in the version we use. |

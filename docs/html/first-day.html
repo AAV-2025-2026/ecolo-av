@@ -7,7 +7,7 @@
 <!-- Generated from docs/first-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your first day</h1>
-<div class="meta">6 min read · 9 sections</div></header>
+<div class="meta">7 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a class="here" href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
@@ -157,35 +157,15 @@ topic, its type, and who publishes and reads it.</p>
 </section>
 <section class="card"><h2 id="4-gazebo-the-simulated-car-15-minutes">4. Gazebo: the simulated car (15 minutes)</h2>
 <p>Stop the turtle first (Ctrl-C in each terminal).</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>On Linux</th>
-<th>On a Mac</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>pixi run sim</code></td>
-<td>terminal 1: <code>pixi run sim gui:=false</code></td>
-</tr>
-<tr>
-<td></td>
-<td>terminal 2: <code>pixi run gz-window</code></td>
-</tr>
-<tr>
-<td></td>
-<td>terminal 3: <code>pixi run rviz</code></td>
-</tr>
-</tbody>
-</table></div>
+<pre class="highlight"><code class="language-bash">pixi run sim      # the same on Linux and on a Mac</code></pre>
 <p><strong>You should see:</strong></p>
 <ul>
-<li><strong>Gazebo:</strong> the car on a grey ground plane.</li>
+<li><strong>Gazebo:</strong> the car, red and white, on a grey ground plane. The camera follows it.</li>
 <li><strong>RViz:</strong> the car model, the map, and the costmaps around the car.</li>
 </ul>
-<p>On a Mac, Gazebo's window has to run as a separate program, which is why it takes two
-terminals.</p>
+<p><img alt="The car in Gazebo, driving a left curve" src="../img/gazebo-car.png" /></p>
+<p>On a Mac, Gazebo's window runs as a separate program, and <code>pixi run sim</code> starts it for you.
+If you close it, <code>pixi run gz-window</code> opens it again.</p>
 <p>Drive it with <code>pixi run keyboard --sim</code> in another terminal. Then run
 <code>pixi run check sim</code>: it should say <code>0 failed</code>.</p>
 </section>
@@ -240,9 +220,14 @@ Any keyboard or joystick input overrides Nav2 at once.</p>
 <td><span class="badge b-works">works</span></td>
 </tr>
 <tr>
-<td>4. Gazebo's window, and RViz</td>
+<td>4. Gazebo's window</td>
 <td><span class="badge b-untested">untested</span> (no screen on oirp-spss)</td>
-<td><span class="badge b-untested">untested</span> both opened; a person still has to look</td>
+<td><span class="badge b-works">works</span> 10 Oct: the car drives in it, and the camera follows</td>
+</tr>
+<tr>
+<td>4. RViz</td>
+<td><span class="badge b-untested">untested</span> (no screen on oirp-spss)</td>
+<td><span class="badge b-untested">untested</span> it opens; nobody has looked at it yet</td>
 </tr>
 <tr>
 <td>5. A Nav2 goal</td>

@@ -22,7 +22,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | twist_mux | `aav_mux` | [[works]] |
 | ego | `aav_ego` | [[works]] |
 | turtlesim | `aav_turtlesim` | [[works]] |
-| Gazebo | `aav_gazebo` | [[works]] headless, on Linux and a Mac; its window is untested |
+| Gazebo | `aav_gazebo` | [[works]] headless on Linux and a Mac; its window on a Mac, with the car driving (10 Oct) |
 | Real car | `aav_spine` | [[untested]] unit-tested; no spine yet |
 | Today's car | `aav_legacy` | [[untested]] on the car |
 | Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 47 tests |
@@ -42,7 +42,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Car, with no hardware attached | comes up; only the missing sensors fail the graph check, as expected |
 | The same `pixi.toml` on macOS | [[works]] on an Apple Silicon Mac (macOS 27), 10 Oct: build 18 s, `pixi run test` all green after one fix (GNU `coreutils`, see [Your Mac](mac.md)) |
 | On the Mac: the turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, `pixi run doctor`, recording a drive | [[works]] |
-| On the Mac: Gazebo's window, RViz, rqt_graph | [[untested]] they open; nobody has looked at them yet |
+| On the Mac: Gazebo's window | [[works]] `pixi run sim` opens it, and the camera follows the car |
+| On the Mac: RViz, rqt_graph | [[untested]] they open; nobody has looked at them yet |
 | The same `pixi.toml` on the car's ARM computers, on today's Ubuntu 22.04 | resolves; [[untested]] |
 
 ## Is it all on Jazzy?

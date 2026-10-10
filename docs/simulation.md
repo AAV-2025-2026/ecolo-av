@@ -44,7 +44,8 @@ pixi run sim world:=test_lot     # the walled test lot, with its map
 | `world` | `empty` | `empty` or `test_lot` |
 | `nav` | `true` | start Nav2 |
 | `teleop` | `false` | `true` with a joystick plugged in |
-| `gui` | `true` | show the Gazebo window |
+| `gui` | `true` | show the Gazebo window (on a Mac, as a second program) |
+| `follow` | `true` | point the window's camera at the car |
 | `rviz` | `true` | open RViz |
 
 How the simulated car connects:

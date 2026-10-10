@@ -145,6 +145,11 @@ replace the number and delete the <code>TODO</code>.</p>
 <pre class="highlight"><code class="language-bash">ros2 launch aav_description view.launch.py</code></pre>
 <p>RViz opens with the car model and every frame's axes (red x forward, green y left, blue
 z up). Each sensor is an orange box. A slider window moves the steering and wheel joints.</p>
+<p>The shapes are only for looking at, and every size comes from <code>vehicle.yaml</code>: a red tub
+over the wheels, a cabin with a white roof and a seat, a bumper and headlights at the
+front, and a white mark on each wheel so you can see it turn. Physics and Nav2 use only
+the collision shapes: the body's outline between the bumpers, and the four wheels.</p>
+<p><img alt="The car model in Gazebo" src="../img/gazebo-car.png" /></p>
 <p>After editing <code>vehicle.yaml</code>, rebuild and relaunch:</p>
 <pre class="highlight"><code class="language-bash">colcon build --packages-select aav_description --symlink-install</code></pre>
 <p>With <code>--symlink-install</code>, later edits to <code>vehicle.yaml</code> only need a relaunch.</p>

@@ -71,6 +71,13 @@ ros2 launch aav_description view.launch.py
 RViz opens with the car model and every frame's axes (red x forward, green y left, blue
 z up). Each sensor is an orange box. A slider window moves the steering and wheel joints.
 
+The shapes are only for looking at, and every size comes from `vehicle.yaml`: a red tub
+over the wheels, a cabin with a white roof and a seat, a bumper and headlights at the
+front, and a white mark on each wheel so you can see it turn. Physics and Nav2 use only
+the collision shapes: the body's outline between the bumpers, and the four wheels.
+
+![The car model in Gazebo](img/gazebo-car.png)
+
 After editing `vehicle.yaml`, rebuild and relaunch:
 
 ```bash

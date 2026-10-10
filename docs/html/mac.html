@@ -187,9 +187,11 @@ WiFi connection, with no ROS on the Mac.</p>
 <p>In either app: Open connection → Foxglove WebSocket → <code>ws://&lt;the Orin's IP&gt;:8765</code>.</p>
 </section>
 <section class="card"><h2 id="gazebo-on-a-mac">Gazebo on a Mac</h2>
-<p>On macOS, Gazebo's window has to run as a separate program:</p>
-<pre class="highlight"><code class="language-bash">pixi run sim gui:=false    # terminal 1: the simulator, with no window
-pixi run gz-window         # terminal 2: Gazebo's window</code></pre>
+<p>On macOS, Gazebo's window has to run as a separate program from the simulator.
+<code>pixi run sim</code> starts both, and points the window's camera at the car:</p>
+<pre class="highlight"><code class="language-bash">pixi run sim               # the simulator, its window, and RViz
+pixi run gz-window         # opens the window again, if you closed it
+pixi run sim follow:=false # a free camera instead of one that follows the car</code></pre>
 <p>Cameras and lidars inside Gazebo can crash it on a Mac. Our simulated car has neither yet.</p>
 <p>If the window stays empty, or the car never appears, run <code>export GZ_IP=127.0.0.1</code> in both
 terminals and start again: Gazebo's two programs then find each other on the Mac itself.
@@ -293,7 +295,11 @@ On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on
 <td><span class="badge b-works">works</span> on the Mac, without <code>GZ_IP</code></td>
 </tr>
 <tr>
-<td>Gazebo's window, RViz and rqt_graph on a Mac</td>
+<td>Gazebo's window on a Mac</td>
+<td><span class="badge b-works">works</span> 10 Oct: <code>pixi run sim</code> opens it; the car drives in it (pictures in <a href="first-day.html">Your first day</a>)</td>
+</tr>
+<tr>
+<td>RViz and rqt_graph on a Mac</td>
 <td><span class="badge b-untested">untested</span> they open without errors (RViz logs one shader warning); nobody has looked at them yet</td>
 </tr>
 <tr>
