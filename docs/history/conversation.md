@@ -1027,6 +1027,17 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **The picture** (`docs/img/bench-stop-sign.png`) is a drawing, not a photo. The bench's pretend camera draws the road and the sign from where the model car is, and the stock YOLO model found the sign: "stop sign", 90% sure. `bench-check --perception` saved it when the car stopped, about 5 m before the sign. The Perception page now explains it in a table.
 - **The rest of that line:** the server work is done (Ben's IMU work and three launch edits, committed from the Mac: 908e69b). The three firmware decisions still wait on the team: the steering on an e-stop, the brake after boot, and a brake on the RC gear switch.
 
+### "Missing: the spine's board code, Rust drivers, a GPS driver inside Pixi, …": what is this? (18:08)
+
+- **Where it's from:** the 13:59 overview email's one-line summary of what still stands between us and a car that drives itself. The Overview page keeps the current list, under "What's missing".
+- **The spine's board code:** the spine's logic is written and tested on a laptop; the program for a real chip waits on the chip (Q10–Q13) and the CAN wiring.
+- **Rust drivers:** mostly done since that email (10 Oct, 98 tests): the Jrk G2s, the throttle DAC, the PCA9555 and iBUS. Left: the W5500 and the display, if the board keeps them.
+- **A GPS driver inside Pixi:** `ublox_dgnss` isn't in RoboStack, so it would run on the car only. Keep it, or switch to `ublox` (Q18).
+- **The car's real measurements:** `vehicle.yaml`'s numbers are 2025-26 guesses (Q1), and the steering isn't calibrated (Q2).
+- **The test site's map:** Nav2 uses an empty map today; the site is Q21, then `tools/make_map.py` draws it.
+- **The HUD's port:** the back end is ported; the app needs small changes and its 51 MB map database (Q29).
+- **Fixed on the way:** the Overview still said Ben's Rust IMU driver wasn't committed. It now lists it with our own code, and its numbers match today's run: 25 packages, 199 `colcon test` tests, 24 tasks.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.

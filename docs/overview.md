@@ -8,14 +8,14 @@ links to the page with the details. As of the evening of 10 October 2026.
 
 | What | How many |
 |---|---|
-| ROS packages that build | 24: 12 in Python, 12 in CMake. None parked |
+| ROS packages that build | 25: 12 in Python, 13 in CMake (one of them in Rust). None parked |
 | Rust firmware crates | 7: `spine-core`, `aav-inputs`, and five device drivers and glue |
 | The previous team's firmware boards, in C++ | 3 |
 | Launch profiles | 5: `turtle`, `sim`, `car`, `replay`, `bench` |
 | Computers in the machine files | 4: `orin`, `motor_pi`, `laptop`, `all` |
 | Contracts | 3: the topics, the CAN frames, the car's measurements |
-| Tests | 153 in Python and 171 in Rust without ROS; 192 in `colcon test`; 7 bench checks |
-| Tools | 16 scripts and 23 `pixi run` tasks |
+| Tests | 160 in Python and 163 in Rust without ROS; 199 in `colcon test`; 7 bench checks |
+| Tools | 16 scripts and 24 `pixi run` tasks |
 
 ## The folders
 
@@ -46,6 +46,7 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).
 | `aav_localization` | the two EKFs and GPS-to-map: settings only | localization |
 | `aav_description` | the car's model and `vehicle.yaml` | description |
 | `aav_sensors` | starts the sensor drivers, with their settings | sensors |
+| `aav_imu_yahboom` | Ben's Rust version of the IMU driver: `imu_driver:=rust` picks it | sensors |
 | `aav_interfaces` | our messages: `VehicleStatus`, `ScriptedDrive` | interfaces |
 | `aav_spine` | the real car: ego's commands as CAN frames | backends |
 | `aav_legacy` | today's car: the 2025-26 ESP32 and wheel encoder | backends |
@@ -121,12 +122,6 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 
 Replaced by stock packages instead of copied: the 2025-26 path planners, obstacle
 avoidance, odometry and QNX layer. [The older code](older-code.md) has every repo.
-
-## In progress, outside this copy
-
-| What | Where | State |
-|---|---|---|
-| A Rust twin of the IMU driver, `aav_imu_yahboom` | on oirp-spss, not committed yet | it arrives with `aav/aav`, which is still downloading |
 
 ## What's missing
 
