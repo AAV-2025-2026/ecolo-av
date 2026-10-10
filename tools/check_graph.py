@@ -29,7 +29,8 @@ IGNORE = {'/parameter_events', '/rosout', '/diagnostics',
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--profile', required=True, choices=['turtle', 'sim', 'car', 'replay'])
+    ap.add_argument('--profile', required=True,
+                    choices=['turtle', 'sim', 'car', 'replay', 'bench'])
     ap.add_argument('--wait', type=float, default=3.0, help='seconds to let discovery settle')
     ap.add_argument('--spec', default=str(ROOT / 'docs' / 'interfaces.yaml'))
     args = ap.parse_args()

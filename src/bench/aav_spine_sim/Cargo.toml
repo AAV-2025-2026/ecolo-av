@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+# bench-car: the spine's real logic (spine-core) driving a model of the car. No ROS:
+#   cargo test -p bench-car
+# spine-sim: the ROS node around it (rclrs). colcon builds it through CMakeLists.txt.
+members = ["crates/bench-car", "crates/spine-sim"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false

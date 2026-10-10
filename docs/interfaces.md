@@ -1,7 +1,7 @@
 # Interfaces
 
 Generated from `docs/interfaces.yaml` by `tools/gen_interfaces_md.py`; edit the YAML.
-Check a running system against it with `pixi run check <turtle|sim|car|replay>`.
+Check a running system against it with `pixi run check <turtle|sim|car|replay|bench>`.
 
 ## Topics
 
@@ -15,30 +15,40 @@ Check a running system against it with `pixi run check <turtle|sim|car|replay>`.
 | `/cmd_vel/nav` | `geometry_msgs/msg/TwistStamped` | `velocity_smoother` | `twist_mux` | - | Priority 20. Nav2; from collision_monitor instead when it is enabled. |
 | `/cmd_vel/ai` | `geometry_msgs/msg/TwistStamped` | - | `twist_mux` | - | Priority 10. Reserved for a learned driver. |
 | `/estop` | `std_msgs/msg/Bool` | `joy_teleop` | `twist_mux`, `spine_bridge`, `legacy_uart_bridge` | - | true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false. |
-| `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | `twist_mux` | `ego` | turtle, sim, car | The one command ego obeys. v (m/s) and w (rad/s) in base_link. |
-| `/ego/actuator_cmd` | `ackermann_msgs/msg/AckermannDriveStamped` | `ego` | `spine_bridge`, `legacy_uart_bridge`, `turtlesim_adapter`, `gazebo_adapter`, `carla_adapter` | turtle, sim, car | 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs. |
-| `/vehicle/odom` | `nav_msgs/msg/Odometry` | `spine_bridge`, `encoder_udp`, `turtlesim_adapter`, `gazebo_adapter`, `carla_adapter` | `ekf_local`, `ekf_global` | turtle, sim, car, replay | Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). |
-| `/vehicle/status` | `aav_interfaces/msg/VehicleStatus` | `spine_bridge`, `gazebo_adapter` | - | sim | Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. |
-| `/vehicle/joint_states` | `sensor_msgs/msg/JointState` | `spine_bridge` | `joint_state_publisher` | - | Measured front steering joint angles, merged into /joint_states. |
-| `/joint_states` | `sensor_msgs/msg/JointState` | `joint_state_publisher`, `gz_bridge` | `robot_state_publisher` | turtle, sim, car, replay |  |
-| `/to_can_bus` | `can_msgs/msg/Frame` | `spine_bridge` | `socket_can_sender` | - | DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc). |
-| `/from_can_bus` | `can_msgs/msg/Frame` | `socket_can_receiver` | `spine_bridge` | - | VEHICLE_FEEDBACK 0x180, VEHICLE_STATUS 0x181. |
-| `/imu/data_raw` | `sensor_msgs/msg/Imu` | `imu_node`, `gazebo_adapter` | `imu_filter_madgwick` | sim, car, replay | Gyro and accelerometer in imu_link, with covariances; no orientation. |
-| `/imu/mag` | `sensor_msgs/msg/MagneticField` | `imu_node` | - | - | Raw counts, not tesla yet; unused. |
-| `/imu/data` | `sensor_msgs/msg/Imu` | `imu_filter_madgwick` | `ekf_local`, `ekf_global` | sim, car, replay | Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only. |
-| `/gps/fix` | `sensor_msgs/msg/NavSatFix` | `ublox_nav_sat_fix_hp`, `gazebo_adapter` | `navsat_transform` | sim, car, replay | Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS). |
-| `/radar/points` | `sensor_msgs/msg/PointCloud2` | `radar` | - | - | Perception phase. Will feed the local costmap's obstacle layer and collision_monitor. |
-| `/battery_status` | `sensor_msgs/msg/BatteryState` | `battery_monitor` | - | - |  |
-| `/odometry/local` | `nav_msgs/msg/Odometry` | `ekf_local` | `controller_server`, `bt_navigator`, `scripted_driver` | turtle, sim, car, replay | odom frame. Smooth; drifts. |
-| `/odometry/global` | `nav_msgs/msg/Odometry` | `ekf_global` | `navsat_transform` | sim, car, replay | map frame. Includes GPS; can jump. |
-| `/odometry/gps` | `nav_msgs/msg/Odometry` | `navsat_transform` | `ekf_global` | sim, car, replay | Each GPS fix as a map-frame position of base_link (antenna offset removed). |
-| `/gps/filtered` | `sensor_msgs/msg/NavSatFix` | `navsat_transform` | - | sim, car, replay | The global EKF's position as lat/lon, for maps in the HUD or Foxglove. |
+| `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | `twist_mux` | `ego` | turtle, sim, car, bench | The one command ego obeys. v (m/s) and w (rad/s) in base_link. |
+| `/ego/actuator_cmd` | `ackermann_msgs/msg/AckermannDriveStamped` | `ego` | `spine_bridge`, `legacy_uart_bridge`, `turtlesim_adapter`, `gazebo_adapter`, `carla_adapter` | turtle, sim, car, bench | 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs. |
+| `/vehicle/odom` | `nav_msgs/msg/Odometry` | `spine_bridge`, `encoder_udp`, `turtlesim_adapter`, `gazebo_adapter`, `carla_adapter` | `ekf_local`, `ekf_global` | turtle, sim, car, replay, bench | Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). |
+| `/vehicle/status` | `aav_interfaces/msg/VehicleStatus` | `spine_bridge`, `gazebo_adapter` | - | sim, bench | Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. |
+| `/vehicle/joint_states` | `sensor_msgs/msg/JointState` | `spine_bridge` | `joint_state_publisher` | bench | Measured front steering joint angles, merged into /joint_states. |
+| `/joint_states` | `sensor_msgs/msg/JointState` | `joint_state_publisher`, `gz_bridge` | `robot_state_publisher` | turtle, sim, car, replay, bench |  |
+| `/to_can_bus` | `can_msgs/msg/Frame` | `spine_bridge` | `socket_can_sender`, `spine_sim` | bench | DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc). |
+| `/from_can_bus` | `can_msgs/msg/Frame` | `socket_can_receiver`, `spine_sim` | `spine_bridge` | bench | VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz. On the bench, spine_sim sends them. |
+| `/imu/data_raw` | `sensor_msgs/msg/Imu` | `imu_node`, `gazebo_adapter`, `mock_imu` | `imu_filter_madgwick` | sim, car, replay, bench | Gyro and accelerometer in imu_link, with covariances; no orientation. |
+| `/imu/mag` | `sensor_msgs/msg/MagneticField` | `imu_node`, `mock_imu` | `imu_filter_madgwick` | bench | Raw counts from imu_node (not tesla yet); tesla from mock_imu. The filter ignores it (use_mag false). |
+| `/imu/data` | `sensor_msgs/msg/Imu` | `imu_filter_madgwick` | `ekf_local`, `ekf_global` | sim, car, replay, bench | Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only. |
+| `/gps/fix` | `sensor_msgs/msg/NavSatFix` | `ublox_nav_sat_fix_hp`, `gazebo_adapter`, `mock_gps` | `navsat_transform` | sim, car, replay, bench | Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS). |
+| `/radar/points` | `sensor_msgs/msg/PointCloud2` | `radar`, `mock_radar` | `radar_clusters` | bench | The TI radar's points, in radar_link. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor. |
+| `/battery_status` | `sensor_msgs/msg/BatteryState` | `battery_monitor`, `mock_battery` | - | bench |  |
+| `/camera/image_raw` | `sensor_msgs/msg/Image` | `usb_cam`, `mock_camera`, `test_camera` | `yolo_detector` | bench | The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. mock_camera draws the bench world; test_camera publishes a file. |
+| `/camera/camera_info` | `sensor_msgs/msg/CameraInfo` | `usb_cam`, `mock_camera`, `test_camera` | - | bench | The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). |
+| `/radar/clusters` | `sensor_msgs/msg/PointCloud2` | `radar_clusters` | - | bench | The radar points DBSCAN grouped into objects, coloured by cluster. |
+| `/radar/cluster_boxes` | `visualization_msgs/msg/MarkerArray` | `radar_clusters` | - | bench | A box round each radar cluster, for RViz. |
+| `/perception/detections` | `vision_msgs/msg/Detection2DArray` | `yolo_detector` | `stop_sign_watcher` | - | YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Runs in the ml environment. |
+| `/perception/detections/image` | `sensor_msgs/msg/Image` | `yolo_detector` | - | - | The camera picture with the boxes drawn on, for RViz or Foxglove. |
+| `/perception/stop` | `std_msgs/msg/Bool` | `stop_sign_watcher` | `twist_mux` | - | true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. |
+| `/bench/truth` | `nav_msgs/msg/Odometry` | `spine_sim` | `mock_imu`, `mock_gps`, `mock_camera` | bench | Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs. |
+| `/bench/hw_estop` | `std_msgs/msg/Bool` | - | `spine_sim` | - | true = press the hardware e-stop, on the bench; false = release it. The spine brakes, and needs arming again. |
+| `/bench/driver_faults` | `std_msgs/msg/UInt16` | - | `spine_sim` | - | Pretend a driver failed. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder). |
+| `/odometry/local` | `nav_msgs/msg/Odometry` | `ekf_local` | `controller_server`, `bt_navigator`, `scripted_driver` | turtle, sim, car, replay, bench | odom frame. Smooth; drifts. |
+| `/odometry/global` | `nav_msgs/msg/Odometry` | `ekf_global` | `navsat_transform` | sim, car, replay, bench | map frame. Includes GPS; can jump. |
+| `/odometry/gps` | `nav_msgs/msg/Odometry` | `navsat_transform` | `ekf_global` | sim, car, replay, bench | Each GPS fix as a map-frame position of base_link (antenna offset removed). |
+| `/gps/filtered` | `sensor_msgs/msg/NavSatFix` | `navsat_transform` | - | sim, car, replay, bench | The global EKF's position as lat/lon, for maps in the HUD or Foxglove. |
 | `/map` | `nav_msgs/msg/OccupancyGrid` | `map_server` | `global_costmap`, `local_costmap` | sim | Transient local (latched). From aav_navigation/maps. |
 | `/goal_pose` | `geometry_msgs/msg/PoseStamped` | `rviz2` | `bt_navigator` | - | RViz "2D Goal Pose" starts a navigate_to_pose. |
 | `/plan` | `nav_msgs/msg/Path` | `planner_server` | - | - | The planned path, for RViz/Foxglove. |
-| `/tf` | `tf2_msgs/msg/TFMessage` | `ekf_local`, `ekf_global`, `robot_state_publisher` | - | turtle, sim, car, replay | map -> odom (ekf_global), odom -> base_link (ekf_local), moving joints (robot_state_publisher). |
-| `/tf_static` | `tf2_msgs/msg/TFMessage` | `robot_state_publisher` | - | turtle, sim, car, replay | base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF. |
-| `/robot_description` | `std_msgs/msg/String` | `robot_state_publisher` | - | turtle, sim, car, replay |  |
+| `/tf` | `tf2_msgs/msg/TFMessage` | `ekf_local`, `ekf_global`, `robot_state_publisher` | - | turtle, sim, car, replay, bench | map -> odom (ekf_global), odom -> base_link (ekf_local), moving joints (robot_state_publisher). |
+| `/tf_static` | `tf2_msgs/msg/TFMessage` | `robot_state_publisher` | - | turtle, sim, car, replay, bench | base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF. |
+| `/robot_description` | `std_msgs/msg/String` | `robot_state_publisher` | - | turtle, sim, car, replay, bench |  |
 | `/clock` | `rosgraph_msgs/msg/Clock` | `gz_bridge` | - | sim, replay | Simulation time; every node runs with use_sim_time:=true in sim and replay. |
 
 ## Services

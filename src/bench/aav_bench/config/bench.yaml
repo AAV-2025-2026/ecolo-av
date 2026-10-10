@@ -1,0 +1,29 @@
+# The bench world and its pretend sensors. Map frame: x east, y north, metres from the GPS
+# datum (aav_localization/config/navsat.yaml). The model car starts at (0, 0), facing east.
+mock_camera:
+  ros__parameters:
+    # Stop signs, as x, y pairs: one on the right of the road, 25 m ahead of the start.
+    stop_signs: [25.0, -2.0]
+    sign_height: 2.0          # m, the plate's centre above the ground
+    sign_size: 0.75           # m across: the common Ontario size
+    width: 640
+    height: 360
+    focal_px: 343.0           # the 2024-25 calibration (cameras/left.ini) scaled to 640 wide
+    rate_hz: 10.0
+
+mock_gps:
+  ros__parameters:
+    stddev: 0.5               # m: plain GPS is 2-3 m, RTK 0.02 m (Q18 decides)
+    rate_hz: 5.0
+
+mock_imu:
+  ros__parameters:
+    gyro_stddev: 0.02         # rad/s, the same as the real driver claims (config/imu.yaml)
+    accel_stddev: 0.2         # m/s^2
+    gyro_bias: 0.002          # rad/s: a small drift, so the EKF has something to do
+
+mock_battery:
+  ros__parameters:
+    full_voltage: 50.9        # V: a 48 V pack is a guess until Q8 is answered
+    empty_voltage: 46.0
+    hours: 2.0
