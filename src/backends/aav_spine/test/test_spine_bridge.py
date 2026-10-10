@@ -25,12 +25,15 @@ pytestmark = pytest.mark.skipif(SpineBridge is None, reason='needs ROS sourced: 
 @pytest.fixture
 def bridge():
     rclpy.init()
-    node = SpineBridge()
-    node.sent = []
-    node._send = lambda can_id, data: node.sent.append(cc.unpack(can_id, data))
-    yield node
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        node = SpineBridge()
+        node.sent = []
+        node._send = lambda can_id, data: node.sent.append(cc.unpack(can_id, data))
+        yield node
+        node.destroy_node()
+    finally:
+        # Even when the node fails to start: otherwise every later test fails on init.
+        rclpy.shutdown()
 
 
 def fresh_command(node, speed=1.0):
