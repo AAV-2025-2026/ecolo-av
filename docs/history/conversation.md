@@ -1,6 +1,6 @@
 # How we got here: questions and answers
 
-A condensed record of one long Claude Code session in which Ben (2026–27 Carleton AAV capstone team) asked Claude about the inherited code and the new ROS 2 design: every question Ben asked, with the answer given. Date: 2026-10-09 (one day).
+A condensed record of one long Claude Code session in which Ben (2026–27 Carleton AAV capstone team) asked Claude about the inherited code and the new ROS 2 design: every question Ben asked, with the answer given. Dates: 2026-10-09, and the night into 10 October.
 
 Reading notes:
 - **"Previous team"** means the 2025–26 team (org `AAV-2025-2026`, cloned into `/home/ben/aav/`). The 2024–25 team's org is `Carleton-AAV-Capstone`. Years are written out because early answers called 2024–25 "last year".
@@ -28,6 +28,7 @@ Reading notes:
 - [Building the workspace](#building-the-workspace)
 - [Jazzy, packages, Gazebo vs CARLA, RViz and rqt](#jazzy-packages-gazebo-vs-carla-rviz-and-rqt)
 - [Documentation requests and the hardware list](#documentation-requests-and-the-hardware-list)
+- [Overnight into 10 October: Jazzy, the Mac and the car](#overnight-into-10-october-jazzy-the-mac-and-the-car)
 - [Open threads](#open-threads)
 
 ## The inherited repos and what we found
@@ -851,7 +852,9 @@ Ben's brief, over several messages:
 
 ### We might want to port the code to Jazzy too, since there may be better implementations there. Add this to the docs.
 
-- Not answered yet. Earlier points: the old nodes are simple and should need few changes; Jazzy brings Python 3.12; the build targets Jazzy and checks Jazzy package parameters.
+- Done on 10 October: everything builds and runs on Jazzy, and every config key was checked against the running Jazzy nodes. The fixes are in `docs/history/audit-2026-10-10-*.md`; [Status](../status.md) says what works.
+
+> **Revised:** this was "not answered yet"; the port was done overnight.
 
 ### We need documentation of everything we've talked about and decided
 
@@ -868,7 +871,7 @@ The request covered:
 
 Ben's notes file (`/home/ben/aav/text`, lines 22–27) adds the URDF, what upgrading everything to Jazzy takes, and "how do we build on different platforms... compile on that platform or just know the target? Pi on Ubuntu and an ESP32 — how do we target the nodes?"
 
-This is in progress; map examples were being generated as this was written. Already established in the sections above:
+Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cover each point. The short answers, from the sections above:
 - **Versions:** Jazzy on Ubuntu 24.04.
 - **Macs:** macOS is Tier 3, but Pixi runs Jazzy on Macs.
 - **Languages:** Python nodes, Rust spine firmware, the C++ IMU driver.
@@ -884,32 +887,72 @@ This is in progress; map examples were being generated as this was written. Alre
 
 - This file is that record. The design doc holds the decisions.
 
+## Overnight into 10 October: Jazzy, the Mac and the car
+
+### Is `aav_turtlesim` different from the regular turtlesim?
+
+- No, it's the stock turtlesim. Our `turtlesim_adapter` steers it with the car's bicycle model, so like the car, it can't turn on the spot. ([Run it](../run.md))
+
+### We talked about Python for the nodes and C++ for the rest. Is that still the case? Should everything be Rust? Which languages are used now?
+
+- **Now:** Python for every ROS node we write, Rust for the spine firmware, and C++ only for the reused IMU driver. Nav2, the EKFs and twist_mux are C++, but they're stock: we only configure them.
+- **All Rust?** Not yet. Nav2 and robot_localization stay C++ whatever we pick, launch files stay Python, and `rclrs` is a community library still at 0.x. Port a node where Rust pays off, such as ego, once the car drives.
+- **Rust works here:** `examples/rust-listener` (rclrs 0.8 from crates.io) builds with plain `cargo` and printed ego's commands live. ([Languages](../languages.md))
+
+### Can it compile on a Mac without Homebrew?
+
+- Yes. Pixi installs ROS 2 Jazzy from RoboStack, with no Homebrew and no admin rights. The same `pixi.toml` resolves for Apple Silicon and Intel Macs (macOS 14 or newer). The one Linux-only line found, a serial speed in the IMU driver, is fixed. Not yet tried on a real Mac. ([Your Mac](../mac.md))
+
+### Can you get it all compiled on my machine? If not, why not? What are we missing?
+
+- All 19 packages build on oirp-spss (AlmaLinux 9, no admin) with Pixi, and `pixi run test` passes.
+- Missing: the GPS driver `ublox_dgnss`, which Pixi doesn't have (B4, a team decision), and foxglove_bridge, which needs a newer glibc than AlmaLinux 9 has. ([Status](../status.md))
+
+### What is ROS, how do we extend it, and how do we use it?
+
+- ROS 2 is a communication system (nodes talking over topics, services and actions), plus a library of ready-made modules such as Nav2 and robot_localization. We configure the modules, and write small nodes only where nothing stock fits: ego, the scripted driver, the bridges. ([ROS 2](../ros2.md))
+
+### Could cargo pull the Rust messaging layer, as part of the normal build?
+
+- Yes. `rclrs` and `ros-env` come from crates.io, and the message crates for every package, ours included, ship in the Jazzy install. ([Languages](../languages.md))
+
+### The code sits on a Linux machine, and I can't show its windows on my Mac. Compile it for AlmaLinux, or pull it to the Mac?
+
+- Both. It builds and runs headless on oirp-spss, and the same repository goes to the Mac as a git bundle (`/home/ben/aav/aav.bundle`). The Mac runs it with Pixi; Ubuntu in a UTM virtual machine is the fallback. ([Your Mac](../mac.md))
+
+### For now, how do I finish this on a Mac, or at least a VM, and join the car's network, to drive the car and see everything from my MacBook?
+
+- **Set up:** install Pixi, clone the bundle, then `pixi install` and `pixi run build`.
+- **Join:** the car's WiFi, the team's `ROS_DOMAIN_ID`, then `pixi run doctor`, which says what to fix.
+- **Drive and watch:** `pixi run keyboard` and `pixi run rviz`. Lichtblick watches with no ROS on the Mac at all.
+- **First, the car:** it must run this stack on Jazzy. Today it runs the 2025–26 software on Humble, and the two don't mix. Pixi can put Jazzy on its Ubuntu 22.04 without a reflash. ([Platforms](../platforms.md))
+
+### The chat at claude.ai (fe09d020…) has the final design: the sensors publish, the local EKF injects, then the global EKF reads the local one and the GPS.
+
+- Claude can't open claude.ai chats, so the key parts need pasting in.
+- The dual EKF described is how it's built: `ekf_local` fuses the wheels and the IMU (odom → base_link), and `ekf_global` adds GPS through navsat_transform (map → odom). In effect the global one builds on the local one. It runs in Gazebo. ([How it fits](../how-it-fits.md))
+
+### We have numbers to validate. Can we build a Gazebo test world?
+
+- Built: `aav_gazebo` with two worlds, `empty` and `test_lot`. In the empty world, Nav2 reached goals 8 m and 9.5 m away. The car's numbers in `vehicle.yaml` are still guesses until someone measures the car. ([Simulation](../simulation.md))
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
 - **Backups:** image the Orin and the Pis before any reflash. They hold the detector, `camera_decode`, the three rqt_graph nodes and `/home/aavjetson`. A backup checklist and script were offered.
+- **The car on Jazzy:** it runs Humble today, so no Jazzy laptop can join it. Try Pixi on its Ubuntu 22.04 first, then reflash the Orin to JetPack 7.2 (Q24).
+- **Ben's Mac:** the steps are ready, and pass from a fresh clone on Linux. Not yet tried on a Mac.
 - **Running today:** the inventory commands haven't been run on the car's computers.
 - **2024–25 repos:** cloning and surveying `emergency-stop`, `Simulation`, `camera_Yolo_detection`, `Braking` and `Power-Management-Documentation-2024-25` was offered, not done. Only `GNSS` has been read in depth.
-- **Local ROS:**
-  - Pixi on Ben's machine is on hold ("Not yet").
-  - Still unchecked: whether RoboStack's Jazzy has the Rust message types, and whether the rclrs examples run.
-  - Keep or delete `ros2-rust/` is undecided; the recommendation is keep.
-- **Design doc not yet updated** for:
-  - explicit years and the org history;
-  - the Rust spine firmware;
-  - Gazebo instead of CARLA in the test ladder.
-- **CLAUDE.md:** the CLAUDE.md-type file hasn't been written. Notes so far live in Claude's memory files and the design doc.
-- **The last documentation requests,** all in progress:
-  - porting to Jazzy;
-  - install and compile per platform, including Mac;
-  - running the simulator;
-  - the costmap's real-world dimensions;
-  - whether the global costmap needs a road map;
-  - formats with examples;
-  - which node runs on which computer.
+- **`ros2-rust/`:** keep or delete is undecided; the recommendation is keep.
+- **The claude.ai chat (fe09d020…):** Ben to paste the key parts.
 - **CARLA:** Jazzy support for its ROS 2 bridge is still being confirmed.
 - **Team decisions:**
-  - every Proposed row;
+  - the team's `ROS_DOMAIN_ID`;
+  - the spine arming rules (Proposed);
+  - the GPS driver: keep `ublox_dgnss` (the car only) or switch to `ublox` (B4, with Q18);
+  - the `/estop` QoS in the mux (N2), respawning device nodes (N3), and Nav2's lookahead (N7);
+  - every other Proposed row;
   - QNX (Q23);
   - the GPS model and corrections (Q18, Q19);
   - the spine owner and inputs (Q10, Q12);
