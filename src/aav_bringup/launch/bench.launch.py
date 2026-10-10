@@ -104,7 +104,7 @@ def launch_setup(context):
     if flag['rviz']:
         actions.append(Node(
             package='rviz2', executable='rviz2', name='rviz2',
-            arguments=['-d', os.path.join(share('aav_bringup'), 'rviz', 'drive.rviz')]))
+            arguments=['-d', os.path.join(share('aav_bringup'), 'rviz', 'bench.rviz')]))
     if flag['arm']:
         actions.append(TimerAction(period=12.0, actions=[ExecuteProcess(
             name='arm_spine', output='screen',

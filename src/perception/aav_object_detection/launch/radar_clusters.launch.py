@@ -11,7 +11,7 @@ Publishes   /radar/clusters        sensor_msgs/PointCloud2: the clustered points
 
 You can set: mock (pretend radar points, from ti_ros2_driver's mock_radar_publisher),
 eps (metres: points this close join a cluster), minimum_points (the smallest cluster),
-rviz.
+radar_rviz.
 """
 
 from ament_index_python.packages import get_package_share_path
@@ -30,7 +30,8 @@ def generate_launch_description():
         DeclareLaunchArgument('mock', default_value='false'),
         DeclareLaunchArgument('eps', default_value='0.8'),
         DeclareLaunchArgument('minimum_points', default_value='15'),
-        DeclareLaunchArgument('rviz', default_value='false'),
+        DeclareLaunchArgument('radar_rviz', default_value='false',
+                              description='RViz with the 2025-26 radar layout'),
         Node(
             package='ti_ros2_driver', executable='mock_radar_publisher', name='mock_radar',
             parameters=[{'topic': '/radar/points', 'frame_id': 'radar_link', 'mode': 'static'}],
@@ -51,5 +52,5 @@ def generate_launch_description():
             output='screen',
         ),
         Node(package='rviz2', executable='rviz2', arguments=['-d', str(rviz)],
-             condition=IfCondition(arg('rviz'))),
+             condition=IfCondition(arg('radar_rviz'))),
     ])
