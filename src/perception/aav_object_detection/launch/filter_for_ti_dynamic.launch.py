@@ -4,11 +4,11 @@ from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_path
 
 def generate_launch_description():
-    default_map = str(get_package_share_path('object_detection') / 'map/mmwave.bt')
+    default_map = str(get_package_share_path('aav_object_detection') / 'map/mmwave.bt')
     print("MAP: " + default_map)
     return LaunchDescription([
         Node(
-            package="object_detection",
+            package="aav_object_detection",
             executable="filter_multi_frames",
             name="filter_multi_frames",
             parameters=[{
@@ -25,6 +25,6 @@ def generate_launch_description():
         ),
         Node(
             package='rviz2', executable='rviz2', name='rviz2', output='screen',
-            arguments=['-d', str(get_package_share_path('object_detection') / 'rviz/mmwave_multi_frames.rviz')],
+            arguments=['-d', str(get_package_share_path('aav_object_detection') / 'rviz/mmwave_multi_frames.rviz')],
         ),
     ])

@@ -7,7 +7,7 @@ def generate_launch_description():
     return LaunchDescription([
         IncludeLaunchDescription(str(get_package_share_path('ti_ros2_driver') / 'launch/6843aop_HeatMap.launch.py')),
         Node(
-            package="object_detection",
+            package="aav_object_detection",
             executable="filter_single_frame",
             name="filter_single_frame",
             parameters=[{
@@ -25,6 +25,6 @@ def generate_launch_description():
         ),
         Node(
             package='rviz2', executable='rviz2', name='rviz2', output='screen',
-            arguments=['-d', str(get_package_share_path('object_detection') / 'rviz/mmwave_single_frame.rviz')],
+            arguments=['-d', str(get_package_share_path('aav_object_detection') / 'rviz/mmwave_single_frame.rviz')],
         ),
     ])
