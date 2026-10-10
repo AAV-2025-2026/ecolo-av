@@ -77,6 +77,21 @@ The detector runs as `python3 -m aav_yolo.detector`, so it uses the `python3` of
 environment that starts it: the `ml` environment's PyTorch on a laptop, JetPack's on the
 Orin.
 
+### One GPU setting for every computer
+
+| `device:=` | On the Orin, or an NVIDIA card | On a Mac |
+|---|---|---|
+| `auto` (the default), `gpu`, `cuda`, `metal` or `mps` | CUDA | Metal |
+| `cpu` | the CPU | the CPU |
+| `cuda:1` | the second NVIDIA card | Metal |
+
+- So `cuda` on a Mac means Metal: the Mac's GPU, through PyTorch.
+- A `.mlpackage` (Core ML) or an `.engine` (TensorRT) ignores the setting: each picks its
+  own hardware.
+- MLX, Apple's own machine-learning library, isn't needed for YOLO: Metal, through
+  PyTorch or Core ML, is the Mac's fast path. MLX could join the `ml` environment later,
+  for training or for other models.
+
 ### The ml environment
 
 A separate Pixi environment, so nobody downloads PyTorch unless they want it: PyTorch

@@ -51,20 +51,27 @@ def boxes_from_result(result, labels: Optional[Sequence[str]] = None) -> List[Bo
     return out
 
 
+# Each of these means "the GPU this computer has", so one setting works everywhere.
+GPU_WORDS = ('auto', 'gpu', 'cuda', 'metal', 'mps')
+
+
 def pick_device(requested: str, model: str, cuda: bool, mps: bool) -> Optional[str]:
     """
     Choose where a model runs.
 
-    'auto' picks the GPU for a PyTorch model (.pt): CUDA (NVIDIA cards, the Orin), then
-    Metal (Macs), then the CPU. Other formats decide for themselves (Core ML picks the Mac's
-    parts, TensorRT uses the GPU), so they get None.
+    'auto' (the default), 'gpu', 'cuda', 'metal' and 'mps' all mean the GPU this computer
+    has, for a PyTorch model (.pt): CUDA on an NVIDIA card or the Orin, Metal on a Mac,
+    and the CPU if there's neither. So 'cuda' on a Mac means Metal. 'cuda:1' picks a
+    second NVIDIA card. Other formats decide for themselves (Core ML picks the Mac's parts,
+    TensorRT uses the GPU), so they get None. Anything else, such as 'cpu', is obeyed.
     """
-    if requested != 'auto':
+    name = requested.strip().lower()
+    if name not in GPU_WORDS and not name.startswith('cuda:'):
         return requested
     if not model.endswith('.pt'):
         return None
     if cuda:
-        return 'cuda:0'
+        return name if name.startswith('cuda:') else 'cuda:0'
     if mps:
         return 'mps'
     return 'cpu'

@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, YOLO, stop signs, lanes and radar</h1>
-<div class="meta">7 min read · 9 sections</div></header>
+<div class="meta">8 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -197,6 +197,41 @@ models and code are licensed AGPL-3.0.</p>
 <p>The detector runs as <code>python3 -m aav_yolo.detector</code>, so it uses the <code>python3</code> of the
 environment that starts it: the <code>ml</code> environment's PyTorch on a laptop, JetPack's on the
 Orin.</p>
+<h3 id="one-gpu-setting-for-every-computer">One GPU setting for every computer</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>device:=</code></th>
+<th>On the Orin, or an NVIDIA card</th>
+<th>On a Mac</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto</code> (the default), <code>gpu</code>, <code>cuda</code>, <code>metal</code> or <code>mps</code></td>
+<td>CUDA</td>
+<td>Metal</td>
+</tr>
+<tr>
+<td><code>cpu</code></td>
+<td>the CPU</td>
+<td>the CPU</td>
+</tr>
+<tr>
+<td><code>cuda:1</code></td>
+<td>the second NVIDIA card</td>
+<td>Metal</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>So <code>cuda</code> on a Mac means Metal: the Mac's GPU, through PyTorch.</li>
+<li>A <code>.mlpackage</code> (Core ML) or an <code>.engine</code> (TensorRT) ignores the setting: each picks its
+  own hardware.</li>
+<li>MLX, Apple's own machine-learning library, isn't needed for YOLO: Metal, through
+  PyTorch or Core ML, is the Mac's fast path. MLX could join the <code>ml</code> environment later,
+  for training or for other models.</li>
+</ul>
 <h3 id="the-ml-environment">The ml environment</h3>
 <p>A separate Pixi environment, so nobody downloads PyTorch unless they want it: PyTorch
 2.13, Ultralytics 8.4, coremltools 9 (Macs only) and NumPy 2.3.</p>

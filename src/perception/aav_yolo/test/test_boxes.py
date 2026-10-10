@@ -53,6 +53,13 @@ def test_parse_labels():
     ('auto', 'models/yolo11n.mlpackage', False, True, None),  # Core ML picks for itself
     ('auto', 'models/yolo11n.engine', True, False, None),     # TensorRT: the GPU anyway
     ('cpu', 'models/yolo11n.pt', True, True, 'cpu'),          # asked for: always obeyed
+    ('gpu', 'models/yolo11n.pt', True, False, 'cuda:0'),      # one setting: the Orin...
+    ('gpu', 'models/yolo11n.pt', False, True, 'mps'),         # ...and a Mac
+    ('cuda', 'models/yolo11n.pt', False, True, 'mps'),        # "cuda" on a Mac means Metal
+    ('metal', 'models/yolo11n.pt', True, False, 'cuda:0'),    # and "metal" on the Orin, CUDA
+    ('cuda:1', 'models/yolo11n.pt', True, False, 'cuda:1'),   # a second NVIDIA card
+    ('CUDA', 'models/yolo11n.pt', False, False, 'cpu'),       # no GPU here at all
+    ('gpu', 'models/yolo11n.mlpackage', False, True, None),   # Core ML still picks for itself
 ])
 def test_pick_device(requested, model, cuda, mps, expect):
     assert pick_device(requested, model, cuda, mps) == expect

@@ -7,7 +7,8 @@ The YOLO detector, on the camera's images.
 
 What you can set:
   model       the model file (.pt, .mlpackage or .engine). Default: models/yolo11n.pt
-  device      auto (the GPU if there is one), cpu, mps or cuda:0
+  device      auto or gpu: the GPU this computer has (CUDA on the Orin, Metal on a Mac;
+              cuda and metal mean the same), cpu, or cuda:1 for a second NVIDIA card
   confidence  the lowest score kept, 0 to 1
   labels      the labels to keep, comma-separated; empty keeps them all
   image       the camera topic to read
