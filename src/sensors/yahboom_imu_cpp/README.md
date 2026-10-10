@@ -11,14 +11,9 @@ The `imu_node` subscribes to the serial port where the Yahboom IMU is connected,
 - Raspberry Pi 4 (Mandatory for this project)
 
 ## Software Requirements
-- ROS2 Humble
+- ROS 2 Jazzy
 - C++17 compatible compiler
-- Serial communication library (e.g., `serial`)
-
-Install ROS2 Dependency:
-```bash
-sudo apt install ros-humble-serial
-```
+- No serial library: the node uses POSIX termios directly.
 ## Repository Structure
 ```
 yahboom_imu_cpp/
@@ -42,7 +37,7 @@ git clone https://github.com/AAV-2025-2026/yahboom-IMU.git
 ```
 2. Source your ROS2 workspace and build the package:
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 cd ~/Desktop/yahboom_imu_cpp
 colcon build --packages-select yahboom_imu_cpp
 source install/setup.bash

@@ -111,8 +111,8 @@ def generate_launch_description():
             condition=enabled('radar'),
         ),
 
-        # Battery monitor (Victron VE.Direct). Its serial port is fixed in the code
-        # (/dev/ttyUSB0); see docs/status.md.
+        # Battery monitor (Victron VE.Direct). Its `port` parameter defaults to the udev
+        # name /dev/aav/battery.
         Node(
             package='battery_monitor',
             executable='battery_monitor',

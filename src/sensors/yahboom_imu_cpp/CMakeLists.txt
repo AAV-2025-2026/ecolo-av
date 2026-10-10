@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(yahboom_imu_cpp)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -25,7 +25,7 @@ install(TARGETS imu_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install (DIRECTORY launch
+install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 

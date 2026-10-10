@@ -36,4 +36,4 @@ Files, unchanged unless listed under Changes:
 
 ## Changes
 
-- None yet.
+- 2026-10-10: `CMakeLists.txt` `cmake_minimum_required` 3.8 -> 3.10.

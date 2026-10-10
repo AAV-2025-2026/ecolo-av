@@ -2,6 +2,7 @@ import math
 import struct
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
 from sensor_msgs.msg import PointCloud2, PointField
@@ -31,7 +32,8 @@ class MockRadarPublisher(Node):
         self.start_time = self.get_clock().now().nanoseconds / 1e9
         self.timer = self.create_timer(1.0 / max(self.publish_rate_hz, 0.1), self.publish_cloud)
         self.get_logger().info(
-            f'Publishing mock radar points on {self.topic} at {self.publish_rate_hz:.1f} Hz (mode={self.mode})'
+            f'Publishing mock radar points on {self.topic} at {self.publish_rate_hz:.1f} Hz '
+            f'(mode={self.mode})'
         )
 
     def publish_cloud(self) -> None:
@@ -91,7 +93,7 @@ def main(args=None):
     node = MockRadarPublisher()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()

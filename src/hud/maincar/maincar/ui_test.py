@@ -14,6 +14,7 @@ Pretend the mocked data is car speed.
 """
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 import random
 
@@ -108,6 +109,10 @@ def main(args=None):
     rclpy.init(args=args)
 
     node = MockNode()
-    rclpy.spin(node) # keeps node alive until CTRL+C command is used
-
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node) # keeps node alive until CTRL+C command is used
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()

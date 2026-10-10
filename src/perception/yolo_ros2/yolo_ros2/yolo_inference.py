@@ -42,7 +42,7 @@ class YOLODetector(Node):
                 if results:
                     annotated_frame = results[0].plot()
                 else:
-                    self.get_logger().warn("YOLO returned empty results.")
+                    self.get_logger().warning("YOLO returned empty results.")
                     return
             except Exception as e:
                 self.get_logger().error(f"YOLO inference failed: {e}")

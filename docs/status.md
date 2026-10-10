@@ -34,8 +34,7 @@ run yet.
 | Check | Result |
 |---|---|
 | `colcon build`, all 19 packages, Jazzy | [[works]] 11 s on Linux |
-| Our tests: Python and Rust | [[works]] 88 pass |
-| Lint tests of 3 inherited packages (IMU, radar, battery) | fail: style, not function |
+| `pixi run test`: build, tests, lint, `colcon test` | [[works]] all pass: Python 43, Rust 47; `colcon test` 77, 0 failures |
 | Live graph vs `docs/interfaces.yaml`, turtle profile | [[works]] 0 failures |
 | Sim, car and replay profiles | [[untested]] |
 | The same `pixi.toml` on macOS | resolves; the one known build blocker is fixed; [[untested]] |

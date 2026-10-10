@@ -12,4 +12,4 @@ Files, unchanged unless listed under Changes:
 
 ## Changes
 
-- None yet.
+- 2026-10-10: `yolo_ros2/yolo_inference.py` `.warn(` -> `.warning(` (deprecated in Jazzy).

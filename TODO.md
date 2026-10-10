@@ -22,9 +22,11 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       - ~~Legacy path~~ *Done 10-10: `to_legacy` evens out the steering gain; `encoder_udp`
         goes quiet after 0.3 s without packets; it runs on the Motor Pi, where the
         Pico sends.*
-      - pixi.toml: add flask, flask-socketio, scipy, ros-jazzy-topic-tools.
-      - Inherited packages: `tests_require` → `extras_require`; yahboom lint; `sudo chmod`
-        in TI.py; maincar NameErrors; `.warn(` → `.warning(`; CMake 3.8 → 3.10.
+      - ~~pixi.toml deps; inherited packages~~ *Done 10-10: flask, flask-socketio, scipy,
+        topic_tools added for all 3 platforms. Radar, battery and IMU code restyled to
+        ROS's lint rules and fixed (no `sudo chmod`, udev port names, clean shutdown);
+        maincar's NameErrors and start-up fixed; CMake 3.10; `.warning(`. `pixi run test`
+        is all green (colcon test: 77, 0 failures).*
       - The live config check of sim, car and replay didn't finish (usage limit): redo it.
 - [ ] **The graph.** Every topic has the right publisher, subscriber, type and QoS.
       Check it live with `tools/check_graph.py` on the turtle run.

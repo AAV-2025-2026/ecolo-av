@@ -1,7 +1,8 @@
-import rclpy
+import time
+
 from rclpy.node import Node
 from std_msgs.msg import String
-import time
+
 
 class TimePublisher(Node):
     publisher = None
@@ -13,5 +14,5 @@ class TimePublisher(Node):
 
     def publish_time(self):
         msg = String()
-        msg.data = f"Current Time: {time.ctime()}"
+        msg.data = f'Current Time: {time.ctime()}'
         self.publisher.publish(msg)

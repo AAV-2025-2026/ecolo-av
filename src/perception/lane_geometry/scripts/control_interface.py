@@ -225,7 +225,7 @@ class ControlInterface(Node):
     def watchdog_cb(self):
         elapsed = time.time() - self.last_msg_t
         if elapsed > 2.0 and self.state != VehicleState.NO_LANE_STOPPING:
-            self.get_logger().warn(f'No geometry message for {elapsed:.1f}s -> stopping', throttle_duration_sec=2.0)
+            self.get_logger().warning(f'No geometry message for {elapsed:.1f}s -> stopping', throttle_duration_sec=2.0)
             self.pub_cmd.publish(Twist())
             self.transition(VehicleState.NO_LANE_STOPPING)
 

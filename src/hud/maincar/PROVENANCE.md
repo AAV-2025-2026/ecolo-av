@@ -17,6 +17,15 @@ Files, unchanged unless listed under Changes:
 
 - `package.xml`: `<depend>flask</depend>` became `python3-flask`, the rosdep key that
   exists (`flask` doesn't resolve, so `rosdep install` failed).
+- 2026-10-10, from the Jazzy port audit:
+  - `ui_flask.py`: `mock_gps_altitude` -> `mock_gps_z` (NameError on `/`);
+    `list_lastestRoute` -> `list_latestRoute` (the route was never stored);
+    `socketio.run(..., allow_unsafe_werkzeug=True)`, without which Flask-SocketIO 5.3+
+    won't start under systemd; `.warn(` -> `.warning(`.
+  - `ui_flask.py`, `ui_test.py`: shut down cleanly (`ExternalShutdownException`,
+    `destroy_node`, `rclpy.try_shutdown`).
+  - `package.xml`: added `sensor_msgs`, `launch` and `launch_ros`; dropped the four
+    test_depends (the tests weren't copied).
 
 ## Not copied
 

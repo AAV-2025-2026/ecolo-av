@@ -32,4 +32,6 @@ Files, unchanged unless listed under Changes:
 
 ## Changes
 
-- None yet.
+- `lib/components/sockets/socket_services.dart`: transports `['polling', 'websocket']`,
+  not just `'websocket'` (2026-10-10). Ubuntu 24.04 has no `python3-simple-websocket`,
+  so maincar's server can only offer polling there.

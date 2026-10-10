@@ -23,11 +23,22 @@ Files, unchanged unless listed under Changes:
 - `src/serial_port.cpp`: `B921600` is behind `#ifdef B921600`, so the package
   compiles on macOS, whose `termios.h` stops at `B230400` (2026-10-10).
 
+### 2026-10-10: lint and Jazzy fixes
+
+- `include/`, `src/`: reformatted with `ament_uncrustify --reformat` (whitespace only).
+- `src/imu_node.cpp`: the `port` parameter defaults to `/dev/aav/imu` (the udev name).
+- `CMakeLists.txt`: `cmake_minimum_required` 3.8 -> 3.10 (CMake 4 warns below 3.10);
+  `install (` -> `install(` for lint_cmake.
+- `launch/imu.launch.py`: port `/dev/aav/imu`; two blank lines and a final newline.
+- `raw_check.py`: dropped the unused `import time`; the port is an optional argument,
+  default `/dev/aav/imu`.
+- `package.xml`: exec_depend `launch` and `launch_ros`.
+- `README.md`: ROS 2 Jazzy, not Humble; no `ros-humble-serial` (the code uses termios).
+- Now `colcon test` passes: it failed 13 lint checks before.
+
 ## Known issues (not changed)
 
 - `/imu/mag` is in raw counts (with y negated), not tesla, so `imu_filter_madgwick`
   runs with `use_mag: false` and yaw drifts. Convert to tesla and calibrate before
   using the magnetometer.
-- The port defaults to `/dev/ttyUSB0`, like the radar and the battery monitor. Use the
-  udev names in `tools/udev/99-aav.rules`.
 - Topics are absolute (`/imu/data_raw`, `/imu/mag`), so a namespace won't move them.

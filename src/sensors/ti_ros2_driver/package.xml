@@ -7,10 +7,12 @@
   <maintainer email="lightinfected@hotmail.com">gyro</maintainer>
   <license>TODO: License declaration</license>
   <depend>rclpy</depend>
-  <depend>ros2launch</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
   <exec_depend>python3-serial</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-scipy</exec_depend>

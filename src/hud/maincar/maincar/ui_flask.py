@@ -5,6 +5,7 @@
 #       while making sure it doesn't change the outcome.
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from flask import Flask, request, jsonify
 from threading import Thread
@@ -75,7 +76,7 @@ real_stop_sign_detection = False
 # =========================
 tuple_destinationCoordinateLatLon = (0.0, 0.0) # default is 0.0, 0.0 until updated
 tuple_startingCoordinateLatLon = (0.0, 0.0) # default is 0.0, 0.0 until updated
-list_lastestRoute = ""
+list_latestRoute = ""
 list_latestRoutePoints = []    # like list_latestRoute, except it's a list that contains Point() types only, but I think I'll make this a list of tuples, x,y with no z, more memory efficient.
 
 
@@ -88,7 +89,7 @@ def home():
 
 @flask_app.route("/gps")
 def gps_page():
-    return "Flask from ROS2! GPS altitude is: " + str(mock_gps_altitude)
+    return "Flask from ROS2! GPS altitude is: " + str(mock_gps_z)
 
 @flask_app.route("/stream-info")
 def stream_info():
@@ -103,7 +104,7 @@ def receive_data():
     global list_latestRoute
     data = request.json   					
     print("Received from Flutter:", data)
-    list_lastestRoute = data
+    list_latestRoute = data
     getDestination(data)
     # print("Type: "+ str(type(data)) )
     return jsonify({"status": "success", "received": data})
@@ -132,6 +133,9 @@ def run_flask():
         port=5000,
         debug=False,
         use_reloader=False,
+        # Flask-SocketIO 5.3+ refuses Werkzeug's server when stdin isn't a terminal
+        # (systemd, flask_bootup.sh), and the HUD back end then silently never listens.
+        allow_unsafe_werkzeug=True,
     )
 
 
@@ -269,7 +273,7 @@ class FlaskNode(Node):
         elif (msg.data == 2):    # 2 means "reversed"
             real_gear = 2
         else:
-            self.get_logger().warn(f"Non-valid gear value: Gear value is currently {msg.data}")
+            self.get_logger().warning(f"Non-valid gear value: Gear value is currently {msg.data}")
 
         # Flutter expects data['real_gear']
         socketio.emit("real_gear_update", {"real_gear": real_gear})
@@ -379,11 +383,12 @@ def main(args=None):
 
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.get_logger().info("Shutting down Flask ROS2 node")
-        rclpy.shutdown()
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 
 if __name__ == "__main__":
