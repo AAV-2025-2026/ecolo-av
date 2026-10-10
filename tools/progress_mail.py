@@ -67,8 +67,9 @@ def inline(text):
 
 
 def table(rows):
-    cells = [[c.strip() for c in r.strip().strip('|').split('|')] for r in rows
-             if not re.fullmatch(r'\s*\|?[\s:|-]+\|?\s*', r)]
+    # Cells split on |, but not on \|: that's a | inside a cell, such as a shell pipe.
+    cells = [[c.strip().replace('\\|', '|') for c in re.split(r'(?<!\\)\|', r.strip().strip('|'))]
+             for r in rows if not re.fullmatch(r'\s*\|?[\s:|-]+\|?\s*', r)]
     head, body = cells[0], cells[1:]
     th = ''.join(f'<th style="background:{RED};color:#fff;text-align:left;padding:6px 10px">'
                  f'{inline(c)}</th>' for c in head)
