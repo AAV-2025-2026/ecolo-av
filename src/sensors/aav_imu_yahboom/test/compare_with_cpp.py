@@ -16,6 +16,7 @@ import random
 import signal
 import struct
 import subprocess
+import sys
 import threading
 import time
 
@@ -129,9 +130,20 @@ def play(master, sets):
 
 
 def cpu_seconds(pid):
-    with open(f'/proc/{pid}/stat', encoding='utf-8') as f:
-        fields = f.read().rsplit(')', 1)[1].split()
-    return (int(fields[11]) + int(fields[12])) / os.sysconf('SC_CLK_TCK')
+    """Return the CPU time a process has used: /proc on Linux, ps elsewhere (macOS)."""
+    try:
+        with open(f'/proc/{pid}/stat', encoding='utf-8') as f:
+            fields = f.read().rsplit(')', 1)[1].split()
+        return (int(fields[11]) + int(fields[12])) / os.sysconf('SC_CLK_TCK')
+    except FileNotFoundError:
+        # ps prints [[dd-]hh:]mm:ss, with hundredths on macOS
+        out = subprocess.run(['ps', '-o', 'time=', '-p', str(pid)], capture_output=True,
+                             text=True).stdout.strip()
+        days, _, clock = out.rpartition('-')
+        seconds = 0.0
+        for part in clock.split(':'):
+            seconds = seconds * 60 + float(part)
+        return seconds + 86400 * int(days or 0)
 
 
 def stop(proc, sig=signal.SIGINT, timeout=5.0):
@@ -148,6 +160,12 @@ def stop(proc, sig=signal.SIGINT, timeout=5.0):
         return None
 
 
+def exited_early(proc, package):
+    """Stop the comparison if the driver died at start-up: writes to its port would block."""
+    if proc.poll() is not None:
+        raise RuntimeError(f'{package} exited at start-up: {proc.stdout.read().strip()}')
+
+
 def run(package, collector, clean, with_cr):
     """Play both kinds of sets into one driver; then Ctrl-C it, and then unplug a second."""
     result = {}
@@ -156,6 +174,7 @@ def run(package, collector, clean, with_cr):
     collector.imu.clear()
     collector.mag.clear()
     collector.wait_for_driver()
+    exited_early(proc, package)
     for name, sets in (('clean', clean), ('cr', with_cr)):
         before = len(collector.imu)
         play(master, sets)
@@ -173,6 +192,7 @@ def run(package, collector, clean, with_cr):
     master, slave = os.openpty()
     proc = start(package, os.ttyname(slave))
     collector.wait_for_driver()
+    exited_early(proc, package)
     os.close(slave)
     os.close(master)
     time.sleep(2.0)
@@ -200,6 +220,12 @@ def main():
     spinner.start()
     try:
         results = {lang: run(package, collector, clean, with_cr) for lang, package in DRIVERS}
+    except RuntimeError as err:
+        print(f'Could not compare: {err}')
+        if sys.platform == 'darwin':
+            print('On a Mac, the fake serial port rejects the Rust serial library\'s baud-rate '
+                  'call (a real USB port should accept it). Run this comparison on Linux.')
+        return 1
     finally:
         executor.shutdown()
         spinner.join()

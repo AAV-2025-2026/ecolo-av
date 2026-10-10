@@ -20,6 +20,8 @@ done
 echo "== firmware/spine"
 if command -v cargo >/dev/null; then
   (cd firmware/spine && cargo test -q)
+  echo "== src/sensors/aav_imu_yahboom: the IMU's serial frames"
+  (cd src/sensors/aav_imu_yahboom && cargo test -q -p yahboom-protocol)
   # Every firmware crate must build without the standard library, for the Pico 2's chip.
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"
