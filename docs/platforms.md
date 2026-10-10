@@ -93,7 +93,8 @@ untested on the car.
 
 1. Stop the 2025-26 software: it is Humble, and Humble and Jazzy don't mix.
 2. On the Orin and the Motor Pi, install Pixi and copy the code, as on
-   [Your Mac](mac.md) (steps 2 to 4).
+   [Your Mac](mac.md) (steps 2 to 4). It needs a 64-bit OS: `uname -m` must say
+   `aarch64`.
 3. Run `pixi run car orin` on the Orin, and `pixi run car motor_pi` on the Motor Pi.
 
 | | Pixi on today's Ubuntu 22.04 | Reflash to JetPack 7.2 |
