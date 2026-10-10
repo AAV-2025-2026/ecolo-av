@@ -41,6 +41,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibus"
+version = "0.1.0"
+dependencies = [
+ "spine-core",
+]
+
+[[package]]
 name = "jrk-g2"
 version = "0.1.0"
 dependencies = [

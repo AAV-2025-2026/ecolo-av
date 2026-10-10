@@ -5,7 +5,7 @@ resolver = "2"
 # pca9555.
 # A board crate (ESP32, Pico 2 or STM32) is not a member: it needs its chip's
 # toolchain, and waits on the board decision (Q10-Q13).
-members = ["crates/spine-core", "crates/aav-inputs", "crates/jrk-g2", "crates/ad5311", "crates/pca9555"]
+members = ["crates/spine-core", "crates/aav-inputs", "crates/jrk-g2", "crates/ad5311", "crates/pca9555", "crates/ibus"]
 
 [workspace.package]
 version = "0.1.0"
