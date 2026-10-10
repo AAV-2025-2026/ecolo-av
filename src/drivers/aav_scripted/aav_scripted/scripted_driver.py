@@ -14,6 +14,7 @@ The joystick outranks this driver in twist_mux, so a person can always take over
 
 import math
 import threading
+import time
 
 from aav_interfaces.action import ScriptedDrive
 from aav_scripted.speed_profile import SpeedProfile, STOPPED
@@ -92,9 +93,9 @@ class ScriptedDriver(Node):
         start = self.distance
         t0 = self.get_clock().now()
         rate = self.create_rate(self.rate_hz)
-        dt = 1.0 / self.rate_hz
         feedback = ScriptedDrive.Feedback()
         tick = 0
+        last = time.monotonic()
         try:
             while rclpy.ok():
                 if handle.is_cancel_requested:
@@ -102,6 +103,12 @@ class ScriptedDriver(Node):
                 with self.lock:
                     travelled = self.distance - start
                     measured = self.speed
+                # The time that really passed, not 1 / rate_hz: on a busy computer the loop
+                # runs late, and a fixed step stretched the whole profile (bench, 10 Oct:
+                # 22 m instead of 6.5 m). The cap only stops a long stall from jumping the
+                # profile; ego and the spine limit how fast the speed can change anyway.
+                now = time.monotonic()
+                dt, last = min(now - last, 0.5), now
                 v = profile.step(dt, travelled)
                 self.publish(v, g.curvature)
                 if tick % 5 == 0:
