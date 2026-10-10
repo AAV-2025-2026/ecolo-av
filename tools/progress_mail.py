@@ -5,6 +5,7 @@ Purpose: let people follow the work from a phone. Write the update in a small ma
 subset, and this renders and sends it. Standard library only, so it runs anywhere.
 
     tools/progress_mail.py --subject "Builds on Linux" --file update.md
+    tools/progress_mail.py --subject "..." --file update.md --attach docs/html/aav-docs.pdf
     tools/progress_mail.py --subject "..." --file update.md --dry-run --preview /tmp/u.html
 
 The markdown subset:
@@ -26,6 +27,7 @@ never committed, because it holds personal addresses):
 import argparse
 from email.message import EmailMessage
 import html
+import mimetypes
 import os
 from pathlib import Path
 import re
@@ -158,6 +160,8 @@ def main():
     ap.add_argument('--file', required=True, help='markdown-subset body')
     ap.add_argument('--dry-run', action='store_true', help='render only, send nothing')
     ap.add_argument('--preview', help='also write the HTML here')
+    ap.add_argument('--attach', action='append', default=[], metavar='FILE',
+                    help='attach a file (repeatable), e.g. the docs PDF')
     args = ap.parse_args()
 
     body_md = Path(args.file).read_text(encoding='utf-8')
@@ -178,6 +182,12 @@ def main():
     msg['To'] = to
     msg.set_content(f'{args.subject}\n\n{body_md}')
     msg.add_alternative(page, subtype='html')
+    for name in args.attach:
+        path = Path(name)
+        kind = mimetypes.guess_type(path.name)[0] or 'application/octet-stream'
+        maintype, subtype = kind.split('/', 1)
+        msg.add_attachment(path.read_bytes(), maintype=maintype, subtype=subtype,
+                           filename=path.name)
     with smtplib.SMTP(cfg['AAV_SMTP_SERVER'], 25, timeout=30) as smtp:
         smtp.send_message(msg)
     print(f'sent to {to} via {cfg["AAV_SMTP_SERVER"]}')
