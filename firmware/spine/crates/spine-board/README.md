@@ -34,6 +34,18 @@ The order of the writes, every tick:
 | 4 | DAC | if the throttle rises: last, and only once the brake write worked |
 | 5 | steering Jrk | always |
 
+## For the board crate
+
+| Setting | Value |
+|---|---|
+| I2C | 100 kHz, as today. Faster, and the Jrk needs 100 µs of quiet after each read |
+| Bus time | a few ms a tick at 100 kHz: 3 reads, 4 writes, and the Jrks stretch the clock (up to 150 µs a byte) |
+| iBUS serial port | 115200 baud, 8N1, receive only |
+| CAN | classic, 500 kbit/s, 11-bit IDs (`firmware/can/aav.dbc`) |
+| Tick | about every 10 ms; the ramp and the e-stop use the clock, not the tick count |
+| E-stop pin | `estop_open()` is true when the loop is open, whatever level that is on the pin |
+| Wheel counter | `wheel()` gives the count, and the clock at its latest count |
+
 ## API
 
 | Item | Does |
@@ -74,7 +86,7 @@ question.
 | Direction | expander P00: high forward, low reverse | Q4 |
 | Other expander pins | outputs, high | Q13 |
 | Wheel | 0.1178 m a count (8 spokes, 0.30 m wheel) | Q5 |
-| RC | the `ibus` crate's `RcMap`; silent after 100 ms | Q7 |
+| RC | `ibus::RcMap::TODAY`; silent after 100 ms | Q7 |
 | E-stop input | releases after 50 ms closed | Q6 |
 
 ## Test

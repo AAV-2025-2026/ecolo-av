@@ -43,26 +43,28 @@ pub struct RcMap {
 }
 
 impl Default for RcMap {
-    /// Today's car.
     fn default() -> Self {
-        RcMap {
-            override_switch: 5,
-            throttle: 2,
-            steering: 3,
-            gear: 4,
-            valid_above: 100,
-            valid_below: 2200,
-            override_above: 1500,
-            forward_below: 1200,
-            reverse_above: 1800,
-            centre: 1500,
-            half_travel: 500,
-            throttle_deadband: 0.05,
-        }
+        Self::TODAY
     }
 }
 
 impl RcMap {
+    /// Today's car.
+    pub const TODAY: RcMap = RcMap {
+        override_switch: 5,
+        throttle: 2,
+        steering: 3,
+        gear: 4,
+        valid_above: 100,
+        valid_below: 2200,
+        override_above: 1500,
+        forward_below: 1200,
+        reverse_above: 1800,
+        centre: 1500,
+        half_travel: 500,
+        throttle_deadband: 0.05,
+    };
+
     /// What the RC asks for, or None if the override switch reads out of range.
     ///
     /// - Override off: `override_switch: false`, nothing else.

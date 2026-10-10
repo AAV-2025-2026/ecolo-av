@@ -140,20 +140,7 @@ impl Calibration {
             metres_per_count: 0.1178,
             timeout_ms: 1000,
         },
-        rc: RcMap {
-            override_switch: 5,
-            throttle: 2,
-            steering: 3,
-            gear: 4,
-            valid_above: 100,
-            valid_below: 2200,
-            override_above: 1500,
-            forward_below: 1200,
-            reverse_above: 1800,
-            centre: 1500,
-            half_travel: 500,
-            throttle_deadband: 0.05,
-        },
+        rc: RcMap::TODAY,
         rc_timeout_ms: 100,
         estop_release_ms: 50,
     };
@@ -237,11 +224,6 @@ mod tests {
     use super::*;
 
     const CAL: Calibration = Calibration::TODAY;
-
-    #[test]
-    fn the_rc_map_is_ibus_s_default() {
-        assert_eq!(CAL.rc, RcMap::default());
-    }
 
     #[test]
     fn steering_targets() {

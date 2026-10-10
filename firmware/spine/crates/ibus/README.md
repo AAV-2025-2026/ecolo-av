@@ -22,7 +22,7 @@ A 32-byte frame comes about every 7 ms.
 | `Receiver::new(timeout_ms)` | a parser, plus the latest frame and when it came |
 | `Receiver::push(byte, now_ms)` | feeds one byte; true when it completed a frame |
 | `Receiver::channels(now_ms)` | the latest channels, or `None` if silent longer than the timeout |
-| `RcMap::default()` | today's channels and switch points (below) |
+| `RcMap::TODAY` | today's channels and switch points (below); also `RcMap::default()` |
 | `RcMap::rc_input(&channels)` | the `spine_core::RcInput`: override switch, throttle and steering, each -1 to 1 |
 | `decode`, `encode`, `checksum` | one frame, without a parser |
 | `Channels::get(index)` | one channel; index 0 is the transmitter's CH1 |
