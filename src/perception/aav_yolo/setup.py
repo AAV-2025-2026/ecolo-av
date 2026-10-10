@@ -17,12 +17,14 @@ setup(
     zip_safe=True,
     maintainer='AAV 2026-27 team',
     maintainer_email='aav-team@todo.invalid',
-    description='A YOLO detector: camera images in, vision_msgs detections out.',
+    description='A YOLO detector (camera images in, vision_msgs detections out), and a '
+                'stop-sign watcher that holds the autonomous drivers at a stop sign.',
     license='TODO',
     extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
             'detector = aav_yolo.detector:main',
+            'stop_sign_watcher = aav_yolo.stop_sign_watcher:main',
         ],
     },
 )
