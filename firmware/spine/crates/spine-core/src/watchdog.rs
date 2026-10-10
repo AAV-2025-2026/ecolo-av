@@ -9,7 +9,10 @@ pub struct Watchdog {
 
 impl Watchdog {
     pub const fn new(timeout_ms: u32) -> Self {
-        Watchdog { timeout_ms, last_ms: None }
+        Watchdog {
+            timeout_ms,
+            last_ms: None,
+        }
     }
 
     /// Record a valid command at `now_ms`.

@@ -13,6 +13,8 @@ Run it after any change to aav.dbc and can_codec.py:
 import importlib.util
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -124,6 +126,10 @@ def main():
     }, indent=2) + '\n')
     RUST_OUT.parent.mkdir(parents=True, exist_ok=True)
     RUST_OUT.write_text('\n'.join(rust) + '\n')
+    # Format it the way `cargo fmt` would, so `cargo fmt --check` stays clean.
+    rustfmt = shutil.which('rustfmt')
+    if rustfmt:
+        subprocess.run([rustfmt, '--edition', '2021', str(RUST_OUT)], check=True)
     print(f'wrote {len(vectors)} vectors to {JSON_OUT.relative_to(ROOT)} and '
           f'{RUST_OUT.relative_to(ROOT)}')
 

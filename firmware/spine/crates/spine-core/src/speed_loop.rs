@@ -55,7 +55,11 @@ fn clamp01(x: f32) -> f32 {
 
 impl SpeedLoop {
     pub fn new(cfg: SpeedLoopConfig) -> Self {
-        SpeedLoop { cfg, integral: 0.0, reverse: false }
+        SpeedLoop {
+            cfg,
+            integral: 0.0,
+            reverse: false,
+        }
     }
 
     pub fn reset(&mut self) {
@@ -75,7 +79,11 @@ impl SpeedLoop {
             } else {
                 self.integral = 0.0;
                 let brake = clamp01(c.hold_brake.max(c.brake_gain * abs(measured)));
-                return Drive { throttle: 0.0, brake, reverse: self.reverse };
+                return Drive {
+                    throttle: 0.0,
+                    brake,
+                    reverse: self.reverse,
+                };
             }
         }
 
@@ -84,9 +92,21 @@ impl SpeedLoop {
         let t = target * sign;
         let m = measured * sign;
 
-        if t <= 0.0 && stopped {
+        // A stop: brake until stopped, then hold. Never coast here: below the coast band
+        // the car would only slow by rolling resistance, and on a slope it might never
+        // stop (found on the bench: it crept on at 0.2 m/s).
+        if t <= 0.0 {
             self.integral = 0.0;
-            return Drive { throttle: 0.0, brake: c.hold_brake, reverse: self.reverse };
+            let brake = if stopped {
+                c.hold_brake
+            } else {
+                clamp01(c.hold_brake.max(c.brake_gain * (m - c.coast_band)))
+            };
+            return Drive {
+                throttle: 0.0,
+                brake,
+                reverse: self.reverse,
+            };
         }
 
         let error = t.max(0.0) - m;
@@ -129,6 +149,18 @@ mod tests {
         let d = lp().update(1.0, 2.0, 0.02);
         assert_eq!(d.throttle, 0.0);
         assert!(d.brake > 0.0);
+    }
+
+    #[test]
+    fn a_stop_brakes_all_the_way_instead_of_coasting() {
+        for speed in [0.1, 0.19, 0.5, 2.0] {
+            let d = lp().update(0.0, speed, 0.02);
+            assert_eq!(d.throttle, 0.0);
+            assert!(
+                d.brake >= SpeedLoopConfig::default().hold_brake,
+                "at {speed} m/s"
+            );
+        }
     }
 
     #[test]

@@ -9,7 +9,10 @@ fn close(a: f32, b: f32) -> bool {
 
 #[test]
 fn estop_on() {
-    let msg = EstopCmd { estop_request: true, counter: 3 };
+    let msg = EstopCmd {
+        estop_request: true,
+        counter: 3,
+    };
     assert_eq!(msg.encode(), [0x31, 0xbe]);
     let back = EstopCmd::decode(&[0x31, 0xbe]).unwrap();
     assert!(back.estop_request);
@@ -18,7 +21,10 @@ fn estop_on() {
 
 #[test]
 fn estop_off() {
-    let msg = EstopCmd { estop_request: false, counter: 15 };
+    let msg = EstopCmd {
+        estop_request: false,
+        counter: 15,
+    };
     assert_eq!(msg.encode(), [0xf0, 0x96]);
     let back = EstopCmd::decode(&[0xf0, 0x96]).unwrap();
     assert!(!back.estop_request);
@@ -27,8 +33,18 @@ fn estop_off() {
 
 #[test]
 fn drive_forward_left() {
-    let msg = DriveCmd { target_speed: 1.5_f32, steering_angle: 0.25_f32, accel_limit: 1.0_f32, steer_rate_limit: 0.5_f32, armed: true, counter: 7 };
-    assert_eq!(msg.encode(), [0xdc, 0x05, 0xc4, 0x09, 0x14, 0x19, 0x71, 0xed]);
+    let msg = DriveCmd {
+        target_speed: 1.5_f32,
+        steering_angle: 0.25_f32,
+        accel_limit: 1.0_f32,
+        steer_rate_limit: 0.5_f32,
+        armed: true,
+        counter: 7,
+    };
+    assert_eq!(
+        msg.encode(),
+        [0xdc, 0x05, 0xc4, 0x09, 0x14, 0x19, 0x71, 0xed]
+    );
     let back = DriveCmd::decode(&[0xdc, 0x05, 0xc4, 0x09, 0x14, 0x19, 0x71, 0xed]).unwrap();
     assert!(close(back.target_speed, 1.5_f32), "target_speed");
     assert!(close(back.steering_angle, 0.25_f32), "steering_angle");
@@ -40,8 +56,18 @@ fn drive_forward_left() {
 
 #[test]
 fn drive_reverse_right() {
-    let msg = DriveCmd { target_speed: -0.75_f32, steering_angle: -0.4363_f32, accel_limit: 0.0_f32, steer_rate_limit: 0.0_f32, armed: false, counter: 0 };
-    assert_eq!(msg.encode(), [0x12, 0xfd, 0xf5, 0xee, 0x00, 0x00, 0x00, 0xf7]);
+    let msg = DriveCmd {
+        target_speed: -0.75_f32,
+        steering_angle: -0.4363_f32,
+        accel_limit: 0.0_f32,
+        steer_rate_limit: 0.0_f32,
+        armed: false,
+        counter: 0,
+    };
+    assert_eq!(
+        msg.encode(),
+        [0x12, 0xfd, 0xf5, 0xee, 0x00, 0x00, 0x00, 0xf7]
+    );
     let back = DriveCmd::decode(&[0x12, 0xfd, 0xf5, 0xee, 0x00, 0x00, 0x00, 0xf7]).unwrap();
     assert!(close(back.target_speed, -0.75_f32), "target_speed");
     assert!(close(back.steering_angle, -0.4363_f32), "steering_angle");
@@ -53,8 +79,18 @@ fn drive_reverse_right() {
 
 #[test]
 fn drive_saturates() {
-    let msg = DriveCmd { target_speed: 40.0_f32, steering_angle: -5.0_f32, accel_limit: 20.0_f32, steer_rate_limit: 9.0_f32, armed: true, counter: 15 };
-    assert_eq!(msg.encode(), [0xff, 0x7f, 0x00, 0x80, 0xff, 0xff, 0xf1, 0x67]);
+    let msg = DriveCmd {
+        target_speed: 40.0_f32,
+        steering_angle: -5.0_f32,
+        accel_limit: 20.0_f32,
+        steer_rate_limit: 9.0_f32,
+        armed: true,
+        counter: 15,
+    };
+    assert_eq!(
+        msg.encode(),
+        [0xff, 0x7f, 0x00, 0x80, 0xff, 0xff, 0xf1, 0x67]
+    );
     let back = DriveCmd::decode(&[0xff, 0x7f, 0x00, 0x80, 0xff, 0xff, 0xf1, 0x67]).unwrap();
     assert!(close(back.target_speed, 32.767_f32), "target_speed");
     assert!(close(back.steering_angle, -3.2768_f32), "steering_angle");
@@ -66,30 +102,63 @@ fn drive_saturates() {
 
 #[test]
 fn feedback_moving() {
-    let msg = VehicleFeedback { measured_speed: 2.345_f32, measured_steering_angle: -0.1_f32, wheel_ticks: 65535, counter: 9 };
-    assert_eq!(msg.encode(), [0x29, 0x09, 0x18, 0xfc, 0xff, 0xff, 0x90, 0x5e]);
+    let msg = VehicleFeedback {
+        measured_speed: 2.345_f32,
+        measured_steering_angle: -0.1_f32,
+        wheel_ticks: 65535,
+        counter: 9,
+    };
+    assert_eq!(
+        msg.encode(),
+        [0x29, 0x09, 0x18, 0xfc, 0xff, 0xff, 0x90, 0x5e]
+    );
     let back = VehicleFeedback::decode(&[0x29, 0x09, 0x18, 0xfc, 0xff, 0xff, 0x90, 0x5e]).unwrap();
     assert!(close(back.measured_speed, 2.345_f32), "measured_speed");
-    assert!(close(back.measured_steering_angle, -0.1_f32), "measured_steering_angle");
+    assert!(
+        close(back.measured_steering_angle, -0.1_f32),
+        "measured_steering_angle"
+    );
     assert_eq!(back.wheel_ticks, 65535);
     assert_eq!(back.counter, 9);
 }
 
 #[test]
 fn feedback_reverse() {
-    let msg = VehicleFeedback { measured_speed: -0.4_f32, measured_steering_angle: 0.3_f32, wheel_ticks: 1234, counter: 1 };
-    assert_eq!(msg.encode(), [0x70, 0xfe, 0xb8, 0x0b, 0xd2, 0x04, 0x10, 0x92]);
+    let msg = VehicleFeedback {
+        measured_speed: -0.4_f32,
+        measured_steering_angle: 0.3_f32,
+        wheel_ticks: 1234,
+        counter: 1,
+    };
+    assert_eq!(
+        msg.encode(),
+        [0x70, 0xfe, 0xb8, 0x0b, 0xd2, 0x04, 0x10, 0x92]
+    );
     let back = VehicleFeedback::decode(&[0x70, 0xfe, 0xb8, 0x0b, 0xd2, 0x04, 0x10, 0x92]).unwrap();
     assert!(close(back.measured_speed, -0.4_f32), "measured_speed");
-    assert!(close(back.measured_steering_angle, 0.3_f32), "measured_steering_angle");
+    assert!(
+        close(back.measured_steering_angle, 0.3_f32),
+        "measured_steering_angle"
+    );
     assert_eq!(back.wheel_ticks, 1234);
     assert_eq!(back.counter, 1);
 }
 
 #[test]
 fn status_computer() {
-    let msg = VehicleStatus { mode: Mode::Computer, armed: true, estop_active: false, throttle: 37.5_f32, brake: 0.0_f32, faults: 129, counter: 12 };
-    assert_eq!(msg.encode(), [0x06, 0x4b, 0x00, 0x81, 0x00, 0x00, 0xc0, 0x68]);
+    let msg = VehicleStatus {
+        mode: Mode::Computer,
+        armed: true,
+        estop_active: false,
+        throttle: 37.5_f32,
+        brake: 0.0_f32,
+        faults: 129,
+        counter: 12,
+    };
+    assert_eq!(
+        msg.encode(),
+        [0x06, 0x4b, 0x00, 0x81, 0x00, 0x00, 0xc0, 0x68]
+    );
     let back = VehicleStatus::decode(&[0x06, 0x4b, 0x00, 0x81, 0x00, 0x00, 0xc0, 0x68]).unwrap();
     assert_eq!(back.mode, Mode::Computer);
     assert!(back.armed);
@@ -102,8 +171,19 @@ fn status_computer() {
 
 #[test]
 fn status_rc_estop() {
-    let msg = VehicleStatus { mode: Mode::Rc, armed: false, estop_active: true, throttle: 0.0_f32, brake: 100.0_f32, faults: 256, counter: 4 };
-    assert_eq!(msg.encode(), [0x09, 0x00, 0xc8, 0x00, 0x01, 0x00, 0x40, 0x6e]);
+    let msg = VehicleStatus {
+        mode: Mode::Rc,
+        armed: false,
+        estop_active: true,
+        throttle: 0.0_f32,
+        brake: 100.0_f32,
+        faults: 256,
+        counter: 4,
+    };
+    assert_eq!(
+        msg.encode(),
+        [0x09, 0x00, 0xc8, 0x00, 0x01, 0x00, 0x40, 0x6e]
+    );
     let back = VehicleStatus::decode(&[0x09, 0x00, 0xc8, 0x00, 0x01, 0x00, 0x40, 0x6e]).unwrap();
     assert_eq!(back.mode, Mode::Rc);
     assert!(!back.armed);

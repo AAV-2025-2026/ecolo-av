@@ -99,7 +99,11 @@ pub fn decode_incoming(id: u16, data: &[u8]) -> Result<Incoming, FrameError> {
 fn crc8_update(mut crc: u8, byte: u8) -> u8 {
     crc ^= byte;
     for _ in 0..8 {
-        crc = if crc & 0x80 != 0 { (crc << 1) ^ 0x1D } else { crc << 1 };
+        crc = if crc & 0x80 != 0 {
+            (crc << 1) ^ 0x1D
+        } else {
+            crc << 1
+        };
     }
     crc
 }
@@ -220,7 +224,12 @@ impl VehicleFeedback {
     pub fn encode(&self) -> [u8; 8] {
         let mut w = 0;
         put(&mut w, 0, 16, raw_signed(self.measured_speed, 1000.0, 16));
-        put(&mut w, 16, 16, raw_signed(self.measured_steering_angle, 10000.0, 16));
+        put(
+            &mut w,
+            16,
+            16,
+            raw_signed(self.measured_steering_angle, 10000.0, 16),
+        );
         put(&mut w, 32, 16, self.wheel_ticks as u64);
         put(&mut w, 52, 4, self.counter as u64);
         finish(VEHICLE_FEEDBACK_ID, w)
@@ -299,7 +308,11 @@ mod tests {
 
     #[test]
     fn corrupted_byte_is_rejected() {
-        let mut frame = EstopCmd { estop_request: true, counter: 2 }.encode();
+        let mut frame = EstopCmd {
+            estop_request: true,
+            counter: 2,
+        }
+        .encode();
         frame[0] ^= 0x01;
         assert_eq!(EstopCmd::decode(&frame), Err(FrameError::BadChecksum));
     }

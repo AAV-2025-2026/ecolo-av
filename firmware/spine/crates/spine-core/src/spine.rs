@@ -276,9 +276,22 @@ impl Spine {
                 return out(0.0, c.idle_brake, false, self.steering_setpoint, self);
             }
             Mode::Rc => {
-                let rc = i.rc.unwrap_or(RcInput { override_switch: true, throttle: 0.0, steering: 0.0 });
-                let cap = if rc.throttle >= 0.0 { c.max_speed } else { c.max_reverse_speed };
-                (rc.throttle.clamp(-1.0, 1.0) * cap, rc.steering.clamp(-1.0, 1.0) * c.max_steering_angle, c.max_accel, c.max_steer_rate)
+                let rc = i.rc.unwrap_or(RcInput {
+                    override_switch: true,
+                    throttle: 0.0,
+                    steering: 0.0,
+                });
+                let cap = if rc.throttle >= 0.0 {
+                    c.max_speed
+                } else {
+                    c.max_reverse_speed
+                };
+                (
+                    rc.throttle.clamp(-1.0, 1.0) * cap,
+                    rc.steering.clamp(-1.0, 1.0) * c.max_steering_angle,
+                    c.max_accel,
+                    c.max_steer_rate,
+                )
             }
             Mode::Computer => {
                 let cmd = self.last_cmd.unwrap_or(DriveCmd {
@@ -289,7 +302,11 @@ impl Spine {
                     armed: false,
                     counter: 0,
                 });
-                let accel = if cmd.accel_limit > 0.0 { cmd.accel_limit.min(c.max_accel) } else { c.max_accel };
+                let accel = if cmd.accel_limit > 0.0 {
+                    cmd.accel_limit.min(c.max_accel)
+                } else {
+                    c.max_accel
+                };
                 let rate = if cmd.steer_rate_limit > 0.0 {
                     cmd.steer_rate_limit.min(c.max_steer_rate)
                 } else {
@@ -306,12 +323,25 @@ impl Spine {
         let rate = if slowing { c.max_decel } else { accel };
         self.speed_setpoint = slew(self.speed_setpoint, target_speed, rate, dt);
         self.steering_setpoint = slew(self.steering_setpoint, target_steering, steer_rate, dt);
-        let drive = self.speed_loop.update(self.speed_setpoint, i.measured_speed, dt);
-        out(drive.throttle, drive.brake, drive.reverse, self.steering_setpoint, self)
+        let drive = self
+            .speed_loop
+            .update(self.speed_setpoint, i.measured_speed, dt);
+        out(
+            drive.throttle,
+            drive.brake,
+            drive.reverse,
+            self.steering_setpoint,
+            self,
+        )
     }
 
     /// VEHICLE_FEEDBACK frame (send at 50 Hz).
-    pub fn feedback_frame(&mut self, measured_speed: f32, measured_steering: f32, wheel_ticks: u16) -> [u8; 8] {
+    pub fn feedback_frame(
+        &mut self,
+        measured_speed: f32,
+        measured_steering: f32,
+        wheel_ticks: u16,
+    ) -> [u8; 8] {
         self.feedback_counter = (self.feedback_counter + 1) & 0x0F;
         VehicleFeedback {
             measured_speed,
@@ -362,7 +392,11 @@ mod tests {
 
     impl Car {
         fn new() -> Self {
-            Car { spine: Spine::new(SpineConfig::default()), now: 1000, counter: 0 }
+            Car {
+                spine: Spine::new(SpineConfig::default()),
+                now: 1000,
+                counter: 0,
+            }
         }
 
         fn cmd(&mut self, speed: f32, steering: f32, armed: bool) -> DriveCmd {
@@ -392,7 +426,10 @@ mod tests {
             let mut last = None;
             for _ in 0..ticks {
                 let cmd = self.cmd(speed, steering, armed);
-                last = Some(self.tick(Inputs { drive_cmd: Some(cmd), ..Default::default() }));
+                last = Some(self.tick(Inputs {
+                    drive_cmd: Some(cmd),
+                    ..Default::default()
+                }));
             }
             last.unwrap()
         }
@@ -468,7 +505,10 @@ mod tests {
         let cmd = car.cmd(1.0, 0.0, true);
         let out = car.tick(Inputs {
             drive_cmd: Some(cmd),
-            estop_cmd: Some(EstopCmd { estop_request: true, counter: 1 }),
+            estop_cmd: Some(EstopCmd {
+                estop_request: true,
+                counter: 1,
+            }),
             ..Default::default()
         });
         assert!(out.estop_active);
@@ -476,7 +516,10 @@ mod tests {
         let cmd = car.cmd(1.0, 0.0, true);
         let out = car.tick(Inputs {
             drive_cmd: Some(cmd),
-            estop_cmd: Some(EstopCmd { estop_request: false, counter: 2 }),
+            estop_cmd: Some(EstopCmd {
+                estop_request: false,
+                counter: 2,
+            }),
             ..Default::default()
         });
         assert_ne!(out.mode, Mode::Computer);
@@ -487,8 +530,16 @@ mod tests {
     #[test]
     fn hardware_estop_beats_rc() {
         let mut car = Car::new();
-        let rc = RcInput { override_switch: true, throttle: 1.0, steering: 0.0 };
-        let out = car.tick(Inputs { rc: Some(rc), hw_estop: true, ..Default::default() });
+        let rc = RcInput {
+            override_switch: true,
+            throttle: 1.0,
+            steering: 0.0,
+        };
+        let out = car.tick(Inputs {
+            rc: Some(rc),
+            hw_estop: true,
+            ..Default::default()
+        });
         assert_eq!(out.throttle, 0.0);
         assert_eq!(out.brake, 1.0);
     }
@@ -498,17 +549,32 @@ mod tests {
         let mut car = Car::new();
         car.arm();
         car.drive(1.0, 0.0, true, 10);
-        let rc = RcInput { override_switch: true, throttle: 0.0, steering: 1.0 };
+        let rc = RcInput {
+            override_switch: true,
+            throttle: 0.0,
+            steering: 1.0,
+        };
         let cmd = car.cmd(1.0, 0.0, true);
-        let out = car.tick(Inputs { drive_cmd: Some(cmd), rc: Some(rc), ..Default::default() });
+        let out = car.tick(Inputs {
+            drive_cmd: Some(cmd),
+            rc: Some(rc),
+            ..Default::default()
+        });
         assert_eq!(out.mode, Mode::Rc);
     }
 
     #[test]
     fn rc_signal_loss_brakes() {
         let mut car = Car::new();
-        let rc = RcInput { override_switch: true, throttle: 0.5, steering: 0.0 };
-        car.tick(Inputs { rc: Some(rc), ..Default::default() });
+        let rc = RcInput {
+            override_switch: true,
+            throttle: 0.5,
+            steering: 0.0,
+        };
+        car.tick(Inputs {
+            rc: Some(rc),
+            ..Default::default()
+        });
         let out = car.tick(Inputs::default());
         assert_eq!(out.brake, 1.0);
         assert_ne!(out.faults & faults::RC_SIGNAL_LOST, 0);
@@ -540,7 +606,11 @@ mod tests {
         // ego stops at 2.0 m/s^2, so from 1 m/s it reaches 0 in 0.5 s. At 2.5 m/s^2
         // the firmware is already there after 0.4 s.
         car.drive(0.0, 0.0, true, 40);
-        assert!(car.spine.speed_setpoint().abs() < 1e-3, "{}", car.spine.speed_setpoint());
+        assert!(
+            car.spine.speed_setpoint().abs() < 1e-3,
+            "{}",
+            car.spine.speed_setpoint()
+        );
     }
 
     #[test]
@@ -568,7 +638,11 @@ mod tests {
     #[test]
     fn driver_fault_stops_rc_too() {
         let mut car = Car::new();
-        let rc = RcInput { override_switch: true, throttle: 1.0, steering: 0.0 };
+        let rc = RcInput {
+            override_switch: true,
+            throttle: 1.0,
+            steering: 0.0,
+        };
         let out = car.tick(Inputs {
             rc: Some(rc),
             driver_faults: faults::THROTTLE_DAC,
@@ -582,8 +656,14 @@ mod tests {
     fn repeated_counter_is_a_fault_and_not_fresh() {
         let mut car = Car::new();
         let cmd = car.cmd(1.0, 0.0, true);
-        car.tick(Inputs { drive_cmd: Some(cmd), ..Default::default() });
-        let out = car.tick(Inputs { drive_cmd: Some(cmd), ..Default::default() });
+        car.tick(Inputs {
+            drive_cmd: Some(cmd),
+            ..Default::default()
+        });
+        let out = car.tick(Inputs {
+            drive_cmd: Some(cmd),
+            ..Default::default()
+        });
         assert_ne!(out.faults & faults::BAD_COUNTER, 0);
     }
 

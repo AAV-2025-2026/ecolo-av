@@ -17,7 +17,10 @@ pub struct Quadrature {
 
 impl Quadrature {
     pub fn new(a: bool, b: bool) -> Self {
-        Quadrature { last: (a as u8) << 1 | b as u8, count: 0 }
+        Quadrature {
+            last: (a as u8) << 1 | b as u8,
+            count: 0,
+        }
     }
 
     /// Feed the current sensor levels; returns the step taken (-1, 0 or +1).
