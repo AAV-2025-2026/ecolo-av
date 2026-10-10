@@ -138,6 +138,7 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 | Part | Status |
 |---|---|
 | The Pixi environment resolves for Macs (Apple Silicon and Intel, macOS 14+) | [[works]] |
+| Steps 3 to 5 from a fresh copy of the bundle: clone, install, build, `pixi run test`, the turtle | [[works]] on Linux; [[untested]] on a Mac |
 | Building on a Mac | [[untested]] The one known blocker, a Linux-only serial speed in the IMU driver, is fixed. |
 | Turtle, keyboard, e-stop | [[works]] on Linux; [[untested]] on a Mac |
 | RViz and rqt on a Mac | [[untested]] |
