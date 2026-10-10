@@ -22,9 +22,9 @@ from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
-from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.task import Future
 
 
 class ScriptedDriver(Node):
@@ -40,14 +40,11 @@ class ScriptedDriver(Node):
         self.speed = 0.0
         self.last_xy = None
         self.odom_time = None
-        group = ReentrantCallbackGroup()
         self.pub = self.create_publisher(TwistStamped, 'cmd_vel/scripted', 10)
-        self.create_subscription(Odometry, 'odometry/local', self.on_odom, 10,
-                                 callback_group=group)
+        self.create_subscription(Odometry, 'odometry/local', self.on_odom, 10)
         self.server = ActionServer(
             self, ScriptedDrive, 'scripted_drive', execute_callback=self.execute,
-            goal_callback=self.on_goal, cancel_callback=lambda _: CancelResponse.ACCEPT,
-            callback_group=group)
+            goal_callback=self.on_goal, cancel_callback=lambda _: CancelResponse.ACCEPT)
 
     def on_odom(self, msg):
         p = msg.pose.pose.position
@@ -85,47 +82,54 @@ class ScriptedDriver(Node):
         msg.twist.angular.z = v * curvature
         self.pub.publish(msg)
 
-    def execute(self, handle):
+    async def execute(self, handle):
+        # A coroutine on one thread, driven by a timer. It used to be a blocking loop on a
+        # MultiThreadedExecutor, and that executor spins a whole core whenever a
+        # subscription gets messages (rclpy 7.1.12; measured 105% CPU while idle).
         self.busy = True
         g = handle.request
         profile = SpeedProfile(g.target_speed, g.acceleration, g.deceleration,
                                g.hold_time, g.hold_distance)
         start = self.distance
         t0 = self.get_clock().now()
-        rate = self.create_rate(self.rate_hz)
         feedback = ScriptedDrive.Feedback()
-        tick = 0
-        last = time.monotonic()
-        try:
-            while rclpy.ok():
-                if handle.is_cancel_requested:
-                    profile.cancel()
-                with self.lock:
-                    travelled = self.distance - start
-                    measured = self.speed
-                # The time that really passed, not 1 / rate_hz: on a busy computer the loop
-                # runs late, and a fixed step stretched the whole profile (bench, 10 Oct:
-                # 22 m instead of 6.5 m). The cap only stops a long stall from jumping the
-                # profile; ego and the spine limit how fast the speed can change anyway.
-                now = time.monotonic()
-                dt, last = min(now - last, 0.5), now
-                v = profile.step(dt, travelled)
-                self.publish(v, g.curvature)
-                if tick % 5 == 0:
-                    feedback.phase = profile.phase
-                    feedback.commanded_speed = v
-                    feedback.measured_speed = measured
-                    feedback.distance_travelled = travelled
-                    handle.publish_feedback(feedback)
-                tick += 1
-                if profile.phase == STOPPED:
-                    break
-                rate.sleep()
-            for _ in range(5):
+        finished = Future()
+        loop = {'tick': 0, 'last': time.monotonic(), 'zeros': 0}
+
+        def tick():
+            if profile.phase == STOPPED:
+                # A few zero commands at the end, so the mux sees the stop.
                 self.publish(0.0, 0.0)
-                rate.sleep()
+                loop['zeros'] += 1
+                if loop['zeros'] >= 5 and not finished.done():
+                    finished.set_result(None)
+                return
+            if handle.is_cancel_requested:
+                profile.cancel()
+            with self.lock:
+                travelled = self.distance - start
+                measured = self.speed
+            # The time that really passed, not 1 / rate_hz: on a busy computer the timer
+            # fires late, and a fixed step stretched the whole profile (bench, 10 Oct:
+            # 22 m instead of 6.5 m). The cap only stops a long stall from jumping the
+            # profile; ego and the spine limit how fast the speed can change anyway.
+            now = time.monotonic()
+            dt, loop['last'] = min(now - loop['last'], 0.5), now
+            v = profile.step(dt, travelled)
+            self.publish(v, g.curvature)
+            if loop['tick'] % 5 == 0:
+                feedback.phase = profile.phase
+                feedback.commanded_speed = v
+                feedback.measured_speed = measured
+                feedback.distance_travelled = travelled
+                handle.publish_feedback(feedback)
+            loop['tick'] += 1
+
+        timer = self.create_timer(1.0 / self.rate_hz, tick)
+        try:
+            await finished
         finally:
-            self.destroy_rate(rate)
+            self.destroy_timer(timer)
             self.busy = False
 
         result = ScriptedDrive.Result()
@@ -144,10 +148,8 @@ class ScriptedDriver(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = ScriptedDriver()
-    executor = MultiThreadedExecutor()
-    executor.add_node(node)
     try:
-        executor.spin()
+        rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     except Exception:
