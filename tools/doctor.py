@@ -151,8 +151,8 @@ def main():
             say('WARN', 'Clock', f"{offset:+.1f} s from the car's: RViz will drop data. "
                                  'Sync the clocks (docs/mac.md)')
     elif nodes:
-        say('WARN', 'The car', f'{len(nodes)} nodes, but not ego or twist_mux: is the car '
-                               'stack running?')
+        say('WARN', 'The car', f'{len(nodes)} nodes, but not ego or twist_mux: is this '
+                               'stack running on the car, on Jazzy?')
     else:
         say('WARN', 'The car', 'no nodes visible: is the car on, with the same domain ID?')
 

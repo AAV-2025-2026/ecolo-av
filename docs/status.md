@@ -40,6 +40,7 @@ run yet.
 | Replay of a recorded drive | [[works]] the EKFs match the recording within 0.03 m |
 | Car, with no hardware attached | comes up; only the missing sensors fail the graph check, as expected |
 | The same `pixi.toml` on macOS | resolves; the one known build blocker is fixed; [[untested]] |
+| The same `pixi.toml` on the car's ARM computers, on today's Ubuntu 22.04 | resolves; [[untested]] |
 
 ## Is it all on Jazzy?
 

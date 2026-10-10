@@ -78,6 +78,9 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
 
 - **`ROS_DOMAIN_ID`** for the car and every laptop (any number 0–101 that no one nearby uses).
 - **Spine arming rules** (design doc, Proposed): boot latched, arm on a 0→1 edge.
+- **Move the car to Jazzy** before a laptop can join it (Humble and Jazzy don't mix):
+  try Pixi on today's Ubuntu 22.04 first, then reflash the Orin to JetPack 7.2 after a
+  backup (`docs/platforms.md`).
 - **GPS driver** (B4): `ublox_dgnss` isn't in Pixi. Keep it (apt, on the car only), or
   switch to `ublox`, which Pixi has.
 - **N2:** twist_mux hears `/estop` best-effort, and the joystick sends it once per press.

@@ -4,6 +4,8 @@ channels = ["robostack-jazzy", "conda-forge"]
 name = "aav"
 platforms = [
   "linux-64",
+  # The car's ARM computers (Orin, Pis), for Jazzy on their Ubuntu 22.04 without a reflash.
+  "linux-aarch64",
   # Macs need macOS 14 (Sonoma) or newer: RoboStack's Nav2 is built for it.
   { name = "mac", platform = "osx-arm64", macos = "14.0" },
   { name = "mac-intel", platform = "osx-64", macos = "14.0" },
@@ -18,6 +20,7 @@ lint = { cmd = "tools/lint.sh", description = "Check our Python against ROS's st
 turtle = { cmd = "tools/ros.sh ros2 launch aav_bringup turtle.launch.py", description = "turtlesim as the car" }
 keyboard = { cmd = "tools/ros.sh tools/keyboard.sh", description = "Drive from the keyboard (second terminal)" }
 sim = { cmd = "tools/ros.sh ros2 launch aav_bringup sim.launch.py", description = "Gazebo as the car" }
+car = { cmd = "tools/ros.sh ros2 launch aav_bringup car.launch.py machine:={{ machine }}", args = [{ arg = "machine", default = "all" }], description = "The real car: pixi run car orin (or motor_pi, laptop, all)" }
 view = { cmd = "tools/ros.sh ros2 launch aav_description view.launch.py", description = "The car model in RViz" }
 graph = { cmd = "tools/ros.sh rqt_graph", description = "Live picture of nodes and topics" }
 check = { cmd = "tools/ros.sh python3 tools/check_graph.py --profile {{ profile }}", args = [{ arg = "profile", default = "turtle" }], description = "Running graph vs the contract: pixi run check [turtle|sim|car|replay]" }
@@ -66,7 +69,7 @@ flask-socketio = ">=5.7.0,<6"
 scipy = ">=1.18.1,<2"
 ros-jazzy-topic-tools = ">=1.3.4,<2"
 
-[target.linux-64.dependencies]
+[target.linux.dependencies]   # SocketCAN is Linux-only
 ros-jazzy-ros2-socketcan = ">=1.4.0,<2"
 
 [feature.docs.dependencies]

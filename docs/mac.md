@@ -47,6 +47,11 @@ Hold `i` to drive.
 
 ## Join the car's network
 
+!!! warning "The car must run Jazzy too"
+  Today's car runs the 2025-26 software on ROS 2 Humble, and Humble and Jazzy don't
+  mix. Put this stack on the car first: [Platforms](platforms.md) shows how, with or
+  without a reflash.
+
 | # | Do this | Why |
 |---|---|---|
 | 1 | Join the car's own WiFi router | campus WiFi blocks the traffic ROS uses to find other computers |

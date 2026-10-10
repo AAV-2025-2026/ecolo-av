@@ -7,8 +7,8 @@ official packages. On a Mac or any other Linux, use Pixi: see [Run it](run.md).
 
 | Computer | OS | Jazzy from |
 |---|---|---|
-| Jetson AGX Orin | JetPack 7.2 (Ubuntu 24.04) | apt. JetPack 6 is Ubuntu 22.04, so reflash first, after a backup. |
-| Raspberry Pi 4 or 5 | Ubuntu 24.04 Server (arm64) | apt |
+| Jetson AGX Orin | JetPack 7.2 (Ubuntu 24.04) | apt. JetPack 6 is Ubuntu 22.04, so reflash first, after a backup. To try it before then: Pixi, below. |
+| Raspberry Pi 4 or 5 | Ubuntu 24.04 Server (arm64) | apt; or Pixi on today's OS, below |
 | Linux laptop | Ubuntu 24.04 | apt, or Pixi |
 | Mac | macOS 14 or newer | Pixi: [Your Mac](mac.md) |
 | oirp-spss | AlmaLinux 9 | Pixi, with no admin rights |
@@ -76,13 +76,31 @@ to today's ESP32. The files in `src/aav_bringup/config/machines/` say what runs 
 | `laptop.yaml` | the joystick, on the safety driver's laptop |
 | `all.yaml` | everything on one computer, for the bench |
 
-On each computer, run `ros2 launch aav_bringup car.launch.py machine:=<its file>`.
+On each computer, run `ros2 launch aav_bringup car.launch.py machine:=<its file>`, or
+`pixi run car <its file>` with Pixi.
 
 !!! warning "The first hardware test"
   Wheels off the ground, the e-stop in reach, and a low speed limit in `ego.yaml`. Check
   that positive steering turns left, that the throttle goes the right way, and that the
   car stops when you release the deadman and when you kill the bridge. Today's firmware
   fails the last one: see [Firmware](firmware.md).
+
+## Try Jazzy on the car before the reflash
+
+Pixi also runs on the car's ARM computers, on the Ubuntu 22.04 they have now. So the
+team can try this stack on the car first, and reflash later. It resolves, but is
+untested on the car.
+
+1. Stop the 2025-26 software: it is Humble, and Humble and Jazzy don't mix.
+2. On the Orin and the Motor Pi, install Pixi and copy the code, as on
+   [Your Mac](mac.md) (steps 2 to 4).
+3. Run `pixi run car orin` on the Orin, and `pixi run car motor_pi` on the Motor Pi.
+
+| | Pixi on today's Ubuntu 22.04 | Reflash to JetPack 7.2 |
+|---|---|---|
+| What changes on the car | one folder; delete it to undo | everything: back up first |
+| Disk | about 7 GB on each computer: check the Pis | the new OS |
+| Good for | trying the stack on the car | the long term: apt, and NVIDIA's ROS packages |
 
 ## Moving the Orin to JetPack 7.2
 

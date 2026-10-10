@@ -7,7 +7,7 @@
 <!-- Generated from docs/platforms.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Platforms: Ubuntu, the car&#x27;s computers, networking</h1>
-<div class="meta">5 min read · 6 sections</div></header>
+<div class="meta">6 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="how-it-fits.html">How it fits</a>
 <a href="ros2.html">ROS 2</a>
@@ -25,7 +25,7 @@
 <a href="costmaps.html">Costmaps</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#which-computer-gets-jazzy-how">Which computer gets Jazzy how</a><a href="#ubuntu-2404-install-jazzy">Ubuntu 24.04: install Jazzy</a><a href="#ubuntu-build-this-workspace">Ubuntu: build this workspace</a><a href="#networking-many-computers-one-ros-graph">Networking: many computers, one ROS graph</a><a href="#on-the-car-what-runs-where">On the car: what runs where</a><a href="#moving-the-orin-to-jetpack-72">Moving the Orin to JetPack 7.2</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#which-computer-gets-jazzy-how">Which computer gets Jazzy how</a><a href="#ubuntu-2404-install-jazzy">Ubuntu 24.04: install Jazzy</a><a href="#ubuntu-build-this-workspace">Ubuntu: build this workspace</a><a href="#networking-many-computers-one-ros-graph">Networking: many computers, one ROS graph</a><a href="#on-the-car-what-runs-where">On the car: what runs where</a><a href="#try-jazzy-on-the-car-before-the-reflash">Try Jazzy on the car before the reflash</a><a href="#moving-the-orin-to-jetpack-72">Moving the Orin to JetPack 7.2</a></nav>
 <div class="lead"><p>Every computer runs ROS 2 Jazzy. On the car's computers that means Ubuntu 24.04 with the
 official packages. On a Mac or any other Linux, use Pixi: see <a href="run.html">Run it</a>.</p></div>
 <section class="card"><h2 id="which-computer-gets-jazzy-how">Which computer gets Jazzy how</h2>
@@ -41,12 +41,12 @@ official packages. On a Mac or any other Linux, use Pixi: see <a href="run.html"
 <tr>
 <td>Jetson AGX Orin</td>
 <td>JetPack 7.2 (Ubuntu 24.04)</td>
-<td>apt. JetPack 6 is Ubuntu 22.04, so reflash first, after a backup.</td>
+<td>apt. JetPack 6 is Ubuntu 22.04, so reflash first, after a backup. To try it before then: Pixi, below.</td>
 </tr>
 <tr>
 <td>Raspberry Pi 4 or 5</td>
 <td>Ubuntu 24.04 Server (arm64)</td>
-<td>apt</td>
+<td>apt; or Pixi on today's OS, below</td>
 </tr>
 <tr>
 <td>Linux laptop</td>
@@ -172,7 +172,8 @@ to today's ESP32. The files in <code>src/aav_bringup/config/machines/</code> say
 </tr>
 </tbody>
 </table></div>
-<p>On each computer, run <code>ros2 launch aav_bringup car.launch.py machine:=&lt;its file&gt;</code>.</p>
+<p>On each computer, run <code>ros2 launch aav_bringup car.launch.py machine:=&lt;its file&gt;</code>, or
+<code>pixi run car &lt;its file&gt;</code> with Pixi.</p>
 <div class="admonition warning">
 <p class="admonition-title">The first hardware test</p>
 <p>Wheels off the ground, the e-stop in reach, and a low speed limit in <code>ego.yaml</code>. Check
@@ -180,6 +181,43 @@ that positive steering turns left, that the throttle goes the right way, and tha
 car stops when you release the deadman and when you kill the bridge. Today's firmware
 fails the last one: see <a href="firmware.html">Firmware</a>.</p>
 </div>
+</section>
+<section class="card"><h2 id="try-jazzy-on-the-car-before-the-reflash">Try Jazzy on the car before the reflash</h2>
+<p>Pixi also runs on the car's ARM computers, on the Ubuntu 22.04 they have now. So the
+team can try this stack on the car first, and reflash later. It resolves, but is
+untested on the car.</p>
+<ol>
+<li>Stop the 2025-26 software: it is Humble, and Humble and Jazzy don't mix.</li>
+<li>On the Orin and the Motor Pi, install Pixi and copy the code, as on
+   <a href="mac.html">Your Mac</a> (steps 2 to 4).</li>
+<li>Run <code>pixi run car orin</code> on the Orin, and <code>pixi run car motor_pi</code> on the Motor Pi.</li>
+</ol>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Pixi on today's Ubuntu 22.04</th>
+<th>Reflash to JetPack 7.2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What changes on the car</td>
+<td>one folder; delete it to undo</td>
+<td>everything: back up first</td>
+</tr>
+<tr>
+<td>Disk</td>
+<td>about 7 GB on each computer: check the Pis</td>
+<td>the new OS</td>
+</tr>
+<tr>
+<td>Good for</td>
+<td>trying the stack on the car</td>
+<td>the long term: apt, and NVIDIA's ROS packages</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="moving-the-orin-to-jetpack-72">Moving the Orin to JetPack 7.2</h2>
 <p>It's a reflash, not an upgrade:</p>
