@@ -29,6 +29,7 @@ Reading notes:
 - [Jazzy, packages, Gazebo vs CARLA, RViz and rqt](#jazzy-packages-gazebo-vs-carla-rviz-and-rqt)
 - [Documentation requests and the hardware list](#documentation-requests-and-the-hardware-list)
 - [Overnight into 10 October: Jazzy, the Mac and the car](#overnight-into-10-october-jazzy-the-mac-and-the-car)
+- [10 October, evening: chips, Rust, Embassy and tools](#10-october-evening-chips-rust-embassy-and-tools)
 - [Open threads](#open-threads)
 
 ## The inherited repos and what we found
@@ -936,6 +937,78 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 
 - Built: `aav_gazebo` with two worlds, `empty` and `test_lot`. In the empty world, Nav2 reached goals 8 m and 9.5 m away. The car's numbers in `vehicle.yaml` are still guesses until someone measures the car. ([Simulation](../simulation.md))
 
+## 10 October, evening: chips, Rust, Embassy and tools
+
+### Does the Gazebo sim have ego in the middle? Are we still downloading? What happened to auto-compact at 50%? (16:34)
+
+- **Ego:** yes. In `pixi run sim`, every driver goes through twist_mux and ego, then `gazebo_adapter` and Gazebo's Ackermann steering. Only the step after ego changes between Gazebo, the bench and the car.
+- **The download:** finished at 16:13, merged and tested.
+- **Auto-compact:** a Claude Code setting in each computer's `~/.claude/settings.json`; only the server had it. Claude copied the server's file to the Mac.
+
+### I'll put you on the network with the hardware at some point, to audit it yourself. (16:42)
+
+- The plan: read-only first. Find the devices, take each computer's inventory over SSH, copy what only the Orin has, compare with the contract, then report. Nothing that drives, arms, flashes or reboots without Ben's OK.
+- Done beforehand: the stand-ins (`turtle`, `sim`, `bench`, `view`) stay on their own computer, so a pretend car can't reach the real one ([Simulation](../simulation.md)).
+
+### Can the bare-metal chips (ESP32, Pico 2, STM32, Arduino) still join ROS 2, if we don't use rust-ros? (16:55)
+
+- **Yes, and they already do.** The chip never runs ROS. It talks over a plain wire, and a small ROS node on a Linux computer translates: UART to `legacy_uart_bridge`, UDP to `encoder_udp`, and CAN to `spine_bridge` next. ([Firmware](../firmware.md), with a picture.)
+- **rclrs can't run on those chips anyway:** it needs a full operating system.
+- **micro-ROS** puts a ROS library in C on the chip, but still needs an "agent" on Linux: a bridge either way. The 2024-25 team's Motor-Control used it; the 2025-26 team moved to the UART bridge.
+
+### For the hardware interfaces, I'd like Rust instead of C or C++. Is that possible? (17:03)
+
+- **Yes: it's already the rule** (Ben, 10 Oct). The spine's device drivers are written in Rust: the Jrk G2s, the throttle DAC, the expander and the RC receiver (98 tests).
+- **On the microcontrollers:** `no_std` Rust, against embedded-hal 1.0.
+- **On Linux:** a Rust ROS node with rclrs works for a device on USB or serial; Ben's `aav_imu_yahboom` is one. Pins on a Pi's header work too, through `rppal` or `linux-embedded-hal`, with the same drivers.
+- **Still C or C++:** the stock ROS drivers we reuse (the GPS, the cameras, the radar), and the 2025-26 boards until each one's Rust version replaces it.
+
+### Does Rust compile for Arduino, the ESP32, the Pico, a Pi 4 and a Pi 5? We still want ROS 2; we just want the low-level interfaces handled safely. (17:03)
+
+- **Pi 4, Pi 5 and the Orin:** yes, ordinary Rust on Linux. They run ROS 2 nodes, in Python or in Rust.
+- **ESP32:** yes. Today's (Xtensa) needs Espressif's `espup` toolchain; the C3 and C6 (RISC-V) use standard Rust.
+- **Pico 2:** yes. All seven firmware crates already build for it in `pixi run test`.
+- **Arduino:** the ARM boards, yes. The Uno and Nano (AVR) only partly: nightly Rust, and tiny chips.
+- **The split:** ROS 2 runs on the Linux computers; the chips handle the low-level parts in Rust and talk to ROS through bridges.
+
+### Embassy sounds interesting. Where does it fit, with Linux staying on the Pi and the Orin? The sensors and actuators should poll the hardware in Rust, and the consumers should be ROS 2 nodes. (17:03)
+
+- **Embassy is for microcontrollers only:** it's an async framework for chips with no operating system (Pico 2, STM32, ESP32). On Linux, Rust uses threads or Tokio instead.
+- **Where it fits:** the spine (the RC receiver, the e-stop, `spine-core` every 10 ms, the actuators, CAN), the wheel encoder, the status display, and any new sensor board.
+- **Ben's idea is the design:** an Embassy board polls at a steady rate, sends each reading over CAN or Ethernet (UDP), and a bridge node publishes it as a standard ROS message. robot_localization subscribes to the topic, like any other.
+- **Which wire:** CAN for the spine (short messages that must get through); UDP over Ethernet for sensor boards; USB serial for devices that plug into a computer.
+- **Next step, when a new board is designed:** one shared Rust crate per wire format, as `spine-core` does for CAN, so the firmware and the bridge can't disagree.
+
+### Should we create a vendor directory for ros2-src and ros2-rust, with their examples? (17:03)
+
+- **Yes, done:** `vendor/` in `aav`. Only the lists are in git: `vendor/ros2-src.repos` (121 repositories) and `vendor/ros2-rust.repos` (9), each at an exact commit. `pixi run vendor` downloads them again.
+- `vendor/COLCON_IGNORE` keeps them out of the build, and `tools/test.sh` checks it.
+
+### Can we add an MCP server to this project, for Claude or another LLM? (17:03)
+
+- **Yes.** A small program that an AI app starts on this computer, offering tools it can call: read the docs and the contract, list the live graph, read one message, run the tests.
+- **Safety first:** read-only, on this computer only. Nothing that publishes to the car. Later, bench-only actions, through the `--local` stand-ins.
+- Proposed, not built yet: see the open threads.
+
+### Put a CLAUDE.md in the root that explains what everything is and what's ours, so we don't waste time on old code. (17:03)
+
+- **Done:** `~/Code/aav/CLAUDE.md`. It maps every 2025-26 folder to what replaced it in `aav`, lists the other folders, and repeats the rules: work only in `aav`, never copy the leaked secrets.
+
+### "Shall I add the slim per-machine environments (Orin, Motor Pi, laptop) to pixi.toml?" What does that actually mean? (17:03)
+
+- **Today:** one big Pixi environment, about 4 GB: ROS 2 desktop, Gazebo, Nav2, RViz, Rust. Every computer gets all of it.
+- **Slim environments:** one per computer, with only the packages its machine file runs. The Orin skips Gazebo and RViz; the Motor Pi gets little more than Python ROS and the two legacy bridges; a laptop gets the viewing tools.
+- **When:** when the first car computer gets Pixi (Phase 0). On Macs nothing changes.
+
+### Add the first-day steps to a README in aav/aav. (17:03)
+
+- **Done:** `README.md` has the six steps, how long each takes, and the same steps as commands.
+
+### The scp seems done, but what about the last file? (17:03)
+
+- It didn't finish by itself: Claude stopped it at 16:13, in the middle of a file. It was copying the server's Linux build output, which a Mac can't use.
+- The half-copied file is in `~/Code/aav/aav-linux-build-output/`, with the rest of that output. Everything that matters came by rsync and was checked: 0 files missing, 0 different.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
@@ -944,7 +1017,9 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **Ben's Mac:** works, 10-10: build, tests, the turtle, Gazebo headless, Nav2, the Rust listener, the docs. Our version, `aav/aav`, is complete on the Mac since 16:13, with every commit from the `~/aav` clone merged in, and it builds and tests green. Gazebo's window works on the Mac: Ben saw the screenshots, and in `pixi run sim` every driver goes through twist_mux and ego (16:34). Left: look at RViz and rqt_graph.
 - **Bench mode and perception (10-10 afternoon):** the whole car graph runs on the Mac with stand-ins (`pixi run bench`, `bench-check` 7 of 7); YOLO stops the car at stop signs on the bench; the spine's device drivers are in Rust; the HUD's back end is on our topics. Waiting on Ben: commit his server work, then perception and the bench join `car.launch.py`'s machine files. Waiting on the team: the spine's chip, three firmware decisions, `best.pt`, the lane finder.
 - **Claude on the car's network (Ben, 10-10 16:42):** Ben will put Claude on the network with the hardware, to audit it directly. The plan is read-only first: find the devices, take each computer's inventory, copy what only the Orin has, and compare with our contract. Done beforehand: the stand-ins stay on their own computer (`tools/ros.sh --local`).
-- **`.gitignore` and `vendor/`:** a fuller `.gitignore` is drafted; a `vendor/` folder (a `.repos` list in git, the source out of it) is proposed; pruning the app's snapshots from `.git` waits on Ben.
+- **`.gitignore` and `vendor/`:** both done: the fuller `.gitignore` (d397a73), and `vendor/` (10-10 evening: the lists in git, the source out of it). Pruning the app's snapshots from `.git` waits on Ben.
+- **An MCP server (Ben, 10-10 17:03):** proposed: a read-only server in `tools/`, over stdio, so Claude or another LLM can read the docs, the contract and the live graph, and run the tests. Bench-only actions later; nothing that reaches the car.
+- **Slim per-machine Pixi environments:** for the Orin, the Motor Pi and laptops, matching the machine files. Waits until the first car computer gets Pixi (Phase 0).
 - **Running today:** the inventory commands haven't been run on the car's computers.
 - **2024–25 repos:** cloning and surveying `emergency-stop`, `Simulation`, `camera_Yolo_detection`, `Braking` and `Power-Management-Documentation-2024-25` was offered, not done. Only `GNSS` has been read in depth.
 - **`ros2-rust/`:** keep or delete is undecided; the recommendation is keep.

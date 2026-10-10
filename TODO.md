@@ -19,10 +19,10 @@ folder downloaded, and moves into it as a fast-forward.
       *The driver page and the costmap exercise were run as written, in a scratch copy.*
 - [x] **`.gitignore` in `aav/aav`:** restored at 12:35. *The app's per-message snapshots
       were taking in the Linux `.pixi` files as scp copied them.*
-- [ ] **A `.gitignore` for every kind of code.** *Draft ready and tested; apply it once
-      `aav/aav` has fully arrived.*
-- [ ] **A `vendor/` folder** for downloaded source: commit an 18 KB `.repos` list (121
-      repos, exact commits), not the 546 MB. *Proposed.*
+- [x] **A `.gitignore` for every kind of code.** *Applied in d397a73.*
+- [x] **A `vendor/` folder** for downloaded source (Ben, 17:03): `vendor/ros2-src.repos`
+      (121 repos) and `vendor/ros2-rust.repos` (9), at exact commits, in git; the 559 MB
+      out of it. `pixi run vendor` downloads; `tools/test.sh` checks `COLCON_IGNORE`.
 - [ ] **Prune the snapshots from `aav/aav/.git`** (149 MB down to about 1 MB)? *Ben to
       decide: it removes the app's undo points.*
 - [x] **Move today's commits from `~/aav` into `aav/aav`** once the download finishes.
@@ -57,6 +57,10 @@ folder downloaded, and moves into it as a fast-forward.
 - [ ] **Find `best.pt`**, the 2024-25 stop-sign model, and the 2025-26 lane finder.
 - [ ] **The HUD app's small changes** (docs/hud.md).
 - [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
+- [x] **The first-day steps in `README.md`** (Ben, 17:03).
+- [x] **`~/Code/aav/CLAUDE.md`:** every old folder, and what replaced it in `aav` (Ben, 17:03).
+- [ ] **An MCP server** (Ben, 17:03): read-only first, over stdio. *Proposed.*
+- [ ] **Slim per-machine Pixi environments** (Orin, Motor Pi, laptop): at Phase 0.
 - [ ] **Claude on the car's network** (Ben, 16:42: "at some point"): a read-only audit of
       the hardware. *Ready: the stand-ins stay on their own computer (`tools/ros.sh
       --local`, checked by `tools/test.sh`), so nothing pretend can reach the car.*
