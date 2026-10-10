@@ -31,7 +31,8 @@ folder downloaded, and moves into it as a fast-forward.
       uncommitted work is intact, and 55 commits fast-forwarded in. The Linux `.pixi`,
       `install` and Rust `target` went to `~/Code/aav/aav-linux-build-output`, not deleted.
       Built (25 packages, Ben's `aav_imu_yahboom` too) and tested green on the Mac.*
-- [ ] **Look at Gazebo's window, RViz and rqt_graph on the Mac**, and say what they show.
+- [x] **Gazebo's window on the Mac:** Ben saw the screenshots (16:34).
+- [ ] **Look at RViz and rqt_graph on the Mac**, and say what they show.
 - [ ] **The small fixes** listed at the end of `docs/work.md`.
 
 ## This afternoon (10-10): "merge in all of this", then "stub in the rest"
@@ -56,6 +57,9 @@ folder downloaded, and moves into it as a fast-forward.
 - [ ] **Find `best.pt`**, the 2024-25 stop-sign model, and the 2025-26 lane finder.
 - [ ] **The HUD app's small changes** (docs/hud.md).
 - [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
+- [ ] **Claude on the car's network** (Ben, 16:42: "at some point"): a read-only audit of
+      the hardware. *Ready: the stand-ins stay on their own computer (`tools/ros.sh
+      --local`, checked by `tools/test.sh`), so nothing pretend can reach the car.*
 
 ## Tonight
 
