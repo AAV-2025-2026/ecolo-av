@@ -46,7 +46,7 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       - Run it: turtle, keyboard, Gazebo
       - src vs firmware; one interface, several drivers (the IMU example)
 - [x] **Email progress** to cmail, red and white, every few hours and when something lands.
-      *Sent at 22:49, 03:50, 04:10 (the morning summary, with the PDF) and 04:35 (the car
+      *Sent at 22:49, 03:50, 04:07 (the morning summary, with the PDF) and 04:17 (the car
       must run Jazzy before a Mac can join it).*
 - [x] **Naming and code style** for all code. Inherited code is ours to edit now.
       *Done: `docs/conventions.md`, `pixi run lint` passes. Renaming the inherited
