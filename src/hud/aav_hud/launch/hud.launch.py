@@ -2,7 +2,7 @@
 The HUD's back end, for the touchscreen app (hud/flutter_pi).
 
   ros2 launch aav_hud hud.launch.py
-  ros2 launch aav_hud hud.launch.py gps:=/gps/fix    # raw GPS: no localization running
+  ros2 launch aav_hud hud.launch.py gps_topic:=/gps/fix    # raw GPS: no localization
 
 Then start the app: it connects to 127.0.0.1:5000. Parameters: config/hud_server.yaml.
 The camera, in a browser on the same computer: http://127.0.0.1:5000/camera/stream
@@ -19,7 +19,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument(
-            'gps', default_value='/gps/filtered',
+            'gps_topic', default_value='/gps/filtered',
             description='Where the car on the map comes from: /gps/filtered or /gps/fix'),
         Node(
             package='aav_hud',
@@ -29,6 +29,6 @@ def generate_launch_description():
                 PathJoinSubstitution([FindPackageShare('aav_hud'), 'config', 'hud_server.yaml']),
                 {'use_sim_time': LaunchConfiguration('use_sim_time')},
             ],
-            remappings=[('/gps/filtered', LaunchConfiguration('gps'))],
+            remappings=[('/gps/filtered', LaunchConfiguration('gps_topic'))],
         ),
     ])

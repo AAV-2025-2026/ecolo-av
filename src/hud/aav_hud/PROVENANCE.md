@@ -86,3 +86,6 @@ The Socket.IO events the app listens for keep their names and keys:
 - Dropped `real_speed_update`, `real_gps_update`, `real_stop_sign_alert` and
   `real_gear_update`: the app never listened for them. Their gear codes also disagreed
   with the 2025-26 RTOS (the back end said 0 = drive, the RTOS 0 = park).
+- 2026-10-10: `launch/hud.launch.py`: the launch argument `gps` is now `gps_topic`.
+  Included launch files share their arguments, and bench.launch.py's localization takes
+  `gps:=true`, so the HUD subscribed to a topic called `/true`.
