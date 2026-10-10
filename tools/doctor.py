@@ -118,7 +118,9 @@ def main():
     if not addrs:
         say('FIX', 'Network', "no network address: join the car's WiFi")
     elif any(a.startswith(CAR_SUBNET) for a in addrs):
-        say('OK', 'Network', ', '.join(addrs))
+        # Many home routers use this range too: only "The car" below proves it's the car.
+        say('OK', 'Network', f'{", ".join(addrs)}: in the car\'s range ({CAR_SUBNET}x), as '
+                             'many home routers are. "The car" below confirms it')
     else:
         say('WARN', 'Network', f'{", ".join(addrs)}: the car used {CAR_SUBNET}x. '
                                'On its WiFi?')

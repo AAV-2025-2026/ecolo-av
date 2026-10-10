@@ -132,12 +132,18 @@ topics:
     pub: [radar, mock_radar]
     sub: [radar_clusters]
     live: [bench]
-    note: The TI radar's points, in radar_link. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor.
+    note: The TI radar's points, in radar_link. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor.
   /battery_status:
     type: sensor_msgs/msg/BatteryState
-    pub: [battery_monitor, mock_battery]
+    pub: [battery_state_publisher, mock_battery]
     sub: []
     live: [bench]
+    note: battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).
+  /battery_monitor_heartbeat:
+    type: std_msgs/msg/String
+    pub: [heartbeat_publisher]
+    sub: []
+    note: battery_monitor's sign of life.
   /camera/image_raw:
     type: sensor_msgs/msg/Image
     pub: [usb_cam, mock_camera, test_camera]
@@ -267,10 +273,10 @@ topics:
     note: map -> odom (ekf_global), odom -> base_link (ekf_local), moving joints (robot_state_publisher).
   /tf_static:
     type: tf2_msgs/msg/TFMessage
-    pub: [robot_state_publisher]
+    pub: [robot_state_publisher, map_to_odom_no_gps]
     sub: []
     live: [turtle, sim, car, replay, bench]
-    note: base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF.
+    note: base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF. With gps:=false, map_to_odom_no_gps adds a fixed map -> odom.
   /robot_description:
     type: std_msgs/msg/String
     pub: [robot_state_publisher]

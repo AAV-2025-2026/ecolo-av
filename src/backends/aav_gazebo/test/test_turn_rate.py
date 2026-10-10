@@ -2,9 +2,15 @@ import math
 
 import pytest
 
-pytest.importorskip('rclpy')   # the module imports ROS messages; runs under colcon test
+# Not pytest.importorskip: ROS's launch_testing plugin turns a module-level skip into a
+# skip of the whole folder (CLAUDE.md). The module imports ROS messages, so without ROS
+# these tests skip one by one; colcon test runs them.
+try:
+    from aav_gazebo.gazebo_adapter import turn_rate
+except ImportError:
+    turn_rate = None
 
-from aav_gazebo.gazebo_adapter import turn_rate  # noqa: E402, I100
+pytestmark = pytest.mark.skipif(turn_rate is None, reason='needs ROS: run it with colcon test')
 
 
 def test_straight_and_stopped():

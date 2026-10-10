@@ -329,23 +329,23 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 </tr>
 <tr>
 <td>The contract credits <code>/battery_status</code> to <code>battery_monitor</code>; the node is <code>battery_state_publisher</code>, and <code>/battery_monitor_heartbeat</code> is missing</td>
-<td>to do</td>
+<td>fixed</td>
 </tr>
 <tr>
 <td>The static map → odom used with <code>gps:=false</code> isn't in the contract's <code>/tf_static</code></td>
-<td>to do</td>
+<td>fixed: <code>map_to_odom_no_gps</code></td>
 </tr>
 <tr>
 <td><code>/radar/points</code> is best-effort; the contract doesn't say</td>
-<td>to do</td>
+<td>fixed</td>
 </tr>
 <tr>
 <td><code>firmware/spine/Cargo.toml</code> points to a README that doesn't exist</td>
-<td>to do</td>
+<td>fixed: the comment changed, and <code>firmware/spine/README.md</code> exists</td>
 </tr>
 <tr>
 <td><code>aav_gazebo</code>'s test skips at module level, which <code>CLAUDE.md</code> says not to do</td>
-<td>to do</td>
+<td>fixed</td>
 </tr>
 <tr>
 <td>The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app</td>
@@ -353,7 +353,7 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 </tr>
 <tr>
 <td><code>car gps:=false</code> still starts the GPS driver when the machine file says <code>gps: true</code></td>
-<td>to do</td>
+<td>to do, once Ben's edits to <code>car.launch.py</code> are committed</td>
 </tr>
 <tr>
 <td>Ctrl-C makes our Python nodes print an error while they shut down (Ctrl-C arrives twice)</td>
@@ -361,11 +361,11 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 </tr>
 <tr>
 <td>Rust builds on a Mac warn: the libraries are for macOS 14, Rust aims at macOS 11</td>
-<td>to do</td>
+<td>fixed: <code>MACOSX_DEPLOYMENT_TARGET=14.0</code> on Macs</td>
 </tr>
 <tr>
 <td><code>pixi run doctor</code> says "Network OK" on any 192.168.1.x network, like a home router</td>
-<td>to do</td>
+<td>fixed: it says only "The car" check proves it</td>
 </tr>
 </tbody>
 </table></div></section>

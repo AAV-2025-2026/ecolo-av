@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">10 min read · 4 sections</div></header>
+<div class="meta">11 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -219,15 +219,23 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>radar</code>, <code>mock_radar</code></td>
 <td><code>radar_clusters</code></td>
 <td>bench</td>
-<td>The TI radar's points, in radar_link. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor.</td>
+<td>The TI radar's points, in radar_link. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor.</td>
 </tr>
 <tr>
 <td><code>/battery_status</code></td>
 <td><code>sensor_msgs/msg/BatteryState</code></td>
-<td><code>battery_monitor</code>, <code>mock_battery</code></td>
+<td><code>battery_state_publisher</code>, <code>mock_battery</code></td>
 <td>-</td>
 <td>bench</td>
-<td></td>
+<td>battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).</td>
+</tr>
+<tr>
+<td><code>/battery_monitor_heartbeat</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>heartbeat_publisher</code></td>
+<td>-</td>
+<td>-</td>
+<td>battery_monitor's sign of life.</td>
 </tr>
 <tr>
 <td><code>/camera/image_raw</code></td>
@@ -400,10 +408,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/tf_static</code></td>
 <td><code>tf2_msgs/msg/TFMessage</code></td>
-<td><code>robot_state_publisher</code></td>
+<td><code>robot_state_publisher</code>, <code>map_to_odom_no_gps</code></td>
 <td>-</td>
 <td>turtle, sim, car, replay, bench</td>
-<td>base_link -&gt; chassis and every sensor frame, from vehicle.yaml through the URDF.</td>
+<td>base_link -&gt; chassis and every sensor frame, from vehicle.yaml through the URDF. With gps:=false, map_to_odom_no_gps adds a fixed map -&gt; odom.</td>
 </tr>
 <tr>
 <td><code>/robot_description</code></td>

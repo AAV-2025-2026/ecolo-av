@@ -27,8 +27,9 @@ Check a running system against it with `pixi run check <turtle|sim|car|replay|be
 | `/imu/mag` | `sensor_msgs/msg/MagneticField` | `imu_node`, `mock_imu` | `imu_filter_madgwick` | bench | Raw counts from imu_node (not tesla yet); tesla from mock_imu. The filter ignores it (use_mag false). |
 | `/imu/data` | `sensor_msgs/msg/Imu` | `imu_filter_madgwick` | `ekf_local`, `ekf_global` | sim, car, replay, bench | Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only. |
 | `/gps/fix` | `sensor_msgs/msg/NavSatFix` | `ublox_nav_sat_fix_hp`, `gazebo_adapter`, `mock_gps` | `navsat_transform` | sim, car, replay, bench | Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS). |
-| `/radar/points` | `sensor_msgs/msg/PointCloud2` | `radar`, `mock_radar` | `radar_clusters` | bench | The TI radar's points, in radar_link. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor. |
-| `/battery_status` | `sensor_msgs/msg/BatteryState` | `battery_monitor`, `mock_battery` | - | bench |  |
+| `/radar/points` | `sensor_msgs/msg/PointCloud2` | `radar`, `mock_radar` | `radar_clusters` | bench | The TI radar's points, in radar_link. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor. |
+| `/battery_status` | `sensor_msgs/msg/BatteryState` | `battery_state_publisher`, `mock_battery` | - | bench | battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable). |
+| `/battery_monitor_heartbeat` | `std_msgs/msg/String` | `heartbeat_publisher` | - | - | battery_monitor's sign of life. |
 | `/camera/image_raw` | `sensor_msgs/msg/Image` | `usb_cam`, `mock_camera`, `test_camera` | `yolo_detector`, `hud_server` | bench | The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. mock_camera draws the bench world; test_camera publishes a file. |
 | `/camera/camera_info` | `sensor_msgs/msg/CameraInfo` | `usb_cam`, `mock_camera`, `test_camera` | - | bench | The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). |
 | `/radar/clusters` | `sensor_msgs/msg/PointCloud2` | `radar_clusters` | - | bench | The radar points DBSCAN grouped into objects, coloured by cluster. |
@@ -50,7 +51,7 @@ Check a running system against it with `pixi run check <turtle|sim|car|replay|be
 | `/goal_pose` | `geometry_msgs/msg/PoseStamped` | `rviz2` | `bt_navigator` | - | RViz "2D Goal Pose" starts a navigate_to_pose. |
 | `/plan` | `nav_msgs/msg/Path` | `planner_server` | - | - | The planned path, for RViz/Foxglove. |
 | `/tf` | `tf2_msgs/msg/TFMessage` | `ekf_local`, `ekf_global`, `robot_state_publisher` | - | turtle, sim, car, replay, bench | map -> odom (ekf_global), odom -> base_link (ekf_local), moving joints (robot_state_publisher). |
-| `/tf_static` | `tf2_msgs/msg/TFMessage` | `robot_state_publisher` | - | turtle, sim, car, replay, bench | base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF. |
+| `/tf_static` | `tf2_msgs/msg/TFMessage` | `robot_state_publisher`, `map_to_odom_no_gps` | - | turtle, sim, car, replay, bench | base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF. With gps:=false, map_to_odom_no_gps adds a fixed map -> odom. |
 | `/robot_description` | `std_msgs/msg/String` | `robot_state_publisher` | - | turtle, sim, car, replay, bench |  |
 | `/clock` | `rosgraph_msgs/msg/Clock` | `gz_bridge` | - | sim, replay | Simulation time; every node runs with use_sim_time:=true in sim and replay. |
 

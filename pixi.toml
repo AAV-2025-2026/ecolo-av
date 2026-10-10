@@ -95,6 +95,11 @@ ros-jazzy-usb-cam = ">=0.8.1,<0.9"
 [target.osx.dependencies]
 coreutils = ">=9.12,<10"
 
+# Macs: the ROS libraries are built for macOS 14, and Rust aims at macOS 11 unless told,
+# so every Rust link warned. pixi.toml already needs macOS 14 (see platforms above).
+[target.osx.activation.env]
+MACOSX_DEPLOYMENT_TARGET = "14.0"
+
 [feature.docs.dependencies]
 markdown = ">=3.11,<4"
 pymdown-extensions = ">=12.1,<13"
