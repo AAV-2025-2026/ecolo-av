@@ -33,6 +33,7 @@ import os
 from pathlib import Path
 import re
 import smtplib
+import socket
 import sys
 
 RED = '#C8102E'
@@ -152,7 +153,8 @@ font-size:15px;line-height:1.45">
 <p style="font-size:16px;margin:10px 0">{html.escape(greeting)} 👋</p>
 {render_body(markdown)}
 <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:8px">
-Sent by a Claude Code session working in the AAV repository on oirp-spss.</p>
+Sent by a Claude Code session working in the AAV repository on
+{html.escape(socket.gethostname().split('.')[0])}.</p>
 </div></body></html>"""
 
 
