@@ -7,7 +7,7 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">6 min read · 7 sections</div></header>
+<div class="meta">7 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
@@ -27,6 +27,7 @@
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a class="here" href="firmware.html">Firmware</a>
+<a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
 <a href="conventions.html">Conventions</a>
 <a href="interfaces.html">Topics</a>
@@ -239,6 +240,9 @@ rejected.</p>
 </tr>
 </tbody>
 </table></div>
+<p>Clean inputs for every board (debounced switches, an e-stop that trips at once, counting
+with a lockout) are in a second crate, <code>aav-inputs</code>. The plan for writing all the firmware
+and drivers in Rust is <a href="rust-firmware.html">Rust on the hardware</a>.</p>
 <p>The ESP32 board code that calls it is <span class="badge b-missing">missing</span>. Hardware facts from today's car:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -331,7 +335,7 @@ rejected.</p>
 <li>what the actuators do when nobody is driving.</li>
 </ul></section>
 <nav class="prevnext"><a class="prev" href="simulation.html"><small>Previous</small>← Simulation</a>
-<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+<a class="next" href="rust-firmware.html"><small>Next</small>Rust firmware →</a></nav>
 </main>
 <footer>Source: <code>docs/firmware.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

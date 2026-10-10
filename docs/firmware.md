@@ -85,6 +85,10 @@ Both sides test against the same generated frames. To change a frame:
 | `limits.rs` | the helpers that apply them: `slew()` and `abs()` |
 | `encoder.rs` | quadrature decoding, and speed from the time between counts |
 
+Clean inputs for every board (debounced switches, an e-stop that trips at once, counting
+with a lockout) are in a second crate, `aav-inputs`. The plan for writing all the firmware
+and drivers in Rust is [Rust on the hardware](rust-firmware.md).
+
 The ESP32 board code that calls it is [[missing]]. Hardware facts from today's car:
 
 | Part | Interface | Today's setting |

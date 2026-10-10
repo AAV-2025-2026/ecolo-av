@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rust on the hardware · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Rust on the hardware</h1>
+<div class="meta">6 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a class="here" href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
+<div class="lead"><p>Ben's direction (10 October 2026): write the firmware and the hardware drivers in Rust,
+not C or C++, even where the ROS nodes above stay in Python. The 2025-26 C++ firmware keeps
+running today's car until a Rust version replaces each board. This page is the plan, and
+what's done so far.</p></div>
+<section class="card"><h2 id="why-rust-at-this-level">Why Rust at this level</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Reason</th>
+<th>What it means here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The same code on the chip and on a laptop</td>
+<td>the logic is plain <code>no_std</code> Rust, so <code>cargo test</code> checks it on any laptop, with no board</td>
+</tr>
+<tr>
+<td>Mistakes caught when it compiles</td>
+<td>no stray pointers, no data races between an interrupt and the main loop</td>
+</tr>
+<tr>
+<td>One driver for every board</td>
+<td>a driver written against <code>embedded-hal</code> runs on an ESP32, a Pico, an STM32, and on the Pi under Linux</td>
+</tr>
+<tr>
+<td>The spine is already Rust</td>
+<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (47 tests)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-runs-where">What runs where</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Hardware</th>
+<th>Runs</th>
+<th>Rust there</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ESP32, Pico 2 (RP2350), STM32, Arduino</td>
+<td>bare metal: no operating system</td>
+<td>a HAL for the chip, plus a small framework (below)</td>
+</tr>
+<tr>
+<td>Raspberry Pi, Jetson Orin</td>
+<td>Linux</td>
+<td>ordinary Rust programs; drivers reach the pins through <code>linux-embedded-hal</code> (or <code>rppal</code> on a Pi)</td>
+</tr>
+<tr>
+<td>Laptops</td>
+<td>macOS or Linux</td>
+<td>the tests, and the simulated hardware</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bare metal on a Pi is possible, but it gives up Linux, ROS and the Pi's drivers. The Pi
+stays on Linux.</p>
+</section>
+<section class="card"><h2 id="the-layers">The layers</h2>
+<p><img alt="The firmware layers" src="../img/rust-firmware.svg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What it is</th>
+<th>Where</th>
+<th>Tested by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logic</td>
+<td>the rules: modes, limits, debouncing, the encoder maths</td>
+<td><code>spine-core</code>, <code>aav-inputs</code></td>
+<td><code>cargo test</code> on a laptop</td>
+</tr>
+<tr>
+<td>Drivers</td>
+<td>one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver, the W5500 Ethernet chip, the display</td>
+<td>crates written against <code>embedded-hal</code> 1.0 (still to write)</td>
+<td><code>embedded-hal-mock</code>, which plays the chip on a laptop</td>
+</tr>
+<tr>
+<td>Boards</td>
+<td>one small program per board: pins, timers, the framework, then a loop that calls the logic</td>
+<td>one crate per board (still to write)</td>
+<td>on the bench, then on the car</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>firmware/spine/</code> is the Cargo workspace for the first two layers. Board crates sit beside
+it, because each needs its chip's toolchain.</p>
+</section>
+<section class="card"><h2 id="the-framework-the-rtos-part">The framework: the "RTOS" part</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>What it is</th>
+<th>Good for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Embassy</strong> (suggested)</td>
+<td>an async framework for microcontrollers: tasks, timers, drivers that wait without blocking. The usual choice for new Rust projects in 2026</td>
+<td>every board here; it supports the RP2350, the ESP32 family (with <code>esp-hal</code>) and STM32</td>
+</tr>
+<tr>
+<td>RTIC 2</td>
+<td>interrupt-driven tasks with fixed priorities, for hard real-time</td>
+<td>Cortex-M chips (Pico 2, STM32), if a timing need appears that Embassy can't meet</td>
+</tr>
+<tr>
+<td>FreeRTOS, through ESP-IDF</td>
+<td>Espressif's operating system, with Rust's standard library</td>
+<td>ESP32 projects that need its WiFi and web stacks</td>
+</tr>
+<tr>
+<td>A plain loop</td>
+<td>read, call the logic, write, repeat</td>
+<td>the simplest boards</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="todays-boards-and-their-rust-versions">Today's boards, and their Rust versions</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Board (2025-26, C++)</th>
+<th>Does</th>
+<th>Rust plan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_umod_esp32</code> (ESP32)</td>
+<td>drives the actuators: steering and brake (Jrk G2), throttle (DAC), the RC receiver</td>
+<td>becomes the spine: <code>spine-core</code> plus a board crate, on the chip the team picks (Q10–Q13)</td>
+</tr>
+<tr>
+<td><code>wheel_encoder_pico2</code> (Pico 2)</td>
+<td>counts wheel spokes, sends them over Ethernet</td>
+<td>Rust on the same Pico 2: <code>aav-inputs</code> (lockout), the encoder maths in <code>spine-core</code>; or the spine reads the sensors itself</td>
+</tr>
+<tr>
+<td><code>aav_sentinel_pico2</code> (Pico 2)</td>
+<td>a status display</td>
+<td>Rust on the same Pico 2, if the display stays</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="toolchains">Toolchains</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Chip</th>
+<th>Rust target</th>
+<th>In Pixi?</th>
+<th>Flashing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pico 2 (RP2350, ARM)</td>
+<td><code>thumbv8m.main-none-eabihf</code></td>
+<td><span class="badge b-works">works</span> <code>spine-core</code> and <code>aav-inputs</code> build for it</td>
+<td>its USB drive (UF2), or <code>probe-rs</code></td>
+</tr>
+<tr>
+<td>STM32-class ARM (Cortex-M4F, M7)</td>
+<td><code>thumbv7em-none-eabihf</code></td>
+<td><span class="badge b-works">works</span> the same two crates build for it</td>
+<td><code>probe-rs</code></td>
+</tr>
+<tr>
+<td>ESP32-C3, C6 (RISC-V)</td>
+<td><code>riscv32imc</code> / <code>riscv32imac</code></td>
+<td><span class="badge b-missing">missing</span> not in Pixi; <code>rustup</code> has them</td>
+<td><code>espflash</code></td>
+</tr>
+<tr>
+<td>Classic ESP32 (today's board)</td>
+<td>Xtensa</td>
+<td><span class="badge b-missing">missing</span> needs Espressif's <code>espup</code> installer</td>
+<td><code>espflash</code></td>
+</tr>
+<tr>
+<td>Arduino (AVR)</td>
+<td><code>avr-*</code></td>
+<td><span class="badge b-missing">missing</span> needs nightly Rust (<code>avr-hal</code>)</td>
+<td><code>ravedude</code></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>An ARM chip (Pico 2 or STM32) keeps the whole toolchain inside Pixi. That's worth
+weighing in Q10–Q13.</p>
+</blockquote>
+</section>
+<section class="card"><h2 id="done-so-far">Done so far</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Crate</th>
+<th>Does</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spine-core</code></td>
+<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames</td>
+<td>47</td>
+</tr>
+<tr>
+<td><code>aav-inputs</code> (10 Oct)</td>
+<td>clean inputs for every board: a <code>Debouncer</code> for switches and buttons, with separate times each way (an e-stop trips at once, and must stay released before it counts), and a <code>Lockout</code> for counting fast signals such as encoder spokes</td>
+<td>9</td>
+</tr>
+</tbody>
+</table></div>
+<p>Both are <code>no_std</code> with no dependencies, pass <code>clippy</code> and <code>rustfmt</code>, and build for the
+Pico 2 and STM32 targets.</p>
+</section>
+<section class="card"><h2 id="next">Next</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>Waits on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The spine's chip</td>
+<td>Q10–Q13</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Embassy or RTIC</td>
+<td>a short trial on a Pico 2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The first driver: the Jrk G2, over I2C, tested with <code>embedded-hal-mock</code></td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The iBUS receiver parser (the RC override) in <code>spine-core</code></td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>5</td>
+<td>A first board crate on a Pico 2: blink, then the encoder sensors through <code>aav-inputs</code></td>
+<td>a Pico 2 on the bench</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="firmware.html"><small>Previous</small>← Firmware</a>
+<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+</main>
+<footer>Source: <code>docs/rust-firmware.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

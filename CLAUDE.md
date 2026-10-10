@@ -46,7 +46,10 @@ These are the conventions decided so far. They apply to people and to Claude ses
   3. then a reasonable stub.
 - **Languages:**
   - Python (rclpy) for every ROS node we write;
-  - Rust (`no_std`) for the spine firmware;
+  - Rust (`no_std`) for all firmware and hardware drivers, not C or C++ (Ben, 10 Oct): the
+    spine first. The 2025-26 C++ boards keep running until each one's Rust version
+    replaces it. Logic goes in crates like `spine-core` and `aav-inputs` (tested on a
+    laptop), drivers against `embedded-hal` 1.0. The plan: `docs/rust-firmware.md`;
   - C++ only for the reused IMU driver.
   - Rust ROS nodes work (`examples/rust-listener`, rclrs from crates.io) but wait until
     the car drives; then port a node where Rust pays off, such as ego.
