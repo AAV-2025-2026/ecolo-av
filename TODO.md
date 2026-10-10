@@ -30,6 +30,8 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       - The live config check of sim, car and replay didn't finish (usage limit): redo it.
 - [ ] **The graph.** Every topic has the right publisher, subscriber, type and QoS.
       Check it live with `tools/check_graph.py` on the turtle run.
+      *Turtle: 0 failures (re-checked 10-10 04:00, after tonight's fixes). Sim, car and
+      replay: the live audit is running.*
 - [x] **Docs as HTML (and PDF)**, short pages, sections, red and white, a picture of how
       it fits together. Markdown stays as the source.
       *Done: `docs/html/index.html` and `pixi run docs` (PDF). Four pictures; pages for
