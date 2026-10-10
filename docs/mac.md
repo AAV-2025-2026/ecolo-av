@@ -80,7 +80,7 @@ clock is off: the car's computers keep the time (the Orin serves it, see
 | Stop everything | `pixi run estop`, then `pixi run estop-clear` when it's safe |
 | The 3D view: map, costmaps, path, the car | `pixi run rviz` |
 | Nodes and topics, live | `pixi run graph` |
-| Be the safety driver's joystick laptop | `pixi run tools/ros.sh ros2 launch aav_bringup car.launch.py machine:=laptop` |
+| Be the safety driver's joystick laptop | `pixi run car laptop` |
 
 !!! warning "Driving the real car"
   The keyboard has priority 90. The safety driver's joystick (100) and the hardware
@@ -119,6 +119,16 @@ terminals and start again: Gazebo's two programs then find each other on the Mac
 4. Display: UTM's GPU-accelerated option (experimental) for RViz. Inside the VM,
    `glxinfo -B` should not say `llvmpipe`.
 5. Inside the VM, install Jazzy as on [Platforms](platforms.md), or use Pixi as above.
+
+## If something breaks
+
+Paste these into Claude (or a team chat), and it can usually say what to fix:
+
+| What | How |
+|---|---|
+| The command, and the last 20 lines it printed | copy them from Terminal |
+| What the doctor says | `pixi run doctor` |
+| Which Mac | `sw_vers; uname -m; pixi --version` |
 
 ## What's been tested
 

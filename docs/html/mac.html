@@ -7,7 +7,7 @@
 <!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your Mac: run it, and drive the car</h1>
-<div class="meta">6 min read · 8 sections</div></header>
+<div class="meta">6 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="how-it-fits.html">How it fits</a>
 <a href="ros2.html">ROS 2</a>
@@ -25,7 +25,7 @@
 <a href="costmaps.html">Costmaps</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
 <div class="lead"><p>Three ways to use a Mac with the car. Use Pixi to run ROS on the Mac itself, and to
 drive. Lichtblick only watches, but needs no setup. Ubuntu in a VM is the fallback.</p></div>
 <section class="card"><h2 id="three-ways">Three ways</h2>
@@ -156,7 +156,7 @@ clock is off: the car's computers keep the time (the Orin serves it, see
 </tr>
 <tr>
 <td>Be the safety driver's joystick laptop</td>
-<td><code>pixi run tools/ros.sh ros2 launch aav_bringup car.launch.py machine:=laptop</code></td>
+<td><code>pixi run car laptop</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -194,6 +194,31 @@ terminals and start again: Gazebo's two programs then find each other on the Mac
    <code>glxinfo -B</code> should not say <code>llvmpipe</code>.</li>
 <li>Inside the VM, install Jazzy as on <a href="platforms.html">Platforms</a>, or use Pixi as above.</li>
 </ol>
+</section>
+<section class="card"><h2 id="if-something-breaks">If something breaks</h2>
+<p>Paste these into Claude (or a team chat), and it can usually say what to fix:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The command, and the last 20 lines it printed</td>
+<td>copy them from Terminal</td>
+</tr>
+<tr>
+<td>What the doctor says</td>
+<td><code>pixi run doctor</code></td>
+</tr>
+<tr>
+<td>Which Mac</td>
+<td><code>sw_vers; uname -m; pixi --version</code></td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="whats-been-tested">What's been tested</h2>
 <div class="table-wrap"><table>
