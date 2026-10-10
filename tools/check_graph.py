@@ -20,7 +20,10 @@ import rclpy
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-IGNORE = {'/parameter_events', '/rosout'}
+# Every ROS system has these. /diagnostics and the */set_pose topics come with
+# robot_localization (the contract lists its set_pose services instead).
+IGNORE = {'/parameter_events', '/rosout', '/diagnostics',
+          '/ekf_local/set_pose', '/ekf_global/set_pose'}
 
 
 def main():
@@ -53,7 +56,9 @@ def main():
         else:
             print(f'-     {name}')
     extra = sorted(set(running) - set(spec['topics']) - IGNORE)
-    extra = [n for n in extra if not n.startswith(('/local_costmap/', '/global_costmap/'))]
+    # Costmap internals, the topics ROS makes inside every action, and turtlesim's own.
+    extra = [n for n in extra if not n.startswith(('/local_costmap/', '/global_costmap/', '/turtle1/'))
+             and '/_action/' not in n]
     if extra:
         print('\nRunning but not in docs/interfaces.yaml:')
         for n in extra:

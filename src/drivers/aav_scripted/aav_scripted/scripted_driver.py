@@ -19,7 +19,7 @@ from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 
 from aav_interfaces.action import ScriptedDrive
@@ -141,8 +141,13 @@ def main(args=None):
     executor.add_node(node)
     try:
         executor.spin()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except Exception:
+        # Ctrl-C reaches a launched node twice (terminal and launch), and Jazzy can then
+        # raise RCLError ("context is not valid"). Only a live context means a real error.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
         rclpy.try_shutdown()

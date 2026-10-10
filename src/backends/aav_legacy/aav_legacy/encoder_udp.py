@@ -15,6 +15,7 @@ import socket
 
 from nav_msgs.msg import Odometry
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
 from aav_legacy.legacy_protocol import encoder_counts, metres_per_count
@@ -77,8 +78,13 @@ def main(args=None):
     node = EncoderUdp()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except Exception:
+        # Ctrl-C reaches a launched node twice (terminal and launch), and Jazzy can then
+        # raise RCLError ("context is not valid"). Only a live context means a real error.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
         rclpy.try_shutdown()

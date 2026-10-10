@@ -16,6 +16,7 @@ fix the clock (chrony) rather than the car stopping for no visible reason.
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist, TwistStamped
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.time import Time
 
@@ -94,8 +95,13 @@ def main(args=None):
     node = Ego()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except Exception:
+        # Ctrl-C reaches a launched node twice (terminal and launch), and Jazzy can then
+        # raise RCLError ("context is not valid"). Only a live context means a real error.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
         rclpy.try_shutdown()
