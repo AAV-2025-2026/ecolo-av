@@ -16,10 +16,9 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       one known build blocker (B921600 in the IMU driver). Left: Ben tries it on his Mac.*
 - [ ] **Port everything to Jazzy as is.** Apply the fixes the audits found (configs,
       inherited code, missing dependencies). Reports: `docs/history/audit-2026-10-10-*.md`.
-      - Spine safety, before any firmware is written:
-        B1 `/spine/arm` must always send the 0→1 edge (spine_bridge.py, `if request.data:`);
-        B2 the spine boots latched (spine.rs `Spine::new`); W1 bridge `cmd_timeout` 0.3 → 0.1;
-        W2 driver faults stop and latch; W3 a separate `max_decel` (≥ 2.5) in SpineConfig.
+      - ~~Spine safety, before any firmware is written~~ *Done 10-10: B1 arming always
+        sends the 0→1 edge; B2 the spine boots latched; W1 `cmd_timeout` 0.1; W2 driver
+        faults stop and latch; W3 `max_decel` 2.5. Each has a test (Rust 47, bridge 4).*
       - Legacy path: steering gain differs left/right (`to_legacy`); `encoder_udp` must go
         quiet, not report 0 m/s, when packets stop; which computer gets the encoder's UDP?
       - pixi.toml: add flask, flask-socketio, scipy, ros-jazzy-topic-tools.

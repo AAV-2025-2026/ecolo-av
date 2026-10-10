@@ -44,12 +44,14 @@ Who wins, highest first:
 | # | Source | When |
 |---|---|---|
 | 1 | Any e-stop: the hardware button, or the `ESTOP_CMD` frame | always: throttle off, full brake |
+| 1 | A driver fault: steering, brake, throttle or encoder | the same |
 | 2 | The RC transmitter | while its override switch is on |
 | 3 | The computer | while armed and sending fresh `DRIVE_CMD` frames |
 | 4 | Nobody | the actuators idle |
 
-After an e-stop or a timeout, the computer must re-arm (`/spine/arm`) before it can drive
-again. A glitch never restarts the car by itself.
+The computer must arm (`/spine/arm`) before it drives: at power-up, and after an e-stop,
+a timeout or a driver fault. Arming sends `armed = 0`, then `armed = 1`. A glitch or a
+reboot never restarts the car by itself.
 
 ## The CAN contract
 
@@ -72,7 +74,7 @@ Both sides test against the same generated frames. To change a frame:
 ## firmware/spine: the Rust code
 
 `crates/spine-core` is plain `no_std` Rust: no allocator, no dependencies, no hardware.
-`cargo test` runs its 43 tests on any laptop.
+`cargo test` runs its 47 tests on any laptop.
 
 | Module | Does |
 |---|---|
@@ -80,7 +82,7 @@ Both sides test against the same generated frames. To change a frame:
 | `protocol.rs` | encodes and decodes the four frames, with the CRC and counter checks |
 | `watchdog.rs` | the 200 ms command watchdog |
 | `speed_loop.rs` | PI speed control into throttle and brake, never both at once |
-| `limits.rs` | clamps and slew limits: 3.0 m/s, ±0.5 rad, 1.5 m/s², 0.6 rad/s |
+| `limits.rs` | clamps and slew limits: 3.0 m/s, ±0.5 rad, 0.6 rad/s; 1.5 m/s² up, 2.5 m/s² down |
 | `encoder.rs` | quadrature decoding, and speed from the time between counts |
 
 The ESP32 board code that calls it is [[missing]]. Hardware facts from today's car:

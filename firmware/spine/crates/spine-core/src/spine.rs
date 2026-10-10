@@ -6,9 +6,12 @@
 //! 3. The computer, while armed and sending fresh DRIVE_CMD frames.
 //! 4. Otherwise manual: actuators idle.
 //!
-//! After an e-stop, or after the command stream stops while the computer was
-//! driving, the computer can't drive again until it sends a frame with
-//! `armed = 0` and then `armed = 1`. A glitch never restarts the car by itself.
+//! A driver fault (steering, brake, throttle or encoder) stops the car in any mode.
+//!
+//! The computer can't drive until it sends a frame with `armed = 0` and then
+//! `armed = 1`: at power-up, after an e-stop, after a driver fault has cleared, and
+//! after the command stream stopped while it was driving. A glitch or a reboot never
+//! restarts the car by itself.
 
 use crate::limits::slew;
 use crate::protocol::{counter_step, DriveCmd, EstopCmd, Mode, VehicleFeedback, VehicleStatus};
@@ -27,6 +30,9 @@ pub mod faults {
     pub const CAN_BUS: u16 = 128;
     pub const RC_SIGNAL_LOST: u16 = 256;
     pub const OVERSPEED: u16 = 512;
+
+    /// Faults that stop the car and latch it, like a command timeout.
+    pub const STOP: u16 = STEERING_DRIVER | BRAKE_DRIVER | THROTTLE_DAC | WHEEL_ENCODER;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -40,6 +46,9 @@ pub struct SpineConfig {
     pub max_steering_angle: f32,
     /// Acceleration and steering-rate caps, also used when a frame sends 0.
     pub max_accel: f32,
+    /// Slowing down is capped separately, and harder than ego's 2.0 m/s^2, so the
+    /// firmware never lags behind a stop that ego asked for.
+    pub max_decel: f32,
     pub max_steer_rate: f32,
     /// Measured speed this far over the cap is a fault and brakes (m/s).
     pub overspeed_margin: f32,
@@ -57,6 +66,7 @@ impl Default for SpineConfig {
             max_reverse_speed: 1.0,
             max_steering_angle: 0.5, // TODO: measure on the car
             max_accel: 1.5,
+            max_decel: 2.5,
             max_steer_rate: 0.6,
             overspeed_margin: 0.5,
             stop_brake: 1.0,
@@ -125,6 +135,7 @@ pub struct Spine {
     sw_estop: bool,
     latched: bool,
     timeout_latched: bool,
+    fault_latched: bool,
     seen_disarm: bool,
     mode: Mode,
     speed_setpoint: f32,
@@ -144,9 +155,10 @@ impl Spine {
             last_cmd: None,
             last_counter: None,
             sw_estop: false,
-            latched: false,
+            latched: true, // boot latched: the computer must disarm, then arm
             timeout_latched: false,
-            seen_disarm: true,
+            fault_latched: false,
+            seen_disarm: false,
             mode: Mode::Manual,
             speed_setpoint: 0.0,
             steering_setpoint: 0.0,
@@ -194,14 +206,21 @@ impl Spine {
             self.latched = true;
             self.seen_disarm = false;
         }
+        let driver_fault = i.driver_faults & faults::STOP != 0;
+        if driver_fault {
+            self.latched = true;
+            self.fault_latched = true;
+            self.seen_disarm = false;
+        }
         if self.mode == Mode::Computer && !fresh && !estop {
             self.latched = true;
             self.timeout_latched = true;
             self.seen_disarm = false;
         }
-        if self.latched && !estop && self.seen_disarm && armed_request {
+        if self.latched && !estop && !driver_fault && self.seen_disarm && armed_request {
             self.latched = false;
             self.timeout_latched = false;
+            self.fault_latched = false;
         }
 
         // Mode.
@@ -231,7 +250,7 @@ impl Spine {
             fault_bits |= faults::OVERSPEED;
         }
 
-        let stop = estop || rc_lost || over > c.overspeed_margin;
+        let stop = estop || driver_fault || rc_lost || over > c.overspeed_margin;
         let out = |throttle, brake, reverse, steering, s: &Self| Outputs {
             mode: s.mode,
             throttle,
@@ -239,11 +258,11 @@ impl Spine {
             reverse,
             steering_target: steering,
             armed: armed_request && !s.latched,
-            estop_active: estop || s.timeout_latched,
+            estop_active: estop || s.timeout_latched || s.fault_latched,
             faults: fault_bits,
         };
 
-        if stop || (self.mode == Mode::Manual && self.timeout_latched) {
+        if stop || (self.mode == Mode::Manual && (self.timeout_latched || self.fault_latched)) {
             self.speed_setpoint = 0.0;
             self.speed_loop.reset();
             return out(0.0, c.stop_brake, false, self.steering_setpoint, self);
@@ -281,7 +300,11 @@ impl Spine {
         };
         let target_speed = target_speed.clamp(-c.max_reverse_speed, c.max_speed);
         let target_steering = target_steering.clamp(-c.max_steering_angle, c.max_steering_angle);
-        self.speed_setpoint = slew(self.speed_setpoint, target_speed, accel, dt);
+        // Slowing down (toward zero, or through it) uses the separate, harder cap.
+        let slowing = target_speed.abs() < self.speed_setpoint.abs()
+            || target_speed * self.speed_setpoint < 0.0;
+        let rate = if slowing { c.max_decel } else { accel };
+        self.speed_setpoint = slew(self.speed_setpoint, target_speed, rate, dt);
         self.steering_setpoint = slew(self.steering_setpoint, target_steering, steer_rate, dt);
         let drive = self.speed_loop.update(self.speed_setpoint, i.measured_speed, dt);
         out(drive.throttle, drive.brake, drive.reverse, self.steering_setpoint, self)
@@ -360,6 +383,11 @@ mod tests {
             self.spine.step(&i)
         }
 
+        /// The computer's arming edge: `armed = 0`, then the caller sends `armed = 1`.
+        fn arm(&mut self) {
+            self.drive(0.0, 0.0, false, 2);
+        }
+
         fn drive(&mut self, speed: f32, steering: f32, armed: bool, ticks: u32) -> Outputs {
             let mut last = None;
             for _ in 0..ticks {
@@ -380,8 +408,21 @@ mod tests {
     }
 
     #[test]
+    fn boots_latched_until_disarm_then_arm() {
+        let mut car = Car::new();
+        // Armed frames straight after a reboot must not drive...
+        let out = car.drive(1.0, 0.0, true, 20);
+        assert_eq!(out.mode, Mode::Manual);
+        assert_eq!(out.throttle, 0.0);
+        // ...until the computer disarms, then arms.
+        car.arm();
+        assert_eq!(car.drive(1.0, 0.0, true, 5).mode, Mode::Computer);
+    }
+
+    #[test]
     fn armed_commands_drive() {
         let mut car = Car::new();
+        car.arm();
         let out = car.drive(1.0, 0.0, true, 20);
         assert_eq!(out.mode, Mode::Computer);
         assert!(out.armed);
@@ -400,6 +441,7 @@ mod tests {
     #[test]
     fn lost_commands_brake_and_latch() {
         let mut car = Car::new();
+        car.arm();
         car.drive(1.0, 0.0, true, 20);
         let mut out = car.tick(Inputs::default());
         for _ in 0..25 {
@@ -421,6 +463,7 @@ mod tests {
     #[test]
     fn software_estop_brakes_and_needs_rearm() {
         let mut car = Car::new();
+        car.arm();
         car.drive(1.0, 0.0, true, 10);
         let cmd = car.cmd(1.0, 0.0, true);
         let out = car.tick(Inputs {
@@ -453,6 +496,7 @@ mod tests {
     #[test]
     fn rc_beats_computer() {
         let mut car = Car::new();
+        car.arm();
         car.drive(1.0, 0.0, true, 10);
         let rc = RcInput { override_switch: true, throttle: 0.0, steering: 1.0 };
         let cmd = car.cmd(1.0, 0.0, true);
@@ -473,6 +517,7 @@ mod tests {
     #[test]
     fn speed_setpoint_ramps() {
         let mut car = Car::new();
+        car.arm();
         car.drive(3.0, 0.0, true, 11); // 100 ms of ramp at 1.5 m/s^2
         let sp = car.spine.speed_setpoint();
         assert!(sp > 0.1 && sp < 0.2, "{sp}");
@@ -481,8 +526,56 @@ mod tests {
     #[test]
     fn steering_is_clamped() {
         let mut car = Car::new();
+        car.arm();
         let out = car.drive(0.5, 2.0, true, 300);
         assert!((out.steering_target - SpineConfig::default().max_steering_angle).abs() < 1e-6);
+    }
+
+    #[test]
+    fn slows_down_faster_than_ego() {
+        let mut car = Car::new();
+        car.arm();
+        car.drive(1.0, 0.0, true, 100); // up to 1 m/s
+        assert!((car.spine.speed_setpoint() - 1.0).abs() < 1e-3);
+        // ego stops at 2.0 m/s^2, so from 1 m/s it reaches 0 in 0.5 s. At 2.5 m/s^2
+        // the firmware is already there after 0.4 s.
+        car.drive(0.0, 0.0, true, 40);
+        assert!(car.spine.speed_setpoint().abs() < 1e-3, "{}", car.spine.speed_setpoint());
+    }
+
+    #[test]
+    fn driver_fault_stops_and_needs_rearm() {
+        let mut car = Car::new();
+        car.arm();
+        car.drive(1.0, 0.0, true, 20);
+        let cmd = car.cmd(1.0, 0.0, true);
+        let out = car.tick(Inputs {
+            drive_cmd: Some(cmd),
+            driver_faults: faults::WHEEL_ENCODER,
+            ..Default::default()
+        });
+        assert_eq!(out.throttle, 0.0);
+        assert_eq!(out.brake, 1.0);
+        assert_ne!(out.faults & faults::WHEEL_ENCODER, 0);
+        // The fault clears, but the car stays stopped until a fresh arm.
+        let out = car.drive(1.0, 0.0, true, 5);
+        assert_eq!(out.throttle, 0.0);
+        assert!(out.estop_active);
+        car.arm();
+        assert_eq!(car.drive(1.0, 0.0, true, 5).mode, Mode::Computer);
+    }
+
+    #[test]
+    fn driver_fault_stops_rc_too() {
+        let mut car = Car::new();
+        let rc = RcInput { override_switch: true, throttle: 1.0, steering: 0.0 };
+        let out = car.tick(Inputs {
+            rc: Some(rc),
+            driver_faults: faults::THROTTLE_DAC,
+            ..Default::default()
+        });
+        assert_eq!(out.throttle, 0.0);
+        assert_eq!(out.brake, 1.0);
     }
 
     #[test]
@@ -497,6 +590,7 @@ mod tests {
     #[test]
     fn status_frame_round_trips() {
         let mut car = Car::new();
+        car.arm();
         let out = car.drive(1.0, 0.1, true, 5);
         let frame = car.spine.status_frame(&out);
         let back = VehicleStatus::decode(&frame).unwrap();

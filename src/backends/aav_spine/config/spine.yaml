@@ -2,7 +2,9 @@
 # launch file passes them); don't set them here.
 spine_bridge:
   ros__parameters:
-    cmd_timeout: 0.3          # s: stop sending DRIVE_CMD when /ego/actuator_cmd is older
+    cmd_timeout: 0.1          # s: stop sending DRIVE_CMD when /ego/actuator_cmd is older.
+                              # 5 of ego's 50 Hz messages. Plus the spine's 200 ms
+                              # watchdog, the car brakes at most 0.3 s after ego stops.
     drive_rate_hz: 50.0       # DRIVE_CMD rate; the spine's watchdog is 200 ms
     estop_rate_hz: 10.0       # ESTOP_CMD heartbeat (also sent at once on change)
     speed_variance: 0.01      # (m/s)^2 on /vehicle/odom vx. TODO from a bag

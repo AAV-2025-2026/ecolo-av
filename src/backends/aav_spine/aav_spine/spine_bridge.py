@@ -14,6 +14,10 @@ Service     spine/arm         std_srvs/SetBool
 Frames are defined in firmware/can/aav.dbc and packed by can_codec.
 DRIVE_CMD goes out at 50 Hz only while /ego/actuator_cmd is fresh. If ego
 stops, the bridge stops sending and the spine's own watchdog brakes the car.
+
+Arming always sends a few armed=0 frames before armed=1: the spine only arms on
+that edge. It also clears latches the bridge can't see (a hardware e-stop, a
+command timeout, a driver fault, a spine reboot).
 """
 
 import math
@@ -37,7 +41,7 @@ class SpineBridge(Node):
         super().__init__('spine_bridge')
         self.wheelbase = self.declare_parameter('wheelbase', 1.57).value
         self.track = self.declare_parameter('track', 0.77).value
-        self.cmd_timeout = self.declare_parameter('cmd_timeout', 0.3).value
+        self.cmd_timeout = self.declare_parameter('cmd_timeout', 0.1).value
         drive_hz = self.declare_parameter('drive_rate_hz', 50.0).value
         estop_hz = self.declare_parameter('estop_rate_hz', 10.0).value
         self.speed_var = self.declare_parameter('speed_variance', 0.01).value
@@ -84,8 +88,8 @@ class SpineBridge(Node):
             response.success = False
             response.message = 'e-stop is active; clear /estop first'
             return response
-        if request.data and not self.armed:
-            self.disarm_frames = 3   # the spine re-arms on armed 0 -> 1
+        if request.data:
+            self.disarm_frames = 3   # the spine arms on armed 0 -> 1, every time
         self.armed = request.data
         response.success = True
         response.message = 'armed' if self.armed else 'disarmed'
@@ -109,8 +113,8 @@ class SpineBridge(Node):
             return
         age = (self.get_clock().now() - self.cmd_time).nanoseconds * 1e-9
         if age > self.cmd_timeout:
-            self.get_logger().warn('no fresh /ego/actuator_cmd; the spine will brake',
-                                   throttle_duration_sec=2.0)
+            self.get_logger().warning('no fresh /ego/actuator_cmd; the spine will brake',
+                                      throttle_duration_sec=2.0)
             return
         armed = self.armed and self.disarm_frames == 0
         if self.disarm_frames:

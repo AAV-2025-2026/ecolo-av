@@ -61,6 +61,6 @@ Where Rust stands in October 2026:
 
 | When | What |
 |---|---|
-| Now | Python for ROS nodes; Rust for the spine firmware (started: `spine-core`, 43 tests) |
+| Now | Python for ROS nodes; Rust for the spine firmware (started: `spine-core`, 47 tests) |
 | Next | build one `rclrs` example in the Pixi environment, to learn the workflow |
 | Later | port a node where Rust pays off, such as ego, once the car drives |

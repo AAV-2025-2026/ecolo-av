@@ -24,7 +24,7 @@ run yet.
 | Gazebo | `aav_gazebo` | [[untested]] |
 | Real car | `aav_spine` | [[untested]] unit-tested; no spine yet |
 | Today's car | `aav_legacy` | [[untested]] on the car |
-| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 43 tests |
+| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 47 tests |
 | Spine board code (ESP32) | | [[missing]] |
 | CARLA | `aav_carla` | [[stub]] next year |
 | Lidar, cameras, AI | | [[later]] |
