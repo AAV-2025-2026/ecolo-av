@@ -15,6 +15,19 @@ what's left to build.
 
 ROS never sees a pin or an I2C address, only device names like `can0` and `/dev/aav/imu`.
 
+## How a chip joins ROS 2
+
+The chips never run ROS. A small bridge node on a Linux computer turns ROS topics into
+plain wire messages, and back.
+
+![How the chips join ROS 2: a bridge node on Linux, a plain wire, and firmware with no ROS](img/chips-and-ros.svg)
+
+| Way to join ROS 2 | On the chip | Our pick |
+|---|---|---|
+| A bridge node on Linux | plain firmware that speaks CAN, UART or UDP | ✅ today's ESP32 and Pico 2, and the spine next |
+| micro-ROS | a ROS library in C, usually on a small operating system like FreeRTOS, plus an "agent" program on a Linux computer | no: it's a bridge either way, and it isn't Rust |
+| rclrs (ROS in Rust) on the chip | not possible: rclrs needs a full operating system, like Linux | rclrs fits the Linux side, if a bridge is ever written in Rust |
+
 ## One interface, many drivers
 
 In ROS the interface is the message type, the topic and the frame. Any driver that

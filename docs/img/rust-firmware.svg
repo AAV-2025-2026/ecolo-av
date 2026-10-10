@@ -32,11 +32,11 @@
   <line x1="480" y1="210" x2="480" y2="236" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
 
   <!-- Drivers -->
-  <rect class="todo" x="30" y="240" width="900" height="110" rx="10"/>
+  <rect class="drv" x="30" y="240" width="900" height="110" rx="10"/>
   <text class="t" x="50" y="268">Drivers: one per chip on the car</text>
-  <text class="s" x="910" y="268" text-anchor="end">still to write</text>
-  <text class="b" x="50" y="296">Jrk G2 (steering, brake) · throttle DAC · PCA9555 · iBUS radio · W5500 Ethernet · display</text>
-  <text class="s" x="50" y="320">written once, against embedded-hal 1.0; checked with embedded-hal-mock, which plays the chip</text>
+  <text class="r" x="910" y="268" text-anchor="end">WRITTEN 10 OCT: 98 TESTS</text>
+  <text class="b" x="50" y="296">Jrk G2 (steering, brake) · throttle DAC · PCA9555 · iBUS radio · spine-board, the glue</text>
+  <text class="s" x="50" y="320">against embedded-hal 1.0; checked with embedded-hal-mock, which plays the chip. Still to write: W5500, display</text>
 
   <line x1="480" y1="350" x2="480" y2="376" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
 
