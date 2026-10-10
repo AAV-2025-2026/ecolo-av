@@ -104,12 +104,13 @@ Hold <code>i</code> to drive.</p>
 </tr>
 <tr>
 <td>5</td>
-<td>Check with <code>pixi run tools/ros.sh ros2 topic list</code></td>
-<td>the car's topics should be listed</td>
+<td>Run <code>pixi run doctor</code></td>
+<td>it checks steps 1–4, and whether it can see the car, and says what to fix</td>
 </tr>
 </tbody>
 </table></div>
-<p>If the car's topics don't show up:</p>
+<p><code>pixi run tools/ros.sh ros2 topic list</code> should then list the car's topics. If they don't
+show up:</p>
 <ul>
 <li>Check that the Mac and the car's computers have addresses on the same network.</li>
 <li>Name the computers directly: add <code>export ROS_STATIC_PEERS=&lt;the Orin's IP&gt;</code> on the Mac,
@@ -212,6 +213,10 @@ pixi run gz-window         # terminal 2: Gazebo's window</code></pre>
 <tr>
 <td>The Mac on the car's network</td>
 <td><span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td><code>pixi run doctor</code></td>
+<td><span class="badge b-works">works</span> on Linux; <span class="badge b-untested">untested</span> on a Mac</td>
 </tr>
 </tbody>
 </table></div></section>

@@ -117,6 +117,11 @@ code.</p>
 <td>always: throttle off, full brake</td>
 </tr>
 <tr>
+<td>1</td>
+<td>A driver fault: steering, brake, throttle or encoder</td>
+<td>the same</td>
+</tr>
+<tr>
 <td>2</td>
 <td>The RC transmitter</td>
 <td>while its override switch is on</td>
@@ -133,8 +138,9 @@ code.</p>
 </tr>
 </tbody>
 </table></div>
-<p>After an e-stop or a timeout, the computer must re-arm (<code>/spine/arm</code>) before it can drive
-again. A glitch never restarts the car by itself.</p>
+<p>The computer must arm (<code>/spine/arm</code>) before it drives: at power-up, and after an e-stop,
+a timeout or a driver fault. Arming sends <code>armed = 0</code>, then <code>armed = 1</code>. A glitch or a
+reboot never restarts the car by itself.</p>
 </section>
 <section class="card"><h2 id="the-can-contract">The CAN contract</h2>
 <p><code>firmware/can/aav.dbc</code> is the source of truth: classic CAN at 500 kbit/s, 11-bit IDs,
@@ -190,7 +196,7 @@ rejected.</p>
 </section>
 <section class="card"><h2 id="firmwarespine-the-rust-code">firmware/spine: the Rust code</h2>
 <p><code>crates/spine-core</code> is plain <code>no_std</code> Rust: no allocator, no dependencies, no hardware.
-<code>cargo test</code> runs its 43 tests on any laptop.</p>
+<code>cargo test</code> runs its 47 tests on any laptop.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -217,7 +223,7 @@ rejected.</p>
 </tr>
 <tr>
 <td><code>limits.rs</code></td>
-<td>clamps and slew limits: 3.0 m/s, ±0.5 rad, 1.5 m/s², 0.6 rad/s</td>
+<td>clamps and slew limits: 3.0 m/s, ±0.5 rad, 0.6 rad/s; 1.5 m/s² up, 2.5 m/s² down</td>
 </tr>
 <tr>
 <td><code>encoder.rs</code></td>

@@ -25,6 +25,7 @@ rviz = { cmd = "tools/ros.sh rviz2 -d src/aav_bringup/rviz/drive.rviz", descript
 estop = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /estop std_msgs/msg/Bool "{data: true}"', description = "E-stop: block every driver (the car brakes)" }
 estop-clear = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /estop std_msgs/msg/Bool "{data: false}"', description = "Clear the e-stop" }
 gz-window = { cmd = "tools/ros.sh gz sim -g", description = "Gazebo's window, for a simulator started with gui:=false (Macs)" }
+doctor = { cmd = "tools/ros.sh python3 tools/doctor.py", description = "Can this computer join the car's ROS network? Says what to fix" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"

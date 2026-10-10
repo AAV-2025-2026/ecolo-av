@@ -156,11 +156,11 @@ to today's ESP32. The files in <code>src/aav_bringup/config/machines/</code> say
 <tbody>
 <tr>
 <td><code>orin.yaml</code></td>
-<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, the legacy encoder listener, Foxglove</td>
+<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove</td>
 </tr>
 <tr>
 <td><code>motor_pi.yaml</code></td>
-<td><code>legacy_uart_bridge</code> only: it's the computer wired to the ESP32</td>
+<td><code>legacy_uart_bridge</code> and <code>encoder_udp</code>: the ESP32 is wired to it, and the encoder sends its packets to it</td>
 </tr>
 <tr>
 <td><code>laptop.yaml</code></td>

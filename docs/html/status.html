@@ -122,7 +122,7 @@ run yet.</p></div>
 <tr>
 <td>Spine firmware logic</td>
 <td><code>firmware/spine/crates/spine-core</code></td>
-<td><span class="badge b-works">works</span> 43 tests</td>
+<td><span class="badge b-works">works</span> 47 tests</td>
 </tr>
 <tr>
 <td>Spine board code (ESP32)</td>
@@ -156,12 +156,8 @@ run yet.</p></div>
 <td><span class="badge b-works">works</span> 11 s on Linux</td>
 </tr>
 <tr>
-<td>Our tests: Python and Rust</td>
-<td><span class="badge b-works">works</span> 88 pass</td>
-</tr>
-<tr>
-<td>Lint tests of 3 inherited packages (IMU, radar, battery)</td>
-<td>fail: style, not function</td>
+<td><code>pixi run test</code>: build, tests, lint, <code>colcon test</code></td>
+<td><span class="badge b-works">works</span> all pass: Python 43, Rust 47; <code>colcon test</code> 77, 0 failures</td>
 </tr>
 <tr>
 <td>Live graph vs <code>docs/interfaces.yaml</code>, turtle profile</td>

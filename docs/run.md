@@ -69,6 +69,7 @@ keyboard → `/cmd_vel/remote` → twist_mux → ego → `/ego/actuator_cmd` →
 | `pixi run sim` | Gazebo instead of the turtle ([Simulation](simulation.md)) |
 | `pixi run rviz` | RViz with the driving layout |
 | `pixi run estop`, `pixi run estop-clear` | stop every driver; let them go again |
+| `pixi run doctor` | can this computer join the car's network? What to fix |
 | `pixi run test` | every test |
 | `pixi run docs` | rebuilds these pages |
 | `pixi shell`, then `source install/setup.bash` | a terminal for any `ros2` command (`setup.zsh` in a Mac's zsh) |

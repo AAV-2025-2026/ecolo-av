@@ -52,9 +52,10 @@ Hold `i` to drive.
 | 2 | Add `export ROS_DOMAIN_ID=<n>` to `~/.zshrc`, with the car's number | ROS only talks within one domain. The team hasn't picked its number yet [[needs-you]] |
 | 3 | Leave the middleware alone | the Mac's Pixi install and Ubuntu both use Fast DDS |
 | 4 | When macOS asks whether `python3` or `rviz2` may accept incoming connections, click Allow | otherwise the firewall blocks the car's replies |
-| 5 | Check with `pixi run tools/ros.sh ros2 topic list` | the car's topics should be listed |
+| 5 | Run `pixi run doctor` | it checks steps 1–4, and whether it can see the car, and says what to fix |
 
-If the car's topics don't show up:
+`pixi run tools/ros.sh ros2 topic list` should then list the car's topics. If they don't
+show up:
 - Check that the Mac and the car's computers have addresses on the same network.
 - Name the computers directly: add `export ROS_STATIC_PEERS=<the Orin's IP>` on the Mac,
   and the Mac's IP on the Orin. This is Jazzy's way around blocked multicast.
@@ -114,3 +115,4 @@ Cameras and lidars inside Gazebo can crash it on a Mac. Our simulated car has ne
 | RViz and rqt on a Mac | [[untested]] |
 | Joystick on a Mac | [[untested]] An old macOS joystick bug is fixed in the version we use. |
 | The Mac on the car's network | [[untested]] |
+| `pixi run doctor` | [[works]] on Linux; [[untested]] on a Mac |
