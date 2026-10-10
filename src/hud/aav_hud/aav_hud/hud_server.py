@@ -59,7 +59,8 @@ def geo_pose(waypoint):
     pose = GeoPose()
     pose.position.latitude = waypoint.lat
     pose.position.longitude = waypoint.lon
-    # Not NaN ("unknown"): navsat_transform's fromLL would turn it into a NaN map z.
+    # Not NaN ("unknown"): navsat_transform's fromLL transforms the altitude with the
+    # position, and a NaN would spoil the whole map point. navsat.yaml zeroes it anyway.
     pose.position.altitude = 0.0
     q = pose.orientation
     q.x, q.y, q.z, q.w = quaternion(waypoint.yaw)
@@ -188,7 +189,9 @@ class HudServer(Node):
         """Send the route to Nav2. None when sent, or why it wasn't."""
         if not self.nav.server_is_ready():
             with self.lock:
+                self.trip_id += 1       # any answer to an older goal is now stale
                 self.trip = Trip(waypoints, status=NO_NAV2)
+                self.goal = None
                 self._send_nav_state()
             return 'Nav2 is not running: nobody serves /follow_gps_waypoints'
         goal = FollowGPSWaypoints.Goal()

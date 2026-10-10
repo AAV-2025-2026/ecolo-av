@@ -51,6 +51,7 @@ ros2_ws/src/maincar. On 2026-10-10 the package was renamed `aav_hud` and ported 
     Before, it ran on with no server.
   - A refused route says why it may have been refused: Nav2 refuses goals until its
     lifecycle manager has activated the waypoint follower. The bench showed it.
+  - A late answer to an older goal can no longer overwrite "nav2_not_running".
   - The camera: `/camera/latest.png` and `/camera/stream` serve `/camera/image_raw` as
     PNG pictures. The node subscribes only while someone fetches them. The old code had
     `/camera/cam1/image_raw` and `/camera/cam2/image_raw` commented out.
