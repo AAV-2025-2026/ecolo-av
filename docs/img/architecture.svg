@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 860" font-family="Verdana, Arial, Helvetica, sans-serif" font-size="14">
+  <title>AAV stack: sensors become telemetry, drivers become one command, ego moves the car</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C8102E"/>
+    </marker>
+    <style>
+      .stock { fill:#F2F2F2; stroke:#999; stroke-width:1.2; }
+      .ours  { fill:#FFFFFF; stroke:#C8102E; stroke-width:2; }
+      .ego   { fill:#C8102E; stroke:#8E0B20; stroke-width:2; }
+      .band  { fill:#FDECEE; stroke:#C8102E; stroke-width:1.2; }
+      .later { fill:#FFFFFF; stroke:#BBB; stroke-width:1.2; stroke-dasharray:5 4; }
+      .t  { fill:#222; font-weight:bold; }
+      .s  { fill:#555; font-size:12px; }
+      .w  { fill:#FFFFFF; font-weight:bold; }
+      .ws { fill:#FFFFFF; font-size:12px; }
+      .lbl { fill:#C8102E; font-size:12px; font-weight:bold; }
+      .layer { fill:#C8102E; font-size:12px; font-weight:bold; letter-spacing:1px; }
+      .line { stroke:#555; stroke-width:1.5; fill:none; marker-end:url(#arr); }
+      .redline { stroke:#C8102E; stroke-width:2.2; fill:none; marker-end:url(#arrRed); }
+      .dash { stroke:#999; stroke-width:1.3; fill:none; stroke-dasharray:4 4; marker-end:url(#arr); }
+    </style>
+  </defs>
+
+  <!-- layer labels -->
+  <text class="layer" x="12" y="62">SENSORS</text>
+  <text class="layer" x="12" y="172">WHERE AM I</text>
+  <text class="layer" x="12" y="262">TELEMETRY</text>
+  <text class="layer" x="12" y="362">DRIVERS</text>
+  <text class="layer" x="12" y="482">PICK ONE</text>
+  <text class="layer" x="12" y="582">EGO</text>
+  <text class="layer" x="12" y="702">BACKENDS</text>
+  <text class="layer" x="12" y="812">FIRMWARE</text>
+
+  <!-- sensors -->
+  <rect class="stock" x="110" y="30" width="150" height="56" rx="8"/>
+  <text class="t" x="185" y="54" text-anchor="middle">wheel + steer</text>
+  <text class="s" x="185" y="72" text-anchor="middle">spine (CAN) / encoder</text>
+  <rect class="stock" x="275" y="30" width="120" height="56" rx="8"/>
+  <text class="t" x="335" y="54" text-anchor="middle">IMU</text>
+  <text class="s" x="335" y="72" text-anchor="middle">USB</text>
+  <rect class="stock" x="410" y="30" width="140" height="56" rx="8"/>
+  <text class="t" x="480" y="54" text-anchor="middle">car model</text>
+  <text class="s" x="480" y="72" text-anchor="middle">vehicle.yaml → URDF</text>
+  <rect class="stock" x="565" y="30" width="130" height="56" rx="8"/>
+  <text class="t" x="630" y="54" text-anchor="middle">GPS</text>
+  <text class="s" x="630" y="72" text-anchor="middle">u-blox USB</text>
+  <rect class="later" x="710" y="30" width="150" height="56" rx="8"/>
+  <text class="t" x="785" y="54" text-anchor="middle">lidar · cameras</text>
+  <text class="s" x="785" y="72" text-anchor="middle">next year</text>
+
+  <!-- localization -->
+  <rect class="stock" x="190" y="140" width="190" height="56" rx="8"/>
+  <text class="t" x="285" y="164" text-anchor="middle">ekf_local</text>
+  <text class="s" x="285" y="182" text-anchor="middle">smooth, never jumps</text>
+  <rect class="stock" x="520" y="140" width="190" height="56" rx="8"/>
+  <text class="t" x="615" y="164" text-anchor="middle">ekf_global</text>
+  <text class="s" x="615" y="182" text-anchor="middle">+ GPS: true position</text>
+  <rect class="later" x="730" y="140" width="130" height="56" rx="8"/>
+  <text class="t" x="795" y="164" text-anchor="middle">costmap_2d</text>
+  <text class="s" x="795" y="182" text-anchor="middle">no-go cells</text>
+
+  <path class="line" d="M185,86 L240,140"/>
+  <path class="line" d="M335,86 L300,140"/>
+  <path class="line" d="M480,86 L350,140"/>
+  <path class="line" d="M630,86 L615,140"/>
+  <path class="line" d="M785,86 L795,140"/>
+  <path class="line" d="M380,168 L520,168"/>
+  <text class="s" x="450" y="160" text-anchor="middle">odom → base</text>
+
+  <!-- telemetry band -->
+  <rect class="band" x="110" y="232" width="750" height="46" rx="10"/>
+  <text class="t" x="485" y="252" text-anchor="middle">TELEMETRY: what everyone reads</text>
+  <text class="s" x="485" y="270" text-anchor="middle">/tf · /odometry/local · /odometry/global · /vehicle/status · costmaps</text>
+  <path class="line" d="M285,196 L285,232"/>
+  <path class="line" d="M615,196 L615,232"/>
+  <path class="line" d="M795,196 L795,232"/>
+
+  <!-- drivers -->
+  <rect class="ours" x="110" y="330" width="130" height="62" rx="8"/>
+  <text class="t" x="175" y="355" text-anchor="middle">joystick</text>
+  <text class="s" x="175" y="374" text-anchor="middle">safety driver · 100</text>
+  <rect class="ours" x="255" y="330" width="130" height="62" rx="8"/>
+  <text class="t" x="320" y="355" text-anchor="middle">keyboard</text>
+  <text class="s" x="320" y="374" text-anchor="middle">remote · 90</text>
+  <rect class="ours" x="400" y="330" width="130" height="62" rx="8"/>
+  <text class="t" x="465" y="355" text-anchor="middle">scripted</text>
+  <text class="s" x="465" y="374" text-anchor="middle">speed profile · 50</text>
+  <rect class="ours" x="545" y="330" width="130" height="62" rx="8"/>
+  <text class="t" x="610" y="355" text-anchor="middle">Nav2</text>
+  <text class="s" x="610" y="374" text-anchor="middle">map goals · 20</text>
+  <rect class="later" x="690" y="330" width="130" height="62" rx="8"/>
+  <text class="t" x="755" y="355" text-anchor="middle">AI</text>
+  <text class="s" x="755" y="374" text-anchor="middle">later · 10</text>
+  <path class="dash" d="M465,278 L465,330"/>
+  <path class="dash" d="M610,278 L610,330"/>
+  <path class="dash" d="M755,278 L755,330"/>
+
+  <!-- mux -->
+  <rect class="ours" x="380" y="456" width="200" height="56" rx="8"/>
+  <text class="t" x="480" y="480" text-anchor="middle">twist_mux</text>
+  <text class="s" x="480" y="498" text-anchor="middle">highest priority wins · /estop</text>
+  <path class="redline" d="M175,392 L420,456"/>
+  <path class="redline" d="M320,392 L445,456"/>
+  <path class="redline" d="M465,392 L475,456"/>
+  <path class="redline" d="M610,392 L515,456"/>
+  <path class="redline" d="M755,392 L545,456"/>
+  <text class="lbl" x="640" y="430">/cmd_vel/&lt;driver&gt;</text>
+
+  <!-- ego -->
+  <rect class="ego" x="355" y="556" width="250" height="62" rx="10"/>
+  <text class="w" x="480" y="582" text-anchor="middle">ego · the virtual car</text>
+  <text class="ws" x="480" y="602" text-anchor="middle">Ackermann model · limits · timeout</text>
+  <path class="redline" d="M480,512 L480,556"/>
+  <text class="lbl" x="492" y="540">/cmd_vel</text>
+
+  <!-- backends -->
+  <rect class="stock" x="110" y="676" width="150" height="56" rx="8"/>
+  <text class="t" x="185" y="700" text-anchor="middle">real car</text>
+  <text class="s" x="185" y="718" text-anchor="middle">aav_spine → CAN</text>
+  <rect class="stock" x="275" y="676" width="150" height="56" rx="8"/>
+  <text class="t" x="350" y="700" text-anchor="middle">today's car</text>
+  <text class="s" x="350" y="718" text-anchor="middle">aav_legacy → UART</text>
+  <rect class="stock" x="440" y="676" width="130" height="56" rx="8"/>
+  <text class="t" x="505" y="700" text-anchor="middle">turtlesim</text>
+  <text class="s" x="505" y="718" text-anchor="middle">laptop test</text>
+  <rect class="stock" x="585" y="676" width="130" height="56" rx="8"/>
+  <text class="t" x="650" y="700" text-anchor="middle">Gazebo</text>
+  <text class="s" x="650" y="718" text-anchor="middle">full simulation</text>
+  <rect class="later" x="730" y="676" width="130" height="56" rx="8"/>
+  <text class="t" x="795" y="700" text-anchor="middle">CARLA</text>
+  <text class="s" x="795" y="718" text-anchor="middle">next year</text>
+  <path class="redline" d="M430,618 L190,676"/>
+  <path class="redline" d="M455,618 L355,676"/>
+  <path class="redline" d="M480,618 L505,676"/>
+  <path class="redline" d="M505,618 L645,676"/>
+  <text class="lbl" x="620" y="650">/ego/actuator_cmd · one at a time</text>
+
+  <!-- firmware -->
+  <rect class="ours" x="110" y="780" width="315" height="56" rx="8"/>
+  <text class="t" x="267" y="804" text-anchor="middle">spine firmware (Rust, ESP32)</text>
+  <text class="s" x="267" y="822" text-anchor="middle">watchdog · limits · speed loop · RC override</text>
+  <path class="line" d="M185,732 L185,780"/>
+  <path class="line" d="M350,732 L350,780"/>
+
+  <!-- legend -->
+  <rect class="ours" x="560" y="786" width="22" height="14" rx="3"/><text class="s" x="590" y="798">our code</text>
+  <rect class="stock" x="680" y="786" width="22" height="14" rx="3"/><text class="s" x="710" y="798">stock / hardware</text>
+  <rect class="later" x="560" y="812" width="22" height="14" rx="3"/><text class="s" x="590" y="824">later</text>
+  <path class="dash" d="M680,819 L702,819"/><text class="s" x="710" y="824">reads</text>
+</svg>

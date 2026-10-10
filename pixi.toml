@@ -57,3 +57,11 @@ ros-jazzy-rqt-tf-tree = ">=1.1.1,<2"
 [target.linux-64.dependencies]
 ros-jazzy-ros2-socketcan = ">=1.4.0,<2"
 
+[feature.docs.dependencies]
+markdown = ">=3.11,<4"
+pymdown-extensions = ">=12.1,<13"
+weasyprint = ">=69.0,<70"
+
+[environments]
+docs = { features = ["docs"], no-default-feature = true }
+
