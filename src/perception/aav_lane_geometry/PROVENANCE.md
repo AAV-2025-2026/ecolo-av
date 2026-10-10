@@ -24,3 +24,7 @@ Files, unchanged unless listed under Changes:
     `/control_cmd`. The lane-keeping logic is unchanged.
   - `launch/control_test.launch.py`: the package name follows.
   - New: `launch/lane_follower.launch.py` (the driver, with fake:=true for a pretend lane).
+  - `scripts/control_interface.py`, `scripts/fake_lane_geometry_pub.py`: a quiet Ctrl-C.
+    They ignore the second Ctrl-C while cleaning up, catch `ExternalShutdownException`, and
+    call `rclpy.try_shutdown()` instead of `rclpy.shutdown()`, which raised when Jazzy's own
+    handler had already shut down.

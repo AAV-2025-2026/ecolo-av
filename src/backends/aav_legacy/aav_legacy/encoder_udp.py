@@ -14,6 +14,7 @@ publishing rather than report 0 m/s, so the EKF doesn't think the car is parked.
 The Pico sends only to the Motor Pi (192.168.1.193), so run this node there.
 """
 
+import signal
 import socket
 
 from aav_legacy.legacy_protocol import encoder_counts, EncoderSpeed, metres_per_count
@@ -90,6 +91,9 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         rclpy.try_shutdown()
 

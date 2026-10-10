@@ -148,6 +148,6 @@ From the design doc's next steps, in order.
 | `aav_gazebo`'s test skips at module level, which `CLAUDE.md` says not to do | fixed |
 | The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app | the back end takes it as a parameter now; the app still has its own |
 | `car gps:=false` still starts the GPS driver when the machine file says `gps: true` | to do, once Ben's edits to `car.launch.py` are committed |
-| Ctrl-C makes our Python nodes print an error while they shut down (Ctrl-C arrives twice) | to do |
+| Ctrl-C makes our Python nodes print an error while they shut down (Ctrl-C arrives twice) | fixed: 0 tracebacks from a full bench; the radar clustering's C++ can still crash inside Fast DDS |
 | Rust builds on a Mac warn: the libraries are for macOS 14, Rust aims at macOS 11 | fixed: `MACOSX_DEPLOYMENT_TARGET=14.0` on Macs |
 | `pixi run doctor` says "Network OK" on any 192.168.1.x network, like a home router | fixed: it says only "The car" check proves it |

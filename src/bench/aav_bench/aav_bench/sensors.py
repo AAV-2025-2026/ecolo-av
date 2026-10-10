@@ -16,6 +16,7 @@ yahboom_imu_cpp, ublox_dgnss, battery_monitor and usb_cam (aav_sensors).
 
 import math
 import random
+import signal
 
 from aav_bench import models, pictures
 from aav_description import vehicle
@@ -190,6 +191,9 @@ def run(node_class):
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         if node is not None:
             node.destroy_node()
         rclpy.try_shutdown()

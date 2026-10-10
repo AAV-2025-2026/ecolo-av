@@ -12,6 +12,8 @@ stopped. It only ever stops the car; it can't make it move.
 Needs no PyTorch: it runs in the default environment.
 """
 
+import signal
+
 from aav_yolo.stop_sign import StopRule, StopSignWatcher
 import rclpy
 from rclpy.executors import ExternalShutdownException
@@ -63,6 +65,9 @@ def main():
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         if node is not None:
             node.destroy_node()
         rclpy.try_shutdown()

@@ -15,6 +15,7 @@ It needs PyTorch and Ultralytics, from the ml environment. Try it:
   pixi run detect picture:=src/perception/aav_yolo/test/stop_sign.jpg
 """
 
+import signal
 import time
 
 from aav_yolo.boxes import boxes_from_result, parse_labels, pick_device
@@ -113,6 +114,9 @@ def main():
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         if node is not None:
             node.destroy_node()
         rclpy.try_shutdown()

@@ -13,6 +13,8 @@ stale, or /estop is true, the bridge sends brake frames. It can't protect agains
 crash, because the firmware has no timeout; fix that in the firmware first.
 """
 
+import signal
+
 from aav_legacy.legacy_protocol import LegacyMapping, pack_frame, stop_command, to_legacy
 from ackermann_msgs.msg import AckermannDriveStamped
 import rclpy
@@ -89,6 +91,9 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         rclpy.try_shutdown()
 

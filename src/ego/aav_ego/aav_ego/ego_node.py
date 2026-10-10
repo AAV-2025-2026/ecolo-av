@@ -14,6 +14,8 @@ replayed bag carries old stamps. A stamp far from now only logs a warning, so
 fix the clock (chrony) rather than the car stopping for no visible reason.
 """
 
+import signal
+
 from aav_ego.ackermann import EgoModel, Limits
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist, TwistStamped
@@ -103,6 +105,9 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         rclpy.try_shutdown()
 

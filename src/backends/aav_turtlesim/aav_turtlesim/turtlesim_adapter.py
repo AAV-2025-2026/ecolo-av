@@ -11,6 +11,7 @@ together on a laptop. One turtlesim unit counts as one metre.
 """
 
 import math
+import signal
 
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist
@@ -66,6 +67,9 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         rclpy.try_shutdown()
 

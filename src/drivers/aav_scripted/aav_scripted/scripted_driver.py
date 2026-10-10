@@ -13,6 +13,7 @@ The joystick outranks this driver in twist_mux, so a person can always take over
 """
 
 import math
+import signal
 import threading
 import time
 
@@ -158,6 +159,9 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         rclpy.try_shutdown()
 

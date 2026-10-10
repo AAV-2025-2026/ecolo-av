@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import time
 import numpy as np
+import signal
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, TwistStamped
 from std_msgs.msg import String
@@ -245,11 +247,14 @@ def main(args=None):
     node = ControlInterface()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        # aav: Ctrl-C arrives twice under launch, and Jazzy's handler may already have shut
+        # rclpy down: ignore the second, and shut down only if it hasn't happened.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
-        rclpy.shutdown()
+        rclpy.try_shutdown()
 
 
 if __name__ == '__main__':

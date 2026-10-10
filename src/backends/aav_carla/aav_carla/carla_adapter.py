@@ -14,6 +14,8 @@ Ubuntu 22.04, and Jazzy support in its native ROS 2 interface is only on unrelea
 branches. See docs/simulation.md before spending time on this.
 """
 
+import signal
+
 from ackermann_msgs.msg import AckermannDrive, AckermannDriveStamped
 from nav_msgs.msg import Odometry
 import rclpy
@@ -63,6 +65,9 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         rclpy.try_shutdown()
 

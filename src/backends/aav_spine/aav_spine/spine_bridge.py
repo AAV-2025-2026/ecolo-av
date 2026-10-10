@@ -21,6 +21,7 @@ command timeout, a driver fault, a spine reboot).
 """
 
 import math
+import signal
 
 from aav_interfaces.msg import VehicleStatus
 from aav_spine import can_codec as cc
@@ -214,6 +215,9 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         node.destroy_node()
         rclpy.try_shutdown()
 
