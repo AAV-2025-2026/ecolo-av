@@ -17,15 +17,19 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       inherited code, missing dependencies).
 - [ ] **The graph.** Every topic has the right publisher, subscriber, type and QoS.
       Check it live with `tools/check_graph.py` on the turtle run.
-- [ ] **Docs as HTML (and PDF)**, short pages, sections, red and white, a picture of how
+- [x] **Docs as HTML (and PDF)**, short pages, sections, red and white, a picture of how
       it fits together. Markdown stays as the source.
+      *Done: `docs/html/index.html` and `pixi run docs` (PDF). Four pictures; pages for
+      each point below.*
       - What ROS 2 is, and how we extend it (stock modules vs our nodes)
       - How Python, C++ and Rust fit into Jazzy, and what we give up with Rust
       - How the dual EKF works ("local injects, global reads local + GPS")
       - Run it: turtle, keyboard, Gazebo
       - src vs firmware; one interface, several drivers (the IMU example)
 - [ ] **Email progress** to cmail, red and white, every few hours and when something lands.
-- [ ] **Naming and code style** for all code. Inherited code is ours to edit now.
+- [x] **Naming and code style** for all code. Inherited code is ours to edit now.
+      *Done: `docs/conventions.md`, `pixi run lint` passes. Renaming the inherited
+      packages is proposed and waits for the team.*
 - [ ] **Rust:** pull `rclrs` and the message crates through cargo. Build one example in
       the Pixi environment. Write down what a Rust rewrite would take (ESP32, Pi).
 - [ ] **Design doc:** fix the ten "last year's", and update the tree, profiles and decisions.
