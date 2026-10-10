@@ -1,0 +1,47 @@
+# The car's measurements: the one place they live.
+#
+# Read by:
+#   urdf/aav.urdf.xacro          -> TF frames for every sensor (robot_state_publisher)
+#   aav_bringup launch files     -> ego (wheelbase, steering limit), aav_spine (wheelbase, track),
+#                                   aav_legacy encoder (wheel diameter), Nav2 (footprint,
+#                                   minimum turning radius)
+#
+# Units: metres and radians. base_link = on the ground under the centre of the rear
+# axle; x forward, y left, z up (REP-103, REP-105). Measure everything from there.
+# View the result: ros2 launch aav_description view.launch.py (see docs/car_measurements.md)
+#
+# TODO values came from the previous teams' code (file:line in each comment) or are
+# guesses. Replace them with real measurements and delete the TODO.
+
+vehicle:
+  wheelbase: 1.57           # rear axle to front axle. TODO confirm (Motor_Steering Ackermann.m:5)
+  track: 0.77               # left to right wheel centres. TODO confirm (Ackermann.m:20)
+  wheel_diameter: 0.30      # TODO measure (aav_speed_control marks 0.30 as a placeholder)
+  wheel_width: 0.10         # TODO measure
+  max_steering_angle: 0.50  # rad, virtual wheel at the middle of the front axle. TODO measure;
+                            # old code says 0.45 (bridge_params.yaml:10) to 0.55 (temp_steer_2_P_only.py:29)
+  body:                     # outline used for Nav2's footprint
+    length: 2.00            # bumper to bumper. TODO measure (obstacle_avoidance.cpp:44 guessed 2.0)
+    width: 1.00             # TODO measure (obstacle_avoidance.cpp:43 guessed 1.4, too wide for a 0.77 m track)
+    height: 1.50            # TODO measure
+    rear_overhang: 0.20     # rear bumper behind the rear axle. TODO measure
+  mass: 272.0               # kg. TODO weigh (CARLA stand-in value)
+  encoder_counts_per_rev: 8 # spokes on the encoder wheel (Wheel_Encoders wiznet.ino:29)
+
+# Sensor mounts, relative to base_link. xyz in metres, rpy in radians.
+sensors:
+  imu_link:
+    xyz: [0.50, 0.00, 0.40]   # TODO measure
+    rpy: [0.0, 0.0, 0.0]      # TODO: how the IMU is turned relative to the car
+  gps_link:
+    xyz: [0.80, 0.00, 1.50]   # TODO measure: the antenna, not the receiver box
+    rpy: [0.0, 0.0, 0.0]
+  radar_link:
+    xyz: [2.20, 0.00, 0.40]   # TODO measure (TI IWR6843AOP, later)
+    rpy: [0.0, 0.0, 0.0]
+  camera_left_link:
+    xyz: [1.80, 0.29, 1.20]   # TODO measure (stereo baseline about 0.58 m, cameras/right.ini:25)
+    rpy: [0.0, 0.0, 0.0]
+  camera_right_link:
+    xyz: [1.80, -0.29, 1.20]  # TODO measure
+    rpy: [0.0, 0.0, 0.0]

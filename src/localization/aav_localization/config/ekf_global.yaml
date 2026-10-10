@@ -1,0 +1,57 @@
+# ekf_global (robot_localization 3.8.3, Jazzy): map -> odom.
+#
+# Same inputs as ekf_local plus GPS positions (/odometry/gps, from navsat_transform), so it
+# stays near the truth but can jump when a fix arrives. Nav2's planner and global costmap
+# use the map frame. Output /odometry/global.
+#
+# Heading: with no magnetometer, the yaw at start comes from initial_state. The car starts
+# on a marked spot facing a known direction; the launch file fills in initial_state from
+# its start_x, start_y and start_yaw arguments (map frame: x east, y north, yaw
+# counter-clockwise from east). After that the gyro carries the heading and GPS positions
+# correct it while the car moves.
+ekf_global:
+  ros__parameters:
+    frequency: 30.0
+    sensor_timeout: 0.1
+    two_d_mode: true
+    publish_tf: true
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: map
+
+    odom0: /vehicle/odom
+    odom0_config: [false, false, false,
+                   false, false, false,
+                   true,  true,  false,
+                   false, false, true,
+                   false, false, false]
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+
+    odom1: /odometry/gps
+    odom1_config: [true,  true,  false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, false]
+    odom1_differential: false
+    odom1_relative: false
+    odom1_queue_size: 10
+
+    imu0: /imu/data
+    imu0_config: [false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, true,
+                  false, false, false]
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true
+
+    use_control: false
+    process_noise_covariance: [0.05, 0.05, 0.06, 0.03, 0.03, 0.06, 0.025, 0.025, 0.04, 0.01, 0.01, 0.02, 0.01, 0.01, 0.015]
+    # Position and heading are unsure at start (set by hand); yaw 0.1 rad ~ 18 degrees (1 sigma).
+    initial_estimate_covariance: [1.0, 1.0, 1e-9, 1.0, 1.0, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]

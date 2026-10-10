@@ -1,0 +1,184 @@
+{
+  "dbc_version": "0.1.0",
+  "generated_by": "firmware/can/gen_test_vectors.py",
+  "vectors": [
+    {
+      "name": "estop_on",
+      "id": 16,
+      "frame": "ESTOP_CMD",
+      "values": {
+        "estop_request": 1,
+        "counter": 3
+      },
+      "decoded": {
+        "estop_request": 1,
+        "counter": 3
+      },
+      "data_hex": "31be"
+    },
+    {
+      "name": "estop_off",
+      "id": 16,
+      "frame": "ESTOP_CMD",
+      "values": {
+        "estop_request": 0,
+        "counter": 15
+      },
+      "decoded": {
+        "estop_request": 0,
+        "counter": 15
+      },
+      "data_hex": "f096"
+    },
+    {
+      "name": "drive_forward_left",
+      "id": 256,
+      "frame": "DRIVE_CMD",
+      "values": {
+        "target_speed": 1.5,
+        "steering_angle": 0.25,
+        "accel_limit": 1.0,
+        "steer_rate_limit": 0.5,
+        "armed": 1,
+        "counter": 7
+      },
+      "decoded": {
+        "target_speed": 1.5,
+        "steering_angle": 0.25,
+        "accel_limit": 1.0,
+        "steer_rate_limit": 0.5,
+        "armed": 1,
+        "counter": 7
+      },
+      "data_hex": "dc05c409141971ed"
+    },
+    {
+      "name": "drive_reverse_right",
+      "id": 256,
+      "frame": "DRIVE_CMD",
+      "values": {
+        "target_speed": -0.75,
+        "steering_angle": -0.4363,
+        "accel_limit": 0.0,
+        "steer_rate_limit": 0.0,
+        "armed": 0,
+        "counter": 0
+      },
+      "decoded": {
+        "target_speed": -0.75,
+        "steering_angle": -0.4363,
+        "accel_limit": 0.0,
+        "steer_rate_limit": 0.0,
+        "armed": 0,
+        "counter": 0
+      },
+      "data_hex": "12fdf5ee000000f7"
+    },
+    {
+      "name": "drive_saturates",
+      "id": 256,
+      "frame": "DRIVE_CMD",
+      "values": {
+        "target_speed": 40.0,
+        "steering_angle": -5.0,
+        "accel_limit": 20.0,
+        "steer_rate_limit": 9.0,
+        "armed": 1,
+        "counter": 15
+      },
+      "decoded": {
+        "target_speed": 32.767,
+        "steering_angle": -3.2768,
+        "accel_limit": 12.75,
+        "steer_rate_limit": 5.1,
+        "armed": 1,
+        "counter": 15
+      },
+      "data_hex": "ff7f0080fffff167"
+    },
+    {
+      "name": "feedback_moving",
+      "id": 384,
+      "frame": "VEHICLE_FEEDBACK",
+      "values": {
+        "measured_speed": 2.345,
+        "measured_steering_angle": -0.1,
+        "wheel_ticks": 65535,
+        "counter": 9
+      },
+      "decoded": {
+        "measured_speed": 2.345,
+        "measured_steering_angle": -0.1,
+        "wheel_ticks": 65535,
+        "counter": 9
+      },
+      "data_hex": "290918fcffff905e"
+    },
+    {
+      "name": "feedback_reverse",
+      "id": 384,
+      "frame": "VEHICLE_FEEDBACK",
+      "values": {
+        "measured_speed": -0.4,
+        "measured_steering_angle": 0.3,
+        "wheel_ticks": 1234,
+        "counter": 1
+      },
+      "decoded": {
+        "measured_speed": -0.4,
+        "measured_steering_angle": 0.3,
+        "wheel_ticks": 1234,
+        "counter": 1
+      },
+      "data_hex": "70feb80bd2041092"
+    },
+    {
+      "name": "status_computer",
+      "id": 385,
+      "frame": "VEHICLE_STATUS",
+      "values": {
+        "mode": 2,
+        "armed": 1,
+        "estop_active": 0,
+        "throttle": 37.5,
+        "brake": 0.0,
+        "faults": 129,
+        "counter": 12
+      },
+      "decoded": {
+        "mode": 2,
+        "armed": 1,
+        "estop_active": 0,
+        "throttle": 37.5,
+        "brake": 0.0,
+        "faults": 129,
+        "counter": 12
+      },
+      "data_hex": "064b00810000c068"
+    },
+    {
+      "name": "status_rc_estop",
+      "id": 385,
+      "frame": "VEHICLE_STATUS",
+      "values": {
+        "mode": 1,
+        "armed": 0,
+        "estop_active": 1,
+        "throttle": 0.0,
+        "brake": 100.0,
+        "faults": 256,
+        "counter": 4
+      },
+      "decoded": {
+        "mode": 1,
+        "armed": 0,
+        "estop_active": 1,
+        "throttle": 0.0,
+        "brake": 100.0,
+        "faults": 256,
+        "counter": 4
+      },
+      "data_hex": "0900c8000100406e"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+# colcon build output (machine-specific; never commit)
+/build/
+/install/
+/log/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Rust (Cargo.lock IS committed: the firmware is a binary)
+target/
+
+# PlatformIO
+.pio/
+
+# Drives recorded with tools/record.sh
+/bags/
+
+# Secrets: copy the .example file and fill it in locally
+secrets.h
+.env
+
+# Local environments and editors
+.pixi/
+.venv/
+.vscode/
+.idea/
+.DS_Store

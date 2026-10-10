@@ -1,0 +1,18 @@
+# Phase 3: a pre-rendered costmap, drawn by hand. This one is made up to show the
+# idea: an 80 m x 60 m lot, a wall around it, two blocked areas (a building and a
+# row of parked cars) and a gap in the wall for the entrance.
+#
+# For the real test site: pick a datum (lat, lon) at one corner, measure (or read
+# off satellite imagery) the drivable area in metres east/north of it, list the
+# blocked rectangles here, and set the same datum on navsat_transform.
+name: example_lot
+resolution: 0.25
+size: [80, 60]
+origin: [-10, -10]
+default: free
+border: 1.0
+blocked:
+  - [20, 20, 40, 35]      # a building
+  - [50, 0, 52, 30]       # parked cars along one row
+free:
+  - [-10, 5, -9, 9]       # the entrance through the west wall

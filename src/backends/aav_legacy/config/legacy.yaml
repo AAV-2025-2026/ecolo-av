@@ -1,0 +1,26 @@
+# Interim backend for the 2025-26 hardware (ESP32 over UART, Pico 2 wheel encoder over UDP).
+# Values marked TODO must be checked with the wheels off the ground before driving.
+legacy_uart_bridge:
+  ros__parameters:
+    port: /dev/ttyAMA0          # the Pi's UART wired to the ESP32 (GPIO16/17 on the ESP32 side)
+    baud: 115200
+    rate_hz: 50.0
+    cmd_timeout: 0.3
+    max_steering_angle: 0.5     # rad at full lock. TODO measure
+    # TODO check: +1 must steer RIGHT for this to be -1. The 2025-26 joystick config had
+    # invert_steer: true (joy_teleop_ackerman/config/joy_params.yaml), which suggests the
+    # ESP32 takes +1 as right. ROS uses + = left (REP-103).
+    steering_sign: -1.0
+    full_throttle_speed: 3.0    # m/s at speed = 1.0 (throttle is open loop). TODO measure
+    stop_speed: 0.05
+    hold_brake: 0.3
+    stop_brake: 1.0
+
+encoder_udp:
+  ros__parameters:
+    port: 10111
+    bind_address: 0.0.0.0
+    wheel_diameter: 0.30        # TODO measure (keep equal to vehicle.yaml)
+    counts_per_rev: 8
+    window_s: 0.5
+    speed_variance: 0.05

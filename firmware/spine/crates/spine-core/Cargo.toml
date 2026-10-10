@@ -1,0 +1,10 @@
+[package]
+name = "spine-core"
+description = "Hardware-independent spine logic: CAN frames, watchdog, drive modes, limits, speed loop, wheel encoder."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No dependencies on purpose: no_std, no allocator, no hardware access.
+[dependencies]

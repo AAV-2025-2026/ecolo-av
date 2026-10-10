@@ -1,0 +1,18 @@
+# The Jetson Orin in the middle of the car: the decision-making parts.
+# TODO: set imu/gps/teleop to wherever those USB devices are actually plugged in.
+parts:
+  description: true
+  mux: true
+  ego: true
+  teleop: false         # the joystick receiver: see laptop.yaml
+  scripted: true
+  imu: true             # TODO is the IMU on the Orin's USB?
+  gps: true             # TODO is the u-blox on the Orin's USB?
+  radar: false          # perception, later
+  battery: false
+  localization: true
+  navigation: true
+  spine: false          # true once the CAN spine exists (and legacy_* false)
+  legacy_uart: false    # runs on motor_pi, which is wired to the ESP32
+  legacy_encoder: true  # a UDP listener: anywhere on the car's network
+  foxglove: true

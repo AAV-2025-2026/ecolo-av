@@ -1,0 +1,27 @@
+# Drive a speed profile: speed up, hold, slow down to a stop.
+# Server: aav_scripted (scripted_driver), publishing /cmd_vel/scripted.
+# Cancelling the goal slows down at `deceleration` and stops.
+
+# Goal
+float32 target_speed     # m/s; negative drives in reverse
+float32 acceleration     # m/s^2, > 0
+float32 deceleration     # m/s^2, > 0
+float32 hold_time        # s at target_speed; used when hold_distance is 0
+float32 hold_distance    # m covered at target_speed (needs /odometry/filtered); 0 = use hold_time
+float32 curvature        # 1/m, positive turns left; 0 drives straight
+---
+# Result
+bool success
+string message
+float32 distance_travelled   # m, from /odometry/filtered (0 if it never arrived)
+float32 duration             # s
+---
+# Feedback
+uint8 PHASE_ACCELERATE=0
+uint8 PHASE_HOLD=1
+uint8 PHASE_DECELERATE=2
+uint8 PHASE_STOPPED=3
+uint8 phase
+float32 commanded_speed      # m/s
+float32 measured_speed       # m/s, from /odometry/filtered
+float32 distance_travelled   # m

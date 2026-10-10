@@ -1,0 +1,18 @@
+# Everything on one computer: the bench, or the Orin with every device plugged into it.
+# The backend for today's hardware is legacy (no CAN spine yet).
+parts:
+  description: true
+  mux: true
+  ego: true
+  teleop: true
+  scripted: true
+  imu: true
+  gps: true
+  radar: false
+  battery: false
+  localization: true
+  navigation: true
+  spine: false
+  legacy_uart: true
+  legacy_encoder: true
+  foxglove: true

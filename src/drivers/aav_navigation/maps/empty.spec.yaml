@@ -1,0 +1,10 @@
+# Phase 2: "an empty costmap". Everything is free, so Nav2 plans straight to a GPS
+# goal (within the car's turning limits) and only the local costmap's sensors, once
+# there are any, can stop it. 200 m x 200 m centred on the datum.
+# Rebuild with: tools/make_map.py src/drivers/aav_navigation/maps/empty.spec.yaml
+name: empty
+resolution: 0.25
+size: [200, 200]
+origin: [-100, -100]
+default: free
+border: 0

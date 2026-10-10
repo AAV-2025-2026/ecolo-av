@@ -1,0 +1,12 @@
+# joy (joystick_drivers 3.3.0, Jazzy): reads the stick, publishes sensor_msgs/Joy on /joy.
+# Axes are -1..1 with left and up positive; buttons are 0/1.
+# See which index is which: ros2 run joy joy_enumerate_devices, then
+#   ros2 topic echo /joy   and move one control at a time.
+joy_node:
+  ros__parameters:
+    device_id: 0                # first joystick; or set device_name instead
+    device_name: ""
+    deadzone: 0.05              # same as the 2025-26 joy_params.yaml
+    autorepeat_rate: 20.0       # Hz: resend while held, so teleop keeps publishing
+    sticky_buttons: false
+    coalesce_interval_ms: 1

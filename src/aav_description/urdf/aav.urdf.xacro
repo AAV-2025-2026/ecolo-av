@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<!--
+  The AAV car: frames and simple shapes, built from config/vehicle.yaml.
+  base_link is on the ground under the centre of the rear axle (REP-105).
+
+  Joints that move:
+    front_left_steering_joint, front_right_steering_joint   (revolute, about z)
+    *_wheel_joint                                           (continuous, about y)
+  On the real car, spine_bridge publishes the steering angles; joint_state_publisher
+  fills in the rest. In Gazebo the simulator publishes all of them.
+
+  View it: ros2 launch aav_description view.launch.py
+-->
+<robot name="aav" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:arg name="vehicle_config" default="$(find aav_description)/config/vehicle.yaml"/>
+  <xacro:arg name="sim" default="false"/>
+
+  <xacro:property name="cfg" value="${xacro.load_yaml('$(arg vehicle_config)')}"/>
+  <xacro:property name="veh" value="${cfg['vehicle']}"/>
+  <xacro:property name="body" value="${veh['body']}"/>
+  <xacro:property name="L" value="${veh['wheelbase']}"/>
+  <xacro:property name="T" value="${veh['track']}"/>
+  <xacro:property name="R" value="${veh['wheel_diameter'] / 2.0}"/>
+  <xacro:property name="W" value="${veh['wheel_width']}"/>
+  <xacro:property name="max_steer" value="${veh['max_steering_angle']}"/>
+
+  <material name="body_grey"><color rgba="0.6 0.6 0.65 1.0"/></material>
+  <material name="tyre_black"><color rgba="0.1 0.1 0.1 1.0"/></material>
+  <material name="sensor_orange"><color rgba="1.0 0.5 0.0 1.0"/></material>
+
+  <xacro:macro name="box_inertia" params="m x y z">
+    <inertia ixx="${m * (y*y + z*z) / 12}" ixy="0" ixz="0"
+             iyy="${m * (x*x + z*z) / 12}" iyz="0" izz="${m * (x*x + y*y) / 12}"/>
+  </xacro:macro>
+
+  <link name="base_link"/>
+
+  <!-- The body, as a box between the bumpers. -->
+  <link name="chassis">
+    <visual>
+      <geometry><box size="${body['length']} ${body['width']} ${body['height'] - R}"/></geometry>
+      <material name="body_grey"/>
+    </visual>
+    <collision>
+      <geometry><box size="${body['length']} ${body['width']} ${body['height'] - R}"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="${veh['mass']}"/>
+      <xacro:box_inertia m="${veh['mass']}" x="${body['length']}" y="${body['width']}" z="${body['height'] - R}"/>
+    </inertial>
+  </link>
+  <joint name="chassis_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="chassis"/>
+    <origin xyz="${body['length'] / 2 - body['rear_overhang']} 0 ${R + (body['height'] - R) / 2}"/>
+  </joint>
+
+  <xacro:macro name="wheel" params="name">
+    <link name="${name}_wheel">
+      <visual>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${R}" length="${W}"/></geometry>
+        <material name="tyre_black"/>
+      </visual>
+      <collision>
+        <origin rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${R}" length="${W}"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="5.0"/>
+        <inertia ixx="${5.0 * (3*R*R + W*W) / 12}" ixy="0" ixz="0"
+                 iyy="${5.0 * R * R / 2}" iyz="0" izz="${5.0 * (3*R*R + W*W) / 12}"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="rear_wheel" params="name y">
+    <xacro:wheel name="${name}"/>
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child link="${name}_wheel"/>
+      <origin xyz="0 ${y} ${R}"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="front_wheel" params="name y">
+    <link name="${name}_steering_link">
+      <inertial>
+        <mass value="0.5"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+    </link>
+    <joint name="${name}_steering_joint" type="revolute">
+      <parent link="base_link"/>
+      <child link="${name}_steering_link"/>
+      <origin xyz="${L} ${y} ${R}"/>
+      <axis xyz="0 0 1"/>
+      <!-- The inner wheel turns further than the virtual centre wheel. -->
+      <limit lower="${-1.3 * max_steer}" upper="${1.3 * max_steer}" effort="100" velocity="1.0"/>
+    </joint>
+    <xacro:wheel name="${name}"/>
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="${name}_steering_link"/>
+      <child link="${name}_wheel"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:rear_wheel name="rear_left" y="${T / 2}"/>
+  <xacro:rear_wheel name="rear_right" y="${-T / 2}"/>
+  <xacro:front_wheel name="front_left" y="${T / 2}"/>
+  <xacro:front_wheel name="front_right" y="${-T / 2}"/>
+
+  <!-- Sensors: one fixed frame each, placed from vehicle.yaml. -->
+  <xacro:macro name="sensor_frame" params="name">
+    <xacro:property name="s" value="${cfg['sensors'][name]}"/>
+    <link name="${name}">
+      <visual>
+        <geometry><box size="0.08 0.08 0.04"/></geometry>
+        <material name="sensor_orange"/>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${name}"/>
+      <origin xyz="${s['xyz'][0]} ${s['xyz'][1]} ${s['xyz'][2]}"
+              rpy="${s['rpy'][0]} ${s['rpy'][1]} ${s['rpy'][2]}"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:sensor_frame name="imu_link"/>
+  <xacro:sensor_frame name="gps_link"/>
+  <xacro:sensor_frame name="radar_link"/>
+  <xacro:sensor_frame name="camera_left_link"/>
+  <xacro:sensor_frame name="camera_right_link"/>
+
+  <xacro:if value="$(arg sim)">
+    <xacro:include filename="$(find aav_description)/urdf/aav.gazebo.xacro"/>
+  </xacro:if>
+
+</robot>

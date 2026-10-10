@@ -1,0 +1,3 @@
+# The safety driver's laptop, joystick plugged in. RViz/Foxglove run here too, by hand.
+parts:
+  teleop: true

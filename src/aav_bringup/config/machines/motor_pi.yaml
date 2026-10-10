@@ -1,0 +1,4 @@
+# The Raspberry Pi wired to the ESP32's UART (2025-26 hardware). Only the serial bridge
+# runs here; it gets /ego/actuator_cmd and /estop from the Orin over the network.
+parts:
+  legacy_uart: true

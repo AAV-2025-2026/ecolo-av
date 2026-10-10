@@ -1,0 +1,11 @@
+# empty: 200 m x 200 m at 0.25 m/pixel (800 x 800 pixels). Made by tools/make_map.py.
+image: empty.pgm
+mode: trinary
+resolution: 0.25
+origin:
+- -100.0
+- -100.0
+- 0.0
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25

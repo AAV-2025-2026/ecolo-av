@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+# spine-core builds and tests on a laptop with `cargo test`.
+# The board crate for the ESP32 is generated separately (see README.md) and
+# depends on spine-core by path; it is not a workspace member because it needs
+# the ESP32 toolchain.
+members = ["crates/spine-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false

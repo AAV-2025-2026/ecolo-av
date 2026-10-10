@@ -1,0 +1,48 @@
+# twist_mux: picks ONE velocity command for ego from all the drivers.
+#
+# Rules (checked in the twist_mux 4.5.0 source, the Jazzy release):
+# - Inputs and output are geometry_msgs/TwistStamped (use_stamped defaults to true).
+# - An input counts while its last message is younger than `timeout` seconds, measured
+#   from when it arrived (header stamps are ignored). Among the inputs that count, the
+#   highest `priority` wins. Priorities are clamped to 1..255.
+# - A lock is std_msgs/Bool. While its last value was true it blocks every input whose
+#   priority is BELOW the lock's. timeout 0 = the lock never expires on silence.
+# - Nothing is published when no input counts; ego then stops after its own timeout.
+# - The output topic is `cmd_vel_out`; aav_mux/launch/mux.launch.py remaps it to /cmd_vel.
+#
+# Holding the joystick deadman (with the stick centred) outranks everything: it stops
+# the car. Releasing it hands control back to the next input after 0.5 s. To stop for
+# good, press the e-stop button (or publish /estop true).
+twist_mux:
+  ros__parameters:
+    use_stamped: true
+    topics:
+      joy:                      # safety driver with the joystick (aav_teleop)
+        topic: /cmd_vel/joy
+        timeout: 0.5
+        priority: 100
+      remote:                   # someone driving from a laptop: Foxglove, the HUD
+        topic: /cmd_vel/remote
+        timeout: 0.5
+        priority: 90
+      scripted:                 # aav_scripted: a fixed speed profile for a test
+        topic: /cmd_vel/scripted
+        timeout: 0.5
+        priority: 50
+      replay:                   # a recorded drive played back (tools/replay_commands.sh)
+        topic: /cmd_vel/replay
+        timeout: 0.5
+        priority: 40
+      nav:                      # Nav2 (aav_navigation)
+        topic: /cmd_vel/nav
+        timeout: 0.5
+        priority: 20
+      ai:                       # a future learned driver
+        topic: /cmd_vel/ai
+        timeout: 0.5
+        priority: 10
+    locks:
+      estop:                    # /estop true blocks every input above. The backends also
+        topic: /estop           # brake directly on /estop, so this is the second layer.
+        timeout: 0.0
+        priority: 255

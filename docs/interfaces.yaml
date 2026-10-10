@@ -1,0 +1,256 @@
+# The node graph contract: every topic, service and action between our packages.
+#
+# docs/interfaces.md is generated from this file (tools/gen_interfaces_md.py), and
+# tools/check_graph.py compares a running system against it. Change the graph here first.
+#
+# live: the bringup profiles where the topic must have a publisher
+#   turtle = aav_bringup turtle.launch.py, sim = sim.launch.py, car = car.launch.py
+# All topic names are absolute. QoS is the ROS default (reliable, volatile, depth 10)
+# unless noted.
+
+topics:
+  # --- drivers -> mux -> ego (the command path) ---
+  /joy:
+    type: sensor_msgs/msg/Joy
+    pub: [joy_node]
+    sub: [teleop_twist_joy_node, joy_teleop]
+    note: Joystick axes and buttons, 20 Hz while held.
+  /cmd_vel/joy:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [teleop_twist_joy_node]
+    sub: [twist_mux]
+    note: Priority 100. Only while the deadman (trigger) is held.
+  /cmd_vel/remote:
+    type: geometry_msgs/msg/TwistStamped
+    pub: []
+    sub: [twist_mux]
+    note: Priority 90. Foxglove teleop panel, or the HUD once ported.
+  /cmd_vel/scripted:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [scripted_driver]
+    sub: [twist_mux]
+    note: Priority 50. Only while a /scripted_drive goal runs.
+  /cmd_vel/replay:
+    type: geometry_msgs/msg/TwistStamped
+    pub: []
+    sub: [twist_mux]
+    note: Priority 40. ros2 bag play of a recorded /cmd_vel (tools/replay_commands.sh).
+  /cmd_vel/nav:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [velocity_smoother]
+    sub: [twist_mux]
+    note: Priority 20. Nav2; from collision_monitor instead when it is enabled.
+  /cmd_vel/ai:
+    type: geometry_msgs/msg/TwistStamped
+    pub: []
+    sub: [twist_mux]
+    note: Priority 10. Reserved for a learned driver.
+  /estop:
+    type: std_msgs/msg/Bool
+    pub: [joy_teleop]
+    sub: [twist_mux, spine_bridge, legacy_uart_bridge]
+    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false.
+  /cmd_vel:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [twist_mux]
+    sub: [ego]
+    live: [turtle, sim, car]
+    note: The one command ego obeys. v (m/s) and w (rad/s) in base_link.
+  /ego/actuator_cmd:
+    type: ackermann_msgs/msg/AckermannDriveStamped
+    pub: [ego]
+    sub: [spine_bridge, legacy_uart_bridge, turtlesim_adapter, gazebo_adapter, carla_adapter]
+    live: [turtle, sim, car]
+    note: 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs.
+
+  # --- backends -> the rest ---
+  /vehicle/odom:
+    type: nav_msgs/msg/Odometry
+    pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
+    sub: [ekf_local, ekf_global]
+    live: [turtle, sim, car]
+    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).
+  /vehicle/status:
+    type: aav_interfaces/msg/VehicleStatus
+    pub: [spine_bridge, gazebo_adapter]
+    sub: []
+    live: [sim]
+    note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.
+  /vehicle/joint_states:
+    type: sensor_msgs/msg/JointState
+    pub: [spine_bridge]
+    sub: [joint_state_publisher]
+    note: Measured front steering joint angles, merged into /joint_states.
+  /joint_states:
+    type: sensor_msgs/msg/JointState
+    pub: [joint_state_publisher, gz_bridge]
+    sub: [robot_state_publisher]
+    live: [turtle, sim, car]
+  /to_can_bus:
+    type: can_msgs/msg/Frame
+    pub: [spine_bridge]
+    sub: [socket_can_sender]
+    note: DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc).
+  /from_can_bus:
+    type: can_msgs/msg/Frame
+    pub: [socket_can_receiver]
+    sub: [spine_bridge]
+    note: VEHICLE_FEEDBACK 0x180, VEHICLE_STATUS 0x181.
+
+  # --- sensors ---
+  /imu/data_raw:
+    type: sensor_msgs/msg/Imu
+    pub: [imu_node, gazebo_adapter]
+    sub: [imu_filter_madgwick]
+    live: [sim, car]
+    note: Gyro and accelerometer in imu_link, with covariances; no orientation.
+  /imu/mag:
+    type: sensor_msgs/msg/MagneticField
+    pub: [imu_node]
+    sub: []
+    note: Raw counts, not tesla yet; unused.
+  /imu/data:
+    type: sensor_msgs/msg/Imu
+    pub: [imu_filter_madgwick]
+    sub: [ekf_local, ekf_global]
+    live: [sim, car]
+    note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
+  /gps/fix:
+    type: sensor_msgs/msg/NavSatFix
+    pub: [ublox_nav_sat_fix_hp, gazebo_adapter]
+    sub: [navsat_transform]
+    live: [sim, car]
+    note: Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS).
+  /radar/points:
+    type: sensor_msgs/msg/PointCloud2
+    pub: [radar]
+    sub: []
+    note: Perception phase. Will feed the local costmap's obstacle layer and collision_monitor.
+  /battery_status:
+    type: sensor_msgs/msg/BatteryState
+    pub: [battery_monitor]
+    sub: []
+
+  # --- localization ---
+  /odometry/local:
+    type: nav_msgs/msg/Odometry
+    pub: [ekf_local]
+    sub: [controller_server, bt_navigator, scripted_driver]
+    live: [turtle, sim, car]
+    note: odom frame. Smooth; drifts.
+  /odometry/global:
+    type: nav_msgs/msg/Odometry
+    pub: [ekf_global]
+    sub: [navsat_transform]
+    live: [sim, car]
+    note: map frame. Includes GPS; can jump.
+  /odometry/gps:
+    type: nav_msgs/msg/Odometry
+    pub: [navsat_transform]
+    sub: [ekf_global]
+    live: [sim, car]
+    note: Each GPS fix as a map-frame position of base_link (antenna offset removed).
+  /gps/filtered:
+    type: sensor_msgs/msg/NavSatFix
+    pub: [navsat_transform]
+    sub: []
+    live: [sim, car]
+    note: The global EKF's position as lat/lon, for maps in the HUD or Foxglove.
+
+  # --- navigation ---
+  /map:
+    type: nav_msgs/msg/OccupancyGrid
+    pub: [map_server]
+    sub: [global_costmap, local_costmap]
+    live: [sim]
+    note: Transient local (latched). From aav_navigation/maps.
+  /goal_pose:
+    type: geometry_msgs/msg/PoseStamped
+    pub: [rviz2]
+    sub: [bt_navigator]
+    note: RViz "2D Goal Pose" starts a navigate_to_pose.
+  /plan:
+    type: nav_msgs/msg/Path
+    pub: [planner_server]
+    sub: []
+    note: The planned path, for RViz/Foxglove.
+
+  # --- frames and plumbing ---
+  /tf:
+    type: tf2_msgs/msg/TFMessage
+    pub: [ekf_local, ekf_global, robot_state_publisher]
+    sub: []
+    live: [turtle, sim, car]
+    note: map -> odom (ekf_global), odom -> base_link (ekf_local), moving joints (robot_state_publisher).
+  /tf_static:
+    type: tf2_msgs/msg/TFMessage
+    pub: [robot_state_publisher]
+    sub: []
+    live: [turtle, sim, car]
+    note: base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF.
+  /robot_description:
+    type: std_msgs/msg/String
+    pub: [robot_state_publisher]
+    sub: []
+    live: [turtle, sim, car]
+  /clock:
+    type: rosgraph_msgs/msg/Clock
+    pub: [gz_bridge]
+    sub: []
+    live: [sim]
+    note: Simulation time; every node runs with use_sim_time:=true in sim and replay.
+
+services:
+  /spine/arm:
+    type: std_srvs/srv/SetBool
+    server: spine_bridge
+    note: The spine ignores drive commands until armed; refused while /estop is true.
+  /fromLL:
+    type: robot_localization/srv/FromLL
+    server: navsat_transform
+    note: Lat/lon -> map x, y. Nav2's follow_gps_waypoints calls it.
+  /toLL:
+    type: robot_localization/srv/ToLL
+    server: navsat_transform
+  /datum:
+    type: robot_localization/srv/SetDatum
+    server: navsat_transform
+    note: Move the map origin (normally set once from navsat.yaml).
+  /ekf_local/set_pose:
+    type: robot_localization/srv/SetPose
+    server: ekf_local
+  /ekf_global/set_pose:
+    type: robot_localization/srv/SetPose
+    server: ekf_global
+    note: Re-seed the start pose by hand (heading!).
+
+actions:
+  /scripted_drive:
+    type: aav_interfaces/action/ScriptedDrive
+    server: scripted_driver
+    note: Drive a speed profile (accelerate, hold for a time or distance, stop). Phase 1.
+  /navigate_to_pose:
+    type: nav2_msgs/action/NavigateToPose
+    server: bt_navigator
+    note: Drive to one map-frame pose.
+  /navigate_through_poses:
+    type: nav2_msgs/action/NavigateThroughPoses
+    server: bt_navigator
+  /follow_waypoints:
+    type: nav2_msgs/action/FollowWaypoints
+    server: waypoint_follower
+  /follow_gps_waypoints:
+    type: nav2_msgs/action/FollowGPSWaypoints
+    server: waypoint_follower
+    note: Lat/lon waypoints (the HUD's destination or OSRM route). Phase 2.
+
+frames:
+  map: {parent: null, by: "ekf_global (map -> odom)", note: "x east, y north; origin = the navsat datum"}
+  odom: {parent: map, by: "ekf_local (odom -> base_link)", note: "continuous; starts where the car starts"}
+  base_link: {parent: odom, note: "on the ground under the rear axle centre; x forward, y left, z up"}
+  chassis: {parent: base_link, by: robot_state_publisher}
+  imu_link: {parent: base_link, by: robot_state_publisher, note: "vehicle.yaml sensors.imu_link"}
+  gps_link: {parent: base_link, by: robot_state_publisher, note: "the antenna"}
+  radar_link: {parent: base_link, by: robot_state_publisher}
+  camera_left_link: {parent: base_link, by: robot_state_publisher}
+  camera_right_link: {parent: base_link, by: robot_state_publisher}
