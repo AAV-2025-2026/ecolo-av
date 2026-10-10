@@ -3,13 +3,17 @@
 Bench check: start bench mode, then test the whole car graph on this computer.
 
     pixi run bench-check          (about 2 minutes; nothing else on the network sees it)
+    pixi run -e ml bench-check --perception    (adds YOLO and the stop sign: 3 minutes)
 
 1. Starts bench.launch.py on a private ROS domain, local to this computer.
 2. Checks the running graph against docs/interfaces.yaml (check_graph.py --profile bench).
 3. Waits for the spine to arm, drives a scripted profile, and compares where the model car
    really is (/bench/truth) with where the car's own software thinks it is (/odometry/global).
 4. Presses the e-stop while driving: the car must stop, and the spine must say so.
-5. Presses the hardware e-stop the same way, then stops everything.
+5. Presses the hardware e-stop the same way.
+6. With --perception: Nav2 drives 40 m east, past the bench's stop sign. The car must stop
+   before the sign, wait, and go on to the goal. The camera's picture with YOLO's boxes, at
+   the moment it stopped, is saved to /tmp/aav-bench-stop-sign.png.
 
 Prints a table and exits 1 if anything failed. Run it after changing anything between the
 drivers and the spine.
@@ -31,10 +35,12 @@ os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
 
 from aav_interfaces.action import ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import VehicleStatus  # noqa: E402
+from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav_msgs.msg import Odometry  # noqa: E402
 import rclpy  # noqa: E402
 from rclpy.action import ActionClient  # noqa: E402
 from rclpy.node import Node  # noqa: E402
+from sensor_msgs.msg import Image  # noqa: E402
 from std_msgs.msg import Bool  # noqa: E402
 from std_srvs.srv import SetBool  # noqa: E402
 
@@ -60,6 +66,19 @@ class Probe(Node):
         self.hw_estop = self.create_publisher(Bool, '/bench/hw_estop', 10)
         self.arm_client = self.create_client(SetBool, '/spine/arm')
         self.drive = ActionClient(self, ScriptedDrive, '/scripted_drive')
+        self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
+        self.stop = False
+        self.picture = None
+        self.create_subscription(Bool, '/perception/stop', self.on_stop, 10)
+        self.create_subscription(Image, '/perception/detections/image',
+                                 lambda m: setattr(self, 'picture', m), 2)
+        self.stop_picture = None
+
+    def on_stop(self, msg):
+        if msg.data and not self.stop and self.picture is not None:
+            self.stop_picture = self.picture   # what the camera saw as the lock went on
+            self.stop_time = self.get_clock().now().nanoseconds * 1e-9
+        self.stop = msg.data
 
     def spin_for(self, seconds, until=None):
         end = time.monotonic() + seconds
@@ -124,11 +143,56 @@ def check_estop(probe, name, publisher):
     probe.arm_and_hold()
 
 
+def check_stop_sign(probe):
+    """Nav2 drives 40 m east, past the stop sign at x = 25 m: it must stop before it."""
+    goal = NavigateToPose.Goal()
+    goal.pose.header.frame_id = 'map'
+    goal.pose.pose.position.x = 40.0
+    goal.pose.pose.orientation.w = 1.0
+    if not probe.nav.wait_for_server(timeout_sec=30.0):
+        result('stop sign', False, 'no Nav2')
+        return
+    sent = probe.nav.send_goal_async(goal)
+    probe.spin_for(10.0, lambda: sent.done())
+    if not sent.done() or not sent.result().accepted:
+        result('stop sign', False, 'Nav2 refused the goal')
+        return
+    done = sent.result().get_result_async()
+    stopped_at, stood_still = None, False
+    end = time.monotonic() + 150.0
+    while time.monotonic() < end and not done.done():
+        probe.spin_for(0.1)
+        if probe.stop and stopped_at is None:
+            stopped_at = probe.truth.pose.pose.position.x
+        if probe.stop and abs(probe.truth.twist.twist.linear.x) < 0.05:
+            stood_still = True
+    x = probe.truth.pose.pose.position.x
+    succeeded = done.done() and done.result().status == 4
+    ok = stopped_at is not None and stopped_at < 24.0 and stood_still and succeeded and x > 35
+    where = f'locked at x = {stopped_at:.1f} m' if stopped_at is not None else 'never locked'
+    result('stop sign', ok, f'{where} (the sign is at 25 m), stood still: {stood_still}, '
+                            f'Nav2 goal {"reached" if succeeded else "not reached"} at {x:.1f} m')
+    if probe.stop_picture is not None:
+        try:
+            from cv_bridge import CvBridge
+            import cv2
+            cv2.imwrite('/tmp/aav-bench-stop-sign.png',
+                        CvBridge().imgmsg_to_cv2(probe.stop_picture, 'bgr8'))
+            stamp = probe.stop_picture.header.stamp
+            age = probe.stop_time - (stamp.sec + stamp.nanosec * 1e-9)
+            print(f'The camera at the stop: /tmp/aav-bench-stop-sign.png (taken {age:.1f} s '
+                  'before the lock went on)', flush=True)
+        except Exception as e:  # noqa: B902 - the picture is a bonus
+            print(f'could not save the picture: {e}', flush=True)
+
+
 def main():
+    perception = '--perception' in sys.argv[1:]
     env = dict(os.environ)
     print(f'Starting bench mode on ROS domain {env["ROS_DOMAIN_ID"]} (local only)...', flush=True)
     log = open('/tmp/aav-bench-check.log', 'w')
-    launch = subprocess.Popen(['ros2', 'launch', 'aav_bringup', 'bench.launch.py', 'rviz:=false'],
+    launch = subprocess.Popen(['ros2', 'launch', 'aav_bringup', 'bench.launch.py', 'rviz:=false',
+                               f'perception:={str(perception).lower()}'],
                               cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
                               start_new_session=True)
     rclpy.init()
@@ -169,6 +233,8 @@ def main():
 
         check_estop(probe, 'software e-stop', probe.estop)
         check_estop(probe, 'hardware e-stop', probe.hw_estop)
+        if perception:
+            check_stop_sign(probe)
     finally:
         probe.destroy_node()
         rclpy.try_shutdown()

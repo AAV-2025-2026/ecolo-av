@@ -32,6 +32,10 @@ from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithP
 # nearly every image (measured: 0 of 50 arrived, against 50 of 50 reliable).
 LATEST = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
                     reliability=ReliabilityPolicy.RELIABLE)
+# The picture with boxes keeps a few frames: a big frame arrives in many pieces, and with
+# room for only one, a busy subscriber may never finish a frame before the next replaces it.
+PICTURES = QoSProfile(depth=3, history=HistoryPolicy.KEEP_LAST,
+                      reliability=ReliabilityPolicy.RELIABLE)
 
 
 class Detector(Node):
@@ -57,7 +61,7 @@ class Detector(Node):
         self.model = YOLO(model, task='detect')
         self.bridge = CvBridge()
         self.pub = self.create_publisher(Detection2DArray, 'detections', 10)
-        self.image_pub = (self.create_publisher(Image, 'detections/image', LATEST)
+        self.image_pub = (self.create_publisher(Image, 'detections/image', PICTURES)
                           if publish_image else None)
         self.create_subscription(Image, 'image', self.on_image, LATEST)
         self.frames, self.busy_s, self.since = 0, 0.0, time.monotonic()
