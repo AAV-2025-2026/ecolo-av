@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulation: Gazebo, replay, and when nothing moves · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Simulation: Gazebo, replay, and when nothing moves</h1>
+<div class="meta">4 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a class="here" href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="platforms.html">Platforms</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-next-year">CARLA: next year</a><a href="#when-nothing-moves">When nothing moves</a></nav>
+<div class="lead"><p>Every backend takes the same <code>/ego/actuator_cmd</code>, so the drivers, mux, ego and
+localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
+the ladder one rung at a time.</p></div>
+<section class="card"><h2 id="the-test-ladder">The test ladder</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rung</th>
+<th>Runs</th>
+<th>Proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Unit tests: <code>pixi run test</code></td>
+<td>the maths and protocols, without ROS</td>
+<td>ego's maths, the CAN frames, the spine logic</td>
+</tr>
+<tr>
+<td>2. turtlesim: <code>pixi run turtle</code></td>
+<td>mux, ego, scripted driver, <code>ekf_local</code></td>
+<td>the command path, end to end</td>
+</tr>
+<tr>
+<td>3. Gazebo: <code>pixi run sim</code></td>
+<td>the whole stack, on a simulated car with an IMU and GPS</td>
+<td>localization and Nav2</td>
+</tr>
+<tr>
+<td>4. Replay</td>
+<td>localization (and Nav2) on a recorded drive</td>
+<td>config changes, against real sensor data</td>
+</tr>
+<tr>
+<td>5. Car on stands</td>
+<td>the real backend, wheels off the ground</td>
+<td>the firmware link, signs and limits</td>
+</tr>
+<tr>
+<td>6. Car</td>
+<td>everything, with a safety driver</td>
+<td>the phase you're on</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="more-drivers-in-the-turtle-run">More drivers in the turtle run</h2>
+<p><strong>Joystick:</strong> plug it in, start with <code>pixi run turtle teleop:=true</code>, hold the deadman
+(the trigger) and steer.</p>
+<p><strong>Scripted drive:</strong> speed up, hold, slow down, on a gentle left curve:</p>
+<pre class="highlight"><code class="language-bash">ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
+  "{target_speed: 1.0, acceleration: 0.5, deceleration: 1.0, hold_time: 3.0, curvature: 0.2}" --feedback</code></pre>
+<p>The keyboard or joystick overrides the script at once. Let go, and the script carries on.</p>
+<p><strong>E-stop:</strong> <code>ros2 topic pub --once /estop std_msgs/msg/Bool "{data: true}"</code> blocks every
+driver. Publish <code>false</code> to clear it.</p>
+</section>
+<section class="card"><h2 id="gazebo">Gazebo</h2>
+<pre class="highlight"><code class="language-bash">pixi run sim                     # the empty world, with Nav2
+pixi run sim world:=test_lot     # the walled test lot, with its map</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Default</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>world</code></td>
+<td><code>empty</code></td>
+<td><code>empty</code> or <code>test_lot</code></td>
+</tr>
+<tr>
+<td><code>nav</code></td>
+<td><code>true</code></td>
+<td>start Nav2</td>
+</tr>
+<tr>
+<td><code>teleop</code></td>
+<td><code>false</code></td>
+<td><code>true</code> with a joystick plugged in</td>
+</tr>
+<tr>
+<td><code>gui</code></td>
+<td><code>true</code></td>
+<td>show the Gazebo window</td>
+</tr>
+<tr>
+<td><code>rviz</code></td>
+<td><code>true</code></td>
+<td>open RViz</td>
+</tr>
+</tbody>
+</table></div>
+<p>How the simulated car connects:</p>
+<ul>
+<li>Gazebo plays the car, with Ackermann steering, an IMU and a GPS.</li>
+<li><code>gazebo_adapter</code> turns those into the real drivers' topics: <code>/vehicle/odom</code>,
+  <code>/imu/data_raw</code> and <code>/gps/fix</code>.</li>
+<li>The IMU filter, both EKFs and <code>navsat_transform</code> run with the car's own configs, on
+  simulated time.</li>
+<li>Map (0, 0) is where the car starts, facing east.</li>
+</ul>
+<p>To drive it:</p>
+<ul>
+<li><strong>Keyboard:</strong> <code>pixi run keyboard --sim</code>.</li>
+<li><strong>A Nav2 goal:</strong> in RViz, click <strong>2D Goal Pose</strong>, then click and drag on the map. Any
+  human input overrides Nav2.</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">No GPU, or in a virtual machine?</p>
+<p>Start it with <code>gui:=false</code>, and watch in RViz or Foxglove instead.</p>
+</div>
+</section>
+<section class="card"><h2 id="replay-a-recorded-drive">Replay a recorded drive</h2>
+<p>On the car, record a drive: <code>tools/record.sh parking_lot_test</code> writes
+<code>bags/&lt;date&gt;_parking_lot_test/</code>. Then re-run localization against it on any laptop:</p>
+<pre class="highlight"><code class="language-bash">ros2 launch aav_bringup replay.launch.py
+ros2 bag play bags/&lt;the bag&gt; --clock --topics /vehicle/odom /imu/data_raw /gps/fix /tf_static</code></pre>
+<p>Change an EKF setting, replay, compare the path. That's how to tune localization without
+the car.</p>
+<p><code>tools/replay_commands.sh bags/&lt;the bag&gt;</code> plays the recorded commands back into the mux
+as <code>replay</code> (priority 40). It's open loop, so the car drifts from the original path.</p>
+</section>
+<section class="card"><h2 id="carla-next-year">CARLA: next year</h2>
+<ul>
+<li><strong>What it is:</strong> a full self-driving simulator, with towns, traffic and photoreal
+  cameras. It's the right tool for perception.</li>
+<li><strong>Why not now:</strong> as of October 2026, no CARLA release or ROS bridge supports Jazzy or
+  Ubuntu 24.04, and it wants an NVIDIA GPU with 8 GB or more.</li>
+<li><strong>Ours:</strong> <code>aav_carla</code> is a stub that has never run. Revisit it when CARLA supports
+  Jazzy, and use Gazebo this year.</li>
+</ul>
+</section>
+<section class="card"><h2 id="when-nothing-moves">When nothing moves</h2>
+<p>Work down the chain:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Ask</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Is a driver publishing?</td>
+<td><code>ros2 topic hz /cmd_vel/remote</code> (or <code>joy</code>, <code>scripted</code>, <code>nav</code>)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Did the mux pick it?</td>
+<td><code>ros2 topic echo /cmd_vel</code>. If it's silent, look for a latched e-stop: <code>ros2 topic echo /estop</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Is ego converting it?</td>
+<td><code>ros2 topic echo /ego/actuator_cmd</code>: it's always 50 Hz, so look at the speed</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Is a backend listening?</td>
+<td><code>ros2 topic info /ego/actuator_cmd -v</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>In Gazebo or replay: is everything on sim time?</td>
+<td>a node on wall-clock time ignores sim-time messages</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Does the graph match the contract?</td>
+<td><code>pixi run check</code>, or <code>tools/check_graph.py --profile sim</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="run.html"><small>Previous</small>← Run it</a>
+<a class="next" href="firmware.html"><small>Next</small>Firmware →</a></nav>
+</main>
+<footer>Source: <code>docs/simulation.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

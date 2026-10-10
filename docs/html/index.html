@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start here · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/index.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Start here</h1>
+<div class="meta">2 min read · 5 sections</div></header>
+<nav class="menu"><a class="here" href="index.html">Start here</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="platforms.html">Platforms</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-whole-stack-in-one-picture">The whole stack in one picture</a><a href="#read-these-in-order">Read these, in order</a><a href="#try-it-in-five-minutes">Try it in five minutes</a><a href="#where-things-live">Where things live</a><a href="#where-decisions-live">Where decisions live</a></nav>
+<div class="lead"><p>The software for Carleton's autonomous car: a ROS 2 Jazzy workspace, plus the firmware
+for the microcontroller that drives the actuators. These pages explain how it fits
+together, and how to run it.</p></div>
+<section class="card"><h2 id="the-whole-stack-in-one-picture">The whole stack in one picture</h2>
+<p><img alt="How the stack fits together" src="../img/architecture.svg" /></p>
+<p>Read it top to bottom: <strong>sensors become telemetry, drivers become one command, and ego
+moves the car.</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Sense</td>
+<td>Sensors publish raw data. Two filters (EKFs) work out where the car is.</td>
+</tr>
+<tr>
+<td>2. Propose</td>
+<td>Each driver proposes a speed and a turn rate: joystick, keyboard, script or Nav2.</td>
+</tr>
+<tr>
+<td>3. Pick</td>
+<td><code>twist_mux</code> passes on the highest-priority driver. <code>/estop</code> blocks them all.</td>
+</tr>
+<tr>
+<td>4. Convert</td>
+<td><strong>ego</strong>, the virtual car, turns that into a speed and steering angle the car can do.</td>
+</tr>
+<tr>
+<td>5. Move</td>
+<td>One backend moves something: the real car, Gazebo, or a turtle on the screen.</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="read-these-in-order">Read these, in order</h2>
+<div class="table-wrap"><table class="pages"><tr><th></th><th>Section</th><th>Read it for</th><th>Time</th></tr><tr><td class="num">1</td><td><a href="index.html"><b>Start here</b></a></td><td>The picture, and where to go next</td><td class="time">2 min</td></tr><tr><td class="num">2</td><td><a href="how-it-fits.html"><b>How it fits</b></a></td><td>What each box does, and the safety layers</td><td class="time">6 min</td></tr><tr><td class="num">3</td><td><a href="ros2.html"><b>ROS 2</b></a></td><td>Nodes, topics and tools; stock packages vs our code</td><td class="time">4 min</td></tr><tr><td class="num">4</td><td><a href="languages.html"><b>Languages</b></a></td><td>Python, C++ and Rust: what goes where, and why</td><td class="time">4 min</td></tr><tr><td class="num">5</td><td><a href="run.html"><b>Run it</b></a></td><td>Mac or Linux: install, build, drive the turtle</td><td class="time">3 min</td></tr><tr><td class="num">6</td><td><a href="simulation.html"><b>Simulation</b></a></td><td>Gazebo, replay, CARLA, and when nothing moves</td><td class="time">4 min</td></tr><tr><td class="num">7</td><td><a href="firmware.html"><b>Firmware</b></a></td><td>src vs firmware, the CAN contract, the spine</td><td class="time">6 min</td></tr><tr><td class="num">8</td><td><a href="status.html"><b>Status</b></a></td><td>What works, what&#x27;s untested, what&#x27;s missing</td><td class="time">2 min</td></tr><tr><td colspan="4" class="group">Reference: look things up here</td></tr><tr><td class="num"></td><td><a href="platforms.html"><b>Platforms</b></a></td><td>Ubuntu, the Orin and Pis, networking</td><td class="time">5 min</td></tr><tr><td class="num"></td><td><a href="interfaces.html"><b>Topics</b></a></td><td>Every topic, service, action and frame</td><td class="time">7 min</td></tr><tr><td class="num"></td><td><a href="car_measurements.html"><b>Car numbers</b></a></td><td>vehicle.yaml, and how to measure the car</td><td class="time">5 min</td></tr><tr><td class="num"></td><td><a href="costmaps.html"><b>Costmaps</b></a></td><td>How Nav2 sees obstacles; maps</td><td class="time">5 min</td></tr><tr><td class="num"></td><td><a href="hud.html"><b>HUD</b></a></td><td>The touchscreen app</td><td class="time">3 min</td></tr></table></div>
+</section>
+<section class="card"><h2 id="try-it-in-five-minutes">Try it in five minutes</h2>
+<p>On a Mac or on Linux, once <a href="run.html">pixi is installed</a>:</p>
+<pre class="highlight"><code class="language-bash">pixi run build       # compile our packages
+pixi run turtle      # terminal 1: a turtle that steers like the car
+pixi run keyboard    # terminal 2: hold i to drive, u or o to turn</code></pre>
+</section>
+<section class="card"><h2 id="where-things-live">Where things live</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>What's in it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/</code></td>
+<td>ROS 2 packages, one folder per layer of the picture</td>
+</tr>
+<tr>
+<td><code>firmware/</code></td>
+<td>microcontroller code: the CAN contract, the Rust spine, today's ESP32</td>
+</tr>
+<tr>
+<td><code>tools/</code></td>
+<td>scripts: tests, keyboard, graph check, recording, these docs</td>
+</tr>
+<tr>
+<td><code>docs/</code></td>
+<td>these pages. Edit a <code>.md</code> file, then run <code>pixi run docs</code>.</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="where-decisions-live">Where decisions live</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The architecture, its decisions, and open questions Q1–Q34</td>
+<td>the team design doc (a Claude Doc)</td>
+</tr>
+<tr>
+<td>Every topic: its type, and who publishes and reads it</td>
+<td><code>docs/interfaces.yaml</code>, shown as <a href="interfaces.html">Topics</a></td>
+</tr>
+<tr>
+<td>The CAN frames between the computer and the spine</td>
+<td><code>firmware/can/aav.dbc</code>, explained in <a href="firmware.html">Firmware</a></td>
+</tr>
+<tr>
+<td>The car's measurements</td>
+<td><code>src/aav_description/config/vehicle.yaml</code>: <a href="car_measurements.html">Car numbers</a></td>
+</tr>
+<tr>
+<td>Rules for code, names, secrets and git</td>
+<td><code>CLAUDE.md</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><span></span>
+<a class="next" href="how-it-fits.html"><small>Next</small>How it fits →</a></nav>
+</main>
+<footer>Source: <code>docs/index.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

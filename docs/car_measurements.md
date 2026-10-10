@@ -62,7 +62,7 @@ Why it matters:
 
 ## Look at it
 
-You need Jazzy installed (see [platforms.md](platforms.md)) and the workspace built.
+You need Jazzy installed and the workspace built: see [Run it](run.md).
 
 ```bash
 ros2 launch aav_description view.launch.py

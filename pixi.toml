@@ -62,6 +62,9 @@ markdown = ">=3.11,<4"
 pymdown-extensions = ">=12.1,<13"
 weasyprint = ">=69.0,<70"
 
+[feature.docs.tasks]
+docs = { cmd = "python tools/build_docs.py", description = "Rebuild the HTML docs and the PDF" }
+
 [environments]
 docs = { features = ["docs"], no-default-feature = true }
 

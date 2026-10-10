@@ -1,0 +1,94 @@
+# Run it on a Mac or Linux
+
+Pixi installs ROS 2 Jazzy into this folder: no Homebrew, no admin rights, and the same
+steps on a Mac and on Linux. Then three commands drive a turtle like a car.
+
+## What you need
+
+| | Mac | Linux |
+|---|---|---|
+| System | macOS 14 (Sonoma) or newer; Apple Silicon or Intel | 64-bit x86: Ubuntu, AlmaLinux … |
+| Disk space | about 7 GB | about 7 GB |
+| Admin rights | no | no |
+| Tested | [[untested]] not yet | [[works]] on oirp-spss, 9 Oct |
+
+## 1. Install pixi (once)
+
+```bash
+curl -fsSL https://pixi.sh/install.sh | sh
+```
+
+Then open a new terminal, so that it finds `pixi`.
+
+## 2. Get the code
+
+The repository lives on oirp-spss until the team has a GitHub org. Over SSH:
+
+```bash
+git clone ssh://ben@oirp-spss.carleton.ca/home/ben/aav/aav aav
+cd aav
+```
+
+Later, `git pull` fetches new work.
+
+## 3. Install ROS, then build
+
+```bash
+pixi install       # the first time: downloads ROS 2 Jazzy, about 7 GB
+pixi run build     # compiles our packages, in about 15 s
+```
+
+## 4. Drive the turtle
+
+| Terminal 1 | Terminal 2 |
+|---|---|
+| `pixi run turtle` | `pixi run keyboard` |
+
+| Key | Does |
+|---|---|
+| `i` / `,` | forward / reverse |
+| `u` / `o` | forward, turning left / right |
+| `k` | stop |
+| `q` / `z` | faster / slower (ego caps it at 1.0 m/s) |
+
+Hold the key down: the turtle stops about half a second after you let go. The path is
+keyboard → `/cmd_vel/remote` → twist_mux → ego → `/ego/actuator_cmd` → turtle.
+
+!!! note "Is this different from the regular turtlesim?"
+  No, it's the stock turtlesim. Our `turtlesim_adapter` steers it with the car's bicycle
+  model, so like the car, it can't turn on the spot.
+
+## 5. More commands
+
+| Command | Does |
+|---|---|
+| `pixi run graph` | rqt_graph: the nodes and topics, live |
+| `pixi run check` | compares the running graph with our contract |
+| `pixi run view` | the car model in RViz |
+| `pixi run sim` | Gazebo instead of the turtle ([Simulation](simulation.md)) |
+| `pixi run test` | every test |
+| `pixi run docs` | rebuilds these pages |
+| `pixi shell`, then `source install/setup.bash` | a terminal for any `ros2` command (`setup.zsh` in a Mac's zsh) |
+
+## On a Mac: what to expect
+
+| Part | Mac | Note |
+|---|---|---|
+| Turtle and keyboard | [[untested]] | every package resolves for macOS |
+| RViz, rqt | [[untested]] | |
+| Gazebo | [[untested]] | its window is the most likely thing to fail on a Mac |
+| Joystick | [[untested]] | |
+| CAN, for the spine | [[missing]] | SocketCAN is Linux-only; the car's computers run Linux anyway |
+
+If macOS asks whether `python3` may accept incoming network connections, allow it: that's
+ROS looking for other nodes.
+
+## When something goes wrong
+
+| Symptom | Try |
+|---|---|
+| `pixi: command not found` | open a new terminal, or run `~/.pixi/bin/pixi` |
+| "Not built yet" | `pixi run build` |
+| The turtle doesn't move | click into the keyboard terminal, and hold the key. Then see [when nothing moves](simulation.md#when-nothing-moves). |
+| Odd build errors after `git pull` | delete `build/`, `install/` and `log/`, then `pixi run build` |
+| Two computers can't see each other | the same `ROS_DOMAIN_ID` on both: see [Platforms](platforms.md) |

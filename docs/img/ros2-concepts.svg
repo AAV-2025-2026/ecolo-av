@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" font-family="Verdana, 'DejaVu Sans', Arial, Helvetica, sans-serif" font-size="14">
+  <title>ROS 2's three ways for nodes to talk: topics, services and actions</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C8102E"/>
+    </marker>
+    <style>
+      .node { fill:#FFFFFF; stroke:#555; stroke-width:1.6; }
+      .band { fill:#FDECEE; stroke:#C8102E; stroke-width:1.2; }
+      .h  { fill:#C8102E; font-size:19px; font-weight:bold; }
+      .t  { fill:#222; font-weight:bold; }
+      .s  { fill:#555; font-size:12px; }
+      .lbl { fill:#C8102E; font-size:12px; font-weight:bold; }
+      .rule { stroke:#E3DED6; stroke-width:1.2; }
+      .plain { stroke:#555; stroke-width:1.5; fill:none; }
+      .line { stroke:#555; stroke-width:1.5; fill:none; marker-end:url(#arr); }
+      .redline { stroke:#C8102E; stroke-width:2.2; fill:none; marker-end:url(#arrRed); }
+      .dash { stroke:#C8102E; stroke-width:1.8; fill:none; stroke-dasharray:6 4; marker-end:url(#arrRed); }
+    </style>
+  </defs>
+
+  <!-- TOPIC -->
+  <text class="h" x="20" y="56">Topic</text>
+  <text class="s" x="20" y="80">a stream: one node sends,</text>
+  <text class="s" x="20" y="98">any number listen,</text>
+  <text class="s" x="20" y="116">nobody replies</text>
+  <rect class="node" x="260" y="50" width="160" height="56" rx="8"/>
+  <text class="t" x="340" y="74" text-anchor="middle">joystick</text>
+  <text class="s" x="340" y="93" text-anchor="middle">publisher</text>
+  <path class="plain" d="M420,78 L450,78"/>
+  <rect class="band" x="450" y="62" width="200" height="32" rx="16"/>
+  <text class="lbl" x="550" y="83" text-anchor="middle">/cmd_vel/joy</text>
+  <text class="s" x="550" y="114" text-anchor="middle">type: TwistStamped</text>
+  <path class="redline" d="M650,78 L688,52"/>
+  <path class="redline" d="M650,78 L688,104"/>
+  <rect class="node" x="690" y="28" width="180" height="46" rx="8"/>
+  <text class="t" x="780" y="49" text-anchor="middle">twist_mux</text>
+  <text class="s" x="780" y="66" text-anchor="middle">subscriber</text>
+  <rect class="node" x="690" y="84" width="180" height="46" rx="8"/>
+  <text class="t" x="780" y="105" text-anchor="middle">rosbag record</text>
+  <text class="s" x="780" y="122" text-anchor="middle">subscriber</text>
+
+  <line class="rule" x1="20" y1="150" x2="880" y2="150"/>
+
+  <!-- SERVICE -->
+  <text class="h" x="20" y="194">Service</text>
+  <text class="s" x="20" y="218">ask once, get one reply:</text>
+  <text class="s" x="20" y="236">quick questions</text>
+  <text class="s" x="20" y="254">and switches</text>
+  <rect class="node" x="260" y="180" width="160" height="62" rx="8"/>
+  <text class="t" x="340" y="207" text-anchor="middle">your terminal</text>
+  <text class="s" x="340" y="226" text-anchor="middle">client</text>
+  <rect class="node" x="690" y="180" width="180" height="62" rx="8"/>
+  <text class="t" x="780" y="207" text-anchor="middle">spine_bridge</text>
+  <text class="s" x="780" y="226" text-anchor="middle">server</text>
+  <path class="redline" d="M420,196 L688,196"/>
+  <text class="lbl" x="555" y="188" text-anchor="middle">request: /spine/arm, true</text>
+  <path class="line" d="M690,226 L422,226"/>
+  <text class="s" x="555" y="245" text-anchor="middle">reply: success</text>
+
+  <line class="rule" x1="20" y1="280" x2="880" y2="280"/>
+
+  <!-- ACTION -->
+  <text class="h" x="20" y="324">Action</text>
+  <text class="s" x="20" y="348">a long job: a goal,</text>
+  <text class="s" x="20" y="366">progress while it runs,</text>
+  <text class="s" x="20" y="384">a result; can be cancelled</text>
+  <rect class="node" x="260" y="300" width="160" height="96" rx="8"/>
+  <text class="t" x="340" y="344" text-anchor="middle">RViz</text>
+  <text class="s" x="340" y="363" text-anchor="middle">client</text>
+  <rect class="node" x="690" y="300" width="180" height="96" rx="8"/>
+  <text class="t" x="780" y="344" text-anchor="middle">Nav2</text>
+  <text class="s" x="780" y="363" text-anchor="middle">server</text>
+  <path class="redline" d="M420,318 L688,318"/>
+  <text class="lbl" x="555" y="311" text-anchor="middle">goal: drive to (20, 5)</text>
+  <path class="dash" d="M690,350 L422,350"/>
+  <text class="lbl" x="555" y="343" text-anchor="middle">feedback: 12 m to go … (repeats)</text>
+  <path class="line" d="M690,382 L422,382"/>
+  <text class="s" x="555" y="375" text-anchor="middle">result: arrived</text>
+</svg>

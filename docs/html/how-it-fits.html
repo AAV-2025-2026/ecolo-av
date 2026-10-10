@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it fits together · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/how-it-fits.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>How it fits together</h1>
+<div class="meta">6 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a class="here" href="how-it-fits.html">How it fits</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="platforms.html">Platforms</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#1-sensors-raw-data">1. Sensors: raw data</a><a href="#2-where-am-i-two-filters">2. Where am I: two filters</a><a href="#3-drivers-propose-the-mux-picks">3. Drivers propose, the mux picks</a><a href="#4-ego-the-virtual-car">4. ego: the virtual car</a><a href="#5-one-car-model-everywhere">5. One car model, everywhere</a><a href="#6-backends-one-plays-the-car">6. Backends: one plays the car</a><a href="#7-safety-layers">7. Safety layers</a></nav>
+<div class="lead"><p>Everything flows one way: sensors, then "where am I", then drivers, the mux, ego, and one
+backend. The layers only talk through ROS topics, so any box can be swapped without
+touching the others.</p></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<p><img alt="How the stack fits together" src="../img/architecture.svg" /></p>
+</section>
+<section class="card"><h2 id="1-sensors-raw-data">1. Sensors: raw data</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Driver</th>
+<th>Publishes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheel speed</td>
+<td>today <code>encoder_udp</code> (in <code>aav_legacy</code>); later the spine</td>
+<td><code>/vehicle/odom</code></td>
+</tr>
+<tr>
+<td>IMU (Yahboom, USB)</td>
+<td><code>yahboom_imu_cpp</code>, then the stock <code>imu_filter_madgwick</code></td>
+<td><code>/imu/data_raw</code>, then <code>/imu/data</code></td>
+</tr>
+<tr>
+<td>GPS (u-blox, USB)</td>
+<td>the stock <code>ublox_dgnss</code></td>
+<td><code>/gps/fix</code></td>
+</tr>
+<tr>
+<td>The car's shape</td>
+<td>the stock <code>robot_state_publisher</code>, from <code>vehicle.yaml</code></td>
+<td><code>/tf_static</code>: where each sensor sits</td>
+</tr>
+<tr>
+<td>Lidar, cameras</td>
+<td>next year</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Each driver publishes a standard message in its own frame. Another IMU or GPS can replace
+it without changing anything downstream.</p>
+</section>
+<section class="card"><h2 id="2-where-am-i-two-filters">2. Where am I: two filters</h2>
+<p><img alt="The two EKFs" src="../img/ekf.svg" /></p>
+<ul>
+<li><strong><code>ekf_local</code></strong> fuses the wheels and the IMU. It's smooth and never jumps, but it drifts
+  slowly, like counting your steps. Use it to steer.</li>
+<li><strong><code>ekf_global</code></strong> fuses the same inputs <strong>plus GPS</strong>. It stays near the truth, but can
+  hop a little when a GPS fix arrives. Use it to plan.</li>
+<li><strong><code>navsat_transform</code></strong> turns GPS latitude and longitude into map x and y for
+  <code>ekf_global</code>.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Does the global EKF read the local one?</p>
+<p>In effect, yes. <code>ekf_global</code> publishes only the correction <code>map → odom</code>, worked out on
+top of <code>ekf_local</code>'s <code>odom → base_link</code>. Chained together, they give the car's true
+position, and the local estimate stays smooth.</p>
+</div>
+</section>
+<section class="card"><h2 id="3-drivers-propose-the-mux-picks">3. Drivers propose, the mux picks</h2>
+<p>Every driver publishes a <code>TwistStamped</code> (speed in m/s, turn rate in rad/s) on its own
+topic. None of them knows what kind of vehicle it's driving.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Driver</th>
+<th>Topic</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Joystick: the safety driver</td>
+<td><code>/cmd_vel/joy</code></td>
+<td>100</td>
+</tr>
+<tr>
+<td>Keyboard, or another remote</td>
+<td><code>/cmd_vel/remote</code></td>
+<td>90</td>
+</tr>
+<tr>
+<td>Scripted: speed up, hold, slow down</td>
+<td><code>/cmd_vel/scripted</code></td>
+<td>50</td>
+</tr>
+<tr>
+<td>Replay of a recorded drive</td>
+<td><code>/cmd_vel/replay</code></td>
+<td>40</td>
+</tr>
+<tr>
+<td>Nav2: drive to a point on the map</td>
+<td><code>/cmd_vel/nav</code></td>
+<td>20</td>
+</tr>
+<tr>
+<td>AI</td>
+<td><code>/cmd_vel/ai</code></td>
+<td>10, later</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>twist_mux</code> passes on the highest priority that has spoken in the last 0.5 s, as
+<code>/cmd_vel</code>. Publishing <code>true</code> on <code>/estop</code> blocks every driver until someone publishes
+<code>false</code>.</p>
+<p>Teleop is just another driver. The keyboard's commands take the same path as Nav2's:
+mux, ego, then the turtle or the car.</p>
+</section>
+<section class="card"><h2 id="4-ego-the-virtual-car">4. ego: the virtual car</h2>
+<p>ego is the only node that knows the car is a car. Fifty times a second it turns <code>/cmd_vel</code>
+into <code>/ego/actuator_cmd</code>: an <code>AckermannDriveStamped</code> with a speed and a steering angle
+(positive is left).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bicycle model</td>
+<td>steering angle = atan(wheelbase × turn rate ÷ speed). A car can't turn on the spot, so at zero speed ego holds the wheels where they are.</td>
+</tr>
+<tr>
+<td>Limits</td>
+<td>1.0 m/s top speed to start; acceleration; steering ±0.5 rad; steering rate</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>no command for 0.3 s: brake to a stop</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="5-one-car-model-everywhere">5. One car model, everywhere</h2>
+<p>The car's numbers live in one file, <code>src/aav_description/config/vehicle.yaml</code>. The launch
+files hand them to every part that needs them.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Uses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ego</td>
+<td>the wheelbase and steering limit, for the bicycle model</td>
+</tr>
+<tr>
+<td>URDF (<code>robot_state_publisher</code>)</td>
+<td>where each sensor sits</td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td>the footprint, and the tightest turn: wheelbase ÷ tan(max steer) = 2.86 m</td>
+</tr>
+<tr>
+<td><code>turtlesim_adapter</code>, <code>gazebo_adapter</code></td>
+<td>the wheelbase, so the turtle and the simulated car turn like the car</td>
+</tr>
+<tr>
+<td><code>aav_spine</code>, <code>aav_legacy</code></td>
+<td>the wheelbase, track and wheel size</td>
+</tr>
+</tbody>
+</table></div>
+<p>Most of the numbers are still guesses: see <a href="car_measurements.html">Car numbers</a>.</p>
+</section>
+<section class="card"><h2 id="6-backends-one-plays-the-car">6. Backends: one plays the car</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Package</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The real car</td>
+<td><code>aav_spine</code></td>
+<td><code>/ego/actuator_cmd</code> into CAN frames, for the spine firmware</td>
+</tr>
+<tr>
+<td>Today's car</td>
+<td><code>aav_legacy</code></td>
+<td>into UART frames, for the 2025-26 ESP32 firmware</td>
+</tr>
+<tr>
+<td>turtlesim</td>
+<td><code>aav_turtlesim</code></td>
+<td>the stock turtlesim, steered with the bicycle model</td>
+</tr>
+<tr>
+<td>Gazebo</td>
+<td><code>aav_gazebo</code></td>
+<td>a simulated car with an IMU and GPS, on the real car's topics</td>
+</tr>
+<tr>
+<td>CARLA</td>
+<td><code>aav_carla</code></td>
+<td>a stub, for next year</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each backend reports the car's speed back on <code>/vehicle/odom</code>. That closes the loop into
+the EKFs.</p>
+</section>
+<section class="card"><h2 id="7-safety-layers">7. Safety layers</h2>
+<p>From the person outward. Each layer works even if everything after it fails.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Layer</th>
+<th>Stops the car when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Joystick deadman (priority 100)</td>
+<td>held with the sticks centred</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>/estop</code></td>
+<td>it's true: the mux blocks every driver, and the car backends brake</td>
+</tr>
+<tr>
+<td>3</td>
+<td>ego's timeout</td>
+<td>no command arrives for 0.3 s</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>spine_bridge</code></td>
+<td>ego goes quiet: it stops sending drive frames</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The spine's watchdog</td>
+<td>no valid frame for 200 ms: throttle off, brake on</td>
+</tr>
+<tr>
+<td>6</td>
+<td>RC override switch, hardware e-stop</td>
+<td>always: handled in the firmware</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Today's car has no layer 5</p>
+<p>The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays
+on. Keep the wheels off the ground and the e-stop in hand: see <a href="firmware.html">Firmware</a>.</p>
+</div></section>
+<nav class="prevnext"><a class="prev" href="index.html"><small>Previous</small>← Start here</a>
+<a class="next" href="ros2.html"><small>Next</small>ROS 2 →</a></nav>
+</main>
+<footer>Source: <code>docs/how-it-fits.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

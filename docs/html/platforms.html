@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platforms: Ubuntu, the car&#x27;s computers, networking · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/platforms.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Platforms: Ubuntu, the car&#x27;s computers, networking</h1>
+<div class="meta">5 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a class="here" href="platforms.html">Platforms</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#which-computer-gets-jazzy-how">Which computer gets Jazzy how</a><a href="#ubuntu-2404-install-jazzy">Ubuntu 24.04: install Jazzy</a><a href="#ubuntu-build-this-workspace">Ubuntu: build this workspace</a><a href="#networking-many-computers-one-ros-graph">Networking: many computers, one ROS graph</a><a href="#on-the-car-what-runs-where">On the car: what runs where</a><a href="#moving-the-orin-to-jetpack-72">Moving the Orin to JetPack 7.2</a></nav>
+<div class="lead"><p>Every computer runs ROS 2 Jazzy. On the car's computers that means Ubuntu 24.04 with the
+official packages. On a Mac or any other Linux, use Pixi: see <a href="run.html">Run it</a>.</p></div>
+<section class="card"><h2 id="which-computer-gets-jazzy-how">Which computer gets Jazzy how</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th>OS</th>
+<th>Jazzy from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jetson AGX Orin</td>
+<td>JetPack 7.2 (Ubuntu 24.04)</td>
+<td>apt. JetPack 6 is Ubuntu 22.04, so reflash first, after a backup.</td>
+</tr>
+<tr>
+<td>Raspberry Pi 4 or 5</td>
+<td>Ubuntu 24.04 Server (arm64)</td>
+<td>apt</td>
+</tr>
+<tr>
+<td>Linux laptop</td>
+<td>Ubuntu 24.04</td>
+<td>apt, or Pixi</td>
+</tr>
+<tr>
+<td>Mac</td>
+<td>macOS 14 or newer</td>
+<td>Pixi</td>
+</tr>
+<tr>
+<td>oirp-spss</td>
+<td>AlmaLinux 9</td>
+<td>Pixi, with no admin rights</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>Windows 10 or 11</td>
+<td>WSL2 with Ubuntu 24.04</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every computer on one ROS network must run the same release: Humble and Jazzy don't mix.</p>
+</section>
+<section class="card"><h2 id="ubuntu-2404-install-jazzy">Ubuntu 24.04: install Jazzy</h2>
+<p>The official steps, from docs.ros.org ("Ubuntu (deb packages)"):</p>
+<pre class="highlight"><code class="language-bash">sudo apt install software-properties-common curl
+sudo add-apt-repository universe
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F'"' '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release &amp;&amp; echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
+sudo apt update &amp;&amp; sudo apt full-upgrade -y
+sudo apt install ros-jazzy-desktop ros-dev-tools     # ros-jazzy-ros-base on the Pis and the Orin
+sudo rosdep init &amp;&amp; rosdep update</code></pre>
+<p>Add <code>source /opt/ros/jazzy/setup.bash</code> to <code>~/.bashrc</code>. To check it, run
+<code>ros2 run demo_nodes_cpp talker</code> in one terminal and <code>ros2 run demo_nodes_py listener</code> in
+another.</p>
+</section>
+<section class="card"><h2 id="ubuntu-build-this-workspace">Ubuntu: build this workspace</h2>
+<pre class="highlight"><code class="language-bash">source /opt/ros/jazzy/setup.bash
+rosdep install --from-paths src --ignore-src -y    # every stock package we use
+colcon build --symlink-install
+source install/setup.bash                          # in every new terminal</code></pre>
+<ul>
+<li><code>--symlink-install</code> links the Python files and configs instead of copying them, so an
+  edit only needs a relaunch. C++ and message changes still need a rebuild.</li>
+<li><code>colcon build --packages-select aav_ego</code> builds just one package.</li>
+<li>After switching branches, delete <code>build/</code>, <code>install/</code> and <code>log/</code>, and rebuild.</li>
+</ul>
+</section>
+<section class="card"><h2 id="networking-many-computers-one-ros-graph">Networking: many computers, one ROS graph</h2>
+<p>ROS 2 has no master. Nodes find each other by multicast on the local network.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The same <code>ROS_DOMAIN_ID</code> (1–101) in every machine's <code>~/.bashrc</code></td>
+<td>the 2025-26 dashboard used 10 and its UI used 0, so they never met</td>
+</tr>
+<tr>
+<td>2</td>
+<td>One network that allows multicast, such as the car's own router</td>
+<td>campus WiFi often blocks it; then list the computers in <code>ROS_STATIC_PEERS</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Keep <code>ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET</code></td>
+<td>set it to <code>LOCALHOST</code> to keep a laptop's experiments off the car</td>
+</tr>
+<tr>
+<td>4</td>
+<td>One middleware everywhere: Fast DDS, the default</td>
+<td>different middlewares may not talk to each other</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Clocks in sync: chrony, with the Orin as the time server</td>
+<td>TF and the EKFs reject messages from a wrong clock</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Virtual machines on bridged networking, not NAT</td>
+<td>so the VM gets its own address on the car's network</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>ros2 doctor --report</code> and <code>ros2 multicast send</code> / <code>receive</code> diagnose most problems.</p>
+</section>
+<section class="card"><h2 id="on-the-car-what-runs-where">On the car: what runs where</h2>
+<p>The design puts everything on the Orin. Until the spine exists, the Motor Pi still talks
+to today's ESP32. The files in <code>src/aav_bringup/config/machines/</code> say what runs where:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine file</th>
+<th>Runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>orin.yaml</code></td>
+<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, the legacy encoder listener, Foxglove</td>
+</tr>
+<tr>
+<td><code>motor_pi.yaml</code></td>
+<td><code>legacy_uart_bridge</code> only: it's the computer wired to the ESP32</td>
+</tr>
+<tr>
+<td><code>laptop.yaml</code></td>
+<td>the joystick, on the safety driver's laptop</td>
+</tr>
+<tr>
+<td><code>all.yaml</code></td>
+<td>everything on one computer, for the bench</td>
+</tr>
+</tbody>
+</table></div>
+<p>On each computer, run <code>ros2 launch aav_bringup car.launch.py machine:=&lt;its file&gt;</code>.</p>
+<div class="admonition warning">
+<p class="admonition-title">The first hardware test</p>
+<p>Wheels off the ground, the e-stop in reach, and a low speed limit in <code>ego.yaml</code>. Check
+that positive steering turns left, that the throttle goes the right way, and that the
+car stops when you release the deadman and when you kill the bridge. Today's firmware
+fails the last one: see <a href="firmware.html">Firmware</a>.</p>
+</div>
+</section>
+<section class="card"><h2 id="moving-the-orin-to-jetpack-72">Moving the Orin to JetPack 7.2</h2>
+<p>It's a reflash, not an upgrade:</p>
+<ol>
+<li><strong>Back up</strong> <code>/home/aavjetson</code> and every workspace first. It holds the only copy of the
+   2025-26 YOLO detector and camera/LiDAR setup. Better still, take a full image with
+   <code>l4t_backup_restore.sh</code>.</li>
+<li><strong>Check</strong> <code>cat /etc/nv_tegra_release</code> and the module's part number. Module
+   699-13701-0005-502 has a reported flashing problem; -501 works.</li>
+<li><strong>Flash</strong> with SDK Manager from an Ubuntu 22.04 or 24.04 x86 PC, or use the dev kit's
+   USB installer.</li>
+<li><strong>Install Jazzy</strong> as above. Move the Pis to Ubuntu 24.04 at the same time.</li>
+</ol>
+<p>The reasons and the risks: <a href="../history/conversation.md#so-we-can-upgrade-the-orin-to-jazzy-jetpack-72-test-it-before-committing">history/conversation.md</a>.</p></section>
+<nav class="prevnext"><a class="prev" href="status.html"><small>Previous</small>← Status</a>
+<a class="next" href="interfaces.html"><small>Next</small>Topics →</a></nav>
+</main>
+<footer>Source: <code>docs/platforms.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

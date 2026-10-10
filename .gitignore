@@ -30,3 +30,6 @@ secrets.h
 # Pixi environments (pixi.lock IS committed)
 .pixi/*
 !.pixi/config.toml
+
+# The PDF is rebuilt on demand (pixi run docs); the HTML pages are committed.
+/docs/html/aav-docs.pdf

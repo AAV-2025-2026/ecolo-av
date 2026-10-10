@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python, C++ and Rust · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/languages.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Python, C++ and Rust</h1>
+<div class="meta">4 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="ros2.html">ROS 2</a>
+<a class="here" href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="platforms.html">Platforms</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-languages-fit-into-ros-2">How languages fit into ROS 2</a><a href="#what-we-use-and-where">What we use, and where</a><a href="#is-c-too-risky">Is C++ too risky?</a><a href="#what-if-everything-were-rust">What if everything were Rust?</a><a href="#rust-on-the-pi-and-the-esp32">Rust on the Pi and the ESP32</a><a href="#the-plan">The plan</a></nav>
+<div class="lead"><p>Our ROS nodes are Python, one reused driver is C++, and the spine firmware is Rust. ROS 2
+lets each program pick its own language, because programs only meet through messages.</p></div>
+<section class="card"><h2 id="how-languages-fit-into-ros-2">How languages fit into ROS 2</h2>
+<p><img alt="How the languages stack up" src="../img/languages.svg" /></p>
+<ul>
+<li>Every node is its own program, so a Python node and a C++ node talk without knowing it.</li>
+<li>Each <code>.msg</code> file is generated into Python, C++ and Rust, so every language sees the
+  same types.</li>
+<li>The client libraries all wrap one C core, <code>rcl</code>, so they behave the same.</li>
+</ul>
+</section>
+<section class="card"><h2 id="what-we-use-and-where">What we use, and where</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Language</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Our ROS nodes: ego, drivers, bridges, adapters</td>
+<td>Python</td>
+<td>Glue that runs 50 times a second or less. Quick to write and read. The same file runs on any computer, with no cross-compiling.</td>
+</tr>
+<tr>
+<td>Launch files</td>
+<td>Python</td>
+<td>That's how ROS 2 launch works</td>
+</tr>
+<tr>
+<td>Stock packages: Nav2, the EKFs, twist_mux</td>
+<td>C++</td>
+<td>Not ours: we only configure them</td>
+</tr>
+<tr>
+<td>The reused IMU driver, <code>yahboom_imu_cpp</code></td>
+<td>C++</td>
+<td>Inherited from the 2025-26 team, and it works</td>
+</tr>
+<tr>
+<td>The spine firmware, <code>firmware/spine</code></td>
+<td>Rust, <code>no_std</code></td>
+<td>Memory-safe, and its logic is tested on a laptop</td>
+</tr>
+<tr>
+<td>Today's ESP32 and Pico firmware</td>
+<td>C++ (Arduino)</td>
+<td>Inherited; the spine replaces it</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="is-c-too-risky">Is C++ too risky?</h2>
+<p>Memory bugs and crashes are a fair worry with C++. In this stack:</p>
+<ul>
+<li>The C++ we run is almost all stock packages that thousands of robots use. We wrote none
+  of it.</li>
+<li>Our own code is Python and Rust, and both are memory-safe.</li>
+<li>Each node is a separate process. A crash takes down one node, not the whole system.</li>
+<li>Safety never rests on one program: ego's timeout and the spine's watchdog stop the car
+  if a node dies.</li>
+</ul>
+</section>
+<section class="card"><h2 id="what-if-everything-were-rust">What if everything were Rust?</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You'd get</th>
+<th>You'd give up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Memory safety and speed in every node</td>
+<td>Official support: <code>rclpy</code> and <code>rclcpp</code> are official; <code>rclrs</code> is a community project</td>
+</tr>
+<tr>
+<td>One language from the firmware up</td>
+<td>Examples: most ROS answers and tutorials are Python or C++</td>
+</tr>
+<tr>
+<td>Cargo, and its tooling</td>
+<td>Simple builds: colcon needs a cargo plugin, and builds get slower</td>
+</tr>
+<tr>
+<td></td>
+<td>Nothing in Nav2 or robot_localization: they stay C++, and we'd still only configure them</td>
+</tr>
+<tr>
+<td></td>
+<td>Launch files: they stay Python</td>
+</tr>
+<tr>
+<td></td>
+<td>An easy hand-over: next year's team has to know Rust</td>
+</tr>
+</tbody>
+</table></div>
+<p>Where Rust stands in October 2026:</p>
+<ul>
+<li><strong>Message crates ship with Jazzy.</strong> Our Pixi install already has them, for example
+  <code>share/sensor_msgs/rust/</code>.</li>
+<li><strong><code>rclrs</code></strong>, the library for writing nodes, comes from crates.io and is still 0.x.</li>
+</ul>
+</section>
+<section class="card"><h2 id="rust-on-the-pi-and-the-esp32">Rust on the Pi and the ESP32</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Rust there</th>
+<th>A ROS node?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Orin, Raspberry Pi (Linux, ARM)</td>
+<td><code>aarch64-unknown-linux-gnu</code></td>
+<td>Yes, with <code>rclrs</code></td>
+</tr>
+<tr>
+<td>ESP32 (bare metal)</td>
+<td><code>no_std</code> with <code>esp-hal</code></td>
+<td>No: it talks CAN to <code>spine_bridge</code> (or micro-ROS, later)</td>
+</tr>
+<tr>
+<td>Raspberry Pi Pico 2</td>
+<td><code>no_std</code>, <code>thumbv8m.main-none-eabihf</code></td>
+<td>No, the same as the ESP32</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-plan">The plan</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Now</td>
+<td>Python for ROS nodes; Rust for the spine firmware (started: <code>spine-core</code>, 43 tests)</td>
+</tr>
+<tr>
+<td>Next</td>
+<td>build one <code>rclrs</code> example in the Pixi environment, to learn the workflow</td>
+</tr>
+<tr>
+<td>Later</td>
+<td>port a node where Rust pays off, such as ego, once the car drives</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="ros2.html"><small>Previous</small>← ROS 2</a>
+<a class="next" href="run.html"><small>Next</small>Run it →</a></nav>
+</main>
+<footer>Source: <code>docs/languages.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

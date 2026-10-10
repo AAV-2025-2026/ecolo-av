@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status: what works and what doesn&#x27;t yet · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Status: what works and what doesn&#x27;t yet</h1>
+<div class="meta">2 min read · 4 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a class="here" href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="platforms.html">Platforms</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#each-box-in-the-picture">Each box in the picture</a><a href="#builds-and-tests">Builds and tests</a><a href="#is-it-all-on-jazzy">Is it all on Jazzy?</a><a href="#next">Next</a></nav>
+<div class="lead"><p>Where things stand on 10 October 2026. "Works" means it ran under ROS 2 Jazzy on
+oirp-spss (through Pixi). "Untested" means the code and its config exist, but it hasn't
+run yet.</p></div>
+<section class="card"><h2 id="each-box-in-the-picture">Each box in the picture</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Box</th>
+<th>Implemented by</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheel speed</td>
+<td><code>aav_legacy</code> <code>encoder_udp</code>; later the spine</td>
+<td><span class="badge b-untested">untested</span> needs the car</td>
+</tr>
+<tr>
+<td>IMU</td>
+<td><code>yahboom_imu_cpp</code> + <code>imu_filter_madgwick</code></td>
+<td><span class="badge b-untested">untested</span> builds; needs the device</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td><code>ublox_dgnss</code></td>
+<td><span class="badge b-untested">untested</span> on Ubuntu; not packaged for Pixi</td>
+</tr>
+<tr>
+<td>Car model</td>
+<td><code>aav_description</code></td>
+<td><span class="badge b-works">works</span> numbers are guesses</td>
+</tr>
+<tr>
+<td><code>ekf_local</code></td>
+<td>robot_localization</td>
+<td><span class="badge b-works">works</span> in the turtle run</td>
+</tr>
+<tr>
+<td><code>ekf_global</code>, <code>navsat_transform</code></td>
+<td>robot_localization</td>
+<td><span class="badge b-untested">untested</span> needs GPS, so Gazebo first</td>
+</tr>
+<tr>
+<td>Joystick</td>
+<td><code>aav_teleop</code></td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>Keyboard</td>
+<td>teleop_twist_keyboard</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Scripted</td>
+<td><code>aav_scripted</code></td>
+<td><span class="badge b-untested">untested</span> unit-tested</td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td><code>aav_navigation</code></td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>twist_mux</td>
+<td><code>aav_mux</code></td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>ego</td>
+<td><code>aav_ego</code></td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>turtlesim</td>
+<td><code>aav_turtlesim</code></td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Gazebo</td>
+<td><code>aav_gazebo</code></td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>Real car</td>
+<td><code>aav_spine</code></td>
+<td><span class="badge b-untested">untested</span> unit-tested; no spine yet</td>
+</tr>
+<tr>
+<td>Today's car</td>
+<td><code>aav_legacy</code></td>
+<td><span class="badge b-untested">untested</span> on the car</td>
+</tr>
+<tr>
+<td>Spine firmware logic</td>
+<td><code>firmware/spine/crates/spine-core</code></td>
+<td><span class="badge b-works">works</span> 43 tests</td>
+</tr>
+<tr>
+<td>Spine board code (ESP32)</td>
+<td></td>
+<td><span class="badge b-missing">missing</span></td>
+</tr>
+<tr>
+<td>CARLA</td>
+<td><code>aav_carla</code></td>
+<td><span class="badge b-stub">stub</span> next year</td>
+</tr>
+<tr>
+<td>Lidar, cameras, AI</td>
+<td></td>
+<td><span class="badge b-later">later</span></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="builds-and-tests">Builds and tests</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>colcon build</code>, all 19 packages, Jazzy</td>
+<td><span class="badge b-works">works</span> 11 s on Linux</td>
+</tr>
+<tr>
+<td>Our tests: Python and Rust</td>
+<td><span class="badge b-works">works</span> 88 pass</td>
+</tr>
+<tr>
+<td>Lint tests of 3 inherited packages (IMU, radar, battery)</td>
+<td>fail: style, not function</td>
+</tr>
+<tr>
+<td>Live graph vs <code>docs/interfaces.yaml</code>, turtle profile</td>
+<td><span class="badge b-works">works</span> 0 failures</td>
+</tr>
+<tr>
+<td>Sim, car and replay profiles</td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>The same <code>pixi.toml</code> on macOS</td>
+<td>resolves; <span class="badge b-untested">untested</span></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="is-it-all-on-jazzy">Is it all on Jazzy?</h2>
+<p>Yes. Everything builds against Jazzy, and the turtle profile runs. The code changes so far
+were small: every node now shuts down cleanly on Ctrl-C under Jazzy. The configuration
+files are being checked against what the Jazzy nodes really accept.</p>
+</section>
+<section class="card"><h2 id="next">Next</h2>
+<ol>
+<li>Run it on a Mac.</li>
+<li>Run the Gazebo profile headless, then Nav2 in the simulator.</li>
+<li>Fix whatever the Jazzy config checks find.</li>
+<li>Measure the car, and replace the guesses in <code>vehicle.yaml</code>.</li>
+<li>Choose the spine's microcontroller (Q10–Q17), then write its board code.</li>
+</ol></section>
+<nav class="prevnext"><a class="prev" href="firmware.html"><small>Previous</small>← Firmware</a>
+<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+</main>
+<footer>Source: <code>docs/status.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

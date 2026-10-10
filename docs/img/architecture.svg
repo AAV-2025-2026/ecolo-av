@@ -108,7 +108,7 @@
   <path class="redline" d="M465,392 L475,456"/>
   <path class="redline" d="M610,392 L515,456"/>
   <path class="redline" d="M755,392 L545,456"/>
-  <text class="lbl" x="640" y="430">/cmd_vel/&lt;driver&gt;</text>
+  <text class="lbl" x="110" y="448">/cmd_vel/&lt;driver&gt;</text>
 
   <!-- ego -->
   <rect class="ego" x="355" y="556" width="250" height="62" rx="10"/>

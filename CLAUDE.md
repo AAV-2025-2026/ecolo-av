@@ -2,7 +2,7 @@
 
 The workspace of the 2026-27 Carleton AAV capstone team: one git repo = one colcon
 workspace for ROS 2 **Jazzy on Ubuntu 24.04** (Python 3.12), plus the spine firmware.
-Read `README.md` first, then `docs/guide.md` (how the stack fits together) and
+Read `README.md` first, then `docs/how-it-fits.md` (how the stack fits together) and
 `docs/status.md` (what works and what's missing).
 
 These are the conventions decided so far. They apply to people and to Claude sessions alike.
@@ -57,11 +57,14 @@ These are the conventions decided so far. They apply to people and to Claude ses
 - `tools/test.sh` runs everything that doesn't need ROS: the Python unit tests, the
   `cargo test` for `firmware/spine`, and the interfaces.md check. Run it before every
   commit.
-- With Jazzy installed, also run `colcon build --symlink-install`, `colcon test`, and
+- With Jazzy, also run `pixi run build`, `pixi run test` (which adds `colcon test`), and
   `tools/check_graph.py --profile turtle|sim|car` against a running system.
-- Ben's AlmaLinux workstation has **no ROS**, so nothing ROS-side can be built or run
-  there. Say so rather than claiming a launch file works. See `docs/platforms.md` for
-  how to get Jazzy.
+- Pixi + RoboStack provide Jazzy without admin rights: on Ben's AlmaLinux workstation
+  (oirp-spss), on Macs, and on any Linux. `pixi.toml` and `pixi.lock` define the
+  environment; `pixi run <task>` runs a command inside it. That machine has no screen
+  for GUIs: run headless there (`QT_QPA_PLATFORM=offscreen`, `gui:=false`).
+- Say what you actually ran. A profile that hasn't been launched is "untested", not
+  "works".
 
 ## Git
 
