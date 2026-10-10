@@ -38,7 +38,7 @@ READ_FIRST = 9     # PAGES[:9] are the reading list; the rest are reference
 # (file in docs/, menu title, what it's for)
 PAGES = [
     ('index.md', 'Start here', 'The picture, and where to go next'),
-    ('first-day.md', 'Your first day', 'Install, drive the turtle, rqt_graph, Gazebo, a Nav2 goal'),
+    ('first-day.md', 'Your first day', 'Install, the turtle, rqt_graph, Gazebo, Nav2'),
     ('how-it-fits.md', 'How it fits', 'What each box does, and the safety layers'),
     ('team.md', 'Starting points', 'One per team member: read, run, first tasks'),
     ('packages.md', 'Packages', 'What each package does, layer by layer'),
