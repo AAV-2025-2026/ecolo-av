@@ -2240,6 +2240,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/conda-gcc-specs-15.3.0-h64e22ab_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/console_bridge-1.0.2-h3e96240_1.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/contourpy-1.4.0-py312h67ba313_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/coreutils-9.12-h74c22ad_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/coverage-7.16.2-py312hf1f8172_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/cppcheck-2.22.0-py312h3286cfa_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/cppzmq-4.11.0-h277b3ab_0.conda
@@ -3208,6 +3209,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/conda-gcc-specs-15.3.0-hbd7c16d_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/console_bridge-1.0.2-hbb4e6a2_1.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/osx-64/contourpy-1.4.0-py312hcba6f97_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/coreutils-9.12-had63097_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/coverage-7.16.2-py312hbbaf924_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/cppcheck-2.22.0-py312h39cb678_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/cppzmq-4.11.0-hd348d56_0.conda
@@ -22500,6 +22502,16 @@ packages:
   run_exports: {}
   size: 303560
   timestamp: 1789746933006
+- conda: https://conda.anaconda.org/conda-forge/osx-64/coreutils-9.12-had63097_0.conda
+  sha256: a0e582dc00ea2ea7d7952e18758a4b40bfd941685a751b11109fbb4fcd65e217
+  md5: 422ed2c78561ea65c449dded4ec57076
+  depends:
+  - __osx >=11.0
+  license: GPL-3.0-or-later
+  license_family: GPL
+  run_exports: {}
+  size: 1913754
+  timestamp: 1789486448832
 - conda: https://conda.anaconda.org/conda-forge/osx-64/coverage-7.16.2-py312hbbaf924_0.conda
   sha256: 13519eab96f64667255a700168172a5e8dc5840d6f26e7e4bb46f867adfe96a2
   md5: add4beb31ddacec19b5a70937bdf024e
@@ -28966,6 +28978,16 @@ packages:
   run_exports: {}
   size: 289644
   timestamp: 1789746846798
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/coreutils-9.12-h74c22ad_0.conda
+  sha256: f9e693d4d68a73d626dbe56452c990d2d249916dd50d8a6ac3001fe1d078160b
+  md5: d6c76e78c52657adc50151e0af762a71
+  depends:
+  - __osx >=11.0
+  license: GPL-3.0-or-later
+  license_family: GPL
+  run_exports: {}
+  size: 1769546
+  timestamp: 1789486371666
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/coverage-7.16.2-py312hf1f8172_0.conda
   sha256: 32b9303e07d0ac446f2ad8dcd590a3528679c1f47f07f4380da4259bc28be86b
   md5: b3ce38f4f403020f6e406f7fec0e16e5

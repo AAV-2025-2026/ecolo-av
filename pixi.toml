@@ -72,6 +72,12 @@ ros-jazzy-topic-tools = ">=1.3.4,<2"
 [target.linux.dependencies]   # SocketCAN is Linux-only
 ros-jazzy-ros2-socketcan = ">=1.4.0,<2"
 
+# Macs: colcon test reads each package's environment through `env`. Apple's /usr/bin/env
+# drops DYLD_LIBRARY_PATH (System Integrity Protection), so tests can't load our messages.
+# GNU env keeps it.
+[target.osx.dependencies]
+coreutils = ">=9.12,<10"
+
 [feature.docs.dependencies]
 markdown = ">=3.11,<4"
 pymdown-extensions = ">=12.1,<13"
