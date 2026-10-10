@@ -1015,6 +1015,11 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **A school project:** commit messages give the intention, with no attribution lines. The co-author line was stripped from the 100 earlier commits before the first push. The README's Credits section names the previous teams, the open-source projects, and Claude as the AI assistant.
 - **Before the push:** a scan of all 100 commits found no secrets. `~/aav`, the Linux build output and the old bundle were deleted, and Ben's Rust IMU driver was reviewed and committed.
 
+### When I say CUDA on a Mac, I mean MLX or Metal, not CUDA. (17:54)
+
+- **Done:** the detector's `device` setting now means "the GPU this computer has". `auto`, `gpu`, `cuda`, `metal` and `mps` all pick CUDA on the Orin, and Metal on a Mac; `cuda` on a Mac used to fail. Checked on Ben's Mac with its own PyTorch. ([Perception](../perception.md))
+- **MLX** isn't needed for YOLO: Metal, through PyTorch or Core ML, is the Mac's fast path. It could join the `ml` environment later, for training or other models.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
