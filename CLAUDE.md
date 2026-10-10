@@ -93,6 +93,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
   orgs are public, so don't push anywhere without the team's say-so.
 - Commit in small steps that each pass `tools/test.sh`. Don't commit build output: no
   `build/`, `install/`, `log/` or `target/`.
+- To hand the repo to a laptop with no GitHub: `git bundle create ../aav.bundle HEAD main`.
+  Keep `HEAD` in that command, or `git clone` of the bundle checks out nothing.
 
 ## Not ours
 

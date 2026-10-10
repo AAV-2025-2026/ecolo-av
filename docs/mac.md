@@ -35,6 +35,9 @@ git clone ~/aav.bundle ~/aav
 cd ~/aav
 ```
 
+Later, for newer work: copy the bundle again with the same `scp`, then run `git pull`
+in `~/aav`.
+
 **4. Install ROS and build:**
 
 ```bash

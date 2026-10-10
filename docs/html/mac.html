@@ -67,6 +67,8 @@ first if this can't connect), then unpack it:</p>
 <pre class="highlight"><code class="language-bash">scp ben@oirp-spss.carleton.ca:/home/ben/aav/aav.bundle ~/
 git clone ~/aav.bundle ~/aav
 cd ~/aav</code></pre>
+<p>Later, for newer work: copy the bundle again with the same <code>scp</code>, then run <code>git pull</code>
+in <code>~/aav</code>.</p>
 <p><strong>4. Install ROS and build:</strong></p>
 <pre class="highlight"><code class="language-bash">pixi install       # ROS 2 Jazzy: about 7 GB, the first time only
 pixi run build     # our packages</code></pre>
