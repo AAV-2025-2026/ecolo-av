@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import rclpy
 from rclpy.node import Node
-from lane_geometry.msg import LaneGeometry
+from aav_lane_geometry.msg import LaneGeometry
 
 
 class GeometryLogger(Node):

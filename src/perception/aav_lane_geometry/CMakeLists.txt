@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(lane_geometry)
+project(aav_lane_geometry)
 
 find_package(ament_cmake REQUIRED)
 find_package(geometry_msgs REQUIRED)

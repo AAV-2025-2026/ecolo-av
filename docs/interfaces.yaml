@@ -44,9 +44,9 @@ topics:
     note: Priority 20. Nav2; from collision_monitor instead when it is enabled.
   /cmd_vel/ai:
     type: geometry_msgs/msg/TwistStamped
-    pub: []
+    pub: [control_interface]
     sub: [twist_mux]
-    note: Priority 10. Reserved for a learned driver.
+    note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
   /estop:
     type: std_msgs/msg/Bool
     pub: [joy_teleop]
@@ -179,6 +179,22 @@ topics:
     pub: [stop_sign_watcher]
     sub: [twist_mux, hud_server]
     note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence.
+
+  /lane_geometry:
+    type: aav_lane_geometry/msg/LaneGeometry
+    pub: [fake_lane_geometry_pub]
+    sub: [control_interface]
+    note: The lane lines as polynomials, the car's offset and the curvature. The lane finder that makes them from the camera is missing; fake_lane_geometry_pub stands in.
+  /lane_geometry_status:
+    type: std_msgs/msg/String
+    pub: [control_interface]
+    sub: []
+    note: Lane keeping's state and numbers, as text.
+  /vehicle_state:
+    type: std_msgs/msg/String
+    pub: [control_interface]
+    sub: []
+    note: Lane keeping's state machine (LANE_KEEP, LANE_CHANGING, ...). Not the car's state - that's /vehicle/status.
 
   # --- bench mode: the stand-ins' own topics ---
   /bench/truth:

@@ -13,7 +13,7 @@ Check a running system against it with `pixi run check <turtle|sim|car|replay|be
 | `/cmd_vel/scripted` | `geometry_msgs/msg/TwistStamped` | `scripted_driver` | `twist_mux` | - | Priority 50. Only while a /scripted_drive goal runs. |
 | `/cmd_vel/replay` | `geometry_msgs/msg/TwistStamped` | - | `twist_mux` | - | Priority 40. ros2 bag play of a recorded /cmd_vel (tools/replay_commands.sh). |
 | `/cmd_vel/nav` | `geometry_msgs/msg/TwistStamped` | `velocity_smoother` | `twist_mux` | - | Priority 20. Nav2; from collision_monitor instead when it is enabled. |
-| `/cmd_vel/ai` | `geometry_msgs/msg/TwistStamped` | - | `twist_mux` | - | Priority 10. Reserved for a learned driver. |
+| `/cmd_vel/ai` | `geometry_msgs/msg/TwistStamped` | `control_interface` | `twist_mux` | - | Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it. |
 | `/estop` | `std_msgs/msg/Bool` | `joy_teleop` | `twist_mux`, `spine_bridge`, `legacy_uart_bridge` | - | true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false. |
 | `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | `twist_mux` | `ego` | turtle, sim, car, bench | The one command ego obeys. v (m/s) and w (rad/s) in base_link. |
 | `/ego/actuator_cmd` | `ackermann_msgs/msg/AckermannDriveStamped` | `ego` | `spine_bridge`, `legacy_uart_bridge`, `turtlesim_adapter`, `gazebo_adapter`, `carla_adapter` | turtle, sim, car, bench | 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs. |
@@ -36,6 +36,9 @@ Check a running system against it with `pixi run check <turtle|sim|car|replay|be
 | `/perception/detections` | `vision_msgs/msg/Detection2DArray` | `yolo_detector` | `stop_sign_watcher` | - | YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Runs in the ml environment. |
 | `/perception/detections/image` | `sensor_msgs/msg/Image` | `yolo_detector` | - | - | The camera picture with the boxes drawn on, for RViz or Foxglove. |
 | `/perception/stop` | `std_msgs/msg/Bool` | `stop_sign_watcher` | `twist_mux`, `hud_server` | - | true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. |
+| `/lane_geometry` | `aav_lane_geometry/msg/LaneGeometry` | `fake_lane_geometry_pub` | `control_interface` | - | The lane lines as polynomials, the car's offset and the curvature. The lane finder that makes them from the camera is missing; fake_lane_geometry_pub stands in. |
+| `/lane_geometry_status` | `std_msgs/msg/String` | `control_interface` | - | - | Lane keeping's state and numbers, as text. |
+| `/vehicle_state` | `std_msgs/msg/String` | `control_interface` | - | - | Lane keeping's state machine (LANE_KEEP, LANE_CHANGING, ...). Not the car's state - that's /vehicle/status. |
 | `/bench/truth` | `nav_msgs/msg/Odometry` | `spine_sim` | `mock_imu`, `mock_gps`, `mock_camera` | bench | Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs. |
 | `/bench/hw_estop` | `std_msgs/msg/Bool` | - | `spine_sim` | - | true = press the hardware e-stop, on the bench; false = release it. The spine brakes, and needs arming again. |
 | `/bench/driver_faults` | `std_msgs/msg/UInt16` | - | `spine_sim` | - | Pretend a driver failed. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder). |

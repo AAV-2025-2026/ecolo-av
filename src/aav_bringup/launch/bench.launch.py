@@ -2,7 +2,7 @@
 Bench mode: the real car's software on one computer, with stand-ins for the hardware.
 
   ros2 launch aav_bringup bench.launch.py [nav:=true] [teleop:=false] [rviz:=false]
-      [perception:=false] [hud:=false] [arm:=true] [foxglove:=false]
+      [perception:=false] [lane:=false] [hud:=false] [arm:=true] [foxglove:=false]
   pixi run bench                            (the same)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
 
@@ -47,7 +47,7 @@ def include(package, launch_file, **args):
 
 def launch_setup(context):
     flag = {n: LaunchConfiguration(n).perform(context).lower() == 'true'
-            for n in ('nav', 'teleop', 'rviz', 'perception', 'hud', 'arm', 'foxglove')}
+            for n in ('nav', 'teleop', 'rviz', 'perception', 'lane', 'hud', 'arm', 'foxglove')}
     v = vehicle.load()['vehicle']
     bench_config = os.path.join(share('aav_bench'), 'config', 'bench.yaml')
     with open(os.path.join(share('aav_localization'), 'config', 'navsat.yaml')) as f:
@@ -94,6 +94,8 @@ def launch_setup(context):
             include('aav_yolo', 'detector.launch.py', labels='stop sign'),
             Node(package='aav_yolo', executable='stop_sign_watcher', name='stop_sign_watcher'),
         ]
+    if flag['lane']:
+        actions.append(include('aav_lane_geometry', 'lane_follower.launch.py', fake='true'))
     if flag['hud']:
         actions.append(include('aav_hud', 'hud.launch.py'))
     if flag['foxglove']:
@@ -119,6 +121,8 @@ def generate_launch_description():
         DeclareLaunchArgument('rviz', default_value='false'),
         DeclareLaunchArgument('perception', default_value='false',
                               description='YOLO and the stop-sign watcher (the ml environment)'),
+        DeclareLaunchArgument('lane', default_value='false',
+                              description='lane keeping on a pretend straight lane (/cmd_vel/ai)'),
         DeclareLaunchArgument('hud', default_value='false',
                               description="the HUD's web server (aav_hud), on 127.0.0.1:5000"),
         DeclareLaunchArgument('arm', default_value='true',

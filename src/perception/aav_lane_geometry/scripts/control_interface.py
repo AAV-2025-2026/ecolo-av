@@ -3,9 +3,9 @@ import time
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TwistStamped
 from std_msgs.msg import String
-from lane_geometry.msg import LaneGeometry
+from aav_lane_geometry.msg import LaneGeometry
 
 
 class VehicleState:
@@ -91,12 +91,14 @@ class ControlInterface(Node):
         self._last_t = time.time()
 
         self.sub = self.create_subscription(LaneGeometry, '/lane_geometry', self.geometry_cb, 10)
-        self.pub_cmd = self.create_publisher(Twist, '/control_cmd', 10)
+        # aav: TwistStamped on /cmd_vel/ai, twist_mux's slot for a learned driver (priority 10),
+        # instead of Twist on /control_cmd. Every other driver outranks it.
+        self.pub_cmd = self.create_publisher(TwistStamped, '/cmd_vel/ai', 10)
         self.pub_stat = self.create_publisher(String, '/lane_geometry_status', 10)
         self.pub_vstate = self.create_publisher(String, '/vehicle_state', 10)
         self.create_timer(0.1, self.watchdog_cb)
 
-        self.get_logger().info('Control interface ready. Subscribing to /lane_geometry and publishing /control_cmd')
+        self.get_logger().info('Control interface ready. Subscribing to /lane_geometry and publishing /cmd_vel/ai')
         self.get_logger().info(f'invert_offset_sign={self.invert_offset_sign}')
 
     def geometry_cb(self, msg: LaneGeometry):
@@ -136,7 +138,7 @@ class ControlInterface(Node):
             return
 
         cmd = self.build_cmd_lane_keep(msg)
-        self.pub_cmd.publish(cmd)
+        self.send(cmd)
         self.publish_status(msg, 'LANE_KEEP')
 
     def handle_lane_changing(self, msg: LaneGeometry, lanes_ok: bool):
@@ -154,7 +156,7 @@ class ControlInterface(Node):
         cmd = Twist()
         cmd.linear.x = self.lc_speed
         cmd.angular.z = self.last_steer
-        self.pub_cmd.publish(cmd)
+        self.send(cmd)
         self.current_speed = self.lc_speed
         self.publish_status(msg, f'LANE_CHANGING peak={self.lc_peak_offset:.2f}m')
 
@@ -174,10 +176,10 @@ class ControlInterface(Node):
             cmd = Twist()
             cmd.linear.x = self.current_speed
             cmd.angular.z = self.last_steer
-            self.pub_cmd.publish(cmd)
+            self.send(cmd)
             self.publish_status(msg, f'NO_LANE decelerating t={elapsed:.1f}s')
         else:
-            self.pub_cmd.publish(Twist())
+            self.send(Twist())
             self.publish_status(msg, f'STOPPED waiting t={elapsed:.1f}s')
 
     def handle_resuming(self, msg: LaneGeometry, lanes_ok: bool):
@@ -188,10 +190,18 @@ class ControlInterface(Node):
         self.current_speed = min(self.base_speed, self.current_speed + self.accel_rate * 0.1)
         cmd = self.build_cmd_lane_keep(msg)
         cmd.linear.x = self.current_speed
-        self.pub_cmd.publish(cmd)
+        self.send(cmd)
         self.publish_status(msg, f'RESUMING {self.current_speed:.2f}/{self.base_speed:.2f}')
         if self.current_speed >= self.base_speed * 0.95:
             self.transition(VehicleState.LANE_KEEP)
+
+    def send(self, cmd: Twist):
+        """Publish a Twist as the TwistStamped twist_mux expects (aav)."""
+        out = TwistStamped()
+        out.header.stamp = self.get_clock().now().to_msg()
+        out.header.frame_id = 'base_link'
+        out.twist = cmd
+        self.pub_cmd.publish(out)
 
     def build_cmd_lane_keep(self, msg: LaneGeometry) -> Twist:
         cmd = Twist()
@@ -226,7 +236,7 @@ class ControlInterface(Node):
         elapsed = time.time() - self.last_msg_t
         if elapsed > 2.0 and self.state != VehicleState.NO_LANE_STOPPING:
             self.get_logger().warning(f'No geometry message for {elapsed:.1f}s -> stopping', throttle_duration_sec=2.0)
-            self.pub_cmd.publish(Twist())
+            self.send(Twist())
             self.transition(VehicleState.NO_LANE_STOPPING)
 
 

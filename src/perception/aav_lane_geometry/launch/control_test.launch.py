@@ -11,14 +11,14 @@ def generate_launch_description():
         DeclareLaunchArgument('mode', default_value='straight'),
         DeclareLaunchArgument('invert_offset_sign', default_value='true'),
         Node(
-            package='lane_geometry',
+            package='aav_lane_geometry',
             executable='control_interface.py',
             name='control_interface',
             output='screen',
             parameters=[{'invert_offset_sign': invert_offset_sign}],
         ),
         Node(
-            package='lane_geometry',
+            package='aav_lane_geometry',
             executable='fake_lane_geometry_pub.py',
             name='fake_lane_geometry_pub',
             output='screen',

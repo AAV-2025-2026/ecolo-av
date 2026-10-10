@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>lane_geometry</name>
+  <name>aav_lane_geometry</name>
   <version>1.0.0</version>
   <description>Lane geometry message package with control interface and mock publisher for ROS2 testing.</description>
   <maintainer email="user@example.com">OpenAI</maintainer>
