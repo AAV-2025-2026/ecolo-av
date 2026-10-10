@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 CAR_NODES = ('/ego', '/twist_mux')   # running on the car whenever it can drive
@@ -63,6 +64,16 @@ def multicast_works():
             return False
     finally:
         receiver.kill()
+
+
+def clock_offset():
+    """Return how far the car's clock is ahead of ours (s), from one /tf stamp, or None."""
+    out = run(['ros2', 'topic', 'echo', '--once', '--no-daemon', '/tf',
+               'tf2_msgs/msg/TFMessage'], timeout=10)
+    m = re.search(r'sec: (\d+)\s+nanosec: (\d+)', out)
+    if not m:
+        return None
+    return int(m.group(1)) + int(m.group(2)) * 1e-9 - time.time()
 
 
 def main():
@@ -129,6 +140,16 @@ def main():
     seen = [n for n in CAR_NODES if n in nodes]
     if seen:
         say('OK', 'The car', f'{len(nodes)} nodes visible, including {" and ".join(seen)}')
+        offset = clock_offset()
+        if offset is None:
+            say('WARN', 'Clock', 'no /tf message to compare with')
+        elif abs(offset) > 1e8:
+            say('OK', 'Clock', 'the stack runs on simulated time: nothing to compare')
+        elif abs(offset) < 0.5:
+            say('OK', 'Clock', f"within {abs(offset):.2f} s of the car's")
+        else:
+            say('WARN', 'Clock', f"{offset:+.1f} s from the car's: RViz will drop data. "
+                                 'Sync the clocks (docs/mac.md)')
     elif nodes:
         say('WARN', 'The car', f'{len(nodes)} nodes, but not ego or twist_mux: is the car '
                                'stack running?')

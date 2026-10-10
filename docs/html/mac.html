@@ -118,6 +118,10 @@ show up:</p>
   and the Mac's IP on the Orin. This is Jazzy's way around blocked multicast.</li>
 <li>Turn off the Mac's firewall for a minute, to see whether it's the cause.</li>
 </ul>
+<p>If RViz shows the car but drops data ("extrapolation" errors), or the doctor says the
+clock is off: the car's computers keep the time (the Orin serves it, see
+<a href="platforms.html">Platforms</a>). Set the Mac from the Orin once with
+<code>sudo sntp -sS &lt;the Orin's IP&gt;</code>.</p>
 </section>
 <section class="card"><h2 id="drive-and-watch-from-the-mac">Drive and watch from the Mac</h2>
 <div class="table-wrap"><table>
