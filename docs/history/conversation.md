@@ -941,7 +941,8 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
 - **Backups:** image the Orin and the Pis before any reflash. They hold the detector, `camera_decode`, the three rqt_graph nodes and `/home/aavjetson`. A backup checklist and script were offered.
 - **The car on Jazzy:** it runs Humble today, so no Jazzy laptop can join it. Try Pixi on its Ubuntu 22.04 first, then reflash the Orin to JetPack 7.2 (Q24).
-- **Ben's Mac:** the steps are ready, and pass from a fresh clone on Linux. Not yet tried on a Mac.
+- **Ben's Mac:** works, 10-10: build, tests, the turtle, Gazebo headless, Nav2, the Rust listener, the docs. Left: look at Gazebo's window, RViz and rqt_graph. Our version is `aav/aav`; today's commits move into it once it has downloaded.
+- **`.gitignore` and `vendor/`:** a fuller `.gitignore` is drafted; a `vendor/` folder (a `.repos` list in git, the source out of it) is proposed; pruning the app's snapshots from `.git` waits on Ben.
 - **Running today:** the inventory commands haven't been run on the car's computers.
 - **2024–25 repos:** cloning and surveying `emergency-stop`, `Simulation`, `camera_Yolo_detection`, `Braking` and `Power-Management-Documentation-2024-25` was offered, not done. Only `GNSS` has been read in depth.
 - **`ros2-rust/`:** keep or delete is undecided; the recommendation is keep.

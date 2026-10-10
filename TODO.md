@@ -3,6 +3,32 @@
 Ben's asks from tonight, in work order. Tick them off as they land; each tick = a commit.
 His messages, word for word: `docs/history/messages-2026-10-09.md`.
 
+## Today on Ben's Mac (10-10)
+
+Ben's messages, word for word: `docs/history/messages-2026-10-10.md`. "Our version" is
+`aav/aav` (`~/Code/aav/aav` on the Mac); this work was done in a clone at `~/aav` while that
+folder downloaded, and moves into it as a fast-forward.
+
+- [x] **Build and test on the Mac.** *`pixi run test` green after the `coreutils` fix. The
+      turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, the doctor and
+      recording all run. `record.sh` now goes through `tools/ros.sh` (SIP again).*
+- [x] **Email everything we talk about, in detail, with sections** (a standing request).
+      *Sent at 12:16, 12:32, 12:39, and with the docs PDF.*
+- [x] **Docs for a new team member:** first day, starting points, packages, work,
+      decisions, infrastructure, build a driver, the costmap exercise, the older code.
+      *The driver page and the costmap exercise were run as written, in a scratch copy.*
+- [x] **`.gitignore` in `aav/aav`:** restored at 12:35. *The app's per-message snapshots
+      were taking in the Linux `.pixi` files as scp copied them.*
+- [ ] **A `.gitignore` for every kind of code.** *Draft ready and tested; apply it once
+      `aav/aav` has fully arrived.*
+- [ ] **A `vendor/` folder** for downloaded source: commit an 18 KB `.repos` list (121
+      repos, exact commits), not the 546 MB. *Proposed.*
+- [ ] **Prune the snapshots from `aav/aav/.git`** (149 MB down to about 1 MB)? *Ben to
+      decide: it removes the app's undo points.*
+- [ ] **Move today's commits from `~/aav` into `aav/aav`** once the download finishes.
+- [ ] **Look at Gazebo's window, RViz and rqt_graph on the Mac**, and say what they show.
+- [ ] **The small fixes** listed at the end of `docs/work.md`.
+
 ## Tonight
 
 - [x] **Build on this machine** with Pixi + RoboStack Jazzy (no admin, no Homebrew).
@@ -11,10 +37,10 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       *Done: all 19 packages build in 11 s; our tests pass; the turtle drives through
       mux → ego; check_graph: 0 failures. The inherited packages' lint failures were
       fixed on 10-10.*
-- [ ] **Mac tomorrow.** The same `pixi.toml` for macOS (Apple Silicon). Check that every
+- [x] **Mac tomorrow.** The same `pixi.toml` for macOS (Apple Silicon). Check that every
       package resolves for `osx-arm64`. Write the steps: no Homebrew.
-      *Resolves for `osx-arm64` and `osx-64` (macOS 14+). Steps: `docs/mac.md`. Fixed the
-      one known build blocker (B921600 in the IMU driver). Left: Ben tries it on his Mac.*
+      *Done 10-10 on Ben's Mac (Apple Silicon, macOS 27): build 18 s, `pixi run test` all
+      green after one fix (GNU `coreutils`: SIP drops `DYLD_LIBRARY_PATH`). See below.*
 - [x] **Port everything to Jazzy as is.** Apply the fixes the audits found (configs,
       inherited code, missing dependencies). Reports: `docs/history/audit-2026-10-10-*.md`.
       - ~~Spine safety, before any firmware is written~~ *Done 10-10: B1 arming always
