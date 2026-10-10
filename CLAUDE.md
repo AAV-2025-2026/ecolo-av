@@ -95,12 +95,19 @@ These are the conventions decided so far. They apply to people and to Claude ses
 
 ## Git
 
-- `main` is local only. There is no GitHub org for 2026-27 yet (Q25), and the previous
-  orgs are public, so don't push anywhere without the team's say-so.
+- The repo is `git@github.com:zander1976/aav.git`, private (Ben, 10 Oct: Q25). Push `main` there
+  once `pixi run test` passes. Never force-push it, and push nowhere else: the previous
+  teams' orgs are public.
+- CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux for every push, and on a
+  Mac every night.
+- Commit messages give the intention: what changed, and why. No attribution lines (no
+  `Co-Authored-By`, no "Generated with"). It's a school project: the README's Credits
+  section says who did what.
 - Commit in small steps that each pass `tools/test.sh`. Don't commit build output: no
   `build/`, `install/`, `log/` or `target/`.
-- To hand the repo to a laptop with no GitHub: `git bundle create ../aav.bundle HEAD main`.
-  Keep `HEAD` in that command, or `git clone` of the bundle checks out nothing.
+- To hand the repo to a laptop with no GitHub access:
+  `git bundle create ../aav.bundle HEAD main`. Keep `HEAD` in that command, or `git clone`
+  of the bundle checks out nothing.
 
 ## Not ours
 

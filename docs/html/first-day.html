@@ -69,7 +69,7 @@ you should see.</p></div>
 </tr>
 <tr>
 <td>The code</td>
-<td><code>aav.bundle</code> from Ben, until the team has a GitHub org</td>
+<td>access to <code>zander1976/aav</code> on GitHub (ask Ben), and an SSH key on your GitHub account</td>
 </tr>
 </tbody>
 </table></div>
@@ -77,7 +77,7 @@ you should see.</p></div>
 <section class="card"><h2 id="1-install-everything-once-about-20-minutes">1. Install everything (once, about 20 minutes)</h2>
 <pre class="highlight"><code class="language-bash">xcode-select --install                        # Mac only: Apple's git and compiler
 curl -fsSL https://pixi.sh/install.sh | sh    # Pixi; then open a new terminal
-git clone ~/aav.bundle ~/aav                  # the code
+git clone git@github.com:zander1976/aav.git ~/aav   # the code
 cd ~/aav
 pixi install                                  # ROS 2 Jazzy, about 7 GB
 pixi run build                                # our packages, about 20 s

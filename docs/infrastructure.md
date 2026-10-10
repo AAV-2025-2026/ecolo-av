@@ -189,16 +189,20 @@ The development computers:
 | 7 | Commit small, each commit passing the tests; inherited code gets a `PROVENANCE.md` line | `git` |
 | 8 | On the car: stands first, then the ground at walking pace, with a safety driver | the test ladder |
 
-## Sharing the code, until there's a GitHub org
+## Sharing the code
 
-`main` stays local until the team picks a GitHub org (Q25). The previous teams' orgs are
-public, so nothing is pushed there.
+The repo is on GitHub: `git@github.com:zander1976/aav.git`, private. Ask Ben to add you. The
+previous teams' orgs are public, so nothing is pushed there.
 
 | Task | Command |
 |---|---|
-| Make a bundle to hand over | `git bundle create ../aav.bundle HEAD main` (keep `HEAD`, or a clone checks out nothing) |
-| Start from a bundle | `git clone aav.bundle aav` |
-| Take newer work from a bundle | copy the new bundle over the old one, then `git pull` |
+| Get it | `git clone git@github.com:zander1976/aav.git aav` |
+| Take newer work | `git pull` |
+| Share your work | `pixi run test`, then `git push` |
+| Hand it to a laptop with no GitHub access | `git bundle create ../aav.bundle HEAD main` (keep `HEAD`, or a clone checks out nothing), then `git clone aav.bundle aav` there |
+
+CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux for every push and pull
+request, and on a Mac every night. The results are on the repo's Actions tab.
 
 !!! warning "What never goes in git"
   Build output (`build/`, `install/`, `log/`, `.pixi/`, `target/`), recordings (`bags/`),

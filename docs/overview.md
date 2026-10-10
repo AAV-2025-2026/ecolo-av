@@ -141,4 +141,4 @@ avoidance, odometry and QNX layer. [The older code](older-code.md) has every rep
 | Drivers | a first real joystick test; an e-stop message that can't get lost (N2) | [Starting points](team.md) |
 | The HUD | small app changes (an e-stop button, cancel, the camera); a download step for its 51 MB map database (Q29) | [HUD](hud.md) |
 | Simulation | CARLA (no Jazzy support yet). Bench mode works: [Bench mode](bench.md) | [Simulation](simulation.md) |
-| The team | owners (Q33), a GitHub org (Q25), the leaked secrets changed (Q34), backups before any reflash | [Work](work.md) |
+| The team | owners (Q33), the leaked secrets changed (Q34), backups before any reflash | [Work](work.md) |

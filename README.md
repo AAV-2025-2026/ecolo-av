@@ -22,7 +22,7 @@ New to the team? Do these in order, on a Mac or on Linux.
 |---|---|---|
 | 1 | Mac only: `xcode-select --install` | a few minutes, once |
 | 2 | Install Pixi: the `curl` line below, then open a new terminal | under a minute, once |
-| 3 | Get the code: `git clone` from GitHub, or from `aav.bundle` until the team has a GitHub org | seconds |
+| 3 | Get the code: `git clone` it from GitHub (ask Ben to add you to `zander1976/aav`) | seconds |
 | 4 | `pixi install` | the first time, a few minutes: it downloads about 4 GB |
 | 5 | `pixi run build`, then `pixi run test` | a few minutes the first time |
 | 6 | `pixi run turtle`, or `pixi run sim` | ready |
@@ -32,7 +32,7 @@ The same steps, as commands:
 ```bash
 xcode-select --install                        # 1. Mac only: Apple's git and compiler
 curl -fsSL https://pixi.sh/install.sh | sh    # 2. Pixi; then open a new terminal
-git clone ~/aav.bundle ~/aav && cd ~/aav      # 3. the code (or git clone from GitHub)
+git clone git@github.com:zander1976/aav.git ~/aav && cd ~/aav   # 3. the code
 pixi install                                  # 4. ROS 2 Jazzy and every dependency
 pixi run build && pixi run test               # 5. our packages, then every test
 pixi run turtle                               # 6. terminal 1: a turtle that steers like the car
@@ -64,6 +64,19 @@ run. Nothing has run on the car yet. What works, what's untested and what's miss
 Decisions and open questions (**Q1–Q34**) are in the team design doc, *AAV 2026–27
 Autonomy Stack — Architecture & Plan* (a Claude Doc). Conventions are in
 [CLAUDE.md](CLAUDE.md).
+
+## Credits
+
+| Who | What |
+|---|---|
+| The 2026-27 AAV capstone team | this design, the new code, and every decision: see [Decisions](docs/decisions.md) |
+| The 2025-26 team (GitHub org `AAV-2025-2026`) | the ESP32 actuator firmware, the Pico 2 wheel encoder, the IMU driver, the radar driver and its clustering, lane keeping, the HUD app, and the steering geometry |
+| The 2024-25 team (`Carleton-AAV-Capstone`) | the battery monitor, the camera calibrations, and the first YOLO stop-sign detector |
+| Open-source projects | ROS 2 Jazzy, Nav2, robot_localization, twist_mux, imu_tools, Gazebo, RoboStack and Pixi, rclrs (ros2-rust), Ultralytics YOLO, and Rust's embedded-hal |
+| Claude (Anthropic) | an AI assistant that helped write code, tests and these docs, under the team's direction |
+
+Each piece copied from the 2025-26 or 2024-25 team keeps a `PROVENANCE.md`, as the next
+section says.
 
 ## Where the code came from
 

@@ -28,7 +28,7 @@ From the design doc's next steps, in order.
 | 3 | **Inventory the car:** take a tape measure and Q1–Q9, Q18, Q20 and Q22 to the car. Photograph the labels on the GPS, the IMU, the motor controller and the actuators | [[needs-you]] |
 | 4 | **Team meeting:** accept or change each Proposed decision, and name an owner per area (Q33) | [[needs-you]] |
 | | **Without the car** | |
-| 5 | **Repo:** a GitHub org (Q25), with CI building on Jazzy | [[needs-you]] |
+| 5 | **Repo:** on GitHub (`zander1976/aav`, private), with CI running `pixi run test` on Linux and a Mac | [[untested]] CI's first run comes with the first push |
 | 6 | **Jazzy everywhere:** every developer installs it, with Pixi | [[works]] on oirp-spss and Ben's Mac |
 | 7 | **ego and the turtle with a real joystick:** the first end-to-end chain | [[works]] with the keyboard; the joystick is [[untested]] |
 | 8 | **Scripted driver:** an action, tested in turtlesim | [[works]] |
@@ -52,7 +52,7 @@ From the design doc's next steps, in order.
 
 ### Integration and the team
 
-- Steps 1–5 above: secrets, backups, the car's inventory, the team meeting, the GitHub org.
+- Steps 1–4 above: secrets, backups, the car's inventory, the team meeting. Step 5, the repo, is done.
 - One `ROS_DOMAIN_ID` for the car and every laptop.
 - The car's computers on Jazzy: Pixi on today's Ubuntu 22.04 first, then the reflash to JetPack 7.2 after a backup (Q24).
 - Merge the older code into `aav` folder by folder: see [The older code](older-code.md).

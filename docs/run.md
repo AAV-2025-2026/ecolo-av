@@ -23,10 +23,10 @@ Then open a new terminal, so that it finds `pixi`.
 
 ## 2. Get the code
 
-The repository lives on oirp-spss until the team has a GitHub org. Over SSH:
+The repository is on GitHub, `zander1976/aav` (private: ask Ben for access):
 
 ```bash
-git clone ssh://ben@oirp-spss.carleton.ca/home/ben/aav/aav aav
+git clone git@github.com:zander1976/aav.git aav
 cd aav
 ```
 

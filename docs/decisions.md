@@ -59,7 +59,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | No pins in ROS | pins, I2C addresses and calibration stay in the firmware |
 | Inherited code | keeps a `PROVENANCE.md`: where it came from, and every change since |
 | Secrets | never in git, logs or docs: write down only where a secret is |
-| Git | `main` stays local until the team has a GitHub org (Q25); small commits, each passing the tests |
+| Git | `main` lives on GitHub, in `zander1976/aav` (private), and CI tests every push; small commits, each passing the tests, with messages that give the intention |
 | Docs | short pages, sections, tables and pictures; Ben is dyslexic |
 | Port first | move everything to Jazzy as it is, then consider rewriting parts in Rust |
 | Simulators | Gazebo this year; CARLA when it supports Jazzy |
@@ -76,7 +76,10 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Flesh out the whole graph down to the sensors, and stub in what the hardware and firmware don't have yet: bench mode | Ben: "get as much done as we can and stub in the rest" |
 | PyTorch and YOLO live in a separate `ml` environment, so the default one stays small | a technical choice: see [Perception](perception.md) |
 | Camera images are subscribed reliably, not best effort | measured on the Mac: best effort lost every image |
-| The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before Claude joins the car's network: see [Simulation](simulation.md) |
+| The code lives in `git@github.com:zander1976/aav.git`, private (Q25) | Ben |
+| CI runs `pixi run test` on Linux for every push, and on a Mac every night | Ben |
+| Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant | Ben: "This is a school project" |
+| The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before the audit on the car's network: see [Simulation](simulation.md) |
 
 ## Open questions
 
@@ -127,7 +130,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 |---|---|---|
 | Q23 | QNX | Is it definitely dropped? Is it a course or sponsor requirement? |
 | **Q24** | Jazzy on the car | Who images and reflashes the Orin, and when? Is there a spare machine to try JetPack 7.2 first? Until then, Pixi can run Jazzy on the car's Ubuntu 22.04 |
-| Q25 | Repo | A new 2026-27 GitHub organization, or the existing one? |
+| Q25 | Repo | A new 2026-27 GitHub organization, or the existing one? **Answered by Ben, 10 Oct: `zander1976/aav`, private** |
 | Q26 | Languages | Python for all our ROS nodes? C++ or Rust for the spine firmware? |
 | Q27 | Steering at standstill | A speed-and-turn-rate command can't steer at zero speed. Should the joystick turn the wheels while stopped? |
 | Q28 | Joystick handover | When the hold-to-drive button is released, go back to the autonomous driver, or stay stopped? |

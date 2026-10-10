@@ -24,9 +24,9 @@ files you'll work in, and the open questions you own. Everyone starts with
 |---|---|
 | Read first | [How it fits](how-it-fits.md), [Infrastructure](infrastructure.md), [Decisions](decisions.md), [Work](work.md) |
 | Run first | everything in [Your first day](first-day.md), on a Mac and on Linux |
-| First tasks | 1. A team meeting: accept or change each Proposed decision, and name an owner per area (Q33). 2. Secrets (Q34) and backups of the Orin and the Pis. 3. A plan for Jazzy on the car (Q24): Pixi on today's Ubuntu 22.04 first. 4. The GitHub org (Q25), then push `aav`. 5. One `ROS_DOMAIN_ID` for everyone |
+| First tasks | 1. A team meeting: accept or change each Proposed decision, and name an owner per area (Q33). 2. Secrets (Q34) and backups of the Orin and the Pis. 3. A plan for Jazzy on the car (Q24): Pixi on today's Ubuntu 22.04 first. 4. Done 10 Oct: `aav` is on GitHub (`zander1976/aav`, private), with CI. 5. One `ROS_DOMAIN_ID` for everyone |
 | Files | `CLAUDE.md`, `pixi.toml`, `docs/interfaces.yaml`, `src/aav_bringup/`, `tools/` |
-| Open questions | Q9, Q23, Q24, Q25, Q32, Q33, Q34 |
+| Open questions | Q9, Q23, Q24, Q32, Q33, Q34 |
 
 ## Spine firmware and CAN
 

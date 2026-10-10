@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">13 min read · 8 sections</div></header>
+<div class="meta">14 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -222,7 +222,7 @@ answer.</p>
 </tr>
 <tr>
 <td>Git</td>
-<td><code>main</code> stays local until the team has a GitHub org (Q25); small commits, each passing the tests</td>
+<td><code>main</code> lives on GitHub, in <code>zander1976/aav</code> (private), and CI tests every push; small commits, each passing the tests, with messages that give the intention</td>
 </tr>
 <tr>
 <td>Docs</td>
@@ -281,8 +281,20 @@ answer.</p>
 <td>measured on the Mac: best effort lost every image</td>
 </tr>
 <tr>
+<td>The code lives in <code>git@github.com:zander1976/aav.git</code>, private (Q25)</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td>CI runs <code>pixi run test</code> on Linux for every push, and on a Mac every night</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td>Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant</td>
+<td>Ben: "This is a school project"</td>
+</tr>
+<tr>
 <td>The stand-ins (<code>turtle</code>, <code>sim</code>, <code>bench</code>, <code>view</code>, and the keyboard with <code>--sim</code> or <code>--local</code>) stay on the computer they run on, so a pretend car can never reach the real one</td>
-<td>a safety choice, before Claude joins the car's network: see <a href="simulation.html">Simulation</a></td>
+<td>a safety choice, before the audit on the car's network: see <a href="simulation.html">Simulation</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -460,7 +472,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q25</td>
 <td>Repo</td>
-<td>A new 2026-27 GitHub organization, or the existing one?</td>
+<td>A new 2026-27 GitHub organization, or the existing one? <strong>Answered by Ben, 10 Oct: <code>zander1976/aav</code>, private</strong></td>
 </tr>
 <tr>
 <td>Q26</td>

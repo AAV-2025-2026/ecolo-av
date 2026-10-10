@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">11 min read · 11 sections</div></header>
+<div class="meta">12 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -37,7 +37,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-pieces-at-a-glance">The pieces at a glance</a><a href="#the-repo-folder-by-folder">The repo, folder by folder</a><a href="#the-three-contracts">The three contracts</a><a href="#the-environment-pixi">The environment: Pixi</a><a href="#the-one-word-tasks">The one-word tasks</a><a href="#the-scripts-in-tools">The scripts in tools/</a><a href="#launch-profiles-the-same-nodes-a-different-car">Launch profiles: the same nodes, a different car</a><a href="#the-computers-and-what-runs-where">The computers, and what runs where</a><a href="#how-a-change-goes-from-an-idea-to-the-car">How a change goes from an idea to the car</a><a href="#sharing-the-code-until-theres-a-github-org">Sharing the code, until there&#x27;s a GitHub org</a><a href="#where-to-find-what-happened">Where to find what happened</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-pieces-at-a-glance">The pieces at a glance</a><a href="#the-repo-folder-by-folder">The repo, folder by folder</a><a href="#the-three-contracts">The three contracts</a><a href="#the-environment-pixi">The environment: Pixi</a><a href="#the-one-word-tasks">The one-word tasks</a><a href="#the-scripts-in-tools">The scripts in tools/</a><a href="#launch-profiles-the-same-nodes-a-different-car">Launch profiles: the same nodes, a different car</a><a href="#the-computers-and-what-runs-where">The computers, and what runs where</a><a href="#how-a-change-goes-from-an-idea-to-the-car">How a change goes from an idea to the car</a><a href="#sharing-the-code">Sharing the code</a><a href="#where-to-find-what-happened">Where to find what happened</a></nav>
 <div class="lead"><p>For whoever puts the whole thing together. <a href="how-it-fits.html">How it fits</a> explains the
 car's software: sensors, drivers, the mux, ego, backends. This page explains everything
 around it: the repo, the environment, the contracts, the profiles, the computers, the
@@ -600,9 +600,9 @@ changes.</p>
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="sharing-the-code-until-theres-a-github-org">Sharing the code, until there's a GitHub org</h2>
-<p><code>main</code> stays local until the team picks a GitHub org (Q25). The previous teams' orgs are
-public, so nothing is pushed there.</p>
+<section class="card"><h2 id="sharing-the-code">Sharing the code</h2>
+<p>The repo is on GitHub: <code>git@github.com:zander1976/aav.git</code>, private. Ask Ben to add you. The
+previous teams' orgs are public, so nothing is pushed there.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -612,19 +612,25 @@ public, so nothing is pushed there.</p>
 </thead>
 <tbody>
 <tr>
-<td>Make a bundle to hand over</td>
-<td><code>git bundle create ../aav.bundle HEAD main</code> (keep <code>HEAD</code>, or a clone checks out nothing)</td>
+<td>Get it</td>
+<td><code>git clone git@github.com:zander1976/aav.git aav</code></td>
 </tr>
 <tr>
-<td>Start from a bundle</td>
-<td><code>git clone aav.bundle aav</code></td>
+<td>Take newer work</td>
+<td><code>git pull</code></td>
 </tr>
 <tr>
-<td>Take newer work from a bundle</td>
-<td>copy the new bundle over the old one, then <code>git pull</code></td>
+<td>Share your work</td>
+<td><code>pixi run test</code>, then <code>git push</code></td>
+</tr>
+<tr>
+<td>Hand it to a laptop with no GitHub access</td>
+<td><code>git bundle create ../aav.bundle HEAD main</code> (keep <code>HEAD</code>, or a clone checks out nothing), then <code>git clone aav.bundle aav</code> there</td>
 </tr>
 </tbody>
 </table></div>
+<p>CI (<code>.github/workflows/test.yml</code>) runs <code>pixi run test</code> on Linux for every push and pull
+request, and on a Mac every night. The results are on the repo's Actions tab.</p>
 <div class="admonition warning">
 <p class="admonition-title">What never goes in git</p>
 <p>Build output (<code>build/</code>, <code>install/</code>, <code>log/</code>, <code>.pixi/</code>, <code>target/</code>), recordings (<code>bags/</code>),
