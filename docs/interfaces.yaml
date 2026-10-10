@@ -22,9 +22,9 @@ topics:
     note: Priority 100. Only while the deadman (trigger) is held.
   /cmd_vel/remote:
     type: geometry_msgs/msg/TwistStamped
-    pub: []
+    pub: [teleop_twist_keyboard]
     sub: [twist_mux]
-    note: Priority 90. Foxglove teleop panel, or the HUD once ported.
+    note: Priority 90. A person driving from a laptop - teleop_twist_keyboard (stamped:=true), the Foxglove teleop panel, or the HUD once ported.
   /cmd_vel/scripted:
     type: geometry_msgs/msg/TwistStamped
     pub: [scripted_driver]

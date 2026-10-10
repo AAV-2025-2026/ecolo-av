@@ -9,7 +9,7 @@ Check a running system against it with `tools/check_graph.py --profile <turtle|s
 |---|---|---|---|---|---|
 | `/joy` | `sensor_msgs/msg/Joy` | `joy_node` | `teleop_twist_joy_node`, `joy_teleop` | - | Joystick axes and buttons, 20 Hz while held. |
 | `/cmd_vel/joy` | `geometry_msgs/msg/TwistStamped` | `teleop_twist_joy_node` | `twist_mux` | - | Priority 100. Only while the deadman (trigger) is held. |
-| `/cmd_vel/remote` | `geometry_msgs/msg/TwistStamped` | - | `twist_mux` | - | Priority 90. Foxglove teleop panel, or the HUD once ported. |
+| `/cmd_vel/remote` | `geometry_msgs/msg/TwistStamped` | `teleop_twist_keyboard` | `twist_mux` | - | Priority 90. A person driving from a laptop - teleop_twist_keyboard (stamped:=true), the Foxglove teleop panel, or the HUD once ported. |
 | `/cmd_vel/scripted` | `geometry_msgs/msg/TwistStamped` | `scripted_driver` | `twist_mux` | - | Priority 50. Only while a /scripted_drive goal runs. |
 | `/cmd_vel/replay` | `geometry_msgs/msg/TwistStamped` | - | `twist_mux` | - | Priority 40. ros2 bag play of a recorded /cmd_vel (tools/replay_commands.sh). |
 | `/cmd_vel/nav` | `geometry_msgs/msg/TwistStamped` | `velocity_smoother` | `twist_mux` | - | Priority 20. Nav2; from collision_monitor instead when it is enabled. |
