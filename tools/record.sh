@@ -14,4 +14,4 @@ exec ros2 bag record -o "$out" \
   /joy /estop /cmd_vel /cmd_vel/joy /cmd_vel/remote /cmd_vel/scripted /cmd_vel/nav \
   /ego/actuator_cmd /to_can_bus /from_can_bus \
   /odometry/local /odometry/global /odometry/gps /gps/filtered \
-  /tf /tf_static /robot_description /plan /goal_pose
+  /tf /tf_static /robot_description /plan /goal_pose /clock

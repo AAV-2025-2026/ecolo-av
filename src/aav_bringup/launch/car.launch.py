@@ -79,8 +79,12 @@ def launch_setup(context):
                                gps=arg('gps'), start_x=arg('start_x'), start_y=arg('start_y'),
                                start_yaw=arg('start_yaw')))
     if on('navigation'):
-        nav_args = {'map': arg('map')} if arg('map') else {}
-        actions.append(include(context, 'aav_navigation', 'navigation.launch.py', **nav_args))
+        # Always pass a map: an empty `map` here would override Nav2's own default,
+        # because included launch files share launch arguments.
+        empty_map = os.path.join(FindPackageShare('aav_navigation').perform(context), 'maps',
+                                 'empty.yaml')
+        actions.append(include(context, 'aav_navigation', 'navigation.launch.py',
+                               map=arg('map') or empty_map))
     if on('spine'):
         actions.append(include(context, 'aav_spine', 'spine.launch.py'))
     if on('legacy_uart') or on('legacy_encoder'):

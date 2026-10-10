@@ -157,7 +157,7 @@ local_costmap:
           obstacle_min_range: 0.3
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 1.5     # m from the footprint
+        inflation_radius: 2.0     # m; at least the car's circumscribed radius, 1.93
         cost_scaling_factor: 3.0
       always_send_full_costmap: true
 
@@ -179,7 +179,7 @@ global_costmap:
         map_subscribe_transient_local: true
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 1.5
+        inflation_radius: 2.0     # m; at least the car's circumscribed radius, 1.93
         cost_scaling_factor: 3.0
       always_send_full_costmap: true
 

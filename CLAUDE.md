@@ -84,6 +84,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
 - On a shared machine, give each test run its own `ROS_DOMAIN_ID` and
   `ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST`, and stop it by its process group. Never
   `pkill` by node name: someone else's run may be live.
+- Gazebo on oirp-spss also needs `GZ_IP=127.0.0.1` (multicast doesn't loop back there)
+  and its own `GZ_PARTITION`; without them the car never spawns.
 
 ## Git
 

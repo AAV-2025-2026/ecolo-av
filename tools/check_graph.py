@@ -2,7 +2,7 @@
 """
 Compare the running ROS graph with docs/interfaces.yaml. Needs a sourced Jazzy install.
 
-usage: tools/check_graph.py --profile turtle|sim|car [--wait 5]
+usage: tools/check_graph.py --profile turtle|sim|car|replay [--wait 5]
 
 Reports, for every topic in the contract:
   FAIL  a topic marked live in this profile has no publisher, or a type differs
@@ -29,7 +29,7 @@ IGNORE = {'/parameter_events', '/rosout', '/diagnostics',
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--profile', required=True, choices=['turtle', 'sim', 'car'])
+    ap.add_argument('--profile', required=True, choices=['turtle', 'sim', 'car', 'replay'])
     ap.add_argument('--wait', type=float, default=3.0, help='seconds to let discovery settle')
     ap.add_argument('--spec', default=str(ROOT / 'docs' / 'interfaces.yaml'))
     args = ap.parse_args()

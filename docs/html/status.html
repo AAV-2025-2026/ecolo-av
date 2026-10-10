@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">2 min read · 4 sections</div></header>
+<div class="meta">3 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="how-it-fits.html">How it fits</a>
 <a href="ros2.html">ROS 2</a>
@@ -52,7 +52,7 @@ run yet.</p></div>
 <tr>
 <td>GPS</td>
 <td><code>ublox_dgnss</code></td>
-<td><span class="badge b-untested">untested</span> on Ubuntu; not packaged for Pixi</td>
+<td><span class="badge b-needs-you">needs you</span> not in Pixi: keep it (apt, car only) or switch to <code>ublox</code></td>
 </tr>
 <tr>
 <td>Car model</td>
@@ -67,7 +67,7 @@ run yet.</p></div>
 <tr>
 <td><code>ekf_global</code>, <code>navsat_transform</code></td>
 <td>robot_localization</td>
-<td><span class="badge b-untested">untested</span> needs GPS, so Gazebo first</td>
+<td><span class="badge b-works">works</span> in Gazebo: parked, it stays within 0.2 m</td>
 </tr>
 <tr>
 <td>Joystick</td>
@@ -87,7 +87,7 @@ run yet.</p></div>
 <tr>
 <td>Nav2</td>
 <td><code>aav_navigation</code></td>
-<td><span class="badge b-untested">untested</span></td>
+<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached</td>
 </tr>
 <tr>
 <td>twist_mux</td>
@@ -107,7 +107,7 @@ run yet.</p></div>
 <tr>
 <td>Gazebo</td>
 <td><code>aav_gazebo</code></td>
-<td><span class="badge b-untested">untested</span></td>
+<td><span class="badge b-works">works</span> headless; its window is untested</td>
 </tr>
 <tr>
 <td>Real car</td>
@@ -157,15 +157,23 @@ run yet.</p></div>
 </tr>
 <tr>
 <td><code>pixi run test</code>: build, tests, lint, <code>colcon test</code></td>
-<td><span class="badge b-works">works</span> all pass: Python 43, Rust 47; <code>colcon test</code> 77, 0 failures</td>
+<td><span class="badge b-works">works</span> all pass: Python 47, Rust 47; <code>colcon test</code> 77, 0 failures</td>
 </tr>
 <tr>
-<td>Live graph vs <code>docs/interfaces.yaml</code>, turtle profile</td>
-<td><span class="badge b-works">works</span> 0 failures</td>
+<td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim and replay</td>
+<td><span class="badge b-works">works</span> 0 failures each</td>
 </tr>
 <tr>
-<td>Sim, car and replay profiles</td>
-<td><span class="badge b-untested">untested</span></td>
+<td>Sim, headless: drive commands (the keyboard's topic) and Nav2 goals</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Replay of a recorded drive</td>
+<td><span class="badge b-works">works</span> the EKFs match the recording within 0.03 m</td>
+</tr>
+<tr>
+<td>Car, with no hardware attached</td>
+<td>comes up; only the missing sensors fail the graph check, as expected</td>
 </tr>
 <tr>
 <td>The same <code>pixi.toml</code> on macOS</td>
@@ -175,15 +183,16 @@ run yet.</p></div>
 </table></div>
 </section>
 <section class="card"><h2 id="is-it-all-on-jazzy">Is it all on Jazzy?</h2>
-<p>Yes. Everything builds against Jazzy, and the turtle profile runs. The code changes so far
-were small: every node now shuts down cleanly on Ctrl-C under Jazzy. The configuration
-files are being checked against what the Jazzy nodes really accept.</p>
+<p>Yes. Everything builds against Jazzy, and the turtle, sim and replay profiles run. Every
+configuration key was checked against what the running Jazzy nodes accept. The fixes were
+small: clean shutdowns, Nav2 on simulated time, and the simulated GPS noise. The details
+are in <code>docs/history/audit-2026-10-10-*.md</code>.</p>
 </section>
 <section class="card"><h2 id="next">Next</h2>
 <ol>
-<li>Run it on a Mac.</li>
-<li>Run the Gazebo profile headless, then Nav2 in the simulator.</li>
-<li>Fix whatever the Jazzy config checks find.</li>
+<li>Run it on a Mac (<code>docs/mac.md</code>), then join the car's network (<code>pixi run doctor</code>).</li>
+<li>Pick the team's <code>ROS_DOMAIN_ID</code> and the GPS driver.</li>
+<li>Drive the turtle with the joystick.</li>
 <li>Measure the car, and replace the guesses in <code>vehicle.yaml</code>.</li>
 <li>Choose the spine's microcontroller (Q10–Q17), then write its board code.</li>
 </ol></section>

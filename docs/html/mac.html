@@ -7,7 +7,7 @@
 <!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your Mac: run it, and drive the car</h1>
-<div class="meta">5 min read · 8 sections</div></header>
+<div class="meta">6 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="how-it-fits.html">How it fits</a>
 <a href="ros2.html">ROS 2</a>
@@ -175,6 +175,9 @@ WiFi connection, with no ROS on the Mac.</p>
 <pre class="highlight"><code class="language-bash">pixi run sim gui:=false    # terminal 1: the simulator, with no window
 pixi run gz-window         # terminal 2: Gazebo's window</code></pre>
 <p>Cameras and lidars inside Gazebo can crash it on a Mac. Our simulated car has neither yet.</p>
+<p>If the window stays empty, or the car never appears, run <code>export GZ_IP=127.0.0.1</code> in both
+terminals and start again: Gazebo's two programs then find each other on the Mac itself.
+<span class="badge b-untested">untested</span> on a Mac; it fixed the same symptom on Linux.</p>
 </section>
 <section class="card"><h2 id="if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</h2>
 <ol>

@@ -9,12 +9,13 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       `colcon build`, `colcon test`, then run `turtle.launch.py` headless and drive it.
       If something can't build, write down why.
       *Done: all 19 packages build in 11 s; our tests pass; the turtle drives through
-      mux → ego; check_graph: 0 failures. Left: lint failures in 3 inherited packages.*
+      mux → ego; check_graph: 0 failures. The inherited packages' lint failures were
+      fixed on 10-10.*
 - [ ] **Mac tomorrow.** The same `pixi.toml` for macOS (Apple Silicon). Check that every
       package resolves for `osx-arm64`. Write the steps: no Homebrew.
       *Resolves for `osx-arm64` and `osx-64` (macOS 14+). Steps: `docs/mac.md`. Fixed the
       one known build blocker (B921600 in the IMU driver). Left: Ben tries it on his Mac.*
-- [ ] **Port everything to Jazzy as is.** Apply the fixes the audits found (configs,
+- [x] **Port everything to Jazzy as is.** Apply the fixes the audits found (configs,
       inherited code, missing dependencies). Reports: `docs/history/audit-2026-10-10-*.md`.
       - ~~Spine safety, before any firmware is written~~ *Done 10-10: B1 arming always
         sends the 0→1 edge; B2 the spine boots latched; W1 `cmd_timeout` 0.1; W2 driver
@@ -27,11 +28,14 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
         ROS's lint rules and fixed (no `sudo chmod`, udev port names, clean shutdown);
         maincar's NameErrors and start-up fixed; CMake 3.10; `.warning(`. `pixi run test`
         is all green (colcon test: 77, 0 failures).*
-      - The live config check of sim, car and replay didn't finish (usage limit): redo it.
-- [ ] **The graph.** Every topic has the right publisher, subscriber, type and QoS.
+      - ~~Live check of sim, car and replay~~ *Done 10-10: every config key is declared
+        by its Jazzy node. Fixed: Nav2 on sim time, the sim GPS noise (degrees, not
+        metres), a map on the car, steering speed and inflation in the sim, a replay
+        profile. Nav2 goals now succeed in Gazebo. Left for the team: see below.*
+- [x] **The graph.** Every topic has the right publisher, subscriber, type and QoS.
       Check it live with `tools/check_graph.py` on the turtle run.
-      *Turtle: 0 failures (re-checked 10-10 04:00, after tonight's fixes). Sim, car and
-      replay: the live audit is running.*
+      *Done 10-10: turtle, sim and replay have 0 failures. The car, with no hardware,
+      fails only on `/imu/data_raw` and `/gps/fix`. No QoS mismatches.*
 - [x] **Docs as HTML (and PDF)**, short pages, sections, red and white, a picture of how
       it fits together. Markdown stays as the source.
       *Done: `docs/html/index.html` and `pixi run docs` (PDF). Four pictures; pages for
@@ -66,6 +70,18 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
 - Can it compile on a Mac without Homebrew?
 - What does the claude.ai chat (fe09d020…) say? I can't open claude.ai chats, so Ben
   needs to paste the key parts.
+
+## For the team to decide
+
+- **`ROS_DOMAIN_ID`** for the car and every laptop (any number 0–101 that no one nearby uses).
+- **Spine arming rules** (design doc, Proposed): boot latched, arm on a 0→1 edge.
+- **GPS driver** (B4): `ublox_dgnss` isn't in Pixi. Keep it (apt, on the car only), or
+  switch to `ublox`, which Pixi has.
+- **N2:** twist_mux hears `/estop` best-effort, and the joystick sends it once per press.
+  The backends still brake. Send it repeatedly, or make the mux reliable?
+- **N3:** no `respawn` on device nodes, and Nav2 gives up without TF. Add respawn?
+- **N7:** Nav2's turn command flips sign about once a second in the sim. Try a longer
+  lookahead.
 
 ## Decided tonight
 

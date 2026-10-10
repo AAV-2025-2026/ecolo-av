@@ -126,7 +126,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code></td>
-<td>turtle, sim, car</td>
+<td>turtle, sim, car, replay</td>
 <td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).</td>
 </tr>
 <tr>
@@ -150,7 +150,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>sensor_msgs/msg/JointState</code></td>
 <td><code>joint_state_publisher</code>, <code>gz_bridge</code></td>
 <td><code>robot_state_publisher</code></td>
-<td>turtle, sim, car</td>
+<td>turtle, sim, car, replay</td>
 <td></td>
 </tr>
 <tr>
@@ -174,7 +174,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_node</code>, <code>gazebo_adapter</code></td>
 <td><code>imu_filter_madgwick</code></td>
-<td>sim, car</td>
+<td>sim, car, replay</td>
 <td>Gyro and accelerometer in imu_link, with covariances; no orientation.</td>
 </tr>
 <tr>
@@ -190,7 +190,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code></td>
-<td>sim, car</td>
+<td>sim, car, replay</td>
 <td>Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.</td>
 </tr>
 <tr>
@@ -198,7 +198,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code></td>
 <td><code>navsat_transform</code></td>
-<td>sim, car</td>
+<td>sim, car, replay</td>
 <td>Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS).</td>
 </tr>
 <tr>
@@ -222,7 +222,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_local</code></td>
 <td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code></td>
-<td>turtle, sim, car</td>
+<td>turtle, sim, car, replay</td>
 <td>odom frame. Smooth; drifts.</td>
 </tr>
 <tr>
@@ -230,7 +230,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_global</code></td>
 <td><code>navsat_transform</code></td>
-<td>sim, car</td>
+<td>sim, car, replay</td>
 <td>map frame. Includes GPS; can jump.</td>
 </tr>
 <tr>
@@ -238,7 +238,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>navsat_transform</code></td>
 <td><code>ekf_global</code></td>
-<td>sim, car</td>
+<td>sim, car, replay</td>
 <td>Each GPS fix as a map-frame position of base_link (antenna offset removed).</td>
 </tr>
 <tr>
@@ -246,7 +246,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>navsat_transform</code></td>
 <td>-</td>
-<td>sim, car</td>
+<td>sim, car, replay</td>
 <td>The global EKF's position as lat/lon, for maps in the HUD or Foxglove.</td>
 </tr>
 <tr>
@@ -278,7 +278,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>tf2_msgs/msg/TFMessage</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code>, <code>robot_state_publisher</code></td>
 <td>-</td>
-<td>turtle, sim, car</td>
+<td>turtle, sim, car, replay</td>
 <td>map -&gt; odom (ekf_global), odom -&gt; base_link (ekf_local), moving joints (robot_state_publisher).</td>
 </tr>
 <tr>
@@ -286,7 +286,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>tf2_msgs/msg/TFMessage</code></td>
 <td><code>robot_state_publisher</code></td>
 <td>-</td>
-<td>turtle, sim, car</td>
+<td>turtle, sim, car, replay</td>
 <td>base_link -&gt; chassis and every sensor frame, from vehicle.yaml through the URDF.</td>
 </tr>
 <tr>
@@ -294,7 +294,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>std_msgs/msg/String</code></td>
 <td><code>robot_state_publisher</code></td>
 <td>-</td>
-<td>turtle, sim, car</td>
+<td>turtle, sim, car, replay</td>
 <td></td>
 </tr>
 <tr>
@@ -302,7 +302,7 @@ Check a running system against it with <code>tools/check_graph.py --profile &lt;
 <td><code>rosgraph_msgs/msg/Clock</code></td>
 <td><code>gz_bridge</code></td>
 <td>-</td>
-<td>sim</td>
+<td>sim, replay</td>
 <td>Simulation time; every node runs with use_sim_time:=true in sim and replay.</td>
 </tr>
 </tbody>

@@ -43,7 +43,6 @@ def nodes(context):
         'default_nav_to_pose_bt_xml': f'{share}/behavior_trees/navigate_to_pose_car.xml',
         'default_nav_through_poses_bt_xml':
             f'{share}/behavior_trees/navigate_through_poses_car.xml',
-        'use_sim_time': str(use_sim_time),
     })
     params = ParameterFile(
         RewrittenYaml(source_file=f'{share}/config/nav2.yaml', param_rewrites=rewrites,
@@ -64,9 +63,11 @@ def nodes(context):
     if collision_monitor:
         servers.append(('nav2_collision_monitor', 'collision_monitor', []))
 
+    # use_sim_time is passed on its own: RewrittenYaml only rewrites keys that already
+    # exist, and nav2.yaml has none, so as a rewrite it was silently dropped.
     actions = [
         Node(package=pkg, executable=exe, name=exe, output='screen',
-             parameters=[params], remappings=remaps)
+             parameters=[params, {'use_sim_time': use_sim_time}], remappings=remaps)
         for pkg, exe, remaps in servers
     ]
     actions.append(Node(

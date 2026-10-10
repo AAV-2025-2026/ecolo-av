@@ -63,6 +63,12 @@ To drive it:
 !!! tip "No GPU, or in a virtual machine?"
   Start it with `gui:=false`, and watch in RViz or Foxglove instead.
 
+!!! tip "The car never appears?"
+  If the log keeps saying `Requesting list of world names`, Gazebo's programs can't find
+  each other: they use multicast, and some networks and firewalls block it. Run
+  `export GZ_IP=127.0.0.1` in every terminal, then start again. On a shared computer, also
+  set your own `GZ_PARTITION=<any name>`, so your simulator doesn't meet someone else's.
+
 ## Replay a recorded drive
 
 On the car, record a drive: `tools/record.sh parking_lot_test` writes
@@ -72,6 +78,10 @@ On the car, record a drive: `tools/record.sh parking_lot_test` writes
 ros2 launch aav_bringup replay.launch.py
 ros2 bag play bags/<the bag> --clock --topics /vehicle/odom /imu/data_raw /gps/fix /tf_static
 ```
+
+A bag from Gazebo carries simulated time. Play its own `/clock` instead of `--clock`:
+`ros2 bag play bags/<the bag> --topics /clock /vehicle/odom /imu/data_raw /gps/fix /tf_static`.
+`pixi run tools/ros.sh python3 tools/check_graph.py --profile replay` checks the result.
 
 Change an EKF setting, replay, compare the path. That's how to tune localization without
 the car.

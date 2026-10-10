@@ -102,6 +102,10 @@ pixi run gz-window         # terminal 2: Gazebo's window
 
 Cameras and lidars inside Gazebo can crash it on a Mac. Our simulated car has neither yet.
 
+If the window stays empty, or the car never appears, run `export GZ_IP=127.0.0.1` in both
+terminals and start again: Gazebo's two programs then find each other on the Mac itself.
+[[untested]] on a Mac; it fixed the same symptom on Linux.
+
 ## If the native way fails: Ubuntu in UTM
 
 1. Install UTM (free) from mac.getutm.app.

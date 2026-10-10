@@ -4,7 +4,8 @@
 # tools/check_graph.py compares a running system against it. Change the graph here first.
 #
 # live: the bringup profiles where the topic must have a publisher
-#   turtle = aav_bringup turtle.launch.py, sim = sim.launch.py, car = car.launch.py
+#   turtle = aav_bringup turtle.launch.py, sim = sim.launch.py, car = car.launch.py,
+#   replay = replay.launch.py with a bag playing (the bag supplies the raw inputs)
 # All topic names are absolute. QoS is the ROS default (reliable, volatile, depth 10)
 # unless noted.
 
@@ -68,7 +69,7 @@ topics:
     type: nav_msgs/msg/Odometry
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
     sub: [ekf_local, ekf_global]
-    live: [turtle, sim, car]
+    live: [turtle, sim, car, replay]
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
@@ -85,7 +86,7 @@ topics:
     type: sensor_msgs/msg/JointState
     pub: [joint_state_publisher, gz_bridge]
     sub: [robot_state_publisher]
-    live: [turtle, sim, car]
+    live: [turtle, sim, car, replay]
   /to_can_bus:
     type: can_msgs/msg/Frame
     pub: [spine_bridge]
@@ -102,7 +103,7 @@ topics:
     type: sensor_msgs/msg/Imu
     pub: [imu_node, gazebo_adapter]
     sub: [imu_filter_madgwick]
-    live: [sim, car]
+    live: [sim, car, replay]
     note: Gyro and accelerometer in imu_link, with covariances; no orientation.
   /imu/mag:
     type: sensor_msgs/msg/MagneticField
@@ -113,13 +114,13 @@ topics:
     type: sensor_msgs/msg/Imu
     pub: [imu_filter_madgwick]
     sub: [ekf_local, ekf_global]
-    live: [sim, car]
+    live: [sim, car, replay]
     note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
   /gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [ublox_nav_sat_fix_hp, gazebo_adapter]
     sub: [navsat_transform]
-    live: [sim, car]
+    live: [sim, car, replay]
     note: Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS).
   /radar/points:
     type: sensor_msgs/msg/PointCloud2
@@ -136,25 +137,25 @@ topics:
     type: nav_msgs/msg/Odometry
     pub: [ekf_local]
     sub: [controller_server, bt_navigator, scripted_driver]
-    live: [turtle, sim, car]
+    live: [turtle, sim, car, replay]
     note: odom frame. Smooth; drifts.
   /odometry/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
     sub: [navsat_transform]
-    live: [sim, car]
+    live: [sim, car, replay]
     note: map frame. Includes GPS; can jump.
   /odometry/gps:
     type: nav_msgs/msg/Odometry
     pub: [navsat_transform]
     sub: [ekf_global]
-    live: [sim, car]
+    live: [sim, car, replay]
     note: Each GPS fix as a map-frame position of base_link (antenna offset removed).
   /gps/filtered:
     type: sensor_msgs/msg/NavSatFix
     pub: [navsat_transform]
     sub: []
-    live: [sim, car]
+    live: [sim, car, replay]
     note: The global EKF's position as lat/lon, for maps in the HUD or Foxglove.
 
   # --- navigation ---
@@ -180,24 +181,24 @@ topics:
     type: tf2_msgs/msg/TFMessage
     pub: [ekf_local, ekf_global, robot_state_publisher]
     sub: []
-    live: [turtle, sim, car]
+    live: [turtle, sim, car, replay]
     note: map -> odom (ekf_global), odom -> base_link (ekf_local), moving joints (robot_state_publisher).
   /tf_static:
     type: tf2_msgs/msg/TFMessage
     pub: [robot_state_publisher]
     sub: []
-    live: [turtle, sim, car]
+    live: [turtle, sim, car, replay]
     note: base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF.
   /robot_description:
     type: std_msgs/msg/String
     pub: [robot_state_publisher]
     sub: []
-    live: [turtle, sim, car]
+    live: [turtle, sim, car, replay]
   /clock:
     type: rosgraph_msgs/msg/Clock
     pub: [gz_bridge]
     sub: []
-    live: [sim]
+    live: [sim, replay]
     note: Simulation time; every node runs with use_sim_time:=true in sim and replay.
 
 services:

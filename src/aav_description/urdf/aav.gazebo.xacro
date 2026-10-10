@@ -25,6 +25,7 @@
       <right_steering_joint>front_right_steering_joint</right_steering_joint>
       <kingpin_width>${T}</kingpin_width>
       <steering_limit>${max_steer}</steering_limit>
+      <steer_p_gain>10.0</steer_p_gain>  <!-- the default lags over 1 s, and Nav2 weaves -->
       <wheel_base>${L}</wheel_base>
       <wheel_separation>${T}</wheel_separation>
       <wheel_radius>${R}</wheel_radius>
@@ -72,7 +73,9 @@
       <gz_frame_id>gps_link</gz_frame_id>
       <navsat>
         <position_sensing>
-          <horizontal><noise type="gaussian"><mean>0</mean><stddev>0.5</stddev></noise></horizontal>
+          <!-- Gazebo adds this to latitude and longitude, so it's in degrees:
+               4.5e-6 degrees is about 0.5 m. (0.5 here once meant 55 km.) -->
+          <horizontal><noise type="gaussian"><mean>0</mean><stddev>4.5e-6</stddev></noise></horizontal>
           <vertical><noise type="gaussian"><mean>0</mean><stddev>1.0</stddev></noise></vertical>
         </position_sensing>
       </navsat>

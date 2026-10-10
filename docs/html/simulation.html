@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">4 min read · 6 sections</div></header>
+<div class="meta">5 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="how-it-fits.html">How it fits</a>
 <a href="ros2.html">ROS 2</a>
@@ -140,12 +140,22 @@ pixi run sim world:=test_lot     # the walled test lot, with its map</code></pre
 <p class="admonition-title">No GPU, or in a virtual machine?</p>
 <p>Start it with <code>gui:=false</code>, and watch in RViz or Foxglove instead.</p>
 </div>
+<div class="admonition tip">
+<p class="admonition-title">The car never appears?</p>
+<p>If the log keeps saying <code>Requesting list of world names</code>, Gazebo's programs can't find
+each other: they use multicast, and some networks and firewalls block it. Run
+<code>export GZ_IP=127.0.0.1</code> in every terminal, then start again. On a shared computer, also
+set your own <code>GZ_PARTITION=&lt;any name&gt;</code>, so your simulator doesn't meet someone else's.</p>
+</div>
 </section>
 <section class="card"><h2 id="replay-a-recorded-drive">Replay a recorded drive</h2>
 <p>On the car, record a drive: <code>tools/record.sh parking_lot_test</code> writes
 <code>bags/&lt;date&gt;_parking_lot_test/</code>. Then re-run localization against it on any laptop:</p>
 <pre class="highlight"><code class="language-bash">ros2 launch aav_bringup replay.launch.py
 ros2 bag play bags/&lt;the bag&gt; --clock --topics /vehicle/odom /imu/data_raw /gps/fix /tf_static</code></pre>
+<p>A bag from Gazebo carries simulated time. Play its own <code>/clock</code> instead of <code>--clock</code>:
+<code>ros2 bag play bags/&lt;the bag&gt; --topics /clock /vehicle/odom /imu/data_raw /gps/fix /tf_static</code>.
+<code>pixi run tools/ros.sh python3 tools/check_graph.py --profile replay</code> checks the result.</p>
 <p>Change an EKF setting, replay, compare the path. That's how to tune localization without
 the car.</p>
 <p><code>tools/replay_commands.sh bags/&lt;the bag&gt;</code> plays the recorded commands back into the mux
