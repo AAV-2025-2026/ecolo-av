@@ -47,7 +47,9 @@ int SerialPort::toBaudRate(int baud) {
     switch (baud) {
         case 9600:   return B9600;
         case 115200: return B115200;
-        case 921600: return B921600;
+#ifdef B921600  // Linux only: macOS stops at B230400. The IMU runs on the car's Linux
+        case 921600: return B921600;  // computers; on a Mac this just has to compile.
+#endif
         default:     return B9600;
     }
 }

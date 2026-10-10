@@ -21,6 +21,10 @@ sim = { cmd = "tools/ros.sh ros2 launch aav_bringup sim.launch.py", description 
 view = { cmd = "tools/ros.sh ros2 launch aav_description view.launch.py", description = "The car model in RViz" }
 graph = { cmd = "tools/ros.sh rqt_graph", description = "Live picture of nodes and topics" }
 check = { cmd = "tools/ros.sh python3 tools/check_graph.py --profile turtle", description = "Running graph vs the contract" }
+rviz = { cmd = "tools/ros.sh rviz2 -d src/aav_bringup/rviz/drive.rviz", description = "RViz with the driving layout: map, costmaps, path, car" }
+estop = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /estop std_msgs/msg/Bool "{data: true}"', description = "E-stop: block every driver (the car brakes)" }
+estop-clear = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /estop std_msgs/msg/Bool "{data: false}"', description = "Clear the e-stop" }
+gz-window = { cmd = "tools/ros.sh gz sim -g", description = "Gazebo's window, for a simulator started with gui:=false (Macs)" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"
@@ -54,6 +58,7 @@ ros-jazzy-foxglove-bridge = ">=3.6.0,<4"
 ros-jazzy-rosbridge-server = ">=2.7.1,<3"
 ros-jazzy-nmea-navsat-driver = ">=2.0.1,<3"
 ros-jazzy-rqt-tf-tree = ">=1.1.1,<2"
+rust = ">=1.98.1,<1.99"
 
 [target.linux-64.dependencies]
 ros-jazzy-ros2-socketcan = ">=1.4.0,<2"

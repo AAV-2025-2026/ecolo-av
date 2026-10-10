@@ -13,6 +13,7 @@
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a class="here" href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="firmware.html">Firmware</a>
 <a href="status.html">Status</a>
@@ -24,7 +25,7 @@
 <a href="costmaps.html">Costmaps</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-you-need">What you need</a><a href="#1-install-pixi-once">1. Install pixi (once)</a><a href="#2-get-the-code">2. Get the code</a><a href="#3-install-ros-then-build">3. Install ROS, then build</a><a href="#4-drive-the-turtle">4. Drive the turtle</a><a href="#5-more-commands">5. More commands</a><a href="#on-a-mac-what-to-expect">On a Mac: what to expect</a><a href="#when-something-goes-wrong">When something goes wrong</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-you-need">What you need</a><a href="#1-install-pixi-once">1. Install pixi (once)</a><a href="#2-get-the-code">2. Get the code</a><a href="#3-install-ros-then-build">3. Install ROS, then build</a><a href="#4-drive-the-turtle">4. Drive the turtle</a><a href="#5-more-commands">5. More commands</a><a href="#on-a-mac">On a Mac</a><a href="#when-something-goes-wrong">When something goes wrong</a></nav>
 <div class="lead"><p>Pixi installs ROS 2 Jazzy into this folder: no Homebrew, no admin rights, and the same
 steps on a Mac and on Linux. Then three commands drive a turtle like a car.</p></div>
 <section class="card"><h2 id="what-you-need">What you need</h2>
@@ -51,6 +52,11 @@ steps on a Mac and on Linux. Then three commands drive a turtle like a car.</p><
 <td>Admin rights</td>
 <td>no</td>
 <td>no</td>
+</tr>
+<tr>
+<td>First</td>
+<td><code>xcode-select --install</code>: Apple's git and compiler</td>
+<td>nothing</td>
 </tr>
 <tr>
 <td>Tested</td>
@@ -149,6 +155,14 @@ model, so like the car, it can't turn on the spot.</p>
 <td>Gazebo instead of the turtle (<a href="simulation.html">Simulation</a>)</td>
 </tr>
 <tr>
+<td><code>pixi run rviz</code></td>
+<td>RViz with the driving layout</td>
+</tr>
+<tr>
+<td><code>pixi run estop</code>, <code>pixi run estop-clear</code></td>
+<td>stop every driver; let them go again</td>
+</tr>
+<tr>
 <td><code>pixi run test</code></td>
 <td>every test</td>
 </tr>
@@ -163,45 +177,9 @@ model, so like the car, it can't turn on the spot.</p>
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="on-a-mac-what-to-expect">On a Mac: what to expect</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Part</th>
-<th>Mac</th>
-<th>Note</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Turtle and keyboard</td>
-<td><span class="badge b-untested">untested</span></td>
-<td>every package resolves for macOS</td>
-</tr>
-<tr>
-<td>RViz, rqt</td>
-<td><span class="badge b-untested">untested</span></td>
-<td></td>
-</tr>
-<tr>
-<td>Gazebo</td>
-<td><span class="badge b-untested">untested</span></td>
-<td>its window is the most likely thing to fail on a Mac</td>
-</tr>
-<tr>
-<td>Joystick</td>
-<td><span class="badge b-untested">untested</span></td>
-<td></td>
-</tr>
-<tr>
-<td>CAN, for the spine</td>
-<td><span class="badge b-missing">missing</span></td>
-<td>SocketCAN is Linux-only; the car's computers run Linux anyway</td>
-</tr>
-</tbody>
-</table></div>
-<p>If macOS asks whether <code>python3</code> may accept incoming network connections, allow it: that's
-ROS looking for other nodes.</p>
+<section class="card"><h2 id="on-a-mac">On a Mac</h2>
+<p><a href="mac.html">Your Mac</a> has the Mac's own steps: copying the code over, joining the car's
+network, driving and watching the car, and Gazebo.</p>
 </section>
 <section class="card"><h2 id="when-something-goes-wrong">When something goes wrong</h2>
 <div class="table-wrap"><table>
@@ -235,7 +213,7 @@ ROS looking for other nodes.</p>
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="languages.html"><small>Previous</small>← Languages</a>
-<a class="next" href="simulation.html"><small>Next</small>Simulation →</a></nav>
+<a class="next" href="mac.html"><small>Next</small>Your Mac →</a></nav>
 </main>
 <footer>Source: <code>docs/run.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Mac: run it, and drive the car · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Your Mac: run it, and drive the car</h1>
+<div class="meta">5 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a class="here" href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
+<div class="lead"><p>Three ways to use a Mac with the car. Use Pixi to run ROS on the Mac itself, and to
+drive. Lichtblick only watches, but needs no setup. Ubuntu in a VM is the fallback.</p></div>
+<section class="card"><h2 id="three-ways">Three ways</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Way</th>
+<th>Gives you</th>
+<th>Setup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. ROS on the Mac, with Pixi</td>
+<td>everything: keyboard driving, e-stop, RViz, rqt, the turtle, Gazebo</td>
+<td>about 30 minutes and 7 GB, once</td>
+</tr>
+<tr>
+<td>2. Lichtblick or Foxglove, no ROS on the Mac</td>
+<td>watching: 3D view, plots, topics, logs</td>
+<td>install an app</td>
+</tr>
+<tr>
+<td>3. Ubuntu in a VM (UTM)</td>
+<td>the same setup as the car's computers</td>
+<td>about an hour; the 3D view is slower</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="set-up-the-mac-once">Set up the Mac (once)</h2>
+<p><strong>1. Apple's command-line tools:</strong> git and the C++ compiler. If they're installed
+already, it says so.</p>
+<pre class="highlight"><code class="language-bash">xcode-select --install</code></pre>
+<p><strong>2. Pixi</strong>, then open a new terminal:</p>
+<pre class="highlight"><code class="language-bash">curl -fsSL https://pixi.sh/install.sh | sh</code></pre>
+<p><strong>3. The code.</strong> Copy the file <code>aav.bundle</code> to the Mac (from <code>/home/ben/aav/</code> on
+oirp-spss), then:</p>
+<pre class="highlight"><code class="language-bash">git clone aav.bundle aav
+cd aav</code></pre>
+<p><strong>4. Install ROS and build:</strong></p>
+<pre class="highlight"><code class="language-bash">pixi install       # ROS 2 Jazzy: about 7 GB, the first time only
+pixi run build     # our packages</code></pre>
+<p><strong>5. Check it:</strong> <code>pixi run turtle</code> in one terminal and <code>pixi run keyboard</code> in another.
+Hold <code>i</code> to drive.</p>
+</section>
+<section class="card"><h2 id="join-the-cars-network">Join the car's network</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do this</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Join the car's own WiFi router</td>
+<td>campus WiFi blocks the traffic ROS uses to find other computers</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Add <code>export ROS_DOMAIN_ID=&lt;n&gt;</code> to <code>~/.zshrc</code>, with the car's number</td>
+<td>ROS only talks within one domain. The team hasn't picked its number yet <span class="badge b-needs-you">needs you</span></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Leave the middleware alone</td>
+<td>the Mac's Pixi install and Ubuntu both use Fast DDS</td>
+</tr>
+<tr>
+<td>4</td>
+<td>When macOS asks whether <code>python3</code> or <code>rviz2</code> may accept incoming connections, click Allow</td>
+<td>otherwise the firewall blocks the car's replies</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Check with <code>pixi run tools/ros.sh ros2 topic list</code></td>
+<td>the car's topics should be listed</td>
+</tr>
+</tbody>
+</table></div>
+<p>If the car's topics don't show up:</p>
+<ul>
+<li>Check that the Mac and the car's computers have addresses on the same network.</li>
+<li>Name the computers directly: add <code>export ROS_STATIC_PEERS=&lt;the Orin's IP&gt;</code> on the Mac,
+  and the Mac's IP on the Orin. This is Jazzy's way around blocked multicast.</li>
+<li>Turn off the Mac's firewall for a minute, to see whether it's the cause.</li>
+</ul>
+</section>
+<section class="card"><h2 id="drive-and-watch-from-the-mac">Drive and watch from the Mac</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Want</th>
+<th>Run this on the Mac</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive with the keyboard</td>
+<td><code>pixi run keyboard</code></td>
+</tr>
+<tr>
+<td>Stop everything</td>
+<td><code>pixi run estop</code>, then <code>pixi run estop-clear</code> when it's safe</td>
+</tr>
+<tr>
+<td>The 3D view: map, costmaps, path, the car</td>
+<td><code>pixi run rviz</code></td>
+</tr>
+<tr>
+<td>Nodes and topics, live</td>
+<td><code>pixi run graph</code></td>
+</tr>
+<tr>
+<td>Be the safety driver's joystick laptop</td>
+<td><code>pixi run tools/ros.sh ros2 launch aav_bringup car.launch.py machine:=laptop</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Driving the real car</p>
+<p>The keyboard has priority 90. The safety driver's joystick (100) and the hardware
+e-stop always win. Keep both in someone's hands whenever the Mac drives.</p>
+</div>
+</section>
+<section class="card"><h2 id="watch-without-ros-lichtblick">Watch without ROS: Lichtblick</h2>
+<p>The car runs <code>foxglove_bridge</code>, so any Foxglove-compatible viewer can watch it over one
+WiFi connection, with no ROS on the Mac.</p>
+<ul>
+<li><strong>Lichtblick:</strong> free, open source, no account. Download the Mac app from
+  github.com/lichtblick-suite/lichtblick (releases).</li>
+<li><strong>Foxglove:</strong> the same idea; its free plan needs an account.</li>
+</ul>
+<p>In either app: Open connection → Foxglove WebSocket → <code>ws://&lt;the Orin's IP&gt;:8765</code>.</p>
+</section>
+<section class="card"><h2 id="gazebo-on-a-mac">Gazebo on a Mac</h2>
+<p>On macOS, Gazebo's window has to run as a separate program:</p>
+<pre class="highlight"><code class="language-bash">pixi run sim gui:=false    # terminal 1: the simulator, with no window
+pixi run gz-window         # terminal 2: Gazebo's window</code></pre>
+<p>Cameras and lidars inside Gazebo can crash it on a Mac. Our simulated car has neither yet.</p>
+</section>
+<section class="card"><h2 id="if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</h2>
+<ol>
+<li>Install UTM (free) from mac.getutm.app.</li>
+<li>Make a VM from the Ubuntu 24.04 <strong>arm64</strong> image, from cdimage.ubuntu.com.</li>
+<li>Network: <strong>Bridged</strong>, so the VM gets its own address on the car's network.</li>
+<li>Display: UTM's GPU-accelerated option (experimental) for RViz. Inside the VM,
+   <code>glxinfo -B</code> should not say <code>llvmpipe</code>.</li>
+<li>Inside the VM, install Jazzy as on <a href="platforms.html">Platforms</a>, or use Pixi as above.</li>
+</ol>
+</section>
+<section class="card"><h2 id="whats-been-tested">What's been tested</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The Pixi environment resolves for Macs (Apple Silicon and Intel, macOS 14+)</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Building on a Mac</td>
+<td><span class="badge b-untested">untested</span> The one known blocker, a Linux-only serial speed in the IMU driver, is fixed.</td>
+</tr>
+<tr>
+<td>Turtle, keyboard, e-stop</td>
+<td><span class="badge b-works">works</span> on Linux; <span class="badge b-untested">untested</span> on a Mac</td>
+</tr>
+<tr>
+<td>RViz and rqt on a Mac</td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>Joystick on a Mac</td>
+<td><span class="badge b-untested">untested</span> An old macOS joystick bug is fixed in the version we use.</td>
+</tr>
+<tr>
+<td>The Mac on the car's network</td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="run.html"><small>Previous</small>← Run it</a>
+<a class="next" href="simulation.html"><small>Next</small>Simulation →</a></nav>
+</main>
+<footer>Source: <code>docs/mac.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

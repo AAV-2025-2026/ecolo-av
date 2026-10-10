@@ -33,7 +33,7 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 8     # PAGES[:8] are the reading list; the rest are reference
+READ_FIRST = 9     # PAGES[:9] are the reading list; the rest are reference
 
 # (file in docs/, menu title, what it's for)
 PAGES = [
@@ -42,6 +42,7 @@ PAGES = [
     ('ros2.md', 'ROS 2', 'Nodes, topics and tools; stock packages vs our code'),
     ('languages.md', 'Languages', 'Python, C++ and Rust: what goes where, and why'),
     ('run.md', 'Run it', 'Mac or Linux: install, build, drive the turtle'),
+    ('mac.md', 'Your Mac', 'Set up the Mac, join the car, drive and watch'),
     ('simulation.md', 'Simulation', 'Gazebo, replay, CARLA, and when nothing moves'),
     ('firmware.md', 'Firmware', 'src vs firmware, the CAN contract, the spine'),
     ('status.md', 'Status', "What works, what's untested, what's missing"),

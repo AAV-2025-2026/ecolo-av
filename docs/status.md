@@ -38,7 +38,7 @@ run yet.
 | Lint tests of 3 inherited packages (IMU, radar, battery) | fail: style, not function |
 | Live graph vs `docs/interfaces.yaml`, turtle profile | [[works]] 0 failures |
 | Sim, car and replay profiles | [[untested]] |
-| The same `pixi.toml` on macOS | resolves; [[untested]] |
+| The same `pixi.toml` on macOS | resolves; the one known build blocker is fixed; [[untested]] |
 
 ## Is it all on Jazzy?
 

@@ -10,6 +10,7 @@ steps on a Mac and on Linux. Then three commands drive a turtle like a car.
 | System | macOS 14 (Sonoma) or newer; Apple Silicon or Intel | 64-bit x86: Ubuntu, AlmaLinux … |
 | Disk space | about 7 GB | about 7 GB |
 | Admin rights | no | no |
+| First | `xcode-select --install`: Apple's git and compiler | nothing |
 | Tested | [[untested]] not yet | [[works]] on oirp-spss, 9 Oct |
 
 ## 1. Install pixi (once)
@@ -66,22 +67,16 @@ keyboard → `/cmd_vel/remote` → twist_mux → ego → `/ego/actuator_cmd` →
 | `pixi run check` | compares the running graph with our contract |
 | `pixi run view` | the car model in RViz |
 | `pixi run sim` | Gazebo instead of the turtle ([Simulation](simulation.md)) |
+| `pixi run rviz` | RViz with the driving layout |
+| `pixi run estop`, `pixi run estop-clear` | stop every driver; let them go again |
 | `pixi run test` | every test |
 | `pixi run docs` | rebuilds these pages |
 | `pixi shell`, then `source install/setup.bash` | a terminal for any `ros2` command (`setup.zsh` in a Mac's zsh) |
 
-## On a Mac: what to expect
+## On a Mac
 
-| Part | Mac | Note |
-|---|---|---|
-| Turtle and keyboard | [[untested]] | every package resolves for macOS |
-| RViz, rqt | [[untested]] | |
-| Gazebo | [[untested]] | its window is the most likely thing to fail on a Mac |
-| Joystick | [[untested]] | |
-| CAN, for the spine | [[missing]] | SocketCAN is Linux-only; the car's computers run Linux anyway |
-
-If macOS asks whether `python3` may accept incoming network connections, allow it: that's
-ROS looking for other nodes.
+[Your Mac](mac.md) has the Mac's own steps: copying the code over, joining the car's
+network, driving and watching the car, and Gazebo.
 
 ## When something goes wrong
 

@@ -20,6 +20,9 @@ Files, unchanged unless listed under Changes:
   `linear_acceleration_covariance`. They were all zero, which robot_localization
   reads as a perfect sensor.
 
+- `src/serial_port.cpp`: `B921600` is behind `#ifdef B921600`, so the package
+  compiles on macOS, whose `termios.h` stops at `B230400` (2026-10-10).
+
 ## Known issues (not changed)
 
 - `/imu/mag` is in raw counts (with y negated), not tesla, so `imu_filter_madgwick`

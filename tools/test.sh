@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run every test that doesn't need ROS: our packages' Python unit tests, the Rust spine
 # library, and the check that docs/interfaces.md matches docs/interfaces.yaml.
-# Needs Python 3 with pytest and PyYAML, and Rust (cargo). Works on any OS.
+# Needs Python 3 with pytest and PyYAML; Rust (cargo) for the spine. Works on any OS.
 #
 # usage: tools/test.sh
 set -euo pipefail
@@ -17,7 +17,11 @@ for pkg in src/ego/aav_ego src/backends/aav_spine src/backends/aav_legacy \
 done
 
 echo "== firmware/spine"
-(cd firmware/spine && cargo test -q)
+if command -v cargo >/dev/null; then
+  (cd firmware/spine && cargo test -q)
+else
+  echo "skipped: no cargo here (pixi run test has it; or install Rust with rustup)"
+fi
 
 echo "== docs/interfaces.md"
 python3 tools/gen_interfaces_md.py --check && echo "in sync"

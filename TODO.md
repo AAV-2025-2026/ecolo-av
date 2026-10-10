@@ -12,7 +12,8 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       mux → ego; check_graph: 0 failures. Left: lint failures in 3 inherited packages.*
 - [ ] **Mac tomorrow.** The same `pixi.toml` for macOS (Apple Silicon). Check that every
       package resolves for `osx-arm64`. Write the steps: no Homebrew.
-      *Resolves for `osx-arm64` and `osx-64` (macOS 14+). Steps still to write.*
+      *Resolves for `osx-arm64` and `osx-64` (macOS 14+). Steps: `docs/mac.md`. Fixed the
+      one known build blocker (B921600 in the IMU driver). Left: Ben tries it on his Mac.*
 - [ ] **Port everything to Jazzy as is.** Apply the fixes the audits found (configs,
       inherited code, missing dependencies). Reports: `docs/history/audit-2026-10-10-*.md`.
       - Spine safety, before any firmware is written:

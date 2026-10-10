@@ -10,7 +10,7 @@ official packages. On a Mac or any other Linux, use Pixi: see [Run it](run.md).
 | Jetson AGX Orin | JetPack 7.2 (Ubuntu 24.04) | apt. JetPack 6 is Ubuntu 22.04, so reflash first, after a backup. |
 | Raspberry Pi 4 or 5 | Ubuntu 24.04 Server (arm64) | apt |
 | Linux laptop | Ubuntu 24.04 | apt, or Pixi |
-| Mac | macOS 14 or newer | Pixi |
+| Mac | macOS 14 or newer | Pixi: [Your Mac](mac.md) |
 | oirp-spss | AlmaLinux 9 | Pixi, with no admin rights |
 | Windows | Windows 10 or 11 | WSL2 with Ubuntu 24.04 |
 
