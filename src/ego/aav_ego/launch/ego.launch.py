@@ -1,4 +1,5 @@
-"""ego: /cmd_vel (TwistStamped from twist_mux) -> /ego/actuator_cmd (AckermannDriveStamped).
+"""
+ego: /cmd_vel (TwistStamped from twist_mux) -> /ego/actuator_cmd (AckermannDriveStamped).
 
   ros2 launch aav_ego ego.launch.py [use_sim_time:=false]
 
@@ -6,13 +7,12 @@ Wheelbase and steering limit come from aav_description/config/vehicle.yaml; the
 speed and rate limits from config/ego.yaml.
 """
 
+from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-
-from aav_description import vehicle
 
 
 def generate_launch_description():

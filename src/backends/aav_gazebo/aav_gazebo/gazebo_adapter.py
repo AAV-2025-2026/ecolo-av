@@ -1,4 +1,5 @@
-"""gazebo_adapter: Gazebo (Harmonic) as the car, behind the same topics as the real one.
+"""
+gazebo_adapter: Gazebo (Harmonic) as the car, behind the same topics as the real one.
 
 Subscribes  ego/actuator_cmd   ackermann_msgs/AckermannDriveStamped
             gazebo/odom        nav_msgs/Odometry   (bridged from the Ackermann system)
@@ -16,6 +17,7 @@ with the same configs as on the car. Gazebo's ground-truth pose is not passed on
 
 import math
 
+from aav_interfaces.msg import VehicleStatus
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -23,8 +25,6 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from sensor_msgs.msg import Imu, NavSatFix, NavSatStatus
-
-from aav_interfaces.msg import VehicleStatus
 
 
 def turn_rate(speed, steering, wheelbase):

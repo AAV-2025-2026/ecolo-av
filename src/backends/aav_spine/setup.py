@@ -18,7 +18,7 @@ setup(
     zip_safe=True,
     maintainer='AAV 2026-27 team',
     maintainer_email='aav-team@todo.invalid',
-    description='ROS side of the CAN spine: /ego/actuator_cmd and /estop to CAN, feedback to /vehicle/*.',
+    description='ROS side of the CAN spine: commands to CAN frames, feedback to /vehicle/*.',
     license='TODO',
     extras_require={'test': ['pytest']},
     entry_points={

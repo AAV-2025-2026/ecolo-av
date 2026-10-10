@@ -1,4 +1,5 @@
-"""Look at the car model and its frames in RViz, with sliders for the joints.
+"""
+Look at the car model and its frames in RViz, with sliders for the joints.
 
   ros2 launch aav_description view.launch.py
 

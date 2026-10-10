@@ -1,4 +1,5 @@
-"""Publish the car's frames: robot_state_publisher from the URDF.
+"""
+Publish the car's frames: robot_state_publisher from the URDF.
 
   ros2 launch aav_description description.launch.py [sim:=true] [use_sim_time:=true]
 

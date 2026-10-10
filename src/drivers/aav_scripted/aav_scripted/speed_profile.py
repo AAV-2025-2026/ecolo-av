@@ -1,4 +1,5 @@
-"""The speed plan for one ScriptedDrive goal: speed up, hold, slow down.
+"""
+The speed plan for one ScriptedDrive goal: speed up, hold, slow down.
 
 No ROS imports, so the tests run anywhere.
 """

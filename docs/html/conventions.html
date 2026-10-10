@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Names and code style · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/conventions.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Names and code style</h1>
+<div class="meta">3 min read · 5 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="platforms.html">Platforms</a>
+<a class="here" href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#names">Names</a><a href="#proposed-renames">Proposed renames</a><a href="#how-a-package-is-laid-out">How a package is laid out</a><a href="#writing-code-here">Writing code here</a><a href="#style-and-what-checks-it">Style, and what checks it</a></nav>
+<div class="lead"><p>One naming system and one way to lay out code, for new code and inherited code alike.
+Inherited code is ours to edit: bring it in line when you touch it, and note the change
+in its <code>PROVENANCE.md</code>.</p></div>
+<section class="card"><h2 id="names">Names</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Pattern</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Our package</td>
+<td><code>aav_&lt;what&gt;</code></td>
+<td><code>aav_ego</code>, <code>aav_spine</code>, <code>aav_teleop</code></td>
+</tr>
+<tr>
+<td>A device driver package</td>
+<td><code>aav_&lt;kind&gt;_&lt;maker&gt;</code>, so drivers of one kind sort together</td>
+<td><code>aav_imu_yahboom</code> (proposed)</td>
+</tr>
+<tr>
+<td>Folder under <code>src/</code></td>
+<td>the layer of the picture</td>
+<td><code>sensors/</code>, <code>localization/</code>, <code>drivers/</code>, <code>mux/</code>, <code>ego/</code>, <code>backends/</code></td>
+</tr>
+<tr>
+<td>Node and executable</td>
+<td>what it is, in snake_case; both the same</td>
+<td><code>ego</code>, <code>spine_bridge</code>, <code>scripted_driver</code></td>
+</tr>
+<tr>
+<td>Logic module</td>
+<td>a noun, no ROS imports</td>
+<td><code>ackermann.py</code>, <code>can_codec.py</code>, <code>vehicle.py</code></td>
+</tr>
+<tr>
+<td>Topic</td>
+<td>absolute: <code>/&lt;area&gt;/&lt;thing&gt;</code></td>
+<td><code>/cmd_vel/joy</code>, <code>/vehicle/odom</code>, <code>/ego/actuator_cmd</code></td>
+</tr>
+<tr>
+<td>Frame</td>
+<td><code>&lt;thing&gt;_link</code>, plus <code>map</code>, <code>odom</code>, <code>base_link</code></td>
+<td><code>imu_link</code>, <code>gps_link</code></td>
+</tr>
+<tr>
+<td>Parameter</td>
+<td>snake_case, SI units, the unit in a comment</td>
+<td><code>max_speed: 1.0  # m/s</code></td>
+</tr>
+<tr>
+<td>Config file</td>
+<td><code>config/&lt;node&gt;.yaml</code>; its top key is the node's name, or ROS ignores it</td>
+<td><code>config/ego.yaml</code> starts with <code>ego:</code></td>
+</tr>
+<tr>
+<td>Launch file</td>
+<td><code>launch/&lt;what&gt;.launch.py</code>; whole-system profiles live in <code>aav_bringup</code></td>
+<td><code>ego.launch.py</code>, <code>turtle.launch.py</code></td>
+</tr>
+<tr>
+<td>Message, action</td>
+<td>a CamelCase noun</td>
+<td><code>VehicleStatus</code>, <code>ScriptedDrive</code></td>
+</tr>
+<tr>
+<td>Rust crate</td>
+<td>kebab-case</td>
+<td><code>spine-core</code></td>
+</tr>
+<tr>
+<td>Docs page</td>
+<td>short kebab-case</td>
+<td><code>how-it-fits.md</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="proposed-renames">Proposed renames</h2>
+<p>The inherited packages kept their old names. Renaming changes their launch files and
+executables, so it waits for a yes from the team. <span class="badge b-needs-you">needs you</span></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Today</th>
+<th>Proposed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>yahboom_imu_cpp</code></td>
+<td><code>aav_imu_yahboom</code></td>
+</tr>
+<tr>
+<td><code>ti_ros2_driver</code></td>
+<td><code>aav_radar_ti</code></td>
+</tr>
+<tr>
+<td><code>battery_monitor</code></td>
+<td><code>aav_battery_victron</code></td>
+</tr>
+<tr>
+<td><code>maincar</code> (the HUD's web server)</td>
+<td><code>aav_hud</code></td>
+</tr>
+<tr>
+<td><code>lane_geometry</code>, <code>object_detection</code>, <code>yolo_ros2</code> (parked)</td>
+<td><code>aav_lane_geometry</code>, <code>aav_object_detection</code>, <code>aav_yolo</code>, when they're un-parked</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="how-a-package-is-laid-out">How a package is laid out</h2>
+<pre class="highlight"><code class="language-text">src/&lt;layer&gt;/aav_&lt;what&gt;/
+  package.xml              its dependencies
+  setup.py, setup.cfg      its executables (Python packages)
+  aav_&lt;what&gt;/
+    &lt;logic&gt;.py             the maths: no ROS imports, unit-tested
+    &lt;node&gt;.py              the ROS node: subscribe, call the logic, publish
+  config/&lt;node&gt;.yaml       its parameters
+  launch/&lt;what&gt;.launch.py  how to start it
+  test/test_&lt;logic&gt;.py     tests for the logic
+  PROVENANCE.md            inherited code only: where it came from, what changed</code></pre>
+</section>
+<section class="card"><h2 id="writing-code-here">Writing code here</h2>
+<ol>
+<li><strong>Purpose first.</strong> Every file opens with a short docstring: what it's for. A node's
+   docstring also lists what it subscribes, publishes, serves and calls.</li>
+<li><strong>Comments say why</strong>, not what. The code already says what.</li>
+<li><strong>Keep the maths out of ROS.</strong> Put it in a plain module with tests; the node stays
+   thin.</li>
+<li><strong>Prefer configuration to code</strong>: stock packages first, then inherited code, then
+   new code.</li>
+<li><strong>SI units and REP-103 frames</strong>: metres, radians, seconds; x forward, y left, z up;
+   positive steering turns left.</li>
+<li><strong>No pins in ROS.</strong> Pins, I2C addresses and calibration live in the firmware.</li>
+<li><strong>No secrets in git</strong>: only where a secret lives and what kind it is.</li>
+<li><strong>Small commits</strong>, each passing <code>pixi run test</code>, each message saying why.</li>
+</ol>
+</section>
+<section class="card"><h2 id="style-and-what-checks-it">Style, and what checks it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Language</th>
+<th>Style</th>
+<th>Checked by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>PEP 8 with 99-character lines, single quotes, docstrings that start with a summary line</td>
+<td><code>pixi run lint</code> (ROS's <code>ament_flake8</code> and <code>ament_pep257</code>)</td>
+</tr>
+<tr>
+<td>C++</td>
+<td>the ROS 2 C++ style</td>
+<td><code>ament_uncrustify</code>, <code>ament_cpplint</code> (in <code>colcon test</code>)</td>
+</tr>
+<tr>
+<td>Rust</td>
+<td>rustfmt and clippy</td>
+<td><code>cargo fmt</code>, <code>cargo clippy</code></td>
+</tr>
+<tr>
+<td>Markdown docs</td>
+<td>short pages, a purpose line, sections, tables</td>
+<td><code>pixi run docs</code>, and a look at the result</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="platforms.html"><small>Previous</small>← Platforms</a>
+<a class="next" href="interfaces.html"><small>Next</small>Topics →</a></nav>
+</main>
+<footer>Source: <code>docs/conventions.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

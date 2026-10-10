@@ -1,4 +1,5 @@
-"""The 2025-26 car's protocols, so the new stack can drive today's hardware.
+"""
+The 2025-26 car's protocols, so the new stack can drive today's hardware.
 
 No ROS imports. Sources (read-only clones in /home/ben/aav):
 

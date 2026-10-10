@@ -1,4 +1,5 @@
-"""Read config/vehicle.yaml and derive what other nodes need from it.
+"""
+Read config/vehicle.yaml and derive what other nodes need from it.
 
 The launch files use this so the car's measurements live in one file:
 
@@ -31,7 +32,7 @@ def min_turning_radius(v):
 
 
 def footprint_points(v):
-    """The body outline as [x, y] corners in base_link, front-left first."""
+    """Return the body outline as [x, y] corners in base_link, front-left first."""
     body = v['body']
     rear = -body['rear_overhang']
     front = rear + body['length']
@@ -40,7 +41,7 @@ def footprint_points(v):
 
 
 def footprint(v):
-    """The outline in the string form Nav2's costmaps take for `footprint`."""
+    """Return the outline in the string form Nav2's costmaps take for `footprint`."""
     return '[' + ', '.join(f'[{x:.3f}, {y:.3f}]' for x, y in footprint_points(v)) + ']'
 
 

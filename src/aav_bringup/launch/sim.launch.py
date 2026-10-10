@@ -1,4 +1,5 @@
-"""The whole stack in Gazebo: same nodes and configs as the car, simulated hardware.
+"""
+The whole stack in Gazebo: same nodes and configs as the car, simulated hardware.
 
   ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot] [nav:=true]
       [teleop:=false] [gui:=true] [rviz:=true]

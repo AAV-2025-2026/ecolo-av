@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Compare the running ROS graph with docs/interfaces.yaml. Needs a sourced Jazzy install.
+"""
+Compare the running ROS graph with docs/interfaces.yaml. Needs a sourced Jazzy install.
 
 usage: tools/check_graph.py --profile turtle|sim|car [--wait 5]
 
@@ -57,8 +58,8 @@ def main():
             print(f'-     {name}')
     extra = sorted(set(running) - set(spec['topics']) - IGNORE)
     # Costmap internals, the topics ROS makes inside every action, and turtlesim's own.
-    extra = [n for n in extra if not n.startswith(('/local_costmap/', '/global_costmap/', '/turtle1/'))
-             and '/_action/' not in n]
+    internal = ('/local_costmap/', '/global_costmap/', '/turtle1/')
+    extra = [n for n in extra if not n.startswith(internal) and '/_action/' not in n]
     if extra:
         print('\nRunning but not in docs/interfaces.yaml:')
         for n in extra:

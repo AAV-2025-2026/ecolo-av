@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Email a progress update as a red-and-white HTML page (the car's colours).
+"""
+Email a progress update as a red-and-white HTML page (the car's colours).
 
 Purpose: let people follow the work from a phone. Write the update in a small markdown
 subset, and this renders and sends it. Standard library only, so it runs anywhere.
@@ -79,7 +80,7 @@ def table(rows):
 
 
 def render_body(markdown):
-    """The markdown subset above -> HTML with inline styles (mail clients drop <style>)."""
+    """Render the markdown subset above as HTML, with inline styles (mail clients drop <style>)."""
     out, para, bullets, rows, code = [], [], [], [], []
 
     def flush():
@@ -111,7 +112,8 @@ def render_body(markdown):
             flush()
         elif s.startswith('### '):
             flush()
-            out.append(f'<h3 style="color:{DARK};margin:14px 0 4px;font-size:16px">{inline(s[4:])}</h3>')
+            out.append(f'<h3 style="color:{DARK};margin:14px 0 4px;font-size:16px">'
+                       f'{inline(s[4:])}</h3>')
         elif s.startswith('## '):
             flush()
             out.append(f'<h2 style="color:{RED};margin:20px 0 6px;font-size:19px;'
@@ -126,8 +128,8 @@ def render_body(markdown):
             bullets.append(s[2:])
         elif s.startswith('> '):
             flush()
-            out.append(f'<div style="border-left:5px solid {RED};background:#FDECEE;padding:8px 12px;'
-                       f'margin:8px 0 12px">{inline(s[2:])}</div>')
+            out.append(f'<div style="border-left:5px solid {RED};background:#FDECEE;'
+                       f'padding:8px 12px;margin:8px 0 12px">{inline(s[2:])}</div>')
         elif bullets and line.startswith('  '):
             bullets[-1] += ' ' + s          # a wrapped bullet
         else:

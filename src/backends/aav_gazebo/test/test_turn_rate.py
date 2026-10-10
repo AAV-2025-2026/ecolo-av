@@ -4,7 +4,7 @@ import pytest
 
 pytest.importorskip('rclpy')   # the module imports ROS messages; runs under colcon test
 
-from aav_gazebo.gazebo_adapter import turn_rate  # noqa: E402
+from aav_gazebo.gazebo_adapter import turn_rate  # noqa: E402, I100
 
 
 def test_straight_and_stopped():

@@ -1,4 +1,5 @@
-"""encoder_udp: today's wheel encoder (Pico 2 + W5500) as /vehicle/odom.
+"""
+encoder_udp: today's wheel encoder (Pico 2 + W5500) as /vehicle/odom.
 
 Interim sensor until the encoder moves into the CAN spine.
 
@@ -13,12 +14,11 @@ takes it from the IMU.
 from collections import deque
 import socket
 
+from aav_legacy.legacy_protocol import encoder_counts, metres_per_count
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-
-from aav_legacy.legacy_protocol import encoder_counts, metres_per_count
 
 
 class EncoderUdp(Node):

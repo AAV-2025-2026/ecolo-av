@@ -1,4 +1,5 @@
-"""Nav2 as one more driver: goals in, /cmd_vel/nav (TwistStamped) out to twist_mux.
+"""
+Nav2 as one more driver: goals in, /cmd_vel/nav (TwistStamped) out to twist_mux.
 
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
       [collision_monitor:=false] [use_sim_time:=false] [autostart:=true]
@@ -21,6 +22,7 @@ Send a goal: RViz "2D Goal Pose" (publishes /goal_pose), or
     "{pose: {header: {frame_id: map}, pose: {position: {x: 20.0, y: 5.0}}}}"
 """
 
+from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -28,8 +30,6 @@ from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
 from nav2_common.launch import RewrittenYaml
-
-from aav_description import vehicle
 
 
 def nodes(context):
@@ -75,7 +75,8 @@ def nodes(context):
         name='lifecycle_manager_navigation',
         output='screen',
         parameters=[{'use_sim_time': use_sim_time,
-                     'autostart': LaunchConfiguration('autostart').perform(context).lower() == 'true',
+                     'autostart': (LaunchConfiguration('autostart').perform(context).lower()
+                                   == 'true'),
                      'node_names': [name for _, name, _ in servers]}],
     ))
     return actions

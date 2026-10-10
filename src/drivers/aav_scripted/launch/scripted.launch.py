@@ -1,4 +1,5 @@
-"""Scripted driver: an action server that drives a speed profile into /cmd_vel/scripted.
+"""
+Scripted driver: an action server that drives a speed profile into /cmd_vel/scripted.
 
   ros2 launch aav_scripted scripted.launch.py
   ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
@@ -20,7 +21,8 @@ def generate_launch_description():
             executable='scripted_driver',
             name='scripted_driver',
             parameters=[
-                PathJoinSubstitution([FindPackageShare('aav_scripted'), 'config', 'scripted.yaml']),
+                PathJoinSubstitution(
+                    [FindPackageShare('aav_scripted'), 'config', 'scripted.yaml']),
                 {'use_sim_time': LaunchConfiguration('use_sim_time')},
             ],
         ),

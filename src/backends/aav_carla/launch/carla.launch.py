@@ -1,4 +1,5 @@
-"""CARLA as the car (stub, never run): adapter plus topic remaps to our sensor names.
+"""
+CARLA as the car (stub, never run): adapter plus topic remaps to our sensor names.
 
   ros2 launch aav_carla carla.launch.py [role_name:=ego_vehicle]
 

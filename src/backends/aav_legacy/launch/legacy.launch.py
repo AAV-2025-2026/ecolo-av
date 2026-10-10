@@ -1,4 +1,5 @@
-"""Today's car (2025-26 hardware) as a backend, until the CAN spine exists.
+"""
+Today's car (2025-26 hardware) as a backend, until the CAN spine exists.
 
   ros2 launch aav_legacy legacy.launch.py [uart:=true] [encoder:=true]
 
@@ -10,14 +11,13 @@ on the car's network. READ docs/firmware.md first: the ESP32 firmware has no
 command timeout, so if this bridge dies the last throttle stays on.
 """
 
+from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-
-from aav_description import vehicle
 
 
 def generate_launch_description():

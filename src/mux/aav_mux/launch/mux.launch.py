@@ -1,4 +1,5 @@
-"""The command mux: every /cmd_vel/<driver> in, one /cmd_vel out (to ego).
+"""
+The command mux: every /cmd_vel/<driver> in, one /cmd_vel out (to ego).
 
   ros2 launch aav_mux mux.launch.py [use_sim_time:=true]
 

@@ -1,4 +1,5 @@
-"""Sensor drivers: each publishes raw data in its own frame; nothing here fuses anything.
+"""
+Sensor drivers: each publishes raw data in its own frame; nothing here fuses anything.
 
   ros2 launch aav_sensors sensors.launch.py [imu:=true] [gps:=true] [radar:=false]
                                             [battery:=false]

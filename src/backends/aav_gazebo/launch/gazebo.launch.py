@@ -1,4 +1,5 @@
-"""Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the adapter.
+"""
+Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the adapter.
 
   ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot] [gui:=true]
 
@@ -11,20 +12,20 @@ Everything else (sensors filter, localization, Nav2, mux, ego) runs as on the ca
 with use_sim_time:=true. aav_bringup sim.launch.py starts the lot.
 """
 
+from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-from aav_description import vehicle
-
 
 def generate_launch_description():
     share = FindPackageShare('aav_gazebo')
     world = PathJoinSubstitution([share, 'worlds', [LaunchConfiguration('world'), '.sdf']])
     # -r: start running; -s: server only (no GUI window)
-    gz_args = [PythonExpression(["'-r' if '", LaunchConfiguration('gui'), "' == 'true' else '-r -s'"]),
+    gz_args = [PythonExpression(["'-r' if '", LaunchConfiguration('gui'),
+                                 "' == 'true' else '-r -s'"]),
                ' ', world]
     v = vehicle.load()['vehicle']
     sim_time = {'use_sim_time': True}

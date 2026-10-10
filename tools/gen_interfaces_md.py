@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Render docs/interfaces.yaml as docs/interfaces.md. No ROS needed.
+"""
+Render docs/interfaces.yaml as docs/interfaces.md. No ROS needed.
 
 usage: tools/gen_interfaces_md.py [docs/interfaces.yaml] > docs/interfaces.md
        tools/gen_interfaces_md.py --check    (exit 1 if interfaces.md is out of date)
@@ -20,7 +21,8 @@ def cell(items):
 def render(spec):
     out = ['# Interfaces', '',
            'Generated from `docs/interfaces.yaml` by `tools/gen_interfaces_md.py`; edit the YAML.',
-           'Check a running system against it with `tools/check_graph.py --profile <turtle|sim|car>`.',
+           'Check a running system against it with '
+           '`tools/check_graph.py --profile <turtle|sim|car>`.',
            '', '## Topics', '',
            '| Topic | Type | Publishers | Subscribers | Must be live in | Notes |',
            '|---|---|---|---|---|---|']

@@ -1,4 +1,5 @@
-"""The real car on the CAN spine: ros2_socketcan + spine_bridge.
+"""
+The real car on the CAN spine: ros2_socketcan + spine_bridge.
 
   ros2 launch aav_spine spine.launch.py [interface:=can0]
 
@@ -13,13 +14,12 @@ Bring the interface up first (once per boot, on the Orin):
 The frame layouts are firmware/can/aav.dbc.
 """
 
+from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-
-from aav_description import vehicle
 
 
 def generate_launch_description():

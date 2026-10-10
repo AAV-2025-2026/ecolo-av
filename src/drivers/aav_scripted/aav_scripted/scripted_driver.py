@@ -1,4 +1,5 @@
-"""scripted_driver: drive a speed profile on request (phase 1a).
+"""
+scripted_driver: drive a speed profile on request (phase 1a).
 
 Action      scripted_drive        aav_interfaces/action/ScriptedDrive
 Subscribes  odometry/local        nav_msgs/Odometry (speed and distance, from ekf_local)
@@ -14,6 +15,8 @@ The joystick outranks this driver in twist_mux, so a person can always take over
 import math
 import threading
 
+from aav_interfaces.action import ScriptedDrive
+from aav_scripted.speed_profile import SpeedProfile, STOPPED
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
 import rclpy
@@ -21,9 +24,6 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
-
-from aav_interfaces.action import ScriptedDrive
-from aav_scripted.profile import SpeedProfile, STOPPED
 
 
 class ScriptedDriver(Node):

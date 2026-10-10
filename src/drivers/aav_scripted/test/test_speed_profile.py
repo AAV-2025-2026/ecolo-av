@@ -1,4 +1,4 @@
-from aav_scripted.profile import ACCELERATE, DECELERATE, HOLD, SpeedProfile, STOPPED
+from aav_scripted.speed_profile import ACCELERATE, DECELERATE, HOLD, SpeedProfile, STOPPED
 import pytest
 
 

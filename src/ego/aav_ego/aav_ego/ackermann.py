@@ -1,4 +1,5 @@
-"""The math behind ego: a Twist (v, w) becomes an Ackermann (speed, steering).
+"""
+The math behind ego: a Twist (v, w) becomes an Ackermann (speed, steering).
 
 No ROS imports, so the tests run anywhere.
 
@@ -69,7 +70,8 @@ class EgoModel:
         self.steering = 0.0
 
     def step(self, cmd: Optional[Tuple[float, float]], dt: float) -> Tuple[float, float, float]:
-        """Advance one tick.
+        """
+        Advance one tick.
 
         cmd is (v, w) from /cmd_vel, or None when it is missing or stale,
         which means stop. Returns (speed, steering angle, acceleration limit).

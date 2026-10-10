@@ -1,4 +1,5 @@
-"""carla_adapter: connect the stack to CARLA through carla_ros_bridge (stub).
+"""
+carla_adapter: connect the stack to CARLA through carla_ros_bridge (stub).
 
 Subscribes  ego/actuator_cmd                    ackermann_msgs/AckermannDriveStamped
             carla/ego_vehicle/speedometer       std_msgs/Float32 (m/s)

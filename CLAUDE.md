@@ -47,8 +47,10 @@ These are the conventions decided so far. They apply to people and to Claude ses
   - Rust (`no_std`) for the spine firmware;
   - C++ only for the reused IMU driver.
 - **Keep the maths out of ROS.** A node's logic lives in a module with no ROS imports
-  and has its own tests. Examples: `ackermann.py`, `can_codec.py`, `profile.py`,
+  and has its own tests. Examples: `ackermann.py`, `can_codec.py`, `speed_profile.py`,
   `legacy_protocol.py` and `vehicle.py`; in Rust, `spine-core`.
+- **Names, package layout and code style** are in `docs/conventions.md`. `pixi run lint`
+  checks our Python against ROS's own rules (ament_flake8, ament_pep257).
 - **Each node's module docstring** lists what it subscribes, publishes, serves and calls.
 - **Pins, I2C addresses and calibration belong in the firmware.** ROS never sees a pin.
 

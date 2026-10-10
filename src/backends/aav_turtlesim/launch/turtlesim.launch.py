@@ -1,4 +1,5 @@
-"""turtlesim as the car: the quickest whole-loop test, on any laptop.
+"""
+turtlesim as the car: the quickest whole-loop test, on any laptop.
 
   ros2 launch aav_turtlesim turtlesim.launch.py
 
@@ -10,12 +11,11 @@ The turtle steers like the car (same wheelbase, bicycle model). Its world is
 so drive slowly.
 """
 
+from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
-from aav_description import vehicle
 
 
 def generate_launch_description():

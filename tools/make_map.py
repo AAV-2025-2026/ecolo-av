@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Make a Nav2 map (PGM image + YAML) from a short spec. No ROS needed.
+"""
+Make a Nav2 map (PGM image + YAML) from a short spec. No ROS needed.
 
 A Nav2 map is two files:
   <name>.pgm   greyscale image, one pixel per cell: white = free, black = blocked,

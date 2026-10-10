@@ -1,4 +1,5 @@
-"""spine_bridge: the ROS side of the CAN spine.
+"""
+spine_bridge: the ROS side of the CAN spine.
 
 Subscribes  ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped
             estop             std_msgs/Bool
@@ -17,6 +18,8 @@ stops, the bridge stops sending and the spine's own watchdog brakes the car.
 
 import math
 
+from aav_interfaces.msg import VehicleStatus
+from aav_spine import can_codec as cc
 from ackermann_msgs.msg import AckermannDriveStamped
 from can_msgs.msg import Frame
 from nav_msgs.msg import Odometry
@@ -26,9 +29,6 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Bool
 from std_srvs.srv import SetBool
-
-from aav_interfaces.msg import VehicleStatus
-from aav_spine import can_codec as cc
 
 
 class SpineBridge(Node):

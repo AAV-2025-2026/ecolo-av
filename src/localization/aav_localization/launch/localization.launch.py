@@ -1,4 +1,5 @@
-"""Localization: the local EKF feeds the global EKF; GPS comes in through navsat_transform.
+"""
+Localization: the local EKF feeds the global EKF; GPS comes in through navsat_transform.
 
   ros2 launch aav_localization localization.launch.py [gps:=true]
       [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [use_sim_time:=false]

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Regenerate the CAN test vectors from the Python codec.
+"""
+Regenerate the CAN test vectors from the Python codec.
 
 Writes:
   firmware/can/test_vectors.json                       (read by aav_spine's tests)
@@ -123,7 +124,8 @@ def main():
     }, indent=2) + '\n')
     RUST_OUT.parent.mkdir(parents=True, exist_ok=True)
     RUST_OUT.write_text('\n'.join(rust) + '\n')
-    print(f'wrote {len(vectors)} vectors to {JSON_OUT.relative_to(ROOT)} and {RUST_OUT.relative_to(ROOT)}')
+    print(f'wrote {len(vectors)} vectors to {JSON_OUT.relative_to(ROOT)} and '
+          f'{RUST_OUT.relative_to(ROOT)}')
 
 
 if __name__ == '__main__':

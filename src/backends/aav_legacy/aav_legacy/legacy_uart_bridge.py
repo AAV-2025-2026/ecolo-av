@@ -1,4 +1,5 @@
-"""legacy_uart_bridge: drive today's ESP32 firmware from /ego/actuator_cmd.
+"""
+legacy_uart_bridge: drive today's ESP32 firmware from /ego/actuator_cmd.
 
 Interim backend until the CAN spine exists. Runs on the computer wired to
 the ESP32's UART (today the Motor Pi, /dev/ttyAMA0).
@@ -12,14 +13,13 @@ stale, or /estop is true, the bridge sends brake frames. It can't protect agains
 crash, because the firmware has no timeout; fix that in the firmware first.
 """
 
+from aav_legacy.legacy_protocol import LegacyMapping, pack_frame, stop_command, to_legacy
 from ackermann_msgs.msg import AckermannDriveStamped
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 import serial
 from std_msgs.msg import Bool
-
-from aav_legacy.legacy_protocol import LegacyMapping, pack_frame, stop_command, to_legacy
 
 
 class LegacyUartBridge(Node):

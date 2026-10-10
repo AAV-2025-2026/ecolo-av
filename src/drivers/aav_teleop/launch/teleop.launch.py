@@ -1,4 +1,5 @@
-"""Joystick driver: /joy -> /cmd_vel/joy (TwistStamped), plus an e-stop button -> /estop.
+"""
+Joystick driver: /joy -> /cmd_vel/joy (TwistStamped), plus an e-stop button -> /estop.
 
   ros2 launch aav_teleop teleop.launch.py [estop_button:=true] [use_sim_time:=false]
 

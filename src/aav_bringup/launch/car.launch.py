@@ -1,4 +1,5 @@
-"""The real car. One launch file for every machine; a machine file picks the parts.
+"""
+The real car. One launch file for every machine; a machine file picks the parts.
 
   ros2 launch aav_bringup car.launch.py machine:=orin
       [gps:=true] [map:=<map yaml>] [start_x:=0] [start_y:=0] [start_yaw:=0]

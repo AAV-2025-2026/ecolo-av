@@ -1,4 +1,5 @@
-"""Pack and unpack the AAV CAN frames defined in firmware/can/aav.dbc.
+"""
+Pack and unpack the AAV CAN frames defined in firmware/can/aav.dbc.
 
 No ROS imports, so it runs and tests anywhere. The Rust firmware
 (firmware/spine/crates/spine-core/src/protocol.rs) implements the same frames.

@@ -1,11 +1,13 @@
-"""Phase 0 on any laptop: turtlesim as the car, the real mux, ego, scripted driver and
-ekf_local. No hardware, no Gazebo.
+"""
+Phase 0 on any laptop: turtlesim as the car.
+
+Runs the real mux, ego, scripted driver and ekf_local. No hardware, no Gazebo.
 
   ros2 launch aav_bringup turtle.launch.py [teleop:=false]
 
 Then, in another terminal:
-  ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
-    "{target_speed: 1.0, acceleration: 0.5, deceleration: 1.0, hold_time: 3.0, curvature: 0.2}" --feedback
+  ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive --feedback \
+    "{target_speed: 1.0, acceleration: 0.5, deceleration: 1.0, hold_time: 3.0, curvature: 0.2}"
 """
 
 import os

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build the docs as web pages and one PDF, from the markdown in docs/.
+"""
+Build the docs as web pages and one PDF, from the markdown in docs/.
 
 Purpose: docs that are easy to scan. Each page gets a red title bar, a short lead, its
 sections as separate cards, tables and pictures, and a reading time. Markdown stays the
@@ -45,6 +46,7 @@ PAGES = [
     ('firmware.md', 'Firmware', 'src vs firmware, the CAN contract, the spine'),
     ('status.md', 'Status', "What works, what's untested, what's missing"),
     ('platforms.md', 'Platforms', 'Ubuntu, the Orin and Pis, networking'),
+    ('conventions.md', 'Conventions', 'Names, package layout and code style'),
     ('interfaces.md', 'Topics', 'Every topic, service, action and frame'),
     ('car_measurements.md', 'Car numbers', 'vehicle.yaml, and how to measure the car'),
     ('costmaps.md', 'Costmaps', 'How Nav2 sees obstacles; maps'),
@@ -54,6 +56,7 @@ BUILT = {name for name, _, _ in PAGES}
 BADGES = ('works', 'untested', 'stub', 'missing', 'later', 'needs-you')
 
 LIST_ITEM = re.compile(r'\s*([-*+]|\d+\.)\s')
+PDF_CONTENTS_NOTE = '<p>The contents, with page numbers, are on the first page.</p>'
 
 
 def slug(name):
@@ -90,8 +93,12 @@ def convert(text):
 
 
 def fix_links(body, pdf=False):
-    """Links in the markdown are relative to docs/. Pages become .html; anything else
-    points back at the file in the repository (one folder up from docs/html/)."""
+    """
+    Point the links at the built pages.
+
+    Links in the markdown are relative to docs/. Pages become .html; anything else points
+    back at the file in the repository, one folder up from docs/html/.
+    """
     def fix(m):
         attr, url = m.group(1), m.group(2)
         if re.match(r'[a-z]+:|#|/', url):
@@ -120,12 +127,15 @@ def reading_list(pages, pdf=False):
     rows = []
     for i, (name, title, purpose, mins) in enumerate(pages):
         if i == READ_FIRST:
-            rows.append(f'<tr><td colspan="{5 if pdf else 4}" class="group">Reference: look things up here</td></tr>')
+            rows.append(f'<tr><td colspan="{5 if pdf else 4}" class="group">'
+                        'Reference: look things up here</td></tr>')
         href = f'#{slug(name)}' if pdf else f'{slug(name)}.html'
         num = str(i + 1) if i < READ_FIRST else ''
         page = f'<td class="time"><a class="pg" href="{href}"></a></td>' if pdf else ''
-        rows.append(f'<tr><td class="num">{num}</td><td><a href="{href}"><b>{html.escape(title)}</b></a></td>'
-                    f'<td>{html.escape(purpose)}</td><td class="time">{mins} min</td>{page}</tr>')
+        rows.append(f'<tr><td class="num">{num}</td>'
+                    f'<td><a href="{href}"><b>{html.escape(title)}</b></a></td>'
+                    f'<td>{html.escape(purpose)}</td>'
+                    f'<td class="time">{mins} min</td>{page}</tr>')
     head = '<th>Page</th>' if pdf else ''
     return ('<div class="table-wrap"><table class="pages"><tr><th></th><th>Section</th>'
             f'<th>Read it for</th><th>Time</th>{head}</tr>' + ''.join(rows) + '</table></div>')
@@ -165,12 +175,14 @@ def prev_next(i):
     out = []
     if i > 0:
         name, title, _ = PAGES[i - 1]
-        out.append(f'<a class="prev" href="{slug(name)}.html"><small>Previous</small>← {html.escape(title)}</a>')
+        out.append(f'<a class="prev" href="{slug(name)}.html">'
+                   f'<small>Previous</small>← {html.escape(title)}</a>')
     else:
         out.append('<span></span>')
     if i + 1 < len(PAGES):
         name, title, _ = PAGES[i + 1]
-        out.append(f'<a class="next" href="{slug(name)}.html"><small>Next</small>{html.escape(title)} →</a>')
+        out.append(f'<a class="next" href="{slug(name)}.html">'
+                   f'<small>Next</small>{html.escape(title)} →</a>')
     return '\n'.join(out)
 
 
@@ -243,8 +255,7 @@ def main():
         (OUT / f'{slug(name)}.html').write_text(
             web_page(i, name, title, mins, intro, sections), encoding='utf-8')
         if not args.no_pdf:
-            printed = body.replace('<p>[[pages]]</p>',
-                                   '<p>The contents, with page numbers, are on the first page.</p>')
+            printed = body.replace('<p>[[pages]]</p>', PDF_CONTENTS_NOTE)
             articles.append(pdf_article(name, *split_page(fix_links(printed, pdf=True))))
     print(f'{len(pages)} pages -> {OUT.relative_to(ROOT)}/')
 

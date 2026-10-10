@@ -1,4 +1,5 @@
-"""ego: the virtual car between the command mux and the backends.
+"""
+ego: the virtual car between the command mux and the backends.
 
 Subscribes  cmd_vel           geometry_msgs/TwistStamped (or Twist, use_stamped:=false)
 Publishes   ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped, at rate_hz
@@ -13,14 +14,13 @@ replayed bag carries old stamps. A stamp far from now only logs a warning, so
 fix the clock (chrony) rather than the car stopping for no visible reason.
 """
 
+from aav_ego.ackermann import EgoModel, Limits
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist, TwistStamped
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.time import Time
-
-from aav_ego.ackermann import EgoModel, Limits
 
 
 class Ego(Node):
