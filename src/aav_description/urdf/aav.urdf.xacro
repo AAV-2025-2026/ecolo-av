@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <!--
-  The AAV car: frames and simple shapes, built from config/vehicle.yaml.
+  The AAV car: frames, and simple shapes that look like the car, built from
+  config/vehicle.yaml. What you see (the visuals) can change freely; physics and Nav2
+  use only the collision shapes: the body outline and the four wheels.
   base_link is on the ground under the centre of the rear axle (REP-105).
 
   Joints that move:
@@ -25,9 +27,37 @@
   <xacro:property name="W" value="${veh['wheel_width']}"/>
   <xacro:property name="max_steer" value="${veh['max_steering_angle']}"/>
 
-  <material name="body_grey"><color rgba="0.6 0.6 0.65 1.0"/></material>
+  <!-- Red and white, like the car. -->
+  <material name="body_red"><color rgba="0.78 0.06 0.18 1.0"/></material>
+  <material name="roof_white"><color rgba="0.95 0.95 0.95 1.0"/></material>
+  <material name="frame_black"><color rgba="0.08 0.08 0.08 1.0"/></material>
+  <material name="seat_grey"><color rgba="0.25 0.25 0.28 1.0"/></material>
+  <material name="light_yellow"><color rgba="1.0 0.95 0.6 1.0"/></material>
   <material name="tyre_black"><color rgba="0.1 0.1 0.1 1.0"/></material>
+  <material name="hub_white"><color rgba="0.9 0.9 0.9 1.0"/></material>
   <material name="sensor_orange"><color rgba="1.0 0.5 0.0 1.0"/></material>
+
+  <!-- Where the body's parts sit, in base_link coordinates (x forward from the rear
+       axle, z up from the ground). The chassis link's own origin is the body's centre. -->
+  <xacro:property name="BL" value="${body['length']}"/>
+  <xacro:property name="BW" value="${body['width']}"/>
+  <xacro:property name="H" value="${body['height']}"/>
+  <xacro:property name="front" value="${body['length'] - body['rear_overhang']}"/>
+  <xacro:property name="rear" value="${-body['rear_overhang']}"/>
+  <xacro:property name="x0" value="${body['length'] / 2 - body['rear_overhang']}"/>
+  <xacro:property name="z0" value="${R + (body['height'] - R) / 2}"/>
+  <xacro:property name="tub_bottom" value="${2 * R}"/>
+  <xacro:property name="tub_top" value="${2 * R + 0.4 * (body['height'] - 2 * R)}"/>
+  <xacro:property name="roof" value="0.04"/>
+
+  <!-- A visual box of the body, centred at (x, y, z) in base_link coordinates. -->
+  <xacro:macro name="part" params="x y z sx sy sz material">
+    <visual>
+      <origin xyz="${x - x0} ${y} ${z - z0}"/>
+      <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+      <material name="${material}"/>
+    </visual>
+  </xacro:macro>
 
   <xacro:macro name="box_inertia" params="m x y z">
     <inertia ixx="${m * (y*y + z*z) / 12}" ixy="0" ixz="0"
@@ -36,12 +66,34 @@
 
   <link name="base_link"/>
 
-  <!-- The body, as a box between the bumpers. -->
+  <!-- The body. What you see: a red tub over the wheels, a frame between them, a cabin
+       with a white roof and a seat, a bumper and headlights at the front. What physics
+       and Nav2 use: the collision box, the whole outline between the bumpers. -->
   <link name="chassis">
-    <visual>
-      <geometry><box size="${body['length']} ${body['width']} ${body['height'] - R}"/></geometry>
-      <material name="body_grey"/>
-    </visual>
+    <xacro:part x="${(front + rear) / 2}" y="0" z="${(tub_bottom + tub_top) / 2}"
+                sx="${BL}" sy="${BW}" sz="${tub_top - tub_bottom}" material="body_red"/>
+    <xacro:part x="${L / 2}" y="0" z="${(0.6 * R + tub_bottom) / 2}"
+                sx="${L}" sy="${T - W - 0.1}" sz="${tub_bottom - 0.6 * R}" material="frame_black"/>
+    <xacro:macro name="post" params="x y">
+      <xacro:part x="${x}" y="${y}" z="${(tub_top + H - roof) / 2}"
+                  sx="0.05" sy="0.05" sz="${H - roof - tub_top}" material="frame_black"/>
+    </xacro:macro>
+    <xacro:post x="${rear + 0.15}" y="${BW / 2 - 0.03}"/>
+    <xacro:post x="${rear + 0.15}" y="${-BW / 2 + 0.03}"/>
+    <xacro:post x="${L - 0.15}" y="${BW / 2 - 0.03}"/>
+    <xacro:post x="${L - 0.15}" y="${-BW / 2 + 0.03}"/>
+    <xacro:part x="${(rear + 0.05 + L) / 2}" y="0" z="${H - roof / 2}"
+                sx="${L - rear - 0.05}" sy="${BW}" sz="${roof}" material="roof_white"/>
+    <xacro:part x="0.35" y="0" z="${tub_top + 0.075}"
+                sx="0.5" sy="${BW - 0.2}" sz="0.15" material="seat_grey"/>
+    <xacro:part x="0.1" y="0" z="${tub_top + 0.3}"
+                sx="0.08" sy="${BW - 0.2}" sz="0.45" material="seat_grey"/>
+    <xacro:part x="${front + 0.03}" y="0" z="${tub_bottom + 0.06}"
+                sx="0.06" sy="${BW}" sz="0.10" material="frame_black"/>
+    <xacro:part x="${front + 0.005}" y="${BW / 2 - 0.15}" z="${tub_top - 0.1}"
+                sx="0.02" sy="0.16" sz="0.08" material="light_yellow"/>
+    <xacro:part x="${front + 0.005}" y="${-BW / 2 + 0.15}" z="${tub_top - 0.1}"
+                sx="0.02" sy="0.16" sz="0.08" material="light_yellow"/>
     <collision>
       <geometry><box size="${body['length']} ${body['width']} ${body['height'] - R}"/></geometry>
     </collision>
@@ -56,12 +108,19 @@
     <origin xyz="${body['length'] / 2 - body['rear_overhang']} 0 ${R + (body['height'] - R) / 2}"/>
   </joint>
 
-  <xacro:macro name="wheel" params="name">
+  <!-- side: 1 on the left, -1 on the right. The white mark on the outside shows the
+       wheel turning. -->
+  <xacro:macro name="wheel" params="name side">
     <link name="${name}_wheel">
       <visual>
         <origin rpy="${pi/2} 0 0"/>
         <geometry><cylinder radius="${R}" length="${W}"/></geometry>
         <material name="tyre_black"/>
+      </visual>
+      <visual>
+        <origin xyz="${0.55 * R} ${side * (W / 2 + 0.003)} 0"/>
+        <geometry><box size="${0.4 * R} 0.006 ${0.4 * R}"/></geometry>
+        <material name="hub_white"/>
       </visual>
       <collision>
         <origin rpy="${pi/2} 0 0"/>
@@ -75,8 +134,8 @@
     </link>
   </xacro:macro>
 
-  <xacro:macro name="rear_wheel" params="name y">
-    <xacro:wheel name="${name}"/>
+  <xacro:macro name="rear_wheel" params="name y side">
+    <xacro:wheel name="${name}" side="${side}"/>
     <joint name="${name}_wheel_joint" type="continuous">
       <parent link="base_link"/>
       <child link="${name}_wheel"/>
@@ -85,7 +144,7 @@
     </joint>
   </xacro:macro>
 
-  <xacro:macro name="front_wheel" params="name y">
+  <xacro:macro name="front_wheel" params="name y side">
     <link name="${name}_steering_link">
       <inertial>
         <mass value="0.5"/>
@@ -100,7 +159,7 @@
       <!-- The inner wheel turns further than the virtual centre wheel. -->
       <limit lower="${-1.3 * max_steer}" upper="${1.3 * max_steer}" effort="100" velocity="1.0"/>
     </joint>
-    <xacro:wheel name="${name}"/>
+    <xacro:wheel name="${name}" side="${side}"/>
     <joint name="${name}_wheel_joint" type="continuous">
       <parent link="${name}_steering_link"/>
       <child link="${name}_wheel"/>
@@ -108,10 +167,10 @@
     </joint>
   </xacro:macro>
 
-  <xacro:rear_wheel name="rear_left" y="${T / 2}"/>
-  <xacro:rear_wheel name="rear_right" y="${-T / 2}"/>
-  <xacro:front_wheel name="front_left" y="${T / 2}"/>
-  <xacro:front_wheel name="front_right" y="${-T / 2}"/>
+  <xacro:rear_wheel name="rear_left" y="${T / 2}" side="1"/>
+  <xacro:rear_wheel name="rear_right" y="${-T / 2}" side="-1"/>
+  <xacro:front_wheel name="front_left" y="${T / 2}" side="1"/>
+  <xacro:front_wheel name="front_right" y="${-T / 2}" side="-1"/>
 
   <!-- Sensors: one fixed frame each, placed from vehicle.yaml. -->
   <xacro:macro name="sensor_frame" params="name">
