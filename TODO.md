@@ -49,7 +49,9 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       message code ships with Jazzy) builds in 18 s and printed ego's commands live.
       `pixi run rust-listener`. The rewrite trade-offs are in docs/languages.md.*
 - [ ] **Design doc:** fix the ten "last year's", and update the tree, profiles and decisions.
-- [ ] **CLAUDE.md:** record tonight's decisions, so no session starts from scratch.
+- [x] **CLAUDE.md:** record tonight's decisions, so no session starts from scratch.
+      *Done: docs for a dyslexic reader, Macs first-class, `pixi run test` green, test
+      isolation, the pytest skip trap, Rust nodes later, where the TODO and audits live.*
 
 ## Questions Ben asked (answer in the docs and the morning email)
 

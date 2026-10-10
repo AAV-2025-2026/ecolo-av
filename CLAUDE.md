@@ -21,6 +21,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
 - **`src/aav_description/config/vehicle.yaml`**: the only place car measurements live.
 - **`docs/history/conversation.md`**: the question-and-answer record of how we got here.
   Add new Q&A under its topic, and keep its "Open threads" list current.
+- **`TODO.md`**: the current work list. Ben's requests are kept verbatim in
+  `docs/history/messages-*.md`; audits in `docs/history/audit-*.md`.
 
 ## Rules
 
@@ -46,6 +48,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
   - Python (rclpy) for every ROS node we write;
   - Rust (`no_std`) for the spine firmware;
   - C++ only for the reused IMU driver.
+  - Rust ROS nodes work (`examples/rust-listener`, rclrs from crates.io) but wait until
+    the car drives; then port a node where Rust pays off, such as ego.
 - **Keep the maths out of ROS.** A node's logic lives in a module with no ROS imports
   and has its own tests. Examples: `ackermann.py`, `can_codec.py`, `speed_profile.py`,
   `legacy_protocol.py` and `vehicle.py`; in Rust, `spine-core`.
@@ -53,6 +57,12 @@ These are the conventions decided so far. They apply to people and to Claude ses
   checks our Python against ROS's own rules (ament_flake8, ament_pep257).
 - **Each node's module docstring** lists what it subscribes, publishes, serves and calls.
 - **Pins, I2C addresses and calibration belong in the firmware.** ROS never sees a pin.
+- **Docs are for a dyslexic reader**: short pages with sections, tables and pictures; no
+  walls of text. Edit `docs/*.md`, run `pixi run docs`, and commit the HTML (the PDF is
+  rebuilt on demand). The reading order is `PAGES` in `tools/build_docs.py`.
+- **Macs are first-class**: the team drives and watches the car from MacBooks
+  (`docs/mac.md`; `pixi run doctor` checks the network). Keep scripts portable: no
+  GNU-only flags, no bash 4 features, no Linux-only serial speeds without `#ifdef`.
 
 ## Testing
 
@@ -67,6 +77,13 @@ These are the conventions decided so far. They apply to people and to Claude ses
   for GUIs: run headless there (`QT_QPA_PLATFORM=offscreen`, `gui:=false`).
 - Say what you actually ran. A profile that hasn't been launched is "untested", not
   "works".
+- Keep `pixi run test` all green: it's the first thing a new laptop runs.
+- In a ROS package's tests, don't skip at module level (`pytest.importorskip`): ROS's
+  launch_testing plugin then skips the whole folder. Guard the imports and use
+  `pytestmark = pytest.mark.skipif(...)` (see `aav_spine/test/test_spine_bridge.py`).
+- On a shared machine, give each test run its own `ROS_DOMAIN_ID` and
+  `ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST`, and stop it by its process group. Never
+  `pkill` by node name: someone else's run may be live.
 
 ## Git
 
