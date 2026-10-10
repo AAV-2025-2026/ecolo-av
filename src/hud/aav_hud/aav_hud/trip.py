@@ -48,7 +48,10 @@ class Trip:
     def answered(self, accepted):
         """Note Nav2's answer: it took the goal or refused it. False: cancel it."""
         if not accepted:
+            # Nav2 gives no reason. It refuses goals until its lifecycle manager has
+            # activated the waypoint follower, a few seconds after it starts.
             self.status = REJECTED
+            self.message = 'Nav2 refused the route: is it still starting?'
             return True
         if self.status == CANCELING:
             return False

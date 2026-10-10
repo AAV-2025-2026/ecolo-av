@@ -49,6 +49,8 @@ ros2_ws/src/maincar. On 2026-10-10 the package was renamed `aav_hud` and ported 
   - Werkzeug no longer logs every request: Socket.IO polling makes several a second.
   - If the web server can't start (the port is taken), the node stops with exit code 1.
     Before, it ran on with no server.
+  - A refused route says why it may have been refused: Nav2 refuses goals until its
+    lifecycle manager has activated the waypoint follower. The bench showed it.
   - The camera: `/camera/latest.png` and `/camera/stream` serve `/camera/image_raw` as
     PNG pictures. The node subscribes only while someone fetches them. The old code had
     `/camera/cam1/image_raw` and `/camera/cam2/image_raw` commented out.

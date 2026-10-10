@@ -44,6 +44,7 @@ def test_rejected():
     t = trip.Trip([A])
     assert t.answered(False)
     assert t.status == trip.REJECTED and not t.active
+    assert 'still starting' in t.event()['message']
 
 
 def test_cancel_while_sending_cancels_once_nav2_answers():
