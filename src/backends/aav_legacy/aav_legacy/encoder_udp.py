@@ -8,13 +8,15 @@ Publishes   vehicle/odom  nav_msgs/Odometry, forward speed only, in base_link
 
 At 8 counts per revolution one count is about 0.12 m, so speed is averaged
 over `window_s`. The yaw rate is left unmeasured (huge covariance); ekf_local
-takes it from the IMU.
+takes it from the IMU. If packets stop for `timeout_s`, the node stops
+publishing rather than report 0 m/s, so the EKF doesn't think the car is parked.
+
+The Pico sends only to the Motor Pi (192.168.1.193), so run this node there.
 """
 
-from collections import deque
 import socket
 
-from aav_legacy.legacy_protocol import encoder_counts, metres_per_count
+from aav_legacy.legacy_protocol import encoder_counts, EncoderSpeed, metres_per_count
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.executors import ExternalShutdownException
@@ -29,17 +31,18 @@ class EncoderUdp(Node):
         bind = self.declare_parameter('bind_address', '0.0.0.0').value
         diameter = self.declare_parameter('wheel_diameter', 0.30).value   # TODO: measure
         cpr = self.declare_parameter('counts_per_rev', 8).value
-        self.window = self.declare_parameter('window_s', 0.5).value
+        window = self.declare_parameter('window_s', 0.5).value
+        timeout = self.declare_parameter('timeout_s', 0.3).value
         self.speed_var = self.declare_parameter('speed_variance', 0.05).value
-        self.mpc = metres_per_count(diameter, cpr)
+        mpc = metres_per_count(diameter, cpr)
+        self.speed = EncoderSpeed(mpc, window, timeout)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((bind, port))
         self.sock.setblocking(False)
-        self.samples = deque()   # (time in s, counts)
         self.pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
         self.create_timer(0.02, self.poll)
         self.create_timer(0.1, self.publish)
-        self.get_logger().info(f'listening on udp {bind}:{port}, {self.mpc:.3f} m per count')
+        self.get_logger().info(f'listening on udp {bind}:{port}, {mpc:.3f} m per count')
 
     def poll(self):
         now = self.get_clock().now().nanoseconds * 1e-9
@@ -49,16 +52,17 @@ class EncoderUdp(Node):
             except BlockingIOError:
                 break
             try:
-                self.samples.append((now, encoder_counts(packet)))
+                self.speed.add(now, encoder_counts(packet))
             except ValueError as e:
-                self.get_logger().warn(str(e), throttle_duration_sec=5.0)
+                self.get_logger().warning(str(e), throttle_duration_sec=5.0)
 
     def publish(self):
         now = self.get_clock().now()
-        t = now.nanoseconds * 1e-9
-        while self.samples and self.samples[0][0] < t - self.window:
-            self.samples.popleft()
-        speed = sum(c for _, c in self.samples) * self.mpc / self.window
+        speed = self.speed.speed(now.nanoseconds * 1e-9)
+        if speed is None:
+            self.get_logger().warning('no encoder packets: not publishing vehicle/odom',
+                                      throttle_duration_sec=5.0)
+            return
         odom = Odometry()
         odom.header.stamp = now.to_msg()
         odom.header.frame_id = 'odom'

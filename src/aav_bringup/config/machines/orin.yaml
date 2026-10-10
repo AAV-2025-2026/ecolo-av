@@ -14,5 +14,5 @@ parts:
   navigation: true
   spine: false          # true once the CAN spine exists (and legacy_* false)
   legacy_uart: false    # runs on motor_pi, which is wired to the ESP32
-  legacy_encoder: true  # a UDP listener: anywhere on the car's network
+  legacy_encoder: false # the Pico sends only to the Motor Pi: see motor_pi.yaml
   foxglove: true

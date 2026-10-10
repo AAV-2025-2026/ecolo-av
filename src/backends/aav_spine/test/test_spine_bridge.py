@@ -1,20 +1,25 @@
 """
 Check the bridge's DRIVE_CMD stream: the arming edge, and going quiet with ego.
 
-Needs ROS (rclpy and aav_interfaces), so only `colcon test` runs it.
+Needs ROS sourced (rclpy and aav_interfaces): `colcon test` runs it, tools/test.sh skips it.
 """
 
 import pytest
 
-pytest.importorskip('aav_interfaces')
+# Not pytest.importorskip: ROS's launch_testing pytest plugin turns a module-level skip
+# into a skip of every test in the folder, and it also overrides collect_ignore.
+try:
+    from aav_spine import can_codec as cc
+    from aav_spine.spine_bridge import SpineBridge
+    from ackermann_msgs.msg import AckermannDrive
+    import rclpy
+    from rclpy.duration import Duration
+    from std_msgs.msg import Bool
+    from std_srvs.srv import SetBool
+except ImportError:
+    SpineBridge = None
 
-from aav_spine import can_codec as cc  # noqa: E402, I100
-from aav_spine.spine_bridge import SpineBridge  # noqa: E402
-from ackermann_msgs.msg import AckermannDrive  # noqa: E402
-import rclpy  # noqa: E402
-from rclpy.duration import Duration  # noqa: E402
-from std_msgs.msg import Bool  # noqa: E402
-from std_srvs.srv import SetBool  # noqa: E402
+pytestmark = pytest.mark.skipif(SpineBridge is None, reason='needs ROS sourced: colcon test')
 
 
 @pytest.fixture

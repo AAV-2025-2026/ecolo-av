@@ -57,7 +57,7 @@ class Ego(Node):
         now = self.get_clock().now()
         stamp = Time.from_msg(msg.header.stamp, clock_type=now.clock_type)
         if stamp.nanoseconds and abs((now - stamp).nanoseconds) * 1e-9 > 0.5:
-            self.get_logger().warn(
+            self.get_logger().warning(
                 'cmd_vel stamp is more than 0.5 s from this clock: check chrony on '
                 'every machine (or this is a replayed bag)', throttle_duration_sec=10.0)
         self._store(msg.twist, now)

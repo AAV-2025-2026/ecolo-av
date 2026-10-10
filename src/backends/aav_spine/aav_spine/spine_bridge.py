@@ -143,7 +143,7 @@ class SpineBridge(Node):
             values = cc.unpack(f.id, bytes(f.data[:f.dlc]))
         except cc.FrameError as e:
             self.bad_frames += 1
-            self.get_logger().warn(f'{e} ({self.bad_frames} so far)', throttle_duration_sec=2.0)
+            self.get_logger().warning(f'{e} ({self.bad_frames} so far)', throttle_duration_sec=2.0)
             return
         if f.id == cc.VEHICLE_FEEDBACK_ID:
             self.publish_feedback(values)

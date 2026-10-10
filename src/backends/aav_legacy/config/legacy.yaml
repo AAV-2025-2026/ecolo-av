@@ -23,4 +23,5 @@ encoder_udp:
     wheel_diameter: 0.30        # TODO measure (keep equal to vehicle.yaml)
     counts_per_rev: 8
     window_s: 0.5
+    timeout_s: 0.3              # no packet for this long: stop publishing (they come every 0.1 s)
     speed_variance: 0.05

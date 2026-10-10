@@ -72,7 +72,7 @@ class ScriptedDriver(Node):
         elif goal.hold_distance > 0 and not self.odom_fresh():
             reason = 'hold_distance needs /odometry/local, which is not arriving'
         if reason:
-            self.get_logger().warn(f'rejected goal: {reason}')
+            self.get_logger().warning(f'rejected goal: {reason}')
             return GoalResponse.REJECT
         return GoalResponse.ACCEPT
 

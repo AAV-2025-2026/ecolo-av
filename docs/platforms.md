@@ -71,8 +71,8 @@ to today's ESP32. The files in `src/aav_bringup/config/machines/` say what runs 
 
 | Machine file | Runs |
 |---|---|
-| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, the legacy encoder listener, Foxglove |
-| `motor_pi.yaml` | `legacy_uart_bridge` only: it's the computer wired to the ESP32 |
+| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove |
+| `motor_pi.yaml` | `legacy_uart_bridge` and `encoder_udp`: the ESP32 is wired to it, and the encoder sends its packets to it |
 | `laptop.yaml` | the joystick, on the safety driver's laptop |
 | `all.yaml` | everything on one computer, for the bench |
 

@@ -41,7 +41,8 @@ class LegacyUartBridge(Node):
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(Bool, 'estop', self.on_estop, 10)
         self.create_timer(1.0 / rate, self.tick)
-        self.get_logger().warn('legacy firmware has no command timeout; keep the e-stop in reach')
+        self.get_logger().warning(
+            'legacy firmware has no command timeout; keep the e-stop in reach')
 
     def on_cmd(self, msg):
         self.cmd = msg.drive
@@ -49,7 +50,7 @@ class LegacyUartBridge(Node):
 
     def on_estop(self, msg):
         if msg.data != self.estop:
-            self.get_logger().warn('e-stop ON: braking' if msg.data else 'e-stop released')
+            self.get_logger().warning('e-stop ON: braking' if msg.data else 'e-stop released')
         self.estop = msg.data
 
     def tick(self):

@@ -19,8 +19,9 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       - ~~Spine safety, before any firmware is written~~ *Done 10-10: B1 arming always
         sends the 0→1 edge; B2 the spine boots latched; W1 `cmd_timeout` 0.1; W2 driver
         faults stop and latch; W3 `max_decel` 2.5. Each has a test (Rust 47, bridge 4).*
-      - Legacy path: steering gain differs left/right (`to_legacy`); `encoder_udp` must go
-        quiet, not report 0 m/s, when packets stop; which computer gets the encoder's UDP?
+      - ~~Legacy path~~ *Done 10-10: `to_legacy` evens out the steering gain; `encoder_udp`
+        goes quiet after 0.3 s without packets; it runs on the Motor Pi, where the
+        Pico sends.*
       - pixi.toml: add flask, flask-socketio, scipy, ros-jazzy-topic-tools.
       - Inherited packages: `tests_require` → `extras_require`; yahboom lint; `sudo chmod`
         in TI.py; maincar NameErrors; `.warn(` → `.warning(`; CMake 3.8 → 3.10.
