@@ -1,0 +1,13 @@
+[package]
+name = "ad5311"
+description = "The throttle DAC: an Analog Devices AD5311 10-bit DAC on I2C, with a hard limit on the code."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+embedded-hal.workspace = true
+
+[dev-dependencies]
+embedded-hal-mock.workspace = true
