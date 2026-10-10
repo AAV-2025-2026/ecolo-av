@@ -1012,13 +1012,20 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 ### Where does the code live, and how are commits credited? (17:18 to 17:51)
 
 - **On GitHub:** `git@github.com:zander1976/aav.git`, private (Ben, Q25). CI runs `pixi run test` on Linux for every push, and on a Mac every night.
-- **A school project:** commit messages give the intention, with no attribution lines. The co-author line was stripped from the 100 earlier commits before the first push. The README's Credits section names the previous teams, the open-source projects, and Claude as the AI assistant.
+- **A school project:** commit messages give the intention, with no attribution lines. The co-author line comes off the 100 earlier commits before the first push, which waits on Ben's go. The README's Credits section names the previous teams, the open-source projects, and Claude as the AI assistant.
 - **Before the push:** a scan of all 100 commits found no secrets. `~/aav`, the Linux build output and the old bundle were deleted, and Ben's Rust IMU driver was reviewed and committed.
 
 ### When I say CUDA on a Mac, I mean MLX or Metal, not CUDA. (17:54)
 
 - **Done:** the detector's `device` setting now means "the GPU this computer has". `auto`, `gpu`, `cuda`, `metal` and `mps` all pick CUDA on the Orin, and Metal on a Mac; `cuda` on a Mac used to fail. Checked on Ben's Mac with its own PyTorch. ([Perception](../perception.md))
 - **MLX** isn't needed for YOLO: Metal, through PyTorch or Core ML, is the Mac's fast path. It could join the `ml` environment later, for training or other models.
+
+### Is `best.pt` the weights? And what's the picture with the stop sign? (18:04)
+
+- **`best.pt`:** yes, a trained YOLO model's weights, in a PyTorch file. Training saves `best.pt` (the round that scored best on the test pictures) and `last.pt`. This one is the 2024-25 team's: one label, `Stop_Sign`, trained on their own pictures. It was on one student's computer (`~/Yolo/Capstone/runs/detect/train7/weights/best.pt`) and never went into a repo.
+- **Not needed to start:** the stock model knows stop signs. When `best.pt` turns up, it drops in: our detector reads `Stop_Sign` and `stop sign` as the same label. (`models/README.md`)
+- **The picture** (`docs/img/bench-stop-sign.png`) is a drawing, not a photo. The bench's pretend camera draws the road and the sign from where the model car is, and the stock YOLO model found the sign: "stop sign", 90% sure. `bench-check --perception` saved it when the car stopped, about 5 m before the sign. The Perception page now explains it in a table.
+- **The rest of that line:** the server work is done (Ben's IMU work and three launch edits, committed from the Mac: 908e69b). The three firmware decisions still wait on the team: the steering on an e-stop, the brake after boot, and a brake on the RC gear switch.
 
 ## Open threads
 

@@ -46,7 +46,28 @@ car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).</p
 lane finder (missing) ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai ─► twist_mux
 radar ─► /radar/points ─► radar_clusters ─► /radar/clusters, /radar/cluster_boxes</code></pre>
 <p><img alt="What the bench camera shows YOLO, about 5 m from the stop sign" src="../img/bench-stop-sign.png" /></p>
-<p>That's the bench camera's picture, with YOLO's box drawn on: "stop sign", 0.90.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>In the picture</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The road, the sky and the sign</td>
+<td>a drawing, not a photo: the bench's pretend camera (<code>mock_camera</code>) draws them from where the model car is. The sign grows as the car gets closer</td>
+</tr>
+<tr>
+<td>The pink box</td>
+<td>the real YOLO model (the stock one) found the sign: "stop sign", 0.90 = 90% sure</td>
+</tr>
+<tr>
+<td>When</td>
+<td><code>pixi run -e ml bench-check --perception</code> saved it the moment the car stopped, about 5 m before the sign</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="the-packages">The packages</h2>
 <div class="table-wrap"><table>

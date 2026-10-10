@@ -14,7 +14,11 @@ radar ─► /radar/points ─► radar_clusters ─► /radar/clusters, /radar/
 
 ![What the bench camera shows YOLO, about 5 m from the stop sign](img/bench-stop-sign.png)
 
-That's the bench camera's picture, with YOLO's box drawn on: "stop sign", 0.90.
+| In the picture | What it is |
+|---|---|
+| The road, the sky and the sign | a drawing, not a photo: the bench's pretend camera (`mock_camera`) draws them from where the model car is. The sign grows as the car gets closer |
+| The pink box | the real YOLO model (the stock one) found the sign: "stop sign", 0.90 = 90% sure |
+| When | `pixi run -e ml bench-check --perception` saved it the moment the car stopped, about 5 m before the sign |
 
 ## The packages
 

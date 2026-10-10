@@ -6,7 +6,7 @@ tracked (see `.gitignore`).
 | File | What it is | How to get it |
 |---|---|---|
 | `yolo11n.pt` | the stock YOLO11 nano model. It knows 80 everyday things, "stop sign" among them | `pixi run get-models` |
-| `best.pt` | the team's own stop-sign model, once someone finds it (the 2024-25 code loaded it from `~/Yolo/Capstone/runs/detect/train7/weights/best.pt`) | ask the team |
+| `best.pt` | the 2024-25 team's own stop-sign model: its trained weights, one label (`Stop_Sign`). Training saves two files, `best.pt` (the round that scored best) and `last.pt`. Their code loaded it from `~/Yolo/Capstone/runs/detect/train7/weights/best.pt`, on one student's computer | ask the team. Then `pixi run detect model:=models/best.pt labels:="stop sign"` |
 
 One model, three formats. Make the other two from the `.pt` file:
 
