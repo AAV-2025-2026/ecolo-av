@@ -2,9 +2,11 @@
 Sensor drivers: each publishes raw data in its own frame; nothing here fuses anything.
 
   ros2 launch aav_sensors sensors.launch.py [imu:=true] [gps:=true] [radar:=false]
-                                            [battery:=false]
+                                            [battery:=false] [imu_driver:=cpp]
 
-  IMU     yahboom_imu_cpp -> /imu/data_raw -> imu_filter_madgwick -> /imu/data
+  IMU     imu_node -> /imu/data_raw -> imu_filter_madgwick -> /imu/data
+          imu_node is yahboom_imu_cpp (C++), or with imu_driver:=rust its twin
+          aav_imu_yahboom (Rust): the same node name, parameters and topics.
   GPS     ublox_dgnss (u-blox over USB) -> ublox_nav_sat_fix_hp -> /gps/fix (NavSatFix)
   radar   ti_ros2_driver pcl_pub -> /radar/points (PointCloud2, frame radar_link)
   battery battery_monitor -> /battery_status (BatteryState)
@@ -17,7 +19,8 @@ Run this file on the machine the sensors are plugged into.
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import (AndSubstitution, EqualsSubstitution, LaunchConfiguration,
+                                  PathJoinSubstitution)
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
 from launch_ros.substitutions import FindPackageShare
@@ -52,15 +55,19 @@ def generate_launch_description():
         DeclareLaunchArgument('radar', default_value='false'),
         DeclareLaunchArgument('battery', default_value='false'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
+        DeclareLaunchArgument('imu_driver', default_value='cpp',
+                              description='cpp: yahboom_imu_cpp; rust: aav_imu_yahboom'),
 
-        # IMU
-        Node(
-            package='yahboom_imu_cpp',
+        # IMU: one of two drivers that take the same config/imu.yaml.
+        *[Node(
+            package=package,
             executable='imu_node',
             name='imu_node',
             parameters=[PathJoinSubstitution([config, 'imu.yaml']), use_sim_time],
-            condition=enabled('imu'),
-        ),
+            condition=IfCondition(AndSubstitution(
+                LaunchConfiguration('imu'),
+                EqualsSubstitution(LaunchConfiguration('imu_driver'), driver))),
+        ) for driver, package in (('cpp', 'yahboom_imu_cpp'), ('rust', 'aav_imu_yahboom'))],
         Node(
             package='imu_filter_madgwick',
             executable='imu_filter_madgwick_node',

@@ -3,6 +3,7 @@ The real car. One launch file for every machine; a machine file picks the parts.
 
   ros2 launch aav_bringup car.launch.py machine:=orin
       [gps:=true] [map:=<map yaml>] [start_x:=0] [start_y:=0] [start_yaw:=0]
+      [imu_driver:=cpp]   (or rust: aav_imu_yahboom, the IMU driver's Rust twin)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all). Every machine uses the same ROS_DOMAIN_ID, so the
@@ -73,7 +74,7 @@ def launch_setup(context):
     if any(on(s) for s in ('imu', 'gps', 'radar', 'battery')):
         actions.append(include(context, 'aav_sensors', 'sensors.launch.py',
                                imu=on('imu'), gps=on('gps'), radar=on('radar'),
-                               battery=on('battery')))
+                               battery=on('battery'), imu_driver=arg('imu_driver')))
     if on('localization'):
         actions.append(include(context, 'aav_localization', 'localization.launch.py',
                                gps=arg('gps'), start_x=arg('start_x'), start_y=arg('start_y'),
@@ -102,6 +103,8 @@ def generate_launch_description():
                               description='config/machines/<machine>.yaml'),
         DeclareLaunchArgument('gps', default_value='true',
                               description='false: no GPS anywhere (odometry only)'),
+        DeclareLaunchArgument('imu_driver', default_value='cpp',
+                              description='cpp or rust: the same IMU node, in either language'),
         DeclareLaunchArgument('map', default_value='',
                               description='Map YAML for Nav2 (default: the empty map)'),
         DeclareLaunchArgument('start_x', default_value='0.0'),

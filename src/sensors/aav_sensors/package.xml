@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>yahboom_imu_cpp</exec_depend>
+  <exec_depend>aav_imu_yahboom</exec_depend>
   <exec_depend>imu_filter_madgwick</exec_depend>
   <exec_depend>ublox_dgnss_node</exec_depend>
   <exec_depend>ublox_nav_sat_fix_hp_node</exec_depend>
