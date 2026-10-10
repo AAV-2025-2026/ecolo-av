@@ -25,9 +25,37 @@ folder downloaded, and moves into it as a fast-forward.
       repos, exact commits), not the 546 MB. *Proposed.*
 - [ ] **Prune the snapshots from `aav/aav/.git`** (149 MB down to about 1 MB)? *Ben to
       decide: it removes the app's undo points.*
-- [ ] **Move today's commits from `~/aav` into `aav/aav`** once the download finishes.
+- [x] **Move today's commits from `~/aav` into `aav/aav`** once the download finishes.
+      *Done 16:13: the scp was still copying the server's Linux build output after six hours,
+      so it was stopped and rsync brought the rest. The copy matches the server, Ben's
+      uncommitted work is intact, and 55 commits fast-forwarded in. The Linux `.pixi`,
+      `install` and Rust `target` went to `~/Code/aav/aav-linux-build-output`, not deleted.
+      Built (25 packages, Ben's `aav_imu_yahboom` too) and tested green on the Mac.*
 - [ ] **Look at Gazebo's window, RViz and rqt_graph on the Mac**, and say what they show.
 - [ ] **The small fixes** listed at the end of `docs/work.md`.
+
+## This afternoon (10-10): "merge in all of this", then "stub in the rest"
+
+- [x] **Perception in:** `aav_yolo` (YOLO, detections, the stop-sign watcher and its mux
+      lock), `aav_object_detection` (radar clustering), `aav_lane_geometry` (lane keeping
+      on `/cmd_vel/ai`), the camera calibrations in `cameras.launch.py`, the `ml` environment.
+- [x] **The graph down to the sensors:** bench mode (`pixi run bench`): spine_sim runs
+      spine-core on the CAN frames and drives a model car; pretend IMU, GPS, camera,
+      battery and radar. `pixi run bench-check`: 7 of 7. `gps_nmea.launch.py`,
+      `perception.launch.py`, udev placeholders.
+- [x] **Rust drivers for the spine's devices:** jrk-g2, ad5311, pca9555, ibus, spine-board
+      (98 tests); all seven firmware crates build no_std for the Pico 2 in `pixi run test`.
+- [x] **The HUD's back end on our topics:** `aav_hud`, 86 tests.
+- [x] **Docs:** Bench mode and Perception pages; every page brought up to date.
+- [ ] **Ben: commit the server work** (`aav_imu_yahboom` and its three edited files). Then
+      perception and the bench become parts in `car.launch.py`'s machine files.
+- [ ] **The board program for the spine's chip** (implements `spine-board`'s `Board`): waits
+      on the chip (Q10-Q13).
+- [ ] **Team decisions:** the steering on an e-stop; the brake after boot; a brake on the RC
+      gear switch (docs/firmware.md).
+- [ ] **Find `best.pt`**, the 2024-25 stop-sign model, and the 2025-26 lane finder.
+- [ ] **The HUD app's small changes** (docs/hud.md).
+- [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
 
 ## Tonight
 
