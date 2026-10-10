@@ -23,8 +23,10 @@ secrets.h
 .env
 
 # Local environments and editors
-.pixi/
 .venv/
 .vscode/
 .idea/
 .DS_Store
+# Pixi environments (pixi.lock IS committed)
+.pixi/*
+!.pixi/config.toml
