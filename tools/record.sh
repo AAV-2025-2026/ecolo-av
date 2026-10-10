@@ -5,10 +5,14 @@
 #
 # usage: tools/record.sh [name]       -> bags/<date>_<name>/ (MCAP, Jazzy's default)
 set -euo pipefail
+cd "$(dirname "$0")/.."
 name="${1:-drive}"
 out="bags/$(date +%Y-%m-%d_%H%M%S)_${name}"
 mkdir -p bags
-exec ros2 bag record -o "$out" \
+# Through tools/ros.sh, which sources the workspace last: on a Mac, starting this script
+# (/usr/bin/env bash) drops DYLD_LIBRARY_PATH, and then ros2 bag can't load our own
+# messages (/vehicle/status).
+exec tools/ros.sh ros2 bag record -o "$out" --topics \
   /vehicle/odom /vehicle/status /vehicle/joint_states \
   /imu/data_raw /imu/data /imu/mag /gps/fix /battery_status \
   /joy /estop /cmd_vel /cmd_vel/joy /cmd_vel/remote /cmd_vel/scripted /cmd_vel/nav \
