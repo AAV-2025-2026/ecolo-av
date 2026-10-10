@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starting points: one per team member · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/team.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Starting points: one per team member</h1>
+<div class="meta">8 min read · 10 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a class="here" href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-areas-at-a-glance">The areas at a glance</a><a href="#integration-ben">Integration (Ben)</a><a href="#spine-firmware-and-can">Spine firmware and CAN</a><a href="#todays-car-the-legacy-path">Today&#x27;s car: the legacy path</a><a href="#ego-and-vehicle-control">Ego and vehicle control</a><a href="#localization-and-sensors">Localization and sensors</a><a href="#navigation-and-costmaps">Navigation and costmaps</a><a href="#drivers-and-teleop">Drivers and teleop</a><a href="#hud-and-ui">HUD and UI</a><a href="#simulation-and-testing">Simulation and testing</a></nav>
+<div class="lead"><p>Pick your area, and start with its card: what to read, what to run, your first tasks, the
+files you'll work in, and the open questions you own. Everyone starts with
+<a href="first-day.html">Your first day</a>. Owners aren't named yet: that's Q33.</p></div>
+<section class="card"><h2 id="the-areas-at-a-glance">The areas at a glance</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>In one line</th>
+<th>Phase it unblocks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#integration-ben">Integration</a></td>
+<td>the whole stack, the infrastructure, the decisions</td>
+<td>all of them</td>
+</tr>
+<tr>
+<td><a href="#spine-firmware-and-can">Spine firmware and CAN</a></td>
+<td>the microcontroller that moves the actuators</td>
+<td>0</td>
+</tr>
+<tr>
+<td><a href="#todays-car-the-legacy-path">Today's car</a></td>
+<td>drive the car we have, with the 2025-26 firmware</td>
+<td>0, on today's hardware</td>
+</tr>
+<tr>
+<td><a href="#ego-and-vehicle-control">Ego and vehicle control</a></td>
+<td>one command into speed and steering the car can do</td>
+<td>0 and 1a</td>
+</tr>
+<tr>
+<td><a href="#localization-and-sensors">Localization and sensors</a></td>
+<td>where the car is: IMU, GPS, wheels, two EKFs</td>
+<td>1b–2</td>
+</tr>
+<tr>
+<td><a href="#navigation-and-costmaps">Navigation and costmaps</a></td>
+<td>Nav2: plan through a map and follow the path</td>
+<td>1b–2 and 3</td>
+</tr>
+<tr>
+<td><a href="#drivers-and-teleop">Drivers and teleop</a></td>
+<td>joystick, keyboard, scripted, and new drivers</td>
+<td>0 and 1a</td>
+</tr>
+<tr>
+<td><a href="#hud-and-ui">HUD and UI</a></td>
+<td>the touchscreen and the remote views</td>
+<td>later</td>
+</tr>
+<tr>
+<td><a href="#simulation-and-testing">Simulation and testing</a></td>
+<td>Gazebo, replay, and the test ladder</td>
+<td>every phase, before the car</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="integration-ben">Integration (Ben)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="how-it-fits.html">How it fits</a>, <a href="infrastructure.html">Infrastructure</a>, <a href="decisions.html">Decisions</a>, <a href="work.html">Work</a></td>
+</tr>
+<tr>
+<td>Run first</td>
+<td>everything in <a href="first-day.html">Your first day</a>, on a Mac and on Linux</td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. A team meeting: accept or change each Proposed decision, and name an owner per area (Q33). 2. Secrets (Q34) and backups of the Orin and the Pis. 3. A plan for Jazzy on the car (Q24): Pixi on today's Ubuntu 22.04 first. 4. The GitHub org (Q25), then push <code>aav</code>. 5. One <code>ROS_DOMAIN_ID</code> for everyone</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>CLAUDE.md</code>, <code>pixi.toml</code>, <code>docs/interfaces.yaml</code>, <code>src/aav_bringup/</code>, <code>tools/</code></td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q9, Q23, Q24, Q25, Q32, Q33, Q34</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="spine-firmware-and-can">Spine firmware and CAN</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="firmware.html">Firmware</a>, then <code>firmware/can/aav.dbc</code> and <code>firmware/spine/crates/spine-core</code></td>
+</tr>
+<tr>
+<td>Run first</td>
+<td><code>pixi run test</code>: its Rust part is the spine logic's 47 tests</td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. Choose the microcontroller and the board (Q10–Q13). 2. Write the board code around <code>spine-core</code> (missing today). 3. Bench-test it with a USB-CAN adapter and <code>candump</code>: the watchdog, arming, limits. 4. Agree the frame map with ROS (<code>aav_spine</code>)</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>firmware/can/</code>, <code>firmware/spine/</code>, <code>src/backends/aav_spine/</code></td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q10–Q17, Q3, Q4, Q6, Q7</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="todays-car-the-legacy-path">Today's car: the legacy path</h2>
+<p>Phase 0 on the hardware we have now, before the spine exists.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="firmware.html">Firmware</a> (the legacy section and its warnings), <a href="platforms.html">Platforms</a></td>
+</tr>
+<tr>
+<td>Run first</td>
+<td><code>pixi run test</code>, then <code>pixi run car all</code> on a laptop: it comes up without hardware</td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. Run Jazzy on the car's computers (Pixi, no reflash). 2. <code>pixi run car motor_pi</code> and <code>pixi run car orin</code>, with the wheels off the ground and the e-stop in hand. 3. The steering calibrations disagree (Q2): measure them</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>src/backends/aav_legacy/</code>, <code>firmware/legacy/</code>, <code>src/aav_bringup/config/machines/</code></td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q2, Q5, Q8, Q11</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Today's ESP32 has no command timeout</p>
+<p>If the bridge dies, the last throttle stays on. Wheels off the ground, and someone on
+the e-stop, until the spine's watchdog exists.</p>
+</div>
+</section>
+<section class="card"><h2 id="ego-and-vehicle-control">Ego and vehicle control</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="how-it-fits.html">How it fits</a> (section 4, ego), <a href="car_measurements.html">Car numbers</a></td>
+</tr>
+<tr>
+<td>Run first</td>
+<td><code>pixi run turtle</code> and <code>pixi run keyboard</code>; then <code>pixi run rust-listener</code> prints what ego sends</td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. Measure the car (Q1) and replace the guesses in <code>vehicle.yaml</code>. 2. Decide steering at standstill (Q27). 3. Agree with the spine owner what ego's output means (Q12): target speed, or raw throttle</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>src/ego/aav_ego/</code> (<code>ackermann.py</code> is the maths), <code>src/aav_description/config/vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q1, Q12, Q27</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="localization-and-sensors">Localization and sensors</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="how-it-fits.html">How it fits</a> (sections 1 and 2), <a href="simulation.html">Simulation</a> (replay)</td>
+</tr>
+<tr>
+<td>Run first</td>
+<td><code>pixi run sim</code>, then watch <code>/odometry/local</code> and <code>/odometry/global</code> in RViz</td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. Identify the GPS (Q18) and pick its driver. 2. The IMU on the car (Q20); its magnetometer is in raw counts, not tesla. 3. Wheel encoder counts per turn (Q5). 4. Record a drive on the car, then tune the EKFs against it with replay. 5. The Rust IMU driver, <code>aav_imu_yahboom</code> (in progress)</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>src/localization/aav_localization/config/</code>, <code>src/sensors/</code></td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q5, Q18, Q19, Q20, Q22</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="navigation-and-costmaps">Navigation and costmaps</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="costmaps.html">Costmaps</a></td>
+</tr>
+<tr>
+<td>Run first</td>
+<td><code>pixi run sim world:=test_lot</code>, then send a Nav2 goal from RViz</td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. Draw your first map: copy <code>maps/example_lot.spec.yaml</code>, change a wall, run <code>tools/make_map.py</code>, and drive it in Gazebo. 2. The real test site (Q21): survey the datum, measure, draw. 3. Nav2's lookahead: its turn command flips sign about once a second in the sim (N7). 4. GPS waypoints for A→B</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>src/drivers/aav_navigation/</code> (<code>config/nav2.yaml</code>, <code>maps/</code>), <code>tools/make_map.py</code>, <code>src/localization/aav_localization/config/navsat.yaml</code> (the datum)</td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q21, and the Proposed Nav2 setup</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="drivers-and-teleop">Drivers and teleop</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="howto-driver.html">Build a driver</a>, <a href="how-it-fits.html">How it fits</a> (section 3)</td>
+</tr>
+<tr>
+<td>Run first</td>
+<td><code>pixi run turtle teleop:=true</code> with a joystick plugged in: hold the trigger and steer</td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. The first real joystick test (untested so far). 2. The e-stop button's message reaches the mux only on a good network (N2): make it robust. 3. Joystick handover (Q28). 4. The scripted drive on the car, phase 1a</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>src/drivers/aav_teleop/</code>, <code>src/drivers/aav_scripted/</code>, <code>src/mux/aav_mux/config/twist_mux.yaml</code></td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q7, Q27, Q28, Q30</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="hud-and-ui">HUD and UI</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="hud.html">HUD</a></td>
+</tr>
+<tr>
+<td>Run first</td>
+<td>Foxglove or Lichtblick on <code>ws://&lt;the computer&gt;:8765</code> while <code>pixi run sim</code> runs: see <a href="mac.html">Your Mac</a></td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. Keep the Flutter app, or not (Q29). 2. If kept: port it to Jazzy's topics, through rosbridge. 3. Its map database (50 MB) needs a download step, not git</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>hud/flutter_pi/</code>, <code>hud/scripts/</code>, <code>src/hud/maincar/</code></td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q29, Q30</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="simulation-and-testing">Simulation and testing</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read first</td>
+<td><a href="simulation.html">Simulation</a></td>
+</tr>
+<tr>
+<td>Run first</td>
+<td><code>pixi run sim</code>, <code>pixi run check sim</code>, and the replay of a recorded drive</td>
+</tr>
+<tr>
+<td>First tasks</td>
+<td>1. Gazebo's window and RViz on a Mac: confirm what they show. 2. The test lot world against the real site, once Q21 is answered. 3. Recordings from the car, for replay. 4. CARLA, when it supports Jazzy (Q31)</td>
+</tr>
+<tr>
+<td>Files</td>
+<td><code>src/backends/aav_gazebo/</code>, <code>src/aav_bringup/launch/sim.launch.py</code> and <code>replay.launch.py</code>, <code>tools/check_graph.py</code></td>
+</tr>
+<tr>
+<td>Open questions</td>
+<td>Q31, Q32</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="how-it-fits.html"><small>Previous</small>← How it fits</a>
+<a class="next" href="packages.html"><small>Next</small>Packages →</a></nav>
+</main>
+<footer>Source: <code>docs/team.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

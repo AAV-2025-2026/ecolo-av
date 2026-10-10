@@ -7,25 +7,33 @@
 <!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your Mac: run it, and drive the car</h1>
-<div class="meta">6 min read · 9 sections</div></header>
+<div class="meta">8 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a class="here" href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="firmware.html">Firmware</a>
-<a href="status.html">Status</a>
-<span class="sep">Reference:</span>
 <a href="platforms.html">Platforms</a>
 <a href="conventions.html">Conventions</a>
 <a href="interfaces.html">Topics</a>
 <a href="car_measurements.html">Car numbers</a>
-<a href="costmaps.html">Costmaps</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#macos-hides-one-setting-from-ros">macOS hides one setting from ROS</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
 <div class="lead"><p>Three ways to use a Mac with the car. Use Pixi to run ROS on the Mac itself, and to
 drive. Lichtblick only watches, but needs no setup. Ubuntu in a VM is the fallback.</p></div>
 <section class="card"><h2 id="three-ways">Three ways</h2>
@@ -185,7 +193,36 @@ pixi run gz-window         # terminal 2: Gazebo's window</code></pre>
 <p>Cameras and lidars inside Gazebo can crash it on a Mac. Our simulated car has neither yet.</p>
 <p>If the window stays empty, or the car never appears, run <code>export GZ_IP=127.0.0.1</code> in both
 terminals and start again: Gazebo's two programs then find each other on the Mac itself.
-<span class="badge b-untested">untested</span> on a Mac; it fixed the same symptom on Linux.</p>
+On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on Linux.</p>
+</section>
+<section class="card"><h2 id="macos-hides-one-setting-from-ros">macOS hides one setting from ROS</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What happens</th>
+<th>Why it matters</th>
+<th>What we do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS's System Integrity Protection (SIP) deletes <code>DYLD_LIBRARY_PATH</code> whenever one of Apple's own programs starts, such as <code>/bin/sh</code>, <code>/bin/bash</code> or <code>/usr/bin/env</code></td>
+<td>ROS finds our own message libraries (<code>aav_interfaces</code>) through that setting. Without it: "Could not load library"</td>
+<td>for <code>colcon test</code>: the Mac environment adds GNU <code>coreutils</code>, whose <code>env</code> isn't Apple's</td>
+</tr>
+<tr>
+<td>A script that starts with <code>#!/usr/bin/env bash</code> loses the setting too</td>
+<td><code>ros2 bag record</code> couldn't record <code>/vehicle/status</code></td>
+<td>scripts run <code>ros2</code> through <code>tools/ros.sh</code>, which sets it last: <code>tools/record.sh</code> does</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two rules follow, for anyone writing scripts:</p>
+<ul>
+<li>On a Mac, a script that runs <code>ros2</code> with our messages must run it through <code>tools/ros.sh</code>.</li>
+<li>Inside Pixi on a Mac, <code>ls</code>, <code>date</code>, <code>stat</code> and friends are the GNU versions, the same as
+  on Linux and the car. Outside Pixi, the Mac's own versions are unchanged.</li>
+</ul>
 </section>
 <section class="card"><h2 id="if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</h2>
 <ol>
@@ -237,19 +274,35 @@ terminals and start again: Gazebo's two programs then find each other on the Mac
 </tr>
 <tr>
 <td>Steps 3 to 5 from a fresh copy of the bundle: clone, install, build, <code>pixi run test</code>, the turtle</td>
-<td><span class="badge b-works">works</span> on Linux; <span class="badge b-untested">untested</span> on a Mac</td>
+<td><span class="badge b-works">works</span> on Linux, and on an Apple Silicon Mac (macOS 27), 10 Oct</td>
 </tr>
 <tr>
 <td>Building on a Mac</td>
-<td><span class="badge b-untested">untested</span> The one known blocker, a Linux-only serial speed in the IMU driver, is fixed.</td>
+<td><span class="badge b-works">works</span> 19 packages in 18 s</td>
 </tr>
 <tr>
-<td>Turtle, keyboard, e-stop</td>
-<td><span class="badge b-works">works</span> on Linux; <span class="badge b-untested">untested</span> on a Mac</td>
+<td><code>pixi run test</code> on a Mac</td>
+<td><span class="badge b-works">works</span> all green, after the <code>coreutils</code> fix above</td>
 </tr>
 <tr>
-<td>RViz and rqt on a Mac</td>
-<td><span class="badge b-untested">untested</span></td>
+<td>The turtle, driving it the keyboard's way, the scripted drive, the e-stop</td>
+<td><span class="badge b-works">works</span> on Linux and the Mac. The real keyboard keys are <span class="badge b-untested">untested</span> on a Mac</td>
+</tr>
+<tr>
+<td>Gazebo without its window, and a Nav2 goal</td>
+<td><span class="badge b-works">works</span> on the Mac, without <code>GZ_IP</code></td>
+</tr>
+<tr>
+<td>Gazebo's window, RViz and rqt_graph on a Mac</td>
+<td><span class="badge b-untested">untested</span> they open without errors (RViz logs one shader warning); nobody has looked at them yet</td>
+</tr>
+<tr>
+<td>Recording a drive (<code>tools/record.sh</code>)</td>
+<td><span class="badge b-works">works</span> on the Mac, after the <code>tools/ros.sh</code> fix above</td>
+</tr>
+<tr>
+<td>The Rust listener</td>
+<td><span class="badge b-works">works</span> on the Mac: builds in 15 s</td>
 </tr>
 <tr>
 <td>Joystick on a Mac</td>
@@ -257,11 +310,11 @@ terminals and start again: Gazebo's two programs then find each other on the Mac
 </tr>
 <tr>
 <td>The Mac on the car's network</td>
-<td><span class="badge b-untested">untested</span></td>
+<td><span class="badge b-untested">untested</span> the car still runs Humble</td>
 </tr>
 <tr>
 <td><code>pixi run doctor</code></td>
-<td><span class="badge b-works">works</span> on Linux; <span class="badge b-untested">untested</span> on a Mac</td>
+<td><span class="badge b-works">works</span> on Linux and the Mac</td>
 </tr>
 </tbody>
 </table></div></section>

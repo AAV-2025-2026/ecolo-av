@@ -11,7 +11,7 @@ steps on a Mac and on Linux. Then three commands drive a turtle like a car.
 | Disk space | about 7 GB | about 7 GB |
 | Admin rights | no | no |
 | First | `xcode-select --install`: Apple's git and compiler | nothing |
-| Tested | [[untested]] not yet | [[works]] on oirp-spss, 9 Oct |
+| Tested | [[works]] on an Apple Silicon Mac, 10 Oct | [[works]] on oirp-spss, 9 Oct |
 
 ## 1. Install pixi (once)
 

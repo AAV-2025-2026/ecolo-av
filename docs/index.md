@@ -19,12 +19,23 @@ moves the car.**
 | 4. Convert | **ego**, the virtual car, turns that into a speed and steering angle the car can do. |
 | 5. Move | One backend moves something: the real car, Gazebo, or a turtle on the screen. |
 
+## New here?
+
+| You are | Start with |
+|---|---|
+| new to the team | [Your first day](first-day.md), then your card in [Starting points](team.md) |
+| putting the whole thing together | [Infrastructure](infrastructure.md), then [Work](work.md) and [Decisions](decisions.md) |
+| looking for what a package does | [Packages](packages.md) |
+| writing a driver, or drawing a map | [Build a driver](howto-driver.md), [Costmaps](costmaps.md) |
+| bringing in the previous teams' code | [The older code](older-code.md) |
+
 ## Read these, in order
 
 [[pages]]
 
 ## Try it in five minutes
 
+The full hour, with rqt_graph, Gazebo and a Nav2 goal, is [Your first day](first-day.md).
 On a Mac or on Linux, once [pixi is installed](run.md):
 
 ```bash
@@ -46,7 +57,7 @@ pixi run keyboard    # terminal 2: hold i to drive, u or o to turn
 
 | What | Where |
 |---|---|
-| The architecture, its decisions, and open questions Q1–Q34 | the team design doc (a Claude Doc) |
+| The architecture, its decisions, and open questions Q1–Q34 | the team design doc (a Claude Doc); a short copy in [Decisions](decisions.md) |
 | Every topic: its type, and who publishes and reads it | `docs/interfaces.yaml`, shown as [Topics](interfaces.md) |
 | The CAN frames between the computer and the spine | `firmware/can/aav.dbc`, explained in [Firmware](firmware.md) |
 | The car's measurements | `src/aav_description/config/vehicle.yaml`: [Car numbers](car_measurements.md) |

@@ -7,28 +7,37 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">3 min read · 4 sections</div></header>
+<div class="meta">4 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a class="here" href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="firmware.html">Firmware</a>
-<a class="here" href="status.html">Status</a>
-<span class="sep">Reference:</span>
 <a href="platforms.html">Platforms</a>
 <a href="conventions.html">Conventions</a>
 <a href="interfaces.html">Topics</a>
 <a href="car_measurements.html">Car numbers</a>
-<a href="costmaps.html">Costmaps</a>
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#each-box-in-the-picture">Each box in the picture</a><a href="#builds-and-tests">Builds and tests</a><a href="#is-it-all-on-jazzy">Is it all on Jazzy?</a><a href="#next">Next</a></nav>
-<div class="lead"><p>Where things stand on 10 October 2026. "Works" means it ran under ROS 2 Jazzy on
-oirp-spss (through Pixi). "Untested" means the code and its config exist, but it hasn't
-run yet.</p></div>
+<div class="lead"><p>Where things stand on 10 October 2026. "Works" means it ran under ROS 2 Jazzy through
+Pixi: on oirp-spss (Linux), and since 10 October on Ben's Mac too. "Untested" means the
+code and its config exist, but it hasn't run yet. The plan and the work left are in
+<a href="work.html">Work</a>.</p></div>
 <section class="card"><h2 id="each-box-in-the-picture">Each box in the picture</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -82,7 +91,7 @@ run yet.</p></div>
 <tr>
 <td>Scripted</td>
 <td><code>aav_scripted</code></td>
-<td><span class="badge b-untested">untested</span> unit-tested</td>
+<td><span class="badge b-works">works</span> in the turtle run: 9.0 m in 12 s on a Mac, 10 Oct</td>
 </tr>
 <tr>
 <td>Nav2</td>
@@ -107,7 +116,7 @@ run yet.</p></div>
 <tr>
 <td>Gazebo</td>
 <td><code>aav_gazebo</code></td>
-<td><span class="badge b-works">works</span> headless; its window is untested</td>
+<td><span class="badge b-works">works</span> headless, on Linux and a Mac; its window is untested</td>
 </tr>
 <tr>
 <td>Real car</td>
@@ -177,7 +186,15 @@ run yet.</p></div>
 </tr>
 <tr>
 <td>The same <code>pixi.toml</code> on macOS</td>
-<td>resolves; the one known build blocker is fixed; <span class="badge b-untested">untested</span></td>
+<td><span class="badge b-works">works</span> on an Apple Silicon Mac (macOS 27), 10 Oct: build 18 s, <code>pixi run test</code> all green after one fix (GNU <code>coreutils</code>, see <a href="mac.html">Your Mac</a>)</td>
+</tr>
+<tr>
+<td>On the Mac: the turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, <code>pixi run doctor</code>, recording a drive</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>On the Mac: Gazebo's window, RViz, rqt_graph</td>
+<td><span class="badge b-untested">untested</span> they open; nobody has looked at them yet</td>
 </tr>
 <tr>
 <td>The same <code>pixi.toml</code> on the car's ARM computers, on today's Ubuntu 22.04</td>
@@ -194,14 +211,14 @@ are in <code>docs/history/audit-2026-10-10-*.md</code>.</p>
 </section>
 <section class="card"><h2 id="next">Next</h2>
 <ol>
-<li>Run it on a Mac (<code>docs/mac.md</code>), then join the car's network (<code>pixi run doctor</code>).</li>
+<li>Join the car's network from the Mac (<code>pixi run doctor</code>), once the car runs Jazzy.</li>
 <li>Pick the team's <code>ROS_DOMAIN_ID</code> and the GPS driver.</li>
 <li>Drive the turtle with the joystick.</li>
 <li>Measure the car, and replace the guesses in <code>vehicle.yaml</code>.</li>
 <li>Choose the spine's microcontroller (Q10–Q17), then write its board code.</li>
 </ol></section>
-<nav class="prevnext"><a class="prev" href="firmware.html"><small>Previous</small>← Firmware</a>
-<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+<nav class="prevnext"><a class="prev" href="infrastructure.html"><small>Previous</small>← Infrastructure</a>
+<a class="next" href="howto-driver.html"><small>Next</small>Build a driver →</a></nav>
 </main>
 <footer>Source: <code>docs/status.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

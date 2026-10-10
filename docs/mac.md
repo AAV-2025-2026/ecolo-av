@@ -112,7 +112,19 @@ Cameras and lidars inside Gazebo can crash it on a Mac. Our simulated car has ne
 
 If the window stays empty, or the car never appears, run `export GZ_IP=127.0.0.1` in both
 terminals and start again: Gazebo's two programs then find each other on the Mac itself.
-[[untested]] on a Mac; it fixed the same symptom on Linux.
+On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on Linux.
+
+## macOS hides one setting from ROS
+
+| What happens | Why it matters | What we do |
+|---|---|---|
+| macOS's System Integrity Protection (SIP) deletes `DYLD_LIBRARY_PATH` whenever one of Apple's own programs starts, such as `/bin/sh`, `/bin/bash` or `/usr/bin/env` | ROS finds our own message libraries (`aav_interfaces`) through that setting. Without it: "Could not load library" | for `colcon test`: the Mac environment adds GNU `coreutils`, whose `env` isn't Apple's |
+| A script that starts with `#!/usr/bin/env bash` loses the setting too | `ros2 bag record` couldn't record `/vehicle/status` | scripts run `ros2` through `tools/ros.sh`, which sets it last: `tools/record.sh` does |
+
+Two rules follow, for anyone writing scripts:
+- On a Mac, a script that runs `ros2` with our messages must run it through `tools/ros.sh`.
+- Inside Pixi on a Mac, `ls`, `date`, `stat` and friends are the GNU versions, the same as
+  on Linux and the car. Outside Pixi, the Mac's own versions are unchanged.
 
 ## If the native way fails: Ubuntu in UTM
 
@@ -138,10 +150,14 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 | Part | Status |
 |---|---|
 | The Pixi environment resolves for Macs (Apple Silicon and Intel, macOS 14+) | [[works]] |
-| Steps 3 to 5 from a fresh copy of the bundle: clone, install, build, `pixi run test`, the turtle | [[works]] on Linux; [[untested]] on a Mac |
-| Building on a Mac | [[untested]] The one known blocker, a Linux-only serial speed in the IMU driver, is fixed. |
-| Turtle, keyboard, e-stop | [[works]] on Linux; [[untested]] on a Mac |
-| RViz and rqt on a Mac | [[untested]] |
+| Steps 3 to 5 from a fresh copy of the bundle: clone, install, build, `pixi run test`, the turtle | [[works]] on Linux, and on an Apple Silicon Mac (macOS 27), 10 Oct |
+| Building on a Mac | [[works]] 19 packages in 18 s |
+| `pixi run test` on a Mac | [[works]] all green, after the `coreutils` fix above |
+| The turtle, driving it the keyboard's way, the scripted drive, the e-stop | [[works]] on Linux and the Mac. The real keyboard keys are [[untested]] on a Mac |
+| Gazebo without its window, and a Nav2 goal | [[works]] on the Mac, without `GZ_IP` |
+| Gazebo's window, RViz and rqt_graph on a Mac | [[untested]] they open without errors (RViz logs one shader warning); nobody has looked at them yet |
+| Recording a drive (`tools/record.sh`) | [[works]] on the Mac, after the `tools/ros.sh` fix above |
+| The Rust listener | [[works]] on the Mac: builds in 15 s |
 | Joystick on a Mac | [[untested]] An old macOS joystick bug is fixed in the version we use. |
-| The Mac on the car's network | [[untested]] |
-| `pixi run doctor` | [[works]] on Linux; [[untested]] on a Mac |
+| The Mac on the car's network | [[untested]] the car still runs Humble |
+| `pixi run doctor` | [[works]] on Linux and the Mac |

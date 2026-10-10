@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Work: what&#x27;s done, and what needs doing · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/work.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Work: what&#x27;s done, and what needs doing</h1>
+<div class="meta">9 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a class="here" href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-plan">The plan</a><a href="#where-we-are">Where we are</a><a href="#the-next-twelve-steps">The next twelve steps</a><a href="#done-so-far">Done so far</a><a href="#what-needs-doing-by-area">What needs doing, by area</a><a href="#risks-to-keep-in-mind">Risks to keep in mind</a><a href="#small-fixes-found-while-writing-these-pages">Small fixes found while writing these pages</a></nav>
+<div class="lead"><p>Where the project stands on 10 October 2026: the plan in five phases, the next twelve
+steps, what's done, and the work left in each area. Who owns each area is Q33: see
+<a href="team.html">Starting points</a>.</p></div>
+<section class="card"><h2 id="the-plan">The plan</h2>
+<p><img alt="The roadmap: five phases, with a gate between each" src="../img/roadmap.svg" /></p>
+</section>
+<section class="card"><h2 id="where-we-are">Where we are</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The software stack</td>
+<td><span class="badge b-works">works</span> end to end in simulation: the turtle, Gazebo, Nav2 goals, replay. On Linux, and on a Mac since 10 Oct</td>
+</tr>
+<tr>
+<td>The car</td>
+<td><span class="badge b-untested">untested</span> nothing has run on it yet. It runs the 2025-26 software on Humble, and the spine's board code is missing</td>
+</tr>
+<tr>
+<td>Phase 0 on the car</td>
+<td>waits on Jazzy on the car's computers (Q24), and on the spine (Q10–Q17) or the legacy path</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-next-twelve-steps">The next twelve steps</h2>
+<p>From the design doc's next steps, in order.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td><strong>Now</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>1</td>
+<td><strong>Secrets:</strong> whoever controls the accounts revokes the GitHub token and Firebase keys, and changes the WiFi password (Q34)</td>
+<td><span class="badge b-needs-you">needs you</span></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Backups:</strong> image the Orin and the Pis before anything is reflashed, and list what's on them</td>
+<td><span class="badge b-needs-you">needs you</span></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Inventory the car:</strong> take a tape measure and Q1–Q9, Q18, Q20 and Q22 to the car. Photograph the labels on the GPS, the IMU, the motor controller and the actuators</td>
+<td><span class="badge b-needs-you">needs you</span></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Team meeting:</strong> accept or change each Proposed decision, and name an owner per area (Q33)</td>
+<td><span class="badge b-needs-you">needs you</span></td>
+</tr>
+<tr>
+<td></td>
+<td><strong>Without the car</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Repo:</strong> a GitHub org (Q25), with CI building on Jazzy</td>
+<td><span class="badge b-needs-you">needs you</span></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Jazzy everywhere:</strong> every developer installs it, with Pixi</td>
+<td><span class="badge b-works">works</span> on oirp-spss and Ben's Mac</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>ego and the turtle with a real joystick:</strong> the first end-to-end chain</td>
+<td><span class="badge b-works">works</span> with the keyboard; the joystick is <span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Scripted driver:</strong> an action, tested in turtlesim</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>CAN frame map:</strong> finish the DBC with the firmware owner; bench-test the spine with a USB-CAN adapter and <code>candump</code></td>
+<td><span class="badge b-untested">untested</span> the DBC is a draft; no spine board yet</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>URDF:</strong> from the measurements</td>
+<td><span class="badge b-untested">untested</span> it exists, with guessed numbers</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>On the car</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Phase 0:</strong> CAN to the Orin and the spine, then the <code>car</code> profile on stands with localization and Nav2 off, then on the ground at walking pace</td>
+<td><span class="badge b-missing">missing</span></td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Phase 1:</strong> the scripted drive on the car. GPS A→B in Gazebo first, then on the car</td>
+<td><span class="badge b-missing">missing</span></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="done-so-far">Done so far</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9 Oct, before the first commit</td>
+<td>Surveyed all 19 of the 2025-26 team's repos; found the leaked secrets; wrote the design doc with Q1–Q34</td>
+</tr>
+<tr>
+<td>9 Oct, evening</td>
+<td>The workspace: our messages, the CAN map and its codec, <code>spine-core</code>, ego, both bridges, the adapters, the scripted driver, <code>vehicle.yaml</code>, the map maker. It builds on Jazzy with Pixi, and the turtle drives through the mux and ego</td>
+</tr>
+<tr>
+<td>9–10 Oct, overnight</td>
+<td>Three audits (the firmware contract, the Jazzy port, a live run) and their fixes; the spine's safety rules (arming, timeouts, faults); the docs as web pages and a PDF; the Rust example; the network doctor; design doc revision 58</td>
+</tr>
+<tr>
+<td>10 Oct, on Ben's Mac</td>
+<td>Everything builds and passes on a Mac, after one macOS fix; the turtle, Gazebo, Nav2, the Rust example, the docs and the doctor all run; recording fixed for Macs; these pages</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-needs-doing-by-area">What needs doing, by area</h2>
+<h3 id="integration-and-the-team">Integration and the team</h3>
+<ul>
+<li>Steps 1–5 above: secrets, backups, the car's inventory, the team meeting, the GitHub org.</li>
+<li>One <code>ROS_DOMAIN_ID</code> for the car and every laptop.</li>
+<li>The car's computers on Jazzy: Pixi on today's Ubuntu 22.04 first, then the reflash to JetPack 7.2 after a backup (Q24).</li>
+<li>Merge the older code into <code>aav</code> folder by folder: see <a href="older-code.html">The older code</a>.</li>
+<li>A <code>.gitignore</code> for every kind of code, and a <code>vendor/</code> folder for downloaded source (proposed).</li>
+</ul>
+<h3 id="todays-car-the-legacy-path">Today's car: the legacy path</h3>
+<ul>
+<li>Run <code>aav_legacy</code> on the car for the first time: wheels off the ground, e-stop in reach, low speed.</li>
+<li>Check the steering sign, the throttle direction, and that the car stops when the deadman is released.</li>
+<li>Use <code>/dev/serial0</code>, not <code>/dev/ttyAMA0</code>, on the Motor Pi: <code>ttyAMA0</code> is the Bluetooth UART on a Pi 3 or 4.</li>
+<li>Make <code>secrets.h</code> from <code>secrets.h.example</code>, with a new WiFi password.</li>
+</ul>
+<h3 id="the-spine-and-can">The spine and CAN</h3>
+<ul>
+<li>Choose the microcontroller, the board and the owner (Q10–Q13).</li>
+<li>Write the board code around <code>spine-core</code>: the pin map, CAN, the encoder, the e-stop input.</li>
+<li>Wire CAN: a transceiver on the Orin (or a USB adapter), 120 Ω at each end (Q14, Q15).</li>
+<li>Calibrate the steering (Q2), the brake (Q3) and the throttle (Q4).</li>
+<li>Still open in the logic: the e-stop frame's counter isn't checked, and what happens when RC releases and when nobody drives.</li>
+</ul>
+<h3 id="ego-and-vehicle-control">Ego and vehicle control</h3>
+<ul>
+<li>Measure the car (Q1) and replace every guess in <code>vehicle.yaml</code>.</li>
+<li>Steering at standstill (Q27).</li>
+<li>Raise the 1.0 m/s speed cap only as the test plan allows.</li>
+</ul>
+<h3 id="localization-and-sensors">Localization and sensors</h3>
+<ul>
+<li>Identify the GPS (Q18) and pick its driver: <code>ublox_dgnss</code> or <code>ublox</code>.</li>
+<li>Survey the test site's datum, and set the magnetic declination (0 now; about 12° W in Ottawa).</li>
+<li>Run the IMU on the car (Q20); convert its magnetometer to tesla, then calibrate it.</li>
+<li>The wheel encoder: run it on the car; its speed comes in steps of about 1.2 m/s, too coarse at walking pace.</li>
+<li>Fill in the USB serial numbers in <code>tools/udev/99-aav.rules</code>.</li>
+</ul>
+<h3 id="navigation-and-costmaps">Navigation and costmaps</h3>
+<ul>
+<li>Draw the real test site (Q21) and drive it in Gazebo first.</li>
+<li>Nav2's lookahead (N7): its turn command flips sign about once a second.</li>
+<li>Restart crashed sensor drivers (N3): Nav2 gives up without TF.</li>
+<li>Later: the radar obstacle layer, and the collision monitor.</li>
+</ul>
+<h3 id="drivers-and-teleop">Drivers and teleop</h3>
+<ul>
+<li>The first real joystick test, and the team joystick's button numbers.</li>
+<li>The e-stop button: pick one (not the deadman), and make <code>/estop</code> reach the mux reliably (N2).</li>
+<li>Joystick handover (Q28).</li>
+</ul>
+<h3 id="the-hud">The HUD</h3>
+<ul>
+<li>Keep the Flutter app or not (Q29). If kept, move its back end (<code>maincar</code>) to the new topics.</li>
+<li>Its boot scripts still use the old Humble workspace and <code>/home/aavui</code>.</li>
+<li>Its map database and the OSRM map data need a download step, not git.</li>
+</ul>
+<h3 id="simulation">Simulation</h3>
+<ul>
+<li>Look at the Gazebo window and RViz on a Mac, and say what they show.</li>
+<li>CARLA, once it supports Jazzy (Q31).</li>
+</ul>
+</section>
+<section class="card"><h2 id="risks-to-keep-in-mind">Risks to keep in mind</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>What we do about it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A runaway car: today's ESP32 has no command timeout</td>
+<td>wheels off the ground and the e-stop in hand until the spine's watchdog exists</td>
+</tr>
+<tr>
+<td>Leaked secrets in public repos</td>
+<td>revoke and change them (Q34); never copy them into <code>aav</code></td>
+</tr>
+<tr>
+<td>Losing work on the Orin in the reflash</td>
+<td>image it first</td>
+</tr>
+<tr>
+<td>Jazzy and Humble on one network</td>
+<td>move every computer together</td>
+</tr>
+<tr>
+<td>A lost <code>/estop</code> message (N2)</td>
+<td>the backends brake on it too; make it reliable</td>
+</tr>
+<tr>
+<td>Plain GPS may be off by metres</td>
+<td>identify the receiver early; RTK if it supports it</td>
+</tr>
+<tr>
+<td>A wrong heading at start-up</td>
+<td>calibrate the magnetometer on the car, or use two GPS antennas</td>
+</tr>
+<tr>
+<td>Knowledge walks out each year</td>
+<td>keep these pages, the contract and the design doc current</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="small-fixes-found-while-writing-these-pages">Small fixes found while writing these pages</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>costmaps.md</code> said 1.5 m inflation; <code>nav2.yaml</code> has 2.0 m</td>
+<td>fixed</td>
+</tr>
+<tr>
+<td><code>firmware.md</code> put the spine's limits in <code>limits.rs</code>; they're in <code>spine.rs</code></td>
+<td>fixed</td>
+</tr>
+<tr>
+<td><code>status.md</code> said the scripted driver was untested; it runs in the turtle</td>
+<td>fixed</td>
+</tr>
+<tr>
+<td>The contract credits <code>/battery_status</code> to <code>battery_monitor</code>; the node is <code>battery_state_publisher</code>, and <code>/battery_monitor_heartbeat</code> is missing</td>
+<td>to do</td>
+</tr>
+<tr>
+<td>The static map → odom used with <code>gps:=false</code> isn't in the contract's <code>/tf_static</code></td>
+<td>to do</td>
+</tr>
+<tr>
+<td><code>/radar/points</code> is best-effort; the contract doesn't say</td>
+<td>to do</td>
+</tr>
+<tr>
+<td><code>firmware/spine/Cargo.toml</code> points to a README that doesn't exist</td>
+<td>to do</td>
+</tr>
+<tr>
+<td><code>aav_gazebo</code>'s test skips at module level, which <code>CLAUDE.md</code> says not to do</td>
+<td>to do</td>
+</tr>
+<tr>
+<td>The HUD's camera address differs: 192.168.1.101 in <code>maincar</code>, .118 in the app</td>
+<td>to do</td>
+</tr>
+<tr>
+<td><code>car gps:=false</code> still starts the GPS driver when the machine file says <code>gps: true</code></td>
+<td>to do</td>
+</tr>
+<tr>
+<td>Ctrl-C makes our Python nodes print an error while they shut down (Ctrl-C arrives twice)</td>
+<td>to do</td>
+</tr>
+<tr>
+<td>Rust builds on a Mac warn: the libraries are for macOS 14, Rust aims at macOS 11</td>
+<td>to do</td>
+</tr>
+<tr>
+<td><code>pixi run doctor</code> says "Network OK" on any 192.168.1.x network, like a home router</td>
+<td>to do</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="packages.html"><small>Previous</small>← Packages</a>
+<a class="next" href="decisions.html"><small>Next</small>Decisions →</a></nav>
+</main>
+<footer>Source: <code>docs/work.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

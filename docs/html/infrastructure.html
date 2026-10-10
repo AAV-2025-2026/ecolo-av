@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infrastructure: how the project is put together · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Infrastructure: how the project is put together</h1>
+<div class="meta">10 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a class="here" href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-pieces-at-a-glance">The pieces at a glance</a><a href="#the-repo-folder-by-folder">The repo, folder by folder</a><a href="#the-three-contracts">The three contracts</a><a href="#the-environment-pixi">The environment: Pixi</a><a href="#the-one-word-tasks">The one-word tasks</a><a href="#the-scripts-in-tools">The scripts in tools/</a><a href="#launch-profiles-the-same-nodes-a-different-car">Launch profiles: the same nodes, a different car</a><a href="#the-computers-and-what-runs-where">The computers, and what runs where</a><a href="#how-a-change-goes-from-an-idea-to-the-car">How a change goes from an idea to the car</a><a href="#sharing-the-code-until-theres-a-github-org">Sharing the code, until there&#x27;s a GitHub org</a><a href="#where-to-find-what-happened">Where to find what happened</a></nav>
+<div class="lead"><p>For whoever puts the whole thing together. <a href="how-it-fits.html">How it fits</a> explains the
+car's software: sensors, drivers, the mux, ego, backends. This page explains everything
+around it: the repo, the environment, the contracts, the profiles, the computers, the
+tests, and how a change goes from an idea to the car.</p></div>
+<section class="card"><h2 id="the-pieces-at-a-glance">The pieces at a glance</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>What it is</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The car's software</td>
+<td>ROS 2 Jazzy packages, one folder per layer</td>
+<td><code>src/</code></td>
+</tr>
+<tr>
+<td>The car's firmware</td>
+<td>the CAN contract, the Rust spine logic, the 2025-26 boards' code</td>
+<td><code>firmware/</code></td>
+</tr>
+<tr>
+<td>The touchscreen app</td>
+<td>the 2025-26 Flutter HUD, not yet ported</td>
+<td><code>hud/</code></td>
+</tr>
+<tr>
+<td>The environment</td>
+<td>ROS, Gazebo, compilers, Python and Rust, all from Pixi</td>
+<td><code>pixi.toml</code>, <code>pixi.lock</code></td>
+</tr>
+<tr>
+<td>The tools</td>
+<td>tests, the graph check, the network doctor, recording, docs, the mailer</td>
+<td><code>tools/</code></td>
+</tr>
+<tr>
+<td>The docs</td>
+<td>short markdown pages, built into web pages and one PDF</td>
+<td><code>docs/</code></td>
+</tr>
+<tr>
+<td>The rules</td>
+<td>names, units, secrets, git, testing</td>
+<td><code>CLAUDE.md</code></td>
+</tr>
+<tr>
+<td>The decisions</td>
+<td>Decided, Tentative, Proposed, and Q1–Q34</td>
+<td>the design doc: summary in <a href="decisions.html">Decisions</a></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-repo-folder-by-folder">The repo, folder by folder</h2>
+<pre class="highlight"><code class="language-text">aav/
+  CLAUDE.md           the rules, for people and Claude sessions alike
+  README.md, TODO.md  the front page; the current work list
+  pixi.toml           the environment, and the one-word tasks (pixi run &lt;task&gt;)
+  pixi.lock           the exact version of every package: committed, so every laptop matches
+  src/                ROS 2 packages (colcon builds these)
+    aav_bringup/        whole-system launch profiles: turtle, sim, car, replay
+    aav_description/    the car's model (URDF) and vehicle.yaml, the car's measurements
+    aav_interfaces/     our own messages and actions
+    sensors/            drivers that turn devices into standard messages
+    localization/       the two EKFs and navsat_transform: configuration only
+    drivers/            everything that proposes a command: teleop, scripted, Nav2
+    mux/                twist_mux: picks one command
+    ego/                the virtual car: one command into speed and steering
+    backends/           whatever plays the car: the real car, Gazebo, turtlesim, CARLA
+    perception/         parked: lanes, objects, YOLO (next year)
+    hud/                the HUD's web server (maincar)
+  firmware/           microcontroller code (colcon ignores it)
+    can/                aav.dbc, the CAN contract, and its test vectors
+    spine/              Rust: spine-core, the spine's logic, with its tests
+    legacy/             the 2025-26 ESP32 and Pico code that runs the car today
+  hud/                the 2025-26 Flutter app (colcon ignores it)
+  examples/           rust-listener: a first ROS node in Rust
+  tools/              scripts: see the table below
+  docs/               these pages; docs/history/ keeps the Q&amp;A, Ben's requests and the audits</code></pre>
+</section>
+<section class="card"><h2 id="the-three-contracts">The three contracts</h2>
+<p>Three files say how the parts must talk. Change the contract first, then the code, and
+the checks tell you if the two disagree.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Contract</th>
+<th>Holds</th>
+<th>Checked by</th>
+<th>After you change it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docs/interfaces.yaml</code></td>
+<td>every topic: its type, who publishes it, who reads it, and in which profiles it must be live</td>
+<td><code>pixi run check &lt;profile&gt;</code> on a running system; <code>pixi run test</code> checks that the Topics page matches</td>
+<td><code>pixi run python tools/gen_interfaces_md.py &gt; docs/interfaces.md</code></td>
+</tr>
+<tr>
+<td><code>firmware/can/aav.dbc</code></td>
+<td>every CAN frame between ROS and the spine</td>
+<td>test vectors, shared by the Python codec and the Rust tests</td>
+<td>update <code>can_codec.py</code> and <code>protocol.rs</code>, run <code>firmware/can/gen_test_vectors.py</code>, run both test suites</td>
+</tr>
+<tr>
+<td><code>src/aav_description/config/vehicle.yaml</code></td>
+<td>every measurement of the car</td>
+<td>its unit test; ego, the URDF, Nav2 and the adapters all read it</td>
+<td>measure the car: <a href="car_measurements.html">Car numbers</a></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-environment-pixi">The environment: Pixi</h2>
+<p>Pixi installs ROS 2 Jazzy and every tool into the repo's own <code>.pixi</code> folder, from
+RoboStack and conda-forge. No admin rights, and the same versions on every computer,
+because <code>pixi.lock</code> pins them all.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Platform in <code>pixi.toml</code></th>
+<th>Who uses it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linux-64</code></td>
+<td>Linux laptops and oirp-spss</td>
+</tr>
+<tr>
+<td><code>linux-aarch64</code></td>
+<td>the car's ARM computers (Orin, Pis), to run Jazzy before a reflash</td>
+</tr>
+<tr>
+<td><code>osx-arm64</code>, <code>osx-64</code></td>
+<td>Macs, Apple Silicon and Intel (macOS 14 or newer)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi install</code></td>
+<td>downloads and installs everything in <code>pixi.lock</code> (about 7 GB the first time)</td>
+</tr>
+<tr>
+<td><code>pixi run &lt;task&gt;</code></td>
+<td>runs a task inside the environment: see the next table</td>
+</tr>
+<tr>
+<td><code>pixi run &lt;any command&gt;</code></td>
+<td>runs any command inside it, e.g. <code>pixi run tools/ros.sh ros2 topic list</code></td>
+</tr>
+<tr>
+<td><code>pixi shell</code></td>
+<td>a terminal inside it; then <code>source install/setup.zsh</code> (Mac) or <code>setup.bash</code> (Linux)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Macs only: GNU coreutils</p>
+<p>On a Mac, macOS's System Integrity Protection deletes <code>DYLD_LIBRARY_PATH</code> whenever
+<code>/bin/sh</code> or <code>/usr/bin/env</code> starts, and ROS needs that setting to load our own messages.
+So the Mac environment adds GNU <code>coreutils</code> for <code>colcon test</code>, and scripts that run ROS
+commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your Mac</a>.</p>
+</div>
+</section>
+<section class="card"><h2 id="the-one-word-tasks">The one-word tasks</h2>
+<p>All defined in <code>pixi.toml</code>. Run them from the repo's top folder.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>build</code></td>
+<td>compiles our packages (<code>colcon build --symlink-install</code>)</td>
+</tr>
+<tr>
+<td><code>test</code></td>
+<td>every test: unit tests, the Rust spine, style, <code>colcon test</code></td>
+</tr>
+<tr>
+<td><code>lint</code></td>
+<td>ROS's style rules on our Python</td>
+</tr>
+<tr>
+<td><code>turtle</code></td>
+<td>the stack, with turtlesim as the car</td>
+</tr>
+<tr>
+<td><code>keyboard</code></td>
+<td>drive from the keyboard (<code>--sim</code> with Gazebo)</td>
+</tr>
+<tr>
+<td><code>sim</code></td>
+<td>the stack, with Gazebo as the car (<code>gui:=false</code> on a Mac)</td>
+</tr>
+<tr>
+<td><code>gz-window</code></td>
+<td>Gazebo's window, for a simulator started with <code>gui:=false</code></td>
+</tr>
+<tr>
+<td><code>car</code></td>
+<td>the real car: <code>pixi run car orin</code> (or <code>motor_pi</code>, <code>laptop</code>, <code>all</code>)</td>
+</tr>
+<tr>
+<td><code>view</code></td>
+<td>the car's model in RViz</td>
+</tr>
+<tr>
+<td><code>rviz</code></td>
+<td>RViz with the driving layout: map, costmaps, path, car</td>
+</tr>
+<tr>
+<td><code>graph</code></td>
+<td>rqt_graph: nodes and topics, live</td>
+</tr>
+<tr>
+<td><code>check</code></td>
+<td>the running graph against the contract: <code>pixi run check sim</code></td>
+</tr>
+<tr>
+<td><code>estop</code>, <code>estop-clear</code></td>
+<td>stop every driver; let them go again</td>
+</tr>
+<tr>
+<td><code>doctor</code></td>
+<td>can this computer join the car's ROS network?</td>
+</tr>
+<tr>
+<td><code>rust-listener</code></td>
+<td>the Rust example: prints ego's commands</td>
+</tr>
+<tr>
+<td><code>docs</code></td>
+<td>rebuilds the docs pages and the PDF</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-scripts-in-tools">The scripts in tools/</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Script</th>
+<th>Purpose</th>
+<th>How to run it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test.sh</code></td>
+<td>the tests that don't need ROS: Python logic, Rust spine, the Topics page</td>
+<td>inside <code>pixi run test</code></td>
+</tr>
+<tr>
+<td><code>lint.sh</code></td>
+<td><code>ament_flake8</code> and <code>ament_pep257</code> on our Python</td>
+<td><code>pixi run lint</code></td>
+</tr>
+<tr>
+<td><code>ros.sh</code></td>
+<td>runs a command with the workspace sourced</td>
+<td>used by most tasks</td>
+</tr>
+<tr>
+<td><code>keyboard.sh</code></td>
+<td>teleop_twist_keyboard into <code>/cmd_vel/remote</code></td>
+<td><code>pixi run keyboard</code></td>
+</tr>
+<tr>
+<td><code>check_graph.py</code></td>
+<td>compares a running system with <code>docs/interfaces.yaml</code></td>
+<td><code>pixi run check &lt;profile&gt;</code></td>
+</tr>
+<tr>
+<td><code>gen_interfaces_md.py</code></td>
+<td>makes the Topics page from the contract</td>
+<td>see the contracts table</td>
+</tr>
+<tr>
+<td><code>doctor.py</code></td>
+<td>network checks for joining the car</td>
+<td><code>pixi run doctor</code></td>
+</tr>
+<tr>
+<td><code>record.sh</code></td>
+<td>records a drive into <code>bags/</code></td>
+<td><code>pixi run tools/record.sh &lt;name&gt;</code></td>
+</tr>
+<tr>
+<td><code>replay_commands.sh</code></td>
+<td>plays a recorded drive's commands back into the mux</td>
+<td><code>pixi run tools/ros.sh tools/replay_commands.sh &lt;bag&gt;</code></td>
+</tr>
+<tr>
+<td><code>make_map.py</code></td>
+<td>draws a Nav2 map from a short spec</td>
+<td><code>pixi run python tools/make_map.py &lt;spec&gt;</code></td>
+</tr>
+<tr>
+<td><code>build_docs.py</code></td>
+<td>builds the docs pages and the PDF</td>
+<td><code>pixi run docs</code></td>
+</tr>
+<tr>
+<td><code>progress_mail.py</code></td>
+<td>emails a red-and-white progress report</td>
+<td>see its docstring</td>
+</tr>
+<tr>
+<td><code>udev/99-aav.rules</code></td>
+<td>stable device names on the car (<code>/dev/aav/imu</code>, ...)</td>
+<td>install on the car's Linux computers</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="launch-profiles-the-same-nodes-a-different-car">Launch profiles: the same nodes, a different car</h2>
+<p>Everything above the backend is the same in every profile. Only what plays the car
+changes.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Start it with</th>
+<th>The car is</th>
+<th>Runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>turtle</code></td>
+<td><code>pixi run turtle</code></td>
+<td>the turtlesim turtle</td>
+<td>mux, ego, scripted driver, the car's model, <code>ekf_local</code></td>
+</tr>
+<tr>
+<td><code>sim</code></td>
+<td><code>pixi run sim</code></td>
+<td>Gazebo</td>
+<td>the whole stack: both EKFs, <code>navsat_transform</code>, Nav2</td>
+</tr>
+<tr>
+<td><code>car</code></td>
+<td><code>pixi run car &lt;machine&gt;</code></td>
+<td>the real car</td>
+<td>the parts its machine file switches on</td>
+</tr>
+<tr>
+<td><code>replay</code></td>
+<td><code>ros2 launch aav_bringup replay.launch.py</code>, with a bag playing</td>
+<td>a recorded drive</td>
+<td>localization (and Nav2) on real sensor data</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-computers-and-what-runs-where">The computers, and what runs where</h2>
+<p>The car runs one ROS graph across several computers. Each one starts <code>pixi run car
+&lt;machine&gt;</code>, and <code>src/aav_bringup/config/machines/&lt;machine&gt;.yaml</code> switches its parts on.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine</th>
+<th>Runs</th>
+<th>Today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>orin</code> (Jetson AGX Orin)</td>
+<td>the car's model, mux, ego, scripted driver, IMU, GPS, localization, Nav2, Foxglove</td>
+<td>Ubuntu 22.04 and Humble: it must move to Jazzy first (Q24)</td>
+</tr>
+<tr>
+<td><code>motor_pi</code></td>
+<td>the legacy bridges to today's ESP32 (UART) and the wheel encoder (UDP)</td>
+<td>Humble</td>
+</tr>
+<tr>
+<td><code>laptop</code></td>
+<td>the safety driver's joystick</td>
+<td>any laptop with Pixi</td>
+</tr>
+<tr>
+<td><code>all</code></td>
+<td>everything on one computer: for a bench test</td>
+<td></td>
+</tr>
+<tr>
+<td>the spine</td>
+<td>a microcontroller on CAN: throttle, brake, steering, watchdog</td>
+<td>not built yet: Q10–Q17</td>
+</tr>
+</tbody>
+</table></div>
+<p>The development computers:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>oirp-spss</td>
+<td>Ben's AlmaLinux workstation: builds and tests headless (no screen)</td>
+</tr>
+<tr>
+<td>Ben's Mac</td>
+<td>development, rqt_graph, Gazebo, RViz; one day, driving and watching the car</td>
+</tr>
+<tr>
+<td>team laptops</td>
+<td>the same, with Pixi: <a href="first-day.html">Your first day</a></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="how-a-change-goes-from-an-idea-to-the-car">How a change goes from an idea to the car</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Change the contract first, if the change touches one</td>
+<td>the contracts table above</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Write the logic in a plain module, with tests</td>
+<td><code>src/&lt;layer&gt;/&lt;package&gt;/</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Keep the node thin, with a docstring of what it reads and writes</td>
+<td>the same package</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Register it: a launch profile, the mux (drivers), <code>tools/test.sh</code> (tests)</td>
+<td><a href="howto-driver.html">Build a driver</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>pixi run test</code>, then the turtle, then <code>pixi run check sim</code> in Gazebo</td>
+<td><a href="simulation.html">Simulation</a></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Update the docs page, then <code>pixi run docs</code></td>
+<td><code>docs/</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Commit small, each commit passing the tests; inherited code gets a <code>PROVENANCE.md</code> line</td>
+<td><code>git</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>On the car: stands first, then the ground at walking pace, with a safety driver</td>
+<td>the test ladder</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="sharing-the-code-until-theres-a-github-org">Sharing the code, until there's a GitHub org</h2>
+<p><code>main</code> stays local until the team picks a GitHub org (Q25). The previous teams' orgs are
+public, so nothing is pushed there.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Make a bundle to hand over</td>
+<td><code>git bundle create ../aav.bundle HEAD main</code> (keep <code>HEAD</code>, or a clone checks out nothing)</td>
+</tr>
+<tr>
+<td>Start from a bundle</td>
+<td><code>git clone aav.bundle aav</code></td>
+</tr>
+<tr>
+<td>Take newer work from a bundle</td>
+<td>copy the new bundle over the old one, then <code>git pull</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">What never goes in git</p>
+<p>Build output (<code>build/</code>, <code>install/</code>, <code>log/</code>, <code>.pixi/</code>, <code>target/</code>), recordings (<code>bags/</code>),
+and secrets. <code>.gitignore</code> lists them. Downloaded third-party source, such as ROS's own
+code, belongs in a <code>vendor/</code> folder that git doesn't track: proposed, see
+<a href="decisions.html">Decisions</a>.</p>
+</div>
+</section>
+<section class="card"><h2 id="where-to-find-what-happened">Where to find what happened</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Want</th>
+<th>Look in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Why something is the way it is</td>
+<td><code>docs/history/conversation.md</code>: the Q&amp;A record, by topic, with its open threads</td>
+</tr>
+<tr>
+<td>Ben's requests, word for word</td>
+<td><code>docs/history/messages-*.md</code></td>
+</tr>
+<tr>
+<td>The audits of the inherited code, the firmware and the live system</td>
+<td><code>docs/history/audit-2026-10-10-*.md</code></td>
+</tr>
+<tr>
+<td>What's next</td>
+<td><code>TODO.md</code> and <a href="work.html">Work</a></td>
+</tr>
+<tr>
+<td>What changed, and why</td>
+<td><code>git log</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="decisions.html"><small>Previous</small>← Decisions</a>
+<a class="next" href="status.html"><small>Next</small>Status →</a></nav>
+</main>
+<footer>Source: <code>docs/infrastructure.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

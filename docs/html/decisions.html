@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decisions and open questions · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Decisions and open questions</h1>
+<div class="meta">11 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a class="here" href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-labels">How to read the labels</a><a href="#decided">Decided</a><a href="#tentative">Tentative</a><a href="#proposed-for-the-next-team-meeting">Proposed: for the next team meeting</a><a href="#ground-rules">Ground rules</a><a href="#decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</a><a href="#open-questions">Open questions</a><a href="#also-waiting-on-the-team">Also waiting on the team</a></nav>
+<div class="lead"><p>What the team has decided, what's still open, and the 34 numbered questions. The source
+is the team design doc, <em>AAV 2026–27 Autonomy Stack — Architecture &amp; Plan</em> (a Claude Doc,
+revision 61 on 10 October 2026). This page is a short copy, so you don't have to hunt.
+When the two differ, the design doc wins.</p></div>
+<section class="card"><h2 id="how-to-read-the-labels">How to read the labels</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Label</th>
+<th>Means</th>
+<th>What you do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Decided</strong></td>
+<td>the team agreed</td>
+<td>build on it; change it only after a team discussion</td>
+</tr>
+<tr>
+<td><strong>Tentative</strong></td>
+<td>the current direction, until a question is answered</td>
+<td>build on it, but keep it easy to change</td>
+</tr>
+<tr>
+<td><strong>Proposed</strong></td>
+<td>a suggestion waiting for the team</td>
+<td>accept or change it at the next team meeting</td>
+</tr>
+</tbody>
+</table></div>
+<p>Answer a question by its number, for example "Q12: targets". The design doc records the
+answer.</p>
+</section>
+<section class="card"><h2 id="decided">Decided</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Commands follow one path: each driver → <code>twist_mux</code> → <code>ego</code> → one backend</td>
+<td>Only ego talks to a backend; no driver reaches the actuators. Teleop (keyboard, remote, joystick) is a driver too (Ben, 9 Oct)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ego outputs Ackermann: <code>AckermannDriveStamped</code></td>
+<td>The real car, Gazebo, turtlesim and CARLA all take the same message, so a driver can't tell which one is running</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Stock ROS packages: robot_localization (two EKFs), Nav2, nav2_costmap_2d, twist_mux</td>
+<td>They replace the previous team's own estimator, planner, costmaps and command picking, where most of its bugs were</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The joystick can drive the car with no autonomy running</td>
+<td>Done with launch profiles</td>
+</tr>
+<tr>
+<td>5</td>
+<td>A CAN spine replaces the serial link from the Motor Pi to the ESP32</td>
+<td>Which signals cross the bus is still open: Q12</td>
+</tr>
+<tr>
+<td>6</td>
+<td>ROS 2 Jazzy on every computer</td>
+<td>Humble support ends in May 2027, Jazzy's in May 2029. ROS can't mix versions, so every computer moves together (Ben, 9 Oct)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>One repo and one workspace, with folders by layer of the picture</td>
+<td>One place to build, test and document everything</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Languages: Python for every ROS node we write; Rust later; C++ only in the reused IMU driver</td>
+<td>Our nodes run at 50 Hz or less, and the hard timing lives in the firmware. The spine logic is already Rust (<code>spine-core</code>)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Develop on Macs too, with Pixi and RoboStack</td>
+<td>The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; both use Fast DDS</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="tentative">Tentative</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Why</th>
+<th>Waits on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No QNX</td>
+<td><code>twist_mux</code> takes over QNX's job of picking which command wins. Hard real-time safety moves into the spine firmware and the hardware e-stop</td>
+<td>Q23</td>
+</tr>
+<tr>
+<td>GPS gives the global position; the model is unknown</td>
+<td>Whether it uses RTK corrections decides how precise GPS A→B can be</td>
+<td>Q18, Q19</td>
+</tr>
+<tr>
+<td>Bare metal waits: only the spine firmware runs without an operating system</td>
+<td>Ben, 9 Oct: "Maybe we will wait on this."</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="proposed-for-the-next-team-meeting">Proposed: for the next team meeting</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Proposal</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TwistStamped</code> on every <code>/cmd_vel*</code> topic</td>
+<td><code>twist_mux</code> expects it, and the timestamp lets ego drop stale commands. The code already does this</td>
+</tr>
+<tr>
+<td>A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree</td>
+<td>A car can't turn on the spot. The config already does this</td>
+</tr>
+<tr>
+<td>The RC transmitter stays the top-priority override, in hardware</td>
+<td>It works today, and doesn't depend on any computer</td>
+</tr>
+<tr>
+<td>The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car</td>
+<td>A reboot or a glitch never restarts the car by itself. It's in <code>spine-core</code> since 10 Oct</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="ground-rules">Ground rules</h2>
+<p>Rules for people and Claude sessions alike. They live in <code>CLAUDE.md</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>In short</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Units and frames</td>
+<td>metres, radians, seconds; x forward, y left, z up; positive steering = left; <code>map → odom → base_link</code>, with <code>base_link</code> on the ground under the rear axle</td>
+</tr>
+<tr>
+<td>Prefer stock</td>
+<td>stock ROS packages first, then the previous teams' code, then a stub</td>
+</tr>
+<tr>
+<td>Keep the maths out of ROS</td>
+<td>a node's logic lives in a plain module, with its own tests</td>
+</tr>
+<tr>
+<td>No pins in ROS</td>
+<td>pins, I2C addresses and calibration stay in the firmware</td>
+</tr>
+<tr>
+<td>Inherited code</td>
+<td>keeps a <code>PROVENANCE.md</code>: where it came from, and every change since</td>
+</tr>
+<tr>
+<td>Secrets</td>
+<td>never in git, logs or docs: write down only where a secret is</td>
+</tr>
+<tr>
+<td>Git</td>
+<td><code>main</code> stays local until the team has a GitHub org (Q25); small commits, each passing the tests</td>
+</tr>
+<tr>
+<td>Docs</td>
+<td>short pages, sections, tables and pictures; Ben is dyslexic</td>
+</tr>
+<tr>
+<td>Port first</td>
+<td>move everything to Jazzy as it is, then consider rewriting parts in Rust</td>
+</tr>
+<tr>
+<td>Simulators</td>
+<td>Gazebo this year; CARLA when it supports Jazzy</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav/aav</code> is our version of the project. The other folders are the previous teams' code, or downloaded source</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td><code>aav</code> will become the merger of everything, in one organized project</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td>Macs get GNU <code>coreutils</code> in their Pixi environment, so <code>colcon test</code> works on a Mac</td>
+<td>a technical fix: see <a href="mac.html">Your Mac</a></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="open-questions">Open questions</h2>
+<p>The design doc numbers 34 questions, and doesn't rank them. <strong>Bold</strong> marks the ones that
+look like they block phase 0 or the first drives: a suggestion, for the team to change.
+The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tape measure.</p>
+<h3 id="the-car">The car</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q</th>
+<th>Topic</th>
+<th>The question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q1</strong></td>
+<td>Dimensions</td>
+<td>Wheelbase, track, overall size, steering limit, top speed? The old code disagrees: 1.3–1.57 m wheelbase</td>
+</tr>
+<tr>
+<td><strong>Q2</strong></td>
+<td>Steering feedback</td>
+<td>Is the steering's position sensor wired to its Jrk G2? How do its counts map to the wheel angle?</td>
+</tr>
+<tr>
+<td><strong>Q3</strong></td>
+<td>Brake</td>
+<td>How far does it travel, how hard does it brake, and what does it do if power is lost? That defines the safe state</td>
+</tr>
+<tr>
+<td><strong>Q4</strong></td>
+<td>Throttle</td>
+<td>Which motor controller does the DAC drive? Does it brake on its own? Is reverse safe while moving?</td>
+</tr>
+<tr>
+<td>Q5</td>
+<td>Wheel encoder</td>
+<td>Which wheel, how many counts per turn, and can it wire straight to the spine?</td>
+</tr>
+<tr>
+<td><strong>Q6</strong></td>
+<td>E-stop</td>
+<td>Is there a physical e-stop that cuts drive power without software? Where, and is there a wireless one?</td>
+</tr>
+<tr>
+<td>Q7</td>
+<td>RC override</td>
+<td>Does the FlySky stay the top override? How does the spine know RC has taken over?</td>
+</tr>
+<tr>
+<td>Q8</td>
+<td>Power</td>
+<td>Battery voltage, the computers' supplies, and what the actuators do when a computer loses power</td>
+</tr>
+<tr>
+<td>Q9</td>
+<td>Which computers stay</td>
+<td>Orin, UI Pi, Motor Pi, radar Pi, camera Pi, QNX Pi? Suggested: the Orin, the spine and the HUD screen</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-spine-and-the-actuators">The spine and the actuators</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q</th>
+<th>Topic</th>
+<th>The question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q10</strong></td>
+<td>Owner</td>
+<td>Who owns the spine firmware and the CAN frame map?</td>
+</tr>
+<tr>
+<td>Q11</td>
+<td>Starting firmware</td>
+<td>Which firmware is on the ESP32 now? Build on AAV_cortex's, Motor_Steering's add-on, or the 2024-25 <code>FinalRev</code>?</td>
+</tr>
+<tr>
+<td><strong>Q12</strong></td>
+<td>What the spine accepts</td>
+<td>Target speed and steering angle (the speed loop in the firmware), or raw throttle and brake? Suggested: targets</td>
+</tr>
+<tr>
+<td>Q13</td>
+<td>Board</td>
+<td>Add a CAN transceiver to today's ESP32 board, or a new board? Who changes the PCB?</td>
+</tr>
+<tr>
+<td>Q14</td>
+<td>The Orin's side</td>
+<td>Its built-in CAN with a transceiver, or a USB-CAN adapter?</td>
+</tr>
+<tr>
+<td>Q15</td>
+<td>The bus</td>
+<td>Bitrate, connectors, cable route, terminators, and what else shares it</td>
+</tr>
+<tr>
+<td>Q16</td>
+<td>Watchdog</td>
+<td>How long without a command before it acts, how hard it brakes, and what the steering does</td>
+</tr>
+<tr>
+<td>Q17</td>
+<td>Wireless updates</td>
+<td>Keep them? If so, how are they authenticated?</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sensors-and-localization">Sensors and localization</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q</th>
+<th>Topic</th>
+<th>The question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q18</strong></td>
+<td>GPS model</td>
+<td>Which receiver is on the car? RTK or plain GPS? One antenna or two? It also picks the ROS driver</td>
+</tr>
+<tr>
+<td>Q19</td>
+<td>Corrections</td>
+<td>If RTK: which correction source, and is there internet at the test site?</td>
+</tr>
+<tr>
+<td>Q20</td>
+<td>IMU</td>
+<td>Keep the Yahboom on USB? Where is it mounted? Is its magnetometer usable on the car?</td>
+</tr>
+<tr>
+<td><strong>Q21</strong></td>
+<td>Test site</td>
+<td>Where do we drive, and who gives permission? A surveyed point there becomes the map origin</td>
+</tr>
+<tr>
+<td>Q22</td>
+<td>Lidar and cameras</td>
+<td>Which models are on the car? Not needed until phase 4, but the URDF and the power budget need them</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="software-and-process">Software and process</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q</th>
+<th>Topic</th>
+<th>The question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q23</td>
+<td>QNX</td>
+<td>Is it definitely dropped? Is it a course or sponsor requirement?</td>
+</tr>
+<tr>
+<td><strong>Q24</strong></td>
+<td>Jazzy on the car</td>
+<td>Who images and reflashes the Orin, and when? Is there a spare machine to try JetPack 7.2 first? Until then, Pixi can run Jazzy on the car's Ubuntu 22.04</td>
+</tr>
+<tr>
+<td>Q25</td>
+<td>Repo</td>
+<td>A new 2026-27 GitHub organization, or the existing one?</td>
+</tr>
+<tr>
+<td>Q26</td>
+<td>Languages</td>
+<td>Python for all our ROS nodes? C++ or Rust for the spine firmware?</td>
+</tr>
+<tr>
+<td>Q27</td>
+<td>Steering at standstill</td>
+<td>A speed-and-turn-rate command can't steer at zero speed. Should the joystick turn the wheels while stopped?</td>
+</tr>
+<tr>
+<td>Q28</td>
+<td>Joystick handover</td>
+<td>When the hold-to-drive button is released, go back to the autonomous driver, or stay stopped?</td>
+</tr>
+<tr>
+<td>Q29</td>
+<td>HUD</td>
+<td>Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year?</td>
+</tr>
+<tr>
+<td>Q30</td>
+<td>Remote driving</td>
+<td>In scope this year? Over which link, with what latency limit?</td>
+</tr>
+<tr>
+<td>Q31</td>
+<td>CARLA</td>
+<td>Which machine runs it, and which version?</td>
+</tr>
+<tr>
+<td><strong>Q32</strong></td>
+<td>Test rules</td>
+<td>Who is the safety driver, what's the speed cap, what's on the pre-drive checklist, who signs it off?</td>
+</tr>
+<tr>
+<td><strong>Q33</strong></td>
+<td>Owners</td>
+<td>Who owns each package?</td>
+</tr>
+<tr>
+<td><strong>Q34</strong></td>
+<td>Secrets</td>
+<td>Have the leaked GitHub token, Firebase keys and WiFi password been revoked or changed? Who controls those accounts?</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="also-waiting-on-the-team">Also waiting on the team</h2>
+<p>From tonight's audits and the Mac work. They're small, but someone has to say yes.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>The choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROS_DOMAIN_ID</code></td>
+<td>one number (0–101) for the car and every laptop</td>
+</tr>
+<tr>
+<td>GPS driver</td>
+<td>keep <code>ublox_dgnss</code> (the car only) or switch to <code>ublox</code>, which Pixi has (with Q18)</td>
+</tr>
+<tr>
+<td><code>/estop</code> reliability (N2)</td>
+<td>send it repeatedly, or make the mux hear it reliably</td>
+</tr>
+<tr>
+<td>Respawning device nodes (N3)</td>
+<td>restart a sensor driver when it dies?</td>
+</tr>
+<tr>
+<td>Nav2's lookahead (N7)</td>
+<td>its turn command flips sign about once a second in the sim</td>
+</tr>
+<tr>
+<td>Package renames</td>
+<td>the inherited packages' new names, in <a href="conventions.html">Conventions</a></td>
+</tr>
+<tr>
+<td>A <code>vendor/</code> folder</td>
+<td>keep downloaded source out of git, with a list to fetch it again</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="work.html"><small>Previous</small>← Work</a>
+<a class="next" href="infrastructure.html"><small>Next</small>Infrastructure →</a></nav>
+</main>
+<footer>Source: <code>docs/decisions.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

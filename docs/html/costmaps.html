@@ -7,25 +7,33 @@
 <!-- Generated from docs/costmaps.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Maps and costmaps</h1>
-<div class="meta">5 min read · 5 sections</div></header>
+<div class="meta">7 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a class="here" href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="firmware.html">Firmware</a>
-<a href="status.html">Status</a>
-<span class="sep">Reference:</span>
 <a href="platforms.html">Platforms</a>
 <a href="conventions.html">Conventions</a>
 <a href="interfaces.html">Topics</a>
 <a href="car_measurements.html">Car numbers</a>
-<a class="here" href="costmaps.html">Costmaps</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-two-costmaps">The two costmaps</a><a href="#what-each-phase-uses">What each phase uses</a><a href="#map-files">Map files</a><a href="#where-the-map-sits-on-the-earth">Where the map sits on the Earth</a><a href="#a-costmap-is-not-a-road-map">A costmap is not a road map</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-two-costmaps">The two costmaps</a><a href="#what-each-phase-uses">What each phase uses</a><a href="#map-files">Map files</a><a href="#your-first-map-in-ten-minutes">Your first map, in ten minutes</a><a href="#where-the-map-sits-on-the-earth">Where the map sits on the Earth</a><a href="#a-costmap-is-not-a-road-map">A costmap is not a road map</a></nav>
 <div class="lead"><p>A <strong>costmap</strong> is a grid laid on the ground. Every cell holds a cost:</p>
 <ul>
 <li>free (0);</li>
@@ -88,7 +96,8 @@ car is meant to do this year. Make it larger only if the car gets faster.</p>
 <ul>
 <li><strong>Footprint:</strong> the car's outline, made from <code>body</code> in <code>vehicle.yaml</code> by the launch
   file. Nav2 checks that it doesn't enter lethal cells.</li>
-<li><strong>Inflation:</strong> 1.5 m with cost scaling 3.0. This keeps paths away from walls rather
+<li><strong>Inflation:</strong> 2.0 m with cost scaling 3.0: at least the car's circumscribed radius,
+  1.93 m. This keeps paths away from walls rather
   than scraping them.</li>
 </ul>
 </section>
@@ -145,6 +154,52 @@ car is meant to do this year. Make it larger only if the car gets faster.</p>
 <p><code>tools/make_map.py --help</code> (or the top of the file) shows the format. It needs only
 Python and PyYAML, not ROS.</p>
 </section>
+<section class="card"><h2 id="your-first-map-in-ten-minutes">Your first map, in ten minutes</h2>
+<ol>
+<li>
+<p>Open <code>src/drivers/aav_navigation/maps/example_lot.spec.yaml</code>, and add a box under
+   <code>blocked:</code>:</p>
+<pre><code>```yaml
+  - [15, -3, 18, 3]       # a box across the drive, to plan around
+```
+</code></pre>
+</li>
+<li>
+<p>Make the map again:</p>
+<pre><code>```bash
+pixi run python tools/make_map.py src/drivers/aav_navigation/maps/example_lot.spec.yaml
+pixi run build
+```
+</code></pre>
+<p>It says <code>wrote example_lot.pgm/.yaml: 320 x 240 px, 80 x 60 m</code>.
+3. Start Gazebo with the test lot: <code>pixi run sim world:=test_lot</code>. On a Mac, add
+ <code>gui:=false</code>, then run <code>pixi run gz-window</code> and <code>pixi run rviz</code> in two more terminals.
+4. In RViz, send a <strong>2D Goal Pose</strong> at about (30, 0): 30 m straight ahead, past the box.</p>
+</li>
+</ol>
+<p><strong>You should see</strong> the planned path bend around your box. In the test on 10 October it
+passed at y = 4.4 m, beside a box that ends at y = 3 m.</p>
+<ol start="5">
+<li>Put the map back: <code>git checkout src/drivers/aav_navigation/maps/</code>.</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Two things this teaches</p>
+<ul>
+<li>The box is only in the map, not in Gazebo's world. Nav2 avoids it because the map
+  says so: that's how phase 3 works.</li>
+<li>Leave room in front of an obstacle. The car turns no tighter than 2.86 m, and the
+  costmap keeps 2 m of clearance, so a box 5 m ahead can't be swerved around. (The
+  test tried it: Nav2 reported "collision ahead".)</li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Known problem, 10 October: the car doesn't finish this drive</p>
+<p>In Gazebo the car follows the curve around the box, but overshoots the goal and ends
+about 6 m off. Nav2 then can't plan a way back, because the car only drives forward,
+so the goal fails. It's open work for the navigation team (N7, the lookahead). A
+straight 8 m goal on the empty map succeeds.</p>
+</div>
+</section>
 <section class="card"><h2 id="where-the-map-sits-on-the-earth">Where the map sits on the Earth</h2>
 <p>The map frame is pinned to the ground by the <strong>datum</strong> in
 <code>src/localization/aav_localization/config/navsat.yaml</code>:</p>
@@ -177,8 +232,8 @@ across a city are a separate kind of map: a road graph. Two tools handle that:</
 </ul>
 <p>For this year's goals (an empty costmap, then a pre-rendered test site) a grid map plus
 GPS waypoints is enough.</p></section>
-<nav class="prevnext"><a class="prev" href="car_measurements.html"><small>Previous</small>← Car numbers</a>
-<a class="next" href="hud.html"><small>Next</small>HUD →</a></nav>
+<nav class="prevnext"><a class="prev" href="howto-driver.html"><small>Previous</small>← Build a driver</a>
+<a class="next" href="older-code.html"><small>Next</small>Older code →</a></nav>
 </main>
 <footer>Source: <code>docs/costmaps.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

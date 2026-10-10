@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build a driver · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/howto-driver.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Build a driver</h1>
+<div class="meta">6 min read · 10 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a class="here" href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="firmware.html">Firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#what-a-driver-does-and-doesnt">What a driver does, and doesn&#x27;t</a><a href="#the-priorities-today">The priorities today</a><a href="#1-make-the-package">1. Make the package</a><a href="#2-write-the-node">2. Write the node</a><a href="#3-register-it">3. Register it</a><a href="#4-try-it">4. Try it</a><a href="#5-before-you-commit">5. Before you commit</a><a href="#safety-rules">Safety rules</a><a href="#whats-been-tested">What&#x27;s been tested</a><a href="#a-sensor-driver-is-different">A sensor driver is different</a></nav>
+<div class="lead"><p>A driver is anything that proposes how to move: a joystick, a script, Nav2, one day a
+learned model. Every driver publishes the same kind of message on its own topic, and
+<code>twist_mux</code> picks one. This page builds a small example driver, <code>aav_circle</code>, from an
+empty folder to a turtle driving in circles.</p></div>
+<section class="card"><h2 id="what-a-driver-does-and-doesnt">What a driver does, and doesn't</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>A driver does</th>
+<th>A driver doesn't</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>publish <code>geometry_msgs/TwistStamped</code> on <code>/cmd_vel/&lt;name&gt;</code></td>
+<td>publish <code>/cmd_vel</code> or <code>/ego/actuator_cmd</code></td>
+</tr>
+<tr>
+<td>put the speed (m/s) in <code>twist.linear.x</code> and the turn rate (rad/s) in <code>twist.angular.z</code></td>
+<td>work out steering angles: that's ego's job</td>
+</tr>
+<tr>
+<td>use the frame <code>base_link</code>: x forward, y left, positive turn rate = left</td>
+<td>talk to hardware: that's a backend's job</td>
+</tr>
+<tr>
+<td>go quiet when it has nothing to say</td>
+<td>handle the e-stop: the mux and the backends do</td>
+</tr>
+</tbody>
+</table></div>
+<p>Because every driver speaks the same message, ego and the backends never change when a
+driver is added.</p>
+</section>
+<section class="card"><h2 id="the-priorities-today">The priorities today</h2>
+<p><code>twist_mux</code> passes on the highest priority that has spoken in the last 0.5 s.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Topic</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E-stop (a lock: blocks everything below it)</td>
+<td><code>/estop</code></td>
+<td>255</td>
+</tr>
+<tr>
+<td>Joystick, the safety driver</td>
+<td><code>/cmd_vel/joy</code></td>
+<td>100</td>
+</tr>
+<tr>
+<td>Keyboard or another remote</td>
+<td><code>/cmd_vel/remote</code></td>
+<td>90</td>
+</tr>
+<tr>
+<td>Scripted</td>
+<td><code>/cmd_vel/scripted</code></td>
+<td>50</td>
+</tr>
+<tr>
+<td>Replay</td>
+<td><code>/cmd_vel/replay</code></td>
+<td>40</td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td><code>/cmd_vel/nav</code></td>
+<td>20</td>
+</tr>
+<tr>
+<td>AI</td>
+<td><code>/cmd_vel/ai</code></td>
+<td>10</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>People outrank software.</strong> Give a new software driver a priority below 90. The example
+uses 30.</p>
+</section>
+<section class="card"><h2 id="1-make-the-package">1. Make the package</h2>
+<p>ROS makes the skeleton for you:</p>
+<pre class="highlight"><code class="language-bash">pixi shell                     # a terminal with ROS in it
+cd src/drivers
+ros2 pkg create aav_circle --build-type ament_python \
+  --dependencies rclpy geometry_msgs --node-name circle_driver</code></pre>
+<p>That makes <code>src/drivers/aav_circle/</code> with <code>package.xml</code>, <code>setup.py</code>, a node file and
+style tests. It also prints a list of licences: that's fine, the team hasn't picked one
+yet. The layout rules are in <a href="conventions.html">Conventions</a>.</p>
+</section>
+<section class="card"><h2 id="2-write-the-node">2. Write the node</h2>
+<p>Replace <code>src/drivers/aav_circle/aav_circle/circle_driver.py</code> with:</p>
+<pre class="highlight"><code class="language-python">"""
+circle_driver: drive a slow left circle, to show how a driver works.
+
+Publishes   cmd_vel/circle   geometry_msgs/TwistStamped, at 20 Hz
+"""
+
+from geometry_msgs.msg import TwistStamped
+import rclpy
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+
+
+class CircleDriver(Node):
+
+    def __init__(self):
+        super().__init__('circle_driver')
+        self.speed = self.declare_parameter('speed', 0.5).value          # m/s
+        self.turn_rate = self.declare_parameter('turn_rate', 0.2).value  # rad/s
+        self.pub = self.create_publisher(TwistStamped, 'cmd_vel/circle', 10)
+        self.create_timer(0.05, self.tick)                               # 20 Hz
+
+    def tick(self):
+        msg = TwistStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
+        msg.twist.linear.x = self.speed
+        msg.twist.angular.z = self.turn_rate
+        self.pub.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = CircleDriver()
+    try:
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()</code></pre>
+<p>A real driver has a decision to make: when to speed up, where to turn. Put that logic in
+a plain module with no ROS imports, and test it. For example, <code>aav_scripted</code> keeps its
+logic in <code>speed_profile.py</code>, tested by <code>test/test_speed_profile.py</code>. Then the node stays
+thin.</p>
+</section>
+<section class="card"><h2 id="3-register-it">3. Register it</h2>
+<p>Four files learn about the new driver:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Add</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/mux/aav_mux/config/twist_mux.yaml</code></td>
+<td>an input under <code>topics:</code>, shown below</td>
+</tr>
+<tr>
+<td><code>docs/interfaces.yaml</code></td>
+<td>the topic, shown below. Then run <code>pixi run python tools/gen_interfaces_md.py &gt; docs/interfaces.md</code></td>
+</tr>
+<tr>
+<td><code>src/aav_bringup/launch/turtle.launch.py</code> (and <code>sim</code>, and the car's machine files)</td>
+<td>a line that starts it, once it has a launch file</td>
+</tr>
+<tr>
+<td><code>tools/test.sh</code></td>
+<td>the package's folder, once it has unit tests</td>
+</tr>
+</tbody>
+</table></div>
+<p>The mux input:</p>
+<pre class="highlight"><code class="language-yaml">      circle:                   # aav_circle: an example driver
+        topic: /cmd_vel/circle
+        timeout: 0.5
+        priority: 30</code></pre>
+<p>The contract entry:</p>
+<pre class="highlight"><code class="language-yaml">  /cmd_vel/circle:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [circle_driver]
+    sub: [twist_mux]
+    note: Priority 30. An example driver that drives in circles.</code></pre>
+</section>
+<section class="card"><h2 id="4-try-it">4. Try it</h2>
+<pre class="highlight"><code class="language-bash">pixi run build
+pixi run turtle                                            # terminal 1
+pixi run tools/ros.sh ros2 run aav_circle circle_driver    # terminal 2
+pixi run graph                                             # terminal 3</code></pre>
+<p><strong>You should see:</strong></p>
+<ul>
+<li>the turtle drives a slow circle;</li>
+<li>rqt_graph shows <code>circle_driver</code> → <code>/cmd_vel/circle</code> → <code>twist_mux</code>;</li>
+<li><code>pixi run keyboard</code> in another terminal: hold <code>i</code>, and the keyboard (90) takes over at
+  once. Let go, and the circle comes back after half a second;</li>
+<li><code>pixi run estop</code> stops everything, and <code>pixi run estop-clear</code> lets it go again.</li>
+</ul>
+<p>Then <code>pixi run check turtle</code> should still say <code>0 failed</code>, and Gazebo is the next rung:
+<code>pixi run sim</code>.</p>
+</section>
+<section class="card"><h2 id="5-before-you-commit">5. Before you commit</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every test still passes</td>
+<td><code>pixi run test</code></td>
+</tr>
+<tr>
+<td>ROS's style rules</td>
+<td><code>pixi run lint</code></td>
+</tr>
+<tr>
+<td>The topics page matches the contract</td>
+<td>part of <code>pixi run test</code></td>
+</tr>
+<tr>
+<td>Small commits, each saying why</td>
+<td><code>git commit</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="safety-rules">Safety rules</h2>
+<ol>
+<li><strong>People outrank software:</strong> priorities below 90.</li>
+<li><strong>Go quiet when you're done:</strong> stop publishing, and the mux hands control to the next
+   driver after 0.5 s.</li>
+<li><strong>Never publish <code>/cmd_vel</code> or <code>/ego/actuator_cmd</code> yourself.</strong> Everything goes through
+   the mux and ego, so the limits and the e-stop always apply.</li>
+<li><strong>Climb the test ladder:</strong> the turtle, then Gazebo, then the car on stands, then the
+   car with a safety driver. See <a href="simulation.html#the-test-ladder">Simulation</a>.</li>
+</ol>
+</section>
+<section class="card"><h2 id="whats-been-tested">What's been tested</h2>
+<p>On a Mac, 10 October, in a copy of the repo: every step on this page as written.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ros2 pkg create</code>, then the node, the mux input and the contract entry from this page</td>
+<td><span class="badge b-works">works</span> 20 packages build</td>
+</tr>
+<tr>
+<td>The driver alone</td>
+<td><span class="badge b-works">works</span> the turtle circles left</td>
+</tr>
+<tr>
+<td>A priority-90 command on <code>/cmd_vel/remote</code> (what the keyboard sends)</td>
+<td><span class="badge b-works">works</span> it takes over and drives straight; the circle returns after it stops</td>
+</tr>
+<tr>
+<td><code>pixi run estop</code>, then <code>pixi run estop-clear</code></td>
+<td><span class="badge b-works">works</span> the turtle stops, then drives again</td>
+</tr>
+<tr>
+<td><code>pixi run check turtle</code></td>
+<td><span class="badge b-works">works</span> <code>/cmd_vel/circle</code> ok, 0 failed</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="a-sensor-driver-is-different">A sensor driver is different</h2>
+<p>A sensor driver turns a device into a standard ROS message: an IMU into
+<code>sensor_msgs/Imu</code>, a GPS into <code>sensor_msgs/NavSatFix</code>. It publishes in its own frame
+(<code>imu_link</code>, <code>gps_link</code>), and the car's model says where that frame sits.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Publish the standard message, with honest covariances</td>
+<td>robot_localization reads all-zero covariances as a perfect sensor</td>
+</tr>
+<tr>
+<td>Keep the topic names</td>
+<td>another driver for the same kind of sensor can replace it without changing anything downstream</td>
+</tr>
+<tr>
+<td>Pins, addresses and calibration stay in the firmware</td>
+<td>ROS never sees a pin</td>
+</tr>
+</tbody>
+</table></div>
+<p>The IMU shows the pattern: <code>yahboom_imu_cpp</code> (C++) and its Rust twin <code>aav_imu_yahboom</code>
+(in progress) take the same config and publish the same topics, so the launch file can
+pick either one.</p></section>
+<nav class="prevnext"><a class="prev" href="status.html"><small>Previous</small>← Status</a>
+<a class="next" href="costmaps.html"><small>Next</small>Costmaps →</a></nav>
+</main>
+<footer>Source: <code>docs/howto-driver.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

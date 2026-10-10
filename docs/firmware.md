@@ -78,11 +78,11 @@ Both sides test against the same generated frames. To change a frame:
 
 | Module | Does |
 |---|---|
-| `spine.rs` | the priorities above: `Spine::step(&Inputs) -> Outputs`, about 100 times a second |
+| `spine.rs` | the priorities above: `Spine::step(&Inputs) -> Outputs`, about 100 times a second. Its `SpineConfig` holds the limits: 3.0 m/s, ±0.5 rad, 0.6 rad/s; 1.5 m/s² up, 2.5 m/s² down |
 | `protocol.rs` | encodes and decodes the four frames, with the CRC and counter checks |
 | `watchdog.rs` | the 200 ms command watchdog |
 | `speed_loop.rs` | PI speed control into throttle and brake, never both at once |
-| `limits.rs` | clamps and slew limits: 3.0 m/s, ±0.5 rad, 0.6 rad/s; 1.5 m/s² up, 2.5 m/s² down |
+| `limits.rs` | the helpers that apply them: `slew()` and `abs()` |
 | `encoder.rs` | quadrature decoding, and speed from the time between counts |
 
 The ESP32 board code that calls it is [[missing]]. Hardware facts from today's car:

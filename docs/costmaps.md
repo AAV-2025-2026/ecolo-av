@@ -27,7 +27,8 @@ car is meant to do this year. Make it larger only if the car gets faster.
 
 - **Footprint:** the car's outline, made from `body` in `vehicle.yaml` by the launch
   file. Nav2 checks that it doesn't enter lethal cells.
-- **Inflation:** 1.5 m with cost scaling 3.0. This keeps paths away from walls rather
+- **Inflation:** 2.0 m with cost scaling 3.0: at least the car's circumscribed radius,
+  1.93 m. This keeps paths away from walls rather
   than scraping them.
 
 ## What each phase uses
@@ -61,6 +62,45 @@ A spec lists:
 
 `tools/make_map.py --help` (or the top of the file) shows the format. It needs only
 Python and PyYAML, not ROS.
+
+## Your first map, in ten minutes
+
+1. Open `src/drivers/aav_navigation/maps/example_lot.spec.yaml`, and add a box under
+   `blocked:`:
+
+    ```yaml
+      - [15, -3, 18, 3]       # a box across the drive, to plan around
+    ```
+
+2. Make the map again:
+
+    ```bash
+    pixi run python tools/make_map.py src/drivers/aav_navigation/maps/example_lot.spec.yaml
+    pixi run build
+    ```
+
+   It says `wrote example_lot.pgm/.yaml: 320 x 240 px, 80 x 60 m`.
+3. Start Gazebo with the test lot: `pixi run sim world:=test_lot`. On a Mac, add
+   `gui:=false`, then run `pixi run gz-window` and `pixi run rviz` in two more terminals.
+4. In RViz, send a **2D Goal Pose** at about (30, 0): 30 m straight ahead, past the box.
+
+**You should see** the planned path bend around your box. In the test on 10 October it
+passed at y = 4.4 m, beside a box that ends at y = 3 m.
+
+5. Put the map back: `git checkout src/drivers/aav_navigation/maps/`.
+
+!!! note "Two things this teaches"
+  - The box is only in the map, not in Gazebo's world. Nav2 avoids it because the map
+    says so: that's how phase 3 works.
+  - Leave room in front of an obstacle. The car turns no tighter than 2.86 m, and the
+    costmap keeps 2 m of clearance, so a box 5 m ahead can't be swerved around. (The
+    test tried it: Nav2 reported "collision ahead".)
+
+!!! warning "Known problem, 10 October: the car doesn't finish this drive"
+  In Gazebo the car follows the curve around the box, but overshoots the goal and ends
+  about 6 m off. Nav2 then can't plan a way back, because the car only drives forward,
+  so the goal fails. It's open work for the navigation team (N7, the lookahead). A
+  straight 8 m goal on the empty map succeeds.
 
 ## Where the map sits on the Earth
 
