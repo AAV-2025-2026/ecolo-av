@@ -11,4 +11,7 @@ Files, unchanged unless listed under Changes:
 
 ## Changes
 
-- None yet.
+- 2026-10-10: `flask_bootup.sh` starts `ros2 launch aav_hud hud.launch.py`. The back end
+  was renamed from `maincar` (its launch file was `launch.py`). The script still sources
+  the old Humble workspace in `/home/aavui`: point it at this repo's
+  `install/setup.bash` on the UI Pi.

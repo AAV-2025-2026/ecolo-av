@@ -1,1 +1,1 @@
-Not ROS packages: the Flutter app and its boot scripts. The HUD ROS node is src/hud/maincar.
+Not ROS packages: the Flutter app and its boot scripts. The HUD ROS node is src/hud/aav_hud.

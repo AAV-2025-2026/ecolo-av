@@ -17,4 +17,4 @@ touch systemd_flask_test.txt
 
 # runs Flask
 source /home/aavui/Desktop/User-Interface/ros2_ws/install/setup.bash
-ros2 launch maincar launch.py
+ros2 launch aav_hud hud.launch.py
