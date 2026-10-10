@@ -45,7 +45,8 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       - How the dual EKF works ("local injects, global reads local + GPS")
       - Run it: turtle, keyboard, Gazebo
       - src vs firmware; one interface, several drivers (the IMU example)
-- [ ] **Email progress** to cmail, red and white, every few hours and when something lands.
+- [x] **Email progress** to cmail, red and white, every few hours and when something lands.
+      *Sent at 22:49, 03:50 and 04:10 (the morning summary, with the PDF).*
 - [x] **Naming and code style** for all code. Inherited code is ours to edit now.
       *Done: `docs/conventions.md`, `pixi run lint` passes. Renaming the inherited
       packages is proposed and waits for the team.*
@@ -63,7 +64,9 @@ His messages, word for word: `docs/history/messages-2026-10-09.md`.
       *Done: docs for a dyslexic reader, Macs first-class, `pixi run test` green, test
       isolation, the pytest skip trap, Rust nodes later, where the TODO and audits live.*
 
-## Questions Ben asked (answer in the docs and the morning email)
+## Questions Ben asked
+
+*Answered in the morning email and in the docs: `run.md`, `languages.md`, `mac.md`.*
 
 - Is `aav_turtlesim` different from the regular turtlesim?
 - What languages are used now, and should everything be Rust?
