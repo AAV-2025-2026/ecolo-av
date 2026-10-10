@@ -46,7 +46,7 @@ public:
 
     // Open serial port
     serial_ = std::make_unique<SerialPort>(port, (int)baud);
-    RCLCPP_INFO(get_logger(), "Opened %s at %ld baud", port.c_str(), baud);
+    RCLCPP_INFO(get_logger(), "Opened %s at %d baud", port.c_str(), static_cast<int>(baud));
 
     // Start reading thread
     running_ = true;

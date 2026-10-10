@@ -23,6 +23,10 @@ Files, unchanged unless listed under Changes:
 - `src/serial_port.cpp`: `B921600` is behind `#ifdef B921600`, so the package
   compiles on macOS, whose `termios.h` stops at `B230400` (2026-10-10).
 
+- `src/imu_node.cpp`: the "Opened ... baud" log prints the baud as an `int` with `%d`.
+  `%ld` with an `int64_t` is wrong where `long` isn't 64 bits: macOS warned, and
+  32-bit Linux prints garbage (2026-10-10).
+
 ### 2026-10-10: lint and Jazzy fixes
 
 - `include/`, `src/`: reformatted with `ament_uncrustify --reformat` (whitespace only).
