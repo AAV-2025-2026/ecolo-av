@@ -11,7 +11,7 @@ export PYTHONDONTWRITEBYTECODE=1
 # Each package's tests import the package, so pytest runs from inside it.
 # (aav_gazebo's test imports ROS messages, so only `colcon test` runs it.)
 for pkg in src/ego/aav_ego src/backends/aav_spine src/backends/aav_legacy \
-           src/drivers/aav_scripted src/aav_description; do
+           src/drivers/aav_scripted src/aav_description src/perception/aav_yolo; do
   echo "== $pkg"
   (cd "$pkg" && python3 -m pytest -q -p no:cacheprovider)
 done

@@ -5,6 +5,8 @@
 set -e
 cd "$(dirname "$0")/.."
 OURS=(src/aav_bringup src/aav_description src/backends src/drivers src/ego src/localization
-      src/mux src/sensors/aav_sensors tools firmware/can)
+      src/mux src/sensors/aav_sensors tools firmware/can
+      src/perception/aav_yolo/aav_yolo src/perception/aav_yolo/launch
+      src/perception/aav_yolo/test src/perception/aav_yolo/setup.py)
 ament_flake8 "${OURS[@]}"
 ament_pep257 "${OURS[@]}"
