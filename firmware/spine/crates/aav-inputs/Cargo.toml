@@ -1,0 +1,10 @@
+[package]
+name = "aav-inputs"
+description = "Clean digital inputs for every board: debounced switches and buttons, and edges with a lockout for counting."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No dependencies on purpose: no_std, no allocator, no hardware access.
+[dependencies]
