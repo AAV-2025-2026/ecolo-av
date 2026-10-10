@@ -7,7 +7,7 @@
 <!-- Generated from docs/packages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>What each package does</h1>
-<div class="meta">7 min read · 9 sections</div></header>
+<div class="meta">10 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -35,10 +37,10 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#at-a-glance">At a glance</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers-the-mux-and-ego">Drivers, the mux and ego</a><a href="#backends">Backends</a><a href="#interfaces-and-bringup">Interfaces and bringup</a><a href="#firmware">Firmware</a><a href="#the-hud">The HUD</a><a href="#examples">Examples</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#at-a-glance">At a glance</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers-the-mux-and-ego">Drivers, the mux and ego</a><a href="#perception">Perception</a><a href="#backends">Backends</a><a href="#bench-mode">Bench mode</a><a href="#interfaces-and-bringup">Interfaces and bringup</a><a href="#firmware">Firmware</a><a href="#the-hud">The HUD</a><a href="#examples">Examples</a></nav>
 <div class="lead"><p>Every ROS package in <code>src/</code>, layer by layer, with what it reads and writes. Then the
-firmware, the HUD and the examples. 19 packages build today; 3 perception packages are
-parked until next year.</p></div>
+firmware, the HUD and the examples. 24 packages build today, and none is parked:
+perception came in on 10 October.</p></div>
 <section class="card"><h2 id="at-a-glance">At a glance</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -54,7 +56,7 @@ parked until next year.</p></div>
 <tr>
 <td><code>aav_sensors</code></td>
 <td>sensors</td>
-<td>starts the IMU, GPS, radar and battery drivers, with their configs</td>
+<td>starts the IMU, GPS, radar, battery and camera drivers, with their configs</td>
 <td><span class="badge b-untested">untested</span> needs the devices</td>
 <td>new</td>
 </tr>
@@ -90,7 +92,7 @@ parked until next year.</p></div>
 <td><code>aav_localization</code></td>
 <td>localization</td>
 <td>the two EKFs and <code>navsat_transform</code>: configuration only</td>
-<td><span class="badge b-works">works</span> turtle and Gazebo</td>
+<td><span class="badge b-works">works</span> turtle, Gazebo and the bench</td>
 <td>new</td>
 </tr>
 <tr>
@@ -104,7 +106,7 @@ parked until next year.</p></div>
 <td><code>aav_scripted</code></td>
 <td>drivers</td>
 <td>scripted drives: speed up, hold, slow down</td>
-<td><span class="badge b-works">works</span> in the turtle run</td>
+<td><span class="badge b-works">works</span> turtle and the bench</td>
 <td>new</td>
 </tr>
 <tr>
@@ -132,7 +134,7 @@ parked until next year.</p></div>
 <td><code>aav_spine</code></td>
 <td>backends</td>
 <td>the real car: ego's commands as CAN frames</td>
-<td><span class="badge b-untested">untested</span> no spine yet</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>; no spine board yet</td>
 <td>new</td>
 </tr>
 <tr>
@@ -173,41 +175,54 @@ parked until next year.</p></div>
 <tr>
 <td><code>aav_bringup</code></td>
 <td>bringup</td>
-<td>the four profiles, the machine files, the RViz layout</td>
-<td><span class="badge b-works">works</span> turtle, sim, replay</td>
+<td>the five profiles, perception on the car, the machine files, the RViz layout</td>
+<td><span class="badge b-works">works</span> turtle, sim, replay, bench</td>
 <td>new</td>
 </tr>
 <tr>
-<td><code>maincar</code></td>
-<td>hud</td>
-<td>the HUD's web server (Flask, Socket.IO)</td>
-<td><span class="badge b-untested">untested</span> not connected to the new stack</td>
-<td>2025-26 <code>User-Interface</code></td>
+<td><code>aav_yolo</code></td>
+<td>perception</td>
+<td>YOLO on the camera's images, and the stop-sign watcher</td>
+<td><span class="badge b-works">works</span> on the bench</td>
+<td>2024-25 <code>camera_ros2_ws</code></td>
 </tr>
 <tr>
-<td><code>lane_geometry</code></td>
+<td><code>aav_object_detection</code></td>
 <td>perception</td>
-<td>lane keeping (parked)</td>
-<td><span class="badge b-later">later</span></td>
-<td>2025-26 <code>Lane_Detection_ROS2</code></td>
-</tr>
-<tr>
-<td><code>object_detection</code></td>
-<td>perception</td>
-<td>radar point-cloud clustering (parked)</td>
-<td><span class="badge b-later">later</span></td>
+<td>radar clustering (DBSCAN), with a box round each object</td>
+<td><span class="badge b-works">works</span> on the pretend radar</td>
 <td>2025-26 <code>Nav_Radar</code></td>
 </tr>
 <tr>
-<td><code>yolo_ros2</code></td>
+<td><code>aav_lane_geometry</code></td>
 <td>perception</td>
-<td>a YOLO stop-sign detector (parked)</td>
-<td><span class="badge b-later">later</span></td>
-<td>2024-25 <code>camera_ros2_ws</code></td>
+<td>lane keeping: a driver on <code>/cmd_vel/ai</code></td>
+<td><span class="badge b-works">works</span> on a pretend lane; the line finder is <span class="badge b-missing">missing</span></td>
+<td>2025-26 <code>Lane_Detection_ROS2</code></td>
+</tr>
+<tr>
+<td><code>aav_hud</code></td>
+<td>hud</td>
+<td>the HUD's web server (Flask, Socket.IO), on our topics</td>
+<td><span class="badge b-works">works</span> on the bench; the app needs small changes</td>
+<td>2025-26 <code>User-Interface</code></td>
+</tr>
+<tr>
+<td><code>aav_spine_sim</code></td>
+<td>bench</td>
+<td>the spine on a laptop: the firmware's logic on a model car (Rust)</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_bench</code></td>
+<td>bench</td>
+<td>pretend sensors: IMU, GPS, battery and camera</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
 </tr>
 </tbody>
 </table></div>
-<p>Parked packages have a <code>COLCON_IGNORE</code> file, so colcon skips them.</p>
 </section>
 <section class="card"><h2 id="sensors">Sensors</h2>
 <div class="table-wrap"><table>
@@ -255,6 +270,18 @@ parked until next year.</p></div>
 <td><code>/dev/aav/battery</code></td>
 <td><code>/battery_status</code></td>
 <td></td>
+</tr>
+<tr>
+<td>stock <code>usb_cam</code> (<code>cameras.launch.py</code>)</td>
+<td><code>/dev/aav/camera_left</code>, <code>_right</code></td>
+<td><code>/camera/image_raw</code>, <code>/camera/camera_info</code></td>
+<td>Linux only; the 2024-25 calibrations</td>
+</tr>
+<tr>
+<td>stock <code>nmea_navsat_driver</code> (<code>gps_nmea.launch.py</code>)</td>
+<td><code>/dev/aav/gps</code></td>
+<td><code>/gps/fix</code></td>
+<td>any NMEA receiver, until Q18 picks the GPS</td>
 </tr>
 </tbody>
 </table></div>
@@ -347,6 +374,45 @@ parked until next year.</p></div>
 </tbody>
 </table></div>
 </section>
+<section class="card"><h2 id="perception">Perception</h2>
+<p><a href="perception.html">Perception</a> has the details.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Reads</th>
+<th>Publishes</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_yolo</code>: <code>yolo_detector</code></td>
+<td><code>/camera/image_raw</code></td>
+<td><code>/perception/detections</code>, <code>/perception/detections/image</code></td>
+<td>a <code>.pt</code>, <code>.mlpackage</code> or <code>.engine</code> model; needs the <code>ml</code> environment</td>
+</tr>
+<tr>
+<td><code>aav_yolo</code>: <code>stop_sign_watcher</code></td>
+<td><code>/perception/detections</code></td>
+<td><code>/perception/stop</code></td>
+<td>twist_mux's stop-sign lock, priority 30</td>
+</tr>
+<tr>
+<td><code>aav_object_detection</code>: <code>radar_clusters</code></td>
+<td><code>/radar/points</code></td>
+<td><code>/radar/clusters</code>, <code>/radar/cluster_boxes</code></td>
+<td>DBSCAN; the 2025-26 filters and ICP are built, not launched</td>
+</tr>
+<tr>
+<td><code>aav_lane_geometry</code>: <code>control_interface</code></td>
+<td><code>/lane_geometry</code></td>
+<td><code>/cmd_vel/ai</code></td>
+<td>the lane finder that makes <code>/lane_geometry</code> is missing</td>
+</tr>
+</tbody>
+</table></div>
+</section>
 <section class="card"><h2 id="backends">Backends</h2>
 <p>Each backend reads <code>/ego/actuator_cmd</code> and reports the car's speed on <code>/vehicle/odom</code>.
 Only one runs at a time.</p>
@@ -387,6 +453,30 @@ Only one runs at a time.</p>
 </tbody>
 </table></div>
 </section>
+<section class="card"><h2 id="bench-mode">Bench mode</h2>
+<p><a href="bench.html">Bench mode</a> runs the car's software with these stand-ins for the hardware.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Stands in for</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_spine_sim</code>: <code>spine_sim</code></td>
+<td>the spine board and the actuators</td>
+<td>answers spine_bridge's CAN frames with spine-core's own logic; publishes <code>/bench/truth</code></td>
+</tr>
+<tr>
+<td><code>aav_bench</code></td>
+<td>the IMU, GPS, battery and camera drivers</td>
+<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>; the world is <code>config/bench.yaml</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
 <section class="card"><h2 id="interfaces-and-bringup">Interfaces and bringup</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -402,7 +492,7 @@ Only one runs at a time.</p>
 </tr>
 <tr>
 <td><code>aav_bringup</code></td>
-<td>the profiles <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code>; the machine files <code>orin</code>, <code>motor_pi</code>, <code>laptop</code>, <code>all</code>; <code>rviz/drive.rviz</code></td>
+<td>the profiles <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code>, <code>bench</code>; <code>perception.launch.py</code>; the machine files <code>orin</code>, <code>motor_pi</code>, <code>laptop</code>, <code>all</code>; <code>rviz/drive.rviz</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -426,12 +516,42 @@ Only one runs at a time.</p>
 <tr>
 <td><code>spine/crates/spine-core</code></td>
 <td>the spine's logic in Rust: modes, arming, the 200 ms watchdog, the speed loop, the encoder</td>
-<td><span class="badge b-works">works</span> 47 tests</td>
+<td><span class="badge b-works">works</span> 48 tests, and the bench</td>
 </tr>
 <tr>
-<td>the spine's board code</td>
-<td>the microcontroller program around <code>spine-core</code></td>
-<td><span class="badge b-missing">missing</span></td>
+<td><code>spine/crates/aav-inputs</code></td>
+<td>debounced switches, an e-stop that trips at once, counting with a lockout</td>
+<td><span class="badge b-works">works</span> 9 tests</td>
+</tr>
+<tr>
+<td><code>spine/crates/jrk-g2</code></td>
+<td>the Pololu Jrk G2 (steering, brake) over I2C</td>
+<td><span class="badge b-works">works</span> 14 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/crates/ad5311</code></td>
+<td>the throttle DAC over I2C</td>
+<td><span class="badge b-works">works</span> 10 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/crates/pca9555</code></td>
+<td>the I/O expander (direction) over I2C</td>
+<td><span class="badge b-works">works</span> 6 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/crates/ibus</code></td>
+<td>the FlySky RC receiver's protocol</td>
+<td><span class="badge b-works">works</span> 24 tests</td>
+</tr>
+<tr>
+<td><code>spine/crates/spine-board</code></td>
+<td>the glue: spine-core's outputs to the devices, the devices to its inputs, and the <code>Board</code> trait</td>
+<td><span class="badge b-works">works</span> 44 tests, against mocks</td>
+</tr>
+<tr>
+<td>the spine's board program</td>
+<td>the program for the chosen chip: it implements <code>Board</code></td>
+<td><span class="badge b-missing">missing</span> waits on the chip (Q10-Q13)</td>
 </tr>
 <tr>
 <td><code>legacy/aav_umod_esp32</code></td>
@@ -469,8 +589,8 @@ Only one runs at a time.</p>
 <td>the old Pi's start-up scripts</td>
 </tr>
 <tr>
-<td><code>src/hud/maincar</code></td>
-<td>its ROS back end. It still listens to the 2025-26 topic names; its <code>PROVENANCE.md</code> has the port plan</td>
+<td><code>src/hud/aav_hud</code></td>
+<td>its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints. <a href="hud.html">HUD</a> has what the app still needs</td>
 </tr>
 </tbody>
 </table></div>

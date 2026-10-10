@@ -7,7 +7,7 @@
 <!-- Generated from docs/run.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Run it on a Mac or Linux</h1>
-<div class="meta">3 min read · 8 sections</div></header>
+<div class="meta">4 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a class="here" href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -163,6 +165,22 @@ model, so like the car, it can't turn on the spot.</p>
 <tr>
 <td><code>pixi run sim</code></td>
 <td>Gazebo instead of the turtle (<a href="simulation.html">Simulation</a>)</td>
+</tr>
+<tr>
+<td><code>pixi run bench</code></td>
+<td>the real car's software, with stand-ins for the hardware (<a href="bench.html">Bench mode</a>)</td>
+</tr>
+<tr>
+<td><code>pixi run bench-check</code></td>
+<td>starts the bench and tests the whole graph: about 2 minutes</td>
+</tr>
+<tr>
+<td><code>pixi run get-models</code>, then <code>pixi run detect picture:=src/perception/aav_yolo/test/stop_sign.jpg</code></td>
+<td>YOLO finds a stop sign in a picture (<a href="perception.html">Perception</a>)</td>
+</tr>
+<tr>
+<td><code>pixi run graph-picture</code></td>
+<td>saves the running graph as a picture</td>
 </tr>
 <tr>
 <td><code>pixi run rviz</code></td>

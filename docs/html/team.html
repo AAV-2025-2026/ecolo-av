@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -148,7 +150,7 @@ files you'll work in, and the open questions you own. Everyone starts with
 </tr>
 <tr>
 <td>First tasks</td>
-<td>1. Choose the microcontroller and the board (Q10–Q13). 2. Write the board code around <code>spine-core</code> (missing today). 3. Bench-test it with a USB-CAN adapter and <code>candump</code>: the watchdog, arming, limits. 4. Agree the frame map with ROS (<code>aav_spine</code>)</td>
+<td>1. Choose the microcontroller and the board (Q10–Q13). 2. Write the board program: it implements <code>spine-board</code>'s <code>Board</code> trait; the drivers and glue are written. 3. Bench-test it with a USB-CAN adapter and <code>candump</code>: the watchdog, arming, limits. 4. Agree the frame map with ROS (<code>aav_spine</code>). Until then, <a href="bench.html">Bench mode</a> runs <code>spine-core</code> on a laptop</td>
 </tr>
 <tr>
 <td>Files</td>

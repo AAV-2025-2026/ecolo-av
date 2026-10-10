@@ -67,6 +67,10 @@ keyboard → `/cmd_vel/remote` → twist_mux → ego → `/ego/actuator_cmd` →
 | `pixi run check` | compares the running graph with our contract (`pixi run check sim` for Gazebo) |
 | `pixi run view` | the car model in RViz |
 | `pixi run sim` | Gazebo instead of the turtle ([Simulation](simulation.md)) |
+| `pixi run bench` | the real car's software, with stand-ins for the hardware ([Bench mode](bench.md)) |
+| `pixi run bench-check` | starts the bench and tests the whole graph: about 2 minutes |
+| `pixi run get-models`, then `pixi run detect picture:=src/perception/aav_yolo/test/stop_sign.jpg` | YOLO finds a stop sign in a picture ([Perception](perception.md)) |
+| `pixi run graph-picture` | saves the running graph as a picture |
 | `pixi run rviz` | RViz with the driving layout |
 | `pixi run estop`, `pixi run estop-clear` | stop every driver; let them go again |
 | `pixi run doctor` | can this computer join the car's network? What to fix |

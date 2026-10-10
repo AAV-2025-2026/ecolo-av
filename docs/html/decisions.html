@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">11 min read · 8 sections</div></header>
+<div class="meta">13 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -261,6 +263,22 @@ answer.</p>
 <tr>
 <td>Firmware and hardware drivers in Rust, not C or C++, even where the ROS nodes stay in Python. The 2025-26 C++ keeps running until each board's Rust version replaces it</td>
 <td>Ben: see <a href="rust-firmware.html">Rust on the hardware</a></td>
+</tr>
+<tr>
+<td>Bring perception in now, not next year: the YOLO detector, the camera calibrations, radar clustering, lane keeping</td>
+<td>Ben: "Lets merge in all of this too"</td>
+</tr>
+<tr>
+<td>Flesh out the whole graph down to the sensors, and stub in what the hardware and firmware don't have yet: bench mode</td>
+<td>Ben: "get as much done as we can and stub in the rest"</td>
+</tr>
+<tr>
+<td>PyTorch and YOLO live in a separate <code>ml</code> environment, so the default one stays small</td>
+<td>a technical choice: see <a href="perception.html">Perception</a></td>
+</tr>
+<tr>
+<td>Camera images are subscribed reliably, not best effort</td>
+<td>measured on the Mac: best effort lost every image</td>
 </tr>
 </tbody>
 </table></div>
@@ -525,6 +543,26 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>A <code>vendor/</code> folder</td>
 <td>keep downloaded source out of git, with a list to fetch it again</td>
+</tr>
+<tr>
+<td>Stop signs as a twist_mux lock</td>
+<td>priority 30: it holds Nav2 and the AI slot, never a person or a test script; 4 s stop, then 10 s to drive past. Built and working on the bench (Proposed)</td>
+</tr>
+<tr>
+<td>The steering on an e-stop</td>
+<td>hold where it is (<code>spine-core</code> today), or centre it (the 2025-26 firmware)</td>
+</tr>
+<tr>
+<td>The brake after boot</td>
+<td><code>idle_brake</code> 0 lets it go once the e-stop clears; the old firmware kept it on</td>
+</tr>
+<tr>
+<td>The RC gear switch's brake position</td>
+<td>today it means "speed zero"; a brake field in <code>RcInput</code> would bring back the old full brake</td>
+</tr>
+<tr>
+<td>The remaining renames</td>
+<td><code>yahboom_imu_cpp</code>, <code>ti_ros2_driver</code>, <code>battery_monitor</code>: <a href="conventions.html">Conventions</a></td>
 </tr>
 </tbody>
 </table></div></section>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">4 min read · 4 sections</div></header>
+<div class="meta">5 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -36,8 +38,10 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#each-box-in-the-picture">Each box in the picture</a><a href="#builds-and-tests">Builds and tests</a><a href="#is-it-all-on-jazzy">Is it all on Jazzy?</a><a href="#next">Next</a></nav>
-<div class="lead"><p>Where things stand on 10 October 2026. "Works" means it ran under ROS 2 Jazzy through
-Pixi: on oirp-spss (Linux), and since 10 October on Ben's Mac too. "Untested" means the
+<div class="lead"><p>Where things stand on the evening of 10 October 2026. "Works" means it ran under ROS 2
+Jazzy through Pixi: on oirp-spss (Linux), and since 10 October on Ben's Mac too. "On the
+bench" means <a href="bench.html">Bench mode</a>: the car's own software, with stand-ins for the
+hardware. "Untested" means the
 code and its config exist, but it hasn't run yet. The plan and the work left are in
 <a href="work.html">Work</a>.</p></div>
 <section class="card"><h2 id="each-box-in-the-picture">Each box in the picture</h2>
@@ -73,12 +77,12 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td><code>ekf_local</code></td>
 <td>robot_localization</td>
-<td><span class="badge b-works">works</span> in the turtle run</td>
+<td><span class="badge b-works">works</span> in the turtle run and on the bench</td>
 </tr>
 <tr>
 <td><code>ekf_global</code>, <code>navsat_transform</code></td>
 <td>robot_localization</td>
-<td><span class="badge b-works">works</span> in Gazebo: parked, it stays within 0.2 m</td>
+<td><span class="badge b-works">works</span> in Gazebo: parked, it stays within 0.2 m. On the bench: 0.03-0.3 m from the truth</td>
 </tr>
 <tr>
 <td>Joystick</td>
@@ -93,12 +97,12 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Scripted</td>
 <td><code>aav_scripted</code></td>
-<td><span class="badge b-works">works</span> in the turtle run: 9.0 m in 12 s on a Mac, 10 Oct</td>
+<td><span class="badge b-works">works</span> turtle and the bench</td>
 </tr>
 <tr>
 <td>Nav2</td>
 <td><code>aav_navigation</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached</td>
+<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign</td>
 </tr>
 <tr>
 <td>twist_mux</td>
@@ -123,7 +127,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Real car</td>
 <td><code>aav_spine</code></td>
-<td><span class="badge b-untested">untested</span> unit-tested; no spine yet</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>: arming, driving, both e-stops</td>
 </tr>
 <tr>
 <td>Today's car</td>
@@ -133,12 +137,47 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Spine firmware logic</td>
 <td><code>firmware/spine/crates/spine-core</code></td>
-<td><span class="badge b-works">works</span> 47 tests</td>
+<td><span class="badge b-works">works</span> 48 tests, and on the bench</td>
 </tr>
 <tr>
-<td>Spine board code (ESP32)</td>
+<td>Spine device drivers and glue</td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>spine-board</code></td>
+<td><span class="badge b-works">works</span> 98 tests, against mocks</td>
+</tr>
+<tr>
+<td>Spine board program</td>
 <td></td>
-<td><span class="badge b-missing">missing</span></td>
+<td><span class="badge b-missing">missing</span> waits on the chip</td>
+</tr>
+<tr>
+<td>Bench mode</td>
+<td><code>aav_spine_sim</code>, <code>aav_bench</code></td>
+<td><span class="badge b-works">works</span> <code>pixi run bench-check</code>: 7 of 7</td>
+</tr>
+<tr>
+<td>Camera</td>
+<td><code>usb_cam</code> (<code>cameras.launch.py</code>)</td>
+<td><span class="badge b-untested">untested</span> Linux only; the models are Q22</td>
+</tr>
+<tr>
+<td>Stop signs</td>
+<td><code>aav_yolo</code></td>
+<td><span class="badge b-works">works</span> on the bench, with the stock YOLO model</td>
+</tr>
+<tr>
+<td>Lane keeping</td>
+<td><code>aav_lane_geometry</code></td>
+<td><span class="badge b-works">works</span> on a pretend lane; the lane finder is <span class="badge b-missing">missing</span></td>
+</tr>
+<tr>
+<td>Radar clustering</td>
+<td><code>aav_object_detection</code></td>
+<td><span class="badge b-works">works</span> on the pretend radar</td>
+</tr>
+<tr>
+<td>HUD back end</td>
+<td><code>aav_hud</code></td>
+<td><span class="badge b-works">works</span> on the bench; the app needs small changes</td>
 </tr>
 <tr>
 <td>CARLA</td>
@@ -146,7 +185,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-stub">stub</span> next year</td>
 </tr>
 <tr>
-<td>Lidar, cameras, AI</td>
+<td>Lidar</td>
 <td></td>
 <td><span class="badge b-later">later</span></td>
 </tr>
@@ -163,16 +202,20 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </thead>
 <tbody>
 <tr>
-<td><code>colcon build</code>, all 19 packages, Jazzy</td>
-<td><span class="badge b-works">works</span> 11 s on Linux</td>
+<td><code>colcon build</code>, all 24 packages, Jazzy</td>
+<td><span class="badge b-works">works</span> 11 s on Linux (19 packages); 15 s on the Mac (24)</td>
 </tr>
 <tr>
 <td><code>pixi run test</code>: build, tests, lint, <code>colcon test</code></td>
-<td><span class="badge b-works">works</span> all pass: Python 47, Rust 47; <code>colcon test</code> 77, 0 failures</td>
+<td><span class="badge b-works">works</span> all pass, 10 Oct: Python 153, Rust 171 and a no_std build for the Pico 2; <code>colcon test</code> 192, 0 failures</td>
 </tr>
 <tr>
-<td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim and replay</td>
+<td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim, replay and bench</td>
 <td><span class="badge b-works">works</span> 0 failures each</td>
+</tr>
+<tr>
+<td><code>pixi run bench-check</code> (and <code>--perception</code>)</td>
+<td><span class="badge b-works">works</span> 7 of 7 on the Mac, 10 Oct</td>
 </tr>
 <tr>
 <td>Sim, headless: drive commands (the keyboard's topic) and Nav2 goals</td>

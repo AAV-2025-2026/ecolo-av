@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perception: cameras, YOLO, stop signs, lanes and radar · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Perception: cameras, YOLO, stop signs, lanes and radar</h1>
+<div class="meta">7 min read · 9 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a class="here" href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="firmware.html">Firmware</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-chain">The chain</a><a href="#the-packages">The packages</a><a href="#stop-signs">Stop signs</a><a href="#models">Models</a><a href="#where-it-runs">Where it runs</a><a href="#lane-keeping">Lane keeping</a><a href="#radar-clustering">Radar clustering</a><a href="#on-the-car">On the car</a><a href="#still-to-do">Still to do</a></nav>
+<div class="lead"><p>What the car sees, and what it does about it. All of it runs on the bench today. On the
+car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).</p></div>
+<section class="card"><h2 id="the-chain">The chain</h2>
+<pre class="highlight"><code>camera ─► yolo_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop
+                                                                    (a lock on twist_mux)
+lane finder (missing) ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai ─► twist_mux
+radar ─► /radar/points ─► radar_clusters ─► /radar/clusters, /radar/cluster_boxes</code></pre>
+<p><img alt="What the bench camera shows YOLO, about 5 m from the stop sign" src="../img/bench-stop-sign.png" /></p>
+<p>That's the bench camera's picture, with YOLO's box drawn on: "stop sign", 0.90.</p>
+</section>
+<section class="card"><h2 id="the-packages">The packages</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>From</th>
+<th>Does</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_yolo</code></td>
+<td>2024-25 <code>camera_ros2_ws</code> (<code>yolo_ros2</code>)</td>
+<td>the detector: camera images in, <code>vision_msgs</code> detections out; and the stop-sign watcher</td>
+<td><span class="badge b-works">works</span> on the bench, with the stock model</td>
+</tr>
+<tr>
+<td><code>aav_object_detection</code></td>
+<td>2025-26 <code>Nav_Radar</code> (<code>object_detection</code>)</td>
+<td>DBSCAN groups the radar's points into objects, with a box round each</td>
+<td><span class="badge b-works">works</span> on the pretend radar</td>
+</tr>
+<tr>
+<td><code>aav_lane_geometry</code></td>
+<td>2025-26 <code>Lane_Detection_ROS2</code></td>
+<td>lane keeping's steering half, as a driver on <code>/cmd_vel/ai</code></td>
+<td><span class="badge b-works">works</span> on a pretend lane. The line finder is <span class="badge b-missing">missing</span></td>
+</tr>
+<tr>
+<td><code>aav_sensors</code> <code>cameras.launch.py</code></td>
+<td>2024-25 <code>cameras</code> (the calibrations)</td>
+<td><code>usb_cam</code> with <code>left.ini</code> and <code>right.ini</code></td>
+<td><span class="badge b-untested">untested</span> Linux only; the camera models are Q22</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="stop-signs">Stop signs</h2>
+<p>The watcher turns the detector's boxes into a lock on twist_mux.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>State</th>
+<th>When</th>
+<th>The lock</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clear</td>
+<td>no stop sign close enough</td>
+<td>off</td>
+</tr>
+<tr>
+<td>Stopping</td>
+<td>a stop sign's box is 72 px tall or more, with a score of 0.5 or more</td>
+<td>on, for 4 s: about 1 s to stop, then a 3 s wait</td>
+</tr>
+<tr>
+<td>Passing</td>
+<td>after the 4 s</td>
+<td>off, and signs are ignored for 10 s, so the car can drive past this one</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The lock</strong> has priority 30. It holds Nav2 (20) and the AI slot (10), and never a
+  person (joystick 100, remote 90) or a test script (50, 40).</li>
+<li><strong>It only stops the car.</strong> It can't make it move.</li>
+<li><strong>It never expires on silence.</strong> If the watcher dies while the lock is on, the car stays
+  stopped.</li>
+<li><strong>On the bench</strong>, Nav2 drove toward the sign at 25 m. The lock came on 4.7 m before it,
+  the car stopped, waited, and went on to its goal 40 m away.</li>
+<li><strong>72 px</strong> suits the bench camera (360 px high): about 3.5 m from the sign. Set
+  <code>min_height_px</code> again for the real camera.</li>
+</ul>
+<p>Last year, a stop sign set off the real e-stop, and the HUD cleared it every half second.
+The lock keeps stop signs away from the e-stop.</p>
+</section>
+<section class="card"><h2 id="models">Models</h2>
+<p>Model files stay out of git, in <code>models/</code>. <code>pixi run get-models</code> downloads the stock
+YOLO11 nano model (5.6 MB, its checksum pinned). It was trained on the COCO dataset, and
+"stop sign" is one of its 80 classes, so we don't need last year's model to start.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Runs on</th>
+<th>Make it with</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.pt</code></td>
+<td>anything, with PyTorch</td>
+<td>the training</td>
+</tr>
+<tr>
+<td><code>.mlpackage</code></td>
+<td>Macs, with Core ML</td>
+<td><code>pixi run -e ml yolo export model=models/yolo11n.pt format=coreml</code></td>
+</tr>
+<tr>
+<td><code>.engine</code></td>
+<td>the Orin, with TensorRT</td>
+<td><code>yolo export model=models/yolo11n.pt format=engine</code>, on the Orin itself</td>
+</tr>
+</tbody>
+</table></div>
+<p>The 2024-25 team's own model, <code>best.pt</code>, is in no repo: their code loaded it from
+<code>~/Yolo/Capstone/runs/detect/train7/weights/best.pt</code> on someone's computer. Ultralytics'
+models and code are licensed AGPL-3.0.</p>
+</section>
+<section class="card"><h2 id="where-it-runs">Where it runs</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine</th>
+<th>How</th>
+<th>Speed (YOLO11 nano, 640 px)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A Mac with Apple silicon</td>
+<td><code>pixi run -e ml</code>: PyTorch on the GPU through Metal</td>
+<td>7.7 ms a frame; 26 ms in the node, with the picture drawn and sent</td>
+</tr>
+<tr>
+<td>The same Mac, Core ML</td>
+<td>a <code>.mlpackage</code>: Apple's version of TensorRT</td>
+<td>4.3 ms for the model alone, on the GPU</td>
+</tr>
+<tr>
+<td>A Linux PC</td>
+<td><code>pixi run -e ml</code>: PyTorch on the CPU (CUDA builds later)</td>
+<td>not measured</td>
+</tr>
+<tr>
+<td>The Orin, on JetPack 7.2</td>
+<td>JetPack's CUDA 13.2.1 and TensorRT 10.16.2, not Pixi's</td>
+<td>not yet</td>
+</tr>
+</tbody>
+</table></div>
+<p>The detector runs as <code>python3 -m aav_yolo.detector</code>, so it uses the <code>python3</code> of the
+environment that starts it: the <code>ml</code> environment's PyTorch on a laptop, JetPack's on the
+Orin.</p>
+<h3 id="the-ml-environment">The ml environment</h3>
+<p>A separate Pixi environment, so nobody downloads PyTorch unless they want it: PyTorch
+2.13, Ultralytics 8.4, coremltools 9 (Macs only) and NumPy 2.3.</p>
+<ul>
+<li>Ultralytics' Core ML export needs NumPy 2.3.5 or older, so the environment pins it.</li>
+<li>conda-forge's torchvision has no Metal version of one step (NMS), so
+  <code>PYTORCH_ENABLE_MPS_FALLBACK=1</code> runs that step on the CPU.</li>
+<li><code>YOLO_AUTOINSTALL=false</code>: Ultralytics must never pip-install into the environment.</li>
+</ul>
+</section>
+<section class="card"><h2 id="lane-keeping">Lane keeping</h2>
+<ul>
+<li><code>control_interface</code> reads <code>/lane_geometry</code> (the lane lines as polynomials, the car's
+  offset and the curvature) and steers with a PID through five states (keep, change,
+  committed, stopping, resuming).</li>
+<li>It publishes on <code>/cmd_vel/ai</code>, the mux's slot for a learned driver. Every other driver
+  outranks it.</li>
+<li>Its base speed is 2 m/s; ego caps it at the car's 1 m/s.</li>
+<li><span class="badge b-missing">missing</span> <strong>The line finder</strong>: whatever turns the camera's picture into
+  <code>/lane_geometry</code>. It isn't in any repo. Until then, <code>fake_lane_geometry_pub</code> stands in
+  (<code>bench.launch.py lane:=true</code>).</li>
+</ul>
+</section>
+<section class="card"><h2 id="radar-clustering">Radar clustering</h2>
+<ul>
+<li><code>radar_clusters</code> runs DBSCAN on <code>/radar/points</code>. Points within 0.8 m join a cluster,
+  and a cluster needs 15 points (5 on the bench).</li>
+<li>It publishes the clustered points, coloured, and a box round each cluster, for RViz.</li>
+<li>The package's other programs (filters, ICP, an OctoMap) are the 2025-26 team's demos,
+  built but not launched.</li>
+<li><span class="badge b-later">later</span> Next: the radar's points into the local costmap (the ObstacleLayer, written and
+  switched off) and <code>collision_monitor</code>.</li>
+</ul>
+</section>
+<section class="card"><h2 id="on-the-car">On the car</h2>
+<p><code>aav_bringup perception.launch.py</code> starts the camera, the detector, the watcher and the
+radar clustering, next to <code>car.launch.py</code>, on the Orin. When <code>car.launch.py</code> next changes,
+they become parts in its machine files.</p>
+</section>
+<section class="card"><h2 id="still-to-do">Still to do</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Waits on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Find <code>best.pt</code> and the training pictures</td>
+<td>the 2024-25 team</td>
+</tr>
+<tr>
+<td>Back up the Orin: the 2025-26 detector lives only there</td>
+<td>before any reflash</td>
+</tr>
+<tr>
+<td>The line finder</td>
+<td>someone: classic OpenCV, or a model</td>
+</tr>
+<tr>
+<td>The cameras' models and udev names</td>
+<td>Q22</td>
+</tr>
+<tr>
+<td><code>min_height_px</code> for the real camera</td>
+<td>the cameras</td>
+</tr>
+<tr>
+<td>TensorRT on the Orin</td>
+<td>the reflash (Q24)</td>
+</tr>
+<tr>
+<td>The radar into the costmap</td>
+<td>the ObstacleLayer settings</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="costmaps.html"><small>Previous</small>← Costmaps</a>
+<a class="next" href="older-code.html"><small>Next</small>Older code →</a></nav>
+</main>
+<footer>Source: <code>docs/perception.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

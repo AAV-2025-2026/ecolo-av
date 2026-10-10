@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">3 min read · 4 sections</div></header>
+<div class="meta">4 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -35,10 +37,10 @@
 <a href="car_measurements.html">Car numbers</a>
 <a class="here" href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-it-is">What it is</a><a href="#how-it-would-fit-the-new-graph">How it would fit the new graph</a><a href="#options-for-the-port">Options for the port</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
-<div class="lead"><p>The 2025-26 team built a touchscreen app for the car. It is copied in unchanged and
-<strong>not yet connected to the new stack</strong>: it still listens to the 2025-26 topic names, and
-its speed and GPS only ever came from mock publishers.</p></div>
+<nav class="toc"><span>On this page:</span><a href="#what-it-is">What it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#run-it">Run it</a><a href="#what-the-app-still-needs">What the app still needs</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
+<div class="lead"><p>The 2025-26 team built a touchscreen app for the car. Its back end, <code>aav_hud</code>, is ported
+to our topics (10 October): it shows real data from the graph, and a locked route drives
+the car through Nav2. The app itself (Flutter) still needs a few small changes.</p></div>
 <section class="card"><h2 id="what-it-is">What it is</h2>
 <p>Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26, two
 800x480 screens):</p>
@@ -58,8 +60,8 @@ its speed and GPS only ever came from mock publishers.</p></div>
 </tr>
 <tr>
 <td>Back end</td>
-<td><code>src/hud/maincar/</code> (ROS 2 Python node + Flask)</td>
-<td>A ROS node that subscribes to car topics and pushes them to the front end over Socket.IO (port 5000), and publishes the chosen destination and route.</td>
+<td><code>src/hud/aav_hud/</code> (ROS 2 Python node + Flask)</td>
+<td><code>hud_server</code>: reads the car's topics and pushes them to the app over Socket.IO (port 5000); sends a locked route to Nav2.</td>
 </tr>
 <tr>
 <td>Routing</td>
@@ -68,52 +70,163 @@ its speed and GPS only ever came from mock publishers.</p></div>
 </tr>
 </tbody>
 </table></div>
-<p><code>hud/scripts/*.sh</code> are the systemd boot scripts the old Pi ran. They hard-code the old
-user's home paths.</p>
 </section>
-<section class="card"><h2 id="how-it-would-fit-the-new-graph">How it would fit the new graph</h2>
-<p>The HUD is a reader of TELEMETRY and a source of goals. It is not a driver that steers:</p>
-<ul>
-<li><strong>Reads:</strong><ul>
-<li><code>/vehicle/status</code>: speed, mode, armed, e-stop, faults;</li>
-<li><code>/gps/filtered</code> or <code>/gps/fix</code>: position on the map;</li>
-<li>the feedback of the Nav2 action it started: distance remaining, state.</li>
-</ul>
-</li>
-<li><strong>Starts:</strong> a <code>follow_gps_waypoints</code> goal (<code>nav2_msgs/action/FollowGPSWaypoints</code>). Its
-  points come from the OSRM route between the car and the destination.</li>
-<li><strong>Remote driving (later):</strong> if the HUD ever drives, it publishes on <code>/cmd_vel/remote</code>
-  (priority 90) like any other driver.</li>
-</ul>
-<p>The exact topic changes are listed in <code>src/hud/maincar/PROVENANCE.md</code> under "Port to the
-2026-27 contract".</p>
+<section class="card"><h2 id="what-the-back-end-reads-and-sends">What the back end reads and sends</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/vehicle/status</code></td>
+<td><code>aav_interfaces/msg/VehicleStatus</code></td>
+<td>reads: speed, mode, armed, e-stop, gear, faults</td>
+</tr>
+<tr>
+<td><code>/gps/filtered</code></td>
+<td><code>sensor_msgs/msg/NavSatFix</code></td>
+<td>reads: the car on the map (<code>gps_topic:=/gps/fix</code> for the raw fix)</td>
+</tr>
+<tr>
+<td><code>/perception/stop</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td>reads: the stop-sign alert</td>
+</tr>
+<tr>
+<td><code>/camera/image_raw</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td>reads, only while someone watches the camera page</td>
+</tr>
+<tr>
+<td><code>/follow_gps_waypoints</code></td>
+<td><code>nav2_msgs/action/FollowGPSWaypoints</code></td>
+<td>sends the locked route as GPS waypoints, and shows Nav2's progress</td>
+</tr>
+</tbody>
+</table></div>
+<p>It publishes no topics. The 2025-26 <code>/ui/*</code> and mock topics are gone.</p>
 </section>
-<section class="card"><h2 id="options-for-the-port">Options for the port</h2>
-<ol>
-<li>
-<p><strong>Keep Flask and Flutter, and rewire the node.</strong> Smallest change:</p>
+<section class="card"><h2 id="socketio-events-and-web-routes">Socket.IO events and web routes</h2>
+<p>The app's four events keep their names and keys, so the app works unchanged.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Carries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mock_speed_update</code></td>
+<td>the speed from <code>/vehicle/status</code> (real now, despite the name)</td>
+</tr>
+<tr>
+<td><code>mock_gps_update</code></td>
+<td>latitude and longitude</td>
+</tr>
+<tr>
+<td><code>mock_stop_sign_alert</code></td>
+<td>the stop-sign alert, sent when it changes</td>
+</tr>
+<tr>
+<td><code>nav_state</code></td>
+<td>distance and status, plus the waypoint number and a message</td>
+</tr>
+<tr>
+<td><code>stream_info</code></td>
+<td>the camera stream's addresses</td>
+</tr>
+<tr>
+<td><code>vehicle_status</code> (new)</td>
+<td>mode, armed, e-stop, gear, steering, throttle, brake, faults</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /receive</code></td>
+<td>takes the app's route, and starts the Nav2 goal. 400 for a bad route, 503 when Nav2 isn't running</td>
+</tr>
+<tr>
+<td><code>POST /cancel</code></td>
+<td>cancels the goal</td>
+</tr>
+<tr>
+<td><code>/camera/latest.png</code>, <code>/camera/stream</code></td>
+<td>the camera's pictures</td>
+</tr>
+<tr>
+<td><code>GET /</code></td>
+<td>the latest copy of every event, as JSON</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="run-it">Run it</h2>
+<pre class="highlight"><code class="language-bash">pixi run bench hud:=true                      # with everything else, on the bench
+ros2 launch aav_hud hud.launch.py             # on its own, next to a running profile</code></pre>
 <ul>
-<li>Replace the subscriptions with the topics above.</li>
-<li>Use an action client for the GPS goal.</li>
-<li>Delete the mock publishers.</li>
+<li>It listens on 127.0.0.1 only, by default: a locked route moves the car, so only the
+  HUD's own computer can send one. <code>host:=0.0.0.0</code> opens it to the network.</li>
+<li>On a Mac, AirPlay holds port 5000 for the network, so <code>host:=0.0.0.0</code> fails there.</li>
+<li>86 tests: <code>pixi run test</code> runs them.</li>
 </ul>
-<p>Flask and flask-socketio must come from apt on Ubuntu 24.04 (<code>python3-flask</code>,
- <code>python3-flask-socketio</code>), because 24.04 blocks <code>pip install</code> into the system Python.
-2. <strong>Drop Flask and talk to ROS directly from the browser or Flutter</strong> through
- <code>rosbridge_server</code> (WebSocket, port 9090) or <code>foxglove_bridge</code> (port 8765). That
- removes one process, but the Flutter app needs a ROS client library.</p>
-</li>
-</ol>
-<p>Either way, start with <strong>Foxglove</strong> as the operator's screen while the HUD is ported.
-Foxglove already shows speed, the map, paths and costmaps from <code>foxglove_bridge</code>, which
-<code>car.launch.py</code> starts on port 8765.</p>
+</section>
+<section class="card"><h2 id="what-the-app-still-needs">What the app still needs</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>An e-stop button that publishes <code>/estop</code></td>
+<td>the app has none</td>
+</tr>
+<tr>
+<td>Unlock and Clear send <code>POST /cancel</code></td>
+<td>today they don't stop the car</td>
+</tr>
+<tr>
+<td>Remove two 3 s debug delays in <code>sendRouteToFlask</code></td>
+<td>Lock Route waits 6 s</td>
+</tr>
+<tr>
+<td>The camera page shows <code>/camera/stream</code></td>
+<td>it plays WebRTC from a fixed address</td>
+</tr>
+<tr>
+<td>Rename the <code>mock_*</code> events, in the app and the back end together</td>
+<td>the data is real now</td>
+</tr>
+<tr>
+<td>A screen for the battery and the vehicle status</td>
+<td>the back end could send them</td>
+</tr>
+</tbody>
+</table></div>
+<p>Keep the Flutter app or not: Q29. Meanwhile, <strong>Foxglove</strong> works as the operator's screen:
+<code>foxglove_bridge</code>, on port 8765, shows speed, the map, paths and costmaps.</p>
 </section>
 <section class="card"><h2 id="before-running-it-on-the-car">Before running it on the car</h2>
 <ul>
 <li>The Firebase service-account keys and the GitHub token in the 2025-26 User-Interface
   repository are public. They were not copied here; revoke them (design doc Q34).</li>
-<li>96% of that repository was <code>node_modules</code>, and only the Flutter app and the ROS node
-  were copied.</li>
+<li><code>hud/scripts/flask_bootup.sh</code> still sources the old <code>/home/aavui</code> workspace.</li>
+<li>Waypoints must be inside Nav2's map, and Nav2 slows down at each one.</li>
 </ul></section>
 <nav class="prevnext"><a class="prev" href="car_measurements.html"><small>Previous</small>← Car numbers</a></nav>
 </main>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/work.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Work: what&#x27;s done, and what needs doing</h1>
-<div class="meta">9 min read · 7 sections</div></header>
+<div class="meta">11 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -180,6 +182,10 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <td>10 Oct, on Ben's Mac</td>
 <td>Everything builds and passes on a Mac, after one macOS fix; the turtle, Gazebo, Nav2, the Rust example, the docs and the doctor all run; recording fixed for Macs; these pages</td>
 </tr>
+<tr>
+<td>10 Oct, afternoon</td>
+<td>Perception brought in: YOLO with a stop-sign lock, radar clustering, lane keeping on <code>/cmd_vel/ai</code>; the <code>ml</code> environment (PyTorch, YOLO, Core ML); the HUD's back end on our topics; the spine's device drivers in Rust; bench mode: the whole car graph on a laptop, with the spine's firmware logic on a model car, and <code>pixi run bench-check</code> (7 of 7). Found on the way: a stop that coasted, a scripted drive that stretched, an executor that spun a CPU core, and best-effort cameras that lost every image on a Mac</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -202,7 +208,9 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <h3 id="the-spine-and-can">The spine and CAN</h3>
 <ul>
 <li>Choose the microcontroller, the board and the owner (Q10–Q13).</li>
-<li>Write the board code around <code>spine-core</code>: the pin map, CAN, the encoder, the e-stop input.</li>
+<li>Write the board program around <code>spine-board</code>: it implements the <code>Board</code> trait (the clock, the e-stop pin, the encoder counter, CAN) for the chosen chip. The drivers and the glue are done.</li>
+<li>Decide: the steering on an e-stop (hold, or centre as the old firmware did); the brake after boot; a brake field for the RC gear switch. <a href="firmware.html">Firmware</a> has the details.</li>
+<li>Tune the speed loop on the car: on the bench it lags a ramp by about a second.</li>
 <li>Wire CAN: a transceiver on the Orin (or a USB adapter), 120 Ω at each end (Q14, Q15).</li>
 <li>Calibrate the steering (Q2), the brake (Q3) and the throttle (Q4).</li>
 <li>Still open in the logic: the e-stop frame's counter isn't checked, and what happens when RC releases and when nobody drives.</li>
@@ -226,7 +234,7 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <li>Draw the real test site (Q21) and drive it in Gazebo first.</li>
 <li>Nav2's lookahead (N7): its turn command flips sign about once a second.</li>
 <li>Restart crashed sensor drivers (N3): Nav2 gives up without TF.</li>
-<li>Later: the radar obstacle layer, and the collision monitor.</li>
+<li>Later: the radar obstacle layer, and the collision monitor. The radar's clusters are ready on <code>/radar/clusters</code>.</li>
 </ul>
 <h3 id="drivers-and-teleop">Drivers and teleop</h3>
 <ul>
@@ -234,15 +242,23 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <li>The e-stop button: pick one (not the deadman), and make <code>/estop</code> reach the mux reliably (N2).</li>
 <li>Joystick handover (Q28).</li>
 </ul>
+<h3 id="perception">Perception</h3>
+<ul>
+<li>Find the 2024-25 team's trained <code>best.pt</code>, and back up the 2025-26 detector from the Orin.</li>
+<li>Write the lane finder: the camera's picture into <code>/lane_geometry</code>.</li>
+<li>Identify the cameras (Q22); fill in their udev names; set the stop-sign distance (<code>min_height_px</code>) for the real camera.</li>
+<li>TensorRT on the Orin, after the reflash (Q24).</li>
+</ul>
 <h3 id="the-hud">The HUD</h3>
 <ul>
-<li>Keep the Flutter app or not (Q29). If kept, move its back end (<code>maincar</code>) to the new topics.</li>
+<li>Keep the Flutter app or not (Q29). Its back end, <code>aav_hud</code>, is on the new topics; the app needs the small changes in <a href="hud.html">HUD</a>.</li>
 <li>Its boot scripts still use the old Humble workspace and <code>/home/aavui</code>.</li>
 <li>Its map database and the OSRM map data need a download step, not git.</li>
 </ul>
 <h3 id="simulation">Simulation</h3>
 <ul>
 <li>Look at the Gazebo window and RViz on a Mac, and say what they show.</li>
+<li>Make the bench's model car match the measured car (Q1-Q5), once it's measured.</li>
 <li>CARLA, once it supports Jazzy (Q31).</li>
 </ul>
 </section>
@@ -332,8 +348,8 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <td>to do</td>
 </tr>
 <tr>
-<td>The HUD's camera address differs: 192.168.1.101 in <code>maincar</code>, .118 in the app</td>
-<td>to do</td>
+<td>The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app</td>
+<td>the back end takes it as a parameter now; the app still has its own</td>
 </tr>
 <tr>
 <td><code>car gps:=false</code> still starts the GPS driver when the machine file says <code>gps: true</code></td>

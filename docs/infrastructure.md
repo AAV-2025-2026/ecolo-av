@@ -27,7 +27,7 @@ aav/
   pixi.toml           the environment, and the one-word tasks (pixi run <task>)
   pixi.lock           the exact version of every package: committed, so every laptop matches
   src/                ROS 2 packages (colcon builds these)
-    aav_bringup/        whole-system launch profiles: turtle, sim, car, replay
+    aav_bringup/        whole-system launch profiles: turtle, sim, car, replay, bench
     aav_description/    the car's model (URDF) and vehicle.yaml, the car's measurements
     aav_interfaces/     our own messages and actions
     sensors/            drivers that turn devices into standard messages
@@ -36,14 +36,16 @@ aav/
     mux/                twist_mux: picks one command
     ego/                the virtual car: one command into speed and steering
     backends/           whatever plays the car: the real car, Gazebo, turtlesim, CARLA
-    perception/         parked: lanes, objects, YOLO (next year)
-    hud/                the HUD's web server (maincar)
+    perception/         YOLO and the stop-sign watcher, radar clustering, lane keeping
+    hud/                the HUD's web server (aav_hud)
+    bench/              bench mode: the spine on a laptop, and pretend sensors
   firmware/           microcontroller code (colcon ignores it)
     can/                aav.dbc, the CAN contract, and its test vectors
-    spine/              Rust: spine-core, the spine's logic, with its tests
+    spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers
     legacy/             the 2025-26 ESP32 and Pico code that runs the car today
   hud/                the 2025-26 Flutter app (colcon ignores it)
   examples/           rust-listener: a first ROS node in Rust
+  models/             trained model files, not in git: pixi run get-models
   tools/              scripts: see the table below
   docs/               these pages; docs/history/ keeps the Q&A, Ben's requests and the audits
 ```
@@ -77,6 +79,13 @@ because `pixi.lock` pins them all.
 | `pixi run <task>` | runs a task inside the environment: see the next table |
 | `pixi run <any command>` | runs any command inside it, e.g. `pixi run tools/ros.sh ros2 topic list` |
 | `pixi shell` | a terminal inside it; then `source install/setup.zsh` (Mac) or `setup.bash` (Linux) |
+| `pixi run -e ml <task>` | the same, in the `ml` environment: PyTorch and YOLO on top of everything else |
+
+| Environment | Holds | Who uses it |
+|---|---|---|
+| `default` | ROS 2 Jazzy, Gazebo, Nav2, Rust, the compilers | everyone |
+| `ml` | the default, plus PyTorch, Ultralytics (YOLO) and, on Macs, Core ML tools | whoever runs the detector: `pixi run detect`, `pixi run -e ml bench perception:=true`. Linux PCs and Macs only |
+| `docs` | Markdown and WeasyPrint | `pixi run docs` |
 
 !!! note "Macs only: GNU coreutils"
   On a Mac, macOS's System Integrity Protection deletes `DYLD_LIBRARY_PATH` whenever
@@ -96,15 +105,20 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `turtle` | the stack, with turtlesim as the car |
 | `keyboard` | drive from the keyboard (`--sim` with Gazebo) |
 | `sim` | the stack, with Gazebo as the car (`gui:=false` on a Mac) |
+| `bench` | the car's own software, with stand-ins for the hardware: [Bench mode](bench.md) |
+| `bench-check` | starts the bench and tests the whole graph: contract, drive, e-stops |
 | `gz-window` | Gazebo's window, for a simulator started with `gui:=false` |
 | `car` | the real car: `pixi run car orin` (or `motor_pi`, `laptop`, `all`) |
 | `view` | the car's model in RViz |
 | `rviz` | RViz with the driving layout: map, costmaps, path, car |
 | `graph` | rqt_graph: nodes and topics, live |
+| `graph-picture` | saves the running graph as `docs/img/graph.svg` and `.png` |
 | `check` | the running graph against the contract: `pixi run check sim` |
 | `estop`, `estop-clear` | stop every driver; let them go again |
 | `doctor` | can this computer join the car's ROS network? |
 | `rust-listener` | the Rust example: prints ego's commands |
+| `get-models` | downloads the stock YOLO model into `models/` |
+| `detect` | YOLO on the camera's images (the `ml` environment): `pixi run detect picture:=<file>` |
 | `docs` | rebuilds the docs pages and the PDF |
 
 ## The scripts in tools/
@@ -123,6 +137,9 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `make_map.py` | draws a Nav2 map from a short spec | `pixi run python tools/make_map.py <spec>` |
 | `build_docs.py` | builds the docs pages and the PDF | `pixi run docs` |
 | `progress_mail.py` | emails a red-and-white progress report | see its docstring |
+| `bench_check.py` | starts bench mode and tests the whole graph | `pixi run bench-check` |
+| `graph_picture.py` | draws the running graph, grouped by layer | `pixi run graph-picture` |
+| `get_models.sh` | downloads the stock YOLO model, checksum pinned | `pixi run get-models` |
 | `udev/99-aav.rules` | stable device names on the car (`/dev/aav/imu`, ...) | install on the car's Linux computers |
 
 ## Launch profiles: the same nodes, a different car
@@ -136,6 +153,7 @@ changes.
 | `sim` | `pixi run sim` | Gazebo | the whole stack: both EKFs, `navsat_transform`, Nav2 |
 | `car` | `pixi run car <machine>` | the real car | the parts its machine file switches on |
 | `replay` | `ros2 launch aav_bringup replay.launch.py`, with a bag playing | a recorded drive | localization (and Nav2) on real sensor data |
+| `bench` | `pixi run bench` | a model car, driven by the spine's own firmware logic | the car's whole graph: the spine bridge, both EKFs with GPS, Nav2, and pretend sensors |
 
 ## The computers, and what runs where
 

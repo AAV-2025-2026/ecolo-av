@@ -72,6 +72,10 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | `aav` will become the merger of everything, in one organized project | Ben |
 | Macs get GNU `coreutils` in their Pixi environment, so `colcon test` works on a Mac | a technical fix: see [Your Mac](mac.md) |
 | Firmware and hardware drivers in Rust, not C or C++, even where the ROS nodes stay in Python. The 2025-26 C++ keeps running until each board's Rust version replaces it | Ben: see [Rust on the hardware](rust-firmware.md) |
+| Bring perception in now, not next year: the YOLO detector, the camera calibrations, radar clustering, lane keeping | Ben: "Lets merge in all of this too" |
+| Flesh out the whole graph down to the sensors, and stub in what the hardware and firmware don't have yet: bench mode | Ben: "get as much done as we can and stub in the rest" |
+| PyTorch and YOLO live in a separate `ml` environment, so the default one stays small | a technical choice: see [Perception](perception.md) |
+| Camera images are subscribed reliably, not best effort | measured on the Mac: best effort lost every image |
 
 ## Open questions
 
@@ -146,3 +150,8 @@ From tonight's audits and the Mac work. They're small, but someone has to say ye
 | Nav2's lookahead (N7) | its turn command flips sign about once a second in the sim |
 | Package renames | the inherited packages' new names, in [Conventions](conventions.md) |
 | A `vendor/` folder | keep downloaded source out of git, with a list to fetch it again |
+| Stop signs as a twist_mux lock | priority 30: it holds Nav2 and the AI slot, never a person or a test script; 4 s stop, then 10 s to drive past. Built and working on the bench (Proposed) |
+| The steering on an e-stop | hold where it is (`spine-core` today), or centre it (the 2025-26 firmware) |
+| The brake after boot | `idle_brake` 0 lets it go once the e-stop clears; the old firmware kept it on |
+| The RC gear switch's brake position | today it means "speed zero"; a brake field in `RcInput` would bring back the old full brake |
+| The remaining renames | `yahboom_imu_cpp`, `ti_ros2_driver`, `battery_monitor`: [Conventions](conventions.md) |

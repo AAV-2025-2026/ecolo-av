@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">6 min read · 8 sections</div></header>
+<div class="meta">7 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a class="here" href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -63,7 +65,7 @@ what's done so far.</p></div>
 </tr>
 <tr>
 <td>The spine is already Rust</td>
-<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (47 tests)</td>
+<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (48 tests), and the drivers for its devices</td>
 </tr>
 </tbody>
 </table></div>
@@ -118,14 +120,20 @@ stays on Linux.</p>
 </tr>
 <tr>
 <td>Drivers</td>
-<td>one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver, the W5500 Ethernet chip, the display</td>
-<td>crates written against <code>embedded-hal</code> 1.0 (still to write)</td>
+<td>one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver</td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, written against <code>embedded-hal</code> 1.0. The W5500 and the display: only if the board keeps them</td>
 <td><code>embedded-hal-mock</code>, which plays the chip on a laptop</td>
 </tr>
 <tr>
+<td>Glue</td>
+<td>spine-core's outputs to the devices, the devices to its inputs, in a safe order</td>
+<td><code>spine-board</code>, with a <code>Board</code> trait for what each chip must provide</td>
+<td><code>embedded-hal-mock</code></td>
+</tr>
+<tr>
 <td>Boards</td>
-<td>one small program per board: pins, timers, the framework, then a loop that calls the logic</td>
-<td>one crate per board (still to write)</td>
+<td>one small program per board: pins, timers, the framework, then a loop that calls the glue</td>
+<td>one crate per board, implementing <code>Board</code> (still to write: it waits on the chip)</td>
 <td>on the bench, then on the car</td>
 </tr>
 </tbody>
@@ -208,13 +216,13 @@ it, because each needs its chip's toolchain.</p>
 <tr>
 <td>Pico 2 (RP2350, ARM)</td>
 <td><code>thumbv8m.main-none-eabihf</code></td>
-<td><span class="badge b-works">works</span> <code>spine-core</code> and <code>aav-inputs</code> build for it</td>
+<td><span class="badge b-works">works</span> all seven crates build for it; <code>pixi run test</code> checks it</td>
 <td>its USB drive (UF2), or <code>probe-rs</code></td>
 </tr>
 <tr>
 <td>STM32-class ARM (Cortex-M4F, M7)</td>
 <td><code>thumbv7em-none-eabihf</code></td>
-<td><span class="badge b-works">works</span> the same two crates build for it</td>
+<td><span class="badge b-works">works</span> the crates build for it too</td>
 <td><code>probe-rs</code></td>
 </tr>
 <tr>
@@ -254,13 +262,38 @@ weighing in Q10–Q13.</p>
 <tbody>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames</td>
-<td>47</td>
+<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench)</td>
+<td>48</td>
 </tr>
 <tr>
 <td><code>aav-inputs</code> (10 Oct)</td>
 <td>clean inputs for every board: a <code>Debouncer</code> for switches and buttons, with separate times each way (an e-stop trips at once, and must stay released before it counts), and a <code>Lockout</code> for counting fast signals such as encoder spokes</td>
 <td>9</td>
+</tr>
+<tr>
+<td><code>jrk-g2</code> (10 Oct)</td>
+<td>the Pololu Jrk G2 over I2C: set target, stop, feedback, error flags. Checked against Pololu's guide</td>
+<td>14</td>
+</tr>
+<tr>
+<td><code>ad5311</code> (10 Oct)</td>
+<td>the throttle DAC (an AD5311; TI's DAC101C081 takes the same bytes), capped at 700 of 1023</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>pca9555</code> (10 Oct)</td>
+<td>the 16-bit I/O expander: the direction output</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>ibus</code> (10 Oct)</td>
+<td>the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's <code>RcInput</code></td>
+<td>24</td>
+</tr>
+<tr>
+<td><code>spine-board</code> (10 Oct)</td>
+<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait</td>
+<td>44</td>
 </tr>
 </tbody>
 </table></div>
@@ -289,18 +322,18 @@ Pico 2 and STM32 targets.</p>
 </tr>
 <tr>
 <td>3</td>
-<td>The first driver: the Jrk G2, over I2C, tested with <code>embedded-hal-mock</code></td>
-<td>nothing</td>
+<td>A first board crate on a Pico 2: blink, then the encoder sensors through <code>aav-inputs</code>, then <code>spine-board</code> on real I2C</td>
+<td>a Pico 2 on the bench</td>
 </tr>
 <tr>
 <td>4</td>
-<td>The iBUS receiver parser (the RC override) in <code>spine-core</code></td>
-<td>nothing</td>
+<td>Confirm the calibrations: steering centre and scale, brake range, throttle cap, RC channels</td>
+<td>the car (Q1-Q7)</td>
 </tr>
 <tr>
 <td>5</td>
-<td>A first board crate on a Pico 2: blink, then the encoder sensors through <code>aav-inputs</code></td>
-<td>a Pico 2 on the bench</td>
+<td>Tune the speed loop: on the bench it lags a ramp by about a second</td>
+<td>the car</td>
 </tr>
 </tbody>
 </table></div></section>

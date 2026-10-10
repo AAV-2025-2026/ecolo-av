@@ -81,15 +81,28 @@ Both sides test against the same generated frames. To change a frame:
 | `spine.rs` | the priorities above: `Spine::step(&Inputs) -> Outputs`, about 100 times a second. Its `SpineConfig` holds the limits: 3.0 m/s, ±0.5 rad, 0.6 rad/s; 1.5 m/s² up, 2.5 m/s² down |
 | `protocol.rs` | encodes and decodes the four frames, with the CRC and counter checks |
 | `watchdog.rs` | the 200 ms command watchdog |
-| `speed_loop.rs` | PI speed control into throttle and brake, never both at once |
+| `speed_loop.rs` | PI speed control into throttle and brake, never both at once. A stop brakes until the car is still, then holds |
 | `limits.rs` | the helpers that apply them: `slew()` and `abs()` |
 | `encoder.rs` | quadrature decoding, and speed from the time between counts |
 
 Clean inputs for every board (debounced switches, an e-stop that trips at once, counting
-with a lockout) are in a second crate, `aav-inputs`. The plan for writing all the firmware
-and drivers in Rust is [Rust on the hardware](rust-firmware.md).
+with a lockout) are in a second crate, `aav-inputs`. The drivers for the spine's devices,
+and the glue between them and `spine-core`, are written too (10 October):
 
-The ESP32 board code that calls it is [[missing]]. Hardware facts from today's car:
+| Crate | Drives | Tests |
+|---|---|---|
+| `jrk-g2` | the two Pololu Jrk G2s (steering, brake) over I2C | 14 |
+| `ad5311` | the throttle DAC over I2C | 10 |
+| `pca9555` | the I/O expander: the direction output | 6 |
+| `ibus` | the FlySky RC receiver | 24 |
+| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits | 44 |
+
+On a laptop, [Bench mode](bench.md) runs `spine-core` on the CAN frames from `spine_bridge`,
+driving a model car. The plan for all the firmware in Rust is
+[Rust on the hardware](rust-firmware.md).
+
+The board program for the spine's chip is [[missing]]: it waits on the chip (Q10-Q13).
+Hardware facts from today's car:
 
 | Part | Interface | Today's setting |
 |---|---|---|
@@ -98,7 +111,7 @@ The ESP32 board code that calls it is [[missing]]. Hardware facts from today's c
 | Throttle: 10-bit DAC | I2C 0x0C | capped at 700 of 1023 |
 | Direction | PCA9555 expander, I2C 0x20 | |
 | I2C bus | SDA GPIO 21, SCL GPIO 22 | |
-| RC receiver: FlySky FS-iA6B | iBUS on GPIO 32, 115200 baud | channel 5 override, 2 throttle, 3 steering, 4 mode |
+| RC receiver: FlySky FS-iA6B | iBUS on GPIO 32, 115200 baud | channel 5 override, 2 throttle, 3 steering, 4 mode. Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7) |
 
 ## Today's firmware: firmware/legacy/
 
@@ -117,9 +130,33 @@ Copied unchanged from the 2025-26 team, as the fallback until the spine exists.
   4. **The steering sign is unconfirmed.** Check it with the wheels off the ground.
   5. **The WiFi password was public** in the 2025-26 repositories. Change it.
 
+!!! warning "Found in the 2025-26 ESP32 firmware, while porting its drivers"
+  1. **Steering past full right turns full left.** Stick values from 2001 to 2199 pass its
+     check, then wrap round to full lock the other way (`rc_handler.cpp`).
+  2. **No RC timeout.** If the receiver goes quiet, the last throttle stays on.
+  3. **A Jrk G2 missing at boot is skipped for good**, but the car still drives: throttle,
+     with no brake.
+  4. **Throttle and brake at the same time**, in the RC brake position.
+  5. **The direction can flip with the throttle on.**
+  6. **Stale commands.** Frames from ROS pile up during RC mode, and run when it ends.
+  7. **Latched Jrk errors never stay latched**: reading them after every target clears them.
+  8. **Weak iBUS sync**: frames get lost or misaligned.
+  9. **All 16 expander pins are driven high**, whatever is wired to them.
+  10. **Two throttle scales**: the top third of the RC stick does nothing.
+
+  The Rust drivers fix each of these. Until the spine replaces this firmware, drive today's
+  car with the RC transmitter's switch in reach.
+
 ## Still to decide
 
-The design doc's questions Q10–Q17:
+For the team, from the drivers' port:
+- On an e-stop, the steering holds where it is. The 2025-26 firmware centred it.
+- After boot, `idle_brake` is 0, so the brake lets go once the e-stop clears. The old
+  firmware kept it on.
+- The RC gear switch's "brake" position: `RcInput` has no brake field yet, so it means
+  "speed zero". Add a field if the team wants the old full brake.
+
+And the design doc's questions Q10–Q17:
 - who owns the spine, and which microcontroller;
 - the CAN transceiver and wiring;
 - where the encoder and the e-stop connect;

@@ -34,7 +34,7 @@ files you'll work in, and the open questions you own. Everyone starts with
 |---|---|
 | Read first | [Firmware](firmware.md), then `firmware/can/aav.dbc` and `firmware/spine/crates/spine-core` |
 | Run first | `pixi run test`: its Rust part is the spine logic's 47 tests |
-| First tasks | 1. Choose the microcontroller and the board (Q10–Q13). 2. Write the board code around `spine-core` (missing today). 3. Bench-test it with a USB-CAN adapter and `candump`: the watchdog, arming, limits. 4. Agree the frame map with ROS (`aav_spine`) |
+| First tasks | 1. Choose the microcontroller and the board (Q10–Q13). 2. Write the board program: it implements `spine-board`'s `Board` trait; the drivers and glue are written. 3. Bench-test it with a USB-CAN adapter and `candump`: the watchdog, arming, limits. 4. Agree the frame map with ROS (`aav_spine`). Until then, [Bench mode](bench.md) runs `spine-core` on a laptop |
 | Files | `firmware/can/`, `firmware/spine/`, `src/backends/aav_spine/` |
 | Open questions | Q10–Q17, Q3, Q4, Q6, Q7 |
 

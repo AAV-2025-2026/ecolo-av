@@ -28,6 +28,8 @@ moves the car.**
 | putting the whole thing together | [Infrastructure](infrastructure.md), then [Work](work.md) and [Decisions](decisions.md) |
 | looking for what a package does | [Packages](packages.md) |
 | writing a driver, or drawing a map | [Build a driver](howto-driver.md), [Costmaps](costmaps.md) |
+| testing the car's software without the car | [Bench mode](bench.md) |
+| working on cameras, YOLO, stop signs or lanes | [Perception](perception.md) |
 | bringing in the previous teams' code | [The older code](older-code.md) |
 
 ## Read these, in order

@@ -22,18 +22,18 @@ in its `PROVENANCE.md`.
 | Rust crate | kebab-case | `spine-core` |
 | Docs page | short kebab-case | `how-it-fits.md` |
 
-## Proposed renames
+## Renames
 
-The inherited packages kept their old names. Renaming changes their launch files and
-executables, so it waits for a yes from the team. [[needs-you]]
+The inherited packages kept their old names until someone brought them in. Renaming
+changes their launch files and executables.
 
-| Today | Proposed |
-|---|---|
-| `yahboom_imu_cpp` | `aav_imu_yahboom` |
-| `ti_ros2_driver` | `aav_radar_ti` |
-| `battery_monitor` | `aav_battery_victron` |
-| `maincar` (the HUD's web server) | `aav_hud` |
-| `lane_geometry`, `object_detection`, `yolo_ros2` (parked) | `aav_lane_geometry`, `aav_object_detection`, `aav_yolo`, when they're un-parked |
+| Was | Now | When |
+|---|---|---|
+| `maincar` (the HUD's web server) | `aav_hud` | done, 10 October |
+| `lane_geometry`, `object_detection`, `yolo_ros2` | `aav_lane_geometry`, `aav_object_detection`, `aav_yolo` | done, 10 October, when perception came in |
+| `yahboom_imu_cpp` | `aav_imu_yahboom` | proposed. Ben's Rust twin already uses the name [[needs-you]] |
+| `ti_ros2_driver` | `aav_radar_ti` | proposed [[needs-you]] |
+| `battery_monitor` | `aav_battery_victron` | proposed [[needs-you]] |
 
 ## How a package is laid out
 

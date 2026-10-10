@@ -7,7 +7,7 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">7 min read · 7 sections</div></header>
+<div class="meta">9 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a class="here" href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -229,7 +231,7 @@ rejected.</p>
 </tr>
 <tr>
 <td><code>speed_loop.rs</code></td>
-<td>PI speed control into throttle and brake, never both at once</td>
+<td>PI speed control into throttle and brake, never both at once. A stop brakes until the car is still, then holds</td>
 </tr>
 <tr>
 <td><code>limits.rs</code></td>
@@ -242,9 +244,49 @@ rejected.</p>
 </tbody>
 </table></div>
 <p>Clean inputs for every board (debounced switches, an e-stop that trips at once, counting
-with a lockout) are in a second crate, <code>aav-inputs</code>. The plan for writing all the firmware
-and drivers in Rust is <a href="rust-firmware.html">Rust on the hardware</a>.</p>
-<p>The ESP32 board code that calls it is <span class="badge b-missing">missing</span>. Hardware facts from today's car:</p>
+with a lockout) are in a second crate, <code>aav-inputs</code>. The drivers for the spine's devices,
+and the glue between them and <code>spine-core</code>, are written too (10 October):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Crate</th>
+<th>Drives</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>jrk-g2</code></td>
+<td>the two Pololu Jrk G2s (steering, brake) over I2C</td>
+<td>14</td>
+</tr>
+<tr>
+<td><code>ad5311</code></td>
+<td>the throttle DAC over I2C</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>pca9555</code></td>
+<td>the I/O expander: the direction output</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>ibus</code></td>
+<td>the FlySky RC receiver</td>
+<td>24</td>
+</tr>
+<tr>
+<td><code>spine-board</code></td>
+<td>all of them, from <code>spine-core</code>'s outputs, in a safe order; their errors become fault bits</td>
+<td>44</td>
+</tr>
+</tbody>
+</table></div>
+<p>On a laptop, <a href="bench.html">Bench mode</a> runs <code>spine-core</code> on the CAN frames from <code>spine_bridge</code>,
+driving a model car. The plan for all the firmware in Rust is
+<a href="rust-firmware.html">Rust on the hardware</a>.</p>
+<p>The board program for the spine's chip is <span class="badge b-missing">missing</span>: it waits on the chip (Q10-Q13).
+Hardware facts from today's car:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -282,7 +324,7 @@ and drivers in Rust is <a href="rust-firmware.html">Rust on the hardware</a>.</p
 <tr>
 <td>RC receiver: FlySky FS-iA6B</td>
 <td>iBUS on GPIO 32, 115200 baud</td>
-<td>channel 5 override, 2 throttle, 3 steering, 4 mode</td>
+<td>channel 5 override, 2 throttle, 3 steering, 4 mode. Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7)</td>
 </tr>
 </tbody>
 </table></div>
@@ -325,9 +367,36 @@ and drivers in Rust is <a href="rust-firmware.html">Rust on the hardware</a>.</p
 <li><strong>The WiFi password was public</strong> in the 2025-26 repositories. Change it.</li>
 </ol>
 </div>
+<div class="admonition warning">
+<p class="admonition-title">Found in the 2025-26 ESP32 firmware, while porting its drivers</p>
+<ol>
+<li><strong>Steering past full right turns full left.</strong> Stick values from 2001 to 2199 pass its
+   check, then wrap round to full lock the other way (<code>rc_handler.cpp</code>).</li>
+<li><strong>No RC timeout.</strong> If the receiver goes quiet, the last throttle stays on.</li>
+<li><strong>A Jrk G2 missing at boot is skipped for good</strong>, but the car still drives: throttle,
+   with no brake.</li>
+<li><strong>Throttle and brake at the same time</strong>, in the RC brake position.</li>
+<li><strong>The direction can flip with the throttle on.</strong></li>
+<li><strong>Stale commands.</strong> Frames from ROS pile up during RC mode, and run when it ends.</li>
+<li><strong>Latched Jrk errors never stay latched</strong>: reading them after every target clears them.</li>
+<li><strong>Weak iBUS sync</strong>: frames get lost or misaligned.</li>
+<li><strong>All 16 expander pins are driven high</strong>, whatever is wired to them.</li>
+<li><strong>Two throttle scales</strong>: the top third of the RC stick does nothing.</li>
+</ol>
+<p>The Rust drivers fix each of these. Until the spine replaces this firmware, drive today's
+car with the RC transmitter's switch in reach.</p>
+</div>
 </section>
 <section class="card"><h2 id="still-to-decide">Still to decide</h2>
-<p>The design doc's questions Q10–Q17:</p>
+<p>For the team, from the drivers' port:</p>
+<ul>
+<li>On an e-stop, the steering holds where it is. The 2025-26 firmware centred it.</li>
+<li>After boot, <code>idle_brake</code> is 0, so the brake lets go once the e-stop clears. The old
+  firmware kept it on.</li>
+<li>The RC gear switch's "brake" position: <code>RcInput</code> has no brake field yet, so it means
+  "speed zero". Add a field if the team wants the old full brake.</li>
+</ul>
+<p>And the design doc's questions Q10–Q17:</p>
 <ul>
 <li>who owns the spine, and which microcontroller;</li>
 <li>the CAN transceiver and wiring;</li>
@@ -335,7 +404,7 @@ and drivers in Rust is <a href="rust-firmware.html">Rust on the hardware</a>.</p
 <li>steering feedback;</li>
 <li>what the actuators do when nobody is driving.</li>
 </ul></section>
-<nav class="prevnext"><a class="prev" href="simulation.html"><small>Previous</small>← Simulation</a>
+<nav class="prevnext"><a class="prev" href="bench.html"><small>Previous</small>← Bench mode</a>
 <a class="next" href="rust-firmware.html"><small>Next</small>Rust firmware →</a></nav>
 </main>
 <footer>Source: <code>docs/firmware.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

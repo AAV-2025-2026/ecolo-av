@@ -7,7 +7,7 @@
 <!-- Generated from docs/overview.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Overview: everything in aav</h1>
-<div class="meta">9 min read · 7 sections</div></header>
+<div class="meta">10 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a class="here" href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -38,7 +40,7 @@
 <nav class="toc"><span>On this page:</span><a href="#in-numbers">In numbers</a><a href="#the-folders">The folders</a><a href="#our-own-code">Our own code</a><a href="#stock-ros-packages-and-plugins-we-use">Stock ROS packages and plugins we use</a><a href="#code-from-the-previous-teams">Code from the previous teams</a><a href="#in-progress-outside-this-copy">In progress, outside this copy</a><a href="#whats-missing">What&#x27;s missing</a></nav>
 <div class="lead"><p>The whole project on one page: what's in the repo, the stock ROS packages and plugins it
 uses, the code it took from the previous teams, and what's still missing. Each section
-links to the page with the details. As of 10 October 2026.</p></div>
+links to the page with the details. As of the evening of 10 October 2026.</p></div>
 <section class="card"><h2 id="in-numbers">In numbers</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -50,11 +52,11 @@ links to the page with the details. As of 10 October 2026.</p></div>
 <tbody>
 <tr>
 <td>ROS packages that build</td>
-<td>19: 10 in Python, 9 in CMake, plus 3 parked until next year</td>
+<td>24: 12 in Python, 12 in CMake. None parked</td>
 </tr>
 <tr>
 <td>Rust firmware crates</td>
-<td>2: <code>spine-core</code> and <code>aav-inputs</code></td>
+<td>7: <code>spine-core</code>, <code>aav-inputs</code>, and five device drivers and glue</td>
 </tr>
 <tr>
 <td>The previous team's firmware boards, in C++</td>
@@ -62,7 +64,7 @@ links to the page with the details. As of 10 October 2026.</p></div>
 </tr>
 <tr>
 <td>Launch profiles</td>
-<td>4: <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code></td>
+<td>5: <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code>, <code>bench</code></td>
 </tr>
 <tr>
 <td>Computers in the machine files</td>
@@ -74,11 +76,11 @@ links to the page with the details. As of 10 October 2026.</p></div>
 </tr>
 <tr>
 <td>Tests</td>
-<td>47 in Python and 56 in Rust without ROS; 77 in <code>colcon test</code></td>
+<td>153 in Python and 171 in Rust without ROS; 192 in <code>colcon test</code>; 7 bench checks</td>
 </tr>
 <tr>
 <td>Tools</td>
-<td>13 scripts and 17 <code>pixi run</code> tasks</td>
+<td>15 scripts and 22 <code>pixi run</code> tasks</td>
 </tr>
 </tbody>
 </table></div>
@@ -205,12 +207,22 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 </tr>
 <tr>
 <td><code>aav_bringup</code></td>
-<td>the four profiles, the machine files, the RViz layout</td>
+<td>the five profiles, perception on the car, the machine files, the RViz layout</td>
 <td>bringup</td>
+</tr>
+<tr>
+<td><code>aav_spine_sim</code>, <code>aav_bench</code></td>
+<td>bench mode: the spine on a laptop, and pretend sensors</td>
+<td>bench</td>
 </tr>
 <tr>
 <td><code>firmware/can</code>, <code>spine-core</code>, <code>aav-inputs</code></td>
 <td>the CAN contract, the spine's logic, clean inputs</td>
+<td>firmware</td>
+</tr>
+<tr>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>spine-board</code></td>
+<td>the spine's device drivers, and the glue to spine-core</td>
 <td>firmware</td>
 </tr>
 </tbody>
@@ -236,6 +248,31 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 <td>Sensors</td>
 <td><code>ublox_dgnss</code></td>
 <td>the u-blox GPS. It isn't in Pixi, so it runs on the car only (Q18)</td>
+</tr>
+<tr>
+<td>Sensors</td>
+<td><code>nmea_navsat_driver</code></td>
+<td>any GPS that speaks NMEA: the fallback until Q18</td>
+</tr>
+<tr>
+<td>Sensors</td>
+<td><code>usb_cam</code></td>
+<td>the cameras, with the 2024-25 calibrations (Linux only)</td>
+</tr>
+<tr>
+<td>Perception</td>
+<td><code>vision_msgs</code>, <code>cv_bridge</code>, <code>image_publisher</code></td>
+<td>detections, pictures, and a picture file as a pretend camera</td>
+</tr>
+<tr>
+<td>Perception</td>
+<td><code>pcl_ros</code>, <code>pcl_conversions</code></td>
+<td>the radar's point clouds, for clustering</td>
+</tr>
+<tr>
+<td>Perception</td>
+<td>Ultralytics YOLO and PyTorch (not ROS)</td>
+<td>the detector, in the <code>ml</code> environment</td>
 </tr>
 <tr>
 <td>Description</td>
@@ -304,8 +341,8 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 </tr>
 <tr>
 <td>Ready, not used yet</td>
-<td><code>rosbridge_server</code>, <code>nmea_navsat_driver</code></td>
-<td>for the HUD's port, and a second GPS option</td>
+<td><code>rosbridge_server</code></td>
+<td>if the HUD moves off Socket.IO</td>
 </tr>
 </tbody>
 </table></div>
@@ -396,13 +433,13 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 <td>Camera calibrations</td>
 <td>2024-25 <code>cameras</code></td>
 <td><code>aav_sensors/config/cameras</code></td>
-<td>copied</td>
+<td>used by <code>cameras.launch.py</code></td>
 </tr>
 <tr>
 <td>The HUD's back end (Flask)</td>
 <td>2025-26 <code>User-Interface</code></td>
-<td><code>src/hud/maincar</code></td>
-<td>copied; still on the old topics</td>
+<td><code>src/hud/aav_hud</code></td>
+<td>ported to our topics, 86 tests</td>
 </tr>
 <tr>
 <td>The HUD app (Flutter) and its boot scripts</td>
@@ -414,7 +451,7 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 <td>The ESP32 actuator firmware (C++)</td>
 <td>2025-26 <code>AAV_cortex</code></td>
 <td><code>firmware/legacy/aav_umod_esp32</code></td>
-<td>runs today's car; its WiFi password moved out of git</td>
+<td>runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers</td>
 </tr>
 <tr>
 <td>The status display (Pico 2)</td>
@@ -437,20 +474,20 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 <tr>
 <td>Lane keeping</td>
 <td>2025-26 <code>Lane_Detection_ROS2</code></td>
-<td><code>src/perception/lane_geometry</code></td>
-<td>parked</td>
+<td><code>src/perception/aav_lane_geometry</code></td>
+<td>brought in: a driver on <code>/cmd_vel/ai</code></td>
 </tr>
 <tr>
 <td>Radar clustering</td>
 <td>2025-26 <code>Nav_Radar</code></td>
-<td><code>src/perception/object_detection</code></td>
-<td>parked</td>
+<td><code>src/perception/aav_object_detection</code></td>
+<td>brought in: works on the pretend radar</td>
 </tr>
 <tr>
 <td>A YOLO stop-sign detector</td>
 <td>2024-25 <code>camera_ros2_ws</code></td>
-<td><code>src/perception/yolo_ros2</code></td>
-<td>parked</td>
+<td><code>src/perception/aav_yolo</code></td>
+<td>rewritten: detections out, and a stop-sign watcher</td>
 </tr>
 <tr>
 <td>The car's geometry</td>
@@ -505,18 +542,23 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 <tbody>
 <tr>
 <td>The spine</td>
-<td>its board code, and the chip it runs on (Q10–Q13); the CAN wiring</td>
+<td>the board program for the chip it runs on (Q10–Q13); the CAN wiring. The drivers and glue are written</td>
 <td><a href="rust-firmware.html">Rust firmware</a></td>
 </tr>
 <tr>
 <td>Rust drivers</td>
-<td>the Jrk G2s, the throttle DAC, the PCA9555, the iBUS receiver, the W5500, the display</td>
+<td>the W5500 and the display, if the board keeps them</td>
 <td><a href="rust-firmware.html">Rust firmware</a></td>
 </tr>
 <tr>
 <td>Sensors</td>
-<td>a GPS driver inside Pixi; lidar and camera drivers (next year); the magnetometer in real units</td>
+<td>the camera and lidar models (Q22); the GPS model (Q18); the magnetometer in real units</td>
 <td><a href="status.html">Status</a></td>
+</tr>
+<tr>
+<td>Perception</td>
+<td>the lane finder; the 2024-25 team's <code>best.pt</code>; TensorRT on the Orin</td>
+<td><a href="perception.html">Perception</a></td>
 </tr>
 <tr>
 <td>The car</td>
@@ -535,12 +577,12 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>The HUD</td>
-<td>the port to the new topics (Q29); a download step for its 51 MB map database</td>
+<td>small app changes (an e-stop button, cancel, the camera); a download step for its 51 MB map database (Q29)</td>
 <td><a href="hud.html">HUD</a></td>
 </tr>
 <tr>
 <td>Simulation</td>
-<td>CARLA (no Jazzy support yet); a bench mode for the real car's software (proposed)</td>
+<td>CARLA (no Jazzy support yet). Bench mode works: <a href="bench.html">Bench mode</a></td>
 <td><a href="simulation.html">Simulation</a></td>
 </tr>
 <tr>

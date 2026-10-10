@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">7 min read · 4 sections</div></header>
+<div class="meta">10 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -37,7 +39,7 @@
 <main>
 <nav class="toc"><span>On this page:</span><a href="#topics">Topics</a><a href="#services">Services</a><a href="#actions">Actions</a><a href="#frames">Frames</a></nav>
 <div class="lead"><p>Generated from <code>docs/interfaces.yaml</code> by <code>tools/gen_interfaces_md.py</code>; edit the YAML.
-Check a running system against it with <code>pixi run check &lt;turtle|sim|car|replay&gt;</code>.</p></div>
+Check a running system against it with <code>pixi run check &lt;turtle|sim|car|replay|bench&gt;</code>.</p></div>
 <section class="card"><h2 id="topics">Topics</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -102,10 +104,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/cmd_vel/ai</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
-<td>-</td>
+<td><code>control_interface</code></td>
 <td><code>twist_mux</code></td>
 <td>-</td>
-<td>Priority 10. Reserved for a learned driver.</td>
+<td>Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.</td>
 </tr>
 <tr>
 <td><code>/estop</code></td>
@@ -120,7 +122,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>twist_mux</code></td>
 <td><code>ego</code></td>
-<td>turtle, sim, car</td>
+<td>turtle, sim, car, bench</td>
 <td>The one command ego obeys. v (m/s) and w (rad/s) in base_link.</td>
 </tr>
 <tr>
@@ -128,7 +130,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
 <td><code>ego</code></td>
 <td><code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
-<td>turtle, sim, car</td>
+<td>turtle, sim, car, bench</td>
 <td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs.</td>
 </tr>
 <tr>
@@ -136,15 +138,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code></td>
-<td>turtle, sim, car, replay</td>
+<td>turtle, sim, car, replay, bench</td>
 <td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).</td>
 </tr>
 <tr>
 <td><code>/vehicle/status</code></td>
 <td><code>aav_interfaces/msg/VehicleStatus</code></td>
 <td><code>spine_bridge</code>, <code>gazebo_adapter</code></td>
-<td>-</td>
-<td>sim</td>
+<td><code>hud_server</code></td>
+<td>sim, bench</td>
 <td>Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.</td>
 </tr>
 <tr>
@@ -152,7 +154,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>sensor_msgs/msg/JointState</code></td>
 <td><code>spine_bridge</code></td>
 <td><code>joint_state_publisher</code></td>
-<td>-</td>
+<td>bench</td>
 <td>Measured front steering joint angles, merged into /joint_states.</td>
 </tr>
 <tr>
@@ -160,79 +162,183 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>sensor_msgs/msg/JointState</code></td>
 <td><code>joint_state_publisher</code>, <code>gz_bridge</code></td>
 <td><code>robot_state_publisher</code></td>
-<td>turtle, sim, car, replay</td>
+<td>turtle, sim, car, replay, bench</td>
 <td></td>
 </tr>
 <tr>
 <td><code>/to_can_bus</code></td>
 <td><code>can_msgs/msg/Frame</code></td>
 <td><code>spine_bridge</code></td>
-<td><code>socket_can_sender</code></td>
-<td>-</td>
+<td><code>socket_can_sender</code>, <code>spine_sim</code></td>
+<td>bench</td>
 <td>DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc).</td>
 </tr>
 <tr>
 <td><code>/from_can_bus</code></td>
 <td><code>can_msgs/msg/Frame</code></td>
-<td><code>socket_can_receiver</code></td>
+<td><code>socket_can_receiver</code>, <code>spine_sim</code></td>
 <td><code>spine_bridge</code></td>
-<td>-</td>
-<td>VEHICLE_FEEDBACK 0x180, VEHICLE_STATUS 0x181.</td>
+<td>bench</td>
+<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz. On the bench, spine_sim sends them.</td>
 </tr>
 <tr>
 <td><code>/imu/data_raw</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
-<td><code>imu_node</code>, <code>gazebo_adapter</code></td>
+<td><code>imu_node</code>, <code>gazebo_adapter</code>, <code>mock_imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
-<td>sim, car, replay</td>
+<td>sim, car, replay, bench</td>
 <td>Gyro and accelerometer in imu_link, with covariances; no orientation.</td>
 </tr>
 <tr>
 <td><code>/imu/mag</code></td>
 <td><code>sensor_msgs/msg/MagneticField</code></td>
-<td><code>imu_node</code></td>
-<td>-</td>
-<td>-</td>
-<td>Raw counts, not tesla yet; unused.</td>
+<td><code>imu_node</code>, <code>mock_imu</code></td>
+<td><code>imu_filter_madgwick</code></td>
+<td>bench</td>
+<td>Raw counts from imu_node (not tesla yet); tesla from mock_imu. The filter ignores it (use_mag false).</td>
 </tr>
 <tr>
 <td><code>/imu/data</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code></td>
-<td>sim, car, replay</td>
+<td>sim, car, replay, bench</td>
 <td>Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.</td>
 </tr>
 <tr>
 <td><code>/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
-<td><code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code></td>
+<td><code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code></td>
 <td><code>navsat_transform</code></td>
-<td>sim, car, replay</td>
+<td>sim, car, replay, bench</td>
 <td>Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS).</td>
 </tr>
 <tr>
 <td><code>/radar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
-<td><code>radar</code></td>
-<td>-</td>
-<td>-</td>
-<td>Perception phase. Will feed the local costmap's obstacle layer and collision_monitor.</td>
+<td><code>radar</code>, <code>mock_radar</code></td>
+<td><code>radar_clusters</code></td>
+<td>bench</td>
+<td>The TI radar's points, in radar_link. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor.</td>
 </tr>
 <tr>
 <td><code>/battery_status</code></td>
 <td><code>sensor_msgs/msg/BatteryState</code></td>
-<td><code>battery_monitor</code></td>
+<td><code>battery_monitor</code>, <code>mock_battery</code></td>
 <td>-</td>
-<td>-</td>
+<td>bench</td>
 <td></td>
+</tr>
+<tr>
+<td><code>/camera/image_raw</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>usb_cam</code>, <code>mock_camera</code>, <code>test_camera</code></td>
+<td><code>yolo_detector</code>, <code>hud_server</code></td>
+<td>bench</td>
+<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. mock_camera draws the bench world; test_camera publishes a file.</td>
+</tr>
+<tr>
+<td><code>/camera/camera_info</code></td>
+<td><code>sensor_msgs/msg/CameraInfo</code></td>
+<td><code>usb_cam</code>, <code>mock_camera</code>, <code>test_camera</code></td>
+<td>-</td>
+<td>bench</td>
+<td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration).</td>
+</tr>
+<tr>
+<td><code>/radar/clusters</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td><code>radar_clusters</code></td>
+<td>-</td>
+<td>bench</td>
+<td>The radar points DBSCAN grouped into objects, coloured by cluster.</td>
+</tr>
+<tr>
+<td><code>/radar/cluster_boxes</code></td>
+<td><code>visualization_msgs/msg/MarkerArray</code></td>
+<td><code>radar_clusters</code></td>
+<td>-</td>
+<td>bench</td>
+<td>A box round each radar cluster, for RViz.</td>
+</tr>
+<tr>
+<td><code>/perception/detections</code></td>
+<td><code>vision_msgs/msg/Detection2DArray</code></td>
+<td><code>yolo_detector</code></td>
+<td><code>stop_sign_watcher</code></td>
+<td>-</td>
+<td>YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Runs in the ml environment.</td>
+</tr>
+<tr>
+<td><code>/perception/detections/image</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>yolo_detector</code></td>
+<td>-</td>
+<td>-</td>
+<td>The camera picture with the boxes drawn on, for RViz or Foxglove.</td>
+</tr>
+<tr>
+<td><code>/perception/stop</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>stop_sign_watcher</code></td>
+<td><code>twist_mux</code>, <code>hud_server</code></td>
+<td>-</td>
+<td>true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence.</td>
+</tr>
+<tr>
+<td><code>/lane_geometry</code></td>
+<td><code>aav_lane_geometry/msg/LaneGeometry</code></td>
+<td><code>fake_lane_geometry_pub</code></td>
+<td><code>control_interface</code></td>
+<td>-</td>
+<td>The lane lines as polynomials, the car's offset and the curvature. The lane finder that makes them from the camera is missing; fake_lane_geometry_pub stands in.</td>
+</tr>
+<tr>
+<td><code>/lane_geometry_status</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>control_interface</code></td>
+<td>-</td>
+<td>-</td>
+<td>Lane keeping's state and numbers, as text.</td>
+</tr>
+<tr>
+<td><code>/vehicle_state</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>control_interface</code></td>
+<td>-</td>
+<td>-</td>
+<td>Lane keeping's state machine (LANE_KEEP, LANE_CHANGING, ...). Not the car's state - that's /vehicle/status.</td>
+</tr>
+<tr>
+<td><code>/bench/truth</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>spine_sim</code></td>
+<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_camera</code></td>
+<td>bench</td>
+<td>Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs.</td>
+</tr>
+<tr>
+<td><code>/bench/hw_estop</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td>-</td>
+<td><code>spine_sim</code></td>
+<td>-</td>
+<td>true = press the hardware e-stop, on the bench; false = release it. The spine brakes, and needs arming again.</td>
+</tr>
+<tr>
+<td><code>/bench/driver_faults</code></td>
+<td><code>std_msgs/msg/UInt16</code></td>
+<td>-</td>
+<td><code>spine_sim</code></td>
+<td>-</td>
+<td>Pretend a driver failed. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).</td>
 </tr>
 <tr>
 <td><code>/odometry/local</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_local</code></td>
 <td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code></td>
-<td>turtle, sim, car, replay</td>
+<td>turtle, sim, car, replay, bench</td>
 <td>odom frame. Smooth; drifts.</td>
 </tr>
 <tr>
@@ -240,7 +346,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_global</code></td>
 <td><code>navsat_transform</code></td>
-<td>sim, car, replay</td>
+<td>sim, car, replay, bench</td>
 <td>map frame. Includes GPS; can jump.</td>
 </tr>
 <tr>
@@ -248,15 +354,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>navsat_transform</code></td>
 <td><code>ekf_global</code></td>
-<td>sim, car, replay</td>
+<td>sim, car, replay, bench</td>
 <td>Each GPS fix as a map-frame position of base_link (antenna offset removed).</td>
 </tr>
 <tr>
 <td><code>/gps/filtered</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>navsat_transform</code></td>
-<td>-</td>
-<td>sim, car, replay</td>
+<td><code>hud_server</code></td>
+<td>sim, car, replay, bench</td>
 <td>The global EKF's position as lat/lon, for maps in the HUD or Foxglove.</td>
 </tr>
 <tr>
@@ -288,7 +394,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>tf2_msgs/msg/TFMessage</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code>, <code>robot_state_publisher</code></td>
 <td>-</td>
-<td>turtle, sim, car, replay</td>
+<td>turtle, sim, car, replay, bench</td>
 <td>map -&gt; odom (ekf_global), odom -&gt; base_link (ekf_local), moving joints (robot_state_publisher).</td>
 </tr>
 <tr>
@@ -296,7 +402,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>tf2_msgs/msg/TFMessage</code></td>
 <td><code>robot_state_publisher</code></td>
 <td>-</td>
-<td>turtle, sim, car, replay</td>
+<td>turtle, sim, car, replay, bench</td>
 <td>base_link -&gt; chassis and every sensor frame, from vehicle.yaml through the URDF.</td>
 </tr>
 <tr>
@@ -304,7 +410,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>std_msgs/msg/String</code></td>
 <td><code>robot_state_publisher</code></td>
 <td>-</td>
-<td>turtle, sim, car, replay</td>
+<td>turtle, sim, car, replay, bench</td>
 <td></td>
 </tr>
 <tr>
@@ -407,7 +513,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/follow_gps_waypoints</code></td>
 <td><code>nav2_msgs/action/FollowGPSWaypoints</code></td>
 <td><code>waypoint_follower</code></td>
-<td>Lat/lon waypoints (the HUD's destination or OSRM route). Phase 2.</td>
+<td>Lat/lon waypoints. The HUD (hud_server) sends its locked route here. Phase 2.</td>
 </tr>
 </tbody>
 </table></div>

@@ -46,6 +46,7 @@ From the design doc's next steps, in order.
 | 9 Oct, evening | The workspace: our messages, the CAN map and its codec, `spine-core`, ego, both bridges, the adapters, the scripted driver, `vehicle.yaml`, the map maker. It builds on Jazzy with Pixi, and the turtle drives through the mux and ego |
 | 9–10 Oct, overnight | Three audits (the firmware contract, the Jazzy port, a live run) and their fixes; the spine's safety rules (arming, timeouts, faults); the docs as web pages and a PDF; the Rust example; the network doctor; design doc revision 58 |
 | 10 Oct, on Ben's Mac | Everything builds and passes on a Mac, after one macOS fix; the turtle, Gazebo, Nav2, the Rust example, the docs and the doctor all run; recording fixed for Macs; these pages |
+| 10 Oct, afternoon | Perception brought in: YOLO with a stop-sign lock, radar clustering, lane keeping on `/cmd_vel/ai`; the `ml` environment (PyTorch, YOLO, Core ML); the HUD's back end on our topics; the spine's device drivers in Rust; bench mode: the whole car graph on a laptop, with the spine's firmware logic on a model car, and `pixi run bench-check` (7 of 7). Found on the way: a stop that coasted, a scripted drive that stretched, an executor that spun a CPU core, and best-effort cameras that lost every image on a Mac |
 
 ## What needs doing, by area
 
@@ -67,7 +68,9 @@ From the design doc's next steps, in order.
 ### The spine and CAN
 
 - Choose the microcontroller, the board and the owner (Q10–Q13).
-- Write the board code around `spine-core`: the pin map, CAN, the encoder, the e-stop input.
+- Write the board program around `spine-board`: it implements the `Board` trait (the clock, the e-stop pin, the encoder counter, CAN) for the chosen chip. The drivers and the glue are done.
+- Decide: the steering on an e-stop (hold, or centre as the old firmware did); the brake after boot; a brake field for the RC gear switch. [Firmware](firmware.md) has the details.
+- Tune the speed loop on the car: on the bench it lags a ramp by about a second.
 - Wire CAN: a transceiver on the Orin (or a USB adapter), 120 Ω at each end (Q14, Q15).
 - Calibrate the steering (Q2), the brake (Q3) and the throttle (Q4).
 - Still open in the logic: the e-stop frame's counter isn't checked, and what happens when RC releases and when nobody drives.
@@ -91,7 +94,7 @@ From the design doc's next steps, in order.
 - Draw the real test site (Q21) and drive it in Gazebo first.
 - Nav2's lookahead (N7): its turn command flips sign about once a second.
 - Restart crashed sensor drivers (N3): Nav2 gives up without TF.
-- Later: the radar obstacle layer, and the collision monitor.
+- Later: the radar obstacle layer, and the collision monitor. The radar's clusters are ready on `/radar/clusters`.
 
 ### Drivers and teleop
 
@@ -99,15 +102,23 @@ From the design doc's next steps, in order.
 - The e-stop button: pick one (not the deadman), and make `/estop` reach the mux reliably (N2).
 - Joystick handover (Q28).
 
+### Perception
+
+- Find the 2024-25 team's trained `best.pt`, and back up the 2025-26 detector from the Orin.
+- Write the lane finder: the camera's picture into `/lane_geometry`.
+- Identify the cameras (Q22); fill in their udev names; set the stop-sign distance (`min_height_px`) for the real camera.
+- TensorRT on the Orin, after the reflash (Q24).
+
 ### The HUD
 
-- Keep the Flutter app or not (Q29). If kept, move its back end (`maincar`) to the new topics.
+- Keep the Flutter app or not (Q29). Its back end, `aav_hud`, is on the new topics; the app needs the small changes in [HUD](hud.md).
 - Its boot scripts still use the old Humble workspace and `/home/aavui`.
 - Its map database and the OSRM map data need a download step, not git.
 
 ### Simulation
 
 - Look at the Gazebo window and RViz on a Mac, and say what they show.
+- Make the bench's model car match the measured car (Q1-Q5), once it's measured.
 - CARLA, once it supports Jazzy (Q31).
 
 ## Risks to keep in mind
@@ -135,7 +146,7 @@ From the design doc's next steps, in order.
 | `/radar/points` is best-effort; the contract doesn't say | to do |
 | `firmware/spine/Cargo.toml` points to a README that doesn't exist | to do |
 | `aav_gazebo`'s test skips at module level, which `CLAUDE.md` says not to do | to do |
-| The HUD's camera address differs: 192.168.1.101 in `maincar`, .118 in the app | to do |
+| The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app | the back end takes it as a parameter now; the app still has its own |
 | `car gps:=false` still starts the GPS driver when the machine file says `gps: true` | to do |
 | Ctrl-C makes our Python nodes print an error while they shut down (Ctrl-C arrives twice) | to do |
 | Rust builds on a Mac warn: the libraries are for macOS 14, Rust aims at macOS 11 | to do |

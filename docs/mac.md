@@ -128,6 +128,14 @@ Two rules follow, for anyone writing scripts:
 - Inside Pixi on a Mac, `ls`, `date`, `stat` and friends are the GNU versions, the same as
   on Linux and the car. Outside Pixi, the Mac's own versions are unchanged.
 
+## Three more things the bench found on a Mac
+
+| What happens | Why | What we do |
+|---|---|---|
+| A best-effort subscriber gets no camera images at all | an image is too big for one UDP packet, and best effort drops the whole image when one piece is lost | subscribe to images reliably, keeping only the newest frame |
+| A Python node with `MultiThreadedExecutor` uses a whole CPU core | rclpy 7.1.12's multi-threaded executor spins whenever any subscription gets messages | use the default single-threaded executor; `scripted_driver` now does |
+| A script started through `#!/usr/bin/env python3` can't load our messages | macOS drops `DYLD_LIBRARY_PATH` when `/usr/bin/env` starts | launch such scripts with `prefix='python3'`, as `aav_lane_geometry` does |
+
 ## If the native way fails: Ubuntu in UTM
 
 1. Install UTM (free) from mac.getutm.app.
@@ -153,7 +161,9 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 |---|---|
 | The Pixi environment resolves for Macs (Apple Silicon and Intel, macOS 14+) | [[works]] |
 | Steps 3 to 5 from a fresh copy of the bundle: clone, install, build, `pixi run test`, the turtle | [[works]] on Linux, and on an Apple Silicon Mac (macOS 27), 10 Oct |
-| Building on a Mac | [[works]] 19 packages in 18 s |
+| Building on a Mac | [[works]] 19 packages in 18 s; 24 packages in 15 s on 10 Oct evening |
+| Bench mode, `pixi run bench-check` | [[works]] 7 of 7, with perception (`-e ml`) |
+| YOLO on the Mac's GPU (Metal) | [[works]] 7.7 ms a frame; Core ML 4.3 ms |
 | `pixi run test` on a Mac | [[works]] all green, after the `coreutils` fix above |
 | The turtle, driving it the keyboard's way, the scripted drive, the e-stop | [[works]] on Linux and the Mac. The real keyboard keys are [[untested]] on a Mac |
 | Gazebo without its window, and a Nav2 goal | [[works]] on the Mac, without `GZ_IP` |

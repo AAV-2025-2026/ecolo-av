@@ -12,6 +12,7 @@ the ladder one rung at a time.
 | 2. turtlesim: `pixi run turtle` | mux, ego, scripted driver, `ekf_local` | the command path, end to end |
 | 3. Gazebo: `pixi run sim` | the whole stack, on a simulated car with an IMU and GPS | localization and Nav2 |
 | 4. Replay | localization (and Nav2) on a recorded drive | config changes, against real sensor data |
+| 4b. The bench: `pixi run bench` | the car's own graph: the spine bridge and CAN frames, the spine's firmware logic on a model car, pretend sensors | the car's software path, end to end, before the car: [Bench mode](bench.md) |
 | 5. Car on stands | the real backend, wheels off the ground | the firmware link, signs and limits |
 | 6. Car | everything, with a safety driver | the phase you're on |
 

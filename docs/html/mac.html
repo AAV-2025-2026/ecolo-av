@@ -7,7 +7,7 @@
 <!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your Mac: run it, and drive the car</h1>
-<div class="meta">8 min read · 10 sections</div></header>
+<div class="meta">9 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -21,12 +21,14 @@
 <span class="sep">Reference:</span>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a class="here" href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -35,7 +37,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#macos-hides-one-setting-from-ros">macOS hides one setting from ROS</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#macos-hides-one-setting-from-ros">macOS hides one setting from ROS</a><a href="#three-more-things-the-bench-found-on-a-mac">Three more things the bench found on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
 <div class="lead"><p>Three ways to use a Mac with the car. Use Pixi to run ROS on the Mac itself, and to
 drive. Lichtblick only watches, but needs no setup. Ubuntu in a VM is the fallback.</p></div>
 <section class="card"><h2 id="three-ways">Three ways</h2>
@@ -228,6 +230,34 @@ On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on
   on Linux and the car. Outside Pixi, the Mac's own versions are unchanged.</li>
 </ul>
 </section>
+<section class="card"><h2 id="three-more-things-the-bench-found-on-a-mac">Three more things the bench found on a Mac</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What happens</th>
+<th>Why</th>
+<th>What we do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A best-effort subscriber gets no camera images at all</td>
+<td>an image is too big for one UDP packet, and best effort drops the whole image when one piece is lost</td>
+<td>subscribe to images reliably, keeping only the newest frame</td>
+</tr>
+<tr>
+<td>A Python node with <code>MultiThreadedExecutor</code> uses a whole CPU core</td>
+<td>rclpy 7.1.12's multi-threaded executor spins whenever any subscription gets messages</td>
+<td>use the default single-threaded executor; <code>scripted_driver</code> now does</td>
+</tr>
+<tr>
+<td>A script started through <code>#!/usr/bin/env python3</code> can't load our messages</td>
+<td>macOS drops <code>DYLD_LIBRARY_PATH</code> when <code>/usr/bin/env</code> starts</td>
+<td>launch such scripts with <code>prefix='python3'</code>, as <code>aav_lane_geometry</code> does</td>
+</tr>
+</tbody>
+</table></div>
+</section>
 <section class="card"><h2 id="if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</h2>
 <ol>
 <li>Install UTM (free) from mac.getutm.app.</li>
@@ -282,7 +312,15 @@ On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on
 </tr>
 <tr>
 <td>Building on a Mac</td>
-<td><span class="badge b-works">works</span> 19 packages in 18 s</td>
+<td><span class="badge b-works">works</span> 19 packages in 18 s; 24 packages in 15 s on 10 Oct evening</td>
+</tr>
+<tr>
+<td>Bench mode, <code>pixi run bench-check</code></td>
+<td><span class="badge b-works">works</span> 7 of 7, with perception (<code>-e ml</code>)</td>
+</tr>
+<tr>
+<td>YOLO on the Mac's GPU (Metal)</td>
+<td><span class="badge b-works">works</span> 7.7 ms a frame; Core ML 4.3 ms</td>
 </tr>
 <tr>
 <td><code>pixi run test</code> on a Mac</td>
