@@ -70,7 +70,7 @@ These are the conventions decided so far. They apply to people and to Claude ses
   `cargo test` for `firmware/spine`, and the interfaces.md check. Run it before every
   commit.
 - With Jazzy, also run `pixi run build`, `pixi run test` (which adds `colcon test`), and
-  `tools/check_graph.py --profile turtle|sim|car` against a running system.
+  `pixi run check <turtle|sim|car|replay>` against a running system.
 - Pixi + RoboStack provide Jazzy without admin rights: on Ben's AlmaLinux workstation
   (oirp-spss), on Macs, and on any Linux. `pixi.toml` and `pixi.lock` define the
   environment; `pixi run <task>` runs a command inside it. That machine has no screen

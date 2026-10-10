@@ -1,7 +1,7 @@
 # Interfaces
 
 Generated from `docs/interfaces.yaml` by `tools/gen_interfaces_md.py`; edit the YAML.
-Check a running system against it with `tools/check_graph.py --profile <turtle|sim|car>`.
+Check a running system against it with `pixi run check <turtle|sim|car|replay>`.
 
 ## Topics
 

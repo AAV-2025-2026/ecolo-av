@@ -64,7 +64,7 @@ keyboard → `/cmd_vel/remote` → twist_mux → ego → `/ego/actuator_cmd` →
 | Command | Does |
 |---|---|
 | `pixi run graph` | rqt_graph: the nodes and topics, live |
-| `pixi run check` | compares the running graph with our contract |
+| `pixi run check` | compares the running graph with our contract (`pixi run check sim` for Gazebo) |
 | `pixi run view` | the car model in RViz |
 | `pixi run sim` | Gazebo instead of the turtle ([Simulation](simulation.md)) |
 | `pixi run rviz` | RViz with the driving layout |

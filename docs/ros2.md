@@ -100,4 +100,4 @@ rclpy.spin(Circle())
 | `rqt_tf_tree` | the frame tree, and who publishes each link |
 | `pixi run view` (RViz) | the 3D view: the car, the map, costmaps, the path |
 | Foxglove | RViz and rqt in one app; good over WiFi (`ws://<computer>:8765`) |
-| `pixi run check` | the live graph against our contract, `docs/interfaces.yaml` |
+| `pixi run check` | the live graph against our contract, `docs/interfaces.yaml`; add `sim`, `car` or `replay` for the other setups |

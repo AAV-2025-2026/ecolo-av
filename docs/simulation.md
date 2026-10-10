@@ -109,4 +109,4 @@ Work down the chain:
 | 3 | Is ego converting it? | `ros2 topic echo /ego/actuator_cmd`: it's always 50 Hz, so look at the speed |
 | 4 | Is a backend listening? | `ros2 topic info /ego/actuator_cmd -v` |
 | 5 | In Gazebo or replay: is everything on sim time? | a node on wall-clock time ignores sim-time messages |
-| 6 | Does the graph match the contract? | `pixi run check`, or `tools/check_graph.py --profile sim` |
+| 6 | Does the graph match the contract? | `pixi run check sim` (or `replay`) |
