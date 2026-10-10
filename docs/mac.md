@@ -26,12 +26,13 @@ xcode-select --install
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
 
-**3. The code.** Copy the file `aav.bundle` to the Mac (from `/home/ben/aav/` on
-oirp-spss), then:
+**3. The code.** Copy `aav.bundle` from oirp-spss (off campus, connect to Carleton's VPN
+first if this can't connect), then unpack it:
 
 ```bash
-git clone aav.bundle aav
-cd aav
+scp ben@oirp-spss.carleton.ca:/home/ben/aav/aav.bundle ~/
+git clone ~/aav.bundle ~/aav
+cd ~/aav
 ```
 
 **4. Install ROS and build:**

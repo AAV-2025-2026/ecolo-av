@@ -62,10 +62,11 @@ already, it says so.</p>
 <pre class="highlight"><code class="language-bash">xcode-select --install</code></pre>
 <p><strong>2. Pixi</strong>, then open a new terminal:</p>
 <pre class="highlight"><code class="language-bash">curl -fsSL https://pixi.sh/install.sh | sh</code></pre>
-<p><strong>3. The code.</strong> Copy the file <code>aav.bundle</code> to the Mac (from <code>/home/ben/aav/</code> on
-oirp-spss), then:</p>
-<pre class="highlight"><code class="language-bash">git clone aav.bundle aav
-cd aav</code></pre>
+<p><strong>3. The code.</strong> Copy <code>aav.bundle</code> from oirp-spss (off campus, connect to Carleton's VPN
+first if this can't connect), then unpack it:</p>
+<pre class="highlight"><code class="language-bash">scp ben@oirp-spss.carleton.ca:/home/ben/aav/aav.bundle ~/
+git clone ~/aav.bundle ~/aav
+cd ~/aav</code></pre>
 <p><strong>4. Install ROS and build:</strong></p>
 <pre class="highlight"><code class="language-bash">pixi install       # ROS 2 Jazzy: about 7 GB, the first time only
 pixi run build     # our packages</code></pre>
