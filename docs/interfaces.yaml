@@ -123,10 +123,25 @@ topics:
     note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
   /gps/fix:
     type: sensor_msgs/msg/NavSatFix
-    pub: [ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
+    pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
     sub: [navsat_transform]
     live: [sim, car, replay, bench]
-    note: Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS).
+    note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
+  /gps/fix_velocity:
+    type: geometry_msgs/msg/TwistWithCovarianceStamped
+    pub: [ublox_gps]
+    sub: []
+    note: The receiver's velocity, east, north and up (m/s). Nothing fuses it yet.
+  /gps/vel:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [gps_nmea]
+    sub: []
+    note: NMEA's speed and course (gps_driver:=nmea). Nothing fuses it yet.
+  /gps/time_reference:
+    type: sensor_msgs/msg/TimeReference
+    pub: [gps_nmea]
+    sub: []
+    note: GPS time, from NMEA (gps_driver:=nmea).
   /radar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [radar, mock_radar]
@@ -146,13 +161,13 @@ topics:
     note: battery_monitor's sign of life.
   /camera/image_raw:
     type: sensor_msgs/msg/Image
-    pub: [usb_cam, mock_camera, test_camera]
-    sub: [yolo_detector, hud_server]
+    pub: [camera_left, mock_camera, test_camera]
+    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server]
     live: [bench]
-    note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. mock_camera draws the bench world; test_camera publishes a file.
+    note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.
   /camera/camera_info:
     type: sensor_msgs/msg/CameraInfo
-    pub: [usb_cam, mock_camera, test_camera]
+    pub: [camera_left, mock_camera, test_camera]
     sub: []
     live: [bench]
     note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration).
@@ -172,19 +187,20 @@ topics:
     note: A box round each radar cluster, for RViz.
   /perception/detections:
     type: vision_msgs/msg/Detection2DArray
-    pub: [yolo_detector]
+    pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]
     sub: [stop_sign_watcher]
-    note: YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Runs in the ml environment.
+    note: YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24), the laptop's for compressed images.
   /perception/detections/image:
     type: sensor_msgs/msg/Image
-    pub: [yolo_detector]
+    pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]
     sub: []
     note: The camera picture with the boxes drawn on, for RViz or Foxglove.
   /perception/stop:
     type: std_msgs/msg/Bool
     pub: [stop_sign_watcher]
     sub: [twist_mux, hud_server]
-    note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence.
+    live: [car]
+    note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.
 
   /lane_geometry:
     type: aav_lane_geometry/msg/LaneGeometry

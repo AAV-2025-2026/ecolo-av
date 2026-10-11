@@ -136,6 +136,12 @@ detect = { cmd = "tools/ros.sh ros2 launch aav_yolo detector.launch.py", descrip
 [feature.ml.target.osx.dependencies]
 coremltools = ">=9.0,<10"
 
+# Core ML is a Mac's: the export makes models/yolo11n.mlpackage next to the .pt. On an
+# M4 Max the export takes 2 s, and the whole task 3 to 10 s. The Orin's TensorRT engine is
+# made on the Orin itself, with JetPack's Python: tools/build_engine.py.
+[feature.ml.target.osx.tasks]
+export-coreml = { cmd = "yolo export model={{ model }} format=coreml", args = [{ arg = "model", default = "models/yolo11n.pt" }], depends-on = ["get-models"], description = "Make the Core ML model for a Mac: pixi run -e ml export-coreml [models/<name>.pt]" }
+
 [feature.ml.activation.env]
 PYTORCH_ENABLE_MPS_FALLBACK = "1"   # conda-forge's torchvision has no Metal NMS: that step runs on the CPU
 YOLO_AUTOINSTALL = "false"          # Ultralytics must never pip-install into the environment

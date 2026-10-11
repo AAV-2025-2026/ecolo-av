@@ -21,6 +21,9 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6015", ATTRS{seria
 
 # u-blox F9P (USB, used through libusb, not a tty). From ublox_dgnss's README (0.7.4).
 ATTRS{idVendor}=="1546", ATTRS{idProduct}=="01a9", MODE="0666", GROUP="plugdev", ENV{ID_MM_DEVICE_IGNORE}="1"
+# Any u-blox receiver's USB serial port (1546 is u-blox), for ublox_gps, the default GPS
+# driver (sensors.launch.py). ModemManager must leave it alone: it probes new ttyACM ports.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", SYMLINK+="aav/gps", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
 # Cameras (usb_cam, aav_sensors cameras.launch.py). TODO: the models are Q22; fill in their
 # IDs from `udevadm info -a -n /dev/video0`. index 0 is a camera's image stream.
 SUBSYSTEM=="video4linux", ATTRS{idVendor}=="TODO", ATTRS{serial}=="TODO", ATTR{index}=="0", SYMLINK+="aav/camera_left", MODE="0666"

@@ -13,6 +13,7 @@ What you can set:
   labels      the labels to keep, comma-separated; empty keeps them all
   image       the camera topic to read
   picture     an image or video file, published as the camera (image_publisher), for tests
+  node_name   the node's name: yolo_detector, or yolo_detector_<machine> on the car
 
 The detector runs as `python3 -m aav_yolo.detector`: the python3 of the environment that
 started the launch, so the ml environment's PyTorch is the one it finds.
@@ -39,6 +40,7 @@ def generate_launch_description():
         DeclareLaunchArgument('labels', default_value=''),
         DeclareLaunchArgument('image', default_value='/camera/image_raw'),
         DeclareLaunchArgument('picture', default_value=''),
+        DeclareLaunchArgument('node_name', default_value='yolo_detector'),
         Node(
             package='image_publisher', executable='image_publisher_node', name='test_camera',
             parameters=[{'filename': arg('picture'), 'publish_rate': 10.0,
@@ -47,8 +49,9 @@ def generate_launch_description():
             condition=IfCondition(picture),
         ),
         ExecuteProcess(
-            name='yolo_detector', output='screen', emulate_tty=True,
+            name=arg('node_name'), output='screen', emulate_tty=True,
             cmd=['python3', '-m', 'aav_yolo.detector', '--ros-args',
+                 '-r', ['__node:=', arg('node_name')],
                  '-p', ['model:=', arg('model')],
                  '-p', ['device:=', arg('device')],
                  '-p', ['confidence:=', arg('confidence')],

@@ -11,7 +11,7 @@ and frame, so nothing downstream changes.
                 10 Hz: a road, and the bench world's stop signs when they're in view
 
 spine_sim publishes /bench/truth: where the model car really is. The real drivers are
-yahboom_imu_cpp, ublox_dgnss, battery_monitor and usb_cam (aav_sensors).
+yahboom_imu_cpp, ublox_gps, battery_monitor and usb_cam (aav_sensors).
 """
 
 import math

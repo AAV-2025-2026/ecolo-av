@@ -83,7 +83,7 @@ From the design doc's next steps, in order.
 
 ### Localization and sensors
 
-- Identify the GPS (Q18) and pick its driver: `ublox_dgnss` or `ublox`.
+- Identify the GPS (Q18), and confirm its driver: `ublox_gps` for now (it runs in Pixi too), or `nmea` or `ublox_dgnss` (`gps_driver:=`).
 - Survey the test site's datum, and set the magnetic declination (0 now; about 12° W in Ottawa).
 - Run the IMU on the car (Q20); convert its magnetometer to tesla, then calibrate it.
 - The wheel encoder: run it on the car; its speed comes in steps of about 1.2 m/s, too coarse at walking pace.
@@ -147,7 +147,7 @@ From the design doc's next steps, in order.
 | `firmware/spine/Cargo.toml` points to a README that doesn't exist | fixed: the comment changed, and `firmware/spine/README.md` exists |
 | `aav_gazebo`'s test skips at module level, which `CLAUDE.md` says not to do | fixed |
 | The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app | the back end takes it as a parameter now; the app still has its own |
-| `car gps:=false` still starts the GPS driver when the machine file says `gps: true` | to do, once Ben's edits to `car.launch.py` are committed |
+| `car gps:=false` still starts the GPS driver when the machine file says `gps: true` | fixed, with a test for it and the other arguments (`aav_bringup/test/test_car_launch.py`) |
 | Ctrl-C makes our Python nodes print an error while they shut down (Ctrl-C arrives twice) | fixed: 0 tracebacks from a full bench; the radar clustering's C++ can still crash inside Fast DDS |
 | Rust builds on a Mac warn: the libraries are for macOS 14, Rust aims at macOS 11 | fixed: `MACOSX_DEPLOYMENT_TARGET=14.0` on Macs |
 | `pixi run doctor` says "Network OK" on any 192.168.1.x network, like a home router | fixed: it says only "The car" check proves it |

@@ -56,13 +56,38 @@ The lock keeps stop signs away from the e-stop.
 
 Model files stay out of git, in `models/`. `pixi run get-models` downloads the stock
 YOLO11 nano model (5.6 MB, its checksum pinned). It was trained on the COCO dataset, and
-"stop sign" is one of its 80 classes, so we don't need last year's model to start.
+"stop sign" is one of its 80 classes, so we don't need the 2024-25 team's model to start.
 
-| Format | Runs on | Make it with |
-|---|---|---|
-| `.pt` | anything, with PyTorch | the training |
-| `.mlpackage` | Macs, with Core ML | `pixi run -e ml yolo export model=models/yolo11n.pt format=coreml` |
-| `.engine` | the Orin, with TensorRT | `yolo export model=models/yolo11n.pt format=engine`, on the Orin itself |
+One model, three formats. Each computer with a GPU runs its own (Ben, 10 Oct), and the
+detector loads any of them. The machine file names the one to use:
+
+| Format | Runs on | Make it with | Machine file |
+|---|---|---|---|
+| `.pt` | anything, with PyTorch | `pixi run get-models`, or the training | `all.yaml` |
+| `.mlpackage` | Macs, with Core ML | `pixi run -e ml export-coreml`, on a Mac | `laptop.yaml` |
+| `.engine` | the Orin, with TensorRT | `python3 tools/build_engine.py`, on the Orin itself | `orin.yaml` |
+
+### Core ML, on a Mac
+
+- `pixi run -e ml export-coreml` makes `models/yolo11n.mlpackage` from
+  `models/yolo11n.pt`, and downloads the `.pt` first if it's missing.
+- Another model: `pixi run -e ml export-coreml models/best.pt`.
+- On an M4 Max the export takes 2 s; the whole command 3 to 10 s.
+- [[works]] The result found the test stop sign at 0.97.
+
+### TensorRT, on the Orin
+
+An engine runs only on the GPU and the TensorRT version that built it. So it's built
+on the Orin, once it's on JetPack 7.2 (Q24):
+
+1. Install NVIDIA's PyTorch for Jetson (not PyPI's), then `pip install ultralytics onnx`.
+   In a venv, make it with `--system-site-packages`, so it sees JetPack's TensorRT.
+2. Run `python3 tools/build_engine.py` in the repo, with JetPack's `python3`, not
+   Pixi's. It checks first, and says what's missing.
+3. It writes `models/yolo11n.engine`: half precision (FP16), 640 px.
+   `car.launch.py machine:=orin` loads it.
+
+[[untested]] It needs the Orin: here it only checks, and stops.
 
 The 2024-25 team's own model, `best.pt`, is in no repo: their code loaded it from
 `~/Yolo/Capstone/runs/detect/train7/weights/best.pt` on someone's computer. It's
@@ -149,9 +174,21 @@ A separate Pixi environment, so nobody downloads PyTorch unless they want it: Py
 
 ## On the car
 
-`aav_bringup perception.launch.py` starts the camera, the detector, the watcher and the
-radar clustering, next to `car.launch.py`, on the Orin. When `car.launch.py` next changes,
-they become parts in its machine files.
+`car.launch.py` starts perception as parts, like the rest of the car. Each machine file
+turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-where)):
+
+| Part | Starts | Where |
+|---|---|---|
+| `camera` | `usb_cam` → `/camera/image_raw` (Linux only) | off everywhere until the cameras are known (Q22) |
+| `detector` | YOLO, as `yolo_detector_<machine>` → `/perception/detections` | the Orin. The laptop's is off until it reads compressed images |
+| `stop_signs` | `stop_sign_watcher` → `/perception/stop` | one per car, next to the mux: the Orin |
+| `radar_clusters` | DBSCAN on `/radar/points` | off until the radar is on the car |
+| `lane` | to do: the lane finder, then lane keeping | the lane finder is being written |
+
+- Every detector publishes on `/perception/detections`, so the watcher hears them all.
+- A detector needs PyTorch: JetPack's on the Orin, the `ml` environment on a laptop
+  (`pixi run -e ml car laptop`). Without it, or without its model file, the part is
+  skipped with a warning, and the rest of the car starts.
 
 - **From a Mac:** a Mac on the car's network can run the detector on the car's cameras.
   Raw images are too big for WiFi, so the cameras should also publish compressed ones.
