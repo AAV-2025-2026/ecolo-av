@@ -39,9 +39,32 @@ topics:
     note: Priority 40. ros2 bag play of a recorded /cmd_vel (tools/replay_commands.sh).
   /cmd_vel/nav:
     type: geometry_msgs/msg/TwistStamped
-    pub: [velocity_smoother]
+    pub: [velocity_smoother, collision_monitor]
     sub: [twist_mux]
-    note: Priority 20. Nav2; from collision_monitor instead when it is enabled.
+    note: Priority 20. Nav2. From collision_monitor where the radar runs (navigation.launch.py radar:=true - the bench, the car with its radar part), else straight from velocity_smoother.
+  /cmd_vel_smoothed:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [velocity_smoother]
+    sub: [collision_monitor]
+    live: [bench]
+    note: Nav2's smoothed command, into collision_monitor, where the radar runs. It stops the car for radar points in its stop zone, or when the radar goes silent; it only guards Nav2.
+  /collision_monitor_state:
+    type: nav2_msgs/msg/CollisionMonitorState
+    pub: [collision_monitor]
+    sub: []
+    live: [bench]
+    note: What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar is silent or its TF is late.
+  /collision_monitor/stop_zone:
+    type: geometry_msgs/msg/PolygonStamped
+    pub: [collision_monitor]
+    sub: []
+    live: [bench]
+    note: The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).
+  /collision_monitor/collision_points_marker:
+    type: visualization_msgs/msg/MarkerArray
+    pub: [collision_monitor]
+    sub: []
+    note: The radar points collision_monitor sees, for RViz; sent only while someone listens.
   /cmd_vel/ai:
     type: geometry_msgs/msg/TwistStamped
     pub: [control_interface]
@@ -130,9 +153,9 @@ topics:
   /radar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [radar, mock_radar]
-    sub: [radar_clusters]
+    sub: [radar_clusters, local_costmap, collision_monitor]
     live: [bench]
-    note: The TI radar's points, in radar_link. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor.
+    note: The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true).
   /battery_status:
     type: sensor_msgs/msg/BatteryState
     pub: [battery_state_publisher, mock_battery]
@@ -158,9 +181,9 @@ topics:
   /camera/camera_info:
     type: sensor_msgs/msg/CameraInfo
     pub: [usb_cam, mock_camera, test_camera]
-    sub: []
+    sub: [camera_obstacles]
     live: [bench]
-    note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration).
+    note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). camera_obstacles keeps each camera's by its frame_id.
 
   # --- perception ---
   /radar/clusters:
@@ -178,7 +201,7 @@ topics:
   /perception/detections:
     type: vision_msgs/msg/Detection2DArray
     pub: [yolo_detector]
-    sub: [stop_sign_watcher]
+    sub: [stop_sign_watcher, camera_obstacles]
     note: YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. One detector per computer with a GPU (the Orin, a laptop), each under its own node name (detector.launch.py name:=), all on this topic. Runs in the ml environment.
   /perception/detections/image:
     type: sensor_msgs/msg/Image
@@ -190,6 +213,16 @@ topics:
     pub: [stop_sign_watcher]
     sub: [twist_mux, hud_server]
     note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence.
+  /perception/camera_obstacles:
+    type: sensor_msgs/msg/PointCloud2
+    pub: [camera_obstacles]
+    sub: [local_costmap]
+    note: Where each detected object stands on the road, in base_link (z = 0) - points 0.1 m apart along its box's bottom edge, out to 12 m from the camera, one cloud per detections message, from the camera its header names. Only the listed COCO classes (people, cyclists, cars...), never stop signs. The local costmap's camera layer marks them (camera_obstacles:=true). Off until the cameras are calibrated (Q22).
+  /perception/camera_view:
+    type: sensor_msgs/msg/PointCloud2
+    pub: [camera_obstacles]
+    sub: [local_costmap]
+    note: The far edge of what that camera sees, on the road, 12 m out, in base_link. The camera layer clears up to it before it marks, so old boxes don't linger.
 
   /lane_geometry:
     type: aav_lane_geometry/msg/LaneGeometry
