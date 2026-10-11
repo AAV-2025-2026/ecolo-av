@@ -1,6 +1,7 @@
 <!--
   Nav2's navigate_through_poses_w_replanning_and_recovery.xml (Jazzy 1.3.13), changed for a
-  car the same way as navigate_to_pose_car.xml: no Spin, no BackUp yet.
+  car the same way as navigate_to_pose_car.xml: no Spin, and no BackUp (forward only;
+  navigate_through_poses_car_reversing.xml has BackUp).
   GPS waypoints (follow_gps_waypoints) are converted to map poses and followed one by one
   with navigate_to_pose; this tree is for navigate_through_poses.
 -->

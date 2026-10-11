@@ -5,6 +5,7 @@ The real car. One launch file for every machine; a machine file picks the parts.
       [gps:=true] [gps_driver:=ublox] [map:=<map yaml>] [start_x:=0] [start_y:=0]
       [start_yaw:=0]
       [imu_driver:=cpp]   (or rust: aav_imu_yahboom, the IMU driver's Rust twin)
+      [reversing:=false]  (true lets Nav2 drive backwards: blind, the team decides first)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
@@ -233,7 +234,8 @@ def launch_setup(context):
         actions.append(include('aav_navigation', 'navigation.launch.py',
                                map=arg('map') or empty_map, radar=on('radar'),
                                collision_monitor=on('radar'),
-                               camera_obstacles=on('camera_obstacles')))
+                               camera_obstacles=on('camera_obstacles'),
+                               reversing=flag('reversing')))
     if on('spine'):
         actions.append(include('aav_spine', 'spine.launch.py'))
     if on('legacy_uart') or on('legacy_encoder'):
@@ -264,5 +266,10 @@ def generate_launch_description():
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0',
                               description='Heading at start, rad counter-clockwise from east'),
+        # Off until the team decides: the radar faces forward, so nothing sees behind the car.
+        # People can still reverse (joystick, keyboard, RC); this is Nav2 only.
+        DeclareLaunchArgument('reversing', default_value='false',
+                              description='true: Nav2 may drive backwards, blind '
+                                          '(docs/steering.md). Off until the team decides'),
         OpaqueFunction(function=launch_setup),
     ])

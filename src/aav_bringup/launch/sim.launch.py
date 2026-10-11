@@ -2,7 +2,7 @@
 The whole stack in Gazebo: same nodes and configs as the car, simulated hardware.
 
   ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot] [nav:=true]
-      [teleop:=false] [gui:=true] [rviz:=true]
+      [teleop:=false] [gui:=true] [rviz:=true] [reversing:=true]
 
 world:=empty pairs with the empty map (phase 2); world:=test_lot with
 maps/example_lot.yaml (phase 3), chosen automatically. The car starts at the world
@@ -30,7 +30,7 @@ def include(context, package, launch_file, **args):
 def launch_setup(context):
     world = LaunchConfiguration('world').perform(context)
     flag = {n: LaunchConfiguration(n).perform(context).lower() == 'true'
-            for n in ('nav', 'teleop', 'rviz')}
+            for n in ('nav', 'teleop', 'rviz', 'reversing')}
     nav_share = FindPackageShare('aav_navigation').perform(context)
     actions = [
         include(context, 'aav_gazebo', 'gazebo.launch.py', world=world,
@@ -48,7 +48,7 @@ def launch_setup(context):
     ]
     if flag['nav']:
         actions.append(include(context, 'aav_navigation', 'navigation.launch.py',
-                               use_sim_time='true',
+                               use_sim_time='true', reversing=str(flag['reversing']).lower(),
                                map=os.path.join(nav_share, 'maps', MAPS[world])))
     if flag['teleop']:
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
@@ -69,5 +69,7 @@ def generate_launch_description():
                               description='true if a joystick is plugged into this computer'),
         DeclareLaunchArgument('gui', default_value='true', description='Gazebo window'),
         DeclareLaunchArgument('rviz', default_value='true'),
+        DeclareLaunchArgument('reversing', default_value='true',
+                              description='Nav2 may drive backwards (docs/steering.md)'),
         OpaqueFunction(function=launch_setup),
     ])
