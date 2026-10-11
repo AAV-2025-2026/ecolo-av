@@ -101,3 +101,56 @@ def test_the_road_runs_east_and_bends_where_asked():
     right = models.Road(bend_x=30.0, bend_radius=-60.0)
     assert right.lateral(89.0, -60.0) == pytest.approx(-1.0)
     assert right.pose(90.0, -60.0, -math.pi / 2) == pytest.approx((0.0, 0.0))
+
+
+RADAR = models.Radar([2.2, 0.0, 0.4], 0.0, 8.4, math.radians(120.0), math.radians(2.0))
+AHEAD = (7.2, -0.5, 8.2, 0.5)   # a 1 m box whose near face is 5 m in front of the radar
+
+
+def returns(t, obstacles, keep=1.0, seed=3):
+    return models.radar_returns(RADAR, t, obstacles, 1.0, random.Random(seed), keep=keep)
+
+
+def test_boxes():
+    assert models.boxes([3.0, 1.0, 2.0, -1.0]) == [(2.0, -1.0, 3.0, 1.0)]
+    assert models.boxes([]) == []
+    with pytest.raises(ValueError):
+        models.boxes([1.0, 2.0, 3.0])
+
+
+def test_a_ray_stops_at_the_near_face_of_a_box():
+    assert models.ray_hits_box(0.0, 0.0, 1.0, 0.0, AHEAD) == pytest.approx(7.2)
+    assert models.ray_hits_box(0.0, 0.0, -1.0, 0.0, AHEAD) is None     # behind
+    assert models.ray_hits_box(0.0, 2.0, 1.0, 0.0, AHEAD) is None      # passes beside it
+
+
+def test_the_radar_sees_the_near_face_of_a_box_ahead():
+    points = returns(truth(), [AHEAD])
+    assert len(points) >= 5
+    for x, y, z, v in points:
+        assert x == pytest.approx(5.0, abs=0.25) and abs(y) <= 0.55
+        assert -0.8 < z < 1.0, 'z is in radar_link: 0.4 m above the ground'
+
+
+def test_nothing_to_see_means_no_points():
+    assert returns(truth(), []) == []
+    assert returns(truth(), [(20.0, -0.5, 21.0, 0.5)]) == [], 'beyond its 8.4 m'
+    assert returns(truth(), [(-5.0, -0.5, -4.0, 0.5)]) == [], 'behind the car'
+    assert returns(truth(), [(2.5, 8.0, 3.5, 9.0)]) == [], 'outside its 120 degrees'
+
+
+def test_a_near_box_hides_the_one_behind_it():
+    behind = (9.2, -0.5, 10.2, 0.5)
+    assert all(x < 5.3 for x, *_ in returns(truth(), [AHEAD, behind]))
+
+
+def test_the_points_turn_with_the_car():
+    north = returns(truth(yaw=math.pi / 2), [(-0.5, 7.2, 0.5, 8.2)])
+    assert north and all(x == pytest.approx(5.0, abs=0.25) for x, *_ in north)
+
+
+def test_the_radar_is_sparse_seeded_and_measures_closing_speed():
+    sparse = returns(truth(speed=1.0), [AHEAD], keep=0.5)
+    assert 0 < len(sparse) < len(returns(truth(), [AHEAD]))
+    assert sparse == returns(truth(speed=1.0), [AHEAD], keep=0.5)
+    assert all(v < -0.9 for *_, v in sparse), 'closing at about the car speed'

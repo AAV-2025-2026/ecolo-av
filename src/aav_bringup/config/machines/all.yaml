@@ -14,6 +14,7 @@ parts:
   detector: true         # YOLO, as yolo_detector_all. Needs PyTorch: pixi run -e ml car all
   stop_signs: true
   radar_clusters: false  # with the radar
+  camera_obstacles: false  # TODO with calibrated cameras (Q22): boxes into Nav2's costmap
   # lane: TODO the lane finder is being written; then a lane part here
   localization: true
   navigation: true

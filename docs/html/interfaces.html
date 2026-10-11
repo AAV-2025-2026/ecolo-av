@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">13 min read · 4 sections</div></header>
+<div class="meta">16 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -97,10 +97,42 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/cmd_vel/nav</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
-<td><code>velocity_smoother</code></td>
+<td><code>velocity_smoother</code>, <code>collision_monitor</code></td>
 <td><code>twist_mux</code></td>
 <td>-</td>
-<td>Priority 20. Nav2; from collision_monitor instead when it is enabled.</td>
+<td>Priority 20. Nav2. From collision_monitor where the radar runs (navigation.launch.py radar:=true - the bench, the car with its radar part), else straight from velocity_smoother.</td>
+</tr>
+<tr>
+<td><code>/cmd_vel_smoothed</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>velocity_smoother</code></td>
+<td><code>collision_monitor</code></td>
+<td>bench</td>
+<td>Nav2's smoothed command, into collision_monitor, where the radar runs. It stops the car for radar points in its stop zone, or when the radar goes silent; it only guards Nav2.</td>
+</tr>
+<tr>
+<td><code>/collision_monitor_state</code></td>
+<td><code>nav2_msgs/msg/CollisionMonitorState</code></td>
+<td><code>collision_monitor</code></td>
+<td>-</td>
+<td>bench</td>
+<td>What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar is silent or its TF is late.</td>
+</tr>
+<tr>
+<td><code>/collision_monitor/stop_zone</code></td>
+<td><code>geometry_msgs/msg/PolygonStamped</code></td>
+<td><code>collision_monitor</code></td>
+<td>-</td>
+<td>bench</td>
+<td>The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).</td>
+</tr>
+<tr>
+<td><code>/collision_monitor/collision_points_marker</code></td>
+<td><code>visualization_msgs/msg/MarkerArray</code></td>
+<td><code>collision_monitor</code></td>
+<td>-</td>
+<td>-</td>
+<td>The radar points collision_monitor sees, for RViz; sent only while someone listens.</td>
 </tr>
 <tr>
 <td><code>/cmd_vel/ai</code></td>
@@ -242,9 +274,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/radar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>radar</code>, <code>mock_radar</code></td>
-<td><code>radar_clusters</code></td>
+<td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code></td>
 <td>bench</td>
-<td>The TI radar's points, in radar_link. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; later also the local costmap's obstacle layer and collision_monitor.</td>
+<td>The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true).</td>
 </tr>
 <tr>
 <td><code>/battery_status</code></td>
@@ -271,12 +303,20 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.</td>
 </tr>
 <tr>
+<td><code>/camera/image_raw/compressed</code></td>
+<td><code>sensor_msgs/msg/CompressedImage</code></td>
+<td><code>camera_left</code>, <code>test_camera</code></td>
+<td><code>yolo_detector</code></td>
+<td>-</td>
+<td>The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera doesn't). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true).</td>
+</tr>
+<tr>
 <td><code>/camera/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
 <td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code></td>
-<td><code>lane_finder</code></td>
+<td><code>lane_finder</code>, <code>camera_obstacles</code></td>
 <td>bench</td>
-<td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here.</td>
+<td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.</td>
 </tr>
 <tr>
 <td><code>/radar/clusters</code></td>
@@ -298,9 +338,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/perception/detections</code></td>
 <td><code>vision_msgs/msg/Detection2DArray</code></td>
 <td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code></td>
-<td><code>stop_sign_watcher</code></td>
+<td><code>stop_sign_watcher</code>, <code>camera_obstacles</code></td>
 <td>-</td>
-<td>YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24), the laptop's for compressed images.</td>
+<td>YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24), the laptop's for compressed images.</td>
 </tr>
 <tr>
 <td><code>/perception/detections/image</code></td>
@@ -317,6 +357,22 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>twist_mux</code>, <code>hud_server</code></td>
 <td>car</td>
 <td>true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.</td>
+</tr>
+<tr>
+<td><code>/perception/camera_obstacles</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td><code>camera_obstacles</code></td>
+<td><code>local_costmap</code></td>
+<td>-</td>
+<td>Where each detected object stands on the road, in base_link (z = 0) - points 0.1 m apart along its box's bottom edge, out to 12 m from the camera, one cloud per detections message, from the camera its header names. Only the listed COCO classes (people, cyclists, cars...), never stop signs. The local costmap's camera layer marks them - bench.launch.py camera_obstacles:=true, or the car's camera_obstacles part next to navigation. Off until the cameras are calibrated (Q22).</td>
+</tr>
+<tr>
+<td><code>/perception/camera_view</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td><code>camera_obstacles</code></td>
+<td><code>local_costmap</code></td>
+<td>-</td>
+<td>The far edge of what that camera sees, on the road, 12 m out, in base_link. The camera layer clears up to it before it marks, so old boxes don't linger.</td>
 </tr>
 <tr>
 <td><code>/lane_geometry</code></td>
@@ -354,7 +410,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/bench/truth</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_sim</code></td>
-<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_camera</code></td>
+<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_camera</code>, <code>mock_radar</code></td>
 <td>bench</td>
 <td>Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs.</td>
 </tr>

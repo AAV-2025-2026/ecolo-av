@@ -14,6 +14,8 @@ parts:
   detector: true        # YOLO, as yolo_detector_orin. Needs JetPack's PyTorch: the reflash (Q24)
   stop_signs: true      # the stop-sign watcher: one per car, next to the mux
   radar_clusters: false # with the radar, later
+  camera_obstacles: false # TODO with calibrated cameras (Q22): boxes into Nav2's costmap,
+                          # next to navigation
   # lane: TODO the lane finder is being written; then a lane part here
   localization: true
   navigation: true

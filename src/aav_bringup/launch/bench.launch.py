@@ -3,7 +3,8 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
 
   ros2 launch aav_bringup bench.launch.py [nav:=true] [teleop:=false] [rviz:=false]
       [perception:=false] [lane:=false|true|fake] [hud:=false] [arm:=true] [foxglove:=false]
-      [start_y:=0.0] [start_yaw:=0.0] [bend_radius:=]
+      [start_y:=0.0] [start_yaw:=0.0] [bend_radius:=] [obstacle:=false]
+      [camera_obstacles:=false]
   pixi run bench                            (the same)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
   pixi run bench lane:=true start_y:=0.3    (lane keeping, from 0.3 m left of the centre)
@@ -15,17 +16,25 @@ topics and frames as the real devices:
   spine_sim                 the spine board and actuators: the firmware's own logic
                             (spine-core) on the CAN frames, driving a model car
   mock_imu, mock_gps,       the sensors, reading where the model car really is
-  mock_battery, mock_camera
-  mock_radar                pretend radar points, clustered by aav_object_detection
+  mock_battery, mock_camera,
+  mock_radar                the radar sees the bench world's obstacles (obstacle:=true);
+                            aav_object_detection clusters its points, and Nav2's local
+                            costmap marks them (navigation.launch.py radar:=true)
+
+camera_obstacles:=true adds aav_yolo's camera_obstacles (the detectors' boxes as points on
+the road, from mock_camera's lens) and the local costmap's camera layer. The bench camera
+draws only stop signs, which never count: publish a detection by hand to see it work.
 
 The model car starts at the map origin (the GPS datum), facing east, on the centre line
 of a straight road; start_y and start_yaw move it. A stop sign stands 25 m ahead on the
-right (aav_bench/config/bench.yaml). lane:=true runs lane keeping: lane_finder reads the
-pretend camera, control_interface steers on /cmd_vel/ai. lane:=fake feeds control_interface
-a pretend straight lane instead. arm:=true arms the spine after
-12 s, once Nav2 is up, the way `ros2 service call /spine/arm std_srvs/srv/SetBool
-"{data: true}"` does. Arming earlier, while everything starts, risks a gap in commands that
-latches the spine again: its 200 ms watchdog doing its job.
+right; obstacle:=true puts a 1 m box in the lane 15 m ahead (aav_bench/config/bench.yaml).
+lane:=true runs lane keeping: lane_finder reads the pretend camera, control_interface
+steers on /cmd_vel/ai. lane:=fake feeds control_interface a pretend straight lane instead.
+
+arm:=true arms the spine after 12 s, once Nav2 is up, the way `ros2 service call
+/spine/arm std_srvs/srv/SetBool "{data: true}"` does. Arming earlier, while everything
+starts, risks a gap in commands that latches the spine again: its 200 ms watchdog doing
+its job.
 """
 
 import os
@@ -52,7 +61,8 @@ def include(package, launch_file, **args):
 
 def launch_setup(context):
     flag = {n: LaunchConfiguration(n).perform(context).lower() == 'true'
-            for n in ('nav', 'teleop', 'rviz', 'perception', 'hud', 'arm', 'foxglove')}
+            for n in ('nav', 'teleop', 'rviz', 'perception', 'hud', 'arm', 'foxglove',
+                      'obstacle', 'camera_obstacles')}
     lane = LaunchConfiguration('lane').perform(context).lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -92,12 +102,15 @@ def launch_setup(context):
              parameters=[bench_config]),
         Node(package='aav_bench', executable='mock_camera', name='mock_camera',
              parameters=[bench_config] + road),
-        include('aav_object_detection', 'radar_clusters.launch.py', mock='true',
-                minimum_points='5'),
+        Node(package='aav_bench', executable='mock_radar', name='mock_radar',
+             parameters=[bench_config, {'obstacle': flag['obstacle']}]),
+        include('aav_object_detection', 'radar_clusters.launch.py', minimum_points='5'),
     ]
     if flag['nav']:
+        # mock_radar always runs, so Nav2's local costmap always reads the radar.
         actions.append(include('aav_navigation', 'navigation.launch.py',
-                               map=os.path.join(share('aav_navigation'), 'maps', 'empty.yaml')))
+                               map=os.path.join(share('aav_navigation'), 'maps', 'empty.yaml'),
+                               radar='true', camera_obstacles=flag['camera_obstacles']))
     if flag['teleop']:
         actions.append(include('aav_teleop', 'teleop.launch.py'))
     if flag['perception']:
@@ -105,6 +118,11 @@ def launch_setup(context):
             include('aav_yolo', 'detector.launch.py', labels='stop sign'),
             Node(package='aav_yolo', executable='stop_sign_watcher', name='stop_sign_watcher'),
         ]
+    if flag['camera_obstacles']:
+        actions.append(Node(package='aav_yolo', executable='camera_obstacles',
+                            name='camera_obstacles',
+                            parameters=[os.path.join(share('aav_yolo'), 'config',
+                                                     'camera_obstacles.yaml')]))
     if lane in ('true', 'fake'):
         actions.append(include('aav_lane_geometry', 'lane_follower.launch.py',
                                fake=str(lane == 'fake').lower()))
@@ -152,5 +170,10 @@ def generate_launch_description():
         DeclareLaunchArgument('bend_radius', default_value='',
                               description='m: bend the bench road from 30 m on, + left, - right '
                                           '(empty: bench.yaml, straight)'),
+        DeclareLaunchArgument('obstacle', default_value='false',
+                              description="a box in the car's lane, 15 m ahead, that the "
+                                          'pretend radar sees'),
+        DeclareLaunchArgument('camera_obstacles', default_value='false',
+                              description="the detectors' boxes into the local costmap"),
         OpaqueFunction(function=launch_setup),
     ])

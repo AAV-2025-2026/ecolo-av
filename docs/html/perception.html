@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, YOLO, stop signs, lanes and radar</h1>
-<div class="meta">17 min read · 10 sections</div></header>
+<div class="meta">18 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -284,6 +284,8 @@ far more pictures may do better:</p>
 environment that starts it: the <code>ml</code> environment's PyTorch on a laptop, JetPack's on the
 Orin.</p>
 <h3 id="one-gpu-setting-for-every-computer">One GPU setting for every computer</h3>
+<p><code>auto</code>, the default, picks the GPU the computer has. The other values are PyTorch's own
+names, passed on as they are.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -294,8 +296,18 @@ Orin.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>auto</code> (the default), <code>gpu</code>, <code>cuda</code>, <code>metal</code> or <code>mps</code></td>
+<td><code>auto</code> (the default)</td>
 <td>CUDA</td>
+<td>Metal</td>
+</tr>
+<tr>
+<td><code>cuda</code>, <code>cuda:N</code></td>
+<td>CUDA: the first card, or card N</td>
+<td>an error: use <code>auto</code> or <code>mps</code></td>
+</tr>
+<tr>
+<td><code>mps</code></td>
+<td>an error: use <code>auto</code> or <code>cuda</code></td>
 <td>Metal</td>
 </tr>
 <tr>
@@ -303,21 +315,38 @@ Orin.</p>
 <td>the CPU</td>
 <td>the CPU</td>
 </tr>
-<tr>
-<td><code>cuda:1</code></td>
-<td>the second NVIDIA card</td>
-<td>Metal</td>
-</tr>
 </tbody>
 </table></div>
 <ul>
-<li>So <code>cuda</code> on a Mac means Metal: the Mac's GPU, through PyTorch.</li>
+<li>A name PyTorch doesn't know, such as <code>gpu</code> or <code>metal</code>, is an error too. It lists the
+  names above.</li>
 <li>A <code>.mlpackage</code> (Core ML) or an <code>.engine</code> (TensorRT) ignores the setting: each picks its
   own hardware.</li>
 <li>MLX, Apple's own machine-learning library, isn't needed for YOLO: Metal, through
   PyTorch or Core ML, is the Mac's fast path. MLX could join the <code>ml</code> environment later,
   for training or for other models.</li>
 </ul>
+<h3 id="one-detector-per-computer-and-wifi">One detector per computer, and WiFi</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>node_name:=yolo_detector_macbook</code></td>
+<td>the node's name. Each computer with a GPU runs its own detector, under its own name: <code>car.launch.py</code> calls it <code>yolo_detector_&lt;machine&gt;</code>. All of them publish on <code>/perception/detections</code></td>
+</tr>
+<tr>
+<td><code>compressed:=true</code></td>
+<td>reads <code>/camera/image_raw/compressed</code>, the JPEG pictures <code>usb_cam</code> already publishes. Raw pictures are too big for WiFi</td>
+</tr>
+</tbody>
+</table></div>
+<p>From a Mac on the car's network, by hand:
+<code>pixi run detect node_name:=yolo_detector_macbook compressed:=true</code>.</p>
 <h3 id="the-ml-environment">The ml environment</h3>
 <p>A separate Pixi environment, so nobody downloads PyTorch unless they want it: PyTorch
 2.13, Ultralytics 8.4, coremltools 9 (Macs only) and NumPy 2.3.</p>
@@ -560,6 +589,11 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
 <td>off until the radar is on the car</td>
 </tr>
 <tr>
+<td><code>camera_obstacles</code></td>
+<td>the boxes as points on the road → <code>/perception/camera_obstacles</code>, for Nav2's costmap</td>
+<td>off until the cameras are calibrated (Q22); then next to <code>navigation</code>: the Orin</td>
+</tr>
+<tr>
 <td><code>lane</code></td>
 <td>to do: the lane finder, then lane keeping</td>
 <td>the lane finder is being written</td>
@@ -577,10 +611,29 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
 <p><strong>From a Mac:</strong> a Mac on the car's network can run the detector on the car's cameras.
   Raw images are too big for WiFi, so the cameras should also publish compressed ones.</p>
 </li>
-<li><strong>Into the costmap:</strong> a camera detection needs a distance first (a stereo pair, a depth
-  model, or the camera's height above a flat road). Then it's a point on the ground, and
-  Nav2's costmap marks it like a radar or lidar point. Stop signs never go in the
-  costmap: they lock the mux.</li>
+<li>
+<p><strong>Into the costmap:</strong> <code>camera_obstacles</code> (in <code>aav_yolo</code>) puts each box where it meets
+  the road: its bottom edge, seen through the camera's lens from its height and tilt
+  (<code>vehicle.yaml</code>, through TF). The local costmap's camera layer marks those points. Off
+  until the cameras are calibrated (Q22); then turn the <code>camera_obstacles</code> part on in the
+  machine file that runs <code>navigation</code>, the Orin's. <a href="costmaps.html">Costmaps</a> has the details.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Counts</th>
+<th>Never counts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>people, bicycles, cars, motorcycles, buses, trucks, cats, dogs, horses (<code>config/camera_obstacles.yaml</code>)</td>
+<td>stop signs, even if listed: they lock the mux</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each message's camera is its <code>header.frame_id</code>, so every detector, on any camera, is
+read the same way.</p>
+</li>
 </ul>
 <h3 id="isaac-ros-nvidia">Isaac ROS (NVIDIA)</h3>
 <ul>

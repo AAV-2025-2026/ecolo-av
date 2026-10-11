@@ -101,7 +101,8 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.
 | `detector` | YOLO, as `yolo_detector_<machine>`, with the model the file names ([Models](perception.md#models)) |
 | `stop_signs` | the stop-sign watcher: one per car, next to the mux |
 | `radar_clusters` | the radar's clustering |
-| `localization`, `navigation` | the two EKFs and `navsat_transform`; Nav2 |
+| `camera_obstacles` | the detectors' boxes as points on the road, for Nav2's costmap ([Costmaps](costmaps.md)) |
+| `localization`, `navigation` | the two EKFs and `navsat_transform`; Nav2. Its costmap reads the `radar` and `camera_obstacles` parts on the same computer, and `collision_monitor` comes with the radar |
 | `spine`, `legacy_uart`, `legacy_encoder` | the backends: the CAN spine, or today's ESP32 and wheel encoder |
 | `foxglove` | `foxglove_bridge`, on port 8765 |
 

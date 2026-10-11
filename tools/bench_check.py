@@ -4,6 +4,7 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 
     pixi run bench-check          (about 2 minutes; nothing else on the network sees it)
     pixi run -e ml bench-check --perception    (adds YOLO and the stop sign: 3 minutes)
+    pixi run bench-check --obstacle            (adds a box for the radar: 3 minutes)
     pixi run bench-check --lane   (adds lane keeping, in a second bench run: 1 more minute)
 
 1. Starts bench.launch.py on a private ROS domain, local to this computer.
@@ -15,12 +16,17 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 6. With --perception: Nav2 drives 40 m east, past the bench's stop sign. The car must stop
    before the sign, wait, and go on to the goal. The camera's picture with YOLO's boxes, at
    the moment it stopped, is saved to /tmp/aav-bench-stop-sign.png.
-7. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
+7. With --obstacle: a 1 m box appears in the lane 15 m ahead, which only the pretend radar
+   sees, and Nav2 drives 30 m. collision_monitor's stop zone must stop the car before the
+   box; once the box is taken away, the car must go on to the goal.
+8. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
    the car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there. Its own start-up and graph checks come first.
 
 Prints a table and exits 1 if anything failed. Run it after changing anything between the
-drivers and the spine.
+drivers and the spine. The launch logs go to /tmp/aav-bench-check.log and, with --lane,
+/tmp/aav-bench-check-lane.log. AAV_BENCH_LOG=/tmp/mine.log moves them to /tmp/mine.log and
+/tmp/mine-lane.log.
 """
 
 import bisect
@@ -39,11 +45,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.environ['ROS_DOMAIN_ID'] = os.environ.get('AAV_BENCH_DOMAIN', str(random.randint(150, 230)))
 os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
 
+from aav_description import vehicle  # noqa: E402
 from aav_interfaces.action import ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
+from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
 from nav_msgs.msg import Odometry  # noqa: E402
+from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue  # noqa: E402
+from rcl_interfaces.srv import SetParameters  # noqa: E402
 import rclpy  # noqa: E402
 from rclpy.action import ActionClient  # noqa: E402
 from rclpy.node import Node  # noqa: E402
@@ -98,6 +108,11 @@ class Probe(Node):
         self.create_subscription(Image, '/perception/detections/image',
                                  lambda m: setattr(self, 'picture', m), 2)
         self.stop_picture = None
+        self.monitor = []    # (time, action, polygon) from collision_monitor, as it changes
+        self.create_subscription(CollisionMonitorState, '/collision_monitor_state',
+                                 lambda m: self.monitor.append(
+                                     (time.monotonic(), m.action_type, m.polygon_name)), 10)
+        self.radar_params = self.create_client(SetParameters, '/mock_radar/set_parameters')
 
     def on_truth(self, msg):
         self.truth = msg
@@ -156,6 +171,19 @@ class Probe(Node):
         future = self.drive.send_goal_async(goal)
         self.spin_for(10.0, lambda: future.done())
         return future.result() if future.done() else None
+
+    def set_radar(self, obstacle, boxes=None):
+        """Put the bench's boxes where the pretend radar sees them, or take them away."""
+        params = [Parameter(name='obstacle', value=ParameterValue(
+            type=ParameterType.PARAMETER_BOOL, bool_value=obstacle))]
+        if boxes is not None:
+            params.append(Parameter(name='boxes', value=ParameterValue(
+                type=ParameterType.PARAMETER_DOUBLE_ARRAY, double_array_value=boxes)))
+        if not self.radar_params.wait_for_service(timeout_sec=10.0):
+            return False
+        future = self.radar_params.call_async(SetParameters.Request(parameters=params))
+        self.spin_for(10.0, lambda: future.done())
+        return future.done() and all(r.successful for r in future.result().results)
 
     def press(self, publisher, value, seconds):
         end = time.monotonic() + seconds
@@ -234,6 +262,70 @@ def check_stop_sign(probe):
                   'before the lock went on)', flush=True)
         except Exception as e:  # noqa: B902 - the picture is a bonus
             print(f'could not save the picture: {e}', flush=True)
+
+
+def yaw_of(msg):
+    q = msg.pose.pose.orientation
+    return math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+
+
+def check_obstacle(probe, ahead=15.0, goal=30.0):
+    """Put a box `ahead` m in the lane: the stop zone must stop the car before it."""
+    name = 'obstacle'
+    if not probe.arm_and_hold():
+        result(name, False, 'the spine would not stay armed')
+        return
+    body = vehicle.load()['vehicle']['body']
+    front = body['length'] - body['rear_overhang']   # base_link to the front bumper
+    t = probe.truth
+    x0, y0, h = t.pose.pose.position.x, t.pose.pose.position.y, yaw_of(t)
+    c, s = math.cos(h), math.sin(h)
+
+    def along():
+        p = probe.truth.pose.pose.position
+        return (p.x - x0) * c + (p.y - y0) * s
+
+    # A 1 m square, its near face `ahead` m in front of the bumper.
+    bx, by = x0 + (front + ahead + 0.5) * c, y0 + (front + ahead + 0.5) * s
+    if not probe.set_radar(True, [bx - 0.5, by - 0.5, bx + 0.5, by + 0.5]):
+        result(name, False, 'could not place the box (mock_radar parameters)')
+        return
+    target = NavigateToPose.Goal()
+    target.pose.header.frame_id = 'map'
+    target.pose.pose.position.x, target.pose.pose.position.y = x0 + goal * c, y0 + goal * s
+    orientation = target.pose.pose.orientation
+    orientation.z, orientation.w = math.sin(h / 2.0), math.cos(h / 2.0)
+    sent = probe.nav.send_goal_async(target)
+    probe.spin_for(10.0, lambda: sent.done())
+    if not sent.done() or not sent.result().accepted:
+        result(name, False, 'Nav2 refused the goal')
+        probe.set_radar(False)
+        return
+    done = sent.result().get_result_async()
+    t0, seen = time.monotonic(), len(probe.monitor)
+    top, still, gap, latched = 0.0, None, None, False
+    while time.monotonic() - t0 < 150.0 and not done.done():
+        probe.spin_for(0.1)
+        v = probe.truth.twist.twist.linear.x
+        top = max(top, v)
+        latched = latched or (probe.status is not None and not probe.status.armed)
+        if gap is None and top > 0.5 and abs(v) < 0.02:
+            still = still or time.monotonic()
+            if time.monotonic() - still > 3.0:      # stood still for 3 s: take the box away
+                gap = ahead - along()
+                probe.set_radar(False)
+        else:
+            still = None
+    states = probe.monitor[seen:]
+    stop_zone = any(a == CollisionMonitorState.STOP and p == 'StopZone' for _, a, p in states)
+    reached = done.done() and done.result().status == 4
+    passed = along() > front + ahead + 1.0
+    ok = gap is not None and 0.0 < gap < 2.0 and stop_zone and reached and passed
+    where = f'stood still {gap:.2f} m before the box' if gap is not None else 'never stopped'
+    result(name, ok, f'{where} (top speed {top:.2f} m/s), stop zone fired: {stop_zone}; box '
+                     f'taken away, Nav2 goal {"reached" if reached else "not reached"} '
+                     f'{along():.1f} m on' + ('; the spine latched' if latched else ''))
+    probe.set_radar(False)
 
 
 def check_lane_keeping(probe):
@@ -411,12 +503,17 @@ def main():
               lambda probe: check_estop(probe, 'hardware e-stop', probe.hw_estop)]
     if perception:
         checks.append(check_stop_sign)
-    logs = ['/tmp/aav-bench-check.log']
+    if '--obstacle' in args:
+        checks.append(check_obstacle)
+    # AAV_BENCH_LOG: another place for the logs, so two checks at once keep their own.
+    log = os.environ.get('AAV_BENCH_LOG', '/tmp/aav-bench-check.log')
+    logs = [log]
     session([f'perception:={str(perception).lower()}'], checks, logs[0])
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
-        logs.append('/tmp/aav-bench-check-lane.log')
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-lane{ext}')
         session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'],
                 [check_lane_keeping], logs[1], 'lane')
 

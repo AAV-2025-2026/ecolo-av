@@ -127,18 +127,33 @@ Orin.
 
 ### One GPU setting for every computer
 
+`auto`, the default, picks the GPU the computer has. The other values are PyTorch's own
+names, passed on as they are.
+
 | `device:=` | On the Orin, or an NVIDIA card | On a Mac |
 |---|---|---|
-| `auto` (the default), `gpu`, `cuda`, `metal` or `mps` | CUDA | Metal |
+| `auto` (the default) | CUDA | Metal |
+| `cuda`, `cuda:N` | CUDA: the first card, or card N | an error: use `auto` or `mps` |
+| `mps` | an error: use `auto` or `cuda` | Metal |
 | `cpu` | the CPU | the CPU |
-| `cuda:1` | the second NVIDIA card | Metal |
 
-- So `cuda` on a Mac means Metal: the Mac's GPU, through PyTorch.
+- A name PyTorch doesn't know, such as `gpu` or `metal`, is an error too. It lists the
+  names above.
 - A `.mlpackage` (Core ML) or an `.engine` (TensorRT) ignores the setting: each picks its
   own hardware.
 - MLX, Apple's own machine-learning library, isn't needed for YOLO: Metal, through
   PyTorch or Core ML, is the Mac's fast path. MLX could join the `ml` environment later,
   for training or for other models.
+
+### One detector per computer, and WiFi
+
+| Setting | Does |
+|---|---|
+| `node_name:=yolo_detector_macbook` | the node's name. Each computer with a GPU runs its own detector, under its own name: `car.launch.py` calls it `yolo_detector_<machine>`. All of them publish on `/perception/detections` |
+| `compressed:=true` | reads `/camera/image_raw/compressed`, the JPEG pictures `usb_cam` already publishes. Raw pictures are too big for WiFi |
+
+From a Mac on the car's network, by hand:
+`pixi run detect node_name:=yolo_detector_macbook compressed:=true`.
 
 ### The ml environment
 
@@ -255,6 +270,7 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 | `detector` | YOLO, as `yolo_detector_<machine>` → `/perception/detections` | the Orin. The laptop's is off until it reads compressed images |
 | `stop_signs` | `stop_sign_watcher` → `/perception/stop` | one per car, next to the mux: the Orin |
 | `radar_clusters` | DBSCAN on `/radar/points` | off until the radar is on the car |
+| `camera_obstacles` | the boxes as points on the road → `/perception/camera_obstacles`, for Nav2's costmap | off until the cameras are calibrated (Q22); then next to `navigation`: the Orin |
 | `lane` | to do: the lane finder, then lane keeping | the lane finder is being written |
 
 - Every detector publishes on `/perception/detections`, so the watcher hears them all.
@@ -264,10 +280,18 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 
 - **From a Mac:** a Mac on the car's network can run the detector on the car's cameras.
   Raw images are too big for WiFi, so the cameras should also publish compressed ones.
-- **Into the costmap:** a camera detection needs a distance first (a stereo pair, a depth
-  model, or the camera's height above a flat road). Then it's a point on the ground, and
-  Nav2's costmap marks it like a radar or lidar point. Stop signs never go in the
-  costmap: they lock the mux.
+- **Into the costmap:** `camera_obstacles` (in `aav_yolo`) puts each box where it meets
+  the road: its bottom edge, seen through the camera's lens from its height and tilt
+  (`vehicle.yaml`, through TF). The local costmap's camera layer marks those points. Off
+  until the cameras are calibrated (Q22); then turn the `camera_obstacles` part on in the
+  machine file that runs `navigation`, the Orin's. [Costmaps](costmaps.md) has the details.
+
+  | Counts | Never counts |
+  |---|---|
+  | people, bicycles, cars, motorcycles, buses, trucks, cats, dogs, horses (`config/camera_obstacles.yaml`) | stop signs, even if listed: they lock the mux |
+
+  Each message's camera is its `header.frame_id`, so every detector, on any camera, is
+  read the same way.
 
 ### Isaac ROS (NVIDIA)
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Bench mode: the whole car on one computer</h1>
-<div class="meta">12 min read · 11 sections</div></header>
+<div class="meta">13 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -100,6 +100,16 @@ don't.</p>
 <td><code>rviz</code>, <code>foxglove</code></td>
 <td><code>false</code></td>
 <td>RViz; foxglove_bridge on port 8765</td>
+</tr>
+<tr>
+<td><code>obstacle</code></td>
+<td><code>false</code></td>
+<td>a 1 m box in the lane 15 m ahead, which only the pretend radar sees: Nav2 stops for it</td>
+</tr>
+<tr>
+<td><code>camera_obstacles</code></td>
+<td><code>false</code></td>
+<td>the detectors' boxes into Nav2's local costmap (<a href="costmaps.html">Costmaps</a>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -212,14 +222,18 @@ can tell the difference.</p>
 </tr>
 <tr>
 <td><code>mock_radar</code></td>
-<td><code>ti_ros2_driver</code></td>
+<td><code>aav_bench</code></td>
 <td><code>/radar/points</code></td>
-<td>three pretend objects</td>
+<td>sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there</td>
 </tr>
 </tbody>
 </table></div>
 <p>The bench world is <code>aav_bench/config/bench.yaml</code>. The model car starts at the map's origin
-(the GPS datum), facing east. A stop sign stands 25 m ahead, 2 m to the right.</p>
+(the GPS datum), facing east. A stop sign stands 25 m ahead, 2 m to the right. With
+<code>obstacle:=true</code>, a 1 m box stands in the lane 15 m ahead; a test can move it, or take it
+away, with <code>mock_radar</code>'s parameters.</p>
+<p>Nav2 on the bench always has the radar in its local costmap, and <code>collision_monitor</code>
+between it and the mux, as on a car with a radar.</p>
 <h3 id="the-model-car">The model car</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -354,6 +368,11 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 <td>Stop sign (<code>pixi run -e ml bench-check --perception</code>)</td>
 <td>Nav2 drives 40 m east: the car stops before the sign, waits, and reaches the goal</td>
 <td><span class="badge b-works">works</span> locked 4.7 m before the sign, stopped, reached the goal</td>
+</tr>
+<tr>
+<td>Obstacle (<code>pixi run bench-check --obstacle</code>)</td>
+<td>a box 15 m ahead, Nav2 driving 30 m: <code>collision_monitor</code>'s stop zone stops the car before it; with the box gone, the car reaches the goal</td>
+<td><span class="badge b-works">works</span> stood still 0.42 m before the box, from 1.02 m/s; reached the goal once the box was gone</td>
 </tr>
 </tbody>
 </table></div>
@@ -514,7 +533,10 @@ the centre.</p>
   watchdog, which then latches the spine, as it should.</li>
 <li>On Ctrl-C, some nodes print a traceback, or a stack trace from deep in ROS's messaging,
   while they shut down. It's harmless.</li>
-<li><code>mock_radar</code>'s objects ride along with the radar: they don't stay put in the world.</li>
+<li>The pretend radar sees only the boxes, not the stop sign; the camera doesn't draw the
+  boxes.</li>
+<li>Parked, the EKFs' heading drifts with <code>mock_imu</code>'s gyro bias, a few degrees a minute
+  (10.5 degrees after about 2 minutes, 11 Oct), until the car drives and GPS corrects it.</li>
 </ul>
 </section>
 <section class="card"><h2 id="files">Files</h2>

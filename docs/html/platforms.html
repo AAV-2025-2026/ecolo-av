@@ -242,8 +242,12 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.</p>
 <td>the radar's clustering</td>
 </tr>
 <tr>
+<td><code>camera_obstacles</code></td>
+<td>the detectors' boxes as points on the road, for Nav2's costmap (<a href="costmaps.html">Costmaps</a>)</td>
+</tr>
+<tr>
 <td><code>localization</code>, <code>navigation</code></td>
-<td>the two EKFs and <code>navsat_transform</code>; Nav2</td>
+<td>the two EKFs and <code>navsat_transform</code>; Nav2. Its costmap reads the <code>radar</code> and <code>camera_obstacles</code> parts on the same computer, and <code>collision_monitor</code> comes with the radar</td>
 </tr>
 <tr>
 <td><code>spine</code>, <code>legacy_uart</code>, <code>legacy_encoder</code></td>

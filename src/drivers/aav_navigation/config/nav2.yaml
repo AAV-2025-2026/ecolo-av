@@ -5,12 +5,16 @@
 #   footprint                 the body outline            (both costmaps)
 #   minimum_turning_radius    wheelbase / tan(max steer)   (SmacPlannerHybrid)
 #   min_turning_r             the same                     (MPPI, if you switch to it)
-# and the map file, and the behaviour tree paths.
+#   StopZone.points           the box ahead of the bumper  (collision_monitor)
+# and the map file, and the behaviour tree paths. Where a radar runs (radar:=true), it
+# also turns on the local costmap's obstacle_layer and starts collision_monitor; with
+# camera_obstacles:=true, the camera_layer.
 #
 # Topics: Nav2 reads /odometry/local (ekf_local) and TF map -> odom -> base_link
 # (robot_localization). Its velocity output goes controller -> velocity_smoother ->
 # /cmd_vel/nav (TwistStamped) -> twist_mux -> /cmd_vel -> ego, which turns it into a
-# steering angle. Nav2 never talks to the wheels.
+# steering angle. With the radar, collision_monitor sits between the smoother and
+# /cmd_vel/nav. Nav2 never talks to the wheels.
 #
 # Jazzy publishes Twist unless enable_stamped_cmd_vel is true on each node (checked in
 # nav2_util/twist_publisher.hpp: the default is false on Jazzy).
@@ -25,7 +29,10 @@ bt_navigator:
     robot_base_frame: base_link
     odom_topic: /odometry/local
     bt_loop_duration: 10
-    default_server_timeout: 20
+    # ms a tree node waits for a server to take (or cancel) its goal. Nav2's 20, and 200,
+    # failed whole goals on a busy computer (the bench, 11 Oct, load 30-40 on 16 cores);
+    # the Orin will be busy too. A server that's gone still fails the goal within 1 s.
+    default_server_timeout: 1000
     wait_for_service_timeout: 1000
     action_server_result_timeout: 900.0
     navigators: ["navigate_to_pose", "navigate_through_poses"]
@@ -78,7 +85,8 @@ controller_server:
       use_velocity_scaled_lookahead_dist: true
       use_rotate_to_heading: false          # MUST be false for a car: it can't spin in place
       allow_reversing: false                # true needs a planner that plans reverse (REEDS_SHEPP)
-      transform_tolerance: 0.1
+      transform_tolerance: 0.5              # s. 0.1 aborted goals when a busy computer's EKF
+                                            # sent map -> odom late (the bench, 11 Oct)
       min_approach_linear_velocity: 0.1
       approach_velocity_scaling_dist: 1.0
       use_collision_detection: true
@@ -136,25 +144,64 @@ local_costmap:
       resolution: 0.10            # m per cell: 200 x 200 cells
       footprint: "[[1.8, 0.5], [1.8, -0.5], [-0.2, -0.5], [-0.2, 0.5]]"   # set by the launch file
       footprint_padding: 0.05
-      # The map's obstacles (static_layer) plus inflation. No sensor feeds it yet; the
-      # obstacle layer below is ready for the radar (perception phase): add it to plugins.
-      plugins: ["static_layer", "inflation_layer"]
+      # The map's obstacles (static_layer), the radar's (obstacle_layer), the cameras'
+      # (camera_layer), then inflation. The launch file turns the sensor layers on:
+      #   obstacle_layer  radar:=true, where a radar runs: the bench, and the car with its
+      #                   radar part. Gazebo's car has no radar
+      #   camera_layer    camera_obstacles:=true, off until the cameras are calibrated (Q22)
+      plugins: ["static_layer", "obstacle_layer", "camera_layer", "inflation_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: true
+        enabled: false              # set by the launch file
+        # Heights in odom, which sits on the road. These bound every source below too.
+        min_obstacle_height: -0.5
+        max_obstacle_height: 2.0
         observation_sources: radar
+        # The TI radar: sparse (a few points per object), noisy, and no ground returns.
+        # Its points come in radar_link (vehicle.yaml), best effort, 10 times a second.
         radar:
           topic: /radar/points
           data_type: "PointCloud2"
           marking: true
-          clearing: false           # radar returns are too sparse to clear with
-          min_obstacle_height: 0.1
-          max_obstacle_height: 2.0
-          obstacle_max_range: 15.0
-          obstacle_min_range: 0.3
+          clearing: true            # each point clears the cells between it and the radar
+          min_obstacle_height: -0.5   # m. A radar's height is poor, and there's no ground
+          max_obstacle_height: 2.0    # to reject: keep low points. Above 2 m is over the car
+          obstacle_min_range: 0.3     # m: closer is the radar's own clutter
+          obstacle_max_range: 8.4     # m: the TI radar's range (ti_ros2_driver cfg/base.cfg)
+          raytrace_min_range: 0.0
+          raytrace_max_range: 8.4
+          observation_persistence: 0.2   # s: both radar frames of each update, not just one
+      # The detectors' boxes, as points on the road (aav_yolo camera_obstacles). Its own
+      # layer, so its clearing never wipes the radar's marks. Each update clears what the
+      # camera sees, then marks the boxes of the last 0.3 s, from every detector.
+      camera_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: false              # set by the launch file
+        min_obstacle_height: -0.5   # m: the points lie on the road, z = 0
+        max_obstacle_height: 0.5
+        observation_sources: camera camera_view
+        camera:
+          topic: /perception/camera_obstacles
+          data_type: "PointCloud2"
+          marking: true
+          clearing: false
+          min_obstacle_height: -0.5
+          max_obstacle_height: 0.5
+          obstacle_min_range: 0.0
+          obstacle_max_range: 15.0      # m from base_link: the node keeps 12 m from the camera
+          observation_persistence: 0.3  # s: the newest boxes from each detector
+        camera_view:
+          topic: /perception/camera_view
+          data_type: "PointCloud2"
+          marking: false
+          clearing: true              # clears from the car out to the edge of the view
+          min_obstacle_height: -0.5
+          max_obstacle_height: 0.5
+          raytrace_min_range: 0.0
+          raytrace_max_range: 15.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 2.0     # m; at least the car's circumscribed radius, 1.93
@@ -272,9 +319,12 @@ velocity_smoother:
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
 
-# Optional (navigation.launch.py collision_monitor:=true), once the radar works: it sits
-# between the smoother and twist_mux and slows or stops the car when points enter the
-# footprint's path.
+# Wherever the radar is (navigation.launch.py radar:=true; collision_monitor:=false leaves
+# it out): it sits between the smoother and twist_mux (velocity_smoother ->
+# /cmd_vel_smoothed -> collision_monitor -> /cmd_vel/nav) and stops the car when radar
+# points enter the stop zone. It reads the radar's own points, not the costmap, so it still
+# stops the car if the costmap, the planner or the controller goes wrong. It only guards
+# Nav2: the other drivers reach twist_mux without it.
 collision_monitor:
   ros__parameters:
     enable_stamped_cmd_vel: true
@@ -284,10 +334,23 @@ collision_monitor:
     cmd_vel_out_topic: /cmd_vel/nav
     state_topic: collision_monitor_state
     transform_tolerance: 0.2
-    source_timeout: 1.0
+    source_timeout: 1.0       # s: a radar silent this long stops the car too
     base_shift_correction: true
-    stop_pub_timeout: 2.0
-    polygons: ["FootprintApproach"]
+    stop_pub_timeout: 2.0     # s of zeros after a stop; then twist_mux's nav slot times out
+    polygons: ["StopZone"]
+    # Three radar points in this box stop the car. From the front bumper to 1 m ahead of
+    # it, 0.2 m wider than the body each side: aav_description vehicle.py stop_zone_points,
+    # from vehicle.yaml's body (it says why 1 m).
+    StopZone:
+      type: "polygon"
+      action_type: "stop"
+      points: "[[2.8, 0.7], [2.8, -0.7], [1.8, -0.7], [1.8, 0.7]]"   # set by the launch file
+      min_points: 3             # a radar is noisy: one stray point mustn't stop the car
+      visualize: true           # for RViz, on polygon_pub_topic
+      polygon_pub_topic: /collision_monitor/stop_zone
+      enabled: true
+    # Not used: slows the car so it stays 2 s from a collision on its current curve. Add it
+    # to polygons to try it.
     FootprintApproach:
       type: "polygon"
       action_type: "approach"
@@ -301,6 +364,7 @@ collision_monitor:
     radar:
       type: "pointcloud"
       topic: /radar/points
-      min_height: 0.1
-      max_height: 2.0
+      min_height: -0.5          # m, in base_link. A radar sees no ground, and its height
+      max_height: 2.0           # is poor: keep low points. Above 2 m is over the car
+      min_range: 0.2            # m from the radar: closer is its own clutter
       enabled: true

@@ -7,13 +7,16 @@ The YOLO detector, on the camera's images.
 
 What you can set:
   model       the model file (.pt, .mlpackage or .engine). Default: models/yolo11n.pt
-  device      auto or gpu: the GPU this computer has (CUDA on the Orin, Metal on a Mac;
-              cuda and metal mean the same), cpu, or cuda:1 for a second NVIDIA card
+  device      auto (the default): the GPU this computer has, CUDA or a Mac's Metal, else
+              the CPU. Or PyTorch's own names: cuda, cuda:N, mps (Metal) or cpu. A .engine
+              or .mlpackage model picks its own hardware
   confidence  the lowest score kept, 0 to 1
   labels      the labels to keep, comma-separated; empty keeps them all
   image       the camera topic to read
+  compressed  true: read <image>/compressed (JPEG) instead: for a laptop on the car's WiFi
   picture     an image or video file, published as the camera (image_publisher), for tests
-  node_name   the node's name: yolo_detector, or yolo_detector_<machine> on the car
+  node_name   the node's name: yolo_detector, or yolo_detector_<machine> on the car. One
+              detector per computer, each under its own name, all on /perception/detections
 
 The detector runs as `python3 -m aav_yolo.detector`: the python3 of the environment that
 started the launch, so the ml environment's PyTorch is the one it finds.
@@ -39,6 +42,8 @@ def generate_launch_description():
         DeclareLaunchArgument('confidence', default_value='0.5'),
         DeclareLaunchArgument('labels', default_value=''),
         DeclareLaunchArgument('image', default_value='/camera/image_raw'),
+        DeclareLaunchArgument('compressed', default_value='false',
+                              description='read <image>/compressed (JPEG), for WiFi'),
         DeclareLaunchArgument('picture', default_value=''),
         DeclareLaunchArgument('node_name', default_value='yolo_detector'),
         Node(
@@ -56,6 +61,7 @@ def generate_launch_description():
                  '-p', ['device:=', arg('device')],
                  '-p', ['confidence:=', arg('confidence')],
                  '-p', ['labels:="', arg('labels'), '"'],
+                 '-p', ['compressed:=', arg('compressed')],
                  '-r', ['image:=', arg('image')],
                  '-r', 'detections:=/perception/detections',
                  '-r', 'detections/image:=/perception/detections/image'],

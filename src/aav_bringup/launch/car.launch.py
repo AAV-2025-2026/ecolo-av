@@ -25,8 +25,13 @@ Parts and what they start:
   stop_signs      stop_sign_watcher -> /perception/stop, twist_mux's stop-sign lock (the
                   lock is in aav_mux's config). One per car, next to the mux
   radar_clusters  DBSCAN on /radar/points -> /radar/clusters, /radar/cluster_boxes
+  camera_obstacles
+                  the detectors' boxes as points on the road -> /perception/camera_obstacles,
+                  for Nav2's costmap. Off until the cameras are calibrated (Q22)
   localization    ekf_local, ekf_global, navsat_transform
-  navigation      Nav2 -> /cmd_vel/nav
+  navigation      Nav2 -> /cmd_vel/nav. Its local costmap reads the sensors this machine
+                  runs: with radar, /radar/points, and collision_monitor stops Nav2 for
+                  radar points just ahead; with camera_obstacles, the camera's points
   spine           backend: CAN spine (ros2_socketcan + spine_bridge)
   legacy_uart     backend: today's ESP32 over UART (the Pi wired to it)
   legacy_encoder  today's wheel encoder over UDP
@@ -56,8 +61,8 @@ from launch_ros.actions import Node
 import yaml
 
 PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'imu', 'gps', 'radar', 'battery',
-         'camera', 'detector', 'stop_signs', 'radar_clusters', 'localization', 'navigation',
-         'spine', 'legacy_uart', 'legacy_encoder', 'foxglove')
+         'camera', 'detector', 'stop_signs', 'radar_clusters', 'camera_obstacles',
+         'localization', 'navigation', 'spine', 'legacy_uart', 'legacy_encoder', 'foxglove')
 # What a machine file holds: the parts, and the detector's settings.
 SECTIONS = ('parts', 'detector')
 # Each model format: what runs it, besides PyTorch and Ultralytics, and how to make it.
@@ -205,6 +210,11 @@ def launch_setup(context):
     if on('radar_clusters'):
         actions.append(include('aav_object_detection', 'radar_clusters.launch.py',
                                mock=False, eps=0.8, minimum_points=15, radar_rviz=False))
+    if on('camera_obstacles'):
+        actions.append(Node(package='aav_yolo', executable='camera_obstacles',
+                            name='camera_obstacles',
+                            parameters=[os.path.join(get_package_share_directory('aav_yolo'),
+                                                     'config', 'camera_obstacles.yaml')]))
     # TODO lane: once the lane finder exists, its part goes here: the finder on the camera
     # (-> /lane_geometry) and aav_lane_geometry's lane_follower.launch.py (-> /cmd_vel/ai).
     if on('localization'):
@@ -216,8 +226,12 @@ def launch_setup(context):
         # because included launch files share launch arguments.
         empty_map = os.path.join(get_package_share_directory('aav_navigation'), 'maps',
                                  'empty.yaml')
+        # The local costmap reads the sensors this machine runs. Each is passed, on or
+        # off, so none can leak in from another file.
         actions.append(include('aav_navigation', 'navigation.launch.py',
-                               map=arg('map') or empty_map))
+                               map=arg('map') or empty_map, radar=on('radar'),
+                               collision_monitor=on('radar'),
+                               camera_obstacles=on('camera_obstacles')))
     if on('spine'):
         actions.append(include('aav_spine', 'spine.launch.py'))
     if on('legacy_uart') or on('legacy_encoder'):
