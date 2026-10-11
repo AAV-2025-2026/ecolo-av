@@ -59,6 +59,7 @@ The order of the writes, every tick:
 | `Actuators::apply(&outputs, now_ms)` | drives the devices; returns fault bits |
 | `Actuators::read()` | the steering angle and the Jrks' faults |
 | `WheelSpeed::update(count, now_ms)` | the speed from the wheel counter |
+| `SpokeSensors::TODAY.update(a, b, now_ms)` | for a board that reads the two spoke sensors itself, every millisecond: the 2025-26 encoder Pico's rule, a count on A's rising edge, backwards if B rose in the 20 ms before |
 
 Faults found here go to `spine-core`, which stops the car until the computer arms again:
 

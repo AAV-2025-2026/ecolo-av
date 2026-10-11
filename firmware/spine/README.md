@@ -12,7 +12,7 @@ chip (Q10-Q13). Every crate is `no_std` and is tested on a laptop, without the b
 | `pca9555` | the I/O expander (the direction output), over I2C | 6 |
 | `mcp2515` | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters, send, receive, error state | 34 |
 | `ibus` | the FlySky RC receiver's iBUS frames | 24 |
-| `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 44 |
+| `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 49 |
 
 Each crate's own README has its API, and where its behaviour came from in the 2025-26 C++.
 
