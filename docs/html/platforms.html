@@ -7,7 +7,7 @@
 <!-- Generated from docs/platforms.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Platforms: Ubuntu, the car&#x27;s computers, networking</h1>
-<div class="meta">6 min read · 7 sections</div></header>
+<div class="meta">8 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -169,7 +169,7 @@ to today's ESP32. The files in <code>src/aav_bringup/config/machines/</code> say
 <tbody>
 <tr>
 <td><code>orin.yaml</code></td>
-<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove</td>
+<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the YOLO detector (<code>yolo_detector_orin</code>, TensorRT) and the stop-sign watcher</td>
 </tr>
 <tr>
 <td><code>motor_pi.yaml</code></td>
@@ -177,11 +177,11 @@ to today's ESP32. The files in <code>src/aav_bringup/config/machines/</code> say
 </tr>
 <tr>
 <td><code>laptop.yaml</code></td>
-<td>the joystick, on the safety driver's laptop</td>
+<td>the joystick, on the safety driver's laptop. Its detector (<code>yolo_detector_laptop</code>, Core ML) is off until it reads compressed images</td>
 </tr>
 <tr>
 <td><code>all.yaml</code></td>
-<td>everything on one computer, for the bench</td>
+<td>everything on one computer, for the bench. Its detector is <code>yolo_detector_all</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -194,6 +194,98 @@ that positive steering turns left, that the throttle goes the right way, and tha
 car stops when you release the deadman and when you kill the bridge. Today's firmware
 fails the last one: see <a href="firmware.html">Firmware</a>.</p>
 </div>
+<h3 id="the-parts">The parts</h3>
+<p>Each machine file turns parts on (<code>true</code>) or off. A <code>TODO</code> marks a part waiting for its
+hardware: the cameras (Q22), the radar, or which USB port a device is on.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Starts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>description</code></td>
+<td>the car's frames: <code>robot_state_publisher</code></td>
+</tr>
+<tr>
+<td><code>mux</code>, <code>ego</code></td>
+<td><code>twist_mux</code>, then <code>ego</code></td>
+</tr>
+<tr>
+<td><code>teleop</code></td>
+<td>the joystick, and its e-stop button</td>
+</tr>
+<tr>
+<td><code>scripted</code></td>
+<td>the scripted driver</td>
+</tr>
+<tr>
+<td><code>imu</code>, <code>gps</code>, <code>radar</code>, <code>battery</code></td>
+<td>the sensor drivers, on the computer each is plugged into</td>
+</tr>
+<tr>
+<td><code>camera</code></td>
+<td>the front camera: <code>usb_cam</code>, Linux only</td>
+</tr>
+<tr>
+<td><code>detector</code></td>
+<td>YOLO, as <code>yolo_detector_&lt;machine&gt;</code>, with the model the file names (<a href="perception.html#models">Models</a>)</td>
+</tr>
+<tr>
+<td><code>stop_signs</code></td>
+<td>the stop-sign watcher: one per car, next to the mux</td>
+</tr>
+<tr>
+<td><code>radar_clusters</code></td>
+<td>the radar's clustering</td>
+</tr>
+<tr>
+<td><code>localization</code>, <code>navigation</code></td>
+<td>the two EKFs and <code>navsat_transform</code>; Nav2</td>
+</tr>
+<tr>
+<td><code>spine</code>, <code>legacy_uart</code>, <code>legacy_encoder</code></td>
+<td>the backends: the CAN spine, or today's ESP32 and wheel encoder</td>
+</tr>
+<tr>
+<td><code>foxglove</code></td>
+<td><code>foxglove_bridge</code>, on port 8765</td>
+</tr>
+</tbody>
+</table></div>
+<p>A part that can't run on that computer (no PyTorch, no model file, no <code>usb_cam</code>) is
+skipped with a warning, and the rest starts.</p>
+<h3 id="the-arguments">The arguments</h3>
+<p>They win over the machine file. With Pixi, put them after <code>--</code>:
+<code>pixi run car orin -- gps:=false</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gps:=false</code></td>
+<td>no GPS anywhere: no driver, and localization without it</td>
+</tr>
+<tr>
+<td><code>gps_driver:=ublox</code></td>
+<td>which GPS driver: <code>ublox</code> (the default, Tentative: Q18), <code>nmea</code>, or <code>ublox_dgnss</code> (apt only, the car)</td>
+</tr>
+<tr>
+<td><code>imu_driver:=cpp</code></td>
+<td>which IMU driver: <code>cpp</code>, or <code>rust</code>, its Rust twin</td>
+</tr>
+<tr>
+<td><code>map:=</code>, <code>start_x:=</code>, <code>start_y:=</code>, <code>start_yaw:=</code></td>
+<td>Nav2's map, and where the car starts on it</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="try-jazzy-on-the-car-before-the-reflash">Try Jazzy on the car before the reflash</h2>
 <p>Pixi also runs on the car's ARM computers, on the Ubuntu 22.04 they have now. So the

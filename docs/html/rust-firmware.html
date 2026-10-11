@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">7 min read · 8 sections</div></header>
+<div class="meta">15 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -38,7 +38,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
 <div class="lead"><p>Ben's direction (10 October 2026): write the firmware and the hardware drivers in Rust,
 not C or C++, even where the ROS nodes above stay in Python. The 2025-26 C++ firmware keeps
 running today's car until a Rust version replaces each board. This page is the plan, and
@@ -66,7 +66,7 @@ what's done so far.</p></div>
 </tr>
 <tr>
 <td>The spine is already Rust</td>
-<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (48 tests), and the drivers for its devices</td>
+<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (54 tests), the drivers for its devices, and a board program for a Pico 2</td>
 </tr>
 </tbody>
 </table></div>
@@ -121,8 +121,8 @@ stays on Linux.</p>
 </tr>
 <tr>
 <td>Drivers</td>
-<td>one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver</td>
-<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, written against <code>embedded-hal</code> 1.0. The W5500 and the display: only if the board keeps them</td>
+<td>one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver, the MCP2515 CAN controller</td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, written against <code>embedded-hal</code> 1.0. The W5500 and the display: only if the board keeps them</td>
 <td><code>embedded-hal-mock</code>, which plays the chip on a laptop</td>
 </tr>
 <tr>
@@ -134,13 +134,14 @@ stays on Linux.</p>
 <tr>
 <td>Boards</td>
 <td>one small program per board: pins, timers, the framework, then a loop that calls the glue</td>
-<td>one crate per board, implementing <code>Board</code> (still to write: it waits on the chip)</td>
-<td>on the bench, then on the car</td>
+<td><code>firmware/spine/boards/pico2</code>: the spine on a Pico 2, for the bench (below)</td>
+<td>it builds in <code>pixi run test</code>; the rest on the bench, then on the car</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>firmware/spine/</code> is the Cargo workspace for the first two layers. Board crates sit beside
-it, because each needs its chip's toolchain.</p>
+<p><code>firmware/spine/</code> is the Cargo workspace for the crates. Each board program in
+<code>firmware/spine/boards/</code> is a workspace of its own: it builds only for its chip, with that
+chip's HAL.</p>
 </section>
 <section class="card"><h2 id="the-framework-the-rtos-part">The framework: the "RTOS" part</h2>
 <div class="table-wrap"><table>
@@ -153,9 +154,9 @@ it, because each needs its chip's toolchain.</p>
 </thead>
 <tbody>
 <tr>
-<td><strong>Embassy</strong> (suggested)</td>
+<td><strong>Embassy</strong> (used)</td>
 <td>an async framework for microcontrollers: tasks, timers, drivers that wait without blocking. The usual choice for new Rust projects in 2026</td>
-<td>every board here; it supports the RP2350, the ESP32 family (with <code>esp-hal</code>) and STM32</td>
+<td>every board here; it supports the RP2350, the ESP32 family (with <code>esp-hal</code>) and STM32. The Pico 2 program uses it</td>
 </tr>
 <tr>
 <td>RTIC 2</td>
@@ -175,6 +176,335 @@ it, because each needs its chip's toolchain.</p>
 </tbody>
 </table></div>
 </section>
+<section class="card"><h2 id="the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</h2>
+<p><code>firmware/spine/boards/pico2</code> runs <code>spine-board</code> and <code>spine-core</code> on a Raspberry Pi Pico 2,
+with Embassy 0.10. It talks plain CAN to <code>spine_bridge</code> through an MCP2515 module. It is
+for the bench: the car's chip is still Q10–Q13. <span class="badge b-untested">untested</span> on a real Pico 2.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The spine's loop</td>
+<td><code>SpineBoard::tick</code> every 10 ms</td>
+</tr>
+<tr>
+<td>CAN</td>
+<td>the MCP2515 on SPI, 500 kbit/s, polled each tick; tried again every second while it doesn't answer</td>
+</tr>
+<tr>
+<td>Steering, brake, throttle, direction</td>
+<td>the two Jrk G2s, the DAC and the PCA9555 on one I2C bus</td>
+</tr>
+<tr>
+<td>The RC receiver</td>
+<td>iBUS on a UART; an interrupt fills a buffer, so no byte is lost while a tick waits on I2C</td>
+</tr>
+<tr>
+<td>The wheel</td>
+<td>two spoke sensors, read every millisecond by a task that interrupts the loop</td>
+</tr>
+<tr>
+<td>Arming, the 200 ms command watchdog</td>
+<td><code>spine-core</code>, as on the bench: it boots latched, and drives only once ROS disarms, then arms</td>
+</tr>
+<tr>
+<td>The chip's own watchdog</td>
+<td>fed after every tick: a hang or a panic resets the chip within 100 ms, into the safe state</td>
+</tr>
+</tbody>
+</table></div>
+<p>Size: 60,164 bytes of flash (of 4 MB) and 2,796 bytes of fixed RAM (of 512 kB).</p>
+<h3 id="the-pin-map">The pin map</h3>
+<p>The one list of the Pico 2's pins. <code>src/main.rs</code> assigns them in this order: change both
+together.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pin</th>
+<th>GPIO</th>
+<th>Signal</th>
+<th>Goes to</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21</td>
+<td>GP16</td>
+<td>SPI0 RX</td>
+<td>MCP2515 SO</td>
+<td>4 MHz SPI</td>
+</tr>
+<tr>
+<td>22</td>
+<td>GP17</td>
+<td>chip select</td>
+<td>MCP2515 CS</td>
+<td></td>
+</tr>
+<tr>
+<td>24</td>
+<td>GP18</td>
+<td>SPI0 SCK</td>
+<td>MCP2515 SCK</td>
+<td></td>
+</tr>
+<tr>
+<td>25</td>
+<td>GP19</td>
+<td>SPI0 TX</td>
+<td>MCP2515 SI</td>
+<td></td>
+</tr>
+<tr>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>MCP2515 INT</td>
+<td>not wired: the program polls the chip</td>
+</tr>
+<tr>
+<td>6</td>
+<td>GP4</td>
+<td>I2C0 SDA</td>
+<td>both Jrk G2s, the DAC, the PCA9555</td>
+<td>100 kHz, as today. Pull-ups to 3.3 V</td>
+</tr>
+<tr>
+<td>7</td>
+<td>GP5</td>
+<td>I2C0 SCL</td>
+<td>the same four</td>
+<td></td>
+</tr>
+<tr>
+<td>12</td>
+<td>GP9</td>
+<td>UART1 RX</td>
+<td>the FlySky receiver's iBUS output</td>
+<td>115200 baud, receive only</td>
+</tr>
+<tr>
+<td>20</td>
+<td>GP15</td>
+<td>e-stop input (pull-up)</td>
+<td>a spare, normally closed contact of the red e-stop, to ground</td>
+<td>high = pressed, or the wire cut. Read only</td>
+</tr>
+<tr>
+<td>14</td>
+<td>GP10</td>
+<td>wheel sensor A (pull-up)</td>
+<td>the first spoke sensor</td>
+<td>counts on its rising edge</td>
+</tr>
+<tr>
+<td>15</td>
+<td>GP11</td>
+<td>wheel sensor B (pull-up)</td>
+<td>the second spoke sensor</td>
+<td>gives the direction (Q5)</td>
+</tr>
+<tr>
+<td>—</td>
+<td>GP25</td>
+<td>the board's LED</td>
+<td></td>
+<td>what it says: below</td>
+</tr>
+<tr>
+<td>36</td>
+<td>3V3 OUT</td>
+<td>3.3 V</td>
+<td>a 3.3 V MCP2515 module, the I2C pull-ups</td>
+<td></td>
+</tr>
+<tr>
+<td>3, 8, 13 …</td>
+<td>GND</td>
+<td>ground</td>
+<td>every module's ground</td>
+<td>one common ground</td>
+</tr>
+<tr>
+<td>—</td>
+<td>USB</td>
+<td>power</td>
+<td>a laptop, on the bench</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="wiring-rules">Wiring rules</h3>
+<ul>
+<li><strong>The e-stop (decided, Ben).</strong> The red button always stops the car, whatever the
+  program does. It stays wired as it is. The spine only reads a spare contact, and tells
+  ROS. Nothing of the spine's is in the button's path, and no output is in series with it.</li>
+<li><strong>The MCP2515 module.</strong> Use one made for 3.3 V, such as an MCP2515 with an SN65HVD230.
+  The common blue module (with a TJA1050) runs at 5 V, and its SPI levels don't suit the
+  Pico 2's 3.3 V without changes. Which module the team has: untested.</li>
+<li><strong>5 V signals.</strong> The Pico 2's pins take 5 V only while the Pico 2 is powered. Pull the
+  I2C bus up to 3.3 V, not 5 V.</li>
+<li><strong>The crystal.</strong> Read the can on the MCP2515 module: "8.000" or "16.000". Set
+  <code>CAN_CRYSTAL</code> to match (it is 8 MHz now).</li>
+</ul>
+<h3 id="settings">Settings</h3>
+<p>In <code>firmware/spine/boards/pico2/src/main.rs</code>. The three choices the team still has to
+make are in <code>spine-core</code> (<code>firmware/spine/README.md</code>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Set to</th>
+<th>Change it when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CAN_CRYSTAL</code></td>
+<td><code>Crystal::MHZ_8</code></td>
+<td>the module's crystal is 16 MHz</td>
+</tr>
+<tr>
+<td><code>CAN_MODE</code></td>
+<td><code>Mode::Normal</code></td>
+<td><code>Mode::Loopback</code> checks the SPI wiring with no bus at all</td>
+</tr>
+<tr>
+<td><code>ESTOP_OPEN</code></td>
+<td><code>Level::High</code></td>
+<td>the spare contact turns out normally open (Q6)</td>
+</tr>
+<tr>
+<td><code>TICK</code>, <code>WATCHDOG</code></td>
+<td>10 ms, 100 ms</td>
+<td>only with the team: <code>spine-core</code> expects them</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="build-and-flash">Build and flash</h3>
+<p>Everything is in Pixi; nothing to install by hand.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Build</td>
+<td><code>pixi run spine-uf2</code></td>
+<td>builds the program, and writes <code>firmware/spine/boards/pico2/spine-pico2.uf2</code></td>
+</tr>
+<tr>
+<td>2. Flash, with a USB cable</td>
+<td>hold BOOTSEL, plug the Pico 2 in, let go</td>
+<td>a drive called RP2350 appears: copy the .uf2 onto it. The Pico 2 restarts into the spine</td>
+</tr>
+<tr>
+<td>or 2. Flash, with a debug probe</td>
+<td><code>pixi run spine-tools</code> (once), then <code>pixi run spine-flash</code></td>
+<td>flashes through the probe, then prints the program's logs</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The UF2 file comes from <code>tools/elf2uf2.py</code>. It uses the RP2350's family ID
+  (<code>rp2350_arm_s</code>, datasheet 5.5.3) and refuses a program without its IMAGE_DEF block in
+  the first 4 kB, or the boot ROM wouldn't start it (5.9.5). <code>pixi run test</code> checks the
+  real program each time.</li>
+<li><code>spine-tools</code> installs probe-rs 0.32.0 into <code>vendor/cargo-tools/bin</code> (about a minute).
+  A probe: the Raspberry Pi Debug Probe, or a second Pico running <code>debugprobe</code>, on the
+  Pico 2's SWD pins. On Linux, probe-rs needs its udev rules (probe.rs, "Probe setup").</li>
+<li>The logs only come through a probe. With the UF2 file alone, the LED is all you see.</li>
+</ul>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>The LED</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a slow blink: 0.5 s on, 0.5 s off</td>
+<td>running, and CAN is up</td>
+</tr>
+<tr>
+<td>a fast blink: 0.1 s on, 0.1 s off</td>
+<td>running, but no CAN: the RC transmitter still drives, the computer can't</td>
+</tr>
+<tr>
+<td>off, or on and still</td>
+<td>not running: no program, the boot ROM (BOOTSEL), or resetting</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-is-untested">What is untested</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Why</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Everything on a real Pico 2</td>
+<td>no board here; flashing waits for Ben</td>
+<td>the bench</td>
+</tr>
+<tr>
+<td>The UF2 file booting</td>
+<td>it matches <code>llvm-objcopy</code>'s image byte for byte, and its IMAGE_DEF is checked; no boot ROM has seen it</td>
+<td>the first flash</td>
+</tr>
+<tr>
+<td><code>spine-flash</code></td>
+<td>probe-rs is installed and knows the RP235x; never run with a probe</td>
+<td>the first flash with a probe</td>
+</tr>
+<tr>
+<td>The chip's watchdog reset</td>
+<td>embassy-rp 0.10 sets the RP2040's reset bits on an RP2350, so the program sets the Pico SDK's instead (<code>reset_all_but_the_oscillators</code>)</td>
+<td>hang the loop on purpose, on the bench</td>
+</tr>
+<tr>
+<td>CAN on a real bus</td>
+<td>needs the module, a USB-CAN adapter, and <code>spine_bridge</code> on SocketCAN (Linux)</td>
+<td>the bench</td>
+</tr>
+<tr>
+<td>I2C to the Jrks, the DAC and the expander</td>
+<td>needs the car's boards</td>
+<td>the bench, then the car</td>
+</tr>
+<tr>
+<td>The wheel sensors</td>
+<td>which is A, and what B's level means (Q5)</td>
+<td>the team</td>
+</tr>
+<tr>
+<td>The e-stop's spare contact</td>
+<td>normally closed? (Q6)</td>
+<td>the team</td>
+</tr>
+<tr>
+<td>A Pico 2 that once had a partition table</td>
+<td>an A2 chip refuses drag-and-drop then (RP2350-E10); a new Pico 2 has none</td>
+<td>use the probe</td>
+</tr>
+</tbody>
+</table></div>
+</section>
 <section class="card"><h2 id="todays-boards-and-their-rust-versions">Today's boards, and their Rust versions</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -188,12 +518,12 @@ it, because each needs its chip's toolchain.</p>
 <tr>
 <td><code>aav_umod_esp32</code> (ESP32)</td>
 <td>drives the actuators: steering and brake (Jrk G2), throttle (DAC), the RC receiver</td>
-<td>becomes the spine: <code>spine-core</code> plus a board crate, on the chip the team picks (Q10–Q13)</td>
+<td>becomes the spine: <code>spine-core</code> plus a board program. For the bench: <code>boards/pico2</code>. On the car: the chip the team picks (Q10–Q13)</td>
 </tr>
 <tr>
 <td><code>wheel_encoder_pico2</code> (Pico 2)</td>
 <td>counts wheel spokes, sends them over Ethernet</td>
-<td>Rust on the same Pico 2: <code>aav-inputs</code> (lockout), the encoder maths in <code>spine-core</code>; or the spine reads the sensors itself</td>
+<td>the Pico 2 spine reads the two sensors itself (<code>spine-board</code>'s <code>SpokeSensors</code>); or Rust on the same Pico 2, with <code>aav-inputs</code> and <code>spine-core</code>'s encoder maths</td>
 </tr>
 <tr>
 <td><code>aav_sentinel_pico2</code> (Pico 2)</td>
@@ -217,8 +547,8 @@ it, because each needs its chip's toolchain.</p>
 <tr>
 <td>Pico 2 (RP2350, ARM)</td>
 <td><code>thumbv8m.main-none-eabihf</code></td>
-<td><span class="badge b-works">works</span> all seven crates build for it; <code>pixi run test</code> checks it</td>
-<td>its USB drive (UF2), or <code>probe-rs</code></td>
+<td><span class="badge b-works">works</span> all eight crates and the board program build for it; <code>pixi run test</code> checks both</td>
+<td>its USB drive (<code>pixi run spine-uf2</code>), or probe-rs (<code>pixi run spine-tools</code>)</td>
 </tr>
 <tr>
 <td>STM32-class ARM (Cortex-M4F, M7)</td>
@@ -249,7 +579,7 @@ it, because each needs its chip's toolchain.</p>
 <blockquote>
 <p>An ARM chip (Pico 2 or STM32) keeps the whole toolchain inside Pixi. Ben said yes to
 one on 10 Oct; the team confirms the chip in Q10–Q13. For CAN, an STM32 has a CAN
-controller built in. A Pico 2 needs an add-on CAN chip, such as an MCP2515 on SPI.</p>
+controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as above.</p>
 </blockquote>
 </section>
 <section class="card"><h2 id="done-so-far">Done so far</h2>
@@ -264,8 +594,8 @@ controller built in. A Pico 2 needs an add-on CAN chip, such as an MCP2515 on SP
 <tbody>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench)</td>
-<td>48</td>
+<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each</td>
+<td>54</td>
 </tr>
 <tr>
 <td><code>aav-inputs</code> (10 Oct)</td>
@@ -289,18 +619,28 @@ controller built in. A Pico 2 needs an add-on CAN chip, such as an MCP2515 on SP
 </tr>
 <tr>
 <td><code>ibus</code> (10 Oct)</td>
-<td>the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's <code>RcInput</code></td>
+<td>the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's <code>RcInput</code>, with the gear switch's brake position</td>
 <td>24</td>
 </tr>
 <tr>
+<td><code>mcp2515</code> (11 Oct)</td>
+<td>the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters for our IDs, send, receive, error state and bus-off</td>
+<td>34</td>
+</tr>
+<tr>
 <td><code>spine-board</code> (10 Oct)</td>
-<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait</td>
-<td>44</td>
+<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait. Since 11 Oct, two spoke sensors counted the 2025-26 way</td>
+<td>49</td>
+</tr>
+<tr>
+<td><code>boards/pico2</code> (11 Oct)</td>
+<td>the spine on a Pico 2, with Embassy (above)</td>
+<td>builds; <span class="badge b-untested">untested</span> on a board</td>
 </tr>
 </tbody>
 </table></div>
-<p>Both are <code>no_std</code> with no dependencies, pass <code>clippy</code> and <code>rustfmt</code>, and build for the
-Pico 2 and STM32 targets.</p>
+<p>All are <code>no_std</code>, pass <code>clippy</code> and <code>rustfmt</code>, and build for the Pico 2 and STM32 targets.
+<code>tools/elf2uf2.py</code> has 24 tests of its own.</p>
 </section>
 <section class="card"><h2 id="next">Next</h2>
 <div class="table-wrap"><table>
@@ -314,26 +654,21 @@ Pico 2 and STM32 targets.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td>The spine's chip</td>
+<td>The car's spine chip</td>
 <td>Q10–Q13</td>
 </tr>
 <tr>
 <td>2</td>
-<td>Embassy or RTIC</td>
-<td>a short trial on a Pico 2</td>
+<td>The Pico 2 program on the bench: the LED, then CAN in loopback, then CAN to <code>spine_bridge</code>, then the I2C devices</td>
+<td>a Pico 2, an MCP2515 module, and Ben</td>
 </tr>
 <tr>
 <td>3</td>
-<td>A first board crate on a Pico 2: blink, then the encoder sensors through <code>aav-inputs</code>, then <code>spine-board</code> on real I2C</td>
-<td>a Pico 2 on the bench</td>
-</tr>
-<tr>
-<td>4</td>
 <td>Confirm the calibrations: steering centre and scale, brake range, throttle cap, RC channels</td>
 <td>the car (Q1-Q7)</td>
 </tr>
 <tr>
-<td>5</td>
+<td>4</td>
 <td>Tune the speed loop: on the bench it lags a ramp by about a second</td>
 <td>the car</td>
 </tr>

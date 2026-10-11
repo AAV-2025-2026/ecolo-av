@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, YOLO, stop signs, lanes and radar</h1>
-<div class="meta">10 min read · 10 sections</div></header>
+<div class="meta">17 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -153,33 +153,59 @@ The lock keeps stop signs away from the e-stop.</p>
 <section class="card"><h2 id="models">Models</h2>
 <p>Model files stay out of git, in <code>models/</code>. <code>pixi run get-models</code> downloads the stock
 YOLO11 nano model (5.6 MB, its checksum pinned). It was trained on the COCO dataset, and
-"stop sign" is one of its 80 classes, so we don't need last year's model to start.</p>
+"stop sign" is one of its 80 classes, so we don't need the 2024-25 team's model to start.</p>
+<p>One model, three formats. Each computer with a GPU runs its own (Ben, 10 Oct), and the
+detector loads any of them. The machine file names the one to use:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>Format</th>
 <th>Runs on</th>
 <th>Make it with</th>
+<th>Machine file</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>.pt</code></td>
 <td>anything, with PyTorch</td>
-<td>the training</td>
+<td><code>pixi run get-models</code>, or the training</td>
+<td><code>all.yaml</code></td>
 </tr>
 <tr>
 <td><code>.mlpackage</code></td>
 <td>Macs, with Core ML</td>
-<td><code>pixi run -e ml yolo export model=models/yolo11n.pt format=coreml</code></td>
+<td><code>pixi run -e ml export-coreml</code>, on a Mac</td>
+<td><code>laptop.yaml</code></td>
 </tr>
 <tr>
 <td><code>.engine</code></td>
 <td>the Orin, with TensorRT</td>
-<td><code>yolo export model=models/yolo11n.pt format=engine</code>, on the Orin itself</td>
+<td><code>python3 tools/build_engine.py</code>, on the Orin itself</td>
+<td><code>orin.yaml</code></td>
 </tr>
 </tbody>
 </table></div>
+<h3 id="core-ml-on-a-mac">Core ML, on a Mac</h3>
+<ul>
+<li><code>pixi run -e ml export-coreml</code> makes <code>models/yolo11n.mlpackage</code> from
+  <code>models/yolo11n.pt</code>, and downloads the <code>.pt</code> first if it's missing.</li>
+<li>Another model: <code>pixi run -e ml export-coreml models/best.pt</code>.</li>
+<li>On an M4 Max the export takes 2 s; the whole command 3 to 10 s.</li>
+<li><span class="badge b-works">works</span> The result found the test stop sign at 0.97.</li>
+</ul>
+<h3 id="tensorrt-on-the-orin">TensorRT, on the Orin</h3>
+<p>An engine runs only on the GPU and the TensorRT version that built it. So it's built
+on the Orin, once it's on JetPack 7.2 (Q24):</p>
+<ol>
+<li>Install NVIDIA's PyTorch for Jetson (not PyPI's), then <code>pip install ultralytics onnx</code>.
+   In a venv, make it with <code>--system-site-packages</code>, so it sees JetPack's TensorRT.</li>
+<li>Run <code>python3 tools/build_engine.py</code> in the repo, with JetPack's <code>python3</code>, not
+   Pixi's. It checks first, and says what's missing.</li>
+<li>It writes <code>models/yolo11n.engine</code>: half precision (FP16), 640 px.
+   <code>car.launch.py machine:=orin</code> loads it.</li>
+</ol>
+<p><span class="badge b-untested">untested</span> It needs the Orin: here it only checks, and stops.</p>
 <p>The 2024-25 team's own model, <code>best.pt</code>, is in no repo: their code loaded it from
 <code>~/Yolo/Capstone/runs/detect/train7/weights/best.pt</code> on someone's computer. It's
 probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct), which can train
@@ -303,17 +329,192 @@ Orin.</p>
 </ul>
 </section>
 <section class="card"><h2 id="lane-keeping">Lane keeping</h2>
+<p>Two nodes, from the camera to the wheels. <code>lane_finder</code> (ours) finds the lane;
+<code>control_interface</code> (the 2025-26 team's) steers by it.</p>
+<pre class="highlight"><code>/camera/image_raw ─► lane_finder ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai</code></pre>
+<p><img alt="The bench camera, and what lane_finder found in it" src="../img/lane-finder.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>In the picture</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Left</td>
+<td>the bench camera: the car 0.3 m left of the lane's centre</td>
+</tr>
+<tr>
+<td>Right</td>
+<td>the bird's-eye view: the road from above, 4 m ahead (bottom) to 16 m (top)</td>
+</tr>
+<tr>
+<td>Yellow</td>
+<td>the paint it found</td>
+</tr>
+<tr>
+<td>Boxes</td>
+<td>the sliding windows: green found paint</td>
+</tr>
+<tr>
+<td>Blue, red</td>
+<td>the left and right lines it fitted</td>
+</tr>
+<tr>
+<td>Green line, white line</td>
+<td>the lane's centre, and the car's own line</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-finder">The finder</h3>
+<p>Classic OpenCV, no model. A model can replace it later, on the same topic.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Bird's-eye view</td>
+<td>warps the picture into a map of the road seen from above: 4-16 m ahead, 4 m either side, 5 cm a pixel. From the lens (<code>/camera/camera_info</code>) and the camera's place and tilt (<code>vehicle.yaml</code>). It takes the road to be flat</td>
+</tr>
+<tr>
+<td>2. Paint</td>
+<td>a pixel is paint when it's brighter than the road on both sides</td>
+</tr>
+<tr>
+<td>3. Sliding windows</td>
+<td>12 windows climb each line, from where it starts near the car</td>
+</tr>
+<tr>
+<td>4. Fit</td>
+<td>a curve per line, <code>y = a x² + b x + c</code>, in metres, in <code>base_link</code></td>
+</tr>
+<tr>
+<td>5. The answer</td>
+<td>the car's offset, the lane's width, each line's radius, and how sure it is</td>
+</tr>
+</tbody>
+</table></div>
 <ul>
-<li><code>control_interface</code> reads <code>/lane_geometry</code> (the lane lines as polynomials, the car's
-  offset and the curvature) and steers with a PID through five states (keep, change,
-  committed, stopping, resuming).</li>
+<li><strong>Speed:</strong> 0.8 ms a picture on Ben's MacBook Pro (M4 Max), 1.2 ms in the node.
+  <span class="badge b-untested">untested</span> on the Orin, whose cores are slower: expect a few ms.</li>
+<li><strong>The code:</strong> <code>src/perception/aav_lane_finder</code>. <code>birds_eye.py</code> and <code>lane_lines.py</code>
+  hold the maths, with no ROS, and 21 tests, most on pictures of known lanes: straight,
+  off centre, turned, curved, one line, none. <code>lane_finder.py</code> is the node.</li>
+</ul>
+<h3 id="what-it-sends-lane_geometry">What it sends: /lane_geometry</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vehicle_offset_m</code></td>
+<td>the car from the lane's centre, 3 m ahead (m). + = the car is left of the centre, so it steers right</td>
+</tr>
+<tr>
+<td><code>left_poly_a</code>, <code>_b</code>, <code>_c</code>, and the same for <code>right_</code></td>
+<td>each line as <code>y = a x² + b x + c</code> (m), in <code>base_link</code>: x forward, y left</td>
+</tr>
+<tr>
+<td><code>left_curvature_m</code>, <code>right_</code>, <code>mean_</code></td>
+<td>the radius (m). 9999 = straight, or not seen</td>
+</tr>
+<tr>
+<td><code>curve_direction</code></td>
+<td>+1 bends left, -1 right, 0 straight</td>
+</tr>
+<tr>
+<td><code>lane_width_m</code></td>
+<td>between the lines (m). With one line, the last width seen</td>
+</tr>
+<tr>
+<td><code>left_confidence</code>, <code>left_lane_detected</code>, and the same for <code>right_</code></td>
+<td>0 to 1; a line counts from 0.3</td>
+</tr>
+<tr>
+<td><code>steering_hint</code></td>
+<td>a pure-pursuit wheel angle to the centre (rad, + = left). control_interface doesn't use it</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>One line:</strong> the centre is half a lane beside it.</li>
+<li><strong>No lines:</strong> nothing detected, so control_interface slows down and stops.</li>
+<li><strong>Why 3 m ahead:</strong> an offset at the rear axle says nothing about which way the car
+  points. On the bench, measured there, the car weaved 0.3 m either side and ran off the
+  lane within 20 s. 3 m ahead, it comes back in about 6 s, 2 cm past the centre at most.</li>
+</ul>
+<h3 id="the-steering-control_interface">The steering: control_interface</h3>
+<ul>
+<li>It steers with a PID on the offset, through five states (keep, change, committed,
+  stopping, resuming).</li>
 <li>It publishes on <code>/cmd_vel/ai</code>, the mux's slot for a learned driver. Every other driver
   outranks it.</li>
-<li>Its base speed is 2 m/s; ego caps it at the car's 1 m/s.</li>
-<li><span class="badge b-missing">missing</span> <strong>The line finder</strong>: whatever turns the camera's picture into
-  <code>/lane_geometry</code>. It isn't in any repo. Until then, <code>fake_lane_geometry_pub</code> stands in
-  (<code>bench.launch.py lane:=true</code>).</li>
+<li>It asks for 2 m/s; ego caps it at the car's 1 m/s.</li>
 </ul>
+<h3 id="on-the-bench">On the bench</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run bench lane:=true nav:=false start_y:=0.3</code></td>
+<td>lane keeping on the pretend camera, from 0.3 m left of the centre</td>
+</tr>
+<tr>
+<td><code>pixi run bench lane:=fake</code></td>
+<td>control_interface on a pretend lane, without the camera</td>
+</tr>
+<tr>
+<td><code>pixi run bench-check --lane</code></td>
+<td>the same, measured: <span class="badge b-works">works</span> back within 5 cm of the centre in about 6 s, 2 cm past it at most</td>
+</tr>
+<tr>
+<td><code>pixi run bench lane:=true nav:=false bend_radius:=60</code></td>
+<td>a 60 m bend to the left, from 30 m on: <span class="badge b-works">works</span> within 8 cm of the centre, 4-5 cm inside it round the bend</td>
+</tr>
+</tbody>
+</table></div>
+<p>More in <a href="bench.html">Bench mode</a>.</p>
+<h3 id="next">Next</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Waits on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The real camera's place, tilt and lens, in <code>vehicle.yaml</code> and its calibration</td>
+<td>the cameras (Q22)</td>
+</tr>
+<tr>
+<td>Tune the paint test on real pictures: shadows, worn paint, glare</td>
+<td>a recording from the car</td>
+</tr>
+<tr>
+<td>Time it on the Orin</td>
+<td>the reflash (Q24)</td>
+</tr>
+<tr>
+<td>Hills and bumps: the warp takes the road to be flat</td>
+<td>later, with the IMU's pitch</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="radar-clustering">Radar clustering</h2>
 <ul>
@@ -327,12 +528,55 @@ Orin.</p>
 </ul>
 </section>
 <section class="card"><h2 id="on-the-car">On the car</h2>
-<p><code>aav_bringup perception.launch.py</code> starts the camera, the detector, the watcher and the
-radar clustering, next to <code>car.launch.py</code>, on the Orin. When <code>car.launch.py</code> next changes,
-they become parts in its machine files.</p>
+<p><code>car.launch.py</code> starts perception as parts, like the rest of the car. Each machine file
+turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where">Platforms</a>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Starts</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>camera</code></td>
+<td><code>usb_cam</code> → <code>/camera/image_raw</code> (Linux only)</td>
+<td>off everywhere until the cameras are known (Q22)</td>
+</tr>
+<tr>
+<td><code>detector</code></td>
+<td>YOLO, as <code>yolo_detector_&lt;machine&gt;</code> → <code>/perception/detections</code></td>
+<td>the Orin. The laptop's is off until it reads compressed images</td>
+</tr>
+<tr>
+<td><code>stop_signs</code></td>
+<td><code>stop_sign_watcher</code> → <code>/perception/stop</code></td>
+<td>one per car, next to the mux: the Orin</td>
+</tr>
+<tr>
+<td><code>radar_clusters</code></td>
+<td>DBSCAN on <code>/radar/points</code></td>
+<td>off until the radar is on the car</td>
+</tr>
+<tr>
+<td><code>lane</code></td>
+<td>to do: the lane finder, then lane keeping</td>
+<td>the lane finder is being written</td>
+</tr>
+</tbody>
+</table></div>
 <ul>
-<li><strong>From a Mac:</strong> a Mac on the car's network can run the detector on the car's cameras.
-  Raw images are too big for WiFi, so the cameras should also publish compressed ones.</li>
+<li>Every detector publishes on <code>/perception/detections</code>, so the watcher hears them all.</li>
+<li>
+<p>A detector needs PyTorch: JetPack's on the Orin, the <code>ml</code> environment on a laptop
+  (<code>pixi run -e ml car laptop</code>). Without it, or without its model file, the part is
+  skipped with a warning, and the rest of the car starts.</p>
+</li>
+<li>
+<p><strong>From a Mac:</strong> a Mac on the car's network can run the detector on the car's cameras.
+  Raw images are too big for WiFi, so the cameras should also publish compressed ones.</p>
+</li>
 <li><strong>Into the costmap:</strong> a camera detection needs a distance first (a stereo pair, a depth
   model, or the camera's height above a flat road). Then it's a point on the ground, and
   Nav2's costmap marks it like a radar or lidar point. Stop signs never go in the

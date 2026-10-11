@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">11 min read · 4 sections</div></header>
+<div class="meta">13 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -113,10 +113,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
-<td><code>joy_teleop</code></td>
+<td><code>joy_teleop</code>, <code>hud_server</code></td>
 <td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code></td>
 <td>-</td>
-<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false.</td>
+<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions.</td>
 </tr>
 <tr>
 <td><code>/cmd_vel</code></td>
@@ -209,10 +209,34 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
-<td><code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code></td>
+<td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code></td>
 <td><code>navsat_transform</code></td>
 <td>sim, car, replay, bench</td>
-<td>Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS).</td>
+<td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
+</tr>
+<tr>
+<td><code>/gps/fix_velocity</code></td>
+<td><code>geometry_msgs/msg/TwistWithCovarianceStamped</code></td>
+<td><code>ublox_gps</code></td>
+<td>-</td>
+<td>-</td>
+<td>The receiver's velocity, east, north and up (m/s). Nothing fuses it yet.</td>
+</tr>
+<tr>
+<td><code>/gps/vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>gps_nmea</code></td>
+<td>-</td>
+<td>-</td>
+<td>NMEA's speed and course (gps_driver:=nmea). Nothing fuses it yet.</td>
+</tr>
+<tr>
+<td><code>/gps/time_reference</code></td>
+<td><code>sensor_msgs/msg/TimeReference</code></td>
+<td><code>gps_nmea</code></td>
+<td>-</td>
+<td>-</td>
+<td>GPS time, from NMEA (gps_driver:=nmea).</td>
 </tr>
 <tr>
 <td><code>/radar/points</code></td>
@@ -226,7 +250,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/battery_status</code></td>
 <td><code>sensor_msgs/msg/BatteryState</code></td>
 <td><code>battery_state_publisher</code>, <code>mock_battery</code></td>
-<td>-</td>
+<td><code>hud_server</code></td>
 <td>bench</td>
 <td>battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).</td>
 </tr>
@@ -241,18 +265,18 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/camera/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>usb_cam</code>, <code>mock_camera</code>, <code>test_camera</code></td>
-<td><code>yolo_detector</code>, <code>hud_server</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code></td>
+<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code></td>
 <td>bench</td>
-<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. mock_camera draws the bench world; test_camera publishes a file.</td>
+<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.</td>
 </tr>
 <tr>
 <td><code>/camera/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
-<td><code>usb_cam</code>, <code>mock_camera</code>, <code>test_camera</code></td>
-<td>-</td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code></td>
+<td><code>lane_finder</code></td>
 <td>bench</td>
-<td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration).</td>
+<td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here.</td>
 </tr>
 <tr>
 <td><code>/radar/clusters</code></td>
@@ -273,15 +297,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/perception/detections</code></td>
 <td><code>vision_msgs/msg/Detection2DArray</code></td>
-<td><code>yolo_detector</code></td>
+<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code></td>
 <td><code>stop_sign_watcher</code></td>
 <td>-</td>
-<td>YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Runs in the ml environment.</td>
+<td>YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24), the laptop's for compressed images.</td>
 </tr>
 <tr>
 <td><code>/perception/detections/image</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>yolo_detector</code></td>
+<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code></td>
 <td>-</td>
 <td>-</td>
 <td>The camera picture with the boxes drawn on, for RViz or Foxglove.</td>
@@ -291,16 +315,24 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>stop_sign_watcher</code></td>
 <td><code>twist_mux</code>, <code>hud_server</code></td>
-<td>-</td>
-<td>true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence.</td>
+<td>car</td>
+<td>true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.</td>
 </tr>
 <tr>
 <td><code>/lane_geometry</code></td>
 <td><code>aav_lane_geometry/msg/LaneGeometry</code></td>
-<td><code>fake_lane_geometry_pub</code></td>
+<td><code>lane_finder</code>, <code>fake_lane_geometry_pub</code></td>
 <td><code>control_interface</code></td>
 <td>-</td>
-<td>The lane lines as polynomials, the car's offset and the curvature. The lane finder that makes them from the camera is missing; fake_lane_geometry_pub stands in.</td>
+<td>One per camera picture, from lane_finder (aav_lane_finder, classic OpenCV), in base_link. vehicle_offset_m - the car from the lane's centre, 3 m ahead (lookahead), + = the car is left of it. Each line as y = a x^2 + b x + c (m), its radius (m; 9999 = straight or not seen) and confidence (0-1); the lane width (m). Bench - lane:=true runs lane_finder, lane:=fake runs fake_lane_geometry_pub (its polynomials are pixels).</td>
+</tr>
+<tr>
+<td><code>/lane_geometry/image</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>lane_finder</code></td>
+<td>-</td>
+<td>-</td>
+<td>The bird's-eye view, with the paint, the windows and the lines lane_finder found, for RViz or Foxglove. Only with debug_image true.</td>
 </tr>
 <tr>
 <td><code>/lane_geometry_status</code></td>

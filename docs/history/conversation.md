@@ -1180,6 +1180,8 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **Jargon, sorry:** "the bench" means a desk, and "free" means spare. The car's two Pico 2s are busy (the wheel encoder, the status display).
 - **Why:** the spine's program for a Pico 2 only compiles until it runs on a real one. A spare Pico 2 on a desk is its first real test, with nothing that can move the car. It needs a Pico 2 (about $7), an MCP2515 CAN module (about $10, since the Pico 2 has no CAN) and a USB cable.
 
+> **Revised (11 Oct):** a **3.3 V** CAN module, for example an MCP2515 with an SN65HVD230. The common module, with a TJA1050, runs at 5 V and doesn't suit a Pico 2's 3.3 V pins.
+
 ### TensorRT on the Orin, Core ML on the MacBook Pro, and whatever ROS tool helps. (21:43)
 
 - **Decided (Ben).** Each machine runs its own detector, with its own model file:
@@ -1219,11 +1221,12 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
 - **oirp-spss:** its copy of `aav` stops at 04:23, with the old commit IDs. Make a fresh clone from GitHub there; nothing on the server is missing from GitHub (checked 21:30).
-- **Next, after tonight's five pieces merge:** our C++ to Rust (Ben, 21:32), and one detector per machine with no device aliases (Ben, 21:34).
+- **The five overnight pieces (10-11):** the HUD app, the car's launch, the lane finder and the spine's Pico 2 program are merged (02:07–02:43). Obstacles in the costmap is being merged. Then the order of work (Ben, 21:45): Ackermann done properly, our C++ to Rust, every file in its language's own style, the whole car working.
+- **One detector per machine:** `yolo_detector_<machine>`, each with its own model file (done 11 Oct). The device names without aliases come with the obstacles merge.
 - **Backups:** image the Orin and the Pis before any reflash. They hold the detector, `camera_decode`, the three rqt_graph nodes and `/home/aavjetson`. A backup checklist and script were offered.
 - **The car on Jazzy:** it runs Humble today, so no Jazzy laptop can join it. Try Pixi on its Ubuntu 22.04 first, then reflash the Orin to JetPack 7.2 (Q24).
 - **Ben's Mac:** works, 10-10: build, tests, the turtle, Gazebo headless, Nav2, the Rust listener, the docs. Our version, `aav/aav`, is complete on the Mac since 16:13, with every commit from the `~/aav` clone merged in, and it builds and tests green. Gazebo's window works on the Mac: Ben saw the screenshots, and in `pixi run sim` every driver goes through twist_mux and ego (16:34). Left: look at RViz and rqt_graph.
-- **Bench mode and perception (10-10 afternoon):** the whole car graph runs on the Mac with stand-ins (`pixi run bench`, `bench-check` 7 of 7); YOLO stops the car at stop signs on the bench; the spine's device drivers are in Rust; the HUD's back end is on our topics. Waiting on Ben: commit his server work, then perception and the bench join `car.launch.py`'s machine files. Waiting on the team: the spine's chip, three firmware decisions, `best.pt`, the lane finder.
+- **Bench mode and perception (10-10 afternoon):** the whole car graph runs on the Mac with stand-ins (`pixi run bench`, `bench-check` 7 of 7); YOLO stops the car at stop signs on the bench; the spine's device drivers are in Rust; the HUD's back end is on our topics. Done 11 Oct: Ben's server work is in `dfaec15`, perception is parts of `car.launch.py`, and we wrote our own lane finder. Waiting on the team: the spine's chip, three firmware decisions (one constant each now), `best.pt`.
 - **Claude on the car's network (Ben, 10-10 16:42):** Ben will put Claude on the network with the hardware, to audit it directly. The plan is read-only first: find the devices, take each computer's inventory, copy what only the Orin has, and compare with our contract. Done beforehand: the stand-ins stay on their own computer (`tools/ros.sh --local`).
 - **`.gitignore` and `vendor/`:** both done: the fuller `.gitignore` (593db7f), and `vendor/` (10-10 evening: the lists in git, the source out of it). Pruning the app's snapshots from `.git` waits on Ben.
 - **The MCP server (Ben, 10-10 17:03):** built that evening, read-only. Open: bench-only actions through the stand-ins, if the team wants them; nothing that reaches the car.
@@ -1235,11 +1238,12 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **The claude.ai chat (fe09d020…):** Ben to paste the key parts.
 - **CARLA:** parked this year (10-10). It comes back on the NVIDIA Linux machine if it ever supports Jazzy (Q31).
 - **The NVIDIA Linux machine:** which one, and access to it, to find `best.pt`.
-- **The board:** a photo of the ESP32 board, and a spare Pico 2 to test the spine on a desk.
+- **The board:** a photo of the ESP32 board, and a spare Pico 2 with a 3.3 V MCP2515 module, to test the spine on a desk.
 - **Team decisions:**
   - the team's `ROS_DOMAIN_ID`;
   - the spine arming rules (Proposed);
-  - the GPS driver: keep `ublox_dgnss` (the car only) or switch to `ublox` (B4, with Q18);
+  - the GPS driver: `ublox` is the default since 11 Oct (Tentative); keep it, or go back to `ublox_dgnss` (B4, with Q18);
+  - the brake after boot: `IDLE_BRAKE` is 0, so the brake lets go; the 2025-26 firmware kept it on;
   - the `/estop` QoS in the mux (N2), respawning device nodes (N3), and Nav2's lookahead (N7);
   - every other Proposed row;
   - QNX (Q23);

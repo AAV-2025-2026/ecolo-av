@@ -27,7 +27,7 @@ answer.
 | 5 | A CAN spine replaces the serial link from the Motor Pi to the ESP32 | Which signals cross the bus is still open: Q12 |
 | 6 | ROS 2 Jazzy on every computer | Humble support ends in May 2027, Jazzy's in May 2029. ROS can't mix versions, so every computer moves together (Ben, 9 Oct) |
 | 7 | One repo and one workspace, with folders by layer of the picture | One place to build, test and document everything |
-| 8 | Languages: Python for every ROS node we write; Rust later; C++ only in the reused IMU driver | Our nodes run at 50 Hz or less, and the hard timing lives in the firmware. The spine logic is already Rust (`spine-core`) |
+| 8 | Languages: Python for the ROS nodes we write; Rust for the firmware, the drivers and the ports of the inherited C++; no C++ of our own (Ben, 10 Oct) | Our nodes run at 50 Hz or less, and the hard timing lives in the firmware. The spine logic is already Rust (`spine-core`) |
 | 9 | Develop on Macs too, with Pixi and RoboStack | The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; both use Fast DDS |
 
 ## Tentative
@@ -37,7 +37,11 @@ answer.
 | No QNX | `twist_mux` takes over QNX's job of picking which command wins. Hard real-time safety moves into the spine firmware and the hardware e-stop | Q23 |
 | GPS gives the global position; the model is unknown | Whether it uses RTK corrections decides how precise GPS A→B can be | Q18, Q19 |
 | Bare metal waits: only the spine firmware runs without an operating system | Ben, 9 Oct: "Maybe we will wait on this." | |
-| The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32 | Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip | Q10–Q13 |
+| The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32 | Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip. A Pico 2 program exists since 11 Oct (`boards/pico2`) | Q10–Q13 |
+| The GPS driver: the stock `ublox_gps` by default; `nmea` and `ublox_dgnss` stay as `gps_driver:=` options | It's in Pixi on every computer. `ublox_dgnss`, the 2024-25 choice, is apt-only, so it runs on the car only | Q18 |
+| The HUD's e-stop button only sets the e-stop. Clearing it stays a person's deliberate act, at the joystick or a laptop | A stray tap on the screen can't restart the car | Q29 |
+| Flutter 3.35.7, downloaded into `vendor/` (`pixi run get-flutter`) | Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's `pubspec.lock` | Q29 |
+| Lane keeping: a classic OpenCV lane finder publishes `/lane_geometry`; the 2025-26 lane keeping follows it | No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same | Q22 |
 
 ## Proposed: for the next team meeting
 
@@ -159,14 +163,14 @@ From tonight's audits and the Mac work. They're small, but someone has to say ye
 | Item | The choice |
 |---|---|
 | `ROS_DOMAIN_ID` | one number (0–101) for the car and every laptop |
-| GPS driver | keep `ublox_dgnss` (the car only) or switch to `ublox`, which Pixi has (with Q18) |
+| GPS driver | `ublox_gps` is the default now (Tentative, above); keep it, or go back to `ublox_dgnss` (the car only). With Q18 |
 | `/estop` reliability (N2) | send it repeatedly, or make the mux hear it reliably |
 | Respawning device nodes (N3) | restart a sensor driver when it dies? |
 | Nav2's lookahead (N7) | its turn command flips sign about once a second in the sim |
 | Package renames | the inherited packages' new names, in [Conventions](conventions.md) |
 | A `vendor/` folder | keep downloaded source out of git, with a list to fetch it again |
 | Stop signs as a twist_mux lock | priority 30: it holds Nav2 and the AI slot, never a person or a test script; 4 s stop, then 10 s to drive past. Built and working on the bench (Proposed) |
-| The steering on an e-stop | hold where it is (`spine-core` today), or centre it (the 2025-26 firmware) |
-| The brake after boot | `idle_brake` 0 lets it go once the e-stop clears; the old firmware kept it on |
-| The RC gear switch's brake position | today it means "speed zero"; a brake field in `RcInput` would bring back the old full brake |
+| The steering on an e-stop | hold where it is (`ESTOP_STEERING = Hold` in `spine-core`), or centre it (the 2025-26 firmware) |
+| The brake after boot | `IDLE_BRAKE = 0.0` lets it go once the e-stop clears; the 2025-26 firmware kept it full on (1.0). ⚠️ Keeping it on may be safer on a slope |
+| The RC gear switch's brake position | `RC_GEAR_BRAKE = SpeedZero`: the speed loop brakes to a stop. `RcInput` now has a brake field, so the old full brake is one constant away |
 | The remaining renames | `yahboom_imu_cpp`, `ti_ros2_driver`, `battery_monitor`: [Conventions](conventions.md) |

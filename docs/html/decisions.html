@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">17 min read · 8 sections</div></header>
+<div class="meta">18 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -120,7 +120,7 @@ answer.</p>
 </tr>
 <tr>
 <td>8</td>
-<td>Languages: Python for every ROS node we write; Rust later; C++ only in the reused IMU driver</td>
+<td>Languages: Python for the ROS nodes we write; Rust for the firmware, the drivers and the ports of the inherited C++; no C++ of our own (Ben, 10 Oct)</td>
 <td>Our nodes run at 50 Hz or less, and the hard timing lives in the firmware. The spine logic is already Rust (<code>spine-core</code>)</td>
 </tr>
 <tr>
@@ -158,8 +158,28 @@ answer.</p>
 </tr>
 <tr>
 <td>The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32</td>
-<td>Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip</td>
+<td>Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip. A Pico 2 program exists since 11 Oct (<code>boards/pico2</code>)</td>
 <td>Q10–Q13</td>
+</tr>
+<tr>
+<td>The GPS driver: the stock <code>ublox_gps</code> by default; <code>nmea</code> and <code>ublox_dgnss</code> stay as <code>gps_driver:=</code> options</td>
+<td>It's in Pixi on every computer. <code>ublox_dgnss</code>, the 2024-25 choice, is apt-only, so it runs on the car only</td>
+<td>Q18</td>
+</tr>
+<tr>
+<td>The HUD's e-stop button only sets the e-stop. Clearing it stays a person's deliberate act, at the joystick or a laptop</td>
+<td>A stray tap on the screen can't restart the car</td>
+<td>Q29</td>
+</tr>
+<tr>
+<td>Flutter 3.35.7, downloaded into <code>vendor/</code> (<code>pixi run get-flutter</code>)</td>
+<td>Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's <code>pubspec.lock</code></td>
+<td>Q29</td>
+</tr>
+<tr>
+<td>Lane keeping: a classic OpenCV lane finder publishes <code>/lane_geometry</code>; the 2025-26 lane keeping follows it</td>
+<td>No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same</td>
+<td>Q22</td>
 </tr>
 </tbody>
 </table></div>
@@ -584,7 +604,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 </tr>
 <tr>
 <td>GPS driver</td>
-<td>keep <code>ublox_dgnss</code> (the car only) or switch to <code>ublox</code>, which Pixi has (with Q18)</td>
+<td><code>ublox_gps</code> is the default now (Tentative, above); keep it, or go back to <code>ublox_dgnss</code> (the car only). With Q18</td>
 </tr>
 <tr>
 <td><code>/estop</code> reliability (N2)</td>
@@ -612,15 +632,15 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 </tr>
 <tr>
 <td>The steering on an e-stop</td>
-<td>hold where it is (<code>spine-core</code> today), or centre it (the 2025-26 firmware)</td>
+<td>hold where it is (<code>ESTOP_STEERING = Hold</code> in <code>spine-core</code>), or centre it (the 2025-26 firmware)</td>
 </tr>
 <tr>
 <td>The brake after boot</td>
-<td><code>idle_brake</code> 0 lets it go once the e-stop clears; the old firmware kept it on</td>
+<td><code>IDLE_BRAKE = 0.0</code> lets it go once the e-stop clears; the 2025-26 firmware kept it full on (1.0). ⚠️ Keeping it on may be safer on a slope</td>
 </tr>
 <tr>
 <td>The RC gear switch's brake position</td>
-<td>today it means "speed zero"; a brake field in <code>RcInput</code> would bring back the old full brake</td>
+<td><code>RC_GEAR_BRAKE = SpeedZero</code>: the speed loop brakes to a stop. <code>RcInput</code> now has a brake field, so the old full brake is one constant away</td>
 </tr>
 <tr>
 <td>The remaining renames</td>

@@ -187,6 +187,10 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <td>10 Oct, afternoon</td>
 <td>Perception brought in: YOLO with a stop-sign lock, radar clustering, lane keeping on <code>/cmd_vel/ai</code>; the <code>ml</code> environment (PyTorch, YOLO, Core ML); the HUD's back end on our topics; the spine's device drivers in Rust; bench mode: the whole car graph on a laptop, with the spine's firmware logic on a model car, and <code>pixi run bench-check</code> (7 of 7). Found on the way: a stop that coasted, a scripted drive that stretched, an executor that spun a CPU core, and best-effort cameras that lost every image on a Mac</td>
 </tr>
+<tr>
+<td>10–11 Oct, overnight</td>
+<td>Five pieces in parallel: the HUD app's changes (its e-stop button, Cancel, the camera; Flutter in <code>vendor/</code>), the car's launch with perception as parts and the GPS driver in Pixi, the lane finder (<code>bench-check --lane</code>), the spine's Pico 2 program with a CAN driver and flashing tools, and obstacles in Nav2's costmap. Found on the way: the HUD app could never connect to its back end</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -197,7 +201,6 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <li>One <code>ROS_DOMAIN_ID</code> for the car and every laptop.</li>
 <li>The car's computers on Jazzy: Pixi on today's Ubuntu 22.04 first, then the reflash to JetPack 7.2 after a backup (Q24).</li>
 <li>Merge the older code into <code>aav</code> folder by folder: see <a href="older-code.html">The older code</a>.</li>
-<li>A <code>.gitignore</code> for every kind of code, and a <code>vendor/</code> folder for downloaded source (proposed).</li>
 </ul>
 <h3 id="todays-car-the-legacy-path">Today's car: the legacy path</h3>
 <ul>
@@ -209,8 +212,8 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <h3 id="the-spine-and-can">The spine and CAN</h3>
 <ul>
 <li>Choose the microcontroller, the board and the owner (Q10–Q13).</li>
-<li>Write the board program around <code>spine-board</code>: it implements the <code>Board</code> trait (the clock, the e-stop pin, the encoder counter, CAN) for the chosen chip. The drivers and the glue are done.</li>
-<li>Decide: the steering on an e-stop (hold, or centre as the old firmware did); the brake after boot; a brake field for the RC gear switch. <a href="firmware.html">Firmware</a> has the details.</li>
+<li>Try the Pico 2 program (<code>boards/pico2</code>) on a spare Pico 2 with a 3.3 V MCP2515 module: <code>pixi run spine-uf2</code>. If the team picks an STM32, write its board program the same way: it implements <code>spine-board</code>'s <code>Board</code> trait.</li>
+<li>Decide: the steering on an e-stop (hold, or centre as the old firmware did); the brake after boot; the RC gear switch's brake. Each is one constant in <code>spine-core</code> now. <a href="firmware.html">Firmware</a> has the details.</li>
 <li>Tune the speed loop on the car: on the bench it lags a ramp by about a second.</li>
 <li>Wire CAN: a transceiver on the Orin (or a USB adapter), 120 Ω at each end (Q14, Q15).</li>
 <li>Calibrate the steering (Q2), the brake (Q3) and the throttle (Q4).</li>
@@ -224,7 +227,7 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 </ul>
 <h3 id="localization-and-sensors">Localization and sensors</h3>
 <ul>
-<li>Identify the GPS (Q18) and pick its driver: <code>ublox_dgnss</code> or <code>ublox</code>.</li>
+<li>Identify the GPS (Q18), and confirm its driver: <code>ublox_gps</code> for now (it runs in Pixi too), or <code>nmea</code> or <code>ublox_dgnss</code> (<code>gps_driver:=</code>).</li>
 <li>Survey the test site's datum, and set the magnetic declination (0 now; about 12° W in Ottawa).</li>
 <li>Run the IMU on the car (Q20); convert its magnetometer to tesla, then calibrate it.</li>
 <li>The wheel encoder: run it on the car; its speed comes in steps of about 1.2 m/s, too coarse at walking pace.</li>
@@ -246,15 +249,15 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <h3 id="perception">Perception</h3>
 <ul>
 <li>Find the 2024-25 team's trained <code>best.pt</code>, and back up the 2025-26 detector from the Orin.</li>
-<li>Write the lane finder: the camera's picture into <code>/lane_geometry</code>.</li>
+<li>~~Write the lane finder~~: done 11 Oct, <code>aav_lane_finder</code>. Next: tune it on the real camera's pictures.</li>
 <li>Identify the cameras (Q22); fill in their udev names; set the stop-sign distance (<code>min_height_px</code>) for the real camera.</li>
-<li>TensorRT on the Orin, after the reflash (Q24).</li>
+<li>TensorRT on the Orin, after the reflash (Q24): <code>python3 tools/build_engine.py</code> there.</li>
 </ul>
 <h3 id="the-hud">The HUD</h3>
 <ul>
-<li>Keep the Flutter app or not (Q29). Its back end, <code>aav_hud</code>, is on the new topics; the app needs the small changes in <a href="hud.html">HUD</a>.</li>
+<li>Keep the Flutter app or not (Q29). Its back end, <code>aav_hud</code>, is on the new topics, and the app's small changes are done (11 Oct): <a href="hud.html">HUD</a>.</li>
 <li>Its boot scripts still use the old Humble workspace and <code>/home/aavui</code>.</li>
-<li>Its map database and the OSRM map data need a download step, not git.</li>
+<li>Its map database downloads with <code>pixi run get-hud-map</code>. The OSRM route data and the tile server still need a download step.</li>
 </ul>
 <h3 id="simulation">Simulation</h3>
 <ul>
@@ -350,11 +353,11 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 </tr>
 <tr>
 <td>The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app</td>
-<td>the back end takes it as a parameter now; the app still has its own</td>
+<td>fixed: the app gets the picture from its back end (<code>/camera/latest.png</code>)</td>
 </tr>
 <tr>
 <td><code>car gps:=false</code> still starts the GPS driver when the machine file says <code>gps: true</code></td>
-<td>to do, once Ben's edits to <code>car.launch.py</code> are committed</td>
+<td>fixed, with a test for it and the other arguments (<code>aav_bringup/test/test_car_launch.py</code>)</td>
 </tr>
 <tr>
 <td>Ctrl-C makes our Python nodes print an error while they shut down (Ctrl-C arrives twice)</td>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">13 min read · 11 sections</div></header>
+<div class="meta">14 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -60,12 +60,12 @@ tests, and how a change goes from an idea to the car.</p></div>
 </tr>
 <tr>
 <td>The car's firmware</td>
-<td>the CAN contract, the Rust spine logic, the 2025-26 boards' code</td>
+<td>the CAN contract, the Rust spine logic and its Pico 2 program, the 2025-26 boards' code</td>
 <td><code>firmware/</code></td>
 </tr>
 <tr>
 <td>The touchscreen app</td>
-<td>the 2025-26 Flutter HUD, not yet ported</td>
+<td>the 2025-26 Flutter HUD, changed for our back end</td>
 <td><code>hud/</code></td>
 </tr>
 <tr>
@@ -112,12 +112,13 @@ tests, and how a change goes from an idea to the car.</p></div>
     mux/                twist_mux: picks one command
     ego/                the virtual car: one command into speed and steering
     backends/           whatever plays the car: the real car, Gazebo, turtlesim, CARLA
-    perception/         YOLO and the stop-sign watcher, radar clustering, lane keeping
+    perception/         YOLO and the stop-sign watcher, radar clustering, the lane finder, lane keeping
     hud/                the HUD's web server (aav_hud)
     bench/              bench mode: the spine on a laptop, and pretend sensors
   firmware/           microcontroller code (colcon ignores it)
     can/                aav.dbc, the CAN contract, and its test vectors
-    spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers
+    spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers,
+                        and boards/pico2, the spine's board program
     legacy/             the 2025-26 ESP32 and Pico code that runs the car today
   hud/                the 2025-26 Flutter app (colcon ignores it)
   examples/           rust-listener: a first ROS node in Rust
@@ -299,7 +300,7 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 </tr>
 <tr>
 <td><code>bench-check</code></td>
-<td>starts the bench and tests the whole graph: contract, drive, e-stops</td>
+<td>starts the bench and tests the whole graph: contract, drive, e-stops. <code>--perception</code> adds the stop sign, <code>--lane</code> lane keeping</td>
 </tr>
 <tr>
 <td><code>gz-window</code></td>
@@ -342,8 +343,36 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td>the Rust example: prints ego's commands</td>
 </tr>
 <tr>
+<td><code>imu-compare</code></td>
+<td>feeds the same bytes to the C++ and Rust IMU drivers, and compares them</td>
+</tr>
+<tr>
+<td><code>vendor</code></td>
+<td>downloads the ROS 2 and rclrs source into <code>vendor/</code>, to look things up</td>
+</tr>
+<tr>
 <td><code>get-models</code></td>
 <td>downloads the stock YOLO model into <code>models/</code></td>
+</tr>
+<tr>
+<td><code>export-coreml</code></td>
+<td>makes the Core ML model for a Mac's detector (the <code>ml</code> environment, Macs only)</td>
+</tr>
+<tr>
+<td><code>get-hud-map</code></td>
+<td>downloads the HUD app's place database (51 MB)</td>
+</tr>
+<tr>
+<td><code>get-flutter</code></td>
+<td>downloads Flutter 3.35.7 into <code>vendor/flutter</code>, for the HUD app</td>
+</tr>
+<tr>
+<td><code>flutter</code></td>
+<td>runs that Flutter in <code>hud/flutter_pi</code>: <code>pixi run flutter doctor</code></td>
+</tr>
+<tr>
+<td><code>hud-test</code></td>
+<td>the HUD app's own checks and tests, against the real back end</td>
 </tr>
 <tr>
 <td><code>detect</code></td>
@@ -360,6 +389,18 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <tr>
 <td><code>legacy-esp32</code></td>
 <td>builds today's ESP32 firmware with PlatformIO (the <code>firmware</code> environment); <code>-t upload</code> flashes it</td>
+</tr>
+<tr>
+<td><code>spine-uf2</code></td>
+<td>builds the spine's Pico 2 program as a UF2 file, to drag onto the board</td>
+</tr>
+<tr>
+<td><code>spine-tools</code></td>
+<td>installs probe-rs into <code>vendor/cargo-tools</code>, to flash through a debug probe (once)</td>
+</tr>
+<tr>
+<td><code>spine-flash</code></td>
+<td>flashes the spine's program through a debug probe, then shows its logs</td>
 </tr>
 </tbody>
 </table></div>
@@ -456,13 +497,48 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 </tr>
 <tr>
 <td><code>tests/</code></td>
-<td>the tools' own tests: the MCP server's parts, and its smoke test</td>
+<td>the tools' own tests: the MCP server's parts and its smoke test, the UF2 converter</td>
 <td>inside <code>pixi run test</code></td>
 </tr>
 <tr>
 <td><code>get_models.sh</code></td>
 <td>downloads the stock YOLO model, checksum pinned</td>
 <td><code>pixi run get-models</code></td>
+</tr>
+<tr>
+<td><code>build_engine.py</code></td>
+<td>builds the Orin's TensorRT model, on the Orin itself (JetPack's Python)</td>
+<td><code>python3 tools/build_engine.py</code> on the Orin</td>
+</tr>
+<tr>
+<td><code>get_hud_map.sh</code></td>
+<td>downloads the HUD's place database, checksum pinned</td>
+<td><code>pixi run get-hud-map</code></td>
+</tr>
+<tr>
+<td><code>get_flutter.sh</code></td>
+<td>downloads Flutter, checksum pinned</td>
+<td><code>pixi run get-flutter</code></td>
+</tr>
+<tr>
+<td><code>flutter.sh</code></td>
+<td>runs that Flutter, with its analytics off</td>
+<td><code>pixi run flutter &lt;arguments&gt;</code></td>
+</tr>
+<tr>
+<td><code>hud_test.sh</code>, <code>hud_fake_backend.py</code></td>
+<td>the HUD app's checks; its client code against the real back end, with a fake car</td>
+<td><code>pixi run hud-test</code></td>
+</tr>
+<tr>
+<td><code>elf2uf2.py</code></td>
+<td>turns the Pico 2 program into a UF2 file</td>
+<td><code>pixi run spine-uf2</code></td>
+</tr>
+<tr>
+<td><code>vendor.py</code></td>
+<td>downloads the source in <code>vendor/*.repos</code></td>
+<td><code>pixi run vendor</code></td>
 </tr>
 <tr>
 <td><code>udev/99-aav.rules</code></td>
@@ -532,7 +608,7 @@ changes.</p>
 <tbody>
 <tr>
 <td><code>orin</code> (Jetson AGX Orin)</td>
-<td>the car's model, mux, ego, scripted driver, IMU, GPS, localization, Nav2, Foxglove</td>
+<td>the car's model, mux, ego, scripted driver, IMU, GPS, localization, Nav2, Foxglove, the detector (TensorRT) and the stop-sign watcher</td>
 <td>Ubuntu 22.04 and Humble: it must move to Jazzy first (Q24)</td>
 </tr>
 <tr>
@@ -553,7 +629,7 @@ changes.</p>
 <tr>
 <td>the spine</td>
 <td>a microcontroller on CAN: throttle, brake, steering, watchdog</td>
-<td>not built yet: Q10–Q17</td>
+<td>a Pico 2 program builds, never flashed; the car's chip is Q10–Q17</td>
 </tr>
 </tbody>
 </table></div>
@@ -669,8 +745,7 @@ request, and on a Mac every night. The results are on the repo's Actions tab.</p
 <p class="admonition-title">What never goes in git</p>
 <p>Build output (<code>build/</code>, <code>install/</code>, <code>log/</code>, <code>.pixi/</code>, <code>target/</code>), recordings (<code>bags/</code>),
 and secrets. <code>.gitignore</code> lists them. Downloaded third-party source, such as ROS's own
-code, belongs in a <code>vendor/</code> folder that git doesn't track: proposed, see
-<a href="decisions.html">Decisions</a>.</p>
+code and Flutter, lives in <code>vendor/</code>, which git doesn't track: <code>pixi run vendor</code>.</p>
 </div>
 </section>
 <section class="card"><h2 id="where-to-find-what-happened">Where to find what happened</h2>

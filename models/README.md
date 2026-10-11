@@ -13,7 +13,7 @@ One model, three formats. Make the other two from the `.pt` file:
 | Format | Runs on | Make it with |
 |---|---|---|
 | `.pt` | anything, with PyTorch | the training |
-| `.mlpackage` | Macs, with Core ML | `pixi run -e ml yolo export model=models/yolo11n.pt format=coreml` |
-| `.engine` | the Orin, with TensorRT | `yolo export model=models/yolo11n.pt format=engine`, on the Orin itself |
+| `.mlpackage` | Macs, with Core ML | `pixi run -e ml export-coreml [models/<name>.pt]`, on a Mac |
+| `.engine` | the Orin, with TensorRT | `python3 tools/build_engine.py [models/<name>.pt]`, on the Orin itself, with JetPack's Python |
 
 The Ultralytics models and code are licensed AGPL-3.0.

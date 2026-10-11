@@ -10,8 +10,8 @@ tests, and how a change goes from an idea to the car.
 | Piece | What it is | Where |
 |---|---|---|
 | The car's software | ROS 2 Jazzy packages, one folder per layer | `src/` |
-| The car's firmware | the CAN contract, the Rust spine logic, the 2025-26 boards' code | `firmware/` |
-| The touchscreen app | the 2025-26 Flutter HUD, not yet ported | `hud/` |
+| The car's firmware | the CAN contract, the Rust spine logic and its Pico 2 program, the 2025-26 boards' code | `firmware/` |
+| The touchscreen app | the 2025-26 Flutter HUD, changed for our back end | `hud/` |
 | The environment | ROS, Gazebo, compilers, Python and Rust, all from Pixi | `pixi.toml`, `pixi.lock` |
 | The tools | tests, the graph check, the network doctor, recording, docs, the mailer, the MCP server | `tools/` |
 | The docs | short markdown pages, built into web pages and one PDF | `docs/` |
@@ -36,12 +36,13 @@ aav/
     mux/                twist_mux: picks one command
     ego/                the virtual car: one command into speed and steering
     backends/           whatever plays the car: the real car, Gazebo, turtlesim, CARLA
-    perception/         YOLO and the stop-sign watcher, radar clustering, lane keeping
+    perception/         YOLO and the stop-sign watcher, radar clustering, the lane finder, lane keeping
     hud/                the HUD's web server (aav_hud)
     bench/              bench mode: the spine on a laptop, and pretend sensors
   firmware/           microcontroller code (colcon ignores it)
     can/                aav.dbc, the CAN contract, and its test vectors
-    spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers
+    spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers,
+                        and boards/pico2, the spine's board program
     legacy/             the 2025-26 ESP32 and Pico code that runs the car today
   hud/                the 2025-26 Flutter app (colcon ignores it)
   examples/           rust-listener: a first ROS node in Rust
@@ -108,7 +109,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `keyboard` | drive from the keyboard (`--sim` with Gazebo) |
 | `sim` | the stack, with Gazebo as the car (`gui:=false` on a Mac) |
 | `bench` | the car's own software, with stand-ins for the hardware: [Bench mode](bench.md) |
-| `bench-check` | starts the bench and tests the whole graph: contract, drive, e-stops |
+| `bench-check` | starts the bench and tests the whole graph: contract, drive, e-stops. `--perception` adds the stop sign, `--lane` lane keeping |
 | `gz-window` | Gazebo's window, for a simulator started with `gui:=false` |
 | `car` | the real car: `pixi run car orin` (or `motor_pi`, `laptop`, `all`) |
 | `view` | the car's model in RViz |
@@ -119,11 +120,21 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `estop`, `estop-clear` | stop every driver; let them go again |
 | `doctor` | can this computer join the car's ROS network? |
 | `rust-listener` | the Rust example: prints ego's commands |
+| `imu-compare` | feeds the same bytes to the C++ and Rust IMU drivers, and compares them |
+| `vendor` | downloads the ROS 2 and rclrs source into `vendor/`, to look things up |
 | `get-models` | downloads the stock YOLO model into `models/` |
+| `export-coreml` | makes the Core ML model for a Mac's detector (the `ml` environment, Macs only) |
+| `get-hud-map` | downloads the HUD app's place database (51 MB) |
+| `get-flutter` | downloads Flutter 3.35.7 into `vendor/flutter`, for the HUD app |
+| `flutter` | runs that Flutter in `hud/flutter_pi`: `pixi run flutter doctor` |
+| `hud-test` | the HUD app's own checks and tests, against the real back end |
 | `detect` | YOLO on the camera's images (the `ml` environment): `pixi run detect picture:=<file>` |
 | `docs` | rebuilds the docs pages and the PDF |
 | `mcp` | the read-only MCP server, for AI apps (the `mcp` environment). The app starts it: [AI apps (MCP)](mcp.md) |
 | `legacy-esp32` | builds today's ESP32 firmware with PlatformIO (the `firmware` environment); `-t upload` flashes it |
+| `spine-uf2` | builds the spine's Pico 2 program as a UF2 file, to drag onto the board |
+| `spine-tools` | installs probe-rs into `vendor/cargo-tools`, to flash through a debug probe (once) |
+| `spine-flash` | flashes the spine's program through a debug probe, then shows its logs |
 
 ## The scripts in tools/
 
@@ -145,8 +156,15 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `graph_picture.py` | draws the running graph, grouped by layer | `pixi run graph-picture` |
 | `mcp_server.py`, `mcp_parts.py` | the read-only MCP server for AI apps, and its parts | an AI app, through `.mcp.json` |
 | `legacy_firmware.sh` | builds today's ESP32 firmware with PlatformIO | `pixi run -e firmware legacy-esp32` |
-| `tests/` | the tools' own tests: the MCP server's parts, and its smoke test | inside `pixi run test` |
+| `tests/` | the tools' own tests: the MCP server's parts and its smoke test, the UF2 converter | inside `pixi run test` |
 | `get_models.sh` | downloads the stock YOLO model, checksum pinned | `pixi run get-models` |
+| `build_engine.py` | builds the Orin's TensorRT model, on the Orin itself (JetPack's Python) | `python3 tools/build_engine.py` on the Orin |
+| `get_hud_map.sh` | downloads the HUD's place database, checksum pinned | `pixi run get-hud-map` |
+| `get_flutter.sh` | downloads Flutter, checksum pinned | `pixi run get-flutter` |
+| `flutter.sh` | runs that Flutter, with its analytics off | `pixi run flutter <arguments>` |
+| `hud_test.sh`, `hud_fake_backend.py` | the HUD app's checks; its client code against the real back end, with a fake car | `pixi run hud-test` |
+| `elf2uf2.py` | turns the Pico 2 program into a UF2 file | `pixi run spine-uf2` |
+| `vendor.py` | downloads the source in `vendor/*.repos` | `pixi run vendor` |
 | `udev/99-aav.rules` | stable device names on the car (`/dev/aav/imu`, ...) | install on the car's Linux computers |
 
 ## Launch profiles: the same nodes, a different car
@@ -169,11 +187,11 @@ The car runs one ROS graph across several computers. Each one starts `pixi run c
 
 | Machine | Runs | Today |
 |---|---|---|
-| `orin` (Jetson AGX Orin) | the car's model, mux, ego, scripted driver, IMU, GPS, localization, Nav2, Foxglove | Ubuntu 22.04 and Humble: it must move to Jazzy first (Q24) |
+| `orin` (Jetson AGX Orin) | the car's model, mux, ego, scripted driver, IMU, GPS, localization, Nav2, Foxglove, the detector (TensorRT) and the stop-sign watcher | Ubuntu 22.04 and Humble: it must move to Jazzy first (Q24) |
 | `motor_pi` | the legacy bridges to today's ESP32 (UART) and the wheel encoder (UDP) | Humble |
 | `laptop` | the safety driver's joystick | any laptop with Pixi |
 | `all` | everything on one computer: for a bench test | |
-| the spine | a microcontroller on CAN: throttle, brake, steering, watchdog | not built yet: Q10–Q17 |
+| the spine | a microcontroller on CAN: throttle, brake, steering, watchdog | a Pico 2 program builds, never flashed; the car's chip is Q10–Q17 |
 
 The development computers:
 
@@ -214,8 +232,7 @@ request, and on a Mac every night. The results are on the repo's Actions tab.
 !!! warning "What never goes in git"
   Build output (`build/`, `install/`, `log/`, `.pixi/`, `target/`), recordings (`bags/`),
   and secrets. `.gitignore` lists them. Downloaded third-party source, such as ROS's own
-  code, belongs in a `vendor/` folder that git doesn't track: proposed, see
-  [Decisions](decisions.md).
+  code and Flutter, lives in `vendor/`, which git doesn't track: `pixi run vendor`.
 
 ## Where to find what happened
 

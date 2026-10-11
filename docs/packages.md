@@ -1,8 +1,8 @@
 # What each package does
 
 Every ROS package in `src/`, layer by layer, with what it reads and writes. Then the
-firmware, the HUD and the examples. 24 packages build today, and none is parked:
-perception came in on 10 October.
+firmware, the HUD and the examples. 26 packages build today, and none is parked:
+perception came in on 10 October, the lane finder on 11 October.
 
 ## At a glance
 
@@ -28,8 +28,9 @@ perception came in on 10 October.
 | `aav_bringup` | bringup | the five profiles, perception on the car, the machine files, the RViz layout | [[works]] turtle, sim, replay, bench | new |
 | `aav_yolo` | perception | YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
 | `aav_object_detection` | perception | radar clustering (DBSCAN), with a box round each object | [[works]] on the pretend radar | 2025-26 `Nav_Radar` |
-| `aav_lane_geometry` | perception | lane keeping: a driver on `/cmd_vel/ai` | [[works]] on a pretend lane; the line finder is [[missing]] | 2025-26 `Lane_Detection_ROS2` |
-| `aav_hud` | hud | the HUD's web server (Flask, Socket.IO), on our topics | [[works]] on the bench; the app needs small changes | 2025-26 `User-Interface` |
+| `aav_lane_finder` | perception | the lane lines in the camera's pictures, as `/lane_geometry` (OpenCV) | [[works]] on the bench | new |
+| `aav_lane_geometry` | perception | lane keeping: a driver on `/cmd_vel/ai` | [[works]] on the bench, with `aav_lane_finder` | 2025-26 `Lane_Detection_ROS2` |
+| `aav_hud` | hud | the HUD's web server (Flask, Socket.IO), on our topics | [[works]] on the bench, with the app's e-stop button | 2025-26 `User-Interface` |
 | `aav_spine_sim` | bench | the spine on a laptop: the firmware's logic on a model car (Rust) | [[works]] | new |
 | `aav_bench` | bench | pretend sensors: IMU, GPS, battery and camera | [[works]] | new |
 
@@ -76,7 +77,8 @@ perception came in on 10 October.
 | `aav_yolo`: `yolo_detector` | `/camera/image_raw` | `/perception/detections`, `/perception/detections/image` | a `.pt`, `.mlpackage` or `.engine` model; needs the `ml` environment |
 | `aav_yolo`: `stop_sign_watcher` | `/perception/detections` | `/perception/stop` | twist_mux's stop-sign lock, priority 30 |
 | `aav_object_detection`: `radar_clusters` | `/radar/points` | `/radar/clusters`, `/radar/cluster_boxes` | DBSCAN; the 2025-26 filters and ICP are built, not launched |
-| `aav_lane_geometry`: `control_interface` | `/lane_geometry` | `/cmd_vel/ai` | the lane finder that makes `/lane_geometry` is missing |
+| `aav_lane_finder`: `lane_finder` | `/camera/image_raw`, `/camera/camera_info` | `/lane_geometry`, `/lane_geometry/image` | a bird's-eye view, sliding windows, a curve per line; the camera's place from `vehicle.yaml` |
+| `aav_lane_geometry`: `control_interface` | `/lane_geometry` | `/cmd_vel/ai` | steers back to the lane's centre, measured 3 m ahead |
 
 ## Backends
 
@@ -114,14 +116,15 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 | Part | What it is | Status |
 |---|---|---|
 | `can/aav.dbc` | the CAN contract: four frames between the Orin and the spine | draft v0.1.0 |
-| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 200 ms watchdog, the speed loop, the encoder | [[works]] 48 tests, and the bench |
+| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 200 ms watchdog, the speed loop, the encoder | [[works]] 54 tests, and the bench |
 | `spine/crates/aav-inputs` | debounced switches, an e-stop that trips at once, counting with a lockout | [[works]] 9 tests |
 | `spine/crates/jrk-g2` | the Pololu Jrk G2 (steering, brake) over I2C | [[works]] 14 tests, against mocks |
 | `spine/crates/ad5311` | the throttle DAC over I2C | [[works]] 10 tests, against mocks |
 | `spine/crates/pca9555` | the I/O expander (direction) over I2C | [[works]] 6 tests, against mocks |
 | `spine/crates/ibus` | the FlySky RC receiver's protocol | [[works]] 24 tests |
-| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait | [[works]] 44 tests, against mocks |
-| the spine's board program | the program for the chosen chip: it implements `Board` | [[missing]] waits on the chip (Q10-Q13) |
+| `spine/crates/mcp2515` | the MCP2515 CAN controller over SPI, since a Pico 2 has no CAN | [[works]] 34 tests, against mocks |
+| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait | [[works]] 49 tests, against mocks |
+| `spine/boards/pico2` | the spine's board program for a Pico 2 (Embassy): it implements `Board`, with a 100 ms hardware watchdog | [[untested]] builds, never flashed. The car's chip is Q10-Q13 |
 | `legacy/aav_umod_esp32` | the 2025-26 ESP32 that drives today's actuators | runs the car today: no timeout, an update page with no password |
 | `legacy/wheel_encoder_pico2` | a Pico 2 that counts wheel spokes and sends them over UDP | runs the car today |
 | `legacy/aav_sentinel_pico2` | a Pico 2 status display | not wired in |
@@ -130,9 +133,9 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 
 | Part | What it is |
 |---|---|
-| `hud/flutter_pi` | the 2025-26 touchscreen app (Flutter): speed, map, camera |
+| `hud/flutter_pi` | the 2025-26 touchscreen app (Flutter): speed, map, camera; since 11 Oct an e-stop button, Cancel and the car's status. `pixi run hud-test` |
 | `hud/scripts` | the old Pi's start-up scripts |
-| `src/hud/aav_hud` | its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints. [HUD](hud.md) has what the app still needs |
+| `src/hud/aav_hud` | its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints, and the e-stop. [HUD](hud.md) has what's left |
 
 ## Examples
 

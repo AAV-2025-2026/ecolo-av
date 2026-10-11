@@ -2,28 +2,28 @@
 
 The whole project on one page: what's in the repo, the stock ROS packages and plugins it
 uses, the code it took from the previous teams, and what's still missing. Each section
-links to the page with the details. As of the evening of 10 October 2026.
+links to the page with the details. As of early on 11 October 2026.
 
 ## In numbers
 
 | What | How many |
 |---|---|
-| ROS packages that build | 25: 12 in Python, 13 in CMake (one of them in Rust). None parked |
-| Rust firmware crates | 7: `spine-core`, `aav-inputs`, and five device drivers and glue |
+| ROS packages that build | 26: 13 in Python, 13 in CMake (one of them in Rust). None parked |
+| Rust firmware crates | 8: `spine-core`, `aav-inputs`, and six device drivers and glue. Plus the spine's board program for a Pico 2 |
 | The previous team's firmware boards, in C++ | 3 |
 | Launch profiles | 5: `turtle`, `sim`, `car`, `replay`, `bench` |
 | Computers in the machine files | 4: `orin`, `motor_pi`, `laptop`, `all` |
 | Contracts | 3: the topics, the CAN frames, the car's measurements |
-| Tests | 173 in Python and 163 in Rust without ROS; 199 in `colcon test`; 7 bench checks |
-| Tools | 19 scripts and 26 `pixi run` tasks |
+| Tests | 230 in Python and 208 in Rust without ROS; 260 in `colcon test`; the bench checks, with `--perception` and `--lane` |
+| Tools | 26 scripts and 34 `pixi run` tasks |
 
 ## The folders
 
 | Folder | What's in it | More |
 |---|---|---|
 | `src/` | the ROS 2 packages, one folder per layer | [Packages](packages.md) |
-| `firmware/` | the CAN contract, the Rust crates, and the 2025-26 C++ boards | [Firmware](firmware.md), [Rust firmware](rust-firmware.md) |
-| `hud/` | the 2025-26 touchscreen app (Flutter). Its back end is ported, as `src/hud/aav_hud` | [HUD](hud.md) |
+| `firmware/` | the CAN contract, the Rust crates, the spine's Pico 2 program, and the 2025-26 C++ boards | [Firmware](firmware.md), [Rust firmware](rust-firmware.md) |
+| `hud/` | the 2025-26 touchscreen app (Flutter), changed for our back end, `src/hud/aav_hud`. `pixi run get-flutter` downloads Flutter | [HUD](hud.md) |
 | `tools/` | tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server | [Infrastructure](infrastructure.md) |
 | `examples/` | a first ROS node in Rust | |
 | `docs/` | these pages, the topic contract, and the history | |
@@ -33,8 +33,9 @@ links to the page with the details. As of the evening of 10 October 2026.
 
 ## Our own code
 
-Written for 2026-27. Most packages are configuration around stock ROS packages; three
-nodes hold real logic of our own (ego, the spine bridge, the scripted driver).
+Written for 2026-27. Most packages are configuration around stock ROS packages; four
+nodes hold real logic of our own (ego, the spine bridge, the scripted driver, the lane
+finder).
 
 | Package | Does | Layer |
 |---|---|---|
@@ -45,16 +46,18 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).
 | `aav_navigation` | Nav2 set up for a car, and the maps | drivers |
 | `aav_localization` | the two EKFs and GPS-to-map: settings only | localization |
 | `aav_description` | the car's model and `vehicle.yaml` | description |
-| `aav_sensors` | starts the sensor drivers, with their settings | sensors |
+| `aav_sensors` | starts the sensor drivers, with their settings. The GPS: `ublox_gps` by default | sensors |
 | `aav_imu_yahboom` | Ben's Rust version of the IMU driver: `imu_driver:=rust` picks it | sensors |
 | `aav_interfaces` | our messages: `VehicleStatus`, `ScriptedDrive` | interfaces |
 | `aav_spine` | the real car: ego's commands as CAN frames | backends |
 | `aav_legacy` | today's car: the 2025-26 ESP32 and wheel encoder | backends |
 | `aav_turtlesim`, `aav_gazebo`, `aav_carla` | the turtle, Gazebo's car, a CARLA stub | backends |
-| `aav_bringup` | the five profiles, perception on the car, the machine files, the RViz layout | bringup |
+| `aav_bringup` | the five profiles, the machine files (each picks its parts, perception too), the RViz layout | bringup |
 | `aav_spine_sim`, `aav_bench` | bench mode: the spine on a laptop, and pretend sensors | bench |
 | `firmware/can`, `spine-core`, `aav-inputs` | the CAN contract, the spine's logic, clean inputs | firmware |
-| `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `spine-board` | the spine's device drivers, and the glue to spine-core | firmware |
+| `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board` | the spine's device drivers, and the glue to spine-core | firmware |
+| `boards/pico2` | the spine's board program for a Pico 2 (Embassy): builds, never flashed | firmware |
+| `aav_lane_finder` | the lane finder: the camera's picture to `/lane_geometry`, with OpenCV | perception |
 
 ## Stock ROS packages and plugins we use
 
@@ -63,8 +66,9 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).
 | Layer | Stock package | What it does for us |
 |---|---|---|
 | Sensors | `imu_filter_madgwick` | turns the IMU's raw readings into an orientation |
-| Sensors | `ublox_dgnss` | the u-blox GPS. It isn't in Pixi, so it runs on the car only (Q18) |
-| Sensors | `nmea_navsat_driver` | any GPS that speaks NMEA: the fallback until Q18 |
+| Sensors | `ublox_gps` (KumarRobotics) | the u-blox GPS, in Pixi on every computer: the default (Tentative, Q18) |
+| Sensors | `ublox_dgnss` | the 2024-25 choice for the same GPS. It isn't in Pixi, so it runs on the car only: `gps_driver:=ublox_dgnss` |
+| Sensors | `nmea_navsat_driver` | any GPS that speaks NMEA: `gps_driver:=nmea` |
 | Sensors | `usb_cam` | the cameras, with the 2024-25 calibrations (Linux only) |
 | Perception | `vision_msgs`, `cv_bridge`, `image_publisher` | detections, pictures, and a picture file as a pretend camera |
 | Perception | `pcl_ros`, `pcl_conversions` | the radar's point clouds, for clustering |
@@ -107,8 +111,8 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | The TI radar driver | 2025-26 `Nav_Radar` | `src/sensors/ti_ros2_driver` | ported; its settings are indoor demos |
 | The battery monitor | 2024-25 `Battery-Monitor-ROS` | `src/sensors/battery_monitor` | ported |
 | Camera calibrations | 2024-25 `cameras` | `aav_sensors/config/cameras` | used by `cameras.launch.py` |
-| The HUD's back end (Flask) | 2025-26 `User-Interface` | `src/hud/aav_hud` | ported to our topics, 86 tests |
-| The HUD app (Flutter) and its boot scripts | 2025-26 `User-Interface` | `hud/` | copied; not ported |
+| The HUD's back end (Flask) | 2025-26 `User-Interface` | `src/hud/aav_hud` | ported to our topics; publishes `/estop`. 98 tests |
+| The HUD app (Flutter) and its boot scripts | 2025-26 `User-Interface` | `hud/` | changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen |
 | The ESP32 actuator firmware (C++) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_umod_esp32` | runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers |
 | The status display (Pico 2) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_sentinel_pico2` | copied; not wired in |
 | The wheel encoder (Pico 2) | 2025-26 `Wheel_Encoders` | `firmware/legacy/wheel_encoder_pico2` | runs today's car |
@@ -127,13 +131,13 @@ avoidance, odometry and QNX layer. [The older code](older-code.md) has every rep
 
 | Area | Missing | More |
 |---|---|---|
-| The spine | the board program for the chip it runs on (Q10–Q13); the CAN wiring. The drivers and glue are written | [Rust firmware](rust-firmware.md) |
+| The spine | a test on a real Pico 2 and a 3.3 V CAN module; the car's chip (Q10–Q13); the CAN wiring. The drivers, the glue and a Pico 2 program are written | [Rust firmware](rust-firmware.md) |
 | Rust drivers | the W5500 and the display, if the board keeps them | [Rust firmware](rust-firmware.md) |
 | Sensors | the camera and lidar models (Q22); the GPS model (Q18); the magnetometer in real units | [Status](status.md) |
-| Perception | the lane finder; the 2024-25 team's `best.pt`; TensorRT on the Orin | [Perception](perception.md) |
+| Perception | the 2024-25 team's `best.pt`; the Orin's TensorRT engine, built on the Orin after its reflash | [Perception](perception.md) |
 | The car | every measurement in `vehicle.yaml` (Q1); the steering calibration (Q2); Jazzy on its computers (Q24) | [Car numbers](car_measurements.md) |
 | Navigation | the real test site's map (Q21); Nav2's lookahead (N7); obstacle inputs | [Costmaps](costmaps.md) |
 | Drivers | a first real joystick test; an e-stop message that can't get lost (N2) | [Starting points](team.md) |
-| The HUD | small app changes (an e-stop button, cancel, the camera); a download step for its 51 MB map database (Q29) | [HUD](hud.md) |
+| The HUD | the build for the car's Pi; its tile server and OSRM route data. The map database downloads with `pixi run get-hud-map` | [HUD](hud.md) |
 | Simulation | CARLA, parked: no Jazzy support. Bench mode works: [Bench mode](bench.md) | [Simulation](simulation.md) |
 | The team | owners (Q33), the leaked secrets changed (Q34), backups before any reflash | [Work](work.md) |

@@ -97,7 +97,7 @@ Both sides test against the same generated frames. To change a frame:
 ## firmware/spine: the Rust code
 
 `crates/spine-core` is plain `no_std` Rust: no allocator, no dependencies, no hardware.
-`cargo test` runs its 47 tests on any laptop.
+`cargo test` runs its 54 tests on any laptop.
 
 | Module | Does |
 |---|---|
@@ -118,13 +118,23 @@ and the glue between them and `spine-core`, are written too (10 October):
 | `ad5311` | the throttle DAC over I2C | 10 |
 | `pca9555` | the I/O expander: the direction output | 6 |
 | `ibus` | the FlySky RC receiver | 24 |
-| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits | 44 |
+| `mcp2515` | the MCP2515 CAN controller over SPI: a Pico 2 has no CAN of its own | 34 |
+| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits | 49 |
 
 On a laptop, [Bench mode](bench.md) runs `spine-core` on the CAN frames from `spine_bridge`,
 driving a model car. The plan for all the firmware in Rust is
 [Rust on the hardware](rust-firmware.md).
 
-The board program for the spine's chip is [[missing]]: it waits on the chip (Q10-Q13).
+The board program for a Pico 2 is `boards/pico2` (11 October): Embassy, CAN through an
+MCP2515, a 100 ms hardware watchdog, and the e-stop's spare contact on GP15. It builds
+(60 KB of flash, 2.8 KB of RAM) and its UF2 file checks out, but it has never run on a
+board: [[untested]]. The car's chip is still Q10-Q13. Flashing it:
+[Rust on the hardware](rust-firmware.md).
+
+!!! warning "Buy a 3.3 V CAN module"
+  The common MCP2515 module, with a TJA1050, runs at 5 V and doesn't suit a Pico 2's
+  3.3 V pins. Buy a 3.3 V one, for example an MCP2515 with an SN65HVD230.
+
 Hardware facts from today's car:
 
 | Part | Interface | Today's setting |
@@ -177,12 +187,16 @@ WiFi details: fine for a test build, but that board can't join the car's WiFi.
 
 ## Still to decide
 
-For the team, from the drivers' port:
-- On an e-stop, the steering holds where it is. The 2025-26 firmware centred it.
-- After boot, `idle_brake` is 0, so the brake lets go once the e-stop clears. The old
-  firmware kept it on.
-- The RC gear switch's "brake" position: `RcInput` has no brake field yet, so it means
-  "speed zero". Add a field if the team wants the old full brake.
+For the team, from the drivers' port. Each is one constant at the top of `spine-core`'s
+`spine.rs`, so the board program and the bench both follow a change:
+
+| Constant | Today | The 2025-26 firmware |
+|---|---|---|
+| `ESTOP_STEERING` | `Hold`: the steering stays where it is on any stop | centred it |
+| `IDLE_BRAKE` | `0.0`: the brake lets go once the e-stop clears | kept it full on (1.0) |
+| `RC_GEAR_BRAKE` | `SpeedZero`: the speed loop brakes to a stop and holds | put the brake full on at once |
+
+⚠️ `IDLE_BRAKE` matters most: on a slope, a car with its brake off can roll.
 
 And the design doc's questions Q10–Q17:
 - who owns the spine, and which microcontroller;

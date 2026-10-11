@@ -7,7 +7,7 @@
 <!-- Generated from docs/overview.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Overview: everything in aav</h1>
-<div class="meta">10 min read · 6 sections</div></header>
+<div class="meta">11 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a class="here" href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -41,7 +41,7 @@
 <nav class="toc"><span>On this page:</span><a href="#in-numbers">In numbers</a><a href="#the-folders">The folders</a><a href="#our-own-code">Our own code</a><a href="#stock-ros-packages-and-plugins-we-use">Stock ROS packages and plugins we use</a><a href="#code-from-the-previous-teams">Code from the previous teams</a><a href="#whats-missing">What&#x27;s missing</a></nav>
 <div class="lead"><p>The whole project on one page: what's in the repo, the stock ROS packages and plugins it
 uses, the code it took from the previous teams, and what's still missing. Each section
-links to the page with the details. As of the evening of 10 October 2026.</p></div>
+links to the page with the details. As of early on 11 October 2026.</p></div>
 <section class="card"><h2 id="in-numbers">In numbers</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -53,11 +53,11 @@ links to the page with the details. As of the evening of 10 October 2026.</p></d
 <tbody>
 <tr>
 <td>ROS packages that build</td>
-<td>25: 12 in Python, 13 in CMake (one of them in Rust). None parked</td>
+<td>26: 13 in Python, 13 in CMake (one of them in Rust). None parked</td>
 </tr>
 <tr>
 <td>Rust firmware crates</td>
-<td>7: <code>spine-core</code>, <code>aav-inputs</code>, and five device drivers and glue</td>
+<td>8: <code>spine-core</code>, <code>aav-inputs</code>, and six device drivers and glue. Plus the spine's board program for a Pico 2</td>
 </tr>
 <tr>
 <td>The previous team's firmware boards, in C++</td>
@@ -77,11 +77,11 @@ links to the page with the details. As of the evening of 10 October 2026.</p></d
 </tr>
 <tr>
 <td>Tests</td>
-<td>173 in Python and 163 in Rust without ROS; 199 in <code>colcon test</code>; 7 bench checks</td>
+<td>230 in Python and 208 in Rust without ROS; 260 in <code>colcon test</code>; the bench checks, with <code>--perception</code> and <code>--lane</code></td>
 </tr>
 <tr>
 <td>Tools</td>
-<td>19 scripts and 26 <code>pixi run</code> tasks</td>
+<td>26 scripts and 34 <code>pixi run</code> tasks</td>
 </tr>
 </tbody>
 </table></div>
@@ -103,12 +103,12 @@ links to the page with the details. As of the evening of 10 October 2026.</p></d
 </tr>
 <tr>
 <td><code>firmware/</code></td>
-<td>the CAN contract, the Rust crates, and the 2025-26 C++ boards</td>
+<td>the CAN contract, the Rust crates, the spine's Pico 2 program, and the 2025-26 C++ boards</td>
 <td><a href="firmware.html">Firmware</a>, <a href="rust-firmware.html">Rust firmware</a></td>
 </tr>
 <tr>
 <td><code>hud/</code></td>
-<td>the 2025-26 touchscreen app (Flutter). Its back end is ported, as <code>src/hud/aav_hud</code></td>
+<td>the 2025-26 touchscreen app (Flutter), changed for our back end, <code>src/hud/aav_hud</code>. <code>pixi run get-flutter</code> downloads Flutter</td>
 <td><a href="hud.html">HUD</a></td>
 </tr>
 <tr>
@@ -145,8 +145,9 @@ links to the page with the details. As of the evening of 10 October 2026.</p></d
 </table></div>
 </section>
 <section class="card"><h2 id="our-own-code">Our own code</h2>
-<p>Written for 2026-27. Most packages are configuration around stock ROS packages; three
-nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</p>
+<p>Written for 2026-27. Most packages are configuration around stock ROS packages; four
+nodes hold real logic of our own (ego, the spine bridge, the scripted driver, the lane
+finder).</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -193,7 +194,7 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 </tr>
 <tr>
 <td><code>aav_sensors</code></td>
-<td>starts the sensor drivers, with their settings</td>
+<td>starts the sensor drivers, with their settings. The GPS: <code>ublox_gps</code> by default</td>
 <td>sensors</td>
 </tr>
 <tr>
@@ -223,7 +224,7 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 </tr>
 <tr>
 <td><code>aav_bringup</code></td>
-<td>the five profiles, perception on the car, the machine files, the RViz layout</td>
+<td>the five profiles, the machine files (each picks its parts, perception too), the RViz layout</td>
 <td>bringup</td>
 </tr>
 <tr>
@@ -237,9 +238,19 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 <td>firmware</td>
 </tr>
 <tr>
-<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>spine-board</code></td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>spine-board</code></td>
 <td>the spine's device drivers, and the glue to spine-core</td>
 <td>firmware</td>
+</tr>
+<tr>
+<td><code>boards/pico2</code></td>
+<td>the spine's board program for a Pico 2 (Embassy): builds, never flashed</td>
+<td>firmware</td>
+</tr>
+<tr>
+<td><code>aav_lane_finder</code></td>
+<td>the lane finder: the camera's picture to <code>/lane_geometry</code>, with OpenCV</td>
+<td>perception</td>
 </tr>
 </tbody>
 </table></div>
@@ -262,13 +273,18 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 </tr>
 <tr>
 <td>Sensors</td>
+<td><code>ublox_gps</code> (KumarRobotics)</td>
+<td>the u-blox GPS, in Pixi on every computer: the default (Tentative, Q18)</td>
+</tr>
+<tr>
+<td>Sensors</td>
 <td><code>ublox_dgnss</code></td>
-<td>the u-blox GPS. It isn't in Pixi, so it runs on the car only (Q18)</td>
+<td>the 2024-25 choice for the same GPS. It isn't in Pixi, so it runs on the car only: <code>gps_driver:=ublox_dgnss</code></td>
 </tr>
 <tr>
 <td>Sensors</td>
 <td><code>nmea_navsat_driver</code></td>
-<td>any GPS that speaks NMEA: the fallback until Q18</td>
+<td>any GPS that speaks NMEA: <code>gps_driver:=nmea</code></td>
 </tr>
 <tr>
 <td>Sensors</td>
@@ -455,13 +471,13 @@ nodes hold real logic of our own (ego, the spine bridge, the scripted driver).</
 <td>The HUD's back end (Flask)</td>
 <td>2025-26 <code>User-Interface</code></td>
 <td><code>src/hud/aav_hud</code></td>
-<td>ported to our topics, 86 tests</td>
+<td>ported to our topics; publishes <code>/estop</code>. 98 tests</td>
 </tr>
 <tr>
 <td>The HUD app (Flutter) and its boot scripts</td>
 <td>2025-26 <code>User-Interface</code></td>
 <td><code>hud/</code></td>
-<td>copied; not ported</td>
+<td>changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen</td>
 </tr>
 <tr>
 <td>The ESP32 actuator firmware (C++)</td>
@@ -540,7 +556,7 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 <tbody>
 <tr>
 <td>The spine</td>
-<td>the board program for the chip it runs on (Q10–Q13); the CAN wiring. The drivers and glue are written</td>
+<td>a test on a real Pico 2 and a 3.3 V CAN module; the car's chip (Q10–Q13); the CAN wiring. The drivers, the glue and a Pico 2 program are written</td>
 <td><a href="rust-firmware.html">Rust firmware</a></td>
 </tr>
 <tr>
@@ -555,7 +571,7 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>Perception</td>
-<td>the lane finder; the 2024-25 team's <code>best.pt</code>; TensorRT on the Orin</td>
+<td>the 2024-25 team's <code>best.pt</code>; the Orin's TensorRT engine, built on the Orin after its reflash</td>
 <td><a href="perception.html">Perception</a></td>
 </tr>
 <tr>
@@ -575,7 +591,7 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>The HUD</td>
-<td>small app changes (an e-stop button, cancel, the camera); a download step for its 51 MB map database (Q29)</td>
+<td>the build for the car's Pi; its tile server and OSRM route data. The map database downloads with <code>pixi run get-hud-map</code></td>
 <td><a href="hud.html">HUD</a></td>
 </tr>
 <tr>

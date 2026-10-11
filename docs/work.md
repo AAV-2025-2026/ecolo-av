@@ -47,6 +47,7 @@ From the design doc's next steps, in order.
 | 9–10 Oct, overnight | Three audits (the firmware contract, the Jazzy port, a live run) and their fixes; the spine's safety rules (arming, timeouts, faults); the docs as web pages and a PDF; the Rust example; the network doctor; design doc revision 58 |
 | 10 Oct, on Ben's Mac | Everything builds and passes on a Mac, after one macOS fix; the turtle, Gazebo, Nav2, the Rust example, the docs and the doctor all run; recording fixed for Macs; these pages |
 | 10 Oct, afternoon | Perception brought in: YOLO with a stop-sign lock, radar clustering, lane keeping on `/cmd_vel/ai`; the `ml` environment (PyTorch, YOLO, Core ML); the HUD's back end on our topics; the spine's device drivers in Rust; bench mode: the whole car graph on a laptop, with the spine's firmware logic on a model car, and `pixi run bench-check` (7 of 7). Found on the way: a stop that coasted, a scripted drive that stretched, an executor that spun a CPU core, and best-effort cameras that lost every image on a Mac |
+| 10–11 Oct, overnight | Five pieces in parallel: the HUD app's changes (its e-stop button, Cancel, the camera; Flutter in `vendor/`), the car's launch with perception as parts and the GPS driver in Pixi, the lane finder (`bench-check --lane`), the spine's Pico 2 program with a CAN driver and flashing tools, and obstacles in Nav2's costmap. Found on the way: the HUD app could never connect to its back end |
 
 ## What needs doing, by area
 
@@ -56,7 +57,6 @@ From the design doc's next steps, in order.
 - One `ROS_DOMAIN_ID` for the car and every laptop.
 - The car's computers on Jazzy: Pixi on today's Ubuntu 22.04 first, then the reflash to JetPack 7.2 after a backup (Q24).
 - Merge the older code into `aav` folder by folder: see [The older code](older-code.md).
-- A `.gitignore` for every kind of code, and a `vendor/` folder for downloaded source (proposed).
 
 ### Today's car: the legacy path
 
@@ -68,8 +68,8 @@ From the design doc's next steps, in order.
 ### The spine and CAN
 
 - Choose the microcontroller, the board and the owner (Q10–Q13).
-- Write the board program around `spine-board`: it implements the `Board` trait (the clock, the e-stop pin, the encoder counter, CAN) for the chosen chip. The drivers and the glue are done.
-- Decide: the steering on an e-stop (hold, or centre as the old firmware did); the brake after boot; a brake field for the RC gear switch. [Firmware](firmware.md) has the details.
+- Try the Pico 2 program (`boards/pico2`) on a spare Pico 2 with a 3.3 V MCP2515 module: `pixi run spine-uf2`. If the team picks an STM32, write its board program the same way: it implements `spine-board`'s `Board` trait.
+- Decide: the steering on an e-stop (hold, or centre as the old firmware did); the brake after boot; the RC gear switch's brake. Each is one constant in `spine-core` now. [Firmware](firmware.md) has the details.
 - Tune the speed loop on the car: on the bench it lags a ramp by about a second.
 - Wire CAN: a transceiver on the Orin (or a USB adapter), 120 Ω at each end (Q14, Q15).
 - Calibrate the steering (Q2), the brake (Q3) and the throttle (Q4).
@@ -105,15 +105,15 @@ From the design doc's next steps, in order.
 ### Perception
 
 - Find the 2024-25 team's trained `best.pt`, and back up the 2025-26 detector from the Orin.
-- Write the lane finder: the camera's picture into `/lane_geometry`.
+- ~~Write the lane finder~~: done 11 Oct, `aav_lane_finder`. Next: tune it on the real camera's pictures.
 - Identify the cameras (Q22); fill in their udev names; set the stop-sign distance (`min_height_px`) for the real camera.
-- TensorRT on the Orin, after the reflash (Q24).
+- TensorRT on the Orin, after the reflash (Q24): `python3 tools/build_engine.py` there.
 
 ### The HUD
 
-- Keep the Flutter app or not (Q29). Its back end, `aav_hud`, is on the new topics; the app needs the small changes in [HUD](hud.md).
+- Keep the Flutter app or not (Q29). Its back end, `aav_hud`, is on the new topics, and the app's small changes are done (11 Oct): [HUD](hud.md).
 - Its boot scripts still use the old Humble workspace and `/home/aavui`.
-- Its map database and the OSRM map data need a download step, not git.
+- Its map database downloads with `pixi run get-hud-map`. The OSRM route data and the tile server still need a download step.
 
 ### Simulation
 
@@ -146,7 +146,7 @@ From the design doc's next steps, in order.
 | `/radar/points` is best-effort; the contract doesn't say | fixed |
 | `firmware/spine/Cargo.toml` points to a README that doesn't exist | fixed: the comment changed, and `firmware/spine/README.md` exists |
 | `aav_gazebo`'s test skips at module level, which `CLAUDE.md` says not to do | fixed |
-| The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app | the back end takes it as a parameter now; the app still has its own |
+| The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app | fixed: the app gets the picture from its back end (`/camera/latest.png`) |
 | `car gps:=false` still starts the GPS driver when the machine file says `gps: true` | fixed, with a test for it and the other arguments (`aav_bringup/test/test_car_launch.py`) |
 | Ctrl-C makes our Python nodes print an error while they shut down (Ctrl-C arrives twice) | fixed: 0 tracebacks from a full bench; the radar clustering's C++ can still crash inside Fast DDS |
 | Rust builds on a Mac warn: the libraries are for macOS 14, Rust aims at macOS 11 | fixed: `MACOSX_DEPLOYMENT_TARGET=14.0` on Macs |

@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">5 min read · 4 sections</div></header>
+<div class="meta">6 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -39,7 +39,7 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#each-box-in-the-picture">Each box in the picture</a><a href="#builds-and-tests">Builds and tests</a><a href="#is-it-all-on-jazzy">Is it all on Jazzy?</a><a href="#next">Next</a></nav>
-<div class="lead"><p>Where things stand on the evening of 10 October 2026. "Works" means it ran under ROS 2
+<div class="lead"><p>Where things stand early on 11 October 2026. "Works" means it ran under ROS 2
 Jazzy through Pixi: on oirp-spss (Linux), and since 10 October on Ben's Mac too. "On the
 bench" means <a href="bench.html">Bench mode</a>: the car's own software, with stand-ins for the
 hardware. "Untested" means the
@@ -67,8 +67,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>GPS</td>
-<td><code>ublox_dgnss</code></td>
-<td><span class="badge b-needs-you">needs you</span> not in Pixi: keep it (apt, car only) or switch to <code>ublox</code></td>
+<td><code>ublox_gps</code> (the stock u-blox driver); <code>nmea</code> and <code>ublox_dgnss</code> are options</td>
+<td><span class="badge b-untested">untested</span> in Pixi on every computer; needs the device. The default is Tentative (Q18)</td>
 </tr>
 <tr>
 <td>Car model</td>
@@ -138,27 +138,27 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Spine firmware logic</td>
 <td><code>firmware/spine/crates/spine-core</code></td>
-<td><span class="badge b-works">works</span> 48 tests, and on the bench</td>
+<td><span class="badge b-works">works</span> 54 tests, and on the bench</td>
 </tr>
 <tr>
 <td>Spine device drivers and glue</td>
-<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>spine-board</code></td>
-<td><span class="badge b-works">works</span> 98 tests, against mocks</td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>spine-board</code></td>
+<td><span class="badge b-works">works</span> 137 tests, against mocks</td>
 </tr>
 <tr>
 <td>Spine board program</td>
-<td></td>
-<td><span class="badge b-missing">missing</span> waits on the chip</td>
+<td><code>firmware/spine/boards/pico2</code></td>
+<td><span class="badge b-untested">untested</span> builds for a Pico 2, and its UF2 file checks out; never flashed. The car's chip is still Q10–Q13</td>
 </tr>
 <tr>
 <td>Bench mode</td>
 <td><code>aav_spine_sim</code>, <code>aav_bench</code></td>
-<td><span class="badge b-works">works</span> <code>pixi run bench-check</code>: 7 of 7</td>
+<td><span class="badge b-works">works</span> <code>pixi run bench-check</code>, plus <code>--perception</code> and <code>--lane</code></td>
 </tr>
 <tr>
 <td>Camera</td>
-<td><code>usb_cam</code> (<code>cameras.launch.py</code>)</td>
-<td><span class="badge b-untested">untested</span> Linux only; the models are Q22</td>
+<td><code>usb_cam</code>, the <code>camera</code> part of <code>car.launch.py</code></td>
+<td><span class="badge b-untested">untested</span> Linux only, off until the camera is fitted; the models are Q22</td>
 </tr>
 <tr>
 <td>Stop signs</td>
@@ -167,8 +167,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Lane keeping</td>
-<td><code>aav_lane_geometry</code></td>
-<td><span class="badge b-works">works</span> on a pretend lane; the lane finder is <span class="badge b-missing">missing</span></td>
+<td><code>aav_lane_finder</code> + <code>aav_lane_geometry</code></td>
+<td><span class="badge b-works">works</span> on the bench: from 0.3 m off the centre line back to within 5 cm in about 6 s</td>
 </tr>
 <tr>
 <td>Radar clustering</td>
@@ -176,9 +176,9 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> on the pretend radar</td>
 </tr>
 <tr>
-<td>HUD back end</td>
-<td><code>aav_hud</code></td>
-<td><span class="badge b-works">works</span> on the bench; the app needs small changes</td>
+<td>HUD back end and app</td>
+<td><code>aav_hud</code>, <code>hud/</code></td>
+<td><span class="badge b-works">works</span> on the bench: the app's e-stop button stops the car in 0.3 s. <span class="badge b-untested">untested</span> on the car's screen</td>
 </tr>
 <tr>
 <td>CARLA</td>
@@ -203,20 +203,20 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </thead>
 <tbody>
 <tr>
-<td><code>colcon build</code>, all 24 packages, Jazzy</td>
-<td><span class="badge b-works">works</span> 11 s on Linux (19 packages); 15 s on the Mac (24)</td>
+<td><code>colcon build</code>, all 26 packages, Jazzy</td>
+<td><span class="badge b-works">works</span> 11 s on Linux (19 packages, 10 Oct); about 15 s on the Mac (26)</td>
 </tr>
 <tr>
 <td><code>pixi run test</code>: build, tests, lint, <code>colcon test</code></td>
-<td><span class="badge b-works">works</span> all pass, 10 Oct: Python 153, Rust 171 and a no_std build for the Pico 2; <code>colcon test</code> 192, 0 failures</td>
+<td><span class="badge b-works">works</span> all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; <code>colcon test</code> 260, 0 failures</td>
 </tr>
 <tr>
 <td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim, replay and bench</td>
 <td><span class="badge b-works">works</span> 0 failures each</td>
 </tr>
 <tr>
-<td><code>pixi run bench-check</code> (and <code>--perception</code>)</td>
-<td><span class="badge b-works">works</span> 7 of 7 on the Mac, 10 Oct</td>
+<td><code>pixi run bench-check</code> (<code>--perception</code>, <code>--lane</code>)</td>
+<td><span class="badge b-works">works</span> on the Mac, 10 Oct; <code>--lane</code> on its own branch, 11 Oct. To run again on <code>main</code></td>
 </tr>
 <tr>
 <td>Sim, headless: drive commands (the keyboard's topic) and Nav2 goals</td>
@@ -228,7 +228,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Car, with no hardware attached</td>
-<td>comes up; only the missing sensors fail the graph check, as expected</td>
+<td>comes up; only the missing sensors (IMU, GPS) fail the graph check, as expected. Checked again on 11 Oct, with the perception parts</td>
 </tr>
 <tr>
 <td>The same <code>pixi.toml</code> on macOS</td>
@@ -265,7 +265,7 @@ are in <code>docs/history/audit-2026-10-10-*.md</code>.</p>
 <li>Pick the team's <code>ROS_DOMAIN_ID</code> and the GPS driver.</li>
 <li>Drive the turtle with the joystick.</li>
 <li>Measure the car, and replace the guesses in <code>vehicle.yaml</code>.</li>
-<li>Choose the spine's microcontroller (Q10–Q17), then write its board code.</li>
+<li>Choose the spine's microcontroller (Q10–Q17). The Pico 2 program is ready to try on a spare board.</li>
 </ol></section>
 <nav class="prevnext"><a class="prev" href="infrastructure.html"><small>Previous</small>← Infrastructure</a>
 <a class="next" href="howto-driver.html"><small>Next</small>Build a driver →</a></nav>

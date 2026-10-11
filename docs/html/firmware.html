@@ -7,7 +7,7 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">11 min read · 8 sections</div></header>
+<div class="meta">12 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -124,7 +124,7 @@ publishes the same thing drops in, and nothing downstream changes.</p>
 </tr>
 <tr>
 <td>GPS: <code>sensor_msgs/NavSatFix</code> on <code>/gps/fix</code>, frame <code>gps_link</code></td>
-<td><code>ublox_dgnss</code>, <code>gazebo_adapter</code>; <code>nmea_navsat_driver</code> would fit</td>
+<td><code>ublox_gps</code>, <code>nmea_navsat_driver</code>, <code>ublox_dgnss</code>, <code>gazebo_adapter</code></td>
 </tr>
 <tr>
 <td>Backend: <code>/ego/actuator_cmd</code> in, <code>/vehicle/odom</code> out</td>
@@ -249,7 +249,7 @@ rejected.</p>
 </section>
 <section class="card"><h2 id="firmwarespine-the-rust-code">firmware/spine: the Rust code</h2>
 <p><code>crates/spine-core</code> is plain <code>no_std</code> Rust: no allocator, no dependencies, no hardware.
-<code>cargo test</code> runs its 47 tests on any laptop.</p>
+<code>cargo test</code> runs its 54 tests on any laptop.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -317,17 +317,31 @@ and the glue between them and <code>spine-core</code>, are written too (10 Octob
 <td>24</td>
 </tr>
 <tr>
+<td><code>mcp2515</code></td>
+<td>the MCP2515 CAN controller over SPI: a Pico 2 has no CAN of its own</td>
+<td>34</td>
+</tr>
+<tr>
 <td><code>spine-board</code></td>
 <td>all of them, from <code>spine-core</code>'s outputs, in a safe order; their errors become fault bits</td>
-<td>44</td>
+<td>49</td>
 </tr>
 </tbody>
 </table></div>
 <p>On a laptop, <a href="bench.html">Bench mode</a> runs <code>spine-core</code> on the CAN frames from <code>spine_bridge</code>,
 driving a model car. The plan for all the firmware in Rust is
 <a href="rust-firmware.html">Rust on the hardware</a>.</p>
-<p>The board program for the spine's chip is <span class="badge b-missing">missing</span>: it waits on the chip (Q10-Q13).
-Hardware facts from today's car:</p>
+<p>The board program for a Pico 2 is <code>boards/pico2</code> (11 October): Embassy, CAN through an
+MCP2515, a 100 ms hardware watchdog, and the e-stop's spare contact on GP15. It builds
+(60 KB of flash, 2.8 KB of RAM) and its UF2 file checks out, but it has never run on a
+board: <span class="badge b-untested">untested</span>. The car's chip is still Q10-Q13. Flashing it:
+<a href="rust-firmware.html">Rust on the hardware</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Buy a 3.3 V CAN module</p>
+<p>The common MCP2515 module, with a TJA1050, runs at 5 V and doesn't suit a Pico 2's
+3.3 V pins. Buy a 3.3 V one, for example an MCP2515 with an SN65HVD230.</p>
+</div>
+<p>Hardware facts from today's car:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -433,14 +447,35 @@ car with the RC transmitter's switch in reach.</p>
 </div>
 </section>
 <section class="card"><h2 id="still-to-decide">Still to decide</h2>
-<p>For the team, from the drivers' port:</p>
-<ul>
-<li>On an e-stop, the steering holds where it is. The 2025-26 firmware centred it.</li>
-<li>After boot, <code>idle_brake</code> is 0, so the brake lets go once the e-stop clears. The old
-  firmware kept it on.</li>
-<li>The RC gear switch's "brake" position: <code>RcInput</code> has no brake field yet, so it means
-  "speed zero". Add a field if the team wants the old full brake.</li>
-</ul>
+<p>For the team, from the drivers' port. Each is one constant at the top of <code>spine-core</code>'s
+<code>spine.rs</code>, so the board program and the bench both follow a change:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Today</th>
+<th>The 2025-26 firmware</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ESTOP_STEERING</code></td>
+<td><code>Hold</code>: the steering stays where it is on any stop</td>
+<td>centred it</td>
+</tr>
+<tr>
+<td><code>IDLE_BRAKE</code></td>
+<td><code>0.0</code>: the brake lets go once the e-stop clears</td>
+<td>kept it full on (1.0)</td>
+</tr>
+<tr>
+<td><code>RC_GEAR_BRAKE</code></td>
+<td><code>SpeedZero</code>: the speed loop brakes to a stop and holds</td>
+<td>put the brake full on at once</td>
+</tr>
+</tbody>
+</table></div>
+<p>⚠️ <code>IDLE_BRAKE</code> matters most: on a slope, a car with its brake off can roll.</p>
 <p>And the design doc's questions Q10–Q17:</p>
 <ul>
 <li>who owns the spine, and which microcontroller;</li>

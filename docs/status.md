@@ -1,6 +1,6 @@
 # Status: what works and what doesn't yet
 
-Where things stand on the evening of 10 October 2026. "Works" means it ran under ROS 2
+Where things stand early on 11 October 2026. "Works" means it ran under ROS 2
 Jazzy through Pixi: on oirp-spss (Linux), and since 10 October on Ben's Mac too. "On the
 bench" means [Bench mode](bench.md): the car's own software, with stand-ins for the
 hardware. "Untested" means the
@@ -13,7 +13,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 |---|---|---|
 | Wheel speed | `aav_legacy` `encoder_udp`; later the spine | [[untested]] needs the car |
 | IMU | `yahboom_imu_cpp` + `imu_filter_madgwick` | [[untested]] builds; needs the device |
-| GPS | `ublox_dgnss` | [[needs-you]] not in Pixi: keep it (apt, car only) or switch to `ublox` |
+| GPS | `ublox_gps` (the stock u-blox driver); `nmea` and `ublox_dgnss` are options | [[untested]] in Pixi on every computer; needs the device. The default is Tentative (Q18) |
 | Car model | `aav_description` | [[works]] numbers are guesses |
 | `ekf_local` | robot_localization | [[works]] in the turtle run and on the bench |
 | `ekf_global`, `navsat_transform` | robot_localization | [[works]] in Gazebo: parked, it stays within 0.2 m. On the bench: 0.03-0.3 m from the truth |
@@ -27,15 +27,15 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Gazebo | `aav_gazebo` | [[works]] headless on Linux and a Mac; its window on a Mac, with the car driving (10 Oct) |
 | Real car | `aav_spine` | [[works]] on the bench, against `spine_sim`: arming, driving, both e-stops |
 | Today's car | `aav_legacy` | [[untested]] on the car |
-| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 48 tests, and on the bench |
-| Spine device drivers and glue | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `spine-board` | [[works]] 98 tests, against mocks |
-| Spine board program | | [[missing]] waits on the chip |
-| Bench mode | `aav_spine_sim`, `aav_bench` | [[works]] `pixi run bench-check`: 7 of 7 |
-| Camera | `usb_cam` (`cameras.launch.py`) | [[untested]] Linux only; the models are Q22 |
+| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 54 tests, and on the bench |
+| Spine device drivers and glue | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board` | [[works]] 137 tests, against mocks |
+| Spine board program | `firmware/spine/boards/pico2` | [[untested]] builds for a Pico 2, and its UF2 file checks out; never flashed. The car's chip is still Q10–Q13 |
+| Bench mode | `aav_spine_sim`, `aav_bench` | [[works]] `pixi run bench-check`, plus `--perception` and `--lane` |
+| Camera | `usb_cam`, the `camera` part of `car.launch.py` | [[untested]] Linux only, off until the camera is fitted; the models are Q22 |
 | Stop signs | `aav_yolo` | [[works]] on the bench, with the stock YOLO model |
-| Lane keeping | `aav_lane_geometry` | [[works]] on a pretend lane; the lane finder is [[missing]] |
+| Lane keeping | `aav_lane_finder` + `aav_lane_geometry` | [[works]] on the bench: from 0.3 m off the centre line back to within 5 cm in about 6 s |
 | Radar clustering | `aav_object_detection` | [[works]] on the pretend radar |
-| HUD back end | `aav_hud` | [[works]] on the bench; the app needs small changes |
+| HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
 | CARLA | `aav_carla` | [[stub]] parked (Q31) |
 | Lidar | | [[later]] |
 
@@ -43,13 +43,13 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 
 | Check | Result |
 |---|---|
-| `colcon build`, all 24 packages, Jazzy | [[works]] 11 s on Linux (19 packages); 15 s on the Mac (24) |
-| `pixi run test`: build, tests, lint, `colcon test` | [[works]] all pass, 10 Oct: Python 153, Rust 171 and a no_std build for the Pico 2; `colcon test` 192, 0 failures |
+| `colcon build`, all 26 packages, Jazzy | [[works]] 11 s on Linux (19 packages, 10 Oct); about 15 s on the Mac (26) |
+| `pixi run test`: build, tests, lint, `colcon test` | [[works]] all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; `colcon test` 260, 0 failures |
 | Live graph vs `docs/interfaces.yaml`: turtle, sim, replay and bench | [[works]] 0 failures each |
-| `pixi run bench-check` (and `--perception`) | [[works]] 7 of 7 on the Mac, 10 Oct |
+| `pixi run bench-check` (`--perception`, `--lane`) | [[works]] on the Mac, 10 Oct; `--lane` on its own branch, 11 Oct. To run again on `main` |
 | Sim, headless: drive commands (the keyboard's topic) and Nav2 goals | [[works]] |
 | Replay of a recorded drive | [[works]] the EKFs match the recording within 0.03 m |
-| Car, with no hardware attached | comes up; only the missing sensors fail the graph check, as expected |
+| Car, with no hardware attached | comes up; only the missing sensors (IMU, GPS) fail the graph check, as expected. Checked again on 11 Oct, with the perception parts |
 | The same `pixi.toml` on macOS | [[works]] on an Apple Silicon Mac (macOS 27), 10 Oct: build 18 s, `pixi run test` all green after one fix (GNU `coreutils`, see [Your Mac](mac.md)) |
 | On the Mac: the turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, `pixi run doctor`, recording a drive | [[works]] |
 | On the Mac: Gazebo's window | [[works]] `pixi run sim` opens it, and the camera follows the car |
@@ -69,4 +69,4 @@ are in `docs/history/audit-2026-10-10-*.md`.
 2. Pick the team's `ROS_DOMAIN_ID` and the GPS driver.
 3. Drive the turtle with the joystick.
 4. Measure the car, and replace the guesses in `vehicle.yaml`.
-5. Choose the spine's microcontroller (Q10–Q17), then write its board code.
+5. Choose the spine's microcontroller (Q10–Q17). The Pico 2 program is ready to try on a spare board.

@@ -1,9 +1,55 @@
-# TODO (overnight, 2026-10-09 → 10-10)
+# TODO
 
-Ben's asks from tonight, in work order. Tick them off as they land; each tick = a commit.
-His messages, word for word: `docs/history/messages-2026-10-09.md`.
+The current work list, newest first. Tick items off as they land; each tick = a commit.
+Ben's messages, word for word: `docs/history/messages-*.md`.
 
-## Today on Ben's Mac (10-10)
+## Overnight (10-10 → 10-11): all the code, then Ackermann, Rust, native style
+
+Ben, 21:45: "Lets try to get a fully functionin gthing going on." The order of work is
+Decided ([Decisions](docs/decisions.md)):
+
+1. **The high-level pieces**, by five helpers in parallel, each on its own branch:
+   - [x] **The HUD app:** an e-stop button, Cancel, the camera page, the car's status, the
+         OpenStreetMap credit. Flutter 3.35.7 in `vendor/` (`pixi run get-flutter`,
+         `hud-test`). *Fixed: the app could never connect (Socket.IO tried polling
+         first); now WebSocket only. The back end has 98 tests.*
+   - [x] **The HUD's place database:** `pixi run get-hud-map` (51 MB, checksum pinned).
+   - [x] **The car's launch:** perception as parts of `car.launch.py` (camera, detector,
+         stop_signs, radar_clusters), the GPS driver (`gps_driver:=ublox` by default),
+         `gps:=false` fixed. *21 launch tests.*
+   - [x] **The lane finder:** `aav_lane_finder`, classic OpenCV, 0.78 ms a picture.
+         *`bench-check --lane`: from 0.3 m off the centre line back to within 5 cm in
+         about 6 s.*
+   - [x] **The spine's board program:** `boards/pico2` (Embassy), the `mcp2515` CAN driver,
+         a 100 ms hardware watchdog, the e-stop's spare contact, and `pixi run spine-uf2`,
+         `spine-tools`, `spine-flash`. *Builds; never flashed.*
+   - [ ] **Obstacles in the costmap:** the radar in Nav2's local costmap, collision_monitor,
+         the camera's detections as points on the road, compressed images,
+         `bench-check --obstacle`. *Being merged.*
+   - [ ] **The `lane` part** in `car.launch.py`, off on every machine: it drives whenever
+         it sees a lane.
+   - [ ] **The laptop's detector** (Core ML), once it reads compressed images.
+   - [ ] **`bench-check --perception` again on a quiet Mac:** it failed 5 of 5 on a busy one.
+2. [ ] **Ackermann done properly:** reversing (Reeds-Shepp in Nav2), both front wheels' real
+      angles in the model and RViz, and the steering motor's real curve from the
+      `Ackermann.m` linkage (Q2).
+3. [ ] **All our C++ to Rust:** the IMU (Ben's twin becomes the default, then the C++ goes),
+      the radar clustering as a Rust ROS node, the wheel encoder and display Picos (Embassy).
+4. [ ] **Every file in its language's own style:** `cargo fmt --check` and
+      `cargo clippy -D warnings` in `pixi run test`.
+5. [ ] **The whole car working, end to end.**
+
+### Needs Ben or the team
+
+- [ ] A spare Pico 2 and a **3.3 V** MCP2515 CAN module (for example with an SN65HVD230),
+      to try the spine on a desk. The common 5 V module (TJA1050) doesn't suit a Pico 2.
+- [ ] The e-stop: a photo, and where its wires go (Q6).
+- [ ] The brake after boot: `IDLE_BRAKE = 0.0` lets it go; the 2025-26 firmware kept it on.
+- [ ] A fresh clone on oirp-spss before anyone works there.
+- [ ] The HUD on the car's Pi: Flutter has no Linux ARM download; the tile server and the
+      OSRM route data.
+
+## On Ben's Mac (10-10)
 
 Ben's messages, word for word: `docs/history/messages-2026-10-10.md`. "Our version" is
 `aav/aav` (`~/Code/aav/aav` on the Mac); this work was done in a clone at `~/aav` while that
@@ -38,11 +84,12 @@ folder downloaded, and moves into it as a fast-forward.
       `pixi run -e firmware legacy-esp32` built today's ESP32 firmware from a clean
       checkout on the Mac (48 s). The tools to flash an ARM chip (`probe-rs`, a UF2
       converter) aren't on conda-forge: they come with the first board program.*
+      *Done 11 Oct: `tools/elf2uf2.py`, and probe-rs in `vendor/cargo-tools`.*
 - [x] **CARLA: 4 or 5, and do we need it?** (20:54) *Parked this year: no Jazzy
       support, no Mac version. Gazebo and bench mode cover the car graph (Q31).*
 - [ ] **The small fixes** listed at the end of `docs/work.md`.
 
-## This afternoon (10-10): "merge in all of this", then "stub in the rest"
+## The afternoon of 10-10: "merge in all of this", then "stub in the rest"
 
 - [x] **Perception in:** `aav_yolo` (YOLO, detections, the stop-sign watcher and its mux
       lock), `aav_object_detection` (radar clustering), `aav_lane_geometry` (lane keeping
@@ -55,16 +102,19 @@ folder downloaded, and moves into it as a fast-forward.
       (98 tests); all seven firmware crates build no_std for the Pico 2 in `pixi run test`.
 - [x] **The HUD's back end on our topics:** `aav_hud`, 86 tests.
 - [x] **Docs:** Bench mode and Perception pages; every page brought up to date.
-- [ ] **Ben: commit the server work** (`aav_imu_yahboom` and its three edited files). Then
+- [x] **Ben: commit the server work** (`aav_imu_yahboom` and its three edited files). Then
       perception and the bench become parts in `car.launch.py`'s machine files.
-- [ ] **The board program for the spine's chip** (implements `spine-board`'s `Board`): waits
-      on the chip (Q10-Q13).
+      *Done: the server's files are byte for byte in `dfaec15`; perception is parts
+      since 11 Oct.*
+- [x] **The board program for the spine's chip** (implements `spine-board`'s `Board`): waits
+      on the chip (Q10-Q13). *Done 11 Oct for a Pico 2, to try on the bench.*
 - [ ] **Team decisions:** the steering on an e-stop; the brake after boot; a brake on the RC
-      gear switch (docs/firmware.md).
-- [ ] **Find `best.pt`**, the 2024-25 stop-sign model, and the 2025-26 lane finder.
+      gear switch (docs/firmware.md). *Since 11 Oct, one constant each in `spine-core`.*
+- [ ] **Find `best.pt`**, the 2024-25 stop-sign model. (The 2025-26 lane finder isn't
+      needed: we wrote our own, 11 Oct.)
       `best.pt` is probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct).
       No SSH to it today: later, once all the code is in place (Ben, 21:14).
-- [ ] **The HUD app's small changes** (docs/hud.md).
+- [x] **The HUD app's small changes** (docs/hud.md). *Done 11 Oct.*
 - [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
 - [x] **The first-day steps in `README.md`** (Ben, 17:03).
 - [x] **`~/Code/aav/CLAUDE.md`:** every old folder, and what replaced it in `aav` (Ben, 17:03).
@@ -81,7 +131,9 @@ folder downloaded, and moves into it as a fast-forward.
       the hardware. *Ready: the stand-ins stay on their own computer (`tools/ros.sh
       --local`, checked by `tools/test.sh`), so nothing pretend can reach the car.*
 
-## Tonight
+## The first night (10-09 → 10-10)
+
+Ben's messages, word for word: `docs/history/messages-2026-10-09.md`.
 
 - [x] **Build on this machine** with Pixi + RoboStack Jazzy (no admin, no Homebrew).
       `colcon build`, `colcon test`, then run `turtle.launch.py` headless and drive it.
@@ -160,15 +212,15 @@ folder downloaded, and moves into it as a fast-forward.
 - **Move the car to Jazzy** before a laptop can join it (Humble and Jazzy don't mix):
   try Pixi on today's Ubuntu 22.04 first, then reflash the Orin to JetPack 7.2 after a
   backup (`docs/platforms.md`).
-- **GPS driver** (B4): `ublox_dgnss` isn't in Pixi. Keep it (apt, on the car only), or
-  switch to `ublox`, which Pixi has.
+- **GPS driver** (B4): `ublox_gps` (in Pixi) is the default since 11 Oct, Tentative.
+  `gps_driver:=ublox_dgnss` (apt, the car only) stays an option.
 - **N2:** twist_mux hears `/estop` best-effort, and the joystick sends it once per press.
   The backends still brake. Send it repeatedly, or make the mux reliable?
 - **N3:** no `respawn` on device nodes, and Nav2 gives up without TF. Add respawn?
 - **N7:** Nav2's turn command flips sign about once a second in the sim. Try a longer
   lookahead.
 
-## Decided tonight
+## Decided on the first night
 
 - Teleop (keyboard, joystick, remote) is a **driver**: it feeds the mux, then ego, then
   the turtle or the car.
@@ -180,7 +232,7 @@ folder downloaded, and moves into it as a fast-forward.
 
 ## Later
 
-- Rewrite parts in Rust and cross-compile for the ESP32 and the Pi.
+- Rewrite parts in Rust: now step 3 of the order of work, at the top.
 - Measure the car and replace every guessed number in `vehicle.yaml`.
 - Rotate the leaked secrets, and back up the Orin and Pis before any reflash.
 - Answer Q1–Q34 with the team.
