@@ -305,10 +305,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/camera/image_raw/compressed</code></td>
 <td><code>sensor_msgs/msg/CompressedImage</code></td>
-<td><code>camera_left</code>, <code>test_camera</code></td>
+<td><code>camera_left</code>, <code>test_camera</code>, <code>mock_camera</code></td>
 <td><code>yolo_detector</code>, <code>yolo_detector_laptop</code></td>
 <td>-</td>
-<td>The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera doesn't). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true).</td>
+<td>The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera only while something reads it). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true; the laptop's machine file). On the bench, pixi run -e ml laptop-bench.</td>
 </tr>
 <tr>
 <td><code>/camera/camera_info</code></td>

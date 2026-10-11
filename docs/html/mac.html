@@ -7,7 +7,7 @@
 <!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your Mac: run it, and drive the car</h1>
-<div class="meta">10 min read · 11 sections</div></header>
+<div class="meta">11 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -38,7 +38,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#macos-hides-one-setting-from-ros">macOS hides one setting from ROS</a><a href="#three-more-things-the-bench-found-on-a-mac">Three more things the bench found on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#ml-on-your-mac-against-the-bench">ML on your Mac, against the bench</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#macos-hides-one-setting-from-ros">macOS hides one setting from ROS</a><a href="#three-more-things-the-bench-found-on-a-mac">Three more things the bench found on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
 <div class="lead"><p>Three ways to use a Mac with the car. Use Pixi to run ROS on the Mac itself, and to
 drive. Lichtblick only watches, but needs no setup. Ubuntu in a VM is the fallback.</p></div>
 <section class="card"><h2 id="three-ways">Three ways</h2>
@@ -186,6 +186,46 @@ clock is off: the car's computers keep the time (the Orin serves it, see
 e-stop always win. Keep both in someone's hands whenever the Mac drives.</p>
 </div>
 </section>
+<section class="card"><h2 id="ml-on-your-mac-against-the-bench">ML on your Mac, against the bench</h2>
+<p>On the car, the laptop runs its own detector (<code>yolo_detector_laptop</code>, Core ML) on the
+camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Terminal</th>
+<th>Run</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pixi run bench</code></td>
+<td>the car's software, with stand-ins for the hardware</td>
+</tr>
+<tr>
+<td>2, once</td>
+<td><code>pixi run -e ml export-coreml</code></td>
+<td>makes <code>models/yolo11n.mlpackage</code>, the Core ML model (12 s)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pixi run -e ml laptop-bench</code></td>
+<td>your laptop's parts, as on the car: the joystick, and its own detector</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>See it:</strong> <code>pixi run graph</code> shows <code>yolo_detector_laptop</code> reading
+  <code>/camera/image_raw/compressed</code>, and publishing <code>/perception/detections</code>.</li>
+<li><strong>Stop at the sign too:</strong> start the bench with <code>pixi run -e ml bench perception:=true</code>. It
+  runs its own detector and the stop-sign watcher, as the Orin would; the watcher then hears
+  both detectors, as on the car.</li>
+<li><strong>Tried on Ben's Mac, 11 Oct:</strong> Core ML took 21 ms a picture and kept up with all 10
+  pictures a second. It saw the bench's stop sign from 20 m (score 0.52), and at 0.95 from
+  5 m.</li>
+</ul>
+</section>
 <section class="card"><h2 id="watch-without-ros-lichtblick">Watch without ROS: Lichtblick</h2>
 <p>The car runs <code>foxglove_bridge</code>, so any Foxglove-compatible viewer can watch it over one
 WiFi connection, with no ROS on the Mac.</p>
@@ -327,6 +367,10 @@ On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on
 <tr>
 <td>YOLO on the Mac's GPU (Metal)</td>
 <td><span class="badge b-works">works</span> 7.7 ms a frame; Core ML 4.3 ms</td>
+</tr>
+<tr>
+<td>The laptop's own detector against the bench (<code>laptop-bench</code>)</td>
+<td><span class="badge b-works">works</span> 11 Oct: Core ML on the compressed pictures, 21 ms each; it saw the stop sign from 20 m</td>
 </tr>
 <tr>
 <td><code>pixi run test</code> on a Mac</td>

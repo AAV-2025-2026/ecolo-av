@@ -8,6 +8,7 @@ and frame, so nothing downstream changes.
   mock_gps      /bench/truth -> /gps/fix (NavSatFix), 5 Hz                       gps_link
   mock_battery  /battery_status (BatteryState), 1 Hz
   mock_camera   /bench/truth -> /camera/image_raw (Image), /camera/camera_info,
+                /camera/image_raw/compressed (JPEG, only while something reads it),
                 10 Hz: the bench road and its lane lines from where the car really is,
                 and the bench world's stop signs when they're in view
   mock_radar    /bench/truth -> /radar/points (PointCloud2, best effort), 10 Hz      radar_link
@@ -30,7 +31,8 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from sensor_msgs.msg import BatteryState, CameraInfo, Image, Imu, MagneticField, NavSatFix
+from sensor_msgs.msg import BatteryState, CameraInfo, CompressedImage, Image, Imu
+from sensor_msgs.msg import MagneticField, NavSatFix
 from sensor_msgs.msg import NavSatStatus, PointCloud2, PointField
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
@@ -177,6 +179,9 @@ class MockCamera(Node):
                        0.0, 0.0, 1.0, 0.0]
         self.bridge = CvBridge()
         self.image_pub = self.create_publisher(Image, '/camera/image_raw', 2)
+        # The JPEG pictures, as usb_cam's image_transport publishes them: a laptop's
+        # detector on the car's WiFi reads these (detector.launch.py compressed:=true).
+        self.jpeg_pub = self.create_publisher(CompressedImage, '/camera/image_raw/compressed', 2)
         self.info_pub = self.create_publisher(CameraInfo, '/camera/camera_info', 2)
         self.truth = None
         self.create_subscription(Odometry, TRUTH, self.on_truth, 10)
@@ -190,13 +195,17 @@ class MockCamera(Node):
             return
         views = [v for v in (models.sign_in_view(self.cam, self.truth, s, self.sign_height,
                                                  self.sign_size) for s in self.signs) if v]
-        image = self.bridge.cv2_to_imgmsg(
-            pictures.scene(self.cam, views, self.truth, self.road), 'bgr8')
+        frame = pictures.scene(self.cam, views, self.truth, self.road)
+        image = self.bridge.cv2_to_imgmsg(frame, 'bgr8')
         image.header.stamp = self.get_clock().now().to_msg()
         image.header.frame_id = self.frame
         self.info.header.stamp = image.header.stamp
         self.image_pub.publish(image)
         self.info_pub.publish(self.info)
+        if self.jpeg_pub.get_subscription_count():
+            jpeg = self.bridge.cv2_to_compressed_imgmsg(frame, 'jpeg')
+            jpeg.header = image.header
+            self.jpeg_pub.publish(jpeg)
 
 
 # The fields the TI radar driver publishes (ti_ros2_driver pc_publisher.py).

@@ -93,6 +93,26 @@ clock is off: the car's computers keep the time (the Orin serves it, see
   The keyboard has priority 90. The safety driver's joystick (100) and the hardware
   e-stop always win. Keep both in someone's hands whenever the Mac drives.
 
+## ML on your Mac, against the bench
+
+On the car, the laptop runs its own detector (`yolo_detector_laptop`, Core ML) on the
+camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:
+
+| Terminal | Run | What it is |
+|---|---|---|
+| 1 | `pixi run bench` | the car's software, with stand-ins for the hardware |
+| 2, once | `pixi run -e ml export-coreml` | makes `models/yolo11n.mlpackage`, the Core ML model (12 s) |
+| 2 | `pixi run -e ml laptop-bench` | your laptop's parts, as on the car: the joystick, and its own detector |
+
+- **See it:** `pixi run graph` shows `yolo_detector_laptop` reading
+  `/camera/image_raw/compressed`, and publishing `/perception/detections`.
+- **Stop at the sign too:** start the bench with `pixi run -e ml bench perception:=true`. It
+  runs its own detector and the stop-sign watcher, as the Orin would; the watcher then hears
+  both detectors, as on the car.
+- **Tried on Ben's Mac, 11 Oct:** Core ML took 21 ms a picture and kept up with all 10
+  pictures a second. It saw the bench's stop sign from 20 m (score 0.52), and at 0.95 from
+  5 m.
+
 ## Watch without ROS: Lichtblick
 
 The car runs `foxglove_bridge`, so any Foxglove-compatible viewer can watch it over one
@@ -168,6 +188,7 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 | Building on a Mac | [[works]] 19 packages in 18 s; 24 packages in 15 s on 10 Oct evening |
 | Bench mode, `pixi run bench-check` | [[works]] 7 of 7, with perception (`-e ml`) |
 | YOLO on the Mac's GPU (Metal) | [[works]] 7.7 ms a frame; Core ML 4.3 ms |
+| The laptop's own detector against the bench (`laptop-bench`) | [[works]] 11 Oct: Core ML on the compressed pictures, 21 ms each; it saw the stop sign from 20 m |
 | `pixi run test` on a Mac | [[works]] all green, after the `coreutils` fix above |
 | The turtle, driving it the keyboard's way, the scripted drive, the e-stop | [[works]] on Linux and the Mac. The real keyboard keys are [[untested]] on a Mac |
 | Gazebo without its window, and a Nav2 goal | [[works]] on the Mac, without `GZ_IP` |

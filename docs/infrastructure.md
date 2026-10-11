@@ -129,6 +129,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `flutter` | runs that Flutter in `hud/flutter_pi`: `pixi run flutter doctor` |
 | `hud-test` | the HUD app's own checks and tests, against the real back end |
 | `detect` | YOLO on the camera's images (the `ml` environment): `pixi run detect picture:=<file>` |
+| `laptop-bench` | your laptop's parts, its own detector too, against `pixi run bench` on the same computer (the `ml` environment) |
 | `docs` | rebuilds the docs pages and the PDF |
 | `mcp` | the read-only MCP server, for AI apps (the `mcp` environment). The app starts it: [AI apps (MCP)](mcp.md) |
 | `legacy-esp32` | builds today's ESP32 firmware with PlatformIO (the `firmware` environment); `-t upload` flashes it |

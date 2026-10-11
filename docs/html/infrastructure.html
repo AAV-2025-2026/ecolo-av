@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">14 min read · 11 sections</div></header>
+<div class="meta">15 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -377,6 +377,10 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <tr>
 <td><code>detect</code></td>
 <td>YOLO on the camera's images (the <code>ml</code> environment): <code>pixi run detect picture:=&lt;file&gt;</code></td>
+</tr>
+<tr>
+<td><code>laptop-bench</code></td>
+<td>your laptop's parts, its own detector too, against <code>pixi run bench</code> on the same computer (the <code>ml</code> environment)</td>
 </tr>
 <tr>
 <td><code>docs</code></td>

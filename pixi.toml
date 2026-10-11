@@ -137,6 +137,7 @@ numpy = ">=2,<=2.3.5"   # Ultralytics' Core ML export fails on NumPy 2.4 and new
 
 [feature.ml.tasks]
 detect = { cmd = "tools/ros.sh ros2 launch aav_yolo detector.launch.py", description = "YOLO on the camera's images: pixi run detect picture:=<file> to try a picture" }
+laptop-bench = { cmd = "tools/ros.sh --local ros2 launch aav_bringup car.launch.py machine:=laptop", description = "Your laptop's parts, its own detector too, against bench mode on this computer (pixi run bench first, in another terminal)" }
 
 [feature.ml.target.osx.dependencies]
 coremltools = ">=9.0,<10"
