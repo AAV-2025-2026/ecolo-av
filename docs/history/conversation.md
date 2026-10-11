@@ -1108,6 +1108,11 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 
 - **Read as no change:** every choice stays as it was. Ben can name any one to change.
 
+### "go", for the 17:54 question: carry on with the MCP server, push, or undo? (21:14)
+
+- **Both were already done:** the push at 20:24, after the strip, and every commit since. GitHub's `main` matches this Mac's (`71ad715`). The MCP server is built and committed (`839e35f`).
+- **Nothing to undo:** the `pixi.toml` and `pixi.lock` changes stay, with the server.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
