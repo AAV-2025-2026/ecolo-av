@@ -19,7 +19,7 @@ folder downloaded, and moves into it as a fast-forward.
       *The driver page and the costmap exercise were run as written, in a scratch copy.*
 - [x] **`.gitignore` in `aav/aav`:** restored at 12:35. *The app's per-message snapshots
       were taking in the Linux `.pixi` files as scp copied them.*
-- [x] **A `.gitignore` for every kind of code.** *Applied in d397a73.*
+- [x] **A `.gitignore` for every kind of code.** *Applied in 593db7f.*
 - [x] **A `vendor/` folder** for downloaded source (Ben, 17:03): `vendor/ros2-src.repos`
       (121 repos) and `vendor/ros2-rust.repos` (9), at exact commits, in git; the 559 MB
       out of it. `pixi run vendor` downloads; `tools/test.sh` checks `COLCON_IGNORE`.

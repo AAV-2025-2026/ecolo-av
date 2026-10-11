@@ -2,7 +2,7 @@
 
 A read-only audit by a Claude Code agent, kept as it reported. Line numbers are from the tree at the time; fixes are tracked in `TODO.md`.
 
-I made no changes under `/home/ben/aav`; `git status` and a `find -newer` check came back clean. Scratch scripts and raw outputs are in `/tmp/aav_portaudit/{scripts,out}` and the downloads are in fresh `dl_*` folders. That folder already had files from an earlier session; I didn't use them. Imports ran as `pixi run --as-is tools/ros.sh python3 -B -P …`, which doesn't touch the lockfile or the environment and writes no `__pycache__`. The main session committed `8ed4ccf` and kept editing `docs/` while I worked, so docs line counts drift.
+I made no changes under `/home/ben/aav`; `git status` and a `find -newer` check came back clean. Scratch scripts and raw outputs are in `/tmp/aav_portaudit/{scripts,out}` and the downloads are in fresh `dl_*` folders. That folder already had files from an earlier session; I didn't use them. Imports ran as `pixi run --as-is tools/ros.sh python3 -B -P …`, which doesn't touch the lockfile or the environment and writes no `__pycache__`. The main session committed `3d0367c` and kept editing `docs/` while I worked, so docs line counts drift.
 
 **1. Per package**
 
