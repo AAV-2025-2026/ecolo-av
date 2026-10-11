@@ -72,9 +72,9 @@ topics:
     note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
   /estop:
     type: std_msgs/msg/Bool
-    pub: [joy_teleop]
+    pub: [joy_teleop, hud_server]
     sub: [twist_mux, spine_bridge, legacy_uart_bridge]
-    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false.
+    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions.
   /cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [twist_mux]
@@ -146,10 +146,25 @@ topics:
     note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
   /gps/fix:
     type: sensor_msgs/msg/NavSatFix
-    pub: [ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
+    pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
     sub: [navsat_transform]
     live: [sim, car, replay, bench]
-    note: Lat/lon of the antenna (gps_link). ublox publishes it best-effort (SensorDataQoS).
+    note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
+  /gps/fix_velocity:
+    type: geometry_msgs/msg/TwistWithCovarianceStamped
+    pub: [ublox_gps]
+    sub: []
+    note: The receiver's velocity, east, north and up (m/s). Nothing fuses it yet.
+  /gps/vel:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [gps_nmea]
+    sub: []
+    note: NMEA's speed and course (gps_driver:=nmea). Nothing fuses it yet.
+  /gps/time_reference:
+    type: sensor_msgs/msg/TimeReference
+    pub: [gps_nmea]
+    sub: []
+    note: GPS time, from NMEA (gps_driver:=nmea).
   /radar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [radar, mock_radar]
@@ -159,7 +174,7 @@ topics:
   /battery_status:
     type: sensor_msgs/msg/BatteryState
     pub: [battery_state_publisher, mock_battery]
-    sub: []
+    sub: [hud_server]
     live: [bench]
     note: battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).
   /battery_monitor_heartbeat:
@@ -169,21 +184,21 @@ topics:
     note: battery_monitor's sign of life.
   /camera/image_raw:
     type: sensor_msgs/msg/Image
-    pub: [usb_cam, mock_camera, test_camera]
-    sub: [yolo_detector, hud_server]
+    pub: [camera_left, mock_camera, test_camera]
+    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder]
     live: [bench]
-    note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. mock_camera draws the bench world; test_camera publishes a file.
+    note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.
   /camera/image_raw/compressed:
     type: sensor_msgs/msg/CompressedImage
-    pub: [usb_cam]
+    pub: [camera_left, test_camera]
     sub: [yolo_detector]
-    note: The same pictures as JPEG, from image_transport's compressed plugin (usb_cam publishes it by itself). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true).
+    note: The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera doesn't). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true).
   /camera/camera_info:
     type: sensor_msgs/msg/CameraInfo
-    pub: [usb_cam, mock_camera, test_camera]
-    sub: [camera_obstacles]
+    pub: [camera_left, mock_camera, test_camera]
+    sub: [lane_finder, camera_obstacles]
     live: [bench]
-    note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). camera_obstacles keeps each camera's by its frame_id.
+    note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.
 
   # --- perception ---
   /radar/clusters:
@@ -200,24 +215,25 @@ topics:
     note: A box round each radar cluster, for RViz.
   /perception/detections:
     type: vision_msgs/msg/Detection2DArray
-    pub: [yolo_detector]
+    pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]
     sub: [stop_sign_watcher, camera_obstacles]
-    note: YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. One detector per computer with a GPU (the Orin, a laptop), each under its own node name (detector.launch.py name:=), all on this topic. Runs in the ml environment.
+    note: YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24), the laptop's for compressed images.
   /perception/detections/image:
     type: sensor_msgs/msg/Image
-    pub: [yolo_detector]
+    pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]
     sub: []
     note: The camera picture with the boxes drawn on, for RViz or Foxglove.
   /perception/stop:
     type: std_msgs/msg/Bool
     pub: [stop_sign_watcher]
     sub: [twist_mux, hud_server]
-    note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence.
+    live: [car]
+    note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.
   /perception/camera_obstacles:
     type: sensor_msgs/msg/PointCloud2
     pub: [camera_obstacles]
     sub: [local_costmap]
-    note: Where each detected object stands on the road, in base_link (z = 0) - points 0.1 m apart along its box's bottom edge, out to 12 m from the camera, one cloud per detections message, from the camera its header names. Only the listed COCO classes (people, cyclists, cars...), never stop signs. The local costmap's camera layer marks them (camera_obstacles:=true). Off until the cameras are calibrated (Q22).
+    note: Where each detected object stands on the road, in base_link (z = 0) - points 0.1 m apart along its box's bottom edge, out to 12 m from the camera, one cloud per detections message, from the camera its header names. Only the listed COCO classes (people, cyclists, cars...), never stop signs. The local costmap's camera layer marks them - bench.launch.py camera_obstacles:=true, or the car's camera_obstacles part next to navigation. Off until the cameras are calibrated (Q22).
   /perception/camera_view:
     type: sensor_msgs/msg/PointCloud2
     pub: [camera_obstacles]
@@ -226,9 +242,14 @@ topics:
 
   /lane_geometry:
     type: aav_lane_geometry/msg/LaneGeometry
-    pub: [fake_lane_geometry_pub]
+    pub: [lane_finder, fake_lane_geometry_pub]
     sub: [control_interface]
-    note: The lane lines as polynomials, the car's offset and the curvature. The lane finder that makes them from the camera is missing; fake_lane_geometry_pub stands in.
+    note: "One per camera picture, from lane_finder (aav_lane_finder, classic OpenCV), in base_link. vehicle_offset_m - the car from the lane's centre, 3 m ahead (lookahead), + = the car is left of it. Each line as y = a x^2 + b x + c (m), its radius (m; 9999 = straight or not seen) and confidence (0-1); the lane width (m). Bench - lane:=true runs lane_finder, lane:=fake runs fake_lane_geometry_pub (its polynomials are pixels)."
+  /lane_geometry/image:
+    type: sensor_msgs/msg/Image
+    pub: [lane_finder]
+    sub: []
+    note: The bird's-eye view, with the paint, the windows and the lines lane_finder found, for RViz or Foxglove. Only with debug_image true.
   /lane_geometry_status:
     type: std_msgs/msg/String
     pub: [control_interface]

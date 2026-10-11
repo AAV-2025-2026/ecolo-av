@@ -12,6 +12,8 @@ import math
 import random
 from typing import List, Optional, Sequence, Tuple
 
+import numpy as np
+
 G = 9.80665                      # m/s^2
 WGS84_A = 6378137.0              # m, the Earth's equatorial radius
 WGS84_E2 = 6.69437999014e-3      # the ellipse's eccentricity squared
@@ -96,6 +98,22 @@ class Camera:
     height: int
     focal: float           # px
     height_above_ground: float
+    pitch: float = 0.0     # rad, + = looking down (vehicle.yaml's rpy[1])
+
+    def pixel(self, forward: float, left: float, up: float) -> Tuple[float, float, float]:
+        """
+        Return (u, v, depth) for a point forward, left and up of the camera (m, level axes).
+
+        depth is the distance along the lens's axis: the point is behind the camera if it's
+        not positive.
+        """
+        c, s = math.cos(self.pitch), math.sin(self.pitch)
+        depth = c * forward - s * up
+        rise = s * forward + c * up
+        if depth <= 0.0:
+            return math.nan, math.nan, depth
+        return (self.width / 2.0 - self.focal * left / depth,
+                self.height / 2.0 - self.focal * rise / depth, depth)
 
 
 @dataclass
@@ -106,6 +124,7 @@ class SignView:
     v: float
     size: float
     distance: float
+    foot_v: Optional[float] = None   # px: the row where its post meets the ground
 
 
 def sign_in_view(cam: Camera, truth: Truth, sign_xy: Sequence[float], sign_height: float,
@@ -120,15 +139,54 @@ def sign_in_view(cam: Camera, truth: Truth, sign_xy: Sequence[float], sign_heigh
     dx, dy = sign_xy[0] - cx, sign_xy[1] - cy
     c, s = math.cos(truth.yaw), math.sin(truth.yaw)
     forward, left = c * dx + s * dy, -s * dx + c * dy
-    if forward < 1.0:
+    u, v, depth = cam.pixel(forward, left, sign_height - cam.height_above_ground)
+    if depth < 1.0:
         return None
-    up = sign_height - cam.height_above_ground
-    u = cam.width / 2.0 - cam.focal * left / forward
-    v = cam.height / 2.0 - cam.focal * up / forward
-    size = cam.focal * sign_size / forward
+    size = cam.focal * sign_size / depth
     if not (0.0 <= u <= cam.width and 0.0 <= v <= cam.height) or size < 4.0:
         return None
-    return SignView(u, v, size, math.hypot(forward, left))
+    _, foot_v, _ = cam.pixel(forward, left, -cam.height_above_ground)
+    return SignView(u, v, size, math.hypot(forward, left), foot_v)
+
+
+@dataclass
+class Road:
+    """
+    The bench world's road: one lane between two painted lines, in the map frame.
+
+    It runs east along y, straight; with a bend_radius, it bends from bend_x on, round a
+    half circle.
+    """
+
+    y: float = 0.0              # m north of the datum: the lane's centre line
+    lane_width: float = 3.5     # m between the lines' centres
+    line_width: float = 0.15    # m of paint
+    shoulder: float = 0.5       # m of tarmac outside each line
+    bend_x: float = 0.0         # m east: where the bend starts
+    bend_radius: float = 0.0    # m: + bends left (north), - right, 0 straight
+
+    def _centre(self) -> Tuple[float, float]:
+        return self.bend_x, self.y + self.bend_radius
+
+    def lateral(self, x, y):
+        """Return how far (x, y) is left of the lane's centre line (m). Takes arrays too."""
+        x, y = np.asarray(x, float), np.asarray(y, float)
+        across = y - self.y
+        if self.bend_radius:
+            r = self.bend_radius
+            ox, oy = self._centre()
+            arc = math.copysign(1.0, r) * (abs(r) - np.hypot(x - ox, y - oy))
+            across = np.where(x > self.bend_x, arc, across)
+        return across
+
+    def pose(self, x: float, y: float, yaw: float) -> Tuple[float, float]:
+        """Return the car's (offset, heading error): m left of the centre, rad left of the road."""
+        direction = 0.0
+        if self.bend_radius and x > self.bend_x:
+            ox, oy = self._centre()
+            direction = math.atan2(y - oy, x - ox) + math.copysign(math.pi / 2, self.bend_radius)
+        error = (yaw - direction + math.pi) % (2.0 * math.pi) - math.pi
+        return float(self.lateral(x, y)), error
 
 
 def pairs(flat: Sequence[float]) -> List[Tuple[float, float]]:

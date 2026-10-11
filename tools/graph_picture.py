@@ -25,7 +25,7 @@ LAYERS = [
     ('Sensors', '#FDECEE',
      r'^(imu_node|imu_filter_madgwick|gps_nmea|ublox.*|radar|battery_monitor|camera_.*)$'),
     ('Perception', '#FFF4D6',
-     r'^(yolo_detector|stop_sign_watcher|radar_clusters|control_interface)$'),
+     r'^(yolo_detector(_\w+)?|stop_sign_watcher|radar_clusters|control_interface)$'),
     ('Localization', '#E8F1FB', r'^(ekf_local|ekf_global|navsat_transform)$'),
     ('Drivers', '#EAF6EA',
      r'^(scripted_driver|joy_node|teleop_twist_joy_node|joy_teleop|teleop_twist_keyboard'

@@ -1,0 +1,30 @@
+# ublox_gps (KumarRobotics' ublox 2.3.0): a u-blox receiver -> /gps/fix (NavSatFix).
+# sensors.launch.py starts it with gps_driver:=ublox, the default (Tentative: Q18).
+#
+# It takes the receiver as it is already set up, and changes nothing that lasts
+# (checked in the 2.3.0 source: node.cpp, gps.cpp and the product files):
+# - config_on_startup: false skips the port, rate, constellation, dynamic-model, SBAS,
+#   PPP and datum settings.
+# - Still sent, to the receiver's RAM only, which a power cycle clears: "send NAV-PVT"
+#   (the fix comes from it; a high-precision F9 also gets NAV-RELPOSNED), and which INF
+#   text messages to send.
+# - Nothing is saved to its flash: save.mask, save_on_shutdown and clear_bbr keep their
+#   defaults (0, false, false).
+# To change the rate or the constellations, set the receiver up once with u-center.
+ublox_gps:
+  ros__parameters:
+    device: /dev/aav/gps        # tools/udev/99-aav.rules: any u-blox on USB
+    frame_id: gps_link
+    config_on_startup: false
+    uart1:
+      baudrate: 38400           # only for a UART cable: the receiver's own speed (38400 on
+                                # an F9P, 9600 on an M8). USB ignores it
+    # What the receiver already sends: one fix a second, from the factory. The driver
+    # doesn't set these (config_on_startup is false), but its diagnostics expect them.
+    rate: 1.0                   # Hz
+    nav_rate: 1                 # measurements per fix
+    publish:
+      esf:
+        all: false              # an M8U's or M8L's sensor-fusion messages: not used
+      hnr:
+        pvt: false

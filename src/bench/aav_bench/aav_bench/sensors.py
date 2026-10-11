@@ -8,12 +8,13 @@ and frame, so nothing downstream changes.
   mock_gps      /bench/truth -> /gps/fix (NavSatFix), 5 Hz                       gps_link
   mock_battery  /battery_status (BatteryState), 1 Hz
   mock_camera   /bench/truth -> /camera/image_raw (Image), /camera/camera_info,
-                10 Hz: a road, and the bench world's stop signs when they're in view
+                10 Hz: the bench road and its lane lines from where the car really is,
+                and the bench world's stop signs when they're in view
   mock_radar    /bench/truth -> /radar/points (PointCloud2, best effort), 10 Hz      radar_link
                 the bench world's obstacle boxes, when obstacle is true; else empty
 
 spine_sim publishes /bench/truth: where the model car really is. The real drivers are
-yahboom_imu_cpp, ublox_dgnss, battery_monitor, usb_cam (aav_sensors) and ti_ros2_driver.
+yahboom_imu_cpp, ublox_gps, battery_monitor, usb_cam (aav_sensors) and ti_ros2_driver.
 """
 
 import math
@@ -156,8 +157,17 @@ class MockCamera(Node):
         self.signs = models.pairs(self.declare_parameter('stop_signs', [25.0, -2.0]).value)
         self.sign_height = self.declare_parameter('sign_height', 2.0).value
         self.sign_size = self.declare_parameter('sign_size', 0.75).value
-        xyz = vehicle.load()['sensors'][self.frame]['xyz']
-        self.cam = models.Camera(xyz, width, height, focal, xyz[2])
+        d = models.Road()
+        self.road = models.Road(
+            y=self.declare_parameter('road_y', d.y).value,
+            lane_width=self.declare_parameter('lane_width', d.lane_width).value,
+            line_width=self.declare_parameter('line_width', d.line_width).value,
+            shoulder=self.declare_parameter('shoulder', d.shoulder).value,
+            bend_x=self.declare_parameter('bend_x', d.bend_x).value,
+            bend_radius=self.declare_parameter('bend_radius', d.bend_radius).value)
+        mount = vehicle.load()['sensors'][self.frame]
+        xyz, rpy = mount['xyz'], mount.get('rpy', [0.0, 0.0, 0.0])
+        self.cam = models.Camera(xyz, width, height, focal, xyz[2], rpy[1])
         self.info = CameraInfo(width=width, height=height, distortion_model='plumb_bob')
         self.info.header.frame_id = self.frame
         self.info.d = [0.0] * 5
@@ -180,7 +190,8 @@ class MockCamera(Node):
             return
         views = [v for v in (models.sign_in_view(self.cam, self.truth, s, self.sign_height,
                                                  self.sign_size) for s in self.signs) if v]
-        image = self.bridge.cv2_to_imgmsg(pictures.scene(self.cam, views), 'bgr8')
+        image = self.bridge.cv2_to_imgmsg(
+            pictures.scene(self.cam, views, self.truth, self.road), 'bgr8')
         image.header.stamp = self.get_clock().now().to_msg()
         image.header.frame_id = self.frame
         self.info.header.stamp = image.header.stamp

@@ -14,6 +14,7 @@ import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
 import 'package:path_provider/path_provider.dart';
 import '../data/constants.dart';
 import '../components/sockets/socket_services.dart';
+import '../services/backend.dart';
 
 void showAppMessage(BuildContext? context, String message) {
   if (context == null) {
@@ -30,7 +31,12 @@ void showAppMessage(BuildContext? context, String message) {
 }
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  const MapPage({super.key, this.socketService, this.backend});
+
+  /// For tests: a socket and a back end that need no network. Null: the real ones.
+  final SocketService? socketService;
+  final HudBackend? backend;
+
   @override
   State<MapPage> createState() => _MapPageState();
 }
@@ -59,8 +65,10 @@ class _MapPageState extends State<MapPage> {
   List<LatLng> lockedRoutePoints = []; // original route when locked
   String? lastRouteJson; // exported JSON of lat/lon for ROS2 later
 
-  // Socket service for receiving GPS coordinates from Flask
-  late SocketService _socketService;
+  // Socket service for receiving GPS coordinates from the back end
+  late final SocketService _socketService = widget.socketService ?? SocketService();
+  // The back end's HTTP side: the locked route, and canceling it
+  late final HudBackend _backend = widget.backend ?? HudBackend();
 
   // Simulation fields
   List<LatLng> _simPoints = [];
@@ -80,19 +88,15 @@ class _MapPageState extends State<MapPage> {
   void initState() {
     super.initState();
 
-    // Connect to Flask via socket and update currentLocation on every GPS event
-    _socketService = SocketService();
+    // Connect to the back end via socket and update currentLocation on every GPS event
     _socketService.initSocketConnection(
-      serverUrl: 'http://127.0.0.1:5000',
+      serverUrl: kBackendUrl,
       onGpsUpdate: (lat, lon) {
         if (!mounted) return;
         setState(() {
           currentLocation = LatLng(lat, lon);
         });
       },
-      // No-op callbacks for events map_page doesn't use
-      onSpeedUpdate: (_) {},
-      onStopSignAlert: (_, __) {},
       onNavState: (distance, status) {
         if (!mounted) return;
         setState(() {
@@ -111,6 +115,7 @@ class _MapPageState extends State<MapPage> {
   @override
   void dispose() {
     _socketService.dispose();
+    if (widget.backend == null) _backend.close();
     _positionSub?.cancel();
     _simTimer?.cancel();
     lonController.dispose();
@@ -299,9 +304,6 @@ class _MapPageState extends State<MapPage> {
 
   // New helper to lock the route
   void _lockRoute() {
-    print("LOCK ROUTE CALLED"); // debug line
-    showAppMessage(context, 'debug: _lockRoute() called');
-
     if (routePoints.isEmpty) {
       showAppMessage(context, 'No route to lock');
       return;
@@ -321,13 +323,10 @@ class _MapPageState extends State<MapPage> {
         .toList();
     lastRouteJson = json.encode(export);
 
-    // Print and show a short message with the JSON (for debugging / later ROS2)
-    // ignore: avoid_print
-    print('Locked route JSON: $lastRouteJson');
     showAppMessage(
-        context, 'Route locked and exported (${lockedRoutePoints.length} points)');
+        context, 'Route locked (${lockedRoutePoints.length} points): sending it to the car');
 
-    // send the new route to Flask
+    // send the new route to the back end: Nav2 drives it
     sendRouteToFlask(lastRouteJson!);
 
     // Zoom to current position and start tracking
@@ -339,48 +338,28 @@ class _MapPageState extends State<MapPage> {
     setState(() {});
   }
 
-  // Helper function to send the new route obtained from _lockRoute() to Flask
+  // Send the route obtained from _lockRoute() to the back end (POST /receive), at once
   Future<void> sendRouteToFlask(String jsonString) async {
-    // TODO: remove all "debug" lines in this function when done
-    // TODO: remove all Future.delayed() functions, the pauses were to help with debugging
+    final reply = await _backend.sendRoute(jsonString);
+    if (!mounted) return;
+    showAppMessage(
+        context,
+        reply.ok
+            ? 'The car has the route: Nav2 drives it'
+            : 'The car did not take the route: ${reply.message}');
+  }
 
-    // request to send Flask (on port 5000, on this machine) some data
-    final url = Uri.parse('http://localhost:5000/receive');
-
-    // prompts on screen (for myself to debug)
-    showAppMessage(context, 'debug: sendRouteToFlask() called'); // debug
-    await Future.delayed(Duration(seconds: 3)); // debug
-
-    try {
-      showAppMessage(context, 'trying now...'); // debug
-      await Future.delayed(Duration(seconds: 3)); // debug
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonString,
-      );
-
-      showAppMessage(context, 'trying worked..'); // debug
-      await Future.delayed(Duration(seconds: 3)); // debug
-
-      if (response.statusCode == 200) {
-        print("Successfully sent route to Flask: ${response.body}");
-        showAppMessage(context,
-            "debug: Successfully sent route to Flask: ${response.body}");
-      } else {
-        print("Failed to send route. Status code: ${response.statusCode}");
-        showAppMessage(context,
-            "debug: Failed to send route. Status code: ${response.statusCode}");
-      }
-    } catch (e) {
-      print("Error sending route to Flask: $e");
-      showAppMessage(context, "debug: Error sending route to Flask: $e");
-    }
+  // Stop the car following the route (POST /cancel): Unlock and Clear
+  Future<void> _cancelRoute() async {
+    final reply = await _backend.cancelRoute();
+    if (!mounted) return;
+    showAppMessage(
+        context, reply.ok ? 'Route canceled' : 'Cancel: ${reply.message}');
   }
 
   // Unlock route and stop tracking
   void _unlockRoute() {
-    print('_unlockRoute() was called'); // debug line
+    _cancelRoute();
 
     routeLocked = false;
     _positionSub?.cancel();
@@ -388,7 +367,6 @@ class _MapPageState extends State<MapPage> {
     // restore routePoints to the lockedRoutePoints so user can re-lock or re-route
     routePoints = List<LatLng>.from(lockedRoutePoints);
     lockedRoutePoints = [];
-    showAppMessage(context, 'Route unlocked');
     setState(() {});
   }
 
@@ -731,22 +709,37 @@ class _MapPageState extends State<MapPage> {
                                     color: Colors.black26, blurRadius: 4)
                               ],
                             ),
-                            child: ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: _suggestions.length,
-                              itemBuilder: (context, index) {
-                                final place = _suggestions[index];
-                                return ListTile(
-                                  leading: Icon(_getIcon(place.type)),
-                                  title: Text(place.displayTitle),
-                                  subtitle: Text(place.displaySubtitle),
-                                  onTap: () {
-                                    searchController.text = place.displayTitle;
-                                    setState(() => _suggestions = []);
-                                    _routeTo(LatLng(place.lat, place.lon));
-                                  },
-                                );
-                              },
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    itemCount: _suggestions.length,
+                                    itemBuilder: (context, index) {
+                                      final place = _suggestions[index];
+                                      return ListTile(
+                                        leading: Icon(_getIcon(place.type)),
+                                        title: Text(place.displayTitle),
+                                        subtitle: Text(place.displaySubtitle),
+                                        onTap: () {
+                                          searchController.text = place.displayTitle;
+                                          setState(() => _suggestions = []);
+                                          _routeTo(LatLng(place.lat, place.lon));
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                                // The places are OpenStreetMap data (ODbL): its credit.
+                                const Padding(
+                                  padding: EdgeInsets.all(6),
+                                  child: Text(
+                                    'Places $kOsmCredit',
+                                    style: TextStyle(color: Colors.black54, fontSize: 12),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                       ],
@@ -803,6 +796,14 @@ class _MapPageState extends State<MapPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // The map's tiles are OpenStreetMap data (ODbL): its credit, under the map.
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'Map $kOsmCredit',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ),
                   Row(
                     children: [
                       Expanded(
@@ -891,6 +892,7 @@ class _MapPageState extends State<MapPage> {
                           foregroundColor: Colors.white,
                         ),
                         onPressed: () {
+                          _cancelRoute();
                           setState(() {
                             routePoints = [];
                             destination = null;

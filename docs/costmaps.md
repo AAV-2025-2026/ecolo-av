@@ -38,8 +38,8 @@ by `navigation.launch.py`.
 
 | Layer | Reads | On | Marks | Clears |
 |---|---|---|---|---|
-| `obstacle_layer` | `/radar/points` (in `radar_link`) | `radar:=true`: the bench always; the car when its machine file runs `radar`; never Gazebo (its car has no radar) | each point 0.3-8.4 m from the radar, -0.5 to 2 m high | the cells between the radar and each point |
-| `camera_layer` | `/perception/camera_obstacles`, `/perception/camera_view` | `camera_obstacles:=true`: off until the cameras are calibrated (Q22) | where each detected object stands on the road, out to 12 m | everything the camera sees, out to 12 m, before it marks |
+| `obstacle_layer` | `/radar/points` (in `radar_link`) | `radar:=true`: the bench always; the car where the machine file that runs `navigation` also runs `radar`; never Gazebo (its car has no radar) | each point 0.3-8.4 m from the radar, -0.5 to 2 m high | the cells between the radar and each point |
+| `camera_layer` | `/perception/camera_obstacles`, `/perception/camera_view` | `camera_obstacles:=true`: the bench's argument, or the car's `camera_obstacles` part next to `navigation`. Off until the cameras are calibrated (Q22) | where each detected object stands on the road, out to 12 m | everything the camera sees, out to 12 m, before it marks |
 
 Why the radar's numbers:
 - **8.4 m:** the TI radar's range (`ti_ros2_driver` `cfg/base.cfg`).

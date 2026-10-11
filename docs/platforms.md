@@ -71,10 +71,10 @@ to today's ESP32. The files in `src/aav_bringup/config/machines/` say what runs 
 
 | Machine file | Runs |
 |---|---|
-| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove |
+| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the YOLO detector (`yolo_detector_orin`, TensorRT) and the stop-sign watcher |
 | `motor_pi.yaml` | `legacy_uart_bridge` and `encoder_udp`: the ESP32 is wired to it, and the encoder sends its packets to it |
-| `laptop.yaml` | the joystick, on the safety driver's laptop |
-| `all.yaml` | everything on one computer, for the bench |
+| `laptop.yaml` | the joystick, on the safety driver's laptop. Its detector (`yolo_detector_laptop`, Core ML) is off until it reads compressed images |
+| `all.yaml` | everything on one computer, for the bench. Its detector is `yolo_detector_all` |
 
 On each computer, run `ros2 launch aav_bringup car.launch.py machine:=<its file>`, or
 `pixi run car <its file>` with Pixi.
@@ -84,6 +84,42 @@ On each computer, run `ros2 launch aav_bringup car.launch.py machine:=<its file>
   that positive steering turns left, that the throttle goes the right way, and that the
   car stops when you release the deadman and when you kill the bridge. Today's firmware
   fails the last one: see [Firmware](firmware.md).
+
+### The parts
+
+Each machine file turns parts on (`true`) or off. A `TODO` marks a part waiting for its
+hardware: the cameras (Q22), the radar, or which USB port a device is on.
+
+| Part | Starts |
+|---|---|
+| `description` | the car's frames: `robot_state_publisher` |
+| `mux`, `ego` | `twist_mux`, then `ego` |
+| `teleop` | the joystick, and its e-stop button |
+| `scripted` | the scripted driver |
+| `imu`, `gps`, `radar`, `battery` | the sensor drivers, on the computer each is plugged into |
+| `camera` | the front camera: `usb_cam`, Linux only |
+| `detector` | YOLO, as `yolo_detector_<machine>`, with the model the file names ([Models](perception.md#models)) |
+| `stop_signs` | the stop-sign watcher: one per car, next to the mux |
+| `radar_clusters` | the radar's clustering |
+| `camera_obstacles` | the detectors' boxes as points on the road, for Nav2's costmap ([Costmaps](costmaps.md)) |
+| `localization`, `navigation` | the two EKFs and `navsat_transform`; Nav2. Its costmap reads the `radar` and `camera_obstacles` parts on the same computer, and `collision_monitor` comes with the radar |
+| `spine`, `legacy_uart`, `legacy_encoder` | the backends: the CAN spine, or today's ESP32 and wheel encoder |
+| `foxglove` | `foxglove_bridge`, on port 8765 |
+
+A part that can't run on that computer (no PyTorch, no model file, no `usb_cam`) is
+skipped with a warning, and the rest starts.
+
+### The arguments
+
+They win over the machine file. With Pixi, put them after `--`:
+`pixi run car orin -- gps:=false`.
+
+| Argument | Does |
+|---|---|
+| `gps:=false` | no GPS anywhere: no driver, and localization without it |
+| `gps_driver:=ublox` | which GPS driver: `ublox` (the default, Tentative: Q18), `nmea`, or `ublox_dgnss` (apt only, the car) |
+| `imu_driver:=cpp` | which IMU driver: `cpp`, or `rust`, its Rust twin |
+| `map:=`, `start_x:=`, `start_y:=`, `start_yaw:=` | Nav2's map, and where the car starts on it |
 
 ## Try Jazzy on the car before the reflash
 

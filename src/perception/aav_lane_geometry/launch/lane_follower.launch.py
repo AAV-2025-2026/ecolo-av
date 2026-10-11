@@ -5,10 +5,10 @@ Lane keeping (2025-26): the steering half, as a driver on twist_mux's AI slot.
 
   /lane_geometry (LaneGeometry) -> control_interface -> /cmd_vel/ai (TwistStamped, priority 10)
 
-The half that finds the lane lines in the camera picture isn't in any repo: something must
-publish /lane_geometry. fake:=true runs the 2025-26 team's fake_lane_geometry_pub instead
-(a straight lane), for the bench. Every other driver outranks /cmd_vel/ai, so a person,
-a test script or Nav2 always wins.
+The half that finds the lane lines in the camera picture is aav_lane_finder's
+lane_finder.launch.py: it publishes /lane_geometry. fake:=true runs the 2025-26 team's
+fake_lane_geometry_pub instead (a pretend straight lane, no camera). Every other driver
+outranks /cmd_vel/ai, so a person, a test script or Nav2 always wins.
 
 The scripts run through python3, not their `#!/usr/bin/env python3` line: on a Mac,
 /usr/bin/env drops the library path that their messages need (docs/mac.md).

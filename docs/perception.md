@@ -56,13 +56,38 @@ The lock keeps stop signs away from the e-stop.
 
 Model files stay out of git, in `models/`. `pixi run get-models` downloads the stock
 YOLO11 nano model (5.6 MB, its checksum pinned). It was trained on the COCO dataset, and
-"stop sign" is one of its 80 classes, so we don't need last year's model to start.
+"stop sign" is one of its 80 classes, so we don't need the 2024-25 team's model to start.
 
-| Format | Runs on | Make it with |
-|---|---|---|
-| `.pt` | anything, with PyTorch | the training |
-| `.mlpackage` | Macs, with Core ML | `pixi run -e ml yolo export model=models/yolo11n.pt format=coreml` |
-| `.engine` | the Orin, with TensorRT | `yolo export model=models/yolo11n.pt format=engine`, on the Orin itself |
+One model, three formats. Each computer with a GPU runs its own (Ben, 10 Oct), and the
+detector loads any of them. The machine file names the one to use:
+
+| Format | Runs on | Make it with | Machine file |
+|---|---|---|---|
+| `.pt` | anything, with PyTorch | `pixi run get-models`, or the training | `all.yaml` |
+| `.mlpackage` | Macs, with Core ML | `pixi run -e ml export-coreml`, on a Mac | `laptop.yaml` |
+| `.engine` | the Orin, with TensorRT | `python3 tools/build_engine.py`, on the Orin itself | `orin.yaml` |
+
+### Core ML, on a Mac
+
+- `pixi run -e ml export-coreml` makes `models/yolo11n.mlpackage` from
+  `models/yolo11n.pt`, and downloads the `.pt` first if it's missing.
+- Another model: `pixi run -e ml export-coreml models/best.pt`.
+- On an M4 Max the export takes 2 s; the whole command 3 to 10 s.
+- [[works]] The result found the test stop sign at 0.97.
+
+### TensorRT, on the Orin
+
+An engine runs only on the GPU and the TensorRT version that built it. So it's built
+on the Orin, once it's on JetPack 7.2 (Q24):
+
+1. Install NVIDIA's PyTorch for Jetson (not PyPI's), then `pip install ultralytics onnx`.
+   In a venv, make it with `--system-site-packages`, so it sees JetPack's TensorRT.
+2. Run `python3 tools/build_engine.py` in the repo, with JetPack's `python3`, not
+   Pixi's. It checks first, and says what's missing.
+3. It writes `models/yolo11n.engine`: half precision (FP16), 640 px.
+   `car.launch.py machine:=orin` loads it.
+
+[[untested]] It needs the Orin: here it only checks, and stops.
 
 The 2024-25 team's own model, `best.pt`, is in no repo: their code loaded it from
 `~/Yolo/Capstone/runs/detect/train7/weights/best.pt` on someone's computer. It's
@@ -116,18 +141,19 @@ names, passed on as they are.
   names above.
 - A `.mlpackage` (Core ML) or an `.engine` (TensorRT) ignores the setting: each picks its
   own hardware.
+- MLX, Apple's own machine-learning library, isn't needed for YOLO: Metal, through
+  PyTorch or Core ML, is the Mac's fast path. MLX could join the `ml` environment later,
+  for training or for other models.
 
 ### One detector per computer, and WiFi
 
 | Setting | Does |
 |---|---|
-| `name:=yolo_orin` | the node's name. Each computer with a GPU runs its own detector, under its own name. All of them publish on `/perception/detections` |
+| `node_name:=yolo_detector_macbook` | the node's name. Each computer with a GPU runs its own detector, under its own name: `car.launch.py` calls it `yolo_detector_<machine>`. All of them publish on `/perception/detections` |
 | `compressed:=true` | reads `/camera/image_raw/compressed`, the JPEG pictures `usb_cam` already publishes. Raw pictures are too big for WiFi |
 
-From a Mac on the car's network: `pixi run detect name:=yolo_macbook compressed:=true`.
-- MLX, Apple's own machine-learning library, isn't needed for YOLO: Metal, through
-  PyTorch or Core ML, is the Mac's fast path. MLX could join the `ml` environment later,
-  for training or for other models.
+From a Mac on the car's network, by hand:
+`pixi run detect node_name:=yolo_detector_macbook compressed:=true`.
 
 ### The ml environment
 
@@ -141,15 +167,87 @@ A separate Pixi environment, so nobody downloads PyTorch unless they want it: Py
 
 ## Lane keeping
 
-- `control_interface` reads `/lane_geometry` (the lane lines as polynomials, the car's
-  offset and the curvature) and steers with a PID through five states (keep, change,
-  committed, stopping, resuming).
+Two nodes, from the camera to the wheels. `lane_finder` (ours) finds the lane;
+`control_interface` (the 2025-26 team's) steers by it.
+
+```
+/camera/image_raw ─► lane_finder ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai
+```
+
+![The bench camera, and what lane_finder found in it](img/lane-finder.png)
+
+| In the picture | What it is |
+|---|---|
+| Left | the bench camera: the car 0.3 m left of the lane's centre |
+| Right | the bird's-eye view: the road from above, 4 m ahead (bottom) to 16 m (top) |
+| Yellow | the paint it found |
+| Boxes | the sliding windows: green found paint |
+| Blue, red | the left and right lines it fitted |
+| Green line, white line | the lane's centre, and the car's own line |
+
+### The finder
+
+Classic OpenCV, no model. A model can replace it later, on the same topic.
+
+| Step | What it does |
+|---|---|
+| 1. Bird's-eye view | warps the picture into a map of the road seen from above: 4-16 m ahead, 4 m either side, 5 cm a pixel. From the lens (`/camera/camera_info`) and the camera's place and tilt (`vehicle.yaml`). It takes the road to be flat |
+| 2. Paint | a pixel is paint when it's brighter than the road on both sides |
+| 3. Sliding windows | 12 windows climb each line, from where it starts near the car |
+| 4. Fit | a curve per line, `y = a x² + b x + c`, in metres, in `base_link` |
+| 5. The answer | the car's offset, the lane's width, each line's radius, and how sure it is |
+
+- **Speed:** 0.8 ms a picture on Ben's MacBook Pro (M4 Max), 1.2 ms in the node.
+  [[untested]] on the Orin, whose cores are slower: expect a few ms.
+- **The code:** `src/perception/aav_lane_finder`. `birds_eye.py` and `lane_lines.py`
+  hold the maths, with no ROS, and 21 tests, most on pictures of known lanes: straight,
+  off centre, turned, curved, one line, none. `lane_finder.py` is the node.
+
+### What it sends: /lane_geometry
+
+| Field | Means |
+|---|---|
+| `vehicle_offset_m` | the car from the lane's centre, 3 m ahead (m). + = the car is left of the centre, so it steers right |
+| `left_poly_a`, `_b`, `_c`, and the same for `right_` | each line as `y = a x² + b x + c` (m), in `base_link`: x forward, y left |
+| `left_curvature_m`, `right_`, `mean_` | the radius (m). 9999 = straight, or not seen |
+| `curve_direction` | +1 bends left, -1 right, 0 straight |
+| `lane_width_m` | between the lines (m). With one line, the last width seen |
+| `left_confidence`, `left_lane_detected`, and the same for `right_` | 0 to 1; a line counts from 0.3 |
+| `steering_hint` | a pure-pursuit wheel angle to the centre (rad, + = left). control_interface doesn't use it |
+
+- **One line:** the centre is half a lane beside it.
+- **No lines:** nothing detected, so control_interface slows down and stops.
+- **Why 3 m ahead:** an offset at the rear axle says nothing about which way the car
+  points. On the bench, measured there, the car weaved 0.3 m either side and ran off the
+  lane within 20 s. 3 m ahead, it comes back in about 6 s, 2 cm past the centre at most.
+
+### The steering: control_interface
+
+- It steers with a PID on the offset, through five states (keep, change, committed,
+  stopping, resuming).
 - It publishes on `/cmd_vel/ai`, the mux's slot for a learned driver. Every other driver
   outranks it.
-- Its base speed is 2 m/s; ego caps it at the car's 1 m/s.
-- [[missing]] **The line finder**: whatever turns the camera's picture into
-  `/lane_geometry`. It isn't in any repo. Until then, `fake_lane_geometry_pub` stands in
-  (`bench.launch.py lane:=true`).
+- It asks for 2 m/s; ego caps it at the car's 1 m/s.
+
+### On the bench
+
+| Command | Does |
+|---|---|
+| `pixi run bench lane:=true nav:=false start_y:=0.3` | lane keeping on the pretend camera, from 0.3 m left of the centre |
+| `pixi run bench lane:=fake` | control_interface on a pretend lane, without the camera |
+| `pixi run bench-check --lane` | the same, measured: [[works]] back within 5 cm of the centre in about 6 s, 2 cm past it at most |
+| `pixi run bench lane:=true nav:=false bend_radius:=60` | a 60 m bend to the left, from 30 m on: [[works]] within 8 cm of the centre, 4-5 cm inside it round the bend |
+
+More in [Bench mode](bench.md).
+
+### Next
+
+| Item | Waits on |
+|---|---|
+| The real camera's place, tilt and lens, in `vehicle.yaml` and its calibration | the cameras (Q22) |
+| Tune the paint test on real pictures: shadows, worn paint, glare | a recording from the car |
+| Time it on the Orin | the reflash (Q24) |
+| Hills and bumps: the warp takes the road to be flat | later, with the IMU's pitch |
 
 ## Radar clustering
 
@@ -163,18 +261,30 @@ A separate Pixi environment, so nobody downloads PyTorch unless they want it: Py
 
 ## On the car
 
-`aav_bringup perception.launch.py` starts the camera, the detector, the watcher and the
-radar clustering, next to `car.launch.py`, on the Orin. When `car.launch.py` next changes,
-they become parts in its machine files.
+`car.launch.py` starts perception as parts, like the rest of the car. Each machine file
+turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-where)):
+
+| Part | Starts | Where |
+|---|---|---|
+| `camera` | `usb_cam` → `/camera/image_raw` (Linux only) | off everywhere until the cameras are known (Q22) |
+| `detector` | YOLO, as `yolo_detector_<machine>` → `/perception/detections` | the Orin. The laptop's is off until it reads compressed images |
+| `stop_signs` | `stop_sign_watcher` → `/perception/stop` | one per car, next to the mux: the Orin |
+| `radar_clusters` | DBSCAN on `/radar/points` | off until the radar is on the car |
+| `camera_obstacles` | the boxes as points on the road → `/perception/camera_obstacles`, for Nav2's costmap | off until the cameras are calibrated (Q22); then next to `navigation`: the Orin |
+| `lane` | to do: the lane finder, then lane keeping | the lane finder is being written |
+
+- Every detector publishes on `/perception/detections`, so the watcher hears them all.
+- A detector needs PyTorch: JetPack's on the Orin, the `ml` environment on a laptop
+  (`pixi run -e ml car laptop`). Without it, or without its model file, the part is
+  skipped with a warning, and the rest of the car starts.
 
 - **From a Mac:** a Mac on the car's network can run the detector on the car's cameras.
   Raw images are too big for WiFi, so the cameras should also publish compressed ones.
 - **Into the costmap:** `camera_obstacles` (in `aav_yolo`) puts each box where it meets
   the road: its bottom edge, seen through the camera's lens from its height and tilt
   (`vehicle.yaml`, through TF). The local costmap's camera layer marks those points. Off
-  until the cameras are calibrated (Q22); then run `perception.launch.py
-  camera_obstacles:=true` and `car.launch.py camera_obstacles:=true`. [Costmaps](costmaps.md)
-  has the details.
+  until the cameras are calibrated (Q22); then turn the `camera_obstacles` part on in the
+  machine file that runs `navigation`, the Orin's. [Costmaps](costmaps.md) has the details.
 
   | Counts | Never counts |
   |---|---|

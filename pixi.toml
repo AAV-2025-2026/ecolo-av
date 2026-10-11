@@ -36,7 +36,15 @@ imu-compare = { cmd = "tools/ros.sh --local python3 src/sensors/aav_imu_yahboom/
 vendor = { cmd = "python3 tools/vendor.py", description = "Download the ROS 2 and ros2-rust source into vendor/, to look things up (not ours; about 560 MB)" }
 get-models = { cmd = "tools/get_models.sh", description = "Download the stock YOLO model into models/ (for pixi run detect)" }
 get-hud-map = { cmd = "tools/get_hud_map.sh", description = "Download the HUD app's place database (51 MB, OpenStreetMap) into hud/flutter_pi/assets/databases/" }
+get-flutter = { cmd = "tools/get_flutter.sh", description = "Download Flutter 3.35.7 into vendor/flutter (about 4.3 GB), for the HUD app" }
+flutter = { cmd = "../../tools/flutter.sh", cwd = "hud/flutter_pi", description = "Flutter from vendor/flutter, in hud/flutter_pi: pixi run flutter doctor" }
+hud-test = { cmd = "tools/hud_test.sh", description = "The HUD app: flutter pub get, analyze and test (needs pixi run get-flutter)" }
 rust-listener = { cmd = "tools/ros.sh cargo run -q --manifest-path examples/rust-listener/Cargo.toml", description = "A Rust (rclrs) node: prints ego's commands" }
+# The spine's board program, for a Pico 2 (docs/rust-firmware.md). spine-uf2 only makes a
+# file; spine-flash writes to a Pico 2, through a debug probe, so run it only on the bench.
+spine-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/spine-pico2 spine-pico2.uf2", cwd = "firmware/spine/boards/pico2", description = "Build the spine's Pico 2 program as firmware/spine/boards/pico2/spine-pico2.uf2: hold BOOTSEL, plug in, drag it on" }
+spine-tools = { cmd = "cargo install --locked --root vendor/cargo-tools probe-rs-tools@0.32.0", description = "Install probe-rs 0.32.0 into vendor/cargo-tools/bin, to flash a Pico 2 through a debug probe (once; several minutes)" }
+spine-flash = { cmd = "cargo build --release --locked && ../../../../vendor/cargo-tools/bin/probe-rs run --chip RP235x target/thumbv8m.main-none-eabihf/release/spine-pico2", cwd = "firmware/spine/boards/pico2", description = "Flash the spine's program onto a Pico 2 through a debug probe, then show its logs (pixi run spine-tools first)" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"
@@ -132,6 +140,12 @@ detect = { cmd = "tools/ros.sh ros2 launch aav_yolo detector.launch.py", descrip
 
 [feature.ml.target.osx.dependencies]
 coremltools = ">=9.0,<10"
+
+# Core ML is a Mac's: the export makes models/yolo11n.mlpackage next to the .pt. On an
+# M4 Max the export takes 2 s, and the whole task 3 to 10 s. The Orin's TensorRT engine is
+# made on the Orin itself, with JetPack's Python: tools/build_engine.py.
+[feature.ml.target.osx.tasks]
+export-coreml = { cmd = "yolo export model={{ model }} format=coreml", args = [{ arg = "model", default = "models/yolo11n.pt" }], depends-on = ["get-models"], description = "Make the Core ML model for a Mac: pixi run -e ml export-coreml [models/<name>.pt]" }
 
 [feature.ml.activation.env]
 PYTORCH_ENABLE_MPS_FALLBACK = "1"   # conda-forge's torchvision has no Metal NMS: that step runs on the CPU

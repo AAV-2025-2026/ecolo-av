@@ -25,7 +25,7 @@
   <rect class="logic" x="30" y="90" width="900" height="120" rx="10"/>
   <text class="t" x="50" y="118">Logic: the rules</text>
   <text class="r" x="910" y="118" text-anchor="end">TESTED ON A LAPTOP</text>
-  <text class="b" x="50" y="146">spine-core: modes, arming, watchdog, speed loop, encoder maths, CAN frames (47 tests)</text>
+  <text class="b" x="50" y="146">spine-core: modes, arming, watchdog, speed loop, encoder maths, CAN frames (54 tests)</text>
   <text class="b" x="50" y="170">aav-inputs: debounced switches, an e-stop that trips at once, counting with a lockout (9 tests)</text>
   <text class="s" x="50" y="194">no_std, no dependencies, no hardware access</text>
 
@@ -34,8 +34,8 @@
   <!-- Drivers -->
   <rect class="drv" x="30" y="240" width="900" height="110" rx="10"/>
   <text class="t" x="50" y="268">Drivers: one per chip on the car</text>
-  <text class="r" x="910" y="268" text-anchor="end">WRITTEN 10 OCT: 98 TESTS</text>
-  <text class="b" x="50" y="296">Jrk G2 (steering, brake) · throttle DAC · PCA9555 · iBUS radio · spine-board, the glue</text>
+  <text class="r" x="910" y="268" text-anchor="end">WRITTEN 10–11 OCT: 137 TESTS</text>
+  <text class="b" x="50" y="296">Jrk G2 (steering, brake) · throttle DAC · PCA9555 · iBUS radio · MCP2515 CAN · spine-board</text>
   <text class="s" x="50" y="320">against embedded-hal 1.0; checked with embedded-hal-mock, which plays the chip. Still to write: W5500, display</text>
 
   <line x1="480" y1="350" x2="480" y2="376" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
@@ -43,9 +43,9 @@
   <!-- Boards -->
   <rect class="todo" x="30" y="380" width="900" height="110" rx="10"/>
   <text class="t" x="50" y="408">Boards: one small program per board</text>
-  <text class="s" x="910" y="408" text-anchor="end">still to write</text>
-  <text class="b" x="50" y="436">pins and timers, Embassy (or RTIC), then a loop: read inputs, call the logic, write outputs</text>
-  <text class="s" x="50" y="460">the spine (chip: Q10–Q13) · the wheel-encoder Pico 2 · the status-display Pico 2</text>
+  <text class="s" x="910" y="408" text-anchor="end">the Pico 2 program: written 11 Oct, not yet on a board</text>
+  <text class="b" x="50" y="436">pins and timers, Embassy, then a loop: read inputs, call the logic, write outputs</text>
+  <text class="s" x="50" y="460">the spine: boards/pico2, for the bench (the car's chip: Q10–Q13) · the status-display Pico 2</text>
 
   <line x1="480" y1="490" x2="480" y2="516" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Run every test that doesn't need ROS: our packages' Python unit tests, the Rust spine
 # library, and the check that docs/interfaces.md matches docs/interfaces.yaml. Where the
-# mcp environment is installed, also the MCP server over stdio (on a private, local domain).
+# mcp environment is installed, also the MCP server over stdio (on a private, local domain);
+# where Flutter is (pixi run get-flutter), also the HUD app's tests (tools/hud_test.sh).
 # Needs Python 3 with pytest and PyYAML; Rust (cargo) for the spine. Works on any OS.
 #
 # usage: tools/test.sh
@@ -13,12 +14,13 @@ export PYTHONDONTWRITEBYTECODE=1
 # (aav_gazebo's test imports ROS messages, so only `colcon test` runs it.)
 for pkg in src/ego/aav_ego src/backends/aav_spine src/backends/aav_legacy \
            src/drivers/aav_scripted src/aav_description src/perception/aav_yolo \
+           src/perception/aav_lane_finder \
            src/bench/aav_bench src/hud/aav_hud; do
   echo "== $pkg"
   (cd "$pkg" && python3 -m pytest -q -p no:cacheprovider)
 done
 
-echo "== tools: the MCP server's parts"
+echo "== tools: the MCP server's parts, and the Pico 2's UF2 converter"
 python3 -m pytest -q -p no:cacheprovider tools/tests
 
 echo "== firmware/spine"
@@ -30,7 +32,14 @@ if command -v cargo >/dev/null; then
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"
     (cd firmware/spine && cargo build -q --target thumbv8m.main-none-eabihf -p spine-core \
-       -p aav-inputs -p jrk-g2 -p ad5311 -p pca9555 -p ibus -p spine-board && echo "builds")
+       -p aav-inputs -p jrk-g2 -p ad5311 -p pca9555 -p mcp2515 -p ibus -p spine-board \
+       && echo "builds")
+    # The board program itself: a workspace of its own, built only for the Pico 2's chip.
+    # Its UF2 file too, the one to drag on: tools/elf2uf2.py checks the boot ROM's IMAGE_DEF.
+    echo "== firmware/spine/boards/pico2: the spine's board program, for the Pico 2"
+    (cd firmware/spine/boards/pico2 && cargo build -q --release --locked && echo "builds")
+    python3 tools/elf2uf2.py \
+      firmware/spine/boards/pico2/target/thumbv8m.main-none-eabihf/release/spine-pico2
   fi
 else
   echo "skipped: no cargo here (pixi run test has it; or install Rust with rustup)"
@@ -78,6 +87,13 @@ if [[ -d .pixi/envs/mcp ]] && command -v pixi >/dev/null; then
   pixi run --frozen -e mcp python3 tools/tests/mcp_smoke.py
 else
   echo "skipped: the mcp environment isn't installed (pixi install -e mcp)"
+fi
+
+echo "== hud/flutter_pi: the HUD app (flutter pub get, analyze, test)"
+if [[ -x vendor/flutter/bin/flutter ]]; then
+  tools/hud_test.sh
+else
+  echo "skipped: no Flutter in vendor/flutter (pixi run get-flutter)"
 fi
 
 echo "== docs/interfaces.md"

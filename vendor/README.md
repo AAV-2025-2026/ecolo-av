@@ -12,6 +12,11 @@ PlatformIO keeps its downloads here too, in `vendor/platformio/` (about 1.5 GB):
 compilers and framework for today's C++ boards. `pixi run -e firmware legacy-esp32`
 fills it.
 
+Flutter lives here too, in `vendor/flutter/` (about 4.3 GB): Flutter 3.35.7, the SDK for
+the HUD app (`hud/flutter_pi`). Its engine files are in `bin/cache/` (3.3 GB), and the
+app's packages in `.pub-cache/` (0.24 GB). `pixi run get-flutter` fills it, checked by
+the SHA-256 that Flutter publishes (docs/hud.md).
+
 ## Rules
 
 - **Look, don't touch.** Never edit, build or commit anything in here. Our code lives in
@@ -27,5 +32,6 @@ fills it.
 | Command | Does |
 |---|---|
 | `pixi run vendor` | downloads what's missing, at the pinned commits; leaves the rest alone |
+| `pixi run get-flutter` | downloads Flutter 3.35.7 into `vendor/flutter/`, if it isn't there |
 | `python3 tools/vendor.py --check` | says what's there, what's missing, and what's at another commit |
 | `python3 tools/vendor.py --freeze ros2-src` | pins what's checked out now, to update a list |

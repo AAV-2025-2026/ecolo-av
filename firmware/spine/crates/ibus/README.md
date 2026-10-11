@@ -23,7 +23,7 @@ A 32-byte frame comes about every 7 ms.
 | `Receiver::push(byte, now_ms)` | feeds one byte; true when it completed a frame |
 | `Receiver::channels(now_ms)` | the latest channels, or `None` if silent longer than the timeout |
 | `RcMap::TODAY` | today's channels and switch points (below); also `RcMap::default()` |
-| `RcMap::rc_input(&channels)` | the `spine_core::RcInput`: override switch, throttle and steering, each -1 to 1 |
+| `RcMap::rc_input(&channels)` | the `spine_core::RcInput`: override switch, throttle and steering (each -1 to 1), and whether the gear switch is on brake |
 | `decode`, `encode`, `checksum` | one frame, without a parser |
 | `Channels::get(index)` | one channel; index 0 is the transmitter's CH1 |
 
@@ -86,5 +86,5 @@ Changed on purpose:
 | Steering scale | 1550 Jrk counts per unit on one side, 1950 on the other | -1 to 1 both ways; `spine-board` turns radians into Jrk counts |
 | Override on, a stick out of range | `jrkSafeStop()`: full brake, wheels straight, throttle off | RC takes over and asks for zero speed and straight wheels |
 | Override switch out of range | read as off, so the computer drives | `None`: no usable RC; `spine-core` stops if RC was driving |
-| Gear switch on brake | brake full on (Jrk target 3500) | zero speed: `spine-core`'s speed loop brakes. `RcInput` has no brake |
+| Gear switch on brake | brake full on (Jrk target 3500) | `RcInput::brake`; `spine-core`'s `RC_GEAR_BRAKE` decides: zero speed, so the speed loop brakes (proposed), or the full brake |
 | What the throttle means | a share of the DAC, open loop | a share of the top speed, for `spine-core`'s speed loop |

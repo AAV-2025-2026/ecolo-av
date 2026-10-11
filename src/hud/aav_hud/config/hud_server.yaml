@@ -8,9 +8,4 @@ hud_server:
     waypoint_spacing: 5.0     # m: the least distance between two GPS waypoints
     camera_fps: 5.0           # Hz: the most pictures a second on /camera/stream
     camera_idle_timeout: 5.0  # s: stop receiving /camera/image_raw this long after the last fetch
-    # MediaMTX: the video the app's camera page plays (WebRTC). The app has this address
-    # built in (camera_page.dart); the 2025-26 back end said 192.168.1.101.
-    mediamtx_host: 192.168.1.118
-    mediamtx_webrtc_port: 8889
-    mediamtx_rtsp_port: 8554
-    stream_path: cam1
+    camera_stale_after: 2.0   # s: an older picture isn't served (the camera stopped)

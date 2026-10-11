@@ -83,6 +83,7 @@ impl RcMap {
                 override_switch: false,
                 throttle: 0.0,
                 steering: 0.0,
+                brake: false,
             });
         }
         let (Some(throttle), Some(steering), Some(gear)) = (
@@ -94,13 +95,27 @@ impl RcMap {
                 override_switch: true,
                 throttle: 0.0,
                 steering: 0.0,
+                brake: false,
             });
         };
+        let gear = self.gear(gear);
         Some(RcInput {
             override_switch: true,
             throttle: self.signed_throttle(throttle, gear),
             steering: self.below_centre(steering).clamp(-1.0, 1.0),
+            brake: gear == Gear::Brake,
         })
+    }
+
+    /// Where the gear switch is.
+    fn gear(&self, value: u16) -> Gear {
+        if value < self.forward_below {
+            Gear::Forward
+        } else if value > self.reverse_above {
+            Gear::Reverse
+        } else {
+            Gear::Brake
+        }
     }
 
     /// How far a stick is below its middle: 1 at 1000, -1 at 2000.
@@ -110,21 +125,28 @@ impl RcMap {
 
     /// The C++ counted the throttle stick below its middle as "go", with 1000 full
     /// (TODO(Q7): the transmitter may reverse CH3). The gear switch gives the sign.
-    fn signed_throttle(&self, throttle: u16, gear: u16) -> f32 {
+    fn signed_throttle(&self, throttle: u16, gear: Gear) -> f32 {
         let push = self.below_centre(throttle).clamp(0.0, 1.0);
         let push = if push > self.throttle_deadband {
             push
         } else {
             0.0
         };
-        if gear < self.forward_below {
-            push
-        } else if gear > self.reverse_above {
-            -push
-        } else {
-            0.0 // brake: ask for zero speed
+        match gear {
+            Gear::Forward => push,
+            Gear::Reverse => -push,
+            // spine-core decides what the brake position does (RC_GEAR_BRAKE).
+            Gear::Brake => 0.0,
         }
     }
+}
+
+/// The gear switch's three positions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Gear {
+    Forward,
+    Reverse,
+    Brake,
 }
 
 #[cfg(test)]
@@ -174,11 +196,18 @@ mod tests {
     }
 
     #[test]
-    fn the_brake_position_asks_for_zero_speed() {
-        assert_eq!(rc(ch(ON, 1000, 1500, BRAKE)).unwrap().throttle, 0.0);
+    fn the_brake_position_asks_for_zero_speed_and_says_brake() {
+        let r = rc(ch(ON, 1000, 1500, BRAKE)).unwrap();
+        assert_eq!((r.throttle, r.brake), (0.0, true));
         // The edges count as brake too: forward needs < 1200, reverse > 1800.
-        assert_eq!(rc(ch(ON, 1000, 1500, 1200)).unwrap().throttle, 0.0);
-        assert_eq!(rc(ch(ON, 1000, 1500, 1800)).unwrap().throttle, 0.0);
+        for edge in [1200, 1800] {
+            let r = rc(ch(ON, 1000, 1500, edge)).unwrap();
+            assert_eq!((r.throttle, r.brake), (0.0, true), "{edge}");
+        }
+        // Forward and reverse are not brake; nor is the override off.
+        assert!(!rc(ch(ON, 1000, 1500, FWD)).unwrap().brake);
+        assert!(!rc(ch(ON, 1000, 1500, REV)).unwrap().brake);
+        assert!(!rc(ch(OFF, 1000, 1500, BRAKE)).unwrap().brake);
     }
 
     #[test]
@@ -215,7 +244,11 @@ mod tests {
             ] {
                 let r = rc(c).unwrap();
                 assert!(r.override_switch, "{bad}");
-                assert_eq!((r.throttle, r.steering), (0.0, 0.0), "{bad}");
+                assert_eq!(
+                    (r.throttle, r.steering, r.brake),
+                    (0.0, 0.0, false),
+                    "{bad}"
+                );
             }
         }
     }

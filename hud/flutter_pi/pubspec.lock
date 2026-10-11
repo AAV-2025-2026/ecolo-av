@@ -57,14 +57,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
-  dart_webrtc:
-    dependency: transitive
-    description:
-      name: dart_webrtc
-      sha256: "63a3ed6b958b5ba32d95ddba484c0dcf1cad4fd55eb551bb23c815b6f1e5d844"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.8.0"
   fake_async:
     dependency: transitive
     description:
@@ -128,14 +120,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_webrtc:
-    dependency: "direct main"
-    description:
-      name: flutter_webrtc
-      sha256: f6800cc2af79018c12e955ddf8ad007891fdfbb8199b0ce3dccd0977ed2add9c
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.11.7"
   geolocator:
     dependency: "direct main"
     description:
@@ -645,14 +629,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-  webrtc_interface:
-    dependency: transitive
-    description:
-      name: webrtc_interface
-      sha256: c6f100eac5057d9a817a60473126f9828c796d42884d498af4f339c97b21014f
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.5.1"
   window_manager:
     dependency: "direct main"
     description:

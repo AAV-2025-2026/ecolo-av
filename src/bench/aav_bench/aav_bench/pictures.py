@@ -1,19 +1,23 @@
 """
-The pretend camera's pictures: a road, and stop signs where the bench world has them.
+The pretend camera's pictures: the road, and stop signs where the bench world has them.
 
-Needs NumPy and OpenCV, not ROS. The stop sign is drawn like the real thing: a red
-octagon with a white rim and STOP, on a grey post. The stock YOLO model knows it.
+Needs NumPy and OpenCV, not ROS. The road is drawn from where the car really is: each
+pixel below the horizon is followed down to the flat ground, and coloured by where that
+point lies on the bench road (models.Road), so the lane lines move as the car does. The
+stop sign is drawn like the real thing: a red octagon with a white rim and STOP, on a grey
+post. The stock YOLO model knows it.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import math
-from typing import Sequence
+from typing import Dict, Optional, Sequence
 
 import cv2
 import numpy as np
 
-from .models import Camera, SignView
+from .models import Camera, offset, Road, SignView, Truth
 
 SKY = (205, 175, 125)      # BGR
 GRASS = (70, 130, 80)
@@ -21,21 +25,55 @@ ROAD = (95, 95, 95)
 PAINT = (235, 235, 235)
 
 
-def road(cam: Camera) -> np.ndarray:
-    """Draw sky, grass and a straight road with its edge lines, seen from the camera."""
+@dataclass
+class _Ground:
+    """Where each pixel below the horizon meets the ground, from the camera (level axes)."""
+
+    pixels: np.ndarray    # flat indices into the picture
+    forward: np.ndarray   # m
+    left: np.ndarray      # m
+    size: np.ndarray      # m across one pixel, sideways: for smooth edges
+
+
+_GROUND: Dict[tuple, _Ground] = {}
+
+
+def _ground(cam: Camera) -> _Ground:
+    key = (cam.width, cam.height, cam.focal, cam.height_above_ground, cam.pitch)
+    if key not in _GROUND:
+        v, u = np.mgrid[0:cam.height, 0:cam.width].astype(np.float32)
+        left = -(u - cam.width / 2.0) / cam.focal      # a ray through each pixel's centre
+        up = -(v - cam.height / 2.0) / cam.focal
+        c, s = math.cos(cam.pitch), math.sin(cam.pitch)
+        forward, rise = c + s * up, -s + c * up         # tipped down with the camera
+        down = rise < -1e-6
+        reach = cam.height_above_ground / -rise[down]
+        _GROUND[key] = _Ground(np.flatnonzero(down), reach * forward[down], reach * left[down],
+                               reach / cam.focal)
+    return _GROUND[key]
+
+
+def _cover(inside: np.ndarray, size: np.ndarray) -> np.ndarray:
+    """Return how much of a pixel lies inside an edge: `inside` m in from it (- = outside)."""
+    return np.clip(0.5 + inside / size, 0.0, 1.0)[:, None]
+
+
+def road(cam: Camera, truth: Optional[Truth] = None, lane: Optional[Road] = None) -> np.ndarray:
+    """Draw sky, grass and the bench road with its two lines, as the car sees them."""
+    truth = truth or Truth(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    lane = lane or Road()
+    g = _ground(cam)
+    x0, y0 = offset(truth, cam.xyz)
+    c, s = math.cos(truth.yaw), math.sin(truth.yaw)
+    across = lane.lateral(x0 + c * g.forward - s * g.left, y0 + s * g.forward + c * g.left)
+    half = lane.lane_width / 2.0
+    tarmac = _cover(half + lane.shoulder - np.abs(across), g.size)
+    paint = _cover(lane.line_width / 2.0 - np.abs(np.abs(across) - half), g.size)
+    colour = np.asarray(GRASS, np.float32) + tarmac * (np.subtract(ROAD, GRASS))
+    colour += paint * (np.asarray(PAINT, np.float32) - colour)
     im = np.empty((cam.height, cam.width, 3), np.uint8)
-    horizon = cam.height // 2
-    im[:horizon] = SKY
-    im[horizon:] = GRASS
-    mid = cam.width // 2
-    bottom = cam.height - 1
-    # A 3.5 m lane in perspective: a point on the ground L metres to the side, at the
-    # picture's bottom row, is L * (rows below the horizon) / (camera height) pixels out.
-    edge = int(1.75 * (bottom - horizon) / cam.height_above_ground)
-    pts = np.array([[mid - edge, bottom], [mid + edge, bottom], [mid, horizon]], np.int32)
-    cv2.fillPoly(im, [pts], ROAD)
-    for side in (-1, 1):
-        cv2.line(im, (mid + side * edge, bottom), (mid, horizon), PAINT, 3, cv2.LINE_AA)
+    im[:] = SKY
+    im.reshape(-1, 3)[g.pixels] = colour.round().astype(np.uint8)
     return im
 
 
@@ -44,7 +82,8 @@ def draw_stop_sign(im: np.ndarray, view: SignView) -> None:
     r = view.size / 2.0
     c = np.array([view.u, view.v])
     post = max(1, int(r / 8))
-    cv2.rectangle(im, (int(view.u) - post, int(view.v + r)), (int(view.u) + post, im.shape[0]),
+    foot = im.shape[0] if view.foot_v is None else min(im.shape[0], int(round(view.foot_v)))
+    cv2.rectangle(im, (int(view.u) - post, int(view.v + r)), (int(view.u) + post, foot),
                   (110, 110, 110), -1)
     angles = math.pi / 8 + np.arange(8) * math.pi / 4
 
@@ -62,9 +101,10 @@ def draw_stop_sign(im: np.ndarray, view: SignView) -> None:
                     (255, 255, 255), thick, cv2.LINE_AA)
 
 
-def scene(cam: Camera, signs: Sequence[SignView]) -> np.ndarray:
+def scene(cam: Camera, signs: Sequence[SignView], truth: Optional[Truth] = None,
+          lane: Optional[Road] = None) -> np.ndarray:
     """Draw the road, with the farthest sign first so nearer ones cover it."""
-    im = road(cam)
+    im = road(cam, truth, lane)
     for view in sorted(signs, key=lambda s: -s.distance):
         draw_stop_sign(im, view)
     return im

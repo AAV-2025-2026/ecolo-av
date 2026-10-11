@@ -28,3 +28,6 @@ Files, unchanged unless listed under Changes:
     They ignore the second Ctrl-C while cleaning up, catch `ExternalShutdownException`, and
     call `rclpy.try_shutdown()` instead of `rclpy.shutdown()`, which raised when Jazzy's own
     handler had already shut down.
+- 2026-10-11: `launch/lane_follower.launch.py`: its docstring names the lane finder
+  (`aav_lane_finder`, ours) as what publishes `/lane_geometry`, and `fake:=true` as the
+  pretend lane without a camera. The code is unchanged.

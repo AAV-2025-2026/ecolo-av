@@ -17,8 +17,9 @@ Reads TF    base_link -> each camera's frame (vehicle.yaml, through the URDF)
 Only the listed classes count (people, cyclists, cars...), and stop signs never do: they
 lock twist_mux instead (stop_sign_watcher). The maths is in ground.py: a pinhole camera
 over a flat road. Off by default until the cameras are calibrated (Q22): bench.launch.py
-and perception.launch.py camera_obstacles:=true start it, and navigation.launch.py
-camera_obstacles:=true turns on the costmap layer that reads it.
+camera_obstacles:=true starts it, or on the car the machine file's camera_obstacles part,
+and either turns on the costmap layer that reads it (navigation.launch.py
+camera_obstacles:=true).
 
 Needs no PyTorch: it runs in the default environment.
 """

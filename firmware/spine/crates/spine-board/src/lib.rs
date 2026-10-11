@@ -21,7 +21,7 @@
 //! | [`board`] | the [`Board`] trait: what differs from chip to chip |
 //! | [`calibration`] | today's numbers: addresses, steering, brake, throttle, direction |
 //! | [`actuators`] | drives the devices from `Outputs` in a safe order, and reads them |
-//! | [`wheel`] | the speed, from the wheel encoder's counter |
+//! | [`wheel`] | the speed, from the wheel encoder's counter; two spoke sensors, counted |
 //! | [`spine_board`] | the loop: [`SpineBoard`] |
 //!
 //! A board crate, in outline:
@@ -54,4 +54,4 @@ pub use actuators::{Actuators, Devices, Readings};
 pub use board::{Board, CanFrame, WheelCount};
 pub use calibration::Calibration;
 pub use spine_board::SpineBoard;
-pub use wheel::WheelSpeed;
+pub use wheel::{SpokeSensors, WheelSpeed};

@@ -37,14 +37,15 @@ perception came in on 10 October.
 
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
-| `aav_sensors` | | | `sensors.launch.py imu:= gps:= radar:= battery:=`; configs in `config/` |
+| `aav_sensors` | | | `sensors.launch.py imu:= gps:= radar:= battery:= imu_driver:= gps_driver:=`; configs in `config/` |
 | `yahboom_imu_cpp` | `/dev/aav/imu` | `/imu/data_raw`, `/imu/mag` | `/imu/mag` is in raw counts, not tesla, so it's unused |
 | stock `imu_filter_madgwick` | `/imu/data_raw` | `/imu/data` | magnetometer off |
-| stock `ublox_dgnss` | the u-blox on USB | `/gps/fix` | not in Pixi: the car only. Q18 picks the driver |
+| stock `ublox_gps` (KumarRobotics' `ublox`) | `/dev/aav/gps` | `/gps/fix` | the default GPS driver, in Pixi too. Leaves the receiver's settings as they are. Tentative until Q18 |
+| stock `ublox_dgnss` | a u-blox F9P on USB | `/gps/fix` | `gps_driver:=ublox_dgnss`. Not in Pixi: the car only |
 | `ti_ros2_driver` | `/dev/aav/radar_cmd`, `/dev/aav/radar_data` | `/radar/points` | its configs are indoor demos |
 | `battery_monitor` | `/dev/aav/battery` | `/battery_status` | |
 | stock `usb_cam` (`cameras.launch.py`) | `/dev/aav/camera_left`, `_right` | `/camera/image_raw`, `/camera/camera_info` | Linux only; the 2024-25 calibrations |
-| stock `nmea_navsat_driver` (`gps_nmea.launch.py`) | `/dev/aav/gps` | `/gps/fix` | any NMEA receiver, until Q18 picks the GPS |
+| stock `nmea_navsat_driver` (`gps_nmea.launch.py`) | `/dev/aav/gps` | `/gps/fix` | `gps_driver:=nmea`: any NMEA receiver |
 
 ## Description and localization
 
@@ -104,7 +105,7 @@ Only one runs at a time.
 | Package | Holds |
 |---|---|
 | `aav_interfaces` | `VehicleStatus` (mode, armed, e-stop, speed, steering, throttle, brake, fault bits) and the `ScriptedDrive` action |
-| `aav_bringup` | the profiles `turtle`, `sim`, `car`, `replay`, `bench`; `perception.launch.py`; the machine files `orin`, `motor_pi`, `laptop`, `all`; `rviz/drive.rviz` |
+| `aav_bringup` | the profiles `turtle`, `sim`, `car`, `replay`, `bench`; the machine files `orin`, `motor_pi`, `laptop`, `all`, which pick the car's parts, perception too; `rviz/drive.rviz` |
 
 ## Firmware
 

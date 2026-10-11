@@ -15,6 +15,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-can"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9d2e857f87ac832df68fa498d18ddc679175cf3d2e4aa893988e5601baf9438"
+dependencies = [
+ "nb",
+]
+
+[[package]]
 name = "embedded-hal"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -57,6 +66,15 @@ dependencies = [
 name = "jrk-g2"
 version = "0.1.0"
 dependencies = [
+ "embedded-hal",
+ "embedded-hal-mock",
+]
+
+[[package]]
+name = "mcp2515"
+version = "0.1.0"
+dependencies = [
+ "embedded-can",
  "embedded-hal",
  "embedded-hal-mock",
 ]

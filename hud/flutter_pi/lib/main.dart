@@ -5,7 +5,6 @@ import 'package:flutter_onscreen_keyboard/flutter_onscreen_keyboard.dart';
 import 'package:flutter_pi/data/constants.dart';
 import 'package:flutter_pi/screens/home_page.dart';
 import 'package:flutter_pi/screens/map_page.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:window_manager/window_manager.dart';
@@ -14,11 +13,6 @@ import 'package:window_manager/window_manager.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize WebRTC on Linux (Raspberry Pi)
-  if (Platform.isLinux) {
-    await WebRTC.initialize();
-  }
 
   final bool isMap = args.contains('--Map');
 

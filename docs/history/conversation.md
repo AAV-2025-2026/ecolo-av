@@ -1209,6 +1209,12 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **Real code everywhere:** every device already has a real driver; after step 1, every remaining stub gets replaced.
 - **The old folders** stay as a reference: `aav` merged what mattered, and anything missing can be found there.
 
+### The helpers stopped: restart them? Keep working; I'm going back to bed. (21:52 to 01:38)
+
+- **Why they stopped:** every new message from Ben interrupts the session, and that stops the helpers running in the background too (20:48 and 21:29). At 23:30 all five also hit the plan's usage limit, which reset at 01:10.
+- **Ben's answer (21:52):** restart them, and after any stop, restart them from where they got to, without asking again. Each commits after every working step, so a stop loses little.
+- **01:40:** all five restarted from their branches. Ben: "pick the recommended option and continue working".
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.

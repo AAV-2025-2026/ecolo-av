@@ -79,8 +79,8 @@ The Socket.IO events the app listens for keep their names and keys:
 | `mock_stop_sign_alert` | `mock_sign_detected`, `message` | `/perception/stop` |
 | `nav_state` | `distance`, `status` | the Nav2 goal |
 
-- The names still say "mock", but the data is real. Rename them only together with
-  the app.
+- The names still said "mock", but the data was real. Renamed with the app on
+  2026-10-11 (below).
 - New event `vehicle_status`: mode, armed, e-stop, a gear letter, faults. The app has
   no screen for it yet.
 - Dropped `real_speed_update`, `real_gps_update`, `real_stop_sign_alert` and
@@ -89,3 +89,30 @@ The Socket.IO events the app listens for keep their names and keys:
 - 2026-10-10: `launch/hud.launch.py`: the launch argument `gps` is now `gps_topic`.
   Included launch files share their arguments, and bench.launch.py's localization takes
   `gps:=true`, so the HUD subscribed to a topic called `/true`.
+
+## With the app's changes (2026-10-11)
+
+The app and the back end changed together (docs/hud.md, "What changed in the app").
+
+| Event (was) | Now | Keys (were) | Keys now |
+|---|---|---|---|
+| `mock_speed_update` | `speed` | `mock_speed` | `speed` |
+| `mock_gps_update` | `position` | `mock_latitude`, `mock_longitude` | `latitude`, `longitude` |
+| `mock_stop_sign_alert` | `stop_sign` | `mock_sign_detected`, `message` | `detected`, `message` |
+| none | `battery` | none | `voltage`, `percentage` (0-100), `current`; null if not measured |
+
+- `hud_server.py`: publishes `/estop` true for the app's e-stop button: at once, then
+  every 0.1 s, five in all, reliable like the backends' subscriptions. It never
+  publishes false. The press also cancels the HUD's route. If nothing subscribes
+  to `/estop`, `POST /estop` answers 503, so the app never says "sent" to nobody.
+- `web.py`: `POST /estop`, which can only set the e-stop. `POST /cancel` is now what the
+  map page's Unlock and Clear send.
+- `hud_server.py`, `events.py`: subscribes to `/battery_status` and sends `battery`.
+- Dropped MediaMTX: the `stream_info` event, `GET /stream-info`, and the parameters
+  `mediamtx_host`, `mediamtx_webrtc_port`, `mediamtx_rtsp_port`, `stream_path`. The
+  camera page shows `/camera/latest.png` now.
+- `/camera/latest.png` and `/camera/stream` serve no picture older than
+  `camera_stale_after` (2 s): an old picture mustn't pass for a live one.
+- `launch/hud.launch.py`: arguments `hud_host` and `hud_port`, so the bench can run the
+  back end on another port (a Mac's AirPlay holds 5000).
+- `test_events.py` checks that the app's `hud_events.dart` lists the same event names.
