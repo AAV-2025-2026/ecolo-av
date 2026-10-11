@@ -116,6 +116,48 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 
 Run it after changing anything between the drivers and the spine.
 
+## Lane keeping
+
+The whole lane-keeping loop runs on the bench. `mock_camera` draws the road from where the
+car really is, `lane_finder` finds the lines, and `control_interface` steers on
+`/cmd_vel/ai`.
+
+```bash
+pixi run bench lane:=true nav:=false start_y:=0.3   # from 0.3 m left of the centre
+pixi run bench-check --lane                         # the same, measured: 1 more minute
+```
+
+| Argument | Default | Does |
+|---|---|---|
+| `lane` | `false` | `true`: lane keeping from the camera (`lane_finder`, `control_interface`). `fake`: `control_interface` on a pretend lane, without the camera |
+| `start_y` | `0.0` | m: start the car this far left of the road's centre (- = right) |
+| `start_yaw` | `0.0` | rad: start it turned this far left of the road. The EKFs still think it faces east |
+| `bend_radius` | straight | m: bend the road from 30 m on, + to the left, - to the right |
+
+- **The road** (`bench.yaml`): one lane 3.5 m wide, running east along y = 0, with
+  0.15 m lines and 0.5 m of tarmac outside them.
+- **The picture follows the car:** each pixel below the horizon is traced down to the
+  ground and coloured by where it lands on the road. About 4 ms a picture.
+- **Nothing else drives:** `nav:=false` leaves out Nav2, which outranks lane keeping.
+
+### What `bench-check --lane` checks
+
+After the usual checks, it starts the bench again, with lane keeping, the car 0.3 m left of
+the centre.
+
+| Check | What passes | Result, Ben's Mac, 11 October: 6 runs |
+|---|---|---|
+| Start-up, graph against the contract | as above, with lane keeping running | [[works]] |
+| Lane keeping | back within 5 cm of the centre by 25 s of driving, and still there at 30 s; under 10 cm past the centre; both lines seen in 9 pictures of 10 | [[works]] 0.30 m to 0.00 m: within 5 cm after 5.6-6.7 s (about 5 m of road), 2 cm past the centre at most |
+| The finder against the truth | (reported) | 0.8-1.2 cm out on average, both lines in every picture |
+
+- **A busy computer:** a gap of 200 ms in the commands latches the spine, and the car
+  stops. The check arms it again, as a safety driver would, and only counts the time the
+  car moves. It says how many times that happened.
+- **A bend** isn't in the check. By hand, with `bend_radius:=60` (left, from 30 m on): the
+  car cuts in up to 8 cm as the bend comes into view, then runs 4-5 cm inside the centre
+  round it, both lines seen in every picture.
+
 ## What the bench has found already
 
 | Found | Fixed |

@@ -162,15 +162,15 @@ topics:
   /camera/image_raw:
     type: sensor_msgs/msg/Image
     pub: [camera_left, mock_camera, test_camera]
-    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server]
+    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder]
     live: [bench]
     note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.
   /camera/camera_info:
     type: sensor_msgs/msg/CameraInfo
     pub: [camera_left, mock_camera, test_camera]
-    sub: []
+    sub: [lane_finder]
     live: [bench]
-    note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration).
+    note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here.
 
   # --- perception ---
   /radar/clusters:
@@ -204,9 +204,14 @@ topics:
 
   /lane_geometry:
     type: aav_lane_geometry/msg/LaneGeometry
-    pub: [fake_lane_geometry_pub]
+    pub: [lane_finder, fake_lane_geometry_pub]
     sub: [control_interface]
-    note: The lane lines as polynomials, the car's offset and the curvature. The lane finder that makes them from the camera is missing; fake_lane_geometry_pub stands in.
+    note: "One per camera picture, from lane_finder (aav_lane_finder, classic OpenCV), in base_link. vehicle_offset_m - the car from the lane's centre, 3 m ahead (lookahead), + = the car is left of it. Each line as y = a x^2 + b x + c (m), its radius (m; 9999 = straight or not seen) and confidence (0-1); the lane width (m). Bench - lane:=true runs lane_finder, lane:=fake runs fake_lane_geometry_pub (its polynomials are pixels)."
+  /lane_geometry/image:
+    type: sensor_msgs/msg/Image
+    pub: [lane_finder]
+    sub: []
+    note: The bird's-eye view, with the paint, the windows and the lines lane_finder found, for RViz or Foxglove. Only with debug_image true.
   /lane_geometry_status:
     type: std_msgs/msg/String
     pub: [control_interface]

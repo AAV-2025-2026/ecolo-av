@@ -10,6 +10,14 @@ mock_camera:
     height: 360
     focal_px: 343.0           # the 2024-25 calibration (cameras/left.ini) scaled to 640 wide
     rate_hz: 10.0
+    # The road: one lane between two painted lines, running east. The car starts on its
+    # centre line (spine_sim's start_y moves it). bend_radius bends it from bend_x on.
+    road_y: 0.0               # m north of the datum: the lane's centre line
+    lane_width: 3.5           # m between the lines' centres
+    line_width: 0.15          # m of paint
+    shoulder: 0.5             # m of tarmac outside each line
+    bend_x: 30.0              # m east: past the stop sign
+    bend_radius: 0.0          # m: + bends left, - right, 0 straight
 
 mock_gps:
   ros__parameters:

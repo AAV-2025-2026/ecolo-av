@@ -4,6 +4,7 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 
     pixi run bench-check          (about 2 minutes; nothing else on the network sees it)
     pixi run -e ml bench-check --perception    (adds YOLO and the stop sign: 3 minutes)
+    pixi run bench-check --lane   (adds lane keeping, in a second bench run: 1 more minute)
 
 1. Starts bench.launch.py on a private ROS domain, local to this computer.
 2. Checks the running graph against docs/interfaces.yaml (check_graph.py --profile bench).
@@ -14,17 +15,22 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 6. With --perception: Nav2 drives 40 m east, past the bench's stop sign. The car must stop
    before the sign, wait, and go on to the goal. The camera's picture with YOLO's boxes, at
    the moment it stopped, is saved to /tmp/aav-bench-stop-sign.png.
+7. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
+   the car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
+   back within 5 cm, and keep it there. Its own start-up and graph checks come first.
 
 Prints a table and exits 1 if anything failed. Run it after changing anything between the
 drivers and the spine.
 """
 
+import bisect
 import math
 import os
 import random
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -35,6 +41,7 @@ os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
 
 from aav_interfaces.action import ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import VehicleStatus  # noqa: E402
+from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav_msgs.msg import Odometry  # noqa: E402
 import rclpy  # noqa: E402
@@ -43,8 +50,22 @@ from rclpy.node import Node  # noqa: E402
 from sensor_msgs.msg import Image  # noqa: E402
 from std_msgs.msg import Bool  # noqa: E402
 from std_srvs.srv import SetBool  # noqa: E402
+import yaml  # noqa: E402
 
 RESULTS = []
+
+# Lane keeping (--lane): where the car starts, what counts as back on the centre line,
+# and how long it has to get there.
+LANE_START = 0.3        # m left of the road's centre
+LANE_BAND = 0.05        # m either side of the centre
+LANE_TIME = 30.0        # s of driving, from when the car starts moving
+LOOKAHEAD = 3.0         # m: where lane_finder measures the offset (its config, lookahead)
+with open(os.path.join(ROOT, 'src', 'bench', 'aav_bench', 'config', 'bench.yaml')) as f:
+    ROAD_Y = yaml.safe_load(f)['mock_camera']['ros__parameters']['road_y']   # m: the centre
+
+
+def seconds(stamp):
+    return stamp.sec + stamp.nanosec * 1e-9
 
 
 def result(name, ok, detail):
@@ -57,11 +78,15 @@ class Probe(Node):
     def __init__(self):
         super().__init__('bench_check')
         self.truth = self.glob = self.status = None
-        self.create_subscription(Odometry, '/bench/truth', lambda m: setattr(self, 'truth', m), 10)
+        # Every truth sample and every lane message, from the start: lane keeping starts the
+        # moment the spine arms, before its check begins.
+        self.track, self.lanes = [], []
+        self.create_subscription(Odometry, '/bench/truth', self.on_truth, 10)
+        self.create_subscription(LaneGeometry, '/lane_geometry', self.on_lane, 10)
         self.create_subscription(Odometry, '/odometry/global',
                                  lambda m: setattr(self, 'glob', m), 10)
-        self.create_subscription(VehicleStatus, '/vehicle/status',
-                                 lambda m: setattr(self, 'status', m), 10)
+        self.latches = []   # (stamp, faults) each time the spine stops being armed
+        self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, 10)
         self.estop = self.create_publisher(Bool, '/estop', 10)
         self.hw_estop = self.create_publisher(Bool, '/bench/hw_estop', 10)
         self.arm_client = self.create_client(SetBool, '/spine/arm')
@@ -73,6 +98,22 @@ class Probe(Node):
         self.create_subscription(Image, '/perception/detections/image',
                                  lambda m: setattr(self, 'picture', m), 2)
         self.stop_picture = None
+
+    def on_truth(self, msg):
+        self.truth = msg
+        q = msg.pose.pose.orientation
+        self.track.append((seconds(msg.header.stamp), msg.pose.pose.position.x,
+                           msg.pose.pose.position.y, 2.0 * math.atan2(q.z, q.w),
+                           msg.twist.twist.linear.x))
+
+    def on_status(self, msg):
+        if self.status is not None and self.status.armed and not msg.armed:
+            self.latches.append((seconds(msg.header.stamp), msg.faults))
+        self.status = msg
+
+    def on_lane(self, msg):
+        self.lanes.append((seconds(msg.header.stamp), msg.vehicle_offset_m,
+                           msg.both_lanes_detected))
 
     def on_stop(self, msg):
         if msg.data and not self.stop and self.picture is not None:
@@ -125,12 +166,21 @@ class Probe(Node):
 
 def check_estop(probe, name, publisher):
     """Drive, press `publisher`'s e-stop at 1 m/s, check the stop, release, re-arm."""
-    handle = probe.send_drive(hold=8.0)
-    if handle is None or not handle.accepted:
-        result(name, False, 'the scripted drive was refused')
-        return
-    probe.spin_for(6.0)
-    v_before = probe.truth.twist.twist.linear.x
+    for attempt in range(2):
+        if not probe.status.armed:
+            probe.arm_and_hold()
+        handle = probe.send_drive(hold=8.0)
+        if handle is None or not handle.accepted:
+            result(name, False, 'the scripted drive was refused')
+            return
+        probe.spin_for(6.0)
+        v_before = probe.truth.twist.twist.linear.x
+        if v_before > 0.5 or probe.status.armed:
+            break
+        # The spine latched before the car got going (a gap in commands on a busy
+        # computer), which isn't what this checks: stop the drive, and start again once.
+        handle.cancel_goal_async()
+        probe.spin_for(2.0)
     probe.press(publisher, True, 3.0)
     v_after = probe.truth.twist.twist.linear.x
     reported = probe.status is not None and probe.status.estop_active
@@ -186,13 +236,147 @@ def check_stop_sign(probe):
             print(f'could not save the picture: {e}', flush=True)
 
 
-def main():
-    perception = '--perception' in sys.argv[1:]
+def check_lane_keeping(probe):
+    """
+    Lane keeping alone: from LANE_START m left of the road's centre, the car must come back.
+
+    control_interface drives from the moment the spine arms, so this reads the track the
+    probe has kept since start-up: LANE_TIME seconds of driving, from when the car started
+    moving. On a busy computer a gap in commands can latch the spine, which stops the car:
+    the check arms it again, as a safety driver would, and its clock only runs while the
+    car moves.
+    """
+    def moved():
+        return next((s for s in probe.track if s[4] > 0.1), None)
+
+    if not probe.spin_for(30.0, lambda: moved() is not None):
+        result('lane keeping', False, f'the car never moved ({len(probe.lanes)} lane messages)')
+        return
+    t0, x0, y0 = moved()[:3]
+
+    def driven():
+        """Return (seconds of driving so far, sample) for each truth sample since t0."""
+        clock, out, last = 0.0, [], None
+        for s in probe.track:
+            if s[0] >= t0:
+                if last is not None and s[4] > 0.05:
+                    clock += s[0] - last[0]
+                out.append((clock, s))
+                last = s
+        return out
+
+    give_up = time.monotonic() + 3.0 * LANE_TIME
+    while driven()[-1][0] < LANE_TIME and time.monotonic() < give_up:
+        probe.spin_for(0.5)
+        if not probe.status.armed:
+            probe.arm()
+    run = [(c, s) for c, s in driven() if c <= LANE_TIME]
+    clocks, stamps = [c for c, _ in run], [s[0] for _, s in run]
+
+    def nearest(values, v):
+        i = min(bisect.bisect_left(values, v), len(values) - 1)
+        return i - 1 if i and v - values[i - 1] < values[i] - v else i
+
+    def at(t):
+        """Return the truth sample nearest to time t (s, a stamp)."""
+        return run[nearest(stamps, t)][1]
+
+    def after(c):
+        """Return the truth sample after c seconds of driving."""
+        return run[nearest(clocks, c)][1]
+
+    start = y0 - ROAD_Y
+    outside = [c for c, s in run if abs(s[2] - ROAD_Y) > LANE_BAND]
+    settled = outside[-1] if outside else 0.0   # s of driving: within the band from then on
+    over = max(0.0, max(-math.copysign(1.0, start) * (s[2] - ROAD_Y) for _, s in run))
+    last = [s for c, s in run if c >= clocks[-1] - 5.0]
+    end = sum(s[2] for s in last) / len(last) - ROAD_Y
+    heading = sum(s[3] for s in last) / len(last)
+    # lane_finder against the truth: the car's offset LOOKAHEAD m ahead, square to the road.
+    errors, both = [], 0
+    for t, offset, two in (m for m in probe.lanes if t0 <= m[0] <= stamps[-1]):
+        _, _, y, yaw, _ = at(t)
+        errors.append(abs(offset - (y - ROAD_Y + LOOKAHEAD * math.sin(yaw)) / math.cos(yaw)))
+        both += two
+    every = '  '.join(f'{after(k)[2] - ROAD_Y:+.2f}' for k in range(0, int(LANE_TIME) + 1, 3))
+    print(f'      the offset (m), every 3 s of driving: {every}', flush=True)
+    latches = sum(t0 <= s[0] <= stamps[-1] for s in probe.latches)
+    ok = (clocks[-1] >= LANE_TIME - 1.0 and settled <= LANE_TIME - 5.0 and over < 0.10
+          and abs(end) < LANE_BAND and bool(errors) and both >= 0.9 * len(errors))
+    finder = (f'lane_finder {100 * sum(errors) / len(errors):.1f} cm from the truth on average, '
+              f'both lines in {both} of {len(errors)} pictures' if errors else 'no lane messages')
+    times = 'once' if latches == 1 else f'{latches} times'
+    paused = (f'; the spine latched {times} (gaps in the commands: a busy computer?) and was '
+              'armed again' if latches else '')
+    result('lane keeping', ok,
+           f'{start:+.2f} m to {end:+.2f} m, within {100 * LANE_BAND:.0f} cm after '
+           f'{settled:.1f} s and {after(settled)[1] - x0:.1f} m, overshoot {100 * over:.0f} cm, '
+           f'heading {heading:+.3f} rad; {finder}{paused}')
+
+
+def check_contract(probe, env, tag):
+    """Check the running graph against docs/interfaces.yaml (check_graph.py --profile bench)."""
+    # Up to three tries, 10 s apart: a node's first start after a build can take 20 s
+    # on a Mac (it loads PCL and VTK, and macOS checks the new binary). The probe spins
+    # meanwhile, so its track of the car has no gaps.
+    for attempt in range(3):
+        with tempfile.TemporaryFile('w+') as out:
+            graph = subprocess.Popen(
+                [sys.executable, os.path.join(ROOT, 'tools', 'check_graph.py'), '--profile',
+                 'bench'], cwd=ROOT, env=env, stdout=out, stderr=subprocess.DEVNULL, text=True)
+            probe.spin_for(60.0, lambda: graph.poll() is not None)
+            code = graph.wait()
+            out.seek(0)
+            fails = [line for line in out.read().splitlines() if line.startswith('FAIL')]
+        if code == 0 and not fails:
+            break
+        probe.spin_for(10.0)
+    result(f'graph vs contract{tag}', code == 0 and not fails,
+           f'{len(fails)} failures' + (': ' + '; '.join(fails[:3]) if fails else ''))
+
+
+def check_drive(probe):
+    """Drive the scripted profile; compare the distance with the plan, and the EKF with truth."""
+    for attempt in range(2):
+        if not probe.status.armed:
+            # A gap in commands latched the spine (a busy computer): arm it again, or the
+            # drive runs out its plan standing still.
+            probe.arm_and_hold()
+        since = probe.track[-1][0]
+        x0, y0 = probe.xy(probe.truth)
+        handle = probe.send_drive()
+        if handle is None or not handle.accepted:
+            result('scripted drive', False, 'refused')
+            return
+        done = handle.get_result_async()
+        probe.spin_for(40.0, lambda: done.done())
+        probe.spin_for(3.0)
+        x1, y1 = probe.xy(probe.truth)
+        travelled = math.hypot(x1 - x0, y1 - y0)
+        # The plan is 6.5 m. The spine's speed loop trails a ramp by about a second, so
+        # 5-6 m is normal; the range catches a stretched plan (22 m) or no motion at all.
+        good = 4.5 < travelled < 8.0
+        if good or not any(t >= since for t, _ in probe.latches):
+            break
+        # The spine latched on the way, which stopped the car: not what this checks.
+        # Drive the plan again, once.
+    again = ', the second time: the spine latched during the first' if attempt else ''
+    result('scripted drive', good,
+           f'{travelled:.2f} m (plan: 6.5 m; the speed loop trails it by about 1 s){again}')
+    gx, gy = probe.xy(probe.glob)
+    error = math.hypot(gx - x1, gy - y1)
+    result('global EKF vs truth', error < 1.5, f'{error:.2f} m apart (GPS noise is 0.5 m)')
+
+
+def session(launch_args, checks, log_path, label=''):
+    """Start bench.launch.py with these arguments, run the checks on it, and stop it."""
+    tag = f' ({label})' if label else ''
     env = dict(os.environ)
-    print(f'Starting bench mode on ROS domain {env["ROS_DOMAIN_ID"]} (local only)...', flush=True)
-    log = open('/tmp/aav-bench-check.log', 'w')
+    print(f'Starting bench mode{tag} on ROS domain {env["ROS_DOMAIN_ID"]} (local only)...',
+          flush=True)
+    log = open(log_path, 'w')
     launch = subprocess.Popen(['ros2', 'launch', 'aav_bringup', 'bench.launch.py', 'rviz:=false',
-                               f'perception:={str(perception).lower()}'],
+                               *launch_args],
                               cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
                               start_new_session=True)
     rclpy.init()
@@ -201,48 +385,13 @@ def main():
         up = probe.spin_for(90.0, lambda: probe.status is not None and probe.glob is not None
                             and probe.truth is not None)
         armed = up and probe.arm_and_hold()
-        result('start-up', armed, 'the spine is armed and both EKFs are running' if armed
+        result(f'start-up{tag}', armed, 'the spine is armed and both EKFs are running' if armed
                else 'no spine status, truth or global odometry within 90 s' if not up
                else 'the spine would not stay armed')
-        if not armed:
-            return 1
-
-        # Up to three tries, 10 s apart: a node's first start after a build can take 20 s
-        # on a Mac (it loads PCL and VTK, and macOS checks the new binary).
-        for attempt in range(3):
-            graph = subprocess.run([sys.executable, os.path.join(ROOT, 'tools', 'check_graph.py'),
-                                    '--profile', 'bench'], cwd=ROOT, env=env,
-                                   capture_output=True, text=True)
-            fails = [line for line in graph.stdout.splitlines() if line.startswith('FAIL')]
-            if graph.returncode == 0 and not fails:
-                break
-            probe.spin_for(10.0)
-        result('graph vs contract', graph.returncode == 0 and not fails,
-               f'{len(fails)} failures' + (': ' + '; '.join(fails[:3]) if fails else ''))
-
-        x0, y0 = probe.xy(probe.truth)
-        handle = probe.send_drive()
-        if handle is None or not handle.accepted:
-            result('scripted drive', False, 'refused')
-        else:
-            done = handle.get_result_async()
-            probe.spin_for(40.0, lambda: done.done())
-            probe.spin_for(3.0)
-            x1, y1 = probe.xy(probe.truth)
-            travelled = math.hypot(x1 - x0, y1 - y0)
-            # The plan is 6.5 m. The spine's speed loop trails a ramp by about a second, so
-            # 5-6 m is normal; the range catches a stretched plan (22 m) or no motion at all.
-            result('scripted drive', 4.5 < travelled < 8.0,
-                   f'{travelled:.2f} m (plan: 6.5 m; the speed loop trails it by about 1 s)')
-            gx, gy = probe.xy(probe.glob)
-            error = math.hypot(gx - x1, gy - y1)
-            result('global EKF vs truth', error < 1.5,
-                   f'{error:.2f} m apart (GPS noise is 0.5 m)')
-
-        check_estop(probe, 'software e-stop', probe.estop)
-        check_estop(probe, 'hardware e-stop', probe.hw_estop)
-        if perception:
-            check_stop_sign(probe)
+        if armed:
+            check_contract(probe, env, tag)
+            for check in checks:
+                check(probe)
     finally:
         probe.destroy_node()
         rclpy.try_shutdown()
@@ -251,11 +400,30 @@ def main():
             launch.wait(timeout=20)
         except subprocess.TimeoutExpired:
             os.killpg(launch.pid, signal.SIGKILL)
+        log.close()
+
+
+def main():
+    args = sys.argv[1:]
+    perception = '--perception' in args
+    checks = [check_drive,
+              lambda probe: check_estop(probe, 'software e-stop', probe.estop),
+              lambda probe: check_estop(probe, 'hardware e-stop', probe.hw_estop)]
+    if perception:
+        checks.append(check_stop_sign)
+    logs = ['/tmp/aav-bench-check.log']
+    session([f'perception:={str(perception).lower()}'], checks, logs[0])
+    if '--lane' in args:
+        # Its own run: control_interface drives whenever it sees the lane, so it would take
+        # the wheel between the other checks. Nothing else drives here: no Nav2.
+        logs.append('/tmp/aav-bench-check-lane.log')
+        session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'],
+                [check_lane_keeping], logs[1], 'lane')
 
     print('\n| Check | Result | Detail |\n|---|---|---|')
     for name, ok, detail in RESULTS:
         print(f'| {name} | {"✅" if ok else "❌"} | {detail} |')
-    print('\nThe bench log: /tmp/aav-bench-check.log')
+    print(f'\nThe bench log: {", ".join(logs)}')
     return 0 if all(ok for _, ok, _ in RESULTS) else 1
 
 

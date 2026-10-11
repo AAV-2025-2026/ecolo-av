@@ -152,15 +152,87 @@ A separate Pixi environment, so nobody downloads PyTorch unless they want it: Py
 
 ## Lane keeping
 
-- `control_interface` reads `/lane_geometry` (the lane lines as polynomials, the car's
-  offset and the curvature) and steers with a PID through five states (keep, change,
-  committed, stopping, resuming).
+Two nodes, from the camera to the wheels. `lane_finder` (ours) finds the lane;
+`control_interface` (the 2025-26 team's) steers by it.
+
+```
+/camera/image_raw ─► lane_finder ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai
+```
+
+![The bench camera, and what lane_finder found in it](img/lane-finder.png)
+
+| In the picture | What it is |
+|---|---|
+| Left | the bench camera: the car 0.3 m left of the lane's centre |
+| Right | the bird's-eye view: the road from above, 4 m ahead (bottom) to 16 m (top) |
+| Yellow | the paint it found |
+| Boxes | the sliding windows: green found paint |
+| Blue, red | the left and right lines it fitted |
+| Green line, white line | the lane's centre, and the car's own line |
+
+### The finder
+
+Classic OpenCV, no model. A model can replace it later, on the same topic.
+
+| Step | What it does |
+|---|---|
+| 1. Bird's-eye view | warps the picture into a map of the road seen from above: 4-16 m ahead, 4 m either side, 5 cm a pixel. From the lens (`/camera/camera_info`) and the camera's place and tilt (`vehicle.yaml`). It takes the road to be flat |
+| 2. Paint | a pixel is paint when it's brighter than the road on both sides |
+| 3. Sliding windows | 12 windows climb each line, from where it starts near the car |
+| 4. Fit | a curve per line, `y = a x² + b x + c`, in metres, in `base_link` |
+| 5. The answer | the car's offset, the lane's width, each line's radius, and how sure it is |
+
+- **Speed:** 0.8 ms a picture on Ben's MacBook Pro (M4 Max), 1.2 ms in the node.
+  [[untested]] on the Orin, whose cores are slower: expect a few ms.
+- **The code:** `src/perception/aav_lane_finder`. `birds_eye.py` and `lane_lines.py`
+  hold the maths, with no ROS, and 21 tests, most on pictures of known lanes: straight,
+  off centre, turned, curved, one line, none. `lane_finder.py` is the node.
+
+### What it sends: /lane_geometry
+
+| Field | Means |
+|---|---|
+| `vehicle_offset_m` | the car from the lane's centre, 3 m ahead (m). + = the car is left of the centre, so it steers right |
+| `left_poly_a`, `_b`, `_c`, and the same for `right_` | each line as `y = a x² + b x + c` (m), in `base_link`: x forward, y left |
+| `left_curvature_m`, `right_`, `mean_` | the radius (m). 9999 = straight, or not seen |
+| `curve_direction` | +1 bends left, -1 right, 0 straight |
+| `lane_width_m` | between the lines (m). With one line, the last width seen |
+| `left_confidence`, `left_lane_detected`, and the same for `right_` | 0 to 1; a line counts from 0.3 |
+| `steering_hint` | a pure-pursuit wheel angle to the centre (rad, + = left). control_interface doesn't use it |
+
+- **One line:** the centre is half a lane beside it.
+- **No lines:** nothing detected, so control_interface slows down and stops.
+- **Why 3 m ahead:** an offset at the rear axle says nothing about which way the car
+  points. On the bench, measured there, the car weaved 0.3 m either side and ran off the
+  lane within 20 s. 3 m ahead, it comes back in about 6 s, 2 cm past the centre at most.
+
+### The steering: control_interface
+
+- It steers with a PID on the offset, through five states (keep, change, committed,
+  stopping, resuming).
 - It publishes on `/cmd_vel/ai`, the mux's slot for a learned driver. Every other driver
   outranks it.
-- Its base speed is 2 m/s; ego caps it at the car's 1 m/s.
-- [[missing]] **The line finder**: whatever turns the camera's picture into
-  `/lane_geometry`. It isn't in any repo. Until then, `fake_lane_geometry_pub` stands in
-  (`bench.launch.py lane:=true`).
+- It asks for 2 m/s; ego caps it at the car's 1 m/s.
+
+### On the bench
+
+| Command | Does |
+|---|---|
+| `pixi run bench lane:=true nav:=false start_y:=0.3` | lane keeping on the pretend camera, from 0.3 m left of the centre |
+| `pixi run bench lane:=fake` | control_interface on a pretend lane, without the camera |
+| `pixi run bench-check --lane` | the same, measured: [[works]] back within 5 cm of the centre in about 6 s, 2 cm past it at most |
+| `pixi run bench lane:=true nav:=false bend_radius:=60` | a 60 m bend to the left, from 30 m on: [[works]] within 8 cm of the centre, 4-5 cm inside it round the bend |
+
+More in [Bench mode](bench.md).
+
+### Next
+
+| Item | Waits on |
+|---|---|
+| The real camera's place, tilt and lens, in `vehicle.yaml` and its calibration | the cameras (Q22) |
+| Tune the paint test on real pictures: shadows, worn paint, glare | a recording from the car |
+| Time it on the Orin | the reflash (Q24) |
+| Hills and bumps: the warp takes the road to be flat | later, with the IMU's pitch |
 
 ## Radar clustering
 
