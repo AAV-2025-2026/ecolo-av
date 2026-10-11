@@ -138,6 +138,11 @@ Copied unchanged from the 2025-26 team, as the fallback until the spine exists.
 | `wheel_encoder_pico2/` | the Pico 2 wheel encoder | UDP port 10111: `encoder_udp` |
 | `aav_sentinel_pico2/` | a Pico 2 status display | not wired in |
 
+Build today's ESP32 firmware with `pixi run -e firmware legacy-esp32` (PlatformIO), and
+add `-t upload` to flash it. PlatformIO's downloads, about 1.5 GB, go into
+`vendor/platformio/`. Without `src/secrets.h`, the build uses the example's placeholder
+WiFi details: fine for a test build, but that board can't join the car's WiFi.
+
 !!! warning "Before driving on the legacy path"
   1. **No command timeout.** If frames stop, the last throttle stays on.
   2. **The OTA update page has no password.** Anyone on the WiFi can flash the car.

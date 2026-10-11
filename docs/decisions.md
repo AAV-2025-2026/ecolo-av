@@ -37,6 +37,7 @@ answer.
 | No QNX | `twist_mux` takes over QNX's job of picking which command wins. Hard real-time safety moves into the spine firmware and the hardware e-stop | Q23 |
 | GPS gives the global position; the model is unknown | Whether it uses RTK corrections decides how precise GPS A→B can be | Q18, Q19 |
 | Bare metal waits: only the spine firmware runs without an operating system | Ben, 9 Oct: "Maybe we will wait on this." | |
+| The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32 | Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip | Q10–Q13 |
 
 ## Proposed: for the next team meeting
 
@@ -62,7 +63,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Git | `main` lives on GitHub, in `zander1976/aav` (private), and CI tests every push; small commits, each passing the tests, with messages that give the intention |
 | Docs | short pages, sections, tables and pictures; Ben is dyslexic |
 | Port first | move everything to Jazzy as it is, then consider rewriting parts in Rust |
-| Simulators | Gazebo this year; CARLA when it supports Jazzy |
+| Simulators | Gazebo and bench mode this year; CARLA parked until it supports Jazzy (Q31) |
 
 ## Decided on 10 October, on the Mac
 
@@ -82,6 +83,9 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before the audit on the car's network: see [Simulation](simulation.md) |
 | The car's existing e-stop stays exactly as it is. The spine may read it, to report it and to stay stopped afterwards, but it never sits in the e-stop's path | Ben: "this already has an estop so we don't want to break that" |
 | A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own `mcp` environment | Ben: "Yes, read-only": see [AI apps (MCP)](mcp.md) |
+| Today's C++ boards build with PlatformIO, in a `firmware` environment. Its downloads go into `vendor/platformio/` | Ben: "We want everybody to be able to build this out of the box" |
+| CARLA is parked for this year: Gazebo and bench mode cover driving, Nav2 and the sensors | recommended, after Ben asked "do we even care": see Q31 |
+| The team's Linux machine with an NVIDIA card trains models. The 2024-25 `best.pt` is probably on it | Ben |
 
 ## Open questions
 
@@ -138,7 +142,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 | Q28 | Joystick handover | When the hold-to-drive button is released, go back to the autonomous driver, or stay stopped? |
 | Q29 | HUD | Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? |
 | Q30 | Remote driving | In scope this year? Over which link, with what latency limit? |
-| Q31 | CARLA | Which machine runs it, and which version? |
+| Q31 | CARLA | Parked this year: no confirmed Jazzy support (the fix was closed unmerged, 26 May 2026), and no Mac version. If it comes back: the NVIDIA Linux machine, with CARLA 0.9.16 (Unreal Engine 4) or 0.10 (Unreal Engine 5) |
 | **Q32** | Test rules | Who is the safety driver, what's the speed cap, what's on the pre-drive checklist, who signs it off? |
 | **Q33** | Owners | Who owns each package? |
 | **Q34** | Secrets | Have the leaked GitHub token, Firebase keys and WiFi password been revoked or changed? Who controls those accounts? |

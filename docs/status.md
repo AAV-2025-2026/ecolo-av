@@ -36,7 +36,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Lane keeping | `aav_lane_geometry` | [[works]] on a pretend lane; the lane finder is [[missing]] |
 | Radar clustering | `aav_object_detection` | [[works]] on the pretend radar |
 | HUD back end | `aav_hud` | [[works]] on the bench; the app needs small changes |
-| CARLA | `aav_carla` | [[stub]] next year |
+| CARLA | `aav_carla` | [[stub]] parked (Q31) |
 | Lidar | | [[later]] |
 
 ## Builds and tests

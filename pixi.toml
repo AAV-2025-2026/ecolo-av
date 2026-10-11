@@ -142,8 +142,22 @@ mcp = ">=2.3.0,<3"
 [feature.mcp.tasks]
 mcp = { cmd = "tools/ros.sh python3 tools/mcp_server.py", description = "The read-only MCP server, for Claude or another AI app (started by the app, through .mcp.json)" }
 
+# Today's C++ boards (the 2025-26 ESP32 and Picos), until the Rust spine replaces them.
+# PlatformIO builds and flashes them. Its own downloads (the ESP32 compilers and
+# framework, about 1 GB) go into vendor/platformio, which git ignores. No ROS here.
+[feature.firmware.dependencies]
+python = ">=3.12,<3.13"
+platformio = ">=6.2.0,<7"
+
+[feature.firmware.activation.env]
+PLATFORMIO_CORE_DIR = "$PIXI_PROJECT_ROOT/vendor/platformio"
+
+[feature.firmware.tasks]
+legacy-esp32 = { cmd = "tools/legacy_firmware.sh", description = "Build today's ESP32 firmware with PlatformIO: pixi run -e firmware legacy-esp32 (add -t upload to flash it)" }
+
 [environments]
 docs = { features = ["docs"], no-default-feature = true }
 ml = { features = ["ml"] }
 mcp = { features = ["mcp"] }
+firmware = { features = ["firmware"], no-default-feature = true }
 

@@ -115,7 +115,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
 
 - **`vendor/`** (inside this repo, but not in git): other people's source, to look things
   up. `vendor/ros2-src/` is ROS 2 Jazzy and the stock packages; `vendor/ros2-rust/` is
-  rclrs. `pixi run vendor` downloads them at the commits in `vendor/*.repos`. Never edit
+  rclrs; PlatformIO keeps its downloads in `vendor/platformio/`. `pixi run vendor` downloads
+  the source at the commits in `vendor/*.repos`. Never edit
   or build them. Search them with `grep -r` or `rg -u`: most search tools skip folders
   that git ignores.
 - **Next to this repo** (`~/Code/aav/` on Ben's Mac, `/home/ben/aav/` on oirp-spss), and

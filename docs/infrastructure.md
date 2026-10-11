@@ -87,6 +87,7 @@ because `pixi.lock` pins them all.
 | `ml` | the default, plus PyTorch, Ultralytics (YOLO) and, on Macs, Core ML tools | whoever runs the detector: `pixi run detect`, `pixi run -e ml bench perception:=true`. Linux PCs and Macs only |
 | `docs` | Markdown and WeasyPrint | `pixi run docs` |
 | `mcp` | the default, plus the MCP Python SDK | an AI app, through `.mcp.json`: [AI apps (MCP)](mcp.md) |
+| `firmware` | Python and PlatformIO, no ROS | today's C++ boards: `pixi run -e firmware legacy-esp32` |
 
 !!! note "Macs only: GNU coreutils"
   On a Mac, macOS's System Integrity Protection deletes `DYLD_LIBRARY_PATH` whenever
@@ -122,6 +123,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `detect` | YOLO on the camera's images (the `ml` environment): `pixi run detect picture:=<file>` |
 | `docs` | rebuilds the docs pages and the PDF |
 | `mcp` | the read-only MCP server, for AI apps (the `mcp` environment). The app starts it: [AI apps (MCP)](mcp.md) |
+| `legacy-esp32` | builds today's ESP32 firmware with PlatformIO (the `firmware` environment); `-t upload` flashes it |
 
 ## The scripts in tools/
 
@@ -142,6 +144,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `bench_check.py` | starts bench mode and tests the whole graph | `pixi run bench-check` |
 | `graph_picture.py` | draws the running graph, grouped by layer | `pixi run graph-picture` |
 | `mcp_server.py`, `mcp_parts.py` | the read-only MCP server for AI apps, and its parts | an AI app, through `.mcp.json` |
+| `legacy_firmware.sh` | builds today's ESP32 firmware with PlatformIO | `pixi run -e firmware legacy-esp32` |
 | `tests/` | the tools' own tests: the MCP server's parts, and its smoke test | inside `pixi run test` |
 | `get_models.sh` | downloads the stock YOLO model, checksum pinned | `pixi run get-models` |
 | `udev/99-aav.rules` | stable device names on the car (`/dev/aav/imu`, ...) | install on the car's Linux computers |

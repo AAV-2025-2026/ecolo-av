@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, YOLO, stop signs, lanes and radar</h1>
-<div class="meta">8 min read · 9 sections</div></header>
+<div class="meta">10 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -38,7 +38,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-chain">The chain</a><a href="#the-packages">The packages</a><a href="#stop-signs">Stop signs</a><a href="#models">Models</a><a href="#where-it-runs">Where it runs</a><a href="#lane-keeping">Lane keeping</a><a href="#radar-clustering">Radar clustering</a><a href="#on-the-car">On the car</a><a href="#still-to-do">Still to do</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-chain">The chain</a><a href="#the-packages">The packages</a><a href="#stop-signs">Stop signs</a><a href="#models">Models</a><a href="#better-models-to-try">Better models to try</a><a href="#where-it-runs">Where it runs</a><a href="#lane-keeping">Lane keeping</a><a href="#radar-clustering">Radar clustering</a><a href="#on-the-car">On the car</a><a href="#still-to-do">Still to do</a></nav>
 <div class="lead"><p>What the car sees, and what it does about it. All of it runs on the bench today. On the
 car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).</p></div>
 <section class="card"><h2 id="the-chain">The chain</h2>
@@ -181,8 +181,46 @@ YOLO11 nano model (5.6 MB, its checksum pinned). It was trained on the COCO data
 </tbody>
 </table></div>
 <p>The 2024-25 team's own model, <code>best.pt</code>, is in no repo: their code loaded it from
-<code>~/Yolo/Capstone/runs/detect/train7/weights/best.pt</code> on someone's computer. Ultralytics'
-models and code are licensed AGPL-3.0.</p>
+<code>~/Yolo/Capstone/runs/detect/train7/weights/best.pt</code> on someone's computer. It's
+probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct), which can train
+new models too. Ultralytics' models and code are licensed AGPL-3.0.</p>
+</section>
+<section class="card"><h2 id="better-models-to-try">Better models to try</h2>
+<p>The 2024-25 model learned one label from the team's own pictures. Open models trained on
+far more pictures may do better:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>Open models</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Everyday objects, stop signs included</td>
+<td>YOLO11 (ours now), RT-DETR, RF-DETR</td>
+</tr>
+<tr>
+<td>Anything named in words, like "traffic cone"</td>
+<td>YOLO-World, Grounding DINO, OWLv2</td>
+</tr>
+<tr>
+<td>Lane lines and the drivable area</td>
+<td>YOLOPv2, TwinLiteNet</td>
+</tr>
+<tr>
+<td>Distance from one camera</td>
+<td>Depth Anything V2</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The fair test:</strong> record the car's cameras once, then run each model on the same
+  recording.</li>
+<li><strong>Several at once:</strong> any number of nodes can read the same camera topic; each
+  publishes its own result.</li>
+<li><strong>Licences:</strong> check each one before it goes on the car.</li>
+</ul>
 </section>
 <section class="card"><h2 id="where-it-runs">Where it runs</h2>
 <div class="table-wrap"><table>
@@ -292,6 +330,24 @@ Orin.</p>
 <p><code>aav_bringup perception.launch.py</code> starts the camera, the detector, the watcher and the
 radar clustering, next to <code>car.launch.py</code>, on the Orin. When <code>car.launch.py</code> next changes,
 they become parts in its machine files.</p>
+<ul>
+<li><strong>From a Mac:</strong> a Mac on the car's network can run the detector on the car's cameras.
+  Raw images are too big for WiFi, so the cameras should also publish compressed ones.</li>
+<li><strong>Into the costmap:</strong> a camera detection needs a distance first (a stereo pair, a depth
+  model, or the camera's height above a flat road). Then it's a point on the ground, and
+  Nav2's costmap marks it like a radar or lidar point. Stop signs never go in the
+  costmap: they lock the mux.</li>
+</ul>
+<h3 id="isaac-ros-nvidia">Isaac ROS (NVIDIA)</h3>
+<ul>
+<li><strong>Not needed for the detector:</strong> it already uses TensorRT on the Orin, through
+  Ultralytics.</li>
+<li><strong>Jazzy:</strong> Isaac ROS 4.6 (18 Aug 2026) is the last release for Jazzy, and supports the
+  Orin on JetPack 7.2. Isaac ROS 5.0 (21 Sept 2026) moved to ROS 2 Lyrical.</li>
+<li><strong>Later, maybe:</strong> nvblox (a costmap from cameras), visual SLAM and stereo depth. It runs
+  in NVIDIA's Docker containers, not in Pixi, and has no Mac version: it needs CUDA.
+  <a href="https://nvidia-isaac-ros.github.io/releases/index.html">Releases</a></li>
+</ul>
 </section>
 <section class="card"><h2 id="still-to-do">Still to do</h2>
 <div class="table-wrap"><table>
@@ -303,8 +359,8 @@ they become parts in its machine files.</p>
 </thead>
 <tbody>
 <tr>
-<td>Find <code>best.pt</code> and the training pictures</td>
-<td>the 2024-25 team</td>
+<td>Find <code>best.pt</code> and the training pictures: probably on the team's NVIDIA Linux machine</td>
+<td>which machine, and access</td>
 </tr>
 <tr>
 <td>Back up the Orin: the 2025-26 detector lives only there</td>

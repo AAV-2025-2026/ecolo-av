@@ -8,6 +8,10 @@ Not ours, and not in git. Only this README and the lists are committed.
 | `ros2-src.repos` | `vendor/ros2-src/` | ROS 2 Jazzy's own source (`core/`), and the stock packages we use (`ecosystem/`): Nav2, robot_localization, ros_gz, twist_mux and more | about 550 MB |
 | `ros2-rust.repos` | `vendor/ros2-rust/` | rclrs (ROS in Rust), its examples, and its build tools | about 13 MB |
 
+PlatformIO keeps its downloads here too, in `vendor/platformio/` (about 1.5 GB): the
+compilers and framework for today's C++ boards. `pixi run -e firmware legacy-esp32`
+fills it.
+
 ## Rules
 
 - **Look, don't touch.** Never edit, build or commit anything in here. Our code lives in

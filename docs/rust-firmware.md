@@ -66,8 +66,9 @@ it, because each needs its chip's toolchain.
 | Classic ESP32 (today's board) | Xtensa | [[missing]] needs Espressif's `espup` installer | `espflash` |
 | Arduino (AVR) | `avr-*` | [[missing]] needs nightly Rust (`avr-hal`) | `ravedude` |
 
-> An ARM chip (Pico 2 or STM32) keeps the whole toolchain inside Pixi. That's worth
-> weighing in Q10–Q13.
+> An ARM chip (Pico 2 or STM32) keeps the whole toolchain inside Pixi. Ben said yes to
+> one on 10 Oct; the team confirms the chip in Q10–Q13. For CAN, an STM32 has a CAN
+> controller built in. A Pico 2 needs an add-on CAN chip, such as an MCP2515 on SPI.
 
 ## Done so far
 

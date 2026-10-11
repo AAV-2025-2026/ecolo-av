@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">14 min read · 8 sections</div></header>
+<div class="meta">15 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -156,6 +156,11 @@ answer.</p>
 <td>Ben, 9 Oct: "Maybe we will wait on this."</td>
 <td></td>
 </tr>
+<tr>
+<td>The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32</td>
+<td>Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip</td>
+<td>Q10–Q13</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -235,7 +240,7 @@ answer.</p>
 </tr>
 <tr>
 <td>Simulators</td>
-<td>Gazebo this year; CARLA when it supports Jazzy</td>
+<td>Gazebo and bench mode this year; CARLA parked until it supports Jazzy (Q31)</td>
 </tr>
 </tbody>
 </table></div>
@@ -304,6 +309,18 @@ answer.</p>
 <tr>
 <td>A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own <code>mcp</code> environment</td>
 <td>Ben: "Yes, read-only": see <a href="mcp.html">AI apps (MCP)</a></td>
+</tr>
+<tr>
+<td>Today's C++ boards build with PlatformIO, in a <code>firmware</code> environment. Its downloads go into <code>vendor/platformio/</code></td>
+<td>Ben: "We want everybody to be able to build this out of the box"</td>
+</tr>
+<tr>
+<td>CARLA is parked for this year: Gazebo and bench mode cover driving, Nav2 and the sensors</td>
+<td>recommended, after Ben asked "do we even care": see Q31</td>
+</tr>
+<tr>
+<td>The team's Linux machine with an NVIDIA card trains models. The 2024-25 <code>best.pt</code> is probably on it</td>
+<td>Ben</td>
 </tr>
 </tbody>
 </table></div>
@@ -511,7 +528,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q31</td>
 <td>CARLA</td>
-<td>Which machine runs it, and which version?</td>
+<td>Parked this year: no confirmed Jazzy support (the fix was closed unmerged, 26 May 2026), and no Mac version. If it comes back: the NVIDIA Linux machine, with CARLA 0.9.16 (Unreal Engine 4) or 0.10 (Unreal Engine 5)</td>
 </tr>
 <tr>
 <td><strong>Q32</strong></td>

@@ -38,7 +38,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-next-year">CARLA: next year</a><a href="#when-nothing-moves">When nothing moves</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-parked">CARLA: parked</a><a href="#when-nothing-moves">When nothing moves</a></nav>
 <div class="lead"><p>Every backend takes the same <code>/ego/actuator_cmd</code>, so the drivers, mux, ego and
 localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
 the ladder one rung at a time.</p>
@@ -187,14 +187,20 @@ the car.</p>
 <p><code>tools/replay_commands.sh bags/&lt;the bag&gt;</code> plays the recorded commands back into the mux
 as <code>replay</code> (priority 40). It's open loop, so the car drifts from the original path.</p>
 </section>
-<section class="card"><h2 id="carla-next-year">CARLA: next year</h2>
+<section class="card"><h2 id="carla-parked">CARLA: parked</h2>
 <ul>
 <li><strong>What it is:</strong> a full self-driving simulator, with towns, traffic and photoreal
-  cameras. It's the right tool for perception.</li>
-<li><strong>Why not now:</strong> as of October 2026, no CARLA release or ROS bridge supports Jazzy or
-  Ubuntu 24.04, and it wants an NVIDIA GPU with 8 GB or more.</li>
-<li><strong>Ours:</strong> <code>aav_carla</code> is a stub that has never run. Revisit it when CARLA supports
-  Jazzy, and use Gazebo this year.</li>
+  cameras. It's the right tool for testing cameras.</li>
+<li><strong>Two versions:</strong> CARLA 0.9.16 (Sept 2025) runs on Unreal Engine 4; CARLA 0.10
+  (Dec 2024) on Unreal Engine 5, and it's heavier.</li>
+<li><strong>Why not now:</strong> its built-in ROS 2 link stalls on Jazzy
+  (<a href="https://github.com/carla-simulator/carla/issues/9551">issue 9551</a>); the fix was closed
+  without merging on 26 May 2026. It has no Mac version, and wants an NVIDIA GPU with
+  8 GB or more.</li>
+<li><strong>Parked (10 Oct):</strong> Gazebo and bench mode already drive the whole car graph: Nav2,
+  the sensors and the e-stops. If perception needs realistic streets later, it can run on
+  the team's NVIDIA Linux machine, once it supports Jazzy (Q31).</li>
+<li><strong>Ours:</strong> <code>aav_carla</code> is a stub that has never run.</li>
 </ul>
 </section>
 <section class="card"><h2 id="when-nothing-moves">When nothing moves</h2>

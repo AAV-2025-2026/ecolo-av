@@ -1055,6 +1055,59 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **The e-stop (Decided, Ben):** the car's existing e-stop stays exactly as it is. The spine may read it, but never sits in its path.
 - **Found so far:** today's ESP32 code reads no e-stop button, so it's wired outside the code. The 2025-26 status display shows "!!! E-STOP !!!" when told to, over I2C; what tells it is still unknown. Q6 (what kind, what it cuts, the wiring) waits on Ben and the board survey.
 
+### I haven't had an email for a long time. That PDF is amazing! (20:54)
+
+- **The emails are queued, not lost:** Carleton's mail server only takes them on campus or through the VPN. A sender keeps trying, and they go out within a minute of the VPN coming on.
+- **The PDF:** 28 pages, with the new MCP page. `pixi run docs` rebuilds it.
+
+### CARLA 4 or 5 for Jazzy? Do we even need it, with Gazebo and turtlesim? (20:54)
+
+- **"4 or 5" are its two Unreal Engine versions:** CARLA 0.9.16 (Sept 2025) uses Unreal Engine 4, CARLA 0.10 (Dec 2024) Unreal Engine 5. Its built-in ROS 2 link stalls on Jazzy, and the fix was closed without merging (26 May 2026). Neither runs on a Mac.
+- **Parked (recommended):** Gazebo and bench mode already run the whole car graph. CARLA mainly adds realistic streets for testing cameras. It could come back on the NVIDIA Linux machine (Q31). ([Simulation](../simulation.md))
+
+### Get the firmware requirements into vendor/, so everybody can build out of the box. (20:54)
+
+- **Ben's yes covered three questions:** the Jrk G2 driver and the iBUS parser (already written, 98 tests), a free Pico 2 for the bench (still open), and an ARM chip, a Pico 2 or an STM32, instead of the ESP32 (Tentative until the team confirms Q10–Q13).
+- **Done:** a `firmware` environment with PlatformIO, its downloads in `vendor/platformio/` (about 1.5 GB). `pixi run -e firmware legacy-esp32` builds today's ESP32 firmware. It needed two fixes: the build looked for the framework in a folder named after one student's computer. From a clean checkout on Ben's Mac: 48 s, RAM 14.3%, flash 63.4%.
+- **Later:** the tools to flash an ARM chip (`probe-rs`, a UF2 converter) aren't on conda-forge; they come with the first board program.
+- **For the chip choice:** an STM32 has CAN built in; a Pico 2 needs an add-on CAN chip, such as an MCP2515.
+
+### Do we need NVIDIA's Isaac ROS for inference? Does it work on Jazzy? Is there a Mac equivalent, with Metal? (20:55)
+
+- **Not for inference:** our detector already uses TensorRT on the Orin, through Ultralytics.
+- **Jazzy:** Isaac ROS 4.6 (18 Aug 2026) is the last release for Jazzy, on the Orin with JetPack 7.2. Isaac ROS 5.0 (21 Sept 2026) moved to ROS 2 Lyrical.
+- **Later, maybe:** nvblox (a costmap from cameras), visual SLAM, stereo depth. In NVIDIA's Docker containers, not Pixi.
+- **Mac:** no equivalent, since it needs CUDA. On a Mac our own nodes do the job, with PyTorch on Metal or Core ML. ([Perception](../perception.md))
+
+### What do the Picos, the actuator controllers and the Raspberry Pi do? Are they all on a board with the ESP32? (20:55)
+
+- **The ESP32** is the actuator controller: steering, brake, throttle, forward/reverse, RC override. Serial to the Motor Pi; I2C to the two Jrk G2s (steering 0x05, brake 0x04), the throttle DAC and the expander.
+- **The Pico 2s:** one counts wheel spokes and sends them over its own Ethernet chip; the "sentinel" is a status display and buzzer on I2C (0x42), which nothing talks to yet.
+- **The Motor Pi** runs the ROS bridge to the ESP32.
+- **One board?** Probably a carrier board the ESP32 plugs into, but the code can't show the circuit board. A photo would settle it; the board survey is looking for one.
+
+### The firmware and car environments: do we still need them? Maybe put them in vendor? (20:55)
+
+- **The `firmware` environment:** yes, while the 2025-26 boards run the car. Done; its downloads go in `vendor/`.
+- **The car environments** (the Orin, the Pis): yes, later, once the car's computers run Jazzy (Phase 0).
+- **Espressif's installer:** no longer needed: the spine is going to an ARM chip, and PlatformIO brings its own ESP32 tools.
+
+### There's a Linux machine with an NVIDIA card. The weights are likely there too. (20:55)
+
+- **Recorded:** that answers question 4 of the ML email (a Linux PC for training). It isn't the design doc's Q4, the throttle, which is still open.
+- **`best.pt`:** probably on that machine, with the training pictures (`~/Yolo/Capstone/yolo_data`). Open: which machine it is, and access to it.
+
+### Video on the Orin or my M4 Max? Open models better than the students'? Both models on the network, ML and lidar into a costmap, then Nav2: is that right? (20:55)
+
+- **On the Mac: yes.** Our detector already runs there on Metal, 7.7 ms a frame. Over WiFi, the cameras should also publish compressed images.
+- **Better models: probably.** The students trained one label on their own pictures. To try: YOLO11, RT-DETR, RF-DETR; YOLO-World, Grounding DINO, OWLv2 (named in words); YOLOPv2, TwinLiteNet (lanes); Depth Anything V2 (distance). The fair test: one recording of the car's cameras, every model on it.
+- **Several models at once: yes.** Each reads the same camera topic and publishes its own result.
+- **The pipeline is right:** points from the lidar or radar, detections from the cameras; a detection needs a distance before it's a point on the ground; Nav2's costmap marks the points, and Nav2 drives around them. Stop signs stay out of the costmap: they lock the mux. Today the car has the radar; the lidar comes next year.
+
+### The "Choices I made for you" table, pasted with no note. (20:55)
+
+- **Read as no change:** every choice stays as it was. Ben can name any one to change.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
@@ -1070,7 +1123,9 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **2024–25 repos:** cloning and surveying `emergency-stop`, `Simulation`, `camera_Yolo_detection`, `Braking` and `Power-Management-Documentation-2024-25` was offered, not done. Only `GNSS` has been read in depth.
 - **`ros2-rust/`:** keep or delete is undecided; the recommendation is keep.
 - **The claude.ai chat (fe09d020…):** Ben to paste the key parts.
-- **CARLA:** Jazzy support for its ROS 2 bridge is still being confirmed.
+- **CARLA:** parked this year (10-10). It comes back on the NVIDIA Linux machine if it ever supports Jazzy (Q31).
+- **The NVIDIA Linux machine:** which one, and access to it, to find `best.pt`.
+- **The board:** a photo of the ESP32 board, and a free Pico 2 for the bench.
 - **Team decisions:**
   - the team's `ROS_DOMAIN_ID`;
   - the spine arming rules (Proposed);

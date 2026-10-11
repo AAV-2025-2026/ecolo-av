@@ -7,7 +7,7 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">10 min read · 8 sections</div></header>
+<div class="meta">11 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -391,6 +391,10 @@ Hardware facts from today's car:</p>
 </tr>
 </tbody>
 </table></div>
+<p>Build today's ESP32 firmware with <code>pixi run -e firmware legacy-esp32</code> (PlatformIO), and
+add <code>-t upload</code> to flash it. PlatformIO's downloads, about 1.5 GB, go into
+<code>vendor/platformio/</code>. Without <code>src/secrets.h</code>, the build uses the example's placeholder
+WiFi details: fine for a test build, but that board can't join the car's WiFi.</p>
 <div class="admonition warning">
 <p class="admonition-title">Before driving on the legacy path</p>
 <ol>

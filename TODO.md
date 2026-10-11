@@ -33,6 +33,13 @@ folder downloaded, and moves into it as a fast-forward.
       Built (25 packages, Ben's `aav_imu_yahboom` too) and tested green on the Mac.*
 - [x] **Gazebo's window on the Mac:** Ben saw the screenshots (16:34).
 - [ ] **Look at RViz and rqt_graph on the Mac**, and say what they show.
+- [x] **The firmware requirements in `vendor/`, built out of the box** (Ben, 20:54).
+      *A `firmware` environment with PlatformIO; its downloads go in `vendor/platformio/`.
+      `pixi run -e firmware legacy-esp32` built today's ESP32 firmware from a clean
+      checkout on the Mac (48 s). The tools to flash an ARM chip (`probe-rs`, a UF2
+      converter) aren't on conda-forge: they come with the first board program.*
+- [x] **CARLA: 4 or 5, and do we need it?** (20:54) *Parked this year: no Jazzy
+      support, no Mac version. Gazebo and bench mode cover the car graph (Q31).*
 - [ ] **The small fixes** listed at the end of `docs/work.md`.
 
 ## This afternoon (10-10): "merge in all of this", then "stub in the rest"
@@ -55,6 +62,7 @@ folder downloaded, and moves into it as a fast-forward.
 - [ ] **Team decisions:** the steering on an e-stop; the brake after boot; a brake on the RC
       gear switch (docs/firmware.md).
 - [ ] **Find `best.pt`**, the 2024-25 stop-sign model, and the 2025-26 lane finder.
+      `best.pt` is probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct).
 - [ ] **The HUD app's small changes** (docs/hud.md).
 - [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
 - [x] **The first-day steps in `README.md`** (Ben, 17:03).

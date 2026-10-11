@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">12 min read · 11 sections</div></header>
+<div class="meta">13 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -244,6 +244,11 @@ because <code>pixi.lock</code> pins them all.</p>
 <td>the default, plus the MCP Python SDK</td>
 <td>an AI app, through <code>.mcp.json</code>: <a href="mcp.html">AI apps (MCP)</a></td>
 </tr>
+<tr>
+<td><code>firmware</code></td>
+<td>Python and PlatformIO, no ROS</td>
+<td>today's C++ boards: <code>pixi run -e firmware legacy-esp32</code></td>
+</tr>
 </tbody>
 </table></div>
 <div class="admonition note">
@@ -352,6 +357,10 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td><code>mcp</code></td>
 <td>the read-only MCP server, for AI apps (the <code>mcp</code> environment). The app starts it: <a href="mcp.html">AI apps (MCP)</a></td>
 </tr>
+<tr>
+<td><code>legacy-esp32</code></td>
+<td>builds today's ESP32 firmware with PlatformIO (the <code>firmware</code> environment); <code>-t upload</code> flashes it</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -439,6 +448,11 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td><code>mcp_server.py</code>, <code>mcp_parts.py</code></td>
 <td>the read-only MCP server for AI apps, and its parts</td>
 <td>an AI app, through <code>.mcp.json</code></td>
+</tr>
+<tr>
+<td><code>legacy_firmware.sh</code></td>
+<td>builds today's ESP32 firmware with PlatformIO</td>
+<td><code>pixi run -e firmware legacy-esp32</code></td>
 </tr>
 <tr>
 <td><code>tests/</code></td>

@@ -65,8 +65,27 @@ YOLO11 nano model (5.6 MB, its checksum pinned). It was trained on the COCO data
 | `.engine` | the Orin, with TensorRT | `yolo export model=models/yolo11n.pt format=engine`, on the Orin itself |
 
 The 2024-25 team's own model, `best.pt`, is in no repo: their code loaded it from
-`~/Yolo/Capstone/runs/detect/train7/weights/best.pt` on someone's computer. Ultralytics'
-models and code are licensed AGPL-3.0.
+`~/Yolo/Capstone/runs/detect/train7/weights/best.pt` on someone's computer. It's
+probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct), which can train
+new models too. Ultralytics' models and code are licensed AGPL-3.0.
+
+## Better models to try
+
+The 2024-25 model learned one label from the team's own pictures. Open models trained on
+far more pictures may do better:
+
+| Job | Open models |
+|---|---|
+| Everyday objects, stop signs included | YOLO11 (ours now), RT-DETR, RF-DETR |
+| Anything named in words, like "traffic cone" | YOLO-World, Grounding DINO, OWLv2 |
+| Lane lines and the drivable area | YOLOPv2, TwinLiteNet |
+| Distance from one camera | Depth Anything V2 |
+
+- **The fair test:** record the car's cameras once, then run each model on the same
+  recording.
+- **Several at once:** any number of nodes can read the same camera topic; each
+  publishes its own result.
+- **Licences:** check each one before it goes on the car.
 
 ## Where it runs
 
@@ -134,11 +153,28 @@ A separate Pixi environment, so nobody downloads PyTorch unless they want it: Py
 radar clustering, next to `car.launch.py`, on the Orin. When `car.launch.py` next changes,
 they become parts in its machine files.
 
+- **From a Mac:** a Mac on the car's network can run the detector on the car's cameras.
+  Raw images are too big for WiFi, so the cameras should also publish compressed ones.
+- **Into the costmap:** a camera detection needs a distance first (a stereo pair, a depth
+  model, or the camera's height above a flat road). Then it's a point on the ground, and
+  Nav2's costmap marks it like a radar or lidar point. Stop signs never go in the
+  costmap: they lock the mux.
+
+### Isaac ROS (NVIDIA)
+
+- **Not needed for the detector:** it already uses TensorRT on the Orin, through
+  Ultralytics.
+- **Jazzy:** Isaac ROS 4.6 (18 Aug 2026) is the last release for Jazzy, and supports the
+  Orin on JetPack 7.2. Isaac ROS 5.0 (21 Sept 2026) moved to ROS 2 Lyrical.
+- **Later, maybe:** nvblox (a costmap from cameras), visual SLAM and stereo depth. It runs
+  in NVIDIA's Docker containers, not in Pixi, and has no Mac version: it needs CUDA.
+  [Releases](https://nvidia-isaac-ros.github.io/releases/index.html)
+
 ## Still to do
 
 | Item | Waits on |
 |---|---|
-| Find `best.pt` and the training pictures | the 2024-25 team |
+| Find `best.pt` and the training pictures: probably on the team's NVIDIA Linux machine | which machine, and access |
 | Back up the Orin: the 2025-26 detector lives only there | before any reflash |
 | The line finder | someone: classic OpenCV, or a model |
 | The cameras' models and udev names | Q22 |

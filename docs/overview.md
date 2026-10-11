@@ -15,7 +15,7 @@ links to the page with the details. As of the evening of 10 October 2026.
 | Computers in the machine files | 4: `orin`, `motor_pi`, `laptop`, `all` |
 | Contracts | 3: the topics, the CAN frames, the car's measurements |
 | Tests | 173 in Python and 163 in Rust without ROS; 199 in `colcon test`; 7 bench checks |
-| Tools | 18 scripts and 25 `pixi run` tasks |
+| Tools | 19 scripts and 26 `pixi run` tasks |
 
 ## The folders
 
@@ -135,5 +135,5 @@ avoidance, odometry and QNX layer. [The older code](older-code.md) has every rep
 | Navigation | the real test site's map (Q21); Nav2's lookahead (N7); obstacle inputs | [Costmaps](costmaps.md) |
 | Drivers | a first real joystick test; an e-stop message that can't get lost (N2) | [Starting points](team.md) |
 | The HUD | small app changes (an e-stop button, cancel, the camera); a download step for its 51 MB map database (Q29) | [HUD](hud.md) |
-| Simulation | CARLA (no Jazzy support yet). Bench mode works: [Bench mode](bench.md) | [Simulation](simulation.md) |
+| Simulation | CARLA, parked: no Jazzy support. Bench mode works: [Bench mode](bench.md) | [Simulation](simulation.md) |
 | The team | owners (Q33), the leaked secrets changed (Q34), backups before any reflash | [Work](work.md) |

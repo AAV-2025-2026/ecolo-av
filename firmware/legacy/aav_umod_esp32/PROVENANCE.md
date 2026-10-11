@@ -28,5 +28,13 @@ Files, unchanged unless listed under Changes:
   `src/secrets.h` (not in git; copy `src/secrets.h.example`). The old values are
   still public in the 2025-26 repository history, so change them on the router.
 - Added `src/secrets.h.example`.
+- `extra_includes.py` (10 Oct 2026): asks PlatformIO where the Arduino framework is,
+  instead of a folder name from one student's machine
+  (`framework-arduinoespressif32@3.20009.0`). The same framework version, 3.20009.0.
+- `platformio.ini` (10 Oct 2026): `lib_extra_dirs` uses `${platformio.packages_dir}`
+  instead of `~/.platformio/...@3.20009.0`, so it works wherever PlatformIO keeps its
+  packages (ours: `vendor/platformio/`).
+- With those two, it builds from a clean checkout: `pixi run -e firmware legacy-esp32`
+  (10 Oct 2026, on a Mac: 48 s with the downloads; RAM 14.3%, flash 63.4%).
 - Nothing else changed. Known problems are listed in `docs/firmware.md`
   (no command timeout, unauthenticated `/update` page, no feedback to the computer).
