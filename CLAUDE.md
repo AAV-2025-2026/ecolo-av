@@ -57,7 +57,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
     goes to Ben's Rust twin, the radar clustering to a Rust ROS node. Stock ROS packages
     stay as they are;
   - Rust ROS nodes (rclrs from crates.io: `examples/rust-listener`, `aav_imu_yahboom`)
-    are for those ports, and later for a node where Rust pays off, such as ego.
+    are for those ports, the HUD (raylib, Ben, 11 Oct), and later for a node where Rust
+    pays off, such as ego.
 - **Keep the maths out of ROS.** A node's logic lives in a module with no ROS imports
   and has its own tests. Examples: `ackermann.py`, `can_codec.py`, `speed_profile.py`,
   `legacy_protocol.py` and `vehicle.py`; in Rust, `spine-core`.

@@ -2,7 +2,11 @@
 
 The 2025-26 team built a touchscreen app for the car. Its back end, `aav_hud`, is ported
 to our topics (10 October). The app now matches it (11 October): an e-stop button, the
-car's status, and the camera from the back end. Keep the app or not: Q29.
+car's status, and the camera from the back end.
+
+**Decided 11 October (Ben):** the HUD becomes one Rust program, raylib and rclrs, that is
+also its ROS node. This app stays until the new one matches it. Still open (Q29): which
+screen, and GPS destinations this year.
 
 ## What it is
 

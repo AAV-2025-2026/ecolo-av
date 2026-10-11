@@ -30,8 +30,9 @@ work on." His order, with the work under way:
       - [ ] collision_monitor flickers between stop and go at the zone's edge.
 5. [ ] **The board drivers in Rust, ready to try on a board:** the wheel encoder and display
       Picos (Embassy); the spine's Pico 2 program is written.
-6. [ ] **The HUD in raylib?** Proposed (Claude): one Rust program that is also the ROS node.
-      *Waits on Ben.*
+6. [ ] **The HUD in raylib** (Ben, 11 Oct: yes): one Rust program, raylib and rclrs, that is
+      also the ROS node. The driving screen first (speed, mode, the e-stop button, the
+      camera); the Flutter app stays until it matches. *Next free helper, after the boards.*
 
 ## Ideas to keep
 

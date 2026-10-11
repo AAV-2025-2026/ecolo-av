@@ -10,6 +10,7 @@
 <div class="meta">11 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
 <a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
 <a href="team.html">Starting points</a>
@@ -17,8 +18,8 @@
 <a href="work.html">Work</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
-<a href="status.html">Status</a>
 <span class="sep">Reference:</span>
+<a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="perception.html">Perception</a>
@@ -41,7 +42,10 @@
 <nav class="toc"><span>On this page:</span><a href="#what-it-is">What it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#the-e-stop-button">The e-stop button</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#what-changed-in-the-app-11-october">What changed in the app (11 October)</a><a href="#get-flutter">Get Flutter</a><a href="#test-the-app">Test the app</a><a href="#run-it">Run it</a><a href="#on-the-bench-11-october">On the bench (11 October)</a><a href="#the-place-database">The place database</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
 <div class="lead"><p>The 2025-26 team built a touchscreen app for the car. Its back end, <code>aav_hud</code>, is ported
 to our topics (10 October). The app now matches it (11 October): an e-stop button, the
-car's status, and the camera from the back end. Keep the app or not: Q29.</p></div>
+car's status, and the camera from the back end.</p>
+<p><strong>Decided 11 October (Ben):</strong> the HUD becomes one Rust program, raylib and rclrs, that is
+also its ROS node. This app stays until the new one matches it. Still open (Q29): which
+screen, and GPS destinations this year.</p></div>
 <section class="card"><h2 id="what-it-is">What it is</h2>
 <p>Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26, two
 800x480 screens):</p>

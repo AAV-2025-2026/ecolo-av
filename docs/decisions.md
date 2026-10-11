@@ -52,7 +52,6 @@ answer.
 | A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree | A car can't turn on the spot. The config already does this |
 | The RC transmitter stays the top-priority override, in hardware | It works today, and doesn't depend on any computer |
 | The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car | A reboot or a glitch never restarts the car by itself. It's in `spine-core` since 10 Oct |
-| The HUD as one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera); the Flutter app stays until it matches | One program instead of three that must agree (the app, Flask, Socket.IO). raylib draws on a Pi's screen with no desktop. The map and the search wait on Q29 (Claude, 11 Oct, after Ben asked about raylib) |
 
 ## Ground rules
 
@@ -103,6 +102,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 |---|---|
 | Work on what we can try at home, in this order: the full graph with the drivers, ego and the simulators; our C++ to Rust (Python later); the Mac on the network with ML on it, and Nav2; the drivers in Rust, ready to try on a board; then the GUI | Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to work on" |
 | micro-ROS goes back from Decided to Tentative: no micro-ROS for now, and we think again once we see the hardware | Ben, 11:38: "No micro-ROS - lets rethink thinks later after we see the hardware" |
+| The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29 | Ben, 11:58: "Raylib for the HUD: yes, no, or try it first? yes" |
 
 ## Open questions
 
@@ -157,7 +157,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 | Q26 | Languages | Python for all our ROS nodes? C++ or Rust for the spine firmware? |
 | Q27 | Steering at standstill | A speed-and-turn-rate command can't steer at zero speed. Should the joystick turn the wheels while stopped? |
 | Q28 | Joystick handover | When the hold-to-drive button is released, go back to the autonomous driver, or stay stopped? |
-| Q29 | HUD | Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? |
+| Q29 | HUD | Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? Partly answered 11 Oct: a raylib HUD replaces the app once it matches |
 | Q30 | Remote driving | In scope this year? Over which link, with what latency limit? |
 | Q31 | CARLA | Parked this year: no confirmed Jazzy support (the fix was closed unmerged, 26 May 2026), and no Mac version. If it comes back: the NVIDIA Linux machine, with CARLA 0.9.16 (Unreal Engine 4) or 0.10 (Unreal Engine 5) |
 | **Q32** | Test rules | Who is the safety driver, what's the speed cap, what's on the pre-drive checklist, who signs it off? |

@@ -10,6 +10,7 @@
 <div class="meta">19 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
 <a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
 <a href="team.html">Starting points</a>
@@ -17,8 +18,8 @@
 <a href="work.html">Work</a>
 <a class="here" href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
-<a href="status.html">Status</a>
 <span class="sep">Reference:</span>
+<a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="perception.html">Perception</a>
@@ -214,10 +215,6 @@ answer.</p>
 <td>The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car</td>
 <td>A reboot or a glitch never restarts the car by itself. It's in <code>spine-core</code> since 10 Oct</td>
 </tr>
-<tr>
-<td>The HUD as one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera); the Flutter app stays until it matches</td>
-<td>One program instead of three that must agree (the app, Flask, Socket.IO). raylib draws on a Pi's screen with no desktop. The map and the search wait on Q29 (Claude, 11 Oct, after Ben asked about raylib)</td>
-</tr>
 </tbody>
 </table></div>
 </section>
@@ -386,6 +383,10 @@ answer.</p>
 <tr>
 <td>micro-ROS goes back from Decided to Tentative: no micro-ROS for now, and we think again once we see the hardware</td>
 <td>Ben, 11:38: "No micro-ROS - lets rethink thinks later after we see the hardware"</td>
+</tr>
+<tr>
+<td>The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29</td>
+<td>Ben, 11:58: "Raylib for the HUD: yes, no, or try it first? yes"</td>
 </tr>
 </tbody>
 </table></div>
@@ -583,7 +584,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q29</td>
 <td>HUD</td>
-<td>Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year?</td>
+<td>Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? Partly answered 11 Oct: a raylib HUD replaces the app once it matches</td>
 </tr>
 <tr>
 <td>Q30</td>

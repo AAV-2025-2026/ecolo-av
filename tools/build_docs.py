@@ -39,6 +39,7 @@ READ_FIRST = 10    # PAGES[:10] are the reading list; the rest are reference
 PAGES = [
     ('index.md', 'Start here', 'The picture, and where to go next'),
     ('overview.md', 'Overview', 'Everything in aav: ours, stock, inherited, missing'),
+    ('release-notes.md', 'Release notes', "What we built to 11 October, and what's left"),
     ('first-day.md', 'Your first day', 'Install, the turtle, rqt_graph, Gazebo, Nav2'),
     ('how-it-fits.md', 'How it fits', 'What each box does, and the safety layers'),
     ('team.md', 'Starting points', 'One per team member: read, run, first tasks'),

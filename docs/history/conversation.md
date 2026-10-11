@@ -1235,6 +1235,7 @@ Ben's order: the full graph with drivers, ego and the simulators, all set up; th
 - **The cost:** few ready-made widgets. The map, an on-screen keyboard and the destination search are ours to draw.
 - **Other options:** keep Flutter (works on the bench; no Flutter download for the Pi's ARM Linux); egui (pure Rust, full widgets, needs a desktop on the Pi); Slint (made for car dashboards; check its licence).
 - **Proposed:** the driving screen first (speed, mode, the e-stop button, the camera), the Flutter app kept until raylib's does everything; the map and the search decided with Q29. Waits on Ben.
+- **Decided (Ben, 11:58): yes.**
 
 ### "how did last night go. Did you have a bunch of emails quueed." (10:56)
 
@@ -1283,13 +1284,21 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 - **The check, all 167 commits on GitHub (`main` is its only branch):** no tokens, keys or passwords; `secrets.h.example` has placeholders only; none of the old repos' WiFi values.
 - **What would become public:** Ben's two email addresses on every commit (rewriting the history would need a force-push); Ben's messages, word for word, in `docs/history/`; the server's name (`oirp-spss`) and Carleton's mail relay; the file paths of the old repos' leaked secrets (`docs/older-code.md`, not yet revoked: Q34); a 2025-26 student's own email address, in the radar driver's package files (inherited); and the 2025-26 code, whose repos have no licence. The repo has no licence file either, and 24 of our 26 packages say `TODO` for theirs.
 
+### "Raylib for the HUD: ... yes". "any other questions?" A release statement, in point form. (11:58)
+
+- **Raylib: Decided.** The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node; the Flutter app stays until it matches. The next free helper, after the board drivers.
+- **The release statement:** a new docs page, [Release notes](../release-notes.md): every project merged in or replaced, the models, the firmware, the Rust ports, Macs, Core ML and MCP, ego and the Ackermann model, the EKFs, the drivers, bridges and simulators, the tests and the docs, and what's left for the first pass.
+- **"streedview?":** nothing by that name exists. The closest: the HUD's offline map and place search, its camera page, the bench's drawn road, Gazebo's road (in progress). Asked Ben what he meant.
+- **Claude's questions for Ben:** the repo's visibility and a licence; what "street view" means; when someone can get to the car; a spare Pico 2 and a 3.3 V CAN module; the brake after boot; whether to copy today's decisions into the design doc.
+- **The helpers:** Ben's message stopped all three at 11:58; they restarted at 12:00 from their branches.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
 - **oirp-spss:** its copy of `aav` stops at 04:23, with the old commit IDs. Make a fresh clone from GitHub there; nothing on the server is missing from GitHub (checked 21:30).
 - **The five overnight pieces (10-11):** all merged and pushed (02:07–11:05). Now Ben's 11 October order: the full graph (with Ackermann), the C++ to Rust, the Mac with ML, Nav2, the board drivers, raylib. Three helpers started at 11:18.
 - **The obstacle check:** fixed in the check (a lane-wide box, a re-arm after a latch); N7 and collision_monitor's flicker are still open.
-- **Raylib for the HUD:** Proposed; waits on Ben.
+- **Raylib for the HUD:** Decided (Ben, 11:58). The next free helper, after the boards one.
 - **micro-ROS:** Tentative since 11 Oct: none for now; think again once we see the hardware.
 - **Your Mac as the operator station:** an idea, saved (11 Oct): `TODO.md`, "Ideas to keep".
 - **The repo public?** Checked 11 Oct; waits on Ben's yes.
