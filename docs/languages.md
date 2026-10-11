@@ -1,7 +1,8 @@
 # Python, C++ and Rust
 
-Our ROS nodes are Python, one reused driver is C++, and the spine firmware is Rust. ROS 2
-lets each program pick its own language, because programs only meet through messages.
+Our ROS nodes are Python, and the firmware and hardware drivers are Rust. The C++ we
+inherited is moving to Rust (Ben, 10 Oct). ROS 2 lets each program pick its own
+language, because programs only meet through messages.
 
 ## How languages fit into ROS 2
 
@@ -19,16 +20,18 @@ lets each program pick its own language, because programs only meet through mess
 | Our ROS nodes: ego, drivers, bridges, adapters | Python | Glue that runs 50 times a second or less. Quick to write and read. The same file runs on any computer, with no cross-compiling. |
 | Launch files | Python | That's how ROS 2 launch works |
 | Stock packages: Nav2, the EKFs, twist_mux | C++ | Not ours: we only configure them |
-| The reused IMU driver, `yahboom_imu_cpp` | C++ | Inherited from the 2025-26 team, and it works |
+| The IMU driver: `yahboom_imu_cpp`, and Ben's Rust twin `aav_imu_yahboom` | C++, moving to Rust | The Rust twin becomes the default; then the C++ goes |
+| The radar clustering, `aav_object_detection` | C++, moving to Rust | Inherited from the 2025-26 team. It becomes a Rust ROS node (`rclrs`) |
 | The spine firmware, `firmware/spine` | Rust, `no_std` | Memory-safe, and its logic is tested on a laptop |
-| Today's ESP32 and Pico firmware | C++ (Arduino) | Inherited; the spine replaces it |
+| Today's ESP32 and Pico firmware | C++ (Arduino) | Inherited. The spine (Rust) replaces the ESP32; the Picos get Rust twins (Embassy) |
 
 ## Is C++ too risky?
 
 Memory bugs and crashes are a fair worry with C++. In this stack:
 - The C++ we run is almost all stock packages that thousands of robots use. We wrote none
   of it.
-- Our own code is Python and Rust, and both are memory-safe.
+- Our own code is Python and Rust, and both are memory-safe. The inherited C++ moves to
+  Rust.
 - Each node is a separate process. A crash takes down one node, not the whole system.
 - Safety never rests on one program: ego's timeout and the spine's watchdog stop the car
   if a node dies.
@@ -57,7 +60,7 @@ Where Rust stands in October 2026:
 | Target | Rust there | A ROS node? |
 |---|---|---|
 | Orin, Raspberry Pi (Linux, ARM) | `aarch64-unknown-linux-gnu` | Yes, with `rclrs` |
-| ESP32 (bare metal) | `no_std` with `esp-hal` | No: it talks CAN to `spine_bridge` (or micro-ROS, later) |
+| ESP32 (bare metal) | `no_std` with `esp-hal` | No: it talks CAN to `spine_bridge`. No micro-ROS (Ben, 10 Oct) |
 | Raspberry Pi Pico 2 | `no_std`, `thumbv8m.main-none-eabihf` | No, the same as the ESP32 |
 
 ## The plan

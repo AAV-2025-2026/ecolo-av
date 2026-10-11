@@ -45,14 +45,18 @@ These are the conventions decided so far. They apply to people and to Claude ses
   2. then code inherited from the previous teams;
   3. then a reasonable stub.
 - **Languages:**
-  - Python (rclpy) for every ROS node we write;
-  - Rust (`no_std`) for all firmware and hardware drivers, not C or C++ (Ben, 10 Oct): the
-    spine first. The 2025-26 C++ boards keep running until each one's Rust version
-    replaces it. Logic goes in crates like `spine-core` and `aav-inputs` (tested on a
-    laptop), drivers against `embedded-hal` 1.0. The plan: `docs/rust-firmware.md`;
-  - C++ only for the reused IMU driver.
-  - Rust ROS nodes work (`examples/rust-listener`, rclrs from crates.io) but wait until
-    the car drives; then port a node where Rust pays off, such as ego.
+  - Python (rclpy) for the ROS nodes we write;
+  - Rust (`no_std`, Embassy) for all firmware and hardware drivers, not C or C++ (Ben,
+    10 Oct): the spine first. The 2025-26 C++ boards keep running until each one's Rust
+    version replaces it. Logic goes in crates like `spine-core` and `aav-inputs` (tested
+    on a laptop), drivers against `embedded-hal` 1.0. The plan: `docs/rust-firmware.md`;
+  - no micro-ROS: a board talks plain CAN, UART or UDP to a ROS node on Linux, which
+    publishes (Ben, 10 Oct);
+  - no C++ of our own: the inherited C++ moves to Rust (Ben, 10 Oct). The IMU driver
+    goes to Ben's Rust twin, the radar clustering to a Rust ROS node. Stock ROS packages
+    stay as they are;
+  - Rust ROS nodes (rclrs from crates.io: `examples/rust-listener`, `aav_imu_yahboom`)
+    are for those ports, and later for a node where Rust pays off, such as ego.
 - **Keep the maths out of ROS.** A node's logic lives in a module with no ROS imports
   and has its own tests. Examples: `ackermann.py`, `can_codec.py`, `speed_profile.py`,
   `legacy_protocol.py` and `vehicle.py`; in Rust, `spine-core`.

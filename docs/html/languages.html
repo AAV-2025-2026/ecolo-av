@@ -39,8 +39,9 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#how-languages-fit-into-ros-2">How languages fit into ROS 2</a><a href="#what-we-use-and-where">What we use, and where</a><a href="#is-c-too-risky">Is C++ too risky?</a><a href="#what-if-everything-were-rust">What if everything were Rust?</a><a href="#rust-on-the-pi-and-the-esp32">Rust on the Pi and the ESP32</a><a href="#the-plan">The plan</a></nav>
-<div class="lead"><p>Our ROS nodes are Python, one reused driver is C++, and the spine firmware is Rust. ROS 2
-lets each program pick its own language, because programs only meet through messages.</p></div>
+<div class="lead"><p>Our ROS nodes are Python, and the firmware and hardware drivers are Rust. The C++ we
+inherited is moving to Rust (Ben, 10 Oct). ROS 2 lets each program pick its own
+language, because programs only meet through messages.</p></div>
 <section class="card"><h2 id="how-languages-fit-into-ros-2">How languages fit into ROS 2</h2>
 <p><img alt="How the languages stack up" src="../img/languages.svg" /></p>
 <ul>
@@ -76,9 +77,14 @@ lets each program pick its own language, because programs only meet through mess
 <td>Not ours: we only configure them</td>
 </tr>
 <tr>
-<td>The reused IMU driver, <code>yahboom_imu_cpp</code></td>
-<td>C++</td>
-<td>Inherited from the 2025-26 team, and it works</td>
+<td>The IMU driver: <code>yahboom_imu_cpp</code>, and Ben's Rust twin <code>aav_imu_yahboom</code></td>
+<td>C++, moving to Rust</td>
+<td>The Rust twin becomes the default; then the C++ goes</td>
+</tr>
+<tr>
+<td>The radar clustering, <code>aav_object_detection</code></td>
+<td>C++, moving to Rust</td>
+<td>Inherited from the 2025-26 team. It becomes a Rust ROS node (<code>rclrs</code>)</td>
 </tr>
 <tr>
 <td>The spine firmware, <code>firmware/spine</code></td>
@@ -88,7 +94,7 @@ lets each program pick its own language, because programs only meet through mess
 <tr>
 <td>Today's ESP32 and Pico firmware</td>
 <td>C++ (Arduino)</td>
-<td>Inherited; the spine replaces it</td>
+<td>Inherited. The spine (Rust) replaces the ESP32; the Picos get Rust twins (Embassy)</td>
 </tr>
 </tbody>
 </table></div>
@@ -98,7 +104,8 @@ lets each program pick its own language, because programs only meet through mess
 <ul>
 <li>The C++ we run is almost all stock packages that thousands of robots use. We wrote none
   of it.</li>
-<li>Our own code is Python and Rust, and both are memory-safe.</li>
+<li>Our own code is Python and Rust, and both are memory-safe. The inherited C++ moves to
+  Rust.</li>
 <li>Each node is a separate process. A crash takes down one node, not the whole system.</li>
 <li>Safety never rests on one program: ego's timeout and the spine's watchdog stop the car
   if a node dies.</li>
@@ -167,7 +174,7 @@ lets each program pick its own language, because programs only meet through mess
 <tr>
 <td>ESP32 (bare metal)</td>
 <td><code>no_std</code> with <code>esp-hal</code></td>
-<td>No: it talks CAN to <code>spine_bridge</code> (or micro-ROS, later)</td>
+<td>No: it talks CAN to <code>spine_bridge</code>. No micro-ROS (Ben, 10 Oct)</td>
 </tr>
 <tr>
 <td>Raspberry Pi Pico 2</td>

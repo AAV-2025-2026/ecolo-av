@@ -1113,9 +1113,73 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **Both were already done:** the push at 20:24, after the strip, and every commit since. GitHub's `main` matches this Mac's (`71ad715`). The MCP server is built and committed (`839e35f`).
 - **Nothing to undo:** the `pixi.toml` and `pixi.lock` changes stay, with the server.
 
+### The scp's half-copied last file: are we missing code? Check the server. (21:29, 21:41)
+
+- **No code is missing.** The file at 0% was `vulkan_static_assertions.hpp`: a header of Vulkan, a graphics library, in the server's Linux Pixi environment (`.pixi/envs/default/include/vulkan/`). It's conda-forge's download, not anyone's code; the server's copy is intact, and Macs don't use Vulkan.
+- **Checked on oirp-spss, read-only (21:30):**
+
+| On the server | On the Mac |
+|---|---|
+| Our repo's commits, up to 04:23 | all in our history: the same files as `e8a9aa5`, with 83 commits since |
+| Ben's 12 uncommitted files (the Rust IMU driver, three launch and package edits) | byte for byte in `dfaec15`; one test script improved since, in `db67f08` |
+| Edits after 16:00 | none |
+| Files git ignores, beyond build output | only the docs PDF and a linter cache, both made by tools |
+| The 19 old team repos | every branch and commit the same |
+| The ROS 2 source (130 repos) | the same commits, in `aav/vendor/` |
+| `SYSC3313`, `c_code_example`, `simplied.c`, `text` | the same checksums |
+| `aav.bundle` | the 04:23 bundle; its commit is in our history |
+
+- **Only on the Mac:** the folder's `CLAUDE.md`, and a local branch `cleanup/gitignore-2026-10-10` in 14 old clones (13:27). Each has one commit that stops tracking build output and editor settings: no source code, never pushed. Their `main` branches are untouched.
+
+### Can we change all the C++ to Rust? (21:32)
+
+- **Yes, for our own C++.** Stock ROS packages (Nav2, robot_localization, twist_mux) stay as they are: ROS maintains them.
+
+| Our C++ | Lines | Plan |
+|---|---|---|
+| `yahboom_imu_cpp` | 251 | Ben's Rust twin becomes the default; then the C++ goes |
+| `aav_object_detection` (radar clustering) | 1,694 | the one node that runs becomes a Rust ROS node; the unlaunched demos go |
+| Today's ESP32 board | 686 | replaced by the spine (Rust, Embassy) |
+| The wheel encoder's Pico 2 | 269 | a Rust twin (Embassy, the same UDP packets) |
+| The status display's Pico 2 | 1,043 | a Rust twin, or dropped: nothing talks to it |
+| The HUD's Linux launcher | 154 | stays: Flutter generates it |
+
+- **When:** right after tonight's five parallel pieces merge, since they edit the same launch files and the radar.
+
+### No micro-ROS: Rust and Embassy on the boards, talking to a real ROS node. (21:34)
+
+- **Decided (Ben):** no micro-ROS. Each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes. That's already the spine's design: spine → CAN → `spine_bridge`.
+
+### "cuda means Metal" seems weird: one ML node on the Orin and one on my laptop. Which weights for stop signs, perception and distance? (21:34)
+
+- **Both at once:** each machine runs its own detector, under its own name, and publishes its own detections; the stop-sign watcher listens to both. The `cuda`-means-Metal alias goes: `auto` (the default) picks each machine's GPU, and the other choices are the real names (`cuda`, `mps`, `cpu`). Next, after the five pieces merge.
+- **Weights:** YOLO11, the stock one (AGPL-3.0; "stop sign" is a COCO class); RF-DETR (Apache-2.0; beats YOLO11 on COCO, and runs on Jetsons); NVIDIA's TrafficCamNet and DashCamNet (cars, people, bikes, and "road sign" for any sign); for a sharper stop-sign model, fine-tune on the Mapillary Traffic Sign Dataset (free for academic research).
+- **Distance:** a stop sign's known size (Ontario's come in 600, 750 and 1200 mm: distance = focal length × width ÷ the box's width in pixels); the flat-road maths for other objects; Depth Anything V2 Small, metric (Apache-2.0), from one camera.
+- **Recommended:** YOLO11 or RF-DETR, the known-size trick for stop signs, and the flat-road maths for the rest.
+
+### Where are we? Python, Rust, C++... Lots of mock drivers: are there real ones? (21:34)
+
+- **Code:** Python 11,641 lines (our ROS nodes, tools, tests), Rust 6,417 (the spine, Ben's IMU driver), C and C++ 4,097 (inherited), Dart 2,082 (the HUD app).
+- **Real drivers:** every device has one: the IMU (C++, and Ben's Rust twin), the GPS (the stock u-blox, NMEA or `ublox_dgnss`), the camera (`usb_cam`), the radar (`ti_ros2_driver`), the battery, the wheel encoder and the actuators (today's Pico and ESP32, through `aav_legacy`), the spine (`spine_bridge`), the joystick. The mocks are the bench's stand-ins. None of the real ones has run on the car yet: it runs Humble.
+
+### How do I run the full suite and look at the graph in rqt_graph? (21:34)
+
+- `pixi run bench` in one terminal (the whole car, with stand-ins), then `pixi run graph` in another; in rqt_graph pick "Nodes/Topics (all)" and refresh. `pixi run bench rviz:=true` adds RViz; `pixi run graph-picture` saves a picture.
+
+### Everything will be Jazzy, not yet but it will be. (21:34)
+
+- **Yes:** Decided on 9 Oct. First Pixi's Jazzy on the car's Ubuntu 22.04, then the Orin's reflash to JetPack 7.2 (Q24).
+
+### "The spine may read the e-stop, but never sits in its path": what does it mean? I just want it to work. (21:37)
+
+- **It means the red button always stops the car, whatever our software does.** We don't rewire it. The spine only listens, through a spare contact on the button, and tells ROS and the HUD it's pressed. The button's wiring doesn't run through our board, so if the board crashes or loses power, the button still stops the car.
+- The docs now say it that way, with a picture ([Firmware](../firmware.md)).
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
+- **oirp-spss:** its copy of `aav` stops at 04:23, with the old commit IDs. Make a fresh clone from GitHub there; nothing on the server is missing from GitHub (checked 21:30).
+- **Next, after tonight's five pieces merge:** our C++ to Rust (Ben, 21:32), and one detector per machine with no device aliases (Ben, 21:34).
 - **Backups:** image the Orin and the Pis before any reflash. They hold the detector, `camera_decode`, the three rqt_graph nodes and `/home/aavjetson`. A backup checklist and script were offered.
 - **The car on Jazzy:** it runs Humble today, so no Jazzy laptop can join it. Try Pixi on its Ubuntu 22.04 first, then reflash the Orin to JetPack 7.2 (Q24).
 - **Ben's Mac:** works, 10-10: build, tests, the turtle, Gazebo headless, Nav2, the Rust listener, the docs. Our version, `aav/aav`, is complete on the Mac since 16:13, with every commit from the `~/aav` clone merged in, and it builds and tests green. Gazebo's window works on the Mac: Ben saw the screenshots, and in `pixi run sim` every driver goes through twist_mux and ego (16:34). Left: look at RViz and rqt_graph.

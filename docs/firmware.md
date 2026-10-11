@@ -25,7 +25,7 @@ plain wire messages, and back.
 | Way to join ROS 2 | On the chip | Our pick |
 |---|---|---|
 | A bridge node on Linux | plain firmware that speaks CAN, UART or UDP | ✅ today's ESP32 and Pico 2, and the spine next |
-| micro-ROS | a ROS library in C, usually on a small operating system like FreeRTOS, plus an "agent" program on a Linux computer | no: it's a bridge either way, and it isn't Rust |
+| micro-ROS | a ROS library in C, usually on a small operating system like FreeRTOS, plus an "agent" program on a Linux computer | no (Ben, 10 Oct): it's a bridge either way, and it isn't Rust |
 | rclrs (ROS in Rust) on the chip | not possible: rclrs needs a full operating system, like Linux | rclrs fits the Linux side, if a bridge is ever written in Rust |
 
 ## One interface, many drivers
@@ -50,8 +50,16 @@ code.
 - Run the speed loop, and steer to the target angle.
 - Read the wheel encoder. Report speed, steering, mode and faults.
 - Let the RC override switch and the hardware e-stop beat the computer.
-- Keep the car's existing e-stop exactly as it is (Ben). The spine may read it, but it
-  never sits in its path: nothing on the board can stop the e-stop from working.
+- **The red button always stops the car, whatever our software does** (Ben). We don't
+  rewire it. The spine only listens, through a spare contact on the button, and tells
+  ROS and the HUD it's pressed. If the spine crashes or loses power, the button still
+  stops the car:
+
+```
+e-stop button ─────────────────► stops the car on its own (wired as it is today)
+      │
+      └─ a spare contact ──► spine (only listens) ──► ROS and the HUD: "e-stop pressed"
+```
 - Stop by itself when commands stop: a 200 ms watchdog.
 
 Who wins, highest first:

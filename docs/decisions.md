@@ -81,7 +81,10 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | CI runs `pixi run test` on Linux for every push, and on a Mac every night | Ben |
 | Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant | Ben: "This is a school project" |
 | The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before the audit on the car's network: see [Simulation](simulation.md) |
-| The car's existing e-stop stays exactly as it is. The spine may read it, to report it and to stay stopped afterwards, but it never sits in the e-stop's path | Ben: "this already has an estop so we don't want to break that" |
+| The car's red e-stop button always stops the car, whatever our software does. We don't rewire it; the spine only listens, through a spare contact, to report it and to stay stopped afterwards | Ben: "this already has an estop so we don't want to break that"; "I just want it to work" |
+| No micro-ROS. Each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes | Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros" |
+| Our C++ moves to Rust: the IMU driver (Ben's twin), the radar clustering (a Rust ROS node), the encoder and display Picos (Embassy); the spine replaces the ESP32. Stock ROS packages stay | Ben, 10 Oct: "Can we change all the c++ to rust?" |
+| ML: a detector on each machine with a GPU (the Orin, a laptop), each under its own name; no device aliases | Ben, 10 Oct: "the orin be one node and/or my laptop be another node" |
 | A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own `mcp` environment | Ben: "Yes, read-only": see [AI apps (MCP)](mcp.md) |
 | Today's C++ boards build with PlatformIO, in a `firmware` environment. Its downloads go into `vendor/platformio/` | Ben: "We want everybody to be able to build this out of the box" |
 | CARLA is parked for this year: Gazebo and bench mode cover driving, Nav2 and the sensors | recommended, after Ben asked "do we even care": see Q31 |

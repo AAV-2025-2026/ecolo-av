@@ -97,7 +97,7 @@ plain wire messages, and back.</p>
 <tr>
 <td>micro-ROS</td>
 <td>a ROS library in C, usually on a small operating system like FreeRTOS, plus an "agent" program on a Linux computer</td>
-<td>no: it's a bridge either way, and it isn't Rust</td>
+<td>no (Ben, 10 Oct): it's a bridge either way, and it isn't Rust</td>
 </tr>
 <tr>
 <td>rclrs (ROS in Rust) on the chip</td>
@@ -143,8 +143,15 @@ code.</p>
 <li>Run the speed loop, and steer to the target angle.</li>
 <li>Read the wheel encoder. Report speed, steering, mode and faults.</li>
 <li>Let the RC override switch and the hardware e-stop beat the computer.</li>
-<li>Keep the car's existing e-stop exactly as it is (Ben). The spine may read it, but it
-  never sits in its path: nothing on the board can stop the e-stop from working.</li>
+<li><strong>The red button always stops the car, whatever our software does</strong> (Ben). We don't
+  rewire it. The spine only listens, through a spare contact on the button, and tells
+  ROS and the HUD it's pressed. If the spine crashes or loses power, the button still
+  stops the car:</li>
+</ul>
+<pre class="highlight"><code>e-stop button ─────────────────► stops the car on its own (wired as it is today)
+      │
+      └─ a spare contact ──► spine (only listens) ──► ROS and the HUD: "e-stop pressed"</code></pre>
+<ul>
 <li>Stop by itself when commands stop: a 200 ms watchdog.</li>
 </ul>
 <p>Who wins, highest first:</p>
