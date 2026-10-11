@@ -5,6 +5,7 @@
 #   footprint                 the body outline            (both costmaps)
 #   minimum_turning_radius    wheelbase / tan(max steer)   (SmacPlannerHybrid)
 #   min_turning_r             the same                     (MPPI, if you switch to it)
+#   StopZone.points           the box ahead of the bumper  (collision_monitor)
 # and the map file, and the behaviour tree paths.
 #
 # Topics: Nav2 reads /odometry/local (ekf_local) and TF map -> odom -> base_link
@@ -273,8 +274,10 @@ velocity_smoother:
     velocity_timeout: 1.0
 
 # Optional (navigation.launch.py collision_monitor:=true), once the radar works: it sits
-# between the smoother and twist_mux and slows or stops the car when points enter the
-# footprint's path.
+# between the smoother and twist_mux (velocity_smoother -> /cmd_vel_smoothed ->
+# collision_monitor -> /cmd_vel/nav) and stops the car when radar points enter the stop
+# zone. It reads the radar's own points, not the costmap, so it still stops the car if the
+# costmap, the planner or the controller goes wrong.
 collision_monitor:
   ros__parameters:
     enable_stamped_cmd_vel: true
@@ -284,10 +287,23 @@ collision_monitor:
     cmd_vel_out_topic: /cmd_vel/nav
     state_topic: collision_monitor_state
     transform_tolerance: 0.2
-    source_timeout: 1.0
+    source_timeout: 1.0       # s: a radar silent this long stops the car too
     base_shift_correction: true
-    stop_pub_timeout: 2.0
-    polygons: ["FootprintApproach"]
+    stop_pub_timeout: 2.0     # s of zeros after a stop; then twist_mux's nav slot times out
+    polygons: ["StopZone"]
+    # Three radar points in this box stop the car. From the front bumper to 1 m ahead of
+    # it, 0.2 m wider than the body each side: aav_description vehicle.py stop_zone_points,
+    # from vehicle.yaml's body (it says why 1 m).
+    StopZone:
+      type: "polygon"
+      action_type: "stop"
+      points: "[[2.8, 0.7], [2.8, -0.7], [1.8, -0.7], [1.8, 0.7]]"   # set by the launch file
+      min_points: 3             # a radar is noisy: one stray point mustn't stop the car
+      visualize: true           # for RViz, on polygon_pub_topic
+      polygon_pub_topic: /collision_monitor/stop_zone
+      enabled: true
+    # Not used: slows the car so it stays 2 s from a collision on its current curve. Add it
+    # to polygons to try it.
     FootprintApproach:
       type: "polygon"
       action_type: "approach"
@@ -301,6 +317,7 @@ collision_monitor:
     radar:
       type: "pointcloud"
       topic: /radar/points
-      min_height: 0.1
-      max_height: 2.0
+      min_height: -0.5          # m, in base_link. A radar sees no ground, and its height
+      max_height: 2.0           # is poor: keep low points. Above 2 m is over the car
+      min_range: 0.2            # m from the radar: closer is its own clutter
       enabled: true

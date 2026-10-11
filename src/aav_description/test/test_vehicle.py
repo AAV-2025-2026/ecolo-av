@@ -32,8 +32,19 @@ def test_footprint_encloses_base_link_and_is_nav2_string():
         '[[1.800, 0.500], [1.800, -0.500], [-0.200, -0.500], [-0.200, 0.500]]'
 
 
+def test_stop_zone_is_ahead_of_the_bumper_and_wider_than_the_body():
+    v = {'body': {'length': 2.0, 'width': 1.0, 'rear_overhang': 0.2}}
+    pts = vehicle.stop_zone_points(v, ahead=1.0, margin=0.2)
+    xs = sorted({round(p[0], 6) for p in pts})
+    ys = sorted({round(p[1], 6) for p in pts})
+    assert xs == [1.8, 2.8] and ys == [-0.7, 0.7]
+    assert vehicle.polygon(pts) == \
+        '[[2.800, 0.700], [2.800, -0.700], [1.800, -0.700], [1.800, 0.700]]'
+
+
 def test_nav2_rewrites_keys():
     v = vehicle.load(CONFIG)['vehicle']
     r = vehicle.nav2_rewrites(v)
-    assert set(r) == {'footprint', 'minimum_turning_radius', 'min_turning_r'}
+    assert set(r) == {'footprint', 'minimum_turning_radius', 'min_turning_r',
+                      'collision_monitor.ros__parameters.StopZone.points'}
     assert r['minimum_turning_radius'] == r['min_turning_r']

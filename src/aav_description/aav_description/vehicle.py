@@ -7,6 +7,7 @@ The launch files use this so the car's measurements live in one file:
     v = vehicle.load()['vehicle']
     vehicle.min_turning_radius(v)    # Nav2 SmacPlannerHybrid, MPPI Ackermann
     vehicle.footprint(v)             # Nav2 costmaps
+    vehicle.stop_zone_points(v)      # Nav2 collision_monitor
     vehicle.ego_params(v)            # ego
 """
 
@@ -40,9 +41,29 @@ def footprint_points(v):
     return [[front, half], [front, -half], [rear, -half], [rear, half]]
 
 
+def polygon(points):
+    """Return [x, y] corners in the string form Nav2 takes for a polygon."""
+    return '[' + ', '.join(f'[{x:.3f}, {y:.3f}]' for x, y in points) + ']'
+
+
 def footprint(v):
     """Return the outline in the string form Nav2's costmaps take for `footprint`."""
-    return '[' + ', '.join(f'[{x:.3f}, {y:.3f}]' for x, y in footprint_points(v)) + ']'
+    return polygon(footprint_points(v))
+
+
+# collision_monitor's stop zone, ahead of the front bumper. At Nav2's 1 m/s, ego's 2 m/s^2
+# stops the car in 0.25 m; add about 0.4 s for the radar's frame, the mux, ego and the
+# brakes (0.4 m), and 0.35 m for the radar's range noise and the guessed measurements.
+STOP_ZONE_AHEAD = 1.0   # m
+STOP_ZONE_MARGIN = 0.2  # m each side of the body
+
+
+def stop_zone_points(v, ahead=STOP_ZONE_AHEAD, margin=STOP_ZONE_MARGIN):
+    """Return the stop zone's corners: from the front bumper to `ahead` past it, widened."""
+    body = v['body']
+    front = body['length'] - body['rear_overhang']
+    half = body['width'] / 2.0 + margin
+    return [[front + ahead, half], [front + ahead, -half], [front, -half], [front, half]]
 
 
 def ego_params(v):
@@ -60,10 +81,15 @@ def spine_params(v):
 
 
 def nav2_rewrites(v):
-    """Values to substitute into aav_navigation/config/nav2.yaml (RewrittenYaml leaf keys)."""
+    """
+    Values to substitute into aav_navigation/config/nav2.yaml.
+
+    RewrittenYaml takes a leaf key (every key of that name) or a whole dotted path.
+    """
     r = min_turning_radius(v)
     return {
         'footprint': footprint(v),
         'minimum_turning_radius': f'{r:.3f}',   # SmacPlannerHybrid
         'min_turning_r': f'{r:.3f}',            # MPPI AckermannConstraints
+        'collision_monitor.ros__parameters.StopZone.points': polygon(stop_zone_points(v)),
     }
