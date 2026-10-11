@@ -85,6 +85,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | No micro-ROS. Each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes | Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros" |
 | Our C++ moves to Rust: the IMU driver (Ben's twin), the radar clustering (a Rust ROS node), the encoder and display Picos (Embassy); the spine replaces the ESP32. Stock ROS packages stay | Ben, 10 Oct: "Can we change all the c++ to rust?" |
 | ML: a detector on each machine with a GPU (the Orin, a laptop), each under its own name; no device aliases | Ben, 10 Oct: "the orin be one node and/or my laptop be another node" |
+| Inference: TensorRT on the Orin (a `.engine` built there), Core ML on the MacBook Pro (a `.mlpackage`), both in our `aav_yolo` node. Isaac ROS's TensorRT detectors are the Orin's upgrade path | Ben, 10 Oct: "TensorRT on the Orin and CoreML ... on the macbook pro" |
 | A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own `mcp` environment | Ben: "Yes, read-only": see [AI apps (MCP)](mcp.md) |
 | Today's C++ boards build with PlatformIO, in a `firmware` environment. Its downloads go into `vendor/platformio/` | Ben: "We want everybody to be able to build this out of the box" |
 | CARLA is parked for this year: Gazebo and bench mode cover driving, Nav2 and the sensors | recommended, after Ben asked "do we even care": see Q31 |

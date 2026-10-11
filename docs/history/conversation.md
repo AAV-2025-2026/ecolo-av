@@ -1067,7 +1067,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 
 ### Get the firmware requirements into vendor/, so everybody can build out of the box. (20:54)
 
-- **Ben's yes covered three questions:** the Jrk G2 driver and the iBUS parser (already written, 98 tests), a free Pico 2 for the bench (still open), and an ARM chip, a Pico 2 or an STM32, instead of the ESP32 (Tentative until the team confirms Q10–Q13).
+- **Ben's yes covered three questions:** the Jrk G2 driver and the iBUS parser (already written, 98 tests), a spare Pico 2 to test the spine on a desk (still open), and an ARM chip, a Pico 2 or an STM32, instead of the ESP32 (Tentative until the team confirms Q10–Q13).
 - **Done:** a `firmware` environment with PlatformIO, its downloads in `vendor/platformio/` (about 1.5 GB). `pixi run -e firmware legacy-esp32` builds today's ESP32 firmware. It needed two fixes: the build looked for the framework in a folder named after one student's computer. From a clean checkout on Ben's Mac: 48 s, RAM 14.3%, flash 63.4%.
 - **Later:** the tools to flash an ARM chip (`probe-rs`, a UF2 converter) aren't on conda-forge; they come with the first board program.
 - **For the chip choice:** an STM32 has CAN built in; a Pico 2 needs an add-on CAN chip, such as an MCP2515.
@@ -1175,6 +1175,23 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **It means the red button always stops the car, whatever our software does.** We don't rewire it. The spine only listens, through a spare contact on the button, and tells ROS and the HUD it's pressed. The button's wiring doesn't run through our board, so if the board crashes or loses power, the button still stops the car.
 - The docs now say it that way, with a picture ([Firmware](../firmware.md)).
 
+### "A free Pico 2 for the bench: still needs an answer": what does that mean? (21:43)
+
+- **Jargon, sorry:** "the bench" means a desk, and "free" means spare. The car's two Pico 2s are busy (the wheel encoder, the status display).
+- **Why:** the spine's program for a Pico 2 only compiles until it runs on a real one. A spare Pico 2 on a desk is its first real test, with nothing that can move the car. It needs a Pico 2 (about $7), an MCP2515 CAN module (about $10, since the Pico 2 has no CAN) and a USB cable.
+
+### TensorRT on the Orin, Core ML on the MacBook Pro, and whatever ROS tool helps. (21:43)
+
+- **Decided (Ben).** Each machine runs its own detector, with its own model file:
+
+| Machine | Model file | Runs on | The ROS node |
+|---|---|---|---|
+| The Orin | `.engine` (TensorRT), built on the Orin itself | its GPU | ours, `aav_yolo`, with JetPack's TensorRT. Later, if it needs more speed: Isaac ROS's `isaac_ros_yolov8` or `isaac_ros_rtdetr` |
+| The MacBook Pro | `.mlpackage` (Core ML) | its GPU and Neural Engine | ours, `aav_yolo`: 4.3 ms a frame for the model, measured on Ben's Mac |
+
+- **No ROS package runs Core ML:** our detector node is that tool, through Ultralytics and coremltools. Both machines publish the same detection messages, so nothing downstream cares which one saw the sign.
+- **Next, with one detector per machine:** the machine files pick the model file; tasks export the `.mlpackage` (on a Mac) and the `.engine` (on the Orin, after the reflash, Q24).
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
@@ -1195,7 +1212,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **The claude.ai chat (fe09d020…):** Ben to paste the key parts.
 - **CARLA:** parked this year (10-10). It comes back on the NVIDIA Linux machine if it ever supports Jazzy (Q31).
 - **The NVIDIA Linux machine:** which one, and access to it, to find `best.pt`.
-- **The board:** a photo of the ESP32 board, and a free Pico 2 for the bench.
+- **The board:** a photo of the ESP32 board, and a spare Pico 2 to test the spine on a desk.
 - **Team decisions:**
   - the team's `ROS_DOMAIN_ID`;
   - the spine arming rules (Proposed);
