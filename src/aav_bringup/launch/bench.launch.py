@@ -3,7 +3,7 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
 
   ros2 launch aav_bringup bench.launch.py [nav:=true] [teleop:=false] [rviz:=false]
       [perception:=false] [lane:=false] [hud:=false] [arm:=true] [foxglove:=false]
-      [obstacle:=false]
+      [obstacle:=false] [camera_obstacles:=false]
   pixi run bench                            (the same)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
 
@@ -16,7 +16,12 @@ topics and frames as the real devices:
   mock_imu, mock_gps,       the sensors, reading where the model car really is
   mock_battery, mock_camera,
   mock_radar                the radar sees the bench world's obstacles (obstacle:=true);
-                            aav_object_detection clusters its points
+                            aav_object_detection clusters its points, and Nav2's local
+                            costmap marks them (navigation.launch.py radar:=true)
+
+camera_obstacles:=true adds aav_yolo's camera_obstacles (the detectors' boxes as points on
+the road, from mock_camera's lens) and the local costmap's camera layer. The bench camera
+draws only stop signs, which never count: publish a detection by hand to see it work.
 
 The model car starts at the map origin (the GPS datum), facing east. A stop sign stands
 25 m ahead on the right; obstacle:=true puts a 1 m box in the lane 15 m ahead
@@ -51,7 +56,7 @@ def include(package, launch_file, **args):
 def launch_setup(context):
     flag = {n: LaunchConfiguration(n).perform(context).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'lane', 'hud', 'arm', 'foxglove',
-                      'obstacle')}
+                      'obstacle', 'camera_obstacles')}
     v = vehicle.load()['vehicle']
     bench_config = os.path.join(share('aav_bench'), 'config', 'bench.yaml')
     with open(os.path.join(share('aav_localization'), 'config', 'navsat.yaml')) as f:
@@ -90,8 +95,10 @@ def launch_setup(context):
         include('aav_object_detection', 'radar_clusters.launch.py', minimum_points='5'),
     ]
     if flag['nav']:
+        # mock_radar always runs, so Nav2's local costmap always reads the radar.
         actions.append(include('aav_navigation', 'navigation.launch.py',
-                               map=os.path.join(share('aav_navigation'), 'maps', 'empty.yaml')))
+                               map=os.path.join(share('aav_navigation'), 'maps', 'empty.yaml'),
+                               radar='true', camera_obstacles=flag['camera_obstacles']))
     if flag['teleop']:
         actions.append(include('aav_teleop', 'teleop.launch.py'))
     if flag['perception']:
@@ -99,6 +106,11 @@ def launch_setup(context):
             include('aav_yolo', 'detector.launch.py', labels='stop sign'),
             Node(package='aav_yolo', executable='stop_sign_watcher', name='stop_sign_watcher'),
         ]
+    if flag['camera_obstacles']:
+        actions.append(Node(package='aav_yolo', executable='camera_obstacles',
+                            name='camera_obstacles',
+                            parameters=[os.path.join(share('aav_yolo'), 'config',
+                                                     'camera_obstacles.yaml')]))
     if flag['lane']:
         actions.append(include('aav_lane_geometry', 'lane_follower.launch.py', fake='true'))
     if flag['hud']:
@@ -137,5 +149,7 @@ def generate_launch_description():
         DeclareLaunchArgument('obstacle', default_value='false',
                               description="a box in the car's lane, 15 m ahead, that the "
                                           'pretend radar sees'),
+        DeclareLaunchArgument('camera_obstacles', default_value='false',
+                              description="the detectors' boxes into the local costmap"),
         OpaqueFunction(function=launch_setup),
     ])

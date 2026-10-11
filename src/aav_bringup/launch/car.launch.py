@@ -4,6 +4,8 @@ The real car. One launch file for every machine; a machine file picks the parts.
   ros2 launch aav_bringup car.launch.py machine:=orin
       [gps:=true] [map:=<map yaml>] [start_x:=0] [start_y:=0] [start_yaw:=0]
       [imu_driver:=cpp]   (or rust: aav_imu_yahboom, the IMU driver's Rust twin)
+      [camera_obstacles:=false]   (Nav2's costmap reads perception.launch.py's
+                                   camera_obstacles: once the cameras are calibrated, Q22)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all). Every machine uses the same ROS_DOMAIN_ID, so the
@@ -17,7 +19,8 @@ Parts and what they start:
   imu, gps,       sensor drivers (on the machine the device is plugged into)
   radar, battery
   localization    ekf_local, ekf_global, navsat_transform
-  navigation      Nav2 -> /cmd_vel/nav
+  navigation      Nav2 -> /cmd_vel/nav. With radar on the same machine, its local
+                  costmap reads /radar/points too
   spine           backend: CAN spine (ros2_socketcan + spine_bridge)
   legacy_uart     backend: today's ESP32 over UART (the Pi wired to it)
   legacy_encoder  today's wheel encoder over UDP
@@ -84,8 +87,10 @@ def launch_setup(context):
         # because included launch files share launch arguments.
         empty_map = os.path.join(FindPackageShare('aav_navigation').perform(context), 'maps',
                                  'empty.yaml')
+        # The local costmap reads the radar where this machine also runs it.
         actions.append(include(context, 'aav_navigation', 'navigation.launch.py',
-                               map=arg('map') or empty_map))
+                               map=arg('map') or empty_map, radar=on('radar'),
+                               camera_obstacles=arg('camera_obstacles')))
     if on('spine'):
         actions.append(include(context, 'aav_spine', 'spine.launch.py'))
     if on('legacy_uart') or on('legacy_encoder'):
@@ -111,5 +116,8 @@ def generate_launch_description():
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0',
                               description='Heading at start, rad counter-clockwise from east'),
+        DeclareLaunchArgument('camera_obstacles', default_value='false',
+                              description="true: Nav2's local costmap reads the cameras' "
+                                          'detections (perception.launch.py)'),
         OpaqueFunction(function=launch_setup),
     ])

@@ -4,13 +4,16 @@ Perception on the car, next to car.launch.py.
 Run it on the computer the camera and the radar plug into (the Orin).
 
   ros2 launch aav_bringup perception.launch.py [camera:=true] [detector:=true]
-      [radar_clusters:=true]
+      [radar_clusters:=true] [camera_obstacles:=false]
 
   camera          aav_sensors cameras.launch.py: usb_cam -> /camera/image_raw (Linux only)
   detector        aav_yolo: YOLO on /camera/image_raw -> /perception/detections, and the
                   stop-sign watcher -> /perception/stop (twist_mux's stop_sign lock)
   radar_clusters  aav_object_detection: DBSCAN on /radar/points (car.launch.py's radar part
                   starts the radar)
+  camera_obstacles  aav_yolo: the detectors' boxes as points on the road, for Nav2's
+                  local costmap (car.launch.py camera_obstacles:=true reads them). Off
+                  until the cameras are calibrated (Q22)
 
 The detector needs PyTorch or TensorRT: on the Orin, JetPack's (docs/perception.md); on a
 laptop, the ml environment. Bench mode starts all of this with stand-ins instead
@@ -41,6 +44,7 @@ def generate_launch_description():
         DeclareLaunchArgument('camera', default_value='true'),
         DeclareLaunchArgument('detector', default_value='true'),
         DeclareLaunchArgument('radar_clusters', default_value='true'),
+        DeclareLaunchArgument('camera_obstacles', default_value='false'),
         include('aav_sensors', 'cameras.launch.py', IfCondition(on('camera'))),
         include('aav_yolo', 'detector.launch.py', IfCondition(on('detector')),
                 labels='stop sign'),
@@ -48,4 +52,8 @@ def generate_launch_description():
              condition=IfCondition(on('detector'))),
         include('aav_object_detection', 'radar_clusters.launch.py',
                 IfCondition(on('radar_clusters'))),
+        Node(package='aav_yolo', executable='camera_obstacles', name='camera_obstacles',
+             parameters=[os.path.join(FindPackageShare('aav_yolo').find('aav_yolo'), 'config',
+                                      'camera_obstacles.yaml')],
+             condition=IfCondition(on('camera_obstacles'))),
     ])
