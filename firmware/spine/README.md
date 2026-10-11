@@ -1,7 +1,7 @@
 # firmware/spine: the spine's firmware, in Rust
 
-Everything the spine board will run, except the board program itself, which waits on the
-chip (Q10-Q13). Every crate is `no_std` and is tested on a laptop, without the board.
+Everything the spine board runs. Every crate is `no_std` and is tested on a laptop, without
+the board. The board program for a Pico 2, on the bench, is in `boards/pico2`.
 
 | Crate | What it is | Tests |
 |---|---|---|
@@ -36,15 +36,24 @@ cargo build --target thumbv8m.main-none-eabihf -p spine-board   # for the Pico 2
 ```
 
 `pixi run test` also builds every crate for the Pico 2's chip, so a crate that pulls in the
-standard library fails.
+standard library fails. It builds the board program too, and checks its UF2 file.
 
 ## Run it without a board
 
 Bench mode runs `spine-core` on a laptop, on the CAN frames from `spine_bridge`, driving a
 model car: `pixi run bench` (`docs/bench.md`).
 
-## The board program, still to write
+## The board program: `boards/pico2`
 
-One small program for the chosen chip. It implements `spine_board::Board` (a millisecond
-clock, the hardware e-stop pin, the wheel encoder's counter, and CAN), then calls
-`SpineBoard::tick` about 100 times a second. `spine-board`'s README has the checklist.
+The spine on a Raspberry Pi Pico 2 (RP2350), with Embassy, for the bench. It implements
+`spine_board::Board` (the clock, the e-stop input, the wheel's spoke sensors, CAN through
+the MCP2515), then calls `SpineBoard::tick` every 10 ms. The car's chip is still Q10-Q13.
+
+| Command | Does |
+|---|---|
+| `pixi run spine-uf2` | builds it, and writes `boards/pico2/spine-pico2.uf2`: hold BOOTSEL, plug in, drag it on |
+| `pixi run spine-tools`, then `pixi run spine-flash` | or flash it through a debug probe, and see its logs |
+
+It is a workspace of its own: it builds only for the RP2350. The pin map, the wiring rules
+(the e-stop's among them), and what is untested: `docs/rust-firmware.md`.
+Untested on a real Pico 2: nothing has been flashed yet.
