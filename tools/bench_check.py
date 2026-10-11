@@ -85,8 +85,8 @@ class Probe(Node):
         self.create_subscription(LaneGeometry, '/lane_geometry', self.on_lane, 10)
         self.create_subscription(Odometry, '/odometry/global',
                                  lambda m: setattr(self, 'glob', m), 10)
-        self.create_subscription(VehicleStatus, '/vehicle/status',
-                                 lambda m: setattr(self, 'status', m), 10)
+        self.latches = []   # (stamp, faults) each time the spine stops being armed
+        self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, 10)
         self.estop = self.create_publisher(Bool, '/estop', 10)
         self.hw_estop = self.create_publisher(Bool, '/bench/hw_estop', 10)
         self.arm_client = self.create_client(SetBool, '/spine/arm')
@@ -105,6 +105,11 @@ class Probe(Node):
         self.track.append((seconds(msg.header.stamp), msg.pose.pose.position.x,
                            msg.pose.pose.position.y, 2.0 * math.atan2(q.z, q.w),
                            msg.twist.twist.linear.x))
+
+    def on_status(self, msg):
+        if self.status is not None and self.status.armed and not msg.armed:
+            self.latches.append((seconds(msg.header.stamp), msg.faults))
+        self.status = msg
 
     def on_lane(self, msg):
         self.lanes.append((seconds(msg.header.stamp), msg.vehicle_offset_m,
@@ -260,15 +265,24 @@ def check_lane_keeping(probe):
         both += two
     every = '  '.join(f'{at(t0 + k)[2] - ROAD_Y:+.2f}' for k in range(0, int(LANE_TIME) + 1, 3))
     print(f'      the offset (m), every 3 s: {every}', flush=True)
-    armed = probe.status is not None and probe.status.armed
+    # A latch stops the car, so the run shows nothing after it: a busy computer can leave
+    # a gap of 200 ms in the commands (VehicleStatus.FAULT_CMD_TIMEOUT).
+    latch = next((s for s in probe.latches if t0 <= s[0] <= t0 + LANE_TIME), None)
+    armed = latch is None and probe.status is not None and probe.status.armed
+    why = ''
+    if latch:
+        why = (f' at {latch[0] - t0:.1f} s, '
+               + ('no commands for 200 ms: is the computer busy?'
+                  if latch[1] & VehicleStatus.FAULT_CMD_TIMEOUT else f'faults {latch[1]}'))
     ok = (settled <= LANE_TIME - 5.0 and over < 0.10 and abs(end) < LANE_BAND and armed
           and bool(errors) and both >= 0.9 * len(errors))
     finder = (f'lane_finder {100 * sum(errors) / len(errors):.1f} cm from the truth on average, '
               f'both lines in {both} of {len(errors)} pictures' if errors else 'no lane messages')
+    latched = '' if armed else f'; the spine latched{why}'
     result('lane keeping', ok,
            f'{start:+.2f} m to {end:+.2f} m, within {100 * LANE_BAND:.0f} cm after '
            f'{settled:.1f} s and {at(t0 + settled)[1] - x0:.1f} m, overshoot {100 * over:.0f} cm, '
-           f'heading {heading:+.3f} rad; {finder}' + ('' if armed else '; the spine latched'))
+           f'heading {heading:+.3f} rad; {finder}{latched}')
 
 
 def check_contract(probe, env, tag):
