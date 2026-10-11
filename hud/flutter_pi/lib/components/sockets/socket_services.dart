@@ -57,10 +57,13 @@ class SocketService {
   /// Open the socket and pass its events to [handle]. Tests replace it.
   @protected
   void connect(String serverUrl, void Function(bool connected)? onConnection) {
+    // WebSocket only. On Linux and macOS the package has no polling transport: with
+    // 'polling' first it opened a WebSocket on the polling address, and never connected.
+    // The back end needs simple-websocket for this (the pixi environment has it).
     final socket = io.io(
       serverUrl,
       io.OptionBuilder()
-          .setTransports(['polling', 'websocket'])
+          .setTransports(['websocket'])
           .disableAutoConnect()
           .build(),
     );

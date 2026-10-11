@@ -59,6 +59,11 @@ Files, unchanged unless listed under Changes:
   - `.gitignore`: the plugin registrant files that every `flutter pub get` makes again.
   - `test/widget_test.dart`: deleted. It was Flutter's template test for a counter the
     app doesn't have, so it could never pass.
+  - `lib/components/sockets/socket_services.dart`: transports `['websocket']` again, as
+    in 2025-26. On Linux and macOS, socket_io_client 2.0.3 has no polling transport:
+    with `'polling'` first it opened a WebSocket on the polling address, and never
+    connected (seen on the bench). The back end needs `simple-websocket`; the pixi
+    environment has it (1.1.0).
 
 ## New files (2026-27, not inherited)
 

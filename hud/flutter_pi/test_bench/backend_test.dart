@@ -1,6 +1,9 @@
-/// The app's own client code against a running back end, on the bench: the same
-/// SocketService and HudBackend as the screens, with no fakes. It presses the e-stop the
-/// way the home screen's button does. Not part of `pixi run hud-test`: it needs the bench.
+/// The app's own client code against a running back end: the same SocketService and
+/// HudBackend as the screens, with no fakes. It presses the e-stop the way the home
+/// screen's button does.
+///
+/// `pixi run hud-test` runs it against the back end's web server with a fake car
+/// (tools/hud_fake_backend.py). On the bench, with the whole car graph:
 ///
 ///   pixi run bench hud:=true hud_port:=5123
 ///   pixi run flutter test test_bench --dart-define=HUD_BACKEND=http://127.0.0.1:5123
