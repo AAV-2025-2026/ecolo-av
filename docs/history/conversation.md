@@ -1053,7 +1053,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 
 - **The name:** a nickname from the design doc (9 Oct), not from Ben's theory. The computers are the brain, the motors the muscles, and the board between them the spine, with one reflex: it brakes by itself if the computers go quiet for 200 ms. The usual industry names are "drive-by-wire controller" and "vehicle control unit" (VCU). Renaming is cheap until the board code exists: Ben's call.
 - **The e-stop (Decided, Ben):** the car's existing e-stop stays exactly as it is. The spine may read it, but never sits in its path.
-- **Found so far:** today's ESP32 code reads no e-stop button, so it's wired outside the code. The 2025-26 status display shows "!!! E-STOP !!!" when told to, over I2C; what tells it is still unknown. Q6 (what kind, what it cuts, the wiring) waits on Ben and the board survey.
+- **Found so far:** today's ESP32 code reads no e-stop button, so it's wired outside the code. The 2025-26 status display shows "!!! E-STOP !!!" when told to, over I2C; what tells it is still unknown. Q6 (what kind, what it cuts, the wiring) waits on Ben.
 
 ### I haven't had an email for a long time. That PDF is amazing! (20:54)
 
@@ -1084,7 +1084,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **The ESP32** is the actuator controller: steering, brake, throttle, forward/reverse, RC override. Serial to the Motor Pi; I2C to the two Jrk G2s (steering 0x05, brake 0x04), the throttle DAC and the expander.
 - **The Pico 2s:** one counts wheel spokes and sends them over its own Ethernet chip; the "sentinel" is a status display and buzzer on I2C (0x42), which nothing talks to yet.
 - **The Motor Pi** runs the ROS bridge to the ESP32.
-- **One board?** Probably a carrier board the ESP32 plugs into, but the code can't show the circuit board. A photo would settle it; the board survey is looking for one.
+- **One board?** Probably a carrier board the ESP32 plugs into, but the code can't show the circuit board. A photo would settle it. The board survey that was looking for one stopped unfinished at 20:48, when a new message came in.
 
 ### The firmware and car environments: do we still need them? Maybe put them in vendor? (20:55)
 
@@ -1120,6 +1120,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **The MCP server (Ben, 10-10 17:03):** built that evening, read-only. Open: bench-only actions through the stand-ins, if the team wants them; nothing that reaches the car.
 - **Slim per-machine Pixi environments:** for the Orin, the Motor Pi and laptops, matching the machine files. Waits until the first car computer gets Pixi (Phase 0).
 - **Running today:** the inventory commands haven't been run on the car's computers.
+- **The board survey** (the old repos, for the board's wiring, photos and the e-stop): stopped unfinished at 20:48, with no report. It runs again only if Ben asks.
 - **2024–25 repos:** cloning and surveying `emergency-stop`, `Simulation`, `camera_Yolo_detection`, `Braking` and `Power-Management-Documentation-2024-25` was offered, not done. Only `GNSS` has been read in depth.
 - **`ros2-rust/`:** keep or delete is undecided; the recommendation is keep.
 - **The claude.ai chat (fe09d020…):** Ben to paste the key parts.
