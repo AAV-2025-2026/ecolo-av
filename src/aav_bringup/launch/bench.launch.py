@@ -3,6 +3,7 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
 
   ros2 launch aav_bringup bench.launch.py [nav:=true] [teleop:=false] [rviz:=false]
       [perception:=false] [lane:=false] [hud:=false] [arm:=true] [foxglove:=false]
+      [obstacle:=false]
   pixi run bench                            (the same)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
 
@@ -13,11 +14,13 @@ topics and frames as the real devices:
   spine_sim                 the spine board and actuators: the firmware's own logic
                             (spine-core) on the CAN frames, driving a model car
   mock_imu, mock_gps,       the sensors, reading where the model car really is
-  mock_battery, mock_camera
-  mock_radar                pretend radar points, clustered by aav_object_detection
+  mock_battery, mock_camera,
+  mock_radar                the radar sees the bench world's obstacles (obstacle:=true);
+                            aav_object_detection clusters its points
 
 The model car starts at the map origin (the GPS datum), facing east. A stop sign stands
-25 m ahead on the right (aav_bench/config/bench.yaml). arm:=true arms the spine after
+25 m ahead on the right; obstacle:=true puts a 1 m box in the lane 15 m ahead
+(aav_bench/config/bench.yaml). arm:=true arms the spine after
 12 s, once Nav2 is up, the way `ros2 service call /spine/arm std_srvs/srv/SetBool
 "{data: true}"` does. Arming earlier, while everything starts, risks a gap in commands that
 latches the spine again: its 200 ms watchdog doing its job.
@@ -47,7 +50,8 @@ def include(package, launch_file, **args):
 
 def launch_setup(context):
     flag = {n: LaunchConfiguration(n).perform(context).lower() == 'true'
-            for n in ('nav', 'teleop', 'rviz', 'perception', 'lane', 'hud', 'arm', 'foxglove')}
+            for n in ('nav', 'teleop', 'rviz', 'perception', 'lane', 'hud', 'arm', 'foxglove',
+                      'obstacle')}
     v = vehicle.load()['vehicle']
     bench_config = os.path.join(share('aav_bench'), 'config', 'bench.yaml')
     with open(os.path.join(share('aav_localization'), 'config', 'navsat.yaml')) as f:
@@ -81,8 +85,9 @@ def launch_setup(context):
              parameters=[bench_config]),
         Node(package='aav_bench', executable='mock_camera', name='mock_camera',
              parameters=[bench_config]),
-        include('aav_object_detection', 'radar_clusters.launch.py', mock='true',
-                minimum_points='5'),
+        Node(package='aav_bench', executable='mock_radar', name='mock_radar',
+             parameters=[bench_config, {'obstacle': flag['obstacle']}]),
+        include('aav_object_detection', 'radar_clusters.launch.py', minimum_points='5'),
     ]
     if flag['nav']:
         actions.append(include('aav_navigation', 'navigation.launch.py',
@@ -129,5 +134,8 @@ def generate_launch_description():
                               description='arm the spine after 12 s'),
         DeclareLaunchArgument('foxglove', default_value='false',
                               description='foxglove_bridge on port 8765'),
+        DeclareLaunchArgument('obstacle', default_value='false',
+                              description="a box in the car's lane, 15 m ahead, that the "
+                                          'pretend radar sees'),
         OpaqueFunction(function=launch_setup),
     ])

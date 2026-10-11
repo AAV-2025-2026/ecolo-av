@@ -211,7 +211,7 @@ topics:
   /bench/truth:
     type: nav_msgs/msg/Odometry
     pub: [spine_sim]
-    sub: [mock_imu, mock_gps, mock_camera]
+    sub: [mock_imu, mock_gps, mock_camera, mock_radar]
     live: [bench]
     note: Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs.
   /bench/hw_estop:

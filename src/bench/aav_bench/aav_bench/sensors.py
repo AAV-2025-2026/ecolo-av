@@ -9,9 +9,11 @@ and frame, so nothing downstream changes.
   mock_battery  /battery_status (BatteryState), 1 Hz
   mock_camera   /bench/truth -> /camera/image_raw (Image), /camera/camera_info,
                 10 Hz: a road, and the bench world's stop signs when they're in view
+  mock_radar    /bench/truth -> /radar/points (PointCloud2, best effort), 10 Hz      radar_link
+                the bench world's obstacle boxes, when obstacle is true; else empty
 
 spine_sim publishes /bench/truth: where the model car really is. The real drivers are
-yahboom_imu_cpp, ublox_dgnss, battery_monitor and usb_cam (aav_sensors).
+yahboom_imu_cpp, ublox_dgnss, battery_monitor, usb_cam (aav_sensors) and ti_ros2_driver.
 """
 
 import math
@@ -22,11 +24,15 @@ from aav_bench import models, pictures
 from aav_description import vehicle
 from cv_bridge import CvBridge
 from nav_msgs.msg import Odometry
+from rcl_interfaces.msg import SetParametersResult
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import BatteryState, CameraInfo, Image, Imu, MagneticField, NavSatFix
-from sensor_msgs.msg import NavSatStatus
+from sensor_msgs.msg import NavSatStatus, PointCloud2, PointField
+from sensor_msgs_py import point_cloud2
+from std_msgs.msg import Header
 
 TRUTH = '/bench/truth'
 
@@ -182,6 +188,62 @@ class MockCamera(Node):
         self.info_pub.publish(self.info)
 
 
+# The fields the TI radar driver publishes (ti_ros2_driver pc_publisher.py).
+RADAR_FIELDS = [PointField(name=n, offset=4 * i, datatype=PointField.FLOAT32, count=1)
+                for i, n in enumerate(('x', 'y', 'z', 'intensity', 'velocity'))]
+
+
+class MockRadar(Node):
+
+    def __init__(self):
+        super().__init__('mock_radar')
+        self.frame = self.declare_parameter('frame_id', 'radar_link').value
+        rate = self.declare_parameter('rate_hz', 10.0).value
+        # Read on every frame, so a test can move the boxes or take them away:
+        # ros2 param set /mock_radar obstacle false
+        self.declare_parameter('obstacle', False)
+        self.declare_parameter('boxes', [15.0, -0.5, 16.0, 0.5])
+        self.declare_parameter('box_height', 1.0)
+        mount = vehicle.load()['sensors'][self.frame]
+        self.radar = models.Radar(
+            mount['xyz'], mount['rpy'][2],
+            self.declare_parameter('max_range', 8.4).value,
+            math.radians(self.declare_parameter('fov_deg', 120.0).value),
+            math.radians(self.declare_parameter('ray_step_deg', 2.0).value))
+        self.keep = self.declare_parameter('keep', 0.8).value
+        self.range_noise = self.declare_parameter('range_noise', 0.05).value
+        self.height_noise = self.declare_parameter('height_noise', 0.1).value
+        self.rng = random.Random(self.declare_parameter('seed', 4).value)
+        self.add_on_set_parameters_callback(self.check)
+        # Best effort, as the TI driver publishes: its subscribers must match it.
+        self.pub = self.create_publisher(PointCloud2, '/radar/points', qos_profile_sensor_data)
+        self.truth = None
+        self.create_subscription(Odometry, TRUTH, self.on_truth, 10)
+        self.create_timer(1.0 / rate, self.tick)
+
+    def check(self, params):
+        for p in params:
+            if p.name == 'boxes' and len(p.value) % 4:
+                return SetParametersResult(successful=False,
+                                           reason='boxes needs x1, y1, x2, y2 per box')
+        return SetParametersResult(successful=True)
+
+    def on_truth(self, msg: Odometry):
+        self.truth = truth_from(msg)
+
+    def tick(self):
+        if self.truth is None:
+            return
+        obstacles = (models.boxes(self.get_parameter('boxes').value)
+                     if self.get_parameter('obstacle').value else [])
+        points = models.radar_returns(self.radar, self.truth, obstacles,
+                                      self.get_parameter('box_height').value, self.rng,
+                                      self.keep, self.range_noise, self.height_noise)
+        header = Header(stamp=self.get_clock().now().to_msg(), frame_id=self.frame)
+        self.pub.publish(point_cloud2.create_cloud(
+            header, RADAR_FIELDS, [(x, y, z, 1.0, v) for x, y, z, v in points]))
+
+
 def run(node_class):
     rclpy.init()
     node = None
@@ -213,3 +275,7 @@ def battery():
 
 def camera():
     run(MockCamera)
+
+
+def radar():
+    run(MockRadar)

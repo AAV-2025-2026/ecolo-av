@@ -136,3 +136,70 @@ def pairs(flat: Sequence[float]) -> List[Tuple[float, float]]:
     if len(flat) % 2:
         raise ValueError('stop_signs needs x, y pairs')
     return [(flat[i], flat[i + 1]) for i in range(0, len(flat), 2)]
+
+
+Box = Tuple[float, float, float, float]   # x1, y1, x2, y2 on the map, as in make_map's specs
+
+
+def boxes(flat: Sequence[float]) -> List[Box]:
+    """Read a flat [x1, y1, x2, y2, ...] parameter as boxes, corners in any order."""
+    if len(flat) % 4:
+        raise ValueError('boxes needs four numbers per box: x1, y1, x2, y2')
+    return [(min(flat[i], flat[i + 2]), min(flat[i + 1], flat[i + 3]),
+             max(flat[i], flat[i + 2]), max(flat[i + 1], flat[i + 3]))
+            for i in range(0, len(flat), 4)]
+
+
+@dataclass
+class Radar:
+    """A radar on the car: where it sits, and how far and wide it sees."""
+
+    xyz: Sequence[float]   # m, on the car (radar_link in vehicle.yaml)
+    yaw: float             # rad, how it's turned on the car
+    max_range: float       # m
+    fov: float             # rad, the whole width it sees, centred ahead
+    ray_step: float        # rad between the rays this model traces
+
+
+def ray_hits_box(ox: float, oy: float, dx: float, dy: float, box: Box) -> Optional[float]:
+    """Return how far a ray from (ox, oy), along the unit vector (dx, dy), goes to the box."""
+    near, far = 0.0, math.inf
+    for o, d, lo, hi in ((ox, dx, box[0], box[2]), (oy, dy, box[1], box[3])):
+        if abs(d) < 1e-12:
+            if not lo <= o <= hi:
+                return None
+            continue
+        t1, t2 = sorted(((lo - o) / d, (hi - o) / d))
+        near, far = max(near, t1), min(far, t2)
+        if near > far:
+            return None
+    return near
+
+
+def radar_returns(radar: Radar, truth: Truth, obstacles: Sequence[Box], height: float,
+                  rng: random.Random, keep: float = 0.8, range_noise: float = 0.05,
+                  height_noise: float = 0.1) -> List[Tuple[float, float, float, float]]:
+    """
+    Return the points a radar sees on the boxes: (x, y, z, radial speed) in radar_link.
+
+    A sparse, noisy radar: rays fan out across the field of view, each stops at the nearest
+    box face (so a near box hides one behind it), and only `keep` of them return a point.
+    Each point gets range noise, and a height anywhere on the box (0.1 m to `height`) plus
+    noise, as a radar's elevation is poor. The ground returns nothing. The radial speed is
+    the car's own, seen from the radar (negative: closing). x forward, y left, z up.
+    """
+    ox, oy = offset(truth, radar.xyz)
+    heading = truth.yaw + radar.yaw
+    points = []
+    rays = int(radar.fov / radar.ray_step) + 1
+    for i in range(rays):
+        a = -radar.fov / 2.0 + i * radar.ray_step
+        dx, dy = math.cos(heading + a), math.sin(heading + a)
+        hits = [r for r in (ray_hits_box(ox, oy, dx, dy, b) for b in obstacles)
+                if r is not None and 0.0 < r <= radar.max_range]
+        if not hits or rng.random() > keep:
+            continue
+        r = min(hits) + rng.gauss(0.0, range_noise)
+        z = rng.uniform(0.1, height) - radar.xyz[2] + rng.gauss(0.0, height_noise)
+        points.append((r * math.cos(a), r * math.sin(a), z, -truth.speed * math.cos(a)))
+    return points

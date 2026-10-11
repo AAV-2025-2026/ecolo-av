@@ -41,7 +41,7 @@ Check a running system against it with `pixi run check <turtle|sim|car|replay|be
 | `/lane_geometry` | `aav_lane_geometry/msg/LaneGeometry` | `fake_lane_geometry_pub` | `control_interface` | - | The lane lines as polynomials, the car's offset and the curvature. The lane finder that makes them from the camera is missing; fake_lane_geometry_pub stands in. |
 | `/lane_geometry_status` | `std_msgs/msg/String` | `control_interface` | - | - | Lane keeping's state and numbers, as text. |
 | `/vehicle_state` | `std_msgs/msg/String` | `control_interface` | - | - | Lane keeping's state machine (LANE_KEEP, LANE_CHANGING, ...). Not the car's state - that's /vehicle/status. |
-| `/bench/truth` | `nav_msgs/msg/Odometry` | `spine_sim` | `mock_imu`, `mock_gps`, `mock_camera` | bench | Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs. |
+| `/bench/truth` | `nav_msgs/msg/Odometry` | `spine_sim` | `mock_imu`, `mock_gps`, `mock_camera`, `mock_radar` | bench | Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs. |
 | `/bench/hw_estop` | `std_msgs/msg/Bool` | - | `spine_sim` | - | true = press the hardware e-stop, on the bench; false = release it. The spine brakes, and needs arming again. |
 | `/bench/driver_faults` | `std_msgs/msg/UInt16` | - | `spine_sim` | - | Pretend a driver failed. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder). |
 | `/odometry/local` | `nav_msgs/msg/Odometry` | `ekf_local` | `controller_server`, `bt_navigator`, `scripted_driver` | turtle, sim, car, replay, bench | odom frame. Smooth; drifts. |

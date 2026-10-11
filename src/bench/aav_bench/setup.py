@@ -17,7 +17,7 @@ setup(
     zip_safe=True,
     maintainer='AAV 2026-27 team',
     maintainer_email='aav-team@todo.invalid',
-    description="Bench mode's pretend sensors: IMU, GPS, battery and camera.",
+    description="Bench mode's pretend sensors: IMU, GPS, battery, camera and radar.",
     license='TODO',
     extras_require={'test': ['pytest']},
     entry_points={
@@ -26,6 +26,7 @@ setup(
             'mock_gps = aav_bench.sensors:gps',
             'mock_battery = aav_bench.sensors:battery',
             'mock_camera = aav_bench.sensors:camera',
+            'mock_radar = aav_bench.sensors:radar',
         ],
     },
 )
