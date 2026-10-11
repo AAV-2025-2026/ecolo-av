@@ -60,7 +60,7 @@ Where Rust stands in October 2026:
 | Target | Rust there | A ROS node? |
 |---|---|---|
 | Orin, Raspberry Pi (Linux, ARM) | `aarch64-unknown-linux-gnu` | Yes, with `rclrs` |
-| ESP32 (bare metal) | `no_std` with `esp-hal` | No: it talks CAN to `spine_bridge`. No micro-ROS (Ben, 10 Oct) |
+| ESP32 (bare metal) | `no_std` with `esp-hal` | No: it talks CAN to `spine_bridge`. No micro-ROS for now: we think again once we see the hardware (Ben, 11 Oct) |
 | Raspberry Pi Pico 2 | `no_std`, `thumbv8m.main-none-eabihf` | No, the same as the ESP32 |
 
 ## The plan

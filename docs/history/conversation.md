@@ -1150,6 +1150,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 ### No micro-ROS: Rust and Embassy on the boards, talking to a real ROS node. (21:34)
 
 - **Decided (Ben):** no micro-ROS. Each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes. That's already the spine's design: spine → CAN → `spine_bridge`.
+- **Changed 11 Oct (Ben, 11:38):** Tentative now. No micro-ROS for now, and we think again once we see the hardware.
 
 ### "cuda means Metal" seems weird: one ML node on the Orin and one on my laptop. Which weights for stop signs, perception and distance? (21:34)
 
@@ -1250,6 +1251,38 @@ Ben's order: the full graph with drivers, ego and the simulators, all set up; th
 - **The fix in the check:** a box as wide as the lane, and a re-arm after a latch, as a safety driver would (the lane check already does). The stop zone must still be what stops the car.
 - **Still open:** N7 itself, and collision_monitor flickering between stop and go at the zone's edge.
 
+### "No micro-ROS - lets rethink thinks later after we see the hardware" (11:38)
+
+- **Changed:** micro-ROS goes from Decided to Tentative. For now the boards keep talking plain CAN, UART or UDP to a ROS node on Linux; we choose again once we've seen the car's chips and wiring (Q10–Q13).
+- **Nothing is lost by waiting:** the spine's logic lives in `spine-core` either way. Only the layer that talks to Linux would change.
+- **Changed on:** the Decisions page, `CLAUDE.md`, the firmware and languages pages, and the chips picture.
+
+### "I guess i should be able to run the hud on my screen on my mac and drive the car with my mac, and core ml ai driver on the mac too." (11:38)
+
+Ben: "All the perception stack maybe, what part does what. When sitting at the car? maybe the orin can do the processing". Saved as an idea in `TODO.md` ("Ideas to keep").
+
+**The rule that decides it:** the car must stay safe with the Mac gone, because WiFi drops. So the car keeps everything that stops it; the Mac adds a screen, hands, and a second GPU.
+
+| Part | Where | Why |
+|---|---|---|
+| The spine bridge, ego, the mux, the e-stop | the car, always | the car must stop by itself when the WiFi drops |
+| The sensors, localization, Nav2, collision_monitor | the car | they need every reading, on time |
+| The radar clusters, the camera obstacles | the car | they feed collision_monitor and the costmap: safety |
+| The detector (YOLO) | both: the Orin's (TensorRT) and your Mac's (Core ML), each under its own name | works on the bench: the stop-sign watcher hears both, and the car doesn't need the Mac's |
+| Lane keeping | the car; your Mac to try | from the Mac, its steering crosses the WiFi. A drop stops the car: safe, but jerky |
+| The HUD | your Mac's screen | raylib's HUD would run on a Mac as it is. The Flutter app needs CocoaPods first |
+| Driving by hand | your Mac: the joystick (priority 100) or the keyboard (90) | works today, on the bench |
+| Watching and recording: RViz, Foxglove, rqt_graph, `ros2 bag` | your Mac | |
+
+- **"When sitting at the car?"** The Orin does what the car needs to drive; your Mac watches, drives by hand, and tries new models first. A model moves to the Orin once it works.
+- **What it waits on:** the car on Jazzy (Q24); the HUD on a Mac (raylib, or CocoaPods for Flutter); the car's WiFi, measured; and your Mac's clock in step with the Orin's (chrony, [Platforms](../platforms.md) step 5).
+
+### "gh repo edit OWNER/REPO --visibility public --accept-visibility-change-consequences" (11:38)
+
+- **Not run yet:** making the repo public can't be undone (anyone can copy it at once), and `CLAUDE.md` says private (Q25). Claude checked the history first, and asked Ben.
+- **The check, all 167 commits on GitHub (`main` is its only branch):** no tokens, keys or passwords; `secrets.h.example` has placeholders only; none of the old repos' WiFi values.
+- **What would become public:** Ben's two email addresses on every commit (rewriting the history would need a force-push); Ben's messages, word for word, in `docs/history/`; the server's name (`oirp-spss`) and Carleton's mail relay; the file paths of the old repos' leaked secrets (`docs/older-code.md`, not yet revoked: Q34); a 2025-26 student's own email address, in the radar driver's package files (inherited); and the 2025-26 code, whose repos have no licence. The repo has no licence file either, and 24 of our 26 packages say `TODO` for theirs.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
@@ -1257,6 +1290,9 @@ Ben's order: the full graph with drivers, ego and the simulators, all set up; th
 - **The five overnight pieces (10-11):** all merged and pushed (02:07–11:05). Now Ben's 11 October order: the full graph (with Ackermann), the C++ to Rust, the Mac with ML, Nav2, the board drivers, raylib. Three helpers started at 11:18.
 - **The obstacle check:** fixed in the check (a lane-wide box, a re-arm after a latch); N7 and collision_monitor's flicker are still open.
 - **Raylib for the HUD:** Proposed; waits on Ben.
+- **micro-ROS:** Tentative since 11 Oct: none for now; think again once we see the hardware.
+- **Your Mac as the operator station:** an idea, saved (11 Oct): `TODO.md`, "Ideas to keep".
+- **The repo public?** Checked 11 Oct; waits on Ben's yes.
 - **One detector per machine:** `yolo_detector_<machine>`, each with its own model file (done 11 Oct). The device names without aliases come with the obstacles merge.
 - **Backups:** image the Orin and the Pis before any reflash. They hold the detector, `camera_decode`, the three rqt_graph nodes and `/home/aavjetson`. A backup checklist and script were offered.
 - **The car on Jazzy:** it runs Humble today, so no Jazzy laptop can join it. Try Pixi on its Ubuntu 22.04 first, then reflash the Orin to JetPack 7.2 (Q24).

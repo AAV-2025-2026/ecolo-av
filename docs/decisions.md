@@ -42,6 +42,7 @@ answer.
 | The HUD's e-stop button only sets the e-stop. Clearing it stays a person's deliberate act, at the joystick or a laptop | A stray tap on the screen can't restart the car | Q29 |
 | Flutter 3.35.7, downloaded into `vendor/` (`pixi run get-flutter`) | Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's `pubspec.lock` | Q29 |
 | Lane keeping: a classic OpenCV lane finder publishes `/lane_geometry`; the 2025-26 lane keeping follows it | No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same | Q22 |
+| No micro-ROS for now: each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes. To think again once we see the car's hardware | Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros". 11 Oct: "lets rethink thinks later after we see the hardware" | seeing the hardware: Q10–Q13 |
 
 ## Proposed: for the next team meeting
 
@@ -87,7 +88,6 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant | Ben: "This is a school project" |
 | The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before the audit on the car's network: see [Simulation](simulation.md) |
 | The car's red e-stop button always stops the car, whatever our software does. We don't rewire it; the spine only listens, through a spare contact, to report it and to stay stopped afterwards | Ben: "this already has an estop so we don't want to break that"; "I just want it to work" |
-| No micro-ROS. Each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes | Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros" |
 | Our C++ moves to Rust: the IMU driver (Ben's twin), the radar clustering (a Rust ROS node), the encoder and display Picos (Embassy); the spine replaces the ESP32. Stock ROS packages stay | Ben, 10 Oct: "Can we change all the c++ to rust?" |
 | ML: a detector on each machine with a GPU (the Orin, a laptop), each under its own name; no device aliases | Ben, 10 Oct: "the orin be one node and/or my laptop be another node" |
 | The order of work: the high-level pieces first, then Ackermann done properly (reversing, both wheels' angles, the steering curve), then the C++ ported to Rust, then every file rewritten to its language's own conventions, until the whole car works | Ben, 10 Oct: "Lets try to get a fully functioning thing going on" |
@@ -102,6 +102,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Decision | By |
 |---|---|
 | Work on what we can try at home, in this order: the full graph with the drivers, ego and the simulators; our C++ to Rust (Python later); the Mac on the network with ML on it, and Nav2; the drivers in Rust, ready to try on a board; then the GUI | Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to work on" |
+| micro-ROS goes back from Decided to Tentative: no micro-ROS for now, and we think again once we see the hardware | Ben, 11:38: "No micro-ROS - lets rethink thinks later after we see the hardware" |
 
 ## Open questions
 

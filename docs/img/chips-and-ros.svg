@@ -86,6 +86,6 @@
 
   <text class="t" x="45" y="505">Microcontrollers: bare metal, no operating system, no ROS</text>
 
-  <text class="s" x="30" y="556">No micro-ROS (Ben, 10 Oct): the chips run Rust and Embassy, with no ROS library on them.</text>
+  <text class="s" x="30" y="556">No micro-ROS for now (we think again once we see the hardware): no ROS library on a chip.</text>
   <text class="s" x="30" y="576">A ROS node on Linux talks to each chip over a plain wire, and publishes what the chip says.</text>
 </svg>

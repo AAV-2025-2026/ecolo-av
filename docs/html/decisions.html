@@ -181,6 +181,11 @@ answer.</p>
 <td>No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same</td>
 <td>Q22</td>
 </tr>
+<tr>
+<td>No micro-ROS for now: each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes. To think again once we see the car's hardware</td>
+<td>Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros". 11 Oct: "lets rethink thinks later after we see the hardware"</td>
+<td>seeing the hardware: Q10–Q13</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -331,10 +336,6 @@ answer.</p>
 <td>Ben: "this already has an estop so we don't want to break that"; "I just want it to work"</td>
 </tr>
 <tr>
-<td>No micro-ROS. Each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes</td>
-<td>Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros"</td>
-</tr>
-<tr>
 <td>Our C++ moves to Rust: the IMU driver (Ben's twin), the radar clustering (a Rust ROS node), the encoder and display Picos (Embassy); the spine replaces the ESP32. Stock ROS packages stay</td>
 <td>Ben, 10 Oct: "Can we change all the c++ to rust?"</td>
 </tr>
@@ -381,6 +382,10 @@ answer.</p>
 <tr>
 <td>Work on what we can try at home, in this order: the full graph with the drivers, ego and the simulators; our C++ to Rust (Python later); the Mac on the network with ML on it, and Nav2; the drivers in Rust, ready to try on a board; then the GUI</td>
 <td>Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to work on"</td>
+</tr>
+<tr>
+<td>micro-ROS goes back from Decided to Tentative: no micro-ROS for now, and we think again once we see the hardware</td>
+<td>Ben, 11:38: "No micro-ROS - lets rethink thinks later after we see the hardware"</td>
 </tr>
 </tbody>
 </table></div>

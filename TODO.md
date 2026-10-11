@@ -33,6 +33,18 @@ work on." His order, with the work under way:
 6. [ ] **The HUD in raylib?** Proposed (Claude): one Rust program that is also the ROS node.
       *Waits on Ben.*
 
+## Ideas to keep
+
+- [ ] **Your Mac as the operator station** (Ben, 11 Oct): the HUD on the Mac's screen,
+      driving the car from the Mac, the Core ML AI driver on the Mac, maybe all of
+      perception; the Orin doing the processing when you sit at the car. *Saved, not
+      started. What runs where: `docs/history/conversation.md`, 11 October.* It waits on:
+      - the car on Jazzy (Q24): a Jazzy Mac can't join the car's Humble;
+      - the HUD on a Mac: raylib's runs there as it is; the Flutter app needs CocoaPods;
+      - the car's WiFi, measured: how late the pictures arrive, and how often it drops.
+- [ ] **micro-ROS, again** (Ben, 11 Oct): "lets rethink thinks later after we see the
+      hardware". No micro-ROS for now (Tentative).
+
 ## Overnight (10-10 → 10-11): all the code, then Ackermann, Rust, native style
 
 Ben, 21:45: "Lets try to get a fully functionin gthing going on." The order of work is
@@ -81,6 +93,8 @@ Decided ([Decisions](docs/decisions.md)):
 - [ ] The e-stop: a photo, and where its wires go (Q6).
 - [ ] The brake after boot: `IDLE_BRAKE = 0.0` lets it go; the 2025-26 firmware kept it on.
 - [ ] A fresh clone on oirp-spss before anyone works there.
+- [ ] Make the repo public? Checked 11 Oct: no secrets in any of its 167 commits. *Waits on Ben's
+      yes, and on what to tidy first (the 11 October email).*
 - [ ] The HUD on the car's Pi: Flutter has no Linux ARM download; the tile server and the
       OSRM route data.
 

@@ -25,7 +25,7 @@ plain wire messages, and back.
 | Way to join ROS 2 | On the chip | Our pick |
 |---|---|---|
 | A bridge node on Linux | plain firmware that speaks CAN, UART or UDP | ✅ today's ESP32 and Pico 2, and the spine next |
-| micro-ROS | a ROS library in C, usually on a small operating system like FreeRTOS, plus an "agent" program on a Linux computer | no (Ben, 10 Oct): it's a bridge either way, and it isn't Rust |
+| micro-ROS | a ROS library in C, usually on a small operating system like FreeRTOS, plus an "agent" program on a Linux computer | not for now (Ben, 10 Oct): it's a bridge either way, and it isn't Rust. We think again once we see the hardware (Ben, 11 Oct) |
 | rclrs (ROS in Rust) on the chip | not possible: rclrs needs a full operating system, like Linux | rclrs fits the Linux side, if a bridge is ever written in Rust |
 
 ## One interface, many drivers

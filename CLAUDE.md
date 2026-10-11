@@ -50,8 +50,9 @@ These are the conventions decided so far. They apply to people and to Claude ses
     10 Oct): the spine first. The 2025-26 C++ boards keep running until each one's Rust
     version replaces it. Logic goes in crates like `spine-core` and `aav-inputs` (tested
     on a laptop), drivers against `embedded-hal` 1.0. The plan: `docs/rust-firmware.md`;
-  - no micro-ROS: a board talks plain CAN, UART or UDP to a ROS node on Linux, which
-    publishes (Ben, 10 Oct);
+  - no micro-ROS for now: a board talks plain CAN, UART or UDP to a ROS node on Linux,
+    which publishes (Ben, 10 Oct). Tentative: we think again once we see the hardware
+    (Ben, 11 Oct);
   - no C++ of our own: the inherited C++ moves to Rust (Ben, 10 Oct). The IMU driver
     goes to Ben's Rust twin, the radar clustering to a Rust ROS node. Stock ROS packages
     stay as they are;
