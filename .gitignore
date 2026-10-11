@@ -92,3 +92,4 @@ Thumbs.db
 
 # The PDF is rebuilt on demand (pixi run docs); the HTML pages are committed.
 /docs/html/aav-docs.pdf
+/docs/html/aav-release-notes.pdf

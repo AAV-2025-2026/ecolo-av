@@ -6,7 +6,7 @@ Purpose: docs that are easy to scan. Each page gets a red title bar, a short lea
 sections as separate cards, tables and pictures, and a reading time. Markdown stays the
 source: edit docs/<page>.md, then rebuild.
 
-    pixi run docs              # docs/html/*.html and docs/html/aav-docs.pdf
+    pixi run docs              # docs/html/*.html, aav-docs.pdf and aav-release-notes.pdf
     pixi run docs --no-pdf     # just the web pages
 
 Only the pages in PAGES are built, in that order. Open docs/html/index.html in a browser.
@@ -39,7 +39,7 @@ READ_FIRST = 10    # PAGES[:10] are the reading list; the rest are reference
 PAGES = [
     ('index.md', 'Start here', 'The picture, and where to go next'),
     ('overview.md', 'Overview', 'Everything in aav: ours, stock, inherited, missing'),
-    ('release-notes.md', 'Release notes', "What we built to 11 October, and what's left"),
+    ('release-notes.md', 'Release notes', 'Release 0.1: what this version does, at a glance'),
     ('first-day.md', 'Your first day', 'Install, the turtle, rqt_graph, Gazebo, Nav2'),
     ('how-it-fits.md', 'How it fits', 'What each box does, and the safety layers'),
     ('team.md', 'Starting points', 'One per team member: read, run, first tasks'),
@@ -68,6 +68,20 @@ PAGES = [
     ('hud.md', 'HUD', 'The touchscreen app'),
 ]
 BUILT = {name for name, _, _ in PAGES}
+RELEASE = 'release-notes.md'   # also printed on its own, with a cover, to share
+RELEASE_PDF = 'aav-release-notes.pdf'
+# The release notes' own PDF: a running footer, and the cover on a page of its own.
+RELEASE_STYLE = """
+@page {
+  @bottom-left { content: "AAV 2026-27 autonomy stack · release notes"; font-size: 9px;
+                 color: #777; font-family: Verdana, "DejaVu Sans", Tahoma, Arial, sans-serif; }
+  @bottom-center { content: none; }
+  @bottom-right { content: counter(page) " of " counter(pages); font-size: 9px; color: #777;
+                  font-family: Verdana, "DejaVu Sans", Tahoma, Arial, sans-serif; }
+}
+@page :first { @bottom-left { content: none; } @bottom-right { content: none; } }
+.release .cover { break-after: page; }
+"""
 BADGES = ('works', 'untested', 'stub', 'missing', 'later', 'needs-you')
 
 LIST_ITEM = re.compile(r'\s*([-*+]|\d+\.)\s')
@@ -248,6 +262,20 @@ def write_pdf(articles, listing, out):
     HTML(string=doc, base_url=str(OUT) + '/').write_pdf(out)
 
 
+def write_release_pdf(title, intro, sections, out):
+    """Print the release notes on their own: a cover with the pitch, then the sections."""
+    from weasyprint import HTML   # only the docs environment has it
+    inside = ''.join(f'<li><a href="#{sid}">{html.escape(text)}</a>'
+                     f'<a class="pg" href="#{sid}"></a></li>' for sid, text, _ in sections)
+    cover = ('<section class="cover"><div class="kicker">CARLETON UNIVERSITY · '
+             f'AUTONOMOUS VEHICLE CAPSTONE</div><h1>{html.escape(title)}</h1>{intro}'
+             f'<h3 class="inside-title">Inside</h3><ol class="inside">{inside}</ol></section>')
+    doc = ('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+           f'<link rel="stylesheet" href="style.css"><style>{RELEASE_STYLE}</style></head>'
+           f'<body class="print release">{cover}{page_body("", sections)}</body></html>')
+    HTML(string=doc, base_url=str(OUT) + '/').write_pdf(out)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('--no-pdf', action='store_true', help='build the web pages only')
@@ -261,7 +289,7 @@ def main():
         pages.append((name, title, purpose, minutes(text), convert(text)))
     listing = [(n, t, p, m) for n, t, p, m, _ in pages]
 
-    articles = []
+    articles, release = [], None
     for i, (name, _, _, mins, body) in enumerate(pages):
         body = badges(body).replace('<table>', '<div class="table-wrap"><table>') \
                            .replace('</table>', '</table></div>')
@@ -272,12 +300,18 @@ def main():
         if not args.no_pdf:
             printed = body.replace('<p>[[pages]]</p>', PDF_CONTENTS_NOTE)
             articles.append(pdf_article(name, *split_page(fix_links(printed, pdf=True))))
+            if name == RELEASE:
+                release = split_page(fix_links(body, pdf=True))
     print(f'{len(pages)} pages -> {OUT.relative_to(ROOT)}/')
 
     if not args.no_pdf:
         pdf = OUT / 'aav-docs.pdf'
         write_pdf(articles, reading_list(listing, pdf=True), pdf)
         print(f'PDF -> {pdf.relative_to(ROOT)} ({pdf.stat().st_size // 1024} KB)')
+        if release:
+            pdf = OUT / RELEASE_PDF
+            write_release_pdf(*release, pdf)
+            print(f'PDF -> {pdf.relative_to(ROOT)} ({pdf.stat().st_size // 1024} KB)')
     return 0
 
 

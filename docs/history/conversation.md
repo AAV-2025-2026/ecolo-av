@@ -1298,6 +1298,12 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 - **Friday 16 Oct:** the hardware audit, read-only first; then driving with W A S D, the car or the turtle.
 - **The final write-up:** emailed, with the release notes' list.
 
+### "Can we get that in pdf or something so I can share it. Its a serious document." Think of it as an advertisement for this version. (13:28 to 13:30)
+
+- **Rewritten as a release announcement:** "Release 0.1: the first pass". Highlights first (one workspace, one command path through ego, AI on every GPU with Core ML and TensorRT, Nav2 for a car, the CAN spine in Rust, bench mode, Macs, the MCP server), then a section per area, the numbers, what's next, and the credits.
+- **Its own PDF:** `pixi run docs` now also makes `docs/html/aav-release-notes.pdf`: a cover with the pitch, six number tiles and the contents, then 7 pages. Emailed to Ben.
+- **Kept honest:** nothing has run on the car yet ("Next: the real car"); TensorRT is ready for the Orin's reflash, not yet run; the full test suite was confirmed on the Mac.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
