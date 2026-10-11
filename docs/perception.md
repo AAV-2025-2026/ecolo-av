@@ -178,8 +178,8 @@ Classic OpenCV, no model. A model can replace it later, on the same topic.
 - **One line:** the centre is half a lane beside it.
 - **No lines:** nothing detected, so control_interface slows down and stops.
 - **Why 3 m ahead:** an offset at the rear axle says nothing about which way the car
-  points, and in a simulation of the loop the PID then weaved. 3 m ahead it does: on the
-  bench, the car comes back with 2 cm of overshoot.
+  points. On the bench, measured there, the car weaved 0.3 m either side and ran off the
+  lane within 20 s. 3 m ahead, it comes back in about 6 s, 2 cm past the centre at most.
 
 ### The steering: control_interface
 
@@ -196,6 +196,7 @@ Classic OpenCV, no model. A model can replace it later, on the same topic.
 | `pixi run bench lane:=true nav:=false start_y:=0.3` | lane keeping on the pretend camera, from 0.3 m left of the centre |
 | `pixi run bench lane:=fake` | control_interface on a pretend lane, without the camera |
 | `pixi run bench-check --lane` | the same, measured: [[works]] back within 5 cm of the centre in about 6 s, 2 cm past it at most |
+| `pixi run bench lane:=true nav:=false bend_radius:=60` | a 60 m bend to the left, from 30 m on: [[works]] within 8 cm of the centre, 4-5 cm inside it round the bend |
 
 More in [Bench mode](bench.md).
 

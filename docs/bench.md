@@ -145,11 +145,18 @@ pixi run bench-check --lane                         # the same, measured: 1 more
 After the usual checks, it starts the bench again, with lane keeping, the car 0.3 m left of
 the centre.
 
-| Check | What passes | Result, Ben's Mac, 11 October |
+| Check | What passes | Result, Ben's Mac, 11 October: 6 runs |
 |---|---|---|
 | Start-up, graph against the contract | as above, with lane keeping running | [[works]] |
-| Lane keeping | back within 5 cm of the centre by 25 s after it starts moving, and still there at 30 s; under 10 cm past the centre; both lines seen in 9 pictures of 10 | [[works]] 0.30 m to 0.00 m: within 5 cm after 6 s, 2 cm past the centre at most |
-| The finder against the truth | (reported) | 1 cm out on average, both lines in every picture |
+| Lane keeping | back within 5 cm of the centre by 25 s of driving, and still there at 30 s; under 10 cm past the centre; both lines seen in 9 pictures of 10 | [[works]] 0.30 m to 0.00 m: within 5 cm after 5.6-6.7 s (about 5 m of road), 2 cm past the centre at most |
+| The finder against the truth | (reported) | 0.8-1.2 cm out on average, both lines in every picture |
+
+- **A busy computer:** a gap of 200 ms in the commands latches the spine, and the car
+  stops. The check arms it again, as a safety driver would, and only counts the time the
+  car moves. It says how many times that happened.
+- **A bend** isn't in the check. By hand, with `bend_radius:=60` (left, from 30 m on): the
+  car cuts in up to 8 cm as the bend comes into view, then runs 4-5 cm inside the centre
+  round it, both lines seen in every picture.
 
 ## What the bench has found already
 
