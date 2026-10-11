@@ -51,6 +51,7 @@ from launch.conditions import evaluate_condition_expression
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.logging import get_logger
 from launch.substitutions import LaunchConfiguration
+from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
 import yaml
 
@@ -135,13 +136,15 @@ def detector(context, machine, settings):
         raise RuntimeError(f'{machine}.yaml: give the detector settings, such as '
                            f'"detector: {{model: models/yolo11n.pt}}"')
     path = launch_file('aav_yolo', 'detector.launch.py')
-    takes = {a.name for a in
-             PythonLaunchDescriptionSource(path).get_launch_description(context)
-             .get_launch_arguments()}
-    unknown = set(settings) - (takes - {'node_name', 'picture'})
+    declared = (PythonLaunchDescriptionSource(path).get_launch_description(context)
+                .get_launch_arguments())
+    unknown = set(settings) - ({a.name for a in declared} - {'node_name', 'picture'})
     if unknown:
         raise RuntimeError(f'{machine}.yaml: the detector takes no {sorted(unknown)}')
-    args = {'labels': 'stop sign', 'model': 'models/yolo11n.pt', **settings}
+    # Every argument, its own defaults included, so none can leak in from another file.
+    defaults = {a.name: perform_substitutions(context, a.default_value) for a in declared
+                if a.default_value is not None}
+    args = {**defaults, 'labels': 'stop sign', 'model': 'models/yolo11n.pt', **settings}
     model = os.path.join(workspace(), os.path.expanduser(str(args['model'])))
     runtime, make = FORMATS.get(os.path.splitext(model)[1], ([], 'docs/perception.md'))
     python, missing = lacks(['torch', 'ultralytics', *runtime])

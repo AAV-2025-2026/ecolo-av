@@ -148,11 +148,15 @@ def test_the_detector_is_named_after_its_machine(monkeypatch, tmp_path):
     model.write_text('')
     monkeypatch.setattr(CAR, 'lacks', lambda modules: ('python3', []))
     context = context_for(CAR, machine='orin')
-    sent = included(CAR.detector(context, 'orin', {'model': str(model)}))
+    sent = included(CAR.detector(context, 'orin', {'model': str(model), 'confidence': 0.6}))
     assert sent['detector.launch.py']['node_name'] == 'yolo_detector_orin'
     assert sent['detector.launch.py']['model'] == str(model)
     assert sent['detector.launch.py']['labels'] == 'stop sign'
     assert sent['detector.launch.py']['picture'] == ''
+    assert sent['detector.launch.py']['confidence'] == '0.6'
+    # The rest are passed too, at the detector's own defaults: none can leak in.
+    assert sent['detector.launch.py']['image'] == '/camera/image_raw'
+    assert sent['detector.launch.py']['device'] == 'auto'
 
 
 def test_the_detector_is_skipped_without_pytorch_or_its_model(monkeypatch, tmp_path):
