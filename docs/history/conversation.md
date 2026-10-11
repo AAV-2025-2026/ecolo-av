@@ -1044,6 +1044,17 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **The MCP server:** built, with 9 read-only tools, a `.mcp.json` for Claude Code, and its page, [AI apps (MCP)](../mcp.md). Its smoke test starts it the way an app does, and reads a live topic.
 - **The board survey and the emails:** the survey restarted after the session limit. The emails wait for the VPN.
 
+### "What was that question? It doesn't seem to make sense. I said yes." (20:48)
+
+- **The "go" question (17:54):** Ben had said yes to the strip (17:18) and asked for the push (17:51). An interruption just before the strip made me stop and ask for a "go". One question too many: from now on, an interruption with a different question doesn't cancel a yes.
+- **Not a pop-up:** no new Claude Code session asked about the `aav` server, the Mac's firewall is off, and the Mac's normal SSH agent asks nothing.
+
+### Is "the spine" from what I said about martial arts? The car already has an e-stop: don't break it. (20:51 to 20:53)
+
+- **The name:** a nickname from the design doc (9 Oct), not from Ben's theory. The computers are the brain, the motors the muscles, and the board between them the spine, with one reflex: it brakes by itself if the computers go quiet for 200 ms. The usual industry names are "drive-by-wire controller" and "vehicle control unit" (VCU). Renaming is cheap until the board code exists: Ben's call.
+- **The e-stop (Decided, Ben):** the car's existing e-stop stays exactly as it is. The spine may read it, but never sits in its path.
+- **Found so far:** today's ESP32 code reads no e-stop button, so it's wired outside the code. The 2025-26 status display shows "!!! E-STOP !!!" when told to, over I2C; what tells it is still unknown. Q6 (what kind, what it cuts, the wiring) waits on Ben and the board survey.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.

@@ -298,6 +298,10 @@ answer.</p>
 <td>a safety choice, before the audit on the car's network: see <a href="simulation.html">Simulation</a></td>
 </tr>
 <tr>
+<td>The car's existing e-stop stays exactly as it is. The spine may read it, to report it and to stay stopped afterwards, but it never sits in the e-stop's path</td>
+<td>Ben: "this already has an estop so we don't want to break that"</td>
+</tr>
+<tr>
 <td>A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own <code>mcp</code> environment</td>
 <td>Ben: "Yes, read-only": see <a href="mcp.html">AI apps (MCP)</a></td>
 </tr>
@@ -346,7 +350,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td><strong>Q6</strong></td>
 <td>E-stop</td>
-<td>Is there a physical e-stop that cuts drive power without software? Where, and is there a wireless one?</td>
+<td>The car already has one (Ben, 10 Oct). Still open: what kind it is, what it cuts, and how it's wired</td>
 </tr>
 <tr>
 <td>Q7</td>

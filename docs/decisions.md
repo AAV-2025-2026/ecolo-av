@@ -80,6 +80,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | CI runs `pixi run test` on Linux for every push, and on a Mac every night | Ben |
 | Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant | Ben: "This is a school project" |
 | The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before the audit on the car's network: see [Simulation](simulation.md) |
+| The car's existing e-stop stays exactly as it is. The spine may read it, to report it and to stay stopped afterwards, but it never sits in the e-stop's path | Ben: "this already has an estop so we don't want to break that" |
 | A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own `mcp` environment | Ben: "Yes, read-only": see [AI apps (MCP)](mcp.md) |
 
 ## Open questions
@@ -97,7 +98,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 | **Q3** | Brake | How far does it travel, how hard does it brake, and what does it do if power is lost? That defines the safe state |
 | **Q4** | Throttle | Which motor controller does the DAC drive? Does it brake on its own? Is reverse safe while moving? |
 | Q5 | Wheel encoder | Which wheel, how many counts per turn, and can it wire straight to the spine? |
-| **Q6** | E-stop | Is there a physical e-stop that cuts drive power without software? Where, and is there a wireless one? |
+| **Q6** | E-stop | The car already has one (Ben, 10 Oct). Still open: what kind it is, what it cuts, and how it's wired |
 | Q7 | RC override | Does the FlySky stay the top override? How does the spine know RC has taken over? |
 | Q8 | Power | Battery voltage, the computers' supplies, and what the actuators do when a computer loses power |
 | Q9 | Which computers stay | Orin, UI Pi, Motor Pi, radar Pi, camera Pi, QNX Pi? Suggested: the Orin, the spine and the HUD screen |

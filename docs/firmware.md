@@ -50,6 +50,8 @@ code.
 - Run the speed loop, and steer to the target angle.
 - Read the wheel encoder. Report speed, steering, mode and faults.
 - Let the RC override switch and the hardware e-stop beat the computer.
+- Keep the car's existing e-stop exactly as it is (Ben). The spine may read it, but it
+  never sits in its path: nothing on the board can stop the e-stop from working.
 - Stop by itself when commands stop: a 200 ms watchdog.
 
 Who wins, highest first:
