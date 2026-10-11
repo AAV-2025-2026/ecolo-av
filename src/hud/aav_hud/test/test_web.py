@@ -13,7 +13,6 @@ except ImportError:
 pytestmark = pytest.mark.skipif(HudWeb is None, reason='needs Flask and Flask-SocketIO')
 
 ROUTE = [{'lat': 45.3860, 'lon': -75.6960}, {'lat': 45.3870, 'lon': -75.6960}]
-STREAM = {'name': 'cam1'}
 
 
 class FakeBackend:
@@ -23,6 +22,7 @@ class FakeBackend:
         self.picture = picture
         self.routes = []
         self.cancels = 0
+        self.estops = 0
 
     def follow(self, waypoints):
         self.routes.append(waypoints)
@@ -32,6 +32,10 @@ class FakeBackend:
         self.cancels += 1
         return self.problem
 
+    def estop(self):
+        self.estops += 1
+        return self.problem
+
     def camera_png(self):
         if isinstance(self.picture, Exception):
             raise self.picture
@@ -39,7 +43,7 @@ class FakeBackend:
 
 
 def make_web(problem=None, picture=None):
-    return HudWeb(FakeBackend(problem, picture), STREAM, tolerance=1.0, min_spacing=5.0,
+    return HudWeb(FakeBackend(problem, picture), tolerance=1.0, min_spacing=5.0,
                   camera_fps=50.0)
 
 
@@ -80,28 +84,52 @@ def test_cancel():
     assert web.backend.cancels == 1
 
 
+def test_the_estop_button():
+    web = make_web()
+    reply = web.app.test_client().post('/estop')
+    assert reply.status_code == 200
+    assert reply.get_json() == {'status': 'success'}
+    assert web.backend.estops == 1
+
+
+def test_the_estop_route_can_only_set_it():
+    web = make_web()
+    client = web.app.test_client()
+    # Whatever the request says, it reaches estop(), which only ever sets the e-stop.
+    assert client.post('/estop', json={'data': False}).status_code == 200
+    assert web.backend.estops == 1
+    assert client.get('/estop').status_code == 405     # only POST
+    assert client.delete('/estop').status_code == 405
+
+
+def test_an_estop_that_could_not_be_sent_is_an_error():
+    web = make_web('no ROS')
+    reply = web.app.test_client().post('/estop')
+    assert reply.status_code == 503
+    assert reply.get_json() == {'status': 'error', 'message': 'no ROS'}
+
+
 def test_health_check_shows_the_newest_events():
     web = make_web()
-    web.send(events.SPEED, {'mock_speed': 1.0})
-    web.send(events.SPEED, {'mock_speed': 2.0})
-    assert web.app.test_client().get('/').get_json() == {
-        'mock_speed_update': {'mock_speed': 2.0}}
+    web.send(events.SPEED, {'speed': 1.0})
+    web.send(events.SPEED, {'speed': 2.0})
+    assert web.app.test_client().get('/').get_json() == {'speed': {'speed': 2.0}}
 
 
-def test_stream_info_route():
-    assert make_web().app.test_client().get('/stream-info').get_json() == STREAM
+def test_the_mediamtx_route_is_gone():
+    # The camera page reads /camera/latest.png now, not WebRTC from MediaMTX.
+    assert make_web().app.test_client().get('/stream-info').status_code == 404
 
 
-def test_a_new_client_gets_stream_info_then_the_newest_events():
+def test_a_new_client_gets_the_newest_events():
     web = make_web()
-    web.send(events.SPEED, {'mock_speed': 2.0})
-    web.send(events.STOP_SIGN, {'mock_sign_detected': True, 'message': 'STOP'})
+    web.send(events.SPEED, {'speed': 2.0})
+    web.send(events.STOP_SIGN, {'detected': True, 'message': 'STOP'})
     received = web.socketio.test_client(web.app).get_received()
     assert received == [
-        {'name': 'stream_info', 'args': [STREAM], 'namespace': '/'},
-        {'name': 'mock_speed_update', 'args': [{'mock_speed': 2.0}], 'namespace': '/'},
-        {'name': 'mock_stop_sign_alert',
-         'args': [{'mock_sign_detected': True, 'message': 'STOP'}], 'namespace': '/'},
+        {'name': 'speed', 'args': [{'speed': 2.0}], 'namespace': '/'},
+        {'name': 'stop_sign', 'args': [{'detected': True, 'message': 'STOP'}],
+         'namespace': '/'},
     ]
 
 
@@ -110,11 +138,11 @@ def test_send_reaches_every_client():
     clients = [web.socketio.test_client(web.app) for _ in range(2)]
     for c in clients:
         c.get_received()
-    web.send(events.POSITION, {'mock_latitude': 45.0, 'mock_longitude': -75.0})
+    web.send(events.POSITION, {'latitude': 45.0, 'longitude': -75.0})
     for c in clients:
         assert c.get_received() == [{
-            'name': 'mock_gps_update',
-            'args': [{'mock_latitude': 45.0, 'mock_longitude': -75.0}],
+            'name': 'position',
+            'args': [{'latitude': 45.0, 'longitude': -75.0}],
             'namespace': '/'}]
 
 

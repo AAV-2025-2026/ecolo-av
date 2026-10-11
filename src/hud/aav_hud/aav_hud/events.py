@@ -4,20 +4,21 @@ What the HUD's Flutter app receives over Socket.IO: one dict per event.
 No ROS imports, so the tests run anywhere. Each function takes a ROS message, or
 anything with the same fields, and returns the payload of one event.
 
-The event names are the ones hud/flutter_pi listens for (socket_services.dart). Three of
-them still say "mock": the 2025-26 app only ever showed mock data. They now carry real
-data. Rename them only together with the app.
+The app listens for the same names (hud/flutter_pi/lib/components/sockets/hud_events.dart).
+test_events.py checks that the two lists match. Rename an event in both at once.
 """
 
 import math
 
-# Event names. The app reads the keys shown; it ignores any others.
-SPEED = 'mock_speed_update'          # {'mock_speed': m/s}
-POSITION = 'mock_gps_update'         # {'mock_latitude': deg, 'mock_longitude': deg}
-STOP_SIGN = 'mock_stop_sign_alert'   # {'mock_sign_detected': bool, 'message': 'STOP'}
-NAV_STATE = 'nav_state'              # {'distance': m, 'status': text} (see trip.py)
-VEHICLE = 'vehicle_status'           # new: mode, armed, e-stop, gear, faults. No screen yet
-STREAM_INFO = 'stream_info'          # MediaMTX addresses, sent to each new client
+# Event names, and the keys the app reads. It ignores any others.
+SPEED = 'speed'                  # {'speed': m/s, negative in reverse}
+POSITION = 'position'            # {'latitude': deg, 'longitude': deg}
+STOP_SIGN = 'stop_sign'          # {'detected': bool, 'message': 'STOP'}
+NAV_STATE = 'nav_state'          # {'distance': m, 'status': text, ...} (see trip.py)
+VEHICLE = 'vehicle_status'       # mode, armed, estop, gear, faults: see vehicle_event()
+BATTERY = 'battery'              # {'voltage': V, 'percentage': 0-100, 'current': A}
+
+EVENTS = (SPEED, POSITION, STOP_SIGN, NAV_STATE, VEHICLE, BATTERY)
 
 # The constants of aav_interfaces/msg/VehicleStatus (test_events checks them).
 MODE_COMPUTER = 2
@@ -39,9 +40,15 @@ NO_FIX = -1      # sensor_msgs/NavSatStatus.STATUS_NO_FIX
 MOVING = 0.05    # m/s: slower than this counts as standing still, for the gear letter
 
 
+def _number(value, digits):
+    """Round a reading for JSON: None when it's NaN or infinite (not measured)."""
+    value = float(value)
+    return round(value, digits) if math.isfinite(value) else None
+
+
 def speed_event(status):
     """Measured speed from /vehicle/status: m/s, negative in reverse."""
-    return {'mock_speed': round(float(status.speed), 2)}
+    return {'speed': round(float(status.speed), 2)}
 
 
 def gear(mode, armed, estop, speed):
@@ -103,21 +110,26 @@ def fix_position(fix):
 
 def position_event(lat, lon):
     """Put the car on the map."""
-    return {'mock_latitude': lat, 'mock_longitude': lon}
+    return {'latitude': lat, 'longitude': lon}
 
 
 def stop_sign_event(msg):
     """/perception/stop: true while the car stops for a stop sign."""
-    return {'mock_sign_detected': bool(msg.data), 'message': 'STOP'}
+    return {'detected': bool(msg.data), 'message': 'STOP'}
 
 
-def stream_info(host, webrtc_port, rtsp_port, path):
-    """Where MediaMTX serves the video that the app's camera page plays (WebRTC)."""
+def battery_event(msg):
+    """
+    /battery_status (sensor_msgs/BatteryState): volts, percent and amps.
+
+    BatteryState gives the charge from 0 to 1; the app shows percent. A reading the
+    battery monitor doesn't measure is NaN in the message, None here: JSON has no NaN.
+    """
+    percentage = _number(msg.percentage, 3)
     return {
-        'name': path,
-        'base_url': f'http://{host}:{webrtc_port}/{path}/',
-        'whep_url': f'http://{host}:{webrtc_port}/{path}/whep',
-        'rtsp_url': f'rtsp://{host}:{rtsp_port}/{path}',
+        'voltage': _number(msg.voltage, 2),
+        'percentage': None if percentage is None else round(100.0 * percentage, 1),
+        'current': _number(msg.current, 2),
     }
 
 

@@ -2,16 +2,23 @@
 hud_server: the back end of the HUD, the car's touchscreen app (hud/flutter_pi).
 
 One process: this ROS node, and a web server (Flask and Socket.IO, web.py) for the app.
-It turns the car's topics into the events the app shows, and the route the app locks
-into a Nav2 goal.
+It turns the car's topics into the events the app shows, the route the app locks into a
+Nav2 goal, and the app's e-stop button into /estop true.
 
 Subscribes  /vehicle/status        aav_interfaces/VehicleStatus  speed, mode, e-stop, faults
             /gps/filtered          sensor_msgs/NavSatFix         the car on the map
             /perception/stop       std_msgs/Bool                 stopping for a stop sign
+            /battery_status        sensor_msgs/BatteryState      volts, charge, amps
             /camera/image_raw      sensor_msgs/Image             only while someone watches
+Publishes   /estop                 std_msgs/Bool                 only true: the app's e-stop
 Calls       /follow_gps_waypoints  nav2_msgs/action/FollowGPSWaypoints  the locked route
-Publishes   nothing (the 2025-26 /ui/destination_point and /ui/route are gone)
-Serves      HTTP and Socket.IO on port 5000 (parameters host, port)
+Serves      HTTP and Socket.IO on 127.0.0.1:5000 (parameters host, port)
+
+The e-stop: POST /estop publishes /estop true at once, then every 0.1 s, five times in
+all (as `pixi run estop` does), so one lost message can't keep the car going. It also
+cancels the HUD's route, so clearing the e-stop doesn't restart the trip. The HUD never
+publishes false: clearing the e-stop stays a person's deliberate act, from a laptop
+(`pixi run estop-clear`, Foxglove), never a tap on this touchscreen.
 
 The conversions live in events.py (messages to events), route.py (the route to GPS
 waypoints), trip.py (the action's progress to nav_state) and png.py (camera pictures).
@@ -43,7 +50,7 @@ from rclpy.action import ActionClient
 from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import Image, NavSatFix
+from sensor_msgs.msg import BatteryState, Image, NavSatFix
 from std_msgs.msg import Bool
 
 # Best effort takes both kinds of publisher: ublox publishes /gps/fix best effort,
@@ -53,6 +60,13 @@ SMALL = qos_profile_sensor_data
 # it on a Mac), and only the newest one.
 PICTURES = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
                       reliability=ReliabilityPolicy.RELIABLE)
+# /estop: what its subscribers use. spine_bridge and legacy_uart_bridge subscribe reliable,
+# volatile, depth 10 (ROS's default); twist_mux 4.5.0 with SystemDefaultsQoS, which takes
+# a reliable publisher too. A best-effort publisher would reach twist_mux only.
+ESTOP = QoSProfile(depth=10, history=HistoryPolicy.KEEP_LAST,
+                   reliability=ReliabilityPolicy.RELIABLE)
+ESTOP_REPEATS = 5       # messages for one press: the first at once, then one every
+ESTOP_PERIOD = 0.1      # s, for half a second in all
 
 
 def geo_pose(waypoint):
@@ -76,13 +90,10 @@ class HudServer(Node):
         self.host = param('host', '127.0.0.1').value
         self.port = param('port', 5000).value
         self.throttle = events.Throttle(param('max_event_rate', 10.0).value)
-        stream = events.stream_info(param('mediamtx_host', '192.168.1.118').value,
-                                    param('mediamtx_webrtc_port', 8889).value,
-                                    param('mediamtx_rtsp_port', 8554).value,
-                                    param('stream_path', 'cam1').value)
-        self.web = HudWeb(self, stream, param('route_tolerance', 1.0).value,
+        self.web = HudWeb(self, param('route_tolerance', 1.0).value,
                           param('waypoint_spacing', 5.0).value, param('camera_fps', 5.0).value)
         self.camera_idle = param('camera_idle_timeout', 5.0).value
+        self.camera_stale = param('camera_stale_after', 2.0).value
 
         # The web server's threads call follow() and cancel(); the executor the rest.
         self.lock = threading.Lock()
@@ -95,13 +106,20 @@ class HudServer(Node):
         self.camera = None              # the subscription, while someone watches
         self.camera_wanted = None       # when the web side last asked for a picture
         self.picture = None             # the newest Image
+        self.picture_time = 0.0         # when it came (time.monotonic)
         self.picture_png = (None, None)     # (Image, its PNG), so each is encoded once
+        self.estop_left = 0     # /estop true messages still to send for the last press
 
         self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, SMALL)
         self.create_subscription(NavSatFix, '/gps/filtered', self.on_fix, SMALL)
         self.create_subscription(Bool, '/perception/stop', self.on_stop, SMALL)
+        self.create_subscription(BatteryState, '/battery_status', self.on_battery, SMALL)
+        # Made now, not when the button is pressed: by then discovery has matched it with
+        # the subscribers, so the first message isn't lost.
+        self.estop_pub = self.create_publisher(Bool, '/estop', ESTOP)
         self.nav = ActionClient(self, FollowGPSWaypoints, '/follow_gps_waypoints')
         self.create_timer(0.5, self.check_camera)
+        self.create_timer(ESTOP_PERIOD, self.repeat_estop)
 
     def start_web(self):
         """Start the web server in a thread. If it fails, the node shuts down."""
@@ -144,9 +162,14 @@ class HudServer(Node):
             self.stop_sign = bool(msg.data)
             self.web.send(events.STOP_SIGN, events.stop_sign_event(msg))
 
+    def on_battery(self, msg):
+        if self.throttle.ready('battery', time.monotonic()):
+            self.web.send(events.BATTERY, events.battery_event(msg))
+
     def on_image(self, msg):
         with self.lock:
             self.picture = msg
+            self.picture_time = time.monotonic()
 
     def check_camera(self):
         """Subscribe to the camera while someone watches; stop when nobody does."""
@@ -165,11 +188,19 @@ class HudServer(Node):
             self.get_logger().info('nobody watches the camera: unsubscribed')
 
     def camera_png(self):
-        """Return the newest picture as PNG, or None (web threads). Raise ValueError."""
+        """
+        Return the newest picture as PNG (web threads). Raise ValueError.
+
+        None before the first picture, or when the newest is older than
+        camera_stale_after: the camera stopped, and an old picture mustn't pass for a live
+        one.
+        """
         with self.lock:
-            self.camera_wanted = time.monotonic()
+            now = time.monotonic()
+            self.camera_wanted = now
             picture, (encoded_for, encoded) = self.picture, self.picture_png
-        if picture is None:
+            fresh = picture is not None and now - self.picture_time < self.camera_stale
+        if not fresh:
             return None
         if picture is encoded_for:
             return encoded
@@ -183,6 +214,24 @@ class HudServer(Node):
         # Call with self.lock held: the executor and the web threads both send this
         # event, and the lock keeps the events in the order the trip changed.
         self.web.send(events.NAV_STATE, self.trip.event(self.position))
+
+    # --- the app's e-stop button (web threads), and its repeats (executor) ---
+
+    def estop(self):
+        """Set the e-stop: /estop true now, then repeated. Never false. None when sent."""
+        # The lock also keeps this thread and the executor's from publishing at once.
+        with self.lock:
+            self.estop_pub.publish(Bool(data=True))
+            self.estop_left = ESTOP_REPEATS - 1
+        self.get_logger().warning('e-stop pressed on the HUD: /estop true')
+        self.cancel()       # 'no route is being followed' is fine: nothing to stop
+        return None
+
+    def repeat_estop(self):
+        with self.lock:
+            if self.estop_left > 0:
+                self.estop_left -= 1
+                self.estop_pub.publish(Bool(data=True))
 
     # --- app -> Nav2 (called from the web server's threads) ---
 

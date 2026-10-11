@@ -7,23 +7,22 @@ an event to every app window. The tests use Flask's and Flask-SocketIO's test cl
 HTTP
   GET  /             the newest copy of every event, as JSON: a health check
   POST /receive      the route the app locked, [{'lat': .., 'lon': ..}, ...]: Nav2 drives it
-  POST /cancel       stop following the route (the app has no button for it yet)
-  GET  /stream-info  where MediaMTX serves the video (the app's camera page)
-  GET  /camera/latest.png  the newest /camera/image_raw picture
+  POST /cancel       stop following the route (the map page's Unlock and Clear)
+  POST /estop        the e-stop button: /estop true. Nothing here can clear it
+  GET  /camera/latest.png  the newest /camera/image_raw picture (the app's camera page)
   GET  /camera/stream      the same, as a stream of pictures: open it in a browser
 Socket.IO
-  each new client gets stream_info, then the newest copy of every event (events.py)
+  each new client gets the newest copy of every event (events.py)
 
-The backend has follow(waypoints) and cancel(): each returns None when done, or the
-reason it couldn't. Its camera_png() returns the newest picture as PNG, or None before
-the first one, and raises ValueError if it can't be made.
+The backend has follow(waypoints), cancel() and estop(): each returns None when done, or
+the reason it couldn't. Its camera_png() returns the newest picture as PNG, or None when
+it has no recent one, and raises ValueError if it can't be made.
 """
 
 import logging
 import threading
 import time
 
-from aav_hud import events
 from aav_hud.route import parse_route, to_waypoints
 from flask import Flask, jsonify, request, Response
 from flask_socketio import emit, SocketIO
@@ -35,9 +34,8 @@ STREAM_TYPE = f'multipart/x-mixed-replace; boundary={BOUNDARY}'
 class HudWeb:
     """The Flask app and its Socket.IO server, for one backend."""
 
-    def __init__(self, backend, stream_info, tolerance=1.0, min_spacing=5.0, camera_fps=5.0):
+    def __init__(self, backend, tolerance=1.0, min_spacing=5.0, camera_fps=5.0):
         self.backend = backend
-        self.stream_info = stream_info
         self.tolerance = tolerance
         self.min_spacing = min_spacing
         self.camera_period = 1.0 / camera_fps if camera_fps > 0 else 1.0
@@ -75,10 +73,6 @@ class HudWeb:
         def health():
             return jsonify(self.latest())
 
-        @app.route('/stream-info')
-        def stream_info():
-            return jsonify(self.stream_info)
-
         @app.route('/receive', methods=['POST'])
         def receive():
             data = request.get_json(silent=True)
@@ -99,6 +93,14 @@ class HudWeb:
                 return jsonify({'status': 'error', 'message': problem}), 409
             return jsonify({'status': 'success'})
 
+        @app.route('/estop', methods=['POST'])
+        def estop():
+            # No body, no options: a request can only set the e-stop, never clear it.
+            problem = self.backend.estop()
+            if problem:
+                return jsonify({'status': 'error', 'message': problem}), 503
+            return jsonify({'status': 'success'})
+
         @app.route('/camera/latest.png')
         def camera_latest():
             try:
@@ -106,8 +108,8 @@ class HudWeb:
             except ValueError as e:
                 return Response(str(e), status=415, mimetype='text/plain')
             if picture is None:
-                return Response('no camera picture yet', status=503, mimetype='text/plain',
-                                headers={'Retry-After': '1'})
+                return Response('no new camera picture: is the camera running?', status=503,
+                                mimetype='text/plain', headers={'Retry-After': '1'})
             return Response(picture, mimetype='image/png', headers={'Cache-Control': 'no-store'})
 
         @app.route('/camera/stream')
@@ -116,7 +118,6 @@ class HudWeb:
 
         @socketio.on('connect')
         def on_connect(auth=None):
-            emit(events.STREAM_INFO, self.stream_info)
             for event, payload in self.latest().items():
                 emit(event, payload)
 

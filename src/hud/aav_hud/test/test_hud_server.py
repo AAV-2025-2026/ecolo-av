@@ -23,7 +23,8 @@ try:
     from rclpy.callback_groups import ReentrantCallbackGroup
     from rclpy.executors import MultiThreadedExecutor
     from rclpy.parameter import Parameter
-    from sensor_msgs.msg import Image, NavSatFix
+    from rclpy.qos import qos_profile_system_default, ReliabilityPolicy
+    from sensor_msgs.msg import BatteryState, Image, NavSatFix
     from std_msgs.msg import Bool
 except ImportError:
     HudServer = None
@@ -122,9 +123,8 @@ def test_status_and_position_become_the_apps_events(ros):
         fix_pub.publish(fix)
 
     wait_for(lambda: ros.events(events.SPEED) and ros.events(events.POSITION), every=publish)
-    assert ros.events(events.SPEED)[-1] == {'mock_speed': 1.5}
-    assert ros.events(events.POSITION)[-1] == {'mock_latitude': START[0],
-                                               'mock_longitude': START[1]}
+    assert ros.events(events.SPEED)[-1] == {'speed': 1.5}
+    assert ros.events(events.POSITION)[-1] == {'latitude': START[0], 'longitude': START[1]}
     vehicle = ros.events(events.VEHICLE)[-1]
     assert (vehicle['mode'], vehicle['armed'], vehicle['gear']) == ('computer', True, 'D')
 
@@ -136,7 +136,50 @@ def test_the_stop_sign_is_sent_when_it_changes(ros):
         pub.publish(Bool(data=True))
     wait_for(lambda: len(ros.events(events.STOP_SIGN)) > 1,
              every=lambda: pub.publish(Bool(data=False)))
-    assert [e['mock_sign_detected'] for e in ros.events(events.STOP_SIGN)] == [True, False]
+    assert [e['detected'] for e in ros.events(events.STOP_SIGN)] == [True, False]
+
+
+def test_the_battery_becomes_the_apps_event(ros):
+    pub = ros.car.create_publisher(BatteryState, '/battery_status', 10)
+    msg = BatteryState(voltage=49.5, percentage=0.75, current=math.nan)
+    wait_for(lambda: ros.events(events.BATTERY), every=lambda: pub.publish(msg))
+    assert ros.events(events.BATTERY)[-1] == {'voltage': 49.5, 'percentage': 75.0,
+                                              'current': None}
+
+
+def listen_for_estop(ros, qos):
+    """Subscribe to /estop as the car does; return the list the values arrive in."""
+    values = []
+    ros.car.create_subscription(Bool, '/estop', lambda m: values.append(m.data), qos)
+    return values
+
+
+def test_the_estop_button_reaches_the_backends_and_twist_mux(ros):
+    assert ros.hud.estop_pub.qos_profile.reliability == ReliabilityPolicy.RELIABLE
+    backends = listen_for_estop(ros, 10)    # spine_bridge, legacy_uart_bridge: depth 10
+    mux = listen_for_estop(ros, qos_profile_system_default)    # twist_mux's locks
+    wait_for(lambda: ros.hud.estop_pub.get_subscription_count() == 2)
+    reply = ros.http.post('/estop')
+    assert reply.status_code == 200
+    wait_for(lambda: len(backends) == 5 and len(mux) == 5)
+    time.sleep(0.5)     # and no more after the five
+    assert backends == [True] * 5
+    assert mux == [True] * 5
+
+
+def test_the_estop_also_cancels_the_route(ros):
+    server, goals = fake_nav2(ros, finish='wait')
+    assert ros.hud.nav.wait_for_server(timeout_sec=5.0)
+    assert ros.http.post('/receive', json=ROUTE).status_code == 200
+    wait_for(lambda: ros.hud.web.latest()[events.NAV_STATE]['status'] == 'navigating')
+    assert ros.http.post('/estop').status_code == 200
+    wait_for(lambda: ros.hud.web.latest()[events.NAV_STATE]['status'] == 'canceled')
+    server.destroy()
+
+
+def test_the_estop_without_a_route(ros):
+    assert ros.http.post('/estop').status_code == 200
+    assert events.NAV_STATE not in ros.hud.web.latest()     # nothing to cancel
 
 
 def test_a_locked_route_drives_through_nav2(ros):
@@ -192,3 +235,19 @@ def test_the_camera_is_received_only_while_someone_watches(ros):
     assert reply.data.startswith(b'\x89PNG')
     assert pub.get_subscription_count() == 1
     wait_for(lambda: pub.get_subscription_count() == 0)     # nobody watches any more
+
+
+@pytest.mark.parametrize('ros', [{'camera_stale_after': 0.5}], indirect=True)
+def test_an_old_picture_is_not_served(ros):
+    pub = ros.car.create_publisher(Image, '/camera/image_raw', 1)
+    picture = Image(width=1, height=1, encoding='mono8', step=1, data=[128])
+
+    def fetch():
+        pub.publish(picture)
+        return ros.http.get('/camera/latest.png').status_code == 200
+
+    wait_for(fetch)
+    time.sleep(1.0)     # the camera stops
+    reply = ros.http.get('/camera/latest.png')
+    assert reply.status_code == 503
+    assert b'is the camera running' in reply.data

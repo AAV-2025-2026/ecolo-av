@@ -1,6 +1,8 @@
 """Tests for events.py: ROS messages to the payloads the Flutter app reads."""
 
 import math
+from pathlib import Path
+import re
 from types import SimpleNamespace
 
 from aav_hud import events
@@ -26,9 +28,24 @@ def fix(lat, lon, state=0):
     return SimpleNamespace(latitude=lat, longitude=lon, status=SimpleNamespace(status=state))
 
 
-def test_speed_uses_the_apps_key_and_keeps_the_sign():
-    assert events.speed_event(status(speed=1.23456)) == {'mock_speed': 1.23}
-    assert events.speed_event(status(speed=-0.5)) == {'mock_speed': -0.5}
+# The app's list of event names (Dart), next to this package in the repository.
+APP_EVENTS = (Path(__file__).resolve().parents[4]
+              / 'hud/flutter_pi/lib/components/sockets/hud_events.dart')
+
+
+@pytest.mark.skipif(not APP_EVENTS.is_file(), reason='the app is not next to this package')
+def test_the_app_listens_for_the_same_events():
+    names = re.findall(r"static const \w+ = '([a-z_]+)';", APP_EVENTS.read_text())
+    assert sorted(names) == sorted(events.EVENTS)
+
+
+def test_no_event_says_mock_any_more():
+    assert not [name for name in events.EVENTS if 'mock' in name]
+
+
+def test_speed_keeps_the_sign():
+    assert events.speed_event(status(speed=1.23456)) == {'speed': 1.23}
+    assert events.speed_event(status(speed=-0.5)) == {'speed': -0.5}
 
 
 @pytest.mark.parametrize('mode, armed, estop, speed, letter', [
@@ -64,8 +81,7 @@ def test_position():
     assert events.fix_position(fix(45.38, -75.69)) == (45.38, -75.69)
     # Jazzy's default status is STATUS_UNKNOWN (-2); navsat_transform accepts it too.
     assert events.fix_position(fix(45.38, -75.69, state=-2)) == (45.38, -75.69)
-    assert events.position_event(45.38, -75.69) == {'mock_latitude': 45.38,
-                                                    'mock_longitude': -75.69}
+    assert events.position_event(45.38, -75.69) == {'latitude': 45.38, 'longitude': -75.69}
 
 
 @pytest.mark.parametrize('bad', [
@@ -81,17 +97,25 @@ def test_no_position_without_a_fix(bad):
 
 def test_stop_sign():
     assert events.stop_sign_event(SimpleNamespace(data=True)) == {
-        'mock_sign_detected': True, 'message': 'STOP'}
-    assert events.stop_sign_event(SimpleNamespace(data=False))['mock_sign_detected'] is False
+        'detected': True, 'message': 'STOP'}
+    assert events.stop_sign_event(SimpleNamespace(data=False))['detected'] is False
 
 
-def test_stream_info_keeps_the_2025_26_shape():
-    assert events.stream_info('10.0.0.5', 8889, 8554, 'cam1') == {
-        'name': 'cam1',
-        'base_url': 'http://10.0.0.5:8889/cam1/',
-        'whep_url': 'http://10.0.0.5:8889/cam1/whep',
-        'rtsp_url': 'rtsp://10.0.0.5:8554/cam1',
-    }
+def battery(voltage, percentage, current):
+    return SimpleNamespace(voltage=voltage, percentage=percentage, current=current)
+
+
+def test_battery_in_volts_percent_and_amps():
+    # The Victron monitor gives all three; BatteryState's charge goes from 0 to 1.
+    assert events.battery_event(battery(48.4567, 0.5234, -12.345)) == {
+        'voltage': 48.46, 'percentage': 52.3, 'current': -12.35}
+
+
+def test_what_the_battery_monitor_does_not_measure_is_none():
+    # The bench's mock_battery has no current; JSON has no NaN, so it must be None.
+    e = events.battery_event(battery(49.0, math.nan, math.nan))
+    assert e == {'voltage': 49.0, 'percentage': None, 'current': None}
+    assert events.battery_event(battery(math.inf, 1.0, 0.0))['voltage'] is None
 
 
 def test_throttle():
