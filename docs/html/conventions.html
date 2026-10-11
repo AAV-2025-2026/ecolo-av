@@ -7,7 +7,7 @@
 <!-- Generated from docs/conventions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Names and code style</h1>
-<div class="meta">3 min read · 5 sections</div></header>
+<div class="meta">4 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -186,7 +186,47 @@ changes their launch files and executables.</p>
 <li><strong>No pins in ROS.</strong> Pins, I2C addresses and calibration live in the firmware.</li>
 <li><strong>No secrets in git</strong>: only where a secret lives and what kind it is.</li>
 <li><strong>Small commits</strong>, each passing <code>pixi run test</code>, each message saying why.</li>
+<li><strong>Write each language its own way</strong> (Ben, 10 Oct). Ported code is rewritten in the
+   new language's style, not copied line by line.</li>
 </ol>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>In Rust</th>
+<th>Not C written in Rust</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>an <code>enum</code> for a state or a mode</td>
+<td>number codes and <code>#define</code>-style constants</td>
+</tr>
+<tr>
+<td><code>Result&lt;T, E&gt;</code>, with an error type</td>
+<td>-1, 0 or a flag for an error</td>
+</tr>
+<tr>
+<td>iterators: <code>iter()</code>, <code>map</code>, <code>filter</code></td>
+<td>index loops over arrays</td>
+</tr>
+<tr>
+<td>small types for units: <code>Metres(f32)</code></td>
+<td>bare <code>f32</code> everywhere</td>
+</tr>
+<tr>
+<td><code>?</code>, and <code>expect</code> with a reason, only where failure is a bug</td>
+<td><code>unwrap()</code> in library code</td>
+</tr>
+<tr>
+<td>traits for a device (<code>embedded-hal</code>)</td>
+<td>functions that take a bus handle and a pin number</td>
+</tr>
+<tr>
+<td><code>cargo fmt</code>, <code>cargo clippy</code> clean</td>
+<td>a style of your own</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="style-and-what-checks-it">Style, and what checks it</h2>
 <div class="table-wrap"><table>

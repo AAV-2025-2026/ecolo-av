@@ -62,6 +62,11 @@ These are the conventions decided so far. They apply to people and to Claude ses
   `legacy_protocol.py` and `vehicle.py`; in Rust, `spine-core`.
 - **Names, package layout and code style** are in `docs/conventions.md`. `pixi run lint`
   checks our Python against ROS's own rules (ament_flake8, ament_pep257).
+- **Write each language its own way** (Ben, 10 Oct: "Not just c code in the rust
+  language"). Rust follows the Rust API Guidelines: enums, not number codes; `Result`,
+  not error values; iterators, not index loops; small types for units; no `unwrap` in
+  library code; `cargo fmt` and `cargo clippy` clean. Python follows PEP 8 and ROS's
+  rules. Ported code is rewritten in the new language's style, not transliterated.
 - **Each node's module docstring** lists what it subscribes, publishes, serves and calls.
 - **Pins, I2C addresses and calibration belong in the firmware.** ROS never sees a pin.
 - **Docs are for a dyslexic reader**: short pages with sections, tables and pictures; no

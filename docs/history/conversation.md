@@ -1192,6 +1192,23 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **No ROS package runs Core ML:** our detector node is that tool, through Ultralytics and coremltools. Both machines publish the same detection messages, so nothing downstream cares which one saw the sign.
 - **Next, with one detector per machine:** the machine files pick the model file; tasks export the `.mlpackage` (on a Mac) and the `.engine` (on the Orin, after the reflash, Q24).
 
+### What was the Vulkan code doing? High-level first, then port, then make every file native. Real drivers everywhere. Ackermann, not bicycle. A fully working car. (21:45)
+
+- **Vulkan:** a graphics library, the Linux counterpart of Metal. `vulkan_static_assertions.hpp` never runs: it checks, while a program compiles, that Vulkan's C++ and C types agree. Linux's Pixi has it for Qt (RViz, rqt), Gazebo's renderer and ffmpeg; none of our code uses it.
+- **The order (Decided, Ben):**
+
+| Step | What |
+|---|---|
+| 1. The high-level pieces | tonight's five parallel pieces: the spine board, the lane finder, obstacles, the car launch, the HUD |
+| 2. Ackermann, done properly | reversing (Reeds-Shepp), both front wheels' real angles, the steering motor's real curve (Q2) |
+| 3. Port the C++ to Rust | the IMU, the radar clustering, the encoder and display Picos |
+| 4. Every file native | Rust that reads like Rust, not C in Rust; standard conventions in every language, checked by `pixi run test` |
+| 5. Fully working | one check that drives everything end to end on the bench; then the car, once it runs Jazzy |
+
+- **Ackermann:** Nav2 already plans for a car (Hybrid-A*, the 2.86 m turning radius), its controller never spins in place, and Gazebo steers with its Ackermann system. "Bicycle" is only the maths for the path: two front wheels treated as one in the middle, which gives the same path when the car doesn't skid, and is how ROS's Ackermann message defines its steering angle. Step 2 adds what's missing.
+- **Real code everywhere:** every device already has a real driver; after step 1, every remaining stub gets replaced.
+- **The old folders** stay as a reference: `aav` merged what mattered, and anything missing can be found there.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.

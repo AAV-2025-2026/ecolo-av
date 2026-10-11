@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">16 min read · 8 sections</div></header>
+<div class="meta">17 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -317,6 +317,10 @@ answer.</p>
 <tr>
 <td>ML: a detector on each machine with a GPU (the Orin, a laptop), each under its own name; no device aliases</td>
 <td>Ben, 10 Oct: "the orin be one node and/or my laptop be another node"</td>
+</tr>
+<tr>
+<td>The order of work: the high-level pieces first, then Ackermann done properly (reversing, both wheels' angles, the steering curve), then the C++ ported to Rust, then every file rewritten to its language's own conventions, until the whole car works</td>
+<td>Ben, 10 Oct: "Lets try to get a fully functioning thing going on"</td>
 </tr>
 <tr>
 <td>Inference: TensorRT on the Orin (a <code>.engine</code> built there), Core ML on the MacBook Pro (a <code>.mlpackage</code>), both in our <code>aav_yolo</code> node. Isaac ROS's TensorRT detectors are the Orin's upgrade path</td>

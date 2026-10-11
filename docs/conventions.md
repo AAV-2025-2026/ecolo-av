@@ -64,6 +64,18 @@ src/<layer>/aav_<what>/
 6. **No pins in ROS.** Pins, I2C addresses and calibration live in the firmware.
 7. **No secrets in git**: only where a secret lives and what kind it is.
 8. **Small commits**, each passing `pixi run test`, each message saying why.
+9. **Write each language its own way** (Ben, 10 Oct). Ported code is rewritten in the
+   new language's style, not copied line by line.
+
+| In Rust | Not C written in Rust |
+|---|---|
+| an `enum` for a state or a mode | number codes and `#define`-style constants |
+| `Result<T, E>`, with an error type | -1, 0 or a flag for an error |
+| iterators: `iter()`, `map`, `filter` | index loops over arrays |
+| small types for units: `Metres(f32)` | bare `f32` everywhere |
+| `?`, and `expect` with a reason, only where failure is a bug | `unwrap()` in library code |
+| traits for a device (`embedded-hal`) | functions that take a bus handle and a pin number |
+| `cargo fmt`, `cargo clippy` clean | a style of your own |
 
 ## Style, and what checks it
 
