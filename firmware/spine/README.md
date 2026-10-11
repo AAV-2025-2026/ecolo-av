@@ -1,19 +1,31 @@
 # firmware/spine: the spine's firmware, in Rust
 
-Everything the spine board will run, except the board program itself, which waits on the
-chip (Q10-Q13). Every crate is `no_std` and is tested on a laptop, without the board.
+Everything the spine board runs. Every crate is `no_std` and is tested on a laptop, without
+the board. The board program for a Pico 2, on the bench, is in `boards/pico2`.
 
 | Crate | What it is | Tests |
 |---|---|---|
-| `spine-core` | the spine's logic: modes, arming, the 200 ms watchdog, the speed loop, the encoder, the CAN frames | 48 |
+| `spine-core` | the spine's logic: modes, arming, the 200 ms watchdog, the speed loop, the encoder, the CAN frames, and the three choices still open (below) | 54 |
 | `aav-inputs` | clean inputs: debounced switches, an e-stop that trips at once, counting with a lockout | 9 |
 | `jrk-g2` | the Pololu Jrk G2 motor controllers (steering, brake), over I2C | 14 |
 | `ad5311` | the throttle DAC, over I2C | 10 |
 | `pca9555` | the I/O expander (the direction output), over I2C | 6 |
+| `mcp2515` | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters, send, receive, error state | 34 |
 | `ibus` | the FlySky RC receiver's iBUS frames | 24 |
-| `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 44 |
+| `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 49 |
 
 Each crate's own README has its API, and where its behaviour came from in the 2025-26 C++.
+
+## Three choices still open
+
+Each is one constant in `spine-core` (`src/spine.rs`), set to what `docs/firmware.md`
+proposes. Change one only with the team; the board program and the bench both follow.
+
+| Constant | Set to | The 2025-26 firmware |
+|---|---|---|
+| `ESTOP_STEERING` | `Hold`: on any stop the spine makes, the wheels stay where they are | centred them (`Centre`) |
+| `IDLE_BRAKE` | `0.0`: with nobody driving, after boot too, the brake lets go once the e-stop input clears | kept it full on (`1.0`) |
+| `RC_GEAR_BRAKE` | `SpeedZero`: the gear switch's brake position asks for zero speed | full brake at once (`FullBrake`) |
 
 ## Test it
 
@@ -24,15 +36,24 @@ cargo build --target thumbv8m.main-none-eabihf -p spine-board   # for the Pico 2
 ```
 
 `pixi run test` also builds every crate for the Pico 2's chip, so a crate that pulls in the
-standard library fails.
+standard library fails. It builds the board program too, and checks its UF2 file.
 
 ## Run it without a board
 
 Bench mode runs `spine-core` on a laptop, on the CAN frames from `spine_bridge`, driving a
 model car: `pixi run bench` (`docs/bench.md`).
 
-## The board program, still to write
+## The board program: `boards/pico2`
 
-One small program for the chosen chip. It implements `spine_board::Board` (a millisecond
-clock, the hardware e-stop pin, the wheel encoder's counter, and CAN), then calls
-`SpineBoard::tick` about 100 times a second. `spine-board`'s README has the checklist.
+The spine on a Raspberry Pi Pico 2 (RP2350), with Embassy, for the bench. It implements
+`spine_board::Board` (the clock, the e-stop input, the wheel's spoke sensors, CAN through
+the MCP2515), then calls `SpineBoard::tick` every 10 ms. The car's chip is still Q10-Q13.
+
+| Command | Does |
+|---|---|
+| `pixi run spine-uf2` | builds it, and writes `boards/pico2/spine-pico2.uf2`: hold BOOTSEL, plug in, drag it on |
+| `pixi run spine-tools`, then `pixi run spine-flash` | or flash it through a debug probe, and see its logs |
+
+It is a workspace of its own: it builds only for the RP2350. The pin map, the wiring rules
+(the e-stop's among them), and what is untested: `docs/rust-firmware.md`.
+Untested on a real Pico 2: nothing has been flashed yet.

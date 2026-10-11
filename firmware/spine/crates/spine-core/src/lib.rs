@@ -14,4 +14,7 @@ pub mod speed_loop;
 pub mod spine;
 pub mod watchdog;
 
-pub use spine::{faults, Inputs, Outputs, RcInput, Spine, SpineConfig};
+pub use spine::{
+    faults, EstopSteering, Inputs, Outputs, RcGearBrake, RcInput, Spine, SpineConfig,
+    ESTOP_STEERING, IDLE_BRAKE, RC_GEAR_BRAKE,
+};
