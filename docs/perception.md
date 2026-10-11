@@ -174,7 +174,7 @@ they become parts in its machine files.
 
 | Item | Waits on |
 |---|---|
-| Find `best.pt` and the training pictures: probably on the team's NVIDIA Linux machine | which machine, and access |
+| Find `best.pt` and the training pictures: probably on the team's NVIDIA Linux machine | SSH to it: later (Ben, 10 Oct) |
 | Back up the Orin: the 2025-26 detector lives only there | before any reflash |
 | The line finder | someone: classic OpenCV, or a model |
 | The cameras' models and udev names | Q22 |

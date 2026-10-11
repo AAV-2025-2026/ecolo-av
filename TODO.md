@@ -63,6 +63,7 @@ folder downloaded, and moves into it as a fast-forward.
       gear switch (docs/firmware.md).
 - [ ] **Find `best.pt`**, the 2024-25 stop-sign model, and the 2025-26 lane finder.
       `best.pt` is probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct).
+      No SSH to it today: later, once all the code is in place (Ben, 21:14).
 - [ ] **The HUD app's small changes** (docs/hud.md).
 - [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
 - [x] **The first-day steps in `README.md`** (Ben, 17:03).
