@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">4 min read · 6 sections</div></header>
+<div class="meta">5 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -38,7 +38,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a class="here" href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-it-is">What it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#run-it">Run it</a><a href="#what-the-app-still-needs">What the app still needs</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-it-is">What it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#run-it">Run it</a><a href="#what-the-app-still-needs">What the app still needs</a><a href="#the-place-database">The place database</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
 <div class="lead"><p>The 2025-26 team built a touchscreen app for the car. Its back end, <code>aav_hud</code>, is ported
 to our topics (10 October): it shows real data from the graph, and a locked route drives
 the car through Nav2. The app itself (Flutter) still needs a few small changes.</p></div>
@@ -216,6 +216,33 @@ ros2 launch aav_hud hud.launch.py             # on its own, next to a running pr
 <tr>
 <td>A screen for the battery and the vehicle status</td>
 <td>the back end could send them</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-place-database">The place database</h2>
+<p>The app's destination search reads <code>ottawa.db</code>: 51 MB of SQLite, 606,628 named places
+around Ottawa. It's too big for git, so a task downloads it:</p>
+<pre class="highlight"><code class="language-bash">pixi run get-hud-map      # into hud/flutter_pi/assets/databases/ (git ignores it)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>From</td>
+<td>the 2025-26 team's public repo, <code>AAV-2025-2026/User-Interface</code>, at <code>ea5adc3</code>: the last commit that changed it</td>
+</tr>
+<tr>
+<td>Checked</td>
+<td>by its SHA-256, so a changed file is refused</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>from OpenStreetMap: © OpenStreetMap contributors, under the ODbL. The app must show that credit</td>
 </tr>
 </tbody>
 </table></div>

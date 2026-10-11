@@ -70,6 +70,21 @@ ros2 launch aav_hud hud.launch.py             # on its own, next to a running pr
 | Rename the `mock_*` events, in the app and the back end together | the data is real now |
 | A screen for the battery and the vehicle status | the back end could send them |
 
+## The place database
+
+The app's destination search reads `ottawa.db`: 51 MB of SQLite, 606,628 named places
+around Ottawa. It's too big for git, so a task downloads it:
+
+```bash
+pixi run get-hud-map      # into hud/flutter_pi/assets/databases/ (git ignores it)
+```
+
+| | |
+|---|---|
+| From | the 2025-26 team's public repo, `AAV-2025-2026/User-Interface`, at `ea5adc3`: the last commit that changed it |
+| Checked | by its SHA-256, so a changed file is refused |
+| Data | from OpenStreetMap: © OpenStreetMap contributors, under the ODbL. The app must show that credit |
+
 Keep the Flutter app or not: Q29. Meanwhile, **Foxglove** works as the operator's screen:
 `foxglove_bridge`, on port 8765, shows speed, the map, paths and costmaps.
 
