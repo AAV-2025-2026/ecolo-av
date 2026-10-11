@@ -194,6 +194,25 @@ passed at y = 4.4 m, beside a box that ends at y = 3 m.
   so the goal fails. It's open work for the navigation team (N7, the lookahead). A
   straight 8 m goal on the empty map succeeds.
 
+### N7: why Nav2's turn command flips (11 October)
+
+In Gazebo, on the empty map, each run on a fresh simulator:
+
+| Turn-sign flips a second | Straight goals (8 m, 25 m) | The curve to (15, 8) |
+|---|---|---|
+| Lookahead 1.5 m (as now) | 0.86-0.99 | 0.48-0.71 |
+| Lookahead 3 m (tried) | 0.85-1.44 | 0.25-0.52 |
+
+- **Not the lookahead:** a longer one didn't help on straight drives, so it stays 1.5 m.
+  Both reached every straight goal; each failed the curve once.
+- **The GPS:** the flips come in steps, five times a second, with the fixes. One step in
+  ten turns the global EKF's heading (`map -> odom`) by more than 4 degrees, and the whole
+  path swings with it.
+- **Tried, not kept:** with `ekf_global` trusting GPS less, one step in ten turned it by
+  more than 0.6 degrees, and the flips fell to 0.06-0.5 a second; but one goal then
+  overshot and looped for 45 s.
+- **Next:** tune `ekf_global` against the real receiver's noise (Q18).
+
 ## Where the map sits on the Earth
 
 The map frame is pinned to the ground by the **datum** in
