@@ -6,8 +6,8 @@ Any GPS that speaks NMEA over serial, as /gps/fix: the fallback until the GPS is
   nmea_navsat_driver -> /gps/fix (NavSatFix), frame gps_link
 
 Most receivers send NMEA by default, u-blox ones too (9600 baud on a u-blox M8's UART,
-38400 on an F9P's). sensors.launch.py's gps part uses ublox_dgnss instead, which needs a
-u-blox F9P and runs on the car only (it isn't in Pixi); this one runs anywhere.
+38400 on an F9P's). sensors.launch.py's gps part starts this with gps_driver:=nmea; its
+default is ublox_gps, for a u-blox (gps_driver:=ublox). Both run anywhere, Pixi too.
 Untested with a receiver.
 """
 
