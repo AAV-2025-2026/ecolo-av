@@ -35,6 +35,8 @@ don't.
 | `hud` | `false` | the HUD's web server, on 127.0.0.1:5000 |
 | `arm` | `true` | arms the spine 12 s after start-up |
 | `rviz`, `foxglove` | `false` | RViz; foxglove_bridge on port 8765 |
+| `obstacle` | `false` | a 1 m box in the lane 15 m ahead, which only the pretend radar sees: Nav2 stops for it |
+| `camera_obstacles` | `false` | the detectors' boxes into Nav2's local costmap ([Costmaps](costmaps.md)) |
 
 ## What's real, and what's a stand-in
 
@@ -63,10 +65,15 @@ can tell the difference.
 | `mock_gps` | `aav_bench` | `/gps/fix` | where the antenna is, as latitude and longitude, with 0.5 m of noise, 5 times a second |
 | `mock_camera` | `aav_bench` | `/camera/image_raw` | draws a road, and each stop sign at its real size when it's in view |
 | `mock_battery` | `aav_bench` | `/battery_status` | a 48 V pack draining over two hours (a guess until Q8) |
-| `mock_radar` | `ti_ros2_driver` | `/radar/points` | three pretend objects |
+| `mock_radar` | `aav_bench` | `/radar/points` | sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there |
 
 The bench world is `aav_bench/config/bench.yaml`. The model car starts at the map's origin
-(the GPS datum), facing east. A stop sign stands 25 m ahead, 2 m to the right.
+(the GPS datum), facing east. A stop sign stands 25 m ahead, 2 m to the right. With
+`obstacle:=true`, a 1 m box stands in the lane 15 m ahead; a test can move it, or take it
+away, with `mock_radar`'s parameters.
+
+Nav2 on the bench always has the radar in its local costmap, and `collision_monitor`
+between it and the mux, as on a car with a radar.
 
 ### The model car
 
@@ -113,6 +120,7 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 | Software e-stop | 1 m/s to a stop, and the spine reports it | [[works]] |
 | Hardware e-stop | the same, from `/bench/hw_estop` | [[works]] |
 | Stop sign (`pixi run -e ml bench-check --perception`) | Nav2 drives 40 m east: the car stops before the sign, waits, and reaches the goal | [[works]] locked 4.7 m before the sign, stopped, reached the goal |
+| Obstacle (`pixi run bench-check --obstacle`) | a box 15 m ahead, Nav2 driving 30 m: `collision_monitor`'s stop zone stops the car before it; with the box gone, the car reaches the goal | [[works]] stood still 0.42 m before the box, from 1.02 m/s; reached the goal once the box was gone |
 
 Run it after changing anything between the drivers and the spine.
 
@@ -145,7 +153,10 @@ Start the real part, and stop the stand-in: same topic, same type, same frame.
   watchdog, which then latches the spine, as it should.
 - On Ctrl-C, some nodes print a traceback, or a stack trace from deep in ROS's messaging,
   while they shut down. It's harmless.
-- `mock_radar`'s objects ride along with the radar: they don't stay put in the world.
+- The pretend radar sees only the boxes, not the stop sign; the camera doesn't draw the
+  boxes.
+- Parked, the EKFs' heading drifts with `mock_imu`'s gyro bias, a few degrees a minute
+  (10.5 degrees after about 2 minutes, 11 Oct), until the car drives and GPS corrects it.
 
 ## Files
 

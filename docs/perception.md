@@ -169,10 +169,19 @@ they become parts in its machine files.
 
 - **From a Mac:** a Mac on the car's network can run the detector on the car's cameras.
   Raw images are too big for WiFi, so the cameras should also publish compressed ones.
-- **Into the costmap:** a camera detection needs a distance first (a stereo pair, a depth
-  model, or the camera's height above a flat road). Then it's a point on the ground, and
-  Nav2's costmap marks it like a radar or lidar point. Stop signs never go in the
-  costmap: they lock the mux.
+- **Into the costmap:** `camera_obstacles` (in `aav_yolo`) puts each box where it meets
+  the road: its bottom edge, seen through the camera's lens from its height and tilt
+  (`vehicle.yaml`, through TF). The local costmap's camera layer marks those points. Off
+  until the cameras are calibrated (Q22); then run `perception.launch.py
+  camera_obstacles:=true` and `car.launch.py camera_obstacles:=true`. [Costmaps](costmaps.md)
+  has the details.
+
+  | Counts | Never counts |
+  |---|---|
+  | people, bicycles, cars, motorcycles, buses, trucks, cats, dogs, horses (`config/camera_obstacles.yaml`) | stop signs, even if listed: they lock the mux |
+
+  Each message's camera is its `header.frame_id`, so every detector, on any camera, is
+  read the same way.
 
 ### Isaac ROS (NVIDIA)
 
