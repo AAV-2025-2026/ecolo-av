@@ -5,7 +5,7 @@ chip (Q10-Q13). Every crate is `no_std` and is tested on a laptop, without the b
 
 | Crate | What it is | Tests |
 |---|---|---|
-| `spine-core` | the spine's logic: modes, arming, the 200 ms watchdog, the speed loop, the encoder, the CAN frames | 48 |
+| `spine-core` | the spine's logic: modes, arming, the 200 ms watchdog, the speed loop, the encoder, the CAN frames, and the three choices still open (below) | 54 |
 | `aav-inputs` | clean inputs: debounced switches, an e-stop that trips at once, counting with a lockout | 9 |
 | `jrk-g2` | the Pololu Jrk G2 motor controllers (steering, brake), over I2C | 14 |
 | `ad5311` | the throttle DAC, over I2C | 10 |
@@ -15,6 +15,17 @@ chip (Q10-Q13). Every crate is `no_std` and is tested on a laptop, without the b
 | `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 44 |
 
 Each crate's own README has its API, and where its behaviour came from in the 2025-26 C++.
+
+## Three choices still open
+
+Each is one constant in `spine-core` (`src/spine.rs`), set to what `docs/firmware.md`
+proposes. Change one only with the team; the board program and the bench both follow.
+
+| Constant | Set to | The 2025-26 firmware |
+|---|---|---|
+| `ESTOP_STEERING` | `Hold`: on any stop the spine makes, the wheels stay where they are | centred them (`Centre`) |
+| `IDLE_BRAKE` | `0.0`: with nobody driving, after boot too, the brake lets go once the e-stop input clears | kept it full on (`1.0`) |
+| `RC_GEAR_BRAKE` | `SpeedZero`: the gear switch's brake position asks for zero speed | full brake at once (`FullBrake`) |
 
 ## Test it
 

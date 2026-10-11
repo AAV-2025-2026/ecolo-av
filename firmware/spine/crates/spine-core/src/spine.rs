@@ -35,6 +35,41 @@ pub mod faults {
     pub const STOP: u16 = STEERING_DRIVER | BRAKE_DRIVER | THROTTLE_DAC | WHEEL_ENCODER;
 }
 
+// Three choices still open with the team (docs/firmware.md, "Still to decide"). Each is one
+// constant, set to what the docs propose. `SpineConfig::default()` uses them, so the board
+// program and the bench both follow a change here.
+
+/// The steering on an e-stop, and on every other stop the spine makes by itself: a driver
+/// fault, a lost RC signal, a command timeout, overspeed. Proposed: hold it where it is.
+/// The 2025-26 firmware centred it (`jrkSafeStop()`).
+pub const ESTOP_STEERING: EstopSteering = EstopSteering::Hold;
+
+/// The brake while nobody drives, from boot on (0 to 1). Proposed: 0, so the brake lets go
+/// once the e-stop input clears. The 2025-26 firmware kept it full on (1.0).
+pub const IDLE_BRAKE: f32 = 0.0;
+
+/// What the RC gear switch's brake position does. Proposed: speed zero, so the speed loop
+/// brakes to a stop and holds. The 2025-26 firmware put the brake full on at once.
+pub const RC_GEAR_BRAKE: RcGearBrake = RcGearBrake::SpeedZero;
+
+/// What the steering does when the spine stops the car by itself.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EstopSteering {
+    /// Hold the wheels where they are.
+    Hold,
+    /// Bring the wheels back to straight, at the steering rate limit.
+    Centre,
+}
+
+/// What the RC gear switch's brake position (its middle) does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RcGearBrake {
+    /// Ask for zero speed: the speed loop brakes to a stop, then holds the car there.
+    SpeedZero,
+    /// Throttle off and the brake full on at once; the steering still follows the stick.
+    FullBrake,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct SpineConfig {
     /// No valid DRIVE_CMD for this long while driving = stop (ms).
@@ -55,6 +90,10 @@ pub struct SpineConfig {
     /// Brake for stops, and brake in manual mode (0..1).
     pub stop_brake: f32,
     pub idle_brake: f32,
+    /// The steering on a stop: [`ESTOP_STEERING`].
+    pub estop_steering: EstopSteering,
+    /// The RC gear switch's brake position: [`RC_GEAR_BRAKE`].
+    pub rc_gear_brake: RcGearBrake,
     pub speed_loop: SpeedLoopConfig,
 }
 
@@ -70,7 +109,9 @@ impl Default for SpineConfig {
             max_steer_rate: 0.6,
             overspeed_margin: 0.5,
             stop_brake: 1.0,
-            idle_brake: 0.0, // open question: brake or release when nobody drives?
+            idle_brake: IDLE_BRAKE,
+            estop_steering: ESTOP_STEERING,
+            rc_gear_brake: RC_GEAR_BRAKE,
             speed_loop: SpeedLoopConfig::default(),
         }
     }
@@ -85,6 +126,8 @@ pub struct RcInput {
     pub throttle: f32,
     /// -1..1, positive left.
     pub steering: f32,
+    /// The gear switch is on brake. What that does is [`SpineConfig::rc_gear_brake`].
+    pub brake: bool,
 }
 
 /// Everything the board read this tick.
@@ -265,10 +308,14 @@ impl Spine {
         if stop || (self.mode == Mode::Manual && (self.timeout_latched || self.fault_latched)) {
             self.speed_setpoint = 0.0;
             self.speed_loop.reset();
+            if c.estop_steering == EstopSteering::Centre {
+                self.steering_setpoint = slew(self.steering_setpoint, 0.0, c.max_steer_rate, dt);
+            }
             return out(0.0, c.stop_brake, false, self.steering_setpoint, self);
         }
 
         // Targets for this mode, inside the firmware's own limits.
+        let mut full_brake = false;
         let (target_speed, target_steering, accel, steer_rate) = match self.mode {
             Mode::Manual => {
                 self.speed_setpoint = 0.0;
@@ -280,7 +327,9 @@ impl Spine {
                     override_switch: true,
                     throttle: 0.0,
                     steering: 0.0,
+                    brake: false,
                 });
+                full_brake = rc.brake && c.rc_gear_brake == RcGearBrake::FullBrake;
                 let cap = if rc.throttle >= 0.0 {
                     c.max_speed
                 } else {
@@ -317,12 +366,17 @@ impl Spine {
         };
         let target_speed = target_speed.clamp(-c.max_reverse_speed, c.max_speed);
         let target_steering = target_steering.clamp(-c.max_steering_angle, c.max_steering_angle);
+        self.steering_setpoint = slew(self.steering_setpoint, target_steering, steer_rate, dt);
+        if full_brake {
+            self.speed_setpoint = 0.0;
+            self.speed_loop.reset();
+            return out(0.0, c.stop_brake, false, self.steering_setpoint, self);
+        }
         // Slowing down (toward zero, or through it) uses the separate, harder cap.
         let slowing = target_speed.abs() < self.speed_setpoint.abs()
             || target_speed * self.speed_setpoint < 0.0;
         let rate = if slowing { c.max_decel } else { accel };
         self.speed_setpoint = slew(self.speed_setpoint, target_speed, rate, dt);
-        self.steering_setpoint = slew(self.steering_setpoint, target_steering, steer_rate, dt);
         let drive = self
             .speed_loop
             .update(self.speed_setpoint, i.measured_speed, dt);
@@ -382,6 +436,8 @@ impl Spine {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
     use super::*;
 
     struct Car {
@@ -392,8 +448,12 @@ mod tests {
 
     impl Car {
         fn new() -> Self {
+            Car::with_config(SpineConfig::default())
+        }
+
+        fn with_config(cfg: SpineConfig) -> Self {
             Car {
-                spine: Spine::new(SpineConfig::default()),
+                spine: Spine::new(cfg),
                 now: 1000,
                 counter: 0,
             }
@@ -534,6 +594,7 @@ mod tests {
             override_switch: true,
             throttle: 1.0,
             steering: 0.0,
+            brake: false,
         };
         let out = car.tick(Inputs {
             rc: Some(rc),
@@ -553,6 +614,7 @@ mod tests {
             override_switch: true,
             throttle: 0.0,
             steering: 1.0,
+            brake: false,
         };
         let cmd = car.cmd(1.0, 0.0, true);
         let out = car.tick(Inputs {
@@ -570,6 +632,7 @@ mod tests {
             override_switch: true,
             throttle: 0.5,
             steering: 0.0,
+            brake: false,
         };
         car.tick(Inputs {
             rc: Some(rc),
@@ -642,6 +705,7 @@ mod tests {
             override_switch: true,
             throttle: 1.0,
             steering: 0.0,
+            brake: false,
         };
         let out = car.tick(Inputs {
             rc: Some(rc),
@@ -665,6 +729,106 @@ mod tests {
             ..Default::default()
         });
         assert_ne!(out.faults & faults::BAD_COUNTER, 0);
+    }
+
+    #[test]
+    fn the_open_choices_are_what_the_docs_propose() {
+        // docs/firmware.md, "Still to decide". Change them only with the team.
+        assert_eq!(ESTOP_STEERING, EstopSteering::Hold);
+        assert_eq!(IDLE_BRAKE, 0.0);
+        assert_eq!(RC_GEAR_BRAKE, RcGearBrake::SpeedZero);
+        let c = SpineConfig::default();
+        assert_eq!(c.estop_steering, ESTOP_STEERING);
+        assert_eq!(c.idle_brake, IDLE_BRAKE);
+        assert_eq!(c.rc_gear_brake, RC_GEAR_BRAKE);
+    }
+
+    /// Steer to 0.3 rad, then hold the hardware e-stop for `ticks`.
+    fn steering_on_an_estop(cfg: SpineConfig, ticks: usize) -> std::vec::Vec<f32> {
+        let mut car = Car::with_config(cfg);
+        car.arm();
+        let out = car.drive(0.0, 0.3, true, 100);
+        assert!((out.steering_target - 0.3).abs() < 1e-6);
+        let estop = Inputs {
+            hw_estop: true,
+            ..Default::default()
+        };
+        (0..ticks)
+            .map(|_| car.tick(estop).steering_target)
+            .collect()
+    }
+
+    #[test]
+    fn an_estop_holds_the_steering() {
+        let steering = steering_on_an_estop(SpineConfig::default(), 100);
+        assert!(
+            steering.iter().all(|s| (s - 0.3).abs() < 1e-6),
+            "{steering:?}"
+        );
+    }
+
+    #[test]
+    fn an_estop_can_centre_the_steering_instead() {
+        let cfg = SpineConfig {
+            estop_steering: EstopSteering::Centre,
+            ..SpineConfig::default()
+        };
+        let steering = steering_on_an_estop(cfg, 100);
+        // Back at the steering rate limit, 0.6 rad/s: 6 mrad a tick, straight after 0.5 s.
+        assert!((steering[0] - 0.294).abs() < 1e-4, "{}", steering[0]);
+        assert!(steering.windows(2).all(|w| w[1] <= w[0]));
+        assert_eq!(steering[60..], [0.0; 40]);
+    }
+
+    #[test]
+    fn the_idle_brake_after_boot() {
+        // Nobody drives straight after boot: the brake is released...
+        let out = Car::new().tick(Inputs::default());
+        assert_eq!((out.mode, out.brake), (Mode::Manual, 0.0));
+        // ...or full on, as the 2025-26 firmware kept it.
+        let cfg = SpineConfig {
+            idle_brake: 1.0,
+            ..SpineConfig::default()
+        };
+        assert_eq!(Car::with_config(cfg).tick(Inputs::default()).brake, 1.0);
+    }
+
+    /// RC drives, with the gear switch on brake and the steering stick full left, while
+    /// the car still rolls at 1 m/s.
+    fn rc_on_brake(cfg: SpineConfig) -> Outputs {
+        let mut car = Car::with_config(cfg);
+        let rc = RcInput {
+            override_switch: true,
+            throttle: 0.0,
+            steering: 1.0,
+            brake: true,
+        };
+        let inputs = Inputs {
+            rc: Some(rc),
+            measured_speed: 1.0,
+            ..Default::default()
+        };
+        (0..10).map(|_| car.tick(inputs)).last().unwrap()
+    }
+
+    #[test]
+    fn the_rc_gear_brake_asks_for_speed_zero() {
+        let out = rc_on_brake(SpineConfig::default());
+        assert_eq!((out.mode, out.throttle), (Mode::Rc, 0.0));
+        // The speed loop brakes as hard as the overspeed needs, not fully.
+        assert!(out.brake > 0.0 && out.brake < 1.0, "{}", out.brake);
+        assert!(out.steering_target > 0.0, "the stick still steers");
+    }
+
+    #[test]
+    fn the_rc_gear_brake_can_be_the_full_brake() {
+        let cfg = SpineConfig {
+            rc_gear_brake: RcGearBrake::FullBrake,
+            ..SpineConfig::default()
+        };
+        let out = rc_on_brake(cfg);
+        assert_eq!((out.mode, out.throttle, out.brake), (Mode::Rc, 0.0, 1.0));
+        assert!(out.steering_target > 0.0, "the stick still steers");
     }
 
     #[test]

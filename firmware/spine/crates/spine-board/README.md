@@ -131,5 +131,5 @@ Changed on purpose:
 | Changing direction | pin, 1 ms, then the ramped throttle: it could reverse with the throttle on | only with the DAC at 0, and no throttle that tick |
 | Throttle with the brake on | RC "brake" ramped the throttle down with the brake full on | the throttle is 0 whenever the brake is on |
 | Throttle and brake both asked for | can't happen in spine-core | `debug_assert!` in tests; on the car the brake wins, since a panic would leave the DAC at its last code |
-| Steering on an e-stop | centred (`jrkSafeStop()`) | held where it was: spine-core's choice |
-| Brake with nobody driving | on (3500) from start-up | spine-core's `idle_brake` (0.0): released once the e-stop input clears (still to decide) |
+| Steering on an e-stop | centred (`jrkSafeStop()`) | spine-core's `ESTOP_STEERING`: held where it was (proposed), or `Centre` |
+| Brake with nobody driving | on (3500) from start-up | spine-core's `IDLE_BRAKE` (0.0): released once the e-stop input clears (proposed; 1.0 keeps it on) |
