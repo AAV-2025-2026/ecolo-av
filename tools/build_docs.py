@@ -57,6 +57,7 @@ PAGES = [
     ('mac.md', 'Your Mac', 'Set up the Mac, join the car, drive and watch'),
     ('simulation.md', 'Simulation', 'Gazebo, replay, CARLA, and when nothing moves'),
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),
+    ('mcp.md', 'AI apps (MCP)', 'Claude and other AI apps: read the project and the graph'),
     ('firmware.md', 'Firmware', 'src vs firmware, the CAN contract, the spine'),
     ('rust-firmware.md', 'Rust firmware', 'Rust on the chips: layers, frameworks, toolchains'),
     ('platforms.md', 'Platforms', 'Ubuntu, the Orin and Pis, networking'),

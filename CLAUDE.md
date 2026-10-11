@@ -90,6 +90,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
 - The stand-in tasks (`turtle`, `sim`, `bench`, `bench-check`, `view`) run through
   `tools/ros.sh --local`, so they never reach a real car on the same network.
   `tools/test.sh` checks it; give any new stand-in task the same.
+- The MCP server (`tools/mcp_server.py`, `docs/mcp.md`) only reads. Never give it a call
+  that writes to ROS, or a file outside git to read: `tools/tests/test_mcp_parts.py` checks.
 - Gazebo on oirp-spss also needs `GZ_IP=127.0.0.1` (multicast doesn't loop back there)
   and its own `GZ_PARTITION`; without them the car never spawns.
 

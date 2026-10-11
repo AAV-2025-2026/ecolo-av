@@ -29,6 +29,7 @@
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
 <a href="firmware.html">Firmware</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
@@ -74,7 +75,7 @@ tests, and how a change goes from an idea to the car.</p></div>
 </tr>
 <tr>
 <td>The tools</td>
-<td>tests, the graph check, the network doctor, recording, docs, the mailer</td>
+<td>tests, the graph check, the network doctor, recording, docs, the mailer, the MCP server</td>
 <td><code>tools/</code></td>
 </tr>
 <tr>
@@ -238,6 +239,11 @@ because <code>pixi.lock</code> pins them all.</p>
 <td>Markdown and WeasyPrint</td>
 <td><code>pixi run docs</code></td>
 </tr>
+<tr>
+<td><code>mcp</code></td>
+<td>the default, plus the MCP Python SDK</td>
+<td>an AI app, through <code>.mcp.json</code>: <a href="mcp.html">AI apps (MCP)</a></td>
+</tr>
 </tbody>
 </table></div>
 <div class="admonition note">
@@ -342,6 +348,10 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td><code>docs</code></td>
 <td>rebuilds the docs pages and the PDF</td>
 </tr>
+<tr>
+<td><code>mcp</code></td>
+<td>the read-only MCP server, for AI apps (the <code>mcp</code> environment). The app starts it: <a href="mcp.html">AI apps (MCP)</a></td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -424,6 +434,16 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td><code>graph_picture.py</code></td>
 <td>draws the running graph, grouped by layer</td>
 <td><code>pixi run graph-picture</code></td>
+</tr>
+<tr>
+<td><code>mcp_server.py</code>, <code>mcp_parts.py</code></td>
+<td>the read-only MCP server for AI apps, and its parts</td>
+<td>an AI app, through <code>.mcp.json</code></td>
+</tr>
+<tr>
+<td><code>tests/</code></td>
+<td>the tools' own tests: the MCP server's parts, and its smoke test</td>
+<td>inside <code>pixi run test</code></td>
 </tr>
 <tr>
 <td><code>get_models.sh</code></td>

@@ -59,7 +59,8 @@ folder downloaded, and moves into it as a fast-forward.
 - [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
 - [x] **The first-day steps in `README.md`** (Ben, 17:03).
 - [x] **`~/Code/aav/CLAUDE.md`:** every old folder, and what replaced it in `aav` (Ben, 17:03).
-- [ ] **An MCP server** (Ben, 17:03): read-only, over stdio. *Ben said yes: next.*
+- [x] **An MCP server** (Ben, 17:03): read-only, over stdio. `tools/mcp_server.py`, `.mcp.json`
+      and `docs/mcp.md`: 9 tools. Its smoke test reads a live topic.
 - [x] **On GitHub** (Ben): `git@github.com:zander1976/aav.git`, private. CI: Linux on every push, a
       Mac every night. Commit messages give the intention, with no attribution lines; the
       README's Credits section covers who did what.

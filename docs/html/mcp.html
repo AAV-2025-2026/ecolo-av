@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The MCP server: Claude and other AI apps · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/mcp.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The MCP server: Claude and other AI apps</h1>
+<div class="meta">3 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="status.html">Status</a>
+<span class="sep">Reference:</span>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a class="here" href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="conventions.html">Conventions</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#what-it-can-do">What it can do</a><a href="#what-it-cant-do">What it can&#x27;t do</a><a href="#connect-claude-code">Connect Claude Code</a><a href="#connect-another-app">Connect another app</a><a href="#which-ros-network-it-sees">Which ROS network it sees</a><a href="#how-its-tested">How it&#x27;s tested</a></nav>
+<div class="lead"><p>An AI app, such as Claude Code, can read this project and the running ROS graph through
+a small server, <code>tools/mcp_server.py</code>. It only reads. MCP (the Model Context Protocol) is
+how AI apps talk to tools like this one.</p>
+<pre class="highlight"><code>AI app ──stdio──► mcp_server.py ──► the docs and contracts (files in git)
+                                ──► the ROS graph: list it, read one message</code></pre></div>
+<section class="card"><h2 id="what-it-can-do">What it can do</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list_pages</code>, <code>read_page</code>, <code>search_pages</code></td>
+<td>the docs, the README, <code>CLAUDE.md</code>, <code>TODO.md</code>, and the three contracts</td>
+</tr>
+<tr>
+<td><code>contract</code></td>
+<td><code>docs/interfaces.yaml</code>: a summary, or one topic, service, action, frame or node</td>
+</tr>
+<tr>
+<td><code>repo_status</code></td>
+<td>the branch, the last 10 commits, and the uncommitted files</td>
+</tr>
+<tr>
+<td><code>ros_graph</code></td>
+<td>the running nodes, topics and services, and who publishes and subscribes</td>
+</tr>
+<tr>
+<td><code>read_topic</code></td>
+<td>one message from a topic. Long arrays, such as images, are cut short</td>
+</tr>
+<tr>
+<td><code>check_contract</code></td>
+<td>the running graph against the contract, like <code>pixi run check</code></td>
+</tr>
+<tr>
+<td><code>run_tests</code></td>
+<td><code>tools/test.sh</code>: the tests that don't need ROS</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-it-cant-do">What it can't do</h2>
+<ul>
+<li><strong>Write to ROS:</strong> no publishing, no service or action calls, no parameters. So it can't
+  move the car. A test checks that the server's code has none of those calls.</li>
+<li><strong>Read files outside git:</strong> it never sees <code>secrets.h</code>, <code>vendor/</code>, or anything else that
+  isn't committed.</li>
+<li><strong>Change files:</strong> the only thing it writes is <code>run_tests</code>' build output, which git
+  ignores.</li>
+</ul>
+</section>
+<section class="card"><h2 id="connect-claude-code">Connect Claude Code</h2>
+<ol>
+<li>Once: <code>pixi run build</code>, then <code>pixi install -e mcp</code>.</li>
+<li>Start Claude Code in the repo folder. It finds <code>.mcp.json</code> and asks whether to use
+   the <code>aav</code> server: say yes.</li>
+<li>Type <code>/mcp</code> to check: <code>aav</code> should say connected.</li>
+</ol>
+</section>
+<section class="card"><h2 id="connect-another-app">Connect another app</h2>
+<p>Give the app the command that starts the server, with full paths:</p>
+<pre class="highlight"><code class="language-json">{
+  "mcpServers": {
+    "aav": {
+      "command": "/Users/you/.pixi/bin/pixi",
+      "args": ["run", "--manifest-path", "/Users/you/aav/pixi.toml",
+               "--frozen", "-e", "mcp", "mcp"]
+    }
+  }
+}</code></pre>
+<p>That's Claude Desktop's <code>claude_desktop_config.json</code>. Other apps ask for the same command
+and arguments. The server talks over stdio, so it runs only on the computer the app is on.</p>
+</section>
+<section class="card"><h2 id="which-ros-network-it-sees">Which ROS network it sees</h2>
+<p>The server uses the ROS settings it was started with.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Started with</th>
+<th>It sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The default settings, on the car's network</td>
+<td>the car</td>
+</tr>
+<tr>
+<td><code>ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST</code></td>
+<td>only this computer, such as the stand-ins</td>
+</tr>
+<tr>
+<td>Another <code>ROS_DOMAIN_ID</code></td>
+<td>only that domain</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><code>ros_graph</code> and <code>check_contract</code> print the domain and the range on their first line.</li>
+<li>To change them, set them before starting the app, or add an <code>env</code> block to
+  <code>.mcp.json</code>.</li>
+</ul>
+</section>
+<section class="card"><h2 id="how-its-tested">How it's tested</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Test</th>
+<th>What it checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tools/tests/test_mcp_parts.py</code></td>
+<td>which files it offers, short names, search, the contract, the QoS rule, and that the server has no call that writes to ROS</td>
+</tr>
+<tr>
+<td><code>tools/tests/mcp_smoke.py</code></td>
+<td>starts the server the way an app does, lists its 9 tools, reads a page, and reads one message from a stand-in publisher, on a ROS domain of its own</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>pixi run test</code> runs both. The smoke test needs the <code>mcp</code> environment: it's skipped where
+that isn't installed. CI installs it.</p></section>
+<nav class="prevnext"><a class="prev" href="bench.html"><small>Previous</small>← Bench mode</a>
+<a class="next" href="firmware.html"><small>Next</small>Firmware →</a></nav>
+</main>
+<footer>Source: <code>docs/mcp.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

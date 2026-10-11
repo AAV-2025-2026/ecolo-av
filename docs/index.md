@@ -31,6 +31,7 @@ moves the car.**
 | testing the car's software without the car | [Bench mode](bench.md) |
 | working on cameras, YOLO, stop signs or lanes | [Perception](perception.md) |
 | bringing in the previous teams' code | [The older code](older-code.md) |
+| connecting Claude or another AI app | [AI apps (MCP)](mcp.md) |
 
 ## Read these, in order
 

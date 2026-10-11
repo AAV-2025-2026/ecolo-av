@@ -14,8 +14,8 @@ links to the page with the details. As of the evening of 10 October 2026.
 | Launch profiles | 5: `turtle`, `sim`, `car`, `replay`, `bench` |
 | Computers in the machine files | 4: `orin`, `motor_pi`, `laptop`, `all` |
 | Contracts | 3: the topics, the CAN frames, the car's measurements |
-| Tests | 160 in Python and 163 in Rust without ROS; 199 in `colcon test`; 7 bench checks |
-| Tools | 16 scripts and 24 `pixi run` tasks |
+| Tests | 173 in Python and 163 in Rust without ROS; 199 in `colcon test`; 7 bench checks |
+| Tools | 18 scripts and 25 `pixi run` tasks |
 
 ## The folders
 
@@ -24,7 +24,7 @@ links to the page with the details. As of the evening of 10 October 2026.
 | `src/` | the ROS 2 packages, one folder per layer | [Packages](packages.md) |
 | `firmware/` | the CAN contract, the Rust crates, and the 2025-26 C++ boards | [Firmware](firmware.md), [Rust firmware](rust-firmware.md) |
 | `hud/` | the 2025-26 touchscreen app (Flutter). Its back end is ported, as `src/hud/aav_hud` | [HUD](hud.md) |
-| `tools/` | tests, the graph check, the doctor, recording, maps, the docs, the mailer | [Infrastructure](infrastructure.md) |
+| `tools/` | tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server | [Infrastructure](infrastructure.md) |
 | `examples/` | a first ROS node in Rust | |
 | `docs/` | these pages, the topic contract, and the history | |
 | `models/` | the YOLO models: `pixi run get-models` downloads them (not in git) | [Perception](perception.md) |

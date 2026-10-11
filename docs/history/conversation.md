@@ -988,7 +988,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 
 - **Yes.** A small program that an AI app starts on this computer, offering tools it can call: read the docs and the contract, list the live graph, read one message, run the tests.
 - **Safety first:** read-only, on this computer only. Nothing that publishes to the car. Later, bench-only actions, through the `--local` stand-ins.
-- Proposed, not built yet: see the open threads.
+- **Built (10-10, 20:3x):** `tools/mcp_server.py`, with 9 tools. See [AI apps (MCP)](../mcp.md).
 
 ### Put a CLAUDE.md in the root that explains what everything is and what's ours, so we don't waste time on old code. (17:03)
 
@@ -1012,7 +1012,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 ### Where does the code live, and how are commits credited? (17:18 to 17:51)
 
 - **On GitHub:** `git@github.com:zander1976/aav.git`, private (Ben, Q25). CI runs `pixi run test` on Linux for every push, and on a Mac every night.
-- **A school project:** commit messages give the intention, with no attribution lines. The co-author line comes off the 100 earlier commits before the first push, which waits on Ben's go. The README's Credits section names the previous teams, the open-source projects, and Claude as the AI assistant.
+- **A school project:** commit messages give the intention, with no attribution lines. The co-author line came off all 108 commits before the first push (20:24). The README's Credits section names the previous teams, the open-source projects, and Claude as the AI assistant.
 - **Before the push:** a scan of all 100 commits found no secrets. `~/aav`, the Linux build output and the old bundle were deleted, and Ben's Rust IMU driver was reviewed and committed.
 
 ### When I say CUDA on a Mac, I mean MLX or Metal, not CUDA. (17:54)
@@ -1038,6 +1038,12 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **The HUD's port:** the back end is ported; the app needs small changes and its 51 MB map database (Q29).
 - **Fixed on the way:** the Overview still said Ben's Rust IMU driver wasn't committed. It now lists it with our own code, and its numbers match today's run: 25 packages, 199 `colcon test` tests, 24 tasks.
 
+### "Please continue." (20:19)
+
+- **The push:** done at 20:24. First the co-author line came off all 108 commits: only the messages changed, and every commit kept its files, author and date. The 4 commit IDs the docs quote were updated, and a new scan of all 109 commits found no secrets. `main` is on GitHub at `zander1976/aav`, and CI runs on every push.
+- **The MCP server:** built, with 9 read-only tools, a `.mcp.json` for Claude Code, and its page, [AI apps (MCP)](../mcp.md). Its smoke test starts it the way an app does, and reads a live topic.
+- **The board survey and the emails:** the survey restarted after the session limit. The emails wait for the VPN.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
@@ -1047,7 +1053,7 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **Bench mode and perception (10-10 afternoon):** the whole car graph runs on the Mac with stand-ins (`pixi run bench`, `bench-check` 7 of 7); YOLO stops the car at stop signs on the bench; the spine's device drivers are in Rust; the HUD's back end is on our topics. Waiting on Ben: commit his server work, then perception and the bench join `car.launch.py`'s machine files. Waiting on the team: the spine's chip, three firmware decisions, `best.pt`, the lane finder.
 - **Claude on the car's network (Ben, 10-10 16:42):** Ben will put Claude on the network with the hardware, to audit it directly. The plan is read-only first: find the devices, take each computer's inventory, copy what only the Orin has, and compare with our contract. Done beforehand: the stand-ins stay on their own computer (`tools/ros.sh --local`).
 - **`.gitignore` and `vendor/`:** both done: the fuller `.gitignore` (593db7f), and `vendor/` (10-10 evening: the lists in git, the source out of it). Pruning the app's snapshots from `.git` waits on Ben.
-- **An MCP server (Ben, 10-10 17:03):** proposed: a read-only server in `tools/`, over stdio, so Claude or another LLM can read the docs, the contract and the live graph, and run the tests. Bench-only actions later; nothing that reaches the car.
+- **The MCP server (Ben, 10-10 17:03):** built that evening, read-only. Open: bench-only actions through the stand-ins, if the team wants them; nothing that reaches the car.
 - **Slim per-machine Pixi environments:** for the Orin, the Motor Pi and laptops, matching the machine files. Waits until the first car computer gets Pixi (Phase 0).
 - **Running today:** the inventory commands haven't been run on the car's computers.
 - **2024–25 repos:** cloning and surveying `emergency-stop`, `Simulation`, `camera_Yolo_detection`, `Braking` and `Power-Management-Documentation-2024-25` was offered, not done. Only `GNSS` has been read in depth.

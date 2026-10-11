@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run every test that doesn't need ROS: our packages' Python unit tests, the Rust spine
-# library, and the check that docs/interfaces.md matches docs/interfaces.yaml.
+# library, and the check that docs/interfaces.md matches docs/interfaces.yaml. Where the
+# mcp environment is installed, also the MCP server over stdio (on a private, local domain).
 # Needs Python 3 with pytest and PyYAML; Rust (cargo) for the spine. Works on any OS.
 #
 # usage: tools/test.sh
@@ -16,6 +17,9 @@ for pkg in src/ego/aav_ego src/backends/aav_spine src/backends/aav_legacy \
   echo "== $pkg"
   (cd "$pkg" && python3 -m pytest -q -p no:cacheprovider)
 done
+
+echo "== tools: the MCP server's parts"
+python3 -m pytest -q -p no:cacheprovider tools/tests
 
 echo "== firmware/spine"
 if command -v cargo >/dev/null; then
@@ -68,6 +72,13 @@ echo "== vendor/ stays out of the build"
 [[ -f vendor/COLCON_IGNORE ]] || { echo "vendor/COLCON_IGNORE is missing"; exit 1; }
 python3 -c "import glob, yaml; [yaml.safe_load(open(f))['repositories'] for f in glob.glob('vendor/*.repos')]"
 echo "it does"
+
+echo "== the MCP server, over stdio, as an AI app starts it"
+if [[ -d .pixi/envs/mcp ]] && command -v pixi >/dev/null; then
+  pixi run --frozen -e mcp python3 tools/tests/mcp_smoke.py
+else
+  echo "skipped: the mcp environment isn't installed (pixi install -e mcp)"
+fi
 
 echo "== docs/interfaces.md"
 python3 tools/gen_interfaces_md.py --check && echo "in sync"

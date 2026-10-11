@@ -47,7 +47,7 @@ When something fails: [docs/run.md](docs/run.md).
 |---|---|
 | `src/` | ROS 2 packages, one folder per layer: sensors, localization, drivers, mux, ego, backends, plus the interfaces, the car description and the launch profiles |
 | `firmware/` | the CAN contract (`can/aav.dbc`), the spine's Rust logic and device drivers (`spine/`), and the inherited C++ firmware (`legacy/`) |
-| `tools/` | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer |
+| `tools/` | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer, the MCP server for AI apps |
 | `examples/` | small runnable examples: a first ROS node in Rust (`rust-listener`) |
 | `docs/` | the docs (markdown sources, the HTML in `docs/html/`), the topic contract, and the history |
 | `hud/` | the 2025-26 touchscreen app. Its back end is ported, as `src/hud/aav_hud` |

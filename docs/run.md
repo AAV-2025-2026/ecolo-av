@@ -76,6 +76,7 @@ keyboard → `/cmd_vel/remote` → twist_mux → ego → `/ego/actuator_cmd` →
 | `pixi run doctor` | can this computer join the car's network? What to fix |
 | `pixi run test` | every test |
 | `pixi run docs` | rebuilds these pages |
+| `pixi install -e mcp` | the read-only MCP server's environment, for Claude or another AI app ([AI apps](mcp.md)) |
 | `pixi shell`, then `source install/setup.bash` | a terminal for any `ros2` command (`setup.zsh` in a Mac's zsh) |
 
 ## On a Mac

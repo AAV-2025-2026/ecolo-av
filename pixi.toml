@@ -133,7 +133,17 @@ coremltools = ">=9.0,<10"
 PYTORCH_ENABLE_MPS_FALLBACK = "1"   # conda-forge's torchvision has no Metal NMS: that step runs on the CPU
 YOLO_AUTOINSTALL = "false"          # Ultralytics must never pip-install into the environment
 
+# The MCP server (tools/mcp_server.py): Claude, or another AI app, can read the docs, the
+# contract and the live ROS graph. Read-only (docs/mcp.md). Its own environment, so the
+# car's stays small. An AI app starts it through .mcp.json: pixi run -e mcp mcp
+[feature.mcp.dependencies]
+mcp = ">=2.3.0,<3"
+
+[feature.mcp.tasks]
+mcp = { cmd = "tools/ros.sh python3 tools/mcp_server.py", description = "The read-only MCP server, for Claude or another AI app (started by the app, through .mcp.json)" }
+
 [environments]
 docs = { features = ["docs"], no-default-feature = true }
 ml = { features = ["ml"] }
+mcp = { features = ["mcp"] }
 

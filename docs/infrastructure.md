@@ -13,7 +13,7 @@ tests, and how a change goes from an idea to the car.
 | The car's firmware | the CAN contract, the Rust spine logic, the 2025-26 boards' code | `firmware/` |
 | The touchscreen app | the 2025-26 Flutter HUD, not yet ported | `hud/` |
 | The environment | ROS, Gazebo, compilers, Python and Rust, all from Pixi | `pixi.toml`, `pixi.lock` |
-| The tools | tests, the graph check, the network doctor, recording, docs, the mailer | `tools/` |
+| The tools | tests, the graph check, the network doctor, recording, docs, the mailer, the MCP server | `tools/` |
 | The docs | short markdown pages, built into web pages and one PDF | `docs/` |
 | The rules | names, units, secrets, git, testing | `CLAUDE.md` |
 | The decisions | Decided, Tentative, Proposed, and Q1–Q34 | the design doc: summary in [Decisions](decisions.md) |
@@ -86,6 +86,7 @@ because `pixi.lock` pins them all.
 | `default` | ROS 2 Jazzy, Gazebo, Nav2, Rust, the compilers | everyone |
 | `ml` | the default, plus PyTorch, Ultralytics (YOLO) and, on Macs, Core ML tools | whoever runs the detector: `pixi run detect`, `pixi run -e ml bench perception:=true`. Linux PCs and Macs only |
 | `docs` | Markdown and WeasyPrint | `pixi run docs` |
+| `mcp` | the default, plus the MCP Python SDK | an AI app, through `.mcp.json`: [AI apps (MCP)](mcp.md) |
 
 !!! note "Macs only: GNU coreutils"
   On a Mac, macOS's System Integrity Protection deletes `DYLD_LIBRARY_PATH` whenever
@@ -120,6 +121,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `get-models` | downloads the stock YOLO model into `models/` |
 | `detect` | YOLO on the camera's images (the `ml` environment): `pixi run detect picture:=<file>` |
 | `docs` | rebuilds the docs pages and the PDF |
+| `mcp` | the read-only MCP server, for AI apps (the `mcp` environment). The app starts it: [AI apps (MCP)](mcp.md) |
 
 ## The scripts in tools/
 
@@ -139,6 +141,8 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `progress_mail.py` | emails a red-and-white progress report | see its docstring |
 | `bench_check.py` | starts bench mode and tests the whole graph | `pixi run bench-check` |
 | `graph_picture.py` | draws the running graph, grouped by layer | `pixi run graph-picture` |
+| `mcp_server.py`, `mcp_parts.py` | the read-only MCP server for AI apps, and its parts | an AI app, through `.mcp.json` |
+| `tests/` | the tools' own tests: the MCP server's parts, and its smoke test | inside `pixi run test` |
 | `get_models.sh` | downloads the stock YOLO model, checksum pinned | `pixi run get-models` |
 | `udev/99-aav.rules` | stable device names on the car (`/dev/aav/imu`, ...) | install on the car's Linux computers |
 
