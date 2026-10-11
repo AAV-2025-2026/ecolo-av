@@ -32,6 +32,9 @@ if command -v cargo >/dev/null; then
     (cd firmware/spine && cargo build -q --target thumbv8m.main-none-eabihf -p spine-core \
        -p aav-inputs -p jrk-g2 -p ad5311 -p pca9555 -p mcp2515 -p ibus -p spine-board \
        && echo "builds")
+    # The board program itself: a workspace of its own, built only for the Pico 2's chip.
+    echo "== firmware/spine/boards/pico2: the spine's board program, for the Pico 2"
+    (cd firmware/spine/boards/pico2 && cargo build -q --release --locked && echo "builds")
   fi
 else
   echo "skipped: no cargo here (pixi run test has it; or install Rust with rustup)"
