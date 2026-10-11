@@ -142,6 +142,10 @@ ros2 launch aav_hud hud.launch.py            # the back end alone, next to a pro
 
 - The app itself, on Linux x64 with GTK: `tools/flutter.sh run -d linux`, outside Pixi
   (Pixi's compilers don't see the system's GTK). Untested.
+- On a Mac: not yet. The app has only a Linux runner. `flutter create --platforms=macos`
+  makes one, but `window_manager` 0.5.1 brings `screen_retriever_macos` 0.2.0, which
+  needs CocoaPods (it has no Swift package). CocoaPods isn't on conda-forge. Tried on
+  11 October in a copy: the build stopped there.
 
 ## On the bench (11 October)
 
