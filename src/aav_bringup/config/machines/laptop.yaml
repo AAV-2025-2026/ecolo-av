@@ -1,3 +1,10 @@
 # The safety driver's laptop, joystick plugged in. RViz/Foxglove run here too, by hand.
 parts:
   teleop: true
+  detector: false   # TODO true once the detector reads compressed images: raw ones are too
+                    # big for WiFi (being added to aav_yolo). Then: pixi run -e ml car laptop
+
+# The detector's settings: aav_yolo detector.launch.py's arguments.
+detector:
+  model: models/yolo11n.mlpackage   # Core ML, on a Mac: pixi run -e ml export-coreml.
+                                    # A Linux laptop: models/yolo11n.pt
