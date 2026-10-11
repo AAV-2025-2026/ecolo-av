@@ -1292,6 +1292,12 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 - **Claude's questions for Ben:** the repo's visibility and a licence; what "street view" means; when someone can get to the car; a spare Pico 2 and a 3.3 V CAN module; the brake after boot; whether to copy today's decisions into the design doc.
 - **The helpers:** Ben's message stopped all three at 11:58; they restarted at 12:00 from their branches.
 
+### "Now, is a good time to start wrapping everything up." (12:27)
+
+- **Done:** `main` pushed with its tests green. The three helpers (stopped by the message) are saved on their branches, each with a last "Work in progress" commit, pushed to GitHub too. A leftover ROS daemon was stopped.
+- **Friday 16 Oct:** the hardware audit, read-only first; then driving with W A S D, the car or the turtle.
+- **The final write-up:** emailed, with the release notes' list.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
@@ -1299,6 +1305,8 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 - **The five overnight pieces (10-11):** all merged and pushed (02:07–11:05). Now Ben's 11 October order: the full graph (with Ackermann), the C++ to Rust, the Mac with ML, Nav2, the board drivers, raylib. Three helpers started at 11:18.
 - **The obstacle check:** fixed in the check (a lane-wide box, a re-arm after a latch); N7 and collision_monitor's flicker are still open.
 - **Raylib for the HUD:** Decided (Ben, 11:58). The next free helper, after the boards one.
+- **Paused 11 Oct, saved on branches:** `wt/sim-full` (nearly ready: its docs page is left), `wt/ackermann` (reversing in Nav2), `wt/rust-ports` (the radar clustering in Rust). See `TODO.md`, "Where we stopped".
+- **Friday 16 Oct:** the hardware audit; then W A S D driving.
 - **micro-ROS:** Tentative since 11 Oct: none for now; think again once we see the hardware.
 - **Your Mac as the operator station:** an idea, saved (11 Oct): `TODO.md`, "Ideas to keep".
 - **The repo public?** Checked 11 Oct; waits on Ben's yes.

@@ -261,14 +261,16 @@ out.
 - **The rules:** `CLAUDE.md` (for people and AI alike) and [Conventions](conventions.md).
 - **The work list:** `TODO.md`.
 
-## In progress now
+## Paused on 11 October, saved on branches
 
-- **The full graph in Gazebo:** a road with lane lines, a stop sign and an obstacle; a
-  camera and a radar on the car; perception, lane keeping, `collision_monitor` and the
-  HUD, all in `pixi run sim`.
-- **Ackermann done properly:** reversing, both front wheels' real angles, the steering
-  curve.
-- **Our C++ to Rust:** the IMU driver, then the radar clustering.
+Not merged yet. Each branch's unfinished part is in its last commit, "Work in progress".
+The next session finishes each one, runs its checks, and merges it.
+
+| Branch | Done there (committed, checked) | Unfinished (its last commit) |
+|---|---|---|
+| `wt/sim-full` | the road world in Gazebo: lane lines, a stop sign, an obstacle, the car's camera and radar; the car's whole graph in `pixi run sim`, checked by `sim-check` | the Simulation page, and a picture |
+| `wt/ackermann` | one reverse speed for the whole car: 0.5 m/s, from `vehicle.yaml` | reversing in Nav2: behaviour trees, settings, a test |
+| `wt/rust-ports` | the Rust IMU driver is the default, and the C++ one is gone | the radar clustering as a Rust node (`aav_radar_clusters`) |
 
 ## Street view?
 
@@ -284,7 +286,8 @@ The first pass: the whole car driving on this software, from the joystick to Nav
 
 **At home, no car needed:**
 
-- Finish the three pieces in progress (above).
+- Finish and merge the three paused pieces (above).
+- Drive with W A S D: the car or the turtle.
 - The board drivers in Rust: the wheel encoder and display Picos.
 - The raylib HUD: the driving screen first (speed, mode, the e-stop button, the camera).
 - Nav2: the car weaves up to 1.5 m off its line (N7); `collision_monitor` flickers at its
@@ -292,7 +295,7 @@ The first pass: the whole car driving on this software, from the joystick to Nav
 - A first test with a real joystick, on the turtle.
 - The spine on a desk: needs a spare Pico 2 and a 3.3 V MCP2515 CAN module.
 
-**At the car:**
+**At the car** (the hardware audit starts on Friday 16 October):
 
 1. Back up (image) the Orin and the Pis, before anything is reflashed.
 2. A read-only look at the car's network and computers.

@@ -3,6 +3,30 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## Where we stopped (11 Oct, 12:30)
+
+Ben, 12:27: "lets try to put everything to a reasonable state and we can audit the
+hardware on friday". `main` is pushed and its tests pass. The three pieces in progress are
+saved on their branches, pushed to GitHub too. Each branch's unfinished part is in its last
+commit, "Work in progress".
+
+| Branch | Done there (committed, checked) | Unfinished (its last commit) |
+|---|---|---|
+| `wt/sim-full` | the road world in Gazebo: lane lines, a stop sign, an obstacle, the car's camera and radar; the car's whole graph in `pixi run sim`, checked by `sim-check` | the Simulation page, and a picture |
+| `wt/ackermann` | one reverse speed for the whole car: 0.5 m/s, from `vehicle.yaml` | reversing in Nav2: behaviour trees, settings, a test |
+| `wt/rust-ports` | the Rust IMU driver is the default, and the C++ one is gone | the radar clustering as a Rust node (`aav_radar_clusters`) |
+
+**Next time, in order:**
+
+1. **Friday 16 Oct: the hardware audit,** read-only first (`docs/work.md`, steps 1-3):
+   backups, then the inventory and the measurements.
+2. **Drive with W A S D,** the car or the turtle (Ben, 11 Oct). `teleop_twist_keyboard`'s
+   keys are fixed (i, j, l and so on), so this is a small keyboard driver of our own, in
+   the keyboard's place in the mux.
+3. **Finish and merge the three branches:** each one's own checks, then `pixi run test`.
+   `wt/sim-full` is nearly ready.
+4. **Then** the board drivers in Rust, and the raylib HUD.
+
 ## 11 Oct: what we can try at home
 
 Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to
@@ -10,14 +34,14 @@ work on." His order, with the work under way:
 
 1. [ ] **The full graph, all set up:** every driver, ego, the simulators. In Gazebo: a road
       with lane lines, a stop sign and an obstacle, a camera and a radar on the car, and
-      perception, lane keeping, collision_monitor and the HUD in `pixi run sim`. *A helper
-      is on it (`wt/sim-full`).*
+      perception, lane keeping, collision_monitor and the HUD in `pixi run sim`. *Paused
+      11 Oct, on `wt/sim-full`.*
       - [ ] **Ackermann done properly**, testable in Gazebo and on the bench: reversing
             (Reeds-Shepp), both front wheels' real angles, the steering curve from
-            `Ackermann.m` (Q2). *A helper is on it (`wt/ackermann`).*
+            `Ackermann.m` (Q2). *Paused 11 Oct, on `wt/ackermann`.*
 2. [ ] **Our C++ to Rust:** Ben's Rust IMU driver becomes the default and the C++ one goes;
-      the radar clustering becomes a Rust ROS node. Python to Rust later (Ben). *A helper
-      is on it (`wt/rust-ports`).*
+      the radar clustering becomes a Rust ROS node. Python to Rust later (Ben). *Paused
+      11 Oct, on `wt/rust-ports`.*
 3. [ ] **The Mac on the network, with ML on it:** the laptop's detector (Core ML) on the
       car's compressed pictures. *On in `laptop.yaml` since 11 Oct; to try against the
       bench as the car.*

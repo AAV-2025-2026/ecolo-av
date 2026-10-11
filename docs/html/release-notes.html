@@ -7,7 +7,7 @@
 <!-- Generated from docs/release-notes.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Release notes: the first pass, to 11 October 2026</h1>
-<div class="meta">17 min read · 13 sections</div></header>
+<div class="meta">18 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a class="here" href="release-notes.html">Release notes</a>
@@ -39,7 +39,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#in-numbers">In numbers</a><a href="#the-previous-teams-projects-merged-in-or-replaced">The previous teams&#x27; projects: merged in, or replaced</a><a href="#the-cars-software-layer-by-layer">The car&#x27;s software, layer by layer</a><a href="#models-used">Models used</a><a href="#firmware">Firmware</a><a href="#porting-to-rust">Porting to Rust</a><a href="#simulators-and-bench-mode">Simulators and bench mode</a><a href="#macs-pixi-core-ml-and-mcp">Macs, Pixi, Core ML and MCP</a><a href="#testing">Testing</a><a href="#documentation">Documentation</a><a href="#in-progress-now">In progress now</a><a href="#street-view">Street view?</a><a href="#whats-left-for-the-first-pass">What&#x27;s left for the first pass</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#in-numbers">In numbers</a><a href="#the-previous-teams-projects-merged-in-or-replaced">The previous teams&#x27; projects: merged in, or replaced</a><a href="#the-cars-software-layer-by-layer">The car&#x27;s software, layer by layer</a><a href="#models-used">Models used</a><a href="#firmware">Firmware</a><a href="#porting-to-rust">Porting to Rust</a><a href="#simulators-and-bench-mode">Simulators and bench mode</a><a href="#macs-pixi-core-ml-and-mcp">Macs, Pixi, Core ML and MCP</a><a href="#testing">Testing</a><a href="#documentation">Documentation</a><a href="#paused-on-11-october-saved-on-branches">Paused on 11 October, saved on branches</a><a href="#street-view">Street view?</a><a href="#whats-left-for-the-first-pass">What&#x27;s left for the first pass</a></nav>
 <div class="lead"><p>Everything built from 9 to 11 October 2026, in point form: 168 commits on <code>main</code>.</p>
 <ul>
 <li><strong>"Works"</strong> means it ran under ROS 2 Jazzy through Pixi, on Linux and on a Mac.</li>
@@ -392,15 +392,35 @@ out.</p>
 <li><strong>The work list:</strong> <code>TODO.md</code>.</li>
 </ul>
 </section>
-<section class="card"><h2 id="in-progress-now">In progress now</h2>
-<ul>
-<li><strong>The full graph in Gazebo:</strong> a road with lane lines, a stop sign and an obstacle; a
-  camera and a radar on the car; perception, lane keeping, <code>collision_monitor</code> and the
-  HUD, all in <code>pixi run sim</code>.</li>
-<li><strong>Ackermann done properly:</strong> reversing, both front wheels' real angles, the steering
-  curve.</li>
-<li><strong>Our C++ to Rust:</strong> the IMU driver, then the radar clustering.</li>
-</ul>
+<section class="card"><h2 id="paused-on-11-october-saved-on-branches">Paused on 11 October, saved on branches</h2>
+<p>Not merged yet. Each branch's unfinished part is in its last commit, "Work in progress".
+The next session finishes each one, runs its checks, and merges it.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Branch</th>
+<th>Done there (committed, checked)</th>
+<th>Unfinished (its last commit)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wt/sim-full</code></td>
+<td>the road world in Gazebo: lane lines, a stop sign, an obstacle, the car's camera and radar; the car's whole graph in <code>pixi run sim</code>, checked by <code>sim-check</code></td>
+<td>the Simulation page, and a picture</td>
+</tr>
+<tr>
+<td><code>wt/ackermann</code></td>
+<td>one reverse speed for the whole car: 0.5 m/s, from <code>vehicle.yaml</code></td>
+<td>reversing in Nav2: behaviour trees, settings, a test</td>
+</tr>
+<tr>
+<td><code>wt/rust-ports</code></td>
+<td>the Rust IMU driver is the default, and the C++ one is gone</td>
+<td>the radar clustering as a Rust node (<code>aav_radar_clusters</code>)</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="street-view">Street view?</h2>
 <ul>
@@ -417,7 +437,8 @@ out.</p>
 <p>The first pass: the whole car driving on this software, from the joystick to Nav2.</p>
 <p><strong>At home, no car needed:</strong></p>
 <ul>
-<li>Finish the three pieces in progress (above).</li>
+<li>Finish and merge the three paused pieces (above).</li>
+<li>Drive with W A S D: the car or the turtle.</li>
 <li>The board drivers in Rust: the wheel encoder and display Picos.</li>
 <li>The raylib HUD: the driving screen first (speed, mode, the e-stop button, the camera).</li>
 <li>Nav2: the car weaves up to 1.5 m off its line (N7); <code>collision_monitor</code> flickers at its
@@ -425,7 +446,7 @@ out.</p>
 <li>A first test with a real joystick, on the turtle.</li>
 <li>The spine on a desk: needs a spare Pico 2 and a 3.3 V MCP2515 CAN module.</li>
 </ul>
-<p><strong>At the car:</strong></p>
+<p><strong>At the car</strong> (the hardware audit starts on Friday 16 October):</p>
 <ol>
 <li>Back up (image) the Orin and the Pis, before anything is reflashed.</li>
 <li>A read-only look at the car's network and computers.</li>
