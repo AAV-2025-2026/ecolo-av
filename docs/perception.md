@@ -102,15 +102,29 @@ Orin.
 
 ### One GPU setting for every computer
 
+`auto`, the default, picks the GPU the computer has. The other values are PyTorch's own
+names, passed on as they are.
+
 | `device:=` | On the Orin, or an NVIDIA card | On a Mac |
 |---|---|---|
-| `auto` (the default), `gpu`, `cuda`, `metal` or `mps` | CUDA | Metal |
+| `auto` (the default) | CUDA | Metal |
+| `cuda`, `cuda:N` | CUDA: the first card, or card N | an error: use `auto` or `mps` |
+| `mps` | an error: use `auto` or `cuda` | Metal |
 | `cpu` | the CPU | the CPU |
-| `cuda:1` | the second NVIDIA card | Metal |
 
-- So `cuda` on a Mac means Metal: the Mac's GPU, through PyTorch.
+- A name PyTorch doesn't know, such as `gpu` or `metal`, is an error too. It lists the
+  names above.
 - A `.mlpackage` (Core ML) or an `.engine` (TensorRT) ignores the setting: each picks its
   own hardware.
+
+### One detector per computer, and WiFi
+
+| Setting | Does |
+|---|---|
+| `name:=yolo_orin` | the node's name. Each computer with a GPU runs its own detector, under its own name. All of them publish on `/perception/detections` |
+| `compressed:=true` | reads `/camera/image_raw/compressed`, the JPEG pictures `usb_cam` already publishes. Raw pictures are too big for WiFi |
+
+From a Mac on the car's network: `pixi run detect name:=yolo_macbook compressed:=true`.
 - MLX, Apple's own machine-learning library, isn't needed for YOLO: Metal, through
   PyTorch or Core ML, is the Mac's fast path. MLX could join the `ml` environment later,
   for training or for other models.

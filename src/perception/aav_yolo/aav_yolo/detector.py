@@ -2,11 +2,15 @@
 detector: a YOLO model finds objects, such as stop signs, in camera images.
 
 Subscribes  image              sensor_msgs/Image (the launch file maps it to /camera/image_raw)
-Publishes   detections         vision_msgs/Detection2DArray (/perception/detections)
+            image/compressed   sensor_msgs/CompressedImage instead, with compressed:=true
+                               (image_transport's JPEG topic: for a laptop on WiFi)
+Publishes   detections         vision_msgs/Detection2DArray (/perception/detections), with
+                               the image's header: its stamp, and its camera's frame
             detections/image   sensor_msgs/Image: the picture with the boxes drawn on
 
 The model file is a parameter, so the same node runs everywhere:
-  .pt         PyTorch, on any machine. Macs use the GPU through Metal ("mps").
+  .pt         PyTorch, on any machine. device: auto (the GPU this computer has), or
+              PyTorch's own names: cuda, cuda:N, mps (a Mac's GPU, through Metal), cpu.
   .mlpackage  Core ML, on Macs: the GPU or the Neural Engine.
   .engine     TensorRT, on the Orin. Build it on the Orin itself.
 
@@ -24,7 +28,7 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CompressedImage, Image
 from vision_msgs.msg import Detection2D, Detection2DArray, ObjectHypothesisWithPose
 
 # Only the newest frame: if the model is slower than the camera, old frames are dropped
@@ -49,6 +53,7 @@ class Detector(Node):
         self.image_size = self.declare_parameter('image_size', 640).value
         self.labels = parse_labels(self.declare_parameter('labels', '').value)
         publish_image = self.declare_parameter('publish_image', True).value
+        self.compressed = self.declare_parameter('compressed', False).value
         if not model:
             raise SystemExit('Set the model file: model:=models/yolo11n.pt '
                              '(pixi run get-models downloads it)')
@@ -57,23 +62,37 @@ class Detector(Node):
             from ultralytics import YOLO
         except ImportError as e:
             raise SystemExit(f'{e}: run the detector in the ml environment (pixi run detect)')
-        self.device = pick_device(device, model, torch.cuda.is_available(),
-                                  torch.backends.mps.is_available())
+        try:
+            self.device = pick_device(device, model, torch.cuda.device_count(),
+                                      torch.backends.mps.is_available())
+        except ValueError as e:
+            raise SystemExit(str(e))
         self.model = YOLO(model, task='detect')
         self.bridge = CvBridge()
         self.pub = self.create_publisher(Detection2DArray, 'detections', 10)
         self.image_pub = (self.create_publisher(Image, 'detections/image', PICTURES)
                           if publish_image else None)
-        self.create_subscription(Image, 'image', self.on_image, LATEST)
+        # image_transport's naming: the JPEG pictures are <image topic>/compressed. Resolve
+        # 'image' first, so a remapping of it (image:=/camera/image_raw) carries over.
+        topic = self.resolve_topic_name('image')
+        if self.compressed:
+            topic += '/compressed'
+            self.create_subscription(CompressedImage, topic, self.on_image, LATEST)
+        else:
+            self.create_subscription(Image, topic, self.on_image, LATEST)
         self.frames, self.busy_s, self.since = 0, 0.0, time.monotonic()
         keep = ', '.join(self.labels) if self.labels else 'every label'
-        self.get_logger().info(f'{model} on {self.device or "its own choice of hardware"}; '
-                               f'keeping {keep}, at confidence {self.confidence} or more')
+        self.get_logger().info(f'{model} on {self.device or "its own choice of hardware"}, '
+                               f'reading {topic}; keeping {keep}, at confidence '
+                               f'{self.confidence} or more')
 
-    def on_image(self, msg: Image):
+    def on_image(self, msg):
         t0 = time.monotonic()
         try:
-            frame = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
+            if self.compressed:
+                frame = self.bridge.compressed_imgmsg_to_cv2(msg, 'bgr8')
+            else:
+                frame = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
             kwargs = {'device': self.device} if self.device else {}
             result = self.model.predict(frame, imgsz=self.image_size, conf=self.confidence,
                                         verbose=False, **kwargs)[0]

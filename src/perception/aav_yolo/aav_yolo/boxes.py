@@ -7,6 +7,7 @@ No ROS or PyTorch imports, so the tests run anywhere.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import List, Optional, Sequence
 
 
@@ -51,27 +52,39 @@ def boxes_from_result(result, labels: Optional[Sequence[str]] = None) -> List[Bo
     return out
 
 
-# Each of these means "the GPU this computer has", so one setting works everywhere.
-GPU_WORDS = ('auto', 'gpu', 'cuda', 'metal', 'mps')
+DEVICES = 'auto, cuda, cuda:N, mps or cpu'
+CUDA_N = re.compile(r'cuda:(\d+)')
 
 
-def pick_device(requested: str, model: str, cuda: bool, mps: bool) -> Optional[str]:
+def pick_device(requested: str, model: str, cuda_devices: int, mps: bool) -> Optional[str]:
     """
-    Choose where a model runs.
+    Choose where a PyTorch model (.pt) runs, from what this computer has.
 
-    'auto' (the default), 'gpu', 'cuda', 'metal' and 'mps' all mean the GPU this computer
-    has, for a PyTorch model (.pt): CUDA on an NVIDIA card or the Orin, Metal on a Mac,
-    and the CPU if there's neither. So 'cuda' on a Mac means Metal. 'cuda:1' picks a
-    second NVIDIA card. Other formats decide for themselves (Core ML picks the Mac's parts,
-    TensorRT uses the GPU), so they get None. Anything else, such as 'cpu', is obeyed.
+    'auto' (the default) picks the GPU: CUDA (an NVIDIA card, or the Orin) first, then
+    Metal on a Mac ('mps'), else the CPU. The other names are PyTorch's own, passed on as
+    they are: 'cuda' (the first NVIDIA card), 'cuda:N', 'mps' and 'cpu'.
+
+    A .engine (TensorRT) or .mlpackage (Core ML) model picks its own hardware, so it gets
+    None, whatever was asked. Raises ValueError, saying what to use instead, for a name
+    PyTorch doesn't know or a device this computer doesn't have.
     """
-    name = requested.strip().lower()
-    if name not in GPU_WORDS and not name.startswith('cuda:'):
-        return requested
+    name = requested.strip()
+    if name not in ('auto', 'cuda', 'mps', 'cpu') and not CUDA_N.fullmatch(name):
+        raise ValueError(f"device '{requested}' isn't a device name: use {DEVICES}")
     if not model.endswith('.pt'):
         return None
-    if cuda:
-        return name if name.startswith('cuda:') else 'cuda:0'
-    if mps:
-        return 'mps'
-    return 'cpu'
+    if name == 'auto':
+        return 'cuda:0' if cuda_devices else 'mps' if mps else 'cpu'
+    if name == 'mps' and not mps:
+        raise ValueError("device 'mps' is a Mac's GPU, and this computer isn't a Mac with "
+                         f"Metal: use auto, or {'cuda' if cuda_devices else 'cpu'}")
+    if name.startswith('cuda'):
+        if not cuda_devices:
+            instead = "mps (this Mac's GPU)" if mps else 'cpu'
+            raise ValueError(f"device '{name}' needs an NVIDIA GPU, and this computer has "
+                             f'none: use auto or {instead}')
+        number = CUDA_N.fullmatch(name)
+        if number and int(number.group(1)) >= cuda_devices:
+            raise ValueError(f"device '{name}': this computer has {cuda_devices} NVIDIA "
+                             f'GPU(s), cuda:0 to cuda:{cuda_devices - 1}')
+    return name

@@ -150,6 +150,11 @@ topics:
     sub: [yolo_detector, hud_server]
     live: [bench]
     note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. mock_camera draws the bench world; test_camera publishes a file.
+  /camera/image_raw/compressed:
+    type: sensor_msgs/msg/CompressedImage
+    pub: [usb_cam]
+    sub: [yolo_detector]
+    note: The same pictures as JPEG, from image_transport's compressed plugin (usb_cam publishes it by itself). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true).
   /camera/camera_info:
     type: sensor_msgs/msg/CameraInfo
     pub: [usb_cam, mock_camera, test_camera]
@@ -174,7 +179,7 @@ topics:
     type: vision_msgs/msg/Detection2DArray
     pub: [yolo_detector]
     sub: [stop_sign_watcher]
-    note: YOLO's boxes in pixels; results[0].hypothesis is the label (e.g. "stop sign") and score. Runs in the ml environment.
+    note: YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. One detector per computer with a GPU (the Orin, a laptop), each under its own node name (detector.launch.py name:=), all on this topic. Runs in the ml environment.
   /perception/detections/image:
     type: sensor_msgs/msg/Image
     pub: [yolo_detector]

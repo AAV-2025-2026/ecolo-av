@@ -1,3 +1,4 @@
+import re
 from types import SimpleNamespace
 
 from aav_yolo.boxes import boxes_from_result, normal_label, parse_labels, pick_device
@@ -46,20 +47,43 @@ def test_parse_labels():
     assert parse_labels('stop sign, Person') == ['stop sign', 'person']
 
 
-@pytest.mark.parametrize('requested, model, cuda, mps, expect', [
-    ('auto', 'models/yolo11n.pt', True, False, 'cuda:0'),    # an NVIDIA card, the Orin
-    ('auto', 'models/yolo11n.pt', False, True, 'mps'),       # a Mac
-    ('auto', 'models/yolo11n.pt', False, False, 'cpu'),
-    ('auto', 'models/yolo11n.mlpackage', False, True, None),  # Core ML picks for itself
-    ('auto', 'models/yolo11n.engine', True, False, None),     # TensorRT: the GPU anyway
-    ('cpu', 'models/yolo11n.pt', True, True, 'cpu'),          # asked for: always obeyed
-    ('gpu', 'models/yolo11n.pt', True, False, 'cuda:0'),      # one setting: the Orin...
-    ('gpu', 'models/yolo11n.pt', False, True, 'mps'),         # ...and a Mac
-    ('cuda', 'models/yolo11n.pt', False, True, 'mps'),        # "cuda" on a Mac means Metal
-    ('metal', 'models/yolo11n.pt', True, False, 'cuda:0'),    # and "metal" on the Orin, CUDA
-    ('cuda:1', 'models/yolo11n.pt', True, False, 'cuda:1'),   # a second NVIDIA card
-    ('CUDA', 'models/yolo11n.pt', False, False, 'cpu'),       # no GPU here at all
-    ('gpu', 'models/yolo11n.mlpackage', False, True, None),   # Core ML still picks for itself
+PT, ENGINE, MLPACKAGE = 'models/yolo11n.pt', 'models/yolo11n.engine', 'models/yolo11n.mlpackage'
+ORIN, MAC, PC = (1, False), (0, True), (0, False)   # (NVIDIA GPUs, Metal)
+
+
+@pytest.mark.parametrize('requested, model, machine, expect', [
+    ('auto', PT, ORIN, 'cuda:0'),            # auto: the GPU this computer has
+    ('auto', PT, MAC, 'mps'),
+    ('auto', PT, PC, 'cpu'),
+    ('cuda', PT, ORIN, 'cuda'),              # PyTorch's own names, passed on as they are
+    ('cuda:1', PT, (2, False), 'cuda:1'),
+    ('mps', PT, MAC, 'mps'),
+    ('cpu', PT, ORIN, 'cpu'),
+    ('cpu', PT, MAC, 'cpu'),
+    ('auto', MLPACKAGE, MAC, None),          # Core ML picks its own hardware
+    ('auto', ENGINE, ORIN, None),            # and so does TensorRT
+    ('cuda', MLPACKAGE, MAC, None),          # whatever was asked
 ])
-def test_pick_device(requested, model, cuda, mps, expect):
-    assert pick_device(requested, model, cuda, mps) == expect
+def test_pick_device(requested, model, machine, expect):
+    assert pick_device(requested, model, *machine) == expect
+
+
+@pytest.mark.parametrize('requested, machine, says', [
+    ('cuda', MAC, 'use auto or mps'),        # cuda on a Mac: say what works there
+    ('cuda:0', MAC, 'use auto or mps'),
+    ('cuda', PC, 'use auto or cpu'),
+    ('cuda:1', ORIN, 'cuda:0 to cuda:0'),    # only one NVIDIA card here
+    ('mps', ORIN, 'use auto, or cuda'),
+    ('mps', PC, 'use auto, or cpu'),
+    ('gpu', ORIN, 'use auto, cuda, cuda:N, mps or cpu'),    # the old aliases are gone
+    ('metal', MAC, 'use auto, cuda, cuda:N, mps or cpu'),
+    ('CUDA', ORIN, 'use auto, cuda, cuda:N, mps or cpu'),   # PyTorch's names are lower case
+])
+def test_pick_device_says_what_to_use_instead(requested, machine, says):
+    with pytest.raises(ValueError, match=re.escape(says)):
+        pick_device(requested, PT, *machine)
+
+
+def test_a_misspelt_device_is_an_error_even_for_tensorrt():
+    with pytest.raises(ValueError, match='isn.t a device name'):
+        pick_device('gpu', ENGINE, *ORIN)

@@ -30,3 +30,8 @@ Files, unchanged unless listed under Changes:
   - New: `aav_yolo/boxes.py` (the logic, with tests), `launch/detector.launch.py`,
     `test/`, and the missing `resource/aav_yolo` marker.
   - `package.xml` and `setup.py` are rewritten with the real dependencies.
+- 2026-10-10: `detector.py` can read the JPEG pictures (`compressed:=true`, for a laptop
+  on WiFi). The device setting takes PyTorch's own names (`auto`, `cuda`, `cuda:N`, `mps`,
+  `cpu`): the aliases (`gpu`, `metal`, `cuda` meaning Metal on a Mac) are gone, and a
+  device the computer lacks is a clear error. The launch file takes the node's `name`, so
+  each computer's detector has its own.
