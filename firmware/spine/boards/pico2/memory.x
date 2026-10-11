@@ -4,7 +4,7 @@
  * (github.com/embassy-rs/embassy, MIT or Apache-2.0), unchanged below this comment.
  * embassy-rp puts its IMAGE_DEF (a secure Arm executable) in .start_block, right after
  * the vector table: the boot ROM wants it in the first 4 kB of flash (RP2350 datasheet,
- * 5.9.5).
+ * 5.9.5). tools/elf2uf2.py checks that it is there.
  */
 
 MEMORY {

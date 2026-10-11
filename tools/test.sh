@@ -18,7 +18,7 @@ for pkg in src/ego/aav_ego src/backends/aav_spine src/backends/aav_legacy \
   (cd "$pkg" && python3 -m pytest -q -p no:cacheprovider)
 done
 
-echo "== tools: the MCP server's parts"
+echo "== tools: the MCP server's parts, and the Pico 2's UF2 converter"
 python3 -m pytest -q -p no:cacheprovider tools/tests
 
 echo "== firmware/spine"
@@ -33,8 +33,11 @@ if command -v cargo >/dev/null; then
        -p aav-inputs -p jrk-g2 -p ad5311 -p pca9555 -p mcp2515 -p ibus -p spine-board \
        && echo "builds")
     # The board program itself: a workspace of its own, built only for the Pico 2's chip.
+    # Its UF2 file too, the one to drag on: tools/elf2uf2.py checks the boot ROM's IMAGE_DEF.
     echo "== firmware/spine/boards/pico2: the spine's board program, for the Pico 2"
     (cd firmware/spine/boards/pico2 && cargo build -q --release --locked && echo "builds")
+    python3 tools/elf2uf2.py \
+      firmware/spine/boards/pico2/target/thumbv8m.main-none-eabihf/release/spine-pico2
   fi
 else
   echo "skipped: no cargo here (pixi run test has it; or install Rust with rustup)"
