@@ -35,3 +35,8 @@ Files, unchanged unless listed under Changes:
   `cpu`): the aliases (`gpu`, `metal`, `cuda` meaning Metal on a Mac) are gone, and a
   device the computer lacks is a clear error. The launch file takes the node's `name`, so
   each computer's detector has its own.
+- 2026-10-11: new, our own: `aav_yolo/ground.py` (a pinhole camera over a flat road: a
+  box's bottom edge to points on the road, with tests in `test/test_ground.py`) and the
+  `camera_obstacles` node (`aav_yolo/camera_obstacles.py`, `config/camera_obstacles.yaml`),
+  which publishes them for Nav2's local costmap. `setup.py` installs `config/`;
+  `package.xml` adds `sensor_msgs_py` and `tf2_ros_py`.
