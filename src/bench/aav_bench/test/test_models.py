@@ -77,3 +77,27 @@ def test_pairs():
     assert models.pairs([1.0, 2.0, 3.0, 4.0]) == [(1.0, 2.0), (3.0, 4.0)]
     with pytest.raises(ValueError):
         models.pairs([1.0])
+
+
+def test_a_camera_tilted_down_sees_the_sign_higher_up():
+    level = models.sign_in_view(CAM, truth(x=10.0), (25.0, -2.0), 2.0, 0.75)
+    tilted = models.Camera([1.8, 0.29, 1.2], 640, 360, 343.0, 1.2, pitch=0.1)
+    down = models.sign_in_view(tilted, truth(x=10.0), (25.0, -2.0), 2.0, 0.75)
+    assert down.v < level.v - 30.0
+    # The post's foot is on the ground: height / distance below the horizon.
+    assert level.foot_v == pytest.approx(180.0 + 343.0 * 1.2 / (25.0 - 10.0 - 1.8))
+
+
+def test_the_road_runs_east_and_bends_where_asked():
+    straight = models.Road(y=1.0)
+    assert straight.lateral(50.0, 1.5) == pytest.approx(0.5)
+    assert straight.pose(10.0, 0.7, 0.1) == pytest.approx((-0.3, 0.1))
+    left = models.Road(bend_x=30.0, bend_radius=60.0)
+    # A quarter of the way round, the road heads north; its inside (west) is on the left.
+    assert left.lateral(90.0, 60.0) == pytest.approx(0.0)
+    assert left.lateral(89.0, 60.0) == pytest.approx(1.0)
+    assert left.pose(90.0, 60.0, math.pi / 2) == pytest.approx((0.0, 0.0))
+    assert left.lateral(20.0, 0.3) == pytest.approx(0.3), 'straight before the bend'
+    right = models.Road(bend_x=30.0, bend_radius=-60.0)
+    assert right.lateral(89.0, -60.0) == pytest.approx(-1.0)
+    assert right.pose(90.0, -60.0, -math.pi / 2) == pytest.approx((0.0, 0.0))
