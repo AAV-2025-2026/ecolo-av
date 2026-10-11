@@ -28,6 +28,9 @@ Parts and what they start:
   camera_obstacles
                   the detectors' boxes as points on the road -> /perception/camera_obstacles,
                   for Nav2's costmap. Off until the cameras are calibrated (Q22)
+  lane            lane keeping: lane_finder on /camera/image_raw -> /lane_geometry, and
+                  control_interface -> /cmd_vel/ai (twist_mux's AI slot). Off on every
+                  machine: it drives whenever it sees a lane, unless a driver above it does
   localization    ekf_local, ekf_global, navsat_transform
   navigation      Nav2 -> /cmd_vel/nav. Its local costmap reads the sensors this machine
                   runs: with radar, /radar/points, and collision_monitor stops Nav2 for
@@ -36,8 +39,6 @@ Parts and what they start:
   legacy_uart     backend: today's ESP32 over UART (the Pi wired to it)
   legacy_encoder  today's wheel encoder over UDP
   foxglove        foxglove_bridge on port 8765, for Foxglove Studio on a laptop
-  TODO lane       the lane finder (being written): the camera -> /lane_geometry, then
-                  aav_lane_geometry's lane keeping -> /cmd_vel/ai
 
 The detector runs as `python3 -m aav_yolo.detector`, the python3 of the environment that
 starts this file: on a laptop, the ml environment's PyTorch (pixi run -e ml car laptop);
@@ -61,7 +62,7 @@ from launch_ros.actions import Node
 import yaml
 
 PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'imu', 'gps', 'radar', 'battery',
-         'camera', 'detector', 'stop_signs', 'radar_clusters', 'camera_obstacles',
+         'camera', 'detector', 'stop_signs', 'radar_clusters', 'camera_obstacles', 'lane',
          'localization', 'navigation', 'spine', 'legacy_uart', 'legacy_encoder', 'foxglove')
 # What a machine file holds: the parts, and the detector's settings.
 SECTIONS = ('parts', 'detector')
@@ -215,8 +216,9 @@ def launch_setup(context):
                             name='camera_obstacles',
                             parameters=[os.path.join(get_package_share_directory('aav_yolo'),
                                                      'config', 'camera_obstacles.yaml')]))
-    # TODO lane: once the lane finder exists, its part goes here: the finder on the camera
-    # (-> /lane_geometry) and aav_lane_geometry's lane_follower.launch.py (-> /cmd_vel/ai).
+    if on('lane'):
+        actions += [include('aav_lane_finder', 'lane_finder.launch.py', debug_image=False),
+                    include('aav_lane_geometry', 'lane_follower.launch.py', fake=False)]
     if on('localization'):
         actions.append(include('aav_localization', 'localization.launch.py',
                                gps=flag('gps'), start_x=arg('start_x'),

@@ -143,6 +143,17 @@ def test_one_stop_sign_watcher_next_to_the_mux():
         assert watcher == bool(parts.get('mux')), machine
 
 
+def test_lane_keeping_is_off_until_a_machine_file_turns_it_on(monkeypatch):
+    # control_interface drives whenever it sees a lane, so no machine file has it on yet.
+    for machine in MACHINES:
+        assert not CAR.load_machine(machine)['parts'].get('lane'), machine
+        assert 'lane_follower.launch.py' not in included(started(CAR, machine=machine))
+    monkeypatch.setattr(CAR, 'load_machine', lambda machine: {'parts': {'lane': True}})
+    sent = included(started(CAR, machine='orin'))
+    assert sent['lane_finder.launch.py'] == {'debug_image': 'false'}
+    assert sent['lane_follower.launch.py'] == {'fake': 'false'}
+
+
 def test_the_detector_is_named_after_its_machine(monkeypatch, tmp_path):
     model = tmp_path / 'yolo11n.engine'
     model.write_text('')

@@ -46,19 +46,16 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother]
     sub: [collision_monitor]
-    live: [bench]
     note: Nav2's smoothed command, into collision_monitor, where the radar runs. It stops the car for radar points in its stop zone, or when the radar goes silent; it only guards Nav2.
   /collision_monitor_state:
     type: nav2_msgs/msg/CollisionMonitorState
     pub: [collision_monitor]
     sub: []
-    live: [bench]
     note: What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar is silent or its TF is late.
   /collision_monitor/stop_zone:
     type: geometry_msgs/msg/PolygonStamped
     pub: [collision_monitor]
     sub: []
-    live: [bench]
     note: The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).
   /collision_monitor/collision_points_marker:
     type: visualization_msgs/msg/MarkerArray
@@ -191,7 +188,7 @@ topics:
   /camera/image_raw/compressed:
     type: sensor_msgs/msg/CompressedImage
     pub: [camera_left, test_camera]
-    sub: [yolo_detector]
+    sub: [yolo_detector, yolo_detector_laptop]
     note: The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera doesn't). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true).
   /camera/camera_info:
     type: sensor_msgs/msg/CameraInfo
@@ -217,7 +214,7 @@ topics:
     type: vision_msgs/msg/Detection2DArray
     pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]
     sub: [stop_sign_watcher, camera_obstacles]
-    note: YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24), the laptop's for compressed images.
+    note: YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop).
   /perception/detections/image:
     type: sensor_msgs/msg/Image
     pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]

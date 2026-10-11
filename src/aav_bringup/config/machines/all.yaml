@@ -15,7 +15,7 @@ parts:
   stop_signs: true
   radar_clusters: false  # with the radar
   camera_obstacles: false  # TODO with calibrated cameras (Q22): boxes into Nav2's costmap
-  # lane: TODO the lane finder is being written; then a lane part here
+  lane: false            # lane keeping, with the camera: it drives whenever it sees a lane
   localization: true
   navigation: true
   spine: false
