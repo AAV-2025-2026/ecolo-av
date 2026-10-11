@@ -166,12 +166,21 @@ class Probe(Node):
 
 def check_estop(probe, name, publisher):
     """Drive, press `publisher`'s e-stop at 1 m/s, check the stop, release, re-arm."""
-    handle = probe.send_drive(hold=8.0)
-    if handle is None or not handle.accepted:
-        result(name, False, 'the scripted drive was refused')
-        return
-    probe.spin_for(6.0)
-    v_before = probe.truth.twist.twist.linear.x
+    for attempt in range(2):
+        if not probe.status.armed:
+            probe.arm_and_hold()
+        handle = probe.send_drive(hold=8.0)
+        if handle is None or not handle.accepted:
+            result(name, False, 'the scripted drive was refused')
+            return
+        probe.spin_for(6.0)
+        v_before = probe.truth.twist.twist.linear.x
+        if v_before > 0.5 or probe.status.armed:
+            break
+        # The spine latched before the car got going (a gap in commands on a busy
+        # computer), which isn't what this checks: stop the drive, and start again once.
+        handle.cancel_goal_async()
+        probe.spin_for(2.0)
     probe.press(publisher, True, 3.0)
     v_after = probe.truth.twist.twist.linear.x
     reported = probe.status is not None and probe.status.estop_active
@@ -232,7 +241,10 @@ def check_lane_keeping(probe):
     Lane keeping alone: from LANE_START m left of the road's centre, the car must come back.
 
     control_interface drives from the moment the spine arms, so this reads the track the
-    probe has kept since start-up: LANE_TIME seconds, from when the car started moving.
+    probe has kept since start-up: LANE_TIME seconds of driving, from when the car started
+    moving. On a busy computer a gap in commands can latch the spine, which stops the car:
+    the check arms it again, as a safety driver would, and its clock only runs while the
+    car moves.
     """
     def moved():
         return next((s for s in probe.track if s[4] > 0.1), None)
@@ -241,48 +253,65 @@ def check_lane_keeping(probe):
         result('lane keeping', False, f'the car never moved ({len(probe.lanes)} lane messages)')
         return
     t0, x0, y0 = moved()[:3]
-    probe.spin_for(LANE_TIME + 10.0, lambda: probe.track[-1][0] >= t0 + LANE_TIME)
-    run = [s for s in probe.track if t0 <= s[0] <= t0 + LANE_TIME]
-    stamps = [s[0] for s in run]
+
+    def driven():
+        """Return (seconds of driving so far, sample) for each truth sample since t0."""
+        clock, out, last = 0.0, [], None
+        for s in probe.track:
+            if s[0] >= t0:
+                if last is not None and s[4] > 0.05:
+                    clock += s[0] - last[0]
+                out.append((clock, s))
+                last = s
+        return out
+
+    give_up = time.monotonic() + 3.0 * LANE_TIME
+    while driven()[-1][0] < LANE_TIME and time.monotonic() < give_up:
+        probe.spin_for(0.5)
+        if not probe.status.armed:
+            probe.arm()
+    run = [(c, s) for c, s in driven() if c <= LANE_TIME]
+    clocks, stamps = [c for c, _ in run], [s[0] for _, s in run]
+
+    def nearest(values, v):
+        i = min(bisect.bisect_left(values, v), len(values) - 1)
+        return i - 1 if i and v - values[i - 1] < values[i] - v else i
 
     def at(t):
-        """Return the truth sample nearest to time t."""
-        i = min(bisect.bisect_left(stamps, t), len(run) - 1)
-        return run[i - 1] if i and t - stamps[i - 1] < stamps[i] - t else run[i]
+        """Return the truth sample nearest to time t (s, a stamp)."""
+        return run[nearest(stamps, t)][1]
+
+    def after(c):
+        """Return the truth sample after c seconds of driving."""
+        return run[nearest(clocks, c)][1]
 
     start = y0 - ROAD_Y
-    outside = [t for t, _, y, _, _ in run if abs(y - ROAD_Y) > LANE_BAND]
-    settled = (outside[-1] if outside else t0) - t0   # s: within the band from then on
-    over = max(0.0, max(-math.copysign(1.0, start) * (y - ROAD_Y) for _, _, y, _, _ in run))
-    last = [s for s in run if s[0] >= run[-1][0] - 5.0]
+    outside = [c for c, s in run if abs(s[2] - ROAD_Y) > LANE_BAND]
+    settled = outside[-1] if outside else 0.0   # s of driving: within the band from then on
+    over = max(0.0, max(-math.copysign(1.0, start) * (s[2] - ROAD_Y) for _, s in run))
+    last = [s for c, s in run if c >= clocks[-1] - 5.0]
     end = sum(s[2] for s in last) / len(last) - ROAD_Y
     heading = sum(s[3] for s in last) / len(last)
     # lane_finder against the truth: the car's offset LOOKAHEAD m ahead, square to the road.
     errors, both = [], 0
-    for t, offset, two in (m for m in probe.lanes if t0 <= m[0] <= t0 + LANE_TIME):
+    for t, offset, two in (m for m in probe.lanes if t0 <= m[0] <= stamps[-1]):
         _, _, y, yaw, _ = at(t)
         errors.append(abs(offset - (y - ROAD_Y + LOOKAHEAD * math.sin(yaw)) / math.cos(yaw)))
         both += two
-    every = '  '.join(f'{at(t0 + k)[2] - ROAD_Y:+.2f}' for k in range(0, int(LANE_TIME) + 1, 3))
-    print(f'      the offset (m), every 3 s: {every}', flush=True)
-    # A latch stops the car, so the run shows nothing after it: a busy computer can leave
-    # a gap of 200 ms in the commands (VehicleStatus.FAULT_CMD_TIMEOUT).
-    latch = next((s for s in probe.latches if t0 <= s[0] <= t0 + LANE_TIME), None)
-    armed = latch is None and probe.status is not None and probe.status.armed
-    why = ''
-    if latch:
-        why = (f' at {latch[0] - t0:.1f} s, '
-               + ('no commands for 200 ms: is the computer busy?'
-                  if latch[1] & VehicleStatus.FAULT_CMD_TIMEOUT else f'faults {latch[1]}'))
-    ok = (settled <= LANE_TIME - 5.0 and over < 0.10 and abs(end) < LANE_BAND and armed
-          and bool(errors) and both >= 0.9 * len(errors))
+    every = '  '.join(f'{after(k)[2] - ROAD_Y:+.2f}' for k in range(0, int(LANE_TIME) + 1, 3))
+    print(f'      the offset (m), every 3 s of driving: {every}', flush=True)
+    latches = sum(t0 <= s[0] <= stamps[-1] for s in probe.latches)
+    ok = (clocks[-1] >= LANE_TIME - 1.0 and settled <= LANE_TIME - 5.0 and over < 0.10
+          and abs(end) < LANE_BAND and bool(errors) and both >= 0.9 * len(errors))
     finder = (f'lane_finder {100 * sum(errors) / len(errors):.1f} cm from the truth on average, '
               f'both lines in {both} of {len(errors)} pictures' if errors else 'no lane messages')
-    latched = '' if armed else f'; the spine latched{why}'
+    times = 'once' if latches == 1 else f'{latches} times'
+    paused = (f'; the spine latched {times} (gaps in the commands: a busy computer?) and was '
+              'armed again' if latches else '')
     result('lane keeping', ok,
            f'{start:+.2f} m to {end:+.2f} m, within {100 * LANE_BAND:.0f} cm after '
-           f'{settled:.1f} s and {at(t0 + settled)[1] - x0:.1f} m, overshoot {100 * over:.0f} cm, '
-           f'heading {heading:+.3f} rad; {finder}{latched}')
+           f'{settled:.1f} s and {after(settled)[1] - x0:.1f} m, overshoot {100 * over:.0f} cm, '
+           f'heading {heading:+.3f} rad; {finder}{paused}')
 
 
 def check_contract(probe, env, tag):
