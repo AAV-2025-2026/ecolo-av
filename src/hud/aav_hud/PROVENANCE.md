@@ -103,7 +103,8 @@ The app and the back end changed together (docs/hud.md, "What changed in the app
 
 - `hud_server.py`: publishes `/estop` true for the app's e-stop button: at once, then
   every 0.1 s, five in all, reliable like the backends' subscriptions. It never
-  publishes false. The press also cancels the HUD's route.
+  publishes false. The press also cancels the HUD's route. If nothing subscribes
+  to `/estop`, `POST /estop` answers 503, so the app never says "sent" to nobody.
 - `web.py`: `POST /estop`, which can only set the e-stop. `POST /cancel` is now what the
   map page's Unlock and Clear send.
 - `hud_server.py`, `events.py`: subscribes to `/battery_status` and sends `battery`.

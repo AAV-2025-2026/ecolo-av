@@ -36,8 +36,9 @@ Files, unchanged unless listed under Changes:
   not just `'websocket'` (2026-10-10). Ubuntu 24.04 has no `python3-simple-websocket`,
   so maincar's server can only offer polling there.
 - 2026-10-11, the changes in docs/hud.md ("What changed in the app"):
-  - `lib/screens/home_page.dart`: an e-stop button (`POST /estop`), and a strip on top
-    for the vehicle status and the battery. The old "Reading ROS2 Mock Data" line is
+  - `lib/screens/home_page.dart`: an e-stop button (`POST /estop`; if that fails, a red
+    message says to press the car's red e-stop button), and a strip on top for the
+    vehicle status and the battery. The old "Reading ROS2 Mock Data" line is
     gone; `withOpacity` became `withValues`. Tests can give it a fake socket and back end.
   - `lib/components/sockets/socket_services.dart`: the events' real names
     (`hud_events.dart`), the `vehicle_status` and `battery` events, and whether the back

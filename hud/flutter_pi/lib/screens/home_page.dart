@@ -107,7 +107,7 @@ class _MyHomePageState extends State<MyHomePage> {
             backgroundColor: Colors.red.shade900,
             duration: const Duration(seconds: 10),
             content: Text(
-              "E-STOP NOT SENT: ${reply.message}. Press the car's red e-stop button.",
+              "E-STOP FAILED: ${reply.message}. Press the car's red e-stop button.",
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),

@@ -16,9 +16,10 @@ Serves      HTTP and Socket.IO on 127.0.0.1:5000 (parameters host, port)
 
 The e-stop: POST /estop publishes /estop true at once, then every 0.1 s, five times in
 all (as `pixi run estop` does), so one lost message can't keep the car going. It also
-cancels the HUD's route, so clearing the e-stop doesn't restart the trip. The HUD never
-publishes false: clearing the e-stop stays a person's deliberate act, from a laptop
-(`pixi run estop-clear`, Foxglove), never a tap on this touchscreen.
+cancels the HUD's route, so clearing the e-stop doesn't restart the trip. If nothing
+subscribes to /estop, the request fails (503), so the app never says "sent" to nobody.
+The HUD never publishes false: clearing the e-stop stays a person's deliberate act, from
+a laptop (`pixi run estop-clear`, Foxglove), never a tap on this touchscreen.
 
 The conversions live in events.py (messages to events), route.py (the route to GPS
 waypoints), trip.py (the action's progress to nav_state) and png.py (camera pictures).
@@ -218,13 +219,22 @@ class HudServer(Node):
     # --- the app's e-stop button (web threads), and its repeats (executor) ---
 
     def estop(self):
-        """Set the e-stop: /estop true now, then repeated. Never false. None when sent."""
+        """
+        Set the e-stop: /estop true now, then repeated. Never false.
+
+        Return None when something subscribes to /estop, or why the press can't work:
+        the app then tells the driver to use the car's red e-stop button.
+        """
         # The lock also keeps this thread and the executor's from publishing at once.
         with self.lock:
             self.estop_pub.publish(Bool(data=True))
             self.estop_left = ESTOP_REPEATS - 1
         self.get_logger().warning('e-stop pressed on the HUD: /estop true')
         self.cancel()       # 'no route is being followed' is fine: nothing to stop
+        if self.estop_pub.get_subscription_count() == 0:
+            # Still published, and repeated: a subscriber may join. But none heard it.
+            self.get_logger().error('nothing subscribes to /estop: the e-stop reached nobody')
+            return 'nothing on the car subscribes to /estop (no backend, no twist_mux)'
         return None
 
     def repeat_estop(self):

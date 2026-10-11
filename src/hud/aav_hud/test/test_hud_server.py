@@ -147,10 +147,17 @@ def test_the_battery_becomes_the_apps_event(ros):
                                               'current': None}
 
 
-def listen_for_estop(ros, qos):
+def listen_for_estop(ros, qos=10):
     """Subscribe to /estop as the car does; return the list the values arrive in."""
     values = []
     ros.car.create_subscription(Bool, '/estop', lambda m: values.append(m.data), qos)
+    return values
+
+
+def a_backend_listens(ros):
+    """Subscribe to /estop as spine_bridge does, and wait until the HUD sees it."""
+    values = listen_for_estop(ros)
+    wait_for(lambda: ros.hud.estop_pub.get_subscription_count() == 1)
     return values
 
 
@@ -168,6 +175,7 @@ def test_the_estop_button_reaches_the_backends_and_twist_mux(ros):
 
 
 def test_the_estop_also_cancels_the_route(ros):
+    a_backend_listens(ros)
     server, goals = fake_nav2(ros, finish='wait')
     assert ros.hud.nav.wait_for_server(timeout_sec=5.0)
     assert ros.http.post('/receive', json=ROUTE).status_code == 200
@@ -178,8 +186,16 @@ def test_the_estop_also_cancels_the_route(ros):
 
 
 def test_the_estop_without_a_route(ros):
+    a_backend_listens(ros)
     assert ros.http.post('/estop').status_code == 200
     assert events.NAV_STATE not in ros.hud.web.latest()     # nothing to cancel
+
+
+def test_an_estop_that_nothing_hears_is_an_error(ros):
+    # No backend, no twist_mux: "sent" would be a lie, so the app must say it failed.
+    reply = ros.http.post('/estop')
+    assert reply.status_code == 503
+    assert 'nothing on the car subscribes to /estop' in reply.get_json()['message']
 
 
 def test_a_locked_route_drives_through_nav2(ros):

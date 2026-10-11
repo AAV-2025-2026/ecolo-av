@@ -38,13 +38,13 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 5)); // the message goes
   });
 
-  testWidgets('an e-stop that was not sent says so, loudly', (tester) async {
+  testWidgets('an e-stop that failed says so, loudly', (tester) async {
     final backend = FakeBackend(status: 503, message: 'no ROS');
     await pumpHome(tester, backend);
     await tester.tap(find.byKey(const Key('estop')));
     await tester.pump();
     await tester.pump();
-    expect(find.textContaining('E-STOP NOT SENT: no ROS'), findsOneWidget);
+    expect(find.textContaining('E-STOP FAILED: no ROS'), findsOneWidget);
     expect(find.textContaining("car's red e-stop button"), findsOneWidget);
     await tester.pumpAndSettle(const Duration(seconds: 11));
   });
