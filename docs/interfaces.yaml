@@ -49,9 +49,9 @@ topics:
     note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
   /estop:
     type: std_msgs/msg/Bool
-    pub: [joy_teleop]
+    pub: [joy_teleop, hud_server]
     sub: [twist_mux, spine_bridge, legacy_uart_bridge]
-    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false.
+    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions.
   /cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [twist_mux]
@@ -136,7 +136,7 @@ topics:
   /battery_status:
     type: sensor_msgs/msg/BatteryState
     pub: [battery_state_publisher, mock_battery]
-    sub: []
+    sub: [hud_server]
     live: [bench]
     note: battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).
   /battery_monitor_heartbeat:

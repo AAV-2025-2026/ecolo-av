@@ -1,87 +1,97 @@
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter/foundation.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 
+import '../../models/vehicle_status.dart';
+import 'hud_events.dart';
+
+/// The app's Socket.IO link to the HUD's back end (aav_hud): the car's state, live.
 class SocketService {
-  IO.Socket? socket;
+  io.Socket? socket;
 
-  late Function(double) onSpeedUpdate;
-  late Function(double, double) onGpsUpdate;
-  late Function(bool, String) onStopSignAlert;
-  Function(double, String)? onNavState; // nullable
+  /// What each event does, by name (HudEvents). [handle] runs them.
+  final Map<String, void Function(Map<dynamic, dynamic>)> handlers = {};
 
-  /// Initialize the socket connection.
+  /// Connect, and call back for each event. Leave out the callbacks a page doesn't use.
   void initSocketConnection({
     required String serverUrl,
-    required Function(double) onSpeedUpdate,
-    required Function(double, double) onGpsUpdate,
-    required Function(bool, String) onStopSignAlert,
-    Function(double, String)? onNavState,
+    void Function(double speed)? onSpeedUpdate,
+    void Function(double latitude, double longitude)? onGpsUpdate,
+    void Function(bool detected, String message)? onStopSignAlert,
+    void Function(double distance, String status)? onNavState,
+    void Function(VehicleStatus status)? onVehicleStatus,
+    void Function(BatteryReading battery)? onBattery,
+    void Function(bool connected)? onConnection,
   }) {
-    this.onSpeedUpdate = onSpeedUpdate;
-    this.onGpsUpdate = onGpsUpdate;
-    this.onStopSignAlert = onStopSignAlert;
-    this.onNavState = onNavState;
+    handlers
+      ..clear()
+      ..[HudEvents.speed] = (data) {
+        onSpeedUpdate?.call((data['speed'] as num).toDouble());
+      }
+      ..[HudEvents.position] = (data) {
+        onGpsUpdate?.call(
+          (data['latitude'] as num).toDouble(),
+          (data['longitude'] as num).toDouble(),
+        );
+      }
+      ..[HudEvents.stopSign] = (data) {
+        onStopSignAlert?.call(
+          data['detected'] as bool? ?? false,
+          data['message'] as String? ?? 'STOP',
+        );
+      }
+      ..[HudEvents.navState] = (data) {
+        onNavState?.call(
+          (data['distance'] as num).toDouble(),
+          data['status'] as String? ?? '',
+        );
+      }
+      ..[HudEvents.vehicleStatus] = (data) {
+        onVehicleStatus?.call(VehicleStatus.fromEvent(data));
+      }
+      ..[HudEvents.battery] = (data) {
+        onBattery?.call(BatteryReading.fromEvent(data));
+      };
+    connect(serverUrl, onConnection);
+  }
 
-    socket = IO.io(
+  /// Open the socket and pass its events to [handle]. Tests replace it.
+  @protected
+  void connect(String serverUrl, void Function(bool connected)? onConnection) {
+    // WebSocket only. On Linux and macOS the package has no polling transport: with
+    // 'polling' first it opened a WebSocket on the polling address, and never connected.
+    // The back end needs simple-websocket for this (the pixi environment has it).
+    final socket = io.io(
       serverUrl,
-      IO.OptionBuilder()
-          .setTransports(['polling', 'websocket'])
+      io.OptionBuilder()
+          .setTransports(['websocket'])
           .disableAutoConnect()
           .build(),
     );
-
-    socket!.connect();
-
-    socket!.onConnect((_) {
-      print("✅ Connected to Flask Socket.IO server");
+    this.socket = socket;
+    socket.onConnect((_) {
+      debugPrint('Connected to the HUD back end at $serverUrl');
+      onConnection?.call(true);
     });
-
-    socket!.onConnectError((err) {
-      print("❌ Connection error: $err");
+    socket.onConnectError((err) => debugPrint('Connection error: $err'));
+    socket.onDisconnect((_) {
+      debugPrint('Disconnected from the HUD back end');
+      onConnection?.call(false);
     });
+    for (final event in handlers.keys) {
+      socket.on(event, (data) => handle(event, data));
+    }
+    socket.connect();
+  }
 
-    socket!.onDisconnect((_) {
-      print("⚠️ Disconnected from Flask server");
-    });
-
-    // Existing listeners
-    socket!.on('mock_stop_sign_alert', (data) {
-      try {
-        final detected = (data['mock_sign_detected'] as bool?) ?? false;
-        final message = data['message'] ?? 'STOP';
-        onStopSignAlert(detected, message);
-      } catch (e) {
-        print('mock_stop_sign_alert parse error: $e');
-      }
-    });
-
-    socket!.on('mock_speed_update', (data) {
-      try {
-        final speed = (data['mock_speed'] as num).toDouble();
-        onSpeedUpdate(speed);
-      } catch (e) {
-        print('mock_speed_update parse error: $e');
-      }
-    });
-
-    socket!.on('mock_gps_update', (data) {
-      try {
-        final latitude = (data['mock_latitude'] as num).toDouble();
-        final longitude = (data['mock_longitude'] as num).toDouble();
-        onGpsUpdate(latitude, longitude);
-      } catch (e) {
-        print('mock_gps_update parse error: $e');
-      }
-    });
-
-    socket!.on('nav_state', (data) {
-      try {
-        final distance = (data['distance'] as num).toDouble();
-        final status = (data['status'] as String?) ?? '';
-        onNavState?.call(distance, status); // safe call
-      } catch (e) {
-        print('nav_state parse error: $e');
-      }
-    });
+  /// Run the callback for one event. A payload it can't read is logged and dropped.
+  void handle(String event, dynamic data) {
+    final handler = handlers[event];
+    if (handler == null) return;
+    try {
+      handler(data as Map<dynamic, dynamic>);
+    } catch (e) {
+      debugPrint('$event: could not read $data ($e)');
+    }
   }
 
   void dispose() {

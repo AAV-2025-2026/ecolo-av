@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Run every test that doesn't need ROS: our packages' Python unit tests, the Rust spine
 # library, and the check that docs/interfaces.md matches docs/interfaces.yaml. Where the
-# mcp environment is installed, also the MCP server over stdio (on a private, local domain).
+# mcp environment is installed, also the MCP server over stdio (on a private, local domain);
+# where Flutter is (pixi run get-flutter), also the HUD app's tests (tools/hud_test.sh).
 # Needs Python 3 with pytest and PyYAML; Rust (cargo) for the spine. Works on any OS.
 #
 # usage: tools/test.sh
@@ -78,6 +79,13 @@ if [[ -d .pixi/envs/mcp ]] && command -v pixi >/dev/null; then
   pixi run --frozen -e mcp python3 tools/tests/mcp_smoke.py
 else
   echo "skipped: the mcp environment isn't installed (pixi install -e mcp)"
+fi
+
+echo "== hud/flutter_pi: the HUD app (flutter pub get, analyze, test)"
+if [[ -x vendor/flutter/bin/flutter ]]; then
+  tools/hud_test.sh
+else
+  echo "skipped: no Flutter in vendor/flutter (pixi run get-flutter)"
 fi
 
 echo "== docs/interfaces.md"
