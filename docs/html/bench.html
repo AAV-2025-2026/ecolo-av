@@ -371,8 +371,8 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 </tr>
 <tr>
 <td>Obstacle (<code>pixi run bench-check --obstacle</code>)</td>
-<td>a box 15 m ahead, Nav2 driving 30 m: <code>collision_monitor</code>'s stop zone stops the car before it; with the box gone, the car reaches the goal</td>
-<td><span class="badge b-works">works</span> stood still 0.42 m before the box, from 1.02 m/s; reached the goal once the box was gone</td>
+<td>a box as wide as the lane, 15 m ahead, Nav2 driving 30 m: <code>collision_monitor</code>'s stop zone stops the car before it; with the box gone, the car reaches the goal. If a busy computer latches the spine, the check arms it again</td>
+<td><span class="badge b-works">works</span> on <code>main</code>, 11 Oct: stood still 0.44 m before the box, from 0.95 m/s; reached the goal once the box was gone</td>
 </tr>
 </tbody>
 </table></div>

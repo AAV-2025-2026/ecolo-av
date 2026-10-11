@@ -35,6 +35,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Stop signs | `aav_yolo` | [[works]] on the bench, with the stock YOLO model |
 | Lane keeping | `aav_lane_finder` + `aav_lane_geometry` | [[works]] on the bench: from 0.3 m off the centre line back to within 5 cm in about 6 s |
 | Radar clustering | `aav_object_detection` | [[works]] on the pretend radar |
+| Obstacles in Nav2 | the radar in the local costmap; `collision_monitor`'s stop zone; `camera_obstacles` | [[works]] on the bench: the stop zone stops the car 0.3-0.4 m before a box as wide as the lane. Open: the car weaves up to 1.5 m off its line (N7), so it can pass beside a narrow box; the stop zone flickers at its edge. The camera layer is off until the cameras are calibrated (Q22) |
 | HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
 | CARLA | `aav_carla` | [[stub]] parked (Q31) |
 | Lidar | | [[later]] |
@@ -44,9 +45,9 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Check | Result |
 |---|---|
 | `colcon build`, all 26 packages, Jazzy | [[works]] 11 s on Linux (19 packages, 10 Oct); about 15 s on the Mac (26) |
-| `pixi run test`: build, tests, lint, `colcon test` | [[works]] all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; `colcon test` 260, 0 failures |
+| `pixi run test`: build, tests, lint, `colcon test` | [[works]] all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; `colcon test` 291, 0 failures; the HUD app's own tests |
 | Live graph vs `docs/interfaces.yaml`: turtle, sim, replay and bench | [[works]] 0 failures each |
-| `pixi run bench-check` (`--perception`, `--lane`) | [[works]] on the Mac, 10 Oct; `--lane` on its own branch, 11 Oct. To run again on `main` |
+| `pixi run bench-check` (`--perception`, `--lane`, `--obstacle`) | [[works]] on `main`, 11 Oct: the default checks, the stop sign, lane keeping and the obstacle |
 | Sim, headless: drive commands (the keyboard's topic) and Nav2 goals | [[works]] |
 | Replay of a recorded drive | [[works]] the EKFs match the recording within 0.03 m |
 | Car, with no hardware attached | comes up; only the missing sensors (IMU, GPS) fail the graph check, as expected. Checked again on 11 Oct, with the perception parts |

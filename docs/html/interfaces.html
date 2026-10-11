@@ -107,7 +107,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>velocity_smoother</code></td>
 <td><code>collision_monitor</code></td>
-<td>bench</td>
+<td>-</td>
 <td>Nav2's smoothed command, into collision_monitor, where the radar runs. It stops the car for radar points in its stop zone, or when the radar goes silent; it only guards Nav2.</td>
 </tr>
 <tr>
@@ -115,7 +115,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>nav2_msgs/msg/CollisionMonitorState</code></td>
 <td><code>collision_monitor</code></td>
 <td>-</td>
-<td>bench</td>
+<td>-</td>
 <td>What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar is silent or its TF is late.</td>
 </tr>
 <tr>
@@ -123,7 +123,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>geometry_msgs/msg/PolygonStamped</code></td>
 <td><code>collision_monitor</code></td>
 <td>-</td>
-<td>bench</td>
+<td>-</td>
 <td>The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).</td>
 </tr>
 <tr>
@@ -306,7 +306,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/camera/image_raw/compressed</code></td>
 <td><code>sensor_msgs/msg/CompressedImage</code></td>
 <td><code>camera_left</code>, <code>test_camera</code></td>
-<td><code>yolo_detector</code></td>
+<td><code>yolo_detector</code>, <code>yolo_detector_laptop</code></td>
 <td>-</td>
 <td>The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera doesn't). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true).</td>
 </tr>
@@ -340,7 +340,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code></td>
 <td><code>stop_sign_watcher</code>, <code>camera_obstacles</code></td>
 <td>-</td>
-<td>YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24), the laptop's for compressed images.</td>
+<td>YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop).</td>
 </tr>
 <tr>
 <td><code>/perception/detections/image</code></td>

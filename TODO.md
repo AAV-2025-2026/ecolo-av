@@ -3,6 +3,36 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## 11 Oct: what we can try at home
+
+Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to
+work on." His order, with the work under way:
+
+1. [ ] **The full graph, all set up:** every driver, ego, the simulators. In Gazebo: a road
+      with lane lines, a stop sign and an obstacle, a camera and a radar on the car, and
+      perception, lane keeping, collision_monitor and the HUD in `pixi run sim`. *A helper
+      is on it (`wt/sim-full`).*
+      - [ ] **Ackermann done properly**, testable in Gazebo and on the bench: reversing
+            (Reeds-Shepp), both front wheels' real angles, the steering curve from
+            `Ackermann.m` (Q2). *A helper is on it (`wt/ackermann`).*
+2. [ ] **Our C++ to Rust:** Ben's Rust IMU driver becomes the default and the C++ one goes;
+      the radar clustering becomes a Rust ROS node. Python to Rust later (Ben). *A helper
+      is on it (`wt/rust-ports`).*
+3. [ ] **The Mac on the network, with ML on it:** the laptop's detector (Core ML) on the
+      car's compressed pictures. *On in `laptop.yaml` since 11 Oct; to try against the
+      bench as the car.*
+4. [ ] **Nav2:**
+      - [x] the obstacle stop: a box as wide as the lane, and a re-arm after a latch, in
+            `bench-check --obstacle`. *Passes on `main`, 11 Oct;*
+      - [ ] N7, the weave: the bench's pretend GPS adds fresh noise to every fix, unlike a
+            real receiver, whose error drifts slowly. Model it as a slow drift, then tune
+            `ekf_global` for the real receiver (Q18);
+      - [ ] collision_monitor flickers between stop and go at the zone's edge.
+5. [ ] **The board drivers in Rust, ready to try on a board:** the wheel encoder and display
+      Picos (Embassy); the spine's Pico 2 program is written.
+6. [ ] **The HUD in raylib?** Proposed (Claude): one Rust program that is also the ROS node.
+      *Waits on Ben.*
+
 ## Overnight (10-10 → 10-11): all the code, then Ackermann, Rust, native style
 
 Ben, 21:45: "Lets try to get a fully functionin gthing going on." The order of work is
@@ -23,13 +53,18 @@ Decided ([Decisions](docs/decisions.md)):
    - [x] **The spine's board program:** `boards/pico2` (Embassy), the `mcp2515` CAN driver,
          a 100 ms hardware watchdog, the e-stop's spare contact, and `pixi run spine-uf2`,
          `spine-tools`, `spine-flash`. *Builds; never flashed.*
-   - [ ] **Obstacles in the costmap:** the radar in Nav2's local costmap, collision_monitor,
+   - [x] **Obstacles in the costmap:** the radar in Nav2's local costmap, collision_monitor,
          the camera's detections as points on the road, compressed images,
-         `bench-check --obstacle`. *Being merged.*
-   - [ ] **The `lane` part** in `car.launch.py`, off on every machine: it drives whenever
+         `bench-check --obstacle`. *Merged 11 Oct.*
+   - [x] **Fix the obstacle stop:** after the stop-sign drive, Nav2's recovery cleared its
+         costmap and the car drove on past the box; alone, the car stopped but the spine
+         latched and it never went on. *Fixed in the check, 11 Oct: the car weaves (N7), so
+         the box now spans the lane; a latch from a busy computer is armed again.*
+   - [x] **The `lane` part** in `car.launch.py`, off on every machine: it drives whenever
          it sees a lane.
-   - [ ] **The laptop's detector** (Core ML), once it reads compressed images.
-   - [ ] **`bench-check --perception` again on a quiet Mac:** it failed 5 of 5 on a busy one.
+   - [x] **The laptop's detector** (Core ML), once it reads compressed images. *On, 11 Oct.*
+   - [x] **`bench-check --perception` again on a quiet Mac:** it failed 5 of 5 on a busy one.
+         *Passed on `main`, 11 Oct: the car locked 4 m before the sign and went on.*
 2. [ ] **Ackermann done properly:** reversing (Reeds-Shepp in Nav2), both front wheels' real
       angles in the model and RViz, and the steering motor's real curve from the
       `Ackermann.m` linkage (Q2).

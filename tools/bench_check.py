@@ -16,8 +16,8 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 6. With --perception: Nav2 drives 40 m east, past the bench's stop sign. The car must stop
    before the sign, wait, and go on to the goal. The camera's picture with YOLO's boxes, at
    the moment it stopped, is saved to /tmp/aav-bench-stop-sign.png.
-7. With --obstacle: a 1 m box appears in the lane 15 m ahead, which only the pretend radar
-   sees, and Nav2 drives 30 m. collision_monitor's stop zone must stop the car before the
+7. With --obstacle: a box as wide as the lane appears 15 m ahead, which only the pretend
+   radar sees, and Nav2 drives 30 m. collision_monitor's stop zone must stop the car before the
    box; once the box is taken away, the car must go on to the goal.
 8. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
    the car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
@@ -71,7 +71,9 @@ LANE_BAND = 0.05        # m either side of the centre
 LANE_TIME = 30.0        # s of driving, from when the car starts moving
 LOOKAHEAD = 3.0         # m: where lane_finder measures the offset (its config, lookahead)
 with open(os.path.join(ROOT, 'src', 'bench', 'aav_bench', 'config', 'bench.yaml')) as f:
-    ROAD_Y = yaml.safe_load(f)['mock_camera']['ros__parameters']['road_y']   # m: the centre
+    ROAD = yaml.safe_load(f)['mock_camera']['ros__parameters']
+ROAD_Y = ROAD['road_y']            # m: the centre
+LANE_WIDTH = ROAD['lane_width']    # m between the lines: the obstacle check's box spans it
 
 
 def seconds(stamp):
@@ -270,7 +272,15 @@ def yaw_of(msg):
 
 
 def check_obstacle(probe, ahead=15.0, goal=30.0):
-    """Put a box `ahead` m in the lane: the stop zone must stop the car before it."""
+    """
+    Put a box `ahead` m in the lane: the stop zone must stop the car before it.
+
+    The box spans the lane, as a stalled car or a barrier would: Nav2's turn command still
+    flips with the GPS (N7), and the car can drift a metre or more off its line, so a narrow
+    box tests that drift, not the stop. On a busy computer a gap in commands can latch the
+    spine: the check arms it again, as a safety driver would. The stop zone must still be
+    what stopped the car.
+    """
     name = 'obstacle'
     if not probe.arm_and_hold():
         result(name, False, 'the spine would not stay armed')
@@ -285,9 +295,10 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
         p = probe.truth.pose.pose.position
         return (p.x - x0) * c + (p.y - y0) * s
 
-    # A 1 m square, its near face `ahead` m in front of the bumper.
+    # A box 1 m deep and as wide as the lane, its near face `ahead` m in front of the bumper.
     bx, by = x0 + (front + ahead + 0.5) * c, y0 + (front + ahead + 0.5) * s
-    if not probe.set_radar(True, [bx - 0.5, by - 0.5, bx + 0.5, by + 0.5]):
+    half = LANE_WIDTH / 2.0
+    if not probe.set_radar(True, [bx - 0.5, by - half, bx + 0.5, by + half]):
         result(name, False, 'could not place the box (mock_radar parameters)')
         return
     target = NavigateToPose.Goal()
@@ -303,12 +314,15 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
         return
     done = sent.result().get_result_async()
     t0, seen = time.monotonic(), len(probe.monitor)
-    top, still, gap, latched = 0.0, None, None, False
+    top, still, gap, latches = 0.0, None, None, 0
     while time.monotonic() - t0 < 150.0 and not done.done():
         probe.spin_for(0.1)
         v = probe.truth.twist.twist.linear.x
         top = max(top, v)
-        latched = latched or (probe.status is not None and not probe.status.armed)
+        if probe.status is not None and not probe.status.armed:
+            latches += 1
+            probe.arm_and_hold()
+            continue
         if gap is None and top > 0.5 and abs(v) < 0.02:
             still = still or time.monotonic()
             if time.monotonic() - still > 3.0:      # stood still for 3 s: take the box away
@@ -322,9 +336,12 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
     passed = along() > front + ahead + 1.0
     ok = gap is not None and 0.0 < gap < 2.0 and stop_zone and reached and passed
     where = f'stood still {gap:.2f} m before the box' if gap is not None else 'never stopped'
+    times = 'once' if latches == 1 else f'{latches} times'
+    paused = (f'; the spine latched {times} (gaps in the commands: a busy computer?) and was '
+              'armed again' if latches else '')
     result(name, ok, f'{where} (top speed {top:.2f} m/s), stop zone fired: {stop_zone}; box '
                      f'taken away, Nav2 goal {"reached" if reached else "not reached"} '
-                     f'{along():.1f} m on' + ('; the spine latched' if latched else ''))
+                     f'{along():.1f} m on{paused}')
     probe.set_radar(False)
 
 

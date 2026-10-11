@@ -14,7 +14,7 @@ links to the page with the details. As of early on 11 October 2026.
 | Launch profiles | 5: `turtle`, `sim`, `car`, `replay`, `bench` |
 | Computers in the machine files | 4: `orin`, `motor_pi`, `laptop`, `all` |
 | Contracts | 3: the topics, the CAN frames, the car's measurements |
-| Tests | 230 in Python and 208 in Rust without ROS; 260 in `colcon test`; the bench checks, with `--perception` and `--lane` |
+| Tests | 230 in Python and 208 in Rust without ROS; 291 in `colcon test`; the HUD app's own; the bench checks, with `--perception`, `--lane` and `--obstacle` |
 | Tools | 26 scripts and 34 `pixi run` tasks |
 
 ## The folders
@@ -98,7 +98,8 @@ finder).
 | Nav2 navigator | `NavigateToPose`, `NavigateThroughPoses` | with our car behaviour trees, adapted from Nav2's |
 | Nav2 waypoints | `WaitAtWaypoint` | GPS waypoints come through the same server |
 | Nav2 checkers | `SimpleGoalChecker`, `SimpleProgressChecker` | when a goal counts as reached |
-| Costmaps | `StaticLayer`, `InflationLayer` | `ObstacleLayer` is written, and off until there's a lidar or radar |
+| Costmaps | `StaticLayer`, `InflationLayer`, `ObstacleLayer` (twice) | the radar's obstacle layer is on where the radar runs; the cameras' layer is off until they're calibrated (Q22) |
+| Nav2 safety | `collision_monitor` | stops Nav2 for radar points in a 1 m zone ahead of the bumper. It guards Nav2 only |
 | Gazebo | `AckermannSteering`, `JointStatePublisher`, `Imu`, `NavSat`, `Physics`, `SceneBroadcaster`, `UserCommands` | the simulated car, its sensors, and the world |
 
 ## Code from the previous teams
@@ -136,7 +137,7 @@ avoidance, odometry and QNX layer. [The older code](older-code.md) has every rep
 | Sensors | the camera and lidar models (Q22); the GPS model (Q18); the magnetometer in real units | [Status](status.md) |
 | Perception | the 2024-25 team's `best.pt`; the Orin's TensorRT engine, built on the Orin after its reflash | [Perception](perception.md) |
 | The car | every measurement in `vehicle.yaml` (Q1); the steering calibration (Q2); Jazzy on its computers (Q24) | [Car numbers](car_measurements.md) |
-| Navigation | the real test site's map (Q21); Nav2's lookahead (N7); obstacle inputs | [Costmaps](costmaps.md) |
+| Navigation | the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount; a sensor behind the car before it reverses | [Costmaps](costmaps.md) |
 | Drivers | a first real joystick test; an e-stop message that can't get lost (N2) | [Starting points](team.md) |
 | The HUD | the build for the car's Pi; its tile server and OSRM route data. The map database downloads with `pixi run get-hud-map` | [HUD](hud.md) |
 | Simulation | CARLA, parked: no Jazzy support. Bench mode works: [Bench mode](bench.md) | [Simulation](simulation.md) |

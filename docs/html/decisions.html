@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">18 min read · 8 sections</div></header>
+<div class="meta">19 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="first-day.html">Your first day</a>
@@ -38,7 +38,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-labels">How to read the labels</a><a href="#decided">Decided</a><a href="#tentative">Tentative</a><a href="#proposed-for-the-next-team-meeting">Proposed: for the next team meeting</a><a href="#ground-rules">Ground rules</a><a href="#decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</a><a href="#open-questions">Open questions</a><a href="#also-waiting-on-the-team">Also waiting on the team</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-labels">How to read the labels</a><a href="#decided">Decided</a><a href="#tentative">Tentative</a><a href="#proposed-for-the-next-team-meeting">Proposed: for the next team meeting</a><a href="#ground-rules">Ground rules</a><a href="#decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</a><a href="#decided-on-11-october">Decided on 11 October</a><a href="#open-questions">Open questions</a><a href="#also-waiting-on-the-team">Also waiting on the team</a></nav>
 <div class="lead"><p>What the team has decided, what's still open, and the 34 numbered questions. The source
 is the team design doc, <em>AAV 2026–27 Autonomy Stack — Architecture &amp; Plan</em> (a Claude Doc,
 revision 61 on 10 October 2026). This page is a short copy, so you don't have to hunt.
@@ -209,6 +209,10 @@ answer.</p>
 <td>The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car</td>
 <td>A reboot or a glitch never restarts the car by itself. It's in <code>spine-core</code> since 10 Oct</td>
 </tr>
+<tr>
+<td>The HUD as one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera); the Flutter app stays until it matches</td>
+<td>One program instead of three that must agree (the app, Flask, Socket.IO). raylib draws on a Pi's screen with no desktop. The map and the search wait on Q29 (Claude, 11 Oct, after Ben asked about raylib)</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -361,6 +365,22 @@ answer.</p>
 <tr>
 <td>The team's Linux machine with an NVIDIA card trains models. The 2024-25 <code>best.pt</code> is probably on it</td>
 <td>Ben</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-11-october">Decided on 11 October</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Work on what we can try at home, in this order: the full graph with the drivers, ego and the simulators; our C++ to Rust (Python later); the Mac on the network with ML on it, and Nav2; the drivers in Rust, ready to try on a board; then the GUI</td>
+<td>Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to work on"</td>
 </tr>
 </tbody>
 </table></div>

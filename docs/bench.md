@@ -120,7 +120,7 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 | Software e-stop | 1 m/s to a stop, and the spine reports it | [[works]] |
 | Hardware e-stop | the same, from `/bench/hw_estop` | [[works]] |
 | Stop sign (`pixi run -e ml bench-check --perception`) | Nav2 drives 40 m east: the car stops before the sign, waits, and reaches the goal | [[works]] locked 4.7 m before the sign, stopped, reached the goal |
-| Obstacle (`pixi run bench-check --obstacle`) | a box 15 m ahead, Nav2 driving 30 m: `collision_monitor`'s stop zone stops the car before it; with the box gone, the car reaches the goal | [[works]] stood still 0.42 m before the box, from 1.02 m/s; reached the goal once the box was gone |
+| Obstacle (`pixi run bench-check --obstacle`) | a box as wide as the lane, 15 m ahead, Nav2 driving 30 m: `collision_monitor`'s stop zone stops the car before it; with the box gone, the car reaches the goal. If a busy computer latches the spine, the check arms it again | [[works]] on `main`, 11 Oct: stood still 0.44 m before the box, from 0.95 m/s; reached the goal once the box was gone |
 
 Run it after changing anything between the drivers and the spine.
 

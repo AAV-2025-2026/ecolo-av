@@ -30,6 +30,7 @@ Reading notes:
 - [Documentation requests and the hardware list](#documentation-requests-and-the-hardware-list)
 - [Overnight into 10 October: Jazzy, the Mac and the car](#overnight-into-10-october-jazzy-the-mac-and-the-car)
 - [10 October, evening: chips, Rust, Embassy and tools](#10-october-evening-chips-rust-embassy-and-tools)
+- [11 October: the night's results, and what we can try at home](#11-october-the-nights-results-and-what-we-can-try-at-home)
 - [Open threads](#open-threads)
 
 ## The inherited repos and what we found
@@ -1217,11 +1218,45 @@ Done on 10 October: the pages in `docs/html/` and the PDF (`pixi run docs`) cove
 - **Ben's answer (21:52):** restart them, and after any stop, restart them from where they got to, without asking again. Each commits after every working step, so a stop loses little.
 - **01:40:** all five restarted from their branches. Ben: "pick the recommended option and continue working".
 
+## 11 October: the night's results, and what we can try at home
+
+### "We can only do so much from home so lets focus on stuff that makes sence to work on." (03:00, sent again 10:56)
+
+Ben's order: the full graph with drivers, ego and the simulators, all set up; then the C++ to Rust (Python later); then the Mac on the network with ML on it, and Nav2; then the drivers in Rust, ready to try on a board; and raylib for the GUI.
+
+- **Recorded** in `TODO.md` ("11 Oct: what we can try at home") and on the Decisions page.
+- **Three helpers started at 11:18,** each in its own worktree: the full graph in Gazebo (a road, a camera and a radar on the car, perception and lane keeping in `pixi run sim`); Ackermann done properly (reversing, both wheels' angles, the steering curve); and the C++ to Rust (the IMU driver, the radar clustering).
+- **The laptop's detector** is on in `laptop.yaml`, reading the camera's compressed pictures (Core ML on a Mac).
+
+### "Ohh and for the gui lets maybe think about raylib?" (03:00)
+
+- **Claude's take: yes, worth trying.** One Rust program (the `raylib` crate 6.0 and rclrs) can be the HUD and its ROS node at once, instead of three programs that must agree (the Flutter app, the Flask back end, Socket.IO). raylib draws on a Pi's screen with no desktop (its DRM mode), and on Macs.
+- **The cost:** few ready-made widgets. The map, an on-screen keyboard and the destination search are ours to draw.
+- **Other options:** keep Flutter (works on the bench; no Flutter download for the Pi's ARM Linux); egui (pure Rust, full widgets, needs a desktop on the Pi); Slint (made for car dashboards; check its licence).
+- **Proposed:** the driving screen first (speed, mode, the e-stop button, the camera), the Flutter app kept until raylib's does everything; the map and the search decided with Q29. Waits on Ben.
+
+### "how did last night go. Did you have a bunch of emails quueed." (10:56)
+
+- **No emails were waiting.** The three queued for the VPN went out at 21:16, and one more at 21:42. Nothing was written after that: the overnight summary went out at 11:01.
+- **The night:** the helpers stopped at 21:29 (Ben's messages; the 21:42 email wrongly said they were running) and restarted at 21:53; the usage limit stopped them at 23:30; they restarted at 01:10 and again at 01:38. Four branches merged between 02:07 and 02:43. At 03:00 the usage limit stopped everything until 10:56, in the middle of the fifth merge.
+- **Since 10:56:** the fifth merge (obstacles) finished and was pushed (11:05). On `main`, on a quiet Mac, the bench checks passed, the stop sign and lane keeping too. The obstacle check failed; see the next answer.
+- **Correction** (from the 21:43 answer): the Pico 2's CAN module must be a 3.3 V one.
+
+### Why did bench-check --obstacle fail on main? (11:20, Claude's own finding)
+
+- **Alone:** the stop zone stopped the car 0.34 m before the box. Then a 0.8 s stall of the whole computer (every topic paused at once) latched the spine, as its 200 ms watchdog should, and nothing armed it again, so Nav2 never finished.
+- **After the stop-sign drive:** the car drove on past the box. A recorded rerun shows why it can: the car weaves up to 1.5 m off its line (N7: the global EKF's heading jumps with each GPS fix), so it can pass beside a 1 m box. In the rerun it reached the box 1 m off its line, and the stop zone just caught the box's edge.
+- **The busy computer:** macOS's code checks (`syspolicyd`, XProtect) used about half a core, checking each program the helpers built.
+- **The fix in the check:** a box as wide as the lane, and a re-arm after a latch, as a safety driver would (the lane check already does). The stop zone must still be what stops the car.
+- **Still open:** N7 itself, and collision_monitor flickering between stop and go at the zone's edge.
+
 ## Open threads
 
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
 - **oirp-spss:** its copy of `aav` stops at 04:23, with the old commit IDs. Make a fresh clone from GitHub there; nothing on the server is missing from GitHub (checked 21:30).
-- **The five overnight pieces (10-11):** the HUD app, the car's launch, the lane finder and the spine's Pico 2 program are merged (02:07–02:43). Obstacles in the costmap is being merged. Then the order of work (Ben, 21:45): Ackermann done properly, our C++ to Rust, every file in its language's own style, the whole car working.
+- **The five overnight pieces (10-11):** all merged and pushed (02:07–11:05). Now Ben's 11 October order: the full graph (with Ackermann), the C++ to Rust, the Mac with ML, Nav2, the board drivers, raylib. Three helpers started at 11:18.
+- **The obstacle check:** fixed in the check (a lane-wide box, a re-arm after a latch); N7 and collision_monitor's flicker are still open.
+- **Raylib for the HUD:** Proposed; waits on Ben.
 - **One detector per machine:** `yolo_detector_<machine>`, each with its own model file (done 11 Oct). The device names without aliases come with the obstacles merge.
 - **Backups:** image the Orin and the Pis before any reflash. They hold the detector, `camera_decode`, the three rqt_graph nodes and `/home/aavjetson`. A backup checklist and script were offered.
 - **The car on Jazzy:** it runs Humble today, so no Jazzy laptop can join it. Try Pixi on its Ubuntu 22.04 first, then reflash the Orin to JetPack 7.2 (Q24).

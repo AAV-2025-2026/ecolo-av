@@ -51,6 +51,7 @@ answer.
 | A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree | A car can't turn on the spot. The config already does this |
 | The RC transmitter stays the top-priority override, in hardware | It works today, and doesn't depend on any computer |
 | The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car | A reboot or a glitch never restarts the car by itself. It's in `spine-core` since 10 Oct |
+| The HUD as one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera); the Flutter app stays until it matches | One program instead of three that must agree (the app, Flask, Socket.IO). raylib draws on a Pi's screen with no desktop. The map and the search wait on Q29 (Claude, 11 Oct, after Ben asked about raylib) |
 
 ## Ground rules
 
@@ -95,6 +96,12 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Today's C++ boards build with PlatformIO, in a `firmware` environment. Its downloads go into `vendor/platformio/` | Ben: "We want everybody to be able to build this out of the box" |
 | CARLA is parked for this year: Gazebo and bench mode cover driving, Nav2 and the sensors | recommended, after Ben asked "do we even care": see Q31 |
 | The team's Linux machine with an NVIDIA card trains models. The 2024-25 `best.pt` is probably on it | Ben |
+
+## Decided on 11 October
+
+| Decision | By |
+|---|---|
+| Work on what we can try at home, in this order: the full graph with the drivers, ego and the simulators; our C++ to Rust (Python later); the Mac on the network with ML on it, and Nav2; the drivers in Rust, ready to try on a board; then the GUI | Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to work on" |
 
 ## Open questions
 

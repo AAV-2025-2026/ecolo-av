@@ -77,7 +77,7 @@ links to the page with the details. As of early on 11 October 2026.</p></div>
 </tr>
 <tr>
 <td>Tests</td>
-<td>230 in Python and 208 in Rust without ROS; 260 in <code>colcon test</code>; the bench checks, with <code>--perception</code> and <code>--lane</code></td>
+<td>230 in Python and 208 in Rust without ROS; 291 in <code>colcon test</code>; the HUD app's own; the bench checks, with <code>--perception</code>, <code>--lane</code> and <code>--obstacle</code></td>
 </tr>
 <tr>
 <td>Tools</td>
@@ -420,8 +420,13 @@ finder).</p>
 </tr>
 <tr>
 <td>Costmaps</td>
-<td><code>StaticLayer</code>, <code>InflationLayer</code></td>
-<td><code>ObstacleLayer</code> is written, and off until there's a lidar or radar</td>
+<td><code>StaticLayer</code>, <code>InflationLayer</code>, <code>ObstacleLayer</code> (twice)</td>
+<td>the radar's obstacle layer is on where the radar runs; the cameras' layer is off until they're calibrated (Q22)</td>
+</tr>
+<tr>
+<td>Nav2 safety</td>
+<td><code>collision_monitor</code></td>
+<td>stops Nav2 for radar points in a 1 m zone ahead of the bumper. It guards Nav2 only</td>
 </tr>
 <tr>
 <td>Gazebo</td>
@@ -581,7 +586,7 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>Navigation</td>
-<td>the real test site's map (Q21); Nav2's lookahead (N7); obstacle inputs</td>
+<td>the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount; a sensor behind the car before it reverses</td>
 <td><a href="costmaps.html">Costmaps</a></td>
 </tr>
 <tr>

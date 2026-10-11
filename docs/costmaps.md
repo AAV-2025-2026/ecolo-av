@@ -76,14 +76,15 @@ controller -> velocity_smoother -> /cmd_vel_smoothed -> collision_monitor -> /cm
 
 ### What the car does at an obstacle
 
-On the bench (`pixi run bench-check --obstacle`, 11 October): a 1 m box 15 m ahead, Nav2
-driving to a goal 30 m away.
+On the bench (`pixi run bench-check --obstacle`, 11 October): a box as wide as the lane, 15 m
+ahead, Nav2 driving to a goal 30 m away. (A 1 m box first; but the car can weave a metre or
+more off its line, N7 below, and once it passed beside the box.)
 
 | Step | What happened |
 |---|---|
 | The radar sees the box | 8.4 m out; the costmap marks it |
 | About 1 m before it | both stop the car, within 0.15-0.7 s of each other: `collision_monitor`'s stop zone (radar points) and Nav2's controller (the costmap). Either can be first |
-| The car stands still | 0.42 m before the box, from 1.02 m/s (0.53 m in a second run) |
+| The car stands still | 0.42 m before the box, from 1.02 m/s (0.53 m in a second run). With the lane-wide box on `main`: 0.44 m, and 0.26 m with the car starting 8° off the road |
 | The box is taken away | `collision_monitor` lets go at once; Nav2's recovery clears the costmap and the car drives on to the goal |
 
 !!! note "Nav2 stops; it doesn't steer around"

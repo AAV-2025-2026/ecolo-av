@@ -188,8 +188,9 @@ twist_mux:</p>
 <li><code>collision_monitor:=false</code> leaves it out, for a test.</li>
 </ul>
 <h3 id="what-the-car-does-at-an-obstacle">What the car does at an obstacle</h3>
-<p>On the bench (<code>pixi run bench-check --obstacle</code>, 11 October): a 1 m box 15 m ahead, Nav2
-driving to a goal 30 m away.</p>
+<p>On the bench (<code>pixi run bench-check --obstacle</code>, 11 October): a box as wide as the lane, 15 m
+ahead, Nav2 driving to a goal 30 m away. (A 1 m box first; but the car can weave a metre or
+more off its line, N7 below, and once it passed beside the box.)</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -208,7 +209,7 @@ driving to a goal 30 m away.</p>
 </tr>
 <tr>
 <td>The car stands still</td>
-<td>0.42 m before the box, from 1.02 m/s (0.53 m in a second run)</td>
+<td>0.42 m before the box, from 1.02 m/s (0.53 m in a second run). With the lane-wide box on <code>main</code>: 0.44 m, and 0.26 m with the car starting 8° off the road</td>
 </tr>
 <tr>
 <td>The box is taken away</td>

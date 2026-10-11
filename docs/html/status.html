@@ -176,6 +176,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> on the pretend radar</td>
 </tr>
 <tr>
+<td>Obstacles in Nav2</td>
+<td>the radar in the local costmap; <code>collision_monitor</code>'s stop zone; <code>camera_obstacles</code></td>
+<td><span class="badge b-works">works</span> on the bench: the stop zone stops the car 0.3-0.4 m before a box as wide as the lane. Open: the car weaves up to 1.5 m off its line (N7), so it can pass beside a narrow box; the stop zone flickers at its edge. The camera layer is off until the cameras are calibrated (Q22)</td>
+</tr>
+<tr>
 <td>HUD back end and app</td>
 <td><code>aav_hud</code>, <code>hud/</code></td>
 <td><span class="badge b-works">works</span> on the bench: the app's e-stop button stops the car in 0.3 s. <span class="badge b-untested">untested</span> on the car's screen</td>
@@ -208,15 +213,15 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td><code>pixi run test</code>: build, tests, lint, <code>colcon test</code></td>
-<td><span class="badge b-works">works</span> all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; <code>colcon test</code> 260, 0 failures</td>
+<td><span class="badge b-works">works</span> all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; <code>colcon test</code> 291, 0 failures; the HUD app's own tests</td>
 </tr>
 <tr>
 <td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim, replay and bench</td>
 <td><span class="badge b-works">works</span> 0 failures each</td>
 </tr>
 <tr>
-<td><code>pixi run bench-check</code> (<code>--perception</code>, <code>--lane</code>)</td>
-<td><span class="badge b-works">works</span> on the Mac, 10 Oct; <code>--lane</code> on its own branch, 11 Oct. To run again on <code>main</code></td>
+<td><code>pixi run bench-check</code> (<code>--perception</code>, <code>--lane</code>, <code>--obstacle</code>)</td>
+<td><span class="badge b-works">works</span> on <code>main</code>, 11 Oct: the default checks, the stop sign, lane keeping and the obstacle</td>
 </tr>
 <tr>
 <td>Sim, headless: drive commands (the keyboard's topic) and Nav2 goals</td>
