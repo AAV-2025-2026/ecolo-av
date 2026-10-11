@@ -52,6 +52,17 @@ pub const IDLE_BRAKE: f32 = 0.0;
 /// brakes to a stop and holds. The 2025-26 firmware put the brake full on at once.
 pub const RC_GEAR_BRAKE: RcGearBrake = RcGearBrake::SpeedZero;
 
+// Copies of src/aav_description/config/vehicle.yaml, the one place the car's numbers live:
+// the firmware can't read it. src/aav_description/test/test_vehicle.py checks the copies.
+
+/// The virtual centre wheel's steering limit, either way (rad): vehicle.yaml
+/// `max_steering_angle`. TODO(Q1): measure on the car.
+pub const MAX_STEERING_ANGLE: f32 = 0.5;
+
+/// The fastest the car may go backwards (m/s), whoever drives, the RC transmitter too:
+/// vehicle.yaml `max_reverse_speed`. Slow on purpose: nothing senses what is behind the car.
+pub const MAX_REVERSE_SPEED: f32 = 0.5;
+
 /// What the steering does when the spine stops the car by itself.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EstopSteering {
@@ -102,8 +113,8 @@ impl Default for SpineConfig {
         SpineConfig {
             cmd_timeout_ms: 200,
             max_speed: 3.0,
-            max_reverse_speed: 1.0,
-            max_steering_angle: 0.5, // TODO: measure on the car
+            max_reverse_speed: MAX_REVERSE_SPEED,
+            max_steering_angle: MAX_STEERING_ANGLE,
             max_accel: 1.5,
             max_decel: 2.5,
             max_steer_rate: 0.6,
@@ -650,6 +661,31 @@ mod tests {
         car.drive(3.0, 0.0, true, 11); // 100 ms of ramp at 1.5 m/s^2
         let sp = car.spine.speed_setpoint();
         assert!(sp > 0.1 && sp < 0.2, "{sp}");
+    }
+
+    #[test]
+    fn reverse_is_capped_for_the_computer_and_the_rc() {
+        // The computer asks for 2 m/s backwards: it gets the reverse cap.
+        let mut car = Car::new();
+        car.arm();
+        car.drive(-2.0, 0.2, true, 300);
+        assert!((car.spine.speed_setpoint() + MAX_REVERSE_SPEED).abs() < 1e-6);
+        // Full reverse on the RC stick: the same cap.
+        let mut car = Car::new();
+        let rc = RcInput {
+            override_switch: true,
+            throttle: -1.0,
+            steering: 0.0,
+            brake: false,
+        };
+        for _ in 0..300 {
+            car.tick(Inputs {
+                rc: Some(rc),
+                ..Default::default()
+            });
+        }
+        assert!((car.spine.speed_setpoint() + MAX_REVERSE_SPEED).abs() < 1e-6);
+        assert_eq!(SpineConfig::default().max_reverse_speed, MAX_REVERSE_SPEED);
     }
 
     #[test]

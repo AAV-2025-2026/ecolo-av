@@ -1,12 +1,11 @@
-# ego: the limits every driver gets, whatever it asks for. wheelbase and
-# max_steering_angle come from aav_description/config/vehicle.yaml (the launch file
+# ego: the limits every driver gets, whatever it asks for. wheelbase, max_steering_angle
+# and max_reverse_speed come from aav_description/config/vehicle.yaml (the launch file
 # passes them), so they are not set here.
 #
 # Start slow. Raise max_speed per test plan, not in passing.
 ego:
   ros__parameters:
     max_speed: 1.0              # m/s forward
-    max_reverse_speed: 0.5      # m/s
     max_acceleration: 1.0       # m/s^2
     max_deceleration: 2.0       # m/s^2 (also how hard it stops when commands go stale)
     max_steering_rate: 0.6      # rad/s at the virtual centre wheel

@@ -2,9 +2,11 @@
 #
 # Read by:
 #   urdf/aav.urdf.xacro          -> TF frames for every sensor (robot_state_publisher)
-#   aav_bringup launch files     -> ego (wheelbase, steering limit), aav_spine (wheelbase, track),
-#                                   aav_legacy encoder (wheel diameter), Nav2 (footprint,
-#                                   minimum turning radius)
+#   aav_bringup launch files     -> ego (wheelbase, steering limit, reverse speed), aav_spine
+#                                   (wheelbase, track), aav_legacy encoder (wheel diameter),
+#                                   Nav2 (footprint, minimum turning radius, reverse speed)
+#   firmware/spine (spine-core)  -> keeps copies of the steering limit and the reverse speed;
+#                                   src/aav_description/test/test_vehicle.py checks them
 #
 # Units: metres and radians. base_link = on the ground under the centre of the rear
 # axle; x forward, y left, z up (REP-103, REP-105). Measure everything from there.
@@ -20,6 +22,9 @@ vehicle:
   wheel_width: 0.10         # TODO measure
   max_steering_angle: 0.50  # rad, virtual wheel at the middle of the front axle. TODO measure;
                             # old code says 0.45 (bridge_params.yaml:10) to 0.55 (temp_steer_2_P_only.py:29)
+  max_reverse_speed: 0.50   # m/s backwards, for every driver: ego, Nav2 and the spine. Slow on
+                            # purpose: the radar faces forward, so reversing is blind
+                            # (docs/steering.md)
   body:                     # outline used for Nav2's footprint
     length: 2.00            # bumper to bumper. TODO measure (obstacle_avoidance.cpp:44 guessed 2.0)
     width: 1.00             # TODO measure (obstacle_avoidance.cpp:43 guessed 1.4, too wide for a 0.77 m track)

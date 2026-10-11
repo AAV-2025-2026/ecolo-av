@@ -1,9 +1,19 @@
 import math
 from pathlib import Path
+import re
 
 from aav_description import vehicle
 
 CONFIG = Path(__file__).resolve().parents[1] / 'config' / 'vehicle.yaml'
+ROOT = Path(__file__).resolve().parents[3]
+SPINE_RS = ROOT / 'firmware/spine/crates/spine-core/src/spine.rs'
+
+
+def rust_const(path, name):
+    """Return the number in `pub const NAME: f32 = <number>;` from a Rust file."""
+    found = re.search(rf'pub const {name}: f32 = ([-0-9.e]+);', path.read_text())
+    assert found, f'no `pub const {name}: f32 = ...;` in {path}'
+    return float(found.group(1))
 
 
 def test_config_loads_and_has_what_the_launch_files_read():
@@ -46,5 +56,43 @@ def test_nav2_rewrites_keys():
     v = vehicle.load(CONFIG)['vehicle']
     r = vehicle.nav2_rewrites(v)
     assert set(r) == {'footprint', 'minimum_turning_radius', 'min_turning_r',
-                      'collision_monitor.ros__parameters.StopZone.points'}
+                      'collision_monitor.ros__parameters.StopZone.points',
+                      'planner_server.ros__parameters.GridBased.motion_model_for_search',
+                      'controller_server.ros__parameters.FollowPath.allow_reversing',
+                      'controller_server.ros__parameters.MPPI.vx_min'}
     assert r['minimum_turning_radius'] == r['min_turning_r']
+    # RewrittenYaml can't index into a list: none of these may try.
+    assert not any(key.split('.')[-1].isdigit() for key in r)
+
+
+def test_nav2_forward_only_or_reversing():
+    v = {'wheelbase': 1.57, 'max_steering_angle': 0.5, 'max_reverse_speed': 0.4,
+         'body': {'length': 2.0, 'width': 1.0, 'rear_overhang': 0.2}}
+    forward = vehicle.nav2_rewrites(v)
+    back = vehicle.nav2_rewrites(v, reversing=True)
+    model = 'planner_server.ros__parameters.GridBased.motion_model_for_search'
+    allow = 'controller_server.ros__parameters.FollowPath.allow_reversing'
+    vx_min = 'controller_server.ros__parameters.MPPI.vx_min'
+    assert (forward[model], forward[allow], forward[vx_min]) == ('DUBIN', 'false', '0.000')
+    assert (back[model], back[allow], back[vx_min]) == ('REEDS_SHEPP', 'true', '-0.400')
+
+
+def test_the_smoother_gets_the_reverse_speed_as_a_list():
+    v = {'max_reverse_speed': 0.4}
+    nav2 = {'velocity_smoother': {'ros__parameters': {'min_velocity': [-0.5, 0.0, -1.0]}}}
+    assert vehicle.nav2_node_params(v, nav2) == {
+        'velocity_smoother': {'min_velocity': [0.0, 0.0, -1.0]}}
+    assert vehicle.nav2_node_params(v, nav2, reversing=True) == {
+        'velocity_smoother': {'min_velocity': [-0.4, 0.0, -1.0]}}
+
+
+def test_ego_gets_the_reverse_speed():
+    v = vehicle.load(CONFIG)['vehicle']
+    assert vehicle.ego_params(v)['max_reverse_speed'] == v['max_reverse_speed']
+
+
+def test_the_firmware_copies_match_vehicle_yaml():
+    # spine-core can't read vehicle.yaml, so it keeps copies. Change both together.
+    v = vehicle.load(CONFIG)['vehicle']
+    assert rust_const(SPINE_RS, 'MAX_STEERING_ANGLE') == v['max_steering_angle']
+    assert rust_const(SPINE_RS, 'MAX_REVERSE_SPEED') == v['max_reverse_speed']

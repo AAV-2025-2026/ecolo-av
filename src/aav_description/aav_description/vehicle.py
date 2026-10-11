@@ -8,6 +8,8 @@ The launch files use this so the car's measurements live in one file:
     vehicle.min_turning_radius(v)    # Nav2 SmacPlannerHybrid, MPPI Ackermann
     vehicle.footprint(v)             # Nav2 costmaps
     vehicle.stop_zone_points(v)      # Nav2 collision_monitor
+    vehicle.nav2_rewrites(v, reversing)         # Nav2's file: forward only, or reversing too
+    vehicle.nav2_node_params(v, nav2, reversing)  # the lists RewrittenYaml can't write
     vehicle.ego_params(v)            # ego
 """
 
@@ -70,6 +72,7 @@ def ego_params(v):
     return {
         'wheelbase': float(v['wheelbase']),
         'max_steering_angle': float(v['max_steering_angle']),
+        'max_reverse_speed': float(v['max_reverse_speed']),
     }
 
 
@@ -80,11 +83,20 @@ def spine_params(v):
     }
 
 
-def nav2_rewrites(v):
+def reverse_limit(v, reversing):
+    """Return the lowest speed Nav2 may command (m/s): -max_reverse_speed, or 0 forward only."""
+    return -float(v['max_reverse_speed']) if reversing else 0.0
+
+
+def nav2_rewrites(v, reversing=False):
     """
     Values to substitute into aav_navigation/config/nav2.yaml.
 
-    RewrittenYaml takes a leaf key (every key of that name) or a whole dotted path.
+    RewrittenYaml takes a leaf key (every key of that name) or a whole dotted path. With
+    `reversing`, Nav2 may drive backwards, at up to max_reverse_speed: the planner plans
+    Reeds-Shepp paths (forward and back), the controller follows them backwards, and MPPI
+    may go negative. Without it, the planner plans forward only (Dubins paths). The velocity
+    smoother's limit is a list, which RewrittenYaml can't write: see nav2_node_params.
     """
     r = min_turning_radius(v)
     return {
@@ -92,4 +104,22 @@ def nav2_rewrites(v):
         'minimum_turning_radius': f'{r:.3f}',   # SmacPlannerHybrid
         'min_turning_r': f'{r:.3f}',            # MPPI AckermannConstraints
         'collision_monitor.ros__parameters.StopZone.points': polygon(stop_zone_points(v)),
+        'planner_server.ros__parameters.GridBased.motion_model_for_search':
+            'REEDS_SHEPP' if reversing else 'DUBIN',
+        'controller_server.ros__parameters.FollowPath.allow_reversing': str(reversing).lower(),
+        'controller_server.ros__parameters.MPPI.vx_min': f'{reverse_limit(v, reversing):.3f}',
     }
+
+
+def nav2_node_params(v, nav2, reversing=False):
+    """
+    Per-node parameters for Nav2 that RewrittenYaml can't set, by node name.
+
+    RewrittenYaml writes only strings and numbers: a list comes out as a string, and an
+    index into a list (`min_velocity.0`) raises a TypeError. So the velocity smoother's
+    lowest speed goes in as a parameter of its own, after nav2.yaml (`nav2`, loaded), so it
+    wins. It is the last stop for a negative speed inside Nav2: 0 unless `reversing`.
+    """
+    smoother = nav2['velocity_smoother']['ros__parameters']
+    min_velocity = [reverse_limit(v, reversing)] + [float(x) for x in smoother['min_velocity'][1:]]
+    return {'velocity_smoother': {'min_velocity': min_velocity}}
