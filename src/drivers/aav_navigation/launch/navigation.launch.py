@@ -21,9 +21,9 @@ robot_localization does localization, no docking or route server):
   lifecycle_manager brings them all up
 
 Obstacles, from where the sensors are:
-  radar:=true             where a radar publishes /sensors/radar/points (the bench; the car with
-                          its radar part): the local costmap's obstacle layer reads it, so
-                          Nav2 stops for what the radar sees. Gazebo's car has no radar
+  radar:=true             where a radar publishes /sensors/radar/points (the bench; the car
+                          with its radar part; Gazebo's road world): the local costmap's
+                          obstacle layer reads it, so Nav2 stops for what the radar sees
   collision_monitor       follows radar unless set: it stops the car for radar points in
                           the stop zone ahead, whatever the costmap says. A silent radar
                           stops Nav2 too
