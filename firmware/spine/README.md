@@ -10,6 +10,7 @@ chip (Q10-Q13). Every crate is `no_std` and is tested on a laptop, without the b
 | `jrk-g2` | the Pololu Jrk G2 motor controllers (steering, brake), over I2C | 14 |
 | `ad5311` | the throttle DAC, over I2C | 10 |
 | `pca9555` | the I/O expander (the direction output), over I2C | 6 |
+| `mcp2515` | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters, send, receive, error state | 34 |
 | `ibus` | the FlySky RC receiver's iBUS frames | 24 |
 | `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 44 |
 

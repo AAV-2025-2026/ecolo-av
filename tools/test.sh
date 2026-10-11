@@ -30,7 +30,8 @@ if command -v cargo >/dev/null; then
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"
     (cd firmware/spine && cargo build -q --target thumbv8m.main-none-eabihf -p spine-core \
-       -p aav-inputs -p jrk-g2 -p ad5311 -p pca9555 -p ibus -p spine-board && echo "builds")
+       -p aav-inputs -p jrk-g2 -p ad5311 -p pca9555 -p mcp2515 -p ibus -p spine-board \
+       && echo "builds")
   fi
 else
   echo "skipped: no cargo here (pixi run test has it; or install Rust with rustup)"
