@@ -337,24 +337,32 @@ def check_contract(probe, env, tag):
 
 def check_drive(probe):
     """Drive the scripted profile; compare the distance with the plan, and the EKF with truth."""
-    if not probe.status.armed:
-        # A gap in commands while the bench was still starting latched the spine (a busy
-        # computer): arm it again, or the drive runs out its plan standing still.
-        probe.arm_and_hold()
-    x0, y0 = probe.xy(probe.truth)
-    handle = probe.send_drive()
-    if handle is None or not handle.accepted:
-        result('scripted drive', False, 'refused')
-        return
-    done = handle.get_result_async()
-    probe.spin_for(40.0, lambda: done.done())
-    probe.spin_for(3.0)
-    x1, y1 = probe.xy(probe.truth)
-    travelled = math.hypot(x1 - x0, y1 - y0)
-    # The plan is 6.5 m. The spine's speed loop trails a ramp by about a second, so
-    # 5-6 m is normal; the range catches a stretched plan (22 m) or no motion at all.
-    result('scripted drive', 4.5 < travelled < 8.0,
-           f'{travelled:.2f} m (plan: 6.5 m; the speed loop trails it by about 1 s)')
+    for attempt in range(2):
+        if not probe.status.armed:
+            # A gap in commands latched the spine (a busy computer): arm it again, or the
+            # drive runs out its plan standing still.
+            probe.arm_and_hold()
+        since = probe.track[-1][0]
+        x0, y0 = probe.xy(probe.truth)
+        handle = probe.send_drive()
+        if handle is None or not handle.accepted:
+            result('scripted drive', False, 'refused')
+            return
+        done = handle.get_result_async()
+        probe.spin_for(40.0, lambda: done.done())
+        probe.spin_for(3.0)
+        x1, y1 = probe.xy(probe.truth)
+        travelled = math.hypot(x1 - x0, y1 - y0)
+        # The plan is 6.5 m. The spine's speed loop trails a ramp by about a second, so
+        # 5-6 m is normal; the range catches a stretched plan (22 m) or no motion at all.
+        good = 4.5 < travelled < 8.0
+        if good or not any(t >= since for t, _ in probe.latches):
+            break
+        # The spine latched on the way, which stopped the car: not what this checks.
+        # Drive the plan again, once.
+    again = ', the second time: the spine latched during the first' if attempt else ''
+    result('scripted drive', good,
+           f'{travelled:.2f} m (plan: 6.5 m; the speed loop trails it by about 1 s){again}')
     gx, gy = probe.xy(probe.glob)
     error = math.hypot(gx - x1, gy - y1)
     result('global EKF vs truth', error < 1.5, f'{error:.2f} m apart (GPS noise is 0.5 m)')
