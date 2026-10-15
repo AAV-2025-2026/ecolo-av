@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">7 min read · 4 sections</div></header>
+<div class="meta">8 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -171,6 +171,16 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td>Spine board program</td>
 <td><code>firmware/spine/boards/pico2</code></td>
 <td><span class="badge b-untested">untested</span> builds for a Pico 2, and its UF2 file checks out; never flashed. The car's chip is still Q10–Q13</td>
+</tr>
+<tr>
+<td>Wheel encoder, in Rust (15 Oct)</td>
+<td><code>firmware/spine/boards/wheel-encoder-pico2</code>, crate <code>wheel-encoder</code></td>
+<td><span class="badge b-untested">untested</span> builds, its UF2 checks out, 12 tests; never flashed. Same packet as the C++ (shared examples). The car's Pico 2 still runs the C++</td>
+</tr>
+<tr>
+<td>Status display, in Rust (15 Oct)</td>
+<td><code>firmware/spine/boards/sentinel-pico2</code>, crates <code>sentinel</code>, <code>hd44780</code></td>
+<td><span class="badge b-untested">untested</span> builds, its UF2 checks out, 45 tests; never flashed. Nothing sends it packets yet</td>
 </tr>
 <tr>
 <td>Bench mode</td>

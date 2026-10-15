@@ -74,7 +74,7 @@
 
   <rect class="chip" x="340" y="356" width="280" height="122" rx="8"/>
   <text class="t" x="354" y="382">Pico 2 + W5500 · today</text>
-  <text class="s" x="354" y="406">the wheel encoder, C++ (Arduino)</text>
+  <text class="s" x="354" y="406">the wheel encoder: C++ today, Rust ready</text>
   <text class="s" x="354" y="426">two IR sensors count the spokes</text>
 
   <rect class="next" x="635" y="356" width="280" height="122" rx="8"/>

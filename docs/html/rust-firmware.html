@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">15 min read · 9 sections</div></header>
+<div class="meta">23 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -55,7 +55,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#the-wheel-encoder-on-a-pico-2-15-oct">The wheel encoder on a Pico 2 (15 Oct)</a><a href="#the-status-display-on-a-pico-2-15-oct">The status display on a Pico 2 (15 Oct)</a><a href="#what-is-untested-on-the-two-new-boards">What is untested on the two new boards</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
 <div class="lead"><p>Ben's direction (10 October 2026): write the firmware and the hardware drivers in Rust,
 not C or C++, even where the ROS nodes above stay in Python. The 2025-26 C++ firmware keeps
 running today's car until a Rust version replaces each board. This page is the plan, and
@@ -132,15 +132,15 @@ stays on Linux.</p>
 <tbody>
 <tr>
 <td>Logic</td>
-<td>the rules: modes, limits, debouncing, the encoder maths</td>
-<td><code>spine-core</code>, <code>aav-inputs</code></td>
+<td>the rules: modes, limits, debouncing, the encoder maths; the wheel encoder's packet; the status display's pages</td>
+<td><code>spine-core</code>, <code>aav-inputs</code>, <code>wheel-encoder</code>, <code>sentinel</code></td>
 <td><code>cargo test</code> on a laptop</td>
 </tr>
 <tr>
 <td>Drivers</td>
-<td>one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver, the MCP2515 CAN controller</td>
-<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, written against <code>embedded-hal</code> 1.0. The W5500 and the display: only if the board keeps them</td>
-<td><code>embedded-hal-mock</code>, which plays the chip on a laptop</td>
+<td>one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver, the MCP2515 CAN controller, the display's LCD</td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>hd44780</code>, written against <code>embedded-hal</code> 1.0. Stock ones where they fit: <code>embassy-net-wiznet</code> (the W5500), <code>max7219</code> (the 8x8 matrix)</td>
+<td><code>embedded-hal-mock</code>, or a fake, which plays the chip on a laptop</td>
 </tr>
 <tr>
 <td>Glue</td>
@@ -151,8 +151,8 @@ stays on Linux.</p>
 <tr>
 <td>Boards</td>
 <td>one small program per board: pins, timers, the framework, then a loop that calls the glue</td>
-<td><code>firmware/spine/boards/pico2</code>: the spine on a Pico 2, for the bench (below)</td>
-<td>it builds in <code>pixi run test</code>; the rest on the bench, then on the car</td>
+<td><code>firmware/spine/boards/</code>: <code>pico2</code> (the spine, for the bench), <code>wheel-encoder-pico2</code>, <code>sentinel-pico2</code> (below)</td>
+<td>they build in <code>pixi run test</code>; the rest on the bench, then on the car</td>
 </tr>
 </tbody>
 </table></div>
@@ -522,13 +522,423 @@ make are in <code>spine-core</code> (<code>firmware/spine/README.md</code>).</p>
 </tbody>
 </table></div>
 </section>
+<section class="card"><h2 id="the-wheel-encoder-on-a-pico-2-15-oct">The wheel encoder on a Pico 2 (15 Oct)</h2>
+<p><code>firmware/spine/boards/wheel-encoder-pico2</code> replaces the 2025-26 C++ wheel encoder
+(<code>Wheel_Encoders</code>, Arduino). Same job, same pins, same packet: the Motor Pi's
+<code>encoder_udp</code> reads it unchanged. <strong>Builds; never flashed.</strong></p>
+<pre class="highlight"><code> IR sensor A ─┐                                         W5500 (SPI0)
+ IR sensor B ─┴─&gt; SpokeSensors ─&gt; Reporter ─&gt; SpokeDelta ─────────────&gt; UDP to 192.168.1.193:10111
+                  (every 1 ms)    (every 100 ms)  4 bytes, big-endian        (encoder_udp, Motor Pi)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The spokes</td>
+<td><code>wheel-encoder</code>'s <code>SpokeSensors</code>, the spine's own rule: a count on A's rising edge, backwards if B rose in the last 20 ms; read every 1 ms by a task that interrupts the rest</td>
+</tr>
+<tr>
+<td>The packet</td>
+<td>every 100 ms: the spokes since the last one, a big-endian int32, byte for byte the 2025-26 one</td>
+</tr>
+<tr>
+<td>Proof of the format</td>
+<td><code>firmware/udp/wheel_encoder_vectors.txt</code>: the Rust crate and <code>aav_legacy</code>'s <code>encoder_counts()</code> both check the same 13 examples</td>
+</tr>
+<tr>
+<td>Ethernet</td>
+<td>the W5500 through <code>embassy-net-wiznet</code> 0.3 and <code>embassy-net</code> 0.9 (Embassy's IP stack); an address from DHCP</td>
+</tr>
+<tr>
+<td>The chip's watchdog</td>
+<td>1 s, fed after each packet</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting (<code>src/main.rs</code>)</th>
+<th>Value</th>
+<th>Same as 2025-26?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MOTOR_PI</code></td>
+<td>192.168.1.193, port 10111</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>LOCAL_PORT</code></td>
+<td>11101</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>MAC</code></td>
+<td>54:65:6d:70:65:6c ("Tempel")</td>
+<td>yes: a DHCP reservation for it still works</td>
+</tr>
+<tr>
+<td><code>SEND_EVERY</code></td>
+<td>100 ms</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>SPOKES_PER_REV</code></td>
+<td>8 (for the logs only)</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<p>Size: 66 kB of flash, 28 kB of RAM (the network's buffers).</p>
+<h3 id="its-pin-map">Its pin map</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pin</th>
+<th>GPIO</th>
+<th>Signal</th>
+<th>Goes to</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>GP2</td>
+<td>sensor A</td>
+<td>the first IR sensor</td>
+<td>its module drives the line: no pull-up</td>
+</tr>
+<tr>
+<td>14</td>
+<td>GP10</td>
+<td>sensor B</td>
+<td>the second IR sensor</td>
+<td>the 2025-26 readme says "GP14"; its code says GP10</td>
+</tr>
+<tr>
+<td>21</td>
+<td>GP16</td>
+<td>SPI0 RX</td>
+<td>W5500 MISO</td>
+<td>50 MHz SPI</td>
+</tr>
+<tr>
+<td>22</td>
+<td>GP17</td>
+<td>chip select</td>
+<td>W5500 CS</td>
+<td>as in 2025-26</td>
+</tr>
+<tr>
+<td>24</td>
+<td>GP18</td>
+<td>SPI0 SCK</td>
+<td>W5500 SCK</td>
+<td></td>
+</tr>
+<tr>
+<td>25</td>
+<td>GP19</td>
+<td>SPI0 TX</td>
+<td>W5500 MOSI</td>
+<td></td>
+</tr>
+<tr>
+<td>26</td>
+<td>GP20</td>
+<td>reset</td>
+<td>W5500 RST</td>
+<td>new: <code>embassy-net-wiznet</code> needs it</td>
+</tr>
+<tr>
+<td>27</td>
+<td>GP21</td>
+<td>interrupt</td>
+<td>W5500 INT</td>
+<td>new: the same</td>
+</tr>
+<tr>
+<td>—</td>
+<td>GP25</td>
+<td>the LED</td>
+<td>on the board</td>
+<td>a slow blink with an address, a fast one without</td>
+</tr>
+</tbody>
+</table></div>
+<p>WIZnet's Ethernet HAT for the Pico wires the W5500 to exactly these GPIOs. Another module
+needs RST and INT wired the same way.</p>
+<h3 id="build-and-flash-it">Build and flash it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Build</td>
+<td><code>pixi run wheel-uf2</code>: writes <code>firmware/spine/boards/wheel-encoder-pico2/wheel-encoder-pico2.uf2</code></td>
+</tr>
+<tr>
+<td>Flash, USB</td>
+<td>hold BOOTSEL, plug in, drag the .uf2 onto the RP2350 drive</td>
+</tr>
+<tr>
+<td>Flash, probe</td>
+<td><code>pixi run wheel-flash</code> (after <code>pixi run spine-tools</code> once): shows the logs too</td>
+</tr>
+<tr>
+<td>Check</td>
+<td>on the Motor Pi, <code>ros2 topic echo /vehicle/odom</code>, or stop <code>encoder_udp</code> and run a UDP listener on port 10111</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-status-display-on-a-pico-2-15-oct">The status display on a Pico 2 (15 Oct)</h2>
+<p><code>firmware/spine/boards/sentinel-pico2</code> replaces the 2025-26 C++ status display, the
+"sentinel" (<code>AAV_cortex</code>, Pico SDK). Same pins, same I2C packet. <strong>Builds; never
+flashed.</strong> Nothing in our stack writes to it yet: the 2025-26 sender isn't in any repo
+(<code>docs/modules.md</code>, question 3).</p>
+<pre class="highlight"><code> a computer ──I2C write, 46 bytes──&gt; Pico 2 at 0x42 ──&gt; sentinel crate ──&gt; 16x2 LCD (13 pages)
+                                          ^                       │──────&gt; 8x8 matrix (MAX7219)
+              knob, its switch, button ───┘                       │──────&gt; 10-LED bar
+                                                                  └──────&gt; buzzer</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The packet</td>
+<td><code>sentinel::telemetry</code>: 46 bytes, little-endian, <code>AA 01</code> first, an XOR checksum last; byte for byte the 2025-26 <code>aav_telemetry_t</code></td>
+</tr>
+<tr>
+<td>The LCD</td>
+<td>an HD44780 16x2, 4-bit on six pins, through our <code>hd44780</code> crate; a line is rewritten only when it changes</td>
+</tr>
+<tr>
+<td>The matrix</td>
+<td>a MAX7219 8x8 through the stock <code>max7219</code> crate: drive mode and direction in turn, a cross for the e-stop, "!" for a lost link</td>
+</tr>
+<tr>
+<td>The LED bar</td>
+<td>the five computers and five ROS nodes that are up</td>
+</tr>
+<tr>
+<td>The knob and the button</td>
+<td>read every 1 ms, above everything else; one click is one page</td>
+</tr>
+<tr>
+<td>The buzzer</td>
+<td>its own task: a beep never holds the display up</td>
+</tr>
+<tr>
+<td>The chip's watchdog</td>
+<td>0.5 s, fed every 5 ms loop</td>
+</tr>
+</tbody>
+</table></div>
+<p>Size: 67 kB of flash, 2.5 kB of RAM.</p>
+<p>What changed from the 2025-26 one: <code>boards/sentinel-pico2/PROVENANCE.md</code>. The pages:
+<code>firmware/spine/crates/sentinel/README.md</code>.</p>
+<h3 id="its-pin-map_1">Its pin map</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pin</th>
+<th>GPIO</th>
+<th>Signal</th>
+<th>Goes to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>GP0</td>
+<td>I2C0 SDA</td>
+<td>the computer that sends the packets (internal pull-up on)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>GP1</td>
+<td>I2C0 SCL</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>4</td>
+<td>GP2</td>
+<td>knob CLK (pull-up)</td>
+<td>the KY-040</td>
+</tr>
+<tr>
+<td>5</td>
+<td>GP3</td>
+<td>knob DT (pull-up)</td>
+<td>the KY-040</td>
+</tr>
+<tr>
+<td>6</td>
+<td>GP4</td>
+<td>knob switch (pull-up)</td>
+<td>the KY-040: pin the page</td>
+</tr>
+<tr>
+<td>7</td>
+<td>GP5</td>
+<td>button (pull-up)</td>
+<td>home</td>
+</tr>
+<tr>
+<td>9</td>
+<td>GP6</td>
+<td>buzzer</td>
+<td>an active buzzer</td>
+</tr>
+<tr>
+<td>10</td>
+<td>GP7</td>
+<td>LCD RS</td>
+<td>the HD44780</td>
+</tr>
+<tr>
+<td>11</td>
+<td>GP8</td>
+<td>LCD E</td>
+<td></td>
+</tr>
+<tr>
+<td>12, 14, 15, 16</td>
+<td>GP9-GP12</td>
+<td>LCD D4-D7</td>
+<td></td>
+</tr>
+<tr>
+<td>17</td>
+<td>GP13</td>
+<td>matrix CS</td>
+<td>the MAX7219</td>
+</tr>
+<tr>
+<td>19</td>
+<td>GP14</td>
+<td>SPI1 SCK</td>
+<td>the MAX7219 CLK, 1 MHz</td>
+</tr>
+<tr>
+<td>20</td>
+<td>GP15</td>
+<td>SPI1 TX</td>
+<td>the MAX7219 DIN</td>
+</tr>
+<tr>
+<td>34, 32, 31, 29, 27, 26, 25, 24, 22, 21</td>
+<td>GP28, 27, 26, 22, 21, 20, 19, 18, 17, 16</td>
+<td>LEDs 0 to 9</td>
+<td>Orin, Motor Pi, Radar Pi, UI Pi, Camera Pi; IMU, radar, lidar, camera, GPS</td>
+</tr>
+<tr>
+<td>—</td>
+<td>GP25</td>
+<td>the LED</td>
+<td>on while the program runs</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="build-and-flash-it_1">Build and flash it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Build</td>
+<td><code>pixi run sentinel-uf2</code>: writes <code>firmware/spine/boards/sentinel-pico2/sentinel-pico2.uf2</code></td>
+</tr>
+<tr>
+<td>Flash, USB</td>
+<td>hold BOOTSEL, plug in, drag the .uf2 onto the RP2350 drive</td>
+</tr>
+<tr>
+<td>Flash, probe</td>
+<td><code>pixi run sentinel-flash</code> (after <code>pixi run spine-tools</code> once)</td>
+</tr>
+<tr>
+<td>Check</td>
+<td>it beeps three times, then once long; the LCD says "Waiting for Pi" and the matrix smiles</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-is-untested-on-the-two-new-boards">What is untested on the two new boards</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Why</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Both, on a real Pico 2</td>
+<td>no board here</td>
+<td>Ben, with a spare Pico 2</td>
+</tr>
+<tr>
+<td>The W5500 through <code>embassy-net-wiznet</code></td>
+<td>its RST and INT pins must be wired (GP20, GP21)</td>
+<td>a WIZnet Ethernet HAT</td>
+</tr>
+<tr>
+<td>DHCP and the packets reaching the Motor Pi</td>
+<td>needs the car's network</td>
+<td>the car</td>
+</tr>
+<tr>
+<td>Sensor B on GP10</td>
+<td>the 2025-26 readme and code disagree</td>
+<td>look at the board</td>
+</tr>
+<tr>
+<td>The sentinel as an I2C device</td>
+<td>embassy-rp's <code>I2cSlave</code> on an RP2350, and the sender</td>
+<td>a Pico 2, and any I2C master (a Pi: <code>i2cset</code>)</td>
+</tr>
+<tr>
+<td>The LCD at 3.3 V</td>
+<td>the HD44780 is often a 5 V part</td>
+<td>the board</td>
+</tr>
+<tr>
+<td>The knob's clicks</td>
+<td>one full cycle a click is the usual KY-040; some give two</td>
+<td>turn it</td>
+</tr>
+</tbody>
+</table></div>
+</section>
 <section class="card"><h2 id="todays-boards-and-their-rust-versions">Today's boards, and their Rust versions</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>Board (2025-26, C++)</th>
 <th>Does</th>
-<th>Rust plan</th>
+<th>Rust version</th>
 </tr>
 </thead>
 <tbody>
@@ -538,17 +948,19 @@ make are in <code>spine-core</code> (<code>firmware/spine/README.md</code>).</p>
 <td>becomes the spine: <code>spine-core</code> plus a board program. For the bench: <code>boards/pico2</code>. On the car: the chip the team picks (Q10–Q13)</td>
 </tr>
 <tr>
-<td><code>wheel_encoder_pico2</code> (Pico 2)</td>
+<td>The wheel encoder (Pico 2)</td>
 <td>counts wheel spokes, sends them over Ethernet</td>
-<td>the Pico 2 spine reads the two sensors itself (<code>spine-board</code>'s <code>SpokeSensors</code>); or Rust on the same Pico 2, with <code>aav-inputs</code> and <code>spine-core</code>'s encoder maths</td>
+<td><code>boards/wheel-encoder-pico2</code> (15 Oct). The C++ is gone from this repo; it stays on GitHub (<code>Wheel_Encoders</code> @ f824e9d805). The spine's Pico 2 can also read the sensors itself</td>
 </tr>
 <tr>
-<td><code>aav_sentinel_pico2</code> (Pico 2)</td>
+<td>The sentinel (Pico 2)</td>
 <td>a status display</td>
-<td>Rust on the same Pico 2, if the display stays</td>
+<td><code>boards/sentinel-pico2</code> (15 Oct). The C++ is gone from this repo; it stays on GitHub (<code>AAV_cortex</code> @ 90de619e52)</td>
 </tr>
 </tbody>
 </table></div>
+<p>The car's two Pico 2s still run the C++ they were flashed with, until someone flashes the
+Rust.</p>
 </section>
 <section class="card"><h2 id="toolchains">Toolchains</h2>
 <div class="table-wrap"><table>
@@ -564,8 +976,8 @@ make are in <code>spine-core</code> (<code>firmware/spine/README.md</code>).</p>
 <tr>
 <td>Pico 2 (RP2350, ARM)</td>
 <td><code>thumbv8m.main-none-eabihf</code></td>
-<td><span class="badge b-works">works</span> all eight crates and the board program build for it; <code>pixi run test</code> checks both</td>
-<td>its USB drive (<code>pixi run spine-uf2</code>), or probe-rs (<code>pixi run spine-tools</code>)</td>
+<td><span class="badge b-works">works</span> all eleven crates and the three board programs build for it; <code>pixi run test</code> checks them</td>
+<td>its USB drive (<code>pixi run spine-uf2</code>, <code>wheel-uf2</code>, <code>sentinel-uf2</code>), or probe-rs (<code>pixi run spine-tools</code>)</td>
 </tr>
 <tr>
 <td>STM32-class ARM (Cortex-M4F, M7)</td>
@@ -646,12 +1058,37 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 </tr>
 <tr>
 <td><code>spine-board</code> (10 Oct)</td>
-<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait. Since 11 Oct, two spoke sensors counted the 2025-26 way</td>
-<td>49</td>
+<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to <code>wheel-encoder</code> on 15 Oct)</td>
+<td>45</td>
+</tr>
+<tr>
+<td><code>wheel-encoder</code> (15 Oct)</td>
+<td>the two spoke sensors, shared by the spine and the wheel encoder; the wheel encoder's UDP packet, checked against examples <code>aav_legacy</code> checks too</td>
+<td>12</td>
+</tr>
+<tr>
+<td><code>sentinel</code> (15 Oct)</td>
+<td>the status display: its I2C packet, 13 LCD pages, the knob, the beeps, the matrix, the link's watchdog</td>
+<td>40</td>
+</tr>
+<tr>
+<td><code>hd44780</code> (15 Oct)</td>
+<td>the display's 16x2 LCD, 4-bit on GPIO pins</td>
+<td>5</td>
 </tr>
 <tr>
 <td><code>boards/pico2</code> (11 Oct)</td>
 <td>the spine on a Pico 2, with Embassy (above)</td>
+<td>builds; <span class="badge b-untested">untested</span> on a board</td>
+</tr>
+<tr>
+<td><code>boards/wheel-encoder-pico2</code> (15 Oct)</td>
+<td>the wheel encoder, with a W5500 (above)</td>
+<td>builds; <span class="badge b-untested">untested</span> on a board</td>
+</tr>
+<tr>
+<td><code>boards/sentinel-pico2</code> (15 Oct)</td>
+<td>the status display (above)</td>
 <td>builds; <span class="badge b-untested">untested</span> on a board</td>
 </tr>
 </tbody>

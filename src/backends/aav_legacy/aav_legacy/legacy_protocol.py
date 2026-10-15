@@ -20,7 +20,9 @@ AAV_uMod_Firmware/src/modules/ros2_handler.cpp:17-80):
 UDP from the wheel encoder (Wheel_Encoders, wiznet.ino:9-19,110-131):
   a 4-byte big-endian int32: signed spoke count since the previous packet,
   about every 100 ms, to port 10111. 8 spokes per wheel revolution. It sends
-  only to the Motor Pi's address, 192.168.1.193 (wiznet.ino:19).
+  only to the Motor Pi's address, 192.168.1.193 (wiznet.ino:19). Its Rust
+  version (firmware/spine/boards/wheel-encoder-pico2) sends the same bytes:
+  both sides check firmware/udp/wheel_encoder_vectors.txt.
 """
 
 from __future__ import annotations

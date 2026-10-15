@@ -27,6 +27,22 @@ commit, "Work in progress".
    `wt/sim-full` is merged (15 Oct).
 4. **Then** the board drivers in Rust, and the raylib HUD.
 
+## 15 Oct: all the C++ to Rust
+
+Ben, 15 Oct: "We should port all cpp to rust", and remove the old.
+
+- [x] **The wheel encoder and the status display Pico 2s, in Rust and Embassy**
+      (`wt/rust-boards`): `boards/wheel-encoder-pico2` (same UDP packet, checked against
+      the same examples as `aav_legacy`) and `boards/sentinel-pico2` (same I2C packet),
+      with their logic in the crates `wheel-encoder`, `sentinel` and `hd44780`. The C++
+      folders are deleted; their source stays on GitHub. *Done 15 Oct: builds, never
+      flashed.*
+- [ ] **Flash them** on spare Pico 2s, then on the car: `pixi run wheel-uf2`,
+      `sentinel-uf2` ([Rust on the hardware](docs/rust-firmware.md)) [[needs-you]].
+- [ ] **Something to feed the sentinel:** its 2025-26 sender isn't in any repo. A small
+      ROS node that writes the packet over I2C (`sentinel::Telemetry::to_packet` shows the
+      bytes), once we know the display is on the car (the audit).
+
 ## 14 Oct: the car in photos, the KEFC CAN plan
 
 Ben sent 32 photos and the KEFC request (CAN bus, wheel speed, steering feedback, new GPS,
@@ -73,8 +89,9 @@ work on." His order, with the work under way:
             real receiver, whose error drifts slowly. Model it as a slow drift, then tune
             `ekf_global` for the real receiver (Q18);
       - [ ] collision_monitor flickers between stop and go at the zone's edge.
-5. [ ] **The board drivers in Rust, ready to try on a board:** the wheel encoder and display
-      Picos (Embassy); the spine's Pico 2 program is written.
+5. [x] **The board drivers in Rust, ready to try on a board:** the wheel encoder and display
+      Picos (Embassy); the spine's Pico 2 program is written. *Done 15 Oct
+      (`wt/rust-boards`): all three build; none flashed.*
 6. [ ] **The HUD in raylib** (Ben, 11 Oct: yes): one Rust program, raylib and rclrs, that is
       also the ROS node. The driving screen first (speed, mode, the e-stop button, the
       camera); the Flutter app stays until it matches. *Started 15 Oct (branch
@@ -130,6 +147,7 @@ Decided ([Decisions](docs/decisions.md)):
       `Ackermann.m` linkage (Q2).
 3. [ ] **All our C++ to Rust:** the IMU (Ben's twin becomes the default, then the C++ goes),
       the radar clustering as a Rust ROS node, the wheel encoder and display Picos (Embassy).
+      *The two Picos: done 15 Oct, builds, never flashed.*
 4. [ ] **Every file in its language's own style:** `cargo fmt --check` and
       `cargo clippy -D warnings` in `pixi run test`.
 5. [ ] **The whole car working, end to end.**

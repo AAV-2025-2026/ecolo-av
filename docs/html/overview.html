@@ -510,14 +510,14 @@ finder).</p>
 <tr>
 <td>The status display (Pico 2)</td>
 <td>2025-26 <code>AAV_cortex</code></td>
-<td><code>firmware/legacy/aav_sentinel_pico2</code></td>
-<td>copied; not wired in</td>
+<td><code>firmware/spine/boards/sentinel-pico2</code>, crates <code>sentinel</code>, <code>hd44780</code></td>
+<td>rewritten in Rust, 15 Oct; builds, never flashed; not wired in</td>
 </tr>
 <tr>
 <td>The wheel encoder (Pico 2)</td>
 <td>2025-26 <code>Wheel_Encoders</code></td>
-<td><code>firmware/legacy/wheel_encoder_pico2</code></td>
-<td>runs today's car</td>
+<td><code>firmware/spine/boards/wheel-encoder-pico2</code>, crate <code>wheel-encoder</code></td>
+<td>rewritten in Rust, 15 Oct; builds, never flashed. The car's board still runs the C++</td>
 </tr>
 <tr>
 <td>Their UART and encoder protocols</td>

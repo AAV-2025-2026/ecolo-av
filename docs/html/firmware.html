@@ -7,7 +7,7 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">12 min read · 8 sections</div></header>
+<div class="meta">13 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -55,7 +55,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#src-vs-firmware">src/ vs firmware/</a><a href="#how-a-chip-joins-ros-2">How a chip joins ROS 2</a><a href="#one-interface-many-drivers">One interface, many drivers</a><a href="#the-spines-job">The spine&#x27;s job</a><a href="#the-can-contract">The CAN contract</a><a href="#firmwarespine-the-rust-code">firmware/spine: the Rust code</a><a href="#todays-firmware-firmwarelegacy">Today&#x27;s firmware: firmware/legacy/</a><a href="#still-to-decide">Still to decide</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#src-vs-firmware">src/ vs firmware/</a><a href="#how-a-chip-joins-ros-2">How a chip joins ROS 2</a><a href="#one-interface-many-drivers">One interface, many drivers</a><a href="#the-spines-job">The spine&#x27;s job</a><a href="#the-can-contract">The CAN contract</a><a href="#firmwarespine-the-rust-code">firmware/spine: the Rust code</a><a href="#the-cars-two-other-pico-2s-in-rust-15-october">The car&#x27;s two other Pico 2s, in Rust (15 October)</a><a href="#todays-firmware-firmwarelegacy">Today&#x27;s firmware: firmware/legacy/</a><a href="#still-to-decide">Still to decide</a></nav>
 <div class="lead"><p>ROS stops at the CAN bus. Below it, a microcontroller called the spine owns the pins, the
 actuators and the watchdog. This page covers what goes where, the CAN contract, and
 what's left to build.</p></div>
@@ -341,7 +341,7 @@ and the glue between them and <code>spine-core</code>, are written too (10 Octob
 <tr>
 <td><code>spine-board</code></td>
 <td>all of them, from <code>spine-core</code>'s outputs, in a safe order; their errors become fault bits</td>
-<td>49</td>
+<td>45</td>
 </tr>
 </tbody>
 </table></div>
@@ -401,6 +401,38 @@ board: <span class="badge b-untested">untested</span>. The car's chip is still Q
 </tbody>
 </table></div>
 </section>
+<section class="card"><h2 id="the-cars-two-other-pico-2s-in-rust-15-october">The car's two other Pico 2s, in Rust (15 October)</h2>
+<p>The 2025-26 wheel encoder and status display were C++. Their Rust versions sit next to the
+spine, in <code>firmware/spine/</code>. Both build and pass their tests; neither has been flashed:
+<span class="badge b-untested">untested</span>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Board</th>
+<th>Does</th>
+<th>Logic (tested on a laptop)</th>
+<th>Build</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>boards/wheel-encoder-pico2</code></td>
+<td>counts wheel spokes; every 100 ms sends the count to the Motor Pi, UDP port 10111, through a W5500</td>
+<td><code>wheel-encoder</code> (12 tests)</td>
+<td><code>pixi run wheel-uf2</code></td>
+</tr>
+<tr>
+<td><code>boards/sentinel-pico2</code></td>
+<td>a status display: an I2C device at 0x42, a 16x2 LCD, an 8x8 matrix, 10 LEDs, a knob, a buzzer</td>
+<td><code>sentinel</code> (40), <code>hd44780</code> (5)</td>
+<td><code>pixi run sentinel-uf2</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The wheel encoder's packet is byte for byte the 2025-26 one: the Rust crate and
+<code>aav_legacy</code> check the same examples (<code>firmware/udp/wheel_encoder_vectors.txt</code>). Pins,
+settings and flashing: <a href="rust-firmware.html">Rust on the hardware</a>.</p>
+</section>
 <section class="card"><h2 id="todays-firmware-firmwarelegacy">Today's firmware: firmware/legacy/</h2>
 <p>Copied unchanged from the 2025-26 team, as the fallback until the spine exists.</p>
 <div class="table-wrap"><table>
@@ -417,18 +449,12 @@ board: <span class="badge b-untested">untested</span>. The car's chip is still Q
 <td>the ESP32 actuator firmware</td>
 <td>UART from the Motor Pi, 13-byte frames: <code>legacy_uart_bridge</code></td>
 </tr>
-<tr>
-<td><code>wheel_encoder_pico2/</code></td>
-<td>the Pico 2 wheel encoder</td>
-<td>UDP port 10111: <code>encoder_udp</code></td>
-</tr>
-<tr>
-<td><code>aav_sentinel_pico2/</code></td>
-<td>a Pico 2 status display</td>
-<td>not wired in</td>
-</tr>
 </tbody>
 </table></div>
+<p>The two Pico 2 programs that were here (the wheel encoder and the status display) were
+replaced by their Rust versions on 15 October, above. Their C++ stays on GitHub:
+<code>AAV-2025-2026/Wheel_Encoders</code> @ f824e9d805, and <code>AAV-2025-2026/AAV_cortex</code> @ 90de619e52
+(<code>AAV_sentinel/</code>).</p>
 <p>Build today's ESP32 firmware with <code>pixi run -e firmware legacy-esp32</code> (PlatformIO), and
 add <code>-t upload</code> to flash it. PlatformIO's downloads, about 1.5 GB, go into
 <code>vendor/platformio/</code>. Without <code>src/secrets.h</code>, the build uses the example's placeholder

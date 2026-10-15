@@ -119,7 +119,7 @@ and the glue between them and `spine-core`, are written too (10 October):
 | `pca9555` | the I/O expander: the direction output | 6 |
 | `ibus` | the FlySky RC receiver | 24 |
 | `mcp2515` | the MCP2515 CAN controller over SPI: a Pico 2 has no CAN of its own | 34 |
-| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits | 49 |
+| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits | 45 |
 
 On a laptop, [Bench mode](bench.md) runs `spine-core` on the CAN frames from `spine_bridge`,
 driving a model car. The plan for all the firmware in Rust is
@@ -146,6 +146,21 @@ Hardware facts from today's car:
 | I2C bus | SDA GPIO 21, SCL GPIO 22 | |
 | RC receiver: FlySky FS-iA6B | iBUS on GPIO 32, 115200 baud | channel 5 override, 2 throttle, 3 steering, 4 mode. Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7) |
 
+## The car's two other Pico 2s, in Rust (15 October)
+
+The 2025-26 wheel encoder and status display were C++. Their Rust versions sit next to the
+spine, in `firmware/spine/`. Both build and pass their tests; neither has been flashed:
+[[untested]].
+
+| Board | Does | Logic (tested on a laptop) | Build |
+|---|---|---|---|
+| `boards/wheel-encoder-pico2` | counts wheel spokes; every 100 ms sends the count to the Motor Pi, UDP port 10111, through a W5500 | `wheel-encoder` (12 tests) | `pixi run wheel-uf2` |
+| `boards/sentinel-pico2` | a status display: an I2C device at 0x42, a 16x2 LCD, an 8x8 matrix, 10 LEDs, a knob, a buzzer | `sentinel` (40), `hd44780` (5) | `pixi run sentinel-uf2` |
+
+The wheel encoder's packet is byte for byte the 2025-26 one: the Rust crate and
+`aav_legacy` check the same examples (`firmware/udp/wheel_encoder_vectors.txt`). Pins,
+settings and flashing: [Rust on the hardware](rust-firmware.md).
+
 ## Today's firmware: firmware/legacy/
 
 Copied unchanged from the 2025-26 team, as the fallback until the spine exists.
@@ -153,8 +168,11 @@ Copied unchanged from the 2025-26 team, as the fallback until the spine exists.
 | Folder | What | Talks to ROS through |
 |---|---|---|
 | `aav_umod_esp32/` | the ESP32 actuator firmware | UART from the Motor Pi, 13-byte frames: `legacy_uart_bridge` |
-| `wheel_encoder_pico2/` | the Pico 2 wheel encoder | UDP port 10111: `encoder_udp` |
-| `aav_sentinel_pico2/` | a Pico 2 status display | not wired in |
+
+The two Pico 2 programs that were here (the wheel encoder and the status display) were
+replaced by their Rust versions on 15 October, above. Their C++ stays on GitHub:
+`AAV-2025-2026/Wheel_Encoders` @ f824e9d805, and `AAV-2025-2026/AAV_cortex` @ 90de619e52
+(`AAV_sentinel/`).
 
 Build today's ESP32 firmware with `pixi run -e firmware legacy-esp32` (PlatformIO), and
 add `-t upload` to flash it. PlatformIO's downloads, about 1.5 GB, go into

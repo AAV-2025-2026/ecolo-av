@@ -1,7 +1,8 @@
-# firmware/spine: the spine's firmware, in Rust
+# firmware/spine: the firmware, in Rust
 
-Everything the spine board runs. Every crate is `no_std` and is tested on a laptop, without
-the board. The board program for a Pico 2, on the bench, is in `boards/pico2`.
+Everything the spine board runs, and the car's two other Pico 2s: the wheel encoder and
+the status display (the sentinel). Every crate is `no_std` and is tested on a laptop,
+without a board. The board programs are in `boards/`.
 
 | Crate | What it is | Tests |
 |---|---|---|
@@ -12,7 +13,10 @@ the board. The board program for a Pico 2, on the bench, is in `boards/pico2`.
 | `pca9555` | the I/O expander (the direction output), over I2C | 6 |
 | `mcp2515` | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters, send, receive, error state | 34 |
 | `ibus` | the FlySky RC receiver's iBUS frames | 24 |
-| `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 49 |
+| `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 45 |
+| `wheel-encoder` (15 Oct) | two spoke sensors, counted the 2025-26 way (the spine and the wheel encoder share it), and the wheel encoder's UDP packet | 12 |
+| `sentinel` (15 Oct) | the status display's logic: its I2C packet, its 13 LCD pages, the knob, the beeps, the matrix | 40 |
+| `hd44780` (15 Oct) | the sentinel's 16x2 character LCD, on six GPIO pins | 5 |
 
 Each crate's own README has its API, and where its behaviour came from in the 2025-26 C++.
 
@@ -36,24 +40,24 @@ cargo build --target thumbv8m.main-none-eabihf -p spine-board   # for the Pico 2
 ```
 
 `pixi run test` also builds every crate for the Pico 2's chip, so a crate that pulls in the
-standard library fails. It builds the board program too, and checks its UF2 file.
+standard library fails. It builds the three board programs too, and checks their UF2 files.
 
 ## Run it without a board
 
 Bench mode runs `spine-core` on a laptop, on the CAN frames from `spine_bridge`, driving a
 model car: `pixi run bench` (`docs/bench.md`).
 
-## The board program: `boards/pico2`
+## The board programs: `boards/`
 
-The spine on a Raspberry Pi Pico 2 (RP2350), with Embassy, for the bench. It implements
-`spine_board::Board` (the clock, the e-stop input, the wheel's spoke sensors, CAN through
-the MCP2515), then calls `SpineBoard::tick` every 10 ms. The car's chip is still Q10-Q13.
+Each is a workspace of its own: it builds only for the RP2350 (a Pico 2), with Embassy.
+The pin maps, the wiring rules, and what is untested: `docs/rust-firmware.md`.
+**None has been flashed yet.**
 
-| Command | Does |
-|---|---|
-| `pixi run spine-uf2` | builds it, and writes `boards/pico2/spine-pico2.uf2`: hold BOOTSEL, plug in, drag it on |
-| `pixi run spine-tools`, then `pixi run spine-flash` | or flash it through a debug probe, and see its logs |
+| Board | Does | Build a UF2 | Flash through a probe |
+|---|---|---|---|
+| `boards/pico2` | the spine, on the bench: `spine-board`, and CAN through an MCP2515, every 10 ms. The car's chip is still Q10-Q13 | `pixi run spine-uf2` | `pixi run spine-flash` |
+| `boards/wheel-encoder-pico2` | the wheel encoder: spokes to the Motor Pi over UDP, through a W5500. Replaces the 2025-26 C++ one | `pixi run wheel-uf2` | `pixi run wheel-flash` |
+| `boards/sentinel-pico2` | the status display: an I2C device at 0x42; an LCD, a matrix, LEDs, a buzzer. Replaces the 2025-26 C++ one | `pixi run sentinel-uf2` | `pixi run sentinel-flash` |
 
-It is a workspace of its own: it builds only for the RP2350. The pin map, the wiring rules
-(the e-stop's among them), and what is untested: `docs/rust-firmware.md`.
-Untested on a real Pico 2: nothing has been flashed yet.
+The UF2 file lands in the board's folder: hold BOOTSEL, plug the Pico 2 in, drag it on.
+Flashing through a probe needs `pixi run spine-tools` once.

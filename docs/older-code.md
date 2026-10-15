@@ -41,7 +41,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 | Odometry | merges a SLAM pose and the IMU into `/odom` | Python ROS 2 | prototype; nothing publishes its input | no | no: robot_localization does this |
 | Real-Time-OS | a QNX layer: command picking, a SQLite logger, body control, a QNX image for a Pi 4 | C, C++; Pi 4 on QNX 8 | prototype: its own README lists the watchdog, e-stop and CAN as not done | no | no: twist_mux, the spine's watchdog and `ros2 bag` cover it ("No QNX" is Tentative, Q23) |
 | User-Interface | the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search | Dart/Flutter, Python ROS 2; the UI Pi | a working demo, on mock data | partly: `hud/`, `src/hud/maincar` | **its place database `ottawa.db` (51 MB)**: the ported app still needs it |
-| Wheel_Encoders | a Pico 2 that counts wheel spokes and sends them over Ethernet | Arduino C++; Pico 2, W5500 | working demo | yes: `firmware/legacy/wheel_encoder_pico2`, `aav_legacy` | its 3D-printed case files |
+| Wheel_Encoders | a Pico 2 that counts wheel spokes and sends them over Ethernet | Arduino C++; Pico 2, W5500 | working demo | yes: rewritten in Rust (`firmware/spine/boards/wheel-encoder-pico2`, 15 Oct), and `aav_legacy` | its 3D-printed case files |
 | joy_teleop_ackerman | joystick to Ackermann commands, with deadman buttons | Python ROS 2 | working | no: stock teleop replaced it; its button map lives on in `aav_teleop` | no |
 | yahboom-IMU | the Yahboom IMU driver | C++ ROS 2; Pi 4 | working | yes, with fixes: `src/sensors/yahboom_imu_cpp` | no |
 

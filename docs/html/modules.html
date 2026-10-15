@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">27 min read · 14 sections</div></header>
+<div class="meta">28 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -55,7 +55,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#how-to-read-a-card">How to read a card</a><a href="#contents">Contents</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers">Drivers</a><a href="#mux-and-ego">Mux and ego</a><a href="#backends">Backends</a><a href="#perception">Perception</a><a href="#hud">HUD</a><a href="#bench">Bench</a><a href="#messages-and-bringup">Messages and bringup</a><a href="#firmware-the-spine-rust">Firmware: the spine (Rust)</a><a href="#firmware-todays-boards-c">Firmware: today&#x27;s boards (C++)</a><a href="#questions-this-page-leaves-open">Questions this page leaves open</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#how-to-read-a-card">How to read a card</a><a href="#contents">Contents</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers">Drivers</a><a href="#mux-and-ego">Mux and ego</a><a href="#backends">Backends</a><a href="#perception">Perception</a><a href="#hud">HUD</a><a href="#bench">Bench</a><a href="#messages-and-bringup">Messages and bringup</a><a href="#firmware-the-spine-rust">Firmware: the spine (Rust)</a><a href="#firmware-the-other-pico-2s-rust">Firmware: the other Pico 2s (Rust)</a><a href="#firmware-todays-boards-c">Firmware: today&#x27;s boards (C++)</a><a href="#questions-this-page-leaves-open">Questions this page leaves open</a></nav>
 <div class="lead"><p>One card for every ROS package in <code>src/</code> and every crate and board in <code>firmware/</code>. Each
 card answers the same nine questions. <a href="packages.html">Packages</a> is the short version, in
 tables; this page goes deeper. Written on 15 October 2026, with the topic names by area
@@ -160,8 +160,12 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <td><code>can/aav.dbc</code>, <code>spine-core</code>, <code>aav-inputs</code>, <code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>spine-board</code>, <code>boards/pico2</code></td>
 </tr>
 <tr>
+<td><a href="#firmware-the-other-pico-2s-rust">Firmware: the other Pico 2s (Rust)</a></td>
+<td><code>wheel-encoder</code>, <code>boards/wheel-encoder-pico2</code>, <code>sentinel</code>, <code>hd44780</code>, <code>boards/sentinel-pico2</code></td>
+</tr>
+<tr>
 <td><a href="#firmware-todays-boards-c">Firmware: today's boards (C++)</a></td>
-<td><code>aav_umod_esp32</code>, <code>wheel_encoder_pico2</code>, <code>aav_sentinel_pico2</code></td>
+<td><code>aav_umod_esp32</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -1558,9 +1562,108 @@ in <code>firmware/spine</code> (part of <code>tools/test.sh</code>). <a href="fi
 <p>Run alone: <code>cd firmware/spine &amp;&amp; cargo test -p &lt;crate&gt;</code>. The board: <code>pixi run spine-uf2</code>.
 Runs on: the spine microcontroller, on CAN (not chosen yet, Q10-Q17).</p>
 </section>
+<section class="card"><h2 id="firmware-the-other-pico-2s-rust">Firmware: the other Pico 2s (Rust)</h2>
+<p>The car's wheel encoder and status display, rewritten in Rust and Embassy on 15 Oct. They
+replace the 2025-26 C++ (<code>Wheel_Encoders</code> @ f824e9d805, <code>AAV_cortex</code> @ 90de619e52), which
+was deleted from this repo then and stays on GitHub. Same crates workspace as the spine.</p>
+<h3 id="boardswheel-encoder-pico2-and-the-crate-wheel-encoder">boards/wheel-encoder-pico2 (and the crate wheel-encoder)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Does</strong></td>
+<td>counts wheel spokes (8 per turn) and sends the count over Ethernet (W5500) every 100 ms</td>
+</tr>
+<tr>
+<td><strong>Why</strong></td>
+<td>the car's only speed sensor today</td>
+</tr>
+<tr>
+<td><strong>Runs on</strong></td>
+<td>a Pico 2 with a W5500 (WIZnet's Ethernet HAT)</td>
+</tr>
+<tr>
+<td><strong>In → out</strong></td>
+<td>two IR spoke sensors → UDP to the Motor Pi (192.168.1.193), port 10111, a big-endian int32: <code>encoder_udp</code></td>
+</tr>
+<tr>
+<td><strong>Origin</strong></td>
+<td>ours, rewritten from the 2025-26 <code>Wheel_Encoders</code>; <code>PROVENANCE.md</code></td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td><span class="badge b-untested">untested</span> builds, never flashed. The car's Pico 2 still runs the C++. One count is about 0.12 m</td>
+</tr>
+<tr>
+<td><strong>Run alone</strong></td>
+<td><code>pixi run wheel-uf2</code>, then drag the file on; <code>cargo test -p wheel-encoder</code></td>
+</tr>
+<tr>
+<td><strong>Test</strong></td>
+<td><code>wheel-encoder</code>: 12 tests, with examples <code>aav_legacy</code> checks too (<code>firmware/udp/wheel_encoder_vectors.txt</code>)</td>
+</tr>
+<tr>
+<td><strong>Read first</strong></td>
+<td><code>crates/wheel-encoder/src/packet.rs</code>, then <code>boards/wheel-encoder-pico2/src/main.rs</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="boardssentinel-pico2-and-the-crates-sentinel-hd44780">boards/sentinel-pico2 (and the crates sentinel, hd44780)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Does</strong></td>
+<td>a status display: a 16x2 LCD with 13 pages, a 10-LED bar, an 8x8 matrix, a knob, a button and a buzzer, fed as an I2C device at 0x42</td>
+</tr>
+<tr>
+<td><strong>Why</strong></td>
+<td>shows the car's state at a glance</td>
+</tr>
+<tr>
+<td><strong>Runs on</strong></td>
+<td>a Pico 2</td>
+</tr>
+<tr>
+<td><strong>In → out</strong></td>
+<td>a 46-byte I2C telemetry packet → the display</td>
+</tr>
+<tr>
+<td><strong>Origin</strong></td>
+<td>ours, rewritten from the 2025-26 <code>AAV_cortex</code> (<code>AAV_sentinel/</code>); <code>PROVENANCE.md</code></td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td><span class="badge b-untested">untested</span> builds, never flashed. Nothing in our stack sends it packets yet (question 3)</td>
+</tr>
+<tr>
+<td><strong>Run alone</strong></td>
+<td><code>pixi run sentinel-uf2</code>; <code>cargo test -p sentinel -p hd44780</code></td>
+</tr>
+<tr>
+<td><strong>Test</strong></td>
+<td><code>sentinel</code>: 40 tests (the packet, every page, the knob, the beeps); <code>hd44780</code>: 5</td>
+</tr>
+<tr>
+<td><strong>Read first</strong></td>
+<td><code>crates/sentinel/README.md</code>, then <code>src/telemetry.rs</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
 <section class="card"><h2 id="firmware-todays-boards-c">Firmware: today's boards (C++)</h2>
-<p>Copied unchanged from the 2025-26 team (<code>AAV_cortex</code> @ 90de619e52 and <code>Wheel_Encoders</code> @
-f824e9d805). They run the car today, until Rust versions replace them.</p>
+<p>Copied unchanged from the 2025-26 team (<code>AAV_cortex</code> @ 90de619e52). It runs the car today,
+until the spine replaces it.</p>
 <h3 id="aav_umod_esp32">aav_umod_esp32</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -1605,100 +1708,6 @@ f824e9d805). They run the car today, until Rust versions replace them.</p>
 <tr>
 <td><strong>Read first</strong></td>
 <td><code>src/modules/ros2_handler/ros2_handler.cpp</code></td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="wheel_encoder_pico2">wheel_encoder_pico2</h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th></th>
-<th></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Does</strong></td>
-<td>counts wheel spokes (8 per turn) and sends the count over Ethernet (W5500) every 100 ms</td>
-</tr>
-<tr>
-<td><strong>Why</strong></td>
-<td>the car's only speed sensor today</td>
-</tr>
-<tr>
-<td><strong>Runs on</strong></td>
-<td>a Pico 2 with a W5500</td>
-</tr>
-<tr>
-<td><strong>In → out</strong></td>
-<td>an IR spoke sensor → UDP to the Motor Pi, port 10111</td>
-</tr>
-<tr>
-<td><strong>Origin</strong></td>
-<td>inherited: 2025-26 <code>Wheel_Encoders</code></td>
-</tr>
-<tr>
-<td><strong>Status</strong></td>
-<td>runs the car today (fouled, says the KEFC request); one count is about 0.12 m</td>
-</tr>
-<tr>
-<td><strong>Run alone</strong></td>
-<td><code>python3 udp_receiver.py</code> on the Motor Pi prints the packets (stop <code>encoder_udp</code> first: one port, one reader)</td>
-</tr>
-<tr>
-<td><strong>Test</strong></td>
-<td>none</td>
-</tr>
-<tr>
-<td><strong>Read first</strong></td>
-<td><code>wiznet.ino</code></td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="aav_sentinel_pico2">aav_sentinel_pico2</h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th></th>
-<th></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Does</strong></td>
-<td>a status display: an LCD, a 10-LED bar, a MAX7219 display and a knob, fed as an I2C device at 0x42</td>
-</tr>
-<tr>
-<td><strong>Why</strong></td>
-<td>shows the car's state at a glance</td>
-</tr>
-<tr>
-<td><strong>Runs on</strong></td>
-<td>a Pico 2; its I2C master is the Pi serial bridge in <code>AAV_cortex</code> (guess)</td>
-</tr>
-<tr>
-<td><strong>In → out</strong></td>
-<td>I2C telemetry (<code>aav_telemetry.hpp</code>) → the display</td>
-</tr>
-<tr>
-<td><strong>Origin</strong></td>
-<td>inherited: 2025-26 <code>AAV_cortex</code></td>
-</tr>
-<tr>
-<td><strong>Status</strong></td>
-<td>not wired into our stack</td>
-</tr>
-<tr>
-<td><strong>Run alone</strong></td>
-<td>Pico SDK and CMake (no pixi task)</td>
-</tr>
-<tr>
-<td><strong>Test</strong></td>
-<td>none</td>
-</tr>
-<tr>
-<td><strong>Read first</strong></td>
-<td><code>aav_telemetry.hpp</code></td>
 </tr>
 </tbody>
 </table></div>

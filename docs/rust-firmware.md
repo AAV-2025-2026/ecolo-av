@@ -31,10 +31,10 @@ stays on Linux.
 
 | Layer | What it is | Where | Tested by |
 |---|---|---|---|
-| Logic | the rules: modes, limits, debouncing, the encoder maths | `spine-core`, `aav-inputs` | `cargo test` on a laptop |
-| Drivers | one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver, the MCP2515 CAN controller | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, written against `embedded-hal` 1.0. The W5500 and the display: only if the board keeps them | `embedded-hal-mock`, which plays the chip on a laptop |
+| Logic | the rules: modes, limits, debouncing, the encoder maths; the wheel encoder's packet; the status display's pages | `spine-core`, `aav-inputs`, `wheel-encoder`, `sentinel` | `cargo test` on a laptop |
+| Drivers | one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver, the MCP2515 CAN controller, the display's LCD | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `hd44780`, written against `embedded-hal` 1.0. Stock ones where they fit: `embassy-net-wiznet` (the W5500), `max7219` (the 8x8 matrix) | `embedded-hal-mock`, or a fake, which plays the chip on a laptop |
 | Glue | spine-core's outputs to the devices, the devices to its inputs, in a safe order | `spine-board`, with a `Board` trait for what each chip must provide | `embedded-hal-mock` |
-| Boards | one small program per board: pins, timers, the framework, then a loop that calls the glue | `firmware/spine/boards/pico2`: the spine on a Pico 2, for the bench (below) | it builds in `pixi run test`; the rest on the bench, then on the car |
+| Boards | one small program per board: pins, timers, the framework, then a loop that calls the glue | `firmware/spine/boards/`: `pico2` (the spine, for the bench), `wheel-encoder-pico2`, `sentinel-pico2` (below) | they build in `pixi run test`; the rest on the bench, then on the car |
 
 `firmware/spine/` is the Cargo workspace for the crates. Each board program in
 `firmware/spine/boards/` is a workspace of its own: it builds only for its chip, with that
@@ -154,19 +154,148 @@ Everything is in Pixi; nothing to install by hand.
 | The e-stop's spare contact | normally closed? (Q6) | the team |
 | A Pico 2 that once had a partition table | an A2 chip refuses drag-and-drop then (RP2350-E10); a new Pico 2 has none | use the probe |
 
+## The wheel encoder on a Pico 2 (15 Oct)
+
+`firmware/spine/boards/wheel-encoder-pico2` replaces the 2025-26 C++ wheel encoder
+(`Wheel_Encoders`, Arduino). Same job, same pins, same packet: the Motor Pi's
+`encoder_udp` reads it unchanged. **Builds; never flashed.**
+
+```
+ IR sensor A ─┐                                         W5500 (SPI0)
+ IR sensor B ─┴─> SpokeSensors ─> Reporter ─> SpokeDelta ─────────────> UDP to 192.168.1.193:10111
+                  (every 1 ms)    (every 100 ms)  4 bytes, big-endian        (encoder_udp, Motor Pi)
+```
+
+| Part | How |
+|---|---|
+| The spokes | `wheel-encoder`'s `SpokeSensors`, the spine's own rule: a count on A's rising edge, backwards if B rose in the last 20 ms; read every 1 ms by a task that interrupts the rest |
+| The packet | every 100 ms: the spokes since the last one, a big-endian int32, byte for byte the 2025-26 one |
+| Proof of the format | `firmware/udp/wheel_encoder_vectors.txt`: the Rust crate and `aav_legacy`'s `encoder_counts()` both check the same 13 examples |
+| Ethernet | the W5500 through `embassy-net-wiznet` 0.3 and `embassy-net` 0.9 (Embassy's IP stack); an address from DHCP |
+| The chip's watchdog | 1 s, fed after each packet |
+
+| Setting (`src/main.rs`) | Value | Same as 2025-26? |
+|---|---|---|
+| `MOTOR_PI` | 192.168.1.193, port 10111 | yes |
+| `LOCAL_PORT` | 11101 | yes |
+| `MAC` | 54:65:6d:70:65:6c ("Tempel") | yes: a DHCP reservation for it still works |
+| `SEND_EVERY` | 100 ms | yes |
+| `SPOKES_PER_REV` | 8 (for the logs only) | yes |
+
+Size: 66 kB of flash, 28 kB of RAM (the network's buffers).
+
+### Its pin map
+
+| Pin | GPIO | Signal | Goes to | Notes |
+|---|---|---|---|---|
+| 4 | GP2 | sensor A | the first IR sensor | its module drives the line: no pull-up |
+| 14 | GP10 | sensor B | the second IR sensor | the 2025-26 readme says "GP14"; its code says GP10 |
+| 21 | GP16 | SPI0 RX | W5500 MISO | 50 MHz SPI |
+| 22 | GP17 | chip select | W5500 CS | as in 2025-26 |
+| 24 | GP18 | SPI0 SCK | W5500 SCK | |
+| 25 | GP19 | SPI0 TX | W5500 MOSI | |
+| 26 | GP20 | reset | W5500 RST | new: `embassy-net-wiznet` needs it |
+| 27 | GP21 | interrupt | W5500 INT | new: the same |
+| — | GP25 | the LED | on the board | a slow blink with an address, a fast one without |
+
+WIZnet's Ethernet HAT for the Pico wires the W5500 to exactly these GPIOs. Another module
+needs RST and INT wired the same way.
+
+### Build and flash it
+
+| Step | Command |
+|---|---|
+| Build | `pixi run wheel-uf2`: writes `firmware/spine/boards/wheel-encoder-pico2/wheel-encoder-pico2.uf2` |
+| Flash, USB | hold BOOTSEL, plug in, drag the .uf2 onto the RP2350 drive |
+| Flash, probe | `pixi run wheel-flash` (after `pixi run spine-tools` once): shows the logs too |
+| Check | on the Motor Pi, `ros2 topic echo /vehicle/odom`, or stop `encoder_udp` and run a UDP listener on port 10111 |
+
+## The status display on a Pico 2 (15 Oct)
+
+`firmware/spine/boards/sentinel-pico2` replaces the 2025-26 C++ status display, the
+"sentinel" (`AAV_cortex`, Pico SDK). Same pins, same I2C packet. **Builds; never
+flashed.** Nothing in our stack writes to it yet: the 2025-26 sender isn't in any repo
+(`docs/modules.md`, question 3).
+
+```
+ a computer ──I2C write, 46 bytes──> Pico 2 at 0x42 ──> sentinel crate ──> 16x2 LCD (13 pages)
+                                          ^                       │──────> 8x8 matrix (MAX7219)
+              knob, its switch, button ───┘                       │──────> 10-LED bar
+                                                                  └──────> buzzer
+```
+
+| Part | How |
+|---|---|
+| The packet | `sentinel::telemetry`: 46 bytes, little-endian, `AA 01` first, an XOR checksum last; byte for byte the 2025-26 `aav_telemetry_t` |
+| The LCD | an HD44780 16x2, 4-bit on six pins, through our `hd44780` crate; a line is rewritten only when it changes |
+| The matrix | a MAX7219 8x8 through the stock `max7219` crate: drive mode and direction in turn, a cross for the e-stop, "!" for a lost link |
+| The LED bar | the five computers and five ROS nodes that are up |
+| The knob and the button | read every 1 ms, above everything else; one click is one page |
+| The buzzer | its own task: a beep never holds the display up |
+| The chip's watchdog | 0.5 s, fed every 5 ms loop |
+
+Size: 67 kB of flash, 2.5 kB of RAM.
+
+What changed from the 2025-26 one: `boards/sentinel-pico2/PROVENANCE.md`. The pages:
+`firmware/spine/crates/sentinel/README.md`.
+
+### Its pin map
+
+| Pin | GPIO | Signal | Goes to |
+|---|---|---|---|
+| 1 | GP0 | I2C0 SDA | the computer that sends the packets (internal pull-up on) |
+| 2 | GP1 | I2C0 SCL | the same |
+| 4 | GP2 | knob CLK (pull-up) | the KY-040 |
+| 5 | GP3 | knob DT (pull-up) | the KY-040 |
+| 6 | GP4 | knob switch (pull-up) | the KY-040: pin the page |
+| 7 | GP5 | button (pull-up) | home |
+| 9 | GP6 | buzzer | an active buzzer |
+| 10 | GP7 | LCD RS | the HD44780 |
+| 11 | GP8 | LCD E | |
+| 12, 14, 15, 16 | GP9-GP12 | LCD D4-D7 | |
+| 17 | GP13 | matrix CS | the MAX7219 |
+| 19 | GP14 | SPI1 SCK | the MAX7219 CLK, 1 MHz |
+| 20 | GP15 | SPI1 TX | the MAX7219 DIN |
+| 34, 32, 31, 29, 27, 26, 25, 24, 22, 21 | GP28, 27, 26, 22, 21, 20, 19, 18, 17, 16 | LEDs 0 to 9 | Orin, Motor Pi, Radar Pi, UI Pi, Camera Pi; IMU, radar, lidar, camera, GPS |
+| — | GP25 | the LED | on while the program runs |
+
+### Build and flash it
+
+| Step | Command |
+|---|---|
+| Build | `pixi run sentinel-uf2`: writes `firmware/spine/boards/sentinel-pico2/sentinel-pico2.uf2` |
+| Flash, USB | hold BOOTSEL, plug in, drag the .uf2 onto the RP2350 drive |
+| Flash, probe | `pixi run sentinel-flash` (after `pixi run spine-tools` once) |
+| Check | it beeps three times, then once long; the LCD says "Waiting for Pi" and the matrix smiles |
+
+## What is untested on the two new boards
+
+| What | Why | Next |
+|---|---|---|
+| Both, on a real Pico 2 | no board here | Ben, with a spare Pico 2 |
+| The W5500 through `embassy-net-wiznet` | its RST and INT pins must be wired (GP20, GP21) | a WIZnet Ethernet HAT |
+| DHCP and the packets reaching the Motor Pi | needs the car's network | the car |
+| Sensor B on GP10 | the 2025-26 readme and code disagree | look at the board |
+| The sentinel as an I2C device | embassy-rp's `I2cSlave` on an RP2350, and the sender | a Pico 2, and any I2C master (a Pi: `i2cset`) |
+| The LCD at 3.3 V | the HD44780 is often a 5 V part | the board |
+| The knob's clicks | one full cycle a click is the usual KY-040; some give two | turn it |
+
 ## Today's boards, and their Rust versions
 
-| Board (2025-26, C++) | Does | Rust plan |
+| Board (2025-26, C++) | Does | Rust version |
 |---|---|---|
 | `aav_umod_esp32` (ESP32) | drives the actuators: steering and brake (Jrk G2), throttle (DAC), the RC receiver | becomes the spine: `spine-core` plus a board program. For the bench: `boards/pico2`. On the car: the chip the team picks (Q10–Q13) |
-| `wheel_encoder_pico2` (Pico 2) | counts wheel spokes, sends them over Ethernet | the Pico 2 spine reads the two sensors itself (`spine-board`'s `SpokeSensors`); or Rust on the same Pico 2, with `aav-inputs` and `spine-core`'s encoder maths |
-| `aav_sentinel_pico2` (Pico 2) | a status display | Rust on the same Pico 2, if the display stays |
+| The wheel encoder (Pico 2) | counts wheel spokes, sends them over Ethernet | `boards/wheel-encoder-pico2` (15 Oct). The C++ is gone from this repo; it stays on GitHub (`Wheel_Encoders` @ f824e9d805). The spine's Pico 2 can also read the sensors itself |
+| The sentinel (Pico 2) | a status display | `boards/sentinel-pico2` (15 Oct). The C++ is gone from this repo; it stays on GitHub (`AAV_cortex` @ 90de619e52) |
+
+The car's two Pico 2s still run the C++ they were flashed with, until someone flashes the
+Rust.
 
 ## Toolchains
 
 | Chip | Rust target | In Pixi? | Flashing |
 |---|---|---|---|
-| Pico 2 (RP2350, ARM) | `thumbv8m.main-none-eabihf` | [[works]] all eight crates and the board program build for it; `pixi run test` checks both | its USB drive (`pixi run spine-uf2`), or probe-rs (`pixi run spine-tools`) |
+| Pico 2 (RP2350, ARM) | `thumbv8m.main-none-eabihf` | [[works]] all eleven crates and the three board programs build for it; `pixi run test` checks them | its USB drive (`pixi run spine-uf2`, `wheel-uf2`, `sentinel-uf2`), or probe-rs (`pixi run spine-tools`) |
 | STM32-class ARM (Cortex-M4F, M7) | `thumbv7em-none-eabihf` | [[works]] the crates build for it too | `probe-rs` |
 | ESP32-C3, C6 (RISC-V) | `riscv32imc` / `riscv32imac` | [[missing]] not in Pixi; `rustup` has them | `espflash` |
 | Classic ESP32 (today's board) | Xtensa | [[missing]] needs Espressif's `espup` installer | `espflash` |
@@ -187,8 +316,13 @@ Everything is in Pixi; nothing to install by hand.
 | `pca9555` (10 Oct) | the 16-bit I/O expander: the direction output | 6 |
 | `ibus` (10 Oct) | the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's `RcInput`, with the gear switch's brake position | 24 |
 | `mcp2515` (11 Oct) | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters for our IDs, send, receive, error state and bus-off | 34 |
-| `spine-board` (10 Oct) | the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The `Board` trait. Since 11 Oct, two spoke sensors counted the 2025-26 way | 49 |
+| `spine-board` (10 Oct) | the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The `Board` trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to `wheel-encoder` on 15 Oct) | 45 |
+| `wheel-encoder` (15 Oct) | the two spoke sensors, shared by the spine and the wheel encoder; the wheel encoder's UDP packet, checked against examples `aav_legacy` checks too | 12 |
+| `sentinel` (15 Oct) | the status display: its I2C packet, 13 LCD pages, the knob, the beeps, the matrix, the link's watchdog | 40 |
+| `hd44780` (15 Oct) | the display's 16x2 LCD, 4-bit on GPIO pins | 5 |
 | `boards/pico2` (11 Oct) | the spine on a Pico 2, with Embassy (above) | builds; [[untested]] on a board |
+| `boards/wheel-encoder-pico2` (15 Oct) | the wheel encoder, with a W5500 (above) | builds; [[untested]] on a board |
+| `boards/sentinel-pico2` (15 Oct) | the status display (above) | builds; [[untested]] on a board |
 
 All are `no_std`, pass `clippy` and `rustfmt`, and build for the Pico 2 and STM32 targets.
 `tools/elf2uf2.py` has 24 tests of its own.

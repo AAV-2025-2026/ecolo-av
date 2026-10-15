@@ -37,7 +37,8 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | [Bench](#bench) | `aav_spine_sim`, `aav_bench` |
 | [Messages and bringup](#messages-and-bringup) | `aav_interfaces`, `aav_bringup` |
 | [Firmware: the spine (Rust)](#firmware-the-spine-rust) | `can/aav.dbc`, `spine-core`, `aav-inputs`, `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board`, `boards/pico2` |
-| [Firmware: today's boards (C++)](#firmware-todays-boards-c) | `aav_umod_esp32`, `wheel_encoder_pico2`, `aav_sentinel_pico2` |
+| [Firmware: the other Pico 2s (Rust)](#firmware-the-other-pico-2s-rust) | `wheel-encoder`, `boards/wheel-encoder-pico2`, `sentinel`, `hd44780`, `boards/sentinel-pico2` |
+| [Firmware: today's boards (C++)](#firmware-todays-boards-c) | `aav_umod_esp32` |
 
 ## Sensors
 
@@ -465,10 +466,44 @@ in `firmware/spine` (part of `tools/test.sh`). [Firmware](firmware.md) and
 Run alone: `cd firmware/spine && cargo test -p <crate>`. The board: `pixi run spine-uf2`.
 Runs on: the spine microcontroller, on CAN (not chosen yet, Q10-Q17).
 
+## Firmware: the other Pico 2s (Rust)
+
+The car's wheel encoder and status display, rewritten in Rust and Embassy on 15 Oct. They
+replace the 2025-26 C++ (`Wheel_Encoders` @ f824e9d805, `AAV_cortex` @ 90de619e52), which
+was deleted from this repo then and stays on GitHub. Same crates workspace as the spine.
+
+### boards/wheel-encoder-pico2 (and the crate wheel-encoder)
+
+| | |
+|---|---|
+| **Does** | counts wheel spokes (8 per turn) and sends the count over Ethernet (W5500) every 100 ms |
+| **Why** | the car's only speed sensor today |
+| **Runs on** | a Pico 2 with a W5500 (WIZnet's Ethernet HAT) |
+| **In → out** | two IR spoke sensors → UDP to the Motor Pi (192.168.1.193), port 10111, a big-endian int32: `encoder_udp` |
+| **Origin** | ours, rewritten from the 2025-26 `Wheel_Encoders`; `PROVENANCE.md` |
+| **Status** | [[untested]] builds, never flashed. The car's Pico 2 still runs the C++. One count is about 0.12 m |
+| **Run alone** | `pixi run wheel-uf2`, then drag the file on; `cargo test -p wheel-encoder` |
+| **Test** | `wheel-encoder`: 12 tests, with examples `aav_legacy` checks too (`firmware/udp/wheel_encoder_vectors.txt`) |
+| **Read first** | `crates/wheel-encoder/src/packet.rs`, then `boards/wheel-encoder-pico2/src/main.rs` |
+
+### boards/sentinel-pico2 (and the crates sentinel, hd44780)
+
+| | |
+|---|---|
+| **Does** | a status display: a 16x2 LCD with 13 pages, a 10-LED bar, an 8x8 matrix, a knob, a button and a buzzer, fed as an I2C device at 0x42 |
+| **Why** | shows the car's state at a glance |
+| **Runs on** | a Pico 2 |
+| **In → out** | a 46-byte I2C telemetry packet → the display |
+| **Origin** | ours, rewritten from the 2025-26 `AAV_cortex` (`AAV_sentinel/`); `PROVENANCE.md` |
+| **Status** | [[untested]] builds, never flashed. Nothing in our stack sends it packets yet (question 3) |
+| **Run alone** | `pixi run sentinel-uf2`; `cargo test -p sentinel -p hd44780` |
+| **Test** | `sentinel`: 40 tests (the packet, every page, the knob, the beeps); `hd44780`: 5 |
+| **Read first** | `crates/sentinel/README.md`, then `src/telemetry.rs` |
+
 ## Firmware: today's boards (C++)
 
-Copied unchanged from the 2025-26 team (`AAV_cortex` @ 90de619e52 and `Wheel_Encoders` @
-f824e9d805). They run the car today, until Rust versions replace them.
+Copied unchanged from the 2025-26 team (`AAV_cortex` @ 90de619e52). It runs the car today,
+until the spine replaces it.
 
 ### aav_umod_esp32
 
@@ -483,34 +518,6 @@ f824e9d805). They run the car today, until Rust versions replace them.
 | **Run alone** | `pixi run -e firmware legacy-esp32` builds it; don't flash before the audit |
 | **Test** | none |
 | **Read first** | `src/modules/ros2_handler/ros2_handler.cpp` |
-
-### wheel_encoder_pico2
-
-| | |
-|---|---|
-| **Does** | counts wheel spokes (8 per turn) and sends the count over Ethernet (W5500) every 100 ms |
-| **Why** | the car's only speed sensor today |
-| **Runs on** | a Pico 2 with a W5500 |
-| **In → out** | an IR spoke sensor → UDP to the Motor Pi, port 10111 |
-| **Origin** | inherited: 2025-26 `Wheel_Encoders` |
-| **Status** | runs the car today (fouled, says the KEFC request); one count is about 0.12 m |
-| **Run alone** | `python3 udp_receiver.py` on the Motor Pi prints the packets (stop `encoder_udp` first: one port, one reader) |
-| **Test** | none |
-| **Read first** | `wiznet.ino` |
-
-### aav_sentinel_pico2
-
-| | |
-|---|---|
-| **Does** | a status display: an LCD, a 10-LED bar, a MAX7219 display and a knob, fed as an I2C device at 0x42 |
-| **Why** | shows the car's state at a glance |
-| **Runs on** | a Pico 2; its I2C master is the Pi serial bridge in `AAV_cortex` (guess) |
-| **In → out** | I2C telemetry (`aav_telemetry.hpp`) → the display |
-| **Origin** | inherited: 2025-26 `AAV_cortex` |
-| **Status** | not wired into our stack |
-| **Run alone** | Pico SDK and CMake (no pixi task) |
-| **Test** | none |
-| **Read first** | `aav_telemetry.hpp` |
 
 ## Questions this page leaves open
 

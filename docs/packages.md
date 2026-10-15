@@ -124,11 +124,14 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 | `spine/crates/pca9555` | the I/O expander (direction) over I2C | [[works]] 6 tests, against mocks |
 | `spine/crates/ibus` | the FlySky RC receiver's protocol | [[works]] 24 tests |
 | `spine/crates/mcp2515` | the MCP2515 CAN controller over SPI, since a Pico 2 has no CAN | [[works]] 34 tests, against mocks |
-| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait | [[works]] 49 tests, against mocks |
+| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait | [[works]] 45 tests, against mocks |
 | `spine/boards/pico2` | the spine's board program for a Pico 2 (Embassy): it implements `Board`, with a 100 ms hardware watchdog | [[untested]] builds, never flashed. The car's chip is Q10-Q13 |
+| `spine/crates/wheel-encoder` | the spoke sensors (shared with the spine) and the wheel encoder's UDP packet | [[works]] 12 tests, with examples `aav_legacy` checks too |
+| `spine/crates/sentinel` | the status display's logic: its I2C packet, 13 LCD pages, the knob, the beeps | [[works]] 40 tests |
+| `spine/crates/hd44780` | a 16x2 character LCD on six GPIO pins | [[works]] 5 tests, against a fake |
+| `spine/boards/wheel-encoder-pico2` | the wheel encoder in Rust: spokes to the Motor Pi over UDP, through a W5500 | [[untested]] builds, never flashed |
+| `spine/boards/sentinel-pico2` | the status display in Rust: an I2C device at 0x42 | [[untested]] builds, never flashed; not wired in |
 | `legacy/aav_umod_esp32` | the 2025-26 ESP32 that drives today's actuators | runs the car today: no timeout, an update page with no password |
-| `legacy/wheel_encoder_pico2` | a Pico 2 that counts wheel spokes and sends them over UDP | runs the car today |
-| `legacy/aav_sentinel_pico2` | a Pico 2 status display | not wired in |
 
 ## The HUD
 

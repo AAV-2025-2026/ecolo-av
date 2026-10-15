@@ -595,7 +595,7 @@ Only one runs at a time.</p>
 <tr>
 <td><code>spine/crates/spine-board</code></td>
 <td>the glue: spine-core's outputs to the devices, the devices to its inputs, and the <code>Board</code> trait</td>
-<td><span class="badge b-works">works</span> 49 tests, against mocks</td>
+<td><span class="badge b-works">works</span> 45 tests, against mocks</td>
 </tr>
 <tr>
 <td><code>spine/boards/pico2</code></td>
@@ -603,19 +603,34 @@ Only one runs at a time.</p>
 <td><span class="badge b-untested">untested</span> builds, never flashed. The car's chip is Q10-Q13</td>
 </tr>
 <tr>
+<td><code>spine/crates/wheel-encoder</code></td>
+<td>the spoke sensors (shared with the spine) and the wheel encoder's UDP packet</td>
+<td><span class="badge b-works">works</span> 12 tests, with examples <code>aav_legacy</code> checks too</td>
+</tr>
+<tr>
+<td><code>spine/crates/sentinel</code></td>
+<td>the status display's logic: its I2C packet, 13 LCD pages, the knob, the beeps</td>
+<td><span class="badge b-works">works</span> 40 tests</td>
+</tr>
+<tr>
+<td><code>spine/crates/hd44780</code></td>
+<td>a 16x2 character LCD on six GPIO pins</td>
+<td><span class="badge b-works">works</span> 5 tests, against a fake</td>
+</tr>
+<tr>
+<td><code>spine/boards/wheel-encoder-pico2</code></td>
+<td>the wheel encoder in Rust: spokes to the Motor Pi over UDP, through a W5500</td>
+<td><span class="badge b-untested">untested</span> builds, never flashed</td>
+</tr>
+<tr>
+<td><code>spine/boards/sentinel-pico2</code></td>
+<td>the status display in Rust: an I2C device at 0x42</td>
+<td><span class="badge b-untested">untested</span> builds, never flashed; not wired in</td>
+</tr>
+<tr>
 <td><code>legacy/aav_umod_esp32</code></td>
 <td>the 2025-26 ESP32 that drives today's actuators</td>
 <td>runs the car today: no timeout, an update page with no password</td>
-</tr>
-<tr>
-<td><code>legacy/wheel_encoder_pico2</code></td>
-<td>a Pico 2 that counts wheel spokes and sends them over UDP</td>
-<td>runs the car today</td>
-</tr>
-<tr>
-<td><code>legacy/aav_sentinel_pico2</code></td>
-<td>a Pico 2 status display</td>
-<td>not wired in</td>
 </tr>
 </tbody>
 </table></div>

@@ -115,8 +115,8 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | The HUD's back end (Flask) | 2025-26 `User-Interface` | `src/hud/aav_hud` | ported to our topics; publishes `/safety/estop`. 98 tests |
 | The HUD app (Flutter) and its boot scripts | 2025-26 `User-Interface` | `hud/` | changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen |
 | The ESP32 actuator firmware (C++) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_umod_esp32` | runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers |
-| The status display (Pico 2) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_sentinel_pico2` | copied; not wired in |
-| The wheel encoder (Pico 2) | 2025-26 `Wheel_Encoders` | `firmware/legacy/wheel_encoder_pico2` | runs today's car |
+| The status display (Pico 2) | 2025-26 `AAV_cortex` | `firmware/spine/boards/sentinel-pico2`, crates `sentinel`, `hd44780` | rewritten in Rust, 15 Oct; builds, never flashed; not wired in |
+| The wheel encoder (Pico 2) | 2025-26 `Wheel_Encoders` | `firmware/spine/boards/wheel-encoder-pico2`, crate `wheel-encoder` | rewritten in Rust, 15 Oct; builds, never flashed. The car's board still runs the C++ |
 | Their UART and encoder protocols | 2025-26 `AAV_cortex`, `Wheel_Encoders` | `aav_legacy` | rewritten in Python |
 | Lane keeping | 2025-26 `Lane_Detection_ROS2` | `src/perception/aav_lane_geometry` | brought in: a driver on `/drivers/ai/cmd_vel` |
 | Radar clustering | 2025-26 `Nav_Radar` | `src/perception/aav_object_detection` | brought in: works on the pretend radar |
