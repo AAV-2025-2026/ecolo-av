@@ -19,3 +19,9 @@ def test_the_road_world_adds_cameras_and_radar_and_lidar_when_asked():
 def test_every_topic_is_absolute_and_in_an_area():
     for _, topic in sources.simulated(rendered=True, lidar=True):
         assert topic.split('/')[1] in ('vehicle', 'sensors'), topic
+
+
+def test_radar_false_leaves_only_the_radar_out():
+    got = names(sources.simulated(rendered=True, lidar=True, radar=False))
+    assert 'radar' not in got
+    assert 'camera_front_left' in got and 'lidar' in got

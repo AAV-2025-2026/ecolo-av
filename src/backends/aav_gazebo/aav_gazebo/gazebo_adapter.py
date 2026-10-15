@@ -8,6 +8,8 @@ Subscribes  ego/actuator_cmd      ackermann_msgs/AckermannDriveStamped
             gazebo/navsat         sensor_msgs/NavSatFix (bridged NavSat sensor)
             gazebo/radar/points   sensor_msgs/PointCloud2, best effort (bridged lidar: the
                                   radar stand-in), only with radar:=true
+            gazebo/camera/front_left/image_raw  sensor_msgs/Image (bridged), only with
+                                  camera_relay:=true (gazebo.launch.py faults:=true)
 Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd_vel), at
                                   rate_hz: the actuator model's speed and steering
             vehicle/odom          nav_msgs/Odometry, twist only, like aav_spine
@@ -23,8 +25,13 @@ Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd
             sensors/radar/points  sensor_msgs/PointCloud2, best effort, in radar_link: only
                                   the rays that hit something, with the TI driver's fields
                                   (radar.py), only with radar:=true
+            sensors/camera/front_left/image_raw  sensor_msgs/Image, only with camera_relay
             system/source         aav_interfaces/DataSource, latched: everything above, and
                                   the cameras and lidar Gazebo renders, is SIM (sources.py)
+
+Sensor faults on purpose (faults.py, READ-ME-FULL-SIMULATION.md step 6): the parameters
+fault.gps, fault.imu, fault.odom, fault.radar and fault.camera (ok, stop, freeze, nan,
+jump), set while it runs (pixi run sim-fault gps stop), change what those topics carry.
 
 The actuator model (actuator_model.py, READ-ME-FULL-SIMULATION.md step 3) sits between
 ego and Gazebo: a stand-in for the spine's speed loop turns ego's speed into throttle and
@@ -35,7 +42,8 @@ Gazebo's own limits (aav.gazebo.xacro) are wide, so the model, not Gazebo, limit
 /ego/actuator_cmd for cmd_timeout s: the target speed drops to 0, as the spine's watchdog.
 
 Parameters  actuator_model (true), rate_hz (50), cmd_timeout (0.2 s), wheelbase,
-            wheel_radius, radar, lidar, and the sensors' noise
+            wheel_radius, rendered (the world renders cameras), radar, lidar,
+            camera_relay (false), fault.<sensor> (ok), and the sensors' noise
 
 So ekf_local, ekf_global, navsat_transform and imu_filter_madgwick run in simulation
 with the same configs as on the car, and radar_clusters, Nav2's costmap and
@@ -49,23 +57,51 @@ import random
 import signal
 
 from aav_description import vehicle
-from aav_gazebo import imu, radar, sources, wheels
+from aav_gazebo import faults, imu, radar, sources, wheels
 from aav_gazebo.actuator_model import ActuatorConfig, Actuators, Ideal
 from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
 from aav_interfaces.msg import WheelSpeeds
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
+from rcl_interfaces.msg import SetParametersResult
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import Imu, JointState, NavSatFix, NavSatStatus, PointCloud2, PointField
+from sensor_msgs.msg import Image, Imu, JointState, NavSatFix, NavSatStatus, PointCloud2
+from sensor_msgs.msg import PointField
 from sensor_msgs_py import point_cloud2
 
 # The TI driver's fields: x, y, z, intensity, velocity, float32 each.
 RADAR_FIELDS = [PointField(name=n, offset=4 * i, datatype=PointField.FLOAT32, count=1)
                 for i, n in enumerate(radar.FIELDS)]
+
+
+NAN = float('nan')
+
+
+def odom_nan(msg):
+    t = msg.twist.twist
+    t.linear.x = t.angular.z = NAN
+
+
+def wheels_nan(msg):
+    msg.front_left = msg.front_right = msg.rear_left = msg.rear_right = NAN
+
+
+def imu_nan(msg):
+    for v in (msg.angular_velocity, msg.linear_acceleration):
+        v.x = v.y = v.z = NAN
+
+
+def gps_nan(msg):
+    msg.latitude = msg.longitude = msg.altitude = NAN
+
+
+def gps_jump(msg):
+    msg.latitude = faults.jumped(msg.latitude)
 
 
 def turn_rate(speed, steering, wheelbase):
@@ -124,8 +160,49 @@ class GazeboAdapter(Node):
                                                    qos_profile_sensor_data)
             self.create_subscription(PointCloud2, 'gazebo/radar/points', self.on_radar,
                                      qos_profile_sensor_data)
-        self.announce(sources.simulated(rendered=self.get_parameter('radar').value,
-                                        lidar=lidar))
+        rendered = self.declare_parameter('rendered', False).value
+        self.announce(sources.simulated(rendered=rendered, lidar=lidar,
+                                        radar=self.get_parameter('radar').value))
+        # Faults on purpose: one per stream, set together per sensor (wheels go with odom).
+        self.faults = {'gps': [faults.Fault('gps')], 'imu': [faults.Fault('imu')],
+                       'odom': [faults.Fault('odom'), faults.Fault('odom')],
+                       'radar': [faults.Fault('radar')], 'camera': [faults.Fault('camera')]}
+        for sensor in self.faults:
+            self.declare_parameter(f'fault.{sensor}', 'ok')
+        self.add_on_set_parameters_callback(self.on_fault)
+        if self.declare_parameter('camera_relay', False).value:
+            # The front left picture, through the camera's fault. Reliable, the newest
+            # only: best effort loses whole pictures over UDP (docs/mac.md).
+            picture = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
+            self.camera_pub = self.create_publisher(
+                Image, 'sensors/camera/front_left/image_raw', picture)
+            self.create_subscription(Image, 'gazebo/camera/front_left/image_raw',
+                                     self.on_camera, picture)
+
+    def on_fault(self, params):
+        for p in params:
+            if not p.name.startswith('fault.'):
+                continue
+            sensor = p.name[len('fault.'):]
+            mode = p.value if p.type_ == Parameter.Type.STRING else repr(p.value)
+            why = faults.check(sensor, mode)
+            if why is not None:
+                return SetParametersResult(successful=False, reason=why)
+            for fault in self.faults[sensor]:
+                fault.switch(mode)
+            # One call per severity: rclpy refuses a call site whose severity changes.
+            if mode == 'ok':
+                self.get_logger().info(f'fault cleared: {sensor} ok')
+            else:
+                self.get_logger().warning(f'FAULT ON PURPOSE: {sensor} {mode}')
+        return SetParametersResult(successful=True)
+
+    def faulty(self, sensor, msg, nan=None, jump=None, stream=0):
+        """Return msg through the sensor's fault (None: send nothing), stamped as msg."""
+        out = self.faults[sensor][stream].apply(msg, nan=nan, jump=jump)
+        if out is not None and out is not msg:
+            out.header.stamp = msg.header.stamp     # a frozen sensor still looks alive
+        return out
 
     def announce(self, entries):
         """Say once, latched, that all of this is simulated (/system/source)."""
@@ -177,7 +254,9 @@ class GazeboAdapter(Node):
                         direction_measured=True)
         w.header.stamp = msg.header.stamp
         w.header.frame_id = 'base_link'
-        self.wheels_pub.publish(w)
+        w = self.faulty('odom', w, nan=wheels_nan, stream=1)
+        if w is not None:
+            self.wheels_pub.publish(w)
 
     def on_odom(self, msg):
         odom = Odometry()
@@ -195,7 +274,9 @@ class GazeboAdapter(Node):
         cov[35] = 0.02
         odom.twist.covariance = cov
         odom.pose.covariance = [1e3 if i % 7 == 0 else 0.0 for i in range(36)]
-        self.odom_pub.publish(odom)
+        odom = self.faulty('odom', odom, nan=odom_nan)
+        if odom is not None:
+            self.odom_pub.publish(odom)
 
         s = VehicleStatus()
         s.header.stamp = msg.header.stamp
@@ -223,7 +304,9 @@ class GazeboAdapter(Node):
         for i in (0, 4, 8):
             msg.angular_velocity_covariance[i] = self.gyro_var
             msg.linear_acceleration_covariance[i] = self.accel_var
-        self.imu_pub.publish(msg)
+        msg = self.faulty('imu', msg, nan=imu_nan)
+        if msg is not None:
+            self.imu_pub.publish(msg)
 
     def on_navsat(self, msg):
         msg.header.frame_id = 'gps_link'
@@ -232,13 +315,22 @@ class GazeboAdapter(Node):
                                    0.0, self.gps_var, 0.0,
                                    0.0, 0.0, 4 * self.gps_var]
         msg.position_covariance_type = NavSatFix.COVARIANCE_TYPE_DIAGONAL_KNOWN
-        self.fix_pub.publish(msg)
+        msg = self.faulty('gps', msg, nan=gps_nan, jump=gps_jump)
+        if msg is not None:
+            self.fix_pub.publish(msg)
 
     def on_radar(self, msg):
         xyz = point_cloud2.read_points_numpy(msg, field_names=('x', 'y', 'z'))
         points = radar.ti_points(radar.returns(xyz, self.radar_range), self.speed)
         msg.header.frame_id = 'radar_link'
-        self.radar_pub.publish(point_cloud2.create_cloud(msg.header, RADAR_FIELDS, points))
+        out = self.faulty('radar', point_cloud2.create_cloud(msg.header, RADAR_FIELDS, points))
+        if out is not None:
+            self.radar_pub.publish(out)
+
+    def on_camera(self, msg):
+        out = self.faulty('camera', msg)
+        if out is not None:
+            self.camera_pub.publish(out)
 
 
 def main(args=None):

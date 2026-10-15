@@ -38,7 +38,7 @@ use hud_core::{
 use rclrs::*;
 use ros_env::aav_interfaces::msg::{DataSource, VehicleStatus as VehicleStatusMsg};
 use ros_env::sensor_msgs::msg::{BatteryState, Image, NavSatFix};
-use ros_env::std_msgs::msg::Bool;
+use ros_env::std_msgs::msg::{Bool, String as StringMsg};
 
 /// How many updates may wait for the screen. More are dropped: the screen is stuck,
 /// and news that old is no use.
@@ -189,6 +189,16 @@ fn spin(
             send(&tx, update)
         }
     })?;
+
+    let _watchdog = node.create_subscription(
+        config
+            .topic(Topic::Watchdog)
+            .qos(QoSProfile::topics_default().reliable().keep_last(1)),
+        {
+            let tx = tx.clone();
+            move |m: StringMsg| send(&tx, Update::Watchdog(m.data))
+        },
+    )?;
 
     let latched = QoSProfile::topics_default()
         .reliable()

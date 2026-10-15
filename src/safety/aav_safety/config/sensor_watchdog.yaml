@@ -1,0 +1,53 @@
+# sensor_watchdog: every input it knows, and how to watch each (aav_safety watchdog.py says
+# what each check means). The launch file picks which inputs run (`inputs`, passed by
+# watchdog.launch.py: not set here, or this file's value would win over the launch's;
+# docs/conventions.md, "A launch override that silently loses").
+#
+#   stop: true   the input is one Nav2 or the AI slot needs: while it isn't OK, twist_mux's
+#                sensors lock holds them (people and tests still drive)
+#   stop: false  only said loudly: the log, /diagnostics, the HUD
+#
+# The ages: about 5 messages at each sensor's rate, and never less than ego's own 0.5 s
+# command timeout. The GPS gets 2 s: a receiver drops a fix now and then, and the EKF
+# carries on from the wheels and the IMU meanwhile.
+sensor_watchdog:
+  ros__parameters:
+    rate_hz: 10.0
+    odom:                       # the wheels' speed: the EKFs' only speed
+      topic: /vehicle/odom
+      kind: odom
+      max_age: 0.5
+      stop: true
+    imu:                        # the filtered IMU: the EKFs' turn rate
+      topic: /sensors/imu/data
+      kind: imu
+      max_age: 0.5
+      stop: true
+      frozen_after: 1.0         # a real IMU's noise never repeats exactly
+    gps:
+      topic: /sensors/gps/fix
+      kind: gps
+      max_age: 2.0
+      stop: true
+      max_jump_speed: 15.0      # m/s: the car can't; a bad fix can (latched: clear it)
+    local:                      # ekf_local: Nav2's odometry
+      topic: /localization/odom/local
+      kind: odom
+      max_age: 0.5
+      stop: true
+    global:                     # ekf_global: where the car is on the map
+      topic: /localization/odom/global
+      kind: odom
+      max_age: 0.5
+      stop: true
+    camera:                     # the front left camera: stop signs, lane keeping
+      topic: /sensors/camera/front_left/image_raw
+      kind: image
+      max_age: 1.0
+      stop: true
+      frozen_after: 1.0         # only while the wheels turn: a still car sees a still picture
+    radar:                      # collision_monitor stops Nav2 itself when it goes quiet
+      topic: /sensors/radar/points
+      kind: cloud
+      max_age: 1.0
+      stop: false
