@@ -45,3 +45,6 @@ sensors:
   camera_right_link:
     xyz: [1.80, -0.29, 1.20]  # TODO measure
     rpy: [0.0, 0.0, 0.0]
+  lidar_link:                 # Gazebo only: the car has no lidar yet (docs/simulation.md)
+    xyz: [1.20, 0.00, 1.90]   # a guess: on a 0.4 m mast, so it clears the roof (1.50 m)
+    rpy: [0.0, 0.0, 0.0]

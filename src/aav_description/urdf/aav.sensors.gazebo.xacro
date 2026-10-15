@@ -10,6 +10,10 @@
     /aav/camera/camera_info   gz.msgs.CameraInfo     -> /sensors/camera/front_left/camera_info
     /aav/radar/points         gz.msgs.PointCloudPacked -> /sensors/radar/points (best effort)
     /model/aav/truth          gz.msgs.Odometry       -> /vehicle/gazebo/truth
+
+  With lidar:=true, a roof lidar too, bridged by aav_gazebo/config/bridge_lidar.yaml:
+
+    /aav/lidar/points         gz.msgs.PointCloudPacked -> /sensors/lidar/points
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
@@ -81,6 +85,49 @@
       </lidar>
     </sensor>
   </gazebo>
+
+  <!-- A roof lidar, with lidar:=true: a generic 16-beam spinning lidar (like a Velodyne
+       VLP-16), 360 degrees in 1800 steps (0.2 degrees), 16 beams from 15 degrees down to
+       15 up, 0.5-100 m, 3 cm of range noise, 10 Hz. The car has none: it shows what one
+       would add. lidar_link and its place come from vehicle.yaml, as every sensor's do.
+       Rays that hit nothing come back as inf, which Nav2 and PCL drop. -->
+  <xacro:if value="$(arg lidar)">
+    <xacro:sensor_frame name="lidar_link"/>
+    <gazebo reference="lidar_link">
+      <sensor name="lidar" type="gpu_lidar">
+        <always_on>1</always_on>
+        <update_rate>10</update_rate>
+        <topic>/aav/lidar</topic>
+        <gz_frame_id>lidar_link</gz_frame_id>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>1800</samples>
+              <resolution>1</resolution>
+              <min_angle>${-pi}</min_angle>
+              <max_angle>${pi}</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>16</samples>
+              <resolution>1</resolution>
+              <min_angle>${radians(-15)}</min_angle>
+              <max_angle>${radians(15)}</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.5</min>
+            <max>100.0</max>
+            <resolution>0.01</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.03</stddev>
+          </noise>
+        </lidar>
+      </sensor>
+    </gazebo>
+  </xacro:if>
 
   <!-- Where the car really is, for checks: its pose in the world, which is the map
        (the datum is the world's origin), as the bench's /vehicle/bench/truth. Nothing on the

@@ -182,3 +182,22 @@ def test_gazebo_runs_the_simulator_headless_without_a_window():
     road = included(started(GAZEBO, world='road', gui='false'))['gz_sim.launch.py']['gz_args']
     assert ('--headless-rendering' in road) == (not GAZEBO.MAC)
     assert '--headless-rendering' not in gz
+
+
+def test_the_lidar_is_on_by_default_only_where_the_world_renders_it():
+    road = started(GAZEBO, world='road', gui='false')
+    assert included(road)['description.launch.py']['lidar'] == 'true'
+    assert parameters(node(road, 'gz_lidar_bridge'))['config_file'].endswith(
+        'bridge_lidar.yaml')
+    for world in ('empty', 'test_lot'):
+        actions = started(GAZEBO, world=world, gui='false', lidar='true')
+        assert included(actions)['description.launch.py']['lidar'] == 'false', world
+        assert 'gz_lidar_bridge' not in names(actions), world
+
+
+def test_lidar_false_leaves_it_out():
+    road = started(GAZEBO, world='road', gui='false', lidar='false')
+    assert included(road)['description.launch.py']['lidar'] == 'false'
+    assert 'gz_lidar_bridge' not in names(road)
+    assert included(started(SIM, world='road', lidar='false'))['gazebo.launch.py'][
+        'lidar'] == 'false'
