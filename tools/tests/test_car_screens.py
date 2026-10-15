@@ -155,6 +155,11 @@ def test_one_monitor_for_both_is_only_a_note(tmp_path):
     assert done.returncode == 0 and 'one hides the other' in done.stderr
 
 
+def test_the_units_script_is_executable():
+    # The unit runs it through aav.sh and tools/ros.sh, which exec it: no bash in front.
+    assert SCREEN.stat().st_mode & 0o111, 'chmod +x tools/car_screen.sh'
+
+
 @pytest.mark.parametrize('script', [SCREEN, INSTALL])
 def test_scripts_parse(script):
     subprocess.run(['bash', '-n', str(script)], check=True)
