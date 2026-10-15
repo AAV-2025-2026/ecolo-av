@@ -4,25 +4,32 @@
 //!             map_topic     nav_msgs/OccupancyGrid       latched: Nav2's map, drawn north up
 //!             odom_topic    nav_msgs/Odometry            the car, in the map frame, and its speed
 //!             plan_topic    nav_msgs/Path                Nav2's plan: the line, the distance left
-//!             goal_topic    geometry_msgs/PoseStamped    RViz's goal, until Nav2 plans for it
+//!             goal_topic    geometry_msgs/PoseStamped    RViz's goal (or ours), until Nav2 plans for it
 //!             source_topic  aav_interfaces/DataSource    latched: the SIMULATED banner
-//! Publishes   nothing
+//! Publishes   goal_topic    geometry_msgs/PoseStamped    the place search's goal, map frame,
+//!                                                        only after DRIVE HERE then CONFIRM
 //! Parameters  the topics above, stale_after, plan_stale_after (s), arrive_within (m),
-//!             street_map (the offline street map's file)
+//!             street_map (the offline street map's file), places (the place database)
 //!
 //! Under Nav2's map: OpenStreetMap's streets, from an offline file (streets.rs), placed
 //! with navsat_transform's datum (navsat.yaml), so the car sits on real streets.
+//!
+//! The place search (search.rs, `/` to type): OpenStreetMap's names and addresses from
+//! ottawa.db, then DRIVE HERE and CONFIRM send Nav2 a goal. Refused off Nav2's map or
+//! with no car position.
 //!
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread and
 //! sends news over a channel (ros.rs). `--demo` swaps the ROS node for pretend data.
 //! The maths (map to screen, the distance left) is in map-core.
 //!
 //! usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE]
-//!            [--navsat FILE] [--streets FILE] [--zoom PX_PER_M] [--screenshot FILE] [--ros-args ...]
+//!            [--navsat FILE] [--streets FILE] [--places FILE] [--zoom PX_PER_M]
+//!            [--search TEXT [--pick N]] [--send-goal TEXT] [--screenshot FILE] [--ros-args ...]
 
 mod demo;
 #[cfg(feature = "ros")]
 mod ros;
+mod search;
 mod source;
 mod streets;
 mod ui;
@@ -36,7 +43,9 @@ use anyhow::{bail, Context as _, Result};
 use map_core::{
     car::CarShape,
     config::MapConfig,
+    destination::Key,
     earth::{Datum, BUILT_IN_NAVSAT_YAML},
+    places::Places,
     state::MapState,
     view::{PixelsPerMetre, ScreenPoint, View},
 };
@@ -44,14 +53,16 @@ use raylib::prelude::*;
 
 use crate::{
     demo::Demo,
+    search::Search,
     source::DataSource,
     streets::StreetMap,
-    ui::{Layout, Ui},
+    ui::{Layout, SearchLayout, Ui},
 };
 
 const USAGE: &str = "\
 usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE]
-           [--navsat FILE] [--streets FILE] [--zoom PX_PER_M] [--screenshot FILE] [--ros-args ...]
+           [--navsat FILE] [--streets FILE] [--places FILE] [--zoom PX_PER_M]
+           [--search TEXT [--pick N]] [--send-goal TEXT] [--screenshot FILE] [--ros-args ...]
 
   --demo             pretend data: no ROS, no car
   --fullscreen       fill the screen (F11 switches too)
@@ -61,15 +72,23 @@ usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE
   --navsat FILE      the datum (map 0,0 on the Earth) from navsat_transform's FILE
                      instead of the built-in navsat.yaml
   --streets FILE     the street map (PMTiles) instead of street_map in config/map.yaml
+  --places FILE      the place database (SQLite) instead of places in config/map.yaml
   --zoom PX_PER_M    start at this scale, in pixels per metre (0.1 shows ~10 km)
+  --search TEXT      start with TEXT typed in the search box (for screenshots)
+  --pick N           with --search: pick result N (1 = the first)
+  --send-goal TEXT   once the map and the car are known: search TEXT, send the first
+                     result inside Nav2's map as the goal, say so on the terminal (tests)
   --screenshot FILE  save the window as a PNG after 4 s, then quit (for the docs)
   --ros-args ...     passed to ROS, e.g. --ros-args -p plan_topic:=/plan
 
-keys: F follow the car / whole map, S streets on / off, + - or the wheel zoom, drag to move,
-      F11 full screen";
+keys: / search for a place (Esc closes; Up Down and Enter pick; Enter: DRIVE HERE, then
+      CONFIRM), F follow the car / whole map, S streets on / off, + - or the wheel zoom,
+      drag to move, F11 full screen";
 
 /// When --screenshot saves its picture: once the data has had time to arrive.
 const SCREENSHOT_AFTER: Duration = Duration::from_secs(4);
+/// How long --send-goal waits for the map and the car before it gives up.
+const SEND_GOAL_WAIT: Duration = Duration::from_secs(120);
 /// One click of the mouse wheel, or one press of + or -.
 const WHEEL_ZOOM: f64 = 1.15;
 const KEY_ZOOM: f64 = 1.25;
@@ -84,7 +103,11 @@ struct Options {
     vehicle: Option<PathBuf>,
     navsat: Option<PathBuf>,
     streets: Option<PathBuf>,
+    places: Option<PathBuf>,
     zoom: Option<f64>,
+    search: Option<String>,
+    pick: Option<usize>,
+    send_goal: Option<String>,
     screenshot: Option<PathBuf>,
 }
 
@@ -94,21 +117,36 @@ impl Options {
         let mut opts = Self::default();
         let mut it = args.iter().skip(1);
         while let Some(arg) = it.next() {
-            let mut file = |what: &str| -> Result<PathBuf> {
+            // The option's value: a file, or words.
+            let mut value = |what: &str| -> Result<String> {
                 Ok(it
                     .next()
-                    .with_context(|| format!("{what} needs a file"))?
-                    .into())
+                    .with_context(|| format!("{what} needs a value"))?
+                    .clone())
             };
             match arg.as_str() {
                 "--ros-args" => break,
                 "--demo" => opts.demo = true,
                 "--fullscreen" => opts.fullscreen = true,
                 "--whole-map" => opts.whole_map = true,
-                "--config" => opts.config = Some(file("--config")?),
-                "--vehicle" => opts.vehicle = Some(file("--vehicle")?),
-                "--navsat" => opts.navsat = Some(file("--navsat")?),
-                "--streets" => opts.streets = Some(file("--streets")?),
+                "--config" => opts.config = Some(value("--config")?.into()),
+                "--vehicle" => opts.vehicle = Some(value("--vehicle")?.into()),
+                "--navsat" => opts.navsat = Some(value("--navsat")?.into()),
+                "--streets" => opts.streets = Some(value("--streets")?.into()),
+                "--places" => opts.places = Some(value("--places")?.into()),
+                "--search" => opts.search = Some(value("--search")?),
+                "--send-goal" => opts.send_goal = Some(value("--send-goal")?),
+                "--pick" => {
+                    let n: usize = it
+                        .next()
+                        .context("--pick needs a number")?
+                        .parse()
+                        .context("--pick: a result's number, 1 for the first")?;
+                    if n == 0 {
+                        bail!("--pick counts from 1");
+                    }
+                    opts.pick = Some(n);
+                }
                 "--zoom" => {
                     let k: f64 = it
                         .next()
@@ -120,13 +158,16 @@ impl Options {
                     }
                     opts.zoom = Some(k);
                 }
-                "--screenshot" => opts.screenshot = Some(file("--screenshot")?),
+                "--screenshot" => opts.screenshot = Some(value("--screenshot")?.into()),
                 "-h" | "--help" => {
                     println!("{USAGE}");
                     std::process::exit(0);
                 }
                 other => bail!("unknown option {other:?}\n{USAGE}"),
             }
+        }
+        if opts.pick.is_some() && opts.search.is_none() {
+            bail!("--pick needs --search");
         }
         Ok(opts)
     }
@@ -162,14 +203,21 @@ fn main() -> Result<()> {
         format!("the datum, in {}", file.display())
     })?;
     let (source, config) = open_source(&opts, args, config)?;
-    let street_file = street_file(opts.streets.as_deref(), &config.street_map);
+    let street_file = data_file(opts.streets.as_deref(), &config.street_map);
     let streets = StreetMap::open(&street_file, datum);
-    run(&opts, source, config, car, streets)
+    let places_file = data_file(opts.places.as_deref(), &config.places);
+    let places = Places::open(&places_file).map_err(|e| e.to_string());
+    if let Err(why) = &places {
+        eprintln!("map: no place search: {why}");
+    }
+    let search = Search::new(places, datum);
+    run(&opts, source, config, car, streets, search)
 }
 
-/// The street map's file: --streets, or config/map.yaml's street_map. A relative path
-/// is looked for in the folder the window started in, then in the pixi project's.
-fn street_file(option: Option<&Path>, configured: &str) -> PathBuf {
+/// A data file (the street map, the places): the option, or config/map.yaml's. A
+/// relative path is looked for in the folder the window started in, then in the pixi
+/// project's.
+fn data_file(option: Option<&Path>, configured: &str) -> PathBuf {
     let file = option.map_or_else(|| PathBuf::from(configured), Path::to_path_buf);
     if file.is_absolute() || file.exists() {
         return file;
@@ -208,6 +256,7 @@ fn run(
     config: MapConfig,
     car: CarShape,
     mut streets: StreetMap,
+    mut search: Search,
 ) -> Result<()> {
     let (mut rl, thread) = raylib::init()
         .size(1600, 900)
@@ -237,6 +286,9 @@ fn run(
     let mut over_streets = streets.visible();
     let mut dragging = false;
     let started = Instant::now();
+    // --search waits for the first news (the car), so the distances show.
+    let mut prefill = opts.search.clone();
+    let mut send_goal = opts.send_goal.clone();
 
     while !rl.window_should_close() && !source.has_stopped() {
         let now = Instant::now();
@@ -259,30 +311,82 @@ fn run(
         let mouse = rl.get_mouse_position();
         let mouse = ScreenPoint::new(f64::from(mouse.x), f64::from(mouse.y));
         let over_map = vp.contains(mouse);
+
+        // The place search first: while typing, every key is a letter for it.
+        if let Some(query) = prefill.take() {
+            search.prefill(&query, &state, &mut view, source.as_mut(), now);
+            if let Some(n) = opts.pick {
+                search.choose(n - 1, &state, &mut view, source.as_mut(), now);
+            }
+        }
+        if let Some(query) = send_goal.clone() {
+            if state.grid.is_some() && state.car.is_some() {
+                send_goal = None;
+                match search.send_first(&query, &state, source.as_mut(), now) {
+                    Ok(said) => println!("map: --send-goal: {said}"),
+                    Err(why) => eprintln!("map: --send-goal {query:?}: {why}"),
+                }
+            } else if now.duration_since(started) > SEND_GOAL_WAIT {
+                send_goal = None;
+                eprintln!("map: --send-goal {query:?}: no map or no car position after {SEND_GOAL_WAIT:?}");
+            }
+        }
+        let typed: Vec<char> = std::iter::from_fn(|| rl.get_char_pressed()).collect();
+        for key in search_keys(
+            &rl,
+            &typed,
+            search.finder.is_typing(),
+            search.finder.is_open(),
+        ) {
+            search.key(key, &state, &mut view, source.as_mut(), now);
+        }
+        let boxes = SearchLayout::new(&layout, &search.finder);
+        let over_search = boxes.contains(mouse);
+        if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
+            if let Some(click) = boxes.click(mouse) {
+                match click {
+                    ui::Click::Field => {
+                        search.key(Key::Open, &state, &mut view, source.as_mut(), now)
+                    }
+                    ui::Click::Result(i) => {
+                        search.choose(i, &state, &mut view, source.as_mut(), now)
+                    }
+                    ui::Click::Button => {
+                        search.key(Key::Enter, &state, &mut view, source.as_mut(), now)
+                    }
+                    ui::Click::Cancel => {
+                        search.key(Key::Escape, &state, &mut view, source.as_mut(), now)
+                    }
+                }
+            }
+        }
+
+        // The map's own keys, unless they're letters for the search box.
+        let map_keys = !search.finder.is_typing();
         if rl.is_key_pressed(KeyboardKey::KEY_F11) {
             toggle_fullscreen(&mut rl);
         }
-        if rl.is_key_pressed(KeyboardKey::KEY_F) {
+        if map_keys && rl.is_key_pressed(KeyboardKey::KEY_F) {
             view.toggle_follow();
         }
-        if rl.is_key_pressed(KeyboardKey::KEY_S) {
+        if map_keys && rl.is_key_pressed(KeyboardKey::KEY_S) {
             streets.shown = !streets.shown;
         }
         let wheel = rl.get_mouse_wheel_move();
-        if wheel != 0.0 && over_map {
+        if wheel != 0.0 && over_map && !over_search {
             view.zoom(WHEEL_ZOOM.powf(f64::from(wheel)), Some(mouse), &vp);
         }
         let zoom_in = [KeyboardKey::KEY_EQUAL, KeyboardKey::KEY_KP_ADD];
         let zoom_out = [KeyboardKey::KEY_MINUS, KeyboardKey::KEY_KP_SUBTRACT];
-        if zoom_in.into_iter().any(|k| rl.is_key_pressed(k)) {
+        if map_keys && zoom_in.into_iter().any(|k| rl.is_key_pressed(k)) {
             view.zoom(KEY_ZOOM, None, &vp);
         }
-        if zoom_out.into_iter().any(|k| rl.is_key_pressed(k)) {
+        if map_keys && zoom_out.into_iter().any(|k| rl.is_key_pressed(k)) {
             view.zoom(1.0 / KEY_ZOOM, None, &vp);
         }
-        // Drag to move: only a drag that starts on the map.
+        // Drag to move: only a drag that starts on the map, not on the search box.
         if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
-            dragging = over_map;
+            dragging = over_map && !over_search;
         }
         if !rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
             dragging = false;
@@ -298,7 +402,9 @@ fn run(
         let label = source.label();
         let tiles = streets.frame(&view, &vp);
         let mut d = rl.begin_drawing(&thread);
-        ui.draw(&mut d, &state, &view, &car, now, label, &streets, &tiles);
+        ui.draw(
+            &mut d, &state, &view, &car, now, label, &streets, &tiles, &search,
+        );
         drop(d);
 
         if let Some(path) = &opts.screenshot {
@@ -309,6 +415,38 @@ fn run(
         }
     }
     Ok(())
+}
+
+/// This frame's keys for the search box. Typing: the letters, and the editing keys
+/// (held Backspace repeats). Open: Enter and Esc. Shut: `/` opens it.
+fn search_keys(rl: &RaylibHandle, typed: &[char], typing: bool, open: bool) -> Vec<Key> {
+    let pressed = |k| rl.is_key_pressed(k);
+    let mut keys = Vec::new();
+    if typing {
+        keys.extend(typed.iter().copied().map(Key::Char));
+        let backspace = KeyboardKey::KEY_BACKSPACE;
+        if pressed(backspace) || rl.is_key_pressed_repeat(backspace) {
+            keys.push(Key::Backspace);
+        }
+        if pressed(KeyboardKey::KEY_UP) {
+            keys.push(Key::Up);
+        }
+        if pressed(KeyboardKey::KEY_DOWN) {
+            keys.push(Key::Down);
+        }
+    } else if typed.contains(&'/') {
+        keys.push(Key::Open);
+        return keys;
+    }
+    if open {
+        if pressed(KeyboardKey::KEY_ENTER) || pressed(KeyboardKey::KEY_KP_ENTER) {
+            keys.push(Key::Enter);
+        }
+        if pressed(KeyboardKey::KEY_ESCAPE) {
+            keys.push(Key::Escape);
+        }
+    }
+    keys
 }
 
 /// Full screen at the monitor's own size, or back to a window.
@@ -383,6 +521,31 @@ mod tests {
         assert_eq!(o.zoom, Some(0.2));
         assert!(Options::parse(&args(&["--zoom", "-1"])).is_err());
         assert!(Options::parse(&args(&["--zoom", "near"])).is_err());
+    }
+
+    #[test]
+    fn options_take_a_search() {
+        let o = Options::parse(&args(&[
+            "--places",
+            "p.db",
+            "--search",
+            "carleton u",
+            "--pick",
+            "2",
+            "--send-goal",
+            "university drive",
+        ]))
+        .expect("valid");
+        assert_eq!(o.places, Some(PathBuf::from("p.db")));
+        assert_eq!(o.search.as_deref(), Some("carleton u"));
+        assert_eq!(o.pick, Some(2));
+        assert_eq!(o.send_goal.as_deref(), Some("university drive"));
+        assert!(
+            Options::parse(&args(&["--pick", "1"])).is_err(),
+            "--pick needs --search"
+        );
+        assert!(Options::parse(&args(&["--search", "x", "--pick", "0"])).is_err());
+        assert!(Options::parse(&args(&["--search"])).is_err());
     }
 
     #[test]

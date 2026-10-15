@@ -123,7 +123,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `vendor` | downloads the ROS 2 and rclrs source into `vendor/`, to look things up |
 | `get-models` | downloads the stock YOLO model into `models/` |
 | `export-coreml` | makes the Core ML model for a Mac's detector (the `ml` environment, Macs only) |
-| `get-hud-map` | downloads the HUD app's place database (51 MB) |
+| `get-hud-map` | downloads the place database (51 MB) into `maps/places/`, for the map window's search and the Flutter app |
 | `get-street-map` | downloads the map window's offline street map of Ottawa (40 MB) into `maps/streets/` |
 | `get-flutter` | downloads Flutter 3.35.7 into `vendor/flutter`, for the HUD app |
 | `flutter` | runs that Flutter in `hud/flutter_pi`: `pixi run flutter doctor` |
@@ -160,7 +160,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `tests/` | the tools' own tests: the MCP server's parts and its smoke test, the UF2 converter | inside `pixi run test` |
 | `get_models.sh` | downloads the stock YOLO model, checksum pinned | `pixi run get-models` |
 | `build_engine.py` | builds the Orin's TensorRT model, on the Orin itself (JetPack's Python) | `python3 tools/build_engine.py` on the Orin |
-| `get_hud_map.sh` | downloads the HUD's place database, checksum pinned | `pixi run get-hud-map` |
+| `get_hud_map.sh` | downloads the place database, checksum pinned, once for both users | `pixi run get-hud-map` |
 | `get_street_map.sh` | cuts Ottawa out of Protomaps' world street map, checksums pinned | `pixi run get-street-map` |
 | `get_flutter.sh` | downloads Flutter, checksum pinned | `pixi run get-flutter` |
 | `flutter.sh` | runs that Flutter, with its analytics off | `pixi run flutter <arguments>` |

@@ -4,7 +4,9 @@
 //! ```text
 //! +--------------------------------------------------+-----------------+
 //! | [ SIMULATED band, when /system/source says so ]  | TRIP            |
-//! | FOLLOWING THE CAR                            N   |   DRIVING       |
+//! | FOLLOWING THE CAR  [ / Search for a place ]  N   |   DRIVING       |
+//! |                    [ results, or the place:  ]   |                 |
+//! |                    [ DRIVE HERE / CONFIRM    ]   |                 |
 //! |                                                  | DISTANCE LEFT   |
 //! |         the streets (OpenStreetMap), and over    |   42 m          |
 //! |         them Nav2's map, north up                |                 |
@@ -24,16 +26,21 @@ use hud_core::{format, health::Health};
 use map_core::{
     car::CarShape,
     config::Topic,
+    destination::{Finder, Step},
     geom::{Metres, Point},
     grid::{Grid, Palette},
+    places::{self, MIN_QUERY_CHARS},
     state::{MapState, Remaining},
     streets::TileShapes,
     trip::{time_left, Tone},
-    view::{self, View, Viewport},
+    view::{self, ScreenPoint, View, Viewport},
 };
 use raylib::prelude::*;
 
-use crate::streets::{self, Status as StreetStatus, StreetMap};
+use crate::{
+    search::Search,
+    streets::{self, Status as StreetStatus, StreetMap},
+};
 
 // The HUD's colours (hud-app/src/ui.rs).
 const BACKGROUND: Color = Color::new(12, 12, 16, 255);
@@ -74,6 +81,13 @@ const CAR_BODY: Color = Color::new(24, 26, 32, 255);
 const CAR_EDGE: Color = Color::new(255, 255, 255, 255);
 /// The translucent backing of text drawn over the map.
 const OVERLAY: Color = Color::new(12, 12, 16, 200);
+/// The search box and its list: nearly solid, so the streets don't show through.
+const SEARCH_BACK: Color = Color::new(22, 24, 30, 240);
+const SEARCH_ROW_ON: Color = Color::new(48, 54, 70, 255);
+/// The place picked in the search, on the map: a magenta pin, unlike the green goal.
+const PICKED: Color = Color::new(215, 60, 200, 255);
+/// CONFIRM: amber, to stop and read.
+const CONFIRM: Color = Color::new(245, 160, 20, 255);
 
 /// Fonts tried in order, as the HUD; raylib's own small pixel font if none is there.
 const FONT_FILES: [&str; 4] = [
@@ -238,6 +252,7 @@ impl Ui {
         source: &str,
         streets: &StreetMap,
         tiles: &[Arc<TileShapes>],
+        search: &Search,
     ) {
         let banner = state.origins.banner();
         let layout = Layout::new(
@@ -269,6 +284,9 @@ impl Ui {
                 );
             }
             self.draw_map(&mut p, state, view, &vp, car, now, on_streets);
+            if let Some(place) = search.finder.picked() {
+                picked_marker(&mut p, screen(view, search.on_map(place), &vp));
+            }
             street_notes(&mut p, &vp, streets);
         }
         let mut p = Painter {
@@ -282,6 +300,13 @@ impl Ui {
             p.centred(cx, band.y + 8.0 * p.u, 40.0, words, Color::BLACK);
         }
         panel(&mut p, &layout, state, now, source);
+        draw_search(
+            &mut p,
+            &SearchLayout::new(&layout, &search.finder),
+            search,
+            state,
+            now,
+        );
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -420,6 +445,303 @@ fn street_notes(p: &mut Painter<impl RaylibDraw>, vp: &Viewport, streets: &Stree
     };
     let w = p.width(&note, 17.0) + 24.0 * p.u;
     p.chip(right - w, bottom - 32.0 * p.u, &note, CAPTION);
+}
+
+/// The picked place: a magenta pin, its point at the place.
+fn picked_marker(p: &mut Painter<impl RaylibDraw>, at: Vector2) {
+    let r = 12.0 * p.u;
+    let head = at - Vector2::new(0.0, 30.0 * p.u);
+    p.d.draw_line_ex(at, head, 4.0 * p.u, CAR_EDGE);
+    p.d.draw_circle_v(at, 4.0 * p.u, CAR_EDGE);
+    p.d.draw_circle_v(head, r + 3.0 * p.u, CAR_EDGE);
+    p.d.draw_circle_v(head, r, PICKED);
+}
+
+/// What a click on the search box hit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Click {
+    /// The box itself: open it.
+    Field,
+    /// One of the results.
+    Result(usize),
+    /// DRIVE HERE, or CONFIRM.
+    Button,
+    /// Cancel, next to CONFIRM.
+    Cancel,
+}
+
+/// Where the search box's parts are this frame: for drawing, and for clicks.
+pub struct SearchLayout {
+    u: f32,
+    field: Rectangle,
+    /// Under the box: the results (typing) or the picked place's card.
+    under: Option<Rectangle>,
+    rows: Vec<Rectangle>,
+    button: Option<Rectangle>,
+    cancel: Option<Rectangle>,
+}
+
+const ROW_H: f32 = 62.0;
+const FOOTER_H: f32 = 34.0;
+const CARD_H: f32 = 180.0;
+
+impl SearchLayout {
+    pub fn new(layout: &Layout, finder: &Finder) -> Self {
+        let u = layout.u;
+        let vp = layout.map;
+        let w = (620.0 * u).min(vp.width as f32 - 40.0 * u).max(100.0);
+        let x = vp.x as f32 + (vp.width as f32 - w) / 2.0;
+        let field = Rectangle::new(x, vp.y as f32 + 12.0 * u, w, 46.0 * u);
+        let top = field.y + field.height + 6.0 * u;
+        let mut boxes = Self {
+            u,
+            field,
+            under: None,
+            rows: Vec::new(),
+            button: None,
+            cancel: None,
+        };
+        match finder.step() {
+            Step::Closed => {}
+            Step::Typing => {
+                let n = finder.results().len();
+                boxes.rows = (0..n)
+                    .map(|i| Rectangle::new(x, top + i as f32 * ROW_H * u, w, ROW_H * u))
+                    .collect();
+                let body = if n == 0 {
+                    46.0 * u
+                } else {
+                    n as f32 * ROW_H * u
+                };
+                boxes.under = Some(Rectangle::new(x, top, w, body + FOOTER_H * u));
+            }
+            Step::Picked | Step::Confirming => {
+                let card = Rectangle::new(x, top, w, CARD_H * u);
+                let by = card.y + 112.0 * u;
+                let bh = 52.0 * u;
+                if finder.step() == Step::Confirming {
+                    let cw = 150.0 * u;
+                    boxes.button = Some(Rectangle::new(x + 16.0 * u, by, w - cw - 44.0 * u, bh));
+                    boxes.cancel = Some(Rectangle::new(x + w - cw - 16.0 * u, by, cw, bh));
+                } else {
+                    boxes.button = Some(Rectangle::new(x + 16.0 * u, by, w - 32.0 * u, bh));
+                }
+                boxes.under = Some(card);
+            }
+        }
+        boxes
+    }
+
+    /// Whether the mouse is over the box or what's under it (not the map).
+    pub fn contains(&self, at: ScreenPoint) -> bool {
+        let v = Vector2::new(at.x as f32, at.y as f32);
+        std::iter::once(self.field)
+            .chain(self.under)
+            .any(|r| r.check_collision_point_rec(v))
+    }
+
+    /// What a click at `at` hits.
+    pub fn click(&self, at: ScreenPoint) -> Option<Click> {
+        let v = Vector2::new(at.x as f32, at.y as f32);
+        let hit = |r: &Rectangle| r.check_collision_point_rec(v);
+        if hit(&self.field) {
+            return Some(Click::Field);
+        }
+        if let Some(i) = self.rows.iter().position(hit) {
+            return Some(Click::Result(i));
+        }
+        if self.cancel.as_ref().is_some_and(hit) {
+            return Some(Click::Cancel);
+        }
+        self.button
+            .as_ref()
+            .filter(|r| hit(r))
+            .map(|_| Click::Button)
+    }
+}
+
+/// The search box, and under it the results or the picked place.
+fn draw_search(
+    p: &mut Painter<impl RaylibDraw>,
+    boxes: &SearchLayout,
+    search: &Search,
+    state: &MapState,
+    now: Instant,
+) {
+    let u = boxes.u;
+    let finder = &search.finder;
+    let f = boxes.field;
+    let typing = finder.is_typing();
+    p.d.draw_rectangle_rounded(f, 0.3, 8, SEARCH_BACK);
+    let (edge, thick) = if typing { (PLAN, 3.0) } else { (DIM, 1.5) };
+    p.d.draw_rectangle_rounded_lines_ex(f, 0.3, 8, thick * u, edge);
+    let tx = f.x + 18.0 * u;
+    let ty = f.y + 11.0 * u;
+    let tw = f.width - 36.0 * u;
+    if finder.query().is_empty() {
+        let hint = if typing {
+            "Type a place or an address"
+        } else {
+            "/   Search for a place"
+        };
+        p.fitted(tx, ty, 21.0, tw, hint, CAPTION);
+    } else {
+        let shown = if typing {
+            format!("{}|", finder.query())
+        } else {
+            finder.query().to_owned()
+        };
+        p.fitted(tx, ty, 21.0, tw, &shown, TEXT);
+    }
+
+    let Some(under) = boxes.under else {
+        if let Some(n) = search.notice(now) {
+            let colour = if n.good { GOOD } else { WARN };
+            p.chip(f.x, f.y + f.height + 8.0 * u, &n.text, colour);
+        }
+        return;
+    };
+    p.d.draw_rectangle_rounded(under, 0.06, 8, SEARCH_BACK);
+    match finder.step() {
+        Step::Typing => draw_results(p, boxes, search, state, under),
+        Step::Picked | Step::Confirming => draw_picked(p, boxes, search, state, under),
+        Step::Closed => {}
+    }
+}
+
+fn draw_results(
+    p: &mut Painter<impl RaylibDraw>,
+    boxes: &SearchLayout,
+    search: &Search,
+    state: &MapState,
+    under: Rectangle,
+) {
+    let u = boxes.u;
+    let finder = &search.finder;
+    let inner = under.width - 36.0 * u;
+    for (i, (place, row)) in finder.results().iter().zip(&boxes.rows).enumerate() {
+        if i == finder.selected() {
+            p.d.draw_rectangle_rounded(*row, 0.12, 8, SEARCH_ROW_ON);
+        }
+        let x = row.x + 18.0 * u;
+        let far = search
+            .distance_from_car(place, state)
+            .map(distance)
+            .unwrap_or_default();
+        let far_w = p.width(&far, 18.0);
+        p.right(
+            row.x + row.width - 18.0 * u,
+            row.y + 10.0 * u,
+            18.0,
+            &far,
+            CAPTION,
+        );
+        let title_w = inner - far_w - 16.0 * u;
+        p.fitted(x, row.y + 8.0 * u, 21.0, title_w, &place.title, TEXT);
+        p.fitted(x, row.y + 36.0 * u, 15.0, inner, &place.detail(), CAPTION);
+    }
+    let x = under.x + 18.0 * u;
+    if finder.results().is_empty() {
+        let (msg, colour) = match finder.problem() {
+            Some(why) => (why.to_owned(), WARN),
+            None if finder.query().chars().count() < MIN_QUERY_CHARS => {
+                (format!("Type {MIN_QUERY_CHARS} letters or more"), CAPTION)
+            }
+            None => ("No places found".to_owned(), CAPTION),
+        };
+        p.fitted(x, under.y + 12.0 * u, 18.0, inner, &msg, colour);
+    }
+    let fy = under.y + under.height - FOOTER_H * u + 8.0 * u;
+    p.text(x, fy, 14.0, places::CREDIT, DIM);
+    p.right(
+        under.x + under.width - 18.0 * u,
+        fy,
+        14.0,
+        "Up Down  Enter pick  Esc close",
+        DIM,
+    );
+}
+
+fn draw_picked(
+    p: &mut Painter<impl RaylibDraw>,
+    boxes: &SearchLayout,
+    search: &Search,
+    state: &MapState,
+    card: Rectangle,
+) {
+    let u = boxes.u;
+    let Some(place) = search.finder.picked() else {
+        return;
+    };
+    let x = card.x + 18.0 * u;
+    let inner = card.width - 36.0 * u;
+    p.fitted(x, card.y + 14.0 * u, 26.0, inner, &place.title, TEXT);
+    let far = search
+        .distance_from_car(place, state)
+        .map(|d| format!("  ·  {} from the car", distance(d)))
+        .unwrap_or_default();
+    p.fitted(
+        x,
+        card.y + 52.0 * u,
+        17.0,
+        inner,
+        &format!("{}{far}", place.detail()),
+        CAPTION,
+    );
+    p.text(x, card.y + 80.0 * u, 14.0, places::CREDIT, DIM);
+    let confirming = search.finder.step() == Step::Confirming;
+    let goal = search.picked_goal(state);
+    match (goal, boxes.button) {
+        (Some(Ok(_)), Some(b)) => {
+            let (colour, words) = if confirming {
+                (CONFIRM, "CONFIRM: send goal  (Enter)")
+            } else {
+                (GOOD, "DRIVE HERE  (Enter)")
+            };
+            p.d.draw_rectangle_rounded(b, 0.3, 8, colour);
+            p.centred(
+                b.x + b.width / 2.0,
+                b.y + 13.0 * u,
+                23.0,
+                words,
+                Color::BLACK,
+            );
+        }
+        (Some(Err(why)), Some(b)) => {
+            p.d.draw_rectangle_rounded_lines_ex(b, 0.3, 8, 2.0 * u, WARN);
+            p.fitted(
+                b.x + 16.0 * u,
+                b.y + 14.0 * u,
+                21.0,
+                b.width - 32.0 * u,
+                &why.to_string(),
+                WARN,
+            );
+        }
+        _ => {}
+    }
+    if let Some(c) = boxes.cancel {
+        p.d.draw_rectangle_rounded_lines_ex(c, 0.3, 8, 2.0 * u, CAPTION);
+        p.centred(
+            c.x + c.width / 2.0,
+            c.y + 14.0 * u,
+            20.0,
+            "Esc cancel",
+            TEXT,
+        );
+    }
+    let hint = if confirming {
+        "Enter sends Nav2 this goal"
+    } else {
+        "Esc back to the list"
+    };
+    p.right(
+        card.x + card.width - 18.0 * u,
+        card.y + 80.0 * u,
+        14.0,
+        hint,
+        DIM,
+    );
 }
 
 /// The goal: a green ring with a white edge and a white middle.
@@ -629,7 +951,7 @@ fn panel(
     y += h + m;
 
     // TOPICS: what's been heard.
-    let keys_h = 130.0 * u;
+    let keys_h = 156.0 * u;
     let row_h = 32.0 * u;
     let wanted = 44.0 * u + Topic::ALL.len() as f32 * row_h + 8.0 * u;
     let h = (r.y + r.height - m - keys_h - m - y).clamp(60.0 * u, wanted);
@@ -687,6 +1009,14 @@ fn panel(
         17.0,
         inner_w,
         "S  streets on / off",
+        CAPTION,
+    );
+    p.fitted(
+        inner,
+        y + 116.0 * u,
+        17.0,
+        inner_w,
+        "/  search for a place",
         CAPTION,
     );
     p.right(x + w - 16.0 * u, y + 10.0 * u, 18.0, source, CAPTION);

@@ -2,13 +2,15 @@
 //!
 //! As the HUD's (hud-app's ros.rs): raylib must own the main thread, so the node lives on
 //! a thread called "ros", and its callbacks turn each message into a map_core `Update`
-//! sent over a channel. The node only listens.
+//! sent over a channel. It publishes one thing: the place search's goal, on goal_topic,
+//! from the window's thread (an rclrs publisher may be used from any thread).
 //!
 //! QoS:
 //! - `/map`: reliable, transient local, depth 1, as map_server sends it (latched), so a
 //!   window opened later still gets the map;
 //! - the car's position: best effort (SensorDataQoS), which takes reliable publishers too;
-//! - the plan and the goal: reliable, as Nav2 and RViz send them;
+//! - the plan and the goal: reliable, as Nav2 and RViz send them; the goal we publish:
+//!   reliable, volatile, depth 10, as RViz's "2D Goal Pose" (bt_navigator listens);
 //! - `/system/source`: reliable, transient local, depth 1, as the HUD.
 
 use std::{
@@ -44,13 +46,14 @@ const QUEUE: usize = 256;
 /// The node, seen from the screen.
 pub struct RosSource {
     updates: Receiver<Update>,
+    goal: Publisher<PoseStamped>,
     stopped: Arc<AtomicBool>,
     executor: Arc<ExecutorCommands>,
     thread: Option<JoinHandle<()>>,
 }
 
 /// What the ROS thread hands back once the node is up.
-type Ready = Result<(MapConfig, Arc<ExecutorCommands>)>;
+type Ready = Result<(MapConfig, Arc<ExecutorCommands>, Publisher<PoseStamped>)>;
 
 impl RosSource {
     /// Starts the node on its own thread and waits until it's up. `args` is the whole
@@ -75,7 +78,7 @@ impl RosSource {
                 stopped.store(true, Ordering::SeqCst);
             })?
         };
-        let (config, executor) = ready_rx
+        let (config, executor, goal) = ready_rx
             .recv()
             .map_err(|_| anyhow!("the ROS thread ended before the node was up"))?
             .context("starting the ROS node (is ROS sourced? try tools/ros.sh, or --demo)")?;
@@ -91,6 +94,7 @@ impl RosSource {
         }
         let source = Self {
             updates,
+            goal,
             stopped,
             executor,
             thread: Some(thread),
@@ -106,6 +110,12 @@ impl crate::source::DataSource for RosSource {
 
     fn drain(&mut self, _now: Instant) -> Vec<Update> {
         self.updates.try_iter().collect()
+    }
+
+    fn send_goal(&mut self, goal: Pose, frame: &str) -> Result<()> {
+        self.goal
+            .publish(goal_message(goal, frame))
+            .context("publishing the goal")
     }
 
     fn has_stopped(&self) -> bool {
@@ -190,9 +200,15 @@ fn spin(
         move |m: DataSource| send(&tx, Update::Source(announcement(&m)))
     })?;
 
+    let goal_publisher = node.create_publisher::<PoseStamped>(config.topic(Topic::Goal))?;
+
     if let Some(r) = ready.take() {
-        r.send(Ok((config, Arc::clone(executor.commands()))))
-            .map_err(|_| anyhow!("the window closed while the node started"))?;
+        r.send(Ok((
+            config,
+            Arc::clone(executor.commands()),
+            goal_publisher,
+        )))
+        .map_err(|_| anyhow!("the window closed while the node started"))?;
     }
     executor.spin(SpinOptions::default()).first_error()?;
     Ok(())
@@ -217,6 +233,19 @@ fn pose(p: &PoseMsg) -> Pose {
             w: o.w,
         },
     )
+}
+
+/// A goal as RViz sends it: the frame, a zero stamp ("the latest", which Nav2 takes),
+/// z 0, and the heading as a quaternion about z.
+fn goal_message(goal: Pose, frame: &str) -> PoseStamped {
+    let mut m = PoseStamped::default();
+    m.header.frame_id = frame.to_owned();
+    m.pose.position.x = goal.position.x;
+    m.pose.position.y = goal.position.y;
+    let (s, c) = (goal.yaw / 2.0).sin_cos();
+    m.pose.orientation.z = s;
+    m.pose.orientation.w = c;
+    m
 }
 
 fn grid(m: &OccupancyGrid) -> Update {
@@ -248,7 +277,7 @@ fn announcement(m: &DataSource) -> Announcement {
 /// The node's parameters: each topic's name, and the limits. Read once, at start-up.
 struct Params {
     _topics: Vec<ReadOnlyParameter<Arc<str>>>,
-    _street_map: ReadOnlyParameter<Arc<str>>,
+    _files: Vec<ReadOnlyParameter<Arc<str>>>,
     _numbers: Vec<ReadOnlyParameter<f64>>,
 }
 
@@ -275,15 +304,22 @@ impl Params {
             *slot = p.get();
             numbers.push(p);
         }
-        let street_map = node
-            .declare_parameter::<Arc<str>>("street_map")
-            .default(config.street_map.as_str().into())
-            .read_only()?;
-        config.street_map = street_map.get().to_string();
+        let mut files = Vec::new();
+        for (name, slot) in [
+            ("street_map", &mut config.street_map),
+            ("places", &mut config.places),
+        ] {
+            let p = node
+                .declare_parameter::<Arc<str>>(name)
+                .default(slot.as_str().into())
+                .read_only()?;
+            *slot = p.get().to_string();
+            files.push(p);
+        }
         config.validate()?;
         let params = Self {
             _topics: topics,
-            _street_map: street_map,
+            _files: files,
             _numbers: numbers,
         };
         Ok((params, config))
@@ -293,6 +329,16 @@ impl Params {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The goal goes out as RViz's would: in the frame, facing the right way.
+    #[test]
+    fn a_goal_becomes_a_pose_stamped() {
+        let m = goal_message(Pose::new(3.0, -4.0, std::f64::consts::FRAC_PI_2), "map");
+        assert_eq!(m.header.frame_id, "map");
+        assert_eq!((m.pose.position.x, m.pose.position.y), (3.0, -4.0));
+        let back = pose(&m.pose);
+        assert!((back.yaw - std::f64::consts::FRAC_PI_2).abs() < 1e-12);
+    }
 
     /// A message's map arrives the right way up: the message's first row is the
     /// grid's lowest (row 0), whatever the picture does with it later.

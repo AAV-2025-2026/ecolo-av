@@ -70,9 +70,10 @@ yarn-error.log*
 # committed; `pixi run get-models` downloads the stock model.
 /models/*
 !/models/README.md
-# The HUD app's place database (51 MB): `pixi run get-hud-map` downloads it.
+# The place database (51 MB), the Flutter app's copy: `pixi run get-hud-map` downloads it.
 /hud/flutter_pi/assets/databases/
-# The map window's street map (40 MB) and the tool that cuts it: `pixi run get-street-map`.
+# The map window's street map (40 MB) and the tool that cuts it (`pixi run get-street-map`),
+# and its place database (`pixi run get-hud-map`).
 /maps/
 
 # Secrets: copy the .example file and fill it in locally

@@ -3,7 +3,7 @@
 
 use std::time::Instant;
 
-use map_core::state::Update;
+use map_core::{geom::Pose, state::Update};
 
 /// A source of [`Update`]s.
 pub trait DataSource {
@@ -12,6 +12,10 @@ pub trait DataSource {
 
     /// Everything that arrived since the last call. Never blocks.
     fn drain(&mut self, now: Instant) -> Vec<Update>;
+
+    /// Sends a goal to Nav2 (the place search's CONFIRM): a PoseStamped on goal_topic,
+    /// in `frame`. The demo only shows it.
+    fn send_goal(&mut self, goal: Pose, frame: &str) -> anyhow::Result<()>;
 
     /// Whether the source has stopped (Ctrl-C, or the ROS node failed): the window closes.
     fn has_stopped(&self) -> bool {
