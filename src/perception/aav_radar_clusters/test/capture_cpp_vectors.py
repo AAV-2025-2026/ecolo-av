@@ -2,17 +2,18 @@
 """
 Record what the C++ radar clustering node publishes for generated clouds, as test vectors.
 
-Purpose: keep the C++ node's answers once aav_object_detection is gone, and check the Rust
-node against them.
+Purpose: the C++ node's answers outlive it (aav_object_detection, removed on 15 Oct), and
+the Rust node is checked against them, through ROS.
 
     pixi run --frozen tools/ros.sh --local python3 \
-        src/perception/aav_radar_clusters/test/capture_cpp_vectors.py [--node cpp|rust]
+        src/perception/aav_radar_clusters/test/capture_cpp_vectors.py [--node rust|cpp]
 
---node cpp (the default) needs aav_object_detection built. It plays each cloud into the C++
-node (`dbscan`, as radar_clusters.launch.py ran it) and writes what it published to
-crates/radar-clustering/tests/cpp_vectors.txt, which tests/cpp_vectors.rs reads.
---node rust plays the file's clouds into the Rust node (radar_clusters) instead, and
+--node rust (the default) plays the file's clouds into the Rust node (radar_clusters), and
 checks that its clusters and boxes are the C++ node's.
+--node cpp made the file: it plays each cloud into the C++ node (`dbscan`, as
+radar_clusters.launch.py ran it) and writes what it published to
+crates/radar-clustering/tests/cpp_vectors.txt, which tests/cpp_vectors.rs reads. It needs
+aav_object_detection built, so only from before its removal (PROVENANCE.md says where).
 
 The C++ compared eps with the squared distance, so its neighbours were within sqrt(eps):
 the Rust node gets that radius. Its own ROS domain (AAV_TEST_DOMAIN_ID, else 77), on this
@@ -153,17 +154,17 @@ def read_cloud(msg):
 
 
 class Collector(Node):
-    """Plays clouds into /radar/points, and keeps what comes back."""
+    """Plays clouds into /sensors/radar/points, and keeps what comes back."""
 
     def __init__(self):
         super().__init__('radar_compare')
         self.lock = threading.Lock()
         self.clouds, self.boxes = [], []
-        self.pub = self.create_publisher(PointCloud2, '/radar/points', 10)
+        self.pub = self.create_publisher(PointCloud2, '/sensors/radar/points', 10)
         # The C++ published its clusters best effort, the Rust node reliable: this hears both.
         best_effort = QoSProfile(depth=100, reliability=ReliabilityPolicy.BEST_EFFORT)
-        self.create_subscription(PointCloud2, '/radar/clusters', self.on_cloud, best_effort)
-        self.create_subscription(MarkerArray, '/radar/cluster_boxes', self.on_boxes, 100)
+        self.create_subscription(PointCloud2, '/perception/radar/clusters', self.on_cloud, best_effort)
+        self.create_subscription(MarkerArray, '/perception/radar/cluster_boxes', self.on_boxes, 100)
 
     def on_cloud(self, msg):
         with self.lock:
@@ -176,12 +177,12 @@ class Collector(Node):
     def wait_for_node(self, timeout=20.0):
         end = time.monotonic() + timeout
         while time.monotonic() < end:
-            if (self.pub.get_subscription_count() and self.count_publishers('/radar/clusters')
-                    and self.count_publishers('/radar/cluster_boxes')):
+            if (self.pub.get_subscription_count() and self.count_publishers('/perception/radar/clusters')
+                    and self.count_publishers('/perception/radar/cluster_boxes')):
                 time.sleep(1.0)   # let both sides finish matching
                 return
             time.sleep(0.1)
-        raise RuntimeError('the node never showed up on /radar/points')
+        raise RuntimeError('the node never showed up on /sensors/radar/points')
 
     def play(self, points, tag, timeout=5.0):
         """Publish one cloud; return the cloud and the boxes the node published for it."""
@@ -215,8 +216,8 @@ def start(node, eps, min_points):
         args = ['-p', f'eps:={eps}', '-p', f'minimum_points:={min_points}',
                 '-p', 'bounding_boxes:=true', '-p', 'target_frame:=radar_link',
                 '-p', 'name_box:=radar_clusters',
-                '-r', '/ti_mmwave/radar_scan_pcl:=/radar/points',
-                '-r', 'dbscan_output:=/radar/clusters', '-r', 'dbscan_box:=/radar/cluster_boxes']
+                '-r', '/ti_mmwave/radar_scan_pcl:=/sensors/radar/points',
+                '-r', 'dbscan_output:=/perception/radar/clusters', '-r', 'dbscan_box:=/perception/radar/cluster_boxes']
     else:
         exe = os.path.join(get_package_prefix('aav_radar_clusters'), 'lib',
                            'aav_radar_clusters', 'radar_clusters')
@@ -397,7 +398,7 @@ def compare(collector):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
-    ap.add_argument('--node', choices=['cpp', 'rust'], default='cpp')
+    ap.add_argument('--node', choices=['rust', 'cpp'], default='rust')
     args = ap.parse_args()
     os.environ['ROS_DOMAIN_ID'] = os.environ.get('AAV_TEST_DOMAIN_ID', '77')
     os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'

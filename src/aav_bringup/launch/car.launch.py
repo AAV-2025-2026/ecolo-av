@@ -23,8 +23,8 @@ Parts and what they start:
                   yolo_detector_<machine>, with the machine file's model
   stop_signs      stop_sign_watcher -> /perception/stop_sign, twist_mux's stop-sign lock (the
                   lock is in aav_mux's config). One per car, next to the mux
-  radar_clusters  DBSCAN on /sensors/radar/points -> /perception/radar/clusters,
-                  /perception/radar/cluster_boxes
+  radar_clusters  DBSCAN (aav_radar_clusters, Rust) on /sensors/radar/points ->
+                  /perception/radar/clusters, /perception/radar/cluster_boxes
   camera_obstacles
                   the detectors' boxes as points on the road -> /perception/camera_obstacles,
                   for Nav2's costmap. Off until the cameras are calibrated (Q22)
@@ -209,7 +209,7 @@ def launch_setup(context):
         actions.append(Node(package='aav_yolo', executable='stop_sign_watcher',
                             name='stop_sign_watcher'))
     if on('radar_clusters'):
-        actions.append(include('aav_object_detection', 'radar_clusters.launch.py',
+        actions.append(include('aav_radar_clusters', 'radar_clusters.launch.py',
                                mock=False, eps=0.8, minimum_points=15, radar_rviz=False))
     if on('camera_obstacles'):
         actions.append(Node(package='aav_yolo', executable='camera_obstacles',

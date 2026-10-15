@@ -18,8 +18,9 @@ topics and frames as the real devices:
   mock_imu, mock_gps,       the sensors, reading where the model car really is
   mock_battery, mock_camera,
   mock_radar                the radar sees the bench world's obstacles (obstacle:=true);
-                            aav_object_detection clusters its points, and Nav2's local
-                            costmap marks them (navigation.launch.py radar:=true)
+                            radar_clusters (aav_radar_clusters, Rust) clusters its points,
+                            and Nav2's local costmap marks them (navigation.launch.py
+                            radar:=true)
 
 camera_obstacles:=true adds aav_yolo's camera_obstacles (the detectors' boxes as points on
 the road, from mock_camera's lens) and the local costmap's camera layer. The bench camera
@@ -105,7 +106,7 @@ def launch_setup(context):
              parameters=[bench_config] + road),
         Node(package='aav_bench', executable='mock_radar', name='mock_radar',
              parameters=[bench_config, {'obstacle': flag['obstacle']}]),
-        include('aav_object_detection', 'radar_clusters.launch.py', minimum_points='5'),
+        include('aav_radar_clusters', 'radar_clusters.launch.py', minimum_points='5'),
     ]
     if flag['nav']:
         # mock_radar always runs, so Nav2's local costmap always reads the radar.

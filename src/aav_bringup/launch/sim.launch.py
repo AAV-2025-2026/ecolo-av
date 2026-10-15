@@ -95,7 +95,7 @@ def launch_setup(context):
     ]
     if sensors:
         # The radar stand-in, as the bench's: few points per object, so small clusters.
-        actions.append(include(context, 'aav_object_detection', 'radar_clusters.launch.py',
+        actions.append(include(context, 'aav_radar_clusters', 'radar_clusters.launch.py',
                                minimum_points='5'))
     if flag['nav']:
         # Where the world renders the radar, Nav2's local costmap reads it, and

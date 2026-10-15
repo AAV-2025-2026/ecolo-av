@@ -147,12 +147,12 @@ pub fn cluster(points: &[Point], settings: &Settings) -> Vec<Cluster> {
             members[id].push(i);
         }
     }
+    // Every cluster holds at least its first core point, so none is empty and none goes.
     members
         .into_iter()
-        .map(|members| {
-            let bounds = Bounds::of(members.iter().map(|&i| &points[i].position))
-                .expect("a cluster holds at least its first core point");
-            Cluster { members, bounds }
+        .filter_map(|members| {
+            let bounds = Bounds::of(members.iter().map(|&i| &points[i].position))?;
+            Some(Cluster { members, bounds })
         })
         .collect()
 }

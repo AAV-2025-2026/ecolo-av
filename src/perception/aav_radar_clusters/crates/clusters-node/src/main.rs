@@ -1,17 +1,19 @@
 //! radar_clusters: DBSCAN groups the radar's points into objects, with a box round each.
 //!
-//! Subscribes  /radar/points         sensor_msgs/PointCloud2         best effort, as the
-//!                                                                    radar publishes it
-//! Publishes   /radar/clusters       sensor_msgs/PointCloud2         the clustered points,
-//!             coloured by cluster, with its number in a `cluster` field; noise left out
-//!             /radar/cluster_boxes  visualization_msgs/MarkerArray  a box round each
-//!             cluster, for RViz, after a DELETEALL that clears the last cloud's boxes
+//! Subscribes  /sensors/radar/points            sensor_msgs/PointCloud2, best effort, as
+//!                                              the radar publishes it
+//! Publishes   /perception/radar/clusters       sensor_msgs/PointCloud2: the clustered
+//!             points, coloured by cluster, with its number in a `cluster` field; noise
+//!             left out
+//!             /perception/radar/cluster_boxes  visualization_msgs/MarkerArray: a box round
+//!             each cluster, for RViz, after a DELETEALL that clears the last cloud's boxes
 //! Parameters  eps (m): points this close are neighbours; minimum_points: the neighbours a
 //!             point needs, itself included, to start or grow a cluster
 //!
 //! Both outputs keep the input's header, so they carry the radar's time and frame. The
 //! maths is in the `radar-clustering` crate, with no ROS. Rewritten from the 2025-26 C++
-//! node (`dbscan` in `aav_object_detection`); where it differs, on purpose:
+//! node (`dbscan` in `aav_object_detection`, removed: PROVENANCE.md says where it is);
+//! where it differs, on purpose:
 //! - eps is a distance. The C++ compared it with the squared distance, so its 0.8 was
 //!   0.89 m;
 //! - noise points are left out. The C++ sent one point at (0, 0, 0) for each;
@@ -52,20 +54,22 @@ fn main() -> Result<()> {
         .with_context(|| format!("eps {eps} m, minimum_points {minimum_points}"))?;
     log_info!(
         node.logger(),
-        "Clustering /radar/points: eps {eps} m, minimum_points {minimum_points}"
+        "Clustering /sensors/radar/points: eps {eps} m, minimum_points {minimum_points}"
     );
 
     let out = Output {
-        clusters: node.create_publisher("/radar/clusters")?,
-        boxes: node.create_publisher("/radar/cluster_boxes")?,
+        clusters: node.create_publisher("/perception/radar/clusters")?,
+        boxes: node.create_publisher("/perception/radar/cluster_boxes")?,
     };
     let logger = node.logger().clone();
-    let _subscription =
-        node.create_subscription("/radar/points".best_effort(), move |radar: PointCloud2| {
+    let _subscription = node.create_subscription(
+        "/sensors/radar/points".best_effort(),
+        move |radar: PointCloud2| {
             if let Err(e) = out.publish(&radar, &settings) {
                 log_warn!(logger.throttle(Duration::from_secs(1)), "{e:#}");
             }
-        })?;
+        },
+    )?;
 
     // Ctrl-C, or launch stopping us: stop spinning, and exit cleanly.
     let commands = Arc::clone(executor.commands());
@@ -114,7 +118,7 @@ impl Output {
             is_bigendian: radar.is_bigendian,
             data: &radar.data,
         };
-        let points = cloud::read_points(&view).context("reading /radar/points")?;
+        let points = cloud::read_points(&view).context("reading /sensors/radar/points")?;
         let clusters = cluster(&points, settings);
         self.clusters
             .publish(clusters_cloud(&radar.header, &points, &clusters))?;

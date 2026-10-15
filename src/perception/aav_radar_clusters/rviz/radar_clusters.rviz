@@ -26,7 +26,7 @@ Visualization Manager:
       Color Transformer: FlatColor
       Color: 255; 255; 255
       Topic:
-        Value: /radar/points
+        Value: /sensors/radar/points
         Reliability Policy: Best Effort
     - Class: rviz_default_plugins/PointCloud2
       Name: Radar clusters
@@ -35,13 +35,13 @@ Visualization Manager:
       Style: Flat Squares
       Color Transformer: RGB8
       Topic:
-        Value: /radar/clusters
+        Value: /perception/radar/clusters
         Reliability Policy: Best Effort
     - Class: rviz_default_plugins/MarkerArray
       Name: Radar boxes
       Enabled: true
       Topic:
-        Value: /radar/cluster_boxes
+        Value: /perception/radar/cluster_boxes
   Global Options:
     Fixed Frame: radar_link
     Frame Rate: 30
