@@ -81,7 +81,7 @@ Every number in `src/aav_description/config/vehicle.yaml` is a guess. Bring a ta
 | M4 | length, width, height; rear bumper to rear axle | 2.0, 1.0, 1.5 m; 0.20 m |
 | M5 | the steering limit: wheel angle at full lock, each way | 0.50 rad (about 29°) |
 | M6 | the GPS antenna, IMU, radar, each camera and the lidar: x forward, y left, z up from the ground under the rear axle | see `vehicle.yaml` |
-| M7 | mass | 272 kg (a stand-in) |
+| M7 | mass: 4 bathroom scales, one under each wheel, add them up (or one scale, a wheel at a time, the others on blocks of the same height) | 181 kg, Ben's estimate (about 400 lb) |
 
 How to measure each: [Car numbers](car_measurements.md).
 
