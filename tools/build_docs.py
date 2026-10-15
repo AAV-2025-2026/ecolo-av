@@ -77,6 +77,7 @@ PAGES = [
     ('can-plan.md', 'CAN plan', 'The KEFC CAN bus vs our CAN contract (Proposed)'),
     ('rust-firmware.md', 'Rust firmware', 'Rust on the chips: layers, frameworks, toolchains'),
     ('platforms.md', 'Platforms', 'Ubuntu, the Orin and Pis, networking'),
+    ('car-install.md', 'From a USB stick', 'Our Jazzy on the car offline, no sudo: the kit'),
     ('car-photos.md', 'Car photos', 'What the car has, from photos (14 Oct), and the audit list'),
     ('conventions.md', 'Conventions', 'Names, package layout and code style'),
     ('naming.md', 'Topic areas', 'Topic names by area (Decided), and why the EKFs meet in TF'),

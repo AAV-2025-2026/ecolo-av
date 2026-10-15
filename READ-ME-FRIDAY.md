@@ -53,23 +53,26 @@ questions).
 On the **Orin** and the **Motor-Pi** (64-bit only: `uname -m` must say `aarch64`):
 
 ```bash
-# from the USB stick
-./car_install.sh            # unpacks into ~/aav-jazzy and builds; no sudo
+# from the USB stick (bash, because a stick may drop the files' run permission)
+bash car-kit/car_install.sh --dry-run    # the checks only: changes nothing
+bash car-kit/car_install.sh              # unpacks into ~/aav-jazzy and builds; no sudo
 ```
 
 - It doesn't touch the Humble install, `~/.bashrc`, or any service.
 - **Undo:** `rm -rf ~/aav-jazzy`.
-- It needs about 7 GB free: check `df -h` first (W7, W8).
+- It needs 13 GB free (the environment is 9 GB unpacked): `--dry-run` checks (W7, W8).
+- Step by step, with sizes and times: [docs/car-install.md](docs/car-install.md).
 
 **Stop point:** the build finishes on both.
 
 ## 4. Listen first: our stack next to theirs
 
-Everything of ours runs in **domain 42**: `export ROS_DOMAIN_ID=42` in each terminal.
-The 2025-26 software in its own domain doesn't see us, and we don't see it.
+Everything of ours runs in **domain 42**. On the car's computers `~/aav-jazzy/aav.sh`
+sets it; on a laptop, `export ROS_DOMAIN_ID=42` in each terminal. The 2025-26 software in
+its own domain doesn't see us, and we don't see it.
 
 ```bash
-./car_listen.sh             # which devices exist, and which our drivers could open
+~/aav-jazzy/aav.sh tools/car_listen.sh    # which devices exist, which our drivers could open
 ```
 
 A device (the GPS, the IMU, a camera) can only be opened by **one program**. So for each
@@ -78,7 +81,7 @@ sensor, one at a time:
 | # | Do | See it |
 |---|---|---|
 | 1 | Stop the 2025-26 program that owns the device (found in step 1) | |
-| 2 | Start ours: `pixi run car orin` with only that part (or its driver alone) | `ros2 topic hz /sensors/gps/fix` |
+| 2 | Start ours: `~/aav-jazzy/aav.sh car orin` with only that part (or its driver alone) | `ros2 topic hz /sensors/gps/fix` |
 | 3 | Look at it: `pixi run hud` on a laptop, domain 42 | the GPS panel: NO FIX / 3D / RTK |
 | 4 | Stop ours; start theirs again | their software works as before |
 
@@ -103,9 +106,9 @@ Then:
 
 ```bash
 # Motor-Pi (domain 42): our legacy backend, to today's ESP32 over its UART
-pixi run car motor_pi
+~/aav-jazzy/aav.sh car motor_pi
 # Orin (domain 42): mux and ego, speed capped
-pixi run car orin max_speed:=0.3 gps:=false
+~/aav-jazzy/aav.sh car orin -- max_speed:=0.3 gps:=false
 # Laptop (domain 42, on the car's WiFi)
 pixi run keyboard
 pixi run hud
@@ -144,5 +147,6 @@ board, the Rust ESP32 firmware, or the reflash to JetPack 7.2.
 |---|---|
 | [docs/audit-questions.md](docs/audit-questions.md) | every question, how to answer it, what it unblocks |
 | [docs/audit-friday.md](docs/audit-friday.md) | the read-only audit, machine by machine |
+| [docs/car-install.md](docs/car-install.md) | the USB kit: install offline, no sudo, and undo |
 | [docs/platforms.md](docs/platforms.md) | Jazzy on the car before the reflash |
 | [READ-ME-HOW-IT-ALL-FITS.md](READ-ME-HOW-IT-ALL-FITS.md) | what starts where, and why |

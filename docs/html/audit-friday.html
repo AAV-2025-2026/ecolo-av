@@ -49,6 +49,7 @@
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="platforms.html">Platforms</a>
+<a href="car-install.html">From a USB stick</a>
 <a href="car-photos.html">Car photos</a>
 <a href="conventions.html">Conventions</a>
 <a href="naming.html">Topic areas</a>
@@ -69,7 +70,14 @@ the network, or drive. The "don't" list is at the end of this page.
 </div>
 <p><strong>The plan for the whole day</strong> (audit, network, our stack on the car):
 <a href="../../READ-ME-FRIDAY.md">READ-ME-FRIDAY.md</a>. <strong>Every question to answer:</strong>
-<a href="audit-questions.html">Friday's questions</a>.</p></div>
+<a href="audit-questions.html">Friday's questions</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">After the backups: our stack, from a USB stick</p>
+<pre><code>If the team agrees, once a machine is backed up: [From a USB stick](car-install.md)
+puts our Jazzy in `~/aav-jazzy` with no internet and no sudo, and leaves Humble alone.
+Its `car_listen.sh` is read-only: it says which devices our drivers could open.
+</code></pre>
+</div></div>
 <section class="card"><h2 id="the-day-in-one-picture">The day in one picture</h2>
 <pre class="highlight"><code class="language-text"> 1. Safe and powered  →  2. Find each machine  →  3. Back it up  →  4. Read-only checks
                                                                           ↓
@@ -446,7 +454,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5</code></pre>
 </tr>
 <tr>
 <td><strong>Look for</strong></td>
-<td>the JetPack version (6 = Ubuntu 22.04); the ROS workspaces and what starts at boot; the YOLO detector and its model file (<code>*.pt</code>, <code>*.engine</code>); <code>camera_decode</code>; any lidar driver; OSRM data; free disk for Pixi (about 7 GB)</td>
+<td>the JetPack version (6 = Ubuntu 22.04); the ROS workspaces and what starts at boot; the YOLO detector and its model file (<code>*.pt</code>, <code>*.engine</code>); <code>camera_decode</code>; any lidar driver; OSRM data; free disk for the USB kit (13 GB)</td>
 </tr>
 <tr>
 <td><strong>Answers</strong></td>

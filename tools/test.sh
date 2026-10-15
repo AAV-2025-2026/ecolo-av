@@ -90,6 +90,16 @@ for flag in --sim --local; do
 done
 echo "they do"
 
+echo "== the car kit's scripts (docs/car-install.md)"
+for s in tools/car_kit.sh tools/car_install.sh tools/car_listen.sh; do bash -n "$s"; done
+# Away from a kit, the installer must stop at its checks, and say it changed nothing.
+if out=$(bash tools/car_install.sh --dry-run --no-verify 2>&1); then
+  echo "car_install.sh --dry-run passed with no kit: $out"; exit 1
+fi
+[[ "$out" == *"nothing was changed"* ]] || { echo "car_install.sh: $out"; exit 1; }
+AAV_PREFIX=/nonexistent bash tools/car_listen.sh > /dev/null
+echo "they parse, the installer refuses cleanly, and car_listen runs"
+
 echo "== vendor/ stays out of the build"
 # Without COLCON_IGNORE, pixi run build would try to build all of ROS 2's source.
 [[ -f vendor/COLCON_IGNORE ]] || { echo "vendor/COLCON_IGNORE is missing"; exit 1; }

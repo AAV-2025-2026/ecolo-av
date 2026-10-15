@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our stack on the car, from a USB stick · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/car-install.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Our stack on the car, from a USB stick</h1>
+<div class="meta">7 min read · 10 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a class="here" href="car-install.html">From a USB stick</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-plan-in-one-picture">The plan in one picture</a><a href="#1-make-the-kit-on-a-mac-with-internet">1. Make the kit (on a Mac, with internet)</a><a href="#2-check-first-on-the-car">2. Check first (on the car)</a><a href="#3-install">3. Install</a><a href="#4-look-read-only-car_listen">4. Look, read-only: car_listen</a><a href="#why-ros_domain_id-42">Why ROS_DOMAIN_ID 42</a><a href="#5-run">5. Run</a><a href="#undo">Undo</a><a href="#when-theres-internet">When there&#x27;s internet</a><a href="#what-was-tested">What was tested</a></nav>
+<div class="lead"><p>How to put our ROS 2 Jazzy on the Orin and the Motor-Pi <strong>with no internet</strong>, <strong>without
+sudo</strong>, and <strong>without touching</strong> the 2025-26 Humble software. It all goes in one folder,
+<code>~/aav-jazzy</code>. Deleting that folder undoes everything.</p>
+<div class="admonition warning">
+<p class="admonition-title">Not on the car yet</p>
+<pre><code>The kit is made and checked on a Mac. The install itself is [[untested]] on ARM Linux:
+Friday is its first run. Do the [audit](audit-friday.md) first: back up, then install.
+</code></pre>
+</div></div>
+<section class="card"><h2 id="the-plan-in-one-picture">The plan in one picture</h2>
+<pre class="highlight"><code class="language-text">  Mac (internet)                    USB stick                 car computer (no internet)
+  pixi run car-kit   ──────────►   car-kit/  (1.8 GB)  ──►   car_install.sh  ──►  ~/aav-jazzy/
+                                                              car_listen.sh       (read-only)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Where</th>
+<th>Step</th>
+<th>Time (measured)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Mac</td>
+<td><code>pixi run car-kit</code></td>
+<td>26 s with Pixi's cache full; else the time to download 1.6 GB</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Mac</td>
+<td>copy <code>car-kit/</code> to a stick</td>
+<td>a few minutes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>car</td>
+<td><code>bash .../car_install.sh --dry-run</code></td>
+<td>1 min (the checksums)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>car</td>
+<td><code>bash .../car_install.sh</code></td>
+<td><span class="badge b-untested">untested</span> on ARM. A Mac took 91 s; guess 10 min on the Orin, 30-60 min on a Pi 4</td>
+</tr>
+<tr>
+<td>5</td>
+<td>car</td>
+<td><code>~/aav-jazzy/aav.sh tools/car_listen.sh</code></td>
+<td>seconds</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="1-make-the-kit-on-a-mac-with-internet">1. Make the kit (on a Mac, with internet)</h2>
+<pre class="highlight"><code class="language-bash">cd ~/aav
+git checkout main &amp;&amp; git pull       # the kit holds what is committed, nothing else
+pixi run car-kit                    # writes car-kit/ (git ignores it)</code></pre>
+<p>What it holds (made on Ben's Mac, 15 Oct):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>What</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav-jazzy-linux-aarch64.tar</code></td>
+<td>every package of our default Pixi environment, for 64-bit ARM, from <code>pixi.lock</code> (packed by pixi-pack)</td>
+<td>1.7 GB</td>
+</tr>
+<tr>
+<td><code>bin/pixi</code>, <code>bin/pixi-unpack</code></td>
+<td>the programs that unpack and run it, for 64-bit ARM, version-pinned and checksummed</td>
+<td>78 MB</td>
+</tr>
+<tr>
+<td><code>aav.bundle</code></td>
+<td>the repo (git bundle)</td>
+<td>5 MB</td>
+</tr>
+<tr>
+<td><code>aav-src.tar.gz</code></td>
+<td>the same code, for a computer with no git</td>
+<td>4 MB</td>
+</tr>
+<tr>
+<td><code>rust-crates.tar.gz</code></td>
+<td>the 152 Rust crates our four Rust packages use, so <code>cargo</code> needs no internet</td>
+<td>43 MB</td>
+</tr>
+<tr>
+<td><code>models/</code></td>
+<td>the YOLO model files from <code>models/</code>, if you have them (<code>pixi run get-models</code>)</td>
+<td>6 MB</td>
+</tr>
+<tr>
+<td><code>car_install.sh</code>, <code>README.md</code>, <code>KIT.txt</code>, <code>SHA256SUMS</code></td>
+<td>the installer, a short how-to, the commit, the checksums</td>
+<td>small</td>
+</tr>
+</tbody>
+</table></div>
+<p>Any stick works, even FAT32: the biggest file is under 4 GB.</p>
+</section>
+<section class="card"><h2 id="2-check-first-on-the-car">2. Check first (on the car)</h2>
+<p>Log in as your normal user (ask the team for the login). Then:</p>
+<pre class="highlight"><code class="language-bash">uname -m                                            # must say aarch64
+bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --dry-run</code></pre>
+<p><code>--dry-run</code> changes nothing. Each line says OK, NOTE or STOP:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>system, processor</td>
+<td>Linux on <code>aarch64</code>. A Pi on a 32-bit OS says <code>armv7l</code>: then the kit can't run there</td>
+</tr>
+<tr>
+<td>user</td>
+<td>not root: no <code>sudo</code></td>
+</tr>
+<tr>
+<td>glibc</td>
+<td>2.28 or newer (Ubuntu 22.04 has 2.35)</td>
+</tr>
+<tr>
+<td>kit, checksums</td>
+<td>every file there, and copied whole</td>
+</tr>
+<tr>
+<td>disk</td>
+<td>13 GB free in your home folder (3 GB when the environment is already there)</td>
+</tr>
+<tr>
+<td>git</td>
+<td>optional: without it, the code comes from <code>aav-src.tar.gz</code></td>
+</tr>
+<tr>
+<td>memory</td>
+<td>under 6 GB (a 4 GB Pi), it builds one package at a time</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="3-install">3. Install</h2>
+<pre class="highlight"><code class="language-bash">bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>unpacks ROS 2 Jazzy: 9.0 GB of package contents</td>
+<td><code>~/aav-jazzy/env</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>clones the code, and links the environment in as Pixi's own</td>
+<td><code>~/aav-jazzy/aav</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>unpacks the Rust crates, and tells cargo to stay offline</td>
+<td><code>~/aav-jazzy/cargo</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>writes <code>aav.sh</code>, which runs a command inside our Jazzy</td>
+<td><code>~/aav-jazzy/aav.sh</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>colcon build</code>, offline. The HUD (<code>aav_hud_raylib</code>) only with <code>--all</code></td>
+<td><code>~/aav-jazzy/aav/install</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Run it again any time: it skips what is done. A newer kit updates the code, and the
+  environment only if <code>pixi.lock</code> changed.</li>
+<li>A package that fails to build doesn't stop the rest: the end of <code>~/aav-jazzy/build.log</code>
+  says which.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">What it never touches</p>
+<pre><code>`sudo`, `/opt/ros` (Humble), `~/.bashrc`, `~/.cargo`, system services, the network
+settings. Everything is in `~/aav-jazzy`.
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="4-look-read-only-car_listen">4. Look, read-only: car_listen</h2>
+<pre class="highlight"><code class="language-bash">~/aav-jazzy/aav.sh tools/car_listen.sh</code></pre>
+<p>It lists the serial, camera and CAN devices, and says whether each of our drivers
+<strong>could</strong> open its device. It opens none of them: opening a USB serial port can reset an
+ESP32.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wants</td>
+<td>the name our config uses, like <code>/dev/aav/imu</code></td>
+</tr>
+<tr>
+<td>Found</td>
+<td>that device, or the raw one with the right USB IDs (<code>/dev/ttyUSB0 (no udev name)</code>): our udev rules need sudo, so they aren't on the car yet</td>
+</tr>
+<tr>
+<td>Can open?</td>
+<td><code>yes</code>, or <code>needs group dialout</code> (an admin adds you later, not Friday)</td>
+</tr>
+<tr>
+<td>In use by</td>
+<td>a program already holding it: the 2025-26 software, probably</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="why-ros_domain_id-42">Why ROS_DOMAIN_ID 42</h2>
+<p>A domain is a separate ROS network on the same wires: each one uses its own UDP ports.
+The 2025-26 software uses domain 0 or 10. <code>aav.sh</code> always sets <strong>42</strong>, so our nodes and
+theirs never see each other: no mixed Humble and Jazzy messages, no topic clashes.</p>
+<ul>
+<li>To watch our nodes from a Mac: <code>export ROS_DOMAIN_ID=42</code> there too.</li>
+<li>A domain keeps the <strong>messages</strong> apart, not the <strong>devices</strong>: two programs can't share a
+  serial port. Stop the 2025-26 driver before ours uses its device, and only when the
+  team agrees.</li>
+</ul>
+</section>
+<section class="card"><h2 id="5-run">5. Run</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Want</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>any ROS command</td>
+<td><code>~/aav-jazzy/aav.sh ros2 topic list</code></td>
+</tr>
+<tr>
+<td>the Motor-Pi's part of the car</td>
+<td><code>~/aav-jazzy/aav.sh car motor_pi</code></td>
+</tr>
+<tr>
+<td>the Orin's part</td>
+<td><code>~/aav-jazzy/aav.sh car orin</code></td>
+</tr>
+<tr>
+<td>a rebuild after an edit</td>
+<td><code>~/aav-jazzy/aav.sh build</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>aav.sh</code> runs <code>pixi run --as-is</code> in <code>~/aav-jazzy/aav</code>, after clearing anything a Humble
+terminal set (<code>AMENT_PREFIX_PATH</code>, <code>PYTHONPATH</code>...). Pixi and cargo never go online.</p>
+<div class="admonition warning">
+<p class="admonition-title">Before <code>car</code></p>
+<pre><code>Wheels off the ground, the e-stop in a hand, and the 2025-26 software stopped
+([Platforms](platforms.md), "The first hardware test"). Not on Friday's audit.
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="undo">Undo</h2>
+<pre class="highlight"><code class="language-bash">rm -rf ~/aav-jazzy</code></pre>
+<p>Nothing else changed, so nothing else needs undoing.</p>
+</section>
+<section class="card"><h2 id="when-theres-internet">When there's internet</h2>
+<p>The online way works too: install Pixi, clone, <code>pixi install</code> (<a href="platforms.html">Platforms</a>,
+"Try Jazzy on the car before the reflash"). The kit's clone already points <code>origin</code> at
+GitHub, so <code>git pull</code> in <code>~/aav-jazzy/aav</code> works once the computer has a GitHub key.</p>
+</section>
+<section class="card"><h2 id="what-was-tested">What was tested</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run car-kit</code> on a Mac</td>
+<td><span class="badge b-works">works</span> 15 Oct: 1.8 GB, 26 s with Pixi's cache full</td>
+</tr>
+<tr>
+<td>the linux-aarch64 pack</td>
+<td><span class="badge b-works">works</span> pixi-pack packed all 1040 packages from <code>pixi.lock</code></td>
+</tr>
+<tr>
+<td><code>car_install.sh --dry-run</code> on a Mac</td>
+<td><span class="badge b-works">works</span> it refuses: not Linux, not aarch64, nothing changed</td>
+</tr>
+<tr>
+<td>the same installer on a Mac, with a Mac pack, the network blocked</td>
+<td><span class="badge b-works">works</span> 15 Oct: unpack 44 s, build all 25 packages 43 s (the Rust ones from the kit's crates), run again 16 s; <code>aav.sh</code> cleared a Humble <code>PYTHONPATH</code> and set domain 42</td>
+</tr>
+<tr>
+<td><code>car_listen.sh</code></td>
+<td><span class="badge b-works">works</span> on a Mac (bash 3.2); its Linux parts (sysfs, /proc, <code>ss</code>) are <span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>the install on the Orin or a Pi</td>
+<td><span class="badge b-untested">untested</span>: Friday</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="platforms.html"><small>Previous</small>← Platforms</a>
+<a class="next" href="car-photos.html"><small>Next</small>Car photos →</a></nav>
+</main>
+<footer>Source: <code>docs/car-install.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

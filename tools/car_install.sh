@@ -4,7 +4,7 @@
 # usage: bash /media/<you>/<stick>/car-kit/car_install.sh [--dry-run] [--all] [--no-verify]
 #
 #   --dry-run    only the checks: says what it would do, changes nothing
-#   --all        also build the HUD (aav_hud_raylib) and bench mode's spine_sim
+#   --all        also build the HUD (aav_hud_raylib, the in-car screen)
 #   --no-verify  skip the checksums of the kit's files (they take a minute from a stick)
 #
 # Run it as your normal user, on the car computer itself (an Orin or a Pi, 64-bit).
@@ -22,8 +22,9 @@ PREFIX="$HOME/aav-jazzy"
 PACK=aav-jazzy-linux-aarch64.tar
 NEED_GB=13          # the environment unpacked (9.1 GiB, measured) + the build + room
 NEED_GB_AGAIN=3     # when the environment is already unpacked
-# Built only with --all: the HUD's screen is DASH-UI's, and spine_sim is bench mode's.
-SKIP_PACKAGES="aav_hud_raylib aav_spine_sim"
+# Built only with --all: the HUD's screen is DASH-UI's, not the Orin's or the Motor-Pi's.
+# Only a package nothing else depends on can be skipped: colcon then fails its dependents.
+SKIP_PACKAGES="aav_hud_raylib"
 
 dry=0 all=0 verify=1
 for arg in "$@"; do
@@ -217,7 +218,12 @@ export PIXI_HOME="\$P/pixi-home" PIXI_CACHE_DIR="\$P/pixi-cache" PIXI_FROZEN=tru
 export CARGO_HOME="\$P/cargo" CARGO_NET_OFFLINE=true
 export AAV_KIT_SHELL=1
 cd "\$P/aav"
-exec "\$P/bin/pixi" run --as-is "\$@"
+# A pixi task (car, build...) as it is; any other command with our built packages on top.
+if awk -v t="\${1:-}" '\$1 == t && \$2 == "=" {f = 1} END {exit !f}' pixi.toml \\
+   || [[ ! -f install/setup.bash ]]; then
+  exec "\$P/bin/pixi" run --as-is "\$@"
+fi
+exec "\$P/bin/pixi" run --as-is tools/ros.sh "\$@"
 EOF
 chmod +x "$PREFIX/aav.sh"
 echo "done"
@@ -227,9 +233,11 @@ skip=""
 if [[ $all == 0 ]]; then skip="--packages-skip $SKIP_PACKAGES"; fi
 t=$(date +%s)
 build_ok=1
+# The build task (colcon build --symlink-install), not colcon through ros.sh: with our own
+# install/ sourced, the Rust packages link against it and fail (seen on a Mac, 15 Oct).
 # shellcheck disable=SC2086  # $skip is a list of words on purpose
 CARGO_BUILD_JOBS=$(( workers > 2 ? workers : 2 )) \
-  "$PREFIX/aav.sh" colcon build --symlink-install --parallel-workers "$workers" $skip \
+  "$PREFIX/aav.sh" build --continue-on-error --parallel-workers "$workers" $skip \
   2>&1 | tee "$PREFIX/build.log" || build_ok=0   # pipefail: colcon's status
 echo "the build took $(( $(date +%s) - t )) s (log: $PREFIX/build.log)"
 

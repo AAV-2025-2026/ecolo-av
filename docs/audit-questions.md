@@ -64,7 +64,7 @@ The ⚠️ rows matter most: they change what we buy, or whether it's safe to dr
 | W4 | Is IGMP snooping on in the TP-Link switch? It can drop ROS's multicast | the switch's web page | W3 |
 | W5 | Does the car's network reach the internet? | `ping 1.1.1.1` from the Orin | online install, or the offline kit |
 | W6 | Are the clocks in sync? | `date` on each, side by side; `chronyc tracking` | TF and the EKFs reject messages from a wrong clock |
-| W7 | The Orin: JetPack version, module part number, free disk | `cat /etc/nv_tegra_release`; the label; `df -h` | the reflash plan (Q24); the kit (about 7 GB) |
+| W7 | The Orin: JetPack version, module part number, free disk | `cat /etc/nv_tegra_release`; the label; `df -h` | the reflash plan (Q24); the kit (13 GB free to install) |
 | W8 | Free disk and RAM on each Pi | `df -h`, `free -h` | our environment on each one |
 | W9 | What are ES-PI and QNX-PI, and are they in the driving path? | log in; `systemctl list-units`; ask | the network map; the start-up order |
 | W10 | Which Pi drives the dash screen, and its resolution? | `xrandr` or `kmsprint` on the dash Pi | the raylib HUD's full-screen size |

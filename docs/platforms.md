@@ -126,6 +126,10 @@ Pixi also runs on the car's ARM computers, on the Ubuntu 22.04 they have now. So
 team can try this stack on the car first, and reflash later. It resolves, but is
 untested on the car.
 
+!!! note "No internet on the car? Use the USB kit"
+    `pixi run car-kit` on a Mac makes a 1.8 GB folder that installs all of this offline,
+    without sudo, into `~/aav-jazzy`: [From a USB stick](car-install.md).
+
 1. Stop the 2025-26 software: it is Humble, and Humble and Jazzy don't mix.
 2. On the Orin and the Motor Pi, install Pixi and copy the code, as on
    [Your Mac](mac.md) (steps 2 to 4). It needs a 64-bit OS: `uname -m` must say
@@ -135,7 +139,7 @@ untested on the car.
 | | Pixi on today's Ubuntu 22.04 | Reflash to JetPack 7.2 |
 |---|---|---|
 | What changes on the car | one folder; delete it to undo | everything: back up first |
-| Disk | about 7 GB on each computer: check the Pis | the new OS |
+| Disk | about 9 GB on each computer, 13 GB free to install: check the Pis | the new OS |
 | Good for | trying the stack on the car | the long term: apt, and NVIDIA's ROS packages |
 
 ## Moving the Orin to JetPack 7.2

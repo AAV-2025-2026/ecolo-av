@@ -14,6 +14,11 @@ there, and save a copy, without changing anything.** This page is steps 2 and 3 
 [READ-ME-FRIDAY.md](../READ-ME-FRIDAY.md). **Every question to answer:**
 [Friday's questions](audit-questions.md).
 
+!!! note "After the backups: our stack, from a USB stick"
+    If the team agrees, once a machine is backed up: [From a USB stick](car-install.md)
+    puts our Jazzy in `~/aav-jazzy` with no internet and no sudo, and leaves Humble alone.
+    Its `car_listen.sh` is read-only: it says which devices our drivers could open.
+
 ## The day in one picture
 
 ```text
@@ -185,7 +190,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5
 |---|---|
 | **Find it** | switch port JETSON. Home folder `/home/aavjetson` ([Platforms](platforms.md)) |
 | **Also run** | `cat /etc/nv_tegra_release`; `cat /proc/device-tree/model`; `timeout 5 tegrastats` (5 seconds, then it stops); `nvpmodel -q` |
-| **Look for** | the JetPack version (6 = Ubuntu 22.04); the ROS workspaces and what starts at boot; the YOLO detector and its model file (`*.pt`, `*.engine`); `camera_decode`; any lidar driver; OSRM data; free disk for Pixi (about 7 GB) |
+| **Look for** | the JetPack version (6 = Ubuntu 22.04); the ROS workspaces and what starts at boot; the YOLO detector and its model file (`*.pt`, `*.engine`); `camera_decode`; any lidar driver; OSRM data; free disk for the USB kit (13 GB) |
 | **Answers** | car-photos #1, #3 (which computer reads the lidar?) |
 | **Photograph** | the module's label: its part number (699-13701-0005-**501** or **-502**: the -502 has a reported flashing problem) |
 
