@@ -57,8 +57,9 @@
 <main>
 <nav class="toc"><span>On this page:</span><a href="#how-languages-fit-into-ros-2">How languages fit into ROS 2</a><a href="#what-we-use-and-where">What we use, and where</a><a href="#is-c-too-risky">Is C++ too risky?</a><a href="#what-if-everything-were-rust">What if everything were Rust?</a><a href="#rust-on-the-pi-and-the-esp32">Rust on the Pi and the ESP32</a><a href="#the-plan">The plan</a></nav>
 <div class="lead"><p>Our ROS nodes are Python, and the firmware and hardware drivers are Rust. The C++ we
-inherited for ROS is now Rust (Ben, 10 and 15 Oct): none of our ROS code is C++. ROS 2 lets each program pick its own
-language, because programs only meet through messages.</p></div>
+inherited is now Rust (Ben, 10 and 15 Oct): none of our ROS code is C++, and only the
+ESP32's firmware still is. ROS 2 lets each program pick its own language, because
+programs only meet through messages.</p></div>
 <section class="card"><h2 id="how-languages-fit-into-ros-2">How languages fit into ROS 2</h2>
 <p><img alt="How the languages stack up" src="../img/languages.svg" /></p>
 <ul>
@@ -109,9 +110,14 @@ language, because programs only meet through messages.</p></div>
 <td>Memory-safe, and its logic is tested on a laptop</td>
 </tr>
 <tr>
-<td>Today's ESP32 and Pico firmware</td>
+<td>Today's ESP32 firmware</td>
 <td>C++ (Arduino)</td>
-<td>Inherited. The spine (Rust) replaces the ESP32; the Picos get Rust twins (Embassy)</td>
+<td>Inherited. The spine (Rust) replaces it</td>
+</tr>
+<tr>
+<td>The wheel encoder and status display Pico 2s</td>
+<td>Rust, Embassy</td>
+<td>Rewrites of the 2025-26 C++, 15 Oct; not yet flashed</td>
 </tr>
 </tbody>
 </table></div>
@@ -121,8 +127,8 @@ language, because programs only meet through messages.</p></div>
 <ul>
 <li>The C++ we run is almost all stock packages that thousands of robots use. We wrote none
   of it.</li>
-<li>Our own code is Python and Rust, and both are memory-safe. The inherited C++ ROS code
-  is now Rust; only today's boards' firmware is still C++, until the spine replaces it.</li>
+<li>Our own code is Python and Rust, and both are memory-safe. The inherited C++ is now
+  Rust; only today's ESP32 firmware is still C++, until the spine replaces it.</li>
 <li>Each node is a separate process. A crash takes down one node, not the whole system.</li>
 <li>Safety never rests on one program: ego's timeout and the spine's watchdog stop the car
   if a node dies.</li>

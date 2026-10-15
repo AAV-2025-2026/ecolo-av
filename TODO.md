@@ -37,6 +37,10 @@ Ben, 15 Oct: "We should port all cpp to rust", and remove the old.
       with their logic in the crates `wheel-encoder`, `sentinel` and `hd44780`. The C++
       folders are deleted; their source stays on GitHub. *Done 15 Oct: builds, never
       flashed.*
+- [x] **The radar clustering in Rust, and the IMU's C++ driver gone** (`wt/rust-ports`):
+      `aav_radar_clusters` replaces `aav_object_detection` in the car, bench and Gazebo
+      launch files, with the C++ node's answers for 94 clouds kept as tests. *Done 15 Oct:
+      no C++ left in `src/`.*
 - [ ] **Flash them** on spare Pico 2s, then on the car: `pixi run wheel-uf2`,
       `sentinel-uf2` ([Rust on the hardware](docs/rust-firmware.md)) [[needs-you]].
 - [ ] **Something to feed the sentinel:** its 2025-26 sender isn't in any repo. A small
@@ -79,7 +83,7 @@ work on." His order, with the work under way:
 2. [x] **Our C++ to Rust:** Ben's Rust IMU driver becomes the default and the C++ one goes;
       the radar clustering becomes a Rust ROS node. Python to Rust later (Ben). *Done
       15 Oct (Ben: "We should port all cpp to rust"): `aav_imu_yahboom` and
-      `aav_radar_clusters`; no C++ left in `src/`. Only today's boards' firmware is C++.*
+      `aav_radar_clusters`; no C++ left in `src/`. Only the ESP32's firmware is C++.*
 3. [ ] **The Mac on the network, with ML on it:** the laptop's detector (Core ML) on the
       car's compressed pictures. *On in `laptop.yaml` since 11 Oct; to try against the
       bench as the car.*
