@@ -28,6 +28,26 @@ vehicle:
   mass: 272.0               # kg. TODO weigh (CARLA stand-in value)
   encoder_counts_per_rev: 8 # spokes on the encoder wheel (Wheel_Encoders wiznet.ino:29)
 
+# How the car answers its commands: the actuator model in Gazebo (aav_gazebo
+# actuator_model.py; READ-ME-FULL-SIMULATION.md, step 3). Units: m/s^2, s, rad, 1/s;
+# throttle and brake 0..1.
+#
+# !! EVERY NUMBER HERE IS A GUESS (15 Oct), chosen to match Gazebo's old limits
+# (+1.5 / -3.0 m/s^2) and the bench's spine_sim. TODO measure them on the car:
+# READ-ME-TESTS.md tests 4.1-4.5 (throttle, coasting, brake, circles) and 3.10-3.12
+# (steering sweep, speed, centre). Then delete the GUESS.
+actuators:
+  max_accel: 1.5          # m/s^2 at full throttle, on the flat. GUESS: TODO tests 4.1, 4.4
+  throttle_deadband: 0.0  # throttle below which the car doesn't move. GUESS: TODO test 4.4
+  throttle_lag: 0.1       # s: the throttle's response (first order). GUESS: TODO test 4.1
+  max_brake: 3.0          # m/s^2 at full brake. GUESS: TODO test 4.3
+  brake_lag: 0.2          # s: the brake actuator's response. GUESS: TODO test 4.3
+  drag: 0.1               # 1/s: coasting, m/s lost per second per m/s. GUESS: TODO test 4.2
+  steer_rate: 0.8         # rad/s: the steering motor's top speed (spine_sim's). GUESS: TODO test 3.11
+  steer_lag: 0.1          # s: the linkage after the motor. GUESS: TODO tests 3.11, 4.5
+  steer_offset: 0.0       # rad, + left: the wheels' angle when told straight. GUESS: TODO test 3.12
+  steer_deadband: 0.005   # rad: a smaller change doesn't move the motor. GUESS: TODO test 3.10
+
 # Sensor mounts, relative to base_link. xyz in metres, rpy in radians.
 sensors:
   imu_link:
