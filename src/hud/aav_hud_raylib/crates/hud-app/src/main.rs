@@ -14,7 +14,8 @@
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread and
 //! sends news over a channel (ros.rs). `--demo` swaps the ROS node for pretend data.
 //!
-//! usage: hud [--demo] [--fullscreen] [--config FILE] [--screenshot FILE] [--ros-args ...]
+//! usage: hud [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors] [--config FILE]
+//!            [--screenshot FILE] [--ros-args ...]
 
 mod demo;
 #[cfg(feature = "ros")]
@@ -28,16 +29,21 @@ use std::{
 };
 
 use anyhow::{bail, Context as _, Result};
-use hud_core::{config::HudConfig, state::HudState};
+use hud_app::window;
+use hud_core::{config::HudConfig, screen::Monitor, state::HudState};
 use raylib::prelude::*;
 
 use crate::{demo::Demo, source::DataSource, ui::Ui};
 
 const USAGE: &str = "\
-usage: hud [--demo] [--fullscreen] [--config FILE] [--screenshot FILE] [--ros-args ...]
+usage: hud [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors] [--config FILE]
+           [--screenshot FILE] [--ros-args ...]
 
   --demo             pretend data: no ROS, no car
   --fullscreen       fill the screen (F11 switches too)
+  --monitor NAME|N   open on this monitor: its name exactly (HDMI-1, as xrandr says) or
+                     its number (0 = the first). Not there: an error that lists them
+  --list-monitors    print the monitors' numbers, names and sizes, then quit
   --config FILE      topic names from FILE instead of the built-in config/hud.yaml
   --screenshot FILE  save the window as a PNG after 4 s, then quit (for the docs)
   --ros-args ...     passed to ROS, e.g. --ros-args -p gps_topic:=/localization/gps/fix";
@@ -50,6 +56,8 @@ const SCREENSHOT_AFTER: Duration = Duration::from_secs(4);
 struct Options {
     demo: bool,
     fullscreen: bool,
+    monitor: Option<Monitor>,
+    list_monitors: bool,
     config: Option<PathBuf>,
     screenshot: Option<PathBuf>,
 }
@@ -64,6 +72,11 @@ impl Options {
                 "--ros-args" => break,
                 "--demo" => opts.demo = true,
                 "--fullscreen" => opts.fullscreen = true,
+                "--list-monitors" => opts.list_monitors = true,
+                "--monitor" => {
+                    let m = it.next().context("--monitor needs a name or a number")?;
+                    opts.monitor = Some(m.parse()?);
+                }
                 "--config" => {
                     opts.config = Some(it.next().context("--config needs a file")?.into())
                 }
@@ -84,6 +97,10 @@ impl Options {
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let opts = Options::parse(&args)?;
+    if opts.list_monitors {
+        window::print_monitors();
+        return Ok(());
+    }
     let config = match &opts.config {
         Some(path) => {
             let text = std::fs::read_to_string(path)
@@ -131,9 +148,7 @@ fn run(opts: &Options, mut source: Box<dyn DataSource>, config: HudConfig) -> Re
     rl.set_exit_key(None);
     rl.set_target_fps(30);
     rl.set_window_min_size(640, 360);
-    if opts.fullscreen {
-        toggle_fullscreen(&mut rl);
-    }
+    window::place(&mut rl, opts.monitor.as_ref(), opts.fullscreen)?;
     let mut ui = Ui::new(&mut rl, &thread);
     let mut state = HudState::new(config);
     let started = Instant::now();
@@ -149,7 +164,7 @@ fn run(opts: &Options, mut source: Box<dyn DataSource>, config: HudConfig) -> Re
             }
         }
         if rl.is_key_pressed(KeyboardKey::KEY_F11) {
-            toggle_fullscreen(&mut rl);
+            window::toggle_fullscreen(&mut rl);
         }
         let button = ui.estop_button(rl.get_screen_width(), rl.get_screen_height());
         let hover = button.check_collision_point_rec(rl.get_mouse_position());
@@ -171,19 +186,6 @@ fn run(opts: &Options, mut source: Box<dyn DataSource>, config: HudConfig) -> Re
         }
     }
     Ok(())
-}
-
-/// Full screen at the monitor's own size, or back to a window.
-fn toggle_fullscreen(rl: &mut RaylibHandle) {
-    if !rl.is_window_fullscreen() {
-        let m = raylib::core::window::get_current_monitor();
-        let (w, h) = (
-            raylib::core::window::get_monitor_width(m),
-            raylib::core::window::get_monitor_height(m),
-        );
-        rl.set_window_size(w, h);
-    }
-    rl.toggle_fullscreen();
 }
 
 /// Saves what the window shows as a PNG. (raylib's own take_screenshot only writes into
@@ -226,5 +228,20 @@ mod tests {
         assert!(o.fullscreen);
         assert!(Options::parse(&args(&["--config"])).is_err());
         assert!(Options::parse(&args(&["--bogus"])).is_err());
+    }
+
+    #[test]
+    fn options_take_a_monitor() {
+        let o = Options::parse(&args(&["--monitor", "HDMI-1", "--fullscreen"])).expect("valid");
+        assert_eq!(o.monitor, Some(Monitor::Name("HDMI-1".into())));
+        let o = Options::parse(&args(&["--monitor", "1"])).expect("valid");
+        assert_eq!(o.monitor, Some(Monitor::Number(1)));
+        assert!(
+            Options::parse(&args(&["--list-monitors"]))
+                .expect("valid")
+                .list_monitors
+        );
+        assert!(Options::parse(&args(&["--monitor"])).is_err());
+        assert!(Options::parse(&args(&["--monitor", ""])).is_err());
     }
 }

@@ -22,7 +22,8 @@
 //! sends news over a channel (ros.rs). `--demo` swaps the ROS node for pretend data.
 //! The maths (map to screen, the distance left) is in map-core.
 //!
-//! usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE]
+//! usage: map [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
+//!            [--whole-map] [--config FILE] [--vehicle FILE]
 //!            [--navsat FILE] [--streets FILE] [--places FILE] [--zoom PX_PER_M]
 //!            [--search TEXT [--pick N]] [--send-goal TEXT] [--screenshot FILE] [--ros-args ...]
 
@@ -40,6 +41,8 @@ use std::{
 };
 
 use anyhow::{bail, Context as _, Result};
+use hud_app::window;
+use hud_core::screen::Monitor;
 use map_core::{
     car::CarShape,
     config::MapConfig,
@@ -60,12 +63,16 @@ use crate::{
 };
 
 const USAGE: &str = "\
-usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE]
+usage: map [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
+           [--whole-map] [--config FILE] [--vehicle FILE]
            [--navsat FILE] [--streets FILE] [--places FILE] [--zoom PX_PER_M]
            [--search TEXT [--pick N]] [--send-goal TEXT] [--screenshot FILE] [--ros-args ...]
 
   --demo             pretend data: no ROS, no car
   --fullscreen       fill the screen (F11 switches too)
+  --monitor NAME|N   open on this monitor: its name exactly (HDMI-2, as xrandr says) or
+                     its number (0 = the first). Not there: an error that lists them
+  --list-monitors    print the monitors' numbers, names and sizes, then quit
   --whole-map        start showing the whole map, not following the car (F switches)
   --config FILE      topic names from FILE instead of the built-in config/map.yaml
   --vehicle FILE     the car's size from FILE instead of the built-in vehicle.yaml
@@ -98,6 +105,8 @@ const KEY_ZOOM: f64 = 1.25;
 struct Options {
     demo: bool,
     fullscreen: bool,
+    monitor: Option<Monitor>,
+    list_monitors: bool,
     whole_map: bool,
     config: Option<PathBuf>,
     vehicle: Option<PathBuf>,
@@ -128,6 +137,8 @@ impl Options {
                 "--ros-args" => break,
                 "--demo" => opts.demo = true,
                 "--fullscreen" => opts.fullscreen = true,
+                "--list-monitors" => opts.list_monitors = true,
+                "--monitor" => opts.monitor = Some(value("--monitor")?.parse()?),
                 "--whole-map" => opts.whole_map = true,
                 "--config" => opts.config = Some(value("--config")?.into()),
                 "--vehicle" => opts.vehicle = Some(value("--vehicle")?.into()),
@@ -180,6 +191,10 @@ fn read(path: &Path) -> Result<String> {
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let opts = Options::parse(&args)?;
+    if opts.list_monitors {
+        window::print_monitors();
+        return Ok(());
+    }
     let config = match &opts.config {
         Some(path) => {
             MapConfig::from_yaml(&read(path)?).with_context(|| format!("in {}", path.display()))?
@@ -270,9 +285,7 @@ fn run(
     rl.set_exit_key(None);
     rl.set_target_fps(30);
     rl.set_window_min_size(800, 450);
-    if opts.fullscreen {
-        toggle_fullscreen(&mut rl);
-    }
+    window::place(&mut rl, opts.monitor.as_ref(), opts.fullscreen)?;
     let mut ui = Ui::new(&mut rl, &thread);
     let mut state = MapState::new(config);
     let mut view = View::default();
@@ -364,7 +377,7 @@ fn run(
         // The map's own keys, unless they're letters for the search box.
         let map_keys = !search.finder.is_typing();
         if rl.is_key_pressed(KeyboardKey::KEY_F11) {
-            toggle_fullscreen(&mut rl);
+            window::toggle_fullscreen(&mut rl);
         }
         if map_keys && rl.is_key_pressed(KeyboardKey::KEY_F) {
             view.toggle_follow();
@@ -447,19 +460,6 @@ fn search_keys(rl: &RaylibHandle, typed: &[char], typing: bool, open: bool) -> V
         }
     }
     keys
-}
-
-/// Full screen at the monitor's own size, or back to a window.
-fn toggle_fullscreen(rl: &mut RaylibHandle) {
-    if !rl.is_window_fullscreen() {
-        let m = raylib::core::window::get_current_monitor();
-        let (w, h) = (
-            raylib::core::window::get_monitor_width(m),
-            raylib::core::window::get_monitor_height(m),
-        );
-        rl.set_window_size(w, h);
-    }
-    rl.toggle_fullscreen();
 }
 
 /// Saves what the window shows as a PNG. (raylib's own take_screenshot only writes into
@@ -546,6 +546,22 @@ mod tests {
         );
         assert!(Options::parse(&args(&["--search", "x", "--pick", "0"])).is_err());
         assert!(Options::parse(&args(&["--search"])).is_err());
+    }
+
+    #[test]
+    fn options_take_a_monitor() {
+        let o = Options::parse(&args(&["--monitor", "HDMI-2", "--fullscreen"])).expect("valid");
+        assert_eq!(o.monitor, Some(Monitor::Name("HDMI-2".into())));
+        assert!(o.fullscreen);
+        let o = Options::parse(&args(&["--monitor", "0"])).expect("valid");
+        assert_eq!(o.monitor, Some(Monitor::Number(0)));
+        assert!(
+            Options::parse(&args(&["--list-monitors"]))
+                .expect("valid")
+                .list_monitors
+        );
+        assert!(Options::parse(&args(&["--monitor"])).is_err());
+        assert!(Options::parse(&args(&["--monitor", " "])).is_err());
     }
 
     #[test]

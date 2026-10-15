@@ -771,6 +771,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ctrlc",
+ "hud-app",
  "hud-core",
  "map-core",
  "raylib",

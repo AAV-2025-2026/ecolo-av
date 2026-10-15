@@ -18,6 +18,8 @@ ros = ["dep:rclrs", "dep:ros-env", "dep:ctrlc"]
 [dependencies]
 anyhow = "1"
 hud-core = { path = "../hud-core" }
+# Only its library: the window's monitor and full screen, shared with the HUD.
+hud-app = { path = "../hud-app", default-features = false }
 map-core = { path = "../map-core" }
 # The same raylib as hud-app: blank images (the map's texture), TrueType fonts, and
 # --screenshot.
