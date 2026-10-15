@@ -1,0 +1,12 @@
+[Desktop Entry]
+# Installed to ~/.config/autostart/ by tools/car_screens_install.sh. The desktop runs it
+# at login. It shares the desktop's display with systemd, then starts both screens: for
+# desktops that don't start graphical-session.target themselves (GNOME does; LXDE and
+# some kiosk setups don't). Harmless where they already run. docs/car-screens.md.
+Type=Application
+Name=AAV screens
+Comment=Starts the AAV HUD and map windows (systemd user units aav-hud, aav-map)
+Exec=sh -c "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XAUTHORITY; systemctl --user start aav-hud.service aav-map.service"
+NoDisplay=true
+Terminal=false
+X-GNOME-Autostart-enabled=true

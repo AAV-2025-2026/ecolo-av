@@ -100,7 +100,8 @@ done
 echo "they do"
 
 echo "== the car kit's scripts (docs/car-install.md)"
-for s in tools/car_kit.sh tools/car_install.sh tools/car_listen.sh; do bash -n "$s"; done
+for s in tools/car_kit.sh tools/car_install.sh tools/car_listen.sh tools/car_screen.sh \
+         tools/car_screens_install.sh; do bash -n "$s"; done
 # Away from a kit, the installer must stop at its checks, and say it changed nothing.
 if out=$(bash tools/car_install.sh --dry-run --no-verify 2>&1); then
   echo "car_install.sh --dry-run passed with no kit: $out"; exit 1

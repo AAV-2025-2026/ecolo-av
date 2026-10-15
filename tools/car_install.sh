@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # Install our Jazzy stack on a car computer from the USB kit (tools/car_kit.sh), offline.
 #
-# usage: bash /media/<you>/<stick>/car-kit/car_install.sh [--dry-run] [--all] [--no-verify]
+# usage: bash /media/<you>/<stick>/car-kit/car_install.sh [--dry-run] [--all] [--screens]
+#                                                          [--no-verify]
 #
 #   --dry-run    only the checks: says what it would do, changes nothing
-#   --all        also build the HUD (aav_hud_raylib, the in-car screen)
+#   --all        also build the HUD (aav_hud_raylib, the in-car screen and the map)
+#   --screens    --all, then the HUD and the map start at login, full screen, each on its
+#                own monitor (tools/car_screens_install.sh: two systemd *user* units).
+#                Only on the computer that drives the dash's screens. docs/car-screens.md
 #   --no-verify  skip the checksums of the kit's files (they take a minute from a stick)
 #
 # Run it as your normal user, on the car computer itself (an Orin or a Pi, 64-bit).
 # Everything goes in one folder, ~/aav-jazzy. To undo it all: rm -rf ~/aav-jazzy
+# (after --screens, first: bash ~/aav-jazzy/aav/tools/car_screens_install.sh uninstall)
 #
 # It never uses sudo, and never touches /opt/ros (the 2025-26 Humble), ~/.bashrc, ~/.cargo,
 # or a system service. Run it again at any time: it skips what is already done, and a new
@@ -22,17 +27,18 @@ PREFIX="$HOME/aav-jazzy"
 PACK=aav-jazzy-linux-aarch64.tar
 NEED_GB=13          # the environment unpacked (9.1 GiB, measured) + the build + room
 NEED_GB_AGAIN=3     # when the environment is already unpacked
-# Built only with --all: the HUD's screen is DASH-UI's, not the Orin's or the Motor-Pi's.
+# Built only with --all or --screens: the screens are DASH-UI's, not the Orin's or the Motor-Pi's.
 # Only a package nothing else depends on can be skipped: colcon then fails its dependents.
 SKIP_PACKAGES="aav_hud_raylib"
 
-dry=0 all=0 verify=1
+dry=0 all=0 screens=0 verify=1
 for arg in "$@"; do
   case "$arg" in
     --dry-run) dry=1 ;;
     --all) all=1 ;;
+    --screens) screens=1 all=1 ;;
     --no-verify) verify=0 ;;
-    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
     *) echo "unknown option: $arg (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -121,6 +127,10 @@ if [[ $dry == 1 ]]; then
   printf '\nDry run: every check passed. Without --dry-run it would fill %s:\n' "$PREFIX"
   printf '  env/ (Jazzy, %s), aav/ (the code, built), cargo/ (Rust crates), bin/, aav.sh\n' \
     "$( [[ $env_done == 1 ]] && echo "already there" || echo "unpacked")"
+  if [[ $screens == 1 ]]; then
+    printf 'Then, for --screens, tools/car_screens_install.sh: aav-hud and aav-map (systemd user\n'
+    printf 'units) in ~/.config/systemd/user, an autostart entry, ~/.config/aav/screens.env\n'
+  fi
   exit 0
 fi
 
@@ -174,6 +184,16 @@ if [[ -d "$KIT/models" ]]; then
     fi
   done
 fi
+# The map window's offline street map and place database (maps/streets, maps/places).
+for m in "$KIT"/maps/*/*; do
+  [[ -f "$m" ]] || continue
+  rel=${m#"$KIT/"}
+  if [[ ! -e "$PREFIX/aav/$rel" ]]; then
+    mkdir -p "$(dirname "$PREFIX/aav/$rel")"
+    cp "$m" "$PREFIX/aav/$rel"
+    echo "copied $rel"
+  fi
+done
 
 step "3. Rust crates into $PREFIX/cargo (so cargo needs no internet)"
 crates_id=$(awk '$2 == "rust-crates.tar.gz" {print $1}' "$KIT/SHA256SUMS")
@@ -241,9 +261,18 @@ CARGO_BUILD_JOBS=$(( workers > 2 ? workers : 2 )) \
   2>&1 | tee "$PREFIX/build.log" || build_ok=0   # pipefail: colcon's status
 echo "the build took $(( $(date +%s) - t )) s (log: $PREFIX/build.log)"
 
+screens_ok=1
+if [[ $screens == 1 ]]; then
+  step "6. The screens: the HUD and the map at login (docs/car-screens.md)"
+  bash "$PREFIX/aav/tools/car_screens_install.sh" install || screens_ok=0
+fi
+
 step "Finished in $(( $(date +%s) - T0 )) s; $(du -sh "$PREFIX" | awk '{print $1}') in $PREFIX"
 if [[ $build_ok == 0 ]]; then
   echo "WARNING: some packages didn't build: see $PREFIX/build.log. The rest still run."
+fi
+if [[ $screens_ok == 0 ]]; then
+  echo "WARNING: the screens weren't set up: see step 6 above (docs/car-screens.md)."
 fi
 cat <<EOF
 
@@ -254,3 +283,6 @@ Next (docs/car-install.md):
                                           2025-26 software is stopped, and the team agrees
 Undo everything:  rm -rf $PREFIX
 EOF
+if [[ $screens == 1 ]]; then
+  echo "  (first the screens: bash $PREFIX/aav/tools/car_screens_install.sh uninstall)"
+fi

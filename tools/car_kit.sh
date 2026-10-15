@@ -13,6 +13,8 @@
 #   bin/pixi-unpack, bin/pixi       their linux-aarch64 programs, pinned and checksummed
 #   rust-crates.tar.gz              every crate our Rust packages use (cargo vendor)
 #   models/                         the YOLO model files in models/, if any
+#   maps/                           the map window's street map and place database, if
+#                                   downloaded (pixi run get-street-map, get-hud-map)
 #   car_install.sh, README.md, KIT.txt, SHA256SUMS
 #
 # Downloads are cached in vendor/car-kit-cache, so a second run is quick.
@@ -110,6 +112,17 @@ for m in models/*; do
 done
 [[ $n -gt 0 ]] || echo "  none in models/ (pixi run get-models downloads the stock one)"
 
+step "The map window's offline files (docs/car-screens.md)"
+for m in maps/streets/ottawa.pmtiles maps/places/ottawa.db; do
+  if [[ -f "$m" ]]; then
+    mkdir -p "$OUT/$(dirname "$m")"
+    cp "$m" "$OUT/$m"
+    echo "  $m"
+  else
+    echo "  no $m (pixi run get-street-map, pixi run get-hud-map): the map works without it"
+  fi
+done
+
 step "The installer, the README, the checksums"
 cp tools/car_install.sh "$OUT/car_install.sh"
 chmod +x "$OUT/car_install.sh"
@@ -132,6 +145,9 @@ The full steps are in the repo: docs/car-install.md.
 2. `bash /media/$USER/<stick>/car-kit/car_install.sh --dry-run`   (checks only)
 3. `bash /media/$USER/<stick>/car-kit/car_install.sh`             (20-60 min)
 4. `~/aav-jazzy/aav.sh tools/car_listen.sh`                       (read-only)
+
+On the computer that drives the dash's two screens, add `--screens` to step 3: the HUD
+and the map then start at login, full screen, one on each (docs/car-screens.md).
 
 | It does | It doesn't |
 |---|---|
