@@ -7,15 +7,18 @@ members = [
     # Logic: no hardware, no dependencies.
     "crates/spine-core",
     "crates/aav-inputs",
-    # The wheel's spoke sensors and the wheel encoder's UDP packet.
+    # The other boards' logic: the wheel's spoke sensors and the wheel encoder's UDP
+    # packet; the status display (the sentinel).
     "crates/wheel-encoder",
+    "crates/sentinel",
     # Drivers: the I2C chips and the CAN controller (SPI) against embedded-hal 1.0;
-    # ibus takes bytes.
+    # ibus takes bytes; hd44780 is the sentinel's LCD, on GPIO pins.
     "crates/jrk-g2",
     "crates/ad5311",
     "crates/pca9555",
     "crates/mcp2515",
     "crates/ibus",
+    "crates/hd44780",
     # The glue between spine-core and the drivers, for any board.
     "crates/spine-board",
 ]
