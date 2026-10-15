@@ -47,6 +47,9 @@ if command -v cargo >/dev/null; then
     python3 tools/elf2uf2.py \
       firmware/spine/boards/pico2/target/thumbv8m.main-none-eabihf/release/spine-pico2
   fi
+  # Today's ESP32 control board: only with Espressif's Xtensa Rust (pixi run esp-tools).
+  echo "== firmware/spine/boards/esp32-umod: the spine on today's ESP32 control board"
+  tools/esp32.sh check
 else
   echo "skipped: no cargo here (pixi run test has it; or install Rust with rustup)"
 fi

@@ -77,6 +77,11 @@ const I2C_KHZ: u32 = 100;
 /// speed. The same guess as `legacy.yaml`'s `full_throttle_speed`. TODO(Q4): measure.
 const FULL_THROTTLE_SPEED: f32 = 3.0;
 
+/// The brake while nobody drives, from boot on. The C++ kept it full on (3500), and this
+/// board has no e-stop input yet to hold it, so it does the same until the team settles
+/// spine-core's `IDLE_BRAKE` (proposed 0.0: released). TODO(Ben): decide.
+const IDLE_BRAKE: f32 = 1.0;
+
 /// The status line on the USB cable, as often as the C++'s `publishStatus()`.
 const STATUS_EVERY_TICKS: u32 = 20;
 
@@ -259,6 +264,7 @@ async fn main(_spawner: Spawner) -> ! {
         speed_feedback: SpeedFeedback::None {
             full_throttle_speed: FULL_THROTTLE_SPEED,
         },
+        idle_brake: IDLE_BRAKE,
         ..SpineConfig::default()
     };
 
