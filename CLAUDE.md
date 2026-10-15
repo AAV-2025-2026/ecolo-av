@@ -44,7 +44,9 @@ These are the conventions decided so far. They apply to people and to Claude ses
   `/<area>/<device or node>/<thing>`, such as `/sensors/gps/fix`, `/drivers/joy/cmd_vel`,
   `/safety/estop`. Only ROS's own global names (`/tf`, `/clock`...) and Nav2's stay
   outside. `tools/tests/test_topic_areas.py` checks `docs/interfaces.yaml`.
-- **Prefer stock packages**:
+- **Prefer stock packages**, and look for a better open-source one before keeping ours or
+  an inherited one (Ben, 15 Oct: "if there is better version of stuff that is open source
+  then lets look at that"). Check its licence:
   1. stock ROS packages (robot_localization, Nav2, twist_mux, teleop_twist_*);
   2. then code inherited from the previous teams;
   3. then a reasonable stub.

@@ -5,11 +5,13 @@ Written 15 October 2026, for Ben. It answers:
 1. YOLO, OpenCV, or the previous teams' trained models?
 2. What do we do with the lidar? Can we just download a model?
 3. Can the HUD show a map?
+4. Are there better open-source models, like NVIDIA's per-pixel ones?
 
 > **The short version**
 > - **Use stock YOLO for objects** (already wired in): one model, run as TensorRT on the Orin and Core ML on a Mac. **Keep OpenCV for lane lines** (already done: under 1 ms a frame).
 > - **The previous teams' trained model is lost** (`best.pt` was on someone's laptop) and knew one label. Start from stock, and train our own later only if the stock one fails on our recordings.
 > - **Lidar: no model to start.** Put its points straight into Nav2's costmap and collision_monitor. Clustering next. A downloaded 3D detector last, and only if needed.
+> - **Per-pixel, for where the road is: NVIDIA's CitySemSegFormer** (a ready ONNX file), run with ONNX Runtime, not Isaac ROS: Isaac ROS isn't on Jazzy for the Orin yet.
 > - **A map on the HUD: yes.** The raylib HUD can draw offline map tiles with the car's GPS dot on top. Not built yet.
 
 ## 1. Camera perception: which tool for which job
@@ -121,7 +123,70 @@ known.
 - **The rules:** OpenStreetMap's own tile servers forbid bulk downloads. Render our own tiles from OSM data, or use a provider that allows offline use. Show "© OpenStreetMap contributors" on the screen, as the Flutter app does.
 - **About a day's work** for a map panel with the car's position. Search and routing come after.
 
-## 5. What to do, in order
+## 5. Better open-source options, including NVIDIA's per-pixel models
+
+Ben, 15 Oct: "if there is better version of stuff that is open source then lets look at
+that ... nvidia has some per pixel object detection models."
+
+### Boxes vs per-pixel
+
+| Kind | Answers | Example | Good for |
+|---|---|---|---|
+| **Detection** (boxes) | "a stop sign, here" | YOLO11, RT-DETR, RF-DETR | signs, people, cars: things to react to |
+| **Semantic segmentation** (per pixel) | "every pixel: road, sidewalk, car, person..." | NVIDIA **CitySemSegFormer**, SegFormer, DeepLabV3+ | **where the road is**: the drivable area, for the costmap and lane keeping |
+| **Instance segmentation** | per pixel, and which object | YOLO11-seg, Mask2Former | both at once |
+| **Drivable area + lanes** | road and lane pixels | TwinLiteNet, YOLOPv2 | a cheap road mask for a small car |
+
+Per-pixel is what our costmap is missing: Nav2 doesn't know where the road is (see
+[READ-ME-MAPS-AND-POSITION.md](READ-ME-MAPS-AND-POSITION.md)). A road mask, projected onto
+the ground, becomes a costmap layer: off-road = high cost.
+
+### NVIDIA's options
+
+| Option | What | Fits us? |
+|---|---|---|
+| **CitySemSegFormer** (NGC, TAO) | per-pixel, 19 city classes (road, sidewalk, car, person, rider...). A ready ONNX file; the card says it's ready for commercial use | ✅ **the best first try.** Road mIoU 73.6, sidewalk 46.9 on its own test data: check it on ours |
+| **PeopleSemSegNet** (NGC) | per-pixel people | a later add-on |
+| **Isaac ROS** (NVIDIA's ROS packages: segmentation, RT-DETR detection, stereo depth, nvblox 3D maps) | open source (Apache 2.0), TensorRT-fast | ⚠️ **not on our Orin with Jazzy yet**: on Orin it's Isaac ROS 3.2 with JetPack 6 and **Humble**; the Jazzy version runs on Jetson Thor. JetPack 7.2 support is "planned", no date |
+| **TAO Toolkit** | NVIDIA's fine-tuning tools | for later, if we train on our own pictures |
+
+**So:** use NVIDIA's **models**, not Isaac ROS (yet). A model is just an ONNX file; we run
+it ourselves.
+
+### One way to run any model: ONNX Runtime
+
+Most open models export to **ONNX**, one file format. ONNX Runtime (in conda-forge for both
+the Mac and the car's ARM computers, version 1.31) runs it on whatever is fastest:
+
+| Computer | ONNX Runtime uses | |
+|---|---|---|
+| Orin | TensorRT or CUDA (JetPack's build) | NVIDIA's speed, without Isaac ROS |
+| Mac | Core ML | the Apple GPU |
+| Any | the CPU | slow, but always works |
+
+One node, `segmenter`, with the model file as a setting, could run CitySemSegFormer today
+and TwinLiteNet tomorrow, and publish a road mask on `/perception/road/mask`. It could even
+be Rust: the `ort` crate wraps ONNX Runtime.
+
+### Licences
+
+| Model | Licence |
+|---|---|
+| YOLO11 (Ultralytics) | AGPL-3.0: fine for our open project; a problem if anyone ships it closed |
+| RT-DETR, RF-DETR | Apache 2.0 |
+| CitySemSegFormer | NVIDIA's model licence (commercial use allowed, per the card): read it before redistributing |
+| SegFormer (the original code) | NVIDIA's own licence, research use: prefer the TAO model |
+| OpenCV | Apache 2.0 |
+
+### The fair test
+
+1. Record the car's cameras on one drive (`tools/record.sh`).
+2. Run each model on the **same** recording: YOLO11 vs RT-DETR vs RF-DETR for boxes;
+   CitySemSegFormer vs TwinLiteNet for the road.
+3. Compare: what each misses, and milliseconds per frame on the Orin and the Mac.
+4. Keep the winner; the losers cost nothing.
+
+## 6. What to do, in order
 
 | # | Task | Needs |
 |---|---|---|
@@ -131,3 +196,12 @@ known.
 | 4 | Record a real drive; run stock YOLO on it; decide whether to train | the cameras on the car |
 | 5 | The HUD's map panel with offline tiles | the test area chosen |
 | 6 | Lidar clusters; then camera + lidar calibration | the lidar on the car |
+| 7 | A `segmenter` node on ONNX Runtime; try CitySemSegFormer for a road mask, then a road layer in the costmap | can start now, in Gazebo's road world |
+
+## Sources (15 Oct)
+
+- [Isaac ROS 4.0 for Thor](https://forums.developer.nvidia.com/t/nvidia-isaac-ros-4-0-for-thor-has-arrived/352109)
+- [Roadmap for Isaac ROS Jazzy on Orin](https://forums.developer.nvidia.com/t/roadmap-for-isaac-ros-jazzy-on-orin-devices/375982)
+- [isaac_ros_image_segmentation](https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_image_segmentation)
+- [CitySemSegFormer on NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tao/models/citysemsegformer)
+- [CitySemSegFormer in the TAO docs](https://docs.nvidia.com/tao/tao-toolkit/text/model_zoo/cv_models/citysegformer.html)
