@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">22 min read · 7 sections</div></header>
+<div class="meta">23 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -258,12 +258,12 @@ real-time factor at 0.98-0.99.</p>
 <td>road</td>
 </tr>
 <tr>
-<td>Lidar (the car has none)</td>
+<td>Lidar (roof)</td>
 <td><code>/aav/lidar/points</code></td>
 <td><code>/sensors/lidar/points</code></td>
 <td>10 Hz</td>
 <td>3 cm</td>
-<td>road, with <code>lidar:=true</code></td>
+<td>road and test_lot; on by default, <code>lidar:=false</code> drops it</td>
 </tr>
 <tr>
 <td>Where the car really is</td>
@@ -525,13 +525,13 @@ bench's road, built in 3D, so the car's own camera and radar can see it.</p>
 </tr>
 </tbody>
 </table></div>
-<p>| Lidar, with <code>lidar:=true</code> | a generic 16-beam spinning lidar: 360 degrees in 1800 steps, 15 degrees down to 15 up, 0.5-100 m, 3 cm of noise, 10 Hz | <code>/sensors/lidar/points</code>, reliable, in <code>lidar_link</code> |</p>
+<p>| Lidar (on by default) | a generic 16-beam spinning lidar: 360 degrees in 1800 steps, 15 degrees down to 15 up, 0.5-100 m, 3 cm of noise, 10 Hz | <code>/sensors/lidar/points</code>, reliable, in <code>lidar_link</code> |</p>
 <p>The radar stand-in isn't a radar: it sees every surface (the sign's post too), and each
 point's speed is the car's own, along the line of sight.</p>
 <h3 id="the-lidar-gazebo-only">The lidar: Gazebo only</h3>
 <p>The car has a lidar on its roof, but its model is unknown (Q22) and our code has no driver
-yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's off by default:</strong>
-start it with <code>pixi run sim world:=road lidar:=true</code>.</p>
+yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on by default
+(15 Oct)</strong> in the road and test_lot worlds: <code>pixi run sim world:=road</code> or <code>world:=test_lot</code>.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -542,7 +542,7 @@ start it with <code>pixi run sim world:=road lidar:=true</code>.</p>
 <tbody>
 <tr>
 <td>Where</td>
-<td><code>lidar_link</code>, in <code>vehicle.yaml</code>: 1.2 m ahead of the rear axle, 1.9 m up (a guess: a 0.4 m mast on the roof)</td>
+<td><code>lidar_link</code>, in <code>vehicle.yaml</code>: on the roof tripod, 0.9 m ahead of the rear axle, 1.8 m up (Ben's placement, 15 Oct, until it's measured)</td>
 </tr>
 <tr>
 <td>Why a mast</td>
@@ -557,20 +557,24 @@ start it with <code>pixi run sim world:=road lidar:=true</code>.</p>
 <td>nobody yet but RViz. Nav2's obstacle layer could, once the car has one</td>
 </tr>
 <tr>
-<td>Turn it on</td>
-<td><code>lidar:=true</code>. With <code>false</code>, the frame and the sensor leave the URDF, and its bridge doesn't start</td>
+<td>Turn it off</td>
+<td><code>lidar:=false</code>: the simulated sensor leaves the URDF (the frame stays), and its bridge doesn't start</td>
 </tr>
 <tr>
 <td>On the Mac, alone</td>
 <td>stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. <code>sim-check --lidar</code> passes</td>
 </tr>
 <tr>
-<td>On the Mac, with YOLO too</td>
+<td>On the Mac, with YOLO too, the morning of 15 Oct</td>
 <td><strong>flaky</strong>: <code>sim-check --perception</code> failed 3 runs out of 3 with the lidar on (a stuck global EKF twice, a 2.5 s stall once). Without it, it passed (see <a href="#sim-check">sim-check</a>)</td>
 </tr>
 <tr>
-<td>Why off by default</td>
+<td>Why it was off</td>
 <td>anything that shows the lidar (RViz, a check) pulls 9 MB/s of reliable clouds. Fast DDS's shared memory fails on the Mac (<code>open_and_lock_file failed</code>), so they go over loopback UDP, and with YOLO running, other processes start missing messages (one lost <code>/clock</code> for 2 minutes)</td>
+</tr>
+<tr>
+<td>Now</td>
+<td>on by default again: with the Mac quiet, everything together passed twice (below). If a run stalls, check for leftover simulators first (<code>ps aux \| grep gz</code>), then try <code>lidar:=false</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -668,7 +672,7 @@ pixi run sim world:=road lane:=true nav:=false start_y:=0.3  # lane keeping alon
 <tbody>
 <tr>
 <td>Do the camera and lidars crash Gazebo?</td>
-<td>no. The camera, the radar stand-in and the roof lidar (<code>lidar:=true</code>) all render headless, with ogre2 on Metal, with no window and no <code>--headless-rendering</code></td>
+<td>no. The camera, the radar stand-in and the roof lidar all render headless, with ogre2 on Metal, with no window and no <code>--headless-rendering</code></td>
 </tr>
 <tr>
 <td>Rates (simulated time)</td>
@@ -698,7 +702,7 @@ the frames come out right (<code>sim-check</code> tests them).</p>
 <pre class="highlight"><code class="language-bash">pixi run sim-check                                # start-up, contract, sensors, a drive
 pixi run -e ml sim-check --perception --obstacle  # and the stop sign, and the box
 pixi run sim-check --lane                         # and lane keeping, in a second run
-pixi run sim-check --lidar                        # with the simulated roof lidar, and its check</code></pre>
+pixi run sim-check --no-lidar                     # without the simulated roof lidar (on by default)</code></pre>
 <p>It starts the road world without a window, on a private ROS domain and Gazebo partition,
 on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code>.</p>
 <p>Ran on Ben's Mac, 15 Oct, after the topic renaming:</p>
@@ -724,7 +728,15 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 </tr>
 <tr>
 <td>The same, with the lidar on</td>
-<td>failed 3 times out of 3 (why: <a href="#the-lidar-gazebo-only">the lidar</a>). So the lidar is off by default</td>
+<td>failed 3 times out of 3 that morning (why: <a href="#the-lidar-gazebo-only">the lidar</a>), so the lidar went off by default</td>
+</tr>
+<tr>
+<td>The same, afternoon, a quiet Mac (an orphaned Gazebo and five leftover ROS daemons stopped)</td>
+<td><strong>passed 2 out of 2</strong> with the lidar, three cameras, the radar and YOLO: the sign seen from 9.6 m, the car stood 3.6 m before it, then reached its goal. So the lidar is on by default again</td>
+</tr>
+<tr>
+<td>The test_lot world with its new sensors</td>
+<td>front cameras 6.9 and 9.7 Hz, rear 7.7 Hz, lidar 9.7 Hz with 2891 hits a sweep on the walls, building and cars</td>
 </tr>
 <tr>
 <td><code>pixi run sim-check --lane</code></td>

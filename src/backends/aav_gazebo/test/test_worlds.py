@@ -41,12 +41,12 @@ def test_world_files_and_an_unknown_world():
         worlds.world_file(str(PACKAGE), 'moon')
 
 
-def test_only_the_road_world_renders_sensors():
+def test_the_road_and_lot_worlds_render_sensors():
     def renders(world):
         return worlds.has_sensors(worlds.world_file(str(PACKAGE), world))
     assert renders('road')
     assert not renders('empty')      # headless anywhere: CI on Linux, oirp-spss
-    assert not renders('test_lot')
+    assert renders('test_lot')
 
 
 def test_every_world_is_named_aav_and_sits_on_the_datum():

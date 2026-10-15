@@ -4,7 +4,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
   ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot|road] [nav:=true]
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
-      [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=false]
+      [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
       [actuator_model:=true] [sim_speed:=]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
@@ -14,8 +14,9 @@ maps/example_lot.yaml (phase 3); world:=road, the bench's road in Gazebo, with t
 map: chosen automatically. The car starts at the world origin facing east, which is also
 the map origin (the datum); start_y and start_yaw move it, as on the bench.
 
-The road world renders the car's camera and its radar stand-in (aav_gazebo
-worlds.has_sensors), so the car's whole graph runs there, with the bench's argument names:
+The road and test_lot worlds render the car's three cameras, its radar stand-in and the
+roof lidar (aav_gazebo worlds.has_sensors), so the car's whole graph runs there, with the
+bench's argument names:
 
   the radar           always, where the world renders it: radar_clusters, and Nav2's
                       obstacle layer and collision_monitor (navigation.launch.py radar:=true)
@@ -26,9 +27,9 @@ worlds.has_sensors), so the car's whole graph runs there, with the bench's argum
   camera_obstacles    the detectors' boxes into Nav2's local costmap
   hud:=true           the HUD's web server, on 127.0.0.1:5000
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
-  lidar:=true         a simulated 16-beam roof lidar, on /sensors/lidar/points. The car
-                      has none, so nothing reads it yet: it is there to look at (RViz).
-                      Off by default: on a Mac it made the full graph flaky
+  lidar:=false        no roof lidar. It's on by default (15 Oct): a simulated 16-beam
+                      lidar on /sensors/lidar/points. Nothing reads it yet but RViz. Its
+                      earlier flakiness on a Mac came from other programs competing
   sim_speed:=3        a higher top speed (m/s, up to 5), for ego and Nav2, in Gazebo only:
                       the car's 1.0 m/s cap (ego.yaml, nav2.yaml) is for its first drives.
                       ego refuses it outside a simulator
@@ -50,7 +51,7 @@ from launch_ros.substitutions import FindPackageShare
 
 MAPS = {'empty': 'empty.yaml', 'test_lot': 'example_lot.yaml', 'road': 'empty.yaml'}
 # What each world shows in RViz: the road world adds the camera, the radar and the truth.
-LAYOUTS = {'road': 'road.rviz'}
+LAYOUTS = {'road': 'road.rviz', 'test_lot': 'road.rviz'}
 # The parts that read the camera, so need a world that renders it.
 CAMERA_PARTS = ('perception', 'camera_obstacles')
 
@@ -173,7 +174,7 @@ def generate_launch_description():
         DeclareLaunchArgument('start_yaw', default_value='0.0',
                               description='rad: start the car turned this far left of east '
                                           '(the EKFs still start facing east)'),
-        DeclareLaunchArgument('lidar', default_value='false',
+        DeclareLaunchArgument('lidar', default_value='true',
                               description='a simulated 16-beam roof lidar, on '
                                           '/sensors/lidar/points (world:=road)'),
         DeclareLaunchArgument('actuator_model', default_value='true',

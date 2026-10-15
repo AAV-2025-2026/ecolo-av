@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">23 min read · 4 sections</div></header>
+<div class="meta">22 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -416,8 +416,8 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>gz_lidar_bridge</code></td>
 <td>-</td>
-<td>-</td>
-<td>Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6). In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). Only with sim.launch.py world:=road lidar:=true (off by default - on a Mac it made the full graph flaky), so not live in road. Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).</td>
+<td>road</td>
+<td>Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6). In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).</td>
 </tr>
 <tr>
 <td><code>/perception/radar/clusters</code></td>

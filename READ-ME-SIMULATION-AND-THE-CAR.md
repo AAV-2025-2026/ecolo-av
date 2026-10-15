@@ -8,7 +8,7 @@ Written 15 October 2026, for Ben. It answers three questions:
 
 > **The short version**
 > - **Gazebo works**, and it **does produce sensor data**: an IMU, a GPS, wheel speed, a camera, a radar and a lidar, all on `main`.
-> - The camera, radar and lidar are in the **road world**: `pixi run sim world:=road` (add `lidar:=true` for the lidar).
+> - The three cameras, the radar and the lidar are in the **road world** and the **parking lot**: `pixi run sim world:=road` or `world:=test_lot` (all on by default since 15 Oct; `lidar:=false` drops the lidar).
 > - **The lidar is simulation only**: the car's own lidar has no driver in our code yet.
 > - **None of our code has run on the real car yet.** Everything "works" in simulation or on the bench only.
 > - The point of simulation: the **same nodes** run in all three places. Only the bottom layer changes.
@@ -75,7 +75,7 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | A road: lane lines, a stop sign, a box in the road (`obstacle:=true`) | | | ✅ |
 | Three cameras: two on top looking forward, one at the back looking back | `/sensors/camera/front_left/image_raw`, `front_right/...`, `rear/...` | 10 Hz | ✅ (15 Oct) |
 | A radar on the grill (a lidar shaped like it) | `/sensors/radar/points` (via `/gazebo/radar/points`) | 10 Hz | ✅ |
-| A 16-beam lidar on the roof, with `lidar:=true` | `/sensors/lidar/points` | 10 Hz | ✅ alone; ⚠️ off by default: with YOLO too, it made the Mac flaky |
+| A 16-beam lidar on the roof | `/sensors/lidar/points` | 10 Hz | ✅ on by default (15 Oct): all sensors together pass on a quiet Mac. Earlier failures came from other programs competing |
 
 ![What the three simulated cameras see](docs/img/sim-cameras.png)
 
@@ -144,7 +144,8 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | Look at one GPS message | `pixi run tools/ros.sh ros2 topic echo --once /sensors/gps/fix` |
 | Drive it | `pixi run keyboard --sim` |
 | Check the whole graph | `pixi run check sim` |
-| The road world, with camera, radar and lidar | `pixi run sim world:=road lidar:=true` |
+| The road world, with cameras, radar and lidar | `pixi run sim world:=road` |
+| The parking lot, with every sensor | `pixi run sim world:=test_lot` |
 | Test the road world end to end | `pixi run sim-check` (2 minutes, no window) |
 | The bench instead | `pixi run bench`, then `pixi run bench-check` |
 | The HUD on top of it | `pixi run hud` |

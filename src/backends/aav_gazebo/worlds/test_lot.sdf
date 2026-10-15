@@ -5,6 +5,9 @@
   Gazebo Harmonic (gz-sim 8). The world is named "aav" in every file, so the bridge
   topics (aav_gazebo/config/bridge.yaml) don't change with the world.
 
+  The Sensors system renders the car's three cameras, its radar stand-in and the roof
+  lidar here too (15 Oct, Ben), so they see the walls, the building and the parked cars.
+
   spherical_coordinates puts the world origin on the Earth: it MUST match the datum in
   aav_localization/config/navsat.yaml, so world (x, y) = map (x, y), x east, y north.
 -->
@@ -19,6 +22,9 @@
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
     <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
     <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
 
     <spherical_coordinates>
       <surface_model>EARTH_WGS84</surface_model>

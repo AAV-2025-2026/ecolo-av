@@ -88,9 +88,9 @@ one sits on the car, and the camera's lens). It's a later step, after both run o
 
 ### In Gazebo today
 
-`pixi run sim world:=road lidar:=true` simulates a generic 16-beam lidar on the roof, on
-`/sensors/lidar/points`. It's off by default: on a Mac, with YOLO running as well, the
-simulation stalled. Step 1 can be built and tested there before the real lidar's model is
+`pixi run sim world:=road` (or `world:=test_lot`) simulates a generic 16-beam lidar on the roof, on
+`/sensors/lidar/points`. It's on by default (15 Oct): with the Mac quiet, it runs with
+YOLO and all three cameras. Step 1 can be built and tested there before the real lidar's model is
 known.
 
 ## 4. A map on the HUD

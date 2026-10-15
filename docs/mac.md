@@ -162,9 +162,9 @@ pixi run sim follow:=false # a free camera instead of one that follows the car
 ```
 
 Cameras and lidars inside Gazebo can crash it on some Macs. Ours don't: in the road world
-(`pixi run sim world:=road lidar:=true`), the camera, the radar stand-in and the roof
+(`pixi run sim world:=road`), the cameras, the radar stand-in and the roof
 lidar render with no window, on Metal, at their full rates (Ben's Mac, 15 Oct). The lidar
-is off by default all the same: its big clouds made the whole graph flaky once YOLO ran too
+was off by default for a while: with YOLO too it failed, but those runs shared the Mac with a stray simulator. On a quiet Mac (15 Oct afternoon) everything together passed twice, so it's on by default
 ([Simulation](simulation.md#the-lidar-gazebo-only)). If Gazebo crashes, use the empty
 world, which renders nothing.
 
@@ -226,7 +226,7 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 | The turtle, driving it the keyboard's way, the scripted drive, the e-stop | [[works]] on Linux and the Mac. The real keyboard keys are [[untested]] on a Mac |
 | Gazebo without its window, and a Nav2 goal | [[works]] on the Mac, without `GZ_IP` |
 | Gazebo's window on a Mac | [[works]] 10 Oct: `pixi run sim` opens it; the car drives in it (pictures in [Your first day](first-day.md)) |
-| Gazebo's camera and lidars on a Mac | [[works]] 15 Oct: headless, 10 Hz each; `pixi run sim-check` passes. The lidar with YOLO too is flaky, so it's off by default |
+| Gazebo's cameras and lidar on a Mac | [[works]] 15 Oct: headless, about 10 Hz each; with YOLO too, `-e ml sim-check --perception` passed 2 of 2 on a quiet Mac, so the lidar is on by default |
 | RViz and rqt_graph on a Mac | [[untested]] they open without errors (RViz logs one shader warning); nobody has looked at them yet |
 | Recording a drive (`tools/record.sh`) | [[works]] on the Mac, after the `tools/ros.sh` fix above |
 | The Rust listener | [[works]] on the Mac: builds in 15 s |

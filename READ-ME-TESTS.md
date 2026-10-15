@@ -23,7 +23,7 @@ Nothing real moves. Run these on any laptop.
 |---|---|---|---|---|
 | 1.1 | The whole car graph in Gazebo | `pixi run sim-check` | all checks PASS: sensors, a 6.5 m drive, the EKF within 0.5 m of the truth | ✅ |
 | 1.2 | All three cameras send pictures | part of 1.1 | front left 10 Hz; front right and rear 5 Hz or more, each in its own frame | ✅ 15 Oct |
-| 1.3 | The roof lidar | `pixi run sim-check --lidar` | 1800 × 16 rays at 10 Hz in `lidar_link` | ✅ |
+| 1.3 | The roof lidar | `pixi run sim-check` (on by default) | 1800 × 16 rays at 10 Hz in `lidar_link` | ✅ |
 | 1.4 | Stop for an obstacle | `pixi run sim-check --obstacle` | stops 0-2 m before the box; drives on when it's gone | ✅ at 272 kg; ⚠️ at 181 kg, unconfirmed (the Mac was overloaded) |
 | 1.5 | Lane keeping | `pixi run sim-check --lane` | back to the lane's centre within 5 cm | ✅ 15 Oct |
 | 1.6 | The HUD, with pretend data | `pixi run hud-demo` | the window opens with speed, camera, GPS, e-stop | ✅ Ben, 15 Oct |

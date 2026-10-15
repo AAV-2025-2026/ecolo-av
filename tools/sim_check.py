@@ -6,7 +6,7 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run -e ml sim-check --perception  (adds YOLO and the stop sign: 2 more minutes)
     pixi run sim-check --obstacle          (adds a box for the radar stand-in: 2 more minutes)
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
-    pixi run sim-check --lidar             (adds the simulated roof lidar: lidar:=true)
+    pixi run sim-check --no-lidar          (without the simulated roof lidar: lidar:=false)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -19,7 +19,7 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 3. Checks the running graph against docs/interfaces.yaml (check_graph.py --profile road).
 4. The sensors: the camera's picture and lens are the bench camera's, in camera_left_link;
    the radar stand-in's cloud has the TI driver's fields, in radar_link, and nothing in it
-   while nothing is within 8.4 m. With --lidar, the simulated roof lidar: 1800 x 16 rays
+   while nothing is within 8.4 m. Unless --no-lidar, the simulated roof lidar: 1800 x 16 rays
    in lidar_link, 10 Hz, some of them hitting the ground and the sign.
 5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth)
    with where the car's own software thinks it is (/localization/odom/global).
@@ -548,7 +548,7 @@ def main():
     if perception and importlib.util.find_spec('ultralytics') is None:
         print('--perception needs YOLO: pixi run -e ml sim-check --perception', file=sys.stderr)
         return 2
-    lidar = '--lidar' in args
+    lidar = '--no-lidar' not in args
     checks = [check_sensors, check_cameras] + ([check_lidar] if lidar else []) + [check_drive]
     if perception:
         checks.append(check_stop_sign)
@@ -563,7 +563,7 @@ def main():
         # the wheel between the other checks. Nothing else drives here: no Nav2.
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-lane{ext}')
-        session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'],
+        session(['lane:=true', 'nav:=false', 'lidar:=false', f'start_y:={ROAD_Y + LANE_START}'],
                 [check_lane_keeping], logs[1], 'lane', ignore=('/map',))
 
     print('\n| Check | Result | Detail |\n|---|---|---|')

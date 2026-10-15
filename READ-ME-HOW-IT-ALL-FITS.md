@@ -43,7 +43,7 @@ deeper on two parts of this page.
 | Front camera L | ribbon to a Pi 5 | `usb_cam` ⚠️ USB only: the ribbon cameras need a libcamera driver (`camera_ros`) | `/sensors/camera/front_left/image_raw` | YOLO, lane finder, HUD | ❌ untested; driver mismatch |
 | Front camera R | ribbon to a Pi 5 | the same | `/sensors/camera/front_right/...` | (not used yet) | ❌ |
 | mmWave radar (TI) | USB | `ti_ros2_driver` (inherited) | `/sensors/radar/points` | radar clusters, Nav2's local costmap, collision_monitor | ✅ bench, Gazebo; ❌ car |
-| Lidar (roof) | Ethernet | **none yet** (model unknown) | `/sensors/lidar/points` (planned) | Nav2's costmap, later | ✅ Gazebo only (`lidar:=true`) |
+| Lidar (roof) | Ethernet | **none yet** (model unknown) | `/sensors/lidar/points` (planned) | Nav2's costmap, later | ✅ Gazebo only, on by default |
 | IMU (Yahboom) | USB | `aav_imu_yahboom` (Rust) + Madgwick filter | `/sensors/imu/data` | both EKFs | ✅ Gazebo; ❌ car |
 | GPS (ZED-F9R) | USB to the RTK-Pi | `ublox_gps` (stock) | `/sensors/gps/fix` | navsat_transform, HUD | ✅ Gazebo; ❌ car |
 | Wheel speed, today | optical encoder → Pico 2 → UDP | `aav_legacy` encoder | `/vehicle/odom` | both EKFs | ❌ untested |
@@ -121,7 +121,7 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 | 1. Unit tests | `pixi run test` | no ROS | maths, CAN frames, firmware logic |
 | 2. Turtle | `pixi run turtle` | a 2D turtle as the car | drivers, mux, ego, scripted drive |
 | 3. Bench | `pixi run bench`, `pixi run bench-check` | pretend sensors, the real CAN frames, the spine's own logic | the car's software path, e-stops, Nav2, stop sign |
-| 4. Gazebo | `pixi run sim world:=road` (`lidar:=true` for the lidar) | 3D physics, every sensor | localization, Nav2, perception, A to B |
+| 4. Gazebo | `pixi run sim world:=road` (or `world:=test_lot`), every sensor on | 3D physics, every sensor | localization, Nav2, perception, A to B |
 | 5. Replay | `ros2 bag play` | a recorded drive | tuning the EKFs against real data |
 | 6. CARLA | parked | photoreal towns | not before it supports Jazzy (Q31) |
 | 7. Car on stands | `pixi run car orin` + `motor_pi` | the real boards, wheels in the air | signs, limits, the drive path |

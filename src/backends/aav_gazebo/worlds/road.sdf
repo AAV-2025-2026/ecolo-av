@@ -14,8 +14,8 @@
   The road and its lines are pictures only (no collision): the car drives on the ground.
   test/test_worlds.py checks that the numbers match bench.yaml. Pairs with the empty map.
 
-  The Sensors system renders the car's camera and radar stand-in (ogre2). It's the only
-  world that has it: the empty and test_lot worlds run headless anywhere, without a GPU.
+  The Sensors system renders the car's cameras, radar stand-in and lidar (ogre2), as the
+  test_lot world's does. The empty world has none: it runs headless anywhere, without a GPU.
   Gazebo Harmonic (gz-sim 8). The world is named "aav" in every file, so the bridge
   topics (aav_gazebo/config/*.yaml) don't change with the world.
 

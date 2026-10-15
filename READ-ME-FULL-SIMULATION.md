@@ -65,7 +65,7 @@ What's where:
 | IMU, GPS, wheel speed | ✅ with noise | noise levels from the real devices (Friday) |
 | 3 cameras | ✅ 15 Oct: two front, one rear | the real lens of each (N4); perception reads only the front left |
 | Radar (grill) | ✅ a stand-in, shaped like the TI radar | its real config file, from the car |
-| Lidar (roof) | ✅ a generic 16-beam one, `lidar:=true` | its real model (probably a Velodyne); **nothing reads it yet**: it should feed Nav2's costmap and the collision monitor |
+| Lidar (roof) | ✅ a generic 16-beam one, on by default (15 Oct) | its real model (probably a Velodyne); **nothing reads it yet**: it should feed Nav2's costmap and the collision monitor |
 | **Throttle and brake** | ✅ 15 Oct: the actuator model, with **guessed** numbers | the real numbers, from tests 4.1-4.4 |
 | **Steering** | ✅ 15 Oct: speed, lag, centre offset, deadband, with **guessed** numbers | the real numbers and angles, from tests 3.10-3.12 and 4.5 |
 | Weight | in the model, but hardly matters (see the box below) | the real weight (scales, M7) |
