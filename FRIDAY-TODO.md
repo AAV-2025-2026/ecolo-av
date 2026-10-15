@@ -22,6 +22,7 @@ the car, and what goes wrong (such as the cameras freezing).
 | ☐ | Do |
 |---|---|
 | ☐ | `git pull`, `pixi run build`, `pixi run test` |
+| ☐ | Make sure the `git pull` has commit 426e3a0b (15 Oct): before it, `pixi run sim`, `turtle`, `bench` and `keyboard --local` were **not** kept on the Mac, so a pretend car could have met the real one |
 | ☐ | The Mac checklist in [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md) ("Your Mac on the car's network"): Local Network permission, firewall, Lichtblick, an SSH key |
 | ☐ | `pixi run car-kit`, onto a USB stick (for after the audit) |
 | ☐ | An external drive with an **encrypted** volume, 1 TB or more: the copies hold passwords and keys |
@@ -232,3 +233,4 @@ What our code has today, and what Friday must answer to finish each layer.
 | Configure the GPS, the radar or the lidar | their settings are part of what we record |
 | Run `i2cdetect`, or open a serial port | it can move an actuator, or reset a board |
 | Copy a password, token or key into notes, chat, photos or git | they must be changed, not spread (Q34) |
+| Run a simulator with `AAV_DISCOVERY=SUBNET` | it would share the pretend car with the real car's network |
