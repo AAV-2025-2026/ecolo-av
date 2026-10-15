@@ -6,10 +6,16 @@ Jetson AGX Orin and the Raspberry Pis); Pixi on Macs and other Linux machines.
 
 **Sensors become telemetry, drivers become one command, and ego moves the car.**
 
-> **Read first:** [READ-ME-SIMULATION-AND-THE-CAR.md](READ-ME-SIMULATION-AND-THE-CAR.md):
-> how far Gazebo goes, what sensor data it makes, and how it all relates to the real car.
-> Then [READ-ME-MAPS-AND-POSITION.md](READ-ME-MAPS-AND-POSITION.md): the EKFs, the map
-> frame, OpenStreetMap and costmaps.
+> **Read first, in this order** (pages in this folder, written for Ben, 15 Oct):
+> 1. [READ-ME-HOW-IT-ALL-FITS.md](READ-ME-HOW-IT-ALL-FITS.md): the layers bottom-up, what
+>    happens at start-up, and how to test each layer.
+> 2. [READ-ME-SIMULATION-AND-THE-CAR.md](READ-ME-SIMULATION-AND-THE-CAR.md): Gazebo, the
+>    bench and the car; what's simulated, what's real.
+> 3. [READ-ME-MAPS-AND-POSITION.md](READ-ME-MAPS-AND-POSITION.md): the EKFs, the map
+>    frame, OpenStreetMap and costmaps.
+> 4. [READ-ME-A-TO-B.md](READ-ME-A-TO-B.md): driving straight from A to B, three ways.
+> 5. [READ-ME-PERCEPTION-AND-HUD-MAP.md](READ-ME-PERCEPTION-AND-HUD-MAP.md): YOLO vs
+>    OpenCV, the lidar, and a map on the HUD.
 
 ## Read the docs
 
