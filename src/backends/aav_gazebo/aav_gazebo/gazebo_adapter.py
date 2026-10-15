@@ -16,7 +16,9 @@ Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd
             vehicle/throttle      aav_interfaces/ActuatorState: the speed loop's, the model's
             vehicle/brake         aav_interfaces/ActuatorState: the same (NaN with the model off)
             vehicle/wheels        aav_interfaces/WheelSpeeds: each wheel's spin x its radius
-            sensors/imu/data_raw  sensor_msgs/Imu, with covariances
+            sensors/imu/data_raw  sensor_msgs/Imu, with covariances; forward and sideways
+                                  acceleration from the car's motion (imu.py), as Gazebo's
+                                  IMU misses it
             sensors/gps/fix       sensor_msgs/NavSatFix, with a covariance
             sensors/radar/points  sensor_msgs/PointCloud2, best effort, in radar_link: only
                                   the rays that hit something, with the TI driver's fields
@@ -43,10 +45,11 @@ passed on: the road world bridges it to /vehicle/gazebo/truth, for checks only.
 """
 
 import math
+import random
 import signal
 
 from aav_description import vehicle
-from aav_gazebo import radar, sources, wheels
+from aav_gazebo import imu, radar, sources, wheels
 from aav_gazebo.actuator_model import ActuatorConfig, Actuators, Ideal
 from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
 from aav_interfaces.msg import WheelSpeeds
@@ -77,14 +80,17 @@ class GazeboAdapter(Node):
         self.wheelbase = self.declare_parameter('wheelbase', 1.57).value
         self.speed_var = self.declare_parameter('speed_variance', 0.01).value
         self.gyro_var = self.declare_parameter('gyro_stddev', 0.02).value ** 2
-        self.accel_var = self.declare_parameter('accel_stddev', 0.2).value ** 2
+        self.accel_std = self.declare_parameter('accel_stddev', 0.2).value
+        self.accel_var = self.accel_std ** 2
         self.gps_var = self.declare_parameter('gps_stddev', 0.5).value ** 2
         self.radar_range = self.declare_parameter('radar_range', 8.4).value   # m
         lidar = self.declare_parameter('lidar', False).value
         self.wheel_radius = self.declare_parameter('wheel_radius', 0.15).value   # m
         self.cmd_timeout = self.declare_parameter('cmd_timeout', 0.2).value     # s
         rate = self.declare_parameter('rate_hz', 50.0).value
-        config = ActuatorConfig.from_vehicle(vehicle.load())
+        car = vehicle.load()
+        config = ActuatorConfig.from_vehicle(car)
+        self.imu_x = float(car['sensors']['imu_link']['xyz'][0])   # m ahead of base_link
         if self.declare_parameter('actuator_model', True).value:
             self.model = Actuators(config)
             self.get_logger().info(f'the actuator model, from vehicle.yaml: {config}')
@@ -207,6 +213,12 @@ class GazeboAdapter(Node):
 
     def on_imu(self, msg):
         msg.header.frame_id = 'imu_link'
+        if self.state is not None:
+            # Gazebo's IMU misses the car's own acceleration (imu.py): the model's, plus noise.
+            fwd, left = imu.body_acceleration(self.state.accel, self.speed,
+                                              msg.angular_velocity.z, x=self.imu_x)
+            msg.linear_acceleration.x = fwd + random.gauss(0.0, self.accel_std)
+            msg.linear_acceleration.y = left + random.gauss(0.0, self.accel_std)
         msg.orientation_covariance[0] = -1.0     # like the real IMU: no orientation
         for i in (0, 4, 8):
             msg.angular_velocity_covariance[i] = self.gyro_var

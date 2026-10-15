@@ -17,7 +17,9 @@ what's missing, and how the car's measurements feed in.
 | 1 | `/system/source` + the SIMULATED banner | ✅ built: Gazebo, turtlesim, the bench, the car's backends and replay announce; the raylib HUD shows the banner and a tag per topic |
 | 2 | `/vehicle/steering`, `/throttle`, `/brake`, `/wheels` | ✅ built: Gazebo all four; the bench and the car (spine_bridge) steering, throttle, brake; turtlesim steering |
 | 3 | The actuator model (A), guessed numbers | ✅ built: `aav_gazebo/actuator_model.py`, numbers in `vehicle.yaml` `actuators:`, on by default (`actuator_model:=false` for the old car) |
-| 4-10 | the rest | not started |
+| 4-6 | the spine in the loop, the lidar into Nav2, sensor failures | not started |
+| 7 | The actuator test script (`READ-ME-TESTS.md` 1.10) | ✅ 15 Oct: `pixi run actuator-test <test> --sim`, all 9 tests in Gazebo; they give back the model's numbers ([docs/actuator-tests.md](docs/actuator-tests.md)). It found Gazebo's IMU blind to the car's acceleration: fixed in `gazebo_adapter` |
+| 8-10 | the real numbers, the test lot, forces | not started |
 
 Tested (15 Oct, Ben's Mac):
 
@@ -120,8 +122,8 @@ B only if A isn't close enough to the real car.
 | 4 | **The spine in the loop**: ego → CAN → the spine's logic → the actuator model → Gazebo | no | 1-2 days |
 | 5 | The lidar into Nav2's costmap and the collision monitor | no | small |
 | 6 | Sensor failures on purpose, and checks that the car stops | no | 1 day |
-| 7 | The actuator test script (`READ-ME-TESTS.md` 1.10), run in Gazebo | no | 1 day |
-| 8 | Fill in the real numbers: measurements and tests | **yes**: Friday, then the lot | - |
+| 7 | The actuator test script (`READ-ME-TESTS.md` 1.10), run in Gazebo ✅ 15 Oct | no | 1 day |
+| 8 | Fill in the real numbers: measurements and tests (`pixi run actuator-test`, on stands then in the lot) | **yes**: Friday, then the lot | - |
 | 9 | A Gazebo copy of the test lot | the lot chosen | 1 day |
 | 10 | B, forces in Gazebo, only if needed | the real numbers | a week |
 

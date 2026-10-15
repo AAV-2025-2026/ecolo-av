@@ -26,6 +26,7 @@ driver is added.
 | E-stop (a lock: blocks everything below it) | `/safety/estop` | 255 |
 | Joystick, the safety driver | `/drivers/joy/cmd_vel` | 100 |
 | Keyboard or another remote | `/drivers/keyboard/cmd_vel` | 90 |
+| Actuator tests ([Actuator tests](actuator-tests.md)) | `/drivers/tests/cmd_vel` | 60 |
 | Scripted | `/drivers/scripted/cmd_vel` | 50 |
 | Replay | `/drivers/replay/cmd_vel` | 40 |
 | Nav2 | `/drivers/nav/cmd_vel` | 20 |

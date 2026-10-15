@@ -44,6 +44,7 @@
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
@@ -99,6 +100,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>-</td>
 <td>Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic.</td>
+</tr>
+<tr>
+<td><code>/drivers/tests/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>actuator_test</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; READ-ME-TESTS.md stages 3-4). It also reads /control/cmd_vel, to stop when someone else takes over.</td>
 </tr>
 <tr>
 <td><code>/drivers/scripted/cmd_vel</code></td>
@@ -168,7 +177,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>joy_teleop</code>, <code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
-<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code></td>
+<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code></td>
 <td>-</td>
 <td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.</td>
 </tr>
@@ -176,7 +185,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/control/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>twist_mux</code></td>
-<td><code>ego</code></td>
+<td><code>ego</code>, <code>actuator_test</code></td>
 <td>turtle, sim, car, bench</td>
 <td>The one command ego obeys. v (m/s) and w (rad/s) in base_link.</td>
 </tr>
@@ -192,7 +201,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/system/source</code></td>
 <td><code>aav_interfaces/msg/DataSource</code></td>
 <td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>replay_source</code></td>
-<td><code>hud</code>, <code>map</code></td>
+<td><code>hud</code>, <code>map</code>, <code>actuator_test</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.</td>
 </tr>
@@ -200,7 +209,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/odom</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
-<td><code>ekf_local</code>, <code>ekf_global</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.</td>
 </tr>
@@ -216,7 +225,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/steering</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
 <td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code></td>
-<td>-</td>
+<td><code>actuator_test</code></td>
 <td>turtle, sim, bench</td>
 <td>The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too.</td>
 </tr>
@@ -224,7 +233,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/throttle</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
 <td><code>spine_bridge</code>, <code>gazebo_adapter</code></td>
-<td>-</td>
+<td><code>actuator_test</code></td>
 <td>sim, bench</td>
 <td>The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.</td>
 </tr>
@@ -232,7 +241,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/brake</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
 <td><code>spine_bridge</code>, <code>gazebo_adapter</code></td>
-<td>-</td>
+<td><code>actuator_test</code></td>
 <td>sim, bench</td>
 <td>The brake, 0..1. As /vehicle/throttle.</td>
 </tr>
@@ -240,7 +249,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/wheels</code></td>
 <td><code>aav_interfaces/msg/WheelSpeeds</code></td>
 <td><code>gazebo_adapter</code>, <code>spine_bridge</code></td>
-<td>-</td>
+<td><code>actuator_test</code></td>
 <td>sim, bench</td>
 <td>Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. The 2025-26 car (aav_legacy) has one encoder, read only as /vehicle/odom.</td>
 </tr>
@@ -280,7 +289,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/imu/data_raw</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_node</code>, <code>gazebo_adapter</code>, <code>mock_imu</code></td>
-<td><code>imu_filter_madgwick</code></td>
+<td><code>imu_filter_madgwick</code>, <code>actuator_test</code></td>
 <td>sim, car, replay, bench</td>
 <td>Gyro and accelerometer in imu_link, with covariances; no orientation.</td>
 </tr>
@@ -304,7 +313,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code></td>
-<td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code></td>
+<td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code></td>
 <td>sim, car, replay, bench</td>
 <td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
 </tr>
@@ -544,7 +553,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/local</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_local</code></td>
-<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code></td>
+<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code>, <code>actuator_test</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>odom frame. Smooth; drifts.</td>
 </tr>

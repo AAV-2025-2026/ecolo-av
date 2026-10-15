@@ -1,6 +1,7 @@
 import math
 
-from aav_ego.ackermann import EgoModel, Limits, slew_speed, steering_angle, turn_rate
+from aav_ego.ackermann import EgoModel, Limits, live_change, slew_speed, steering_angle
+from aav_ego.ackermann import turn_rate
 import pytest
 
 LIM = Limits(wheelbase=1.57, max_steering_angle=0.5, max_speed=2.0, max_reverse_speed=1.0,
@@ -71,3 +72,12 @@ def test_steering_rate_is_limited():
     m = EgoModel(slow)
     _, d, _ = m.step((1.0, 1.0), 0.1)
     assert d == pytest.approx(0.05)
+
+
+def test_only_the_steering_rate_changes_while_running():
+    assert live_change('max_steering_rate', 3.0) is None
+    assert live_change('max_steering_rate', 6.0) is not None    # above the range
+    assert live_change('max_steering_rate', 0.0) is not None
+    assert live_change('max_steering_rate', 'fast') is not None
+    assert 'start-up' in live_change('max_speed', 3.0)            # the speed cap stays put
+    assert live_change('use_sim_time', True) is None               # not ego's to judge

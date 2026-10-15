@@ -3,6 +3,8 @@ ego: the virtual car between the command mux and the backends.
 
 Subscribes  control/cmd_vel   geometry_msgs/TwistStamped (or Twist, use_stamped:=false)
 Publishes   ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped, at rate_hz
+Parameters  the limits, read at start-up; only max_steering_rate may change while running
+            (ackermann.LIVE_LIMITS: the actuator tests lift it for test 3.11, on stands)
 
 Every backend (the CAN spine, the legacy serial bridge, turtlesim, Gazebo,
 CARLA) consumes the same /ego/actuator_cmd, so the drivers never know which
@@ -16,9 +18,10 @@ fix the clock (chrony) rather than the car stopping for no visible reason.
 
 import signal
 
-from aav_ego.ackermann import EgoModel, Limits
+from aav_ego.ackermann import EgoModel, Limits, live_change
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist, TwistStamped
+from rcl_interfaces.msg import SetParametersResult
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -51,9 +54,22 @@ class Ego(Node):
             self.create_subscription(Twist, 'control/cmd_vel', self.on_twist, 10)
         self.pub = self.create_publisher(AckermannDriveStamped, 'ego/actuator_cmd', 10)
         self.create_timer(1.0 / rate, self.tick)
+        # After the declarations: only changes made while running reach it.
+        self.add_on_set_parameters_callback(self.on_set_parameters)
         self.get_logger().info(
             f'wheelbase {self.limits.wheelbase} m, max steering '
             f'{self.limits.max_steering_angle} rad, max speed {self.limits.max_speed} m/s')
+
+    def on_set_parameters(self, params):
+        for p in params:
+            reason = live_change(p.name, p.value)
+            if reason:
+                return SetParametersResult(successful=False, reason=reason)
+        for p in params:
+            if p.name == 'max_steering_rate':
+                self.limits.max_steering_rate = float(p.value)
+                self.get_logger().warning(f'max_steering_rate is now {p.value} rad/s')
+        return SetParametersResult(successful=True)
 
     def on_stamped(self, msg: TwistStamped):
         now = self.get_clock().now()

@@ -30,7 +30,7 @@ Nothing real moves. Run these on any laptop.
 | 1.7 | The HUD with the turtle | `pixi run turtle`, `pixi run hud`, `pixi run keyboard --local` | speed and steering move as you drive | ✅ Ben, 15 Oct |
 | 1.8 | Plain-English driving | `pixi run -e llm talk`: "drive 10 m forward" | drives 10 m (±0.2 m) after you type yes | ✅ Gazebo |
 | 1.9 | **"SIMULATED" on the HUD** | run Gazebo, look at the HUD | an orange SIMULATED banner; REAL / SIM tag per sensor | ⬜ |
-| 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | the test script, against Gazebo | the script runs end to end and reports g and angles | ⬜ |
+| 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | `pixi run actuator-test <test> --sim` ([docs](docs/actuator-tests.md)) | the script runs end to end and reports g and angles | ✅ 15 Oct: all 9 tests; they give back `vehicle.yaml`'s numbers |
 
 ## Stage 2: the bench
 
@@ -65,32 +65,33 @@ software stopped; speed capped (`max_speed:=0.3`).
 
 | # | Test | Measure | Passes when | Status |
 |---|---|---|---|---|
-| 3.10 | **Steering sweep**: full left, centre, full right, slowly | the wheel angle at each command (protractor or phone app on the wheel) | a table: command → real angle, each way | ⬜ |
-| 3.11 | **Steering speed**: centre to full lock | seconds, from a video | written in `vehicle.yaml` | ⬜ |
-| 3.12 | **Centre**: command straight | the wheels' angle | under 1°, or the offset written down | ⬜ |
+| 3.10 | **Steering sweep**: full left, centre, full right, slowly | the wheel angle at each command (protractor or phone app on the wheel). `pixi run actuator-test steer-sweep --stands`: it asks for each angle | a table: command → real angle, each way | 🔧 |
+| 3.11 | **Steering speed**: centre to full lock | seconds, from a video (or `actuator-test steer-rate --stands`, once a steering sensor reports) | written in `vehicle.yaml` | 🔧 |
+| 3.12 | **Centre**: command straight | the wheels' angle; `actuator-test steer-centre --stands` | under 1°, or the offset written down | 🔧 |
 | 3.13 | Wheel speed on stands | `/vehicle/status` speed vs a phone tachometer app | within 10% | ⬜ |
 
 ## Stage 4: the car in an empty lot
 
 **Before:** stage 3 passed; the timeout fix (3.9) in; a safety driver; walking pace first.
-The test script logs the IMU (g), the wheel speed and the GPS for every test.
+The test script (`pixi run actuator-test <test>`, [docs](docs/actuator-tests.md)) logs the IMU (g),
+the wheel speed, the pose and the GPS for every test.
 
 ### 4a. Speed up, coast, brake
 
 | # | Test | How | Measure | Status |
 |---|---|---|---|---|
-| 4.1 | **Speed up** | from still, a fixed throttle (25%, 50%, full), 10 m | acceleration in **g** (IMU), and the time to 1, 2, 3 m/s | ⬜ |
-| 4.2 | **Coast** | at 2 m/s, let go: no throttle, no brake | how fast it slows: rolling resistance and drag | ⬜ |
-| 4.3 | **Brake** | at 1, 2, 3 m/s, a fixed brake (50%, full) | stopping distance and deceleration in **g** | ⬜ |
-| 4.4 | **Throttle map** | repeat 4.1 at several throttles | a table: throttle % → acceleration; and the deadband (the throttle where it starts to move) | ⬜ |
+| 4.1 | **Speed up** | from still, a fixed throttle (25%, 50%, full), 10 m. `actuator-test speed-up`: a speed command, so the speed loop picks the throttle | acceleration in **g** (IMU), and the time to 1, 2, 3 m/s | 🔧 |
+| 4.2 | **Coast** | at 2 m/s, let go: no throttle, no brake. `actuator-test coast` (with the spine; not the ESP32) | how fast it slows: rolling resistance and drag | 🔧 |
+| 4.3 | **Brake** | at 1, 2, 3 m/s, a fixed brake (50%, full). `actuator-test brake`: a normal stop, as no brake command exists | stopping distance and deceleration in **g** | 🔧 |
+| 4.4 | **Throttle map** | repeat 4.1 at several throttles; `actuator-test throttle-map` | a table: throttle % → acceleration; and the deadband (the throttle where it starts to move) | 🔧 |
 
 ### 4b. Steering on the ground
 
 | # | Test | How | Measure | Status |
 |---|---|---|---|---|
-| 4.5 | **Circles** | a fixed steering command at 1 m/s, a full circle each, both ways, several angles | the circle's size (GPS, or a tape), and yaw rate ÷ speed (IMU): the **real wheel angle** for each command | ⬜ |
-| 4.6 | **Tightest turn** | full lock, both ways | the turning circle: checks `max_steering_angle` | ⬜ |
-| 4.7 | **Straight line** | steering straight, 10 m at 0.5 m/s | sideways drift: under 0.5 m over 10 m | ⬜ |
+| 4.5 | **Circles** | a fixed steering command at 1 m/s, a full circle each, both ways, several angles; `actuator-test circles` | the circle's size (GPS, or a tape), and yaw rate ÷ speed (IMU): the **real wheel angle** for each command | 🔧 |
+| 4.6 | **Tightest turn** | full lock, both ways (the last pair of `actuator-test circles`) | the turning circle: checks `max_steering_angle` | 🔧 |
+| 4.7 | **Straight line** | steering straight, 10 m at 0.5 m/s; `actuator-test straight` | sideways drift: under 0.5 m over 10 m | 🔧 |
 
 ### 4c. The car's weight (audit M7)
 
@@ -150,7 +151,6 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 
 | What | For | Size |
 |---|---|---|
-| The actuator test script: runs 4.1-4.7, logs, prints g, distances and angles | 1.10, 3.10-3.13, 4.1-4.10 | 1 day |
 | The SIMULATED banner and REAL / SIM tags | 1.9 | small |
 | The line driver: speed by distance left to B | 5.2 | about a day |
 | Ghost obstacles on the real car | 5.4 | 1 day |

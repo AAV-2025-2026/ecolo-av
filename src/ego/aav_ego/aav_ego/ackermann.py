@@ -32,6 +32,26 @@ class Limits:
     min_speed_for_steering: float = 0.05  # m/s; below this the steering holds
 
 
+# The only limit a running ego lets anyone change (ros2 param set /ego ...), and its range.
+# The actuator tests lift it for test 3.11, on stands, so they time the steering motor,
+# not ego's own ramp; they put it back afterwards. Every other limit is read at start-up.
+LIVE_LIMITS = {'max_steering_rate': (0.05, 5.0)}   # rad/s
+
+
+def live_change(name: str, value) -> Optional[str]:
+    """Why ego refuses to change this parameter while running, or None if it may."""
+    if name in LIVE_LIMITS:
+        lo, hi = LIVE_LIMITS[name]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return f'{name} must be a number'
+        if not lo <= value <= hi:
+            return f'{name} must be between {lo} and {hi}'
+        return None
+    if name in vars(Limits()):
+        return f'{name} is read only at start-up: restart ego to change it'
+    return None
+
+
 def clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, x))
 

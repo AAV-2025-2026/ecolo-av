@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">30 min read · 15 sections</div></header>
+<div class="meta">31 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -44,6 +44,7 @@
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
@@ -505,6 +506,53 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tr>
 <td><strong>Read first</strong></td>
 <td><code>config/teleop_twist_joy.yaml</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="aav_actuator_tests">aav_actuator_tests</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Does</strong></td>
+<td>runs the stage-3 and stage-4 tests (steering, speed up, coast, brake, circles, straight), logs them, prints the numbers for <code>vehicle.yaml</code></td>
+</tr>
+<tr>
+<td><strong>Why</strong></td>
+<td>fill <code>vehicle.yaml</code>'s <code>actuators:</code> with measured numbers, so Gazebo moves like the car</td>
+</tr>
+<tr>
+<td><strong>Runs on</strong></td>
+<td>the laptop on the car's network (or the Mac with Gazebo)</td>
+</tr>
+<tr>
+<td><strong>In → out</strong></td>
+<td>the car's readings, <code>/safety/estop</code>, <code>/system/source</code> → <code>/drivers/tests/cmd_vel</code> (priority 60)</td>
+</tr>
+<tr>
+<td><strong>Origin</strong></td>
+<td>ours</td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td><span class="badge b-works">works</span> Gazebo, all 9 tests (15 Oct); <span class="badge b-untested">untested</span> on the car</td>
+</tr>
+<tr>
+<td><strong>Run alone</strong></td>
+<td><code>pixi run actuator-test --list</code>; <code>pixi run actuator-test speed-up --sim</code></td>
+</tr>
+<tr>
+<td><strong>Test</strong></td>
+<td><code>test/</code> (in <code>tools/test.sh</code>): the maths, the safety rules, and each test on a pretend car</td>
+</tr>
+<tr>
+<td><strong>Read first</strong></td>
+<td><a href="actuator-tests.html">Actuator tests</a>, then <code>aav_actuator_tests/procedures.py</code></td>
 </tr>
 </tbody>
 </table></div>

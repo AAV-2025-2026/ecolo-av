@@ -7,7 +7,7 @@
 <!-- Generated from docs/packages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>What each package does</h1>
-<div class="meta">13 min read · 11 sections</div></header>
+<div class="meta">14 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -44,6 +44,7 @@
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
@@ -395,6 +396,12 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>your keys</td>
 <td><code>/drivers/keyboard/cmd_vel</code></td>
 <td><code>pixi run keyboard</code></td>
+</tr>
+<tr>
+<td><code>aav_actuator_tests</code></td>
+<td><code>/vehicle/odom</code>, <code>/vehicle/steering</code>, <code>/throttle</code>, <code>/brake</code>, <code>/wheels</code>, the IMU, <code>/localization/odom/local</code>, GPS, <code>/safety/estop</code>, <code>/control/cmd_vel</code>, <code>/system/source</code></td>
+<td><code>/drivers/tests/cmd_vel</code></td>
+<td><code>pixi run actuator-test</code>: the stage 3-4 tests; prints <code>vehicle.yaml</code> lines (<a href="actuator-tests.html">Actuator tests</a>)</td>
 </tr>
 <tr>
 <td><code>aav_scripted</code></td>

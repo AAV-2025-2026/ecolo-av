@@ -25,6 +25,10 @@ twist_mux:
         topic: /drivers/keyboard/cmd_vel  # Foxglove's teleop panel set to this topic
         timeout: 0.5
         priority: 90
+      tests:                    # aav_actuator_tests: READ-ME-TESTS.md stages 3-4 (pixi run
+        topic: /drivers/tests/cmd_vel     # actuator-test). Below both people, above every
+        timeout: 0.5            # other program, so Nav2 can't steer into a measurement
+        priority: 60
       scripted:                 # aav_scripted: a fixed speed profile for a test
         topic: /drivers/scripted/cmd_vel
         timeout: 0.5
@@ -48,5 +52,5 @@ twist_mux:
         priority: 255
       stop_sign:                # aav_yolo's stop_sign_watcher: true while the car stops for a
         topic: /perception/stop_sign # sign. Priority 30 holds Nav2 (20) and the AI slot (10), never a
-        timeout: 0.0            # person (100, 90) or a test (50, 40). Never expires on silence:
+        timeout: 0.0            # person (100, 90) or a test (60, 50, 40). Never expires on silence:
         priority: 30            # if the watcher dies while true, the car stays stopped.
