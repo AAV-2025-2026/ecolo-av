@@ -89,7 +89,9 @@ nothing publishes that topic there.
 
 `src/hud/aav_hud_raylib`, binary `map`: its own window, which is also the ROS node `map`.
 Step 1 (15 October): what Nav2 already knows, drawn north up. Step 2 (15 October): an
-offline street map of Ottawa under it ([below](#the-street-map-under-it)).
+offline street map of Ottawa under it ([below](#the-street-map-under-it)). Step 3
+(15 October): [search for a place](#search-for-a-place-and-drive-there) and send it to
+Nav2.
 
 ![The map window, with pretend data (--demo)](img/map-raylib.png)
 
@@ -110,6 +112,7 @@ offline street map of Ottawa under it ([below](#the-street-map-under-it)).
 
 | Key | Does |
 |---|---|
+| / | search for a place ([below](#search-for-a-place-and-drive-there)) |
 | F | follow the car (the start: 60 m across) / the whole map (`--whole-map` starts there) |
 | S | the street map on / off |
 | mouse wheel, + and - | zoom |
@@ -241,6 +244,78 @@ campus streets that aren't really there: the streets only match the world on the
 | On the car with a real GPS | untested |
 
 ![The live window in Gazebo, whole map: the test lot, see-through, over the street map](img/map-streets-sim.png)
+
+### Search for a place, and drive there
+
+Type a name or an address, pick a result, and send it to Nav2 as the goal. Two presses
+(DRIVE HERE, then CONFIRM), so a stray tap never moves the car.
+
+![Typing "carleton": names, types, streets and the distance from the car (--demo --search carleton)](img/map-search.png)
+
+| Key | Does |
+|---|---|
+| `/` or a click on the box | open the search box |
+| letters, Backspace | type (the map's own keys, F S + -, are letters while typing) |
+| Up, Down, Enter, or a click | pick a result: the map centres on it, with a magenta pin |
+| Enter, or a click | **DRIVE HERE**, then **CONFIRM: send goal** |
+| Esc | back one step: CONFIRM to the place, the place to the list, the list closed |
+
+#### What it sends
+
+| | |
+|---|---|
+| Message | `geometry_msgs/PoseStamped` on `/goal_pose` (`goal_topic` in `config/map.yaml`), as RViz's "2D Goal Pose": `bt_navigator` starts a navigate_to_pose |
+| Frame | Nav2's map frame (`map`), from the place's lat/lon by the same sums as navsat_transform (`earth.rs`) |
+| Facing | from the car toward the place |
+| Refused | outside Nav2's `/map` (**Outside Nav2's map: 3.8 km away**, from its edge), no `/map` yet, or no car position |
+| `--demo` | no Nav2: the goal shows, and the pretend car stops |
+
+![A place 3.8 km off Nav2's map: no DRIVE HERE, the reason instead (--demo --search parliament --pick 1)](img/map-search-outside.png)
+
+On the car, Nav2's map is only the test site, so most of Ottawa is "outside" until a
+bigger map (or Nav2's GPS waypoints over a road map) exists. That's the right answer, not
+a bug.
+
+#### How the search works
+
+| | |
+|---|---|
+| File | `maps/places/ottawa.db` (`places` in `config/map.yaml`, or `--places FILE`): `pixi run get-hud-map` |
+| Opened | read-only |
+| Matches | a name that starts with the words (any case), an address ("580 rideau"), then names with the words inside |
+| Left out | street lamps, benches, crossings, footways, service roads, link roads... (a deny-list, `NOT_DESTINATIONS` in `places.rs`: over 300 types, so a new one should show up) |
+| Ranked | exact name, then starts with, then a word starts with, then inside; nearest first in each; a street's many pieces count once |
+| Shows | at most 8 |
+| Speed (a Mac, release build) | 0.3 to 19 ms on the real file |
+| Credit | "© OpenStreetMap contributors" under the results and the place (ODbL) |
+| Code | `map-core/src/places.rs` (search), `destination.rs` (the steps, the goal check), `map-app/src/search.rs` (keys, sending) |
+| Library | `rusqlite` with SQLite built in (MIT; SQLite is public domain) |
+
+Try a search from a terminal: `cargo run --release -p map-core --example search -- tim hortons`
+(in `src/hud/aav_hud_raylib`, with `PLACES=` the file's path).
+
+#### For tests and screenshots
+
+| Option | Does |
+|---|---|
+| `--search TEXT` | starts with TEXT typed |
+| `--pick N` | with `--search`: picks result N |
+| `--send-goal TEXT` | once `/map` and the car are known: sends the first result inside Nav2's map, and says so on the terminal |
+
+#### Tested (15 October, a Mac)
+
+| What | Result |
+|---|---|
+| `cargo test` (map-core 74 with the real file, map-app 11) | all pass |
+| Gazebo `test_lot`, headless, private domain: `--send-goal "university drive"` | sent x 59.27, y 11.90 m; `bt_navigator`: "Begin navigating from current location (0.06, 0.09) to (59.27, 11.90)"; then "Goal succeeded" |
+| The same, `--send-goal "carleton university"` | nothing sent: every result "Outside Nav2's map" (109 m to 700 m away) |
+| Typing, clicks, Up/Down, DRIVE HERE and CONFIRM by hand | not tested: macOS blocks input from scripts. The steps are unit-tested in `destination.rs` |
+| On the car's touchscreen | untested: it needs an on-screen keyboard (future work) |
+
+![Gazebo: University Drive, sent by --send-goal, and Nav2 driving there](img/map-search-sim.png)
+
+The sim's datum is the placeholder near Carleton, so in Gazebo "University Drive" lands
+inside the test lot. On the car, the datum is the real test site.
 
 ## The Flutter app (2025-26): what it is
 
@@ -418,11 +493,12 @@ scripted driver held 0.90 m/s, then the e-stop was pressed:
 
 ## The place database
 
-The app's destination search reads `ottawa.db`: 51 MB of SQLite, 606,628 named places
-around Ottawa. It's too big for git, so a task downloads it:
+The map window's [place search](#search-for-a-place-and-drive-there) and the Flutter
+app's destination search read `ottawa.db`: 51 MB of SQLite, 606,628 named places around
+Ottawa. It's too big for git, so a task downloads it:
 
 ```bash
-pixi run get-hud-map      # into hud/flutter_pi/assets/databases/ (git ignores it)
+pixi run get-hud-map      # into maps/places/, linked into hud/flutter_pi/assets/databases/
 ```
 
 | | |

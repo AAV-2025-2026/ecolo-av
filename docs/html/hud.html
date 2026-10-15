@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">25 min read · 13 sections</div></header>
+<div class="meta">30 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -251,7 +251,9 @@ nothing publishes that topic there.</p>
 <section class="card"><h2 id="the-map-window-big-screen">The map window (big screen)</h2>
 <p><code>src/hud/aav_hud_raylib</code>, binary <code>map</code>: its own window, which is also the ROS node <code>map</code>.
 Step 1 (15 October): what Nav2 already knows, drawn north up. Step 2 (15 October): an
-offline street map of Ottawa under it (<a href="#the-street-map-under-it">below</a>).</p>
+offline street map of Ottawa under it (<a href="#the-street-map-under-it">below</a>). Step 3
+(15 October): <a href="#search-for-a-place-and-drive-there">search for a place</a> and send it to
+Nav2.</p>
 <p><img alt="The map window, with pretend data (--demo)" src="../img/map-raylib.png" /></p>
 <div class="table-wrap"><table>
 <thead>
@@ -312,6 +314,10 @@ offline street map of Ottawa under it (<a href="#the-street-map-under-it">below<
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>/</td>
+<td>search for a place (<a href="#search-for-a-place-and-drive-there">below</a>)</td>
+</tr>
 <tr>
 <td>F</td>
 <td>follow the car (the start: 60 m across) / the whole map (<code>--whole-map</code> starts there)</td>
@@ -619,6 +625,185 @@ campus streets that aren't really there: the streets only match the world on the
 </tbody>
 </table></div>
 <p><img alt="The live window in Gazebo, whole map: the test lot, see-through, over the street map" src="../img/map-streets-sim.png" /></p>
+<h3 id="search-for-a-place-and-drive-there">Search for a place, and drive there</h3>
+<p>Type a name or an address, pick a result, and send it to Nav2 as the goal. Two presses
+(DRIVE HERE, then CONFIRM), so a stray tap never moves the car.</p>
+<p><img alt="Typing &quot;carleton&quot;: names, types, streets and the distance from the car (--demo --search carleton)" src="../img/map-search.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/</code> or a click on the box</td>
+<td>open the search box</td>
+</tr>
+<tr>
+<td>letters, Backspace</td>
+<td>type (the map's own keys, F S + -, are letters while typing)</td>
+</tr>
+<tr>
+<td>Up, Down, Enter, or a click</td>
+<td>pick a result: the map centres on it, with a magenta pin</td>
+</tr>
+<tr>
+<td>Enter, or a click</td>
+<td><strong>DRIVE HERE</strong>, then <strong>CONFIRM: send goal</strong></td>
+</tr>
+<tr>
+<td>Esc</td>
+<td>back one step: CONFIRM to the place, the place to the list, the list closed</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="what-it-sends">What it sends</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Message</td>
+<td><code>geometry_msgs/PoseStamped</code> on <code>/goal_pose</code> (<code>goal_topic</code> in <code>config/map.yaml</code>), as RViz's "2D Goal Pose": <code>bt_navigator</code> starts a navigate_to_pose</td>
+</tr>
+<tr>
+<td>Frame</td>
+<td>Nav2's map frame (<code>map</code>), from the place's lat/lon by the same sums as navsat_transform (<code>earth.rs</code>)</td>
+</tr>
+<tr>
+<td>Facing</td>
+<td>from the car toward the place</td>
+</tr>
+<tr>
+<td>Refused</td>
+<td>outside Nav2's <code>/map</code> (<strong>Outside Nav2's map: 3.8 km away</strong>, from its edge), no <code>/map</code> yet, or no car position</td>
+</tr>
+<tr>
+<td><code>--demo</code></td>
+<td>no Nav2: the goal shows, and the pretend car stops</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="A place 3.8 km off Nav2's map: no DRIVE HERE, the reason instead (--demo --search parliament --pick 1)" src="../img/map-search-outside.png" /></p>
+<p>On the car, Nav2's map is only the test site, so most of Ottawa is "outside" until a
+bigger map (or Nav2's GPS waypoints over a road map) exists. That's the right answer, not
+a bug.</p>
+<h4 id="how-the-search-works">How the search works</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File</td>
+<td><code>maps/places/ottawa.db</code> (<code>places</code> in <code>config/map.yaml</code>, or <code>--places FILE</code>): <code>pixi run get-hud-map</code></td>
+</tr>
+<tr>
+<td>Opened</td>
+<td>read-only</td>
+</tr>
+<tr>
+<td>Matches</td>
+<td>a name that starts with the words (any case), an address ("580 rideau"), then names with the words inside</td>
+</tr>
+<tr>
+<td>Left out</td>
+<td>street lamps, benches, crossings, footways, service roads, link roads... (a deny-list, <code>NOT_DESTINATIONS</code> in <code>places.rs</code>: over 300 types, so a new one should show up)</td>
+</tr>
+<tr>
+<td>Ranked</td>
+<td>exact name, then starts with, then a word starts with, then inside; nearest first in each; a street's many pieces count once</td>
+</tr>
+<tr>
+<td>Shows</td>
+<td>at most 8</td>
+</tr>
+<tr>
+<td>Speed (a Mac, release build)</td>
+<td>0.3 to 19 ms on the real file</td>
+</tr>
+<tr>
+<td>Credit</td>
+<td>"© OpenStreetMap contributors" under the results and the place (ODbL)</td>
+</tr>
+<tr>
+<td>Code</td>
+<td><code>map-core/src/places.rs</code> (search), <code>destination.rs</code> (the steps, the goal check), <code>map-app/src/search.rs</code> (keys, sending)</td>
+</tr>
+<tr>
+<td>Library</td>
+<td><code>rusqlite</code> with SQLite built in (MIT; SQLite is public domain)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Try a search from a terminal: <code>cargo run --release -p map-core --example search -- tim hortons</code>
+(in <code>src/hud/aav_hud_raylib</code>, with <code>PLACES=</code> the file's path).</p>
+<h4 id="for-tests-and-screenshots">For tests and screenshots</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--search TEXT</code></td>
+<td>starts with TEXT typed</td>
+</tr>
+<tr>
+<td><code>--pick N</code></td>
+<td>with <code>--search</code>: picks result N</td>
+</tr>
+<tr>
+<td><code>--send-goal TEXT</code></td>
+<td>once <code>/map</code> and the car are known: sends the first result inside Nav2's map, and says so on the terminal</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="tested-15-october-a-mac_3">Tested (15 October, a Mac)</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cargo test</code> (map-core 74 with the real file, map-app 11)</td>
+<td>all pass</td>
+</tr>
+<tr>
+<td>Gazebo <code>test_lot</code>, headless, private domain: <code>--send-goal "university drive"</code></td>
+<td>sent x 59.27, y 11.90 m; <code>bt_navigator</code>: "Begin navigating from current location (0.06, 0.09) to (59.27, 11.90)"; then "Goal succeeded"</td>
+</tr>
+<tr>
+<td>The same, <code>--send-goal "carleton university"</code></td>
+<td>nothing sent: every result "Outside Nav2's map" (109 m to 700 m away)</td>
+</tr>
+<tr>
+<td>Typing, clicks, Up/Down, DRIVE HERE and CONFIRM by hand</td>
+<td>not tested: macOS blocks input from scripts. The steps are unit-tested in <code>destination.rs</code></td>
+</tr>
+<tr>
+<td>On the car's touchscreen</td>
+<td>untested: it needs an on-screen keyboard (future work)</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="Gazebo: University Drive, sent by --send-goal, and Nav2 driving there" src="../img/map-search-sim.png" /></p>
+<p>The sim's datum is the placeholder near Carleton, so in Gazebo "University Drive" lands
+inside the test lot. On the car, the datum is the real test site.</p>
 </section>
 <section class="card"><h2 id="the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</h2>
 <p><strong>Decided (Ben, 15 Oct): the raylib HUD replaces it</strong> (Q29). What it looked like, drawn
@@ -977,9 +1162,10 @@ scripted driver held 0.90 m/s, then the e-stop was pressed:</p>
 </ul>
 </section>
 <section class="card"><h2 id="the-place-database">The place database</h2>
-<p>The app's destination search reads <code>ottawa.db</code>: 51 MB of SQLite, 606,628 named places
-around Ottawa. It's too big for git, so a task downloads it:</p>
-<pre class="highlight"><code class="language-bash">pixi run get-hud-map      # into hud/flutter_pi/assets/databases/ (git ignores it)</code></pre>
+<p>The map window's <a href="#search-for-a-place-and-drive-there">place search</a> and the Flutter
+app's destination search read <code>ottawa.db</code>: 51 MB of SQLite, 606,628 named places around
+Ottawa. It's too big for git, so a task downloads it:</p>
+<pre class="highlight"><code class="language-bash">pixi run get-hud-map      # into maps/places/, linked into hud/flutter_pi/assets/databases/</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>

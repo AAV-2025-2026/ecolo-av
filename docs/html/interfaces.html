@@ -582,10 +582,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/goal_pose</code></td>
 <td><code>geometry_msgs/msg/PoseStamped</code></td>
-<td><code>rviz2</code></td>
+<td><code>rviz2</code>, <code>map</code></td>
 <td><code>bt_navigator</code>, <code>map</code></td>
 <td>-</td>
-<td>RViz "2D Goal Pose" starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
+<td>RViz "2D Goal Pose", or the map window's place search (map, aav_hud_raylib - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
 </tr>
 <tr>
 <td><code>/plan</code></td>

@@ -390,9 +390,9 @@ topics:
     note: Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud_raylib) draws it north up, for the big screen.
   /goal_pose:
     type: geometry_msgs/msg/PoseStamped
-    pub: [rviz2]
+    pub: [rviz2, map]
     sub: [bt_navigator, map]
-    note: RViz "2D Goal Pose" starts a navigate_to_pose. The map window shows it until Nav2 plans for it.
+    note: RViz "2D Goal Pose", or the map window's place search (map, aav_hud_raylib - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.
   /plan:
     type: nav_msgs/msg/Path
     pub: [planner_server]
