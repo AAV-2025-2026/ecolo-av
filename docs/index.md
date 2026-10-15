@@ -41,6 +41,7 @@ our car uses it.
 
 | Idea | Page |
 |---|---|
+| GPS: where the car is on the earth, and RTK | [Learn: GPS](learn-gps.md) |
 | CAN: the wire for steering, brake and throttle | [Learn: CAN](learn-can.md) |
 
 ## Read these, in order

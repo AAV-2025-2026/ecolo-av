@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPS from zero · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/learn-gps.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>GPS from zero</h1>
+<div class="meta">10 min read · 9 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a>
+<a class="here" href="learn-gps.html">Learn: GPS</a>
+<a href="learn-can.html">Learn: CAN</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-gnss-satellites-and-clocks">1. GNSS: satellites and clocks</a><a href="#2-fix-types-how-good-is-this-fix">2. Fix types: how good is this fix?</a><a href="#3-our-receiver-u-blox-zed-f9r">3. Our receiver: u-blox ZED-F9R</a><a href="#4-the-message-sensor_msgsnavsatfix">4. The message: sensor_msgs/NavSatFix</a><a href="#5-the-datum-where-degrees-meet-metres">5. The datum: where degrees meet metres</a><a href="#6-navsat_transform-degrees-in-metres-out">6. navsat_transform: degrees in, metres out</a><a href="#7-gps-in-gazebo-and-on-the-bench">7. GPS in Gazebo and on the bench</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>GPS tells the car where it is on the earth, as a latitude and longitude. This page
+explains how that works, how good it is, and how our car turns it into metres on a map.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>what GNSS is, and why "GPS" is only part of it;</li>
+<li>fix types, and what RTK float and RTK fixed mean;</li>
+<li>what our receiver, the u-blox ZED-F9R, can do;</li>
+<li>every field of a ROS <code>NavSatFix</code> message;</li>
+<li>the datum, and how <code>navsat_transform</code> turns degrees into metres;</li>
+<li>how to check that GPS data is really arriving;</li>
+<li>the bench's GPS noise problem (N7 in <code>TODO.md</code>).</li>
+</ul>
+<p>This page goes deeper than <a href="../../READ-ME-MAPS-AND-POSITION.md">Maps and position</a>, which
+shows the big picture. Read that one first if you haven't.</p></div>
+<section class="card"><h2 id="1-gnss-satellites-and-clocks">1. GNSS: satellites and clocks</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Word</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GNSS</strong></td>
+<td>any satellite positioning system. "GPS" is the American one</td>
+</tr>
+<tr>
+<td>The four systems</td>
+<td>GPS (USA), GLONASS (Russia), Galileo (Europe), BeiDou (China). Modern receivers use all four</td>
+</tr>
+<tr>
+<td>How it works</td>
+<td>each satellite sends the time. The receiver works out how far away each one is from how late the signal arrives</td>
+</tr>
+<tr>
+<td>How many satellites</td>
+<td>at least <strong>4</strong>: three for the position, one for the receiver's own clock error</td>
+</tr>
+<tr>
+<td>What it gives</td>
+<td>latitude, longitude, altitude and very exact time</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-spoils-it">What spoils it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The sky is blocked (buildings, trees, a garage)</td>
+<td>fewer satellites; no fix indoors</td>
+</tr>
+<tr>
+<td>Signals bounce off walls (multipath)</td>
+<td>a position a few metres off, near buildings</td>
+</tr>
+<tr>
+<td>The air (ionosphere) slows the signal</td>
+<td>metres of error, mostly removed by dual-band receivers</td>
+</tr>
+<tr>
+<td>A poor antenna cable</td>
+<td>weak signal. Our ZED-F9R's antenna lead is held on with tape (<a href="car-photos.html">Car photos</a>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="2-fix-types-how-good-is-this-fix">2. Fix types: how good is this fix?</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Fix</th>
+<th>Typical error</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No fix</td>
+<td>-</td>
+<td>fewer than 4 satellites</td>
+</tr>
+<tr>
+<td>2D</td>
+<td>5-10 m</td>
+<td>3 satellites: no altitude</td>
+</tr>
+<tr>
+<td>3D</td>
+<td><strong>2-5 m</strong></td>
+<td>4+ satellites. What a phone gets</td>
+</tr>
+<tr>
+<td>SBAS / DGPS</td>
+<td>about 1 m</td>
+<td>correction signals from a satellite or a station</td>
+</tr>
+<tr>
+<td><strong>RTK float</strong></td>
+<td>10-50 cm</td>
+<td>RTK corrections, still being worked out</td>
+</tr>
+<tr>
+<td><strong>RTK fixed</strong></td>
+<td><strong>1-2 cm</strong></td>
+<td>RTK corrections, fully worked out</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="rtk-in-one-picture">RTK in one picture</h3>
+<pre class="highlight"><code class="language-text">  satellites ───────────┬────────────────────┐
+                        ▼                    ▼
+   base station (fixed, known spot)     our car (rover)
+        │  "here's the error I see right now"  ▲
+        └──── corrections (RTCM) over radio or the internet ────┘</code></pre>
+<ul>
+<li>A <strong>base station</strong> sits on a known spot. It sees the same errors as the car.</li>
+<li>It sends <strong>corrections</strong> (RTCM messages), often through an internet service (NTRIP).</li>
+<li>The car's receiver removes the shared errors.</li>
+<li><strong>Float:</strong> the maths hasn't settled yet. <strong>Fixed:</strong> it has. Fixed can take tens of
+  seconds after the corrections start.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Where do our corrections come from?</p>
+<pre><code>Not known yet. The switch has a port labelled **RTK-PI**, so the 2025-26 car probably
+had a corrections setup. Friday's audit should find out ([Car photos](car-photos.md)).
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="3-our-receiver-u-blox-zed-f9r">3. Our receiver: u-blox ZED-F9R</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>What it means for us</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dual band</strong> (L1 + L2)</td>
+<td>removes most of the air's error</td>
+</tr>
+<tr>
+<td><strong>RTK</strong></td>
+<td>centimetres, once it gets corrections</td>
+</tr>
+<tr>
+<td><strong>A built-in IMU</strong> (gyro + accelerometer)</td>
+<td><strong>dead reckoning</strong>: it keeps a position going for a while in a tunnel or under trees</td>
+</tr>
+<tr>
+<td>Can read wheel speed</td>
+<td>better dead reckoning. Not wired on our car</td>
+</tr>
+<tr>
+<td>USB</td>
+<td>it shows up on the Pi as <code>/dev/ttyACM*</code>; our udev rule names it <code>/dev/aav/gps</code></td>
+</tr>
+<tr>
+<td>Rate</td>
+<td>1 fix a second from the factory. Faster is set once, with u-blox's u-center</td>
+</tr>
+</tbody>
+</table></div>
+<p>On the car today: a SparkFun ZED-F9R board on the ceiling panel, USB-C into a Pi. The
+KEFC plan replaces it with a board that has a screw-on antenna connector.</p>
+<div class="admonition warning">
+<p class="admonition-title">Never tried with our code</p>
+<pre><code>Our GPS driver (`ublox_gps`) has **never run** with this receiver. Friday's audit
+checks the first step: is there any data at all?
+</code></pre>
+</div>
+<h3 id="the-driver-three-choices">The driver: three choices</h3>
+<p><code>sensors.launch.py gps_driver:=...</code> picks one. Each publishes <code>/sensors/gps/fix</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Package</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ublox</code> (default)</td>
+<td><code>ublox_gps</code> (KumarRobotics)</td>
+<td>in Pixi. Uses the receiver <strong>as it is set up</strong>: changes nothing that lasts</td>
+</tr>
+<tr>
+<td><code>nmea</code></td>
+<td><code>nmea_navsat_driver</code></td>
+<td>any receiver that speaks NMEA text</td>
+</tr>
+<tr>
+<td><code>ublox_dgnss</code></td>
+<td><code>ublox_dgnss</code></td>
+<td>the 2024-25 team's choice. apt only, not in Pixi</td>
+</tr>
+</tbody>
+</table></div>
+<p>Which one stays is open question <strong>Q18</strong> (Tentative: <code>ublox</code>).</p>
+</section>
+<section class="card"><h2 id="4-the-message-sensor_msgsnavsatfix">4. The message: sensor_msgs/NavSatFix</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>header.stamp</code></td>
+<td></td>
+<td>when the fix was taken</td>
+</tr>
+<tr>
+<td><code>header.frame_id</code></td>
+<td><code>gps_link</code></td>
+<td><strong>the antenna</strong>, not the box. Its spot on the car is in <code>vehicle.yaml</code>: 0.80 m forward, 1.50 m up</td>
+</tr>
+<tr>
+<td><code>status.status</code></td>
+<td>0</td>
+<td>-1 no fix, 0 fix, 1 SBAS, 2 GBAS (ground-based corrections)</td>
+</tr>
+<tr>
+<td><code>status.service</code></td>
+<td>1</td>
+<td>which systems: 1 GPS, 2 GLONASS, 4 BeiDou, 8 Galileo (added together)</td>
+</tr>
+<tr>
+<td><code>latitude</code></td>
+<td>45.3860</td>
+<td>degrees, + north</td>
+</tr>
+<tr>
+<td><code>longitude</code></td>
+<td>-75.6960</td>
+<td>degrees, + east (so Ottawa is negative)</td>
+</tr>
+<tr>
+<td><code>altitude</code></td>
+<td></td>
+<td>metres above the WGS-84 ellipsoid, not sea level</td>
+</tr>
+<tr>
+<td><code>position_covariance</code></td>
+<td>9 numbers</td>
+<td>how unsure, in m², east-north-up. The middle diagonal ones matter</td>
+</tr>
+<tr>
+<td><code>position_covariance_type</code></td>
+<td>2</td>
+<td>0 unknown, 1 approximate, 2 diagonal known, 3 full</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Reading the covariance:</strong> the square root is the error in metres.
+<code>position_covariance[0] = 0.25</code> means about <strong>0.5 m</strong> east-west (1 sigma).</p>
+<p><strong>Degrees to metres, near Ottawa:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Is about</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.00001° of latitude</td>
+<td>1.1 m north</td>
+</tr>
+<tr>
+<td>0.00001° of longitude</td>
+<td>0.79 m east (less, because we're at 45° north)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="5-the-datum-where-degrees-meet-metres">5. The datum: where degrees meet metres</h2>
+<p>"Datum" has two meanings. Both matter.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Meaning</th>
+<th>Ours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The earth's shape</strong> that latitude and longitude are measured on</td>
+<td>WGS-84, what every GPS uses</td>
+</tr>
+<tr>
+<td><strong>robot_localization's datum</strong>: the one point where the <code>map</code> frame is (0, 0)</td>
+<td>45.3860 N, -75.6960: a <strong>placeholder</strong> near Carleton (<code>navsat.yaml</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>From the datum:</p>
+<ul>
+<li>x points <strong>east</strong>, y points <strong>north</strong>, in metres;</li>
+<li>every map, every Nav2 goal and every GPS waypoint uses this frame;</li>
+<li>set it to the test site before the car drives there.</li>
+</ul>
+</section>
+<section class="card"><h2 id="6-navsat_transform-degrees-in-metres-out">6. navsat_transform: degrees in, metres out</h2>
+<pre class="highlight"><code class="language-text">/sensors/gps/fix  ─┐
+/sensors/imu/data ─┼─► navsat_transform ─► /localization/gps/odom  (x, y in map) ─► ekf_global
+/localization/odom/global ─┘                └► /localization/gps/fix  (the filtered position, as lat/lon)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting (<code>navsat.yaml</code>)</th>
+<th>Ours</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wait_for_datum</code></td>
+<td>true</td>
+<td>use our datum, not the first fix</td>
+</tr>
+<tr>
+<td><code>datum</code></td>
+<td>[45.3860, -75.6960, 0.0]</td>
+<td>the placeholder above</td>
+</tr>
+<tr>
+<td><code>zero_altitude</code></td>
+<td>true</td>
+<td>a flat map: ignore height</td>
+</tr>
+<tr>
+<td><code>delay</code></td>
+<td>3.0 s</td>
+<td>wait for the EKF before starting</td>
+</tr>
+<tr>
+<td><code>magnetic_declination_radians</code>, <code>yaw_offset</code></td>
+<td>0.0</td>
+<td>must be 0 with a datum. No magnetometer yet</td>
+</tr>
+<tr>
+<td><code>frequency</code></td>
+<td>30 Hz</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>It also:</p>
+<ul>
+<li>removes the antenna's offset, using TF <code>base_link → gps_link</code>: that's why the antenna's
+  spot in <code>vehicle.yaml</code> matters;</li>
+<li>serves <code>/fromLL</code> (lat/lon → x, y) and <code>/toLL</code> (back). The HUD's route reaches Nav2
+  through <code>/fromLL</code>.</li>
+</ul>
+</section>
+<section class="card"><h2 id="7-gps-in-gazebo-and-on-the-bench">7. GPS in Gazebo and on the bench</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Gazebo (<code>pixi run sim</code>)</th>
+<th>Bench (<code>pixi run bench</code>)</th>
+<th>The car</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Made by</td>
+<td>Gazebo's <code>navsat</code> sensor on <code>gps_link</code></td>
+<td><code>mock_gps</code></td>
+<td><code>ublox_gps</code></td>
+</tr>
+<tr>
+<td>Path</td>
+<td><code>/aav/navsat</code> → <code>/gazebo/navsat</code> → <code>gazebo_adapter</code> → <code>/sensors/gps/fix</code></td>
+<td>straight to <code>/sensors/gps/fix</code></td>
+<td>straight to <code>/sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>Rate</td>
+<td>5 Hz</td>
+<td>5 Hz</td>
+<td>1 Hz (factory)</td>
+</tr>
+<tr>
+<td>Noise</td>
+<td>4.5e-6° (about 0.5 m) per fix</td>
+<td>0.5 m per fix</td>
+<td>unknown until we log it</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>always <code>STATUS_FIX</code></td>
+<td>always <code>STATUS_FIX</code></td>
+<td>depends on the sky</td>
+</tr>
+<tr>
+<td>Origin</td>
+<td>the world's <code>spherical_coordinates</code> = our datum</td>
+<td>the datum</td>
+<td>the earth</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-benchs-gps-problem-n7">The bench's GPS problem: N7</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Bench GPS today</th>
+<th>A real receiver</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Error</td>
+<td><strong>fresh</strong> random noise on every fix</td>
+<td><strong>drifts slowly</strong>: wrong by the same metre for a while</td>
+</tr>
+<tr>
+<td>Looks like</td>
+<td>dots jumping around the truth, 5 times a second</td>
+<td>a smooth line, a little off to one side</td>
+</tr>
+<tr>
+<td>Effect on <code>ekf_global</code></td>
+<td>the map correction jiggles, so the car <strong>weaves</strong> a little</td>
+<td>smooth, but offset</td>
+</tr>
+</tbody>
+</table></div>
+<p>So tuning <code>ekf_global</code> on the bench tunes it for the wrong kind of noise. The fix in
+<code>TODO.md</code> (N7): model the bench's GPS error as a slow drift, then tune <code>ekf_global</code> for
+the real receiver, once we have logs from it (Q18).</p>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You want to</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A GPS in Gazebo</td>
+<td><code>pixi run sim</code></td>
+</tr>
+<tr>
+<td>How often fixes come (expect 5 Hz)</td>
+<td><code>pixi run tools/ros.sh ros2 topic hz /sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>One fix, every field</td>
+<td><code>pixi run tools/ros.sh ros2 topic echo --once /sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>The same fix after <code>navsat_transform</code>, in metres</td>
+<td><code>pixi run tools/ros.sh ros2 topic echo --once /localization/gps/odom</code></td>
+</tr>
+<tr>
+<td>A lat/lon as map x, y</td>
+<td><code>pixi run tools/ros.sh ros2 service call /fromLL robot_localization/srv/FromLL "{ll_point: {latitude: 45.3861, longitude: -75.6959}}"</code></td>
+</tr>
+<tr>
+<td>The real receiver (on the Pi it's plugged into)</td>
+<td><code>ls -l /dev/aav/gps</code>, then <code>pixi run tools/ros.sh ros2 launch aav_sensors sensors.launch.py imu:=false</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The <code>/fromLL</code> example is about 11 m north and 8 m east of the datum, so expect x near 8
+and y near 11.</p>
+<div class="admonition note">
+<p class="admonition-title">Nothing on the topic?</p>
+<pre><code>`ublox_dgnss` publishes best effort. Add `--qos-reliability best_effort` to
+`ros2 topic echo`. Indoors, a real receiver has no fix at all: go outside.
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPS driver settings</td>
+<td><code>src/sensors/aav_sensors/config/ublox_gps.yaml</code></td>
+</tr>
+<tr>
+<td>Which driver starts</td>
+<td><code>src/sensors/aav_sensors/launch/sensors.launch.py</code> (<code>gps_driver:=</code>)</td>
+</tr>
+<tr>
+<td>The datum, navsat_transform</td>
+<td><code>src/localization/aav_localization/config/navsat.yaml</code></td>
+</tr>
+<tr>
+<td>The antenna's spot on the car</td>
+<td><code>src/aav_description/config/vehicle.yaml</code> (<code>gps_link</code>)</td>
+</tr>
+<tr>
+<td>Gazebo's GPS sensor</td>
+<td><code>src/aav_description/urdf/aav.gazebo.xacro</code> (<code>navsat</code>)</td>
+</tr>
+<tr>
+<td>Gazebo → our topic name</td>
+<td><code>src/backends/aav_gazebo/aav_gazebo/gazebo_adapter.py</code></td>
+</tr>
+<tr>
+<td>The bench's pretend GPS</td>
+<td><code>src/bench/aav_bench/aav_bench/sensors.py</code> (<code>MockGps</code>)</td>
+</tr>
+<tr>
+<td>The device name <code>/dev/aav/gps</code></td>
+<td><code>tools/udev/99-aav.rules</code></td>
+</tr>
+<tr>
+<td>The contract</td>
+<td><code>docs/interfaces.yaml</code>: <code>/sensors/gps/fix</code>, <code>/localization/gps/*</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="hud.html"><small>Previous</small>← HUD</a>
+<a class="next" href="learn-can.html"><small>Next</small>Learn: CAN →</a></nav>
+</main>
+<footer>Source: <code>docs/learn-gps.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>
