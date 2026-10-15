@@ -274,7 +274,10 @@ camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:</p>
 WiFi connection, with no ROS on the Mac.</p>
 <ul>
 <li><strong>Lichtblick:</strong> free, open source, no account. Download the Mac app from
-  github.com/lichtblick-suite/lichtblick (releases).</li>
+  github.com/lichtblick-suite/lichtblick (releases).
+  The Mac app (<code>lichtblick-&lt;version&gt;-mac-universal.dmg</code>, under Assets) isn't notarized by
+  Apple, so macOS may refuse to open it: right-click it in Applications → Open → Open.
+  Check the download against the <code>sha512</code> in <code>latest-mac.yml</code>, in the same release.</li>
 <li><strong>Foxglove:</strong> the same idea; its free plan needs an account.</li>
 </ul>
 <p>In either app: Open connection → Foxglove WebSocket → <code>ws://&lt;the Orin's IP&gt;:8765</code>.</p>

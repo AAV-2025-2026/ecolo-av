@@ -143,6 +143,9 @@ The car runs `foxglove_bridge`, so any Foxglove-compatible viewer can watch it o
 WiFi connection, with no ROS on the Mac.
 - **Lichtblick:** free, open source, no account. Download the Mac app from
   github.com/lichtblick-suite/lichtblick (releases).
+  The Mac app (`lichtblick-<version>-mac-universal.dmg`, under Assets) isn't notarized by
+  Apple, so macOS may refuse to open it: right-click it in Applications → Open → Open.
+  Check the download against the `sha512` in `latest-mac.yml`, in the same release.
 - **Foxglove:** the same idea; its free plan needs an account.
 
 In either app: Open connection → Foxglove WebSocket → `ws://<the Orin's IP>:8765`.
