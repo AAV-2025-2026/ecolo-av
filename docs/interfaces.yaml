@@ -176,7 +176,7 @@ topics:
     pub: [radar, mock_radar, gazebo_adapter]
     sub: [radar_clusters, local_costmap, collision_monitor]
     live: [bench, road]
-    note: The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_adapter makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.
+    note: The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_adapter makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.
   /vehicle/battery:
     type: sensor_msgs/msg/BatteryState
     pub: [battery_state_publisher, mock_battery]
@@ -217,13 +217,13 @@ topics:
     pub: [radar_clusters]
     sub: []
     live: [bench, road]
-    note: The radar points DBSCAN grouped into objects, coloured by cluster.
+    note: The radar points DBSCAN grouped into objects (radar_clusters, aav_radar_clusters, Rust), coloured by cluster, with each point's cluster number in a cluster field; noise left out. The radar cloud's frame and time.
   /perception/radar/cluster_boxes:
     type: visualization_msgs/msg/MarkerArray
     pub: [radar_clusters]
     sub: []
     live: [bench, road]
-    note: A box round each radar cluster, for RViz.
+    note: A box round each radar cluster, for RViz - a DELETEALL first, then one CUBE per cluster, its id the cluster number.
   /perception/detections:
     type: vision_msgs/msg/Detection2DArray
     pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]

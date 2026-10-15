@@ -113,6 +113,19 @@ def test_the_imu_driver_is_the_rust_one():
     assert 'imu_driver' not in included(started(CAR, machine='all'))['sensors.launch.py']
 
 
+def test_the_radar_clusters_are_the_rust_node(monkeypatch):
+    # The C++ node (aav_object_detection's dbscan) is gone: aav_radar_clusters replaced it.
+    monkeypatch.setattr(CAR, 'load_machine', lambda machine: {'parts': {'radar_clusters': True}})
+    sent = included(started(CAR, machine='orin'))
+    assert sent['radar_clusters.launch.py'] == {
+        'mock': 'false', 'eps': '0.8', 'minimum_points': '15', 'radar_rviz': 'false'}
+    clusters = load('aav_radar_clusters', 'radar_clusters.launch.py')
+    started_nodes = {(a.node_package, a.node_executable)
+                     for a in clusters.generate_launch_description().entities
+                     if isinstance(a, Node)}
+    assert ('aav_radar_clusters', 'radar_clusters') in started_nodes
+
+
 def test_the_map_and_the_start_pose_reach_their_launch_files():
     sent = included(started(CAR, machine='all', map='/maps/site.yaml', start_x='1.5',
                             start_y='-2.0', start_yaw='0.3'))
