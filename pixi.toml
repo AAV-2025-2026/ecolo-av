@@ -33,6 +33,7 @@ estop = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /safety/estop std_msgs/m
 estop-clear = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /safety/estop std_msgs/msg/Bool "{data: false}"', description = "Clear the e-stop" }
 gz-window = { cmd = "tools/ros.sh tools/gz_window.sh", description = "Gazebo's window again, following the car, for a simulator already running" }
 doctor = { cmd = "tools/ros.sh python3 tools/doctor.py", description = "Can this computer join the car's ROS network? Says what to fix" }
+shm-clean = { cmd = "fastdds shm clean", description = "Remove Fast DDS shared-memory files left by ROS programs that died: nodes that hang at start-up, or a sim that never spawns the car (docs/run.md)" }
 net-map = { cmd = "bash tools/net_map.sh", description = "Map the network you're on: every machine, its maker (a guess), open ports, and the ROS domains heard. Read-only; no ROS needed" }
 survey = { cmd = "bash tools/survey_car.sh", description = "Survey every car computer in a hosts file over ssh, read-only: pixi run survey ~/aav-audit/hosts.txt (FRIDAY-TODO.md)" }
 car-kit = { cmd = "tools/car_kit.sh", description = "Make car-kit/, to install our Jazzy on the car's ARM computers from a USB stick, offline (docs/car-install.md; about 2 GB)" }

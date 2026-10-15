@@ -93,4 +93,5 @@ network, driving and watching the car, and Gazebo.
 | The turtle doesn't move | click into the keyboard terminal, and hold the key. Then see [when nothing moves](simulation.md#when-nothing-moves). |
 | Odd build errors after `git pull` | delete `build/`, `install/` and `log/`, then `pixi run build` |
 | Two computers can't see each other | the same `ROS_DOMAIN_ID` on both: see [Platforms](platforms.md) |
+| Nodes hang at start-up, or the sim never spawns the car | `pixi run shm-clean`: it removes Fast DDS's shared-memory files left by programs that died (515 of them on 15 Oct). Stop every ROS program first |
 | Another computer can't see my sim or bench | that's on purpose: the stand-ins stay on their computer. To share one: `AAV_DISCOVERY=SUBNET pixi run sim` |

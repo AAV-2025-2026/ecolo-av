@@ -4,7 +4,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
   ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot|road] [nav:=true]
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
-      [hud_web:=false] [map:=false]
+      [hud_web:=false] [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
       [actuator_model:=true] [sim_speed:=]
   pixi run sim world:=road                         the road: the car's camera and radar
@@ -32,6 +32,8 @@ bench's argument names:
   hud_web:=true       the Flutter app's web server (aav_hud), on 127.0.0.1:5000
   map:=true           the map window (aav_hud_raylib, as pixi run map): Nav2's map, the
                       car, the plan, the distance left. Needs a screen
+  foxglove:=true      foxglove_bridge on 127.0.0.1:8765, for Lichtblick or Foxglove on this
+                      computer: open ws://localhost:8765
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
   lidar:=false        no roof lidar. It's on by default (15 Oct): a simulated 16-beam
                       lidar on /sensors/lidar/points. Nothing reads it yet but RViz. Its
@@ -79,7 +81,7 @@ def launch_setup(context):
         raise ValueError(f'world:={world}: pick one of {sorted(MAPS)}')
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
-                      'hud_web', 'map')}
+                      'hud_web', 'map', 'foxglove')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -148,6 +150,11 @@ def launch_setup(context):
         actions.append(include(context, 'aav_hud', 'hud.launch.py', use_sim_time='true'))
     if flag['map']:
         actions.append(include(context, 'aav_hud_raylib', 'map.launch.py'))
+    if flag['foxglove']:
+        # This computer only, like the rest of the simulator (tools/ros.sh --local).
+        actions.append(Node(package='foxglove_bridge', executable='foxglove_bridge',
+                            name='foxglove_bridge',
+                            parameters=[{'port': 8765, 'address': '127.0.0.1'}]))
     if flag['rviz']:
         actions.append(Node(
             package='rviz2', executable='rviz2', name='rviz2',
@@ -184,6 +191,8 @@ def generate_launch_description():
         DeclareLaunchArgument('map', default_value='false',
                               description="the big screen's map window (aav_hud_raylib); "
                                           'needs a screen'),
+        DeclareLaunchArgument('foxglove', default_value='false',
+                              description='foxglove_bridge on 127.0.0.1:8765 (Lichtblick)'),
         DeclareLaunchArgument('obstacle', default_value='false',
                               description="a 1 m box in the car's lane, 15 m ahead"),
         DeclareLaunchArgument('start_y', default_value='0.0',

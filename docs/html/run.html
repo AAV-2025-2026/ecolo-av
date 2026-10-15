@@ -268,6 +268,10 @@ network, driving and watching the car, and Gazebo.</p>
 <td>the same <code>ROS_DOMAIN_ID</code> on both: see <a href="platforms.html">Platforms</a></td>
 </tr>
 <tr>
+<td>Nodes hang at start-up, or the sim never spawns the car</td>
+<td><code>pixi run shm-clean</code>: it removes Fast DDS's shared-memory files left by programs that died (515 of them on 15 Oct). Stop every ROS program first</td>
+</tr>
+<tr>
 <td>Another computer can't see my sim or bench</td>
 <td>that's on purpose: the stand-ins stay on their computer. To share one: <code>AAV_DISCOVERY=SUBNET pixi run sim</code></td>
 </tr>
