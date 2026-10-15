@@ -118,22 +118,29 @@ pub struct Layout {
     u: f32,
     pub map: Viewport,
     panel: Rectangle,
+    /// The SIMULATED band above the map, when there is one.
+    band: Option<Rectangle>,
 }
 
 impl Layout {
-    pub fn new(window_w: i32, window_h: i32) -> Self {
+    /// `banner`: a SIMULATED / BENCH / REPLAY band goes above the map, not over it, so
+    /// the whole map still fits below it.
+    pub fn new(window_w: i32, window_h: i32, banner: bool) -> Self {
         let (w, h) = (window_w as f32, window_h as f32);
         let u = (w / 1600.0).min(h / 900.0).clamp(0.6, 3.0);
         let pw = PANEL_W * u;
+        let band = banner.then(|| Rectangle::new(0.0, 0.0, (w - pw).max(1.0), 56.0 * u));
+        let top = band.map_or(0.0, |b| b.height);
         Self {
             u,
             map: Viewport {
                 x: 0.0,
-                y: 0.0,
+                y: f64::from(top),
                 width: f64::from((w - pw).max(1.0)),
-                height: f64::from(h.max(1.0)),
+                height: f64::from((h - top).max(1.0)),
             },
             panel: Rectangle::new(w - pw, 0.0, pw, h),
+            band,
         }
     }
 }
@@ -197,7 +204,12 @@ impl Ui {
         now: Instant,
         source: &str,
     ) {
-        let layout = Layout::new(d.get_screen_width(), d.get_screen_height());
+        let banner = state.origins.banner();
+        let layout = Layout::new(
+            d.get_screen_width(),
+            d.get_screen_height(),
+            banner.is_some(),
+        );
         d.clear_background(BACKGROUND);
         {
             let vp = layout.map;
@@ -215,6 +227,11 @@ impl Ui {
             font: &self.font,
             u: layout.u,
         };
+        if let (Some(band), Some(words)) = (layout.band, &banner) {
+            p.d.draw_rectangle_rec(band, NOT_REAL);
+            let cx = band.x + band.width / 2.0;
+            p.centred(cx, band.y + 8.0 * p.u, 40.0, words, Color::BLACK);
+        }
         panel(&mut p, &layout, state, now, source);
     }
 
@@ -256,19 +273,7 @@ impl Ui {
         }
 
         // On top: the banner, the view's mode, north, the scale bar, and any problem.
-        let mut top = vp.y as f32 + 12.0 * p.u;
-        if let Some(words) = state.origins.banner() {
-            let band = Rectangle::new(vp.x as f32, vp.y as f32, vp.width as f32, 56.0 * p.u);
-            p.d.draw_rectangle_rec(band, NOT_REAL);
-            p.centred(
-                band.x + band.width / 2.0,
-                band.y + 8.0 * p.u,
-                40.0,
-                &words,
-                Color::BLACK,
-            );
-            top += band.height;
-        }
+        let top = vp.y as f32 + 12.0 * p.u;
         p.chip(vp.x as f32 + 14.0 * p.u, top, view.mode.label(), TEXT);
         north(
             p,

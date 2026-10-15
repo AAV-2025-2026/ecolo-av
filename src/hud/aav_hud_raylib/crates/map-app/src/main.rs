@@ -13,7 +13,7 @@
 //! sends news over a channel (ros.rs). `--demo` swaps the ROS node for pretend data.
 //! The maths (map to screen, the distance left) is in map-core.
 //!
-//! usage: map [--demo] [--fullscreen] [--config FILE] [--vehicle FILE] [--screenshot FILE]
+//! usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE] [--screenshot FILE]
 //!            [--ros-args ...]
 
 mod demo;
@@ -43,11 +43,12 @@ use crate::{
 };
 
 const USAGE: &str = "\
-usage: map [--demo] [--fullscreen] [--config FILE] [--vehicle FILE] [--screenshot FILE]
+usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE] [--screenshot FILE]
            [--ros-args ...]
 
   --demo             pretend data: no ROS, no car
   --fullscreen       fill the screen (F11 switches too)
+  --whole-map        start showing the whole map, not following the car (F switches)
   --config FILE      topic names from FILE instead of the built-in config/map.yaml
   --vehicle FILE     the car's size from FILE instead of the built-in vehicle.yaml
   --screenshot FILE  save the window as a PNG after 4 s, then quit (for the docs)
@@ -66,6 +67,7 @@ const KEY_ZOOM: f64 = 1.25;
 struct Options {
     demo: bool,
     fullscreen: bool,
+    whole_map: bool,
     config: Option<PathBuf>,
     vehicle: Option<PathBuf>,
     screenshot: Option<PathBuf>,
@@ -87,6 +89,7 @@ impl Options {
                 "--ros-args" => break,
                 "--demo" => opts.demo = true,
                 "--fullscreen" => opts.fullscreen = true,
+                "--whole-map" => opts.whole_map = true,
                 "--config" => opts.config = Some(file("--config")?),
                 "--vehicle" => opts.vehicle = Some(file("--vehicle")?),
                 "--screenshot" => opts.screenshot = Some(file("--screenshot")?),
@@ -169,6 +172,9 @@ fn run(
     let mut ui = Ui::new(&mut rl, &thread);
     let mut state = MapState::new(config);
     let mut view = View::default();
+    if opts.whole_map {
+        view.toggle_follow();
+    }
     let mut dragging = false;
     let started = Instant::now();
 
@@ -185,7 +191,8 @@ fn run(
             }
         }
 
-        let layout = Layout::new(rl.get_screen_width(), rl.get_screen_height());
+        let banner = state.origins.banner().is_some();
+        let layout = Layout::new(rl.get_screen_width(), rl.get_screen_height(), banner);
         let vp = layout.map;
         let mouse = rl.get_mouse_position();
         let mouse = ScreenPoint::new(f64::from(mouse.x), f64::from(mouse.y));
