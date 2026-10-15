@@ -135,9 +135,11 @@ pixi run sim follow:=false # a free camera instead of one that follows the car
 ```
 
 Cameras and lidars inside Gazebo can crash it on some Macs. Ours don't: in the road world
-(`pixi run sim world:=road`), the camera, the radar stand-in and the roof lidar render
-with no window, on Metal, at their full rates (Ben's Mac, 15 Oct). If yours crashes, start
-with `lidar:=false`, or use the empty world, which renders nothing.
+(`pixi run sim world:=road lidar:=true`), the camera, the radar stand-in and the roof
+lidar render with no window, on Metal, at their full rates (Ben's Mac, 15 Oct). The lidar
+is off by default all the same: its big clouds made the whole graph flaky once YOLO ran too
+([Simulation](simulation.md#the-lidar-gazebo-only)). If Gazebo crashes, use the empty
+world, which renders nothing.
 
 If the window stays empty, or the car never appears, run `export GZ_IP=127.0.0.1` in both
 terminals and start again: Gazebo's two programs then find each other on the Mac itself.
@@ -197,7 +199,7 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 | The turtle, driving it the keyboard's way, the scripted drive, the e-stop | [[works]] on Linux and the Mac. The real keyboard keys are [[untested]] on a Mac |
 | Gazebo without its window, and a Nav2 goal | [[works]] on the Mac, without `GZ_IP` |
 | Gazebo's window on a Mac | [[works]] 10 Oct: `pixi run sim` opens it; the car drives in it (pictures in [Your first day](first-day.md)) |
-| Gazebo's camera and lidars on a Mac | [[works]] 15 Oct: headless, 10 Hz each; `pixi run sim-check` passes |
+| Gazebo's camera and lidars on a Mac | [[works]] 15 Oct: headless, 10 Hz each; `pixi run sim-check` passes. The lidar with YOLO too is flaky, so it's off by default |
 | RViz and rqt_graph on a Mac | [[untested]] they open without errors (RViz logs one shader warning); nobody has looked at them yet |
 | Recording a drive (`tools/record.sh`) | [[works]] on the Mac, after the `tools/ros.sh` fix above |
 | The Rust listener | [[works]] on the Mac: builds in 15 s |

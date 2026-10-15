@@ -8,7 +8,7 @@ Written 15 October 2026, for Ben. It answers three questions:
 
 > **The short version**
 > - **Gazebo works**, and it **does produce sensor data**: an IMU, a GPS, wheel speed, a camera, a radar and a lidar, all on `main`.
-> - The camera, radar and lidar are in the **road world**: `pixi run sim world:=road`.
+> - The camera, radar and lidar are in the **road world**: `pixi run sim world:=road` (add `lidar:=true` for the lidar).
 > - **The lidar is simulation only**: the car's own lidar has no driver in our code yet.
 > - **None of our code has run on the real car yet.** Everything "works" in simulation or on the bench only.
 > - The point of simulation: the **same nodes** run in all three places. Only the bottom layer changes.
@@ -75,7 +75,7 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | A road: lane lines, a stop sign, a box in the road (`obstacle:=true`) | | | ✅ |
 | A camera on the car | `/sensors/camera/front_left/image_raw` | 10 Hz | ✅ |
 | A radar on the car (a lidar shaped like it) | `/sensors/radar/points` (via `/gazebo/radar/points`) | 10 Hz | ✅ |
-| A 16-beam lidar on the roof (`lidar:=true`, the default) | `/sensors/lidar/points` | 10 Hz | ✅ stable on the Mac |
+| A 16-beam lidar on the roof, with `lidar:=true` | `/sensors/lidar/points` | 10 Hz | ✅ alone; ⚠️ off by default: with YOLO too, it made the Mac flaky |
 
 ![What the simulated camera sees](docs/img/sim-camera.png)
 
@@ -145,7 +145,7 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | Look at one GPS message | `pixi run tools/ros.sh ros2 topic echo --once /sensors/gps/fix` |
 | Drive it | `pixi run keyboard --sim` |
 | Check the whole graph | `pixi run check sim` |
-| The road world, with camera, radar and lidar | `pixi run sim world:=road` |
+| The road world, with camera, radar and lidar | `pixi run sim world:=road lidar:=true` |
 | Test the road world end to end | `pixi run sim-check` (2 minutes, no window) |
 | The bench instead | `pixi run bench`, then `pixi run bench-check` |
 | The HUD on top of it | `pixi run hud` |

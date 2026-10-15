@@ -209,8 +209,7 @@ topics:
     type: sensor_msgs/msg/PointCloud2
     pub: [gz_lidar_bridge]
     sub: []
-    live: [road]
-    note: Gazebo only - the car has no lidar. A generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). sim.launch.py lidar:=true, the default in the road world. Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).
+    note: Gazebo only - the car has no lidar yet. A generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). Only with sim.launch.py world:=road lidar:=true (off by default - on a Mac it made the full graph flaky), so not live in road. Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).
 
   # --- perception ---
   /perception/radar/clusters:

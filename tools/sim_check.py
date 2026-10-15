@@ -6,7 +6,7 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run -e ml sim-check --perception  (adds YOLO and the stop sign: 2 more minutes)
     pixi run sim-check --obstacle          (adds a box for the radar stand-in: 2 more minutes)
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
-    pixi run sim-check --no-lidar          (without the simulated roof lidar: lidar:=false)
+    pixi run sim-check --lidar             (adds the simulated roof lidar: lidar:=true)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -19,8 +19,8 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 3. Checks the running graph against docs/interfaces.yaml (check_graph.py --profile road).
 4. The sensors: the camera's picture and lens are the bench camera's, in camera_left_link;
    the radar stand-in's cloud has the TI driver's fields, in radar_link, and nothing in it
-   while nothing is within 8.4 m. The simulated roof lidar: 1800 x 16 rays in lidar_link,
-   10 Hz, some of them hitting the ground and the sign.
+   while nothing is within 8.4 m. With --lidar, the simulated roof lidar: 1800 x 16 rays
+   in lidar_link, 10 Hz, some of them hitting the ground and the sign.
 5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth)
    with where the car's own software thinks it is (/localization/odom/global).
 6. With --perception: Nav2 drives to 40 m east, past the stop sign at 25 m. The car must
@@ -131,17 +131,14 @@ def gz_service(service, reqtype, request):
 
 class Probe(Node):
 
-    lidar_on = True     # sim-check --no-lidar starts the sim with lidar:=false
-
     def __init__(self):
         # On Gazebo's clock, like every node in the sim.
         super().__init__('sim_check', parameter_overrides=[Parameter('use_sim_time',
                                                                      value=True)])
-        self.truth = self.glob = self.image = self.info = self.cloud = self.lidar = None
+        self.truth = self.glob = self.image = self.info = self.cloud = None
         # Every truth sample, lane message and sensor stamp, from the start: lane keeping
         # starts as soon as the camera sees the lane, before its check begins.
         self.track, self.lanes, self.image_stamps, self.cloud_stamps = [], [], [], []
-        self.lidar_stamps = []
         self.create_subscription(Odometry, '/vehicle/gazebo/truth', self.on_truth, 10)
         self.create_subscription(Odometry, '/localization/odom/global',
                                  lambda m: setattr(self, 'glob', m), 10)
@@ -151,8 +148,6 @@ class Probe(Node):
                                  lambda m: setattr(self, 'info', m), 2)
         self.create_subscription(PointCloud2, '/sensors/radar/points', self.on_cloud,
                                  qos_profile_sensor_data)
-        # The simulated roof lidar (lidar:=true, the default): reliable, as it publishes.
-        self.create_subscription(PointCloud2, '/sensors/lidar/points', self.on_lidar, 2)
         self.drive = ActionClient(self, ScriptedDrive, '/scripted_drive')
         self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
         self.stop, self.stop_picture, self.picture, self.stop_sign = False, None, None, None
@@ -183,10 +178,6 @@ class Probe(Node):
     def on_cloud(self, msg):
         self.cloud = msg
         self.cloud_stamps = self.cloud_stamps[-49:] + [seconds(msg.header.stamp)]
-
-    def on_lidar(self, msg):
-        self.lidar = msg
-        self.lidar_stamps = self.lidar_stamps[-49:] + [seconds(msg.header.stamp)]
 
     def on_boxes(self, msg):
         x = self.truth.pose.pose.position.x if self.truth is not None else math.nan
@@ -242,15 +233,11 @@ def check_contract(probe, env, tag):
             probe.spin_for(60.0, lambda: graph.poll() is not None)
             code = graph.wait()
             out.seek(0)
-            found = [line for line in out.read().splitlines() if line.startswith('FAIL')]
-        # --no-lidar: the contract's lidar is the default's, so it's missing on purpose.
-        fails = [line for line in found
-                 if probe.lidar_on or '/sensors/lidar/points:' not in line]
-        ok = not fails and (code == 0 or bool(found))   # a crash prints no FAIL
-        if ok:
+            fails = [line for line in out.read().splitlines() if line.startswith('FAIL')]
+        if code == 0 and not fails:
             break
         probe.spin_for(10.0)
-    result(f'graph vs contract{tag}', ok,
+    result(f'graph vs contract{tag}', code == 0 and not fails,
            f'{len(fails)} failures' + (': ' + '; '.join(fails[:3]) if fails else ''))
 
 
@@ -277,19 +264,22 @@ def check_sensors(probe):
            f'{BENCH["focal_px"]:.0f}); radar stand-in in {cloud.header.frame_id} at '
            f'{radar_hz:.1f} Hz, fields {",".join(fields)}, '
            f'{cloud.width * cloud.height} points with nothing within 8.4 m')
-    if probe.lidar_on:
-        check_lidar(probe)
 
 
 def check_lidar(probe):
     """Check the simulated roof lidar: 1800 x 16 rays in lidar_link at 10 Hz, some hitting."""
-    cloud = probe.lidar
-    if cloud is None:
-        result('lidar', False, 'nothing on /sensors/lidar/points (lidar:=true is the default)')
+    # Only for this check: 9 MB/s of reliable clouds would load the rest of the run.
+    clouds = []
+    sub = probe.create_subscription(PointCloud2, '/sensors/lidar/points', clouds.append, 2)
+    probe.spin_for(5.0)
+    probe.destroy_subscription(sub)
+    if not clouds:
+        result('lidar', False, 'nothing on /sensors/lidar/points in 5 s')
         return
+    cloud = clouds[-1]
     x = point_cloud2.read_points(cloud, field_names=['x'], skip_nans=False)['x']
     hits = int(numpy.isfinite(x).sum())
-    lidar_hz = rate(probe.lidar_stamps)
+    lidar_hz = rate([seconds(c.header.stamp) for c in clouds])
     ok = (cloud.header.frame_id == 'lidar_link' and (cloud.width, cloud.height) == LIDAR_RAYS
           and abs(lidar_hz - 10.0) < 1.5 and hits > 1000)
     result('lidar', ok, f'{cloud.width} x {cloud.height} rays in {cloud.header.frame_id} at '
@@ -525,22 +515,22 @@ def main():
     if perception and importlib.util.find_spec('ultralytics') is None:
         print('--perception needs YOLO: pixi run -e ml sim-check --perception', file=sys.stderr)
         return 2
-    checks = [check_sensors, check_drive]
+    lidar = '--lidar' in args
+    checks = [check_sensors] + ([check_lidar] if lidar else []) + [check_drive]
     if perception:
         checks.append(check_stop_sign)
     if '--obstacle' in args:
         checks.append(check_obstacle)
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
-    lidar = f'lidar:={str("--no-lidar" not in args).lower()}'
-    Probe.lidar_on = '--no-lidar' not in args
-    session([f'perception:={str(perception).lower()}', lidar], checks, logs[0])
+    session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],
+            checks, logs[0])
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-lane{ext}')
-        session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}', lidar],
+        session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'],
                 [check_lane_keeping], logs[1], 'lane')
 
     print('\n| Check | Result | Detail |\n|---|---|---|')

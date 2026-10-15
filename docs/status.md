@@ -25,7 +25,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | ego | `aav_ego` | [[works]] |
 | turtlesim | `aav_turtlesim` | [[works]] |
 | Gazebo | `aav_gazebo` | [[works]] headless on Linux and a Mac; its window on a Mac, with the car driving (10 Oct) |
-| Gazebo's road world | `aav_gazebo` `world:=road` | [[works]] on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; `pixi run sim-check` and `--obstacle` pass; `--perception` passed on 11 Oct. [[untested]] on Linux, which needs EGL ([Simulation](simulation.md)) |
+| Gazebo's road world | `aav_gazebo` `world:=road` | [[works]] on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) (with `lidar:=true`) render headless; `pixi run sim-check`, `--lidar --obstacle` and `--perception` pass. With YOLO and the lidar together it was flaky, so the lidar is off by default. [[untested]] on Linux, which needs EGL ([Simulation](simulation.md)) |
 | Real car | `aav_spine` | [[works]] on the bench, against `spine_sim`: arming, driving, both e-stops |
 | Today's car | `aav_legacy` | [[untested]] on the car |
 | Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 54 tests, and on the bench |
@@ -40,7 +40,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
 | HUD in Rust (raylib) | `aav_hud_raylib` | [[works]] on a Mac: `--demo`, and as a node fed by `ros2 topic pub`; its e-stop reaches a subscriber as 5 trues. [[works]] next to bench mode too. [[untested]] on a Pi and on the car's screen |
 | CARLA | `aav_carla` | [[stub]] parked (Q31) |
-| Lidar | on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo only (`/sensors/lidar/points`, 15 Oct) | [[missing]] on the car |
+| Lidar | on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo only (`lidar:=true`, `/sensors/lidar/points`, 15 Oct); off by default, as it made the Mac flaky with YOLO | [[missing]] on the car |
 
 ## Builds and tests
 

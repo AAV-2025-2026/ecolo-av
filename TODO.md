@@ -39,8 +39,11 @@ a second Orin). Pages: [car photos](docs/car-photos.md), [CAN plan](docs/can-pla
 - [ ] **DBC v0.2.0** for the KEFC plan: the ESP32 board as the spine, wheel frames 0x200 and
       0x201, a 100 ms timeout (`docs/can-plan.md`, Proposed) [[needs-you]].
 - [ ] **A lidar driver:** a lidar is on the roof; our code has none. Model at the audit.
-      *A generic 16-beam lidar runs in Gazebo's road world since 15 Oct, on
-      `/sensors/lidar/points`: the real driver should publish the same.*
+      *A generic 16-beam lidar runs in Gazebo's road world since 15 Oct
+      (`lidar:=true`), on `/sensors/lidar/points`: the real driver should publish the same.*
+- [ ] **The simulated lidar on by default:** off for now, as on the Mac it made the full
+      graph with YOLO flaky (DDS over loopback UDP). Try Fast DDS's shared memory, or a
+      smaller cloud (`docs/simulation.md`).
 - [x] **Gazebo's road world on `main`** (`wt/sim-full`): the camera, radar and a roof
       lidar, with the new topic names. *Done 15 Oct: `sim-check` passes on the Mac.*
 - [ ] **Friday's audit:** the checklist at the end of `docs/car-photos.md`.

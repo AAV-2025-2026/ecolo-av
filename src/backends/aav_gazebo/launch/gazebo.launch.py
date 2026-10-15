@@ -2,7 +2,7 @@
 Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the adapter.
 
   ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road] [gui:=true]
-      [follow:=true] [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
+      [follow:=true] [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=false]
 
   /ego/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
   Gazebo odometry, IMU, NavSat ──bridge──> gazebo_adapter ──> /vehicle/odom,
@@ -19,8 +19,9 @@ the TI radar (aav_gazebo worlds.has_sensors). A second bridge, gz_road_bridge, c
   Gazebo's truth ──road bridge──> /vehicle/gazebo/truth (where the car really is, for checks)
   roof lidar ──lidar bridge──> /sensors/lidar/points (lidar_link), with lidar:=true
 
-lidar:=true (the default) adds a simulated 16-beam roof lidar, in a world that renders
-sensors; the car itself has none. Elsewhere it is ignored.
+lidar:=true adds a simulated 16-beam roof lidar, in a world that renders sensors; the car
+itself has none. Elsewhere it is ignored. Off by default: on a Mac, its 9 MB/s of clouds
+made the full graph with YOLO flaky (docs/simulation.md).
 
 obstacle:=true puts the bench's 1 m box in the car's lane, 15 m ahead. start_y and
 start_yaw put the car this far left of the world's origin, turned this far left of east
@@ -142,7 +143,7 @@ def generate_launch_description():
                                           "world's origin"),
         DeclareLaunchArgument('start_yaw', default_value='0.0',
                               description='rad: start the car turned this far left of east'),
-        DeclareLaunchArgument('lidar', default_value='true',
+        DeclareLaunchArgument('lidar', default_value='false',
                               description='a simulated 16-beam roof lidar, on '
                                           '/sensors/lidar/points (world:=road)'),
         OpaqueFunction(function=launch_setup),

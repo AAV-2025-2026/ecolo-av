@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">17 min read · 7 sections</div></header>
+<div class="meta">18 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -165,8 +165,8 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 </tr>
 <tr>
 <td><code>lidar</code></td>
-<td><code>true</code></td>
-<td>the simulated roof lidar, in the road world only (<a href="#the-lidar-gazebo-only">below</a>)</td>
+<td><code>false</code></td>
+<td><code>true</code>: the simulated roof lidar, in the road world only (<a href="#the-lidar-gazebo-only">below</a>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -239,7 +239,7 @@ real-time factor at 0.98-0.99.</p>
 <td><code>/sensors/lidar/points</code></td>
 <td>10 Hz</td>
 <td>3 cm</td>
-<td>road, <code>lidar:=true</code> (the default)</td>
+<td>road, with <code>lidar:=true</code></td>
 </tr>
 <tr>
 <td>Where the car really is</td>
@@ -384,12 +384,13 @@ bench's road, built in 3D, so the car's own camera and radar can see it.</p>
 </tr>
 </tbody>
 </table></div>
-<p>| Lidar, with <code>lidar:=true</code> (the default) | a generic 16-beam spinning lidar: 360 degrees in 1800 steps, 15 degrees down to 15 up, 0.5-100 m, 3 cm of noise, 10 Hz | <code>/sensors/lidar/points</code>, reliable, in <code>lidar_link</code> |</p>
+<p>| Lidar, with <code>lidar:=true</code> | a generic 16-beam spinning lidar: 360 degrees in 1800 steps, 15 degrees down to 15 up, 0.5-100 m, 3 cm of noise, 10 Hz | <code>/sensors/lidar/points</code>, reliable, in <code>lidar_link</code> |</p>
 <p>The radar stand-in isn't a radar: it sees every surface (the sign's post too), and each
 point's speed is the car's own, along the line of sight.</p>
 <h3 id="the-lidar-gazebo-only">The lidar: Gazebo only</h3>
 <p>The car has a lidar on its roof, but its model is unknown (Q22) and our code has no driver
-yet. So Gazebo has a generic one, to try what a lidar would add.</p>
+yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's off by default:</strong>
+start it with <code>pixi run sim world:=road lidar:=true</code>.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -415,12 +416,20 @@ yet. So Gazebo has a generic one, to try what a lidar would add.</p>
 <td>nobody yet but RViz. Nav2's obstacle layer could, once the car has one</td>
 </tr>
 <tr>
-<td>Turn it off</td>
-<td><code>lidar:=false</code>: the frame and the sensor leave the URDF, and its bridge doesn't start</td>
+<td>Turn it on</td>
+<td><code>lidar:=true</code>. With <code>false</code>, the frame and the sensor leave the URDF, and its bridge doesn't start</td>
 </tr>
 <tr>
-<td>On the Mac</td>
-<td>stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too</td>
+<td>On the Mac, alone</td>
+<td>stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. <code>sim-check --lidar</code> passes</td>
+</tr>
+<tr>
+<td>On the Mac, with YOLO too</td>
+<td><strong>flaky</strong>: <code>sim-check --perception</code> failed 3 runs out of 3 with the lidar on (a stuck global EKF twice, a 2.5 s stall once). Without it, it passed (see <a href="#sim-check">sim-check</a>)</td>
+</tr>
+<tr>
+<td>Why off by default</td>
+<td>anything that shows the lidar (RViz, a check) pulls 9 MB/s of reliable clouds. Fast DDS's shared memory fails on the Mac (<code>open_and_lock_file failed</code>), so they go over loopback UDP, and with YOLO running, other processes start missing messages (one lost <code>/clock</code> for 2 minutes)</td>
 </tr>
 </tbody>
 </table></div>
@@ -518,7 +527,7 @@ pixi run sim world:=road lane:=true nav:=false start_y:=0.3  # lane keeping alon
 <tbody>
 <tr>
 <td>Do the camera and lidars crash Gazebo?</td>
-<td>no. The camera, the radar stand-in and the roof lidar all render headless, with ogre2 on Metal, with no window and no <code>--headless-rendering</code></td>
+<td>no. The camera, the radar stand-in and the roof lidar (<code>lidar:=true</code>) all render headless, with ogre2 on Metal, with no window and no <code>--headless-rendering</code></td>
 </tr>
 <tr>
 <td>Rates (simulated time)</td>
@@ -547,7 +556,8 @@ the frames come out right (<code>sim-check</code> tests them).</p>
 <h3 id="sim-check">sim-check</h3>
 <pre class="highlight"><code class="language-bash">pixi run sim-check                                # start-up, contract, sensors, a drive
 pixi run -e ml sim-check --perception --obstacle  # and the stop sign, and the box
-pixi run sim-check --lane                         # and lane keeping, in a second run</code></pre>
+pixi run sim-check --lane                         # and lane keeping, in a second run
+pixi run sim-check --lidar                        # with the simulated roof lidar, and its check</code></pre>
 <p>It starts the road world without a window, on a private ROS domain and Gazebo partition,
 on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code>.</p>
 <p>Ran on Ben's Mac, 15 Oct, after the topic renaming:</p>
@@ -561,18 +571,29 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 <tbody>
 <tr>
 <td><code>pixi run sim-check</code></td>
-<td>all pass: start-up, the contract (0 failures), sensors, lidar, a scripted drive of 6.4 m (plan 6.5 m), the global EKF within 0.12-0.26 m of the truth (three runs)</td>
+<td>all pass: start-up, the contract (0 failures), sensors, a scripted drive of 6.3-6.5 m (plan 6.5 m), the global EKF within 0.1-0.3 m of the truth</td>
 </tr>
 <tr>
-<td><code>pixi run sim-check --obstacle</code></td>
-<td>all pass: the car stood still 0.74 m before the box; with the box gone, Nav2 reached its goal 29.7 m on</td>
+<td><code>pixi run sim-check --lidar --obstacle</code></td>
+<td>all pass: the lidar at 10.0 Hz with 12654 hits; the car stood still 0.79 m before the box; with the box gone, Nav2 reached its goal 29.6 m on</td>
 </tr>
 <tr>
 <td><code>pixi run -e ml sim-check --perception</code></td>
-<td>passed on 11 Oct: YOLO 0.94 sure at 59 px, the car stood 3.6 m before the sign, then went on. Not run again on 15 Oct</td>
+<td>all pass: YOLO saw the sign from 11.2 m, the lock went on at 18.2 m, the car stood with its bumper 4.8 m before the sign, then reached its goal at 39.9 m</td>
+</tr>
+<tr>
+<td>The same, with the lidar on</td>
+<td>failed 3 times out of 3 (why: <a href="#the-lidar-gazebo-only">the lidar</a>). So the lidar is off by default</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --lane</code></td>
+<td>not run on 15 Oct</td>
 </tr>
 </tbody>
 </table></div>
+<p>Ten runs in all, on a Mac shared with other work (load 5-17 on 16 cores). One more
+<code>--perception</code> run without the lidar failed too: the car never moved, and the log doesn't
+say why. So the full graph with YOLO is still a little flaky on a busy Mac.</p>
 </section>
 <section class="card"><h2 id="replay-a-recorded-drive">Replay a recorded drive</h2>
 <p>On the car, record a drive: <code>tools/record.sh parking_lot_test</code> writes

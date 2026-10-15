@@ -4,7 +4,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
   ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot|road] [nav:=true]
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
-      [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
+      [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=false]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
 
@@ -26,7 +26,8 @@ worlds.has_sensors), so the car's whole graph runs there, with the bench's argum
   hud:=true           the HUD's web server, on 127.0.0.1:5000
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
   lidar:=true         a simulated 16-beam roof lidar, on /sensors/lidar/points. The car
-                      has none, so nothing reads it yet: it is there to look at (RViz)
+                      has none, so nothing reads it yet: it is there to look at (RViz).
+                      Off by default: on a Mac it made the full graph flaky
 
 The empty and test_lot worlds render nothing, so they run headless anywhere, and the
 camera's parts need world:=road. Every node runs on simulated time.
@@ -164,7 +165,7 @@ def generate_launch_description():
         DeclareLaunchArgument('start_yaw', default_value='0.0',
                               description='rad: start the car turned this far left of east '
                                           '(the EKFs still start facing east)'),
-        DeclareLaunchArgument('lidar', default_value='true',
+        DeclareLaunchArgument('lidar', default_value='false',
                               description='a simulated 16-beam roof lidar, on '
                                           '/sensors/lidar/points (world:=road; the car has '
                                           'none)'),

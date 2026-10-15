@@ -145,7 +145,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Gazebo's road world</td>
 <td><code>aav_gazebo</code> <code>world:=road</code></td>
-<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code> and <code>--obstacle</code> pass; <code>--perception</code> passed on 11 Oct. <span class="badge b-untested">untested</span> on Linux, which needs EGL (<a href="simulation.html">Simulation</a>)</td>
+<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) (with <code>lidar:=true</code>) render headless; <code>pixi run sim-check</code>, <code>--lidar --obstacle</code> and <code>--perception</code> pass. With YOLO and the lidar together it was flaky, so the lidar is off by default. <span class="badge b-untested">untested</span> on Linux, which needs EGL (<a href="simulation.html">Simulation</a>)</td>
 </tr>
 <tr>
 <td>Real car</td>
@@ -219,7 +219,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Lidar</td>
-<td>on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo only (<code>/sensors/lidar/points</code>, 15 Oct)</td>
+<td>on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo only (<code>lidar:=true</code>, <code>/sensors/lidar/points</code>, 15 Oct); off by default, as it made the Mac flaky with YOLO</td>
 <td><span class="badge b-missing">missing</span> on the car</td>
 </tr>
 </tbody>
