@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CAN from zero · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/learn-can.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>CAN from zero</h1>
+<div class="meta">12 min read · 12 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a class="here" href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#1-two-wires-one-bus">1. Two wires, one bus</a><a href="#2-a-frame">2. A frame</a><a href="#3-the-dbc-file-the-dictionary">3. The DBC file: the dictionary</a><a href="#4-our-frames-today-v010">4. Our frames today: v0.1.0</a><a href="#5-one-frame-byte-by-byte">5. One frame, byte by byte</a><a href="#6-why-a-counter-and-a-crc-of-our-own">6. Why a counter and a CRC of our own</a><a href="#7-timeouts-the-car-stops-when-the-talking-stops">7. Timeouts: the car stops when the talking stops</a><a href="#8-from-ros-to-the-wire">8. From ROS to the wire</a><a href="#9-the-bench-tools">9. The bench tools</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>CAN is the wire that cars use for small, urgent messages: "steer to 0.25 rad", "I'm
+going 1.4 m/s". The KEFC plan puts our steering, brake and throttle on a CAN bus. This
+page starts at the two wires and ends with one of our frames, decoded byte by byte.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>what a CAN bus is, and why it has a 120 Ω resistor at each end;</li>
+<li>what a frame is: ID, length, data, and who wins when two talk at once;</li>
+<li>our frames (v0.1.0), and what the KEFC plan adds (v0.2.0, proposed);</li>
+<li>why every frame of ours carries a counter and a CRC;</li>
+<li>the bench tools: a CANable, <code>candump</code>, <code>cansend</code>, <code>ip link</code>, <code>ros2_socketcan</code>.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Status</p>
+<pre><code>The CAN code is written and tested against a simulator. **No real CAN bus has carried
+our frames yet**: the parts are still to buy ([CAN plan](can-plan.md)).
+</code></pre>
+</div></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<p><img alt="The bus, and one DRIVE_CMD byte by byte" src="../img/can-bus.svg" /></p>
+</section>
+<section class="card"><h2 id="1-two-wires-one-bus">1. Two wires, one bus</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>In plain words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bus</strong></td>
+<td>one pair of wires that every board clips onto. No hub, no switch</td>
+</tr>
+<tr>
+<td><strong>Differential pair</strong></td>
+<td>two wires, CAN_H and CAN_L, twisted together. The board reads the <strong>difference</strong> between them</td>
+</tr>
+<tr>
+<td><strong>Why the difference</strong></td>
+<td>noise from the motor hits both wires the same way. The difference doesn't change, so the noise cancels</td>
+</tr>
+<tr>
+<td><strong>Dominant bit (0)</strong></td>
+<td>the wires are pulled apart: CAN_H about 3.5 V, CAN_L about 1.5 V</td>
+</tr>
+<tr>
+<td><strong>Recessive bit (1)</strong></td>
+<td>the wires rest together, both about 2.5 V</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-120-resistors">The 120 Ω resistors</h3>
+<p>A signal running down a wire bounces back off an open end, like a wave in a bath. A
+120 Ω resistor at <strong>each end</strong> soaks it up.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You measure between CAN_H and CAN_L (power off)</th>
+<th>It means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>about <strong>60 Ω</strong></td>
+<td>right: two 120 Ω in parallel</td>
+</tr>
+<tr>
+<td>about 120 Ω</td>
+<td>one resistor is missing</td>
+</tr>
+<tr>
+<td>about 40 Ω</td>
+<td>one too many: three resistors</td>
+</tr>
+</tbody>
+</table></div>
+<p>On our car (KEFC plan): one in the <strong>CAN Pal</strong> on the Orin, one on the <strong>last wheel
+node</strong>. Not on the boards in the middle.</p>
+</section>
+<section class="card"><h2 id="2-a-frame">2. A frame</h2>
+<p>A CAN message is a <strong>frame</strong>. Classic CAN (what we use) looks like this:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Size</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>11 bits</td>
+<td><strong>what</strong> the message is (0x000 to 0x7FF). Not who it's for</td>
+</tr>
+<tr>
+<td>DLC</td>
+<td>4 bits</td>
+<td>how many data bytes follow: 0 to 8</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>0 to 8 bytes</td>
+<td>the message itself</td>
+</tr>
+<tr>
+<td>CRC-15</td>
+<td>15 bits</td>
+<td>the hardware's own check for wire noise</td>
+</tr>
+<tr>
+<td>ACK</td>
+<td>1 bit</td>
+<td>any other board says "I heard that"</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="no-addresses">No addresses</h3>
+<ul>
+<li>Every board hears <strong>every</strong> frame.</li>
+<li>Each board keeps the IDs it cares about, and ignores the rest.</li>
+<li>So a new board (a logger, a laptop) can listen without anyone changing anything.</li>
+</ul>
+<h3 id="who-talks-first-arbitration">Who talks first: arbitration</h3>
+<p>Two boards may start at the same moment. They both send their ID, bit by bit, and
+listen:</p>
+<ul>
+<li>a 0 (dominant) beats a 1 (recessive) on the wire;</li>
+<li>a board that sent a 1 but hears a 0 stops and tries again later;</li>
+<li>so the <strong>lowest ID always wins</strong>, and nothing is lost.</li>
+</ul>
+<p>That's why our <strong>e-stop is 0x010</strong>: it beats the drive command (0x100) and the
+feedback (0x180) every time.</p>
+<h3 id="speed-500-kbits">Speed: 500 kbit/s</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Our bit rate</td>
+<td><strong>500 kbit/s</strong> (<code>aav.dbc</code>, and the <code>ip link</code> command below)</td>
+</tr>
+<tr>
+<td>One bit</td>
+<td>2 µs</td>
+</tr>
+<tr>
+<td>One 8-byte frame</td>
+<td>about 110-135 bits, so about 0.25 ms</td>
+</tr>
+<tr>
+<td>Our frames per second (v0.2)</td>
+<td>50 + 50 + 10 + 10 + 100 + 100 = <strong>320</strong></td>
+</tr>
+<tr>
+<td>Bus load</td>
+<td>about <strong>8 %</strong>: plenty of room</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every board on the bus must use the same bit rate, or nobody hears anybody.</p>
+<h3 id="when-things-go-wrong">When things go wrong</h3>
+<p>The CAN chips count their own errors (bad CRC, no ACK, a garbled bit):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>State</th>
+<th>When</th>
+<th>The board</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Error active</td>
+<td>few errors</td>
+<td>works normally</td>
+</tr>
+<tr>
+<td>Error passive</td>
+<td>128+ errors counted</td>
+<td>still talks, more quietly</td>
+</tr>
+<tr>
+<td><strong>Bus off</strong></td>
+<td>256+ errors sent</td>
+<td><strong>leaves the bus</strong> until it is reset</td>
+</tr>
+</tbody>
+</table></div>
+<p>A board with a broken wire takes itself off, rather than jamming everyone else.</p>
+</section>
+<section class="card"><h2 id="3-the-dbc-file-the-dictionary">3. The DBC file: the dictionary</h2>
+<p>A <strong>DBC file</strong> says what each ID means and where each value sits in the bytes. Ours is
+<code>firmware/can/aav.dbc</code>. Tools like SavvyCAN or <code>cantools</code> read it and decode frames for you.</p>
+<p>One line of it:</p>
+<pre class="highlight"><code class="language-text">SG_ target_speed : 0|16@1- (0.001,0) [-32.768|32.767] "m/s" SPINE</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0&#124;16</td>
+<td>starts at bit 0, 16 bits long</td>
+</tr>
+<tr>
+<td><code>@1</code></td>
+<td>little-endian (Intel): the low byte comes first</td>
+</tr>
+<tr>
+<td><code>-</code></td>
+<td>signed: it can be negative (reverse)</td>
+</tr>
+<tr>
+<td><code>(0.001,0)</code></td>
+<td>value = raw × 0.001 + 0</td>
+</tr>
+<tr>
+<td>[-32.768&#124;32.767]</td>
+<td>the smallest and largest value</td>
+</tr>
+<tr>
+<td><code>"m/s"</code></td>
+<td>the unit</td>
+</tr>
+<tr>
+<td><code>SPINE</code></td>
+<td>the board that reads it</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="4-our-frames-today-v010">4. Our frames today: v0.1.0</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>From → to</th>
+<th>Rate</th>
+<th>Bytes</th>
+<th>Carries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x010</td>
+<td><code>ESTOP_CMD</code></td>
+<td>Orin → spine</td>
+<td>10 Hz, and at once on change</td>
+<td>2</td>
+<td>stop now (1) or not (0)</td>
+</tr>
+<tr>
+<td>0x100</td>
+<td><code>DRIVE_CMD</code></td>
+<td>Orin → spine</td>
+<td>50 Hz</td>
+<td>8</td>
+<td>target speed, steering angle, two limits, armed</td>
+</tr>
+<tr>
+<td>0x180</td>
+<td><code>VEHICLE_FEEDBACK</code></td>
+<td>spine → Orin</td>
+<td>50 Hz</td>
+<td>8</td>
+<td>measured speed and steering, wheel ticks</td>
+</tr>
+<tr>
+<td>0x181</td>
+<td><code>VEHICLE_STATUS</code></td>
+<td>spine → Orin</td>
+<td>10 Hz</td>
+<td>8</td>
+<td>mode, armed, e-stop, throttle %, brake %, fault bits</td>
+</tr>
+</tbody>
+</table></div>
+<p>"The spine" is the board that drives the actuators. In the KEFC plan, it is the
+existing <strong>ESP32 control board</strong>.</p>
+<h3 id="proposed-for-v020-the-kefc-plan">Proposed for v0.2.0 (the KEFC plan)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Add <code>WHEEL_SPEED_L</code> <strong>0x200</strong> and <code>WHEEL_SPEED_R</code> <strong>0x201</strong>, 100 Hz</td>
+<td>two ESP32-CAN-X2 wheel nodes, Hall sensors on the front brake-rotor holes</td>
+</tr>
+<tr>
+<td>Add nodes <code>WHEEL_L</code> and <code>WHEEL_R</code></td>
+<td>so the DBC says who sends them</td>
+</tr>
+<tr>
+<td>The timeout from 200 ms to <strong>100 ms</strong></td>
+<td>the KEFC PDF's number</td>
+</tr>
+<tr>
+<td>The spine is the ESP32 board, not a Pico 2</td>
+<td>it's already on the car, with a CAN plug</td>
+</tr>
+</tbody>
+</table></div>
+<p>The layout of the two wheel frames isn't written yet. <strong>Status: Proposed.</strong> The
+DBC is still v0.1.0.</p>
+</section>
+<section class="card"><h2 id="5-one-frame-byte-by-byte">5. One frame, byte by byte</h2>
+<p>The test vector <code>drive_forward_left</code> in <code>firmware/can/test_vectors.json</code>:</p>
+<pre class="highlight"><code class="language-text">ID 0x100   data  DC 05 C4 09 14 19 71 ED</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Bytes</th>
+<th>Raw</th>
+<th>Rule (from the DBC)</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0-1: <code>DC 05</code></td>
+<td>low byte first: 0x05DC = 1500</td>
+<td>× 0.001</td>
+<td><code>target_speed</code> = <strong>1.5 m/s</strong></td>
+</tr>
+<tr>
+<td>2-3: <code>C4 09</code></td>
+<td>0x09C4 = 2500</td>
+<td>× 0.0001</td>
+<td><code>steering_angle</code> = <strong>0.25 rad</strong> (left)</td>
+</tr>
+<tr>
+<td>4: <code>14</code></td>
+<td>20</td>
+<td>× 0.05</td>
+<td><code>accel_limit</code> = <strong>1.0 m/s²</strong></td>
+</tr>
+<tr>
+<td>5: <code>19</code></td>
+<td>25</td>
+<td>× 0.02</td>
+<td><code>steer_rate_limit</code> = <strong>0.5 rad/s</strong></td>
+</tr>
+<tr>
+<td>6: <code>71</code></td>
+<td>0111 0001 in binary</td>
+<td>bit 48 = the lowest bit; bits 52-55 = the top four</td>
+<td><code>armed</code> = <strong>1</strong>, <code>counter</code> = <strong>7</strong></td>
+</tr>
+<tr>
+<td>7: <code>ED</code></td>
+<td></td>
+<td>CRC-8 over <code>00 01 DC 05 C4 09 14 19 71</code></td>
+<td><code>checksum</code> = 0xED, correct</td>
+</tr>
+</tbody>
+</table></div>
+<p>A negative number uses two's complement. <code>drive_reverse_right</code> starts <code>12 FD</code>: 0xFD12 is
+-750, so -0.75 m/s.</p>
+<div class="admonition note">
+<p class="admonition-title">Check it yourself</p>
+<pre><code>The decode above was checked with our own codec. See **Try it** below: the same
+one-line command prints every value.
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="6-why-a-counter-and-a-crc-of-our-own">6. Why a counter and a CRC of our own</h2>
+<p>CAN already has a CRC-15. So why add our own?</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Catches</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CAN's CRC-15 (in the chip)</td>
+<td>noise on the wire</td>
+</tr>
+<tr>
+<td><strong>Our CRC-8</strong> (last byte)</td>
+<td>a frame <strong>built wrong</strong> by software, or sent with the <strong>wrong ID</strong>: the ID is part of what it checks</td>
+</tr>
+<tr>
+<td><strong>Our 4-bit counter</strong></td>
+<td>a <strong>frozen sender</strong>: an Orin that crashed but keeps repeating the same frame</td>
+</tr>
+</tbody>
+</table></div>
+<p>What the spine does (<code>spine-core</code>, <code>spine.rs</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>It sees</th>
+<th>It does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a bad CRC or wrong length</td>
+<td>throws the frame away; sets the fault bit <code>BAD_CHECKSUM</code></td>
+</tr>
+<tr>
+<td>the same counter twice</td>
+<td>treats it as <strong>not fresh</strong>; sets <code>BAD_COUNTER</code></td>
+</tr>
+<tr>
+<td>no fresh <code>DRIVE_CMD</code> for 200 ms</td>
+<td>its watchdog trips: <strong>throttle off, brake on, steering held</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The CRC is CRC-8/SAE-J1850 (poly 0x1D, start 0xFF, end XOR 0xFF), the one cars use.</p>
+</section>
+<section class="card"><h2 id="7-timeouts-the-car-stops-when-the-talking-stops">7. Timeouts: the car stops when the talking stops</h2>
+<pre class="highlight"><code class="language-text">ego goes quiet ──0.1 s──► spine_bridge stops sending DRIVE_CMD
+                          ──0.2 s──► the spine's watchdog: brake</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Timeout</th>
+<th>File</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spine_bridge</code></td>
+<td>0.1 s without <code>/ego/actuator_cmd</code></td>
+<td><code>src/backends/aav_spine/config/spine.yaml</code></td>
+</tr>
+<tr>
+<td>The spine's watchdog</td>
+<td>200 ms today, <strong>100 ms</strong> in the KEFC plan</td>
+<td><code>spine-core/src/spine.rs</code> (<code>cmd_timeout_ms</code>)</td>
+</tr>
+<tr>
+<td>The KEFC control board</td>
+<td>100 ms → brake</td>
+<td>the KEFC PDF</td>
+</tr>
+</tbody>
+</table></div>
+<p>The spine also refuses to drive until it is <strong>armed</strong>: <code>armed = 0</code>, then <code>armed = 1</code>. A
+reboot never restarts the car by itself (<a href="firmware.html">Firmware</a>).</p>
+</section>
+<section class="card"><h2 id="8-from-ros-to-the-wire">8. From ROS to the wire</h2>
+<pre class="highlight"><code class="language-text">/ego/actuator_cmd ─► spine_bridge ─► /can/tx ─► socket_can_sender ─► can0 ─► the bus
+the bus ─► can0 ─► socket_can_receiver ─► /can/rx ─► spine_bridge ─► /vehicle/odom, /vehicle/status</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SocketCAN</strong></td>
+<td>Linux's own CAN support: a CAN adapter shows up as a network device, <code>can0</code></td>
+</tr>
+<tr>
+<td><strong><code>ros2_socketcan</code></strong></td>
+<td>the stock ROS package: CAN frames ⇄ <code>can_msgs/Frame</code> on <code>/can/tx</code> and <code>/can/rx</code></td>
+</tr>
+<tr>
+<td><strong><code>spine_bridge</code></strong></td>
+<td>ours: packs and unpacks frames with <code>can_codec.py</code></td>
+</tr>
+<tr>
+<td><strong>On the bench</strong></td>
+<td>no real bus: <code>aav_spine_sim</code> reads <code>/can/tx</code> and answers on <code>/can/rx</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>SocketCAN is <strong>Linux only</strong>: on a Mac, use the bench, or a Linux machine.</p>
+</section>
+<section class="card"><h2 id="9-the-bench-tools">9. The bench tools</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CANable</strong> (or any candleLight adapter)</td>
+<td>a USB stick with a CAN plug. Linux sees it as <code>can0</code>. Has its own 120 Ω jumper</td>
+</tr>
+<tr>
+<td><code>ip link</code></td>
+<td>brings <code>can0</code> up at a bit rate</td>
+</tr>
+<tr>
+<td><code>candump</code></td>
+<td>prints every frame on the bus</td>
+</tr>
+<tr>
+<td><code>cansend</code></td>
+<td>sends one frame you type</td>
+</tr>
+<tr>
+<td><code>vcan0</code></td>
+<td>a pretend bus inside Linux: no hardware needed</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>candump</code> and <code>cansend</code> come in <code>can-utils</code> (<code>sudo apt install can-utils</code> on Ubuntu).
+They are not in Pixi.</p>
+<div class="admonition warning">
+<p class="admonition-title">Never cansend a DRIVE_CMD to the car</p>
+<pre><code>A hand-typed `0x100` with `armed = 1` can move the car. On the real bus, only listen.
+Practise sending on `vcan0`.
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<p><strong>Anywhere (Mac or Linux), no ROS:</strong> decode the test vector with our codec.</p>
+<pre class="highlight"><code class="language-bash">PYTHONPATH=src/backends/aav_spine python3 -c "from aav_spine.can_codec import unpack; print(unpack(0x100, bytes.fromhex('dc05c409141971ed')))"</code></pre>
+<p>It prints:</p>
+<pre class="highlight"><code class="language-text">{'target_speed': 1.5, 'steering_angle': 0.25, 'accel_limit': 1.0, 'steer_rate_limit': 0.5, 'armed': 1, 'counter': 7}</code></pre>
+<p>Change the last <code>d</code> to <code>e</code>: it raises <code>FrameError: DRIVE_CMD: bad checksum</code>.</p>
+<p><strong>The bench (Mac or Linux):</strong> watch our frames as ROS messages.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pixi run bench</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pixi run tools/ros.sh ros2 topic hz /can/tx</code> (about 60 Hz: 50 drive + 10 e-stop)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>pixi run tools/ros.sh ros2 topic echo --once /can/rx</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Linux, a pretend bus</strong> (not yet tried by the team; needs <code>sudo</code>):</p>
+<pre class="highlight"><code class="language-bash">sudo modprobe vcan
+sudo ip link add dev vcan0 type vcan
+sudo ip link set vcan0 up
+candump vcan0                    # terminal 1: listen
+cansend vcan0 010#31BE           # terminal 2: the test vector estop_on</code></pre>
+<p><code>candump</code> shows <code>vcan0  010   [2]  31 BE</code>.</p>
+<p><strong>Linux, a CANable on a real bus:</strong></p>
+<pre class="highlight"><code class="language-bash">sudo ip link set can0 up type can bitrate 500000
+candump can0
+ip -details -statistics link show can0    # error state, error counts</code></pre>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The frame dictionary</td>
+<td><code>firmware/can/aav.dbc</code></td>
+</tr>
+<tr>
+<td>The test frames both sides must match</td>
+<td><code>firmware/can/test_vectors.json</code>, from <code>gen_test_vectors.py</code></td>
+</tr>
+<tr>
+<td>Python codec</td>
+<td><code>src/backends/aav_spine/aav_spine/can_codec.py</code></td>
+</tr>
+<tr>
+<td>ROS bridge</td>
+<td><code>src/backends/aav_spine/aav_spine/spine_bridge.py</code>, <code>config/spine.yaml</code></td>
+</tr>
+<tr>
+<td>Launch with <code>ros2_socketcan</code></td>
+<td><code>src/backends/aav_spine/launch/spine.launch.py</code> (<code>interface:=can0</code>)</td>
+</tr>
+<tr>
+<td>Rust codec, watchdog, counter check</td>
+<td><code>firmware/spine/crates/spine-core/src/protocol.rs</code>, <code>watchdog.rs</code>, <code>spine.rs</code></td>
+</tr>
+<tr>
+<td>The bench's pretend spine</td>
+<td><code>src/bench/aav_spine_sim</code></td>
+</tr>
+<tr>
+<td>The KEFC plan vs our DBC</td>
+<td><a href="can-plan.html">CAN plan</a></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="learn-nav2.html"><small>Previous</small>← Learn: Nav2</a>
+<a class="next" href="status.html"><small>Next</small>Status →</a></nav>
+</main>
+<footer>Source: <code>docs/learn-can.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

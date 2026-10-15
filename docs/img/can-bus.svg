@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-family="Verdana, 'DejaVu Sans', Arial, Helvetica, sans-serif" font-size="14">
+  <title>The CAN bus on the car (KEFC plan), and one DRIVE_CMD frame byte by byte</title>
+  <defs>
+    <style>
+      .stock { fill:#F2F2F2; stroke:#999; stroke-width:1.2; }
+      .key   { fill:#FFFFFF; stroke:#555; stroke-width:2; }
+      .new   { fill:#FFFFFF; stroke:#999; stroke-width:1.5; stroke-dasharray:5 4; }
+      .band  { fill:#FDECEE; stroke:#C8102E; stroke-width:1.2; }
+      .t  { fill:#222; font-weight:bold; }
+      .s  { fill:#555; font-size:12px; }
+      .hex { fill:#222; font-weight:bold; font-size:22px; font-family:Menlo, 'DejaVu Sans Mono', monospace; }
+      .lbl { fill:#C8102E; font-size:12px; font-weight:bold; }
+      .layer { fill:#C8102E; font-size:12px; font-weight:bold; letter-spacing:1px; }
+      .canh { stroke:#C8102E; stroke-width:4; fill:none; }
+      .canl { stroke:#333; stroke-width:4; fill:none; }
+      .stub { stroke:#555; stroke-width:1.5; fill:none; }
+      .res  { fill:#FFF8E1; stroke:#B07A00; stroke-width:1.5; }
+      .brk  { stroke:#C8102E; stroke-width:1.5; fill:none; }
+    </style>
+  </defs>
+
+  <text class="layer" x="20" y="24">THE BUS: TWO TWISTED WIRES, EVERY BOARD ON THEM (KEFC PLAN)</text>
+
+  <!-- nodes -->
+  <rect class="key" x="110" y="44" width="170" height="80" rx="8"/>
+  <text class="t" x="195" y="70" text-anchor="middle">Orin #1</text>
+  <text class="s" x="195" y="88" text-anchor="middle">+ CAN Pal (120 Ω)</text>
+  <text class="s" x="195" y="108" text-anchor="middle">sends 0x010, 0x100</text>
+
+  <rect class="key" x="300" y="44" width="180" height="80" rx="8"/>
+  <text class="t" x="390" y="70" text-anchor="middle">Control board</text>
+  <text class="s" x="390" y="88" text-anchor="middle">ESP32, 2 Jrk G2, DAC</text>
+  <text class="s" x="390" y="108" text-anchor="middle">sends 0x180, 0x181</text>
+
+  <rect class="new" x="500" y="44" width="150" height="80" rx="8"/>
+  <text class="t" x="575" y="70" text-anchor="middle">Wheel node L</text>
+  <text class="s" x="575" y="88" text-anchor="middle">ESP32-CAN-X2</text>
+  <text class="s" x="575" y="108" text-anchor="middle">0x200 (proposed)</text>
+
+  <rect class="new" x="670" y="44" width="150" height="80" rx="8"/>
+  <text class="t" x="745" y="70" text-anchor="middle">Wheel node R</text>
+  <text class="s" x="745" y="88" text-anchor="middle">X2 (120 Ω)</text>
+  <text class="s" x="745" y="108" text-anchor="middle">0x201 (proposed)</text>
+
+  <!-- stubs: each board to both wires -->
+  <path class="stub" d="M185,124 L185,180 M205,124 L205,210 M380,124 L380,180 M400,124 L400,210 M565,124 L565,180 M585,124 L585,210 M735,124 L735,180 M755,124 L755,210"/>
+
+  <!-- the two wires -->
+  <path class="canh" d="M70,180 L830,180"/>
+  <path class="canl" d="M70,210 L830,210"/>
+  <text class="lbl" x="80" y="172">CAN_H</text>
+  <text class="t" x="80" y="228" font-size="12">CAN_L</text>
+
+  <!-- terminators -->
+  <rect class="res" x="40" y="172" width="30" height="46" rx="4"/>
+  <text class="t" x="55" y="244" text-anchor="middle" font-size="12">120 Ω</text>
+  <rect class="res" x="830" y="172" width="30" height="46" rx="4"/>
+  <text class="t" x="845" y="244" text-anchor="middle" font-size="12">120 Ω</text>
+
+  <text class="s" x="450" y="244" text-anchor="middle">500 kbit/s · every board hears every frame · the ID says WHAT it is, not who it's for</text>
+  <text class="s" x="450" y="262" text-anchor="middle">a lower ID wins a tie: 0x010 (e-stop) beats 0x100 (drive) beats 0x180 (feedback)</text>
+
+  <!-- one frame -->
+  <text class="layer" x="20" y="306">ONE DRIVE_CMD (ID 0x100, 8 DATA BYTES): THE TEST VECTOR "drive_forward_left"</text>
+
+  <rect class="band" x="40" y="320" width="100" height="56"/>
+  <rect class="band" x="140" y="320" width="100" height="56"/>
+  <rect class="key" x="240" y="320" width="100" height="56"/>
+  <rect class="key" x="340" y="320" width="100" height="56"/>
+  <rect class="stock" x="440" y="320" width="100" height="56"/>
+  <rect class="stock" x="540" y="320" width="100" height="56"/>
+  <rect class="key" x="640" y="320" width="100" height="56"/>
+  <rect class="band" x="740" y="320" width="100" height="56"/>
+
+  <text class="hex" x="90" y="356" text-anchor="middle">DC</text>
+  <text class="hex" x="190" y="356" text-anchor="middle">05</text>
+  <text class="hex" x="290" y="356" text-anchor="middle">C4</text>
+  <text class="hex" x="390" y="356" text-anchor="middle">09</text>
+  <text class="hex" x="490" y="356" text-anchor="middle">14</text>
+  <text class="hex" x="590" y="356" text-anchor="middle">19</text>
+  <text class="hex" x="690" y="356" text-anchor="middle">71</text>
+  <text class="hex" x="790" y="356" text-anchor="middle">ED</text>
+
+  <text class="s" x="90" y="394" text-anchor="middle">byte 0</text>
+  <text class="s" x="190" y="394" text-anchor="middle">byte 1</text>
+  <text class="s" x="290" y="394" text-anchor="middle">byte 2</text>
+  <text class="s" x="390" y="394" text-anchor="middle">byte 3</text>
+  <text class="s" x="490" y="394" text-anchor="middle">byte 4</text>
+  <text class="s" x="590" y="394" text-anchor="middle">byte 5</text>
+  <text class="s" x="690" y="394" text-anchor="middle">byte 6</text>
+  <text class="s" x="790" y="394" text-anchor="middle">byte 7</text>
+
+  <!-- brackets -->
+  <path class="brk" d="M44,404 L44,412 L236,412 L236,404"/>
+  <path class="brk" d="M244,404 L244,412 L436,412 L436,404"/>
+  <path class="brk" d="M444,404 L444,412 L536,412 L536,404"/>
+  <path class="brk" d="M544,404 L544,412 L636,412 L636,404"/>
+  <path class="brk" d="M644,404 L644,412 L736,412 L736,404"/>
+  <path class="brk" d="M744,404 L744,412 L836,412 L836,404"/>
+
+  <text class="t" x="140" y="434" text-anchor="middle">target_speed</text>
+  <text class="s" x="140" y="452" text-anchor="middle">0x05DC = 1500</text>
+  <text class="lbl" x="140" y="470" text-anchor="middle">× 0.001 = 1.5 m/s</text>
+
+  <text class="t" x="340" y="434" text-anchor="middle">steering_angle</text>
+  <text class="s" x="340" y="452" text-anchor="middle">0x09C4 = 2500</text>
+  <text class="lbl" x="340" y="470" text-anchor="middle">× 0.0001 = 0.25 rad</text>
+
+  <text class="t" x="490" y="434" text-anchor="middle">accel</text>
+  <text class="s" x="490" y="452" text-anchor="middle">20 × 0.05</text>
+  <text class="lbl" x="490" y="470" text-anchor="middle">1.0 m/s²</text>
+
+  <text class="t" x="590" y="434" text-anchor="middle">steer rate</text>
+  <text class="s" x="590" y="452" text-anchor="middle">25 × 0.02</text>
+  <text class="lbl" x="590" y="470" text-anchor="middle">0.5 rad/s</text>
+
+  <text class="t" x="690" y="434" text-anchor="middle">0111 0001</text>
+  <text class="s" x="690" y="452" text-anchor="middle">counter 7</text>
+  <text class="lbl" x="690" y="470" text-anchor="middle">armed 1</text>
+
+  <text class="t" x="790" y="434" text-anchor="middle">CRC-8</text>
+  <text class="s" x="790" y="452" text-anchor="middle">over 00 01 +</text>
+  <text class="lbl" x="790" y="470" text-anchor="middle">bytes 0-6</text>
+
+  <text class="s" x="450" y="494" text-anchor="middle">little-endian: the LOW byte comes first, so DC 05 reads as 0x05DC</text>
+</svg>

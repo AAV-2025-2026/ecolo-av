@@ -34,7 +34,7 @@ OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
 READ_FIRST = 12    # PAGES[:12] are the reading list
-LEARN_END = 16     # PAGES[12:16] are the learn pages; the rest are reference
+LEARN_END = 22     # PAGES[12:22] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for)
 PAGES = [
@@ -54,6 +54,12 @@ PAGES = [
     ('learn-journey.md', "A command's journey", 'One push and one Nav2 goal, hand to wheels, and back'),
     ('faq.md', 'Questions', 'What a professor or a new teammate asks, answered'),
     ('glossary.md', 'Glossary', 'Every acronym and term, in plain words'),
+    ('learn-sensors.md', 'Learn: sensors', 'Every sensor: measures, rate, topic, frame, driver, sim'),
+    ('learn-gps.md', 'Learn: GPS', 'GNSS, RTK, NavSatFix, the datum, navsat_transform'),
+    ('learn-localization.md', 'Learn: localization', 'Odometry, IMU, Kalman, frames, TF, our two EKFs'),
+    ('learn-control.md', 'Learn: control', 'Feedback loops, PID, Ackermann, limits, timeouts'),
+    ('learn-nav2.md', 'Learn: Nav2', 'Planner, controller, behaviour tree, collision_monitor'),
+    ('learn-can.md', 'Learn: CAN', 'CAN from two wires to our DRIVE_CMD, byte by byte'),
     ('status.md', 'Status', "What works, what's untested, what's missing"),
     ('howto-driver.md', 'Build a driver', 'A new driver, from an empty folder to the turtle'),
     ('costmaps.md', 'Costmaps', 'How Nav2 sees obstacles; draw your first map'),
@@ -72,7 +78,7 @@ PAGES = [
     ('platforms.md', 'Platforms', 'Ubuntu, the Orin and Pis, networking'),
     ('car-photos.md', 'Car photos', 'What the car has, from photos (14 Oct), and the audit list'),
     ('conventions.md', 'Conventions', 'Names, package layout and code style'),
-    ('naming.md', 'Topic areas', 'Topic names by area (Proposed), and why the EKFs meet in TF'),
+    ('naming.md', 'Topic areas', 'Topic names by area (Decided), and why the EKFs meet in TF'),
     ('interfaces.md', 'Topics', 'Every topic, service, action and frame'),
     ('car_measurements.md', 'Car numbers', 'vehicle.yaml, and how to measure the car'),
     ('hud.md', 'HUD', 'The in-car screen: Rust and raylib; the Flutter app'),
