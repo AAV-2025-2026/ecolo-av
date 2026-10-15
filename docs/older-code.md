@@ -5,6 +5,17 @@ team, 19 repos) and `Carleton-AAV-Capstone` (the 2024-25 team, 13 repos). This p
 what each one is, what's already in `aav`, what's worth pulling in next, and what no
 repo provides. Surveyed on 10 October 2026, from the 14 clones in `~/Code/aav`.
 
+### Earlier teams (found 15 October)
+
+| Where | Team | What |
+|---|---|---|
+| `Carleton-AAV` (org, made Sept 2022) | 2022-23 | 2 public repos: `Legacy-AAV-Control-Code` (the 2021-22 team's Arduino scooter code, "most likely no longer of use") and `AI-Development-Scripts` (Colab notebooks for vision models) |
+| `KeshwarmenMulliah/Carleton_AAV_UWB_Localisation` | 2022-23 | UWB radio localisation scripts, one person's repo |
+| `CollinDang24/AAV-Wheel-Encoders` | 2025-26 | a personal copy of the wheel encoder repo (6 Oct 2026) |
+
+No 2023-24 org has been found. A repo with more documentation is said to exist: it may
+be private (an org's private repos don't show to non-members), or not on GitHub.
+
 ## In one picture
 
 | | Repos |
