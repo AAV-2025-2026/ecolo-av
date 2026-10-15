@@ -11,7 +11,8 @@ Jetson AGX Orin and the Raspberry Pis); Pixi on Macs and other Linux machines.
 > and our stack on the car, step by step.
 > After it: [TEAM-TODO.md](TEAM-TODO.md), the team's work list (such as upgrading the Jetson,
 > after its backup).
-> Every test, in order: [READ-ME-TESTS.md](READ-ME-TESTS.md).
+> Every test, in order: [READ-ME-TESTS.md](READ-ME-TESTS.md). Measuring the car, a sheet for the team:
+> [READ-ME-MEASURE-THE-CAR.md](READ-ME-MEASURE-THE-CAR.md).
 >
 > **Read first, in this order** (pages in this folder, written for Ben, 15 Oct):
 > 1. [READ-ME-HOW-IT-ALL-FITS.md](READ-ME-HOW-IT-ALL-FITS.md): the layers bottom-up, what

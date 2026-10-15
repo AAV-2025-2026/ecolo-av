@@ -198,7 +198,7 @@ What our code has today, and what Friday must answer to finish each layer.
 | ☐ | Do |
 |---|---|
 | ☐ | Photograph every label: each computer, the GPS, IMU, lidar, radar, cameras, motor controller, both Jrk G2s, the converters, the switch. Name files by label: `RTK-PI-1.jpg` |
-| ☐ | The tape-measure list, M1-M7: [docs/car_measurements.md](docs/car_measurements.md) |
+| ☐ | The tape-measure sheet, M1-M7 and every sensor: [READ-ME-MEASURE-THE-CAR.md](READ-ME-MEASURE-THE-CAR.md). Print it; fill it in; photograph it |
 
 ## 8. Write it up (no secrets)
 

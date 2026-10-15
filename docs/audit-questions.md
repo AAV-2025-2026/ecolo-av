@@ -83,7 +83,7 @@ Every number in `src/aav_description/config/vehicle.yaml` is a guess. Bring a ta
 | M6 | the GPS antenna, IMU, radar, each camera and the lidar: x forward, y left, z up from the ground under the rear axle | see `vehicle.yaml` |
 | M7 | mass: 4 bathroom scales, one under each wheel, add them up (or one scale, a wheel at a time, the others on blocks of the same height) | 181 kg, Ben's estimate (about 400 lb) |
 
-How to measure each: [Car numbers](car_measurements.md).
+How to measure each, as a sheet to fill in: [READ-ME-MEASURE-THE-CAR.md](../READ-ME-MEASURE-THE-CAR.md).
 
 ## 7. Power
 
