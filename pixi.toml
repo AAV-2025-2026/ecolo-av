@@ -49,6 +49,10 @@ rust-listener ={ cmd = "tools/ros.sh cargo run -q --manifest-path examples/rust-
 spine-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/spine-pico2 spine-pico2.uf2", cwd = "firmware/spine/boards/pico2", description = "Build the spine's Pico 2 program as firmware/spine/boards/pico2/spine-pico2.uf2: hold BOOTSEL, plug in, drag it on" }
 spine-tools = { cmd = "cargo install --locked --root vendor/cargo-tools probe-rs-tools@0.32.0", description = "Install probe-rs 0.32.0 into vendor/cargo-tools/bin, to flash a Pico 2 through a debug probe (once; several minutes)" }
 spine-flash = { cmd = "cargo build --release --locked && ../../../../vendor/cargo-tools/bin/probe-rs run --chip RP235x target/thumbv8m.main-none-eabihf/release/spine-pico2", cwd = "firmware/spine/boards/pico2", description = "Flash the spine's program onto a Pico 2 through a debug probe, then show its logs (pixi run spine-tools first)" }
+# The wheel encoder's Pico 2 (with a W5500), the Rust version of the 2025-26 one. The same
+# pair: wheel-uf2 only makes a file; wheel-flash writes to a board through a probe.
+wheel-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/wheel-encoder-pico2 wheel-encoder-pico2.uf2", cwd = "firmware/spine/boards/wheel-encoder-pico2", description = "Build the wheel encoder's Pico 2 program as firmware/spine/boards/wheel-encoder-pico2/wheel-encoder-pico2.uf2: hold BOOTSEL, plug in, drag it on" }
+wheel-flash = { cmd = "cargo build --release --locked && ../../../../vendor/cargo-tools/bin/probe-rs run --chip RP235x target/thumbv8m.main-none-eabihf/release/wheel-encoder-pico2", cwd = "firmware/spine/boards/wheel-encoder-pico2", description = "Flash the wheel encoder's program onto its Pico 2 through a debug probe, then show its logs (pixi run spine-tools first)" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"
