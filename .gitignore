@@ -98,3 +98,6 @@ Thumbs.db
 
 # Ben's full-size car photos (62 MB of HEIC): small copies are in docs/img/car/
 /images/
+
+# Claude Code helpers' worktrees and local settings
+/.claude/
