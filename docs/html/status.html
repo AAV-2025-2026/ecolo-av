@@ -79,8 +79,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>IMU</td>
-<td><code>yahboom_imu_cpp</code> + <code>imu_filter_madgwick</code></td>
-<td><span class="badge b-untested">untested</span> builds; needs the device</td>
+<td><code>aav_imu_yahboom</code> (Rust) + <code>imu_filter_madgwick</code></td>
+<td><span class="badge b-untested">untested</span> needs the device; gives the 2025-26 C++ driver's answers, bit for bit</td>
 </tr>
 <tr>
 <td>GPS</td>
@@ -204,8 +204,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Radar clustering</td>
-<td><code>aav_object_detection</code></td>
-<td><span class="badge b-works">works</span> on the pretend radar</td>
+<td><code>aav_radar_clusters</code> (Rust)</td>
+<td><span class="badge b-works">works</span> on the bench and in Gazebo's road world (15 Oct); gives the 2025-26 C++ node's answers, bit for bit</td>
 </tr>
 <tr>
 <td>Obstacles in Nav2</td>

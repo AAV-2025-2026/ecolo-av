@@ -216,7 +216,7 @@ finder).</p>
 </tr>
 <tr>
 <td><code>aav_imu_yahboom</code></td>
-<td>Ben's Rust version of the IMU driver: <code>imu_driver:=rust</code> picks it</td>
+<td>the IMU driver, in Rust (Ben's rewrite of the 2025-26 C++ one)</td>
 <td>sensors</td>
 </tr>
 <tr>
@@ -312,11 +312,6 @@ finder).</p>
 <td>Perception</td>
 <td><code>vision_msgs</code>, <code>cv_bridge</code>, <code>image_publisher</code></td>
 <td>detections, pictures, and a picture file as a pretend camera</td>
-</tr>
-<tr>
-<td>Perception</td>
-<td><code>pcl_ros</code>, <code>pcl_conversions</code></td>
-<td>the radar's point clouds, for clustering</td>
 </tr>
 <tr>
 <td>Perception</td>
@@ -468,8 +463,8 @@ finder).</p>
 <tr>
 <td>The Yahboom IMU driver (C++)</td>
 <td>2025-26 <code>yahboom-IMU</code></td>
-<td><code>src/sensors/yahboom_imu_cpp</code></td>
-<td>ported, with fixes</td>
+<td><code>src/sensors/aav_imu_yahboom</code></td>
+<td>rewritten in Rust (Ben); the C++ went on 11 Oct</td>
 </tr>
 <tr>
 <td>The TI radar driver</td>
@@ -532,10 +527,10 @@ finder).</p>
 <td>brought in: a driver on <code>/drivers/ai/cmd_vel</code></td>
 </tr>
 <tr>
-<td>Radar clustering</td>
+<td>Radar clustering (C++)</td>
 <td>2025-26 <code>Nav_Radar</code></td>
-<td><code>src/perception/aav_object_detection</code></td>
-<td>brought in: works on the pretend radar</td>
+<td><code>src/perception/aav_radar_clusters</code></td>
+<td>rewritten in Rust; the C++ went on 15 Oct</td>
 </tr>
 <tr>
 <td>A YOLO stop-sign detector</td>

@@ -12,7 +12,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Box | Implemented by | Status |
 |---|---|---|
 | Wheel speed | `aav_legacy` `encoder_udp`; later the spine | [[untested]] needs the car |
-| IMU | `yahboom_imu_cpp` + `imu_filter_madgwick` | [[untested]] builds; needs the device |
+| IMU | `aav_imu_yahboom` (Rust) + `imu_filter_madgwick` | [[untested]] needs the device; gives the 2025-26 C++ driver's answers, bit for bit |
 | GPS | `ublox_gps` (the stock u-blox driver); `nmea` and `ublox_dgnss` are options | [[untested]] in Pixi on every computer; needs the device. The default is Tentative (Q18) |
 | Car model | `aav_description` | [[works]] numbers are guesses |
 | `ekf_local` | robot_localization | [[works]] in the turtle run and on the bench |
@@ -37,7 +37,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Camera | `usb_cam`, the `camera` part of `car.launch.py` | [[untested]] Linux only, off until the camera is fitted; the models are Q22 |
 | Stop signs | `aav_yolo` | [[works]] on the bench, with the stock YOLO model |
 | Lane keeping | `aav_lane_finder` + `aav_lane_geometry` | [[works]] on the bench: from 0.3 m off the centre line back to within 5 cm in about 6 s |
-| Radar clustering | `aav_object_detection` | [[works]] on the pretend radar |
+| Radar clustering | `aav_radar_clusters` (Rust) | [[works]] on the bench and in Gazebo's road world (15 Oct); gives the 2025-26 C++ node's answers, bit for bit |
 | Obstacles in Nav2 | the radar in the local costmap; `collision_monitor`'s stop zone; `camera_obstacles` | [[works]] on the bench: the stop zone stops the car 0.3-0.4 m before a box as wide as the lane. Open: the car weaves up to 1.5 m off its line (N7), so it can pass beside a narrow box; the stop zone flickers at its edge. The camera layer is off until the cameras are calibrated (Q22) |
 | HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
 | HUD in Rust (raylib) | `aav_hud_raylib` | [[works]] on a Mac: `--demo`, and as a node fed by `ros2 topic pub`; its e-stop reaches a subscriber as 5 trues. [[works]] next to bench mode too. [[untested]] on a Pi and on the car's screen |

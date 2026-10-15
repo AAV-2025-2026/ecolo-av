@@ -47,7 +47,7 @@ finder).
 | `aav_localization` | the two EKFs and GPS-to-map: settings only | localization |
 | `aav_description` | the car's model and `vehicle.yaml` | description |
 | `aav_sensors` | starts the sensor drivers, with their settings. The GPS: `ublox_gps` by default | sensors |
-| `aav_imu_yahboom` | Ben's Rust version of the IMU driver: `imu_driver:=rust` picks it | sensors |
+| `aav_imu_yahboom` | the IMU driver, in Rust (Ben's rewrite of the 2025-26 C++ one) | sensors |
 | `aav_interfaces` | our messages: `VehicleStatus`, `ScriptedDrive` | interfaces |
 | `aav_spine` | the real car: ego's commands as CAN frames | backends |
 | `aav_legacy` | today's car: the 2025-26 ESP32 and wheel encoder | backends |
@@ -71,7 +71,6 @@ finder).
 | Sensors | `nmea_navsat_driver` | any GPS that speaks NMEA: `gps_driver:=nmea` |
 | Sensors | `usb_cam` | the cameras, with the 2024-25 calibrations (Linux only) |
 | Perception | `vision_msgs`, `cv_bridge`, `image_publisher` | detections, pictures, and a picture file as a pretend camera |
-| Perception | `pcl_ros`, `pcl_conversions` | the radar's point clouds, for clustering |
 | Perception | Ultralytics YOLO and PyTorch (not ROS) | the detector, in the `ml` environment |
 | Description | `robot_state_publisher`, `joint_state_publisher`, `xacro` | the car's model and frames |
 | Localization | `robot_localization`: `ekf_node` (twice) and `navsat_transform_node` | where the car is: `ekf_local` to steer, `ekf_global` to plan, GPS into map coordinates |
@@ -108,7 +107,7 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 
 | Code | From | Now in | State |
 |---|---|---|---|
-| The Yahboom IMU driver (C++) | 2025-26 `yahboom-IMU` | `src/sensors/yahboom_imu_cpp` | ported, with fixes |
+| The Yahboom IMU driver (C++) | 2025-26 `yahboom-IMU` | `src/sensors/aav_imu_yahboom` | rewritten in Rust (Ben); the C++ went on 11 Oct |
 | The TI radar driver | 2025-26 `Nav_Radar` | `src/sensors/ti_ros2_driver` | ported; its settings are indoor demos |
 | The battery monitor | 2024-25 `Battery-Monitor-ROS` | `src/sensors/battery_monitor` | ported |
 | Camera calibrations | 2024-25 `cameras` | `aav_sensors/config/cameras` | used by `cameras.launch.py` |
@@ -119,7 +118,7 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | The wheel encoder (Pico 2) | 2025-26 `Wheel_Encoders` | `firmware/spine/boards/wheel-encoder-pico2`, crate `wheel-encoder` | rewritten in Rust, 15 Oct; builds, never flashed. The car's board still runs the C++ |
 | Their UART and encoder protocols | 2025-26 `AAV_cortex`, `Wheel_Encoders` | `aav_legacy` | rewritten in Python |
 | Lane keeping | 2025-26 `Lane_Detection_ROS2` | `src/perception/aav_lane_geometry` | brought in: a driver on `/drivers/ai/cmd_vel` |
-| Radar clustering | 2025-26 `Nav_Radar` | `src/perception/aav_object_detection` | brought in: works on the pretend radar |
+| Radar clustering (C++) | 2025-26 `Nav_Radar` | `src/perception/aav_radar_clusters` | rewritten in Rust; the C++ went on 15 Oct |
 | A YOLO stop-sign detector | 2024-25 `camera_ros2_ws` | `src/perception/aav_yolo` | rewritten: detections out, and a stop-sign watcher |
 | The car's geometry | 2025-26 `Motor_Steering` (`Ackermann.m`) | `vehicle.yaml`, `docs/reference/` | numbers carried over, still guesses |
 | The joystick's button map | 2025-26 `joy_teleop_ackerman` | `aav_teleop` | carried over |

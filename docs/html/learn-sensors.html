@@ -302,7 +302,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>Driver</strong></td>
-<td><code>yahboom_imu_cpp</code> (from the 2025-26 team), or Ben's Rust twin <code>aav_imu_yahboom</code> (<code>imu_driver:=rust</code>), then the stock <code>imu_filter_madgwick</code></td>
+<td><code>aav_imu_yahboom</code> (Ben's Rust rewrite of the 2025-26 C++ driver), then the stock <code>imu_filter_madgwick</code></td>
 </tr>
 <tr>
 <td><strong>Used by</strong></td>
@@ -383,7 +383,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>Driver</strong></td>
-<td><code>ti_ros2_driver</code> (from the 2025-26 <code>Nav_Radar</code>), then <code>radar_clusters</code> groups the points</td>
+<td><code>ti_ros2_driver</code> (from the 2025-26 <code>Nav_Radar</code>), then <code>radar_clusters</code> (<code>aav_radar_clusters</code>, Rust) groups the points</td>
 </tr>
 <tr>
 <td><strong>Used by</strong></td>
@@ -525,10 +525,6 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <td>The live graph against the contract</td>
 <td><code>pixi run check bench</code> (with the bench running)</td>
 </tr>
-<tr>
-<td>The two IMU drivers agree, no IMU needed</td>
-<td><code>pixi run imu-compare</code></td>
-</tr>
 </tbody>
 </table></div>
 </section>
@@ -550,8 +546,8 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <td><code>src/sensors/aav_sensors/config/</code> (<code>imu.yaml</code>, <code>imu_filter.yaml</code>, <code>ublox_gps.yaml</code>, <code>cameras/</code>)</td>
 </tr>
 <tr>
-<td>IMU drivers</td>
-<td><code>src/sensors/yahboom_imu_cpp</code>, <code>src/sensors/aav_imu_yahboom</code></td>
+<td>IMU driver</td>
+<td><code>src/sensors/aav_imu_yahboom</code></td>
 </tr>
 <tr>
 <td>Radar driver</td>

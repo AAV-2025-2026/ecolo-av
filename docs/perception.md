@@ -25,7 +25,7 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 | Package | From | Does | State |
 |---|---|---|---|
 | `aav_yolo` | 2024-25 `camera_ros2_ws` (`yolo_ros2`) | the detector: camera images in, `vision_msgs` detections out; and the stop-sign watcher | [[works]] on the bench, with the stock model |
-| `aav_object_detection` | 2025-26 `Nav_Radar` (`object_detection`) | DBSCAN groups the radar's points into objects, with a box round each | [[works]] on the pretend radar |
+| `aav_radar_clusters` | ours (Rust): a rewrite of the 2025-26 `Nav_Radar` C++ node | DBSCAN groups the radar's points into objects, with a box round each | [[works]] on the bench and in Gazebo |
 | `aav_lane_geometry` | 2025-26 `Lane_Detection_ROS2` | lane keeping's steering half, as a driver on `/drivers/ai/cmd_vel` | [[works]] on a pretend lane. The line finder is [[missing]] |
 | `aav_sensors` `cameras.launch.py` | 2024-25 `cameras` (the calibrations) | `usb_cam` with `left.ini` and `right.ini` | [[untested]] Linux only; the camera models are Q22 |
 
@@ -254,8 +254,11 @@ More in [Bench mode](bench.md).
 - `radar_clusters` runs DBSCAN on `/sensors/radar/points`. Points within 0.8 m join a cluster,
   and a cluster needs 15 points (5 on the bench).
 - It publishes the clustered points, coloured, and a box round each cluster, for RViz.
-- The package's other programs (filters, ICP, an OctoMap) are the 2025-26 team's demos,
-  built but not launched.
+- It is Rust (`aav_radar_clusters`), since 15 Oct. It gives the 2025-26 C++ node's
+  clusters and boxes, bit for bit (94 recorded clouds), with a few fixes: eps is a real
+  distance, noise is left out, old boxes are cleared. Its `PROVENANCE.md` lists them.
+- The C++ package's other programs (filters, ICP, an OctoMap) were demos, never launched:
+  they went with it.
 - [[later]] Next: the radar's points into the local costmap (the ObstacleLayer, written and
   switched off) and `collision_monitor`.
 

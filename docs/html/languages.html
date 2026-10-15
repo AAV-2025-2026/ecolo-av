@@ -57,7 +57,7 @@
 <main>
 <nav class="toc"><span>On this page:</span><a href="#how-languages-fit-into-ros-2">How languages fit into ROS 2</a><a href="#what-we-use-and-where">What we use, and where</a><a href="#is-c-too-risky">Is C++ too risky?</a><a href="#what-if-everything-were-rust">What if everything were Rust?</a><a href="#rust-on-the-pi-and-the-esp32">Rust on the Pi and the ESP32</a><a href="#the-plan">The plan</a></nav>
 <div class="lead"><p>Our ROS nodes are Python, and the firmware and hardware drivers are Rust. The C++ we
-inherited is moving to Rust (Ben, 10 Oct). ROS 2 lets each program pick its own
+inherited for ROS is now Rust (Ben, 10 and 15 Oct): none of our ROS code is C++. ROS 2 lets each program pick its own
 language, because programs only meet through messages.</p></div>
 <section class="card"><h2 id="how-languages-fit-into-ros-2">How languages fit into ROS 2</h2>
 <p><img alt="How the languages stack up" src="../img/languages.svg" /></p>
@@ -94,14 +94,14 @@ language, because programs only meet through messages.</p></div>
 <td>Not ours: we only configure them</td>
 </tr>
 <tr>
-<td>The IMU driver: <code>yahboom_imu_cpp</code>, and Ben's Rust twin <code>aav_imu_yahboom</code></td>
-<td>C++, moving to Rust</td>
-<td>The Rust twin becomes the default; then the C++ goes</td>
+<td>The IMU driver, <code>aav_imu_yahboom</code></td>
+<td>Rust (<code>rclrs</code>)</td>
+<td>Ben's rewrite of the 2025-26 C++ driver, which it replaced on 11 Oct</td>
 </tr>
 <tr>
-<td>The radar clustering, <code>aav_object_detection</code></td>
-<td>C++, moving to Rust</td>
-<td>Inherited from the 2025-26 team. It becomes a Rust ROS node (<code>rclrs</code>)</td>
+<td>The radar clustering, <code>aav_radar_clusters</code></td>
+<td>Rust (<code>rclrs</code>)</td>
+<td>A rewrite of the 2025-26 C++ node, which it replaced on 15 Oct</td>
 </tr>
 <tr>
 <td>The spine firmware, <code>firmware/spine</code></td>
@@ -121,8 +121,8 @@ language, because programs only meet through messages.</p></div>
 <ul>
 <li>The C++ we run is almost all stock packages that thousands of robots use. We wrote none
   of it.</li>
-<li>Our own code is Python and Rust, and both are memory-safe. The inherited C++ moves to
-  Rust.</li>
+<li>Our own code is Python and Rust, and both are memory-safe. The inherited C++ ROS code
+  is now Rust; only today's boards' firmware is still C++, until the spine replaces it.</li>
 <li>Each node is a separate process. A crash takes down one node, not the whole system.</li>
 <li>Safety never rests on one program: ego's timeout and the spine's watchdog stop the car
   if a node dies.</li>

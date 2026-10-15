@@ -85,7 +85,7 @@ transceiver chip (U7) fitted? The audit checks.
 
 | Sensor | Measures | Wire | In our code |
 |---|---|---|---|
-| IMU (Yahboom) | turn rate and acceleration | USB, to which computer? | `yahboom_imu_cpp`, `aav_imu_yahboom` |
+| IMU (Yahboom) | turn rate and acceleration | USB, to which computer? | `aav_imu_yahboom` |
 | GPS (u-blox ZED-F9R) | latitude and longitude | USB to the RTK-Pi | `ublox_gps` (the default) |
 | Wheel speed | how fast the wheels turn | today UDP to the Motor-Pi; later CAN | `encoder_udp`; later `spine_bridge` |
 | Lidar, on the roof (*photos*) | 3D points around the car | Ethernet | **no driver yet**; model unknown (Q22) |

@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, YOLO, stop signs, lanes and radar</h1>
-<div class="meta">18 min read · 10 sections</div></header>
+<div class="meta">19 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -105,10 +105,10 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 <td><span class="badge b-works">works</span> on the bench, with the stock model</td>
 </tr>
 <tr>
-<td><code>aav_object_detection</code></td>
-<td>2025-26 <code>Nav_Radar</code> (<code>object_detection</code>)</td>
+<td><code>aav_radar_clusters</code></td>
+<td>ours (Rust): a rewrite of the 2025-26 <code>Nav_Radar</code> C++ node</td>
 <td>DBSCAN groups the radar's points into objects, with a box round each</td>
-<td><span class="badge b-works">works</span> on the pretend radar</td>
+<td><span class="badge b-works">works</span> on the bench and in Gazebo</td>
 </tr>
 <tr>
 <td><code>aav_lane_geometry</code></td>
@@ -567,8 +567,11 @@ names, passed on as they are.</p>
 <li><code>radar_clusters</code> runs DBSCAN on <code>/sensors/radar/points</code>. Points within 0.8 m join a cluster,
   and a cluster needs 15 points (5 on the bench).</li>
 <li>It publishes the clustered points, coloured, and a box round each cluster, for RViz.</li>
-<li>The package's other programs (filters, ICP, an OctoMap) are the 2025-26 team's demos,
-  built but not launched.</li>
+<li>It is Rust (<code>aav_radar_clusters</code>), since 15 Oct. It gives the 2025-26 C++ node's
+  clusters and boxes, bit for bit (94 recorded clouds), with a few fixes: eps is a real
+  distance, noise is left out, old boxes are cleared. Its <code>PROVENANCE.md</code> lists them.</li>
+<li>The C++ package's other programs (filters, ICP, an OctoMap) were demos, never launched:
+  they went with it.</li>
 <li><span class="badge b-later">later</span> Next: the radar's points into the local costmap (the ObstacleLayer, written and
   switched off) and <code>collision_monitor</code>.</li>
 </ul>

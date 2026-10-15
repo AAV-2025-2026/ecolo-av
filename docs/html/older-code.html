@@ -243,7 +243,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>the Yahboom IMU driver</td>
 <td>C++ ROS 2; Pi 4</td>
 <td>working</td>
-<td>yes, with fixes: <code>src/sensors/yahboom_imu_cpp</code></td>
+<td>yes, rewritten in Rust: <code>src/sensors/aav_imu_yahboom</code> (the C++ copy went on 11 Oct)</td>
 <td>no</td>
 </tr>
 </tbody>
@@ -266,7 +266,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Nav_Radar</td>
 <td>none</td>
-<td>in <code>aav</code>: <code>ti_ros2_driver</code>, and the clustering as <code>aav_object_detection</code></td>
+<td>in <code>aav</code>: <code>ti_ros2_driver</code>; the clustering, rewritten in Rust, as <code>aav_radar_clusters</code></td>
 </tr>
 <tr>
 <td>AAV_dashboard</td>

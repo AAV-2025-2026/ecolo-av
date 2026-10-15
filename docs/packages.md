@@ -9,7 +9,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | Package | Layer | Does | Status | Origin |
 |---|---|---|---|---|
 | `aav_sensors` | sensors | starts the IMU, GPS, radar, battery and camera drivers, with their configs | [[untested]] needs the devices | new |
-| `yahboom_imu_cpp` | sensors | the Yahboom IMU over USB serial (C++) | [[untested]] builds | 2025-26 `yahboom-IMU` |
+| `aav_imu_yahboom` | sensors | the Yahboom IMU over USB serial (Rust) | [[untested]] needs the device; the C++ driver's answers, bit for bit | new: Ben's rewrite of the 2025-26 `yahboom-IMU` C++ driver |
 | `battery_monitor` | sensors | the Victron battery monitor | [[untested]] | 2024-25 `Battery-Monitor-ROS` |
 | `ti_ros2_driver` | sensors | the TI mmWave radar, as point clouds | [[untested]] | 2025-26 `Nav_Radar` |
 | `aav_description` | description | the car's model (URDF) and `vehicle.yaml` | [[works]] the numbers are guesses | new |
@@ -27,7 +27,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_interfaces` | interfaces | our messages: `VehicleStatus`, `ScriptedDrive` | [[works]] builds | new |
 | `aav_bringup` | bringup | the five profiles, perception on the car, the machine files, the RViz layout | [[works]] turtle, sim, replay, bench | new |
 | `aav_yolo` | perception | YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
-| `aav_object_detection` | perception | radar clustering (DBSCAN), with a box round each object | [[works]] on the pretend radar | 2025-26 `Nav_Radar` |
+| `aav_radar_clusters` | perception | radar clustering (DBSCAN), with a box round each object (Rust) | [[works]] on the bench and in Gazebo | new: a rewrite of the 2025-26 `Nav_Radar` C++ node |
 | `aav_lane_finder` | perception | the lane lines in the camera's pictures, as `/perception/lane/geometry` (OpenCV) | [[works]] on the bench | new |
 | `aav_lane_geometry` | perception | lane keeping: a driver on `/drivers/ai/cmd_vel` | [[works]] on the bench, with `aav_lane_finder` | 2025-26 `Lane_Detection_ROS2` |
 | `aav_hud` | hud | the HUD's web server (Flask, Socket.IO), on our topics | [[works]] on the bench, with the app's e-stop button | 2025-26 `User-Interface` |
@@ -39,8 +39,8 @@ perception came in on 10 October, the lane finder on 11 October.
 
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
-| `aav_sensors` | | | `sensors.launch.py imu:= gps:= radar:= battery:= imu_driver:= gps_driver:=`; configs in `config/` |
-| `yahboom_imu_cpp` | `/dev/aav/imu` | `/sensors/imu/data_raw`, `/sensors/imu/mag` | `/sensors/imu/mag` is in raw counts, not tesla, so it's unused |
+| `aav_sensors` | | | `sensors.launch.py imu:= gps:= radar:= battery:= gps_driver:=`; configs in `config/` |
+| `aav_imu_yahboom`: `imu_node` | `/dev/aav/imu` | `/sensors/imu/data_raw`, `/sensors/imu/mag` | `/sensors/imu/mag` is in raw counts, not tesla, so it's unused |
 | stock `imu_filter_madgwick` | `/sensors/imu/data_raw` | `/sensors/imu/data` | magnetometer off |
 | stock `ublox_gps` (KumarRobotics' `ublox`) | `/dev/aav/gps` | `/sensors/gps/fix` | the default GPS driver, in Pixi too. Leaves the receiver's settings as they are. Tentative until Q18 |
 | stock `ublox_dgnss` | a u-blox F9P on USB | `/sensors/gps/fix` | `gps_driver:=ublox_dgnss`. Not in Pixi: the car only |
@@ -77,7 +77,7 @@ perception came in on 10 October, the lane finder on 11 October.
 |---|---|---|---|
 | `aav_yolo`: `yolo_detector` | `/sensors/camera/front_left/image_raw` | `/perception/detections`, `/perception/detections/image` | a `.pt`, `.mlpackage` or `.engine` model; needs the `ml` environment |
 | `aav_yolo`: `stop_sign_watcher` | `/perception/detections` | `/perception/stop_sign` | twist_mux's stop-sign lock, priority 30 |
-| `aav_object_detection`: `radar_clusters` | `/sensors/radar/points` | `/perception/radar/clusters`, `/perception/radar/cluster_boxes` | DBSCAN; the 2025-26 filters and ICP are built, not launched |
+| `aav_radar_clusters`: `radar_clusters` | `/sensors/radar/points` | `/perception/radar/clusters`, `/perception/radar/cluster_boxes` | DBSCAN, in Rust; eps 0.8 m, 15 points (5 on the bench and in Gazebo) |
 | `aav_lane_finder`: `lane_finder` | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info` | `/perception/lane/geometry`, `/perception/lane/image` | a bird's-eye view, sliding windows, a curve per line; the camera's place from `vehicle.yaml` |
 | `aav_lane_geometry`: `control_interface` | `/perception/lane/geometry` | `/drivers/ai/cmd_vel` | steers back to the lane's centre, measured 3 m ahead |
 

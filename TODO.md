@@ -14,7 +14,7 @@ commit, "Work in progress".
 |---|---|---|
 | `wt/sim-full` | the road world in Gazebo: lane lines, a stop sign, an obstacle, the car's camera and radar; the car's whole graph in `pixi run sim`, checked by `sim-check` | ~~the Simulation page, and a picture~~ *Done 15 Oct, with a lidar; merged into `main`* |
 | `wt/ackermann` | one reverse speed for the whole car: 0.5 m/s, from `vehicle.yaml` | reversing in Nav2: behaviour trees, settings, a test |
-| `wt/rust-ports` | the Rust IMU driver is the default, and the C++ one is gone | the radar clustering as a Rust node (`aav_radar_clusters`) |
+| `wt/rust-ports` | the Rust IMU driver is the default, and the C++ one is gone | ~~the radar clustering as a Rust node (`aav_radar_clusters`)~~ *Done 15 Oct: the C++ is gone too; merged into `main`* |
 
 **Next time, in order:**
 
@@ -76,9 +76,10 @@ work on." His order, with the work under way:
       - [ ] **Ackermann done properly**, testable in Gazebo and on the bench: reversing
             (Reeds-Shepp), both front wheels' real angles, the steering curve from
             `Ackermann.m` (Q2). *Paused 11 Oct, on `wt/ackermann`.*
-2. [ ] **Our C++ to Rust:** Ben's Rust IMU driver becomes the default and the C++ one goes;
-      the radar clustering becomes a Rust ROS node. Python to Rust later (Ben). *Paused
-      11 Oct, on `wt/rust-ports`.*
+2. [x] **Our C++ to Rust:** Ben's Rust IMU driver becomes the default and the C++ one goes;
+      the radar clustering becomes a Rust ROS node. Python to Rust later (Ben). *Done
+      15 Oct (Ben: "We should port all cpp to rust"): `aav_imu_yahboom` and
+      `aav_radar_clusters`; no C++ left in `src/`. Only today's boards' firmware is C++.*
 3. [ ] **The Mac on the network, with ML on it:** the laptop's detector (Core ML) on the
       car's compressed pictures. *On in `laptop.yaml` since 11 Oct; to try against the
       bench as the car.*
@@ -145,9 +146,10 @@ Decided ([Decisions](docs/decisions.md)):
 2. [ ] **Ackermann done properly:** reversing (Reeds-Shepp in Nav2), both front wheels' real
       angles in the model and RViz, and the steering motor's real curve from the
       `Ackermann.m` linkage (Q2).
-3. [ ] **All our C++ to Rust:** the IMU (Ben's twin becomes the default, then the C++ goes),
+3. [x] **All our C++ to Rust:** the IMU (Ben's twin becomes the default, then the C++ goes),
       the radar clustering as a Rust ROS node, the wheel encoder and display Picos (Embassy).
-      *The two Picos: done 15 Oct, builds, never flashed.*
+      *The two Picos, the IMU and the radar clustering: done 15 Oct. The Picos build, never
+      flashed.*
 4. [ ] **Every file in its language's own style:** `cargo fmt --check` and
       `cargo clippy -D warnings` in `pixi run test`.
 5. [ ] **The whole car working, end to end.**
@@ -238,8 +240,8 @@ folder downloaded, and moves into it as a fast-forward.
 - [x] **On GitHub** (Ben): `git@github.com:zander1976/aav.git`, private. CI: Linux on every push, a
       Mac every night. Commit messages give the intention, with no attribution lines; the
       README's Credits section covers who did what.
-- [x] **Ben's Rust IMU driver** (`aav_imu_yahboom`, `imu_driver:=rust`): reviewed and
-      committed; its tests now run in `pixi run test`.
+- [x] **Ben's Rust IMU driver** (`aav_imu_yahboom`, then `imu_driver:=rust`): reviewed and
+      committed; its tests now run in `pixi run test`. *The only IMU driver since 15 Oct.*
 - [x] **Cleaned up** (Ben approved): `~/aav`, the Linux build output and the old bundle.
 - [ ] **Slim per-machine Pixi environments** (Orin, Motor Pi, laptop): at Phase 0.
 - [ ] **An audit on the car's network** (Ben, 16:42: "at some point"): a read-only audit of

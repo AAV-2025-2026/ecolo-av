@@ -121,7 +121,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tbody>
 <tr>
 <td><a href="#sensors">Sensors</a></td>
-<td><code>aav_sensors</code>, <code>yahboom_imu_cpp</code>, <code>aav_imu_yahboom</code>, <code>battery_monitor</code>, <code>ti_ros2_driver</code></td>
+<td><code>aav_sensors</code>, <code>aav_imu_yahboom</code>, <code>battery_monitor</code>, <code>ti_ros2_driver</code></td>
 </tr>
 <tr>
 <td><a href="#description-and-localization">Description and localization</a></td>
@@ -141,7 +141,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><a href="#perception">Perception</a></td>
-<td><code>aav_yolo</code>, <code>aav_object_detection</code>, <code>aav_lane_finder</code>, <code>aav_lane_geometry</code></td>
+<td><code>aav_yolo</code>, <code>aav_radar_clusters</code>, <code>aav_lane_finder</code>, <code>aav_lane_geometry</code></td>
 </tr>
 <tr>
 <td><a href="#hud">HUD</a></td>
@@ -218,7 +218,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 </tbody>
 </table></div>
-<h3 id="yahboom_imu_cpp">yahboom_imu_cpp</h3>
+<h3 id="aav_imu_yahboom">aav_imu_yahboom</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -229,7 +229,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tbody>
 <tr>
 <td><strong>Does</strong></td>
-<td>reads the Yahboom 10-axis IMU over USB serial and publishes it</td>
+<td>reads the Yahboom 10-axis IMU over USB serial and publishes it, in Rust (rclrs)</td>
 </tr>
 <tr>
 <td><strong>Why</strong></td>
@@ -245,70 +245,23 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
-<td>inherited: 2025-26 <code>yahboom-IMU</code> @ 95469f1a63; covariances added, a macOS fix</td>
+<td>ours (Ben): a rewrite of the 2025-26 C++ driver (<code>yahboom-IMU</code> @ 95469f1a63), which it replaced on 11 Oct. Two crates: <code>yahboom-protocol</code> (frames, no ROS) and <code>imu-node</code> (the node)</td>
 </tr>
 <tr>
 <td><strong>Status</strong></td>
-<td><span class="badge b-untested">untested</span> builds; needs the device. To be replaced by its Rust twin (branch <code>wt/rust-ports</code>)</td>
+<td><span class="badge b-works">works</span> its protocol tests, and the C++ driver's recorded answers, bit for bit. <span class="badge b-untested">untested</span> on a real IMU</td>
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
-<td><code>ros2 launch aav_sensors sensors.launch.py imu_driver:=cpp gps:=false</code></td>
+<td><code>ros2 launch aav_sensors sensors.launch.py gps:=false</code></td>
 </tr>
 <tr>
 <td><strong>Test</strong></td>
-<td><code>pixi run imu-compare</code> (Linux): the same bytes into both drivers</td>
+<td><code>cargo test -p yahboom-protocol</code> (in <code>tools/test.sh</code>)</td>
 </tr>
 <tr>
 <td><strong>Read first</strong></td>
-<td><code>src/imu_node.cpp</code></td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="aav_imu_yahboom">aav_imu_yahboom</h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th></th>
-<th></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Does</strong></td>
-<td>the same IMU driver, rewritten in Rust (rclrs): same node name, parameters, topics, units</td>
-</tr>
-<tr>
-<td><strong>Why</strong></td>
-<td>the Rust rule (Ben, 10 Oct): the inherited C++ moves to Rust</td>
-</tr>
-<tr>
-<td><strong>Runs on</strong></td>
-<td>as <code>yahboom_imu_cpp</code></td>
-</tr>
-<tr>
-<td><strong>In → out</strong></td>
-<td>as <code>yahboom_imu_cpp</code></td>
-</tr>
-<tr>
-<td><strong>Origin</strong></td>
-<td>ours (Ben), from the C++ driver. Two crates: <code>yahboom-protocol</code> (frames, no ROS) and <code>imu-node</code> (the node)</td>
-</tr>
-<tr>
-<td><strong>Status</strong></td>
-<td><span class="badge b-works">works</span> its protocol tests and the comparison with the C++ (Linux). <span class="badge b-untested">untested</span> on a real IMU</td>
-</tr>
-<tr>
-<td><strong>Run alone</strong></td>
-<td><code>ros2 launch aav_sensors sensors.launch.py imu_driver:=rust gps:=false</code></td>
-</tr>
-<tr>
-<td><strong>Test</strong></td>
-<td><code>cargo test -p yahboom-protocol</code> (in <code>tools/test.sh</code>); <code>pixi run imu-compare</code></td>
-</tr>
-<tr>
-<td><strong>Read first</strong></td>
-<td><code>crates/yahboom-protocol/src/lib.rs</code></td>
+<td><code>crates/yahboom-protocol/src/lib.rs</code>, then <code>PROVENANCE.md</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -1029,7 +982,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 </tbody>
 </table></div>
-<h3 id="aav_object_detection">aav_object_detection</h3>
+<h3 id="aav_radar_clusters">aav_radar_clusters</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1040,7 +993,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tbody>
 <tr>
 <td><strong>Does</strong></td>
-<td>groups the radar's points into objects (DBSCAN), with a box round each</td>
+<td>groups the radar's points into objects (DBSCAN), with a box round each, in Rust (rclrs)</td>
 </tr>
 <tr>
 <td><strong>Why</strong></td>
@@ -1048,7 +1001,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>Runs on</strong></td>
-<td>with the radar (<code>radar_clusters: false</code> everywhere for now)</td>
+<td>with the radar (<code>radar_clusters: false</code> on the car for now); always on the bench and in Gazebo's road world</td>
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
@@ -1056,23 +1009,23 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
-<td>inherited: 2025-26 <code>Nav_Radar</code> @ 6242631882 (C++, PCL). Its filters and ICP are built, not launched</td>
+<td>ours: a rewrite of the 2025-26 C++ node (<code>Nav_Radar</code> @ 6242631882), which it replaced on 15 Oct. Two crates: <code>radar-clustering</code> (DBSCAN, boxes, cloud bytes; no ROS) and <code>clusters-node</code></td>
 </tr>
 <tr>
 <td><strong>Status</strong></td>
-<td><span class="badge b-works">works</span> on the pretend radar. To become a Rust node (branch <code>wt/rust-ports</code>)</td>
+<td><span class="badge b-works">works</span> on the bench and in Gazebo; the C++ node's answers for 94 clouds, bit for bit. <span class="badge b-untested">untested</span> on the real radar</td>
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
-<td><code>ros2 launch aav_object_detection radar_clusters.launch.py mock:=true</code></td>
+<td><code>ros2 launch aav_radar_clusters radar_clusters.launch.py mock:=true minimum_points:=5 radar_rviz:=true</code></td>
 </tr>
 <tr>
 <td><strong>Test</strong></td>
-<td>the mock above, in RViz (<code>radar_rviz:=true</code>). Its docstring mentions <code>pixi run radar-demo</code>, which doesn't exist</td>
+<td><code>cargo test -p radar-clustering</code> (in <code>tools/test.sh</code>); <code>pixi run bench-check --obstacle</code></td>
 </tr>
 <tr>
 <td><strong>Read first</strong></td>
-<td><code>launch/radar_clusters.launch.py</code>, then <code>example/dbscan.cpp</code></td>
+<td><code>crates/radar-clustering/src/lib.rs</code>, then <code>PROVENANCE.md</code></td>
 </tr>
 </tbody>
 </table></div>

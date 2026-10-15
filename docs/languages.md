@@ -1,7 +1,7 @@
 # Python, C++ and Rust
 
 Our ROS nodes are Python, and the firmware and hardware drivers are Rust. The C++ we
-inherited is moving to Rust (Ben, 10 Oct). ROS 2 lets each program pick its own
+inherited for ROS is now Rust (Ben, 10 and 15 Oct): none of our ROS code is C++. ROS 2 lets each program pick its own
 language, because programs only meet through messages.
 
 ## How languages fit into ROS 2
@@ -21,7 +21,7 @@ language, because programs only meet through messages.
 | Launch files | Python | That's how ROS 2 launch works |
 | Stock packages: Nav2, the EKFs, twist_mux | C++ | Not ours: we only configure them |
 | The IMU driver, `aav_imu_yahboom` | Rust (`rclrs`) | Ben's rewrite of the 2025-26 C++ driver, which it replaced on 11 Oct |
-| The radar clustering, `aav_object_detection` | C++, moving to Rust | Inherited from the 2025-26 team. It becomes a Rust ROS node (`rclrs`) |
+| The radar clustering, `aav_radar_clusters` | Rust (`rclrs`) | A rewrite of the 2025-26 C++ node, which it replaced on 15 Oct |
 | The spine firmware, `firmware/spine` | Rust, `no_std` | Memory-safe, and its logic is tested on a laptop |
 | Today's ESP32 and Pico firmware | C++ (Arduino) | Inherited. The spine (Rust) replaces the ESP32; the Picos get Rust twins (Embassy) |
 
@@ -30,8 +30,8 @@ language, because programs only meet through messages.
 Memory bugs and crashes are a fair worry with C++. In this stack:
 - The C++ we run is almost all stock packages that thousands of robots use. We wrote none
   of it.
-- Our own code is Python and Rust, and both are memory-safe. The inherited C++ moves to
-  Rust.
+- Our own code is Python and Rust, and both are memory-safe. The inherited C++ ROS code
+  is now Rust; only today's boards' firmware is still C++, until the spine replaces it.
 - Each node is a separate process. A crash takes down one node, not the whole system.
 - Safety never rests on one program: ego's timeout and the spine's watchdog stop the car
   if a node dies.

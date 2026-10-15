@@ -120,7 +120,6 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `estop`, `estop-clear` | stop every driver; let them go again |
 | `doctor` | can this computer join the car's ROS network? |
 | `rust-listener` | the Rust example: prints ego's commands |
-| `imu-compare` | feeds the same bytes to the C++ and Rust IMU drivers, and compares them |
 | `vendor` | downloads the ROS 2 and rclrs source into `vendor/`, to look things up |
 | `get-models` | downloads the stock YOLO model into `models/` |
 | `export-coreml` | makes the Core ML model for a Mac's detector (the `ml` environment, Macs only) |

@@ -50,7 +50,7 @@ The five not cloned here:
 | Repo | What GitHub says | Status |
 |---|---|---|
 | Lane_Detection_ROS2 | none | the controller is in `aav`: `src/perception/aav_lane_geometry`, a driver on `/drivers/ai/cmd_vel`. The lane finder isn't in the repo |
-| Nav_Radar | none | in `aav`: `ti_ros2_driver`, and the clustering as `aav_object_detection` |
+| Nav_Radar | none | in `aav`: `ti_ros2_driver`; the clustering, rewritten in Rust, as `aav_radar_clusters` |
 | AAV_dashboard | a stop-sign badge and bounding-box overlay | not surveyed |
 | Speed | none | not surveyed |
 | Navigation-GlobalMapRouter---Abandoned--- | none | abandoned |

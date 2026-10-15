@@ -27,12 +27,12 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 
 | Layer | Modules |
 |---|---|
-| [Sensors](#sensors) | `aav_sensors`, `yahboom_imu_cpp`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver` |
+| [Sensors](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver` |
 | [Description and localization](#description-and-localization) | `aav_description`, `aav_localization` |
 | [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_navigation` |
 | [Mux and ego](#mux-and-ego) | `aav_mux`, `aav_ego` |
 | [Backends](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla` |
-| [Perception](#perception) | `aav_yolo`, `aav_object_detection`, `aav_lane_finder`, `aav_lane_geometry` |
+| [Perception](#perception) | `aav_yolo`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry` |
 | [HUD](#hud) | `aav_hud`, `aav_hud_raylib` |
 | [Bench](#bench) | `aav_spine_sim`, `aav_bench` |
 | [Messages and bringup](#messages-and-bringup) | `aav_interfaces`, `aav_bringup` |
@@ -56,33 +56,19 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Test** | on the car: `ros2 topic hz /sensors/gps/fix` and `/sensors/imu/data` |
 | **Read first** | `launch/sensors.launch.py` (its docstring lists every option) |
 
-### yahboom_imu_cpp
-
-| | |
-|---|---|
-| **Does** | reads the Yahboom 10-axis IMU over USB serial and publishes it |
-| **Why** | ekf_local needs the turn rate; the wheels can't give it |
-| **Runs on** | the computer the IMU is plugged into (Orin, guess) |
-| **In → out** | `/dev/aav/imu` → `/sensors/imu/data_raw` (Imu, `imu_link`), `/sensors/imu/mag` (raw counts, not tesla: unused) |
-| **Origin** | inherited: 2025-26 `yahboom-IMU` @ 95469f1a63; covariances added, a macOS fix |
-| **Status** | [[untested]] builds; needs the device. To be replaced by its Rust twin (branch `wt/rust-ports`) |
-| **Run alone** | `ros2 launch aav_sensors sensors.launch.py imu_driver:=cpp gps:=false` |
-| **Test** | `pixi run imu-compare` (Linux): the same bytes into both drivers |
-| **Read first** | `src/imu_node.cpp` |
-
 ### aav_imu_yahboom
 
 | | |
 |---|---|
-| **Does** | the same IMU driver, rewritten in Rust (rclrs): same node name, parameters, topics, units |
-| **Why** | the Rust rule (Ben, 10 Oct): the inherited C++ moves to Rust |
-| **Runs on** | as `yahboom_imu_cpp` |
-| **In → out** | as `yahboom_imu_cpp` |
-| **Origin** | ours (Ben), from the C++ driver. Two crates: `yahboom-protocol` (frames, no ROS) and `imu-node` (the node) |
-| **Status** | [[works]] its protocol tests and the comparison with the C++ (Linux). [[untested]] on a real IMU |
-| **Run alone** | `ros2 launch aav_sensors sensors.launch.py imu_driver:=rust gps:=false` |
-| **Test** | `cargo test -p yahboom-protocol` (in `tools/test.sh`); `pixi run imu-compare` |
-| **Read first** | `crates/yahboom-protocol/src/lib.rs` |
+| **Does** | reads the Yahboom 10-axis IMU over USB serial and publishes it, in Rust (rclrs) |
+| **Why** | ekf_local needs the turn rate; the wheels can't give it |
+| **Runs on** | the computer the IMU is plugged into (Orin, guess) |
+| **In → out** | `/dev/aav/imu` → `/sensors/imu/data_raw` (Imu, `imu_link`), `/sensors/imu/mag` (raw counts, not tesla: unused) |
+| **Origin** | ours (Ben): a rewrite of the 2025-26 C++ driver (`yahboom-IMU` @ 95469f1a63), which it replaced on 11 Oct. Two crates: `yahboom-protocol` (frames, no ROS) and `imu-node` (the node) |
+| **Status** | [[works]] its protocol tests, and the C++ driver's recorded answers, bit for bit. [[untested]] on a real IMU |
+| **Run alone** | `ros2 launch aav_sensors sensors.launch.py gps:=false` |
+| **Test** | `cargo test -p yahboom-protocol` (in `tools/test.sh`) |
+| **Read first** | `crates/yahboom-protocol/src/lib.rs`, then `PROVENANCE.md` |
 
 ### battery_monitor
 
@@ -308,19 +294,19 @@ Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle
 | **Test** | `test/` (in `tools/test.sh`); `pixi run bench-check --perception` |
 | **Read first** | `aav_yolo/stop_sign.py` |
 
-### aav_object_detection
+### aav_radar_clusters
 
 | | |
 |---|---|
-| **Does** | groups the radar's points into objects (DBSCAN), with a box round each |
+| **Does** | groups the radar's points into objects (DBSCAN), with a box round each, in Rust (rclrs) |
 | **Why** | turns a cloud of radar points into "something is there" |
-| **Runs on** | with the radar (`radar_clusters: false` everywhere for now) |
+| **Runs on** | with the radar (`radar_clusters: false` on the car for now); always on the bench and in Gazebo's road world |
 | **In → out** | `/sensors/radar/points` → `/perception/radar/clusters`, `/perception/radar/cluster_boxes` |
-| **Origin** | inherited: 2025-26 `Nav_Radar` @ 6242631882 (C++, PCL). Its filters and ICP are built, not launched |
-| **Status** | [[works]] on the pretend radar. To become a Rust node (branch `wt/rust-ports`) |
-| **Run alone** | `ros2 launch aav_object_detection radar_clusters.launch.py mock:=true` |
-| **Test** | the mock above, in RViz (`radar_rviz:=true`). Its docstring mentions `pixi run radar-demo`, which doesn't exist |
-| **Read first** | `launch/radar_clusters.launch.py`, then `example/dbscan.cpp` |
+| **Origin** | ours: a rewrite of the 2025-26 C++ node (`Nav_Radar` @ 6242631882), which it replaced on 15 Oct. Two crates: `radar-clustering` (DBSCAN, boxes, cloud bytes; no ROS) and `clusters-node` |
+| **Status** | [[works]] on the bench and in Gazebo; the C++ node's answers for 94 clouds, bit for bit. [[untested]] on the real radar |
+| **Run alone** | `ros2 launch aav_radar_clusters radar_clusters.launch.py mock:=true minimum_points:=5 radar_rviz:=true` |
+| **Test** | `cargo test -p radar-clustering` (in `tools/test.sh`); `pixi run bench-check --obstacle` |
+| **Read first** | `crates/radar-clustering/src/lib.rs`, then `PROVENANCE.md` |
 
 ### aav_lane_finder
 

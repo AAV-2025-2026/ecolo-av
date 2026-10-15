@@ -187,4 +187,4 @@ From tonight's audits and the Mac work. They're small, but someone has to say ye
 | The steering on an e-stop | hold where it is (`ESTOP_STEERING = Hold` in `spine-core`), or centre it (the 2025-26 firmware) |
 | The brake after boot | `IDLE_BRAKE = 0.0` lets it go once the e-stop clears; the 2025-26 firmware kept it full on (1.0). ⚠️ Keeping it on may be safer on a slope |
 | The RC gear switch's brake position | `RC_GEAR_BRAKE = SpeedZero`: the speed loop brakes to a stop. `RcInput` now has a brake field, so the old full brake is one constant away |
-| The remaining renames | `yahboom_imu_cpp`, `ti_ros2_driver`, `battery_monitor`: [Conventions](conventions.md) |
+| The remaining renames | `ti_ros2_driver`, `battery_monitor`: [Conventions](conventions.md) |

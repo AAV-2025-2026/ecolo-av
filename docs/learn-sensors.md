@@ -73,7 +73,7 @@ Every frame's position on the car is in `src/aav_description/config/vehicle.yaml
 | **Plugs in** | USB serial, 115200 baud, named `/dev/aav/imu` by our udev rule |
 | **Good at** | fast, smooth turn rate |
 | **Bad at** | the gyro drifts slowly; the magnetometer is fooled by the motor and steel. **We don't use the magnetometer yet** |
-| **Driver** | `yahboom_imu_cpp` (from the 2025-26 team), or Ben's Rust twin `aav_imu_yahboom` (`imu_driver:=rust`), then the stock `imu_filter_madgwick` |
+| **Driver** | `aav_imu_yahboom` (Ben's Rust rewrite of the 2025-26 C++ driver), then the stock `imu_filter_madgwick` |
 | **Used by** | both EKFs: the **yaw rate** only |
 | **Gazebo** | yes, 50 Hz, with noise 0.02 rad/s and 0.2 m/s² |
 
@@ -99,7 +99,7 @@ All about it: [Learn: GPS](learn-gps.md).
 | **Rate, range** | 10 Hz; 8.4 m (`ti_ros2_driver` `cfg/base.cfg`) |
 | **Good at** | works in the dark, rain and fog; measures speed directly |
 | **Bad at** | few points; poor height; clutter close up. Publishes best effort: subscribe best effort |
-| **Driver** | `ti_ros2_driver` (from the 2025-26 `Nav_Radar`), then `radar_clusters` groups the points |
+| **Driver** | `ti_ros2_driver` (from the 2025-26 `Nav_Radar`), then `radar_clusters` (`aav_radar_clusters`, Rust) groups the points |
 | **Used by** | the local costmap's obstacle layer, and `collision_monitor` |
 | **Gazebo** | yes, in the road world: a lidar shaped like the radar (`/gazebo/radar/points`, turned into ours by `gazebo_adapter`) |
 | **Bench** | `mock_radar` draws points on the bench's boxes |
@@ -141,7 +141,6 @@ All about it: [Learn: GPS](learn-gps.md).
 | The bench's radar and camera too | `pixi run bench`, then `pixi run tools/ros.sh ros2 topic hz /sensors/radar/points` |
 | Where each sensor sits on the car | `pixi run view` (RViz with the car model) |
 | The live graph against the contract | `pixi run check bench` (with the bench running) |
-| The two IMU drivers agree, no IMU needed | `pixi run imu-compare` |
 
 ## Where this lives in the code
 
@@ -149,7 +148,7 @@ All about it: [Learn: GPS](learn-gps.md).
 |---|---|
 | Starting the drivers | `src/sensors/aav_sensors/launch/sensors.launch.py`, `cameras.launch.py` |
 | Driver settings | `src/sensors/aav_sensors/config/` (`imu.yaml`, `imu_filter.yaml`, `ublox_gps.yaml`, `cameras/`) |
-| IMU drivers | `src/sensors/yahboom_imu_cpp`, `src/sensors/aav_imu_yahboom` |
+| IMU driver | `src/sensors/aav_imu_yahboom` |
 | Radar driver | `src/sensors/ti_ros2_driver` |
 | Battery | `src/sensors/battery_monitor` |
 | Wheel speed | `src/backends/aav_legacy` (today), `src/backends/aav_spine` (CAN) |

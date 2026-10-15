@@ -79,11 +79,11 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>new</td>
 </tr>
 <tr>
-<td><code>yahboom_imu_cpp</code></td>
+<td><code>aav_imu_yahboom</code></td>
 <td>sensors</td>
-<td>the Yahboom IMU over USB serial (C++)</td>
-<td><span class="badge b-untested">untested</span> builds</td>
-<td>2025-26 <code>yahboom-IMU</code></td>
+<td>the Yahboom IMU over USB serial (Rust)</td>
+<td><span class="badge b-untested">untested</span> needs the device; the C++ driver's answers, bit for bit</td>
+<td>new: Ben's rewrite of the 2025-26 <code>yahboom-IMU</code> C++ driver</td>
 </tr>
 <tr>
 <td><code>battery_monitor</code></td>
@@ -205,11 +205,11 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>2024-25 <code>camera_ros2_ws</code></td>
 </tr>
 <tr>
-<td><code>aav_object_detection</code></td>
+<td><code>aav_radar_clusters</code></td>
 <td>perception</td>
-<td>radar clustering (DBSCAN), with a box round each object</td>
-<td><span class="badge b-works">works</span> on the pretend radar</td>
-<td>2025-26 <code>Nav_Radar</code></td>
+<td>radar clustering (DBSCAN), with a box round each object (Rust)</td>
+<td><span class="badge b-works">works</span> on the bench and in Gazebo</td>
+<td>new: a rewrite of the 2025-26 <code>Nav_Radar</code> C++ node</td>
 </tr>
 <tr>
 <td><code>aav_lane_finder</code></td>
@@ -271,10 +271,10 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td><code>aav_sensors</code></td>
 <td></td>
 <td></td>
-<td><code>sensors.launch.py imu:= gps:= radar:= battery:= imu_driver:= gps_driver:=</code>; configs in <code>config/</code></td>
+<td><code>sensors.launch.py imu:= gps:= radar:= battery:= gps_driver:=</code>; configs in <code>config/</code></td>
 </tr>
 <tr>
-<td><code>yahboom_imu_cpp</code></td>
+<td><code>aav_imu_yahboom</code>: <code>imu_node</code></td>
 <td><code>/dev/aav/imu</code></td>
 <td><code>/sensors/imu/data_raw</code>, <code>/sensors/imu/mag</code></td>
 <td><code>/sensors/imu/mag</code> is in raw counts, not tesla, so it's unused</td>
@@ -437,10 +437,10 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>twist_mux's stop-sign lock, priority 30</td>
 </tr>
 <tr>
-<td><code>aav_object_detection</code>: <code>radar_clusters</code></td>
+<td><code>aav_radar_clusters</code>: <code>radar_clusters</code></td>
 <td><code>/sensors/radar/points</code></td>
 <td><code>/perception/radar/clusters</code>, <code>/perception/radar/cluster_boxes</code></td>
-<td>DBSCAN; the 2025-26 filters and ICP are built, not launched</td>
+<td>DBSCAN, in Rust; eps 0.8 m, 15 points (5 on the bench and in Gazebo)</td>
 </tr>
 <tr>
 <td><code>aav_lane_finder</code>: <code>lane_finder</code></td>
