@@ -172,6 +172,25 @@ def mux_config(params: Mapping) -> Tuple[Tuple[MuxInput, ...], Tuple[MuxLock, ..
     return inputs, locks
 
 
+def mux_locks_from_diagnostics(statuses) -> Optional[Dict[str, bool]]:
+    """
+    Read twist_mux's locks from one /diagnostics message, or None if it isn't twist_mux's.
+
+    statuses: (name, {key: value}) per DiagnosticStatus. twist_mux 4.5 sends, once a
+    second, a status "twist_mux: Twist mux status" with a value per lock (seen on the
+    turtle, 15 Oct): "lock locks.estop" = " locked (listening to /safety/estop @
+    0.000000s with priority #255)", or " free (...)".
+    """
+    for name, values in statuses:
+        if 'twist mux' not in name.lower() and 'twist_mux' not in name.lower():
+            continue
+        locks = {key[len('lock '):].split('.')[-1]: value.strip().startswith('locked')
+                 for key, value in values.items() if key.startswith('lock ')}
+        if locks:
+            return locks
+    return None
+
+
 def mux_choice(inputs: Iterable[MuxInput], ages: Mapping[str, Optional[float]],
                locks: Iterable[MuxLock], lock_values: Mapping[str, Tuple[bool, float]]
                ) -> Dict[str, Optional[str]]:

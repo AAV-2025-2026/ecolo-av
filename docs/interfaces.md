@@ -68,6 +68,7 @@ Check a running system against it with `pixi run check <turtle|sim|road|car|repl
 | `/tf_static` | `tf2_msgs/msg/TFMessage` | `robot_state_publisher`, `map_to_odom_no_gps` | - | turtle, sim, car, replay, bench | base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF. With gps:=false, map_to_odom_no_gps adds a fixed map -> odom. |
 | `/robot_description` | `std_msgs/msg/String` | `robot_state_publisher` | - | turtle, sim, car, replay, bench |  |
 | `/clock` | `rosgraph_msgs/msg/Clock` | `gz_bridge` | - | sim, replay | Simulation time; every node runs with use_sim_time:=true in sim and replay. |
+| `/diagnostics` | `diagnostic_msgs/msg/DiagnosticArray` | `twist_mux`, `ekf_local`, `ekf_global` | `language_drive` | - | ROS's diagnostics. twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic. |
 
 ## Services
 

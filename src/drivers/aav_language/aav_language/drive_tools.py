@@ -50,6 +50,7 @@ class CarState:
     vehicle_estop: Optional[bool] = None                     # /vehicle/status estop_active
     armed: Optional[bool] = None                             # /vehicle/status armed
     mux: Dict[str, Optional[str]] = field(default_factory=dict)  # driver, blocked_by
+    mux_locks: Optional[Dict[str, bool]] = None   # twist_mux's own report (/diagnostics)
 
 
 class Backend(Protocol):
@@ -73,6 +74,14 @@ def default_log_path() -> Path:
     base = os.environ.get('ROS_LOG_DIR') or os.path.join(
         os.environ.get('ROS_HOME') or os.path.expanduser('~/.ros'), 'log')
     return Path(base) / 'aav_language' / 'tool_calls.jsonl'
+
+
+def estop_state(s: CarState) -> Optional[bool]:
+    """Say whether any source says the e-stop is on; None when no source has spoken."""
+    said = [v for v in (s.estop, s.vehicle_estop,
+                        None if s.mux_locks is None else s.mux_locks.get('estop'))
+            if v is not None]
+    return any(said) if said else None
 
 
 def _r(x: Optional[float], digits: int = 2) -> Optional[float]:
@@ -132,7 +141,10 @@ class DriveTools:
         if why:
             return why
         s = self.backend.state()
-        if s.estop or s.vehicle_estop:
+        if s.mux_locks is None:
+            return ("twist_mux's report (/diagnostics) isn't arriving, so whether the e-stop "
+                    'is on is unknown. Is the stack running?')
+        if s.estop or s.vehicle_estop or s.mux_locks.get('estop'):
             return ('the e-stop is on. A person must clear it (pixi run estop-clear); '
                     'this server never does')
         busy = self.backend.running()
@@ -182,8 +194,7 @@ class DriveTools:
                    'gps': None if s.gps is None else {
                        'lat': round(s.gps[0], 7), 'lon': round(s.gps[1], 7),
                        'fix': FIX_KINDS.get(s.gps_status, f'status {s.gps_status}')},
-                   'estop': bool(s.estop or s.vehicle_estop) if (
-                       s.estop is not None or s.vehicle_estop is not None) else None,
+                   'estop': estop_state(s),
                    'armed': s.armed,
                    'mux_driver': s.mux.get('driver'),
                    'mux_blocked_by': s.mux.get('blocked_by'),

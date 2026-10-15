@@ -6,12 +6,13 @@ car. High-level tools only, never raw velocities:
 
   status()                                   speed, pose, GPS, e-stop, armed, who drives
   drive(distance_m, speed_mps, direction, curvature, wait)
-  turn(angle_deg, radius_m, speed_mps, wait)
+  turn(angle_deg, radius_m, direction, speed_mps, wait)
   stop()          estop()          go_to_gps(lat, lon, wait)          wait(seconds)
   check(tool, arguments)          would that call be refused? (for the agent's plan)
 
 Every rule is checked here, not by the model: drive_tools.py and safety.py. Its ROS node
-is language_drive (ros_backend.py, which lists the topics and actions).
+is language_drive (ros_backend.py, which lists the topics and actions). When the app that
+started it goes away (stdin closes), it cancels any drive still running.
 
     pixi run -e mcp drive-server            turtle, sim or bench (this computer only)
     pixi run -e mcp drive-server --car      the real car: only with a safety driver
@@ -26,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import signal
 import sys
 from typing import Optional
 
@@ -151,9 +153,20 @@ def main(argv: Optional[list] = None):
 
     if args.max_speed > 2.0:
         sys.exit('--max-speed above 2 m/s is not allowed')
+    if not sys.stdin.isatty():
+        # Started by an app (the agent, Claude...): Ctrl-C in the app's terminal reaches
+        # this process too, and it must live to send the stop() the app asks for. The app
+        # ends it by closing stdin.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
     tools = make_tools(args, log)
     log(f'started: car={args.car} fake={args.fake} cap={args.max_speed} m/s')
-    build_server(tools).run()
+    try:
+        build_server(tools).run()
+    finally:
+        # The app has gone (or the server failed): never leave a drive running unattended.
+        cancelled = tools.backend.cancel_all()
+        if cancelled:
+            log(f'the app went away: cancelled {cancelled}, slowing to a stop')
 
 
 if __name__ == '__main__':

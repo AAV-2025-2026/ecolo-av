@@ -7,6 +7,10 @@ Subscribes  /localization/odom/local  nav_msgs/Odometry (speed, odom pose)
             /vehicle/status           aav_interfaces/VehicleStatus (armed, e-stop)
             every twist_mux input and lock in aav_mux's twist_mux.yaml (/drivers/*/cmd_vel,
             /perception/stop_sign): only their arrival times, to tell who drives
+            /diagnostics              diagnostic_msgs/DiagnosticArray: twist_mux's own word,
+                                      once a second, on each lock (is the e-stop on?). The
+                                      only place a late starter can learn it: /safety/estop
+                                      is sent a few times and its senders go away
             /tf, /tf_static           the map pose (map -> base_link), when there is one
 Publishes   /safety/estop             std_msgs/Bool: ONLY true, five times in 0.5 s (estop()).
                                       Never false: a person clears the e-stop
@@ -32,6 +36,7 @@ from aav_language import safety
 from aav_language.drive_maths import DriveGoal
 from aav_language.drive_tools import BackendError, CarState
 from action_msgs.msg import GoalStatus
+from diagnostic_msgs.msg import DiagnosticArray
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
 from rcl_interfaces.srv import GetParameters
@@ -45,6 +50,8 @@ from std_msgs.msg import Bool
 import tf2_ros
 import yaml
 
+DIAG_WAIT = 3.0     # s to wait at start for twist_mux's first report (it sends one a second)
+DIAG_FRESH = 3.5    # s: an older report means twist_mux has gone quiet
 EGO_PARAMS = ('max_speed', 'max_reverse_speed', 'max_acceleration', 'max_deceleration',
               'wheelbase', 'max_steering_angle')
 STATUS_NAMES = {GoalStatus.STATUS_SUCCEEDED: 'succeeded', GoalStatus.STATUS_CANCELED: 'canceled',
@@ -94,6 +101,9 @@ class RosBackend:
                               qos_profile_sensor_data)
         n.create_subscription(Bool, '/safety/estop', self._on_estop, reliable)
         n.create_subscription(VehicleStatus, '/vehicle/status', self._on_status, 10)
+        n.create_subscription(DiagnosticArray, '/diagnostics', self._on_diagnostics, 10)
+        self.diag_locks: Optional[Dict[str, bool]] = None
+        self.diag_at = -1e9
         self.mux_inputs, self.mux_locks = load_mux_config()
         for i in self.mux_inputs:
             n.create_subscription(TwistStamped, i.topic,
@@ -120,6 +130,11 @@ class RosBackend:
         self.executor.add_node(n)
         self.thread = threading.Thread(target=self.executor.spin, name='ros', daemon=True)
         self.thread.start()
+        # twist_mux reports its locks once a second: wait for one report, so the very first
+        # request already knows whether the e-stop is on.
+        deadline = time.monotonic() + DIAG_WAIT
+        while self.diag_locks is None and time.monotonic() < deadline:
+            time.sleep(0.05)
 
     # --- incoming ---
 
@@ -140,6 +155,13 @@ class RosBackend:
         with self.lock:
             self.status = msg
 
+    def _on_diagnostics(self, msg):
+        locks = safety.mux_locks_from_diagnostics(
+            [(s.name, {kv.key: kv.value for kv in s.values}) for s in msg.status])
+        if locks is not None:
+            with self.lock:
+                self.diag_locks, self.diag_at = locks, time.monotonic()
+
     def _arrived(self, name):
         with self.lock:
             self.arrivals[name] = time.monotonic()
@@ -157,7 +179,11 @@ class RosBackend:
             status, estop = self.status, self.estop_value
             ages = {k: now - t for k, t in self.arrivals.items()}
             locks = {k: (v, now - t) for k, (v, t) in self.lock_values.items()}
-        s = CarState(estop=estop)
+            diag = dict(self.diag_locks) if (
+                self.diag_locks is not None and now - self.diag_at < DIAG_FRESH) else None
+        s = CarState(estop=estop, mux_locks=diag)
+        for name, value in (diag or {}).items():
+            locks[name] = (value, 0.0)          # twist_mux's own word beats ours
         if odom is not None:
             p = odom.pose.pose
             s.speed = odom.twist.twist.linear.x

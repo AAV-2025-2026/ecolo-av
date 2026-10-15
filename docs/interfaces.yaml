@@ -366,6 +366,11 @@ topics:
     sub: []
     live: [sim, replay]
     note: Simulation time; every node runs with use_sim_time:=true in sim and replay.
+  /diagnostics:
+    type: diagnostic_msgs/msg/DiagnosticArray
+    pub: [twist_mux, ekf_local, ekf_global]
+    sub: [language_drive]
+    note: ROS's diagnostics. twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic.
 
 services:
   /spine/arm:

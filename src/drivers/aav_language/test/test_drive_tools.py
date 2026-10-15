@@ -92,6 +92,45 @@ def test_estop_on_refuses_every_move_and_stop_still_works():
     assert car.sent == []
 
 
+def test_an_estop_pressed_before_the_server_started_still_refuses():
+    # Gazebo, 15 Oct: /safety/estop was sent before this server started, and nobody sends
+    # it again. Only twist_mux's report (/diagnostics) still says the lock is on.
+    tools, car, _ = make()
+    plain = car.state
+
+    def late():
+        s = plain()
+        s.estop = s.vehicle_estop = None
+        s.mux_locks = {'estop': True, 'stop_sign': False}
+        return s
+    car.state = late
+    r = tools.drive(5)
+    assert not r['ok'] and 'e-stop is on' in r['message']
+    assert tools.status()['estop'] is True
+    assert car.sent == []
+
+
+def test_no_word_from_twist_mux_refuses_to_move():
+    tools, car, _ = make()
+    car.mux_silent = True
+    r = tools.drive(5)
+    assert not r['ok'] and 'twist_mux' in r['message']
+    assert tools.stop()['ok']
+
+
+def test_mux_locks_from_twist_mux_diagnostics():
+    # As twist_mux 4.5 sent it on the turtle, 15 Oct, after pixi run estop.
+    values = {'velocity topics.joy': ' masked (listening to /drivers/joy/cmd_vel @ 0.5s)',
+              'lock locks.estop': ' locked (listening to /safety/estop @ 0.000000s with '
+                                  'priority #255)',
+              'lock locks.stop_sign': ' free (listening to /perception/stop_sign @ 0.0s)',
+              'current priority': '255'}
+    got = safety.mux_locks_from_diagnostics([('ekf_local: odometry', {'x': '1'}),
+                                             ('twist_mux: Twist mux status', values)])
+    assert got == {'estop': True, 'stop_sign': False}
+    assert safety.mux_locks_from_diagnostics([('ekf_local: odometry', {})]) is None
+
+
 def test_tools_never_clear_the_estop():
     tools, car, _ = make()
     tools.estop()

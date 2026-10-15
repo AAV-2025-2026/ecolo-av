@@ -102,7 +102,9 @@ async def handle(request: str, agent: react.ReactAgent, call_tool, auto_yes: boo
         print(f'  {fast}():', json.loads(await call_tool(fast, {})).get('message'))
         return None
     plan = await agent.plan(request)
-    if plan.answer:
+    if plan.answer and (verbose or not plan.queued):
+        # With a plan, the plan speaks: the model's own words ("the car has started...")
+        # come before anything has moved, and can mislead.
         print(f'\n{plan.answer}')
     for call, why in plan.refused:
         print(f'  refused by the server: {call.text()}: {why}')
