@@ -64,6 +64,23 @@ def test_stopping_constant_deceleration():
     assert an.stopping(t, [1.0] * len(t), 0.0) is None    # never stops
 
 
+def test_fit_throttle_with_a_deadband():
+    # a = 1.5 th above a 0.1 deadband, nothing below, less 0.1 v.
+    th = [i / 100 for i in range(60)]
+    v = [0.5 + (i % 7) * 0.2 for i in range(60)]
+    a = [(1.5 * t if t > 0.1 else 0.0) - 0.1 * s for t, s in zip(th, v)]
+    fit = an.fit_throttle(th, v, a, drag=0.1, deadband=0.1)
+    assert fit.gain == pytest.approx(1.5)
+    assert an.fit_throttle([0.01] * 30, v[:30], a[:30], drag=0.1) is None   # never pushed
+
+
+def test_start_throttle_is_where_it_moved():
+    th = [0.0, 0.05, 0.1, 0.15, 0.2, 0.25]
+    v = [0.0, 0.0, 0.001, 0.01, 0.03, 0.06]
+    assert an.start_throttle(th, v) == 0.1
+    assert an.start_throttle(th, [1.0] * 6) is None     # already rolling: no answer
+
+
 def test_fit_lag_finds_the_time_constant():
     t = [i * 0.02 for i in range(200)]
     cmd = [0.0 if x < 0.5 else 1.0 for x in t]
