@@ -20,9 +20,9 @@ matches it. Still open (Q29): which screen, and GPS destinations this year.
 | Top strip | mode, armed, gear (D/R/P), e-stop on/off, battery, faults |
 | Speed | km/h, big. Grey with "OLD" when `/vehicle/status` stops |
 | Controls | steering (left of centre = left), throttle, brake |
-| Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it |
+| Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange **SIMULATED** / **BENCH** / **REPLAY** band along its bottom when `/system/source` says any data isn't the real car's |
 | E-STOP | the button: `/safety/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
-| Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago |
+| Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where `/system/source` names it |
 | GPS | is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age |
 
 ### Run it
@@ -60,6 +60,7 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 | One press, through the real node, to another node (`cargo test`) | exactly 5 trues, no false, each "sent to 1 node" |
 | Ctrl-C to `ros2 launch` | the window closes, "finished cleanly" |
 | A click on the window's button | not tested: macOS blocks clicks from scripts  |
+| The SIMULATED / BENCH / REPLAY banner (15 Oct) | its logic: `cargo test` (hud-core `origin`, and the message's numbers in hud-app). Not seen on screen yet: the window couldn't open from that session |
 
 ### What it shows with each backend
 
@@ -73,6 +74,7 @@ then `pixi run hud` in another terminal (the same `ROS_DOMAIN_ID`).
 | Camera | NEVER: no camera | ✅ road world, about 9 Hz | ✅ the drawn road | the camera Pis |
 | Stop sign | NEVER | with `perception:=true` (`pixi run -e ml sim ...`) | with `--perception` | YOLO |
 | Battery | NEVER | NEVER: not simulated | ✅ | the battery monitor |
+| Orange banner (`/system/source`, 15 Oct) | SIMULATED | SIMULATED | BENCH | none: `spine_bridge` and `legacy_uart_bridge` say REAL |
 
 Checked on 15 Oct by listening to each topic while the backend drove a scripted goal
 (the window itself couldn't open from that session). NEVER on a panel is the honest answer:

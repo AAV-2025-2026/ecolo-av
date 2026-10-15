@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">15 min read · 12 sections</div></header>
+<div class="meta">16 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -91,7 +91,7 @@ matches it. Still open (Q29): which screen, and GPS destinations this year.</p><
 </tr>
 <tr>
 <td>Camera</td>
-<td>the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it</td>
+<td>the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange <strong>SIMULATED</strong> / <strong>BENCH</strong> / <strong>REPLAY</strong> band along its bottom when <code>/system/source</code> says any data isn't the real car's</td>
 </tr>
 <tr>
 <td>E-STOP</td>
@@ -99,7 +99,7 @@ matches it. Still open (Q29): which screen, and GPS destinations this year.</p><
 </tr>
 <tr>
 <td>Topics</td>
-<td>every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago</td>
+<td>every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where <code>/system/source</code> names it</td>
 </tr>
 <tr>
 <td>GPS</td>
@@ -176,6 +176,10 @@ pixi run hud fullscreen:=true      # full screen; F11 switches too</code></pre>
 <td>A click on the window's button</td>
 <td>not tested: macOS blocks clicks from scripts</td>
 </tr>
+<tr>
+<td>The SIMULATED / BENCH / REPLAY banner (15 Oct)</td>
+<td>its logic: <code>cargo test</code> (hud-core <code>origin</code>, and the message's numbers in hud-app). Not seen on screen yet: the window couldn't open from that session</td>
+</tr>
 </tbody>
 </table></div>
 <h3 id="what-it-shows-with-each-backend">What it shows with each backend</h3>
@@ -226,6 +230,13 @@ then <code>pixi run hud</code> in another terminal (the same <code>ROS_DOMAIN_ID
 <td>NEVER: not simulated</td>
 <td>✅</td>
 <td>the battery monitor</td>
+</tr>
+<tr>
+<td>Orange banner (<code>/system/source</code>, 15 Oct)</td>
+<td>SIMULATED</td>
+<td>SIMULATED</td>
+<td>BENCH</td>
+<td>none: <code>spine_bridge</code> and <code>legacy_uart_bridge</code> say REAL</td>
 </tr>
 </tbody>
 </table></div>

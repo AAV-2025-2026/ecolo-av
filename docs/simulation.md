@@ -54,6 +54,7 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 | `follow` | `true` | point the window's camera at the car |
 | `rviz` | `true` | open RViz |
 | `lidar` | `false` | `true`: the simulated roof lidar, in the road world only ([below](#the-lidar-gazebo-only)) |
+| `actuator_model` | `true` | the car answers like `vehicle.yaml`'s `actuators:` say ([below](#the-actuator-model)); `false`: the old instant car, to compare |
 
 ### What Gazebo simulates
 
@@ -72,6 +73,9 @@ real-time factor at 0.98-0.99.
 | Radar | `/aav/radar/points` (a lidar shaped like the radar) | `/sensors/radar/points` | 10 Hz | 5 cm | road |
 | Lidar (the car has none) | `/aav/lidar/points` | `/sensors/lidar/points` | 10 Hz | 3 cm | road, with `lidar:=true` |
 | Where the car really is | `/model/aav/truth` | `/vehicle/gazebo/truth`, for checks only | 50 Hz | none | road |
+| Steering, throttle, brake | (the actuator model) | `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`: command and measured | 50 Hz | none | all |
+| Each wheel's speed | `/world/aav/model/aav/joint_state` | `/vehicle/wheels` (m/s, all four) | 50 Hz | none | all |
+| "This is a simulation" | (`gazebo_adapter`) | `/system/source`, latched: every sensor above is SIM | once | - | all |
 
 Each one carries the same name, type and frame as the real device's, so the software above
 can't tell. `/gazebo/*` topics are Gazebo's own side of `gazebo_adapter`, not in the
@@ -89,9 +93,46 @@ Where each sensor sits (15 Oct, until Friday's tape measure): the two front came
 | The magnetometer | the EKFs don't use it |
 | The battery | nothing to simulate yet |
 | CAN and the spine | that's the bench's job (`pixi run bench`), not Gazebo's |
-| Steering feedback, motor lag, wheel slip | Gazebo's Ackermann system steers and drives exactly as told |
+| The real actuators' numbers | the [actuator model](#the-actuator-model) has them, but they're guesses until the tests (`READ-ME-TESTS.md` 3.10-3.12, 4.1-4.5) |
+| Wheel slip, slopes, the weight | the model sets the speed; no forces (option B in `READ-ME-FULL-SIMULATION.md`) |
+| The spine's own logic (timeouts, e-stop) | a Python copy of its speed loop only; the spine in the loop is step 4 |
 | A real radar | the stand-in is a lidar: it sees every surface, and no speeds of its own |
 | Traffic, people, weather | the worlds are empty but for the road, the sign and the box |
+
+### The actuator model
+
+Added 15 Oct (`READ-ME-FULL-SIMULATION.md`, step 3). Gazebo used to set the speed itself
+(+1.5 / -3.0 m/s²) and steer at once. Now `gazebo_adapter` puts a model of the actuators
+in between, 50 times a second, on Gazebo's clock:
+
+```text
+ego's speed ──> speed loop (the spine's, in Python) ──> throttle %, brake %
+                                                          │
+ego's angle ───────────────────────────────────────┐      ▼
+                                       ACTUATOR MODEL (actuator_model.py)
+                                       throttle → push, brake → stop, drag
+                                       steering: deadband → motor speed → lag → offset
+                                                          │
+                                                          ▼
+                                       Gazebo: this speed, this angle
+```
+
+| Part | Its numbers (`vehicle.yaml`, `actuators:`) | Measured by |
+|---|---|---|
+| Throttle | `max_accel` 1.5 m/s², `throttle_deadband` 0, `throttle_lag` 0.1 s | tests 4.1, 4.4 |
+| Coasting | `drag` 0.1 /s | test 4.2 |
+| Brake | `max_brake` 3.0 m/s², `brake_lag` 0.2 s | test 4.3 |
+| Steering | `steer_rate` 0.8 rad/s, `steer_lag` 0.1 s, `steer_offset` 0, `steer_deadband` 0.005 rad | tests 3.10-3.12, 4.5 |
+
+!!! warning "Every number is a guess"
+    Chosen to match Gazebo's old limits and the bench's `spine_sim`. Swap in the measured
+    ones once the tests are done: no code changes.
+
+- Gazebo's own limits (`aav.gazebo.xacro`) are now ±10 m/s², so the model limits, not Gazebo.
+- `actuator_model:=false` keeps the old behaviour (in the adapter), to compare the two.
+- No `/ego/actuator_cmd` for 0.2 s: the model brakes to a stop, like the spine's watchdog.
+- Plot command against measured: `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`
+  (Foxglove or PlotJuggler).
 
 How the simulated car connects:
 - Gazebo plays the car, with Ackermann steering, an IMU and a GPS.

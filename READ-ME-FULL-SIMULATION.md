@@ -10,6 +10,35 @@ what's missing, and how the car's measurements feed in.
 > - **The fix:** an **actuator model** between our commands and Gazebo, filled with the numbers from the tests (`READ-ME-TESTS.md`, stage 4). Then the real firmware logic **in the loop**, as the bench already does.
 > - **Measurements come first:** the sheet (`READ-ME-MEASURE-THE-CAR.md`) for where everything is, the tests for how it moves.
 
+## Status (15 Oct, branch `wt/full-sim-1`)
+
+| # | Step | Status |
+|---|---|---|
+| 1 | `/system/source` + the SIMULATED banner | ✅ built: Gazebo, turtlesim, the bench, the car's backends and replay announce; the raylib HUD shows the banner and a tag per topic |
+| 2 | `/vehicle/steering`, `/throttle`, `/brake`, `/wheels` | ✅ built: Gazebo all four; the bench and the car (spine_bridge) steering, throttle, brake; turtlesim steering |
+| 3 | The actuator model (A), guessed numbers | ✅ built: `aav_gazebo/actuator_model.py`, numbers in `vehicle.yaml` `actuators:`, on by default (`actuator_model:=false` for the old car) |
+| 4-10 | the rest | not started |
+
+Tested (15 Oct, Ben's Mac):
+
+| Run | Result |
+|---|---|
+| `pixi run sim-check` (the model on) | ✅ all 6: graph vs contract (the new topics too), drive 6.01 m of 6.5 |
+| `pixi run sim-check --obstacle --lane` | ✅ all: stood still 0.51 m before the box; lane keeping back within 5 cm in 5.4 s |
+| `pixi run bench-check` | ✅ all 6, graph vs contract with the bench's new topics |
+| turtle profile vs contract | ✅ `/system/source` and `/vehicle/steering` from `turtlesim_adapter` |
+| Gazebo with `actuator_model:=false` | ✅ the old car: no throttle or brake (NaN), an instant steer |
+| The HUD's banner | ✅ its logic (`cargo test`); ❌ not seen on screen: the window couldn't open from that session |
+
+What's where:
+
+| Thing | Where |
+|---|---|
+| The messages | `aav_interfaces`: `DataSource` + `SensorSource` (REAL, SIM, BENCH, REPLAY per sensor), `ActuatorState` (command + measured), `WheelSpeeds` |
+| The contract | `docs/interfaces.yaml`; `/system/` is a new topic area (`docs/naming.md`) |
+| The model and its tests | `src/backends/aav_gazebo/aav_gazebo/actuator_model.py`, `test/test_actuator_model.py` |
+| How it's documented | `docs/simulation.md`, "The actuator model"; `docs/hud.md` for the banner |
+
 ## 1. The full pipeline, in one picture
 
 ```text
@@ -37,12 +66,12 @@ what's missing, and how the car's measurements feed in.
 | 3 cameras | ✅ 15 Oct: two front, one rear | the real lens of each (N4); perception reads only the front left |
 | Radar (grill) | ✅ a stand-in, shaped like the TI radar | its real config file, from the car |
 | Lidar (roof) | ✅ a generic 16-beam one, `lidar:=true` | its real model (probably a Velodyne); **nothing reads it yet**: it should feed Nav2's costmap and the collision monitor |
-| **Throttle and brake** | ❌ Gazebo sets the speed itself | **an actuator model**: throttle % → acceleration, brake % → deceleration, from tests 4.1-4.4 |
-| **Steering** | ❌ an instant, perfect steer | **its speed, lag, centre offset and real angles**, from tests 3.10-3.12 and 4.5 |
+| **Throttle and brake** | ✅ 15 Oct: the actuator model, with **guessed** numbers | the real numbers, from tests 4.1-4.4 |
+| **Steering** | ✅ 15 Oct: speed, lag, centre offset, deadband, with **guessed** numbers | the real numbers and angles, from tests 3.10-3.12 and 4.5 |
 | Weight | in the model, but hardly matters (see the box below) | the real weight (scales, M7) |
 | The firmware's safety logic | ❌ skipped in Gazebo (the bench has it) | **the spine in the loop**: CAN frames, timeouts, e-stops, as on the bench |
-| What's real and what's fake | ❌ looks the same as the car | **`/system/source` and a SIMULATED banner** on the HUD |
-| Per-actuator readings | bundled in `/vehicle/status` | `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`, `/vehicle/wheels` |
+| What's real and what's fake | ✅ 15 Oct: `/system/source`, and the HUD's orange SIMULATED banner | - |
+| Per-actuator readings | ✅ 15 Oct: `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`, `/vehicle/wheels` (and still `/vehicle/status`) | the real measured values from the car |
 | The world | a test road, an empty lot | **a copy of the real test lot** |
 | Sensor failures | ❌ | make a sensor fail on purpose (a frozen camera, a lost GPS), and check the car stops, loudly |
 
@@ -85,9 +114,9 @@ B only if A isn't close enough to the real car.
 
 | # | Build | Needs the car? | Size |
 |---|---|---|---|
-| 1 | `/system/source` + the SIMULATED banner | no | small |
-| 2 | Per-actuator readings: `/vehicle/steering`, `/throttle`, `/brake`, `/wheels` | no | small |
-| 3 | **The actuator model (A)**, with guessed numbers for now, in `vehicle.yaml` | no; the numbers later | 1 day |
+| 1 | `/system/source` + the SIMULATED banner ✅ 15 Oct | no | small |
+| 2 | Per-actuator readings: `/vehicle/steering`, `/throttle`, `/brake`, `/wheels` ✅ 15 Oct | no | small |
+| 3 | **The actuator model (A)**, with guessed numbers for now, in `vehicle.yaml` ✅ 15 Oct | no; the numbers later | 1 day |
 | 4 | **The spine in the loop**: ego → CAN → the spine's logic → the actuator model → Gazebo | no | 1-2 days |
 | 5 | The lidar into Nav2's costmap and the collision monitor | no | small |
 | 6 | Sensor failures on purpose, and checks that the car stops | no | 1 day |

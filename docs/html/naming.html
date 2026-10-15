@@ -66,7 +66,7 @@
 <code>wt/topic-areas</code>, now on <code>main</code>. <code>tools/tests/test_topic_areas.py</code> keeps it that way.</p></div>
 <section class="card"><h2 id="the-rule">The rule</h2>
 <p>The first part of every name is the <strong>area</strong>: the layer of the picture it comes from. The
-same areas as the folders under <code>src/</code>.</p>
+same areas as the folders under <code>src/</code>, plus <code>/system/</code> for the whole run.</p>
 <pre class="highlight"><code class="language-text">/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code></pre>
 <div class="table-wrap"><table>
 <thead>
@@ -126,6 +126,11 @@ same areas as the folders under <code>src/</code>.</p>
 <td><code>/hud/</code></td>
 <td>what only the screen needs</td>
 <td>the HUD</td>
+</tr>
+<tr>
+<td><code>/system/</code></td>
+<td>what kind of run this is: <code>/system/source</code> (real, sim, bench, replay)</td>
+<td>the backends, the bench, a replay (added 15 Oct, <code>READ-ME-FULL-SIMULATION.md</code>)</td>
 </tr>
 </tbody>
 </table></div>

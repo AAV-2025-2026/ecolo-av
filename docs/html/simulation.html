@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">19 min read · 7 sections</div></header>
+<div class="meta">21 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -171,6 +171,11 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 <td><code>false</code></td>
 <td><code>true</code>: the simulated roof lidar, in the road world only (<a href="#the-lidar-gazebo-only">below</a>)</td>
 </tr>
+<tr>
+<td><code>actuator_model</code></td>
+<td><code>true</code></td>
+<td>the car answers like <code>vehicle.yaml</code>'s <code>actuators:</code> say (<a href="#the-actuator-model">below</a>); <code>false</code>: the old instant car, to compare</td>
+</tr>
 </tbody>
 </table></div>
 <h3 id="what-gazebo-simulates">What Gazebo simulates</h3>
@@ -268,6 +273,30 @@ real-time factor at 0.98-0.99.</p>
 <td>none</td>
 <td>road</td>
 </tr>
+<tr>
+<td>Steering, throttle, brake</td>
+<td>(the actuator model)</td>
+<td><code>/vehicle/steering</code>, <code>/vehicle/throttle</code>, <code>/vehicle/brake</code>: command and measured</td>
+<td>50 Hz</td>
+<td>none</td>
+<td>all</td>
+</tr>
+<tr>
+<td>Each wheel's speed</td>
+<td><code>/world/aav/model/aav/joint_state</code></td>
+<td><code>/vehicle/wheels</code> (m/s, all four)</td>
+<td>50 Hz</td>
+<td>none</td>
+<td>all</td>
+</tr>
+<tr>
+<td>"This is a simulation"</td>
+<td>(<code>gazebo_adapter</code>)</td>
+<td><code>/system/source</code>, latched: every sensor above is SIM</td>
+<td>once</td>
+<td>-</td>
+<td>all</td>
+</tr>
 </tbody>
 </table></div>
 <p>Each one carries the same name, type and frame as the real device's, so the software above
@@ -301,8 +330,16 @@ contract.</p>
 <td>that's the bench's job (<code>pixi run bench</code>), not Gazebo's</td>
 </tr>
 <tr>
-<td>Steering feedback, motor lag, wheel slip</td>
-<td>Gazebo's Ackermann system steers and drives exactly as told</td>
+<td>The real actuators' numbers</td>
+<td>the <a href="#the-actuator-model">actuator model</a> has them, but they're guesses until the tests (<code>READ-ME-TESTS.md</code> 3.10-3.12, 4.1-4.5)</td>
+</tr>
+<tr>
+<td>Wheel slip, slopes, the weight</td>
+<td>the model sets the speed; no forces (option B in <code>READ-ME-FULL-SIMULATION.md</code>)</td>
+</tr>
+<tr>
+<td>The spine's own logic (timeouts, e-stop)</td>
+<td>a Python copy of its speed loop only; the spine in the loop is step 4</td>
 </tr>
 <tr>
 <td>A real radar</td>
@@ -314,6 +351,63 @@ contract.</p>
 </tr>
 </tbody>
 </table></div>
+<h3 id="the-actuator-model">The actuator model</h3>
+<p>Added 15 Oct (<code>READ-ME-FULL-SIMULATION.md</code>, step 3). Gazebo used to set the speed itself
+(+1.5 / -3.0 m/s²) and steer at once. Now <code>gazebo_adapter</code> puts a model of the actuators
+in between, 50 times a second, on Gazebo's clock:</p>
+<pre class="highlight"><code class="language-text">ego's speed ──&gt; speed loop (the spine's, in Python) ──&gt; throttle %, brake %
+                                                          │
+ego's angle ───────────────────────────────────────┐      ▼
+                                       ACTUATOR MODEL (actuator_model.py)
+                                       throttle → push, brake → stop, drag
+                                       steering: deadband → motor speed → lag → offset
+                                                          │
+                                                          ▼
+                                       Gazebo: this speed, this angle</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Its numbers (<code>vehicle.yaml</code>, <code>actuators:</code>)</th>
+<th>Measured by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Throttle</td>
+<td><code>max_accel</code> 1.5 m/s², <code>throttle_deadband</code> 0, <code>throttle_lag</code> 0.1 s</td>
+<td>tests 4.1, 4.4</td>
+</tr>
+<tr>
+<td>Coasting</td>
+<td><code>drag</code> 0.1 /s</td>
+<td>test 4.2</td>
+</tr>
+<tr>
+<td>Brake</td>
+<td><code>max_brake</code> 3.0 m/s², <code>brake_lag</code> 0.2 s</td>
+<td>test 4.3</td>
+</tr>
+<tr>
+<td>Steering</td>
+<td><code>steer_rate</code> 0.8 rad/s, <code>steer_lag</code> 0.1 s, <code>steer_offset</code> 0, <code>steer_deadband</code> 0.005 rad</td>
+<td>tests 3.10-3.12, 4.5</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Every number is a guess</p>
+<pre><code>Chosen to match Gazebo's old limits and the bench's `spine_sim`. Swap in the measured
+ones once the tests are done: no code changes.
+</code></pre>
+</div>
+<ul>
+<li>Gazebo's own limits (<code>aav.gazebo.xacro</code>) are now ±10 m/s², so the model limits, not Gazebo.</li>
+<li><code>actuator_model:=false</code> keeps the old behaviour (in the adapter), to compare the two.</li>
+<li>No <code>/ego/actuator_cmd</code> for 0.2 s: the model brakes to a stop, like the spine's watchdog.</li>
+<li>Plot command against measured: <code>/vehicle/steering</code>, <code>/vehicle/throttle</code>, <code>/vehicle/brake</code>
+  (Foxglove or PlotJuggler).</li>
+</ul>
 <p>How the simulated car connects:</p>
 <ul>
 <li>Gazebo plays the car, with Ackermann steering, an IMU and a GPS.</li>

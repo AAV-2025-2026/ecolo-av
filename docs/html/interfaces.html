@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">21 min read · 4 sections</div></header>
+<div class="meta">23 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -188,6 +188,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs.</td>
 </tr>
 <tr>
+<td><code>/system/source</code></td>
+<td><code>aav_interfaces/msg/DataSource</code></td>
+<td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>replay_source</code></td>
+<td><code>hud</code></td>
+<td>turtle, sim, car, replay, bench</td>
+<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.</td>
+</tr>
+<tr>
 <td><code>/vehicle/odom</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
@@ -202,6 +210,38 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
 <td>turtle, sim, bench</td>
 <td>Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.</td>
+</tr>
+<tr>
+<td><code>/vehicle/steering</code></td>
+<td><code>aav_interfaces/msg/ActuatorState</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code></td>
+<td>-</td>
+<td>turtle, sim, bench</td>
+<td>The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too.</td>
+</tr>
+<tr>
+<td><code>/vehicle/throttle</code></td>
+<td><code>aav_interfaces/msg/ActuatorState</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code></td>
+<td>-</td>
+<td>sim, bench</td>
+<td>The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.</td>
+</tr>
+<tr>
+<td><code>/vehicle/brake</code></td>
+<td><code>aav_interfaces/msg/ActuatorState</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code></td>
+<td>-</td>
+<td>sim, bench</td>
+<td>The brake, 0..1. As /vehicle/throttle.</td>
+</tr>
+<tr>
+<td><code>/vehicle/wheels</code></td>
+<td><code>aav_interfaces/msg/WheelSpeeds</code></td>
+<td><code>gazebo_adapter</code></td>
+<td>-</td>
+<td>sim</td>
+<td>Each wheel's ground speed (m/s), NaN where not measured. Gazebo gives all four (its wheel joints); the car has one encoder, still read as /vehicle/odom.</td>
 </tr>
 <tr>
 <td><code>/vehicle/joint_states</code></td>

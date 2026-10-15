@@ -112,6 +112,11 @@ work on." His order, with the work under way:
       with lane lines, a stop sign and an obstacle, a camera and a radar on the car, and
       perception, lane keeping, collision_monitor and the HUD in `pixi run sim`. *Done
       15 Oct: merged from `wt/sim-full`, with a lidar too ([Simulation](docs/simulation.md)).*
+      - [ ] **The full simulation** (Ben, 15 Oct: "We want to fully simulate the car inside
+            gazebo with all the sensors and build the full pipeline";
+            `READ-ME-FULL-SIMULATION.md`). *Steps 1-3 built 15 Oct on `wt/full-sim-1`:
+            `/system/source` and the HUD's SIMULATED banner, the per-actuator topics, the
+            actuator model with guessed numbers. Next: step 4, the spine in the loop.*
       - [ ] **Ackermann done properly**, testable in Gazebo and on the bench: reversing
             (Reeds-Shepp), both front wheels' real angles, the steering curve from
             `Ackermann.m` (Q2). *Paused 11 Oct, on `wt/ackermann`.*
