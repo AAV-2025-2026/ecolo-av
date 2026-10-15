@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 spine-core = { path = "../spine-core" }
 aav-inputs = { path = "../aav-inputs" }
+legacy-link = { path = "../legacy-link" }
 jrk-g2 = { path = "../jrk-g2" }
 ad5311 = { path = "../ad5311" }
 pca9555 = { path = "../pca9555" }

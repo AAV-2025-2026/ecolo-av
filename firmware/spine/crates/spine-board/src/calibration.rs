@@ -185,7 +185,26 @@ impl Brake {
     }
 }
 
+impl Brake {
+    /// The fraction (0 to 1) for a target: the inverse of [`Brake::target`].
+    pub fn fraction(&self, target: u16) -> f32 {
+        let span = f32::from(self.full) - f32::from(self.released);
+        if span == 0.0 {
+            return 1.0;
+        }
+        ((f32::from(target) - f32::from(self.released)) / span).clamp(0.0, 1.0)
+    }
+}
+
 impl Throttle {
+    /// The fraction (0 to 1) for a DAC code: the inverse of [`Throttle::code`].
+    pub fn fraction(&self, code: u16) -> f32 {
+        if self.full_code == 0 {
+            return 0.0;
+        }
+        (f32::from(code) / f32::from(self.full_code)).clamp(0.0, 1.0)
+    }
+
     /// The DAC code for 0 to 1. Not a number gives 0.
     pub fn code(&self, throttle: f32) -> u16 {
         if throttle > 0.0 {
@@ -280,6 +299,23 @@ mod tests {
         assert_eq!(t.code(2.0), 700); // the cap
         assert_eq!(t.code(-0.5), 0);
         assert_eq!(t.code(f32::NAN), 0);
+    }
+
+    #[test]
+    fn fractions_give_the_same_targets_back() {
+        let (b, t) = (CAL.brake, CAL.throttle);
+        for target in 400..=3500 {
+            assert_eq!(b.target(b.fraction(target)), target);
+        }
+        for code in 0..=700 {
+            assert_eq!(t.code(t.fraction(code)), code);
+        }
+        let s = CAL.steering;
+        for target in 400..=3500 {
+            assert_eq!(s.target(s.angle(target)), target);
+        }
+        assert_eq!((b.fraction(0), b.fraction(9999)), (0.0, 1.0));
+        assert_eq!(t.fraction(1023), 1.0);
     }
 
     #[test]

@@ -108,6 +108,7 @@ dependencies = [
  "embedded-io",
  "ibus",
  "jrk-g2",
+ "legacy-link",
  "pca9555",
  "spine-core",
 ]

@@ -90,6 +90,20 @@ pub struct FakeBoard {
     pub can_ok: bool,
 }
 
+impl FakeBoard {
+    /// At 1000 ms, the e-stop closed, CAN working, nothing received.
+    pub fn new() -> Self {
+        FakeBoard {
+            now: 1000,
+            estop_open: false,
+            wheel: WheelCount::default(),
+            rx: VecDeque::new(),
+            sent: Vec::new(),
+            can_ok: true,
+        }
+    }
+}
+
 impl Board for FakeBoard {
     fn now_ms(&mut self) -> u32 {
         self.now
@@ -149,15 +163,13 @@ impl Rig {
         let uart = FakeUart::default();
         let cal = Calibration::TODAY;
         let devices = Devices::new(bus.clone(), bus.clone(), bus.clone(), bus.clone(), &cal);
-        let board = FakeBoard {
-            now: 1000,
-            estop_open: false,
-            wheel: WheelCount::default(),
-            rx: VecDeque::new(),
-            sent: Vec::new(),
-            can_ok: true,
-        };
-        let mut sb = SpineBoard::new(board, devices, uart.clone(), cal, SpineConfig::default());
+        let mut sb = SpineBoard::new(
+            FakeBoard::new(),
+            devices,
+            uart.clone(),
+            cal,
+            SpineConfig::default(),
+        );
         sb.init();
         Rig {
             sb,
