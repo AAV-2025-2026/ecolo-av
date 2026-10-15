@@ -8,7 +8,7 @@ is tested on a laptop, without a board. The board programs are in `boards/`:
 
 | Crate | What it is | Tests |
 |---|---|---|
-| `spine-core` | the spine's logic: modes, arming, the 100 ms watchdog, the speed loop (closed, or open with no wheel speed), the encoder, the CAN frames, open-loop commands, and the three choices still open (below) | 69 |
+| `spine-core` | the spine's logic: modes, arming, the 100 ms watchdog, the speed loop (closed, or open with no wheel speed), the encoder, the CAN frames, open-loop commands, and the three choices still open (below) | 70 |
 | `wheel-core` | the front wheel nodes' logic: Hall sensor pulses to speed, and the WHEEL_SPEED frame | 9 |
 | `legacy-link` | the 2025-26 UART link: the Motor-Pi's 13-byte frames, and the targets the C++ set for them | 31 |
 | `aav-inputs` | clean inputs: debounced switches, an e-stop that trips at once, counting with a lockout | 9 |

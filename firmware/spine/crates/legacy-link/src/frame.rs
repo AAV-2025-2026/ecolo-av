@@ -31,8 +31,9 @@ impl Frame {
     pub fn encode(&self) -> [u8; FRAME_LEN] {
         let mut bytes = [0; FRAME_LEN];
         let values = [self.steering, self.speed, self.accel];
-        for (chunk, value) in bytes.chunks_exact_mut(4).zip(values) {
-            chunk.copy_from_slice(&value.to_le_bytes());
+        let (chunks, _checksum) = bytes.as_chunks_mut::<4>();
+        for (chunk, value) in chunks.iter_mut().zip(values) {
+            *chunk = value.to_le_bytes();
         }
         bytes[12] = checksum(&bytes[..12]);
         bytes

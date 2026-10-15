@@ -6,8 +6,8 @@ ego: /control/cmd_vel (TwistStamped from twist_mux) -> /ego/actuator_cmd (Ackerm
 max_speed (m/s) caps the forward speed below config/ego.yaml's, for a first drive on
 stands; empty (the default) keeps ego.yaml's. It can only lower the cap, never raise it.
 
-Wheelbase and steering limit come from aav_description/config/vehicle.yaml; the
-speed and rate limits from config/ego.yaml.
+The wheelbase, the steering limit and the reverse speed come from
+aav_description/config/vehicle.yaml; the other limits from config/ego.yaml.
 """
 
 import os

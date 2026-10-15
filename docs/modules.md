@@ -453,7 +453,7 @@ in `firmware/spine` (part of `tools/test.sh`). [Firmware](firmware.md) and
 | Crate or file | Does | Why | Origin | Status | Read first |
 |---|---|---|---|---|---|
 | `can/aav.dbc` | the CAN contract: six frames between the Orin, the spine and the two wheel nodes | both sides must agree on every bit | ours | v0.2.0 (the KEFC plan), merged 15 Oct | `aav.dbc`, then `test_vectors.json` |
-| `spine-core` | the spine's decisions: modes, arming, the 100 ms watchdog, speed loop (closed or open), encoder | the safety rules, testable without hardware | ours | [[works]] 69 tests, and the bench | `src/lib.rs` |
+| `spine-core` | the spine's decisions: modes, arming, the 100 ms watchdog, speed loop (closed or open), encoder | the safety rules, testable without hardware | ours | [[works]] 70 tests, and the bench | `src/lib.rs` |
 | `wheel-core` | a front wheel node's logic: Hall sensor pulses to speed, the WHEEL_SPEED frame | wheel speed for the odometry | ours | [[works]] 9 tests, and the bench | `src/lib.rs` |
 | `aav-inputs` | debounced switches, an instant e-stop, counting with a lockout | clean inputs from noisy pins | ours | [[works]] tests | `src/lib.rs` |
 | `jrk-g2` | the Pololu Jrk G2 (steering 0x05, brake 0x04) over I2C | steering and brake | ours, from Pololu's guide and the 2025-26 bytes | [[works]] against mocks | `src/lib.rs` |

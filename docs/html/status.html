@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">9 min read · 4 sections</div></header>
+<div class="meta">10 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -134,7 +134,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Nav2</td>
 <td><code>aav_navigation</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign</td>
+<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (<code>reversing:=true</code>, 15 Oct): on in Gazebo and on the bench, off on the car; its settings are tested; <span class="badge b-works">works</span> in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s</td>
 </tr>
 <tr>
 <td>twist_mux</td>
@@ -174,7 +174,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Spine firmware logic</td>
 <td><code>firmware/spine/crates/spine-core</code></td>
-<td><span class="badge b-works">works</span> 69 tests, and on the bench</td>
+<td><span class="badge b-works">works</span> 70 tests, and on the bench</td>
 </tr>
 <tr>
 <td>Wheel node logic (15 Oct)</td>

@@ -6,7 +6,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [hud_web:=false] [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
-      [actuator_model:=true] [sim_speed:=]
+      [actuator_model:=true] [sim_speed:=] [reversing:=true]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
   pixi run sim world:=test_lot sim_speed:=3 hud:=true   Gazebo, RViz, Nav2 and the HUD window
@@ -81,7 +81,7 @@ def launch_setup(context):
         raise ValueError(f'world:={world}: pick one of {sorted(MAPS)}')
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
-                      'hud_web', 'map', 'foxglove')}
+                      'hud_web', 'map', 'foxglove', 'reversing')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -122,7 +122,8 @@ def launch_setup(context):
                                map=os.path.join(nav_share, 'maps', MAPS[world]),
                                radar=sensors, collision_monitor=sensors,
                                camera_obstacles=flag['camera_obstacles'],
-                               max_speed=arg('sim_speed')))
+                               max_speed=arg('sim_speed'),
+                               reversing=str(flag['reversing']).lower()))
     if flag['teleop']:
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
     if flag['perception']:
@@ -209,5 +210,9 @@ def generate_launch_description():
         DeclareLaunchArgument('sim_speed', default_value='',
                               description='m/s, up to 5: a higher top speed for ego and Nav2 '
                                           "than the car's 1.0, in Gazebo only"),
+        DeclareLaunchArgument('reversing', default_value='true',
+                              description='Nav2 may drive backwards, at up to '
+                                          "vehicle.yaml's max_reverse_speed "
+                                          '(docs/learn-nav2.md, Reversing)'),
         OpaqueFunction(function=launch_setup),
     ])

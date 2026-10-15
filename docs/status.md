@@ -22,7 +22,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Keyboard | teleop_twist_keyboard | [[works]] |
 | Scripted | `aav_scripted` | [[works]] turtle and the bench |
 | Plain English | `aav_language`: a drive tool server (MCP) and a local model (MLX) | [[works]] in Gazebo and the turtle, 15 Oct: "drive 10 m forward" drove 10.02 m in Gazebo, a 90° turn turned 87.6°. Asks before it moves; refuses the real car without `--car`. [[untested]] on the bench and the car ([Plain English](plain-english.md)) |
-| Nav2 | `aav_navigation` | [[works]] in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign |
+| Nav2 | `aav_navigation` | [[works]] in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (`reversing:=true`, 15 Oct): on in Gazebo and on the bench, off on the car; its settings are tested; [[works]] in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s |
 | twist_mux | `aav_mux` | [[works]] |
 | ego | `aav_ego` | [[works]] |
 | turtlesim | `aav_turtlesim` | [[works]] |
@@ -30,7 +30,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Gazebo's road world | `aav_gazebo` `world:=road` | [[works]] on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) (with `lidar:=true`) render headless; `pixi run sim-check`, `--lidar --obstacle` and `--perception` pass. With YOLO and the lidar together it was flaky, so the lidar is off by default. [[untested]] on Linux, which needs EGL ([Simulation](simulation.md)) |
 | Real car | `aav_spine` | [[works]] on the bench, against `spine_sim`: arming, driving, both e-stops |
 | Today's car | `aav_legacy` | [[untested]] on the car |
-| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 69 tests, and on the bench |
+| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 70 tests, and on the bench |
 | Wheel node logic (15 Oct) | `firmware/spine/crates/wheel-core` | [[untested]] 9 tests; no board crate yet (`boards/esp32s3-wheel`, [Rust firmware](rust-firmware.md)) |
 | Spine device drivers and glue | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `legacy-link`, `spine-board` | [[works]] 176 tests, against mocks; `legacy-link` also against the 2025-26 C++ itself |
 | ESP32 board program (Rust) | `firmware/spine/boards/esp32-umod` | [[untested]] builds with Espressif's Rust (`pixi run esp-tools`), both links; never flashed. Merged 15 Oct; the C++ stays on the car until it is proven. [First flash on the bench](esp32-bench.md) |

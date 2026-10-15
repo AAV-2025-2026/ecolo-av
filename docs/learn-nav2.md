@@ -49,7 +49,7 @@ So every path it returns is one our car can follow.
 
 | Setting (`nav2.yaml`) | Ours | Means |
 |---|---|---|
-| `motion_model_for_search` | `DUBIN` | forward only. `REEDS_SHEPP` would add reversing |
+| `motion_model_for_search` | `DUBIN` | forward only. `REEDS_SHEPP` (forward and back) with `reversing:=true` ([Reversing](#reversing)) |
 | `minimum_turning_radius` | 2.87 m | set by the launch file: wheelbase ÷ tan(max steer) |
 | `angle_quantization_bins` | 72 | headings in 5° steps |
 | `max_planning_time` | 5.0 s | give up after this |
@@ -91,7 +91,7 @@ The arc's curvature = 2 × (how far the carrot is to the side) ÷ (lookahead)².
 | `desired_linear_vel` | 1.0 m/s | start slow; ego caps it too |
 | Lookahead | speed × 1.5 s, kept between 1.5 and 4.0 m | short weaves, long cuts corners. About the wheelbase or more |
 | `use_rotate_to_heading` | **false** | a car can't spin on the spot |
-| `allow_reversing` | false | the planner doesn't plan reversing yet |
+| `allow_reversing` | false | true with `reversing:=true`: it follows a path backwards ([Reversing](#reversing)) |
 
 **Done** when within 0.5 m and 0.5 rad of the goal. **Stuck** if it moves less than
 0.5 m in 10 s.
@@ -123,8 +123,34 @@ Navigate (up to 6 tries)
 | Changed for a car | Why |
 |---|---|
 | **No Spin** | a car can't turn on the spot |
-| **No BackUp** (yet) | nothing senses what's behind the car |
+| **No BackUp** on the car | nothing senses what's behind the car. With `reversing:=true` (Gazebo, the bench), the `*_car_reversing.xml` trees back up 1 m at 0.25 m/s after the wait |
 | Server timeouts 1 s, not Nav2's 20 ms | a busy computer failed whole goals (the bench, 11 Oct) |
+
+## Reversing
+
+One switch, `reversing:=`, on `navigation.launch.py`. Nothing senses what is behind the
+car (the radar faces forward), so it is **off on the car** and on in Gazebo and on the bench.
+
+| | `reversing:=false` (the car) | `reversing:=true` (Gazebo, the bench) |
+|---|---|---|
+| Planner (`motion_model_for_search`) | `DUBIN`: forward only | `REEDS_SHEPP`: forward and back; a reverse metre costs 2x (`reverse_penalty`) |
+| Controller (`allow_reversing`) | false | true: follows the backward parts |
+| MPPI's `vx_min` | 0 | -0.5 m/s |
+| Velocity smoother's lowest speed | 0 | -0.5 m/s |
+| Behaviour trees | `*_car.xml`: no BackUp | `*_car_reversing.xml`: BackUp 1 m at 0.25 m/s |
+
+The 0.5 m/s is `max_reverse_speed` in `vehicle.yaml`: the one reverse speed for the whole car.
+ego and the spine (`MAX_REVERSE_SPEED` in `spine-core`, also for the RC transmitter) cap
+reversing at the same number, whoever drives.
+
+| Where it is set | How |
+|---|---|
+| `vehicle.yaml` | `max_reverse_speed: 0.50` |
+| `aav_description/vehicle.py` | `nav2_rewrites(v, reversing)` (planner, controller, MPPI) and `nav2_tuned(...)` (the smoother's list, written into a copy of `nav2.yaml`) |
+| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=` false, true, true |
+| Tests | `test_vehicle.py` (the values, and that each rewrite lands on a real key); `test_behavior_trees.py` (the two trees differ only by BackUp, inside the reverse speed) |
+
+People can always reverse (joystick, keyboard, RC): this switch is Nav2's only.
 
 ## 5. collision_monitor: the last word
 

@@ -16,5 +16,5 @@ pub mod watchdog;
 
 pub use spine::{
     faults, DirectCmd, EstopSteering, Inputs, Outputs, RcGearBrake, RcInput, SpeedFeedback, Spine,
-    SpineConfig, ESTOP_STEERING, IDLE_BRAKE, RC_GEAR_BRAKE,
+    SpineConfig, ESTOP_STEERING, IDLE_BRAKE, MAX_REVERSE_SPEED, MAX_STEERING_ANGLE, RC_GEAR_BRAKE,
 };

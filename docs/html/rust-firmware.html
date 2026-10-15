@@ -87,7 +87,7 @@ what's done so far.</p></div>
 </tr>
 <tr>
 <td>The spine is already Rust</td>
-<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (69 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2</td>
+<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (70 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2</td>
 </tr>
 </tbody>
 </table></div>
@@ -1696,8 +1696,8 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tbody>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0</td>
-<td>69</td>
+<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, <code>MAX_REVERSE_SPEED</code>, from vehicle.yaml</td>
+<td>70</td>
 </tr>
 <tr>
 <td><code>aav-inputs</code> (10 Oct)</td>

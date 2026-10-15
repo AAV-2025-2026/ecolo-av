@@ -5,14 +5,15 @@ Ben's messages, word for word: `docs/history/messages-*.md`.
 
 ## Where we stopped (15 Oct, morning)
 
-Everything from the night of 14-15 Oct is on `main` and pushed, except two branches that
-wait for Ben. GitHub's Linux CI is green again.
+Everything from the night of 14-15 Oct is on `main` and pushed. GitHub's Linux CI is green
+again. The three branches that waited for Ben are merged (Ben, 15 Oct: "These are
+important"), on the branch `merge-three-branches`, for him to bring into `main`:
 
-| Waiting for Ben | Branch | Why |
+| Merged 15 Oct | From | Still open |
 |---|---|---|
-| CAN v0.2: the ESP32 board as the spine, wheel frames 0x200/0x201, 100 ms timeout | `wt/can-v2` | it changes the CAN contract (`docs/can-plan.md`) |
-| The ESP32 control board's firmware in Rust (today's UART link, CAN optional) | `wt/rust-esp32` | actuator firmware for the real car: never flashed. `docs/esp32-bench.md` |
-| `wt/ackermann`: reversing in Nav2 | `wt/ackermann` | paused 11 Oct, not restarted |
+| CAN v0.2.0: wheel frames 0x200/0x201, 100 ms timeout; `wheel-core`; wheel speed in `/vehicle/odom`, per wheel on `/vehicle/wheels` | `can-v2-work` (`wt/can-v2` was an older copy) | the wheel node boards (`boards/esp32s3-wheel`) |
+| The ESP32 control board's firmware in Rust (today's UART link, CAN optional) | `wt/rust-esp32` | never flashed: `docs/esp32-bench.md` first, with Ben's go-ahead |
+| One reverse speed (0.5 m/s, `vehicle.yaml`); Nav2 may reverse with `reversing:=true` (Gazebo, the bench), never on the car by default | `wt/ackermann` (its unfinished part finished) | a goal behind the car, tried in Gazebo |
 
 **Found overnight, for Friday's audit:**
 - Today's ESP32 firmware has **no command timeout, no e-stop input and no watchdog**, and an
@@ -35,7 +36,7 @@ wait for Ben. GitHub's Linux CI is green again.
 **Checked by Ben on his Mac, 15 Oct:** the raylib HUD opens (`hud-demo`), and with the turtle it shows speed, throttle and steering live while driving from the keyboard. The car kit is made (1.8 GB, `car-kit/`).
 
 **Next, in order:** Thursday evening, `pixi run car-kit`; Friday's audit and our stack on
-the car on stands (`READ-ME-FRIDAY.md`); Ben's answers on the branches above; the A-to-B
+the car on stands (`READ-ME-FRIDAY.md`); the A-to-B
 drive (`READ-ME-A-TO-B.md`); the HUD's map panel; Python to Rust, step 1 (spine bridge, ego).
 
 ## Where we stopped (11 Oct, 12:30)

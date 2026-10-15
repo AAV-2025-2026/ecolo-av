@@ -3,7 +3,7 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
 
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
       [radar:=false] [collision_monitor:=<radar>] [camera_obstacles:=false]
-      [use_sim_time:=false] [autostart:=true]
+      [reversing:=false] [max_speed:=] [use_sim_time:=false] [autostart:=true]
 
 Starts only the Nav2 servers a car needs (not nav2_bringup's full list: no AMCL, since
 robot_localization does localization, no docking or route server):
@@ -12,7 +12,7 @@ robot_localization does localization, no docking or route server):
   planner_server    SmacPlannerHybrid: drivable paths for a car
   controller_server Regulated Pure Pursuit -> cmd_vel_nav
   behavior_server   wait, backup, drive_on_heading (no spin)
-  bt_navigator      navigate_to_pose, navigate_through_poses (behavior_trees/*_car.xml)
+  bt_navigator      navigate_to_pose, navigate_through_poses (behavior_trees/*_car*.xml)
   waypoint_follower follow_waypoints, follow_gps_waypoints (lat/lon via /fromLL)
   velocity_smoother cmd_vel_nav -> /drivers/nav/cmd_vel
                     (or -> /control/cmd_vel_smoothed -> collision_monitor)
@@ -31,7 +31,17 @@ Obstacles, from where the sensors are:
                           (the detectors' boxes on the road). Off until the cameras are
                           calibrated (Q22)
 
-The car's footprint and turning radius come from aav_description/config/vehicle.yaml.
+Reversing (docs/learn-nav2.md): nothing senses what is behind the car, so it is off unless
+asked for:
+  reversing:=false        forward only: Dubins paths, no reversing in the controller, the
+                          velocity smoother's lowest speed 0, the trees without BackUp
+  reversing:=true         Reeds-Shepp paths (forward and back), Regulated Pure Pursuit
+                          follows them backwards, down to -max_reverse_speed, and the trees
+                          back up 1 m when stuck (behavior_trees/*_car_reversing.xml).
+                          Gazebo and the bench turn it on; car.launch.py leaves it off
+
+The car's footprint, turning radius and reverse speed come from
+aav_description/config/vehicle.yaml.
 Send a goal: RViz "2D Goal Pose" (publishes /goal_pose), or
   ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose \
     "{pose: {header: {frame_id: map}, pose: {position: {x: 20.0, y: 5.0}}}}"
@@ -59,12 +69,10 @@ def flag(context, name):
     return LaunchConfiguration(name).perform(context).lower() == 'true'
 
 
-def faster_copy(source, speed):
-    """Return a temporary copy of nav2.yaml with this top speed (m/s)."""
+def tuned_copy(source, v, reversing, max_speed):
+    """Return a temporary copy of nav2.yaml, tuned by vehicle.nav2_tuned (no ROS there)."""
     with open(source) as f:
-        cfg = yaml.safe_load(f)
-    cfg['controller_server']['ros__parameters']['FollowPath']['desired_linear_vel'] = speed
-    cfg['velocity_smoother']['ros__parameters']['max_velocity'][0] = speed
+        cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed)
     out = tempfile.NamedTemporaryFile('w', prefix='nav2_', suffix='.yaml', delete=False)
     with out:
         yaml.safe_dump(cfg, out)
@@ -77,27 +85,28 @@ def nodes(context):
     radar = flag(context, 'radar')
     collision_monitor = flag(context, 'collision_monitor')
     camera = flag(context, 'camera_obstacles')
+    reversing = flag(context, 'reversing')
 
-    rewrites = vehicle.nav2_rewrites(vehicle.load()['vehicle'])
+    v = vehicle.load()['vehicle']
+    trees = '_car_reversing.xml' if reversing else '_car.xml'
+    rewrites = vehicle.nav2_rewrites(v, reversing)
     rewrites.update({
         'yaml_filename': LaunchConfiguration('map').perform(context),
-        'default_nav_to_pose_bt_xml': f'{share}/behavior_trees/navigate_to_pose_car.xml',
+        'default_nav_to_pose_bt_xml': f'{share}/behavior_trees/navigate_to_pose{trees}',
         'default_nav_through_poses_bt_xml':
-            f'{share}/behavior_trees/navigate_through_poses_car.xml',
+            f'{share}/behavior_trees/navigate_through_poses{trees}',
         LOCAL + 'obstacle_layer.enabled': str(radar).lower(),
         LOCAL + 'camera_layer.enabled': str(camera).lower(),
     })
-    source = f'{share}/config/nav2.yaml'
+    # A copy of nav2.yaml with the values RewrittenYaml can't write (lists: the velocity
+    # smoother's limits), and max_speed:= (sim.launch.py sim_speed:=). In the file, not as
+    # per-node dicts after it: nav2.yaml names its nodes, and a named entry beats a later
+    # dict when the launch sets a global parameter (sim.launch.py's use_sim_time).
     speed = LaunchConfiguration('max_speed').perform(context).strip()
-    if speed:
-        # max_speed:= (sim.launch.py sim_speed:=): the controller's speed and the
-        # smoother's limit, written into a copy of nav2.yaml. Not as per-node dicts after
-        # the file: nav2.yaml names its nodes, and a named entry beats a later dict when
-        # the launch sets a global parameter (sim.launch.py's use_sim_time).
-        source = faster_copy(source, float(speed))
+    source = tuned_copy(f'{share}/config/nav2.yaml', v, reversing,
+                        float(speed) if speed else None)
     params = ParameterFile(
-        RewrittenYaml(source_file=source, param_rewrites=rewrites,
-                      convert_types=True),
+        RewrittenYaml(source_file=source, param_rewrites=rewrites, convert_types=True),
         allow_substs=True)
 
     smoothed = '/control/cmd_vel_smoothed' if collision_monitor else '/drivers/nav/cmd_vel'
@@ -122,7 +131,8 @@ def nodes(context):
     # exist, and nav2.yaml has none, so as a rewrite it was silently dropped.
     actions = [
         Node(package=pkg, executable=exe, name=exe, output='screen',
-             parameters=[params, {'use_sim_time': use_sim_time}], remappings=remaps)
+             parameters=[params, {'use_sim_time': use_sim_time}],
+             remappings=remaps)
         for pkg, exe, remaps in servers
     ]
     actions.append(Node(
@@ -157,6 +167,9 @@ def generate_launch_description():
         DeclareLaunchArgument('max_speed', default_value='',
                               description="m/s: Nav2's top speed, if not nav2.yaml's 1.0 "
                                           '(sim.launch.py sim_speed:=)'),
+        DeclareLaunchArgument('reversing', default_value='false',
+                              description='true: Nav2 may drive backwards (blind: nothing '
+                                          'senses behind the car). docs/learn-nav2.md'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('autostart', default_value='true'),
         OpaqueFunction(function=nodes),

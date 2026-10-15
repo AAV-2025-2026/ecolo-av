@@ -10,6 +10,15 @@
 # also turns on the local costmap's obstacle_layer and starts collision_monitor; with
 # camera_obstacles:=true, the camera_layer.
 #
+# Reversing (navigation.launch.py reversing:=true; off unless asked for, docs/learn-nav2.md)
+# also sets, from vehicle.yaml's max_reverse_speed:
+#   motion_model_for_search   DUBIN (forward only) or REEDS_SHEPP (forward and back)
+#   allow_reversing           Regulated Pure Pursuit follows a path backwards
+#   vx_min                    MPPI's lowest speed: 0, or -max_reverse_speed
+#   min_velocity              the velocity smoother's lowest speed: the same (a list, so
+#                             the launch file writes it into a copy of this file)
+# and picks the behaviour trees with BackUp (*_car_reversing.xml).
+#
 # Topics: Nav2 reads /localization/odom/local (ekf_local) and TF map -> odom -> base_link
 # (robot_localization). Its velocity output goes controller -> velocity_smoother ->
 # /drivers/nav/cmd_vel (TwistStamped) -> twist_mux -> /control/cmd_vel -> ego, which turns it into a
@@ -84,7 +93,7 @@ controller_server:
       lookahead_time: 1.5
       use_velocity_scaled_lookahead_dist: true
       use_rotate_to_heading: false          # MUST be false for a car: it can't spin in place
-      allow_reversing: false                # true needs a planner that plans reverse (REEDS_SHEPP)
+      allow_reversing: false                # set by the launch file: true with REEDS_SHEPP
       transform_tolerance: 0.5              # s. 0.1 aborted goals when a busy computer's EKF
                                             # sent map -> odom late (the bench, 11 Oct)
       min_approach_linear_velocity: 0.1
@@ -114,7 +123,7 @@ controller_server:
       vy_std: 0.2
       wz_std: 0.4
       vx_max: 1.0
-      vx_min: -0.5
+      vx_min: 0.0                           # set by the launch file: -max_reverse_speed to reverse
       vy_max: 0.0
       wz_max: 0.6
       ax_max: 1.0
@@ -242,7 +251,9 @@ planner_server:
     # Hybrid-A*: plans paths a car can drive (it respects the turning radius).
     GridBased:
       plugin: "nav2_smac_planner::SmacPlannerHybrid"
-      motion_model_for_search: "DUBIN"     # forward only. REEDS_SHEPP adds reversing
+      motion_model_for_search: "DUBIN"     # set by the launch file: forward only, or REEDS_SHEPP
+      # A path that reverses costs reverse_penalty times as much a metre: forward wins
+      # unless reversing saves a lot (a goal behind the car, a three-point turn).
       minimum_turning_radius: 2.86         # set by the launch file
       angle_quantization_bins: 72
       tolerance: 0.5
@@ -274,7 +285,7 @@ behavior_server:
     local_footprint_topic: local_costmap/published_footprint
     global_footprint_topic: global_costmap/published_footprint
     cycle_frequency: 10.0
-    # No spin (a car can't). backup stays available but the car trees don't call it yet.
+    # No spin (a car can't). backup: only the reversing trees call it (*_car_reversing.xml).
     behavior_plugins: ["backup", "drive_on_heading", "wait"]
     backup:
       plugin: "nav2_behaviors::BackUp"
@@ -311,7 +322,9 @@ velocity_smoother:
     scale_velocities: true
     feedback: "OPEN_LOOP"
     max_velocity: [1.0, 0.0, 1.0]
-    min_velocity: [-0.5, 0.0, -1.0]
+    # x is set by the launch file: 0 forward only, -max_reverse_speed with reversing:=true.
+    # The last stop for a negative speed inside Nav2 (ego and the spine cap it too).
+    min_velocity: [0.0, 0.0, -1.0]
     max_accel: [1.0, 0.0, 1.5]
     max_decel: [-2.0, 0.0, -1.5]
     odom_topic: /localization/odom/local

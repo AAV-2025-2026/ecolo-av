@@ -13,6 +13,9 @@ if(BUILD_TESTING)
     APPEND_ENV AMENT_PREFIX_PATH=${CMAKE_INSTALL_PREFIX})
   ament_add_pytest_test(test_sim_launch test/test_sim_launch.py
     APPEND_ENV AMENT_PREFIX_PATH=${CMAKE_INSTALL_PREFIX})
+  # Nav2's settings with and without reversing, as navigation.launch.py writes them.
+  ament_add_pytest_test(test_navigation_launch test/test_navigation_launch.py
+    APPEND_ENV AMENT_PREFIX_PATH=${CMAKE_INSTALL_PREFIX})
 endif()
 
 ament_package()

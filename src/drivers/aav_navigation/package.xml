@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>aav_description</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <exec_depend>nav2_common</exec_depend>
   <exec_depend>nav2_map_server</exec_depend>
   <exec_depend>nav2_planner</exec_depend>
@@ -26,6 +27,9 @@
   <exec_depend>nav2_costmap_2d</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>python3-pytest</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

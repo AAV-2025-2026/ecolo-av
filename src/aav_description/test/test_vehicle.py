@@ -1,9 +1,21 @@
 import math
 from pathlib import Path
+import re
 
 from aav_description import vehicle
+import yaml
 
 CONFIG = Path(__file__).resolve().parents[1] / 'config' / 'vehicle.yaml'
+ROOT = Path(__file__).resolve().parents[3]
+SPINE_RS = ROOT / 'firmware/spine/crates/spine-core/src/spine.rs'
+NAV2_YAML = ROOT / 'src/drivers/aav_navigation/config/nav2.yaml'
+
+
+def rust_const(path, name):
+    """Return the number in `pub const NAME: f32 = <number>;` from a Rust file."""
+    found = re.search(rf'pub const {name}: f32 = ([-0-9.e]+);', path.read_text())
+    assert found, f'no `pub const {name}: f32 = ...;` in {path}'
+    return float(found.group(1))
 
 
 def test_config_loads_and_has_what_the_launch_files_read():
@@ -47,5 +59,91 @@ def test_nav2_rewrites_keys():
     v = vehicle.load(CONFIG)['vehicle']
     r = vehicle.nav2_rewrites(v)
     assert set(r) == {'footprint', 'minimum_turning_radius', 'min_turning_r',
-                      'collision_monitor.ros__parameters.StopZone.points'}
+                      'collision_monitor.ros__parameters.StopZone.points',
+                      'planner_server.ros__parameters.GridBased.motion_model_for_search',
+                      'controller_server.ros__parameters.FollowPath.allow_reversing',
+                      'controller_server.ros__parameters.MPPI.vx_min'}
     assert r['minimum_turning_radius'] == r['min_turning_r']
+    # RewrittenYaml can't index into a list: none of these may try.
+    assert not any(key.split('.')[-1].isdigit() for key in r)
+
+
+def test_nav2_forward_only_or_reversing():
+    v = {'wheelbase': 1.57, 'max_steering_angle': 0.5, 'max_reverse_speed': 0.4,
+         'body': {'length': 2.0, 'width': 1.0, 'rear_overhang': 0.2}}
+    forward = vehicle.nav2_rewrites(v)
+    back = vehicle.nav2_rewrites(v, reversing=True)
+    model = 'planner_server.ros__parameters.GridBased.motion_model_for_search'
+    allow = 'controller_server.ros__parameters.FollowPath.allow_reversing'
+    vx_min = 'controller_server.ros__parameters.MPPI.vx_min'
+    assert (forward[model], forward[allow], forward[vx_min]) == ('DUBIN', 'false', '0.000')
+    assert (back[model], back[allow], back[vx_min]) == ('REEDS_SHEPP', 'true', '-0.400')
+
+
+NAV2_SMALL = {
+    'velocity_smoother': {'ros__parameters': {'min_velocity': [-0.5, 0.0, -1.0],
+                                              'max_velocity': [1.0, 0.0, 1.0]}},
+    'controller_server': {'ros__parameters': {'FollowPath': {'desired_linear_vel': 1.0}}},
+}
+
+
+def test_the_smoother_gets_the_reverse_speed_as_a_list():
+    v = {'max_reverse_speed': 0.4}
+    smoother = 'velocity_smoother'
+    forward = vehicle.nav2_tuned(NAV2_SMALL, v)[smoother]['ros__parameters']
+    back = vehicle.nav2_tuned(NAV2_SMALL, v, reversing=True)[smoother]['ros__parameters']
+    assert forward['min_velocity'] == [0.0, 0.0, -1.0]
+    assert back['min_velocity'] == [-0.4, 0.0, -1.0]
+    # A copy: the loaded file stays as it was.
+    assert NAV2_SMALL[smoother]['ros__parameters']['min_velocity'] == [-0.5, 0.0, -1.0]
+
+
+def test_max_speed_raises_the_controller_and_the_smoother_together():
+    v = {'max_reverse_speed': 0.4}
+    same = vehicle.nav2_tuned(NAV2_SMALL, v)
+    assert same['controller_server'] == NAV2_SMALL['controller_server']
+    fast = vehicle.nav2_tuned(NAV2_SMALL, v, reversing=True, max_speed=3)
+    assert fast['controller_server']['ros__parameters']['FollowPath']['desired_linear_vel'] == 3.0
+    smoother = fast['velocity_smoother']['ros__parameters']
+    assert smoother['max_velocity'] == [3.0, 0.0, 1.0]
+    assert smoother['min_velocity'] == [-0.4, 0.0, -1.0]   # reversing stays as slow
+
+
+def test_every_rewrite_lands_on_a_key_nav2_yaml_has():
+    # RewrittenYaml drops a whole dotted path that isn't in the file, silently.
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    for key in vehicle.nav2_rewrites(v, reversing=True):
+        if '.' not in key:
+            continue
+        node = nav2
+        for part in key.split('.'):
+            assert part in node, f'{key}: no {part!r} in nav2.yaml'
+            node = node[part]
+    tuned = vehicle.nav2_tuned(nav2, v, reversing=True, max_speed=2.0)
+    smoother = tuned['velocity_smoother']['ros__parameters']
+    assert smoother['min_velocity'][0] == -v['max_reverse_speed']
+    assert smoother['max_velocity'][0] == 2.0
+
+
+def test_nav2_yaml_is_forward_only_until_the_launch_file_says():
+    # The file's own values are the safe ones: no launch file, no reversing.
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    follow = nav2['controller_server']['ros__parameters']['FollowPath']
+    assert follow['allow_reversing'] is False
+    assert nav2['controller_server']['ros__parameters']['MPPI']['vx_min'] == 0.0
+    assert nav2['velocity_smoother']['ros__parameters']['min_velocity'][0] == 0.0
+    grid = nav2['planner_server']['ros__parameters']['GridBased']
+    assert grid['motion_model_for_search'] == 'DUBIN'
+
+
+def test_ego_gets_the_reverse_speed():
+    v = vehicle.load(CONFIG)['vehicle']
+    assert vehicle.ego_params(v)['max_reverse_speed'] == v['max_reverse_speed']
+
+
+def test_the_firmware_copies_match_vehicle_yaml():
+    # spine-core can't read vehicle.yaml, so it keeps copies. Change both together.
+    v = vehicle.load(CONFIG)['vehicle']
+    assert rust_const(SPINE_RS, 'MAX_STEERING_ANGLE') == v['max_steering_angle']
+    assert rust_const(SPINE_RS, 'MAX_REVERSE_SPEED') == v['max_reverse_speed']

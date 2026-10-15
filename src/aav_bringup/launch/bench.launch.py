@@ -4,7 +4,7 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
   ros2 launch aav_bringup bench.launch.py [nav:=true] [teleop:=false] [rviz:=false]
       [perception:=false] [lane:=false|true|fake] [hud:=false] [arm:=true] [foxglove:=false]
       [start_y:=0.0] [start_yaw:=0.0] [bend_radius:=] [obstacle:=false]
-      [camera_obstacles:=false]
+      [camera_obstacles:=false] [reversing:=true]
   pixi run bench                            (the same)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
   pixi run bench lane:=true start_y:=0.3    (lane keeping, from 0.3 m left of the centre)
@@ -63,7 +63,7 @@ def include(package, launch_file, **args):
 def launch_setup(context):
     flag = {n: LaunchConfiguration(n).perform(context).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'hud', 'arm', 'foxglove',
-                      'obstacle', 'camera_obstacles')}
+                      'obstacle', 'camera_obstacles', 'reversing')}
     lane = LaunchConfiguration('lane').perform(context).lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -115,7 +115,8 @@ def launch_setup(context):
         # mock_radar always runs, so Nav2's local costmap always reads the radar.
         actions.append(include('aav_navigation', 'navigation.launch.py',
                                map=os.path.join(share('aav_navigation'), 'maps', 'empty.yaml'),
-                               radar='true', camera_obstacles=flag['camera_obstacles']))
+                               radar='true', camera_obstacles=flag['camera_obstacles'],
+                               reversing=str(flag['reversing']).lower()))
     if flag['teleop']:
         actions.append(include('aav_teleop', 'teleop.launch.py'))
     if flag['perception']:
@@ -181,5 +182,8 @@ def generate_launch_description():
                                           'pretend radar sees'),
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="the detectors' boxes into the local costmap"),
+        DeclareLaunchArgument('reversing', default_value='true',
+                              description='Nav2 may drive backwards: on here, off on the car '
+                                          '(docs/learn-nav2.md)'),
         OpaqueFunction(function=launch_setup),
     ])

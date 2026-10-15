@@ -140,7 +140,7 @@ behind a stop that a higher layer asked for.
 | Limit | ego (`ego.yaml`) | Nav2 velocity smoother | The spine (`spine.rs`) |
 |---|---|---|---|
 | Top speed | **1.0 m/s** | 1.0 m/s | 3.0 m/s |
-| Reverse | 0.5 m/s | 0.5 m/s | 1.0 m/s |
+| Reverse | 0.5 m/s (`vehicle.yaml`: one number for all three) | 0.5 m/s, with `reversing:=true`; else 0 | 0.5 m/s, RC too |
 | Speeding up | 1.0 m/s² | 1.0 m/s² | 1.5 m/s² |
 | Slowing down | 2.0 m/s² | 2.0 m/s² | 2.5 m/s² |
 | Steering rate | 0.6 rad/s | - | 0.6 rad/s |

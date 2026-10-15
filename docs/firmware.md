@@ -104,7 +104,7 @@ Both sides test against the same generated frames. To change a frame:
 ## firmware/spine: the Rust code
 
 `crates/spine-core` is plain `no_std` Rust: no allocator, no dependencies, no hardware.
-`cargo test` runs its 69 tests on any laptop.
+`cargo test` runs its 70 tests on any laptop.
 
 | Module | Does |
 |---|---|

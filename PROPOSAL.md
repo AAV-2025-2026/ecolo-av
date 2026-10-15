@@ -43,7 +43,7 @@ we are. Details live in the pages linked from each row.
 | **Instrument cluster (small screen)** | raylib HUD in Rust: speed, mode, gear, e-stop button, camera, GPS, topic health | 🧪 | [HUD](docs/hud.md) |
 | **Map (big screen)** | Nav2's map over offline Ottawa streets (OpenStreetMap), the car, the path, distance and time left; **search a place and send the car there** | 🧪 | [HUD](docs/hud.md) |
 | **Plain-English driving** | a local language model (Qwen3, on the Mac with MLX) plans "drive 10 m forward"; you type yes | 🧪 sim: drove 10.02 m | [plain English](docs/plain-english.md) |
-| **Rust port** | firmware in Rust: the spine (on today's ESP32 control board too, over its UART or CAN), the wheel encoder, the status display, the CAN wheel nodes' logic; the IMU driver and radar clustering in Rust | 🧪 320 tests in `firmware/spine`; builds for the Pico 2 and the ESP32; never flashed | [Rust firmware](docs/rust-firmware.md) |
+| **Rust port** | firmware in Rust: the spine (on today's ESP32 control board too, over its UART or CAN), the wheel encoder, the status display, the CAN wheel nodes' logic; the IMU driver and radar clustering in Rust | 🧪 321 tests in `firmware/spine`; builds for the Pico 2 and the ESP32; never flashed | [Rust firmware](docs/rust-firmware.md) |
 | **Linux and Mac** | one `pixi.toml`: the same commands on Ubuntu, AlmaLinux and macOS, no admin rights; nightly Mac CI | ✅ | [Mac](docs/mac.md) |
 | **Watching** | Lichtblick / Foxglove, RViz, recording and replaying drives | ✅ | |
 | **Testing** | unit tests (Python, Rust), graph checks, `sim-check`, `bench-check`, CI on every push | ✅ | [tests](READ-ME-TESTS.md) |

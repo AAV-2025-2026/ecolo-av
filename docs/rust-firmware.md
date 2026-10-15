@@ -12,7 +12,7 @@ what's done so far.
 | The same code on the chip and on a laptop | the logic is plain `no_std` Rust, so `cargo test` checks it on any laptop, with no board |
 | Mistakes caught when it compiles | no stray pointers, no data races between an interrupt and the main loop |
 | One driver for every board | a driver written against `embedded-hal` runs on an ESP32, a Pico, an STM32, and on the Pi under Linux |
-| The spine is already Rust | `spine-core`: modes, arming, the watchdog, the speed loop, the CAN frames (69 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2 |
+| The spine is already Rust | `spine-core`: modes, arming, the watchdog, the speed loop, the CAN frames (70 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2 |
 
 ## What runs where
 
@@ -526,7 +526,7 @@ Rust.
 
 | Crate | Does | Tests |
 |---|---|---|
-| `spine-core` | the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (`DirectCmd`, for the UART link) and a speed loop with no wheel speed (`SpeedFeedback::None`). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0 | 69 |
+| `spine-core` | the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (`DirectCmd`, for the UART link) and a speed loop with no wheel speed (`SpeedFeedback::None`). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, `MAX_REVERSE_SPEED`, from vehicle.yaml | 70 |
 | `aav-inputs` (10 Oct) | clean inputs for every board: a `Debouncer` for switches and buttons, with separate times each way (an e-stop trips at once, and must stay released before it counts), and a `Lockout` for counting fast signals such as encoder spokes | 9 |
 | `jrk-g2` (10 Oct) | the Pololu Jrk G2 over I2C: set target, stop, feedback, error flags. Checked against Pololu's guide | 14 |
 | `ad5311` (10 Oct) | the throttle DAC (an AD5311; TI's DAC101C081 takes the same bytes), capped at 700 of 1023 | 10 |

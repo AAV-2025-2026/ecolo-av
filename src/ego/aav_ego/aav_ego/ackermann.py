@@ -25,7 +25,7 @@ class Limits:
     wheelbase: float = 1.57              # m, rear axle to front axle
     max_steering_angle: float = 0.5      # rad, either side
     max_speed: float = 1.0               # m/s forward (set per profile)
-    max_reverse_speed: float = 0.5       # m/s
+    max_reverse_speed: float = 0.5       # m/s backwards (vehicle.yaml sets it)
     max_acceleration: float = 1.0        # m/s^2 while speeding up
     max_deceleration: float = 2.0        # m/s^2 while slowing down
     max_steering_rate: float = 0.6       # rad/s
