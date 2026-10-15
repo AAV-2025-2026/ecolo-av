@@ -46,6 +46,7 @@ topic. None of them knows what kind of vehicle it's driving.
 |---|---|---|
 | Joystick: the safety driver | `/drivers/joy/cmd_vel` | 100 |
 | Keyboard, or another remote | `/drivers/keyboard/cmd_vel` | 90 |
+| Actuator tests: measure the car (stages 3-4) | `/drivers/tests/cmd_vel` | 60 |
 | Scripted: speed up, hold, slow down | `/drivers/scripted/cmd_vel` | 50 |
 | Replay of a recorded drive | `/drivers/replay/cmd_vel` | 40 |
 | Nav2: drive to a point on the map | `/drivers/nav/cmd_vel` | 20 |

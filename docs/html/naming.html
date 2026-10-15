@@ -44,6 +44,7 @@
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
@@ -158,6 +159,11 @@ actions, <code>/cmd_vel_nav</code> and the costmaps' topics.</p>
 <td>keyboard</td>
 <td><code>tools/keyboard.sh</code> runs <code>teleop_twist_keyboard</code> in the namespace <code>/drivers/keyboard</code></td>
 <td><code>/drivers/keyboard/cmd_vel</code></td>
+</tr>
+<tr>
+<td>tests</td>
+<td><code>actuator_test</code> publishes <code>drivers/tests/cmd_vel</code></td>
+<td><code>/drivers/tests/cmd_vel</code></td>
 </tr>
 <tr>
 <td>scripted</td>

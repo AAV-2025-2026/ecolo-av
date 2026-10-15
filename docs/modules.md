@@ -144,6 +144,20 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Test** | with `pixi run turtle` running: hold the deadman, watch the turtle |
 | **Read first** | `config/teleop_twist_joy.yaml` |
 
+### aav_actuator_tests
+
+| | |
+|---|---|
+| **Does** | runs the stage-3 and stage-4 tests (steering, speed up, coast, brake, circles, straight), logs them, prints the numbers for `vehicle.yaml` |
+| **Why** | fill `vehicle.yaml`'s `actuators:` with measured numbers, so Gazebo moves like the car |
+| **Runs on** | the laptop on the car's network (or the Mac with Gazebo) |
+| **In → out** | the car's readings, `/safety/estop`, `/system/source` → `/drivers/tests/cmd_vel` (priority 60) |
+| **Origin** | ours |
+| **Status** | [[works]] Gazebo, all 9 tests (15 Oct); [[untested]] on the car |
+| **Run alone** | `pixi run actuator-test --list`; `pixi run actuator-test speed-up --sim` |
+| **Test** | `test/` (in `tools/test.sh`): the maths, the safety rules, and each test on a pretend car |
+| **Read first** | [Actuator tests](actuator-tests.md), then `aav_actuator_tests/procedures.py` |
+
 ### aav_scripted
 
 | | |

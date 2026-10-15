@@ -44,6 +44,7 @@
 <a href="mac.html">Your Mac</a>
 <a class="here" href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
@@ -407,6 +408,14 @@ ones once the tests are done: no code changes.
 <li>No <code>/ego/actuator_cmd</code> for 0.2 s: the model brakes to a stop, like the spine's watchdog.</li>
 <li>Plot command against measured: <code>/vehicle/steering</code>, <code>/vehicle/throttle</code>, <code>/vehicle/brake</code>
   (Foxglove or PlotJuggler).</li>
+<li><strong>Check it:</strong> <code>pixi run actuator-test &lt;test&gt; --sim</code> runs the car's stage 3-4 tests in
+  Gazebo and prints these numbers back (<a href="actuator-tests.html">Actuator tests</a>). On 15 Oct
+  all but the throttle deadband came back within a few percent.</li>
+<li><strong>The IMU feels the model</strong> (15 Oct): Gazebo's own IMU never felt the car speed up,
+  brake or turn (it reads only gravity, noise and contact bumps). <code>gazebo_adapter</code> puts
+  the model's forward and sideways acceleration at <code>imu_link</code> in its place, with the
+  configured noise (<code>aav_gazebo/imu.py</code>). The EKFs use only the yaw rate, so nothing
+  else changes.</li>
 </ul>
 <p>How the simulated car connects:</p>
 <ul>

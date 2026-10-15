@@ -133,6 +133,14 @@ ego's angle ──────────────────────�
 - No `/ego/actuator_cmd` for 0.2 s: the model brakes to a stop, like the spine's watchdog.
 - Plot command against measured: `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`
   (Foxglove or PlotJuggler).
+- **Check it:** `pixi run actuator-test <test> --sim` runs the car's stage 3-4 tests in
+  Gazebo and prints these numbers back ([Actuator tests](actuator-tests.md)). On 15 Oct
+  all but the throttle deadband came back within a few percent.
+- **The IMU feels the model** (15 Oct): Gazebo's own IMU never felt the car speed up,
+  brake or turn (it reads only gravity, noise and contact bumps). `gazebo_adapter` puts
+  the model's forward and sideways acceleration at `imu_link` in its place, with the
+  configured noise (`aav_gazebo/imu.py`). The EKFs use only the yaw rate, so nothing
+  else changes.
 
 How the simulated car connects:
 - Gazebo plays the car, with Ackermann steering, an IMU and a GPS.

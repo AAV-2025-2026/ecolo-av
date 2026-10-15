@@ -58,7 +58,7 @@ we are. Details live in the pages linked from each row.
 | 3 | **Back up and upgrade the Jetson Orin** to a current JetPack, then ROS 2 Jazzy on every car computer | one ROS version everywhere; TensorRT for YOLO | yes | 🔧 |
 | 4 | **The missing sensors for closed loop** (below) | today the car is driven **open loop**: we send commands but can't see what the actuators did | yes | 🔧 |
 | 5 | **The safety timeout** in the actuator board: brake if commands stop | today a lost cable keeps the car going | yes | 🔧 must come first |
-| 6 | **Actuator tests**: speed up, brake, steering sweep, circles; numbers into the sim | the sim behaves like the real car; the car knows how hard it can brake | yes | 🔧 |
+| 6 | **Actuator tests**: speed up, brake, steering sweep, circles; numbers into the sim. The script is built and proven in Gazebo (15 Oct: `pixi run actuator-test`) | the sim behaves like the real car; the car knows how hard it can brake | yes | 🔧 |
 | 7 | **GPS-to-GPS movement**: from A to B by GPS in an empty lot, with a smooth stop at B | the main goal | yes | 🔧 |
 | 8 | **The spine in the loop** in Gazebo, sensor failures on purpose, the lidar into Nav2 | test the safety logic without the car | no | 🔧 |
 | 9 | **The real lidar driver** (likely a Velodyne) and the real cameras into perception | more of the world seen | yes | 🔧 |

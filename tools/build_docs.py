@@ -72,6 +72,7 @@ PAGES = [
     ('mac.md', 'Your Mac', 'Set up the Mac, join the car, drive and watch'),
     ('simulation.md', 'Simulation', 'Gazebo, replay, CARLA, and when nothing moves'),
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),
+    ('actuator-tests.md', 'Actuator tests', 'Measure how the car moves: on stands, in a lot'),
     ('mcp.md', 'AI apps (MCP)', 'Claude and other AI apps: read the project and the graph'),
     ('plain-english.md', 'Plain English', 'Type what the car should do; a model plans it'),
     ('firmware.md', 'Firmware', 'src vs firmware, the CAN contract, the spine'),
