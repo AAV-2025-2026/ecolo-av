@@ -106,8 +106,16 @@ dependencies = [
  "jrk-g2",
  "pca9555",
  "spine-core",
+ "wheel-encoder",
 ]
 
 [[package]]
 name = "spine-core"
 version = "0.1.0"
+
+[[package]]
+name = "wheel-encoder"
+version = "0.1.0"
+dependencies = [
+ "aav-inputs",
+]

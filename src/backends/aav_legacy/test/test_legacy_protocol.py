@@ -1,7 +1,13 @@
+from pathlib import Path
+
 from aav_legacy.legacy_protocol import (
     encoder_counts, EncoderSpeed, LegacyMapping, metres_per_count, pack_frame, stop_command,
     to_legacy, unpack_frame)
 import pytest
+
+ROOT = Path(__file__).resolve().parents[4]
+# The wheel encoder's packet, as the Pico 2's Rust (crate wheel-encoder) checks it too.
+ENCODER_VECTORS = ROOT / 'firmware/udp/wheel_encoder_vectors.txt'
 
 M = LegacyMapping(max_steering_angle=0.5, full_throttle_speed=3.0)
 
@@ -48,6 +54,14 @@ def test_encoder_packet():
     assert encoder_counts((-3).to_bytes(4, 'big', signed=True)) == -3
     with pytest.raises(ValueError):
         encoder_counts(b'\x00\x01')
+
+
+def test_encoder_packet_matches_the_rust_firmware():
+    lines = [line.split() for line in ENCODER_VECTORS.read_text().splitlines()
+             if line.strip() and not line.startswith('#')]
+    assert len(lines) >= 10
+    for spokes, packet in lines:
+        assert encoder_counts(bytes.fromhex(packet)) == int(spokes)
 
 
 def test_metres_per_count():

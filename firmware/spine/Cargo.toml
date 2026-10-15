@@ -7,6 +7,8 @@ members = [
     # Logic: no hardware, no dependencies.
     "crates/spine-core",
     "crates/aav-inputs",
+    # The wheel's spoke sensors and the wheel encoder's UDP packet.
+    "crates/wheel-encoder",
     # Drivers: the I2C chips and the CAN controller (SPI) against embedded-hal 1.0;
     # ibus takes bytes.
     "crates/jrk-g2",

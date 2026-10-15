@@ -1,0 +1,23 @@
+# The wheel encoder's UDP packet: examples both sides must agree on.
+#
+# Each line: the spokes since the previous packet, then the packet's 4 bytes in hex.
+# The packet is a big-endian signed 32-bit integer (the 2025-26 Wheel_Encoders format).
+#
+# Checked by:
+#   firmware/spine/crates/wheel-encoder/tests/vectors.rs   (the Pico 2's Rust)
+#   src/backends/aav_legacy/test/test_legacy_protocol.py   (encoder_udp on the Motor Pi)
+#
+# spokes      bytes
+0             00000000
+1             00000001
+-1            ffffffff
+3             00000003
+-3            fffffffd
+8             00000008
+-8            fffffff8
+255           000000ff
+256           00000100
+-256          ffffff00
+16909060      01020304
+2147483647    7fffffff
+-2147483648   80000000

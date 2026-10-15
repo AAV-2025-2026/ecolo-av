@@ -49,14 +49,8 @@ impl CanFrame {
     }
 }
 
-/// The wheel encoder's counter, and when it last changed.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct WheelCount {
-    /// Counts since power-up: up going forward, down in reverse. It may wrap.
-    pub count: i32,
-    /// The millisecond clock at the latest count.
-    pub at_ms: u32,
-}
+/// The wheel encoder's counter, and when it last changed (from `wheel-encoder`).
+pub use wheel_encoder::WheelCount;
 
 /// The board-specific parts.
 pub trait Board {
