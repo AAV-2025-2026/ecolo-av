@@ -6,6 +6,12 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run -e ml sim-check --perception  (adds YOLO and the stop sign: 2 more minutes)
     pixi run sim-check --obstacle          (adds a box for the radar stand-in: 2 more minutes)
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
+    pixi run sim-check --lidar-obstacle    (the lidar alone, radar off, stops for a post: a
+                                            second run, 3 more minutes)
+    pixi run sim-check --faults            (sensor failures on purpose, each while Nav2 drives:
+                                            the car must stop, and say why: 5 more minutes)
+    pixi run sim-check --faults --no-watchdog   (the same without the sensor watchdog: a report
+                                            of what the stack does on its own, no pass or fail)
     pixi run sim-check --no-lidar          (without the simulated roof lidar: lidar:=false)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
@@ -20,7 +26,8 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 4. The sensors: the camera's picture and lens are the bench camera's, in camera_left_link;
    the radar stand-in's cloud has the TI driver's fields, in radar_link, and nothing in it
    while nothing is within 8.4 m. Unless --no-lidar, the simulated roof lidar: 1800 x 16 rays
-   in lidar_link, 10 Hz, some of them hitting the ground and the sign.
+   in lidar_link, 10 Hz, some of them hitting the ground and the sign; and lidar_scan's 2D
+   scan of it for Nav2 (/sensors/lidar/scan: 720 ranges in base_link, 10 Hz, the sign in it).
 5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth)
    with where the car's own software thinks it is (/localization/odom/global).
 6. With --perception: Nav2 drives to 40 m east, past the stop sign at 25 m. The car must
@@ -29,7 +36,15 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 7. With --obstacle: the bench's 1 m box appears in the lane 15 m ahead (Gazebo's create
    service), and Nav2 drives 30 m. collision_monitor's stop zone must stop the car before
    the box; once the box is taken away, the car must go on to the goal.
-8. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
+8. With --lidar-obstacle: Gazebo again, with the radar off (radar:=false), so only the roof
+   lidar guards Nav2. A person-sized post (0.5 x 0.5 x 1.8 m) in the lane 15 m ahead: the
+   stop zone must stop the car before it from the lidar's scan, and the post must show in
+   the local costmap; once the post is gone, the car must go on to the goal.
+9. With --faults: Gazebo again (faults:=true), and for each fault in FAULTS: Nav2 drives,
+   the fault goes on (gazebo_adapter's fault.<sensor>), and the car must stop within
+   REACT seconds, stopped by the sensor watchdog's lock or collision_monitor; then the
+   fault goes off, and the lock must open again. With --no-watchdog it only reports.
+10. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
    car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there.
 
@@ -64,16 +79,18 @@ from aav_interfaces.action import ScriptedDrive  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
-from nav_msgs.msg import Odometry  # noqa: E402
+from nav_msgs.msg import OccupancyGrid, Odometry  # noqa: E402
 import numpy  # noqa: E402
 import rclpy  # noqa: E402
 from rclpy.action import ActionClient  # noqa: E402
 from rclpy.node import Node  # noqa: E402
 from rclpy.parameter import Parameter  # noqa: E402
+from rclpy.parameter_client import AsyncParameterClient  # noqa: E402
 from rclpy.qos import qos_profile_sensor_data  # noqa: E402
-from sensor_msgs.msg import CameraInfo, Image, PointCloud2  # noqa: E402
+from sensor_msgs.msg import CameraInfo, Image, LaserScan, PointCloud2  # noqa: E402
 from sensor_msgs_py import point_cloud2  # noqa: E402
-from std_msgs.msg import Bool  # noqa: E402
+from std_msgs.msg import Bool, String  # noqa: E402
+from std_srvs.srv import Trigger  # noqa: E402
 from vision_msgs.msg import Detection2DArray  # noqa: E402
 import yaml  # noqa: E402
 
@@ -84,8 +101,12 @@ with open(os.path.join(ROOT, 'src', 'bench', 'aav_bench', 'config', 'bench.yaml'
     BENCH = yaml.safe_load(f)['mock_camera']['ros__parameters']
 ROAD_Y = BENCH['road_y']                # m: the lane's centre line
 SIGN_X = BENCH['stop_signs'][0]         # m east: the stop sign
-OBSTACLE = os.path.join(ROOT, 'src', 'backends', 'aav_gazebo', 'models', 'obstacle',
-                        'model.sdf')
+MODELS = os.path.join(ROOT, 'src', 'backends', 'aav_gazebo', 'models')
+OBSTACLE = os.path.join(MODELS, 'obstacle', 'model.sdf')   # the bench's 1 m box
+POST = os.path.join(MODELS, 'post', 'model.sdf')           # 0.5 x 0.5 x 1.8 m: a person
+# What the radar adds to the road world's graph: absent with radar:=false.
+RADAR_TOPICS = ('/sensors/radar/points', '/perception/radar/clusters',
+                '/perception/radar/cluster_boxes')
 RADAR_FIELDS = ['x', 'y', 'z', 'intensity', 'velocity']   # the TI driver's
 LIDAR_RAYS = (1800, 16)     # the simulated roof lidar: steps around, beams (sensors xacro)
 
@@ -95,6 +116,16 @@ LANE_START = 0.3        # m left of the road's centre
 LANE_BAND = 0.05        # m either side of the centre
 LANE_TIME = 30.0        # s of driving, from when the car starts moving
 LOOKAHEAD = 3.0         # m: where lane_finder measures the offset (its config, lookahead)
+
+# Sensor failures on purpose (--faults): each while Nav2 drives, in this order (the NaNs
+# last: a NaN that reaches an EKF could spoil the runs after it). The watchdog's limits
+# (aav_safety config/sensor_watchdog.yaml) and collision_monitor's source_timeout set how
+# soon each must stop the car: REACT gives each that, plus ego's stop.
+FAULTS = [('gps', 'stop'), ('imu', 'stop'), ('odom', 'stop'), ('camera', 'freeze'),
+          ('radar', 'stop'), ('imu', 'freeze'), ('gps', 'jump'), ('gps', 'nan'),
+          ('odom', 'nan'), ('imu', 'nan')]
+REACT = 6.0             # s of Gazebo's time from the fault to standing still
+STILL = 0.05            # m/s: standing still
 
 
 def seconds(stamp):
@@ -157,6 +188,11 @@ class Probe(Node):
         # The stop signs YOLO saw: (where the car was, x m; score; box height, px).
         self.signs = []
         self.create_subscription(Detection2DArray, '/perception/detections', self.on_boxes, 10)
+        self.lock, self.state = None, ''     # the sensor watchdog's
+        self.create_subscription(Bool, '/safety/sensor_watchdog/lock',
+                                 lambda m: setattr(self, 'lock', m.data), 10)
+        self.create_subscription(String, '/safety/sensor_watchdog/state',
+                                 lambda m: setattr(self, 'state', m.data), 10)
         self.monitor = []    # (action, polygon) from collision_monitor, as it changes
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  lambda m: self.monitor.append((m.action_type, m.polygon_name)),
@@ -218,7 +254,8 @@ class Probe(Node):
         self.spin_for(10.0, lambda: sent.done())
         if not sent.done() or not sent.result().accepted:
             return None
-        return sent.result().get_result_async()
+        self.goal = sent.result()     # its handle, to cancel it
+        return self.goal.get_result_async()
 
 
 def check_contract(probe, env, tag, ignore=()):
@@ -319,6 +356,28 @@ def check_lidar(probe):
                         f'{lidar_hz:.1f} Hz, {hits} hits (the ground and the sign)')
 
 
+def check_lidar_scan(probe):
+    """Check lidar_scan's 2D scan for Nav2: 720 ranges in base_link, 10 Hz, the sign in it."""
+    scans = []
+    sub = probe.create_subscription(LaserScan, '/sensors/lidar/scan', scans.append,
+                                    qos_profile_sensor_data)
+    probe.spin_for(5.0)
+    probe.destroy_subscription(sub)
+    if not scans:
+        result('lidar scan', False, 'nothing on /sensors/lidar/scan in 5 s')
+        return
+    scan = scans[-1]
+    ranges = numpy.asarray(scan.ranges)
+    finite = ranges[numpy.isfinite(ranges)]
+    hz = rate([seconds(m.header.stamp) for m in scans])
+    # The road world's only thing over 0.3 m near the road: the stop sign, 25 m ahead.
+    ok = (scan.header.frame_id == 'base_link' and len(ranges) in (720, 721)
+          and abs(hz - 10.0) < 2.0 and finite.size > 0)
+    nearest = f'the nearest {finite.min():.1f} m away' if finite.size else 'nothing seen'
+    result('lidar scan', ok, f'{len(ranges)} ranges in {scan.header.frame_id} at {hz:.1f} Hz, '
+                             f'{finite.size} of them see something, {nearest} (the sign)')
+
+
 def check_drive(probe):
     """Drive the scripted profile; compare the distance with the plan, and the EKF with truth."""
     x0, y0 = probe.xy(probe.truth)
@@ -391,9 +450,25 @@ def check_stop_sign(probe):
             print(f'could not save the picture: {e}', flush=True)
 
 
-def check_obstacle(probe, ahead=15.0, goal=30.0):
-    """Put the bench's box `ahead` m in the lane: the stop zone must stop the car before it."""
-    name = 'obstacle'
+def costmap_peak(grid, x, y, radius):
+    """Return the highest cost (0-100) in an OccupancyGrid within `radius` m of (x, y)."""
+    info = grid.info
+    cells = numpy.asarray(grid.data, dtype=numpy.int16).reshape(info.height, info.width)
+    ox, oy, res = info.origin.position.x, info.origin.position.y, info.resolution
+    cx = (numpy.arange(info.width) + 0.5) * res + ox
+    cy = (numpy.arange(info.height) + 0.5) * res + oy
+    near = (cx[None, :] - x) ** 2 + (cy[:, None] - y) ** 2 <= radius ** 2
+    return int(cells[near].max()) if near.any() else -1
+
+
+def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name='obstacle',
+                   costmap=False):
+    """
+    Put a model `ahead` m in the lane: the stop zone must stop the car before it.
+
+    model is the bench's box (1 m deep) unless given; the lidar's check uses the post
+    (0.5 m). With costmap, the local costmap must also mark it while the car stands there.
+    """
     body = vehicle.load()['vehicle']['body']
     front = body['length'] - body['rear_overhang']   # base_link to the front bumper
     x0, y0 = probe.xy(probe.truth)
@@ -404,20 +479,24 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
         x, y = probe.xy(probe.truth)
         return (x - x0) * c + (y - y0) * s
 
-    # The 1 m box, its near face `ahead` m in front of the bumper, on the car's line.
-    bx, by = x0 + (front + ahead + 0.5) * c, y0 + (front + ahead + 0.5) * s
+    # Its near face `ahead` m in front of the bumper, on the car's line.
+    bx, by = x0 + (front + ahead + depth / 2.0) * c, y0 + (front + ahead + depth / 2.0) * s
     if not gz_service('create', 'gz.msgs.EntityFactory',
-                      f'sdf_filename: "{OBSTACLE}", name: "obstacle", '
+                      f'sdf_filename: "{model}", name: "obstacle", '
                       f'pose: {{position: {{x: {bx}, y: {by}, z: 0}}, '
                       f'orientation: {{z: {math.sin(h / 2.0)}, w: {math.cos(h / 2.0)}}}}}'):
         result(name, False, "could not place the box (Gazebo's create service)")
         return
+    newest = {}     # the local costmap, in odom: on the world's origin, as the car started
+    if costmap:
+        sub = probe.create_subscription(OccupancyGrid, '/local_costmap/costmap',
+                                        lambda m: newest.update(grid=m), 2)
     done = probe.go_to(x0 + goal * c, y0 + goal * s, h)
     if done is None:
         result(name, False, 'no Nav2, or it refused the goal')
         gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
         return
-    seen, top, still, gap = len(probe.monitor), 0.0, None, None
+    seen, top, still, gap, peak = len(probe.monitor), 0.0, None, None, None
     end = time.monotonic() + 240.0
     while time.monotonic() < end and not done.done():
         probe.spin_for(0.1)
@@ -427,16 +506,25 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
             still = still if still is not None else probe.now()
             if probe.now() - still > 3.0:      # stood still for 3 s: take the box away
                 gap = ahead - along()
+                if 'grid' in newest:
+                    peak = costmap_peak(newest['grid'], bx, by, depth / 2.0 + 0.5)
                 gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
         else:
             still = None
+    if costmap:
+        probe.destroy_subscription(sub)
     stop_zone = any(a == CollisionMonitorState.STOP and p == 'StopZone'
                     for a, p in probe.monitor[seen:])
     reached = done.done() and done.result().status == 4
-    passed = along() > front + ahead + 1.0
-    ok = gap is not None and 0.0 < gap < 2.0 and stop_zone and reached and passed
-    where = f'stood still {gap:.2f} m before the box' if gap is not None else 'never stopped'
-    result(name, ok, f'{where} (top speed {top:.2f} m/s), stop zone fired: {stop_zone}; box '
+    passed = along() > front + ahead + depth
+    marked = not costmap or (peak is not None and peak >= 99)
+    ok = gap is not None and 0.0 < gap < 2.0 and stop_zone and reached and passed and marked
+    where = f'stood still {gap:.2f} m before it' if gap is not None else 'never stopped'
+    mark = ''
+    if costmap:
+        mark = (f'; the local costmap {peak} of 100 there' if peak is not None
+                else '; no local costmap seen')
+    result(name, ok, f'{where} (top speed {top:.2f} m/s), stop zone fired: {stop_zone}{mark}; '
                      f'taken away, Nav2 goal {"reached" if reached else "not reached"} '
                      f'{along():.1f} m on')
     if gap is None:
@@ -493,9 +581,112 @@ def check_lane_keeping(probe):
            f'cm, heading {heading:+.3f} rad, over {driven:.0f} s; {finder}')
 
 
-def session(launch_args, checks, log_path, label='', ignore=()):
+def check_lidar_obstacle(probe):
+    """Stop for a post only the lidar sees (the radar is off), and mark it in the costmap."""
+    check_obstacle(probe, model=POST, depth=0.5, name='lidar obstacle', costmap=True)
+
+
+def set_fault(probe, client, sensor, mode):
+    """Set gazebo_adapter's fault.<sensor>; True if it took it."""
+    sent = client.set_parameters([Parameter(f'fault.{sensor}', value=mode)])
+    probe.spin_for(10.0, sent.done)
+    return sent.done() and all(r.successful for r in sent.result().results)
+
+
+def drive_on(probe):
+    """
+    Send Nav2 15 m on, along the road; wait until the car drives at 0.5 m/s.
+
+    East until x = 60 m, then west back to x = 0 (the map ends at 100 m): Nav2 turns the
+    car round between the two, so the wait allows for a three-point turn.
+    """
+    x, y = probe.xy(probe.truth)
+    facing_east = math.cos(yaw_of(probe.truth)) > 0.0
+    east = x < 0.0 or (facing_east and x < 60.0)
+    done = probe.go_to(x + (15.0 if east else -15.0), y, 0.0 if east else math.pi)
+    if done is None:
+        return None
+    probe.spin_for(120.0, lambda: probe.truth.twist.twist.linear.x > 0.5 or done.done())
+    return done
+
+
+def check_faults(probe, watchdog=True):
+    """Each fault in FAULTS while Nav2 drives: the car must stop, and something say why."""
+    client = AsyncParameterClient(probe, 'gazebo_adapter')
+    if not client.wait_for_services(timeout_sec=20.0):
+        result('faults', False, "no gazebo_adapter parameters: can't set a fault")
+        return
+    clear = probe.create_client(Trigger, '/safety/sensor_watchdog/clear')
+    for sensor, mode in FAULTS:
+        name = f'fault {sensor} {mode}'
+        if not probe.spin_for(30.0, lambda: probe.lock is not True) and watchdog:
+            result(name, False, f'the watchdog was still locked before it: {probe.state}')
+            continue
+        done = drive_on(probe)
+        if done is not None and done.done():
+            done = drive_on(probe)      # it turned round and arrived: once more, ahead
+        if done is None or probe.truth.twist.twist.linear.x <= 0.5:
+            result(name, False, 'Nav2 would not drive before the fault')
+            if done is not None:
+                probe.goal.cancel_goal_async()
+            continue
+        seen = len(probe.monitor)
+        x0, y0 = probe.xy(probe.truth)
+        if not set_fault(probe, client, sensor, mode):
+            result(name, False, 'gazebo_adapter refused the fault')
+            continue
+        t0, stopped_at, locked, why = probe.now(), None, False, ''
+        while probe.now() - t0 < REACT + 4.0:
+            probe.spin_for(0.1)
+            if probe.lock and not locked:
+                locked, why = True, probe.state
+            if stopped_at is None and abs(probe.truth.twist.twist.linear.x) < STILL:
+                stopped_at = probe.now() - t0
+        x1, y1 = probe.xy(probe.truth)
+        on = math.hypot(x1 - x0, y1 - y0)
+        gx, gy = probe.xy(probe.glob)
+        ekf = math.hypot(gx - x1, gy - y1)
+        invalid = any(a == CollisionMonitorState.STOP and p == 'invalid source'
+                      for a, p in probe.monitor[seen:])
+        by = ', '.join(w for w, on_ in (('the watchdog', locked),
+                                        ('collision_monitor (invalid source)', invalid)) if on_)
+        stood = (f'stood still {stopped_at:.1f} s after it' if stopped_at is not None
+                 else f'still driving after {REACT + 4.0:.0f} s')
+        detail = (f'{stood}, {on:.1f} m on; stopped by: {by or "nothing"}; the global EKF '
+                  f'{ekf:.1f} m from the truth' + (f'; the watchdog said "{why}"' if why else ''))
+        ok = stopped_at is not None and stopped_at <= REACT and bool(by)
+        # Mend it, and let the car's software settle before the next.
+        set_fault(probe, client, sensor, 'ok')
+        if mode == 'jump':
+            probe.spin_for(30.0, lambda: math.hypot(*(a - b for a, b in zip(
+                probe.xy(probe.glob), probe.xy(probe.truth)))) < 2.0)
+            if clear.wait_for_service(timeout_sec=5.0):
+                cleared = clear.call_async(Trigger.Request())
+                probe.spin_for(10.0, cleared.done)
+        released = probe.spin_for(30.0, lambda: probe.lock is not True)
+        if watchdog and not released:
+            ok = False
+            detail += f'; the lock never opened again: {probe.state}'
+        if not done.done():
+            probe.goal.cancel_goal_async()
+        probe.spin_for(30.0, lambda: abs(probe.truth.twist.twist.linear.x) < STILL)
+        if watchdog:
+            result(name, ok, detail)
+        else:
+            print(f'INFO  {name}: {detail}', flush=True)
+            RESULTS.append((name, None, detail))
+
+
+LIDAR_TOPICS = ('/sensors/lidar/points', '/sensors/lidar/scan')
+WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/state')
+
+
+def session(launch_args, checks, log_path, label='', ignore=(), radar=True):
     """Start sim.launch.py's road world with these arguments, run the checks, and stop it."""
     tag = f' ({label})' if label else ''
+    # What a run leaves out on purpose isn't missing from the graph.
+    ignore = (tuple(ignore) + (LIDAR_TOPICS if 'lidar:=false' in launch_args else ())
+              + (WATCHDOG_TOPICS if 'watchdog:=false' in launch_args else ()))
     env = dict(os.environ)
     print(f"Starting Gazebo's road world{tag} on ROS domain {env['ROS_DOMAIN_ID']}, Gazebo "
           f"partition {env['GZ_PARTITION']} (this computer only)...", flush=True)
@@ -510,7 +701,7 @@ def session(launch_args, checks, log_path, label='', ignore=()):
         def missing():
             return [n for n, m in (('truth', probe.truth), ('global EKF', probe.glob),
                                    ('camera', probe.image), ('lens', probe.info),
-                                   ('radar', probe.cloud)) if m is None]
+                                   ('radar', probe.cloud if radar else True)) if m is None]
 
         up = probe.spin_for(120.0, lambda: not missing())
         # Nav2 comes up last: its lifecycle manager starts its servers one at a time. On a
@@ -523,8 +714,9 @@ def session(launch_args, checks, log_path, label='', ignore=()):
             detail = ('the sensors run, but Nav2 never came up in 120 s (its lifecycle '
                       f'manager stalled? See {log_path})')
         else:
-            detail = ("Gazebo's truth, the global EKF, the camera and the radar stand-in are "
-                      'running' + (', and Nav2 is up' if nav else ''))
+            detail = ("Gazebo's truth, the global EKF, the camera" +
+                      (' and the radar stand-in are' if radar else ' are (no radar)') +
+                      ' running' + (', and Nav2 is up' if nav else ''))
         result(f'start-up{tag}', nav_up, detail)
         up = nav_up
         if up:
@@ -549,7 +741,8 @@ def main():
         print('--perception needs YOLO: pixi run -e ml sim-check --perception', file=sys.stderr)
         return 2
     lidar = '--no-lidar' not in args
-    checks = [check_sensors, check_cameras] + ([check_lidar] if lidar else []) + [check_drive]
+    checks = ([check_sensors, check_cameras] + ([check_lidar, check_lidar_scan] if lidar else [])
+              + [check_drive])
     if perception:
         checks.append(check_stop_sign)
     if '--obstacle' in args:
@@ -558,19 +751,33 @@ def main():
     logs = [log]
     session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],
             checks, logs[0])
+    if '--lidar-obstacle' in args:
+        # Its own run, with the radar off: only the lidar can stop the car for the post.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-lidar{ext}')
+        session(['radar:=false', 'lidar:=true'], [check_lidar_obstacle], logs[-1], 'lidar',
+                ignore=RADAR_TOPICS, radar=False)
+    if '--faults' in args:
+        # Its own run: a fault spoils the car's software for a while, and the camera's
+        # picture goes through gazebo_adapter (faults:=true). No lidar: a lighter run.
+        watchdog = '--no-watchdog' not in args
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-faults{ext}')
+        session(['faults:=true', 'lidar:=false', f'watchdog:={str(watchdog).lower()}'],
+                [lambda probe: check_faults(probe, watchdog)], logs[-1], 'faults')
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-lane{ext}')
         session(['lane:=true', 'nav:=false', 'lidar:=false', f'start_y:={ROAD_Y + LANE_START}'],
-                [check_lane_keeping], logs[1], 'lane', ignore=('/map',))
+                [check_lane_keeping], logs[-1], 'lane', ignore=('/map',))
 
     print('\n| Check | Result | Detail |\n|---|---|---|')
     for name, ok, detail in RESULTS:
-        print(f'| {name} | {"✅" if ok else "❌"} | {detail} |')
+        print(f'| {name} | {"ℹ️" if ok is None else "✅" if ok else "❌"} | {detail} |')
     print(f'\nThe launch log: {", ".join(logs)}')
-    return 0 if all(ok for _, ok, _ in RESULTS) else 1
+    return 0 if all(ok is not False for _, ok, _ in RESULTS) else 1
 
 
 if __name__ == '__main__':

@@ -5,6 +5,8 @@ The real car. One launch file for every machine; a machine file picks the parts.
       [gps:=true] [gps_driver:=ublox] [map:=<map yaml>] [start_x:=0] [start_y:=0]
       [start_yaw:=0] [max_speed:=0.3]
       [reversing:=false]  (true lets Nav2 drive backwards: blind, the team decides first)
+      [lidar:=false]      (true: Nav2 reads /sensors/lidar/points; the roof lidar has no
+                           driver yet, so nothing publishes it)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
@@ -34,9 +36,12 @@ Parts and what they start:
                   control_interface -> /drivers/ai/cmd_vel (twist_mux's AI slot). Off on every
                   machine: it drives whenever it sees a lane, unless a driver above it does
   localization    ekf_local, ekf_global, navsat_transform
-  navigation      Nav2 -> /drivers/nav/cmd_vel. Its local costmap reads the sensors this machine
+  navigation      Nav2 -> /drivers/nav/cmd_vel, and the sensor watchdog (aav_safety), which
+                  stops Nav2 and the AI slot when a sensor they need fails. Nav2's local
+                  costmap reads the sensors this machine
                   runs: with radar, /sensors/radar/points, and collision_monitor stops Nav2 for
-                  radar points just ahead; with camera_obstacles, the camera's points
+                  radar points just ahead; with camera_obstacles, the camera's points;
+                  with lidar:=true (off: no lidar driver yet), /sensors/lidar/points
   spine           backend: CAN spine (ros2_socketcan + spine_bridge)
   legacy_uart     backend: today's ESP32 over UART (the Pi wired to it)
   legacy_encoder  today's wheel encoder over UDP
@@ -233,9 +238,15 @@ def launch_setup(context):
         # off, so none can leak in from another file.
         actions.append(include('aav_navigation', 'navigation.launch.py',
                                map=arg('map') or empty_map, radar=on('radar'),
-                               collision_monitor=on('radar'),
+                               lidar=flag('lidar'),
+                               collision_monitor=on('radar') or flag('lidar'),
                                camera_obstacles=on('camera_obstacles'),
                                reversing=flag('reversing')))
+        # The sensor watchdog, next to Nav2: twist_mux's sensors lock stops Nav2 and the AI
+        # slot when the wheels, the IMU, the GPS or an EKF fail (aav_safety). The car's
+        # sensors may run on other machines: it watches their topics over the network.
+        actions.append(include('aav_safety', 'watchdog.launch.py',
+                               inputs='odom,imu,local,global' + (',gps' if flag('gps') else '')))
     if on('spine'):
         actions.append(include('aav_spine', 'spine.launch.py'))
     if on('legacy_uart') or on('legacy_encoder'):
@@ -263,6 +274,12 @@ def generate_launch_description():
                                           'until the receiver is known: Q18'),
         DeclareLaunchArgument('map', default_value='',
                               description='Map YAML for Nav2 (default: the empty map)'),
+        # Off until the roof lidar has a driver (probably a Velodyne: audit N6). Gazebo
+        # tries it today (sim.launch.py lidar:=true).
+        DeclareLaunchArgument('lidar', default_value='false',
+                              description='true: Nav2 reads the roof lidar on '
+                                          '/sensors/lidar/points. Nothing publishes it on '
+                                          'the car yet'),
         DeclareLaunchArgument('start_x', default_value='0.0'),
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0',
