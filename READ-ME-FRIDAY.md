@@ -109,7 +109,8 @@ Then:
 ~/aav-jazzy/aav.sh car motor_pi
 # Orin (domain 42): mux and ego, speed capped
 ~/aav-jazzy/aav.sh car orin -- max_speed:=0.3 gps:=false
-# Laptop (domain 42, on the car's WiFi)
+# Laptop, on the car's WiFi: in every terminal first
+export ROS_DOMAIN_ID=42
 pixi run keyboard
 pixi run hud
 ```
