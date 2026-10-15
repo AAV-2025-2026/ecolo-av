@@ -73,7 +73,7 @@ PAGES = [
     ('simulation.md', 'Simulation', 'Gazebo, replay, CARLA, and when nothing moves'),
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),
     ('mcp.md', 'AI apps (MCP)', 'Claude and other AI apps: read the project and the graph'),
-    ('plain-english.md', 'Plain English', 'Type what the car should do; a model plans, you say yes'),
+    ('plain-english.md', 'Plain English', 'Type what the car should do; a model plans it'),
     ('firmware.md', 'Firmware', 'src vs firmware, the CAN contract, the spine'),
     ('can-plan.md', 'CAN plan', 'The KEFC CAN bus vs our CAN contract (Proposed)'),
     ('rust-firmware.md', 'Rust firmware', 'Rust on the chips: layers, frameworks, toolchains'),
