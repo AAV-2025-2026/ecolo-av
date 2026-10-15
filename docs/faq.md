@@ -82,7 +82,7 @@ Layers, from the person outward. Each one works even if the ones after it fail.
 | 3 | `/safety/estop` | true: twist_mux blocks every driver, the backends brake |
 | 4 | ego's timeout | no command for 0.3 s |
 | 5 | `spine_bridge` | ego goes quiet: it stops sending drive frames |
-| 6 | The board's watchdog | no good CAN frame for 200 ms (100 ms in the KEFC plan) |
+| 6 | The board's watchdog | no good CAN frame for 100 ms (DBC v0.2.0) |
 
 !!! warning "Today's car has no layer 6"
     The 2025-26 ESP32 firmware has no timeout. If the Motor-Pi dies, the last throttle

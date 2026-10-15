@@ -122,7 +122,7 @@ transceiver chip (U7) fitted? The audit checks.
 | | Today | After KEFC |
 |---|---|---|
 | Command path | Orin → Ethernet → Motor-Pi → UART → ESP32 | Orin #1 → CAN → ESP32 control board |
-| If the computer freezes | **the last throttle stays on**: no timeout | the board brakes after 100 ms (our DBC says 200 ms today; the [CAN plan](can-plan.md) moves it to 100) |
+| If the computer freezes | **the last throttle stays on**: no timeout | the board brakes after 100 ms (DBC v0.2.0, the [CAN plan](can-plan.md)) |
 | Wheel speed | Pico 2 → UDP → Motor-Pi | two wheel nodes → CAN, 100 Hz |
 | Steering position | not measured | KTC-100 pot through the Jrk |
 | GPS | ZED-F9R, taped antenna lead | new board, screw-on antenna, RTK |
