@@ -719,9 +719,11 @@ mod tests {
     }
 
     /// The real file, when it's there (pixi run get-hud-map): fast enough to search as
-    /// someone types.
+    /// someone types. The limit is for a release build (the window's); a debug build's
+    /// SQLite is unoptimised, and tests run side by side, so it gets more room.
     #[test]
     fn the_real_file_is_quick() {
+        let limit_ms = if cfg!(debug_assertions) { 1000 } else { 50 };
         let path =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../../maps/places/ottawa.db");
         let Ok(places) = Places::open(&path) else {
@@ -733,7 +735,7 @@ mod tests {
             let found = places.search(q, Some(HERE)).expect("searches");
             let took = start.elapsed();
             eprintln!("{q:?}: {} results in {took:?}", found.len());
-            assert!(took.as_millis() < 250, "{q:?} took {took:?}");
+            assert!(took.as_millis() < limit_ms, "{q:?} took {took:?}");
         }
         let found = places
             .search("carleton university", Some(HERE))

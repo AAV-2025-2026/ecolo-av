@@ -4,6 +4,9 @@
 //! drives a route through it at up to 3 m/s, and a plan from the car to the goal every
 //! second, as Nav2 sends. At the goal it waits 5 s, then drives the route back. The lot
 //! sits on Carleton's campus, so the street map shows around it.
+//!
+//! A goal sent from the place search: the demo has no Nav2, so it only shows the goal
+//! (WAITING FOR A PLAN, the distance in a straight line) and the car stops.
 
 use std::time::{Duration, Instant};
 
@@ -60,6 +63,10 @@ pub struct Demo {
     sent_map: bool,
     car_due: Instant,
     plan_due: Instant,
+    /// A goal from the place search, to show on the next drain.
+    sent_goal: Option<(Pose, String)>,
+    /// A goal came: the car stops and no more plans come.
+    held: bool,
 }
 
 impl Demo {
@@ -75,6 +82,8 @@ impl Demo {
             sent_map: false,
             car_due: now,
             plan_due: now,
+            sent_goal: None,
+            held: false,
         };
         demo.set_path(corners(true));
         // Start part of the way along, so a screenshot shows a car on the move.
@@ -132,6 +141,10 @@ impl Demo {
             .as_secs_f64()
             .min(0.2);
         self.last = now;
+        if self.held {
+            self.speed = 0.0;
+            return;
+        }
         if let Some(at) = self.arrived_at {
             if now.saturating_duration_since(at) > WAIT_AT_GOAL {
                 // Back the way it came.
@@ -182,8 +195,11 @@ impl DataSource for Demo {
                 frame: "map".into(),
             }));
         }
+        if let Some((pose, frame)) = self.sent_goal.take() {
+            out.push(Update::Goal { pose, frame });
+        }
         // Nav2 stops planning at the goal.
-        if now >= self.plan_due && self.arrived_at.is_none() {
+        if now >= self.plan_due && self.arrived_at.is_none() && !self.held {
             self.plan_due = now + PLAN_PERIOD;
             out.push(Update::Plan {
                 route: self.plan(),
@@ -191,6 +207,12 @@ impl DataSource for Demo {
             });
         }
         out
+    }
+
+    fn send_goal(&mut self, goal: Pose, frame: &str) -> anyhow::Result<()> {
+        self.sent_goal = Some((goal, frame.to_owned()));
+        self.held = true;
+        Ok(())
     }
 }
 
@@ -307,6 +329,25 @@ mod tests {
         }
         assert!(arrived);
         assert!(demo.pose().position.distance(start).0 > 1.0);
+    }
+
+    #[test]
+    fn a_sent_goal_shows_and_the_car_stops() {
+        let t0 = Instant::now();
+        let mut demo = Demo::new(t0);
+        demo.drain(t0);
+        demo.send_goal(Pose::new(1.0, 2.0, 0.5), "map")
+            .expect("the demo takes it");
+        let t1 = t0 + Duration::from_secs(2);
+        let next = demo.drain(t1);
+        assert!(next.contains(&Update::Goal {
+            pose: Pose::new(1.0, 2.0, 0.5),
+            frame: "map".into()
+        }));
+        assert!(!next.iter().any(|u| matches!(u, Update::Plan { .. })));
+        let here = demo.pose().position;
+        demo.drain(t1 + Duration::from_secs(2));
+        assert_eq!(demo.pose().position, here);
     }
 
     #[test]
