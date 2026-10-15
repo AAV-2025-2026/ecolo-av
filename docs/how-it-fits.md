@@ -108,7 +108,7 @@ From the person outward. Each layer works even if everything after it fails.
 | 2 | `/safety/estop` | it's true: the mux blocks every driver, and the car backends brake |
 | 3 | ego's timeout | no command arrives for 0.3 s |
 | 4 | `spine_bridge` | ego is quiet for 0.1 s: it stops sending drive frames |
-| 5 | The spine's watchdog | no valid frame for 200 ms: throttle off, brake on |
+| 5 | The spine's watchdog | no valid frame for 100 ms: throttle off, brake on |
 | 6 | RC override switch, hardware e-stop, driver faults | always: handled in the firmware |
 
 !!! warning "Today's car has no layer 5"

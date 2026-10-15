@@ -1,11 +1,12 @@
 # firmware/spine: the spine's firmware, in Rust
 
-Everything the spine board runs. Every crate is `no_std` and is tested on a laptop, without
+Everything the spine board and the wheel nodes run. Every crate is `no_std` and is tested on a laptop, without
 the board. The board program for a Pico 2, on the bench, is in `boards/pico2`.
 
 | Crate | What it is | Tests |
 |---|---|---|
-| `spine-core` | the spine's logic: modes, arming, the 200 ms watchdog, the speed loop, the encoder, the CAN frames, and the three choices still open (below) | 54 |
+| `spine-core` | the spine's logic: modes, arming, the 100 ms watchdog, the speed loop, the encoder, the CAN frames, and the three choices still open (below) | 59 |
+| `wheel-core` | the front wheel nodes' logic: Hall sensor pulses to speed, and the WHEEL_SPEED frame | 9 |
 | `aav-inputs` | clean inputs: debounced switches, an e-stop that trips at once, counting with a lockout | 9 |
 | `jrk-g2` | the Pololu Jrk G2 motor controllers (steering, brake), over I2C | 14 |
 | `ad5311` | the throttle DAC, over I2C | 10 |

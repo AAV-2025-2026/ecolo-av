@@ -159,7 +159,7 @@ the centre.
 | Lane keeping | back within 5 cm of the centre by 25 s of driving, and still there at 30 s; under 10 cm past the centre; both lines seen in 9 pictures of 10 | [[works]] 0.30 m to 0.00 m: within 5 cm after 5.6-6.7 s (about 5 m of road), 2 cm past the centre at most |
 | The finder against the truth | (reported) | 0.8-1.2 cm out on average, both lines in every picture |
 
-- **A busy computer:** a gap of 200 ms in the commands latches the spine, and the car
+- **A busy computer:** a gap of 100 ms in the commands latches the spine, and the car
   stops. The check arms it again, as a safety driver would, and only counts the time the
   car moves. It says how many times that happened.
 - **A bend** isn't in the check. By hand, with `bend_radius:=60` (left, from 30 m on): the
@@ -191,7 +191,7 @@ Start the real part, and stop the stand-in: same topic, same type, same frame.
 
 - The model car is simple: no wheel slip, no slopes, and an instant brake. Its numbers are
   guesses.
-- Everything runs in real time. A busy laptop can delay commands past the spine's 200 ms
+- Everything runs in real time. A busy laptop can delay commands past the spine's 100 ms
   watchdog, which then latches the spine, as it should.
 - On Ctrl-C, some nodes print a traceback, or a stack trace from deep in ROS's messaging,
   while they shut down. It's harmless.

@@ -12,7 +12,7 @@ what's done so far.
 | The same code on the chip and on a laptop | the logic is plain `no_std` Rust, so `cargo test` checks it on any laptop, with no board |
 | Mistakes caught when it compiles | no stray pointers, no data races between an interrupt and the main loop |
 | One driver for every board | a driver written against `embedded-hal` runs on an ESP32, a Pico, an STM32, and on the Pi under Linux |
-| The spine is already Rust | `spine-core`: modes, arming, the watchdog, the speed loop, the CAN frames (54 tests), the drivers for its devices, and a board program for a Pico 2 |
+| The spine is already Rust | `spine-core`: modes, arming, the watchdog, the speed loop, the CAN frames (59 tests), the drivers for its devices, and a board program for a Pico 2 |
 
 ## What runs where
 
@@ -31,7 +31,7 @@ stays on Linux.
 
 | Layer | What it is | Where | Tested by |
 |---|---|---|---|
-| Logic | the rules: modes, limits, debouncing, the encoder maths | `spine-core`, `aav-inputs` | `cargo test` on a laptop |
+| Logic | the rules: modes, limits, debouncing, the encoder maths | `spine-core`, `aav-inputs`, `wheel-core` | `cargo test` on a laptop |
 | Drivers | one per chip on the car: the Jrk G2 motor controllers, the throttle DAC, the PCA9555 expander, the iBUS radio receiver, the MCP2515 CAN controller | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, written against `embedded-hal` 1.0. The W5500 and the display: only if the board keeps them | `embedded-hal-mock`, which plays the chip on a laptop |
 | Glue | spine-core's outputs to the devices, the devices to its inputs, in a safe order | `spine-board`, with a `Board` trait for what each chip must provide | `embedded-hal-mock` |
 | Boards | one small program per board: pins, timers, the framework, then a loop that calls the glue | `firmware/spine/boards/pico2`: the spine on a Pico 2, for the bench (below) | it builds in `pixi run test`; the rest on the bench, then on the car |
@@ -62,7 +62,7 @@ for the bench: the car's chip is still Q10–Q13. [[untested]] on a real Pico 2.
 | Steering, brake, throttle, direction | the two Jrk G2s, the DAC and the PCA9555 on one I2C bus |
 | The RC receiver | iBUS on a UART; an interrupt fills a buffer, so no byte is lost while a tick waits on I2C |
 | The wheel | two spoke sensors, read every millisecond by a task that interrupts the loop |
-| Arming, the 200 ms command watchdog | `spine-core`, as on the bench: it boots latched, and drives only once ROS disarms, then arms |
+| Arming, the 100 ms command watchdog | `spine-core`, as on the bench: it boots latched, and drives only once ROS disarms, then arms |
 | The chip's own watchdog | fed after every tick: a hang or a panic resets the chip within 100 ms, into the safe state |
 
 Size: 60,164 bytes of flash (of 4 MB) and 2,796 bytes of fixed RAM (of 512 kB).
@@ -153,6 +153,62 @@ Everything is in Pixi; nothing to install by hand.
 | The wheel sensors | which is A, and what B's level means (Q5) | the team |
 | The e-stop's spare contact | normally closed? (Q6) | the team |
 | A Pico 2 that once had a partition table | an A2 chip refuses drag-and-drop then (RP2350-E10); a new Pico 2 has none | use the probe |
+
+## The ESP32 boards of the KEFC plan (15 Oct)
+
+[The KEFC CAN plan](can-plan.md) keeps the car's own control board as the spine, and adds
+a wheel node on each front wheel. Both chips are Xtensa ESP32s. [[needs-you]] Ben hasn't
+approved the DBC change yet.
+
+```text
+            CAN bus, 500 kbit/s
+  Orin ───────────┬─────────────────┬─────────────────┐
+                  │                 │                 │
+          control board        wheel node L      wheel node R
+          ESP32 (MicroMod)     ESP32-S3 (X2)     ESP32-S3 (X2)
+          spine-core           wheel-core        wheel-core
+          spine-board          Hall sensor       Hall sensor
+```
+
+| Board | Chip | Its logic, done and tested | Its board crate, still to write |
+|---|---|---|---|
+| The spine: the AAV control board | ESP32 (Xtensa LX6) | `spine-core` and `spine-board`: modes, arming, the 100 ms watchdog, the speed loop, the frames, the Jrk G2s, the DAC, iBUS | `boards/esp32-spine` |
+| A wheel node: ESP32-CAN-X2 | ESP32-S3 (Xtensa LX7) | `wheel-core`: pulses and their times to a speed, the zero-speed timeout, the WHEEL_SPEED frame from `spine-core`'s protocol | `boards/esp32s3-wheel` |
+
+### What a board crate does
+
+| Part | How, with `esp-hal` and Embassy |
+|---|---|
+| CAN | `esp-hal`'s TWAI driver (the ESP32's built-in CAN controller), 500 kbit/s, an acceptance filter for our IDs. No MCP2515 needed |
+| The loop | an Embassy task every 10 ms: the spine's `SpineBoard::tick`, or the wheel node's `frame()` |
+| The Hall sensor | a GPIO interrupt (or the PCNT pulse counter) calls `WheelNode::on_pulse(now_us)` |
+| The clock | `embassy_time::Instant`, in microseconds |
+| Settings | constants in the board crate: pins, rotor holes, tyre radius. ROS never sees them |
+| Safety | the chip's watchdog fed after every tick, as on the Pico 2 |
+
+### The toolchain
+
+The ESP32 and ESP32-S3 are Xtensa, which stock Rust can't build for. Espressif's `espup`
+installs their Rust fork; `espflash` flashes over USB. Not installed yet, and not in Pixi.
+
+| Step | Command |
+|---|---|
+| Install, once | `cargo install espup espflash`, then `espup install` |
+| Each terminal | `. ~/export-esp.sh` |
+| Build and flash | `cargo run --release` in the board crate (its runner is `espflash flash --monitor`) |
+
+Like `boards/pico2`, each board crate is a workspace of its own, outside the default build:
+`pixi run test` keeps working on a laptop without `espup`. The logic crates need nothing:
+they already build and test with stock Rust.
+
+### What's left
+
+| # | Step | Waits on |
+|---|---|---|
+| 1 | Ben approves DBC v0.2.0 | Ben |
+| 2 | Install `espup`; write `boards/esp32s3-wheel` (the smaller one first) | step 1 |
+| 3 | Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel | the car |
+| 4 | Write `boards/esp32-spine`: the control board's pins, from its schematic | the schematic |
 
 ## Today's boards, and their Rust versions
 

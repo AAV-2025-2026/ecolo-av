@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">15 min read · 9 sections</div></header>
+<div class="meta">18 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,7 +49,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#the-esp32-boards-of-the-kefc-plan-15-oct">The ESP32 boards of the KEFC plan (15 Oct)</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
 <div class="lead"><p>Ben's direction (10 October 2026): write the firmware and the hardware drivers in Rust,
 not C or C++, even where the ROS nodes above stay in Python. The 2025-26 C++ firmware keeps
 running today's car until a Rust version replaces each board. This page is the plan, and
@@ -77,7 +77,7 @@ what's done so far.</p></div>
 </tr>
 <tr>
 <td>The spine is already Rust</td>
-<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (54 tests), the drivers for its devices, and a board program for a Pico 2</td>
+<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (59 tests), the drivers for its devices, and a board program for a Pico 2</td>
 </tr>
 </tbody>
 </table></div>
@@ -127,7 +127,7 @@ stays on Linux.</p>
 <tr>
 <td>Logic</td>
 <td>the rules: modes, limits, debouncing, the encoder maths</td>
-<td><code>spine-core</code>, <code>aav-inputs</code></td>
+<td><code>spine-core</code>, <code>aav-inputs</code>, <code>wheel-core</code></td>
 <td><code>cargo test</code> on a laptop</td>
 </tr>
 <tr>
@@ -220,7 +220,7 @@ for the bench: the car's chip is still Q10–Q13. <span class="badge b-untested"
 <td>two spoke sensors, read every millisecond by a task that interrupts the loop</td>
 </tr>
 <tr>
-<td>Arming, the 200 ms command watchdog</td>
+<td>Arming, the 100 ms command watchdog</td>
 <td><code>spine-core</code>, as on the bench: it boots latched, and drives only once ROS disarms, then arms</td>
 </tr>
 <tr>
@@ -512,6 +512,137 @@ make are in <code>spine-core</code> (<code>firmware/spine/README.md</code>).</p>
 <td>A Pico 2 that once had a partition table</td>
 <td>an A2 chip refuses drag-and-drop then (RP2350-E10); a new Pico 2 has none</td>
 <td>use the probe</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-esp32-boards-of-the-kefc-plan-15-oct">The ESP32 boards of the KEFC plan (15 Oct)</h2>
+<p><a href="can-plan.html">The KEFC CAN plan</a> keeps the car's own control board as the spine, and adds
+a wheel node on each front wheel. Both chips are Xtensa ESP32s. <span class="badge b-needs-you">needs you</span> Ben hasn't
+approved the DBC change yet.</p>
+<pre class="highlight"><code class="language-text">            CAN bus, 500 kbit/s
+  Orin ───────────┬─────────────────┬─────────────────┐
+                  │                 │                 │
+          control board        wheel node L      wheel node R
+          ESP32 (MicroMod)     ESP32-S3 (X2)     ESP32-S3 (X2)
+          spine-core           wheel-core        wheel-core
+          spine-board          Hall sensor       Hall sensor</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Board</th>
+<th>Chip</th>
+<th>Its logic, done and tested</th>
+<th>Its board crate, still to write</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The spine: the AAV control board</td>
+<td>ESP32 (Xtensa LX6)</td>
+<td><code>spine-core</code> and <code>spine-board</code>: modes, arming, the 100 ms watchdog, the speed loop, the frames, the Jrk G2s, the DAC, iBUS</td>
+<td><code>boards/esp32-spine</code></td>
+</tr>
+<tr>
+<td>A wheel node: ESP32-CAN-X2</td>
+<td>ESP32-S3 (Xtensa LX7)</td>
+<td><code>wheel-core</code>: pulses and their times to a speed, the zero-speed timeout, the WHEEL_SPEED frame from <code>spine-core</code>'s protocol</td>
+<td><code>boards/esp32s3-wheel</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-a-board-crate-does">What a board crate does</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>How, with <code>esp-hal</code> and Embassy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CAN</td>
+<td><code>esp-hal</code>'s TWAI driver (the ESP32's built-in CAN controller), 500 kbit/s, an acceptance filter for our IDs. No MCP2515 needed</td>
+</tr>
+<tr>
+<td>The loop</td>
+<td>an Embassy task every 10 ms: the spine's <code>SpineBoard::tick</code>, or the wheel node's <code>frame()</code></td>
+</tr>
+<tr>
+<td>The Hall sensor</td>
+<td>a GPIO interrupt (or the PCNT pulse counter) calls <code>WheelNode::on_pulse(now_us)</code></td>
+</tr>
+<tr>
+<td>The clock</td>
+<td><code>embassy_time::Instant</code>, in microseconds</td>
+</tr>
+<tr>
+<td>Settings</td>
+<td>constants in the board crate: pins, rotor holes, tyre radius. ROS never sees them</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>the chip's watchdog fed after every tick, as on the Pico 2</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-toolchain">The toolchain</h3>
+<p>The ESP32 and ESP32-S3 are Xtensa, which stock Rust can't build for. Espressif's <code>espup</code>
+installs their Rust fork; <code>espflash</code> flashes over USB. Not installed yet, and not in Pixi.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Install, once</td>
+<td><code>cargo install espup espflash</code>, then <code>espup install</code></td>
+</tr>
+<tr>
+<td>Each terminal</td>
+<td><code>. ~/export-esp.sh</code></td>
+</tr>
+<tr>
+<td>Build and flash</td>
+<td><code>cargo run --release</code> in the board crate (its runner is <code>espflash flash --monitor</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Like <code>boards/pico2</code>, each board crate is a workspace of its own, outside the default build:
+<code>pixi run test</code> keeps working on a laptop without <code>espup</code>. The logic crates need nothing:
+they already build and test with stock Rust.</p>
+<h3 id="whats-left">What's left</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>Waits on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Ben approves DBC v0.2.0</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Install <code>espup</code>; write <code>boards/esp32s3-wheel</code> (the smaller one first)</td>
+<td>step 1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel</td>
+<td>the car</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Write <code>boards/esp32-spine</code>: the control board's pins, from its schematic</td>
+<td>the schematic</td>
 </tr>
 </tbody>
 </table></div>

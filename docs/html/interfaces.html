@@ -183,7 +183,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).</td>
+<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.</td>
 </tr>
 <tr>
 <td><code>/vehicle/status</code></td>
@@ -200,6 +200,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>joint_state_publisher</code></td>
 <td>bench</td>
 <td>Measured front steering joint angles, merged into /joint_states.</td>
+</tr>
+<tr>
+<td><code>/vehicle/wheel_speed</code></td>
+<td><code>aav_interfaces/msg/WheelSpeed</code></td>
+<td><code>spine_bridge</code></td>
+<td>-</td>
+<td>bench</td>
+<td>Front wheel speeds (m/s, signed) and pulse counts from the wheel nodes (CAN 0x200, 0x201), about 100 Hz. Their mean, when fresh, is the speed in /vehicle/odom.</td>
 </tr>
 <tr>
 <td><code>/joint_states</code></td>
@@ -223,7 +231,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>socket_can_receiver</code>, <code>spine_sim</code></td>
 <td><code>spine_bridge</code></td>
 <td>bench</td>
-<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz. On the bench, spine_sim sends them.</td>
+<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench, spine_sim sends them all.</td>
 </tr>
 <tr>
 <td><code>/sensors/imu/data_raw</code></td>

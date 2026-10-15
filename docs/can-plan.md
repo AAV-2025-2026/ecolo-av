@@ -4,7 +4,8 @@ Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and th
 a CAN bus. Our code already has a CAN contract, `firmware/can/aav.dbc` (v0.1.0). This page
 compares the two, and says what changes.
 
-**Status: Proposed** [[needs-you]]. The DBC is not changed yet.
+**Status: Implemented on `wt/can-v2`, waiting for Ben** [[needs-you]]. DBC v0.2.0 is on
+that branch, not on `main`: merge it once Ben says yes.
 
 ## The plan in one picture
 
@@ -26,7 +27,7 @@ Orin #1 ── CAN Pal (40-pin header) ──┬──────────�
 | One command frame at 50 Hz | 0x100 | 0x100 `DRIVE_CMD`, 50 Hz |
 | Status frame from the board | 0x180 | 0x180 `VEHICLE_FEEDBACK`, 0x181 `VEHICLE_STATUS` |
 | A counter and a checksum, so a frozen Orin is caught | yes | yes: every frame, CRC-8 |
-| Brake on silence | 100 ms | 200 ms |
+| Brake on silence | 100 ms | 100 ms (v0.2.0; it was 200 ms) |
 | The speed loop on the board, not the Orin | yes | yes: `spine-core` |
 
 ## What is different
