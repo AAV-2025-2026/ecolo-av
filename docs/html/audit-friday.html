@@ -400,6 +400,14 @@ sudo dd if=/dev/rdiskN bs=4m | gzip &gt; ~/aav-backup/&lt;machine&gt;.img.gz</co
 </section>
 <section class="card"><h2 id="step-4-the-read-only-checks">Step 4: the read-only checks</h2>
 <h3 id="the-block-for-every-linux-machine">The block for every Linux machine</h3>
+<div class="admonition note">
+<p class="admonition-title">Now a script: <code>pixi run survey</code></p>
+<pre><code>[FRIDAY-TODO.md](../FRIDAY-TODO.md) part 2: `tools/machine_survey.sh` does all of the block
+below and more (boot scripts, who holds each device, camera and power errors, code and
+weights found only here), on every machine in `~/aav-audit/hosts.txt`. The block below
+stays as the by-hand version.
+</code></pre>
+</div>
 <p>Save this as <code>audit.sh</code> <strong>on your laptop</strong>, then run it from the laptop:</p>
 <pre class="highlight"><code class="language-bash">ssh &lt;user&gt;@&lt;ip&gt; 'bash -s' &lt; audit.sh &gt; ~/aav-audit/&lt;switch label&gt;.txt 2&gt;&amp;1</code></pre>
 <p>Nothing is saved on the car. The output stays on your laptop.</p>

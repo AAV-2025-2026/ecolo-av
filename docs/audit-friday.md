@@ -141,6 +141,12 @@ sudo dd if=/dev/rdiskN bs=4m | gzip > ~/aav-backup/<machine>.img.gz
 
 ### The block for every Linux machine
 
+!!! note "Now a script: `pixi run survey`"
+    [FRIDAY-TODO.md](../FRIDAY-TODO.md) part 2: `tools/machine_survey.sh` does all of the block
+    below and more (boot scripts, who holds each device, camera and power errors, code and
+    weights found only here), on every machine in `~/aav-audit/hosts.txt`. The block below
+    stays as the by-hand version.
+
 Save this as `audit.sh` **on your laptop**, then run it from the laptop:
 
 ```bash

@@ -4,6 +4,7 @@ Written 15 October 2026, for Ben and the team. The plan for the day, in order, w
 **stop point** after each step.
 
 > **The short version**
+> - **The tick-list for the morning:** [FRIDAY-TODO.md](FRIDAY-TODO.md): find, log in and survey every machine (`pixi run survey`), copy what exists only on the car, chase the camera freezes.
 > - **Morning: look, don't touch.** Back up, run the read-only checks, and answer the questions in [docs/audit-questions.md](docs/audit-questions.md).
 > - **Then the network, together:** the IPs, the ROS domain, and whether multicast passes between the machines (ROS needs it).
 > - **Then our stack, one piece at a time,** in our own ROS domain (42), so it never mixes with the 2025-26 software.
