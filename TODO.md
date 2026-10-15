@@ -22,8 +22,19 @@ wait for Ben. GitHub's Linux CI is green again.
 - The front cameras are ribbon (CSI); our driver `usb_cam` is USB-only: `camera_ros` instead.
 - A lidar is on the roof; we have a simulated one (`lidar:=true`) but no driver.
 
-**Next, in order:** Friday's audit (`docs/audit-friday.md`); Ben's answers on the two
-branches above; the A-to-B drive (`READ-ME-A-TO-B.md`); the HUD's map panel.
+**Also landed on 15 Oct (after the summary above):**
+- the two Pico 2 boards and the radar clustering in Rust; no C++ left in `src/`;
+- Friday's plan, `READ-ME-FRIDAY.md`, and every hardware question, `docs/audit-questions.md`;
+- the offline install kit for the car: `pixi run car-kit` (1.8 GB, untested on ARM);
+- `max_speed:=` caps ego at launch, for the first drive on stands;
+- plain-English driving with a local model (`pixi run -e llm talk`, Qwen3-4B), Gazebo only:
+  `docs/plain-english.md`;
+- better open-source models, including NVIDIA's per-pixel CitySemSegFormer, in
+  `READ-ME-PERCEPTION-AND-HUD-MAP.md`.
+
+**Next, in order:** Thursday evening, `pixi run car-kit`; Friday's audit and our stack on
+the car on stands (`READ-ME-FRIDAY.md`); Ben's answers on the branches above; the A-to-B
+drive (`READ-ME-A-TO-B.md`); the HUD's map panel; Python to Rust, step 1 (spine bridge, ego).
 
 ## Where we stopped (11 Oct, 12:30)
 
