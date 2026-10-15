@@ -44,6 +44,7 @@ our car uses it.
 | GPS: where the car is on the earth, and RTK | [Learn: GPS](learn-gps.md) |
 | Localization: odometry, Kalman filters, frames and TF | [Learn: localization](learn-localization.md) |
 | Control: feedback loops, PID, steering geometry, safe stops | [Learn: control](learn-control.md) |
+| Nav2: planning a path and steering along it | [Learn: Nav2](learn-nav2.md) |
 | CAN: the wire for steering, brake and throttle | [Learn: CAN](learn-can.md) |
 
 ## Read these, in order
