@@ -67,7 +67,7 @@ The ⚠️ rows matter most: they change what we buy, or whether it's safe to dr
 | W7 | The Orin: JetPack version, module part number, free disk | `cat /etc/nv_tegra_release`; the label; `df -h` | the reflash plan (Q24); the kit (13 GB free to install) |
 | W8 | Free disk and RAM on each Pi | `df -h`, `free -h` | our environment on each one |
 | W9 | What are ES-PI and QNX-PI, and are they in the driving path? | log in; `systemctl list-units`; ask | the network map; the start-up order |
-| W10 | Which Pi drives the dash screen, and its resolution? | `xrandr` or `kmsprint` on the dash Pi | the raylib HUD's full-screen size |
+| W10 | Which computer drives the dash's two screens? Their output names, resolutions, X11 or Wayland? | `xrandr --listmonitors`, `wlr-randr` or `kmsprint`; `echo $XDG_SESSION_TYPE` | the monitors in `screens.env`, for the HUD and the map at boot (docs/car-screens.md) |
 
 ## 6. Measurements for `vehicle.yaml` (Q1)
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-install.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Our stack on the car, from a USB stick</h1>
-<div class="meta">7 min read · 10 sections</div></header>
+<div class="meta">8 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -53,6 +53,7 @@
 <a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a class="here" href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
 <a href="car-photos.html">Car photos</a>
 <a href="conventions.html">Conventions</a>
 <a href="naming.html">Topic areas</a>
@@ -257,11 +258,15 @@ bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --dry-run</code></pre>
   environment only if <code>pixi.lock</code> changed.</li>
 <li>A package that fails to build doesn't stop the rest: the end of <code>~/aav-jazzy/build.log</code>
   says which.</li>
+<li>On the computer that drives the dash's two screens, add <strong><code>--screens</code></strong>: it builds the
+  HUD and the map, and starts them at login, full screen, one on each screen
+  (<a href="car-screens.html">The two screens</a>).</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">What it never touches</p>
 <pre><code>`sudo`, `/opt/ros` (Humble), `~/.bashrc`, `~/.cargo`, system services, the network
-settings. Everything is in `~/aav-jazzy`.
+settings. Everything is in `~/aav-jazzy`. Only `--screens` adds files outside it:
+two systemd *user* units and an autostart entry in `~/.config`.
 </code></pre>
 </div>
 </section>
@@ -345,7 +350,8 @@ terminal set (<code>AMENT_PREFIX_PATH</code>, <code>PYTHONPATH</code>...). Pixi 
 </div>
 </section>
 <section class="card"><h2 id="undo">Undo</h2>
-<pre class="highlight"><code class="language-bash">rm -rf ~/aav-jazzy</code></pre>
+<pre class="highlight"><code class="language-bash">bash ~/aav-jazzy/aav/tools/car_screens_install.sh uninstall   # only after --screens
+rm -rf ~/aav-jazzy</code></pre>
 <p>Nothing else changed, so nothing else needs undoing.</p>
 </section>
 <section class="card"><h2 id="when-theres-internet">When there's internet</h2>
@@ -389,7 +395,7 @@ GitHub, so <code>git pull</code> in <code>~/aav-jazzy/aav</code> works once the 
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="platforms.html"><small>Previous</small>← Platforms</a>
-<a class="next" href="car-photos.html"><small>Next</small>Car photos →</a></nav>
+<a class="next" href="car-screens.html"><small>Next</small>The two screens →</a></nav>
 </main>
 <footer>Source: <code>docs/car-install.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

@@ -40,8 +40,8 @@ we are. Details live in the pages linked from each row.
 | **Bench** | the real CAN messages, the spine's logic and both e-stops, without the car | ✅ `bench-check` | |
 | **Perception** | YOLO11 (stop signs and objects), lane keeping, radar clustering (Rust) | 🧪 bench and sim | [perception](READ-ME-PERCEPTION-AND-HUD-MAP.md) |
 | **Core ML and TensorRT** | the same YOLO model exported for the Mac (Core ML) and the Jetson Orin (TensorRT, built on the Orin) | 🧪 Mac done; Orin after its upgrade | [perception](docs/perception.md) |
-| **Instrument cluster (small screen)** | raylib HUD in Rust: speed, mode, gear, e-stop button, camera, GPS, topic health | 🧪 | [HUD](docs/hud.md) |
-| **Map (big screen)** | Nav2's map over offline Ottawa streets (OpenStreetMap), the car, the path, distance and time left; **search a place and send the car there** | 🧪 | [HUD](docs/hud.md) |
+| **Instrument cluster (small screen)** | raylib HUD in Rust: speed, mode, gear, e-stop button, camera, GPS, topic health; full screen on its own monitor at boot (ready to install) | 🧪 | [HUD](docs/hud.md), [two screens](docs/car-screens.md) |
+| **Map (big screen)** | Nav2's map over offline Ottawa streets (OpenStreetMap), the car, the path, distance and time left; **search a place and send the car there**; full screen at boot, like the HUD | 🧪 | [HUD](docs/hud.md), [two screens](docs/car-screens.md) |
 | **Plain-English driving** | a local language model (Qwen3, on the Mac with MLX) plans "drive 10 m forward"; you type yes | 🧪 sim: drove 10.02 m | [plain English](docs/plain-english.md) |
 | **Rust port** | firmware in Rust: the spine (on today's ESP32 control board too, over its UART or CAN), the wheel encoder, the status display, the CAN wheel nodes' logic; the IMU driver and radar clustering in Rust | 🧪 321 tests in `firmware/spine`; builds for the Pico 2 and the ESP32; never flashed | [Rust firmware](docs/rust-firmware.md) |
 | **Linux and Mac** | one `pixi.toml`: the same commands on Ubuntu, AlmaLinux and macOS, no admin rights; nightly Mac CI | ✅ | [Mac](docs/mac.md) |

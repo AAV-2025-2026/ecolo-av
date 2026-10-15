@@ -204,8 +204,26 @@ What our code has today, and what Friday must answer to finish each layer.
 | **Lidar** | **none yet**; Gazebo only | make, model, IP; which computer reads it; any driver on the car | N6 |
 | **Power, battery** | none | each converter's rating and load; the KM110F's data port | P1, P2, N8 |
 | **Network, time** | domain 42; `doctor`, `net-map` | the IP map; multicast; IGMP; clocks | W1-W6 |
-| **HUD screen** | the raylib HUD; the Flutter app | which Pi drives which screen, and its resolution; how the app starts at boot | W10 |
+| **HUD screen** | the raylib HUD and map; boot units ready (`car_install.sh --screens`) | which computer drives which screen, the outputs' names and resolutions; how the app starts at boot (below) | W10 |
 | **CAN (the KEFC plan)** | the DBC; the spine firmware | is U7 fitted and wired to the ESP32; rotor holes; room at each wheel | C1-C3 |
+
+### The dash's two screens (W10)
+
+Our HUD and map are ready to start at boot, one per screen ([docs/car-screens.md](docs/car-screens.md)):
+they only need these answers. Read-only, on the computer the screens plug into, in its
+desktop's terminal (or over ssh with `DISPLAY=:0`).
+
+| ☐ | Note | How |
+|---|---|---|
+| ☐ | Which computer drives each screen (follow the cables: the small touchscreen, the Innoview) | photo of both ends of each cable |
+| ☐ | The outputs' names and resolutions | `xrandr --listmonitors` (X11); `wlr-randr` (Wayland: Pi OS); `kmsprint` (no desktop) |
+| ☐ | Which name is the small screen, which the big one | the sizes in the line above: ~800x480 is the touchscreen |
+| ☐ | X11 or Wayland | `echo $XDG_SESSION_TYPE`, and `loginctl show-session $XDG_SESSION_ID -p Type` |
+| ☐ | Does it log in to the desktop by itself at power-on? As which user? | watch a boot; `grep -i autologin /etc/gdm3/custom.conf` |
+| ☐ | What starts the 2025-26 app now | `systemctl list-unit-files --state=enabled`; `systemctl --user list-unit-files`; `ls ~/.config/autostart` |
+| ☐ | Is the touchscreen's touch a mouse to X? | `xinput list` |
+| ☐ | The GPU and OpenGL version (two full-screen windows) | `glxinfo -B` if installed; `uname -m` must say `aarch64` for our kit |
+| ☐ | Its 5 V (the dash converter showed 3.48 A) | `vcgencmd get_throttled` (E1) |
 
 ## 7. Photos and measurements
 

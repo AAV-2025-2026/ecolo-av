@@ -11,7 +11,8 @@ matches it. Still open (Q29): which screen, and GPS destinations this year.
 
 **Two screens (Ben, 15 Oct):** a small ~7" touchscreen is the instrument cluster (the
 HUD), and a big ~15" monitor shows the map: [the map window](#the-map-window-big-screen),
-a second program.
+a second program. Each opens full screen on its own monitor at boot:
+[The two screens](car-screens.md).
 
 ## The HUD in Rust (raylib)
 
@@ -35,6 +36,7 @@ a second program.
 pixi run hud-demo                  # pretend data: no ROS, no car, any Mac
 pixi run build && pixi run hud     # the real node (ros2 launch aav_hud_raylib hud.launch.py)
 pixi run hud fullscreen:=true      # full screen; F11 switches too
+pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or number
 ```
 
 Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
@@ -51,8 +53,11 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 - The GPS panel reads `/sensors/gps/fix`, the receiver itself, not `/localization/gps/fix`: it answers
   "does the GPS work?". navsat_transform marks every `/localization/gps/fix` message as RTK.
 - NavSatFix can't tell RTK float from fixed. The HUD calls it fixed at 5 cm or better.
-- Not in `car.launch.py` yet. On Linux without X11's headers, colcon skips it with a
-  warning.
+- Not in `car.launch.py`: on the car it starts at login by itself
+  ([The two screens](car-screens.md)). On Linux without X11's headers, colcon skips it
+  with a warning.
+- `--monitor NAME|N` picks the monitor (its name exactly, or its number);
+  `--list-monitors` prints them. A missing monitor is an error, never a guess.
 
 ### Tested (15 October, a Mac)
 
@@ -125,6 +130,7 @@ Nav2.
 pixi run map-demo                          # pretend data: no ROS, no car
 pixi run build && pixi run map             # the real node (ros2 launch aav_hud_raylib map.launch.py)
 pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window together
+pixi run map fullscreen:=true monitor:=HDMI-1   # full screen on that monitor
 ```
 
 ### How it's built

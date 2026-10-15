@@ -53,6 +53,7 @@
 <a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
 <a href="car-photos.html">Car photos</a>
 <a href="conventions.html">Conventions</a>
 <a href="naming.html">Topic areas</a>
@@ -70,7 +71,8 @@ also its ROS node. Its first screen runs since 15 October:
 matches it. Still open (Q29): which screen, and GPS destinations this year.</p>
 <p><strong>Two screens (Ben, 15 Oct):</strong> a small ~7" touchscreen is the instrument cluster (the
 HUD), and a big ~15" monitor shows the map: <a href="#the-map-window-big-screen">the map window</a>,
-a second program.</p></div>
+a second program. Each opens full screen on its own monitor at boot:
+<a href="car-screens.html">The two screens</a>.</p></div>
 <section class="card"><h2 id="the-hud-in-rust-raylib">The HUD in Rust (raylib)</h2>
 <p><code>src/hud/aav_hud_raylib</code>: one window, which is also the ROS node <code>hud</code>.</p>
 <p><img alt="The driving screen, with pretend data (--demo)" src="../img/hud-raylib.png" /></p>
@@ -115,7 +117,8 @@ a second program.</p></div>
 <h3 id="run-it">Run it</h3>
 <pre class="highlight"><code class="language-bash">pixi run hud-demo                  # pretend data: no ROS, no car, any Mac
 pixi run build &amp;&amp; pixi run hud     # the real node (ros2 launch aav_hud_raylib hud.launch.py)
-pixi run hud fullscreen:=true      # full screen; F11 switches too</code></pre>
+pixi run hud fullscreen:=true      # full screen; F11 switches too
+pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or number</code></pre>
 <p>Without Pixi: <code>cargo run -p hud-app --no-default-features -- --demo</code>, in
 <code>src/hud/aav_hud_raylib</code>. The first build compiles raylib (cmake, about a minute).</p>
 <h3 id="how-its-built">How it's built</h3>
@@ -145,8 +148,11 @@ pixi run hud fullscreen:=true      # full screen; F11 switches too</code></pre>
 <li>The GPS panel reads <code>/sensors/gps/fix</code>, the receiver itself, not <code>/localization/gps/fix</code>: it answers
   "does the GPS work?". navsat_transform marks every <code>/localization/gps/fix</code> message as RTK.</li>
 <li>NavSatFix can't tell RTK float from fixed. The HUD calls it fixed at 5 cm or better.</li>
-<li>Not in <code>car.launch.py</code> yet. On Linux without X11's headers, colcon skips it with a
-  warning.</li>
+<li>Not in <code>car.launch.py</code>: on the car it starts at login by itself
+  (<a href="car-screens.html">The two screens</a>). On Linux without X11's headers, colcon skips it
+  with a warning.</li>
+<li><code>--monitor NAME|N</code> picks the monitor (its name exactly, or its number);
+  <code>--list-monitors</code> prints them. A missing monitor is an error, never a guess.</li>
 </ul>
 <h3 id="tested-15-october-a-mac">Tested (15 October, a Mac)</h3>
 <div class="table-wrap"><table>
@@ -345,7 +351,8 @@ Nav2.</p>
 <h3 id="run-it_1">Run it</h3>
 <pre class="highlight"><code class="language-bash">pixi run map-demo                          # pretend data: no ROS, no car
 pixi run build &amp;&amp; pixi run map             # the real node (ros2 launch aav_hud_raylib map.launch.py)
-pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window together</code></pre>
+pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window together
+pixi run map fullscreen:=true monitor:=HDMI-1   # full screen on that monitor</code></pre>
 <h3 id="how-its-built_1">How it's built</h3>
 <div class="table-wrap"><table>
 <thead>

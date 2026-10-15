@@ -85,10 +85,14 @@ bash /media/$USER/<stick>/car-kit/car_install.sh
   environment only if `pixi.lock` changed.
 - A package that fails to build doesn't stop the rest: the end of `~/aav-jazzy/build.log`
   says which.
+- On the computer that drives the dash's two screens, add **`--screens`**: it builds the
+  HUD and the map, and starts them at login, full screen, one on each screen
+  ([The two screens](car-screens.md)).
 
 !!! note "What it never touches"
     `sudo`, `/opt/ros` (Humble), `~/.bashrc`, `~/.cargo`, system services, the network
-    settings. Everything is in `~/aav-jazzy`.
+    settings. Everything is in `~/aav-jazzy`. Only `--screens` adds files outside it:
+    two systemd *user* units and an autostart entry in `~/.config`.
 
 ## 4. Look, read-only: car_listen
 
@@ -137,6 +141,7 @@ terminal set (`AMENT_PREFIX_PATH`, `PYTHONPATH`...). Pixi and cargo never go onl
 ## Undo
 
 ```bash
+bash ~/aav-jazzy/aav/tools/car_screens_install.sh uninstall   # only after --screens
 rm -rf ~/aav-jazzy
 ```
 

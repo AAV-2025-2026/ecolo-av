@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The car&#x27;s two screens · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/car-screens.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The car&#x27;s two screens</h1>
+<div class="meta">7 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-install.html">From a USB stick</a>
+<a class="here" href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-it-starts">How it starts</a><a href="#the-settings-configaavscreensenv">The settings: ~/.config/aav/screens.env</a><a href="#which-monitor-names-not-guesses">Which monitor: names, not guesses</a><a href="#install-on-the-car-computer-with-the-screens">Install (on the car computer with the screens)</a><a href="#day-to-day">Day to day</a><a href="#the-2025-26-way-for-comparison">The 2025-26 way, for comparison</a><a href="#what-was-tested">What was tested</a></nav>
+<div class="lead"><p>Power on the car → the <strong>HUD</strong> fills the small screen, the <strong>map</strong> fills the big one.
+Both start by themselves at login, and come back 5 s after a crash.</p>
+<div class="admonition warning">
+<p class="admonition-title">Built, not yet on the car</p>
+<pre><code>Everything below is ready in the repo (15 Oct) and [[untested]] on the car. Friday's
+audit tells us which computer drives the screens and what it calls them.
+</code></pre>
+</div>
+<p><img alt="The dash: the small touchscreen (left) and the Innoview monitor (right)" src="../img/car/dash-screens.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>Size</th>
+<th>Shows</th>
+<th>Program</th>
+<th>Its unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Small touchscreen, left</td>
+<td>~7"</td>
+<td>the instrument cluster: speed, mode, gear, e-stop button, camera, GPS</td>
+<td><code>hud</code></td>
+<td><code>aav-hud.service</code></td>
+</tr>
+<tr>
+<td>Innoview monitor, right</td>
+<td>~15"</td>
+<td>the map: Nav2's map over Ottawa's streets, place search</td>
+<td><code>map</code></td>
+<td><code>aav-map.service</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Both are in <code>src/hud/aav_hud_raylib</code> (<a href="hud.html">HUD</a>).</p></div>
+<section class="card"><h2 id="how-it-starts">How it starts</h2>
+<pre class="highlight"><code class="language-text"> power on → desktop login → graphical-session.target ─┬─► aav-hud.service ─► car_screen.sh hud ─► hud --fullscreen --monitor &lt;HUD's&gt;
+   (auto-login: a system        (or the autostart     └─► aav-map.service ─► car_screen.sh map ─► map --fullscreen --monitor &lt;map's&gt;
+    setting, below)              entry, see below)              ▲
+                                                     ~/.config/aav/screens.env: which monitor, ROS domain, map files</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Where in git</th>
+<th>Installed to</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav-hud.service</code>, <code>aav-map.service</code></td>
+<td><code>tools/screens/</code></td>
+<td><code>~/.config/systemd/user/</code></td>
+<td>systemd <strong>user</strong> units: start with the desktop, restart 5 s after any exit, log to the journal</td>
+</tr>
+<tr>
+<td><code>aav-screens.desktop</code></td>
+<td><code>tools/screens/</code></td>
+<td><code>~/.config/autostart/</code></td>
+<td>for desktops that don't start <code>graphical-session.target</code>: shares <code>DISPLAY</code> with systemd, starts both</td>
+</tr>
+<tr>
+<td><code>screens.env</code></td>
+<td><code>tools/screens/</code> (template)</td>
+<td><code>~/.config/aav/screens.env</code></td>
+<td>the settings (below). Kept when you install again</td>
+</tr>
+<tr>
+<td><code>car_screen.sh</code></td>
+<td><code>tools/</code></td>
+<td>stays in <code>~/aav-jazzy/aav/tools/</code></td>
+<td>reads the settings, checks them, runs <code>ros2 launch aav_hud_raylib hud.launch.py fullscreen:=true monitor:=...</code></td>
+</tr>
+<tr>
+<td><code>car_screens_install.sh</code></td>
+<td><code>tools/</code></td>
+<td>stays there</td>
+<td>copies, enables, removes</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-settings-configaavscreensenv">The settings: <code>~/.config/aav/screens.env</code></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Example</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AAV_HUD_MONITOR</code></td>
+<td><code>HDMI-2</code></td>
+<td>the HUD's monitor: its name exactly, or its number (<code>0</code> = the first). Empty: the HUD doesn't start</td>
+</tr>
+<tr>
+<td><code>AAV_MAP_MONITOR</code></td>
+<td><code>HDMI-1</code></td>
+<td>the map's monitor, the same way</td>
+</tr>
+<tr>
+<td><code>AAV_ROS_DOMAIN_ID</code></td>
+<td><code>42</code></td>
+<td>our ROS network: the car's stack is on 42, never 0 or 10 (the 2025-26 team's)</td>
+</tr>
+<tr>
+<td><code>AAV_STREET_MAP</code></td>
+<td><code>/home/aavui/aav-jazzy/aav/maps/streets/ottawa.pmtiles</code></td>
+<td>the street map, a full path. Empty: <code>config/map.yaml</code>'s</td>
+</tr>
+<tr>
+<td><code>AAV_PLACES</code></td>
+<td><code>/home/aavui/aav-jazzy/aav/maps/places/ottawa.db</code></td>
+<td>the place search's database, a full path</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>One <code>KEY=value</code> a line. Nothing is expanded: no <code>~</code>, no <code>$HOME</code>.</li>
+<li>A wrong or empty setting stops that screen with exit code 78, and the journal says what's
+  wrong. systemd doesn't retry that one: fix the file, then restart it.</li>
+<li>Not <code>--local</code>: on the car the screens must see the car's ROS graph.</li>
+</ul>
+</section>
+<section class="card"><h2 id="which-monitor-names-not-guesses">Which monitor: names, not guesses</h2>
+<pre class="highlight"><code class="language-bash">~/aav-jazzy/aav.sh tools/car_screen.sh --list      # what the HUD sees</code></pre>
+<pre class="highlight"><code class="language-text">number  name                      size         at
+0       "HDMI-1"                  1920x1080    0,0
+1       "HDMI-2"                  800x480      1920,0</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A name must match exactly</td>
+<td><code>HDMI-1</code> is never "close enough" to <code>HDMI-2</code></td>
+</tr>
+<tr>
+<td>A missing monitor is an error that lists the ones there</td>
+<td>a map on the HUD's screen is worse than no map</td>
+</tr>
+<tr>
+<td>Two monitors with one name: use the number</td>
+<td>some systems name a monitor by its model</td>
+</tr>
+<tr>
+<td><code>--monitor</code> works by hand too</td>
+<td><code>pixi run hud fullscreen:=true monitor:=HDMI-2</code>, or <code>hud --demo --monitor 1</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>On X11, the names are the same as <code>xrandr --listmonitors</code> shows.</li>
+<li>On a <strong>Wayland</strong> desktop (Ubuntu 22.04's default on some Pis), our windows run through
+  XWayland, and the names may read <code>XWAYLAND0</code>, <code>XWAYLAND1</code>. Use <code>--list</code> and the
+  numbers, or log in to "Ubuntu on Xorg". The audit finds out which (W10).</li>
+<li>raylib draws through GLFW on X11. A computer with no desktop at all (plain KMS/DRM)
+  would need raylib built for DRM, with one screen only: not planned.</li>
+</ul>
+</section>
+<section class="card"><h2 id="install-on-the-car-computer-with-the-screens">Install (on the car computer with the screens)</h2>
+<pre class="highlight"><code class="language-bash">bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --screens --dry-run   # look first
+bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --screens             # builds the HUD, then installs</code></pre>
+<p>Already installed? Just the screens: <code>bash ~/aav-jazzy/aav/tools/car_screens_install.sh [--dry-run]</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>~/aav-jazzy/aav.sh tools/car_screen.sh --list</code>: note both names</td>
+</tr>
+<tr>
+<td>2</td>
+<td>write them in <code>~/.config/aav/screens.env</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>~/aav-jazzy/aav.sh tools/car_screen.sh hud --print</code> (and <code>map</code>): checks, runs nothing</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>systemctl --user restart aav-hud aav-map</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>reboot: both come back on their own</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>It needs no sudo. The units run as the user who logs in to the desktop.</li>
+<li><strong>Boot to the desktop with no password</strong> (auto-login) is a system setting, and needs an
+  admin: on Ubuntu, Settings → Users → Automatic Login (or <code>/etc/gdm3/custom.conf</code>). Ask
+  the team first: the 2025-26 setup may already do it.</li>
+<li>The kit copies the map's two files (<code>maps/</code>) when they were downloaded on the Mac
+  before <code>pixi run car-kit</code>.</li>
+</ul>
+</section>
+<section class="card"><h2 id="day-to-day">Day to day</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Want</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Their logs, live</td>
+<td><code>journalctl --user -u aav-hud -u aav-map -f</code></td>
+</tr>
+<tr>
+<td>Are they running?</td>
+<td><code>systemctl --user status aav-hud aav-map</code></td>
+</tr>
+<tr>
+<td>Stop them until the next boot</td>
+<td><code>systemctl --user stop aav-hud aav-map</code></td>
+</tr>
+<tr>
+<td>Never start them</td>
+<td><code>bash ~/aav-jazzy/aav/tools/car_screens_install.sh uninstall</code> (keeps <code>screens.env</code>)</td>
+</tr>
+<tr>
+<td>Try one by hand</td>
+<td><code>~/aav-jazzy/aav.sh ros2 launch aav_hud_raylib map.launch.py fullscreen:=true monitor:=HDMI-1</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-2025-26-way-for-comparison">The 2025-26 way, for comparison</h2>
+<p>Their UI Pi started three scripts from systemd system services (<code>hud/scripts/*_bootup.sh</code>):
+Flask, <code>flutter run</code> (a debug build) and OSRM in Docker, all from <code>/home/aavui/Desktop</code>.
+Ours: two user units, no sudo, no Docker, release builds, a restart on a crash, and the
+monitors named in one file. Theirs stay as they are until the team agrees to switch (A8).</p>
+</section>
+<section class="card"><h2 id="what-was-tested">What was tested</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hud-core</code> <code>screen</code>: names, numbers, exact match, missing, two with one name, the listing</td>
+<td><span class="badge b-works">works</span> <code>cargo test</code></td>
+</tr>
+<tr>
+<td><code>--monitor</code>, <code>--list-monitors</code> options in <code>hud</code> and <code>map</code></td>
+<td><span class="badge b-works">works</span> <code>cargo test</code></td>
+</tr>
+<tr>
+<td>The units and the autostart entry: sections, keys, ExecStart, restart rules</td>
+<td><span class="badge b-works">works</span> a parser test (<code>tools/tests/test_car_screens.py</code>); no <code>systemd-analyze</code> on a Mac</td>
+</tr>
+<tr>
+<td><code>car_screen.sh</code>: the settings, bad ones → 78, the command it runs</td>
+<td><span class="badge b-works">works</span> <code>--print</code>, in the same test</td>
+</tr>
+<tr>
+<td><code>car_screens_install.sh --dry-run</code>, <code>car_install.sh --screens --dry-run</code></td>
+<td><span class="badge b-works">works</span> on a Mac: shows the plan, refuses (not Linux), writes nothing</td>
+</tr>
+<tr>
+<td><code>shellcheck</code>, <code>bash -n</code></td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>A window on a chosen monitor</td>
+<td><span class="badge b-untested">untested</span>: no window could open from the session that built it (plain <code>--demo</code> failed the same way)</td>
+</tr>
+<tr>
+<td>systemd starting them at login, on the car</td>
+<td><span class="badge b-untested">untested</span>: after the audit</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="car-install.html"><small>Previous</small>← From a USB stick</a>
+<a class="next" href="car-photos.html"><small>Next</small>Car photos →</a></nav>
+</main>
+<footer>Source: <code>docs/car-screens.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

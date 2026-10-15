@@ -53,6 +53,7 @@
 <a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
 <a href="car-photos.html">Car photos</a>
 <a href="conventions.html">Conventions</a>
 <a href="naming.html">Topic areas</a>
@@ -340,9 +341,9 @@ row says how to answer it and what the answer unblocks. Write the answers into
 </tr>
 <tr>
 <td>W10</td>
-<td>Which Pi drives the dash screen, and its resolution?</td>
-<td><code>xrandr</code> or <code>kmsprint</code> on the dash Pi</td>
-<td>the raylib HUD's full-screen size</td>
+<td>Which computer drives the dash's two screens? Their output names, resolutions, X11 or Wayland?</td>
+<td><code>xrandr --listmonitors</code>, <code>wlr-randr</code> or <code>kmsprint</code>; <code>echo $XDG_SESSION_TYPE</code></td>
+<td>the monitors in <code>screens.env</code>, for the HUD and the map at boot (docs/car-screens.md)</td>
 </tr>
 </tbody>
 </table></div>

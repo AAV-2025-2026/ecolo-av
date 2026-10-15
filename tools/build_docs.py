@@ -81,6 +81,7 @@ PAGES = [
     ('esp32-bench.md', 'ESP32 first flash', 'The Rust ESP32 on the bench: flash, check, undo'),
     ('platforms.md', 'Platforms', 'Ubuntu, the Orin and Pis, networking'),
     ('car-install.md', 'From a USB stick', 'Our Jazzy on the car offline, no sudo: the kit'),
+    ('car-screens.md', 'The two screens', 'The HUD and the map, full screen at boot'),
     ('car-photos.md', 'Car photos', 'What the car has, from photos (14 Oct), and the audit list'),
     ('conventions.md', 'Conventions', 'Names, package layout and code style'),
     ('naming.md', 'Topic areas', 'Topic names by area (Decided), and why the EKFs meet in TF'),

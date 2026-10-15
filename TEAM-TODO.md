@@ -98,10 +98,25 @@ Details: [docs/platforms.md](docs/platforms.md), "Moving the Orin to JetPack 7.2
 | D1 | **Measure the car**, and replace every guess in `vehicle.yaml` | S | Friday's tape measure (M1-M7) | no "guess" comments left in `vehicle.yaml`; the URDF matches photos in RViz | | |
 | D2 | **Bring in what existed only on the car**: code into git with a `PROVENANCE.md`; weights into `models/` with checksums | M | A1; the audit's list | each item either in git or written off in `docs/older-code.md` | | |
 | D3 | **YOLO on TensorRT** on the Orin; test stock YOLO11 vs the 2025-26 detector on a recording | S | A3; a recording from C3 | ms per frame on the Orin written in `docs/perception.md` | | |
-| D4 | **Our HUD on the dash screen**, starting at boot | S | audit W10; A8 | power on → the HUD shows speed and GPS, full screen | | |
+| D4 | **The HUD and the map on the dash's two screens**, full screen, starting at boot. **Ready to install (15 Oct):** `car_install.sh --screens`, then two monitor names in `~/.config/aav/screens.env` ([below](#d4-in-detail-the-two-screens)) | S | audit W10 (which computer, the outputs' names, X11 or Wayland); auto-login (an admin); E1 | power on → the HUD on the small screen, the map on the big one, both full screen; kill one → back in 5 s | | |
 | D5 | **The HUD's map panel**, with offline tiles of the test area | M | the test area chosen | the car's dot moves on the map in Gazebo, then on the car | | |
 | D6 | **A-to-B**: the test lot's datum, a start spot, then a GPS goal | M | C1, C2, B8 | `READ-ME-A-TO-B.md` test 5 with a GPS goal | | |
 | D7 | **Python to Rust, step 1**: the spine bridge and ego | L | Ben's go-ahead | the same tests pass with the Rust nodes; `bench-check` 7 of 7 | | |
+
+### D4 in detail: the two screens
+
+How it works: [docs/car-screens.md](docs/car-screens.md). Two systemd *user* units start
+`hud` and `map` at login, each with `--fullscreen --monitor <name>`.
+
+| Ready (15 Oct, tested on a Mac) | The audit must confirm |
+|---|---|
+| `--monitor NAME\|N` and `--list-monitors` in both programs | **Which computer** drives the screens: the dash Pi (DASH-UI) or the Orin? Both screens on one computer? |
+| `aav-hud.service`, `aav-map.service`, an autostart entry | **The outputs' names** (`xrandr --listmonitors`, or `wlr-randr`, or `kmsprint`) and resolutions; which is the small one |
+| `~/.config/aav/screens.env`: monitors, ROS domain 42, the map's files | **X11 or Wayland** (`echo $XDG_SESSION_TYPE`): on Wayland the names may read `XWAYLAND0` |
+| `car_install.sh --screens` and `car_screens_install.sh [--dry-run]` | **The Pi's GPU** copes with two full-screen OpenGL windows (`glxinfo -B`), and its OS is 64-bit (the kit needs `aarch64`) |
+| The kit carries the street map and the place database | **Auto-login** to the desktop: on already? (an admin setting) |
+| | **What starts the 2025-26 app** at boot now (its services), so ours replaces it cleanly (A8) |
+| | **E1: the dash's 5 V** (3.48 A seen): two screens plus a Pi may brown out |
 
 ## E. Power and wiring
 
