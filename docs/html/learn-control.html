@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control from zero · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/learn-control.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Control from zero</h1>
+<div class="meta">10 min read · 9 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a class="here" href="learn-control.html">Learn: control</a>
+<a href="learn-can.html">Learn: CAN</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-open-loop-vs-closed-loop">1. Open loop vs closed loop</a><a href="#2-pid-by-feel">2. PID, by feel</a><a href="#3-where-each-loop-closes-on-our-car">3. Where each loop closes on our car</a><a href="#4-ackermann-and-the-bicycle-model">4. Ackermann and the bicycle model</a><a href="#5-rate-limits-no-sudden-moves">5. Rate limits: no sudden moves</a><a href="#6-timeouts-silence-means-stop">6. Timeouts: silence means stop</a><a href="#7-safe-states">7. Safe states</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>"Control" is how a wish ("go 1.5 m/s, turn gently left") becomes motors doing the right
+thing, even on a hill or with a flat-ish tyre. This page explains feedback loops, then
+shows each loop on our car and the limits and timeouts around them.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>open loop vs closed loop;</li>
+<li>PID, by feel, with our speed loop's real numbers;</li>
+<li>where each loop closes on our car;</li>
+<li>the Ackermann and bicycle models, and what ego does with them;</li>
+<li>rate limits, timeouts and safe states.</li>
+</ul></div>
+<section class="card"><h2 id="1-open-loop-vs-closed-loop">1. Open loop vs closed loop</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Open loop</th>
+<th>Closed loop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Idea</td>
+<td>send a command and hope</td>
+<td>measure, compare with the target, correct</td>
+</tr>
+<tr>
+<td>Like</td>
+<td>a toaster: 2 minutes, whatever the bread</td>
+<td>a thermostat: heat until it's 21 °C</td>
+</tr>
+<tr>
+<td>Needs a sensor?</td>
+<td>no</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>On a hill</td>
+<td>slows down, and nobody notices</td>
+<td>sees the speed drop, adds throttle</td>
+</tr>
+<tr>
+<td>Our car <strong>today</strong> (2025-26 path)</td>
+<td>throttle = speed ÷ 3.0 m/s (<code>legacy.yaml</code>); no steering angle comes back</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Our car <strong>after KEFC</strong></td>
+<td>-</td>
+<td>speed from the wheel nodes; steering angle from the KTC-100 pot</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="2-pid-by-feel">2. PID, by feel</h2>
+<p>The <strong>error</strong> is target minus measured. A PID controller adds three pushes:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Pushes in proportion to</th>
+<th>Like</th>
+<th>Fixes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P</strong> (proportional)</td>
+<td>the error now</td>
+<td>pressing harder the slower you are</td>
+<td>most of the error</td>
+</tr>
+<tr>
+<td><strong>I</strong> (integral)</td>
+<td>the error added up over time</td>
+<td>"I've been slow for a while, press more"</td>
+<td>the last bit: hills, wind, friction</td>
+</tr>
+<tr>
+<td><strong>D</strong> (derivative)</td>
+<td>how fast the error changes</td>
+<td>easing off as you get close</td>
+<td>overshoot. <strong>We don't use it</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Too much P: it wobbles. Too much I: it overshoots and swings. <strong>Anti-windup</strong>: cap the
+I term, so it can't grow huge while the car is stuck.</p>
+<h3 id="our-speed-loop-pi-in-numbers">Our speed loop (PI), in numbers</h3>
+<p><code>firmware/spine/crates/spine-core/src/speed_loop.rs</code>. Starting values, to tune on the car:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kp</code></td>
+<td>0.3</td>
+<td>30 % throttle per 1 m/s too slow</td>
+</tr>
+<tr>
+<td><code>ki</code></td>
+<td>0.1</td>
+<td>+10 % throttle per second of being 1 m/s too slow</td>
+</tr>
+<tr>
+<td><code>integral_limit</code></td>
+<td>0.3</td>
+<td>the I term never gives more than 30 % (anti-windup)</td>
+</tr>
+<tr>
+<td><code>coast_band</code></td>
+<td>0.2 m/s</td>
+<td>up to this much too fast: just less throttle, no brake</td>
+</tr>
+<tr>
+<td><code>brake_gain</code></td>
+<td>0.5</td>
+<td>50 % brake per 1 m/s too fast, beyond the coast band</td>
+</tr>
+<tr>
+<td><code>hold_brake</code></td>
+<td>0.3</td>
+<td>30 % brake when stopped, so the car can't roll</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Example: target 1.5 m/s, measured 1.0 m/s.</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Sum</th>
+<th>Throttle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P</td>
+<td>0.3 × 0.5</td>
+<td>15 %</td>
+</tr>
+<tr>
+<td>I, after 1 s of that</td>
+<td>0.1 × 0.5 × 1 s</td>
+<td>+ 5 %</td>
+</tr>
+<tr>
+<td>Total</td>
+<td></td>
+<td><strong>20 %</strong>, and rising until the speed is right</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Example: target 1.0 m/s, measured 1.5 m/s (downhill).</strong> 0.5 m/s too fast, minus the
+0.2 coast band = 0.3. Brake = 0.5 × 0.3 = <strong>15 %</strong>. Throttle and brake are never on together.</p>
+</section>
+<section class="card"><h2 id="3-where-each-loop-closes-on-our-car">3. Where each loop closes on our car</h2>
+<p><img alt="The three loops: path on the Orin, speed on the control board, steering in the Jrk" src="../img/control-loops.svg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Loop</th>
+<th>Measures</th>
+<th>Moves</th>
+<th>Runs on</th>
+<th>Rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Path</strong></td>
+<td>where the car is (<code>ekf_local</code>) vs the plan</td>
+<td>speed and turn rate</td>
+<td>Orin #1: Nav2's Regulated Pure Pursuit</td>
+<td>20 Hz</td>
+</tr>
+<tr>
+<td><strong>Speed</strong></td>
+<td>wheel speed (KEFC: Hall wheel nodes)</td>
+<td>throttle DAC, brake Jrk</td>
+<td>the control board: <code>spine-core</code></td>
+<td>every board tick (10 ms in the Pico 2 program)</td>
+</tr>
+<tr>
+<td><strong>Steering angle</strong></td>
+<td>the KTC-100 pot</td>
+<td>the steering motor</td>
+<td>inside the steering Jrk G2</td>
+<td>the Jrk's own loop</td>
+</tr>
+<tr>
+<td>Brake position</td>
+<td>the actuator's own feedback, if it has one</td>
+<td>the brake motor</td>
+<td>inside the brake Jrk G2</td>
+<td>to confirm (KEFC list)</td>
+</tr>
+<tr>
+<td>Plan</td>
+<td>the costmap and the goal</td>
+<td>a new path</td>
+<td>Orin: Nav2's planner</td>
+<td>1 Hz</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The rule:</strong> the inner loops are fast and simple, and sit next to the motor. If the
+Orin hiccups for 50 ms, the board keeps the speed steady.</p>
+</section>
+<section class="card"><h2 id="4-ackermann-and-the-bicycle-model">4. Ackermann and the bicycle model</h2>
+<h3 id="ackermann-steering">Ackermann steering</h3>
+<p>When a car turns, the <strong>inner</strong> front wheel must turn more than the outer one: both
+wheels circle the same centre, on the line of the rear axle.</p>
+<pre class="highlight"><code class="language-text">                    inner wheel (sharper)
+         ┌──┐  ╱
+  rear   │  │ ╱      outer wheel (gentler)
+  axle ──┼──┼──────────────────────●  turning centre, R metres away
+         └──┘</code></pre>
+<p>At a 5 m turn, with our wheelbase 1.57 m and track 0.77 m:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Wheel</th>
+<th>Angle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inner (left, turning left)</td>
+<td>0.328 rad (18.8°)</td>
+</tr>
+<tr>
+<td>Outer (right)</td>
+<td>0.284 rad (16.3°)</td>
+</tr>
+<tr>
+<td><strong>The bicycle model's one wheel</strong></td>
+<td><strong>0.304 rad</strong> (17.4°): in between</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-bicycle-model">The bicycle model</h3>
+<p>Merge the two front wheels into <strong>one virtual wheel</strong> in the middle. Then:</p>
+<pre class="highlight"><code class="language-text">turn rate  ω = v × tan(δ) ÷ L        steering  δ = atan(L × ω ÷ v)</code></pre>
+<p>v = speed, δ = steering angle, L = wheelbase (1.57 m, <code>vehicle.yaml</code>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Number</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Steering limit</td>
+<td>±0.50 rad (a guess: <code>vehicle.yaml</code>, TODO measure)</td>
+</tr>
+<tr>
+<td>Tightest turn</td>
+<td>L ÷ tan(0.50) = <strong>2.87 m</strong> radius</td>
+</tr>
+</tbody>
+</table></div>
+<p>The linkage on the car makes the two real wheels follow Ackermann by itself. Our
+software only ever sends <strong>one</strong> angle: the virtual wheel's.</p>
+<h3 id="what-ego-does">What ego does</h3>
+<p><code>ego</code> turns every driver's (speed, turn rate) into (speed, steering angle), 50 times a
+second. <code>src/ego/aav_ego/aav_ego/ackermann.py</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Bicycle model</td>
+<td>δ = atan(1.57 × ω ÷ v), clamped to ±0.5 rad</td>
+</tr>
+<tr>
+<td>2. Keep the curve</td>
+<td>it works out δ <strong>before</strong> capping the speed, so a slower car still follows the same curve</td>
+</tr>
+<tr>
+<td>3. Can't turn on the spot</td>
+<td>below 0.05 m/s it holds the wheels where they are</td>
+</tr>
+<tr>
+<td>4. Limits</td>
+<td>speed, acceleration, steering rate (next section)</td>
+</tr>
+<tr>
+<td>5. Reverse</td>
+<td>changes direction only through a stop</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Example:</strong> Nav2 asks for 2.0 m/s and 0.4 rad/s (a 5 m circle). δ = atan(1.57 × 0.4 ÷
+2.0) = <strong>0.304 rad</strong>. ego caps the speed at 1.0 m/s but keeps 0.304 rad: still a 5 m circle,
+just slower.</p>
+</section>
+<section class="card"><h2 id="5-rate-limits-no-sudden-moves">5. Rate limits: no sudden moves</h2>
+<p>Each layer has its own limits. Lower layers are a little looser, so they never lag
+behind a stop that a higher layer asked for.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Limit</th>
+<th>ego (<code>ego.yaml</code>)</th>
+<th>Nav2 velocity smoother</th>
+<th>The spine (<code>spine.rs</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top speed</td>
+<td><strong>1.0 m/s</strong></td>
+<td>1.0 m/s</td>
+<td>3.0 m/s</td>
+</tr>
+<tr>
+<td>Reverse</td>
+<td>0.5 m/s</td>
+<td>0.5 m/s</td>
+<td>1.0 m/s</td>
+</tr>
+<tr>
+<td>Speeding up</td>
+<td>1.0 m/s²</td>
+<td>1.0 m/s²</td>
+<td>1.5 m/s²</td>
+</tr>
+<tr>
+<td>Slowing down</td>
+<td>2.0 m/s²</td>
+<td>2.0 m/s²</td>
+<td>2.5 m/s²</td>
+</tr>
+<tr>
+<td>Steering rate</td>
+<td>0.6 rad/s</td>
+<td>-</td>
+<td>0.6 rad/s</td>
+</tr>
+</tbody>
+</table></div>
+<p>What those mean at 1.0 m/s:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Takes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 → 1.0 m/s</td>
+<td>1 s</td>
+</tr>
+<tr>
+<td>Stop from 1.0 m/s, at 2.0 m/s²</td>
+<td>0.5 s and <strong>0.25 m</strong></td>
+</tr>
+<tr>
+<td>Full left (+0.5) → full right (−0.5)</td>
+<td>1.7 s</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="6-timeouts-silence-means-stop">6. Timeouts: silence means stop</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Waits</th>
+<th>Then</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>twist_mux</code></td>
+<td>0.5 s per driver</td>
+<td>ignores that driver; the next one takes over</td>
+</tr>
+<tr>
+<td><code>ego</code></td>
+<td>0.3 s with no <code>/control/cmd_vel</code></td>
+<td>slows to a stop at 2.0 m/s²</td>
+</tr>
+<tr>
+<td><code>spine_bridge</code></td>
+<td>0.1 s with no <code>/ego/actuator_cmd</code></td>
+<td>stops sending <code>DRIVE_CMD</code></td>
+</tr>
+<tr>
+<td>The spine's watchdog</td>
+<td>200 ms with no fresh <code>DRIVE_CMD</code> (KEFC: 100 ms)</td>
+<td>throttle off, brake on</td>
+</tr>
+<tr>
+<td><code>collision_monitor</code></td>
+<td>1.0 s with no radar</td>
+<td>stops Nav2's commands</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Today's car has no board timeout</p>
+<pre><code>On the 2025-26 path the ESP32 firmware never times out: if commands stop, the last
+throttle stays on. Wheels off the ground, RC switch in reach ([Firmware](firmware.md)).
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="7-safe-states">7. Safe states</h2>
+<p>When something goes wrong, what should each actuator do?</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Actuator</th>
+<th>On a stop by the spine</th>
+<th>Decided?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Throttle</td>
+<td>0</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Brake</td>
+<td>full (<code>stop_brake</code> 1.0)</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Steering</td>
+<td><strong>hold</strong> where it is (<code>ESTOP_STEERING</code>)</td>
+<td>Proposed: the 2025-26 firmware centred it</td>
+</tr>
+<tr>
+<td>Brake while nobody drives</td>
+<td><strong>off</strong> (<code>IDLE_BRAKE</code> 0.0)</td>
+<td>Proposed: on a slope the car could roll</td>
+</tr>
+<tr>
+<td>RC gear switch on "brake"</td>
+<td>speed zero: brake to a stop, then hold</td>
+<td>Proposed</td>
+</tr>
+<tr>
+<td>Brake with no power</td>
+<td>unknown</td>
+<td>on the KEFC "to confirm" list</td>
+</tr>
+</tbody>
+</table></div>
+<p>The <strong>red e-stop button</strong> stops the car through its own wiring, whatever the software
+does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You want to</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Watch the bicycle model, with no car</td>
+<td><code>pixi run turtle</code>, then <code>pixi run keyboard</code> in a second terminal</td>
+</tr>
+<tr>
+<td>See ego's output</td>
+<td><code>pixi run tools/ros.sh ros2 topic echo /ego/actuator_cmd</code></td>
+</tr>
+<tr>
+<td>See its limits</td>
+<td><code>pixi run tools/ros.sh ros2 param dump /ego</code></td>
+</tr>
+<tr>
+<td>The speed loop, with throttle and brake</td>
+<td><code>pixi run bench</code>, then <code>pixi run tools/ros.sh ros2 topic echo /vehicle/status</code></td>
+</tr>
+<tr>
+<td>Stop everything</td>
+<td><code>pixi run estop</code>, then <code>pixi run estop-clear</code></td>
+</tr>
+<tr>
+<td>The speed loop's own tests</td>
+<td><code>cd firmware/spine &amp;&amp; pixi run cargo test -p spine-core speed_loop</code></td>
+</tr>
+<tr>
+<td>ego's maths tests</td>
+<td><code>cd src/ego/aav_ego &amp;&amp; pixi run python3 -m pytest -q test/test_ackermann.py</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The bicycle model and ego's limits</td>
+<td><code>src/ego/aav_ego/aav_ego/ackermann.py</code>, <code>config/ego.yaml</code></td>
+</tr>
+<tr>
+<td>The speed loop (PI)</td>
+<td><code>firmware/spine/crates/spine-core/src/speed_loop.rs</code></td>
+</tr>
+<tr>
+<td>Spine limits, watchdog, safe-state choices</td>
+<td><code>firmware/spine/crates/spine-core/src/spine.rs</code>, <code>watchdog.rs</code>, <code>limits.rs</code></td>
+</tr>
+<tr>
+<td>Today's open-loop throttle</td>
+<td><code>src/backends/aav_legacy/config/legacy.yaml</code> (<code>full_throttle_speed</code>)</td>
+</tr>
+<tr>
+<td>Nav2's controller and smoother</td>
+<td><code>src/drivers/aav_navigation/config/nav2.yaml</code></td>
+</tr>
+<tr>
+<td>Driver timeouts and priorities</td>
+<td><code>src/mux/aav_mux/config/twist_mux.yaml</code></td>
+</tr>
+<tr>
+<td>Wheelbase, track, steering limit</td>
+<td><code>src/aav_description/config/vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>The safety layers, in one table</td>
+<td><a href="how-it-fits.html">How it fits</a></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="learn-localization.html"><small>Previous</small>← Learn: localization</a>
+<a class="next" href="learn-can.html"><small>Next</small>Learn: CAN →</a></nav>
+</main>
+<footer>Source: <code>docs/learn-control.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

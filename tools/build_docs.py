@@ -73,6 +73,7 @@ PAGES = [
     # glossary come first; these follow them.
     ('learn-gps.md', 'Learn: GPS', 'GNSS, RTK, NavSatFix, the datum, navsat_transform'),
     ('learn-localization.md', 'Learn: localization', 'Odometry, IMU, Kalman, frames, TF, our two EKFs'),
+    ('learn-control.md', 'Learn: control', 'Feedback loops, PID, Ackermann, limits, timeouts'),
     ('learn-can.md', 'Learn: CAN', 'CAN from two wires to our DRIVE_CMD, byte by byte'),
 ]
 BUILT = {name for name, _, _ in PAGES}
