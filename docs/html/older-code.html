@@ -7,7 +7,7 @@
 <!-- Generated from docs/older-code.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The older code: what we have, and what&#x27;s missing</h1>
-<div class="meta">10 min read · 6 sections</div></header>
+<div class="meta">11 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -15,7 +15,9 @@
 <a href="how-it-fits.html">How it fits</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <span class="sep">Learn:</span>
@@ -47,7 +49,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#the-2025-26-repos-one-by-one">The 2025-26 repos, one by one</a><a href="#the-2024-25-repos">The 2024-25 repos</a><a href="#what-no-repo-provides">What no repo provides</a><a href="#red-flags-in-the-old-repos">Red flags in the old repos</a><a href="#bringing-more-code-in">Bringing more code in</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#the-2025-26-repos-one-by-one">The 2025-26 repos, one by one</a><a href="#the-2024-25-repos">The 2024-25 repos</a><a href="#what-no-repo-provides">What no repo provides</a><a href="#red-flags-in-the-old-repos">Red flags in the old repos</a><a href="#how-to-read-the-older-code-safely">How to read the older code safely</a><a href="#bringing-more-code-in">Bringing more code in</a></nav>
 <div class="lead"><p>The previous teams left 32 repos in two public GitHub orgs: <code>AAV-2025-2026</code> (the 2025-26
 team, 19 repos) and <code>Carleton-AAV-Capstone</code> (the 2024-25 team, 13 repos). This page says
 what each one is, what's already in <code>aav</code>, what's worth pulling in next, and what no
@@ -449,6 +451,48 @@ Orin and the Pis first.</p>
 </tbody>
 </table></div>
 <p><code>aav</code> and its history contain none of these secrets.</p>
+</section>
+<section class="card"><h2 id="how-to-read-the-older-code-safely">How to read the older code safely</h2>
+<p>The "In <code>aav</code>?" columns above already map each repo to its module here; each module's
+card is in <a href="modules.html">Every module</a>. To read the originals:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Do</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read the clones next to <code>aav</code> (<code>~/Code/aav/</code> on Ben's Mac, <code>/home/ben/aav/</code> on oirp-spss)</td>
+<td>they are read-only copies: never build, fix or commit in them</td>
+</tr>
+<tr>
+<td>Search only them: <code>grep -r --exclude-dir=aav --exclude-dir=aav-linux-build-output &lt;word&gt; .</code> from <code>~/Code/aav</code></td>
+<td>so the search skips our own code and the build output</td>
+</tr>
+<tr>
+<td>Check the branch first: <code>git -C &lt;repo&gt; branch -a</code></td>
+<td>the working code is often not on <code>main</code> (AAV_cortex: <code>6-pico2-aav-firmware</code>; Motor-Control: <code>FinalRev</code>)</td>
+</tr>
+<tr>
+<td>Start from the <code>PROVENANCE.md</code> of the module that came from it</td>
+<td>it names the repo, branch and commit we copied, and every change since</td>
+</tr>
+<tr>
+<td>When a search hits a token, key or password, close the file</td>
+<td>write down only where it is and what kind (the "Red flags" table). Never paste it into notes, chat or an AI app</td>
+</tr>
+<tr>
+<td>Don't run the old scripts or flash the old firmware from the clones</td>
+<td>some reach the car's WiFi or flash a board; the car's own copies are what Friday's <a href="audit-friday.html">audit</a> records</td>
+</tr>
+<tr>
+<td>Expect the old topic names (<code>/cmd_vel</code>, <code>/gps/fix</code>, ...)</td>
+<td>they're Humble-era; ours start with their area (<a href="naming.html">Topic areas</a>)</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="bringing-more-code-in">Bringing more code in</h2>
 <div class="table-wrap"><table>

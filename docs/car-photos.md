@@ -1,7 +1,7 @@
 # The car in photos (14 October)
 
 Ben took 32 photos of the car on 14 October. This page lists what they show, and what
-to check at the audit on Friday 16 Oct. The full set is not in git (62 MB). It is in
+to check at the audit on Friday 16 Oct ([step by step](audit-friday.md)). The full set is not in git (62 MB). It is in
 `images/` on Ben's Mac.
 
 !!! warning "Read from photos only"
@@ -111,6 +111,8 @@ A 12 V → 5 V converter on the dash's fuse block E1-E4 showed **5.08 V at 3.48 
 wants 5 A for full USB power. Friday: what does it feed, and what is its rating?
 
 ## For Friday's audit
+
+How to do each check, machine by machine: [The hardware audit, step by step](audit-friday.md).
 
 | # | Check | Why |
 |---|---|---|

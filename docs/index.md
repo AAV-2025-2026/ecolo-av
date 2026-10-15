@@ -28,8 +28,9 @@ moves the car.**
 | new to the team | [Your first day](first-day.md), then your card in [Starting points](team.md) |
 | new to the car, or to ROS | [The car, box by box](learn-car.md), then [A command's journey](learn-journey.md); words in the [Glossary](glossary.md) |
 | a professor, or anyone with a question | [Questions people ask](faq.md) |
+| at the car for the audit (16 Oct) | [The hardware audit](audit-friday.md) |
 | putting the whole thing together | [Infrastructure](infrastructure.md), then [Work](work.md) and [Decisions](decisions.md) |
-| looking for what a package does | [Packages](packages.md) |
+| looking for what a package does | [Packages](packages.md); the deeper cards in [Every module](modules.md) |
 | writing a driver, or drawing a map | [Build a driver](howto-driver.md), [Costmaps](costmaps.md) |
 | testing the car's software without the car | [Bench mode](bench.md) |
 | working on cameras, YOLO, stop signs or lanes | [Perception](perception.md) |
