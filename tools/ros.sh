@@ -4,15 +4,16 @@
 #
 # --local, for the stand-ins (turtle, sim, bench, view): ROS discovery stays on this
 # computer, so a pretend car never meets the real one on the same network and domain.
-# Other terminals on this computer still see it. To share one on purpose, set
-# ROS_AUTOMATIC_DISCOVERY_RANGE yourself: ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET pixi run sim
+# Other terminals on this computer still see it. To share one on purpose:
+# AAV_DISCOVERY=SUBNET pixi run sim
+# Not ROS_AUTOMATIC_DISCOVERY_RANGE itself: pixi's activation (ros_environment) already
+# sets it to SUBNET before this script runs, so "keep the user's value" kept SUBNET and
+# --local never was local (found 15 Oct, when a network blocked multicast).
 cd "$(dirname "$0")/.."
+local=false
 if [[ "${1:-}" == "--local" ]]; then
   shift
-  if [[ -z "${ROS_AUTOMATIC_DISCOVERY_RANGE:-}" ]]; then
-    export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
-    unset ROS_STATIC_PEERS  # static peers reach other computers whatever the range says
-  fi
+  local=true
 fi
 if [[ ! -f install/setup.bash ]]; then
   echo "Not built yet: run 'pixi run build' first." >&2
@@ -26,5 +27,12 @@ if [[ -n "${CONDA_PREFIX:-}" && -f "$CONDA_PREFIX/setup.bash" ]]; then
   source install/local_setup.bash
 else
   source install/setup.bash
+fi
+if [[ "$local" == true ]]; then
+  # After sourcing: ROS's own setup scripts may set the range too.
+  export ROS_AUTOMATIC_DISCOVERY_RANGE="${AAV_DISCOVERY:-LOCALHOST}"
+  if [[ "$ROS_AUTOMATIC_DISCOVERY_RANGE" == LOCALHOST ]]; then
+    unset ROS_STATIC_PEERS  # static peers reach other computers whatever the range says
+  fi
 fi
 exec "$@"

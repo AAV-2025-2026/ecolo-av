@@ -16,10 +16,10 @@ case "${1:-}" in
   --sim) sim=true; here=true ;;
   --local) here=true ;;
 esac
-if [[ "$here" == true && -z "${ROS_AUTOMATIC_DISCOVERY_RANGE:-}" ]]; then
-  # The same rule as tools/ros.sh --local.
-  export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
-  unset ROS_STATIC_PEERS
+if [[ "$here" == true ]]; then
+  # The same rule as tools/ros.sh --local: pixi has already set SUBNET, so override it.
+  export ROS_AUTOMATIC_DISCOVERY_RANGE="${AAV_DISCOVERY:-LOCALHOST}"
+  [[ "$ROS_AUTOMATIC_DISCOVERY_RANGE" == LOCALHOST ]] && unset ROS_STATIC_PEERS
 fi
 exec ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args \
   -p stamped:=true -p use_sim_time:=$sim -r __ns:=/drivers/keyboard

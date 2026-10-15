@@ -74,9 +74,12 @@ if [[ -f install/setup.bash ]]; then
   got=$(env -u ROS_AUTOMATIC_DISCOVERY_RANGE ROS_STATIC_PEERS=192.0.2.1 tools/ros.sh --local \
         bash -c 'echo "$ROS_AUTOMATIC_DISCOVERY_RANGE ${ROS_STATIC_PEERS:-no-peers}"')
   [[ "$got" == "LOCALHOST no-peers" ]] || { echo "tools/ros.sh --local gave: $got"; exit 1; }
+  # As pixi runs it: its activation has already set SUBNET (15 Oct: --local wasn't local).
   got=$(ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET tools/ros.sh --local \
         bash -c 'echo "$ROS_AUTOMATIC_DISCOVERY_RANGE"')
-  [[ "$got" == "SUBNET" ]] || { echo "tools/ros.sh --local overrode SUBNET: $got"; exit 1; }
+  [[ "$got" == "LOCALHOST" ]] || { echo "tools/ros.sh --local kept SUBNET: $got"; exit 1; }
+  got=$(AAV_DISCOVERY=SUBNET tools/ros.sh --local bash -c 'echo "$ROS_AUTOMATIC_DISCOVERY_RANGE"')
+  [[ "$got" == "SUBNET" ]] || { echo "tools/ros.sh --local ignored AAV_DISCOVERY: $got"; exit 1; }
 fi
 # The keyboard with --sim or --local stays here too (a stand-in ros2 prints what it got).
 stub=$(mktemp -d)
@@ -85,7 +88,7 @@ printf '#!/usr/bin/env bash\necho "${ROS_AUTOMATIC_DISCOVERY_RANGE:-unset} ${ROS
   > "$stub/ros2"
 chmod +x "$stub/ros2"
 for flag in --sim --local; do
-  got=$(env -u ROS_AUTOMATIC_DISCOVERY_RANGE ROS_STATIC_PEERS=192.0.2.1 PATH="$stub:$PATH" \
+  got=$(ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET ROS_STATIC_PEERS=192.0.2.1 PATH="$stub:$PATH" \
         tools/keyboard.sh $flag)
   [[ "$got" == "LOCALHOST no-peers" ]] || { echo "tools/keyboard.sh $flag gave: $got"; exit 1; }
 done

@@ -6,7 +6,7 @@ the ladder one rung at a time.
 
 `pixi run sim` and `pixi run turtle` stay on this computer: other terminals here see them,
 other computers don't. So a simulated car never meets the real one. To share one on
-purpose: `ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET pixi run sim`.
+purpose: `AAV_DISCOVERY=SUBNET pixi run sim`.
 
 ## The test ladder
 
