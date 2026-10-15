@@ -25,7 +25,8 @@ vehicle:
     width: 1.00             # TODO measure (obstacle_avoidance.cpp:43 guessed 1.4, too wide for a 0.77 m track)
     height: 1.50            # TODO measure
     rear_overhang: 0.20     # rear bumper behind the rear axle. TODO measure
-  mass: 272.0               # kg. TODO weigh (CARLA stand-in value)
+  mass: 181.0               # kg: Ben's estimate, about 400 lb (15 Oct). TODO weigh (audit M7).
+                            # Was 272, a CARLA stand-in; the 2025-26 braking model used 60
   encoder_counts_per_rev: 8 # spokes on the encoder wheel (Wheel_Encoders wiznet.ino:29)
 
 # How the car answers its commands: the actuator model in Gazebo (aav_gazebo
