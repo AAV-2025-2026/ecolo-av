@@ -67,6 +67,8 @@ real-time factor at 0.98-0.99.
 | Wheel speed | `/model/aav/odometry` | `/vehicle/odom` (speed only, like the spine's) | 50 Hz | none | all |
 | Car status | (`gazebo_adapter`) | `/vehicle/status` (computer mode, armed) | 50 Hz | none | all |
 | Front camera | `/aav/camera/image` | `/sensors/camera/front_left/image_raw`, `.../camera_info` | 10 Hz | none | road |
+| Front right camera | `/aav/camera_right/image` | `/sensors/camera/front_right/image_raw`, `.../camera_info` | 10 Hz | none | road |
+| Rear camera, looking back | `/aav/camera_rear/image` | `/sensors/camera/rear/image_raw`, `.../camera_info` | 10 Hz | none | road |
 | Radar | `/aav/radar/points` (a lidar shaped like the radar) | `/sensors/radar/points` | 10 Hz | 5 cm | road |
 | Lidar (the car has none) | `/aav/lidar/points` | `/sensors/lidar/points` | 10 Hz | 3 cm | road, with `lidar:=true` |
 | Where the car really is | `/model/aav/truth` | `/vehicle/gazebo/truth`, for checks only | 50 Hz | none | road |
@@ -75,7 +77,9 @@ Each one carries the same name, type and frame as the real device's, so the soft
 can't tell. `/gazebo/*` topics are Gazebo's own side of `gazebo_adapter`, not in the
 contract.
 
-![What the simulated front camera sees, at the start of the road world](img/sim-camera.png)
+![What the three simulated cameras see, at the start of the road world](img/sim-cameras.png)
+
+Where each sensor sits (15 Oct, until Friday's tape measure): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from `vehicle.yaml`. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.
 
 ### What isn't simulated
 
@@ -236,7 +240,7 @@ Ran on Ben's Mac, 15 Oct, after the topic renaming:
 | `pixi run sim-check --lidar --obstacle` | all pass: the lidar at 10.0 Hz with 12654 hits; the car stood still 0.79 m before the box; with the box gone, Nav2 reached its goal 29.6 m on |
 | `pixi run -e ml sim-check --perception` | all pass: YOLO saw the sign from 11.2 m, the lock went on at 18.2 m, the car stood with its bumper 4.8 m before the sign, then reached its goal at 39.9 m |
 | The same, with the lidar on | failed 3 times out of 3 (why: [the lidar](#the-lidar-gazebo-only)). So the lidar is off by default |
-| `pixi run sim-check --lane` | not run on 15 Oct |
+| `pixi run sim-check --lane` | ✅ 15 Oct, after the cameras moved: back to the lane's centre within 5 cm in 5 s |
 
 Ten runs in all, on a Mac shared with other work (load 5-17 on 16 cores). One more
 `--perception` run without the lidar failed too: the car never moved, and the log doesn't

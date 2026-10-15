@@ -221,8 +221,12 @@ class Probe(Node):
         return sent.result().get_result_async()
 
 
-def check_contract(probe, env, tag):
-    """Check the running graph against docs/interfaces.yaml (check_graph.py --profile road)."""
+def check_contract(probe, env, tag, ignore=()):
+    """
+    Check the running graph against docs/interfaces.yaml (check_graph.py --profile road).
+
+    ignore: topics this run leaves out on purpose, such as Nav2's /map with nav:=false.
+    """
     # Up to three tries, 10 s apart, as in bench_check.py: a node's first start after a
     # build can be slow on a Mac. The probe spins meanwhile, so its track has no gaps.
     for attempt in range(3):
@@ -233,11 +237,15 @@ def check_contract(probe, env, tag):
             probe.spin_for(60.0, lambda: graph.poll() is not None)
             code = graph.wait()
             out.seek(0)
-            fails = [line for line in out.read().splitlines() if line.startswith('FAIL')]
-        if code == 0 and not fails:
+            every = [line for line in out.read().splitlines() if line.startswith('FAIL')]
+            fails = [line for line in every
+                     if not any(line.startswith(f'FAIL  {t}:') for t in ignore)]
+        # check_graph exits 1 on any FAIL, the ignored ones too: then only fails count.
+        ok = not fails and (code == 0 or bool(every))
+        if ok:
             break
         probe.spin_for(10.0)
-    result(f'graph vs contract{tag}', code == 0 and not fails,
+    result(f'graph vs contract{tag}', ok,
            f'{len(fails)} failures' + (': ' + '; '.join(fails[:3]) if fails else ''))
 
 
@@ -264,6 +272,31 @@ def check_sensors(probe):
            f'{BENCH["focal_px"]:.0f}); radar stand-in in {cloud.header.frame_id} at '
            f'{radar_hz:.1f} Hz, fields {",".join(fields)}, '
            f'{cloud.width * cloud.height} points with nothing within 8.4 m')
+
+
+def check_cameras(probe):
+    """
+    Check the other two cameras: front right and rear, each in its own frame.
+
+    At 5 Hz or more: they send 10, but on a busy Mac two more reliable picture streams lose
+    some. The front left camera's own check (check_sensors) holds 10 Hz.
+    """
+    # Only for this check, as the lidar's: two more picture streams would load the run.
+    got = {'front_right': [], 'rear': []}
+    subs = [probe.create_subscription(Image, f'/sensors/camera/{name}/image_raw',
+                                      lambda m, n=name: got[n].append(m), 2)
+            for name in got]
+    probe.spin_for(5.0)
+    for sub in subs:
+        probe.destroy_subscription(sub)
+    frames = {'front_right': 'camera_right_link', 'rear': 'camera_rear_link'}
+    parts, ok = [], True
+    for name, msgs in got.items():
+        hz = rate([seconds(m.header.stamp) for m in msgs])
+        frame = msgs[-1].header.frame_id if msgs else 'nothing'
+        ok &= bool(msgs) and frame == frames[name] and hz >= 5.0
+        parts.append(f'{name} in {frame} at {hz:.1f} Hz')
+    result('cameras', ok, '; '.join(parts))
 
 
 def check_lidar(probe):
@@ -460,7 +493,7 @@ def check_lane_keeping(probe):
            f'cm, heading {heading:+.3f} rad, over {driven:.0f} s; {finder}')
 
 
-def session(launch_args, checks, log_path, label=''):
+def session(launch_args, checks, log_path, label='', ignore=()):
     """Start sim.launch.py's road world with these arguments, run the checks, and stop it."""
     tag = f' ({label})' if label else ''
     env = dict(os.environ)
@@ -495,7 +528,7 @@ def session(launch_args, checks, log_path, label=''):
         result(f'start-up{tag}', nav_up, detail)
         up = nav_up
         if up:
-            check_contract(probe, env, tag)
+            check_contract(probe, env, tag, ignore)
             for check in checks:
                 check(probe)
     finally:
@@ -516,7 +549,7 @@ def main():
         print('--perception needs YOLO: pixi run -e ml sim-check --perception', file=sys.stderr)
         return 2
     lidar = '--lidar' in args
-    checks = [check_sensors] + ([check_lidar] if lidar else []) + [check_drive]
+    checks = [check_sensors, check_cameras] + ([check_lidar] if lidar else []) + [check_drive]
     if perception:
         checks.append(check_stop_sign)
     if '--obstacle' in args:
@@ -531,7 +564,7 @@ def main():
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-lane{ext}')
         session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'],
-                [check_lane_keeping], logs[1], 'lane')
+                [check_lane_keeping], logs[1], 'lane', ignore=('/map',))
 
     print('\n| Check | Result | Detail |\n|---|---|---|')
     for name, ok, detail in RESULTS:

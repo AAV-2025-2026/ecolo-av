@@ -11,7 +11,8 @@ def test_config_loads_and_has_what_the_launch_files_read():
     v = cfg['vehicle']
     for key in ('wheelbase', 'track', 'wheel_diameter', 'max_steering_angle', 'body'):
         assert key in v
-    for name in ('imu_link', 'gps_link', 'radar_link'):
+    for name in ('imu_link', 'gps_link', 'radar_link', 'camera_left_link',
+                 'camera_right_link', 'camera_rear_link', 'lidar_link'):
         assert len(cfg['sensors'][name]['xyz']) == 3
 
 

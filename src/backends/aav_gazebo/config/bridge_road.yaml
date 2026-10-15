@@ -8,7 +8,7 @@
 # stand-in goes through gazebo_adapter first, which keeps only the rays that hit
 # something, with the TI driver's fields (aav_gazebo/radar.py).
 
-# The front camera. Reliable, as the camera's subscribers ask (big messages).
+# The front left camera. Reliable, as the camera's subscribers ask (big messages).
 - ros_topic_name: /sensors/camera/front_left/image_raw
   gz_topic_name: /aav/camera/image
   ros_type_name: sensor_msgs/msg/Image
@@ -17,6 +17,32 @@
 
 - ros_topic_name: /sensors/camera/front_left/camera_info
   gz_topic_name: /aav/camera/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+# The front right camera, the same way.
+- ros_topic_name: /sensors/camera/front_right/image_raw
+  gz_topic_name: /aav/camera_right/image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /sensors/camera/front_right/camera_info
+  gz_topic_name: /aav/camera_right/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+# The rear camera, the same way.
+- ros_topic_name: /sensors/camera/rear/image_raw
+  gz_topic_name: /aav/camera_rear/image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /sensors/camera/rear/camera_info
+  gz_topic_name: /aav/camera_rear/camera_info
   ros_type_name: sensor_msgs/msg/CameraInfo
   gz_type_name: gz.msgs.CameraInfo
   direction: GZ_TO_ROS

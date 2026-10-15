@@ -17,8 +17,8 @@
 
   <xacro:arg name="vehicle_config" default="$(find aav_description)/config/vehicle.yaml"/>
   <xacro:arg name="sim" default="false"/>
-  <!-- With sim: a simulated roof lidar on lidar_link (aav.sensors.gazebo.xacro). The car
-       has none, so it never appears without sim. -->
+  <!-- With sim: the roof lidar is simulated too (aav.sensors.gazebo.xacro). Its frame,
+       lidar_link, is always there: the car has one. -->
   <xacro:arg name="lidar" default="false"/>
 
   <xacro:property name="cfg" value="${xacro.load_yaml('$(arg vehicle_config)')}"/>
@@ -197,6 +197,8 @@
   <xacro:sensor_frame name="radar_link"/>
   <xacro:sensor_frame name="camera_left_link"/>
   <xacro:sensor_frame name="camera_right_link"/>
+  <xacro:sensor_frame name="camera_rear_link"/>
+  <xacro:sensor_frame name="lidar_link"/>
 
   <xacro:if value="$(arg sim)">
     <xacro:include filename="$(find aav_description)/urdf/aav.gazebo.xacro"/>

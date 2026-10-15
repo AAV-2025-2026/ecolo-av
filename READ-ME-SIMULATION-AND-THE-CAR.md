@@ -73,11 +73,11 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | Added | The car's software sees it as | Rate | Status |
 |---|---|---|---|
 | A road: lane lines, a stop sign, a box in the road (`obstacle:=true`) | | | ✅ |
-| A camera on the car | `/sensors/camera/front_left/image_raw` | 10 Hz | ✅ |
-| A radar on the car (a lidar shaped like it) | `/sensors/radar/points` (via `/gazebo/radar/points`) | 10 Hz | ✅ |
+| Three cameras: two on top looking forward, one at the back looking back | `/sensors/camera/front_left/image_raw`, `front_right/...`, `rear/...` | 10 Hz | ✅ (15 Oct) |
+| A radar on the grill (a lidar shaped like it) | `/sensors/radar/points` (via `/gazebo/radar/points`) | 10 Hz | ✅ |
 | A 16-beam lidar on the roof, with `lidar:=true` | `/sensors/lidar/points` | 10 Hz | ✅ alone; ⚠️ off by default: with YOLO too, it made the Mac flaky |
 
-![What the simulated camera sees](docs/img/sim-camera.png)
+![What the three simulated cameras see](docs/img/sim-cameras.png)
 
 - **Cameras and lidars on a Mac:** they render without a window, and didn't crash.
 - **Checked by** `pixi run sim-check`: every check passes, on 15 Oct.
@@ -88,7 +88,6 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | Thing | Why not |
 |---|---|
 | The real lidar | Gazebo's is a generic one: the car's model is unknown (Q22), and has no driver yet |
-| The right and rear cameras | only the front left camera is simulated |
 | The magnetometer | the EKFs don't use it |
 | The battery | nothing to simulate yet |
 | The real CAN boards | that's the bench's job, not Gazebo's |
@@ -125,7 +124,7 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | Wheel speed | optical encoder (fouled) on a Pico 2 | `aav_legacy` reads it | 2 Hall sensors → 2 ESP32 wheel nodes → CAN |
 | Steering feedback | none (open loop) | `measured_steering_angle` waits for it | KTC-100 pot → the Jrk G2 |
 | GPS | ZED-F9R on a taped u.FL lead | `ublox_gps` driver, untested | new ZED-F9R board, screw-on antenna |
-| Lidar | on the roof, unknown model | a generic one in Gazebo only; no driver | read on Orin #2 |
+| Lidar | on the roof, probably a Velodyne (the 2025-26 code read `/velodyne_points`) | a generic one in Gazebo only; no driver | read on Orin #2 |
 | Cameras | 2 front Pi 5s | `usb_cam` launch, untested | + a rear Pi 5 |
 
 ## 7. The plan, in order

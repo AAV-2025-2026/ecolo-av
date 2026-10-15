@@ -205,11 +205,35 @@ topics:
     sub: [lane_finder, camera_obstacles]
     live: [bench, road]
     note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.
+  /sensors/camera/front_right/image_raw:
+    type: sensor_msgs/msg/Image
+    pub: [gz_road_bridge]
+    sub: []
+    live: [road]
+    note: The front right camera, beside the left one (camera_right_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.
+  /sensors/camera/front_right/camera_info:
+    type: sensor_msgs/msg/CameraInfo
+    pub: [gz_road_bridge]
+    sub: []
+    live: [road]
+    note: Its lens. In Gazebo, the same as the front left camera's.
+  /sensors/camera/rear/image_raw:
+    type: sensor_msgs/msg/Image
+    pub: [gz_road_bridge]
+    sub: []
+    live: [road]
+    note: The rear camera, looking back (the orange housing on the tailgate) (camera_rear_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.
+  /sensors/camera/rear/camera_info:
+    type: sensor_msgs/msg/CameraInfo
+    pub: [gz_road_bridge]
+    sub: []
+    live: [road]
+    note: Its lens. In Gazebo, the same as the front left camera's.
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [gz_lidar_bridge]
     sub: []
-    note: Gazebo only - the car has no lidar yet. A generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). Only with sim.launch.py world:=road lidar:=true (off by default - on a Mac it made the full graph flaky), so not live in road. Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).
+    note: Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6). In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). Only with sim.launch.py world:=road lidar:=true (off by default - on a Mac it made the full graph flaky), so not live in road. Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).
 
   # --- perception ---
   /perception/radar/clusters:
@@ -426,3 +450,5 @@ frames:
   radar_link: {parent: base_link, by: robot_state_publisher}
   camera_left_link: {parent: base_link, by: robot_state_publisher}
   camera_right_link: {parent: base_link, by: robot_state_publisher}
+  camera_rear_link: {parent: base_link, by: robot_state_publisher, note: "turned 180 degrees: it looks back"}
+  lidar_link: {parent: base_link, by: robot_state_publisher, note: "the roof lidar"}

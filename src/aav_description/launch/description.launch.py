@@ -7,7 +7,7 @@ Publish the car's frames: robot_state_publisher from the URDF.
 joint_state_publisher fills in the joints nobody measures (wheel spin) and merges
 the measured steering angles that aav_spine publishes on /vehicle/joint_states.
 In Gazebo, the simulator publishes /joint_states itself, so turn it off there.
-lidar:=true (with sim:=true) adds the simulated roof lidar and its lidar_link.
+lidar:=true (with sim:=true) simulates the roof lidar on lidar_link, which is always there.
 """
 
 from launch import LaunchDescription

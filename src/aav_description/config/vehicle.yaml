@@ -36,15 +36,21 @@ sensors:
   gps_link:
     xyz: [0.80, 0.00, 1.50]   # TODO measure: the antenna, not the receiver box
     rpy: [0.0, 0.0, 0.0]
-  radar_link:
-    xyz: [2.20, 0.00, 0.40]   # TODO measure (TI IWR6843AOP, later)
+  # Where Ben placed them (15 Oct), until Friday's tape measure (audit M6): the radar on the
+  # grill, two cameras up top looking forward, one at the back looking back, the lidar on
+  # its roof tripod (docs/img/car/roof-lidar-antennas.jpg, rear-camera.jpg).
+  radar_link:                 # the TI mmWave radar, on the grill: the front bumper is at
+    xyz: [1.80, 0.00, 0.45]   # length - rear_overhang = 1.80. TODO measure
     rpy: [0.0, 0.0, 0.0]
-  camera_left_link:
-    xyz: [1.80, 0.29, 1.20]   # TODO measure (stereo baseline about 0.58 m, cameras/right.ini:25)
+  camera_left_link:           # front left, on top at the roof's front edge, looking forward
+    xyz: [1.75, 0.29, 1.55]   # TODO measure (stereo baseline about 0.58 m, cameras/right.ini:25)
     rpy: [0.0, 0.0, 0.0]
-  camera_right_link:
-    xyz: [1.80, -0.29, 1.20]  # TODO measure
+  camera_right_link:          # front right, the same. Not lower or further back: Gazebo's
+    xyz: [1.75, -0.29, 1.55]  # car is a solid box, and a camera inside it sees its walls
     rpy: [0.0, 0.0, 0.0]
-  lidar_link:                 # Gazebo only: the car has no lidar yet (docs/simulation.md)
-    xyz: [1.20, 0.00, 1.90]   # a guess: on a 0.4 m mast, so it clears the roof (1.50 m)
+  camera_rear_link:           # the orange housing on the tailgate's DIN rail, looking back
+    xyz: [-0.20, 0.00, 0.90]  # TODO measure
+    rpy: [0.0, 0.0, 3.14159265]
+  lidar_link:                 # on the roof's printed tripod: probably a Velodyne (the 2025-26
+    xyz: [0.90, 0.00, 1.80]   # code read /velodyne_points). TODO measure; model: audit N6
     rpy: [0.0, 0.0, 0.0]

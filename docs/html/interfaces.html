@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">20 min read · 4 sections</div></header>
+<div class="meta">21 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -340,12 +340,44 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.</td>
 </tr>
 <tr>
+<td><code>/sensors/camera/front_right/image_raw</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>gz_road_bridge</code></td>
+<td>-</td>
+<td>road</td>
+<td>The front right camera, beside the left one (camera_right_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/front_right/camera_info</code></td>
+<td><code>sensor_msgs/msg/CameraInfo</code></td>
+<td><code>gz_road_bridge</code></td>
+<td>-</td>
+<td>road</td>
+<td>Its lens. In Gazebo, the same as the front left camera's.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/rear/image_raw</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>gz_road_bridge</code></td>
+<td>-</td>
+<td>road</td>
+<td>The rear camera, looking back (the orange housing on the tailgate) (camera_rear_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/rear/camera_info</code></td>
+<td><code>sensor_msgs/msg/CameraInfo</code></td>
+<td><code>gz_road_bridge</code></td>
+<td>-</td>
+<td>road</td>
+<td>Its lens. In Gazebo, the same as the front left camera's.</td>
+</tr>
+<tr>
 <td><code>/sensors/lidar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>gz_lidar_bridge</code></td>
 <td>-</td>
 <td>-</td>
-<td>Gazebo only - the car has no lidar yet. A generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). Only with sim.launch.py world:=road lidar:=true (off by default - on a Mac it made the full graph flaky), so not live in road. Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).</td>
+<td>Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6). In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). Only with sim.launch.py world:=road lidar:=true (off by default - on a Mac it made the full graph flaky), so not live in road. Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).</td>
 </tr>
 <tr>
 <td><code>/perception/radar/clusters</code></td>
@@ -724,6 +756,18 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>base_link</td>
 <td>robot_state_publisher</td>
 <td></td>
+</tr>
+<tr>
+<td><code>camera_rear_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td>turned 180 degrees: it looks back</td>
+</tr>
+<tr>
+<td><code>lidar_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td>the roof lidar</td>
 </tr>
 </tbody>
 </table></div></section>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">18 min read · 7 sections</div></header>
+<div class="meta">19 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -229,6 +229,22 @@ real-time factor at 0.98-0.99.</p>
 <td>road</td>
 </tr>
 <tr>
+<td>Front right camera</td>
+<td><code>/aav/camera_right/image</code></td>
+<td><code>/sensors/camera/front_right/image_raw</code>, <code>.../camera_info</code></td>
+<td>10 Hz</td>
+<td>none</td>
+<td>road</td>
+</tr>
+<tr>
+<td>Rear camera, looking back</td>
+<td><code>/aav/camera_rear/image</code></td>
+<td><code>/sensors/camera/rear/image_raw</code>, <code>.../camera_info</code></td>
+<td>10 Hz</td>
+<td>none</td>
+<td>road</td>
+</tr>
+<tr>
 <td>Radar</td>
 <td><code>/aav/radar/points</code> (a lidar shaped like the radar)</td>
 <td><code>/sensors/radar/points</code></td>
@@ -257,7 +273,8 @@ real-time factor at 0.98-0.99.</p>
 <p>Each one carries the same name, type and frame as the real device's, so the software above
 can't tell. <code>/gazebo/*</code> topics are Gazebo's own side of <code>gazebo_adapter</code>, not in the
 contract.</p>
-<p><img alt="What the simulated front camera sees, at the start of the road world" src="../img/sim-camera.png" /></p>
+<p><img alt="What the three simulated cameras see, at the start of the road world" src="../img/sim-cameras.png" /></p>
+<p>Where each sensor sits (15 Oct, until Friday's tape measure): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from <code>vehicle.yaml</code>. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.</p>
 <h3 id="what-isnt-simulated">What isn't simulated</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -590,7 +607,7 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 </tr>
 <tr>
 <td><code>pixi run sim-check --lane</code></td>
-<td>not run on 15 Oct</td>
+<td>✅ 15 Oct, after the cameras moved: back to the lane's centre within 5 cm in 5 s</td>
 </tr>
 </tbody>
 </table></div>

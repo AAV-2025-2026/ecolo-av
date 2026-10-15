@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  The Gazebo car's camera and radar stand-in, and Gazebo's truth: included when sim:=true.
+  The Gazebo car's three cameras and radar stand-in, and Gazebo's truth: included when sim:=true.
   Each sensor sits at the URDF's own frame (vehicle.yaml), and its messages carry that
   frame, as the real devices' do. Only a world with the Sensors system renders them (the
   road world); elsewhere they cost nothing. Element names checked against gz-sim 8 and
@@ -8,6 +8,8 @@
 
     /aav/camera/image         gz.msgs.Image          -> /sensors/camera/front_left/image_raw
     /aav/camera/camera_info   gz.msgs.CameraInfo     -> /sensors/camera/front_left/camera_info
+    /aav/camera_right/...     the same               -> /sensors/camera/front_right/...
+    /aav/camera_rear/...      the same               -> /sensors/camera/rear/...
     /aav/radar/points         gz.msgs.PointCloudPacked -> /sensors/radar/points (best effort)
     /model/aav/truth          gz.msgs.Odometry       -> /vehicle/gazebo/truth
 
@@ -25,24 +27,31 @@
   <xacro:property name="camera_width" value="640"/>
   <xacro:property name="camera_height" value="360"/>
   <xacro:property name="camera_focal" value="343.0"/>
-  <gazebo reference="camera_left_link">
-    <sensor name="camera_left" type="camera">
-      <always_on>1</always_on>
-      <update_rate>10</update_rate>
-      <topic>/aav/camera/image</topic>
-      <gz_frame_id>camera_left_link</gz_frame_id>
-      <camera>
-        <camera_info_topic>/aav/camera/camera_info</camera_info_topic>
-        <horizontal_fov>${2 * atan(camera_width / 2.0 / camera_focal)}</horizontal_fov>
-        <image>
-          <width>${camera_width}</width>
-          <height>${camera_height}</height>
-          <format>R8G8B8</format>
-        </image>
-        <clip><near>0.1</near><far>150</far></clip>
-      </camera>
-    </sensor>
-  </gazebo>
+  <xacro:macro name="sim_camera" params="link name topic">
+    <gazebo reference="${link}">
+      <sensor name="${name}" type="camera">
+        <always_on>1</always_on>
+        <update_rate>10</update_rate>
+        <topic>${topic}/image</topic>
+        <gz_frame_id>${link}</gz_frame_id>
+        <camera>
+          <camera_info_topic>${topic}/camera_info</camera_info_topic>
+          <horizontal_fov>${2 * atan(camera_width / 2.0 / camera_focal)}</horizontal_fov>
+          <image>
+            <width>${camera_width}</width>
+            <height>${camera_height}</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip><near>0.1</near><far>150</far></clip>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+  <!-- The car's three: two up top looking forward, one at the back looking back. All the
+       same lens, as the front ones are the same model; the rear one's is unknown (N4). -->
+  <xacro:sim_camera link="camera_left_link" name="camera_left" topic="/aav/camera"/>
+  <xacro:sim_camera link="camera_right_link" name="camera_right" topic="/aav/camera_right"/>
+  <xacro:sim_camera link="camera_rear_link" name="camera_rear" topic="/aav/camera_rear"/>
 
   <!-- A radar stand-in: a lidar shaped like the TI IWR6843AOP with ti_ros2_driver's
        cfg/base.cfg, as the bench's mock_radar is: 8.4 m, 120 degrees wide, a ray every
@@ -92,7 +101,6 @@
        would add. lidar_link and its place come from vehicle.yaml, as every sensor's do.
        Rays that hit nothing come back as inf, which Nav2 and PCL drop. -->
   <xacro:if value="$(arg lidar)">
-    <xacro:sensor_frame name="lidar_link"/>
     <gazebo reference="lidar_link">
       <sensor name="lidar" type="gpu_lidar">
         <always_on>1</always_on>
