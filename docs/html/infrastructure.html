@@ -379,6 +379,10 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td>downloads the HUD app's place database (51 MB)</td>
 </tr>
 <tr>
+<td><code>get-street-map</code></td>
+<td>downloads the map window's offline street map of Ottawa (40 MB) into <code>maps/streets/</code></td>
+</tr>
+<tr>
 <td><code>get-flutter</code></td>
 <td>downloads Flutter 3.35.7 into <code>vendor/flutter</code>, for the HUD app</td>
 </tr>
@@ -534,6 +538,11 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td><code>get_hud_map.sh</code></td>
 <td>downloads the HUD's place database, checksum pinned</td>
 <td><code>pixi run get-hud-map</code></td>
+</tr>
+<tr>
+<td><code>get_street_map.sh</code></td>
+<td>cuts Ottawa out of Protomaps' world street map, checksums pinned</td>
+<td><code>pixi run get-street-map</code></td>
 </tr>
 <tr>
 <td><code>get_flutter.sh</code></td>

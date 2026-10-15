@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">20 min read · 13 sections</div></header>
+<div class="meta">25 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -250,7 +250,8 @@ nothing publishes that topic there.</p>
 </section>
 <section class="card"><h2 id="the-map-window-big-screen">The map window (big screen)</h2>
 <p><code>src/hud/aav_hud_raylib</code>, binary <code>map</code>: its own window, which is also the ROS node <code>map</code>.
-Step 1 (15 October): what Nav2 already knows, drawn north up.</p>
+Step 1 (15 October): what Nav2 already knows, drawn north up. Step 2 (15 October): an
+offline street map of Ottawa under it (<a href="#the-street-map-under-it">below</a>).</p>
 <p><img alt="The map window, with pretend data (--demo)" src="../img/map-raylib.png" /></p>
 <div class="table-wrap"><table>
 <thead>
@@ -316,6 +317,10 @@ Step 1 (15 October): what Nav2 already knows, drawn north up.</p>
 <td>follow the car (the start: 60 m across) / the whole map (<code>--whole-map</code> starts there)</td>
 </tr>
 <tr>
+<td>S</td>
+<td>the street map on / off</td>
+</tr>
+<tr>
 <td>mouse wheel, + and -</td>
 <td>zoom</td>
 </tr>
@@ -352,7 +357,7 @@ pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window tog
 </tr>
 <tr>
 <td><code>config/map.yaml</code></td>
-<td>every topic name, and the limits: <code>stale_after</code>, <code>plan_stale_after</code> (3 s), <code>arrive_within</code> (1 m)</td>
+<td>every topic name, the limits: <code>stale_after</code>, <code>plan_stale_after</code> (3 s), <code>arrive_within</code> (1 m), and <code>street_map</code>, the street map's file</td>
 </tr>
 </tbody>
 </table></div>
@@ -399,6 +404,221 @@ pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window tog
 <li>Near the goal, Nav2 may plan a loop to arrive facing the right way; the distance left
   follows the loop.</li>
 </ul>
+<h3 id="the-street-map-under-it">The street map under it</h3>
+<p>OpenStreetMap's streets, water, parks and buildings, drawn under Nav2's map, so the car
+and its path sit on real streets. It works with no internet: the map is a file.</p>
+<p><img alt="The demo lot on a Carleton parking lot, by Stadium Way and Bronson Avenue (--demo --zoom 2.5)" src="../img/map-streets-demo.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Get it, once</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run get-street-map</code></td>
+<td>40 MB into <code>maps/streets/ottawa.pmtiles</code> (git ignores <code>maps/</code>)</td>
+</tr>
+<tr>
+<td>What it is</td>
+<td>Ottawa, lon -76.0 to -75.4, lat 45.2 to 45.55, zoom 0 to 15: vector tiles</td>
+</tr>
+<tr>
+<td>From</td>
+<td><a href="https://docs.protomaps.com/basemaps/downloads">Protomaps</a>' world basemap, build 20260811 (OpenStreetMap of 11 Aug 2026)</td>
+</tr>
+<tr>
+<td>How</td>
+<td>go-pmtiles' <code>pmtiles extract</code>: only the tiles in the box, never the 139 GB file</td>
+</tr>
+<tr>
+<td>Checked</td>
+<td>the tool and the file, each against a pinned SHA-256</td>
+</tr>
+<tr>
+<td>Newer streets</td>
+<td><code>STREET_MAP_BUILD=latest pixi run get-street-map</code> (delete the old file first; no checksum then)</td>
+</tr>
+</tbody>
+</table></div>
+<p>No file: the window still runs, and says <strong>No street map: pixi run get-street-map</strong>.</p>
+<h4 id="licence-and-credit">Licence and credit</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Licence</th>
+<th>Asks for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The map data</td>
+<td>OpenStreetMap, <a href="https://www.openstreetmap.org/copyright">ODbL</a></td>
+<td>"© OpenStreetMap contributors" wherever it's shown</td>
+</tr>
+<tr>
+<td>The tiles (Protomaps basemap)</td>
+<td>data ODbL, code BSD-3-Clause</td>
+<td>nothing more; we credit "Protomaps" too</td>
+</tr>
+<tr>
+<td>go-pmtiles (the download tool)</td>
+<td>BSD-3-Clause</td>
+<td></td>
+</tr>
+<tr>
+<td>mvt-reader, earcut, flate2 (Rust)</td>
+<td>MIT, MIT or Apache-2.0</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>The window writes <strong>© OpenStreetMap contributors · Protomaps</strong> bottom right whenever the
+streets show. Don't remove it.</p>
+<h4 id="why-this-way">Why this way</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Instead of</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A Protomaps extract (vector)</td>
+<td>downloading tile.openstreetmap.org's pictures</td>
+<td>their <a href="https://operations.osmfoundation.org/policies/tiles/">tile policy</a> forbids bulk and offline downloads</td>
+</tr>
+<tr>
+<td>Vector tiles, drawn by us</td>
+<td>ready-made pictures</td>
+<td>our own dark colours, sharp at any zoom, 40 MB for the whole city</td>
+</tr>
+<tr>
+<td>Our own PMTiles reader (150 lines)</td>
+<td>the <code>pmtiles</code> crate</td>
+<td>it reads only through tokio (async); <code>pmtiles2</code> brings brotli and zstd</td>
+</tr>
+<tr>
+<td>The datum from <code>navsat.yaml</code></td>
+<td>a second copy in <code>map.yaml</code></td>
+<td>one place: the window uses what navsat_transform uses (<code>--navsat</code>, from the launch file)</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="where-the-streets-go">Where the streets go</h4>
+<p>navsat_transform puts map (0, 0) at its datum (<code>aav_localization/config/navsat.yaml</code>), x
+east, y north. map-core's <code>earth</code> does the same sums: UTM in the datum's zone, less the
+datum, turned by the meridian convergence (-0.495 degrees at Carleton).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check (15 Oct)</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UTM against GeographicLib (<code>GeoConvert</code>)</td>
+<td>within 1 mm (unit test)</td>
+</tr>
+<tr>
+<td>Carleton (45.3835, -75.6974) on the map</td>
+<td>ours (-109.607, -277.746) m; navsat_transform's <code>/fromLL</code> in the sim (-109.607, -277.746)</td>
+</tr>
+<tr>
+<td>Parliament Hill (4 km north)</td>
+<td>ours (-93.875, 3944.025) m; <code>/fromLL</code> the same to 1 mm</td>
+</tr>
+<tr>
+<td>Without the convergence turn</td>
+<td>34 m off at Parliament Hill: why it's there</td>
+</tr>
+</tbody>
+</table></div>
+<p>The sim's datum is the placeholder near Carleton, so in Gazebo the test lot sits on
+campus streets that aren't really there: the streets only match the world on the car.</p>
+<h4 id="how-it-draws">How it draws</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lat/lon to map metres and back</td>
+<td><code>map-core/src/earth.rs</code></td>
+</tr>
+<tr>
+<td>Which tiles, which zoom</td>
+<td><code>map-core/src/tiles.rs</code></td>
+</tr>
+<tr>
+<td>Reading the file</td>
+<td><code>map-core/src/pmtiles.rs</code></td>
+</tr>
+<tr>
+<td>One tile to triangles and lines</td>
+<td><code>map-core/src/streets.rs</code> (mvt-reader, earcut)</td>
+</tr>
+<tr>
+<td>What to keep, load, forget</td>
+<td><code>map-core/src/tilecache.rs</code> (160 tiles; a parent tile stands in while one loads)</td>
+</tr>
+<tr>
+<td>The loader thread, the colours, the names</td>
+<td><code>map-app/src/streets.rs</code> (rlgl: one batch per colour)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Order: streets, then Nav2's map see-through (unknown clear, free a faint blue,
+  occupied near-white), then the plan, the goal and the car.</li>
+<li>Roads by class: paths and service roads dim, residential grey, major roads (Bronson,
+  Colonel By) brighter and wider, highways (the 417) amber. Zoomed in, roads are their
+  real width.</li>
+<li>Street names from about 1.5 km across the window, along the street.</li>
+<li><code>--zoom 0.12</code> starts zoomed out (about 10 km across); the wheel goes out to 50 m a
+  pixel.</li>
+</ul>
+<p><img alt="The live window in Gazebo, zoomed out: about 10 km of Ottawa around the car (--zoom 0.12)" src="../img/map-streets-ottawa.png" /></p>
+<h4 id="tested-15-october-a-mac_2">Tested (15 October, a Mac)</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cargo test</code> (map-core 54, map-app 8)</td>
+<td>all pass; two tests read the real file when it's there</td>
+</tr>
+<tr>
+<td><code>--demo</code>, near and far</td>
+<td>the pictures above</td>
+</tr>
+<tr>
+<td>Gazebo, <code>test_lot</code>, headless, private domain, a Nav2 goal</td>
+<td>the lot over the campus streets, the plan and the car; the goal SUCCEEDED</td>
+</tr>
+<tr>
+<td>S, the wheel, dragging</td>
+<td>not tested: macOS blocks input from scripts</td>
+</tr>
+<tr>
+<td>On the car with a real GPS</td>
+<td>untested</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The live window in Gazebo, whole map: the test lot, see-through, over the street map" src="../img/map-streets-sim.png" /></p>
 </section>
 <section class="card"><h2 id="the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</h2>
 <p><strong>Decided (Ben, 15 Oct): the raylib HUD replaces it</strong> (Q29). What it looked like, drawn
