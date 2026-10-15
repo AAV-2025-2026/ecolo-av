@@ -3,7 +3,7 @@ The real car. One launch file for every machine; a machine file picks the parts.
 
   ros2 launch aav_bringup car.launch.py machine:=orin
       [gps:=true] [gps_driver:=ublox] [map:=<map yaml>] [start_x:=0] [start_y:=0]
-      [start_yaw:=0]
+      [start_yaw:=0] [max_speed:=0.3]
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
@@ -249,6 +249,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('machine', default_value='all',
                               description='config/machines/<machine>.yaml'),
+        DeclareLaunchArgument('max_speed', default_value='',
+                              description='m/s: cap ego below config/ego.yaml (a first drive on '
+                                          'stands: max_speed:=0.3); empty keeps ego.yaml'),
         DeclareLaunchArgument('gps', default_value='true',
                               description='false: no GPS anywhere (odometry only), whatever '
                                           'the machine file says'),
