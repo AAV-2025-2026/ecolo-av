@@ -56,6 +56,7 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 |---|---|
 | `--demo`, in a window and full screen | draws; screenshots checked |
 | The node, with `ros2 topic pub` and `image_publisher` (private domain) | speed, faults, RTK FIXED, 2D FIX, STOP SIGN and the camera picture shown |
+| Next to bench mode (`bench.launch.py nav:=false`, private domain) | every bench topic OK: status, GPS 3D fix, battery 100 %, the bench camera. `/perception/stop` NEVER (perception is off there) |
 | One press, through the real node, to another node (`cargo test`) | exactly 5 trues, no false, each "sent to 1 node" |
 | Ctrl-C to `ros2 launch` | the window closes, "finished cleanly" |
 | A click on the window's button | not tested: macOS blocks clicks from scripts  |

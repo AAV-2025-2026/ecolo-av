@@ -37,7 +37,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Radar clustering | `aav_object_detection` | [[works]] on the pretend radar |
 | Obstacles in Nav2 | the radar in the local costmap; `collision_monitor`'s stop zone; `camera_obstacles` | [[works]] on the bench: the stop zone stops the car 0.3-0.4 m before a box as wide as the lane. Open: the car weaves up to 1.5 m off its line (N7), so it can pass beside a narrow box; the stop zone flickers at its edge. The camera layer is off until the cameras are calibrated (Q22) |
 | HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
-| HUD in Rust (raylib) | `aav_hud_raylib` | [[works]] on a Mac: `--demo`, and as a node fed by `ros2 topic pub`; its e-stop reaches a subscriber as 5 trues. [[untested]] with the bench, on a Pi and on the car's screen |
+| HUD in Rust (raylib) | `aav_hud_raylib` | [[works]] on a Mac: `--demo`, and as a node fed by `ros2 topic pub`; its e-stop reaches a subscriber as 5 trues. [[works]] next to bench mode too. [[untested]] on a Pi and on the car's screen |
 | CARLA | `aav_carla` | [[stub]] parked (Q31) |
 | Lidar | | [[later]] |
 
