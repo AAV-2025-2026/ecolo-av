@@ -7,7 +7,7 @@
 <!-- Generated from docs/packages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>What each package does</h1>
-<div class="meta">12 min read · 11 sections</div></header>
+<div class="meta">13 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -45,6 +45,7 @@
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
 <a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
@@ -127,6 +128,13 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>drivers</td>
 <td>scripted drives: speed up, hold, slow down</td>
 <td><span class="badge b-works">works</span> turtle and the bench</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_language</code></td>
+<td>drivers</td>
+<td>plain English: a local model plans drive tools, you say yes</td>
+<td><span class="badge b-works">works</span> Gazebo and the turtle</td>
 <td>new</td>
 </tr>
 <tr>
@@ -392,6 +400,12 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td><code>/localization/odom/local</code></td>
 <td><code>/drivers/scripted/cmd_vel</code></td>
 <td>the action <code>/scripted_drive</code></td>
+</tr>
+<tr>
+<td><code>aav_language</code></td>
+<td>your words; odometry, GPS, <code>/diagnostics</code>, <code>/vehicle/status</code></td>
+<td><code>/safety/estop</code> (true only)</td>
+<td>calls <code>/scripted_drive</code> and <code>/follow_gps_waypoints</code>; never publishes a velocity</td>
 </tr>
 <tr>
 <td><code>aav_navigation</code></td>

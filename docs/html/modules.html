@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">28 min read · 15 sections</div></header>
+<div class="meta">29 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -45,6 +45,7 @@
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
 <a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
@@ -131,7 +132,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><a href="#drivers">Drivers</a></td>
-<td><code>aav_teleop</code>, <code>aav_scripted</code>, <code>aav_navigation</code></td>
+<td><code>aav_teleop</code>, <code>aav_scripted</code>, <code>aav_language</code>, <code>aav_navigation</code></td>
 </tr>
 <tr>
 <td><a href="#mux-and-ego">Mux and ego</a></td>
@@ -550,6 +551,53 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tr>
 <td><strong>Read first</strong></td>
 <td><code>aav_scripted/speed_profile.py</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="aav_language">aav_language</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Does</strong></td>
+<td>plain English to a plan of drive tools, through a local model; drives after a typed yes</td>
+</tr>
+<tr>
+<td><strong>Why</strong></td>
+<td>Ben, 15 Oct: "type in plain English what we want to do, like drive 100m forward"</td>
+</tr>
+<tr>
+<td><strong>Runs on</strong></td>
+<td>a Mac with Apple silicon (the model); the drive server anywhere with ROS</td>
+</tr>
+<tr>
+<td><strong>In → out</strong></td>
+<td>your words → MCP → <code>/scripted_drive</code>, <code>/follow_gps_waypoints</code>, <code>/safety/estop</code> (true only)</td>
+</tr>
+<tr>
+<td><strong>Origin</strong></td>
+<td>ours; the ReAct design from Ben's SYSC 4415 A3 and <code>mcpsearch</code></td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td><span class="badge b-works">works</span> Gazebo and turtle; <span class="badge b-untested">untested</span> bench and car</td>
+</tr>
+<tr>
+<td><strong>Run alone</strong></td>
+<td><code>pixi run -e llm talk --fake</code> (no ROS); <code>pixi run -e llm llm-eval</code> (the model test)</td>
+</tr>
+<tr>
+<td><strong>Test</strong></td>
+<td><code>test/</code> (in <code>tools/test.sh</code>): the distance maths, every safety rule, the ReAct loop</td>
+</tr>
+<tr>
+<td><strong>Read first</strong></td>
+<td><a href="plain-english.html">Plain English</a>, then <code>aav_language/drive_tools.py</code></td>
 </tr>
 </tbody>
 </table></div>

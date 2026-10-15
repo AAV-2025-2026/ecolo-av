@@ -29,7 +29,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 |---|---|
 | [Sensors](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver` |
 | [Description and localization](#description-and-localization) | `aav_description`, `aav_localization` |
-| [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_navigation` |
+| [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_language`, `aav_navigation` |
 | [Mux and ego](#mux-and-ego) | `aav_mux`, `aav_ego` |
 | [Backends](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla` |
 | [Perception](#perception) | `aav_yolo`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry` |
@@ -157,6 +157,20 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Run alone** | `ros2 launch aav_scripted scripted.launch.py`, then the `ros2 action send_goal` in its docstring |
 | **Test** | `test/test_speed_profile.py` (in `tools/test.sh`) |
 | **Read first** | `aav_scripted/speed_profile.py` |
+
+### aav_language
+
+| | |
+|---|---|
+| **Does** | plain English to a plan of drive tools, through a local model; drives after a typed yes |
+| **Why** | Ben, 15 Oct: "type in plain English what we want to do, like drive 100m forward" |
+| **Runs on** | a Mac with Apple silicon (the model); the drive server anywhere with ROS |
+| **In → out** | your words → MCP → `/scripted_drive`, `/follow_gps_waypoints`, `/safety/estop` (true only) |
+| **Origin** | ours; the ReAct design from Ben's SYSC 4415 A3 and `mcpsearch` |
+| **Status** | [[works]] Gazebo and turtle; [[untested]] bench and car |
+| **Run alone** | `pixi run -e llm talk --fake` (no ROS); `pixi run -e llm llm-eval` (the model test) |
+| **Test** | `test/` (in `tools/test.sh`): the distance maths, every safety rule, the ReAct loop |
+| **Read first** | [Plain English](plain-english.md), then `aav_language/drive_tools.py` |
 
 ### aav_navigation
 

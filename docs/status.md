@@ -20,6 +20,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Joystick | `aav_teleop` | [[untested]] |
 | Keyboard | teleop_twist_keyboard | [[works]] |
 | Scripted | `aav_scripted` | [[works]] turtle and the bench |
+| Plain English | `aav_language`: a drive tool server (MCP) and a local model (MLX) | [[works]] in Gazebo and the turtle, 15 Oct: "drive 10 m forward" drove 10.02 m in Gazebo, a 90° turn turned 87.6°. Asks before it moves; refuses the real car without `--car`. [[untested]] on the bench and the car ([Plain English](plain-english.md)) |
 | Nav2 | `aav_navigation` | [[works]] in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign |
 | twist_mux | `aav_mux` | [[works]] |
 | ego | `aav_ego` | [[works]] |

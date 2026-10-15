@@ -45,6 +45,7 @@
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
 <a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
@@ -118,6 +119,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td>Scripted</td>
 <td><code>aav_scripted</code></td>
 <td><span class="badge b-works">works</span> turtle and the bench</td>
+</tr>
+<tr>
+<td>Plain English</td>
+<td><code>aav_language</code>: a drive tool server (MCP) and a local model (MLX)</td>
+<td><span class="badge b-works">works</span> in Gazebo and the turtle, 15 Oct: "drive 10 m forward" drove 10.02 m in Gazebo, a 90° turn turned 87.6°. Asks before it moves; refuses the real car without <code>--car</code>. <span class="badge b-untested">untested</span> on the bench and the car (<a href="plain-english.html">Plain English</a>)</td>
 </tr>
 <tr>
 <td>Nav2</td>

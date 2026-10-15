@@ -56,6 +56,7 @@ ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
 
 - Any person driving (keyboard, joystick) overrides it at once. Cancel the goal and it slows down and stops.
 - **Limits:** with wheels straight but no correction, a slightly-off steering centre makes it curve. Until the KTC-100 gives real steering feedback, expect drift.
+- **Or in plain English:** `pixi run -e llm talk`, then type "drive 10 m forward". A local model plans the goal (the whole 10 m, ramps included), shows it, and drives only after you type yes. Stand-ins only for now: [docs/plain-english.md](docs/plain-english.md).
 
 ## 3. Way 2: Nav2 to a GPS point (today)
 

@@ -1322,7 +1322,30 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 - **Checked:** `tools/test.sh`, `pixi run test`, the turtle, Gazebo and bench mode with
   their checks. A test keeps every new topic in an area.
 
+## 15 October: driving in plain English
+
+### "Maybe we can load our own weights with qwen or llama or whatever is the best that allows us to type in plain English what we want to do, like drive 100m forward, and have the model produce ReAct commands."
+
+- **Built:** `aav_language` ([Plain English](../plain-english.md)). A drive tool server
+  (MCP over stdio, separate from the read-only one) with high-level tools only, and a
+  ReAct agent on a local MLX model. It prints the plan and drives only after a typed yes.
+- **The rules are in the server**, not the model: 1 m/s, 200 m per command, reverse
+  0.5 m/s and 10 m, the car's tightest turn, no move while the e-stop is on (it reads
+  twist_mux's own report), never clears it, no real car without `--car`, every call logged.
+- **The model, by a fair test:** five local models, 23 requests (7 should be refused).
+  Qwen3-4B-Instruct-2507 is the default: 21 of 23, 0.9 s a step, 3.3 GB. Ben's
+  Llama-3.2-1B planned none of the 12 moves.
+- **The test changed the design:** turns take "left"/"right" words (models got the sign
+  wrong); the plan flags any number the person never typed (models shrank "250 m" to 200).
+- **Ran:** Gazebo, "drive 10 m forward" = 10.02 m; "turn left 90 degrees with a 5 m
+  radius" = 87.6°. Ctrl-C stopped a 30 m drive at 11.7 m; a drive while e-stopped was refused.
+- **Credit:** the design follows Ben's SYSC 4415 A3 ReAct agent and his `mcpsearch`.
+
 ## Open threads
+
+- **Plain English (15 Oct):** works in Gazebo and the turtle; untested on the bench and
+  the car. Before the car: the scripted driver on stands, steering feedback, a safety
+  driver on the joystick.
 
 - **Topic areas (15 Oct):** done and on `main`. Bags recorded before then hold the old names: play them with `--remap`. The raylib HUD's window wasn't opened in this check (no screen for the session); its names come from `config/hud.yaml`.
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.

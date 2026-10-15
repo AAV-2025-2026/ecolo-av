@@ -45,6 +45,7 @@
 <a href="simulation.html">Simulation</a>
 <a href="bench.html">Bench mode</a>
 <a class="here" href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
@@ -106,7 +107,8 @@ how AI apps talk to tools like this one.</p>
 <section class="card"><h2 id="what-it-cant-do">What it can't do</h2>
 <ul>
 <li><strong>Write to ROS:</strong> no publishing, no service or action calls, no parameters. So it can't
-  move the car. A test checks that the server's code has none of those calls.</li>
+  move the car. A test checks that the server's code has none of those calls. Driving
+  has a server of its own, with its own rules: <a href="plain-english.html">Plain English</a>.</li>
 <li><strong>Read files outside git:</strong> it never sees <code>secrets.h</code>, <code>vendor/</code>, or anything else that
   isn't committed.</li>
 <li><strong>Change files:</strong> the only thing it writes is <code>run_tests</code>' build output, which git
@@ -187,7 +189,7 @@ and arguments. The server talks over stdio, so it runs only on the computer the 
 <p><code>pixi run test</code> runs both. The smoke test needs the <code>mcp</code> environment: it's skipped where
 that isn't installed. CI installs it.</p></section>
 <nav class="prevnext"><a class="prev" href="bench.html"><small>Previous</small>← Bench mode</a>
-<a class="next" href="firmware.html"><small>Next</small>Firmware →</a></nav>
+<a class="next" href="plain-english.html"><small>Next</small>Plain English →</a></nav>
 </main>
 <footer>Source: <code>docs/mcp.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

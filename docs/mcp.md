@@ -24,7 +24,8 @@ AI app ──stdio──► mcp_server.py ──► the docs and contracts (file
 ## What it can't do
 
 - **Write to ROS:** no publishing, no service or action calls, no parameters. So it can't
-  move the car. A test checks that the server's code has none of those calls.
+  move the car. A test checks that the server's code has none of those calls. Driving
+  has a server of its own, with its own rules: [Plain English](plain-english.md).
 - **Read files outside git:** it never sees `secrets.h`, `vendor/`, or anything else that
   isn't committed.
 - **Change files:** the only thing it writes is `run_tests`' build output, which git
