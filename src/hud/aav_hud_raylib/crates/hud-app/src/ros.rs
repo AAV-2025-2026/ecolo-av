@@ -318,4 +318,56 @@ mod tests {
             .collect();
         assert_eq!(ours, bits);
     }
+
+    /// The real node: one press of the button reaches another node as five trues, and
+    /// the screen hears that it was sent to a subscriber. Needs ROS sourced; runs on
+    /// this computer only, on ROS_DOMAIN_ID (93 unless set), with a topic of its own.
+    #[test]
+    fn one_press_reaches_a_subscriber_as_five_trues() -> Result<()> {
+        use crate::source::DataSource;
+        use std::sync::atomic::AtomicUsize;
+
+        if std::env::var_os("ROS_DOMAIN_ID").is_none() {
+            std::env::set_var("ROS_DOMAIN_ID", "93");
+        }
+        std::env::set_var("ROS_AUTOMATIC_DISCOVERY_RANGE", "LOCALHOST");
+        let topic = format!("/hud_test_{}/estop", std::process::id());
+        let mut config = HudConfig::default();
+        config.set_topic(Topic::Estop, topic.clone());
+        let (mut hud, _) = RosSource::start(vec!["hud".into()], config)?;
+
+        let context = Context::default_from_env()?;
+        let mut executor = context.create_basic_executor();
+        let listener = executor.create_node("hud_test_listener")?;
+        let trues = Arc::new(AtomicUsize::new(0));
+        let falses = Arc::new(AtomicUsize::new(0));
+        let _sub = listener.create_subscription(topic.as_str().reliable().keep_last(10), {
+            let (trues, falses) = (Arc::clone(&trues), Arc::clone(&falses));
+            move |m: Bool| {
+                let n = if m.data { &trues } else { &falses };
+                n.fetch_add(1, Ordering::SeqCst);
+            }
+        })?;
+        // Give discovery a moment, so the first message isn't lost before it matches.
+        executor.spin(SpinOptions::default().timeout(Duration::from_millis(1500)));
+        hud.press_estop();
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while trues.load(Ordering::SeqCst) < 5 && Instant::now() < deadline {
+            executor.spin(SpinOptions::default().timeout(Duration::from_millis(100)));
+        }
+        // A little longer: a sixth would be a bug.
+        executor.spin(SpinOptions::default().timeout(Duration::from_millis(300)));
+        assert_eq!(trues.load(Ordering::SeqCst), 5);
+        assert_eq!(falses.load(Ordering::SeqCst), 0);
+        let reports: Vec<Update> = hud
+            .drain(Instant::now())
+            .into_iter()
+            .filter(|u| matches!(u, Update::Estop(_)))
+            .collect();
+        assert_eq!(reports.len(), 5);
+        assert!(reports.iter().all(
+            |u| matches!(u, Update::Estop(EstopReport::Sent { subscribers }) if *subscribers >= 1)
+        ));
+        Ok(())
+    }
 }
