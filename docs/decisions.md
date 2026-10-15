@@ -108,7 +108,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 
 | Decision | By |
 |---|---|
-| Topic names by area: `/<area>/<device or node>/<thing>`, with the areas `/sensors/`, `/vehicle/`, `/can/`, `/localization/`, `/perception/`, `/drivers/`, `/control/`, `/ego/`, `/safety/`, `/hud/` ([Topic areas](naming.md)). Each driver gets its own: `/drivers/keyboard/cmd_vel`, `/drivers/joy/cmd_vel` | Ben, 00:50: "The drivers all need to be in a /drivers/keybaord, etc type stuff as an example." |
+| Topic names by area: `/<area>/<device or node>/<thing>`, with the areas `/sensors/`, `/vehicle/`, `/can/`, `/localization/`, `/perception/`, `/drivers/`, `/control/`, `/ego/`, `/safety/`, `/hud/` ([Topic areas](naming.md)). Each driver gets its own: `/drivers/keyboard/cmd_vel`, `/drivers/joy/cmd_vel` | Ben, 00:30: "The drivers all need to be in a /drivers/keybaord, etc type stuff as an example." |
 
 ## Open questions
 
