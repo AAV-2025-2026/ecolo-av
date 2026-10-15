@@ -9,6 +9,11 @@ there, and save a copy, without changing anything.** This page is steps 2 and 3 
     Look, copy and photograph. Don't install, upgrade, reflash, restart services, change
     the network, or drive. The "don't" list is at the end of this page.
 
+
+**The plan for the whole day** (audit, network, our stack on the car):
+[READ-ME-FRIDAY.md](../READ-ME-FRIDAY.md). **Every question to answer:**
+[Friday's questions](audit-questions.md).
+
 ## The day in one picture
 
 ```text

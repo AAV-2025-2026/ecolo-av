@@ -6,6 +6,9 @@ Jetson AGX Orin and the Raspberry Pis); Pixi on Macs and other Linux machines.
 
 **Sensors become telemetry, drivers become one command, and ego moves the car.**
 
+> **This Friday (16 Oct):** [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md): the audit, the network,
+> and our stack on the car, step by step.
+>
 > **Read first, in this order** (pages in this folder, written for Ben, 15 Oct):
 > 1. [READ-ME-HOW-IT-ALL-FITS.md](READ-ME-HOW-IT-ALL-FITS.md): the layers bottom-up, what
 >    happens at start-up, and how to test each layer.
