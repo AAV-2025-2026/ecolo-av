@@ -3,7 +3,8 @@
 Ben, 14 Oct: "Maybe we need more structure like /localization/<command> and
 /drivers/<command> /ego/<command> ... Something that isolates messages into their area."
 
-**Status: Proposed** [[needs-you]]. Nothing is renamed yet.
+**Status: Decided** (Ben, 15 Oct: "The drivers all need to be in a /drivers/keybaord, etc
+type stuff as an example."). The rename is under way on the branch `wt/topic-areas`.
 
 ## The rule
 
