@@ -72,6 +72,8 @@ yarn-error.log*
 !/models/README.md
 # The HUD app's place database (51 MB): `pixi run get-hud-map` downloads it.
 /hud/flutter_pi/assets/databases/
+# The map window's street map (40 MB) and the tool that cuts it: `pixi run get-street-map`.
+/maps/
 
 # Secrets: copy the .example file and fill it in locally
 secrets.h
