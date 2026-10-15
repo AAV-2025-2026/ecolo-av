@@ -8,6 +8,8 @@ Jetson AGX Orin and the Raspberry Pis); Pixi on Macs and other Linux machines.
 
 > **Read first:** [READ-ME-SIMULATION-AND-THE-CAR.md](READ-ME-SIMULATION-AND-THE-CAR.md):
 > how far Gazebo goes, what sensor data it makes, and how it all relates to the real car.
+> Then [READ-ME-MAPS-AND-POSITION.md](READ-ME-MAPS-AND-POSITION.md): the EKFs, the map
+> frame, OpenStreetMap and costmaps.
 
 ## Read the docs
 
