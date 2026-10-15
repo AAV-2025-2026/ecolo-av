@@ -103,9 +103,9 @@ topics:
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
-    pub: [spine_bridge, gazebo_adapter]
+    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter]
     sub: [hud_server, hud]
-    live: [sim, bench]
+    live: [turtle, sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.
   /vehicle/joint_states:
     type: sensor_msgs/msg/JointState

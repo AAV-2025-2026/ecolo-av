@@ -61,6 +61,23 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 | Ctrl-C to `ros2 launch` | the window closes, "finished cleanly" |
 | A click on the window's button | not tested: macOS blocks clicks from scripts  |
 
+### What it shows with each backend
+
+The HUD reads topics, so it works next to anything that publishes them. Start the backend,
+then `pixi run hud` in another terminal (the same `ROS_DOMAIN_ID`).
+
+| HUD panel | Turtle (`pixi run turtle`) | Gazebo (`pixi run sim world:=road`) | Bench (`pixi run bench`) | Car |
+|---|---|---|---|---|
+| Speed, steering, mode, armed | ✅ from the turtle's motion (15 Oct) | ✅ 50 Hz, from Gazebo's wheels | ✅ | the backend's `/vehicle/status` |
+| GPS panel | NEVER: no GPS | ✅ 3D fix, about 5 Hz | ✅ | the ZED-F9R, once it runs |
+| Camera | NEVER: no camera | ✅ road world, about 9 Hz | ✅ the drawn road | the camera Pis |
+| Stop sign | NEVER | with `perception:=true` (`pixi run -e ml sim ...`) | with `--perception` | YOLO |
+| Battery | NEVER | NEVER: not simulated | ✅ | the battery monitor |
+
+Checked on 15 Oct by listening to each topic while the backend drove a scripted goal
+(the window itself couldn't open from that session). NEVER on a panel is the honest answer:
+nothing publishes that topic there.
+
 ## The Flutter app (2025-26): what it is
 
 Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26, two

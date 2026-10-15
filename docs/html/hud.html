@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">14 min read · 12 sections</div></header>
+<div class="meta">15 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -175,6 +175,60 @@ pixi run hud fullscreen:=true      # full screen; F11 switches too</code></pre>
 </tr>
 </tbody>
 </table></div>
+<h3 id="what-it-shows-with-each-backend">What it shows with each backend</h3>
+<p>The HUD reads topics, so it works next to anything that publishes them. Start the backend,
+then <code>pixi run hud</code> in another terminal (the same <code>ROS_DOMAIN_ID</code>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>HUD panel</th>
+<th>Turtle (<code>pixi run turtle</code>)</th>
+<th>Gazebo (<code>pixi run sim world:=road</code>)</th>
+<th>Bench (<code>pixi run bench</code>)</th>
+<th>Car</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed, steering, mode, armed</td>
+<td>✅ from the turtle's motion (15 Oct)</td>
+<td>✅ 50 Hz, from Gazebo's wheels</td>
+<td>✅</td>
+<td>the backend's <code>/vehicle/status</code></td>
+</tr>
+<tr>
+<td>GPS panel</td>
+<td>NEVER: no GPS</td>
+<td>✅ 3D fix, about 5 Hz</td>
+<td>✅</td>
+<td>the ZED-F9R, once it runs</td>
+</tr>
+<tr>
+<td>Camera</td>
+<td>NEVER: no camera</td>
+<td>✅ road world, about 9 Hz</td>
+<td>✅ the drawn road</td>
+<td>the camera Pis</td>
+</tr>
+<tr>
+<td>Stop sign</td>
+<td>NEVER</td>
+<td>with <code>perception:=true</code> (<code>pixi run -e ml sim ...</code>)</td>
+<td>with <code>--perception</code></td>
+<td>YOLO</td>
+</tr>
+<tr>
+<td>Battery</td>
+<td>NEVER</td>
+<td>NEVER: not simulated</td>
+<td>✅</td>
+<td>the battery monitor</td>
+</tr>
+</tbody>
+</table></div>
+<p>Checked on 15 Oct by listening to each topic while the backend drove a scripted goal
+(the window itself couldn't open from that session). NEVER on a panel is the honest answer:
+nothing publishes that topic there.</p>
 </section>
 <section class="card"><h2 id="the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</h2>
 <p>Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26, two
