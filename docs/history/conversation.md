@@ -1324,7 +1324,7 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 
 ## 15 October: driving in plain English
 
-### "Maybe we can load our own weights with qwen or llama or whatever is the best that allows us to type in plain English what we want to do, like drive 100m forward, and have the model produce ReAct commands."
+### "Myabe we can load our own weights with qwen or llama or whatever is the best that allows us to type in plan engish what we want to do. like drive 100m forward. and have the model produce react commands."
 
 - **Built:** `aav_language` ([Plain English](../plain-english.md)). A drive tool server
   (MCP over stdio, separate from the read-only one) with high-level tools only, and a

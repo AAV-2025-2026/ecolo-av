@@ -2,8 +2,9 @@
 
 Type "drive 10 m forward" or "turn left 90 degrees with a 5 m radius". A language model
 on your Mac turns it into a plan. You read the plan and type **yes**. Only then does the
-car move. Ben asked for it on 15 October: "type in plain English what we want to do, like
-drive 100m forward, and have the model produce ReAct commands".
+car move. Ben asked for it on 15 October: type what we want in plain English, like
+"drive 100m forward", and have a local model (Qwen, Llama, whichever is best) produce
+ReAct commands.
 
 !!! warning "Stand-ins only, for now"
     It drives the turtle, Gazebo and bench mode. It refuses the real car unless it's

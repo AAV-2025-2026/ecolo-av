@@ -163,7 +163,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | | |
 |---|---|
 | **Does** | plain English to a plan of drive tools, through a local model; drives after a typed yes |
-| **Why** | Ben, 15 Oct: "type in plain English what we want to do, like drive 100m forward" |
+| **Why** | Ben, 15 Oct: type what we want in plain English, like "drive 100m forward" |
 | **Runs on** | a Mac with Apple silicon (the model); the drive server anywhere with ROS |
 | **In → out** | your words → MCP → `/scripted_drive`, `/follow_gps_waypoints`, `/safety/estop` (true only) |
 | **Origin** | ours; the ReAct design from Ben's SYSC 4415 A3 and `mcpsearch` |
