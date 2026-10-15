@@ -217,6 +217,13 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>2025-26 <code>User-Interface</code></td>
 </tr>
 <tr>
+<td><code>aav_hud_raylib</code></td>
+<td>hud</td>
+<td>the in-car screen in Rust: one raylib window that is the ROS node <code>hud</code></td>
+<td><span class="badge b-works">works</span> on a Mac: <code>--demo</code> and fed topics. <span class="badge b-untested">untested</span> with the bench and on the car</td>
+<td>new</td>
+</tr>
+<tr>
 <td><code>aav_spine_sim</code></td>
 <td>bench</td>
 <td>the spine on a laptop: the firmware's logic on a model car (Rust)</td>
@@ -617,6 +624,10 @@ Only one runs at a time.</p>
 <tr>
 <td><code>src/hud/aav_hud</code></td>
 <td>its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints, and the e-stop. <a href="hud.html">HUD</a> has what's left</td>
+</tr>
+<tr>
+<td><code>src/hud/aav_hud_raylib</code></td>
+<td>the HUD in Rust (raylib and rclrs), to replace the two above: the driving screen, the e-stop button, GPS and topic health. <code>pixi run hud-demo</code></td>
 </tr>
 </tbody>
 </table></div>

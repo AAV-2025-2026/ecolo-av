@@ -31,6 +31,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_lane_finder` | perception | the lane lines in the camera's pictures, as `/lane_geometry` (OpenCV) | [[works]] on the bench | new |
 | `aav_lane_geometry` | perception | lane keeping: a driver on `/cmd_vel/ai` | [[works]] on the bench, with `aav_lane_finder` | 2025-26 `Lane_Detection_ROS2` |
 | `aav_hud` | hud | the HUD's web server (Flask, Socket.IO), on our topics | [[works]] on the bench, with the app's e-stop button | 2025-26 `User-Interface` |
+| `aav_hud_raylib` | hud | the in-car screen in Rust: one raylib window that is the ROS node `hud` | [[works]] on a Mac: `--demo` and fed topics. [[untested]] with the bench and on the car | new |
 | `aav_spine_sim` | bench | the spine on a laptop: the firmware's logic on a model car (Rust) | [[works]] | new |
 | `aav_bench` | bench | pretend sensors: IMU, GPS, battery and camera | [[works]] | new |
 
@@ -136,6 +137,7 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 | `hud/flutter_pi` | the 2025-26 touchscreen app (Flutter): speed, map, camera; since 11 Oct an e-stop button, Cancel and the car's status. `pixi run hud-test` |
 | `hud/scripts` | the old Pi's start-up scripts |
 | `src/hud/aav_hud` | its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints, and the e-stop. [HUD](hud.md) has what's left |
+| `src/hud/aav_hud_raylib` | the HUD in Rust (raylib and rclrs), to replace the two above: the driving screen, the e-stop button, GPS and topic health. `pixi run hud-demo` |
 
 ## Examples
 

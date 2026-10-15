@@ -56,7 +56,9 @@ work on." His order, with the work under way:
       Picos (Embassy); the spine's Pico 2 program is written.
 6. [ ] **The HUD in raylib** (Ben, 11 Oct: yes): one Rust program, raylib and rclrs, that is
       also the ROS node. The driving screen first (speed, mode, the e-stop button, the
-      camera); the Flutter app stays until it matches. *Next free helper, after the boards.*
+      camera); the Flutter app stays until it matches. *Started 15 Oct (branch
+      `wt/hud-raylib`): the driving screen, the e-stop, GPS and topic health run on a Mac
+      (`pixi run hud-demo`, `pixi run hud`). Next: the bench, a Pi, the map page.*
 
 ## Ideas to keep
 

@@ -146,10 +146,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <tr>
 <td><code>/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
-<td><code>joy_teleop</code>, <code>hud_server</code></td>
+<td><code>joy_teleop</code>, <code>hud_server</code>, <code>hud</code></td>
 <td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code></td>
 <td>-</td>
-<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions.</td>
+<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike.</td>
 </tr>
 <tr>
 <td><code>/cmd_vel</code></td>
@@ -179,7 +179,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/vehicle/status</code></td>
 <td><code>aav_interfaces/msg/VehicleStatus</code></td>
 <td><code>spine_bridge</code>, <code>gazebo_adapter</code></td>
-<td><code>hud_server</code></td>
+<td><code>hud_server</code>, <code>hud</code></td>
 <td>sim, bench</td>
 <td>Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.</td>
 </tr>
@@ -243,7 +243,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code></td>
-<td><code>navsat_transform</code></td>
+<td><code>navsat_transform</code>, <code>hud</code></td>
 <td>sim, car, replay, bench</td>
 <td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
 </tr>
@@ -283,7 +283,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/battery_status</code></td>
 <td><code>sensor_msgs/msg/BatteryState</code></td>
 <td><code>battery_state_publisher</code>, <code>mock_battery</code></td>
-<td><code>hud_server</code></td>
+<td><code>hud_server</code>, <code>hud</code></td>
 <td>bench</td>
 <td>battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).</td>
 </tr>
@@ -299,7 +299,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/camera/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
 <td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code></td>
-<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code></td>
+<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code></td>
 <td>bench</td>
 <td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.</td>
 </tr>
@@ -355,7 +355,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/perception/stop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>stop_sign_watcher</code></td>
-<td><code>twist_mux</code>, <code>hud_server</code></td>
+<td><code>twist_mux</code>, <code>hud_server</code>, <code>hud</code></td>
 <td>car</td>
 <td>true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.</td>
 </tr>
@@ -459,7 +459,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/gps/filtered</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>navsat_transform</code></td>
-<td><code>hud_server</code></td>
+<td><code>hud_server</code>, <code>hud</code></td>
 <td>sim, car, replay, bench</td>
 <td>The global EKF's position as lat/lon, for maps in the HUD or Foxglove.</td>
 </tr>
