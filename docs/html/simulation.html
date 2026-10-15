@@ -463,6 +463,31 @@ real drives. In Gazebo, raise it for ego and Nav2 together:</p>
 </tr>
 </tbody>
 </table></div>
+<h3 id="everything-in-one-command-hudtrue">Everything in one command: <code>hud:=true</code></h3>
+<pre class="highlight"><code class="language-bash">pixi run sim world:=test_lot sim_speed:=3 hud:=true</code></pre>
+<p>Gazebo, RViz, Nav2 and the HUD window together. Give goals with RViz's 2D Goal Pose.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Opens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hud:=true</code></td>
+<td>the HUD window (<code>aav_hud_raylib</code>, the same as <code>pixi run hud</code>)</td>
+</tr>
+<tr>
+<td><code>hud_web:=true</code></td>
+<td>the Flutter app's web server on 127.0.0.1:5000 (this was <code>hud:=true</code> before 15 Oct)</td>
+</tr>
+<tr>
+<td>Tried, 15 Oct</td>
+<td>the parking lot, sim speed 3, the HUD on: a 36 m Nav2 goal reached</td>
+</tr>
+</tbody>
+</table></div>
 <p>If you reopen Gazebo's window (<code>pixi run gz-window</code>), its camera follows the car again.</p>
 </section>
 <section class="card"><h2 id="the-road-world-the-cars-whole-graph">The road world: the car's whole graph</h2>

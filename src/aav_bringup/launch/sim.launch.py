@@ -4,10 +4,12 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
   ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot|road] [nav:=true]
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
+      [hud_web:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
       [actuator_model:=true] [sim_speed:=]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
+  pixi run sim world:=test_lot sim_speed:=3 hud:=true   Gazebo, RViz, Nav2 and the HUD window
 
 world:=empty pairs with the empty map (phase 2); world:=test_lot with
 maps/example_lot.yaml (phase 3); world:=road, the bench's road in Gazebo, with the empty
@@ -25,7 +27,8 @@ bench's argument names:
   lane:=true          lane keeping: lane_finder and control_interface, on /drivers/ai/cmd_vel.
                       lane:=fake: control_interface on a pretend lane, in any world
   camera_obstacles    the detectors' boxes into Nav2's local costmap
-  hud:=true           the HUD's web server, on 127.0.0.1:5000
+  hud:=true           the HUD window (aav_hud_raylib, as pixi run hud): needs a screen
+  hud_web:=true       the Flutter app's web server (aav_hud), on 127.0.0.1:5000
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
   lidar:=false        no roof lidar. It's on by default (15 Oct): a simulated 16-beam
                       lidar on /sensors/lidar/points. Nothing reads it yet but RViz. Its
@@ -72,7 +75,8 @@ def launch_setup(context):
     if world not in MAPS:
         raise ValueError(f'world:={world}: pick one of {sorted(MAPS)}')
     flag = {n: arg(n).lower() == 'true'
-            for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud')}
+            for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
+                      'hud_web')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -136,6 +140,8 @@ def launch_setup(context):
     if lane == 'true':
         actions.append(include(context, 'aav_lane_finder', 'lane_finder.launch.py'))
     if flag['hud']:
+        actions.append(include(context, 'aav_hud_raylib', 'hud.launch.py'))
+    if flag['hud_web']:
         actions.append(include(context, 'aav_hud', 'hud.launch.py', use_sim_time='true'))
     if flag['rviz']:
         actions.append(Node(
@@ -166,7 +172,10 @@ def generate_launch_description():
                               description="the detectors' boxes into the local costmap "
                                           '(world:=road)'),
         DeclareLaunchArgument('hud', default_value='false',
-                              description="the HUD's web server (aav_hud), on 127.0.0.1:5000"),
+                              description='the HUD window (aav_hud_raylib); needs a screen'),
+        DeclareLaunchArgument('hud_web', default_value='false',
+                              description="the Flutter app's web server (aav_hud), on "
+                                          '127.0.0.1:5000'),
         DeclareLaunchArgument('obstacle', default_value='false',
                               description="a 1 m box in the car's lane, 15 m ahead"),
         DeclareLaunchArgument('start_y', default_value='0.0',

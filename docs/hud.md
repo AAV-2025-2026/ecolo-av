@@ -66,6 +66,7 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 
 The HUD reads topics, so it works next to anything that publishes them. Start the backend,
 then `pixi run hud` in another terminal (the same `ROS_DOMAIN_ID`).
+With Gazebo, one command does both: `pixi run sim world:=test_lot hud:=true`.
 
 | HUD panel | Turtle (`pixi run turtle`) | Gazebo (`pixi run sim world:=road`) | Bench (`pixi run bench`) | Car |
 |---|---|---|---|---|

@@ -174,6 +174,20 @@ pixi run sim world:=test_lot sim_speed:=3     # m/s, up to 5
 | The real car | never: ego refuses `sim_max_speed` unless it runs on simulated time |
 | Tried, 15 Oct | a 40 m Nav2 goal in the empty world: top speed 3.18 m/s, goal reached |
 
+### Everything in one command: `hud:=true`
+
+```bash
+pixi run sim world:=test_lot sim_speed:=3 hud:=true
+```
+
+Gazebo, RViz, Nav2 and the HUD window together. Give goals with RViz's 2D Goal Pose.
+
+| Argument | Opens |
+|---|---|
+| `hud:=true` | the HUD window (`aav_hud_raylib`, the same as `pixi run hud`) |
+| `hud_web:=true` | the Flutter app's web server on 127.0.0.1:5000 (this was `hud:=true` before 15 Oct) |
+| Tried, 15 Oct | the parking lot, sim speed 3, the HUD on: a 36 m Nav2 goal reached |
+
 If you reopen Gazebo's window (`pixi run gz-window`), its camera follows the car again.
 
 ## The road world: the car's whole graph

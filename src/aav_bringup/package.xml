@@ -26,6 +26,7 @@
   <exec_depend>aav_radar_clusters</exec_depend>
   <exec_depend>aav_yolo</exec_depend>
   <exec_depend>aav_hud</exec_depend>
+  <exec_depend>aav_hud_raylib</exec_depend>
   <exec_depend>aav_lane_geometry</exec_depend>
   <exec_depend>aav_lane_finder</exec_depend>
   <exec_depend>imu_filter_madgwick</exec_depend>
