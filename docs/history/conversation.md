@@ -31,6 +31,7 @@ Reading notes:
 - [Overnight into 10 October: Jazzy, the Mac and the car](#overnight-into-10-october-jazzy-the-mac-and-the-car)
 - [10 October, evening: chips, Rust, Embassy and tools](#10-october-evening-chips-rust-embassy-and-tools)
 - [11 October: the night's results, and what we can try at home](#11-october-the-nights-results-and-what-we-can-try-at-home)
+- [15 October: topic names by area](#15-october-topic-names-by-area)
 - [Open threads](#open-threads)
 
 ## The inherited repos and what we found
@@ -1304,8 +1305,26 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 - **Its own PDF:** `pixi run docs` now also makes `docs/html/aav-release-notes.pdf`: a cover with the pitch, six number tiles and the contents, then 7 pages. Emailed to Ben.
 - **Kept honest:** nothing has run on the car yet ("Next: the real car"); TensorRT is ready for the Orin's reflash, not yet run; the full test suite was confirmed on the Mac.
 
+## 15 October: topic names by area
+
+### "The drivers all need to be in a /drivers/keybaord, etc type stuff as an example." (00:30)
+
+- **Decided, then done:** every topic now starts with its area,
+  `/<area>/<device or node>/<thing>`: `/sensors/gps/fix`, `/localization/odom/local`,
+  `/drivers/joy/cmd_vel`, `/control/cmd_vel`, `/safety/estop`. The table is in
+  [Topic areas](../naming.md).
+- **The drivers:** each one publishes `/drivers/<name>/cmd_vel`. The joystick's nodes and
+  the keyboard run in the namespaces `/drivers/joy` and `/drivers/keyboard`, so their
+  names fall into place without remaps. twist_mux's `remote` slot was the keyboard, so it
+  is called `keyboard` now.
+- **Kept:** ROS's global names (`/tf`, `/clock`...), Nav2's own, navsat_transform's
+  services (Nav2 calls `/fromLL` by its absolute name) and the HUD's HTTP routes.
+- **Checked:** `tools/test.sh`, `pixi run test`, the turtle, Gazebo and bench mode with
+  their checks. A test keeps every new topic in an area.
+
 ## Open threads
 
+- **Topic areas (15 Oct):** done and on `main`. Bags recorded before then hold the old names: play them with `--remap`. The raylib HUD's window wasn't opened in this check (no screen for the session); its names come from `config/hud.yaml`.
 - **Secrets (Q34):** revoke the token and keys, and change the WiFi password. The owners are unknown.
 - **oirp-spss:** its copy of `aav` stops at 04:23, with the old commit IDs. Make a fresh clone from GitHub there; nothing on the server is missing from GitHub (checked 21:30).
 - **The five overnight pieces (10-11):** all merged and pushed (02:07–11:05). Now Ben's 11 October order: the full graph (with Ackermann), the C++ to Rust, the Mac with ML, Nav2, the board drivers, raylib. Three helpers started at 11:18.

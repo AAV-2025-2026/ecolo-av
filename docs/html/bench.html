@@ -58,7 +58,7 @@ pixi run bench                          # the car's software, with stand-ins
 pixi run bench-check                    # start it and test it: about 2 minutes
 pixi run -e ml bench perception:=true   # add YOLO and the stop sign</code></pre>
 <p>While it runs, in more terminals: <code>pixi run graph</code> (rqt_graph), <code>pixi run rviz</code>,
-<code>pixi run keyboard --local</code> (you drive, at the remote priority), or <code>pixi run check bench</code>.
+<code>pixi run keyboard --local</code> (you drive, at the keyboard priority), or <code>pixi run check bench</code>.
 The bench stays on this computer, like the sim: these terminals see it, other computers
 don't.</p>
 <div class="table-wrap"><table>
@@ -88,7 +88,7 @@ don't.</p>
 <tr>
 <td><code>lane</code></td>
 <td><code>false</code></td>
-<td>lane keeping on a pretend straight lane: the car drives itself on <code>/cmd_vel/ai</code></td>
+<td>lane keeping on a pretend straight lane: the car drives itself on <code>/drivers/ai/cmd_vel</code></td>
 </tr>
 <tr>
 <td><code>hud</code></td>
@@ -147,7 +147,7 @@ can tell the difference.</p>
 </tr>
 <tr>
 <td>The CAN bus</td>
-<td>the topics <code>/to_can_bus</code> and <code>/from_can_bus</code></td>
+<td>the topics <code>/can/tx</code> and <code>/can/rx</code></td>
 <td><code>ros2_socketcan</code> and <code>can0</code></td>
 </tr>
 <tr>
@@ -197,37 +197,37 @@ can tell the difference.</p>
 <tr>
 <td><code>spine_sim</code></td>
 <td><code>aav_spine_sim</code> (Rust)</td>
-<td><code>/from_can_bus</code>, <code>/bench/truth</code></td>
+<td><code>/can/rx</code>, <code>/vehicle/bench/truth</code></td>
 <td>runs spine-core's <code>Spine::step</code> 100 times a second, as the board will, and drives a model car with the outputs</td>
 </tr>
 <tr>
 <td><code>mock_imu</code></td>
 <td><code>aav_bench</code></td>
-<td><code>/imu/data_raw</code>, <code>/imu/mag</code></td>
+<td><code>/sensors/imu/data_raw</code>, <code>/sensors/imu/mag</code></td>
 <td>the model's turn rate and acceleration, plus noise and a small gyro drift</td>
 </tr>
 <tr>
 <td><code>mock_gps</code></td>
 <td><code>aav_bench</code></td>
-<td><code>/gps/fix</code></td>
+<td><code>/sensors/gps/fix</code></td>
 <td>where the antenna is, as latitude and longitude, with 0.5 m of noise, 5 times a second</td>
 </tr>
 <tr>
 <td><code>mock_camera</code></td>
 <td><code>aav_bench</code></td>
-<td><code>/camera/image_raw</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
 <td>draws a road, and each stop sign at its real size when it's in view</td>
 </tr>
 <tr>
 <td><code>mock_battery</code></td>
 <td><code>aav_bench</code></td>
-<td><code>/battery_status</code></td>
+<td><code>/vehicle/battery</code></td>
 <td>a 48 V pack draining over two hours (a guess until Q8)</td>
 </tr>
 <tr>
 <td><code>mock_radar</code></td>
 <td><code>aav_bench</code></td>
-<td><code>/radar/points</code></td>
+<td><code>/sensors/radar/points</code></td>
 <td>sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there</td>
 </tr>
 </tbody>
@@ -307,11 +307,11 @@ between it and the mux, as on a car with a radar.</p>
 </tr>
 <tr>
 <td>The hardware e-stop</td>
-<td><code>ros2 topic pub -t 3 /bench/hw_estop std_msgs/msg/Bool "{data: true}"</code>, then <code>false</code></td>
+<td><code>ros2 topic pub -t 3 /vehicle/bench/hw_estop std_msgs/msg/Bool "{data: true}"</code>, then <code>false</code></td>
 </tr>
 <tr>
 <td>A driver failing</td>
-<td><code>ros2 topic pub -t 3 /bench/driver_faults std_msgs/msg/UInt16 "{data: 8}"</code> (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder)</td>
+<td><code>ros2 topic pub -t 3 /vehicle/bench/driver_faults std_msgs/msg/UInt16 "{data: 8}"</code> (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder)</td>
 </tr>
 <tr>
 <td>Arming again</td>
@@ -319,7 +319,7 @@ between it and the mux, as on a car with a radar.</p>
 </tr>
 <tr>
 <td>The truth against the EKF</td>
-<td><code>ros2 topic echo /bench/truth</code> and <code>ros2 topic echo /odometry/global</code></td>
+<td><code>ros2 topic echo /vehicle/bench/truth</code> and <code>ros2 topic echo /localization/odom/global</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -365,7 +365,7 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 </tr>
 <tr>
 <td>Hardware e-stop</td>
-<td>the same, from <code>/bench/hw_estop</code></td>
+<td>the same, from <code>/vehicle/bench/hw_estop</code></td>
 <td><span class="badge b-works">works</span></td>
 </tr>
 <tr>
@@ -385,7 +385,7 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 <section class="card"><h2 id="lane-keeping">Lane keeping</h2>
 <p>The whole lane-keeping loop runs on the bench. <code>mock_camera</code> draws the road from where the
 car really is, <code>lane_finder</code> finds the lines, and <code>control_interface</code> steers on
-<code>/cmd_vel/ai</code>.</p>
+<code>/drivers/ai/cmd_vel</code>.</p>
 <pre class="highlight"><code class="language-bash">pixi run bench lane:=true nav:=false start_y:=0.3   # from 0.3 m left of the centre
 pixi run bench-check --lane                         # the same, measured: 1 more minute</code></pre>
 <div class="table-wrap"><table>

@@ -126,7 +126,7 @@ by <code>navigation.launch.py</code>.</p>
 <tbody>
 <tr>
 <td><code>obstacle_layer</code></td>
-<td><code>/radar/points</code> (in <code>radar_link</code>)</td>
+<td><code>/sensors/radar/points</code> (in <code>radar_link</code>)</td>
 <td><code>radar:=true</code>: the bench always; the car where the machine file that runs <code>navigation</code> also runs <code>radar</code>; never Gazebo (its car has no radar)</td>
 <td>each point 0.3-8.4 m from the radar, -0.5 to 2 m high</td>
 <td>the cells between the radar and each point</td>
@@ -153,7 +153,7 @@ by <code>navigation.launch.py</code>.</p>
 <h3 id="collision_monitor">collision_monitor</h3>
 <p>Where the radar runs, Nav2's command passes through <code>collision_monitor</code> on its way to
 twist_mux:</p>
-<pre class="highlight"><code>controller -&gt; velocity_smoother -&gt; /cmd_vel_smoothed -&gt; collision_monitor -&gt; /cmd_vel/nav -&gt; twist_mux</code></pre>
+<pre class="highlight"><code>controller -&gt; velocity_smoother -&gt; /control/cmd_vel_smoothed -&gt; collision_monitor -&gt; /drivers/nav/cmd_vel -&gt; twist_mux</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>

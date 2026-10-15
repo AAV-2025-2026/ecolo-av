@@ -189,7 +189,7 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 </tr>
 <tr>
 <td>10 Oct, afternoon</td>
-<td>Perception brought in: YOLO with a stop-sign lock, radar clustering, lane keeping on <code>/cmd_vel/ai</code>; the <code>ml</code> environment (PyTorch, YOLO, Core ML); the HUD's back end on our topics; the spine's device drivers in Rust; bench mode: the whole car graph on a laptop, with the spine's firmware logic on a model car, and <code>pixi run bench-check</code> (7 of 7). Found on the way: a stop that coasted, a scripted drive that stretched, an executor that spun a CPU core, and best-effort cameras that lost every image on a Mac</td>
+<td>Perception brought in: YOLO with a stop-sign lock, radar clustering, lane keeping on <code>/drivers/ai/cmd_vel</code>; the <code>ml</code> environment (PyTorch, YOLO, Core ML); the HUD's back end on our topics; the spine's device drivers in Rust; bench mode: the whole car graph on a laptop, with the spine's firmware logic on a model car, and <code>pixi run bench-check</code> (7 of 7). Found on the way: a stop that coasted, a scripted drive that stretched, an executor that spun a CPU core, and best-effort cameras that lost every image on a Mac</td>
 </tr>
 <tr>
 <td>10–11 Oct, overnight</td>
@@ -242,12 +242,12 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <li>Draw the real test site (Q21) and drive it in Gazebo first.</li>
 <li>Nav2's lookahead (N7): its turn command flips sign about once a second.</li>
 <li>Restart crashed sensor drivers (N3): Nav2 gives up without TF.</li>
-<li>Later: the radar obstacle layer, and the collision monitor. The radar's clusters are ready on <code>/radar/clusters</code>.</li>
+<li>Later: the radar obstacle layer, and the collision monitor. The radar's clusters are ready on <code>/perception/radar/clusters</code>.</li>
 </ul>
 <h3 id="drivers-and-teleop">Drivers and teleop</h3>
 <ul>
 <li>The first real joystick test, and the team joystick's button numbers.</li>
-<li>The e-stop button: pick one (not the deadman), and make <code>/estop</code> reach the mux reliably (N2).</li>
+<li>The e-stop button: pick one (not the deadman), and make <code>/safety/estop</code> reach the mux reliably (N2).</li>
 <li>Joystick handover (Q28).</li>
 </ul>
 <h3 id="perception">Perception</h3>
@@ -296,7 +296,7 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <td>move every computer together</td>
 </tr>
 <tr>
-<td>A lost <code>/estop</code> message (N2)</td>
+<td>A lost <code>/safety/estop</code> message (N2)</td>
 <td>the backends brake on it too; make it reliable</td>
 </tr>
 <tr>
@@ -336,7 +336,7 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <td>fixed</td>
 </tr>
 <tr>
-<td>The contract credits <code>/battery_status</code> to <code>battery_monitor</code>; the node is <code>battery_state_publisher</code>, and <code>/battery_monitor_heartbeat</code> is missing</td>
+<td>The contract credits <code>/vehicle/battery</code> to <code>battery_monitor</code>; the node is <code>battery_state_publisher</code>, and <code>/vehicle/battery/heartbeat</code> is missing</td>
 <td>fixed</td>
 </tr>
 <tr>
@@ -344,7 +344,7 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <td>fixed: <code>map_to_odom_no_gps</code></td>
 </tr>
 <tr>
-<td><code>/radar/points</code> is best-effort; the contract doesn't say</td>
+<td><code>/sensors/radar/points</code> is best-effort; the contract doesn't say</td>
 <td>fixed</td>
 </tr>
 <tr>

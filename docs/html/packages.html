@@ -7,7 +7,7 @@
 <!-- Generated from docs/packages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>What each package does</h1>
-<div class="meta">11 min read · 11 sections</div></header>
+<div class="meta">12 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -103,7 +103,7 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tr>
 <td><code>aav_teleop</code></td>
 <td>drivers</td>
-<td>joystick → <code>/cmd_vel/joy</code>, plus an e-stop button</td>
+<td>joystick → <code>/drivers/joy/cmd_vel</code>, plus an e-stop button</td>
 <td><span class="badge b-untested">untested</span></td>
 <td>new; the button map from 2025-26 <code>joy_teleop_ackerman</code></td>
 </tr>
@@ -201,14 +201,14 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tr>
 <td><code>aav_lane_finder</code></td>
 <td>perception</td>
-<td>the lane lines in the camera's pictures, as <code>/lane_geometry</code> (OpenCV)</td>
+<td>the lane lines in the camera's pictures, as <code>/perception/lane/geometry</code> (OpenCV)</td>
 <td><span class="badge b-works">works</span> on the bench</td>
 <td>new</td>
 </tr>
 <tr>
 <td><code>aav_lane_geometry</code></td>
 <td>perception</td>
-<td>lane keeping: a driver on <code>/cmd_vel/ai</code></td>
+<td>lane keeping: a driver on <code>/drivers/ai/cmd_vel</code></td>
 <td><span class="badge b-works">works</span> on the bench, with <code>aav_lane_finder</code></td>
 <td>2025-26 <code>Lane_Detection_ROS2</code></td>
 </tr>
@@ -263,49 +263,49 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tr>
 <td><code>yahboom_imu_cpp</code></td>
 <td><code>/dev/aav/imu</code></td>
-<td><code>/imu/data_raw</code>, <code>/imu/mag</code></td>
-<td><code>/imu/mag</code> is in raw counts, not tesla, so it's unused</td>
+<td><code>/sensors/imu/data_raw</code>, <code>/sensors/imu/mag</code></td>
+<td><code>/sensors/imu/mag</code> is in raw counts, not tesla, so it's unused</td>
 </tr>
 <tr>
 <td>stock <code>imu_filter_madgwick</code></td>
-<td><code>/imu/data_raw</code></td>
-<td><code>/imu/data</code></td>
+<td><code>/sensors/imu/data_raw</code></td>
+<td><code>/sensors/imu/data</code></td>
 <td>magnetometer off</td>
 </tr>
 <tr>
 <td>stock <code>ublox_gps</code> (KumarRobotics' <code>ublox</code>)</td>
 <td><code>/dev/aav/gps</code></td>
-<td><code>/gps/fix</code></td>
+<td><code>/sensors/gps/fix</code></td>
 <td>the default GPS driver, in Pixi too. Leaves the receiver's settings as they are. Tentative until Q18</td>
 </tr>
 <tr>
 <td>stock <code>ublox_dgnss</code></td>
 <td>a u-blox F9P on USB</td>
-<td><code>/gps/fix</code></td>
+<td><code>/sensors/gps/fix</code></td>
 <td><code>gps_driver:=ublox_dgnss</code>. Not in Pixi: the car only</td>
 </tr>
 <tr>
 <td><code>ti_ros2_driver</code></td>
 <td><code>/dev/aav/radar_cmd</code>, <code>/dev/aav/radar_data</code></td>
-<td><code>/radar/points</code></td>
+<td><code>/sensors/radar/points</code></td>
 <td>its configs are indoor demos</td>
 </tr>
 <tr>
 <td><code>battery_monitor</code></td>
 <td><code>/dev/aav/battery</code></td>
-<td><code>/battery_status</code></td>
+<td><code>/vehicle/battery</code></td>
 <td></td>
 </tr>
 <tr>
 <td>stock <code>usb_cam</code> (<code>cameras.launch.py</code>)</td>
 <td><code>/dev/aav/camera_left</code>, <code>_right</code></td>
-<td><code>/camera/image_raw</code>, <code>/camera/camera_info</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code>, <code>/sensors/camera/front_left/camera_info</code></td>
 <td>Linux only; the 2024-25 calibrations</td>
 </tr>
 <tr>
 <td>stock <code>nmea_navsat_driver</code> (<code>gps_nmea.launch.py</code>)</td>
 <td><code>/dev/aav/gps</code></td>
-<td><code>/gps/fix</code></td>
+<td><code>/sensors/gps/fix</code></td>
 <td><code>gps_driver:=nmea</code>: any NMEA receiver</td>
 </tr>
 </tbody>
@@ -330,20 +330,20 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 </tr>
 <tr>
 <td><code>aav_localization</code>: <code>ekf_local</code></td>
-<td><code>/vehicle/odom</code>, <code>/imu/data</code></td>
-<td><code>/odometry/local</code>, odom → base_link</td>
+<td><code>/vehicle/odom</code>, <code>/sensors/imu/data</code></td>
+<td><code>/localization/odom/local</code>, odom → base_link</td>
 <td>smooth; use it to steer</td>
 </tr>
 <tr>
 <td><code>aav_localization</code>: <code>ekf_global</code></td>
-<td>the same, plus <code>/odometry/gps</code></td>
-<td><code>/odometry/global</code>, map → odom</td>
+<td>the same, plus <code>/localization/gps/odom</code></td>
+<td><code>/localization/odom/global</code>, map → odom</td>
 <td>stays near the truth; use it to plan</td>
 </tr>
 <tr>
 <td><code>aav_localization</code>: <code>navsat_transform</code></td>
-<td><code>/gps/fix</code>, <code>/imu/data</code>, <code>/odometry/global</code></td>
-<td><code>/odometry/gps</code>, <code>/gps/filtered</code></td>
+<td><code>/sensors/gps/fix</code>, <code>/sensors/imu/data</code>, <code>/localization/odom/global</code></td>
+<td><code>/localization/gps/odom</code>, <code>/localization/gps/fix</code></td>
 <td>the datum in <code>navsat.yaml</code> is a placeholder near Carleton</td>
 </tr>
 </tbody>
@@ -362,37 +362,37 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tbody>
 <tr>
 <td><code>aav_teleop</code></td>
-<td><code>/joy</code></td>
-<td><code>/cmd_vel/joy</code> (while the trigger is held), <code>/estop</code></td>
+<td><code>/drivers/joy/joy</code></td>
+<td><code>/drivers/joy/cmd_vel</code> (while the trigger is held), <code>/safety/estop</code></td>
 <td>the button numbers are still TODO</td>
 </tr>
 <tr>
 <td>keyboard (<code>tools/keyboard.sh</code>)</td>
 <td>your keys</td>
-<td><code>/cmd_vel/remote</code></td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
 <td><code>pixi run keyboard</code></td>
 </tr>
 <tr>
 <td><code>aav_scripted</code></td>
-<td><code>/odometry/local</code></td>
-<td><code>/cmd_vel/scripted</code></td>
+<td><code>/localization/odom/local</code></td>
+<td><code>/drivers/scripted/cmd_vel</code></td>
 <td>the action <code>/scripted_drive</code></td>
 </tr>
 <tr>
 <td><code>aav_navigation</code></td>
-<td><code>/odometry/local</code>, <code>/map</code>, <code>/goal_pose</code></td>
-<td><code>/cmd_vel/nav</code>, <code>/plan</code></td>
+<td><code>/localization/odom/local</code>, <code>/map</code>, <code>/goal_pose</code></td>
+<td><code>/drivers/nav/cmd_vel</code>, <code>/plan</code></td>
 <td>SmacPlannerHybrid and Regulated Pure Pursuit; GPS waypoints through <code>/follow_gps_waypoints</code></td>
 </tr>
 <tr>
 <td><code>aav_mux</code> (twist_mux)</td>
-<td>every <code>/cmd_vel/&lt;driver&gt;</code>, <code>/estop</code></td>
-<td><code>/cmd_vel</code></td>
+<td>every <code>/drivers/&lt;driver&gt;/cmd_vel</code>, <code>/safety/estop</code></td>
+<td><code>/control/cmd_vel</code></td>
 <td>priorities: <a href="howto-driver.html">Build a driver</a></td>
 </tr>
 <tr>
 <td><code>aav_ego</code></td>
-<td><code>/cmd_vel</code></td>
+<td><code>/control/cmd_vel</code></td>
 <td><code>/ego/actuator_cmd</code>, 50 times a second</td>
 <td>1.0 m/s top speed, ±0.5 rad, brakes after 0.3 s without a command</td>
 </tr>
@@ -413,32 +413,32 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tbody>
 <tr>
 <td><code>aav_yolo</code>: <code>yolo_detector</code></td>
-<td><code>/camera/image_raw</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>/perception/detections</code>, <code>/perception/detections/image</code></td>
 <td>a <code>.pt</code>, <code>.mlpackage</code> or <code>.engine</code> model; needs the <code>ml</code> environment</td>
 </tr>
 <tr>
 <td><code>aav_yolo</code>: <code>stop_sign_watcher</code></td>
 <td><code>/perception/detections</code></td>
-<td><code>/perception/stop</code></td>
+<td><code>/perception/stop_sign</code></td>
 <td>twist_mux's stop-sign lock, priority 30</td>
 </tr>
 <tr>
 <td><code>aav_object_detection</code>: <code>radar_clusters</code></td>
-<td><code>/radar/points</code></td>
-<td><code>/radar/clusters</code>, <code>/radar/cluster_boxes</code></td>
+<td><code>/sensors/radar/points</code></td>
+<td><code>/perception/radar/clusters</code>, <code>/perception/radar/cluster_boxes</code></td>
 <td>DBSCAN; the 2025-26 filters and ICP are built, not launched</td>
 </tr>
 <tr>
 <td><code>aav_lane_finder</code>: <code>lane_finder</code></td>
-<td><code>/camera/image_raw</code>, <code>/camera/camera_info</code></td>
-<td><code>/lane_geometry</code>, <code>/lane_geometry/image</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code>, <code>/sensors/camera/front_left/camera_info</code></td>
+<td><code>/perception/lane/geometry</code>, <code>/perception/lane/image</code></td>
 <td>a bird's-eye view, sliding windows, a curve per line; the camera's place from <code>vehicle.yaml</code></td>
 </tr>
 <tr>
 <td><code>aav_lane_geometry</code>: <code>control_interface</code></td>
-<td><code>/lane_geometry</code></td>
-<td><code>/cmd_vel/ai</code></td>
+<td><code>/perception/lane/geometry</code></td>
+<td><code>/drivers/ai/cmd_vel</code></td>
 <td>steers back to the lane's centre, measured 3 m ahead</td>
 </tr>
 </tbody>
@@ -458,7 +458,7 @@ Only one runs at a time.</p>
 <tbody>
 <tr>
 <td><code>aav_spine</code></td>
-<td>CAN frames on <code>/to_can_bus</code> (through ros2_socketcan, Linux only)</td>
+<td>CAN frames on <code>/can/tx</code> (through ros2_socketcan, Linux only)</td>
 <td><code>/vehicle/status</code>; the service <code>/spine/arm</code>; stops sending drive frames when ego goes quiet for 0.1 s</td>
 </tr>
 <tr>
@@ -474,7 +474,7 @@ Only one runs at a time.</p>
 <tr>
 <td><code>aav_gazebo</code></td>
 <td><code>/gazebo/cmd_vel</code></td>
-<td>turns Gazebo's IMU and GPS into <code>/imu/data_raw</code> and <code>/gps/fix</code></td>
+<td>turns Gazebo's IMU and GPS into <code>/sensors/imu/data_raw</code> and <code>/sensors/gps/fix</code></td>
 </tr>
 <tr>
 <td><code>aav_carla</code></td>
@@ -498,7 +498,7 @@ Only one runs at a time.</p>
 <tr>
 <td><code>aav_spine_sim</code>: <code>spine_sim</code></td>
 <td>the spine board and the actuators</td>
-<td>answers spine_bridge's CAN frames with spine-core's own logic; publishes <code>/bench/truth</code></td>
+<td>answers spine_bridge's CAN frames with spine-core's own logic; publishes <code>/vehicle/bench/truth</code></td>
 </tr>
 <tr>
 <td><code>aav_bench</code></td>

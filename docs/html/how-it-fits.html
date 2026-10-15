@@ -67,12 +67,12 @@ touching the others.</p></div>
 <tr>
 <td>IMU (Yahboom, USB)</td>
 <td><code>yahboom_imu_cpp</code>, then the stock <code>imu_filter_madgwick</code></td>
-<td><code>/imu/data_raw</code>, then <code>/imu/data</code></td>
+<td><code>/sensors/imu/data_raw</code>, then <code>/sensors/imu/data</code></td>
 </tr>
 <tr>
 <td>GPS (u-blox, USB)</td>
 <td>the stock <code>ublox_gps</code>; or <code>nmea_navsat_driver</code>, or <code>ublox_dgnss</code> on the car</td>
-<td><code>/gps/fix</code></td>
+<td><code>/sensors/gps/fix</code></td>
 </tr>
 <tr>
 <td>The car's shape</td>
@@ -120,44 +120,44 @@ topic. None of them knows what kind of vehicle it's driving.</p>
 <tbody>
 <tr>
 <td>Joystick: the safety driver</td>
-<td><code>/cmd_vel/joy</code></td>
+<td><code>/drivers/joy/cmd_vel</code></td>
 <td>100</td>
 </tr>
 <tr>
 <td>Keyboard, or another remote</td>
-<td><code>/cmd_vel/remote</code></td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
 <td>90</td>
 </tr>
 <tr>
 <td>Scripted: speed up, hold, slow down</td>
-<td><code>/cmd_vel/scripted</code></td>
+<td><code>/drivers/scripted/cmd_vel</code></td>
 <td>50</td>
 </tr>
 <tr>
 <td>Replay of a recorded drive</td>
-<td><code>/cmd_vel/replay</code></td>
+<td><code>/drivers/replay/cmd_vel</code></td>
 <td>40</td>
 </tr>
 <tr>
 <td>Nav2: drive to a point on the map</td>
-<td><code>/cmd_vel/nav</code></td>
+<td><code>/drivers/nav/cmd_vel</code></td>
 <td>20</td>
 </tr>
 <tr>
 <td>AI</td>
-<td><code>/cmd_vel/ai</code></td>
+<td><code>/drivers/ai/cmd_vel</code></td>
 <td>10, later</td>
 </tr>
 </tbody>
 </table></div>
 <p><code>twist_mux</code> passes on the highest priority that has spoken in the last 0.5 s, as
-<code>/cmd_vel</code>. Publishing <code>true</code> on <code>/estop</code> blocks every driver until someone publishes
+<code>/control/cmd_vel</code>. Publishing <code>true</code> on <code>/safety/estop</code> blocks every driver until someone publishes
 <code>false</code>.</p>
 <p>Teleop is just another driver. The keyboard's commands take the same path as Nav2's:
 mux, ego, then the turtle or the car.</p>
 </section>
 <section class="card"><h2 id="4-ego-the-virtual-car">4. ego: the virtual car</h2>
-<p>ego is the only node that knows the car is a car. Fifty times a second it turns <code>/cmd_vel</code>
+<p>ego is the only node that knows the car is a car. Fifty times a second it turns <code>/control/cmd_vel</code>
 into <code>/ego/actuator_cmd</code>: an <code>AckermannDriveStamped</code> with a speed and a steering angle
 (positive is left).</p>
 <div class="table-wrap"><table>
@@ -276,7 +276,7 @@ the EKFs.</p>
 </tr>
 <tr>
 <td>2</td>
-<td><code>/estop</code></td>
+<td><code>/safety/estop</code></td>
 <td>it's true: the mux blocks every driver, and the car backends brake</td>
 </tr>
 <tr>

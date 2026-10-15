@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">16 min read · 4 sections</div></header>
+<div class="meta">17 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -59,15 +59,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 </thead>
 <tbody>
 <tr>
-<td><code>/joy</code></td>
+<td><code>/drivers/joy/joy</code></td>
 <td><code>sensor_msgs/msg/Joy</code></td>
 <td><code>joy_node</code></td>
 <td><code>teleop_twist_joy_node</code>, <code>joy_teleop</code></td>
 <td>-</td>
-<td>Joystick axes and buttons, 20 Hz while held.</td>
+<td>Joystick axes and buttons, 20 Hz while held. joy_node, teleop_twist_joy_node and joy_teleop run in the namespace /drivers/joy (aav_teleop teleop.launch.py), so their relative topics land here.</td>
 </tr>
 <tr>
-<td><code>/cmd_vel/joy</code></td>
+<td><code>/drivers/joy/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>teleop_twist_joy_node</code></td>
 <td><code>twist_mux</code></td>
@@ -75,15 +75,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Priority 100. Only while the deadman (trigger) is held.</td>
 </tr>
 <tr>
-<td><code>/cmd_vel/remote</code></td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>teleop_twist_keyboard</code></td>
 <td><code>twist_mux</code></td>
 <td>-</td>
-<td>Priority 90. A person driving from a laptop - teleop_twist_keyboard (stamped:=true), the Foxglove teleop panel, or the HUD once ported.</td>
+<td>Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic.</td>
 </tr>
 <tr>
-<td><code>/cmd_vel/scripted</code></td>
+<td><code>/drivers/scripted/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>scripted_driver</code></td>
 <td><code>twist_mux</code></td>
@@ -91,15 +91,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Priority 50. Only while a /scripted_drive goal runs.</td>
 </tr>
 <tr>
-<td><code>/cmd_vel/replay</code></td>
+<td><code>/drivers/replay/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td>-</td>
 <td><code>twist_mux</code></td>
 <td>-</td>
-<td>Priority 40. ros2 bag play of a recorded /cmd_vel (tools/replay_commands.sh).</td>
+<td>Priority 40. ros2 bag play of a recorded /control/cmd_vel (tools/replay_commands.sh).</td>
 </tr>
 <tr>
-<td><code>/cmd_vel/nav</code></td>
+<td><code>/drivers/nav/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>velocity_smoother</code>, <code>collision_monitor</code></td>
 <td><code>twist_mux</code></td>
@@ -107,7 +107,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Priority 20. Nav2. From collision_monitor where the radar runs (navigation.launch.py radar:=true - the bench, the car with its radar part), else straight from velocity_smoother.</td>
 </tr>
 <tr>
-<td><code>/cmd_vel_smoothed</code></td>
+<td><code>/control/cmd_vel_smoothed</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>velocity_smoother</code></td>
 <td><code>collision_monitor</code></td>
@@ -115,7 +115,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Nav2's smoothed command, into collision_monitor, where the radar runs. It stops the car for radar points in its stop zone, or when the radar goes silent; it only guards Nav2.</td>
 </tr>
 <tr>
-<td><code>/collision_monitor_state</code></td>
+<td><code>/safety/collision_monitor/state</code></td>
 <td><code>nav2_msgs/msg/CollisionMonitorState</code></td>
 <td><code>collision_monitor</code></td>
 <td>-</td>
@@ -123,7 +123,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar is silent or its TF is late.</td>
 </tr>
 <tr>
-<td><code>/collision_monitor/stop_zone</code></td>
+<td><code>/safety/collision_monitor/stop_zone</code></td>
 <td><code>geometry_msgs/msg/PolygonStamped</code></td>
 <td><code>collision_monitor</code></td>
 <td>-</td>
@@ -131,7 +131,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).</td>
 </tr>
 <tr>
-<td><code>/collision_monitor/collision_points_marker</code></td>
+<td><code>/safety/collision_monitor/collision_points_marker</code></td>
 <td><code>visualization_msgs/msg/MarkerArray</code></td>
 <td><code>collision_monitor</code></td>
 <td>-</td>
@@ -139,7 +139,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The radar points collision_monitor sees, for RViz; sent only while someone listens.</td>
 </tr>
 <tr>
-<td><code>/cmd_vel/ai</code></td>
+<td><code>/drivers/ai/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>control_interface</code></td>
 <td><code>twist_mux</code></td>
@@ -147,7 +147,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.</td>
 </tr>
 <tr>
-<td><code>/estop</code></td>
+<td><code>/safety/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>joy_teleop</code>, <code>hud_server</code>, <code>hud</code></td>
 <td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code></td>
@@ -155,7 +155,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike.</td>
 </tr>
 <tr>
-<td><code>/cmd_vel</code></td>
+<td><code>/control/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>twist_mux</code></td>
 <td><code>ego</code></td>
@@ -203,7 +203,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td></td>
 </tr>
 <tr>
-<td><code>/to_can_bus</code></td>
+<td><code>/can/tx</code></td>
 <td><code>can_msgs/msg/Frame</code></td>
 <td><code>spine_bridge</code></td>
 <td><code>socket_can_sender</code>, <code>spine_sim</code></td>
@@ -211,7 +211,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc).</td>
 </tr>
 <tr>
-<td><code>/from_can_bus</code></td>
+<td><code>/can/rx</code></td>
 <td><code>can_msgs/msg/Frame</code></td>
 <td><code>socket_can_receiver</code>, <code>spine_sim</code></td>
 <td><code>spine_bridge</code></td>
@@ -219,7 +219,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz. On the bench, spine_sim sends them.</td>
 </tr>
 <tr>
-<td><code>/imu/data_raw</code></td>
+<td><code>/sensors/imu/data_raw</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_node</code>, <code>gazebo_adapter</code>, <code>mock_imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
@@ -227,7 +227,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Gyro and accelerometer in imu_link, with covariances; no orientation.</td>
 </tr>
 <tr>
-<td><code>/imu/mag</code></td>
+<td><code>/sensors/imu/mag</code></td>
 <td><code>sensor_msgs/msg/MagneticField</code></td>
 <td><code>imu_node</code>, <code>mock_imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
@@ -235,7 +235,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Raw counts from imu_node (not tesla yet); tesla from mock_imu. The filter ignores it (use_mag false).</td>
 </tr>
 <tr>
-<td><code>/imu/data</code></td>
+<td><code>/sensors/imu/data</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code></td>
@@ -243,7 +243,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.</td>
 </tr>
 <tr>
-<td><code>/gps/fix</code></td>
+<td><code>/sensors/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code></td>
 <td><code>navsat_transform</code>, <code>hud</code></td>
@@ -251,7 +251,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
 </tr>
 <tr>
-<td><code>/gps/fix_velocity</code></td>
+<td><code>/sensors/gps/fix_velocity</code></td>
 <td><code>geometry_msgs/msg/TwistWithCovarianceStamped</code></td>
 <td><code>ublox_gps</code></td>
 <td>-</td>
@@ -259,7 +259,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The receiver's velocity, east, north and up (m/s). Nothing fuses it yet.</td>
 </tr>
 <tr>
-<td><code>/gps/vel</code></td>
+<td><code>/sensors/gps/vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>gps_nmea</code></td>
 <td>-</td>
@@ -267,7 +267,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>NMEA's speed and course (gps_driver:=nmea). Nothing fuses it yet.</td>
 </tr>
 <tr>
-<td><code>/gps/time_reference</code></td>
+<td><code>/sensors/gps/time_reference</code></td>
 <td><code>sensor_msgs/msg/TimeReference</code></td>
 <td><code>gps_nmea</code></td>
 <td>-</td>
@@ -275,7 +275,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>GPS time, from NMEA (gps_driver:=nmea).</td>
 </tr>
 <tr>
-<td><code>/radar/points</code></td>
+<td><code>/sensors/radar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>radar</code>, <code>mock_radar</code></td>
 <td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code></td>
@@ -283,7 +283,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true).</td>
 </tr>
 <tr>
-<td><code>/battery_status</code></td>
+<td><code>/vehicle/battery</code></td>
 <td><code>sensor_msgs/msg/BatteryState</code></td>
 <td><code>battery_state_publisher</code>, <code>mock_battery</code></td>
 <td><code>hud_server</code>, <code>hud</code></td>
@@ -291,7 +291,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).</td>
 </tr>
 <tr>
-<td><code>/battery_monitor_heartbeat</code></td>
+<td><code>/vehicle/battery/heartbeat</code></td>
 <td><code>std_msgs/msg/String</code></td>
 <td><code>heartbeat_publisher</code></td>
 <td>-</td>
@@ -299,7 +299,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>battery_monitor's sign of life.</td>
 </tr>
 <tr>
-<td><code>/camera/image_raw</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
 <td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code></td>
 <td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code></td>
@@ -307,7 +307,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.</td>
 </tr>
 <tr>
-<td><code>/camera/image_raw/compressed</code></td>
+<td><code>/sensors/camera/front_left/image_raw/compressed</code></td>
 <td><code>sensor_msgs/msg/CompressedImage</code></td>
 <td><code>camera_left</code>, <code>test_camera</code>, <code>mock_camera</code></td>
 <td><code>yolo_detector</code>, <code>yolo_detector_laptop</code></td>
@@ -315,7 +315,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera only while something reads it). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true; the laptop's machine file). On the bench, pixi run -e ml laptop-bench.</td>
 </tr>
 <tr>
-<td><code>/camera/camera_info</code></td>
+<td><code>/sensors/camera/front_left/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
 <td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code></td>
 <td><code>lane_finder</code>, <code>camera_obstacles</code></td>
@@ -323,7 +323,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.</td>
 </tr>
 <tr>
-<td><code>/radar/clusters</code></td>
+<td><code>/perception/radar/clusters</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>radar_clusters</code></td>
 <td>-</td>
@@ -331,7 +331,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The radar points DBSCAN grouped into objects, coloured by cluster.</td>
 </tr>
 <tr>
-<td><code>/radar/cluster_boxes</code></td>
+<td><code>/perception/radar/cluster_boxes</code></td>
 <td><code>visualization_msgs/msg/MarkerArray</code></td>
 <td><code>radar_clusters</code></td>
 <td>-</td>
@@ -355,7 +355,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The camera picture with the boxes drawn on, for RViz or Foxglove.</td>
 </tr>
 <tr>
-<td><code>/perception/stop</code></td>
+<td><code>/perception/stop_sign</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>stop_sign_watcher</code></td>
 <td><code>twist_mux</code>, <code>hud_server</code>, <code>hud</code></td>
@@ -379,7 +379,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The far edge of what that camera sees, on the road, 12 m out, in base_link. The camera layer clears up to it before it marks, so old boxes don't linger.</td>
 </tr>
 <tr>
-<td><code>/lane_geometry</code></td>
+<td><code>/perception/lane/geometry</code></td>
 <td><code>aav_lane_geometry/msg/LaneGeometry</code></td>
 <td><code>lane_finder</code>, <code>fake_lane_geometry_pub</code></td>
 <td><code>control_interface</code></td>
@@ -387,7 +387,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>One per camera picture, from lane_finder (aav_lane_finder, classic OpenCV), in base_link. vehicle_offset_m - the car from the lane's centre, 3 m ahead (lookahead), + = the car is left of it. Each line as y = a x^2 + b x + c (m), its radius (m; 9999 = straight or not seen) and confidence (0-1); the lane width (m). Bench - lane:=true runs lane_finder, lane:=fake runs fake_lane_geometry_pub (its polynomials are pixels).</td>
 </tr>
 <tr>
-<td><code>/lane_geometry/image</code></td>
+<td><code>/perception/lane/image</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
 <td><code>lane_finder</code></td>
 <td>-</td>
@@ -395,15 +395,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>The bird's-eye view, with the paint, the windows and the lines lane_finder found, for RViz or Foxglove. Only with debug_image true.</td>
 </tr>
 <tr>
-<td><code>/lane_geometry_status</code></td>
+<td><code>/drivers/ai/lane_status</code></td>
 <td><code>std_msgs/msg/String</code></td>
 <td><code>control_interface</code></td>
 <td>-</td>
 <td>-</td>
-<td>Lane keeping's state and numbers, as text.</td>
+<td>Lane keeping's state and numbers, as text. Under /drivers/ai, as control_interface (the AI slot's driver) publishes it.</td>
 </tr>
 <tr>
-<td><code>/vehicle_state</code></td>
+<td><code>/drivers/ai/lane_state</code></td>
 <td><code>std_msgs/msg/String</code></td>
 <td><code>control_interface</code></td>
 <td>-</td>
@@ -411,15 +411,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Lane keeping's state machine (LANE_KEEP, LANE_CHANGING, ...). Not the car's state - that's /vehicle/status.</td>
 </tr>
 <tr>
-<td><code>/bench/truth</code></td>
+<td><code>/vehicle/bench/truth</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_sim</code></td>
 <td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_camera</code>, <code>mock_radar</code></td>
 <td>bench</td>
-<td>Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs.</td>
+<td>Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /localization/odom/global to check the EKFs.</td>
 </tr>
 <tr>
-<td><code>/bench/hw_estop</code></td>
+<td><code>/vehicle/bench/hw_estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td>-</td>
 <td><code>spine_sim</code></td>
@@ -427,7 +427,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>true = press the hardware e-stop, on the bench; false = release it. The spine brakes, and needs arming again.</td>
 </tr>
 <tr>
-<td><code>/bench/driver_faults</code></td>
+<td><code>/vehicle/bench/driver_faults</code></td>
 <td><code>std_msgs/msg/UInt16</code></td>
 <td>-</td>
 <td><code>spine_sim</code></td>
@@ -435,7 +435,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Pretend a driver failed. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).</td>
 </tr>
 <tr>
-<td><code>/odometry/local</code></td>
+<td><code>/localization/odom/local</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_local</code></td>
 <td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code></td>
@@ -443,7 +443,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>odom frame. Smooth; drifts.</td>
 </tr>
 <tr>
-<td><code>/odometry/global</code></td>
+<td><code>/localization/odom/global</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_global</code></td>
 <td><code>navsat_transform</code></td>
@@ -451,7 +451,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>map frame. Includes GPS; can jump.</td>
 </tr>
 <tr>
-<td><code>/odometry/gps</code></td>
+<td><code>/localization/gps/odom</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>navsat_transform</code></td>
 <td><code>ekf_global</code></td>
@@ -459,7 +459,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td>Each GPS fix as a map-frame position of base_link (antenna offset removed).</td>
 </tr>
 <tr>
-<td><code>/gps/filtered</code></td>
+<td><code>/localization/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>navsat_transform</code></td>
 <td><code>hud_server</code>, <code>hud</code></td>
@@ -540,7 +540,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|car|r
 <td><code>/spine/arm</code></td>
 <td><code>std_srvs/srv/SetBool</code></td>
 <td><code>spine_bridge</code></td>
-<td>The spine ignores drive commands until armed; refused while /estop is true.</td>
+<td>The spine ignores drive commands until armed; refused while /safety/estop is true.</td>
 </tr>
 <tr>
 <td><code>/fromLL</code></td>

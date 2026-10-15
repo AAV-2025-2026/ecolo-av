@@ -34,7 +34,8 @@ a second Orin). Pages: [car photos](docs/car-photos.md), [CAN plan](docs/can-pla
 [topic areas](docs/naming.md).
 
 - [ ] **The raylib HUD** (Ben: "today maybe"). *Started 14 Oct, on `wt/hud-raylib`.*
-- [ ] **Topic names by area** (`docs/naming.md`, Proposed) [[needs-you]].
+- [x] **Topic names by area** (`docs/naming.md`). *Done 15 Oct: Decided by Ben, renamed
+      everywhere (`wt/topic-areas`), checked by `tools/tests/test_topic_areas.py`.*
 - [ ] **DBC v0.2.0** for the KEFC plan: the ESP32 board as the spine, wheel frames 0x200 and
       0x201, a 100 ms timeout (`docs/can-plan.md`, Proposed) [[needs-you]].
 - [ ] **A lidar driver:** a lidar is on the roof; our code has none. Model at the audit.

@@ -59,7 +59,7 @@ look inside. We configure the ready-made programs, and write a few of our own.</
 <tr>
 <td>Messaging</td>
 <td>Programs, called <strong>nodes</strong>, publish typed messages on named <strong>topics</strong>. Any node on the network can listen. Nodes find each other by themselves.</td>
-<td><code>/cmd_vel</code>, <code>/imu/data</code></td>
+<td><code>/control/cmd_vel</code>, <code>/sensors/imu/data</code></td>
 </tr>
 <tr>
 <td>Packages</td>
@@ -89,7 +89,7 @@ look inside. We configure the ready-made programs, and write a few of our own.</
 <tr>
 <td>Topic</td>
 <td>anything that streams: sensors, commands, state</td>
-<td><code>/cmd_vel/*</code>, <code>/vehicle/odom</code>, <code>/tf</code></td>
+<td><code>/drivers/*/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/tf</code></td>
 </tr>
 <tr>
 <td>Service</td>
@@ -241,7 +241,7 @@ from geometry_msgs.msg import TwistStamped
 class Circle(Node):
     def __init__(self):
         super().__init__('circle_driver')
-        self.pub = self.create_publisher(TwistStamped, '/cmd_vel/scripted', 10)
+        self.pub = self.create_publisher(TwistStamped, '/drivers/scripted/cmd_vel', 10)
         self.create_timer(0.1, self.tick)        # ten times a second
 
     def tick(self):
@@ -268,7 +268,7 @@ rclpy.spin(Circle())</code></pre>
 <td>what's running; a node's topics and settings</td>
 </tr>
 <tr>
-<td><code>ros2 topic echo /cmd_vel</code>, <code>ros2 topic hz /imu/data</code></td>
+<td><code>ros2 topic echo /control/cmd_vel</code>, <code>ros2 topic hz /sensors/imu/data</code></td>
 <td>the messages on a topic; how often they come</td>
 </tr>
 <tr>

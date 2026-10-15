@@ -253,7 +253,7 @@ finder).</p>
 </tr>
 <tr>
 <td><code>aav_lane_finder</code></td>
-<td>the lane finder: the camera's picture to <code>/lane_geometry</code>, with OpenCV</td>
+<td>the lane finder: the camera's picture to <code>/perception/lane/geometry</code>, with OpenCV</td>
 <td>perception</td>
 </tr>
 </tbody>
@@ -480,7 +480,7 @@ finder).</p>
 <td>The HUD's back end (Flask)</td>
 <td>2025-26 <code>User-Interface</code></td>
 <td><code>src/hud/aav_hud</code></td>
-<td>ported to our topics; publishes <code>/estop</code>. 98 tests</td>
+<td>ported to our topics; publishes <code>/safety/estop</code>. 98 tests</td>
 </tr>
 <tr>
 <td>The HUD app (Flutter) and its boot scripts</td>
@@ -516,7 +516,7 @@ finder).</p>
 <td>Lane keeping</td>
 <td>2025-26 <code>Lane_Detection_ROS2</code></td>
 <td><code>src/perception/aav_lane_geometry</code></td>
-<td>brought in: a driver on <code>/cmd_vel/ai</code></td>
+<td>brought in: a driver on <code>/drivers/ai/cmd_vel</code></td>
 </tr>
 <tr>
 <td>Radar clustering</td>

@@ -221,7 +221,7 @@ camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:</p>
 </table></div>
 <ul>
 <li><strong>See it:</strong> <code>pixi run graph</code> shows <code>yolo_detector_laptop</code> reading
-  <code>/camera/image_raw/compressed</code>, and publishing <code>/perception/detections</code>.</li>
+  <code>/sensors/camera/front_left/image_raw/compressed</code>, and publishing <code>/perception/detections</code>.</li>
 <li><strong>Stop at the sign too:</strong> start the bench with <code>pixi run -e ml bench perception:=true</code>. It
   runs its own detector and the stop-sign watcher, as the Orin would; the watcher then hears
   both detectors, as on the car.</li>

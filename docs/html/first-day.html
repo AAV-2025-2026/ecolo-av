@@ -128,12 +128,12 @@ path a real drive takes:</p>
 <tr>
 <td>1</td>
 <td>The keyboard proposes a speed and a turn rate</td>
-<td><code>/cmd_vel/remote</code></td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
 </tr>
 <tr>
 <td>2</td>
 <td><code>twist_mux</code> picks the highest-priority driver</td>
-<td><code>/cmd_vel</code></td>
+<td><code>/control/cmd_vel</code></td>
 </tr>
 <tr>
 <td>3</td>
@@ -157,8 +157,8 @@ path a real drive takes:</p>
 <li>tick <strong>Hide: Debug</strong> and <strong>Hide: tf</strong>;</li>
 <li>click the refresh button after you start or stop something.</li>
 </ul>
-<p>Follow the chain from section 2: <code>teleop_twist_keyboard</code> → <code>/cmd_vel/remote</code> →
-<code>twist_mux</code> → <code>/cmd_vel</code> → <code>ego</code> → <code>/ego/actuator_cmd</code> → <code>turtlesim_adapter</code>.</p>
+<p>Follow the chain from section 2: <code>teleop_twist_keyboard</code> → <code>/drivers/keyboard/cmd_vel</code> →
+<code>twist_mux</code> → <code>/control/cmd_vel</code> → <code>ego</code> → <code>/ego/actuator_cmd</code> → <code>turtlesim_adapter</code>.</p>
 <p>Then check the graph against the team's contract:</p>
 <pre class="highlight"><code class="language-bash">pixi run check turtle</code></pre>
 <p><strong>You should see</strong> <code>0 failed</code> at the end. The contract is <code>docs/interfaces.yaml</code>: every

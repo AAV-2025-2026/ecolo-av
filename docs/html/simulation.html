@@ -104,7 +104,7 @@ purpose: <code>ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET pixi run sim</code>.</p></di
 <pre class="highlight"><code class="language-bash">ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
   "{target_speed: 1.0, acceleration: 0.5, deceleration: 1.0, hold_time: 3.0, curvature: 0.2}" --feedback</code></pre>
 <p>The keyboard or joystick overrides the script at once. Let go, and the script carries on.</p>
-<p><strong>E-stop:</strong> <code>ros2 topic pub --once /estop std_msgs/msg/Bool "{data: true}"</code> blocks every
+<p><strong>E-stop:</strong> <code>ros2 topic pub --once /safety/estop std_msgs/msg/Bool "{data: true}"</code> blocks every
 driver. Publish <code>false</code> to clear it.</p>
 </section>
 <section class="card"><h2 id="gazebo">Gazebo</h2>
@@ -155,7 +155,7 @@ pixi run sim world:=test_lot     # the walled test lot, with its map</code></pre
 <ul>
 <li>Gazebo plays the car, with Ackermann steering, an IMU and a GPS.</li>
 <li><code>gazebo_adapter</code> turns those into the real drivers' topics: <code>/vehicle/odom</code>,
-  <code>/imu/data_raw</code> and <code>/gps/fix</code>.</li>
+  <code>/sensors/imu/data_raw</code> and <code>/sensors/gps/fix</code>.</li>
 <li>The IMU filter, both EKFs and <code>navsat_transform</code> run with the car's own configs, on
   simulated time.</li>
 <li>Map (0, 0) is where the car starts, facing east.</li>
@@ -182,9 +182,9 @@ set your own <code>GZ_PARTITION=&lt;any name&gt;</code>, so your simulator doesn
 <p>On the car, record a drive: <code>tools/record.sh parking_lot_test</code> writes
 <code>bags/&lt;date&gt;_parking_lot_test/</code>. Then re-run localization against it on any laptop:</p>
 <pre class="highlight"><code class="language-bash">ros2 launch aav_bringup replay.launch.py
-ros2 bag play bags/&lt;the bag&gt; --clock --topics /vehicle/odom /imu/data_raw /gps/fix /tf_static</code></pre>
+ros2 bag play bags/&lt;the bag&gt; --clock --topics /vehicle/odom /sensors/imu/data_raw /sensors/gps/fix /tf_static</code></pre>
 <p>A bag from Gazebo carries simulated time. Play its own <code>/clock</code> instead of <code>--clock</code>:
-<code>ros2 bag play bags/&lt;the bag&gt; --topics /clock /vehicle/odom /imu/data_raw /gps/fix /tf_static</code>.
+<code>ros2 bag play bags/&lt;the bag&gt; --topics /clock /vehicle/odom /sensors/imu/data_raw /sensors/gps/fix /tf_static</code>.
 <code>pixi run tools/ros.sh python3 tools/check_graph.py --profile replay</code> checks the result.</p>
 <p>Change an EKF setting, replay, compare the path. That's how to tune localization without
 the car.</p>
@@ -221,12 +221,12 @@ as <code>replay</code> (priority 40). It's open loop, so the car drifts from the
 <tr>
 <td>1</td>
 <td>Is a driver publishing?</td>
-<td><code>ros2 topic hz /cmd_vel/remote</code> (or <code>joy</code>, <code>scripted</code>, <code>nav</code>)</td>
+<td><code>ros2 topic hz /drivers/keyboard/cmd_vel</code> (or <code>joy</code>, <code>scripted</code>, <code>nav</code>)</td>
 </tr>
 <tr>
 <td>2</td>
 <td>Did the mux pick it?</td>
-<td><code>ros2 topic echo /cmd_vel</code>. If it's silent, look for a latched e-stop: <code>ros2 topic echo /estop</code></td>
+<td><code>ros2 topic echo /control/cmd_vel</code>. If it's silent, look for a latched e-stop: <code>ros2 topic echo /safety/estop</code></td>
 </tr>
 <tr>
 <td>3</td>

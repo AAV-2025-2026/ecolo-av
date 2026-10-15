@@ -46,10 +46,10 @@
 <div class="lead"><p>What the car sees, and what it does about it. All of it runs on the bench today. On the
 car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).</p></div>
 <section class="card"><h2 id="the-chain">The chain</h2>
-<pre class="highlight"><code>camera ─► yolo_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop
+<pre class="highlight"><code>camera ─► yolo_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
                                                                     (a lock on twist_mux)
-lane finder (missing) ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai ─► twist_mux
-radar ─► /radar/points ─► radar_clusters ─► /radar/clusters, /radar/cluster_boxes</code></pre>
+lane finder (missing) ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
+radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/radar/clusters, /perception/radar/cluster_boxes</code></pre>
 <p><img alt="What the bench camera shows YOLO, about 5 m from the stop sign" src="../img/bench-stop-sign.png" /></p>
 <div class="table-wrap"><table>
 <thead>
@@ -100,7 +100,7 @@ radar ─► /radar/points ─► radar_clusters ─► /radar/clusters, /radar/
 <tr>
 <td><code>aav_lane_geometry</code></td>
 <td>2025-26 <code>Lane_Detection_ROS2</code></td>
-<td>lane keeping's steering half, as a driver on <code>/cmd_vel/ai</code></td>
+<td>lane keeping's steering half, as a driver on <code>/drivers/ai/cmd_vel</code></td>
 <td><span class="badge b-works">works</span> on a pretend lane. The line finder is <span class="badge b-missing">missing</span></td>
 </tr>
 <tr>
@@ -142,7 +142,7 @@ radar ─► /radar/points ─► radar_clusters ─► /radar/clusters, /radar/
 </table></div>
 <ul>
 <li><strong>The lock</strong> has priority 30. It holds Nav2 (20) and the AI slot (10), and never a
-  person (joystick 100, remote 90) or a test script (50, 40).</li>
+  person (joystick 100, keyboard 90) or a test script (50, 40).</li>
 <li><strong>It only stops the car.</strong> It can't make it move.</li>
 <li><strong>It never expires on silence.</strong> If the watcher dies while the lock is on, the car stays
   stopped.</li>
@@ -345,7 +345,7 @@ names, passed on as they are.</p>
 </tr>
 <tr>
 <td><code>compressed:=true</code></td>
-<td>reads <code>/camera/image_raw/compressed</code>, the JPEG pictures <code>usb_cam</code> already publishes. Raw pictures are too big for WiFi</td>
+<td>reads <code>/sensors/camera/front_left/image_raw/compressed</code>, the JPEG pictures <code>usb_cam</code> already publishes. Raw pictures are too big for WiFi</td>
 </tr>
 </tbody>
 </table></div>
@@ -364,7 +364,7 @@ names, passed on as they are.</p>
 <section class="card"><h2 id="lane-keeping">Lane keeping</h2>
 <p>Two nodes, from the camera to the wheels. <code>lane_finder</code> (ours) finds the lane;
 <code>control_interface</code> (the 2025-26 team's) steers by it.</p>
-<pre class="highlight"><code>/camera/image_raw ─► lane_finder ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai</code></pre>
+<pre class="highlight"><code>/sensors/camera/front_left/image_raw ─► lane_finder ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel</code></pre>
 <p><img alt="The bench camera, and what lane_finder found in it" src="../img/lane-finder.png" /></p>
 <div class="table-wrap"><table>
 <thead>
@@ -412,7 +412,7 @@ names, passed on as they are.</p>
 <tbody>
 <tr>
 <td>1. Bird's-eye view</td>
-<td>warps the picture into a map of the road seen from above: 4-16 m ahead, 4 m either side, 5 cm a pixel. From the lens (<code>/camera/camera_info</code>) and the camera's place and tilt (<code>vehicle.yaml</code>). It takes the road to be flat</td>
+<td>warps the picture into a map of the road seen from above: 4-16 m ahead, 4 m either side, 5 cm a pixel. From the lens (<code>/sensors/camera/front_left/camera_info</code>) and the camera's place and tilt (<code>vehicle.yaml</code>). It takes the road to be flat</td>
 </tr>
 <tr>
 <td>2. Paint</td>
@@ -439,7 +439,7 @@ names, passed on as they are.</p>
   hold the maths, with no ROS, and 21 tests, most on pictures of known lanes: straight,
   off centre, turned, curved, one line, none. <code>lane_finder.py</code> is the node.</li>
 </ul>
-<h3 id="what-it-sends-lane_geometry">What it sends: /lane_geometry</h3>
+<h3 id="what-it-sends-perceptionlanegeometry">What it sends: /perception/lane/geometry</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -489,7 +489,7 @@ names, passed on as they are.</p>
 <ul>
 <li>It steers with a PID on the offset, through five states (keep, change, committed,
   stopping, resuming).</li>
-<li>It publishes on <code>/cmd_vel/ai</code>, the mux's slot for a learned driver. Every other driver
+<li>It publishes on <code>/drivers/ai/cmd_vel</code>, the mux's slot for a learned driver. Every other driver
   outranks it.</li>
 <li>It asks for 2 m/s; ego caps it at the car's 1 m/s.</li>
 </ul>
@@ -551,7 +551,7 @@ names, passed on as they are.</p>
 </section>
 <section class="card"><h2 id="radar-clustering">Radar clustering</h2>
 <ul>
-<li><code>radar_clusters</code> runs DBSCAN on <code>/radar/points</code>. Points within 0.8 m join a cluster,
+<li><code>radar_clusters</code> runs DBSCAN on <code>/sensors/radar/points</code>. Points within 0.8 m join a cluster,
   and a cluster needs 15 points (5 on the bench).</li>
 <li>It publishes the clustered points, coloured, and a box round each cluster, for RViz.</li>
 <li>The package's other programs (filters, ICP, an OctoMap) are the 2025-26 team's demos,
@@ -574,7 +574,7 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
 <tbody>
 <tr>
 <td><code>camera</code></td>
-<td><code>usb_cam</code> → <code>/camera/image_raw</code> (Linux only)</td>
+<td><code>usb_cam</code> → <code>/sensors/camera/front_left/image_raw</code> (Linux only)</td>
 <td>off everywhere until the cameras are known (Q22)</td>
 </tr>
 <tr>
@@ -584,12 +584,12 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
 </tr>
 <tr>
 <td><code>stop_signs</code></td>
-<td><code>stop_sign_watcher</code> → <code>/perception/stop</code></td>
+<td><code>stop_sign_watcher</code> → <code>/perception/stop_sign</code></td>
 <td>one per car, next to the mux: the Orin</td>
 </tr>
 <tr>
 <td><code>radar_clusters</code></td>
-<td>DBSCAN on <code>/radar/points</code></td>
+<td>DBSCAN on <code>/sensors/radar/points</code></td>
 <td>off until the radar is on the car</td>
 </tr>
 <tr>

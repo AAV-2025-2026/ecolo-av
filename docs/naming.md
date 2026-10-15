@@ -1,10 +1,11 @@
-# Topic names by area (Proposed, 14 October)
+# Topic names by area (Done, 15 October)
 
 Ben, 14 Oct: "Maybe we need more structure like /localization/<command> and
 /drivers/<command> /ego/<command> ... Something that isolates messages into their area."
 
-**Status: Decided** (Ben, 15 Oct: "The drivers all need to be in a /drivers/keybaord, etc
-type stuff as an example."). The rename is under way on the branch `wt/topic-areas`.
+**Status: Done (15 Oct).** Decided by Ben on 15 Oct ("The drivers all need to be in a
+/drivers/keybaord, etc type stuff as an example."), and renamed everywhere on the branch
+`wt/topic-areas`, now on `main`. `tools/tests/test_topic_areas.py` keeps it that way.
 
 ## The rule
 
@@ -29,48 +30,82 @@ same areas as the folders under `src/`.
 | `/hud/` | what only the screen needs | the HUD |
 
 Global names stay global, because every ROS tool expects them: `/tf`, `/tf_static`,
-`/clock`, `/robot_description`, `/joint_states`, `/diagnostics`, `/rosout`. Nav2 keeps its own
-names (`/plan`, `/goal_pose`, its actions) for now.
+`/clock`, `/robot_description`, `/joint_states`, `/diagnostics`, `/rosout`,
+`/parameter_events`. Nav2 keeps its own names for now: `/map`, `/plan`, `/goal_pose`, its
+actions, `/cmd_vel_nav` and the costmaps' topics.
+
+## How the drivers get their names
+
+| Driver | How | Topics |
+|---|---|---|
+| joystick | `joy_node`, `teleop_twist_joy_node`, `joy_teleop` run in the namespace `/drivers/joy` | `/drivers/joy/joy`, `/drivers/joy/cmd_vel` |
+| keyboard | `tools/keyboard.sh` runs `teleop_twist_keyboard` in the namespace `/drivers/keyboard` | `/drivers/keyboard/cmd_vel` |
+| scripted | `scripted_driver` publishes `drivers/scripted/cmd_vel` | `/drivers/scripted/cmd_vel` |
+| Nav2 | `velocity_smoother` or `collision_monitor`, remapped | `/drivers/nav/cmd_vel` |
+| AI | `control_interface` (lane keeping) | `/drivers/ai/cmd_vel` |
+| replay | `tools/replay_commands.sh` | `/drivers/replay/cmd_vel` |
+
+A namespace makes the relative names fall into place, with no remaps. The joystick's
+config files name their nodes `/**/joy_node` and so on, so they match in any namespace.
 
 ## Old name → new name
 
-| Now | Proposed |
+| Was | Now |
 |---|---|
 | `/gps/fix` | `/sensors/gps/fix` |
 | `/gps/fix_velocity` | `/sensors/gps/fix_velocity` |
+| `/gps/vel`, `/gps/time_reference` (NMEA) | `/sensors/gps/vel`, `/sensors/gps/time_reference` |
 | `/imu/data_raw`, `/imu/mag` | `/sensors/imu/data_raw`, `/sensors/imu/mag` |
 | `/imu/data` (after Madgwick) | `/sensors/imu/data` |
-| `/camera/image_raw` | `/sensors/camera/front_left/image_raw` |
+| `/camera/image_raw` (and `/compressed`) | `/sensors/camera/front_left/image_raw` (and `/compressed`) |
+| `/camera/camera_info` | `/sensors/camera/front_left/camera_info` |
 | `/camera/right/...` | `/sensors/camera/front_right/...` |
 | (none yet) | `/sensors/camera/rear/...` |
 | (none yet: the lidar) | `/sensors/lidar/points` |
 | `/radar/points` | `/sensors/radar/points` |
 | `/battery_status` | `/vehicle/battery` |
-| `/vehicle/odom`, `/vehicle/status` | unchanged |
+| `/battery_monitor_heartbeat` | `/vehicle/battery/heartbeat` |
+| `/vehicle/odom`, `/vehicle/status`, `/vehicle/joint_states` | unchanged |
 | (new: the wheel nodes) | `/vehicle/wheel_speed` |
+| `/bench/truth`, `/bench/hw_estop`, `/bench/driver_faults` | `/vehicle/bench/truth`, `/vehicle/bench/hw_estop`, `/vehicle/bench/driver_faults` |
 | `/to_can_bus`, `/from_can_bus` | `/can/tx`, `/can/rx` |
 | `/odometry/local` | `/localization/odom/local` |
 | `/odometry/global` | `/localization/odom/global` |
 | `/odometry/gps` | `/localization/gps/odom` |
 | `/gps/filtered` | `/localization/gps/fix` |
-| `/radar/clusters` | `/perception/radar/clusters` |
-| `/lane_geometry`, `/lane_geometry_status` | `/perception/lane/geometry`, `/perception/lane/status` |
+| `/radar/clusters`, `/radar/cluster_boxes` | `/perception/radar/clusters`, `/perception/radar/cluster_boxes` |
+| `/lane_geometry`, `/lane_geometry/image` | `/perception/lane/geometry`, `/perception/lane/image` |
+| `/lane_geometry_status`, `/vehicle_state` (lane keeping's) | `/drivers/ai/lane_status`, `/drivers/ai/lane_state` |
 | `/perception/stop` | `/perception/stop_sign` |
-| `/joy` | `/drivers/joy/raw` |
-| `/cmd_vel/joy`, `/cmd_vel/nav`, ... | `/drivers/joy/cmd_vel`, `/drivers/nav/cmd_vel`, ... |
+| `/perception/detections`, `/perception/camera_obstacles`, `/perception/camera_view` | unchanged |
+| `/joy` | `/drivers/joy/joy` |
+| `/cmd_vel/joy`, `/cmd_vel/scripted`, `/cmd_vel/replay`, `/cmd_vel/nav`, `/cmd_vel/ai` | `/drivers/joy/cmd_vel`, `/drivers/scripted/cmd_vel`, ... |
+| `/cmd_vel/remote` (it was the keyboard) | `/drivers/keyboard/cmd_vel` (twist_mux's slot `keyboard`) |
 | `/cmd_vel` (twist_mux out) | `/control/cmd_vel` |
 | `/cmd_vel_smoothed` | `/control/cmd_vel_smoothed` |
 | `/ego/actuator_cmd` | unchanged |
 | `/estop` | `/safety/estop` |
 | `/collision_monitor_state` | `/safety/collision_monitor/state` |
+| `/collision_monitor/stop_zone`, `.../collision_points_marker` | `/safety/collision_monitor/stop_zone`, `.../collision_points_marker` |
 
-## How we would do it
+Changed from the proposal, once the code showed it:
 
-1. Change `docs/interfaces.yaml` first (the contract), and regenerate `interfaces.md`.
-2. Rename in the launch files and configs with **remaps**: most stock nodes (robot_localization,
-   ublox, twist_mux) take a remap, not a code change.
-3. A test that checks every name in `interfaces.yaml` starts with an area from the table.
-4. `pixi run check sim` and `bench-check` must still pass.
+- **`/drivers/joy/joy`, not `/drivers/joy/raw`:** it is what the namespace gives `joy_node`
+  by itself, with no remap.
+- **Lane keeping's two text topics go under `/drivers/ai/`:** `control_interface`, the AI
+  slot's driver, publishes them, not the lane finder.
+- **The bench's own topics go under `/vehicle/bench/`:** the bench stands in for the car.
+
+## Left as they were
+
+| Name | Why |
+|---|---|
+| `/fromLL`, `/toLL`, `/datum` (navsat_transform's services) | Nav2's `waypoint_follower` calls `/fromLL` by its absolute name. Moving them needs a remap on two nodes, one of them inside Nav2: not a clean remap |
+| `/spine/arm`, `/scripted_drive`, `/ekf_*/set_pose` | services and actions, not topics: the rule is for topics |
+| `/gazebo/cmd_vel`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat` | Gazebo's own side of `gazebo_adapter`, like `/turtle1/...` for turtlesim; not in the contract |
+| `/map`, `/plan`, `/goal_pose`, `/cmd_vel_nav`, the costmaps | Nav2's own, for now |
+| The HUD back end's HTTP routes (`POST /estop`, `/camera/latest.png`) | web addresses, not topics |
+| Bags recorded before 15 Oct | they hold the old names: play them with `--remap` (for example `/cmd_vel:=/control/cmd_vel`) |
 
 ## Why the two EKFs don't talk
 

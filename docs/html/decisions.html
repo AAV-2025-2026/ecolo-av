@@ -181,7 +181,7 @@ answer.</p>
 <td>Q29</td>
 </tr>
 <tr>
-<td>Lane keeping: a classic OpenCV lane finder publishes <code>/lane_geometry</code>; the 2025-26 lane keeping follows it</td>
+<td>Lane keeping: a classic OpenCV lane finder publishes <code>/perception/lane/geometry</code>; the 2025-26 lane keeping follows it</td>
 <td>No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same</td>
 <td>Q22</td>
 </tr>
@@ -203,7 +203,7 @@ answer.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>TwistStamped</code> on every <code>/cmd_vel*</code> topic</td>
+<td><code>TwistStamped</code> on every command topic (<code>/drivers/*/cmd_vel</code>, <code>/control/cmd_vel</code>)</td>
 <td><code>twist_mux</code> expects it, and the timestamp lets ego drop stale commands. The code already does this</td>
 </tr>
 <tr>
@@ -652,7 +652,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <td><code>ublox_gps</code> is the default now (Tentative, above); keep it, or go back to <code>ublox_dgnss</code> (the car only). With Q18</td>
 </tr>
 <tr>
-<td><code>/estop</code> reliability (N2)</td>
+<td><code>/safety/estop</code> reliability (N2)</td>
 <td>send it repeatedly, or make the mux hear it reliably</td>
 </tr>
 <tr>

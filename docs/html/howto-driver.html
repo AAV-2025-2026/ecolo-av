@@ -57,8 +57,8 @@ empty folder to a turtle driving in circles.</p></div>
 </thead>
 <tbody>
 <tr>
-<td>publish <code>geometry_msgs/TwistStamped</code> on <code>/cmd_vel/&lt;name&gt;</code></td>
-<td>publish <code>/cmd_vel</code> or <code>/ego/actuator_cmd</code></td>
+<td>publish <code>geometry_msgs/TwistStamped</code> on <code>/drivers/&lt;name&gt;/cmd_vel</code></td>
+<td>publish <code>/control/cmd_vel</code> or <code>/ego/actuator_cmd</code></td>
 </tr>
 <tr>
 <td>put the speed (m/s) in <code>twist.linear.x</code> and the turn rate (rad/s) in <code>twist.angular.z</code></td>
@@ -90,37 +90,37 @@ driver is added.</p>
 <tbody>
 <tr>
 <td>E-stop (a lock: blocks everything below it)</td>
-<td><code>/estop</code></td>
+<td><code>/safety/estop</code></td>
 <td>255</td>
 </tr>
 <tr>
 <td>Joystick, the safety driver</td>
-<td><code>/cmd_vel/joy</code></td>
+<td><code>/drivers/joy/cmd_vel</code></td>
 <td>100</td>
 </tr>
 <tr>
 <td>Keyboard or another remote</td>
-<td><code>/cmd_vel/remote</code></td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
 <td>90</td>
 </tr>
 <tr>
 <td>Scripted</td>
-<td><code>/cmd_vel/scripted</code></td>
+<td><code>/drivers/scripted/cmd_vel</code></td>
 <td>50</td>
 </tr>
 <tr>
 <td>Replay</td>
-<td><code>/cmd_vel/replay</code></td>
+<td><code>/drivers/replay/cmd_vel</code></td>
 <td>40</td>
 </tr>
 <tr>
 <td>Nav2</td>
-<td><code>/cmd_vel/nav</code></td>
+<td><code>/drivers/nav/cmd_vel</code></td>
 <td>20</td>
 </tr>
 <tr>
 <td>AI</td>
-<td><code>/cmd_vel/ai</code></td>
+<td><code>/drivers/ai/cmd_vel</code></td>
 <td>10</td>
 </tr>
 </tbody>
@@ -143,7 +143,7 @@ yet. The layout rules are in <a href="conventions.html">Conventions</a>.</p>
 <pre class="highlight"><code class="language-python">"""
 circle_driver: drive a slow left circle, to show how a driver works.
 
-Publishes   cmd_vel/circle   geometry_msgs/TwistStamped, at 20 Hz
+Publishes   drivers/circle/cmd_vel  geometry_msgs/TwistStamped, at 20 Hz
 """
 
 from geometry_msgs.msg import TwistStamped
@@ -158,7 +158,7 @@ class CircleDriver(Node):
         super().__init__('circle_driver')
         self.speed = self.declare_parameter('speed', 0.5).value          # m/s
         self.turn_rate = self.declare_parameter('turn_rate', 0.2).value  # rad/s
-        self.pub = self.create_publisher(TwistStamped, 'cmd_vel/circle', 10)
+        self.pub = self.create_publisher(TwistStamped, 'drivers/circle/cmd_vel', 10)
         self.create_timer(0.05, self.tick)                               # 20 Hz
 
     def tick(self):
@@ -215,11 +215,11 @@ thin.</p>
 </table></div>
 <p>The mux input:</p>
 <pre class="highlight"><code class="language-yaml">      circle:                   # aav_circle: an example driver
-        topic: /cmd_vel/circle
+        topic: /drivers/circle/cmd_vel
         timeout: 0.5
         priority: 30</code></pre>
 <p>The contract entry:</p>
-<pre class="highlight"><code class="language-yaml">  /cmd_vel/circle:
+<pre class="highlight"><code class="language-yaml">  /drivers/circle/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [circle_driver]
     sub: [twist_mux]
@@ -233,7 +233,7 @@ pixi run graph                                             # terminal 3</code></
 <p><strong>You should see:</strong></p>
 <ul>
 <li>the turtle drives a slow circle;</li>
-<li>rqt_graph shows <code>circle_driver</code> → <code>/cmd_vel/circle</code> → <code>twist_mux</code>;</li>
+<li>rqt_graph shows <code>circle_driver</code> → <code>/drivers/circle/cmd_vel</code> → <code>twist_mux</code>;</li>
 <li><code>pixi run keyboard</code> in another terminal: hold <code>i</code>, and the keyboard (90) takes over at
   once. Let go, and the circle comes back after half a second;</li>
 <li><code>pixi run estop</code> stops everything, and <code>pixi run estop-clear</code> lets it go again.</li>
@@ -274,7 +274,7 @@ pixi run graph                                             # terminal 3</code></
 <li><strong>People outrank software:</strong> priorities below 90.</li>
 <li><strong>Go quiet when you're done:</strong> stop publishing, and the mux hands control to the next
    driver after 0.5 s.</li>
-<li><strong>Never publish <code>/cmd_vel</code> or <code>/ego/actuator_cmd</code> yourself.</strong> Everything goes through
+<li><strong>Never publish <code>/control/cmd_vel</code> or <code>/ego/actuator_cmd</code> yourself.</strong> Everything goes through
    the mux and ego, so the limits and the e-stop always apply.</li>
 <li><strong>Climb the test ladder:</strong> the turtle, then Gazebo, then the car on stands, then the
    car with a safety driver. See <a href="simulation.html#the-test-ladder">Simulation</a>.</li>
@@ -299,7 +299,7 @@ pixi run graph                                             # terminal 3</code></
 <td><span class="badge b-works">works</span> the turtle circles left</td>
 </tr>
 <tr>
-<td>A priority-90 command on <code>/cmd_vel/remote</code> (what the keyboard sends)</td>
+<td>A priority-90 command on <code>/drivers/keyboard/cmd_vel</code> (what the keyboard sends)</td>
 <td><span class="badge b-works">works</span> it takes over and drives straight; the circle returns after it stops</td>
 </tr>
 <tr>
@@ -308,7 +308,7 @@ pixi run graph                                             # terminal 3</code></
 </tr>
 <tr>
 <td><code>pixi run check turtle</code></td>
-<td><span class="badge b-works">works</span> <code>/cmd_vel/circle</code> ok, 0 failed</td>
+<td><span class="badge b-works">works</span> <code>/drivers/circle/cmd_vel</code> ok, 0 failed</td>
 </tr>
 </tbody>
 </table></div>

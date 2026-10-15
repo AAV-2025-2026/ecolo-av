@@ -79,7 +79,7 @@ matches it. Still open (Q29): which screen, and GPS destinations this year.</p><
 </tr>
 <tr>
 <td>E-STOP</td>
-<td>the button: <code>/estop</code> true 5 times, 0.1 s apart. Never false. Says whether anything heard it</td>
+<td>the button: <code>/safety/estop</code> true 5 times, 0.1 s apart. Never false. Says whether anything heard it</td>
 </tr>
 <tr>
 <td>Topics</td>
@@ -121,8 +121,8 @@ pixi run hud fullscreen:=true      # full screen; F11 switches too</code></pre>
 </tbody>
 </table></div>
 <ul>
-<li>The GPS panel reads <code>/gps/fix</code>, the receiver itself, not <code>/gps/filtered</code>: it answers
-  "does the GPS work?". navsat_transform marks every <code>/gps/filtered</code> message as RTK.</li>
+<li>The GPS panel reads <code>/sensors/gps/fix</code>, the receiver itself, not <code>/localization/gps/fix</code>: it answers
+  "does the GPS work?". navsat_transform marks every <code>/localization/gps/fix</code> message as RTK.</li>
 <li>NavSatFix can't tell RTK float from fixed. The HUD calls it fixed at 5 cm or better.</li>
 <li>Not in <code>car.launch.py</code> yet. On Linux without X11's headers, colcon skips it with a
   warning.</li>
@@ -146,7 +146,7 @@ pixi run hud fullscreen:=true      # full screen; F11 switches too</code></pre>
 </tr>
 <tr>
 <td>Next to bench mode (<code>bench.launch.py nav:=false</code>, private domain)</td>
-<td>every bench topic OK: status, GPS 3D fix, battery 100 %, the bench camera. <code>/perception/stop</code> NEVER (perception is off there)</td>
+<td>every bench topic OK: status, GPS 3D fix, battery 100 %, the bench camera. <code>/perception/stop_sign</code> NEVER (perception is off there)</td>
 </tr>
 <tr>
 <td>One press, through the real node, to another node (<code>cargo test</code>)</td>
@@ -183,7 +183,7 @@ pixi run hud fullscreen:=true      # full screen; F11 switches too</code></pre>
 <tr>
 <td>Back end</td>
 <td><code>src/hud/aav_hud/</code> (ROS 2 Python node + Flask)</td>
-<td><code>hud_server</code>: reads the car's topics and pushes them to the app (port 5000); sends a locked route to Nav2; publishes the e-stop button's <code>/estop</code>.</td>
+<td><code>hud_server</code>: reads the car's topics and pushes them to the app (port 5000); sends a locked route to Nav2; publishes the e-stop button's <code>/safety/estop</code>.</td>
 </tr>
 <tr>
 <td>Routing</td>
@@ -211,27 +211,27 @@ in git either.</p>
 <td>reads: speed, mode, armed, e-stop, gear, faults</td>
 </tr>
 <tr>
-<td><code>/gps/filtered</code></td>
+<td><code>/localization/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
-<td>reads: the car on the map (<code>gps_topic:=/gps/fix</code> for the raw fix)</td>
+<td>reads: the car on the map (<code>gps_topic:=/sensors/gps/fix</code> for the raw fix)</td>
 </tr>
 <tr>
-<td><code>/perception/stop</code></td>
+<td><code>/perception/stop_sign</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td>reads: the stop-sign alert</td>
 </tr>
 <tr>
-<td><code>/battery_status</code></td>
+<td><code>/vehicle/battery</code></td>
 <td><code>sensor_msgs/msg/BatteryState</code></td>
 <td>reads: volts, charge, amps</td>
 </tr>
 <tr>
-<td><code>/camera/image_raw</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
 <td>reads, only while someone watches the camera page</td>
 </tr>
 <tr>
-<td><code>/estop</code></td>
+<td><code>/safety/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td>publishes: only true, when the e-stop button is pressed</td>
 </tr>
@@ -248,13 +248,13 @@ in git either.</p>
 touches it.</p>
 <ul>
 <li>Big and red, on the home screen. One tap sends <code>POST /estop</code>.</li>
-<li>The back end publishes <code>/estop</code> true at once, then 4 more times, 0.1 s apart.</li>
+<li>The back end publishes <code>/safety/estop</code> true at once, then 4 more times, 0.1 s apart.</li>
 <li>Reliable, depth 10: what spine_bridge and legacy_uart_bridge subscribe with. twist_mux
   takes it too.</li>
 <li>The press also cancels the HUD's route, so clearing the e-stop doesn't restart the trip.</li>
 <li>The HUD never clears it. Clearing stays a person's deliberate act, from a laptop:
   <code>pixi run estop-clear</code>, or Foxglove.</li>
-<li>No answer, or nothing subscribes to <code>/estop</code>: the app shows a red message, "E-STOP
+<li>No answer, or nothing subscribes to <code>/safety/estop</code>: the app shows a red message, "E-STOP
   FAILED ... Press the car's red e-stop button."</li>
 </ul>
 </section>
@@ -313,7 +313,7 @@ touches it.</p>
 </tr>
 <tr>
 <td><code>POST /estop</code></td>
-<td>publishes <code>/estop</code> true. It can't clear it. 503 when nothing subscribes</td>
+<td>publishes <code>/safety/estop</code> true. It can't clear it. 503 when nothing subscribes</td>
 </tr>
 <tr>
 <td><code>GET /camera/latest.png</code></td>
@@ -489,11 +489,11 @@ scripted driver held 0.90 m/s, then the e-stop was pressed:</p>
 </tbody>
 </table></div>
 <ul>
-<li>Times count from the request (first row), or from the first <code>/estop</code> message (second).</li>
-<li><code>/estop</code> true came 5 times in 0.36 s, and never false. The spine disarmed; clearing
+<li>Times count from the request (first row), or from the first <code>/safety/estop</code> message (second).</li>
+<li><code>/safety/estop</code> true came 5 times in 0.36 s, and never false. The spine disarmed; clearing
   the e-stop and arming again, from the "laptop", worked.</li>
 <li>The app's client saw <code>vehicle_status</code> say "e-stop on" 41 ms after its press.</li>
-<li><code>pixi run check bench</code>: 0 failed. <code>/estop</code>: published by <code>hud_server</code>, subscribed by
+<li><code>pixi run check bench</code>: 0 failed. <code>/safety/estop</code>: published by <code>hud_server</code>, subscribed by
   <code>spine_bridge</code> and <code>twist_mux</code>.</li>
 <li><code>/camera/latest.png</code>: a 640x360 picture (11 kB), from the second fetch on. The first
   answers 503: it starts the camera subscription.</li>
