@@ -53,6 +53,9 @@ spine-flash = { cmd = "cargo build --release --locked && ../../../../vendor/carg
 # pair: wheel-uf2 only makes a file; wheel-flash writes to a board through a probe.
 wheel-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/wheel-encoder-pico2 wheel-encoder-pico2.uf2", cwd = "firmware/spine/boards/wheel-encoder-pico2", description = "Build the wheel encoder's Pico 2 program as firmware/spine/boards/wheel-encoder-pico2/wheel-encoder-pico2.uf2: hold BOOTSEL, plug in, drag it on" }
 wheel-flash = { cmd = "cargo build --release --locked && ../../../../vendor/cargo-tools/bin/probe-rs run --chip RP235x target/thumbv8m.main-none-eabihf/release/wheel-encoder-pico2", cwd = "firmware/spine/boards/wheel-encoder-pico2", description = "Flash the wheel encoder's program onto its Pico 2 through a debug probe, then show its logs (pixi run spine-tools first)" }
+# The status display's Pico 2 (the sentinel), the Rust version of the 2025-26 one.
+sentinel-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/sentinel-pico2 sentinel-pico2.uf2", cwd = "firmware/spine/boards/sentinel-pico2", description = "Build the status display's Pico 2 program as firmware/spine/boards/sentinel-pico2/sentinel-pico2.uf2: hold BOOTSEL, plug in, drag it on" }
+sentinel-flash = { cmd = "cargo build --release --locked && ../../../../vendor/cargo-tools/bin/probe-rs run --chip RP235x target/thumbv8m.main-none-eabihf/release/sentinel-pico2", cwd = "firmware/spine/boards/sentinel-pico2", description = "Flash the status display's program onto its Pico 2 through a debug probe, then show its logs (pixi run spine-tools first)" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"

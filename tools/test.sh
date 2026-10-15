@@ -43,7 +43,8 @@ if command -v cargo >/dev/null; then
     # The board programs: each a workspace of its own, built only for the Pico 2's chip.
     # Their UF2 files too, the ones to drag on: tools/elf2uf2.py checks the boot ROM's
     # IMAGE_DEF. pico2 is the spine; the other two replace the 2025-26 C++ Pico 2s.
-    for board in pico2:spine-pico2 wheel-encoder-pico2:wheel-encoder-pico2; do
+    for board in pico2:spine-pico2 wheel-encoder-pico2:wheel-encoder-pico2 \
+                 sentinel-pico2:sentinel-pico2; do
       dir=${board%%:*} bin=${board##*:}
       echo "== firmware/spine/boards/$dir: a board program, for the Pico 2"
       (cd "firmware/spine/boards/$dir" && cargo build -q --release --locked && echo "builds")

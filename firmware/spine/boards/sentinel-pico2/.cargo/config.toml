@@ -1,0 +1,13 @@
+# Everything here builds for the Pico 2's chip, the RP2350 (Arm Cortex-M33).
+[build]
+target = "thumbv8m.main-none-eabihf"
+
+# `cargo run --release` flashes through a debug probe, and shows the logs: it needs probe-rs
+# on your PATH. `pixi run spine-tools` installs it into vendor/cargo-tools/bin, and
+# `pixi run sentinel-flash` runs that one, with this chip name. Without a probe, use the
+# UF2 file instead: `pixi run sentinel-uf2` (docs/rust-firmware.md).
+[target.thumbv8m.main-none-eabihf]
+runner = "probe-rs run --chip RP235x"
+
+[env]
+DEFMT_LOG = "info"

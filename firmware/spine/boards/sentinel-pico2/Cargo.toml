@@ -1,0 +1,37 @@
+[package]
+name = "sentinel-pico2"
+description = "The status display's board program for a Raspberry Pi Pico 2 (RP2350): an I2C device at 0x42 that shows the car's telemetry on a 16x2 LCD, an 8x8 matrix, a 10-LED bar and a buzzer, as the 2025-26 AAV_sentinel did."
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false
+
+# A workspace of its own, not a member of firmware/spine's: it builds only for the
+# RP2350 (thumbv8m.main-none-eabihf, set in .cargo/config.toml). The Embassy versions are
+# the spine's (boards/pico2), so the boards move together.
+[workspace]
+
+[dependencies]
+# Ours: the display's logic and the LCD's driver (firmware/spine/crates).
+sentinel = { path = "../../crates/sentinel" }
+hd44780 = { path = "../../crates/hd44780" }
+# The 8x8 matrix: a stock driver, on embedded-hal 1.0.
+max7219 = "0.5.0"
+
+embassy-rp = { version = "0.10.0", features = ["rp235xa", "time-driver", "critical-section-impl", "unstable-pac", "defmt"] }
+embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-time = { version = "0.5.1", features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-sync = "0.8.0"
+embedded-hal-bus = "0.3.0"
+
+cortex-m = { version = "0.7.7", features = ["inline-asm"] }
+cortex-m-rt = "0.7.5"
+# Logs and panics over a debug probe (probe-rs); without one they go nowhere.
+defmt = "1.0.1"
+defmt-rtt = "1.0.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+[profile.release]
+debug = 2          # symbols for probe-rs and defmt; they never reach the flash image
+lto = true
+codegen-units = 1
