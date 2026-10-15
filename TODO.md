@@ -32,6 +32,8 @@ wait for Ben. GitHub's Linux CI is green again.
 - better open-source models, including NVIDIA's per-pixel CitySemSegFormer, in
   `READ-ME-PERCEPTION-AND-HUD-MAP.md`.
 
+**Checked by Ben on his Mac, 15 Oct:** the raylib HUD opens (`hud-demo`), and with the turtle it shows speed, throttle and steering live while driving from the keyboard. The car kit is made (1.8 GB, `car-kit/`).
+
 **Next, in order:** Thursday evening, `pixi run car-kit`; Friday's audit and our stack on
 the car on stands (`READ-ME-FRIDAY.md`); Ben's answers on the branches above; the A-to-B
 drive (`READ-ME-A-TO-B.md`); the HUD's map panel; Python to Rust, step 1 (spine bridge, ego).
