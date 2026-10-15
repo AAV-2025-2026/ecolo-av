@@ -168,6 +168,22 @@ mcp = ">=2.3.0,<3"
 
 [feature.mcp.tasks]
 mcp = { cmd = "tools/ros.sh python3 tools/mcp_server.py", description = "The read-only MCP server, for Claude or another AI app (started by the app, through .mcp.json)" }
+drive-server = { cmd = "tools/ros.sh --local python3 -m aav_language.drive_server", description = "The DRIVE tool server (MCP over stdio): drive, turn, stop, with hard limits. Turtle, sim or bench only, unless --car (docs/plain-english.md)" }
+
+# Plain-English driving (docs/plain-english.md): a local language model, through Apple's
+# MLX, turns "drive 10 m forward" into calls to the drive server (aav_language). Macs with
+# Apple silicon only: MLX needs Metal. mlx and mlx-lm are MIT licensed. The models
+# download into the Hugging Face cache (~/.cache/huggingface).
+[feature.llm]
+platforms = ["mac"]
+
+# From PyPI: conda-forge's mlx needs macOS 14.5, and this workspace promises 14.0.
+[feature.llm.pypi-dependencies]
+mlx-lm = ">=0.32.0,<0.33"
+
+[feature.llm.tasks]
+talk = { cmd = "tools/ros.sh --local python3 -m aav_language.agent", description = "Tell the car what to do in plain English: a local model plans, you type yes (turtle, sim or bench only)" }
+llm-eval = { cmd = "tools/ros.sh python3 -m aav_language.run_eval", description = "Score local models on the plain-English test set, against a fake drive server (no ROS, no car)" }
 
 # Today's C++ boards (the 2025-26 ESP32 and Picos), until the Rust spine replaces them.
 # PlatformIO builds and flashes them. Its own downloads (the ESP32 compilers and
@@ -186,5 +202,6 @@ legacy-esp32 = { cmd = "tools/legacy_firmware.sh", description = "Build today's 
 docs = { features = ["docs"], no-default-feature = true }
 ml = { features = ["ml"] }
 mcp = { features = ["mcp"] }
+llm = { features = ["llm", "mcp"] }
 firmware = { features = ["firmware"], no-default-feature = true }
 
