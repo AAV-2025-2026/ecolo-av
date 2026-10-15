@@ -97,7 +97,7 @@ Both sides test against the same generated frames. To change a frame:
 ## firmware/spine: the Rust code
 
 `crates/spine-core` is plain `no_std` Rust: no allocator, no dependencies, no hardware.
-`cargo test` runs its 54 tests on any laptop.
+`cargo test` runs its 64 tests on any laptop.
 
 | Module | Does |
 |---|---|
@@ -119,7 +119,8 @@ and the glue between them and `spine-core`, are written too (10 October):
 | `pca9555` | the I/O expander: the direction output | 6 |
 | `ibus` | the FlySky RC receiver | 24 |
 | `mcp2515` | the MCP2515 CAN controller over SPI: a Pico 2 has no CAN of its own | 34 |
-| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits | 49 |
+| `legacy-link` | the Motor-Pi's 13-byte UART frames, and the targets the C++ set for them (15 Oct) | 31 |
+| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits. Commands through CAN or the UART (`CommandLink`) | 61 |
 
 On a laptop, [Bench mode](bench.md) runs `spine-core` on the CAN frames from `spine_bridge`,
 driving a model car. The plan for all the firmware in Rust is
@@ -149,6 +150,13 @@ Hardware facts from today's car:
 ## Today's firmware: firmware/legacy/
 
 Copied unchanged from the 2025-26 team, as the fallback until the spine exists.
+
+!!! note "The ESP32's Rust replacement (15 Oct)"
+    `firmware/spine/boards/esp32-umod` is `aav_umod_esp32` in Rust: the same board, pins
+    and devices, and byte for byte the same UART frames (checked against the C++ itself).
+    It builds, and has never been flashed. The C++ stays here, and on the car, until the
+    Rust one is proven on the car: [Rust firmware](rust-firmware.md),
+    [First flash on the bench](esp32-bench.md).
 
 | Folder | What | Talks to ROS through |
 |---|---|---|

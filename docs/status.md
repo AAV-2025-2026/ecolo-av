@@ -28,8 +28,9 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Gazebo's road world | `aav_gazebo` `world:=road` | [[works]] on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) (with `lidar:=true`) render headless; `pixi run sim-check`, `--lidar --obstacle` and `--perception` pass. With YOLO and the lidar together it was flaky, so the lidar is off by default. [[untested]] on Linux, which needs EGL ([Simulation](simulation.md)) |
 | Real car | `aav_spine` | [[works]] on the bench, against `spine_sim`: arming, driving, both e-stops |
 | Today's car | `aav_legacy` | [[untested]] on the car |
-| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 54 tests, and on the bench |
-| Spine device drivers and glue | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board` | [[works]] 137 tests, against mocks |
+| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 64 tests, and on the bench |
+| Spine device drivers and glue | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `legacy-link`, `spine-board` | [[works]] 180 tests, against mocks; `legacy-link` also against the 2025-26 C++ itself |
+| ESP32 board program (Rust) | `firmware/spine/boards/esp32-umod` | [[untested]] builds with Espressif's Rust (`pixi run esp-tools`), both links; never flashed. Branch `wt/rust-esp32`, for Ben's review. [First flash on the bench](esp32-bench.md) |
 | Spine board program | `firmware/spine/boards/pico2` | [[untested]] builds for a Pico 2, and its UF2 file checks out; never flashed. The car's chip is still Q10–Q13 |
 | Bench mode | `aav_spine_sim`, `aav_bench` | [[works]] `pixi run bench-check`, plus `--perception` and `--lane` |
 | Camera | `usb_cam`, the `camera` part of `car.launch.py` | [[untested]] Linux only, off until the camera is fitted; the models are Q22 |

@@ -1,18 +1,21 @@
 # firmware/spine: the spine's firmware, in Rust
 
 Everything the spine board runs. Every crate is `no_std` and is tested on a laptop, without
-the board. The board program for a Pico 2, on the bench, is in `boards/pico2`.
+the board. The board programs: `boards/esp32-umod`, today's ESP32 control board (the
+Rust replacement for `firmware/legacy/aav_umod_esp32`), and `boards/pico2`, a Pico 2 on
+the bench.
 
 | Crate | What it is | Tests |
 |---|---|---|
-| `spine-core` | the spine's logic: modes, arming, the 200 ms watchdog, the speed loop, the encoder, the CAN frames, and the three choices still open (below) | 54 |
+| `spine-core` | the spine's logic: modes, arming, the 200 ms watchdog, the speed loop (closed, or open with no wheel speed), the encoder, the CAN frames, open-loop commands, and the three choices still open (below) | 64 |
+| `legacy-link` | the 2025-26 UART link: the Motor-Pi's 13-byte frames, and the targets the C++ set for them | 31 |
 | `aav-inputs` | clean inputs: debounced switches, an e-stop that trips at once, counting with a lockout | 9 |
 | `jrk-g2` | the Pololu Jrk G2 motor controllers (steering, brake), over I2C | 14 |
 | `ad5311` | the throttle DAC, over I2C | 10 |
 | `pca9555` | the I/O expander (the direction output), over I2C | 6 |
 | `mcp2515` | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters, send, receive, error state | 34 |
 | `ibus` | the FlySky RC receiver's iBUS frames | 24 |
-| `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait a board program implements | 49 |
+| `spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, the `Board` trait a board program implements, and the `CommandLink` trait: CAN or the UART | 61 |
 
 Each crate's own README has its API, and where its behaviour came from in the 2025-26 C++.
 
@@ -42,6 +45,21 @@ standard library fails. It builds the board program too, and checks its UF2 file
 
 Bench mode runs `spine-core` on a laptop, on the CAN frames from `spine_bridge`, driving a
 model car: `pixi run bench` (`docs/bench.md`).
+
+## The board program: `boards/esp32-umod`
+
+The spine on today's ESP32 control board (the SparkFun ESP32 MicroMod, Xtensa), with
+Embassy: the Rust replacement for the C++ that drives the car today. The same pins and
+devices; commands from the Motor-Pi's UART (default) or CAN (`--features can`). Its own
+README has the details. It needs Espressif's Rust, which Pixi doesn't have:
+
+| Command | Does |
+|---|---|
+| `pixi run esp-tools` | installs it for your user, once (needs rustup) |
+| `pixi run esp-build` | builds the program |
+| `pixi run esp-flash` | flashes it on the USB cable: bench only (`docs/esp32-bench.md`) |
+
+Untested on the board: nothing has been flashed yet. The C++ stays until it is proven.
 
 ## The board program: `boards/pico2`
 

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First flash on the bench: the Rust ESP32 · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/esp32-bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>First flash on the bench: the Rust ESP32</h1>
+<div class="meta">5 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a class="here" href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
+<div class="lead"><p>The plan for the first time the Rust program (<code>firmware/spine/boards/esp32-umod</code>) goes onto
+the car's ESP32 control board. Do it with Ben, <strong>wheels off the ground</strong>, with the C++
+ready to go back on. What the program is: <a href="rust-firmware.html">Rust firmware</a>.</p>
+<p><span class="badge b-untested">untested</span> Nothing here has been done yet.</p>
+<div class="admonition warning">
+<p class="admonition-title">Before you start</p>
+<pre><code>- The car on stands: **all four wheels off the ground**.
+- A second person at the **red e-stop button**. It cuts power by itself, whatever
+  the program does.
+- The RC transmitter on, override switch **off**.
+- Know how to roll back (the last section). Try it once before the first flash.
+</code></pre>
+</div></div>
+<section class="card"><h2 id="what-you-need">What you need</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A laptop with this repo, <code>pixi run esp-tools</code> done</td>
+<td>builds and flashes</td>
+</tr>
+<tr>
+<td>A USB cable to the ESP32 MicroMod's USB port</td>
+<td>flashing and the log</td>
+</tr>
+<tr>
+<td>The Motor-Pi running <code>aav_legacy</code> (<code>pixi run car</code> profile, or <code>legacy.launch.py</code>)</td>
+<td>sends the frames</td>
+</tr>
+<tr>
+<td>The RC transmitter</td>
+<td>the override</td>
+</tr>
+<tr>
+<td>A multimeter</td>
+<td>the DAC output, the direction pin</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="1-build-and-save-the-c-first">1. Build, and save the C++ first</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pixi run -e firmware legacy-esp32</code></td>
+<td>the C++ still builds: it is the way back</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>vendor/cargo-tools/bin/espflash read-flash 0 0x400000 backup-esp32.bin</code></td>
+<td>a copy of what is on the board now (4 MB). Keep it off git</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>pixi run esp-build</code></td>
+<td><code>Finished</code>; the program is <code>firmware/spine/boards/esp32-umod/target/xtensa-esp32-none-elf/release/spine-esp32-umod</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="2-flash">2. Flash</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>vendor/cargo-tools/bin/espflash list-ports</code></td>
+<td>the board's port (a Mac: <code>/dev/cu.usbserial-…</code>)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pixi run esp-flash</code> (add <code>--port &lt;port&gt;</code> if asked)</td>
+<td>it flashes, resets, and shows the log</td>
+</tr>
+<tr>
+<td>3</td>
+<td>read the first lines</td>
+<td><code>spine-esp32-umod 0.1.0, link: Motor-Pi UART; the last reset: …</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>If it won't connect: hold the board's BOOT button while it starts flashing.</p>
+</section>
+<section class="card"><h2 id="3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</h2>
+<p>Do them in order. Stop at the first one that fails, and roll back.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Power on, nothing else</td>
+<td>brake pulled (3500), steering centred (1950), DAC 0 V. Log: <code>STATUS mode=Manual … faults=0x0000</code>. Status LED blinks fast</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Unplug a Jrk's I2C, then plug it back</td>
+<td>the red LED and a fault bit (8 steering, 16 brake) while it is out</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Start the Motor-Pi's bridge, with ego stale</td>
+<td>the bridge sends stop frames: brake stays full</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Drive slowly from ROS (keyboard or joystick, 0.3 m/s)</td>
+<td><code>mode=Computer</code>, green LED, brake lets go (400), the DAC rises smoothly (600 codes a second at most), the wheels turn <strong>forward</strong></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Steer left from ROS</td>
+<td>the wheels turn <strong>left</strong>. If right: the steering sign (Q2), in <code>legacy.yaml</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Stop from ROS</td>
+<td>throttle 0; the bridge's hold brake: target 1050, as the C++ gave it</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Reverse slowly</td>
+<td>the direction changes only with the DAC at 0; the wheels turn backwards</td>
+</tr>
+<tr>
+<td>8</td>
+<td>While driving, stop the bridge (Ctrl-C)</td>
+<td>within 0.2 s: throttle 0, brake full, <code>faults</code> has 1 (timeout)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Start the bridge again</td>
+<td>brake stays on until ego is stale or stops (a stop frame), then it drives again</td>
+</tr>
+<tr>
+<td>10</td>
+<td>RC override switch on, gear forward, a little throttle</td>
+<td><code>mode=Rc</code>, blue LED, wheels turn; ROS commands ignored</td>
+</tr>
+<tr>
+<td>11</td>
+<td>RC: switch the transmitter off</td>
+<td>within 0.1 s: brake full, <code>faults</code> has 256 (RC lost)</td>
+</tr>
+<tr>
+<td>12</td>
+<td>RC override off</td>
+<td>back to the computer, or Manual</td>
+</tr>
+<tr>
+<td>13</td>
+<td>The red e-stop button</td>
+<td>the car stops by itself, as today</td>
+</tr>
+<tr>
+<td>14</td>
+<td>10 minutes of 1 to 13, mixed</td>
+<td>no unexpected resets in the log (<code>the last reset:</code> stays the power-on one)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Compare with the C++ (the table "The C++ beside the Rust" in
+<a href="rust-firmware.html">Rust firmware</a>): the differences marked ⚠️ are expected.</p>
+</section>
+<section class="card"><h2 id="4-roll-back-to-the-c">4. Roll back to the C++</h2>
+<p>Any time something is wrong:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>press the e-stop; unplug the Motor-Pi's bridge</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pixi run -e firmware legacy-esp32 -t upload</code> (PlatformIO builds and flashes the C++; <code>src/secrets.h</code> for its WiFi)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>or the backup: <code>vendor/cargo-tools/bin/espflash write-bin 0 backup-esp32.bin</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>check the C++ is back: its log says <code>=== ESP32: AAV Controller ===</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="after-the-bench">After the bench</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>Then</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All 14 checks pass</td>
+<td>the same on the ground, at walking speed, with Ben</td>
+</tr>
+<tr>
+<td>Proven on the car</td>
+<td>Ben decides: the C++ in <code>firmware/legacy/aav_umod_esp32</code> is removed, and <code>docs/firmware.md</code> updated</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="rust-firmware.html"><small>Previous</small>← Rust firmware</a>
+<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+</main>
+<footer>Source: <code>docs/esp32-bench.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

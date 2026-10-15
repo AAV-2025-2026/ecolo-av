@@ -117,16 +117,18 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 | Part | What it is | Status |
 |---|---|---|
 | `can/aav.dbc` | the CAN contract: four frames between the Orin and the spine | draft v0.1.0 |
-| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 200 ms watchdog, the speed loop, the encoder | [[works]] 54 tests, and the bench |
+| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 200 ms watchdog, the speed loop, the encoder | [[works]] 64 tests, and the bench |
 | `spine/crates/aav-inputs` | debounced switches, an e-stop that trips at once, counting with a lockout | [[works]] 9 tests |
 | `spine/crates/jrk-g2` | the Pololu Jrk G2 (steering, brake) over I2C | [[works]] 14 tests, against mocks |
 | `spine/crates/ad5311` | the throttle DAC over I2C | [[works]] 10 tests, against mocks |
 | `spine/crates/pca9555` | the I/O expander (direction) over I2C | [[works]] 6 tests, against mocks |
 | `spine/crates/ibus` | the FlySky RC receiver's protocol | [[works]] 24 tests |
 | `spine/crates/mcp2515` | the MCP2515 CAN controller over SPI, since a Pico 2 has no CAN | [[works]] 34 tests, against mocks |
-| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait | [[works]] 49 tests, against mocks |
+| `spine/crates/legacy-link` | the 2025-26 UART link: the Motor-Pi's 13-byte frames and the C++'s targets | [[works]] 31 tests, and against the C++ itself |
+| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, the `Board` trait, the `CommandLink` trait (CAN or UART) | [[works]] 61 tests, against mocks |
+| `spine/boards/esp32-umod` | the spine on today's ESP32 control board (Embassy): the C++'s pins and devices; the Motor-Pi's UART or CAN | [[untested]] builds, never flashed |
 | `spine/boards/pico2` | the spine's board program for a Pico 2 (Embassy): it implements `Board`, with a 100 ms hardware watchdog | [[untested]] builds, never flashed. The car's chip is Q10-Q13 |
-| `legacy/aav_umod_esp32` | the 2025-26 ESP32 that drives today's actuators | runs the car today: no timeout, an update page with no password |
+| `legacy/aav_umod_esp32` | the 2025-26 ESP32 that drives today's actuators | runs the car today: no timeout, an update page with no password. Stays until `boards/esp32-umod` is proven on the car |
 | `legacy/wheel_encoder_pico2` | a Pico 2 that counts wheel spokes and sends them over UDP | runs the car today |
 | `legacy/aav_sentinel_pico2` | a Pico 2 status display | not wired in |
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">27 min read · 14 sections</div></header>
+<div class="meta">28 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -47,6 +47,7 @@
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-photos.html">Car photos</a>
 <a href="conventions.html">Conventions</a>
@@ -157,7 +158,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><a href="#firmware-the-spine-rust">Firmware: the spine (Rust)</a></td>
-<td><code>can/aav.dbc</code>, <code>spine-core</code>, <code>aav-inputs</code>, <code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>spine-board</code>, <code>boards/pico2</code></td>
+<td><code>can/aav.dbc</code>, <code>spine-core</code>, <code>aav-inputs</code>, <code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>legacy-link</code>, <code>spine-board</code>, <code>boards/esp32-umod</code>, <code>boards/pico2</code></td>
 </tr>
 <tr>
 <td><a href="#firmware-todays-boards-c">Firmware: today's boards (C++)</a></td>
@@ -1483,10 +1484,10 @@ in <code>firmware/spine</code> (part of <code>tools/test.sh</code>). <a href="fi
 </tr>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's decisions: modes, arming, the 200 ms watchdog, speed loop, encoder</td>
+<td>the spine's decisions: modes, arming, the 200 ms watchdog, speed loop (closed or open), encoder</td>
 <td>the safety rules, testable without hardware</td>
 <td>ours</td>
-<td><span class="badge b-works">works</span> 54 tests, and the bench</td>
+<td><span class="badge b-works">works</span> 64 tests, and the bench</td>
 <td><code>src/lib.rs</code></td>
 </tr>
 <tr>
@@ -1538,12 +1539,28 @@ in <code>firmware/spine</code> (part of <code>tools/test.sh</code>). <a href="fi
 <td><code>src/lib.rs</code></td>
 </tr>
 <tr>
+<td><code>legacy-link</code></td>
+<td>the Motor-Pi's 13-byte UART frames, and the Jrk and DAC targets the C++ set for them</td>
+<td>the Rust ESP32 is a drop-in for the C++</td>
+<td>ours, from the 2025-26 <code>ros2_handler.cpp</code></td>
+<td><span class="badge b-works">works</span> tests, and against the C++ itself</td>
+<td><code>src/lib.rs</code>, <code>vectors.json</code></td>
+</tr>
+<tr>
 <td><code>spine-board</code></td>
-<td>the glue: devices ↔ <code>spine-core</code>, and the <code>Board</code> trait any chip implements</td>
+<td>the glue: devices ↔ <code>spine-core</code>, the <code>Board</code> trait any chip implements, the <code>CommandLink</code> trait (CAN or the UART)</td>
 <td>one loop for any chip (Q10-Q13)</td>
 <td>ours</td>
 <td><span class="badge b-works">works</span> against mocks</td>
 <td><code>src/lib.rs</code></td>
+</tr>
+<tr>
+<td><code>boards/esp32-umod</code></td>
+<td>the spine on today's ESP32 control board (Embassy): the C++'s pins; the Motor-Pi's UART or CAN; a 100 ms watchdog</td>
+<td>the C++'s replacement, in Rust (Ben, 15 Oct)</td>
+<td>ours</td>
+<td><span class="badge b-untested">untested</span> builds, never flashed</td>
+<td><code>src/main.rs</code>, <code>src/pins.rs</code></td>
 </tr>
 <tr>
 <td><code>boards/pico2</code></td>
@@ -1555,7 +1572,7 @@ in <code>firmware/spine</code> (part of <code>tools/test.sh</code>). <a href="fi
 </tr>
 </tbody>
 </table></div>
-<p>Run alone: <code>cd firmware/spine &amp;&amp; cargo test -p &lt;crate&gt;</code>. The board: <code>pixi run spine-uf2</code>.
+<p>Run alone: <code>cd firmware/spine &amp;&amp; cargo test -p &lt;crate&gt;</code>. The boards: <code>pixi run esp-build</code> (after <code>pixi run esp-tools</code>), <code>pixi run spine-uf2</code>.
 Runs on: the spine microcontroller, on CAN (not chosen yet, Q10-Q17).</p>
 </section>
 <section class="card"><h2 id="firmware-todays-boards-c">Firmware: today's boards (C++)</h2>
@@ -1592,7 +1609,7 @@ f824e9d805). They run the car today, until Rust versions replace them.</p>
 </tr>
 <tr>
 <td><strong>Status</strong></td>
-<td>runs the car today. No command timeout; an update page with no password; ten more faults in <a href="firmware.html">Firmware</a></td>
+<td>runs the car today. No command timeout; an update page with no password; ten more faults in <a href="firmware.html">Firmware</a>. Its Rust replacement is <code>boards/esp32-umod</code>; this stays until that is proven on the car</td>
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
