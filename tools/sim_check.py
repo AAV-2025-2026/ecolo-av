@@ -18,9 +18,10 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 3. Checks the running graph against docs/interfaces.yaml (check_graph.py --profile road).
 4. The sensors: the camera's picture and lens are the bench camera's, in camera_left_link;
    the radar stand-in's cloud has the TI driver's fields, in radar_link, and nothing in it
-   while nothing is within 8.4 m.
-5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth) with
-   where the car's own software thinks it is (/localization/odom/global).
+   while nothing is within 8.4 m. The simulated roof lidar: 1800 x 16 rays in lidar_link,
+   10 Hz, some of them hitting the ground and the sign.
+5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth)
+   with where the car's own software thinks it is (/localization/odom/global).
 6. With --perception: Nav2 drives to 40 m east, past the stop sign at 25 m. The car must
    stop with its front bumper before the sign, wait, and go on to the goal. The camera's
    picture with YOLO's boxes, as the lock went on, is saved to /tmp/aav-sim-stop-sign.png.
@@ -63,12 +64,14 @@ from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
 from nav_msgs.msg import Odometry  # noqa: E402
+import numpy  # noqa: E402
 import rclpy  # noqa: E402
 from rclpy.action import ActionClient  # noqa: E402
 from rclpy.node import Node  # noqa: E402
 from rclpy.parameter import Parameter  # noqa: E402
 from rclpy.qos import qos_profile_sensor_data  # noqa: E402
 from sensor_msgs.msg import CameraInfo, Image, PointCloud2  # noqa: E402
+from sensor_msgs_py import point_cloud2  # noqa: E402
 from std_msgs.msg import Bool  # noqa: E402
 from vision_msgs.msg import Detection2DArray  # noqa: E402
 import yaml  # noqa: E402
@@ -83,6 +86,7 @@ SIGN_X = BENCH['stop_signs'][0]         # m east: the stop sign
 OBSTACLE = os.path.join(ROOT, 'src', 'backends', 'aav_gazebo', 'models', 'obstacle',
                         'model.sdf')
 RADAR_FIELDS = ['x', 'y', 'z', 'intensity', 'velocity']   # the TI driver's
+LIDAR_RAYS = (1800, 16)     # the simulated roof lidar: steps around, beams (sensors xacro)
 
 # Lane keeping (--lane), as bench_check.py: where the car starts, what counts as back on the
 # centre line, and how long it has to get there.
@@ -130,10 +134,11 @@ class Probe(Node):
         # On Gazebo's clock, like every node in the sim.
         super().__init__('sim_check', parameter_overrides=[Parameter('use_sim_time',
                                                                      value=True)])
-        self.truth = self.glob = self.image = self.info = self.cloud = None
+        self.truth = self.glob = self.image = self.info = self.cloud = self.lidar = None
         # Every truth sample, lane message and sensor stamp, from the start: lane keeping
         # starts as soon as the camera sees the lane, before its check begins.
         self.track, self.lanes, self.image_stamps, self.cloud_stamps = [], [], [], []
+        self.lidar_stamps = []
         self.create_subscription(Odometry, '/vehicle/gazebo/truth', self.on_truth, 10)
         self.create_subscription(Odometry, '/localization/odom/global',
                                  lambda m: setattr(self, 'glob', m), 10)
@@ -143,6 +148,8 @@ class Probe(Node):
                                  lambda m: setattr(self, 'info', m), 2)
         self.create_subscription(PointCloud2, '/sensors/radar/points', self.on_cloud,
                                  qos_profile_sensor_data)
+        # The simulated roof lidar (lidar:=true, the default): reliable, as it publishes.
+        self.create_subscription(PointCloud2, '/sensors/lidar/points', self.on_lidar, 2)
         self.drive = ActionClient(self, ScriptedDrive, '/scripted_drive')
         self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
         self.stop, self.stop_picture, self.picture, self.stop_sign = False, None, None, None
@@ -173,6 +180,10 @@ class Probe(Node):
     def on_cloud(self, msg):
         self.cloud = msg
         self.cloud_stamps = self.cloud_stamps[-49:] + [seconds(msg.header.stamp)]
+
+    def on_lidar(self, msg):
+        self.lidar = msg
+        self.lidar_stamps = self.lidar_stamps[-49:] + [seconds(msg.header.stamp)]
 
     def on_boxes(self, msg):
         x = self.truth.pose.pose.position.x if self.truth is not None else math.nan
@@ -259,6 +270,22 @@ def check_sensors(probe):
            f'{BENCH["focal_px"]:.0f}); radar stand-in in {cloud.header.frame_id} at '
            f'{radar_hz:.1f} Hz, fields {",".join(fields)}, '
            f'{cloud.width * cloud.height} points with nothing within 8.4 m')
+    check_lidar(probe)
+
+
+def check_lidar(probe):
+    """Check the simulated roof lidar: 1800 x 16 rays in lidar_link at 10 Hz, some hitting."""
+    cloud = probe.lidar
+    if cloud is None:
+        result('lidar', False, 'nothing on /sensors/lidar/points (lidar:=true is the default)')
+        return
+    x = point_cloud2.read_points(cloud, field_names=['x'], skip_nans=False)['x']
+    hits = int(numpy.isfinite(x).sum())
+    lidar_hz = rate(probe.lidar_stamps)
+    ok = (cloud.header.frame_id == 'lidar_link' and (cloud.width, cloud.height) == LIDAR_RAYS
+          and abs(lidar_hz - 10.0) < 1.5 and hits > 1000)
+    result('lidar', ok, f'{cloud.width} x {cloud.height} rays in {cloud.header.frame_id} at '
+                        f'{lidar_hz:.1f} Hz, {hits} hits (the ground and the sign)')
 
 
 def check_drive(probe):
