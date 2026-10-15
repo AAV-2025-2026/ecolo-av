@@ -5,7 +5,11 @@ resolver = "2"
 # hud-app: the program itself, raylib on the main thread. The `ros` feature (on by
 #   default, for colcon) adds the rclrs node; without it only --demo works:
 #   `cargo run -p hud-app --no-default-features -- --demo`
-members = ["crates/hud-core", "crates/hud-app"]
+# map-core: the map window's logic (map to screen, the grid's pixels, the distance left).
+#   No ROS, no raylib: `cargo test -p map-core`.
+# map-app: the map window for the big screen, binary `map`, built like hud-app:
+#   `cargo run -p map-app --no-default-features -- --demo`
+members = ["crates/hud-core", "crates/hud-app", "crates/map-core", "crates/map-app"]
 
 [workspace.package]
 version = "0.1.0"

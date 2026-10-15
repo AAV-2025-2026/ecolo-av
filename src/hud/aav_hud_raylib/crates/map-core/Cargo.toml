@@ -1,0 +1,13 @@
+[package]
+name = "map-core"
+description = "The map window's logic, with no ROS and no raylib: map to screen, the occupancy grid's pixels, the distance left"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Shared with the HUD: OK / STALE / NEVER, /system/source's banner, formatting.
+hud-core = { path = "../hud-core" }
+serde = { version = "1", features = ["derive"] }
+serde_yaml_ng = "0.10"
+thiserror = "2"

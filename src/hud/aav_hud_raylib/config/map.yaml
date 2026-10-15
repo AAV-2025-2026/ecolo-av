@@ -1,0 +1,13 @@
+# map: the big screen's map window (aav_hud_raylib). Every topic name it uses lives here,
+# not in the code: rename a topic here (or with `--ros-args -p plan_topic:=...`), never in
+# Rust. Built into the program as its defaults, so --demo shows the same names.
+map:
+  ros__parameters:
+    map_topic: /map                           # nav_msgs/msg/OccupancyGrid, latched: Nav2's map
+    odom_topic: /localization/odom/global     # nav_msgs/msg/Odometry, map frame: the car
+    plan_topic: /plan                         # nav_msgs/msg/Path: Nav2's planned path
+    goal_topic: /goal_pose                    # geometry_msgs/msg/PoseStamped: RViz's 2D Goal Pose
+    source_topic: /system/source              # aav_interfaces/msg/DataSource, latched: the SIMULATED banner
+    stale_after: 1.0                          # s: the car's position this old shows STALE
+    plan_stale_after: 3.0                     # s: Nav2 replans every 1 s while it drives; older = it stopped
+    arrive_within: 1.0                        # m: the car this close to the goal = ARRIVED (Nav2's own is 0.5)
