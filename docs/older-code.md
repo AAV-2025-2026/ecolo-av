@@ -104,6 +104,21 @@ The repos are public. Deleting a file doesn't remove it from the history.
 
 `aav` and its history contain none of these secrets.
 
+## How to read the older code safely
+
+The "In `aav`?" columns above already map each repo to its module here; each module's
+card is in [Every module](modules.md). To read the originals:
+
+| Do | Why |
+|---|---|
+| Read the clones next to `aav` (`~/Code/aav/` on Ben's Mac, `/home/ben/aav/` on oirp-spss) | they are read-only copies: never build, fix or commit in them |
+| Search only them: `grep -r --exclude-dir=aav --exclude-dir=aav-linux-build-output <word> .` from `~/Code/aav` | so the search skips our own code and the build output |
+| Check the branch first: `git -C <repo> branch -a` | the working code is often not on `main` (AAV_cortex: `6-pico2-aav-firmware`; Motor-Control: `FinalRev`) |
+| Start from the `PROVENANCE.md` of the module that came from it | it names the repo, branch and commit we copied, and every change since |
+| When a search hits a token, key or password, close the file | write down only where it is and what kind (the "Red flags" table). Never paste it into notes, chat or an AI app |
+| Don't run the old scripts or flash the old firmware from the clones | some reach the car's WiFi or flash a board; the car's own copies are what Friday's [audit](audit-friday.md) records |
+| Expect the old topic names (`/cmd_vel`, `/gps/fix`, ...) | they're Humble-era; ours start with their area ([Topic areas](naming.md)) |
+
 ## Bringing more code in
 
 | Rule | Why |
