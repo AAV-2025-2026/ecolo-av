@@ -83,6 +83,15 @@ nothing publishes that topic there.
 
 ## The Flutter app (2025-26): what it is
 
+**Decided (Ben, 15 Oct): the raylib HUD replaces it** (Q29). What it looked like, drawn
+from its own code by a Flutter widget test with pretend data (15 Oct). The map tiles are
+blank: they came from a tile server on the car's Pi.
+
+| Dashboard | Map |
+|---|---|
+| ![The Flutter dashboard](img/flutter-dashboard.png) | ![The Flutter map](img/flutter-map.png) |
+
+
 Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26, two
 800x480 screens):
 
