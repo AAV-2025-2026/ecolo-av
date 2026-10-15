@@ -21,6 +21,11 @@ defaults:
 
 env:
   PIXI_VERSION: v0.81.0
+  # GitHub's Ubuntu runners ship PowerShell and set PSModulePath, so colcon takes PowerShell
+  # for its shell and sets each package's environment from package.ps1: our own packages'
+  # paths then never reach a build (aav_hud_raylib's cargo found no aav_interfaces). Empty,
+  # colcon uses sh, as on a laptop.
+  PSModulePath: ""
 
 jobs:
   linux:
