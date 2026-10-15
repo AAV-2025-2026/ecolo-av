@@ -5,10 +5,13 @@ Radar clustering: DBSCAN groups the radar's points into objects, with a box roun
   ros2 launch aav_radar_clusters radar_clusters.launch.py mock:=true minimum_points:=5 \
       radar_rviz:=true                                          # pretend points, in RViz
 
-Subscribes  /sensors/radar/points          sensor_msgs/PointCloud2, best effort (aav_sensors starts
-                                   the radar; the bench, its stand-in)
-Publishes   /perception/radar/clusters        sensor_msgs/PointCloud2: the clustered points, coloured
-            /perception/radar/cluster_boxes   visualization_msgs/MarkerArray: a box round each cluster
+Subscribes  /sensors/radar/points            sensor_msgs/PointCloud2, best effort
+                                             (aav_sensors starts the radar; the bench, its
+                                             stand-in)
+Publishes   /perception/radar/clusters       sensor_msgs/PointCloud2: the clustered
+                                             points, coloured
+            /perception/radar/cluster_boxes  visualization_msgs/MarkerArray: a box round
+                                             each cluster
 
 You can set: eps (metres: points this close are neighbours), minimum_points (the
 neighbours a point needs, itself included, to start or grow a cluster), mock (pretend
@@ -36,7 +39,8 @@ def generate_launch_description():
                               description='RViz with the radar points, clusters and boxes'),
         Node(
             package='ti_ros2_driver', executable='mock_radar_publisher', name='mock_radar',
-            parameters=[{'topic': '/sensors/radar/points', 'frame_id': 'radar_link', 'mode': 'static'}],
+            parameters=[{'topic': '/sensors/radar/points', 'frame_id': 'radar_link',
+                         'mode': 'static'}],
             condition=IfCondition(arg('mock')),
         ),
         Node(

@@ -9,6 +9,7 @@ OURS=(src/aav_bringup src/aav_description src/backends src/drivers src/ego src/l
       src/perception/aav_yolo/aav_yolo src/perception/aav_yolo/launch
       src/perception/aav_yolo/test src/perception/aav_yolo/setup.py src/bench/aav_bench
       src/perception/aav_lane_finder
-      src/hud/aav_hud src/hud/aav_hud_raylib/launch)
+      src/hud/aav_hud src/hud/aav_hud_raylib/launch src/perception/aav_radar_clusters/launch
+      src/perception/aav_radar_clusters/test)
 ament_flake8 "${OURS[@]}"
 ament_pep257 "${OURS[@]}"

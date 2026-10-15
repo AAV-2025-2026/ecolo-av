@@ -46,6 +46,9 @@ OUT = (Path(__file__).resolve().parents[1] / 'crates' / 'radar-clustering' / 'te
 # The C++ node's eps and minimum_points, as car.launch.py and bench.launch.py gave them.
 SETTINGS = [('the car', 0.8, 15), ('the bench', 0.8, 5)]
 FIELDS = ('x', 'y', 'z', 'intensity', 'velocity')   # as the TI driver sends them
+POINTS = '/sensors/radar/points'
+CLUSTERS = '/perception/radar/clusters'
+BOXES = '/perception/radar/cluster_boxes'
 RANDOM_CLOUDS = 40                                  # per setting
 
 
@@ -55,7 +58,7 @@ def f32(v):
 
 
 def cpp_threshold(eps):
-    """The C++ node's test, squared distance <= eps, with eps through a float, as it did."""
+    """Return the C++ node's limit: squared distance <= eps, with eps through a float."""
     return f32(eps)
 
 
@@ -160,11 +163,11 @@ class Collector(Node):
         super().__init__('radar_compare')
         self.lock = threading.Lock()
         self.clouds, self.boxes = [], []
-        self.pub = self.create_publisher(PointCloud2, '/sensors/radar/points', 10)
+        self.pub = self.create_publisher(PointCloud2, POINTS, 10)
         # The C++ published its clusters best effort, the Rust node reliable: this hears both.
         best_effort = QoSProfile(depth=100, reliability=ReliabilityPolicy.BEST_EFFORT)
-        self.create_subscription(PointCloud2, '/perception/radar/clusters', self.on_cloud, best_effort)
-        self.create_subscription(MarkerArray, '/perception/radar/cluster_boxes', self.on_boxes, 100)
+        self.create_subscription(PointCloud2, CLUSTERS, self.on_cloud, best_effort)
+        self.create_subscription(MarkerArray, BOXES, self.on_boxes, 100)
 
     def on_cloud(self, msg):
         with self.lock:
@@ -177,12 +180,12 @@ class Collector(Node):
     def wait_for_node(self, timeout=20.0):
         end = time.monotonic() + timeout
         while time.monotonic() < end:
-            if (self.pub.get_subscription_count() and self.count_publishers('/perception/radar/clusters')
-                    and self.count_publishers('/perception/radar/cluster_boxes')):
+            if (self.pub.get_subscription_count() and self.count_publishers(CLUSTERS)
+                    and self.count_publishers(BOXES)):
                 time.sleep(1.0)   # let both sides finish matching
                 return
             time.sleep(0.1)
-        raise RuntimeError('the node never showed up on /sensors/radar/points')
+        raise RuntimeError(f'the node never showed up on {POINTS}')
 
     def play(self, points, tag, timeout=5.0):
         """Publish one cloud; return the cloud and the boxes the node published for it."""
@@ -216,8 +219,8 @@ def start(node, eps, min_points):
         args = ['-p', f'eps:={eps}', '-p', f'minimum_points:={min_points}',
                 '-p', 'bounding_boxes:=true', '-p', 'target_frame:=radar_link',
                 '-p', 'name_box:=radar_clusters',
-                '-r', '/ti_mmwave/radar_scan_pcl:=/sensors/radar/points',
-                '-r', 'dbscan_output:=/perception/radar/clusters', '-r', 'dbscan_box:=/perception/radar/cluster_boxes']
+                '-r', f'/ti_mmwave/radar_scan_pcl:={POINTS}',
+                '-r', f'dbscan_output:={CLUSTERS}', '-r', f'dbscan_box:={BOXES}']
     else:
         exe = os.path.join(get_package_prefix('aav_radar_clusters'), 'lib',
                            'aav_radar_clusters', 'radar_clusters')
@@ -260,11 +263,11 @@ def members_of(points, coordinates):
 
 
 def cpp_answer(points, cloud, boxes):
-    """The C++ node's clusters (from its boxes' points), boxes, and zero padding."""
+    """Return the C++ node's clusters (from its boxes' points), boxes, and zero padding."""
     clusters, cubes = [], []
     for m in boxes.markers:
-        if (m.type, m.action, m.ns, m.header.frame_id) != (Marker.CUBE, Marker.ADD,
-                                                          'radar_clusters', 'radar_link'):
+        expected = (Marker.CUBE, Marker.ADD, 'radar_clusters', 'radar_link')
+        if (m.type, m.action, m.ns, m.header.frame_id) != expected:
             raise RuntimeError(f'an unexpected marker: {m}')
         coordinates = [(p.x, p.y, p.z) for p in m.points]
         clusters.append((m.id, members_of(points, coordinates)))
@@ -283,7 +286,7 @@ def cpp_answer(points, cloud, boxes):
 
 
 def rust_answer(points, cloud, boxes, tag):
-    """The Rust node's clusters (from the cloud's cluster field) and boxes, checked."""
+    """Return the Rust node's clusters (from the cloud's cluster field) and boxes, checked."""
     first, *cubes = boxes.markers
     if (first.action, first.ns) != (Marker.DELETEALL, 'radar_clusters'):
         raise RuntimeError(f'{tag}: the boxes do not start with a DELETEALL')
