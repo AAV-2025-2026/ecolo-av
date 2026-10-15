@@ -3,6 +3,28 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## Where we stopped (15 Oct, morning)
+
+Everything from the night of 14-15 Oct is on `main` and pushed, except two branches that
+wait for Ben. GitHub's Linux CI is green again.
+
+| Waiting for Ben | Branch | Why |
+|---|---|---|
+| CAN v0.2: the ESP32 board as the spine, wheel frames 0x200/0x201, 100 ms timeout | `wt/can-v2` | it changes the CAN contract (`docs/can-plan.md`) |
+| The ESP32 control board's firmware in Rust (today's UART link, CAN optional) | `wt/rust-esp32` | actuator firmware for the real car: never flashed. `docs/esp32-bench.md` |
+| `wt/ackermann`: reversing in Nav2 | `wt/ackermann` | paused 11 Oct, not restarted |
+
+**Found overnight, for Friday's audit:**
+- Today's ESP32 firmware has **no command timeout, no e-stop input and no watchdog**, and an
+  unprotected web update page.
+- SparkFun's ESP32 MicroMod schematic shows its **CAN pads not connected**: check that the
+  control board's CAN chip (U7) can reach the ESP32 before ordering the KEFC CAN parts.
+- The front cameras are ribbon (CSI); our driver `usb_cam` is USB-only: `camera_ros` instead.
+- A lidar is on the roof; we have a simulated one (`lidar:=true`) but no driver.
+
+**Next, in order:** Friday's audit (`docs/audit-friday.md`); Ben's answers on the two
+branches above; the A-to-B drive (`READ-ME-A-TO-B.md`); the HUD's map panel.
+
 ## Where we stopped (11 Oct, 12:30)
 
 Ben, 12:27: "lets try to put everything to a reasonable state and we can audit the
