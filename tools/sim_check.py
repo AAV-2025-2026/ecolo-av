@@ -6,6 +6,7 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run -e ml sim-check --perception  (adds YOLO and the stop sign: 2 more minutes)
     pixi run sim-check --obstacle          (adds a box for the radar stand-in: 2 more minutes)
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
+    pixi run sim-check --no-lidar          (without the simulated roof lidar: lidar:=false)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -130,6 +131,8 @@ def gz_service(service, reqtype, request):
 
 class Probe(Node):
 
+    lidar_on = True     # sim-check --no-lidar starts the sim with lidar:=false
+
     def __init__(self):
         # On Gazebo's clock, like every node in the sim.
         super().__init__('sim_check', parameter_overrides=[Parameter('use_sim_time',
@@ -239,11 +242,15 @@ def check_contract(probe, env, tag):
             probe.spin_for(60.0, lambda: graph.poll() is not None)
             code = graph.wait()
             out.seek(0)
-            fails = [line for line in out.read().splitlines() if line.startswith('FAIL')]
-        if code == 0 and not fails:
+            found = [line for line in out.read().splitlines() if line.startswith('FAIL')]
+        # --no-lidar: the contract's lidar is the default's, so it's missing on purpose.
+        fails = [line for line in found
+                 if probe.lidar_on or '/sensors/lidar/points:' not in line]
+        ok = not fails and (code == 0 or bool(found))   # a crash prints no FAIL
+        if ok:
             break
         probe.spin_for(10.0)
-    result(f'graph vs contract{tag}', code == 0 and not fails,
+    result(f'graph vs contract{tag}', ok,
            f'{len(fails)} failures' + (': ' + '; '.join(fails[:3]) if fails else ''))
 
 
@@ -270,7 +277,8 @@ def check_sensors(probe):
            f'{BENCH["focal_px"]:.0f}); radar stand-in in {cloud.header.frame_id} at '
            f'{radar_hz:.1f} Hz, fields {",".join(fields)}, '
            f'{cloud.width * cloud.height} points with nothing within 8.4 m')
-    check_lidar(probe)
+    if probe.lidar_on:
+        check_lidar(probe)
 
 
 def check_lidar(probe):
@@ -524,13 +532,15 @@ def main():
         checks.append(check_obstacle)
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
-    session([f'perception:={str(perception).lower()}'], checks, logs[0])
+    lidar = f'lidar:={str("--no-lidar" not in args).lower()}'
+    Probe.lidar_on = '--no-lidar' not in args
+    session([f'perception:={str(perception).lower()}', lidar], checks, logs[0])
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-lane{ext}')
-        session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'],
+        session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}', lidar],
                 [check_lane_keeping], logs[1], 'lane')
 
     print('\n| Check | Result | Detail |\n|---|---|---|')
