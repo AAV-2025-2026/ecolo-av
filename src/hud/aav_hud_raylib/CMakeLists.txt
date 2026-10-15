@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 # A Rust package, built like aav_imu_yahboom: CMake only runs cargo and installs the
-# result, so colcon, `ros2 run aav_hud_raylib hud` and launch files treat it like any node.
+# result, so colcon, `ros2 run aav_hud_raylib hud` (or `map`) and launch files treat them
+# like any node.
 project(aav_hud_raylib NONE)
 
 find_package(ament_cmake REQUIRED)
@@ -37,12 +38,13 @@ set(CARGO_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/target)
 add_custom_target(cargo_build ALL
   COMMAND ${CMAKE_COMMAND} -E env --unset=MAKEFLAGS --unset=MFLAGS --unset=CARGO_MAKEFLAGS
     CARGO_TARGET_DIR=${CARGO_TARGET_DIR}
-    ${CARGO} build --release --locked --quiet --bin hud
+    ${CARGO} build --release --locked --quiet --bin hud --bin map
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  COMMENT "cargo build --release --bin hud (raylib from source the first time: a minute)"
+  COMMENT "cargo build --release --bin hud --bin map (raylib from source the first time: a minute)"
   VERBATIM)
 
-install(PROGRAMS ${CARGO_TARGET_DIR}/release/hud
+# hud: the in-car screen. map: the big screen's map window.
+install(PROGRAMS ${CARGO_TARGET_DIR}/release/hud ${CARGO_TARGET_DIR}/release/map
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

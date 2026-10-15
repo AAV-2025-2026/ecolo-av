@@ -31,7 +31,7 @@ LAYERS = [
      r'^(scripted_driver|joy_node|teleop_twist_joy_node|joy_teleop|teleop_twist_keyboard'
      r'|bt_navigator|controller_server|planner_server|behavior_server|velocity_smoother'
      r'|waypoint_follower|smoother_server|map_server|collision_monitor)$'),
-    ('HUD', '#E8F1FB', r'^(hud_server|hud)$'),
+    ('HUD', '#E8F1FB', r'^(hud_server|hud|map)$'),
     ('Mux and ego', '#F6E8F6', r'^(twist_mux|ego)$'),
     ('Backend', '#FDECEE', r'^(spine_bridge|legacy_.*|encoder_udp|.*_adapter|socket_can_.*)$'),
     ('Car model', '#F2F2F2', r'^(robot_state_publisher|joint_state_publisher)$'),

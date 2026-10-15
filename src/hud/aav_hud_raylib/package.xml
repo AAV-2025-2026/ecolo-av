@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_hud_raylib</name>
   <version>0.1.0</version>
-  <description>hud: the in-car screen in Rust, one raylib program that is also its ROS node (rclrs). Speed, mode, the e-stop button, steering, throttle and brake, the GPS fix, topic health, the stop-sign alert and the camera. Topic names in config/hud.yaml.</description>
+  <description>hud: the in-car screen in Rust, one raylib program that is also its ROS node (rclrs). Speed, mode, the e-stop button, steering, throttle and brake, the GPS fix, topic health, the stop-sign alert and the camera. Topic names in config/hud.yaml. Also map: the big screen's map window (Nav2's map, the car, the plan, the distance left), topic names in config/map.yaml.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 
@@ -15,6 +15,10 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>aav_interfaces</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <!-- map: the car's outline, from vehicle.yaml (a copy built in, the installed one at launch). -->
+  <depend>aav_description</depend>
 
   <exec_depend>launch_ros</exec_depend>
 

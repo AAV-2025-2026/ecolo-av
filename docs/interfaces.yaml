@@ -98,7 +98,7 @@ topics:
   /system/source:
     type: aav_interfaces/msg/DataSource
     pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, replay_source]
-    sub: [hud]
+    sub: [hud, map]
     live: [turtle, sim, car, replay, bench]
     note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.
 
@@ -365,9 +365,9 @@ topics:
   /localization/odom/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
-    sub: [navsat_transform]
+    sub: [navsat_transform, map]
     live: [sim, car, replay, bench]
-    note: map frame. Includes GPS; can jump.
+    note: map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it.
   /localization/gps/odom:
     type: nav_msgs/msg/Odometry
     pub: [navsat_transform]
@@ -385,19 +385,19 @@ topics:
   /map:
     type: nav_msgs/msg/OccupancyGrid
     pub: [map_server]
-    sub: [global_costmap, local_costmap]
+    sub: [global_costmap, local_costmap, map]
     live: [sim]
-    note: Transient local (latched). From aav_navigation/maps.
+    note: Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud_raylib) draws it north up, for the big screen.
   /goal_pose:
     type: geometry_msgs/msg/PoseStamped
     pub: [rviz2]
-    sub: [bt_navigator]
-    note: RViz "2D Goal Pose" starts a navigate_to_pose.
+    sub: [bt_navigator, map]
+    note: RViz "2D Goal Pose" starts a navigate_to_pose. The map window shows it until Nav2 plans for it.
   /plan:
     type: nav_msgs/msg/Path
     pub: [planner_server]
-    sub: []
-    note: The planned path, for RViz/Foxglove.
+    sub: [map]
+    note: The planned path, for RViz/Foxglove, and the map window (map, aav_hud_raylib) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.
 
   # --- frames and plumbing ---
   /tf:
