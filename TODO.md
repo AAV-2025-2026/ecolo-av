@@ -12,7 +12,7 @@ commit, "Work in progress".
 
 | Branch | Done there (committed, checked) | Unfinished (its last commit) |
 |---|---|---|
-| `wt/sim-full` | the road world in Gazebo: lane lines, a stop sign, an obstacle, the car's camera and radar; the car's whole graph in `pixi run sim`, checked by `sim-check` | the Simulation page, and a picture |
+| `wt/sim-full` | the road world in Gazebo: lane lines, a stop sign, an obstacle, the car's camera and radar; the car's whole graph in `pixi run sim`, checked by `sim-check` | ~~the Simulation page, and a picture~~ *Done 15 Oct, with a lidar; merged into `main`* |
 | `wt/ackermann` | one reverse speed for the whole car: 0.5 m/s, from `vehicle.yaml` | reversing in Nav2: behaviour trees, settings, a test |
 | `wt/rust-ports` | the Rust IMU driver is the default, and the C++ one is gone | the radar clustering as a Rust node (`aav_radar_clusters`) |
 
@@ -24,7 +24,7 @@ commit, "Work in progress".
    keys are fixed (i, j, l and so on), so this is a small keyboard driver of our own, in
    the keyboard's place in the mux.
 3. **Finish and merge the three branches:** each one's own checks, then `pixi run test`.
-   `wt/sim-full` is nearly ready.
+   `wt/sim-full` is merged (15 Oct).
 4. **Then** the board drivers in Rust, and the raylib HUD.
 
 ## 14 Oct: the car in photos, the KEFC CAN plan
@@ -39,6 +39,10 @@ a second Orin). Pages: [car photos](docs/car-photos.md), [CAN plan](docs/can-pla
 - [ ] **DBC v0.2.0** for the KEFC plan: the ESP32 board as the spine, wheel frames 0x200 and
       0x201, a 100 ms timeout (`docs/can-plan.md`, Proposed) [[needs-you]].
 - [ ] **A lidar driver:** a lidar is on the roof; our code has none. Model at the audit.
+      *A generic 16-beam lidar runs in Gazebo's road world since 15 Oct, on
+      `/sensors/lidar/points`: the real driver should publish the same.*
+- [x] **Gazebo's road world on `main`** (`wt/sim-full`): the camera, radar and a roof
+      lidar, with the new topic names. *Done 15 Oct: `sim-check` passes on the Mac.*
 - [ ] **Friday's audit:** the checklist at the end of `docs/car-photos.md`.
 
 ## 11 Oct: what we can try at home
@@ -48,8 +52,8 @@ work on." His order, with the work under way:
 
 1. [ ] **The full graph, all set up:** every driver, ego, the simulators. In Gazebo: a road
       with lane lines, a stop sign and an obstacle, a camera and a radar on the car, and
-      perception, lane keeping, collision_monitor and the HUD in `pixi run sim`. *Paused
-      11 Oct, on `wt/sim-full`.*
+      perception, lane keeping, collision_monitor and the HUD in `pixi run sim`. *Done
+      15 Oct: merged from `wt/sim-full`, with a lidar too ([Simulation](docs/simulation.md)).*
       - [ ] **Ackermann done properly**, testable in Gazebo and on the bench: reversing
             (Reeds-Shepp), both front wheels' real angles, the steering curve from
             `Ackermann.m` (Q2). *Paused 11 Oct, on `wt/ackermann`.*

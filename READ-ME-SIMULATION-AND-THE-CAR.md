@@ -7,9 +7,9 @@ Written 15 October 2026, for Ben. It answers three questions:
 3. How does any of it relate to the real car?
 
 > **The short version**
-> - **Gazebo works**, and it **does produce sensor data**: an IMU, a GPS and wheel speed, on `main`.
-> - A camera and a radar in Gazebo are **on a branch**, being finished tonight.
-> - **There is no lidar** anywhere yet, not even in simulation.
+> - **Gazebo works**, and it **does produce sensor data**: an IMU, a GPS, wheel speed, a camera, a radar and a lidar, all on `main`.
+> - The camera, radar and lidar are in the **road world**: `pixi run sim world:=road`.
+> - **The lidar is simulation only**: the car's own lidar has no driver in our code yet.
 > - **None of our code has run on the real car yet.** Everything "works" in simulation or on the bench only.
 > - The point of simulation: the **same nodes** run in all three places. Only the bottom layer changes.
 
@@ -47,7 +47,7 @@ Most of the software doesn't know whether it's driving a real car or a pretend o
 
 ## 3. Does Gazebo produce sensor data? Yes
 
-### On `main` (today)
+### In every world
 
 | Sensor | Gazebo makes it | The car's software sees it as | Rate | Status |
 |---|---|---|---|---|
@@ -66,22 +66,29 @@ Gazebo sensor → ros_gz_bridge → /gazebo/... → gazebo_adapter → the real 
 
 ![The simulated car in Gazebo](docs/img/gazebo-car.png)
 
-### On the branch `wt/sim-full` (being finished tonight)
+### In the road world (`pixi run sim world:=road`)
 
-| Added | The car's software sees it as | Status |
-|---|---|---|
-| A road world: lane lines, a stop sign, a box in the road | | 🔧 written on 11 Oct, checked by `sim-check` then |
-| A camera on the car | `/sensors/camera/front_left/image_raw` | 🔧 being finished |
-| A radar on the car | `/sensors/radar/points` (via `/gazebo/radar/points`) | 🔧 being finished |
-| A lidar on the roof | `/lidar/points` | 🔧 being tried: Gazebo's lidar can crash on a Mac |
+Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on simulated time.
 
-A helper is finishing this branch tonight. It merges into `main` only if all its checks pass.
+| Added | The car's software sees it as | Rate | Status |
+|---|---|---|---|
+| A road: lane lines, a stop sign, a box in the road (`obstacle:=true`) | | | ✅ |
+| A camera on the car | `/sensors/camera/front_left/image_raw` | 10 Hz | ✅ |
+| A radar on the car (a lidar shaped like it) | `/sensors/radar/points` (via `/gazebo/radar/points`) | 10 Hz | ✅ |
+| A 16-beam lidar on the roof (`lidar:=true`, the default) | `/sensors/lidar/points` | 10 Hz | ✅ stable on the Mac |
+
+![What the simulated camera sees](docs/img/sim-camera.png)
+
+- **Cameras and lidars on a Mac:** they render without a window, and didn't crash.
+- **Checked by** `pixi run sim-check`: every check passes, on 15 Oct.
+- **Details:** [Simulation](docs/simulation.md): every sensor's noise, the lidar, what isn't simulated.
 
 ### Not simulated at all
 
 | Thing | Why not |
 |---|---|
-| Lidar (on `main`) | no lidar in our code yet. Its model is unknown (Q22) |
+| The real lidar | Gazebo's is a generic one: the car's model is unknown (Q22), and has no driver yet |
+| The right and rear cameras | only the front left camera is simulated |
 | The magnetometer | the EKFs don't use it |
 | The battery | nothing to simulate yet |
 | The real CAN boards | that's the bench's job, not Gazebo's |
@@ -93,8 +100,8 @@ A helper is finishing this branch tonight. It merges into `main` only if all its
 | twist_mux, ego (the command path) | ✅ | ✅ | ❌ never run |
 | Both EKFs + navsat_transform | ✅ within 0.2 m parked | ✅ 0.03-0.3 m from the truth | ❌ |
 | Nav2 drives to a goal | ✅ 8 m and 9.5 m goals | ✅ 40 m past a stop sign | ❌ |
-| Stop sign → the car stops | 🔧 on the branch | ✅ | ❌ |
-| Obstacle stop (collision_monitor) | | ✅ | ❌ |
+| Stop sign → the car stops | ✅ (11 Oct) | ✅ | ❌ |
+| Obstacle stop (collision_monitor) | ✅ 0.74 m before the box | ✅ | ❌ |
 | The spine and CAN frames | | ✅ against the spine simulator | ❌ the board was never flashed |
 | GPS driver (`ublox_gps`) | | | ❌ never run with the receiver |
 | IMU driver | | | ❌ needs the device |
@@ -118,12 +125,12 @@ A helper is finishing this branch tonight. It merges into `main` only if all its
 | Wheel speed | optical encoder (fouled) on a Pico 2 | `aav_legacy` reads it | 2 Hall sensors → 2 ESP32 wheel nodes → CAN |
 | Steering feedback | none (open loop) | `measured_steering_angle` waits for it | KTC-100 pot → the Jrk G2 |
 | GPS | ZED-F9R on a taped u.FL lead | `ublox_gps` driver, untested | new ZED-F9R board, screw-on antenna |
-| Lidar | on the roof, unknown model | **nothing** | read on Orin #2 |
+| Lidar | on the roof, unknown model | a generic one in Gazebo only; no driver | read on Orin #2 |
 | Cameras | 2 front Pi 5s | `usb_cam` launch, untested | + a rear Pi 5 |
 
 ## 7. The plan, in order
 
-1. **Tonight:** finish the Gazebo camera and radar (and maybe a lidar), and merge them if green.
+1. **Done 15 Oct:** the Gazebo camera, radar and lidar, merged into `main`.
 2. **Friday:** the audit (`docs/car-photos.md` has the checklist). Find out what really runs.
 3. **Then:** get our stack onto the car, either Jazzy on the Orin or Pixi, and listen first: `ros2 topic hz /sensors/gps/fix`.
 4. **Then:** drive on stands through `aav_legacy`, before any CAN work.
@@ -138,6 +145,8 @@ A helper is finishing this branch tonight. It merges into `main` only if all its
 | Look at one GPS message | `pixi run tools/ros.sh ros2 topic echo --once /sensors/gps/fix` |
 | Drive it | `pixi run keyboard --sim` |
 | Check the whole graph | `pixi run check sim` |
+| The road world, with camera, radar and lidar | `pixi run sim world:=road` |
+| Test the road world end to end | `pixi run sim-check` (2 minutes, no window) |
 | The bench instead | `pixi run bench`, then `pixi run bench-check` |
 | The HUD on top of it | `pixi run hud` |
 

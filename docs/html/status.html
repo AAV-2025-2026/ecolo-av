@@ -143,6 +143,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> headless on Linux and a Mac; its window on a Mac, with the car driving (10 Oct)</td>
 </tr>
 <tr>
+<td>Gazebo's road world</td>
+<td><code>aav_gazebo</code> <code>world:=road</code></td>
+<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code> and <code>--obstacle</code> pass; <code>--perception</code> passed on 11 Oct. <span class="badge b-untested">untested</span> on Linux, which needs EGL (<a href="simulation.html">Simulation</a>)</td>
+</tr>
+<tr>
 <td>Real car</td>
 <td><code>aav_spine</code></td>
 <td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>: arming, driving, both e-stops</td>
@@ -214,8 +219,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Lidar</td>
-<td>on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22)</td>
-<td><span class="badge b-missing">missing</span></td>
+<td>on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo only (<code>/sensors/lidar/points</code>, 15 Oct)</td>
+<td><span class="badge b-missing">missing</span> on the car</td>
 </tr>
 </tbody>
 </table></div>
@@ -238,8 +243,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; <code>colcon test</code> 291, 0 failures; the HUD app's own tests</td>
 </tr>
 <tr>
-<td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim, replay and bench</td>
-<td><span class="badge b-works">works</span> 0 failures each</td>
+<td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim, road, replay and bench</td>
+<td><span class="badge b-works">works</span> 0 failures each (sim and road again on 15 Oct, after the topic renaming)</td>
 </tr>
 <tr>
 <td><code>pixi run bench-check</code> (<code>--perception</code>, <code>--lane</code>, <code>--obstacle</code>)</td>

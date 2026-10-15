@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">6 min read · 6 sections</div></header>
+<div class="meta">17 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -55,7 +55,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-parked">CARLA: parked</a><a href="#when-nothing-moves">When nothing moves</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#the-road-world-the-cars-whole-graph">The road world: the car&#x27;s whole graph</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-parked">CARLA: parked</a><a href="#when-nothing-moves">When nothing moves</a></nav>
 <div class="lead"><p>Every backend takes the same <code>/ego/actuator_cmd</code>, so the drivers, mux, ego and
 localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
 the ladder one rung at a time.</p>
@@ -84,8 +84,8 @@ purpose: <code>ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET pixi run sim</code>.</p></di
 </tr>
 <tr>
 <td>3. Gazebo: <code>pixi run sim</code></td>
-<td>the whole stack, on a simulated car with an IMU and GPS</td>
-<td>localization and Nav2</td>
+<td>the whole stack, on a simulated car with an IMU and GPS; in the road world, its camera and radar too</td>
+<td>localization and Nav2; in the road world, the car's whole graph: <code>pixi run sim-check</code></td>
 </tr>
 <tr>
 <td>4. Replay</td>
@@ -122,7 +122,8 @@ driver. Publish <code>false</code> to clear it.</p>
 </section>
 <section class="card"><h2 id="gazebo">Gazebo</h2>
 <pre class="highlight"><code class="language-bash">pixi run sim                     # the empty world, with Nav2
-pixi run sim world:=test_lot     # the walled test lot, with its map</code></pre>
+pixi run sim world:=test_lot     # the walled test lot, with its map
+pixi run sim world:=road         # the bench's road, for the car's camera and radar</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -135,7 +136,7 @@ pixi run sim world:=test_lot     # the walled test lot, with its map</code></pre
 <tr>
 <td><code>world</code></td>
 <td><code>empty</code></td>
-<td><code>empty</code> or <code>test_lot</code></td>
+<td><code>empty</code>, <code>test_lot</code> or <code>road</code> (<a href="#the-road-world-the-cars-whole-graph">the road world</a>)</td>
 </tr>
 <tr>
 <td><code>nav</code></td>
@@ -162,6 +163,135 @@ pixi run sim world:=test_lot     # the walled test lot, with its map</code></pre
 <td><code>true</code></td>
 <td>open RViz</td>
 </tr>
+<tr>
+<td><code>lidar</code></td>
+<td><code>true</code></td>
+<td>the simulated roof lidar, in the road world only (<a href="#the-lidar-gazebo-only">below</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-gazebo-simulates">What Gazebo simulates</h3>
+<p>Rates measured on Ben's Mac, 15 Oct, on simulated time (<code>ros2 topic hz -s</code>), with the
+real-time factor at 0.98-0.99.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Gazebo topic</th>
+<th>ROS topic</th>
+<th>Rate</th>
+<th>Noise</th>
+<th>Worlds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMU</td>
+<td><code>/aav/imu</code></td>
+<td><code>/sensors/imu/data_raw</code> (then the filter: <code>/sensors/imu/data</code>)</td>
+<td>50 Hz</td>
+<td>gyro 0.02 rad/s, accel 0.2 m/s²</td>
+<td>all</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td><code>/aav/navsat</code></td>
+<td><code>/sensors/gps/fix</code></td>
+<td>5 Hz</td>
+<td>0.5 m across, 1 m up</td>
+<td>all</td>
+</tr>
+<tr>
+<td>Wheel speed</td>
+<td><code>/model/aav/odometry</code></td>
+<td><code>/vehicle/odom</code> (speed only, like the spine's)</td>
+<td>50 Hz</td>
+<td>none</td>
+<td>all</td>
+</tr>
+<tr>
+<td>Car status</td>
+<td>(<code>gazebo_adapter</code>)</td>
+<td><code>/vehicle/status</code> (computer mode, armed)</td>
+<td>50 Hz</td>
+<td>none</td>
+<td>all</td>
+</tr>
+<tr>
+<td>Front camera</td>
+<td><code>/aav/camera/image</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code>, <code>.../camera_info</code></td>
+<td>10 Hz</td>
+<td>none</td>
+<td>road</td>
+</tr>
+<tr>
+<td>Radar</td>
+<td><code>/aav/radar/points</code> (a lidar shaped like the radar)</td>
+<td><code>/sensors/radar/points</code></td>
+<td>10 Hz</td>
+<td>5 cm</td>
+<td>road</td>
+</tr>
+<tr>
+<td>Lidar (the car has none)</td>
+<td><code>/aav/lidar/points</code></td>
+<td><code>/sensors/lidar/points</code></td>
+<td>10 Hz</td>
+<td>3 cm</td>
+<td>road, <code>lidar:=true</code> (the default)</td>
+</tr>
+<tr>
+<td>Where the car really is</td>
+<td><code>/model/aav/truth</code></td>
+<td><code>/vehicle/gazebo/truth</code>, for checks only</td>
+<td>50 Hz</td>
+<td>none</td>
+<td>road</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each one carries the same name, type and frame as the real device's, so the software above
+can't tell. <code>/gazebo/*</code> topics are Gazebo's own side of <code>gazebo_adapter</code>, not in the
+contract.</p>
+<p><img alt="What the simulated front camera sees, at the start of the road world" src="../img/sim-camera.png" /></p>
+<h3 id="what-isnt-simulated">What isn't simulated</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Why not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The right and rear cameras</td>
+<td>only the front left camera is in the URDF's Gazebo sensors</td>
+</tr>
+<tr>
+<td>The magnetometer</td>
+<td>the EKFs don't use it</td>
+</tr>
+<tr>
+<td>The battery</td>
+<td>nothing to simulate yet</td>
+</tr>
+<tr>
+<td>CAN and the spine</td>
+<td>that's the bench's job (<code>pixi run bench</code>), not Gazebo's</td>
+</tr>
+<tr>
+<td>Steering feedback, motor lag, wheel slip</td>
+<td>Gazebo's Ackermann system steers and drives exactly as told</td>
+</tr>
+<tr>
+<td>A real radar</td>
+<td>the stand-in is a lidar: it sees every surface, and no speeds of its own</td>
+</tr>
+<tr>
+<td>Traffic, people, weather</td>
+<td>the worlds are empty but for the road, the sign and the box</td>
+</tr>
 </tbody>
 </table></div>
 <p>How the simulated car connects:</p>
@@ -172,6 +302,7 @@ pixi run sim world:=test_lot     # the walled test lot, with its map</code></pre
 <li>The IMU filter, both EKFs and <code>navsat_transform</code> run with the car's own configs, on
   simulated time.</li>
 <li>Map (0, 0) is where the car starts, facing east.</li>
+<li>In the road world, the car also has its front camera and a radar stand-in.</li>
 </ul>
 <p>To drive it:</p>
 <ul>
@@ -181,7 +312,9 @@ pixi run sim world:=test_lot     # the walled test lot, with its map</code></pre
 </ul>
 <div class="admonition tip">
 <p class="admonition-title">No GPU, or in a virtual machine?</p>
-<p>Start it with <code>gui:=false</code>, and watch in RViz or Foxglove instead.</p>
+<p>Start it with <code>gui:=false</code>, and watch in RViz or Foxglove instead. The empty and
+test_lot worlds render nothing, so they run anywhere. The road world renders the camera:
+on Linux without a screen, that needs EGL (untested).</p>
 </div>
 <div class="admonition tip">
 <p class="admonition-title">The car never appears?</p>
@@ -190,6 +323,256 @@ each other: they use multicast, and some networks and firewalls block it. Run
 <code>export GZ_IP=127.0.0.1</code> in every terminal, then start again. On a shared computer, also
 set your own <code>GZ_PARTITION=&lt;any name&gt;</code>, so your simulator doesn't meet someone else's.</p>
 </div>
+</section>
+<section class="card"><h2 id="the-road-world-the-cars-whole-graph">The road world: the car's whole graph</h2>
+<p>At home there is no car, so Gazebo runs everything the car runs. The road world is the
+bench's road, built in 3D, so the car's own camera and radar can see it.</p>
+<p><img alt="The car's camera in Gazebo, with YOLO's box, as the car stops for the sign" src="../img/sim-road-stop-sign.png" /></p>
+<h3 id="whats-in-it">What's in it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One lane, 3.5 m wide; white lines 0.15 m wide; 0.5 m of tarmac outside them</td>
+<td>east along y = 0, from x = -20 to 100 m</td>
+</tr>
+<tr>
+<td>A stop sign, 0.75 m across, its centre 2 m up</td>
+<td>25 m east, 2 m right, facing the car</td>
+</tr>
+<tr>
+<td>A 1 m box, with <code>obstacle:=true</code></td>
+<td>in the lane, 15-16 m east</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>It's the bench world: <code>aav_gazebo/test/test_worlds.py</code> checks the numbers against
+  <code>aav_bench/config/bench.yaml</code>. It pairs with the empty map, as the bench does.</li>
+<li>The sign's picture is our own drawing (<code>tools/make_stop_sign.py</code>), so it has no licence
+  to track. The stock YOLO model calls it "stop sign", 0.8-0.97 sure.</li>
+</ul>
+<h3 id="the-cars-sensors-there">The car's sensors there</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>In Gazebo</th>
+<th>On ROS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Front camera</td>
+<td>640 x 360, 86 degrees across, 10 Hz: the bench camera's picture and lens (the 2024-25 calibration at a third of its size)</td>
+<td><code>/sensors/camera/front_left/image_raw</code>, <code>/sensors/camera/front_left/camera_info</code>, in <code>camera_left_link</code></td>
+</tr>
+<tr>
+<td>Radar</td>
+<td>a lidar shaped like the TI radar: 8.4 m, 120 degrees, 61 x 3 rays, 10 Hz. <code>gazebo_adapter</code> keeps the rays that hit something, with the TI driver's fields</td>
+<td><code>/sensors/radar/points</code>, best effort, in <code>radar_link</code></td>
+</tr>
+<tr>
+<td>Where the car really is</td>
+<td>Gazebo's own pose, like the bench's <code>/vehicle/bench/truth</code></td>
+<td><code>/vehicle/gazebo/truth</code>, for checks only</td>
+</tr>
+</tbody>
+</table></div>
+<p>| Lidar, with <code>lidar:=true</code> (the default) | a generic 16-beam spinning lidar: 360 degrees in 1800 steps, 15 degrees down to 15 up, 0.5-100 m, 3 cm of noise, 10 Hz | <code>/sensors/lidar/points</code>, reliable, in <code>lidar_link</code> |</p>
+<p>The radar stand-in isn't a radar: it sees every surface (the sign's post too), and each
+point's speed is the car's own, along the line of sight.</p>
+<h3 id="the-lidar-gazebo-only">The lidar: Gazebo only</h3>
+<p>The car has a lidar on its roof, but its model is unknown (Q22) and our code has no driver
+yet. So Gazebo has a generic one, to try what a lidar would add.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where</td>
+<td><code>lidar_link</code>, in <code>vehicle.yaml</code>: 1.2 m ahead of the rear axle, 1.9 m up (a guess: a 0.4 m mast on the roof)</td>
+</tr>
+<tr>
+<td>Why a mast</td>
+<td>at 0.1 m above the roof, the beam 11 degrees down hit the car's own roof: 904 points a sweep at 0.5 m. At 0.4 m nothing hits the car</td>
+</tr>
+<tr>
+<td>Size</td>
+<td>1800 x 16 points, 0.9 MB a cloud, so it's bridged <strong>reliably</strong>: best effort loses big messages (see <a href="mac.html">Mac</a>)</td>
+</tr>
+<tr>
+<td>Who reads it</td>
+<td>nobody yet but RViz. Nav2's obstacle layer could, once the car has one</td>
+</tr>
+<tr>
+<td>Turn it off</td>
+<td><code>lidar:=false</code>: the frame and the sensor leave the URDF, and its bridge doesn't start</td>
+</tr>
+<tr>
+<td>On the Mac</td>
+<td>stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="One sweep of the simulated lidar, from above: the ground's rings and the stop sign" src="../img/sim-lidar.png" /></p>
+<p>The rings are where each beam meets the flat ground. The far rings come out slightly
+polygonal: Gazebo's <code>gpu_lidar</code> renders depth in a few camera views, and at grazing
+angles small depth errors become large range errors.</p>
+<h3 id="the-parts-the-benchs-argument-names">The parts: the bench's argument names</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Default</th>
+<th>Starts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(always, in the road world)</td>
+<td></td>
+<td><code>radar_clusters</code>, and Nav2's obstacle layer and <code>collision_monitor</code></td>
+</tr>
+<tr>
+<td><code>perception</code></td>
+<td><code>false</code></td>
+<td>YOLO and <code>stop_sign_watcher</code>: twist_mux's stop-sign lock. Needs <code>pixi run -e ml</code></td>
+</tr>
+<tr>
+<td><code>lane</code></td>
+<td><code>false</code></td>
+<td><code>true</code>: lane keeping (<code>lane_finder</code>, and <code>control_interface</code> on <code>/drivers/ai/cmd_vel</code>). Add <code>nav:=false</code>: Nav2 outranks it. <code>fake</code>: on a pretend lane, in any world</td>
+</tr>
+<tr>
+<td><code>camera_obstacles</code></td>
+<td><code>false</code></td>
+<td>the detectors' boxes into Nav2's local costmap</td>
+</tr>
+<tr>
+<td><code>hud</code></td>
+<td><code>false</code></td>
+<td>the HUD's web server, on 127.0.0.1:5000</td>
+</tr>
+<tr>
+<td><code>obstacle</code></td>
+<td><code>false</code></td>
+<td>the bench's 1 m box, in the lane 15 m ahead</td>
+</tr>
+<tr>
+<td><code>start_y</code>, <code>start_yaw</code></td>
+<td><code>0.0</code></td>
+<td>m and rad: start the car this far left of the centre, and turned this far left. The EKFs still start at the origin, facing east</td>
+</tr>
+</tbody>
+</table></div>
+<pre class="highlight"><code class="language-bash">pixi run -e ml sim world:=road perception:=true              # then a Nav2 goal past the sign
+pixi run sim world:=road obstacle:=true                      # the radar stops Nav2 for the box
+pixi run sim world:=road lane:=true nav:=false start_y:=0.3  # lane keeping alone</code></pre>
+<ul>
+<li>Every node runs on Gazebo's clock.</li>
+<li>The camera's parts need the road world: in another world, the launch stops and says so.</li>
+<li>The empty and test_lot worlds render nothing, and start what they always have.</li>
+</ul>
+<h3 id="what-you-see">What you see</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Window</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gazebo</td>
+<td>the car on the road; the window's camera follows it</td>
+</tr>
+<tr>
+<td>RViz (<code>rviz/road.rviz</code>)</td>
+<td>the map and both costmaps, the plan, the car, the radar's points (magenta) and clusters, the stop zone (red), Gazebo's truth (grey arrows), the camera's picture, and YOLO's boxes with <code>perception:=true</code></td>
+</tr>
+<tr>
+<td>rqt_graph: <code>pixi run graph</code></td>
+<td>every node and topic, as on the bench</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="on-a-mac">On a Mac</h3>
+<p>Ben's Mac (Apple silicon, macOS), 15 Oct, <code>pixi run sim world:=road gui:=false rviz:=false</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Do the camera and lidars crash Gazebo?</td>
+<td>no. The camera, the radar stand-in and the roof lidar all render headless, with ogre2 on Metal, with no window and no <code>--headless-rendering</code></td>
+</tr>
+<tr>
+<td>Rates (simulated time)</td>
+<td>camera 10.0 Hz, radar 10.0 Hz, lidar 10.0 Hz, IMU 50.0 Hz, GPS 5.0 Hz, wheel speed 50.0 Hz</td>
+</tr>
+<tr>
+<td>Real-time factor</td>
+<td>0.98-0.99</td>
+</tr>
+<tr>
+<td><code>ros2 topic hz</code> on the camera</td>
+<td>shows <strong>nothing</strong>: Jazzy's <code>hz</code> always subscribes best effort, and a 690 kB image is lost over UDP. Count it reliably instead: <code>ros2 topic echo --qos-reliability reliable --field header.stamp /sensors/camera/front_left/image_raw</code> (90 frames in 10 s)</td>
+</tr>
+<tr>
+<td><code>pixi run check sim</code>, <code>pixi run check road</code></td>
+<td>0 failed</td>
+</tr>
+<tr>
+<td>Gazebo's window too (<code>gui:=true</code>)</td>
+<td>the 11 Oct runs used it; not run again on 15 Oct</td>
+</tr>
+</tbody>
+</table></div>
+<p>The warning <code>gz_frame_id ... not defined in SDF</code> is harmless: Gazebo copies it over, and
+the frames come out right (<code>sim-check</code> tests them).</p>
+<h3 id="sim-check">sim-check</h3>
+<pre class="highlight"><code class="language-bash">pixi run sim-check                                # start-up, contract, sensors, a drive
+pixi run -e ml sim-check --perception --obstacle  # and the stop sign, and the box
+pixi run sim-check --lane                         # and lane keeping, in a second run</code></pre>
+<p>It starts the road world without a window, on a private ROS domain and Gazebo partition,
+on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code>.</p>
+<p>Ran on Ben's Mac, 15 Oct, after the topic renaming:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run sim-check</code></td>
+<td>all pass: start-up, the contract (0 failures), sensors, lidar, a scripted drive of 6.4 m (plan 6.5 m), the global EKF within 0.12-0.26 m of the truth (three runs)</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --obstacle</code></td>
+<td>all pass: the car stood still 0.74 m before the box; with the box gone, Nav2 reached its goal 29.7 m on</td>
+</tr>
+<tr>
+<td><code>pixi run -e ml sim-check --perception</code></td>
+<td>passed on 11 Oct: YOLO 0.94 sure at 59 px, the car stood 3.6 m before the sign, then went on. Not run again on 15 Oct</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="replay-a-recorded-drive">Replay a recorded drive</h2>
 <p>On the car, record a drive: <code>tools/record.sh parking_lot_test</code> writes
@@ -259,7 +642,7 @@ as <code>replay</code> (priority 40). It's open loop, so the car drifts from the
 <tr>
 <td>6</td>
 <td>Does the graph match the contract?</td>
-<td><code>pixi run check sim</code> (or <code>replay</code>)</td>
+<td><code>pixi run check sim</code> (or <code>road</code>, <code>replay</code>)</td>
 </tr>
 </tbody>
 </table></div></section>
