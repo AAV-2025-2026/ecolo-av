@@ -6,6 +6,9 @@ Jetson AGX Orin and the Raspberry Pis); Pixi on Macs and other Linux machines.
 
 **Sensors become telemetry, drivers become one command, and ego moves the car.**
 
+> **Read first:** [READ-ME-SIMULATION-AND-THE-CAR.md](READ-ME-SIMULATION-AND-THE-CAR.md):
+> how far Gazebo goes, what sensor data it makes, and how it all relates to the real car.
+
 ## Read the docs
 
 Open **`docs/html/index.html`** in a browser: short pages with pictures. There's also a
