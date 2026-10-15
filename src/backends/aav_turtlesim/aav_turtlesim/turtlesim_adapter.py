@@ -7,6 +7,9 @@ Publishes   turtle1/cmd_vel   geometry_msgs/Twist (bicycle model: w = v tan(d) /
             vehicle/odom      nav_msgs/Odometry (twist only), so ekf_local can run
             vehicle/status    aav_interfaces/VehicleStatus (mode COMPUTER, armed), so the
                               HUD shows the speed and steering, as with Gazebo
+            vehicle/steering  aav_interfaces/ActuatorState: command = measured (a turtle
+                              steers at once)
+            system/source     aav_interfaces/DataSource, latched: all of it is SIM
 
 The fastest way to test the joystick, mux, ego, scripted driver and ekf_local
 together on a laptop. One turtlesim unit counts as one metre.
@@ -15,14 +18,19 @@ together on a laptop. One turtlesim unit counts as one metre.
 import math
 import signal
 
-from aav_interfaces.msg import VehicleStatus
+from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from turtlesim.msg import Pose
+
+# /system/source: one message, kept for late subscribers.
+LATCHED = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                     durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 
 class TurtlesimAdapter(Node):
@@ -35,10 +43,24 @@ class TurtlesimAdapter(Node):
         self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
         self.steering = 0.0
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
+        self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
         self.create_subscription(Pose, 'turtle1/pose', self.on_pose, 10)
+
+        # Say once, latched, that this car is a turtle.
+        self.source_pub = self.create_publisher(DataSource, 'system/source', LATCHED)
+        announcement = DataSource(announcer=self.get_name())
+        announcement.header.stamp = self.get_clock().now().to_msg()
+        announcement.sensors = [SensorSource(name=n, topic=t, source=SensorSource.SIM)
+                                for n, t in (('vehicle', '/vehicle/status'),
+                                             ('odometry', '/vehicle/odom'))]
+        self.source_pub.publish(announcement)
 
     def on_cmd(self, msg):
         self.steering = msg.drive.steering_angle
+        steer = ActuatorState(command=self.steering, measured=self.steering)
+        steer.header.stamp = msg.header.stamp
+        steer.header.frame_id = 'base_link'
+        self.steering_pub.publish(steer)
         t = Twist()
         t.linear.x = msg.drive.speed
         t.angular.z = msg.drive.speed * math.tan(msg.drive.steering_angle) / self.wheelbase

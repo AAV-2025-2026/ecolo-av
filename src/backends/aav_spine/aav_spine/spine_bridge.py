@@ -9,6 +9,12 @@ Publishes   can/tx            can_msgs/Frame  (ros2_socketcan sender)
             vehicle/status    aav_interfaces/VehicleStatus
             vehicle/joint_states  sensor_msgs/JointState  (front steering joints, for RViz;
                                   joint_state_publisher merges it into /joint_states)
+            vehicle/steering  aav_interfaces/ActuatorState  (command: the last sent; measured:
+                              VEHICLE_FEEDBACK)
+            vehicle/throttle, vehicle/brake  aav_interfaces/ActuatorState  (measured, from
+                              VEHICLE_STATUS; command NaN: the spine's speed loop decides)
+            system/source     aav_interfaces/DataSource, latched: REAL on the car, BENCH on
+                              the bench (the `source` parameter)
 Service     spine/arm         std_srvs/SetBool
 
 Frames are defined in firmware/can/aav.dbc and packed by can_codec.
@@ -23,7 +29,7 @@ command timeout, a driver fault, a spine reboot).
 import math
 import signal
 
-from aav_interfaces.msg import VehicleStatus
+from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
 from aav_spine import can_codec as cc
 from ackermann_msgs.msg import AckermannDriveStamped
 from can_msgs.msg import Frame
@@ -31,9 +37,18 @@ from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Bool
 from std_srvs.srv import SetBool
+
+# /system/source: what the `source` parameter may say.
+SOURCES = {'real': SensorSource.REAL, 'bench': SensorSource.BENCH}
+# What this node publishes, for /system/source.
+ANNOUNCED = (('vehicle', '/vehicle/status'), ('odometry', '/vehicle/odom'),
+             ('steering', '/vehicle/steering'), ('throttle', '/vehicle/throttle'),
+             ('brake', '/vehicle/brake'))
+NAN = float('nan')
 
 
 class SpineBridge(Node):
@@ -49,6 +64,9 @@ class SpineBridge(Node):
         self.yaw_rate_var = self.declare_parameter('yaw_rate_variance', 0.02).value
         self.joints = self.declare_parameter(
             'steering_joints', ['front_left_steering_joint', 'front_right_steering_joint']).value
+        source = self.declare_parameter('source', 'real').value
+        if source not in SOURCES:
+            raise ValueError(f'source:={source}: use one of {sorted(SOURCES)}')
 
         self.cmd = None
         self.cmd_time = None
@@ -63,12 +81,32 @@ class SpineBridge(Node):
         self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
         self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
         self.joint_pub = self.create_publisher(JointState, 'vehicle/joint_states', 10)
+        self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
+        self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
+        self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
+        latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                             durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.source_pub = self.create_publisher(DataSource, 'system/source', latched)
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
         self.create_subscription(Frame, 'can/rx', self.on_frame, 100)
         self.create_service(SetBool, 'spine/arm', self.on_arm)
         self.create_timer(1.0 / drive_hz, self.send_drive)
         self.create_timer(1.0 / estop_hz, self.send_estop)
+        self.announce(SOURCES[source])
+
+    def announce(self, kind):
+        """Say once, latched, where this node's data comes from (/system/source)."""
+        msg = DataSource(announcer=self.get_name())
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.sensors = [SensorSource(name=n, topic=t, source=kind) for n, t in ANNOUNCED]
+        self.source_pub.publish(msg)
+
+    def actuator(self, stamp, command, measured):
+        a = ActuatorState(command=float(command), measured=float(measured))
+        a.header.stamp = stamp
+        a.header.frame_id = 'base_link'
+        return a
 
     # Orin -> spine
 
@@ -177,6 +215,9 @@ class SpineBridge(Node):
         js.position = list(self.wheel_angles(steer))
         self.joint_pub.publish(js)
 
+        command = self.cmd.steering_angle if self.cmd is not None else NAN
+        self.steering_pub.publish(self.actuator(now, command, steer))
+
     def wheel_angles(self, steer):
         """Return the left and right wheel angles for a virtual centre angle (Ackermann)."""
         if abs(steer) < 1e-6:
@@ -200,6 +241,8 @@ class SpineBridge(Node):
             s.speed = self.feedback['measured_speed']
             s.steering_angle = self.feedback['measured_steering_angle']
         self.status_pub.publish(s)
+        self.throttle_pub.publish(self.actuator(s.header.stamp, NAN, s.throttle))
+        self.brake_pub.publish(self.actuator(s.header.stamp, NAN, s.brake))
 
 
 def main(args=None):

@@ -15,7 +15,7 @@
 # Names (docs/naming.md, Decided 15 Oct): every topic starts with its area,
 #   /<area>/<device or node>/<thing>
 # areas: /sensors/ /vehicle/ /can/ /localization/ /perception/ /drivers/ /control/ /ego/
-# /safety/ /hud/. Only ROS's own global names (/tf, /tf_static, /clock, /joint_states,
+# /safety/ /hud/ /system/. Only ROS's own global names (/tf, /tf_static, /clock, /joint_states,
 # /robot_description...) and Nav2's (/map, /goal_pose, /plan) stay outside an area.
 # tools/tests/test_topic_areas.py checks every topic below.
 
@@ -94,6 +94,14 @@ topics:
     live: [turtle, sim, car, bench]
     note: 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs.
 
+  # --- the system: what kind of run this is ---
+  /system/source:
+    type: aav_interfaces/msg/DataSource
+    pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, replay_source]
+    sub: [hud]
+    live: [turtle, sim, car, replay, bench]
+    note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.
+
   # --- backends -> the rest ---
   /vehicle/odom:
     type: nav_msgs/msg/Odometry
@@ -107,6 +115,30 @@ topics:
     sub: [hud_server, hud, language_drive]
     live: [turtle, sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.
+  /vehicle/steering:
+    type: aav_interfaces/msg/ActuatorState
+    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter]
+    sub: []
+    live: [turtle, sim, bench]
+    note: The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too.
+  /vehicle/throttle:
+    type: aav_interfaces/msg/ActuatorState
+    pub: [spine_bridge, gazebo_adapter]
+    sub: []
+    live: [sim, bench]
+    note: The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.
+  /vehicle/brake:
+    type: aav_interfaces/msg/ActuatorState
+    pub: [spine_bridge, gazebo_adapter]
+    sub: []
+    live: [sim, bench]
+    note: The brake, 0..1. As /vehicle/throttle.
+  /vehicle/wheels:
+    type: aav_interfaces/msg/WheelSpeeds
+    pub: [gazebo_adapter]
+    sub: []
+    live: [sim]
+    note: Each wheel's ground speed (m/s), NaN where not measured. Gazebo gives all four (its wheel joints); the car has one encoder, still read as /vehicle/odom.
   /vehicle/joint_states:
     type: sensor_msgs/msg/JointState
     pub: [spine_bridge]

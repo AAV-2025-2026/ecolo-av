@@ -15,6 +15,8 @@ Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd
             sensors/radar/points  sensor_msgs/PointCloud2, best effort, in radar_link: only
                                   the rays that hit something, with the TI driver's fields
                                   (radar.py), only with radar:=true
+            system/source         aav_interfaces/DataSource, latched: everything above, and
+                                  the cameras and lidar Gazebo renders, is SIM (sources.py)
 
 So ekf_local, ekf_global, navsat_transform and imu_filter_madgwick run in simulation
 with the same configs as on the car, and radar_clusters, Nav2's costmap and
@@ -26,15 +28,15 @@ passed on: the road world bridges it to /vehicle/gazebo/truth, for checks only.
 import math
 import signal
 
-from aav_gazebo import radar
-from aav_interfaces.msg import VehicleStatus
+from aav_gazebo import radar, sources
+from aav_interfaces.msg import DataSource, SensorSource, VehicleStatus
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Imu, NavSatFix, NavSatStatus, PointCloud2, PointField
 from sensor_msgs_py import point_cloud2
 
@@ -58,6 +60,7 @@ class GazeboAdapter(Node):
         self.accel_var = self.declare_parameter('accel_stddev', 0.2).value ** 2
         self.gps_var = self.declare_parameter('gps_stddev', 0.5).value ** 2
         self.radar_range = self.declare_parameter('radar_range', 8.4).value   # m
+        lidar = self.declare_parameter('lidar', False).value
         self.steering = 0.0
         self.speed = 0.0
 
@@ -76,6 +79,19 @@ class GazeboAdapter(Node):
                                                    qos_profile_sensor_data)
             self.create_subscription(PointCloud2, 'gazebo/radar/points', self.on_radar,
                                      qos_profile_sensor_data)
+        self.announce(sources.simulated(rendered=self.get_parameter('radar').value,
+                                        lidar=lidar))
+
+    def announce(self, entries):
+        """Say once, latched, that all of this is simulated (/system/source)."""
+        latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                             durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.source_pub = self.create_publisher(DataSource, 'system/source', latched)
+        msg = DataSource(announcer=self.get_name())
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.sensors = [SensorSource(name=n, topic=t, source=SensorSource.SIM)
+                       for n, t in entries]
+        self.source_pub.publish(msg)
 
     def on_cmd(self, msg):
         d = msg.drive

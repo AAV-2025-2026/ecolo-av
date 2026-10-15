@@ -10,7 +10,7 @@ Ben, 14 Oct: "Maybe we need more structure like /localization/<command> and
 ## The rule
 
 The first part of every name is the **area**: the layer of the picture it comes from. The
-same areas as the folders under `src/`.
+same areas as the folders under `src/`, plus `/system/` for the whole run.
 
 ```text
 /<area>/<device or node>/<thing>
@@ -28,6 +28,7 @@ same areas as the folders under `src/`.
 | `/ego/` | the command for the wheels | ego |
 | `/safety/` | e-stop, collision monitor | the HUD button, collision_monitor |
 | `/hud/` | what only the screen needs | the HUD |
+| `/system/` | what kind of run this is: `/system/source` (real, sim, bench, replay) | the backends, the bench, a replay (added 15 Oct, `READ-ME-FULL-SIMULATION.md`) |
 
 Global names stay global, because every ROS tool expects them: `/tf`, `/tf_static`,
 `/clock`, `/robot_description`, `/joint_states`, `/diagnostics`, `/rosout`,

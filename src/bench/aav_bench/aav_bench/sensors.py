@@ -18,6 +18,9 @@ and frame, so nothing downstream changes.
                 10 Hz                                                           radar_link
                 the bench world's obstacle boxes, when obstacle is true; else empty
 
+Each one also says, once and latched, on /system/source (aav_interfaces/DataSource), that
+its topic is BENCH: a stand-in, not the real device. The HUD shows a BENCH banner.
+
 spine_sim publishes /vehicle/bench/truth: where the model car really is. The real drivers are
 aav_imu_yahboom, ublox_gps, battery_monitor, usb_cam (aav_sensors) and ti_ros2_driver.
 """
@@ -28,13 +31,14 @@ import signal
 
 from aav_bench import models, pictures
 from aav_description import vehicle
+from aav_interfaces.msg import DataSource, SensorSource
 from cv_bridge import CvBridge
 from nav_msgs.msg import Odometry
 from rcl_interfaces.msg import SetParametersResult
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import BatteryState, CameraInfo, CompressedImage, Image, Imu
 from sensor_msgs.msg import MagneticField, NavSatFix
 from sensor_msgs.msg import NavSatStatus, PointCloud2, PointField
@@ -53,6 +57,8 @@ def truth_from(msg: Odometry) -> models.Truth:
 
 
 class MockImu(Node):
+
+    ANNOUNCE = ('imu', '/sensors/imu/data_raw')   # for /system/source
 
     def __init__(self):
         super().__init__('mock_imu')
@@ -91,6 +97,8 @@ class MockImu(Node):
 
 class MockGps(Node):
 
+    ANNOUNCE = ('gps', '/sensors/gps/fix')   # for /system/source
+
     def __init__(self):
         super().__init__('mock_gps')
         self.frame = self.declare_parameter('frame_id', 'gps_link').value
@@ -128,6 +136,8 @@ class MockGps(Node):
 
 class MockBattery(Node):
 
+    ANNOUNCE = ('battery', '/vehicle/battery')   # for /system/source
+
     def __init__(self):
         super().__init__('mock_battery')
         self.full = self.declare_parameter('full_voltage', 50.9).value
@@ -152,6 +162,8 @@ class MockBattery(Node):
 
 
 class MockCamera(Node):
+
+    ANNOUNCE = ('camera_front_left', '/sensors/camera/front_left/image_raw')   # for /system/source
 
     def __init__(self):
         super().__init__('mock_camera')
@@ -221,6 +233,8 @@ RADAR_FIELDS = [PointField(name=n, offset=4 * i, datatype=PointField.FLOAT32, co
 
 class MockRadar(Node):
 
+    ANNOUNCE = ('radar', '/sensors/radar/points')   # for /system/source
+
     def __init__(self):
         super().__init__('mock_radar')
         self.frame = self.declare_parameter('frame_id', 'radar_link').value
@@ -271,11 +285,23 @@ class MockRadar(Node):
             header, RADAR_FIELDS, [(x, y, z, 1.0, v) for x, y, z, v in points]))
 
 
+def announce(node, name, topic):
+    """Say once, latched, that this topic comes from a bench stand-in (/system/source)."""
+    latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                         durability=DurabilityPolicy.TRANSIENT_LOCAL)
+    node.source_pub = node.create_publisher(DataSource, '/system/source', latched)
+    msg = DataSource(announcer=node.get_name())
+    msg.header.stamp = node.get_clock().now().to_msg()
+    msg.sensors = [SensorSource(name=name, topic=topic, source=SensorSource.BENCH)]
+    node.source_pub.publish(msg)
+
+
 def run(node_class):
     rclpy.init()
     node = None
     try:
         node = node_class()
+        announce(node, *node_class.ANNOUNCE)
         rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass

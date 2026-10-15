@@ -90,7 +90,9 @@ def launch_setup(context):
         include('aav_localization', 'localization.launch.py', gps='true'),
         Node(package='aav_spine', executable='spine_bridge', name='spine_bridge',
              parameters=[os.path.join(share('aav_spine'), 'config', 'spine.yaml'),
-                         vehicle.spine_params(v)]),
+                         vehicle.spine_params(v),
+                         # /system/source: the spine is spine_sim, not the real board.
+                         {'source': 'bench'}]),
 
         # The stand-ins for the hardware.
         Node(package='aav_spine_sim', executable='spine_sim', name='spine_sim',

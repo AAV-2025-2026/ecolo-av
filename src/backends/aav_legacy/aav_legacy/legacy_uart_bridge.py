@@ -6,6 +6,7 @@ the ESP32's UART (today the Motor Pi, /dev/ttyAMA0).
 
 Subscribes  ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped
             safety/estop      std_msgs/Bool (true: full brake now, until false)
+Publishes   system/source     aav_interfaces/DataSource, latched: the actuators are REAL
 Writes      13-byte frames at rate_hz on the serial port (see legacy_protocol)
 
 Throttle is open loop: speed / full_throttle_speed. If /ego/actuator_cmd goes
@@ -15,11 +16,13 @@ crash, because the firmware has no timeout; fix that in the firmware first.
 
 import signal
 
+from aav_interfaces.msg import DataSource, SensorSource
 from aav_legacy.legacy_protocol import LegacyMapping, pack_frame, stop_command, to_legacy
 from ackermann_msgs.msg import AckermannDriveStamped
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 import serial
 from std_msgs.msg import Bool
 
@@ -43,6 +46,15 @@ class LegacyUartBridge(Node):
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
         self.create_timer(1.0 / rate, self.tick)
+        # Say once, latched, that this drives the real car (/system/source).
+        latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                             durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.source_pub = self.create_publisher(DataSource, 'system/source', latched)
+        announcement = DataSource(announcer=self.get_name())
+        announcement.header.stamp = self.get_clock().now().to_msg()
+        announcement.sensors = [SensorSource(name='actuators', topic='',
+                                             source=SensorSource.REAL)]
+        self.source_pub.publish(announcement)
         self.get_logger().warning(
             'legacy firmware has no command timeout; keep the e-stop in reach')
 

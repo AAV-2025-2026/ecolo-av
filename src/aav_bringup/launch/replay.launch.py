@@ -13,15 +13,26 @@ A bag from the simulator carries simulated time, so play its own /clock instead 
 The bag (tools/record.sh) supplies the raw inputs and the clock; this file runs the
 same IMU filter and EKFs as the car, so a config change can be tried on yesterday's
 drive. To replay a drive's COMMANDS into the car instead, see tools/replay_commands.sh.
+
+It also says, latched, on /system/source, that the sensors are a recording (REPLAY), so
+the HUD shows a REPLAY banner: `ros2 topic pub` as the node replay_source.
 """
 
 import os
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import (DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,
+                            OpaqueFunction)
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
+# /system/source: what the bag plays (aav_interfaces/SensorSource REPLAY = 3).
+REPLAYED = (('odometry', '/vehicle/odom'), ('imu', '/sensors/imu/data_raw'),
+            ('gps', '/sensors/gps/fix'))
+ANNOUNCEMENT = ('{announcer: replay_source, sensors: ['
+                + ', '.join(f"{{name: {n}, topic: '{t}', source: 3}}" for n, t in REPLAYED)
+                + ']}')
 
 
 def launch_setup(context):
@@ -42,6 +53,12 @@ def launch_setup(context):
              remappings=[('imu/data_raw', '/sensors/imu/data_raw'),
                          ('imu/data', '/sensors/imu/data')]),
         include('aav_localization', 'localization.launch.py'),
+        # Latched, and again every 10 s (a late subscriber gets it either way).
+        ExecuteProcess(name='replay_source', output='log', cmd=[
+            'ros2', 'topic', 'pub', '-n', 'replay_source', '-r', '0.1',
+            '--qos-reliability', 'reliable', '--qos-durability', 'transient_local',
+            '--qos-depth', '1', '/system/source', 'aav_interfaces/msg/DataSource',
+            ANNOUNCEMENT]),
     ]
     if LaunchConfiguration('nav').perform(context).lower() == 'true':
         actions.append(include('aav_navigation', 'navigation.launch.py'))

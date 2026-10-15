@@ -1,0 +1,21 @@
+from aav_gazebo import sources
+
+
+def names(entries):
+    return [n for n, _ in entries]
+
+
+def test_the_empty_world_has_the_basic_sensors_only():
+    got = names(sources.simulated(rendered=False, lidar=True))
+    assert got == ['vehicle', 'odometry', 'wheels', 'imu', 'gps']
+
+
+def test_the_road_world_adds_cameras_and_radar_and_lidar_when_asked():
+    plain = names(sources.simulated(rendered=True, lidar=False))
+    assert 'radar' in plain and 'camera_rear' in plain and 'lidar' not in plain
+    assert names(sources.simulated(rendered=True, lidar=True))[-1] == 'lidar'
+
+
+def test_every_topic_is_absolute_and_in_an_area():
+    for _, topic in sources.simulated(rendered=True, lidar=True):
+        assert topic.split('/')[1] in ('vehicle', 'sensors'), topic

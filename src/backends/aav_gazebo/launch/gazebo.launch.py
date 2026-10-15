@@ -103,7 +103,8 @@ def launch_setup(context):
              parameters=[{'config_file': os.path.join(share, 'config', 'bridge.yaml')},
                          sim_time]),
         Node(package='aav_gazebo', executable='gazebo_adapter', name='gazebo_adapter',
-             parameters=[{'wheelbase': float(v['wheelbase']), 'radar': sensors}, sim_time]),
+             parameters=[{'wheelbase': float(v['wheelbase']), 'radar': sensors,
+                          'lidar': lidar}, sim_time]),
     ]
     if gui and MAC:
         actions.append(ExecuteProcess(cmd=['gz', 'sim', '-g'], name='gz_window',

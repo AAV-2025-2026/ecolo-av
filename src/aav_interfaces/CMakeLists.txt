@@ -7,6 +7,10 @@ find_package(std_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/VehicleStatus.msg"
+  "msg/SensorSource.msg"
+  "msg/DataSource.msg"
+  "msg/ActuatorState.msg"
+  "msg/WheelSpeeds.msg"
   "action/ScriptedDrive.action"
   DEPENDENCIES std_msgs
 )
