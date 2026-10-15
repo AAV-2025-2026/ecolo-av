@@ -36,7 +36,7 @@ if command -v cargo >/dev/null; then
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"
     (cd firmware/spine && cargo build -q --target thumbv8m.main-none-eabihf -p spine-core \
-       -p aav-inputs -p jrk-g2 -p ad5311 -p pca9555 -p mcp2515 -p ibus -p spine-board \
+       -p wheel-core -p aav-inputs -p jrk-g2 -p ad5311 -p pca9555 -p mcp2515 -p ibus -p spine-board \
        && echo "builds")
     # The board program itself: a workspace of its own, built only for the Pico 2's chip.
     # Its UF2 file too, the one to drag on: tools/elf2uf2.py checks the boot ROM's IMAGE_DEF.

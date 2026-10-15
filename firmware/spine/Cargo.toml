@@ -7,6 +7,8 @@ members = [
     # Logic: no hardware, no dependencies.
     "crates/spine-core",
     "crates/aav-inputs",
+    # The wheel nodes' logic (ESP32-S3 boards on the front wheels).
+    "crates/wheel-core",
     # Drivers: the I2C chips and the CAN controller (SPI) against embedded-hal 1.0;
     # ibus takes bytes.
     "crates/jrk-g2",
