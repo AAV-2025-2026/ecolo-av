@@ -69,9 +69,9 @@ topics:
     note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
   /estop:
     type: std_msgs/msg/Bool
-    pub: [joy_teleop, hud_server]
+    pub: [joy_teleop, hud_server, hud]
     sub: [twist_mux, spine_bridge, legacy_uart_bridge]
-    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions.
+    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike.
   /cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [twist_mux]
@@ -95,7 +95,7 @@ topics:
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter]
-    sub: [hud_server]
+    sub: [hud_server, hud]
     live: [sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.
   /vehicle/joint_states:
@@ -144,7 +144,7 @@ topics:
   /gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
-    sub: [navsat_transform]
+    sub: [navsat_transform, hud]
     live: [sim, car, replay, bench]
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
   /gps/fix_velocity:
@@ -171,7 +171,7 @@ topics:
   /battery_status:
     type: sensor_msgs/msg/BatteryState
     pub: [battery_state_publisher, mock_battery]
-    sub: [hud_server]
+    sub: [hud_server, hud]
     live: [bench]
     note: battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).
   /battery_monitor_heartbeat:
@@ -182,7 +182,7 @@ topics:
   /camera/image_raw:
     type: sensor_msgs/msg/Image
     pub: [camera_left, mock_camera, test_camera]
-    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder]
+    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder, hud]
     live: [bench]
     note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.
   /camera/image_raw/compressed:
@@ -223,7 +223,7 @@ topics:
   /perception/stop:
     type: std_msgs/msg/Bool
     pub: [stop_sign_watcher]
-    sub: [twist_mux, hud_server]
+    sub: [twist_mux, hud_server, hud]
     live: [car]
     note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.
   /perception/camera_obstacles:
@@ -298,7 +298,7 @@ topics:
   /gps/filtered:
     type: sensor_msgs/msg/NavSatFix
     pub: [navsat_transform]
-    sub: [hud_server]
+    sub: [hud_server, hud]
     live: [sim, car, replay, bench]
     note: The global EKF's position as lat/lon, for maps in the HUD or Foxglove.
 
