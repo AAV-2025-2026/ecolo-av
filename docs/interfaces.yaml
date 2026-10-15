@@ -36,6 +36,11 @@ topics:
     pub: [teleop_twist_keyboard]
     sub: [twist_mux, language_drive]
     note: Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic.
+  /drivers/tests/cmd_vel:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [actuator_test]
+    sub: [twist_mux, language_drive]
+    note: Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; READ-ME-TESTS.md stages 3-4). It also reads /control/cmd_vel, to stop when someone else takes over.
   /drivers/scripted/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [scripted_driver]
@@ -79,12 +84,12 @@ topics:
   /safety/estop:
     type: std_msgs/msg/Bool
     pub: [joy_teleop, hud_server, hud, language_drive]
-    sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive]
+    sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive, actuator_test]
     note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.
   /control/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [twist_mux]
-    sub: [ego]
+    sub: [ego, actuator_test]
     live: [turtle, sim, car, bench]
     note: The one command ego obeys. v (m/s) and w (rad/s) in base_link.
   /ego/actuator_cmd:
@@ -98,7 +103,7 @@ topics:
   /system/source:
     type: aav_interfaces/msg/DataSource
     pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, replay_source]
-    sub: [hud, map]
+    sub: [hud, map, actuator_test]
     live: [turtle, sim, car, replay, bench]
     note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.
 
@@ -106,7 +111,7 @@ topics:
   /vehicle/odom:
     type: nav_msgs/msg/Odometry
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
-    sub: [ekf_local, ekf_global]
+    sub: [ekf_local, ekf_global, actuator_test]
     live: [turtle, sim, car, replay, bench]
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).
   /vehicle/status:
@@ -118,25 +123,25 @@ topics:
   /vehicle/steering:
     type: aav_interfaces/msg/ActuatorState
     pub: [spine_bridge, gazebo_adapter, turtlesim_adapter]
-    sub: []
+    sub: [actuator_test]
     live: [turtle, sim, bench]
     note: The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too.
   /vehicle/throttle:
     type: aav_interfaces/msg/ActuatorState
     pub: [spine_bridge, gazebo_adapter]
-    sub: []
+    sub: [actuator_test]
     live: [sim, bench]
     note: The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.
   /vehicle/brake:
     type: aav_interfaces/msg/ActuatorState
     pub: [spine_bridge, gazebo_adapter]
-    sub: []
+    sub: [actuator_test]
     live: [sim, bench]
     note: The brake, 0..1. As /vehicle/throttle.
   /vehicle/wheels:
     type: aav_interfaces/msg/WheelSpeeds
     pub: [gazebo_adapter]
-    sub: []
+    sub: [actuator_test]
     live: [sim]
     note: Each wheel's ground speed (m/s), NaN where not measured. Gazebo gives all four (its wheel joints); the car has one encoder, still read as /vehicle/odom.
   /vehicle/joint_states:
@@ -167,7 +172,7 @@ topics:
   /sensors/imu/data_raw:
     type: sensor_msgs/msg/Imu
     pub: [imu_node, gazebo_adapter, mock_imu]
-    sub: [imu_filter_madgwick]
+    sub: [imu_filter_madgwick, actuator_test]
     live: [sim, car, replay, bench]
     note: Gyro and accelerometer in imu_link, with covariances; no orientation.
   /sensors/imu/mag:
@@ -185,7 +190,7 @@ topics:
   /sensors/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
-    sub: [navsat_transform, hud, language_drive]
+    sub: [navsat_transform, hud, language_drive, actuator_test]
     live: [sim, car, replay, bench]
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
   /sensors/gps/fix_velocity:
@@ -359,7 +364,7 @@ topics:
   /localization/odom/local:
     type: nav_msgs/msg/Odometry
     pub: [ekf_local]
-    sub: [controller_server, bt_navigator, scripted_driver, language_drive]
+    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test]
     live: [turtle, sim, car, replay, bench]
     note: odom frame. Smooth; drifts.
   /localization/odom/global:
