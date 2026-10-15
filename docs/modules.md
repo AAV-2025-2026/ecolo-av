@@ -265,14 +265,14 @@ Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle
 
 | | |
 |---|---|
-| **Does** | puts Gazebo's simulated car behind the real car's topics, with an IMU and GPS |
+| **Does** | puts Gazebo's simulated car behind the real car's topics, with an IMU and GPS; in the road world, a camera, a radar stand-in and (with `lidar:=true`) a roof lidar |
 | **Why** | Nav2 and the EKFs can be tested with the same settings as on the car |
 | **Runs on** | any laptop (headless on oirp-spss) |
-| **In → out** | `/ego/actuator_cmd`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat` → `/gazebo/cmd_vel`, `/vehicle/odom`, `/vehicle/status`, `/sensors/imu/data_raw`, `/sensors/gps/fix` |
+| **In → out** | `/ego/actuator_cmd`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat`, `/gazebo/radar/points` → `/gazebo/cmd_vel`, `/vehicle/odom`, `/vehicle/status`, `/sensors/imu/data_raw`, `/sensors/gps/fix`, `/sensors/radar/points`. The road world's bridges add `/sensors/camera/front_left/*`, `/sensors/lidar/points` and `/vehicle/gazebo/truth` |
 | **Origin** | ours, on stock Gazebo Harmonic and `ros_gz` |
 | **Status** | [[works]] headless on Linux and a Mac; its window on a Mac |
 | **Run alone** | `pixi run sim` (`gui:=false` on a Mac) |
-| **Test** | `test/test_turn_rate.py` (`colcon test` only); `pixi run check sim` |
+| **Test** | `test/test_turn_rate.py`, `test_radar.py`, `test_worlds.py` (`colcon test` only); `pixi run check sim`, `pixi run sim-check` |
 | **Read first** | `aav_gazebo/gazebo_adapter.py` |
 
 ### aav_carla

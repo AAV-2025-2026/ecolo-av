@@ -137,7 +137,8 @@ slow camera frame then can't delay a brake command. See [The car, box by box](le
 ### Is there a lidar?
 
 There is one on the roof (from the photos). There is **no lidar driver** in our code, and
-its model is unknown (Q22).
+its model is unknown (Q22). Gazebo has a generic one to try: `pixi run sim world:=road
+lidar:=true` ([Simulation](simulation.md#the-lidar-gazebo-only)).
 
 ### How does the car know where it is?
 
@@ -166,7 +167,7 @@ No. Almost everything runs on one laptop:
 | Run | You get |
 |---|---|
 | `pixi run turtle` | the command path, on a turtle |
-| `pixi run sim` | Gazebo: the car, its IMU, GPS and wheel speed |
+| `pixi run sim` | Gazebo: the car, its IMU, GPS and wheel speed; `world:=road` adds its camera and radar |
 | `pixi run bench` | the car's real software, with pretend boards |
 
 ### Can I use a Mac?

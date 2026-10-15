@@ -316,7 +316,8 @@ CAN master); Orin #2 (new) does the heavy seeing: cameras, lidar, costmaps and N
 slow camera frame then can't delay a brake command. See <a href="learn-car.html">The car, box by box</a>.</p>
 <h3 id="is-there-a-lidar">Is there a lidar?</h3>
 <p>There is one on the roof (from the photos). There is <strong>no lidar driver</strong> in our code, and
-its model is unknown (Q22).</p>
+its model is unknown (Q22). Gazebo has a generic one to try: <code>pixi run sim world:=road
+lidar:=true</code> (<a href="simulation.html#the-lidar-gazebo-only">Simulation</a>).</p>
 <h3 id="how-does-the-car-know-where-it-is">How does the car know where it is?</h3>
 <p>Two EKFs from <code>robot_localization</code>:</p>
 <div class="table-wrap"><table>
@@ -364,7 +365,7 @@ Staying in the lane is lane keeping's job.</p>
 </tr>
 <tr>
 <td><code>pixi run sim</code></td>
-<td>Gazebo: the car, its IMU, GPS and wheel speed</td>
+<td>Gazebo: the car, its IMU, GPS and wheel speed; <code>world:=road</code> adds its camera and radar</td>
 </tr>
 <tr>
 <td><code>pixi run bench</code></td>

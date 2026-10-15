@@ -138,8 +138,8 @@ the costmap. So it still stops the car if the planner, the controller or the cos
 | Radar silent for | 1.0 s → stop |
 | Guards | **only Nav2**. The joystick and keyboard reach `twist_mux` without it |
 
-It runs only with `radar:=true`: on the bench, and on the car with its radar.
-Gazebo's car on `main` has no radar.
+It runs only with `radar:=true`: on the bench, on the car with its radar, and in Gazebo's
+road world (`pixi run sim world:=road`), whose car has a radar stand-in.
 
 ## 6. GPS waypoints
 

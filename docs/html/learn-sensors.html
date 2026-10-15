@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-sensors.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Sensors from zero</h1>
-<div class="meta">8 min read · 11 sections</div></header>
+<div class="meta">9 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -162,7 +162,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <td><code>/sensors/radar/points</code></td>
 <td><code>sensor_msgs/PointCloud2</code></td>
 <td><code>radar_link</code></td>
-<td>on branch <code>wt/sim-full</code></td>
+<td><strong>yes</strong>, in the road world</td>
 </tr>
 <tr>
 <td>Front cameras (Pi 5)</td>
@@ -171,16 +171,16 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/Image</code></td>
 <td><code>camera_left_link</code></td>
-<td>on branch <code>wt/sim-full</code></td>
+<td><strong>yes</strong>, in the road world (front left only)</td>
 </tr>
 <tr>
 <td>Lidar (roof)</td>
 <td>3D points all round</td>
-<td>-</td>
-<td>none yet</td>
-<td>(would be <code>PointCloud2</code>)</td>
-<td>none yet</td>
-<td><strong>no</strong></td>
+<td>10 Hz (sim)</td>
+<td><code>/sensors/lidar/points</code> (sim only)</td>
+<td><code>sensor_msgs/PointCloud2</code></td>
+<td><code>lidar_link</code> (sim only)</td>
+<td>a generic one, road world, <code>lidar:=true</code></td>
 </tr>
 <tr>
 <td>Battery (Victron)</td>
@@ -391,7 +391,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>Gazebo</strong></td>
-<td>on branch <code>wt/sim-full</code> (as <code>/gazebo/radar/points</code>, renamed to ours)</td>
+<td>yes, in the road world: a lidar shaped like the radar (<code>/gazebo/radar/points</code>, turned into ours by <code>gazebo_adapter</code>)</td>
 </tr>
 <tr>
 <td><strong>Bench</strong></td>
@@ -435,7 +435,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>Gazebo</strong></td>
-<td>on branch <code>wt/sim-full</code></td>
+<td>yes, in the road world: 640 x 360, 10 Hz, the bench camera's lens</td>
 </tr>
 <tr>
 <td><strong>Bench</strong></td>
@@ -479,7 +479,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>Gazebo</strong></td>
-<td><strong>no</strong>. Tried on <code>wt/sim-full</code>: Gazebo's lidar can crash on a Mac</td>
+<td>a generic 16-beam one, with <code>pixi run sim world:=road lidar:=true</code>. Off by default: on a Mac it made the full graph flaky (<a href="simulation.html#the-lidar-gazebo-only">Simulation</a>)</td>
 </tr>
 <tr>
 <td><strong>Next</strong></td>

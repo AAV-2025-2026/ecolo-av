@@ -34,9 +34,9 @@ Each sensor fails in its own way. Together they cover each other's gaps
 | Steering angle | front wheel angle | 50 Hz (in CAN feedback) | `/vehicle/status`, `/vehicle/joint_states` | `VehicleStatus`, `JointState` | the steering joints | yes (status) |
 | IMU (Yahboom) | turn rate, acceleration | 200 Hz device; 50 Hz sim | `/sensors/imu/data_raw` → `/sensors/imu/data` | `sensor_msgs/Imu` | `imu_link` | **yes**, on `main` |
 | GPS (ZED-F9R) | latitude, longitude | 1 Hz factory; 5 Hz sim | `/sensors/gps/fix` | `sensor_msgs/NavSatFix` | `gps_link` | **yes**, on `main` |
-| Radar (TI mmWave) | points and their speed | 10 Hz | `/sensors/radar/points` | `sensor_msgs/PointCloud2` | `radar_link` | on branch `wt/sim-full` |
-| Front cameras (Pi 5) | pictures | 15 fps, 1920 × 1080 | `/sensors/camera/front_left/image_raw` | `sensor_msgs/Image` | `camera_left_link` | on branch `wt/sim-full` |
-| Lidar (roof) | 3D points all round | - | none yet | (would be `PointCloud2`) | none yet | **no** |
+| Radar (TI mmWave) | points and their speed | 10 Hz | `/sensors/radar/points` | `sensor_msgs/PointCloud2` | `radar_link` | **yes**, in the road world |
+| Front cameras (Pi 5) | pictures | 15 fps, 1920 × 1080 | `/sensors/camera/front_left/image_raw` | `sensor_msgs/Image` | `camera_left_link` | **yes**, in the road world (front left only) |
+| Lidar (roof) | 3D points all round | 10 Hz (sim) | `/sensors/lidar/points` (sim only) | `sensor_msgs/PointCloud2` | `lidar_link` (sim only) | a generic one, road world, `lidar:=true` |
 | Battery (Victron) | voltage, charge | 1 Hz (bench) | `/vehicle/battery` | `sensor_msgs/BatteryState` | - | no |
 
 Every frame's position on the car is in `src/aav_description/config/vehicle.yaml`.
@@ -101,7 +101,7 @@ All about it: [Learn: GPS](learn-gps.md).
 | **Bad at** | few points; poor height; clutter close up. Publishes best effort: subscribe best effort |
 | **Driver** | `ti_ros2_driver` (from the 2025-26 `Nav_Radar`), then `radar_clusters` groups the points |
 | **Used by** | the local costmap's obstacle layer, and `collision_monitor` |
-| **Gazebo** | on branch `wt/sim-full` (as `/gazebo/radar/points`, renamed to ours) |
+| **Gazebo** | yes, in the road world: a lidar shaped like the radar (`/gazebo/radar/points`, turned into ours by `gazebo_adapter`) |
 | **Bench** | `mock_radar` draws points on the bench's boxes |
 
 ## 8. Cameras: Pi 5s at the windscreen
@@ -114,7 +114,7 @@ All about it: [Learn: GPS](learn-gps.md).
 | **Bad at** | no distance by itself; glare, dark; big messages (use the compressed topic over WiFi) |
 | **Driver** | `usb_cam` (Linux only), with the 2024-25 calibration `left.ini` |
 | **Used by** | `aav_yolo` (stop signs, objects), `aav_lane_finder`, the HUD |
-| **Gazebo** | on branch `wt/sim-full` |
+| **Gazebo** | yes, in the road world: 640 x 360, 10 Hz, the bench camera's lens |
 | **Bench** | `mock_camera` draws the bench road |
 | **KEFC** | adds a rear camera (Cam3) |
 
@@ -127,7 +127,7 @@ All about it: [Learn: GPS](learn-gps.md).
 | **Bad at** | rain and snow; expensive; lots of data |
 | **On the car** | a 3D lidar on a printed tripod. Model unknown (Q22) |
 | **Driver** | **none yet** |
-| **Gazebo** | **no**. Tried on `wt/sim-full`: Gazebo's lidar can crash on a Mac |
+| **Gazebo** | a generic 16-beam one, with `pixi run sim world:=road lidar:=true`. Off by default: on a Mac it made the full graph flaky ([Simulation](simulation.md#the-lidar-gazebo-only)) |
 | **Next** | find the model and IP at Friday's audit; it will be read on Orin #2 |
 
 ## Try it

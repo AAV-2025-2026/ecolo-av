@@ -892,7 +892,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tbody>
 <tr>
 <td><strong>Does</strong></td>
-<td>puts Gazebo's simulated car behind the real car's topics, with an IMU and GPS</td>
+<td>puts Gazebo's simulated car behind the real car's topics, with an IMU and GPS; in the road world, a camera, a radar stand-in and (with <code>lidar:=true</code>) a roof lidar</td>
 </tr>
 <tr>
 <td><strong>Why</strong></td>
@@ -904,7 +904,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/ego/actuator_cmd</code>, <code>/gazebo/odom</code>, <code>/gazebo/imu</code>, <code>/gazebo/navsat</code> → <code>/gazebo/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/sensors/imu/data_raw</code>, <code>/sensors/gps/fix</code></td>
+<td><code>/ego/actuator_cmd</code>, <code>/gazebo/odom</code>, <code>/gazebo/imu</code>, <code>/gazebo/navsat</code>, <code>/gazebo/radar/points</code> → <code>/gazebo/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/sensors/imu/data_raw</code>, <code>/sensors/gps/fix</code>, <code>/sensors/radar/points</code>. The road world's bridges add <code>/sensors/camera/front_left/*</code>, <code>/sensors/lidar/points</code> and <code>/vehicle/gazebo/truth</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
@@ -920,7 +920,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>Test</strong></td>
-<td><code>test/test_turn_rate.py</code> (<code>colcon test</code> only); <code>pixi run check sim</code></td>
+<td><code>test/test_turn_rate.py</code>, <code>test_radar.py</code>, <code>test_worlds.py</code> (<code>colcon test</code> only); <code>pixi run check sim</code>, <code>pixi run sim-check</code></td>
 </tr>
 <tr>
 <td><strong>Read first</strong></td>
