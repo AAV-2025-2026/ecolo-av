@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">15 min read · 11 sections</div></header>
+<div class="meta">16 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -785,6 +785,12 @@ request, and on a Mac every night. The results are on the repo's Actions tab.</p
 </table></div>
 <p>Without a sign-in GitHub allows 60 of these calls an hour, so don't poll fast. A step keeps
 at most 10 annotations: 9 failing tests, then the rest by name, or the log's last 40 lines.</p>
+<div class="admonition note">
+<p class="admonition-title">PowerShell on the Linux runner</p>
+<p>GitHub's Ubuntu runners set <code>PSModulePath</code>, which makes colcon set each package's
+environment through PowerShell; our own packages then go missing from later builds. The
+workflow empties <code>PSModulePath</code>, so colcon uses <code>sh</code>, as on a laptop.</p>
+</div>
 <div class="admonition warning">
 <p class="admonition-title">What never goes in git</p>
 <p>Build output (<code>build/</code>, <code>install/</code>, <code>log/</code>, <code>.pixi/</code>, <code>target/</code>), recordings (<code>bags/</code>),

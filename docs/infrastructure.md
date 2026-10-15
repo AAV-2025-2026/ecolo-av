@@ -243,6 +243,11 @@ A job's log needs a GitHub sign-in. Its **annotations** don't: when the test ste
 Without a sign-in GitHub allows 60 of these calls an hour, so don't poll fast. A step keeps
 at most 10 annotations: 9 failing tests, then the rest by name, or the log's last 40 lines.
 
+!!! note "PowerShell on the Linux runner"
+  GitHub's Ubuntu runners set `PSModulePath`, which makes colcon set each package's
+  environment through PowerShell; our own packages then go missing from later builds. The
+  workflow empties `PSModulePath`, so colcon uses `sh`, as on a laptop.
+
 !!! warning "What never goes in git"
   Build output (`build/`, `install/`, `log/`, `.pixi/`, `target/`), recordings (`bags/`),
   and secrets. `.gitignore` lists them. Downloaded third-party source, such as ROS's own
