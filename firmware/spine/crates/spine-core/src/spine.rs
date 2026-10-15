@@ -8,6 +8,16 @@
 //!
 //! A driver fault (steering, brake, throttle or encoder) stops the car in any mode.
 //!
+//! The computer's commands come in two kinds, with the same watchdog and arming:
+//!
+//! | Kind | From | The spine |
+//! |---|---|---|
+//! | [`DriveCmd`]: a speed and a steering angle | CAN (`firmware/can/aav.dbc`) | runs the speed loop |
+//! | [`DirectCmd`]: throttle, brake and steering as they are | the 2025-26 UART link (`legacy-link`) | passes them on, inside its limits |
+//!
+//! With no wheel speed on the board ([`SpeedFeedback::None`]), the speed loop runs open
+//! loop: throttle in proportion to the speed asked for.
+//!
 //! The computer can't drive until it sends a frame with `armed = 0` and then
 //! `armed = 1`: at power-up, after an e-stop, after a driver fault has cleared, and
 //! after the command stream stopped while it was driving. A glitch or a reboot never
@@ -70,6 +80,20 @@ pub enum RcGearBrake {
     FullBrake,
 }
 
+/// Where the speed loop gets the car's speed.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SpeedFeedback {
+    /// `Inputs::measured_speed`, from a wheel encoder: closed loop.
+    Wheel,
+    /// No speed on this board (today's ESP32 control board: the encoder talks to the
+    /// Motor-Pi). Open loop: throttle = speed / `full_throttle_speed`, the 2025-26 way.
+    /// The overspeed check can't work, and the stop brake is the hold brake.
+    None {
+        /// The speed (m/s) the car reaches at full throttle. TODO(Q4): measure.
+        full_throttle_speed: f32,
+    },
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct SpineConfig {
     /// No valid DRIVE_CMD for this long while driving = stop (ms).
@@ -95,6 +119,8 @@ pub struct SpineConfig {
     /// The RC gear switch's brake position: [`RC_GEAR_BRAKE`].
     pub rc_gear_brake: RcGearBrake,
     pub speed_loop: SpeedLoopConfig,
+    /// The wheel speed, or none: [`SpeedFeedback`].
+    pub speed_feedback: SpeedFeedback,
 }
 
 impl Default for SpineConfig {
@@ -113,6 +139,7 @@ impl Default for SpineConfig {
             estop_steering: ESTOP_STEERING,
             rc_gear_brake: RC_GEAR_BRAKE,
             speed_loop: SpeedLoopConfig::default(),
+            speed_feedback: SpeedFeedback::Wheel,
         }
     }
 }
@@ -130,6 +157,42 @@ pub struct RcInput {
     pub brake: bool,
 }
 
+/// An open-loop command: the actuators' demands as they are, with no speed loop. The
+/// 2025-26 UART link carries these (`legacy-link`): it has no speed, and no arming bit.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DirectCmd {
+    /// 0..1, to the throttle. Ignored while `brake` is above 0.
+    pub throttle: f32,
+    /// The direction for the throttle.
+    pub reverse: bool,
+    /// 0..1, to the brake.
+    pub brake: f32,
+    /// rad, positive left.
+    pub steering_angle: f32,
+    /// This command is a stop: no throttle. A stop is the first half of the arming edge,
+    /// like `armed = 0` in a DRIVE_CMD; any command after it is the second half. Unlike
+    /// `armed = 0`, a stop still drives the actuators: its brake is applied.
+    pub stop: bool,
+}
+
+/// The computer's latest command, of either kind.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Command {
+    Speed(DriveCmd),
+    Direct(DirectCmd),
+}
+
+impl Command {
+    fn armed(&self) -> bool {
+        match self {
+            Command::Speed(cmd) => cmd.armed,
+            // Every command of this kind counts as armed: the link has no arming bit.
+            // Only its stops make the edge (below).
+            Command::Direct(_) => true,
+        }
+    }
+}
+
 /// Everything the board read this tick.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Inputs {
@@ -137,6 +200,8 @@ pub struct Inputs {
     pub now_ms: u32,
     /// A valid DRIVE_CMD received since the last tick.
     pub drive_cmd: Option<DriveCmd>,
+    /// A valid open-loop command received since the last tick (the UART link).
+    pub direct_cmd: Option<DirectCmd>,
     /// A valid ESTOP_CMD received since the last tick.
     pub estop_cmd: Option<EstopCmd>,
     /// A frame for the spine failed its length or checksum since the last tick.
@@ -173,7 +238,7 @@ pub struct Spine {
     cfg: SpineConfig,
     watchdog: Watchdog,
     speed_loop: SpeedLoop,
-    last_cmd: Option<DriveCmd>,
+    last_cmd: Option<Command>,
     last_counter: Option<u8>,
     sw_estop: bool,
     latched: bool,
@@ -233,15 +298,23 @@ impl Spine {
                 self.frame_faults |= faults::BAD_COUNTER;
             } else {
                 self.watchdog.feed(i.now_ms);
-                self.last_cmd = Some(cmd);
+                self.last_cmd = Some(Command::Speed(cmd));
                 if !cmd.armed {
                     self.seen_disarm = true;
                 }
             }
             self.last_counter = Some(cmd.counter);
         }
+        // The UART link has no counter: its checksum is all it has.
+        if let Some(cmd) = i.direct_cmd {
+            self.watchdog.feed(i.now_ms);
+            self.last_cmd = Some(Command::Direct(cmd));
+            if cmd.stop {
+                self.seen_disarm = true;
+            }
+        }
         let fresh = !self.watchdog.expired(i.now_ms);
-        let armed_request = fresh && self.last_cmd.is_some_and(|cmd| cmd.armed);
+        let armed_request = fresh && self.last_cmd.is_some_and(|cmd| cmd.armed());
 
         // Latches.
         let estop = i.hw_estop || self.sw_estop;
@@ -288,6 +361,12 @@ impl Spine {
             i.measured_speed - c.max_speed
         } else {
             -i.measured_speed - c.max_reverse_speed
+        };
+        // Without a wheel speed, there is no overspeed to see.
+        let over = if c.speed_feedback == SpeedFeedback::Wheel {
+            over
+        } else {
+            0.0
         };
         if over > c.overspeed_margin {
             fault_bits |= faults::OVERSPEED;
@@ -343,14 +422,18 @@ impl Spine {
                 )
             }
             Mode::Computer => {
-                let cmd = self.last_cmd.unwrap_or(DriveCmd {
-                    target_speed: 0.0,
-                    steering_angle: self.steering_setpoint,
-                    accel_limit: 0.0,
-                    steer_rate_limit: 0.0,
-                    armed: false,
-                    counter: 0,
-                });
+                let cmd = match self.last_cmd {
+                    Some(Command::Speed(cmd)) => cmd,
+                    Some(Command::Direct(cmd)) => return self.direct(&cmd, dt, &out),
+                    None => DriveCmd {
+                        target_speed: 0.0,
+                        steering_angle: self.steering_setpoint,
+                        accel_limit: 0.0,
+                        steer_rate_limit: 0.0,
+                        armed: false,
+                        counter: 0,
+                    },
+                };
                 let accel = if cmd.accel_limit > 0.0 {
                     cmd.accel_limit.min(c.max_accel)
                 } else {
@@ -377,9 +460,17 @@ impl Spine {
             || target_speed * self.speed_setpoint < 0.0;
         let rate = if slowing { c.max_decel } else { accel };
         self.speed_setpoint = slew(self.speed_setpoint, target_speed, rate, dt);
-        let drive = self
-            .speed_loop
-            .update(self.speed_setpoint, i.measured_speed, dt);
+        let drive = match c.speed_feedback {
+            SpeedFeedback::Wheel => {
+                self.speed_loop
+                    .update(self.speed_setpoint, i.measured_speed, dt)
+            }
+            SpeedFeedback::None {
+                full_throttle_speed,
+            } => self
+                .speed_loop
+                .open_loop(self.speed_setpoint, full_throttle_speed),
+        };
         out(
             drive.throttle,
             drive.brake,
@@ -387,6 +478,39 @@ impl Spine {
             self.steering_setpoint,
             self,
         )
+    }
+
+    /// An open-loop command, in computer mode: steering at the steering rate limit, the
+    /// throttle and the brake as asked (never both), inside the firmware's limits.
+    fn direct(
+        &mut self,
+        cmd: &DirectCmd,
+        dt: f32,
+        out: &impl Fn(f32, f32, bool, f32, &Self) -> Outputs,
+    ) -> Outputs {
+        let c = self.cfg;
+        self.speed_setpoint = 0.0;
+        self.speed_loop.reset();
+        let target = cmd
+            .steering_angle
+            .clamp(-c.max_steering_angle, c.max_steering_angle);
+        let target = if target.is_nan() {
+            self.steering_setpoint
+        } else {
+            target
+        };
+        self.steering_setpoint = slew(self.steering_setpoint, target, c.max_steer_rate, dt);
+        let brake = if cmd.brake.is_nan() {
+            1.0
+        } else {
+            cmd.brake.clamp(0.0, 1.0)
+        };
+        let throttle = if cmd.stop || brake > 0.0 || cmd.throttle.is_nan() {
+            0.0
+        } else {
+            cmd.throttle.clamp(0.0, 1.0)
+        };
+        out(throttle, brake, cmd.reverse, self.steering_setpoint, self)
     }
 
     /// VEHICLE_FEEDBACK frame (send at 50 Hz).
@@ -840,5 +964,149 @@ mod tests {
         let back = VehicleStatus::decode(&frame).unwrap();
         assert_eq!(back.mode, Mode::Computer);
         assert!(back.armed);
+    }
+
+    // --- Open-loop commands (the 2025-26 UART link) and no wheel speed ---
+
+    fn direct(throttle: f32, brake: f32, steering: f32) -> DirectCmd {
+        DirectCmd {
+            throttle,
+            reverse: false,
+            brake,
+            steering_angle: steering,
+            stop: brake > 0.0,
+        }
+    }
+
+    impl Car {
+        fn send_direct(&mut self, cmd: DirectCmd, ticks: u32) -> Outputs {
+            let mut last = None;
+            for _ in 0..ticks {
+                last = Some(self.tick(Inputs {
+                    direct_cmd: Some(cmd),
+                    ..Default::default()
+                }));
+            }
+            last.unwrap()
+        }
+    }
+
+    #[test]
+    fn direct_commands_need_a_stop_first() {
+        let mut car = Car::new();
+        // A drive frame straight after boot does nothing...
+        let out = car.send_direct(direct(0.5, 0.0, 0.0), 5);
+        assert_eq!((out.mode, out.throttle), (Mode::Manual, 0.0));
+        // ...until a stop frame (the arming edge's first half), then a drive frame.
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        let out = car.send_direct(direct(0.5, 0.0, 0.0), 1);
+        assert_eq!(out.mode, Mode::Computer);
+        assert_eq!((out.throttle, out.brake), (0.5, 0.0));
+    }
+
+    #[test]
+    fn direct_commands_pass_through_inside_limits() {
+        let mut car = Car::new();
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        let out = car.send_direct(direct(3.0, 0.0, 0.0), 1);
+        assert_eq!(out.throttle, 1.0); // clamped to 0..1
+                                       // The brake wins over the throttle, and the stop frame's brake passes as it is.
+        let out = car.send_direct(direct(0.5, 0.4, 0.0), 1);
+        assert_eq!((out.throttle, out.brake), (0.0, 0.4));
+        assert_eq!(out.mode, Mode::Computer); // a stop frame still counts as fresh
+                                              // Reverse passes through.
+        let mut cmd = direct(0.2, 0.0, 0.0);
+        cmd.reverse = true;
+        let out = car.send_direct(cmd, 1);
+        assert!(out.reverse && out.throttle == 0.2);
+    }
+
+    #[test]
+    fn direct_steering_is_rate_limited_and_capped() {
+        let mut car = Car::new();
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        let out = car.send_direct(direct(0.0, 0.0, 2.0), 1);
+        let cfg = SpineConfig::default();
+        assert!(out.steering_target <= cfg.max_steer_rate * 0.01 + 1e-6);
+        let out = car.send_direct(direct(0.0, 0.0, 2.0), 300);
+        assert_eq!(out.steering_target, cfg.max_steering_angle);
+    }
+
+    #[test]
+    fn direct_commands_time_out_into_a_full_stop() {
+        let mut car = Car::new();
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        car.send_direct(direct(0.5, 0.0, 0.0), 1);
+        let mut out = car.tick(Inputs::default());
+        for _ in 0..25 {
+            out = car.tick(Inputs::default());
+        }
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        assert_ne!(out.faults & faults::CMD_TIMEOUT, 0);
+        // Drive frames alone don't restart it: a stop frame must come first.
+        let out = car.send_direct(direct(0.5, 0.0, 0.0), 3);
+        assert_eq!(out.throttle, 0.0);
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        assert_eq!(car.send_direct(direct(0.5, 0.0, 0.0), 1).throttle, 0.5);
+    }
+
+    #[test]
+    fn rc_and_estop_beat_direct_commands() {
+        let mut car = Car::new();
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        car.send_direct(direct(0.5, 0.0, 0.0), 1);
+        let out = car.tick(Inputs {
+            direct_cmd: Some(direct(0.5, 0.0, 0.0)),
+            hw_estop: true,
+            ..Default::default()
+        });
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        let mut car = Car::new();
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        let out = car.tick(Inputs {
+            direct_cmd: Some(direct(0.5, 0.0, 0.0)),
+            rc: Some(RcInput {
+                override_switch: true,
+                throttle: 0.0,
+                steering: 0.0,
+                brake: false,
+            }),
+            ..Default::default()
+        });
+        assert_eq!((out.mode, out.throttle), (Mode::Rc, 0.0));
+    }
+
+    fn open_loop_config() -> SpineConfig {
+        SpineConfig {
+            speed_feedback: SpeedFeedback::None {
+                full_throttle_speed: 3.0,
+            },
+            ..SpineConfig::default()
+        }
+    }
+
+    #[test]
+    fn without_a_wheel_speed_the_throttle_follows_the_setpoint() {
+        let mut car = Car::with_config(open_loop_config());
+        car.arm();
+        // 1.5 m/s of 3.0: the setpoint ramps at 1.5 m/s^2, so after 1.5 s it is there.
+        let out = car.drive(1.5, 0.0, true, 200);
+        assert_eq!(out.mode, Mode::Computer);
+        assert!((out.throttle - 0.5).abs() < 1e-3, "{}", out.throttle);
+        assert_eq!(out.brake, 0.0);
+        // Back to zero: the throttle falls with the setpoint, then the hold brake.
+        let out = car.drive(0.0, 0.0, true, 200);
+        assert_eq!(out.throttle, 0.0);
+        assert_eq!(out.brake, SpeedLoopConfig::default().hold_brake);
+    }
+
+    #[test]
+    fn without_a_wheel_speed_there_is_no_overspeed() {
+        let mut car = Car::with_config(open_loop_config());
+        let out = car.tick(Inputs {
+            measured_speed: 20.0,
+            ..Default::default()
+        });
+        assert_eq!(out.faults & faults::OVERSPEED, 0);
     }
 }
