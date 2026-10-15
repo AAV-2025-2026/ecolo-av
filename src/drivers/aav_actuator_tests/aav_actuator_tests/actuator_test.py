@@ -46,6 +46,7 @@ import signal
 import subprocess
 import sys
 import time
+import warnings
 
 from aav_actuator_tests import procedures as pr
 from aav_actuator_tests import reports
@@ -466,7 +467,9 @@ class Run:
             return
         rep = reports.analyse(self.test.name, self.rows, self.ctx)
         if self.abort:
-            rep.notes.insert(0, f'ABORTED: {self.abort}. The numbers cover only what ran')
+            rep.notes.insert(0, f'ABORTED: {self.abort}. The numbers cover only what ran, '
+                                'so no vehicle.yaml lines: run it again to the end')
+            rep.yaml.clear()
         text = reports.table(rep)
         lines = reports.yaml_lines(rep)
         self.say()
@@ -593,6 +596,8 @@ def main(argv=None):
     if args.analyse:
         return analyse_folder(args.analyse)
 
+    # Ctrl-C can land inside the executor, which then leaves a coroutine behind: harmless.
+    warnings.filterwarnings('ignore', message="coroutine 'Executor._make_handler")
     # No rclpy signal handler: Ctrl-C must leave ROS working, to send the stop commands.
     rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
     node = ActuatorTest(args.sim)
