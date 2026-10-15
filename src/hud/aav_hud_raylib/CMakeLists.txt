@@ -11,6 +11,8 @@ install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
 # without them (a headless server, CI) still builds the rest of the workspace: the HUD is
 # skipped there, with a warning that says what to install.
 if(UNIX AND NOT APPLE)
+  # FindX11 test-compiles its checks, so it needs C (the project itself is NONE).
+  enable_language(C)
   find_package(X11)
   find_package(OpenGL)
   if(NOT (X11_FOUND AND X11_Xrandr_FOUND AND X11_Xinerama_FOUND AND X11_Xcursor_FOUND
