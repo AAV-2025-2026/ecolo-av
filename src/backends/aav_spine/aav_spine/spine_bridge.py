@@ -6,12 +6,16 @@ Subscribes  ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped
             can/rx            can_msgs/Frame  (ros2_socketcan receiver)
 Publishes   can/tx            can_msgs/Frame  (ros2_socketcan sender)
             vehicle/odom      nav_msgs/Odometry  (twist only, in base_link)
+            vehicle/wheel_speed  aav_interfaces/WheelSpeed  (front wheel nodes, ~100 Hz)
             vehicle/status    aav_interfaces/VehicleStatus
             vehicle/joint_states  sensor_msgs/JointState  (front steering joints, for RViz;
                                   joint_state_publisher merges it into /joint_states)
 Service     spine/arm         std_srvs/SetBool
 
 Frames are defined in firmware/can/aav.dbc and packed by can_codec.
+/vehicle/odom's speed is the front wheel nodes' mean (WHEEL_SPEED_L/R, turned into
+the rear axle's speed by wheel_speed), while both are fresh; otherwise the spine's
+own measured_speed from VEHICLE_FEEDBACK.
 DRIVE_CMD goes out at 50 Hz only while /ego/actuator_cmd is fresh. If ego
 stops, the bridge stops sending and the spine's own watchdog brakes the car.
 
@@ -23,8 +27,9 @@ command timeout, a driver fault, a spine reboot).
 import math
 import signal
 
-from aav_interfaces.msg import VehicleStatus
+from aav_interfaces.msg import VehicleStatus, WheelSpeed
 from aav_spine import can_codec as cc
+from aav_spine import wheel_speed as ws
 from ackermann_msgs.msg import AckermannDriveStamped
 from can_msgs.msg import Frame
 from nav_msgs.msg import Odometry
@@ -38,11 +43,14 @@ from std_srvs.srv import SetBool
 
 class SpineBridge(Node):
 
+    FROM_BUS = (cc.VEHICLE_FEEDBACK_ID, cc.VEHICLE_STATUS_ID) + cc.WHEEL_SPEED_IDS
+
     def __init__(self):
         super().__init__('spine_bridge')
         self.wheelbase = self.declare_parameter('wheelbase', 1.57).value
         self.track = self.declare_parameter('track', 0.77).value
         self.cmd_timeout = self.declare_parameter('cmd_timeout', 0.1).value
+        wheel_timeout = self.declare_parameter('wheel_timeout', 0.1).value
         drive_hz = self.declare_parameter('drive_rate_hz', 50.0).value
         estop_hz = self.declare_parameter('estop_rate_hz', 10.0).value
         self.speed_var = self.declare_parameter('speed_variance', 0.01).value
@@ -58,10 +66,12 @@ class SpineBridge(Node):
         self.counters = {}
         self.feedback = None
         self.bad_frames = 0
+        self.wheels = ws.FrontWheels(wheel_timeout)
 
         self.to_can = self.create_publisher(Frame, 'can/tx', 50)
         self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
         self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
+        self.wheel_pub = self.create_publisher(WheelSpeed, 'vehicle/wheel_speed', 10)
         self.joint_pub = self.create_publisher(JointState, 'vehicle/joint_states', 10)
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
@@ -138,7 +148,7 @@ class SpineBridge(Node):
     # spine -> Orin
 
     def on_frame(self, f):
-        if f.is_error or f.is_rtr or f.id not in (cc.VEHICLE_FEEDBACK_ID, cc.VEHICLE_STATUS_ID):
+        if f.is_error or f.is_rtr or f.id not in self.FROM_BUS:
             return
         try:
             values = cc.unpack(f.id, bytes(f.data[:f.dlc]))
@@ -148,14 +158,35 @@ class SpineBridge(Node):
             return
         if f.id == cc.VEHICLE_FEEDBACK_ID:
             self.publish_feedback(values)
-        else:
+        elif f.id == cc.VEHICLE_STATUS_ID:
             self.publish_status(values)
+        elif self.wheels.update(f.id, values, self.now_s()):
+            self.publish_wheels()
+
+    def now_s(self):
+        return self.get_clock().now().nanoseconds * 1e-9
+
+    def drive_sign(self):
+        return ws.drive_sign(self.feedback and self.feedback['measured_speed'],
+                             self.cmd.speed if self.cmd else None)
+
+    def publish_wheels(self):
+        r = self.wheels.reading(self.now_s(), self.drive_sign())
+        msg = WheelSpeed()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
+        msg.left, msg.right = r.left, r.right
+        msg.left_fresh, msg.right_fresh = r.left_fresh, r.right_fresh
+        msg.direction_measured = r.direction_measured
+        msg.left_pulses, msg.right_pulses = r.left_pulses, r.right_pulses
+        self.wheel_pub.publish(msg)
 
     def publish_feedback(self, v):
         self.feedback = v
         now = self.get_clock().now().to_msg()
-        speed = v['measured_speed']
         steer = v['measured_steering_angle']
+        front = self.wheels.reading(self.now_s(), self.drive_sign()).mean()
+        speed = v['measured_speed'] if front is None else ws.rear_axle_speed(front, steer)
         odom = Odometry()
         odom.header.stamp = now
         odom.header.frame_id = 'odom'

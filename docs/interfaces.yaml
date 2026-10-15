@@ -98,7 +98,7 @@ topics:
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
     sub: [ekf_local, ekf_global]
     live: [turtle, sim, car, replay, bench]
-    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).
+    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter]
@@ -111,6 +111,12 @@ topics:
     sub: [joint_state_publisher]
     live: [bench]
     note: Measured front steering joint angles, merged into /joint_states.
+  /vehicle/wheel_speed:
+    type: aav_interfaces/msg/WheelSpeed
+    pub: [spine_bridge]
+    sub: []
+    live: [bench]
+    note: Front wheel speeds (m/s, signed) and pulse counts from the wheel nodes (CAN 0x200, 0x201), about 100 Hz. Their mean, when fresh, is the speed in /vehicle/odom.
   /joint_states:
     type: sensor_msgs/msg/JointState
     pub: [joint_state_publisher, gz_bridge]
@@ -127,7 +133,7 @@ topics:
     pub: [socket_can_receiver, spine_sim]
     sub: [spine_bridge]
     live: [bench]
-    note: VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz. On the bench, spine_sim sends them.
+    note: VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench, spine_sim sends them all.
 
   # --- sensors ---
   /sensors/imu/data_raw:

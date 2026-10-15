@@ -93,7 +93,8 @@ def launch_setup(context):
 
         # The stand-ins for the hardware.
         Node(package='aav_spine_sim', executable='spine_sim', name='spine_sim',
-             parameters=[{'wheelbase': float(v['wheelbase']),
+             parameters=[{'wheelbase': float(v['wheelbase']), 'track': float(v['track']),
+                          'wheel_radius': float(v['wheel_diameter']) / 2,
                           'max_steering': float(v['max_steering_angle']), **start}]),
         Node(package='aav_bench', executable='mock_imu', name='mock_imu',
              parameters=[bench_config]),

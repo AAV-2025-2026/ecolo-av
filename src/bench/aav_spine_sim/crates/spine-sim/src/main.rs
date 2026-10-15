@@ -7,10 +7,13 @@
 //! Subscribes  /can/tx                       can_msgs/Frame    what spine_bridge puts on the bus
 //!             /vehicle/bench/hw_estop       std_msgs/Bool     true = the hardware e-stop is pressed
 //!             /vehicle/bench/driver_faults  std_msgs/UInt16   pretend a driver failed (fault bits)
-//! Publishes   /can/rx                       can_msgs/Frame    VEHICLE_FEEDBACK 50 Hz, VEHICLE_STATUS 10 Hz
+//! Publishes   /can/rx                       can_msgs/Frame    VEHICLE_FEEDBACK 50 Hz, VEHICLE_STATUS 10 Hz,
+//!                                                             and the front wheel nodes' WHEEL_SPEED_L
+//!                                                             and WHEEL_SPEED_R 100 Hz (wheel-core)
 //!             /vehicle/bench/truth          nav_msgs/Odometry where the model car really is (map
 //!                                                             frame, 50 Hz), for the pretend sensors
-//! Parameters  wheelbase (m), max_steering (rad), start_x, start_y (m), start_yaw (rad)
+//! Parameters  wheelbase, track, wheel_radius (m), max_steering (rad), start_x, start_y (m),
+//!             start_yaw (rad)
 //!
 //! A thread runs the spine at 100 Hz, like the board's main loop; the main thread spins.
 
@@ -23,8 +26,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use anyhow::{bail, Result};
-use bench_car::{Bench, PlantConfig, Pose};
+use anyhow::{anyhow, bail, Result};
+use bench_car::{Bench, PlantConfig, Pose, BENCH_WHEELS};
 use rclrs::*;
 use ros_env::builtin_interfaces::msg::Time;
 use ros_env::can_msgs::msg::Frame;
@@ -48,6 +51,7 @@ fn main() -> Result<()> {
     };
     let plant = PlantConfig {
         wheelbase: param("wheelbase", 1.57)? as f32,
+        track: param("track", 0.77)? as f32,
         max_steering: param("max_steering", 0.5)? as f32,
         ..PlantConfig::default()
     };
@@ -57,7 +61,11 @@ fn main() -> Result<()> {
         yaw: param("start_yaw", 0.0)?,
         ..Pose::default()
     };
-    let bench = Arc::new(Mutex::new(Bench::new(Default::default(), plant, start)));
+    let mut wheels = BENCH_WHEELS;
+    wheels.wheel_radius = param("wheel_radius", 0.15)? as f32;
+    let bench = Bench::new(Default::default(), plant, start, wheels)
+        .map_err(|e| anyhow!("bad wheel settings: {e:?}"))?;
+    let bench = Arc::new(Mutex::new(bench));
     log_info!(
         node.logger(),
         "The spine's firmware logic, driving a model car (wheelbase {} m). Arm it with \
@@ -118,7 +126,7 @@ fn main() -> Result<()> {
                     frames_out.publish(frame(id, data, stamp.clone()))?;
                 }
                 ticks += 1;
-                if ticks % 2 == 0 {
+                if ticks.is_multiple_of(2) {
                     truth.publish(odometry(&pose, stamp))?;
                 }
                 // Keep a steady 100 Hz; if a tick runs late, don't try to catch up.
