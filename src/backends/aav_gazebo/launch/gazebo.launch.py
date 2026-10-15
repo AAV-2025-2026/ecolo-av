@@ -3,8 +3,11 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
 
   ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road] [gui:=true]
       [follow:=true] [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=false]
+      [actuator_model:=true]
 
   /ego/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
+                       (the actuator model: vehicle.yaml's actuators:, unless
+                        actuator_model:=false)
   Gazebo odometry, IMU, NavSat ──bridge──> gazebo_adapter ──> /vehicle/odom,
                                            /sensors/imu/data_raw, /sensors/gps/fix, /vehicle/status
   Gazebo joints ──bridge──> /joint_states;  Gazebo clock ──bridge──> /clock
@@ -104,7 +107,8 @@ def launch_setup(context):
                          sim_time]),
         Node(package='aav_gazebo', executable='gazebo_adapter', name='gazebo_adapter',
              parameters=[{'wheelbase': float(v['wheelbase']), 'radar': sensors,
-                          'lidar': lidar}, sim_time]),
+                          'lidar': lidar, 'wheel_radius': float(v['wheel_diameter']) / 2.0,
+                          'actuator_model': flag(context, 'actuator_model')}, sim_time]),
     ]
     if gui and MAC:
         actions.append(ExecuteProcess(cmd=['gz', 'sim', '-g'], name='gz_window',
@@ -147,5 +151,8 @@ def generate_launch_description():
         DeclareLaunchArgument('lidar', default_value='false',
                               description='a simulated 16-beam roof lidar, on '
                                           '/sensors/lidar/points (world:=road)'),
+        DeclareLaunchArgument('actuator_model', default_value='true',
+                              description="the actuators as vehicle.yaml's actuators: say "
+                                          "(gazebo_adapter); false: Gazebo's old instant car"),
         OpaqueFunction(function=launch_setup),
     ])

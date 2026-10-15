@@ -5,6 +5,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=false]
+      [actuator_model:=true]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
 
@@ -28,6 +29,8 @@ worlds.has_sensors), so the car's whole graph runs there, with the bench's argum
   lidar:=true         a simulated 16-beam roof lidar, on /sensors/lidar/points. The car
                       has none, so nothing reads it yet: it is there to look at (RViz).
                       Off by default: on a Mac it made the full graph flaky
+  actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
+                      vehicle.yaml's actuators:), to compare the two
 
 The empty and test_lot worlds render nothing, so they run headless anywhere, and the
 camera's parts need world:=road. Every node runs on simulated time.
@@ -80,7 +83,7 @@ def launch_setup(context):
         SetParameter(name='use_sim_time', value=True),
         include(context, 'aav_gazebo', 'gazebo.launch.py', world=world, gui=arg('gui'),
                 obstacle=arg('obstacle'), start_y=arg('start_y'), start_yaw=arg('start_yaw'),
-                lidar=arg('lidar')),
+                lidar=arg('lidar'), actuator_model=arg('actuator_model')),
         include(context, 'aav_mux', 'mux.launch.py', use_sim_time='true'),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true'),
         include(context, 'aav_scripted', 'scripted.launch.py', use_sim_time='true'),
@@ -169,5 +172,8 @@ def generate_launch_description():
                               description='a simulated 16-beam roof lidar, on '
                                           '/sensors/lidar/points (world:=road; the car has '
                                           'none)'),
+        DeclareLaunchArgument('actuator_model', default_value='true',
+                              description="the actuators as vehicle.yaml's actuators: say; "
+                                          "false: Gazebo's old instant car"),
         OpaqueFunction(function=launch_setup),
     ])

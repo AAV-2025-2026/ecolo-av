@@ -31,8 +31,11 @@
       <wheel_radius>${R}</wheel_radius>
       <min_velocity>-3.0</min_velocity>
       <max_velocity>3.0</max_velocity>
-      <min_acceleration>-3.0</min_acceleration>
-      <max_acceleration>1.5</max_acceleration>
+      <!-- Wide on purpose (15 Oct): gazebo_adapter's actuator model limits the speed and
+           steering (vehicle.yaml actuators:), not Gazebo. They were -3.0 and +1.5; with
+           actuator_model:=false the adapter keeps those old limits itself. -->
+      <min_acceleration>-10.0</min_acceleration>
+      <max_acceleration>10.0</max_acceleration>
       <topic>/model/aav/cmd_vel</topic>
       <odom_topic>/model/aav/odometry</odom_topic>
       <tf_topic>/model/aav/tf</tf_topic>

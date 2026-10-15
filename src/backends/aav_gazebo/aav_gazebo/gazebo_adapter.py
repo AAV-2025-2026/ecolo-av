@@ -3,13 +3,19 @@ gazebo_adapter: Gazebo (Harmonic) as the car, behind the same topics as the real
 
 Subscribes  ego/actuator_cmd      ackermann_msgs/AckermannDriveStamped
             gazebo/odom           nav_msgs/Odometry   (bridged from the Ackermann system)
+            joint_states          sensor_msgs/JointState (bridged: the wheels' spin)
             gazebo/imu            sensor_msgs/Imu     (bridged IMU sensor)
             gazebo/navsat         sensor_msgs/NavSatFix (bridged NavSat sensor)
             gazebo/radar/points   sensor_msgs/PointCloud2, best effort (bridged lidar: the
                                   radar stand-in), only with radar:=true
-Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd_vel)
+Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd_vel), at
+                                  rate_hz: the actuator model's speed and steering
             vehicle/odom          nav_msgs/Odometry, twist only, like aav_spine
             vehicle/status        aav_interfaces/VehicleStatus (mode COMPUTER, armed)
+            vehicle/steering      aav_interfaces/ActuatorState: ego's angle, the model's
+            vehicle/throttle      aav_interfaces/ActuatorState: the speed loop's, the model's
+            vehicle/brake         aav_interfaces/ActuatorState: the same (NaN with the model off)
+            vehicle/wheels        aav_interfaces/WheelSpeeds: each wheel's spin x its radius
             sensors/imu/data_raw  sensor_msgs/Imu, with covariances
             sensors/gps/fix       sensor_msgs/NavSatFix, with a covariance
             sensors/radar/points  sensor_msgs/PointCloud2, best effort, in radar_link: only
@@ -17,6 +23,17 @@ Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd
                                   (radar.py), only with radar:=true
             system/source         aav_interfaces/DataSource, latched: everything above, and
                                   the cameras and lidar Gazebo renders, is SIM (sources.py)
+
+The actuator model (actuator_model.py, READ-ME-FULL-SIMULATION.md step 3) sits between
+ego and Gazebo: a stand-in for the spine's speed loop turns ego's speed into throttle and
+brake, and the model turns those, and ego's steering angle, into what the car does, with
+the numbers in vehicle.yaml's `actuators:` section. actuator_model:=false gives the old
+behaviour instead, to compare: the speed within Gazebo's old limits, an instant steer.
+Gazebo's own limits (aav.gazebo.xacro) are wide, so the model, not Gazebo, limits. No
+/ego/actuator_cmd for cmd_timeout s: the target speed drops to 0, as the spine's watchdog.
+
+Parameters  actuator_model (true), rate_hz (50), cmd_timeout (0.2 s), wheelbase,
+            wheel_radius, radar, lidar, and the sensors' noise
 
 So ekf_local, ekf_global, navsat_transform and imu_filter_madgwick run in simulation
 with the same configs as on the car, and radar_clusters, Nav2's costmap and
@@ -28,8 +45,11 @@ passed on: the road world bridges it to /vehicle/gazebo/truth, for checks only.
 import math
 import signal
 
-from aav_gazebo import radar, sources
-from aav_interfaces.msg import DataSource, SensorSource, VehicleStatus
+from aav_description import vehicle
+from aav_gazebo import radar, sources, wheels
+from aav_gazebo.actuator_model import ActuatorConfig, Actuators, Ideal
+from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
+from aav_interfaces.msg import WheelSpeeds
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -37,7 +57,7 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
-from sensor_msgs.msg import Imu, NavSatFix, NavSatStatus, PointCloud2, PointField
+from sensor_msgs.msg import Imu, JointState, NavSatFix, NavSatStatus, PointCloud2, PointField
 from sensor_msgs_py import point_cloud2
 
 # The TI driver's fields: x, y, z, intensity, velocity, float32 each.
@@ -61,7 +81,20 @@ class GazeboAdapter(Node):
         self.gps_var = self.declare_parameter('gps_stddev', 0.5).value ** 2
         self.radar_range = self.declare_parameter('radar_range', 8.4).value   # m
         lidar = self.declare_parameter('lidar', False).value
-        self.steering = 0.0
+        self.wheel_radius = self.declare_parameter('wheel_radius', 0.15).value   # m
+        self.cmd_timeout = self.declare_parameter('cmd_timeout', 0.2).value     # s
+        rate = self.declare_parameter('rate_hz', 50.0).value
+        config = ActuatorConfig.from_vehicle(vehicle.load())
+        if self.declare_parameter('actuator_model', True).value:
+            self.model = Actuators(config)
+            self.get_logger().info(f'the actuator model, from vehicle.yaml: {config}')
+        else:
+            self.model = Ideal(config)
+            self.get_logger().info("no actuator model: Gazebo's old limits, an instant steer")
+        self.cmd = None          # ego's last command
+        self.cmd_time = None
+        self.last_tick = None
+        self.state = None        # the model's last step
         self.speed = 0.0
 
         self.cmd_pub = self.create_publisher(Twist, 'gazebo/cmd_vel', 10)
@@ -69,10 +102,16 @@ class GazeboAdapter(Node):
         self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
         self.imu_pub = self.create_publisher(Imu, 'sensors/imu/data_raw', 10)
         self.fix_pub = self.create_publisher(NavSatFix, 'sensors/gps/fix', 10)
+        self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
+        self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
+        self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
+        self.wheels_pub = self.create_publisher(WheelSpeeds, 'vehicle/wheels', 10)
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(Odometry, 'gazebo/odom', self.on_odom, 10)
         self.create_subscription(Imu, 'gazebo/imu', self.on_imu, 10)
         self.create_subscription(NavSatFix, 'gazebo/navsat', self.on_navsat, 10)
+        self.create_subscription(JointState, 'joint_states', self.on_joints, 10)
+        self.create_timer(1.0 / rate, self.tick)
         if self.declare_parameter('radar', False).value:
             # Best effort both ways, as the TI driver publishes: its subscribers ask for it.
             self.radar_pub = self.create_publisher(PointCloud2, 'sensors/radar/points',
@@ -94,12 +133,44 @@ class GazeboAdapter(Node):
         self.source_pub.publish(msg)
 
     def on_cmd(self, msg):
-        d = msg.drive
-        self.steering = d.steering_angle
+        self.cmd = msg.drive
+        self.cmd_time = self.get_clock().now()
+
+    def tick(self):
+        """Step the actuator model on Gazebo's clock, and send Gazebo what it gives."""
+        now = self.get_clock().now()
+        before, self.last_tick = self.last_tick, now
+        if before is None:
+            return
+        dt = (now - before).nanoseconds * 1e-9
+        if dt <= 0.0:
+            return                       # the clock stood still, or went back (a reset)
+        dt = min(dt, 0.1)                # a stall: don't jump
+        fresh = (self.cmd is not None
+                 and (now - self.cmd_time).nanoseconds * 1e-9 <= self.cmd_timeout)
+        speed = self.cmd.speed if fresh else 0.0
+        steer = self.cmd.steering_angle if self.cmd is not None else 0.0
+        s = self.state = self.model.step(speed, steer, dt)
+
         out = Twist()
-        out.linear.x = d.speed
-        out.angular.z = turn_rate(d.speed, d.steering_angle, self.wheelbase)
+        out.linear.x = s.speed
+        out.angular.z = turn_rate(s.speed, s.steering, self.wheelbase)
         self.cmd_pub.publish(out)
+
+        stamp = now.to_msg()
+        for pub, command, measured in ((self.steering_pub, s.steer_command, s.steering),
+                                       (self.throttle_pub, s.throttle_command, s.throttle),
+                                       (self.brake_pub, s.brake_command, s.brake)):
+            a = ActuatorState(command=float(command), measured=float(measured))
+            a.header.stamp = stamp
+            a.header.frame_id = 'base_link'
+            pub.publish(a)
+
+    def on_joints(self, msg):
+        w = WheelSpeeds(**wheels.ground_speeds(msg.name, msg.velocity, self.wheel_radius))
+        w.header.stamp = msg.header.stamp
+        w.header.frame_id = 'base_link'
+        self.wheels_pub.publish(w)
 
     def on_odom(self, msg):
         odom = Odometry()
@@ -125,7 +196,12 @@ class GazeboAdapter(Node):
         s.mode = VehicleStatus.MODE_COMPUTER
         s.armed = True
         s.speed = speed
-        s.steering_angle = self.steering
+        if self.state is not None:
+            m = self.state
+            s.steering_angle = m.steering
+            # The model's levels; with the model off there are none (NaN): say 0.
+            s.throttle = m.throttle if math.isfinite(m.throttle) else 0.0
+            s.brake = m.brake if math.isfinite(m.brake) else 0.0
         self.status_pub.publish(s)
 
     def on_imu(self, msg):
