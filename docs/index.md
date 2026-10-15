@@ -27,7 +27,7 @@ moves the car.**
 | after what this version does, at a glance | [Release notes](release-notes.md) |
 | new to the team | [Your first day](first-day.md), then your card in [Starting points](team.md) |
 | putting the whole thing together | [Infrastructure](infrastructure.md), then [Work](work.md) and [Decisions](decisions.md) |
-| looking for what a package does | [Packages](packages.md) |
+| looking for what a package does | [Packages](packages.md); the deeper cards in [Every module](modules.md) |
 | writing a driver, or drawing a map | [Build a driver](howto-driver.md), [Costmaps](costmaps.md) |
 | testing the car's software without the car | [Bench mode](bench.md) |
 | working on cameras, YOLO, stop signs or lanes | [Perception](perception.md) |
