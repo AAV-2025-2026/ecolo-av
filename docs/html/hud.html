@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">16 min read · 12 sections</div></header>
+<div class="meta">20 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -58,14 +58,17 @@
 <a href="car_measurements.html">Car numbers</a>
 <a class="here" href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#the-e-stop-button">The e-stop button</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#what-changed-in-the-app-11-october">What changed in the app (11 October)</a><a href="#get-flutter">Get Flutter</a><a href="#test-the-app">Test the app</a><a href="#run-it_1">Run it</a><a href="#on-the-bench-11-october">On the bench (11 October)</a><a href="#the-place-database">The place database</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-map-window-big-screen">The map window (big screen)</a><a href="#the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#the-e-stop-button">The e-stop button</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#what-changed-in-the-app-11-october">What changed in the app (11 October)</a><a href="#get-flutter">Get Flutter</a><a href="#test-the-app">Test the app</a><a href="#run-it_2">Run it</a><a href="#on-the-bench-11-october">On the bench (11 October)</a><a href="#the-place-database">The place database</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
 <div class="lead"><p>The 2025-26 team built a touchscreen app for the car. Its back end, <code>aav_hud</code>, is ported
 to our topics (10 October). The app now matches it (11 October): an e-stop button, the
 car's status, and the camera from the back end.</p>
 <p><strong>Decided 11 October (Ben):</strong> the HUD becomes one Rust program, raylib and rclrs, that is
 also its ROS node. Its first screen runs since 15 October:
 <a href="#the-hud-in-rust-raylib">the HUD in Rust</a>. The Flutter app stays until the new one
-matches it. Still open (Q29): which screen, and GPS destinations this year.</p></div>
+matches it. Still open (Q29): which screen, and GPS destinations this year.</p>
+<p><strong>Two screens (Ben, 15 Oct):</strong> a small ~7" touchscreen is the instrument cluster (the
+HUD), and a big ~15" monitor shows the map: <a href="#the-map-window-big-screen">the map window</a>,
+a second program.</p></div>
 <section class="card"><h2 id="the-hud-in-rust-raylib">The HUD in Rust (raylib)</h2>
 <p><code>src/hud/aav_hud_raylib</code>: one window, which is also the ROS node <code>hud</code>.</p>
 <p><img alt="The driving screen, with pretend data (--demo)" src="../img/hud-raylib.png" /></p>
@@ -244,6 +247,158 @@ With Gazebo, one command does both: <code>pixi run sim world:=test_lot hud:=true
 <p>Checked on 15 Oct by listening to each topic while the backend drove a scripted goal
 (the window itself couldn't open from that session). NEVER on a panel is the honest answer:
 nothing publishes that topic there.</p>
+</section>
+<section class="card"><h2 id="the-map-window-big-screen">The map window (big screen)</h2>
+<p><code>src/hud/aav_hud_raylib</code>, binary <code>map</code>: its own window, which is also the ROS node <code>map</code>.
+Step 1 (15 October): what Nav2 already knows, drawn north up.</p>
+<p><img alt="The map window, with pretend data (--demo)" src="../img/map-raylib.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>On screen</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The map: free light, occupied dark, unknown grey; grid lines every round number of metres</td>
+<td><code>/map</code> (latched)</td>
+</tr>
+<tr>
+<td>The car: its outline to scale (<code>vehicle.yaml</code>), with an arrow; grey when its position is old</td>
+<td><code>/localization/odom/global</code> (map frame)</td>
+</tr>
+<tr>
+<td>The plan: a blue line</td>
+<td><code>/plan</code></td>
+</tr>
+<tr>
+<td>The goal: a green dot</td>
+<td>the plan's last point; RViz's <code>/goal_pose</code> until Nav2 plans for it</td>
+</tr>
+<tr>
+<td>TRIP</td>
+<td>NO GOAL, DRIVING, ARRIVED (within 1 m), WAITING FOR A PLAN, NO NEW PLAN (Nav2 stopped replanning: cancelled or failed), NO POSITION</td>
+</tr>
+<tr>
+<td>DISTANCE LEFT</td>
+<td>along the plan, from the point nearest the car</td>
+</tr>
+<tr>
+<td>TIME LEFT, SPEED</td>
+<td>distance / speed; km/h from the odometry</td>
+</tr>
+<tr>
+<td>TOPICS</td>
+<td>each topic: OK, STALE or NEVER</td>
+</tr>
+<tr>
+<td>Orange band</td>
+<td>SIMULATED / BENCH / REPLAY, as on the HUD (<code>/system/source</code>)</td>
+</tr>
+<tr>
+<td>Scale bar, N</td>
+<td>bottom left; north is always up</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="keys">Keys</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F</td>
+<td>follow the car (the start: 60 m across) / the whole map (<code>--whole-map</code> starts there)</td>
+</tr>
+<tr>
+<td>mouse wheel, + and -</td>
+<td>zoom</td>
+</tr>
+<tr>
+<td>drag</td>
+<td>move the map (a free view; F goes back to the car)</td>
+</tr>
+<tr>
+<td>F11</td>
+<td>full screen</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="run-it_1">Run it</h3>
+<pre class="highlight"><code class="language-bash">pixi run map-demo                          # pretend data: no ROS, no car
+pixi run build &amp;&amp; pixi run map             # the real node (ros2 launch aav_hud_raylib map.launch.py)
+pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window together</code></pre>
+<h3 id="how-its-built_1">How it's built</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>crates/map-core</code></td>
+<td>the maths, no ROS, no raylib: map to screen and back, zoom, the grid's pixels, the nearest point and the distance left, the trip's status. <code>cargo test -p map-core</code> (in <code>tools/test.sh</code>)</td>
+</tr>
+<tr>
+<td><code>crates/map-app</code></td>
+<td>the window and the node, built like the HUD's. <code>--demo</code>, <code>--screenshot FILE</code>, <code>--vehicle FILE</code></td>
+</tr>
+<tr>
+<td><code>config/map.yaml</code></td>
+<td>every topic name, and the limits: <code>stale_after</code>, <code>plan_stale_after</code> (3 s), <code>arrive_within</code> (1 m)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The distance comes from <code>/plan</code> and the car, not from Nav2's action feedback: simpler,
+  and it works for a goal sent from anywhere.</li>
+<li>The car's size: <code>vehicle.yaml</code>, built in, and the installed one at launch (<code>--vehicle</code>).</li>
+</ul>
+<h3 id="tested-15-october-a-mac_1">Tested (15 October, a Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cargo test</code> (map-core 33, map-app 6: the grid message, the demo, the options)</td>
+<td>all pass</td>
+</tr>
+<tr>
+<td><code>--demo</code>, with <code>--screenshot</code></td>
+<td>the picture above</td>
+</tr>
+<tr>
+<td>Gazebo, <code>world:=test_lot sim_speed:=3</code>, headless, private domain, two Nav2 goals</td>
+<td>the lot, the car, the plan and the goal; SIMULATED; DRIVING, the distance and the time left counting down; both goals SUCCEEDED</td>
+</tr>
+<tr>
+<td>ARRIVED on screen</td>
+<td>only in <code>--demo</code> and the unit tests: each live window closed (screenshot) before the car got there</td>
+</tr>
+<tr>
+<td>Clicks, the wheel, dragging</td>
+<td>not tested: macOS blocks input from scripts</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The map window next to Gazebo, whole map (--whole-map), driving to a goal" src="../img/map-raylib-sim.png" /></p>
+<ul>
+<li><code>/plan</code> isn't latched: a window opened after Nav2 finished shows NO GOAL until the
+  next goal.</li>
+<li>Near the goal, Nav2 may plan a loop to arrive facing the right way; the distance left
+  follows the loop.</li>
+</ul>
 </section>
 <section class="card"><h2 id="the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</h2>
 <p><strong>Decided (Ben, 15 Oct): the raylib HUD replaces it</strong> (Q29). What it looked like, drawn
@@ -532,7 +687,7 @@ pixi run test             # everything; includes hud-test when vendor/flutter ex
 <li>The back end has 98 tests of its own; <code>pixi run test</code> runs them too.</li>
 </ul>
 </section>
-<section class="card"><h2 id="run-it_1">Run it</h2>
+<section class="card"><h2 id="run-it_2">Run it</h2>
 <pre class="highlight"><code class="language-bash">pixi run bench hud:=true hud_port:=5123      # the back end, with the bench car
 ros2 launch aav_hud hud.launch.py            # the back end alone, next to a profile</code></pre>
 <ul>

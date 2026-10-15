@@ -9,6 +9,10 @@ also its ROS node. Its first screen runs since 15 October:
 [the HUD in Rust](#the-hud-in-rust-raylib). The Flutter app stays until the new one
 matches it. Still open (Q29): which screen, and GPS destinations this year.
 
+**Two screens (Ben, 15 Oct):** a small ~7" touchscreen is the instrument cluster (the
+HUD), and a big ~15" monitor shows the map: [the map window](#the-map-window-big-screen),
+a second program.
+
 ## The HUD in Rust (raylib)
 
 `src/hud/aav_hud_raylib`: one window, which is also the ROS node `hud`.
@@ -80,6 +84,72 @@ With Gazebo, one command does both: `pixi run sim world:=test_lot hud:=true`.
 Checked on 15 Oct by listening to each topic while the backend drove a scripted goal
 (the window itself couldn't open from that session). NEVER on a panel is the honest answer:
 nothing publishes that topic there.
+
+## The map window (big screen)
+
+`src/hud/aav_hud_raylib`, binary `map`: its own window, which is also the ROS node `map`.
+Step 1 (15 October): what Nav2 already knows, drawn north up.
+
+![The map window, with pretend data (--demo)](img/map-raylib.png)
+
+| On screen | From |
+|---|---|
+| The map: free light, occupied dark, unknown grey; grid lines every round number of metres | `/map` (latched) |
+| The car: its outline to scale (`vehicle.yaml`), with an arrow; grey when its position is old | `/localization/odom/global` (map frame) |
+| The plan: a blue line | `/plan` |
+| The goal: a green dot | the plan's last point; RViz's `/goal_pose` until Nav2 plans for it |
+| TRIP | NO GOAL, DRIVING, ARRIVED (within 1 m), WAITING FOR A PLAN, NO NEW PLAN (Nav2 stopped replanning: cancelled or failed), NO POSITION |
+| DISTANCE LEFT | along the plan, from the point nearest the car |
+| TIME LEFT, SPEED | distance / speed; km/h from the odometry |
+| TOPICS | each topic: OK, STALE or NEVER |
+| Orange band | SIMULATED / BENCH / REPLAY, as on the HUD (`/system/source`) |
+| Scale bar, N | bottom left; north is always up |
+
+### Keys
+
+| Key | Does |
+|---|---|
+| F | follow the car (the start: 60 m across) / the whole map (`--whole-map` starts there) |
+| mouse wheel, + and - | zoom |
+| drag | move the map (a free view; F goes back to the car) |
+| F11 | full screen |
+
+### Run it
+
+```bash
+pixi run map-demo                          # pretend data: no ROS, no car
+pixi run build && pixi run map             # the real node (ros2 launch aav_hud_raylib map.launch.py)
+pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window together
+```
+
+### How it's built
+
+| Part | What it does |
+|---|---|
+| `crates/map-core` | the maths, no ROS, no raylib: map to screen and back, zoom, the grid's pixels, the nearest point and the distance left, the trip's status. `cargo test -p map-core` (in `tools/test.sh`) |
+| `crates/map-app` | the window and the node, built like the HUD's. `--demo`, `--screenshot FILE`, `--vehicle FILE` |
+| `config/map.yaml` | every topic name, and the limits: `stale_after`, `plan_stale_after` (3 s), `arrive_within` (1 m) |
+
+- The distance comes from `/plan` and the car, not from Nav2's action feedback: simpler,
+  and it works for a goal sent from anywhere.
+- The car's size: `vehicle.yaml`, built in, and the installed one at launch (`--vehicle`).
+
+### Tested (15 October, a Mac)
+
+| What | Result |
+|---|---|
+| `cargo test` (map-core 33, map-app 6: the grid message, the demo, the options) | all pass |
+| `--demo`, with `--screenshot` | the picture above |
+| Gazebo, `world:=test_lot sim_speed:=3`, headless, private domain, two Nav2 goals | the lot, the car, the plan and the goal; SIMULATED; DRIVING, the distance and the time left counting down; both goals SUCCEEDED |
+| ARRIVED on screen | only in `--demo` and the unit tests: each live window closed (screenshot) before the car got there |
+| Clicks, the wheel, dragging | not tested: macOS blocks input from scripts |
+
+![The map window next to Gazebo, whole map (--whole-map), driving to a goal](img/map-raylib-sim.png)
+
+- `/plan` isn't latched: a window opened after Nav2 finished shows NO GOAL until the
+  next goal.
+- Near the goal, Nav2 may plan a loop to arrive facing the right way; the distance left
+  follows the loop.
 
 ## The Flutter app (2025-26): what it is
 

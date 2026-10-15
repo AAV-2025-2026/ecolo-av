@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">22 min read · 4 sections</div></header>
+<div class="meta">23 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -191,7 +191,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/system/source</code></td>
 <td><code>aav_interfaces/msg/DataSource</code></td>
 <td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>replay_source</code></td>
-<td><code>hud</code></td>
+<td><code>hud</code>, <code>map</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.</td>
 </tr>
@@ -551,9 +551,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/global</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_global</code></td>
-<td><code>navsat_transform</code></td>
+<td><code>navsat_transform</code>, <code>map</code></td>
 <td>sim, car, replay, bench</td>
-<td>map frame. Includes GPS; can jump.</td>
+<td>map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it.</td>
 </tr>
 <tr>
 <td><code>/localization/gps/odom</code></td>
@@ -575,25 +575,25 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/map</code></td>
 <td><code>nav_msgs/msg/OccupancyGrid</code></td>
 <td><code>map_server</code></td>
-<td><code>global_costmap</code>, <code>local_costmap</code></td>
+<td><code>global_costmap</code>, <code>local_costmap</code>, <code>map</code></td>
 <td>sim</td>
-<td>Transient local (latched). From aav_navigation/maps.</td>
+<td>Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud_raylib) draws it north up, for the big screen.</td>
 </tr>
 <tr>
 <td><code>/goal_pose</code></td>
 <td><code>geometry_msgs/msg/PoseStamped</code></td>
 <td><code>rviz2</code></td>
-<td><code>bt_navigator</code></td>
+<td><code>bt_navigator</code>, <code>map</code></td>
 <td>-</td>
-<td>RViz "2D Goal Pose" starts a navigate_to_pose.</td>
+<td>RViz "2D Goal Pose" starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
 </tr>
 <tr>
 <td><code>/plan</code></td>
 <td><code>nav_msgs/msg/Path</code></td>
 <td><code>planner_server</code></td>
+<td><code>map</code></td>
 <td>-</td>
-<td>-</td>
-<td>The planned path, for RViz/Foxglove.</td>
+<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud_raylib) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.</td>
 </tr>
 <tr>
 <td><code>/tf</code></td>
