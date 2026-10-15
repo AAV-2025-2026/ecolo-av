@@ -208,6 +208,7 @@ What our code has today, and what Friday must answer to finish each layer.
 | ☐ | Answer each question in [docs/audit-questions.md](docs/audit-questions.md) by its number |
 | ☐ | `grep -n -i -E "pass|psk|token|secret|key|ntrip" docs/history/audit-2026-10-16-car.md`: write only where a secret is and what kind |
 | ☐ | The raw survey files and backups stay in `~/aav-audit/` and on the encrypted drive: **never in git** |
+| ☐ | Update [TEAM-TODO.md](TEAM-TODO.md), the team's work list: fill its "Audit says" column, fix the sizes, add what the audit found |
 
 ## Don't (all day, until part 8 is done)
 
