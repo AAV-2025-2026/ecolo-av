@@ -12,10 +12,11 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
 The road world also renders the car's camera and its radar stand-in, a lidar shaped like
 the TI radar (aav_gazebo worlds.has_sensors). A second bridge, gz_road_bridge, carries them:
 
-  camera ──road bridge──> /camera/image_raw, /camera/camera_info (camera_left_link)
-  lidar ──road bridge──> /gazebo/radar/points ──> gazebo_adapter ──> /radar/points
+  camera ──road bridge──> /sensors/camera/front_left/image_raw and camera_info
+                          (camera_left_link)
+  lidar ──road bridge──> /gazebo/radar/points ──> gazebo_adapter ──> /sensors/radar/points
                                                   (radar_link, as the TI driver's)
-  Gazebo's truth ──road bridge──> /gazebo/truth (where the car really is, for checks)
+  Gazebo's truth ──road bridge──> /vehicle/gazebo/truth (where the car really is, for checks)
 
 obstacle:=true puts the bench's 1 m box in the car's lane, 15 m ahead. start_y and
 start_yaw put the car this far left of the world's origin, turned this far left of east

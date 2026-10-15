@@ -103,9 +103,9 @@ bench's road, built in 3D, so the car's own camera and radar can see it.
 
 | Sensor | In Gazebo | On ROS |
 |---|---|---|
-| Front camera | 640 x 360, 86 degrees across, 10 Hz: the bench camera's picture and lens (the 2024-25 calibration at a third of its size) | `/camera/image_raw`, `/camera/camera_info`, in `camera_left_link` |
-| Radar | a lidar shaped like the TI radar: 8.4 m, 120 degrees, 61 x 3 rays, 10 Hz. `gazebo_adapter` keeps the rays that hit something, with the TI driver's fields | `/radar/points`, best effort, in `radar_link` |
-| Where the car really is | Gazebo's own pose, like the bench's `/bench/truth` | `/gazebo/truth`, for checks only |
+| Front camera | 640 x 360, 86 degrees across, 10 Hz: the bench camera's picture and lens (the 2024-25 calibration at a third of its size) | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info`, in `camera_left_link` |
+| Radar | a lidar shaped like the TI radar: 8.4 m, 120 degrees, 61 x 3 rays, 10 Hz. `gazebo_adapter` keeps the rays that hit something, with the TI driver's fields | `/sensors/radar/points`, best effort, in `radar_link` |
+| Where the car really is | Gazebo's own pose, like the bench's `/vehicle/bench/truth` | `/vehicle/gazebo/truth`, for checks only |
 
 The radar stand-in isn't a radar: it sees every surface (the sign's post too), and each
 point's speed is the car's own, along the line of sight.
@@ -116,7 +116,7 @@ point's speed is the car's own, along the line of sight.
 |---|---|---|
 | (always, in the road world) | | `radar_clusters`, and Nav2's obstacle layer and `collision_monitor` |
 | `perception` | `false` | YOLO and `stop_sign_watcher`: twist_mux's stop-sign lock. Needs `pixi run -e ml` |
-| `lane` | `false` | `true`: lane keeping (`lane_finder`, and `control_interface` on `/cmd_vel/ai`). Add `nav:=false`: Nav2 outranks it. `fake`: on a pretend lane, in any world |
+| `lane` | `false` | `true`: lane keeping (`lane_finder`, and `control_interface` on `/drivers/ai/cmd_vel`). Add `nav:=false`: Nav2 outranks it. `fake`: on a pretend lane, in any world |
 | `camera_obstacles` | `false` | the detectors' boxes into Nav2's local costmap |
 | `hud` | `false` | the HUD's web server, on 127.0.0.1:5000 |
 | `obstacle` | `false` | the bench's 1 m box, in the lane 15 m ahead |

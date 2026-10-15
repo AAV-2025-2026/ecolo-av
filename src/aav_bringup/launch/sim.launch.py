@@ -20,7 +20,7 @@ worlds.has_sensors), so the car's whole graph runs there, with the bench's argum
                       obstacle layer and collision_monitor (navigation.launch.py radar:=true)
   perception:=true    YOLO (the ml environment) and stop_sign_watcher: twist_mux's
                       stop-sign lock
-  lane:=true          lane keeping: lane_finder and control_interface, on /cmd_vel/ai.
+  lane:=true          lane keeping: lane_finder and control_interface, on /drivers/ai/cmd_vel.
                       lane:=fake: control_interface on a pretend lane, in any world
   camera_obstacles    the detectors' boxes into Nav2's local costmap
   hud:=true           the HUD's web server, on 127.0.0.1:5000
@@ -147,7 +147,7 @@ def generate_launch_description():
                                           'environment; world:=road)'),
         DeclareLaunchArgument('lane', default_value='false',
                               description='true: lane keeping (lane_finder and '
-                                          'control_interface, on /cmd_vel/ai; world:=road); '
+                                          'control_interface, on /drivers/ai/cmd_vel; world:=road); '
                                           'fake: the same on a pretend lane'),
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="the detectors' boxes into the local costmap "

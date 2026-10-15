@@ -9,20 +9,20 @@
 # something, with the TI driver's fields (aav_gazebo/radar.py).
 
 # The front camera. Reliable, as the camera's subscribers ask (big messages).
-- ros_topic_name: /camera/image_raw
+- ros_topic_name: /sensors/camera/front_left/image_raw
   gz_topic_name: /aav/camera/image
   ros_type_name: sensor_msgs/msg/Image
   gz_type_name: gz.msgs.Image
   direction: GZ_TO_ROS
 
-- ros_topic_name: /camera/camera_info
+- ros_topic_name: /sensors/camera/front_left/camera_info
   gz_topic_name: /aav/camera/camera_info
   ros_type_name: sensor_msgs/msg/CameraInfo
   gz_type_name: gz.msgs.CameraInfo
   direction: GZ_TO_ROS
 
 # The radar stand-in's points: one per ray, inf where it hit nothing. gazebo_adapter
-# turns them into /radar/points. Best effort, as the TI driver publishes.
+# turns them into /sensors/radar/points. Best effort, as the TI driver publishes.
 - ros_topic_name: /gazebo/radar/points
   gz_topic_name: /aav/radar/points
   ros_type_name: sensor_msgs/msg/PointCloud2
@@ -30,8 +30,8 @@
   direction: GZ_TO_ROS
   qos_profile: SENSOR_DATA
 
-# Where the car really is, in the map frame: for checks, like the bench's /bench/truth.
-- ros_topic_name: /gazebo/truth
+# Where the car really is, in the map frame: for checks, like the bench's /vehicle/bench/truth.
+- ros_topic_name: /vehicle/gazebo/truth
   gz_topic_name: /model/aav/truth
   ros_type_name: nav_msgs/msg/Odometry
   gz_type_name: gz.msgs.Odometry

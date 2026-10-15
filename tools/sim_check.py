@@ -19,8 +19,8 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 4. The sensors: the camera's picture and lens are the bench camera's, in camera_left_link;
    the radar stand-in's cloud has the TI driver's fields, in radar_link, and nothing in it
    while nothing is within 8.4 m.
-5. Drives a scripted profile, and compares where the car really is (/gazebo/truth) with
-   where the car's own software thinks it is (/odometry/global).
+5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth) with
+   where the car's own software thinks it is (/localization/odom/global).
 6. With --perception: Nav2 drives to 40 m east, past the stop sign at 25 m. The car must
    stop with its front bumper before the sign, wait, and go on to the goal. The camera's
    picture with YOLO's boxes, as the lock went on, is saved to /tmp/aav-sim-stop-sign.png.
@@ -134,26 +134,26 @@ class Probe(Node):
         # Every truth sample, lane message and sensor stamp, from the start: lane keeping
         # starts as soon as the camera sees the lane, before its check begins.
         self.track, self.lanes, self.image_stamps, self.cloud_stamps = [], [], [], []
-        self.create_subscription(Odometry, '/gazebo/truth', self.on_truth, 10)
-        self.create_subscription(Odometry, '/odometry/global',
+        self.create_subscription(Odometry, '/vehicle/gazebo/truth', self.on_truth, 10)
+        self.create_subscription(Odometry, '/localization/odom/global',
                                  lambda m: setattr(self, 'glob', m), 10)
-        self.create_subscription(LaneGeometry, '/lane_geometry', self.on_lane, 10)
-        self.create_subscription(Image, '/camera/image_raw', self.on_image, 2)
-        self.create_subscription(CameraInfo, '/camera/camera_info',
+        self.create_subscription(LaneGeometry, '/perception/lane/geometry', self.on_lane, 10)
+        self.create_subscription(Image, '/sensors/camera/front_left/image_raw', self.on_image, 2)
+        self.create_subscription(CameraInfo, '/sensors/camera/front_left/camera_info',
                                  lambda m: setattr(self, 'info', m), 2)
-        self.create_subscription(PointCloud2, '/radar/points', self.on_cloud,
+        self.create_subscription(PointCloud2, '/sensors/radar/points', self.on_cloud,
                                  qos_profile_sensor_data)
         self.drive = ActionClient(self, ScriptedDrive, '/scripted_drive')
         self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
         self.stop, self.stop_picture, self.picture, self.stop_sign = False, None, None, None
-        self.create_subscription(Bool, '/perception/stop', self.on_stop, 10)
+        self.create_subscription(Bool, '/perception/stop_sign', self.on_stop, 10)
         self.create_subscription(Image, '/perception/detections/image',
                                  lambda m: setattr(self, 'picture', m), 2)
         # The stop signs YOLO saw: (where the car was, x m; score; box height, px).
         self.signs = []
         self.create_subscription(Detection2DArray, '/perception/detections', self.on_boxes, 10)
         self.monitor = []    # (action, polygon) from collision_monitor, as it changes
-        self.create_subscription(CollisionMonitorState, '/collision_monitor_state',
+        self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  lambda m: self.monitor.append((m.action_type, m.polygon_name)),
                                  10)
 

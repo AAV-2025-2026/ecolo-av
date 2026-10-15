@@ -70,7 +70,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /odometry/global
+        Value: /localization/odom/global
     - Class: rviz_default_plugins/Odometry
       Name: GPS (in map frame)
       Enabled: true
@@ -80,7 +80,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /odometry/gps
+        Value: /localization/gps/odom
     - Class: rviz_default_plugins/RobotModel
       Name: Car
       Enabled: true
@@ -104,7 +104,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /gazebo/truth
+        Value: /vehicle/gazebo/truth
     - Class: rviz_default_plugins/PointCloud2
       Name: Radar points
       Enabled: true
@@ -113,14 +113,14 @@ Visualization Manager:
       Color Transformer: FlatColor
       Color: 255; 0; 255
       Topic:
-        Value: /radar/points
+        Value: /sensors/radar/points
         Reliability Policy: Best Effort
     - Class: rviz_default_plugins/Polygon
       Name: Stop zone
       Enabled: true
       Color: 255; 0; 0
       Topic:
-        Value: /collision_monitor/stop_zone
+        Value: /safety/collision_monitor/stop_zone
     - Class: rviz_default_plugins/PointCloud2
       Name: Radar clusters
       Enabled: true
@@ -128,19 +128,19 @@ Visualization Manager:
       Style: Flat Squares
       Color Transformer: RGB8
       Topic:
-        Value: /radar/clusters
+        Value: /perception/radar/clusters
         Reliability Policy: Best Effort
     - Class: rviz_default_plugins/MarkerArray
       Name: Radar boxes
       Enabled: true
       Topic:
-        Value: /radar/cluster_boxes
+        Value: /perception/radar/cluster_boxes
     - Class: rviz_default_plugins/Image
       Name: Camera
       Enabled: true
       Normalize Range: true
       Topic:
-        Value: /camera/image_raw
+        Value: /sensors/camera/front_left/image_raw
         Reliability Policy: Reliable
     - Class: rviz_default_plugins/Image
       Name: Camera, with YOLO's boxes (perception:=true)

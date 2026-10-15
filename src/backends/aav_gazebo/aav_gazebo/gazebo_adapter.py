@@ -20,7 +20,7 @@ So ekf_local, ekf_global, navsat_transform and imu_filter_madgwick run in simula
 with the same configs as on the car, and radar_clusters, Nav2's costmap and
 collision_monitor read the radar as they would on the car. radar is true only in a world
 that renders the radar stand-in (gazebo.launch.py). Gazebo's ground-truth pose is not
-passed on: the road world bridges it to /gazebo/truth, for checks only.
+passed on: the road world bridges it to /vehicle/gazebo/truth, for checks only.
 """
 
 import math
@@ -72,7 +72,7 @@ class GazeboAdapter(Node):
         self.create_subscription(NavSatFix, 'gazebo/navsat', self.on_navsat, 10)
         if self.declare_parameter('radar', False).value:
             # Best effort both ways, as the TI driver publishes: its subscribers ask for it.
-            self.radar_pub = self.create_publisher(PointCloud2, 'radar/points',
+            self.radar_pub = self.create_publisher(PointCloud2, 'sensors/radar/points',
                                                    qos_profile_sensor_data)
             self.create_subscription(PointCloud2, 'gazebo/radar/points', self.on_radar,
                                      qos_profile_sensor_data)

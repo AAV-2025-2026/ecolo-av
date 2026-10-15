@@ -6,10 +6,10 @@
   road world); elsewhere they cost nothing. Element names checked against gz-sim 8 and
   gz-sensors 8 (Harmonic). Bridged to ROS by aav_gazebo/config/bridge_road.yaml:
 
-    /aav/camera/image         gz.msgs.Image          -> /camera/image_raw
-    /aav/camera/camera_info   gz.msgs.CameraInfo     -> /camera/camera_info
-    /aav/radar/points         gz.msgs.PointCloudPacked -> /radar/points (best effort)
-    /model/aav/truth          gz.msgs.Odometry       -> /gazebo/truth
+    /aav/camera/image         gz.msgs.Image          -> /sensors/camera/front_left/image_raw
+    /aav/camera/camera_info   gz.msgs.CameraInfo     -> /sensors/camera/front_left/camera_info
+    /aav/radar/points         gz.msgs.PointCloudPacked -> /sensors/radar/points (best effort)
+    /model/aav/truth          gz.msgs.Odometry       -> /vehicle/gazebo/truth
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
@@ -83,7 +83,7 @@
   </gazebo>
 
   <!-- Where the car really is, for checks: its pose in the world, which is the map
-       (the datum is the world's origin), as the bench's /bench/truth. Nothing on the
+       (the datum is the world's origin), as the bench's /vehicle/bench/truth. Nothing on the
        car's side reads it. -->
   <gazebo>
     <plugin filename="gz-sim-odometry-publisher-system"
