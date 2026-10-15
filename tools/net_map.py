@@ -64,6 +64,8 @@ PORTS = {
     5900: 'vnc',
     8080: 'web-alt',
     8765: 'foxglove',   # foxglove_bridge: watch with Lichtblick
+    8554: 'rtsp',       # MediaMTX: the 2025-26 camera video streams, on the camera Pis
+    9090: 'websocket',  # the 2025-26 camera dashboard's live stream
 }
 
 # ROS 2 (DDS) discovery: each domain announces on its own multicast port.

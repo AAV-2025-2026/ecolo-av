@@ -7,7 +7,7 @@
 <!-- Generated from docs/older-code.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The older code: what we have, and what&#x27;s missing</h1>
-<div class="meta">11 min read · 7 sections</div></header>
+<div class="meta">12 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -110,8 +110,8 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>Navigation_PathPlanning_ObstacleAvoidance, Navigation-LocalPathGenerator-rf_cpp, Obstacle_Avoidance_logic, Odometry, Real-Time-OS, joy_teleop_ackerman</td>
 </tr>
 <tr>
-<td>Worth a look before they're dropped</td>
-<td>Navigation-LocalPathGenerator's OSRM parser; the HUD's place database; Motor-Control's <code>FinalRev</code> branch (the only code that reads steering feedback)</td>
+<td>Looked at, then dropped (15 Oct)</td>
+<td>Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69, if the HUD's routes ever need it); the HUD's place database (<code>pixi run get-hud-map</code> downloads it); Motor-Control's <code>FinalRev</code> (below); AAV_dashboard (its README is now <code>docs/reference/2025-26-camera-system</code>)</td>
 </tr>
 <tr>
 <td>Empty</td>
@@ -151,7 +151,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>C++, micro-ROS; ESP32</td>
 <td>inactive since 2025</td>
 <td>no</td>
-<td>reference only: branch <code>FinalRev</code> reads the steering's position</td>
+<td>no. What it taught us: branch <code>FinalRev</code> (4166ec0) reads the steering's position from the <strong>steering Jrk G2's own feedback</strong>, <code>jrk_steer.getScaledFeedback()</code>, 0-4095 mapped to -1..+1 (<code>src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187</code>). So the Jrk may already have a position sensor wired (TEAM-TODO B6, audit D6, D7)</td>
 </tr>
 <tr>
 <td>Motor_Steering</td>
@@ -273,13 +273,13 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 </tr>
 <tr>
 <td>AAV_dashboard</td>
-<td>a stop-sign badge and bounding-box overlay</td>
-<td>not surveyed</td>
+<td>the <strong>camera system's README</strong> (main @ 5a26e15): CSI cameras → MediaMTX RTSP on the camera Pis (port 8554) → the Jetson's <code>camera_decode</code> (NVDEC) → <code>/camera/cam1/image_raw</code>, <code>cam2</code> → YOLOv8 on TensorRT → <code>/aav/stop_sign_*</code>; domain 10. The code itself is only on the Jetson, <code>~/Desktop/aav/Camera</code>. Plus a small web dashboard (ports 8080, 9090)</td>
+<td>the README: <code>docs/reference/2025-26-camera-system</code> (15 Oct). The code: copy on Friday</td>
 </tr>
 <tr>
 <td>Speed</td>
-<td>none</td>
-<td>not surveyed</td>
+<td>an older copy of the wheel-encoder Pico program, <code>Wheel_Encoders.cpp</code> (master @ a520646)</td>
+<td>no: Wheel_Encoders is the newer one, now in Rust</td>
 </tr>
 <tr>
 <td>Navigation-GlobalMapRouter---Abandoned---</td>

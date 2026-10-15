@@ -22,7 +22,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 |---|---|
 | Already in `aav` (all or part) | AAV_cortex, Motor_Steering (its numbers), User-Interface, Wheel_Encoders, yahboom-IMU, Lane_Detection_ROS2, Nav_Radar; from 2024-25: Battery-Monitor-ROS, camera_ros2_ws, camera_Yolo_detection, cameras |
 | Replaced by stock ROS packages | Navigation_PathPlanning_ObstacleAvoidance, Navigation-LocalPathGenerator-rf_cpp, Obstacle_Avoidance_logic, Odometry, Real-Time-OS, joy_teleop_ackerman |
-| Worth a look before they're dropped | Navigation-LocalPathGenerator's OSRM parser; the HUD's place database; Motor-Control's `FinalRev` branch (the only code that reads steering feedback) |
+| Looked at, then dropped (15 Oct) | Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69, if the HUD's routes ever need it); the HUD's place database (`pixi run get-hud-map` downloads it); Motor-Control's `FinalRev` (below); AAV_dashboard (its README is now `docs/reference/2025-26-camera-system`) |
 | Empty | Navigation-BehaviorPlanning |
 | Not surveyed yet | three 2025-26 repos and seven 2024-25 repos (the tables below) |
 
@@ -31,7 +31,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 | Repo | What it is | Language, hardware | State | In `aav`? | Pull in next? |
 |---|---|---|---|---|---|
 | AAV_cortex | the ESP32 actuator firmware (RC override, the Pi's UART), a Pico 2 status display, a Pi serial bridge | C++ (PlatformIO, Pico SDK), Python ROS 2; ESP32, Pico 2 | working, on branch `6-pico2-aav-firmware` | partly: `firmware/legacy/`, and its UART protocol in `aav_legacy` | the Pi-side display script, if the status display stays |
-| Motor-Control | the 2024-25 micro-ROS motor firmware: a fork | C++, micro-ROS; ESP32 | inactive since 2025 | no | reference only: branch `FinalRev` reads the steering's position |
+| Motor-Control | the 2024-25 micro-ROS motor firmware: a fork | C++, micro-ROS; ESP32 | inactive since 2025 | no | no. What it taught us: branch `FinalRev` (4166ec0) reads the steering's position from the **steering Jrk G2's own feedback**, `jrk_steer.getScaledFeedback()`, 0-4095 mapped to -1..+1 (`src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187`). So the Jrk may already have a position sensor wired (TEAM-TODO B6, audit D6, D7) |
 | Motor_Steering | a Pi speed controller and UART bridge, an ESP32 add-on, sims, MATLAB steering geometry | Python ROS 2, C++, MATLAB; Pi 5, ESP32 | prototype | partly: its geometry in `docs/reference/` and `vehicle.yaml` | its 250 ms link timeout idea, for today's ESP32 (but braking, not releasing) |
 | Navigation-BehaviorPlanning | a README title | none | empty | no | no |
 | Navigation-LocalPathGenerator | follows an OSRM route from GPS: the current step, a local path, a speed | Python ROS 2 | prototype; nothing feeds it | no | maybe its OSRM parser, to turn the HUD's route into Nav2 GPS waypoints |
@@ -51,8 +51,8 @@ The five not cloned here:
 |---|---|---|
 | Lane_Detection_ROS2 | none | the controller is in `aav`: `src/perception/aav_lane_geometry`, a driver on `/drivers/ai/cmd_vel`. The lane finder isn't in the repo |
 | Nav_Radar | none | in `aav`: `ti_ros2_driver`; the clustering, rewritten in Rust, as `aav_radar_clusters` |
-| AAV_dashboard | a stop-sign badge and bounding-box overlay | not surveyed |
-| Speed | none | not surveyed |
+| AAV_dashboard | the **camera system's README** (main @ 5a26e15): CSI cameras → MediaMTX RTSP on the camera Pis (port 8554) → the Jetson's `camera_decode` (NVDEC) → `/camera/cam1/image_raw`, `cam2` → YOLOv8 on TensorRT → `/aav/stop_sign_*`; domain 10. The code itself is only on the Jetson, `~/Desktop/aav/Camera`. Plus a small web dashboard (ports 8080, 9090) | the README: `docs/reference/2025-26-camera-system` (15 Oct). The code: copy on Friday |
+| Speed | an older copy of the wheel-encoder Pico program, `Wheel_Encoders.cpp` (master @ a520646) | no: Wheel_Encoders is the newer one, now in Rust |
 | Navigation-GlobalMapRouter---Abandoned--- | none | abandoned |
 
 ## The 2024-25 repos

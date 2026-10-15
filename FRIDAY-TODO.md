@@ -112,7 +112,8 @@ Each file has sections starting `====`. For each machine, pull out:
 | ☐ | `/etc` (services, udev, network) | each machine | `ssh <user>@<ip> 'sudo -n tar czf - /etc' > /Volumes/<drive>/aav-backup/<label>/etc.tgz`. If sudo wants a password: the three commands in [docs/audit-friday.md](docs/audit-friday.md), step 3 |
 | ☐ | **Model weights**: the stop-sign detector, any `best.pt`, `.engine`, `.onnx` | the Orin (survey: "files that may exist only here") | in the home copy. Write each one's path, size and `sha256sum` |
 | ☐ | **Code not on GitHub**: repos with changed files or unpushed commits; workspaces that aren't git repos | survey: "code on this machine" | in the home copy. List each one in the write-up |
-| ☐ | `camera_decode` and the camera streaming setup | the Orin, the camera Pis | in the home copy |
+| ☐ | **`~/Desktop/aav/Camera` on the Jetson**: `camera_decode`, `best.pt` / `best.onnx` / `best.engine` (the stop-sign model), `cameras.yaml` (the Pis' IPs). **In no git repo** | the Jetson | in the home copy; check it's there |
+| ☐ | MediaMTX's config, `/usr/local/etc/mediamtx.yml`, and its service | each camera Pi | in the `/etc` copy, plus that file |
 | ☐ | Camera calibration (`~/.ros/camera_info/*.yaml`) | the camera Pis, the Orin | in the home copy |
 | ☐ | OSRM route data, map tiles, `ottawa.db` | DASH-UI, the Orin; Docker volumes | the home copy; `docker inspect` shows the volume paths |
 | ☐ | Recordings (`.db3`, `.mcap`, `.bag`) | anywhere | in the home copy: useful test data |
@@ -125,6 +126,18 @@ What then comes into **git** (later, on a branch): source code only, each with a
 ## 5. Errors to chase
 
 ### The cameras freezing
+
+**How their cameras work** (found 15 Oct, in the 2025-26 `AAV_dashboard` repo:
+[docs/reference/2025-26-camera-system](docs/reference/2025-26-camera-system/README.md)):
+
+```text
+ camera (ribbon) → camera Pi 5: MediaMTX video server, RTSP port 8554 → network
+   → Jetson: camera_decode (NVDEC decoder) → /camera/cam1/image_raw, cam2 → YOLOv8 (TensorRT) → stop sign
+```
+
+So a freeze can start in **four** places: the Pi (power, the ribbon), MediaMTX, the network,
+or the Jetson's decoder. Check each: `systemctl status mediamtx` on each camera Pi; port 8554
+open in net-map; `ros2 topic hz /camera/cam1/image_raw` on the Jetson (domain 10).
 
 **First, ask the team** (write the answers down):
 

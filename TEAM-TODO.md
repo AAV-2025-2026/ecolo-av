@@ -73,7 +73,7 @@ Details: [docs/platforms.md](docs/platforms.md), "Moving the Orin to JetPack 7.2
 | B3 | **The e-stop input**: wire the e-stop to the board, so the firmware knows | S | audit S1 (what the Kar-Tech and the mushroom cut) | press each e-stop → `/vehicle/status` shows it | | |
 | B4 | **Brake safe state**: what the brake does with power cut, and at boot | S | audit S2; the Jrk G2 settings (D6) | written in `vehicle.yaml` / the firmware; tested on stands | | |
 | B5 | **Calibrate** steering (centre, full lock each way), throttle (deadband, top speed), brake (travel) | M | B1; the Jrk settings (D6, N9); measurements (M5) | `vehicle.yaml` has measured numbers; the scripted drive goes straight within 0.5 m over 10 m | | |
-| B6 | **Steering position feedback**: the actuator's own pot, or the KTC-100 | M | audit D7 (wire count) | steering angle in `/vehicle/status`, within 1° | | |
+| B6 | **Steering position feedback**: the actuator's own pot, or the KTC-100. The 2024-25 firmware read it from the steering Jrk G2 (`getScaledFeedback()`, docs/older-code.md): try that first | M | audit D6, D7 (wire count) | steering angle in `/vehicle/status`, within 1° | | |
 | B7 | **CAN (the KEFC plan)**: decide the board, then order the parts | M | audit C1 (is U7 wired to the ESP32?); Ben's decision on `wt/can-v2` | `candump` shows the spine's frames on the Orin | | |
 | B8 | **The first drive on the ground**, walking pace, empty lot, safety driver | S | B1, B2, B3, B5 | `READ-ME-A-TO-B.md` test 5: a scripted 10 m at 0.5 m/s | | |
 
