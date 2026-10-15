@@ -10,6 +10,7 @@ use crate::{
     config::{HudConfig, Topic},
     gps::Fix,
     health::{Health, LastSeen},
+    origin::{Announcement, Origins},
     picture::Picture,
     vehicle::VehicleStatus,
 };
@@ -58,6 +59,8 @@ pub enum Update {
     /// The camera sent a picture the HUD can't show; why.
     BadPicture(String),
     Estop(EstopReport),
+    /// A node said where its data comes from (`/system/source`).
+    Source(Announcement),
 }
 
 impl Update {
@@ -70,7 +73,8 @@ impl Update {
             Self::StopSign(_) => Some(Topic::StopSign),
             Self::Battery(_) => Some(Topic::Battery),
             Self::Picture(_) | Self::BadPicture(_) => Some(Topic::Camera),
-            Self::Estop(_) => None,
+            // Latched, sent once: its age says nothing about the data.
+            Self::Estop(_) | Self::Source(_) => None,
         }
     }
 }
@@ -88,6 +92,8 @@ pub struct HudState {
     pub picture_problem: Option<String>,
     /// The last e-stop report since the button was last pressed.
     pub estop: Option<EstopReport>,
+    /// Where the data comes from, as announced.
+    pub origins: Origins,
     new_picture: Option<Picture>,
     last_seen: HashMap<Topic, LastSeen>,
 }
@@ -118,6 +124,7 @@ impl HudState {
             }
             Update::BadPicture(why) => self.picture_problem = Some(why),
             Update::Estop(report) => self.estop = Some(report),
+            Update::Source(a) => self.origins.apply(a),
         }
     }
 
@@ -223,6 +230,24 @@ mod tests {
         assert_eq!(b.voltage, Some(50.9));
         assert!(b.percent.is_some_and(|p| (p - 99.7).abs() < 1e-3));
         assert_eq!(b.current, None);
+    }
+
+    #[test]
+    fn a_source_announcement_sets_the_banner() {
+        use crate::origin::{Entry, Origin};
+        let mut s = HudState::new(HudConfig::default());
+        assert_eq!(s.origins.banner(), None);
+        let a = Announcement {
+            announcer: "gazebo_adapter".into(),
+            entries: vec![Entry {
+                name: "vehicle".into(),
+                topic: "/vehicle/status".into(),
+                origin: Origin::Sim,
+            }],
+        };
+        s.apply(Update::Source(a), Instant::now());
+        assert_eq!(s.origins.banner().as_deref(), Some("SIMULATED"));
+        assert_eq!(s.origins.of_topic("/vehicle/status"), Some(Origin::Sim));
     }
 
     #[test]

@@ -10,4 +10,5 @@ hud:
     battery_topic: /vehicle/battery                       # sensor_msgs/msg/BatteryState
     camera_topic: /sensors/camera/front_left/image_raw    # sensor_msgs/msg/Image (rgb8, bgr8, mono8...)
     estop_topic: /safety/estop                            # std_msgs/msg/Bool: published, only ever true
+    source_topic: /system/source                          # aav_interfaces/msg/DataSource, latched: the SIMULATED banner
     stale_after: 1.0                                      # s: a topic this quiet shows STALE

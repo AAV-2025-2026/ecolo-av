@@ -10,7 +10,9 @@
 //! - small messages: best effort (SensorDataQoS), which takes reliable and best-effort
 //!   publishers alike (ublox publishes /sensors/gps/fix best effort);
 //! - pictures: reliable, depth 1; best effort loses most big messages over WiFi;
-//! - the e-stop: reliable, depth 10, what spine_bridge and legacy_uart_bridge use.
+//! - the e-stop: reliable, depth 10, what spine_bridge and legacy_uart_bridge use;
+//! - `/system/source`: reliable, transient local, depth 1, so the HUD gets each
+//!   announcer's one message even when it starts later.
 
 use std::{
     sync::{
@@ -27,13 +29,14 @@ use hud_core::{
     config::{HudConfig, Topic, NODE_NAME},
     estop::EstopButton,
     gps::{Fix, RawFix},
+    origin::{Announcement, Entry, Origin},
     picture::Picture,
     state::{Battery, EstopReport, Update},
     units::{Fraction, MetresPerSecond, Radians},
     vehicle::{Faults, Mode, VehicleStatus},
 };
 use rclrs::*;
-use ros_env::aav_interfaces::msg::VehicleStatus as VehicleStatusMsg;
+use ros_env::aav_interfaces::msg::{DataSource, VehicleStatus as VehicleStatusMsg};
 use ros_env::sensor_msgs::msg::{BatteryState, Image, NavSatFix};
 use ros_env::std_msgs::msg::Bool;
 
@@ -187,6 +190,15 @@ fn spin(
         }
     })?;
 
+    let latched = QoSProfile::topics_default()
+        .reliable()
+        .transient_local()
+        .keep_last(1);
+    let _source = node.create_subscription(config.topic(Topic::Source).qos(latched), {
+        let tx = tx.clone();
+        move |m: DataSource| send(&tx, Update::Source(announcement(&m)))
+    })?;
+
     let estop_qos = QoSProfile::topics_default().reliable().keep_last(10);
     let estop_pub: Publisher<Bool> =
         node.create_publisher(config.topic(Topic::Estop).qos(estop_qos))?;
@@ -246,6 +258,21 @@ fn vehicle(m: &VehicleStatusMsg) -> VehicleStatus {
     }
 }
 
+fn announcement(m: &DataSource) -> Announcement {
+    Announcement {
+        announcer: m.announcer.clone(),
+        entries: m
+            .sensors
+            .iter()
+            .map(|e| Entry {
+                name: e.name.clone(),
+                topic: e.topic.clone(),
+                origin: Origin::from(e.source),
+            })
+            .collect(),
+    }
+}
+
 fn fix(m: &NavSatFix) -> Fix {
     Fix::from(RawFix {
         status: m.status.status,
@@ -268,7 +295,7 @@ impl Params {
     /// settings as ROS has them (a --params-file or -p wins).
     fn declare(node: &Node, mut config: HudConfig) -> Result<(Self, HudConfig)> {
         let mut topics = Vec::new();
-        for t in Topic::LISTENED.into_iter().chain([Topic::Estop]) {
+        for t in Topic::LISTENED.into_iter().chain(Topic::UNLISTED) {
             let p = node
                 .declare_parameter::<Arc<str>>(t.parameter())
                 .default(config.topic(t).into())
@@ -317,6 +344,16 @@ mod tests {
             .map(|f| f.bit())
             .collect();
         assert_eq!(ours, bits);
+    }
+
+    /// hud_core's origins must match the message's constants.
+    #[test]
+    fn origins_match_the_message() {
+        use ros_env::aav_interfaces::msg::SensorSource;
+        assert_eq!(Origin::from(SensorSource::REAL), Origin::Real);
+        assert_eq!(Origin::from(SensorSource::SIM), Origin::Sim);
+        assert_eq!(Origin::from(SensorSource::BENCH), Origin::Bench);
+        assert_eq!(Origin::from(SensorSource::REPLAY), Origin::Replay);
     }
 
     /// The real node: one press of the button reaches another node as five trues, and

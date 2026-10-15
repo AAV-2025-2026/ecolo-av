@@ -25,6 +25,9 @@ pub enum Topic {
     Battery,
     Camera,
     Estop,
+    /// `/system/source`: where the data comes from. Not listed under TOPICS: it's
+    /// latched and sent once, so its age means nothing.
+    Source,
 }
 
 impl Topic {
@@ -38,6 +41,9 @@ impl Topic {
         Topic::Camera,
     ];
 
+    /// The topics that aren't listed: the e-stop (sent) and the source (latched).
+    pub const UNLISTED: [Topic; 2] = [Topic::Estop, Topic::Source];
+
     /// The ROS parameter that holds this topic's name.
     pub fn parameter(self) -> &'static str {
         match self {
@@ -48,6 +54,7 @@ impl Topic {
             Self::Battery => "battery_topic",
             Self::Camera => "camera_topic",
             Self::Estop => "estop_topic",
+            Self::Source => "source_topic",
         }
     }
 }
@@ -62,6 +69,7 @@ pub struct HudConfig {
     pub battery_topic: String,
     pub camera_topic: String,
     pub estop_topic: String,
+    pub source_topic: String,
     /// Seconds without a message before a topic shows STALE.
     pub stale_after: f64,
 }
@@ -114,6 +122,7 @@ impl HudConfig {
             Topic::Battery => &self.battery_topic,
             Topic::Camera => &self.camera_topic,
             Topic::Estop => &self.estop_topic,
+            Topic::Source => &self.source_topic,
         }
     }
 
@@ -127,6 +136,7 @@ impl HudConfig {
             Topic::Battery => &mut self.battery_topic,
             Topic::Camera => &mut self.camera_topic,
             Topic::Estop => &mut self.estop_topic,
+            Topic::Source => &mut self.source_topic,
         };
         *slot = name;
     }
@@ -153,7 +163,7 @@ mod tests {
         let c = HudConfig::from_yaml(BUILT_IN_YAML).expect("config/hud.yaml must parse");
         assert!(c.stale_after() > Duration::ZERO);
         // Every name is absolute (docs/conventions.md), and none is empty.
-        for t in Topic::LISTENED.into_iter().chain([Topic::Estop]) {
+        for t in Topic::LISTENED.into_iter().chain(Topic::UNLISTED) {
             assert!(c.topic(t).starts_with('/'), "{t:?}: {}", c.topic(t));
         }
     }

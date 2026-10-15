@@ -7,6 +7,7 @@
 //!             stop_sign_topic       std_msgs/Bool                 the STOP SIGN banner
 //!             battery_topic         sensor_msgs/BatteryState      the strip's battery
 //!             camera_topic          sensor_msgs/Image             the camera panel
+//!             source_topic          aav_interfaces/DataSource     latched: the SIMULATED banner
 //! Publishes   estop_topic           std_msgs/Bool                 only true: the e-stop button
 //! Parameters  the topics above, and stale_after (s)
 //!

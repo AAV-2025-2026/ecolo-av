@@ -9,10 +9,15 @@
 //! +----------------+--------------------------+------------------------+
 //! | SPEED          | CAMERA                   |  [  E-STOP button  ]   |
 //! |   12 km/h      | (STOP SIGN banner)       |  sent / failed         |
+//! |                | (SIMULATED banner)       |                        |
 //! +----------------+--------------------------+------------------------+
 //! | STEERING  ---  | TOPICS                   | GPS                    |
-//! | THROTTLE  ===  |  /vehicle/status  OK     |  RTK FIXED             |
-//! | BRAKE     ===  |  /sensors/gps/fix         STALE  |  lat, lon, accuracy    |
+//! | THROTTLE  ===  |  /vehicle/status  SIM OK |  RTK FIXED             |
+//! | BRAKE     ===  |  /sensors/gps/fix  STALE |  lat, lon, accuracy    |
+//! +--------------------------------------------------------------------+
+//!
+//! The orange SIMULATED / BENCH / REPLAY banner shows whenever `/system/source` says any
+//! data isn't from the real car; each topic it names gets a REAL / SIM tag under TOPICS.
 //! +----------------+--------------------------+------------------------+
 //! ```
 
@@ -23,6 +28,7 @@ use hud_core::{
     format,
     gps::FixKind,
     health::Health,
+    origin::Origin,
     picture::Picture,
     state::{EstopReport, HudState},
     vehicle::VehicleStatus,
@@ -43,6 +49,8 @@ const WARN: Color = Color::new(245, 180, 40, 255);
 const BAD: Color = Color::new(230, 45, 45, 255);
 const ESTOP_RED: Color = Color::new(200, 20, 20, 255);
 const ESTOP_HOVER: Color = Color::new(240, 40, 40, 255);
+/// The not-the-real-car banner, and the tags of topics that aren't real.
+const NOT_REAL: Color = Color::new(255, 140, 0, 255);
 
 /// The steering bar's ends, in degrees each way.
 const STEERING_RANGE_DEG: f32 = 30.0;
@@ -515,10 +523,19 @@ fn camera(
         }
         Health::Ok(_) => {}
     }
+    // Not the real car: a big orange band along the bottom, always on.
+    let banner_h = 70.0;
+    let not_real = state.origins.banner();
+    if let Some(words) = &not_real {
+        let band = (inner.0, inner.1 + inner.3 - banner_h, inner.2, banner_h);
+        c.bar(band, NOT_REAL);
+        c.centred(cx, band.1 + 8.0, 52.0, words, Color::BLACK);
+    }
+    let lift = if not_real.is_some() { banner_h } else { 0.0 };
     if let Some(why) = &state.picture_problem {
         c.fitted(
             inner.0 + 8.0,
-            inner.1 + inner.3 - 30.0,
+            inner.1 + inner.3 - 30.0 - lift,
             18.0,
             inner.2 - 16.0,
             why,
@@ -532,7 +549,8 @@ fn camera(
     }
 }
 
-/// Every topic the HUD listens to: OK / STALE / NEVER, and how long ago.
+/// Every topic the HUD listens to: OK / STALE / NEVER, how long ago, and where its data
+/// comes from (REAL, SIM...) when `/system/source` says.
 fn topics(c: &mut Canvas, state: &HudState, now: Instant) {
     let a = area::TOPICS;
     c.panel(a, "TOPICS");
@@ -541,8 +559,19 @@ fn topics(c: &mut Canvas, state: &HudState, now: Instant) {
         let y = a.1 + 42.0 + i as f32 * 43.0;
         let status = format::health(health);
         let status_w = c.width(&status, 24.0);
-        c.fitted(x, y, 24.0, right - x - status_w - 16.0, name, TEXT);
         c.right(right, y, 24.0, &status, health_colour(health));
+        let mut name_right = right - status_w - 16.0;
+        if let Some(origin) = state.origins.of_topic(name) {
+            let tag = origin.tag();
+            let colour = if origin == Origin::Real {
+                CAPTION
+            } else {
+                NOT_REAL
+            };
+            c.right(name_right, y + 2.0, 20.0, tag, colour);
+            name_right -= c.width(tag, 20.0) + 12.0;
+        }
+        c.fitted(x, y, 24.0, name_right - x, name, TEXT);
     }
 }
 
