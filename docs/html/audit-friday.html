@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The hardware audit, step by step (Friday 16 October) · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/audit-friday.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The hardware audit, step by step (Friday 16 October)</h1>
+<div class="meta">16 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a class="here" href="audit-friday.html">Audit, 16 Oct</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-day-in-one-picture">The day in one picture</a><a href="#remember-the-car-speaks-humble-not-our-names">Remember: the car speaks Humble, not our names</a><a href="#what-to-bring">What to bring</a><a href="#step-1-safe-and-powered">Step 1: safe and powered</a><a href="#step-2-find-each-machine">Step 2: find each machine</a><a href="#step-3-back-up-first">Step 3: back up first</a><a href="#step-4-the-read-only-checks">Step 4: the read-only checks</a><a href="#step-5-measure-and-the-power">Step 5: measure, and the power</a><a href="#step-6-photos">Step 6: photos</a><a href="#step-7-save-the-results">Step 7: save the results</a><a href="#dont">Don&#x27;t</a></nav>
+<div class="lead"><p>The first time the 2026-27 team logs in to the car's computers. The goal: <strong>know what is
+there, and save a copy, without changing anything.</strong> This page is steps 2 and 3 of
+<a href="work.html">Work</a> ("Backups", "Inventory the car"), and it covers the checklist at the end of
+<a href="car-photos.html">Car photos</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Read-only first</p>
+<pre><code>Look, copy and photograph. Don't install, upgrade, reflash, restart services, change
+the network, or drive. The "don't" list is at the end of this page.
+</code></pre>
+</div></div>
+<section class="card"><h2 id="the-day-in-one-picture">The day in one picture</h2>
+<pre class="highlight"><code class="language-text"> 1. Safe and powered  →  2. Find each machine  →  3. Back it up  →  4. Read-only checks
+                                                                          ↓
+              7. Save the results (no secrets)  ←  6. Photos  ←  5. Measure (Q1-Q9, Q18, Q20, Q22)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>Who</th>
+<th>Time (guess)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The car on stands, wheels off the ground, e-stop in reach; power on</td>
+<td>everyone</td>
+<td>15 min</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Find every machine on the network</td>
+<td>one laptop</td>
+<td>20 min</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Back up each Linux machine</td>
+<td>one laptop, one big drive</td>
+<td>1-3 h, in the background</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The read-only checks, machine by machine</td>
+<td>pairs</td>
+<td>2 h</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Measure the car: Q1-Q9, Q18, Q20, Q22 (<a href="car_measurements.html">Car numbers</a>)</td>
+<td>a tape measure</td>
+<td>1 h</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Photograph every label</td>
+<td>a phone</td>
+<td>while you go</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Write it up as <code>docs/history/audit-2026-10-16-car.md</code></td>
+<td>one person</td>
+<td>30 min</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="remember-the-car-speaks-humble-not-our-names">Remember: the car speaks Humble, not our names</h2>
+<div class="admonition note">
+<p class="admonition-title">Use ros2 topic list; don't assume our names</p>
+<pre><code>The car runs the 2025-26 software on **ROS 2 Humble**, with **its own topic names**
+(such as `/gps/fix`, `/cmd_vel`). Our names, like `/sensors/gps/fix`, only exist in our
+Jazzy code. On the car, list what is really there with `ros2 topic list -t`, and write
+down the names you see. Humble and Jazzy don't mix: don't run our stack against it.
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="what-to-bring">What to bring</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A laptop with an Ethernet port or USB adapter, and a cable</td>
+<td>plug into a spare port on the TP-Link switch</td>
+</tr>
+<tr>
+<td>An external drive, 1 TB or more, with an encrypted volume</td>
+<td>the backups: they hold passwords and keys</td>
+</tr>
+<tr>
+<td>A microSD reader</td>
+<td>to image a Pi's card, if the team agrees to power it down</td>
+</tr>
+<tr>
+<td>A phone camera</td>
+<td>labels, wiring, screens</td>
+</tr>
+<tr>
+<td>A tape measure, and the questions Q1-Q9, Q18, Q20, Q22</td>
+<td><a href="decisions.html">Decisions</a></td>
+</tr>
+<tr>
+<td>The machine logins</td>
+<td><strong>ask the team.</strong> Never write them in git, in these pages, or in chat</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="step-1-safe-and-powered">Step 1: safe and powered</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Done</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheels off the ground, on stands</td>
+<td></td>
+</tr>
+<tr>
+<td>The red mushroom e-stop and the Kar-Tech remote in someone's hand</td>
+<td></td>
+</tr>
+<tr>
+<td>RC transmitter off, or its override switch off</td>
+<td></td>
+</tr>
+<tr>
+<td>Power on; note which LEDs light on the control board (Jrk power, error) and the e-stop board (TR, ES)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Nothing on Friday should make a wheel turn. If one does, press the e-stop and stop the audit.</p>
+</section>
+<section class="card"><h2 id="step-2-find-each-machine">Step 2: find each machine</h2>
+<p>Plug the laptop into a spare switch port (or join the car's WiFi). Then, on a Mac or Linux:</p>
+<pre class="highlight"><code class="language-bash">ifconfig | grep "inet "          # your own address: the car's network is probably 192.168.1.x
+arp -a                           # every machine your laptop has heard from
+nmap -sn 192.168.1.0/24          # if nmap is installed: every machine that answers</code></pre>
+<p>Also open the router's page (step 4, "The router") and copy its client list: it names each
+machine with its address.</p>
+<p>What the old code already tells us (to confirm, not to trust):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine</th>
+<th>Address hint</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motor-Pi</td>
+<td>192.168.1.193</td>
+<td>the wheel encoder sends to it (<code>wiznet.ino</code>)</td>
+</tr>
+<tr>
+<td>Wheel-encoder Pico 2</td>
+<td>MAC address <code>54:65:6d:70:65:6c</code> (it spells "Tempel")</td>
+<td><code>wiznet.ino</code></td>
+</tr>
+<tr>
+<td>Router</td>
+<td>192.168.1.1 (guess)</td>
+<td>the usual Linksys default</td>
+</tr>
+<tr>
+<td>A camera</td>
+<td>192.168.1.101 or .118</td>
+<td>the old HUD code (the two disagree)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Fill in this table as you go. Put the switch port label in the first column.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Switch label</th>
+<th>Hostname</th>
+<th>IP</th>
+<th>MAC</th>
+<th>Answers ssh?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JETSON</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CAM1-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CAM2-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>RTK-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>DASH-UI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ES-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>QNX-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LIDAR</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no (a sensor)</td>
+</tr>
+<tr>
+<td>ROUTER</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no (web page)</td>
+</tr>
+<tr>
+<td>(not on the switch) Motor-Pi</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(not on the switch) wheel encoder</td>
+<td></td>
+<td></td>
+<td></td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="step-3-back-up-first">Step 3: back up first</h2>
+<p>Before any check, copy each Linux machine to the encrypted drive. Check the sizes first:</p>
+<pre class="highlight"><code class="language-bash">ssh &lt;user&gt;@&lt;ip&gt; 'df -h /; sudo du -sh /home /etc /opt 2&gt;/dev/null'</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Way</th>
+<th>When</th>
+<th>Size (guess)</th>
+<th>Command (run on the laptop)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>rsync the home folder</strong></td>
+<td>every machine, Friday</td>
+<td>1-20 GB a Pi; more on the Orin (models, bags)</td>
+<td><code>rsync -a --exclude .cache &lt;user&gt;@&lt;ip&gt;:/home/&lt;user&gt;/ ~/aav-backup/&lt;machine&gt;/home/</code></td>
+</tr>
+<tr>
+<td><strong>tar /etc</strong></td>
+<td>every machine, Friday</td>
+<td>under 50 MB</td>
+<td><code>ssh &lt;user&gt;@&lt;ip&gt; 'sudo tar czf /tmp/etc.tgz /etc'</code>, then <code>scp &lt;user&gt;@&lt;ip&gt;:/tmp/etc.tgz ~/aav-backup/&lt;machine&gt;/</code>, then <code>ssh &lt;user&gt;@&lt;ip&gt; 'sudo rm /tmp/etc.tgz'</code></td>
+</tr>
+<tr>
+<td><strong>SD card image</strong></td>
+<td>a Pi, only if the team agrees to shut it down</td>
+<td>the card's size (16-128 GB) before gzip</td>
+<td>on a Mac: below the table</td>
+</tr>
+<tr>
+<td><strong>Full Orin image</strong></td>
+<td>not Friday: needs an x86 Ubuntu PC and recovery mode</td>
+<td>the whole eMMC or SSD</td>
+<td><code>l4t_backup_restore.sh</code> (<a href="platforms.html">Platforms</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The SD card image, on a Mac (the card in the reader, <code>N</code> from <code>diskutil list</code>):</p>
+<pre class="highlight"><code class="language-bash">diskutil list                                   # find the card: /dev/diskN, its size
+diskutil unmountDisk /dev/diskN
+sudo dd if=/dev/rdiskN bs=4m | gzip &gt; ~/aav-backup/&lt;machine&gt;.img.gz</code></pre>
+<ul>
+<li>The <code>/tmp/etc.tgz</code> file is the only thing written on the car on Friday, and it is deleted
+  straight after.</li>
+<li>With <code>dd</code>, <code>if=</code> is the <strong>card</strong> you read from. Swap <code>if</code> and <code>of</code> and you erase it. Have a
+  second person read the command before you press Enter.</li>
+<li><strong>The backups hold secrets</strong> (WiFi passwords in <code>/etc/NetworkManager</code>, SSH keys, password
+  hashes). Keep them on the encrypted drive. Never in git, never in a shared folder.</li>
+<li>The Orin holds the only copies of the 2025-26 stop-sign detector, <code>camera_decode</code> and the
+  OSRM map data (<a href="older-code.html">Older code</a>). Back it up first.</li>
+</ul>
+</section>
+<section class="card"><h2 id="step-4-the-read-only-checks">Step 4: the read-only checks</h2>
+<h3 id="the-block-for-every-linux-machine">The block for every Linux machine</h3>
+<p>Save this as <code>audit.sh</code> <strong>on your laptop</strong>, then run it from the laptop:</p>
+<pre class="highlight"><code class="language-bash">ssh &lt;user&gt;@&lt;ip&gt; 'bash -s' &lt; audit.sh &gt; ~/aav-audit/&lt;switch label&gt;.txt 2&gt;&amp;1</code></pre>
+<p>Nothing is saved on the car. The output stays on your laptop.</p>
+<pre class="highlight"><code class="language-bash"># audit.sh: read-only. Prints what a machine is and what it runs.
+echo "== who";        hostname; whoami; date; uptime
+echo "== os";         cat /etc/os-release; uname -a
+echo "== disk";       df -h
+echo "== memory";     free -h
+echo "== network";    ip -br addr; ip route
+echo "== running";    systemctl list-units --type=service --state=running --no-pager
+echo "== enabled";    systemctl list-unit-files --state=enabled --no-pager
+echo "== added";      ls -la /etc/systemd/system
+echo "== cron";       crontab -l 2&gt;&amp;1; ls /etc/cron.d
+echo "== devices";    ls -l /dev/tty* /dev/serial* /dev/video* /dev/can* /dev/i2c* 2&gt;/dev/null | grep -v "tty[0-9]"
+echo "== by-id";      ls -l /dev/serial/by-id 2&gt;/dev/null
+echo "== usb";        lsusb
+echo "== ros env";    printenv | grep -i ros; grep -n "ROS\|source" ~/.bashrc
+echo "== ros";        ls /opt/ros 2&gt;/dev/null
+echo "== workspaces"; ls -d ~/*/src ~/*/install 2&gt;/dev/null
+echo "== docker";     docker ps -a 2&gt;&amp;1
+echo "== busiest";    ps aux --sort=-%cpu | head -25
+echo "== udp ports";  ss -uapn 2&gt;/dev/null | head -30
+echo "== ros graph"
+for d in /opt/ros/*/setup.bash; do source "$d"; done
+export ROS_DOMAIN_ID=$(grep -o 'ROS_DOMAIN_ID=[0-9]*' ~/.bashrc | tail -1 | cut -d= -f2)
+echo "domain: ${ROS_DOMAIN_ID:-0 (not set)}"
+timeout 30 ros2 node list --no-daemon --spin-time 5
+timeout 30 ros2 topic list -t --no-daemon --spin-time 5</code></pre>
+<ul>
+<li>An ssh session doesn't read <code>.bashrc</code>, so the block reads the domain from it. The
+  2025-26 team used <strong>10</strong> on the dashboard and <strong>0</strong> on the UI. If the graph is empty, try
+  both: <code>export ROS_DOMAIN_ID=10</code>.</li>
+<li><code>--no-daemon</code> keeps <code>ros2</code> from starting its background daemon on the car.</li>
+<li><strong>Before you share an output file, read it.</strong> <code>printenv</code>, <code>.bashrc</code> and <code>crontab</code> can hold
+  tokens or passwords. Cut them out.</li>
+</ul>
+<h3 id="jetson-orin-1">JETSON (Orin #1)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>switch port JETSON. Home folder <code>/home/aavjetson</code> (<a href="platforms.html">Platforms</a>)</td>
+</tr>
+<tr>
+<td><strong>Also run</strong></td>
+<td><code>cat /etc/nv_tegra_release</code>; <code>cat /proc/device-tree/model</code>; <code>timeout 5 tegrastats</code> (5 seconds, then it stops); <code>nvpmodel -q</code></td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>the JetPack version (6 = Ubuntu 22.04); the ROS workspaces and what starts at boot; the YOLO detector and its model file (<code>*.pt</code>, <code>*.engine</code>); <code>camera_decode</code>; any lidar driver; OSRM data; free disk for Pixi (about 7 GB)</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>car-photos #1, #3 (which computer reads the lidar?)</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>the module's label: its part number (699-13701-0005-<strong>501</strong> or <strong>-502</strong>: the -502 has a reported flashing problem)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="cam1-pi-and-cam2-pi">CAM1-PI and CAM2-PI</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>switch ports CAM1-PI, CAM2-PI. Pi 5s at the top of the windscreen</td>
+</tr>
+<tr>
+<td><strong>Also run</strong></td>
+<td><code>rpicam-hello --list-cameras</code> (or <code>libcamera-hello --list-cameras</code> on an older OS). If a service already holds the camera, it says so: that's an answer too</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>the camera model; what streams the pictures (a ROS node, GStreamer, a web stream) and to which address; the topic names</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>Q22, car-photos #6 (is the rear camera on one of these?)</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>each camera's lens and board label; the ribbon cable</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="rtk-pi-with-the-zed-f9r">RTK-PI (with the ZED-F9R)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>switch port RTK-PI ("RIG-Pi + GPS" in the KEFC PDF). On the ceiling panel, beside the ZED-F9R</td>
+</tr>
+<tr>
+<td><strong>Also run</strong></td>
+<td><code>ls -l /dev/ttyACM* /dev/serial/by-id</code>; <code>sudo fuser -v /dev/ttyACM0</code> (who has the port open); <code>ps aux</code>, and look for ntrip, str2str, rtk, ublox or gps in it</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>the ZED-F9R on <code>/dev/ttyACM*</code>; which program reads it; <strong>where the RTCM corrections come from</strong> (an NTRIP client and its caster's name; the 2024-25 team used the public rtk2go caster); whether a GPS topic is live: <code>ros2 topic hz &lt;the GPS topic you saw&gt;</code></td>
+</tr>
+<tr>
+<td><strong>Don't</strong></td>
+<td>send the receiver any configuration (no u-center, no <code>ubxtool</code> writes). Don't copy NTRIP usernames or passwords: write only "an NTRIP login, in file X"</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>Q18, car-photos #2 ("Is there GPS data?")</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>the ZED-F9R board and its u.FL antenna lead; the antenna's cable path</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="dash-ui">DASH-UI</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>switch port DASH-UI. The small touchscreen on the dash (guess)</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>the 2025-26 Flutter app and its Flask back end; the boot scripts (<code>flask_bootup.sh</code>, which sources <code>/home/aavui</code>); <code>ottawa.db</code>; the OSRM route data and the tile server; which screen it drives (the Innoview or the small one)</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>which computer runs our HUD later (<a href="hud.html">HUD</a>)</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>both screens, with what they show</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="es-pi">ES-PI</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>switch port ES-PI. Maybe the Pi in a black case beside fuse block H1-H4 (guess)</td>
+</tr>
+<tr>
+<td><strong>Also run</strong></td>
+<td><code>pinctrl get</code> (a Pi 5) or <code>raspi-gpio get</code> (a Pi 4): reads the pins, changes nothing</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>what it runs; whether it is in the e-stop path (relays, GPIO to the e-stop board's TR or ES)</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>car-photos #4, Q6</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>its wiring, end to end</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="qnx-pi">QNX-PI</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>switch port QNX-PI. Probably the 2025-26 <code>Real-Time-OS</code> layer, a Pi 4 on QNX 8</td>
+</tr>
+<tr>
+<td><strong>Log in</strong></td>
+<td>ssh may land in a QNX shell, not Linux. Use <code>uname -a</code>, <code>pidin</code> (QNX's process list), <code>df -h</code>, <code>ls /dev</code>. The Linux block will partly fail: that's fine</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>whether anything else depends on it: is it in the driving path?</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>car-photos #4</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>the board and its cables</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="motor-pi-the-raspberry-pi-4-on-the-control-board">Motor-Pi (the Raspberry Pi 4 on the control board)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>not on the switch's labels; expected at 192.168.1.193</td>
+</tr>
+<tr>
+<td><strong>Also run</strong></td>
+<td><code>ls -l /dev/serial0 /dev/ttyAMA0 /dev/ttyS0</code>; <code>grep -v "^#" /boot/firmware/config.txt</code> (or <code>/boot/config.txt</code>); <code>sudo fuser -v /dev/serial0 /dev/ttyAMA0</code>; <code>ss -uapn</code> (look for port 10111)</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td><strong>what talks to the ESP32</strong>: which program writes the UART, and from which ROS topic; what listens on UDP port 10111 for the wheel encoder; whether Bluetooth is turned off (<code>dtoverlay=disable-bt</code>)</td>
+</tr>
+<tr>
+<td><strong>Don't</strong></td>
+<td>run <code>i2cdetect</code>: it probes the bus the actuators share</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>the legacy path in <a href="work.html">Work</a>; <code>aav_legacy</code> runs here later</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>the board's header and UART wires</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-lidar">The LIDAR</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>switch port LIDAR, then its address in the router's client list or <code>arp -a</code></td>
+</tr>
+<tr>
+<td><strong>Log in</strong></td>
+<td>none. If it has a web page, open it and only read it</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>the model and its IP; which computer receives its packets (on the Orin: <code>ss -uapn</code> shows the port); any driver in a workspace</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>Q22, car-photos #3. Our code has no lidar driver yet</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>its label (model, serial) on the roof tripod</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-router-linksys-ea3500">The router (Linksys EA3500)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>switch port ROUTER; its page at the gateway address (<code>ip route</code> on any machine shows it)</td>
+</tr>
+<tr>
+<td><strong>Log in</strong></td>
+<td>ask the team. Don't write the admin password anywhere</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>the client list (names, IPs, MACs): a screenshot; the address range; the firmware version</td>
+</tr>
+<tr>
+<td><strong>Don't</strong></td>
+<td>change any setting; photograph the note taped to it up close</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>the client list page (check it shows no password first)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-esp32-control-board">The ESP32 control board</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>the red SparkFun MicroMod on the control board. It joins the WiFi; its address is in the router's list</td>
+</tr>
+<tr>
+<td><strong>Log in</strong></td>
+<td>none. Its web page at <code>http://&lt;ip&gt;/status</code> is read-only: open it</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>is the CAN transceiver <strong>U7</strong> fitted?; the "Throttle enable" jumper; how many wires go to the steering and brake actuators</td>
+</tr>
+<tr>
+<td><strong>Don't</strong></td>
+<td>open its update page (no password: anyone could reflash the car); plug USB into it (it may reset); open <code>/scan</code> unless the car is on stands</td>
+</tr>
+<tr>
+<td><strong>Answers</strong></td>
+<td>car-photos #5</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>both sides of the board, U3 and U7, the CANH/CANL plug, both Jrk G2 labels</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-wheel-encoder-pico-2-if-present">The wheel-encoder Pico 2 (if present)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Find it</strong></td>
+<td>by its MAC <code>54:65:6d:70:65:6c</code> in <code>arp -a</code> or the router's list; near a wheel</td>
+</tr>
+<tr>
+<td><strong>Log in</strong></td>
+<td>none</td>
+</tr>
+<tr>
+<td><strong>Look for</strong></td>
+<td>on the Motor-Pi, whether its packets arrive: <code>sudo tcpdump -n -c 5 udp port 10111</code> (if tcpdump is installed); the IR sensor's state (the KEFC request says it is fouled)</td>
+</tr>
+<tr>
+<td><strong>Photograph</strong></td>
+<td>the board, the W5500, the spoke sensor</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="step-5-measure-and-the-power">Step 5: measure, and the power</h2>
+<p>The tape-measure list is <a href="car_measurements.html">Car numbers</a> (Q1-Q5). Also, from car-photos #7:
+read the rating off each 12 V → 5 V converter, and note what each one feeds (the dash one
+showed 3.5 A; a Pi 5 wants 5 A).</p>
+</section>
+<section class="card"><h2 id="step-6-photos">Step 6: photos</h2>
+<p>Photograph every label: the GPS, the IMU, the motor controller, both actuators, the lidar,
+each Pi's case, the switch. Name the files after the switch label (<code>RTK-PI-1.jpg</code>). Photos
+stay out of git; pick a few small ones for <code>docs/img/car/</code> afterwards.</p>
+</section>
+<section class="card"><h2 id="step-7-save-the-results">Step 7: save the results</h2>
+<p>Copy this table into <code>docs/history/audit-2026-10-16-car.md</code>, one row per machine:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine</th>
+<th>Hostname, IP</th>
+<th>OS, kernel</th>
+<th>ROS, domain</th>
+<th>Runs at boot</th>
+<th>Devices</th>
+<th>Topics seen</th>
+<th>Backed up?</th>
+<th>Open questions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JETSON</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CAM1-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CAM2-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>RTK-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>DASH-UI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ES-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>QNX-PI</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Motor-Pi</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LIDAR</td>
+<td></td>
+<td></td>
+<td>n/a</td>
+<td>n/a</td>
+<td></td>
+<td></td>
+<td>n/a</td>
+<td></td>
+</tr>
+<tr>
+<td>Router</td>
+<td></td>
+<td></td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td></td>
+</tr>
+<tr>
+<td>ESP32 board</td>
+<td></td>
+<td></td>
+<td>n/a</td>
+<td></td>
+<td></td>
+<td>n/a</td>
+<td>n/a</td>
+<td></td>
+</tr>
+<tr>
+<td>Encoder Pico 2</td>
+<td></td>
+<td></td>
+<td>n/a</td>
+<td></td>
+<td></td>
+<td>n/a</td>
+<td>n/a</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Then answer the car-photos checklist (#1-#7) under it, and list each question (Q1-Q34) the
+day answered.</p>
+<div class="admonition warning">
+<p class="admonition-title">No secrets in the write-up</p>
+<pre><code>Before you commit, search the file:
+`grep -n -i -E "pass|psk|token|secret|key|ntrip" docs/history/audit-2026-10-16-car.md`.
+For each hit, write only where the secret is and what kind it is (as
+[Older code](older-code.md) does). The raw outputs in `~/aav-audit/` stay off git.
+</code></pre>
+</div>
+<p>Commit the page on its own branch, then <code>pixi run docs</code> if you link it from a page.</p>
+</section>
+<section class="card"><h2 id="dont">Don't</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Don't</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apt upgrade</code>, <code>apt install</code>, <code>pip install</code></td>
+<td>it changes what the 2025-26 software runs on</td>
+</tr>
+<tr>
+<td>Reflash, or move the Orin to JetPack 7.2</td>
+<td>not before a full image (<a href="platforms.html">Platforms</a>)</td>
+</tr>
+<tr>
+<td>Change the network: IPs, WiFi, the router, <code>netplan</code></td>
+<td>the machines find each other by fixed addresses</td>
+</tr>
+<tr>
+<td>Start, stop or restart services, or reboot</td>
+<td>something may be driving the car</td>
+</tr>
+<tr>
+<td>Drive, or start our stack (<code>pixi run car</code>)</td>
+<td>Humble and Jazzy don't mix; nothing is tested on the car</td>
+</tr>
+<tr>
+<td>Configure the GPS receiver, the radar or the lidar</td>
+<td>their settings are part of what we're recording</td>
+</tr>
+<tr>
+<td>Open the ESP32's update page, or flash any board</td>
+<td>no password, and no way back without a backup</td>
+</tr>
+<tr>
+<td>Copy passwords, tokens, keys or the WiFi password into notes, chat, photos or git</td>
+<td>they must be changed, not spread (Q34)</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="work.html"><small>Previous</small>← Work</a>
+<a class="next" href="decisions.html"><small>Next</small>Decisions →</a></nav>
+</main>
+<footer>Source: <code>docs/audit-friday.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

@@ -26,6 +26,7 @@ moves the car.**
 | after everything on one page | [Overview](overview.md) |
 | after what this version does, at a glance | [Release notes](release-notes.md) |
 | new to the team | [Your first day](first-day.md), then your card in [Starting points](team.md) |
+| at the car for the audit (16 Oct) | [The hardware audit](audit-friday.md) |
 | putting the whole thing together | [Infrastructure](infrastructure.md), then [Work](work.md) and [Decisions](decisions.md) |
 | looking for what a package does | [Packages](packages.md); the deeper cards in [Every module](modules.md) |
 | writing a driver, or drawing a map | [Build a driver](howto-driver.md), [Costmaps](costmaps.md) |

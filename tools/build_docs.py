@@ -33,7 +33,7 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 11    # PAGES[:11] are the reading list; the rest are reference
+READ_FIRST = 12    # PAGES[:12] are the reading list; the rest are reference
 
 # (file in docs/, menu title, what it's for)
 PAGES = [
@@ -46,6 +46,7 @@ PAGES = [
     ('packages.md', 'Packages', 'What each package does, layer by layer'),
     ('modules.md', 'Every module', 'One card per package, crate and board: what, why, where, status'),
     ('work.md', 'Work', "The plan, what's done, what needs doing"),
+    ('audit-friday.md', 'Audit, 16 Oct', 'The hardware audit, machine by machine, read-only first'),
     ('decisions.md', 'Decisions', 'Decided, Tentative, Proposed, and Q1–Q34'),
     ('infrastructure.md', 'Infrastructure', 'The repo, Pixi, the contracts, profiles, computers'),
     ('status.md', 'Status', "What works, what's untested, what's missing"),
