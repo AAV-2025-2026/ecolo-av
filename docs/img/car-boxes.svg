@@ -89,7 +89,7 @@
   <rect class="stock" x="18" y="256" width="92" height="68" rx="8"/>
   <text class="t" x="64" y="282" text-anchor="middle">IMU</text>
   <text class="s" x="64" y="300" text-anchor="middle">Yahboom</text>
-  <text class="s" x="64" y="316" text-anchor="middle">USB</text>
+  <text class="s" x="64" y="316" text-anchor="middle">USB: where?</text>
   <path class="wire" d="M110,290 H128"/>
 
   <!-- CAN Pal -->

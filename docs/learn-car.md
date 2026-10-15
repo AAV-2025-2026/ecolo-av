@@ -13,6 +13,10 @@ talks on. Today, and after the KEFC changes.
     A box marked *photos* is "from the photos, not yet checked". The audit on Friday
     16 October checks it.
 
+!!! note "None of our code has run on the car yet"
+    The car still runs the 2025-26 team's code, on ROS 2 Humble. Our code (Jazzy) runs in
+    the turtle, Gazebo and [bench mode](bench.md) only.
+
 ## The picture
 
 ![The car, box by box: Ethernet on top, CAN below, the moving parts at the bottom](img/car-boxes.svg)
@@ -42,10 +46,10 @@ The [Glossary](glossary.md) explains each word.
 
 | Box | Does | Wire | Today | After KEFC |
 |---|---|---|---|---|
-| Jetson AGX Orin #1 | the main computer: the EKFs, twist_mux, ego | Ethernet | runs everything | keeps control; becomes the CAN master |
+| Jetson AGX Orin #1 | the main computer: in our plan, the EKFs, twist_mux, ego | Ethernet | runs the 2025-26 code, on Humble | keeps control; becomes the CAN master |
 | Jetson AGX Orin #2 (64 GB) | cameras, lidar, costmaps, Nav2 planning | Ethernet | not there | **new** |
 | Motor-Pi (Raspberry Pi 4) | turns ego's commands into UART frames for the ESP32 | Ethernet, UART | drives the car | kept until CAN is proven, then retired |
-| Cam1-Pi, Cam2-Pi (Pi 5) | the two front cameras, at the windscreen (*photos*) | Ethernet | there | the same |
+| Cam1-Pi, Cam2-Pi (Pi 5) | the two front cameras, at the windscreen, each on a ribbon cable (*photos*) | Ethernet | there | the same |
 | Cam3-Pi (Pi 5) | the rear camera (*photos*: a camera is fitted at the back; is it wired?) | Ethernet | maybe | **new** |
 | RTK-Pi (Pi, on the ceiling panel) | reads the GPS board over USB (*photos*) | Ethernet, USB | there | the same, with RTK corrections |
 | Dash-UI | the in-car screen, the [HUD](hud.md) (*photos*) | Ethernet | there | the same |
@@ -67,7 +71,7 @@ The [Glossary](glossary.md) explains each word.
 | Box | Does | Wire | Today | After KEFC |
 |---|---|---|---|---|
 | AAV control board | carries the ESP32, two Jrk G2s and the throttle DAC | UART today, CAN after | runs the 2025-26 firmware | becomes the CAN node that steers, brakes and drives |
-| ESP32 MicroMod | the microcontroller on that board | | 2025-26 C++ firmware, **no command timeout** | new firmware: 100 ms timeout, watchdog, speed loop |
+| ESP32 MicroMod | the microcontroller on that board | | 2025-26 C++ firmware, **no command timeout** | new Rust firmware: brake after 100 ms of silence, watchdog, speed loop (not written yet for the ESP32) |
 | Wheel encoder (Pico 2 + W5500) | counts wheel spokes, sends them over UDP to the Motor-Pi | Ethernet | runs today | replaced by the wheel nodes |
 | Wheel node L, R (ESP32-CAN-X2) | count Hall-sensor pulses from the front brake-rotor holes; wheel speed on CAN | CAN (0x200 L, 0x201 R, 100 Hz) | not there | **new** |
 | ZED-F9R GPS board (SparkFun) | GPS position, to a Pi over USB-C | USB | fitted; its antenna lead is held by tape (*photos*) | a new board, same chip, screw-on antenna, RTK |
@@ -83,9 +87,9 @@ transceiver chip (U7) fitted? The audit checks.
 |---|---|---|---|
 | IMU (Yahboom) | turn rate and acceleration | USB, to which computer? | `yahboom_imu_cpp`, `aav_imu_yahboom` |
 | GPS (u-blox ZED-F9R) | latitude and longitude | USB to the RTK-Pi | `ublox_gps` (the default) |
-| Wheel speed | how fast the wheels turn | today UDP; later CAN | `encoder_udp`; later `spine_bridge` |
+| Wheel speed | how fast the wheels turn | today UDP to the Motor-Pi; later CAN | `encoder_udp`; later `spine_bridge` |
 | Lidar, on the roof (*photos*) | 3D points around the car | Ethernet | **no driver yet**; model unknown (Q22) |
-| Cameras | pictures | Ethernet, through their Pis | `usb_cam` (expects USB cameras) |
+| Cameras | pictures | ribbon cable into a Pi 5, then Ethernet | `usb_cam`, which expects a USB camera: a mismatch to sort out (Q22) |
 | TI radar | points ahead of the car | USB | `ti_ros2_driver`; not seen in the photos |
 | Battery monitor (Victron) | battery voltage and charge | USB (VE.Direct cable) | `battery_monitor` |
 | Steering position (KTC-100 pot) | where the front wheels point | wire, into the steering Jrk | **new**: the board reads it from the Jrk |
@@ -118,11 +122,11 @@ transceiver chip (U7) fitted? The audit checks.
 | | Today | After KEFC |
 |---|---|---|
 | Command path | Orin → Ethernet → Motor-Pi → UART → ESP32 | Orin #1 → CAN → ESP32 control board |
-| If the computer freezes | **the last throttle stays on**: no timeout | the board brakes after 100 ms |
+| If the computer freezes | **the last throttle stays on**: no timeout | the board brakes after 100 ms (our DBC says 200 ms today; the [CAN plan](can-plan.md) moves it to 100) |
 | Wheel speed | Pico 2 → UDP → Motor-Pi | two wheel nodes → CAN, 100 Hz |
 | Steering position | not measured | KTC-100 pot through the Jrk |
 | GPS | ZED-F9R, taped antenna lead | new board, screw-on antenna, RTK |
-| Perception and Nav2 | on Orin #1 | on Orin #2 |
+| Perception and Nav2 | on Orin #1 (in our plan) | on Orin #2 |
 
 The rollout, from the KEFC request: write the DBC first; test on the bench with a CANable
 and `candump`; keep the Motor-Pi path until CAN is proven; **never run both at once**.

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The car, box by box · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/learn-car.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The car, box by box</h1>
+<div class="meta">9 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a class="here" href="learn-car.html">The car, box by box</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#the-four-kinds-of-wire">The four kinds of wire</a><a href="#the-computers">The computers</a><a href="#the-network-boxes">The network boxes</a><a href="#the-boards">The boards</a><a href="#the-sensors">The sensors</a><a href="#the-moving-parts">The moving parts</a><a href="#power-and-safety">Power and safety</a><a href="#today-vs-after-the-kefc-changes">Today vs after the KEFC changes</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>Every computer, board, sensor and motor on the car: what it does, and which wire it
+talks on. Today, and after the KEFC changes.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>the four kinds of wire on the car: Ethernet, CAN, USB and UART;</li>
+<li>what each box does, in one line;</li>
+<li>what changes when the KEFC request is built.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Mostly from photos</p>
+<pre><code>Much of this page comes from Ben's photos of 14 October ([Car photos](car-photos.md)).
+A box marked *photos* is "from the photos, not yet checked". The audit on Friday
+16 October checks it.
+</code></pre>
+</div>
+<div class="admonition note">
+<p class="admonition-title">None of our code has run on the car yet</p>
+<pre><code>The car still runs the 2025-26 team's code, on ROS 2 Humble. Our code (Jazzy) runs in
+the turtle, Gazebo and [bench mode](bench.md) only.
+</code></pre>
+</div></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<p><img alt="The car, box by box: Ethernet on top, CAN below, the moving parts at the bottom" src="../img/car-boxes.svg" /></p>
+<p>Read it top to bottom:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What travels there</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ethernet</td>
+<td>heavy data: camera pictures, lidar points, GPS, the screens</td>
+</tr>
+<tr>
+<td>The brains</td>
+<td>two Jetson Orins: one drives, one sees and plans</td>
+</tr>
+<tr>
+<td>CAN</td>
+<td>small, urgent control messages: steer, brake, speed</td>
+</tr>
+<tr>
+<td>Moving parts</td>
+<td>the actuators and the motor, wired to the control board</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>the buttons that stop the car whatever the software does</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-four-kinds-of-wire">The four kinds of wire</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Wire</th>
+<th>What it is</th>
+<th>Good for</th>
+<th>On the car</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ethernet</strong></td>
+<td>the network cable a laptop uses</td>
+<td>lots of data, many computers</td>
+<td>the switch behind the seat</td>
+</tr>
+<tr>
+<td><strong>CAN</strong></td>
+<td>two twisted wires, built for cars</td>
+<td>short messages that must arrive on time</td>
+<td>new: the Orin, the control board, two wheel nodes</td>
+</tr>
+<tr>
+<td><strong>USB</strong></td>
+<td>the plug on any computer</td>
+<td>one device into one computer</td>
+<td>the IMU; the GPS board into its Pi</td>
+</tr>
+<tr>
+<td><strong>UART</strong></td>
+<td>a simple serial line between two chips</td>
+<td>one board talking to one board</td>
+<td>today: the Motor-Pi to the ESP32</td>
+</tr>
+</tbody>
+</table></div>
+<p>The <a href="../glossary.md">Glossary</a> explains each word.</p>
+</section>
+<section class="card"><h2 id="the-computers">The computers</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Box</th>
+<th>Does</th>
+<th>Wire</th>
+<th>Today</th>
+<th>After KEFC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jetson AGX Orin #1</td>
+<td>the main computer: in our plan, the EKFs, twist_mux, ego</td>
+<td>Ethernet</td>
+<td>runs the 2025-26 code, on Humble</td>
+<td>keeps control; becomes the CAN master</td>
+</tr>
+<tr>
+<td>Jetson AGX Orin #2 (64 GB)</td>
+<td>cameras, lidar, costmaps, Nav2 planning</td>
+<td>Ethernet</td>
+<td>not there</td>
+<td><strong>new</strong></td>
+</tr>
+<tr>
+<td>Motor-Pi (Raspberry Pi 4)</td>
+<td>turns ego's commands into UART frames for the ESP32</td>
+<td>Ethernet, UART</td>
+<td>drives the car</td>
+<td>kept until CAN is proven, then retired</td>
+</tr>
+<tr>
+<td>Cam1-Pi, Cam2-Pi (Pi 5)</td>
+<td>the two front cameras, at the windscreen, each on a ribbon cable (<em>photos</em>)</td>
+<td>Ethernet</td>
+<td>there</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>Cam3-Pi (Pi 5)</td>
+<td>the rear camera (<em>photos</em>: a camera is fitted at the back; is it wired?)</td>
+<td>Ethernet</td>
+<td>maybe</td>
+<td><strong>new</strong></td>
+</tr>
+<tr>
+<td>RTK-Pi (Pi, on the ceiling panel)</td>
+<td>reads the GPS board over USB (<em>photos</em>)</td>
+<td>Ethernet, USB</td>
+<td>there</td>
+<td>the same, with RTK corrections</td>
+</tr>
+<tr>
+<td>Dash-UI</td>
+<td>the in-car screen, the <a href="hud.html">HUD</a> (<em>photos</em>)</td>
+<td>Ethernet</td>
+<td>there</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>ES-Pi</td>
+<td>unknown: an e-stop Pi? (<em>photos</em>: a port label only)</td>
+<td>Ethernet</td>
+<td>?</td>
+<td>not in the KEFC picture</td>
+</tr>
+<tr>
+<td>QNX-Pi</td>
+<td>probably the 2025-26 QNX layer, now replaced by twist_mux (<em>photos</em>: a port label only)</td>
+<td>Ethernet</td>
+<td>?</td>
+<td>not in the KEFC picture</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-network-boxes">The network boxes</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Box</th>
+<th>Does</th>
+<th>Seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TP-Link TL-SG116E switch, 16 ports</td>
+<td>joins every Ethernet box</td>
+<td>photos: its ports are labelled</td>
+</tr>
+<tr>
+<td>Linksys EA3500 router</td>
+<td>the car's WiFi, so laptops can join</td>
+<td>photos</td>
+</tr>
+<tr>
+<td>CAN Pal</td>
+<td>a CAN transceiver on Orin #1's 40-pin header</td>
+<td><strong>new</strong> (KEFC)</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The switch, with its port labels" src="../img/car/switch.jpg" /></p>
+</section>
+<section class="card"><h2 id="the-boards">The boards</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Box</th>
+<th>Does</th>
+<th>Wire</th>
+<th>Today</th>
+<th>After KEFC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AAV control board</td>
+<td>carries the ESP32, two Jrk G2s and the throttle DAC</td>
+<td>UART today, CAN after</td>
+<td>runs the 2025-26 firmware</td>
+<td>becomes the CAN node that steers, brakes and drives</td>
+</tr>
+<tr>
+<td>ESP32 MicroMod</td>
+<td>the microcontroller on that board</td>
+<td></td>
+<td>2025-26 C++ firmware, <strong>no command timeout</strong></td>
+<td>new Rust firmware: brake after 100 ms of silence, watchdog, speed loop (not written yet for the ESP32)</td>
+</tr>
+<tr>
+<td>Wheel encoder (Pico 2 + W5500)</td>
+<td>counts wheel spokes, sends them over UDP to the Motor-Pi</td>
+<td>Ethernet</td>
+<td>runs today</td>
+<td>replaced by the wheel nodes</td>
+</tr>
+<tr>
+<td>Wheel node L, R (ESP32-CAN-X2)</td>
+<td>count Hall-sensor pulses from the front brake-rotor holes; wheel speed on CAN</td>
+<td>CAN (0x200 L, 0x201 R, 100 Hz)</td>
+<td>not there</td>
+<td><strong>new</strong></td>
+</tr>
+<tr>
+<td>ZED-F9R GPS board (SparkFun)</td>
+<td>GPS position, to a Pi over USB-C</td>
+<td>USB</td>
+<td>fitted; its antenna lead is held by tape (<em>photos</em>)</td>
+<td>a new board, same chip, screw-on antenna, RTK</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The control board: a Pi 4, the ESP32 MicroMod, two Jrk G2" src="../img/car/control-board.jpg" /></p>
+<p>The board already has a white CAN plug, labelled CANH / CANL (<em>photos</em>). Is its
+transceiver chip (U7) fitted? The audit checks.</p>
+</section>
+<section class="card"><h2 id="the-sensors">The sensors</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Measures</th>
+<th>Wire</th>
+<th>In our code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMU (Yahboom)</td>
+<td>turn rate and acceleration</td>
+<td>USB, to which computer?</td>
+<td><code>yahboom_imu_cpp</code>, <code>aav_imu_yahboom</code></td>
+</tr>
+<tr>
+<td>GPS (u-blox ZED-F9R)</td>
+<td>latitude and longitude</td>
+<td>USB to the RTK-Pi</td>
+<td><code>ublox_gps</code> (the default)</td>
+</tr>
+<tr>
+<td>Wheel speed</td>
+<td>how fast the wheels turn</td>
+<td>today UDP to the Motor-Pi; later CAN</td>
+<td><code>encoder_udp</code>; later <code>spine_bridge</code></td>
+</tr>
+<tr>
+<td>Lidar, on the roof (<em>photos</em>)</td>
+<td>3D points around the car</td>
+<td>Ethernet</td>
+<td><strong>no driver yet</strong>; model unknown (Q22)</td>
+</tr>
+<tr>
+<td>Cameras</td>
+<td>pictures</td>
+<td>ribbon cable into a Pi 5, then Ethernet</td>
+<td><code>usb_cam</code>, which expects a USB camera: a mismatch to sort out (Q22)</td>
+</tr>
+<tr>
+<td>TI radar</td>
+<td>points ahead of the car</td>
+<td>USB</td>
+<td><code>ti_ros2_driver</code>; not seen in the photos</td>
+</tr>
+<tr>
+<td>Battery monitor (Victron)</td>
+<td>battery voltage and charge</td>
+<td>USB (VE.Direct cable)</td>
+<td><code>battery_monitor</code></td>
+</tr>
+<tr>
+<td>Steering position (KTC-100 pot)</td>
+<td>where the front wheels point</td>
+<td>wire, into the steering Jrk</td>
+<td><strong>new</strong>: the board reads it from the Jrk</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The roof: the lidar, the GNSS antenna, three stick antennas" src="../img/car/roof-lidar-antennas.jpg" /></p>
+</section>
+<section class="card"><h2 id="the-moving-parts">The moving parts</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Does</th>
+<th>Driven by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Steering actuator</td>
+<td>turns the front wheels</td>
+<td>Jrk G2 #1 (I2C address 0x05)</td>
+</tr>
+<tr>
+<td>Brake actuator</td>
+<td>presses the brake</td>
+<td>Jrk G2 #2 (I2C 0x04)</td>
+</tr>
+<tr>
+<td>Throttle DAC</td>
+<td>a voltage that sets the motor's power</td>
+<td>the ESP32 (I2C 0x0C)</td>
+</tr>
+<tr>
+<td>Motor controller</td>
+<td>powers the rear-wheel-drive motor (<em>photos</em>: silver finned box)</td>
+<td>the DAC's voltage</td>
+</tr>
+<tr>
+<td>Pololu Jrk G2</td>
+<td>a small motor driver with feedback: "go to position X"</td>
+<td>the ESP32, over I2C</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="power-and-safety">Power and safety</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Does</th>
+<th>Seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kar-Tech wireless e-stop</td>
+<td>a remote stop; beats all software</td>
+<td>photos: "ROS ON/OFF" written beside it</td>
+</tr>
+<tr>
+<td>Red mushroom e-stop button</td>
+<td>stops the car on its own wiring</td>
+<td>photos: on the left frame tube</td>
+</tr>
+<tr>
+<td>Kill switch</td>
+<td>cuts the drive</td>
+<td>KEFC request</td>
+</tr>
+<tr>
+<td>RC transmitter and receiver (FlySky)</td>
+<td>a person can take over by radio</td>
+<td>firmware: iBUS on the ESP32</td>
+</tr>
+<tr>
+<td>E-stop board (TR, ES lights), 8 relays</td>
+<td>the e-stop's trigger and status</td>
+<td>photos</td>
+</tr>
+<tr>
+<td>Battery box, fuse blocks, 12 V → 5 V converters</td>
+<td>power for everything</td>
+<td>photos: one converter at 3.5 A (is it enough for a Pi 5?)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="today-vs-after-the-kefc-changes">Today vs after the KEFC changes</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Today</th>
+<th>After KEFC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command path</td>
+<td>Orin → Ethernet → Motor-Pi → UART → ESP32</td>
+<td>Orin #1 → CAN → ESP32 control board</td>
+</tr>
+<tr>
+<td>If the computer freezes</td>
+<td><strong>the last throttle stays on</strong>: no timeout</td>
+<td>the board brakes after 100 ms (our DBC says 200 ms today; the <a href="can-plan.html">CAN plan</a> moves it to 100)</td>
+</tr>
+<tr>
+<td>Wheel speed</td>
+<td>Pico 2 → UDP → Motor-Pi</td>
+<td>two wheel nodes → CAN, 100 Hz</td>
+</tr>
+<tr>
+<td>Steering position</td>
+<td>not measured</td>
+<td>KTC-100 pot through the Jrk</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td>ZED-F9R, taped antenna lead</td>
+<td>new board, screw-on antenna, RTK</td>
+</tr>
+<tr>
+<td>Perception and Nav2</td>
+<td>on Orin #1 (in our plan)</td>
+<td>on Orin #2</td>
+</tr>
+</tbody>
+</table></div>
+<p>The rollout, from the KEFC request: write the DBC first; test on the bench with a CANable
+and <code>candump</code>; keep the Motor-Pi path until CAN is proven; <strong>never run both at once</strong>.
+Details: <a href="can-plan.html">CAN plan</a>.</p>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<pre class="highlight"><code class="language-bash">pixi run bench        # the car's software, with stand-ins for every box above
+pixi run bench-check  # start it and check the whole graph (2 min)
+pixi run view         # the car's 3D model and its sensor frames, in RViz</code></pre>
+<p>On the car's network, once it runs Jazzy: <code>pixi run doctor</code> says whether your laptop can
+see the car.</p>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Which program runs on which computer</td>
+<td><code>src/aav_bringup/config/machines/</code> (<code>orin</code>, <code>motor_pi</code>, <code>laptop</code>, <code>all</code>)</td>
+</tr>
+<tr>
+<td>Where each sensor sits on the car</td>
+<td><code>src/aav_description/config/vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>Today's car</td>
+<td><code>src/backends/aav_legacy</code>, <code>firmware/legacy/</code></td>
+</tr>
+<tr>
+<td>The CAN car</td>
+<td><code>src/backends/aav_spine</code>, <code>firmware/can/aav.dbc</code>, <code>firmware/spine/</code></td>
+</tr>
+<tr>
+<td>The sensor drivers</td>
+<td><code>src/sensors/</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Next: <a href="../learn-journey.md">A command's journey</a> follows one joystick push through these
+boxes.</p></section>
+<nav class="prevnext"><a class="prev" href="infrastructure.html"><small>Previous</small>← Infrastructure</a>
+<a class="next" href="status.html"><small>Next</small>Status →</a></nav>
+</main>
+<footer>Source: <code>docs/learn-car.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>
