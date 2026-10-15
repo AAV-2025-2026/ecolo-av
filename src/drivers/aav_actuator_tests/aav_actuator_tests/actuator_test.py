@@ -243,6 +243,12 @@ class Run:
             return 1
         self.ego = node.ego_params()
         if not self.ego:
+            if d.real:
+                # The real car: without ego's limits we don't know its speed cap or
+                # steering, so we don't move it.
+                self.say('REFUSED: ego did not answer (/ego/get_parameters): start the car '
+                         "stack first; on the real car we don't drive without ego's limits")
+                return 1
             self.say('WARNING: ego did not answer (/ego/get_parameters): is the stack running?')
         wheelbase = float(self.ego.get('wheelbase', self.ctx.wheelbase))
         max_steer = float(self.ego.get('max_steering_angle', self.ctx.max_steering))

@@ -92,6 +92,7 @@ then run the rest. Start at walking pace: `--max-speed 0.5`.
 |---|---|
 | **Typing the test's name** | on the real car (or when nobody announces `/system/source`), nothing moves until you type it. No keyboard (a script, a pipe): refused |
 | **Speed cap** | 1 m/s on the car, 0.3 m/s on stands; `--max-speed` can lower it, never raise it there |
+| **ego must answer** | on the car, no answer from ego (its speed cap and steering limits): refused. In Gazebo, a warning |
 | **Stage check** | on the car, stage-3 tests need `--stands`, stage-4 tests refuse it |
 | **Envelope** | each test has a speed, distance and time limit (printed at the start): crossing one stops the car |
 | **Ctrl-C, errors** | zero commands until the car stands still, then it exits. A second Ctrl-C can't cut that short |
