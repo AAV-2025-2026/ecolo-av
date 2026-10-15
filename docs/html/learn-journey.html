@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A command&#x27;s journey · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/learn-journey.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>A command&#x27;s journey</h1>
+<div class="meta">11 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a class="here" href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-whole-trip-in-one-picture">The whole trip in one picture</a><a href="#1-the-joystick-push">1. The joystick push</a><a href="#2-today-to-the-wheels-through-the-motor-pi">2. Today: to the wheels through the Motor-Pi</a><a href="#3-after-the-kefc-changes-can">3. After the KEFC changes: CAN</a><a href="#4-a-nav2-goal">4. A Nav2 goal</a><a href="#5-the-way-back-sensors-to-where-am-i">5. The way back: sensors to &quot;where am I&quot;</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>Follow one joystick push from your hand to the wheels, then a Nav2 goal, then the
+sensor data on its way back.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>every hop a command takes: which program, which topic, how often;</li>
+<li>what can go wrong at each hop, and how to watch it;</li>
+<li>how the car's sensors close the loop.</li>
+</ul>
+<p>Words you may not know (topic, node, twist, Ackermann, CAN) are in the
+<a href="glossary.html">Glossary</a>. The boxes themselves are in <a href="learn-car.html">The car, box by box</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Not on the car yet</p>
+<pre><code>Every hop below runs in the turtle, Gazebo or [bench mode](bench.md). None of it has
+run on the real car yet: the car still runs the 2025-26 code, on Humble.
+</code></pre>
+</div></div>
+<section class="card"><h2 id="the-whole-trip-in-one-picture">The whole trip in one picture</h2>
+<p><img alt="A command's journey: drivers, twist_mux, ego, a backend, the wheels; and the sensors back to the EKFs" src="../img/journey.svg" /></p>
+<p>Two ideas make it simple:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every driver speaks the same language</td>
+<td>a speed (m/s) and a turn rate (rad/s): a <code>TwistStamped</code></td>
+</tr>
+<tr>
+<td>Only ego knows it's a car</td>
+<td>ego turns the twist into a speed and a steering angle: an <code>AckermannDriveStamped</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="1-the-joystick-push">1. The joystick push</h2>
+<p>You hold the trigger (the deadman) and push the stick forward.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Who</th>
+<th>Topic</th>
+<th>Message</th>
+<th>Rate</th>
+<th>What can go wrong</th>
+<th>Watch it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>joy_node</code> (stock <code>joy</code>) reads the USB joystick</td>
+<td><code>/drivers/joy/joy</code></td>
+<td><code>sensor_msgs/Joy</code></td>
+<td>20 Hz while held</td>
+<td>wrong axis or button numbers (still a TODO for the team's joystick)</td>
+<td><code>ros2 topic echo /drivers/joy/joy</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>teleop_twist_joy_node</code> (stock)</td>
+<td><code>/drivers/joy/cmd_vel</code></td>
+<td><code>geometry_msgs/TwistStamped</code></td>
+<td>20 Hz, only while the trigger is held</td>
+<td>trigger not held: nothing is sent</td>
+<td><code>ros2 topic echo /drivers/joy/cmd_vel</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>twist_mux</code> (stock) picks one driver</td>
+<td><code>/control/cmd_vel</code></td>
+<td><code>TwistStamped</code></td>
+<td>as fast as the winner sends</td>
+<td>a higher driver is talking; <code>/safety/estop</code> is true</td>
+<td><code>ros2 topic echo /control/cmd_vel</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>ego</code> (ours)</td>
+<td><code>/ego/actuator_cmd</code></td>
+<td><code>ackermann_msgs/AckermannDriveStamped</code></td>
+<td>50 Hz, always</td>
+<td>no <code>/control/cmd_vel</code> for 0.3 s: ego slows to a stop</td>
+<td><code>ros2 topic hz /ego/actuator_cmd</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>How twist_mux picks:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Driver</th>
+<th>Topic</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>joystick</td>
+<td><code>/drivers/joy/cmd_vel</code></td>
+<td>100 (the highest)</td>
+</tr>
+<tr>
+<td>keyboard</td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
+<td>90</td>
+</tr>
+<tr>
+<td>scripted test</td>
+<td><code>/drivers/scripted/cmd_vel</code></td>
+<td>50</td>
+</tr>
+<tr>
+<td>replay</td>
+<td><code>/drivers/replay/cmd_vel</code></td>
+<td>40</td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td><code>/drivers/nav/cmd_vel</code></td>
+<td>20</td>
+</tr>
+<tr>
+<td>AI (lane keeping)</td>
+<td><code>/drivers/ai/cmd_vel</code></td>
+<td>10</td>
+</tr>
+<tr>
+<td><strong>lock:</strong> <code>/safety/estop</code> true</td>
+<td>blocks everyone below 255</td>
+<td>255</td>
+</tr>
+<tr>
+<td><strong>lock:</strong> <code>/perception/stop_sign</code> true</td>
+<td>blocks Nav2 and AI</td>
+<td>30</td>
+</tr>
+</tbody>
+</table></div>
+<p>A driver counts while its last message is under 0.5 s old. Let go of the trigger and,
+0.5 s later, twist_mux hands control to the next driver.</p>
+<p>What ego does:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Steering angle</td>
+<td>atan(wheelbase × turn rate ÷ speed): the bicycle model</td>
+</tr>
+<tr>
+<td>Speed limits</td>
+<td>1.0 m/s forward, 0.5 m/s reverse (to start)</td>
+</tr>
+<tr>
+<td>Speed changes</td>
+<td>at most 1.0 m/s² faster, 2.0 m/s² slower</td>
+</tr>
+<tr>
+<td>Steering limits</td>
+<td>±0.5 rad, changing at most 0.6 rad/s</td>
+</tr>
+<tr>
+<td>At zero speed</td>
+<td>it holds the wheels where they are: a twist with no speed has no curve</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="2-today-to-the-wheels-through-the-motor-pi">2. Today: to the wheels through the Motor-Pi</h2>
+<p>Today's car would drive through the 2025-26 hardware, with our <code>aav_legacy</code> backend.
+<span class="badge b-untested">untested</span> on the car.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Who</th>
+<th>Topic or wire</th>
+<th>Message</th>
+<th>Rate</th>
+<th>What can go wrong</th>
+<th>Watch it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td>ROS 2 over Ethernet, Orin → Motor-Pi</td>
+<td><code>/ego/actuator_cmd</code></td>
+<td>the same</td>
+<td>50 Hz</td>
+<td>a different <code>ROS_DOMAIN_ID</code>; the network</td>
+<td>on the Pi: <code>ros2 topic hz /ego/actuator_cmd</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>legacy_uart_bridge</code> on the Motor-Pi</td>
+<td>UART <code>/dev/ttyAMA0</code>, 115200 baud</td>
+<td>13 bytes: steering, speed, accel, checksum</td>
+<td>50 Hz</td>
+<td>stale for 0.3 s, or <code>/safety/estop</code> true: it sends brake frames</td>
+<td>the node's log</td>
+</tr>
+<tr>
+<td>7</td>
+<td>the ESP32 (2025-26 firmware)</td>
+<td>I2C</td>
+<td>Jrk targets, a DAC value</td>
+<td>each frame</td>
+<td><strong>no timeout</strong>: if frames stop, the last throttle stays on</td>
+<td>nothing comes back</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Jrk G2 #1, Jrk G2 #2, the DAC</td>
+<td>wires</td>
+<td>steering, brake, throttle voltage</td>
+<td></td>
+<td>the throttle is open loop: no speed feedback</td>
+<td>watch the car, wheels off the ground</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Today's weak spot</p>
+<pre><code>If the Motor-Pi or its bridge dies, the ESP32 keeps the last throttle. Keep the wheels
+off the ground and the e-stop in hand: see [Firmware](firmware.md).
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="3-after-the-kefc-changes-can">3. After the KEFC changes: CAN</h2>
+<p>The <code>aav_spine</code> backend replaces the Motor-Pi. It works on the bench, against a pretend
+board (<code>spine_sim</code>). It has never driven the car, and the ESP32's CAN firmware isn't
+written yet.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Who</th>
+<th>Topic or wire</th>
+<th>Message</th>
+<th>Rate</th>
+<th>What can go wrong</th>
+<th>Watch it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td><code>spine_bridge</code> on Orin #1</td>
+<td><code>/can/tx</code></td>
+<td><code>can_msgs/Frame</code>: <code>DRIVE_CMD</code> 0x100 (speed, steering)</td>
+<td>50 Hz, only while ego is fresh</td>
+<td>not armed: the board ignores it (<code>/spine/arm</code>)</td>
+<td><code>ros2 topic echo /can/tx</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>socket_can_sender</code> (stock <code>ros2_socketcan</code>)</td>
+<td><code>can0</code>, 500 kbit/s</td>
+<td>a CAN frame, with a counter and a CRC</td>
+<td>50 Hz</td>
+<td><code>can0</code> not up; a missing 120 Ω end</td>
+<td><code>candump can0</code> (Linux, can-utils)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>the control board's ESP32</td>
+<td>I2C</td>
+<td>its own speed loop, into Jrk targets and the DAC</td>
+<td>about 100 Hz</td>
+<td>no good frame for 200 ms (100 ms in the KEFC plan): it brakes</td>
+<td><code>VEHICLE_STATUS</code> 0x181 on the bus</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Jrk G2s, DAC</td>
+<td>wires</td>
+<td>steering (read back from the KTC-100 pot), brake, throttle</td>
+<td></td>
+<td>a driver fault: it brakes and sets a fault bit</td>
+<td><code>ros2 topic echo /vehicle/status</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The frames are defined in <code>firmware/can/aav.dbc</code> (<a href="firmware.html">Firmware</a>). The KEFC plan
+changes a few: <a href="can-plan.html">CAN plan</a> (Proposed).</p>
+</section>
+<section class="card"><h2 id="4-a-nav2-goal">4. A Nav2 goal</h2>
+<p>Nav2 is just another driver, at priority 20. Its command joins the same path at hop 3.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Who</th>
+<th>Topic</th>
+<th>Message</th>
+<th>Rate</th>
+<th>What can go wrong</th>
+<th>Watch it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>You, in RViz: "2D Goal Pose"</td>
+<td><code>/goal_pose</code></td>
+<td><code>geometry_msgs/PoseStamped</code></td>
+<td>once</td>
+<td>the goal is off the map</td>
+<td><code>ros2 topic echo /goal_pose</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>bt_navigator</code> starts the action</td>
+<td><code>/navigate_to_pose</code></td>
+<td><code>NavigateToPose</code> action</td>
+<td>once</td>
+<td></td>
+<td><code>ros2 action list</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>planner_server</code> (SmacPlannerHybrid: paths a car can drive)</td>
+<td><code>/plan</code></td>
+<td><code>nav_msgs/Path</code></td>
+<td>when asked</td>
+<td>no path fits the turning circle</td>
+<td>RViz shows the path</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>controller_server</code> (Regulated Pure Pursuit)</td>
+<td><code>cmd_vel_nav</code></td>
+<td><code>TwistStamped</code></td>
+<td>20 Hz</td>
+<td>no TF <code>map → odom → base_link</code></td>
+<td><code>ros2 topic hz /cmd_vel_nav</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>velocity_smoother</code></td>
+<td><code>/drivers/nav/cmd_vel</code>, or <code>/control/cmd_vel_smoothed</code> where the radar runs</td>
+<td><code>TwistStamped</code></td>
+<td>20 Hz</td>
+<td></td>
+<td><code>ros2 topic echo /drivers/nav/cmd_vel</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>collision_monitor</code> (only where the radar runs)</td>
+<td><code>/drivers/nav/cmd_vel</code></td>
+<td><code>TwistStamped</code></td>
+<td>20 Hz</td>
+<td>a radar point in the 1 m stop zone, or a silent radar: it sends zero</td>
+<td><code>ros2 topic echo /safety/collision_monitor/state</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>twist_mux</code>, then ego and the backend</td>
+<td>as in sections 1 to 3</td>
+<td></td>
+<td></td>
+<td>the joystick, the keyboard or a stop sign outranks Nav2</td>
+<td><code>ros2 topic echo /control/cmd_vel</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The HUD can send a route too: <code>hud_server</code> calls the action <code>/follow_gps_waypoints</code> with
+GPS points.</p>
+</section>
+<section class="card"><h2 id="5-the-way-back-sensors-to-where-am-i">5. The way back: sensors to "where am I"</h2>
+<p>The car tells the software what it really did. This closes the loop.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>From</th>
+<th>Topic</th>
+<th>Message</th>
+<th>Rate</th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Wheel speed: today <code>encoder_udp</code>; later <code>spine_bridge</code></td>
+<td><code>/vehicle/odom</code></td>
+<td><code>nav_msgs/Odometry</code> (speed only)</td>
+<td>10 Hz today; 50 Hz with the spine</td>
+<td>both EKFs</td>
+</tr>
+<tr>
+<td>2</td>
+<td>IMU: <code>imu_node</code> (Yahboom)</td>
+<td><code>/sensors/imu/data_raw</code></td>
+<td><code>sensor_msgs/Imu</code></td>
+<td>as the device sends</td>
+<td><code>imu_filter_madgwick</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>imu_filter_madgwick</code></td>
+<td><code>/sensors/imu/data</code></td>
+<td><code>sensor_msgs/Imu</code>, with an orientation</td>
+<td>the same</td>
+<td>both EKFs</td>
+</tr>
+<tr>
+<td>4</td>
+<td>GPS: <code>ublox_gps</code></td>
+<td><code>/sensors/gps/fix</code></td>
+<td><code>sensor_msgs/NavSatFix</code></td>
+<td>1 Hz</td>
+<td><code>navsat_transform</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>navsat_transform</code></td>
+<td><code>/localization/gps/odom</code></td>
+<td><code>Odometry</code>, in map x and y</td>
+<td>with each fix</td>
+<td><code>ekf_global</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>ekf_local</code></td>
+<td><code>/localization/odom/local</code>, TF <code>odom → base_link</code></td>
+<td><code>Odometry</code></td>
+<td>30 Hz</td>
+<td>Nav2's controller, the scripted driver</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>ekf_global</code></td>
+<td><code>/localization/odom/global</code>, TF <code>map → odom</code></td>
+<td><code>Odometry</code></td>
+<td>30 Hz</td>
+<td><code>navsat_transform</code>, Nav2's planner (through TF)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>navsat_transform</code></td>
+<td><code>/localization/gps/fix</code></td>
+<td><code>NavSatFix</code></td>
+<td>30 Hz</td>
+<td>the HUD's map</td>
+</tr>
+<tr>
+<td>9</td>
+<td>the backend (spine, Gazebo)</td>
+<td><code>/vehicle/status</code></td>
+<td><code>aav_interfaces/VehicleStatus</code></td>
+<td>10 Hz</td>
+<td>the HUD</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The two EKFs" src="../img/ekf.svg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What can go wrong</th>
+<th>What you see</th>
+<th>Watch it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No wheel speed</td>
+<td><code>ekf_local</code> drifts, then stops moving</td>
+<td><code>ros2 topic hz /vehicle/odom</code></td>
+</tr>
+<tr>
+<td>No IMU</td>
+<td>the car's heading never turns</td>
+<td><code>ros2 topic hz /sensors/imu/data</code></td>
+</tr>
+<tr>
+<td>No GPS fix</td>
+<td><code>ekf_global</code> drifts with <code>ekf_local</code></td>
+<td><code>ros2 topic echo /sensors/gps/fix</code> (status −1 = no fix)</td>
+</tr>
+<tr>
+<td>Today's car</td>
+<td>no <code>/vehicle/status</code>: the legacy backend doesn't send it</td>
+<td><code>ros2 topic info /vehicle/status</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Why the two EKFs don't talk on a topic: <a href="naming.html#why-the-two-ekfs-dont-talk">Topic areas</a>.</p>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<p>The turtle runs the same command path, on one computer:</p>
+<pre class="highlight"><code class="language-bash">pixi run turtle              # terminal 1: a turtle that steers like the car
+pixi run keyboard --local    # terminal 2: hold i to drive
+pixi run graph               # terminal 3: rqt_graph, the whole path as a picture</code></pre>
+<p>Then watch each hop in another terminal. <code>tools/ros.sh --local</code> keeps it on this
+computer, like the turtle:</p>
+<pre class="highlight"><code class="language-bash">pixi run tools/ros.sh --local ros2 topic echo /drivers/keyboard/cmd_vel
+pixi run tools/ros.sh --local ros2 topic echo /control/cmd_vel
+pixi run tools/ros.sh --local ros2 topic hz /ego/actuator_cmd</code></pre>
+<p>For the CAN path, run <code>pixi run bench</code>, then
+<code>pixi run tools/ros.sh --local ros2 topic echo /can/tx</code>. <code>pixi run estop</code> and
+<code>pixi run estop-clear</code> try the e-stop. <code>pixi run check turtle</code> compares the running graph
+with <code>docs/interfaces.yaml</code>.</p>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Hop</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Joystick</td>
+<td><code>src/drivers/aav_teleop/config/</code></td>
+</tr>
+<tr>
+<td>Keyboard</td>
+<td><code>tools/keyboard.sh</code></td>
+</tr>
+<tr>
+<td>twist_mux priorities</td>
+<td><code>src/mux/aav_mux/config/twist_mux.yaml</code></td>
+</tr>
+<tr>
+<td>ego</td>
+<td><code>src/ego/aav_ego/</code> (the maths: <code>ackermann.py</code>; the limits: <code>config/</code>)</td>
+</tr>
+<tr>
+<td>Today's backend</td>
+<td><code>src/backends/aav_legacy/</code> (<code>legacy_uart_bridge.py</code>, <code>encoder_udp.py</code>)</td>
+</tr>
+<tr>
+<td>The CAN backend</td>
+<td><code>src/backends/aav_spine/</code> (<code>spine_bridge.py</code>, <code>can_codec.py</code>)</td>
+</tr>
+<tr>
+<td>The CAN frames</td>
+<td><code>firmware/can/aav.dbc</code></td>
+</tr>
+<tr>
+<td>The board's logic</td>
+<td><code>firmware/spine/crates/spine-core</code></td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td><code>src/drivers/aav_navigation/</code></td>
+</tr>
+<tr>
+<td>The EKFs</td>
+<td><code>src/localization/aav_localization/config/</code></td>
+</tr>
+<tr>
+<td>Every topic</td>
+<td><code>docs/interfaces.yaml</code>, shown as <a href="interfaces.html">Topics</a></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="learn-car.html"><small>Previous</small>← The car, box by box</a>
+<a class="next" href="faq.html"><small>Next</small>Questions →</a></nav>
+</main>
+<footer>Source: <code>docs/learn-journey.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

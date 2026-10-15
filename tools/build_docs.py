@@ -33,7 +33,8 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 10    # PAGES[:10] are the reading list; the rest are reference
+READ_FIRST = 10    # PAGES[:10] are the reading list
+LEARN_END = 14     # PAGES[10:14] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for)
 PAGES = [
@@ -47,6 +48,10 @@ PAGES = [
     ('work.md', 'Work', "The plan, what's done, what needs doing"),
     ('decisions.md', 'Decisions', 'Decided, Tentative, Proposed, and Q1–Q34'),
     ('infrastructure.md', 'Infrastructure', 'The repo, Pixi, the contracts, profiles, computers'),
+    ('learn-car.md', 'The car, box by box', 'Every computer, board and wire on the car'),
+    ('learn-journey.md', "A command's journey", 'One push and one Nav2 goal, hand to wheels, and back'),
+    ('faq.md', 'Questions', 'What a professor or a new teammate asks, answered'),
+    ('glossary.md', 'Glossary', 'Every acronym and term, in plain words'),
     ('status.md', 'Status', "What works, what's untested, what's missing"),
     ('howto-driver.md', 'Build a driver', 'A new driver, from an empty folder to the turtle'),
     ('costmaps.md', 'Costmaps', 'How Nav2 sees obstacles; draw your first map'),
@@ -158,9 +163,11 @@ def badges(body):
 def reading_list(pages, pdf=False):
     rows = []
     for i, (name, title, purpose, mins) in enumerate(pages):
-        if i == READ_FIRST:
+        if i in (READ_FIRST, LEARN_END):
+            label = ('Learn: the car and the code, step by step' if i == READ_FIRST
+                     else 'Reference: look things up here')
             rows.append(f'<tr><td colspan="{5 if pdf else 4}" class="group">'
-                        'Reference: look things up here</td></tr>')
+                        f'{label}</td></tr>')
         href = f'#{slug(name)}' if pdf else f'{slug(name)}.html'
         num = str(i + 1) if i < READ_FIRST else ''
         page = f'<td class="time"><a class="pg" href="{href}"></a></td>' if pdf else ''
@@ -197,6 +204,8 @@ def menu(here):
     links = []
     for i, (name, title, _) in enumerate(PAGES):
         if i == READ_FIRST:
+            links.append('<span class="sep">Learn:</span>')
+        if i == LEARN_END:
             links.append('<span class="sep">Reference:</span>')
         cls = ' class="here"' if name == here else ''
         links.append(f'<a{cls} href="{slug(name)}.html">{html.escape(title)}</a>')
