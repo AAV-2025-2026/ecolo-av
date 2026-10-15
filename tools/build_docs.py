@@ -71,6 +71,7 @@ PAGES = [
     ('hud.md', 'HUD', 'The in-car screen: Rust and raylib; the Flutter app'),
     # Learn: the ideas behind the car, from zero. learn-car, learn-journey, faq and
     # glossary come first; these follow them.
+    ('learn-sensors.md', 'Learn: sensors', 'Every sensor: measures, rate, topic, frame, driver, sim'),
     ('learn-gps.md', 'Learn: GPS', 'GNSS, RTK, NavSatFix, the datum, navsat_transform'),
     ('learn-localization.md', 'Learn: localization', 'Odometry, IMU, Kalman, frames, TF, our two EKFs'),
     ('learn-control.md', 'Learn: control', 'Feedback loops, PID, Ackermann, limits, timeouts'),

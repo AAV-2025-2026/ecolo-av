@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sensors from zero · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/learn-sensors.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Sensors from zero</h1>
+<div class="meta">8 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a>
+<a class="here" href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-why-so-many-sensors">1. Why so many sensors?</a><a href="#2-all-of-them-on-one-table">2. All of them, on one table</a><a href="#3-wheel-speed">3. Wheel speed</a><a href="#4-steering-angle">4. Steering angle</a><a href="#5-imu-yahboom-10-axis">5. IMU: Yahboom 10-axis</a><a href="#6-gps-u-blox-zed-f9r">6. GPS: u-blox ZED-F9R</a><a href="#7-radar-ti-mmwave">7. Radar: TI mmWave</a><a href="#8-cameras-pi-5s-at-the-windscreen">8. Cameras: Pi 5s at the windscreen</a><a href="#9-lidar-on-the-roof-unknown">9. Lidar: on the roof, unknown</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>Every sensor on our car: what it measures, how often, which ROS topic and frame it uses,
+what it's good and bad at, which driver reads it, and whether Gazebo can pretend to be it.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>the sensors a self-driving car needs, and why it needs more than one;</li>
+<li>each of ours: the numbers, the topic, the frame, the driver, the status;</li>
+<li>which ones the simulator makes, and which it doesn't;</li>
+<li>how to check that a sensor is really talking.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Nothing here has run on the car yet</p>
+<pre><code>Our drivers work in Gazebo and on the bench. On the real car, every sensor below is
+[[untested]] until Friday's audit and after ([Car photos](car-photos.md)).
+</code></pre>
+</div></div>
+<section class="card"><h2 id="1-why-so-many-sensors">1. Why so many sensors?</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answered by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>How fast am I going?</td>
+<td>wheel speed</td>
+</tr>
+<tr>
+<td>How fast am I turning?</td>
+<td>the IMU's gyro, the steering angle</td>
+</tr>
+<tr>
+<td>Where am I on the earth?</td>
+<td>GPS</td>
+</tr>
+<tr>
+<td>What's in front of me?</td>
+<td>radar, cameras, lidar</td>
+</tr>
+<tr>
+<td>What's the road like?</td>
+<td>cameras (lanes, signs)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each sensor fails in its own way. Together they cover each other's gaps
+(<a href="learn-localization.html">Learn: localization</a>).</p>
+</section>
+<section class="card"><h2 id="2-all-of-them-on-one-table">2. All of them, on one table</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Measures</th>
+<th>Rate</th>
+<th>Topic</th>
+<th>Message</th>
+<th>Frame</th>
+<th>In Gazebo?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheel speed</td>
+<td>forward speed</td>
+<td>50 Hz (sim); 10 Hz packets today</td>
+<td><code>/vehicle/odom</code></td>
+<td><code>nav_msgs/Odometry</code></td>
+<td><code>base_link</code></td>
+<td><strong>yes</strong>, on <code>main</code></td>
+</tr>
+<tr>
+<td>Steering angle</td>
+<td>front wheel angle</td>
+<td>50 Hz (in CAN feedback)</td>
+<td><code>/vehicle/status</code>, <code>/vehicle/joint_states</code></td>
+<td><code>VehicleStatus</code>, <code>JointState</code></td>
+<td>the steering joints</td>
+<td>yes (status)</td>
+</tr>
+<tr>
+<td>IMU (Yahboom)</td>
+<td>turn rate, acceleration</td>
+<td>200 Hz device; 50 Hz sim</td>
+<td><code>/sensors/imu/data_raw</code> → <code>/sensors/imu/data</code></td>
+<td><code>sensor_msgs/Imu</code></td>
+<td><code>imu_link</code></td>
+<td><strong>yes</strong>, on <code>main</code></td>
+</tr>
+<tr>
+<td>GPS (ZED-F9R)</td>
+<td>latitude, longitude</td>
+<td>1 Hz factory; 5 Hz sim</td>
+<td><code>/sensors/gps/fix</code></td>
+<td><code>sensor_msgs/NavSatFix</code></td>
+<td><code>gps_link</code></td>
+<td><strong>yes</strong>, on <code>main</code></td>
+</tr>
+<tr>
+<td>Radar (TI mmWave)</td>
+<td>points and their speed</td>
+<td>10 Hz</td>
+<td><code>/sensors/radar/points</code></td>
+<td><code>sensor_msgs/PointCloud2</code></td>
+<td><code>radar_link</code></td>
+<td>on branch <code>wt/sim-full</code></td>
+</tr>
+<tr>
+<td>Front cameras (Pi 5)</td>
+<td>pictures</td>
+<td>15 fps, 1920 × 1080</td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
+<td><code>sensor_msgs/Image</code></td>
+<td><code>camera_left_link</code></td>
+<td>on branch <code>wt/sim-full</code></td>
+</tr>
+<tr>
+<td>Lidar (roof)</td>
+<td>3D points all round</td>
+<td>-</td>
+<td>none yet</td>
+<td>(would be <code>PointCloud2</code>)</td>
+<td>none yet</td>
+<td><strong>no</strong></td>
+</tr>
+<tr>
+<td>Battery (Victron)</td>
+<td>voltage, charge</td>
+<td>1 Hz (bench)</td>
+<td><code>/vehicle/battery</code></td>
+<td><code>sensor_msgs/BatteryState</code></td>
+<td>-</td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every frame's position on the car is in <code>src/aav_description/config/vehicle.yaml</code>.</p>
+</section>
+<section class="card"><h2 id="3-wheel-speed">3. Wheel speed</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Measures</strong></td>
+<td>how fast the wheels turn → forward speed</td>
+</tr>
+<tr>
+<td><strong>Today</strong></td>
+<td>an optical encoder (8 spokes) on a Pico 2, sending UDP packets every 0.1 s to <code>encoder_udp</code> (<code>aav_legacy</code>). It is reported fouled</td>
+</tr>
+<tr>
+<td><strong>After KEFC</strong></td>
+<td>Hall sensors reading the holes in the two front brake rotors, each on an ESP32-CAN-X2 wheel node, sending CAN frames 0x200 and 0x201 at 100 Hz (Proposed)</td>
+</tr>
+<tr>
+<td><strong>Good at</strong></td>
+<td>smooth, fast, never jumps</td>
+</tr>
+<tr>
+<td><strong>Bad at</strong></td>
+<td>wheel slip; a wrong wheel size (ours, 0.30 m, is a guess) adds up</td>
+</tr>
+<tr>
+<td><strong>Driver</strong></td>
+<td><code>encoder_udp</code> today; <code>spine_bridge</code> on CAN</td>
+</tr>
+<tr>
+<td><strong>Gazebo</strong></td>
+<td>yes: <code>gazebo_adapter</code> reads the car model's motion</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="4-steering-angle">4. Steering angle</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Measures</strong></td>
+<td>the angle of the front wheels</td>
+</tr>
+<tr>
+<td><strong>Today</strong></td>
+<td><strong>nothing</strong>: the steering is open loop</td>
+</tr>
+<tr>
+<td><strong>After KEFC</strong></td>
+<td>a KTC-100 linear pot, read by the steering Jrk G2, sent in <code>VEHICLE_FEEDBACK</code> (0x180)</td>
+</tr>
+<tr>
+<td><strong>Good at</strong></td>
+<td>the turn rate, from speed × tan(angle) ÷ wheelbase</td>
+</tr>
+<tr>
+<td><strong>Bad at</strong></td>
+<td>needs calibrating: which pot reading is straight ahead?</td>
+</tr>
+<tr>
+<td><strong>Driver</strong></td>
+<td><code>spine_bridge</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="5-imu-yahboom-10-axis">5. IMU: Yahboom 10-axis</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Measures</strong></td>
+<td>gyro: turn rate on 3 axes. Accelerometer: acceleration with gravity. Magnetometer: the earth's field</td>
+</tr>
+<tr>
+<td><strong>Rate</strong></td>
+<td>200 Hz (set on the device; the 2025-26 README)</td>
+</tr>
+<tr>
+<td><strong>Plugs in</strong></td>
+<td>USB serial, 115200 baud, named <code>/dev/aav/imu</code> by our udev rule</td>
+</tr>
+<tr>
+<td><strong>Good at</strong></td>
+<td>fast, smooth turn rate</td>
+</tr>
+<tr>
+<td><strong>Bad at</strong></td>
+<td>the gyro drifts slowly; the magnetometer is fooled by the motor and steel. <strong>We don't use the magnetometer yet</strong></td>
+</tr>
+<tr>
+<td><strong>Driver</strong></td>
+<td><code>yahboom_imu_cpp</code> (from the 2025-26 team), or Ben's Rust twin <code>aav_imu_yahboom</code> (<code>imu_driver:=rust</code>), then the stock <code>imu_filter_madgwick</code></td>
+</tr>
+<tr>
+<td><strong>Used by</strong></td>
+<td>both EKFs: the <strong>yaw rate</strong> only</td>
+</tr>
+<tr>
+<td><strong>Gazebo</strong></td>
+<td>yes, 50 Hz, with noise 0.02 rad/s and 0.2 m/s²</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="6-gps-u-blox-zed-f9r">6. GPS: u-blox ZED-F9R</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Measures</strong></td>
+<td>latitude, longitude, altitude, time</td>
+</tr>
+<tr>
+<td><strong>Rate</strong></td>
+<td>1 Hz from the factory; faster once set up with u-center</td>
+</tr>
+<tr>
+<td><strong>Good at</strong></td>
+<td>never drifts; centimetres with RTK</td>
+</tr>
+<tr>
+<td><strong>Bad at</strong></td>
+<td>slow; metres off without RTK; nothing indoors; jumps near buildings</td>
+</tr>
+<tr>
+<td><strong>Driver</strong></td>
+<td><code>ublox_gps</code> (default; Tentative, Q18), or <code>nmea_navsat_driver</code>, or <code>ublox_dgnss</code></td>
+</tr>
+<tr>
+<td><strong>On the car</strong></td>
+<td>a SparkFun board on the ceiling panel, USB to a Pi; its antenna lead is taped</td>
+</tr>
+<tr>
+<td><strong>Gazebo</strong></td>
+<td>yes, 5 Hz, about 0.5 m noise</td>
+</tr>
+</tbody>
+</table></div>
+<p>All about it: <a href="learn-gps.html">Learn: GPS</a>.</p>
+</section>
+<section class="card"><h2 id="7-radar-ti-mmwave">7. Radar: TI mmWave</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Measures</strong></td>
+<td>points (x, y, z) and each point's speed toward or away from the radar</td>
+</tr>
+<tr>
+<td><strong>Rate, range</strong></td>
+<td>10 Hz; 8.4 m (<code>ti_ros2_driver</code> <code>cfg/base.cfg</code>)</td>
+</tr>
+<tr>
+<td><strong>Good at</strong></td>
+<td>works in the dark, rain and fog; measures speed directly</td>
+</tr>
+<tr>
+<td><strong>Bad at</strong></td>
+<td>few points; poor height; clutter close up. Publishes best effort: subscribe best effort</td>
+</tr>
+<tr>
+<td><strong>Driver</strong></td>
+<td><code>ti_ros2_driver</code> (from the 2025-26 <code>Nav_Radar</code>), then <code>radar_clusters</code> groups the points</td>
+</tr>
+<tr>
+<td><strong>Used by</strong></td>
+<td>the local costmap's obstacle layer, and <code>collision_monitor</code></td>
+</tr>
+<tr>
+<td><strong>Gazebo</strong></td>
+<td>on branch <code>wt/sim-full</code> (as <code>/gazebo/radar/points</code>, renamed to ours)</td>
+</tr>
+<tr>
+<td><strong>Bench</strong></td>
+<td><code>mock_radar</code> draws points on the bench's boxes</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="8-cameras-pi-5s-at-the-windscreen">8. Cameras: Pi 5s at the windscreen</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Measures</strong></td>
+<td>colour pictures</td>
+</tr>
+<tr>
+<td><strong>Rate</strong></td>
+<td>15 fps at 1920 × 1080 (<code>cameras.launch.py</code>)</td>
+</tr>
+<tr>
+<td><strong>Good at</strong></td>
+<td>the only sensor that reads lanes, signs and lights</td>
+</tr>
+<tr>
+<td><strong>Bad at</strong></td>
+<td>no distance by itself; glare, dark; big messages (use the compressed topic over WiFi)</td>
+</tr>
+<tr>
+<td><strong>Driver</strong></td>
+<td><code>usb_cam</code> (Linux only), with the 2024-25 calibration <code>left.ini</code></td>
+</tr>
+<tr>
+<td><strong>Used by</strong></td>
+<td><code>aav_yolo</code> (stop signs, objects), <code>aav_lane_finder</code>, the HUD</td>
+</tr>
+<tr>
+<td><strong>Gazebo</strong></td>
+<td>on branch <code>wt/sim-full</code></td>
+</tr>
+<tr>
+<td><strong>Bench</strong></td>
+<td><code>mock_camera</code> draws the bench road</td>
+</tr>
+<tr>
+<td><strong>KEFC</strong></td>
+<td>adds a rear camera (Cam3)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="9-lidar-on-the-roof-unknown">9. Lidar: on the roof, unknown</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Measures</strong></td>
+<td>3D points all round, from laser pulses</td>
+</tr>
+<tr>
+<td><strong>Good at</strong></td>
+<td>exact distances, day or night</td>
+</tr>
+<tr>
+<td><strong>Bad at</strong></td>
+<td>rain and snow; expensive; lots of data</td>
+</tr>
+<tr>
+<td><strong>On the car</strong></td>
+<td>a 3D lidar on a printed tripod. Model unknown (Q22)</td>
+</tr>
+<tr>
+<td><strong>Driver</strong></td>
+<td><strong>none yet</strong></td>
+</tr>
+<tr>
+<td><strong>Gazebo</strong></td>
+<td><strong>no</strong>. Tried on <code>wt/sim-full</code>: Gazebo's lidar can crash on a Mac</td>
+</tr>
+<tr>
+<td><strong>Next</strong></td>
+<td>find the model and IP at Friday's audit; it will be read on Orin #2</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You want to</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gazebo's sensors</td>
+<td><code>pixi run sim</code></td>
+</tr>
+<tr>
+<td>Every sensor topic that's live</td>
+<td><code>pixi run tools/ros.sh ros2 topic list</code></td>
+</tr>
+<tr>
+<td>How often the IMU talks (expect 50 Hz in Gazebo)</td>
+<td><code>pixi run tools/ros.sh ros2 topic hz /sensors/imu/data</code></td>
+</tr>
+<tr>
+<td>One wheel-speed message</td>
+<td><code>pixi run tools/ros.sh ros2 topic echo --once /vehicle/odom</code></td>
+</tr>
+<tr>
+<td>The bench's radar and camera too</td>
+<td><code>pixi run bench</code>, then <code>pixi run tools/ros.sh ros2 topic hz /sensors/radar/points</code></td>
+</tr>
+<tr>
+<td>Where each sensor sits on the car</td>
+<td><code>pixi run view</code> (RViz with the car model)</td>
+</tr>
+<tr>
+<td>The live graph against the contract</td>
+<td><code>pixi run check bench</code> (with the bench running)</td>
+</tr>
+<tr>
+<td>The two IMU drivers agree, no IMU needed</td>
+<td><code>pixi run imu-compare</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Starting the drivers</td>
+<td><code>src/sensors/aav_sensors/launch/sensors.launch.py</code>, <code>cameras.launch.py</code></td>
+</tr>
+<tr>
+<td>Driver settings</td>
+<td><code>src/sensors/aav_sensors/config/</code> (<code>imu.yaml</code>, <code>imu_filter.yaml</code>, <code>ublox_gps.yaml</code>, <code>cameras/</code>)</td>
+</tr>
+<tr>
+<td>IMU drivers</td>
+<td><code>src/sensors/yahboom_imu_cpp</code>, <code>src/sensors/aav_imu_yahboom</code></td>
+</tr>
+<tr>
+<td>Radar driver</td>
+<td><code>src/sensors/ti_ros2_driver</code></td>
+</tr>
+<tr>
+<td>Battery</td>
+<td><code>src/sensors/battery_monitor</code></td>
+</tr>
+<tr>
+<td>Wheel speed</td>
+<td><code>src/backends/aav_legacy</code> (today), <code>src/backends/aav_spine</code> (CAN)</td>
+</tr>
+<tr>
+<td>Sensor positions</td>
+<td><code>src/aav_description/config/vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>Gazebo's sensors</td>
+<td><code>src/aav_description/urdf/aav.gazebo.xacro</code>, <code>src/backends/aav_gazebo</code></td>
+</tr>
+<tr>
+<td>The bench's pretend sensors</td>
+<td><code>src/bench/aav_bench/aav_bench/sensors.py</code></td>
+</tr>
+<tr>
+<td>Every topic</td>
+<td><code>docs/interfaces.yaml</code>, shown as <a href="interfaces.html">Topics</a></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="hud.html"><small>Previous</small>← HUD</a>
+<a class="next" href="learn-gps.html"><small>Next</small>Learn: GPS →</a></nav>
+</main>
+<footer>Source: <code>docs/learn-sensors.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

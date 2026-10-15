@@ -41,6 +41,7 @@ our car uses it.
 
 | Idea | Page |
 |---|---|
+| Sensors: every one on the car, and what it's good for | [Learn: sensors](learn-sensors.md) |
 | GPS: where the car is on the earth, and RTK | [Learn: GPS](learn-gps.md) |
 | Localization: odometry, Kalman filters, frames and TF | [Learn: localization](learn-localization.md) |
 | Control: feedback loops, PID, steering geometry, safe stops | [Learn: control](learn-control.md) |
