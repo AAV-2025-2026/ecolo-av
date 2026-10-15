@@ -6,19 +6,29 @@
 //! | Module | What it holds |
 //! |---|---|
 //! | [`config`] | the topic names, from `config/map.yaml` |
+//! | [`earth`] | latitude and longitude to the map frame and back, as navsat_transform does |
 //! | [`geom`] | points and poses in the map frame (metres, radians) |
 //! | [`grid`] | Nav2's occupancy grid, and its pixels for the screen |
 //! | [`route`] | the planned path: the nearest point to the car, the distance left |
 //! | [`car`] | the car's outline, from `vehicle.yaml` |
 //! | [`view`] | map to screen and back: follow the car, the whole map, zoom, the scale bar |
 //! | [`trip`] | NO GOAL, DRIVING, ARRIVED... and the time left |
+//! | [`tiles`] | the street map's tiles: which ones the view needs, at which zoom |
+//! | [`pmtiles`] | reads the street map's file (PMTiles) |
+//! | [`streets`] | one tile's water, parks, buildings and roads, as triangles and lines in map metres |
+//! | [`tilecache`] | the decoded tiles: what to draw, what to load, what to forget |
 //! | [`state`] | everything above, as one value the screen draws |
 
 pub mod car;
 pub mod config;
+pub mod earth;
 pub mod geom;
 pub mod grid;
+pub mod pmtiles;
 pub mod route;
 pub mod state;
+pub mod streets;
+pub mod tilecache;
+pub mod tiles;
 pub mod trip;
 pub mod view;

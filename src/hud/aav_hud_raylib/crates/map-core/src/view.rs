@@ -18,8 +18,8 @@ use crate::{geom::Point, grid::Bounds};
 pub struct PixelsPerMetre(pub f64);
 
 impl PixelsPerMetre {
-    /// The most zoomed out: 1 px = 2 m.
-    pub const MIN: Self = Self(0.5);
+    /// The most zoomed out: 1 px = 50 m (60 km across a big screen: the street map).
+    pub const MIN: Self = Self(0.02);
     /// The most zoomed in: 1 m = 400 px.
     pub const MAX: Self = Self(400.0);
 
@@ -157,6 +157,12 @@ impl View {
         let k = (vp.width / w.max(1e-3)).min(vp.height / h.max(1e-3)) * (1.0 - 2.0 * FIT_MARGIN);
         self.scale = PixelsPerMetre(k).clamped();
         self.centre = b.centre();
+    }
+
+    /// Sets the scale (clamped), and keeps it for following the car too.
+    pub fn set_scale(&mut self, scale: PixelsPerMetre) {
+        self.scale = scale.clamped();
+        self.follow_scale = Some(self.scale);
     }
 
     /// F: following the car <-> the whole map. From a free view, back to the car.

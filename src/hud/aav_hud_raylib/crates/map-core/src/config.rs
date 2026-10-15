@@ -66,6 +66,8 @@ pub struct MapConfig {
     pub plan_stale_after: f64,
     /// Metres from the goal that count as arrived.
     pub arrive_within: f64,
+    /// The street map's file (PMTiles), relative to the folder the window starts in.
+    pub street_map: String,
 }
 
 /// Why a settings file can't be used.

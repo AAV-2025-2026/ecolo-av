@@ -6,8 +6,12 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
+earcut = "0.4"
+flate2 = "1"
+geo-types = "0.7"
 # Shared with the HUD: OK / STALE / NEVER, /system/source's banner, formatting.
 hud-core = { path = "../hud-core" }
+mvt-reader = "2.5"
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"
 thiserror = "2"

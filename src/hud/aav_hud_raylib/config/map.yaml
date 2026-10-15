@@ -11,3 +11,6 @@ map:
     stale_after: 1.0                          # s: the car's position this old shows STALE
     plan_stale_after: 3.0                     # s: Nav2 replans every 1 s while it drives; older = it stopped
     arrive_within: 1.0                        # m: the car this close to the goal = ARRIVED (Nav2's own is 0.5)
+    # The street map under Nav2's map (pixi run get-street-map). A path relative to the
+    # folder the window starts in (pixi starts it in the repo); missing = no streets.
+    street_map: maps/streets/ottawa.pmtiles
