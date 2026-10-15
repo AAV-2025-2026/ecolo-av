@@ -69,6 +69,9 @@ PAGES = [
     ('interfaces.md', 'Topics', 'Every topic, service, action and frame'),
     ('car_measurements.md', 'Car numbers', 'vehicle.yaml, and how to measure the car'),
     ('hud.md', 'HUD', 'The in-car screen: Rust and raylib; the Flutter app'),
+    # Learn: the ideas behind the car, from zero. learn-car, learn-journey, faq and
+    # glossary come first; these follow them.
+    ('learn-can.md', 'Learn: CAN', 'CAN from two wires to our DRIVE_CMD, byte by byte'),
 ]
 BUILT = {name for name, _, _ in PAGES}
 RELEASE = 'release-notes.md'   # also printed on its own, with a cover, to share

@@ -34,6 +34,15 @@ moves the car.**
 | bringing in the previous teams' code | [The older code](older-code.md) |
 | connecting Claude or another AI app | [AI apps (MCP)](mcp.md) |
 
+## Learn the ideas, from zero
+
+New to cars, robots or ROS? Each page explains one idea simply, then shows exactly how
+our car uses it.
+
+| Idea | Page |
+|---|---|
+| CAN: the wire for steering, brake and throttle | [Learn: CAN](learn-can.md) |
+
 ## Read these, in order
 
 [[pages]]
