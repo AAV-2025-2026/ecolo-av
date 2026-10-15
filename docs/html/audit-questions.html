@@ -285,13 +285,13 @@ row says how to answer it and what the answer unblocks. Write the answers into
 <tr>
 <td>W1</td>
 <td>The subnet, and each machine's IP and MAC</td>
-<td>the router's client list; <code>arp -a</code>; <code>ip -br addr</code> on each</td>
+<td><code>pixi run net-map</code> on a laptop; the router's client list; <code>ip -br addr</code> on each</td>
 <td>a network map; <code>vehicle</code> machine files</td>
 </tr>
 <tr>
 <td>W2</td>
 <td>Which <code>ROS_DOMAIN_ID</code> does the 2025-26 software use?</td>
-<td><code>printenv | grep ROS</code> on each</td>
+<td><code>pixi run net-map</code> (the ROS column); <code>printenv | grep ROS</code> on each</td>
 <td>picking ours so the two never mix (our kit uses 42)</td>
 </tr>
 <tr>

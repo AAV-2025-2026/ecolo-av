@@ -7,7 +7,7 @@
 <!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your Mac: run it, and drive the car</h1>
-<div class="meta">12 min read · 12 sections</div></header>
+<div class="meta">14 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -129,8 +129,8 @@ without a reflash.</p>
 </tr>
 <tr>
 <td>2</td>
-<td>Add <code>export ROS_DOMAIN_ID=&lt;n&gt;</code> to <code>~/.zshrc</code>, with the car's number</td>
-<td>ROS only talks within one domain. The team hasn't picked its number yet <span class="badge b-needs-you">needs you</span></td>
+<td><code>export ROS_DOMAIN_ID=42</code> in each terminal</td>
+<td>ROS only talks within one domain. Ours is 42, so it never mixes with the 2025-26 software (<code>pixi run net-map</code> shows which domains theirs uses)</td>
 </tr>
 <tr>
 <td>3</td>
@@ -143,12 +143,35 @@ without a reflash.</p>
 <td>otherwise the firewall blocks the car's replies</td>
 </tr>
 <tr>
+<td>4b</td>
+<td>System Settings → Privacy &amp; Security → <strong>Local Network</strong>: turn on your terminal app (Terminal, iTerm, VS Code)</td>
+<td>since macOS 15, apps need this to reach other machines on the network. macOS asks once; if you said no, nothing on the car answers</td>
+</tr>
+<tr>
 <td>5</td>
 <td>Run <code>pixi run doctor</code></td>
 <td>it checks steps 1–4, and whether it can see the car, and says what to fix</td>
 </tr>
 </tbody>
 </table></div>
+<h3 id="see-whats-on-the-network-pixi-run-net-map">See what's on the network: <code>pixi run net-map</code></h3>
+<p>It lists every machine on the network you've joined: IP, name, MAC, a guess at the maker
+(Raspberry Pi, NVIDIA, Espressif = an ESP32), open ports (SSH, web, Foxglove), and the
+<strong>ROS domains each machine is talking in</strong>. It needs no ROS and no login, and changes
+nothing: it pings, knocks on a few ports, and listens.</p>
+<pre class="highlight"><code class="language-bash">pixi run net-map                       # about 25 s
+pixi run net-map --listen 30 --out ~/net-map.md</code></pre>
+<ul>
+<li>It hears <strong>Humble and Jazzy alike</strong>: it reads the raw discovery packets, not ROS. So it
+  shows which domain the 2025-26 software uses without logging in to anything.</li>
+<li>"No ROS discovery heard" with ROS running means multicast isn't reaching the Mac:
+  WiFi routers often drop it. Try Ethernet, or <code>ROS_STATIC_PEERS</code> below.</li>
+<li>On a Mac, programs started by Python see an empty ARP table (Local Network privacy),
+  so <code>net-map</code> reads it from bash. If the MAC column is empty, check step 4b.</li>
+<li>Tried on Ben's home network, 15 Oct: 13 machines in 25 s, and a test talker on domain
+  77 heard. <strong>Not yet tried on the car.</strong></li>
+</ul>
+<h3 id="the-cars-own-topics">The car's own topics</h3>
 <p><code>pixi run tools/ros.sh ros2 topic list</code> should then list the car's topics. If they don't
 show up:</p>
 <ul>

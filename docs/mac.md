@@ -56,10 +56,34 @@ Hold `i` to drive.
 | # | Do this | Why |
 |---|---|---|
 | 1 | Join the car's own WiFi router | campus WiFi blocks the traffic ROS uses to find other computers |
-| 2 | Add `export ROS_DOMAIN_ID=<n>` to `~/.zshrc`, with the car's number | ROS only talks within one domain. The team hasn't picked its number yet [[needs-you]] |
+| 2 | `export ROS_DOMAIN_ID=42` in each terminal | ROS only talks within one domain. Ours is 42, so it never mixes with the 2025-26 software (`pixi run net-map` shows which domains theirs uses) |
 | 3 | Leave the middleware alone | the Mac's Pixi install and Ubuntu both use Fast DDS |
 | 4 | When macOS asks whether `python3` or `rviz2` may accept incoming connections, click Allow | otherwise the firewall blocks the car's replies |
+| 4b | System Settings → Privacy & Security → **Local Network**: turn on your terminal app (Terminal, iTerm, VS Code) | since macOS 15, apps need this to reach other machines on the network. macOS asks once; if you said no, nothing on the car answers |
 | 5 | Run `pixi run doctor` | it checks steps 1–4, and whether it can see the car, and says what to fix |
+
+### See what's on the network: `pixi run net-map`
+
+It lists every machine on the network you've joined: IP, name, MAC, a guess at the maker
+(Raspberry Pi, NVIDIA, Espressif = an ESP32), open ports (SSH, web, Foxglove), and the
+**ROS domains each machine is talking in**. It needs no ROS and no login, and changes
+nothing: it pings, knocks on a few ports, and listens.
+
+```bash
+pixi run net-map                       # about 25 s
+pixi run net-map --listen 30 --out ~/net-map.md
+```
+
+- It hears **Humble and Jazzy alike**: it reads the raw discovery packets, not ROS. So it
+  shows which domain the 2025-26 software uses without logging in to anything.
+- "No ROS discovery heard" with ROS running means multicast isn't reaching the Mac:
+  WiFi routers often drop it. Try Ethernet, or `ROS_STATIC_PEERS` below.
+- On a Mac, programs started by Python see an empty ARP table (Local Network privacy),
+  so `net-map` reads it from bash. If the MAC column is empty, check step 4b.
+- Tried on Ben's home network, 15 Oct: 13 machines in 25 s, and a test talker on domain
+  77 heard. **Not yet tried on the car.**
+
+### The car's own topics
 
 `pixi run tools/ros.sh ros2 topic list` should then list the car's topics. If they don't
 show up:

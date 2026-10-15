@@ -19,6 +19,40 @@ Written 15 October 2026, for Ben and the team. The plan for the day, in order, w
 | 3 | Print or open [docs/audit-questions.md](docs/audit-questions.md) and [docs/audit-friday.md](docs/audit-friday.md) | |
 | 4 | Bring: the USB stick, an Ethernet cable, a USB-C hub, a tape measure, a multimeter, the joystick, a magnet (for C2) | |
 | 5 | Ask the team for the logins. **Never write passwords into the repo** | |
+| 6 | Get your Mac ready: the box below | so the network part is about the car, not the Mac |
+
+### Your Mac on the car's network
+
+Ben joins the car's network with his MacBook. What it can do there:
+
+| Want | How | Works on Friday? |
+|---|---|---|
+| Every machine: IP, name, maker, open ports | `pixi run net-map` | ✅ needs nothing on the car |
+| **Which ROS domain the 2025-26 software uses** | `pixi run net-map` (the last column) | ✅ it reads the raw packets: Humble or Jazzy |
+| Can this Mac join ROS here? | `pixi run doctor` | ✅ |
+| Log in to each computer | `ssh <user>@<ip>`, with the team's logins | ✅ |
+| See the 2025-26 topics | `ssh` in, and run `ros2 topic list` **there** | ⚠️ not from the Mac: they run Humble, the Mac runs Jazzy, and the two don't mix |
+| Watch in Lichtblick | `ws://<ip>:8765` | only if a `foxglove_bridge` runs (net-map shows port 8765) |
+| Our HUD, the keyboard | `export ROS_DOMAIN_ID=42`, then `pixi run hud`, `pixi run keyboard` | after step 3 puts our stack on the car |
+
+**Get the Mac ready at home** (so macOS asks its questions there, not in the car):
+
+| # | Do | |
+|---|---|---|
+| 1 | `git pull`, `pixi run build`, `pixi run test` | ☐ |
+| 2 | `pixi run net-map` once: macOS may ask about the local network. Say **Allow** | ☐ |
+| 3 | System Settings → Privacy & Security → **Local Network**: your terminal app on | ☐ |
+| 4 | `pixi run doctor`: click **Allow** if the firewall asks about `python3` | ☐ |
+| 5 | Install Lichtblick (github.com/lichtblick-suite/lichtblick, releases) | ☐ |
+| 6 | An SSH key: `ls ~/.ssh/id_*.pub`; if none, `ssh-keygen -t ed25519` | ☐ |
+
+- **Your home network is `192.168.1.x` too**, like the 2025-26 car's. So "the right
+  range" proves nothing: net-map's makers (Raspberry Pi, NVIDIA) and the doctor's "The car"
+  line do.
+- The car's WiFi may have no internet. macOS may then say "No Internet Connection" and
+  still be on it: that's fine.
+- **WiFi often drops multicast.** If net-map hears no ROS over WiFi, plug the Mac into the
+  car's switch with the Ethernet cable and try again. That tells us which link is at fault.
 
 ## 1. Morning: the audit (read-only)
 
@@ -35,8 +69,8 @@ to pass it between machines, and over the WiFi to the laptops.
 
 | # | Check | Command | Good answer |
 |---|---|---|---|
-| 1 | The map: every machine's IP and name | the router's client list; `arp -a` | a table: switch label → IP → hostname |
-| 2 | The 2025-26 domain | `printenv \| grep ROS` on each | a number: ours (42) must differ |
+| 1 | The map: every machine's IP and name | `pixi run net-map --listen 30 --out ~/net-map.md` on the Mac; the router's client list | a table: switch label → IP → hostname → maker |
+| 2 | The 2025-26 domain | net-map's last column; `printenv \| grep ROS` on each to confirm | a number: ours (42) must differ |
 | 3 | Multicast, wired | `ros2 multicast receive` on the Orin, `ros2 multicast send` on a Pi | "Received from ..." |
 | 4 | Multicast, WiFi | the same between a laptop on the WiFi and the Orin | the same, both ways |
 | 5 | The switch | its web page: IGMP snooping | off, or check 3 passes anyway |
