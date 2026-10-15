@@ -242,7 +242,7 @@ topics:
     pub: [camera_left, mock_camera, test_camera, gz_road_bridge, gazebo_adapter]
     sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder, hud, sensor_watchdog]
     live: [bench, road]
-    note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens).
+    note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_adapter first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its camera fault (freeze, stop).
   /sensors/camera/front_left/image_raw/compressed:
     type: sensor_msgs/msg/CompressedImage
     pub: [camera_left, test_camera, mock_camera]
@@ -278,11 +278,6 @@ topics:
     sub: []
     live: [road]
     note: Its lens. In Gazebo, the same as the front left camera's.
-  /gazebo/camera/front_left/image_raw:
-    type: sensor_msgs/msg/Image
-    pub: [gz_road_bridge]
-    sub: [gazebo_adapter]
-    note: Gazebo only, with faults:=true - the front left picture, which gazebo_adapter passes on to /sensors/camera/front_left/image_raw through its camera fault (freeze, stop). Without faults:=true the bridge publishes the camera's topic itself.
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [gz_lidar_bridge]
