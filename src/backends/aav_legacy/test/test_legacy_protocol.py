@@ -1,3 +1,5 @@
+import importlib.util
+import json
 from pathlib import Path
 
 from aav_legacy.legacy_protocol import (
@@ -112,3 +114,35 @@ def test_silent_encoder_reads_nothing():
     assert enc.speed(2.25) is None          # back, but not a full window yet
     feed(enc, 2.3, 2.6, counts=2)
     assert enc.speed(2.55) == pytest.approx(2.0, rel=0.25)
+
+
+# --- The Rust board's vectors (firmware/spine/crates/legacy-link) ---
+
+ROOT = Path(__file__).resolve().parents[4]
+VECTORS = ROOT / 'firmware/spine/crates/legacy-link/vectors.json'
+GENERATOR = ROOT / 'firmware/spine/crates/legacy-link/gen_vectors.py'
+
+
+def load_generator():
+    spec = importlib.util.spec_from_file_location('legacy_gen_vectors', GENERATOR)
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    return gen
+
+
+@pytest.mark.skipif(not VECTORS.exists(), reason='not in a full checkout')
+def test_rust_vectors_are_what_this_module_sends():
+    """vectors.json holds this module's bytes: rerun gen_vectors.py after changing it."""
+    gen = load_generator()
+    doc = json.loads(VECTORS.read_text())
+    assert [c['bytes'] for c in doc['cases']] == [list(f) for _, _, f in gen.CASES]
+    assert doc['stream'] == list(gen.STREAM)
+
+
+@pytest.mark.skipif(not VECTORS.exists(), reason='not in a full checkout')
+def test_rust_vectors_decode_here():
+    doc = json.loads(VECTORS.read_text())
+    for case in doc['cases']:
+        values = unpack_frame(bytes(case['bytes']))
+        in_range = all(abs(v) <= 1.0 for v in values)  # False for NaN
+        assert in_range == (case['cpp'] is not None), case['name']

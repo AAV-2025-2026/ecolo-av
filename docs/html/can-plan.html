@@ -49,6 +49,7 @@
 <a href="firmware.html">Firmware</a>
 <a class="here" href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-install.html">From a USB stick</a>
 <a href="car-photos.html">Car photos</a>
@@ -62,8 +63,8 @@
 <div class="lead"><p>Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and throttle on
 a CAN bus. Our code already has a CAN contract, <code>firmware/can/aav.dbc</code> (v0.1.0). This page
 compares the two, and says what changes.</p>
-<p><strong>Status: Implemented on <code>wt/can-v2</code>, waiting for Ben</strong> <span class="badge b-needs-you">needs you</span>. DBC v0.2.0 is on
-that branch, not on <code>main</code>: merge it once Ben says yes.</p></div>
+<p><strong>Status: Implemented, and merged on 15 Oct at Ben's request</strong> ("These are important").
+DBC v0.2.0, <code>spine_bridge</code> and the bench use it; the wheel node boards are still to write.</p></div>
 <section class="card"><h2 id="the-plan-in-one-picture">The plan in one picture</h2>
 <pre class="highlight"><code class="language-text">Orin #1 ── CAN Pal (40-pin header) ──┬──────────────┬──────────────┐
   EKF, ego, spine_bridge             │              │              │

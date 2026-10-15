@@ -4,41 +4,43 @@
 //!
 //! | Step | Reads | Fills, in `Inputs` |
 //! |---|---|---|
-//! | 1 | CAN frames, from the board | `drive_cmd`, `estop_cmd`, `bad_frame` |
+//! | 1 | the computer's commands, from the link: CAN, or the UART ([`CommandLink`]) | `drive_cmd` or `direct_cmd`, `estop_cmd`, `bad_frame` |
 //! | 2 | the RC receiver's serial port | `rc` |
 //! | 3 | the hardware e-stop, debounced | `hw_estop` |
 //! | 4 | the wheel encoder's counter | `measured_speed` |
 //! | 5 | the steering and brake Jrks | `measured_steering`; `driver_faults`, with last tick's write errors |
 //!
 //! Then `Spine::step`, then `Actuators::apply`, then VEHICLE_FEEDBACK every 20 ms
-//! and VEHICLE_STATUS every 100 ms.
+//! and VEHICLE_STATUS every 100 ms, through the link (the UART link drops them).
 
 use crate::actuators::{Actuators, Devices};
-use crate::board::{Board, CanFrame};
+use crate::board::Board;
 use crate::calibration::Calibration;
+use crate::link::{CanLink, CommandLink};
 use crate::wheel::WheelSpeed;
 use aav_inputs::Debouncer;
 use embedded_hal::i2c::I2c;
 use embedded_io::{Read, ReadReady};
 use ibus::{RcMap, Receiver};
-use spine_core::protocol::{
-    decode_incoming, FrameError, Incoming, VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID,
-};
+use spine_core::protocol::{VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID};
 use spine_core::{faults, Inputs, Outputs, Spine, SpineConfig};
 
 /// VEHICLE_FEEDBACK at 50 Hz, and VEHICLE_STATUS at 10 Hz (`docs/firmware.md`).
 pub const FEEDBACK_PERIOD_MS: u32 = 20;
 pub const STATUS_PERIOD_MS: u32 = 100;
 
-/// Limits on one tick's work, so a flood of frames or bytes can't stall the loop.
-const MAX_CAN_FRAMES: usize = 32;
+/// A limit on one tick's work, so a flood of bytes can't stall the loop.
 const MAX_UART_READS: usize = 16;
 
 /// The whole spine on a board: give it the board, the four devices and the RC
 /// receiver's serial port, then call [`SpineBoard::tick`] about 100 times a second.
-pub struct SpineBoard<B, I2C, U> {
+///
+/// The computer's commands come through `L`: CAN by default ([`SpineBoard::new`]), or
+/// another [`CommandLink`] ([`SpineBoard::with_link`]).
+pub struct SpineBoard<B, I2C, U, L = CanLink> {
     board: B,
     uart: U,
+    link: L,
     actuators: Actuators<I2C>,
     spine: Spine,
     rc: Receiver,
@@ -52,7 +54,9 @@ pub struct SpineBoard<B, I2C, U> {
     status: Every,
 }
 
-impl<B: Board, I2C: I2c, U: Read + ReadReady> SpineBoard<B, I2C, U> {
+impl<B: Board, I2C: I2c, U: Read + ReadReady> SpineBoard<B, I2C, U, CanLink> {
+    /// The spine, with the computer on CAN, through the board.
+    ///
     /// `uart`: the RC receiver's serial port, set to 115200 baud, 8N1.
     pub fn new(
         board: B,
@@ -61,9 +65,26 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady> SpineBoard<B, I2C, U> {
         cal: Calibration,
         config: SpineConfig,
     ) -> Self {
+        Self::with_link(board, devices, uart, CanLink, cal, config)
+    }
+}
+
+impl<B: Board, I2C: I2c, U: Read + ReadReady, L: CommandLink> SpineBoard<B, I2C, U, L> {
+    /// The spine, with the computer's commands through `link`.
+    ///
+    /// `uart`: the RC receiver's serial port, set to 115200 baud, 8N1.
+    pub fn with_link(
+        board: B,
+        devices: Devices<I2C>,
+        uart: U,
+        link: L,
+        cal: Calibration,
+        config: SpineConfig,
+    ) -> Self {
         SpineBoard {
             board,
             uart,
+            link,
             actuators: Actuators::new(devices, cal),
             spine: Spine::new(config),
             rc: Receiver::new(cal.rc_timeout_ms),
@@ -94,7 +115,7 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady> SpineBoard<B, I2C, U> {
             now_ms: now,
             ..Inputs::default()
         };
-        self.read_can(&mut inputs);
+        self.link.receive(&mut self.board, &mut inputs);
         self.read_rc(now);
         inputs.rc = self.rc.channels(now).and_then(|c| self.rc_map.rc_input(&c));
         let open = self.board.estop_open();
@@ -120,30 +141,6 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady> SpineBoard<B, I2C, U> {
     /// The devices and their state, to read something else from them.
     pub fn actuators(&mut self) -> &mut Actuators<I2C> {
         &mut self.actuators
-    }
-
-    fn read_can(&mut self, inputs: &mut Inputs) {
-        for _ in 0..MAX_CAN_FRAMES {
-            let Some(frame) = self.board.can_receive() else {
-                break;
-            };
-            match decode_incoming(frame.id(), frame.data()) {
-                // A disarm in any frame this tick wins, so an arming edge isn't lost.
-                Ok(Incoming::Drive(cmd)) => {
-                    if inputs.drive_cmd.is_none_or(|old| old.armed) {
-                        inputs.drive_cmd = Some(cmd);
-                    }
-                }
-                // An e-stop request in any frame this tick wins over a release.
-                Ok(Incoming::Estop(e)) => {
-                    if inputs.estop_cmd.is_none_or(|old| !old.estop_request) {
-                        inputs.estop_cmd = Some(e);
-                    }
-                }
-                Err(FrameError::UnknownId) => {} // for someone else on the bus
-                Err(_) => inputs.bad_frame = true,
-            }
-        }
     }
 
     /// Feed the iBUS parser whatever the serial port has. A UART error loses those
@@ -186,7 +183,7 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady> SpineBoard<B, I2C, U> {
     }
 
     fn send(&mut self, id: u16, data: &[u8]) -> bool {
-        CanFrame::new(id, data).is_some_and(|frame| self.board.can_send(&frame))
+        self.link.send(&mut self.board, id, data)
     }
 }
 
@@ -442,5 +439,161 @@ mod loop_tests {
         assert_eq!(rig.tick().faults & faults::BAD_CHECKSUM, 0);
         rig.can(DRIVE_CMD_ID, &[0; 8]); // the CRC is wrong
         assert_ne!(rig.tick().faults & faults::BAD_CHECKSUM, 0);
+    }
+}
+
+/// The loop with the 2025-26 UART link instead of CAN, and no wheel speed: today's ESP32
+/// control board, as `boards/esp32-umod` builds it.
+#[cfg(test)]
+mod legacy_loop_tests {
+    extern crate std;
+    use super::SpineBoard;
+    use crate::actuators::Devices;
+    use crate::calibration::Calibration;
+    use crate::link::LegacyLink;
+    use crate::rig::{BusState, FakeBoard, FakeBus, FakeUart, BRAKE, DAC, STEER};
+    use core::cell::RefCell;
+    use jrk_g2::command::set_target;
+    use legacy_link::Frame;
+    use spine_core::protocol::Mode;
+    use spine_core::{faults, Outputs, SpeedFeedback, SpineConfig};
+    use std::rc::Rc;
+    use std::vec::Vec;
+
+    struct LegacyRig {
+        sb: SpineBoard<FakeBoard, FakeBus, FakeUart, LegacyLink<FakeUart>>,
+        bus: Rc<RefCell<BusState>>,
+        motor_pi: FakeUart,
+        receiver: FakeUart,
+    }
+
+    impl LegacyRig {
+        fn new() -> Self {
+            let bus = FakeBus::default();
+            let (motor_pi, receiver) = (FakeUart::default(), FakeUart::default());
+            let cal = Calibration::TODAY;
+            let devices = Devices::new(bus.clone(), bus.clone(), bus.clone(), bus.clone(), &cal);
+            let config = SpineConfig {
+                speed_feedback: SpeedFeedback::None {
+                    full_throttle_speed: 3.0,
+                },
+                ..SpineConfig::default()
+            };
+            let link = LegacyLink::new(motor_pi.clone(), cal);
+            let board = FakeBoard::new();
+            let mut sb = SpineBoard::with_link(board, devices, receiver.clone(), link, cal, config);
+            sb.init();
+            LegacyRig {
+                sb,
+                bus: bus.0,
+                motor_pi,
+                receiver,
+            }
+        }
+
+        /// One frame from the Motor-Pi, then a 20 ms tick: the bridge's 50 Hz.
+        fn frame(&mut self, steering: f32, speed: f32, accel: f32) -> Outputs {
+            let bytes = Frame {
+                steering,
+                speed,
+                accel,
+            }
+            .encode();
+            self.motor_pi.0.borrow_mut().extend(bytes);
+            self.sb.board().now += 20;
+            self.sb.tick()
+        }
+
+        fn frames(&mut self, n: usize, steering: f32, speed: f32, accel: f32) -> Outputs {
+            (0..n)
+                .map(|_| self.frame(steering, speed, accel))
+                .last()
+                .unwrap()
+        }
+
+        /// Stop frames past the e-stop input's release (50 ms after boot): the arming
+        /// edge's first half. The bridge sends them whenever ego is stale.
+        fn arm(&mut self) {
+            self.frames(5, 0.0, 0.0, -1.0);
+        }
+
+        /// The latest bytes written to a device.
+        fn last(&self, address: u8) -> Option<Vec<u8>> {
+            let state = self.bus.borrow();
+            let latest = state.writes.iter().rev().find(|w| w.0 == address);
+            latest.map(|w| w.1.clone())
+        }
+
+        fn dac(&self) -> u16 {
+            self.last(DAC)
+                .map_or(0, |w| ad5311::decode([w[0], w[1]]).code)
+        }
+    }
+
+    #[test]
+    fn drive_frames_after_a_reboot_do_not_drive_until_a_stop_frame() {
+        let mut rig = LegacyRig::new();
+        let out = rig.frames(10, 0.0, 0.5, 0.0);
+        assert_eq!(out.mode, Mode::Manual);
+        assert_eq!(rig.dac(), 0);
+        // The bridge sends stop frames whenever ego is stale, so this comes first anyway.
+        rig.arm();
+        assert_eq!(rig.last(BRAKE), Some(set_target(3500).to_vec()));
+        let out = rig.frames(100, 0.0, 0.5, 0.0);
+        assert_eq!(out.mode, Mode::Computer);
+        // The C++'s code for speed 0.5, reached through the ramp; the brake let go.
+        assert_eq!(rig.dac(), 350);
+        assert_eq!(rig.last(BRAKE), Some(set_target(400).to_vec()));
+    }
+
+    #[test]
+    fn the_steering_reaches_the_cpp_target() {
+        let mut rig = LegacyRig::new();
+        rig.arm();
+        rig.frames(200, 0.5, 0.0, 0.0); // 2725: the C++'s target for +0.5
+        assert_eq!(rig.last(STEER), Some(set_target(2725).to_vec()));
+        rig.frames(300, -1.0, 0.0, 0.0); // 0, clipped to 400
+        assert_eq!(rig.last(STEER), Some(set_target(400).to_vec()));
+    }
+
+    #[test]
+    fn a_brake_frame_cuts_the_throttle_at_once() {
+        let mut rig = LegacyRig::new();
+        rig.arm();
+        rig.frames(100, 0.0, 0.8, 0.0);
+        assert!(rig.dac() > 0);
+        rig.frame(0.0, 0.8, -0.3);
+        assert_eq!(rig.dac(), 0);
+        assert_eq!(rig.last(BRAKE), Some(set_target(1050).to_vec()));
+    }
+
+    #[test]
+    fn silence_brakes_fully_within_the_timeout() {
+        let mut rig = LegacyRig::new();
+        rig.arm();
+        rig.frames(100, 0.0, 0.5, 0.0);
+        let mut out = rig.sb.tick();
+        for _ in 0..25 {
+            rig.sb.board().now += 10;
+            out = rig.sb.tick();
+        }
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        assert_ne!(out.faults & faults::CMD_TIMEOUT, 0);
+        assert_eq!(rig.dac(), 0);
+        assert_eq!(rig.last(BRAKE), Some(set_target(3500).to_vec()));
+    }
+
+    #[test]
+    fn the_rc_override_beats_the_motor_pi() {
+        let mut rig = LegacyRig::new();
+        rig.arm();
+        rig.frames(100, 0.0, 0.5, 0.0);
+        let mut ch = [1500; ibus::CHANNELS];
+        ch[5] = 2000; // the override switch
+        ch[4] = 1500; // the gear switch on brake
+        let rc = ibus::encode(&ibus::Channels(ch));
+        rig.receiver.0.borrow_mut().extend(rc);
+        let out = rig.frame(0.0, 0.5, 0.0);
+        assert_eq!(out.mode, Mode::Rc);
     }
 }

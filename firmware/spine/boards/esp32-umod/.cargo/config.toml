@@ -1,0 +1,24 @@
+# Everything here builds for the ESP32 (Xtensa), with Espressif's Rust toolchain:
+# `pixi run esp-tools` installs it, and rust-toolchain.toml picks it ("esp").
+[build]
+target = "xtensa-esp32-none-elf"
+rustflags = [
+  # esp-hal's linker scripts; the C runtime's start files aren't wanted.
+  "-C", "link-arg=-nostartfiles",
+  "-C", "link-arg=-Wl,-Tlinkall.x",
+  # Frame pointers, so a panic prints a useful backtrace.
+  "-C", "force-frame-pointers",
+]
+
+# `cargo run --release` flashes the board on the USB cable and shows its log: it needs
+# espflash on your PATH (`pixi run esp-tools` puts it in vendor/cargo-tools/bin;
+# `pixi run esp-flash` runs that one).
+[target.xtensa-esp32-none-elf]
+runner = "espflash flash --chip esp32 --monitor"
+
+[env]
+ESP_LOG = "info"
+
+# Xtensa has no prebuilt core library: build it from source.
+[unstable]
+build-std = ["core"]

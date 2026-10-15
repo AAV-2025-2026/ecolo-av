@@ -10,6 +10,7 @@ publish.workspace = true
 spine-core = { path = "../spine-core" }
 aav-inputs = { path = "../aav-inputs" }
 wheel-encoder = { path = "../wheel-encoder" }
+legacy-link = { path = "../legacy-link" }
 jrk-g2 = { path = "../jrk-g2" }
 ad5311 = { path = "../ad5311" }
 pca9555 = { path = "../pca9555" }

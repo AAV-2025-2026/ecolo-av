@@ -13,6 +13,8 @@ members = [
     "crates/wheel-encoder",
     "crates/sentinel",
     "crates/wheel-core",
+    # The 2025-26 UART link from the Motor-Pi: its frames, resync and the C++'s targets.
+    "crates/legacy-link",
     # Drivers: the I2C chips and the CAN controller (SPI) against embedded-hal 1.0;
     # ibus takes bytes; hd44780 is the sentinel's LCD, on GPIO pins.
     "crates/jrk-g2",

@@ -77,6 +77,7 @@ PAGES = [
     ('firmware.md', 'Firmware', 'src vs firmware, the CAN contract, the spine'),
     ('can-plan.md', 'CAN plan', 'The KEFC CAN bus vs our CAN contract (Proposed)'),
     ('rust-firmware.md', 'Rust firmware', 'Rust on the chips: layers, frameworks, toolchains'),
+    ('esp32-bench.md', 'ESP32 first flash', 'The Rust ESP32 on the bench: flash, check, undo'),
     ('platforms.md', 'Platforms', 'Ubuntu, the Orin and Pis, networking'),
     ('car-install.md', 'From a USB stick', 'Our Jazzy on the car offline, no sudo: the kit'),
     ('car-photos.md', 'Car photos', 'What the car has, from photos (14 Oct), and the audit list'),

@@ -63,6 +63,12 @@ wheel-flash = { cmd = "cargo build --release --locked && ../../../../vendor/carg
 # The status display's Pico 2 (the sentinel), the Rust version of the 2025-26 one.
 sentinel-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/sentinel-pico2 sentinel-pico2.uf2", cwd = "firmware/spine/boards/sentinel-pico2", description = "Build the status display's Pico 2 program as firmware/spine/boards/sentinel-pico2/sentinel-pico2.uf2: hold BOOTSEL, plug in, drag it on" }
 sentinel-flash = { cmd = "cargo build --release --locked && ../../../../vendor/cargo-tools/bin/probe-rs run --chip RP235x target/thumbv8m.main-none-eabihf/release/sentinel-pico2", cwd = "firmware/spine/boards/sentinel-pico2", description = "Flash the status display's program onto its Pico 2 through a debug probe, then show its logs (pixi run spine-tools first)" }
+# The spine on today's ESP32 control board, in Rust (docs/rust-firmware.md). The ESP32 is
+# Xtensa: esp-tools installs Espressif's Rust for this user (needs rustup), once.
+# esp-flash writes to the car's control board: on the bench only, wheels off the ground.
+esp-tools = { cmd = "tools/esp32.sh tools", description = "Install Espressif's Rust (Xtensa, into ~/.rustup/toolchains/esp) and espup + espflash (into vendor/cargo-tools/bin), for the ESP32 board (once; needs rustup; several minutes, about 1.5 GB)" }
+esp-build = { cmd = "tools/esp32.sh build", description = "Build the Rust firmware for today's ESP32 control board (Motor-Pi UART link); add --no-default-features --features can for CAN" }
+esp-flash = { cmd = "tools/esp32.sh flash", description = "Build and flash the Rust firmware onto the ESP32 control board on the USB cable, then show its log (bench only: docs/esp32-bench.md)" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"

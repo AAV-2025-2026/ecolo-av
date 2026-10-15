@@ -49,6 +49,7 @@
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-install.html">From a USB stick</a>
 <a href="car-photos.html">Car photos</a>
@@ -570,13 +571,13 @@ Only one runs at a time.</p>
 <tbody>
 <tr>
 <td><code>can/aav.dbc</code></td>
-<td>the CAN contract: four frames between the Orin and the spine</td>
-<td>draft v0.1.0</td>
+<td>the CAN contract: six frames between the Orin, the spine and the two wheel nodes</td>
+<td>v0.2.0 (the KEFC plan), merged 15 Oct</td>
 </tr>
 <tr>
 <td><code>spine/crates/spine-core</code></td>
 <td>the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder</td>
-<td><span class="badge b-works">works</span> 59 tests, and the bench</td>
+<td><span class="badge b-works">works</span> 69 tests, and the bench</td>
 </tr>
 <tr>
 <td><code>spine/crates/wheel-core</code></td>
@@ -614,9 +615,19 @@ Only one runs at a time.</p>
 <td><span class="badge b-works">works</span> 34 tests, against mocks</td>
 </tr>
 <tr>
+<td><code>spine/crates/legacy-link</code></td>
+<td>the 2025-26 UART link: the Motor-Pi's 13-byte frames and the C++'s targets</td>
+<td><span class="badge b-works">works</span> 31 tests, and against the C++ itself</td>
+</tr>
+<tr>
 <td><code>spine/crates/spine-board</code></td>
-<td>the glue: spine-core's outputs to the devices, the devices to its inputs, and the <code>Board</code> trait</td>
-<td><span class="badge b-works">works</span> 45 tests, against mocks</td>
+<td>the glue: spine-core's outputs to the devices, the devices to its inputs, the <code>Board</code> trait, the <code>CommandLink</code> trait (CAN or UART)</td>
+<td><span class="badge b-works">works</span> 57 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/boards/esp32-umod</code></td>
+<td>the spine on today's ESP32 control board (Embassy): the C++'s pins and devices; the Motor-Pi's UART or CAN</td>
+<td><span class="badge b-untested">untested</span> builds, never flashed</td>
 </tr>
 <tr>
 <td><code>spine/boards/pico2</code></td>
@@ -651,7 +662,7 @@ Only one runs at a time.</p>
 <tr>
 <td><code>legacy/aav_umod_esp32</code></td>
 <td>the 2025-26 ESP32 that drives today's actuators</td>
-<td>runs the car today: no timeout, an update page with no password</td>
+<td>runs the car today: no timeout, an update page with no password. Stays until <code>boards/esp32-umod</code> is proven on the car</td>
 </tr>
 </tbody>
 </table></div>

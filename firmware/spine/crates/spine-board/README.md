@@ -54,7 +54,9 @@ The order of the writes, every tick:
 | `CanFrame`, `WheelCount` | what those return |
 | `Calibration::TODAY` | today's numbers (below) |
 | `Devices::new(steering, brake, dac, expander, &cal)` | the four I2C devices; share one bus with `embedded-hal-bus` |
-| `SpineBoard::new(board, devices, uart, cal, config)` | the whole spine |
+| `SpineBoard::new(board, devices, uart, cal, config)` | the whole spine, with the computer on CAN |
+| `SpineBoard::with_link(board, devices, uart, link, cal, config)` | the same, with the commands through `link` |
+| `CommandLink`, `CanLink`, `LegacyLink` | where the commands come from: CAN through the board (`aav.dbc`), or the Motor-Pi's 13-byte UART frames (`legacy-link`), turned into the same Jrk and DAC targets as the 2025-26 C++ |
 | `SpineBoard::init()`, `tick()` | power-up, then one pass of the loop |
 | `Actuators::apply(&outputs, now_ms)` | drives the devices; returns fault bits |
 | `Actuators::read()` | the steering angle and the Jrks' faults |

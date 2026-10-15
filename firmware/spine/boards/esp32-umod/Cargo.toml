@@ -1,0 +1,63 @@
+[package]
+name = "spine-esp32-umod"
+description = "The spine on today's control board: the SparkFun ESP32 MicroMod (original ESP32, Xtensa), driving the two Jrk G2s, the throttle DAC and the direction pin, with commands from the Motor-Pi's UART (today) or CAN (the KEFC plan)."
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false
+
+# A workspace of its own, not a member of firmware/spine's: it builds only for the ESP32
+# (xtensa-esp32-none-elf), with Espressif's Rust toolchain (`pixi run esp-tools`), while
+# the members build and test on any laptop with the stock one.
+[workspace]
+
+[features]
+# Where the computer's commands come from. Exactly one.
+#   legacy-uart: the Motor-Pi's 13-byte frames on GPIO16, as today: a drop-in for
+#                firmware/legacy/aav_umod_esp32.
+#   can:         the frames of firmware/can/aav.dbc on the ESP32's TWAI (CAN) controller.
+default = ["legacy-uart"]
+legacy-uart = []
+can = []
+# The e-stop's spare contact on an input pin. Off until it is wired (Q6): an unwired
+# input floats, and would trip and release at random.
+estop-input = []
+
+[dependencies]
+# Ours: the logic, the glue, the drivers (firmware/spine/crates).
+spine-core = { path = "../../crates/spine-core" }
+spine-board = { path = "../../crates/spine-board" }
+legacy-link = { path = "../../crates/legacy-link" }
+ibus = { path = "../../crates/ibus" }
+
+# Espressif's HAL for the ESP32, and Embassy on it. unstable: for TWAI (CAN) and the
+# interrupt executor.
+esp-hal = { version = "1.2.2", features = ["esp32", "unstable"] }
+esp-rtos = { version = "0.4.0", features = ["esp32", "embassy"] }
+# The app descriptor the ESP-IDF bootloader (and espflash) looks for.
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32"] }
+# Logs on UART0 (the USB cable), and panics printed there before the chip resets.
+esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
+esp-backtrace = { version = "0.20.0", features = ["esp32", "panic-handler", "println"] }
+log = "0.4"
+
+embassy-executor = "0.10.0"
+embassy-time = "0.5.1"
+embassy-sync = "0.8.0"
+# One I2C bus for four devices.
+embedded-hal = "1.0.0"
+embedded-hal-bus = "0.3.0"
+embedded-io = "0.7"
+embedded-can = "0.4"
+nb = "1.1"
+critical-section = "1.2"
+static_cell = "2.1.1"
+
+[profile.release]
+debug = 2          # symbols for backtraces; they never reach the flash image
+lto = "fat"
+codegen-units = 1
+opt-level = "s"
+
+[profile.dev]
+opt-level = "s"    # the ESP32 is slow at debug-level code

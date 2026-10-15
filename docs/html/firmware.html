@@ -49,6 +49,7 @@
 <a class="here" href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-install.html">From a USB stick</a>
 <a href="car-photos.html">Car photos</a>
@@ -287,7 +288,7 @@ from the drive direction.</p>
 </section>
 <section class="card"><h2 id="firmwarespine-the-rust-code">firmware/spine: the Rust code</h2>
 <p><code>crates/spine-core</code> is plain <code>no_std</code> Rust: no allocator, no dependencies, no hardware.
-<code>cargo test</code> runs its 59 tests on any laptop.</p>
+<code>cargo test</code> runs its 69 tests on any laptop.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -360,9 +361,14 @@ and the glue between them and <code>spine-core</code>, are written too (10 Octob
 <td>34</td>
 </tr>
 <tr>
+<td><code>legacy-link</code></td>
+<td>the Motor-Pi's 13-byte UART frames, and the targets the C++ set for them (15 Oct)</td>
+<td>31</td>
+</tr>
+<tr>
 <td><code>spine-board</code></td>
-<td>all of them, from <code>spine-core</code>'s outputs, in a safe order; their errors become fault bits</td>
-<td>45</td>
+<td>all of them, from <code>spine-core</code>'s outputs, in a safe order; their errors become fault bits. Commands through CAN or the UART (<code>CommandLink</code>)</td>
+<td>57</td>
 </tr>
 </tbody>
 </table></div>
@@ -456,6 +462,15 @@ settings and flashing: <a href="rust-firmware.html">Rust on the hardware</a>.</p
 </section>
 <section class="card"><h2 id="todays-firmware-firmwarelegacy">Today's firmware: firmware/legacy/</h2>
 <p>Copied unchanged from the 2025-26 team, as the fallback until the spine exists.</p>
+<div class="admonition note">
+<p class="admonition-title">The ESP32's Rust replacement (15 Oct)</p>
+<pre><code>`firmware/spine/boards/esp32-umod` is `aav_umod_esp32` in Rust: the same board, pins
+and devices, and byte for byte the same UART frames (checked against the C++ itself).
+It builds, and has never been flashed. The C++ stays here, and on the car, until the
+Rust one is proven on the car: [Rust firmware](rust-firmware.md),
+[First flash on the bench](esp32-bench.md).
+</code></pre>
+</div>
 <div class="table-wrap"><table>
 <thead>
 <tr>

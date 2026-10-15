@@ -110,7 +110,7 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 |---|---|---|
 | Kar-Tech wireless e-stop, kill switch | hardware | power: overrides everything |
 | HUD button, `pixi run estop` | `/safety/estop` = true | the mux blocks every driver; the backend stops |
-| The computer freezes | ego's 50 Hz stops | the board's timeout brakes (200 ms today; 100 ms on `wt/can-v2`) |
+| The computer freezes | ego's 50 Hz stops | the board's timeout brakes: 100 ms in the Rust spine (CAN v0.2.0). Today's C++ ESP32 has none yet (TEAM-TODO B2) |
 | An obstacle | collision_monitor | Nav2's command, before the mux |
 | The person drives | any higher-priority driver | the mux picks them over Nav2 |
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">26 min read · 13 sections</div></header>
+<div class="meta">40 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,6 +49,7 @@
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a class="here" href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-install.html">From a USB stick</a>
 <a href="car-photos.html">Car photos</a>
@@ -58,7 +59,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#the-wheel-encoder-on-a-pico-2-15-oct">The wheel encoder on a Pico 2 (15 Oct)</a><a href="#the-status-display-on-a-pico-2-15-oct">The status display on a Pico 2 (15 Oct)</a><a href="#what-is-untested-on-the-two-new-boards">What is untested on the two new boards</a><a href="#the-esp32-boards-of-the-kefc-plan-15-oct">The ESP32 boards of the KEFC plan (15 Oct)</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-todays-esp32-15-oct">The spine on today&#x27;s ESP32 (15 Oct)</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#the-wheel-encoder-on-a-pico-2-15-oct">The wheel encoder on a Pico 2 (15 Oct)</a><a href="#the-status-display-on-a-pico-2-15-oct">The status display on a Pico 2 (15 Oct)</a><a href="#what-is-untested-on-the-two-new-boards">What is untested on the two new boards</a><a href="#the-esp32-boards-of-the-kefc-plan-15-oct">The ESP32 boards of the KEFC plan (15 Oct)</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
 <div class="lead"><p>Ben's direction (10 October 2026): write the firmware and the hardware drivers in Rust,
 not C or C++, even where the ROS nodes above stay in Python. The 2025-26 C++ firmware keeps
 running today's car until a Rust version replaces each board. This page is the plan, and
@@ -86,7 +87,7 @@ what's done so far.</p></div>
 </tr>
 <tr>
 <td>The spine is already Rust</td>
-<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (59 tests), the drivers for its devices, and a board program for a Pico 2</td>
+<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (69 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2</td>
 </tr>
 </tbody>
 </table></div>
@@ -154,8 +155,8 @@ stays on Linux.</p>
 <tr>
 <td>Boards</td>
 <td>one small program per board: pins, timers, the framework, then a loop that calls the glue</td>
-<td><code>firmware/spine/boards/</code>: <code>pico2</code> (the spine, for the bench), <code>wheel-encoder-pico2</code>, <code>sentinel-pico2</code> (below)</td>
-<td>they build in <code>pixi run test</code>; the rest on the bench, then on the car</td>
+<td><code>firmware/spine/boards/</code>: <code>esp32-umod</code> (today's ESP32 control board), <code>pico2</code> (the spine, for the bench), <code>wheel-encoder-pico2</code>, <code>sentinel-pico2</code> (below)</td>
+<td>they build in <code>pixi run test</code> (the ESP32 one where its toolchain is); the rest on the bench, then on the car</td>
 </tr>
 </tbody>
 </table></div>
@@ -176,7 +177,7 @@ chip's HAL.</p>
 <tr>
 <td><strong>Embassy</strong> (used)</td>
 <td>an async framework for microcontrollers: tasks, timers, drivers that wait without blocking. The usual choice for new Rust projects in 2026</td>
-<td>every board here; it supports the RP2350, the ESP32 family (with <code>esp-hal</code>) and STM32. The Pico 2 program uses it</td>
+<td>every board here; it supports the RP2350, the ESP32 family (with <code>esp-hal</code>) and STM32. Both board programs use it</td>
 </tr>
 <tr>
 <td>RTIC 2</td>
@@ -192,6 +193,570 @@ chip's HAL.</p>
 <td>A plain loop</td>
 <td>read, call the logic, write, repeat</td>
 <td>the simplest boards</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-spine-on-todays-esp32-15-oct">The spine on today's ESP32 (15 Oct)</h2>
+<p>Ben, 15 October: "We should port all cpp to rust." In the KEFC plan
+(<a href="can-plan.html">CAN plan</a>), the ESP32 control board already on the car becomes the spine.
+<code>firmware/spine/boards/esp32-umod</code> is that board's program in Rust: the replacement for
+the 2025-26 C++ in <code>firmware/legacy/aav_umod_esp32</code>. It builds; it has <strong>never been
+flashed</strong> <span class="badge b-untested">untested</span>. Merged on 15 Oct at Ben's request; flashing waits for his go-ahead.</p>
+<div class="admonition warning">
+<p class="admonition-title">The C++ stays</p>
+<pre><code>The car runs `firmware/legacy/aav_umod_esp32` today. It stays in the repo, and on the
+car, until the Rust program has been flashed and proven on the car
+([First flash on the bench](esp32-bench.md)). Only then is the C++ removed.
+</code></pre>
+</div>
+<pre class="highlight"><code class="language-text">                       one CommandLink trait (spine-board)
+Motor-Pi ── UART, 13-byte frames ──► LegacyLink ─┐
+                                                  ├─► spine-core ─► spine-board ─► 2 Jrk G2, DAC, PCA9555
+Orin ───── CAN, aav.dbc v0.2.0 ────► CanLink ────┘   (Spine::step)    (I2C 21/22)
+RC receiver ── iBUS, GPIO32 ─────────────────────────────┘</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Link</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>legacy-uart</code> (default)</td>
+<td>the Motor-Pi's 13-byte frames on GPIO16</td>
+<td><strong>today</strong>: a drop-in for the C++, with <code>aav_legacy</code> unchanged</td>
+</tr>
+<tr>
+<td><code>can</code></td>
+<td><code>firmware/can/aav.dbc</code> v0.2.0 on the ESP32's TWAI controller, 500 kbit/s</td>
+<td>the KEFC plan: <code>spine_bridge</code> on the Orin. Its pins are unknown (below)</td>
+</tr>
+<tr>
+<td><code>estop-input</code> (off)</td>
+<td>the e-stop's spare contact on GPIO27</td>
+<td>once it is wired (Q6)</td>
+</tr>
+</tbody>
+</table></div>
+<p>DBC v0.2.0 (merged 15 Oct) adds the wheel frames 0x200 and 0x201 and a 100 ms timeout;
+<code>spine-core</code> uses the 100 ms on both links (the bridges send at 50 Hz). Still to do: on
+CAN, read those frames as this board's wheel speed, so its speed loop closes. Today it runs
+open loop.</p>
+<h3 id="what-runs-on-it">What runs on it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The brain</td>
+<td><code>spine-core</code>'s <code>Spine::step</code>, every 10 ms, on Embassy (<code>esp-rtos</code> 0.4, <code>esp-hal</code> 1.2)</td>
+</tr>
+<tr>
+<td>The devices</td>
+<td><code>spine-board</code>: the same two Jrk G2s, the DAC and the PCA9555, on the same I2C bus at 100 kHz</td>
+</tr>
+<tr>
+<td>The Motor-Pi's frames</td>
+<td><code>legacy-link</code> (new crate): the frame, the C++'s resync, the C++'s Jrk and DAC targets</td>
+</tr>
+<tr>
+<td>The RC receiver</td>
+<td><code>ibus</code>, on UART2, read from its 128-byte FIFO each tick</td>
+</tr>
+<tr>
+<td>The wheel speed</td>
+<td>none on this board (the encoder talks to the Motor-Pi): the speed loop runs <strong>open loop</strong>, throttle = speed / 3.0 m/s (<code>SpeedFeedback::None</code>, new in spine-core)</td>
+</tr>
+<tr>
+<td>The chip's own watchdog</td>
+<td>TIMG1, 100 ms, fed after every tick: a hang or a panic resets the chip</td>
+</tr>
+<tr>
+<td>The log</td>
+<td>the USB cable, 115200 baud: a <code>STATUS</code> line every 200 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>Size: 132 KB image (3 % of the 4 MB flash); 9.5 KB of fixed RAM.</p>
+<h3 id="the-pin-map">The pin map</h3>
+<p>The same pins as the C++ (<code>hardware_configs.h</code>, <code>main.cpp</code>). The program's copy is
+<code>src/pins.rs</code>: change both together.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>GPIO</th>
+<th>MicroMod pad</th>
+<th>Signal</th>
+<th>Goes to</th>
+<th>In the C++</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16</td>
+<td>19</td>
+<td>UART1 RX, 115200</td>
+<td>Motor-Pi TX: the frames</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>17</td>
+<td>17</td>
+<td>not driven</td>
+<td>Motor-Pi RX</td>
+<td>set up as TX, never used</td>
+</tr>
+<tr>
+<td>32</td>
+<td>73</td>
+<td>UART2 RX, 115200, pull-up</td>
+<td>FlySky iBUS</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>21, 22</td>
+<td>12, 14</td>
+<td>I2C SDA, SCL, 100 kHz</td>
+<td>Jrk steer 0x05, Jrk brake 0x04, DAC 0x0C, PCA9555 0x20</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>2</td>
+<td>—</td>
+<td>output</td>
+<td>status LED: slow blink = computer drives, fast = it doesn't</td>
+<td>on at boot</td>
+</tr>
+<tr>
+<td>18, 19, 14</td>
+<td>57, 61, 10</td>
+<td>outputs</td>
+<td>red = a fault, green = computer drives, blue = RC drives</td>
+<td>red, green: WiFi; blue unused</td>
+</tr>
+<tr>
+<td>PCA9555 P00</td>
+<td>—</td>
+<td>the direction</td>
+<td>the motor controller: high = forward</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>25, 26</td>
+<td>42, 44</td>
+<td>TWAI TX, RX (<code>can</code>)</td>
+<td><strong>unknown</strong> <span class="badge b-needs-you">needs you</span></td>
+<td>none</td>
+</tr>
+<tr>
+<td>27</td>
+<td>18</td>
+<td>input, pull-up (<code>estop-input</code>)</td>
+<td><strong>unknown</strong> (Q6) <span class="badge b-needs-you">needs you</span></td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Where does the CAN transceiver connect?</p>
+<pre><code>SparkFun's schematic of the ESP32 MicroMod has **no net on MicroMod's CAN pads**
+(41, 43). If the carrier wires U7 to those pads, CAN never reaches the ESP32. Find
+where U7's TXD and RXD go before using `can`. GPIO 25 and 26 are free, and are a guess.
+</code></pre>
+</div>
+<h3 id="the-toolchain-installed-15-oct">The toolchain (installed 15 Oct)</h3>
+<p>The ESP32 is Xtensa: the stock Rust, and Pixi's, can't build for it. <code>pixi run esp-tools</code>
+installs Espressif's, for one user, with no admin rights. It needs <code>rustup</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Version</th>
+<th>Where</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>espup</code>, the installer</td>
+<td>0.18.0</td>
+<td><code>vendor/cargo-tools/bin</code> (git ignores it)</td>
+<td>10 MB</td>
+</tr>
+<tr>
+<td><code>espflash</code>, the flasher</td>
+<td>4.3.0 (4.4+ need rustc 1.95)</td>
+<td><code>vendor/cargo-tools/bin</code></td>
+<td>10 MB</td>
+</tr>
+<tr>
+<td>Xtensa Rust, toolchain <code>esp</code></td>
+<td>1.97.0.0</td>
+<td><code>~/.rustup/toolchains/esp</code></td>
+<td>1.4 GB, with the next two</td>
+</tr>
+<tr>
+<td>Xtensa GCC (the linker)</td>
+<td>16.2.0_20260914</td>
+<td><code>~/.rustup/toolchains/esp/xtensa-esp-elf</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Espressif's LLVM libraries</td>
+<td>esp-21.1.3_20260408</td>
+<td><code>~/.rustup/toolchains/esp/xtensa-esp32-elf-clang</code></td>
+<td></td>
+</tr>
+<tr>
+<td>The two environment variables</td>
+<td>—</td>
+<td><code>vendor/esp/export-esp.sh</code> (<code>LIBCLANG_PATH</code>, <code>PATH</code>)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>The board's <code>rust-toolchain.toml</code> picks <code>esp</code>; <code>tools/esp32.sh</code> reads the export file.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run esp-tools</code></td>
+<td>installs all of the above (once; several minutes)</td>
+</tr>
+<tr>
+<td><code>pixi run esp-build</code></td>
+<td>builds the default (Motor-Pi UART) program</td>
+</tr>
+<tr>
+<td><code>pixi run esp-build --no-default-features --features can</code></td>
+<td>builds the CAN one</td>
+</tr>
+<tr>
+<td><code>pixi run esp-flash</code></td>
+<td>builds, flashes the board on the USB cable, shows its log: <a href="esp32-bench.html">bench only</a></td>
+</tr>
+<tr>
+<td><code>tools/test.sh</code></td>
+<td>also builds both, with clippy, where the toolchain is; "skipped" where not</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="proof-it-speaks-the-cs-language">Proof it speaks the C++'s language</h3>
+<p>Three witnesses agree on 21 frames and a noisy byte stream
+(<code>firmware/spine/crates/legacy-link/vectors.json</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Witness</th>
+<th>Checked by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>legacy_protocol.py</code> made the bytes (what the Motor-Pi sends)</td>
+<td><code>gen_vectors.py</code>; aav_legacy's tests check the file is current</td>
+</tr>
+<tr>
+<td>the 2025-26 C++ itself: <code>ros2_handler.cpp</code> and <code>jrk_g2.cpp</code>, compiled on the laptop with stand-in Arduino headers</td>
+<td><code>tools/tests/test_legacy_cpp.py</code>, with and without fused multiply-adds</td>
+</tr>
+<tr>
+<td>the Rust <code>legacy-link</code> crate</td>
+<td><code>cargo test -p legacy-link</code> (<code>tests/vectors.rs</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>All three give the same steering and brake targets and DAC code for each frame.
+<code>spine-board</code>'s tests then drive frames through the whole loop and check the same targets
+reach the fake I2C bus. The steering goes through radians and back: every target from 400
+to 3500 survives the round trip (tested).</p>
+<h3 id="the-c-beside-the-rust">The C++ beside the Rust</h3>
+<p>Every behaviour of <code>aav_umod_esp32</code>, and where it is now. ⚠️ = different: Ben decides.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>C++ behaviour</th>
+<th>Where</th>
+<th>Rust</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Frame: 13 bytes, 3 × f32 LE, sum checksum</td>
+<td><code>ros2_handler.cpp</code></td>
+<td><code>legacy-link::Frame</code></td>
+<td>same</td>
+</tr>
+<tr>
+<td>Resync: bad sum drops one byte</td>
+<td><code>ros2_handler.cpp</code></td>
+<td><code>legacy-link::Parser</code></td>
+<td>same</td>
+</tr>
+<tr>
+<td>Values outside -1..1 turned down, DAC ramps to 0</td>
+<td><code>ros2_handler.cpp</code></td>
+<td><code>LegacyLink</code>: the last command, throttle 0</td>
+<td>same</td>
+</tr>
+<tr>
+<td>Steering: 1950 + s × 1950 (s ≤ 0) or × 1550; clamped 400..3500</td>
+<td><code>ros2_handler.cpp</code>, <code>setSteer()</code></td>
+<td><code>Frame::targets</code>, then radians, then the same target</td>
+<td>same target; ⚠️ reached at 0.6 rad/s (spine-core's steering rate limit), not at once</td>
+</tr>
+<tr>
+<td>Brake: accel &lt; -0.05 → clamp(|a| × 3500, 400, 3500), DAC cut at once</td>
+<td><code>ros2_handler.cpp</code></td>
+<td><code>Frame::targets</code> → <code>DirectCmd</code></td>
+<td>same</td>
+</tr>
+<tr>
+<td>Throttle: |v| &lt; 0.03 → ramp to 0; else DAC |v| × 700, direction from the sign</td>
+<td><code>ros2_handler.cpp</code></td>
+<td><code>Frame::targets</code> → <code>DirectCmd</code></td>
+<td>same code; ⚠️ ramp up 600 codes/s (C++: 6 a frame = 300/s at 50 Hz), down at once (C++: 12 a frame)</td>
+</tr>
+<tr>
+<td>Direction pin set before the throttle, even while it runs</td>
+<td><code>ros2_handler.cpp</code></td>
+<td><code>spine-board</code>: only with the DAC at 0</td>
+<td>⚠️ safer: fixes bug 5</td>
+</tr>
+<tr>
+<td>No command timeout: the last throttle stays on</td>
+<td>—</td>
+<td>spine-core: 100 ms (CAN v0.2.0), then throttle 0 and full brake</td>
+<td>⚠️ new. The bridge sends 50 Hz</td>
+</tr>
+<tr>
+<td>Drives on the first frame after boot</td>
+<td>—</td>
+<td>spine-core boots latched: a stop frame (accel &lt; -0.05) first, then drive frames</td>
+<td>⚠️ new. The bridge sends stop frames whenever ego is stale, so this happens by itself</td>
+</tr>
+<tr>
+<td>After a timeout, frames drive again at once</td>
+<td>—</td>
+<td>latched until a stop frame</td>
+<td>⚠️ new</td>
+</tr>
+<tr>
+<td>RC override: CH6 (index 5) between 1500 and 2200</td>
+<td><code>main.cpp</code></td>
+<td><code>ibus::RcMap::TODAY</code></td>
+<td>same</td>
+</tr>
+<tr>
+<td>RC sticks: CH3 throttle, CH4 steering, CH5 gear: forward &lt; 1200 &lt; brake &lt; 1800 &lt; reverse</td>
+<td><code>rc_handler.cpp</code></td>
+<td><code>RcMap::TODAY</code></td>
+<td>same channels and thresholds</td>
+</tr>
+<tr>
+<td>RC throttle: stick × 1023, capped at 700 (the top third of the stick does nothing)</td>
+<td><code>rc_handler.cpp</code></td>
+<td>stick × 3.0 m/s, open loop: stick × 700, reverse capped at 1.0 m/s (233)</td>
+<td>⚠️ the whole stick works; reverse is slower</td>
+</tr>
+<tr>
+<td>RC gear on brake: DAC ramps down, brake full</td>
+<td><code>rc_handler.cpp</code></td>
+<td>spine-core <code>RC_GEAR_BRAKE = SpeedZero</code>: speed to 0, then the hold brake (0.3)</td>
+<td>⚠️ open choice (<code>docs/firmware.md</code>)</td>
+</tr>
+<tr>
+<td>RC stick released in forward or reverse: coast, brake released</td>
+<td><code>rc_handler.cpp</code></td>
+<td>speed to 0, then the hold brake (0.3)</td>
+<td>⚠️</td>
+</tr>
+<tr>
+<td>RC sticks out of range: safe stop, steering centred</td>
+<td><code>rc_handler.cpp</code></td>
+<td>RC drives, asks for 0 speed, straight wheels</td>
+<td>⚠️</td>
+</tr>
+<tr>
+<td>RC receiver silent: the last values stay (no timeout)</td>
+<td><code>IBusBM</code></td>
+<td>100 ms: lost; full brake</td>
+<td>⚠️ safer: fixes bug 2</td>
+</tr>
+<tr>
+<td>Frames pile up during RC, run after it</td>
+<td><code>main.cpp</code></td>
+<td>read every tick; RC wins while on</td>
+<td>⚠️ fixes bug 6</td>
+</tr>
+<tr>
+<td>E-stop</td>
+<td>none: the button cuts power on its own</td>
+<td>the button still does; <code>estop-input</code> reads a spare contact, once wired</td>
+<td>⚠️ off until Q6</td>
+</tr>
+<tr>
+<td>Startup: WiFi first (up to 10 s), then DAC 0, steering 1950, brake 3500</td>
+<td><code>setup()</code></td>
+<td>within milliseconds: DAC 0, brake 3500, expander, steering 1950</td>
+<td>⚠️ faster: the actuators are safe sooner</td>
+</tr>
+<tr>
+<td>Brake while nobody drives: full (3500)</td>
+<td><code>setup()</code></td>
+<td>full: this board sets <code>idle_brake = 1.0</code></td>
+<td>same, on purpose. spine-core's proposed <code>IDLE_BRAKE</code> is 0.0; this board keeps the C++'s value until the team decides, because it has no e-stop input yet</td>
+</tr>
+<tr>
+<td>Steering on a stop</td>
+<td><code>jrkSafeStop()</code>: centred</td>
+<td>spine-core <code>ESTOP_STEERING = Hold</code></td>
+<td>⚠️ open choice</td>
+</tr>
+<tr>
+<td>Expander: all 16 pins outputs, high</td>
+<td><code>setup()</code></td>
+<td>the same (<code>Calibration::TODAY</code>)</td>
+<td>same</td>
+</tr>
+<tr>
+<td>A Jrk missing at boot: skipped for good, the car still drives</td>
+<td><code>setup()</code></td>
+<td>tried every tick; its fault stops the car</td>
+<td>⚠️ safer: fixes bug 3</td>
+</tr>
+<tr>
+<td>Jrk errors, DAC errors: printed</td>
+<td><code>jrk_g2.cpp</code>, <code>dac.cpp</code></td>
+<td>fault bits: the car stops until the next stop-then-drive</td>
+<td>⚠️ safer</td>
+</tr>
+<tr>
+<td>Hardware watchdog</td>
+<td>none</td>
+<td>100 ms</td>
+<td>⚠️ new</td>
+</tr>
+<tr>
+<td>WiFi, the status web page, the WebSocket log, the I2C scan page</td>
+<td><code>web_handler.cpp</code></td>
+<td>gone</td>
+<td>⚠️ the log is on the USB cable</td>
+</tr>
+<tr>
+<td>OTA update page, no password</td>
+<td><code>main.cpp</code></td>
+<td>gone: flash on the USB cable</td>
+<td>⚠️ safer</td>
+</tr>
+<tr>
+<td>Status line every 200 ms</td>
+<td><code>publishStatus()</code></td>
+<td><code>STATUS mode=… throttle=… brake=… faults=…</code></td>
+<td>⚠️ another format; nothing parses it</td>
+</tr>
+<tr>
+<td>Nothing sent back to the Motor-Pi</td>
+<td>—</td>
+<td>nothing</td>
+<td>same</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="for-ben-to-decide">For Ben to decide</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>Now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Where U7 (the CAN transceiver) reaches the ESP32</td>
+<td>GPIO 25/26, a guess</td>
+</tr>
+<tr>
+<td>2</td>
+<td>The e-stop's spare contact: which pin, normally closed? (Q6)</td>
+<td>not read</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>IDLE_BRAKE</code> on this board: keep the C++'s full brake, or spine-core's 0?</td>
+<td>full brake</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Steering rate limit on the UART link: keep 0.6 rad/s, or pass targets at once like the C++?</td>
+<td>0.6 rad/s</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Throttle ramp: 600 codes/s up (twice the C++'s on the UART link)</td>
+<td>600/s</td>
+</tr>
+<tr>
+<td>6</td>
+<td>The RC changes above: the gear's brake position, a released stick, reverse speed</td>
+<td>spine-core's defaults</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>FULL_THROTTLE_SPEED</code> 3.0 m/s, the same guess as <code>legacy.yaml</code> (Q4)</td>
+<td>3.0</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Remove the C++ once the Rust is proven on the car</td>
+<td>kept</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-is-untested">What is untested</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Why</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Everything on the real ESP32</td>
+<td>never flashed</td>
+<td><a href="esp32-bench.html">the bench plan</a></td>
+</tr>
+<tr>
+<td>The FIFO reads keeping up</td>
+<td>a tick takes a few ms of I2C; the FIFO holds about 28 ms of iBUS</td>
+<td>watch for RC dropouts in the log</td>
+</tr>
+<tr>
+<td>The watchdog reset</td>
+<td>TIMG1's watchdog, never seen to fire</td>
+<td>hang the loop on purpose, on the bench</td>
+</tr>
+<tr>
+<td>CAN</td>
+<td>the pins are unknown</td>
+<td>find U7's wiring, then a USB-CAN adapter</td>
 </tr>
 </tbody>
 </table></div>
@@ -239,7 +804,7 @@ for the bench: the car's chip is still Q10–Q13. <span class="badge b-untested"
 </tbody>
 </table></div>
 <p>Size: 60,164 bytes of flash (of 4 MB) and 2,796 bytes of fixed RAM (of 512 kB).</p>
-<h3 id="the-pin-map">The pin map</h3>
+<h3 id="the-pin-map_1">The pin map</h3>
 <p>The one list of the Pico 2's pins. <code>src/main.rs</code> assigns them in this order: change both
 together.</p>
 <div class="table-wrap"><table>
@@ -467,7 +1032,7 @@ make are in <code>spine-core</code> (<code>firmware/spine/README.md</code>).</p>
 </tr>
 </tbody>
 </table></div>
-<h3 id="what-is-untested">What is untested</h3>
+<h3 id="what-is-untested_1">What is untested</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -937,8 +1502,7 @@ flashed.</strong> Nothing in our stack writes to it yet: the 2025-26 sender isn'
 </section>
 <section class="card"><h2 id="the-esp32-boards-of-the-kefc-plan-15-oct">The ESP32 boards of the KEFC plan (15 Oct)</h2>
 <p><a href="can-plan.html">The KEFC CAN plan</a> keeps the car's own control board as the spine, and adds
-a wheel node on each front wheel. Both chips are Xtensa ESP32s. <span class="badge b-needs-you">needs you</span> Ben hasn't
-approved the DBC change yet.</p>
+a wheel node on each front wheel. Both chips are Xtensa ESP32s.</p>
 <pre class="highlight"><code class="language-text">            CAN bus, 500 kbit/s
   Orin ───────────┬─────────────────┬─────────────────┐
                   │                 │                 │
@@ -952,7 +1516,7 @@ approved the DBC change yet.</p>
 <th>Board</th>
 <th>Chip</th>
 <th>Its logic, done and tested</th>
-<th>Its board crate, still to write</th>
+<th>Its board crate</th>
 </tr>
 </thead>
 <tbody>
@@ -960,13 +1524,13 @@ approved the DBC change yet.</p>
 <td>The spine: the AAV control board</td>
 <td>ESP32 (Xtensa LX6)</td>
 <td><code>spine-core</code> and <code>spine-board</code>: modes, arming, the 100 ms watchdog, the speed loop, the frames, the Jrk G2s, the DAC, iBUS</td>
-<td><code>boards/esp32-spine</code></td>
+<td>written: <code>boards/esp32-umod --features can</code> (above). Its CAN pins are a placeholder until the schematic shows them</td>
 </tr>
 <tr>
 <td>A wheel node: ESP32-CAN-X2</td>
 <td>ESP32-S3 (Xtensa LX7)</td>
 <td><code>wheel-core</code>: pulses and their times to a speed, the zero-speed timeout, the WHEEL_SPEED frame from <code>spine-core</code>'s protocol</td>
-<td><code>boards/esp32s3-wheel</code></td>
+<td>still to write: <code>boards/esp32s3-wheel</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -1006,32 +1570,12 @@ approved the DBC change yet.</p>
 </tbody>
 </table></div>
 <h3 id="the-toolchain">The toolchain</h3>
-<p>The ESP32 and ESP32-S3 are Xtensa, which stock Rust can't build for. Espressif's <code>espup</code>
-installs their Rust fork; <code>espflash</code> flashes over USB. Not installed yet, and not in Pixi.</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Step</th>
-<th>Command</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Install, once</td>
-<td><code>cargo install espup espflash</code>, then <code>espup install</code></td>
-</tr>
-<tr>
-<td>Each terminal</td>
-<td><code>. ~/export-esp.sh</code></td>
-</tr>
-<tr>
-<td>Build and flash</td>
-<td><code>cargo run --release</code> in the board crate (its runner is <code>espflash flash --monitor</code>)</td>
-</tr>
-</tbody>
-</table></div>
+<p>The ESP32 and ESP32-S3 are Xtensa, which stock Rust can't build for. <code>pixi run esp-tools</code>
+installs Espressif's Rust and <code>espflash</code> for one user, at fixed versions (above, with
+<code>esp-build</code> and <code>esp-flash</code>). The wheel node needs the <code>esp32s3</code> target added to it:
+<code>vendor/cargo-tools/bin/espup install --targets esp32,esp32s3</code>.</p>
 <p>Like <code>boards/pico2</code>, each board crate is a workspace of its own, outside the default build:
-<code>pixi run test</code> keeps working on a laptop without <code>espup</code>. The logic crates need nothing:
+<code>pixi run test</code> keeps working on a laptop without Espressif's Rust (it says "skipped"). The logic crates need nothing:
 they already build and test with stock Rust.</p>
 <h3 id="whats-left">What's left</h3>
 <div class="table-wrap"><table>
@@ -1045,22 +1589,17 @@ they already build and test with stock Rust.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td>Ben approves DBC v0.2.0</td>
-<td>Ben</td>
+<td>Write <code>boards/esp32s3-wheel</code> (DBC v0.2.0 is merged, 15 Oct)</td>
+<td>nothing</td>
 </tr>
 <tr>
 <td>2</td>
-<td>Install <code>espup</code>; write <code>boards/esp32s3-wheel</code> (the smaller one first)</td>
-<td>step 1</td>
-</tr>
-<tr>
-<td>3</td>
 <td>Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel</td>
 <td>the car</td>
 </tr>
 <tr>
-<td>4</td>
-<td>Write <code>boards/esp32-spine</code>: the control board's pins, from its schematic</td>
+<td>3</td>
+<td><code>boards/esp32-umod --features can</code>: the real CAN pins, from the control board's schematic</td>
 <td>the schematic</td>
 </tr>
 </tbody>
@@ -1079,7 +1618,7 @@ they already build and test with stock Rust.</p>
 <tr>
 <td><code>aav_umod_esp32</code> (ESP32)</td>
 <td>drives the actuators: steering and brake (Jrk G2), throttle (DAC), the RC receiver</td>
-<td>becomes the spine: <code>spine-core</code> plus a board program. For the bench: <code>boards/pico2</code>. On the car: the chip the team picks (Q10–Q13)</td>
+<td><strong><code>boards/esp32-umod</code></strong> (15 Oct): the same board in Rust, with the Motor-Pi's UART or CAN. Builds; <span class="badge b-untested">untested</span> on the board. The C++ stays until the Rust is proven on the car</td>
 </tr>
 <tr>
 <td>The wheel encoder (Pico 2)</td>
@@ -1110,7 +1649,7 @@ Rust.</p>
 <tr>
 <td>Pico 2 (RP2350, ARM)</td>
 <td><code>thumbv8m.main-none-eabihf</code></td>
-<td><span class="badge b-works">works</span> all eleven crates and the three board programs build for it; <code>pixi run test</code> checks them</td>
+<td><span class="badge b-works">works</span> all thirteen crates and the three Pico 2 board programs build for it; <code>pixi run test</code> checks them</td>
 <td>its USB drive (<code>pixi run spine-uf2</code>, <code>wheel-uf2</code>, <code>sentinel-uf2</code>), or probe-rs (<code>pixi run spine-tools</code>)</td>
 </tr>
 <tr>
@@ -1127,9 +1666,9 @@ Rust.</p>
 </tr>
 <tr>
 <td>Classic ESP32 (today's board)</td>
-<td>Xtensa</td>
-<td><span class="badge b-missing">missing</span> needs Espressif's <code>espup</code> installer</td>
-<td><code>espflash</code></td>
+<td><code>xtensa-esp32-none-elf</code></td>
+<td><span class="badge b-works">works</span> not in Pixi: <code>pixi run esp-tools</code> installs Espressif's Rust for one user (above); <code>tools/test.sh</code> builds the board where it is</td>
+<td><code>espflash</code> (<code>pixi run esp-flash</code>)</td>
 </tr>
 <tr>
 <td>Arduino (AVR)</td>
@@ -1157,8 +1696,8 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tbody>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each</td>
-<td>54</td>
+<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0</td>
+<td>69</td>
 </tr>
 <tr>
 <td><code>aav-inputs</code> (10 Oct)</td>
@@ -1191,9 +1730,14 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <td>34</td>
 </tr>
 <tr>
+<td><code>legacy-link</code> (15 Oct)</td>
+<td>the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself</td>
+<td>31</td>
+</tr>
+<tr>
 <td><code>spine-board</code> (10 Oct)</td>
-<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to <code>wheel-encoder</code> on 15 Oct)</td>
-<td>45</td>
+<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to <code>wheel-encoder</code> on 15 Oct). Since 15 Oct, the <code>CommandLink</code> trait: <code>CanLink</code> or <code>LegacyLink</code></td>
+<td>57</td>
 </tr>
 <tr>
 <td><code>wheel-encoder</code> (15 Oct)</td>
@@ -1209,6 +1753,11 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <td><code>hd44780</code> (15 Oct)</td>
 <td>the display's 16x2 LCD, 4-bit on GPIO pins</td>
 <td>5</td>
+</tr>
+<tr>
+<td><code>boards/esp32-umod</code> (15 Oct)</td>
+<td>the spine on today's ESP32 control board, with Embassy (above)</td>
+<td>builds, clippy clean; <span class="badge b-untested">untested</span> on a board</td>
 </tr>
 <tr>
 <td><code>boards/pico2</code> (11 Oct)</td>
@@ -1242,28 +1791,33 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tbody>
 <tr>
 <td>1</td>
-<td>The car's spine chip</td>
-<td>Q10–Q13</td>
+<td>The ESP32 program on the bench: <a href="esp32-bench.html">First flash on the bench</a></td>
+<td>Ben, and the answers in "For Ben to decide"</td>
 </tr>
 <tr>
 <td>2</td>
+<td>The car's spine chip: the ESP32 control board, if the KEFC plan holds</td>
+<td>Q10–Q13</td>
+</tr>
+<tr>
+<td>3</td>
 <td>The Pico 2 program on the bench: the LED, then CAN in loopback, then CAN to <code>spine_bridge</code>, then the I2C devices</td>
 <td>a Pico 2, an MCP2515 module, and Ben</td>
 </tr>
 <tr>
-<td>3</td>
+<td>4</td>
 <td>Confirm the calibrations: steering centre and scale, brake range, throttle cap, RC channels</td>
 <td>the car (Q1-Q7)</td>
 </tr>
 <tr>
-<td>4</td>
+<td>5</td>
 <td>Tune the speed loop: on the bench it lags a ramp by about a second</td>
 <td>the car</td>
 </tr>
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="can-plan.html"><small>Previous</small>← CAN plan</a>
-<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+<a class="next" href="esp32-bench.html"><small>Next</small>ESP32 first flash →</a></nav>
 </main>
 <footer>Source: <code>docs/rust-firmware.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

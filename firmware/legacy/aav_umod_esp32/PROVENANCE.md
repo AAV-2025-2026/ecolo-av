@@ -36,5 +36,9 @@ Files, unchanged unless listed under Changes:
   packages (ours: `vendor/platformio/`).
 - With those two, it builds from a clean checkout: `pixi run -e firmware legacy-esp32`
   (10 Oct 2026, on a Mac: 48 s with the downloads; RAM 14.3%, flash 63.4%).
+- 15 Oct 2026: not changed, but `ros2_handler.cpp` and `jrk_g2.cpp` are now also
+  compiled on a laptop by `tools/tests/test_legacy_cpp.py`, to prove the Rust
+  replacement (`firmware/spine/boards/esp32-umod`) sets the same targets. This folder
+  stays until the Rust one is flashed and proven on the car.
 - Nothing else changed. Known problems are listed in `docs/firmware.md`
   (no command timeout, unauthenticated `/update` page, no feedback to the computer).

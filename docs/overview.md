@@ -56,7 +56,8 @@ finder).
 | `aav_bringup` | the five profiles, the machine files (each picks its parts, perception too), the RViz layout | bringup |
 | `aav_spine_sim`, `aav_bench` | bench mode: the spine on a laptop, and pretend sensors | bench |
 | `firmware/can`, `spine-core`, `aav-inputs` | the CAN contract, the spine's logic, clean inputs | firmware |
-| `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board` | the spine's device drivers, and the glue to spine-core | firmware |
+| `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `legacy-link`, `spine-board` | the spine's device drivers, the 2025-26 UART link, and the glue to spine-core | firmware |
+| `boards/esp32-umod` | the spine on today's ESP32 control board, in Rust (Embassy): builds, never flashed | firmware |
 | `boards/pico2` | the spine's board program for a Pico 2 (Embassy): builds, never flashed | firmware |
 | `aav_lane_finder` | the lane finder: the camera's picture to `/perception/lane/geometry`, with OpenCV | perception |
 

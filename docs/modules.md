@@ -36,7 +36,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | [HUD](#hud) | `aav_hud`, `aav_hud_raylib` |
 | [Bench](#bench) | `aav_spine_sim`, `aav_bench` |
 | [Messages and bringup](#messages-and-bringup) | `aav_interfaces`, `aav_bringup` |
-| [Firmware: the spine (Rust)](#firmware-the-spine-rust) | `can/aav.dbc`, `spine-core`, `aav-inputs`, `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board`, `boards/pico2` |
+| [Firmware: the spine (Rust)](#firmware-the-spine-rust) | `can/aav.dbc`, `spine-core`, `aav-inputs`, `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `legacy-link`, `spine-board`, `boards/esp32-umod`, `boards/pico2` |
 | [Firmware: the other Pico 2s (Rust)](#firmware-the-other-pico-2s-rust) | `wheel-encoder`, `boards/wheel-encoder-pico2`, `sentinel`, `hd44780`, `boards/sentinel-pico2` |
 | [Firmware: today's boards (C++)](#firmware-todays-boards-c) | `aav_umod_esp32` |
 
@@ -452,8 +452,8 @@ in `firmware/spine` (part of `tools/test.sh`). [Firmware](firmware.md) and
 
 | Crate or file | Does | Why | Origin | Status | Read first |
 |---|---|---|---|---|---|
-| `can/aav.dbc` | the CAN contract: six frames between the Orin, the spine and the two wheel nodes | both sides must agree on every bit | ours | v0.2.0 (the KEFC plan), waiting for Ben | `aav.dbc`, then `test_vectors.json` |
-| `spine-core` | the spine's decisions: modes, arming, the 100 ms watchdog, speed loop, encoder | the safety rules, testable without hardware | ours | [[works]] 59 tests, and the bench | `src/lib.rs` |
+| `can/aav.dbc` | the CAN contract: six frames between the Orin, the spine and the two wheel nodes | both sides must agree on every bit | ours | v0.2.0 (the KEFC plan), merged 15 Oct | `aav.dbc`, then `test_vectors.json` |
+| `spine-core` | the spine's decisions: modes, arming, the 100 ms watchdog, speed loop (closed or open), encoder | the safety rules, testable without hardware | ours | [[works]] 69 tests, and the bench | `src/lib.rs` |
 | `wheel-core` | a front wheel node's logic: Hall sensor pulses to speed, the WHEEL_SPEED frame | wheel speed for the odometry | ours | [[works]] 9 tests, and the bench | `src/lib.rs` |
 | `aav-inputs` | debounced switches, an instant e-stop, counting with a lockout | clean inputs from noisy pins | ours | [[works]] tests | `src/lib.rs` |
 | `jrk-g2` | the Pololu Jrk G2 (steering 0x05, brake 0x04) over I2C | steering and brake | ours, from Pololu's guide and the 2025-26 bytes | [[works]] against mocks | `src/lib.rs` |
@@ -461,10 +461,12 @@ in `firmware/spine` (part of `tools/test.sh`). [Firmware](firmware.md) and
 | `pca9555` | the I/O expander (0x20); P00 is the drive direction | forward or reverse | ours | [[works]] against mocks | `src/lib.rs` |
 | `ibus` | the FlySky RC receiver's frames | the RC override | ours | [[works]] tests | `src/lib.rs` |
 | `mcp2515` | the MCP2515 CAN controller over SPI | a Pico 2 has no CAN of its own | ours | [[works]] against mocks | `src/lib.rs` |
-| `spine-board` | the glue: devices ↔ `spine-core`, and the `Board` trait any chip implements | one loop for any chip (Q10-Q13) | ours | [[works]] against mocks | `src/lib.rs` |
+| `legacy-link` | the Motor-Pi's 13-byte UART frames, and the Jrk and DAC targets the C++ set for them | the Rust ESP32 is a drop-in for the C++ | ours, from the 2025-26 `ros2_handler.cpp` | [[works]] tests, and against the C++ itself | `src/lib.rs`, `vectors.json` |
+| `spine-board` | the glue: devices ↔ `spine-core`, the `Board` trait any chip implements, the `CommandLink` trait (CAN or the UART) | one loop for any chip (Q10-Q13) | ours | [[works]] against mocks | `src/lib.rs` |
+| `boards/esp32-umod` | the spine on today's ESP32 control board (Embassy): the C++'s pins; the Motor-Pi's UART or CAN; a 100 ms watchdog | the C++'s replacement, in Rust (Ben, 15 Oct) | ours | [[untested]] builds, never flashed | `src/main.rs`, `src/pins.rs` |
 | `boards/pico2` | the spine's program for a Pico 2 (Embassy), with a 100 ms hardware watchdog | the first real board | ours | [[untested]] builds, never flashed | `src/main.rs` |
 
-Run alone: `cd firmware/spine && cargo test -p <crate>`. The board: `pixi run spine-uf2`.
+Run alone: `cd firmware/spine && cargo test -p <crate>`. The boards: `pixi run esp-build` (after `pixi run esp-tools`), `pixi run spine-uf2`.
 Runs on: the spine microcontroller, on CAN (not chosen yet, Q10-Q17).
 
 ## Firmware: the other Pico 2s (Rust)
@@ -515,7 +517,7 @@ until the spine replaces it.
 | **Runs on** | the SparkFun ESP32 MicroMod on the control board |
 | **In → out** | RC (iBUS), UART 13-byte frames → I2C to two Jrk G2s, the DAC, the expander |
 | **Origin** | inherited: 2025-26 `AAV_cortex`, branch `6-pico2-aav-firmware` |
-| **Status** | runs the car today. No command timeout; an update page with no password; ten more faults in [Firmware](firmware.md) |
+| **Status** | runs the car today. No command timeout; an update page with no password; ten more faults in [Firmware](firmware.md). Its Rust replacement is `boards/esp32-umod`; this stays until that is proven on the car |
 | **Run alone** | `pixi run -e firmware legacy-esp32` builds it; don't flash before the audit |
 | **Test** | none |
 | **Read first** | `src/modules/ros2_handler/ros2_handler.cpp` |

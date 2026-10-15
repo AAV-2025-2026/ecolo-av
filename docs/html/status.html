@@ -49,6 +49,7 @@
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-install.html">From a USB stick</a>
 <a href="car-photos.html">Car photos</a>
@@ -83,7 +84,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Wheel speed, the CAN wheel nodes (KEFC plan, CAN v0.2.0)</td>
 <td><code>spine_bridge</code>: WHEEL_SPEED_L/R (0x200, 0x201) into <code>/vehicle/wheels</code> and <code>/vehicle/odom</code>'s speed; <code>wheel-core</code> (the nodes' logic)</td>
-<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>'s wheel frames (15 Oct). <span class="badge b-missing">missing</span> on the car: no wheel node boards yet, and Ben hasn't approved DBC v0.2.0</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>'s wheel frames (15 Oct). <span class="badge b-missing">missing</span> on the car: no wheel node boards yet</td>
 </tr>
 <tr>
 <td>IMU</td>
@@ -173,7 +174,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Spine firmware logic</td>
 <td><code>firmware/spine/crates/spine-core</code></td>
-<td><span class="badge b-works">works</span> 59 tests, and on the bench</td>
+<td><span class="badge b-works">works</span> 69 tests, and on the bench</td>
 </tr>
 <tr>
 <td>Wheel node logic (15 Oct)</td>
@@ -182,8 +183,13 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Spine device drivers and glue</td>
-<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>spine-board</code></td>
-<td><span class="badge b-works">works</span> 137 tests, against mocks</td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>legacy-link</code>, <code>spine-board</code></td>
+<td><span class="badge b-works">works</span> 176 tests, against mocks; <code>legacy-link</code> also against the 2025-26 C++ itself</td>
+</tr>
+<tr>
+<td>ESP32 board program (Rust)</td>
+<td><code>firmware/spine/boards/esp32-umod</code></td>
+<td><span class="badge b-untested">untested</span> builds with Espressif's Rust (<code>pixi run esp-tools</code>), both links; never flashed. Merged 15 Oct; the C++ stays on the car until it is proven. <a href="esp32-bench.html">First flash on the bench</a></td>
 </tr>
 <tr>
 <td>Spine board program</td>

@@ -118,8 +118,8 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 
 | Part | What it is | Status |
 |---|---|---|
-| `can/aav.dbc` | the CAN contract: four frames between the Orin and the spine | draft v0.1.0 |
-| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder | [[works]] 59 tests, and the bench |
+| `can/aav.dbc` | the CAN contract: six frames between the Orin, the spine and the two wheel nodes | v0.2.0 (the KEFC plan), merged 15 Oct |
+| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder | [[works]] 69 tests, and the bench |
 | `spine/crates/wheel-core` | the front wheel nodes' logic in Rust: pulses to speed, the WHEEL_SPEED frame | [[works]] 9 tests, and the bench; no board yet |
 | `spine/crates/aav-inputs` | debounced switches, an e-stop that trips at once, counting with a lockout | [[works]] 9 tests |
 | `spine/crates/jrk-g2` | the Pololu Jrk G2 (steering, brake) over I2C | [[works]] 14 tests, against mocks |
@@ -127,14 +127,16 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 | `spine/crates/pca9555` | the I/O expander (direction) over I2C | [[works]] 6 tests, against mocks |
 | `spine/crates/ibus` | the FlySky RC receiver's protocol | [[works]] 24 tests |
 | `spine/crates/mcp2515` | the MCP2515 CAN controller over SPI, since a Pico 2 has no CAN | [[works]] 34 tests, against mocks |
-| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, and the `Board` trait | [[works]] 45 tests, against mocks |
+| `spine/crates/legacy-link` | the 2025-26 UART link: the Motor-Pi's 13-byte frames and the C++'s targets | [[works]] 31 tests, and against the C++ itself |
+| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, the `Board` trait, the `CommandLink` trait (CAN or UART) | [[works]] 57 tests, against mocks |
+| `spine/boards/esp32-umod` | the spine on today's ESP32 control board (Embassy): the C++'s pins and devices; the Motor-Pi's UART or CAN | [[untested]] builds, never flashed |
 | `spine/boards/pico2` | the spine's board program for a Pico 2 (Embassy): it implements `Board`, with a 100 ms hardware watchdog | [[untested]] builds, never flashed. The car's chip is Q10-Q13 |
 | `spine/crates/wheel-encoder` | the spoke sensors (shared with the spine) and the wheel encoder's UDP packet | [[works]] 12 tests, with examples `aav_legacy` checks too |
 | `spine/crates/sentinel` | the status display's logic: its I2C packet, 13 LCD pages, the knob, the beeps | [[works]] 40 tests |
 | `spine/crates/hd44780` | a 16x2 character LCD on six GPIO pins | [[works]] 5 tests, against a fake |
 | `spine/boards/wheel-encoder-pico2` | the wheel encoder in Rust: spokes to the Motor Pi over UDP, through a W5500 | [[untested]] builds, never flashed |
 | `spine/boards/sentinel-pico2` | the status display in Rust: an I2C device at 0x42 | [[untested]] builds, never flashed; not wired in |
-| `legacy/aav_umod_esp32` | the 2025-26 ESP32 that drives today's actuators | runs the car today: no timeout, an update page with no password |
+| `legacy/aav_umod_esp32` | the 2025-26 ESP32 that drives today's actuators | runs the car today: no timeout, an update page with no password. Stays until `boards/esp32-umod` is proven on the car |
 
 ## The HUD
 

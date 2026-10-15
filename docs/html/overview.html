@@ -7,7 +7,7 @@
 <!-- Generated from docs/overview.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Overview: everything in aav</h1>
-<div class="meta">11 min read · 6 sections</div></header>
+<div class="meta">12 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a class="here" href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,6 +49,7 @@
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
 <a href="car-install.html">From a USB stick</a>
 <a href="car-photos.html">Car photos</a>
@@ -263,8 +264,13 @@ finder).</p>
 <td>firmware</td>
 </tr>
 <tr>
-<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>spine-board</code></td>
-<td>the spine's device drivers, and the glue to spine-core</td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>legacy-link</code>, <code>spine-board</code></td>
+<td>the spine's device drivers, the 2025-26 UART link, and the glue to spine-core</td>
+<td>firmware</td>
+</tr>
+<tr>
+<td><code>boards/esp32-umod</code></td>
+<td>the spine on today's ESP32 control board, in Rust (Embassy): builds, never flashed</td>
 <td>firmware</td>
 </tr>
 <tr>
