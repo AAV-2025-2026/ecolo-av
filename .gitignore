@@ -93,3 +93,6 @@ Thumbs.db
 # The PDF is rebuilt on demand (pixi run docs); the HTML pages are committed.
 /docs/html/aav-docs.pdf
 /docs/html/aav-release-notes.pdf
+
+# Ben's full-size car photos (62 MB of HEIC): small copies are in docs/img/car/
+/images/

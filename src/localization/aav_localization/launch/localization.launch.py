@@ -1,5 +1,8 @@
 """
-Localization: the local EKF feeds the global EKF; GPS comes in through navsat_transform.
+Localization: two EKFs, each fed by the raw sensors; GPS comes in through navsat_transform.
+
+Neither EKF reads the other's topic. They meet only in TF: ekf_global publishes
+map -> odom, worked out on top of ekf_local's odom -> base_link.
 
   ros2 launch aav_localization localization.launch.py [gps:=true]
       [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [use_sim_time:=false]

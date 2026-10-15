@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The car in photos (14 October) · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/car-photos.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The car in photos (14 October)</h1>
+<div class="meta">6 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a class="here" href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-equipment-bay-behind-the-seat">The equipment bay (behind the seat)</a><a href="#the-control-board-the-motor-pi-board">The control board (the &quot;Motor-Pi&quot; board)</a><a href="#the-roof">The roof</a><a href="#the-ceiling-panel-the-gps-and-two-pis">The ceiling panel: the GPS and two Pis</a><a href="#the-cameras">The cameras</a><a href="#the-dash">The dash</a><a href="#for-fridays-audit">For Friday&#x27;s audit</a></nav>
+<div class="lead"><p>Ben took 32 photos of the car on 14 October. This page lists what they show, and what
+to check at the audit on Friday 16 Oct. The full set is not in git (62 MB). It is in
+<code>images/</code> on Ben's Mac.</p>
+<div class="admonition warning">
+<p class="admonition-title">Read from photos only</p>
+<pre><code>Nothing here has been logged into or measured yet. Friday's audit confirms it.
+</code></pre>
+</div></div>
+<section class="card"><h2 id="the-equipment-bay-behind-the-seat">The equipment bay (behind the seat)</h2>
+<p><img alt="The bay: the switch, the Orin, the router, the power" src="../img/car/bay.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Seen</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jetson AGX Orin #1</td>
+<td>grey finned box, left of the switch</td>
+<td>the main computer</td>
+</tr>
+<tr>
+<td>TP-Link TL-SG116E, 16 ports</td>
+<td>ports labelled</td>
+<td>see the next table</td>
+</tr>
+<tr>
+<td>Linksys EA3500 router</td>
+<td>right of the switch</td>
+<td>the car's WiFi. A note is taped to it: don't photograph it close up</td>
+</tr>
+<tr>
+<td>Kar-Tech wireless e-stop receiver</td>
+<td>top left, "ROS ON/OFF" written beside it</td>
+<td>the human layer: overrides everything</td>
+</tr>
+<tr>
+<td>A Pi in a black case</td>
+<td>beside the fuse block H1-H4</td>
+<td>which Pi? (ES-Pi or QNX-Pi?)</td>
+</tr>
+<tr>
+<td>Battery box, fuse panel, fan</td>
+<td>under the shelf</td>
+<td></td>
+</tr>
+<tr>
+<td>Motor controller</td>
+<td>silver finned box, under the keyboard</td>
+<td>its maximum current decides the battery shunt (KEFC sheet)</td>
+</tr>
+<tr>
+<td>A red mushroom e-stop</td>
+<td>on the left frame tube</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-switchs-port-labels">The switch's port labels</h3>
+<p><img alt="The switch" src="../img/car/switch.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Label</th>
+<th>In the KEFC plan?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JETSON</td>
+<td>yes: Orin #1</td>
+</tr>
+<tr>
+<td>DASH-UI</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CAM1-PI, CAM2-PI</td>
+<td>yes: the two front cameras</td>
+</tr>
+<tr>
+<td>LIDAR</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>RTK-PI</td>
+<td>yes: "RIG-Pi + GPS" in the PDF (the same Pi?)</td>
+</tr>
+<tr>
+<td>ROUTER</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><strong>ES-PI</strong></td>
+<td><strong>no</strong>: an e-stop Pi?</td>
+</tr>
+<tr>
+<td><strong>QNX-PI</strong></td>
+<td><strong>no</strong>: the 2025-26 QNX layer (<code>Real-Time-OS</code>), replaced by twist_mux and the spine</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-control-board-the-motor-pi-board">The control board (the "Motor-Pi" board)</h2>
+<p><img alt="The control board: a Pi 4, the ESP32 MicroMod, two Jrk G2" src="../img/car/control-board.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Raspberry Pi 4 (Motor-Pi)</td>
+<td>plugged in on the left</td>
+</tr>
+<tr>
+<td>ESP32 MicroMod (SparkFun, red)</td>
+<td>in the MicroMod slot</td>
+</tr>
+<tr>
+<td>2 × Pololu Jrk G2</td>
+<td>top: steering. Below: braking. Each has power and error LEDs</td>
+</tr>
+<tr>
+<td><strong>CAN connector</strong></td>
+<td>a white 2-pin plug labelled <strong>CANH / CANL</strong>, beside chips U3 and U7</td>
+</tr>
+<tr>
+<td>Throttle DAC</td>
+<td>two blue trim pots, "addr dac", a "Throttle enable" jumper</td>
+</tr>
+<tr>
+<td>e-stop trig, e-stop headers</td>
+<td>along the bottom edge</td>
+</tr>
+</tbody>
+</table></div>
+<p>The CAN plug is on the board. Friday: is the transceiver (U7) fitted, and does it work?</p>
+<p><img alt="The e-stop board: TR and ES LEDs" src="../img/car/estop-board.jpg" /></p>
+<p>A second board: 5 V and 3.3 V regulators, two RJ45 jacks, and LEDs for <strong>TR</strong> (e-stop
+trigger) and <strong>ES</strong> (e-stop status). Beside it, an 8-relay module and fuse block G1-G4.</p>
+<p><img alt="The relays" src="../img/car/relays.jpg" /></p>
+</section>
+<section class="card"><h2 id="the-roof">The roof</h2>
+<p><img alt="The lidar, the GNSS antenna, three stick antennas" src="../img/car/roof-lidar-antennas.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A 3D lidar</strong> on a printed tripod</td>
+<td><strong>our code has no lidar at all yet.</strong> Its model? (Q22)</td>
+</tr>
+<tr>
+<td>GNSS antenna (black puck)</td>
+<td>taped down on a steel plate</td>
+</tr>
+<tr>
+<td>3 stick antennas</td>
+<td>the router's WiFi?</td>
+</tr>
+<tr>
+<td>A gold SMA bulkhead</td>
+<td>its cable goes inside: to the GPS?</td>
+</tr>
+<tr>
+<td>A suction-cup mount</td>
+<td>empty</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The GNSS antenna" src="../img/car/gps-antenna.jpg" /></p>
+</section>
+<section class="card"><h2 id="the-ceiling-panel-the-gps-and-two-pis">The ceiling panel: the GPS and two Pis</h2>
+<p><img alt="The ceiling panel" src="../img/car/ceiling-panel.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SparkFun ZED-F9R board</td>
+<td>USB-C to a Pi. Its antenna lead is a thin u.FL cable, held by tape: the reason for the new board with a screw-on connector</td>
+</tr>
+<tr>
+<td>2 Raspberry Pis (a Pi 5 and a Pi 4?)</td>
+<td>one is the RTK-Pi</td>
+</tr>
+<tr>
+<td>A 12 V → 5 V converter</td>
+<td>showed 5.11 V, 1.55 A</td>
+</tr>
+<tr>
+<td>Fuse block F1-F4</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The ZED-F9R" src="../img/car/zed-f9r.jpg" /></p>
+</section>
+<section class="card"><h2 id="the-cameras">The cameras</h2>
+<p><img alt="A camera Pi 5 at the windscreen" src="../img/car/camera-pi.jpg" /></p>
+<p>Pi 5s on DIN rail at the top of the windscreen, each with a ribbon cable to its camera.</p>
+<p><img alt="A camera in an orange housing, with IR LEDs" src="../img/car/rear-camera.jpg" /></p>
+<p>A camera in an orange printed housing with IR LEDs, on a DIN rail at the back. The PDF
+lists the rear camera as new: is this one connected?</p>
+</section>
+<section class="card"><h2 id="the-dash">The dash</h2>
+<p><img alt="The dash: a portable screen and a small touchscreen" src="../img/car/dash-screens.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Innoview portable screen</td>
+<td>showing an Ubuntu desktop: the raylib HUD's screen?</td>
+</tr>
+<tr>
+<td>A small touchscreen, left</td>
+<td>the Dash-UI?</td>
+</tr>
+<tr>
+<td>A joystick, a keyboard labelled AAV-1</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>A 12 V → 5 V converter on the dash's fuse block E1-E4 showed <strong>5.08 V at 3.48 A</strong>. A Pi 5
+wants 5 A for full USB power. Friday: what does it feed, and what is its rating?</p>
+</section>
+<section class="card"><h2 id="for-fridays-audit">For Friday's audit</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Check</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Log in to each Pi and the Orin: <code>hostname</code>, OS, ROS version, what runs at boot</td>
+<td>the inventory</td>
+</tr>
+<tr>
+<td>2</td>
+<td>RTK-Pi: is the ZED-F9R on <code>/dev/ttyACM*</code>? Does <code>ros2 topic hz /gps/fix</code> give anything?</td>
+<td>"Is there GPS data?"</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The lidar: its model, its IP, which Pi or Orin reads it</td>
+<td>no driver in our code yet</td>
+</tr>
+<tr>
+<td>4</td>
+<td>ES-Pi and QNX-Pi: what do they run? Are they in the driving path?</td>
+<td>not in the KEFC picture</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The control board: is U7 fitted? The steering and brake actuators' wire counts</td>
+<td>the KEFC "to confirm" list</td>
+</tr>
+<tr>
+<td>6</td>
+<td>The rear camera: connected to which Pi?</td>
+<td>Cam3 is in the KEFC request</td>
+</tr>
+<tr>
+<td>7</td>
+<td>The 5 V converters: rating, and what each one feeds</td>
+<td>the dash one is at 3.5 A</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="platforms.html"><small>Previous</small>← Platforms</a>
+<a class="next" href="conventions.html"><small>Next</small>Conventions →</a></nav>
+</main>
+<footer>Source: <code>docs/car-photos.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

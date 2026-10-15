@@ -27,6 +27,19 @@ commit, "Work in progress".
    `wt/sim-full` is nearly ready.
 4. **Then** the board drivers in Rust, and the raylib HUD.
 
+## 14 Oct: the car in photos, the KEFC CAN plan
+
+Ben sent 32 photos and the KEFC request (CAN bus, wheel speed, steering feedback, new GPS,
+a second Orin). Pages: [car photos](docs/car-photos.md), [CAN plan](docs/can-plan.md),
+[topic areas](docs/naming.md).
+
+- [ ] **The raylib HUD** (Ben: "today maybe"). *Started 14 Oct, on `wt/hud-raylib`.*
+- [ ] **Topic names by area** (`docs/naming.md`, Proposed) [[needs-you]].
+- [ ] **DBC v0.2.0** for the KEFC plan: the ESP32 board as the spine, wheel frames 0x200 and
+      0x201, a 100 ms timeout (`docs/can-plan.md`, Proposed) [[needs-you]].
+- [ ] **A lidar driver:** a lidar is on the roof; our code has none. Model at the audit.
+- [ ] **Friday's audit:** the checklist at the end of `docs/car-photos.md`.
+
 ## 11 Oct: what we can try at home
 
 Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Topic names by area (Proposed, 14 October) · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/naming.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Topic names by area (Proposed, 14 October)</h1>
+<div class="meta">4 min read · 4 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="work.html">Work</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="bench.html">Bench mode</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a class="here" href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-rule">The rule</a><a href="#old-name-new-name">Old name → new name</a><a href="#how-we-would-do-it">How we would do it</a><a href="#why-the-two-ekfs-dont-talk">Why the two EKFs don&#x27;t talk</a></nav>
+<div class="lead"><p>Ben, 14 Oct: "Maybe we need more structure like /localization/<command> and
+/drivers/<command> /ego/<command> ... Something that isolates messages into their area."</p>
+<p><strong>Status: Proposed</strong> <span class="badge b-needs-you">needs you</span>. Nothing is renamed yet.</p></div>
+<section class="card"><h2 id="the-rule">The rule</h2>
+<p>The first part of every name is the <strong>area</strong>: the layer of the picture it comes from. The
+same areas as the folders under <code>src/</code>.</p>
+<pre class="highlight"><code class="language-text">/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Holds</th>
+<th>Who publishes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/sensors/</code></td>
+<td>raw sensor data</td>
+<td>the drivers on the Pis and the Orins</td>
+</tr>
+<tr>
+<td><code>/vehicle/</code></td>
+<td>what the car says about itself</td>
+<td>the backend (spine, legacy, Gazebo, bench)</td>
+</tr>
+<tr>
+<td><code>/can/</code></td>
+<td>raw CAN frames</td>
+<td>the socketcan bridge</td>
+</tr>
+<tr>
+<td><code>/localization/</code></td>
+<td>where the car is</td>
+<td>the EKFs, navsat_transform</td>
+</tr>
+<tr>
+<td><code>/perception/</code></td>
+<td>what the car sees</td>
+<td>the detectors, the lane finder, radar clusters</td>
+</tr>
+<tr>
+<td><code>/drivers/</code></td>
+<td>one command per driver</td>
+<td>joystick, keyboard, scripted, Nav2, AI, replay</td>
+</tr>
+<tr>
+<td><code>/control/</code></td>
+<td>the chosen command</td>
+<td>twist_mux, the smoother</td>
+</tr>
+<tr>
+<td><code>/ego/</code></td>
+<td>the command for the wheels</td>
+<td>ego</td>
+</tr>
+<tr>
+<td><code>/safety/</code></td>
+<td>e-stop, collision monitor</td>
+<td>the HUD button, collision_monitor</td>
+</tr>
+<tr>
+<td><code>/hud/</code></td>
+<td>what only the screen needs</td>
+<td>the HUD</td>
+</tr>
+</tbody>
+</table></div>
+<p>Global names stay global, because every ROS tool expects them: <code>/tf</code>, <code>/tf_static</code>,
+<code>/clock</code>, <code>/robot_description</code>, <code>/joint_states</code>, <code>/diagnostics</code>, <code>/rosout</code>. Nav2 keeps its own
+names (<code>/plan</code>, <code>/goal_pose</code>, its actions) for now.</p>
+</section>
+<section class="card"><h2 id="old-name-new-name">Old name → new name</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Now</th>
+<th>Proposed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/gps/fix</code></td>
+<td><code>/sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td><code>/gps/fix_velocity</code></td>
+<td><code>/sensors/gps/fix_velocity</code></td>
+</tr>
+<tr>
+<td><code>/imu/data_raw</code>, <code>/imu/mag</code></td>
+<td><code>/sensors/imu/data_raw</code>, <code>/sensors/imu/mag</code></td>
+</tr>
+<tr>
+<td><code>/imu/data</code> (after Madgwick)</td>
+<td><code>/sensors/imu/data</code></td>
+</tr>
+<tr>
+<td><code>/camera/image_raw</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
+</tr>
+<tr>
+<td><code>/camera/right/...</code></td>
+<td><code>/sensors/camera/front_right/...</code></td>
+</tr>
+<tr>
+<td>(none yet)</td>
+<td><code>/sensors/camera/rear/...</code></td>
+</tr>
+<tr>
+<td>(none yet: the lidar)</td>
+<td><code>/sensors/lidar/points</code></td>
+</tr>
+<tr>
+<td><code>/radar/points</code></td>
+<td><code>/sensors/radar/points</code></td>
+</tr>
+<tr>
+<td><code>/battery_status</code></td>
+<td><code>/vehicle/battery</code></td>
+</tr>
+<tr>
+<td><code>/vehicle/odom</code>, <code>/vehicle/status</code></td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td>(new: the wheel nodes)</td>
+<td><code>/vehicle/wheel_speed</code></td>
+</tr>
+<tr>
+<td><code>/to_can_bus</code>, <code>/from_can_bus</code></td>
+<td><code>/can/tx</code>, <code>/can/rx</code></td>
+</tr>
+<tr>
+<td><code>/odometry/local</code></td>
+<td><code>/localization/odom/local</code></td>
+</tr>
+<tr>
+<td><code>/odometry/global</code></td>
+<td><code>/localization/odom/global</code></td>
+</tr>
+<tr>
+<td><code>/odometry/gps</code></td>
+<td><code>/localization/gps/odom</code></td>
+</tr>
+<tr>
+<td><code>/gps/filtered</code></td>
+<td><code>/localization/gps/fix</code></td>
+</tr>
+<tr>
+<td><code>/radar/clusters</code></td>
+<td><code>/perception/radar/clusters</code></td>
+</tr>
+<tr>
+<td><code>/lane_geometry</code>, <code>/lane_geometry_status</code></td>
+<td><code>/perception/lane/geometry</code>, <code>/perception/lane/status</code></td>
+</tr>
+<tr>
+<td><code>/perception/stop</code></td>
+<td><code>/perception/stop_sign</code></td>
+</tr>
+<tr>
+<td><code>/joy</code></td>
+<td><code>/drivers/joy/raw</code></td>
+</tr>
+<tr>
+<td><code>/cmd_vel/joy</code>, <code>/cmd_vel/nav</code>, ...</td>
+<td><code>/drivers/joy/cmd_vel</code>, <code>/drivers/nav/cmd_vel</code>, ...</td>
+</tr>
+<tr>
+<td><code>/cmd_vel</code> (twist_mux out)</td>
+<td><code>/control/cmd_vel</code></td>
+</tr>
+<tr>
+<td><code>/cmd_vel_smoothed</code></td>
+<td><code>/control/cmd_vel_smoothed</code></td>
+</tr>
+<tr>
+<td><code>/ego/actuator_cmd</code></td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td><code>/estop</code></td>
+<td><code>/safety/estop</code></td>
+</tr>
+<tr>
+<td><code>/collision_monitor_state</code></td>
+<td><code>/safety/collision_monitor/state</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="how-we-would-do-it">How we would do it</h2>
+<ol>
+<li>Change <code>docs/interfaces.yaml</code> first (the contract), and regenerate <code>interfaces.md</code>.</li>
+<li>Rename in the launch files and configs with <strong>remaps</strong>: most stock nodes (robot_localization,
+   ublox, twist_mux) take a remap, not a code change.</li>
+<li>A test that checks every name in <code>interfaces.yaml</code> starts with an area from the table.</li>
+<li><code>pixi run check sim</code> and <code>bench-check</code> must still pass.</li>
+</ol>
+</section>
+<section class="card"><h2 id="why-the-two-ekfs-dont-talk">Why the two EKFs don't talk</h2>
+<p>The local EKF doesn't feed the global one, and that is on purpose: robot_localization's
+standard setup. Each one fuses the raw sensors itself.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><code>ekf_local</code></th>
+<th><code>ekf_global</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uses</td>
+<td>wheel speed, IMU</td>
+<td>wheel speed, IMU, <strong>GPS</strong></td>
+</tr>
+<tr>
+<td>Gives</td>
+<td>a smooth position that never jumps</td>
+<td>a true position that may jump</td>
+</tr>
+<tr>
+<td>Publishes</td>
+<td><code>odom → base_link</code></td>
+<td><code>map → odom</code></td>
+</tr>
+<tr>
+<td>Who uses it</td>
+<td>Nav2's controller (steering)</td>
+<td>Nav2's planner, the HUD's map</td>
+</tr>
+</tbody>
+</table></div>
+<p>If the global EKF used the local one's output, the same wheel and IMU data would count
+twice, and it would be too sure of itself. Feeding both from the raw sensors avoids that.</p>
+<p>They do meet, but in <strong>TF</strong>, not on a topic: <code>ekf_global</code> publishes only the correction
+<code>map → odom</code>, worked out on top of <code>ekf_local</code>'s <code>odom → base_link</code>. So <code>rqt_graph</code> shows
+no line between them; <code>ros2 run rqt_tf_tree rqt_tf_tree</code> shows the chain. The launch
+file's first line said "the local EKF feeds the global EKF"; it now says this (14 Oct).</p></section>
+<nav class="prevnext"><a class="prev" href="conventions.html"><small>Previous</small>← Conventions</a>
+<a class="next" href="interfaces.html"><small>Next</small>Topics →</a></nav>
+</main>
+<footer>Source: <code>docs/naming.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

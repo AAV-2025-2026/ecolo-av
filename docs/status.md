@@ -38,7 +38,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Obstacles in Nav2 | the radar in the local costmap; `collision_monitor`'s stop zone; `camera_obstacles` | [[works]] on the bench: the stop zone stops the car 0.3-0.4 m before a box as wide as the lane. Open: the car weaves up to 1.5 m off its line (N7), so it can pass beside a narrow box; the stop zone flickers at its edge. The camera layer is off until the cameras are calibrated (Q22) |
 | HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
 | CARLA | `aav_carla` | [[stub]] parked (Q31) |
-| Lidar | | [[later]] |
+| Lidar | on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22) | [[missing]] |
 
 ## Builds and tests
 
