@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+# hud-core: the HUD's state, formatting and e-stop logic. No ROS, no raylib:
+#   `cargo test -p hud-core` runs anywhere.
+# hud-app: the program itself, raylib on the main thread. The `ros` feature (on by
+#   default, for colcon) adds the rclrs node; without it only --demo works:
+#   `cargo run -p hud-app --no-default-features -- --demo`
+members = ["crates/hud-core", "crates/hud-app"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false

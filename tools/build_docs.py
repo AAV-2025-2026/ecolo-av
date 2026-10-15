@@ -68,7 +68,7 @@ PAGES = [
     ('naming.md', 'Topic areas', 'Topic names by area (Proposed), and why the EKFs meet in TF'),
     ('interfaces.md', 'Topics', 'Every topic, service, action and frame'),
     ('car_measurements.md', 'Car numbers', 'vehicle.yaml, and how to measure the car'),
-    ('hud.md', 'HUD', 'The touchscreen app'),
+    ('hud.md', 'HUD', 'The in-car screen: Rust and raylib; the Flutter app'),
 ]
 BUILT = {name for name, _, _ in PAGES}
 RELEASE = 'release-notes.md'   # also printed on its own, with a cover, to share

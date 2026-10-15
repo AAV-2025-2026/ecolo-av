@@ -1,0 +1,11 @@
+[package]
+name = "hud-core"
+description = "The in-car HUD's state, formatting and e-stop logic, with no ROS and no raylib"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_yaml_ng = "0.10"
+thiserror = "2"

@@ -5,10 +5,63 @@ to our topics (10 October). The app now matches it (11 October): an e-stop butto
 car's status, and the camera from the back end.
 
 **Decided 11 October (Ben):** the HUD becomes one Rust program, raylib and rclrs, that is
-also its ROS node. This app stays until the new one matches it. Still open (Q29): which
-screen, and GPS destinations this year.
+also its ROS node. Its first screen runs since 15 October:
+[the HUD in Rust](#the-hud-in-rust-raylib). The Flutter app stays until the new one
+matches it. Still open (Q29): which screen, and GPS destinations this year.
 
-## What it is
+## The HUD in Rust (raylib)
+
+`src/hud/aav_hud_raylib`: one window, which is also the ROS node `hud`.
+
+![The driving screen, with pretend data (--demo)](img/hud-raylib.png)
+
+| Panel | Shows |
+|---|---|
+| Top strip | mode, armed, gear (D/R/P), e-stop on/off, battery, faults |
+| Speed | km/h, big. Grey with "OLD" when `/vehicle/status` stops |
+| Controls | steering (left of centre = left), throttle, brake |
+| Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it |
+| E-STOP | the button: `/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
+| Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago |
+| GPS | is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age |
+
+### Run it
+
+```bash
+pixi run hud-demo                  # pretend data: no ROS, no car, any Mac
+pixi run build && pixi run hud     # the real node (ros2 launch aav_hud_raylib hud.launch.py)
+pixi run hud fullscreen:=true      # full screen; F11 switches too
+```
+
+Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
+`src/hud/aav_hud_raylib`. The first build compiles raylib (cmake, about a minute).
+
+### How it's built
+
+| Part | What it does |
+|---|---|
+| `crates/hud-core` | the logic, no ROS, no raylib: state, GPS kinds, OK/STALE/NEVER, the e-stop burst. `cargo test -p hud-core` (in `tools/test.sh`) |
+| `crates/hud-app` | the window (raylib, main thread) and the node (rclrs, its own thread, news over a channel). `--demo` swaps the node for pretend data |
+| `config/hud.yaml` | every topic name, the only place they're written. Rename one there, or `--ros-args -p gps_topic:=/x` |
+
+- The GPS panel reads `/gps/fix`, the receiver itself, not `/gps/filtered`: it answers
+  "does the GPS work?". navsat_transform marks every `/gps/filtered` message as RTK.
+- NavSatFix can't tell RTK float from fixed. The HUD calls it fixed at 5 cm or better.
+- Not in `car.launch.py` yet. On Linux without X11's headers, colcon skips it with a
+  warning.
+
+### Tested (15 October, a Mac)
+
+| What | Result |
+|---|---|
+| `--demo`, in a window and full screen | draws; screenshots checked |
+| The node, with `ros2 topic pub` and `image_publisher` (private domain) | speed, faults, RTK FIXED, 2D FIX, STOP SIGN and the camera picture shown |
+| Next to bench mode (`bench.launch.py nav:=false`, private domain) | every bench topic OK: status, GPS 3D fix, battery 100 %, the bench camera. `/perception/stop` NEVER (perception is off there) |
+| One press, through the real node, to another node (`cargo test`) | exactly 5 trues, no false, each "sent to 1 node" |
+| Ctrl-C to `ros2 launch` | the window closes, "finished cleanly" |
+| A click on the window's button | not tested: macOS blocks clicks from scripts  |
+
+## The Flutter app (2025-26): what it is
 
 Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26, two
 800x480 screens):

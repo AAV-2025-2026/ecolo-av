@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">11 min read · 11 sections</div></header>
+<div class="meta">14 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -42,14 +42,128 @@
 <a href="car_measurements.html">Car numbers</a>
 <a class="here" href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-it-is">What it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#the-e-stop-button">The e-stop button</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#what-changed-in-the-app-11-october">What changed in the app (11 October)</a><a href="#get-flutter">Get Flutter</a><a href="#test-the-app">Test the app</a><a href="#run-it">Run it</a><a href="#on-the-bench-11-october">On the bench (11 October)</a><a href="#the-place-database">The place database</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#the-e-stop-button">The e-stop button</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#what-changed-in-the-app-11-october">What changed in the app (11 October)</a><a href="#get-flutter">Get Flutter</a><a href="#test-the-app">Test the app</a><a href="#run-it_1">Run it</a><a href="#on-the-bench-11-october">On the bench (11 October)</a><a href="#the-place-database">The place database</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
 <div class="lead"><p>The 2025-26 team built a touchscreen app for the car. Its back end, <code>aav_hud</code>, is ported
 to our topics (10 October). The app now matches it (11 October): an e-stop button, the
 car's status, and the camera from the back end.</p>
 <p><strong>Decided 11 October (Ben):</strong> the HUD becomes one Rust program, raylib and rclrs, that is
-also its ROS node. This app stays until the new one matches it. Still open (Q29): which
-screen, and GPS destinations this year.</p></div>
-<section class="card"><h2 id="what-it-is">What it is</h2>
+also its ROS node. Its first screen runs since 15 October:
+<a href="#the-hud-in-rust-raylib">the HUD in Rust</a>. The Flutter app stays until the new one
+matches it. Still open (Q29): which screen, and GPS destinations this year.</p></div>
+<section class="card"><h2 id="the-hud-in-rust-raylib">The HUD in Rust (raylib)</h2>
+<p><code>src/hud/aav_hud_raylib</code>: one window, which is also the ROS node <code>hud</code>.</p>
+<p><img alt="The driving screen, with pretend data (--demo)" src="../img/hud-raylib.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Panel</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top strip</td>
+<td>mode, armed, gear (D/R/P), e-stop on/off, battery, faults</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>km/h, big. Grey with "OLD" when <code>/vehicle/status</code> stops</td>
+</tr>
+<tr>
+<td>Controls</td>
+<td>steering (left of centre = left), throttle, brake</td>
+</tr>
+<tr>
+<td>Camera</td>
+<td>the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it</td>
+</tr>
+<tr>
+<td>E-STOP</td>
+<td>the button: <code>/estop</code> true 5 times, 0.1 s apart. Never false. Says whether anything heard it</td>
+</tr>
+<tr>
+<td>Topics</td>
+<td>every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td>is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="run-it">Run it</h3>
+<pre class="highlight"><code class="language-bash">pixi run hud-demo                  # pretend data: no ROS, no car, any Mac
+pixi run build &amp;&amp; pixi run hud     # the real node (ros2 launch aav_hud_raylib hud.launch.py)
+pixi run hud fullscreen:=true      # full screen; F11 switches too</code></pre>
+<p>Without Pixi: <code>cargo run -p hud-app --no-default-features -- --demo</code>, in
+<code>src/hud/aav_hud_raylib</code>. The first build compiles raylib (cmake, about a minute).</p>
+<h3 id="how-its-built">How it's built</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>crates/hud-core</code></td>
+<td>the logic, no ROS, no raylib: state, GPS kinds, OK/STALE/NEVER, the e-stop burst. <code>cargo test -p hud-core</code> (in <code>tools/test.sh</code>)</td>
+</tr>
+<tr>
+<td><code>crates/hud-app</code></td>
+<td>the window (raylib, main thread) and the node (rclrs, its own thread, news over a channel). <code>--demo</code> swaps the node for pretend data</td>
+</tr>
+<tr>
+<td><code>config/hud.yaml</code></td>
+<td>every topic name, the only place they're written. Rename one there, or <code>--ros-args -p gps_topic:=/x</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The GPS panel reads <code>/gps/fix</code>, the receiver itself, not <code>/gps/filtered</code>: it answers
+  "does the GPS work?". navsat_transform marks every <code>/gps/filtered</code> message as RTK.</li>
+<li>NavSatFix can't tell RTK float from fixed. The HUD calls it fixed at 5 cm or better.</li>
+<li>Not in <code>car.launch.py</code> yet. On Linux without X11's headers, colcon skips it with a
+  warning.</li>
+</ul>
+<h3 id="tested-15-october-a-mac">Tested (15 October, a Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--demo</code>, in a window and full screen</td>
+<td>draws; screenshots checked</td>
+</tr>
+<tr>
+<td>The node, with <code>ros2 topic pub</code> and <code>image_publisher</code> (private domain)</td>
+<td>speed, faults, RTK FIXED, 2D FIX, STOP SIGN and the camera picture shown</td>
+</tr>
+<tr>
+<td>Next to bench mode (<code>bench.launch.py nav:=false</code>, private domain)</td>
+<td>every bench topic OK: status, GPS 3D fix, battery 100 %, the bench camera. <code>/perception/stop</code> NEVER (perception is off there)</td>
+</tr>
+<tr>
+<td>One press, through the real node, to another node (<code>cargo test</code>)</td>
+<td>exactly 5 trues, no false, each "sent to 1 node"</td>
+</tr>
+<tr>
+<td>Ctrl-C to <code>ros2 launch</code></td>
+<td>the window closes, "finished cleanly"</td>
+</tr>
+<tr>
+<td>A click on the window's button</td>
+<td>not tested: macOS blocks clicks from scripts</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</h2>
 <p>Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26, two
 800x480 screens):</p>
 <div class="table-wrap"><table>
@@ -319,7 +433,7 @@ pixi run test             # everything; includes hud-test when vendor/flutter ex
 <li>The back end has 98 tests of its own; <code>pixi run test</code> runs them too.</li>
 </ul>
 </section>
-<section class="card"><h2 id="run-it">Run it</h2>
+<section class="card"><h2 id="run-it_1">Run it</h2>
 <pre class="highlight"><code class="language-bash">pixi run bench hud:=true hud_port:=5123      # the back end, with the bench car
 ros2 launch aav_hud hud.launch.py            # the back end alone, next to a profile</code></pre>
 <ul>

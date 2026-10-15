@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">6 min read · 4 sections</div></header>
+<div class="meta">7 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -188,6 +188,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td>HUD back end and app</td>
 <td><code>aav_hud</code>, <code>hud/</code></td>
 <td><span class="badge b-works">works</span> on the bench: the app's e-stop button stops the car in 0.3 s. <span class="badge b-untested">untested</span> on the car's screen</td>
+</tr>
+<tr>
+<td>HUD in Rust (raylib)</td>
+<td><code>aav_hud_raylib</code></td>
+<td><span class="badge b-works">works</span> on a Mac: <code>--demo</code>, and as a node fed by <code>ros2 topic pub</code>; its e-stop reaches a subscriber as 5 trues. <span class="badge b-works">works</span> next to bench mode too. <span class="badge b-untested">untested</span> on a Pi and on the car's screen</td>
 </tr>
 <tr>
 <td>CARLA</td>

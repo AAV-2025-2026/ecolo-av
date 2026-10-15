@@ -39,7 +39,10 @@ get-hud-map = { cmd = "tools/get_hud_map.sh", description = "Download the HUD ap
 get-flutter = { cmd = "tools/get_flutter.sh", description = "Download Flutter 3.35.7 into vendor/flutter (about 4.3 GB), for the HUD app" }
 flutter = { cmd = "../../tools/flutter.sh", cwd = "hud/flutter_pi", description = "Flutter from vendor/flutter, in hud/flutter_pi: pixi run flutter doctor" }
 hud-test = { cmd = "tools/hud_test.sh", description = "The HUD app: flutter pub get, analyze and test (needs pixi run get-flutter)" }
-rust-listener = { cmd = "tools/ros.sh cargo run -q --manifest-path examples/rust-listener/Cargo.toml", description = "A Rust (rclrs) node: prints ego's commands" }
+# The HUD in Rust and raylib (docs/hud.md). hud-demo needs no ROS: pretend data.
+hud = { cmd = "tools/ros.sh ros2 launch aav_hud_raylib hud.launch.py", description = "The in-car screen (raylib), as the ROS node hud: pixi run hud fullscreen:=true" }
+hud-demo = { cmd = "cargo run --release -q --locked --manifest-path src/hud/aav_hud_raylib/Cargo.toml -p hud-app --no-default-features -- --demo", description = "The in-car screen with pretend data: no ROS, no car" }
+rust-listener ={ cmd = "tools/ros.sh cargo run -q --manifest-path examples/rust-listener/Cargo.toml", description = "A Rust (rclrs) node: prints ego's commands" }
 # The spine's board program, for a Pico 2 (docs/rust-firmware.md). spine-uf2 only makes a
 # file; spine-flash writes to a Pico 2, through a debug probe, so run it only on the bench.
 spine-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/spine-pico2 spine-pico2.uf2", cwd = "firmware/spine/boards/pico2", description = "Build the spine's Pico 2 program as firmware/spine/boards/pico2/spine-pico2.uf2: hold BOOTSEL, plug in, drag it on" }
