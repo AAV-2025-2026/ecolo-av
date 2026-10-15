@@ -34,7 +34,7 @@ OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
 READ_FIRST = 10    # PAGES[:10] are the reading list
-LEARN_END = 11     # PAGES[10:11] are the learn pages; the rest are reference
+LEARN_END = 12     # PAGES[10:12] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for)
 PAGES = [
@@ -49,6 +49,7 @@ PAGES = [
     ('decisions.md', 'Decisions', 'Decided, Tentative, Proposed, and Q1–Q34'),
     ('infrastructure.md', 'Infrastructure', 'The repo, Pixi, the contracts, profiles, computers'),
     ('learn-car.md', 'The car, box by box', 'Every computer, board and wire on the car'),
+    ('learn-journey.md', "A command's journey", 'One push and one Nav2 goal, hand to wheels, and back'),
     ('status.md', 'Status', "What works, what's untested, what's missing"),
     ('howto-driver.md', 'Build a driver', 'A new driver, from an empty folder to the turtle'),
     ('costmaps.md', 'Costmaps', 'How Nav2 sees obstacles; draw your first map'),
