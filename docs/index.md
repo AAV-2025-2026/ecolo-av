@@ -27,6 +27,7 @@ moves the car.**
 | after what this version does, at a glance | [Release notes](release-notes.md) |
 | new to the team | [Your first day](first-day.md), then your card in [Starting points](team.md) |
 | new to the car, or to ROS | [The car, box by box](learn-car.md), then [A command's journey](learn-journey.md) |
+| a professor, or anyone with a question | [Questions people ask](faq.md) |
 | putting the whole thing together | [Infrastructure](infrastructure.md), then [Work](work.md) and [Decisions](decisions.md) |
 | looking for what a package does | [Packages](packages.md) |
 | writing a driver, or drawing a map | [Build a driver](howto-driver.md), [Costmaps](costmaps.md) |
