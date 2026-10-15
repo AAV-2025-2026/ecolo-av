@@ -32,8 +32,11 @@ from sensor_msgs_py import point_cloud2
 
 # m behind and beside the body's outline that is still the car: the rear camera's housing,
 # the mirrors (the simulated lidar sees something of the car's 0.5 m from the rear axle).
-# Not ahead of the front bumper: that is the stop zone's.
 SELF_MARGIN = 0.3
+# m ahead of the front bumper, only: the front cameras' housings at the roof's edge (the
+# simulated lidar sees them 1.8 m from the rear axle). The stop zone starts at the bumper,
+# so keep it small.
+FRONT_MARGIN = 0.1
 
 
 class LidarScan(Node):
@@ -48,7 +51,7 @@ class LidarScan(Node):
             name: float(self.declare_parameter(name, getattr(default, name)).value)
             for name in ('min_height', 'max_height', 'angle_min', 'angle_max',
                          'angle_increment', 'range_min', 'range_max')},
-            body=(min(xs) - SELF_MARGIN, max(xs), max(ys) + SELF_MARGIN))
+            body=(min(xs) - SELF_MARGIN, max(xs) + FRONT_MARGIN, max(ys) + SELF_MARGIN))
         self.scan_time = self.declare_parameter('scan_time', 0.1).value
         mount = car['sensors']['lidar_link']
         self.xyz, self.rpy = mount['xyz'], mount['rpy']
