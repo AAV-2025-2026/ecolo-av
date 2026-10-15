@@ -74,7 +74,7 @@ Details: [docs/platforms.md](docs/platforms.md), "Moving the Orin to JetPack 7.2
 | B4 | **Brake safe state**: what the brake does with power cut, and at boot | S | audit S2; the Jrk G2 settings (D6) | written in `vehicle.yaml` / the firmware; tested on stands | | |
 | B5 | **Calibrate** steering (centre, full lock each way), throttle (deadband, top speed), brake (travel) | M | B1; the Jrk settings (D6, N9); measurements (M5) | `vehicle.yaml` has measured numbers; the scripted drive goes straight within 0.5 m over 10 m | | |
 | B6 | **Steering position feedback**: the actuator's own pot, or the KTC-100. The 2024-25 firmware read it from the steering Jrk G2 (`getScaledFeedback()`, docs/older-code.md): try that first | M | audit D6, D7 (wire count) | steering angle in `/vehicle/status`, within 1° | | |
-| B7 | **CAN (the KEFC plan)**: decide the board, then order the parts | M | audit C1 (is U7 wired to the ESP32?); Ben's decision on `wt/can-v2` | `candump` shows the spine's frames on the Orin | | |
+| B7 | **CAN (the KEFC plan)**: decide the board, then order the parts | M | audit C1 (is U7 wired to the ESP32?). The ROS side is ready: CAN v0.2.0 (wheel speed frames, 100 ms timeout) and `spine_bridge`'s `/vehicle/wheels` merged 15 Oct (`can-v2-work`) | `candump` shows the spine's frames on the Orin | | |
 | B8 | **The first drive on the ground**, walking pace, empty lot, safety driver | S | B1, B2, B3, B5 | `READ-ME-A-TO-B.md` test 5: a scripted 10 m at 0.5 m/s | | |
 
 ## C. The sensors
@@ -87,7 +87,7 @@ Details: [docs/platforms.md](docs/platforms.md), "Moving the Orin to JetPack 7.2
 | C4 | **Fix the camera freezes** | M | Friday's 10-minute watch (`FRIDAY-TODO.md` part 5) | 1 hour with no freeze, logged | | |
 | C5 | **Radar** on `ti_ros2_driver`, its clusters in Nav2 | S | audit N7 | `/perception/radar/clusters` while someone walks in front | | |
 | C6 | **Lidar driver**, its points into Nav2's costmap and the collision monitor | M | audit N6 (make, model, IP) | an obstacle in front shows in RViz's local costmap | | |
-| C7 | **Wheel encoder**: alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors) | M | audit D4, C2 | `/vehicle/status` speed matches a GPS speed within 10% at 1 m/s | | |
+| C7 | **Wheel encoder**: alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors: `wheel-core` and `spine_bridge` already read them, 15 Oct) | M | audit D4, C2 | `/vehicle/status` speed matches a GPS speed within 10% at 1 m/s | | |
 | C8 | **Stable device names**: USB serial numbers into `tools/udev/99-aav.rules` | S | the survey's "by-id" lists | unplug and replug everything: same names | | |
 | C9 | **Battery**: read the KM110F, or drop it from the plan | S | audit N8 | `/vehicle/battery` shows the voltage, or a decision written down | | |
 

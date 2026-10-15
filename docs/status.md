@@ -11,7 +11,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 
 | Box | Implemented by | Status |
 |---|---|---|
-| Wheel speed | `aav_legacy` `encoder_udp`; later the spine | [[untested]] needs the car |
+| Wheel speed, today's car | `aav_legacy` `encoder_udp` (one wheel, into `/vehicle/odom`) | [[untested]] needs the car |
+| Wheel speed, the CAN wheel nodes (KEFC plan, CAN v0.2.0) | `spine_bridge`: WHEEL_SPEED_L/R (0x200, 0x201) into `/vehicle/wheels` and `/vehicle/odom`'s speed; `wheel-core` (the nodes' logic) | [[works]] on the bench, against `spine_sim`'s wheel frames (15 Oct). [[missing]] on the car: no wheel node boards yet, and Ben hasn't approved DBC v0.2.0 |
 | IMU | `aav_imu_yahboom` (Rust) + `imu_filter_madgwick` | [[untested]] needs the device; gives the 2025-26 C++ driver's answers, bit for bit |
 | GPS | `ublox_gps` (the stock u-blox driver); `nmea` and `ublox_dgnss` are options | [[untested]] in Pixi on every computer; needs the device. The default is Tentative (Q18) |
 | Car model | `aav_description` | [[works]] numbers are guesses |
@@ -29,7 +30,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Gazebo's road world | `aav_gazebo` `world:=road` | [[works]] on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) (with `lidar:=true`) render headless; `pixi run sim-check`, `--lidar --obstacle` and `--perception` pass. With YOLO and the lidar together it was flaky, so the lidar is off by default. [[untested]] on Linux, which needs EGL ([Simulation](simulation.md)) |
 | Real car | `aav_spine` | [[works]] on the bench, against `spine_sim`: arming, driving, both e-stops |
 | Today's car | `aav_legacy` | [[untested]] on the car |
-| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 54 tests, and on the bench |
+| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 59 tests, and on the bench |
+| Wheel node logic (15 Oct) | `firmware/spine/crates/wheel-core` | [[untested]] 9 tests; no board crate yet (`boards/esp32s3-wheel`, [Rust firmware](rust-firmware.md)) |
 | Spine device drivers and glue | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board` | [[works]] 137 tests, against mocks |
 | Spine board program | `firmware/spine/boards/pico2` | [[untested]] builds for a Pico 2, and its UF2 file checks out; never flashed. The car's chip is still Q10–Q13 |
 | Wheel encoder, in Rust (15 Oct) | `firmware/spine/boards/wheel-encoder-pico2`, crate `wheel-encoder` | [[untested]] builds, its UF2 checks out, 12 tests; never flashed. Same packet as the C++ (shared examples). The car's Pico 2 still runs the C++ |

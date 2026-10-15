@@ -73,11 +73,11 @@ we are. Details live in the pages linked from each row.
 | Actuator | We command it | We need to read back | Plan |
 |---|---|---|---|
 | **Steering** | yes | the real wheel angle | the Jrk motor controller already reports its position (the 2024-25 firmware read it); wire it into `/vehicle/steering` |
-| **Throttle** | yes | wheel speed: is it moving as asked? | the wheel encoder exists (one wheel); check it's reliable, maybe a second wheel |
+| **Throttle** | yes | wheel speed: is it moving as asked? | the wheel encoder exists (one wheel); check it's reliable. Or a Hall sensor on each front wheel (the KEFC plan): CAN v0.2.0 and `spine_bridge` already read them into `/vehicle/wheels` and `/vehicle/odom` (bench, 15 Oct) |
 | **Brake** | yes | brake position or pressure | a position sensor on the brake actuator: to choose after the audit |
 | **E-stop** | the red button | its state | the spine reads it; never in its path |
 
-The topics for all four already exist (`/vehicle/steering`, `/throttle`, `/brake`, `/wheels`); the simulator fills them today.
+The topics for all four already exist (`/vehicle/steering`, `/throttle`, `/brake`, `/wheels`); the simulator fills them today, and the bench fills `/wheels` from the CAN wheel frames.
 
 ## 4. The order
 

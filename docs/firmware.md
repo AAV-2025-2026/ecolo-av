@@ -60,7 +60,7 @@ e-stop button ─────────────────► stops the c
       │
       └─ a spare contact ──► spine (only listens) ──► ROS and the HUD: "e-stop pressed"
 ```
-- Stop by itself when commands stop: a 200 ms watchdog.
+- Stop by itself when commands stop: a 100 ms watchdog (DBC v0.2.0, from the KEFC plan).
 
 Who wins, highest first:
 
@@ -88,6 +88,13 @@ rejected.
 | 0x100 | `DRIVE_CMD` | Orin → spine | 50 Hz | target speed, steering angle, limits, armed |
 | 0x180 | `VEHICLE_FEEDBACK` | spine → Orin | 50 Hz | measured speed and steering, wheel ticks |
 | 0x181 | `VEHICLE_STATUS` | spine → Orin | 10 Hz | mode, armed, e-stop, throttle %, brake %, faults |
+| 0x200 | `WHEEL_SPEED_L` | left wheel node → Orin | 100 Hz | left front wheel speed (m/s), pulse count |
+| 0x201 | `WHEEL_SPEED_R` | right wheel node → Orin | 100 Hz | right front wheel speed (m/s), pulse count |
+
+DBC v0.2.0 (15 Oct, [The KEFC CAN plan](can-plan.md)) added the wheel frames and cut the
+timeout to 100 ms. The wheel frames' speed is signed, 1 mm/s a step (±32 m/s). One Hall
+sensor can't tell direction, so `direction_known` = 0 and `spine_bridge` takes the sign
+from the drive direction.
 
 Both sides test against the same generated frames. To change a frame:
 1. Edit the DBC.
@@ -97,13 +104,13 @@ Both sides test against the same generated frames. To change a frame:
 ## firmware/spine: the Rust code
 
 `crates/spine-core` is plain `no_std` Rust: no allocator, no dependencies, no hardware.
-`cargo test` runs its 54 tests on any laptop.
+`cargo test` runs its 59 tests on any laptop.
 
 | Module | Does |
 |---|---|
 | `spine.rs` | the priorities above: `Spine::step(&Inputs) -> Outputs`, about 100 times a second. Its `SpineConfig` holds the limits: 3.0 m/s, ±0.5 rad, 0.6 rad/s; 1.5 m/s² up, 2.5 m/s² down |
-| `protocol.rs` | encodes and decodes the four frames, with the CRC and counter checks |
-| `watchdog.rs` | the 200 ms command watchdog |
+| `protocol.rs` | encodes and decodes the six frames, with the CRC and counter checks |
+| `watchdog.rs` | the 100 ms command watchdog |
 | `speed_loop.rs` | PI speed control into throttle and brake, never both at once. A stop brakes until the car is still, then holds |
 | `limits.rs` | the helpers that apply them: `slew()` and `abs()` |
 | `encoder.rs` | quadrature decoding, and speed from the time between counts |

@@ -7,5 +7,7 @@
 pub mod bench;
 pub mod plant;
 
-pub use bench::{Bench, Frame, FEEDBACK_PERIOD_MS, STATUS_PERIOD_MS};
+pub use bench::{
+    Bench, Frame, BENCH_WHEELS, FEEDBACK_PERIOD_MS, STATUS_PERIOD_MS, WHEEL_PERIOD_MS,
+};
 pub use plant::{Plant, PlantConfig, Pose};

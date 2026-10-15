@@ -167,7 +167,8 @@ class GazeboAdapter(Node):
             pub.publish(a)
 
     def on_joints(self, msg):
-        w = WheelSpeeds(**wheels.ground_speeds(msg.name, msg.velocity, self.wheel_radius))
+        w = WheelSpeeds(**wheels.ground_speeds(msg.name, msg.velocity, self.wheel_radius),
+                        direction_measured=True)
         w.header.stamp = msg.header.stamp
         w.header.frame_id = 'base_link'
         self.wheels_pub.publish(w)

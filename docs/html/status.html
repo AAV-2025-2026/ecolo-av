@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">8 min read · 4 sections</div></header>
+<div class="meta">9 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -76,9 +76,14 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </thead>
 <tbody>
 <tr>
-<td>Wheel speed</td>
-<td><code>aav_legacy</code> <code>encoder_udp</code>; later the spine</td>
+<td>Wheel speed, today's car</td>
+<td><code>aav_legacy</code> <code>encoder_udp</code> (one wheel, into <code>/vehicle/odom</code>)</td>
 <td><span class="badge b-untested">untested</span> needs the car</td>
+</tr>
+<tr>
+<td>Wheel speed, the CAN wheel nodes (KEFC plan, CAN v0.2.0)</td>
+<td><code>spine_bridge</code>: WHEEL_SPEED_L/R (0x200, 0x201) into <code>/vehicle/wheels</code> and <code>/vehicle/odom</code>'s speed; <code>wheel-core</code> (the nodes' logic)</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>'s wheel frames (15 Oct). <span class="badge b-missing">missing</span> on the car: no wheel node boards yet, and Ben hasn't approved DBC v0.2.0</td>
 </tr>
 <tr>
 <td>IMU</td>
@@ -168,7 +173,12 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Spine firmware logic</td>
 <td><code>firmware/spine/crates/spine-core</code></td>
-<td><span class="badge b-works">works</span> 54 tests, and on the bench</td>
+<td><span class="badge b-works">works</span> 59 tests, and on the bench</td>
+</tr>
+<tr>
+<td>Wheel node logic (15 Oct)</td>
+<td><code>firmware/spine/crates/wheel-core</code></td>
+<td><span class="badge b-untested">untested</span> 9 tests; no board crate yet (<code>boards/esp32s3-wheel</code>, <a href="rust-firmware.html">Rust firmware</a>)</td>
 </tr>
 <tr>
 <td>Spine device drivers and glue</td>

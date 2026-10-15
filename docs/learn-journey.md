@@ -89,7 +89,7 @@ written yet.
 |---|---|---|---|---|---|---|
 | 5 | `spine_bridge` on Orin #1 | `/can/tx` | `can_msgs/Frame`: `DRIVE_CMD` 0x100 (speed, steering) | 50 Hz, only while ego is fresh | not armed: the board ignores it (`/spine/arm`) | `ros2 topic echo /can/tx` |
 | 6 | `socket_can_sender` (stock `ros2_socketcan`) | `can0`, 500 kbit/s | a CAN frame, with a counter and a CRC | 50 Hz | `can0` not up; a missing 120 Ω end | `candump can0` (Linux, can-utils) |
-| 7 | the control board's ESP32 | I2C | its own speed loop, into Jrk targets and the DAC | about 100 Hz | no good frame for 200 ms (100 ms in the KEFC plan): it brakes | `VEHICLE_STATUS` 0x181 on the bus |
+| 7 | the control board's ESP32 | I2C | its own speed loop, into Jrk targets and the DAC | about 100 Hz | no good frame for 100 ms: it brakes | `VEHICLE_STATUS` 0x181 on the bus |
 | 8 | Jrk G2s, DAC | wires | steering (read back from the KTC-100 pot), brake, throttle | | a driver fault: it brakes and sets a fault bit | `ros2 topic echo /vehicle/status` |
 
 The frames are defined in `firmware/can/aav.dbc` ([Firmware](firmware.md)). The KEFC plan

@@ -119,7 +119,8 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 | Part | What it is | Status |
 |---|---|---|
 | `can/aav.dbc` | the CAN contract: four frames between the Orin and the spine | draft v0.1.0 |
-| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 200 ms watchdog, the speed loop, the encoder | [[works]] 54 tests, and the bench |
+| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder | [[works]] 59 tests, and the bench |
+| `spine/crates/wheel-core` | the front wheel nodes' logic in Rust: pulses to speed, the WHEEL_SPEED frame | [[works]] 9 tests, and the bench; no board yet |
 | `spine/crates/aav-inputs` | debounced switches, an e-stop that trips at once, counting with a lockout | [[works]] 9 tests |
 | `spine/crates/jrk-g2` | the Pololu Jrk G2 (steering, brake) over I2C | [[works]] 14 tests, against mocks |
 | `spine/crates/ad5311` | the throttle DAC over I2C | [[works]] 10 tests, against mocks |

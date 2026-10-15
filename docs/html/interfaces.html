@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">23 min read · 4 sections</div></header>
+<div class="meta">24 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -201,7 +201,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).</td>
+<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.</td>
 </tr>
 <tr>
 <td><code>/vehicle/status</code></td>
@@ -238,10 +238,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/vehicle/wheels</code></td>
 <td><code>aav_interfaces/msg/WheelSpeeds</code></td>
-<td><code>gazebo_adapter</code></td>
+<td><code>gazebo_adapter</code>, <code>spine_bridge</code></td>
 <td>-</td>
-<td>sim</td>
-<td>Each wheel's ground speed (m/s), NaN where not measured. Gazebo gives all four (its wheel joints); the car has one encoder, still read as /vehicle/odom.</td>
+<td>sim, bench</td>
+<td>Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. The 2025-26 car (aav_legacy) has one encoder, read only as /vehicle/odom.</td>
 </tr>
 <tr>
 <td><code>/vehicle/joint_states</code></td>
@@ -273,7 +273,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>socket_can_receiver</code>, <code>spine_sim</code></td>
 <td><code>spine_bridge</code></td>
 <td>bench</td>
-<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz. On the bench, spine_sim sends them.</td>
+<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench, spine_sim sends them all.</td>
 </tr>
 <tr>
 <td><code>/sensors/imu/data_raw</code></td>

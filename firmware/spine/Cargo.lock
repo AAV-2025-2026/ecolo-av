@@ -128,6 +128,13 @@ name = "spine-core"
 version = "0.1.0"
 
 [[package]]
+name = "wheel-core"
+version = "0.1.0"
+dependencies = [
+ "spine-core",
+]
+
+[[package]]
 name = "wheel-encoder"
 version = "0.1.0"
 dependencies = [

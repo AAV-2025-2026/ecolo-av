@@ -20,7 +20,7 @@ float32 throttle         # 0..1 of full throttle
 float32 brake            # 0..1 of full brake
 
 # Fault bits, same values as the `faults` signal of VEHICLE_STATUS.
-uint16 FAULT_CMD_TIMEOUT=1        # no valid DRIVE_CMD for 200 ms
+uint16 FAULT_CMD_TIMEOUT=1        # no valid DRIVE_CMD for 100 ms
 uint16 FAULT_BAD_CHECKSUM=2       # a frame failed its CRC
 uint16 FAULT_BAD_COUNTER=4        # a frame repeated or skipped its counter
 uint16 FAULT_STEERING_DRIVER=8    # steering Jrk G2 not responding or in error

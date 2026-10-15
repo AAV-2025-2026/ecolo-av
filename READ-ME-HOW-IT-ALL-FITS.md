@@ -47,7 +47,7 @@ deeper on two parts of this page.
 | IMU (Yahboom) | USB | `aav_imu_yahboom` (Rust) + Madgwick filter | `/sensors/imu/data` | both EKFs | ✅ Gazebo; ❌ car |
 | GPS (ZED-F9R) | USB to the RTK-Pi | `ublox_gps` (stock) | `/sensors/gps/fix` | navsat_transform, HUD | ✅ Gazebo; ❌ car |
 | Wheel speed, today | optical encoder → Pico 2 → UDP | `aav_legacy` encoder | `/vehicle/odom` | both EKFs | ❌ untested |
-| Wheel speed, KEFC | Hall sensors → 2 ESP32 → CAN 0x200/0x201 | `spine_bridge` | `/vehicle/wheel_speed`, `/vehicle/odom` | both EKFs | 🔧 on the branch `wt/can-v2`, waiting for you |
+| Wheel speed, KEFC | Hall sensors → 2 ESP32 → CAN 0x200/0x201 | `spine_bridge` | `/vehicle/wheels`, `/vehicle/odom` | both EKFs | ✅ bench (spine_sim sends the frames); ❌ car: no wheel nodes yet |
 | Steering | Jrk G2 + KTC-100 pot (KEFC) | the control board | `/vehicle/status` (angle) | EKF (later), HUD | ❌ no sensor today (open loop) |
 | Brake | Jrk G2 | the control board | `/vehicle/status` (brake %) | HUD | ❌ |
 | Throttle | DAC → motor controller | the control board | `/vehicle/status` (throttle %) | HUD | ❌ |

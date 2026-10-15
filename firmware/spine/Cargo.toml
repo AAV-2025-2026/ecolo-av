@@ -8,9 +8,11 @@ members = [
     "crates/spine-core",
     "crates/aav-inputs",
     # The other boards' logic: the wheel's spoke sensors and the wheel encoder's UDP
-    # packet; the status display (the sentinel).
+    # packet; the status display (the sentinel); the CAN wheel nodes (ESP32-S3 boards
+    # on the front wheels).
     "crates/wheel-encoder",
     "crates/sentinel",
+    "crates/wheel-core",
     # Drivers: the I2C chips and the CAN controller (SPI) against embedded-hal 1.0;
     # ibus takes bytes; hd44780 is the sentinel's LCD, on GPIO pins.
     "crates/jrk-g2",

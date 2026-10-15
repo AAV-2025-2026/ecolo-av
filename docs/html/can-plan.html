@@ -62,7 +62,8 @@
 <div class="lead"><p>Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and throttle on
 a CAN bus. Our code already has a CAN contract, <code>firmware/can/aav.dbc</code> (v0.1.0). This page
 compares the two, and says what changes.</p>
-<p><strong>Status: Proposed</strong> <span class="badge b-needs-you">needs you</span>. The DBC is not changed yet.</p></div>
+<p><strong>Status: Implemented on <code>wt/can-v2</code>, waiting for Ben</strong> <span class="badge b-needs-you">needs you</span>. DBC v0.2.0 is on
+that branch, not on <code>main</code>: merge it once Ben says yes.</p></div>
 <section class="card"><h2 id="the-plan-in-one-picture">The plan in one picture</h2>
 <pre class="highlight"><code class="language-text">Orin #1 ── CAN Pal (40-pin header) ──┬──────────────┬──────────────┐
   EKF, ego, spine_bridge             │              │              │
@@ -104,7 +105,7 @@ compares the two, and says what changes.</p>
 <tr>
 <td>Brake on silence</td>
 <td>100 ms</td>
-<td>200 ms</td>
+<td>100 ms (v0.2.0; it was 200 ms)</td>
 </tr>
 <tr>
 <td>The speed loop on the board, not the Orin</td>
@@ -190,7 +191,7 @@ compares the two, and says what changes.</p>
 </tr>
 <tr>
 <td><code>spine_bridge</code></td>
-<td>the two wheel speeds into <code>/vehicle/odom</code>, and a new <code>/vehicle/wheel_speed</code></td>
+<td>the two wheel speeds into <code>/vehicle/odom</code>, and <code>/vehicle/wheels</code> (the front two; the same topic Gazebo fills)</td>
 </tr>
 <tr>
 <td><code>spine-core</code></td>

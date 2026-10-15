@@ -11,6 +11,8 @@ use spine_core::Outputs;
 pub struct PlantConfig {
     /// Rear axle to front axle (m). vehicle.yaml overrides it.
     pub wheelbase: f32,
+    /// Left to right wheel centres (m). vehicle.yaml overrides it.
+    pub track: f32,
     /// The steering's mechanical stop (rad).
     pub max_steering: f32,
     /// How fast the steering motor turns the wheels (rad/s).
@@ -29,6 +31,7 @@ impl Default for PlantConfig {
     fn default() -> Self {
         PlantConfig {
             wheelbase: 1.57,
+            track: 0.77,
             max_steering: 0.5,
             steer_rate: 0.8,
             max_accel: 2.0,
@@ -61,6 +64,8 @@ pub struct Plant {
     cfg: PlantConfig,
     pose: Pose,
     ticks: f64,
+    /// Distance each front tyre has rolled, forwards or back (m): [left, right].
+    front_rolled: [f64; 2],
 }
 
 impl Plant {
@@ -69,6 +74,7 @@ impl Plant {
             cfg,
             pose: start,
             ticks: 0.0,
+            front_rolled: [0.0; 2],
         }
     }
 
@@ -79,6 +85,26 @@ impl Plant {
     /// The encoder's 16-bit counter, as the spine sends it in VEHICLE_FEEDBACK.
     pub fn wheel_ticks(&self) -> u16 {
         (self.ticks as u64 & 0xFFFF) as u16
+    }
+
+    /// How far each front tyre has rolled over the ground, either way (m): [left, right].
+    /// What the wheel nodes' Hall sensors count.
+    pub fn front_rolled(&self) -> [f64; 2] {
+        self.front_rolled
+    }
+
+    /// Each front tyre's speed over the ground (m/s, negative in reverse): [left, right].
+    ///
+    /// The rigid-body speed at each front wheel, turning about the rear axle's centre
+    /// line: the wheel at (wheelbase, ±track/2) moves at (v - ω·y, ω·wheelbase).
+    pub fn front_wheel_speeds(&self) -> [f32; 2] {
+        let p = &self.pose;
+        let c = &self.cfg;
+        [c.track / 2.0, -c.track / 2.0].map(|y| {
+            let along = p.speed - p.yaw_rate * y;
+            let across = p.yaw_rate * c.wheelbase;
+            along.hypot(across).copysign(p.speed)
+        })
     }
 
     /// Move the model on by `dt` seconds under the spine's outputs.
@@ -116,6 +142,10 @@ impl Plant {
         p.y += v * p.yaw.sin() * dt64;
         p.yaw = wrap(p.yaw + p.yaw_rate as f64 * dt64);
         self.ticks += v.abs() * dt64 * c.ticks_per_metre as f64;
+        let front = self.front_wheel_speeds();
+        for (rolled, speed) in self.front_rolled.iter_mut().zip(front) {
+            *rolled += speed.abs() as f64 * dt64;
+        }
     }
 }
 
@@ -241,6 +271,31 @@ mod tests {
         assert_eq!(p.wheel_ticks(), 65_535);
         p.ticks = 65_536.2;
         assert_eq!(p.wheel_ticks(), 0);
+    }
+
+    #[test]
+    fn front_wheels_roll_further_on_the_outside_of_a_turn() {
+        let mut p = car();
+        p.cfg.drag = 0.0;
+        p.pose.speed = 1.0;
+        run(&mut p, outputs(0.0, 0.0, false, 0.0), 1.0);
+        let [l, r] = p.front_wheel_speeds();
+        assert!(
+            (l - 1.0).abs() < 1e-6 && (r - 1.0).abs() < 1e-6,
+            "straight: {l} {r}"
+        );
+
+        run(&mut p, outputs(0.0, 0.0, false, 0.4), 2.0); // turning left
+        let [l, r] = p.front_wheel_speeds();
+        assert!(
+            r > 1.0 && r > l,
+            "the right (outside) wheel is fastest: {l} {r}"
+        );
+        let [dl, dr] = p.front_rolled();
+        assert!(dr > dl && dl > 2.5, "{dl} {dr}");
+
+        p.pose.speed = -1.0;
+        assert!(p.front_wheel_speeds().iter().all(|v| *v < 0.0), "reverse");
     }
 
     #[test]

@@ -7,7 +7,7 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">13 min read · 9 sections</div></header>
+<div class="meta">14 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -172,7 +172,7 @@ code.</p>
       │
       └─ a spare contact ──► spine (only listens) ──► ROS and the HUD: "e-stop pressed"</code></pre>
 <ul>
-<li>Stop by itself when commands stop: a 200 ms watchdog.</li>
+<li>Stop by itself when commands stop: a 100 ms watchdog (DBC v0.2.0, from the KEFC plan).</li>
 </ul>
 <p>Who wins, highest first:</p>
 <div class="table-wrap"><table>
@@ -258,8 +258,26 @@ rejected.</p>
 <td>10 Hz</td>
 <td>mode, armed, e-stop, throttle %, brake %, faults</td>
 </tr>
+<tr>
+<td>0x200</td>
+<td><code>WHEEL_SPEED_L</code></td>
+<td>left wheel node → Orin</td>
+<td>100 Hz</td>
+<td>left front wheel speed (m/s), pulse count</td>
+</tr>
+<tr>
+<td>0x201</td>
+<td><code>WHEEL_SPEED_R</code></td>
+<td>right wheel node → Orin</td>
+<td>100 Hz</td>
+<td>right front wheel speed (m/s), pulse count</td>
+</tr>
 </tbody>
 </table></div>
+<p>DBC v0.2.0 (15 Oct, <a href="can-plan.html">The KEFC CAN plan</a>) added the wheel frames and cut the
+timeout to 100 ms. The wheel frames' speed is signed, 1 mm/s a step (±32 m/s). One Hall
+sensor can't tell direction, so <code>direction_known</code> = 0 and <code>spine_bridge</code> takes the sign
+from the drive direction.</p>
 <p>Both sides test against the same generated frames. To change a frame:</p>
 <ol>
 <li>Edit the DBC.</li>
@@ -269,7 +287,7 @@ rejected.</p>
 </section>
 <section class="card"><h2 id="firmwarespine-the-rust-code">firmware/spine: the Rust code</h2>
 <p><code>crates/spine-core</code> is plain <code>no_std</code> Rust: no allocator, no dependencies, no hardware.
-<code>cargo test</code> runs its 54 tests on any laptop.</p>
+<code>cargo test</code> runs its 59 tests on any laptop.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -284,11 +302,11 @@ rejected.</p>
 </tr>
 <tr>
 <td><code>protocol.rs</code></td>
-<td>encodes and decodes the four frames, with the CRC and counter checks</td>
+<td>encodes and decodes the six frames, with the CRC and counter checks</td>
 </tr>
 <tr>
 <td><code>watchdog.rs</code></td>
-<td>the 200 ms command watchdog</td>
+<td>the 100 ms command watchdog</td>
 </tr>
 <tr>
 <td><code>speed_loop.rs</code></td>

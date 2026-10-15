@@ -170,6 +170,7 @@ name = "bench-car"
 version = "0.1.0"
 dependencies = [
  "spine-core",
+ "wheel-core",
 ]
 
 [[package]]
@@ -936,6 +937,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23f0c9c52aa7cd7d77769a4cfe2a9adb1b331f489a41d912ce14513d5ab995c6"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wheel-core"
+version = "0.1.0"
+dependencies = [
+ "spine-core",
 ]
 
 [[package]]

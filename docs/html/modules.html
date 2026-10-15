@@ -1482,18 +1482,26 @@ in <code>firmware/spine</code> (part of <code>tools/test.sh</code>). <a href="fi
 <tbody>
 <tr>
 <td><code>can/aav.dbc</code></td>
-<td>the CAN contract: four frames between the Orin and the spine</td>
+<td>the CAN contract: six frames between the Orin, the spine and the two wheel nodes</td>
 <td>both sides must agree on every bit</td>
 <td>ours</td>
-<td>draft v0.1.0; v0.2.0 for the KEFC plan is Proposed</td>
+<td>v0.2.0 (the KEFC plan), waiting for Ben</td>
 <td><code>aav.dbc</code>, then <code>test_vectors.json</code></td>
 </tr>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's decisions: modes, arming, the 200 ms watchdog, speed loop, encoder</td>
+<td>the spine's decisions: modes, arming, the 100 ms watchdog, speed loop, encoder</td>
 <td>the safety rules, testable without hardware</td>
 <td>ours</td>
-<td><span class="badge b-works">works</span> 54 tests, and the bench</td>
+<td><span class="badge b-works">works</span> 59 tests, and the bench</td>
+<td><code>src/lib.rs</code></td>
+</tr>
+<tr>
+<td><code>wheel-core</code></td>
+<td>a front wheel node's logic: Hall sensor pulses to speed, the WHEEL_SPEED frame</td>
+<td>wheel speed for the odometry</td>
+<td>ours</td>
+<td><span class="badge b-works">works</span> 9 tests, and the bench</td>
 <td><code>src/lib.rs</code></td>
 </tr>
 <tr>

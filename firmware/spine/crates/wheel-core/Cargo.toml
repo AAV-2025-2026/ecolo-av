@@ -1,0 +1,12 @@
+[package]
+name = "wheel-core"
+description = "The wheel nodes' logic, for any board: Hall sensor pulses and their times in, wheel speed and the WHEEL_SPEED CAN frame out."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# no_std, no allocator, no hardware access. spine-core gives the CAN frame
+# (protocol::WheelSpeed) and the speed from pulse timing (encoder::SpeedEstimator).
+[dependencies]
+spine-core = { path = "../spine-core" }

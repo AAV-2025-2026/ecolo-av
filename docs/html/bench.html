@@ -472,7 +472,7 @@ the centre.</p>
 </tbody>
 </table></div>
 <ul>
-<li><strong>A busy computer:</strong> a gap of 200 ms in the commands latches the spine, and the car
+<li><strong>A busy computer:</strong> a gap of 100 ms in the commands latches the spine, and the car
   stops. The check arms it again, as a safety driver would, and only counts the time the
   car moves. It says how many times that happened.</li>
 <li><strong>A bend</strong> isn't in the check. By hand, with <code>bend_radius:=60</code> (left, from 30 m on): the
@@ -549,7 +549,7 @@ the centre.</p>
 <ul>
 <li>The model car is simple: no wheel slip, no slopes, and an instant brake. Its numbers are
   guesses.</li>
-<li>Everything runs in real time. A busy laptop can delay commands past the spine's 200 ms
+<li>Everything runs in real time. A busy laptop can delay commands past the spine's 100 ms
   watchdog, which then latches the spine, as it should.</li>
 <li>On Ctrl-C, some nodes print a traceback, or a stack trace from deep in ROS's messaging,
   while they shut down. It's harmless.</li>

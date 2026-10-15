@@ -67,7 +67,7 @@ config files name their nodes `/**/joy_node` and so on, so they match in any nam
 | `/battery_status` | `/vehicle/battery` |
 | `/battery_monitor_heartbeat` | `/vehicle/battery/heartbeat` |
 | `/vehicle/odom`, `/vehicle/status`, `/vehicle/joint_states` | unchanged |
-| (new: the wheel nodes) | `/vehicle/wheel_speed` |
+| (new: each wheel's speed: Gazebo, and the CAN wheel nodes) | `/vehicle/wheels` (one topic for both) |
 | `/bench/truth`, `/bench/hw_estop`, `/bench/driver_faults` | `/vehicle/bench/truth`, `/vehicle/bench/hw_estop`, `/vehicle/bench/driver_faults` |
 | `/to_can_bus`, `/from_can_bus` | `/can/tx`, `/can/rx` |
 | `/odometry/local` | `/localization/odom/local` |

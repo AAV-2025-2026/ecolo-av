@@ -4,16 +4,33 @@
 //! frames since the last tick, the model's speed and steering, the bench's switches), runs
 //! `Spine::step`, moves the model under the `Outputs`, and returns the frames the spine
 //! sends: VEHICLE_FEEDBACK every 20 ms, VEHICLE_STATUS every 100 ms, as on the car.
+//!
+//! The two front wheel nodes run here too, on their own logic (wheel-core): the model's
+//! tyres pass rotor holes, each hole is a Hall sensor pulse at the moment it passes, and
+//! WHEEL_SPEED_L and WHEEL_SPEED_R go out every 10 ms. Like the real sensors, they send a
+//! magnitude only (direction_known = 0).
 
+use spine_core::protocol::Wheel;
 use spine_core::protocol::{decode_incoming, FrameError, Incoming};
 use spine_core::protocol::{VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID};
 use spine_core::{Inputs, Outputs, Spine, SpineConfig};
+use wheel_core::{ConfigError, WheelConfig, WheelNode};
 
 use crate::plant::{Plant, PlantConfig, Pose};
 
 /// How often the spine sends each frame (ms), from firmware/can/aav.dbc.
 pub const FEEDBACK_PERIOD_MS: u32 = 20;
 pub const STATUS_PERIOD_MS: u32 = 100;
+pub use wheel_core::FRAME_PERIOD_MS as WHEEL_PERIOD_MS;
+
+/// The bench's wheel nodes: 8 rotor holes (a guess until the rotors are counted) on
+/// vehicle.yaml's 0.30 m wheel.
+pub const BENCH_WHEELS: WheelConfig = WheelConfig {
+    holes_per_rev: 8,
+    wheel_radius: 0.15,
+    zero_speed_timeout_ms: 500,
+    min_pulse_gap_us: 0,
+};
 
 /// One CAN frame: an 11-bit ID and 8 data bytes.
 pub type Frame = (u16, [u8; 8]);
@@ -28,11 +45,20 @@ pub struct Bench {
     hw_estop: bool,
     driver_faults: u16,
     last: Option<Outputs>,
+    /// The front wheel nodes, [left, right], and the holes each has passed so far.
+    wheels: [WheelNode; 2],
+    holes_passed: [u64; 2],
+    since_wheels_ms: u32,
 }
 
 impl Bench {
-    pub fn new(spine: SpineConfig, plant: PlantConfig, start: Pose) -> Self {
-        Bench {
+    pub fn new(
+        spine: SpineConfig,
+        plant: PlantConfig,
+        start: Pose,
+        wheels: WheelConfig,
+    ) -> Result<Self, ConfigError> {
+        Ok(Bench {
             spine: Spine::new(spine),
             plant: Plant::new(plant, start),
             now_ms: 0,
@@ -42,7 +68,13 @@ impl Bench {
             hw_estop: false,
             driver_faults: 0,
             last: None,
-        }
+            wheels: [
+                WheelNode::new(Wheel::Left, wheels)?,
+                WheelNode::new(Wheel::Right, wheels)?,
+            ],
+            holes_passed: [0; 2],
+            since_wheels_ms: 0,
+        })
     }
 
     /// A frame from the bus. Frames for other IDs are ignored, as the spine's filter does.
@@ -79,10 +111,22 @@ impl Bench {
             ..core::mem::take(&mut self.pending)
         };
         let out = self.spine.step(&inputs);
+        let rolled_before = self.plant.front_rolled();
         self.plant.step(&out, dt_ms as f32 / 1000.0);
         self.last = Some(out);
+        self.pass_holes(rolled_before, dt_ms);
 
         let mut frames = Vec::new();
+        self.since_wheels_ms += dt_ms;
+        if self.since_wheels_ms >= WHEEL_PERIOD_MS {
+            self.since_wheels_ms -= WHEEL_PERIOD_MS;
+            let now_us = self.now_us();
+            frames.extend(
+                self.wheels
+                    .iter_mut()
+                    .map(|w| (w.wheel().id(), w.frame(now_us, None))),
+            );
+        }
         self.since_feedback_ms += dt_ms;
         self.since_status_ms += dt_ms;
         if self.since_feedback_ms >= FEEDBACK_PERIOD_MS {
@@ -100,6 +144,29 @@ impl Bench {
         frames
     }
 
+    /// The wheel nodes' microsecond clock. It wraps, as theirs does.
+    fn now_us(&self) -> u32 {
+        self.now_ms.wrapping_mul(1000)
+    }
+
+    /// A pulse to each wheel node for every hole that passed its sensor during the last
+    /// `dt_ms`, at the moment it passed (the tyre's distance, interpolated in the tick).
+    fn pass_holes(&mut self, rolled_before: [f64; 2], dt_ms: u32) {
+        let start_us = self.now_us().wrapping_sub(dt_ms * 1000);
+        let rolled_after = self.plant.front_rolled();
+        for (i, node) in self.wheels.iter_mut().enumerate() {
+            let per_hole = node.config().metres_per_pulse() as f64;
+            let (d0, d1) = (rolled_before[i], rolled_after[i]);
+            let holes = (d1 / per_hole) as u64;
+            while self.holes_passed[i] < holes {
+                self.holes_passed[i] += 1;
+                let at = self.holes_passed[i] as f64 * per_hole;
+                let fraction = ((at - d0) / (d1 - d0)).clamp(0.0, 1.0);
+                node.on_pulse(start_us.wrapping_add((fraction * dt_ms as f64 * 1000.0) as u32));
+            }
+        }
+    }
+
     /// Where the model car is: the ground truth.
     pub fn pose(&self) -> Pose {
         self.plant.pose()
@@ -115,7 +182,9 @@ impl Bench {
 mod tests {
     use super::*;
     use spine_core::faults;
-    use spine_core::protocol::{DriveCmd, EstopCmd, Mode, VehicleStatus};
+    use spine_core::protocol::{
+        DriveCmd, EstopCmd, Mode, VehicleStatus, WheelSpeed, WHEEL_SPEED_L_ID, WHEEL_SPEED_R_ID,
+    };
 
     /// The bench, and what spine_bridge would send it.
     struct Rig {
@@ -130,7 +199,9 @@ mod tests {
                     SpineConfig::default(),
                     PlantConfig::default(),
                     Pose::default(),
-                ),
+                    BENCH_WHEELS,
+                )
+                .expect("the bench's wheel settings are valid"),
                 counter: 0,
             }
         }
@@ -287,11 +358,37 @@ mod tests {
     }
 
     #[test]
-    fn frames_go_out_at_50_and_10_hz() {
+    fn frames_go_out_at_50_10_and_100_hz() {
         let mut rig = Rig::new();
         let frames = rig.run(1.0, None);
         let count = |id| frames.iter().filter(|(i, _)| *i == id).count();
         assert_eq!(count(VEHICLE_FEEDBACK_ID), 50);
         assert_eq!(count(VEHICLE_STATUS_ID), 10);
+        assert_eq!(count(WHEEL_SPEED_L_ID), 100);
+        assert_eq!(count(WHEEL_SPEED_R_ID), 100);
+    }
+
+    #[test]
+    fn the_wheel_nodes_measure_the_model_car() {
+        let mut rig = Rig::new();
+        rig.arm();
+        let frames = rig.run(8.0, Some((1.0, 0.0, true)));
+        let truth = rig.bench.pose().speed;
+        for wheel in [Wheel::Left, Wheel::Right] {
+            let (_, data) = frames
+                .iter()
+                .rev()
+                .find(|(id, _)| *id == wheel.id())
+                .expect("a wheel frame");
+            let w = WheelSpeed::decode(wheel, data).expect("a valid frame");
+            assert!(!w.direction_known);
+            assert!(
+                (w.wheel_speed - truth).abs() < 0.1,
+                "{wheel:?}: {} m/s, the car {truth}",
+                w.wheel_speed
+            );
+            // 8 m or so at 0.118 m a hole.
+            assert!(w.pulse_count > 40, "{}", w.pulse_count);
+        }
     }
 }

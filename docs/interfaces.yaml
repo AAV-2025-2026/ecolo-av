@@ -108,7 +108,7 @@ topics:
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
     sub: [ekf_local, ekf_global]
     live: [turtle, sim, car, replay, bench]
-    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured).
+    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter, turtlesim_adapter]
@@ -135,10 +135,10 @@ topics:
     note: The brake, 0..1. As /vehicle/throttle.
   /vehicle/wheels:
     type: aav_interfaces/msg/WheelSpeeds
-    pub: [gazebo_adapter]
+    pub: [gazebo_adapter, spine_bridge]
     sub: []
-    live: [sim]
-    note: Each wheel's ground speed (m/s), NaN where not measured. Gazebo gives all four (its wheel joints); the car has one encoder, still read as /vehicle/odom.
+    live: [sim, bench]
+    note: Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. The 2025-26 car (aav_legacy) has one encoder, read only as /vehicle/odom.
   /vehicle/joint_states:
     type: sensor_msgs/msg/JointState
     pub: [spine_bridge]
@@ -161,7 +161,7 @@ topics:
     pub: [socket_can_receiver, spine_sim]
     sub: [spine_bridge]
     live: [bench]
-    note: VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz. On the bench, spine_sim sends them.
+    note: VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench, spine_sim sends them all.
 
   # --- sensors ---
   /sensors/imu/data_raw:
