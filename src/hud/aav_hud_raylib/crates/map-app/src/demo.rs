@@ -2,7 +2,8 @@
 //!
 //! A small parking lot (50 m x 30 m: two rows of parked cars, a building), a car that
 //! drives a route through it at up to 3 m/s, and a plan from the car to the goal every
-//! second, as Nav2 sends. At the goal it waits 5 s, then drives the route back.
+//! second, as Nav2 sends. At the goal it waits 5 s, then drives the route back. The lot
+//! sits on Carleton's campus, so the street map shows around it.
 
 use std::time::{Duration, Instant};
 
@@ -21,6 +22,10 @@ const RESOLUTION: f64 = 0.25;
 const CELLS_X: u32 = 240;
 const CELLS_Y: u32 = 160;
 const ORIGIN: (f64, f64) = (-5.0, -5.0);
+/// Where the lot sits on the map: the coordinates above are the lot's own, moved by
+/// this. It puts the pretend lot on a parking lot of Carleton's campus, so
+/// the street map (when downloaded) shows real streets around it.
+const PLACE: Point = Point::new(188.0, 136.0);
 
 /// The drive, before its corners are rounded.
 const ROUTE: [(f64, f64); 6] = [
@@ -191,7 +196,10 @@ impl DataSource for Demo {
 
 /// The route's corners, forward or back.
 fn corners(forward: bool) -> Vec<Point> {
-    let mut c: Vec<Point> = ROUTE.iter().map(|&(x, y)| Point::new(x, y)).collect();
+    let mut c: Vec<Point> = ROUTE
+        .iter()
+        .map(|&(x, y)| Point::new(x, y) + PLACE)
+        .collect();
     if !forward {
         c.reverse();
     }
@@ -267,7 +275,7 @@ fn lot() -> Update {
         width: CELLS_X,
         height: CELLS_Y,
         resolution: RESOLUTION,
-        origin: Pose::new(ORIGIN.0, ORIGIN.1, 0.0),
+        origin: Pose::new(ORIGIN.0 + PLACE.x, ORIGIN.1 + PLACE.y, 0.0),
     };
     Grid::new(info, "map".into(), cells).map_or_else(|e| Update::BadMap(e.to_string()), Update::Map)
 }

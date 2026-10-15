@@ -6,18 +6,19 @@
 //! | [ SIMULATED band, when /system/source says so ]  | TRIP            |
 //! | FOLLOWING THE CAR                            N   |   DRIVING       |
 //! |                                                  | DISTANCE LEFT   |
-//! |         Nav2's map, north up                     |   42 m          |
+//! |         the streets (OpenStreetMap), and over    |   42 m          |
+//! |         them Nav2's map, north up                |                 |
 //! |         the plan (blue), the goal (green)        | TIME LEFT 15 s  |
 //! |         the car (its outline and an arrow)       | SPEED   11 km/h |
 //! |                                                  | TOPICS          |
-//! | |----| 10 m                                      | keys            |
+//! | |----| 10 m          © OpenStreetMap contributors | keys            |
 //! +--------------------------------------------------+-----------------+
 //! ```
 //!
 //! The map part uses the window's pixels; the panel's sizes grow with the window, so a
 //! 15" monitor and a laptop look alike.
 
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use hud_core::{format, health::Health};
 use map_core::{
@@ -26,10 +27,13 @@ use map_core::{
     geom::{Metres, Point},
     grid::{Grid, Palette},
     state::{MapState, Remaining},
+    streets::TileShapes,
     trip::{time_left, Tone},
     view::{self, View, Viewport},
 };
 use raylib::prelude::*;
+
+use crate::streets::{self, Status as StreetStatus, StreetMap};
 
 // The HUD's colours (hud-app/src/ui.rs).
 const BACKGROUND: Color = Color::new(12, 12, 16, 255);
@@ -50,7 +54,19 @@ const MAP_PALETTE: Palette = Palette {
     occupied: [26, 28, 34, 255],
     unknown: [74, 77, 88, 255],
 };
+/// Over the street map, Nav2's map is see-through: unknown shows the streets, free is a
+/// faint blue tint (where Nav2 has looked), occupied a near-white (what's in the way).
+const OVER_STREETS_PALETTE: Palette = Palette {
+    free: [120, 160, 220, 46],
+    occupied: [228, 230, 238, 215],
+    unknown: [0, 0, 0, 0],
+};
 const GRID_LINE: Color = Color::new(0, 0, 0, 34);
+/// Over the streets, the grid lines are light.
+const GRID_LINE_OVER_STREETS: Color = Color::new(255, 255, 255, 18);
+/// What the street map's data needs said wherever it's shown (ODbL), and where the tiles
+/// were made.
+const STREET_CREDIT: &str = "© OpenStreetMap contributors · Protomaps";
 const PLAN: Color = Color::new(20, 115, 245, 255);
 const PLAN_CASING: Color = Color::new(255, 255, 255, 200);
 const GOAL: Color = Color::new(40, 175, 80, 255);
@@ -67,6 +83,13 @@ const FONT_FILES: [&str; 4] = [
     "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf", // Fedora, AlmaLinux
 ];
 const FONT_LOAD_SIZE: i32 = 128;
+/// The letters loaded from the font: ASCII, the street map's credit (© ·), and the
+/// accents of Ottawa's French street names (rue Élisabeth-Bruyère, chemin de la Côte...).
+const FONT_GLYPHS: &str = concat!(
+    " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`",
+    "abcdefghijklmnopqrstuvwxyz{|}~",
+    "©·–—’éèêëàâäçôöîïùûüÉÈÊÀÂÇÔÎœŒ°"
+);
 
 /// The panel's width at the reference size (1600 x 900); it grows with the window.
 const PANEL_W: f32 = 400.0;
@@ -151,7 +174,10 @@ impl Ui {
         let loaded = FONT_FILES
             .iter()
             .filter(|path| std::path::Path::new(path).exists())
-            .find_map(|path| rl.load_font_ex(thread, path, FONT_LOAD_SIZE, None).ok());
+            .find_map(|path| {
+                rl.load_font_ex(thread, path, FONT_LOAD_SIZE, Some(FONT_GLYPHS))
+                    .ok()
+            });
         let font = match loaded {
             Some(f) => {
                 f.texture()
@@ -169,6 +195,7 @@ impl Ui {
         rl: &mut RaylibHandle,
         thread: &RaylibThread,
         grid: &Grid,
+        over_streets: bool,
     ) -> anyhow::Result<()> {
         let (gw, gh) = (grid.info.width, grid.info.height);
         let same_size = self
@@ -189,12 +216,18 @@ impl Ui {
             });
         }
         if let Some(m) = self.map.as_mut() {
-            m.texture.update_texture(&grid.to_rgba(&MAP_PALETTE))?;
+            let palette = if over_streets {
+                &OVER_STREETS_PALETTE
+            } else {
+                &MAP_PALETTE
+            };
+            m.texture.update_texture(&grid.to_rgba(palette))?;
         }
         Ok(())
     }
 
-    /// Draws one frame.
+    /// Draws one frame. `tiles`: the street map's, from [`StreetMap::frame`].
+    #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
         d: &mut RaylibDrawHandle,
@@ -203,6 +236,8 @@ impl Ui {
         car: &CarShape,
         now: Instant,
         source: &str,
+        streets: &StreetMap,
+        tiles: &[Arc<TileShapes>],
     ) {
         let banner = state.origins.banner();
         let layout = Layout::new(
@@ -220,7 +255,21 @@ impl Ui {
                 font: &self.font,
                 u: layout.u,
             };
-            self.draw_map(&mut p, state, view, &vp, car, now);
+            let on_streets = streets.visible();
+            if on_streets {
+                let font = &self.font;
+                streets::draw(
+                    p.d,
+                    font,
+                    |text, size| font.measure(text, size),
+                    tiles,
+                    view,
+                    &vp,
+                    p.u,
+                );
+            }
+            self.draw_map(&mut p, state, view, &vp, car, now, on_streets);
+            street_notes(&mut p, &vp, streets);
         }
         let mut p = Painter {
             d,
@@ -235,6 +284,7 @@ impl Ui {
         panel(&mut p, &layout, state, now, source);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw_map(
         &self,
         p: &mut Painter<impl RaylibDraw>,
@@ -243,6 +293,7 @@ impl Ui {
         vp: &Viewport,
         car: &CarShape,
         now: Instant,
+        on_streets: bool,
     ) {
         let at = |pt: Point| screen(view, pt, vp);
         // The map's picture, turned as the grid is.
@@ -255,7 +306,12 @@ impl Ui {
             let src = Rectangle::new(0.0, 0.0, tex.width as f32, tex.height as f32);
             let turn = -(info.origin.yaw.to_degrees() as f32);
             p.d.draw_texture_pro(&tex.texture, src, dest, Vector2::zero(), turn, Color::WHITE);
-            grid_lines(p, view, vp, grid);
+            let line = if on_streets {
+                GRID_LINE_OVER_STREETS
+            } else {
+                GRID_LINE
+            };
+            grid_lines(p, view, vp, grid, line);
         }
 
         // The plan: a white casing under a blue line, so it shows on any colour.
@@ -302,7 +358,13 @@ fn screen(view: &View, p: Point, vp: &Viewport) -> Vector2 {
 }
 
 /// Thin lines every round number of metres, over the map only.
-fn grid_lines(p: &mut Painter<impl RaylibDraw>, view: &View, vp: &Viewport, grid: &Grid) {
+fn grid_lines(
+    p: &mut Painter<impl RaylibDraw>,
+    view: &View,
+    vp: &Viewport,
+    grid: &Grid,
+    colour: Color,
+) {
     let step = view::grid_step(view.scale, 70.0 * f64::from(p.u));
     let seen = view.visible(vp);
     let map = grid.info.bounds();
@@ -316,15 +378,48 @@ fn grid_lines(p: &mut Painter<impl RaylibDraw>, view: &View, vp: &Viewport, grid
             screen(view, Point::new(x, y0), vp),
             screen(view, Point::new(x, y1), vp),
         );
-        p.d.draw_line_ex(a, b, 1.0, GRID_LINE);
+        p.d.draw_line_ex(a, b, 1.0, colour);
     }
     for y in view::grid_lines(y0, y1, step) {
         let (a, b) = (
             screen(view, Point::new(x0, y), vp),
             screen(view, Point::new(x1, y), vp),
         );
-        p.d.draw_line_ex(a, b, 1.0, GRID_LINE);
+        p.d.draw_line_ex(a, b, 1.0, colour);
     }
+}
+
+/// Bottom right of the map: the street map's credit when it's shown, or why it isn't.
+fn street_notes(p: &mut Painter<impl RaylibDraw>, vp: &Viewport, streets: &StreetMap) {
+    let right = (vp.x + vp.width) as f32 - 14.0 * p.u;
+    let bottom = (vp.y + vp.height) as f32 - 12.0 * p.u;
+    if streets.visible() {
+        let size = 15.0;
+        let w = p.width(STREET_CREDIT, size);
+        let r = Rectangle::new(
+            right - w - 16.0 * p.u,
+            bottom - 26.0 * p.u,
+            w + 16.0 * p.u,
+            26.0 * p.u,
+        );
+        p.d.draw_rectangle_rounded(r, 0.4, 8, OVERLAY);
+        p.text(
+            r.x + 8.0 * p.u,
+            r.y + 5.0 * p.u,
+            size,
+            STREET_CREDIT,
+            CAPTION,
+        );
+        return;
+    }
+    let note = match &streets.status {
+        _ if !streets.shown => "STREETS OFF (S)".to_owned(),
+        StreetStatus::Missing(_) => "No street map: pixi run get-street-map".to_owned(),
+        StreetStatus::Failed(why) => format!("No street map: {why}"),
+        StreetStatus::Loading | StreetStatus::Ready => return,
+    };
+    let w = p.width(&note, 17.0) + 24.0 * p.u;
+    p.chip(right - w, bottom - 32.0 * p.u, &note, CAPTION);
 }
 
 /// The goal: a green ring with a white edge and a white middle.
@@ -534,7 +629,7 @@ fn panel(
     y += h + m;
 
     // TOPICS: what's been heard.
-    let keys_h = 104.0 * u;
+    let keys_h = 130.0 * u;
     let row_h = 32.0 * u;
     let wanted = 44.0 * u + Topic::ALL.len() as f32 * row_h + 8.0 * u;
     let h = (r.y + r.height - m - keys_h - m - y).clamp(60.0 * u, wanted);
@@ -584,6 +679,14 @@ fn panel(
         17.0,
         inner_w,
         "wheel, + -  zoom    drag  move",
+        CAPTION,
+    );
+    p.fitted(
+        inner,
+        y + 90.0 * u,
+        17.0,
+        inner_w,
+        "S  streets on / off",
         CAPTION,
     );
     p.right(x + w - 16.0 * u, y + 10.0 * u, 18.0, source, CAPTION);

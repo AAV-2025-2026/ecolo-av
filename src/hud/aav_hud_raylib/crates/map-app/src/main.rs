@@ -7,19 +7,24 @@
 //!             goal_topic    geometry_msgs/PoseStamped    RViz's goal, until Nav2 plans for it
 //!             source_topic  aav_interfaces/DataSource    latched: the SIMULATED banner
 //! Publishes   nothing
-//! Parameters  the topics above, stale_after, plan_stale_after (s), arrive_within (m)
+//! Parameters  the topics above, stale_after, plan_stale_after (s), arrive_within (m),
+//!             street_map (the offline street map's file)
+//!
+//! Under Nav2's map: OpenStreetMap's streets, from an offline file (streets.rs), placed
+//! with navsat_transform's datum (navsat.yaml), so the car sits on real streets.
 //!
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread and
 //! sends news over a channel (ros.rs). `--demo` swaps the ROS node for pretend data.
 //! The maths (map to screen, the distance left) is in map-core.
 //!
-//! usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE] [--screenshot FILE]
-//!            [--ros-args ...]
+//! usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE]
+//!            [--navsat FILE] [--streets FILE] [--zoom PX_PER_M] [--screenshot FILE] [--ros-args ...]
 
 mod demo;
 #[cfg(feature = "ros")]
 mod ros;
 mod source;
+mod streets;
 mod ui;
 
 use std::{
@@ -31,30 +36,37 @@ use anyhow::{bail, Context as _, Result};
 use map_core::{
     car::CarShape,
     config::MapConfig,
+    earth::{Datum, BUILT_IN_NAVSAT_YAML},
     state::MapState,
-    view::{ScreenPoint, View},
+    view::{PixelsPerMetre, ScreenPoint, View},
 };
 use raylib::prelude::*;
 
 use crate::{
     demo::Demo,
     source::DataSource,
+    streets::StreetMap,
     ui::{Layout, Ui},
 };
 
 const USAGE: &str = "\
-usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE] [--screenshot FILE]
-           [--ros-args ...]
+usage: map [--demo] [--fullscreen] [--whole-map] [--config FILE] [--vehicle FILE]
+           [--navsat FILE] [--streets FILE] [--zoom PX_PER_M] [--screenshot FILE] [--ros-args ...]
 
   --demo             pretend data: no ROS, no car
   --fullscreen       fill the screen (F11 switches too)
   --whole-map        start showing the whole map, not following the car (F switches)
   --config FILE      topic names from FILE instead of the built-in config/map.yaml
   --vehicle FILE     the car's size from FILE instead of the built-in vehicle.yaml
+  --navsat FILE      the datum (map 0,0 on the Earth) from navsat_transform's FILE
+                     instead of the built-in navsat.yaml
+  --streets FILE     the street map (PMTiles) instead of street_map in config/map.yaml
+  --zoom PX_PER_M    start at this scale, in pixels per metre (0.1 shows ~10 km)
   --screenshot FILE  save the window as a PNG after 4 s, then quit (for the docs)
   --ros-args ...     passed to ROS, e.g. --ros-args -p plan_topic:=/plan
 
-keys: F follow the car / whole map, + - or the wheel zoom, drag to move, F11 full screen";
+keys: F follow the car / whole map, S streets on / off, + - or the wheel zoom, drag to move,
+      F11 full screen";
 
 /// When --screenshot saves its picture: once the data has had time to arrive.
 const SCREENSHOT_AFTER: Duration = Duration::from_secs(4);
@@ -70,6 +82,9 @@ struct Options {
     whole_map: bool,
     config: Option<PathBuf>,
     vehicle: Option<PathBuf>,
+    navsat: Option<PathBuf>,
+    streets: Option<PathBuf>,
+    zoom: Option<f64>,
     screenshot: Option<PathBuf>,
 }
 
@@ -92,6 +107,19 @@ impl Options {
                 "--whole-map" => opts.whole_map = true,
                 "--config" => opts.config = Some(file("--config")?),
                 "--vehicle" => opts.vehicle = Some(file("--vehicle")?),
+                "--navsat" => opts.navsat = Some(file("--navsat")?),
+                "--streets" => opts.streets = Some(file("--streets")?),
+                "--zoom" => {
+                    let k: f64 = it
+                        .next()
+                        .context("--zoom needs a number")?
+                        .parse()
+                        .context("--zoom: pixels per metre, such as 0.2")?;
+                    if !(k.is_finite() && k > 0.0) {
+                        bail!("--zoom must be a positive number");
+                    }
+                    opts.zoom = Some(k);
+                }
                 "--screenshot" => opts.screenshot = Some(file("--screenshot")?),
                 "-h" | "--help" => {
                     println!("{USAGE}");
@@ -122,8 +150,34 @@ fn main() -> Result<()> {
             .with_context(|| format!("in {}", path.display()))?,
         None => CarShape::default(),
     };
+    let datum = match &opts.navsat {
+        Some(path) => Datum::from_navsat_yaml(&read(path)?),
+        None => Datum::from_navsat_yaml(BUILT_IN_NAVSAT_YAML),
+    }
+    .with_context(|| {
+        let file = opts
+            .navsat
+            .as_deref()
+            .unwrap_or(Path::new("the built-in navsat.yaml"));
+        format!("the datum, in {}", file.display())
+    })?;
     let (source, config) = open_source(&opts, args, config)?;
-    run(&opts, source, config, car)
+    let street_file = street_file(opts.streets.as_deref(), &config.street_map);
+    let streets = StreetMap::open(&street_file, datum);
+    run(&opts, source, config, car, streets)
+}
+
+/// The street map's file: --streets, or config/map.yaml's street_map. A relative path
+/// is looked for in the folder the window started in, then in the pixi project's.
+fn street_file(option: Option<&Path>, configured: &str) -> PathBuf {
+    let file = option.map_or_else(|| PathBuf::from(configured), Path::to_path_buf);
+    if file.is_absolute() || file.exists() {
+        return file;
+    }
+    std::env::var_os("PIXI_PROJECT_ROOT")
+        .map(|root| PathBuf::from(root).join(&file))
+        .filter(|p| p.exists())
+        .unwrap_or(file)
 }
 
 /// The demo, or the ROS node (which may rename topics from its parameters).
@@ -153,6 +207,7 @@ fn run(
     mut source: Box<dyn DataSource>,
     config: MapConfig,
     car: CarShape,
+    mut streets: StreetMap,
 ) -> Result<()> {
     let (mut rl, thread) = raylib::init()
         .size(1600, 900)
@@ -175,6 +230,11 @@ fn run(
     if opts.whole_map {
         view.toggle_follow();
     }
+    if let Some(k) = opts.zoom {
+        view.set_scale(PixelsPerMetre(k));
+    }
+    // Nav2's map is drawn see-through over the streets: redrawn when they come or go.
+    let mut over_streets = streets.visible();
     let mut dragging = false;
     let started = Instant::now();
 
@@ -183,9 +243,11 @@ fn run(
         for update in source.drain(now) {
             state.apply(update, now);
         }
-        if state.take_grid_change() {
+        let streets_changed = over_streets != streets.visible();
+        if state.take_grid_change() || streets_changed {
+            over_streets = streets.visible();
             if let Some(grid) = &state.grid {
-                if let Err(e) = ui.upload(&mut rl, &thread, grid) {
+                if let Err(e) = ui.upload(&mut rl, &thread, grid, over_streets) {
                     state.map_problem = Some(format!("can't show the map: {e}"));
                 }
             }
@@ -202,6 +264,9 @@ fn run(
         }
         if rl.is_key_pressed(KeyboardKey::KEY_F) {
             view.toggle_follow();
+        }
+        if rl.is_key_pressed(KeyboardKey::KEY_S) {
+            streets.shown = !streets.shown;
         }
         let wheel = rl.get_mouse_wheel_move();
         if wheel != 0.0 && over_map {
@@ -231,8 +296,9 @@ fn run(
         view.update(car_centre, map_bounds, &vp);
 
         let label = source.label();
+        let tiles = streets.frame(&view, &vp);
         let mut d = rl.begin_drawing(&thread);
-        ui.draw(&mut d, &state, &view, &car, now, label);
+        ui.draw(&mut d, &state, &view, &car, now, label, &streets, &tiles);
         drop(d);
 
         if let Some(path) = &opts.screenshot {
@@ -299,5 +365,28 @@ mod tests {
         assert_eq!(o.screenshot, Some(PathBuf::from("a.png")));
         assert!(Options::parse(&args(&["--config"])).is_err());
         assert!(Options::parse(&args(&["--bogus"])).is_err());
+    }
+
+    #[test]
+    fn options_take_the_street_map_and_a_zoom() {
+        let o = Options::parse(&args(&[
+            "--streets",
+            "s.pmtiles",
+            "--navsat",
+            "n.yaml",
+            "--zoom",
+            "0.2",
+        ]))
+        .expect("valid");
+        assert_eq!(o.streets, Some(PathBuf::from("s.pmtiles")));
+        assert_eq!(o.navsat, Some(PathBuf::from("n.yaml")));
+        assert_eq!(o.zoom, Some(0.2));
+        assert!(Options::parse(&args(&["--zoom", "-1"])).is_err());
+        assert!(Options::parse(&args(&["--zoom", "near"])).is_err());
+    }
+
+    #[test]
+    fn the_built_in_datum_reads() {
+        assert!(Datum::from_navsat_yaml(BUILT_IN_NAVSAT_YAML).is_ok());
     }
 }

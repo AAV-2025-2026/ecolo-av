@@ -19,6 +19,9 @@
   <depend>geometry_msgs</depend>
   <!-- map: the car's outline, from vehicle.yaml (a copy built in, the installed one at launch). -->
   <depend>aav_description</depend>
+  <!-- map: the datum (map 0,0 on the Earth) for the street map, from navsat.yaml (a copy
+       built in, the installed one at launch). -->
+  <exec_depend>aav_localization</exec_depend>
 
   <exec_depend>launch_ros</exec_depend>
 

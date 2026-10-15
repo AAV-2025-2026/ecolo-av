@@ -248,6 +248,7 @@ fn announcement(m: &DataSource) -> Announcement {
 /// The node's parameters: each topic's name, and the limits. Read once, at start-up.
 struct Params {
     _topics: Vec<ReadOnlyParameter<Arc<str>>>,
+    _street_map: ReadOnlyParameter<Arc<str>>,
     _numbers: Vec<ReadOnlyParameter<f64>>,
 }
 
@@ -274,9 +275,15 @@ impl Params {
             *slot = p.get();
             numbers.push(p);
         }
+        let street_map = node
+            .declare_parameter::<Arc<str>>("street_map")
+            .default(config.street_map.as_str().into())
+            .read_only()?;
+        config.street_map = street_map.get().to_string();
         config.validate()?;
         let params = Self {
             _topics: topics,
+            _street_map: street_map,
             _numbers: numbers,
         };
         Ok((params, config))
