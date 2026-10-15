@@ -7,6 +7,8 @@ members = [
     # Logic: no hardware, no dependencies.
     "crates/spine-core",
     "crates/aav-inputs",
+    # The 2025-26 UART link from the Motor-Pi: its frames, resync and the C++'s targets.
+    "crates/legacy-link",
     # Drivers: the I2C chips and the CAN controller (SPI) against embedded-hal 1.0;
     # ibus takes bytes.
     "crates/jrk-g2",

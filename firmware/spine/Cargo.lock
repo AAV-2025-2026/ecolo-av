@@ -71,6 +71,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "legacy-link"
+version = "0.1.0"
+
+[[package]]
 name = "mcp2515"
 version = "0.1.0"
 dependencies = [
