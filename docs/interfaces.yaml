@@ -9,70 +9,77 @@
 #   bench = bench.launch.py: the car's graph, with stand-ins for the hardware
 # All topic names are absolute. QoS is the ROS default (reliable, volatile, depth 10)
 # unless noted.
+#
+# Names (docs/naming.md, Decided 15 Oct): every topic starts with its area,
+#   /<area>/<device or node>/<thing>
+# areas: /sensors/ /vehicle/ /can/ /localization/ /perception/ /drivers/ /control/ /ego/
+# /safety/ /hud/. Only ROS's own global names (/tf, /tf_static, /clock, /joint_states,
+# /robot_description...) and Nav2's (/map, /goal_pose, /plan) stay outside an area.
+# tools/tests/test_topic_areas.py checks every topic below.
 
 topics:
   # --- drivers -> mux -> ego (the command path) ---
-  /joy:
+  /drivers/joy/joy:
     type: sensor_msgs/msg/Joy
     pub: [joy_node]
     sub: [teleop_twist_joy_node, joy_teleop]
-    note: Joystick axes and buttons, 20 Hz while held.
-  /cmd_vel/joy:
+    note: Joystick axes and buttons, 20 Hz while held. joy_node, teleop_twist_joy_node and joy_teleop run in the namespace /drivers/joy (aav_teleop teleop.launch.py), so their relative topics land here.
+  /drivers/joy/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [teleop_twist_joy_node]
     sub: [twist_mux]
     note: Priority 100. Only while the deadman (trigger) is held.
-  /cmd_vel/remote:
+  /drivers/keyboard/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [teleop_twist_keyboard]
     sub: [twist_mux]
-    note: Priority 90. A person driving from a laptop - teleop_twist_keyboard (stamped:=true), the Foxglove teleop panel, or the HUD once ported.
-  /cmd_vel/scripted:
+    note: Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic.
+  /drivers/scripted/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [scripted_driver]
     sub: [twist_mux]
     note: Priority 50. Only while a /scripted_drive goal runs.
-  /cmd_vel/replay:
+  /drivers/replay/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: []
     sub: [twist_mux]
-    note: Priority 40. ros2 bag play of a recorded /cmd_vel (tools/replay_commands.sh).
-  /cmd_vel/nav:
+    note: Priority 40. ros2 bag play of a recorded /control/cmd_vel (tools/replay_commands.sh).
+  /drivers/nav/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother, collision_monitor]
     sub: [twist_mux]
     note: Priority 20. Nav2. From collision_monitor where the radar runs (navigation.launch.py radar:=true - the bench, the car with its radar part), else straight from velocity_smoother.
-  /cmd_vel_smoothed:
+  /control/cmd_vel_smoothed:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother]
     sub: [collision_monitor]
     note: Nav2's smoothed command, into collision_monitor, where the radar runs. It stops the car for radar points in its stop zone, or when the radar goes silent; it only guards Nav2.
-  /collision_monitor_state:
+  /safety/collision_monitor/state:
     type: nav2_msgs/msg/CollisionMonitorState
     pub: [collision_monitor]
     sub: []
     note: What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar is silent or its TF is late.
-  /collision_monitor/stop_zone:
+  /safety/collision_monitor/stop_zone:
     type: geometry_msgs/msg/PolygonStamped
     pub: [collision_monitor]
     sub: []
     note: The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).
-  /collision_monitor/collision_points_marker:
+  /safety/collision_monitor/collision_points_marker:
     type: visualization_msgs/msg/MarkerArray
     pub: [collision_monitor]
     sub: []
     note: The radar points collision_monitor sees, for RViz; sent only while someone listens.
-  /cmd_vel/ai:
+  /drivers/ai/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [control_interface]
     sub: [twist_mux]
     note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
-  /estop:
+  /safety/estop:
     type: std_msgs/msg/Bool
     pub: [joy_teleop, hud_server, hud]
     sub: [twist_mux, spine_bridge, legacy_uart_bridge]
     note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike.
-  /cmd_vel:
+  /control/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [twist_mux]
     sub: [ego]
@@ -109,13 +116,13 @@ topics:
     pub: [joint_state_publisher, gz_bridge]
     sub: [robot_state_publisher]
     live: [turtle, sim, car, replay, bench]
-  /to_can_bus:
+  /can/tx:
     type: can_msgs/msg/Frame
     pub: [spine_bridge]
     sub: [socket_can_sender, spine_sim]
     live: [bench]
     note: DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc).
-  /from_can_bus:
+  /can/rx:
     type: can_msgs/msg/Frame
     pub: [socket_can_receiver, spine_sim]
     sub: [spine_bridge]
@@ -123,74 +130,74 @@ topics:
     note: VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz. On the bench, spine_sim sends them.
 
   # --- sensors ---
-  /imu/data_raw:
+  /sensors/imu/data_raw:
     type: sensor_msgs/msg/Imu
     pub: [imu_node, gazebo_adapter, mock_imu]
     sub: [imu_filter_madgwick]
     live: [sim, car, replay, bench]
     note: Gyro and accelerometer in imu_link, with covariances; no orientation.
-  /imu/mag:
+  /sensors/imu/mag:
     type: sensor_msgs/msg/MagneticField
     pub: [imu_node, mock_imu]
     sub: [imu_filter_madgwick]
     live: [bench]
     note: Raw counts from imu_node (not tesla yet); tesla from mock_imu. The filter ignores it (use_mag false).
-  /imu/data:
+  /sensors/imu/data:
     type: sensor_msgs/msg/Imu
     pub: [imu_filter_madgwick]
     sub: [ekf_local, ekf_global]
     live: [sim, car, replay, bench]
     note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
-  /gps/fix:
+  /sensors/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
     sub: [navsat_transform, hud]
     live: [sim, car, replay, bench]
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
-  /gps/fix_velocity:
+  /sensors/gps/fix_velocity:
     type: geometry_msgs/msg/TwistWithCovarianceStamped
     pub: [ublox_gps]
     sub: []
     note: The receiver's velocity, east, north and up (m/s). Nothing fuses it yet.
-  /gps/vel:
+  /sensors/gps/vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [gps_nmea]
     sub: []
     note: NMEA's speed and course (gps_driver:=nmea). Nothing fuses it yet.
-  /gps/time_reference:
+  /sensors/gps/time_reference:
     type: sensor_msgs/msg/TimeReference
     pub: [gps_nmea]
     sub: []
     note: GPS time, from NMEA (gps_driver:=nmea).
-  /radar/points:
+  /sensors/radar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [radar, mock_radar]
     sub: [radar_clusters, local_costmap, collision_monitor]
     live: [bench]
     note: The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by aav_object_detection; read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true).
-  /battery_status:
+  /vehicle/battery:
     type: sensor_msgs/msg/BatteryState
     pub: [battery_state_publisher, mock_battery]
     sub: [hud_server, hud]
     live: [bench]
     note: battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).
-  /battery_monitor_heartbeat:
+  /vehicle/battery/heartbeat:
     type: std_msgs/msg/String
     pub: [heartbeat_publisher]
     sub: []
     note: battery_monitor's sign of life.
-  /camera/image_raw:
+  /sensors/camera/front_left/image_raw:
     type: sensor_msgs/msg/Image
     pub: [camera_left, mock_camera, test_camera]
     sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder, hud]
     live: [bench]
     note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file.
-  /camera/image_raw/compressed:
+  /sensors/camera/front_left/image_raw/compressed:
     type: sensor_msgs/msg/CompressedImage
     pub: [camera_left, test_camera, mock_camera]
     sub: [yolo_detector, yolo_detector_laptop]
     note: The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera only while something reads it). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true; the laptop's machine file). On the bench, pixi run -e ml laptop-bench.
-  /camera/camera_info:
+  /sensors/camera/front_left/camera_info:
     type: sensor_msgs/msg/CameraInfo
     pub: [camera_left, mock_camera, test_camera]
     sub: [lane_finder, camera_obstacles]
@@ -198,13 +205,13 @@ topics:
     note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.
 
   # --- perception ---
-  /radar/clusters:
+  /perception/radar/clusters:
     type: sensor_msgs/msg/PointCloud2
     pub: [radar_clusters]
     sub: []
     live: [bench]
     note: The radar points DBSCAN grouped into objects, coloured by cluster.
-  /radar/cluster_boxes:
+  /perception/radar/cluster_boxes:
     type: visualization_msgs/msg/MarkerArray
     pub: [radar_clusters]
     sub: []
@@ -220,7 +227,7 @@ topics:
     pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]
     sub: []
     note: The camera picture with the boxes drawn on, for RViz or Foxglove.
-  /perception/stop:
+  /perception/stop_sign:
     type: std_msgs/msg/Bool
     pub: [stop_sign_watcher]
     sub: [twist_mux, hud_server, hud]
@@ -237,65 +244,65 @@ topics:
     sub: [local_costmap]
     note: The far edge of what that camera sees, on the road, 12 m out, in base_link. The camera layer clears up to it before it marks, so old boxes don't linger.
 
-  /lane_geometry:
+  /perception/lane/geometry:
     type: aav_lane_geometry/msg/LaneGeometry
     pub: [lane_finder, fake_lane_geometry_pub]
     sub: [control_interface]
     note: "One per camera picture, from lane_finder (aav_lane_finder, classic OpenCV), in base_link. vehicle_offset_m - the car from the lane's centre, 3 m ahead (lookahead), + = the car is left of it. Each line as y = a x^2 + b x + c (m), its radius (m; 9999 = straight or not seen) and confidence (0-1); the lane width (m). Bench - lane:=true runs lane_finder, lane:=fake runs fake_lane_geometry_pub (its polynomials are pixels)."
-  /lane_geometry/image:
+  /perception/lane/image:
     type: sensor_msgs/msg/Image
     pub: [lane_finder]
     sub: []
     note: The bird's-eye view, with the paint, the windows and the lines lane_finder found, for RViz or Foxglove. Only with debug_image true.
-  /lane_geometry_status:
+  /drivers/ai/lane_status:
     type: std_msgs/msg/String
     pub: [control_interface]
     sub: []
-    note: Lane keeping's state and numbers, as text.
-  /vehicle_state:
+    note: Lane keeping's state and numbers, as text. Under /drivers/ai, as control_interface (the AI slot's driver) publishes it.
+  /drivers/ai/lane_state:
     type: std_msgs/msg/String
     pub: [control_interface]
     sub: []
     note: Lane keeping's state machine (LANE_KEEP, LANE_CHANGING, ...). Not the car's state - that's /vehicle/status.
 
   # --- bench mode: the stand-ins' own topics ---
-  /bench/truth:
+  /vehicle/bench/truth:
     type: nav_msgs/msg/Odometry
     pub: [spine_sim]
     sub: [mock_imu, mock_gps, mock_camera, mock_radar]
     live: [bench]
-    note: Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /odometry/global to check the EKFs.
-  /bench/hw_estop:
+    note: Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /localization/odom/global to check the EKFs.
+  /vehicle/bench/hw_estop:
     type: std_msgs/msg/Bool
     pub: []
     sub: [spine_sim]
     note: true = press the hardware e-stop, on the bench; false = release it. The spine brakes, and needs arming again.
-  /bench/driver_faults:
+  /vehicle/bench/driver_faults:
     type: std_msgs/msg/UInt16
     pub: []
     sub: [spine_sim]
     note: Pretend a driver failed. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).
 
   # --- localization ---
-  /odometry/local:
+  /localization/odom/local:
     type: nav_msgs/msg/Odometry
     pub: [ekf_local]
     sub: [controller_server, bt_navigator, scripted_driver]
     live: [turtle, sim, car, replay, bench]
     note: odom frame. Smooth; drifts.
-  /odometry/global:
+  /localization/odom/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
     sub: [navsat_transform]
     live: [sim, car, replay, bench]
     note: map frame. Includes GPS; can jump.
-  /odometry/gps:
+  /localization/gps/odom:
     type: nav_msgs/msg/Odometry
     pub: [navsat_transform]
     sub: [ekf_global]
     live: [sim, car, replay, bench]
     note: Each GPS fix as a map-frame position of base_link (antenna offset removed).
-  /gps/filtered:
+  /localization/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [navsat_transform]
     sub: [hud_server, hud]
@@ -349,7 +356,7 @@ services:
   /spine/arm:
     type: std_srvs/srv/SetBool
     server: spine_bridge
-    note: The spine ignores drive commands until armed; refused while /estop is true.
+    note: The spine ignores drive commands until armed; refused while /safety/estop is true.
   /fromLL:
     type: robot_localization/srv/FromLL
     server: navsat_transform

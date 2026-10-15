@@ -103,7 +103,7 @@ def contract(name: str = '') -> str:
     Look something up in the node-graph contract, docs/interfaces.yaml.
 
     No name: every topic, service and action with its type. A topic, service, action or
-    frame ('/cmd_vel/joy'): its entry, with who publishes and subscribes, and the
+    frame ('/drivers/joy/cmd_vel'): its entry, with who publishes and subscribes, and the
     profiles where it must be live. A node ('twist_mux'): every entry it touches.
     """
     spec = parts.load_contract()

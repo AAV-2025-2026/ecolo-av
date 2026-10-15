@@ -51,14 +51,14 @@ def test_search_any_case_with_a_limit():
 
 def test_contract_summary():
     text = parts.contract_summary(SPEC)
-    assert '  /cmd_vel/joy  geometry_msgs/msg/TwistStamped' in text
+    assert '  /drivers/joy/cmd_vel  geometry_msgs/msg/TwistStamped' in text
     assert '  /spine/arm  std_srvs/srv/SetBool' in text
     assert '  /scripted_drive  aav_interfaces/action/ScriptedDrive' in text
 
 
 def test_contract_for_a_topic_with_or_without_the_slash():
-    text = parts.contract_for(SPEC, '/cmd_vel/joy')
-    assert text == parts.contract_for(SPEC, 'cmd_vel/joy')
+    text = parts.contract_for(SPEC, '/drivers/joy/cmd_vel')
+    assert text == parts.contract_for(SPEC, 'drivers/joy/cmd_vel')
     assert 'geometry_msgs/msg/TwistStamped' in text and 'twist_mux' in text
 
 
@@ -78,12 +78,12 @@ def test_qos_asks_only_for_what_every_publisher_offers():
 def test_graph_text():
     text = parts.graph_text(
         ['/ego', '/twist_mux'],
-        {'/cmd_vel': (['geometry_msgs/msg/TwistStamped'], ['twist_mux'], ['ego'])},
+        {'/control/cmd_vel': (['geometry_msgs/msg/TwistStamped'], ['twist_mux'], ['ego'])},
         {'/ego/get_parameters': ['rcl_interfaces/srv/GetParameters'],
          '/spine/arm': ['std_srvs/srv/SetBool']},
         'ROS domain 7, discovery range LOCALHOST')
     assert text.startswith('ROS domain 7, discovery range LOCALHOST')
-    assert '  /cmd_vel  geometry_msgs/msg/TwistStamped' in text
+    assert '  /control/cmd_vel  geometry_msgs/msg/TwistStamped' in text
     assert 'pub: twist_mux   sub: ego' in text
     assert '/spine/arm' in text and 'get_parameters' not in text
 

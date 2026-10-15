@@ -115,8 +115,8 @@ def contract_for(spec: dict, name: str) -> Optional[str]:
     """
     Say what the contract says about one name, as YAML: None if it says nothing.
 
-    A topic, service or action ('/cmd_vel/joy', or 'cmd_vel/joy'), or a frame, gives
-    its entry. A node ('twist_mux') gives every entry it publishes, subscribes or serves.
+    A topic, service or action ('/drivers/joy/cmd_vel', or 'drivers/joy/cmd_vel'), or a frame,
+    gives its entry. A node ('twist_mux') gives every entry it publishes, subscribes or serves.
     """
     name = name.strip()
     found: Dict[str, dict] = {}
