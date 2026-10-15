@@ -239,29 +239,35 @@ class DriveTools:
                                 planned)
         return self._call('drive', args, body)
 
-    def check_turn(self, angle_deg: float, radius_m: float,
+    def check_turn(self, angle_deg: float, radius_m: float, direction: Optional[str] = None,
                    speed_mps: float = 0.5) -> Optional[str]:
         """Why turn() would refuse these numbers now, or None. Moves nothing."""
-        return (safety.check_turn(self.caps(), float(angle_deg), float(radius_m),
-                                  float(speed_mps))
+        try:
+            angle = drive_maths.signed_angle(float(angle_deg), direction)
+        except ValueError as e:
+            return str(e)
+        return (safety.check_turn(self.caps(), angle, float(radius_m), float(speed_mps))
                 or self._may_move())
 
-    def turn(self, angle_deg: float, radius_m: float, speed_mps: float = 0.5,
-             wait: bool = True) -> dict:
+    def turn(self, angle_deg: float, radius_m: float, direction: Optional[str] = None,
+             speed_mps: float = 0.5, wait: bool = True) -> dict:
         """
-        Turn by angle_deg (+ = left, - = right) driving forward on a circle of radius_m.
+        Turn by angle_deg driving forward on a circle of radius_m.
 
-        The arc's length is radius x angle; the drive covers exactly that, ramps included.
+        direction "left" or "right" gives the side, and angle_deg is then only the size;
+        without it, + = left and - = right (REP-103). The arc's length is radius x angle;
+        the drive covers exactly that, ramps included.
         """
-        args = {'angle_deg': angle_deg, 'radius_m': radius_m, 'speed_mps': speed_mps,
-                'wait': wait}
+        args = {'angle_deg': angle_deg, 'radius_m': radius_m, 'direction': direction,
+                'speed_mps': speed_mps, 'wait': wait}
 
         def body():
-            why = self.check_turn(angle_deg, radius_m, speed_mps)
+            why = self.check_turn(angle_deg, radius_m, direction, speed_mps)
             if why:
                 return {'ok': False, 'message': f'refused: {why}'}
             c = self.caps()
-            arc = drive_maths.plan_arc(float(angle_deg), float(radius_m))
+            angle = drive_maths.signed_angle(float(angle_deg), direction)
+            arc = drive_maths.plan_arc(angle, float(radius_m))
             goal = drive_maths.plan_distance(arc.length, float(speed_mps), c.acceleration,
                                              c.deceleration, curvature=arc.curvature)
             planned = {'goal': goal.as_dict(), 'arc_length_m': _r(arc.length)}

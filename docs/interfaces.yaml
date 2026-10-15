@@ -29,27 +29,27 @@ topics:
   /drivers/joy/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [teleop_twist_joy_node]
-    sub: [twist_mux]
+    sub: [twist_mux, language_drive]
     note: Priority 100. Only while the deadman (trigger) is held.
   /drivers/keyboard/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [teleop_twist_keyboard]
-    sub: [twist_mux]
+    sub: [twist_mux, language_drive]
     note: Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic.
   /drivers/scripted/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [scripted_driver]
-    sub: [twist_mux]
-    note: Priority 50. Only while a /scripted_drive goal runs.
+    sub: [twist_mux, language_drive]
+    note: Priority 50. Only while a /scripted_drive goal runs. language_drive (aav_language, plain-English driving) only reads the mux inputs' arrival times, to tell who drives.
   /drivers/replay/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: []
-    sub: [twist_mux]
+    sub: [twist_mux, language_drive]
     note: Priority 40. ros2 bag play of a recorded /control/cmd_vel (tools/replay_commands.sh).
   /drivers/nav/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother, collision_monitor]
-    sub: [twist_mux]
+    sub: [twist_mux, language_drive]
     note: Priority 20. Nav2. From collision_monitor where the radar runs (navigation.launch.py radar:=true - the bench, the car with its radar part, Gazebo's road world), else straight from velocity_smoother.
   /control/cmd_vel_smoothed:
     type: geometry_msgs/msg/TwistStamped
@@ -74,13 +74,13 @@ topics:
   /drivers/ai/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [control_interface]
-    sub: [twist_mux]
+    sub: [twist_mux, language_drive]
     note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
   /safety/estop:
     type: std_msgs/msg/Bool
-    pub: [joy_teleop, hud_server, hud]
-    sub: [twist_mux, spine_bridge, legacy_uart_bridge]
-    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike.
+    pub: [joy_teleop, hud_server, hud, language_drive]
+    sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive]
+    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.
   /control/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [twist_mux]
@@ -104,7 +104,7 @@ topics:
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter, turtlesim_adapter]
-    sub: [hud_server, hud]
+    sub: [hud_server, hud, language_drive]
     live: [turtle, sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.
   /vehicle/joint_states:
@@ -153,7 +153,7 @@ topics:
   /sensors/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
-    sub: [navsat_transform, hud]
+    sub: [navsat_transform, hud, language_drive]
     live: [sim, car, replay, bench]
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
   /sensors/gps/fix_velocity:
@@ -237,7 +237,7 @@ topics:
   /perception/stop_sign:
     type: std_msgs/msg/Bool
     pub: [stop_sign_watcher]
-    sub: [twist_mux, hud_server, hud]
+    sub: [twist_mux, hud_server, hud, language_drive]
     live: [car]
     note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.
   /perception/camera_obstacles:
@@ -302,7 +302,7 @@ topics:
   /localization/odom/local:
     type: nav_msgs/msg/Odometry
     pub: [ekf_local]
-    sub: [controller_server, bt_navigator, scripted_driver]
+    sub: [controller_server, bt_navigator, scripted_driver, language_drive]
     live: [turtle, sim, car, replay, bench]
     note: odom frame. Smooth; drifts.
   /localization/odom/global:
@@ -395,7 +395,7 @@ actions:
   /scripted_drive:
     type: aav_interfaces/action/ScriptedDrive
     server: scripted_driver
-    note: Drive a speed profile (accelerate, hold for a time or distance, stop). Phase 1.
+    note: Drive a speed profile (accelerate, hold for a time or distance, stop). Phase 1. Sent by language_drive (aav_language) for drive() and turn() - a whole distance, ramps included.
   /navigate_to_pose:
     type: nav2_msgs/action/NavigateToPose
     server: bt_navigator
@@ -409,7 +409,7 @@ actions:
   /follow_gps_waypoints:
     type: nav2_msgs/action/FollowGPSWaypoints
     server: waypoint_follower
-    note: Lat/lon waypoints. The HUD (hud_server) sends its locked route here. Phase 2.
+    note: Lat/lon waypoints. The HUD (hud_server) sends its locked route here. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.
 
 frames:
   map: {parent: null, by: "ekf_global (map -> odom)", note: "x east, y north; origin = the navsat datum"}

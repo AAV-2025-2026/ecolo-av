@@ -71,6 +71,7 @@ async def run_model(model_id: str, json_actions: bool, verbose: bool) -> dict:
                      'ok': ok, 'why': why, 'steps': len(plan.steps),
                      'seconds': round(sum(times), 2),
                      'queued': [c.text() for c in plan.queued],
+                     'unsaid': plan.unsaid(),
                      'ran_now': [c.text() for c in plan.ran_now],
                      'answer': plan.answer[:300],
                      'raw': [s.raw[:400] for s in plan.steps]})
@@ -83,7 +84,10 @@ async def run_model(model_id: str, json_actions: bool, verbose: bool) -> dict:
     for k in ('move', 'now', 'refuse'):
         sel = [r for r in rows if r['kind'] == k]
         by_kind[k] = f'{sum(r["ok"] for r in sel)}/{len(sel)}'
+    wrong = [r for r in rows if not r['ok'] and r['queued']]
+    flagged = f'{sum(bool(r["unsaid"]) for r in wrong)}/{len(wrong)}'
     return {'model': model_id, 'format': 'json actions' if use_json else 'native tools',
+            'wrong_plans_flagged': flagged,
             'correct': sum(r['ok'] for r in rows), 'total': len(rows), 'by_kind': by_kind,
             'unreadable_replies': bad, 'load_s': round(load_s, 1),
             'step_s_median': round(statistics.median(step_times), 2) if step_times else None,
@@ -94,14 +98,14 @@ async def run_model(model_id: str, json_actions: bool, verbose: bool) -> dict:
 
 
 def table(results) -> str:
-    lines = ['| Model | Correct | Moves | At once | Refusals | Unreadable | s/step (median) '
-             '| s/request | Memory GB | Disk GB |',
+    lines = ['| Model | Correct | Moves | At once | Refusals | Wrong plans flagged '
+             '| s/step (median) | s/request | Memory GB | Disk GB |',
              '|---|---|---|---|---|---|---|---|---|---|']
     for r in results:
         lines.append(
             f'| {r["model"].split("/")[-1]} | **{r["correct"]}/{r["total"]}** | '
             f'{r["by_kind"]["move"]} | {r["by_kind"]["now"]} | {r["by_kind"]["refuse"]} | '
-            f'{r["unreadable_replies"]} | {r["step_s_median"]} | {r["request_s_mean"]} | '
+            f'{r["wrong_plans_flagged"]} | {r["step_s_median"]} | {r["request_s_mean"]} | '
             f'{r["peak_memory_gb"]} | {r["disk_gb"]} |')
     return '\n'.join(lines)
 

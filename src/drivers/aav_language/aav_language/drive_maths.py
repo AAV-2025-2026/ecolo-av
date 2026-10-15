@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -102,6 +103,21 @@ def plan_arc(angle_deg: float, radius: float) -> Arc:
         raise ValueError('radius must be a positive number of metres')
     angle = math.radians(angle_deg)
     return Arc(curvature=math.copysign(1.0 / radius, angle), length=radius * abs(angle))
+
+
+def signed_angle(angle_deg: float, direction: Optional[str] = None) -> float:
+    """
+    Return the turn angle with REP-103's sign: + = left, - = right.
+
+    With a direction ("left" or "right"), angle_deg is only the size: "right" and 45 or
+    -45 both give -45. Without one, angle_deg keeps its own sign.
+    """
+    if direction is None or str(direction).strip() == '':
+        return angle_deg
+    side = str(direction).strip().lower()
+    if side not in ('left', 'right'):
+        raise ValueError('direction must be "left" or "right"')
+    return abs(angle_deg) if side == 'left' else -abs(angle_deg)
 
 
 def min_turn_radius(wheelbase: float, max_steering_angle: float) -> float:

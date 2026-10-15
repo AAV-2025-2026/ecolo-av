@@ -189,6 +189,34 @@ def test_fast_words(text, tool):
     assert react.FAST[text.strip().lower().rstrip('!.')] == tool
 
 
+def test_a_turn_scores_by_its_side_whichever_way_it_was_given():
+    item = {'moves': [('turn', {'angle_deg': -45, 'radius_m': 8})]}
+    for args, ok in (({'angle_deg': -45, 'radius_m': 8}, True),
+                     ({'angle_deg': 45, 'radius_m': 8, 'direction': 'right'}, True),
+                     ({'angle_deg': 45, 'radius_m': 8}, False),
+                     ({'angle_deg': 45, 'radius_m': 8, 'direction': 'left'}, False)):
+        plan = react.Plan(queued=[ToolCall('turn', args)])
+        assert eval_set.score(item, plan)[0] == ok, args
+
+
+def test_numbers_the_person_never_typed_are_pointed_out():
+    plan = react.Plan(request='drive two hundred and fifty metres',
+                      queued=[ToolCall('drive', {'distance_m': 200, 'direction': 'forward'})])
+    assert plan.unsaid() == ['drive: distance_m=200 is not a number you typed']
+    assert 'CHECK: drive: distance_m=200' in plan.text()
+    ok = react.unsaid_numbers('turn right 45 degrees, radius 8 m, then drive 10.5 m',
+                              [ToolCall('turn', {'angle_deg': -45, 'radius_m': 8,
+                                                 'speed_mps': 0.5, 'direction': 'right'}),
+                               ToolCall('drive', {'distance_m': 10.5})])
+    assert ok == []
+    assert react.unsaid_numbers('turn left 90 degrees', [ToolCall('turn', {
+        'angle_deg': 90, 'radius_m': 5})]) == []           # 5 m: the prompt's default
+    assert react.unsaid_numbers('go as fast as you can', [ToolCall('drive', {
+        'distance_m': 200, 'speed_mps': 1})]) == [
+        'drive: distance_m=200 is not a number you typed',
+        'drive: speed_mps=1 is not a number you typed']
+
+
 def test_eval_set_is_well_formed():
     ids = [i['id'] for i in eval_set.ITEMS]
     assert len(ids) == len(set(ids)) and len(ids) >= 20

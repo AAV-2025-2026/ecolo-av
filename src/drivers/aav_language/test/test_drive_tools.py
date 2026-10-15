@@ -65,6 +65,16 @@ def test_turn_is_an_arc_of_the_right_length():
     assert r['heading_change_deg'] == pytest.approx(-45.0, abs=0.1)
 
 
+def test_turn_direction_words_give_the_side():
+    tools, car, _ = make()
+    for angle, side, turned in ((45, 'right', -45), (-45, 'Right', -45), (-30, 'left', 30)):
+        r = tools.turn(angle, 8, direction=side)
+        assert r['heading_change_deg'] == pytest.approx(turned, abs=0.1)
+    r = tools.turn(30, 8, direction='up')
+    assert not r['ok'] and 'left' in r['message']
+    assert len(car.sent) == 3
+
+
 def test_turn_tighter_than_the_car_is_refused():
     tools, car, _ = make()
     r = tools.turn(90, 1.0)

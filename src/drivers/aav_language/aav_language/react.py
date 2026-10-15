@@ -165,10 +165,10 @@ Work in steps: think in one short sentence, call ONE tool, read its result, repe
 nothing is left to do, answer the person in one or two short sentences, with no tool call.
 
 How to drive:
-- Units: metres, m/s, degrees. A positive angle turns left, a negative angle turns right.
+- Units: metres, m/s, degrees.
 - drive(distance_m) covers the whole distance. To back up, use direction="reverse".
-- turn(angle_deg, radius_m) drives forward along an arc. If no radius is given, use 5.
-  The car cannot turn on the spot.
+- turn(angle_deg, radius_m, direction) drives forward along an arc; direction is "left"
+  or "right". If no radius is given, use 5. The car cannot turn on the spot.
 - If no speed is given, leave speed_mps out (0.5 m/s).
 - For several moves, call them in order, one per step. Moves do not run at once: each
   one is queued, and runs after the person types yes. Never repeat a queued move.
@@ -180,7 +180,8 @@ Limits (the server refuses anything more):
 - reverse: at most {lim['max_reverse_distance_m']:g} m, at most {rev_speed:g} m/s
 - turn radius: at least {lim['min_turn_radius_m'] or 0:.1f} m
 If a request breaks a limit, or leaves out what you need (how far?), do NOT call a move:
-say why, and ask. Never split a request into several moves to get round a limit."""
+say why, and ask. Never make a number smaller to fit a limit, and never split a request
+into several moves to get round one."""
     if json_actions:
         tool_list = json.dumps(tools or [], indent=1)
         text += f"""
@@ -234,16 +235,53 @@ class Plan:
     refused: List[Tuple[ToolCall, str]] = field(default_factory=list)
     ran_now: List[ToolCall] = field(default_factory=list)
     answer: str = ''
+    request: str = ''
 
     def moves(self) -> List[ToolCall]:
         return [c for c in self.queued if c.name in MOVES]
+
+    def unsaid(self) -> List[str]:
+        """Numbers in the plan that the person never typed (see unsaid_numbers)."""
+        return unsaid_numbers(self.request, self.queued)
 
     def text(self) -> str:
         if not self.queued:
             return 'No moves planned.'
         lines = ['The plan (nothing has moved yet):']
         lines += [f'  {i}. {c.text()}' for i, c in enumerate(self.queued, 1)]
+        for note in self.unsaid():
+            lines.append(f'  CHECK: {note}')
         return '\n'.join(lines)
+
+
+# Numbers a plan may use without the person typing them: the tools' defaults, and the
+# prompt's default radius.
+DEFAULT_NUMBERS = {'speed_mps': (0.5,), 'radius_m': (5.0,), 'curvature': (0.0,)}
+NUMBER = re.compile(r'-?\d+(?:\.\d+)?')
+
+
+def unsaid_numbers(request: str, calls: List[ToolCall]) -> List[str]:
+    """
+    List the plan's numbers that are not in the request, for the person to check.
+
+    A model sometimes shrinks a request to fit a limit ("drive 250 m" becomes 200 m) or
+    makes one up ("go as fast as you can"). The server can't tell; the person can, if the
+    plan points it out. Only a warning: a fair conversion ("5 km" is 5000 m) shows too.
+    """
+    said = [abs(float(n)) for n in NUMBER.findall(request or '')]
+    notes = []
+    for call in calls:
+        for key, value in call.arguments.items():
+            try:
+                v = abs(float(value))
+            except (TypeError, ValueError):
+                continue
+            if any(abs(v - s) <= 1e-6 * max(1.0, s) for s in said):
+                continue
+            if any(abs(v - d) < 1e-9 for d in DEFAULT_NUMBERS.get(key, ())):
+                continue
+            notes.append(f'{call.name}: {key}={value} is not a number you typed')
+    return notes
 
 
 Llm = Callable[[List[Dict], Optional[List[Dict]]], str]
@@ -271,7 +309,7 @@ class ReactAgent:
 
     async def plan(self, request: str) -> Plan:
         """Think and act until the model answers. Moves are checked and queued, not run."""
-        plan = Plan()
+        plan = Plan(request=request)
         messages = [{'role': 'system', 'content': self.system},
                     {'role': 'user', 'content': request}]
         for n in range(self.max_steps):

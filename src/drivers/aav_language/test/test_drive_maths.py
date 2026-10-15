@@ -1,7 +1,7 @@
 import math
 
 from aav_language.drive_maths import (haversine, min_turn_radius, plan_arc, plan_distance,
-                                      ramp_distance)
+                                      ramp_distance, signed_angle)
 from aav_scripted.speed_profile import SpeedProfile, STOPPED
 import pytest
 
@@ -83,6 +83,14 @@ def test_arc_length_and_curvature():
         plan_arc(0.0, 5.0)
     with pytest.raises(ValueError):
         plan_arc(90.0, 0.0)
+
+
+def test_signed_angle():
+    assert signed_angle(45.0) == 45.0 and signed_angle(-45.0) == -45.0
+    assert signed_angle(45.0, 'right') == -45.0 and signed_angle(-45.0, 'right') == -45.0
+    assert signed_angle(-90.0, 'LEFT') == 90.0 and signed_angle(90.0, '') == 90.0
+    with pytest.raises(ValueError):
+        signed_angle(90.0, 'up')
 
 
 def test_min_turn_radius_is_the_bicycle_model():

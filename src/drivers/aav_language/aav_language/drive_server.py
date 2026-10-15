@@ -76,15 +76,15 @@ def build_server(tools: DriveTools):
         return out(tools.drive(distance_m, speed_mps, direction, curvature, wait))
 
     @server.tool(annotations=moves, structured_output=False)
-    def turn(angle_deg: float, radius_m: float, speed_mps: float = 0.5,
+    def turn(angle_deg: float, radius_m: float, direction: str, speed_mps: float = 0.5,
              wait: bool = True) -> str:
         """
         Turn while driving forward, along an arc.
 
-        angle_deg positive = left, negative = right; radius_m is the circle's radius in
-        metres. Returns when the car has stopped.
+        direction is "left" or "right"; angle_deg is how far, in degrees (90 = a quarter
+        turn); radius_m is the circle's radius in metres. Returns when the car has stopped.
         """
-        return out(tools.turn(angle_deg, radius_m, speed_mps, wait))
+        return out(tools.turn(angle_deg, radius_m, direction, speed_mps, wait))
 
     @server.tool(annotations=moves, structured_output=False)
     def go_to_gps(lat: float, lon: float, wait: bool = True) -> str:
