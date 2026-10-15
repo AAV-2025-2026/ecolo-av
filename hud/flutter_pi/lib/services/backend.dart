@@ -44,7 +44,7 @@ class HudBackend {
   /// Stop following the route (the map page's Unlock and Clear).
   Future<BackendReply> cancelRoute() => _post('/cancel');
 
-  /// The e-stop: the back end publishes /estop true. Nothing in the app can clear it.
+  /// The e-stop: the back end publishes /safety/estop true. Nothing in the app can clear it.
   Future<BackendReply> estop() => _post('/estop');
 
   /// The newest camera picture, from /camera/latest.png.

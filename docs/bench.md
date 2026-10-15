@@ -22,7 +22,7 @@ pixi run -e ml bench perception:=true   # add YOLO and the stop sign
 ```
 
 While it runs, in more terminals: `pixi run graph` (rqt_graph), `pixi run rviz`,
-`pixi run keyboard --local` (you drive, at the remote priority), or `pixi run check bench`.
+`pixi run keyboard --local` (you drive, at the keyboard priority), or `pixi run check bench`.
 The bench stays on this computer, like the sim: these terminals see it, other computers
 don't.
 
@@ -31,7 +31,7 @@ don't.
 | `nav` | `true` | Nav2: goals from RViz's 2D Goal Pose |
 | `teleop` | `false` | the joystick, if one is plugged in |
 | `perception` | `false` | YOLO and the stop-sign watcher. Needs `pixi run -e ml` |
-| `lane` | `false` | lane keeping on a pretend straight lane: the car drives itself on `/cmd_vel/ai` |
+| `lane` | `false` | lane keeping on a pretend straight lane: the car drives itself on `/drivers/ai/cmd_vel` |
 | `hud` | `false` | the HUD's web server, on 127.0.0.1:5000 |
 | `arm` | `true` | arms the spine 12 s after start-up |
 | `rviz`, `foxglove` | `false` | RViz; foxglove_bridge on port 8765 |
@@ -48,7 +48,7 @@ can tell the difference.
 | Drivers, twist_mux, ego | the car's own | the same |
 | Localization | the car's own: both EKFs and `navsat_transform`, with GPS | the same |
 | The spine bridge | the car's own: `spine_bridge` and its CAN frames | the same |
-| The CAN bus | the topics `/to_can_bus` and `/from_can_bus` | `ros2_socketcan` and `can0` |
+| The CAN bus | the topics `/can/tx` and `/can/rx` | `ros2_socketcan` and `can0` |
 | The spine board and actuators | `spine_sim`: the firmware's own logic on a model car | the spine board, two Jrk G2s, the throttle DAC |
 | IMU | `mock_imu` | `yahboom_imu_cpp`, or its Rust twin |
 | GPS | `mock_gps` | `ublox_gps` (the default), `gps_nmea` or `ublox_dgnss`: `gps_driver:=` picks |
@@ -60,12 +60,12 @@ can tell the difference.
 
 | Stand-in | Package | Publishes | How it works |
 |---|---|---|---|
-| `spine_sim` | `aav_spine_sim` (Rust) | `/from_can_bus`, `/bench/truth` | runs spine-core's `Spine::step` 100 times a second, as the board will, and drives a model car with the outputs |
-| `mock_imu` | `aav_bench` | `/imu/data_raw`, `/imu/mag` | the model's turn rate and acceleration, plus noise and a small gyro drift |
-| `mock_gps` | `aav_bench` | `/gps/fix` | where the antenna is, as latitude and longitude, with 0.5 m of noise, 5 times a second |
-| `mock_camera` | `aav_bench` | `/camera/image_raw` | draws a road, and each stop sign at its real size when it's in view |
-| `mock_battery` | `aav_bench` | `/battery_status` | a 48 V pack draining over two hours (a guess until Q8) |
-| `mock_radar` | `aav_bench` | `/radar/points` | sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there |
+| `spine_sim` | `aav_spine_sim` (Rust) | `/can/rx`, `/vehicle/bench/truth` | runs spine-core's `Spine::step` 100 times a second, as the board will, and drives a model car with the outputs |
+| `mock_imu` | `aav_bench` | `/sensors/imu/data_raw`, `/sensors/imu/mag` | the model's turn rate and acceleration, plus noise and a small gyro drift |
+| `mock_gps` | `aav_bench` | `/sensors/gps/fix` | where the antenna is, as latitude and longitude, with 0.5 m of noise, 5 times a second |
+| `mock_camera` | `aav_bench` | `/sensors/camera/front_left/image_raw` | draws a road, and each stop sign at its real size when it's in view |
+| `mock_battery` | `aav_bench` | `/vehicle/battery` | a 48 V pack draining over two hours (a guess until Q8) |
+| `mock_radar` | `aav_bench` | `/sensors/radar/points` | sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there |
 
 The bench world is `aav_bench/config/bench.yaml`. The model car starts at the map's origin
 (the GPS datum), facing east. A stop sign stands 25 m ahead, 2 m to the right. With
@@ -98,10 +98,10 @@ In a terminal opened with `pixi shell`, then `source install/setup.zsh`
 | A scripted drive | `ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive "{target_speed: 1.0, acceleration: 0.5, deceleration: 1.0, hold_time: 5.0}"` |
 | A Nav2 goal | RViz's 2D Goal Pose, or the command in [Your first day](first-day.md) |
 | The e-stop | `pixi run estop`, then `pixi run estop-clear` |
-| The hardware e-stop | `ros2 topic pub -t 3 /bench/hw_estop std_msgs/msg/Bool "{data: true}"`, then `false` |
-| A driver failing | `ros2 topic pub -t 3 /bench/driver_faults std_msgs/msg/UInt16 "{data: 8}"` (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder) |
+| The hardware e-stop | `ros2 topic pub -t 3 /vehicle/bench/hw_estop std_msgs/msg/Bool "{data: true}"`, then `false` |
+| A driver failing | `ros2 topic pub -t 3 /vehicle/bench/driver_faults std_msgs/msg/UInt16 "{data: 8}"` (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder) |
 | Arming again | `ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"` |
-| The truth against the EKF | `ros2 topic echo /bench/truth` and `ros2 topic echo /odometry/global` |
+| The truth against the EKF | `ros2 topic echo /vehicle/bench/truth` and `ros2 topic echo /localization/odom/global` |
 
 After an e-stop, a driver fault or a gap in commands, the spine latches. Arm it again, as
 on the car.
@@ -118,7 +118,7 @@ nothing on the network sees it. Then it runs these checks. Results on Ben's Mac,
 | Scripted drive | 4.5-8 m for a 6.5 m plan: the speed loop trails the plan by about a second | [[works]] 4.9-6.2 m over the day's runs |
 | Global EKF against the truth | under 1.5 m apart | [[works]] 0.06 m |
 | Software e-stop | 1 m/s to a stop, and the spine reports it | [[works]] |
-| Hardware e-stop | the same, from `/bench/hw_estop` | [[works]] |
+| Hardware e-stop | the same, from `/vehicle/bench/hw_estop` | [[works]] |
 | Stop sign (`pixi run -e ml bench-check --perception`) | Nav2 drives 40 m east: the car stops before the sign, waits, and reaches the goal | [[works]] locked 4.7 m before the sign, stopped, reached the goal |
 | Obstacle (`pixi run bench-check --obstacle`) | a box as wide as the lane, 15 m ahead, Nav2 driving 30 m: `collision_monitor`'s stop zone stops the car before it; with the box gone, the car reaches the goal. If a busy computer latches the spine, the check arms it again | [[works]] on `main`, 11 Oct: stood still 0.44 m before the box, from 0.95 m/s; reached the goal once the box was gone |
 
@@ -128,7 +128,7 @@ Run it after changing anything between the drivers and the spine.
 
 The whole lane-keeping loop runs on the bench. `mock_camera` draws the road from where the
 car really is, `lane_finder` finds the lines, and `control_interface` steers on
-`/cmd_vel/ai`.
+`/drivers/ai/cmd_vel`.
 
 ```bash
 pixi run bench lane:=true nav:=false start_y:=0.3   # from 0.3 m left of the centre

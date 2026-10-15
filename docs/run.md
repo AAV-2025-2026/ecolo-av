@@ -53,7 +53,7 @@ pixi run build     # compiles our packages, in about 15 s
 | `q` / `z` | faster / slower (ego caps it at 1.0 m/s) |
 
 Hold the key down: the turtle stops about half a second after you let go. The path is
-keyboard → `/cmd_vel/remote` → twist_mux → ego → `/ego/actuator_cmd` → turtle.
+keyboard → `/drivers/keyboard/cmd_vel` → twist_mux → ego → `/ego/actuator_cmd` → turtle.
 
 !!! note "Is this different from the regular turtlesim?"
   No, it's the stock turtlesim. Our `turtlesim_adapter` steers it with the car's bicycle

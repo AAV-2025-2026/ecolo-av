@@ -39,7 +39,7 @@ usage: hud [--demo] [--fullscreen] [--config FILE] [--screenshot FILE] [--ros-ar
   --fullscreen       fill the screen (F11 switches too)
   --config FILE      topic names from FILE instead of the built-in config/hud.yaml
   --screenshot FILE  save the window as a PNG after 4 s, then quit (for the docs)
-  --ros-args ...     passed to ROS, e.g. --ros-args -p gps_topic:=/gps/filtered";
+  --ros-args ...     passed to ROS, e.g. --ros-args -p gps_topic:=/localization/gps/fix";
 
 /// When --screenshot saves its picture: once the data has had time to arrive.
 const SCREENSHOT_AFTER: Duration = Duration::from_secs(4);

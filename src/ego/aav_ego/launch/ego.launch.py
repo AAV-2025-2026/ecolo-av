@@ -1,5 +1,5 @@
 """
-ego: /cmd_vel (TwistStamped from twist_mux) -> /ego/actuator_cmd (AckermannDriveStamped).
+ego: /control/cmd_vel (TwistStamped from twist_mux) -> /ego/actuator_cmd (AckermannDriveStamped).
 
   ros2 launch aav_ego ego.launch.py [use_sim_time:=false]
 

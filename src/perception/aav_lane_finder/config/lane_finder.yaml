@@ -4,7 +4,7 @@
 # aav_lane_finder/lane_lines.py (Settings), with what it means.
 lane_finder:
   ros__parameters:
-    focal_px: 343.0          # px: only until /camera/camera_info arrives (the bench camera's)
+    focal_px: 343.0          # px: only until /sensors/camera/front_left/camera_info arrives (the bench camera's)
     # The bird's-eye view: the patch of road it looks at, in base_link.
     x_min: 4.0               # m ahead: about where the bench camera first sees the road
     x_max: 16.0              # m ahead: further out, 360 rows give too few rows per metre
@@ -16,4 +16,4 @@ lane_finder:
     lane_width: 3.5          # m: assumed until both lines are seen (the bench road's)
     lookahead: 3.0           # m ahead of base_link, where vehicle_offset_m is measured
     min_confidence: 0.3      # 0 to 1: below it, a line isn't detected
-    debug_image: false       # true: /lane_geometry/image, the bird's-eye view and what it found
+    debug_image: false       # true: /perception/lane/image, the bird's-eye view and what it found

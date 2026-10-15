@@ -3,8 +3,8 @@ The real car on the CAN spine: ros2_socketcan + spine_bridge.
 
   ros2 launch aav_spine spine.launch.py [interface:=can0]
 
-  /ego/actuator_cmd, /estop ──> spine_bridge ──> /to_can_bus ──> socket_can_sender ──> can0
-  can0 ──> socket_can_receiver ──> /from_can_bus ──> spine_bridge ──> /vehicle/odom,
+  /ego/actuator_cmd, /safety/estop ──> spine_bridge ──> /can/tx ──> socket_can_sender ──> can0
+  can0 ──> socket_can_receiver ──> /can/rx ──> spine_bridge ──> /vehicle/odom,
                                                                     /vehicle/status,
                                                                     /vehicle/joint_states
   Service /spine/arm (std_srvs/SetBool): the spine ignores DRIVE_CMD until armed.
@@ -29,13 +29,15 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('interface', default_value='can0'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
-        # Lifecycle nodes; these launch files configure and activate them.
+        # Lifecycle nodes; these launch files configure and activate them. Their topics
+        # (from_can_bus, to_can_bus) move to /can/rx and /can/tx through the launch files'
+        # own *_topic arguments.
         IncludeLaunchDescription(
             PathJoinSubstitution([socketcan, 'launch', 'socket_can_receiver.launch.py']),
-            launch_arguments={'interface': interface}.items()),
+            launch_arguments={'interface': interface, 'from_can_bus_topic': '/can/rx'}.items()),
         IncludeLaunchDescription(
             PathJoinSubstitution([socketcan, 'launch', 'socket_can_sender.launch.py']),
-            launch_arguments={'interface': interface}.items()),
+            launch_arguments={'interface': interface, 'to_can_bus_topic': '/can/tx'}.items()),
         Node(
             package='aav_spine',
             executable='spine_bridge',

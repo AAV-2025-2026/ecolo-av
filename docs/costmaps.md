@@ -38,7 +38,7 @@ by `navigation.launch.py`.
 
 | Layer | Reads | On | Marks | Clears |
 |---|---|---|---|---|
-| `obstacle_layer` | `/radar/points` (in `radar_link`) | `radar:=true`: the bench always; the car where the machine file that runs `navigation` also runs `radar`; never Gazebo (its car has no radar) | each point 0.3-8.4 m from the radar, -0.5 to 2 m high | the cells between the radar and each point |
+| `obstacle_layer` | `/sensors/radar/points` (in `radar_link`) | `radar:=true`: the bench always; the car where the machine file that runs `navigation` also runs `radar`; never Gazebo (its car has no radar) | each point 0.3-8.4 m from the radar, -0.5 to 2 m high | the cells between the radar and each point |
 | `camera_layer` | `/perception/camera_obstacles`, `/perception/camera_view` | `camera_obstacles:=true`: the bench's argument, or the car's `camera_obstacles` part next to `navigation`. Off until the cameras are calibrated (Q22) | where each detected object stands on the road, out to 12 m | everything the camera sees, out to 12 m, before it marks |
 
 Why the radar's numbers:
@@ -57,7 +57,7 @@ Where the radar runs, Nav2's command passes through `collision_monitor` on its w
 twist_mux:
 
 ```
-controller -> velocity_smoother -> /cmd_vel_smoothed -> collision_monitor -> /cmd_vel/nav -> twist_mux
+controller -> velocity_smoother -> /control/cmd_vel_smoothed -> collision_monitor -> /drivers/nav/cmd_vel -> twist_mux
 ```
 
 | Setting | Value |

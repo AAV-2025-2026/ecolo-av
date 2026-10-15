@@ -1,5 +1,5 @@
 # The Raspberry Pi wired to the ESP32's UART (2025-26 hardware). The serial bridge gets
-# /ego/actuator_cmd and /estop from the Orin over the network. The wheel encoder's Pico
+# /ego/actuator_cmd and /safety/estop from the Orin over the network. The wheel encoder's Pico
 # sends its UDP packets only to this Pi (192.168.1.193), so its listener runs here too.
 parts:
   legacy_uart: true

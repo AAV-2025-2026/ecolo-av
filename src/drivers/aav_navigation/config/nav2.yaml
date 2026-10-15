@@ -10,11 +10,11 @@
 # also turns on the local costmap's obstacle_layer and starts collision_monitor; with
 # camera_obstacles:=true, the camera_layer.
 #
-# Topics: Nav2 reads /odometry/local (ekf_local) and TF map -> odom -> base_link
+# Topics: Nav2 reads /localization/odom/local (ekf_local) and TF map -> odom -> base_link
 # (robot_localization). Its velocity output goes controller -> velocity_smoother ->
-# /cmd_vel/nav (TwistStamped) -> twist_mux -> /cmd_vel -> ego, which turns it into a
+# /drivers/nav/cmd_vel (TwistStamped) -> twist_mux -> /control/cmd_vel -> ego, which turns it into a
 # steering angle. With the radar, collision_monitor sits between the smoother and
-# /cmd_vel/nav. Nav2 never talks to the wheels.
+# /drivers/nav/cmd_vel. Nav2 never talks to the wheels.
 #
 # Jazzy publishes Twist unless enable_stamped_cmd_vel is true on each node (checked in
 # nav2_util/twist_publisher.hpp: the default is false on Jazzy).
@@ -27,7 +27,7 @@ bt_navigator:
   ros__parameters:
     global_frame: map
     robot_base_frame: base_link
-    odom_topic: /odometry/local
+    odom_topic: /localization/odom/local
     bt_loop_duration: 10
     # ms a tree node waits for a server to take (or cancel) its goal. Nav2's 20, and 200,
     # failed whole goals on a busy computer (the bench, 11 Oct, load 30-40 on 16 cores);
@@ -50,7 +50,7 @@ bt_navigator:
 controller_server:
   ros__parameters:
     enable_stamped_cmd_vel: true
-    odom_topic: /odometry/local
+    odom_topic: /localization/odom/local
     controller_frequency: 20.0
     costmap_update_timeout: 0.30
     min_x_velocity_threshold: 0.001
@@ -163,7 +163,7 @@ local_costmap:
         # The TI radar: sparse (a few points per object), noisy, and no ground returns.
         # Its points come in radar_link (vehicle.yaml), best effort, 10 times a second.
         radar:
-          topic: /radar/points
+          topic: /sensors/radar/points
           data_type: "PointCloud2"
           marking: true
           clearing: true            # each point clears the cells between it and the radar
@@ -314,14 +314,14 @@ velocity_smoother:
     min_velocity: [-0.5, 0.0, -1.0]
     max_accel: [1.0, 0.0, 1.5]
     max_decel: [-2.0, 0.0, -1.5]
-    odom_topic: /odometry/local
+    odom_topic: /localization/odom/local
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
 
 # Wherever the radar is (navigation.launch.py radar:=true; collision_monitor:=false leaves
 # it out): it sits between the smoother and twist_mux (velocity_smoother ->
-# /cmd_vel_smoothed -> collision_monitor -> /cmd_vel/nav) and stops the car when radar
+# /control/cmd_vel_smoothed -> collision_monitor -> /drivers/nav/cmd_vel) and stops the car when radar
 # points enter the stop zone. It reads the radar's own points, not the costmap, so it still
 # stops the car if the costmap, the planner or the controller goes wrong. It only guards
 # Nav2: the other drivers reach twist_mux without it.
@@ -330,9 +330,9 @@ collision_monitor:
     enable_stamped_cmd_vel: true
     base_frame_id: base_link
     odom_frame_id: odom
-    cmd_vel_in_topic: cmd_vel_smoothed
-    cmd_vel_out_topic: /cmd_vel/nav
-    state_topic: collision_monitor_state
+    cmd_vel_in_topic: /control/cmd_vel_smoothed
+    cmd_vel_out_topic: /drivers/nav/cmd_vel
+    state_topic: /safety/collision_monitor/state
     transform_tolerance: 0.2
     source_timeout: 1.0       # s: a radar silent this long stops the car too
     base_shift_correction: true
@@ -347,7 +347,7 @@ collision_monitor:
       points: "[[2.8, 0.7], [2.8, -0.7], [1.8, -0.7], [1.8, 0.7]]"   # set by the launch file
       min_points: 3             # a radar is noisy: one stray point mustn't stop the car
       visualize: true           # for RViz, on polygon_pub_topic
-      polygon_pub_topic: /collision_monitor/stop_zone
+      polygon_pub_topic: /safety/collision_monitor/stop_zone
       enabled: true
     # Not used: slows the car so it stays 2 s from a collision on its current curve. Add it
     # to polygons to try it.
@@ -363,7 +363,7 @@ collision_monitor:
     observation_sources: ["radar"]
     radar:
       type: "pointcloud"
-      topic: /radar/points
+      topic: /sensors/radar/points
       min_height: -0.5          # m, in base_link. A radar sees no ground, and its height
       max_height: 2.0           # is poor: keep low points. Above 2 m is over the car
       min_range: 0.2            # m from the radar: closer is its own clutter

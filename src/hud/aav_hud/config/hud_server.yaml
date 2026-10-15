@@ -7,5 +7,5 @@ hud_server:
     route_tolerance: 1.0      # m: a route point this close to a straight line is dropped
     waypoint_spacing: 5.0     # m: the least distance between two GPS waypoints
     camera_fps: 5.0           # Hz: the most pictures a second on /camera/stream
-    camera_idle_timeout: 5.0  # s: stop receiving /camera/image_raw this long after the last fetch
+    camera_idle_timeout: 5.0  # s: stop receiving /sensors/camera/front_left/image_raw this long after the last fetch
     camera_stale_after: 2.0   # s: an older picture isn't served (the camera stopped)

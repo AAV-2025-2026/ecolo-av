@@ -115,7 +115,7 @@ wants 5 A for full USB power. Friday: what does it feed, and what is its rating?
 | # | Check | Why |
 |---|---|---|
 | 1 | Log in to each Pi and the Orin: `hostname`, OS, ROS version, what runs at boot | the inventory |
-| 2 | RTK-Pi: is the ZED-F9R on `/dev/ttyACM*`? Does `ros2 topic hz /gps/fix` give anything? | "Is there GPS data?" |
+| 2 | RTK-Pi: is the ZED-F9R on `/dev/ttyACM*`? Does `ros2 topic hz /sensors/gps/fix` give anything? | "Is there GPS data?" |
 | 3 | The lidar: its model, its IP, which Pi or Orin reads it | no driver in our code yet |
 | 4 | ES-Pi and QNX-Pi: what do they run? Are they in the driving path? | not in the KEFC picture |
 | 5 | The control board: is U7 fitted? The steering and brake actuators' wire counts | the KEFC "to confirm" list |

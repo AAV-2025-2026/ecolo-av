@@ -8,7 +8,7 @@ look inside. We configure the ready-made programs, and write a few of our own.
 
 | Part | What it is | Examples |
 |---|---|---|
-| Messaging | Programs, called **nodes**, publish typed messages on named **topics**. Any node on the network can listen. Nodes find each other by themselves. | `/cmd_vel`, `/imu/data` |
+| Messaging | Programs, called **nodes**, publish typed messages on named **topics**. Any node on the network can listen. Nodes find each other by themselves. | `/control/cmd_vel`, `/sensors/imu/data` |
 | Packages | Thousands of open-source nodes, configured with YAML | Nav2, robot_localization, twist_mux, turtlesim |
 | Tools | Build, run, inspect, record and visualise | `colcon`, `ros2`, RViz, rqt, `ros2 bag` |
 
@@ -20,7 +20,7 @@ A ROS release is one tested set of all three. Ours is **Jazzy**, supported until
 
 | Kind | Use it for | Ours |
 |---|---|---|
-| Topic | anything that streams: sensors, commands, state | `/cmd_vel/*`, `/vehicle/odom`, `/tf` |
+| Topic | anything that streams: sensors, commands, state | `/drivers/*/cmd_vel`, `/vehicle/odom`, `/tf` |
 | Service | a quick question, or a switch | `/spine/arm`, `/fromLL` |
 | Action | a job that takes seconds, with progress, and can be cancelled | `/scripted_drive`, `/navigate_to_pose` |
 
@@ -75,7 +75,7 @@ from geometry_msgs.msg import TwistStamped
 class Circle(Node):
     def __init__(self):
         super().__init__('circle_driver')
-        self.pub = self.create_publisher(TwistStamped, '/cmd_vel/scripted', 10)
+        self.pub = self.create_publisher(TwistStamped, '/drivers/scripted/cmd_vel', 10)
         self.create_timer(0.1, self.tick)        # ten times a second
 
     def tick(self):
@@ -94,7 +94,7 @@ rclpy.spin(Circle())
 | Command | Shows |
 |---|---|
 | `ros2 node list`, `ros2 node info /ego` | what's running; a node's topics and settings |
-| `ros2 topic echo /cmd_vel`, `ros2 topic hz /imu/data` | the messages on a topic; how often they come |
+| `ros2 topic echo /control/cmd_vel`, `ros2 topic hz /sensors/imu/data` | the messages on a topic; how often they come |
 | `ros2 param dump /ekf_local` | every setting a node is really using |
 | `pixi run graph` (rqt_graph) | nodes and topics as a live diagram |
 | `rqt_tf_tree` | the frame tree, and who publishes each link |

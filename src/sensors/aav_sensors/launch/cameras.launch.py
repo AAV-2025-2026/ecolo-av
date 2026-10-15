@@ -3,11 +3,11 @@ The car's cameras, with the 2024-25 calibrations. Linux only (usb_cam).
 
   ros2 launch aav_sensors cameras.launch.py [left:=/dev/aav/camera_left] [right:=]
 
-  left   usb_cam -> /camera/image_raw, /camera/camera_info        frame camera_left_link
-  right  usb_cam -> /camera/right/image_raw, .../camera_info       frame camera_right_link
+  left   usb_cam -> /sensors/camera/front_left/image_raw, .../camera_info   camera_left_link
+  right  usb_cam -> /sensors/camera/front_right/image_raw, .../camera_info  camera_right_link
          (only when right:= names a device)
 
-The left camera is "the camera": the YOLO detector reads /camera/image_raw. The
+The left camera is "the camera": the YOLO detector reads /sensors/camera/front_left/image_raw. The
 calibrations are config/cameras/left.ini and right.ini, in ROS's own INI format, for
 1920 x 1080. Untested on the car: the camera models are Q22, and their udev names need
 filling in (tools/udev/99-aav.rules). On a Mac, bench mode's mock_camera stands in.
@@ -47,5 +47,5 @@ def generate_launch_description():
         DeclareLaunchArgument('right', default_value='',
                               description='the right camera, e.g. /dev/aav/camera_right'),
         camera('left', LaunchConfiguration('left'), '/camera'),
-        camera('right', LaunchConfiguration('right'), '/camera/right'),
+        camera('right', LaunchConfiguration('right'), '/sensors/camera/front_right'),
     ])

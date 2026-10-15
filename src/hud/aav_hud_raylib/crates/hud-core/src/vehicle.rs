@@ -175,7 +175,7 @@ impl fmt::Display for Faults {
 pub struct VehicleStatus {
     pub mode: Mode,
     pub armed: bool,
-    /// Any stop: the hardware button, `/estop`, or the spine's watchdog.
+    /// Any stop: the hardware button, `/safety/estop`, or the spine's watchdog.
     pub estop_active: bool,
     pub speed: MetresPerSecond,
     pub steering_angle: Radians,

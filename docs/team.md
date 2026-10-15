@@ -69,7 +69,7 @@ Phase 0 on the hardware we have now, before the spine exists.
 | | |
 |---|---|
 | Read first | [How it fits](how-it-fits.md) (sections 1 and 2), [Simulation](simulation.md) (replay) |
-| Run first | `pixi run sim`, then watch `/odometry/local` and `/odometry/global` in RViz |
+| Run first | `pixi run sim`, then watch `/localization/odom/local` and `/localization/odom/global` in RViz |
 | First tasks | 1. Identify the GPS (Q18) and pick its driver. 2. The IMU on the car (Q20); its magnetometer is in raw counts, not tesla. 3. Wheel encoder counts per turn (Q5). 4. Record a drive on the car, then tune the EKFs against it with replay. 5. The Rust IMU driver, `aav_imu_yahboom` (in progress) |
 | Files | `src/localization/aav_localization/config/`, `src/sensors/` |
 | Open questions | Q5, Q18, Q19, Q20, Q22 |

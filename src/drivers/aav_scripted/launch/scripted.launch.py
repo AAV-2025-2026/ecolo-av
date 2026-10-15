@@ -1,5 +1,5 @@
 """
-Scripted driver: an action server that drives a speed profile into /cmd_vel/scripted.
+Scripted driver: an action server that drives a speed profile into /drivers/scripted/cmd_vel.
 
   ros2 launch aav_scripted scripted.launch.py
   ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \

@@ -1,7 +1,7 @@
-# imu_filter_madgwick (imu_tools 2.1.6, Jazzy): /imu/data_raw -> /imu/data with an
+# imu_filter_madgwick (imu_tools 2.1.6, Jazzy): /sensors/imu/data_raw -> /sensors/imu/data with an
 # orientation estimate. Parameter names checked in imu_filter_ros.cpp.
 #
-# use_mag is false: the Yahboom driver's /imu/mag isn't in tesla yet. Without it the yaw
+# use_mag is false: the Yahboom driver's /sensors/imu/mag isn't in tesla yet. Without it the yaw
 # is only relative (it starts at 0 and drifts), so the EKFs fuse the yaw RATE, not the
 # yaw. Heading comes from the start pose (see aav_localization/config/navsat.yaml).
 imu_filter_madgwick:

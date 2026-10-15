@@ -8,8 +8,8 @@ Subscribes  ego/actuator_cmd   ackermann_msgs/AckermannDriveStamped
 Publishes   gazebo/cmd_vel     geometry_msgs/Twist (bridged to /model/aav/cmd_vel)
             vehicle/odom       nav_msgs/Odometry, twist only, like aav_spine
             vehicle/status     aav_interfaces/VehicleStatus (mode COMPUTER, armed)
-            imu/data_raw       sensor_msgs/Imu, with covariances
-            gps/fix            sensor_msgs/NavSatFix, with a covariance
+            sensors/imu/data_raw  sensor_msgs/Imu, with covariances
+            sensors/gps/fix    sensor_msgs/NavSatFix, with a covariance
 
 So ekf_local, ekf_global, navsat_transform and imu_filter_madgwick run in simulation
 with the same configs as on the car. Gazebo's ground-truth pose is not passed on.
@@ -47,8 +47,8 @@ class GazeboAdapter(Node):
         self.cmd_pub = self.create_publisher(Twist, 'gazebo/cmd_vel', 10)
         self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
         self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
-        self.imu_pub = self.create_publisher(Imu, 'imu/data_raw', 10)
-        self.fix_pub = self.create_publisher(NavSatFix, 'gps/fix', 10)
+        self.imu_pub = self.create_publisher(Imu, 'sensors/imu/data_raw', 10)
+        self.fix_pub = self.create_publisher(NavSatFix, 'sensors/gps/fix', 10)
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(Odometry, 'gazebo/odom', self.on_odom, 10)
         self.create_subscription(Imu, 'gazebo/imu', self.on_imu, 10)

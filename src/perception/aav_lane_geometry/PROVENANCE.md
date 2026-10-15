@@ -31,3 +31,15 @@ Files, unchanged unless listed under Changes:
 - 2026-10-11: `launch/lane_follower.launch.py`: its docstring names the lane finder
   (`aav_lane_finder`, ours) as what publishes `/lane_geometry`, and `fake:=true` as the
   pretend lane without a camera. The code is unchanged.
+
+## Topic names by area (2026-10-15)
+
+The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
+change, never the logic:
+
+- `scripts/control_interface.py`: `/lane_geometry` -> `/perception/lane/geometry`,
+  `/cmd_vel/ai` -> `/drivers/ai/cmd_vel`, `/lane_geometry_status` ->
+  `/drivers/ai/lane_status`, `/vehicle_state` -> `/drivers/ai/lane_state` (control_interface
+  is the AI slot's driver, so what it publishes goes under `/drivers/ai/`).
+- `scripts/fake_lane_geometry_pub.py`, `scripts/geometry_logger.py`,
+  `launch/lane_follower.launch.py`: `/lane_geometry` -> `/perception/lane/geometry`.

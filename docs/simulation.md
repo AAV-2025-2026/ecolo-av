@@ -34,7 +34,7 @@ ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
 
 The keyboard or joystick overrides the script at once. Let go, and the script carries on.
 
-**E-stop:** `ros2 topic pub --once /estop std_msgs/msg/Bool "{data: true}"` blocks every
+**E-stop:** `ros2 topic pub --once /safety/estop std_msgs/msg/Bool "{data: true}"` blocks every
 driver. Publish `false` to clear it.
 
 ## Gazebo
@@ -56,7 +56,7 @@ pixi run sim world:=test_lot     # the walled test lot, with its map
 How the simulated car connects:
 - Gazebo plays the car, with Ackermann steering, an IMU and a GPS.
 - `gazebo_adapter` turns those into the real drivers' topics: `/vehicle/odom`,
-  `/imu/data_raw` and `/gps/fix`.
+  `/sensors/imu/data_raw` and `/sensors/gps/fix`.
 - The IMU filter, both EKFs and `navsat_transform` run with the car's own configs, on
   simulated time.
 - Map (0, 0) is where the car starts, facing east.
@@ -82,11 +82,11 @@ On the car, record a drive: `tools/record.sh parking_lot_test` writes
 
 ```bash
 ros2 launch aav_bringup replay.launch.py
-ros2 bag play bags/<the bag> --clock --topics /vehicle/odom /imu/data_raw /gps/fix /tf_static
+ros2 bag play bags/<the bag> --clock --topics /vehicle/odom /sensors/imu/data_raw /sensors/gps/fix /tf_static
 ```
 
 A bag from Gazebo carries simulated time. Play its own `/clock` instead of `--clock`:
-`ros2 bag play bags/<the bag> --topics /clock /vehicle/odom /imu/data_raw /gps/fix /tf_static`.
+`ros2 bag play bags/<the bag> --topics /clock /vehicle/odom /sensors/imu/data_raw /sensors/gps/fix /tf_static`.
 `pixi run tools/ros.sh python3 tools/check_graph.py --profile replay` checks the result.
 
 Change an EKF setting, replay, compare the path. That's how to tune localization without
@@ -116,8 +116,8 @@ Work down the chain:
 
 | # | Ask | Check |
 |---|---|---|
-| 1 | Is a driver publishing? | `ros2 topic hz /cmd_vel/remote` (or `joy`, `scripted`, `nav`) |
-| 2 | Did the mux pick it? | `ros2 topic echo /cmd_vel`. If it's silent, look for a latched e-stop: `ros2 topic echo /estop` |
+| 1 | Is a driver publishing? | `ros2 topic hz /drivers/keyboard/cmd_vel` (or `joy`, `scripted`, `nav`) |
+| 2 | Did the mux pick it? | `ros2 topic echo /control/cmd_vel`. If it's silent, look for a latched e-stop: `ros2 topic echo /safety/estop` |
 | 3 | Is ego converting it? | `ros2 topic echo /ego/actuator_cmd`: it's always 50 Hz, so look at the speed |
 | 4 | Is a backend listening? | `ros2 topic info /ego/actuator_cmd -v` |
 | 5 | In Gazebo or replay: is everything on sim time? | a node on wall-clock time ignores sim-time messages |

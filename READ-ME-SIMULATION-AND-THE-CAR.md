@@ -22,7 +22,7 @@ Most of the software doesn't know whether it's driving a real car or a pretend o
   THE SAME  │ drivers → twist_mux → ego                    │
   EVERYWHERE│ EKFs, navsat_transform, Nav2, perception, HUD│
             └──────────────────────┬───────────────────────┘
-                     /ego/actuator_cmd  ↓      ↑  /vehicle/odom, /imu, /gps/fix ...
+                     /ego/actuator_cmd  ↓      ↑  /vehicle/odom, /imu, /sensors/gps/fix ...
             ┌──────────────┬────────────────┬────────────────┐
   SWAPPED   │  Gazebo      │  The bench     │  The real car  │
             │ (simulator)  │ (stand-ins)    │ (hardware)     │
@@ -51,8 +51,8 @@ Most of the software doesn't know whether it's driving a real car or a pretend o
 
 | Sensor | Gazebo makes it | The car's software sees it as | Rate | Status |
 |---|---|---|---|---|
-| IMU | `/aav/imu` | `/imu/data_raw` → filter → `/imu/data` | 50 Hz | ✅ |
-| GPS | `/aav/navsat` | `/gps/fix` | 5 Hz | ✅ |
+| IMU | `/aav/imu` | `/sensors/imu/data_raw` → filter → `/sensors/imu/data` | 50 Hz | ✅ |
+| GPS | `/aav/navsat` | `/sensors/gps/fix` | 5 Hz | ✅ |
 | Wheel speed | from the car model's motion | `/vehicle/odom` | 50 Hz | ✅ |
 | Car status | from the car model | `/vehicle/status` | 50 Hz | ✅ |
 
@@ -62,7 +62,7 @@ Most of the software doesn't know whether it's driving a real car or a pretend o
 Gazebo sensor → ros_gz_bridge → /gazebo/... → gazebo_adapter → the real drivers' topic names
 ```
 
-`gazebo_adapter` renames everything to the **same names the real drivers use** (`/gps/fix`, `/imu/data_raw`, `/vehicle/odom`). The software above can't tell the difference.
+`gazebo_adapter` renames everything to the **same names the real drivers use** (`/sensors/gps/fix`, `/sensors/imu/data_raw`, `/vehicle/odom`). The software above can't tell the difference.
 
 ![The simulated car in Gazebo](docs/img/gazebo-car.png)
 
@@ -71,8 +71,8 @@ Gazebo sensor → ros_gz_bridge → /gazebo/... → gazebo_adapter → the real 
 | Added | The car's software sees it as | Status |
 |---|---|---|
 | A road world: lane lines, a stop sign, a box in the road | | 🔧 written on 11 Oct, checked by `sim-check` then |
-| A camera on the car | `/camera/image_raw` | 🔧 being finished |
-| A radar on the car | `/radar/points` (via `/gazebo/radar/points`) | 🔧 being finished |
+| A camera on the car | `/sensors/camera/front_left/image_raw` | 🔧 being finished |
+| A radar on the car | `/sensors/radar/points` (via `/gazebo/radar/points`) | 🔧 being finished |
 | A lidar on the roof | `/lidar/points` | 🔧 being tried: Gazebo's lidar can crash on a Mac |
 
 A helper is finishing this branch tonight. It merges into `main` only if all its checks pass.
@@ -125,7 +125,7 @@ A helper is finishing this branch tonight. It merges into `main` only if all its
 
 1. **Tonight:** finish the Gazebo camera and radar (and maybe a lidar), and merge them if green.
 2. **Friday:** the audit (`docs/car-photos.md` has the checklist). Find out what really runs.
-3. **Then:** get our stack onto the car, either Jazzy on the Orin or Pixi, and listen first: `ros2 topic hz /gps/fix`.
+3. **Then:** get our stack onto the car, either Jazzy on the Orin or Pixi, and listen first: `ros2 topic hz /sensors/gps/fix`.
 4. **Then:** drive on stands through `aav_legacy`, before any CAN work.
 5. **Then:** the KEFC parts, the CAN bench with a CANable, one board at a time.
 
@@ -134,8 +134,8 @@ A helper is finishing this branch tonight. It merges into `main` only if all its
 | You want to | Run |
 |---|---|
 | See Gazebo with the car | `pixi run sim` |
-| See its sensor data | in another terminal: `pixi run tools/ros.sh ros2 topic hz /gps/fix` |
-| Look at one GPS message | `pixi run tools/ros.sh ros2 topic echo --once /gps/fix` |
+| See its sensor data | in another terminal: `pixi run tools/ros.sh ros2 topic hz /sensors/gps/fix` |
+| Look at one GPS message | `pixi run tools/ros.sh ros2 topic echo --once /sensors/gps/fix` |
 | Drive it | `pixi run keyboard --sim` |
 | Check the whole graph | `pixi run check sim` |
 | The bench instead | `pixi run bench`, then `pixi run bench-check` |

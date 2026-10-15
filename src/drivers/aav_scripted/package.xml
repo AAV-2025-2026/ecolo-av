@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_scripted</name>
   <version>0.1.0</version>
-  <description>Scripted driver: a ScriptedDrive action server that speeds up, holds and slows down, publishing /cmd_vel/scripted.</description>
+  <description>Scripted driver: a ScriptedDrive action server that speeds up, holds and slows down, publishing /drivers/scripted/cmd_vel.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 

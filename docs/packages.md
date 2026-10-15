@@ -14,7 +14,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `ti_ros2_driver` | sensors | the TI mmWave radar, as point clouds | [[untested]] | 2025-26 `Nav_Radar` |
 | `aav_description` | description | the car's model (URDF) and `vehicle.yaml` | [[works]] the numbers are guesses | new |
 | `aav_localization` | localization | the two EKFs and `navsat_transform`: configuration only | [[works]] turtle, Gazebo and the bench | new |
-| `aav_teleop` | drivers | joystick → `/cmd_vel/joy`, plus an e-stop button | [[untested]] | new; the button map from 2025-26 `joy_teleop_ackerman` |
+| `aav_teleop` | drivers | joystick → `/drivers/joy/cmd_vel`, plus an e-stop button | [[untested]] | new; the button map from 2025-26 `joy_teleop_ackerman` |
 | `aav_scripted` | drivers | scripted drives: speed up, hold, slow down | [[works]] turtle and the bench | new |
 | `aav_navigation` | drivers | Nav2, set up for a car, and the maps | [[works]] goals reached in Gazebo | new |
 | `aav_mux` | mux | twist_mux: the priorities and the e-stop lock | [[works]] | new |
@@ -28,8 +28,8 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_bringup` | bringup | the five profiles, perception on the car, the machine files, the RViz layout | [[works]] turtle, sim, replay, bench | new |
 | `aav_yolo` | perception | YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
 | `aav_object_detection` | perception | radar clustering (DBSCAN), with a box round each object | [[works]] on the pretend radar | 2025-26 `Nav_Radar` |
-| `aav_lane_finder` | perception | the lane lines in the camera's pictures, as `/lane_geometry` (OpenCV) | [[works]] on the bench | new |
-| `aav_lane_geometry` | perception | lane keeping: a driver on `/cmd_vel/ai` | [[works]] on the bench, with `aav_lane_finder` | 2025-26 `Lane_Detection_ROS2` |
+| `aav_lane_finder` | perception | the lane lines in the camera's pictures, as `/perception/lane/geometry` (OpenCV) | [[works]] on the bench | new |
+| `aav_lane_geometry` | perception | lane keeping: a driver on `/drivers/ai/cmd_vel` | [[works]] on the bench, with `aav_lane_finder` | 2025-26 `Lane_Detection_ROS2` |
 | `aav_hud` | hud | the HUD's web server (Flask, Socket.IO), on our topics | [[works]] on the bench, with the app's e-stop button | 2025-26 `User-Interface` |
 | `aav_hud_raylib` | hud | the in-car screen in Rust: one raylib window that is the ROS node `hud` | [[works]] on a Mac: `--demo`, fed topics, bench mode. [[untested]] on a Pi and on the car | new |
 | `aav_spine_sim` | bench | the spine on a laptop: the firmware's logic on a model car (Rust) | [[works]] | new |
@@ -40,34 +40,34 @@ perception came in on 10 October, the lane finder on 11 October.
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
 | `aav_sensors` | | | `sensors.launch.py imu:= gps:= radar:= battery:= imu_driver:= gps_driver:=`; configs in `config/` |
-| `yahboom_imu_cpp` | `/dev/aav/imu` | `/imu/data_raw`, `/imu/mag` | `/imu/mag` is in raw counts, not tesla, so it's unused |
-| stock `imu_filter_madgwick` | `/imu/data_raw` | `/imu/data` | magnetometer off |
-| stock `ublox_gps` (KumarRobotics' `ublox`) | `/dev/aav/gps` | `/gps/fix` | the default GPS driver, in Pixi too. Leaves the receiver's settings as they are. Tentative until Q18 |
-| stock `ublox_dgnss` | a u-blox F9P on USB | `/gps/fix` | `gps_driver:=ublox_dgnss`. Not in Pixi: the car only |
-| `ti_ros2_driver` | `/dev/aav/radar_cmd`, `/dev/aav/radar_data` | `/radar/points` | its configs are indoor demos |
-| `battery_monitor` | `/dev/aav/battery` | `/battery_status` | |
-| stock `usb_cam` (`cameras.launch.py`) | `/dev/aav/camera_left`, `_right` | `/camera/image_raw`, `/camera/camera_info` | Linux only; the 2024-25 calibrations |
-| stock `nmea_navsat_driver` (`gps_nmea.launch.py`) | `/dev/aav/gps` | `/gps/fix` | `gps_driver:=nmea`: any NMEA receiver |
+| `yahboom_imu_cpp` | `/dev/aav/imu` | `/sensors/imu/data_raw`, `/sensors/imu/mag` | `/sensors/imu/mag` is in raw counts, not tesla, so it's unused |
+| stock `imu_filter_madgwick` | `/sensors/imu/data_raw` | `/sensors/imu/data` | magnetometer off |
+| stock `ublox_gps` (KumarRobotics' `ublox`) | `/dev/aav/gps` | `/sensors/gps/fix` | the default GPS driver, in Pixi too. Leaves the receiver's settings as they are. Tentative until Q18 |
+| stock `ublox_dgnss` | a u-blox F9P on USB | `/sensors/gps/fix` | `gps_driver:=ublox_dgnss`. Not in Pixi: the car only |
+| `ti_ros2_driver` | `/dev/aav/radar_cmd`, `/dev/aav/radar_data` | `/sensors/radar/points` | its configs are indoor demos |
+| `battery_monitor` | `/dev/aav/battery` | `/vehicle/battery` | |
+| stock `usb_cam` (`cameras.launch.py`) | `/dev/aav/camera_left`, `_right` | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info` | Linux only; the 2024-25 calibrations |
+| stock `nmea_navsat_driver` (`gps_nmea.launch.py`) | `/dev/aav/gps` | `/sensors/gps/fix` | `gps_driver:=nmea`: any NMEA receiver |
 
 ## Description and localization
 
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
 | `aav_description` | `vehicle.yaml`, `/vehicle/joint_states` | `/robot_description`, `/tf`, `/tf_static` | `pixi run view` shows the model |
-| `aav_localization`: `ekf_local` | `/vehicle/odom`, `/imu/data` | `/odometry/local`, odom → base_link | smooth; use it to steer |
-| `aav_localization`: `ekf_global` | the same, plus `/odometry/gps` | `/odometry/global`, map → odom | stays near the truth; use it to plan |
-| `aav_localization`: `navsat_transform` | `/gps/fix`, `/imu/data`, `/odometry/global` | `/odometry/gps`, `/gps/filtered` | the datum in `navsat.yaml` is a placeholder near Carleton |
+| `aav_localization`: `ekf_local` | `/vehicle/odom`, `/sensors/imu/data` | `/localization/odom/local`, odom → base_link | smooth; use it to steer |
+| `aav_localization`: `ekf_global` | the same, plus `/localization/gps/odom` | `/localization/odom/global`, map → odom | stays near the truth; use it to plan |
+| `aav_localization`: `navsat_transform` | `/sensors/gps/fix`, `/sensors/imu/data`, `/localization/odom/global` | `/localization/gps/odom`, `/localization/gps/fix` | the datum in `navsat.yaml` is a placeholder near Carleton |
 
 ## Drivers, the mux and ego
 
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
-| `aav_teleop` | `/joy` | `/cmd_vel/joy` (while the trigger is held), `/estop` | the button numbers are still TODO |
-| keyboard (`tools/keyboard.sh`) | your keys | `/cmd_vel/remote` | `pixi run keyboard` |
-| `aav_scripted` | `/odometry/local` | `/cmd_vel/scripted` | the action `/scripted_drive` |
-| `aav_navigation` | `/odometry/local`, `/map`, `/goal_pose` | `/cmd_vel/nav`, `/plan` | SmacPlannerHybrid and Regulated Pure Pursuit; GPS waypoints through `/follow_gps_waypoints` |
-| `aav_mux` (twist_mux) | every `/cmd_vel/<driver>`, `/estop` | `/cmd_vel` | priorities: [Build a driver](howto-driver.md) |
-| `aav_ego` | `/cmd_vel` | `/ego/actuator_cmd`, 50 times a second | 1.0 m/s top speed, ±0.5 rad, brakes after 0.3 s without a command |
+| `aav_teleop` | `/drivers/joy/joy` | `/drivers/joy/cmd_vel` (while the trigger is held), `/safety/estop` | the button numbers are still TODO |
+| keyboard (`tools/keyboard.sh`) | your keys | `/drivers/keyboard/cmd_vel` | `pixi run keyboard` |
+| `aav_scripted` | `/localization/odom/local` | `/drivers/scripted/cmd_vel` | the action `/scripted_drive` |
+| `aav_navigation` | `/localization/odom/local`, `/map`, `/goal_pose` | `/drivers/nav/cmd_vel`, `/plan` | SmacPlannerHybrid and Regulated Pure Pursuit; GPS waypoints through `/follow_gps_waypoints` |
+| `aav_mux` (twist_mux) | every `/drivers/<driver>/cmd_vel`, `/safety/estop` | `/control/cmd_vel` | priorities: [Build a driver](howto-driver.md) |
+| `aav_ego` | `/control/cmd_vel` | `/ego/actuator_cmd`, 50 times a second | 1.0 m/s top speed, ±0.5 rad, brakes after 0.3 s without a command |
 
 ## Perception
 
@@ -75,11 +75,11 @@ perception came in on 10 October, the lane finder on 11 October.
 
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
-| `aav_yolo`: `yolo_detector` | `/camera/image_raw` | `/perception/detections`, `/perception/detections/image` | a `.pt`, `.mlpackage` or `.engine` model; needs the `ml` environment |
-| `aav_yolo`: `stop_sign_watcher` | `/perception/detections` | `/perception/stop` | twist_mux's stop-sign lock, priority 30 |
-| `aav_object_detection`: `radar_clusters` | `/radar/points` | `/radar/clusters`, `/radar/cluster_boxes` | DBSCAN; the 2025-26 filters and ICP are built, not launched |
-| `aav_lane_finder`: `lane_finder` | `/camera/image_raw`, `/camera/camera_info` | `/lane_geometry`, `/lane_geometry/image` | a bird's-eye view, sliding windows, a curve per line; the camera's place from `vehicle.yaml` |
-| `aav_lane_geometry`: `control_interface` | `/lane_geometry` | `/cmd_vel/ai` | steers back to the lane's centre, measured 3 m ahead |
+| `aav_yolo`: `yolo_detector` | `/sensors/camera/front_left/image_raw` | `/perception/detections`, `/perception/detections/image` | a `.pt`, `.mlpackage` or `.engine` model; needs the `ml` environment |
+| `aav_yolo`: `stop_sign_watcher` | `/perception/detections` | `/perception/stop_sign` | twist_mux's stop-sign lock, priority 30 |
+| `aav_object_detection`: `radar_clusters` | `/sensors/radar/points` | `/perception/radar/clusters`, `/perception/radar/cluster_boxes` | DBSCAN; the 2025-26 filters and ICP are built, not launched |
+| `aav_lane_finder`: `lane_finder` | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info` | `/perception/lane/geometry`, `/perception/lane/image` | a bird's-eye view, sliding windows, a curve per line; the camera's place from `vehicle.yaml` |
+| `aav_lane_geometry`: `control_interface` | `/perception/lane/geometry` | `/drivers/ai/cmd_vel` | steers back to the lane's centre, measured 3 m ahead |
 
 ## Backends
 
@@ -88,10 +88,10 @@ Only one runs at a time.
 
 | Package | Plays the car with | Also |
 |---|---|---|
-| `aav_spine` | CAN frames on `/to_can_bus` (through ros2_socketcan, Linux only) | `/vehicle/status`; the service `/spine/arm`; stops sending drive frames when ego goes quiet for 0.1 s |
+| `aav_spine` | CAN frames on `/can/tx` (through ros2_socketcan, Linux only) | `/vehicle/status`; the service `/spine/arm`; stops sending drive frames when ego goes quiet for 0.1 s |
 | `aav_legacy` | 13-byte UART frames to today's ESP32 (`/dev/ttyAMA0`) | `encoder_udp`: the wheel encoder's UDP packets into `/vehicle/odom` |
 | `aav_turtlesim` | `/turtle1/cmd_vel` | |
-| `aav_gazebo` | `/gazebo/cmd_vel` | turns Gazebo's IMU and GPS into `/imu/data_raw` and `/gps/fix` |
+| `aav_gazebo` | `/gazebo/cmd_vel` | turns Gazebo's IMU and GPS into `/sensors/imu/data_raw` and `/sensors/gps/fix` |
 | `aav_carla` | `/carla/ego_vehicle/ackermann_cmd` | a stub |
 
 ## Bench mode
@@ -100,7 +100,7 @@ Only one runs at a time.
 
 | Package | Stands in for | Notes |
 |---|---|---|
-| `aav_spine_sim`: `spine_sim` | the spine board and the actuators | answers spine_bridge's CAN frames with spine-core's own logic; publishes `/bench/truth` |
+| `aav_spine_sim`: `spine_sim` | the spine board and the actuators | answers spine_bridge's CAN frames with spine-core's own logic; publishes `/vehicle/bench/truth` |
 | `aav_bench` | the IMU, GPS, battery and camera drivers | `mock_imu`, `mock_gps`, `mock_battery`, `mock_camera`; the world is `config/bench.yaml` |
 
 ## Interfaces and bringup

@@ -1,9 +1,9 @@
 """
 scripted_driver: drive a speed profile on request (phase 1a).
 
-Action      scripted_drive        aav_interfaces/action/ScriptedDrive
-Subscribes  odometry/local        nav_msgs/Odometry (speed and distance, from ekf_local)
-Publishes   cmd_vel/scripted      geometry_msgs/TwistStamped, at rate_hz while a goal runs
+Action      scripted_drive            aav_interfaces/action/ScriptedDrive
+Subscribes  localization/odom/local   nav_msgs/Odometry (speed and distance, from ekf_local)
+Publishes   drivers/scripted/cmd_vel  geometry_msgs/TwistStamped, at rate_hz while a goal runs
 
 Try it:
   ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
@@ -41,8 +41,8 @@ class ScriptedDriver(Node):
         self.speed = 0.0
         self.last_xy = None
         self.odom_time = None
-        self.pub = self.create_publisher(TwistStamped, 'cmd_vel/scripted', 10)
-        self.create_subscription(Odometry, 'odometry/local', self.on_odom, 10)
+        self.pub = self.create_publisher(TwistStamped, 'drivers/scripted/cmd_vel', 10)
+        self.create_subscription(Odometry, 'localization/odom/local', self.on_odom, 10)
         self.server = ActionServer(
             self, ScriptedDrive, 'scripted_drive', execute_callback=self.execute,
             goal_callback=self.on_goal, cancel_callback=lambda _: CancelResponse.ACCEPT)
@@ -69,7 +69,7 @@ class ScriptedDriver(Node):
         elif goal.acceleration <= 0 or goal.deceleration <= 0:
             reason = 'acceleration and deceleration must be positive'
         elif goal.hold_distance > 0 and not self.odom_fresh():
-            reason = 'hold_distance needs /odometry/local, which is not arriving'
+            reason = 'hold_distance needs /localization/odom/local, which is not arriving'
         if reason:
             self.get_logger().warning(f'rejected goal: {reason}')
             return GoalResponse.REJECT

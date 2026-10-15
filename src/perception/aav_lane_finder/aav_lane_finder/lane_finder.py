@@ -1,20 +1,24 @@
 """
-lane_finder: the lane lines in the front camera's pictures, as /lane_geometry.
+lane_finder: the lane lines in the front camera's pictures, as /perception/lane/geometry.
 
-Subscribes  /camera/image_raw     sensor_msgs/Image (reliable, the newest only)
-            /camera/camera_info   sensor_msgs/CameraInfo: the lens's focal length, centre
-                                  and distortion
-Publishes   /lane_geometry        aav_lane_geometry/LaneGeometry, one per picture, in
-                                  base_link: control_interface steers by it
-            /lane_geometry/image  sensor_msgs/Image: the bird's-eye view with the paint,
-                                  the windows and the lines found (only with debug_image)
+Subscribes  /sensors/camera/front_left/image_raw    sensor_msgs/Image (reliable, the newest
+                                                    only)
+            /sensors/camera/front_left/camera_info  sensor_msgs/CameraInfo: the lens's focal
+                                                    length, centre and distortion
+Publishes   /perception/lane/geometry               aav_lane_geometry/LaneGeometry, one per
+                                                    picture, in base_link: control_interface
+                                                    steers by it
+            /perception/lane/image                  sensor_msgs/Image: the bird's-eye view
+                                                    with the paint, the windows and the lines
+                                                    found (only with debug_image)
 
 Classic OpenCV, no model: a bird's-eye warp of a flat road, a mask for the paint, sliding
 windows and a second-order fit per line (birds_eye.py and lane_lines.py hold the maths).
 A model can replace it later, behind the same topic.
 
 The camera's place on the car comes from vehicle.yaml, through the launch file
-(camera_xyz, camera_rpy). The lens comes from /camera/camera_info; until it arrives, the
+(camera_xyz, camera_rpy). The lens comes from /sensors/camera/front_left/camera_info;
+until it arrives, the
 node uses focal_px and the middle of the picture.
 """
 
@@ -57,10 +61,13 @@ class LaneFinderNode(Node):
         self.bridge = CvBridge()
         self.info = None
         self.finder = None
-        self.pub = self.create_publisher(LaneGeometry, '/lane_geometry', 10)
-        self.debug_pub = self.create_publisher(Image, '/lane_geometry/image', 2) if debug else None
-        self.create_subscription(CameraInfo, '/camera/camera_info', self.on_info, LATEST)
-        self.create_subscription(Image, '/camera/image_raw', self.on_image, LATEST)
+        self.pub = self.create_publisher(LaneGeometry, '/perception/lane/geometry', 10)
+        self.debug_pub = (self.create_publisher(Image, '/perception/lane/image', 2)
+                          if debug else None)
+        self.create_subscription(CameraInfo, '/sensors/camera/front_left/camera_info',
+                                 self.on_info, LATEST)
+        self.create_subscription(Image, '/sensors/camera/front_left/image_raw',
+                                 self.on_image, LATEST)
         self.seen = None
         self.frames, self.busy_s, self.since = 0, 0.0, time.monotonic()
         self.get_logger().info(

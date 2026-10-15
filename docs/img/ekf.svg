@@ -32,10 +32,10 @@
   <text class="s" x="125" y="82" text-anchor="middle">/vehicle/odom</text>
   <rect class="stock" x="20" y="130" width="210" height="56" rx="8"/>
   <text class="t" x="125" y="154" text-anchor="middle">IMU (turn rate)</text>
-  <text class="s" x="125" y="172" text-anchor="middle">/imu/data</text>
+  <text class="s" x="125" y="172" text-anchor="middle">/sensors/imu/data</text>
   <rect class="stock" x="20" y="310" width="210" height="56" rx="8"/>
   <text class="t" x="125" y="334" text-anchor="middle">GPS</text>
-  <text class="s" x="125" y="352" text-anchor="middle">/gps/fix (lat, lon)</text>
+  <text class="s" x="125" y="352" text-anchor="middle">/sensors/gps/fix (lat, lon)</text>
 
   <!-- wheels and IMU go to both filters -->
   <path class="plain" d="M230,68 L262,68 M230,158 L262,158 M262,68 L262,225"/>
@@ -55,17 +55,17 @@
 
   <path class="line" d="M230,338 L320,338"/>
   <path class="redline" d="M420,310 L420,262"/>
-  <text class="lbl" x="412" y="291" text-anchor="end">/odometry/gps</text>
+  <text class="lbl" x="412" y="291" text-anchor="end">/localization/gps/odom</text>
   <path class="dash" d="M500,260 L500,308"/>
   <text class="s" x="508" y="291">heading</text>
 
   <!-- outputs -->
   <rect class="band" x="640" y="50" width="240" height="70" rx="8"/>
-  <text class="t" x="760" y="72" text-anchor="middle">/odometry/local</text>
+  <text class="t" x="760" y="72" text-anchor="middle">/localization/odom/local</text>
   <text class="s" x="760" y="91" text-anchor="middle">TF odom → base_link</text>
   <text class="s" x="760" y="109" text-anchor="middle">to steer (Nav2 controller)</text>
   <rect class="band" x="640" y="190" width="240" height="70" rx="8"/>
-  <text class="t" x="760" y="212" text-anchor="middle">/odometry/global</text>
+  <text class="t" x="760" y="212" text-anchor="middle">/localization/odom/global</text>
   <text class="s" x="760" y="231" text-anchor="middle">TF map → odom</text>
   <text class="s" x="760" y="249" text-anchor="middle">to plan (Nav2 planner)</text>
   <path class="redline" d="M570,85 L638,85"/>

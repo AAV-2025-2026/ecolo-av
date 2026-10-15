@@ -74,7 +74,7 @@
   <!-- telemetry band -->
   <rect class="band" x="110" y="232" width="750" height="46" rx="10"/>
   <text class="t" x="485" y="252" text-anchor="middle">TELEMETRY: what everyone reads</text>
-  <text class="s" x="485" y="270" text-anchor="middle">/tf · /odometry/local · /odometry/global · /vehicle/status · costmaps</text>
+  <text class="s" x="485" y="270" text-anchor="middle">/tf · /localization/odom/local · /localization/odom/global · /vehicle/status · costmaps</text>
   <path class="line" d="M285,196 L285,232"/>
   <path class="line" d="M615,196 L615,232"/>
   <path class="line" d="M795,196 L795,232"/>
@@ -102,20 +102,20 @@
   <!-- mux -->
   <rect class="ours" x="380" y="456" width="200" height="56" rx="8"/>
   <text class="t" x="480" y="480" text-anchor="middle">twist_mux</text>
-  <text class="s" x="480" y="498" text-anchor="middle">highest priority wins · /estop</text>
+  <text class="s" x="480" y="498" text-anchor="middle">highest priority wins · /safety/estop</text>
   <path class="redline" d="M175,392 L420,456"/>
   <path class="redline" d="M320,392 L445,456"/>
   <path class="redline" d="M465,392 L475,456"/>
   <path class="redline" d="M610,392 L515,456"/>
   <path class="redline" d="M755,392 L545,456"/>
-  <text class="lbl" x="110" y="448">/cmd_vel/&lt;driver&gt;</text>
+  <text class="lbl" x="110" y="448">/drivers/&lt;driver&gt;/cmd_vel</text>
 
   <!-- ego -->
   <rect class="ego" x="355" y="556" width="250" height="62" rx="10"/>
   <text class="w" x="480" y="582" text-anchor="middle">ego · the virtual car</text>
   <text class="ws" x="480" y="602" text-anchor="middle">Ackermann model · limits · timeout</text>
   <path class="redline" d="M480,512 L480,556"/>
-  <text class="lbl" x="492" y="540">/cmd_vel</text>
+  <text class="lbl" x="492" y="540">/control/cmd_vel</text>
 
   <!-- backends -->
   <rect class="stock" x="110" y="676" width="150" height="56" rx="8"/>

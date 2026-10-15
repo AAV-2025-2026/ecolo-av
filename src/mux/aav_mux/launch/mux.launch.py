@@ -1,5 +1,5 @@
 """
-The command mux: every /cmd_vel/<driver> in, one /cmd_vel out (to ego).
+The command mux: every /drivers/<driver>/cmd_vel in, one /control/cmd_vel out (to ego).
 
   ros2 launch aav_mux mux.launch.py [use_sim_time:=true]
 
@@ -22,6 +22,6 @@ def generate_launch_description():
             executable='twist_mux',
             name='twist_mux',
             parameters=[config, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
-            remappings=[('cmd_vel_out', '/cmd_vel')],
+            remappings=[('cmd_vel_out', '/control/cmd_vel')],
         ),
     ])

@@ -50,8 +50,8 @@ path a real drive takes:
 
 | # | Step | Topic |
 |---|---|---|
-| 1 | The keyboard proposes a speed and a turn rate | `/cmd_vel/remote` |
-| 2 | `twist_mux` picks the highest-priority driver | `/cmd_vel` |
+| 1 | The keyboard proposes a speed and a turn rate | `/drivers/keyboard/cmd_vel` |
+| 2 | `twist_mux` picks the highest-priority driver | `/control/cmd_vel` |
 | 3 | `ego` turns it into a speed and a steering angle the car can do | `/ego/actuator_cmd` |
 | 4 | `turtlesim_adapter` moves the turtle | `/turtle1/cmd_vel` |
 
@@ -68,8 +68,8 @@ pixi run graph      # rqt_graph
 - tick **Hide: Debug** and **Hide: tf**;
 - click the refresh button after you start or stop something.
 
-Follow the chain from section 2: `teleop_twist_keyboard` → `/cmd_vel/remote` →
-`twist_mux` → `/cmd_vel` → `ego` → `/ego/actuator_cmd` → `turtlesim_adapter`.
+Follow the chain from section 2: `teleop_twist_keyboard` → `/drivers/keyboard/cmd_vel` →
+`twist_mux` → `/control/cmd_vel` → `ego` → `/ego/actuator_cmd` → `turtlesim_adapter`.
 
 Then check the graph against the team's contract:
 

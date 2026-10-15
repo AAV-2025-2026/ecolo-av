@@ -7,9 +7,11 @@ map -> odom, worked out on top of ekf_local's odom -> base_link.
   ros2 launch aav_localization localization.launch.py [gps:=true]
       [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [use_sim_time:=false]
 
-  /vehicle/odom, /imu/data ──> ekf_local ──> /odometry/local, TF odom -> base_link
-  /vehicle/odom, /imu/data, /odometry/gps ──> ekf_global ──> /odometry/global, TF map -> odom
-  /gps/fix, /odometry/global ──> navsat_transform ──> /odometry/gps, /gps/filtered
+  /vehicle/odom, /sensors/imu/data ──> ekf_local ──> /localization/odom/local, TF odom -> base_link
+  /vehicle/odom, /sensors/imu/data, /localization/gps/odom ──> ekf_global
+      ──> /localization/odom/global, TF map -> odom
+  /sensors/gps/fix, /localization/odom/global ──> navsat_transform
+      ──> /localization/gps/odom, /localization/gps/fix
 
 start_x, start_y, start_yaw: where the car is when this starts, in the map frame
 (metres east and north of the datum, yaw in radians counter-clockwise from east).
@@ -45,7 +47,8 @@ def global_ekf(context):
         parameters=[PathJoinSubstitution([config, 'ekf_global.yaml']),
                     {'initial_state': initial_state,
                      'use_sim_time': LaunchConfiguration('use_sim_time')}],
-        remappings=[('odometry/filtered', '/odometry/global')] + ekf_services('ekf_global'),
+        remappings=([('odometry/filtered', '/localization/odom/global')]
+                    + ekf_services('ekf_global')),
         condition=IfCondition(LaunchConfiguration('gps')),
     )]
 
@@ -65,7 +68,8 @@ def generate_launch_description():
             executable='ekf_node',
             name='ekf_local',
             parameters=[PathJoinSubstitution([config, 'ekf_local.yaml']), use_sim_time],
-            remappings=[('odometry/filtered', '/odometry/local')] + ekf_services('ekf_local'),
+            remappings=([('odometry/filtered', '/localization/odom/local')]
+                        + ekf_services('ekf_local')),
         ),
         OpaqueFunction(function=global_ekf),
         Node(
@@ -73,11 +77,11 @@ def generate_launch_description():
             executable='navsat_transform_node',
             name='navsat_transform',
             parameters=[PathJoinSubstitution([config, 'navsat.yaml']), use_sim_time],
-            remappings=[('imu', '/imu/data'),
-                        ('gps/fix', '/gps/fix'),
-                        ('gps/filtered', '/gps/filtered'),
-                        ('odometry/gps', '/odometry/gps'),
-                        ('odometry/filtered', '/odometry/global')],
+            remappings=[('imu', '/sensors/imu/data'),
+                        ('gps/fix', '/sensors/gps/fix'),
+                        ('gps/filtered', '/localization/gps/fix'),
+                        ('odometry/gps', '/localization/gps/odom'),
+                        ('odometry/filtered', '/localization/odom/global')],
             condition=IfCondition(LaunchConfiguration('gps')),
         ),
         Node(

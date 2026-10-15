@@ -73,7 +73,7 @@ class EgoModel:
         """
         Advance one tick.
 
-        cmd is (v, w) from /cmd_vel, or None when it is missing or stale,
+        cmd is (v, w) from /control/cmd_vel, or None when it is missing or stale,
         which means stop. Returns (speed, steering angle, acceleration limit).
         """
         lim = self.lim

@@ -1,5 +1,5 @@
 """
-Nav2 as one more driver: goals in, /cmd_vel/nav (TwistStamped) out to twist_mux.
+Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to twist_mux.
 
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
       [radar:=false] [collision_monitor:=<radar>] [camera_obstacles:=false]
@@ -14,12 +14,14 @@ robot_localization does localization, no docking or route server):
   behavior_server   wait, backup, drive_on_heading (no spin)
   bt_navigator      navigate_to_pose, navigate_through_poses (behavior_trees/*_car.xml)
   waypoint_follower follow_waypoints, follow_gps_waypoints (lat/lon via /fromLL)
-  velocity_smoother cmd_vel_nav -> /cmd_vel/nav (or -> collision_monitor -> /cmd_vel/nav)
-  collision_monitor /cmd_vel_smoothed -> /cmd_vel/nav, stopping for radar points ahead
+  velocity_smoother cmd_vel_nav -> /drivers/nav/cmd_vel
+                    (or -> /control/cmd_vel_smoothed -> collision_monitor)
+  collision_monitor /control/cmd_vel_smoothed -> /drivers/nav/cmd_vel, stopping for radar
+                    points ahead; its state and stop zone under /safety/collision_monitor/
   lifecycle_manager brings them all up
 
 Obstacles, from where the sensors are:
-  radar:=true             where a radar publishes /radar/points (the bench; the car with
+  radar:=true             where a radar publishes /sensors/radar/points (the bench; the car with
                           its radar part): the local costmap's obstacle layer reads it, so
                           Nav2 stops for what the radar sees. Gazebo's car has no radar
   collision_monitor       follows radar unless set: it stops the car for radar points in
@@ -75,7 +77,7 @@ def nodes(context):
                       convert_types=True),
         allow_substs=True)
 
-    smoothed = 'cmd_vel_smoothed' if collision_monitor else '/cmd_vel/nav'
+    smoothed = '/control/cmd_vel_smoothed' if collision_monitor else '/drivers/nav/cmd_vel'
     servers = [
         ('nav2_map_server', 'map_server', []),
         ('nav2_planner', 'planner_server', []),
@@ -87,7 +89,11 @@ def nodes(context):
          [('cmd_vel', 'cmd_vel_nav'), ('cmd_vel_smoothed', smoothed)]),
     ]
     if collision_monitor:
-        servers.append(('nav2_collision_monitor', 'collision_monitor', []))
+        # Its marker topic is private (~/collision_points_marker): move it next to the
+        # rest of what it publishes, under /safety/collision_monitor/.
+        servers.append(('nav2_collision_monitor', 'collision_monitor', [
+            ('/collision_monitor/collision_points_marker',
+             '/safety/collision_monitor/collision_points_marker')]))
 
     # use_sim_time is passed on its own: RewrittenYaml only rewrites keys that already
     # exist, and nav2.yaml has none, so as a rewrite it was silently dropped.
@@ -114,12 +120,14 @@ def generate_launch_description():
         DeclareLaunchArgument('map', default_value=empty_map,
                               description='Map YAML (see maps/README.md)'),
         DeclareLaunchArgument('radar', default_value='false',
-                              description='true where a radar publishes /radar/points: the '
+                              description='true where a radar publishes '
+                                          '/sensors/radar/points: the '
                                           "local costmap's obstacle layer reads it"),
-        # The radar's value unless set: collision_monitor needs /radar/points, and stops
+        # The radar's value unless set: collision_monitor needs /sensors/radar/points, and stops
         # Nav2 when it goes silent.
         DeclareLaunchArgument('collision_monitor', default_value=LaunchConfiguration('radar'),
-                              description='Insert collision_monitor (needs /radar/points)'),
+                              description='Insert collision_monitor (needs '
+                                          '/sensors/radar/points)'),
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="true: the local costmap's camera layer reads "
                                           '/perception/camera_obstacles'),

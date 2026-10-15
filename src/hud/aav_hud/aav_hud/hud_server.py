@@ -3,21 +3,22 @@ hud_server: the back end of the HUD, the car's touchscreen app (hud/flutter_pi).
 
 One process: this ROS node, and a web server (Flask and Socket.IO, web.py) for the app.
 It turns the car's topics into the events the app shows, the route the app locks into a
-Nav2 goal, and the app's e-stop button into /estop true.
+Nav2 goal, and the app's e-stop button into /safety/estop true.
 
-Subscribes  /vehicle/status        aav_interfaces/VehicleStatus  speed, mode, e-stop, faults
-            /gps/filtered          sensor_msgs/NavSatFix         the car on the map
-            /perception/stop       std_msgs/Bool                 stopping for a stop sign
-            /battery_status        sensor_msgs/BatteryState      volts, charge, amps
-            /camera/image_raw      sensor_msgs/Image             only while someone watches
-Publishes   /estop                 std_msgs/Bool                 only true: the app's e-stop
-Calls       /follow_gps_waypoints  nav2_msgs/action/FollowGPSWaypoints  the locked route
+Subscribes  /vehicle/status                       aav_interfaces/VehicleStatus
+                                                  speed, mode, e-stop, faults
+            /localization/gps/fix                 sensor_msgs/NavSatFix: the car on the map
+            /perception/stop_sign                 std_msgs/Bool: stopping for a stop sign
+            /vehicle/battery                      sensor_msgs/BatteryState: volts, charge, amps
+            /sensors/camera/front_left/image_raw  sensor_msgs/Image, only while someone watches
+Publishes   /safety/estop                         std_msgs/Bool: only true, the app's e-stop
+Calls       /follow_gps_waypoints                 nav2_msgs/action/FollowGPSWaypoints: the route
 Serves      HTTP and Socket.IO on 127.0.0.1:5000 (parameters host, port)
 
-The e-stop: POST /estop publishes /estop true at once, then every 0.1 s, five times in
+The e-stop: POST /estop publishes /safety/estop true at once, then every 0.1 s, five times in
 all (as `pixi run estop` does), so one lost message can't keep the car going. It also
 cancels the HUD's route, so clearing the e-stop doesn't restart the trip. If nothing
-subscribes to /estop, the request fails (503), so the app never says "sent" to nobody.
+subscribes to /safety/estop, the request fails (503), so the app never says "sent" to nobody.
 The HUD never publishes false: clearing the e-stop stays a person's deliberate act, from
 a laptop (`pixi run estop-clear`, Foxglove), never a tap on this touchscreen.
 
@@ -54,14 +55,14 @@ from rclpy.qos import HistoryPolicy, qos_profile_sensor_data, QoSProfile, Reliab
 from sensor_msgs.msg import BatteryState, Image, NavSatFix
 from std_msgs.msg import Bool
 
-# Best effort takes both kinds of publisher: ublox publishes /gps/fix best effort,
+# Best effort takes both kinds of publisher: ublox publishes /sensors/gps/fix best effort,
 # the others are reliable. These messages are small, so losing one costs nothing.
 SMALL = qos_profile_sensor_data
 # Pictures: reliable, as best effort loses most big messages over UDP (aav_yolo measured
 # it on a Mac), and only the newest one.
 PICTURES = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
                       reliability=ReliabilityPolicy.RELIABLE)
-# /estop: what its subscribers use. spine_bridge and legacy_uart_bridge subscribe reliable,
+# /safety/estop: what its subscribers use. spine_bridge and legacy_uart_bridge subscribe reliable,
 # volatile, depth 10 (ROS's default); twist_mux 4.5.0 with SystemDefaultsQoS, which takes
 # a reliable publisher too. A best-effort publisher would reach twist_mux only.
 ESTOP = QoSProfile(depth=10, history=HistoryPolicy.KEEP_LAST,
@@ -109,15 +110,15 @@ class HudServer(Node):
         self.picture = None             # the newest Image
         self.picture_time = 0.0         # when it came (time.monotonic)
         self.picture_png = (None, None)     # (Image, its PNG), so each is encoded once
-        self.estop_left = 0     # /estop true messages still to send for the last press
+        self.estop_left = 0     # /safety/estop true messages still to send for the last press
 
         self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, SMALL)
-        self.create_subscription(NavSatFix, '/gps/filtered', self.on_fix, SMALL)
-        self.create_subscription(Bool, '/perception/stop', self.on_stop, SMALL)
-        self.create_subscription(BatteryState, '/battery_status', self.on_battery, SMALL)
+        self.create_subscription(NavSatFix, '/localization/gps/fix', self.on_fix, SMALL)
+        self.create_subscription(Bool, '/perception/stop_sign', self.on_stop, SMALL)
+        self.create_subscription(BatteryState, '/vehicle/battery', self.on_battery, SMALL)
         # Made now, not when the button is pressed: by then discovery has matched it with
         # the subscribers, so the first message isn't lost.
-        self.estop_pub = self.create_publisher(Bool, '/estop', ESTOP)
+        self.estop_pub = self.create_publisher(Bool, '/safety/estop', ESTOP)
         self.nav = ActionClient(self, FollowGPSWaypoints, '/follow_gps_waypoints')
         self.create_timer(0.5, self.check_camera)
         self.create_timer(ESTOP_PERIOD, self.repeat_estop)
@@ -178,7 +179,9 @@ class HudServer(Node):
             wanted = (self.camera_wanted is not None
                       and time.monotonic() - self.camera_wanted < self.camera_idle)
         if wanted and self.camera is None:
-            self.camera = self.create_subscription(Image, '/camera/image_raw', self.on_image,
+            self.camera = self.create_subscription(Image,
+                                                   '/sensors/camera/front_left/image_raw',
+                                                   self.on_image,
                                                    PICTURES)
             self.get_logger().info('someone watches the camera: subscribed')
         elif not wanted and self.camera is not None:
@@ -220,21 +223,22 @@ class HudServer(Node):
 
     def estop(self):
         """
-        Set the e-stop: /estop true now, then repeated. Never false.
+        Set the e-stop: /safety/estop true now, then repeated. Never false.
 
-        Return None when something subscribes to /estop, or why the press can't work:
+        Return None when something subscribes to /safety/estop, or why the press can't work:
         the app then tells the driver to use the car's red e-stop button.
         """
         # The lock also keeps this thread and the executor's from publishing at once.
         with self.lock:
             self.estop_pub.publish(Bool(data=True))
             self.estop_left = ESTOP_REPEATS - 1
-        self.get_logger().warning('e-stop pressed on the HUD: /estop true')
+        self.get_logger().warning('e-stop pressed on the HUD: /safety/estop true')
         self.cancel()       # 'no route is being followed' is fine: nothing to stop
         if self.estop_pub.get_subscription_count() == 0:
             # Still published, and repeated: a subscriber may join. But none heard it.
-            self.get_logger().error('nothing subscribes to /estop: the e-stop reached nobody')
-            return 'nothing on the car subscribes to /estop (no backend, no twist_mux)'
+            self.get_logger().error('nothing subscribes to /safety/estop: the e-stop reached '
+                                    'nobody')
+            return 'nothing on the car subscribes to /safety/estop (no backend, no twist_mux)'
         return None
 
     def repeat_estop(self):

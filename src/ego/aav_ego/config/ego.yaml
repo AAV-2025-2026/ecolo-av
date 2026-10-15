@@ -11,7 +11,7 @@ ego:
     max_deceleration: 2.0       # m/s^2 (also how hard it stops when commands go stale)
     max_steering_rate: 0.6      # rad/s at the virtual centre wheel
     min_speed_for_steering: 0.05
-    cmd_timeout: 0.3            # s since the last /cmd_vel ARRIVED, then stop
+    cmd_timeout: 0.3            # s since the last /control/cmd_vel ARRIVED, then stop
     rate_hz: 50.0
     frame_id: base_link
     use_stamped: true

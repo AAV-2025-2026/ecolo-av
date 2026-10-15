@@ -3,4 +3,4 @@ scripted_driver:
   ros__parameters:
     max_speed: 2.0        # m/s: goals asking for more are rejected (ego caps lower anyway)
     rate_hz: 50.0
-    odom_timeout: 0.5     # s: hold_distance goals need fresh /odometry/local
+    odom_timeout: 0.5     # s: hold_distance goals need fresh /localization/odom/local

@@ -16,11 +16,11 @@ class FakeLaneGeometryPublisher(Node):
         self.mode = str(self.get_parameter('mode').value)
         self.rate_hz = float(self.get_parameter('rate_hz').value)
         self.lane_width = float(self.get_parameter('lane_width_m').value)
-        self.pub = self.create_publisher(LaneGeometry, '/lane_geometry', 10)
+        self.pub = self.create_publisher(LaneGeometry, '/perception/lane/geometry', 10)
         self.t = 0.0
         self.dt = 1.0 / max(self.rate_hz, 1.0)
         self.create_timer(self.dt, self.timer_cb)
-        self.get_logger().info(f'Publishing fake /lane_geometry in mode={self.mode} at {self.rate_hz:.1f} Hz')
+        self.get_logger().info(f'Publishing fake /perception/lane/geometry in mode={self.mode} at {self.rate_hz:.1f} Hz')
 
     def timer_cb(self):
         msg = LaneGeometry()

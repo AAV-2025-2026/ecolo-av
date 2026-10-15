@@ -1,4 +1,4 @@
-//! The HUD's e-stop button: one press sends `/estop` true five times, 0.1 s apart.
+//! The HUD's e-stop button: one press sends `/safety/estop` true five times, 0.1 s apart.
 //!
 //! The same as aav_hud's button (docs/hud.md): repeated, so one lost message can't keep
 //! the car going. It never sends false: clearing the e-stop stays a person's deliberate
@@ -12,7 +12,7 @@ pub const REPEATS: u8 = 5;
 /// Time between two messages of one press.
 pub const PERIOD: Duration = Duration::from_millis(100);
 
-/// "Publish `/estop` true now." There is no message for false.
+/// "Publish `/safety/estop` true now." There is no message for false.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StopMessage;
 

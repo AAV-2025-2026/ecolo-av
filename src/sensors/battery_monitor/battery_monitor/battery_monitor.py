@@ -9,9 +9,9 @@ from sensor_msgs.msg import BatteryState
 import serial
 
 BSP_NODE_NAME = 'battery_state_publisher'
-BSP_TOPIC_NAME = '/battery_status'
+BSP_TOPIC_NAME = '/vehicle/battery'
 HP_NODE_NAME = 'heartbeat_publisher'
-HP_TOPIC_NAME = '/battery_monitor_heartbeat'
+HP_TOPIC_NAME = '/vehicle/battery/heartbeat'
 
 
 class BatteryMonitor:

@@ -8,7 +8,7 @@
 //!
 //! QoS, as aav_hud's (docs/hud.md):
 //! - small messages: best effort (SensorDataQoS), which takes reliable and best-effort
-//!   publishers alike (ublox publishes /gps/fix best effort);
+//!   publishers alike (ublox publishes /sensors/gps/fix best effort);
 //! - pictures: reliable, depth 1; best effort loses most big messages over WiFi;
 //! - the e-stop: reliable, depth 10, what spine_bridge and legacy_uart_bridge use.
 

@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_bench</name>
   <version>0.1.0</version>
-  <description>Bench mode's pretend sensors: an IMU, GPS, battery, camera and radar that read where the model car really is (/bench/truth, from aav_spine_sim) and publish what the real drivers will, on the same topics and frames.</description>
+  <description>Bench mode's pretend sensors: an IMU, GPS, battery, camera and radar that read where the model car really is (/vehicle/bench/truth, from aav_spine_sim) and publish what the real drivers will, on the same topics and frames.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 

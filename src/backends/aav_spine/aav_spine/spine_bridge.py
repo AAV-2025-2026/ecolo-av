@@ -2,9 +2,9 @@
 spine_bridge: the ROS side of the CAN spine.
 
 Subscribes  ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped
-            estop             std_msgs/Bool
-            from_can_bus      can_msgs/Frame  (ros2_socketcan receiver)
-Publishes   to_can_bus        can_msgs/Frame  (ros2_socketcan sender)
+            safety/estop      std_msgs/Bool
+            can/rx            can_msgs/Frame  (ros2_socketcan receiver)
+Publishes   can/tx            can_msgs/Frame  (ros2_socketcan sender)
             vehicle/odom      nav_msgs/Odometry  (twist only, in base_link)
             vehicle/status    aav_interfaces/VehicleStatus
             vehicle/joint_states  sensor_msgs/JointState  (front steering joints, for RViz;
@@ -59,13 +59,13 @@ class SpineBridge(Node):
         self.feedback = None
         self.bad_frames = 0
 
-        self.to_can = self.create_publisher(Frame, 'to_can_bus', 50)
+        self.to_can = self.create_publisher(Frame, 'can/tx', 50)
         self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
         self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
         self.joint_pub = self.create_publisher(JointState, 'vehicle/joint_states', 10)
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
-        self.create_subscription(Bool, 'estop', self.on_estop, 10)
-        self.create_subscription(Frame, 'from_can_bus', self.on_frame, 100)
+        self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
+        self.create_subscription(Frame, 'can/rx', self.on_frame, 100)
         self.create_service(SetBool, 'spine/arm', self.on_arm)
         self.create_timer(1.0 / drive_hz, self.send_drive)
         self.create_timer(1.0 / estop_hz, self.send_estop)
@@ -87,7 +87,7 @@ class SpineBridge(Node):
     def on_arm(self, request, response):
         if request.data and self.estop:
             response.success = False
-            response.message = 'e-stop is active; clear /estop first'
+            response.message = 'e-stop is active; clear /safety/estop first'
             return response
         if request.data:
             self.disarm_frames = 3   # the spine arms on armed 0 -> 1, every time

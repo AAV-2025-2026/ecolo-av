@@ -4,12 +4,12 @@
 //! and drives a model of the car instead of motors. It answers with the frames the real
 //! spine sends, so nothing above it can tell the difference.
 //!
-//! Subscribes  /to_can_bus            can_msgs/Frame    what spine_bridge puts on the bus
-//!             /bench/hw_estop        std_msgs/Bool     true = the hardware e-stop is pressed
-//!             /bench/driver_faults   std_msgs/UInt16   pretend a driver failed (fault bits)
-//! Publishes   /from_can_bus          can_msgs/Frame    VEHICLE_FEEDBACK 50 Hz, VEHICLE_STATUS 10 Hz
-//!             /bench/truth           nav_msgs/Odometry where the model car really is (map
-//!                                                      frame, 50 Hz), for the pretend sensors
+//! Subscribes  /can/tx                       can_msgs/Frame    what spine_bridge puts on the bus
+//!             /vehicle/bench/hw_estop       std_msgs/Bool     true = the hardware e-stop is pressed
+//!             /vehicle/bench/driver_faults  std_msgs/UInt16   pretend a driver failed (fault bits)
+//! Publishes   /can/rx                       can_msgs/Frame    VEHICLE_FEEDBACK 50 Hz, VEHICLE_STATUS 10 Hz
+//!             /vehicle/bench/truth          nav_msgs/Odometry where the model car really is (map
+//!                                                             frame, 50 Hz), for the pretend sensors
 //! Parameters  wheelbase (m), max_steering (rad), start_x, start_y (m), start_yaw (rad)
 //!
 //! A thread runs the spine at 100 Hz, like the board's main loop; the main thread spins.
@@ -67,7 +67,7 @@ fn main() -> Result<()> {
 
     let _frames_in = {
         let bench = Arc::clone(&bench);
-        node.create_subscription::<Frame, _>("/to_can_bus", move |f: Frame| {
+        node.create_subscription::<Frame, _>("/can/tx", move |f: Frame| {
             if !f.is_extended && !f.is_rtr && !f.is_error && f.id <= 0x7FF {
                 let len = (f.dlc as usize).min(8);
                 bench.lock().unwrap().receive(f.id as u16, &f.data[..len]);
@@ -76,18 +76,18 @@ fn main() -> Result<()> {
     };
     let _estop = {
         let bench = Arc::clone(&bench);
-        node.create_subscription::<Bool, _>("/bench/hw_estop", move |m: Bool| {
+        node.create_subscription::<Bool, _>("/vehicle/bench/hw_estop", move |m: Bool| {
             bench.lock().unwrap().set_hw_estop(m.data);
         })?
     };
     let _faults = {
         let bench = Arc::clone(&bench);
-        node.create_subscription::<UInt16, _>("/bench/driver_faults", move |m: UInt16| {
+        node.create_subscription::<UInt16, _>("/vehicle/bench/driver_faults", move |m: UInt16| {
             bench.lock().unwrap().set_driver_faults(m.data);
         })?
     };
-    let frames_out = node.create_publisher::<Frame>("/from_can_bus")?;
-    let truth = node.create_publisher::<Odometry>("/bench/truth")?;
+    let frames_out = node.create_publisher::<Frame>("/can/rx")?;
+    let truth = node.create_publisher::<Odometry>("/vehicle/bench/truth")?;
 
     let running = Arc::new(AtomicBool::new(true));
     let commands = Arc::clone(executor.commands());

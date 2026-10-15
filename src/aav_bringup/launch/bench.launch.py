@@ -29,7 +29,7 @@ The model car starts at the map origin (the GPS datum), facing east, on the cent
 of a straight road; start_y and start_yaw move it. A stop sign stands 25 m ahead on the
 right; obstacle:=true puts a 1 m box in the lane 15 m ahead (aav_bench/config/bench.yaml).
 lane:=true runs lane keeping: lane_finder reads the pretend camera, control_interface
-steers on /cmd_vel/ai. lane:=fake feeds control_interface a pretend straight lane instead.
+steers on /drivers/ai/cmd_vel. lane:=fake feeds control_interface a pretend straight lane instead.
 
 arm:=true arms the spine after 12 s, once Nav2 is up, the way `ros2 service call
 /spine/arm std_srvs/srv/SetBool "{data: true}"` does. Arming earlier, while everything
@@ -83,8 +83,9 @@ def launch_setup(context):
         Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',
              name='imu_filter_madgwick',
              parameters=[os.path.join(share('aav_sensors'), 'config', 'imu_filter.yaml')],
-             remappings=[('imu/data_raw', '/imu/data_raw'), ('imu/data', '/imu/data'),
-                         ('imu/mag', '/imu/mag')]),
+             remappings=[('imu/data_raw', '/sensors/imu/data_raw'),
+                         ('imu/data', '/sensors/imu/data'),
+                         ('imu/mag', '/sensors/imu/mag')]),
         include('aav_localization', 'localization.launch.py', gps='true'),
         Node(package='aav_spine', executable='spine_bridge', name='spine_bridge',
              parameters=[os.path.join(share('aav_spine'), 'config', 'spine.yaml'),
@@ -155,7 +156,8 @@ def generate_launch_description():
                               description='YOLO and the stop-sign watcher (the ml environment)'),
         DeclareLaunchArgument('lane', default_value='false',
                               description='true: lane keeping (lane_finder and control_interface, '
-                                          'on /cmd_vel/ai); fake: the same on a pretend lane'),
+                                          'on /drivers/ai/cmd_vel); fake: the same on a '
+                                          'pretend lane'),
         DeclareLaunchArgument('hud', default_value='false',
                               description="the HUD's web server (aav_hud), on 127.0.0.1:5000"),
         DeclareLaunchArgument('arm', default_value='true',

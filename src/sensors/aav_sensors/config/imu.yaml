@@ -1,5 +1,5 @@
 # Yahboom 10-axis IMU (src/sensors/yahboom_imu_cpp, from the 2025-26 yahboom-IMU repo).
-# Publishes /imu/data_raw (sensor_msgs/Imu: gyro + accel, no orientation) and /imu/mag
+# Publishes /sensors/imu/data_raw (sensor_msgs/Imu: gyro + accel, no orientation) and /sensors/imu/mag
 # (raw counts, not tesla, so unused). Frame imu_link: its mount is in
 # aav_description/config/vehicle.yaml.
 imu_node:

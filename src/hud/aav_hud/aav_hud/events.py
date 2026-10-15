@@ -114,13 +114,13 @@ def position_event(lat, lon):
 
 
 def stop_sign_event(msg):
-    """/perception/stop: true while the car stops for a stop sign."""
+    """/perception/stop_sign: true while the car stops for a stop sign."""
     return {'detected': bool(msg.data), 'message': 'STOP'}
 
 
 def battery_event(msg):
     """
-    /battery_status (sensor_msgs/BatteryState): volts, percent and amps.
+    /vehicle/battery (sensor_msgs/BatteryState): volts, percent and amps.
 
     BatteryState gives the charge from 0 to 1; the app shows percent. A reading the
     battery monitor doesn't measure is NaN in the message, None here: JSON has no NaN.

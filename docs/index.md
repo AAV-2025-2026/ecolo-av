@@ -15,7 +15,7 @@ moves the car.**
 |---|---|
 | 1. Sense | Sensors publish raw data. Two filters (EKFs) work out where the car is. |
 | 2. Propose | Each driver proposes a speed and a turn rate: joystick, keyboard, script or Nav2. |
-| 3. Pick | `twist_mux` passes on the highest-priority driver. `/estop` blocks them all. |
+| 3. Pick | `twist_mux` passes on the highest-priority driver. `/safety/estop` blocks them all. |
 | 4. Convert | **ego**, the virtual car, turns that into a speed and steering angle the car can do. |
 | 5. Move | One backend moves something: the real car, Gazebo, or a turtle on the screen. |
 

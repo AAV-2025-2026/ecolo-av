@@ -89,7 +89,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  /// The e-stop button: ask the back end for /estop true, and say whether it was sent.
+  /// The e-stop button: ask the back end for /safety/estop true, and say whether it was sent.
   Future<void> _estop() async {
     final reply = await backend.estop();
     if (!mounted) return;

@@ -13,7 +13,7 @@ in its `PROVENANCE.md`.
 | Folder under `src/` | the layer of the picture | `sensors/`, `localization/`, `drivers/`, `mux/`, `ego/`, `backends/` |
 | Node and executable | what it is, in snake_case; both the same | `ego`, `spine_bridge`, `scripted_driver` |
 | Logic module | a noun, no ROS imports | `ackermann.py`, `can_codec.py`, `vehicle.py` |
-| Topic | absolute: `/<area>/<thing>` | `/cmd_vel/joy`, `/vehicle/odom`, `/ego/actuator_cmd` |
+| Topic | absolute: `/<area>/<thing>` | `/drivers/joy/cmd_vel`, `/vehicle/odom`, `/ego/actuator_cmd` |
 | Frame | `<thing>_link`, plus `map`, `odom`, `base_link` | `imu_link`, `gps_link` |
 | Parameter | snake_case, SI units, the unit in a comment | `max_speed: 1.0  # m/s` |
 | Config file | `config/<node>.yaml`; its top key is the node's name, or ROS ignores it | `config/ego.yaml` starts with `ego:` |

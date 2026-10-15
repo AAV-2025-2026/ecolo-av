@@ -76,3 +76,12 @@ Files, unchanged unless listed under Changes:
 | `lib/services/backend.dart` | the back end's HTTP routes: route, cancel, e-stop, camera |
 | `test/*.dart` | the app's tests (`pixi run hud-test`) |
 | `test_bench/backend_test.dart` | the app's own client code against the bench's back end |
+
+## Topic names by area (2026-10-15)
+
+The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
+change, never the logic:
+
+- `lib/screens/camera_page.dart`, `lib/screens/home_page.dart`, `lib/services/backend.dart`:
+  comments name the topics behind the back end (`/sensors/camera/front_left/image_raw`,
+  `/safety/estop`). The HTTP routes (`POST /estop`, `/camera/latest.png`) are unchanged.

@@ -14,26 +14,28 @@ that can't run here (no PyTorch, no model file, no usb_cam) is skipped with a wa
 
 Parts and what they start:
   description     robot_state_publisher (+ joint_state_publisher): the car's frames
-  mux, ego        twist_mux -> /cmd_vel -> ego -> /ego/actuator_cmd
-  teleop          joystick -> /cmd_vel/joy, e-stop button -> /estop
-  scripted        /scripted_drive action -> /cmd_vel/scripted
+  mux, ego        twist_mux -> /control/cmd_vel -> ego -> /ego/actuator_cmd
+  teleop          joystick -> /drivers/joy/cmd_vel, e-stop button -> /safety/estop
+  scripted        /scripted_drive action -> /drivers/scripted/cmd_vel
   imu, gps,       sensor drivers (on the machine the device is plugged into);
   radar, battery  gps_driver picks the GPS's: ublox (the default), nmea or ublox_dgnss
-  camera          usb_cam -> /camera/image_raw (Linux only)
-  detector        YOLO on /camera/image_raw -> /perception/detections, as
+  camera          usb_cam -> /sensors/camera/front_left/image_raw (Linux only)
+  detector        YOLO on /sensors/camera/front_left/image_raw -> /perception/detections, as
                   yolo_detector_<machine>, with the machine file's model
-  stop_signs      stop_sign_watcher -> /perception/stop, twist_mux's stop-sign lock (the
+  stop_signs      stop_sign_watcher -> /perception/stop_sign, twist_mux's stop-sign lock (the
                   lock is in aav_mux's config). One per car, next to the mux
-  radar_clusters  DBSCAN on /radar/points -> /radar/clusters, /radar/cluster_boxes
+  radar_clusters  DBSCAN on /sensors/radar/points -> /perception/radar/clusters,
+                  /perception/radar/cluster_boxes
   camera_obstacles
                   the detectors' boxes as points on the road -> /perception/camera_obstacles,
                   for Nav2's costmap. Off until the cameras are calibrated (Q22)
-  lane            lane keeping: lane_finder on /camera/image_raw -> /lane_geometry, and
-                  control_interface -> /cmd_vel/ai (twist_mux's AI slot). Off on every
+  lane            lane keeping: lane_finder on /sensors/camera/front_left/image_raw ->
+                  /perception/lane/geometry, and
+                  control_interface -> /drivers/ai/cmd_vel (twist_mux's AI slot). Off on every
                   machine: it drives whenever it sees a lane, unless a driver above it does
   localization    ekf_local, ekf_global, navsat_transform
-  navigation      Nav2 -> /cmd_vel/nav. Its local costmap reads the sensors this machine
-                  runs: with radar, /radar/points, and collision_monitor stops Nav2 for
+  navigation      Nav2 -> /drivers/nav/cmd_vel. Its local costmap reads the sensors this machine
+                  runs: with radar, /sensors/radar/points, and collision_monitor stops Nav2 for
                   radar points just ahead; with camera_obstacles, the camera's points
   spine           backend: CAN spine (ros2_socketcan + spine_bridge)
   legacy_uart     backend: today's ESP32 over UART (the Pi wired to it)

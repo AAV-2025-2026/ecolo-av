@@ -2,7 +2,7 @@
 //!
 //! They live in `config/hud.yaml`, a ROS parameters file. The program carries a copy of
 //! it as its defaults ([`HudConfig::default`]), so no topic name is written in the code.
-//! ROS parameters (`--ros-args -p gps_topic:=/gps/fix`) and `--config <file>` override it.
+//! ROS parameters (`--ros-args -p gps_topic:=/sensors/gps/fix`) and `--config <file>` override it.
 
 use std::time::Duration;
 

@@ -70,7 +70,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /odometry/global
+        Value: /localization/odom/global
     - Class: rviz_default_plugins/Odometry
       Name: GPS (in map frame)
       Enabled: true
@@ -80,7 +80,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /odometry/gps
+        Value: /localization/gps/odom
     - Class: rviz_default_plugins/RobotModel
       Name: Car
       Enabled: true

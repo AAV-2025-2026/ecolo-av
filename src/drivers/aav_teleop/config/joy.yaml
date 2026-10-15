@@ -1,8 +1,8 @@
-# joy (joystick_drivers 3.3.0, Jazzy): reads the stick, publishes sensor_msgs/Joy on /joy.
+# joy (joystick_drivers 3.3.0, Jazzy): reads the stick, publishes sensor_msgs/Joy on /drivers/joy/joy.
 # Axes are -1..1 with left and up positive; buttons are 0/1.
 # See which index is which: ros2 run joy joy_enumerate_devices, then
-#   ros2 topic echo /joy   and move one control at a time.
-joy_node:
+#   ros2 topic echo /drivers/joy/joy   and move one control at a time.
+/**/joy_node:                   # any namespace: teleop.launch.py puts it in /drivers/joy
   ros__parameters:
     device_id: 0                # first joystick; or set device_name instead
     device_name: ""

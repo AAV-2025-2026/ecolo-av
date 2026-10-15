@@ -13,8 +13,8 @@ touching the others.
 | Sensor | Driver | Publishes |
 |---|---|---|
 | Wheel speed | today `encoder_udp` (in `aav_legacy`); later the spine | `/vehicle/odom` |
-| IMU (Yahboom, USB) | `yahboom_imu_cpp`, then the stock `imu_filter_madgwick` | `/imu/data_raw`, then `/imu/data` |
-| GPS (u-blox, USB) | the stock `ublox_gps`; or `nmea_navsat_driver`, or `ublox_dgnss` on the car | `/gps/fix` |
+| IMU (Yahboom, USB) | `yahboom_imu_cpp`, then the stock `imu_filter_madgwick` | `/sensors/imu/data_raw`, then `/sensors/imu/data` |
+| GPS (u-blox, USB) | the stock `ublox_gps`; or `nmea_navsat_driver`, or `ublox_dgnss` on the car | `/sensors/gps/fix` |
 | The car's shape | the stock `robot_state_publisher`, from `vehicle.yaml` | `/tf_static`: where each sensor sits |
 | Lidar, cameras | next year | |
 
@@ -44,15 +44,15 @@ topic. None of them knows what kind of vehicle it's driving.
 
 | Driver | Topic | Priority |
 |---|---|---|
-| Joystick: the safety driver | `/cmd_vel/joy` | 100 |
-| Keyboard, or another remote | `/cmd_vel/remote` | 90 |
-| Scripted: speed up, hold, slow down | `/cmd_vel/scripted` | 50 |
-| Replay of a recorded drive | `/cmd_vel/replay` | 40 |
-| Nav2: drive to a point on the map | `/cmd_vel/nav` | 20 |
-| AI | `/cmd_vel/ai` | 10, later |
+| Joystick: the safety driver | `/drivers/joy/cmd_vel` | 100 |
+| Keyboard, or another remote | `/drivers/keyboard/cmd_vel` | 90 |
+| Scripted: speed up, hold, slow down | `/drivers/scripted/cmd_vel` | 50 |
+| Replay of a recorded drive | `/drivers/replay/cmd_vel` | 40 |
+| Nav2: drive to a point on the map | `/drivers/nav/cmd_vel` | 20 |
+| AI | `/drivers/ai/cmd_vel` | 10, later |
 
 `twist_mux` passes on the highest priority that has spoken in the last 0.5 s, as
-`/cmd_vel`. Publishing `true` on `/estop` blocks every driver until someone publishes
+`/control/cmd_vel`. Publishing `true` on `/safety/estop` blocks every driver until someone publishes
 `false`.
 
 Teleop is just another driver. The keyboard's commands take the same path as Nav2's:
@@ -60,7 +60,7 @@ mux, ego, then the turtle or the car.
 
 ## 4. ego: the virtual car
 
-ego is the only node that knows the car is a car. Fifty times a second it turns `/cmd_vel`
+ego is the only node that knows the car is a car. Fifty times a second it turns `/control/cmd_vel`
 into `/ego/actuator_cmd`: an `AckermannDriveStamped` with a speed and a steering angle
 (positive is left).
 
@@ -105,7 +105,7 @@ From the person outward. Each layer works even if everything after it fails.
 | # | Layer | Stops the car when |
 |---|---|---|
 | 1 | Joystick deadman (priority 100) | held with the sticks centred |
-| 2 | `/estop` | it's true: the mux blocks every driver, and the car backends brake |
+| 2 | `/safety/estop` | it's true: the mux blocks every driver, and the car backends brake |
 | 3 | ego's timeout | no command arrives for 0.3 s |
 | 4 | `spine_bridge` | ego is quiet for 0.1 s: it stops sending drive frames |
 | 5 | The spine's watchdog | no valid frame for 200 ms: throttle off, brake on |

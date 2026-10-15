@@ -28,7 +28,7 @@ def generate_launch_description():
         ),
         # CARLA's sensors -> our sensor topics, through topic_tools relay (no copying code).
         Node(package='topic_tools', executable='relay', name='carla_imu_relay',
-             arguments=[['/carla/', role, '/imu'], '/imu/data_raw']),
+             arguments=[['/carla/', role, '/imu'], '/sensors/imu/data_raw']),
         Node(package='topic_tools', executable='relay', name='carla_gnss_relay',
-             arguments=[['/carla/', role, '/gnss'], '/gps/fix']),
+             arguments=[['/carla/', role, '/gnss'], '/sensors/gps/fix']),
     ])

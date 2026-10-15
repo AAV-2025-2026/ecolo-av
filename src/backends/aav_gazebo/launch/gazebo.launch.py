@@ -5,7 +5,7 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
 
   /ego/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
   Gazebo odometry, IMU, NavSat ──bridge──> gazebo_adapter ──> /vehicle/odom,
-                                           /imu/data_raw, /gps/fix, /vehicle/status
+                                           /sensors/imu/data_raw, /sensors/gps/fix, /vehicle/status
   Gazebo joints ──bridge──> /joint_states;  Gazebo clock ──bridge──> /clock
 
 Everything else (sensors filter, localization, Nav2, mux, ego) runs as on the car,

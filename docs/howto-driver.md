@@ -9,7 +9,7 @@ empty folder to a turtle driving in circles.
 
 | A driver does | A driver doesn't |
 |---|---|
-| publish `geometry_msgs/TwistStamped` on `/cmd_vel/<name>` | publish `/cmd_vel` or `/ego/actuator_cmd` |
+| publish `geometry_msgs/TwistStamped` on `/drivers/<name>/cmd_vel` | publish `/control/cmd_vel` or `/ego/actuator_cmd` |
 | put the speed (m/s) in `twist.linear.x` and the turn rate (rad/s) in `twist.angular.z` | work out steering angles: that's ego's job |
 | use the frame `base_link`: x forward, y left, positive turn rate = left | talk to hardware: that's a backend's job |
 | go quiet when it has nothing to say | handle the e-stop: the mux and the backends do |
@@ -23,13 +23,13 @@ driver is added.
 
 | Input | Topic | Priority |
 |---|---|---|
-| E-stop (a lock: blocks everything below it) | `/estop` | 255 |
-| Joystick, the safety driver | `/cmd_vel/joy` | 100 |
-| Keyboard or another remote | `/cmd_vel/remote` | 90 |
-| Scripted | `/cmd_vel/scripted` | 50 |
-| Replay | `/cmd_vel/replay` | 40 |
-| Nav2 | `/cmd_vel/nav` | 20 |
-| AI | `/cmd_vel/ai` | 10 |
+| E-stop (a lock: blocks everything below it) | `/safety/estop` | 255 |
+| Joystick, the safety driver | `/drivers/joy/cmd_vel` | 100 |
+| Keyboard or another remote | `/drivers/keyboard/cmd_vel` | 90 |
+| Scripted | `/drivers/scripted/cmd_vel` | 50 |
+| Replay | `/drivers/replay/cmd_vel` | 40 |
+| Nav2 | `/drivers/nav/cmd_vel` | 20 |
+| AI | `/drivers/ai/cmd_vel` | 10 |
 
 **People outrank software.** Give a new software driver a priority below 90. The example
 uses 30.
@@ -57,7 +57,7 @@ Replace `src/drivers/aav_circle/aav_circle/circle_driver.py` with:
 """
 circle_driver: drive a slow left circle, to show how a driver works.
 
-Publishes   cmd_vel/circle   geometry_msgs/TwistStamped, at 20 Hz
+Publishes   drivers/circle/cmd_vel  geometry_msgs/TwistStamped, at 20 Hz
 """
 
 from geometry_msgs.msg import TwistStamped
@@ -72,7 +72,7 @@ class CircleDriver(Node):
         super().__init__('circle_driver')
         self.speed = self.declare_parameter('speed', 0.5).value          # m/s
         self.turn_rate = self.declare_parameter('turn_rate', 0.2).value  # rad/s
-        self.pub = self.create_publisher(TwistStamped, 'cmd_vel/circle', 10)
+        self.pub = self.create_publisher(TwistStamped, 'drivers/circle/cmd_vel', 10)
         self.create_timer(0.05, self.tick)                               # 20 Hz
 
     def tick(self):
@@ -116,7 +116,7 @@ The mux input:
 
 ```yaml
       circle:                   # aav_circle: an example driver
-        topic: /cmd_vel/circle
+        topic: /drivers/circle/cmd_vel
         timeout: 0.5
         priority: 30
 ```
@@ -124,7 +124,7 @@ The mux input:
 The contract entry:
 
 ```yaml
-  /cmd_vel/circle:
+  /drivers/circle/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [circle_driver]
     sub: [twist_mux]
@@ -142,7 +142,7 @@ pixi run graph                                             # terminal 3
 
 **You should see:**
 - the turtle drives a slow circle;
-- rqt_graph shows `circle_driver` → `/cmd_vel/circle` → `twist_mux`;
+- rqt_graph shows `circle_driver` → `/drivers/circle/cmd_vel` → `twist_mux`;
 - `pixi run keyboard` in another terminal: hold `i`, and the keyboard (90) takes over at
   once. Let go, and the circle comes back after half a second;
 - `pixi run estop` stops everything, and `pixi run estop-clear` lets it go again.
@@ -164,7 +164,7 @@ Then `pixi run check turtle` should still say `0 failed`, and Gazebo is the next
 1. **People outrank software:** priorities below 90.
 2. **Go quiet when you're done:** stop publishing, and the mux hands control to the next
    driver after 0.5 s.
-3. **Never publish `/cmd_vel` or `/ego/actuator_cmd` yourself.** Everything goes through
+3. **Never publish `/control/cmd_vel` or `/ego/actuator_cmd` yourself.** Everything goes through
    the mux and ego, so the limits and the e-stop always apply.
 4. **Climb the test ladder:** the turtle, then Gazebo, then the car on stands, then the
    car with a safety driver. See [Simulation](simulation.md#the-test-ladder).
@@ -177,9 +177,9 @@ On a Mac, 10 October, in a copy of the repo: every step on this page as written.
 |---|---|
 | `ros2 pkg create`, then the node, the mux input and the contract entry from this page | [[works]] 20 packages build |
 | The driver alone | [[works]] the turtle circles left |
-| A priority-90 command on `/cmd_vel/remote` (what the keyboard sends) | [[works]] it takes over and drives straight; the circle returns after it stops |
+| A priority-90 command on `/drivers/keyboard/cmd_vel` (what the keyboard sends) | [[works]] it takes over and drives straight; the circle returns after it stops |
 | `pixi run estop`, then `pixi run estop-clear` | [[works]] the turtle stops, then drives again |
-| `pixi run check turtle` | [[works]] `/cmd_vel/circle` ok, 0 failed |
+| `pixi run check turtle` | [[works]] `/drivers/circle/cmd_vel` ok, 0 failed |
 
 ## A sensor driver is different
 

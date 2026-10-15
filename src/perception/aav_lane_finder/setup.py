@@ -19,7 +19,7 @@ setup(
     maintainer='AAV 2026-27 team',
     maintainer_email='aav-team@todo.invalid',
     description="The lane finder: the lane lines in the front camera's pictures, with classic "
-                'OpenCV, published as /lane_geometry for lane keeping.',
+                'OpenCV, published as /perception/lane/geometry for lane keeping.',
     license='TODO',
     extras_require={'test': ['pytest']},
     entry_points={

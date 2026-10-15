@@ -12,7 +12,7 @@ uint8 MODE_COMPUTER=2    # the spine follows /ego/actuator_cmd
 uint8 mode
 
 bool armed               # the spine accepts computer commands
-bool estop_active        # any stop: hardware button, /estop, or watchdog
+bool estop_active        # any stop: hardware button, /safety/estop, or watchdog
 
 float32 speed            # m/s, measured, negative in reverse
 float32 steering_angle   # rad, measured, positive turns left (REP-103)

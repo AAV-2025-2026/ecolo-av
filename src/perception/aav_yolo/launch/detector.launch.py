@@ -1,7 +1,7 @@
 """
 The YOLO detector, on the camera's images.
 
-  pixi run detect                                    # the stock model, on /camera/image_raw
+  pixi run detect                       # the stock model, on /sensors/camera/front_left/image_raw
   pixi run detect picture:=src/perception/aav_yolo/test/stop_sign.jpg   # a test picture
   pixi run detect model:=models/best.pt labels:="stop sign"
 
@@ -41,7 +41,7 @@ def generate_launch_description():
         DeclareLaunchArgument('device', default_value='auto'),
         DeclareLaunchArgument('confidence', default_value='0.5'),
         DeclareLaunchArgument('labels', default_value=''),
-        DeclareLaunchArgument('image', default_value='/camera/image_raw'),
+        DeclareLaunchArgument('image', default_value='/sensors/camera/front_left/image_raw'),
         DeclareLaunchArgument('compressed', default_value='false',
                               description='read <image>/compressed (JPEG), for WiFi'),
         DeclareLaunchArgument('picture', default_value=''),
@@ -50,7 +50,8 @@ def generate_launch_description():
             package='image_publisher', executable='image_publisher_node', name='test_camera',
             parameters=[{'filename': arg('picture'), 'publish_rate': 10.0,
                          'frame_id': 'camera_left_link'}],
-            remappings=[('image_raw', arg('image')), ('camera_info', '/camera/camera_info')],
+            remappings=[('image_raw', arg('image')),
+                        ('camera_info', '/sensors/camera/front_left/camera_info')],
             condition=IfCondition(picture),
         ),
         ExecuteProcess(

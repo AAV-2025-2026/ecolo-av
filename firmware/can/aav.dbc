@@ -72,7 +72,7 @@ BO_ 385 VEHICLE_STATUS: 8 SPINE
 CM_ "AAV CAN frame map, version 0.1.0. Classic CAN at 500 kbit/s, 11-bit IDs, little-endian signals. The last byte of every frame is a CRC-8/SAE-J1850 (poly 0x1D, init 0xFF, not reflected, xorout 0xFF) over the ID low byte, the ID high byte, then the other data bytes. counter is a 4-bit rolling counter per frame ID. Reference implementations: src/backends/aav_spine/aav_spine/can_codec.py and firmware/spine/crates/spine-core/src/protocol.rs, both checked against test_vectors.json.";
 CM_ BU_ ORIN "The autonomy computer, running aav_spine spine_bridge through ros2_socketcan.";
 CM_ BU_ SPINE "The spine microcontroller: steering, throttle and brake drivers, wheel encoder, RC receiver and hardware e-stop input.";
-CM_ BO_ 16 "Software e-stop request, from /estop. Sent on every change and at 10 Hz.";
+CM_ BO_ 16 "Software e-stop request, from /safety/estop. Sent on every change and at 10 Hz.";
 CM_ BO_ 256 "Drive command, from /ego/actuator_cmd, at 50 Hz. With no valid frame for 200 ms the spine cuts throttle, brakes and holds the steering.";
 CM_ BO_ 384 "Measured motion, at 50 Hz.";
 CM_ BO_ 385 "Spine state, at 10 Hz.";

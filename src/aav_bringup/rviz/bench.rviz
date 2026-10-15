@@ -70,7 +70,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /odometry/global
+        Value: /localization/odom/global
     - Class: rviz_default_plugins/Odometry
       Name: GPS (in map frame)
       Enabled: true
@@ -80,7 +80,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /odometry/gps
+        Value: /localization/gps/odom
     - Class: rviz_default_plugins/RobotModel
       Name: Car
       Enabled: true
@@ -104,7 +104,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /bench/truth
+        Value: /vehicle/bench/truth
     - Class: rviz_default_plugins/PointCloud2
       Name: Radar clusters
       Enabled: true
@@ -112,13 +112,13 @@ Visualization Manager:
       Style: Flat Squares
       Color Transformer: RGB8
       Topic:
-        Value: /radar/clusters
+        Value: /perception/radar/clusters
         Reliability Policy: Best Effort
     - Class: rviz_default_plugins/MarkerArray
       Name: Radar boxes
       Enabled: true
       Topic:
-        Value: /radar/cluster_boxes
+        Value: /perception/radar/cluster_boxes
     - Class: rviz_default_plugins/Image
       Name: Camera, with YOLO's boxes
       Enabled: true

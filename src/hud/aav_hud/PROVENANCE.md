@@ -116,3 +116,14 @@ The app and the back end changed together (docs/hud.md, "What changed in the app
 - `launch/hud.launch.py`: arguments `hud_host` and `hud_port`, so the bench can run the
   back end on another port (a Mac's AirPlay holds 5000).
 - `test_events.py` checks that the app's `hud_events.dart` lists the same event names.
+
+## Topic names by area (2026-10-15)
+
+The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
+change, never the logic:
+
+- `hud_server.py`, `events.py`, `web.py`, `config/hud_server.yaml`, `launch/hud.launch.py`,
+  `package.xml`, `test/test_hud_server.py`: `/gps/filtered` -> `/localization/gps/fix`,
+  `/perception/stop` -> `/perception/stop_sign`, `/battery_status` -> `/vehicle/battery`,
+  `/camera/image_raw` -> `/sensors/camera/front_left/image_raw`, `/estop` ->
+  `/safety/estop`. The HTTP routes (`POST /estop`, `/camera/...`) are unchanged.

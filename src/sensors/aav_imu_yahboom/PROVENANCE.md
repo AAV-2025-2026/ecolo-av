@@ -17,3 +17,11 @@ which was copied from github.com/AAV-2025-2026/yahboom-IMU @ main (95469f1a63).
   exits at start-up, instead of waiting forever on its port. On a Mac the Rust driver
   can't open the script's fake port (macOS's baud-rate call fails on it), so the
   comparison runs on Linux. A real USB port should accept that call: untested on a Mac.
+
+## Topic names by area (2026-10-15)
+
+The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
+change, never the logic:
+
+- `crates/imu-node/src/main.rs`, `test/compare_with_cpp.py`, `package.xml`: `/imu/data_raw`
+  -> `/sensors/imu/data_raw`, `/imu/mag` -> `/sensors/imu/mag`, as its C++ twin.

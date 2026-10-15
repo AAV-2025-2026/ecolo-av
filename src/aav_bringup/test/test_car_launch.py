@@ -166,7 +166,7 @@ def test_the_detector_is_named_after_its_machine(monkeypatch, tmp_path):
     assert sent['detector.launch.py']['picture'] == ''
     assert sent['detector.launch.py']['confidence'] == '0.6'
     # The rest are passed too, at the detector's own defaults: none can leak in.
-    assert sent['detector.launch.py']['image'] == '/camera/image_raw'
+    assert sent['detector.launch.py']['image'] == '/sensors/camera/front_left/image_raw'
     assert sent['detector.launch.py']['device'] == 'auto'
 
 

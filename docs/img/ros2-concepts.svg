@@ -32,7 +32,7 @@
   <text class="s" x="340" y="93" text-anchor="middle">publisher</text>
   <path class="plain" d="M420,78 L450,78"/>
   <rect class="band" x="450" y="62" width="200" height="32" rx="16"/>
-  <text class="lbl" x="550" y="83" text-anchor="middle">/cmd_vel/joy</text>
+  <text class="lbl" x="550" y="83" text-anchor="middle">/drivers/joy/cmd_vel</text>
   <text class="s" x="550" y="114" text-anchor="middle">type: TwistStamped</text>
   <path class="redline" d="M650,78 L688,52"/>
   <path class="redline" d="M650,78 L688,104"/>

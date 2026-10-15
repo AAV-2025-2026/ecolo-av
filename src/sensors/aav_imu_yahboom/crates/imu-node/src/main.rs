@@ -3,8 +3,8 @@
 //! The twin of `yahboom_imu_cpp`: the same node name, parameters, topics, units and
 //! covariances, so either one runs from `aav_sensors/config/imu.yaml`.
 //!
-//! Publishes   /imu/data_raw  sensor_msgs/Imu            gyro and accel, no orientation
-//!             /imu/mag       sensor_msgs/MagneticField  raw counts, y negated (README)
+//! Publishes   /sensors/imu/data_raw  sensor_msgs/Imu            gyro and accel, no orientation
+//!             /sensors/imu/mag       sensor_msgs/MagneticField  raw counts, y negated (README)
 //! Parameters  port, baud_rate, frame_id, gyro_stddev (rad/s), accel_stddev (m/s^2)
 //!
 //! A thread reads the port and publishes; the main thread spins the node, so `ros2 param`
@@ -90,8 +90,8 @@ fn main() -> Result<()> {
     log_info!(node.logger(), "Opened {port} at {baud} baud");
 
     let out = Output {
-        imu: node.create_publisher("/imu/data_raw")?,
-        mag: node.create_publisher("/imu/mag")?,
+        imu: node.create_publisher("/sensors/imu/data_raw")?,
+        mag: node.create_publisher("/sensors/imu/mag")?,
         frame_id: params.frame_id.get().to_string(),
         gyro_var: gyro_stddev * gyro_stddev,
         accel_var: accel_stddev * accel_stddev,

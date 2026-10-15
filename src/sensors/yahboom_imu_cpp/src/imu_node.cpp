@@ -41,8 +41,8 @@ public:
     accel_var_ = std::pow(get_parameter("accel_stddev").as_double(), 2);
 
     // Publishers
-    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("/imu/data_raw", 10);
-    mag_pub_ = create_publisher<sensor_msgs::msg::MagneticField>("/imu/mag", 10);
+    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("/sensors/imu/data_raw", 10);
+    mag_pub_ = create_publisher<sensor_msgs::msg::MagneticField>("/sensors/imu/mag", 10);
 
     // Open serial port
     serial_ = std::make_unique<SerialPort>(port, (int)baud);

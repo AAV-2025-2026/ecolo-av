@@ -2,7 +2,7 @@
 The HUD's back end, for the touchscreen app (hud/flutter_pi).
 
   ros2 launch aav_hud hud.launch.py
-  ros2 launch aav_hud hud.launch.py gps_topic:=/gps/fix    # raw GPS: no localization
+  ros2 launch aav_hud hud.launch.py gps_topic:=/sensors/gps/fix    # raw GPS: no localization
   ros2 launch aav_hud hud.launch.py hud_port:=5123         # another port (a Mac's AirPlay)
 
 Then start the app: it connects to 127.0.0.1:5000 (tools/flutter.sh run
@@ -26,8 +26,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument(
-            'gps_topic', default_value='/gps/filtered',
-            description='Where the car on the map comes from: /gps/filtered or /gps/fix'),
+            'gps_topic', default_value='/localization/gps/fix',
+            description='Where the car on the map comes from: /localization/gps/fix or '
+                        '/sensors/gps/fix'),
         DeclareLaunchArgument(
             'hud_host', default_value='127.0.0.1',
             description='Who may connect: 127.0.0.1 = this computer only, 0.0.0.0 = any'),
@@ -43,6 +44,6 @@ def generate_launch_description():
                  'host': ParameterValue(LaunchConfiguration('hud_host'), value_type=str),
                  'port': ParameterValue(LaunchConfiguration('hud_port'), value_type=int)},
             ],
-            remappings=[('/gps/filtered', LaunchConfiguration('gps_topic'))],
+            remappings=[('/localization/gps/fix', LaunchConfiguration('gps_topic'))],
         ),
     ])

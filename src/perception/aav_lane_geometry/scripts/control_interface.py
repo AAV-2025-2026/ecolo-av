@@ -92,15 +92,15 @@ class ControlInterface(Node):
         self.lc_peak_offset = 0.0
         self._last_t = time.time()
 
-        self.sub = self.create_subscription(LaneGeometry, '/lane_geometry', self.geometry_cb, 10)
-        # aav: TwistStamped on /cmd_vel/ai, twist_mux's slot for a learned driver (priority 10),
+        self.sub = self.create_subscription(LaneGeometry, '/perception/lane/geometry', self.geometry_cb, 10)
+        # aav: TwistStamped on /drivers/ai/cmd_vel, twist_mux's slot for a learned driver (priority 10),
         # instead of Twist on /control_cmd. Every other driver outranks it.
-        self.pub_cmd = self.create_publisher(TwistStamped, '/cmd_vel/ai', 10)
-        self.pub_stat = self.create_publisher(String, '/lane_geometry_status', 10)
-        self.pub_vstate = self.create_publisher(String, '/vehicle_state', 10)
+        self.pub_cmd = self.create_publisher(TwistStamped, '/drivers/ai/cmd_vel', 10)
+        self.pub_stat = self.create_publisher(String, '/drivers/ai/lane_status', 10)
+        self.pub_vstate = self.create_publisher(String, '/drivers/ai/lane_state', 10)
         self.create_timer(0.1, self.watchdog_cb)
 
-        self.get_logger().info('Control interface ready. Subscribing to /lane_geometry and publishing /cmd_vel/ai')
+        self.get_logger().info('Control interface ready. Subscribing to /perception/lane/geometry and publishing /drivers/ai/cmd_vel')
         self.get_logger().info(f'invert_offset_sign={self.invert_offset_sign}')
 
     def geometry_cb(self, msg: LaneGeometry):

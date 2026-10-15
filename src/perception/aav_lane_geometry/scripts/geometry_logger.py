@@ -25,7 +25,7 @@ class GeometryLogger(Node):
             'right_poly_a', 'right_poly_b', 'right_poly_c'
         ])
         self.row_count = 0
-        self.sub = self.create_subscription(LaneGeometry, '/lane_geometry', self.log_cb, 10)
+        self.sub = self.create_subscription(LaneGeometry, '/perception/lane/geometry', self.log_cb, 10)
         self.get_logger().info(f'Logging to: {path}')
 
     def log_cb(self, msg: LaneGeometry):

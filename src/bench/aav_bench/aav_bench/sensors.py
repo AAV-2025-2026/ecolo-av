@@ -4,17 +4,21 @@ The pretend sensors, for bench mode.
 Each one stands where a real driver will, on the same topic, with the same message type
 and frame, so nothing downstream changes.
 
-  mock_imu      /bench/truth -> /imu/data_raw (Imu), /imu/mag (MagneticField)    imu_link
-  mock_gps      /bench/truth -> /gps/fix (NavSatFix), 5 Hz                       gps_link
-  mock_battery  /battery_status (BatteryState), 1 Hz
-  mock_camera   /bench/truth -> /camera/image_raw (Image), /camera/camera_info,
-                /camera/image_raw/compressed (JPEG, only while something reads it),
+  mock_imu      /vehicle/bench/truth -> /sensors/imu/data_raw (Imu),
+                /sensors/imu/mag (MagneticField)                                imu_link
+  mock_gps      /vehicle/bench/truth -> /sensors/gps/fix (NavSatFix), 5 Hz       gps_link
+  mock_battery  /vehicle/battery (BatteryState), 1 Hz
+  mock_camera   /vehicle/bench/truth -> /sensors/camera/front_left/image_raw (Image),
+                /sensors/camera/front_left/camera_info,
+                /sensors/camera/front_left/image_raw/compressed (JPEG, only while
+                something reads it),
                 10 Hz: the bench road and its lane lines from where the car really is,
                 and the bench world's stop signs when they're in view
-  mock_radar    /bench/truth -> /radar/points (PointCloud2, best effort), 10 Hz      radar_link
+  mock_radar    /vehicle/bench/truth -> /sensors/radar/points (PointCloud2, best effort),
+                10 Hz                                                           radar_link
                 the bench world's obstacle boxes, when obstacle is true; else empty
 
-spine_sim publishes /bench/truth: where the model car really is. The real drivers are
+spine_sim publishes /vehicle/bench/truth: where the model car really is. The real drivers are
 yahboom_imu_cpp, ublox_gps, battery_monitor, usb_cam (aav_sensors) and ti_ros2_driver.
 """
 
@@ -37,7 +41,7 @@ from sensor_msgs.msg import NavSatStatus, PointCloud2, PointField
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Header
 
-TRUTH = '/bench/truth'
+TRUTH = '/vehicle/bench/truth'
 
 
 def truth_from(msg: Odometry) -> models.Truth:
@@ -57,8 +61,8 @@ class MockImu(Node):
         self.accel_sd = self.declare_parameter('accel_stddev', 0.2).value
         self.gyro_bias = self.declare_parameter('gyro_bias', 0.002).value
         self.rng = random.Random(self.declare_parameter('seed', 1).value)
-        self.imu = self.create_publisher(Imu, '/imu/data_raw', 10)
-        self.mag = self.create_publisher(MagneticField, '/imu/mag', 10)
+        self.imu = self.create_publisher(Imu, '/sensors/imu/data_raw', 10)
+        self.mag = self.create_publisher(MagneticField, '/sensors/imu/mag', 10)
         self.before = None
         self.create_subscription(Odometry, TRUTH, self.on_truth, 10)
 
@@ -95,7 +99,7 @@ class MockGps(Node):
         rate = self.declare_parameter('rate_hz', 5.0).value
         self.rng = random.Random(self.declare_parameter('seed', 2).value)
         self.antenna = vehicle.load()['sensors']['gps_link']['xyz']
-        self.pub = self.create_publisher(NavSatFix, '/gps/fix', 10)
+        self.pub = self.create_publisher(NavSatFix, '/sensors/gps/fix', 10)
         self.truth = None
         self.create_subscription(Odometry, TRUTH, self.on_truth, 10)
         self.create_timer(1.0 / rate, self.tick)
@@ -129,7 +133,7 @@ class MockBattery(Node):
         self.full = self.declare_parameter('full_voltage', 50.9).value
         self.empty = self.declare_parameter('empty_voltage', 46.0).value
         self.hours = self.declare_parameter('hours', 2.0).value
-        self.pub = self.create_publisher(BatteryState, '/battery_status', 10)
+        self.pub = self.create_publisher(BatteryState, '/vehicle/battery', 10)
         self.start = self.get_clock().now()
         self.create_timer(1.0, self.tick)
 
@@ -178,11 +182,13 @@ class MockCamera(Node):
         self.info.p = [focal, 0.0, width / 2.0, 0.0, 0.0, focal, height / 2.0, 0.0,
                        0.0, 0.0, 1.0, 0.0]
         self.bridge = CvBridge()
-        self.image_pub = self.create_publisher(Image, '/camera/image_raw', 2)
+        self.image_pub = self.create_publisher(Image, '/sensors/camera/front_left/image_raw', 2)
         # The JPEG pictures, as usb_cam's image_transport publishes them: a laptop's
         # detector on the car's WiFi reads these (detector.launch.py compressed:=true).
-        self.jpeg_pub = self.create_publisher(CompressedImage, '/camera/image_raw/compressed', 2)
-        self.info_pub = self.create_publisher(CameraInfo, '/camera/camera_info', 2)
+        self.jpeg_pub = self.create_publisher(
+            CompressedImage, '/sensors/camera/front_left/image_raw/compressed', 2)
+        self.info_pub = self.create_publisher(CameraInfo,
+                                              '/sensors/camera/front_left/camera_info', 2)
         self.truth = None
         self.create_subscription(Odometry, TRUTH, self.on_truth, 10)
         self.create_timer(1.0 / rate, self.tick)
@@ -236,7 +242,8 @@ class MockRadar(Node):
         self.rng = random.Random(self.declare_parameter('seed', 4).value)
         self.add_on_set_parameters_callback(self.check)
         # Best effort, as the TI driver publishes: its subscribers must match it.
-        self.pub = self.create_publisher(PointCloud2, '/radar/points', qos_profile_sensor_data)
+        self.pub = self.create_publisher(PointCloud2, '/sensors/radar/points',
+                                         qos_profile_sensor_data)
         self.truth = None
         self.create_subscription(Odometry, TRUTH, self.on_truth, 10)
         self.create_timer(1.0 / rate, self.tick)

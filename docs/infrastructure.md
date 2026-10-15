@@ -144,7 +144,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `test.sh` | the tests that don't need ROS: Python logic, Rust spine, the Topics page | inside `pixi run test` |
 | `lint.sh` | `ament_flake8` and `ament_pep257` on our Python | `pixi run lint` |
 | `ros.sh` | runs a command with the workspace sourced | used by most tasks |
-| `keyboard.sh` | teleop_twist_keyboard into `/cmd_vel/remote` | `pixi run keyboard` |
+| `keyboard.sh` | teleop_twist_keyboard into `/drivers/keyboard/cmd_vel` | `pixi run keyboard` |
 | `check_graph.py` | compares a running system with `docs/interfaces.yaml` | `pixi run check <profile>` |
 | `gen_interfaces_md.py` | makes the Topics page from the contract | see the contracts table |
 | `doctor.py` | network checks for joining the car | `pixi run doctor` |

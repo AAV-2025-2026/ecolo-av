@@ -41,14 +41,14 @@ answer.
 | The GPS driver: the stock `ublox_gps` by default; `nmea` and `ublox_dgnss` stay as `gps_driver:=` options | It's in Pixi on every computer. `ublox_dgnss`, the 2024-25 choice, is apt-only, so it runs on the car only | Q18 |
 | The HUD's e-stop button only sets the e-stop. Clearing it stays a person's deliberate act, at the joystick or a laptop | A stray tap on the screen can't restart the car | Q29 |
 | Flutter 3.35.7, downloaded into `vendor/` (`pixi run get-flutter`) | Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's `pubspec.lock` | Q29 |
-| Lane keeping: a classic OpenCV lane finder publishes `/lane_geometry`; the 2025-26 lane keeping follows it | No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same | Q22 |
+| Lane keeping: a classic OpenCV lane finder publishes `/perception/lane/geometry`; the 2025-26 lane keeping follows it | No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same | Q22 |
 | No micro-ROS for now: each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes. To think again once we see the car's hardware | Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros". 11 Oct: "lets rethink thinks later after we see the hardware" | seeing the hardware: Q10–Q13 |
 
 ## Proposed: for the next team meeting
 
 | Proposal | Why |
 |---|---|
-| `TwistStamped` on every `/cmd_vel*` topic | `twist_mux` expects it, and the timestamp lets ego drop stale commands. The code already does this |
+| `TwistStamped` on every command topic (`/drivers/*/cmd_vel`, `/control/cmd_vel`) | `twist_mux` expects it, and the timestamp lets ego drop stale commands. The code already does this |
 | A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree | A car can't turn on the spot. The config already does this |
 | The RC transmitter stays the top-priority override, in hardware | It works today, and doesn't depend on any computer |
 | The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car | A reboot or a glitch never restarts the car by itself. It's in `spine-core` since 10 Oct |
@@ -178,7 +178,7 @@ From tonight's audits and the Mac work. They're small, but someone has to say ye
 |---|---|
 | `ROS_DOMAIN_ID` | one number (0–101) for the car and every laptop |
 | GPS driver | `ublox_gps` is the default now (Tentative, above); keep it, or go back to `ublox_dgnss` (the car only). With Q18 |
-| `/estop` reliability (N2) | send it repeatedly, or make the mux hear it reliably |
+| `/safety/estop` reliability (N2) | send it repeatedly, or make the mux hear it reliably |
 | Respawning device nodes (N3) | restart a sensor driver when it dies? |
 | Nav2's lookahead (N7) | its turn command flips sign about once a second in the sim |
 | Package renames | the inherited packages' new names, in [Conventions](conventions.md) |

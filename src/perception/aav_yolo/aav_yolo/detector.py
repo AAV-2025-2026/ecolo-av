@@ -1,7 +1,8 @@
 """
 detector: a YOLO model finds objects, such as stop signs, in camera images.
 
-Subscribes  image              sensor_msgs/Image (the launch file maps it to /camera/image_raw)
+Subscribes  image              sensor_msgs/Image (the launch file maps it to
+                               /sensors/camera/front_left/image_raw)
             image/compressed   sensor_msgs/CompressedImage instead, with compressed:=true
                                (image_transport's JPEG topic: for a laptop on WiFi)
 Publishes   detections         vision_msgs/Detection2DArray (/perception/detections), with
@@ -73,7 +74,8 @@ class Detector(Node):
         self.image_pub = (self.create_publisher(Image, 'detections/image', PICTURES)
                           if publish_image else None)
         # image_transport's naming: the JPEG pictures are <image topic>/compressed. Resolve
-        # 'image' first, so a remapping of it (image:=/camera/image_raw) carries over.
+        # 'image' first, so a remapping of it (image:=/sensors/camera/front_left/image_raw)
+        # carries over.
         topic = self.resolve_topic_name('image')
         if self.compressed:
             topic += '/compressed'

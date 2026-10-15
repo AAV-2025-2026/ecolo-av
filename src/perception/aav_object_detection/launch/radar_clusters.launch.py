@@ -5,9 +5,9 @@ Radar clustering: DBSCAN groups the radar's points into objects, with a box roun
   ros2 launch aav_object_detection radar_clusters.launch.py mock:=true   # pretend points
   (pixi run radar-demo is the second one, with RViz.)
 
-Subscribes  /radar/points          sensor_msgs/PointCloud2 (aav_sensors starts the radar)
-Publishes   /radar/clusters        sensor_msgs/PointCloud2: the clustered points, coloured
-            /radar/cluster_boxes   visualization_msgs/MarkerArray: a box round each cluster
+Subscribes  /sensors/radar/points          sensor_msgs/PointCloud2 (aav_sensors starts the radar)
+Publishes   /perception/radar/clusters        sensor_msgs/PointCloud2: the clustered points, coloured
+            /perception/radar/cluster_boxes   visualization_msgs/MarkerArray: a box round each cluster
 
 You can set: mock (pretend radar points, from ti_ros2_driver's mock_radar_publisher),
 eps (metres: points this close join a cluster), minimum_points (the smallest cluster),
@@ -34,7 +34,7 @@ def generate_launch_description():
                               description='RViz with the 2025-26 radar layout'),
         Node(
             package='ti_ros2_driver', executable='mock_radar_publisher', name='mock_radar',
-            parameters=[{'topic': '/radar/points', 'frame_id': 'radar_link', 'mode': 'static'}],
+            parameters=[{'topic': '/sensors/radar/points', 'frame_id': 'radar_link', 'mode': 'static'}],
             condition=IfCondition(arg('mock')),
         ),
         Node(
@@ -46,9 +46,9 @@ def generate_launch_description():
                 'target_frame': 'radar_link',
                 'name_box': 'radar_clusters',
             }],
-            remappings=[('/ti_mmwave/radar_scan_pcl', '/radar/points'),
-                        ('dbscan_output', '/radar/clusters'),
-                        ('dbscan_box', '/radar/cluster_boxes')],
+            remappings=[('/ti_mmwave/radar_scan_pcl', '/sensors/radar/points'),
+                        ('dbscan_output', '/perception/radar/clusters'),
+                        ('dbscan_box', '/perception/radar/cluster_boxes')],
             output='screen',
         ),
         Node(package='rviz2', executable='rviz2', arguments=['-d', str(rviz)],

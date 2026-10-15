@@ -2,11 +2,13 @@
 Re-run localization (and optionally Nav2) on a recorded drive, on any laptop.
 
   ros2 launch aav_bringup replay.launch.py [nav:=false] [rviz:=true]
-  ros2 bag play <bag> --clock --topics /vehicle/odom /imu/data_raw /gps/fix /tf_static
+  ros2 bag play <bag> --clock --topics /vehicle/odom /sensors/imu/data_raw \
+      /sensors/gps/fix /tf_static
 
 A bag from the simulator carries simulated time, so play its own /clock instead of
 --clock:
-  ros2 bag play <bag> --topics /clock /vehicle/odom /imu/data_raw /gps/fix /tf_static
+  ros2 bag play <bag> --topics /clock /vehicle/odom /sensors/imu/data_raw \
+      /sensors/gps/fix /tf_static
 
 The bag (tools/record.sh) supplies the raw inputs and the clock; this file runs the
 same IMU filter and EKFs as the car, so a config change can be tried on yesterday's
@@ -37,7 +39,8 @@ def launch_setup(context):
              name='imu_filter_madgwick',
              parameters=[os.path.join(share('aav_sensors'), 'config', 'imu_filter.yaml'),
                          {'use_sim_time': True}],
-             remappings=[('imu/data_raw', '/imu/data_raw'), ('imu/data', '/imu/data')]),
+             remappings=[('imu/data_raw', '/sensors/imu/data_raw'),
+                         ('imu/data', '/sensors/imu/data')]),
         include('aav_localization', 'localization.launch.py'),
     ]
     if LaunchConfiguration('nav').perform(context).lower() == 'true':

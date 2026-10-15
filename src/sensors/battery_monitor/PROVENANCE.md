@@ -34,3 +34,11 @@ Files, unchanged unless listed under Changes:
   - `HeartbeatPublisher.py`: dropped an unused `import rclpy`.
 - `setup.py`: `tests_require` -> `extras_require={'test': ['pytest']}`. setuptools 79
   ignores `tests_require`, so colcon ran no tests and failed. A real description.
+
+## Topic names by area (2026-10-15)
+
+The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
+change, never the logic:
+
+- `battery_monitor/battery_monitor.py`: `/battery_status` -> `/vehicle/battery`,
+  `/battery_monitor_heartbeat` -> `/vehicle/battery/heartbeat`.

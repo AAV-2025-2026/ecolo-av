@@ -1,4 +1,4 @@
-# ublox_gps (KumarRobotics' ublox 2.3.0): a u-blox receiver -> /gps/fix (NavSatFix).
+# ublox_gps (KumarRobotics' ublox 2.3.0): a u-blox receiver -> /sensors/gps/fix (NavSatFix).
 # sensors.launch.py starts it with gps_driver:=ublox, the default (Tentative: Q18).
 #
 # It takes the receiver as it is already set up, and changes nothing that lasts

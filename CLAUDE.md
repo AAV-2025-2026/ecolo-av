@@ -38,8 +38,12 @@ These are the conventions decided so far. They apply to people and to Claude ses
   - metres, radians and seconds;
   - x forward, y left, z up, positive steering = left;
   - `map → odom → base_link`, with `base_link` on the ground under the rear axle.
-- **Commands:** drivers publish `TwistStamped` on `/cmd_vel/<driver>`. Ackermann appears
+- **Commands:** drivers publish `TwistStamped` on `/drivers/<driver>/cmd_vel`. Ackermann appears
   only after ego (`/ego/actuator_cmd`). Exactly one backend runs at a time.
+- **Topic names start with their area** (Ben, 15 Oct; `docs/naming.md`):
+  `/<area>/<device or node>/<thing>`, such as `/sensors/gps/fix`, `/drivers/joy/cmd_vel`,
+  `/safety/estop`. Only ROS's own global names (`/tf`, `/clock`...) and Nav2's stay
+  outside. `tools/tests/test_topic_areas.py` checks `docs/interfaces.yaml`.
 - **Prefer stock packages**:
   1. stock ROS packages (robot_localization, Nav2, twist_mux, teleop_twist_*);
   2. then code inherited from the previous teams;

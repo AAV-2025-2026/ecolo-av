@@ -1,7 +1,7 @@
 # ekf_local (robot_localization 3.8.3, Jazzy): odom -> base_link.
 #
 # Smooth and continuous, never jumps, slowly drifts. Nav2's controller and local costmap
-# use it. Output /odometry/local (the launch remaps odometry/filtered).
+# use it. Output /localization/odom/local (the launch remaps odometry/filtered).
 #
 # Inputs (each sensor's *_config picks what to fuse, in this order:
 #   x, y, z,  roll, pitch, yaw,  vx, vy, vz,  vroll, vpitch, vyaw,  ax, ay, az):
@@ -9,7 +9,7 @@
 #                  and vyaw. Each backend sets the covariance to what it knows: the spine
 #                  computes vyaw from the measured steering angle, the legacy encoder can't
 #                  (covariance 1e3, so the EKF ignores it), turtlesim and Gazebo report it.
-#   /imu/data      yaw rate only. No absolute yaw until the magnetometer works.
+#   /sensors/imu/data      yaw rate only. No absolute yaw until the magnetometer works.
 #
 # Parameter names checked against the 3.8.3 ros_filter.cpp and the package's
 # params/dual_ekf_navsat_example.yaml.
@@ -34,7 +34,7 @@ ekf_local:
     odom0_relative: false
     odom0_queue_size: 10
 
-    imu0: /imu/data
+    imu0: /sensors/imu/data
     imu0_config: [false, false, false,
                   false, false, false,
                   false, false, false,

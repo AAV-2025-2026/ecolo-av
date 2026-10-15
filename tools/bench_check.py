@@ -10,7 +10,8 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 1. Starts bench.launch.py on a private ROS domain, local to this computer.
 2. Checks the running graph against docs/interfaces.yaml (check_graph.py --profile bench).
 3. Waits for the spine to arm, drives a scripted profile, and compares where the model car
-   really is (/bench/truth) with where the car's own software thinks it is (/odometry/global).
+   really is (/vehicle/bench/truth) with where the car's own software thinks it is
+   (/localization/odom/global).
 4. Presses the e-stop while driving: the car must stop, and the spine must say so.
 5. Presses the hardware e-stop the same way.
 6. With --perception: Nav2 drives 40 m east, past the bench's stop sign. The car must stop
@@ -93,25 +94,25 @@ class Probe(Node):
         # Every truth sample and every lane message, from the start: lane keeping starts the
         # moment the spine arms, before its check begins.
         self.track, self.lanes = [], []
-        self.create_subscription(Odometry, '/bench/truth', self.on_truth, 10)
-        self.create_subscription(LaneGeometry, '/lane_geometry', self.on_lane, 10)
-        self.create_subscription(Odometry, '/odometry/global',
+        self.create_subscription(Odometry, '/vehicle/bench/truth', self.on_truth, 10)
+        self.create_subscription(LaneGeometry, '/perception/lane/geometry', self.on_lane, 10)
+        self.create_subscription(Odometry, '/localization/odom/global',
                                  lambda m: setattr(self, 'glob', m), 10)
         self.latches = []   # (stamp, faults) each time the spine stops being armed
         self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, 10)
-        self.estop = self.create_publisher(Bool, '/estop', 10)
-        self.hw_estop = self.create_publisher(Bool, '/bench/hw_estop', 10)
+        self.estop = self.create_publisher(Bool, '/safety/estop', 10)
+        self.hw_estop = self.create_publisher(Bool, '/vehicle/bench/hw_estop', 10)
         self.arm_client = self.create_client(SetBool, '/spine/arm')
         self.drive = ActionClient(self, ScriptedDrive, '/scripted_drive')
         self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
         self.stop = False
         self.picture = None
-        self.create_subscription(Bool, '/perception/stop', self.on_stop, 10)
+        self.create_subscription(Bool, '/perception/stop_sign', self.on_stop, 10)
         self.create_subscription(Image, '/perception/detections/image',
                                  lambda m: setattr(self, 'picture', m), 2)
         self.stop_picture = None
         self.monitor = []    # (time, action, polygon) from collision_monitor, as it changes
-        self.create_subscription(CollisionMonitorState, '/collision_monitor_state',
+        self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  lambda m: self.monitor.append(
                                      (time.monotonic(), m.action_type, m.polygon_name)), 10)
         self.radar_params = self.create_client(SetParameters, '/mock_radar/set_parameters')

@@ -51,3 +51,12 @@ Files, unchanged unless listed under Changes:
     eigen, ti_ros2_driver) and the team as maintainer.
   - New: `launch/radar_clusters.launch.py`, the DBSCAN node on our topics (/radar/points in;
     /radar/clusters and /radar/cluster_boxes out), with mock radar points for testing.
+
+## Topic names by area (2026-10-15)
+
+The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
+change, never the logic:
+
+- `launch/radar_clusters.launch.py`: `/radar/points` -> `/sensors/radar/points`,
+  `/radar/clusters` -> `/perception/radar/clusters`, `/radar/cluster_boxes` ->
+  `/perception/radar/cluster_boxes`.

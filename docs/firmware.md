@@ -35,8 +35,8 @@ publishes the same thing drops in, and nothing downstream changes.
 
 | Interface | Implementations |
 |---|---|
-| IMU: `sensor_msgs/Imu` on `/imu/data_raw`, frame `imu_link` | `yahboom_imu_cpp`, `gazebo_adapter` |
-| GPS: `sensor_msgs/NavSatFix` on `/gps/fix`, frame `gps_link` | `ublox_gps`, `nmea_navsat_driver`, `ublox_dgnss`, `gazebo_adapter` |
+| IMU: `sensor_msgs/Imu` on `/sensors/imu/data_raw`, frame `imu_link` | `yahboom_imu_cpp`, `gazebo_adapter` |
+| GPS: `sensor_msgs/NavSatFix` on `/sensors/gps/fix`, frame `gps_link` | `ublox_gps`, `nmea_navsat_driver`, `ublox_dgnss`, `gazebo_adapter` |
 | Backend: `/ego/actuator_cmd` in, `/vehicle/odom` out | `spine_bridge`, `legacy_uart_bridge`, `turtlesim_adapter`, `gazebo_adapter`, `carla_adapter` |
 
 The firmware applies the same idea one level down. `spine-core` never touches hardware:

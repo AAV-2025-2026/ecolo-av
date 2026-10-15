@@ -12,7 +12,7 @@
 //! +----------------+--------------------------+------------------------+
 //! | STEERING  ---  | TOPICS                   | GPS                    |
 //! | THROTTLE  ===  |  /vehicle/status  OK     |  RTK FIXED             |
-//! | BRAKE     ===  |  /gps/fix         STALE  |  lat, lon, accuracy    |
+//! | BRAKE     ===  |  /sensors/gps/fix         STALE  |  lat, lon, accuracy    |
 //! +----------------+--------------------------+------------------------+
 //! ```
 

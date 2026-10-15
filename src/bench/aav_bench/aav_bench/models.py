@@ -2,7 +2,7 @@
 What each pretend sensor would measure, given where the model car really is.
 
 No ROS imports, so the tests run anywhere. The car's truth comes from spine_sim on
-/bench/truth: position and heading in the map frame (x east, y north), speed, turn rate.
+/vehicle/bench/truth: position and heading in the map frame (x east, y north), speed, turn rate.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ FIELD_DOWN_T = 52.0e-6
 
 @dataclass
 class Truth:
-    """One /bench/truth sample."""
+    """One /vehicle/bench/truth sample."""
 
     t: float          # s
     x: float          # m, east of the datum

@@ -2,10 +2,10 @@
 stop_sign_watcher: stop the car at stop signs, through a lock on twist_mux.
 
 Subscribes  /perception/detections  vision_msgs/Detection2DArray (from the detector)
-Publishes   /perception/stop        std_msgs/Bool, 10 Hz: true while the car must stay stopped
+Publishes   /perception/stop_sign        std_msgs/Bool, 10 Hz: true while the car must stay stopped
 
 twist_mux's stop_sign lock (aav_mux, priority 30) holds every driver below it: Nav2 (20)
-and the AI slot (10). A person (joystick 100, remote 90) and test scripts (50, 40) still
+and the AI slot (10). A person (joystick 100, keyboard 90) and test scripts (50, 40) still
 drive. The lock never expires on silence, so if this node dies while it's on, the car stays
 stopped. It only ever stops the car; it can't make it move.
 
@@ -33,7 +33,7 @@ class Watcher(Node):
             ignore_s=self.declare_parameter('ignore_s', StopRule.ignore_s).value,
         )
         self.watcher = StopSignWatcher(rule)
-        self.pub = self.create_publisher(Bool, '/perception/stop', 10)
+        self.pub = self.create_publisher(Bool, '/perception/stop_sign', 10)
         self.create_subscription(Detection2DArray, '/perception/detections', self.on_boxes, 10)
         self.create_timer(0.1, self.tick)
         self.state = self.watcher.state

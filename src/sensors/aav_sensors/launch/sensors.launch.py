@@ -4,18 +4,18 @@ Sensor drivers: each publishes raw data in its own frame; nothing here fuses any
   ros2 launch aav_sensors sensors.launch.py [imu:=true] [gps:=true] [radar:=false]
       [battery:=false] [imu_driver:=cpp] [gps_driver:=ublox]
 
-  IMU     imu_node -> /imu/data_raw -> imu_filter_madgwick -> /imu/data
+  IMU     imu_node -> /sensors/imu/data_raw -> imu_filter_madgwick -> /sensors/imu/data
           imu_node is yahboom_imu_cpp (C++), or with imu_driver:=rust its twin
           aav_imu_yahboom (Rust): the same node name, parameters and topics.
-  GPS     one of three drivers, each -> /gps/fix (NavSatFix, frame gps_link):
+  GPS     one of three drivers, each -> /sensors/gps/fix (NavSatFix, frame gps_link):
             ublox        ublox_gps (KumarRobotics' ublox): a u-blox on /dev/aav/gps, as
                          the receiver is already set up (config/ublox_gps.yaml). The
                          default, Tentative until the receiver is known (Q18). In Pixi too
             nmea         nmea_navsat_driver: any NMEA receiver (gps_nmea.launch.py)
             ublox_dgnss  ublox_dgnss -> ublox_nav_sat_fix_hp: a u-blox F9P over libusb,
                          the 2024-25 choice. apt only: the car, not Pixi
-  radar   ti_ros2_driver pcl_pub -> /radar/points (PointCloud2, frame radar_link)
-  battery battery_monitor -> /battery_status (BatteryState)
+  radar   ti_ros2_driver pcl_pub -> /sensors/radar/points (PointCloud2, frame radar_link)
+  battery battery_monitor -> /vehicle/battery (BatteryState)
 
 Frames (imu_link, gps_link, radar_link) come from aav_description; run its
 description.launch.py too, or nothing can place these readings on the car.
@@ -64,7 +64,7 @@ def installed(package):
 
 
 def gps(driver, config, use_sim_time):
-    """Return the GPS driver's actions: every driver publishes /gps/fix in gps_link."""
+    """Return the GPS driver's actions: every driver publishes /sensors/gps/fix in gps_link."""
     if not installed(GPS_DRIVERS[driver]):
         hint = (' ublox_dgnss is apt only, for the car: gps_driver:=ublox runs anywhere'
                 if driver == 'ublox_dgnss' else '')
@@ -75,7 +75,8 @@ def gps(driver, config, use_sim_time):
         return [Node(
             package='ublox_gps', executable='ublox_gps_node', name='ublox_gps',
             parameters=[os.path.join(config, 'ublox_gps.yaml'), use_sim_time],
-            remappings=[('fix', '/gps/fix'), ('fix_velocity', '/gps/fix_velocity')],
+            remappings=[('fix', '/sensors/gps/fix'),
+                        ('fix_velocity', '/sensors/gps/fix_velocity')],
         )]
     if driver == 'nmea':
         nmea = os.path.join(get_package_share_directory('aav_sensors'), 'launch',
@@ -102,7 +103,7 @@ def gps(driver, config, use_sim_time):
                 plugin='ublox_nav_sat_fix_hp::UbloxNavSatHpFixNode',
                 name='ublox_nav_sat_fix_hp',
                 parameters=[use_sim_time],
-                remappings=[('fix', '/gps/fix')],
+                remappings=[('fix', '/sensors/gps/fix')],
             ),
         ],
     )]
@@ -134,8 +135,9 @@ def launch_setup(context):
             Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',
                  name='imu_filter_madgwick',
                  parameters=[os.path.join(config, 'imu_filter.yaml'), use_sim_time],
-                 remappings=[('imu/data_raw', '/imu/data_raw'), ('imu/data', '/imu/data'),
-                             ('imu/mag', '/imu/mag')]),
+                 remappings=[('imu/data_raw', '/sensors/imu/data_raw'),
+                             ('imu/data', '/sensors/imu/data'),
+                             ('imu/mag', '/sensors/imu/mag')]),
         ]
     if on('gps'):
         actions += gps(choice('gps_driver', GPS_DRIVERS), config, use_sim_time)
@@ -149,7 +151,7 @@ def launch_setup(context):
                 'command_port': '/dev/aav/radar_cmd',
                 'data_port': '/dev/aav/radar_data',
                 'frame_id': 'radar_link',
-                'topic': '/radar/points',
+                'topic': '/sensors/radar/points',
             }, use_sim_time],
         ))
     if on('battery'):

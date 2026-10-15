@@ -1,8 +1,8 @@
 # ekf_global (robot_localization 3.8.3, Jazzy): map -> odom.
 #
-# Same inputs as ekf_local plus GPS positions (/odometry/gps, from navsat_transform), so it
+# Same inputs as ekf_local plus GPS positions (/localization/gps/odom, from navsat_transform), so it
 # stays near the truth but can jump when a fix arrives. Nav2's planner and global costmap
-# use the map frame. Output /odometry/global.
+# use the map frame. Output /localization/odom/global.
 #
 # Heading: with no magnetometer, the yaw at start comes from initial_state. The car starts
 # on a marked spot facing a known direction; the launch file fills in initial_state from
@@ -30,7 +30,7 @@ ekf_global:
     odom0_relative: false
     odom0_queue_size: 10
 
-    odom1: /odometry/gps
+    odom1: /localization/gps/odom
     odom1_config: [true,  true,  false,
                    false, false, false,
                    false, false, false,
@@ -40,7 +40,7 @@ ekf_global:
     odom1_relative: false
     odom1_queue_size: 10
 
-    imu0: /imu/data
+    imu0: /sensors/imu/data
     imu0_config: [false, false, false,
                   false, false, false,
                   false, false, false,

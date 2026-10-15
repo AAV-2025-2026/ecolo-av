@@ -6,10 +6,10 @@ car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).
 ## The chain
 
 ```
-camera ─► yolo_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop
+camera ─► yolo_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
                                                                     (a lock on twist_mux)
-lane finder (missing) ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai ─► twist_mux
-radar ─► /radar/points ─► radar_clusters ─► /radar/clusters, /radar/cluster_boxes
+lane finder (missing) ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
+radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/radar/clusters, /perception/radar/cluster_boxes
 ```
 
 ![What the bench camera shows YOLO, about 5 m from the stop sign](img/bench-stop-sign.png)
@@ -26,7 +26,7 @@ radar ─► /radar/points ─► radar_clusters ─► /radar/clusters, /radar/
 |---|---|---|---|
 | `aav_yolo` | 2024-25 `camera_ros2_ws` (`yolo_ros2`) | the detector: camera images in, `vision_msgs` detections out; and the stop-sign watcher | [[works]] on the bench, with the stock model |
 | `aav_object_detection` | 2025-26 `Nav_Radar` (`object_detection`) | DBSCAN groups the radar's points into objects, with a box round each | [[works]] on the pretend radar |
-| `aav_lane_geometry` | 2025-26 `Lane_Detection_ROS2` | lane keeping's steering half, as a driver on `/cmd_vel/ai` | [[works]] on a pretend lane. The line finder is [[missing]] |
+| `aav_lane_geometry` | 2025-26 `Lane_Detection_ROS2` | lane keeping's steering half, as a driver on `/drivers/ai/cmd_vel` | [[works]] on a pretend lane. The line finder is [[missing]] |
 | `aav_sensors` `cameras.launch.py` | 2024-25 `cameras` (the calibrations) | `usb_cam` with `left.ini` and `right.ini` | [[untested]] Linux only; the camera models are Q22 |
 
 ## Stop signs
@@ -40,7 +40,7 @@ The watcher turns the detector's boxes into a lock on twist_mux.
 | Passing | after the 4 s | off, and signs are ignored for 10 s, so the car can drive past this one |
 
 - **The lock** has priority 30. It holds Nav2 (20) and the AI slot (10), and never a
-  person (joystick 100, remote 90) or a test script (50, 40).
+  person (joystick 100, keyboard 90) or a test script (50, 40).
 - **It only stops the car.** It can't make it move.
 - **It never expires on silence.** If the watcher dies while the lock is on, the car stays
   stopped.
@@ -150,7 +150,7 @@ names, passed on as they are.
 | Setting | Does |
 |---|---|
 | `node_name:=yolo_detector_macbook` | the node's name. Each computer with a GPU runs its own detector, under its own name: `car.launch.py` calls it `yolo_detector_<machine>`. All of them publish on `/perception/detections` |
-| `compressed:=true` | reads `/camera/image_raw/compressed`, the JPEG pictures `usb_cam` already publishes. Raw pictures are too big for WiFi |
+| `compressed:=true` | reads `/sensors/camera/front_left/image_raw/compressed`, the JPEG pictures `usb_cam` already publishes. Raw pictures are too big for WiFi |
 
 From a Mac on the car's network, by hand:
 `pixi run detect node_name:=yolo_detector_macbook compressed:=true`.
@@ -171,7 +171,7 @@ Two nodes, from the camera to the wheels. `lane_finder` (ours) finds the lane;
 `control_interface` (the 2025-26 team's) steers by it.
 
 ```
-/camera/image_raw ─► lane_finder ─► /lane_geometry ─► control_interface ─► /cmd_vel/ai
+/sensors/camera/front_left/image_raw ─► lane_finder ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel
 ```
 
 ![The bench camera, and what lane_finder found in it](img/lane-finder.png)
@@ -191,7 +191,7 @@ Classic OpenCV, no model. A model can replace it later, on the same topic.
 
 | Step | What it does |
 |---|---|
-| 1. Bird's-eye view | warps the picture into a map of the road seen from above: 4-16 m ahead, 4 m either side, 5 cm a pixel. From the lens (`/camera/camera_info`) and the camera's place and tilt (`vehicle.yaml`). It takes the road to be flat |
+| 1. Bird's-eye view | warps the picture into a map of the road seen from above: 4-16 m ahead, 4 m either side, 5 cm a pixel. From the lens (`/sensors/camera/front_left/camera_info`) and the camera's place and tilt (`vehicle.yaml`). It takes the road to be flat |
 | 2. Paint | a pixel is paint when it's brighter than the road on both sides |
 | 3. Sliding windows | 12 windows climb each line, from where it starts near the car |
 | 4. Fit | a curve per line, `y = a x² + b x + c`, in metres, in `base_link` |
@@ -203,7 +203,7 @@ Classic OpenCV, no model. A model can replace it later, on the same topic.
   hold the maths, with no ROS, and 21 tests, most on pictures of known lanes: straight,
   off centre, turned, curved, one line, none. `lane_finder.py` is the node.
 
-### What it sends: /lane_geometry
+### What it sends: /perception/lane/geometry
 
 | Field | Means |
 |---|---|
@@ -225,7 +225,7 @@ Classic OpenCV, no model. A model can replace it later, on the same topic.
 
 - It steers with a PID on the offset, through five states (keep, change, committed,
   stopping, resuming).
-- It publishes on `/cmd_vel/ai`, the mux's slot for a learned driver. Every other driver
+- It publishes on `/drivers/ai/cmd_vel`, the mux's slot for a learned driver. Every other driver
   outranks it.
 - It asks for 2 m/s; ego caps it at the car's 1 m/s.
 
@@ -251,7 +251,7 @@ More in [Bench mode](bench.md).
 
 ## Radar clustering
 
-- `radar_clusters` runs DBSCAN on `/radar/points`. Points within 0.8 m join a cluster,
+- `radar_clusters` runs DBSCAN on `/sensors/radar/points`. Points within 0.8 m join a cluster,
   and a cluster needs 15 points (5 on the bench).
 - It publishes the clustered points, coloured, and a box round each cluster, for RViz.
 - The package's other programs (filters, ICP, an OctoMap) are the 2025-26 team's demos,
@@ -266,10 +266,10 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 
 | Part | Starts | Where |
 |---|---|---|
-| `camera` | `usb_cam` → `/camera/image_raw` (Linux only) | off everywhere until the cameras are known (Q22) |
+| `camera` | `usb_cam` → `/sensors/camera/front_left/image_raw` (Linux only) | off everywhere until the cameras are known (Q22) |
 | `detector` | YOLO, as `yolo_detector_<machine>` → `/perception/detections` | the Orin. The laptop's is off until it reads compressed images |
-| `stop_signs` | `stop_sign_watcher` → `/perception/stop` | one per car, next to the mux: the Orin |
-| `radar_clusters` | DBSCAN on `/radar/points` | off until the radar is on the car |
+| `stop_signs` | `stop_sign_watcher` → `/perception/stop_sign` | one per car, next to the mux: the Orin |
+| `radar_clusters` | DBSCAN on `/sensors/radar/points` | off until the radar is on the car |
 | `camera_obstacles` | the boxes as points on the road → `/perception/camera_obstacles`, for Nav2's costmap | off until the cameras are calibrated (Q22); then next to `navigation`: the Orin |
 | `lane` | to do: the lane finder, then lane keeping | the lane finder is being written |
 

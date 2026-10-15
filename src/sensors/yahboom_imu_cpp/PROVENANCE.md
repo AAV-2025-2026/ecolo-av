@@ -42,7 +42,16 @@ Files, unchanged unless listed under Changes:
 
 ## Known issues (not changed)
 
-- `/imu/mag` is in raw counts (with y negated), not tesla, so `imu_filter_madgwick`
+- `/sensors/imu/mag` (was `/imu/mag`) is in raw counts (with y negated), not tesla, so `imu_filter_madgwick`
   runs with `use_mag: false` and yaw drifts. Convert to tesla and calibrate before
   using the magnetometer.
-- Topics are absolute (`/imu/data_raw`, `/imu/mag`), so a namespace won't move them.
+- Topics are absolute (`/sensors/imu/data_raw`, `/sensors/imu/mag`), so a namespace won't
+  move them.
+
+## Topic names by area (2026-10-15)
+
+The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
+change, never the logic:
+
+- `src/imu_node.cpp`, `README.md`: `/imu/data_raw` -> `/sensors/imu/data_raw`, `/imu/mag`
+  -> `/sensors/imu/mag`.

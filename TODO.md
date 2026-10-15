@@ -182,7 +182,7 @@ folder downloaded, and moves into it as a fast-forward.
 
 - [x] **Perception in:** `aav_yolo` (YOLO, detections, the stop-sign watcher and its mux
       lock), `aav_object_detection` (radar clustering), `aav_lane_geometry` (lane keeping
-      on `/cmd_vel/ai`), the camera calibrations in `cameras.launch.py`, the `ml` environment.
+      on `/drivers/ai/cmd_vel`), the camera calibrations in `cameras.launch.py`, the `ml` environment.
 - [x] **The graph down to the sensors:** bench mode (`pixi run bench`): spine_sim runs
       spine-core on the CAN frames and drives a model car; pretend IMU, GPS, camera,
       battery and radar. `pixi run bench-check`: 7 of 7. `gps_nmea.launch.py`,
@@ -254,7 +254,7 @@ Ben's messages, word for word: `docs/history/messages-2026-10-09.md`.
 - [x] **The graph.** Every topic has the right publisher, subscriber, type and QoS.
       Check it live with `tools/check_graph.py` on the turtle run.
       *Done 10-10: turtle, sim and replay have 0 failures. The car, with no hardware,
-      fails only on `/imu/data_raw` and `/gps/fix`. No QoS mismatches.*
+      fails only on `/sensors/imu/data_raw` and `/sensors/gps/fix`. No QoS mismatches.*
 - [x] **Docs as HTML (and PDF)**, short pages, sections, red and white, a picture of how
       it fits together. Markdown stays as the source.
       *Done: `docs/html/index.html` and `pixi run docs` (PDF). Four pictures; pages for
@@ -303,7 +303,7 @@ Ben's messages, word for word: `docs/history/messages-2026-10-09.md`.
   backup (`docs/platforms.md`).
 - **GPS driver** (B4): `ublox_gps` (in Pixi) is the default since 11 Oct, Tentative.
   `gps_driver:=ublox_dgnss` (apt, the car only) stays an option.
-- **N2:** twist_mux hears `/estop` best-effort, and the joystick sends it once per press.
+- **N2:** twist_mux hears `/safety/estop` best-effort, and the joystick sends it once per press.
   The backends still brake. Send it repeatedly, or make the mux reliable?
 - **N3:** no `respawn` on device nodes, and Nav2 gives up without TF. Add respawn?
 - **N7:** Nav2's turn command flips sign about once a second in the sim. Try a longer

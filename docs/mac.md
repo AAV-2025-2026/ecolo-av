@@ -105,7 +105,7 @@ camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:
 | 2 | `pixi run -e ml laptop-bench` | your laptop's parts, as on the car: the joystick, and its own detector |
 
 - **See it:** `pixi run graph` shows `yolo_detector_laptop` reading
-  `/camera/image_raw/compressed`, and publishing `/perception/detections`.
+  `/sensors/camera/front_left/image_raw/compressed`, and publishing `/perception/detections`.
 - **Stop at the sign too:** start the bench with `pixi run -e ml bench perception:=true`. It
   runs its own detector and the stop-sign watcher, as the Orin would; the watcher then hears
   both detectors, as on the car.

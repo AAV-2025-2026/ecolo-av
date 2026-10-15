@@ -1,7 +1,7 @@
 //! A camera picture (sensor_msgs/msg/Image) turned into RGBA pixels for the screen.
 //!
 //! Only uncompressed 8-bit pictures: what usb_cam, mock_camera and image_publisher send
-//! on `/camera/image_raw`.
+//! on `/sensors/camera/front_left/image_raw`.
 
 use std::str::FromStr;
 

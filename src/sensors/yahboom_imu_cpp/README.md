@@ -48,26 +48,26 @@ ros2 launch yahboom_imu_cpp imu.launch.py
 ```
 
 ## Topics Published
-- `/imu/data_raw`: Publishes `sensor_msgs/msg/Imu` messages containing raw accelerometer and gyroscope data.
-- `/imu/mag`: Publishes `sensor_msgs/msg/MagneticField` messages containing raw magnetometer data.
+- `/sensors/imu/data_raw`: Publishes `sensor_msgs/msg/Imu` messages containing raw accelerometer and gyroscope data.
+- `/sensors/imu/mag`: Publishes `sensor_msgs/msg/MagneticField` messages containing raw magnetometer data.
 
 ## Monitoring and Debugging
 Check the ROS2 topics to verify that data is being published correctly:
 ```bash
-ros2 topic echo /imu/data_raw
-ros2 topic echo /imu/mag
+ros2 topic echo /sensors/imu/data_raw
+ros2 topic echo /sensors/imu/mag
 ```
 
 Check IMU data frequency:
 ```bash
-ros2 topic hz /imu/data_raw
-ros2 topic hz /imu/mag
+ros2 topic hz /sensors/imu/data_raw
+ros2 topic hz /sensors/imu/mag
 ```
 
 Monitor Data:
 ```bash
-ros2 topic echo /imu/data_raw
-ros2 topic echo /imu/mag
+ros2 topic echo /sensors/imu/data_raw
+ros2 topic echo /sensors/imu/mag
 ```
 
 ## Troubleshooting

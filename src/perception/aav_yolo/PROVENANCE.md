@@ -40,3 +40,12 @@ Files, unchanged unless listed under Changes:
   `camera_obstacles` node (`aav_yolo/camera_obstacles.py`, `config/camera_obstacles.yaml`),
   which publishes them for Nav2's local costmap. `setup.py` installs `config/`;
   `package.xml` adds `sensor_msgs_py` and `tf2_ros_py`.
+
+## Topic names by area (2026-10-15)
+
+The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
+change, never the logic:
+
+- `aav_yolo/detector.py`, `aav_yolo/camera_obstacles.py`, `aav_yolo/stop_sign_watcher.py`,
+  `config/camera_obstacles.yaml`, `launch/detector.launch.py`: `/camera/...` ->
+  `/sensors/camera/front_left/...`, `/perception/stop` -> `/perception/stop_sign`.

@@ -100,12 +100,12 @@ class Collector(Node):
         super().__init__('imu_compare')
         qos = QoSProfile(depth=10000, reliability=ReliabilityPolicy.RELIABLE)
         self.imu, self.mag = [], []
-        self.create_subscription(Imu, '/imu/data_raw', self.imu.append, qos)
-        self.create_subscription(MagneticField, '/imu/mag', self.mag.append, qos)
+        self.create_subscription(Imu, '/sensors/imu/data_raw', self.imu.append, qos)
+        self.create_subscription(MagneticField, '/sensors/imu/mag', self.mag.append, qos)
 
     def wait_for_driver(self, timeout=20.0):
         end = time.monotonic() + timeout
-        while self.count_publishers('/imu/mag') == 0 and time.monotonic() < end:
+        while self.count_publishers('/sensors/imu/mag') == 0 and time.monotonic() < end:
             time.sleep(0.1)
         time.sleep(1.5)   # the driver configures the port, and the topics connect
 

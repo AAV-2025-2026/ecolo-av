@@ -57,7 +57,7 @@ finder).
 | `firmware/can`, `spine-core`, `aav-inputs` | the CAN contract, the spine's logic, clean inputs | firmware |
 | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board` | the spine's device drivers, and the glue to spine-core | firmware |
 | `boards/pico2` | the spine's board program for a Pico 2 (Embassy): builds, never flashed | firmware |
-| `aav_lane_finder` | the lane finder: the camera's picture to `/lane_geometry`, with OpenCV | perception |
+| `aav_lane_finder` | the lane finder: the camera's picture to `/perception/lane/geometry`, with OpenCV | perception |
 
 ## Stock ROS packages and plugins we use
 
@@ -112,13 +112,13 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | The TI radar driver | 2025-26 `Nav_Radar` | `src/sensors/ti_ros2_driver` | ported; its settings are indoor demos |
 | The battery monitor | 2024-25 `Battery-Monitor-ROS` | `src/sensors/battery_monitor` | ported |
 | Camera calibrations | 2024-25 `cameras` | `aav_sensors/config/cameras` | used by `cameras.launch.py` |
-| The HUD's back end (Flask) | 2025-26 `User-Interface` | `src/hud/aav_hud` | ported to our topics; publishes `/estop`. 98 tests |
+| The HUD's back end (Flask) | 2025-26 `User-Interface` | `src/hud/aav_hud` | ported to our topics; publishes `/safety/estop`. 98 tests |
 | The HUD app (Flutter) and its boot scripts | 2025-26 `User-Interface` | `hud/` | changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen |
 | The ESP32 actuator firmware (C++) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_umod_esp32` | runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers |
 | The status display (Pico 2) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_sentinel_pico2` | copied; not wired in |
 | The wheel encoder (Pico 2) | 2025-26 `Wheel_Encoders` | `firmware/legacy/wheel_encoder_pico2` | runs today's car |
 | Their UART and encoder protocols | 2025-26 `AAV_cortex`, `Wheel_Encoders` | `aav_legacy` | rewritten in Python |
-| Lane keeping | 2025-26 `Lane_Detection_ROS2` | `src/perception/aav_lane_geometry` | brought in: a driver on `/cmd_vel/ai` |
+| Lane keeping | 2025-26 `Lane_Detection_ROS2` | `src/perception/aav_lane_geometry` | brought in: a driver on `/drivers/ai/cmd_vel` |
 | Radar clustering | 2025-26 `Nav_Radar` | `src/perception/aav_object_detection` | brought in: works on the pretend radar |
 | A YOLO stop-sign detector | 2024-25 `camera_ros2_ws` | `src/perception/aav_yolo` | rewritten: detections out, and a stop-sign watcher |
 | The car's geometry | 2025-26 `Motor_Steering` (`Ackermann.m`) | `vehicle.yaml`, `docs/reference/` | numbers carried over, still guesses |

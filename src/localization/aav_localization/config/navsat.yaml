@@ -2,7 +2,7 @@
 #
 # Subscribes gps/fix, imu, odometry/filtered; publishes odometry/gps and gps/filtered;
 # serves datum, toLL, fromLL, fromLLArray, setUTMZone (names checked in navsat_transform.cpp;
-# the launch file maps them to /gps/fix, /imu/data, /odometry/global, ...).
+# the launch file maps them to /sensors/gps/fix, /sensors/imu/data, /localization/odom/global, ...).
 # It also uses TF base_link -> gps_link (from the URDF) to remove the antenna's offset,
 # which is why the antenna position in vehicle.yaml matters.
 #

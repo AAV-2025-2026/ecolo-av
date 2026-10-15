@@ -8,8 +8,9 @@ HTTP
   GET  /             the newest copy of every event, as JSON: a health check
   POST /receive      the route the app locked, [{'lat': .., 'lon': ..}, ...]: Nav2 drives it
   POST /cancel       stop following the route (the map page's Unlock and Clear)
-  POST /estop        the e-stop button: /estop true. Nothing here can clear it
-  GET  /camera/latest.png  the newest /camera/image_raw picture (the app's camera page)
+  POST /estop        the e-stop button: /safety/estop true. Nothing here can clear it
+  GET  /camera/latest.png  the newest /sensors/camera/front_left/image_raw picture (the
+                           app's camera page)
   GET  /camera/stream      the same, as a stream of pictures: open it in a browser
 Socket.IO
   each new client gets the newest copy of every event (events.py)

@@ -6,8 +6,9 @@ import 'package:flutter_pi/util/ipc.dart';
 
 import '../services/backend.dart';
 
-/// The camera: the back end's newest picture of /camera/image_raw, fetched from
-/// /camera/latest.png a few times a second. The back end subscribes to the camera only
+/// The camera: the back end's newest picture of
+/// /sensors/camera/front_left/image_raw, fetched from /camera/latest.png a few
+/// times a second. The back end subscribes to the camera only
 /// while someone fetches, so it costs nothing while this page is closed.
 class CameraPage extends StatefulWidget {
   const CameraPage({

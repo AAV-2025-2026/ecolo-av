@@ -1,7 +1,7 @@
 """
 ego: the virtual car between the command mux and the backends.
 
-Subscribes  cmd_vel           geometry_msgs/TwistStamped (or Twist, use_stamped:=false)
+Subscribes  control/cmd_vel   geometry_msgs/TwistStamped (or Twist, use_stamped:=false)
 Publishes   ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped, at rate_hz
 
 Every backend (the CAN spine, the legacy serial bridge, turtlesim, Gazebo,
@@ -46,9 +46,9 @@ class Ego(Node):
         self.last_tick = None
 
         if use_stamped:
-            self.create_subscription(TwistStamped, 'cmd_vel', self.on_stamped, 10)
+            self.create_subscription(TwistStamped, 'control/cmd_vel', self.on_stamped, 10)
         else:
-            self.create_subscription(Twist, 'cmd_vel', self.on_twist, 10)
+            self.create_subscription(Twist, 'control/cmd_vel', self.on_twist, 10)
         self.pub = self.create_publisher(AckermannDriveStamped, 'ego/actuator_cmd', 10)
         self.create_timer(1.0 / rate, self.tick)
         self.get_logger().info(

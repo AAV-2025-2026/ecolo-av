@@ -21,7 +21,7 @@ matches it. Still open (Q29): which screen, and GPS destinations this year.
 | Speed | km/h, big. Grey with "OLD" when `/vehicle/status` stops |
 | Controls | steering (left of centre = left), throttle, brake |
 | Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it |
-| E-STOP | the button: `/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
+| E-STOP | the button: `/safety/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
 | Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago |
 | GPS | is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age |
 
@@ -44,8 +44,8 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 | `crates/hud-app` | the window (raylib, main thread) and the node (rclrs, its own thread, news over a channel). `--demo` swaps the node for pretend data |
 | `config/hud.yaml` | every topic name, the only place they're written. Rename one there, or `--ros-args -p gps_topic:=/x` |
 
-- The GPS panel reads `/gps/fix`, the receiver itself, not `/gps/filtered`: it answers
-  "does the GPS work?". navsat_transform marks every `/gps/filtered` message as RTK.
+- The GPS panel reads `/sensors/gps/fix`, the receiver itself, not `/localization/gps/fix`: it answers
+  "does the GPS work?". navsat_transform marks every `/localization/gps/fix` message as RTK.
 - NavSatFix can't tell RTK float from fixed. The HUD calls it fixed at 5 cm or better.
 - Not in `car.launch.py` yet. On Linux without X11's headers, colcon skips it with a
   warning.
@@ -56,7 +56,7 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 |---|---|
 | `--demo`, in a window and full screen | draws; screenshots checked |
 | The node, with `ros2 topic pub` and `image_publisher` (private domain) | speed, faults, RTK FIXED, 2D FIX, STOP SIGN and the camera picture shown |
-| Next to bench mode (`bench.launch.py nav:=false`, private domain) | every bench topic OK: status, GPS 3D fix, battery 100 %, the bench camera. `/perception/stop` NEVER (perception is off there) |
+| Next to bench mode (`bench.launch.py nav:=false`, private domain) | every bench topic OK: status, GPS 3D fix, battery 100 %, the bench camera. `/perception/stop_sign` NEVER (perception is off there) |
 | One press, through the real node, to another node (`cargo test`) | exactly 5 trues, no false, each "sent to 1 node" |
 | Ctrl-C to `ros2 launch` | the window closes, "finished cleanly" |
 | A click on the window's button | not tested: macOS blocks clicks from scripts  |
@@ -69,7 +69,7 @@ Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26
 | Part | Where | What it does |
 |---|---|---|
 | Front end | `hud/flutter_pi/` (Flutter/Dart) | Screens: home (e-stop button, status strip, speed, stop-sign alert), map with destination search, camera page. Talks to the back end over Socket.IO and HTTP. |
-| Back end | `src/hud/aav_hud/` (ROS 2 Python node + Flask) | `hud_server`: reads the car's topics and pushes them to the app (port 5000); sends a locked route to Nav2; publishes the e-stop button's `/estop`. |
+| Back end | `src/hud/aav_hud/` (ROS 2 Python node + Flask) | `hud_server`: reads the car's topics and pushes them to the app (port 5000); sends a locked route to Nav2; publishes the e-stop button's `/safety/estop`. |
 | Routing | OSRM in Docker (`hud/scripts/osrm_bootup.sh`) | Offline road routing for Ontario on port 5001. The map data file (`ontario-*.osrm`) was on the Pi, not in git. |
 
 The map page also needs a tile server on port 8080 (`/styles/basic-preview/`). It isn't
@@ -80,11 +80,11 @@ in git either.
 | Name | Type | Use |
 |---|---|---|
 | `/vehicle/status` | `aav_interfaces/msg/VehicleStatus` | reads: speed, mode, armed, e-stop, gear, faults |
-| `/gps/filtered` | `sensor_msgs/msg/NavSatFix` | reads: the car on the map (`gps_topic:=/gps/fix` for the raw fix) |
-| `/perception/stop` | `std_msgs/msg/Bool` | reads: the stop-sign alert |
-| `/battery_status` | `sensor_msgs/msg/BatteryState` | reads: volts, charge, amps |
-| `/camera/image_raw` | `sensor_msgs/msg/Image` | reads, only while someone watches the camera page |
-| `/estop` | `std_msgs/msg/Bool` | publishes: only true, when the e-stop button is pressed |
+| `/localization/gps/fix` | `sensor_msgs/msg/NavSatFix` | reads: the car on the map (`gps_topic:=/sensors/gps/fix` for the raw fix) |
+| `/perception/stop_sign` | `std_msgs/msg/Bool` | reads: the stop-sign alert |
+| `/vehicle/battery` | `sensor_msgs/msg/BatteryState` | reads: volts, charge, amps |
+| `/sensors/camera/front_left/image_raw` | `sensor_msgs/msg/Image` | reads, only while someone watches the camera page |
+| `/safety/estop` | `std_msgs/msg/Bool` | publishes: only true, when the e-stop button is pressed |
 | `/follow_gps_waypoints` | `nav2_msgs/action/FollowGPSWaypoints` | sends the locked route as GPS waypoints, and shows Nav2's progress |
 
 ## The e-stop button
@@ -93,13 +93,13 @@ This is the software e-stop. The car's red e-stop button is separate: nothing he
 touches it.
 
 - Big and red, on the home screen. One tap sends `POST /estop`.
-- The back end publishes `/estop` true at once, then 4 more times, 0.1 s apart.
+- The back end publishes `/safety/estop` true at once, then 4 more times, 0.1 s apart.
 - Reliable, depth 10: what spine_bridge and legacy_uart_bridge subscribe with. twist_mux
   takes it too.
 - The press also cancels the HUD's route, so clearing the e-stop doesn't restart the trip.
 - The HUD never clears it. Clearing stays a person's deliberate act, from a laptop:
   `pixi run estop-clear`, or Foxglove.
-- No answer, or nothing subscribes to `/estop`: the app shows a red message, "E-STOP
+- No answer, or nothing subscribes to `/safety/estop`: the app shows a red message, "E-STOP
   FAILED ... Press the car's red e-stop button."
 
 ## Socket.IO events and web routes
@@ -120,7 +120,7 @@ The app's names are in `lib/components/sockets/hud_events.dart`, the back end's 
 |---|---|
 | `POST /receive` | takes the app's route, and starts the Nav2 goal. 400 for a bad route, 503 when Nav2 isn't running |
 | `POST /cancel` | cancels the goal: the map page's Unlock and Clear. 409 when no route is followed |
-| `POST /estop` | publishes `/estop` true. It can't clear it. 503 when nothing subscribes |
+| `POST /estop` | publishes `/safety/estop` true. It can't clear it. 503 when nothing subscribes |
 | `GET /camera/latest.png` | the newest camera picture: the camera page. 503 when none is newer than 2 s |
 | `GET /camera/stream` | the same, as a stream of pictures: open it in a browser |
 | `GET /` | the latest copy of every event, as JSON |
@@ -214,11 +214,11 @@ scripted driver held 0.90 m/s, then the e-stop was pressed:
 | `POST /estop`, as the app sends it | 200, in 8 ms | after 0.12 s | after 0.24 s | 0.0 m/s |
 | the app's own client code (`test_bench`) | 200 | after 0.05 s | after 0.28 s | 0.0 m/s |
 
-- Times count from the request (first row), or from the first `/estop` message (second).
-- `/estop` true came 5 times in 0.36 s, and never false. The spine disarmed; clearing
+- Times count from the request (first row), or from the first `/safety/estop` message (second).
+- `/safety/estop` true came 5 times in 0.36 s, and never false. The spine disarmed; clearing
   the e-stop and arming again, from the "laptop", worked.
 - The app's client saw `vehicle_status` say "e-stop on" 41 ms after its press.
-- `pixi run check bench`: 0 failed. `/estop`: published by `hud_server`, subscribed by
+- `pixi run check bench`: 0 failed. `/safety/estop`: published by `hud_server`, subscribed by
   `spine_bridge` and `twist_mux`.
 - `/camera/latest.png`: a 640x360 picture (11 kB), from the second fetch on. The first
   answers 503: it starts the camera subscription.

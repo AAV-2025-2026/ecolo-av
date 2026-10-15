@@ -114,7 +114,7 @@ def fake_nav2(ros, finish='succeed'):
 
 def test_status_and_position_become_the_apps_events(ros):
     status_pub = ros.car.create_publisher(VehicleStatus, '/vehicle/status', 10)
-    fix_pub = ros.car.create_publisher(NavSatFix, '/gps/filtered', 10)
+    fix_pub = ros.car.create_publisher(NavSatFix, '/localization/gps/fix', 10)
     status = VehicleStatus(mode=VehicleStatus.MODE_COMPUTER, armed=True, speed=1.5)
     fix = NavSatFix(latitude=START[0], longitude=START[1])
 
@@ -130,7 +130,7 @@ def test_status_and_position_become_the_apps_events(ros):
 
 
 def test_the_stop_sign_is_sent_when_it_changes(ros):
-    pub = ros.car.create_publisher(Bool, '/perception/stop', 10)
+    pub = ros.car.create_publisher(Bool, '/perception/stop_sign', 10)
     wait_for(lambda: ros.events(events.STOP_SIGN), every=lambda: pub.publish(Bool(data=True)))
     for _ in range(5):
         pub.publish(Bool(data=True))
@@ -140,7 +140,7 @@ def test_the_stop_sign_is_sent_when_it_changes(ros):
 
 
 def test_the_battery_becomes_the_apps_event(ros):
-    pub = ros.car.create_publisher(BatteryState, '/battery_status', 10)
+    pub = ros.car.create_publisher(BatteryState, '/vehicle/battery', 10)
     msg = BatteryState(voltage=49.5, percentage=0.75, current=math.nan)
     wait_for(lambda: ros.events(events.BATTERY), every=lambda: pub.publish(msg))
     assert ros.events(events.BATTERY)[-1] == {'voltage': 49.5, 'percentage': 75.0,
@@ -148,14 +148,14 @@ def test_the_battery_becomes_the_apps_event(ros):
 
 
 def listen_for_estop(ros, qos=10):
-    """Subscribe to /estop as the car does; return the list the values arrive in."""
+    """Subscribe to /safety/estop as the car does; return the list the values arrive in."""
     values = []
-    ros.car.create_subscription(Bool, '/estop', lambda m: values.append(m.data), qos)
+    ros.car.create_subscription(Bool, '/safety/estop', lambda m: values.append(m.data), qos)
     return values
 
 
 def a_backend_listens(ros):
-    """Subscribe to /estop as spine_bridge does, and wait until the HUD sees it."""
+    """Subscribe to /safety/estop as spine_bridge does, and wait until the HUD sees it."""
     values = listen_for_estop(ros)
     wait_for(lambda: ros.hud.estop_pub.get_subscription_count() == 1)
     return values
@@ -195,7 +195,7 @@ def test_an_estop_that_nothing_hears_is_an_error(ros):
     # No backend, no twist_mux: "sent" would be a lie, so the app must say it failed.
     reply = ros.http.post('/estop')
     assert reply.status_code == 503
-    assert 'nothing on the car subscribes to /estop' in reply.get_json()['message']
+    assert 'nothing on the car subscribes to /safety/estop' in reply.get_json()['message']
 
 
 def test_a_locked_route_drives_through_nav2(ros):
@@ -236,7 +236,7 @@ def test_without_nav2_the_route_is_refused(ros):
 
 @pytest.mark.parametrize('ros', [{'camera_idle_timeout': 1.0}], indirect=True)
 def test_the_camera_is_received_only_while_someone_watches(ros):
-    pub = ros.car.create_publisher(Image, '/camera/image_raw', 1)
+    pub = ros.car.create_publisher(Image, '/sensors/camera/front_left/image_raw', 1)
     assert pub.get_subscription_count() == 0
     assert ros.http.get('/camera/latest.png').status_code == 503
     picture = Image(width=2, height=1, encoding='bgr8', step=6, data=[255, 0, 0, 0, 0, 255])
@@ -255,7 +255,7 @@ def test_the_camera_is_received_only_while_someone_watches(ros):
 
 @pytest.mark.parametrize('ros', [{'camera_stale_after': 0.5}], indirect=True)
 def test_an_old_picture_is_not_served(ros):
-    pub = ros.car.create_publisher(Image, '/camera/image_raw', 1)
+    pub = ros.car.create_publisher(Image, '/sensors/camera/front_left/image_raw', 1)
     picture = Image(width=1, height=1, encoding='mono8', step=1, data=[128])
 
     def fetch():

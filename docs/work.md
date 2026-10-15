@@ -46,7 +46,7 @@ From the design doc's next steps, in order.
 | 9 Oct, evening | The workspace: our messages, the CAN map and its codec, `spine-core`, ego, both bridges, the adapters, the scripted driver, `vehicle.yaml`, the map maker. It builds on Jazzy with Pixi, and the turtle drives through the mux and ego |
 | 9–10 Oct, overnight | Three audits (the firmware contract, the Jazzy port, a live run) and their fixes; the spine's safety rules (arming, timeouts, faults); the docs as web pages and a PDF; the Rust example; the network doctor; design doc revision 58 |
 | 10 Oct, on Ben's Mac | Everything builds and passes on a Mac, after one macOS fix; the turtle, Gazebo, Nav2, the Rust example, the docs and the doctor all run; recording fixed for Macs; these pages |
-| 10 Oct, afternoon | Perception brought in: YOLO with a stop-sign lock, radar clustering, lane keeping on `/cmd_vel/ai`; the `ml` environment (PyTorch, YOLO, Core ML); the HUD's back end on our topics; the spine's device drivers in Rust; bench mode: the whole car graph on a laptop, with the spine's firmware logic on a model car, and `pixi run bench-check` (7 of 7). Found on the way: a stop that coasted, a scripted drive that stretched, an executor that spun a CPU core, and best-effort cameras that lost every image on a Mac |
+| 10 Oct, afternoon | Perception brought in: YOLO with a stop-sign lock, radar clustering, lane keeping on `/drivers/ai/cmd_vel`; the `ml` environment (PyTorch, YOLO, Core ML); the HUD's back end on our topics; the spine's device drivers in Rust; bench mode: the whole car graph on a laptop, with the spine's firmware logic on a model car, and `pixi run bench-check` (7 of 7). Found on the way: a stop that coasted, a scripted drive that stretched, an executor that spun a CPU core, and best-effort cameras that lost every image on a Mac |
 | 10–11 Oct, overnight | Five pieces in parallel: the HUD app's changes (its e-stop button, Cancel, the camera; Flutter in `vendor/`), the car's launch with perception as parts and the GPS driver in Pixi, the lane finder (`bench-check --lane`), the spine's Pico 2 program with a CAN driver and flashing tools, and obstacles in Nav2's costmap. Found on the way: the HUD app could never connect to its back end |
 
 ## What needs doing, by area
@@ -94,12 +94,12 @@ From the design doc's next steps, in order.
 - Draw the real test site (Q21) and drive it in Gazebo first.
 - Nav2's lookahead (N7): its turn command flips sign about once a second.
 - Restart crashed sensor drivers (N3): Nav2 gives up without TF.
-- Later: the radar obstacle layer, and the collision monitor. The radar's clusters are ready on `/radar/clusters`.
+- Later: the radar obstacle layer, and the collision monitor. The radar's clusters are ready on `/perception/radar/clusters`.
 
 ### Drivers and teleop
 
 - The first real joystick test, and the team joystick's button numbers.
-- The e-stop button: pick one (not the deadman), and make `/estop` reach the mux reliably (N2).
+- The e-stop button: pick one (not the deadman), and make `/safety/estop` reach the mux reliably (N2).
 - Joystick handover (Q28).
 
 ### Perception
@@ -129,7 +129,7 @@ From the design doc's next steps, in order.
 | Leaked secrets in public repos | revoke and change them (Q34); never copy them into `aav` |
 | Losing work on the Orin in the reflash | image it first |
 | Jazzy and Humble on one network | move every computer together |
-| A lost `/estop` message (N2) | the backends brake on it too; make it reliable |
+| A lost `/safety/estop` message (N2) | the backends brake on it too; make it reliable |
 | Plain GPS may be off by metres | identify the receiver early; RTK if it supports it |
 | A wrong heading at start-up | calibrate the magnetometer on the car, or use two GPS antennas |
 | Knowledge walks out each year | keep these pages, the contract and the design doc current |
@@ -141,9 +141,9 @@ From the design doc's next steps, in order.
 | `costmaps.md` said 1.5 m inflation; `nav2.yaml` has 2.0 m | fixed |
 | `firmware.md` put the spine's limits in `limits.rs`; they're in `spine.rs` | fixed |
 | `status.md` said the scripted driver was untested; it runs in the turtle | fixed |
-| The contract credits `/battery_status` to `battery_monitor`; the node is `battery_state_publisher`, and `/battery_monitor_heartbeat` is missing | fixed |
+| The contract credits `/vehicle/battery` to `battery_monitor`; the node is `battery_state_publisher`, and `/vehicle/battery/heartbeat` is missing | fixed |
 | The static map → odom used with `gps:=false` isn't in the contract's `/tf_static` | fixed: `map_to_odom_no_gps` |
-| `/radar/points` is best-effort; the contract doesn't say | fixed |
+| `/sensors/radar/points` is best-effort; the contract doesn't say | fixed |
 | `firmware/spine/Cargo.toml` points to a README that doesn't exist | fixed: the comment changed, and `firmware/spine/README.md` exists |
 | `aav_gazebo`'s test skips at module level, which `CLAUDE.md` says not to do | fixed |
 | The HUD's camera address differs: 192.168.1.101 in the old back end, .118 in the app | fixed: the app gets the picture from its back end (`/camera/latest.png`) |

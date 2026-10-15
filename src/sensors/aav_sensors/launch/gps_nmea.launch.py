@@ -1,9 +1,11 @@
 """
-Any GPS that speaks NMEA over serial, as /gps/fix: the fallback until the GPS is chosen (Q18).
+Any GPS that speaks NMEA over serial, as /sensors/gps/fix: the fallback until the GPS is chosen.
+
+Q18 picks the GPS.
 
   ros2 launch aav_sensors gps_nmea.launch.py [port:=/dev/aav/gps] [baud:=9600]
 
-  nmea_navsat_driver -> /gps/fix (NavSatFix), frame gps_link
+  nmea_navsat_driver -> /sensors/gps/fix (NavSatFix), frame gps_link
 
 Most receivers send NMEA by default, u-blox ones too (9600 baud on a u-blox M8's UART,
 38400 on an F9P's). sensors.launch.py's gps part starts this with gps_driver:=nmea; its
@@ -31,7 +33,7 @@ def generate_launch_description():
                 'time_ref_source': 'gps',
                 'useRMC': False,          # GGA: it carries the fix quality
             }],
-            remappings=[('fix', '/gps/fix'), ('vel', '/gps/vel'),
-                        ('time_reference', '/gps/time_reference')],
+            remappings=[('fix', '/sensors/gps/fix'), ('vel', '/sensors/gps/vel'),
+                        ('time_reference', '/sensors/gps/time_reference')],
         ),
     ])

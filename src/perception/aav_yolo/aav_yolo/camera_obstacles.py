@@ -5,8 +5,8 @@ Subscribes  /perception/detections        vision_msgs/Detection2DArray, from eve
                                           (one per computer with a GPU). Each message's
                                           header.frame_id names its camera
             camera_info_topics            sensor_msgs/CameraInfo, one topic per camera
-                                          (default /camera/camera_info): each lens, kept by
-                                          the frame it names
+                                          (default /sensors/camera/front_left/camera_info):
+                                          each lens, kept by the frame it names
 Publishes   /perception/camera_obstacles  sensor_msgs/PointCloud2 in base_link: where each
                                           counted box's bottom edge meets the road
             /perception/camera_view       sensor_msgs/PointCloud2 in base_link: the far edge
@@ -48,7 +48,8 @@ class CameraObstacles(Node):
         self.step = self.declare_parameter('step', 0.1).value
         self.view_range = self.declare_parameter('view_range', 12.0).value
         self.base = self.declare_parameter('base_frame', 'base_link').value
-        topics = self.declare_parameter('camera_info_topics', ['/camera/camera_info']).value
+        topics = self.declare_parameter('camera_info_topics',
+                                        ['/sensors/camera/front_left/camera_info']).value
         self.lenses = {}
         self.tf = Buffer()
         self.listener = TransformListener(self.tf, self)

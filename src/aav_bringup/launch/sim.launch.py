@@ -43,7 +43,8 @@ def launch_setup(context):
              name='imu_filter_madgwick',
              parameters=[os.path.join(FindPackageShare('aav_sensors').perform(context),
                                       'config', 'imu_filter.yaml'), {'use_sim_time': True}],
-             remappings=[('imu/data_raw', '/imu/data_raw'), ('imu/data', '/imu/data')]),
+             remappings=[('imu/data_raw', '/sensors/imu/data_raw'),
+                         ('imu/data', '/sensors/imu/data')]),
         include(context, 'aav_localization', 'localization.launch.py', use_sim_time='true'),
     ]
     if flag['nav']:

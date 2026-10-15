@@ -1,4 +1,4 @@
-# teleop_twist_joy (2.6.5, Jazzy): Joy -> TwistStamped on /cmd_vel/joy (remapped in the launch).
+# teleop_twist_joy (2.6.5, Jazzy): Joy -> TwistStamped on /drivers/joy/cmd_vel (in the namespace /drivers/joy).
 # It publishes only while the enable button (deadman) is held, plus one zero on release.
 #
 # Mapping carried over from the 2025-26 joy_teleop_ackerman config/joy_params.yaml:
@@ -14,7 +14,7 @@
 #   can't steer while stopped (a Twist with v = 0 has no curvature).
 # - inverted_reverse makes the stick act like a steering wheel in reverse: stick left turns
 #   the wheels left, as the old node did.
-teleop_twist_joy_node:
+/**/teleop_twist_joy_node:      # any namespace: teleop.launch.py puts it in /drivers/joy
   ros__parameters:
     publish_stamped_twist: true   # twist_mux and Nav2 on Jazzy use TwistStamped
     frame: base_link
