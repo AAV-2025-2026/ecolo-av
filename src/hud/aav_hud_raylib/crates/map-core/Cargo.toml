@@ -12,6 +12,9 @@ geo-types = "0.7"
 # Shared with the HUD: OK / STALE / NEVER, /system/source's banner, formatting.
 hud-core = { path = "../hud-core" }
 mvt-reader = "2.5"
+# The place search reads ottawa.db (SQLite). "bundled" compiles SQLite itself (public
+# domain), so no system library is needed. rusqlite and libsqlite3-sys: MIT.
+rusqlite = { version = "0.40", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"
 thiserror = "2"

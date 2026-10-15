@@ -195,6 +195,15 @@ impl View {
         self.mode = Mode::Free;
     }
 
+    /// Centres the view on a map point (a place picked in the search), at the same
+    /// scale: the view becomes free; F goes back to the car.
+    pub fn look_at(&mut self, p: Point) {
+        if p.is_finite() {
+            self.centre = p;
+            self.mode = Mode::Free;
+        }
+    }
+
     /// Drags the map by (dx, dy) screen pixels: the view becomes free.
     pub fn pan(&mut self, dx: f64, dy: f64) {
         if dx == 0.0 && dy == 0.0 {
@@ -370,5 +379,15 @@ mod tests {
         assert_eq!(grid_step(PixelsPerMetre(100.0), 50.0), 0.5);
         let lines: Vec<f64> = grid_lines(-7.0, 12.0, 5.0).collect();
         assert_eq!(lines, [-5.0, 0.0, 5.0, 10.0]);
+    }
+
+    #[test]
+    fn looking_at_a_place_frees_the_view() {
+        let mut v = View::default();
+        v.look_at(Point::new(120.0, -40.0));
+        assert_eq!(v.centre, Point::new(120.0, -40.0));
+        assert_eq!(v.mode, Mode::Free);
+        v.look_at(Point::new(f64::NAN, 0.0));
+        assert_eq!(v.centre, Point::new(120.0, -40.0));
     }
 }

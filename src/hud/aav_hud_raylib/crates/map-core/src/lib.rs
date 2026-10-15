@@ -17,13 +17,17 @@
 //! | [`pmtiles`] | reads the street map's file (PMTiles) |
 //! | [`streets`] | one tile's water, parks, buildings and roads, as triangles and lines in map metres |
 //! | [`tilecache`] | the decoded tiles: what to draw, what to load, what to forget |
+//! | [`places`] | the place search: names and addresses from `ottawa.db` (SQLite) |
+//! | [`destination`] | the search box, picking a place, and whether it can be Nav2's goal |
 //! | [`state`] | everything above, as one value the screen draws |
 
 pub mod car;
 pub mod config;
+pub mod destination;
 pub mod earth;
 pub mod geom;
 pub mod grid;
+pub mod places;
 pub mod pmtiles;
 pub mod route;
 pub mod state;

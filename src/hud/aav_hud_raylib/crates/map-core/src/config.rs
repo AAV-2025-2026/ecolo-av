@@ -24,7 +24,7 @@ pub enum Topic {
     Odom,
     /// Nav2's planned path.
     Plan,
-    /// RViz's goal.
+    /// The goal: RViz's, or the place search's (the window publishes it too).
     Goal,
     /// `/system/source` (latched): the SIMULATED banner.
     Source,
@@ -68,6 +68,8 @@ pub struct MapConfig {
     pub arrive_within: f64,
     /// The street map's file (PMTiles), relative to the folder the window starts in.
     pub street_map: String,
+    /// The place search's file (SQLite, `ottawa.db`), found the same way.
+    pub places: String,
 }
 
 /// Why a settings file can't be used.

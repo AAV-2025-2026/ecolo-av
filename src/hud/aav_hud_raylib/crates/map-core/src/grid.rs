@@ -5,7 +5,7 @@
 
 use thiserror::Error;
 
-use crate::geom::{Point, Pose};
+use crate::geom::{Metres, Point, Pose};
 
 /// Where the grid lies, and how big a cell is.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -44,6 +44,25 @@ impl GridInfo {
     /// The smallest box, on the map's axes, that holds the whole grid.
     pub fn bounds(&self) -> Bounds {
         Bounds::around(self.corners()).unwrap_or_default()
+    }
+
+    /// A map point in the grid's own frame: metres from cell (0, 0)'s corner.
+    fn local(&self, p: Point) -> Point {
+        (p - self.origin.position).rotated(-self.origin.yaw)
+    }
+
+    /// Whether a map point is on the grid (edges included).
+    pub fn contains(&self, p: Point) -> bool {
+        self.distance_outside(p).0 == 0.0
+    }
+
+    /// How far a map point is from the grid: 0 on it, else to its nearest edge.
+    pub fn distance_outside(&self, p: Point) -> Metres {
+        let q = self.local(p);
+        let (w, h) = self.size();
+        let dx = (-q.x).max(q.x - w).max(0.0);
+        let dy = (-q.y).max(q.y - h).max(0.0);
+        Metres(dx.hypot(dy))
     }
 }
 
@@ -262,5 +281,23 @@ mod tests {
         assert_eq!(b.max, Point::new(1.0, -1.0));
         assert_eq!(b.centre(), Point::new(0.0, -1.5));
         assert_eq!(Bounds::around([]), None);
+    }
+
+    #[test]
+    fn a_point_on_or_off_a_turned_grid() {
+        // 10 m x 4 m, from (2, 0), turned 90 degrees: it covers x -2..2, y 0..10.
+        let info = GridInfo {
+            width: 10,
+            height: 4,
+            resolution: 1.0,
+            origin: Pose::new(2.0, 0.0, std::f64::consts::FRAC_PI_2),
+        };
+        assert!(info.contains(Point::new(0.0, 5.0)));
+        assert!(info.contains(Point::new(2.0, 0.0)));
+        assert!(!info.contains(Point::new(3.0, 5.0)));
+        let d = info.distance_outside(Point::new(0.0, 13.0)).0;
+        assert!((d - 3.0).abs() < 1e-9, "{d}");
+        let d = info.distance_outside(Point::new(5.0, -4.0)).0;
+        assert!((d - 5.0).abs() < 1e-9, "{d}");
     }
 }
