@@ -3,7 +3,8 @@ sim.launch.py and aav_gazebo's gazebo.launch.py: what each world and argument st
 
 Each test runs a launch file's own setup with some arguments, and looks at what it would
 start. Nothing starts: no ROS, no Gazebo. The defaults must start what `pixi run sim`
-always has; the road world adds the car's sensors and the parts that read them.
+always has; the road and test_lot worlds add the car's sensors and the parts that read
+them (test_lot renders them since 15 Oct). The lidar is on by default (15 Oct).
 """
 
 import importlib.util
@@ -28,7 +29,7 @@ def load(package, name):
 
 SIM = load('aav_bringup', 'sim.launch.py')
 GAZEBO = load('aav_gazebo', 'gazebo.launch.py')
-# What the parts that read the camera are called: they need the road world.
+# What the parts that read the camera are called: they need a world that renders it.
 CAMERA_PARTS = [{'perception': 'true'}, {'camera_obstacles': 'true'}, {'lane': 'true'}]
 
 
@@ -128,7 +129,7 @@ def test_the_road_worlds_full_graph():
     assert sent['detector.launch.py'] == {'labels': 'stop sign', 'use_sim_time': 'true'}
     assert sent['lane_finder.launch.py'] == {}
     assert sent['lane_follower.launch.py'] == {'fake': 'false'}
-    assert sent['hud.launch.py'] == {'use_sim_time': 'true'}
+    assert sent['hud.launch.py'] == {}   # aav_hud_raylib's window (15 Oct)
     assert sent['navigation.launch.py']['camera_obstacles'] == 'true'
     assert (sent['gazebo.launch.py']['obstacle'], sent['gazebo.launch.py']['start_y']) == (
         'true', '0.3')
@@ -137,9 +138,17 @@ def test_the_road_worlds_full_graph():
 
 @pytest.mark.parametrize('part', CAMERA_PARTS)
 def test_the_cameras_parts_need_a_world_with_a_camera(part):
-    for world in ('empty', 'test_lot'):
-        with pytest.raises(ValueError, match='world:=road'):
-            started(SIM, world=world, **part)
+    with pytest.raises(ValueError, match='world:=road'):
+        started(SIM, world='empty', **part)
+    started(SIM, world='test_lot', **part)  # the lot renders the cameras: no error
+
+
+def test_the_screens_and_lichtblick():
+    sent = included(started(SIM, hud='true', map='true'))
+    assert sent['hud.launch.py'] == {} and sent['map.launch.py'] == {}
+    assert included(started(SIM, hud_web='true'))['hud.launch.py'] == {'use_sim_time': 'true'}
+    fox = parameters(node(started(SIM, foxglove='true'), 'foxglove_bridge'))
+    assert (fox['port'], fox['address']) == (8765, '127.0.0.1')  # this computer only
 
 
 def test_a_pretend_lane_needs_no_camera():
@@ -154,14 +163,15 @@ def test_bad_values_stop_the_launch():
 
 
 def test_gazebo_bridges_the_sensors_only_where_the_world_renders_them():
-    for world in ('empty', 'test_lot'):
+    actions = started(GAZEBO, world='empty', gui='false')
+    assert 'gz_road_bridge' not in names(actions)
+    assert parameters(node(actions, 'gazebo_adapter'))['radar'] is False
+    for world in ('road', 'test_lot'):
         actions = started(GAZEBO, world=world, gui='false')
-        assert 'gz_road_bridge' not in names(actions), world
-        assert parameters(node(actions, 'gazebo_adapter'))['radar'] is False, world
-    road = started(GAZEBO, world='road', gui='false')
-    assert 'gz_road_bridge' in names(road)
-    assert parameters(node(road, 'gazebo_adapter'))['radar'] is True
-    assert parameters(node(road, 'gz_road_bridge'))['config_file'].endswith('bridge_road.yaml')
+        assert 'gz_road_bridge' in names(actions), world
+        assert parameters(node(actions, 'gazebo_adapter'))['radar'] is True, world
+        assert parameters(node(actions, 'gz_road_bridge'))['config_file'].endswith(
+            'bridge_road.yaml'), world
 
 
 def test_gazebo_obstacle_and_start_pose():
@@ -189,16 +199,18 @@ def test_the_lidar_only_where_the_world_renders_it():
     assert included(road)['description.launch.py']['lidar'] == 'true'
     assert parameters(node(road, 'gz_lidar_bridge'))['config_file'].endswith(
         'bridge_lidar.yaml')
-    for world in ('empty', 'test_lot'):
-        actions = started(GAZEBO, world=world, gui='false', lidar='true')
-        assert included(actions)['description.launch.py']['lidar'] == 'false', world
-        assert 'gz_lidar_bridge' not in names(actions), world
+    lot = started(GAZEBO, world='test_lot', gui='false', lidar='true')
+    assert included(lot)['description.launch.py']['lidar'] == 'true'
+    actions = started(GAZEBO, world='empty', gui='false', lidar='true')
+    assert included(actions)['description.launch.py']['lidar'] == 'false'
+    assert 'gz_lidar_bridge' not in names(actions)
 
 
-def test_the_lidar_is_off_by_default():
+def test_the_lidar_is_on_by_default():
     road = started(GAZEBO, world='road', gui='false')
-    assert included(road)['description.launch.py']['lidar'] == 'false'
-    assert 'gz_lidar_bridge' not in names(road)
-    assert included(started(SIM, world='road'))['gazebo.launch.py']['lidar'] == 'false'
-    assert included(started(SIM, world='road', lidar='true'))['gazebo.launch.py'][
-        'lidar'] == 'true'
+    assert included(road)['description.launch.py']['lidar'] == 'true'
+    assert 'gz_lidar_bridge' in names(road)
+    assert included(started(SIM, world='road'))['gazebo.launch.py']['lidar'] == 'true'
+    off = started(GAZEBO, world='road', gui='false', lidar='false')
+    assert included(off)['description.launch.py']['lidar'] == 'false'
+    assert 'gz_lidar_bridge' not in names(off)
