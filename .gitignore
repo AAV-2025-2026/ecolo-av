@@ -52,6 +52,9 @@ node_modules/
 npm-debug.log*
 yarn-error.log*
 
+# The USB kit for the car's computers (pixi run car-kit): made again in a minute
+/car-kit/
+
 # Drives recorded with tools/record.sh, and logs
 /bags/
 *.log
