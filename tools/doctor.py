@@ -102,7 +102,7 @@ def main():
     if domain:
         say('OK', 'Domain ID', f"{domain}: it must match the car's")
     else:
-        say('WARN', 'Domain ID', "not set (0). Set the car's: `export ROS_DOMAIN_ID=<n>`")
+        say('WARN', 'Domain ID', 'not set (0). Ours is 42: `export ROS_DOMAIN_ID=42`')
 
     reach = env.get('ROS_AUTOMATIC_DISCOVERY_RANGE', '') or 'SUBNET'
     if reach == 'SUBNET':
