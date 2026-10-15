@@ -335,7 +335,10 @@ collision_monitor:
     state_topic: /safety/collision_monitor/state
     transform_tolerance: 0.2
     source_timeout: 1.0       # s: a radar silent this long stops the car too
-    base_shift_correction: true
+    # false: no wait for an odom TF newer than the radar point. With sim time it waited
+    # forever (the clock can't tick while this callback blocks): on a busy Mac the car
+    # never moved (15 Oct). Costs at most speed x 0.1 s of error: 0.1 m at 1 m/s.
+    base_shift_correction: false
     stop_pub_timeout: 2.0     # s of zeros after a stop; then twist_mux's nav slot times out
     polygons: ["StopZone"]
     # Three radar points in this box stop the car. From the front bumper to 1 m ahead of
