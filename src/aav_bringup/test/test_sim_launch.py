@@ -95,11 +95,13 @@ def test_the_defaults_start_what_pixi_run_sim_always_has():
     sent = included(actions)
     assert set(sent) == {'gazebo.launch.py', 'mux.launch.py', 'ego.launch.py',
                          'scripted.launch.py', 'localization.launch.py',
-                         'navigation.launch.py'}
+                         'navigation.launch.py', 'watchdog.launch.py'}
     assert sent['gazebo.launch.py']['world'] == 'empty'
     nav = sent['navigation.launch.py']
-    assert (nav['radar'], nav['collision_monitor'], nav['camera_obstacles']) == (
-        'false', 'false', 'false')
+    assert (nav['radar'], nav['lidar'], nav['collision_monitor'], nav['camera_obstacles']) == (
+        'false', 'false', 'false', 'false')
+    # The empty world renders no camera, radar or lidar: the watchdog watches the rest.
+    assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,gps,local,global'
     assert nav['map'].endswith(os.path.join('maps', 'empty.yaml'))
     assert names(actions) == {'imu_filter_madgwick', 'rviz2'}
     assert arguments(node(actions, 'rviz2'))[1].endswith('drive.rviz')
@@ -118,8 +120,26 @@ def test_the_road_world_adds_the_radar_to_nav2_and_its_clusters():
     sent = included(actions)
     assert sent['radar_clusters.launch.py'] == {'minimum_points': '5'}
     nav = sent['navigation.launch.py']
-    assert (nav['radar'], nav['collision_monitor']) == ('true', 'true')
+    assert (nav['radar'], nav['lidar'], nav['collision_monitor']) == ('true', 'true', 'true')
     assert nav['map'].endswith(os.path.join('maps', 'empty.yaml'))
+    # Nothing reads the camera by default, so the watchdog leaves it alone.
+    assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,gps,local,global,radar'
+
+
+def test_the_lidar_alone_guards_nav2_with_the_radar_off():
+    sent = included(started(SIM, world='road', radar='false'))
+    nav = sent['navigation.launch.py']
+    assert (nav['radar'], nav['lidar'], nav['collision_monitor']) == ('false', 'true', 'true')
+    assert 'radar_clusters.launch.py' not in sent
+    assert sent['gazebo.launch.py']['radar'] == 'false'
+    assert 'radar' not in sent['watchdog.launch.py']['inputs']
+
+
+def test_faults_route_the_camera_and_the_watchdog_can_be_left_out():
+    sent = included(started(SIM, world='road', faults='true'))
+    assert sent['gazebo.launch.py']['faults'] == 'true'
+    assert 'camera' in sent['watchdog.launch.py']['inputs'].split(',')
+    assert 'watchdog.launch.py' not in included(started(SIM, world='road', watchdog='false'))
 
 
 def test_the_road_worlds_full_graph():

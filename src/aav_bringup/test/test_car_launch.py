@@ -137,6 +137,18 @@ def test_the_map_and_the_start_pose_reach_their_launch_files():
     assert default.endswith(os.path.join('maps', 'empty.yaml'))
 
 
+def test_the_lidar_stays_off_and_the_watchdog_guards_nav2():
+    sent = included(started(CAR, machine='all'))
+    nav = sent['navigation.launch.py']
+    # No driver publishes the roof lidar yet: Nav2 mustn't wait for it.
+    assert (nav['lidar'], nav['collision_monitor']) == ('false', nav['radar'])
+    assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,local,global,gps'
+    no_gps = included(started(CAR, machine='all', gps='false'))
+    assert 'gps' not in no_gps['watchdog.launch.py']['inputs']
+    assert included(started(CAR, machine='all', lidar='true'))['navigation.launch.py'][
+        'collision_monitor'] == 'true'
+
+
 def test_bad_values_stop_the_launch():
     with pytest.raises(RuntimeError, match='no such machine file'):
         started(CAR, machine='nowhere')

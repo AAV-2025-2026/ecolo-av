@@ -29,6 +29,7 @@
   <exec_depend>aav_hud_raylib</exec_depend>
   <exec_depend>aav_lane_geometry</exec_depend>
   <exec_depend>aav_lane_finder</exec_depend>
+  <exec_depend>aav_safety</exec_depend>
   <exec_depend>imu_filter_madgwick</exec_depend>
   <exec_depend>foxglove_bridge</exec_depend>
   <exec_depend>rviz2</exec_depend>
