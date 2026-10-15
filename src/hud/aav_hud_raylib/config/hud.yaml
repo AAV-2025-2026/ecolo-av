@@ -1,0 +1,13 @@
+# hud: the in-car screen (aav_hud_raylib). Every topic name it uses lives here, not in
+# the code: rename a topic here (or with `--ros-args -p gps_topic:=...`), never in Rust.
+# Built into the program as its defaults, so --demo shows the same names.
+hud:
+  ros__parameters:
+    vehicle_status_topic: /vehicle/status   # aav_interfaces/msg/VehicleStatus
+    gps_topic: /gps/fix                     # sensor_msgs/msg/NavSatFix, the receiver itself
+    gps_filtered_topic: /gps/filtered       # sensor_msgs/msg/NavSatFix, the EKF's position
+    stop_sign_topic: /perception/stop       # std_msgs/msg/Bool
+    battery_topic: /battery_status          # sensor_msgs/msg/BatteryState
+    camera_topic: /camera/image_raw         # sensor_msgs/msg/Image (rgb8, bgr8, mono8...)
+    estop_topic: /estop                     # std_msgs/msg/Bool: published, only ever true
+    stale_after: 1.0                        # s: a topic this quiet shows STALE
