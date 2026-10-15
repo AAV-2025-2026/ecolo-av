@@ -159,6 +159,23 @@ To drive it:
   `export GZ_IP=127.0.0.1` in every terminal, then start again. On a shared computer, also
   set your own `GZ_PARTITION=<any name>`, so your simulator doesn't meet someone else's.
 
+### Faster in Gazebo: `sim_speed:=`
+
+The car's top speed is 1 m/s (walking pace, `ego.yaml` and `nav2.yaml`), for its first
+real drives. In Gazebo, raise it for ego and Nav2 together:
+
+```bash
+pixi run sim world:=test_lot sim_speed:=3     # m/s, up to 5
+```
+
+| | |
+|---|---|
+| Changes | ego's cap, Nav2's controller speed and its velocity smoother, in this run only |
+| The real car | never: ego refuses `sim_max_speed` unless it runs on simulated time |
+| Tried, 15 Oct | a 40 m Nav2 goal in the empty world: top speed 3.18 m/s, goal reached |
+
+If you reopen Gazebo's window (`pixi run gz-window`), its camera follows the car again.
+
 ## The road world: the car's whole graph
 
 At home there is no car, so Gazebo runs everything the car runs. The road world is the

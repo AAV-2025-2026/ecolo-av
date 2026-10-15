@@ -5,7 +5,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=false]
-      [actuator_model:=true]
+      [actuator_model:=true] [sim_speed:=]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
 
@@ -29,6 +29,9 @@ worlds.has_sensors), so the car's whole graph runs there, with the bench's argum
   lidar:=true         a simulated 16-beam roof lidar, on /sensors/lidar/points. The car
                       has none, so nothing reads it yet: it is there to look at (RViz).
                       Off by default: on a Mac it made the full graph flaky
+  sim_speed:=3        a higher top speed (m/s, up to 5), for ego and Nav2, in Gazebo only:
+                      the car's 1.0 m/s cap (ego.yaml, nav2.yaml) is for its first drives.
+                      ego refuses it outside a simulator
   actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
                       vehicle.yaml's actuators:), to compare the two
 
@@ -85,7 +88,8 @@ def launch_setup(context):
                 obstacle=arg('obstacle'), start_y=arg('start_y'), start_yaw=arg('start_yaw'),
                 lidar=arg('lidar'), actuator_model=arg('actuator_model')),
         include(context, 'aav_mux', 'mux.launch.py', use_sim_time='true'),
-        include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true'),
+        include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
+                sim_max_speed=arg('sim_speed')),
         include(context, 'aav_scripted', 'scripted.launch.py', use_sim_time='true'),
         # Only the IMU filter: Gazebo stands in for the drivers.
         Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',
@@ -107,7 +111,8 @@ def launch_setup(context):
                                use_sim_time='true',
                                map=os.path.join(nav_share, 'maps', MAPS[world]),
                                radar=sensors, collision_monitor=sensors,
-                               camera_obstacles=flag['camera_obstacles']))
+                               camera_obstacles=flag['camera_obstacles'],
+                               max_speed=arg('sim_speed')))
     if flag['teleop']:
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
     if flag['perception']:
@@ -170,10 +175,12 @@ def generate_launch_description():
                                           '(the EKFs still start facing east)'),
         DeclareLaunchArgument('lidar', default_value='false',
                               description='a simulated 16-beam roof lidar, on '
-                                          '/sensors/lidar/points (world:=road; the car has '
-                                          'none)'),
+                                          '/sensors/lidar/points (world:=road)'),
         DeclareLaunchArgument('actuator_model', default_value='true',
                               description="the actuators as vehicle.yaml's actuators: say; "
                                           "false: Gazebo's old instant car"),
+        DeclareLaunchArgument('sim_speed', default_value='',
+                              description='m/s, up to 5: a higher top speed for ego and Nav2 '
+                                          "than the car's 1.0, in Gazebo only"),
         OpaqueFunction(function=launch_setup),
     ])

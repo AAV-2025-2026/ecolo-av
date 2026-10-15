@@ -127,3 +127,8 @@ B only if A isn't close enough to the real car.
 
 Steps 1-7 can all be built before the car is measured: they start with today's guesses,
 and step 8 swaps in the real numbers without changing any code.
+
+## Faster drives in Gazebo (15 Oct)
+
+`pixi run sim world:=test_lot sim_speed:=3`: ego and Nav2 up to 3 m/s (5 at most), in
+Gazebo only. The real car keeps 1 m/s. Details: [docs/simulation.md](docs/simulation.md).

@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">21 min read · 7 sections</div></header>
+<div class="meta">22 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -437,6 +437,33 @@ each other: they use multicast, and some networks and firewalls block it. Run
 <code>export GZ_IP=127.0.0.1</code> in every terminal, then start again. On a shared computer, also
 set your own <code>GZ_PARTITION=&lt;any name&gt;</code>, so your simulator doesn't meet someone else's.</p>
 </div>
+<h3 id="faster-in-gazebo-sim_speed">Faster in Gazebo: <code>sim_speed:=</code></h3>
+<p>The car's top speed is 1 m/s (walking pace, <code>ego.yaml</code> and <code>nav2.yaml</code>), for its first
+real drives. In Gazebo, raise it for ego and Nav2 together:</p>
+<pre class="highlight"><code class="language-bash">pixi run sim world:=test_lot sim_speed:=3     # m/s, up to 5</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Changes</td>
+<td>ego's cap, Nav2's controller speed and its velocity smoother, in this run only</td>
+</tr>
+<tr>
+<td>The real car</td>
+<td>never: ego refuses <code>sim_max_speed</code> unless it runs on simulated time</td>
+</tr>
+<tr>
+<td>Tried, 15 Oct</td>
+<td>a 40 m Nav2 goal in the empty world: top speed 3.18 m/s, goal reached</td>
+</tr>
+</tbody>
+</table></div>
+<p>If you reopen Gazebo's window (<code>pixi run gz-window</code>), its camera follows the car again.</p>
 </section>
 <section class="card"><h2 id="the-road-world-the-cars-whole-graph">The road world: the car's whole graph</h2>
 <p>At home there is no car, so Gazebo runs everything the car runs. The road world is the

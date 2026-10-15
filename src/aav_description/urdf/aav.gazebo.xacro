@@ -29,8 +29,8 @@
       <wheel_base>${L}</wheel_base>
       <wheel_separation>${T}</wheel_separation>
       <wheel_radius>${R}</wheel_radius>
-      <min_velocity>-3.0</min_velocity>
-      <max_velocity>3.0</max_velocity>
+      <min_velocity>-6.0</min_velocity>
+      <max_velocity>6.0</max_velocity>
       <!-- Wide on purpose (15 Oct): gazebo_adapter's actuator model limits the speed and
            steering (vehicle.yaml actuators:), not Gazebo. They were -3.0 and +1.5; with
            actuator_model:=false the adapter keeps those old limits itself. -->

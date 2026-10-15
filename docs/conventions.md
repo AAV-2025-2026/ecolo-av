@@ -77,6 +77,18 @@ src/<layer>/aav_<what>/
 | traits for a device (`embedded-hal`) | functions that take a bus handle and a pin number |
 | `cargo fmt`, `cargo clippy` clean | a style of your own |
 
+### A launch override that silently loses
+
+ROS 2 quirk, found 15 Oct: if a launch file sets a **global** parameter (`SetParameter`,
+as `sim.launch.py` does for `use_sim_time`), then a YAML file that **names the node**
+(`ego:`) beats any dict passed **after** it. The override is ignored, with no warning.
+`sim_speed:=3` left ego at 1.0 m/s that way.
+
+| Do | Don't |
+|---|---|
+| Load the YAML yourself and pass it as a dict (`ego.launch.py`), or edit a copy of the file (`navigation.launch.py`'s `faster_copy`) | put a node-named YAML file first and trust a later dict to override it |
+| Check the live value: `ros2 param get /<node> <name>` | trust the launch file |
+
 ## Style, and what checks it
 
 | Language | Style | Checked by |

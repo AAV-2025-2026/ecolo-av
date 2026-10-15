@@ -37,6 +37,8 @@ Send a goal: RViz "2D Goal Pose" (publishes /goal_pose), or
     "{pose: {header: {frame_id: map}, pose: {position: {x: 20.0, y: 5.0}}}}"
 """
 
+import tempfile
+
 from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
@@ -45,6 +47,7 @@ from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
 from nav2_common.launch import RewrittenYaml
+import yaml
 
 
 # The local costmap's parameters, as a whole path for RewrittenYaml: a leaf key such as
@@ -54,6 +57,18 @@ LOCAL = 'local_costmap.local_costmap.ros__parameters.'
 
 def flag(context, name):
     return LaunchConfiguration(name).perform(context).lower() == 'true'
+
+
+def faster_copy(source, speed):
+    """Return a temporary copy of nav2.yaml with this top speed (m/s)."""
+    with open(source) as f:
+        cfg = yaml.safe_load(f)
+    cfg['controller_server']['ros__parameters']['FollowPath']['desired_linear_vel'] = speed
+    cfg['velocity_smoother']['ros__parameters']['max_velocity'][0] = speed
+    out = tempfile.NamedTemporaryFile('w', prefix='nav2_', suffix='.yaml', delete=False)
+    with out:
+        yaml.safe_dump(cfg, out)
+    return out.name
 
 
 def nodes(context):
@@ -72,8 +87,16 @@ def nodes(context):
         LOCAL + 'obstacle_layer.enabled': str(radar).lower(),
         LOCAL + 'camera_layer.enabled': str(camera).lower(),
     })
+    source = f'{share}/config/nav2.yaml'
+    speed = LaunchConfiguration('max_speed').perform(context).strip()
+    if speed:
+        # max_speed:= (sim.launch.py sim_speed:=): the controller's speed and the
+        # smoother's limit, written into a copy of nav2.yaml. Not as per-node dicts after
+        # the file: nav2.yaml names its nodes, and a named entry beats a later dict when
+        # the launch sets a global parameter (sim.launch.py's use_sim_time).
+        source = faster_copy(source, float(speed))
     params = ParameterFile(
-        RewrittenYaml(source_file=f'{share}/config/nav2.yaml', param_rewrites=rewrites,
+        RewrittenYaml(source_file=source, param_rewrites=rewrites,
                       convert_types=True),
         allow_substs=True)
 
@@ -131,6 +154,9 @@ def generate_launch_description():
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="true: the local costmap's camera layer reads "
                                           '/perception/camera_obstacles'),
+        DeclareLaunchArgument('max_speed', default_value='',
+                              description="m/s: Nav2's top speed, if not nav2.yaml's 1.0 "
+                                          '(sim.launch.py sim_speed:=)'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('autostart', default_value='true'),
         OpaqueFunction(function=nodes),

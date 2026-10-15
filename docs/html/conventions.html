@@ -7,7 +7,7 @@
 <!-- Generated from docs/conventions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Names and code style</h1>
-<div class="meta">4 min read · 5 sections</div></header>
+<div class="meta">5 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -244,6 +244,29 @@ changes their launch files and executables.</p>
 <tr>
 <td><code>cargo fmt</code>, <code>cargo clippy</code> clean</td>
 <td>a style of your own</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="a-launch-override-that-silently-loses">A launch override that silently loses</h3>
+<p>ROS 2 quirk, found 15 Oct: if a launch file sets a <strong>global</strong> parameter (<code>SetParameter</code>,
+as <code>sim.launch.py</code> does for <code>use_sim_time</code>), then a YAML file that <strong>names the node</strong>
+(<code>ego:</code>) beats any dict passed <strong>after</strong> it. The override is ignored, with no warning.
+<code>sim_speed:=3</code> left ego at 1.0 m/s that way.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Do</th>
+<th>Don't</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Load the YAML yourself and pass it as a dict (<code>ego.launch.py</code>), or edit a copy of the file (<code>navigation.launch.py</code>'s <code>faster_copy</code>)</td>
+<td>put a node-named YAML file first and trust a later dict to override it</td>
+</tr>
+<tr>
+<td>Check the live value: <code>ros2 param get /&lt;node&gt; &lt;name&gt;</code></td>
+<td>trust the launch file</td>
 </tr>
 </tbody>
 </table></div>
