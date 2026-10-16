@@ -73,10 +73,15 @@ Check a running system against it with `pixi run check <turtle|sim|road|car|repl
 | `/localization/odom/local` | `nav_msgs/msg/Odometry` | `ekf_local` | `controller_server`, `bt_navigator`, `scripted_driver`, `language_drive`, `actuator_test`, `sensor_watchdog` | turtle, sim, car, replay, bench | odom frame. Smooth; drifts. |
 | `/localization/odom/global` | `nav_msgs/msg/Odometry` | `ekf_global` | `navsat_transform`, `map`, `sensor_watchdog` | sim, car, replay, bench | map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it. |
 | `/localization/gps/odom` | `nav_msgs/msg/Odometry` | `navsat_transform` | `ekf_global` | sim, car, replay, bench | Each GPS fix as a map-frame position of base_link (antenna offset removed). |
-| `/localization/gps/fix` | `sensor_msgs/msg/NavSatFix` | `navsat_transform` | `hud_server`, `hud` | sim, car, replay, bench | The global EKF's position as lat/lon, for maps in the HUD or Foxglove. |
+| `/localization/gps/fix` | `sensor_msgs/msg/NavSatFix` | `navsat_transform` | `hud_server`, `hud`, `street_router` | sim, car, replay, bench | The global EKF's position as lat/lon, for maps in the HUD or Foxglove, and the start of street_router's routes. |
 | `/map` | `nav_msgs/msg/OccupancyGrid` | `map_server` | `global_costmap`, `local_costmap`, `map` | sim | Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud_raylib) draws it north up, for the big screen. |
 | `/goal_pose` | `geometry_msgs/msg/PoseStamped` | `rviz2`, `map` | `bt_navigator`, `map` | - | RViz "2D Goal Pose", or the map window's place search (map, aav_hud_raylib - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it. |
 | `/plan` | `nav_msgs/msg/Path` | `planner_server` | `map` | - | The planned path, for RViz/Foxglove, and the map window (map, aav_hud_raylib) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. |
+| `/drivers/nav/route/destination` | `geographic_msgs/msg/GeoPointStamped` | - | `street_router` | - | Where to go, as lat/lon (ros2 topic pub, or a screen). street_router asks the router (Valhalla on this computer, pixi run -e routes router) for the way there along the streets, from the car's newest /localization/gps/fix. |
+| `/drivers/nav/route/goal` | `geometry_msgs/msg/PoseStamped` | - | `street_router` | - | Where to go, as a map-frame point (RViz, or a screen); street_router turns it into lat/lon with /toLL, then as /drivers/nav/route/destination. |
+| `/drivers/nav/route/waypoints` | `geographic_msgs/msg/GeoPath` | `street_router` | - | - | Transient local (latched). The route as GPS waypoints spaced for Nav2 (10-30 m apart, each facing along the street, the car's own start left out) - what /drivers/nav/route/follow sends to /follow_gps_waypoints. |
+| `/drivers/nav/route/path` | `nav_msgs/msg/Path` | `street_router` | - | - | Transient local (latched). The whole route in the map frame (each point through /fromLL), to draw in RViz or Foxglove. Not a plan Nav2 follows. |
+| `/drivers/nav/route/status` | `std_msgs/msg/String` | `street_router` | - | - | Transient local (latched). For people - the route's length and the router's time for a normal car, or why there's no route (no router, no GPS fix, longer than max_length). |
 | `/tf` | `tf2_msgs/msg/TFMessage` | `ekf_local`, `ekf_global`, `robot_state_publisher` | - | turtle, sim, car, replay, bench | map -> odom (ekf_global), odom -> base_link (ekf_local), moving joints (robot_state_publisher). |
 | `/tf_static` | `tf2_msgs/msg/TFMessage` | `robot_state_publisher`, `map_to_odom_no_gps` | - | turtle, sim, car, replay, bench | base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF. With gps:=false, map_to_odom_no_gps adds a fixed map -> odom. |
 | `/robot_description` | `std_msgs/msg/String` | `robot_state_publisher` | - | turtle, sim, car, replay, bench |  |
@@ -88,12 +93,13 @@ Check a running system against it with `pixi run check <turtle|sim|road|car|repl
 | Name | Type | Server | Notes |
 |---|---|---|---|
 | `/spine/arm` | `std_srvs/srv/SetBool` | `spine_bridge` | The spine ignores drive commands until armed; refused while /safety/estop is true. |
-| `/fromLL` | `robot_localization/srv/FromLL` | `navsat_transform` | Lat/lon -> map x, y. Nav2's follow_gps_waypoints calls it. |
-| `/toLL` | `robot_localization/srv/ToLL` | `navsat_transform` |  |
+| `/fromLL` | `robot_localization/srv/FromLL` | `navsat_transform` | Lat/lon -> map x, y. Nav2's follow_gps_waypoints calls it, and street_router, for /drivers/nav/route/path. |
+| `/toLL` | `robot_localization/srv/ToLL` | `navsat_transform` | Map x, y -> lat/lon. street_router calls it for /drivers/nav/route/goal. |
 | `/datum` | `robot_localization/srv/SetDatum` | `navsat_transform` | Move the map origin (normally set once from navsat.yaml). |
 | `/ekf_local/set_pose` | `robot_localization/srv/SetPose` | `ekf_local` |  |
 | `/ekf_global/set_pose` | `robot_localization/srv/SetPose` | `ekf_global` | Re-seed the start pose by hand (heading!). |
 | `/safety/sensor_watchdog/clear` | `std_srvs/srv/Trigger` | `sensor_watchdog` | A person says the position is right again after a GPS jump, which the watchdog latches (pixi run sim-fault clear in Gazebo). |
+| `/drivers/nav/route/follow` | `std_srvs/srv/Trigger` | `street_router` | A person sends street_router's newest route to Nav2, as a /follow_gps_waypoints goal. Nothing goes to Nav2 without it (unless follow_at_once is set). Nav2, twist_mux, ego and the spine stay in charge. |
 
 ## Actions
 
@@ -103,7 +109,7 @@ Check a running system against it with `pixi run check <turtle|sim|road|car|repl
 | `/navigate_to_pose` | `nav2_msgs/action/NavigateToPose` | `bt_navigator` | Drive to one map-frame pose. |
 | `/navigate_through_poses` | `nav2_msgs/action/NavigateThroughPoses` | `bt_navigator` |  |
 | `/follow_waypoints` | `nav2_msgs/action/FollowWaypoints` | `waypoint_follower` |  |
-| `/follow_gps_waypoints` | `nav2_msgs/action/FollowGPSWaypoints` | `waypoint_follower` | Lat/lon waypoints. The HUD (hud_server) sends its locked route here. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away. |
+| `/follow_gps_waypoints` | `nav2_msgs/action/FollowGPSWaypoints` | `waypoint_follower` | Lat/lon waypoints. The HUD (hud_server) sends its locked route here, and street_router its street route on /drivers/nav/route/follow. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away. |
 
 ## Frames
 

@@ -400,9 +400,9 @@ topics:
   /localization/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [navsat_transform]
-    sub: [hud_server, hud]
+    sub: [hud_server, hud, street_router]
     live: [sim, car, replay, bench]
-    note: The global EKF's position as lat/lon, for maps in the HUD or Foxglove.
+    note: The global EKF's position as lat/lon, for maps in the HUD or Foxglove, and the start of street_router's routes.
 
   # --- navigation ---
   /map:
@@ -421,6 +421,33 @@ topics:
     pub: [planner_server]
     sub: [map]
     note: The planned path, for RViz/Foxglove, and the map window (map, aav_hud_raylib) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.
+
+  # --- street routes (aav_routes, docs/routes.md): for real streets later, the lot first ---
+  /drivers/nav/route/destination:
+    type: geographic_msgs/msg/GeoPointStamped
+    pub: []
+    sub: [street_router]
+    note: Where to go, as lat/lon (ros2 topic pub, or a screen). street_router asks the router (Valhalla on this computer, pixi run -e routes router) for the way there along the streets, from the car's newest /localization/gps/fix.
+  /drivers/nav/route/goal:
+    type: geometry_msgs/msg/PoseStamped
+    pub: []
+    sub: [street_router]
+    note: Where to go, as a map-frame point (RViz, or a screen); street_router turns it into lat/lon with /toLL, then as /drivers/nav/route/destination.
+  /drivers/nav/route/waypoints:
+    type: geographic_msgs/msg/GeoPath
+    pub: [street_router]
+    sub: []
+    note: Transient local (latched). The route as GPS waypoints spaced for Nav2 (10-30 m apart, each facing along the street, the car's own start left out) - what /drivers/nav/route/follow sends to /follow_gps_waypoints.
+  /drivers/nav/route/path:
+    type: nav_msgs/msg/Path
+    pub: [street_router]
+    sub: []
+    note: Transient local (latched). The whole route in the map frame (each point through /fromLL), to draw in RViz or Foxglove. Not a plan Nav2 follows.
+  /drivers/nav/route/status:
+    type: std_msgs/msg/String
+    pub: [street_router]
+    sub: []
+    note: Transient local (latched). For people - the route's length and the router's time for a normal car, or why there's no route (no router, no GPS fix, longer than max_length).
 
   # --- frames and plumbing ---
   /tf:
@@ -460,10 +487,11 @@ services:
   /fromLL:
     type: robot_localization/srv/FromLL
     server: navsat_transform
-    note: Lat/lon -> map x, y. Nav2's follow_gps_waypoints calls it.
+    note: Lat/lon -> map x, y. Nav2's follow_gps_waypoints calls it, and street_router, for /drivers/nav/route/path.
   /toLL:
     type: robot_localization/srv/ToLL
     server: navsat_transform
+    note: Map x, y -> lat/lon. street_router calls it for /drivers/nav/route/goal.
   /datum:
     type: robot_localization/srv/SetDatum
     server: navsat_transform
@@ -479,6 +507,10 @@ services:
     type: std_srvs/srv/Trigger
     server: sensor_watchdog
     note: A person says the position is right again after a GPS jump, which the watchdog latches (pixi run sim-fault clear in Gazebo).
+  /drivers/nav/route/follow:
+    type: std_srvs/srv/Trigger
+    server: street_router
+    note: A person sends street_router's newest route to Nav2, as a /follow_gps_waypoints goal. Nothing goes to Nav2 without it (unless follow_at_once is set). Nav2, twist_mux, ego and the spine stay in charge.
 
 actions:
   /scripted_drive:
@@ -498,7 +530,7 @@ actions:
   /follow_gps_waypoints:
     type: nav2_msgs/action/FollowGPSWaypoints
     server: waypoint_follower
-    note: Lat/lon waypoints. The HUD (hud_server) sends its locked route here. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.
+    note: Lat/lon waypoints. The HUD (hud_server) sends its locked route here, and street_router its street route on /drivers/nav/route/follow. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.
 
 frames:
   map: {parent: null, by: "ekf_global (map -> odom)", note: "x east, y north; origin = the navsat datum"}

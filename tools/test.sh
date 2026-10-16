@@ -16,7 +16,7 @@ export PYTHONDONTWRITEBYTECODE=1
 for pkg in src/ego/aav_ego src/backends/aav_spine src/backends/aav_legacy \
            src/backends/aav_gazebo \
            src/drivers/aav_scripted src/drivers/aav_language src/drivers/aav_navigation \
-           src/drivers/aav_actuator_tests \
+           src/drivers/aav_actuator_tests src/drivers/aav_routes \
            src/aav_description \
            src/perception/aav_yolo \
            src/perception/aav_lane_finder src/perception/aav_lidar \
