@@ -20,7 +20,7 @@ for pkg in src/ego/aav_ego src/backends/aav_spine src/backends/aav_legacy \
            src/aav_description \
            src/perception/aav_yolo \
            src/perception/aav_lane_finder src/perception/aav_lidar \
-           src/safety/aav_safety \
+           src/safety/aav_safety src/safety/aav_ghost \
            src/bench/aav_bench src/hud/aav_hud; do
   echo "== $pkg"
   (cd "$pkg" && python3 -m pytest -q -p no:cacheprovider)

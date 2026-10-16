@@ -10,8 +10,8 @@ The launch files use this so the car's measurements live in one file:
     vehicle.stop_zone_points(v)      # Nav2 collision_monitor
     vehicle.obstacle_heights(v)      # the lidar's band of obstacle heights (lidar_scan)
     vehicle.nav2_rewrites(v, reversing)         # Nav2's file: forward only, or reversing too
-    vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar)  # what RewrittenYaml
-                                                                     # can't write
+    vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar, ghost)  # what
+                                                                # RewrittenYaml can't write
     vehicle.ego_params(v)            # ego
     vehicle.wheel_angles(v, centre)  # each front wheel's angle for a centre (bicycle) angle
     vehicle.centre_angle(v, inner, outer)       # the reverse: from M5's two measured angles
@@ -176,7 +176,8 @@ def nav2_rewrites(v, reversing=False):
     }
 
 
-def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False):
+def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False,
+               ghost=False):
     """
     Return a copy of nav2.yaml's settings (`nav2`, loaded) with what RewrittenYaml can't write.
 
@@ -189,15 +190,17 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
       smoother's top speed;
     - the sensors collision_monitor reads: the radar, the lidar or both;
     - the local costmap's lidar_layer, only with the lidar: a layer that is there but
-      disabled still subscribes to its topic.
+      disabled still subscribes to its topic;
+    - with `ghost` (aav_ghost), the ghost as one more source, and its own layer,
+      ghost_layer: it only adds a pretend obstacle, never clears the real sensors' marks.
     """
     out = copy.deepcopy(nav2)
     monitor = out['collision_monitor']['ros__parameters']
-    monitor['observation_sources'] = [name for name, on in (('radar', radar), ('lidar', lidar))
-                                      if on]
+    monitor['observation_sources'] = [name for name, on in (('radar', radar), ('lidar', lidar),
+                                                            ('ghost', ghost)) if on]
     local = out['local_costmap']['local_costmap']['ros__parameters']
-    if not lidar:
-        local['plugins'] = [p for p in local['plugins'] if p != 'lidar_layer']
+    gone = {layer for layer, on in (('lidar_layer', lidar), ('ghost_layer', ghost)) if not on}
+    local['plugins'] = [p for p in local['plugins'] if p not in gone]
     smoother = out['velocity_smoother']['ros__parameters']
     smoother['min_velocity'] = ([reverse_limit(v, reversing)] +
                                 [float(x) for x in smoother['min_velocity'][1:]])

@@ -91,7 +91,8 @@ NAV2_SMALL = {
     'controller_server': {'ros__parameters': {'FollowPath': {'desired_linear_vel': 1.0}}},
     'collision_monitor': {'ros__parameters': {'observation_sources': ['radar']}},
     'local_costmap': {'local_costmap': {'ros__parameters': {
-        'plugins': ['static_layer', 'obstacle_layer', 'lidar_layer', 'inflation_layer']}}},
+        'plugins': ['static_layer', 'obstacle_layer', 'lidar_layer', 'ghost_layer',
+                    'inflation_layer']}}},
 }
 
 
@@ -109,6 +110,25 @@ def test_the_lidar_feeds_the_costmap_and_the_stop_zone_only_when_it_runs():
     assert sources == ['radar', 'lidar'] and 'lidar_layer' in layers
     sources, layers = picked(radar=False, lidar=True)
     assert sources == ['lidar'] and layers[-1] == 'inflation_layer'
+
+
+def test_the_ghost_is_its_own_source_and_layer_only_when_asked_for():
+    v = {'max_reverse_speed': 0.4}
+
+    def picked(**sensors):
+        cfg = vehicle.nav2_tuned(NAV2_SMALL, v, **sensors)
+        return (cfg['collision_monitor']['ros__parameters']['observation_sources'],
+                cfg['local_costmap']['local_costmap']['ros__parameters']['plugins'])
+
+    sources, layers = picked()
+    assert 'ghost' not in sources and 'ghost_layer' not in layers
+    # On top of the real sensors: they keep their own layers and sources.
+    sources, layers = picked(radar=True, lidar=True, ghost=True)
+    assert sources == ['radar', 'lidar', 'ghost']
+    assert layers == ['static_layer', 'obstacle_layer', 'lidar_layer', 'ghost_layer',
+                      'inflation_layer']
+    sources, layers = picked(radar=False, ghost=True)
+    assert sources == ['ghost'] and 'lidar_layer' not in layers and 'ghost_layer' in layers
 
 
 def test_the_lidar_ignores_the_road_and_what_the_car_passes_under():

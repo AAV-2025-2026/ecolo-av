@@ -7,7 +7,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [hud_web:=false] [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [sim_speed:=] [reversing:=true] [watchdog:=true]
-      [faults:=false] [spine:=false] [arm:=true]
+      [faults:=false] [spine:=false] [arm:=true] [ghost:=false]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
   pixi run sim world:=test_lot sim_speed:=3 hud:=true   Gazebo, RViz, Nav2 and the HUD window
@@ -56,6 +56,10 @@ bench's argument names:
                       watchdog, both e-stops, faults, its speed loop) -> the actuator
                       model -> Gazebo; Gazebo's measurements back as CAN frames ->
                       spine_bridge -> /vehicle/*. arm:=true arms it after 12 s
+  ghost:=true         a pretend person in Nav2's view (aav_ghost), for stopping tests
+                      with nothing in Gazebo: pixi run ghost ahead 10, pixi run ghost off.
+                      Its own costmap layer and collision_monitor source: it only adds
+                      (docs/ghost-obstacles.md)
   actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
                       vehicle.yaml's actuators:), to compare the two
 
@@ -96,7 +100,8 @@ def launch_setup(context):
         raise ValueError(f'world:={world}: pick one of {sorted(MAPS)}')
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
-                      'hud_web', 'map', 'foxglove', 'reversing', 'watchdog', 'faults')}
+                      'hud_web', 'map', 'foxglove', 'reversing', 'watchdog', 'faults',
+                      'ghost')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -143,7 +148,8 @@ def launch_setup(context):
         actions.append(include(context, 'aav_navigation', 'navigation.launch.py',
                                use_sim_time='true',
                                map=os.path.join(nav_share, 'maps', MAPS[world]),
-                               radar=radar, lidar=lidar, collision_monitor=radar or lidar,
+                               radar=radar, lidar=lidar, ghost=flag['ghost'],
+                               collision_monitor=radar or lidar or flag['ghost'],
                                camera_obstacles=flag['camera_obstacles'],
                                max_speed=arg('sim_speed'),
                                reversing=str(flag['reversing']).lower()))
@@ -255,6 +261,9 @@ def generate_launch_description():
         DeclareLaunchArgument('faults', default_value='false',
                               description='route the front left picture through '
                                           'gazebo_adapter, for fault.camera'),
+        DeclareLaunchArgument('ghost', default_value='false',
+                              description="a pretend person in Nav2's view (aav_ghost); "
+                                          'place it with pixi run ghost ahead 10'),
         DeclareLaunchArgument('sim_speed', default_value='',
                               description='m/s, up to 5: a higher top speed for ego and Nav2 '
                                           "than the car's 1.0, in Gazebo only"),

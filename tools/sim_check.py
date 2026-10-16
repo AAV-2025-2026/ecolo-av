@@ -8,6 +8,8 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
     pixi run sim-check --lidar-obstacle    (the lidar alone, radar off, stops for a post: a
                                             second run, 3 more minutes)
+    pixi run sim-check --ghost             (a pretend person only Nav2 sees, aav_ghost: a
+                                            second run, 3 more minutes)
     pixi run sim-check --faults            (sensor failures on purpose, each while Nav2 drives:
                                             the car must stop, and say why: 5 more minutes)
     pixi run sim-check --faults --no-watchdog   (the same without the sensor watchdog: a report
@@ -48,7 +50,14 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    lidar guards Nav2. A person-sized post (0.5 x 0.5 x 1.8 m) in the lane 15 m ahead: the
    stop zone must stop the car before it from the lidar's scan, and the post must show in
    the local costmap; once the post is gone, the car must go on to the goal.
-9. With --faults: Gazebo again (faults:=true), and for each fault in FAULTS: Nav2 drives,
+9. With --ghost: Gazebo again, with ghost:=true (aav_ghost): nothing in Gazebo, only a
+   pretend person 15 m past the bumper in Nav2's view (its own costmap layer and
+   collision_monitor source), placed through ghost_obstacle's parameters as
+   `pixi run ghost ahead 15` does. Nav2 drives 30 m: the stop zone must stop the car
+   0-2 m before the ghost (as the global EKF has the car), and the local costmap must mark
+   it; once the ghost is switched off, the car must go on to the goal, through where it
+   stood.
+10. With --faults: Gazebo again (faults:=true), and for each fault in FAULTS: Nav2 drives,
    the fault goes on (gazebo_adapter's fault.<sensor>), and the car must stop within
    REACT seconds, stopped by the sensor watchdog's lock or collision_monitor; then the
    fault goes off, and the lock must open again. Two faults are of the watchdog itself:
@@ -58,7 +67,7 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    (the car's speed or turn changes: Nav2 slows or steers), as they're right till then,
    and has FROZEN_REACT s: a speed that stays wrong needs the GPS's 6 s window.
    With --no-watchdog it only reports, without the watchdog's own two.
-10. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
+11. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
    car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there.
 11. With --spine: Gazebo again with the spine in the loop (spine:=true: ego -> spine_bridge
@@ -128,6 +137,7 @@ from sensor_msgs_py import point_cloud2  # noqa: E402
 from std_msgs.msg import Bool, String  # noqa: E402
 from std_srvs.srv import SetBool, Trigger  # noqa: E402
 from vision_msgs.msg import Detection2DArray  # noqa: E402
+from visualization_msgs.msg import Marker  # noqa: E402
 import yaml  # noqa: E402
 
 RESULTS = []
@@ -773,6 +783,106 @@ def check_lane_keeping(probe):
 def check_lidar_obstacle(probe):
     """Stop for a post only the lidar sees (the radar is off), and mark it in the costmap."""
     check_obstacle(probe, model=POST, depth=0.5, name='lidar obstacle', costmap=True)
+
+
+def set_ghost(probe, client, **values):
+    """Set ghost_obstacle's parameters, all at once; True if it took them."""
+    sent = client.set_parameters_atomically([Parameter(k, value=v) for k, v in values.items()])
+    probe.spin_for(10.0, sent.done)
+    return sent.done() and sent.result().result.successful
+
+
+def check_ghost(probe, ahead=15.0, goal=30.0):
+    """
+    Put a ghost (aav_ghost) `ahead` m past the bumper: not in Gazebo, only in Nav2's view.
+
+    Nav2 must stop the car 0-2 m before it, and the local costmap must mark it; once the
+    ghost is switched off, the car must go on to the goal, through where it stood. Either
+    may stop it: collision_monitor's stop zone, or the controller's own collision check on
+    the costmap (Regulated Pure Pursuit), which can stop it first. The gap is measured as
+    Nav2 sees it: from the ghost's own scan, the bumper to its nearest point ahead.
+    """
+    body = vehicle.load()['vehicle']['body']
+    front = body['length'] - body['rear_overhang']   # base_link to the front bumper
+    client = AsyncParameterClient(probe, '/ghost_obstacle')
+    if not client.wait_for_services(timeout_sec=20.0):
+        result('ghost', False, 'no ghost_obstacle (navigation.launch.py ghost:=true)')
+        return
+    marker = {}
+    marker_sub = probe.create_subscription(
+        Marker, '/safety/ghost/marker',
+        lambda m: marker.update(ghost=m) if m.action == Marker.ADD else marker.clear(), 10)
+    scan = {}
+    scan_sub = probe.create_subscription(LaserScan, '/safety/ghost/scan',
+                                         lambda m: scan.update(newest=m),
+                                         qos_profile_sensor_data)
+    newest = {}     # the local costmap, in odom: on the world's origin, as the car started
+    grid_sub = probe.create_subscription(OccupancyGrid, '/local_costmap/costmap',
+                                         lambda m: newest.update(grid=m), 2)
+    x0, y0 = probe.xy(probe.truth)
+    h = yaw_of(probe.truth)
+    c, s = math.cos(h), math.sin(h)
+
+    def along():
+        x, y = probe.xy(probe.truth)
+        return (x - x0) * c + (y - y0) * s
+
+    def gap_now():
+        """Return the m from the bumper to the ghost, in its scan: in front, the car's width."""
+        m = scan.get('newest')
+        if m is None:
+            return None
+        r = numpy.asarray(m.ranges, dtype=float)
+        a = m.angle_min + m.angle_increment * numpy.arange(len(r))
+        x, y = r * numpy.cos(a), r * numpy.sin(a)
+        ahead_ = numpy.isfinite(r) & (x > 0.0) & (numpy.abs(y) < body['width'] / 2.0)
+        return float(x[ahead_].min()) - front if ahead_.any() else None
+
+    placed = (set_ghost(probe, client, ahead=ahead, enabled=True)
+              and probe.spin_for(10.0, lambda: 'ghost' in marker))
+    if not placed:
+        result('ghost', False, "ghost_obstacle didn't place the ghost")
+    done = probe.go_to(x0 + goal * c, y0 + goal * s, h) if placed else None
+    if placed and done is None:
+        result('ghost', False, 'no Nav2, or it refused the goal')
+    seen, top, still, gap, peak, gone = len(probe.monitor), 0.0, None, None, None, False
+    where = None        # the ghost's centre, in map
+    end = time.monotonic() + 240.0
+    while done is not None and time.monotonic() < end and not done.done():
+        probe.spin_for(0.1)
+        v = probe.truth.twist.twist.linear.x
+        top = max(top, v)
+        if gap is None and top > 0.5 and abs(v) < 0.02:
+            still = still if still is not None else probe.now()
+            if probe.now() - still > 3.0:      # stood still for 3 s: take the ghost away
+                gap = gap_now()
+                gap = gap if gap is not None else math.nan
+                g = marker['ghost']
+                where = (g.pose.position.x, g.pose.position.y)
+                if 'grid' in newest:
+                    peak = costmap_peak(newest['grid'], *where, g.scale.x / 2.0 + 0.5)
+                gone = set_ghost(probe, client, enabled=False)
+        else:
+            still = None
+    probe.destroy_subscription(marker_sub)
+    probe.destroy_subscription(scan_sub)
+    probe.destroy_subscription(grid_sub)
+    if done is None:
+        set_ghost(probe, client, enabled=False)
+        return
+    stop_zone = any(a == CollisionMonitorState.STOP and p == 'StopZone'
+                    for a, p in probe.monitor[seen:])
+    reached = done.done() and done.result().status == 4
+    passed = along() > front + ahead + 0.5
+    marked = peak is not None and peak >= 99
+    ok = gap is not None and 0.0 < gap < 2.0 and marked and gone and reached and passed
+    stood = f'stood still {gap:.2f} m before it' if gap is not None else 'never stopped'
+    mark = f'the local costmap {peak} of 100 there' if peak is not None else 'no local costmap'
+    result('ghost', ok, f'{stood} (top speed {top:.2f} m/s), stop zone fired: {stop_zone} '
+                        f'(else the controller did); {mark}; switched off: {gone}, Nav2 goal '
+                        f'{"reached" if reached else "not reached"} {along():.1f} m on')
+    if gap is None:
+        set_ghost(probe, client, enabled=False)
 
 
 def node_pid(name='sensor_watchdog'):
@@ -1455,6 +1565,13 @@ def main():
         logs.append(f'{stem}-lidar{ext}')
         session(['radar:=false', 'lidar:=true'], [check_lidar_obstacle], logs[-1], 'lidar',
                 ignore=RADAR_TOPICS, radar=False)
+    if '--ghost' in args:
+        # Its own run: the ghost is one more collision_monitor source, beside the radar and
+        # the lidar, so the other runs keep the graph the car has.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-ghost{ext}')
+        session(['ghost:=true', f'lidar:={str(lidar).lower()}'], [check_ghost], logs[-1],
+                'ghost')
     if '--faults' in args:
         # Its own run: a fault spoils the car's software for a while, and the camera's
         # picture goes through gazebo_adapter (faults:=true). No lidar: a lighter run.

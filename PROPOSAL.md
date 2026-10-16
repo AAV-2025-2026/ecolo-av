@@ -124,7 +124,7 @@ the hardware lead's.
 | S1 | **GPS A → B with a smooth stop**: speed by the distance left to B, slowing at half the measured braking g | the main goal (READ-ME-TESTS 5.2), proven in Gazebo first | 1 day | ✅ in Gazebo 15 Oct: `aav_goto`, `pixi run goto`; every stop within 0.4 m of B, at 1 and 3 m/s (`sim-check --goto`). On the car: C9 |
 | S2 | **The spine in the loop** in Gazebo: ego → CAN → the spine's safety logic → the actuator model → Gazebo | timeouts and e-stops tested the way the car runs them | 1-2 days | ✅ 15 Oct: `pixi run sim spine:=true`, `pixi run sim-check --spine` passes |
 | S3 | **Gazebo steering fix**: full lock turns 0.43 rad, not 0.5 | the sim should steer like the car | small | ✅ done 15 Oct: 0.484 rad at full lock (Gazebo's `steering_limit` from `vehicle.py`; the last 3% is tyre slip) |
-| S4 | **Ghost obstacles**: a pretend person in Nav2's map while the real car drives | test stopping on the car with nothing real to hit | 1 day | |
+| S4 | **Ghost obstacles**: a pretend person in Nav2's map while the real car drives | test stopping on the car with nothing real to hit | 1 day | ✅ in Gazebo 16 Oct: `aav_ghost`, `pixi run ghost ahead 10`, `sim:=... ghost:=true`; `sim-check --ghost` stopped 0.21 m before it ([docs](docs/ghost-obstacles.md)). On the car: untested |
 | S5 | **Touchscreen keyboard** for the map's search | type a destination in the car | small | |
 | S6 | **Newer models**, on the same pictures and tasks: YOLO26 / RF-DETR vs YOLO11; Qwen3.5 / Gemma 4 / Granite vs Qwen3 | better or freer models | medium | |
 | S7 | **Python → Rust**: ego and the spine bridge (TEAM-TODO D7) | needs Ben's go-ahead | large | |
