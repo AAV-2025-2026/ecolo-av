@@ -64,6 +64,21 @@ def test_a_gps_jump_latches_until_cleared():
     assert state(dog, 'gps', 10.0) == OK
 
 
+def test_gps_noise_and_fixes_that_arrive_together_are_not_jumps():
+    dog = Watchdog([GPS])
+    gps = dog.watches['gps']
+    north = 1 / 111195.0           # a metre of latitude
+    gps.arrived(0.0, fix=HERE, stamp=100.0)
+    gps.arrived(0.2, fix=(HERE[0] + 2.5 * north, HERE[1]), stamp=100.2)   # 2.5 m of noise
+    # Two queued fixes delivered at once: 0.2 s apart by their stamps, not 0 s.
+    gps.arrived(0.5, fix=(HERE[0] + 1.4 * north, HERE[1]), stamp=100.4)
+    gps.arrived(0.5, fix=(HERE[0] + 2.6 * north, HERE[1]), stamp=100.6)
+    gps.arrived(0.5, fix=(HERE[0] + 2.6 * north, HERE[1]), stamp=100.6)   # the same again
+    assert state(dog, 'gps', 0.5) == OK
+    gps.arrived(0.7, fix=(HERE[0] + 23.0 * north, HERE[1]), stamp=100.8)  # 20 m in 0.2 s
+    assert state(dog, 'gps', 0.7) == JUMP
+
+
 def test_frozen_values_stop_after_frozen_after():
     dog = Watchdog([IMU])
     imu = dog.watches['imu']

@@ -27,7 +27,7 @@ once: a warning when an input goes wrong, info when it is back.
 
 Parameters  inputs (the names to watch), rate_hz (10), and for each name: topic, kind
             (odom, imu, gps, image, cloud), max_age (s), stop (bool), frozen_after (s, 0
-            off), max_jump_speed (m/s, 0 off)
+            off), max_jump_speed (m/s, 0 off), jump_margin (m)
 """
 
 import signal
@@ -71,7 +71,8 @@ class SensorWatchdog(Node):
             rules.append(Rule(name, param('topic', ''), param('kind', 'odom'),
                               float(param('max_age', 1.0)), bool(param('stop', True)),
                               float(param('frozen_after', 0.0)),
-                              float(param('max_jump_speed', 0.0))))
+                              float(param('max_jump_speed', 0.0)),
+                              float(param('jump_margin', 5.0))))
         self.dog = Watchdog(rules)
         self.speed = None      # the wheels' newest speed, for the camera's frozen check
         for rule in rules:
@@ -115,8 +116,9 @@ class SensorWatchdog(Node):
             values = imu_values(msg)
             watch.arrived(now, values, digest=values)
         elif rule.kind == 'gps':
+            stamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
             watch.arrived(now, fix=(msg.latitude, msg.longitude),
-                          has_fix=msg.status.status >= NavSatStatus.STATUS_FIX)
+                          has_fix=msg.status.status >= NavSatStatus.STATUS_FIX, stamp=stamp)
         elif rule.kind == 'image':
             # A frozen camera repeats its whole picture: a sample of it is enough.
             watch.arrived(now, digest=zlib.crc32(bytes(memoryview(msg.data)[::997])),

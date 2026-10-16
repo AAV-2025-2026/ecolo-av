@@ -16,7 +16,8 @@ What counts as wrong, per input (each check only where its rule asks for it):
   FROZEN  the same values again and again for frozen_after seconds (a driver stuck,
           sending its last message with fresh stamps). For a camera only while the car
           moves: a still car in a still world sees the same picture
-  JUMP    two GPS fixes further apart than max_jump_speed allows. Latched: the position
+  JUMP    two GPS fixes further apart than max_jump_speed allows in the time between
+          their stamps, plus jump_margin for the fixes' own noise. Latched: the position
           after a jump can't be trusted until a person says so (clear())
 
 Times are seconds on the node's clock (Gazebo's, in the simulator).
@@ -49,6 +50,7 @@ class Rule:
     stop: bool = True           # stop the automatic drivers while it isn't OK
     frozen_after: float = 0.0   # s of identical values: FROZEN
     max_jump_speed: float = 0.0  # m/s between two GPS fixes: JUMP
+    jump_margin: float = 5.0    # m more, for the noise of two fixes (0.5 m each, in Gazebo)
 
     def __post_init__(self):
         if self.kind not in KINDS:
@@ -79,16 +81,18 @@ class Watch:
         self.bad = None            # what was wrong with the newest message, or None
         self.digest = None         # the newest values, to spot a frozen sensor
         self.same_since = None     # when the values stopped changing
-        self.fix = None            # the newest good GPS fix: (time, latitude, longitude)
+        self.fix = None            # the newest good GPS fix: (stamp, latitude, longitude)
         self.jumped = None         # the jump that latched, as text, until clear()
 
     def arrived(self, now: float, values: Sequence[float] = (), digest=None,
                 fix: Optional[Tuple[float, float]] = None, has_fix: bool = True,
-                speed: Optional[float] = None):
+                speed: Optional[float] = None, stamp: Optional[float] = None):
         """
         Note a message: its numbers (NaN check), a digest of it (frozen check), a GPS fix.
 
-        speed is the car's newest wheel speed (m/s), for the camera's frozen check.
+        speed is the car's newest wheel speed (m/s), for the camera's frozen check. stamp
+        is the fix's own time (s): fixes can arrive two at once, so their arrival times
+        say nothing about how far apart they were taken.
         """
         rule = self.rule
         self.heard = now
@@ -106,12 +110,14 @@ class Watch:
                 self.same_since = now
             self.digest = digest
         if rule.kind == 'gps':
+            taken = now if stamp is None else stamp
             if self.fix is not None and rule.max_jump_speed > 0.0 and self.jumped is None:
-                dt = max(now - self.fix[0], 1e-3)
+                dt = taken - self.fix[0]
                 metres = ground_distance(self.fix[1:], fix)
-                if metres / dt > rule.max_jump_speed:
+                if dt > 0.0 and metres > rule.max_jump_speed * dt + rule.jump_margin:
                     self.jumped = f'{metres:.1f} m in {dt:.2f} s'
-            self.fix = (now, fix[0], fix[1])
+            if self.fix is None or taken > self.fix[0]:     # not an old fix, late
+                self.fix = (taken, fix[0], fix[1])
 
     def state(self, now: float) -> Tuple[str, str]:
         """Return (OK or what is wrong, a few words for a person)."""
