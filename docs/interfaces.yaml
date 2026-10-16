@@ -96,7 +96,7 @@ topics:
   /safety/estop:
     type: std_msgs/msg/Bool
     pub: [joy_teleop, hud_server, hud, language_drive]
-    sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive, actuator_test]
+    sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive, actuator_test, carla_adapter]
     note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.
   /control/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
@@ -114,7 +114,7 @@ topics:
   # --- the system: what kind of run this is ---
   /system/source:
     type: aav_interfaces/msg/DataSource
-    pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, replay_source]
+    pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, replay_source, carla_adapter]
     sub: [hud, map, actuator_test]
     live: [turtle, sim, car, replay, bench]
     note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.
@@ -128,31 +128,31 @@ topics:
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
-    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter]
+    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter]
     sub: [hud_server, hud, language_drive]
     live: [turtle, sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.
   /vehicle/steering:
     type: aav_interfaces/msg/ActuatorState
-    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter]
+    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter]
     sub: [actuator_test]
     live: [turtle, sim, bench]
     note: The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too.
   /vehicle/throttle:
     type: aav_interfaces/msg/ActuatorState
-    pub: [spine_bridge, gazebo_adapter]
+    pub: [spine_bridge, gazebo_adapter, carla_adapter]
     sub: [actuator_test]
     live: [sim, bench]
     note: The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.
   /vehicle/brake:
     type: aav_interfaces/msg/ActuatorState
-    pub: [spine_bridge, gazebo_adapter]
+    pub: [spine_bridge, gazebo_adapter, carla_adapter]
     sub: [actuator_test]
     live: [sim, bench]
     note: The brake, 0..1. As /vehicle/throttle.
   /vehicle/wheels:
     type: aav_interfaces/msg/WheelSpeeds
-    pub: [gazebo_adapter, spine_bridge]
+    pub: [gazebo_adapter, spine_bridge, carla_adapter]
     sub: [actuator_test]
     live: [sim, bench]
     note: Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. The 2025-26 car (aav_legacy) has one encoder, read only as /vehicle/odom.
@@ -183,7 +183,7 @@ topics:
   # --- sensors ---
   /sensors/imu/data_raw:
     type: sensor_msgs/msg/Imu
-    pub: [imu_node, gazebo_adapter, mock_imu]
+    pub: [imu_node, gazebo_adapter, mock_imu, carla_adapter]
     sub: [imu_filter_madgwick, actuator_test]
     live: [sim, car, replay, bench]
     note: Gyro and accelerometer in imu_link, with covariances; no orientation.
@@ -201,7 +201,7 @@ topics:
     note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
   /sensors/gps/fix:
     type: sensor_msgs/msg/NavSatFix
-    pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
+    pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps, carla_adapter]
     sub: [navsat_transform, hud, language_drive, actuator_test, sensor_watchdog]
     live: [sim, car, replay, bench]
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
@@ -222,7 +222,7 @@ topics:
     note: GPS time, from NMEA (gps_driver:=nmea).
   /sensors/radar/points:
     type: sensor_msgs/msg/PointCloud2
-    pub: [radar, mock_radar, gazebo_adapter]
+    pub: [radar, mock_radar, gazebo_adapter, carla_adapter]
     sub: [radar_clusters, local_costmap, collision_monitor, sensor_watchdog]
     live: [bench, road]
     note: The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_adapter makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.
@@ -239,7 +239,7 @@ topics:
     note: battery_monitor's sign of life.
   /sensors/camera/front_left/image_raw:
     type: sensor_msgs/msg/Image
-    pub: [camera_left, mock_camera, test_camera, gz_road_bridge, gazebo_adapter]
+    pub: [camera_left, mock_camera, test_camera, gz_road_bridge, gazebo_adapter, carla_adapter]
     sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder, hud, sensor_watchdog]
     live: [bench, road]
     note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_adapter first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its camera fault (freeze, stop).
@@ -250,37 +250,37 @@ topics:
     note: The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera only while something reads it). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true; the laptop's machine file). On the bench, pixi run -e ml laptop-bench.
   /sensors/camera/front_left/camera_info:
     type: sensor_msgs/msg/CameraInfo
-    pub: [camera_left, mock_camera, test_camera, gz_road_bridge]
+    pub: [camera_left, mock_camera, test_camera, gz_road_bridge, carla_adapter]
     sub: [lane_finder, camera_obstacles]
     live: [bench, road]
     note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.
   /sensors/camera/front_right/image_raw:
     type: sensor_msgs/msg/Image
-    pub: [gz_road_bridge]
+    pub: [gz_road_bridge, carla_adapter]
     sub: []
     live: [road]
     note: The front right camera, beside the left one (camera_right_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.
   /sensors/camera/front_right/camera_info:
     type: sensor_msgs/msg/CameraInfo
-    pub: [gz_road_bridge]
+    pub: [gz_road_bridge, carla_adapter]
     sub: []
     live: [road]
     note: Its lens. In Gazebo, the same as the front left camera's.
   /sensors/camera/rear/image_raw:
     type: sensor_msgs/msg/Image
-    pub: [gz_road_bridge]
+    pub: [gz_road_bridge, carla_adapter]
     sub: []
     live: [road]
     note: The rear camera, looking back (the orange housing on the tailgate) (camera_rear_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.
   /sensors/camera/rear/camera_info:
     type: sensor_msgs/msg/CameraInfo
-    pub: [gz_road_bridge]
+    pub: [gz_road_bridge, carla_adapter]
     sub: []
     live: [road]
     note: Its lens. In Gazebo, the same as the front left camera's.
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
-    pub: [gz_lidar_bridge]
+    pub: [gz_lidar_bridge, carla_adapter]
     sub: [lidar_scan]
     live: [road]
     note: Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6), so car.launch.py's lidar:=false is the default. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.
@@ -378,6 +378,13 @@ topics:
     live: [road]
     note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges and gazebo_adapter.
 
+  # --- CARLA: the simulator's own ---
+  /vehicle/carla/truth:
+    type: nav_msgs/msg/Odometry
+    pub: [carla_adapter]
+    sub: []
+    note: Where the CARLA car really is (base_link in the map frame, each CARLA step), like /vehicle/gazebo/truth. The map frame is CARLA's world when its map is built round the datum (a Carleton map, osm:=), else the spawn point facing east (aav_carla frames.map_frame). Nothing on the car's side reads it. carla_adapter (aav_bringup carla.launch.py, pixi run carla-car) has never run against a CARLA server, so no profile checks its topics yet (docs/carla.md).
+
   # --- localization ---
   /localization/odom/local:
     type: nav_msgs/msg/Odometry
@@ -442,7 +449,7 @@ topics:
     live: [turtle, sim, car, replay, bench]
   /clock:
     type: rosgraph_msgs/msg/Clock
-    pub: [gz_bridge]
+    pub: [gz_bridge, carla_adapter]
     sub: []
     live: [sim, replay]
     note: Simulation time; every node runs with use_sim_time:=true in sim and replay.

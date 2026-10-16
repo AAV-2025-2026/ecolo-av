@@ -17,7 +17,7 @@ setup(
     zip_safe=True,
     maintainer='AAV 2026-27 team',
     maintainer_email='aav-team@todo.invalid',
-    description='Backend stub for CARLA through carla_ros_bridge.',
+    description='CARLA as the car, behind the same topics as the real one.',
     license='TODO',
     extras_require={'test': ['pytest']},
     entry_points={

@@ -2,18 +2,26 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>aav_carla</name>
-  <version>0.1.0</version>
-  <description>Backend stub for CARLA through carla_ros_bridge. Untested; carla_ros_bridge is not released for Jazzy.</description>
+  <version>0.2.0</version>
+  <description>CARLA (0.10 on Unreal Engine 5, or 0.9.16) as the car, behind the same topics as the real one, through CARLA's Python client. Never run against a CARLA server yet: docs/carla.md.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 
   <exec_depend>rclpy</exec_depend>
   <exec_depend>ackermann_msgs</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
-  <exec_depend>topic_tools</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>aav_interfaces</exec_depend>
+  <exec_depend>aav_description</exec_depend>
+  <exec_depend>aav_localization</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <!-- CARLA's Python client (import carla) is not a ROS package: it comes with the CARLA
+       server (Linux x86_64, Windows). carla_adapter imports it only when it starts. -->
 
   <test_depend>ament_flake8</test_depend>
   <test_depend>python3-pytest</test_depend>

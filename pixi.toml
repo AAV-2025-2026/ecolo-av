@@ -25,6 +25,7 @@ bench = { cmd = "tools/ros.sh --local ros2 launch aav_bringup bench.launch.py", 
 bench-check = { cmd = "tools/ros.sh --local python3 tools/bench_check.py", description = "Start bench mode and test the whole car graph: contract, drive, e-stops (2 min)" }
 sim-check = { cmd = "tools/ros.sh --local python3 tools/sim_check.py", description = "Start Gazebo's road world headless and test the car's whole graph in it: contract, sensors, a drive (2 min); --perception (with -e ml), --obstacle, --lidar-obstacle, --faults, --lane add more" }
 sim-fault = { cmd = "tools/ros.sh --local tools/sim_fault.sh", description = "Make a Gazebo sensor fail on purpose next to pixi run sim: sim-fault gps stop, sim-fault gps ok (gps, imu, odom, radar, camera; stop, freeze, nan, jump)" }
+carla-car = { cmd = "tools/ros.sh --local ros2 launch aav_bringup carla.launch.py", description = "CARLA as the car: pixi run carla-car host:=<the CARLA computer> [town:=Town10HD_Opt] [osm:=maps/carla/carleton.osm]. Linux x86_64 with CARLA's Python client; ROS stays on this computer, CARLA can be anywhere (docs/carla.md)" }
 car = { cmd = "tools/ros.sh ros2 launch aav_bringup car.launch.py machine:={{ machine }}", args = [{ arg = "machine", default = "all" }], description = "The real car: pixi run car orin (or motor_pi, laptop, all)" }
 view = { cmd = "tools/ros.sh --local ros2 launch aav_description view.launch.py", description = "The car model in RViz (this computer only)" }
 graph = { cmd = "tools/ros.sh rqt_graph", description = "Live picture of nodes and topics" }
@@ -43,6 +44,7 @@ vendor = { cmd = "python3 tools/vendor.py", description = "Download the ROS 2 an
 get-models = { cmd = "tools/get_models.sh", description = "Download the stock YOLO model into models/ (for pixi run detect)" }
 get-hud-map = { cmd = "tools/get_hud_map.sh", description = "Download the place database (51 MB, OpenStreetMap) into maps/places/ for the map window's place search, linked into hud/flutter_pi/assets/databases/ for the Flutter app" }
 get-street-map = { cmd = "tools/get_street_map.sh", description = "Download the map window's offline street map of Ottawa (40 MB of OpenStreetMap vector tiles, from Protomaps) into maps/streets/" }
+get-carla-osm = { cmd = "tools/get_carla_osm.sh", description = "Download Carleton's OpenStreetMap data round our datum into maps/carla/, for a CARLA map of the campus: pixi run get-carla-osm [--roads] (docs/carla.md)" }
 get-flutter = { cmd = "tools/get_flutter.sh", description = "Download Flutter 3.35.7 into vendor/flutter (about 4.3 GB), for the HUD app" }
 flutter = { cmd = "../../tools/flutter.sh", cwd = "hud/flutter_pi", description = "Flutter from vendor/flutter, in hud/flutter_pi: pixi run flutter doctor" }
 hud-test = { cmd = "tools/hud_test.sh", description = "The HUD app: flutter pub get, analyze and test (needs pixi run get-flutter)" }
