@@ -5,8 +5,10 @@
 # - An input counts while its last message is younger than `timeout` seconds, measured
 #   from when it arrived (header stamps are ignored). Among the inputs that count, the
 #   highest `priority` wins. Priorities are clamped to 1..255.
-# - A lock is std_msgs/Bool. While its last value was true it blocks every input whose
-#   priority is BELOW the lock's. timeout 0 = the lock never expires on silence.
+# - A lock is std_msgs/Bool. It is locked while its last value was true, OR while its
+#   last message is older than `timeout` (silence: from start-up until the first one
+#   too). Locked, it blocks every input whose priority is BELOW the lock's. timeout 0 =
+#   the lock never expires on silence (topic_handle.hpp, LockTopicHandle::isLocked).
 # - Nothing is published when no input counts; ego then stops after its own timeout.
 # - The output topic is `cmd_vel_out`; aav_mux/launch/mux.launch.py remaps it to /control/cmd_vel.
 #
@@ -56,7 +58,8 @@ twist_mux:
         priority: 30            # if the watcher dies while true, the car stays stopped.
       sensors:                  # aav_safety's sensor_watchdog: true while a sensor Nav2 or the
         topic: /safety/sensor_watchdog/lock  # AI slot needs is stale, NaN, frozen or jumped.
-        timeout: 0.0            # Priority 30, as the stop sign: never a person or a test.
-        priority: 30            # Never expires on silence: where no watchdog runs (the
-                                # turtle), the lock stays open. If it dies while true, the
-                                # car stays stopped; while false, nothing stops it (TODO).
+        timeout: 1.0            # Fail-safe: the watchdog sends false 10 times a second, so 1 s
+        priority: 30            # of silence (it died, hung, or never started) holds them too.
+                                # Priority 30, as the stop sign: never a person or a test.
+                                # Profiles with no watchdog (the turtle) start the mux with
+                                # sensor_lock:=false, which sets this timeout to 0 (mux.launch.py).

@@ -165,6 +165,17 @@ def test_one_stop_sign_watcher_next_to_the_mux():
         assert watcher == bool(parts.get('mux')), machine
 
 
+def test_the_sensor_watchdog_runs_wherever_the_mux_does():
+    # The mux's sensors lock needs the watchdog's heartbeat (fail-safe: silence holds Nav2),
+    # so the two always start together, whichever machine Nav2 is on.
+    for machine in MACHINES:
+        parts = CAR.load_machine(machine)['parts']
+        sent = included(started(CAR, machine=machine))
+        assert ('watchdog.launch.py' in sent) == bool(parts.get('mux')), machine
+        if parts.get('mux'):
+            assert sent['mux.launch.py'].get('sensor_lock', 'true') == 'true', machine
+
+
 def test_lane_keeping_is_off_until_a_machine_file_turns_it_on(monkeypatch):
     # control_interface drives whenever it sees a lane, so no machine file has it on yet.
     for machine in MACHINES:

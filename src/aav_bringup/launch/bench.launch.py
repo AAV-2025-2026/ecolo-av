@@ -117,9 +117,10 @@ def launch_setup(context):
                                map=os.path.join(share('aav_navigation'), 'maps', 'empty.yaml'),
                                radar='true', camera_obstacles=flag['camera_obstacles'],
                                reversing=str(flag['reversing']).lower()))
-        # The sensor watchdog guards Nav2 as on the car: twist_mux's sensors lock.
-        actions.append(include('aav_safety', 'watchdog.launch.py',
-                               inputs='odom,imu,gps,local,global,radar'))
+    # The sensor watchdog guards Nav2 and the AI slot (lane keeping) as on the car, always:
+    # the mux's sensors lock needs its heartbeat (aav_mux mux.launch.py sensor_lock).
+    actions.append(include('aav_safety', 'watchdog.launch.py',
+                           inputs='odom,imu,gps,local,global,radar'))
     if flag['teleop']:
         actions.append(include('aav_teleop', 'teleop.launch.py'))
     if flag['perception']:

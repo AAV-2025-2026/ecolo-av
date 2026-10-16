@@ -142,6 +142,24 @@ def test_faults_route_the_camera_and_the_watchdog_can_be_left_out():
     assert 'watchdog.launch.py' not in included(started(SIM, world='road', watchdog='false'))
 
 
+def test_the_mux_needs_the_watchdogs_heartbeat_only_where_it_runs():
+    assert included(started(SIM))['mux.launch.py']['sensor_lock'] == 'true'
+    # Without the watchdog, nothing would ever open the fail-safe lock: Nav2 couldn't drive.
+    assert included(started(SIM, watchdog='false'))['mux.launch.py']['sensor_lock'] == 'false'
+
+
+MUX = load('aav_mux', 'mux.launch.py')
+
+
+def test_the_mux_lock_is_fail_safe_unless_told_no_watchdog_runs():
+    on = MUX.mux(context_for(MUX))[0]
+    assert 'locks.sensors.timeout' not in parameters(on)      # the file's 1 s: silence locks
+    off = MUX.mux(context_for(MUX, sensor_lock='false'))[0]
+    assert parameters(off)['locks.sensors.timeout'] == 0.0
+    with pytest.raises(ValueError, match='sensor_lock'):
+        MUX.mux(context_for(MUX, sensor_lock='maybe'))
+
+
 def test_the_road_worlds_full_graph():
     actions = started(SIM, world='road', perception='true', lane='true',
                       camera_obstacles='true', hud='true', obstacle='true', start_y='0.3')

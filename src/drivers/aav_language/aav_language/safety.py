@@ -199,8 +199,10 @@ def mux_choice(inputs: Iterable[MuxInput], ages: Mapping[str, Optional[float]],
 
     ages: seconds since each input's last message arrived (None = never). lock_values:
     each lock's last value and its age. twist_mux's own rules (aav_mux's YAML): an input
-    counts while younger than its timeout, the highest priority wins, and a lock that is
-    true blocks every input below its priority. Returns {'driver', 'blocked_by'}.
+    counts while younger than its timeout, the highest priority wins, and a lock blocks
+    every input below its priority while its last value is true, or while it is older
+    than its timeout (silence locks, unless the timeout is 0). Returns {'driver',
+    'blocked_by'}.
     """
     live = [i for i in inputs
             if ages.get(i.name) is not None and ages[i.name] <= i.timeout]
@@ -208,7 +210,7 @@ def mux_choice(inputs: Iterable[MuxInput], ages: Mapping[str, Optional[float]],
     top_lock = None
     for lock in locks:
         value, age = lock_values.get(lock.name, (False, math.inf))
-        if value and (lock.timeout == 0 or age <= lock.timeout):
+        if value or (lock.timeout > 0 and age > lock.timeout):
             if top_lock is None or lock.priority > top_lock.priority:
                 top_lock = lock
     for i in live:

@@ -16,7 +16,9 @@ that can't run here (no PyTorch, no model file, no usb_cam) is skipped with a wa
 
 Parts and what they start:
   description     robot_state_publisher (+ joint_state_publisher): the car's frames
-  mux, ego        twist_mux -> /control/cmd_vel -> ego -> /ego/actuator_cmd
+  mux, ego        twist_mux -> /control/cmd_vel -> ego -> /ego/actuator_cmd; with the
+                  mux, the sensor watchdog (aav_safety): it stops Nav2 and the AI slot when
+                  a sensor they need fails, and they stop too if it goes quiet
   teleop          joystick -> /drivers/joy/cmd_vel, e-stop button -> /safety/estop
   scripted        /scripted_drive action -> /drivers/scripted/cmd_vel
   imu, gps,       sensor drivers (on the machine the device is plugged into);
@@ -36,10 +38,8 @@ Parts and what they start:
                   control_interface -> /drivers/ai/cmd_vel (twist_mux's AI slot). Off on every
                   machine: it drives whenever it sees a lane, unless a driver above it does
   localization    ekf_local, ekf_global, navsat_transform
-  navigation      Nav2 -> /drivers/nav/cmd_vel, and the sensor watchdog (aav_safety), which
-                  stops Nav2 and the AI slot when a sensor they need fails. Nav2's local
-                  costmap reads the sensors this machine
-                  runs: with radar, /sensors/radar/points, and collision_monitor stops Nav2 for
+  navigation      Nav2 -> /drivers/nav/cmd_vel. Nav2's local costmap reads the sensors this
+                  machine runs: with radar, /sensors/radar/points, and collision_monitor stops Nav2 for
                   radar points just ahead; with camera_obstacles, the camera's points;
                   with lidar:=true (off: no lidar driver yet), /sensors/lidar/points
   spine           backend: CAN spine (ros2_socketcan + spine_bridge)
@@ -193,6 +193,12 @@ def launch_setup(context):
         actions.append(include('aav_description', 'description.launch.py'))
     if on('mux'):
         actions.append(include('aav_mux', 'mux.launch.py'))
+        # The sensor watchdog, next to the mux: twist_mux's sensors lock stops Nav2 and the
+        # AI slot when the wheels, the IMU, the GPS or an EKF fail (aav_safety), and when
+        # the watchdog itself goes quiet (the lock's 1 s timeout). Nav2 and the sensors may
+        # run on other machines: it watches their topics over the network.
+        actions.append(include('aav_safety', 'watchdog.launch.py',
+                               inputs='odom,imu,local,global' + (',gps' if flag('gps') else '')))
     if on('ego'):
         actions.append(include('aav_ego', 'ego.launch.py'))
     if on('teleop'):
@@ -242,11 +248,6 @@ def launch_setup(context):
                                collision_monitor=on('radar') or flag('lidar'),
                                camera_obstacles=on('camera_obstacles'),
                                reversing=flag('reversing')))
-        # The sensor watchdog, next to Nav2: twist_mux's sensors lock stops Nav2 and the AI
-        # slot when the wheels, the IMU, the GPS or an EKF fail (aav_safety). The car's
-        # sensors may run on other machines: it watches their topics over the network.
-        actions.append(include('aav_safety', 'watchdog.launch.py',
-                               inputs='odom,imu,local,global' + (',gps' if flag('gps') else '')))
     if on('spine'):
         actions.append(include('aav_spine', 'spine.launch.py'))
     if on('legacy_uart') or on('legacy_encoder'):

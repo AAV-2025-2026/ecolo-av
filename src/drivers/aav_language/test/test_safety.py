@@ -78,7 +78,7 @@ def test_mux_config_reads_our_twist_mux_yaml():
 
 def test_mux_choice_follows_twist_mux_rules():
     inputs, locks = safety.mux_config(yaml.safe_load(MUX_YAML.read_text()))
-    no_locks = {}
+    no_locks = {'sensors': (False, 0.1)}     # the sensor watchdog's heartbeat: all well
     assert safety.mux_choice(inputs, {}, locks, no_locks) == {'driver': None,
                                                               'blocked_by': None}
     ages = {'scripted': 0.1, 'nav': 0.1}
@@ -93,3 +93,18 @@ def test_mux_choice_follows_twist_mux_rules():
     sign = {'stop_sign': (True, 1.0)}
     assert safety.mux_choice(inputs, {'nav': 0.1}, locks, sign)['blocked_by'] == 'stop_sign'
     assert safety.mux_choice(inputs, {'scripted': 0.1}, locks, sign)['driver'] == 'scripted'
+
+
+def test_a_lock_with_a_timeout_locks_on_silence_as_twist_mux_does():
+    inputs, locks = safety.mux_config(yaml.safe_load(MUX_YAML.read_text()))
+    sensors = next(lk for lk in locks if lk.name == 'sensors')
+    # Fail-safe: the sensor watchdog's heartbeat must keep arriving, or Nav2 is held.
+    assert 0.0 < sensors.timeout <= 2.0 and sensors.priority == 30
+    heard = {'sensors': (False, 0.1)}
+    assert safety.mux_choice(inputs, {'nav': 0.1}, locks, heard)['driver'] == 'nav'
+    quiet = {'sensors': (False, sensors.timeout + 0.5)}
+    assert safety.mux_choice(inputs, {'nav': 0.1}, locks, quiet)['blocked_by'] == 'sensors'
+    assert safety.mux_choice(inputs, {'nav': 0.1}, locks, {})['blocked_by'] == 'sensors'
+    # A person, a test, still drive.
+    assert safety.mux_choice(inputs, {'joy': 0.1}, locks, quiet)['driver'] == 'joy'
+    assert safety.mux_choice(inputs, {'scripted': 0.1}, locks, {})['driver'] == 'scripted'

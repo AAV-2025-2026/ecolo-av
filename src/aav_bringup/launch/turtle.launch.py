@@ -30,7 +30,8 @@ def generate_launch_description():
         DeclareLaunchArgument('teleop', default_value='false',
                               description='true if a joystick is plugged in'),
         include('aav_turtlesim', 'turtlesim.launch.py'),
-        include('aav_mux', 'mux.launch.py'),
+        # No sensor watchdog here, so no heartbeat for the mux's sensors lock to need.
+        include('aav_mux', 'mux.launch.py', sensor_lock='false'),
         include('aav_ego', 'ego.launch.py'),
         include('aav_scripted', 'scripted.launch.py'),
         include('aav_description', 'description.launch.py'),
