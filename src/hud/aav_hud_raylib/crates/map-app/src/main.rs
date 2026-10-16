@@ -16,7 +16,8 @@
 //!
 //! The place search (search.rs, `/` to type): OpenStreetMap's names and addresses from
 //! ottawa.db, then DRIVE HERE and CONFIRM send Nav2 a goal. Refused off Nav2's map or
-//! with no car position.
+//! with no car position. A tap (or a click) on the box opens an on-screen keyboard, for
+//! the car's touchscreen; a real keyboard works as well.
 //!
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread and
 //! sends news over a channel (ros.rs). `--demo` swaps the ROS node for pretend data.
@@ -25,7 +26,8 @@
 //! usage: map [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
 //!            [--whole-map] [--config FILE] [--vehicle FILE]
 //!            [--navsat FILE] [--streets FILE] [--places FILE] [--zoom PX_PER_M]
-//!            [--search TEXT [--pick N]] [--send-goal TEXT] [--screenshot FILE] [--ros-args ...]
+//!            [--search TEXT [--pick N]] [--keyboard] [--send-goal TEXT] [--screenshot FILE]
+//!            [--ros-args ...]
 
 mod demo;
 #[cfg(feature = "ros")]
@@ -48,6 +50,7 @@ use map_core::{
     config::MapConfig,
     destination::Key,
     earth::{Datum, BUILT_IN_NAVSAT_YAML},
+    keyboard::Press,
     places::Places,
     state::MapState,
     view::{PixelsPerMetre, ScreenPoint, View},
@@ -66,7 +69,8 @@ const USAGE: &str = "\
 usage: map [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
            [--whole-map] [--config FILE] [--vehicle FILE]
            [--navsat FILE] [--streets FILE] [--places FILE] [--zoom PX_PER_M]
-           [--search TEXT [--pick N]] [--send-goal TEXT] [--screenshot FILE] [--ros-args ...]
+           [--search TEXT [--pick N]] [--keyboard] [--send-goal TEXT] [--screenshot FILE]
+           [--ros-args ...]
 
   --demo             pretend data: no ROS, no car
   --fullscreen       fill the screen (F11 switches too)
@@ -83,6 +87,8 @@ usage: map [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
   --zoom PX_PER_M    start at this scale, in pixels per metre (0.1 shows ~10 km)
   --search TEXT      start with TEXT typed in the search box (for screenshots)
   --pick N           with --search: pick result N (1 = the first)
+  --keyboard         start with the search box open and the on-screen keyboard showing
+                     (as after a tap on the box; for screenshots)
   --send-goal TEXT   once the map and the car are known: search TEXT, send the first
                      result inside Nav2's map as the goal, say so on the terminal (tests)
   --screenshot FILE  save the window as a PNG after 4 s, then quit (for the docs)
@@ -90,7 +96,8 @@ usage: map [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
 
 keys: / search for a place (Esc closes; Up Down and Enter pick; Enter: DRIVE HERE, then
       CONFIRM), F follow the car / whole map, S streets on / off, + - or the wheel zoom,
-      drag to move, F11 full screen";
+      drag to move, F11 full screen
+touch: tap the search box for the on-screen keyboard; tap a result, DRIVE HERE, CONFIRM";
 
 /// When --screenshot saves its picture: once the data has had time to arrive.
 const SCREENSHOT_AFTER: Duration = Duration::from_secs(4);
@@ -116,6 +123,7 @@ struct Options {
     zoom: Option<f64>,
     search: Option<String>,
     pick: Option<usize>,
+    keyboard: bool,
     send_goal: Option<String>,
     screenshot: Option<PathBuf>,
 }
@@ -147,6 +155,7 @@ impl Options {
                 "--places" => opts.places = Some(value("--places")?.into()),
                 "--search" => opts.search = Some(value("--search")?),
                 "--send-goal" => opts.send_goal = Some(value("--send-goal")?),
+                "--keyboard" => opts.keyboard = true,
                 "--pick" => {
                     let n: usize = it
                         .next()
@@ -302,6 +311,10 @@ fn run(
     // --search waits for the first news (the car), so the distances show.
     let mut prefill = opts.search.clone();
     let mut send_goal = opts.send_goal.clone();
+    // The on-screen keyboard: opened by a tap on the box (or --keyboard), shown while
+    // the box is typing. `/` on a real keyboard leaves it shut.
+    let mut keyboard_on = false;
+    let mut open_keyboard = opts.keyboard;
 
     while !rl.window_should_close() && !source.has_stopped() {
         let now = Instant::now();
@@ -332,6 +345,13 @@ fn run(
                 search.choose(n - 1, &state, &mut view, source.as_mut(), now);
             }
         }
+        // --keyboard: after --search, so the words are there.
+        if prefill.is_none() && std::mem::take(&mut open_keyboard) {
+            if !search.finder.is_typing() {
+                search.key(Key::Open, &state, &mut view, source.as_mut(), now);
+            }
+            keyboard_on = true;
+        }
         if let Some(query) = send_goal.clone() {
             if state.grid.is_some() && state.car.is_some() {
                 send_goal = None;
@@ -353,13 +373,27 @@ fn run(
         ) {
             search.key(key, &state, &mut view, source.as_mut(), now);
         }
-        let boxes = SearchLayout::new(&layout, &search.finder);
-        let over_search = boxes.contains(mouse);
+        // The keyboard goes away once a place is picked, or the box shuts.
+        keyboard_on &= search.finder.is_typing();
+        let keyboard = keyboard_on.then(|| layout.keyboard());
+        let on_keyboard = keyboard.as_ref().filter(|kb| kb.contains(mouse));
+        let boxes = SearchLayout::new(&layout, &search.finder, keyboard.as_ref());
+        let over_search = boxes.contains(mouse) || on_keyboard.is_some();
         if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
-            if let Some(click) = boxes.click(mouse) {
+            if let Some(kb) = on_keyboard {
+                // A tap on a key (between keys: nothing, and not the map either).
+                match kb.key_at(mouse).map(|cap| cap.press()) {
+                    Some(Press::Search(key)) => {
+                        search.key(key, &state, &mut view, source.as_mut(), now)
+                    }
+                    Some(Press::Close) => keyboard_on = false,
+                    None => {}
+                }
+            } else if let Some(click) = boxes.click(mouse) {
                 match click {
                     ui::Click::Field => {
-                        search.key(Key::Open, &state, &mut view, source.as_mut(), now)
+                        search.key(Key::Open, &state, &mut view, source.as_mut(), now);
+                        keyboard_on = true;
                     }
                     ui::Click::Result(i) => {
                         search.choose(i, &state, &mut view, source.as_mut(), now)
@@ -414,9 +448,25 @@ fn run(
 
         let label = source.label();
         let tiles = streets.frame(&view, &vp);
+        // After this frame's taps: the keyboard as it is now, and the key held down.
+        keyboard_on &= search.finder.is_typing();
+        let keyboard = keyboard_on.then(|| layout.keyboard());
+        let held = keyboard
+            .as_ref()
+            .filter(|_| rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT))
+            .and_then(|kb| kb.key_at(mouse));
         let mut d = rl.begin_drawing(&thread);
         ui.draw(
-            &mut d, &state, &view, &car, now, label, &streets, &tiles, &search,
+            &mut d,
+            &state,
+            &view,
+            &car,
+            now,
+            label,
+            &streets,
+            &tiles,
+            &search,
+            keyboard.as_ref().map(|kb| (kb, held)),
         );
         drop(d);
 
@@ -540,6 +590,12 @@ mod tests {
         assert_eq!(o.search.as_deref(), Some("carleton u"));
         assert_eq!(o.pick, Some(2));
         assert_eq!(o.send_goal.as_deref(), Some("university drive"));
+        assert!(!o.keyboard);
+        assert!(
+            Options::parse(&args(&["--keyboard"]))
+                .expect("valid")
+                .keyboard
+        );
         assert!(
             Options::parse(&args(&["--pick", "1"])).is_err(),
             "--pick needs --search"

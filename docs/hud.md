@@ -263,13 +263,37 @@ Type a name or an address, pick a result, and send it to Nav2 as the goal. Two p
 
 | Key | Does |
 |---|---|
-| `/` or a click on the box | open the search box |
+| `/` or a click on the box | open the search box (a tap or click also opens the [on-screen keyboard](#the-on-screen-keyboard-touchscreen)) |
 | letters, Backspace | type (the map's own keys, F S + -, are letters while typing) |
 | Up, Down, Enter, or a click | pick a result: the map centres on it, with a magenta pin |
 | Enter, or a click | **DRIVE HERE**, then **CONFIRM: send goal** |
 | Esc | back one step: CONFIRM to the place, the place to the list, the list closed |
 
-#### What it sends
+#### The on-screen keyboard (touchscreen)
+
+The car's screen has no keyboard. **Tap the search box**: a keyboard opens along the
+bottom. A mouse click counts as a tap, so it works the same on a Mac.
+
+![The on-screen keyboard: "café" typed, the results above the keys (--demo --search café --keyboard)](img/map-keyboard.png)
+
+| Key | Does |
+|---|---|
+| letters, digits, `' - . &` | type (lower case: the search ignores case) |
+| é è à ç ê ô | the accents in Ottawa's French names |
+| Space | a space |
+| Back | remove the last letter (a whole letter, even é) |
+| Clear | empty the box |
+| Enter | pick the top result (the map centres on it, then DRIVE HERE) |
+| Close | hide the keyboard; the results stay, tap one |
+
+| | |
+|---|---|
+| Key size | 84 px at 1600 x 900, grows with the window, never under 60 px |
+| Results | only the rows that fit above the keyboard |
+| A real keyboard | works as before; `/` opens the box without the on-screen keyboard |
+| Code | `map-core/src/keyboard.rs` (the keys, which one a tap hit: unit-tested), `map-app/src/ui.rs` (drawing) |
+| Screenshot | `--keyboard` opens it at the start |
+
 
 | | |
 |---|---|
@@ -309,6 +333,7 @@ Try a search from a terminal: `cargo run --release -p map-core --example search 
 |---|---|
 | `--search TEXT` | starts with TEXT typed |
 | `--pick N` | with `--search`: picks result N |
+| `--keyboard` | opens the box with the on-screen keyboard showing |
 | `--send-goal TEXT` | once `/map` and the car are known: sends the first result inside Nav2's map, and says so on the terminal |
 
 #### Tested (15 October, a Mac)
@@ -319,7 +344,8 @@ Try a search from a terminal: `cargo run --release -p map-core --example search 
 | Gazebo `test_lot`, headless, private domain: `--send-goal "university drive"` | sent x 59.27, y 11.90 m; `bt_navigator`: "Begin navigating from current location (0.06, 0.09) to (59.27, 11.90)"; then "Goal succeeded" |
 | The same, `--send-goal "carleton university"` | nothing sent: every result "Outside Nav2's map" (109 m to 700 m away) |
 | Typing, clicks, Up/Down, DRIVE HERE and CONFIRM by hand | not tested: macOS blocks input from scripts. The steps are unit-tested in `destination.rs` |
-| On the car's touchscreen | untested: it needs an on-screen keyboard (future work) |
+| On the car's touchscreen | untested: the on-screen keyboard (16 Oct) is ready; taps by hand not tried yet |
+| The on-screen keyboard (16 Oct) | `cargo test` (map-core `keyboard`: key at a point, scaling, editing, Back on é); `--demo --keyboard` screenshot above. Taps by hand: not tested (macOS blocks input from scripts) |
 
 ![Gazebo: University Drive, sent by --send-goal, and Nav2 driving there](img/map-search-sim.png)
 
