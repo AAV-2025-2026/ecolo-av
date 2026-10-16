@@ -1,8 +1,10 @@
 """
 The model test: each local model plans every request in eval_set.py, and is scored.
 
-    pixi run -e llm llm-eval                                  the four default models
+    pixi run -e llm llm-eval                                  the default models
     pixi run -e llm llm-eval --models mlx-community/Qwen3-8B-4bit --out results.json
+    pixi run -e llm llm-eval --backend openai --base-url http://127.0.0.1:8080/v1 \
+        --models qwen3-4b                  a model behind llama-server, Ollama, trtllm-serve
 
 Each request gets a fresh pretend car: the drive server with --fake, over MCP stdio, as
 the agent uses it. Only the plan is scored (nothing runs). Per model: correct plans (all,
@@ -26,10 +28,24 @@ from aav_language.agent import drive_session, server_command
 
 MODELS = [
     'mlx-community/Llama-3.2-1B-Instruct-4bit',      # Ben's mcpsearch model
-    'mlx-community/Qwen3-4B-Instruct-2507-4bit',
+    'mlx-community/Qwen3-4B-Instruct-2507-4bit',     # the default (llm_mlx.DEFAULT_MODEL)
     'mlx-community/Qwen3.5-4B-4bit',
     'mlx-community/Qwen3-8B-4bit',
     'mlx-community/Meta-Llama-3.1-8B-Instruct-4bit',
+]
+# The newer models of S6 (docs/model-comparison.md): --models newer
+NEWER = [
+    'mlx-community/Qwen3.5-2B-4bit',
+    'mlx-community/Qwen3.5-9B-4bit',
+    'mlx-community/gemma-4-e2b-it-4bit',
+    'mlx-community/gemma-4-e4b-it-4bit',
+    'mlx-community/granite-4.1-3b-4bit',
+    'mlx-community/granite-4.1-8b-4bit',
+    'mlx-community/Ministral-3-3B-Instruct-2512-4bit',
+    'mlx-community/Ministral-3-8B-Instruct-2512-4bit',
+    'mlx-community/Llama-3.2-3B-Instruct-4bit',
+    'mlx-community/gemma-4-26b-a4b-it-4bit',         # 15 GB: an Orin AGX, not an Orin Nano
+    'mlx-community/Qwen3.6-35B-A3B-4bit',            # 20 GB: the same
 ]
 
 
@@ -54,11 +70,20 @@ async def one_item(llm, item, json_actions: bool):
     return plan, ok, why
 
 
-async def run_model(model_id: str, json_actions: bool, verbose: bool) -> dict:
+def make_llm(model_id: str, backend: str, base_url: str):
+    """Load the model; return it and a function for the most memory it held (or None)."""
+    if backend == 'openai':
+        from aav_language.llm_openai import OpenAiChat
+        return OpenAiChat(model_id, base_url), lambda: None
     from aav_language.llm_mlx import MlxChat, peak_memory_gb, reset_peak_memory
     reset_peak_memory()
+    return MlxChat(model_id), lambda: round(peak_memory_gb(), 2)
+
+
+async def run_model(model_id: str, json_actions: bool, verbose: bool,
+                    backend: str = 'mlx', base_url: str = '') -> dict:
     t0 = time.monotonic()
-    llm = MlxChat(model_id)
+    llm, peak = make_llm(model_id, backend, base_url)
     load_s = time.monotonic() - t0
     use_json = json_actions or not llm.native_tools
     rows, step_times, bad = [], [], 0
@@ -93,7 +118,8 @@ async def run_model(model_id: str, json_actions: bool, verbose: bool) -> dict:
             'step_s_median': round(statistics.median(step_times), 2) if step_times else None,
             'step_s_max': round(max(step_times), 2) if step_times else None,
             'request_s_mean': round(sum(r['seconds'] for r in rows) / len(rows), 2),
-            'peak_memory_gb': round(peak_memory_gb(), 2), 'disk_gb': round(disk_gb(model_id), 2),
+            'peak_memory_gb': peak(), 'disk_gb': round(disk_gb(model_id), 2),
+            'backend': backend,
             'rows': rows}
 
 
@@ -114,7 +140,13 @@ async def main_async(args):
     results = []
     for model_id in args.models:
         print(f'== {model_id}', flush=True)
-        results.append(await run_model(model_id, args.json_actions, args.verbose))
+        try:
+            results.append(await run_model(model_id, args.json_actions, args.verbose,
+                                           args.backend, args.base_url))
+        except Exception as e:  # noqa: B902 (a model that won't load: say why, go on)
+            print(f'   could not run {model_id}: {type(e).__name__}: {str(e)[:300]}',
+                  flush=True)
+            continue
         print(table(results[-1:]), flush=True)
         if args.out:
             Path(args.out).write_text(json.dumps(results, indent=1))
@@ -123,13 +155,19 @@ async def main_async(args):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description='Score local models on the plain-English test.')
-    p.add_argument('--models', nargs='+', default=MODELS)
+    p.add_argument('--models', nargs='+', default=MODELS,
+                   help="model ids; 'newer' = the S6 list (NEWER)")
+    p.add_argument('--backend', choices=['mlx', 'openai'], default='mlx',
+                   help='mlx: in this process (a Mac); openai: an OpenAI-compatible server')
+    p.add_argument('--base-url', default='http://127.0.0.1:8080/v1',
+                   help='the server, with --backend openai (llm_openai.py)')
     p.add_argument('--out', help='also write every plan and score to this JSON file')
     p.add_argument('--json-actions', action='store_true',
                    help="JSON actions for every model, not the model's own tool format")
     p.add_argument('--only', nargs='+', help='only these item ids (eval_set.py)')
     p.add_argument('-v', '--verbose', action='store_true')
     args = p.parse_args(argv)
+    args.models = [m for name in args.models for m in (NEWER if name == 'newer' else [name])]
     if args.only:
         eval_set.ITEMS[:] = [i for i in eval_set.ITEMS if i['id'] in args.only]
     asyncio.run(main_async(args))
