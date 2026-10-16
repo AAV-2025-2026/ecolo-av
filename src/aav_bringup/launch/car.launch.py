@@ -38,10 +38,11 @@ Parts and what they start:
                   control_interface -> /drivers/ai/cmd_vel (twist_mux's AI slot). Off on every
                   machine: it drives whenever it sees a lane, unless a driver above it does
   localization    ekf_local, ekf_global, navsat_transform
-  navigation      Nav2 -> /drivers/nav/cmd_vel. Nav2's local costmap reads the sensors this
-                  machine runs: with radar, /sensors/radar/points, and collision_monitor stops Nav2 for
-                  radar points just ahead; with camera_obstacles, the camera's points;
-                  with lidar:=true (off: no lidar driver yet), /sensors/lidar/points
+  navigation      Nav2 -> /drivers/nav/cmd_vel. Nav2's local costmap reads the sensors
+                  this machine runs: with radar, /sensors/radar/points, and
+                  collision_monitor stops Nav2 for radar points just ahead; with
+                  camera_obstacles, the camera's points; with lidar:=true (off: no lidar
+                  driver yet), /sensors/lidar/points
   spine           backend: CAN spine (ros2_socketcan + spine_bridge)
   legacy_uart     backend: today's ESP32 over UART (the Pi wired to it)
   legacy_encoder  today's wheel encoder over UDP

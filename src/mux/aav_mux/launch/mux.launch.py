@@ -45,6 +45,6 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('sensor_lock', default_value='true',
                               description="true: Nav2 and the AI slot need sensor_watchdog's "
-                                          "heartbeat; false: no watchdog runs (the turtle)"),
+                                          'heartbeat; false: no watchdog runs (the turtle)'),
         OpaqueFunction(function=mux),
     ])
