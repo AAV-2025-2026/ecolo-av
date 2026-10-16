@@ -5,7 +5,7 @@ plan"). What's already done is in [PROPOSAL.md](PROPOSAL.md); this page is only 
 left, and in what order.
 
 > **The short version**
-> - **Software we can build now**, no car needed: S1-S9. S1-S3 done in Gazebo 15 Oct, S4 16 Oct.
+> - **Software we can build now**, no car needed: S1-S9. S1-S3 done in Gazebo 15 Oct, S4 and S8 16 Oct.
 > - **Needs the car, or the hardware lead's decision**: C1-C10. Hardware choices are the hardware lead's, not Ben's.
 > - **The goal:** C9, the car drives itself from GPS point A to B and stops at B.
 
@@ -29,7 +29,7 @@ left, and in what order.
 | S5 | **Touchscreen keyboard** for the map's search | type a destination in the car | small | |
 | S6 | **Newer models**, on the same pictures and tasks: YOLO26 / RF-DETR vs YOLO11; Qwen3.5 / Gemma 4 / Granite vs Qwen3 | better or freer models | medium | |
 | S7 | **Python → Rust**: ego and the spine bridge (TEAM-TODO D7) | needs Ben's go-ahead | large | |
-| S8 | **OSRM street routes** | only for driving on real streets | medium | stretch |
+| S8 | **OSRM street routes** | only for driving on real streets | medium | ✅ in Gazebo 16 Oct: Valhalla (MIT) offline, `aav_routes` street_router; a street route drove to 0.5 m of its end through Nav2 ([docs](docs/routes.md)). For real streets later, the lot first |
 | S9 | **CARLA (the Unreal Engine 5 version)** next to Gazebo: photo-real cameras, traffic, towns | Ben asked 15 Oct (reopens Q31). No Mac version: needs Linux or Windows with an NVIDIA RTX card (16 GB of video memory or more). [CARLA](docs/carla.md): Town10 on 0.10 (UE5); Carleton's streets from OpenStreetMap on 0.9.16 (UE5 can't import maps yet) | medium | **research done, adapter built and tested without a server (15 Oct); never run: needs the NVIDIA machine** |
 
 ## Needs the car, or the hardware lead

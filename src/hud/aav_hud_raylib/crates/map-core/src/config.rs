@@ -30,17 +30,20 @@ pub enum Topic {
     Source,
     /// The sensor watchdog's verdict (aav_safety): a banner unless OK, as on the HUD.
     Watchdog,
+    /// street_router's street route (aav_routes, latched): a suggestion, not Nav2's plan.
+    StreetRoute,
 }
 
 impl Topic {
     /// Every topic, in the order the screen lists them.
-    pub const ALL: [Topic; 6] = [
+    pub const ALL: [Topic; 7] = [
         Topic::Map,
         Topic::Odom,
         Topic::Plan,
         Topic::Goal,
         Topic::Source,
         Topic::Watchdog,
+        Topic::StreetRoute,
     ];
 
     /// The ROS parameter that holds this topic's name.
@@ -52,6 +55,7 @@ impl Topic {
             Self::Goal => "goal_topic",
             Self::Source => "source_topic",
             Self::Watchdog => "watchdog_topic",
+            Self::StreetRoute => "street_route_topic",
         }
     }
 }
@@ -65,6 +69,7 @@ pub struct MapConfig {
     pub goal_topic: String,
     pub source_topic: String,
     pub watchdog_topic: String,
+    pub street_route_topic: String,
     /// Seconds without a position before the car shows STALE.
     pub stale_after: f64,
     /// Seconds without a new plan before the trip shows NO NEW PLAN.
@@ -131,6 +136,7 @@ impl MapConfig {
             Topic::Goal => &self.goal_topic,
             Topic::Source => &self.source_topic,
             Topic::Watchdog => &self.watchdog_topic,
+            Topic::StreetRoute => &self.street_route_topic,
         }
     }
 
@@ -143,6 +149,7 @@ impl MapConfig {
             Topic::Goal => &mut self.goal_topic,
             Topic::Source => &mut self.source_topic,
             Topic::Watchdog => &mut self.watchdog_topic,
+            Topic::StreetRoute => &mut self.street_route_topic,
         };
         *slot = name;
     }

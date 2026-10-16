@@ -53,6 +53,11 @@ pub enum Update {
     Source(Announcement),
     /// The sensor watchdog's verdict: "OK", or "STOP: ..." / "WARN: ...".
     Watchdog(String),
+    /// street_router's street route: drawn, but not what Nav2 drives (that's the plan).
+    StreetRoute {
+        route: Route,
+        frame: String,
+    },
 }
 
 /// How far is left.
@@ -83,6 +88,9 @@ pub struct MapState {
     pub car: Option<Car>,
     pub route: Route,
     plan_frame: String,
+    /// street_router's street route, and its frame.
+    pub street_route: Route,
+    street_route_frame: String,
     plan_at: Option<Instant>,
     /// RViz's goal, and when it came.
     pub goal_pose: Option<Pose>,
@@ -104,6 +112,8 @@ impl MapState {
             car: None,
             route: Route::default(),
             plan_frame: String::new(),
+            street_route: Route::default(),
+            street_route_frame: String::new(),
             plan_at: None,
             goal_pose: None,
             goal_frame: String::new(),
@@ -123,6 +133,7 @@ impl MapState {
             Update::Goal { .. } => Topic::Goal,
             Update::Source(_) => Topic::Source,
             Update::Watchdog(_) => Topic::Watchdog,
+            Update::StreetRoute { .. } => Topic::StreetRoute,
         };
         self.seen.entry(topic).or_default().heard(now);
         match update {
@@ -145,6 +156,10 @@ impl MapState {
             }
             Update::Source(a) => self.origins.apply(a),
             Update::Watchdog(w) => self.watchdog = Some(w),
+            Update::StreetRoute { route, frame } => {
+                self.street_route = route;
+                self.street_route_frame = frame;
+            }
         }
     }
 
@@ -159,7 +174,7 @@ impl MapState {
         let limit = match topic {
             Topic::Odom | Topic::Watchdog => self.config.stale_after(),
             Topic::Plan => self.config.plan_stale_after(),
-            Topic::Map | Topic::Goal | Topic::Source => Duration::MAX,
+            Topic::Map | Topic::Goal | Topic::Source | Topic::StreetRoute => Duration::MAX,
         };
         self.seen
             .get(&topic)
@@ -242,7 +257,9 @@ impl MapState {
         let goal = self
             .goal_pose
             .map(|_| ("the goal", self.goal_frame.as_str()));
-        [car, plan, goal]
+        let street = (!self.street_route.is_empty())
+            .then_some(("the street route", self.street_route_frame.as_str()));
+        [car, plan, goal, street]
             .into_iter()
             .flatten()
             .filter(|(_, frame)| !frame.is_empty() && *frame != map)
@@ -371,5 +388,35 @@ mod tests {
             Instant::now(),
         );
         assert_eq!(s.frame_problems(), ["the car is in odom, not map"]);
+    }
+
+    /// A street route is drawn, but it's not the plan: the trip and the distance left
+    /// still follow Nav2's plan alone. It's latched, so it never goes stale.
+    #[test]
+    fn a_street_route_is_only_shown() {
+        let now = Instant::now();
+        let mut s = MapState::new(MapConfig::default());
+        s.apply(car_at(0.0, 0.0), now);
+        let street = Route::new([Point::new(0.0, 0.0), Point::new(0.0, 500.0)]);
+        s.apply(
+            Update::StreetRoute {
+                route: street.clone(),
+                frame: "map".into(),
+            },
+            now,
+        );
+        assert_eq!(s.street_route, street);
+        assert_eq!(s.trip(now), Trip::NoGoal);
+        assert_eq!(s.remaining(), None);
+        let much_later = now + Duration::from_secs(3600);
+        assert!(s.health(Topic::StreetRoute, much_later).is_ok());
+        s.apply(
+            Update::StreetRoute {
+                route: street,
+                frame: "utm".into(),
+            },
+            now,
+        );
+        assert_eq!(s.frame_problems(), ["the street route is in utm, not map"]);
     }
 }

@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Verdana, 'DejaVu Sans', Arial, Helvetica, sans-serif" font-size="14">
+  <title>Street routes: a destination and the car's GPS fix go to street_router, which asks Valhalla, then publishes GPS waypoints and a map path; a person's follow call sends them to Nav2, and the safety layers stay in charge</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C8102E"/>
+    </marker>
+    <style>
+      .stock { fill:#F2F2F2; stroke:#999; stroke-width:1.2; }
+      .ours  { fill:#FFFFFF; stroke:#555; stroke-width:2; }
+      .band  { fill:#FDECEE; stroke:#C8102E; stroke-width:1.2; }
+      .t  { fill:#222; font-weight:bold; }
+      .s  { fill:#555; font-size:12px; }
+      .lbl { fill:#C8102E; font-size:12px; font-weight:bold; }
+      .layer { fill:#C8102E; font-size:12px; font-weight:bold; letter-spacing:1px; }
+      .line { stroke:#555; stroke-width:1.8; fill:none; marker-end:url(#arr); }
+      .redline { stroke:#C8102E; stroke-width:2.2; fill:none; marker-end:url(#arrRed); }
+    </style>
+  </defs>
+
+  <text class="layer" x="20" y="28">1. WHERE TO, AND FROM WHERE</text>
+
+  <rect class="stock" x="20" y="44" width="200" height="70" rx="8"/>
+  <text class="t" x="120" y="70" text-anchor="middle">A destination</text>
+  <text class="s" x="120" y="90" text-anchor="middle">lat/lon, or a map point</text>
+  <text class="s" x="120" y="106" text-anchor="middle">(ros2 topic pub, RViz)</text>
+
+  <rect class="stock" x="20" y="140" width="200" height="70" rx="8"/>
+  <text class="t" x="120" y="166" text-anchor="middle">The car's GPS fix</text>
+  <text class="s" x="120" y="186" text-anchor="middle">/localization/gps/fix</text>
+  <text class="s" x="120" y="202" text-anchor="middle">(navsat_transform)</text>
+
+  <text class="layer" x="300" y="28">2. ASK THE ROUTER (THIS COMPUTER)</text>
+
+  <rect class="ours" x="300" y="80" width="230" height="96" rx="8"/>
+  <text class="t" x="415" y="108" text-anchor="middle">street_router</text>
+  <text class="s" x="415" y="128" text-anchor="middle">aav_routes (Python)</text>
+  <text class="s" x="415" y="146" text-anchor="middle">osrm_route.py: parse, then</text>
+  <text class="s" x="415" y="162" text-anchor="middle">waypoints 10-30 m apart</text>
+
+  <rect class="stock" x="300" y="230" width="230" height="80" rx="8"/>
+  <text class="t" x="415" y="258" text-anchor="middle">Valhalla (MIT)</text>
+  <text class="s" x="415" y="278" text-anchor="middle">127.0.0.1:8002, offline</text>
+  <text class="s" x="415" y="296" text-anchor="middle">Ottawa's streets (OSM, ODbL)</text>
+
+  <path class="line" d="M220,79 L300,110"/>
+  <path class="line" d="M220,175 L300,148"/>
+  <path class="line" d="M395,176 L395,230"/>
+  <path class="line" d="M435,230 L435,176"/>
+  <text class="s" x="300" y="210">HTTP: from, to</text>
+  <text class="s" x="445" y="210">OSRM's JSON</text>
+
+  <text class="layer" x="600" y="28">3. A SUGGESTION, SHOWN</text>
+
+  <rect class="stock" x="600" y="44" width="280" height="56" rx="8"/>
+  <text class="t" x="740" y="68" text-anchor="middle">/drivers/nav/route/waypoints</text>
+  <text class="s" x="740" y="88" text-anchor="middle">GeoPath: lat/lon, a heading each</text>
+
+  <rect class="stock" x="600" y="112" width="280" height="56" rx="8"/>
+  <text class="t" x="740" y="136" text-anchor="middle">/drivers/nav/route/path</text>
+  <text class="s" x="740" y="156" text-anchor="middle">Path, map frame (/fromLL): to draw</text>
+
+  <rect class="stock" x="600" y="180" width="280" height="50" rx="8"/>
+  <text class="t" x="740" y="203" text-anchor="middle">/drivers/nav/route/status</text>
+  <text class="s" x="740" y="221" text-anchor="middle">"route: 1.99 km, about 4 min"</text>
+
+  <path class="line" d="M530,100 L600,72"/>
+  <path class="line" d="M530,128 L600,140"/>
+  <path class="line" d="M530,160 L600,203"/>
+
+  <text class="layer" x="20" y="360">4. ONLY WHEN A PERSON SAYS GO</text>
+
+  <rect class="band" x="20" y="374" width="250" height="76" rx="8"/>
+  <text class="t" x="145" y="400" text-anchor="middle">/drivers/nav/route/follow</text>
+  <text class="s" x="145" y="420" text-anchor="middle">std_srvs/Trigger: a person</text>
+  <text class="s" x="145" y="436" text-anchor="middle">asks for it</text>
+
+  <rect class="stock" x="330" y="374" width="230" height="76" rx="8"/>
+  <text class="t" x="445" y="400" text-anchor="middle">Nav2</text>
+  <text class="s" x="445" y="420" text-anchor="middle">/follow_gps_waypoints:</text>
+  <text class="s" x="445" y="436" text-anchor="middle">plans each step on its costmaps</text>
+
+  <rect class="band" x="620" y="374" width="260" height="76" rx="8"/>
+  <text class="t" x="750" y="400" text-anchor="middle">Still in charge</text>
+  <text class="s" x="750" y="420" text-anchor="middle">twist_mux, e-stop, ego's limits,</text>
+  <text class="s" x="750" y="436" text-anchor="middle">watchdogs, the spine</text>
+
+  <path class="redline" d="M270,412 L330,412"/>
+  <path class="redline" d="M560,412 L620,412"/>
+  <text class="lbl" x="575" y="400">cmd_vel</text>
+</svg>

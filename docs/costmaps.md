@@ -239,7 +239,8 @@ The global costmap only says which cells may be driven on. Roads, junctions and 
 across a city are a separate kind of map: a road graph. Two tools handle that:
 - **OSRM**, which the HUD already uses. It turns a destination into a route of
   latitude/longitude points. Those points can become a `follow_gps_waypoints` goal for
-  Nav2 (see [hud.md](hud.md)).
+  Nav2 (see [hud.md](hud.md)). Our own offline router for that, Valhalla, and the node
+  that turns its routes into waypoints: [Street routes](routes.md).
 - **Nav2's Route Server** (`nav2_route`). It's released for Jazzy, in Nav2 1.3.13 as of
   October 2026, and follows a hand-made graph of lanes or paths. Consider it if the test site becomes a set of fixed lanes.
 

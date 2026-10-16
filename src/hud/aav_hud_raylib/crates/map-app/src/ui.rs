@@ -11,6 +11,7 @@
 //! |         the streets (OpenStreetMap), and over    |   42 m          |
 //! |         them Nav2's map, north up                |                 |
 //! |         the plan (blue), the goal (green)        | TIME LEFT 15 s  |
+//! |         a street route (violet, aav_routes)      |                 |
 //! |         the car (its outline and an arrow)       | SPEED   11 km/h |
 //! | [ the sensor watchdog's verdict, unless OK ]     | TOPICS          |
 //! | |----| 10 m          © OpenStreetMap contributors | keys            |
@@ -76,6 +77,8 @@ const GRID_LINE_OVER_STREETS: Color = Color::new(255, 255, 255, 18);
 const STREET_CREDIT: &str = "© OpenStreetMap contributors · Protomaps";
 const PLAN: Color = Color::new(20, 115, 245, 255);
 const PLAN_CASING: Color = Color::new(255, 255, 255, 200);
+/// street_router's street route: a suggestion, drawn thinner, under Nav2's plan.
+const STREET_ROUTE: Color = Color::new(150, 80, 230, 255);
 const GOAL: Color = Color::new(40, 175, 80, 255);
 const CAR_BODY: Color = Color::new(24, 26, 32, 255);
 const CAR_EDGE: Color = Color::new(255, 255, 255, 255);
@@ -338,6 +341,13 @@ impl Ui {
                 GRID_LINE
             };
             grid_lines(p, view, vp, grid, line);
+        }
+
+        // A street route (aav_routes), under the plan: what Nav2 may be asked to follow.
+        let street: Vec<Vector2> = state.street_route.points().iter().map(|&q| at(q)).collect();
+        if street.len() >= 2 {
+            p.d.draw_spline_linear(&street, 7.0 * p.u, PLAN_CASING);
+            p.d.draw_spline_linear(&street, 4.0 * p.u, STREET_ROUTE);
         }
 
         // The plan: a white casing under a blue line, so it shows on any colour.
@@ -997,7 +1007,9 @@ fn panel(
         let health = state.health(t, now);
         let status = match (t, health) {
             // Latched or sent once: when it came means little; that it came, a lot.
-            (Topic::Map | Topic::Goal | Topic::Source, Health::Ok(_)) => "HEARD".to_owned(),
+            (Topic::Map | Topic::Goal | Topic::Source | Topic::StreetRoute, Health::Ok(_)) => {
+                "HEARD".to_owned()
+            }
             _ => format::health(health),
         };
         let colour = match health {
@@ -1008,7 +1020,11 @@ fn panel(
             Health::Never
                 if matches!(
                     t,
-                    Topic::Plan | Topic::Goal | Topic::Source | Topic::Watchdog
+                    Topic::Plan
+                        | Topic::Goal
+                        | Topic::Source
+                        | Topic::Watchdog
+                        | Topic::StreetRoute
                 ) =>
             {
                 DIM

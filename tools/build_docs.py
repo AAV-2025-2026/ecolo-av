@@ -64,6 +64,7 @@ PAGES = [
     ('status.md', 'Status', "What works, what's untested, what's missing"),
     ('howto-driver.md', 'Build a driver', 'A new driver, from an empty folder to the turtle'),
     ('costmaps.md', 'Costmaps', 'How Nav2 sees obstacles; draw your first map'),
+    ('routes.md', 'Street routes', 'A destination to GPS waypoints along real streets (Valhalla)'),
     ('perception.md', 'Perception', 'Cameras, YOLO, stop signs, lanes and radar'),
     ('older-code.md', 'Older code', "The previous teams' repos: what we have, what's missing"),
     ('ros2.md', 'ROS 2', 'Nodes, topics and tools; stock packages vs our code'),
