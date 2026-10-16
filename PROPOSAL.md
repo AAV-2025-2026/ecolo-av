@@ -102,6 +102,50 @@ The topics for all four already exist (`/vehicle/steering`, `/throttle`, `/brake
 
 The tests for each step, in order: [READ-ME-TESTS.md](READ-ME-TESTS.md).
 
+## 4b. The build plan (15 Oct)
+
+The same plan as [PLAN.md](PLAN.md), agreed with Ben on 15 Oct: what's left, split into software we
+can build now (S) and work that needs the car or the hardware lead (C). Hardware choices are
+the hardware lead's.
+
+### The path to the goal
+
+```text
+ now (software)          Friday           hardware lead        on the car
+ S1 A→B in Gazebo ──┐    C1 audit    ──►  C3 timeout     ──►  C8 stands → lot ──► C9 A→B 🎯
+ S2 spine in loop ──┼──► C2 measure  ──►  C4 sensors
+ S3 steering fix  ──┘                     C5 Jetson, Jazzy, C6 drivers, C7 install
+```
+
+### Software we can build now (no car)
+
+| # | Build | Why | Size | Status |
+|---|---|---|---|---|
+| S1 | **GPS A → B with a smooth stop**: speed by the distance left to B, slowing at half the measured braking g | the main goal (READ-ME-TESTS 5.2), proven in Gazebo first | 1 day | started 15 Oct |
+| S2 | **The spine in the loop** in Gazebo: ego → CAN → the spine's safety logic → the actuator model → Gazebo | timeouts and e-stops tested the way the car runs them | 1-2 days | started 15 Oct |
+| S3 | **Gazebo steering fix**: full lock turns 0.43 rad, not 0.5 | the sim should steer like the car | small | started 15 Oct |
+| S4 | **Ghost obstacles**: a pretend person in Nav2's map while the real car drives | test stopping on the car with nothing real to hit | 1 day | |
+| S5 | **Touchscreen keyboard** for the map's search | type a destination in the car | small | |
+| S6 | **Newer models**, on the same pictures and tasks: YOLO26 / RF-DETR vs YOLO11; Qwen3.5 / Gemma 4 / Granite vs Qwen3 | better or freer models | medium | |
+| S7 | **Python → Rust**: ego and the spine bridge (TEAM-TODO D7) | needs Ben's go-ahead | large | |
+| S8 | **OSRM street routes** | only for driving on real streets | medium | stretch |
+| S9 | **CARLA (the Unreal Engine 5 version)** next to Gazebo: photo-real cameras, traffic, towns | Ben asked 15 Oct (reopens Q31). No Mac version: needs Linux or Windows with an NVIDIA RTX card (16 GB of video memory or more). The ROS side (`aav_carla`) can be readied now; running it needs that machine | medium | research and adapter first |
+
+### Needs the car, or the hardware lead
+
+| # | Work | Who decides | Blocks |
+|---|---|---|---|
+| C1 | **The audit** (16 Oct): every computer, `best.pt`, camera code, the screens ([FRIDAY-TODO.md](FRIDAY-TODO.md)) | team | everything below |
+| C2 | **Measure and weigh** the car → `vehicle.yaml` ([READ-ME-MEASURE-THE-CAR.md](READ-ME-MEASURE-THE-CAR.md)) | team | an accurate sim |
+| C3 | ⚠️ **The safety timeout**: flash the Rust ESP32 or patch today's board (TEAM-TODO B2) | **hardware lead** | any drive on the ground |
+| C4 | **Closed-loop sensors**: steering angle from the Jrk, wheel speed (CAN boards or not), brake position | **hardware lead** | closed-loop control |
+| C5 | **Back up and upgrade the Jetson**, then Jazzy on every car computer | team | our software on the car |
+| C6 | **Drivers for the real parts**: the lidar (probably a Velodyne), the cameras from the Pis, the GPS | after C1 | full perception |
+| C7 | **Install**: the car kit, the two screens at boot ([docs/car-screens.md](docs/car-screens.md)) | after C5 | |
+| C8 | **Tests on stands, then in the lot**: `pixi run actuator-test` ([docs/actuator-tests.md](docs/actuator-tests.md)) | after C3 | real numbers |
+| C9 | **GPS A → B on the car** | after C3-C8 | 🎯 the goal |
+| C10 | A Gazebo copy of the real test lot | the lot chosen | |
+
 ## 5. Risks
 
 | Risk | What we do |
