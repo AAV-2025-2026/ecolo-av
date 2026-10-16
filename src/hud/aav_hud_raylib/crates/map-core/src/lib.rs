@@ -19,6 +19,7 @@
 //! | [`tilecache`] | the decoded tiles: what to draw, what to load, what to forget |
 //! | [`places`] | the place search: names and addresses from `ottawa.db` (SQLite) |
 //! | [`destination`] | the search box, picking a place, and whether it can be Nav2's goal |
+//! | [`keyboard`] | the on-screen keyboard for the search: where its keys are, which one a tap hit |
 //! | [`state`] | everything above, as one value the screen draws |
 
 pub mod car;
@@ -27,6 +28,7 @@ pub mod destination;
 pub mod earth;
 pub mod geom;
 pub mod grid;
+pub mod keyboard;
 pub mod places;
 pub mod pmtiles;
 pub mod route;

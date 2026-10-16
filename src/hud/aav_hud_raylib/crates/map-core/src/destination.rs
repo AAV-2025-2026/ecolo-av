@@ -93,7 +93,10 @@ pub enum Key {
     /// `/`, or a click on the box.
     Open,
     Char(char),
+    /// Removes the last letter (a whole letter: é is one, though two bytes).
     Backspace,
+    /// Empties the box (the on-screen keyboard's Clear).
+    Clear,
     Up,
     Down,
     Enter,
@@ -218,6 +221,14 @@ impl Finder {
                     Action::Search
                 } else {
                     Action::Nothing
+                }
+            }
+            (Step::Typing, Key::Clear) => {
+                if self.query.is_empty() {
+                    Action::Nothing
+                } else {
+                    self.query.clear();
+                    Action::Search
                 }
             }
             (Step::Typing, Key::Up) => {
@@ -411,5 +422,23 @@ mod tests {
         // Backspace on nothing: nothing to search.
         f.key(Key::Backspace, true);
         assert_eq!(f.key(Key::Backspace, true), Action::Nothing);
+    }
+
+    #[test]
+    fn backspace_takes_a_whole_letter_and_clear_empties() {
+        let mut f = Finder::new();
+        f.prefill("Côté");
+        assert_eq!(f.key(Key::Backspace, true), Action::Search);
+        assert_eq!(f.query(), "Côt");
+        f.key(Key::Backspace, true);
+        assert_eq!(f.query(), "Cô");
+        f.key(Key::Backspace, true);
+        assert_eq!(f.query(), "C");
+        assert_eq!(f.key(Key::Clear, true), Action::Search);
+        assert_eq!(f.query(), "");
+        assert_eq!(f.key(Key::Clear, true), Action::Nothing, "already empty");
+        // Closed, Clear does nothing.
+        f.key(Key::Escape, true);
+        assert_eq!(f.key(Key::Clear, true), Action::Nothing);
     }
 }
