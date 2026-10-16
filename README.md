@@ -6,7 +6,7 @@ Jetson AGX Orin and the Raspberry Pis); Pixi on Macs and other Linux machines.
 
 **Sensors become telemetry, drivers become one command, and ego moves the car.**
 
-> **The plan for the year:** [PROPOSAL.md](PROPOSAL.md): everything done so far, what's left, how sure we are.
+> **The plan for the year:** [PROPOSAL.md](PROPOSAL.md): everything done so far, what's left, how sure we are. What's left to build, in order: [PLAN.md](PLAN.md).
 >
 > **This Friday (16 Oct):** [FRIDAY-TODO.md](FRIDAY-TODO.md), the tick-list: log in to every
 > machine and survey it. [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md): the audit, the network,
