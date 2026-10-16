@@ -75,6 +75,7 @@ PAGES = [
     ('actuator-tests.md', 'Actuator tests', 'Measure how the car moves: on stands, in a lot'),
     ('mcp.md', 'AI apps (MCP)', 'Claude and other AI apps: read the project and the graph'),
     ('plain-english.md', 'Plain English', 'Type what the car should do; a model plans it'),
+    ('model-comparison.md', 'Newer models', 'YOLO26 and RF-DETR vs YOLO11; newer local LLMs'),
     ('firmware.md', 'Firmware', 'src vs firmware, the CAN contract, the spine'),
     ('can-plan.md', 'CAN plan', 'The KEFC CAN bus vs our CAN contract (Proposed)'),
     ('rust-firmware.md', 'Rust firmware', 'Rust on the chips: layers, frameworks, toolchains'),
