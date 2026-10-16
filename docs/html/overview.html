@@ -43,6 +43,7 @@
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -247,7 +248,7 @@ finder).</p>
 </tr>
 <tr>
 <td><code>aav_turtlesim</code>, <code>aav_gazebo</code>, <code>aav_carla</code></td>
-<td>the turtle, Gazebo's car, a CARLA stub</td>
+<td>the turtle, Gazebo's car, a CARLA car (untested)</td>
 <td>backends</td>
 </tr>
 <tr>
@@ -378,11 +379,6 @@ finder).</p>
 <td>Backends</td>
 <td><code>turtlesim</code>; <code>ros_gz</code> with Gazebo Harmonic</td>
 <td>the turtle; the simulated car</td>
-</tr>
-<tr>
-<td>Backends</td>
-<td><code>topic_tools</code></td>
-<td>renames CARLA's topics (stub)</td>
 </tr>
 <tr>
 <td>Watching</td>
@@ -567,10 +563,10 @@ finder).</p>
 <td>carried over</td>
 </tr>
 <tr>
-<td>CARLA's topic names</td>
-<td>2024-25 <code>carla_ros_bridge</code></td>
+<td>CARLA's axis rules</td>
+<td><code>carla-ros-bridge</code> (MIT)</td>
 <td><code>aav_carla</code></td>
-<td>stub</td>
+<td>rewritten, untested</td>
 </tr>
 </tbody>
 </table></div>
@@ -629,8 +625,8 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>Simulation</td>
-<td>CARLA, parked: no Jazzy support. Bench mode works: <a href="bench.html">Bench mode</a></td>
-<td><a href="simulation.html">Simulation</a></td>
+<td>CARLA: adapter ready, never run (needs the NVIDIA computer). Bench mode works: <a href="bench.html">Bench mode</a></td>
+<td><a href="carla.html">CARLA</a></td>
 </tr>
 <tr>
 <td>The team</td>

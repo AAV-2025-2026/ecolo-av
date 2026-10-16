@@ -119,7 +119,7 @@ From the design doc's next steps, in order.
 
 - Look at the Gazebo window and RViz on a Mac, and say what they show.
 - Make the bench's model car match the measured car (Q1-Q5), once it's measured.
-- CARLA, once it supports Jazzy (Q31).
+- CARLA on the NVIDIA computer: the adapter is ready ([CARLA](carla.md), Q31).
 
 ## Risks to keep in mind
 

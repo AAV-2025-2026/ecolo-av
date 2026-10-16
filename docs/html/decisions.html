@@ -43,6 +43,7 @@
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -288,7 +289,7 @@ answer.</p>
 </tr>
 <tr>
 <td>Simulators</td>
-<td>Gazebo and bench mode this year; CARLA parked until it supports Jazzy (Q31)</td>
+<td>Gazebo and bench mode every day; CARLA for the cameras, once the NVIDIA computer runs it (Q31, reopened 15 Oct)</td>
 </tr>
 </tbody>
 </table></div>
@@ -379,8 +380,8 @@ answer.</p>
 <td>Ben: "We want everybody to be able to build this out of the box"</td>
 </tr>
 <tr>
-<td>CARLA is parked for this year: Gazebo and bench mode cover driving, Nav2 and the sensors</td>
-<td>recommended, after Ben asked "do we even care": see Q31</td>
+<td>CARLA next to Gazebo, through our own adapter (CARLA's Python client), not its ROS 2 link</td>
+<td>reopened by Ben 15 Oct ("I think we want carla 5 not 4"): see Q31 and <a href="carla.html">CARLA</a></td>
 </tr>
 <tr>
 <td>The team's Linux machine with an NVIDIA card trains models. The 2024-25 <code>best.pt</code> is probably on it</td>
@@ -632,7 +633,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q31</td>
 <td>CARLA</td>
-<td>Parked this year: no confirmed Jazzy support (the fix was closed unmerged, 26 May 2026), and no Mac version. If it comes back: the NVIDIA Linux machine, with CARLA 0.9.16 (Unreal Engine 4) or 0.10 (Unreal Engine 5)</td>
+<td><strong>Reopened by Ben 15 Oct: research done, adapter ready, needs the NVIDIA machine.</strong> <code>carla_adapter</code> uses CARLA's Python client, so it runs with CARLA 0.10 (Unreal Engine 5) and 0.9.16 alike, without the ROS 2 link that stalls on Jazzy. Town10 on 0.10 for the cameras; Carleton's streets (from OpenStreetMap) only on 0.9.16 for now, as 0.10 can't import maps yet. Never run against a server: no Mac version (<a href="carla.html">CARLA</a>). Was: parked, 10 Oct</td>
 </tr>
 <tr>
 <td><strong>Q32</strong></td>

@@ -32,7 +32,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | CAN Pal | a small CAN transceiver board on the Orin's 40-pin header | Orin #1 (KEFC) |
 | CANable | a USB-to-CAN adapter for a laptop, to watch or test a bus | the bench test of CAN |
 | `candump` | a Linux command that prints every frame on a CAN bus | `candump can0` |
-| CARLA | a driving simulator; parked this year (Q31) | `src/backends/aav_carla` |
+| CARLA | a photo-real driving simulator, on Unreal Engine; next to Gazebo, for the cameras (Q31, [CARLA](carla.md)) | `src/backends/aav_carla` |
 | checksum, CRC | a few bits worked out from a message, so a garbled one is caught | every CAN frame (CRC-8) |
 | CI | Continuous Integration: GitHub runs the tests on every push | `.github/workflows/test.yml` |
 | colcon | the tool that builds a ROS workspace | `pixi run build` |

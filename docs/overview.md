@@ -52,7 +52,7 @@ finder).
 | `aav_interfaces` | our messages: `VehicleStatus`, `ScriptedDrive` | interfaces |
 | `aav_spine` | the real car: ego's commands as CAN frames | backends |
 | `aav_legacy` | today's car: the 2025-26 ESP32 and wheel encoder | backends |
-| `aav_turtlesim`, `aav_gazebo`, `aav_carla` | the turtle, Gazebo's car, a CARLA stub | backends |
+| `aav_turtlesim`, `aav_gazebo`, `aav_carla` | the turtle, Gazebo's car, a CARLA car (untested) | backends |
 | `aav_bringup` | the five profiles, the machine files (each picks its parts, perception too), the RViz layout | bringup |
 | `aav_spine_sim`, `aav_bench` | bench mode: the spine on a laptop, and pretend sensors | bench |
 | `firmware/can`, `spine-core`, `aav-inputs` | the CAN contract, the spine's logic, clean inputs | firmware |
@@ -83,7 +83,6 @@ finder).
 | The mux | `twist_mux` | picks one command, by priority |
 | Backends | `ros2_socketcan` | the CAN bus (Linux only) |
 | Backends | `turtlesim`; `ros_gz` with Gazebo Harmonic | the turtle; the simulated car |
-| Backends | `topic_tools` | renames CARLA's topics (stub) |
 | Watching | `rviz2`, `rqt_graph`, `rqt_tf_tree` | the 3D view, the node graph, the frame tree |
 | Watching | `foxglove_bridge` | Foxglove or Lichtblick on a laptop, on the car |
 | Recording | `rosbag2`, with MCAP files | `tools/record.sh` and replay |
@@ -124,7 +123,7 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | A YOLO stop-sign detector | 2024-25 `camera_ros2_ws` | `src/perception/aav_yolo` | rewritten: detections out, and a stop-sign watcher |
 | The car's geometry | 2025-26 `Motor_Steering` (`Ackermann.m`) | `vehicle.yaml`, `docs/reference/` | numbers carried over, still guesses |
 | The joystick's button map | 2025-26 `joy_teleop_ackerman` | `aav_teleop` | carried over |
-| CARLA's topic names | 2024-25 `carla_ros_bridge` | `aav_carla` | stub |
+| CARLA's axis rules | `carla-ros-bridge` (MIT) | `aav_carla` | rewritten, untested |
 
 Replaced by stock packages instead of copied: the 2025-26 path planners, obstacle
 avoidance, odometry and QNX layer. [The older code](older-code.md) has every repo.
@@ -141,5 +140,5 @@ avoidance, odometry and QNX layer. [The older code](older-code.md) has every rep
 | Navigation | the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount; a sensor behind the car before it reverses | [Costmaps](costmaps.md) |
 | Drivers | a first real joystick test; an e-stop message that can't get lost (N2) | [Starting points](team.md) |
 | The HUD | the build for the car's Pi; its tile server and OSRM route data. The map database downloads with `pixi run get-hud-map` | [HUD](hud.md) |
-| Simulation | CARLA, parked: no Jazzy support. Bench mode works: [Bench mode](bench.md) | [Simulation](simulation.md) |
+| Simulation | CARLA: adapter ready, never run (needs the NVIDIA computer). Bench mode works: [Bench mode](bench.md) | [CARLA](carla.md) |
 | The team | owners (Q33), the leaked secrets changed (Q34), backups before any reflash | [Work](work.md) |

@@ -259,6 +259,9 @@ folder downloaded, and moves into it as a fast-forward.
       *Done 11 Oct: `tools/elf2uf2.py`, and probe-rs in `vendor/cargo-tools`.*
 - [x] **CARLA: 4 or 5, and do we need it?** (20:54) *Parked this year: no Jazzy
       support, no Mac version. Gazebo and bench mode cover the car graph (Q31).*
+      *Reopened 15 Oct (Ben: "I think we want carla 5 not 4"): research, `carla_adapter`
+      through CARLA's Python client, and Carleton's OpenStreetMap download done
+      (docs/carla.md). Left: run it on the NVIDIA computer.*
 - [ ] **The small fixes** listed at the end of `docs/work.md`.
 
 ## The afternoon of 10-10: "merge in all of this", then "stub in the rest"

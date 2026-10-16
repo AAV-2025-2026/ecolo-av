@@ -43,6 +43,7 @@
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -192,8 +193,8 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tr>
 <td><code>aav_carla</code></td>
 <td>backends</td>
-<td>a CARLA adapter</td>
-<td><span class="badge b-stub">stub</span> never run</td>
+<td>a CARLA adapter (CARLA's Python client)</td>
+<td><span class="badge b-untested">untested</span> never run against a server</td>
 <td>new</td>
 </tr>
 <tr>
@@ -516,8 +517,8 @@ Only one runs at a time.</p>
 </tr>
 <tr>
 <td><code>aav_carla</code></td>
-<td><code>/carla/ego_vehicle/ackermann_cmd</code></td>
-<td>a stub</td>
+<td>CARLA's Python client (TCP to the server)</td>
+<td>the same sensor topics as Gazebo; untested (<a href="carla.html">CARLA</a>)</td>
 </tr>
 </tbody>
 </table></div>

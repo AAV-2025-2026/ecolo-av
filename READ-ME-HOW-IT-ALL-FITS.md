@@ -123,7 +123,7 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 | 3. Bench | `pixi run bench`, `pixi run bench-check` | pretend sensors, the real CAN frames, the spine's own logic | the car's software path, e-stops, Nav2, stop sign |
 | 4. Gazebo | `pixi run sim world:=road` (or `world:=test_lot`), every sensor on | 3D physics, every sensor | localization, Nav2, perception, A to B |
 | 5. Replay | `ros2 bag play` | a recorded drive | tuning the EKFs against real data |
-| 6. CARLA | parked | photoreal towns | not before it supports Jazzy (Q31) |
+| 6. CARLA | adapter ready, untested | photoreal towns, Carleton's streets | needs the NVIDIA computer (Q31; docs/carla.md) |
 | 7. Car on stands | `pixi run car orin` + `motor_pi` | the real boards, wheels in the air | signs, limits, the drive path |
 | 8. Car | the same, on the ground | everything | with a safety driver |
 

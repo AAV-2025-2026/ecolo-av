@@ -43,6 +43,7 @@
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -996,39 +997,39 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tbody>
 <tr>
 <td><strong>Does</strong></td>
-<td>would connect the stack to the CARLA simulator</td>
+<td>a CARLA car as the car: the same topics as Gazebo's, from CARLA's Python client</td>
 </tr>
 <tr>
 <td><strong>Why</strong></td>
-<td>a richer simulator, one day</td>
+<td>photo-real towns and cameras; Carleton's streets from OpenStreetMap (<a href="carla.html">CARLA</a>)</td>
 </tr>
 <tr>
 <td><strong>Runs on</strong></td>
-<td>nowhere yet</td>
+<td>a Linux x86_64 computer that can reach a CARLA server (TCP 2000-2001); not a Mac</td>
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/ego/actuator_cmd</code> → <code>/carla/ego_vehicle/ackermann_cmd</code>; <code>/vehicle/odom</code></td>
+<td><code>/ego/actuator_cmd</code>, <code>/safety/estop</code> → odom, status, IMU, GPS, cameras, radar, lidar, <code>/clock</code>, <code>/vehicle/carla/truth</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
-<td>ours, to the topic names the 2024-25 team used</td>
+<td>ours (15 Oct); the axis rules follow carla-ros-bridge (MIT)</td>
 </tr>
 <tr>
 <td><strong>Status</strong></td>
-<td><span class="badge b-stub">stub</span> never run: CARLA's ROS bridge doesn't support Jazzy (Q31)</td>
+<td><span class="badge b-untested">untested</span> built and tested without a server; never run against CARLA (Q31)</td>
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
-<td><code>ros2 launch aav_carla carla.launch.py</code> (needs CARLA)</td>
+<td><code>ros2 launch aav_carla carla.launch.py host:=&lt;server&gt;</code>; the whole stack: <code>pixi run carla-car host:=&lt;server&gt;</code></td>
 </tr>
 <tr>
 <td><strong>Test</strong></td>
-<td>none</td>
+<td><code>test/</code> (78, no CARLA needed: a pretend <code>carla</code> module); <code>aav_bringup</code> <code>test_carla_launch.py</code></td>
 </tr>
 <tr>
 <td><strong>Read first</strong></td>
-<td><code>aav_carla/carla_adapter.py</code></td>
+<td><code>aav_carla/carla_adapter.py</code>, then <code>frames.py</code> and <code>link.py</code></td>
 </tr>
 </tbody>
 </table></div>

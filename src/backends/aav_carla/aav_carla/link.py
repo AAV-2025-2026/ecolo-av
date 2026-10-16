@@ -6,7 +6,7 @@ The `carla` module is handed in, not imported here, so this file loads, and its 
 load_carla() imports the real one, when carla_adapter starts.
 
 The client must be the server's own version: the wheel in the server's
-PythonAPI/carla/dist/ (CARLA 0.10, Unreal Engine 5), or `pip install carla==0.9.16`
+PythonAPI/ folder (CARLA 0.10, Unreal Engine 5: not on PyPI), or `pip install carla==0.9.16`
 (Unreal Engine 4). Both are for Linux x86_64 and Windows only: there is no macOS client,
 so carla_adapter runs on a Linux computer (docs/carla.md).
 """
@@ -25,7 +25,7 @@ def load_carla():
     except ImportError as e:
         raise RuntimeError(
             "no CARLA Python client here (import carla failed). Install the server's own: "
-            'pip install <server>/PythonAPI/carla/dist/carla-*-cp312-*.whl (CARLA 0.10), or '
+            'pip install the carla-*-cp312-*.whl in its PythonAPI folder (CARLA 0.10), or '
             'pip install carla==0.9.16. Linux x86_64 or Windows only: see docs/carla.md') from e
     return carla
 

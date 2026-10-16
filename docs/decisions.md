@@ -68,7 +68,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Git | `main` lives on GitHub, in `zander1976/aav` (public), and CI tests every push; small commits, each passing the tests, with messages that give the intention |
 | Docs | short pages, sections, tables and pictures; Ben is dyslexic |
 | Port first | move everything to Jazzy as it is, then consider rewriting parts in Rust |
-| Simulators | Gazebo and bench mode this year; CARLA parked until it supports Jazzy (Q31) |
+| Simulators | Gazebo and bench mode every day; CARLA for the cameras, once the NVIDIA computer runs it (Q31, reopened 15 Oct) |
 
 ## Decided on 10 October, on the Mac
 
@@ -93,7 +93,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Inference: TensorRT on the Orin (a `.engine` built there), Core ML on the MacBook Pro (a `.mlpackage`), both in our `aav_yolo` node. Isaac ROS's TensorRT detectors are the Orin's upgrade path | Ben, 10 Oct: "TensorRT on the Orin and CoreML ... on the macbook pro" |
 | A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own `mcp` environment | Ben: "Yes, read-only": see [AI apps (MCP)](mcp.md) |
 | Today's C++ boards build with PlatformIO, in a `firmware` environment. Its downloads go into `vendor/platformio/` | Ben: "We want everybody to be able to build this out of the box" |
-| CARLA is parked for this year: Gazebo and bench mode cover driving, Nav2 and the sensors | recommended, after Ben asked "do we even care": see Q31 |
+| CARLA next to Gazebo, through our own adapter (CARLA's Python client), not its ROS 2 link | reopened by Ben 15 Oct ("I think we want carla 5 not 4"): see Q31 and [CARLA](carla.md) |
 | The team's Linux machine with an NVIDIA card trains models. The 2024-25 `best.pt` is probably on it | Ben |
 
 ## Decided on 11 October
@@ -165,7 +165,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 | Q28 | Joystick handover | When the hold-to-drive button is released, go back to the autonomous driver, or stay stopped? |
 | Q29 | HUD | Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? Partly answered 11 Oct: a raylib HUD replaces the app once it matches |
 | Q30 | Remote driving | In scope this year? Over which link, with what latency limit? |
-| Q31 | CARLA | Parked this year: no confirmed Jazzy support (the fix was closed unmerged, 26 May 2026), and no Mac version. If it comes back: the NVIDIA Linux machine, with CARLA 0.9.16 (Unreal Engine 4) or 0.10 (Unreal Engine 5) |
+| Q31 | CARLA | **Reopened by Ben 15 Oct: research done, adapter ready, needs the NVIDIA machine.** `carla_adapter` uses CARLA's Python client, so it runs with CARLA 0.10 (Unreal Engine 5) and 0.9.16 alike, without the ROS 2 link that stalls on Jazzy. Town10 on 0.10 for the cameras; Carleton's streets (from OpenStreetMap) only on 0.9.16 for now, as 0.10 can't import maps yet. Never run against a server: no Mac version ([CARLA](carla.md)). Was: parked, 10 Oct |
 | **Q32** | Test rules | Who is the safety driver, what's the speed cap, what's on the pre-drive checklist, who signs it off? |
 | **Q33** | Owners | Who owns each package? |
 | **Q34** | Secrets | Have the leaked GitHub token, Firebase keys and WiFi password been revoked or changed? Who controls those accounts? |

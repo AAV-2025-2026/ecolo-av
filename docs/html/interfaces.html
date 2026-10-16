@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">27 min read · 4 sections</div></header>
+<div class="meta">28 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -43,6 +43,7 @@
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -194,7 +195,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>joy_teleop</code>, <code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
-<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code></td>
+<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>carla_adapter</code></td>
 <td>-</td>
 <td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.</td>
 </tr>
@@ -217,7 +218,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/system/source</code></td>
 <td><code>aav_interfaces/msg/DataSource</code></td>
-<td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>replay_source</code></td>
+<td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>replay_source</code>, <code>carla_adapter</code></td>
 <td><code>hud</code>, <code>map</code>, <code>actuator_test</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.</td>
@@ -233,7 +234,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/vehicle/status</code></td>
 <td><code>aav_interfaces/msg/VehicleStatus</code></td>
-<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code></td>
 <td><code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
 <td>turtle, sim, bench</td>
 <td>Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.</td>
@@ -241,7 +242,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/vehicle/steering</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
-<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code></td>
 <td><code>actuator_test</code></td>
 <td>turtle, sim, bench</td>
 <td>The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too.</td>
@@ -249,7 +250,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/vehicle/throttle</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
-<td><code>spine_bridge</code>, <code>gazebo_adapter</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>actuator_test</code></td>
 <td>sim, bench</td>
 <td>The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.</td>
@@ -257,7 +258,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/vehicle/brake</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
-<td><code>spine_bridge</code>, <code>gazebo_adapter</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>actuator_test</code></td>
 <td>sim, bench</td>
 <td>The brake, 0..1. As /vehicle/throttle.</td>
@@ -265,7 +266,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/vehicle/wheels</code></td>
 <td><code>aav_interfaces/msg/WheelSpeeds</code></td>
-<td><code>gazebo_adapter</code>, <code>spine_bridge</code></td>
+<td><code>gazebo_adapter</code>, <code>spine_bridge</code>, <code>carla_adapter</code></td>
 <td><code>actuator_test</code></td>
 <td>sim, bench</td>
 <td>Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. The 2025-26 car (aav_legacy) has one encoder, read only as /vehicle/odom.</td>
@@ -305,7 +306,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/imu/data_raw</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
-<td><code>imu_node</code>, <code>gazebo_adapter</code>, <code>mock_imu</code></td>
+<td><code>imu_node</code>, <code>gazebo_adapter</code>, <code>mock_imu</code>, <code>carla_adapter</code></td>
 <td><code>imu_filter_madgwick</code>, <code>actuator_test</code></td>
 <td>sim, car, replay, bench</td>
 <td>Gyro and accelerometer in imu_link, with covariances; no orientation.</td>
@@ -329,7 +330,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
-<td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code></td>
+<td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code>, <code>carla_adapter</code></td>
 <td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
 <td>sim, car, replay, bench</td>
 <td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
@@ -361,7 +362,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/radar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
-<td><code>radar</code>, <code>mock_radar</code>, <code>gazebo_adapter</code></td>
+<td><code>radar</code>, <code>mock_radar</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
 <td>The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_adapter makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.</td>
@@ -385,7 +386,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_adapter</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
 <td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_adapter first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its camera fault (freeze, stop).</td>
@@ -401,7 +402,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/front_left/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
-<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>carla_adapter</code></td>
 <td><code>lane_finder</code>, <code>camera_obstacles</code></td>
 <td>bench, road</td>
 <td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.</td>
@@ -409,7 +410,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/front_right/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>gz_road_bridge</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
 <td>-</td>
 <td>road</td>
 <td>The front right camera, beside the left one (camera_right_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.</td>
@@ -417,7 +418,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/front_right/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
-<td><code>gz_road_bridge</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
 <td>-</td>
 <td>road</td>
 <td>Its lens. In Gazebo, the same as the front left camera's.</td>
@@ -425,7 +426,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/rear/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>gz_road_bridge</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
 <td>-</td>
 <td>road</td>
 <td>The rear camera, looking back (the orange housing on the tailgate) (camera_rear_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.</td>
@@ -433,7 +434,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/rear/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
-<td><code>gz_road_bridge</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
 <td>-</td>
 <td>road</td>
 <td>Its lens. In Gazebo, the same as the front left camera's.</td>
@@ -441,7 +442,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/lidar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
-<td><code>gz_lidar_bridge</code></td>
+<td><code>gz_lidar_bridge</code>, <code>carla_adapter</code></td>
 <td><code>lidar_scan</code></td>
 <td>road</td>
 <td>Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6), so car.launch.py's lidar:=false is the default. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.</td>
@@ -575,6 +576,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges and gazebo_adapter.</td>
 </tr>
 <tr>
+<td><code>/vehicle/carla/truth</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>carla_adapter</code></td>
+<td>-</td>
+<td>-</td>
+<td>Where the CARLA car really is (base_link in the map frame, each CARLA step), like /vehicle/gazebo/truth. The map frame is CARLA's world when its map is built round the datum (a Carleton map, osm:=), else the spawn point facing east (aav_carla frames.map_frame). Nothing on the car's side reads it. carla_adapter (aav_bringup carla.launch.py, pixi run carla-car) has never run against a CARLA server, so no profile checks its topics yet (docs/carla.md).</td>
+</tr>
+<tr>
 <td><code>/localization/odom/local</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_local</code></td>
@@ -657,7 +666,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/clock</code></td>
 <td><code>rosgraph_msgs/msg/Clock</code></td>
-<td><code>gz_bridge</code></td>
+<td><code>gz_bridge</code>, <code>carla_adapter</code></td>
 <td>-</td>
 <td>sim, replay</td>
 <td>Simulation time; every node runs with use_sim_time:=true in sim and replay.</td>

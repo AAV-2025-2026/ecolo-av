@@ -30,7 +30,7 @@ left, and in what order.
 | S6 | **Newer models**, on the same pictures and tasks: YOLO26 / RF-DETR vs YOLO11; Qwen3.5 / Gemma 4 / Granite vs Qwen3 | better or freer models | medium | |
 | S7 | **Python → Rust**: ego and the spine bridge (TEAM-TODO D7) | needs Ben's go-ahead | large | |
 | S8 | **OSRM street routes** | only for driving on real streets | medium | stretch |
-| S9 | **CARLA (the Unreal Engine 5 version)** next to Gazebo: photo-real cameras, traffic, towns | Ben asked 15 Oct (reopens Q31). No Mac version: needs Linux or Windows with an NVIDIA RTX card (16 GB of video memory or more). The ROS side (`aav_carla`) can be readied now; running it needs that machine | medium | research and adapter first |
+| S9 | **CARLA (the Unreal Engine 5 version)** next to Gazebo: photo-real cameras, traffic, towns | Ben asked 15 Oct (reopens Q31). No Mac version: needs Linux or Windows with an NVIDIA RTX card (16 GB of video memory or more). [CARLA](docs/carla.md): Town10 on 0.10 (UE5); Carleton's streets from OpenStreetMap on 0.9.16 (UE5 can't import maps yet) | medium | **research done, adapter built and tested without a server (15 Oct); never run: needs the NVIDIA machine** |
 
 ## Needs the car, or the hardware lead
 

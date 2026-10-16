@@ -24,7 +24,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_legacy` | backends | today's car: the 2025-26 ESP32 over UART, and the wheel encoder | [[untested]] on the car | new, for the 2025-26 protocols |
 | `aav_turtlesim` | backends | turtlesim, steered like the car | [[works]] | new |
 | `aav_gazebo` | backends | Gazebo's car behind the real car's topics | [[works]] headless | new |
-| `aav_carla` | backends | a CARLA adapter | [[stub]] never run | new |
+| `aav_carla` | backends | a CARLA adapter (CARLA's Python client) | [[untested]] never run against a server | new |
 | `aav_interfaces` | interfaces | our messages: `VehicleStatus`, `ScriptedDrive` | [[works]] builds | new |
 | `aav_bringup` | bringup | the five profiles, perception on the car, the machine files, the RViz layout | [[works]] turtle, sim, replay, bench | new |
 | `aav_yolo` | perception | YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
@@ -95,7 +95,7 @@ Only one runs at a time.
 | `aav_legacy` | 13-byte UART frames to today's ESP32 (`/dev/ttyAMA0`) | `encoder_udp`: the wheel encoder's UDP packets into `/vehicle/odom` |
 | `aav_turtlesim` | `/turtle1/cmd_vel` | |
 | `aav_gazebo` | `/gazebo/cmd_vel` | turns Gazebo's IMU and GPS into `/sensors/imu/data_raw` and `/sensors/gps/fix` |
-| `aav_carla` | `/carla/ego_vehicle/ackermann_cmd` | a stub |
+| `aav_carla` | CARLA's Python client (TCP to the server) | the same sensor topics as Gazebo; untested ([CARLA](carla.md)) |
 
 ## Bench mode
 

@@ -43,6 +43,7 @@
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
 <a class="here" href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -61,7 +62,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#the-road-world-the-cars-whole-graph">The road world: the car&#x27;s whole graph</a><a href="#sensor-failures-on-purpose">Sensor failures on purpose</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-parked">CARLA: parked</a><a href="#when-nothing-moves">When nothing moves</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#the-road-world-the-cars-whole-graph">The road world: the car&#x27;s whole graph</a><a href="#sensor-failures-on-purpose">Sensor failures on purpose</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-reopened">CARLA: reopened</a><a href="#when-nothing-moves">When nothing moves</a></nav>
 <div class="lead"><p>Every backend takes the same <code>/ego/actuator_cmd</code>, so the drivers, mux, ego and
 localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
 the ladder one rung at a time.</p>
@@ -1217,20 +1218,18 @@ the car.</p>
 <p><code>tools/replay_commands.sh bags/&lt;the bag&gt;</code> plays the recorded commands back into the mux
 as <code>replay</code> (priority 40). It's open loop, so the car drifts from the original path.</p>
 </section>
-<section class="card"><h2 id="carla-parked">CARLA: parked</h2>
+<section class="card"><h2 id="carla-reopened">CARLA: reopened</h2>
 <ul>
-<li><strong>What it is:</strong> a full self-driving simulator, with towns, traffic and photoreal
-  cameras. It's the right tool for testing cameras.</li>
-<li><strong>Two versions:</strong> CARLA 0.9.16 (Sept 2025) runs on Unreal Engine 4; CARLA 0.10
-  (Dec 2024) on Unreal Engine 5, and it's heavier.</li>
-<li><strong>Why not now:</strong> its built-in ROS 2 link stalls on Jazzy
-  (<a href="https://github.com/carla-simulator/carla/issues/9551">issue 9551</a>); the fix was closed
-  without merging on 26 May 2026. It has no Mac version, and wants an NVIDIA GPU with
-  8 GB or more.</li>
-<li><strong>Parked (10 Oct):</strong> Gazebo and bench mode already drive the whole car graph: Nav2,
-  the sensors and the e-stops. If perception needs realistic streets later, it can run on
-  the team's NVIDIA Linux machine, once it supports Jazzy (Q31).</li>
-<li><strong>Ours:</strong> <code>aav_carla</code> is a stub that has never run.</li>
+<li><strong>What it is:</strong> a full self-driving simulator, with towns, traffic and photo-real
+  cameras: the right tool for testing the cameras.</li>
+<li><strong>Reopened by Ben (15 Oct):</strong> "I think we want carla 5 not 4". The research, the two
+  versions side by side, and a digital twin of Carleton: <a href="carla.html">CARLA</a>.</li>
+<li><strong>Ours:</strong> <code>aav_carla</code>'s <code>carla_adapter</code> talks to CARLA through its Python client, so it
+  doesn't need CARLA's ROS 2 link, which stalls on Jazzy
+  (<a href="https://github.com/carla-simulator/carla/issues/9551">issue 9551</a>).
+  <code>pixi run carla-car host:=&lt;the CARLA computer&gt;</code>.</li>
+<li><strong>Not yet run:</strong> CARLA has no Mac version. It needs the team's NVIDIA Linux computer
+  (16 GB of video memory for the Unreal Engine 5 version) or a cloud GPU.</li>
 </ul>
 </section>
 <section class="card"><h2 id="when-nothing-moves">When nothing moves</h2>
@@ -1282,7 +1281,7 @@ as <code>replay</code> (priority 40). It's open loop, so the car drifts from the
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="mac.html"><small>Previous</small>← Your Mac</a>
-<a class="next" href="bench.html"><small>Next</small>Bench mode →</a></nav>
+<a class="next" href="carla.html"><small>Next</small>CARLA →</a></nav>
 </main>
 <footer>Source: <code>docs/simulation.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

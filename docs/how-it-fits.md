@@ -94,7 +94,7 @@ Most of the numbers are still guesses: see [Car numbers](car_measurements.md).
 | Today's car | `aav_legacy` | into UART frames, for the 2025-26 ESP32 firmware |
 | turtlesim | `aav_turtlesim` | the stock turtlesim, steered with the bicycle model |
 | Gazebo | `aav_gazebo` | a simulated car with an IMU and GPS, on the real car's topics |
-| CARLA | `aav_carla` | a stub, parked (Q31) |
+| CARLA | `aav_carla` | adapter ready, untested: needs the NVIDIA computer ([CARLA](carla.md)) |
 
 Each backend reports the car's speed back on `/vehicle/odom`. That closes the loop into
 the EKFs.

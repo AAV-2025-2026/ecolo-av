@@ -851,6 +851,14 @@ Ben's brief, over several messages:
 
 > **Revised:** the doc's test ladder put CARLA second. The latest pick is Gazebo this year, and CARLA next year.
 
+### Would it be possible to get CARLA 5 running too? Do they have the digital twin for Ottawa? (Ben, 15 Oct: "I think we want carla 5 not 4")
+
+- **Yes, on the NVIDIA computer, not a Mac.** CARLA 0.10 (Unreal Engine 5.5, Dec 2024) is still the only UE5 release; it wants an RTX 3070 or better with 16 GB of video memory, Ubuntu 22.04 or Windows 11. No Mac build, no Mac Python client.
+- **How it connects:** our own `carla_adapter`, through CARLA's Python client (TCP), not CARLA's ROS 2 link, which stalls on Jazzy (issue 9551), and not carla-ros-bridge (no Jazzy release; last commit 2022). The same adapter runs 0.10 and 0.9.16.
+- **What UE5 lacks today:** only Town10 and Mine01, daylight only, no OpenDRIVE or OpenStreetMap import, no Digital Twin Tool.
+- **Ottawa:** no ready-made map. We build Carleton's from OpenStreetMap, round our navsat datum, so CARLA's GPS lines up with Nav2 and the map window (`pixi run get-carla-osm`, then `osm:=`). That needs CARLA 0.9.16 (Unreal Engine 4) until UE5 imports maps.
+- **State:** built and tested without a server; never run. [CARLA](../carla.md).
+
 ## Documentation requests and the hardware list
 
 ### We might want to port the code to Jazzy too, since there may be better implementations there. Add this to the docs.
@@ -1343,6 +1351,7 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 
 ## Open threads
 
+- **CARLA (15 Oct, Q31 reopened):** the adapter and Carleton's map download are ready and tested without a server. Left: run it on the NVIDIA computer (0.10 for Town10, 0.9.16 for Carleton's streets), and check the IMU's roll and pitch signs, the radar's speed sign and the GPS line-up ([CARLA](../carla.md)).
 - **Plain English (15 Oct):** works in Gazebo and the turtle; untested on the bench and
   the car. Before the car: the scripted driver on stands, steering feedback, a safety
   driver on the joystick.

@@ -294,15 +294,15 @@ Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle
 
 | | |
 |---|---|
-| **Does** | would connect the stack to the CARLA simulator |
-| **Why** | a richer simulator, one day |
-| **Runs on** | nowhere yet |
-| **In → out** | `/ego/actuator_cmd` → `/carla/ego_vehicle/ackermann_cmd`; `/vehicle/odom` |
-| **Origin** | ours, to the topic names the 2024-25 team used |
-| **Status** | [[stub]] never run: CARLA's ROS bridge doesn't support Jazzy (Q31) |
-| **Run alone** | `ros2 launch aav_carla carla.launch.py` (needs CARLA) |
-| **Test** | none |
-| **Read first** | `aav_carla/carla_adapter.py` |
+| **Does** | a CARLA car as the car: the same topics as Gazebo's, from CARLA's Python client |
+| **Why** | photo-real towns and cameras; Carleton's streets from OpenStreetMap ([CARLA](carla.md)) |
+| **Runs on** | a Linux x86_64 computer that can reach a CARLA server (TCP 2000-2001); not a Mac |
+| **In → out** | `/ego/actuator_cmd`, `/safety/estop` → odom, status, IMU, GPS, cameras, radar, lidar, `/clock`, `/vehicle/carla/truth` |
+| **Origin** | ours (15 Oct); the axis rules follow carla-ros-bridge (MIT) |
+| **Status** | [[untested]] built and tested without a server; never run against CARLA (Q31) |
+| **Run alone** | `ros2 launch aav_carla carla.launch.py host:=<server>`; the whole stack: `pixi run carla-car host:=<server>` |
+| **Test** | `test/` (78, no CARLA needed: a pretend `carla` module); `aav_bringup` `test_carla_launch.py` |
+| **Read first** | `aav_carla/carla_adapter.py`, then `frames.py` and `link.py` |
 
 ## Perception
 

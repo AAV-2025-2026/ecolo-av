@@ -525,20 +525,18 @@ the car.
 `tools/replay_commands.sh bags/<the bag>` plays the recorded commands back into the mux
 as `replay` (priority 40). It's open loop, so the car drifts from the original path.
 
-## CARLA: parked
+## CARLA: reopened
 
-- **What it is:** a full self-driving simulator, with towns, traffic and photoreal
-  cameras. It's the right tool for testing cameras.
-- **Two versions:** CARLA 0.9.16 (Sept 2025) runs on Unreal Engine 4; CARLA 0.10
-  (Dec 2024) on Unreal Engine 5, and it's heavier.
-- **Why not now:** its built-in ROS 2 link stalls on Jazzy
-  ([issue 9551](https://github.com/carla-simulator/carla/issues/9551)); the fix was closed
-  without merging on 26 May 2026. It has no Mac version, and wants an NVIDIA GPU with
-  8 GB or more.
-- **Parked (10 Oct):** Gazebo and bench mode already drive the whole car graph: Nav2,
-  the sensors and the e-stops. If perception needs realistic streets later, it can run on
-  the team's NVIDIA Linux machine, once it supports Jazzy (Q31).
-- **Ours:** `aav_carla` is a stub that has never run.
+- **What it is:** a full self-driving simulator, with towns, traffic and photo-real
+  cameras: the right tool for testing the cameras.
+- **Reopened by Ben (15 Oct):** "I think we want carla 5 not 4". The research, the two
+  versions side by side, and a digital twin of Carleton: [CARLA](carla.md).
+- **Ours:** `aav_carla`'s `carla_adapter` talks to CARLA through its Python client, so it
+  doesn't need CARLA's ROS 2 link, which stalls on Jazzy
+  ([issue 9551](https://github.com/carla-simulator/carla/issues/9551)).
+  `pixi run carla-car host:=<the CARLA computer>`.
+- **Not yet run:** CARLA has no Mac version. It needs the team's NVIDIA Linux computer
+  (16 GB of video memory for the Unreal Engine 5 version) or a cloud GPU.
 
 ## When nothing moves
 
