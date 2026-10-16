@@ -82,11 +82,12 @@ src/<layer>/aav_<what>/
 ROS 2 quirk, found 15 Oct: if a launch file sets a **global** parameter (`SetParameter`,
 as `sim.launch.py` does for `use_sim_time`), then a YAML file that **names the node**
 (`ego:`) beats any dict passed **after** it. The override is ignored, with no warning.
-`sim_speed:=3` left ego at 1.0 m/s that way.
+`sim_speed:=3` left ego at 1.0 m/s that way, and (again, 15 Oct) `watchdog:=false` left
+twist_mux's sensors lock at its 1 s timeout, so Nav2 never drove.
 
 | Do | Don't |
 |---|---|
-| Load the YAML yourself and pass it as a dict (`ego.launch.py`), or edit a copy of the file (`navigation.launch.py`'s `faster_copy`) | put a node-named YAML file first and trust a later dict to override it |
+| Load the YAML yourself and pass it as a dict (`ego.launch.py`), edit a copy of the file (`navigation.launch.py`'s `faster_copy`), or pass a second node-named YAML file after the first (`aav_mux`'s `no_sensor_lock.yaml`) | put a node-named YAML file first and trust a later dict to override it |
 | Check the live value: `ros2 param get /<node> <name>` | trust the launch file |
 
 ## Style, and what checks it

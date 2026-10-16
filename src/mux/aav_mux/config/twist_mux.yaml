@@ -62,4 +62,4 @@ twist_mux:
         priority: 30            # of silence (it died, hung, or never started) holds them too.
                                 # Priority 30, as the stop sign: never a person or a test.
                                 # Profiles with no watchdog (the turtle) start the mux with
-                                # sensor_lock:=false, which sets this timeout to 0 (mux.launch.py).
+                                # sensor_lock:=false: no_sensor_lock.yaml sets this timeout to 0.

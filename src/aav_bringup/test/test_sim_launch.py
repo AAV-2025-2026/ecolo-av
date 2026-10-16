@@ -151,11 +151,20 @@ def test_the_mux_needs_the_watchdogs_heartbeat_only_where_it_runs():
 MUX = load('aav_mux', 'mux.launch.py')
 
 
+def mux_files(**args):
+    """Return the parameter files mux.launch.py gives twist_mux, in order."""
+    context = context_for(MUX, **args)
+    node = MUX.mux(context)[0]
+    return [os.path.basename(str(p))
+            for p in evaluate_parameters(context, node._Node__parameters)
+            if not isinstance(p, dict)]
+
+
 def test_the_mux_lock_is_fail_safe_unless_told_no_watchdog_runs():
-    on = MUX.mux(context_for(MUX))[0]
-    assert 'locks.sensors.timeout' not in parameters(on)      # the file's 1 s: silence locks
-    off = MUX.mux(context_for(MUX, sensor_lock='false'))[0]
-    assert parameters(off)['locks.sensors.timeout'] == 0.0
+    # twist_mux.yaml's 1 s timeout: silence locks.
+    assert mux_files() == ['twist_mux.yaml']
+    # After it, under the same node name, so it wins: a dict (/**) would lose to it.
+    assert mux_files(sensor_lock='false') == ['twist_mux.yaml', 'no_sensor_lock.yaml']
     with pytest.raises(ValueError, match='sensor_lock'):
         MUX.mux(context_for(MUX, sensor_lock='maybe'))
 
