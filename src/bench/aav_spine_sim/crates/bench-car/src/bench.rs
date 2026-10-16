@@ -16,6 +16,7 @@ use spine_core::protocol::{VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID};
 use spine_core::{Inputs, Outputs, Spine, SpineConfig};
 use wheel_core::{ConfigError, WheelConfig, WheelNode};
 
+use crate::car::Car;
 use crate::plant::{Plant, PlantConfig, Pose};
 
 /// How often the spine sends each frame (ms), from firmware/can/aav.dbc.
@@ -35,9 +36,11 @@ pub const BENCH_WHEELS: WheelConfig = WheelConfig {
 /// One CAN frame: an 11-bit ID and 8 data bytes.
 pub type Frame = (u16, [u8; 8]);
 
-pub struct Bench {
+/// The spine and the car it drives: the bench's model car ([`Plant`], the default) or
+/// one measured elsewhere, such as Gazebo's ([`crate::MeasuredCar`]).
+pub struct Bench<C: Car = Plant> {
     spine: Spine,
-    plant: Plant,
+    plant: C,
     now_ms: u32,
     since_feedback_ms: u32,
     since_status_ms: u32,
@@ -51,16 +54,29 @@ pub struct Bench {
     since_wheels_ms: u32,
 }
 
-impl Bench {
+impl Bench<Plant> {
+    /// The spine driving the bench's model car, from `start`.
     pub fn new(
         spine: SpineConfig,
         plant: PlantConfig,
         start: Pose,
         wheels: WheelConfig,
     ) -> Result<Self, ConfigError> {
+        Bench::with_car(spine, Plant::new(plant, start), wheels)
+    }
+
+    /// Where the model car is: the ground truth.
+    pub fn pose(&self) -> Pose {
+        self.plant.pose()
+    }
+}
+
+impl<C: Car> Bench<C> {
+    /// The spine driving any car: the model, or one measured elsewhere.
+    pub fn with_car(spine: SpineConfig, car: C, wheels: WheelConfig) -> Result<Self, ConfigError> {
         Ok(Bench {
             spine: Spine::new(spine),
-            plant: Plant::new(plant, start),
+            plant: car,
             now_ms: 0,
             since_feedback_ms: 0,
             since_status_ms: 0,
@@ -100,13 +116,12 @@ impl Bench {
     /// Run the spine and the model for `dt_ms`, and return the frames due.
     pub fn tick(&mut self, dt_ms: u32) -> Vec<Frame> {
         self.now_ms = self.now_ms.wrapping_add(dt_ms);
-        let pose = self.plant.pose();
         let inputs = Inputs {
             now_ms: self.now_ms,
             hw_estop: self.hw_estop,
             rc: None,
-            measured_speed: pose.speed,
-            measured_steering: pose.steering,
+            measured_speed: self.plant.speed(),
+            measured_steering: self.plant.steering(),
             driver_faults: self.driver_faults,
             ..core::mem::take(&mut self.pending)
         };
@@ -131,10 +146,11 @@ impl Bench {
         self.since_status_ms += dt_ms;
         if self.since_feedback_ms >= FEEDBACK_PERIOD_MS {
             self.since_feedback_ms -= FEEDBACK_PERIOD_MS;
-            let p = self.plant.pose();
-            let data = self
-                .spine
-                .feedback_frame(p.speed, p.steering, self.plant.wheel_ticks());
+            let data = self.spine.feedback_frame(
+                self.plant.speed(),
+                self.plant.steering(),
+                self.plant.wheel_ticks(),
+            );
             frames.push((VEHICLE_FEEDBACK_ID, data));
         }
         if self.since_status_ms >= STATUS_PERIOD_MS {
@@ -167,9 +183,14 @@ impl Bench {
         }
     }
 
-    /// Where the model car is: the ground truth.
-    pub fn pose(&self) -> Pose {
-        self.plant.pose()
+    /// The car the spine drives.
+    pub fn car(&self) -> &C {
+        &self.plant
+    }
+
+    /// The car the spine drives, to give it new measurements.
+    pub fn car_mut(&mut self) -> &mut C {
+        &mut self.plant
     }
 
     /// What the spine wrote to the actuators on the last tick.
@@ -390,5 +411,69 @@ mod tests {
             // 8 m or so at 0.118 m a hole.
             assert!(w.pulse_count > 40, "{}", w.pulse_count);
         }
+    }
+
+    /// The spine driving a car that something else moves (Gazebo): the same logic.
+    #[test]
+    fn a_measured_car_gets_the_same_spine_and_its_watchdog() {
+        use crate::MeasuredCar;
+        let mut bench = Bench::with_car(
+            SpineConfig::default(),
+            MeasuredCar::new(100.0),
+            BENCH_WHEELS,
+        )
+        .expect("the bench's wheel settings are valid");
+        let mut counter = 0u8;
+        let mut drive = |bench: &mut Bench<MeasuredCar>, armed: bool| {
+            counter = (counter + 1) & 0x0F;
+            let cmd = DriveCmd {
+                target_speed: 1.0,
+                steering_angle: 0.2,
+                accel_limit: 0.0,
+                steer_rate_limit: 0.0,
+                armed,
+                counter,
+            };
+            bench.receive(spine_core::protocol::DRIVE_CMD_ID, &cmd.encode());
+        };
+        // Arm on the edge, then drive for a second: the car is measured still, so the
+        // speed loop pushes.
+        for i in 0..120 {
+            drive(&mut bench, i >= 10);
+            bench.tick(10);
+        }
+        let out = bench.outputs().expect("it ran");
+        assert!(
+            out.armed && out.throttle > 0.0 && out.brake == 0.0,
+            "{out:?}"
+        );
+        assert!(out.steering_target > 0.0, "steering toward 0.2: {out:?}");
+
+        // The car moves (as Gazebo says): the wheel nodes count it.
+        bench.car_mut().measure_speed(1.0);
+        bench.car_mut().measure_front_wheels([1.0, 1.0]);
+        let mut frames = Vec::new();
+        for _ in 0..100 {
+            drive(&mut bench, true);
+            frames.extend(bench.tick(10));
+        }
+        let (_, data) = frames
+            .iter()
+            .rev()
+            .find(|(id, _)| *id == WHEEL_SPEED_L_ID)
+            .expect("a wheel frame");
+        let w = WheelSpeed::decode(Wheel::Left, data).expect("a valid frame");
+        assert!((w.wheel_speed - 1.0).abs() < 0.15, "{}", w.wheel_speed);
+
+        // No commands for 100 ms: the watchdog brakes, and latches.
+        for _ in 0..12 {
+            bench.tick(10);
+        }
+        let out = bench.outputs().expect("it ran");
+        assert!(
+            !out.armed && out.throttle == 0.0 && out.brake > 0.5,
+            "{out:?}"
+        );
+        assert!(out.faults & faults::CMD_TIMEOUT != 0);
     }
 }

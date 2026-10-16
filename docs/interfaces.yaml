@@ -9,6 +9,9 @@
 #   bench = bench.launch.py: the car's graph, with stand-ins for the hardware,
 #   road = sim.launch.py world:=road: Gazebo's road world, which adds the car's camera and
 #   radar stand-in. Whatever is live in sim must be live there too (check_graph.py)
+#   spine = sim.launch.py world:=road spine:=true: the road world with the spine in the
+#   loop (spine_bridge, the CAN topics, spine_sim on Gazebo's car). Whatever is live in
+#   sim and road must be live there too
 # All topic names are absolute. QoS is the ROS default (reliable, volatile, depth 10)
 # unless noted.
 #
@@ -109,7 +112,7 @@ topics:
     pub: [ego]
     sub: [spine_bridge, legacy_uart_bridge, turtlesim_adapter, gazebo_adapter, carla_adapter]
     live: [turtle, sim, car, bench]
-    note: 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs.
+    note: 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs - in Gazebo's spine profile (spine:=true) that is spine_bridge, and gazebo_adapter doesn't read it.
 
   # --- the system: what kind of run this is ---
   /system/source:
@@ -117,7 +120,7 @@ topics:
     pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, replay_source, carla_adapter]
     sub: [hud, map, actuator_test]
     live: [turtle, sim, car, replay, bench]
-    note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.
+    note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.
 
   # --- backends -> the rest ---
   /vehicle/odom:
@@ -125,7 +128,7 @@ topics:
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
     sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog]
     live: [turtle, sim, car, replay, bench]
-    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.
+    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter]
@@ -160,7 +163,7 @@ topics:
     type: sensor_msgs/msg/JointState
     pub: [spine_bridge]
     sub: [joint_state_publisher]
-    live: [bench]
+    live: [bench, spine]
     note: Measured front steering joint angles, merged into /joint_states.
   /joint_states:
     type: sensor_msgs/msg/JointState
@@ -171,14 +174,14 @@ topics:
     type: can_msgs/msg/Frame
     pub: [spine_bridge]
     sub: [socket_can_sender, spine_sim]
-    live: [bench]
+    live: [bench, spine]
     note: DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc).
   /can/rx:
     type: can_msgs/msg/Frame
     pub: [socket_can_receiver, spine_sim]
     sub: [spine_bridge]
-    live: [bench]
-    note: VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench, spine_sim sends them all.
+    live: [bench, spine]
+    note: VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench and in Gazebo's spine profile, spine_sim sends them all.
 
   # --- sensors ---
   /sensors/imu/data_raw:
@@ -363,12 +366,12 @@ topics:
     type: std_msgs/msg/Bool
     pub: []
     sub: [spine_sim]
-    note: true = press the hardware e-stop, on the bench; false = release it. The spine brakes, and needs arming again.
+    note: true = press the hardware e-stop, on the bench and in Gazebo's spine profile; false = release it. The spine brakes, and needs arming again.
   /vehicle/bench/driver_faults:
     type: std_msgs/msg/UInt16
     pub: []
     sub: [spine_sim]
-    note: Pretend a driver failed. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).
+    note: Pretend a driver failed, on the bench and in Gazebo's spine profile. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).
 
   # --- Gazebo's road world: the simulator's own ---
   /vehicle/gazebo/truth:
@@ -377,6 +380,24 @@ topics:
     sub: []
     live: [road]
     note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges and gazebo_adapter.
+  /vehicle/gazebo/spine_outputs:
+    type: aav_interfaces/msg/SpineOutputs
+    pub: [spine_sim]
+    sub: [gazebo_adapter]
+    live: [spine]
+    note: Gazebo's spine profile only (sim.launch.py spine:=true). What the spine's logic (spine-core, in spine_sim) writes to its actuator drivers each tick, 100 Hz on Gazebo's clock - throttle and brake (0..1), reverse, the steering target (rad). On the car these never reach ROS. gazebo_adapter's actuator model turns them into what Gazebo's car does; silent for 0.2 s, it brakes fully.
+  /vehicle/gazebo/wheels:
+    type: aav_interfaces/msg/WheelSpeeds
+    pub: [gazebo_adapter]
+    sub: [spine_sim]
+    live: [spine]
+    note: Gazebo's spine profile only. Gazebo's four wheels, as /vehicle/wheels in the direct profile, for spine_sim - the front two for its wheel nodes' frames, the rear two's mean as the spine's measured speed (its motor encoder).
+  /vehicle/gazebo/steering:
+    type: aav_interfaces/msg/ActuatorState
+    pub: [gazebo_adapter]
+    sub: [spine_sim]
+    live: [spine]
+    note: Gazebo's spine profile only. command = the spine's steering target, measured = the actuator model's angle, which spine_sim sends back in VEHICLE_FEEDBACK.
 
   # --- CARLA: the simulator's own ---
   /vehicle/carla/truth:
@@ -463,7 +484,7 @@ services:
   /spine/arm:
     type: std_srvs/srv/SetBool
     server: spine_bridge
-    note: The spine ignores drive commands until armed; refused while /safety/estop is true.
+    note: The spine ignores drive commands until armed; refused while /safety/estop is true. On the car, the bench and Gazebo's spine profile.
   /fromLL:
     type: robot_localization/srv/FromLL
     server: navsat_transform

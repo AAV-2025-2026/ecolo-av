@@ -13,6 +13,9 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run sim-check --faults --no-watchdog   (the same without the sensor watchdog: a report
                                             of what the stack does on its own, no pass or fail)
     pixi run sim-check --no-lidar          (without the simulated roof lidar: lidar:=false)
+    pixi run sim-check --spine             (adds the spine in the loop, spine:=true: its
+                                            stops, e-stops and arming, in a second run: 3
+                                            more minutes)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -55,6 +58,16 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 10. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
    car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there.
+11. With --spine: Gazebo again with the spine in the loop (spine:=true: ego -> spine_bridge
+   -> CAN frames -> spine_sim, the spine's own firmware logic -> the actuator model). The
+   normal checks first (the graph against the spine profile, the scripted drive, the EKF
+   against the truth, a Nav2 goal), then the spine's own stops, each while driving:
+   `command stream lost` (ego's process stopped, SIGSTOP: the spine's watchdog must brake
+   fully within SPINE_BRAKE s and latch, until armed again), `software e-stop`
+   (/safety/estop), `hardware e-stop` (the bench's /vehicle/bench/hw_estop: still latched
+   after it is let go, until armed again) and `not armed` (disarmed, a drive must not
+   move the car). The first run also measures `command stream lost` and `software
+   e-stop` on the direct path, and a last table compares the two.
 
 Times are Gazebo's, simulated; only the limits on waiting are wall-clock. Prints a table and
 exits 1 if anything failed. The launch logs go to /tmp/aav-sim-check.log and, with --lane,
@@ -85,6 +98,7 @@ os.environ['GZ_PARTITION'] = os.environ.get('AAV_SIM_PARTITION', f'sim_check_{DO
 
 from aav_description import vehicle  # noqa: E402
 from aav_interfaces.action import ScriptedDrive  # noqa: E402
+from aav_interfaces.msg import ActuatorState, SpineOutputs, VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticArray  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
@@ -100,7 +114,7 @@ from rclpy.qos import qos_profile_sensor_data  # noqa: E402
 from sensor_msgs.msg import CameraInfo, Image, LaserScan, PointCloud2  # noqa: E402
 from sensor_msgs_py import point_cloud2  # noqa: E402
 from std_msgs.msg import Bool, String  # noqa: E402
-from std_srvs.srv import Trigger  # noqa: E402
+from std_srvs.srv import SetBool, Trigger  # noqa: E402
 from vision_msgs.msg import Detection2DArray  # noqa: E402
 import yaml  # noqa: E402
 
@@ -153,6 +167,22 @@ with open(os.path.join(ROOT, 'src', 'safety', 'aav_safety', 'config',
     # the wheels' cross check against the IMU: its tolerances
     CROSS = yaml.safe_load(f)['sensor_watchdog']['ros__parameters']['odom']
 LAUNCH = {}             # the running launch: its process group and log (session())
+
+# The spine in the loop (--spine). spine_bridge stops sending DRIVE_CMD cmd_timeout s after
+# ego's last command (spine.yaml), and the spine's watchdog brakes fully 0.1 s after its
+# last DRIVE_CMD (spine-core cmd_timeout_ms). On the direct path gazebo_adapter's own
+# cmd_timeout (0.2 s) does both. TICKS allows for each one's tick and the frames' trip.
+with open(os.path.join(ROOT, 'src', 'backends', 'aav_spine', 'config', 'spine.yaml')) as f:
+    BRIDGE_TIMEOUT = yaml.safe_load(f)['spine_bridge']['ros__parameters']['cmd_timeout']
+SPINE_WATCHDOG = 0.1    # s: spine-core's cmd_timeout_ms
+DIRECT_TIMEOUT = 0.2    # s: gazebo_adapter's cmd_timeout
+TICKS = 0.08            # s
+SPINE_BRAKE = BRIDGE_TIMEOUT + SPINE_WATCHDOG + TICKS   # ego quiet -> full brake, spine
+DIRECT_BRAKE = DIRECT_TIMEOUT + TICKS                   # ego quiet -> brake, direct path
+ESTOP_BRAKE = 0.15      # s from /safety/estop or the hardware e-stop to the spine's brake
+STOP_TIME = 3.0         # s from the stop to standing still, from about 1 m/s
+LATCH_HOLD = 3.0        # s the car must stay still, its drive still asking, while latched
+STOPS = {}              # (stop, path) -> (s to the brake, s to standing still, m/s before)
 
 
 def seconds(stamp):
@@ -223,6 +253,22 @@ class Probe(Node):
         self.disagreed = False      # the wheels' cross check ever said DISAGREE
         self.gaps = {}              # its worst gaps, from /diagnostics
         self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diagnostics, 10)
+        # The car's status (the spine's, with spine:=true), and the actuators' demands as
+        # (stamp, throttle, brake): spine_sim's outputs with the spine in the loop, or
+        # gazebo_adapter's own speed loop's commands on the direct path. For the stops.
+        self.status, self.demands, self.direct = None, [], {}
+        self.latches = []    # Gazebo's time each time the spine stopped being armed
+        self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, 10)
+        self.create_subscription(SpineOutputs, '/vehicle/gazebo/spine_outputs',
+                                 lambda m: self.on_demand(seconds(m.header.stamp), m.throttle,
+                                                          m.brake), 10)
+        self.create_subscription(ActuatorState, '/vehicle/throttle',
+                                 lambda m: self.on_direct('throttle', m), 10)
+        self.create_subscription(ActuatorState, '/vehicle/brake',
+                                 lambda m: self.on_direct('brake', m), 10)
+        self.estop = self.create_publisher(Bool, '/safety/estop', 10)
+        self.hw_estop = self.create_publisher(Bool, '/vehicle/bench/hw_estop', 10)
+        self.arm_client = self.create_client(SetBool, '/spine/arm')
         self.monitor = []    # (action, polygon) from collision_monitor, as it changes
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  lambda m: self.monitor.append((m.action_type, m.polygon_name)),
@@ -232,6 +278,54 @@ class Probe(Node):
         self.truth = msg
         self.track.append((seconds(msg.header.stamp), msg.pose.pose.position.x,
                            msg.pose.pose.position.y, yaw_of(msg), msg.twist.twist.linear.x))
+
+    def on_status(self, msg):
+        if self.armed() and not msg.armed:
+            self.latches.append(seconds(msg.header.stamp))
+        self.status = msg
+
+    def on_demand(self, stamp, throttle, brake):
+        self.demands = self.demands[-2999:] + [(stamp, throttle, brake)]
+
+    def on_direct(self, kind, msg):
+        """gazebo_adapter's throttle and brake commands (NaN from spine_bridge: skipped)."""
+        if math.isnan(msg.command):
+            return
+        self.direct[kind] = msg.command
+        if kind == 'brake' and 'throttle' in self.direct:
+            self.on_demand(seconds(msg.header.stamp), self.direct['throttle'], msg.command)
+
+    def arm(self, on=True):
+        """Ask spine_bridge to arm the spine (on) or disarm it; True if it agreed."""
+        if not self.arm_client.wait_for_service(timeout_sec=20.0):
+            return False
+        future = self.arm_client.call_async(SetBool.Request(data=on))
+        self.spin_for(10.0, future.done)
+        return future.done() and future.result().success
+
+    def armed(self):
+        return self.status is not None and self.status.armed
+
+    def arm_and_hold(self, tries=3):
+        """Arm, and wait until the spine has stayed armed for 2 s (bench_check.py's)."""
+        for _ in range(tries):
+            self.arm()
+            if self.spin_for(3.0, self.armed) and not self.spin_for(2.0,
+                                                                    lambda: not self.armed()):
+                return True
+        return False
+
+    def send_drive(self, speed=1.0, hold=15.0):
+        """Start a scripted drive; return its goal handle, or None if refused."""
+        if not self.drive.wait_for_server(timeout_sec=20.0):
+            return None
+        sent = self.drive.send_goal_async(ScriptedDrive.Goal(
+            target_speed=speed, acceleration=0.5, deceleration=1.0, hold_time=hold))
+        self.spin_for(10.0, sent.done)
+        return sent.result() if sent.done() and sent.result().accepted else None
+
+    def speed(self):
+        return self.truth.twist.twist.linear.x
 
     def on_state(self, msg):
         self.state = msg.data
@@ -310,9 +404,11 @@ class Probe(Node):
         return self.goal.get_result_async()
 
 
-def check_contract(probe, env, tag, ignore=()):
+def check_contract(probe, env, tag, ignore=(), profile='road'):
     """
     Check the running graph against docs/interfaces.yaml (check_graph.py --profile road).
+
+    profile: spine instead, with the spine in the loop.
 
     ignore: topics this run leaves out on purpose, such as Nav2's /map with nav:=false.
     """
@@ -322,7 +418,7 @@ def check_contract(probe, env, tag, ignore=()):
         with tempfile.TemporaryFile('w+') as out:
             graph = subprocess.Popen(
                 [sys.executable, os.path.join(ROOT, 'tools', 'check_graph.py'), '--profile',
-                 'road'], cwd=ROOT, env=env, stdout=out, stderr=subprocess.DEVNULL, text=True)
+                 profile], cwd=ROOT, env=env, stdout=out, stderr=subprocess.DEVNULL, text=True)
             probe.spin_for(60.0, lambda: graph.poll() is not None)
             code = graph.wait()
             out.seek(0)
@@ -430,28 +526,42 @@ def check_lidar_scan(probe):
                              f'{finite.size} of them see something, {nearest} (the sign)')
 
 
-def check_drive(probe):
-    """Drive the scripted profile; compare the distance with the plan, and the EKF with truth."""
-    x0, y0 = probe.xy(probe.truth)
+def check_drive(probe, spine=False):
+    """
+    Drive the scripted profile; compare the distance with the plan, and the EKF with truth.
+
+    spine: the spine is in the loop. If it latched on the way (a gap in ego's commands on a
+    busy computer, as on the bench), which stops the car, arm it and drive the plan again,
+    once, as bench_check.py does.
+    """
     if not probe.drive.wait_for_server(timeout_sec=20.0):
         result('scripted drive', False, 'no scripted driver')
         return
-    sent = probe.drive.send_goal_async(ScriptedDrive.Goal(
-        target_speed=1.0, acceleration=0.5, deceleration=1.0, hold_time=5.0))
-    probe.spin_for(10.0, lambda: sent.done())
-    if not sent.done() or not sent.result().accepted:
-        result('scripted drive', False, 'refused')
-        return
-    done = sent.result().get_result_async()
-    probe.spin_for(60.0, lambda: done.done())
-    start = probe.now()
-    probe.spin_for(20.0, lambda: probe.now() - start > 3.0)    # 3 s to come to rest
-    x1, y1 = probe.xy(probe.truth)
-    travelled = math.hypot(x1 - x0, y1 - y0)
-    # The plan: 2 s up to 1 m/s (1 m), 5 s at 1 m/s (5 m), 1 s down (0.5 m). The range is
-    # bench_check.py's: it catches a stretched plan, or no motion at all.
-    result('scripted drive', 4.5 < travelled < 8.0,
-           f'{travelled:.2f} m (plan: 6.5 m), {y1 - y0:+.2f} m to the side')
+    for attempt in range(2 if spine else 1):
+        if spine and not probe.armed():
+            probe.arm_and_hold()
+        latches = len(probe.latches)
+        x0, y0 = probe.xy(probe.truth)
+        sent = probe.drive.send_goal_async(ScriptedDrive.Goal(
+            target_speed=1.0, acceleration=0.5, deceleration=1.0, hold_time=5.0))
+        probe.spin_for(10.0, lambda: sent.done())
+        if not sent.done() or not sent.result().accepted:
+            result('scripted drive', False, 'refused')
+            return
+        done = sent.result().get_result_async()
+        probe.spin_for(60.0, lambda: done.done())
+        start = probe.now()
+        probe.spin_for(20.0, lambda: probe.now() - start > 3.0)    # 3 s to come to rest
+        x1, y1 = probe.xy(probe.truth)
+        travelled = math.hypot(x1 - x0, y1 - y0)
+        # The plan: 2 s up to 1 m/s (1 m), 5 s at 1 m/s (5 m), 1 s down (0.5 m). The range
+        # is bench_check.py's: it catches a stretched plan, or no motion at all.
+        good = 4.5 < travelled < 8.0
+        if good or len(probe.latches) == latches:
+            break
+    again = ', the second time: the spine latched during the first' if attempt else ''
+    result('scripted drive', good,
+           f'{travelled:.2f} m (plan: 6.5 m), {y1 - y0:+.2f} m to the side{again}')
     gx, gy = probe.xy(probe.glob)
     error = math.hypot(gx - x1, gy - y1)
     result('global EKF vs truth', error < 1.5, f'{error:.2f} m apart (GPS noise is 0.5 m)')
@@ -650,15 +760,14 @@ def check_lidar_obstacle(probe):
     check_obstacle(probe, model=POST, depth=0.5, name='lidar obstacle', costmap=True)
 
 
-def watchdog_pid():
+def node_pid(name='sensor_watchdog'):
     """
-    Return the sensor watchdog's process id, from the launch log, or None.
+    Return a node's process id (the sensor watchdog's, or ego's), from the launch log, or None.
 
-    Only a process in this run's own process group: never someone else's watchdog.
+    Only a process in this run's own process group: never someone else's.
     """
     with open(LAUNCH['log']) as f:
-        found = re.findall(r'\[sensor_watchdog-\d+\]: process started with pid \[(\d+)\]',
-                           f.read())
+        found = re.findall(rf'\[{name}-\d+\]: process started with pid \[(\d+)\]', f.read())
     if not found:
         return None
     pid = int(found[-1])
@@ -670,7 +779,7 @@ def watchdog_pid():
 
 def signal_watchdog(mode):
     """Send the watchdog its fault: hang (SIGSTOP), ok (SIGCONT), kill (SIGKILL); True if sent."""
-    pid = watchdog_pid()
+    pid = node_pid()
     if pid is None:
         return False
     os.kill(pid, {'hang': signal.SIGSTOP, 'ok': signal.SIGCONT, 'kill': signal.SIGKILL}[mode])
@@ -815,12 +924,217 @@ def check_faults(probe, watchdog=True):
             RESULTS.append((name, None, detail))
 
 
+def check_nav_goal(probe):
+    """Nav2 drives 15 m on, along the car's heading: it must get there."""
+    x0, y0 = probe.xy(probe.truth)
+    h = yaw_of(probe.truth)
+    gx, gy = x0 + 15.0 * math.cos(h), y0 + 15.0 * math.sin(h)
+    done = probe.go_to(gx, gy, h)
+    if done is None:
+        result('Nav2 goal', False, 'no Nav2, or it refused the goal')
+        return
+    probe.spin_for(180.0, done.done)
+    reached = done.done() and done.result().status == 4
+    if not done.done():
+        probe.goal.cancel_goal_async()
+    x1, y1 = probe.xy(probe.truth)
+    result('Nav2 goal', reached, f'{"reached" if reached else "not reached"}: '
+                                 f'{math.hypot(x1 - x0, y1 - y0):.1f} m on, '
+                                 f'{math.hypot(gx - x1, gy - y1):.2f} m from the goal')
+
+
+def finish(probe, handle):
+    """Cancel a scripted drive and wait until it has stopped: one drive at a time."""
+    result = handle.get_result_async()
+    handle.cancel_goal_async()
+    probe.spin_for(15.0, result.done)
+
+
+def get_going(probe, spine):
+    """Arm the spine if need be, start a scripted drive, wait for 0.8 m/s; its handle or None."""
+    for _ in range(2):
+        if spine and not probe.armed():
+            probe.arm_and_hold()
+        handle = probe.send_drive()
+        if handle is None:
+            return None
+        if probe.spin_for(30.0, lambda: probe.speed() > 0.8):
+            return handle
+        # The spine latched before the car got going (a gap in commands on a busy
+        # computer), which isn't what these check: once more.
+        finish(probe, handle)
+    return None
+
+
+def measure_stop(probe, t0, press=None):
+    """
+    Return (s to the brake, s to standing still) after t0 (Gazebo's time), None if never.
+
+    The brake: the first demand after t0 with no throttle and some brake. press: an e-stop
+    publisher to keep pressing meanwhile.
+    """
+    def still():
+        if press is not None:
+            press.publish(Bool(data=True))
+        return seconds(probe.truth.header.stamp) > t0 and abs(probe.speed()) < STILL
+
+    probe.spin_for(30.0, still)
+    stood = seconds(probe.truth.header.stamp) - t0 if still() else None
+    brake = next((t - t0 for t, throttle, b in probe.demands
+                  if t >= t0 and throttle == 0.0 and b > 0.0), None)
+    return brake, stood
+
+
+def held(probe, seconds_, press=None):
+    """Spin seconds_ of Gazebo's time; return the top speed meanwhile (m/s)."""
+    top, end = 0.0, probe.now() + seconds_
+    while probe.now() < end:
+        if press is not None:
+            press.publish(Bool(data=False))
+        probe.spin_for(0.1)
+        top = max(top, abs(probe.speed()))
+    return top
+
+
+def stop_detail(brake, stood, v0, limit):
+    b = f'braked {1000 * brake:.0f} ms after it' if brake is not None else 'never braked'
+    s = f'stood still {stood:.2f} s after it' if stood is not None else 'never stood still'
+    return f'from {v0:.2f} m/s: {b} (limit {1000 * limit:.0f} ms), {s}'
+
+
+def stop_ok(brake, stood, limit):
+    return brake is not None and brake <= limit and stood is not None and stood <= STOP_TIME
+
+
+def rearm(probe, top):
+    """After a latched stop: the car stayed still (top m/s); arm again. Return the words."""
+    status = probe.status
+    latched = status is not None and not status.armed
+    cleared = probe.arm_and_hold()
+    return (latched and top < STILL and cleared,
+            f'latched: {latched} (top speed {top:.2f} m/s for {LATCH_HOLD:g} s, its drive '
+            f'still asking), armed again: {cleared}')
+
+
+def check_command_lost(probe, spine):
+    """Stop ego's process while driving: the car must brake and stop; the spine latches."""
+    name = 'command stream lost' + ('' if spine else ' (direct path)')
+    limit = SPINE_BRAKE if spine else DIRECT_BRAKE
+    pid = node_pid('ego')
+    handle = pid and get_going(probe, spine)
+    if not handle:
+        result(name, False, "no ego process in this run's log" if not pid
+               else 'the car would not get going')
+        return
+    v0, t0 = probe.speed(), probe.now()
+    os.kill(pid, signal.SIGSTOP)        # ego's own process, in this run's process group
+    try:
+        brake, stood = measure_stop(probe, t0)
+        if not spine:
+            finish(probe, handle)
+    finally:
+        os.kill(pid, signal.SIGCONT)
+    detail = stop_detail(brake, stood, v0, limit)
+    ok = stop_ok(brake, stood, limit)
+    if spine:
+        # ego is back and the drive still asks: the spine must hold until armed again.
+        timeout = probe.status is not None and bool(
+            probe.status.faults & VehicleStatus.FAULT_CMD_TIMEOUT)
+        top = held(probe, LATCH_HOLD)
+        finish(probe, handle)
+        good, words = rearm(probe, top)
+        ok = ok and good and timeout
+        detail += f'; CMD_TIMEOUT: {timeout}; {words}'
+    STOPS[('command stream lost', 'spine' if spine else 'direct')] = (brake, stood, v0)
+    result(name, ok, detail)
+
+
+def check_estop(probe, spine, hardware=False):
+    """Press an e-stop while driving: the car must brake and stop; the spine latches."""
+    stop = 'hardware e-stop' if hardware else 'software e-stop'
+    name = stop + ('' if spine else ' (direct path)')
+    publisher = probe.hw_estop if hardware else probe.estop
+    handle = get_going(probe, spine)
+    if handle is None:
+        result(name, False, 'the car would not get going')
+        return
+    v0, t0 = probe.speed(), probe.now()
+    publisher.publish(Bool(data=True))
+    brake, stood = measure_stop(probe, t0, press=publisher)
+    limit = ESTOP_BRAKE if spine else DIRECT_BRAKE + 0.5
+    detail = stop_detail(brake, stood, v0, limit)
+    ok = stop_ok(brake, stood, limit)
+    if spine:
+        reported = probe.status is not None and probe.status.estop_active
+        # Let go, the drive still asking: still latched until armed again.
+        top = held(probe, LATCH_HOLD, press=publisher)
+        finish(probe, handle)
+        good, words = rearm(probe, top)
+        ok = ok and reported and good
+        detail += f'; the spine reported it: {reported}; let go, {words}'
+    else:
+        finish(probe, handle)
+        held(probe, 1.0, press=publisher)
+    STOPS[(stop, 'spine' if spine else 'direct')] = (brake, stood, v0)
+    result(name, ok, detail)
+
+
+def check_not_armed(probe):
+    """Disarm the spine: a scripted drive must not move the car, nor the throttle open."""
+    disarmed = probe.arm(False) and probe.spin_for(5.0, lambda: not probe.armed())
+    t0 = probe.now()
+    handle = probe.send_drive(hold=3.0)
+    top = held(probe, 8.0)
+    if handle is not None:
+        finish(probe, handle)
+    throttle = max((t for stamp, t, _ in probe.demands if stamp >= t0), default=None)
+    status = probe.status
+    ok = (disarmed and handle is not None and top < STILL and throttle == 0.0
+          and not status.armed)
+    rearmed = probe.arm_and_hold()
+    result('not armed', ok and rearmed,
+           f'disarmed: {disarmed}, a drive asked for 1 m/s for 8 s: top speed {top:.2f} m/s, '
+           f"the spine's top throttle {throttle}, mode {status.mode} (0 = manual); "
+           f'armed again: {rearmed}')
+
+
+def armed_first(check):
+    """With the spine in the loop: arm it again first if a gap in commands latched it."""
+    def run(probe):
+        if not probe.armed():
+            probe.arm_and_hold()
+        check(probe)
+    return run
+
+
+def print_stops():
+    """Print the stop times: the direct path beside the spine in the loop."""
+    if not STOPS:
+        return
+
+    def cell(key):
+        if key not in STOPS:
+            return 'not run'
+        brake, stood, v0 = STOPS[key]
+        b = f'{1000 * brake:.0f} ms' if brake is not None else 'never'
+        s = f'{stood:.2f} s' if stood is not None else 'never'
+        return f'brake {b}, still {s} (from {v0:.2f} m/s)'
+
+    print('\n| Stop | Direct path | Spine in the loop |\n|---|---|---|')
+    for stop in ('command stream lost', 'software e-stop', 'hardware e-stop'):
+        print(f'| {stop} | {cell((stop, "direct"))} | {cell((stop, "spine"))} |')
+
+
 LIDAR_TOPICS = ('/sensors/lidar/points', '/sensors/lidar/scan')
 WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/state')
 
 
-def session(launch_args, checks, log_path, label='', ignore=(), radar=True):
-    """Start sim.launch.py's road world with these arguments, run the checks, and stop it."""
+def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spine=False):
+    """
+    Start sim.launch.py's road world with these arguments, run the checks, and stop it.
+
+    spine: the spine is in the loop (spine:=true): its status must come, and it must arm.
+    """
     tag = f' ({label})' if label else ''
     # What a run leaves out on purpose isn't missing from the graph.
     ignore = (tuple(ignore) + (LIDAR_TOPICS if 'lidar:=false' in launch_args else ())
@@ -856,10 +1170,16 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True):
             detail = ("Gazebo's truth, the global EKF, the camera" +
                       (' and the radar stand-in are' if radar else ' are (no radar)') +
                       ' running' + (', and Nav2 is up' if nav else ''))
+        if nav_up and spine:
+            # The launch arms it after 12 s (arm:=true); a gap in commands may latch it.
+            nav_up = probe.spin_for(30.0, lambda: probe.status is not None) and (
+                probe.armed() or probe.arm_and_hold())
+            detail += ('; the spine is armed' if nav_up
+                       else '; but the spine would not stay armed')
         result(f'start-up{tag}', nav_up, detail)
         up = nav_up
         if up:
-            check_contract(probe, env, tag, ignore)
+            check_contract(probe, env, tag, ignore, 'spine' if spine else 'road')
             for check in checks:
                 check(probe)
     finally:
@@ -887,6 +1207,11 @@ def main():
     if '--obstacle' in args:
         checks.append(check_obstacle)
     checks.append(check_wheels_vs_imu)
+    spine = '--spine' in args
+    if spine:
+        # The direct path's stop times, to compare with the spine's below.
+        checks += [lambda probe: check_command_lost(probe, False),
+                   lambda probe: check_estop(probe, False)]
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],
@@ -913,9 +1238,23 @@ def main():
         session(['lane:=true', 'nav:=false', 'lidar:=false', f'start_y:={ROAD_Y + LANE_START}'],
                 [check_lane_keeping], logs[-1], 'lane', ignore=('/map',))
 
+    if spine:
+        # Its own run: the spine in the loop (spine:=true). No lidar: a lighter run.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-spine{ext}')
+        session(['spine:=true', 'lidar:=false'],
+                [lambda probe: check_drive(probe, spine=True), armed_first(check_nav_goal),
+                 check_wheels_vs_imu,
+                 lambda probe: check_command_lost(probe, True),
+                 lambda probe: check_estop(probe, True),
+                 lambda probe: check_estop(probe, True, hardware=True),
+                 check_not_armed],
+                logs[-1], 'spine', spine=True)
+
     print('\n| Check | Result | Detail |\n|---|---|---|')
     for name, ok, detail in RESULTS:
         print(f'| {name} | {"ℹ️" if ok is None else "✅" if ok else "❌"} | {detail} |')
+    print_stops()
     print(f'\nThe launch log: {", ".join(logs)}')
     return 0 if all(ok is not False for _, ok, _ in RESULTS) else 1
 

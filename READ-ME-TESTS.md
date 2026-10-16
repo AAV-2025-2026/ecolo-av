@@ -33,6 +33,7 @@ Nothing real moves. Run these on any laptop.
 | 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | `pixi run actuator-test <test> --sim` ([docs](docs/actuator-tests.md)) | the script runs end to end and reports g and angles | ✅ 15 Oct: all 9 tests; they give back `vehicle.yaml`'s numbers |
 | 1.11 | **The lidar alone stops the car** | `pixi run sim-check --lidar-obstacle` | radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone | ✅ 15 Oct: 0.16-0.55 m before it |
 | 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check | ✅ 15 Oct: all 13 |
+| 1.13 | **The spine in the loop** | `pixi run sim-check --spine` | in Gazebo with `spine:=true`: the normal checks pass; ego's commands stopped → the spine brakes fully within 0.28 s and latches; `/safety/estop` and the hardware e-stop → brake within 0.15 s, latched until armed again; disarmed → no motion | ✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms |
 
 ## Stage 2: the bench
 

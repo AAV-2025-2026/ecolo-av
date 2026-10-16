@@ -1,8 +1,8 @@
 import math
 from pathlib import Path
 
-from aav_gazebo.actuator_model import (ActuatorConfig, Actuators, Ideal, lag, SpeedLoop,
-                                       SpeedLoopConfig)
+from aav_gazebo.actuator_model import (ActuatorConfig, Actuators, Demand, Ideal, lag,
+                                       SpeedLoop, SpeedLoopConfig)
 import pytest
 import yaml
 
@@ -159,3 +159,25 @@ def test_speed_loop_matches_the_spines_rules():
     assert d.throttle == 0.0 and d.brake > 0.0
     d = SpeedLoop().update(0.0, 0.0, DT)
     assert d.brake == SpeedLoopConfig().hold_brake
+
+
+def test_the_spines_demand_drives_the_actuators_directly():
+    """spine:=true: the spine's throttle and brake skip our speed loop."""
+    cfg = ActuatorConfig(throttle_lag=0.0, brake_lag=0.0, drag=0.0)
+    car = Actuators(cfg)
+    for _ in range(50):     # 1 s at full throttle: max_accel, whatever our speed loop thinks
+        s = car.drive(Demand(1.0, 0.0, False), 0.1, DT)
+    assert s.speed == pytest.approx(cfg.max_accel, rel=1e-6)
+    assert s.throttle_command == 1.0 and s.brake_command == 0.0
+    assert s.steering > 0.0, 'toward the steering target'
+    for _ in range(50):     # full brake: stops, and never reverses
+        s = car.drive(Demand(0.0, 1.0, False), 0.0, DT)
+    assert s.speed == 0.0
+    for _ in range(25):     # reverse gear, half throttle
+        s = car.drive(Demand(0.5, 0.0, True), 0.0, DT)
+    assert s.speed < 0.0
+
+
+def test_drive_refuses_a_zero_step():
+    with pytest.raises(ValueError):
+        Actuators().drive(Demand(0.0, 0.0, False), 0.0, 0.0)

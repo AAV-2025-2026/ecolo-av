@@ -7,17 +7,17 @@ what's missing, and how the car's measurements feed in.
 > **The short version**
 > - **Most of it exists.** Gazebo already plays the car: IMU, GPS, wheel speed, three cameras, the radar, the lidar. The same EKFs, Nav2, perception and HUD run on it.
 > - **The big gap is the actuators.** Gazebo's car sets its speed directly, with made-up limits. It ignores the weight, the motor and the brakes. So it doesn't yet speed up, brake or steer like the real car.
-> - **The fix:** an **actuator model** between our commands and Gazebo, filled with the numbers from the tests (`READ-ME-TESTS.md`, stage 4). Then the real firmware logic **in the loop**, as the bench already does.
+> - **The fix:** an **actuator model** between our commands and Gazebo, filled with the numbers from the tests (`READ-ME-TESTS.md`, stage 4). Then the real firmware logic **in the loop**, as the bench already does. Both built 15 Oct: the model is on by default, the spine with `spine:=true`.
 > - **Measurements come first:** the sheet (`READ-ME-MEASURE-THE-CAR.md`) for where everything is, the tests for how it moves.
 
-## Status (15 Oct, branch `wt/full-sim-1`)
+## Status (15 Oct)
 
 | # | Step | Status |
 |---|---|---|
 | 1 | `/system/source` + the SIMULATED banner | ✅ built: Gazebo, turtlesim, the bench, the car's backends and replay announce; the raylib HUD shows the banner and a tag per topic |
 | 2 | `/vehicle/steering`, `/throttle`, `/brake`, `/wheels` | ✅ built: Gazebo all four; the bench and the car (spine_bridge) steering, throttle, brake; turtlesim steering |
 | 3 | The actuator model (A), guessed numbers | ✅ built: `aav_gazebo/actuator_model.py`, numbers in `vehicle.yaml` `actuators:`, on by default (`actuator_model:=false` for the old car) |
-| 4 | the spine in the loop | not started |
+| 4 | The spine in the loop | ✅ 15 Oct: `pixi run sim spine:=true`. ego's commands go over the CAN frames to the spine's own firmware logic, then the actuator model. `pixi run sim-check --spine` passes: its timeout, both e-stops and arming stop the car ([below](#the-spine-in-the-loop-step-4)) |
 | 5 | The lidar into Nav2 | ✅ 15 Oct: `lidar_scan` (`aav_lidar`) flattens the roof lidar into a 2D scan; the local costmap's `lidar_layer` and `collision_monitor` read it. `lidar:=true` in Gazebo, **off on the car** (no lidar driver yet). With the radar off, the lidar alone stopped the car 0.16-0.55 m before a post |
 | 6 | Sensor failures on purpose | ✅ 15 Oct: `pixi run sim-fault <sensor> <fault>`, and the sensor watchdog (`aav_safety`): it stops Nav2 and the AI slot, and says why on the HUD and the map window. All 13 faults stop the car ([the table](#sensor-failures-before-and-after)), the watchdog's own death and frozen wheels too |
 | 7 | The actuator test script (`READ-ME-TESTS.md` 1.10) | ✅ 15 Oct: `pixi run actuator-test <test> --sim`, all 9 tests in Gazebo; they give back the model's numbers ([docs/actuator-tests.md](docs/actuator-tests.md)). It found Gazebo's IMU blind to the car's acceleration: fixed in `gazebo_adapter` |
@@ -27,6 +27,7 @@ Tested (15 Oct, Ben's Mac):
 
 | Run | Result |
 |---|---|
+| `pixi run sim-check --spine` (step 4) | ✅ all 21: the direct path, then the spine in the loop: graph vs the spine contract, drive 6.00 m, the EKF 0.03 m from the truth, a Nav2 goal, the command stream lost, both e-stops, not armed ([stop times](#stop-times-the-direct-path-vs-the-spine)) |
 | `pixi run sim-check` (the model on) | ✅ all 6: graph vs contract (the new topics too), drive 6.01 m of 6.5 |
 | `pixi run sim-check --obstacle --lane` | ✅ all: stood still 0.51 m before the box; lane keeping back within 5 cm in 5.4 s |
 | `pixi run sim-check --obstacle --lidar-obstacle` (steps 5, 6 branch; twice) | ✅ the box: 0.32-0.46 m before it (radar and lidar); the post, radar off: 0.16-0.55 m before it, the costmap 100 of 100 there; both goals reached once they were gone |
@@ -53,12 +54,12 @@ What's where:
         │
   twist_mux → ego ──────────── /ego/actuator_cmd (speed + steering)
         │
-  ┌─────┴───────────────── TODAY in Gazebo ──────────┐   ┌──────── THE FULL VERSION ────────┐
-  │ gazebo_adapter → Gazebo sets the speed directly  │   │ spine_bridge → CAN frames        │
-  │ (fixed limits: +1.5 / −3.0 m/s², a quick steer)  │   │   → the spine's real logic       │
-  │                                                  │   │     (timeouts, e-stop, limits)   │
-  │                                                  │   │   → ACTUATOR MODEL: throttle,    │
-  │                                                  │   │     brake, steering, as measured │
+  ┌─────┴─────── spine:=false (default) ─────────────┐   ┌────── spine:=true (15 Oct) ──────┐
+  │ gazebo_adapter → a Python copy of the spine's    │   │ spine_bridge → CAN frames        │
+  │ speed loop → ACTUATOR MODEL: throttle, brake,    │   │   → the spine's real logic       │
+  │ steering, as measured → Gazebo                   │   │     (timeouts, e-stop, limits)   │
+  │ (no CAN, no arming, no e-stop latch; brakes      │   │   → ACTUATOR MODEL: throttle,    │
+  │ 0.2 s after ego goes quiet)                      │   │     brake, steering, as measured │
   │                                                  │   │   → Gazebo                       │
   └──────────────────────────────────────────────────┘   └──────────────────────────────────┘
         │
@@ -76,7 +77,7 @@ What's where:
 | **Throttle and brake** | ✅ 15 Oct: the actuator model, with **guessed** numbers | the real numbers, from tests 4.1-4.4 |
 | **Steering** | ✅ 15 Oct: speed, lag, centre offset, deadband, with **guessed** numbers | the real numbers and angles, from tests 3.10-3.12 and 4.5 |
 | Weight | in the model, but hardly matters (see the box below) | the real weight (scales, M7) |
-| The firmware's safety logic | ❌ skipped in Gazebo (the bench has it) | **the spine in the loop**: CAN frames, timeouts, e-stops, as on the bench |
+| The firmware's safety logic | ✅ 15 Oct, with `spine:=true`: the CAN frames, the spine's timeout, both e-stops, arming ([step 4](#the-spine-in-the-loop-step-4)). Off by default | the real CAN bus and boards: that's the car |
 | What's real and what's fake | ✅ 15 Oct: `/system/source`, and the HUD's orange SIMULATED banner | - |
 | Per-actuator readings | ✅ 15 Oct: `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`, `/vehicle/wheels` (and still `/vehicle/status`) | the real measured values from the car |
 | The world | a test road, an empty lot | **a copy of the real test lot** |
@@ -124,7 +125,7 @@ B only if A isn't close enough to the real car.
 | 1 | `/system/source` + the SIMULATED banner ✅ 15 Oct | no | small |
 | 2 | Per-actuator readings: `/vehicle/steering`, `/throttle`, `/brake`, `/wheels` ✅ 15 Oct | no | small |
 | 3 | **The actuator model (A)**, with guessed numbers for now, in `vehicle.yaml` ✅ 15 Oct | no; the numbers later | 1 day |
-| 4 | **The spine in the loop**: ego → CAN → the spine's logic → the actuator model → Gazebo | no | 1-2 days |
+| 4 | **The spine in the loop**: ego → CAN → the spine's logic → the actuator model → Gazebo ✅ 15 Oct | no | 1-2 days |
 | 5 | The lidar into Nav2's costmap and the collision monitor ✅ 15 Oct | no | small |
 | 6 | Sensor failures on purpose, and checks that the car stops ✅ 15 Oct | no | 1 day |
 | 7 | The actuator test script (`READ-ME-TESTS.md` 1.10), run in Gazebo ✅ 15 Oct | no | 1 day |
@@ -134,6 +135,61 @@ B only if A isn't close enough to the real car.
 
 Steps 1-7 can all be built before the car is measured: they start with today's guesses,
 and step 8 swaps in the real numbers without changing any code.
+
+## The spine in the loop (step 4)
+
+Built 15 Oct. Gazebo can now run the spine's **real firmware logic** between ego and the
+car, as the bench does. Off by default; one switch turns it on:
+
+```bash
+pixi run sim spine:=true          # Gazebo, with the spine in the loop
+pixi run sim-check --spine        # proves it: the normal checks, then the spine's stops
+```
+
+```text
+ ego ──/ego/actuator_cmd──► spine_bridge ──CAN frames──► spine_sim: the spine's own logic
+                                                         (arming, 100 ms watchdog, both
+                                                          e-stops, its speed loop)
+                                                              │ throttle, brake, gear, steering
+                                                              ▼
+                                gazebo_adapter: the actuator model ──► Gazebo's car
+                                                              │ Gazebo's wheels and steering
+                                                              ▼
+ /vehicle/* ◄── spine_bridge ◄──CAN frames── spine_sim: VEHICLE_FEEDBACK, STATUS, wheel frames
+```
+
+| What | How |
+|---|---|
+| One backend | `spine_bridge` alone reads `/ego/actuator_cmd`. `gazebo_adapter` then only drives the actuator model from the spine's outputs, and no longer publishes `/vehicle/*` |
+| `/system/source` | still **SIM**: `spine_bridge` says so (`source:=sim`) |
+| The clock | `spine_sim` ticks every 10 ms of Gazebo's time, so the spine's 100 ms watchdog counts Gazebo's time |
+| Arming | `arm:=true` (the default) arms it 12 s after start-up, as the bench does. After a stop: `ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"` |
+| Hardware e-stop | the bench's: `/vehicle/bench/hw_estop` (true = pressed) |
+| The contract | profile `spine` in `docs/interfaces.yaml` (`pixi run check spine`) |
+
+### Stop times: the direct path vs the spine
+
+Each while driving at 0.8 m/s, Gazebo's road world, Ben's Mac, 15 Oct: three runs of
+`pixi run sim-check --spine`, the last one all green. Times are Gazebo's.
+
+| Stop | Direct path (`gazebo_adapter`) | Spine in the loop |
+|---|---|---|
+| Command stream lost (ego's process stopped) | brake 200-220 ms, still 1.24-1.25 s | **full** brake 195-209 ms, still 0.64-0.66 s, and **latched** until armed again |
+| `/safety/estop` | brake 460 ms (through twist_mux and ego), still 1.70 s | brake 1-12 ms (ESTOP_CMD straight to the spine), still 0.18-0.48 s, latched |
+| Hardware e-stop | (no such thing) | brake 2-10 ms, still 0.46-0.48 s, latched after it's let go |
+| Not armed | (always armed) | a drive asking 1 m/s for 8 s: no throttle, no motion |
+
+- **Why the spine stops sooner:** it brakes **fully** (`stop_brake` 1.0); the direct path's
+  speed loop only slows to a stop.
+- **Its 195-209 ms** is `spine_bridge`'s 0.1 s (`spine.yaml` `cmd_timeout`) plus the
+  spine's own 0.1 s watchdog: inside the car's 200 ms target (`READ-ME-TESTS.md` 3.9).
+- **Latched:** after any stop, the spine holds the brake, its drive still asking, until
+  someone arms it again. The direct path drives on as soon as commands come back.
+- **Found:** in two of the three runs, the spine latched once during the first drive: ego's 50 Hz
+  commands stalled for more than 0.1 s (a busy Mac, just after the graph check). That's
+  `spine_bridge`'s `cmd_timeout` doing its job, but it is tight for a Python ego on a
+  loaded computer. `sim-check` arms it and drives again, as `bench-check` does. Worth
+  watching on the car's computer.
 
 ## Sensor failures: before and after
 

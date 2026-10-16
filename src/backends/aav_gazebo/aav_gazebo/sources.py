@@ -7,11 +7,15 @@ stand-in, and lidar:=true adds the roof lidar (gazebo.launch.py); radar:=false l
 radar out.
 """
 
-# Always there: what gazebo_adapter itself publishes.
-ALWAYS = [
+# The car's own readings: gazebo_adapter's, unless the spine is in the loop (spine:=true),
+# when spine_bridge publishes them, and announces them SIM itself.
+VEHICLE = [
     ('vehicle', '/vehicle/status'),
     ('odometry', '/vehicle/odom'),
     ('wheels', '/vehicle/wheels'),
+]
+# Always there: what gazebo_adapter itself publishes.
+ALWAYS = [
     ('imu', '/sensors/imu/data_raw'),
     ('gps', '/sensors/gps/fix'),
 ]
@@ -25,9 +29,9 @@ RENDERED = [
 LIDAR = ('lidar', '/sensors/lidar/points')
 
 
-def simulated(rendered, lidar, radar=True):
-    """Return (name, topic) for everything Gazebo simulates in this world."""
-    out = list(ALWAYS)
+def simulated(rendered, lidar, radar=True, vehicle=True):
+    """Return (name, topic) for everything gazebo_adapter announces in this world."""
+    out = (list(VEHICLE) if vehicle else []) + list(ALWAYS)
     if rendered:
         out += [entry for entry in RENDERED if radar or entry[0] != 'radar']
         if lidar:

@@ -1,7 +1,9 @@
 """
 gazebo_adapter: Gazebo (Harmonic) as the car, behind the same topics as the real one.
 
-Subscribes  ego/actuator_cmd      ackermann_msgs/AckermannDriveStamped
+Subscribes  ego/actuator_cmd      ackermann_msgs/AckermannDriveStamped (not with spine)
+            vehicle/gazebo/spine_outputs  aav_interfaces/SpineOutputs, only with spine:
+                                  spine_sim's throttle, brake, gear and steering target
             gazebo/odom           nav_msgs/Odometry   (bridged from the Ackermann system)
             joint_states          sensor_msgs/JointState (bridged: the wheels' spin)
             gazebo/imu            sensor_msgs/Imu     (bridged IMU sensor)
@@ -12,12 +14,17 @@ Subscribes  ego/actuator_cmd      ackermann_msgs/AckermannDriveStamped
                                   camera_relay:=true (gazebo.launch.py faults:=true)
 Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd_vel), at
                                   rate_hz: the actuator model's speed and steering
-            vehicle/odom          nav_msgs/Odometry, twist only, like aav_spine
-            vehicle/status        aav_interfaces/VehicleStatus (mode COMPUTER, armed)
-            vehicle/steering      aav_interfaces/ActuatorState: ego's angle, the model's
+            vehicle/odom          nav_msgs/Odometry, twist only, like aav_spine (not with spine)
+            vehicle/status        aav_interfaces/VehicleStatus (mode COMPUTER, armed; not with
+                                  spine)
+            vehicle/steering      aav_interfaces/ActuatorState: ego's angle, the model's; with
+                                  spine, on vehicle/gazebo/steering: the spine's target, the
+                                  model's angle
             vehicle/throttle      aav_interfaces/ActuatorState: the speed loop's, the model's
-            vehicle/brake         aav_interfaces/ActuatorState: the same (NaN with the model off)
-            vehicle/wheels        aav_interfaces/WheelSpeeds: each wheel's spin x its radius
+            vehicle/brake         aav_interfaces/ActuatorState: the same (NaN with the model
+                                  off). Neither with spine: spine_bridge has them
+            vehicle/wheels        aav_interfaces/WheelSpeeds: each wheel's spin x its radius;
+                                  with spine, on vehicle/gazebo/wheels, for spine_sim
             sensors/imu/data_raw  sensor_msgs/Imu, with covariances; forward and sideways
                                   acceleration from the car's motion (imu.py), as Gazebo's
                                   IMU misses it
@@ -41,7 +48,15 @@ behaviour instead, to compare: the speed within Gazebo's old limits, an instant 
 Gazebo's own limits (aav.gazebo.xacro) are wide, so the model, not Gazebo, limits. No
 /ego/actuator_cmd for cmd_timeout s: the target speed drops to 0, as the spine's watchdog.
 
-Parameters  actuator_model (true), rate_hz (50), cmd_timeout (0.2 s), wheelbase,
+The spine in the loop (spine:=true, READ-ME-FULL-SIMULATION.md step 4): ego's commands go
+to spine_bridge instead, and over the CAN topics to spine_sim, which runs the spine's own
+firmware logic (spine-core). Its outputs come here, to the actuator model's actuators
+(Actuators.drive: its speed loop is skipped), and what Gazebo's car does goes back to
+spine_sim on vehicle/gazebo/wheels and vehicle/gazebo/steering; spine_bridge publishes the
+car's /vehicle/* from the spine's CAN frames. Exactly one backend still takes ego's
+commands: spine_bridge. If spine_sim goes quiet for cmd_timeout s, the car brakes fully.
+
+Parameters  actuator_model (true), spine (false), rate_hz (50), cmd_timeout (0.2 s), wheelbase,
             wheel_radius, rendered (the world renders cameras), radar, lidar,
             camera_relay (false), fault.<sensor> (ok), and the sensors' noise
 
@@ -58,8 +73,9 @@ import signal
 
 from aav_description import vehicle
 from aav_gazebo import faults, imu, radar, sources, wheels
-from aav_gazebo.actuator_model import ActuatorConfig, Actuators, Ideal
-from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
+from aav_gazebo.actuator_model import ActuatorConfig, Actuators, Demand, Ideal
+from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, SpineOutputs
+from aav_interfaces.msg import VehicleStatus
 from aav_interfaces.msg import WheelSpeeds
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist
@@ -80,6 +96,8 @@ RADAR_FIELDS = [PointField(name=n, offset=4 * i, datatype=PointField.FLOAT32, co
 
 
 NAN = float('nan')
+# What a silent spine_sim leaves on the actuators, in Gazebo: no throttle, full brake.
+SILENT_SPINE = Demand(throttle=0.0, brake=1.0, reverse=False)
 
 
 def odom_nan(msg):
@@ -127,28 +145,41 @@ class GazeboAdapter(Node):
         car = vehicle.load()
         config = ActuatorConfig.from_vehicle(car)
         self.imu_x = float(car['sensors']['imu_link']['xyz'][0])   # m ahead of base_link
-        if self.declare_parameter('actuator_model', True).value:
+        self.spine = self.declare_parameter('spine', False).value
+        modelled = self.declare_parameter('actuator_model', True).value
+        if self.spine and not modelled:
+            raise ValueError('spine:=true drives the actuator model: actuator_model must be true')
+        if modelled:
             self.model = Actuators(config)
             self.get_logger().info(f'the actuator model, from vehicle.yaml: {config}')
         else:
             self.model = Ideal(config)
             self.get_logger().info("no actuator model: Gazebo's old limits, an instant steer")
-        self.cmd = None          # ego's last command
+        self.cmd = None          # ego's last command, or spine_sim's last outputs
         self.cmd_time = None
         self.last_tick = None
         self.state = None        # the model's last step
         self.speed = 0.0
 
         self.cmd_pub = self.create_publisher(Twist, 'gazebo/cmd_vel', 10)
-        self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
-        self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
         self.imu_pub = self.create_publisher(Imu, 'sensors/imu/data_raw', 10)
         self.fix_pub = self.create_publisher(NavSatFix, 'sensors/gps/fix', 10)
-        self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
-        self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
-        self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
-        self.wheels_pub = self.create_publisher(WheelSpeeds, 'vehicle/wheels', 10)
-        self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
+        if self.spine:
+            # The car's /vehicle/* come from spine_bridge; these only go to spine_sim.
+            self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/gazebo/steering',
+                                                      10)
+            self.wheels_pub = self.create_publisher(WheelSpeeds, 'vehicle/gazebo/wheels', 10)
+            self.create_subscription(SpineOutputs, 'vehicle/gazebo/spine_outputs',
+                                     self.on_cmd, 10)
+            self.get_logger().info('the spine in the loop: spine_sim drives the actuator model')
+        else:
+            self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
+            self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
+            self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
+            self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
+            self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
+            self.wheels_pub = self.create_publisher(WheelSpeeds, 'vehicle/wheels', 10)
+            self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(Odometry, 'gazebo/odom', self.on_odom, 10)
         self.create_subscription(Imu, 'gazebo/imu', self.on_imu, 10)
         self.create_subscription(NavSatFix, 'gazebo/navsat', self.on_navsat, 10)
@@ -162,7 +193,8 @@ class GazeboAdapter(Node):
                                      qos_profile_sensor_data)
         rendered = self.declare_parameter('rendered', False).value
         self.announce(sources.simulated(rendered=rendered, lidar=lidar,
-                                        radar=self.get_parameter('radar').value))
+                                        radar=self.get_parameter('radar').value,
+                                        vehicle=not self.spine))
         # Faults on purpose: one per stream, set together per sensor (wheels go with odom).
         self.faults = {'gps': [faults.Fault('gps')], 'imu': [faults.Fault('imu')],
                        'odom': [faults.Fault('odom'), faults.Fault('odom')],
@@ -216,7 +248,8 @@ class GazeboAdapter(Node):
         self.source_pub.publish(msg)
 
     def on_cmd(self, msg):
-        self.cmd = msg.drive
+        """Ego's AckermannDriveStamped, or (spine) spine_sim's SpineOutputs."""
+        self.cmd = msg if self.spine else msg.drive
         self.cmd_time = self.get_clock().now()
 
     def tick(self):
@@ -231,9 +264,16 @@ class GazeboAdapter(Node):
         dt = min(dt, 0.1)                # a stall: don't jump
         fresh = (self.cmd is not None
                  and (now - self.cmd_time).nanoseconds * 1e-9 <= self.cmd_timeout)
-        speed = self.cmd.speed if fresh else 0.0
-        steer = self.cmd.steering_angle if self.cmd is not None else 0.0
-        s = self.state = self.model.step(speed, steer, dt)
+        if self.spine:
+            # The spine's own speed loop decided these: straight to the actuators.
+            demand = (Demand(throttle=self.cmd.throttle, brake=self.cmd.brake,
+                             reverse=self.cmd.reverse) if fresh else SILENT_SPINE)
+            steer = self.cmd.steering if self.cmd is not None else 0.0
+            s = self.state = self.model.drive(demand, steer, dt)
+        else:
+            speed = self.cmd.speed if fresh else 0.0
+            steer = self.cmd.steering_angle if self.cmd is not None else 0.0
+            s = self.state = self.model.step(speed, steer, dt)
 
         out = Twist()
         out.linear.x = s.speed
@@ -241,9 +281,11 @@ class GazeboAdapter(Node):
         self.cmd_pub.publish(out)
 
         stamp = now.to_msg()
-        for pub, command, measured in ((self.steering_pub, s.steer_command, s.steering),
-                                       (self.throttle_pub, s.throttle_command, s.throttle),
-                                       (self.brake_pub, s.brake_command, s.brake)):
+        actuators = [(self.steering_pub, s.steer_command, s.steering)]
+        if not self.spine:
+            actuators += [(self.throttle_pub, s.throttle_command, s.throttle),
+                          (self.brake_pub, s.brake_command, s.brake)]
+        for pub, command, measured in actuators:
             a = ActuatorState(command=float(command), measured=float(measured))
             a.header.stamp = stamp
             a.header.frame_id = 'base_link'
@@ -265,6 +307,8 @@ class GazeboAdapter(Node):
         odom.child_frame_id = 'base_link'
         speed = msg.twist.twist.linear.x
         self.speed = speed
+        if self.spine:
+            return               # spine_bridge has the car's odometry and status
         odom.twist.twist.linear.x = speed
         odom.twist.twist.angular.z = msg.twist.twist.angular.z
         cov = [0.0] * 36

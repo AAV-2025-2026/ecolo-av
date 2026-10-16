@@ -3,7 +3,7 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
 
   ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road] [gui:=true]
       [follow:=true] [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
-      [radar:=true] [actuator_model:=true] [faults:=false]
+      [radar:=true] [actuator_model:=true] [faults:=false] [spine:=false] [arm:=true]
 
   /ego/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
                        (the actuator model: vehicle.yaml's actuators:, unless
@@ -11,6 +11,20 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
   Gazebo odometry, IMU, NavSat ──bridge──> gazebo_adapter ──> /vehicle/odom,
                                            /sensors/imu/data_raw, /sensors/gps/fix, /vehicle/status
   Gazebo joints ──bridge──> /joint_states;  Gazebo clock ──bridge──> /clock
+
+spine:=true puts the spine in the loop (READ-ME-FULL-SIMULATION.md step 4): the car's own
+spine_bridge takes ego's commands instead of gazebo_adapter, and spine_sim (car:=gazebo)
+runs the spine's firmware logic (spine-core) on its CAN frames, on Gazebo's clock:
+
+  /ego/actuator_cmd ──> spine_bridge ──> /can/tx ──> spine_sim (the spine's logic)
+  spine_sim ──> /vehicle/gazebo/spine_outputs ──> gazebo_adapter (the actuator model) ──> Gazebo
+  gazebo_adapter ──> /vehicle/gazebo/wheels, /vehicle/gazebo/steering ──> spine_sim
+  spine_sim ──> /can/rx ──> spine_bridge ──> /vehicle/odom, status, steering, wheels...
+
+Still one backend: spine_bridge alone reads /ego/actuator_cmd. arm:=true (the default)
+arms the spine 12 s after start-up, as the bench does; /spine/arm arms it again after a
+stop. The hardware e-stop and driver faults are the bench's: /vehicle/bench/hw_estop and
+/vehicle/bench/driver_faults.
 
 The road world also renders the car's camera and its radar stand-in, a lidar shaped like
 the TI radar (aav_gazebo worlds.has_sensors). A second bridge, gz_road_bridge, carries them:
@@ -53,7 +67,7 @@ from aav_description import vehicle
 from aav_gazebo import faults, worlds
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,
-                            OpaqueFunction)
+                            OpaqueFunction, TimerAction)
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -79,6 +93,29 @@ def flag(context, name):
     return LaunchConfiguration(name).perform(context).lower() == 'true'
 
 
+def spine_in_the_loop(context, v, sim_time):
+    """spine_bridge and spine_sim: the car's CAN path, and the spine's own logic."""
+    spine_share = FindPackageShare('aav_spine').perform(context)
+    actions = [
+        Node(package='aav_spine', executable='spine_bridge', name='spine_bridge',
+             parameters=[os.path.join(spine_share, 'config', 'spine.yaml'),
+                         vehicle.spine_params(v),
+                         # /system/source: everything under it is Gazebo's.
+                         {'source': 'sim'}, sim_time]),
+        Node(package='aav_spine_sim', executable='spine_sim', name='spine_sim',
+             parameters=[{'car': 'gazebo', 'wheelbase': float(v['wheelbase']),
+                          'track': float(v['track']),
+                          'wheel_radius': float(v['wheel_diameter']) / 2,
+                          'max_steering': float(v['max_steering_angle'])}, sim_time]),
+    ]
+    if flag(context, 'arm'):
+        actions.append(TimerAction(period=12.0, actions=[ExecuteProcess(
+            name='arm_spine', output='screen',
+            cmd=['ros2', 'service', 'call', '/spine/arm', 'std_srvs/srv/SetBool',
+                 '{data: true}'])]))
+    return actions
+
+
 def launch_setup(context):
     share = FindPackageShare('aav_gazebo').perform(context)
     world = worlds.world_file(share, LaunchConfiguration('world').perform(context))
@@ -87,6 +124,9 @@ def launch_setup(context):
     lidar = sensors and flag(context, 'lidar')
     radar = sensors and flag(context, 'radar')
     relay = sensors and flag(context, 'faults')
+    spine = flag(context, 'spine')
+    if spine and not flag(context, 'actuator_model'):
+        raise ValueError('spine:=true drives the actuator model: leave actuator_model:=true')
     gui = flag(context, 'gui')
     # -r: start running; -s: server only (no window). On a Mac the window is always its
     # own program (below). On Linux with no window, the sensors render through EGL.
@@ -118,8 +158,11 @@ def launch_setup(context):
              parameters=[{'wheelbase': float(v['wheelbase']), 'rendered': sensors,
                           'radar': radar, 'camera_relay': relay,
                           'lidar': lidar, 'wheel_radius': float(v['wheel_diameter']) / 2.0,
-                          'actuator_model': flag(context, 'actuator_model')}, sim_time]),
+                          'actuator_model': flag(context, 'actuator_model'),
+                          'spine': spine}, sim_time]),
     ]
+    if spine:
+        actions += spine_in_the_loop(context, v, sim_time)
     if gui and MAC:
         actions.append(ExecuteProcess(cmd=['gz', 'sim', '-g'], name='gz_window',
                                       output='screen'))
@@ -179,5 +222,11 @@ def generate_launch_description():
         DeclareLaunchArgument('faults', default_value='false',
                               description='true: the front left picture goes through '
                                           'gazebo_adapter, so fault.camera can freeze it'),
+        DeclareLaunchArgument('spine', default_value='false',
+                              description='the spine in the loop: spine_bridge, CAN frames '
+                                          "and spine_sim, the spine's own logic, in front "
+                                          'of the actuator model'),
+        DeclareLaunchArgument('arm', default_value='true',
+                              description='with spine:=true: arm the spine after 12 s'),
         OpaqueFunction(function=launch_setup),
     ])
