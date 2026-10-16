@@ -84,6 +84,13 @@ Measure every x along the x line, every y square to it, and every z straight up 
 | M5c | **Turning circle** | at full lock, push or drive one slow full circle; measure the circle the **outside front tyre** draws, across | (none) | left: ____ cm right: ____ cm |
 | M5d | Steering wheel turns, lock to lock | count the turns | (none) | ____ turns |
 
+!!! note "Two wheel angles, one number"
+    `max_steering_angle` in `vehicle.yaml` is neither wheel: it's the **middle** of the
+    front axle (the bicycle model, which ego and Nav2 use). The inside wheel turns
+    further, the outside one less. To get it from M5's two angles (in radians):
+    `vehicle.centre_angle(v, inside, outside)` in `aav_description/vehicle.py`.
+    Use the smaller of left and right. Gazebo's own number is worked out from it.
+
 ## 5. Where each sensor is
 
 For each sensor, measure **its centre**: for a camera, the **middle of the lens**; for the

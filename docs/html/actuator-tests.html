@@ -7,7 +7,7 @@
 <!-- Generated from docs/actuator-tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Actuator tests: measure how the car moves</h1>
-<div class="meta">11 min read · 7 sections</div></header>
+<div class="meta">12 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -420,27 +420,39 @@ The script should give them back:</p>
 <tr>
 <td>real angle, full-lock circle</td>
 <td>0.5 rad</td>
-<td>0.433 ⚠️</td>
-<td><code>circles</code>: Gazebo turns wider than told (below)</td>
+<td>0.484 (was 0.433)</td>
+<td><code>circles</code>: fixed 15 Oct (below)</td>
 </tr>
 <tr>
 <td>real angle at 0.2 / 0.35 rad</td>
 <td>0.2 / 0.35</td>
-<td>0.194 / 0.339</td>
+<td>0.196 / 0.341</td>
 <td><code>circles</code>: yaw rate, odometry circle and GPS circle agree within 1%</td>
 </tr>
 </tbody>
 </table></div>
 <p>Other figures from the same runs: 0 → 3 m/s in 6.2 s; IMU and wheel-speed g agree
 (0.054 vs 0.056 g mean); stopping from 1.1 / 2.2 / 3.1 m/s took 1.05 / 2.57 / 4.46 m;
-drift over 10 m was 0.06 m; the full-lock circle was 6.8 m across, not 5.75.</p>
-<div class="admonition warning">
-<p class="admonition-title">Found: Gazebo's car can't reach full lock</p>
-<pre><code>The steering sensor says 0.5 rad, but the car turns as if 0.433. Gazebo's Ackermann
-system applies `steering_limit` (`max_steering_angle`) to the **inner** wheel, so
-the virtual centre wheel stops near 0.45 rad; tyre slip takes the rest. Not fixed
-yet: the fix (an inner-wheel limit in `aav.gazebo.xacro`) changes every Gazebo drive,
-and needs its own `sim-check`. On the car, `circles` measures the real thing.
+drift over 10 m was 0.06 m; the full-lock circle was 6.8 m across, not 5.75 (6.0 m since the fix below).</p>
+<div class="admonition success">
+<p class="admonition-title">Fixed: Gazebo's car now reaches full lock (S3, 15 Oct)</p>
+<pre><code>Told 0.5 rad, the car turned as if 0.433. The cause was Gazebo's Ackermann system
+(gz-sim 8): it turns `steering_limit` into a smallest circle, wheelbase ÷ sin(limit),
+so a limit of 0.5 stopped the middle wheel at 0.447. Tyre slip (about 3%) took the
+rest. Now `vehicle.gazebo_steering_limit` gives Gazebo 0.578, worked out from
+`max_steering_angle`. `vehicle.yaml` and the real car's meaning don't change.
+
+| `circles --sim`, 1 m/s | Before | After |
+|---|---|---|
+| full lock, left / right | 0.433 | 0.485 / 0.484 rad (3% short) |
+| 0.35 rad, left / right | 0.339 | 0.342 / 0.341 |
+| 0.2 rad, left / right | 0.194 | 0.197 / 0.196 |
+| circle across, full lock | 6.8 m | 5.93-5.98 m |
+| Gazebo's wheels at full lock, inside / outside | 0.498 / 0.405 (worked out) | 0.563 / 0.449 (Ackermann: 0.563 / 0.449) |
+
+The wheels now point exactly where Ackermann says. The last 3% is the tyres
+sliding sideways, at every angle: the real car will slide too, and `circles` on the
+car measures it. `steer-sweep --sim` still reads 0.495 (the deadband).
 </code></pre>
 </div>
 <div class="admonition note">
