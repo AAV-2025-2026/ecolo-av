@@ -288,6 +288,7 @@ angles small depth errors become large range errors.
 | `camera_obstacles` | `false` | the detectors' boxes into Nav2's local costmap |
 | `hud` | `false` | the HUD's web server, on 127.0.0.1:5000 |
 | `obstacle` | `false` | the bench's 1 m box, in the lane 15 m ahead |
+| `ghost` | `false` | a pretend person only Nav2 sees: `pixi run ghost --local ahead 10` ([Ghost obstacles](ghost-obstacles.md)) |
 | `start_y`, `start_yaw` | `0.0` | m and rad: start the car this far left of the centre, and turned this far left. The EKFs still start at the origin, facing east |
 
 ```bash
@@ -331,6 +332,7 @@ pixi run sim-check                                # start-up, contract, sensors,
 pixi run -e ml sim-check --perception --obstacle  # and the stop sign, and the box
 pixi run sim-check --lane                         # and lane keeping, in a second run
 pixi run sim-check --lidar-obstacle               # and the lidar alone (radar off) stops for a post
+pixi run sim-check --ghost                        # and a pretend person only Nav2 sees, in a second run
 pixi run sim-check --faults                       # and sensor failures on purpose (below)
 pixi run sim-check --faults --no-watchdog         # the same, a report of what happens without the watchdog
 pixi run sim-check --no-lidar                     # without the simulated roof lidar (on by default)
