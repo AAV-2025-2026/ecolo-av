@@ -6,9 +6,12 @@
 #   minimum_turning_radius    wheelbase / tan(max steer)   (SmacPlannerHybrid)
 #   min_turning_r             the same                     (MPPI, if you switch to it)
 #   StopZone.points           the box ahead of the bumper  (collision_monitor)
+#   min_height, max_height    the lidar's obstacle heights (lidar_scan, aav_lidar)
 # and the map file, and the behaviour tree paths. Where a radar runs (radar:=true), it
 # also turns on the local costmap's obstacle_layer and starts collision_monitor; with
-# camera_obstacles:=true, the camera_layer.
+# camera_obstacles:=true, the camera_layer. Where a lidar runs (lidar:=true), it starts
+# lidar_scan, keeps the lidar_layer and adds the lidar to collision_monitor's sources
+# (vehicle.nav2_tuned: lists, so written into a copy of this file).
 #
 # Reversing (navigation.launch.py reversing:=true; off unless asked for, docs/learn-nav2.md)
 # also sets, from vehicle.yaml's max_reverse_speed:
@@ -154,11 +157,16 @@ local_costmap:
       footprint: "[[1.8, 0.5], [1.8, -0.5], [-0.2, -0.5], [-0.2, 0.5]]"   # set by the launch file
       footprint_padding: 0.05
       # The map's obstacles (static_layer), the radar's (obstacle_layer), the cameras'
-      # (camera_layer), then inflation. The launch file turns the sensor layers on:
-      #   obstacle_layer  radar:=true, where a radar runs: the bench, and the car with its
-      #                   radar part. Gazebo's car has no radar
+      # (camera_layer), the lidar's (lidar_layer), then inflation. The launch file turns
+      # the sensor layers on:
+      #   obstacle_layer  radar:=true, where a radar runs: the bench, Gazebo's road and
+      #                   test_lot worlds, and the car with its radar part
       #   camera_layer    camera_obstacles:=true, off until the cameras are calibrated (Q22)
-      plugins: ["static_layer", "obstacle_layer", "camera_layer", "inflation_layer"]
+      #   lidar_layer     lidar:=true, where a lidar runs: Gazebo (on by default). Not the
+      #                   car yet: no driver for its lidar. Without it the launch file takes
+      #                   the layer out of this list
+      plugins: ["static_layer", "obstacle_layer", "camera_layer", "lidar_layer",
+                "inflation_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
@@ -211,11 +219,49 @@ local_costmap:
           max_obstacle_height: 0.5
           raytrace_min_range: 0.0
           raytrace_max_range: 15.0
+      # The roof lidar, as lidar_scan's 2D scan (below): the nearest thing in each direction
+      # between the road and just over the roof. Its own layer, so its clearing never
+      # wipes the radar's marks: a box too low and close for the roof lidar to see (its
+      # lowest beam, 15 degrees down from 1.8 m, meets a 1 m box only 3 m away) stays in
+      # the radar's layer.
+      lidar_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        min_obstacle_height: -0.5   # m: the scan lies at base_link's height, the road
+        max_obstacle_height: 0.5
+        observation_sources: lidar
+        lidar:
+          topic: /sensors/lidar/scan
+          data_type: "LaserScan"
+          marking: true
+          clearing: true
+          inf_is_valid: true          # no return = nothing there: clear to raytrace range
+          min_obstacle_height: -0.5
+          max_obstacle_height: 0.5
+          obstacle_min_range: 0.0
+          obstacle_max_range: 12.0    # m: past the costmap's 10 m edge, as the car turns
+          raytrace_min_range: 0.0
+          raytrace_max_range: 15.0
+          observation_persistence: 0.0  # s: the newest scan only
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 2.0     # m; at least the car's circumscribed radius, 1.93
         cost_scaling_factor: 3.0
       always_send_full_costmap: true
+
+# The roof lidar's cloud, flattened into a 2D scan around base_link for the local costmap
+# and collision_monitor (navigation.launch.py lidar:=true; aav_lidar lidar_scan). 28,800
+# points at 10 Hz become 720 ranges: Nav2's two readers get 3 kB each instead of 9 MB/s,
+# and the road and anything over the car are gone. One reader of the full cloud.
+lidar_scan:
+  ros__parameters:
+    min_height: 0.3             # m above the road: set by the launch file
+    max_height: 2.0             # m: the same (vehicle.obstacle_heights)
+    angle_min: -3.14159265      # rad: all the way round
+    angle_max: 3.14159265
+    angle_increment: 0.00872665  # 0.5 degrees: 720 ranges
+    range_min: 0.2              # m from base_link
+    range_max: 30.0
+    scan_time: 0.1              # s: the lidar's 10 Hz
 
 global_costmap:
   global_costmap:
@@ -332,10 +378,11 @@ velocity_smoother:
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
 
-# Wherever the radar is (navigation.launch.py radar:=true; collision_monitor:=false leaves
-# it out): it sits between the smoother and twist_mux (velocity_smoother ->
-# /control/cmd_vel_smoothed -> collision_monitor -> /drivers/nav/cmd_vel) and stops the car when radar
-# points enter the stop zone. It reads the radar's own points, not the costmap, so it still
+# Wherever a radar or a lidar is (navigation.launch.py radar:=true or lidar:=true;
+# collision_monitor:=false leaves it out): it sits between the smoother and twist_mux
+# (velocity_smoother -> /control/cmd_vel_smoothed -> collision_monitor -> /drivers/nav/cmd_vel)
+# and stops the car when radar or lidar points enter the stop zone. It reads the sensors
+# themselves, not the costmap, so it still
 # stops the car if the costmap, the planner or the controller goes wrong. It only guards
 # Nav2: the other drivers reach twist_mux without it.
 collision_monitor:
@@ -354,7 +401,7 @@ collision_monitor:
     base_shift_correction: false
     stop_pub_timeout: 2.0     # s of zeros after a stop; then twist_mux's nav slot times out
     polygons: ["StopZone"]
-    # Three radar points in this box stop the car. From the front bumper to 1 m ahead of
+    # Three radar (or lidar) points in this box stop the car. From the front bumper to 1 m ahead of
     # it, 0.2 m wider than the body each side: aav_description vehicle.py stop_zone_points,
     # from vehicle.yaml's body (it says why 1 m).
     StopZone:
@@ -376,6 +423,8 @@ collision_monitor:
       min_points: 3
       visualize: false
       enabled: true
+    # Set by the launch file (vehicle.nav2_tuned): the radar, the lidar, or both. Any
+    # source that goes silent for source_timeout stops the car.
     observation_sources: ["radar"]
     radar:
       type: "pointcloud"
@@ -383,4 +432,11 @@ collision_monitor:
       min_height: -0.5          # m, in base_link. A radar sees no ground, and its height
       max_height: 2.0           # is poor: keep low points. Above 2 m is over the car
       min_range: 0.2            # m from the radar: closer is its own clutter
+      enabled: true
+    # The roof lidar, as lidar_scan's scan (heights already filtered). From the roof it can't
+    # see low things right in front: in the stop zone only what stands over about 1.3 m
+    # (a person, a car, a post), so the radar stays the stop zone's main sensor.
+    lidar:
+      type: "scan"
+      topic: /sensors/lidar/scan
       enabled: true

@@ -3,7 +3,7 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
 
   ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road] [gui:=true]
       [follow:=true] [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
-      [actuator_model:=true]
+      [radar:=true] [actuator_model:=true] [faults:=false]
 
   /ego/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
                        (the actuator model: vehicle.yaml's actuators:, unless
@@ -24,7 +24,12 @@ the TI radar (aav_gazebo worlds.has_sensors). A second bridge, gz_road_bridge, c
 
 lidar:=true, the default, adds a simulated 16-beam roof lidar in a world that renders
 sensors; elsewhere it is ignored. lidar:=false drops it, if a busy Mac struggles with its
-9 MB/s of clouds (docs/simulation.md).
+9 MB/s of clouds (docs/simulation.md). radar:=false leaves out /sensors/radar/points (the
+stand-in still renders: gazebo_adapter just doesn't pass it on), to try the lidar alone.
+
+faults:=true routes the front left camera's picture through gazebo_adapter too, so its
+fault.camera can freeze or stop it (aav_gazebo faults.py); the other sensors' faults work
+without it.
 
 obstacle:=true puts the bench's 1 m box in the car's lane, 15 m ahead. start_y and
 start_yaw put the car this far left of the world's origin, turned this far left of east
@@ -42,15 +47,17 @@ camera at the car once the window is up.
 
 import os
 import sys
+import tempfile
 
 from aav_description import vehicle
-from aav_gazebo import worlds
+from aav_gazebo import faults, worlds
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,
                             OpaqueFunction)
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+import yaml
 
 MAC = sys.platform == 'darwin'
 
@@ -78,6 +85,8 @@ def launch_setup(context):
     sensors = worlds.has_sensors(world)
     # The lidar only where the world renders it: elsewhere it would publish nothing.
     lidar = sensors and flag(context, 'lidar')
+    radar = sensors and flag(context, 'radar')
+    relay = sensors and flag(context, 'faults')
     gui = flag(context, 'gui')
     # -r: start running; -s: server only (no window). On a Mac the window is always its
     # own program (below). On Linux with no window, the sensors render through EGL.
@@ -106,7 +115,8 @@ def launch_setup(context):
              parameters=[{'config_file': os.path.join(share, 'config', 'bridge.yaml')},
                          sim_time]),
         Node(package='aav_gazebo', executable='gazebo_adapter', name='gazebo_adapter',
-             parameters=[{'wheelbase': float(v['wheelbase']), 'radar': sensors,
+             parameters=[{'wheelbase': float(v['wheelbase']), 'rendered': sensors,
+                          'radar': radar, 'camera_relay': relay,
                           'lidar': lidar, 'wheel_radius': float(v['wheel_diameter']) / 2.0,
                           'actuator_model': flag(context, 'actuator_model')}, sim_time]),
     ]
@@ -116,10 +126,19 @@ def launch_setup(context):
     if gui and flag(context, 'follow'):
         actions.append(ExecuteProcess(cmd=[FOLLOW], shell=True, name='follow_car'))
     if sensors:
+        bridge = os.path.join(share, 'config', 'bridge_road.yaml')
+        if relay:
+            # The front left picture to gazebo_adapter, which passes it on through its fault.
+            with open(bridge) as f:
+                entries = faults.relayed(yaml.safe_load(f))
+            out = tempfile.NamedTemporaryFile('w', prefix='bridge_road_', suffix='.yaml',
+                                              delete=False)
+            with out:
+                yaml.safe_dump(entries, out)
+            bridge = out.name
         actions.append(Node(
             package='ros_gz_bridge', executable='parameter_bridge', name='gz_road_bridge',
-            parameters=[{'config_file': os.path.join(share, 'config', 'bridge_road.yaml')},
-                        sim_time]))
+            parameters=[{'config_file': bridge}, sim_time]))
     if lidar:
         actions.append(Node(
             package='ros_gz_bridge', executable='parameter_bridge', name='gz_lidar_bridge',
@@ -151,8 +170,14 @@ def generate_launch_description():
         DeclareLaunchArgument('lidar', default_value='true',
                               description='a simulated 16-beam roof lidar, on '
                                           '/sensors/lidar/points (world:=road)'),
+        DeclareLaunchArgument('radar', default_value='true',
+                              description='pass the radar stand-in on, as '
+                                          '/sensors/radar/points (world:=road)'),
         DeclareLaunchArgument('actuator_model', default_value='true',
                               description="the actuators as vehicle.yaml's actuators: say "
                                           "(gazebo_adapter); false: Gazebo's old instant car"),
+        DeclareLaunchArgument('faults', default_value='false',
+                              description='true: the front left picture goes through '
+                                          'gazebo_adapter, so fault.camera can freeze it'),
         OpaqueFunction(function=launch_setup),
     ])

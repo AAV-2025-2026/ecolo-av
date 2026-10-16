@@ -35,7 +35,8 @@ we are. Details live in the pages linked from each row.
 | **twist_mux** | picks which driver is in charge (joystick > keyboard > Nav2...) and stops stale ones | ✅ | |
 | **EKFs** | robot_localization: local (wheels + IMU) and global (+ GPS) | 🧪 sim: within 0.15 m of the truth; replay: 0.03 m | [maps and position](READ-ME-MAPS-AND-POSITION.md) |
 | **Maps** | Nav2 maps for an empty world and a test lot; GPS datum ties them to the real world | 🧪 | |
-| **Nav2** | paths, obstacles (radar, camera), collision monitor that stops the car; may reverse in the sim and on the bench, never on the car | 🧪 sim: goals reached, stops 0.44 m before a box, backs up 5 m | |
+| **Nav2** | paths, obstacles (radar, camera, lidar), collision monitor that stops the car; may reverse in the sim and on the bench, never on the car | 🧪 sim: goals reached, stops 0.32-0.46 m before a box; with the lidar alone, 0.16-0.55 m before a post; backs up 5 m | |
+| **Sensor watchdog** | stops Nav2 when the wheels, IMU, GPS, an EKF or the camera go quiet, NaN or frozen, or the GPS jumps; says why on the HUD. Faults on purpose in Gazebo (`pixi run sim-fault`) | 🧪 sim: all 10 faults stop the car within 4.1 s | [sensor failures](docs/simulation.md#sensor-failures-on-purpose) |
 | **Simulation** | Gazebo: the whole car, 3 cameras, radar, lidar, GPS, IMU, wheel speed, an actuator model, a SIMULATED banner; one command opens everything | 🧪 | [full simulation](READ-ME-FULL-SIMULATION.md) |
 | **Bench** | the real CAN messages, the spine's logic and both e-stops, without the car | ✅ `bench-check` | |
 | **Perception** | YOLO11 (stop signs and objects), lane keeping, radar clustering (Rust) | 🧪 bench and sim | [perception](READ-ME-PERCEPTION-AND-HUD-MAP.md) |
@@ -61,7 +62,7 @@ we are. Details live in the pages linked from each row.
 | 5 | **The safety timeout** in the actuator board: brake if commands stop | today a lost cable keeps the car going | yes | 🔧 must come first |
 | 6 | **Actuator tests**: speed up, brake, steering sweep, circles; numbers into the sim. The script is built and proven in Gazebo (15 Oct: `pixi run actuator-test`) | the sim behaves like the real car; the car knows how hard it can brake | yes | 🔧 |
 | 7 | **GPS-to-GPS movement**: from A to B by GPS in an empty lot, with a smooth stop at B | the main goal | yes | 🔧 |
-| 8 | **The spine in the loop** in Gazebo, sensor failures on purpose, the lidar into Nav2 | test the safety logic without the car | no | 🔧 |
+| 8 | **The spine in the loop** in Gazebo (sensor failures on purpose and the lidar into Nav2: done 15 Oct) | test the safety logic without the car | no | 🔧 |
 | 9 | **The real lidar driver** (likely a Velodyne) and the real cameras into perception | more of the world seen | yes | 🔧 |
 | 10 | **Newer models**: YOLO26 or RF-DETR for perception; Qwen3.5, Gemma 4 or Granite for plain English, on the Orin too | better and freer models since 2024 | no | 🔧 test, then pick |
 | 11 | **Touchscreen keyboard** for the map's search | type a destination in the car | no | 🔧 |

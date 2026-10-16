@@ -62,7 +62,9 @@ def test_nav2_rewrites_keys():
                       'collision_monitor.ros__parameters.StopZone.points',
                       'planner_server.ros__parameters.GridBased.motion_model_for_search',
                       'controller_server.ros__parameters.FollowPath.allow_reversing',
-                      'controller_server.ros__parameters.MPPI.vx_min'}
+                      'controller_server.ros__parameters.MPPI.vx_min',
+                      'lidar_scan.ros__parameters.min_height',
+                      'lidar_scan.ros__parameters.max_height'}
     assert r['minimum_turning_radius'] == r['min_turning_r']
     # RewrittenYaml can't index into a list: none of these may try.
     assert not any(key.split('.')[-1].isdigit() for key in r)
@@ -70,7 +72,7 @@ def test_nav2_rewrites_keys():
 
 def test_nav2_forward_only_or_reversing():
     v = {'wheelbase': 1.57, 'max_steering_angle': 0.5, 'max_reverse_speed': 0.4,
-         'body': {'length': 2.0, 'width': 1.0, 'rear_overhang': 0.2}}
+         'body': {'length': 2.0, 'width': 1.0, 'height': 1.5, 'rear_overhang': 0.2}}
     forward = vehicle.nav2_rewrites(v)
     back = vehicle.nav2_rewrites(v, reversing=True)
     model = 'planner_server.ros__parameters.GridBased.motion_model_for_search'
@@ -84,7 +86,34 @@ NAV2_SMALL = {
     'velocity_smoother': {'ros__parameters': {'min_velocity': [-0.5, 0.0, -1.0],
                                               'max_velocity': [1.0, 0.0, 1.0]}},
     'controller_server': {'ros__parameters': {'FollowPath': {'desired_linear_vel': 1.0}}},
+    'collision_monitor': {'ros__parameters': {'observation_sources': ['radar']}},
+    'local_costmap': {'local_costmap': {'ros__parameters': {
+        'plugins': ['static_layer', 'obstacle_layer', 'lidar_layer', 'inflation_layer']}}},
 }
+
+
+def test_the_lidar_feeds_the_costmap_and_the_stop_zone_only_when_it_runs():
+    v = {'max_reverse_speed': 0.4}
+
+    def picked(**sensors):
+        cfg = vehicle.nav2_tuned(NAV2_SMALL, v, **sensors)
+        return (cfg['collision_monitor']['ros__parameters']['observation_sources'],
+                cfg['local_costmap']['local_costmap']['ros__parameters']['plugins'])
+
+    sources, layers = picked()                       # the default: the radar alone
+    assert sources == ['radar'] and 'lidar_layer' not in layers
+    sources, layers = picked(radar=True, lidar=True)
+    assert sources == ['radar', 'lidar'] and 'lidar_layer' in layers
+    sources, layers = picked(radar=False, lidar=True)
+    assert sources == ['lidar'] and layers[-1] == 'inflation_layer'
+
+
+def test_the_lidar_ignores_the_road_and_what_the_car_passes_under():
+    low, high = vehicle.obstacle_heights({'body': {'height': 1.5}})
+    assert 0.0 < low < 0.5          # over the road and its kerbs
+    assert high > 1.5               # over the roof, so nothing the car hits is dropped
+    rewrites = vehicle.nav2_rewrites(vehicle.load(CONFIG)['vehicle'])
+    assert float(rewrites['lidar_scan.ros__parameters.max_height']) > 1.5
 
 
 def test_the_smoother_gets_the_reverse_speed_as_a_list():

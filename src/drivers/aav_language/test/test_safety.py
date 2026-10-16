@@ -73,7 +73,7 @@ def test_mux_config_reads_our_twist_mux_yaml():
     # A person always outranks the scripted driver (and so this server).
     assert prio['joy'] > prio['scripted'] and prio['keyboard'] > prio['scripted']
     assert inputs[0].name == 'joy'
-    assert {lk.name for lk in locks} == {'estop', 'stop_sign'}
+    assert {lk.name for lk in locks} == {'estop', 'stop_sign', 'sensors'}
 
 
 def test_mux_choice_follows_twist_mux_rules():

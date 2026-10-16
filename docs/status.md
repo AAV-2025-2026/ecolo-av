@@ -27,7 +27,9 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | ego | `aav_ego` | [[works]] |
 | turtlesim | `aav_turtlesim` | [[works]] |
 | Gazebo | `aav_gazebo` | [[works]] headless on Linux and a Mac; its window on a Mac, with the car driving (10 Oct) |
-| Gazebo's road world | `aav_gazebo` `world:=road` | [[works]] on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) (with `lidar:=true`) render headless; `pixi run sim-check`, `--lidar --obstacle` and `--perception` pass. With YOLO and the lidar together it was flaky, so the lidar is off by default. [[untested]] on Linux, which needs EGL ([Simulation](simulation.md)) |
+| Gazebo's road world | `aav_gazebo` `world:=road` | [[works]] on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; `pixi run sim-check`, `--obstacle`, `--lidar-obstacle`, `--faults` and `--perception` pass. [[untested]] on Linux, which needs EGL ([Simulation](simulation.md)) |
+| The lidar in Nav2 (15 Oct) | `aav_lidar` `lidar_scan` -> the local costmap's `lidar_layer` and `collision_monitor` | [[works]] in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post. [[missing]] on the car: no lidar driver, so `car.launch.py lidar:=false` |
+| Sensor watchdog (15 Oct) | `aav_safety` `sensor_watchdog`: a twist_mux lock, the HUD's banner | [[works]] in Gazebo: all 10 faults on purpose (`pixi run sim-fault`) stop Nav2 within 4.1 s and say why. On the bench, `bench-check` passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. [[untested]] on the car ([Simulation](simulation.md#sensor-failures-on-purpose)) |
 | Real car | `aav_spine` | [[works]] on the bench, against `spine_sim`: arming, driving, both e-stops |
 | Today's car | `aav_legacy` | [[untested]] on the car |
 | Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 70 tests, and on the bench |
@@ -46,7 +48,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
 | HUD in Rust (raylib) | `aav_hud_raylib` | [[works]] on a Mac: `--demo`, and as a node fed by `ros2 topic pub`; its e-stop reaches a subscriber as 5 trues. [[works]] next to bench mode too. [[untested]] on a Pi and on the car's screen |
 | CARLA | `aav_carla` | [[stub]] parked (Q31) |
-| Lidar | on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo only (`lidar:=true`, `/sensors/lidar/points`, 15 Oct); off by default, as it made the Mac flaky with YOLO | [[missing]] on the car |
+| Lidar | on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo (`/sensors/lidar/points`, on by default), which Nav2 reads since 15 Oct | [[missing]] on the car |
 
 ## Builds and tests
 

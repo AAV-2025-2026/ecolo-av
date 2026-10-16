@@ -5,8 +5,9 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [hud_web:=false] [map:=false] [foxglove:=false]
-      [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
-      [actuator_model:=true] [sim_speed:=] [reversing:=true]
+      [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
+      [actuator_model:=true] [sim_speed:=] [reversing:=true] [watchdog:=true]
+      [faults:=false]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
   pixi run sim world:=test_lot sim_speed:=3 hud:=true   Gazebo, RViz, Nav2 and the HUD window
@@ -21,8 +22,9 @@ The road and test_lot worlds render the car's three cameras, its radar stand-in 
 roof lidar (aav_gazebo worlds.has_sensors), so the car's whole graph runs there, with the
 bench's argument names:
 
-  the radar           always, where the world renders it: radar_clusters, and Nav2's
-                      obstacle layer and collision_monitor (navigation.launch.py radar:=true)
+  the radar           where the world renders it (radar:=false drops it, to test the
+                      lidar alone): radar_clusters, and Nav2's obstacle layer and
+                      collision_monitor (navigation.launch.py radar:=true)
   perception:=true    YOLO (the ml environment) and stop_sign_watcher: twist_mux's
                       stop-sign lock
   lane:=true          lane keeping: lane_finder and control_interface, on /drivers/ai/cmd_vel.
@@ -36,11 +38,19 @@ bench's argument names:
                       computer: open ws://localhost:8765
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
   lidar:=false        no roof lidar. It's on by default (15 Oct): a simulated 16-beam
-                      lidar on /sensors/lidar/points. Nothing reads it yet but RViz. Its
-                      earlier flakiness on a Mac came from other programs competing
+                      lidar on /sensors/lidar/points, which Nav2 reads as a 2D scan
+                      (navigation.launch.py lidar:=true: its local costmap and
+                      collision_monitor). Its earlier flakiness on a Mac came from other
+                      programs competing
   sim_speed:=3        a higher top speed (m/s, up to 5), for ego and Nav2, in Gazebo only:
                       the car's 1.0 m/s cap (ego.yaml, nav2.yaml) is for its first drives.
                       ego refuses it outside a simulator
+  watchdog:=true      the sensor watchdog (aav_safety): twist_mux's sensors lock stops Nav2
+                      and the AI slot when the wheels, the IMU, the GPS or an EKF go quiet,
+                      NaN or frozen, or the GPS jumps; and the camera, where something
+                      reads it (perception, lane, camera_obstacles, faults)
+  faults:=true        the front left picture through gazebo_adapter, so its fault.camera
+                      works (pixi run sim-fault camera freeze); the other faults always do
   actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
                       vehicle.yaml's actuators:), to compare the two
 
@@ -81,12 +91,15 @@ def launch_setup(context):
         raise ValueError(f'world:={world}: pick one of {sorted(MAPS)}')
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
-                      'hud_web', 'map', 'foxglove', 'reversing')}
+                      'hud_web', 'map', 'foxglove', 'reversing', 'watchdog', 'faults')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
     gazebo_share = FindPackageShare('aav_gazebo').perform(context)
     sensors = worlds.has_sensors(worlds.world_file(gazebo_share, world))
+    # Each only where the world renders it, as gazebo.launch.py decides.
+    radar = sensors and arg('radar').lower() == 'true'
+    lidar = sensors and arg('lidar').lower() == 'true'
     wanted = [n for n in CAMERA_PARTS if flag[n]] + (['lane'] if lane == 'true' else [])
     if wanted and not sensors:
         raise ValueError(f'{", ".join(wanted)}: world:={world} has no camera. Use world:=road')
@@ -96,7 +109,8 @@ def launch_setup(context):
         SetParameter(name='use_sim_time', value=True),
         include(context, 'aav_gazebo', 'gazebo.launch.py', world=world, gui=arg('gui'),
                 obstacle=arg('obstacle'), start_y=arg('start_y'), start_yaw=arg('start_yaw'),
-                lidar=arg('lidar'), actuator_model=arg('actuator_model')),
+                lidar=arg('lidar'), radar=arg('radar'),
+                actuator_model=arg('actuator_model'), faults=flag['faults']),
         include(context, 'aav_mux', 'mux.launch.py', use_sim_time='true'),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
                 sim_max_speed=arg('sim_speed')),
@@ -110,20 +124,29 @@ def launch_setup(context):
                          ('imu/data', '/sensors/imu/data')]),
         include(context, 'aav_localization', 'localization.launch.py', use_sim_time='true'),
     ]
-    if sensors:
+    if radar:
         # The radar stand-in, as the bench's: few points per object, so small clusters.
         actions.append(include(context, 'aav_radar_clusters', 'radar_clusters.launch.py',
                                minimum_points='5'))
     if flag['nav']:
-        # Where the world renders the radar, Nav2's local costmap reads it, and
-        # collision_monitor guards Nav2's commands, as on a car with a radar.
+        # Where the world renders the radar and the lidar, Nav2's local costmap reads
+        # them, and collision_monitor guards Nav2's commands, as on a car with them.
         actions.append(include(context, 'aav_navigation', 'navigation.launch.py',
                                use_sim_time='true',
                                map=os.path.join(nav_share, 'maps', MAPS[world]),
-                               radar=sensors, collision_monitor=sensors,
+                               radar=radar, lidar=lidar, collision_monitor=radar or lidar,
                                camera_obstacles=flag['camera_obstacles'],
                                max_speed=arg('sim_speed'),
                                reversing=str(flag['reversing']).lower()))
+    if flag['watchdog']:
+        # What this world has, and the camera only where something reads it: watching it
+        # costs one more stream of pictures.
+        camera = sensors and (flag['perception'] or flag['camera_obstacles'] or lane != 'false'
+                              or flag['faults'])
+        inputs = (['odom', 'imu', 'gps', 'local', 'global'] + (['camera'] if camera else [])
+                  + (['radar'] if radar else []))
+        actions.append(include(context, 'aav_safety', 'watchdog.launch.py',
+                               inputs=','.join(inputs), use_sim_time='true'))
     if flag['teleop']:
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
     if flag['perception']:
@@ -203,10 +226,20 @@ def generate_launch_description():
                                           '(the EKFs still start facing east)'),
         DeclareLaunchArgument('lidar', default_value='true',
                               description='a simulated 16-beam roof lidar, on '
-                                          '/sensors/lidar/points (world:=road)'),
+                                          '/sensors/lidar/points, read by Nav2 '
+                                          '(world:=road or test_lot)'),
+        DeclareLaunchArgument('radar', default_value='true',
+                              description='the radar stand-in (world:=road or test_lot); '
+                                          'false: the lidar alone guards Nav2'),
         DeclareLaunchArgument('actuator_model', default_value='true',
                               description="the actuators as vehicle.yaml's actuators: say; "
                                           "false: Gazebo's old instant car"),
+        DeclareLaunchArgument('watchdog', default_value='true',
+                              description='the sensor watchdog: stops Nav2 and the AI slot '
+                                          'when a sensor they need fails (aav_safety)'),
+        DeclareLaunchArgument('faults', default_value='false',
+                              description='route the front left picture through '
+                                          'gazebo_adapter, for fault.camera'),
         DeclareLaunchArgument('sim_speed', default_value='',
                               description='m/s, up to 5: a higher top speed for ego and Nav2 '
                                           "than the car's 1.0, in Gazebo only"),

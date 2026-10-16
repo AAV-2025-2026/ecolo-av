@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">24 min read · 4 sections</div></header>
+<div class="meta">27 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -132,7 +132,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>velocity_smoother</code>, <code>collision_monitor</code></td>
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>-</td>
-<td>Priority 20. Nav2. From collision_monitor where the radar runs (navigation.launch.py radar:=true - the bench, the car with its radar part, Gazebo's road world), else straight from velocity_smoother.</td>
+<td>Priority 20. Nav2. From collision_monitor where the radar or the lidar runs (navigation.launch.py radar:=true or lidar:=true - the bench, the car with its radar part, Gazebo's road and test_lot worlds), else straight from velocity_smoother.</td>
 </tr>
 <tr>
 <td><code>/control/cmd_vel_smoothed</code></td>
@@ -140,7 +140,23 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>velocity_smoother</code></td>
 <td><code>collision_monitor</code></td>
 <td>-</td>
-<td>Nav2's smoothed command, into collision_monitor, where the radar runs. It stops the car for radar points in its stop zone, or when the radar goes silent; it only guards Nav2.</td>
+<td>Nav2's smoothed command, into collision_monitor, where the radar or the lidar runs. It stops the car for radar or lidar points in its stop zone, or when either goes silent; it only guards Nav2.</td>
+</tr>
+<tr>
+<td><code>/safety/sensor_watchdog/lock</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>sensor_watchdog</code></td>
+<td><code>twist_mux</code></td>
+<td>sim</td>
+<td>true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen or jumped (aav_safety sensor_watchdog, 10 Hz). A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test; never expires on silence. Runs in Gazebo (sim.launch.py watchdog:=true), on the bench, and on the car with Nav2.</td>
+</tr>
+<tr>
+<td><code>/safety/sensor_watchdog/state</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>sensor_watchdog</code></td>
+<td><code>hud</code></td>
+<td>sim</td>
+<td>One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD shows it.</td>
 </tr>
 <tr>
 <td><code>/safety/collision_monitor/state</code></td>
@@ -148,7 +164,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>collision_monitor</code></td>
 <td>-</td>
 <td>-</td>
-<td>What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar is silent or its TF is late.</td>
+<td>What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar or the lidar is silent or its TF is late.</td>
 </tr>
 <tr>
 <td><code>/safety/collision_monitor/stop_zone</code></td>
@@ -164,7 +180,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>collision_monitor</code></td>
 <td>-</td>
 <td>-</td>
-<td>The radar points collision_monitor sees, for RViz; sent only while someone listens.</td>
+<td>The radar and lidar points collision_monitor sees, for RViz; sent only while someone listens.</td>
 </tr>
 <tr>
 <td><code>/drivers/ai/cmd_vel</code></td>
@@ -210,7 +226,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/odom</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
-<td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.</td>
 </tr>
@@ -306,7 +322,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/imu/data</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
-<td><code>ekf_local</code>, <code>ekf_global</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code></td>
 <td>sim, car, replay, bench</td>
 <td>Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.</td>
 </tr>
@@ -314,7 +330,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code></td>
-<td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code></td>
+<td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
 <td>sim, car, replay, bench</td>
 <td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
 </tr>
@@ -346,7 +362,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/radar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>radar</code>, <code>mock_radar</code>, <code>gazebo_adapter</code></td>
-<td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code></td>
+<td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
 <td>The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_adapter makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.</td>
 </tr>
@@ -369,10 +385,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code></td>
-<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_adapter</code></td>
+<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
-<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens).</td>
+<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_adapter first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its camera fault (freeze, stop).</td>
 </tr>
 <tr>
 <td><code>/sensors/camera/front_left/image_raw/compressed</code></td>
@@ -426,9 +442,17 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/lidar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>gz_lidar_bridge</code></td>
-<td>-</td>
+<td><code>lidar_scan</code></td>
 <td>road</td>
-<td>Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6). In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).</td>
+<td>Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6), so car.launch.py's lidar:=false is the default. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.</td>
+</tr>
+<tr>
+<td><code>/sensors/lidar/scan</code></td>
+<td><code>sensor_msgs/msg/LaserScan</code></td>
+<td><code>lidar_scan</code></td>
+<td><code>local_costmap</code>, <code>collision_monitor</code></td>
+<td>road</td>
+<td>The roof lidar flattened (aav_lidar lidar_scan - navigation.launch.py lidar:=true) - in base_link, 720 ranges all the way round, each the nearest point between 0.3 m and the roof plus 0.5 m (vehicle.obstacle_heights), inf where there is none. Best effort, 10 Hz. Read by the local costmap's lidar_layer and collision_monitor's stop zone. From the roof, the lowest beam (15 degrees down from 1.8 m) meets a 1 m box only 3 m away, so low things close in front are the radar's.</td>
 </tr>
 <tr>
 <td><code>/perception/radar/clusters</code></td>
@@ -554,7 +578,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/local</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_local</code></td>
-<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code>, <code>actuator_test</code></td>
+<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>odom frame. Smooth; drifts.</td>
 </tr>
@@ -562,7 +586,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/global</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_global</code></td>
-<td><code>navsat_transform</code>, <code>map</code></td>
+<td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code></td>
 <td>sim, car, replay, bench</td>
 <td>map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it.</td>
 </tr>
@@ -641,10 +665,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/diagnostics</code></td>
 <td><code>diagnostic_msgs/msg/DiagnosticArray</code></td>
-<td><code>twist_mux</code>, <code>ekf_local</code>, <code>ekf_global</code></td>
+<td><code>twist_mux</code>, <code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code></td>
 <td><code>language_drive</code></td>
 <td>-</td>
-<td>ROS's diagnostics. twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic.</td>
+<td>ROS's diagnostics. sensor_watchdog reports each input it watches once a second (OK, WARN, ERROR when it stops the car). twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic.</td>
 </tr>
 </tbody>
 </table></div>
@@ -695,6 +719,12 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>robot_localization/srv/SetPose</code></td>
 <td><code>ekf_global</code></td>
 <td>Re-seed the start pose by hand (heading!).</td>
+</tr>
+<tr>
+<td><code>/safety/sensor_watchdog/clear</code></td>
+<td><code>std_srvs/srv/Trigger</code></td>
+<td><code>sensor_watchdog</code></td>
+<td>A person says the position is right again after a GPS jump, which the watchdog latches (pixi run sim-fault clear in Gazebo).</td>
 </tr>
 </tbody>
 </table></div>

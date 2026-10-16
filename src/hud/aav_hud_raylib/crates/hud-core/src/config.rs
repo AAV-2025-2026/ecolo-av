@@ -28,6 +28,8 @@ pub enum Topic {
     /// `/system/source`: where the data comes from. Not listed under TOPICS: it's
     /// latched and sent once, so its age means nothing.
     Source,
+    /// The sensor watchdog's verdict (aav_safety): a banner over the camera unless OK.
+    Watchdog,
 }
 
 impl Topic {
@@ -41,8 +43,9 @@ impl Topic {
         Topic::Camera,
     ];
 
-    /// The topics that aren't listed: the e-stop (sent) and the source (latched).
-    pub const UNLISTED: [Topic; 2] = [Topic::Estop, Topic::Source];
+    /// The topics that aren't listed: the e-stop (sent), the source (latched), and the
+    /// watchdog (a banner of its own).
+    pub const UNLISTED: [Topic; 3] = [Topic::Estop, Topic::Source, Topic::Watchdog];
 
     /// The ROS parameter that holds this topic's name.
     pub fn parameter(self) -> &'static str {
@@ -55,6 +58,7 @@ impl Topic {
             Self::Camera => "camera_topic",
             Self::Estop => "estop_topic",
             Self::Source => "source_topic",
+            Self::Watchdog => "watchdog_topic",
         }
     }
 }
@@ -70,6 +74,7 @@ pub struct HudConfig {
     pub camera_topic: String,
     pub estop_topic: String,
     pub source_topic: String,
+    pub watchdog_topic: String,
     /// Seconds without a message before a topic shows STALE.
     pub stale_after: f64,
 }
@@ -123,6 +128,7 @@ impl HudConfig {
             Topic::Camera => &self.camera_topic,
             Topic::Estop => &self.estop_topic,
             Topic::Source => &self.source_topic,
+            Topic::Watchdog => &self.watchdog_topic,
         }
     }
 
@@ -137,6 +143,7 @@ impl HudConfig {
             Topic::Camera => &mut self.camera_topic,
             Topic::Estop => &mut self.estop_topic,
             Topic::Source => &mut self.source_topic,
+            Topic::Watchdog => &mut self.watchdog_topic,
         };
         *slot = name;
     }

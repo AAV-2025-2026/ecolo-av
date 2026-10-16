@@ -8,8 +8,10 @@ The launch files use this so the car's measurements live in one file:
     vehicle.min_turning_radius(v)    # Nav2 SmacPlannerHybrid, MPPI Ackermann
     vehicle.footprint(v)             # Nav2 costmaps
     vehicle.stop_zone_points(v)      # Nav2 collision_monitor
+    vehicle.obstacle_heights(v)      # the lidar's band of obstacle heights (lidar_scan)
     vehicle.nav2_rewrites(v, reversing)         # Nav2's file: forward only, or reversing too
-    vehicle.nav2_tuned(nav2, v, reversing, max_speed)  # what RewrittenYaml can't write
+    vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar)  # what RewrittenYaml
+                                                                     # can't write
     vehicle.ego_params(v)            # ego
 """
 
@@ -69,6 +71,19 @@ def stop_zone_points(v, ahead=STOP_ZONE_AHEAD, margin=STOP_ZONE_MARGIN):
     return [[front + ahead, half], [front + ahead, -half], [front, -half], [front, half]]
 
 
+# The lidar's obstacles: what lies between these heights above the road (base_link's z).
+# Below: the road itself, kerbs, and the ground the lidar sees as its beams tilt with the
+# car (0.3 m is the ground 10 m away, with the car pitched 1.7 degrees). Above the car's
+# roof by more than OVERHEAD_MARGIN: branches, signs, a garage door the car passes under.
+GROUND_CLEARANCE = 0.3  # m
+OVERHEAD_MARGIN = 0.5   # m above the body's height
+
+
+def obstacle_heights(v):
+    """Return (lowest, highest) m above the road that counts as an obstacle for the lidar."""
+    return GROUND_CLEARANCE, float(v['body']['height']) + OVERHEAD_MARGIN
+
+
 def ego_params(v):
     return {
         'wheelbase': float(v['wheelbase']),
@@ -100,8 +115,11 @@ def nav2_rewrites(v, reversing=False):
     smoother's limit is a list, which RewrittenYaml can't write: see nav2_tuned.
     """
     r = min_turning_radius(v)
+    low, high = obstacle_heights(v)
     return {
         'footprint': footprint(v),
+        'lidar_scan.ros__parameters.min_height': f'{low:.3f}',
+        'lidar_scan.ros__parameters.max_height': f'{high:.3f}',
         'minimum_turning_radius': f'{r:.3f}',   # SmacPlannerHybrid
         'min_turning_r': f'{r:.3f}',            # MPPI AckermannConstraints
         'collision_monitor.ros__parameters.StopZone.points': polygon(stop_zone_points(v)),
@@ -112,7 +130,7 @@ def nav2_rewrites(v, reversing=False):
     }
 
 
-def nav2_tuned(nav2, v, reversing=False, max_speed=None):
+def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False):
     """
     Return a copy of nav2.yaml's settings (`nav2`, loaded) with what RewrittenYaml can't write.
 
@@ -122,9 +140,18 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None):
     - the velocity smoother's lowest speed, the last stop for a negative speed inside Nav2:
       0, or -max_reverse_speed with `reversing`;
     - with `max_speed` (m/s, sim.launch.py sim_speed:=), the controller's speed and the
-      smoother's top speed.
+      smoother's top speed;
+    - the sensors collision_monitor reads: the radar, the lidar or both;
+    - the local costmap's lidar_layer, only with the lidar: a layer that is there but
+      disabled still subscribes to its topic.
     """
     out = copy.deepcopy(nav2)
+    monitor = out['collision_monitor']['ros__parameters']
+    monitor['observation_sources'] = [name for name, on in (('radar', radar), ('lidar', lidar))
+                                      if on]
+    local = out['local_costmap']['local_costmap']['ros__parameters']
+    if not lidar:
+        local['plugins'] = [p for p in local['plugins'] if p != 'lidar_layer']
     smoother = out['velocity_smoother']['ros__parameters']
     smoother['min_velocity'] = ([reverse_limit(v, reversing)] +
                                 [float(x) for x in smoother['min_velocity'][1:]])

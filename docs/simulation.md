@@ -53,7 +53,10 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 | `gui` | `true` | show the Gazebo window (on a Mac, as a second program) |
 | `follow` | `true` | point the window's camera at the car |
 | `rviz` | `true` | open RViz |
-| `lidar` | `false` | `true`: the simulated roof lidar, in the road world only ([below](#the-lidar-gazebo-only)) |
+| `lidar` | `true` | the simulated roof lidar, in the road and test_lot worlds, read by Nav2 ([below](#the-lidar-gazebo-only)); `false` drops it |
+| `radar` | `true` | the radar stand-in, in the road and test_lot worlds; `false`: the lidar alone guards Nav2 |
+| `watchdog` | `true` | the sensor watchdog: stops Nav2 and the AI slot when a sensor fails ([below](#sensor-failures-on-purpose)) |
+| `faults` | `false` | `true`: the front left picture goes through `gazebo_adapter` too, so it can freeze on purpose |
 | `actuator_model` | `true` | the car answers like `vehicle.yaml`'s `actuators:` say ([below](#the-actuator-model)); `false`: the old instant car, to compare |
 
 ### What Gazebo simulates
@@ -243,12 +246,31 @@ yet. So Gazebo has a generic one, to try what a lidar would add. **It's on by de
 | Where | `lidar_link`, in `vehicle.yaml`: on the roof tripod, 0.9 m ahead of the rear axle, 1.8 m up (Ben's placement, 15 Oct, until it's measured) |
 | Why a mast | at 0.1 m above the roof, the beam 11 degrees down hit the car's own roof: 904 points a sweep at 0.5 m. At 0.4 m nothing hits the car |
 | Size | 1800 x 16 points, 0.9 MB a cloud, so it's bridged **reliably**: best effort loses big messages (see [Mac](mac.md)) |
-| Who reads it | nobody yet but RViz. Nav2's obstacle layer could, once the car has one |
+| Who reads it | Nav2, since 15 Oct (below): `lidar_scan` flattens it into a 2D scan for the local costmap and `collision_monitor` |
 | Turn it off | `lidar:=false`: the simulated sensor leaves the URDF (the frame stays), and its bridge doesn't start |
 | On the Mac, alone | stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. `sim-check --lidar` passes |
 | On the Mac, with YOLO too, the morning of 15 Oct | **flaky**: `sim-check --perception` failed 3 runs out of 3 with the lidar on (a stuck global EKF twice, a 2.5 s stall once). Without it, it passed (see [sim-check](#sim-check)) |
 | Why it was off | anything that shows the lidar (RViz, a check) pulls 9 MB/s of reliable clouds. Fast DDS's shared memory fails on the Mac (`open_and_lock_file failed`), so they go over loopback UDP, and with YOLO running, other processes start missing messages (one lost `/clock` for 2 minutes) |
 | Now | on by default again: with the Mac quiet, everything together passed twice (below). If a run stalls, check for leftover simulators first (`ps aux \| grep gz`), then try `lidar:=false` |
+
+#### The lidar in Nav2 (15 Oct)
+
+```text
+ /sensors/lidar/points ─► lidar_scan ─► /sensors/lidar/scan ─┬─► local costmap: lidar_layer
+  (0.9 MB, 10 Hz,          (aav_lidar)   (720 ranges, 3 kB)   └─► collision_monitor: stop zone
+   reliable)
+```
+
+| | |
+|---|---|
+| What counts | points from 0.3 m above the road to 0.5 m over the roof (2.0 m): `vehicle.obstacle_heights`, from `vehicle.yaml`. The road, kerbs and overhead branches don't; nor do points on the car itself |
+| The scan | 720 directions (0.5°), each the nearest point, flat from `base_link`; `inf` where nothing is, which clears the costmap |
+| Its own costmap layer | `lidar_layer`, so its clearing never wipes the radar's marks |
+| Switch | `navigation.launch.py lidar:=true`. `sim.launch.py` passes it where the world renders the lidar. **The car: `lidar:=false`**, as no driver publishes its lidar yet (probably a Velodyne: audit N6) |
+| CPU | `lidar_scan` about 4% of one core; Nav2's two readers get 3 kB a scan instead of 0.9 MB |
+| Why not the stock `pointcloud_to_laserscan` | tried first: it subscribes best effort, and on a Mac no 0.9 MB cloud ever arrives that way ([Mac](mac.md)). Ours subscribes reliably |
+| Its blind spot | from 1.8 m up, the lowest beam (15° down) meets a 1 m box only 2.1 m ahead of the bumper, and the road only 4.9 m ahead. In the stop zone (bumper to 1 m ahead) it sees only what stands over about 1.3 m: a person, a car, a post. Low things close in front are the radar's |
+| Proof | `pixi run sim-check --lidar-obstacle`: the radar off, a person-sized post (0.5 x 0.5 x 1.8 m) 15 m ahead. The car stood still 0.16-0.55 m before it (two runs), the stop zone fired from the lidar, the costmap marked it (100 of 100); with the post gone, it drove on to its goal |
 
 ![One sweep of the simulated lidar, from above: the ground's rings and the stop sign](img/sim-lidar.png)
 
@@ -260,7 +282,7 @@ angles small depth errors become large range errors.
 
 | Argument | Default | Starts |
 |---|---|---|
-| (always, in the road world) | | `radar_clusters`, and Nav2's obstacle layer and `collision_monitor` |
+| (always, in the road world) | | `radar_clusters`, and Nav2's obstacle layer and `collision_monitor`; `lidar_scan` and the lidar layer; the sensor watchdog |
 | `perception` | `false` | YOLO and `stop_sign_watcher`: twist_mux's stop-sign lock. Needs `pixi run -e ml` |
 | `lane` | `false` | `true`: lane keeping (`lane_finder`, and `control_interface` on `/drivers/ai/cmd_vel`). Add `nav:=false`: Nav2 outranks it. `fake`: on a pretend lane, in any world |
 | `camera_obstacles` | `false` | the detectors' boxes into Nav2's local costmap |
@@ -308,6 +330,9 @@ the frames come out right (`sim-check` tests them).
 pixi run sim-check                                # start-up, contract, sensors, a drive
 pixi run -e ml sim-check --perception --obstacle  # and the stop sign, and the box
 pixi run sim-check --lane                         # and lane keeping, in a second run
+pixi run sim-check --lidar-obstacle               # and the lidar alone (radar off) stops for a post
+pixi run sim-check --faults                       # and sensor failures on purpose (below)
+pixi run sim-check --faults --no-watchdog         # the same, a report of what happens without the watchdog
 pixi run sim-check --no-lidar                     # without the simulated roof lidar (on by default)
 ```
 
@@ -325,10 +350,90 @@ Ran on Ben's Mac, 15 Oct, after the topic renaming:
 | The same, afternoon, a quiet Mac (an orphaned Gazebo and five leftover ROS daemons stopped) | **passed 2 out of 2** with the lidar, three cameras, the radar and YOLO: the sign seen from 9.6 m, the car stood 3.6 m before it, then reached its goal. So the lidar is on by default again |
 | The test_lot world with its new sensors | front cameras 6.9 and 9.7 Hz, rear 7.7 Hz, lidar 9.7 Hz with 2891 hits a sweep on the walls, building and cars |
 | `pixi run sim-check --lane` | ✅ 15 Oct, after the cameras moved: back to the lane's centre within 5 cm in 5 s |
+| `pixi run sim-check --obstacle --lidar-obstacle` (15 Oct, the lidar into Nav2; twice) | all pass: the box 0.32-0.46 m ahead with radar and lidar; with the radar off, the lidar alone stopped the car 0.16-0.55 m before a person-sized post, the costmap 100 of 100 there; both goals reached once they were gone |
+| `pixi run sim-check --faults` (15 Oct) | all 10 faults pass: the car stood still 1.7-4.1 s after each, and the watchdog (or `collision_monitor`, for the radar) said why; then let go |
+| `pixi run sim-check --faults --no-watchdog` (15 Oct) | the before column [below](#what-the-car-does-before-and-after): only the radar stopped the car |
 
 Ten runs in all, on a Mac shared with other work (load 5-17 on 16 cores). One more
 `--perception` run without the lidar failed too: the car never moved, and the log doesn't
 say why. So the full graph with YOLO is still a little flaky on a busy Mac.
+
+## Sensor failures on purpose
+
+READ-ME-FULL-SIMULATION.md step 6 (15 Oct): make a simulated sensor fail, and check the
+car stops, **safely and loudly**.
+
+### Make one fail
+
+```bash
+pixi run sim world:=road faults:=true     # faults:=true only for the camera
+pixi run sim-fault gps stop               # the GPS goes quiet
+pixi run sim-fault gps ok                 # mended
+pixi run sim-fault clear                  # after a GPS jump: a person says the position is right
+```
+
+| Sensor | Topic it breaks | Faults |
+|---|---|---|
+| `gps` | `/sensors/gps/fix` | `stop`, `freeze`, `nan`, `jump` (20 m north) |
+| `imu` | `/sensors/imu/data_raw` | `stop`, `freeze`, `nan` |
+| `odom` | the wheels: `/vehicle/odom`, `/vehicle/wheels` | `stop`, `freeze`, `nan` |
+| `radar` | `/sensors/radar/points` | `stop`, `freeze` |
+| `camera` | `/sensors/camera/front_left/image_raw` (with `faults:=true`) | `stop`, `freeze` |
+
+`freeze` sends the last good message again, with fresh stamps: it looks alive. It's a
+parameter of `gazebo_adapter` (`fault.<sensor>`); the logic is `aav_gazebo/faults.py`.
+
+### The sensor watchdog
+
+`aav_safety`'s `sensor_watchdog` watches what Nav2 and the AI slot need. While one isn't
+right, its twist_mux lock (priority 30, as the stop sign) holds them; people and tests
+still drive. It says why on `/safety/sensor_watchdog/state`, on the HUD (a red banner over
+the camera), in the log and on `/diagnostics`.
+
+| Input | Topic | Wrong when | Then |
+|---|---|---|---|
+| odom | `/vehicle/odom` | quiet 0.5 s; NaN | stop |
+| imu | `/sensors/imu/data` | quiet 0.5 s; NaN; the same for 1 s | stop |
+| gps | `/sensors/gps/fix` | no good fix for 2 s (NaN or no fix count as none); a jump between two fixes of more than 15 m/s x the time between their stamps + 5 m (for noise), **latched** until cleared | stop |
+| local, global | the EKFs' `/localization/odom/*` | quiet 0.5 s; NaN | stop |
+| camera | the front left picture | quiet 1 s; the same picture for 1 s **while the wheels turn** | stop (only where something reads it: perception, lane, camera obstacles) |
+| radar | `/sensors/radar/points` | quiet 1 s | warn: `collision_monitor` already stops Nav2 |
+
+It runs in Gazebo (`watchdog:=true`), on the bench, and on the car next to Nav2 (odom,
+IMU, GPS, the EKFs). The checks are `aav_safety/watchdog.py`, with no ROS, and its tests.
+
+### What the car does: before and after
+
+`pixi run sim-check --faults` (after) and `--faults --no-watchdog` (before): each fault
+while Nav2 drives at about 1 m/s, in Gazebo's road world, on Ben's Mac, 15 Oct.
+
+| Fault | Before: no watchdog | After: the watchdog |
+|---|---|---|
+| GPS lost (`gps stop`) | ❌ drove on: 10.6 m in 10 s, nothing said. The global EKF carried on from the wheels and IMU (1.1 m out) | ✅ stood still 3.8 s after it, 2.8 m on: "gps STALE" |
+| GPS NaN (`gps nan`) | ❌ drove on 10.0 m, nothing said (navsat_transform drops NaN fixes: the same as lost) | ✅ 4.1 s, 2.8 m: "gps STALE (no fix)" |
+| GPS jumps 20 m (`gps jump`) | ⚠️ stood still 2.2 s after it, but by accident (Nav2's plan jumped with the map position, 19.3 m out); nothing said | ✅ 1.7 s, 0.7 m: "gps JUMP 20.0 m in 0.20 s", held until a person clears it |
+| IMU stopped (`imu stop`) | ❌ drove on 7.2 m, nothing said | ✅ 2.2 s, 1.1 m: "imu STALE" |
+| IMU frozen (`imu freeze`) | ❌ drove on 8.4 m, nothing said | ✅ 2.8 s, 1.7 m: "imu FROZEN" |
+| IMU NaN (`imu nan`) | ❌ drove on 7.7 m; the global EKF stayed 0.3 m from the truth | ✅ 1.8 s, 1.0 m: "imu NAN" |
+| Wheels stopped (`odom stop`) | ❌ drove on 9.0 m, nothing said | ✅ 1.9 s, 0.9 m: "odom STALE" |
+| Wheels NaN (`odom nan`) | ❌ drove on 6.3 m, nothing said | ✅ 1.7 s, 0.8 m: "odom NAN" |
+| Camera frozen (`camera freeze`) | ❌ drove on 7.6 m; on the HUD a frozen picture looks live | ✅ 2.9 s, 4.5 m: "camera FROZEN" |
+| Radar stopped (`radar stop`) | ✅ stood still 2.5 s after it: `collision_monitor`'s "invalid source" | ✅ the same, 2.5 s; the watchdog warns too |
+
+"Nothing said": no warning in the log, nothing on the HUD (only the HUD's GPS line
+turned STALE for a lost GPS). The after column is the last of three runs: the first
+passed too; the second caught a false GPS jump (two fixes delivered at once), fixed by
+timing jumps with the fixes' stamps, plus 5 m for their noise.
+
+### Still to do
+
+| What | Why |
+|---|---|
+| The watchdog's lock never expires | if the watchdog dies while all is well, nothing stops Nav2 for a sensor (twist_mux's lock times out only on silence; a timeout would block the profiles that run no watchdog). A heartbeat check, or a lock timeout where it always runs |
+| Wheel odometry that freezes | not caught: a car at a steady speed sends the same speed. Cross-check the wheels with the IMU and the GPS |
+| The EKF's own guard against a GPS jump | robot_localization's `odom1_pose_rejection_threshold` would ignore it, but would also refuse the first fix on the car, far from the datum. Seed the EKF from the first fix first |
+| The map window | still shows only how old the car's position is; not the watchdog's verdict |
+| The real car's faults | the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's |
 
 ## Replay a recorded drive
 
@@ -377,3 +482,4 @@ Work down the chain:
 | 4 | Is a backend listening? | `ros2 topic info /ego/actuator_cmd -v` |
 | 5 | In Gazebo or replay: is everything on sim time? | a node on wall-clock time ignores sim-time messages |
 | 6 | Does the graph match the contract? | `pixi run check sim` (or `road`, `replay`) |
+| 7 | Is the sensor watchdog holding Nav2? | `ros2 topic echo /safety/sensor_watchdog/state`: anything but OK says which sensor and why |

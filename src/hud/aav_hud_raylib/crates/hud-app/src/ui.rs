@@ -30,7 +30,7 @@ use hud_core::{
     health::Health,
     origin::Origin,
     picture::Picture,
-    state::{EstopReport, HudState},
+    state::{Alarm, EstopReport, HudState},
     vehicle::VehicleStatus,
 };
 use raylib::prelude::*;
@@ -542,10 +542,28 @@ fn camera(
             WARN,
         );
     }
+    let mut top = inner.1;
     if state.stop_sign && state.health(Topic::StopSign, now).is_ok() {
         let banner = (inner.0, inner.1, inner.2, 84.0);
         c.bar(banner, if blink { BAD } else { ESTOP_RED });
         c.centred(cx, inner.1 + 14.0, 56.0, "STOP SIGN", TEXT);
+        top += 84.0;
+    }
+    // The sensor watchdog: what failed, and whether Nav2 and the AI slot stopped for it.
+    if let Some(alarm) = state.sensor_alarm(now) {
+        let (text, colour) = match &alarm {
+            Alarm::Stop(t) => (t, if blink { BAD } else { ESTOP_RED }),
+            Alarm::Warn(t) => (t, WARN),
+        };
+        c.bar((inner.0, top, inner.2, 40.0), colour);
+        c.fitted(
+            inner.0 + 8.0,
+            top + 9.0,
+            22.0,
+            inner.2 - 16.0,
+            text,
+            Color::BLACK,
+        );
     }
 }
 

@@ -55,17 +55,29 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother, collision_monitor]
     sub: [twist_mux, language_drive]
-    note: Priority 20. Nav2. From collision_monitor where the radar runs (navigation.launch.py radar:=true - the bench, the car with its radar part, Gazebo's road world), else straight from velocity_smoother.
+    note: Priority 20. Nav2. From collision_monitor where the radar or the lidar runs (navigation.launch.py radar:=true or lidar:=true - the bench, the car with its radar part, Gazebo's road and test_lot worlds), else straight from velocity_smoother.
   /control/cmd_vel_smoothed:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother]
     sub: [collision_monitor]
-    note: Nav2's smoothed command, into collision_monitor, where the radar runs. It stops the car for radar points in its stop zone, or when the radar goes silent; it only guards Nav2.
+    note: Nav2's smoothed command, into collision_monitor, where the radar or the lidar runs. It stops the car for radar or lidar points in its stop zone, or when either goes silent; it only guards Nav2.
+  /safety/sensor_watchdog/lock:
+    type: std_msgs/msg/Bool
+    pub: [sensor_watchdog]
+    sub: [twist_mux]
+    live: [sim]
+    note: true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen or jumped (aav_safety sensor_watchdog, 10 Hz). A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test; never expires on silence. Runs in Gazebo (sim.launch.py watchdog:=true), on the bench, and on the car with Nav2.
+  /safety/sensor_watchdog/state:
+    type: std_msgs/msg/String
+    pub: [sensor_watchdog]
+    sub: [hud]
+    live: [sim]
+    note: One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD shows it.
   /safety/collision_monitor/state:
     type: nav2_msgs/msg/CollisionMonitorState
     pub: [collision_monitor]
     sub: []
-    note: What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar is silent or its TF is late.
+    note: What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar or the lidar is silent or its TF is late.
   /safety/collision_monitor/stop_zone:
     type: geometry_msgs/msg/PolygonStamped
     pub: [collision_monitor]
@@ -75,7 +87,7 @@ topics:
     type: visualization_msgs/msg/MarkerArray
     pub: [collision_monitor]
     sub: []
-    note: The radar points collision_monitor sees, for RViz; sent only while someone listens.
+    note: The radar and lidar points collision_monitor sees, for RViz; sent only while someone listens.
   /drivers/ai/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [control_interface]
@@ -111,7 +123,7 @@ topics:
   /vehicle/odom:
     type: nav_msgs/msg/Odometry
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
-    sub: [ekf_local, ekf_global, actuator_test]
+    sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog]
     live: [turtle, sim, car, replay, bench]
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.
   /vehicle/status:
@@ -184,13 +196,13 @@ topics:
   /sensors/imu/data:
     type: sensor_msgs/msg/Imu
     pub: [imu_filter_madgwick]
-    sub: [ekf_local, ekf_global]
+    sub: [ekf_local, ekf_global, sensor_watchdog]
     live: [sim, car, replay, bench]
     note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
   /sensors/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps]
-    sub: [navsat_transform, hud, language_drive, actuator_test]
+    sub: [navsat_transform, hud, language_drive, actuator_test, sensor_watchdog]
     live: [sim, car, replay, bench]
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
   /sensors/gps/fix_velocity:
@@ -211,7 +223,7 @@ topics:
   /sensors/radar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [radar, mock_radar, gazebo_adapter]
-    sub: [radar_clusters, local_costmap, collision_monitor]
+    sub: [radar_clusters, local_costmap, collision_monitor, sensor_watchdog]
     live: [bench, road]
     note: The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_adapter makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.
   /vehicle/battery:
@@ -227,10 +239,10 @@ topics:
     note: battery_monitor's sign of life.
   /sensors/camera/front_left/image_raw:
     type: sensor_msgs/msg/Image
-    pub: [camera_left, mock_camera, test_camera, gz_road_bridge]
-    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder, hud]
+    pub: [camera_left, mock_camera, test_camera, gz_road_bridge, gazebo_adapter]
+    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder, hud, sensor_watchdog]
     live: [bench, road]
-    note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens).
+    note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_adapter first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its camera fault (freeze, stop).
   /sensors/camera/front_left/image_raw/compressed:
     type: sensor_msgs/msg/CompressedImage
     pub: [camera_left, test_camera, mock_camera]
@@ -269,9 +281,15 @@ topics:
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [gz_lidar_bridge]
-    sub: []
+    sub: [lidar_scan]
     live: [road]
-    note: Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6). In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Nothing reads it yet but RViz; Nav2 could (docs/simulation.md).
+    note: Gazebo only for now - the car has a roof lidar (probably a Velodyne - the 2025-26 code read /velodyne_points), but we have no driver for it yet (audit N6), so car.launch.py's lidar:=false is the default. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.
+  /sensors/lidar/scan:
+    type: sensor_msgs/msg/LaserScan
+    pub: [lidar_scan]
+    sub: [local_costmap, collision_monitor]
+    live: [road]
+    note: The roof lidar flattened (aav_lidar lidar_scan - navigation.launch.py lidar:=true) - in base_link, 720 ranges all the way round, each the nearest point between 0.3 m and the roof plus 0.5 m (vehicle.obstacle_heights), inf where there is none. Best effort, 10 Hz. Read by the local costmap's lidar_layer and collision_monitor's stop zone. From the roof, the lowest beam (15 degrees down from 1.8 m) meets a 1 m box only 3 m away, so low things close in front are the radar's.
 
   # --- perception ---
   /perception/radar/clusters:
@@ -364,13 +382,13 @@ topics:
   /localization/odom/local:
     type: nav_msgs/msg/Odometry
     pub: [ekf_local]
-    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test]
+    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test, sensor_watchdog]
     live: [turtle, sim, car, replay, bench]
     note: odom frame. Smooth; drifts.
   /localization/odom/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
-    sub: [navsat_transform, map]
+    sub: [navsat_transform, map, sensor_watchdog]
     live: [sim, car, replay, bench]
     note: map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it.
   /localization/gps/odom:
@@ -430,9 +448,9 @@ topics:
     note: Simulation time; every node runs with use_sim_time:=true in sim and replay.
   /diagnostics:
     type: diagnostic_msgs/msg/DiagnosticArray
-    pub: [twist_mux, ekf_local, ekf_global]
+    pub: [twist_mux, ekf_local, ekf_global, sensor_watchdog]
     sub: [language_drive]
-    note: ROS's diagnostics. twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic.
+    note: ROS's diagnostics. sensor_watchdog reports each input it watches once a second (OK, WARN, ERROR when it stops the car). twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic.
 
 services:
   /spine/arm:
@@ -457,6 +475,10 @@ services:
     type: robot_localization/srv/SetPose
     server: ekf_global
     note: Re-seed the start pose by hand (heading!).
+  /safety/sensor_watchdog/clear:
+    type: std_srvs/srv/Trigger
+    server: sensor_watchdog
+    note: A person says the position is right again after a GPS jump, which the watchdog latches (pixi run sim-fault clear in Gazebo).
 
 actions:
   /scripted_drive:

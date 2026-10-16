@@ -2,7 +2,8 @@
 Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to twist_mux.
 
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
-      [radar:=false] [collision_monitor:=<radar>] [camera_obstacles:=false]
+      [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
+      [camera_obstacles:=false]
       [reversing:=false] [max_speed:=] [use_sim_time:=false] [autostart:=true]
 
 Starts only the Nav2 servers a car needs (not nav2_bringup's full list: no AMCL, since
@@ -17,16 +18,24 @@ robot_localization does localization, no docking or route server):
   velocity_smoother cmd_vel_nav -> /drivers/nav/cmd_vel
                     (or -> /control/cmd_vel_smoothed -> collision_monitor)
   collision_monitor /control/cmd_vel_smoothed -> /drivers/nav/cmd_vel, stopping for radar
-                    points ahead; its state and stop zone under /safety/collision_monitor/
+                    or lidar points ahead; its state and stop zone under
+                    /safety/collision_monitor/
+  lidar_scan        with lidar:=true (aav_lidar): the roof lidar's
+                    cloud -> /sensors/lidar/scan (what stands between the road and just
+                    over the roof, all the way round), for the costmap and collision_monitor
   lifecycle_manager brings them all up
 
 Obstacles, from where the sensors are:
   radar:=true             where a radar publishes /sensors/radar/points (the bench; the car
                           with its radar part; Gazebo's road world): the local costmap's
                           obstacle layer reads it, so Nav2 stops for what the radar sees
-  collision_monitor       follows radar unless set: it stops the car for radar points in
-                          the stop zone ahead, whatever the costmap says. A silent radar
-                          stops Nav2 too
+  lidar:=true             where a lidar publishes /sensors/lidar/points (Gazebo's road and
+                          test_lot worlds; not the car yet: its lidar has no driver, so
+                          car.launch.py leaves it off): lidar_scan flattens it, the local
+                          costmap's lidar_layer reads it, and collision_monitor too
+  collision_monitor       radar or lidar unless set: it stops the car for radar or lidar
+                          points in the stop zone ahead, whatever the costmap says. A
+                          silent radar or lidar stops Nav2 too
   camera_obstacles:=true  the local costmap's camera layer reads aav_yolo camera_obstacles
                           (the detectors' boxes on the road). Off until the cameras are
                           calibrated (Q22)
@@ -69,10 +78,10 @@ def flag(context, name):
     return LaunchConfiguration(name).perform(context).lower() == 'true'
 
 
-def tuned_copy(source, v, reversing, max_speed):
+def tuned_copy(source, v, reversing, max_speed, radar, lidar):
     """Return a temporary copy of nav2.yaml, tuned by vehicle.nav2_tuned (no ROS there)."""
     with open(source) as f:
-        cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed)
+        cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed, radar, lidar)
     out = tempfile.NamedTemporaryFile('w', prefix='nav2_', suffix='.yaml', delete=False)
     with out:
         yaml.safe_dump(cfg, out)
@@ -83,7 +92,10 @@ def nodes(context):
     share = FindPackageShare('aav_navigation').perform(context)
     use_sim_time = flag(context, 'use_sim_time')
     radar = flag(context, 'radar')
-    collision_monitor = flag(context, 'collision_monitor')
+    lidar = flag(context, 'lidar')
+    # Empty: wherever a sensor can feed it.
+    monitor = LaunchConfiguration('collision_monitor').perform(context).strip().lower()
+    collision_monitor = (radar or lidar) if monitor == '' else monitor == 'true'
     camera = flag(context, 'camera_obstacles')
     reversing = flag(context, 'reversing')
 
@@ -99,12 +111,13 @@ def nodes(context):
         LOCAL + 'camera_layer.enabled': str(camera).lower(),
     })
     # A copy of nav2.yaml with the values RewrittenYaml can't write (lists: the velocity
-    # smoother's limits), and max_speed:= (sim.launch.py sim_speed:=). In the file, not as
+    # smoother's limits, collision_monitor's sources, the costmap's layers), and
+    # max_speed:= (sim.launch.py sim_speed:=). In the file, not as
     # per-node dicts after it: nav2.yaml names its nodes, and a named entry beats a later
     # dict when the launch sets a global parameter (sim.launch.py's use_sim_time).
     speed = LaunchConfiguration('max_speed').perform(context).strip()
     source = tuned_copy(f'{share}/config/nav2.yaml', v, reversing,
-                        float(speed) if speed else None)
+                        float(speed) if speed else None, radar, lidar)
     params = ParameterFile(
         RewrittenYaml(source_file=source, param_rewrites=rewrites, convert_types=True),
         allow_substs=True)
@@ -135,6 +148,11 @@ def nodes(context):
              remappings=remaps)
         for pkg, exe, remaps in servers
     ]
+    if lidar:
+        # Not a lifecycle node: it runs from the start, Nav2's servers or not.
+        actions.append(Node(package='aav_lidar', executable='lidar_scan', name='lidar_scan',
+                            output='screen',
+                            parameters=[params, {'use_sim_time': use_sim_time}]))
     actions.append(Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -156,11 +174,16 @@ def generate_launch_description():
                               description='true where a radar publishes '
                                           '/sensors/radar/points: the '
                                           "local costmap's obstacle layer reads it"),
-        # The radar's value unless set: collision_monitor needs /sensors/radar/points, and stops
-        # Nav2 when it goes silent.
-        DeclareLaunchArgument('collision_monitor', default_value=LaunchConfiguration('radar'),
-                              description='Insert collision_monitor (needs '
-                                          '/sensors/radar/points)'),
+        DeclareLaunchArgument('lidar', default_value='false',
+                              description='true where a lidar publishes '
+                                          '/sensors/lidar/points: lidar_scan, the '
+                                          "local costmap's lidar_layer and collision_monitor "
+                                          'read it'),
+        # Empty: radar or lidar. collision_monitor needs one of them, and stops Nav2 when
+        # one goes silent.
+        DeclareLaunchArgument('collision_monitor', default_value='',
+                              description='Insert collision_monitor (needs the radar or '
+                                          'the lidar); empty: wherever one runs'),
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="true: the local costmap's camera layer reads "
                                           '/perception/camera_obstacles'),

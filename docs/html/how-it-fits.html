@@ -325,6 +325,25 @@ the EKFs.</p>
 </tr>
 </tbody>
 </table></div>
+<p>Two more, for the automatic drivers only (Nav2 and the AI slot; never a person or a test):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Stops Nav2 when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>collision_monitor</td>
+<td>radar or lidar points in the stop zone just ahead; or the radar or lidar goes quiet for 1 s</td>
+</tr>
+<tr>
+<td>The sensor watchdog (<code>aav_safety</code>)</td>
+<td>the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps. A twist_mux lock, shown on the HUD (<a href="simulation.html#sensor-failures-on-purpose">simulation</a>)</td>
+</tr>
+</tbody>
+</table></div>
 <div class="admonition warning">
 <p class="admonition-title">Today's car has no layer 5</p>
 <p>The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays

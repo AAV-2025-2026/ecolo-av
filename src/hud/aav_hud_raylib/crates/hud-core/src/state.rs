@@ -61,6 +61,8 @@ pub enum Update {
     Estop(EstopReport),
     /// A node said where its data comes from (`/system/source`).
     Source(Announcement),
+    /// The sensor watchdog's verdict: "OK", or "STOP: ..." / "WARN: ...".
+    Watchdog(String),
 }
 
 impl Update {
@@ -73,6 +75,7 @@ impl Update {
             Self::StopSign(_) => Some(Topic::StopSign),
             Self::Battery(_) => Some(Topic::Battery),
             Self::Picture(_) | Self::BadPicture(_) => Some(Topic::Camera),
+            Self::Watchdog(_) => Some(Topic::Watchdog),
             // Latched, sent once: its age says nothing about the data.
             Self::Estop(_) | Self::Source(_) => None,
         }
@@ -94,6 +97,8 @@ pub struct HudState {
     pub estop: Option<EstopReport>,
     /// Where the data comes from, as announced.
     pub origins: Origins,
+    /// The sensor watchdog's last verdict.
+    pub watchdog: Option<String>,
     new_picture: Option<Picture>,
     last_seen: HashMap<Topic, LastSeen>,
 }
@@ -125,6 +130,7 @@ impl HudState {
             Update::BadPicture(why) => self.picture_problem = Some(why),
             Update::Estop(report) => self.estop = Some(report),
             Update::Source(a) => self.origins.apply(a),
+            Update::Watchdog(w) => self.watchdog = Some(w),
         }
     }
 
@@ -147,12 +153,37 @@ impl HudState {
             .health(now, self.config.stale_after())
     }
 
+    /// What the sensor watchdog says is wrong, for a banner; None when all is well.
+    ///
+    /// A watchdog never heard is none of the HUD's business (the turtle runs none). One
+    /// that went quiet is: then nothing watches the sensors, so say so.
+    pub fn sensor_alarm(&self, now: Instant) -> Option<Alarm> {
+        match self.health(Topic::Watchdog, now) {
+            Health::Never => None,
+            Health::Stale(_) => Some(Alarm::Warn("SENSOR WATCHDOG SILENT".into())),
+            Health::Ok(_) => match self.watchdog.as_deref() {
+                None | Some("OK") => None,
+                Some(text) if text.starts_with("STOP") => Some(Alarm::Stop(text.into())),
+                Some(text) => Some(Alarm::Warn(text.into())),
+            },
+        }
+    }
+
     /// Every listened topic's name and health, in screen order.
     pub fn topic_health(&self, now: Instant) -> impl Iterator<Item = (&str, Health)> + '_ {
         Topic::LISTENED
             .into_iter()
             .map(move |t| (self.config.topic(t), self.health(t, now)))
     }
+}
+
+/// A banner's worth of trouble from the sensor watchdog.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Alarm {
+    /// The automatic drivers are stopped: a sensor they need failed.
+    Stop(String),
+    /// Something is wrong, but nothing was stopped for it.
+    Warn(String),
 }
 
 #[cfg(test)]
@@ -181,6 +212,25 @@ mod tests {
             Health::Stale(_)
         ));
         assert_eq!(s.health(Topic::Gps, later), Health::Never);
+    }
+
+    #[test]
+    fn the_watchdog_banner_shows_only_trouble() {
+        let start = Instant::now();
+        let mut s = HudState::new(HudConfig::default());
+        assert_eq!(s.sensor_alarm(start), None); // no watchdog in this run
+        s.apply(Update::Watchdog("OK".into()), start);
+        assert_eq!(s.sensor_alarm(start), None);
+        let stop = "STOP: gps STALE (nothing for 2.3 s)";
+        s.apply(Update::Watchdog(stop.into()), start);
+        assert_eq!(s.sensor_alarm(start), Some(Alarm::Stop(stop.into())));
+        s.apply(Update::Watchdog("WARN: radar NEVER".into()), start);
+        assert!(matches!(s.sensor_alarm(start), Some(Alarm::Warn(_))));
+        let later = start + s.config.stale_after() + Duration::from_millis(100);
+        assert_eq!(
+            s.sensor_alarm(later),
+            Some(Alarm::Warn("SENSOR WATCHDOG SILENT".into()))
+        );
     }
 
     #[test]

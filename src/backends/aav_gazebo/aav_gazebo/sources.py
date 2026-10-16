@@ -3,7 +3,8 @@ What Gazebo makes up, for /system/source: each simulated sensor's name and topic
 
 No ROS here: gazebo_adapter turns the list into an aav_interfaces/DataSource, every entry
 SIM. Which entries depend on the world: the road world renders the cameras and the radar
-stand-in, and lidar:=true adds the roof lidar (gazebo.launch.py).
+stand-in, and lidar:=true adds the roof lidar (gazebo.launch.py); radar:=false leaves the
+radar out.
 """
 
 # Always there: what gazebo_adapter itself publishes.
@@ -24,11 +25,11 @@ RENDERED = [
 LIDAR = ('lidar', '/sensors/lidar/points')
 
 
-def simulated(rendered, lidar):
+def simulated(rendered, lidar, radar=True):
     """Return (name, topic) for everything Gazebo simulates in this world."""
     out = list(ALWAYS)
     if rendered:
-        out += RENDERED
+        out += [entry for entry in RENDERED if radar or entry[0] != 'radar']
         if lidar:
             out.append(LIDAR)
     return out

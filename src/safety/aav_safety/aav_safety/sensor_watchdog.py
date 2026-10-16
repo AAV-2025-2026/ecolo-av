@@ -1,0 +1,193 @@
+"""
+sensor_watchdog: stops the automatic drivers when a sensor they need dies, lies or freezes.
+
+Subscribes  each input's topic, as config/sensor_watchdog.yaml says (the launch file picks
+            which: inputs), such as
+            vehicle/odom              nav_msgs/Odometry     (also: the wheel speed, for
+                                                             the camera's frozen check)
+            sensors/imu/data          sensor_msgs/Imu
+            sensors/gps/fix           sensor_msgs/NavSatFix
+            localization/odom/local   nav_msgs/Odometry
+            localization/odom/global  nav_msgs/Odometry
+            sensors/camera/front_left/image_raw  sensor_msgs/Image (reliable, newest only)
+            sensors/radar/points      sensor_msgs/PointCloud2 (best effort)
+Publishes   safety/sensor_watchdog/lock   std_msgs/Bool, at rate_hz: true while an input
+                                          marked stop isn't OK. twist_mux's sensors lock
+                                          (priority 30): it holds Nav2 and the AI slot,
+                                          never a person or a test
+            safety/sensor_watchdog/state  std_msgs/String, at rate_hz: OK, or STOP/WARN and
+                                          what is wrong, for the HUD and people
+            diagnostics                   diagnostic_msgs/DiagnosticArray, once a second:
+                                          one status per input (rqt_robot_monitor, Foxglove)
+Serves      safety/sensor_watchdog/clear  std_srvs/Trigger: forget a latched GPS jump, once
+                                          a person has checked the position
+
+What each check means is in watchdog.py (no ROS there). Each change of state is logged
+once: a warning when an input goes wrong, info when it is back.
+
+Parameters  inputs (the names to watch), rate_hz (10), and for each name: topic, kind
+            (odom, imu, gps, image, cloud), max_age (s), stop (bool), frozen_after (s, 0
+            off), max_jump_speed (m/s, 0 off), jump_margin (m)
+"""
+
+import signal
+import zlib
+
+from aav_safety.watchdog import NEVER, OK, Rule, Watchdog
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+from nav_msgs.msg import Odometry
+import rclpy
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import Image, Imu, NavSatFix, NavSatStatus, PointCloud2
+from std_msgs.msg import Bool, String
+from std_srvs.srv import Trigger
+
+TYPES = {'odom': Odometry, 'imu': Imu, 'gps': NavSatFix, 'image': Image, 'cloud': PointCloud2}
+
+
+def odom_values(msg):
+    t = msg.twist.twist
+    p = msg.pose.pose.position
+    return (t.linear.x, t.linear.y, t.angular.z, p.x, p.y)
+
+
+def imu_values(msg):
+    w, a = msg.angular_velocity, msg.linear_acceleration
+    return (w.x, w.y, w.z, a.x, a.y, a.z)
+
+
+class SensorWatchdog(Node):
+
+    def __init__(self):
+        super().__init__('sensor_watchdog')
+        names = list(self.declare_parameter('inputs', ['odom']).value)
+        rate = self.declare_parameter('rate_hz', 10.0).value
+        rules = []
+        for name in names:
+            def param(key, default, name=name):
+                return self.declare_parameter(f'{name}.{key}', default).value
+            rules.append(Rule(name, param('topic', ''), param('kind', 'odom'),
+                              float(param('max_age', 1.0)), bool(param('stop', True)),
+                              float(param('frozen_after', 0.0)),
+                              float(param('max_jump_speed', 0.0)),
+                              float(param('jump_margin', 5.0))))
+        self.dog = Watchdog(rules)
+        self.speed = None      # the wheels' newest speed, for the camera's frozen check
+        for rule in rules:
+            if rule.kind == 'image':
+                qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
+            elif rule.kind == 'cloud':
+                qos = qos_profile_sensor_data
+            else:
+                qos = 10
+            self.create_subscription(TYPES[rule.kind], rule.topic,
+                                     lambda msg, r=rule: self.on_message(r, msg), qos)
+        if not any(r.topic == '/vehicle/odom' for r in rules):
+            self.create_subscription(Odometry, '/vehicle/odom', self.on_wheels, 10)
+        self.lock_pub = self.create_publisher(Bool, 'safety/sensor_watchdog/lock', 10)
+        self.state_pub = self.create_publisher(String, 'safety/sensor_watchdog/state', 10)
+        self.diag_pub = self.create_publisher(DiagnosticArray, 'diagnostics', 10)
+        self.create_service(Trigger, 'safety/sensor_watchdog/clear', self.on_clear)
+        self.said = {}         # the state each input was last logged in
+        self.ticks = 0
+        self.diag_every = max(1, int(round(rate)))
+        self.create_timer(1.0 / rate, self.tick)
+        self.get_logger().info('watching ' + ', '.join(
+            f'{r.name} ({r.topic}, {r.max_age:g} s, {"stop" if r.stop else "warn"})'
+            for r in rules))
+
+    def now(self):
+        return self.get_clock().now().nanoseconds * 1e-9
+
+    def on_wheels(self, msg):
+        self.speed = msg.twist.twist.linear.x
+
+    def on_message(self, rule, msg):
+        watch = self.dog.watches[rule.name]
+        now = self.now()
+        if rule.kind == 'odom':
+            values = odom_values(msg)
+            if rule.topic == '/vehicle/odom':
+                self.speed = values[0]
+            watch.arrived(now, values, digest=values)
+        elif rule.kind == 'imu':
+            values = imu_values(msg)
+            watch.arrived(now, values, digest=values)
+        elif rule.kind == 'gps':
+            stamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+            watch.arrived(now, fix=(msg.latitude, msg.longitude),
+                          has_fix=msg.status.status >= NavSatStatus.STATUS_FIX, stamp=stamp)
+        elif rule.kind == 'image':
+            # A frozen camera repeats its whole picture: a sample of it is enough.
+            watch.arrived(now, digest=zlib.crc32(bytes(memoryview(msg.data)[::997])),
+                          speed=self.speed)
+        else:
+            watch.arrived(now)
+
+    def tick(self):
+        now = self.now()
+        states = self.dog.states(now)
+        locked = any(stops for *_, stops in states)
+        self.lock_pub.publish(Bool(data=locked))
+        summary = self.dog.summary(now)
+        self.state_pub.publish(String(data=summary))
+        for name, state, detail, stops in states:
+            before = self.said.get(name)
+            if before == state:
+                continue
+            if state == OK:
+                if before not in (None, NEVER):
+                    self.get_logger().info(f'{name}: OK again')
+            elif before is not None or state != NEVER:      # not the quiet start-up
+                # One call per severity: rclpy refuses a call site whose severity changes.
+                if stops:
+                    self.get_logger().error(f'{name} {state}: {detail}. Nav2 and the AI '
+                                            'slot stop (twist_mux lock)')
+                else:
+                    self.get_logger().warning(f'{name} {state}: {detail}')
+            self.said[name] = state
+        self.ticks += 1
+        if self.ticks % self.diag_every == 0:
+            self.publish_diagnostics(states)
+
+    def publish_diagnostics(self, states):
+        out = DiagnosticArray()
+        out.header.stamp = self.get_clock().now().to_msg()
+        for name, state, detail, stops in states:
+            rule = self.dog.watches[name].rule
+            level = (DiagnosticStatus.OK if state == OK else
+                     DiagnosticStatus.ERROR if stops else DiagnosticStatus.WARN)
+            out.status.append(DiagnosticStatus(
+                level=level, name=f'sensor_watchdog: {name}', message=f'{state}: {detail}',
+                hardware_id=rule.topic,
+                values=[KeyValue(key='max_age', value=f'{rule.max_age:g}'),
+                        KeyValue(key='stops', value=str(rule.stop).lower())]))
+        self.diag_pub.publish(out)
+
+    def on_clear(self, request, response):
+        self.dog.clear()
+        response.success = True
+        response.message = 'latched GPS jumps forgotten'
+        self.get_logger().warning('cleared by a person: ' + response.message)
+        return response
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = SensorWatchdog()
+    try:
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        # Ctrl-C reaches a launched node twice (the terminal, then launch): ignore the
+        # second, so it can't interrupt the clean-up with a traceback.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        node.destroy_node()
+        rclpy.try_shutdown()
+
+
+if __name__ == '__main__':
+    main()
