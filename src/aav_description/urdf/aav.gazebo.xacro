@@ -24,7 +24,11 @@
       <left_steering_joint>front_left_steering_joint</left_steering_joint>
       <right_steering_joint>front_right_steering_joint</right_steering_joint>
       <kingpin_width>${T}</kingpin_width>
-      <steering_limit>${max_steer}</steering_limit>
+      <!-- Not max_steering_angle: Gazebo makes it a radius, wheel_base / sin(limit), and
+           stopped the car at 0.447 rad when given 0.5. description.launch.py passes the
+           limit that gives the centre wheel max_steering_angle (vehicle.py,
+           gazebo_steering_limit). Missing: xacro stops here rather than steer short. -->
+      <steering_limit>${float('$(arg gz_steering_limit)')}</steering_limit>
       <steer_p_gain>10.0</steer_p_gain>  <!-- the default lags over 1 s, and Nav2 weaves -->
       <wheel_base>${L}</wheel_base>
       <wheel_separation>${T}</wheel_separation>
