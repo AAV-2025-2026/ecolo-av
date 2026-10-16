@@ -3,7 +3,7 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
 
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
       [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
-      [camera_obstacles:=false]
+      [camera_obstacles:=false] [ghost:=false]
       [reversing:=false] [max_speed:=] [use_sim_time:=false] [autostart:=true]
 
 Starts only the Nav2 servers a car needs (not nav2_bringup's full list: no AMCL, since
@@ -39,6 +39,9 @@ Obstacles, from where the sensors are:
   camera_obstacles:=true  the local costmap's camera layer reads aav_yolo camera_obstacles
                           (the detectors' boxes on the road). Off until the cameras are
                           calibrated (Q22)
+  ghost:=true             a pretend person (aav_ghost ghost_obstacle, docs/ghost-obstacles.md):
+                          its own costmap layer and collision_monitor source, so it only
+                          adds. No ghost until someone places one: pixi run ghost ahead 10
 
 Reversing (docs/learn-nav2.md): nothing senses what is behind the car, so it is off unless
 asked for:
@@ -78,10 +81,11 @@ def flag(context, name):
     return LaunchConfiguration(name).perform(context).lower() == 'true'
 
 
-def tuned_copy(source, v, reversing, max_speed, radar, lidar):
+def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False):
     """Return a temporary copy of nav2.yaml, tuned by vehicle.nav2_tuned (no ROS there)."""
     with open(source) as f:
-        cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed, radar, lidar)
+        cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed, radar, lidar,
+                                 ghost)
     out = tempfile.NamedTemporaryFile('w', prefix='nav2_', suffix='.yaml', delete=False)
     with out:
         yaml.safe_dump(cfg, out)
@@ -93,9 +97,10 @@ def nodes(context):
     use_sim_time = flag(context, 'use_sim_time')
     radar = flag(context, 'radar')
     lidar = flag(context, 'lidar')
-    # Empty: wherever a sensor can feed it.
+    ghost = flag(context, 'ghost')
+    # Empty: wherever a sensor (or the ghost) can feed it.
     monitor = LaunchConfiguration('collision_monitor').perform(context).strip().lower()
-    collision_monitor = (radar or lidar) if monitor == '' else monitor == 'true'
+    collision_monitor = (radar or lidar or ghost) if monitor == '' else monitor == 'true'
     camera = flag(context, 'camera_obstacles')
     reversing = flag(context, 'reversing')
 
@@ -117,7 +122,7 @@ def nodes(context):
     # dict when the launch sets a global parameter (sim.launch.py's use_sim_time).
     speed = LaunchConfiguration('max_speed').perform(context).strip()
     source = tuned_copy(f'{share}/config/nav2.yaml', v, reversing,
-                        float(speed) if speed else None, radar, lidar)
+                        float(speed) if speed else None, radar, lidar, ghost)
     params = ParameterFile(
         RewrittenYaml(source_file=source, param_rewrites=rewrites, convert_types=True),
         allow_substs=True)
@@ -153,6 +158,13 @@ def nodes(context):
         actions.append(Node(package='aav_lidar', executable='lidar_scan', name='lidar_scan',
                             output='screen',
                             parameters=[params, {'use_sim_time': use_sim_time}]))
+    if ghost:
+        # Not a lifecycle node either. Its own file, then use_sim_time: the file doesn't
+        # set it, so the dict adds it rather than losing to the file.
+        config = FindPackageShare('aav_ghost').perform(context) + '/config/ghost_obstacle.yaml'
+        actions.append(Node(package='aav_ghost', executable='ghost_obstacle',
+                            name='ghost_obstacle', output='screen',
+                            parameters=[config, {'use_sim_time': use_sim_time}]))
     actions.append(Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -179,14 +191,18 @@ def generate_launch_description():
                                           '/sensors/lidar/points: lidar_scan, the '
                                           "local costmap's lidar_layer and collision_monitor "
                                           'read it'),
-        # Empty: radar or lidar. collision_monitor needs one of them, and stops Nav2 when
-        # one goes silent.
+        # Empty: radar, lidar or ghost. collision_monitor needs one of them, and stops Nav2
+        # when one goes silent.
         DeclareLaunchArgument('collision_monitor', default_value='',
-                              description='Insert collision_monitor (needs the radar or '
-                                          'the lidar); empty: wherever one runs'),
+                              description='Insert collision_monitor (needs the radar, '
+                                          'the lidar or the ghost); empty: wherever one runs'),
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="true: the local costmap's camera layer reads "
                                           '/perception/camera_obstacles'),
+        DeclareLaunchArgument('ghost', default_value='false',
+                              description='true: a pretend person (aav_ghost), its own '
+                                          'costmap layer and collision_monitor source; '
+                                          'placed with pixi run ghost'),
         DeclareLaunchArgument('max_speed', default_value='',
                               description="m/s: Nav2's top speed, if not nav2.yaml's 1.0 "
                                           '(sim.launch.py sim_speed:=)'),

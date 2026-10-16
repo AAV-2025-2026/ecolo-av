@@ -1,5 +1,5 @@
 """
-aav_navigation's navigation.launch.py: reversing, and sim.launch.py's faster Nav2.
+aav_navigation's navigation.launch.py: reversing, sim.launch.py's faster Nav2, the ghost.
 
 Each test runs the launch file's own setup with some arguments, then reads the settings
 each Nav2 server would get: the rewritten copy of nav2.yaml, as the server would load it.
@@ -112,3 +112,64 @@ def test_who_may_reverse():
     assert sent_to_navigation(BENCH)['reversing'] == 'true'
     assert sent_to_navigation(CAR, machine='all')['reversing'] == 'false'
     assert sent_to_navigation(CAR, machine='all', reversing='true')['reversing'] == 'true'
+
+
+def whole_file(**args):
+    """Return the whole rewritten nav2.yaml the servers load: the costmaps' keys too."""
+    context = context_for(NAV, map='/maps/empty.yaml', **args)
+    for a in NAV.nodes(context):
+        if isinstance(a, Node) and a._Node__node_name == 'controller_server':
+            for p in a._Node__parameters:
+                if isinstance(p, ParameterFile):
+                    with open(p.evaluate(context)) as f:
+                        return yaml.safe_load(f)
+    raise AssertionError('no controller_server')
+
+
+def local_costmap(**args):
+    return whole_file(**args)['local_costmap']['local_costmap']['ros__parameters']
+
+
+def ghost_nodes(**args):
+    """Return the ghost_obstacle nodes navigation.launch.py starts with these arguments."""
+    context = context_for(NAV, map='/maps/empty.yaml', **args)
+    return [a for a in NAV.nodes(context)
+            if isinstance(a, Node) and a._Node__node_name == 'ghost_obstacle']
+
+
+def test_no_ghost_unless_asked_for():
+    # The radar alone, so collision_monitor runs: and reads no ghost.
+    monitor = settings(radar='true')['collision_monitor']
+    assert 'ghost' not in monitor['observation_sources']
+    assert 'ghost_layer' not in local_costmap()['plugins']
+    assert ghost_nodes() == []
+
+
+def test_the_ghost_adds_its_own_layer_and_source_beside_the_real_sensors():
+    s = settings(radar='true', lidar='true', ghost='true')
+    assert s['collision_monitor']['observation_sources'] == ['radar', 'lidar', 'ghost']
+    assert s['collision_monitor']['ghost']['topic'] == '/safety/ghost/scan'
+    local = local_costmap(radar='true', lidar='true', ghost='true')
+    assert local['plugins'].index('ghost_layer') < local['plugins'].index('inflation_layer')
+    # Its own layer reads only the ghost: its clearing can't touch the radar's or lidar's.
+    assert local['ghost_layer']['observation_sources'] == 'ghost'
+    assert local['ghost_layer']['ghost']['topic'] == '/safety/ghost/scan'
+    assert local['obstacle_layer']['observation_sources'] == 'radar'
+    assert local['lidar_layer']['observation_sources'] == 'lidar'
+    assert len(ghost_nodes(ghost='true')) == 1
+
+
+def test_the_ghost_alone_brings_collision_monitor():
+    context = context_for(NAV, map='/maps/empty.yaml', ghost='true')
+    names = [a._Node__node_name for a in NAV.nodes(context) if isinstance(a, Node)]
+    assert 'collision_monitor' in names
+
+
+def test_who_may_have_a_ghost():
+    # Off everywhere unless asked for; the launch argument reaches Nav2.
+    assert sent_to_navigation(SIM)['ghost'] == 'false'
+    sim = sent_to_navigation(SIM, ghost='true')
+    assert (sim['ghost'], sim['collision_monitor']) == ('true', 'true')
+    assert sent_to_navigation(CAR, machine='all')['ghost'] == 'false'
+    car = sent_to_navigation(CAR, machine='all', ghost='true')
+    assert (car['ghost'], car['collision_monitor']) == ('true', 'true')

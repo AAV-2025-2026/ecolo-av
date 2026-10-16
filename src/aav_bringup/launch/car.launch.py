@@ -7,6 +7,8 @@ The real car. One launch file for every machine; a machine file picks the parts.
       [reversing:=false]  (true lets Nav2 drive backwards: blind, the team decides first)
       [lidar:=false]      (true: Nav2 reads /sensors/lidar/points; the roof lidar has no
                            driver yet, so nothing publishes it)
+      [ghost:=false]      (true: a pretend person in Nav2's view, where Nav2 runs, for
+                           stopping tests with nothing real to hit: pixi run ghost ahead 10)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
@@ -245,8 +247,8 @@ def launch_setup(context):
         # off, so none can leak in from another file.
         actions.append(include('aav_navigation', 'navigation.launch.py',
                                map=arg('map') or empty_map, radar=on('radar'),
-                               lidar=flag('lidar'),
-                               collision_monitor=on('radar') or flag('lidar'),
+                               lidar=flag('lidar'), ghost=flag('ghost'),
+                               collision_monitor=on('radar') or flag('lidar') or flag('ghost'),
                                camera_obstacles=on('camera_obstacles'),
                                reversing=flag('reversing')))
     if on('spine'):
@@ -282,6 +284,11 @@ def generate_launch_description():
                               description='true: Nav2 reads the roof lidar on '
                                           '/sensors/lidar/points. Nothing publishes it on '
                                           'the car yet'),
+        # Off unless asked for: a pretend person, for stopping tests on the real car with
+        # nothing real to hit (aav_ghost, docs/ghost-obstacles.md). Where Nav2 runs.
+        DeclareLaunchArgument('ghost', default_value='false',
+                              description="true: a pretend person in Nav2's view, placed "
+                                          'with pixi run ghost ahead 10 (it only adds)'),
         DeclareLaunchArgument('start_x', default_value='0.0'),
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0',

@@ -11,7 +11,10 @@
 # also turns on the local costmap's obstacle_layer and starts collision_monitor; with
 # camera_obstacles:=true, the camera_layer. Where a lidar runs (lidar:=true), it starts
 # lidar_scan, keeps the lidar_layer and adds the lidar to collision_monitor's sources
-# (vehicle.nav2_tuned: lists, so written into a copy of this file).
+# (vehicle.nav2_tuned: lists, so written into a copy of this file). With ghost:=true
+# (aav_ghost, docs/ghost-obstacles.md), it starts ghost_obstacle, keeps the ghost_layer
+# and adds the ghost to collision_monitor's sources: a pretend person, added on top of
+# what the real sensors see.
 #
 # Reversing (navigation.launch.py reversing:=true; off unless asked for, docs/learn-nav2.md)
 # also sets, from vehicle.yaml's max_reverse_speed:
@@ -165,8 +168,10 @@ local_costmap:
       #   lidar_layer     lidar:=true, where a lidar runs: Gazebo (on by default). Not the
       #                   car yet: no driver for its lidar. Without it the launch file takes
       #                   the layer out of this list
+      #   ghost_layer     ghost:=true: aav_ghost's pretend person (docs/ghost-obstacles.md).
+      #                   Without it the launch file takes the layer out of this list
       plugins: ["static_layer", "obstacle_layer", "camera_layer", "lidar_layer",
-                "inflation_layer"]
+                "ghost_layer", "inflation_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
@@ -239,6 +244,27 @@ local_costmap:
           max_obstacle_height: 0.5
           obstacle_min_range: 0.0
           obstacle_max_range: 12.0    # m: past the costmap's 10 m edge, as the car turns
+          raytrace_min_range: 0.0
+          raytrace_max_range: 15.0
+          observation_persistence: 0.0  # s: the newest scan only
+      # The ghost (aav_ghost ghost_obstacle): a pretend person, as the scan a perfect lidar
+      # at base_link would see of it, inf everywhere else. Its own layer, so it only ever
+      # adds: its clearing wipes only old ghosts, never a real sensor's marks.
+      ghost_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        min_obstacle_height: -0.5   # m: the scan lies at base_link's height, the road
+        max_obstacle_height: 0.5
+        observation_sources: ghost
+        ghost:
+          topic: /safety/ghost/scan
+          data_type: "LaserScan"
+          marking: true
+          clearing: true
+          inf_is_valid: true          # inf = no ghost that way: clear to raytrace range
+          min_obstacle_height: -0.5
+          max_obstacle_height: 0.5
+          obstacle_min_range: 0.0
+          obstacle_max_range: 12.0    # m: as the lidar's
           raytrace_min_range: 0.0
           raytrace_max_range: 15.0
           observation_persistence: 0.0  # s: the newest scan only
@@ -423,8 +449,8 @@ collision_monitor:
       min_points: 3
       visualize: false
       enabled: true
-    # Set by the launch file (vehicle.nav2_tuned): the radar, the lidar, or both. Any
-    # source that goes silent for source_timeout stops the car.
+    # Set by the launch file (vehicle.nav2_tuned): the radar, the lidar, the ghost, or any
+    # of them. Any source that goes silent for source_timeout stops the car.
     observation_sources: ["radar"]
     radar:
       type: "pointcloud"
@@ -439,4 +465,10 @@ collision_monitor:
     lidar:
       type: "scan"
       topic: /sensors/lidar/scan
+      enabled: true
+    # The ghost (ghost:=true): a pretend person, so the stop zone can be tested with
+    # nothing real to hit. It adds points; it never hides the radar's or the lidar's.
+    ghost:
+      type: "scan"
+      topic: /safety/ghost/scan
       enabled: true
