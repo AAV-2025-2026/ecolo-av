@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">27 min read · 4 sections</div></header>
+<div class="meta">29 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -63,8 +63,8 @@
 <main>
 <nav class="toc"><span>On this page:</span><a href="#topics">Topics</a><a href="#services">Services</a><a href="#actions">Actions</a><a href="#frames">Frames</a></nav>
 <div class="lead"><p>Generated from <code>docs/interfaces.yaml</code> by <code>tools/gen_interfaces_md.py</code>; edit the YAML.
-Check a running system against it with <code>pixi run check &lt;turtle|sim|road|car|replay|bench&gt;</code>.
-<code>road</code> is the sim in its road world (<code>world:=road</code>): what is live in <code>sim</code> must be live there too.</p></div>
+Check a running system against it with <code>pixi run check &lt;turtle|sim|road|spine|car|replay|bench&gt;</code>.
+<code>road</code> is the sim in its road world (<code>world:=road</code>): what is live in <code>sim</code> must be live there too. <code>spine</code> is the road world with the spine in the loop (<code>spine:=true</code>): what is live in <code>road</code> must be live there too.</p></div>
 <section class="card"><h2 id="topics">Topics</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -212,7 +212,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>ego</code></td>
 <td><code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td>turtle, sim, car, bench</td>
-<td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs.</td>
+<td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs - in Gazebo's spine profile (spine:=true) that is spine_bridge, and gazebo_adapter doesn't read it.</td>
 </tr>
 <tr>
 <td><code>/system/source</code></td>
@@ -220,7 +220,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>replay_source</code></td>
 <td><code>hud</code>, <code>map</code>, <code>actuator_test</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car and BENCH on the bench (its source parameter), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.</td>
+<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.</td>
 </tr>
 <tr>
 <td><code>/vehicle/odom</code></td>
@@ -228,7 +228,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK.</td>
+<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.</td>
 </tr>
 <tr>
 <td><code>/vehicle/status</code></td>
@@ -275,7 +275,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>sensor_msgs/msg/JointState</code></td>
 <td><code>spine_bridge</code></td>
 <td><code>joint_state_publisher</code></td>
-<td>bench</td>
+<td>bench, spine</td>
 <td>Measured front steering joint angles, merged into /joint_states.</td>
 </tr>
 <tr>
@@ -291,7 +291,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>can_msgs/msg/Frame</code></td>
 <td><code>spine_bridge</code></td>
 <td><code>socket_can_sender</code>, <code>spine_sim</code></td>
-<td>bench</td>
+<td>bench, spine</td>
 <td>DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc).</td>
 </tr>
 <tr>
@@ -299,8 +299,8 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>can_msgs/msg/Frame</code></td>
 <td><code>socket_can_receiver</code>, <code>spine_sim</code></td>
 <td><code>spine_bridge</code></td>
-<td>bench</td>
-<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench, spine_sim sends them all.</td>
+<td>bench, spine</td>
+<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench and in Gazebo's spine profile, spine_sim sends them all.</td>
 </tr>
 <tr>
 <td><code>/sensors/imu/data_raw</code></td>
@@ -556,7 +556,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>-</td>
 <td><code>spine_sim</code></td>
 <td>-</td>
-<td>true = press the hardware e-stop, on the bench; false = release it. The spine brakes, and needs arming again.</td>
+<td>true = press the hardware e-stop, on the bench and in Gazebo's spine profile; false = release it. The spine brakes, and needs arming again.</td>
 </tr>
 <tr>
 <td><code>/vehicle/bench/driver_faults</code></td>
@@ -564,7 +564,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>-</td>
 <td><code>spine_sim</code></td>
 <td>-</td>
-<td>Pretend a driver failed. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).</td>
+<td>Pretend a driver failed, on the bench and in Gazebo's spine profile. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).</td>
 </tr>
 <tr>
 <td><code>/vehicle/gazebo/truth</code></td>
@@ -573,6 +573,30 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>-</td>
 <td>road</td>
 <td>Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges and gazebo_adapter.</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/spine_outputs</code></td>
+<td><code>aav_interfaces/msg/SpineOutputs</code></td>
+<td><code>spine_sim</code></td>
+<td><code>gazebo_adapter</code></td>
+<td>spine</td>
+<td>Gazebo's spine profile only (sim.launch.py spine:=true). What the spine's logic (spine-core, in spine_sim) writes to its actuator drivers each tick, 100 Hz on Gazebo's clock - throttle and brake (0..1), reverse, the steering target (rad). On the car these never reach ROS. gazebo_adapter's actuator model turns them into what Gazebo's car does; silent for 0.2 s, it brakes fully.</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/wheels</code></td>
+<td><code>aav_interfaces/msg/WheelSpeeds</code></td>
+<td><code>gazebo_adapter</code></td>
+<td><code>spine_sim</code></td>
+<td>spine</td>
+<td>Gazebo's spine profile only. Gazebo's four wheels, as /vehicle/wheels in the direct profile, for spine_sim - the front two for its wheel nodes' frames, the rear two's mean as the spine's measured speed (its motor encoder).</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/steering</code></td>
+<td><code>aav_interfaces/msg/ActuatorState</code></td>
+<td><code>gazebo_adapter</code></td>
+<td><code>spine_sim</code></td>
+<td>spine</td>
+<td>Gazebo's spine profile only. command = the spine's steering target, measured = the actuator model's angle, which spine_sim sends back in VEHICLE_FEEDBACK.</td>
 </tr>
 <tr>
 <td><code>/localization/odom/local</code></td>
@@ -688,7 +712,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/spine/arm</code></td>
 <td><code>std_srvs/srv/SetBool</code></td>
 <td><code>spine_bridge</code></td>
-<td>The spine ignores drive commands until armed; refused while /safety/estop is true.</td>
+<td>The spine ignores drive commands until armed; refused while /safety/estop is true. On the car, the bench and Gazebo's spine profile.</td>
 </tr>
 <tr>
 <td><code>/fromLL</code></td>

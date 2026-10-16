@@ -62,7 +62,7 @@ we are. Details live in the pages linked from each row.
 | 5 | **The safety timeout** in the actuator board: brake if commands stop | today a lost cable keeps the car going | yes | 🔧 must come first |
 | 6 | **Actuator tests**: speed up, brake, steering sweep, circles; numbers into the sim. The script is built and proven in Gazebo (15 Oct: `pixi run actuator-test`) | the sim behaves like the real car; the car knows how hard it can brake | yes | 🔧 |
 | 7 | **GPS-to-GPS movement**: from A to B by GPS in an empty lot, with a smooth stop at B | the main goal | yes | 🔧 |
-| 8 | **The spine in the loop** in Gazebo (sensor failures on purpose and the lidar into Nav2: done 15 Oct) | test the safety logic without the car | no | 🔧 |
+| 8 | **The spine in the loop** in Gazebo ✅ 15 Oct: `pixi run sim spine:=true`; `sim-check --spine` passes (commands lost: full brake in 0.2 s, latched; both e-stops; disarmed: no motion). Sensor failures on purpose and the lidar into Nav2: done 15 Oct too | test the safety logic without the car | no | ✅ in Gazebo |
 | 9 | **The real lidar driver** (likely a Velodyne) and the real cameras into perception | more of the world seen | yes | 🔧 |
 | 10 | **Newer models**: YOLO26 or RF-DETR for perception; Qwen3.5, Gemma 4 or Granite for plain English, on the Orin too | better and freer models since 2024 | no | 🔧 test, then pick |
 | 11 | **Touchscreen keyboard** for the map's search | type a destination in the car | no | 🔧 |
@@ -122,7 +122,7 @@ the hardware lead's.
 | # | Build | Why | Size | Status |
 |---|---|---|---|---|
 | S1 | **GPS A → B with a smooth stop**: speed by the distance left to B, slowing at half the measured braking g | the main goal (READ-ME-TESTS 5.2), proven in Gazebo first | 1 day | started 15 Oct |
-| S2 | **The spine in the loop** in Gazebo: ego → CAN → the spine's safety logic → the actuator model → Gazebo | timeouts and e-stops tested the way the car runs them | 1-2 days | started 15 Oct |
+| S2 | **The spine in the loop** in Gazebo: ego → CAN → the spine's safety logic → the actuator model → Gazebo | timeouts and e-stops tested the way the car runs them | 1-2 days | ✅ 15 Oct: `pixi run sim spine:=true`, `pixi run sim-check --spine` passes |
 | S3 | **Gazebo steering fix**: full lock turns 0.43 rad, not 0.5 | the sim should steer like the car | small | started 15 Oct |
 | S4 | **Ghost obstacles**: a pretend person in Nav2's map while the real car drives | test stopping on the car with nothing real to hit | 1 day | |
 | S5 | **Touchscreen keyboard** for the map's search | type a destination in the car | small | |

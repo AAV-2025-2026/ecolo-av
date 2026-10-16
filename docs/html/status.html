@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">10 min read · 4 sections</div></header>
+<div class="meta">11 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -161,7 +161,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Gazebo's road world</td>
 <td><code>aav_gazebo</code> <code>world:=road</code></td>
-<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code>, <code>--obstacle</code>, <code>--lidar-obstacle</code>, <code>--faults</code> and <code>--perception</code> pass. <span class="badge b-untested">untested</span> on Linux, which needs EGL (<a href="simulation.html">Simulation</a>)</td>
+<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code>, <code>--obstacle</code>, <code>--lidar-obstacle</code>, <code>--faults</code>, <code>--spine</code> and <code>--perception</code> pass. <span class="badge b-untested">untested</span> on Linux, which needs EGL (<a href="simulation.html">Simulation</a>)</td>
 </tr>
 <tr>
 <td>The lidar in Nav2 (15 Oct)</td>
@@ -179,6 +179,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>: arming, driving, both e-stops</td>
 </tr>
 <tr>
+<td>The spine in the loop, in Gazebo (15 Oct)</td>
+<td><code>pixi run sim spine:=true</code>: <code>spine_bridge</code> → CAN topics → <code>spine_sim</code> (<code>car:=gazebo</code>, the spine's logic) → the actuator model</td>
+<td><span class="badge b-works">works</span> on the Mac: <code>pixi run sim-check --spine</code> passes (graph, drive, EKF, a Nav2 goal; commands lost: full brake 195-209 ms and latched; both e-stops: brake within 12 ms, latched; disarmed: no motion). <span class="badge b-untested">untested</span> on Linux (<a href="simulation.html#the-spine-in-the-loop-spinetrue">Simulation</a>)</td>
+</tr>
+<tr>
 <td>Today's car</td>
 <td><code>aav_legacy</code></td>
 <td><span class="badge b-untested">untested</span> on the car</td>
@@ -186,7 +191,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Spine firmware logic</td>
 <td><code>firmware/spine/crates/spine-core</code></td>
-<td><span class="badge b-works">works</span> 70 tests, and on the bench</td>
+<td><span class="badge b-works">works</span> 70 tests, on the bench, and in Gazebo (<code>spine:=true</code>)</td>
 </tr>
 <tr>
 <td>Wheel node logic (15 Oct)</td>

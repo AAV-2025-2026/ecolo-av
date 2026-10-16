@@ -95,10 +95,9 @@ Where each sensor sits (15 Oct, until Friday's tape measure): the two front came
 | The right and rear cameras | only the front left camera is in the URDF's Gazebo sensors |
 | The magnetometer | the EKFs don't use it |
 | The battery | nothing to simulate yet |
-| CAN and the spine | that's the bench's job (`pixi run bench`), not Gazebo's |
+| The real CAN bus | with `spine:=true` the CAN frames travel as ROS topics (`/can/tx`, `/can/rx`), as on the bench; no bus timing or errors |
 | The real actuators' numbers | the [actuator model](#the-actuator-model) has them, but they're guesses until the tests (`READ-ME-TESTS.md` 3.10-3.12, 4.1-4.5) |
 | Wheel slip, slopes, the weight | the model sets the speed; no forces (option B in `READ-ME-FULL-SIMULATION.md`) |
-| The spine's own logic (timeouts, e-stop) | a Python copy of its speed loop only; the spine in the loop is step 4 |
 | A real radar | the stand-in is a lidar: it sees every surface, and no speeds of its own |
 | Traffic, people, weather | the worlds are empty but for the road, the sign and the box |
 
@@ -134,6 +133,7 @@ ego's angle ──────────────────────�
 - Gazebo's own limits (`aav.gazebo.xacro`) are now ±10 m/s², so the model limits, not Gazebo.
 - `actuator_model:=false` keeps the old behaviour (in the adapter), to compare the two.
 - No `/ego/actuator_cmd` for 0.2 s: the model brakes to a stop, like the spine's watchdog.
+  For the spine's real watchdog, e-stops and arming: [`spine:=true`](#the-spine-in-the-loop-spinetrue).
 - Plot command against measured: `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`
   (Foxglove or PlotJuggler).
 - **Check it:** `pixi run actuator-test <test> --sim` runs the car's stage 3-4 tests in
@@ -169,6 +169,34 @@ To drive it:
   each other: they use multicast, and some networks and firewalls block it. Run
   `export GZ_IP=127.0.0.1` in every terminal, then start again. On a shared computer, also
   set your own `GZ_PARTITION=<any name>`, so your simulator doesn't meet someone else's.
+
+### The spine in the loop: `spine:=true`
+
+Added 15 Oct (`READ-ME-FULL-SIMULATION.md`, step 4). The car's own `spine_bridge` and the
+bench's `spine_sim` (the spine's firmware logic, `spine-core`) go between ego and the
+actuator model:
+
+```text
+ego ──> spine_bridge ──CAN frames──> spine_sim ──throttle, brake, gear, steering──> actuator model ──> Gazebo
+/vehicle/* <── spine_bridge <──CAN frames── spine_sim <──Gazebo's wheels and steering──┘
+```
+
+```bash
+pixi run sim world:=road spine:=true      # arms itself after 12 s (arm:=false: you arm it)
+pixi run sim-check --spine                # tests it (3 more minutes)
+```
+
+| | Direct path (default) | `spine:=true` |
+|---|---|---|
+| Takes `/ego/actuator_cmd` | `gazebo_adapter` | `spine_bridge` (only one backend at a time) |
+| Speed loop | a Python copy in `actuator_model.py` | the spine's own, in Rust |
+| Ego goes quiet | brakes after 0.2 s | full brake after 0.2 s (0.1 + 0.1), **latched** |
+| `/safety/estop` | twist_mux stops the drivers: brake 0.46 s | ESTOP_CMD to the spine: brake within 12 ms, latched |
+| Hardware e-stop | none | `/vehicle/bench/hw_estop`: brake within 10 ms, latched |
+| Arming | always armed | `/spine/arm`, as on the car |
+| `/system/source` | SIM (`gazebo_adapter`) | SIM (`spine_bridge`, `source:=sim`) |
+
+Stop times in full: [READ-ME-FULL-SIMULATION.md](../READ-ME-FULL-SIMULATION.md#stop-times-the-direct-path-vs-the-spine).
 
 ### Faster in Gazebo: `sim_speed:=`
 
@@ -334,6 +362,7 @@ pixi run sim-check --lidar-obstacle               # and the lidar alone (radar o
 pixi run sim-check --faults                       # and sensor failures on purpose (below)
 pixi run sim-check --faults --no-watchdog         # the same, a report of what happens without the watchdog
 pixi run sim-check --no-lidar                     # without the simulated roof lidar (on by default)
+pixi run sim-check --spine                        # and the spine in the loop: its stops (above)
 ```
 
 It starts the road world without a window, on a private ROS domain and Gazebo partition,
@@ -353,6 +382,7 @@ Ran on Ben's Mac, 15 Oct, after the topic renaming:
 | `pixi run sim-check --obstacle --lidar-obstacle` (15 Oct, the lidar into Nav2; twice) | all pass: the box 0.32-0.46 m ahead with radar and lidar; with the radar off, the lidar alone stopped the car 0.16-0.55 m before a person-sized post, the costmap 100 of 100 there; both goals reached once they were gone |
 | `pixi run sim-check --faults` (15 Oct) | all 10 faults pass: the car stood still 1.7-4.1 s after each, and the watchdog (or `collision_monitor`, for the radar) said why; then let go |
 | `pixi run sim-check --faults --no-watchdog` (15 Oct) | the before column [below](#what-the-car-does-before-and-after): only the radar stopped the car |
+| `pixi run sim-check --spine` (15 Oct) | all 21 pass: the spine profile's graph, drive, EKF and a Nav2 goal; the command stream lost: full brake 209 ms, still 0.66 s, latched; both e-stops: brake within 12 ms, latched; disarmed: no motion ([the spine in the loop](#the-spine-in-the-loop-spinetrue)) |
 
 Ten runs in all, on a Mac shared with other work (load 5-17 on 16 cores). One more
 `--perception` run without the lidar failed too: the car never moved, and the log doesn't
