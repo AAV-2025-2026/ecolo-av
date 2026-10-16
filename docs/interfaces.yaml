@@ -83,6 +83,16 @@ topics:
     pub: [collision_monitor]
     sub: []
     note: The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).
+  /safety/ghost/scan:
+    type: sensor_msgs/msg/LaserScan
+    pub: [ghost_obstacle]
+    sub: [local_costmap, collision_monitor]
+    note: A pretend person for stopping tests with nothing real to hit (aav_ghost ghost_obstacle, navigation.launch.py ghost:=true - sim.launch.py and car.launch.py pass it; off by default). In base_link, 720 ranges all the way round, 10 Hz - the ghost's near side, inf everywhere else, all inf with no ghost. Read by the local costmap's own ghost_layer and as collision_monitor's ghost source, so it only ever adds an obstacle, never clears or hides a real one. Silent for 1 s, it stops Nav2 like a silent radar. Placed with pixi run ghost (ahead 10, at x y, off). docs/ghost-obstacles.md.
+  /safety/ghost/marker:
+    type: visualization_msgs/msg/Marker
+    pub: [ghost_obstacle]
+    sub: []
+    note: The ghost as a purple cylinder in the map frame, for RViz and Lichtblick; DELETE when it goes.
   /safety/collision_monitor/collision_points_marker:
     type: visualization_msgs/msg/MarkerArray
     pub: [collision_monitor]
