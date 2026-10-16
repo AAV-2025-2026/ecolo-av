@@ -63,8 +63,9 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    the last stopped. Each must stop within 2 m of B by Gazebo's truth, no more than
    GOTO_PAST past it by its own EKF, and slow down at about half max_brake (the hardest
    0.5 s of its final stop, by the truth; from 1 m/s, only never harder: GOTO_DECEL_FROM).
-   At 1 m/s also: a lat/lon B (through /toLL and /fromLL), a 250 m B refused, and a drive stopped by a cancel (Ctrl-C), the e-stop and a
-   GPS fault (the driver's own timeout and the sensor watchdog's lock).
+   At 1 m/s also: a lat/lon B (through /toLL and /fromLL), a 250 m B refused, and a drive
+   stopped by a cancel (Ctrl-C), the e-stop and a GPS fault (the driver's own timeout and
+   the sensor watchdog's lock).
 
 Times are Gazebo's, simulated; only the limits on waiting are wall-clock. Prints a table and
 exits 1 if anything failed. The launch logs go to /tmp/aav-sim-check.log and, with --lane,
