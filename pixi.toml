@@ -200,6 +200,23 @@ mlx-lm = ">=0.32.0,<0.33"
 talk = { cmd = "tools/ros.sh --local python3 -m aav_language.agent", description = "Tell the car what to do in plain English: a local model plans, you type yes (turtle, sim or bench only)" }
 llm-eval = { cmd = "tools/ros.sh python3 -m aav_language.run_eval", description = "Score local models on the plain-English test set, against a fake drive server (no ROS, no car)" }
 
+# Street routes (docs/routes.md, PLAN S8): Valhalla (MIT), the offline router, from its
+# own Python wheel, which carries valhalla_build_tiles and valhalla_service. Wheels exist
+# for Linux (x86_64 and aarch64: the Jetson) and Apple-silicon Macs, not Intel Macs. Its
+# own environment, so the car's stays small. The street data: OpenStreetMap (ODbL).
+[feature.routes]
+platforms = ["linux-64", "linux-aarch64", "mac"]
+
+[feature.routes.dependencies]
+python = ">=3.12,<3.13"
+
+[feature.routes.pypi-dependencies]
+pyvalhalla = "==3.9.1"
+
+[feature.routes.tasks]
+get-routes = { cmd = "tools/get_routes.sh", description = "Download OpenStreetMap's Ottawa (about 50 MB, from BBBike) into maps/routes/ and build Valhalla's street graph from it (a minute or two): pixi run -e routes get-routes" }
+router = { cmd = "tools/router.sh", description = "Start the street router (Valhalla) on 127.0.0.1:8002, for street_route: pixi run -e routes router (pixi run -e routes get-routes first)" }
+
 # Today's C++ boards (the 2025-26 ESP32 and Picos), until the Rust spine replaces them.
 # PlatformIO builds and flashes them. Its own downloads (the ESP32 compilers and
 # framework, about 1 GB) go into vendor/platformio, which git ignores. No ROS here.
@@ -219,4 +236,5 @@ ml = { features = ["ml"] }
 mcp = { features = ["mcp"] }
 llm = { features = ["llm", "mcp"] }
 firmware = { features = ["firmware"], no-default-feature = true }
+routes = { features = ["routes"], no-default-feature = true }
 
