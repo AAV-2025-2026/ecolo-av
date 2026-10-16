@@ -4,8 +4,11 @@ Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and th
 a CAN bus. Our code already has a CAN contract, `firmware/can/aav.dbc` (v0.1.0). This page
 compares the two, and says what changes.
 
-**Status: Implemented, and merged on 15 Oct at Ben's request** ("These are important").
-DBC v0.2.0, `spine_bridge` and the bench use it; the wheel node boards are still to write.
+**Status: built in software, hardware not decided.** DBC v0.2.0, `spine_bridge` and the bench
+use it (merged 15 Oct, so the software is ready). Whether the car gets CAN and the wheel
+node boards is **the hardware lead's decision**, with the team (Ben, 15 Oct: "I am waiting
+on the other people to make the final decisions. There is a hardware lead that isn't me").
+No parts are ordered until then.
 
 ## The plan in one picture
 
