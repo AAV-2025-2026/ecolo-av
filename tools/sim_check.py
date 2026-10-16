@@ -13,6 +13,9 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run sim-check --faults --no-watchdog   (the same without the sensor watchdog: a report
                                             of what the stack does on its own, no pass or fail)
     pixi run sim-check --no-lidar          (without the simulated roof lidar: lidar:=false)
+    pixi run sim-check --goto              (drives to points and stops there, at 1 and 3 m/s,
+                                            in the empty world: two more runs, 8 more minutes;
+                                            --goto-only skips the road world's run)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -55,6 +58,13 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 10. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
    car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there.
+11. With --goto: Gazebo's empty world, twice: sim_speed 1 and 3. The goto driver (aav_goto)
+   drives to GOTO_TARGETS (10, 30 and 60 m, ahead, to the side and behind), each from where
+   the last stopped. Each must stop within 2 m of B by Gazebo's truth, no more than
+   GOTO_PAST past it by its own EKF, and slow down at about half max_brake (90 % to 10 % of
+   its top speed, by the truth). At 1 m/s also: a lat/lon B (through /toLL and /fromLL), a
+   250 m B refused, and a drive stopped by a cancel (Ctrl-C), the e-stop and a GPS fault
+   (the driver's own timeout and the sensor watchdog's lock).
 
 Times are Gazebo's, simulated; only the limits on waiting are wall-clock. Prints a table and
 exits 1 if anything failed. The launch logs go to /tmp/aav-sim-check.log and, with --lane,
@@ -84,7 +94,7 @@ os.environ['GZ_IP'] = '127.0.0.1'
 os.environ['GZ_PARTITION'] = os.environ.get('AAV_SIM_PARTITION', f'sim_check_{DOMAIN}')
 
 from aav_description import vehicle  # noqa: E402
-from aav_interfaces.action import ScriptedDrive  # noqa: E402
+from aav_interfaces.action import GoTo, ScriptedDrive  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticArray  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
@@ -97,6 +107,7 @@ from rclpy.node import Node  # noqa: E402
 from rclpy.parameter import Parameter  # noqa: E402
 from rclpy.parameter_client import AsyncParameterClient  # noqa: E402
 from rclpy.qos import qos_profile_sensor_data  # noqa: E402
+from robot_localization.srv import ToLL  # noqa: E402
 from sensor_msgs.msg import CameraInfo, Image, LaserScan, PointCloud2  # noqa: E402
 from sensor_msgs_py import point_cloud2  # noqa: E402
 from std_msgs.msg import Bool, String  # noqa: E402
@@ -207,6 +218,9 @@ class Probe(Node):
         self.create_subscription(PointCloud2, '/sensors/radar/points', self.on_cloud,
                                  qos_profile_sensor_data)
         self.drive = ActionClient(self, ScriptedDrive, '/scripted_drive')
+        self.goto = ActionClient(self, GoTo, '/goto')
+        self.estop = self.create_publisher(Bool, '/safety/estop', 10)
+        self.to_ll = self.create_client(ToLL, '/toLL')
         self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
         self.stop, self.stop_picture, self.picture, self.stop_sign = False, None, None, None
         self.create_subscription(Bool, '/perception/stop_sign', self.on_stop, 10)
@@ -310,7 +324,7 @@ class Probe(Node):
         return self.goal.get_result_async()
 
 
-def check_contract(probe, env, tag, ignore=()):
+def check_contract(probe, env, tag, ignore=(), profile='road'):
     """
     Check the running graph against docs/interfaces.yaml (check_graph.py --profile road).
 
@@ -322,7 +336,7 @@ def check_contract(probe, env, tag, ignore=()):
         with tempfile.TemporaryFile('w+') as out:
             graph = subprocess.Popen(
                 [sys.executable, os.path.join(ROOT, 'tools', 'check_graph.py'), '--profile',
-                 'road'], cwd=ROOT, env=env, stdout=out, stderr=subprocess.DEVNULL, text=True)
+                 profile], cwd=ROOT, env=env, stdout=out, stderr=subprocess.DEVNULL, text=True)
             probe.spin_for(60.0, lambda: graph.poll() is not None)
             code = graph.wait()
             out.seek(0)
@@ -815,21 +829,203 @@ def check_faults(probe, watchdog=True):
             RESULTS.append((name, None, detail))
 
 
+# --goto: drive to points and stop there (aav_goto). The same targets as test_drive.py:
+# metres away, and degrees to the left of the car's nose, each from where the last stopped.
+GOTO_TARGETS = [(10.0, 0.0), (30.0, 45.0), (60.0, -30.0), (30.0, 150.0)]
+GOTO_SPEEDS = (1.0, 3.0)        # m/s: the car's ego cap, and Gazebo's sim_speed 3
+GOTO_TOLERANCE = 2.0            # m from B, by Gazebo's truth: READ-ME-TESTS 5.2 without RTK
+GOTO_PAST = 0.3                 # m past B, along the car's heading, by its own global EKF
+GOTO_DECEL = (0.6, 1.25)        # x the planned deceleration (half max_brake): the band
+GOTO_PLAN = 0.5 * float(vehicle.load()['actuators']['max_brake'])   # m/s^2, as goto.yaml
+
+
+def ahead_of(msg, distance, degrees):
+    """Return the map point `distance` m away, `degrees` left of the car's nose."""
+    x, y = msg.pose.pose.position.x, msg.pose.pose.position.y
+    a = yaw_of(msg) + math.radians(degrees)
+    return x + distance * math.cos(a), y + distance * math.sin(a)
+
+
+def slowing(track, t0):
+    """
+    Return (top speed, the average deceleration from 90 % to 10 % of it, m/s^2) after t0.
+
+    From Gazebo's truth: the stretch where the car comes down from its cruise to a stop.
+    """
+    run = [s for s in track if s[0] >= t0]
+    if len(run) < 2:
+        return 0.0, math.nan
+    top = max(s[4] for s in run)
+    i = max(k for k, s in enumerate(run) if s[4] >= 0.9 * top)
+    j = next((k for k in range(i, len(run)) if run[k][4] <= 0.1 * top), None)
+    if j is None or run[j][0] <= run[i][0]:
+        return top, math.nan
+    return top, (run[i][4] - run[j][4]) / (run[j][0] - run[i][0])
+
+
+def send_goto(probe, goal, wait=300.0):
+    """Send /goto a goal; return its result (None if refused or no answer) and its handle."""
+    if not probe.goto.wait_for_server(timeout_sec=20.0):
+        return None, None
+    sent = probe.goto.send_goal_async(goal)
+    probe.spin_for(10.0, sent.done)
+    if not sent.done() or not sent.result().accepted:
+        return None, None
+    handle = sent.result()
+    done = handle.get_result_async()
+    probe.spin_for(wait, done.done)
+    return (done.result() if done.done() else None), handle
+
+
+def goto_drive(probe, speed, distance, degrees, lat_lon=False):
+    """Drive to one point; check the stop against Gazebo's truth, the braking and overshoot."""
+    name = f'goto {distance:g} m at {degrees:+g} deg, {speed:g} m/s' + (
+        ' (lat/lon)' if lat_lon else '')
+    bx, by = ahead_of(probe.glob, distance, degrees)
+    goal = GoTo.Goal(x=bx, y=by, cruise_speed=float(speed))
+    where = f'B ({bx:.1f}, {by:.1f})'
+    if lat_lon:
+        if not probe.to_ll.wait_for_service(timeout_sec=10.0):
+            result(name, False, 'no /toLL from navsat_transform')
+            return
+        req = ToLL.Request()
+        req.map_point.x, req.map_point.y = bx, by
+        ll = probe.to_ll.call_async(req)
+        probe.spin_for(10.0, ll.done)
+        if not ll.done():
+            result(name, False, '/toLL did not answer')
+            return
+        p = ll.result().ll_point
+        goal = GoTo.Goal(use_lat_lon=True, latitude=p.latitude, longitude=p.longitude,
+                         cruise_speed=float(speed))
+        where = f'B lat {p.latitude:.7f} lon {p.longitude:.7f}'
+    t0 = probe.now()
+    res, _ = send_goto(probe, goal, wait=60.0 + 6.0 * distance / speed)
+    probe.spin_for(10.0, lambda: probe.now() - t0 > 0.0 and abs(
+        probe.truth.twist.twist.linear.x) < STILL)
+    if res is None:
+        result(name, False, f'{where}: refused, or no answer')
+        return
+    r = res.result
+    tx, ty = probe.xy(probe.truth)
+    error = math.hypot(tx - r.target_x, ty - r.target_y)
+    gx, gy = probe.xy(probe.glob)
+    yaw = yaw_of(probe.glob)
+    past = (gx - r.target_x) * math.cos(yaw) + (gy - r.target_y) * math.sin(yaw)
+    top, decel = slowing(probe.track, t0)
+    lo, hi = GOTO_DECEL
+    ok = (r.success and error <= GOTO_TOLERANCE and past <= GOTO_PAST
+          and lo * GOTO_PLAN <= decel <= hi * GOTO_PLAN)
+    result(name, ok,
+           f'{where}: stopped {error:.2f} m from B by the truth ({r.distance_left:.2f} m by '
+           f'its EKF), {past:+.2f} m past it; top {top:.2f} m/s, slowed at {decel:.2f} '
+           f'm/s^2 (plan {GOTO_PLAN:g}); {r.distance_travelled:.1f} m in {r.duration:.0f} s;'
+           f' "{r.message}"')
+
+
+def goto_stops(probe, name, stop, mend=None, react=4.0):
+    """Start a 40 m drive, then `stop(probe)` once it moves: it must stand still within react s."""
+    bx, by = ahead_of(probe.glob, 40.0, 0.0)
+    if not probe.goto.wait_for_server(timeout_sec=20.0):
+        result(name, False, 'no /goto')
+        return
+    sent = probe.goto.send_goal_async(GoTo.Goal(x=bx, y=by, cruise_speed=1.0))
+    probe.spin_for(10.0, sent.done)
+    if not sent.done() or not sent.result().accepted:
+        result(name, False, 'refused')
+        return
+    handle = sent.result()
+    done = handle.get_result_async()
+    moving = probe.spin_for(60.0, lambda: probe.truth.twist.twist.linear.x > 0.8)
+    if not moving:
+        handle.cancel_goal_async()
+        result(name, False, 'it never got going')
+        return
+    x0, y0 = probe.xy(probe.truth)
+    stop(probe, handle)
+    t0 = probe.now()
+    still = probe.spin_for(60.0, lambda: abs(probe.truth.twist.twist.linear.x) < STILL)
+    took = probe.now() - t0
+    probe.spin_for(15.0, done.done)
+    message = done.result().result.message if done.done() else 'no result'
+    # It must stay stopped: a few seconds more, nothing moves.
+    end, top = probe.now() + 3.0, 0.0
+    while probe.now() < end:
+        probe.spin_for(0.1)
+        top = max(top, abs(probe.truth.twist.twist.linear.x))
+    on = math.hypot(*(a - b for a, b in zip(probe.xy(probe.truth), (x0, y0))))
+    if mend is not None:
+        mend(probe)
+    if not done.done():
+        handle.cancel_goal_async()
+    ok = still and took <= react and top < STILL and done.done()
+    result(name, ok, f'stood still {took:.1f} s after it, {on:.1f} m on, then held (top '
+                     f'{top:.2f} m/s); the driver said "{message}"')
+
+
+def gps_fault(mode):
+    def set_it(probe, *_):
+        client = AsyncParameterClient(probe, 'gazebo_adapter')
+        if client.wait_for_services(timeout_sec=10.0):
+            set_fault(probe, client, 'gps', mode)
+    return set_it
+
+
+def estop(on):
+    def press(probe, *_):
+        for _ in range(5):
+            probe.estop.publish(Bool(data=on))
+            probe.spin_for(0.1)
+    return press
+
+
+def check_goto_refusals(probe):
+    """Check it refuses a B over max_distance away (goto.yaml: 200 m)."""
+    far, _ = send_goto(probe, GoTo.Goal(x=250.0, y=0.0), wait=20.0)
+    refused = far is not None and not far.result.success and 'over the limit' in \
+        far.result.message
+    result('goto refuses 250 m', refused,
+           f'"{far.result.message}"' if far is not None else 'no answer')
+
+
+def check_goto(probe, speed):
+    """Drive GOTO_TARGETS at this speed (Gazebo's sim_speed); at 1 m/s, its stops too."""
+    for distance, degrees in GOTO_TARGETS:
+        goto_drive(probe, speed, distance, degrees)
+    if speed == GOTO_SPEEDS[0]:
+        goto_drive(probe, speed, 20.0, 0.0, lat_lon=True)
+        check_goto_refusals(probe)
+        goto_stops(probe, 'goto: cancel (Ctrl-C) stops it',
+                   lambda p, handle: handle.cancel_goal_async())
+        goto_stops(probe, 'goto: the e-stop stops it', estop(True), mend=estop(False))
+        # The GPS stops: the driver's own gps_timeout (2 s) and the watchdog's lock (30).
+        goto_stops(probe, "goto: a GPS fault stops it (watchdog's lock)", gps_fault('stop'),
+                   mend=gps_fault('ok'), react=6.0)
+        probe.spin_for(30.0, lambda: not probe.locked())
+
+
 LIDAR_TOPICS = ('/sensors/lidar/points', '/sensors/lidar/scan')
 WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/state')
 
 
-def session(launch_args, checks, log_path, label='', ignore=(), radar=True):
-    """Start sim.launch.py's road world with these arguments, run the checks, and stop it."""
+def session(launch_args, checks, log_path, label='', ignore=(), radar=True, world='road'):
+    """
+    Start sim.launch.py's world with these arguments, run the checks, and stop it.
+
+    world: road (the camera and radar must run, the road profile) or empty (only the truth
+    and the global EKF, the sim profile).
+    """
+    road = world == 'road'
+    radar = radar and road
     tag = f' ({label})' if label else ''
     # What a run leaves out on purpose isn't missing from the graph.
     ignore = (tuple(ignore) + (LIDAR_TOPICS if 'lidar:=false' in launch_args else ())
               + (WATCHDOG_TOPICS if 'watchdog:=false' in launch_args else ()))
     env = dict(os.environ)
-    print(f"Starting Gazebo's road world{tag} on ROS domain {env['ROS_DOMAIN_ID']}, Gazebo "
+    print(f"Starting Gazebo's {world} world{tag} on ROS domain {env['ROS_DOMAIN_ID']}, Gazebo "
           f"partition {env['GZ_PARTITION']} (this computer only)...", flush=True)
     log = open(log_path, 'w')
-    launch = subprocess.Popen(['ros2', 'launch', 'aav_bringup', 'sim.launch.py', 'world:=road',
+    launch = subprocess.Popen(['ros2', 'launch', 'aav_bringup', 'sim.launch.py', f'world:={world}',
                                'gui:=false', 'rviz:=false', *launch_args],
                               cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
                               start_new_session=True)
@@ -839,7 +1035,8 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True):
     try:
         def missing():
             return [n for n, m in (('truth', probe.truth), ('global EKF', probe.glob),
-                                   ('camera', probe.image), ('lens', probe.info),
+                                   ('camera', probe.image if road else True),
+                                   ('lens', probe.info if road else True),
                                    ('radar', probe.cloud if radar else True)) if m is None]
 
         up = probe.spin_for(120.0, lambda: not missing())
@@ -853,13 +1050,13 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True):
             detail = ('the sensors run, but Nav2 never came up in 120 s (its lifecycle '
                       f'manager stalled? See {log_path})')
         else:
-            detail = ("Gazebo's truth, the global EKF, the camera" +
+            detail = ("Gazebo's truth, the global EKF" + (', the camera' if road else '') +
                       (' and the radar stand-in are' if radar else ' are (no radar)') +
                       ' running' + (', and Nav2 is up' if nav else ''))
         result(f'start-up{tag}', nav_up, detail)
         up = nav_up
         if up:
-            check_contract(probe, env, tag, ignore)
+            check_contract(probe, env, tag, ignore, 'road' if road else 'sim')
             for check in checks:
                 check(probe)
     finally:
@@ -889,8 +1086,11 @@ def main():
     checks.append(check_wheels_vs_imu)
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
-    session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],
-            checks, logs[0])
+    if '--goto-only' not in args:
+        session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],
+                checks, logs[0])
+    else:
+        logs = []
     if '--lidar-obstacle' in args:
         # Its own run, with the radar off: only the lidar can stop the car for the post.
         stem, ext = os.path.splitext(log)
@@ -905,6 +1105,15 @@ def main():
         logs.append(f'{stem}-faults{ext}')
         session(['faults:=true', 'lidar:=false', f'watchdog:={str(watchdog).lower()}'],
                 [lambda probe: check_faults(probe, watchdog)], logs[-1], 'faults')
+    if '--goto' in args or '--goto-only' in args:
+        # Its own runs, one per speed (sim_speed is ego's cap, set at launch): the empty
+        # world, so any angle is open ground. No Nav2, lidar or radar: lighter runs.
+        stem, ext = os.path.splitext(log)
+        for speed in GOTO_SPEEDS:
+            logs.append(f'{stem}-goto-{speed:g}{ext}')
+            session(['nav:=false', 'lidar:=false', 'radar:=false', f'sim_speed:={speed:g}'],
+                    [lambda probe, v=speed: check_goto(probe, v)], logs[-1],
+                    f'goto {speed:g} m/s', ignore=('/map',), world='empty')
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
