@@ -257,8 +257,8 @@ class Probe(Node):
         # (stamp, throttle, brake): spine_sim's outputs with the spine in the loop, or
         # gazebo_adapter's own speed loop's commands on the direct path. For the stops.
         self.status, self.demands, self.direct = None, [], {}
-        self.create_subscription(VehicleStatus, '/vehicle/status',
-                                 lambda m: setattr(self, 'status', m), 10)
+        self.latches = []    # Gazebo's time each time the spine stopped being armed
+        self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, 10)
         self.create_subscription(SpineOutputs, '/vehicle/gazebo/spine_outputs',
                                  lambda m: self.on_demand(seconds(m.header.stamp), m.throttle,
                                                           m.brake), 10)
@@ -278,6 +278,11 @@ class Probe(Node):
         self.truth = msg
         self.track.append((seconds(msg.header.stamp), msg.pose.pose.position.x,
                            msg.pose.pose.position.y, yaw_of(msg), msg.twist.twist.linear.x))
+
+    def on_status(self, msg):
+        if self.armed() and not msg.armed:
+            self.latches.append(seconds(msg.header.stamp))
+        self.status = msg
 
     def on_demand(self, stamp, throttle, brake):
         self.demands = self.demands[-2999:] + [(stamp, throttle, brake)]
@@ -521,28 +526,42 @@ def check_lidar_scan(probe):
                              f'{finite.size} of them see something, {nearest} (the sign)')
 
 
-def check_drive(probe):
-    """Drive the scripted profile; compare the distance with the plan, and the EKF with truth."""
-    x0, y0 = probe.xy(probe.truth)
+def check_drive(probe, spine=False):
+    """
+    Drive the scripted profile; compare the distance with the plan, and the EKF with truth.
+
+    spine: the spine is in the loop. If it latched on the way (a gap in ego's commands on a
+    busy computer, as on the bench), which stops the car, arm it and drive the plan again,
+    once, as bench_check.py does.
+    """
     if not probe.drive.wait_for_server(timeout_sec=20.0):
         result('scripted drive', False, 'no scripted driver')
         return
-    sent = probe.drive.send_goal_async(ScriptedDrive.Goal(
-        target_speed=1.0, acceleration=0.5, deceleration=1.0, hold_time=5.0))
-    probe.spin_for(10.0, lambda: sent.done())
-    if not sent.done() or not sent.result().accepted:
-        result('scripted drive', False, 'refused')
-        return
-    done = sent.result().get_result_async()
-    probe.spin_for(60.0, lambda: done.done())
-    start = probe.now()
-    probe.spin_for(20.0, lambda: probe.now() - start > 3.0)    # 3 s to come to rest
-    x1, y1 = probe.xy(probe.truth)
-    travelled = math.hypot(x1 - x0, y1 - y0)
-    # The plan: 2 s up to 1 m/s (1 m), 5 s at 1 m/s (5 m), 1 s down (0.5 m). The range is
-    # bench_check.py's: it catches a stretched plan, or no motion at all.
-    result('scripted drive', 4.5 < travelled < 8.0,
-           f'{travelled:.2f} m (plan: 6.5 m), {y1 - y0:+.2f} m to the side')
+    for attempt in range(2 if spine else 1):
+        if spine and not probe.armed():
+            probe.arm_and_hold()
+        latches = len(probe.latches)
+        x0, y0 = probe.xy(probe.truth)
+        sent = probe.drive.send_goal_async(ScriptedDrive.Goal(
+            target_speed=1.0, acceleration=0.5, deceleration=1.0, hold_time=5.0))
+        probe.spin_for(10.0, lambda: sent.done())
+        if not sent.done() or not sent.result().accepted:
+            result('scripted drive', False, 'refused')
+            return
+        done = sent.result().get_result_async()
+        probe.spin_for(60.0, lambda: done.done())
+        start = probe.now()
+        probe.spin_for(20.0, lambda: probe.now() - start > 3.0)    # 3 s to come to rest
+        x1, y1 = probe.xy(probe.truth)
+        travelled = math.hypot(x1 - x0, y1 - y0)
+        # The plan: 2 s up to 1 m/s (1 m), 5 s at 1 m/s (5 m), 1 s down (0.5 m). The range
+        # is bench_check.py's: it catches a stretched plan, or no motion at all.
+        good = 4.5 < travelled < 8.0
+        if good or len(probe.latches) == latches:
+            break
+    again = ', the second time: the spine latched during the first' if attempt else ''
+    result('scripted drive', good,
+           f'{travelled:.2f} m (plan: 6.5 m), {y1 - y0:+.2f} m to the side{again}')
     gx, gy = probe.xy(probe.glob)
     error = math.hypot(gx - x1, gy - y1)
     result('global EKF vs truth', error < 1.5, f'{error:.2f} m apart (GPS noise is 0.5 m)')
@@ -1063,12 +1082,12 @@ def check_estop(probe, spine, hardware=False):
 def check_not_armed(probe):
     """Disarm the spine: a scripted drive must not move the car, nor the throttle open."""
     disarmed = probe.arm(False) and probe.spin_for(5.0, lambda: not probe.armed())
-    seen = len(probe.demands)
+    t0 = probe.now()
     handle = probe.send_drive(hold=3.0)
     top = held(probe, 8.0)
     if handle is not None:
         finish(probe, handle)
-    throttle = max((d[1] for d in probe.demands[seen:]), default=None)
+    throttle = max((t for stamp, t, _ in probe.demands if stamp >= t0), default=None)
     status = probe.status
     ok = (disarmed and handle is not None and top < STILL and throttle == 0.0
           and not status.armed)
@@ -1224,7 +1243,8 @@ def main():
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-spine{ext}')
         session(['spine:=true', 'lidar:=false'],
-                [armed_first(check_drive), armed_first(check_nav_goal), check_wheels_vs_imu,
+                [lambda probe: check_drive(probe, spine=True), armed_first(check_nav_goal),
+                 check_wheels_vs_imu,
                  lambda probe: check_command_lost(probe, True),
                  lambda probe: check_estop(probe, True),
                  lambda probe: check_estop(probe, True, hardware=True),
