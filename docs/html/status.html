@@ -171,7 +171,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Sensor watchdog (15 Oct)</td>
 <td><code>aav_safety</code> <code>sensor_watchdog</code>: a twist_mux lock, the HUD's banner</td>
-<td><span class="badge b-works">works</span> in Gazebo: all 10 faults on purpose (<code>pixi run sim-fault</code>) stop Nav2 within 4.1 s and say why. On the bench, <code>bench-check</code> passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. <span class="badge b-untested">untested</span> on the car (<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>)</td>
+<td><span class="badge b-works">works</span> in Gazebo: all 13 faults on purpose (<code>pixi run sim-fault</code>, <code>sim-check --faults</code>) stop Nav2 and say why, frozen wheels (cross-checked with the IMU and GPS) and the watchdog's own death (a fail-safe lock) too. On the bench, <code>bench-check</code> passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. <span class="badge b-untested">untested</span> on the car (<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>)</td>
 </tr>
 <tr>
 <td>Real car</td>

@@ -388,24 +388,88 @@ parameter of `gazebo_adapter` (`fault.<sensor>`); the logic is `aav_gazebo/fault
 `aav_safety`'s `sensor_watchdog` watches what Nav2 and the AI slot need. While one isn't
 right, its twist_mux lock (priority 30, as the stop sign) holds them; people and tests
 still drive. It says why on `/safety/sensor_watchdog/state`, on the HUD (a red banner over
-the camera), in the log and on `/diagnostics`.
+the camera), on the map window (a banner across the map), in the log and on
+`/diagnostics`.
 
 | Input | Topic | Wrong when | Then |
 |---|---|---|---|
-| odom | `/vehicle/odom` | quiet 0.5 s; NaN | stop |
+| odom | `/vehicle/odom` | quiet 0.5 s; NaN; the wheels **disagree** with the IMU or the GPS for 1 s (below), **latched** until cleared | stop |
 | imu | `/sensors/imu/data` | quiet 0.5 s; NaN; the same for 1 s | stop |
 | gps | `/sensors/gps/fix` | no good fix for 2 s (NaN or no fix count as none); a jump between two fixes of more than 15 m/s x the time between their stamps + 5 m (for noise), **latched** until cleared | stop |
 | local, global | the EKFs' `/localization/odom/*` | quiet 0.5 s; NaN | stop |
 | camera | the front left picture | quiet 1 s; the same picture for 1 s **while the wheels turn** | stop (only where something reads it: perception, lane, camera obstacles) |
 | radar | `/sensors/radar/points` | quiet 1 s | warn: `collision_monitor` already stops Nav2 |
 
-It runs in Gazebo (`watchdog:=true`), on the bench, and on the car next to Nav2 (odom,
-IMU, GPS, the EKFs). The checks are `aav_safety/watchdog.py`, with no ROS, and its tests.
+It runs in Gazebo (`watchdog:=true`), on the bench (always), and on the car next to the
+mux (odom, IMU, GPS, the EKFs). The checks are `aav_safety/watchdog.py` and
+`wheel_check.py`, with no ROS, and their tests.
+
+### If the watchdog itself dies
+
+The lock is **fail-safe** (15 Oct). The watchdog sends `false` 10 times a second: a
+heartbeat. twist_mux locks a lock with a timeout when it goes quiet (checked in its
+source: `LockTopicHandle::isLocked`), so 1 s of silence holds Nav2 too.
+
+```text
+ sensor_watchdog --false, 10 Hz--> twist_mux sensors lock (priority 30, timeout 1 s)
+       dies, hangs, never starts  -->  silence > 1 s  -->  locked: Nav2 and AI held
+                                                           joystick, keyboard, tests: still drive
+```
+
+| Profile | Watchdog | Lock |
+|---|---|---|
+| Gazebo, `watchdog:=true` (the default) | runs | fail-safe |
+| Gazebo, `watchdog:=false` | none | timeout 0 (`aav_mux` `no_sensor_lock.yaml`) |
+| Bench | always runs | fail-safe |
+| Car | next to the mux, wherever Nav2 runs | fail-safe |
+| Turtle | none | timeout 0 |
+
+`mux.launch.py sensor_lock:=false` picks timeout 0; every profile sets it.
+
+### Frozen wheels
+
+A wheel-speed driver stuck in a loop sends the same speed with fresh stamps. At a steady
+speed that looks like a car at a steady speed. `wheel_check.py` cross-checks the wheels:
+
+| Against | How | Catches |
+|---|---|---|
+| The IMU's acceleration | over 1.5 s: the wheels' change in speed vs the forward acceleration, added up | a frozen speed while the car speeds up or brakes |
+| The IMU's gyro | over 1.5 s: the mean turn rates | a frozen turn rate while the car steers |
+| The GPS | over 6 s: the speed of a line fitted to the fixes vs one fitted to where the wheels say the car went | a speed that **stays** wrong |
+
+Any gap over its limit (0.3 m/s, 0.15 rad/s, 0.3 m/s) for 1 s is **DISAGREE**, latched
+until `pixi run sim-fault clear`. Wheels frozen at a speed the car really keeps are still
+right, so nothing is said until the car's speed or turn changes. A frozen IMU or GPS is
+left out (its own input says FROZEN), not blamed on the wheels.
+
+Normal driving, Gazebo (sim-check's `wheels vs IMU and GPS`): worst speed gap 0.09-0.14
+m/s and turn 0.006-0.010 rad/s (6 runs), GPS 0.12-0.14 m/s (3 runs). The limits are **Gazebo's**: on
+the car, read `worst_*_gap` on `/diagnostics` after a normal drive, and set them well
+above.
+
+### The global EKF and a GPS jump
+
+`ekf_global` now refuses a GPS fix more than 10 sigma from where it thinks the car is
+(`odom1_pose_rejection_threshold`, Mahalanobis distance). The first fix on the car could
+be far from `start_x, start_y` (or the datum): so x and y start 100 m unsure, and the
+first fix always gets in. `tools/tests/test_ekf_config.py` checks the numbers.
+
+| 20 m jump (`gps jump`) | The global EKF, 10 s on |
+|---|---|
+| Before (no gate), no watchdog | 19.3 m from the truth |
+| Gate, with the watchdog (the car stops) | 0.1-0.5 m (three runs) |
+| Gate, no watchdog (the car drives on) | 19.4 m: driving, the filter grows unsure of its heading, and after a few seconds it takes the jump. Then it refuses the good fixes for a while (8.5 m out at the next fault) |
+
+So the gate keeps the map position right **while the watchdog holds the car**; the
+watchdog's latched JUMP stays the guard, and a person checks the position before
+clearing it.
 
 ### What the car does: before and after
 
 `pixi run sim-check --faults` (after) and `--faults --no-watchdog` (before): each fault
-while Nav2 drives at about 1 m/s, in Gazebo's road world, on Ben's Mac, 15 Oct.
+while Nav2 drives at about 1 m/s, in Gazebo's road world, on Ben's Mac, 15 Oct. The first
+ten rows: the watchdog's first runs. The last three: added later on 15 Oct (fail-safe
+lock, frozen wheels).
 
 | Fault | Before: no watchdog | After: the watchdog |
 |---|---|---|
@@ -419,6 +483,9 @@ while Nav2 drives at about 1 m/s, in Gazebo's road world, on Ben's Mac, 15 Oct.
 | Wheels NaN (`odom nan`) | ❌ drove on 6.3 m, nothing said | ✅ 1.7 s, 0.8 m: "odom NAN" |
 | Camera frozen (`camera freeze`) | ❌ drove on 7.6 m; on the HUD a frozen picture looks live | ✅ 2.9 s, 4.5 m: "camera FROZEN" |
 | Radar stopped (`radar stop`) | ✅ stood still 2.5 s after it: `collision_monitor`'s "invalid source" | ✅ the same, 2.5 s; the watchdog warns too |
+| Wheels frozen (`odom freeze`) | ❌ drove on 10.9 m in 15 s, nothing said | ✅ 3.4-4.8 s after the wheels went wrong (Nav2 steered), 2.2-3.9 m: "odom DISAGREE (the wheels and the IMU disagree ... turn 0.28 rad/s)" (two runs) |
+| Watchdog hung (`watchdog hang`: SIGSTOP) | ❌ by design: the old lock never expired, so nothing stopped Nav2 (not run) | ✅ 2.7 s, 1.4-1.5 m: twist_mux's 1 s lock timeout; drove again after SIGCONT |
+| Watchdog killed (`watchdog kill`: SIGKILL, the last fault) | ❌ the same (not run) | ✅ 2.6-2.8 s, 1.2-1.5 m, then held 10 s more with Nav2 still asking (top speed 0.00 m/s) |
 
 "Nothing said": no warning in the log, nothing on the HUD (only the HUD's GPS line
 turned STALE for a lost GPS). The after column is the last of three runs: the first
@@ -429,11 +496,13 @@ timing jumps with the fixes' stamps, plus 5 m for their noise.
 
 | What | Why |
 |---|---|
-| The watchdog's lock never expires | if the watchdog dies while all is well, nothing stops Nav2 for a sensor (twist_mux's lock times out only on silence; a timeout would block the profiles that run no watchdog). A heartbeat check, or a lock timeout where it always runs |
-| Wheel odometry that freezes | not caught: a car at a steady speed sends the same speed. Cross-check the wheels with the IMU and the GPS |
-| The EKF's own guard against a GPS jump | robot_localization's `odom1_pose_rejection_threshold` would ignore it, but would also refuse the first fix on the car, far from the datum. Seed the EKF from the first fix first |
-| The map window | still shows only how old the car's position is; not the watchdog's verdict |
-| The real car's faults | the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's |
+| ~~The watchdog's lock never expires~~ | done 15 Oct: fail-safe, a 1 s timeout on its heartbeat ([above](#if-the-watchdog-itself-dies)) |
+| ~~Wheel odometry that freezes~~ | done 15 Oct: the wheels against the IMU and the GPS ([above](#frozen-wheels)) |
+| ~~The EKF's own guard against a GPS jump~~ | done 15 Oct, partly: it holds while the watchdog stops the car ([above](#the-global-ekf-and-a-gps-jump)). A car that drives on takes the jump after a few seconds |
+| ~~The map window~~ | done 15 Oct: the same banner as the HUD. Not seen on a screen yet |
+| The cross check's limits on the car | Gazebo's numbers. Read `worst_*_gap` on `/diagnostics` after a normal drive. A sloping lot, the real IMU's mounting and the real GPS's noise all change them |
+| A frozen wheel at a speed the car keeps | not caught until the speed or turn changes: harmless till then, but the EKF's position drifts if the car really changes speed slowly under 0.3 m/s |
+| The real car's faults | the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog |
 
 ## Replay a recorded drive
 

@@ -117,7 +117,7 @@ Two more, for the automatic drivers only (Nav2 and the AI slot; never a person o
 | Layer | Stops Nav2 when |
 |---|---|
 | collision_monitor | radar or lidar points in the stop zone just ahead; or the radar or lidar goes quiet for 1 s |
-| The sensor watchdog (`aav_safety`) | the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps. A twist_mux lock, shown on the HUD ([simulation](simulation.md#sensor-failures-on-purpose)) |
+| The sensor watchdog (`aav_safety`) | the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps; the wheels disagree with the IMU or the GPS; the watchdog itself goes quiet (fail-safe: twist_mux's lock times out). A twist_mux lock, shown on the HUD and the map window ([simulation](simulation.md#sensor-failures-on-purpose)) |
 
 !!! warning "Today's car has no layer 5"
   The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays

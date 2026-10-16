@@ -32,7 +32,7 @@ Nothing real moves. Run these on any laptop.
 | 1.9 | **"SIMULATED" on the HUD** | run Gazebo, look at the HUD | an orange SIMULATED banner; REAL / SIM tag per sensor | ⬜ |
 | 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | `pixi run actuator-test <test> --sim` ([docs](docs/actuator-tests.md)) | the script runs end to end and reports g and angles | ✅ 15 Oct: all 9 tests; they give back `vehicle.yaml`'s numbers |
 | 1.11 | **The lidar alone stops the car** | `pixi run sim-check --lidar-obstacle` | radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone | ✅ 15 Oct: 0.16-0.55 m before it |
-| 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 10 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, NaN; camera frozen; radar stopped) stops the car within 6 s, and says why | ✅ 15 Oct: all 10, within 1.7-4.1 s |
+| 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check | ✅ 15 Oct: all 13 |
 
 ## Stage 2: the bench
 

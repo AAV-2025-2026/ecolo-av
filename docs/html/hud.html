@@ -98,7 +98,7 @@ a second program. Each opens full screen on its own monitor at boot:
 </tr>
 <tr>
 <td>Camera</td>
-<td>the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange <strong>SIMULATED</strong> / <strong>BENCH</strong> / <strong>REPLAY</strong> band along its bottom when <code>/system/source</code> says any data isn't the real car's; the sensor watchdog's banner (15 Oct): red <strong>STOP: gps STALE (...)</strong> while it holds Nav2, amber for a warning, amber <strong>SENSOR WATCHDOG SILENT</strong> if it stops talking (<a href="simulation.html#sensor-failures-on-purpose">simulation</a>)</td>
+<td>the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange <strong>SIMULATED</strong> / <strong>BENCH</strong> / <strong>REPLAY</strong> band along its bottom when <code>/system/source</code> says any data isn't the real car's; the sensor watchdog's banner (15 Oct): red <strong>STOP: gps STALE (...)</strong> while it holds Nav2, amber for a warning, red <strong>SENSOR WATCHDOG SILENT</strong> if it stops talking (twist_mux then holds Nav2 for its silence) (<a href="simulation.html#sensor-failures-on-purpose">simulation</a>)</td>
 </tr>
 <tr>
 <td>E-STOP</td>
@@ -189,7 +189,7 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
 </tr>
 <tr>
 <td>The sensor watchdog's banner (15 Oct)</td>
-<td>its logic: <code>cargo test</code> (hud-core <code>state</code>). Not seen on screen yet</td>
+<td>its logic: <code>cargo test</code> (hud-core <code>watchdog</code>, <code>state</code>), shared with the map window. Not seen on screen yet</td>
 </tr>
 <tr>
 <td>The SIMULATED / BENCH / REPLAY banner (15 Oct)</td>
@@ -312,6 +312,10 @@ Nav2.</p>
 <td>SIMULATED / BENCH / REPLAY, as on the HUD (<code>/system/source</code>)</td>
 </tr>
 <tr>
+<td>Watchdog banner (15 Oct)</td>
+<td>across the bottom of the map: the sensor watchdog's verdict, as on the HUD: red <strong>STOP: ...</strong> while it holds Nav2, or <strong>SENSOR WATCHDOG SILENT</strong>; amber for a warning (<code>/safety/sensor_watchdog/state</code>)</td>
+</tr>
+<tr>
 <td>Scale bar, N</td>
 <td>bottom left; north is always up</td>
 </tr>
@@ -409,6 +413,10 @@ pixi run map fullscreen:=true monitor:=HDMI-1   # full screen on that monitor</c
 <tr>
 <td>ARRIVED on screen</td>
 <td>only in <code>--demo</code> and the unit tests: each live window closed (screenshot) before the car got there</td>
+</tr>
+<tr>
+<td>The watchdog banner (15 Oct)</td>
+<td>its logic: <code>cargo test</code> (map-core <code>state</code>, hud-core <code>watchdog</code>), and <code>cargo clippy</code>. Not seen on screen: the window couldn't open from that session</td>
 </tr>
 <tr>
 <td>Clicks, the wheel, dragging</td>

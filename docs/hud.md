@@ -25,7 +25,7 @@ a second program. Each opens full screen on its own monitor at boot:
 | Top strip | mode, armed, gear (D/R/P), e-stop on/off, battery, faults |
 | Speed | km/h, big. Grey with "OLD" when `/vehicle/status` stops |
 | Controls | steering (left of centre = left), throttle, brake |
-| Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange **SIMULATED** / **BENCH** / **REPLAY** band along its bottom when `/system/source` says any data isn't the real car's; the sensor watchdog's banner (15 Oct): red **STOP: gps STALE (...)** while it holds Nav2, amber for a warning, amber **SENSOR WATCHDOG SILENT** if it stops talking ([simulation](simulation.md#sensor-failures-on-purpose)) |
+| Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange **SIMULATED** / **BENCH** / **REPLAY** band along its bottom when `/system/source` says any data isn't the real car's; the sensor watchdog's banner (15 Oct): red **STOP: gps STALE (...)** while it holds Nav2, amber for a warning, red **SENSOR WATCHDOG SILENT** if it stops talking (twist_mux then holds Nav2 for its silence) ([simulation](simulation.md#sensor-failures-on-purpose)) |
 | E-STOP | the button: `/safety/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
 | Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where `/system/source` names it |
 | GPS | is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age |
@@ -69,7 +69,7 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 | One press, through the real node, to another node (`cargo test`) | exactly 5 trues, no false, each "sent to 1 node" |
 | Ctrl-C to `ros2 launch` | the window closes, "finished cleanly" |
 | A click on the window's button | not tested: macOS blocks clicks from scripts  |
-| The sensor watchdog's banner (15 Oct) | its logic: `cargo test` (hud-core `state`). Not seen on screen yet |
+| The sensor watchdog's banner (15 Oct) | its logic: `cargo test` (hud-core `watchdog`, `state`), shared with the map window. Not seen on screen yet |
 | The SIMULATED / BENCH / REPLAY banner (15 Oct) | its logic: `cargo test` (hud-core `origin`, and the message's numbers in hud-app). Not seen on screen yet: the window couldn't open from that session |
 
 ### What it shows with each backend
@@ -112,6 +112,7 @@ Nav2.
 | TIME LEFT, SPEED | distance / speed; km/h from the odometry |
 | TOPICS | each topic: OK, STALE or NEVER |
 | Orange band | SIMULATED / BENCH / REPLAY, as on the HUD (`/system/source`) |
+| Watchdog banner (15 Oct) | across the bottom of the map: the sensor watchdog's verdict, as on the HUD: red **STOP: ...** while it holds Nav2, or **SENSOR WATCHDOG SILENT**; amber for a warning (`/safety/sensor_watchdog/state`) |
 | Scale bar, N | bottom left; north is always up |
 
 ### Keys
@@ -154,6 +155,7 @@ pixi run map fullscreen:=true monitor:=HDMI-1   # full screen on that monitor
 | `--demo`, with `--screenshot` | the picture above |
 | Gazebo, `world:=test_lot sim_speed:=3`, headless, private domain, two Nav2 goals | the lot, the car, the plan and the goal; SIMULATED; DRIVING, the distance and the time left counting down; both goals SUCCEEDED |
 | ARRIVED on screen | only in `--demo` and the unit tests: each live window closed (screenshot) before the car got there |
+| The watchdog banner (15 Oct) | its logic: `cargo test` (map-core `state`, hud-core `watchdog`), and `cargo clippy`. Not seen on screen: the window couldn't open from that session |
 | Clicks, the wheel, dragging | not tested: macOS blocks input from scripts |
 
 ![The map window next to Gazebo, whole map (--whole-map), driving to a goal](img/map-raylib-sim.png)

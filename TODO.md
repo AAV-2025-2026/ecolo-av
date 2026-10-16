@@ -124,6 +124,10 @@ work on." His order, with the work under way:
       - [ ] **The sensor watchdog's to-dos** (`docs/simulation.md`, "Still to do"): a lock
             that expires if the watchdog dies, frozen wheel odometry, the EKF's own guard
             against a GPS jump, the verdict on the map window, the same faults on the car.
+            *Done 15 Oct, but for the car: a fail-safe lock, the wheels cross-checked with
+            the IMU and the GPS, ekf_global's GPS gate (holds while the car is stopped),
+            the map window's banner. Left: the cross check's limits and the faults on the
+            car.*
       - [ ] **Ackermann done properly**, testable in Gazebo and on the bench: reversing
             (Reeds-Shepp), both front wheels' real angles, the steering curve from
             `Ackermann.m` (Q2). *Paused 11 Oct, on `wt/ackermann`.*
