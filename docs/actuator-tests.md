@@ -153,19 +153,31 @@ The script should give them back:
 | `steer_offset` | 0 | 0.000 | `steer-centre`, `steer-sweep`, `straight` |
 | `steer_deadband` | 0.005 rad | 0.005 | `steer-centre` |
 | `max_steering_angle` | 0.5 rad | 0.495 | `steer-sweep` (the deadband leaves 0.005 short) |
-| real angle, full-lock circle | 0.5 rad | 0.433 ⚠️ | `circles`: Gazebo turns wider than told (below) |
-| real angle at 0.2 / 0.35 rad | 0.2 / 0.35 | 0.194 / 0.339 | `circles`: yaw rate, odometry circle and GPS circle agree within 1% |
+| real angle, full-lock circle | 0.5 rad | 0.484 (was 0.433) | `circles`: fixed 15 Oct (below) |
+| real angle at 0.2 / 0.35 rad | 0.2 / 0.35 | 0.196 / 0.341 | `circles`: yaw rate, odometry circle and GPS circle agree within 1% |
 
 Other figures from the same runs: 0 → 3 m/s in 6.2 s; IMU and wheel-speed g agree
 (0.054 vs 0.056 g mean); stopping from 1.1 / 2.2 / 3.1 m/s took 1.05 / 2.57 / 4.46 m;
-drift over 10 m was 0.06 m; the full-lock circle was 6.8 m across, not 5.75.
+drift over 10 m was 0.06 m; the full-lock circle was 6.8 m across, not 5.75 (6.0 m since the fix below).
 
-!!! warning "Found: Gazebo's car can't reach full lock"
-    The steering sensor says 0.5 rad, but the car turns as if 0.433. Gazebo's Ackermann
-    system applies `steering_limit` (`max_steering_angle`) to the **inner** wheel, so
-    the virtual centre wheel stops near 0.45 rad; tyre slip takes the rest. Not fixed
-    yet: the fix (an inner-wheel limit in `aav.gazebo.xacro`) changes every Gazebo drive,
-    and needs its own `sim-check`. On the car, `circles` measures the real thing.
+!!! success "Fixed: Gazebo's car now reaches full lock (S3, 15 Oct)"
+    Told 0.5 rad, the car turned as if 0.433. The cause was Gazebo's Ackermann system
+    (gz-sim 8): it turns `steering_limit` into a smallest circle, wheelbase ÷ sin(limit),
+    so a limit of 0.5 stopped the middle wheel at 0.447. Tyre slip (about 3%) took the
+    rest. Now `vehicle.gazebo_steering_limit` gives Gazebo 0.578, worked out from
+    `max_steering_angle`. `vehicle.yaml` and the real car's meaning don't change.
+
+    | `circles --sim`, 1 m/s | Before | After |
+    |---|---|---|
+    | full lock, left / right | 0.433 | 0.485 / 0.484 rad (3% short) |
+    | 0.35 rad, left / right | 0.339 | 0.342 / 0.341 |
+    | 0.2 rad, left / right | 0.194 | 0.197 / 0.196 |
+    | circle across, full lock | 6.8 m | 5.93-5.98 m |
+    | Gazebo's wheels at full lock, inside / outside | 0.498 / 0.405 (worked out) | 0.563 / 0.449 (Ackermann: 0.563 / 0.449) |
+
+    The wheels now point exactly where Ackermann says. The last 3% is the tyres
+    sliding sideways, at every angle: the real car will slide too, and `circles` on the
+    car measures it. `steer-sweep --sim` still reads 0.495 (the deadband).
 
 !!! note "Gazebo's IMU"
     Gazebo's own IMU never felt the car speed up or brake (0.00 m/s² while speeding up at

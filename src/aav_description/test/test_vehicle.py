@@ -1,8 +1,11 @@
 import math
 from pathlib import Path
 import re
+import shutil
+import subprocess
 
 from aav_description import vehicle
+import pytest
 import yaml
 
 CONFIG = Path(__file__).resolve().parents[1] / 'config' / 'vehicle.yaml'
@@ -176,3 +179,71 @@ def test_the_firmware_copies_match_vehicle_yaml():
     v = vehicle.load(CONFIG)['vehicle']
     assert rust_const(SPINE_RS, 'MAX_STEERING_ANGLE') == v['max_steering_angle']
     assert rust_const(SPINE_RS, 'MAX_REVERSE_SPEED') == v['max_reverse_speed']
+
+
+CAR = {'wheelbase': 1.57, 'track': 0.77, 'max_steering_angle': 0.5}
+
+
+def test_the_inner_wheel_turns_further_than_the_centre_and_the_outer_less():
+    inner, outer = vehicle.wheel_angles(CAR, 0.5)
+    assert outer < 0.5 < inner
+    assert math.isclose(inner, math.atan(1.57 / (1.57 / math.tan(0.5) - 0.385)))
+    # Ackermann: both wheels point at the same turning centre.
+    assert math.isclose(1 / math.tan(outer) - 1 / math.tan(inner), 0.77 / 1.57)
+    assert vehicle.wheel_angles(CAR, 0.0) == (0.0, 0.0)
+    assert vehicle.wheel_angles(CAR, -0.3) == vehicle.wheel_angles(CAR, 0.3)
+
+
+def test_m5s_two_angles_give_the_centre_angle_back():
+    for centre in (0.1, 0.3, 0.5, 0.6):
+        inner, outer = vehicle.wheel_angles(CAR, centre)
+        assert math.isclose(vehicle.centre_angle(CAR, inner, outer), centre)
+    # 29 degrees each way: the centre is 29 degrees too.
+    same = math.radians(29)
+    assert math.isclose(vehicle.centre_angle(CAR, same, same), same)
+    with pytest.raises(ValueError):
+        vehicle.centre_angle(CAR, 0.5, 0.0)
+
+
+def gazebo_centre_angle(v, steering_limit):
+    """Gazebo's AckermannSteering at full lock (gz-sim 8, UpdateVelocity): the centre angle."""
+    smallest_radius = v['wheelbase'] / math.sin(steering_limit)
+    return math.atan(v['wheelbase'] / smallest_radius)
+
+
+def test_gazebos_steering_limit_gives_the_centre_angle_at_full_lock():
+    # Given max_steering_angle as it is, Gazebo stops 10% short: the 0.433 found by circles.
+    assert gazebo_centre_angle(CAR, 0.5) < 0.45
+    limit = vehicle.gazebo_steering_limit(CAR)
+    assert limit > 0.5
+    assert math.isclose(gazebo_centre_angle(CAR, limit), 0.5)
+    # Its smallest radius is the bicycle model's: Nav2's minimum turning radius.
+    assert math.isclose(CAR['wheelbase'] / math.sin(limit), vehicle.min_turning_radius(CAR))
+    # The inner wheel's joint limit in aav.urdf.xacro (1.3 x max) leaves it room.
+    v = vehicle.load(CONFIG)['vehicle']
+    assert vehicle.wheel_angles(v, v['max_steering_angle'])[0] < 1.3 * v['max_steering_angle']
+    with pytest.raises(ValueError):
+        vehicle.gazebo_steering_limit({'max_steering_angle': math.radians(50)})
+
+
+def find_share():
+    try:
+        from ament_index_python.packages import get_package_share_directory
+        return get_package_share_directory('aav_description')
+    except Exception:       # tools/test.sh: no ROS, or not built
+        return None
+
+
+@pytest.mark.skipif(shutil.which('xacro') is None or find_share() is None,
+                    reason='needs xacro and the built package')
+def test_gazebos_urdf_gets_the_derived_limit_and_refuses_none():
+    urdf = Path(find_share()) / 'urdf' / 'aav.urdf.xacro'
+    v = vehicle.load(CONFIG)['vehicle']
+    limit = f'{vehicle.gazebo_steering_limit(v):.6f}'
+    out = subprocess.run(['xacro', str(urdf), 'sim:=true', f'gz_steering_limit:={limit}'],
+                         capture_output=True, text=True, check=True).stdout
+    assert f'<steering_limit>{limit}</steering_limit>' in out
+    missing = subprocess.run(['xacro', str(urdf), 'sim:=true'], capture_output=True)
+    assert missing.returncode != 0
+    car = subprocess.run(['xacro', str(urdf)], capture_output=True, text=True, check=True)
+    assert 'steering_limit' not in car.stdout

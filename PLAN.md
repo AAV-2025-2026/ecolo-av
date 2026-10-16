@@ -5,7 +5,7 @@ plan"). What's already done is in [PROPOSAL.md](PROPOSAL.md); this page is only 
 left, and in what order.
 
 > **The short version**
-> - **Software we can build now**, no car needed: S1-S9. S1-S3 started 15 Oct.
+> - **Software we can build now**, no car needed: S1-S9. S1-S2 started 15 Oct; S3 done 15 Oct.
 > - **Needs the car, or the hardware lead's decision**: C1-C10. Hardware choices are the hardware lead's, not Ben's.
 > - **The goal:** C9, the car drives itself from GPS point A to B and stops at B.
 
@@ -24,7 +24,7 @@ left, and in what order.
 |---|---|---|---|---|
 | S1 | **GPS A → B with a smooth stop**: speed by the distance left to B, slowing at half the measured braking g | the main goal (READ-ME-TESTS 5.2), proven in Gazebo first | 1 day | started 15 Oct |
 | S2 | **The spine in the loop** in Gazebo: ego → CAN → the spine's safety logic → the actuator model → Gazebo | timeouts and e-stops tested the way the car runs them | 1-2 days | started 15 Oct |
-| S3 | **Gazebo steering fix**: full lock turns 0.43 rad, not 0.5 | the sim should steer like the car | small | started 15 Oct |
+| S3 | **Gazebo steering fix**: full lock turns 0.43 rad, not 0.5 | the sim should steer like the car | small | ✅ done 15 Oct: 0.484 rad at full lock (Gazebo's `steering_limit` from `vehicle.py`; the last 3% is tyre slip) |
 | S4 | **Ghost obstacles**: a pretend person in Nav2's map while the real car drives | test stopping on the car with nothing real to hit | 1 day | |
 | S5 | **Touchscreen keyboard** for the map's search | type a destination in the car | small | |
 | S6 | **Newer models**, on the same pictures and tasks: YOLO26 / RF-DETR vs YOLO11; Qwen3.5 / Gemma 4 / Granite vs Qwen3 | better or freer models | medium | |

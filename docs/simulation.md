@@ -132,6 +132,10 @@ ego's angle ──────────────────────�
     ones once the tests are done: no code changes.
 
 - Gazebo's own limits (`aav.gazebo.xacro`) are now ±10 m/s², so the model limits, not Gazebo.
+- Gazebo's `steering_limit` is **not** `max_steering_angle`. Gazebo turns it into a smallest
+  circle, wheelbase ÷ sin(limit), so 0.5 stopped the car at 0.447 rad. The launch file
+  passes `vehicle.gazebo_steering_limit` (0.578) instead: the middle wheel then reaches
+  0.5. Measured: 0.484 rad at full lock, the last 3% tyre slip ([Actuator tests](actuator-tests.md)).
 - `actuator_model:=false` keeps the old behaviour (in the adapter), to compare the two.
 - No `/ego/actuator_cmd` for 0.2 s: the model brakes to a stop, like the spine's watchdog.
 - Plot command against measured: `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`

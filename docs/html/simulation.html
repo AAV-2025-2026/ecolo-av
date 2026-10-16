@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">38 min read · 8 sections</div></header>
+<div class="meta">39 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -422,6 +422,10 @@ ones once the tests are done: no code changes.
 </div>
 <ul>
 <li>Gazebo's own limits (<code>aav.gazebo.xacro</code>) are now ±10 m/s², so the model limits, not Gazebo.</li>
+<li>Gazebo's <code>steering_limit</code> is <strong>not</strong> <code>max_steering_angle</code>. Gazebo turns it into a smallest
+  circle, wheelbase ÷ sin(limit), so 0.5 stopped the car at 0.447 rad. The launch file
+  passes <code>vehicle.gazebo_steering_limit</code> (0.578) instead: the middle wheel then reaches
+  0.5. Measured: 0.484 rad at full lock, the last 3% tyre slip (<a href="actuator-tests.html">Actuator tests</a>).</li>
 <li><code>actuator_model:=false</code> keeps the old behaviour (in the adapter), to compare the two.</li>
 <li>No <code>/ego/actuator_cmd</code> for 0.2 s: the model brakes to a stop, like the spine's watchdog.</li>
 <li>Plot command against measured: <code>/vehicle/steering</code>, <code>/vehicle/throttle</code>, <code>/vehicle/brake</code>

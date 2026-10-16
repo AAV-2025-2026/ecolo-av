@@ -13,6 +13,9 @@ The launch files use this so the car's measurements live in one file:
     vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar)  # what RewrittenYaml
                                                                      # can't write
     vehicle.ego_params(v)            # ego
+    vehicle.wheel_angles(v, centre)  # each front wheel's angle for a centre (bicycle) angle
+    vehicle.centre_angle(v, inner, outer)       # the reverse: from M5's two measured angles
+    vehicle.gazebo_steering_limit(v) # Gazebo's AckermannSteering steering_limit
 """
 
 import copy
@@ -35,6 +38,49 @@ def load(path=None):
 def min_turning_radius(v):
     """Radius of the path of base_link (the rear axle centre) at full lock, in metres."""
     return v['wheelbase'] / math.tan(v['max_steering_angle'])
+
+
+# max_steering_angle is the virtual wheel in the middle of the front axle: the bicycle
+# model's angle, which ego and Nav2 use. With Ackermann steering both front wheels point
+# at one turning centre on the rear axle's line, so the inner wheel turns further and the
+# outer less (READ-ME-MEASURE-THE-CAR.md M5 measures both):
+#
+#     cot(outer) - cot(inner) = track / wheelbase,   cot(centre) = (cot(inner) + cot(outer)) / 2
+
+
+def wheel_angles(v, centre):
+    """Return (inner, outer) front wheel angles (rad, >= 0) for a centre angle (rad)."""
+    c = abs(centre)
+    if c == 0.0:
+        return 0.0, 0.0
+    radius = v['wheelbase'] / math.tan(c)       # rear axle centre to the turning centre
+    half = v['track'] / 2.0
+    return (math.atan2(v['wheelbase'], radius - half),
+            math.atan2(v['wheelbase'], radius + half))
+
+
+def centre_angle(v, inner, outer):
+    """Return the centre (bicycle) angle from both measured front wheel angles (rad)."""
+    if inner <= 0.0 or outer <= 0.0:
+        raise ValueError('measure both wheels turned the same way, each > 0')
+    return math.atan(2.0 / (1.0 / math.tan(inner) + 1.0 / math.tan(outer)))
+
+
+def gazebo_steering_limit(v):
+    """
+    Return the steering_limit for Gazebo's AckermannSteering system (rad).
+
+    It is not the centre angle, nor the inner wheel's (gz-sim 8, AckermannSteering.cc,
+    UpdateVelocity): Gazebo turns it into a smallest radius, wheelbase / sin(limit), then
+    sets the centre angle to atan(wheelbase / radius). Given max_steering_angle itself,
+    the car stops at atan(sin(0.5)) = 0.447 rad, not 0.5. So pass the limit whose sine
+    is tan(max_steering_angle): the smallest radius is then wheelbase / tan(max), the
+    bicycle model's, and the centre wheel reaches max_steering_angle.
+    """
+    t = math.tan(v['max_steering_angle'])
+    if not 0.0 < t < 1.0:
+        raise ValueError("Gazebo's AckermannSteering can't steer 45 degrees or more")
+    return math.asin(t)
 
 
 def footprint_points(v):
