@@ -14,7 +14,7 @@ HERE = (45.3860, -75.6960)
 
 
 def state(dog, name, now):
-    return dict((n, s) for n, s, _, _ in dog.states(now))[name]
+    return {n: s for n, s, _, _ in dog.states(now)}[name]
 
 
 def test_nothing_yet_stops_the_drivers():

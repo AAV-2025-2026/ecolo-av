@@ -11,29 +11,37 @@ Subscribes  each input's topic, as config/sensor_watchdog.yaml says (the launch 
             localization/odom/global  nav_msgs/Odometry
             sensors/camera/front_left/image_raw  sensor_msgs/Image (reliable, newest only)
             sensors/radar/points      sensor_msgs/PointCloud2 (best effort)
+            sensors/imu/data          also for the odom input's cross check, if no imu
+                                      input watches it
 Publishes   safety/sensor_watchdog/lock   std_msgs/Bool, at rate_hz: true while an input
-                                          marked stop isn't OK. twist_mux's sensors lock
-                                          (priority 30): it holds Nav2 and the AI slot,
-                                          never a person or a test
+                                          marked stop isn't OK, false otherwise: a
+                                          heartbeat. twist_mux's sensors lock (priority
+                                          30): it holds Nav2 and the AI slot, never a
+                                          person or a test, and also after 1 s without
+                                          one (aav_mux twist_mux.yaml): a watchdog that
+                                          dies or hangs stops them too
             safety/sensor_watchdog/state  std_msgs/String, at rate_hz: OK, or STOP/WARN and
                                           what is wrong, for the HUD and people
             diagnostics                   diagnostic_msgs/DiagnosticArray, once a second:
                                           one status per input (rqt_robot_monitor, Foxglove)
-Serves      safety/sensor_watchdog/clear  std_srvs/Trigger: forget a latched GPS jump, once
-                                          a person has checked the position
+Serves      safety/sensor_watchdog/clear  std_srvs/Trigger: forget a latched GPS jump or
+                                          wheel disagreement, once a person has checked
 
 What each check means is in watchdog.py (no ROS there). Each change of state is logged
 once: a warning when an input goes wrong, info when it is back.
 
 Parameters  inputs (the names to watch), rate_hz (10), and for each name: topic, kind
             (odom, imu, gps, image, cloud), max_age (s), stop (bool), frozen_after (s, 0
-            off), max_jump_speed (m/s, 0 off), jump_margin (m)
+            off), max_jump_speed (m/s, 0 off), jump_margin (m); for an odom input,
+            cross_check (bool: the wheels against the IMU, wheel_check.py), cross_window
+            (s), cross_speed_tolerance (m/s), cross_yaw_tolerance (rad/s), cross_persist (s)
 """
 
 import signal
 import zlib
 
 from aav_safety.watchdog import NEVER, OK, Rule, Watchdog
+from aav_safety.wheel_check import CrossCheck
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 from nav_msgs.msg import Odometry
 import rclpy
@@ -44,6 +52,7 @@ from sensor_msgs.msg import Image, Imu, NavSatFix, NavSatStatus, PointCloud2
 from std_msgs.msg import Bool, String
 from std_srvs.srv import Trigger
 
+IMU_TOPIC = '/sensors/imu/data'     # what the odom input's cross check reads
 TYPES = {'odom': Odometry, 'imu': Imu, 'gps': NavSatFix, 'image': Image, 'cloud': PointCloud2}
 
 
@@ -68,11 +77,18 @@ class SensorWatchdog(Node):
         for name in names:
             def param(key, default, name=name):
                 return self.declare_parameter(f'{name}.{key}', default).value
+            cross = None
+            if bool(param('cross_check', False)):
+                d = CrossCheck()
+                cross = CrossCheck(float(param('cross_window', d.window)),
+                                   float(param('cross_speed_tolerance', d.speed_tolerance)),
+                                   float(param('cross_yaw_tolerance', d.yaw_tolerance)),
+                                   float(param('cross_persist', d.persist)))
             rules.append(Rule(name, param('topic', ''), param('kind', 'odom'),
                               float(param('max_age', 1.0)), bool(param('stop', True)),
                               float(param('frozen_after', 0.0)),
                               float(param('max_jump_speed', 0.0)),
-                              float(param('jump_margin', 5.0))))
+                              float(param('jump_margin', 5.0)), cross))
         self.dog = Watchdog(rules)
         self.speed = None      # the wheels' newest speed, for the camera's frozen check
         for rule in rules:
@@ -86,6 +102,8 @@ class SensorWatchdog(Node):
                                      lambda msg, r=rule: self.on_message(r, msg), qos)
         if not any(r.topic == '/vehicle/odom' for r in rules):
             self.create_subscription(Odometry, '/vehicle/odom', self.on_wheels, 10)
+        if self.dog.cross_checked() and not any(r.topic == IMU_TOPIC for r in rules):
+            self.create_subscription(Imu, IMU_TOPIC, self.on_imu, 10)
         self.lock_pub = self.create_publisher(Bool, 'safety/sensor_watchdog/lock', 10)
         self.state_pub = self.create_publisher(String, 'safety/sensor_watchdog/state', 10)
         self.diag_pub = self.create_publisher(DiagnosticArray, 'diagnostics', 10)
@@ -104,6 +122,9 @@ class SensorWatchdog(Node):
     def on_wheels(self, msg):
         self.speed = msg.twist.twist.linear.x
 
+    def on_imu(self, msg):
+        self.dog.imu(self.now(), msg.linear_acceleration.x, msg.angular_velocity.z)
+
     def on_message(self, rule, msg):
         watch = self.dog.watches[rule.name]
         now = self.now()
@@ -115,6 +136,8 @@ class SensorWatchdog(Node):
         elif rule.kind == 'imu':
             values = imu_values(msg)
             watch.arrived(now, values, digest=values)
+            if rule.topic == IMU_TOPIC:
+                self.dog.imu(now, values[3], values[2])
         elif rule.kind == 'gps':
             stamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
             watch.arrived(now, fix=(msg.latitude, msg.longitude),
@@ -156,20 +179,30 @@ class SensorWatchdog(Node):
         out = DiagnosticArray()
         out.header.stamp = self.get_clock().now().to_msg()
         for name, state, detail, stops in states:
-            rule = self.dog.watches[name].rule
+            watch = self.dog.watches[name]
+            rule = watch.rule
             level = (DiagnosticStatus.OK if state == OK else
                      DiagnosticStatus.ERROR if stops else DiagnosticStatus.WARN)
+            values = [KeyValue(key='max_age', value=f'{rule.max_age:g}'),
+                      KeyValue(key='stops', value=str(rule.stop).lower())]
+            if watch.cross is not None:
+                # For tuning the tolerances on the car: how close normal driving comes.
+                gaps = watch.cross.gaps
+                values += [KeyValue(key='speed_gap', value='' if gaps is None
+                                    else f'{gaps[0]:.3f}'),
+                           KeyValue(key='turn_gap', value='' if gaps is None
+                                    else f'{gaps[1]:.3f}'),
+                           KeyValue(key='worst_speed_gap', value=f'{watch.cross.worst[0]:.3f}'),
+                           KeyValue(key='worst_turn_gap', value=f'{watch.cross.worst[1]:.3f}')]
             out.status.append(DiagnosticStatus(
                 level=level, name=f'sensor_watchdog: {name}', message=f'{state}: {detail}',
-                hardware_id=rule.topic,
-                values=[KeyValue(key='max_age', value=f'{rule.max_age:g}'),
-                        KeyValue(key='stops', value=str(rule.stop).lower())]))
+                hardware_id=rule.topic, values=values))
         self.diag_pub.publish(out)
 
     def on_clear(self, request, response):
         self.dog.clear()
         response.success = True
-        response.message = 'latched GPS jumps forgotten'
+        response.message = 'latched GPS jumps and wheel disagreements forgotten'
         self.get_logger().warning('cleared by a person: ' + response.message)
         return response
 

@@ -29,7 +29,9 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    in lidar_link, 10 Hz, some of them hitting the ground and the sign; and lidar_scan's 2D
    scan of it for Nav2 (/sensors/lidar/scan: 720 ranges in base_link, 10 Hz, the sign in it).
 5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth)
-   with where the car's own software thinks it is (/localization/odom/global).
+   with where the car's own software thinks it is (/localization/odom/global). After all
+   the drives of this run, `wheels vs IMU`: the watchdog's wheel cross check never said
+   DISAGREE, and the worst gaps it saw (its /diagnostics).
 6. With --perception: Nav2 drives to 40 m east, past the stop sign at 25 m. The car must
    stop with its front bumper before the sign, wait, and go on to the goal. The camera's
    picture with YOLO's boxes, as the lock went on, is saved to /tmp/aav-sim-stop-sign.png.
@@ -43,7 +45,12 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 9. With --faults: Gazebo again (faults:=true), and for each fault in FAULTS: Nav2 drives,
    the fault goes on (gazebo_adapter's fault.<sensor>), and the car must stop within
    REACT seconds, stopped by the sensor watchdog's lock or collision_monitor; then the
-   fault goes off, and the lock must open again. With --no-watchdog it only reports.
+   fault goes off, and the lock must open again. Two faults are of the watchdog itself:
+   `watchdog hang` stops its process (SIGSTOP, then SIGCONT to mend it) and `watchdog
+   kill` kills it (the last fault: nothing mends it). Its silence must hold Nav2 through
+   twist_mux's lock timeout. `odom freeze` counts from when the frozen wheels go wrong
+   (the car's speed or turn changes: Nav2 slows or steers), as they're right till then.
+   With --no-watchdog it only reports, without the watchdog's own two.
 10. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
    car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there.
@@ -59,6 +66,7 @@ import importlib.util
 import math
 import os
 import random
+import re
 import signal
 import subprocess
 import sys
@@ -77,6 +85,7 @@ os.environ['GZ_PARTITION'] = os.environ.get('AAV_SIM_PARTITION', f'sim_check_{DO
 from aav_description import vehicle  # noqa: E402
 from aav_interfaces.action import ScriptedDrive  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
+from diagnostic_msgs.msg import DiagnosticArray  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
 from nav_msgs.msg import OccupancyGrid, Odometry  # noqa: E402
@@ -121,11 +130,25 @@ LOOKAHEAD = 3.0         # m: where lane_finder measures the offset (its config, 
 # last: a NaN that reaches an EKF could spoil the runs after it). The watchdog's limits
 # (aav_safety config/sensor_watchdog.yaml) and collision_monitor's source_timeout set how
 # soon each must stop the car: REACT gives each that, plus ego's stop.
-FAULTS = [('gps', 'stop'), ('imu', 'stop'), ('odom', 'stop'), ('camera', 'freeze'),
-          ('radar', 'stop'), ('imu', 'freeze'), ('gps', 'jump'), ('gps', 'nan'),
-          ('odom', 'nan'), ('imu', 'nan')]
+# The watchdog's own two: hang (mended by SIGCONT) early; kill last, as nothing mends it.
+FAULTS = [('gps', 'stop'), ('watchdog', 'hang'), ('imu', 'stop'), ('odom', 'stop'),
+          ('odom', 'freeze'), ('camera', 'freeze'), ('radar', 'stop'), ('imu', 'freeze'),
+          ('gps', 'jump'), ('gps', 'nan'), ('odom', 'nan'), ('imu', 'nan'), ('watchdog', 'kill')]
 REACT = 6.0             # s of Gazebo's time from the fault to standing still
 STILL = 0.05            # m/s: standing still
+WRONG_SPEED = 0.2       # m/s and rad/s from the frozen values: frozen wheels now wrong
+WRONG_TURN = 0.1
+FROZEN_WAIT = 30.0      # s of Gazebo's time for frozen wheels to go wrong (Nav2 slows, turns)
+HELD = 10.0             # s of Gazebo's time the car must stay still with no watchdog at all
+with open(os.path.join(ROOT, 'src', 'mux', 'aav_mux', 'config', 'twist_mux.yaml')) as f:
+    # s of silence from the watchdog before twist_mux's sensors lock holds Nav2 itself
+    LOCK_TIMEOUT = yaml.safe_load(f)['twist_mux']['ros__parameters']['locks']['sensors'][
+        'timeout']
+with open(os.path.join(ROOT, 'src', 'safety', 'aav_safety', 'config',
+                       'sensor_watchdog.yaml')) as f:
+    # the wheels' cross check against the IMU: its tolerances
+    CROSS = yaml.safe_load(f)['sensor_watchdog']['ros__parameters']['odom']
+LAUNCH = {}             # the running launch: its process group and log (session())
 
 
 def seconds(stamp):
@@ -189,10 +212,13 @@ class Probe(Node):
         self.signs = []
         self.create_subscription(Detection2DArray, '/perception/detections', self.on_boxes, 10)
         self.lock, self.state = None, ''     # the sensor watchdog's
-        self.create_subscription(Bool, '/safety/sensor_watchdog/lock',
-                                 lambda m: setattr(self, 'lock', m.data), 10)
-        self.create_subscription(String, '/safety/sensor_watchdog/state',
-                                 lambda m: setattr(self, 'state', m.data), 10)
+        self.lock_heard = None               # when its lock last arrived (Gazebo's time)
+        self.fail_safe = True                # twist_mux's sensors lock holds on silence
+        self.create_subscription(Bool, '/safety/sensor_watchdog/lock', self.on_lock, 10)
+        self.create_subscription(String, '/safety/sensor_watchdog/state', self.on_state, 10)
+        self.disagreed = False      # the wheels' cross check ever said DISAGREE
+        self.gaps = {}              # its worst gaps, from /diagnostics
+        self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diagnostics, 10)
         self.monitor = []    # (action, polygon) from collision_monitor, as it changes
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  lambda m: self.monitor.append((m.action_type, m.polygon_name)),
@@ -202,6 +228,28 @@ class Probe(Node):
         self.truth = msg
         self.track.append((seconds(msg.header.stamp), msg.pose.pose.position.x,
                            msg.pose.pose.position.y, yaw_of(msg), msg.twist.twist.linear.x))
+
+    def on_state(self, msg):
+        self.state = msg.data
+        self.disagreed = self.disagreed or 'DISAGREE' in msg.data
+
+    def on_diagnostics(self, msg):
+        for status in msg.status:
+            if status.name == 'sensor_watchdog: odom':
+                self.gaps.update({kv.key: kv.value for kv in status.values
+                                  if kv.key.startswith('worst_')})
+
+    def on_lock(self, msg):
+        self.lock, self.lock_heard = msg.data, self.now()
+
+    def silent(self):
+        """Return True if the watchdog has been quiet long enough for twist_mux to lock."""
+        return self.fail_safe and (self.lock_heard is None
+                                   or self.now() - self.lock_heard > LOCK_TIMEOUT)
+
+    def locked(self):
+        """Return True while twist_mux's sensors lock holds Nav2: true, or silent."""
+        return self.lock is True or self.silent()
 
     def on_lane(self, msg):
         self.lanes.append((seconds(msg.header.stamp), msg.vehicle_offset_m,
@@ -405,6 +453,17 @@ def check_drive(probe):
     result('global EKF vs truth', error < 1.5, f'{error:.2f} m apart (GPS noise is 0.5 m)')
 
 
+def check_wheels_vs_imu(probe):
+    """After the drives: the watchdog's wheel cross check must not have cried wolf."""
+    probe.spin_for(3.0, lambda: bool(probe.gaps))
+    speed, turn = probe.gaps.get('worst_speed_gap', '?'), probe.gaps.get('worst_turn_gap', '?')
+    result('wheels vs IMU', bool(probe.gaps) and not probe.disagreed,
+           f'worst gaps in normal driving: speed {speed} m/s, turn {turn} rad/s (the watchdog '
+           f"stops at {CROSS['cross_speed_tolerance']:g} and {CROSS['cross_yaw_tolerance']:g} "
+           f"for {CROSS['cross_persist']:g} s)"
+           + ('; it said DISAGREE' if probe.disagreed else ''))
+
+
 def check_stop_sign(probe):
     """Nav2 drives to 40 m east, past the stop sign at 25 m: it must stop before it."""
     body = vehicle.load()['vehicle']['body']
@@ -586,8 +645,37 @@ def check_lidar_obstacle(probe):
     check_obstacle(probe, model=POST, depth=0.5, name='lidar obstacle', costmap=True)
 
 
+def watchdog_pid():
+    """
+    Return the sensor watchdog's process id, from the launch log, or None.
+
+    Only a process in this run's own process group: never someone else's watchdog.
+    """
+    with open(LAUNCH['log']) as f:
+        found = re.findall(r'\[sensor_watchdog-\d+\]: process started with pid \[(\d+)\]',
+                           f.read())
+    if not found:
+        return None
+    pid = int(found[-1])
+    try:
+        return pid if os.getpgid(pid) == LAUNCH['pgid'] else None
+    except ProcessLookupError:
+        return None
+
+
+def signal_watchdog(mode):
+    """Send the watchdog its fault: hang (SIGSTOP), ok (SIGCONT), kill (SIGKILL); True if sent."""
+    pid = watchdog_pid()
+    if pid is None:
+        return False
+    os.kill(pid, {'hang': signal.SIGSTOP, 'ok': signal.SIGCONT, 'kill': signal.SIGKILL}[mode])
+    return True
+
+
 def set_fault(probe, client, sensor, mode):
-    """Set gazebo_adapter's fault.<sensor>; True if it took it."""
+    """Set gazebo_adapter's fault.<sensor>, or signal the watchdog; True if it took it."""
+    if sensor == 'watchdog':
+        return signal_watchdog(mode)
     sent = client.set_parameters([Parameter(f'fault.{sensor}', value=mode)])
     probe.spin_for(10.0, sent.done)
     return sent.done() and all(r.successful for r in sent.result().results)
@@ -617,9 +705,12 @@ def check_faults(probe, watchdog=True):
         result('faults', False, "no gazebo_adapter parameters: can't set a fault")
         return
     clear = probe.create_client(Trigger, '/safety/sensor_watchdog/clear')
+    probe.fail_safe = watchdog
     for sensor, mode in FAULTS:
+        if sensor == 'watchdog' and not watchdog:
+            continue            # no watchdog to hang or kill
         name = f'fault {sensor} {mode}'
-        if not probe.spin_for(30.0, lambda: probe.lock is not True) and watchdog:
+        if not probe.spin_for(30.0, lambda: not probe.locked()) and watchdog:
             result(name, False, f'the watchdog was still locked before it: {probe.state}')
             continue
         done = drive_on(probe)
@@ -635,12 +726,28 @@ def check_faults(probe, watchdog=True):
         if not set_fault(probe, client, sensor, mode):
             result(name, False, 'gazebo_adapter refused the fault')
             continue
-        t0, stopped_at, locked, why = probe.now(), None, False, ''
-        while probe.now() - t0 < REACT + 4.0:
+        t0, stopped_at, locked, silent, why = probe.now(), None, False, False, ''
+        # Frozen wheels at a speed the car keeps are still right: they go wrong only once
+        # the car's speed or turn changes (wheel_check.py), so the clock starts then.
+        frozen = (sensor, mode) == ('odom', 'freeze')
+        held_v, held_w = probe.truth.twist.twist.linear.x, probe.truth.twist.twist.angular.z
+        wrong = None if frozen else 0.0     # s after the fault: the wheels' values are wrong
+
+        def waiting():
+            if wrong is None:
+                return probe.now() - t0 < FROZEN_WAIT
+            return probe.now() - t0 < wrong + REACT + 4.0
+
+        while waiting():
             probe.spin_for(0.1)
             if probe.lock and not locked:
                 locked, why = True, probe.state
-            if stopped_at is None and abs(probe.truth.twist.twist.linear.x) < STILL:
+            silent = silent or probe.silent()
+            twist = probe.truth.twist.twist
+            if wrong is None and (abs(twist.linear.x - held_v) > WRONG_SPEED
+                                  or abs(twist.angular.z - held_w) > WRONG_TURN):
+                wrong = probe.now() - t0
+            if stopped_at is None and abs(twist.linear.x) < STILL:
                 stopped_at = probe.now() - t0
         x1, y1 = probe.xy(probe.truth)
         on = math.hypot(x1 - x0, y1 - y0)
@@ -649,21 +756,44 @@ def check_faults(probe, watchdog=True):
         invalid = any(a == CollisionMonitorState.STOP and p == 'invalid source'
                       for a, p in probe.monitor[seen:])
         by = ', '.join(w for w, on_ in (('the watchdog', locked),
+                                        ("the watchdog's silence (twist_mux's "
+                                         f'{LOCK_TIMEOUT:g} s lock timeout)', silent),
                                         ('collision_monitor (invalid source)', invalid)) if on_)
         stood = (f'stood still {stopped_at:.1f} s after it' if stopped_at is not None
-                 else f'still driving after {REACT + 4.0:.0f} s')
+                 else f'still driving after {probe.now() - t0:.0f} s')
+        if frozen:
+            stood += (f" (the wheels went wrong {wrong:.1f} s after it, as the car's speed or "
+                      'turn changed)' if wrong is not None else ' (the wheels never went wrong)')
         detail = (f'{stood}, {on:.1f} m on; stopped by: {by or "nothing"}; the global EKF '
                   f'{ekf:.1f} m from the truth' + (f'; the watchdog said "{why}"' if why else ''))
-        ok = stopped_at is not None and stopped_at <= REACT and bool(by)
+        ok = (stopped_at is not None and wrong is not None and stopped_at - wrong <= REACT
+              and bool(by))
+        if mode == 'kill':
+            # Nothing mends it: Nav2's goal still stands, and the car must stay still.
+            top = 0.0
+            end = probe.now() + HELD
+            while probe.now() < end:
+                probe.spin_for(0.1)
+                top = max(top, abs(probe.truth.twist.twist.linear.x))
+            held = top < STILL and probe.silent()
+            ok = ok and held
+            detail += (f'; held {HELD:.0f} s more with no watchdog, Nav2 still asking '
+                       f'(top speed {top:.2f} m/s)')
+            if not done.done():
+                probe.goal.cancel_goal_async()
+            result(name, ok, detail)
+            continue
         # Mend it, and let the car's software settle before the next.
         set_fault(probe, client, sensor, 'ok')
-        if mode == 'jump':
+        if mode == 'jump' or (sensor, mode) == ('odom', 'freeze'):
+            # Latched: a person checks the position (or the wheels), then clears it.
             probe.spin_for(30.0, lambda: math.hypot(*(a - b for a, b in zip(
                 probe.xy(probe.glob), probe.xy(probe.truth)))) < 2.0)
+            probe.spin_for(3.0)
             if clear.wait_for_service(timeout_sec=5.0):
                 cleared = clear.call_async(Trigger.Request())
                 probe.spin_for(10.0, cleared.done)
-        released = probe.spin_for(30.0, lambda: probe.lock is not True)
+        released = probe.spin_for(30.0, lambda: not probe.locked())
         if watchdog and not released:
             ok = False
             detail += f'; the lock never opened again: {probe.state}'
@@ -695,6 +825,7 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True):
                                'gui:=false', 'rviz:=false', *launch_args],
                               cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
                               start_new_session=True)
+    LAUNCH.update(pgid=launch.pid, log=log_path)
     rclpy.init()
     probe = Probe()
     try:
@@ -747,6 +878,7 @@ def main():
         checks.append(check_stop_sign)
     if '--obstacle' in args:
         checks.append(check_obstacle)
+    checks.append(check_wheels_vs_imu)
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],

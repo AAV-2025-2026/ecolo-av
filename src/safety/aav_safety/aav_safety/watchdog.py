@@ -19,6 +19,9 @@ What counts as wrong, per input (each check only where its rule asks for it):
   JUMP    two GPS fixes further apart than max_jump_speed allows in the time between
           their stamps, plus jump_margin for the fixes' own noise. Latched: the position
           after a jump can't be trusted until a person says so (clear())
+  DISAGREE  the wheels' speed or turn against the IMU's, where the odom rule has a
+          cross_check (wheel_check.py): a wheel speed frozen while the car speeds up,
+          brakes or turns. Latched, as a jump
 
 Times are seconds on the node's clock (Gazebo's, in the simulator).
 """
@@ -26,6 +29,8 @@ Times are seconds on the node's clock (Gazebo's, in the simulator).
 from dataclasses import dataclass
 import math
 from typing import Optional, Sequence, Tuple
+
+from aav_safety.wheel_check import CrossCheck, DISAGREE, WheelCheck
 
 OK = 'OK'
 NEVER = 'NEVER'
@@ -51,12 +56,15 @@ class Rule:
     frozen_after: float = 0.0   # s of identical values: FROZEN
     max_jump_speed: float = 0.0  # m/s between two GPS fixes: JUMP
     jump_margin: float = 5.0    # m more, for the noise of two fixes (0.5 m each, in Gazebo)
+    cross_check: Optional[CrossCheck] = None    # odom only: the wheels against the IMU
 
     def __post_init__(self):
         if self.kind not in KINDS:
             raise ValueError(f'{self.name}: kind {self.kind!r} is not one of {KINDS}')
         if not self.max_age > 0.0:
             raise ValueError(f'{self.name}: max_age must be a positive number of seconds')
+        if self.cross_check is not None and self.kind != 'odom':
+            raise ValueError(f'{self.name}: only an odom input has a cross check')
 
 
 def finite(values: Sequence[float]) -> bool:
@@ -83,6 +91,8 @@ class Watch:
         self.same_since = None     # when the values stopped changing
         self.fix = None            # the newest good GPS fix: (stamp, latitude, longitude)
         self.jumped = None         # the jump that latched, as text, until clear()
+        # The wheels against the IMU (odom only): fed by arrived() and imu().
+        self.cross = WheelCheck(rule.cross_check) if rule.cross_check is not None else None
 
     def arrived(self, now: float, values: Sequence[float] = (), digest=None,
                 fix: Optional[Tuple[float, float]] = None, has_fix: bool = True,
@@ -104,6 +114,8 @@ class Watch:
             return
         self.bad = None
         self.good = now
+        if self.cross is not None and len(values) >= 3:
+            self.cross.wheels(now, values[0], values[2])    # forward speed, turn rate
         if rule.frozen_after > 0.0 and digest is not None:
             moving = rule.kind != 'image' or (speed is not None and abs(speed) > MOVING)
             if digest != self.digest or not moving:
@@ -124,6 +136,9 @@ class Watch:
         rule = self.rule
         if self.jumped is not None:
             return JUMP, f'jumped {self.jumped}: clear it once the position is right'
+        why = self.cross.update(now) if self.cross is not None else None
+        if why is not None:
+            return DISAGREE, why + ': clear it once the wheels are right'
         if self.heard is None:
             return NEVER, 'nothing yet'
         if self.bad == NAN:
@@ -140,13 +155,24 @@ class Watch:
 
     def clear(self):
         self.jumped = None
+        if self.cross is not None:
+            self.cross.clear()
 
 
 class Watchdog:
-    """Every input's Watch, and the verdict: may the automatic drivers drive?"""
+    """Every input's Watch, and the verdict: whether the automatic drivers may drive."""
 
     def __init__(self, rules: Sequence[Rule]):
         self.watches = {r.name: Watch(r) for r in rules}
+
+    def imu(self, now: float, forward: float, yaw_rate: float):
+        """Note an IMU sample for every cross check: forward m/s^2, yaw rate rad/s."""
+        for watch in self.watches.values():
+            if watch.cross is not None:
+                watch.cross.imu(now, forward, yaw_rate)
+
+    def cross_checked(self) -> bool:
+        return any(w.cross is not None for w in self.watches.values())
 
     def states(self, now: float):
         """Return [(name, state, detail, stops)] for every input, in the rules' order."""
@@ -169,6 +195,6 @@ class Watchdog:
         return verdict + ': ' + '; '.join(f'{n} {s} ({d})' for n, s, d, _ in wrong)
 
     def clear(self):
-        """Forget latched GPS jumps (a person checked the position)."""
+        """Forget latched GPS jumps and wheel disagreements (a person checked)."""
         for watch in self.watches.values():
             watch.clear()

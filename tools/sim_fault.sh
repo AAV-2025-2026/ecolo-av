@@ -8,8 +8,9 @@
 #   pixi run sim-fault gps stop      the GPS goes quiet
 #   pixi run sim-fault gps ok        back to normal
 #
-# After a GPS jump, the sensor watchdog holds Nav2 until a person says the position is
-# right again: `pixi run sim-fault clear`.
+# After a GPS jump, or wheels that disagree with the IMU (odom freeze while the car speeds
+# up, brakes or turns), the sensor watchdog holds Nav2 until a person says all is right
+# again: `pixi run sim-fault clear`.
 set -euo pipefail
 if [[ "${1:-}" == clear ]]; then
   exec ros2 service call /safety/sensor_watchdog/clear std_srvs/srv/Trigger
