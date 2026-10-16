@@ -7,6 +7,7 @@ the car's network from a laptop (Friday 16 Oct).
 
 usage: pixi run net-map                     (or: bash tools/net_map.sh)
        pixi run net-map --listen 20         (listen longer for ROS)
+       pixi run net-map --interface en7     (this network: an Ethernet dongle, say)
        pixi run net-map --subnet 192.168.1.0/24 --out net-map.md
 
 Run it through tools/net_map.sh: on a Mac, a program started by Python sees an empty ARP
@@ -124,6 +125,47 @@ def parse_interfaces(text):
     return found
 
 
+def parse_named_interfaces(text):
+    """`ifconfig` or `ip -4 -o addr` -> [(name, IPv4Interface)], without loopback."""
+    found = []
+    name = None
+    for line in text.splitlines():
+        head = re.match(r'(?:\d+:\s+)?([A-Za-z][\w.\-]*):?\s', line)
+        if head and not line.startswith((' ', '\t')):
+            name = head.group(1)
+        for iface in parse_interfaces(line):
+            found.append((name, iface))
+    return found
+
+
+def route_interface(text):
+    """Return the default route's interface, from `route -n get default` or `ip route`."""
+    m = re.search(r'(?:interface:|dev) (\S+)', text)
+    return m.group(1) if m else None
+
+
+def choose_interface(named, internet=None, wanted=None):
+    """
+    Pick the network to sweep -> ((name, IPv4Interface), why).
+
+    With a phone hotspot for the internet and an Ethernet cable to the car, the car is the
+    network that *isn't* the default route. `wanted` (--interface) always wins.
+    """
+    if wanted:
+        for item in named:
+            if item[0] == wanted:
+                return item, f'{wanted}, as asked'
+        raise ValueError(f'no IPv4 address on {wanted}: have ' +
+                         ', '.join(f'{n} {i}' for n, i in named))
+    if len(named) == 1:
+        return named[0], 'the only network'
+    others = [item for item in named if item[0] != internet]
+    if others:
+        return others[0], (f'not {internet}, the internet route (the car is usually the '
+                           'other network)')
+    return named[0], 'the first network'
+
+
 def domain_of_port(port):
     """Return the ROS domain whose discovery multicast uses this UDP port, or None."""
     domain, rest = divmod(port - DDS_BASE, DDS_DOMAIN_GAIN)
@@ -156,13 +198,16 @@ def run(cmd, timeout=10):
 
 
 def my_interfaces():
-    return parse_interfaces(run(['ip', '-4', '-o', 'addr', 'show']) or run(['ifconfig']))
+    return parse_named_interfaces(run(['ip', '-4', '-o', 'addr', 'show']) or run(['ifconfig']))
+
+
+def default_route():
+    return run(['route', '-n', 'get', 'default']) if sys.platform == 'darwin' else \
+        run(['ip', 'route', 'show', 'default'])
 
 
 def gateway():
-    out = run(['route', '-n', 'get', 'default']) if sys.platform == 'darwin' else \
-        run(['ip', 'route', 'show', 'default'])
-    m = re.search(r'(?:gateway:|via) (\d+\.\d+\.\d+\.\d+)', out)
+    m = re.search(r'(?:gateway:|via) (\d+\.\d+\.\d+\.\d+)', default_route())
     return m.group(1) if m else None
 
 
@@ -230,6 +275,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.strip().split('\n')[0])
     ap.add_argument('--subnet', help='the addresses to sweep, such as 192.168.1.0/24 '
                                      "(default: this computer's network)")
+    ap.add_argument('--interface', help='the network to sweep, such as en7 (an Ethernet '
+                    'dongle); default: the one that is not the internet route')
     ap.add_argument('--listen', type=float, default=10.0,
                     help='seconds to listen for ROS discovery (default 10; 0 = skip)')
     ap.add_argument('--out', help='also save the result to this Markdown file')
@@ -242,7 +289,19 @@ def main():
     mine = my_interfaces()
     if not mine:
         sys.exit("No network address: join the car's WiFi or plug in its Ethernet first.")
-    me = mine[0]
+    raw = run(['ip', '-4', '-o', 'addr', 'show']) or run(['ifconfig'])
+    if re.search(r'inet 169\.254\.', raw):
+        print('Note: a network here has only a 169.254.x.x address: nothing on it gave this '
+              'computer an address (a plain switch has no DHCP). Set one by hand: '
+              'READ-ME-FRIDAY.md, "Ethernet dongle and phone hotspot".')
+    internet = route_interface(default_route())
+    try:
+        (name, me), why = choose_interface(mine, internet, args.interface)
+    except ValueError as e:
+        sys.exit(str(e))
+    if len(mine) > 1:
+        print('Networks here: ' + ', '.join(f'{n} {i}' for n, i in mine) +
+              f'. Sweeping {name} ({why}); another: --interface <name>.')
     net = ipaddress.ip_network(args.subnet) if args.subnet else me.network
     if net.num_addresses > 1024:
         sys.exit(f'{net} has {net.num_addresses} addresses: give a /22 or smaller with '

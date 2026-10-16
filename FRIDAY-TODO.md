@@ -35,7 +35,7 @@ the car, and what goes wrong (such as the cameras freezing).
 | ☐ | Do | Gives |
 |---|---|---|
 | ☐ | Car on stands, wheels off the ground, e-stop in someone's hand, RC off | nothing can move |
-| ☐ | Mac on the car's switch (Ethernet) or WiFi | |
+| ☐ | Mac on the car's switch with the **USB-C Ethernet dongle**, phone hotspot for the internet: the step-by-step is in [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md), "Ethernet dongle and phone hotspot" | |
 | ☐ | `pixi run net-map --listen 30 --out ~/aav-audit/net-map.md` | every IP, MAC, maker, open ports, ROS domains |
 | ☐ | The router's client list: a screenshot (check no password shows) | names for the IPs |
 | ☐ | Match each IP to a switch label, and write `~/aav-audit/hosts.txt` (below) | the list for part 2 |

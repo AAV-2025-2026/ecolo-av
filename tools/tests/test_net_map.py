@@ -68,3 +68,51 @@ def test_rtps_packets():
 
 def test_table():
     assert net_map.table([['a', 'b']], ['X', 'Y']) == '| X | Y |\n|---|---|\n| a | b |'
+
+
+# Friday's setup (Ben, 15 Oct): the phone's hotspot on WiFi for the internet, and a USB
+# Ethernet dongle to the car's switch.
+HOTSPOT_AND_DONGLE = """\
+lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> mtu 16384
+\tinet 127.0.0.1 netmask 0xff000000
+en0: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+\tinet 172.20.10.4 netmask 0xfffffff0 broadcast 172.20.10.15
+en7: flags=8863<UP,BROADCAST,SMART,RUNNING,SIMPLEX,MULTICAST> mtu 1500
+\tinet 192.168.1.50 netmask 0xffffff00 broadcast 192.168.1.255
+"""
+MAC_ROUTE = """\
+   route to: default
+destination: default
+    gateway: 172.20.10.1
+  interface: en0
+"""
+
+
+def test_interfaces_keep_their_names():
+    named = net_map.parse_named_interfaces(HOTSPOT_AND_DONGLE)
+    assert [(n, str(i)) for n, i in named] == [('en0', '172.20.10.4/28'),
+                                               ('en7', '192.168.1.50/24')]
+    assert [(n, str(i)) for n, i in net_map.parse_named_interfaces(LINUX_IP)] == [
+        ('eth0', '10.0.0.5/16')]
+
+
+def test_the_car_is_the_network_that_is_not_the_internet():
+    named = net_map.parse_named_interfaces(HOTSPOT_AND_DONGLE)
+    internet = net_map.route_interface(MAC_ROUTE)
+    assert internet == 'en0'
+    (name, iface), why = net_map.choose_interface(named, internet)
+    assert (name, str(iface)) == ('en7', '192.168.1.50/24') and 'en0' in why
+    assert net_map.route_interface('default via 10.0.0.1 dev eth0 proto dhcp') == 'eth0'
+
+
+def test_asking_for_an_interface_wins_and_a_wrong_one_says_what_exists():
+    named = net_map.parse_named_interfaces(HOTSPOT_AND_DONGLE)
+    assert net_map.choose_interface(named, 'en0', 'en0')[0][0] == 'en0'
+    try:
+        net_map.choose_interface(named, 'en0', 'en9')
+    except ValueError as e:
+        assert 'en7 192.168.1.50/24' in str(e)
+    else:
+        raise AssertionError('en9 should have been refused')
+    one = net_map.parse_named_interfaces(MAC_IFCONFIG)
+    assert net_map.choose_interface(one, 'en0')[0][0] == 'en0'  # the only one, even if internet

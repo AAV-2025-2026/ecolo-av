@@ -55,6 +55,31 @@ Ben joins the car's network with his MacBook. What it can do there:
 - **WiFi often drops multicast.** If net-map hears no ROS over WiFi, plug the Mac into the
   car's switch with the Ethernet cable and try again. That tells us which link is at fault.
 
+### Ethernet dongle and phone hotspot (Ben's setup, 16 Oct)
+
+The car's cable for the car, the phone for the internet. One step at a time:
+
+```text
+ phone hotspot ──WiFi──┐                    ┌── Orin, Pis, ESP32...
+                       MacBook ──USB-C dongle ──Ethernet── car's switch
+ internet ◄────────────┘                    (no internet here)
+```
+
+| # | Do | You should see |
+|---|---|---|
+| 1 | Phone: turn on **Personal Hotspot**. Mac: join it on WiFi | internet works |
+| 2 | Plug the dongle into the Mac, and the cable into the **car's switch** | System Settings → Network shows the dongle ("USB 10/100/1000 LAN" or similar) |
+| 3 | Click the dongle: does it show an **IP address** like `192.168.1.x`? | yes: go to 5. `169.254.x.x` or "Self-Assigned IP": go to 4 |
+| 4 | No address from the car: dongle → **Details → TCP/IP → Configure IPv4: Manually**. IP `192.168.1.200`, subnet mask `255.255.255.0`, **Router: leave empty** | the dongle shows 192.168.1.200 (first check nothing else answers on .200: `ping -c 2 192.168.1.200` should fail) |
+| 5 | Keep the internet on the phone: Network → **⋯ → Set Service Order**: drag **Wi-Fi above** the dongle | websites still load |
+| 6 | `pixi run net-map` | "Sweeping en7 (not en0, the internet route...)" and the car's machines. Name differs? `pixi run net-map --interface <the dongle's name>` (`ifconfig` lists them) |
+| 7 | `pixi run doctor` | its checks, on the car's side |
+
+- The dongle's name (`en5`, `en7`...) is in `ifconfig`: the one with the `192.168.1.x` address.
+- ROS on the Mac (Fast DDS) uses every network at once, so the hotspot doesn't get in its way.
+- Leaving: unplug the dongle. Step 4's manual address stays on that dongle only; set it
+  back to **Using DHCP** at home if the dongle is used elsewhere.
+
 ## 1. Morning: the audit (read-only)
 
 Follow [docs/audit-friday.md](docs/audit-friday.md): safe and powered, find each
