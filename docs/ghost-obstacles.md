@@ -84,7 +84,7 @@ run with `ghost:=true`. A ghost 15 m ahead; Nav2 drives 30 m.
 
 | Must | How it's measured |
 |---|---|
-| stop 0-2 m before the ghost | the global EKF's bumper to the ghost's near edge |
-| the stop zone fired | `/safety/collision_monitor/state` |
+| stop 0-2 m before the ghost | the bumper to the ghost, in the ghost's own scan: what Nav2 sees |
+| who stopped it | the stop zone (`/safety/collision_monitor/state`), or the controller's own collision check on the costmap, which can stop it first. Either counts |
 | the local costmap marks it | 99 or more of 100 there |
 | drive on once it's off | Nav2's goal reached, past where the ghost stood |

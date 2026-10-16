@@ -671,9 +671,11 @@ def check_ghost(probe, ahead=15.0, goal=30.0):
     """
     Put a ghost (aav_ghost) `ahead` m past the bumper: not in Gazebo, only in Nav2's view.
 
-    The stop zone must stop the car before it, and the local costmap must mark it; once the
-    ghost is switched off, the car must go on to the goal, through where it stood. The gap
-    is measured as Nav2 sees it: the global EKF's bumper to the ghost's near edge.
+    Nav2 must stop the car 0-2 m before it, and the local costmap must mark it; once the
+    ghost is switched off, the car must go on to the goal, through where it stood. Either
+    may stop it: collision_monitor's stop zone, or the controller's own collision check on
+    the costmap (Regulated Pure Pursuit), which can stop it first. The gap is measured as
+    Nav2 sees it: from the ghost's own scan, the bumper to its nearest point ahead.
     """
     body = vehicle.load()['vehicle']['body']
     front = body['length'] - body['rear_overhang']   # base_link to the front bumper
@@ -685,6 +687,10 @@ def check_ghost(probe, ahead=15.0, goal=30.0):
     marker_sub = probe.create_subscription(
         Marker, '/safety/ghost/marker',
         lambda m: marker.update(ghost=m) if m.action == Marker.ADD else marker.clear(), 10)
+    scan = {}
+    scan_sub = probe.create_subscription(LaserScan, '/safety/ghost/scan',
+                                         lambda m: scan.update(newest=m),
+                                         qos_profile_sensor_data)
     newest = {}     # the local costmap, in odom: on the world's origin, as the car started
     grid_sub = probe.create_subscription(OccupancyGrid, '/local_costmap/costmap',
                                          lambda m: newest.update(grid=m), 2)
@@ -697,13 +703,15 @@ def check_ghost(probe, ahead=15.0, goal=30.0):
         return (x - x0) * c + (y - y0) * s
 
     def gap_now():
-        """Return the m from the bumper to the ghost's near edge, as the global EKF has it."""
-        g = marker['ghost']
-        x, y = probe.xy(probe.glob)
-        yaw = yaw_of(probe.glob)
-        bumper = (x + front * math.cos(yaw), y + front * math.sin(yaw))
-        return ((g.pose.position.x - bumper[0]) * c + (g.pose.position.y - bumper[1]) * s
-                - g.scale.x / 2.0)
+        """Return the m from the bumper to the ghost, in its scan: in front, the car's width."""
+        m = scan.get('newest')
+        if m is None:
+            return None
+        r = numpy.asarray(m.ranges, dtype=float)
+        a = m.angle_min + m.angle_increment * numpy.arange(len(r))
+        x, y = r * numpy.cos(a), r * numpy.sin(a)
+        ahead_ = numpy.isfinite(r) & (x > 0.0) & (numpy.abs(y) < body['width'] / 2.0)
+        return float(x[ahead_].min()) - front if ahead_.any() else None
 
     placed = (set_ghost(probe, client, ahead=ahead, enabled=True)
               and probe.spin_for(10.0, lambda: 'ghost' in marker))
@@ -723,6 +731,7 @@ def check_ghost(probe, ahead=15.0, goal=30.0):
             still = still if still is not None else probe.now()
             if probe.now() - still > 3.0:      # stood still for 3 s: take the ghost away
                 gap = gap_now()
+                gap = gap if gap is not None else math.nan
                 g = marker['ghost']
                 where = (g.pose.position.x, g.pose.position.y)
                 if 'grid' in newest:
@@ -731,6 +740,7 @@ def check_ghost(probe, ahead=15.0, goal=30.0):
         else:
             still = None
     probe.destroy_subscription(marker_sub)
+    probe.destroy_subscription(scan_sub)
     probe.destroy_subscription(grid_sub)
     if done is None:
         set_ghost(probe, client, enabled=False)
@@ -740,12 +750,11 @@ def check_ghost(probe, ahead=15.0, goal=30.0):
     reached = done.done() and done.result().status == 4
     passed = along() > front + ahead + 0.5
     marked = peak is not None and peak >= 99
-    ok = (gap is not None and 0.0 < gap < 2.0 and stop_zone and marked and gone and reached
-          and passed)
+    ok = gap is not None and 0.0 < gap < 2.0 and marked and gone and reached and passed
     stood = f'stood still {gap:.2f} m before it' if gap is not None else 'never stopped'
     mark = f'the local costmap {peak} of 100 there' if peak is not None else 'no local costmap'
-    result('ghost', ok, f'{stood} (top speed {top:.2f} m/s), stop zone fired: {stop_zone}; '
-                        f'{mark}; switched off: {gone}, Nav2 goal '
+    result('ghost', ok, f'{stood} (top speed {top:.2f} m/s), stop zone fired: {stop_zone} '
+                        f'(else the controller did); {mark}; switched off: {gone}, Nav2 goal '
                         f'{"reached" if reached else "not reached"} {along():.1f} m on')
     if gap is None:
         set_ghost(probe, client, enabled=False)
