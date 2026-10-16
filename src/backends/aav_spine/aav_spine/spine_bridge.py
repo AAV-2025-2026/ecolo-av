@@ -16,7 +16,8 @@ Publishes   can/tx            can_msgs/Frame  (ros2_socketcan sender)
             vehicle/throttle, vehicle/brake  aav_interfaces/ActuatorState  (measured, from
                               VEHICLE_STATUS; command NaN: the spine's speed loop decides)
             system/source     aav_interfaces/DataSource, latched: REAL on the car, BENCH on
-                              the bench (the `source` parameter)
+                              the bench, SIM in Gazebo's spine profile (the `source`
+                              parameter)
 Service     spine/arm         std_srvs/SetBool
 
 Frames are defined in firmware/can/aav.dbc and packed by can_codec.
@@ -50,7 +51,7 @@ from std_msgs.msg import Bool
 from std_srvs.srv import SetBool
 
 # /system/source: what the `source` parameter may say.
-SOURCES = {'real': SensorSource.REAL, 'bench': SensorSource.BENCH}
+SOURCES = {'real': SensorSource.REAL, 'bench': SensorSource.BENCH, 'sim': SensorSource.SIM}
 # What this node publishes, for /system/source.
 ANNOUNCED = (('vehicle', '/vehicle/status'), ('odometry', '/vehicle/odom'),
              ('steering', '/vehicle/steering'), ('throttle', '/vehicle/throttle'),

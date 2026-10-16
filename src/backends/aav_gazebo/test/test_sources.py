@@ -25,3 +25,9 @@ def test_radar_false_leaves_only_the_radar_out():
     got = names(sources.simulated(rendered=True, lidar=True, radar=False))
     assert 'radar' not in got
     assert 'camera_front_left' in got and 'lidar' in got
+
+
+def test_with_the_spine_in_the_loop_spine_bridge_announces_the_car():
+    got = names(sources.simulated(rendered=True, lidar=True, vehicle=False))
+    assert not {'vehicle', 'odometry', 'wheels'} & set(got)
+    assert 'imu' in got and 'gps' in got and 'camera_front_left' in got

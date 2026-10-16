@@ -7,7 +7,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [hud_web:=false] [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [sim_speed:=] [reversing:=true] [watchdog:=true]
-      [faults:=false]
+      [faults:=false] [spine:=false] [arm:=true]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
   pixi run sim world:=test_lot sim_speed:=3 hud:=true   Gazebo, RViz, Nav2 and the HUD window
@@ -51,6 +51,11 @@ bench's argument names:
                       reads it (perception, lane, camera_obstacles, faults)
   faults:=true        the front left picture through gazebo_adapter, so its fault.camera
                       works (pixi run sim-fault camera freeze); the other faults always do
+  spine:=true         the spine in the loop: ego -> spine_bridge -> CAN frames -> spine_sim
+                      (the spine's own firmware logic: arming, its 100 ms command
+                      watchdog, both e-stops, faults, its speed loop) -> the actuator
+                      model -> Gazebo; Gazebo's measurements back as CAN frames ->
+                      spine_bridge -> /vehicle/*. arm:=true arms it after 12 s
   actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
                       vehicle.yaml's actuators:), to compare the two
 
@@ -110,7 +115,8 @@ def launch_setup(context):
         include(context, 'aav_gazebo', 'gazebo.launch.py', world=world, gui=arg('gui'),
                 obstacle=arg('obstacle'), start_y=arg('start_y'), start_yaw=arg('start_yaw'),
                 lidar=arg('lidar'), radar=arg('radar'),
-                actuator_model=arg('actuator_model'), faults=flag['faults']),
+                actuator_model=arg('actuator_model'), faults=flag['faults'],
+                spine=arg('spine'), arm=arg('arm')),
         include(context, 'aav_mux', 'mux.launch.py', use_sim_time='true',
                 sensor_lock=flag['watchdog']),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
@@ -235,6 +241,12 @@ def generate_launch_description():
         DeclareLaunchArgument('actuator_model', default_value='true',
                               description="the actuators as vehicle.yaml's actuators: say; "
                                           "false: Gazebo's old instant car"),
+        DeclareLaunchArgument('spine', default_value='false',
+                              description='the spine in the loop: spine_bridge, CAN frames '
+                                          "and spine_sim (the spine's own logic) before the "
+                                          'actuator model'),
+        DeclareLaunchArgument('arm', default_value='true',
+                              description='with spine:=true: arm the spine after 12 s'),
         DeclareLaunchArgument('watchdog', default_value='true',
                               description='the sensor watchdog: stops Nav2 and the AI slot '
                                           'when a sensor they need fails (aav_safety)'),

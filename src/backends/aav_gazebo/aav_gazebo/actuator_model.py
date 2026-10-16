@@ -16,6 +16,12 @@ and steering it gives (READ-ME-FULL-SIMULATION.md, option A):
   - Ideal: the old behaviour, for comparison (actuator_model:=false): the speed follows
     the command within Gazebo's old limits (+1.5 / -3.0 m/s^2), the steering at once.
 
+With the spine in the loop (sim.launch.py spine:=true, step 4), the spine's own speed
+loop runs in spine_sim (spine-core, Rust), and its throttle, brake, gear and steering
+target go straight to Actuators.drive, skipping SpeedLoop:
+
+    spine_sim ──> throttle %, brake %, reverse, steering target ──> Actuators.drive ──> Gazebo
+
 Units: m/s, m/s^2, rad, s. Throttle and brake are 0..1. Positive steering turns left.
 """
 
@@ -63,7 +69,7 @@ class SpeedLoopConfig:
 
 @dataclass(frozen=True)
 class Demand:
-    """What the speed loop asks for. Throttle and brake are never both above zero."""
+    """What a speed loop asks for (ours, or the spine's). Throttle and brake: never both."""
 
     throttle: float
     brake: float
@@ -146,12 +152,18 @@ class Actuators:
         self.wheels = 0.0     # after the linkage's lag
 
     def step(self, speed_command, steer_command, dt):
+        """Step ego's speed and angle: the speed loop (ours, in Python), then the actuators."""
+        if dt <= 0.0:
+            raise ValueError(f'dt must be positive, not {dt}')
+        return self.drive(self.loop.update(speed_command, self.speed, dt), steer_command, dt)
+
+    def drive(self, d, steer_command, dt):
+        """Drive the actuators alone: a throttle, brake and gear Demand, and a steering target."""
         c = self.cfg
         if dt <= 0.0:
             raise ValueError(f'dt must be positive, not {dt}')
 
-        # Throttle and brake: the speed loop's demand, through each actuator's lag.
-        d = self.loop.update(speed_command, self.speed, dt)
+        # Throttle and brake: the demand, through each actuator's lag.
         self.throttle = lag(self.throttle, d.throttle, c.throttle_lag, dt)
         self.brake = lag(self.brake, d.brake, c.brake_lag, dt)
         pushing = self.throttle if self.throttle > c.throttle_deadband else 0.0

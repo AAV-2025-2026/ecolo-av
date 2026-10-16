@@ -2,7 +2,7 @@
 """
 Compare the running ROS graph with docs/interfaces.yaml. Needs a sourced Jazzy install.
 
-usage: tools/check_graph.py --profile turtle|sim|road|car|replay|bench [--wait 5]
+usage: tools/check_graph.py --profile turtle|sim|road|spine|car|replay|bench [--wait 5]
 
 Reports, for every topic in the contract:
   FAIL  a topic marked live in this profile has no publisher, or a type differs
@@ -12,7 +12,8 @@ and lists topics that are running but not in the contract (a typo, or the contra
 needs an entry). Exit status 1 if anything failed: usable in a test script.
 
 road is the sim in its road world (sim.launch.py world:=road), so a topic live in sim must
-be live there too, and so must the road world's own: the camera and the radar.
+be live there too, and so must the road world's own: the camera and the radar. spine is
+the road world with the spine in the loop (spine:=true): road's topics, plus the CAN ones.
 """
 
 import argparse
@@ -28,9 +29,9 @@ ROOT = Path(__file__).resolve().parents[1]
 # robot_localization (the contract lists its set_pose services instead).
 IGNORE = {'/parameter_events', '/rosout', '/diagnostics',
           '/ekf_local/set_pose', '/ekf_global/set_pose'}
-PROFILES = ('turtle', 'sim', 'road', 'car', 'replay', 'bench')
+PROFILES = ('turtle', 'sim', 'road', 'spine', 'car', 'replay', 'bench')
 # The profiles each one runs whole, besides its own: the road world is the sim, and more.
-INCLUDES = {'road': ('sim',)}
+INCLUDES = {'road': ('sim',), 'spine': ('sim', 'road')}
 
 
 def main():
