@@ -17,7 +17,7 @@ setup(
     zip_safe=True,
     maintainer='AAV 2026-27 team',
     maintainer_email='aav-team@todo.invalid',
-    description='Ghost obstacles: a pretend person in Nav2\'s view.',
+    description="Ghost obstacles: a pretend person in Nav2's view.",
     license='TODO',
     extras_require={'test': ['pytest']},
     entry_points={

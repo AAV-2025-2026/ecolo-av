@@ -25,11 +25,11 @@ Parameters (config/ghost_obstacle.yaml; change them live, or with `pixi run ghos
 Setting enabled, ahead, x, y or frame places the ghost again. The maths is in ghost.py.
 """
 
+import math
 import signal
 
 from aav_description import vehicle
 from aav_ghost.ghost import ahead_of, Ghost, Pose, ranges, ScanShape
-import math
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node

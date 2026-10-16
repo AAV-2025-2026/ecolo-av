@@ -65,7 +65,7 @@ def to_base(x, y, pose):
 
 def ranges(ghost, pose, shape=ScanShape()):
     """
-    Return the scan's ranges (m, numpy float array): the ghost's near side, inf elsewhere.
+    Return the scan of the ghost, in m: its near side, inf in every other direction.
 
     Each beam from base_link meets the ghost's circle (radius width / 2) at its nearest
     crossing. With base_link inside the ghost, every beam reads range_min: something is
