@@ -11,7 +11,8 @@
 //! - the car's position: best effort (SensorDataQoS), which takes reliable publishers too;
 //! - the plan and the goal: reliable, as Nav2 and RViz send them; the goal we publish:
 //!   reliable, volatile, depth 10, as RViz's "2D Goal Pose" (bt_navigator listens);
-//! - `/system/source`: reliable, transient local, depth 1, as the HUD.
+//! - `/system/source`: reliable, transient local, depth 1, as the HUD;
+//! - the sensor watchdog's verdict: reliable, depth 1, as the HUD.
 
 use std::{
     sync::{
@@ -39,6 +40,7 @@ use rclrs::*;
 use ros_env::aav_interfaces::msg::DataSource;
 use ros_env::geometry_msgs::msg::{Pose as PoseMsg, PoseStamped};
 use ros_env::nav_msgs::msg::{OccupancyGrid, Odometry, Path};
+use ros_env::std_msgs::msg::String as StringMsg;
 
 /// How many updates may wait for the screen. More are dropped: the screen is stuck.
 const QUEUE: usize = 256;
@@ -199,6 +201,15 @@ fn spin(
         let tx = tx.clone();
         move |m: DataSource| send(&tx, Update::Source(announcement(&m)))
     })?;
+    let _watchdog = node.create_subscription(
+        config
+            .topic(Topic::Watchdog)
+            .qos(QoSProfile::topics_default().reliable().keep_last(1)),
+        {
+            let tx = tx.clone();
+            move |m: StringMsg| send(&tx, Update::Watchdog(m.data))
+        },
+    )?;
 
     let goal_publisher = node.create_publisher::<PoseStamped>(config.topic(Topic::Goal))?;
 

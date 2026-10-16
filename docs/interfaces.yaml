@@ -66,13 +66,13 @@ topics:
     pub: [sensor_watchdog]
     sub: [twist_mux]
     live: [sim]
-    note: true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen or jumped (aav_safety sensor_watchdog, 10 Hz). A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test; never expires on silence. Runs in Gazebo (sim.launch.py watchdog:=true), on the bench, and on the car with Nav2.
+    note: true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).
   /safety/sensor_watchdog/state:
     type: std_msgs/msg/String
     pub: [sensor_watchdog]
-    sub: [hud]
+    sub: [hud, map]
     live: [sim]
-    note: One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD shows it.
+    note: One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD and the map window show it as a banner, red for STOP or when it goes silent (then twist_mux holds Nav2 too).
   /safety/collision_monitor/state:
     type: nav2_msgs/msg/CollisionMonitorState
     pub: [collision_monitor]
@@ -450,7 +450,7 @@ topics:
     type: diagnostic_msgs/msg/DiagnosticArray
     pub: [twist_mux, ekf_local, ekf_global, sensor_watchdog]
     sub: [language_drive]
-    note: ROS's diagnostics. sensor_watchdog reports each input it watches once a second (OK, WARN, ERROR when it stops the car). twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic.
+    note: ROS's diagnostics. sensor_watchdog reports each input it watches once a second (OK, WARN, ERROR when it stops the car); for the wheels, also the gaps to the IMU (speed_gap, turn_gap, worst_speed_gap, worst_turn_gap), to tune the cross check on the car. twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic.
 
 services:
   /spine/arm:

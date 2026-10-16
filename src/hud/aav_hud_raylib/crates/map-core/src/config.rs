@@ -28,16 +28,19 @@ pub enum Topic {
     Goal,
     /// `/system/source` (latched): the SIMULATED banner.
     Source,
+    /// The sensor watchdog's verdict (aav_safety): a banner unless OK, as on the HUD.
+    Watchdog,
 }
 
 impl Topic {
     /// Every topic, in the order the screen lists them.
-    pub const ALL: [Topic; 5] = [
+    pub const ALL: [Topic; 6] = [
         Topic::Map,
         Topic::Odom,
         Topic::Plan,
         Topic::Goal,
         Topic::Source,
+        Topic::Watchdog,
     ];
 
     /// The ROS parameter that holds this topic's name.
@@ -48,6 +51,7 @@ impl Topic {
             Self::Plan => "plan_topic",
             Self::Goal => "goal_topic",
             Self::Source => "source_topic",
+            Self::Watchdog => "watchdog_topic",
         }
     }
 }
@@ -60,6 +64,7 @@ pub struct MapConfig {
     pub plan_topic: String,
     pub goal_topic: String,
     pub source_topic: String,
+    pub watchdog_topic: String,
     /// Seconds without a position before the car shows STALE.
     pub stale_after: f64,
     /// Seconds without a new plan before the trip shows NO NEW PLAN.
@@ -125,6 +130,7 @@ impl MapConfig {
             Topic::Plan => &self.plan_topic,
             Topic::Goal => &self.goal_topic,
             Topic::Source => &self.source_topic,
+            Topic::Watchdog => &self.watchdog_topic,
         }
     }
 
@@ -136,6 +142,7 @@ impl MapConfig {
             Topic::Plan => &mut self.plan_topic,
             Topic::Goal => &mut self.goal_topic,
             Topic::Source => &mut self.source_topic,
+            Topic::Watchdog => &mut self.watchdog_topic,
         };
         *slot = name;
     }

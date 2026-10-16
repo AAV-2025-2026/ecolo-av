@@ -12,7 +12,7 @@
 //! |         them Nav2's map, north up                |                 |
 //! |         the plan (blue), the goal (green)        | TIME LEFT 15 s  |
 //! |         the car (its outline and an arrow)       | SPEED   11 km/h |
-//! |                                                  | TOPICS          |
+//! | [ the sensor watchdog's verdict, unless OK ]     | TOPICS          |
 //! | |----| 10 m          © OpenStreetMap contributors | keys            |
 //! +--------------------------------------------------+-----------------+
 //! ```
@@ -22,7 +22,7 @@
 
 use std::{sync::Arc, time::Instant};
 
-use hud_core::{format, health::Health};
+use hud_core::{format, health::Health, watchdog::Alarm};
 use map_core::{
     car::CarShape,
     config::Topic,
@@ -288,6 +288,7 @@ impl Ui {
                 picked_marker(&mut p, screen(view, search.on_map(place), &vp));
             }
             street_notes(&mut p, &vp, streets);
+            watchdog_banner(&mut p, &vp, state, now);
         }
         let mut p = Painter {
             d,
@@ -415,6 +416,40 @@ fn grid_lines(
 }
 
 /// Bottom right of the map: the street map's credit when it's shown, or why it isn't.
+/// The sensor watchdog's verdict, as on the HUD: red while it holds Nav2 (STOP, or the
+/// watchdog silent), amber for a warning. Across the bottom of the map, over the scale.
+fn watchdog_banner(
+    p: &mut Painter<impl RaylibDraw>,
+    vp: &Viewport,
+    state: &MapState,
+    now: Instant,
+) {
+    let Some(alarm) = state.sensor_alarm(now) else {
+        return;
+    };
+    let (text, colour) = match &alarm {
+        Alarm::Stop(t) => (t, BAD),
+        Alarm::Warn(t) => (t, WARN),
+    };
+    let margin = 14.0 * p.u;
+    let h = 44.0 * p.u;
+    let r = Rectangle::new(
+        vp.x as f32 + margin,
+        (vp.y + vp.height) as f32 - 96.0 * p.u - h,
+        (vp.width as f32 - 2.0 * margin).max(1.0),
+        h,
+    );
+    p.d.draw_rectangle_rounded(r, 0.2, 8, colour);
+    p.fitted(
+        r.x + 12.0 * p.u,
+        r.y + 9.0 * p.u,
+        24.0,
+        r.width - 24.0 * p.u,
+        text,
+        Color::BLACK,
+    );
+}
+
 fn street_notes(p: &mut Painter<impl RaylibDraw>, vp: &Viewport, streets: &StreetMap) {
     let right = (vp.x + vp.width) as f32 - 14.0 * p.u;
     let bottom = (vp.y + vp.height) as f32 - 12.0 * p.u;
@@ -968,8 +1003,16 @@ fn panel(
         let colour = match health {
             Health::Ok(_) => GOOD,
             Health::Stale(_) => WARN,
-            // No goal and no plan is normal; nothing announcing the source is too.
-            Health::Never if matches!(t, Topic::Plan | Topic::Goal | Topic::Source) => DIM,
+            // No goal and no plan is normal; nothing announcing the source is too, and no
+            // sensor watchdog (the turtle runs none).
+            Health::Never
+                if matches!(
+                    t,
+                    Topic::Plan | Topic::Goal | Topic::Source | Topic::Watchdog
+                ) =>
+            {
+                DIM
+            }
             Health::Never => BAD,
         };
         let sw = p.width(&status, 18.0);

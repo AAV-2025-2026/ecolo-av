@@ -11,6 +11,7 @@ use hud_core::{
     health::{Health, LastSeen},
     origin::{Announcement, Origins},
     units::MetresPerSecond,
+    watchdog::{self, Alarm},
 };
 
 use crate::{
@@ -50,6 +51,8 @@ pub enum Update {
         frame: String,
     },
     Source(Announcement),
+    /// The sensor watchdog's verdict: "OK", or "STOP: ..." / "WARN: ...".
+    Watchdog(String),
 }
 
 /// How far is left.
@@ -86,6 +89,8 @@ pub struct MapState {
     goal_frame: String,
     goal_at: Option<Instant>,
     pub origins: Origins,
+    /// The sensor watchdog's last verdict.
+    pub watchdog: Option<String>,
     seen: HashMap<Topic, LastSeen>,
 }
 
@@ -104,6 +109,7 @@ impl MapState {
             goal_frame: String::new(),
             goal_at: None,
             origins: Origins::default(),
+            watchdog: None,
             seen: HashMap::new(),
         }
     }
@@ -116,6 +122,7 @@ impl MapState {
             Update::Plan { .. } => Topic::Plan,
             Update::Goal { .. } => Topic::Goal,
             Update::Source(_) => Topic::Source,
+            Update::Watchdog(_) => Topic::Watchdog,
         };
         self.seen.entry(topic).or_default().heard(now);
         match update {
@@ -137,6 +144,7 @@ impl MapState {
                 self.goal_at = Some(now);
             }
             Update::Source(a) => self.origins.apply(a),
+            Update::Watchdog(w) => self.watchdog = Some(w),
         }
     }
 
@@ -149,7 +157,7 @@ impl MapState {
     /// (latched, or by a person), so they never go stale.
     pub fn health(&self, topic: Topic, now: Instant) -> Health {
         let limit = match topic {
-            Topic::Odom => self.config.stale_after(),
+            Topic::Odom | Topic::Watchdog => self.config.stale_after(),
             Topic::Plan => self.config.plan_stale_after(),
             Topic::Map | Topic::Goal | Topic::Source => Duration::MAX,
         };
@@ -158,6 +166,12 @@ impl MapState {
             .copied()
             .unwrap_or_default()
             .health(now, limit)
+    }
+
+    /// What the sensor watchdog says is wrong, for a banner; None when all is well. The
+    /// same words as on the HUD ([`watchdog::alarm`]).
+    pub fn sensor_alarm(&self, now: Instant) -> Option<Alarm> {
+        watchdog::alarm(self.health(Topic::Watchdog, now), self.watchdog.as_deref())
     }
 
     /// The car's position, if any has come.
@@ -244,6 +258,23 @@ mod tests {
         geom::Pose,
         grid::{Grid, GridInfo},
     };
+
+    #[test]
+    fn the_watchdog_banner_is_the_huds() {
+        let start = Instant::now();
+        let mut s = MapState::new(MapConfig::default());
+        assert_eq!(s.sensor_alarm(start), None); // no watchdog in this run
+        s.apply(Update::Watchdog("OK".into()), start);
+        assert_eq!(s.sensor_alarm(start), None);
+        let stop = "STOP: gps JUMP (jumped 20.0 m in 0.20 s)";
+        s.apply(Update::Watchdog(stop.into()), start);
+        assert_eq!(s.sensor_alarm(start), Some(Alarm::Stop(stop.into())));
+        let later = start + s.config.stale_after() + Duration::from_millis(100);
+        assert_eq!(
+            s.sensor_alarm(later),
+            Some(Alarm::Stop("SENSOR WATCHDOG SILENT".into()))
+        );
+    }
 
     fn car_at(x: f64, y: f64) -> Update {
         Update::Car(Car {

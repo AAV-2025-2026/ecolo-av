@@ -6,6 +6,8 @@
 
 use std::{collections::HashMap, time::Instant};
 
+pub use crate::watchdog::Alarm;
+
 use crate::{
     config::{HudConfig, Topic},
     gps::Fix,
@@ -13,6 +15,7 @@ use crate::{
     origin::{Announcement, Origins},
     picture::Picture,
     vehicle::VehicleStatus,
+    watchdog,
 };
 
 /// The battery (sensor_msgs/msg/BatteryState). None = not measured (NaN in the message).
@@ -153,20 +156,10 @@ impl HudState {
             .health(now, self.config.stale_after())
     }
 
-    /// What the sensor watchdog says is wrong, for a banner; None when all is well.
-    ///
-    /// A watchdog never heard is none of the HUD's business (the turtle runs none). One
-    /// that went quiet is: then nothing watches the sensors, so say so.
+    /// What the sensor watchdog says is wrong, for a banner; None when all is well
+    /// ([`watchdog::alarm`]: the map window shows the same).
     pub fn sensor_alarm(&self, now: Instant) -> Option<Alarm> {
-        match self.health(Topic::Watchdog, now) {
-            Health::Never => None,
-            Health::Stale(_) => Some(Alarm::Warn("SENSOR WATCHDOG SILENT".into())),
-            Health::Ok(_) => match self.watchdog.as_deref() {
-                None | Some("OK") => None,
-                Some(text) if text.starts_with("STOP") => Some(Alarm::Stop(text.into())),
-                Some(text) => Some(Alarm::Warn(text.into())),
-            },
-        }
+        watchdog::alarm(self.health(Topic::Watchdog, now), self.watchdog.as_deref())
     }
 
     /// Every listened topic's name and health, in screen order.
@@ -175,15 +168,6 @@ impl HudState {
             .into_iter()
             .map(move |t| (self.config.topic(t), self.health(t, now)))
     }
-}
-
-/// A banner's worth of trouble from the sensor watchdog.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Alarm {
-    /// The automatic drivers are stopped: a sensor they need failed.
-    Stop(String),
-    /// Something is wrong, but nothing was stopped for it.
-    Warn(String),
 }
 
 #[cfg(test)]
@@ -229,7 +213,7 @@ mod tests {
         let later = start + s.config.stale_after() + Duration::from_millis(100);
         assert_eq!(
             s.sensor_alarm(later),
-            Some(Alarm::Warn("SENSOR WATCHDOG SILENT".into()))
+            Some(Alarm::Stop("SENSOR WATCHDOG SILENT".into()))
         );
     }
 

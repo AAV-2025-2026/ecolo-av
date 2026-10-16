@@ -10,6 +10,7 @@
 //! | [`origin`] | `/system/source`: real, simulated, bench or replay, per topic |
 //! | [`picture`] | a camera picture turned into RGBA pixels for the screen |
 //! | [`estop`] | the e-stop button: five `true`s, 0.1 s apart, never `false` |
+//! | [`watchdog`] | the sensor watchdog's verdict, as a banner (the map window's too) |
 //! | [`state`] | everything above, as one value the screen draws |
 //! | [`format`] | numbers turned into short text for the screen |
 //! | [`screen`] | which monitor a window goes on (`--monitor HDMI-1`), for two screens |
@@ -25,3 +26,4 @@ pub mod screen;
 pub mod state;
 pub mod units;
 pub mod vehicle;
+pub mod watchdog;

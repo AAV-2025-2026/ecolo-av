@@ -8,6 +8,7 @@ map:
     plan_topic: /plan                         # nav_msgs/msg/Path: Nav2's planned path
     goal_topic: /goal_pose                    # geometry_msgs/msg/PoseStamped: RViz's 2D Goal Pose, and ours (the place search)
     source_topic: /system/source              # aav_interfaces/msg/DataSource, latched: the SIMULATED banner
+    watchdog_topic: /safety/sensor_watchdog/state  # std_msgs/msg/String: the sensor watchdog's verdict, a banner unless OK
     stale_after: 1.0                          # s: the car's position this old shows STALE
     plan_stale_after: 3.0                     # s: Nav2 replans every 1 s while it drives; older = it stopped
     arrive_within: 1.0                        # m: the car this close to the goal = ARRIVED (Nav2's own is 0.5)
