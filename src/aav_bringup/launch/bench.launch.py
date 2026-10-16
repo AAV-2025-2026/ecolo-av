@@ -81,6 +81,7 @@ def launch_setup(context):
         include('aav_mux', 'mux.launch.py'),
         include('aav_ego', 'ego.launch.py'),
         include('aav_scripted', 'scripted.launch.py'),
+        include('aav_goto', 'goto.launch.py'),
         Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',
              name='imu_filter_madgwick',
              parameters=[os.path.join(share('aav_sensors'), 'config', 'imu_filter.yaml')],

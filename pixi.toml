@@ -20,6 +20,7 @@ lint = { cmd = "tools/lint.sh", description = "Check our Python against ROS's st
 turtle = { cmd = "tools/ros.sh --local ros2 launch aav_bringup turtle.launch.py", description = "turtlesim as the car (this computer only)" }
 keyboard = { cmd = "tools/ros.sh tools/keyboard.sh", description = "Drive from the keyboard (second terminal)" }
 actuator-test = { cmd = "tools/actuator_test.sh", description = "The actuator tests, stages 3-4: pixi run actuator-test --list; <test> --sim in Gazebo (this computer only); <test> [--stands] on the car (docs/actuator-tests.md)" }
+goto = { cmd = "tools/goto.sh", description = "Drive to one point and stop there smoothly: pixi run goto --sim --ahead 20 (Gazebo, this computer only); --lat L --lon L or --x X --y Y; on the car without --sim, it asks first (READ-ME-A-TO-B.md)" }
 sim = { cmd = "tools/ros.sh --local ros2 launch aav_bringup sim.launch.py", description = "Gazebo as the car (this computer only)" }
 bench = { cmd = "tools/ros.sh --local ros2 launch aav_bringup bench.launch.py", description = "The real car's software, with stand-ins for the hardware (bench mode, this computer only)" }
 bench-check = { cmd = "tools/ros.sh --local python3 tools/bench_check.py", description = "Start bench mode and test the whole car graph: contract, drive, e-stops (2 min)" }

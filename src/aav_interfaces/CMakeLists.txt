@@ -12,6 +12,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ActuatorState.msg"
   "msg/WheelSpeeds.msg"
   "action/ScriptedDrive.action"
+  "action/GoTo.action"
   DEPENDENCIES std_msgs
 )
 

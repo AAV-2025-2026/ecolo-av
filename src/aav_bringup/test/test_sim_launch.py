@@ -94,7 +94,7 @@ def test_the_defaults_start_what_pixi_run_sim_always_has():
     actions = started(SIM)
     sent = included(actions)
     assert set(sent) == {'gazebo.launch.py', 'mux.launch.py', 'ego.launch.py',
-                         'scripted.launch.py', 'localization.launch.py',
+                         'scripted.launch.py', 'goto.launch.py', 'localization.launch.py',
                          'navigation.launch.py', 'watchdog.launch.py'}
     assert sent['gazebo.launch.py']['world'] == 'empty'
     nav = sent['navigation.launch.py']
