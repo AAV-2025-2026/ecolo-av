@@ -378,10 +378,10 @@ topics:
   # --- Gazebo's road world: the simulator's own ---
   /vehicle/gazebo/truth:
     type: nav_msgs/msg/Odometry
-    pub: [gz_road_bridge]
+    pub: [gz_bridge]
     sub: []
-    live: [road]
-    note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges and gazebo_adapter.
+    live: [sim]
+    note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global, and --goto measures each stop with it. In every world (gz_bridge), since 15 Oct. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges and gazebo_adapter.
 
   # --- localization ---
   /localization/odom/local:
