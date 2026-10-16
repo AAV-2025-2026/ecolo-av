@@ -31,6 +31,8 @@ Nothing real moves. Run these on any laptop.
 | 1.8 | Plain-English driving | `pixi run -e llm talk`: "drive 10 m forward" | drives 10 m (±0.2 m) after you type yes | ✅ Gazebo |
 | 1.9 | **"SIMULATED" on the HUD** | run Gazebo, look at the HUD | an orange SIMULATED banner; REAL / SIM tag per sensor | ⬜ |
 | 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | `pixi run actuator-test <test> --sim` ([docs](docs/actuator-tests.md)) | the script runs end to end and reports g and angles | ✅ 15 Oct: all 9 tests; they give back `vehicle.yaml`'s numbers |
+| 1.11 | **The lidar alone stops the car** | `pixi run sim-check --lidar-obstacle` | radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone | ✅ 15 Oct: 0.16-0.55 m before it |
+| 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 10 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, NaN; camera frozen; radar stopped) stops the car within 6 s, and says why | ✅ 15 Oct: all 10, within 1.7-4.1 s |
 
 ## Stage 2: the bench
 
@@ -114,7 +116,8 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | 4.14 | Global EKF + GPS | drive a loop: the EKF's track stays within 2 m of the GPS track | ⬜ |
 | 4.15 | Cameras: the freeze | 1 hour with no freeze, power and heat logged (`FRIDAY-TODO.md` part 5) | ⬜ |
 | 4.16 | Radar | `/perception/radar/clusters` shows a person walking in front | ⬜ |
-| 4.17 | Lidar (once it has a driver) | an obstacle shows in RViz's local costmap | ⬜ |
+| 4.17 | Lidar (once it has a driver) | `car.launch.py lidar:=true`: an obstacle shows in RViz's local costmap (`lidar_layer`), and a person in front stops Nav2 | ⬜ no driver yet; ✅ in Gazebo (1.11) |
+| 4.18 | **Sensor failures on the car** | pull the GPS's, the IMU's, the wheel encoder's cable while Nav2 drives at walking pace: the HUD's red banner names it, and the car stops | ⬜ |
 
 ## Stage 5: the whole drive
 
@@ -155,3 +158,4 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | The line driver: speed by distance left to B | 5.2 | about a day |
 | Ghost obstacles on the real car | 5.4 | 1 day |
 | The ESP32 timeout | 3.9, and everything after | TEAM-TODO B2 |
+| A driver for the roof lidar (probably a Velodyne) | 4.17 | small, once the model is known |

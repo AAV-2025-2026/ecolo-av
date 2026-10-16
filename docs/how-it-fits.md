@@ -112,6 +112,13 @@ From the person outward. Each layer works even if everything after it fails.
 | 5 | The spine's watchdog | no valid frame for 100 ms: throttle off, brake on |
 | 6 | RC override switch, hardware e-stop, driver faults | always: handled in the firmware |
 
+Two more, for the automatic drivers only (Nav2 and the AI slot; never a person or a test):
+
+| Layer | Stops Nav2 when |
+|---|---|
+| collision_monitor | radar or lidar points in the stop zone just ahead; or the radar or lidar goes quiet for 1 s |
+| The sensor watchdog (`aav_safety`) | the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps. A twist_mux lock, shown on the HUD ([simulation](simulation.md#sensor-failures-on-purpose)) |
+
 !!! warning "Today's car has no layer 5"
   The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays
   on. Keep the wheels off the ground and the e-stop in hand: see [Firmware](firmware.md).

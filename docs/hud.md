@@ -24,7 +24,7 @@ a second program.
 | Top strip | mode, armed, gear (D/R/P), e-stop on/off, battery, faults |
 | Speed | km/h, big. Grey with "OLD" when `/vehicle/status` stops |
 | Controls | steering (left of centre = left), throttle, brake |
-| Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange **SIMULATED** / **BENCH** / **REPLAY** band along its bottom when `/system/source` says any data isn't the real car's |
+| Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange **SIMULATED** / **BENCH** / **REPLAY** band along its bottom when `/system/source` says any data isn't the real car's; the sensor watchdog's banner (15 Oct): red **STOP: gps STALE (...)** while it holds Nav2, amber for a warning, amber **SENSOR WATCHDOG SILENT** if it stops talking ([simulation](simulation.md#sensor-failures-on-purpose)) |
 | E-STOP | the button: `/safety/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
 | Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where `/system/source` names it |
 | GPS | is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age |
@@ -64,6 +64,7 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 | One press, through the real node, to another node (`cargo test`) | exactly 5 trues, no false, each "sent to 1 node" |
 | Ctrl-C to `ros2 launch` | the window closes, "finished cleanly" |
 | A click on the window's button | not tested: macOS blocks clicks from scripts  |
+| The sensor watchdog's banner (15 Oct) | its logic: `cargo test` (hud-core `state`). Not seen on screen yet |
 | The SIMULATED / BENCH / REPLAY banner (15 Oct) | its logic: `cargo test` (hud-core `origin`, and the message's numbers in hud-app). Not seen on screen yet: the window couldn't open from that session |
 
 ### What it shows with each backend

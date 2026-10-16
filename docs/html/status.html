@@ -160,7 +160,17 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Gazebo's road world</td>
 <td><code>aav_gazebo</code> <code>world:=road</code></td>
-<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) (with <code>lidar:=true</code>) render headless; <code>pixi run sim-check</code>, <code>--lidar --obstacle</code> and <code>--perception</code> pass. With YOLO and the lidar together it was flaky, so the lidar is off by default. <span class="badge b-untested">untested</span> on Linux, which needs EGL (<a href="simulation.html">Simulation</a>)</td>
+<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code>, <code>--obstacle</code>, <code>--lidar-obstacle</code>, <code>--faults</code> and <code>--perception</code> pass. <span class="badge b-untested">untested</span> on Linux, which needs EGL (<a href="simulation.html">Simulation</a>)</td>
+</tr>
+<tr>
+<td>The lidar in Nav2 (15 Oct)</td>
+<td><code>aav_lidar</code> <code>lidar_scan</code> -&gt; the local costmap's <code>lidar_layer</code> and <code>collision_monitor</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post. <span class="badge b-missing">missing</span> on the car: no lidar driver, so <code>car.launch.py lidar:=false</code></td>
+</tr>
+<tr>
+<td>Sensor watchdog (15 Oct)</td>
+<td><code>aav_safety</code> <code>sensor_watchdog</code>: a twist_mux lock, the HUD's banner</td>
+<td><span class="badge b-works">works</span> in Gazebo: all 10 faults on purpose (<code>pixi run sim-fault</code>) stop Nav2 within 4.1 s and say why. On the bench, <code>bench-check</code> passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. <span class="badge b-untested">untested</span> on the car (<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>)</td>
 </tr>
 <tr>
 <td>Real car</td>
@@ -254,7 +264,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Lidar</td>
-<td>on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo only (<code>lidar:=true</code>, <code>/sensors/lidar/points</code>, 15 Oct); off by default, as it made the Mac flaky with YOLO</td>
+<td>on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo (<code>/sensors/lidar/points</code>, on by default), which Nav2 reads since 15 Oct</td>
 <td><span class="badge b-missing">missing</span> on the car</td>
 </tr>
 </tbody>

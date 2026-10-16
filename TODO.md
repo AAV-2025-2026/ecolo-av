@@ -96,7 +96,8 @@ a second Orin). Pages: [car photos](docs/car-photos.md), [CAN plan](docs/can-pla
       0x201, a 100 ms timeout (`docs/can-plan.md`, Proposed) [[needs-you]].
 - [ ] **A lidar driver:** a lidar is on the roof; our code has none. Model at the audit.
       *A generic 16-beam lidar runs in Gazebo's road world since 15 Oct
-      (`lidar:=true`), on `/sensors/lidar/points`: the real driver should publish the same.*
+      (`lidar:=true`), on `/sensors/lidar/points`: the real driver should publish the same.
+      Nav2 reads it since 15 Oct (`aav_lidar` `lidar_scan`); then `car.launch.py lidar:=true`.*
 - [ ] **The simulated lidar on by default:** off for now, as on the Mac it made the full
       graph with YOLO flaky (DDS over loopback UDP). Try Fast DDS's shared memory, or a
       smaller cloud (`docs/simulation.md`).
@@ -117,7 +118,12 @@ work on." His order, with the work under way:
             gazebo with all the sensors and build the full pipeline";
             `READ-ME-FULL-SIMULATION.md`). *Steps 1-3 built 15 Oct on `wt/full-sim-1`:
             `/system/source` and the HUD's SIMULATED banner, the per-actuator topics, the
-            actuator model with guessed numbers. Next: step 4, the spine in the loop.*
+            actuator model with guessed numbers. Steps 5 and 6 built 15 Oct: the lidar into
+            Nav2, sensor failures on purpose and the sensor watchdog (`aav_safety`). Next:
+            step 4, the spine in the loop.*
+      - [ ] **The sensor watchdog's to-dos** (`docs/simulation.md`, "Still to do"): a lock
+            that expires if the watchdog dies, frozen wheel odometry, the EKF's own guard
+            against a GPS jump, the verdict on the map window, the same faults on the car.
       - [ ] **Ackermann done properly**, testable in Gazebo and on the bench: reversing
             (Reeds-Shepp), both front wheels' real angles, the steering curve from
             `Ackermann.m` (Q2). *Paused 11 Oct, on `wt/ackermann`.*

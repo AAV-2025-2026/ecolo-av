@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">24 min read · 7 sections</div></header>
+<div class="meta">33 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -60,7 +60,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#the-road-world-the-cars-whole-graph">The road world: the car&#x27;s whole graph</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-parked">CARLA: parked</a><a href="#when-nothing-moves">When nothing moves</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#the-road-world-the-cars-whole-graph">The road world: the car&#x27;s whole graph</a><a href="#sensor-failures-on-purpose">Sensor failures on purpose</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-parked">CARLA: parked</a><a href="#when-nothing-moves">When nothing moves</a></nav>
 <div class="lead"><p>Every backend takes the same <code>/ego/actuator_cmd</code>, so the drivers, mux, ego and
 localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
 the ladder one rung at a time.</p>
@@ -170,8 +170,23 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 </tr>
 <tr>
 <td><code>lidar</code></td>
+<td><code>true</code></td>
+<td>the simulated roof lidar, in the road and test_lot worlds, read by Nav2 (<a href="#the-lidar-gazebo-only">below</a>); <code>false</code> drops it</td>
+</tr>
+<tr>
+<td><code>radar</code></td>
+<td><code>true</code></td>
+<td>the radar stand-in, in the road and test_lot worlds; <code>false</code>: the lidar alone guards Nav2</td>
+</tr>
+<tr>
+<td><code>watchdog</code></td>
+<td><code>true</code></td>
+<td>the sensor watchdog: stops Nav2 and the AI slot when a sensor fails (<a href="#sensor-failures-on-purpose">below</a>)</td>
+</tr>
+<tr>
+<td><code>faults</code></td>
 <td><code>false</code></td>
-<td><code>true</code>: the simulated roof lidar, in the road world only (<a href="#the-lidar-gazebo-only">below</a>)</td>
+<td><code>true</code>: the front left picture goes through <code>gazebo_adapter</code> too, so it can freeze on purpose</td>
 </tr>
 <tr>
 <td><code>actuator_model</code></td>
@@ -593,7 +608,7 @@ yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on
 </tr>
 <tr>
 <td>Who reads it</td>
-<td>nobody yet but RViz. Nav2's obstacle layer could, once the car has one</td>
+<td>Nav2, since 15 Oct (below): <code>lidar_scan</code> flattens it into a 2D scan for the local costmap and <code>collision_monitor</code></td>
 </tr>
 <tr>
 <td>Turn it off</td>
@@ -617,6 +632,52 @@ yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on
 </tr>
 </tbody>
 </table></div>
+<h4 id="the-lidar-in-nav2-15-oct">The lidar in Nav2 (15 Oct)</h4>
+<pre class="highlight"><code class="language-text"> /sensors/lidar/points ─► lidar_scan ─► /sensors/lidar/scan ─┬─► local costmap: lidar_layer
+  (0.9 MB, 10 Hz,          (aav_lidar)   (720 ranges, 3 kB)   └─► collision_monitor: stop zone
+   reliable)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What counts</td>
+<td>points from 0.3 m above the road to 0.5 m over the roof (2.0 m): <code>vehicle.obstacle_heights</code>, from <code>vehicle.yaml</code>. The road, kerbs and overhead branches don't; nor do points on the car itself</td>
+</tr>
+<tr>
+<td>The scan</td>
+<td>720 directions (0.5°), each the nearest point, flat from <code>base_link</code>; <code>inf</code> where nothing is, which clears the costmap</td>
+</tr>
+<tr>
+<td>Its own costmap layer</td>
+<td><code>lidar_layer</code>, so its clearing never wipes the radar's marks</td>
+</tr>
+<tr>
+<td>Switch</td>
+<td><code>navigation.launch.py lidar:=true</code>. <code>sim.launch.py</code> passes it where the world renders the lidar. <strong>The car: <code>lidar:=false</code></strong>, as no driver publishes its lidar yet (probably a Velodyne: audit N6)</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td><code>lidar_scan</code> about 4% of one core; Nav2's two readers get 3 kB a scan instead of 0.9 MB</td>
+</tr>
+<tr>
+<td>Why not the stock <code>pointcloud_to_laserscan</code></td>
+<td>tried first: it subscribes best effort, and on a Mac no 0.9 MB cloud ever arrives that way (<a href="mac.html">Mac</a>). Ours subscribes reliably</td>
+</tr>
+<tr>
+<td>Its blind spot</td>
+<td>from 1.8 m up, the lowest beam (15° down) meets a 1 m box only 2.1 m ahead of the bumper, and the road only 4.9 m ahead. In the stop zone (bumper to 1 m ahead) it sees only what stands over about 1.3 m: a person, a car, a post. Low things close in front are the radar's</td>
+</tr>
+<tr>
+<td>Proof</td>
+<td><code>pixi run sim-check --lidar-obstacle</code>: the radar off, a person-sized post (0.5 x 0.5 x 1.8 m) 15 m ahead. The car stood still 0.16-0.55 m before it (two runs), the stop zone fired from the lidar, the costmap marked it (100 of 100); with the post gone, it drove on to its goal</td>
+</tr>
+</tbody>
+</table></div>
 <p><img alt="One sweep of the simulated lidar, from above: the ground's rings and the stop sign" src="../img/sim-lidar.png" /></p>
 <p>The rings are where each beam meets the flat ground. The far rings come out slightly
 polygonal: Gazebo's <code>gpu_lidar</code> renders depth in a few camera views, and at grazing
@@ -634,7 +695,7 @@ angles small depth errors become large range errors.</p>
 <tr>
 <td>(always, in the road world)</td>
 <td></td>
-<td><code>radar_clusters</code>, and Nav2's obstacle layer and <code>collision_monitor</code></td>
+<td><code>radar_clusters</code>, and Nav2's obstacle layer and <code>collision_monitor</code>; <code>lidar_scan</code> and the lidar layer; the sensor watchdog</td>
 </tr>
 <tr>
 <td><code>perception</code></td>
@@ -741,6 +802,9 @@ the frames come out right (<code>sim-check</code> tests them).</p>
 <pre class="highlight"><code class="language-bash">pixi run sim-check                                # start-up, contract, sensors, a drive
 pixi run -e ml sim-check --perception --obstacle  # and the stop sign, and the box
 pixi run sim-check --lane                         # and lane keeping, in a second run
+pixi run sim-check --lidar-obstacle               # and the lidar alone (radar off) stops for a post
+pixi run sim-check --faults                       # and sensor failures on purpose (below)
+pixi run sim-check --faults --no-watchdog         # the same, a report of what happens without the watchdog
 pixi run sim-check --no-lidar                     # without the simulated roof lidar (on by default)</code></pre>
 <p>It starts the road world without a window, on a private ROS domain and Gazebo partition,
 on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code>.</p>
@@ -781,11 +845,224 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 <td><code>pixi run sim-check --lane</code></td>
 <td>✅ 15 Oct, after the cameras moved: back to the lane's centre within 5 cm in 5 s</td>
 </tr>
+<tr>
+<td><code>pixi run sim-check --obstacle --lidar-obstacle</code> (15 Oct, the lidar into Nav2; twice)</td>
+<td>all pass: the box 0.32-0.46 m ahead with radar and lidar; with the radar off, the lidar alone stopped the car 0.16-0.55 m before a person-sized post, the costmap 100 of 100 there; both goals reached once they were gone</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --faults</code> (15 Oct)</td>
+<td>all 10 faults pass: the car stood still 1.7-4.1 s after each, and the watchdog (or <code>collision_monitor</code>, for the radar) said why; then let go</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --faults --no-watchdog</code> (15 Oct)</td>
+<td>the before column <a href="#what-the-car-does-before-and-after">below</a>: only the radar stopped the car</td>
+</tr>
 </tbody>
 </table></div>
 <p>Ten runs in all, on a Mac shared with other work (load 5-17 on 16 cores). One more
 <code>--perception</code> run without the lidar failed too: the car never moved, and the log doesn't
 say why. So the full graph with YOLO is still a little flaky on a busy Mac.</p>
+</section>
+<section class="card"><h2 id="sensor-failures-on-purpose">Sensor failures on purpose</h2>
+<p>READ-ME-FULL-SIMULATION.md step 6 (15 Oct): make a simulated sensor fail, and check the
+car stops, <strong>safely and loudly</strong>.</p>
+<h3 id="make-one-fail">Make one fail</h3>
+<pre class="highlight"><code class="language-bash">pixi run sim world:=road faults:=true     # faults:=true only for the camera
+pixi run sim-fault gps stop               # the GPS goes quiet
+pixi run sim-fault gps ok                 # mended
+pixi run sim-fault clear                  # after a GPS jump: a person says the position is right</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Topic it breaks</th>
+<th>Faults</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gps</code></td>
+<td><code>/sensors/gps/fix</code></td>
+<td><code>stop</code>, <code>freeze</code>, <code>nan</code>, <code>jump</code> (20 m north)</td>
+</tr>
+<tr>
+<td><code>imu</code></td>
+<td><code>/sensors/imu/data_raw</code></td>
+<td><code>stop</code>, <code>freeze</code>, <code>nan</code></td>
+</tr>
+<tr>
+<td><code>odom</code></td>
+<td>the wheels: <code>/vehicle/odom</code>, <code>/vehicle/wheels</code></td>
+<td><code>stop</code>, <code>freeze</code>, <code>nan</code></td>
+</tr>
+<tr>
+<td><code>radar</code></td>
+<td><code>/sensors/radar/points</code></td>
+<td><code>stop</code>, <code>freeze</code></td>
+</tr>
+<tr>
+<td><code>camera</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code> (with <code>faults:=true</code>)</td>
+<td><code>stop</code>, <code>freeze</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>freeze</code> sends the last good message again, with fresh stamps: it looks alive. It's a
+parameter of <code>gazebo_adapter</code> (<code>fault.&lt;sensor&gt;</code>); the logic is <code>aav_gazebo/faults.py</code>.</p>
+<h3 id="the-sensor-watchdog">The sensor watchdog</h3>
+<p><code>aav_safety</code>'s <code>sensor_watchdog</code> watches what Nav2 and the AI slot need. While one isn't
+right, its twist_mux lock (priority 30, as the stop sign) holds them; people and tests
+still drive. It says why on <code>/safety/sensor_watchdog/state</code>, on the HUD (a red banner over
+the camera), in the log and on <code>/diagnostics</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Topic</th>
+<th>Wrong when</th>
+<th>Then</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>odom</td>
+<td><code>/vehicle/odom</code></td>
+<td>quiet 0.5 s; NaN</td>
+<td>stop</td>
+</tr>
+<tr>
+<td>imu</td>
+<td><code>/sensors/imu/data</code></td>
+<td>quiet 0.5 s; NaN; the same for 1 s</td>
+<td>stop</td>
+</tr>
+<tr>
+<td>gps</td>
+<td><code>/sensors/gps/fix</code></td>
+<td>no good fix for 2 s (NaN or no fix count as none); a jump between two fixes of more than 15 m/s x the time between their stamps + 5 m (for noise), <strong>latched</strong> until cleared</td>
+<td>stop</td>
+</tr>
+<tr>
+<td>local, global</td>
+<td>the EKFs' <code>/localization/odom/*</code></td>
+<td>quiet 0.5 s; NaN</td>
+<td>stop</td>
+</tr>
+<tr>
+<td>camera</td>
+<td>the front left picture</td>
+<td>quiet 1 s; the same picture for 1 s <strong>while the wheels turn</strong></td>
+<td>stop (only where something reads it: perception, lane, camera obstacles)</td>
+</tr>
+<tr>
+<td>radar</td>
+<td><code>/sensors/radar/points</code></td>
+<td>quiet 1 s</td>
+<td>warn: <code>collision_monitor</code> already stops Nav2</td>
+</tr>
+</tbody>
+</table></div>
+<p>It runs in Gazebo (<code>watchdog:=true</code>), on the bench, and on the car next to Nav2 (odom,
+IMU, GPS, the EKFs). The checks are <code>aav_safety/watchdog.py</code>, with no ROS, and its tests.</p>
+<h3 id="what-the-car-does-before-and-after">What the car does: before and after</h3>
+<p><code>pixi run sim-check --faults</code> (after) and <code>--faults --no-watchdog</code> (before): each fault
+while Nav2 drives at about 1 m/s, in Gazebo's road world, on Ben's Mac, 15 Oct.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Fault</th>
+<th>Before: no watchdog</th>
+<th>After: the watchdog</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPS lost (<code>gps stop</code>)</td>
+<td>❌ drove on: 10.6 m in 10 s, nothing said. The global EKF carried on from the wheels and IMU (1.1 m out)</td>
+<td>✅ stood still 3.8 s after it, 2.8 m on: "gps STALE"</td>
+</tr>
+<tr>
+<td>GPS NaN (<code>gps nan</code>)</td>
+<td>❌ drove on 10.0 m, nothing said (navsat_transform drops NaN fixes: the same as lost)</td>
+<td>✅ 4.1 s, 2.8 m: "gps STALE (no fix)"</td>
+</tr>
+<tr>
+<td>GPS jumps 20 m (<code>gps jump</code>)</td>
+<td>⚠️ stood still 2.2 s after it, but by accident (Nav2's plan jumped with the map position, 19.3 m out); nothing said</td>
+<td>✅ 1.7 s, 0.7 m: "gps JUMP 20.0 m in 0.20 s", held until a person clears it</td>
+</tr>
+<tr>
+<td>IMU stopped (<code>imu stop</code>)</td>
+<td>❌ drove on 7.2 m, nothing said</td>
+<td>✅ 2.2 s, 1.1 m: "imu STALE"</td>
+</tr>
+<tr>
+<td>IMU frozen (<code>imu freeze</code>)</td>
+<td>❌ drove on 8.4 m, nothing said</td>
+<td>✅ 2.8 s, 1.7 m: "imu FROZEN"</td>
+</tr>
+<tr>
+<td>IMU NaN (<code>imu nan</code>)</td>
+<td>❌ drove on 7.7 m; the global EKF stayed 0.3 m from the truth</td>
+<td>✅ 1.8 s, 1.0 m: "imu NAN"</td>
+</tr>
+<tr>
+<td>Wheels stopped (<code>odom stop</code>)</td>
+<td>❌ drove on 9.0 m, nothing said</td>
+<td>✅ 1.9 s, 0.9 m: "odom STALE"</td>
+</tr>
+<tr>
+<td>Wheels NaN (<code>odom nan</code>)</td>
+<td>❌ drove on 6.3 m, nothing said</td>
+<td>✅ 1.7 s, 0.8 m: "odom NAN"</td>
+</tr>
+<tr>
+<td>Camera frozen (<code>camera freeze</code>)</td>
+<td>❌ drove on 7.6 m; on the HUD a frozen picture looks live</td>
+<td>✅ 2.9 s, 4.5 m: "camera FROZEN"</td>
+</tr>
+<tr>
+<td>Radar stopped (<code>radar stop</code>)</td>
+<td>✅ stood still 2.5 s after it: <code>collision_monitor</code>'s "invalid source"</td>
+<td>✅ the same, 2.5 s; the watchdog warns too</td>
+</tr>
+</tbody>
+</table></div>
+<p>"Nothing said": no warning in the log, nothing on the HUD (only the HUD's GPS line
+turned STALE for a lost GPS). The after column is the last of three runs: the first
+passed too; the second caught a false GPS jump (two fixes delivered at once), fixed by
+timing jumps with the fixes' stamps, plus 5 m for their noise.</p>
+<h3 id="still-to-do">Still to do</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The watchdog's lock never expires</td>
+<td>if the watchdog dies while all is well, nothing stops Nav2 for a sensor (twist_mux's lock times out only on silence; a timeout would block the profiles that run no watchdog). A heartbeat check, or a lock timeout where it always runs</td>
+</tr>
+<tr>
+<td>Wheel odometry that freezes</td>
+<td>not caught: a car at a steady speed sends the same speed. Cross-check the wheels with the IMU and the GPS</td>
+</tr>
+<tr>
+<td>The EKF's own guard against a GPS jump</td>
+<td>robot_localization's <code>odom1_pose_rejection_threshold</code> would ignore it, but would also refuse the first fix on the car, far from the datum. Seed the EKF from the first fix first</td>
+</tr>
+<tr>
+<td>The map window</td>
+<td>still shows only how old the car's position is; not the watchdog's verdict</td>
+</tr>
+<tr>
+<td>The real car's faults</td>
+<td>the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="replay-a-recorded-drive">Replay a recorded drive</h2>
 <p>On the car, record a drive: <code>tools/record.sh parking_lot_test</code> writes
@@ -856,6 +1133,11 @@ as <code>replay</code> (priority 40). It's open loop, so the car drifts from the
 <td>6</td>
 <td>Does the graph match the contract?</td>
 <td><code>pixi run check sim</code> (or <code>road</code>, <code>replay</code>)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Is the sensor watchdog holding Nav2?</td>
+<td><code>ros2 topic echo /safety/sensor_watchdog/state</code>: anything but OK says which sensor and why</td>
 </tr>
 </tbody>
 </table></div></section>
