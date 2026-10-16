@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newer models, on the same pictures and tasks (S6) · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/model-comparison.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Newer models, on the same pictures and tasks (S6)</h1>
+<div class="meta">21 min read · 5 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a class="here" href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#what-was-run-and-what-wasnt">What was run, and what wasn&#x27;t</a><a href="#1-seeing-people-and-stop-signs">1. Seeing: people and stop signs</a><a href="#2-plain-english-newer-local-language-models">2. Plain English: newer local language models</a><a href="#3-two-open-source-agents-what-we-could-borrow">3. Two open-source agents: what we could borrow</a><a href="#files">Files</a></nav>
+<div class="lead"><p>PLAN.md item S6, 16 Oct 2026. Two questions:</p>
+<ol>
+<li><strong>Seeing</strong>: is YOLO26 or RF-DETR better than our YOLO11 at people and stop signs?</li>
+<li><strong>Plain English</strong>: is a newer local language model better than Qwen3 at turning
+   "drive 10 m forward" into the drive server's tool calls?</li>
+</ol>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Camera: try RF-DETR Nano next, on the Orin.</strong> It saw Gazebo's stop sign from
+  <strong>20 m</strong> (YOLO11n: 10 m) and found people in 4 of 5 photos (YOLO11n: 3), with no
+  false finds. It's <strong>Apache-2.0</strong>, so the AGPL question goes away. On a Mac it is as
+  fast as YOLO11n (16-17 ms vs 12-21 ms). Its cost: 12 times the weights (30 M), and
+  2.5 times slower on a CPU alone. Not tried on the Orin yet.
+- <strong>YOLO26 brings nothing here.</strong> YOLO26n scored the same as YOLO11n, picture for
+  picture, and has the same AGPL-3.0 licence.
+- <strong>Language: Gemma 4 E4B planned all 23 requests right</strong> (Qwen3-4B, our default: 21),
+  at 0.5 s a step, in 5 GB, Apache-2.0. Ministral 3 3B (22, in 2.8 GB) is the small
+  runner-up. The default stays Qwen3-4B until the team agrees: 23 requests is a small test.
+- <strong>New: an OpenAI-compatible backend</strong> (<code>aav_language/llm_openai.py</code>), so the same agent
+  can use llama.cpp or TensorRT-LLM on the Orin. Tried through <code>mlx_lm.server</code>: 22 of 23.</p>
+</blockquote></div>
+<section class="card"><h2 id="what-was-run-and-what-wasnt">What was run, and what wasn't</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Run?</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6 detectors on 8 photos and 7 Gazebo frames, CPU, Metal (MPS) and Core ML</td>
+<td><strong>yes</strong></td>
+<td>Ben's Mac (M4 Max, 48 GB), 16 Oct</td>
+</tr>
+<tr>
+<td>The Gazebo frames</td>
+<td><strong>yes</strong>: <code>tools/sim_frames.py</code>, road world, headless</td>
+<td>the same Mac</td>
+</tr>
+<tr>
+<td>16 language models on the 23-request test, through MLX</td>
+<td><strong>yes</strong></td>
+<td>the same Mac</td>
+</tr>
+<tr>
+<td>One model through the new OpenAI-compatible backend (<code>mlx_lm.server</code>)</td>
+<td><strong>yes</strong></td>
+<td>the same Mac</td>
+</tr>
+<tr>
+<td>Anything on the Orin: TensorRT, llama.cpp with CUDA, TensorRT-LLM</td>
+<td><strong>no</strong>: no Orin here</td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>RF-DETR inside the detector node (<code>aav_yolo</code>)</td>
+<td><strong>no</strong>: only in the comparison script</td>
+<td><span class="badge b-later">later</span></td>
+</tr>
+<tr>
+<td>The car's own camera pictures</td>
+<td><strong>no</strong>: none recorded yet (C1, C6)</td>
+<td><span class="badge b-needs-you">needs you</span></td>
+</tr>
+<tr>
+<td>Ollama, llama.cpp on the Mac</td>
+<td><strong>no</strong>: neither is installed here</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Timings were taken while other jobs (Gazebo runs, downloads) shared the Mac: treat them
+as rough, within about 20 %.</p>
+</section>
+<section class="card"><h2 id="1-seeing-people-and-stop-signs">1. Seeing: people and stop signs</h2>
+<h3 id="the-result">The result</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Person (photos)</th>
+<th>Stop sign (photos + Gazebo)</th>
+<th>Gazebo sign seen from</th>
+<th>ms CPU</th>
+<th>ms Metal</th>
+<th>ms Core ML</th>
+<th>Weights</th>
+<th>Licence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>YOLO11n (ours now)</td>
+<td>3/5 (0.65)</td>
+<td>6/10 (0.54)</td>
+<td>10 m</td>
+<td>30</td>
+<td><strong>12</strong></td>
+<td>21</td>
+<td>2.6 M, 6 MB</td>
+<td>AGPL-3.0</td>
+</tr>
+<tr>
+<td>YOLO11s</td>
+<td><strong>5/5</strong> (0.76)</td>
+<td>7/10 (0.61)</td>
+<td>15 m</td>
+<td>54</td>
+<td>15</td>
+<td>37</td>
+<td>9.5 M, 19 MB</td>
+<td>AGPL-3.0</td>
+</tr>
+<tr>
+<td>YOLO26n</td>
+<td>3/5 (0.65)</td>
+<td>6/10 (0.52)</td>
+<td>10 m</td>
+<td>32</td>
+<td>13</td>
+<td>20</td>
+<td>2.6 M, 6 MB</td>
+<td>AGPL-3.0</td>
+</tr>
+<tr>
+<td>YOLO26s</td>
+<td>4/5 (0.76)</td>
+<td>7/10 (0.63)</td>
+<td>15 m</td>
+<td>56</td>
+<td>15</td>
+<td>36</td>
+<td>10.0 M, 20 MB</td>
+<td>AGPL-3.0</td>
+</tr>
+<tr>
+<td><strong>RF-DETR Nano</strong></td>
+<td>4/5 (0.72)</td>
+<td><strong>8/10</strong> (0.70)</td>
+<td><strong>20 m</strong></td>
+<td>74</td>
+<td>16</td>
+<td><strong>17</strong></td>
+<td>30.5 M, 122 MB</td>
+<td><strong>Apache-2.0</strong></td>
+</tr>
+<tr>
+<td>RF-DETR Small</td>
+<td><strong>5/5</strong> (0.82)</td>
+<td><strong>8/10</strong> (0.73)</td>
+<td><strong>20 m</strong></td>
+<td>122</td>
+<td>20</td>
+<td>22</td>
+<td>32.1 M, 128 MB</td>
+<td><strong>Apache-2.0</strong></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Person, Stop sign</td>
+<td>pictures where the model found it at 0.5 or more (the detector node's <code>confidence</code>), of the pictures that have one; in brackets, the mean of its best score in each</td>
+</tr>
+<tr>
+<td>Gazebo sign seen from</td>
+<td>the farthest frame where the sign scored 0.5 or more (camera to sign)</td>
+</tr>
+<tr>
+<td>ms</td>
+<td>per picture, the library's pre- and post-processing included; the median of 5 runs</td>
+</tr>
+<tr>
+<td>Weights</td>
+<td>parameters, and their size at 32-bit. RF-DETR's download is a 366-386 MB training checkpoint</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>No model made a false find</strong>: nothing scored 0.5 on the empty street, or a sign
+  among the people.</li>
+<li><strong>Every model found all 3 real stop signs</strong>, the French ARRÊT in Gatineau too. The
+  difference is distance: Gazebo's sign at 15 and 20 m.</li>
+<li><strong>Core ML's scores are PyTorch's</strong> to within about 0.06, for YOLO and RF-DETR. Once
+  that tipped a picture: YOLO11s found 4 of 5 people through Core ML, 5 on the CPU. The
+  table's scores are the CPU's; the Metal ones are the same.</li>
+<li>The watcher stops the car only when the box is 72 px tall (about 3.5 m), so every model
+  sees the sign in time today. Seeing it at 20 m would let the car slow down earlier.</li>
+</ul>
+<h3 id="per-picture-best-person-stop-sign-score-cpu">Per picture (best person / stop-sign score, CPU)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Picture</th>
+<th>Has</th>
+<th>YOLO11n</th>
+<th>YOLO11s</th>
+<th>YOLO26n</th>
+<th>YOLO26s</th>
+<th>RF-DETR N</th>
+<th>RF-DETR S</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dashcam-stop</td>
+<td>stop sign</td>
+<td>0.00 / 0.88</td>
+<td>0.00 / 0.94</td>
+<td>0.00 / 0.84</td>
+<td>0.00 / 0.93</td>
+<td>0.00 / 0.91</td>
+<td>0.00 / 0.92</td>
+</tr>
+<tr>
+<td>gatineau-arret</td>
+<td>stop sign</td>
+<td>0.17 / 0.89</td>
+<td>0.00 / 0.92</td>
+<td>0.18 / 0.89</td>
+<td>0.18 / 0.93</td>
+<td>0.32 / 0.90</td>
+<td>0.28 / 0.95</td>
+</tr>
+<tr>
+<td>sf-all-way-stop</td>
+<td>both</td>
+<td>0.50 / 0.94</td>
+<td>0.66 / 0.96</td>
+<td>0.48 / 0.95</td>
+<td>0.79 / 0.93</td>
+<td>0.38 / 0.95</td>
+<td>0.69 / 0.96</td>
+</tr>
+<tr>
+<td>sf-market-from-above</td>
+<td>person</td>
+<td>0.27 / 0.00</td>
+<td>0.54 / 0.00</td>
+<td>0.44 / 0.11</td>
+<td>0.39 / 0.00</td>
+<td>0.64 / 0.00</td>
+<td>0.77 / 0.00</td>
+</tr>
+<tr>
+<td>petersfield-walkers</td>
+<td>person</td>
+<td>0.88 / 0.00</td>
+<td>0.89 / 0.00</td>
+<td>0.83 / 0.00</td>
+<td>0.87 / 0.00</td>
+<td>0.89 / 0.00</td>
+<td>0.91 / 0.00</td>
+</tr>
+<tr>
+<td>barcelona-crossing</td>
+<td>person</td>
+<td>0.75 / 0.00</td>
+<td>0.82 / 0.00</td>
+<td>0.71 / 0.00</td>
+<td>0.85 / 0.00</td>
+<td>0.81 / 0.00</td>
+<td>0.85 / 0.00</td>
+</tr>
+<tr>
+<td>dyott-street-crossing</td>
+<td>person</td>
+<td>0.84 / 0.00</td>
+<td>0.88 / 0.00</td>
+<td>0.81 / 0.00</td>
+<td>0.89 / 0.00</td>
+<td>0.87 / 0.00</td>
+<td>0.90 / 0.00</td>
+</tr>
+<tr>
+<td>mississauga-empty</td>
+<td>nothing</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.15 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.26 / 0.00</td>
+<td>0.00 / 0.00</td>
+</tr>
+<tr>
+<td>Gazebo, 40 m</td>
+<td>stop sign</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.14</td>
+<td>0.18 / 0.00</td>
+</tr>
+<tr>
+<td>Gazebo, 30 m</td>
+<td>stop sign</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.28</td>
+</tr>
+<tr>
+<td>Gazebo, 20 m</td>
+<td>stop sign</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / <strong>0.51</strong></td>
+<td>0.00 / <strong>0.65</strong></td>
+</tr>
+<tr>
+<td>Gazebo, 15 m</td>
+<td>stop sign</td>
+<td>0.00 / 0.00</td>
+<td>0.00 / <strong>0.55</strong></td>
+<td>0.00 / 0.00</td>
+<td>0.00 / <strong>0.83</strong></td>
+<td>0.00 / <strong>0.79</strong></td>
+<td>0.00 / <strong>0.85</strong></td>
+</tr>
+<tr>
+<td>Gazebo, 10 m</td>
+<td>stop sign</td>
+<td>0.00 / 0.89</td>
+<td>0.00 / 0.90</td>
+<td>0.00 / 0.72</td>
+<td>0.00 / 0.81</td>
+<td>0.00 / 0.91</td>
+<td>0.00 / 0.88</td>
+</tr>
+<tr>
+<td>Gazebo, 7 m</td>
+<td>stop sign</td>
+<td>0.00 / 0.90</td>
+<td>0.00 / 0.92</td>
+<td>0.00 / 0.89</td>
+<td>0.00 / 0.89</td>
+<td>0.00 / 0.92</td>
+<td>0.00 / 0.92</td>
+</tr>
+<tr>
+<td>Gazebo, 5 m</td>
+<td>stop sign</td>
+<td>0.00 / 0.93</td>
+<td>0.00 / 0.93</td>
+<td>0.00 / 0.86</td>
+<td>0.00 / 0.93</td>
+<td>0.00 / 0.92</td>
+<td>0.00 / 0.93</td>
+</tr>
+</tbody>
+</table></div>
+<p>"sf-market-from-above" is a hard one on purpose: tiny people, seen from a roof. 15
+pictures are too few to rank models closely: they show big differences only.</p>
+<h3 id="the-pictures">The pictures</h3>
+<p>Photos from Wikimedia Commons, 640 px wide. They are <strong>not in git</strong>: <code>--fetch</code>
+downloads them, and checks each licence on Commons first.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Commons file</th>
+<th>By</th>
+<th>Licence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dashcam-stop</td>
+<td>Jackson Rd wb Wallace Rd intersection solar stop sign dashcam.jpg</td>
+<td>Michael Rivera (Mjrmtg)</td>
+<td>CC0</td>
+</tr>
+<tr>
+<td>gatineau-arret</td>
+<td>Tiled intersection with stop sign in Gatineau.jpg</td>
+<td>137a</td>
+<td>CC BY 4.0</td>
+</tr>
+<tr>
+<td>sf-all-way-stop</td>
+<td>All-way stop intersection in San Francisco.jpg</td>
+<td>Hiya111</td>
+<td>CC BY-SA 4.0</td>
+</tr>
+<tr>
+<td>sf-market-from-above</td>
+<td>Crosswalk of Market at Third, San Francisco.jpg</td>
+<td>Dllu</td>
+<td>CC BY-SA 4.0</td>
+</tr>
+<tr>
+<td>petersfield-walkers</td>
+<td>Pedestrians and a cyclist in the Petersfield Road - geograph.org.uk - 3005700.jpg</td>
+<td>Basher Eyre</td>
+<td>CC BY-SA 2.0</td>
+</tr>
+<tr>
+<td>barcelona-crossing</td>
+<td>Pedestrians crossing the street in Barcelona DSF0993.jpg</td>
+<td>Levi Meir Clancy</td>
+<td>CC0</td>
+</tr>
+<tr>
+<td>dyott-street-crossing</td>
+<td>Pedestrians crossing in Dyott Street - geograph.org.uk - 1105273.jpg</td>
+<td>Basher Eyre</td>
+<td>CC BY-SA 2.0</td>
+</tr>
+<tr>
+<td>mississauga-empty</td>
+<td>Crosswalk (6984572731).jpg</td>
+<td>^ Missi ^ (Flickr)</td>
+<td>CC BY 2.0</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Gazebo frames: the front left camera (640 x 360) on the road world's centre line,
+40, 30, 20, 15, 10, 7 and 5 m from the stop sign. Gazebo has no people in it yet.</p>
+<h3 id="licences-what-agpl-30-means-for-us">Licences: what AGPL-3.0 means for us</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Ultralytics (YOLO11, YOLO26)</th>
+<th>RF-DETR Nano, Small (Roboflow)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Code</td>
+<td>AGPL-3.0</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>The trained weights</td>
+<td>AGPL-3.0, Ultralytics says, our own fine-tuned ones too</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Our code that uses it</td>
+<td>must be shared under AGPL-3.0 terms whenever we give the program to anyone, <strong>or let people use it over a network</strong></td>
+<td>any licence</td>
+</tr>
+<tr>
+<td>A closed or paid version later</td>
+<td>needs an Ultralytics Enterprise licence</td>
+<td>allowed: keep the notices</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Our repo is public</strong>, so sharing the source is easy. But it has <strong>no licence file</strong>
+  yet: by default that means "all rights reserved", which doesn't fit with AGPL code in
+  the same program. With YOLO, the team should put the repo, or at least <code>aav_yolo</code>,
+  under AGPL-3.0 (a team decision; not legal advice).</li>
+<li><strong>The network clause</strong>: if the HUD's web page ever shows YOLO's boxes to people over the
+  network, that counts as use over a network.</li>
+<li><strong>The 2024-25 <code>best.pt</code></strong> was trained with Ultralytics: Ultralytics counts it as AGPL too.</li>
+<li><strong>RF-DETR's larger models</strong> (XLarge, 2XLarge, in <code>rfdetr_plus</code>) have a different,
+  Roboflow licence. Nano, Small, Medium, Base and Large are Apache-2.0.</li>
+</ul>
+<h3 id="exporting-orin-and-mac">Exporting: Orin and Mac</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Orin (TensorRT)</th>
+<th>Mac (Core ML)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>YOLO11, YOLO26</td>
+<td><code>yolo export format=engine half=True</code> on the Orin: <code>tools/build_engine.py</code> (written, <span class="badge b-untested">untested</span>). YOLO26 needs no NMS step, so the engine is all on the GPU</td>
+<td><code>yolo export format=coreml</code>: <strong>ran</strong>, 2 s each, 5-37 MB</td>
+</tr>
+<tr>
+<td>RF-DETR</td>
+<td><code>model.export(format="onnx")</code>, then TensorRT's <code>trtexec --fp16</code> on the Orin, or <code>format="tensorrt"</code> with <code>rfdetr[tensorrt]</code>. No NMS step either. <span class="badge b-untested">untested</span></td>
+<td><code>model.export(format="coreml")</code>: <strong>ran</strong> (the script's Core ML rows). The script reads its raw scores itself</td>
+</tr>
+</tbody>
+</table></div>
+<p>An engine runs only on the GPU and TensorRT version that built it: build each on the
+Orin itself.</p>
+<h3 id="installing">Installing</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Where from</th>
+<th>Licence</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ultralytics 8.4 (YOLO11, YOLO26)</td>
+<td>conda-forge, already in the ml environment</td>
+<td>AGPL-3.0</td>
+<td>works</td>
+</tr>
+<tr>
+<td>rfdetr 1.11.2</td>
+<td>conda-forge</td>
+<td>Apache-2.0</td>
+<td><strong>works</strong> beside Ultralytics, the same PyTorch 2.13-2.14. Added to <code>pixi.toml</code>'s ml feature</td>
+</tr>
+<tr>
+<td>transformers 5, supervision, peft, pydantic</td>
+<td>come with rfdetr</td>
+<td>Apache-2.0, MIT</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>The run itself used a scratch Pixi environment in <code>~/aav-models/s6-env</code> with the same
+packages, so the shared <code>.pixi</code> wasn't changed under other people's runs.</p>
+<h3 id="run-it-again">Run it again</h3>
+<pre class="highlight"><code class="language-bash">pixi run python3 tools/sim_frames.py --out ~/aav-models/frames      # Gazebo frames (1 min)
+pixi run -e ml python3 tools/compare_detectors.py --fetch           # the photos
+pixi run -e ml python3 tools/compare_detectors.py --out ~/aav-models/detectors.json</code></pre>
+<p>The weights go in <code>~/aav-models/weights/</code> (their URLs are in the script, <code>MODELS</code>), never
+in git. The script checks each file's SHA-256 (MD5 for RF-DETR, as rfdetr pins them)
+before loading it: these files are Python pickles, so a wrong one could run code.</p>
+</section>
+<section class="card"><h2 id="2-plain-english-newer-local-language-models">2. Plain English: newer local language models</h2>
+<h3 id="the-result_1">The result</h3>
+<p>The node's own test: 23 requests (<code>aav_language/eval_set.py</code>), each planned against a
+pretend car through the real drive server, greedy decoding, through MLX on the Mac. All
+<code>mlx-community/&lt;name&gt;-4bit</code>. <strong>Bold</strong> = the best in the column.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Correct (of 23)</th>
+<th>Moves (12)</th>
+<th>At once (4)</th>
+<th>Refusals (7)</th>
+<th>s per step</th>
+<th>s per request</th>
+<th>Memory GB</th>
+<th>Licence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>gemma-4-e4b-it</strong> (new)</td>
+<td><strong>23</strong></td>
+<td><strong>12</strong></td>
+<td><strong>4</strong></td>
+<td><strong>7</strong></td>
+<td>0.53</td>
+<td>1.5</td>
+<td>5.1</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Ministral-3-3B-Instruct-2512 (new)</td>
+<td>22</td>
+<td>11</td>
+<td><strong>4</strong></td>
+<td><strong>7</strong></td>
+<td>0.70</td>
+<td>1.4</td>
+<td><strong>2.8</strong></td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>granite-4.1-8b (new)</td>
+<td>22</td>
+<td><strong>12</strong></td>
+<td><strong>4</strong></td>
+<td>6</td>
+<td>2.2</td>
+<td>4.9</td>
+<td>6.2</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Qwen3.6-35B-A3B (new, 20 GB)</td>
+<td>22</td>
+<td><strong>12</strong></td>
+<td><strong>4</strong></td>
+<td>6</td>
+<td>0.90</td>
+<td>2.3</td>
+<td>21.0</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Qwen3-4B-Instruct-2507 (<strong>our default</strong>)</td>
+<td>21</td>
+<td><strong>12</strong></td>
+<td><strong>4</strong></td>
+<td>5</td>
+<td>0.91</td>
+<td>2.0</td>
+<td>3.3</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Qwen3-8B</td>
+<td>21</td>
+<td><strong>12</strong></td>
+<td><strong>4</strong></td>
+<td>5</td>
+<td>1.7</td>
+<td>3.8</td>
+<td>5.7</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>gemma-4-26b-a4b-it (new, 15 GB)</td>
+<td>21</td>
+<td><strong>12</strong></td>
+<td><strong>4</strong></td>
+<td>5</td>
+<td>0.76</td>
+<td>1.6</td>
+<td>15.4</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>gemma-4-e2b-it (new)</td>
+<td>20</td>
+<td>11</td>
+<td>2</td>
+<td><strong>7</strong></td>
+<td><strong>0.20</strong></td>
+<td><strong>0.4</strong></td>
+<td>3.5</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Qwen3.5-4B</td>
+<td>19</td>
+<td><strong>12</strong></td>
+<td><strong>4</strong></td>
+<td>3</td>
+<td>1.0</td>
+<td>2.2</td>
+<td>3.9</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Ministral-3-8B-Instruct-2512 (new)</td>
+<td>19</td>
+<td>10</td>
+<td><strong>4</strong></td>
+<td>5</td>
+<td>1.7</td>
+<td>4.4</td>
+<td>5.8</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Qwen3.5-9B (new)</td>
+<td>18</td>
+<td>9</td>
+<td><strong>4</strong></td>
+<td>5</td>
+<td>2.3</td>
+<td>7.9</td>
+<td>6.7</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Qwen3.5-2B (new)</td>
+<td>14</td>
+<td>10</td>
+<td>3</td>
+<td>1</td>
+<td>0.60</td>
+<td>2.7</td>
+<td>2.5</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>granite-4.1-3b (new)</td>
+<td>13</td>
+<td>9</td>
+<td>3</td>
+<td>1</td>
+<td>0.89</td>
+<td>2.2</td>
+<td>3.1</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td>Llama-3.2-3B-Instruct (new)</td>
+<td>10</td>
+<td>5</td>
+<td><strong>4</strong></td>
+<td>1</td>
+<td>0.88</td>
+<td>4.2</td>
+<td>2.9</td>
+<td>Llama 3.2</td>
+</tr>
+</tbody>
+</table></div>
+<p>Run 16 Oct. The three Qwen rows above them in plain-english.md were run again: the same
+scores to the request (greedy decoding). Llama-3.1-8B (17) and Llama-3.2-1B (8) are from
+that page, not run again.</p>
+<h3 id="what-went-wrong-model-by-model">What went wrong, model by model</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Its mistakes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gemma-4-e4b</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Ministral-3-3B</td>
+<td>"go forward 5 m then turn left 90 degrees": only the drive; it asked for the radius instead</td>
+</tr>
+<tr>
+<td>granite-4.1-8b</td>
+<td>"go as fast as you can": a 10 m drive at 1 m/s</td>
+</tr>
+<tr>
+<td>Qwen3.6-35B-A3B</td>
+<td>"go as fast as you can": 200 m at 1 m/s</td>
+</tr>
+<tr>
+<td>Qwen3-4B-2507 (default)</td>
+<td>"30 m at 5 m/s" shrunk to 1 m/s; "go somewhere fun": a turn</td>
+</tr>
+<tr>
+<td>gemma-4-26b-a4b</td>
+<td>"go as fast as you can" and "go somewhere fun": drives</td>
+</tr>
+<tr>
+<td>gemma-4-e2b</td>
+<td><strong>didn't call stop or e-stop</strong> for "stop the car now please" and "EMERGENCY! kill it": not safe enough</td>
+</tr>
+<tr>
+<td>Qwen3.5-9B</td>
+<td>repeated a move up to 8 times; drove for "go somewhere fun"</td>
+</tr>
+<tr>
+<td>Llama-3.2-3B</td>
+<td>numbers as text ("100"), moves twice</td>
+</tr>
+</tbody>
+</table></div>
+<p>Typing just "stop" or "estop" never reaches a model (<code>react.FAST</code>), so a model's miss
+there matters less; the agent's Ctrl-C sends <code>stop()</code> too.</p>
+<h3 id="two-models-needed-the-agent-to-learn-their-format">Two models needed the agent to learn their format</h3>
+<p>Gemma 4 and Ministral 3 first scored <strong>0</strong>: they answered in their own tool-call formats,
+which the agent couldn't read. <code>react.parse_reply</code> now reads both:</p>
+<pre class="highlight"><code class="language-text">Gemma 4      &lt;|tool_call&gt;call:turn{angle_deg:45,direction:&lt;|"|&gt;right&lt;|"|&gt;}&lt;tool_call|&gt;
+Ministral 3  [TOOL_CALLS]turn[ARGS]{"angle_deg": 45, "direction": "right"}</code></pre>
+<h3 id="the-recommendation">The recommendation</h3>
+<ul>
+<li><strong>Gemma 4 E4B is the best candidate for the default</strong>: all 23, quick, Apache-2.0. Its
+  official licence is Apache-2.0 (<code>google/gemma-4-e4b-it</code>); the MLX copy's page still
+  says "gemma": go by Google's. Its download is 5.2 GB.</li>
+<li><strong>Before switching</strong>: add 20 or so requests to <code>eval_set.py</code> (one or two answers either
+  way is noise at 23), and try it on the Orin.</li>
+<li><strong>On the Orin (AGX)</strong>: the 3-8 B models fit easily. The two 15-20 GB mixture-of-experts
+  models fit a 64 GB Orin too, and are quick for their size (only 3-4 B weights work per
+  word), but scored no better.</li>
+</ul>
+<h3 id="the-same-agent-on-the-orin-the-openai-compatible-backend">The same agent on the Orin: the OpenAI-compatible backend</h3>
+<p>MLX runs only on Apple silicon. The Orin needs llama.cpp (CUDA) or TensorRT-LLM. All of
+them, and Ollama, serve the same OpenAI <code>/v1/chat/completions</code> API, so one small client
+covers every one: <code>aav_language/llm_openai.py</code> (standard library only).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Server</th>
+<th>Machine</th>
+<th>Licence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>llama-server -m &lt;model&gt;.gguf --jinja</code> (llama.cpp)</td>
+<td>Orin (CUDA), Mac, Linux</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>trtllm-serve &lt;model&gt;</code> (TensorRT-LLM)</td>
+<td>Orin (JetPack)</td>
+<td>Apache-2.0</td>
+</tr>
+<tr>
+<td><code>ollama serve</code></td>
+<td>Orin, Mac, Linux</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td><code>mlx_lm.server --model &lt;id&gt;</code></td>
+<td>Mac</td>
+<td>MIT</td>
+</tr>
+</tbody>
+</table></div>
+<pre class="highlight"><code class="language-bash">pixi run -e llm llm-eval --backend openai --base-url http://127.0.0.1:8080/v1 --models &lt;name&gt;</code></pre>
+<p><strong>Tried on the Mac</strong> through <code>mlx_lm.server</code> with Gemma 4 E4B: <strong>22 of 23</strong>, 0.2 s a step
+(the server keeps the prompt cached). The one miss, the U-turn, came back empty: the
+server's own reading of the tool call failed. <span class="badge b-untested">untested</span> on the Orin.</p>
+<h3 id="run-it-again_1">Run it again</h3>
+<pre class="highlight"><code class="language-bash">pixi run -e llm llm-eval                                   # the five models on plain-english.md
+HF_HOME=~/aav-models/hf pixi run -e llm llm-eval --models newer --out ~/aav-models/llm.json</code></pre>
+<p><code>--models newer</code> is the S6 list (<code>run_eval.NEWER</code>). The models download into the Hugging
+Face cache (here <code>~/aav-models/hf</code>): safetensors only, nothing that runs code.</p>
+</section>
+<section class="card"><h2 id="3-two-open-source-agents-what-we-could-borrow">3. Two open-source agents: what we could borrow</h2>
+<p>Ben mentioned two agent harnesses. Both are <strong>MIT</strong>-licensed TypeScript; we read them as
+references only, and copied no code.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>pi (Mario Zechner)</th>
+<th>opencode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Repo</td>
+<td><code>badlogic/pi-mono</code>, now <code>earendil-works/pi</code></td>
+<td><code>sst/opencode</code>, now <code>anomalyco/opencode</code></td>
+</tr>
+<tr>
+<td>The loop</td>
+<td>call the model, run its tool calls, add the results, repeat until no tool calls</td>
+<td>the same, one step at a time, with a step limit per agent</td>
+</tr>
+<tr>
+<td>Tool calls in one reply</td>
+<td>run together, unless a tool says "one at a time"</td>
+<td>run together</td>
+</tr>
+<tr>
+<td>Bad arguments</td>
+<td>checked against the tool's JSON schema; the error, field by field, goes back to the model</td>
+<td>the same, "update the arguments and call the tool again"</td>
+</tr>
+<tr>
+<td>Asking a person</td>
+<td>none by design (run it in a container)</td>
+<td>per tool: allow, ask or deny; the last matching rule wins</td>
+</tr>
+<tr>
+<td>Stopping</td>
+<td>an abort signal reaches every tool; messages typed meanwhile are queued ("steer")</td>
+<td>interrupt cancels running tools; a queue for typed messages</td>
+</tr>
+<tr>
+<td>Too many steps</td>
+<td>no limit</td>
+<td>tools switched off; the model must sum up what it did and what's left</td>
+</tr>
+<tr>
+<td>Local models</td>
+<td>any OpenAI-compatible server (Ollama, llama.cpp <code>--jinja</code>)</td>
+<td>the same; raise Ollama's context to 16-32 k for tool calls</td>
+</tr>
+<tr>
+<td>Where</td>
+<td><code>packages/agent/src/agent-loop.ts</code></td>
+<td><code>packages/core/src/session/runner/llm.ts</code>, <code>permission.ts</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>What our node (<code>react.py</code>) could borrow:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>From</th>
+<th>For us</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Check arguments against the tool's schema, send the errors back once</td>
+<td>both</td>
+<td>fewer "unreadable" steps from small models</td>
+</tr>
+<tr>
+<td>Allow / ask / deny per tool</td>
+<td>opencode</td>
+<td>what we do by hand: status, stop, estop allowed; moves asked (the "yes")</td>
+</tr>
+<tr>
+<td>At the step limit, switch tools off and make the model sum up</td>
+<td>opencode</td>
+<td>a clear answer instead of "I stopped planning"</td>
+</tr>
+<tr>
+<td>Never run a reply cut off by the token limit</td>
+<td>pi</td>
+<td>a half-written move must not run</td>
+</tr>
+<tr>
+<td>Typed text during a drive is queued, not lost; one abort reaches everything</td>
+<td>pi</td>
+<td>"stop" while driving already works; "then turn left" could queue</td>
+</tr>
+<tr>
+<td>One OpenAI-compatible client</td>
+<td>both</td>
+<td><strong>done</strong>: <code>llm_openai.py</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="files">Files</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tools/compare_detectors.py</code></td>
+<td>the detector comparison; tests in <code>tools/tests/test_compare_detectors.py</code></td>
+</tr>
+<tr>
+<td><code>tools/sim_frames.py</code></td>
+<td>Gazebo's stop sign from 7 distances</td>
+</tr>
+<tr>
+<td><code>src/drivers/aav_language/aav_language/run_eval.py</code></td>
+<td>the language test: <code>--models newer</code>, <code>--backend openai</code></td>
+</tr>
+<tr>
+<td><code>src/drivers/aav_language/aav_language/llm_openai.py</code></td>
+<td>the OpenAI-compatible backend; tests in <code>test/test_llm_openai.py</code></td>
+</tr>
+<tr>
+<td><code>src/drivers/aav_language/aav_language/react.py</code></td>
+<td>reads Gemma 4's and Mistral 3's tool calls</td>
+</tr>
+<tr>
+<td><code>~/aav-models/</code> (not in git)</td>
+<td>weights, photos, frames, every score as JSON</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="plain-english.html"><small>Previous</small>← Plain English</a>
+<a class="next" href="firmware.html"><small>Next</small>Firmware →</a></nav>
+</main>
+<footer>Source: <code>docs/model-comparison.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

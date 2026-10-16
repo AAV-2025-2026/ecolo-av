@@ -36,6 +36,7 @@
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a class="here" href="costmaps.html">Costmaps</a>
+<a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
@@ -46,8 +47,10 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
@@ -449,14 +452,15 @@ across a city are a separate kind of map: a road graph. Two tools handle that:</
 <ul>
 <li><strong>OSRM</strong>, which the HUD already uses. It turns a destination into a route of
   latitude/longitude points. Those points can become a <code>follow_gps_waypoints</code> goal for
-  Nav2 (see <a href="hud.html">hud.md</a>).</li>
+  Nav2 (see <a href="hud.html">hud.md</a>). Our own offline router for that, Valhalla, and the node
+  that turns its routes into waypoints: <a href="routes.html">Street routes</a>.</li>
 <li><strong>Nav2's Route Server</strong> (<code>nav2_route</code>). It's released for Jazzy, in Nav2 1.3.13 as of
   October 2026, and follows a hand-made graph of lanes or paths. Consider it if the test site becomes a set of fixed lanes.</li>
 </ul>
 <p>For this year's goals (an empty costmap, then a pre-rendered test site) a grid map plus
 GPS waypoints is enough.</p></section>
 <nav class="prevnext"><a class="prev" href="howto-driver.html"><small>Previous</small>← Build a driver</a>
-<a class="next" href="perception.html"><small>Next</small>Perception →</a></nav>
+<a class="next" href="routes.html"><small>Next</small>Street routes →</a></nav>
 </main>
 <footer>Source: <code>docs/costmaps.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

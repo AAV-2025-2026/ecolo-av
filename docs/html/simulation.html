@@ -36,6 +36,7 @@
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
@@ -46,8 +47,10 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
@@ -781,6 +784,11 @@ angles small depth errors become large range errors.</p>
 <td>the bench's 1 m box, in the lane 15 m ahead</td>
 </tr>
 <tr>
+<td><code>ghost</code></td>
+<td><code>false</code></td>
+<td>a pretend person only Nav2 sees: <code>pixi run ghost --local ahead 10</code> (<a href="ghost-obstacles.html">Ghost obstacles</a>)</td>
+</tr>
+<tr>
 <td><code>start_y</code>, <code>start_yaw</code></td>
 <td><code>0.0</code></td>
 <td>m and rad: start the car this far left of the centre, and turned this far left. The EKFs still start at the origin, facing east</td>
@@ -861,6 +869,7 @@ the frames come out right (<code>sim-check</code> tests them).</p>
 pixi run -e ml sim-check --perception --obstacle  # and the stop sign, and the box
 pixi run sim-check --lane                         # and lane keeping, in a second run
 pixi run sim-check --lidar-obstacle               # and the lidar alone (radar off) stops for a post
+pixi run sim-check --ghost                        # and a pretend person only Nav2 sees, in a second run
 pixi run sim-check --faults                       # and sensor failures on purpose (below)
 pixi run sim-check --faults --no-watchdog         # the same, a report of what happens without the watchdog
 pixi run sim-check --no-lidar                     # without the simulated roof lidar (on by default)

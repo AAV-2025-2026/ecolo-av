@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">31 min read · 13 sections</div></header>
+<div class="meta">33 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -36,6 +36,7 @@
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
@@ -46,8 +47,10 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
@@ -661,7 +664,7 @@ campus streets that aren't really there: the streets only match the world on the
 <tbody>
 <tr>
 <td><code>/</code> or a click on the box</td>
-<td>open the search box</td>
+<td>open the search box (a tap or click also opens the <a href="#the-on-screen-keyboard-touchscreen">on-screen keyboard</a>)</td>
 </tr>
 <tr>
 <td>letters, Backspace</td>
@@ -681,7 +684,78 @@ campus streets that aren't really there: the streets only match the world on the
 </tr>
 </tbody>
 </table></div>
-<h4 id="what-it-sends">What it sends</h4>
+<h4 id="the-on-screen-keyboard-touchscreen">The on-screen keyboard (touchscreen)</h4>
+<p>The car's screen has no keyboard. <strong>Tap the search box</strong>: a keyboard opens along the
+bottom. A mouse click counts as a tap, so it works the same on a Mac.</p>
+<p><img alt="The on-screen keyboard: &quot;café&quot; typed, the results above the keys (--demo --search café --keyboard)" src="../img/map-keyboard.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>letters, digits, <code>' - . &amp;</code></td>
+<td>type (lower case: the search ignores case)</td>
+</tr>
+<tr>
+<td>é è à ç ê ô</td>
+<td>the accents in Ottawa's French names</td>
+</tr>
+<tr>
+<td>Space</td>
+<td>a space</td>
+</tr>
+<tr>
+<td>Back</td>
+<td>remove the last letter (a whole letter, even é)</td>
+</tr>
+<tr>
+<td>Clear</td>
+<td>empty the box</td>
+</tr>
+<tr>
+<td>Enter</td>
+<td>pick the top result (the map centres on it, then DRIVE HERE)</td>
+</tr>
+<tr>
+<td>Close</td>
+<td>hide the keyboard; the results stay, tap one</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Key size</td>
+<td>84 px at 1600 x 900, grows with the window, never under 60 px</td>
+</tr>
+<tr>
+<td>Results</td>
+<td>only the rows that fit above the keyboard</td>
+</tr>
+<tr>
+<td>A real keyboard</td>
+<td>works as before; <code>/</code> opens the box without the on-screen keyboard</td>
+</tr>
+<tr>
+<td>Code</td>
+<td><code>map-core/src/keyboard.rs</code> (the keys, which one a tap hit: unit-tested), <code>map-app/src/ui.rs</code> (drawing)</td>
+</tr>
+<tr>
+<td>Screenshot</td>
+<td><code>--keyboard</code> opens it at the start</td>
+</tr>
+</tbody>
+</table></div>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -787,6 +861,10 @@ a bug.</p>
 <td>with <code>--search</code>: picks result N</td>
 </tr>
 <tr>
+<td><code>--keyboard</code></td>
+<td>opens the box with the on-screen keyboard showing</td>
+</tr>
+<tr>
 <td><code>--send-goal TEXT</code></td>
 <td>once <code>/map</code> and the car are known: sends the first result inside Nav2's map, and says so on the terminal</td>
 </tr>
@@ -819,7 +897,11 @@ a bug.</p>
 </tr>
 <tr>
 <td>On the car's touchscreen</td>
-<td>untested: it needs an on-screen keyboard (future work)</td>
+<td>untested: the on-screen keyboard (16 Oct) is ready; taps by hand not tried yet</td>
+</tr>
+<tr>
+<td>The on-screen keyboard (16 Oct)</td>
+<td><code>cargo test</code> (map-core <code>keyboard</code>: key at a point, scaling, editing, Back on é); <code>--demo --keyboard</code> screenshot above. Taps by hand: not tested (macOS blocks input from scripts)</td>
 </tr>
 </tbody>
 </table></div>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">31 min read · 4 sections</div></header>
+<div class="meta">34 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -36,6 +36,7 @@
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
+<a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
@@ -46,8 +47,10 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
 <a href="firmware.html">Firmware</a>
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
@@ -182,6 +185,22 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>-</td>
 <td>-</td>
 <td>The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).</td>
+</tr>
+<tr>
+<td><code>/safety/ghost/scan</code></td>
+<td><code>sensor_msgs/msg/LaserScan</code></td>
+<td><code>ghost_obstacle</code></td>
+<td><code>local_costmap</code>, <code>collision_monitor</code></td>
+<td>-</td>
+<td>A pretend person for stopping tests with nothing real to hit (aav_ghost ghost_obstacle, navigation.launch.py ghost:=true - sim.launch.py and car.launch.py pass it; off by default). In base_link, 720 ranges all the way round, 10 Hz - the ghost's near side, inf everywhere else, all inf with no ghost. Read by the local costmap's own ghost_layer and as collision_monitor's ghost source, so it only ever adds an obstacle, never clears or hides a real one. Silent for 1 s, it stops Nav2 like a silent radar. Placed with pixi run ghost (ahead 10, at x y, off). docs/ghost-obstacles.md.</td>
+</tr>
+<tr>
+<td><code>/safety/ghost/marker</code></td>
+<td><code>visualization_msgs/msg/Marker</code></td>
+<td><code>ghost_obstacle</code></td>
+<td>-</td>
+<td>-</td>
+<td>The ghost as a purple cylinder in the map frame, for RViz and Lichtblick; DELETE when it goes.</td>
 </tr>
 <tr>
 <td><code>/safety/collision_monitor/collision_points_marker</code></td>
@@ -643,9 +662,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>navsat_transform</code></td>
-<td><code>hud_server</code>, <code>hud</code></td>
+<td><code>hud_server</code>, <code>hud</code>, <code>street_router</code></td>
 <td>sim, car, replay, bench</td>
-<td>The global EKF's position as lat/lon, for maps in the HUD or Foxglove.</td>
+<td>The global EKF's position as lat/lon, for maps in the HUD or Foxglove, and the start of street_router's routes.</td>
 </tr>
 <tr>
 <td><code>/map</code></td>
@@ -670,6 +689,46 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>map</code></td>
 <td>-</td>
 <td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud_raylib) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/destination</code></td>
+<td><code>geographic_msgs/msg/GeoPointStamped</code></td>
+<td>-</td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>Where to go, as lat/lon (ros2 topic pub, or a screen). street_router asks the router (Valhalla on this computer, pixi run -e routes router) for the way there along the streets, from the car's newest /localization/gps/fix.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/goal</code></td>
+<td><code>geometry_msgs/msg/PoseStamped</code></td>
+<td>-</td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>Where to go, as a map-frame point (RViz, or a screen); street_router turns it into lat/lon with /toLL, then as /drivers/nav/route/destination.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/waypoints</code></td>
+<td><code>geographic_msgs/msg/GeoPath</code></td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>-</td>
+<td>Transient local (latched). The route as GPS waypoints spaced for Nav2 (10-30 m apart, each facing along the street, the car's own start left out) - what /drivers/nav/route/follow sends to /follow_gps_waypoints.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/path</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>street_router</code></td>
+<td><code>map</code></td>
+<td>-</td>
+<td>Transient local (latched). The whole route in the map frame (each point through /fromLL). The map window (map, aav_hud_raylib) draws it violet under Nav2's blue plan; RViz and Foxglove can too. Not a plan Nav2 follows.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/status</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>-</td>
+<td>Transient local (latched). For people - the route's length and the router's time for a normal car, or why there's no route (no router, no GPS fix, longer than max_length).</td>
 </tr>
 <tr>
 <td><code>/tf</code></td>
@@ -735,13 +794,13 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/fromLL</code></td>
 <td><code>robot_localization/srv/FromLL</code></td>
 <td><code>navsat_transform</code></td>
-<td>Lat/lon -&gt; map x, y. Nav2's follow_gps_waypoints calls it, and goto_driver (aav_goto) for a lat/lon goal.</td>
+<td>Lat/lon -&gt; map x, y. Nav2's follow_gps_waypoints calls it, and goto_driver (aav_goto) for a lat/lon goal, and street_router, for /drivers/nav/route/path.</td>
 </tr>
 <tr>
 <td><code>/toLL</code></td>
 <td><code>robot_localization/srv/ToLL</code></td>
 <td><code>navsat_transform</code></td>
-<td></td>
+<td>Map x, y -&gt; lat/lon. street_router calls it for /drivers/nav/route/goal.</td>
 </tr>
 <tr>
 <td><code>/datum</code></td>
@@ -766,6 +825,12 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>std_srvs/srv/Trigger</code></td>
 <td><code>sensor_watchdog</code></td>
 <td>A person says the position is right again after a GPS jump, which the watchdog latches (pixi run sim-fault clear in Gazebo).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/follow</code></td>
+<td><code>std_srvs/srv/Trigger</code></td>
+<td><code>street_router</code></td>
+<td>A person sends street_router's newest route to Nav2, as a /follow_gps_waypoints goal. Nothing goes to Nav2 without it (unless follow_at_once is set). Nav2, twist_mux, ego and the spine stay in charge.</td>
 </tr>
 </tbody>
 </table></div>
@@ -815,7 +880,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/follow_gps_waypoints</code></td>
 <td><code>nav2_msgs/action/FollowGPSWaypoints</code></td>
 <td><code>waypoint_follower</code></td>
-<td>Lat/lon waypoints. The HUD (hud_server) sends its locked route here. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.</td>
+<td>Lat/lon waypoints. The HUD (hud_server) sends its locked route here, and street_router its street route on /drivers/nav/route/follow. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.</td>
 </tr>
 </tbody>
 </table></div>
