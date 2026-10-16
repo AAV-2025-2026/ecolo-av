@@ -28,6 +28,37 @@ def test_qwen35_xml_tool_call():
     assert r.calls == [ToolCall('turn', {'angle_deg': -45, 'radius_m': 8.5})]
 
 
+def test_gemma4_tool_call():
+    r = parse_reply('<|tool_call>call:turn{angle_deg:45,direction:<|"|>right<|"|>,'
+                    'radius_m:8}<tool_call|>')
+    assert r.calls == [ToolCall('turn', {'angle_deg': 45, 'direction': 'right',
+                                         'radius_m': 8})]
+    r = parse_reply('Checking.\n<|tool_call>call:status{}<tool_call|>')
+    assert r.calls == [ToolCall('status', {})] and r.thought == 'Checking.'
+    r = parse_reply('<|tool_call>call:go_to_gps{lat:45.3861,lon:-75.6959}')   # cut off
+    assert r.calls == [ToolCall('go_to_gps', {'lat': 45.3861, 'lon': -75.6959})]
+    r = parse_reply('<|tool_call>call:drive{note:<|"|>a, b: c<|"|>,distance_m:3}<tool_call|>')
+    assert r.calls == [ToolCall('drive', {'note': 'a, b: c', 'distance_m': 3})]
+
+
+def test_gemma4_unreadable_arguments_are_an_error():
+    r = parse_reply('<|tool_call>call:drive{distance_m:<|"|>10}<tool_call|>')
+    assert r.error and not r.calls
+
+
+def test_mistral3_tool_call():
+    r = parse_reply('[TOOL_CALLS]turn[ARGS]{"angle_deg": 45, "radius_m": 8, '
+                    '"direction": "right"}')
+    assert r.calls == [ToolCall('turn', {'angle_deg': 45, 'radius_m': 8,
+                                         'direction': 'right'})]
+    r = parse_reply('[TOOL_CALLS]status[ARGS]{}[TOOL_CALLS]drive[ARGS]{"distance_m": 5}')
+    assert r.calls == [ToolCall('status', {}), ToolCall('drive', {'distance_m': 5})]
+    r = parse_reply('[TOOL_CALLS]drive[ARGS]{"distance_m": ')
+    assert r.error and not r.calls
+    r = parse_reply('[TOOL_CALLS][{"name": "drive", "arguments": {"distance_m": 7}}]')
+    assert r.calls == [ToolCall('drive', {'distance_m': 7})]       # Mistral before 3
+
+
 def test_llama_tool_call():
     r = parse_reply('<|python_tag|>{"name": "drive", "parameters": {"distance_m": 10}}')
     assert r.calls == [ToolCall('drive', {'distance_m': 10})]

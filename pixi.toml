@@ -160,6 +160,7 @@ platforms = ["linux-64", "mac"]
 pytorch = ">=2.13,<3"
 torchvision = ">=0.28,<1"
 ultralytics = ">=8.4.175,<9"
+rfdetr = ">=1.11,<2"   # RF-DETR (Roboflow, Apache-2.0): S6, docs/model-comparison.md
 numpy = ">=2,<=2.3.5"   # Ultralytics' Core ML export fails on NumPy 2.4 and newer
 
 [feature.ml.tasks]

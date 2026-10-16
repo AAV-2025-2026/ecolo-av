@@ -112,6 +112,45 @@ THINK = re.compile(r'<think>.*?</think>', re.S)
 TAGGED = re.compile(r'<tool_call>(.*?)(?:</tool_call>|$)', re.S)
 XML_FN = re.compile(r'<function=([\w.-]+)>(.*?)(?:</function>|$)', re.S)
 XML_ARG = re.compile(r'<parameter=([\w.-]+)>(.*?)</parameter>', re.S)
+GEMMA = re.compile(r'<\|tool_call>\s*call:([\w.-]+)\s*\{(.*?)\}\s*(?:<tool_call\|>|$)', re.S)
+GEMMA_QUOTE = '<|"|>'
+MISTRAL = re.compile(r'\[TOOL_CALLS\]\s*([\w.-]+)\s*\[ARGS\]\s*')
+
+
+def _gemma_args(body: str) -> Optional[Dict]:
+    """
+    Read Gemma 4's arguments: key:value pairs, strings between <|"|> marks.
+
+    distance_m:100,direction:<|"|>right<|"|>  ->  {'distance_m': 100, 'direction': 'right'}
+    None if they can't be read (a nested object, say: our tools take none).
+    """
+    args, i = {}, 0
+    while i < len(body):
+        colon = body.find(':', i)
+        if colon < 0:
+            return None if body[i:].strip() else args
+        key = body[i:colon].strip().strip('"')
+        rest = body[colon + 1:].lstrip()
+        start = len(body) - len(rest)
+        if rest.startswith(GEMMA_QUOTE):
+            end = body.find(GEMMA_QUOTE, start + len(GEMMA_QUOTE))
+            if end < 0:
+                return None
+            value = body[start + len(GEMMA_QUOTE):end]
+            i = end + len(GEMMA_QUOTE)
+        else:
+            end = body.find(',', start)
+            end = len(body) if end < 0 else end
+            raw = body[start:end].strip()
+            if raw.startswith(('{', '[')):
+                return None
+            value, i = _number(raw), end
+        if not key:
+            return None
+        args[key] = value
+        i = body.find(',', i)
+        i = len(body) if i < 0 else i + 1
+    return args
 
 
 def parse_reply(text: str) -> Reply:
@@ -119,12 +158,33 @@ def parse_reply(text: str) -> Reply:
     Read one model reply: its tool calls, or its answer.
 
     Formats: Qwen's <tool_call>{"name", "arguments"}</tool_call>; Qwen 3.5's
-    <tool_call><function=..><parameter=..>; Llama's bare {"name", "parameters"}, perhaps
-    after <|python_tag|>; Ben's {"type": "action", "tool", "input"} and
-    {"type": "answer", "content"}. <think>...</think> is dropped.
+    <tool_call><function=..><parameter=..>; Gemma 4's <|tool_call>call:name{k:v}<tool_call|>;
+    Llama's bare {"name", "parameters"}, perhaps after <|python_tag|>; Ben's
+    {"type": "action", "tool", "input"} and {"type": "answer", "content"}.
+    <think>...</think> is dropped.
     """
     text = THINK.sub('', text or '').replace('<|python_tag|>', '').strip()
     reply = Reply()
+    if MISTRAL.search(text):
+        reply.thought = text[:text.find('[TOOL_CALLS]')].strip()
+        for m in MISTRAL.finditer(text):
+            found = next(iter(_json_objects(text[m.end():])), None)
+            if found is None or found[1] != 0 or not isinstance(found[0], dict):
+                reply.error = f'could not read the tool call: {text[m.start():][:200]}'
+            else:
+                reply.calls.append(ToolCall(m.group(1), found[0]))
+        return reply
+    text = text.replace('[TOOL_CALLS]', '')     # older Mistral: a JSON list follows
+    gemma = GEMMA.findall(text)
+    if gemma:
+        reply.thought = text[:text.find('<|tool_call>')].strip()
+        for name, body in gemma:
+            args = _gemma_args(body)
+            if args is None:
+                reply.error = f'could not read the tool call: {name}{{{body.strip()[:200]}}}'
+            else:
+                reply.calls.append(ToolCall(name, args))
+        return reply
     tagged = TAGGED.findall(text)
     if tagged:
         reply.thought = text[:text.find('<tool_call>')].strip()
