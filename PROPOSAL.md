@@ -31,11 +31,11 @@ we are. Details live in the pages linked from each row.
 | **The graph** | one contract for every topic and node (`docs/interfaces.yaml`), checked against the running system; topic names by area (`/sensors/`, `/vehicle/`, `/safety/`...) | ✅ | [interfaces](docs/interfaces.md), [naming](docs/naming.md) |
 | **Car model** | the car's shape, sensors and frames from one file (`vehicle.yaml`); zero point under the rear axle | ✅ the numbers are **guesses** until measured | [measure the car](READ-ME-MEASURE-THE-CAR.md) |
 | **Ackermann** | the steering maths (speed + turn → wheel angle), with its own tests | ✅ | [conventions](docs/conventions.md) |
-| **ego** | turns every driver's command into one Ackermann command, with speed caps (1 m/s on the car; faster only in sim) | ✅ | |
+| **ego** | turns every driver's command into one Ackermann command, with speed caps (1 m/s on the car; faster only in sim) and one reverse speed (0.5 m/s) | ✅ | |
 | **twist_mux** | picks which driver is in charge (joystick > keyboard > Nav2...) and stops stale ones | ✅ | |
 | **EKFs** | robot_localization: local (wheels + IMU) and global (+ GPS) | 🧪 sim: within 0.15 m of the truth; replay: 0.03 m | [maps and position](READ-ME-MAPS-AND-POSITION.md) |
 | **Maps** | Nav2 maps for an empty world and a test lot; GPS datum ties them to the real world | 🧪 | |
-| **Nav2** | paths, obstacles (radar, camera), collision monitor that stops the car | 🧪 sim: goals reached, stops 0.44 m before a box | |
+| **Nav2** | paths, obstacles (radar, camera), collision monitor that stops the car; may reverse in the sim and on the bench, never on the car | 🧪 sim: goals reached, stops 0.44 m before a box, backs up 5 m | |
 | **Simulation** | Gazebo: the whole car, 3 cameras, radar, lidar, GPS, IMU, wheel speed, an actuator model, a SIMULATED banner; one command opens everything | 🧪 | [full simulation](READ-ME-FULL-SIMULATION.md) |
 | **Bench** | the real CAN messages, the spine's logic and both e-stops, without the car | ✅ `bench-check` | |
 | **Perception** | YOLO11 (stop signs and objects), lane keeping, radar clustering (Rust) | 🧪 bench and sim | [perception](READ-ME-PERCEPTION-AND-HUD-MAP.md) |
@@ -45,8 +45,9 @@ we are. Details live in the pages linked from each row.
 | **Plain-English driving** | a local language model (Qwen3, on the Mac with MLX) plans "drive 10 m forward"; you type yes | 🧪 sim: drove 10.02 m | [plain English](docs/plain-english.md) |
 | **Rust port** | firmware in Rust: the spine (on today's ESP32 control board too, over its UART or CAN), the wheel encoder, the status display, the CAN wheel nodes' logic; the IMU driver and radar clustering in Rust | 🧪 321 tests in `firmware/spine`; builds for the Pico 2 and the ESP32; never flashed | [Rust firmware](docs/rust-firmware.md) |
 | **Linux and Mac** | one `pixi.toml`: the same commands on Ubuntu, AlmaLinux and macOS, no admin rights; nightly Mac CI | ✅ | [Mac](docs/mac.md) |
-| **Watching** | Lichtblick / Foxglove, RViz, recording and replaying drives | ✅ | |
-| **Testing** | unit tests (Python, Rust), graph checks, `sim-check`, `bench-check`, CI on every push | ✅ | [tests](READ-ME-TESTS.md) |
+| **Watching** | Lichtblick / Foxglove (`sim ... foxglove:=true`), RViz, recording and replaying drives | ✅ | |
+| **Testing** | 516 tests (Python, Rust, launch files), graph checks, `sim-check`, `bench-check`, the actuator tests; GitHub CI on every push to main | ✅ | [tests](READ-ME-TESTS.md) |
+| **Simulation stays on the laptop** | `pixi run sim`, `turtle`, `bench` never reach a real car on the same network (fixed 15 Oct: they used to) | ✅ | [run](docs/run.md) |
 | **The car audit** | tools to map the car's network and survey every computer, read-only | ✅ ready for 16 Oct | [Friday](FRIDAY-TODO.md) |
 
 ## 3. What's left, and how sure we are
@@ -108,6 +109,7 @@ The tests for each step, in order: [READ-ME-TESTS.md](READ-ME-TESTS.md).
 | No timeout today: a lost cable keeps the car going | fixed before any drive (TEAM-TODO B2) |
 | Upgrading the Jetson loses the only copy of something | back up the whole disk first |
 | Leaked passwords and keys in the old repos | changed, never copied (Q34) |
+| Our GitHub repo is **public** (found 15 Oct), though the plan said private | no secrets go in it; Ben decides whether to make it private (Q25) |
 | GPS isn't accurate enough near buildings | an RTK fix, and the EKF with the wheels and IMU |
 | The sim lies, because its numbers are guesses | measure, then test on stands before the ground |
 
