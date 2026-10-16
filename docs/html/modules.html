@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">31 min read · 15 sections</div></header>
+<div class="meta">32 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -136,7 +136,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><a href="#drivers">Drivers</a></td>
-<td><code>aav_teleop</code>, <code>aav_scripted</code>, <code>aav_language</code>, <code>aav_navigation</code></td>
+<td><code>aav_teleop</code>, <code>aav_scripted</code>, <code>aav_goto</code>, <code>aav_language</code>, <code>aav_navigation</code></td>
 </tr>
 <tr>
 <td><a href="#mux-and-ego">Mux and ego</a></td>
@@ -602,6 +602,53 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tr>
 <td><strong>Read first</strong></td>
 <td><code>aav_scripted/speed_profile.py</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="aav_goto">aav_goto</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Does</strong></td>
+<td>an action that drives to one point B (lat/lon or map x/y) and stops there: speed up gently, hold, slow down by the distance left at half the measured braking</td>
+</tr>
+<tr>
+<td><strong>Why</strong></td>
+<td>the main goal (Ben, 15 Oct): GPS A to B with a smooth stop, READ-ME-TESTS 5.2</td>
+</tr>
+<tr>
+<td><strong>Runs on</strong></td>
+<td>the Orin, next to the mux</td>
+</tr>
+<tr>
+<td><strong>In → out</strong></td>
+<td>the action <code>/goto</code>, <code>/localization/odom/global</code>, <code>/sensors/gps/fix</code> → <code>/drivers/goto/cmd_vel</code> (twist_mux priority 25)</td>
+</tr>
+<tr>
+<td><strong>Origin</strong></td>
+<td>ours</td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td><span class="badge b-works">works</span> in Gazebo (<code>pixi run sim-check --goto</code>, 15 Oct); <span class="badge b-untested">untested</span> on the car</td>
+</tr>
+<tr>
+<td><strong>Run alone</strong></td>
+<td><code>pixi run sim</code>, then <code>pixi run goto --sim --ahead 20</code></td>
+</tr>
+<tr>
+<td><strong>Test</strong></td>
+<td><code>test/</code> (in <code>tools/test.sh</code>): the speed plan, the steering, the rules, whole drives on a pretend car</td>
+</tr>
+<tr>
+<td><strong>Read first</strong></td>
+<td><a href="../../READ-ME-A-TO-B.md">A to B</a>, then <code>aav_goto/approach.py</code> and <code>line.py</code></td>
 </tr>
 </tbody>
 </table></div>

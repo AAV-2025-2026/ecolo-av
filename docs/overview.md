@@ -42,6 +42,7 @@ finder).
 | `aav_ego` | ego: one command into a speed and steering angle the car can do | ego |
 | `aav_mux` | twist_mux's settings: the priorities and the e-stop lock | mux |
 | `aav_scripted` | scripted drives: speed up, hold, slow down | drivers |
+| `aav_goto` | drive to one GPS point and stop there smoothly | drivers |
 | `aav_language` | plain English: a local model plans drive tools, you say yes | drivers |
 | `aav_teleop` | the joystick's settings, and its e-stop button | drivers |
 | `aav_navigation` | Nav2 set up for a car, and the maps | drivers |

@@ -135,6 +135,13 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>new</td>
 </tr>
 <tr>
+<td><code>aav_goto</code></td>
+<td>drivers</td>
+<td>drive to one GPS or map point B, and stop there smoothly</td>
+<td><span class="badge b-works">works</span> in Gazebo (15 Oct); <span class="badge b-untested">untested</span> on the car</td>
+<td>new</td>
+</tr>
+<tr>
 <td><code>aav_language</code></td>
 <td>drivers</td>
 <td>plain English: a local model plans drive tools, you say yes</td>
@@ -200,7 +207,7 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tr>
 <td><code>aav_interfaces</code></td>
 <td>interfaces</td>
-<td>our messages: <code>VehicleStatus</code>, <code>ScriptedDrive</code></td>
+<td>our messages: <code>VehicleStatus</code>, <code>ScriptedDrive</code>, <code>GoTo</code></td>
 <td><span class="badge b-works">works</span> builds</td>
 <td>new</td>
 </tr>
@@ -410,6 +417,12 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td><code>/localization/odom/local</code></td>
 <td><code>/drivers/scripted/cmd_vel</code></td>
 <td>the action <code>/scripted_drive</code></td>
+</tr>
+<tr>
+<td><code>aav_goto</code></td>
+<td><code>/localization/odom/global</code>, <code>/sensors/gps/fix</code>, <code>/safety/estop</code>, the watchdog's lock, <code>/system/source</code>, <code>/control/cmd_vel</code></td>
+<td><code>/drivers/goto/cmd_vel</code></td>
+<td>the action <code>/goto</code>; calls <code>/fromLL</code> for a lat/lon B. <code>pixi run goto</code> (<a href="../../READ-ME-A-TO-B.md">A to B</a>)</td>
 </tr>
 <tr>
 <td><code>aav_language</code></td>

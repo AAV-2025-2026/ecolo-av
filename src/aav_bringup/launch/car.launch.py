@@ -21,6 +21,7 @@ Parts and what they start:
                   a sensor they need fails, and they stop too if it goes quiet
   teleop          joystick -> /drivers/joy/cmd_vel, e-stop button -> /safety/estop
   scripted        /scripted_drive action -> /drivers/scripted/cmd_vel
+  goto            /goto action (drive to a GPS point, stop there) -> /drivers/goto/cmd_vel
   imu, gps,       sensor drivers (on the machine the device is plugged into);
   radar, battery  gps_driver picks the GPS's: ublox (the default), nmea or ublox_dgnss
   camera          usb_cam -> /sensors/camera/front_left/image_raw (Linux only)
@@ -69,9 +70,10 @@ from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
 import yaml
 
-PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'imu', 'gps', 'radar', 'battery',
-         'camera', 'detector', 'stop_signs', 'radar_clusters', 'camera_obstacles', 'lane',
-         'localization', 'navigation', 'spine', 'legacy_uart', 'legacy_encoder', 'foxglove')
+PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'goto', 'imu', 'gps', 'radar',
+         'battery', 'camera', 'detector', 'stop_signs', 'radar_clusters', 'camera_obstacles',
+         'lane', 'localization', 'navigation', 'spine', 'legacy_uart', 'legacy_encoder',
+         'foxglove')
 # What a machine file holds: the parts, and the detector's settings.
 SECTIONS = ('parts', 'detector')
 # Each model format: what runs it, besides PyTorch and Ultralytics, and how to make it.
@@ -206,6 +208,8 @@ def launch_setup(context):
         actions.append(include('aav_teleop', 'teleop.launch.py'))
     if on('scripted'):
         actions.append(include('aav_scripted', 'scripted.launch.py'))
+    if on('goto'):
+        actions.append(include('aav_goto', 'goto.launch.py'))
     if any(on(s) for s in ('imu', 'gps', 'radar', 'battery')):
         actions.append(include('aav_sensors', 'sensors.launch.py',
                                imu=on('imu'), gps=on('gps'), radar=on('radar'),

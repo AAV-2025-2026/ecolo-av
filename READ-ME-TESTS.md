@@ -34,6 +34,7 @@ Nothing real moves. Run these on any laptop.
 | 1.11 | **The lidar alone stops the car** | `pixi run sim-check --lidar-obstacle` | radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone | ✅ 15 Oct: 0.16-0.55 m before it |
 | 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check | ✅ 15 Oct: all 13 |
 | 1.13 | **The spine in the loop** | `pixi run sim-check --spine` | in Gazebo with `spine:=true`: the normal checks pass; ego's commands stopped → the spine brakes fully within 0.28 s and latches; `/safety/estop` and the hardware e-stop → brake within 0.15 s, latched until armed again; disarmed → no motion | ✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms |
+| 1.14 | **Drive to a GPS point, smooth stop** | `pixi run sim-check --goto` ([A to B](READ-ME-A-TO-B.md)) | every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half `max_brake`; a cancel, the e-stop and a GPS fault stop it | ✅ 15 Oct: all within 0.4 m |
 
 ## Stage 2: the bench
 
@@ -124,9 +125,9 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 
 | # | Test | How | Passes when | Status |
 |---|---|---|---|---|
-| 5.1 | **Scripted drive** | 10 m at 0.5 m/s (`READ-ME-A-TO-B.md`, test 5) | stops 10 m on (±0.5 m), straight | ⬜ |
-| 5.2 | **Smooth stop at a GPS point** | speed up, hold, slow down at **half the measured brake g** (from 4.3), stop at B | stops within 1 m of B (2 m without RTK) | ⬜ needs 4.3 and the line driver |
-| 5.3 | Nav2 to a GPS point | the GPS goal, empty lot | reaches B, stops | ⬜ |
+| 5.1 | **Scripted drive** | 10 m at 0.5 m/s (`READ-ME-A-TO-B.md`, test 5) | stops 10 m on (±0.5 m), straight | 🔧 in Gazebo, `sim-check`'s 6.5 m plan passes; not yet on the car |
+| 5.2 | **Smooth stop at a GPS point** | `pixi run goto --lat .. --lon ..`: speed up, hold, slow down at **half the measured brake g** (`vehicle.yaml` `max_brake`, from 4.3), stop at B ([A to B](READ-ME-A-TO-B.md)) | stops within 1 m of B (2 m without RTK) | 🔧 in Gazebo 15 Oct (`sim-check --goto`): 10-60 m, any angle, 1 and 3 m/s, every stop within 0.4 m of B, braking 1.4-1.6 m/s² for a plan of 1.5. 🔧 the car: needs 4.3 |
+| 5.3 | Nav2 to a GPS point | the GPS goal, empty lot | reaches B, stops | 🔧 in Gazebo, goals of 8 m and 9.5 m; not yet on the car |
 | 5.4 | **Ghost obstacles** | the real car with a **simulated** person in Nav2's costmap | slows and stops for it, with nothing real to hit | ⬜ |
 | 5.5 | Plain-English driving on the car | `talk --car`: "drive 10 m forward" | the same as 5.1, after you type yes | ⬜ last |
 
@@ -156,7 +157,6 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | What | For | Size |
 |---|---|---|
 | The SIMULATED banner and REAL / SIM tags | 1.9 | small |
-| The line driver: speed by distance left to B | 5.2 | about a day |
 | Ghost obstacles on the real car | 5.4 | 1 day |
 | The ESP32 timeout | 3.9, and everything after | TEAM-TODO B2 |
 | A driver for the roof lidar (probably a Velodyne) | 4.17 | small, once the model is known |

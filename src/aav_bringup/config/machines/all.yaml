@@ -6,6 +6,7 @@ parts:
   ego: true
   teleop: true
   scripted: true
+  goto: true
   imu: true
   gps: true
   radar: false

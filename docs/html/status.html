@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">11 min read · 4 sections</div></header>
+<div class="meta">12 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -128,6 +128,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td>Scripted</td>
 <td><code>aav_scripted</code></td>
 <td><span class="badge b-works">works</span> turtle and the bench</td>
+</tr>
+<tr>
+<td>Goto: GPS A to B (15 Oct)</td>
+<td><code>aav_goto</code>: the <code>/goto</code> action, <code>pixi run goto</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --goto</code> drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half <code>max_brake</code>); a cancel, the e-stop and a GPS fault each stopped it. <span class="badge b-untested">untested</span> on the bench and the car (<a href="../../READ-ME-A-TO-B.md">A to B</a>)</td>
 </tr>
 <tr>
 <td>Plain English</td>

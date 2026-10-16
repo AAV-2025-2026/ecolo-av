@@ -21,6 +21,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Joystick | `aav_teleop` | [[untested]] |
 | Keyboard | teleop_twist_keyboard | [[works]] |
 | Scripted | `aav_scripted` | [[works]] turtle and the bench |
+| Goto: GPS A to B (15 Oct) | `aav_goto`: the `/goto` action, `pixi run goto` | [[works]] in Gazebo: `sim-check --goto` drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half `max_brake`); a cancel, the e-stop and a GPS fault each stopped it. [[untested]] on the bench and the car ([A to B](../READ-ME-A-TO-B.md)) |
 | Plain English | `aav_language`: a drive tool server (MCP) and a local model (MLX) | [[works]] in Gazebo and the turtle, 15 Oct: "drive 10 m forward" drove 10.02 m in Gazebo, a 90° turn turned 87.6°. Asks before it moves; refuses the real car without `--car`. [[untested]] on the bench and the car ([Plain English](plain-english.md)) |
 | Nav2 | `aav_navigation` | [[works]] in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (`reversing:=true`, 15 Oct): on in Gazebo and on the bench, off on the car; its settings are tested; [[works]] in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s |
 | twist_mux | `aav_mux` | [[works]] |

@@ -64,7 +64,7 @@ So ekf_local, ekf_global, navsat_transform and imu_filter_madgwick run in simula
 with the same configs as on the car, and radar_clusters, Nav2's costmap and
 collision_monitor read the radar as they would on the car. radar is true only in a world
 that renders the radar stand-in (gazebo.launch.py). Gazebo's ground-truth pose is not
-passed on: the road world bridges it to /vehicle/gazebo/truth, for checks only.
+passed on: gz_bridge carries it to /vehicle/gazebo/truth, for checks only.
 """
 
 import math

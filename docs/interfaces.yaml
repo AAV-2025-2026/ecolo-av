@@ -54,6 +54,11 @@ topics:
     pub: []
     sub: [twist_mux, language_drive]
     note: Priority 40. ros2 bag play of a recorded /control/cmd_vel (tools/replay_commands.sh).
+  /drivers/goto/cmd_vel:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [goto_driver]
+    sub: [twist_mux, language_drive]
+    note: Priority 25 - below every person, test and script, above Nav2. Only while a /goto goal runs (aav_goto, pixi run goto; READ-ME-A-TO-B.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.
   /drivers/nav/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother, collision_monitor]
@@ -67,7 +72,7 @@ topics:
   /safety/sensor_watchdog/lock:
     type: std_msgs/msg/Bool
     pub: [sensor_watchdog]
-    sub: [twist_mux]
+    sub: [twist_mux, goto_driver]
     live: [sim]
     note: true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).
   /safety/sensor_watchdog/state:
@@ -99,12 +104,12 @@ topics:
   /safety/estop:
     type: std_msgs/msg/Bool
     pub: [joy_teleop, hud_server, hud, language_drive]
-    sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive, actuator_test, carla_adapter]
+    sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive, actuator_test, carla_adapter, goto_driver]
     note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.
   /control/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [twist_mux]
-    sub: [ego, actuator_test]
+    sub: [ego, actuator_test, goto_driver]
     live: [turtle, sim, car, bench]
     note: The one command ego obeys. v (m/s) and w (rad/s) in base_link.
   /ego/actuator_cmd:
@@ -118,7 +123,7 @@ topics:
   /system/source:
     type: aav_interfaces/msg/DataSource
     pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, replay_source, carla_adapter]
-    sub: [hud, map, actuator_test]
+    sub: [hud, map, actuator_test, goto_driver, goto_cli]
     live: [turtle, sim, car, replay, bench]
     note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.
 
@@ -205,7 +210,7 @@ topics:
   /sensors/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_adapter, mock_gps, carla_adapter]
-    sub: [navsat_transform, hud, language_drive, actuator_test, sensor_watchdog]
+    sub: [navsat_transform, hud, language_drive, actuator_test, sensor_watchdog, goto_driver]
     live: [sim, car, replay, bench]
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
   /sensors/gps/fix_velocity:
@@ -376,9 +381,9 @@ topics:
   # --- Gazebo's road world: the simulator's own ---
   /vehicle/gazebo/truth:
     type: nav_msgs/msg/Odometry
-    pub: [gz_road_bridge]
+    pub: [gz_bridge]
     sub: []
-    live: [road]
+    live: [sim]
     note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges and gazebo_adapter.
   /vehicle/gazebo/spine_outputs:
     type: aav_interfaces/msg/SpineOutputs
@@ -416,7 +421,7 @@ topics:
   /localization/odom/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
-    sub: [navsat_transform, map, sensor_watchdog]
+    sub: [navsat_transform, map, sensor_watchdog, goto_driver, goto_cli]
     live: [sim, car, replay, bench]
     note: map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it.
   /localization/gps/odom:
@@ -488,7 +493,7 @@ services:
   /fromLL:
     type: robot_localization/srv/FromLL
     server: navsat_transform
-    note: Lat/lon -> map x, y. Nav2's follow_gps_waypoints calls it.
+    note: Lat/lon -> map x, y. Nav2's follow_gps_waypoints calls it, and goto_driver (aav_goto) for a lat/lon goal.
   /toLL:
     type: robot_localization/srv/ToLL
     server: navsat_transform
@@ -513,6 +518,10 @@ actions:
     type: aav_interfaces/action/ScriptedDrive
     server: scripted_driver
     note: Drive a speed profile (accelerate, hold for a time or distance, stop). Phase 1. Sent by language_drive (aav_language) for drive() and turn() - a whole distance, ramps included.
+  /goto:
+    type: aav_interfaces/action/GoTo
+    server: goto_driver
+    note: Drive to one point B (lat/lon through /fromLL, or map x/y) and stop there - speed up gently, hold, slow down by the distance left at half vehicle.yaml's max_brake. Pure pursuit, turning towards B first. Refuses B over 200 m away or inside the tightest turn; on REAL only with confirmed (pixi run goto asks). Sent by goto_cli (pixi run goto) and tools/sim_check.py --goto.
   /navigate_to_pose:
     type: nav2_msgs/action/NavigateToPose
     server: bt_navigator

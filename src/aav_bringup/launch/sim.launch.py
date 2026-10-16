@@ -122,6 +122,8 @@ def launch_setup(context):
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
                 sim_max_speed=arg('sim_speed')),
         include(context, 'aav_scripted', 'scripted.launch.py', use_sim_time='true'),
+        include(context, 'aav_goto', 'goto.launch.py', use_sim_time='true',
+                watchdog=arg('watchdog')),
         # Only the IMU filter: Gazebo stands in for the drivers.
         Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',
              name='imu_filter_madgwick',

@@ -39,6 +39,10 @@ twist_mux:
         topic: /drivers/replay/cmd_vel
         timeout: 0.5
         priority: 40
+      goto:                     # aav_goto: drive to one GPS point, stop there (pixi run goto).
+        topic: /drivers/goto/cmd_vel  # Below every person, test and script; above Nav2,
+        timeout: 0.5            # so a forgotten Nav2 goal can't steer it. Below the stop-sign
+        priority: 25            # and sensor locks (30): it drives on GPS, so they hold it
       nav:                      # Nav2 (aav_navigation)
         topic: /drivers/nav/cmd_vel
         timeout: 0.5

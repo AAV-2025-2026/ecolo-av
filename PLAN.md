@@ -5,7 +5,7 @@ plan"). What's already done is in [PROPOSAL.md](PROPOSAL.md); this page is only 
 left, and in what order.
 
 > **The short version**
-> - **Software we can build now**, no car needed: S1-S9. S1 started 15 Oct; S2 and S3 done 15 Oct.
+> - **Software we can build now**, no car needed: S1-S9. S1, S2 and S3 done in Gazebo 15 Oct.
 > - **Needs the car, or the hardware lead's decision**: C1-C10. Hardware choices are the hardware lead's, not Ben's.
 > - **The goal:** C9, the car drives itself from GPS point A to B and stops at B.
 
@@ -22,7 +22,7 @@ left, and in what order.
 
 | # | Build | Why | Size | Status |
 |---|---|---|---|---|
-| S1 | **GPS A → B with a smooth stop**: speed by the distance left to B, slowing at half the measured braking g | the main goal (READ-ME-TESTS 5.2), proven in Gazebo first | 1 day | started 15 Oct |
+| S1 | **GPS A → B with a smooth stop**: speed by the distance left to B, slowing at half the measured braking g | the main goal (READ-ME-TESTS 5.2), proven in Gazebo first | 1 day | ✅ in Gazebo 15 Oct: `aav_goto`, `pixi run goto`; every stop within 0.4 m of B, at 1 and 3 m/s (`sim-check --goto`). On the car: C9 |
 | S2 | **The spine in the loop** in Gazebo: ego → CAN → the spine's safety logic → the actuator model → Gazebo | timeouts and e-stops tested the way the car runs them | 1-2 days | ✅ 15 Oct: `pixi run sim spine:=true`, `pixi run sim-check --spine` passes |
 | S3 | **Gazebo steering fix**: full lock turns 0.43 rad, not 0.5 | the sim should steer like the car | small | ✅ done 15 Oct: 0.484 rad at full lock (Gazebo's `steering_limit` from `vehicle.py`; the last 3% is tyre slip) |
 | S4 | **Ghost obstacles**: a pretend person in Nav2's map while the real car drives | test stopping on the car with nothing real to hit | 1 day | |
