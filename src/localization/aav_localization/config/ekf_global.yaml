@@ -39,6 +39,16 @@ ekf_global:
     odom1_differential: false
     odom1_relative: false
     odom1_queue_size: 10
+    # Refuse a GPS position more than 10 sigma from where the filter thinks the car is
+    # (Mahalanobis distance, with the fix's own covariance and the filter's): a bad fix
+    # that jumps 20 m (pixi run sim-fault gps jump) moves the map position not at all,
+    # where it moved it 19 m before (15 Oct). Normal fixes are 1-2 sigma off. The first
+    # fix is never refused: x and y start 100 m unsure (initial_estimate_covariance), so
+    # a car parked far from start_x, start_y (or the datum) still takes its first fix,
+    # and is sure of it from then on. A jump that stays (the GPS really wrong) is taken
+    # only once the filter's own doubt has grown to match, minutes later: the sensor
+    # watchdog holds Nav2 for a jump meanwhile, until a person clears it.
+    odom1_pose_rejection_threshold: 10.0
 
     imu0: /sensors/imu/data
     imu0_config: [false, false, false,
@@ -53,5 +63,7 @@ ekf_global:
 
     use_control: false
     process_noise_covariance: [0.05, 0.05, 0.06, 0.03, 0.03, 0.06, 0.025, 0.025, 0.04, 0.01, 0.01, 0.02, 0.01, 0.01, 0.015]
-    # Position and heading are unsure at start (set by hand); yaw 0.1 rad ~ 18 degrees (1 sigma).
-    initial_estimate_covariance: [1.0, 1.0, 1e-9, 1.0, 1.0, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    # Heading is unsure at start (set by hand): yaw 0.1 rad ~ 18 degrees (1 sigma). x and
+    # y are 1e4 m^2 (100 m, 1 sigma): the first GPS fix decides them, whatever the
+    # rejection threshold above.
+    initial_estimate_covariance: [1.0e+4, 1.0e+4, 1e-9, 1.0, 1.0, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
