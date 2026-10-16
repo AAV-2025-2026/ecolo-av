@@ -34,7 +34,9 @@ Parameters  inputs (the names to watch), rate_hz (10), and for each name: topic,
             (odom, imu, gps, image, cloud), max_age (s), stop (bool), frozen_after (s, 0
             off), max_jump_speed (m/s, 0 off), jump_margin (m); for an odom input,
             cross_check (bool: the wheels against the IMU, wheel_check.py), cross_window
-            (s), cross_speed_tolerance (m/s), cross_yaw_tolerance (rad/s), cross_persist (s)
+            (s), cross_speed_tolerance (m/s), cross_yaw_tolerance (rad/s), cross_persist (s),
+            cross_gps_window (s), cross_gps_tolerance (m/s): the GPS's fixes join the check
+            where a gps input is watched
 """
 
 import signal
@@ -80,10 +82,13 @@ class SensorWatchdog(Node):
             cross = None
             if bool(param('cross_check', False)):
                 d = CrossCheck()
-                cross = CrossCheck(float(param('cross_window', d.window)),
-                                   float(param('cross_speed_tolerance', d.speed_tolerance)),
-                                   float(param('cross_yaw_tolerance', d.yaw_tolerance)),
-                                   float(param('cross_persist', d.persist)))
+                cross = CrossCheck(
+                    window=float(param('cross_window', d.window)),
+                    speed_tolerance=float(param('cross_speed_tolerance', d.speed_tolerance)),
+                    yaw_tolerance=float(param('cross_yaw_tolerance', d.yaw_tolerance)),
+                    persist=float(param('cross_persist', d.persist)),
+                    gps_window=float(param('cross_gps_window', d.gps_window)),
+                    gps_tolerance=float(param('cross_gps_tolerance', d.gps_tolerance)))
             rules.append(Rule(name, param('topic', ''), param('kind', 'odom'),
                               float(param('max_age', 1.0)), bool(param('stop', True)),
                               float(param('frozen_after', 0.0)),
@@ -140,8 +145,11 @@ class SensorWatchdog(Node):
                 self.dog.imu(now, values[3], values[2])
         elif rule.kind == 'gps':
             stamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
-            watch.arrived(now, fix=(msg.latitude, msg.longitude),
-                          has_fix=msg.status.status >= NavSatStatus.STATUS_FIX, stamp=stamp)
+            has_fix = msg.status.status >= NavSatStatus.STATUS_FIX
+            watch.arrived(now, fix=(msg.latitude, msg.longitude), has_fix=has_fix,
+                          stamp=stamp)
+            if has_fix:
+                self.dog.gps(stamp, (msg.latitude, msg.longitude))
         elif rule.kind == 'image':
             # A frozen camera repeats its whole picture: a sample of it is enough.
             watch.arrived(now, digest=zlib.crc32(bytes(memoryview(msg.data)[::997])),
@@ -188,12 +196,11 @@ class SensorWatchdog(Node):
             if watch.cross is not None:
                 # For tuning the tolerances on the car: how close normal driving comes.
                 gaps = watch.cross.gaps
-                values += [KeyValue(key='speed_gap', value='' if gaps is None
-                                    else f'{gaps[0]:.3f}'),
-                           KeyValue(key='turn_gap', value='' if gaps is None
-                                    else f'{gaps[1]:.3f}'),
-                           KeyValue(key='worst_speed_gap', value=f'{watch.cross.worst[0]:.3f}'),
-                           KeyValue(key='worst_turn_gap', value=f'{watch.cross.worst[1]:.3f}')]
+                for i, key in enumerate(('speed_gap', 'turn_gap', 'gps_gap')):
+                    values += [KeyValue(key=key, value='' if gaps is None
+                                        else f'{gaps[i]:.3f}'),
+                               KeyValue(key=f'worst_{key}',
+                                        value=f'{watch.cross.worst[i]:.3f}')]
             out.status.append(DiagnosticStatus(
                 level=level, name=f'sensor_watchdog: {name}', message=f'{state}: {detail}',
                 hardware_id=rule.topic, values=values))

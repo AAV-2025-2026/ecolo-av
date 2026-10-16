@@ -19,9 +19,9 @@ What counts as wrong, per input (each check only where its rule asks for it):
   JUMP    two GPS fixes further apart than max_jump_speed allows in the time between
           their stamps, plus jump_margin for the fixes' own noise. Latched: the position
           after a jump can't be trusted until a person says so (clear())
-  DISAGREE  the wheels' speed or turn against the IMU's, where the odom rule has a
-          cross_check (wheel_check.py): a wheel speed frozen while the car speeds up,
-          brakes or turns. Latched, as a jump
+  DISAGREE  the wheels' speed or turn against the IMU's and the GPS's, where the odom
+          rule has a cross_check (wheel_check.py): a wheel speed frozen while the car
+          speeds up, brakes, turns or drives on faster. Latched, as a jump
 
 Times are seconds on the node's clock (Gazebo's, in the simulator).
 """
@@ -170,6 +170,12 @@ class Watchdog:
         for watch in self.watches.values():
             if watch.cross is not None:
                 watch.cross.imu(now, forward, yaw_rate)
+
+    def gps(self, stamp: float, fix: Tuple[float, float]):
+        """Note a good GPS fix for every cross check: its stamp (s), (latitude, longitude)."""
+        for watch in self.watches.values():
+            if watch.cross is not None:
+                watch.cross.gps(stamp, *fix)
 
     def cross_checked(self) -> bool:
         return any(w.cross is not None for w in self.watches.values())

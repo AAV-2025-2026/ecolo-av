@@ -30,8 +30,8 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    scan of it for Nav2 (/sensors/lidar/scan: 720 ranges in base_link, 10 Hz, the sign in it).
 5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth)
    with where the car's own software thinks it is (/localization/odom/global). After all
-   the drives of this run, `wheels vs IMU`: the watchdog's wheel cross check never said
-   DISAGREE, and the worst gaps it saw (its /diagnostics).
+   the drives of this run, `wheels vs IMU and GPS`: the watchdog's wheel cross check never
+   said DISAGREE, and the worst gaps it saw (its /diagnostics).
 6. With --perception: Nav2 drives to 40 m east, past the stop sign at 25 m. The car must
    stop with its front bumper before the sign, wait, and go on to the goal. The camera's
    picture with YOLO's boxes, as the lock went on, is saved to /tmp/aav-sim-stop-sign.png.
@@ -49,7 +49,8 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    `watchdog hang` stops its process (SIGSTOP, then SIGCONT to mend it) and `watchdog
    kill` kills it (the last fault: nothing mends it). Its silence must hold Nav2 through
    twist_mux's lock timeout. `odom freeze` counts from when the frozen wheels go wrong
-   (the car's speed or turn changes: Nav2 slows or steers), as they're right till then.
+   (the car's speed or turn changes: Nav2 slows or steers), as they're right till then,
+   and has FROZEN_REACT s: a speed that stays wrong needs the GPS's 6 s window.
    With --no-watchdog it only reports, without the watchdog's own two.
 10. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
    car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
@@ -139,6 +140,9 @@ STILL = 0.05            # m/s: standing still
 WRONG_SPEED = 0.2       # m/s and rad/s from the frozen values: frozen wheels now wrong
 WRONG_TURN = 0.1
 FROZEN_WAIT = 30.0      # s of Gazebo's time for frozen wheels to go wrong (Nav2 slows, turns)
+# s from frozen wheels going wrong to standing still: the IMU sees a quick change at once,
+# but a speed that stays wrong needs the GPS's 6 s window (sensor_watchdog.yaml).
+FROZEN_REACT = 10.0
 HELD = 10.0             # s of Gazebo's time the car must stay still with no watchdog at all
 with open(os.path.join(ROOT, 'src', 'mux', 'aav_mux', 'config', 'twist_mux.yaml')) as f:
     # s of silence from the watchdog before twist_mux's sensors lock holds Nav2 itself
@@ -456,11 +460,12 @@ def check_drive(probe):
 def check_wheels_vs_imu(probe):
     """After the drives: the watchdog's wheel cross check must not have cried wolf."""
     probe.spin_for(3.0, lambda: bool(probe.gaps))
-    speed, turn = probe.gaps.get('worst_speed_gap', '?'), probe.gaps.get('worst_turn_gap', '?')
-    result('wheels vs IMU', bool(probe.gaps) and not probe.disagreed,
-           f'worst gaps in normal driving: speed {speed} m/s, turn {turn} rad/s (the watchdog '
-           f"stops at {CROSS['cross_speed_tolerance']:g} and {CROSS['cross_yaw_tolerance']:g} "
-           f"for {CROSS['cross_persist']:g} s)"
+    worst = {k: probe.gaps.get(f'worst_{k}_gap', '?') for k in ('speed', 'turn', 'gps')}
+    result('wheels vs IMU and GPS', bool(probe.gaps) and not probe.disagreed,
+           f"worst gaps in normal driving: speed {worst['speed']} m/s, turn {worst['turn']} "
+           f"rad/s, GPS speed {worst['gps']} m/s (the watchdog stops at "
+           f"{CROSS['cross_speed_tolerance']:g}, {CROSS['cross_yaw_tolerance']:g} and "
+           f"{CROSS['cross_gps_tolerance']:g} for {CROSS['cross_persist']:g} s)"
            + ('; it said DISAGREE' if probe.disagreed else ''))
 
 
@@ -732,16 +737,19 @@ def check_faults(probe, watchdog=True):
         frozen = (sensor, mode) == ('odom', 'freeze')
         held_v, held_w = probe.truth.twist.twist.linear.x, probe.truth.twist.twist.angular.z
         wrong = None if frozen else 0.0     # s after the fault: the wheels' values are wrong
+        react = FROZEN_REACT if frozen else REACT
 
         def waiting():
             if wrong is None:
                 return probe.now() - t0 < FROZEN_WAIT
-            return probe.now() - t0 < wrong + REACT + 4.0
+            return probe.now() - t0 < wrong + react + 4.0
 
         while waiting():
             probe.spin_for(0.1)
-            if probe.lock and not locked:
-                locked, why = True, probe.state
+            locked = locked or probe.lock is True
+            # Its words, once they say STOP: the lock can arrive a moment before them.
+            if locked and not why and probe.state.startswith('STOP'):
+                why = probe.state
             silent = silent or probe.silent()
             twist = probe.truth.twist.twist
             if wrong is None and (abs(twist.linear.x - held_v) > WRONG_SPEED
@@ -766,7 +774,7 @@ def check_faults(probe, watchdog=True):
                       'turn changed)' if wrong is not None else ' (the wheels never went wrong)')
         detail = (f'{stood}, {on:.1f} m on; stopped by: {by or "nothing"}; the global EKF '
                   f'{ekf:.1f} m from the truth' + (f'; the watchdog said "{why}"' if why else ''))
-        ok = (stopped_at is not None and wrong is not None and stopped_at - wrong <= REACT
+        ok = (stopped_at is not None and wrong is not None and stopped_at - wrong <= react
               and bool(by))
         if mode == 'kill':
             # Nothing mends it: Nav2's goal still stands, and the car must stay still.

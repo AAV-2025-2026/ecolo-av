@@ -18,15 +18,16 @@ sensor_watchdog:
       kind: odom
       max_age: 0.5
       stop: true
-      # The wheels against the IMU (/sensors/imu/data), to catch a frozen wheel speed:
-      # wheel_check.py. Tuned in Gazebo only: on the car, read worst_speed_gap and
-      # worst_turn_gap on /diagnostics after a normal drive, and keep the tolerances
-      # well above them.
+      # The wheels against the IMU (/sensors/imu/data) and the GPS, to catch a frozen
+      # wheel speed: wheel_check.py. Tuned in Gazebo only: on the car, read the worst_*
+      # gaps on /diagnostics after a normal drive, and keep the tolerances well above.
       cross_check: true
       cross_window: 1.5         # s
       cross_speed_tolerance: 0.3  # m/s: the wheels' change in speed vs the IMU's
       cross_yaw_tolerance: 0.15   # rad/s: the wheels' turn rate vs the gyro's
       cross_persist: 1.0        # s a gap must last
+      cross_gps_window: 6.0     # s of fixes (5 Hz in Gazebo): the speeds of fitted lines
+      cross_gps_tolerance: 0.3  # m/s: the wheels' vs the GPS's
     imu:                        # the filtered IMU: the EKFs' turn rate
       topic: /sensors/imu/data
       kind: imu
