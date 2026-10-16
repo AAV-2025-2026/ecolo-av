@@ -14,7 +14,7 @@ export PYTHONDONTWRITEBYTECODE=1
 # Each package's tests import the package, so pytest runs from inside it.
 # (aav_gazebo's adapter test imports ROS messages, so only `colcon test` runs that one.)
 for pkg in src/ego/aav_ego src/backends/aav_spine src/backends/aav_legacy \
-           src/backends/aav_gazebo \
+           src/backends/aav_gazebo src/backends/aav_carla \
            src/drivers/aav_scripted src/drivers/aav_language src/drivers/aav_navigation \
            src/drivers/aav_actuator_tests \
            src/aav_description \

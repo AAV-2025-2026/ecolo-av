@@ -36,7 +36,7 @@ SENSOR_TICK = 0.1                     # s: 10 Hz, as Gazebo's cameras, radar and
 
 
 def fov_deg(width: int, focal: float) -> float:
-    """The horizontal field of view (degrees) of a pinhole camera."""
+    """Return the horizontal field of view (degrees) of a pinhole camera."""
     return math.degrees(2 * math.atan(width / 2.0 / focal))
 
 
@@ -91,7 +91,7 @@ ALWAYS = [
 
 
 def chosen(cameras: bool = True, radar: bool = True, lidar: bool = True) -> list[Sensor]:
-    """The CARLA sensors to attach: the IMU always, the others as asked."""
+    """Return the CARLA sensors to attach: the IMU always, the others as asked."""
     out = [IMU_SENSOR]
     if cameras:
         out += list(CAMERAS)
@@ -108,12 +108,14 @@ def sources(sensors: list[Sensor]) -> list[tuple[str, str]]:
 
 
 def info_topic(image_topic: str) -> str:
-    """A camera's camera_info topic, next to its image_raw."""
+    """Return a camera's camera_info topic, next to its image_raw."""
     return image_topic.rsplit('/', 1)[0] + '/camera_info'
 
 
 def camera_matrix(width: int, height: int, fov: float) -> dict:
     """
+    Return a CARLA camera's lens as sensor_msgs/CameraInfo's fields.
+
     A CARLA camera's lens as sensor_msgs/CameraInfo's fields: a perfect pinhole (no
     distortion), with the focal length from its horizontal field of view (degrees).
     """
@@ -127,7 +129,7 @@ def camera_matrix(width: int, height: int, fov: float) -> dict:
 
 
 def bgra_to_bgr(raw: bytes, width: int, height: int) -> bytes:
-    """A CARLA camera picture (BGRA, 4 bytes a pixel) as bgr8, the encoding ours use."""
+    """Return a CARLA camera picture (BGRA) as bgr8, the encoding ours use."""
     pixels = np.frombuffer(raw, dtype=np.uint8)
     if pixels.size != width * height * 4:
         raise ValueError(f'{pixels.size} bytes is not a {width} x {height} BGRA picture')
@@ -136,6 +138,8 @@ def bgra_to_bgr(raw: bytes, width: int, height: int) -> bytes:
 
 def lidar_points(raw: bytes) -> np.ndarray:
     """
+    Return a CARLA lidar sweep as N x 4 float32 in ROS axes.
+
     A CARLA lidar sweep (x, y, z, intensity: float32 each, CARLA axes, in the sensor's
     frame) as N x 4 float32 in ROS axes: y flips.
     """
@@ -146,6 +150,8 @@ def lidar_points(raw: bytes) -> np.ndarray:
 
 def radar_points(raw: bytes, intensity: float = 1.0) -> np.ndarray:
     """
+    Return a CARLA radar's detections as the TI driver's points.
+
     A CARLA radar's detections as the TI driver's points: x, y, z, intensity, velocity
     (N x 5 float32, ROS axes, radar_link), as aav_gazebo's radar.FIELDS.
 
@@ -167,6 +173,8 @@ def radar_points(raw: bytes, intensity: float = 1.0) -> np.ndarray:
 
 def wheel_speeds(speed: float, yaw_rate: float, wheelbase: float, track: float) -> dict:
     """
+    Return each wheel's ground speed (m/s) from the car's motion.
+
     Each wheel's ground speed (m/s), from the car's motion: a rigid body rolling without
     slip (CARLA's Python API has no wheel speeds). speed is the rear axle's centre
     (base_link) forward speed, yaw_rate rad/s + left, both cars' sizes our vehicle.yaml's.

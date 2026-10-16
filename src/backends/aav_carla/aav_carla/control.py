@@ -29,6 +29,8 @@ CARS = ('vehicle.micro.microlino', 'vehicle.mini.cooper_s_2021', 'vehicle.mini.c
 
 def pick_car(available, wanted: str = '') -> str:
     """
+    Return the car blueprint to spawn.
+
     The car blueprint to spawn: wanted if CARLA has it, else the first of CARS it has.
 
     available: the blueprint ids CARLA offers (world.get_blueprint_library()).
@@ -46,7 +48,7 @@ def pick_car(available, wanted: str = '') -> str:
 
 
 def match_curvature(steer: float, wheelbase: float, carla_wheelbase: float) -> float:
-    """Our angle (rad) as the angle that turns the CARLA car on the same circle."""
+    """Return our angle (rad) as the one that turns the CARLA car on our circle."""
     return math.atan(math.tan(steer) * carla_wheelbase / wheelbase)
 
 
@@ -64,17 +66,19 @@ class Geometry:
     carla_max_steer: float     # rad: the CARLA car's front wheels' limit
 
     def carla_angle(self, steer: float) -> float:
-        """Ego's angle (rad, + left) as the CARLA car's (rad, + RIGHT), within both limits."""
+        """Return ego's angle (rad, + left) as the CARLA car's (rad, + RIGHT)."""
         ours = clamp(steer, -self.max_steer, self.max_steer)
         theirs = match_curvature(ours, self.wheelbase, self.carla_wheelbase)
         return -clamp(theirs, -self.carla_max_steer, self.carla_max_steer)
 
     def carla_steer(self, steer: float) -> float:
-        """Ego's angle as VehicleControl.steer: -1 (full left) .. 1 (full right)."""
+        """Return ego's angle as VehicleControl.steer: -1 (full left) .. 1 (right)."""
         return clamp(self.carla_angle(steer) / self.carla_max_steer, -1.0, 1.0)
 
     def our_angle(self, left_deg: float, right_deg: float) -> float:
         """
+        Return the CARLA car's measured steering as our angle.
+
         The CARLA car's front wheels (Vehicle.get_wheel_steer_angle, degrees, + right) as
         our virtual centre wheel (rad, + left): what /vehicle/steering measures.
         """
@@ -96,6 +100,8 @@ class Ackermann:
 def ackermann(geometry: Geometry, speed: float, steer: float, acceleration: float = 0.0,
               steer_speed: float = 0.0, max_accel: float = 1.5) -> Ackermann:
     """
+    Return ego's command as VehicleAckermannControl's fields.
+
     Ego's command as VehicleAckermannControl. 0 means "as fast as you can" to CARLA, for
     the acceleration and the steering speed, so ego's 0 becomes our car's own limit
     (vehicle.yaml actuators: max_accel; the steering speed is left to CARLA).
@@ -119,6 +125,8 @@ class Pedals:
 @dataclass
 class SpeedLoop:
     """
+    Hold a speed with throttle and brake: a PI loop.
+
     A PI speed loop for the pedals mode: the stand-in for the spine's, as in Gazebo.
     Throttle (0..1) to speed up, brake (0..1) to slow; in reverse below zero.
     """
@@ -147,14 +155,14 @@ class SpeedLoop:
 
 def pedals(geometry: Geometry, loop: SpeedLoop, target: float, steer: float,
            speed: float, dt: float) -> Pedals:
-    """Ego's command as VehicleControl, through the speed loop."""
+    """Return ego's command as VehicleControl, through the speed loop."""
     throttle, brake, reverse = loop.step(target, speed, dt)
     return Pedals(throttle=throttle, brake=brake, steer=geometry.carla_steer(steer),
                   reverse=reverse)
 
 
 def stopped() -> Pedals:
-    """The e-stop: full brake and the hand brake, wheels straight."""
+    """Return the e-stop: full brake and the hand brake, wheels straight."""
     return Pedals(throttle=0.0, brake=1.0, steer=0.0, reverse=False, hand_brake=True)
 
 
