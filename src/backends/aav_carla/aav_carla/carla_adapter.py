@@ -100,7 +100,8 @@ class CarlaAdapter(Node):
         self.xodr = p('xodr', '').value
         self.sync = p('sync', True).value
         self.fixed_delta = p('fixed_delta', 0.05).value
-        self.pacer = state.Pacer(realtime=p('realtime', True).value)
+        # Only a synchronous CARLA can run ahead: an asynchronous one keeps its own time.
+        self.pacer = state.Pacer(realtime=p('realtime', True).value and self.sync)
         self.vehicle_name = p('vehicle', '').value
         self.role_name = p('role_name', 'ego_vehicle').value
         self.spawn = georef.parse_spawn(p('spawn', '').value)
