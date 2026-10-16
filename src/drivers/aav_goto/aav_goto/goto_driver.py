@@ -287,7 +287,7 @@ class GotoDriver(Node):
 
         finished = Future()
         st = {'last': self.seconds(), 't0': self.seconds(), 'tick': 0, 'zeros': 0,
-              'still': None, 'path': 0.0, 'xy': (start.x, start.y), 'stop': None,
+              'still': None, 'path': 0.0, 'stop': None,
               'cancel': False, 'cmd': None}
         feedback = GoTo.Feedback()
 
@@ -312,8 +312,9 @@ class GotoDriver(Node):
             if why:
                 return stop(why)
             pose, measured = self.pose
-            st['path'] += math.hypot(pose.x - st['xy'][0], pose.y - st['xy'][1])
-            st['xy'] = (pose.x, pose.y)
+            # The distance driven, from the speed: the global EKF's position jitters with
+            # the GPS, and summing its steps counted double (sim_check, 15 Oct).
+            st['path'] += abs(measured) * dt
             if st['path'] > max_path:
                 return stop(f'drove {st["path"]:.0f} m, over the limit of {max_path:.0f} m')
             if t - st['t0'] > max_time:

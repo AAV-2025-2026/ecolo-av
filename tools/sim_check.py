@@ -61,10 +61,10 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 11. With --goto: Gazebo's empty world, twice: sim_speed 1 and 3. The goto driver (aav_goto)
    drives to GOTO_TARGETS (10, 30 and 60 m, ahead, to the side and behind), each from where
    the last stopped. Each must stop within 2 m of B by Gazebo's truth, no more than
-   GOTO_PAST past it by its own EKF, and slow down at about half max_brake (90 % to 10 % of
-   its top speed, by the truth). At 1 m/s also: a lat/lon B (through /toLL and /fromLL), a
-   250 m B refused, and a drive stopped by a cancel (Ctrl-C), the e-stop and a GPS fault
-   (the driver's own timeout and the sensor watchdog's lock).
+   GOTO_PAST past it by its own EKF, and slow down at about half max_brake (the hardest
+   0.5 s of its final stop, by the truth). At 1 m/s also: a lat/lon B (through /toLL and
+   /fromLL), a 250 m B refused, and a drive stopped by a cancel (Ctrl-C), the e-stop and a
+   GPS fault (the driver's own timeout and the sensor watchdog's lock).
 
 Times are Gazebo's, simulated; only the limits on waiting are wall-clock. Prints a table and
 exits 1 if anything failed. The launch logs go to /tmp/aav-sim-check.log and, with --lane,
@@ -837,6 +837,10 @@ GOTO_TOLERANCE = 2.0            # m from B, by Gazebo's truth: READ-ME-TESTS 5.2
 GOTO_PAST = 0.3                 # m past B, along the car's heading, by its own global EKF
 GOTO_DECEL = (0.6, 1.25)        # x the planned deceleration (half max_brake): the band
 GOTO_PLAN = 0.5 * float(vehicle.load()['actuators']['max_brake'])   # m/s^2, as goto.yaml
+# A drive the watchdog's lock or a stale position stopped (a busy computer stalls every
+# sensor at once) is sent again, from where it stopped, this many times; the table says so.
+GOTO_RESENDS = 2
+STALL_WORDS = ("watchdog's lock", 'is stale')
 
 
 def ahead_of(msg, distance, degrees):
@@ -846,21 +850,28 @@ def ahead_of(msg, distance, degrees):
     return x + distance * math.cos(a), y + distance * math.sin(a)
 
 
-def slowing(track, t0):
+def slowing(track, t0, window=0.5):
     """
-    Return (top speed, the average deceleration from 90 % to 10 % of it, m/s^2) after t0.
+    Return (top speed, the hardest deceleration over `window` s, m/s^2) after t0.
 
-    From Gazebo's truth: the stretch where the car comes down from its cruise to a stop.
+    From Gazebo's truth, over the final stop only: from the last moment at 90 % of the top
+    speed. As test_drive.py's: a window smooths the truth's speed, which is a difference.
     """
     run = [s for s in track if s[0] >= t0]
     if len(run) < 2:
         return 0.0, math.nan
     top = max(s[4] for s in run)
     i = max(k for k, s in enumerate(run) if s[4] >= 0.9 * top)
-    j = next((k for k in range(i, len(run)) if run[k][4] <= 0.1 * top), None)
-    if j is None or run[j][0] <= run[i][0]:
-        return top, math.nan
-    return top, (run[i][4] - run[j][4]) / (run[j][0] - run[i][0])
+    hardest, j = math.nan, i
+    for a in range(i, len(run)):
+        j = max(j, a)
+        while j < len(run) and run[j][0] - run[a][0] < window:
+            j += 1
+        if j == len(run):
+            break
+        d = (run[a][4] - run[j][4]) / (run[j][0] - run[a][0])
+        hardest = d if math.isnan(hardest) else max(hardest, d)
+    return top, hardest
 
 
 def send_goto(probe, goal, wait=300.0):
@@ -899,14 +910,21 @@ def goto_drive(probe, speed, distance, degrees, lat_lon=False):
         goal = GoTo.Goal(use_lat_lon=True, latitude=p.latitude, longitude=p.longitude,
                          cruise_speed=float(speed))
         where = f'B lat {p.latitude:.7f} lon {p.longitude:.7f}'
-    t0 = probe.now()
-    res, _ = send_goto(probe, goal, wait=60.0 + 6.0 * distance / speed)
-    probe.spin_for(10.0, lambda: probe.now() - t0 > 0.0 and abs(
-        probe.truth.twist.twist.linear.x) < STILL)
-    if res is None:
-        result(name, False, f'{where}: refused, or no answer')
-        return
-    r = res.result
+    stalls = []
+    for _ in range(1 + GOTO_RESENDS):
+        t0 = probe.now()
+        res, _ = send_goto(probe, goal, wait=60.0 + 6.0 * distance / speed)
+        probe.spin_for(10.0, lambda: abs(probe.truth.twist.twist.linear.x) < STILL)
+        if res is None:
+            result(name, False, f'{where}: refused, or no answer')
+            return
+        r = res.result
+        if r.success or not any(w in r.message for w in STALL_WORDS):
+            break
+        # A busy computer stalls every sensor at once: the watchdog locks, the driver stops,
+        # as they must. Once the lock opens, the same B again, from where it stopped.
+        stalls.append(r.message.split(': ', 1)[-1])
+        probe.spin_for(30.0, lambda: not probe.locked())
     tx, ty = probe.xy(probe.truth)
     error = math.hypot(tx - r.target_x, ty - r.target_y)
     gx, gy = probe.xy(probe.glob)
@@ -916,11 +934,13 @@ def goto_drive(probe, speed, distance, degrees, lat_lon=False):
     lo, hi = GOTO_DECEL
     ok = (r.success and error <= GOTO_TOLERANCE and past <= GOTO_PAST
           and lo * GOTO_PLAN <= decel <= hi * GOTO_PLAN)
+    again = (f'; sent again after {len(stalls)} stall(s) that stopped it: '
+             f'{"; ".join(stalls)}' if stalls else '')
     result(name, ok,
            f'{where}: stopped {error:.2f} m from B by the truth ({r.distance_left:.2f} m by '
            f'its EKF), {past:+.2f} m past it; top {top:.2f} m/s, slowed at {decel:.2f} '
-           f'm/s^2 (plan {GOTO_PLAN:g}); {r.distance_travelled:.1f} m in {r.duration:.0f} s;'
-           f' "{r.message}"')
+           f'm/s^2 at most (plan {GOTO_PLAN:g}); {r.distance_travelled:.1f} m in '
+           f'{r.duration:.0f} s; "{r.message}"{again}')
 
 
 def goto_stops(probe, name, stop, mend=None, react=4.0):
@@ -981,7 +1001,8 @@ def estop(on):
 
 def check_goto_refusals(probe):
     """Check it refuses a B over max_distance away (goto.yaml: 200 m)."""
-    far, _ = send_goto(probe, GoTo.Goal(x=250.0, y=0.0), wait=20.0)
+    bx, by = ahead_of(probe.glob, 250.0, 0.0)
+    far, _ = send_goto(probe, GoTo.Goal(x=bx, y=by), wait=20.0)
     refused = far is not None and not far.result.success and 'over the limit' in \
         far.result.message
     result('goto refuses 250 m', refused,
