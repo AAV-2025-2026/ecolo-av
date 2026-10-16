@@ -5,7 +5,8 @@ Action      goto                       aav_interfaces/action/GoTo
 Subscribes  localization/odom/global   nav_msgs/Odometry: where the car is on the map, its speed
             sensors/gps/fix            sensor_msgs/NavSatFix (best effort): fresh? RTK?
             safety/estop               std_msgs/Bool: true stops the drive
-            safety/sensor_watchdog/lock  std_msgs/Bool: true stops the drive
+            safety/sensor_watchdog/lock  std_msgs/Bool: true, or silent for watchdog_timeout,
+                                       stops the drive (as twist_mux's sensors lock)
             system/source              aav_interfaces/DataSource, latched: REAL needs a person
                                        to confirm (the goal's `confirmed`)
             control/cmd_vel            geometry_msgs/TwistStamped: twist_mux's choice, to
@@ -25,7 +26,8 @@ It speeds up gently, holds a cruise speed, and slows down by the distance left a
 the measured braking (vehicle.yaml actuators max_brake), so it stops at B (approach.py).
 It steers by pure pursuit: first towards B, then along the straight line to it (line.py).
 It stops at once (zero commands; ego's own deceleration) on a cancel, the e-stop, the
-watchdog's lock, a stale position or GPS fix, or someone else driving (rules.py). It
+watchdog's lock or its silence, a stale position or GPS fix, someone else driving, or the
+car standing still though asked to move (rules.py). It
 refuses a B over max_distance away, or inside the car's tightest turn.
 """
 
@@ -77,11 +79,13 @@ class GotoDriver(Node):
             ('lookahead_min', 2.0), ('lookahead_time', 1.0), ('lateral_accel', 1.5),
             ('wheelbase', 1.57), ('max_steering_angle', 0.5),
             ('max_distance', 200.0), ('pose_timeout', 0.5), ('gps_timeout', 2.0),
-            ('require_gps', True), ('still_speed', 0.05), ('still_time', 1.0))}
+            ('require_gps', True), ('watchdog_timeout', 1.0), ('stuck_time', 5.0),
+            ('still_speed', 0.05), ('still_time', 1.0))}
         self.p = p
         self.limits = rules.Limits(max_distance=p['max_distance'],
                                    pose_timeout=p['pose_timeout'],
-                                   gps_timeout=p['gps_timeout'], require_gps=p['require_gps'])
+                                   gps_timeout=p['gps_timeout'], require_gps=p['require_gps'],
+                                   watchdog_timeout=p['watchdog_timeout'])
         self.radius = min_radius(p['wheelbase'], p['max_steering_angle'])
         self.busy = False
         self.pose = None            # (Pose, speed)
@@ -90,6 +94,7 @@ class GotoDriver(Node):
         self.fix_status = None
         self.estop = False
         self.locked = False
+        self.lock_time = None       # s: the watchdog's lock last arrived (its heartbeat)
         self.sources = {}
         self.ours = collections.deque(maxlen=50)   # our last commands (v, w)
         self.other_since = None                    # s: twist_mux passing someone else's
@@ -102,8 +107,7 @@ class GotoDriver(Node):
                                  qos_profile_sensor_data)
         self.create_subscription(Bool, 'safety/estop',
                                  lambda m: setattr(self, 'estop', bool(m.data)), 10)
-        self.create_subscription(Bool, 'safety/sensor_watchdog/lock',
-                                 lambda m: setattr(self, 'locked', bool(m.data)), 10)
+        self.create_subscription(Bool, 'safety/sensor_watchdog/lock', self.on_lock, 10)
         self.create_subscription(DataSource, 'system/source', self.on_source, latched)
         self.create_subscription(TwistStamped, 'control/cmd_vel', self.on_mux, 10)
         self.from_ll = self.create_client(FromLL, '/fromLL')
@@ -132,6 +136,10 @@ class GotoDriver(Node):
             self.fix_time = self.seconds()
             self.fix_status = msg.status.status
 
+    def on_lock(self, msg):
+        self.locked = bool(msg.data)
+        self.lock_time = self.seconds()
+
     def on_source(self, msg):
         self.sources[msg.announcer] = [s.source for s in msg.sensors]
 
@@ -149,7 +157,7 @@ class GotoDriver(Node):
             return None if stamp is None else t - stamp
         return rules.Now(pose_age=age(self.pose_time), fix_age=age(self.fix_time),
                          estop=self.estop, locked=self.locked,
-                         kind=source_kind(self.sources),
+                         kind=source_kind(self.sources), lock_age=age(self.lock_time),
                          taken_over=(self.other_since is not None
                                      and t - self.other_since > TAKEOVER_TIME))
 
@@ -287,7 +295,7 @@ class GotoDriver(Node):
 
         finished = Future()
         st = {'last': self.seconds(), 't0': self.seconds(), 'tick': 0, 'zeros': 0,
-              'still': None, 'path': 0.0, 'stop': None,
+              'still': None, 'stuck': None, 'path': 0.0, 'stop': None,
               'cancel': False, 'cmd': None}
         feedback = GoTo.Feedback()
 
@@ -324,6 +332,15 @@ class GotoDriver(Node):
                             f'{approach.cruise:g} m/s')
             cmd = run.tick(pose, measured, dt)
             st['cmd'] = cmd
+            # Asked to move, standing still: something holds the car (a lock this driver
+            # can't see, a brake, a wall). Stop asking.
+            if rules.not_moving(cmd.speed, measured, p['still_speed']):
+                st['stuck'] = st['stuck'] if st['stuck'] is not None else t
+                if t - st['stuck'] > p['stuck_time']:
+                    return stop(f'the car stood still for {p["stuck_time"]:g} s though asked '
+                                'to move: something holds it')
+            else:
+                st['stuck'] = None
             self.publish(cmd.speed, cmd.curvature)
             if cmd.phase == STOPPING:
                 if abs(measured) < p['still_speed']:

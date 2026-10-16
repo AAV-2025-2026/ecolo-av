@@ -23,5 +23,9 @@ goto_driver:
     pose_timeout: 0.5       # s without /localization/odom/global: stop
     gps_timeout: 2.0        # s without a GPS fix: stop (the watchdog's GPS max_age)
     require_gps: true       # false only where no GPS runs (x/y goals with no fix at all)
+    # s without the sensor watchdog's heartbeat (its lock): stop. twist_mux's sensors lock
+    # timeout, so it stops when twist_mux holds it. The launch file sets 0 with watchdog:=false.
+    watchdog_timeout: 1.0
+    stuck_time: 5.0         # s standing still though asked to move: stop (something holds it)
     still_speed: 0.05       # m/s: standing still
     still_time: 1.0         # s standing still at B before it reports

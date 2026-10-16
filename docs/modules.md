@@ -29,7 +29,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 |---|---|
 | [Sensors](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver` |
 | [Description and localization](#description-and-localization) | `aav_description`, `aav_localization` |
-| [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_language`, `aav_navigation` |
+| [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_goto`, `aav_language`, `aav_navigation` |
 | [Mux and ego](#mux-and-ego) | `aav_mux`, `aav_ego` |
 | [Backends](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla` |
 | [Perception](#perception) | `aav_yolo`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry` |
@@ -171,6 +171,20 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Run alone** | `ros2 launch aav_scripted scripted.launch.py`, then the `ros2 action send_goal` in its docstring |
 | **Test** | `test/test_speed_profile.py` (in `tools/test.sh`) |
 | **Read first** | `aav_scripted/speed_profile.py` |
+
+### aav_goto
+
+| | |
+|---|---|
+| **Does** | an action that drives to one point B (lat/lon or map x/y) and stops there: speed up gently, hold, slow down by the distance left at half the measured braking |
+| **Why** | the main goal (Ben, 15 Oct): GPS A to B with a smooth stop, READ-ME-TESTS 5.2 |
+| **Runs on** | the Orin, next to the mux |
+| **In → out** | the action `/goto`, `/localization/odom/global`, `/sensors/gps/fix` → `/drivers/goto/cmd_vel` (twist_mux priority 25) |
+| **Origin** | ours |
+| **Status** | [[works]] in Gazebo (`pixi run sim-check --goto`, 15 Oct); [[untested]] on the car |
+| **Run alone** | `pixi run sim`, then `pixi run goto --sim --ahead 20` |
+| **Test** | `test/` (in `tools/test.sh`): the speed plan, the steering, the rules, whole drives on a pretend car |
+| **Read first** | [A to B](../READ-ME-A-TO-B.md), then `aav_goto/approach.py` and `line.py` |
 
 ### aav_language
 

@@ -35,6 +35,8 @@ def test_every_reason_to_stop():
         'no GPS fix': now(fix_age=None),
         'GPS fix is stale': now(fix_age=2.5),
         'someone else': now(taken_over=True),
+        'watchdog is never heard': now(lock_age=None),
+        'watchdog is silent': now(lock_age=1.5),
     }
     for words, state in cases.items():
         assert words in rules.stop_reason(state, LIMITS), words
@@ -74,3 +76,13 @@ def test_tolerance_is_1_m_with_rtk_and_2_m_without():
 def test_confirmation_is_the_word_exactly():
     assert rules.confirmed('goto') and rules.confirmed(' goto\n')
     assert not rules.confirmed('yes') and not rules.confirmed(None) and not rules.confirmed('')
+
+
+def test_no_watchdog_where_none_runs():
+    assert rules.stop_reason(now(lock_age=None), rules.Limits(watchdog_timeout=0.0)) is None
+
+
+def test_standing_still_though_asked_to_move():
+    assert rules.not_moving(commanded=0.5, measured=0.0)
+    assert not rules.not_moving(commanded=0.5, measured=0.3)
+    assert not rules.not_moving(commanded=0.1, measured=0.0)    # slowing to B: fine

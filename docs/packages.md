@@ -16,6 +16,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_localization` | localization | the two EKFs and `navsat_transform`: configuration only | [[works]] turtle, Gazebo and the bench | new |
 | `aav_teleop` | drivers | joystick → `/drivers/joy/cmd_vel`, plus an e-stop button | [[untested]] | new; the button map from 2025-26 `joy_teleop_ackerman` |
 | `aav_scripted` | drivers | scripted drives: speed up, hold, slow down | [[works]] turtle and the bench | new |
+| `aav_goto` | drivers | drive to one GPS or map point B, and stop there smoothly | [[works]] in Gazebo (15 Oct); [[untested]] on the car | new |
 | `aav_language` | drivers | plain English: a local model plans drive tools, you say yes | [[works]] Gazebo and the turtle | new |
 | `aav_navigation` | drivers | Nav2, set up for a car, and the maps | [[works]] goals reached in Gazebo | new |
 | `aav_mux` | mux | twist_mux: the priorities and the e-stop lock | [[works]] | new |
@@ -25,7 +26,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_turtlesim` | backends | turtlesim, steered like the car | [[works]] | new |
 | `aav_gazebo` | backends | Gazebo's car behind the real car's topics | [[works]] headless | new |
 | `aav_carla` | backends | a CARLA adapter | [[stub]] never run | new |
-| `aav_interfaces` | interfaces | our messages: `VehicleStatus`, `ScriptedDrive` | [[works]] builds | new |
+| `aav_interfaces` | interfaces | our messages: `VehicleStatus`, `ScriptedDrive`, `GoTo` | [[works]] builds | new |
 | `aav_bringup` | bringup | the five profiles, perception on the car, the machine files, the RViz layout | [[works]] turtle, sim, replay, bench | new |
 | `aav_yolo` | perception | YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
 | `aav_radar_clusters` | perception | radar clustering (DBSCAN), with a box round each object (Rust) | [[works]] on the bench and in Gazebo | new: a rewrite of the 2025-26 `Nav_Radar` C++ node |
@@ -67,6 +68,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | keyboard (`tools/keyboard.sh`) | your keys | `/drivers/keyboard/cmd_vel` | `pixi run keyboard` |
 | `aav_actuator_tests` | `/vehicle/odom`, `/vehicle/steering`, `/throttle`, `/brake`, `/wheels`, the IMU, `/localization/odom/local`, GPS, `/safety/estop`, `/control/cmd_vel`, `/system/source` | `/drivers/tests/cmd_vel` | `pixi run actuator-test`: the stage 3-4 tests; prints `vehicle.yaml` lines ([Actuator tests](actuator-tests.md)) |
 | `aav_scripted` | `/localization/odom/local` | `/drivers/scripted/cmd_vel` | the action `/scripted_drive` |
+| `aav_goto` | `/localization/odom/global`, `/sensors/gps/fix`, `/safety/estop`, the watchdog's lock, `/system/source`, `/control/cmd_vel` | `/drivers/goto/cmd_vel` | the action `/goto`; calls `/fromLL` for a lat/lon B. `pixi run goto` ([A to B](../READ-ME-A-TO-B.md)) |
 | `aav_language` | your words; odometry, GPS, `/diagnostics`, `/vehicle/status` | `/safety/estop` (true only) | calls `/scripted_drive` and `/follow_gps_waypoints`; never publishes a velocity |
 | `aav_navigation` | `/localization/odom/local`, `/map`, `/goal_pose` | `/drivers/nav/cmd_vel`, `/plan` | SmacPlannerHybrid and Regulated Pure Pursuit; GPS waypoints through `/follow_gps_waypoints` |
 | `aav_mux` (twist_mux) | every `/drivers/<driver>/cmd_vel`, `/safety/estop` | `/control/cmd_vel` | priorities: [Build a driver](howto-driver.md) |

@@ -1038,6 +1038,7 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, worl
     """
     road = world == 'road'
     radar = radar and road
+    watchdog = 'watchdog:=false' not in launch_args
     tag = f' ({label})' if label else ''
     # What a run leaves out on purpose isn't missing from the graph.
     ignore = (tuple(ignore) + (LIDAR_TOPICS if 'lidar:=false' in launch_args else ())
@@ -1058,7 +1059,10 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, worl
             return [n for n, m in (('truth', probe.truth), ('global EKF', probe.glob),
                                    ('camera', probe.image if road else True),
                                    ('lens', probe.info if road else True),
-                                   ('radar', probe.cloud if radar else True)) if m is None]
+                                   ('radar', probe.cloud if radar else True),
+                                   # Its heartbeat: without it twist_mux holds the drivers.
+                                   ('the sensor watchdog', probe.lock if watchdog else True))
+                    if m is None]
 
         up = probe.spin_for(120.0, lambda: not missing())
         # Nav2 comes up last: its lifecycle manager starts its servers one at a time. On a

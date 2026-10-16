@@ -11,7 +11,8 @@ so the two agree on what REAL means.
 | A goal's numbers are sane | check_numbers |
 | May start: no e-stop or lock, a fresh position and fix, confirmed on REAL | refuse_start |
 | B is near enough, and a forward-only car can reach it | refuse_target |
-| Stop now: the e-stop, the lock, a stale position or GPS fix, someone else driving | stop_reason |
+| Stop now: e-stop, lock or silent watchdog, stale position or fix, another driver | stop_reason |
+| The car doesn't move though asked to (something holds it) | not_moving |
 | How close counts as at B: 1 m with RTK, 2 m without | tolerance |
 """
 
@@ -40,6 +41,9 @@ class Limits:
     pose_timeout: float = 0.5     # s without the global EKF: stop
     gps_timeout: float = 2.0      # s without a GPS fix: stop (the watchdog's own max_age)
     require_gps: bool = True      # false only where no GPS runs at all (x/y goals)
+    # s without the watchdog's lock (a heartbeat): stop. twist_mux's lock timeout, so the
+    # driver stops when twist_mux holds it. 0 where no watchdog runs (sim watchdog:=false).
+    watchdog_timeout: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -52,6 +56,7 @@ class Now:
     locked: bool                  # the sensor watchdog's lock says true
     kind: Kind                    # what /system/source says we drive
     taken_over: bool = False      # twist_mux passes someone else's commands
+    lock_age: Optional[float] = 0.0   # s since the watchdog's lock last arrived; None = never
 
 
 def check_numbers(cruise: float, accel: float, decel: float) -> Optional[str]:
@@ -81,6 +86,11 @@ def stop_reason(now: Now, limits: Limits) -> Optional[str]:
         return 'the e-stop is on (/safety/estop)'
     if now.locked:
         return "the sensor watchdog's lock is on: a sensor is stale, NaN, frozen or jumped"
+    if limits.watchdog_timeout > 0 and (now.lock_age is None
+                                        or now.lock_age > limits.watchdog_timeout):
+        heard = 'never heard' if now.lock_age is None else f'silent for {now.lock_age:.1f} s'
+        return (f"the sensor watchdog's lock is on: the watchdog is {heard}, so twist_mux "
+                'holds every driver below 30')
     if now.pose_age is None:
         return 'no position: nothing on /localization/odom/global'
     if now.pose_age > limits.pose_timeout:
@@ -109,6 +119,12 @@ def refuse_target(pose: Pose, target: Point, limits: Limits, radius: float) -> O
         return (f"B is inside the car's tightest turn ({radius:.1f} m radius): a car that "
                 "can't reverse would circle it. Drive further first, or use Nav2")
     return None
+
+
+def not_moving(commanded: float, measured: float, still: float = 0.05,
+               asked: float = 0.2) -> bool:
+    """Return True if the car stands still though asked for at least `asked` m/s."""
+    return commanded >= asked and abs(measured) < still
 
 
 def tolerance(fix_status: Optional[int]) -> float:
