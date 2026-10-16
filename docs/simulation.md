@@ -442,8 +442,9 @@ until `pixi run sim-fault clear`. Wheels frozen at a speed the car really keeps 
 right, so nothing is said until the car's speed or turn changes. A frozen IMU or GPS is
 left out (its own input says FROZEN), not blamed on the wheels.
 
-Normal driving, Gazebo (sim-check's `wheels vs IMU and GPS`): worst speed gap 0.09-0.14
-m/s and turn 0.006-0.010 rad/s (6 runs), GPS 0.12-0.14 m/s (3 runs). The limits are **Gazebo's**: on
+Normal driving, Gazebo (sim-check's `wheels vs IMU and GPS`, the obstacle's braking too):
+worst speed gap 0.09-0.15 m/s and turn 0.006-0.010 rad/s (8 runs), GPS 0.12-0.14 m/s
+(5 runs): half the limits or less. The limits are **Gazebo's**: on
 the car, read `worst_*_gap` on `/diagnostics` after a normal drive, and set them well
 above.
 

@@ -1044,8 +1044,9 @@ speed that looks like a car at a steady speed. <code>wheel_check.py</code> cross
 until <code>pixi run sim-fault clear</code>. Wheels frozen at a speed the car really keeps are still
 right, so nothing is said until the car's speed or turn changes. A frozen IMU or GPS is
 left out (its own input says FROZEN), not blamed on the wheels.</p>
-<p>Normal driving, Gazebo (sim-check's <code>wheels vs IMU and GPS</code>): worst speed gap 0.09-0.14
-m/s and turn 0.006-0.010 rad/s (6 runs), GPS 0.12-0.14 m/s (3 runs). The limits are <strong>Gazebo's</strong>: on
+<p>Normal driving, Gazebo (sim-check's <code>wheels vs IMU and GPS</code>, the obstacle's braking too):
+worst speed gap 0.09-0.15 m/s and turn 0.006-0.010 rad/s (8 runs), GPS 0.12-0.14 m/s
+(5 runs): half the limits or less. The limits are <strong>Gazebo's</strong>: on
 the car, read <code>worst_*_gap</code> on <code>/diagnostics</code> after a normal drive, and set them well
 above.</p>
 <h3 id="the-global-ekf-and-a-gps-jump">The global EKF and a GPS jump</h3>
