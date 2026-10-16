@@ -441,8 +441,8 @@ topics:
   /drivers/nav/route/path:
     type: nav_msgs/msg/Path
     pub: [street_router]
-    sub: []
-    note: Transient local (latched). The whole route in the map frame (each point through /fromLL), to draw in RViz or Foxglove. Not a plan Nav2 follows.
+    sub: [map]
+    note: Transient local (latched). The whole route in the map frame (each point through /fromLL). The map window (map, aav_hud_raylib) draws it violet under Nav2's blue plan; RViz and Foxglove can too. Not a plan Nav2 follows.
   /drivers/nav/route/status:
     type: std_msgs/msg/String
     pub: [street_router]

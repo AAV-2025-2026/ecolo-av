@@ -6,6 +6,8 @@
 //!             plan_topic    nav_msgs/Path                Nav2's plan: the line, the distance left
 //!             goal_topic    geometry_msgs/PoseStamped    RViz's goal (or ours), until Nav2 plans for it
 //!             source_topic  aav_interfaces/DataSource    latched: the SIMULATED banner
+//!             street_route_topic  nav_msgs/Path          latched: street_router's street route
+//!                                                        (aav_routes), violet, under the plan
 //! Publishes   goal_topic    geometry_msgs/PoseStamped    the place search's goal, map frame,
 //!                                                        only after DRIVE HERE then CONFIRM
 //! Parameters  the topics above, stale_after, plan_stale_after (s), arrive_within (m),

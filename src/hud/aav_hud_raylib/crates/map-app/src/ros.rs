@@ -12,7 +12,8 @@
 //! - the plan and the goal: reliable, as Nav2 and RViz send them; the goal we publish:
 //!   reliable, volatile, depth 10, as RViz's "2D Goal Pose" (bt_navigator listens);
 //! - `/system/source`: reliable, transient local, depth 1, as the HUD;
-//! - the sensor watchdog's verdict: reliable, depth 1, as the HUD.
+//! - the sensor watchdog's verdict: reliable, depth 1, as the HUD;
+//! - street_router's street route: reliable, transient local, depth 1 (latched).
 
 use std::{
     sync::{
@@ -172,14 +173,22 @@ fn spin(
     let _plan = node.create_subscription(config.topic(Topic::Plan).qos(plans), {
         let tx = tx.clone();
         move |m: Path| {
-            let route = Route::new(m.poses.iter().map(|p| {
-                let q = &p.pose.position;
-                Point::new(q.x, q.y)
-            }));
             send(
                 &tx,
                 Update::Plan {
-                    route,
+                    route: route(&m),
+                    frame: m.header.frame_id,
+                },
+            )
+        }
+    })?;
+    let _street = node.create_subscription(config.topic(Topic::StreetRoute).qos(latched), {
+        let tx = tx.clone();
+        move |m: Path| {
+            send(
+                &tx,
+                Update::StreetRoute {
+                    route: route(&m),
                     frame: m.header.frame_id,
                 },
             )
@@ -230,6 +239,14 @@ fn send(tx: &SyncSender<Update>, update: Update) {
     match tx.try_send(update) {
         Ok(()) | Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {}
     }
+}
+
+/// A path's points, start to end.
+fn route(m: &Path) -> Route {
+    Route::new(m.poses.iter().map(|p| {
+        let q = &p.pose.position;
+        Point::new(q.x, q.y)
+    }))
 }
 
 fn pose(p: &PoseMsg) -> Pose {
