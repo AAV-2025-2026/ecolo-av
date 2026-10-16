@@ -218,7 +218,7 @@ The development computers:
 
 ## Sharing the code
 
-The repo is on GitHub: `git@github.com:zander1976/aav.git`, private. Ask Ben to add you. The
+The repo is on GitHub: `git@github.com:zander1976/aav.git`, public: anyone can read it; ask Ben to add you to push. The
 previous teams' orgs are public, so nothing is pushed there.
 
 | Task | Command |

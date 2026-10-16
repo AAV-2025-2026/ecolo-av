@@ -114,11 +114,12 @@ These are the conventions decided so far. They apply to people and to Claude ses
 
 ## Git
 
-- The repo is `git@github.com:zander1976/aav.git`, private (Ben, 10 Oct: Q25). Push `main` there
-  once `pixi run test` passes. Never force-push it, and push nowhere else: the previous
-  teams' orgs are public.
-- CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux for every push, and on a
-  Mac every night.
+- The repo is `git@github.com:zander1976/aav.git` (Q25), **public** on purpose (Ben,
+  15 Oct), so nothing secret ever goes in it. Push `main` there once the full
+  `pixi run test` passes (not just `tools/test.sh`: it skips the launch-file tests).
+  Never force-push it, and push nowhere else.
+- CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux for every push to `main`
+  and every pull request, and on a Mac every night.
 - Commit messages give the intention: what changed, and why. No attribution lines (no
   `Co-Authored-By`, no "Generated with"). It's a school project: the README's Credits
   section says who did what.

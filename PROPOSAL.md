@@ -110,7 +110,7 @@ The tests for each step, in order: [READ-ME-TESTS.md](READ-ME-TESTS.md).
 | No timeout today: a lost cable keeps the car going | fixed before any drive (TEAM-TODO B2) |
 | Upgrading the Jetson loses the only copy of something | back up the whole disk first |
 | Leaked passwords and keys in the old repos | changed, never copied (Q34) |
-| Our GitHub repo is **public** (found 15 Oct), though the plan said private | no secrets go in it; Ben decides whether to make it private (Q25) |
+| Our GitHub repo is **public**, on purpose (Ben, 15 Oct) | no secrets ever go in it: only where the old ones are (Q34) |
 | GPS isn't accurate enough near buildings | an RTK fix, and the EKF with the wheels and IMU |
 | The sim lies, because its numbers are guesses | measure, then test on stands before the ground |
 
