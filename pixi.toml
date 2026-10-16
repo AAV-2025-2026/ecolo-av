@@ -74,6 +74,7 @@ hud-demo = { cmd = "cargo run --release -q --locked --manifest-path ros/hud/aav_
 # The big screen's map window, the same way: map-demo needs no ROS.
 map = { cmd = "tools/ros.sh ros2 launch aav_hud_raylib map.launch.py", description = "The big screen's map window (raylib), as the ROS node map: pixi run map fullscreen:=true" }
 map-demo = { cmd = "cargo run --release -q --locked --manifest-path ros/hud/aav_hud_raylib/Cargo.toml -p map-app --no-default-features -- --demo", description = "The map window with pretend data: no ROS, no car" }
+demo = { cmd = "tools/demo_all.sh", description = "Start the whole simulated car on this computer in one go: Gazebo, the nav screen (RViz), the HUD and the street-map window; localhost-only, never touches the real car. pixi run demo [fullscreen]; Ctrl-C stops all four" }
 rust-listener ={ cmd = "tools/ros.sh cargo run -q --manifest-path examples/rust-listener/Cargo.toml", description = "A Rust (rclrs) node: prints ego's commands" }
 # The spine's board program, for a Pico 2 (docs/rust-firmware.md). spine-uf2 only makes a
 # file; spine-flash writes to a Pico 2, through a debug probe, so run it only on the bench.
