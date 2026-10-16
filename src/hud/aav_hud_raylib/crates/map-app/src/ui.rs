@@ -20,6 +20,9 @@
 //!
 //! The map part uses the window's pixels; the panel's sizes grow with the window, so a
 //! 15" monitor and a laptop look alike.
+//!
+//! A tap (a click) on the search box also opens the on-screen keyboard along the bottom
+//! (map-core's `keyboard`): the car's screen has no real keyboard.
 
 use std::{sync::Arc, time::Instant};
 
@@ -30,6 +33,7 @@ use map_core::{
     destination::{Finder, Step},
     geom::{Metres, Point},
     grid::{Grid, Palette},
+    keyboard::{KeyCap, Keyboard},
     places::{self, MIN_QUERY_CHARS},
     state::{MapState, Remaining},
     streets::TileShapes,
@@ -91,6 +95,10 @@ const SEARCH_ROW_ON: Color = Color::new(48, 54, 70, 255);
 const PICKED: Color = Color::new(215, 60, 200, 255);
 /// CONFIRM: amber, to stop and read.
 const CONFIRM: Color = Color::new(245, 160, 20, 255);
+/// The on-screen keyboard's keys: letters, the editing keys, and a key held down.
+const KEY: Color = Color::new(58, 64, 82, 255);
+const KEY_COMMAND: Color = Color::new(36, 40, 52, 255);
+const KEY_DOWN: Color = Color::new(120, 130, 160, 255);
 
 /// Fonts tried in order, as the HUD; raylib's own small pixel font if none is there.
 const FONT_FILES: [&str; 4] = [
@@ -183,6 +191,17 @@ impl Layout {
             band,
         }
     }
+
+    /// The on-screen keyboard, at the bottom of the window, centred under the map.
+    pub fn keyboard(&self) -> Keyboard {
+        let window = Viewport {
+            x: 0.0,
+            y: 0.0,
+            width: f64::from(self.panel.x + self.panel.width),
+            height: f64::from(self.panel.height),
+        };
+        Keyboard::new(window, self.map.centre().x, f64::from(self.u))
+    }
 }
 
 impl Ui {
@@ -244,6 +263,7 @@ impl Ui {
     }
 
     /// Draws one frame. `tiles`: the street map's, from [`StreetMap::frame`].
+    /// `keyboard`: the on-screen keyboard when it's open, and the key held down.
     #[allow(clippy::too_many_arguments)]
     pub fn draw(
         &self,
@@ -256,6 +276,7 @@ impl Ui {
         streets: &StreetMap,
         tiles: &[Arc<TileShapes>],
         search: &Search,
+        keyboard: Option<(&Keyboard, Option<KeyCap>)>,
     ) {
         let banner = state.origins.banner();
         let layout = Layout::new(
@@ -304,13 +325,11 @@ impl Ui {
             p.centred(cx, band.y + 8.0 * p.u, 40.0, words, Color::BLACK);
         }
         panel(&mut p, &layout, state, now, source);
-        draw_search(
-            &mut p,
-            &SearchLayout::new(&layout, &search.finder),
-            search,
-            state,
-            now,
-        );
+        let boxes = SearchLayout::new(&layout, &search.finder, keyboard.map(|(kb, _)| kb));
+        draw_search(&mut p, &boxes, search, state, now);
+        if let Some((kb, held)) = keyboard {
+            draw_keyboard(&mut p, kb, held);
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -524,6 +543,8 @@ pub struct SearchLayout {
     rows: Vec<Rectangle>,
     button: Option<Rectangle>,
     cancel: Option<Rectangle>,
+    /// The on-screen keyboard is open: the hints say tap.
+    keyboard: bool,
 }
 
 const ROW_H: f32 = 62.0;
@@ -531,7 +552,8 @@ const FOOTER_H: f32 = 34.0;
 const CARD_H: f32 = 180.0;
 
 impl SearchLayout {
-    pub fn new(layout: &Layout, finder: &Finder) -> Self {
+    /// `keyboard`: the on-screen keyboard, when it's open; the results stop above it.
+    pub fn new(layout: &Layout, finder: &Finder, keyboard: Option<&Keyboard>) -> Self {
         let u = layout.u;
         let vp = layout.map;
         let w = (620.0 * u).min(vp.width as f32 - 40.0 * u).max(100.0);
@@ -545,11 +567,17 @@ impl SearchLayout {
             rows: Vec::new(),
             button: None,
             cancel: None,
+            keyboard: keyboard.is_some(),
         };
         match finder.step() {
             Step::Closed => {}
             Step::Typing => {
-                let n = finder.results().len();
+                // Only the rows that fit above the keyboard (at least one).
+                let room = keyboard.map_or(f32::INFINITY, |kb| {
+                    kb.area().y as f32 - 8.0 * u - top - FOOTER_H * u
+                });
+                let fit = (room / (ROW_H * u)).floor().max(1.0) as usize;
+                let n = finder.results().len().min(fit);
                 boxes.rows = (0..n)
                     .map(|i| Rectangle::new(x, top + i as f32 * ROW_H * u, w, ROW_H * u))
                     .collect();
@@ -627,7 +655,7 @@ fn draw_search(
         let hint = if typing {
             "Type a place or an address"
         } else {
-            "/   Search for a place"
+            "Search for a place: tap here, or /"
         };
         p.fitted(tx, ty, 21.0, tw, hint, CAPTION);
     } else {
@@ -698,13 +726,45 @@ fn draw_results(
     }
     let fy = under.y + under.height - FOOTER_H * u + 8.0 * u;
     p.text(x, fy, 14.0, places::CREDIT, DIM);
-    p.right(
-        under.x + under.width - 18.0 * u,
-        fy,
-        14.0,
-        "Up Down  Enter pick  Esc close",
-        DIM,
-    );
+    let hint = if boxes.keyboard {
+        "Tap a place, or Enter for the top one"
+    } else {
+        "Up Down  Enter pick  Esc close"
+    };
+    p.right(under.x + under.width - 18.0 * u, fy, 14.0, hint, DIM);
+}
+
+fn rectangle(r: Viewport) -> Rectangle {
+    Rectangle::new(r.x as f32, r.y as f32, r.width as f32, r.height as f32)
+}
+
+/// The on-screen keyboard: big keys, the letters light, the editing keys darker, Enter
+/// blue; the key under a finger lights up.
+fn draw_keyboard(p: &mut Painter<impl RaylibDraw>, kb: &Keyboard, held: Option<KeyCap>) {
+    let u = p.u;
+    let area = rectangle(kb.area());
+    p.d.draw_rectangle_rounded(area, 0.04, 8, SEARCH_BACK);
+    p.d.draw_rectangle_rounded_lines_ex(area, 0.04, 8, 1.5 * u, DIM);
+    // Letters about 45% of a key's height; the words on the wide keys a little smaller.
+    let letter = kb.key_height() as f32 * 0.45 / u;
+    for (cap, r) in kb.keys() {
+        let r = rectangle(r);
+        let back = match cap {
+            _ if held == Some(cap) => KEY_DOWN,
+            KeyCap::Enter => PLAN,
+            c if c.is_command() => KEY_COMMAND,
+            _ => KEY,
+        };
+        p.d.draw_rectangle_rounded(r, 0.18, 8, back);
+        let label = cap.label();
+        let size = if label.chars().count() > 1 {
+            letter * 0.7
+        } else {
+            letter
+        };
+        let y = r.y + (r.height - size * u) / 2.0;
+        p.centred(r.x + r.width / 2.0, y, size, &label, TEXT);
+    }
 }
 
 fn draw_picked(
@@ -1075,7 +1135,7 @@ fn panel(
         y + 116.0 * u,
         17.0,
         inner_w,
-        "/  search for a place",
+        "/ or tap the box  search",
         CAPTION,
     );
     p.right(x + w - 16.0 * u, y + 10.0 * u, 18.0, source, CAPTION);
