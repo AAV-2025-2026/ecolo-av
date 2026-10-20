@@ -3,7 +3,7 @@
 Bench check: start bench mode, then test the whole car graph on this computer.
 
     pixi run bench-check          (about 2 minutes; nothing else on the network sees it)
-    pixi run -e ml bench-check --perception    (adds YOLO and the stop sign: 3 minutes)
+    pixi run -e ml bench-check --perception    (adds the detector, RF-DETR by default, and the stop sign: 3 minutes)
     pixi run bench-check --obstacle            (adds a box for the radar: 3 minutes)
     pixi run bench-check --lane   (adds lane keeping, in a second bench run: 1 more minute)
 
@@ -15,7 +15,7 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 4. Presses the e-stop while driving: the car must stop, and the spine must say so.
 5. Presses the hardware e-stop the same way.
 6. With --perception: Nav2 drives 40 m east, past the bench's stop sign. The car must stop
-   before the sign, wait, and go on to the goal. The camera's picture with YOLO's boxes, at
+   before the sign, wait, and go on to the goal. The camera's picture with the detector's boxes, at
    the moment it stopped, is saved to /tmp/aav-bench-stop-sign.png.
 7. With --obstacle: a box as wide as the lane appears 15 m ahead, which only the pretend
    radar sees, and Nav2 drives 30 m. collision_monitor's stop zone must stop the car before the

@@ -18,6 +18,11 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 CAR_NODES = ('/ego', '/twist_mux')   # running on the car whenever it can drive
 CAR_SUBNET = '192.168.1.'           # the 2025-26 car network
+# The 2025-26 software, still on the car (ROS 2 Humble): domain 0, and 10 on the dashboard
+# (docs/audit-friday.md). Its node names don't cross from Humble to Jazzy (they come back
+# _UNKNOWN_), but its topics do.
+OLD_CAR_DOMAINS = (0, 10)
+ROS_OWN = ('/rosout', '/parameter_events')
 
 counts = {'OK': 0, 'WARN': 0, 'FIX': 0}
 
@@ -46,6 +51,29 @@ def addresses():
             found = re.findall(r'inet (?:addr:)?(\d+\.\d+\.\d+\.\d+)', out)
             return [a for a in found if not a.startswith('127.')]
     return []
+
+
+def topics_on(domain):
+    """Return the topics heard on another ROS domain, ROS's own left out."""
+    env = {**os.environ, 'ROS_DOMAIN_ID': str(domain)}
+    try:
+        done = subprocess.run(['ros2', 'topic', 'list', '--no-daemon', '--spin-time', '3'],
+                              capture_output=True, text=True, timeout=20, env=env)
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    return [t for t in done.stdout.split() if t.startswith('/') and t not in ROS_OWN]
+
+
+def old_car_line(found):
+    """Say what the 2025-26 software shows, from {domain: [topics]}: (status, detail)."""
+    live = {d: t for d, t in found.items() if t}
+    if not live:
+        return 'WARN', (f'nothing on domain {" or ".join(map(str, found))} either (its '
+                        '2025-26 software): is the car on, and this computer on its network?')
+    parts = [f'domain {d}: {len(t)} topics, such as {", ".join(sorted(t)[:2])}'
+             for d, t in sorted(live.items())]
+    return 'OK', ('; '.join(parts) + '. To watch it: export ROS_DOMAIN_ID='
+                  f'{min(live)} (ours stays 42)')
 
 
 def multicast_works():
@@ -157,6 +185,8 @@ def main():
                                'stack running on the car, on Jazzy?')
     else:
         say('WARN', 'The car', 'no nodes visible: is the car on, with the same domain ID?')
+        status, detail = old_car_line({d: topics_on(d) for d in OLD_CAR_DOMAINS})
+        say(status, 'The old car', detail)
 
     if counts['FIX']:
         print(f"\n{counts['FIX']} to fix. See docs/mac.md.")

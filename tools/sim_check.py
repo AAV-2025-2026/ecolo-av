@@ -3,7 +3,7 @@
 Sim check: start Gazebo's road world headless, then test the car's whole graph in it.
 
     pixi run sim-check                     (about 2 minutes, on this computer only)
-    pixi run -e ml sim-check --perception  (adds YOLO and the stop sign: 2 more minutes)
+    pixi run -e ml sim-check --perception  (adds the detector, RF-DETR by default, and the stop sign: 2 more minutes)
     pixi run sim-check --obstacle          (adds a box for the radar stand-in: 2 more minutes)
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
     pixi run sim-check --lidar-obstacle    (the lidar alone, radar off, stops for a post: a
@@ -42,7 +42,7 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    said DISAGREE, and the worst gaps it saw (its /diagnostics).
 6. With --perception: Nav2 drives to 40 m east, past the stop sign at 25 m. The car must
    stop with its front bumper before the sign, wait, and go on to the goal. The camera's
-   picture with YOLO's boxes, as the lock went on, is saved to /tmp/aav-sim-stop-sign.png.
+   picture with the detector's boxes, as the lock went on, is saved to /tmp/aav-sim-stop-sign.png.
 7. With --obstacle: the bench's 1 m box appears in the lane 15 m ahead (Gazebo's create
    service), and Nav2 drives 30 m. collision_monitor's stop zone must stop the car before
    the box; once the box is taken away, the car must go on to the goal.
@@ -267,7 +267,7 @@ class Probe(Node):
         self.create_subscription(Bool, '/perception/stop_sign', self.on_stop, 10)
         self.create_subscription(Image, '/perception/detections/image',
                                  lambda m: setattr(self, 'picture', m), 2)
-        # The stop signs YOLO saw: (where the car was, x m; score; box height, px).
+        # The stop signs the detector saw: (where the car was, x m; score; box height, px).
         self.signs = []
         self.create_subscription(Detection2DArray, '/perception/detections', self.on_boxes, 10)
         self.lock, self.state = None, ''     # the sensor watchdog's
@@ -626,8 +626,8 @@ def check_stop_sign(probe):
     ok = (locked_at is not None and locked_at < SIGN_X - 1.0 and still_at is not None
           and still_at + front < SIGN_X and reached and x > 35.0)
     signs = probe.signs[seen:]
-    first = (f'YOLO first saw it from x = {signs[0][0]:.1f} m' if signs
-             else 'YOLO never saw it')
+    first = (f'the detector first saw it from x = {signs[0][0]:.1f} m' if signs
+             else 'the detector never saw it')
     lock = 'never locked'
     if locked_at is not None:
         lock = f'locked at x = {locked_at:.1f} m'
@@ -1537,7 +1537,7 @@ def main():
     args = sys.argv[1:]
     perception = '--perception' in args
     if perception and importlib.util.find_spec('ultralytics') is None:
-        print('--perception needs YOLO: pixi run -e ml sim-check --perception', file=sys.stderr)
+        print('--perception needs the detector (PyTorch): pixi run -e ml sim-check --perception', file=sys.stderr)
         return 2
     lidar = '--no-lidar' not in args
     checks = ([check_sensors, check_cameras] + ([check_lidar, check_lidar_scan] if lidar else [])

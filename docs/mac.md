@@ -150,6 +150,22 @@ WiFi connection, with no ROS on the Mac.
 
 In either app: Open connection → Foxglove WebSocket → `ws://<the Orin's IP>:8765`.
 
+**Our layout** (20 Oct): `src/aav_bringup/lichtblick/car.json`. In Lichtblick's Layouts
+menu, import it from that file. One screen shows:
+
+| Panel | Shows |
+|---|---|
+| 3D, following the car | the lidar's points (coloured by height), the radar, Nav2's plan, the street route, the stop zone |
+| Image | the camera, with the detector's boxes (`/perception/detections/image`) |
+| Map | the car's GPS position on a street map |
+| Light | green, or red with "STOP" when the sensor watchdog stops Nav2 |
+| Plot | measured against commanded speed |
+| Raw message | `/vehicle/status`: mode, armed, e-stop, faults |
+
+Its setting names were checked against Lichtblick's own code, and a test keeps every
+topic in it matching `docs/interfaces.yaml`. Not yet opened against the car. In the
+simulator: `pixi run sim foxglove:=true`, then `ws://localhost:8765`.
+
 ## Gazebo on a Mac
 
 On macOS, Gazebo's window has to run as a separate program from the simulator.
