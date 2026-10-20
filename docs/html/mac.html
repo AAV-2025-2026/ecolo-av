@@ -7,7 +7,7 @@
 <!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your Mac: run it, and drive the car</h1>
-<div class="meta">14 min read · 12 sections</div></header>
+<div class="meta">15 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -288,6 +288,45 @@ WiFi connection, with no ROS on the Mac.</p>
 <li><strong>Foxglove:</strong> the same idea; its free plan needs an account.</li>
 </ul>
 <p>In either app: Open connection → Foxglove WebSocket → <code>ws://&lt;the Orin's IP&gt;:8765</code>.</p>
+<p><strong>Our layout</strong> (20 Oct): <code>src/aav_bringup/lichtblick/car.json</code>. In Lichtblick's Layouts
+menu, import it from that file. One screen shows:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Panel</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3D, following the car</td>
+<td>the lidar's points (coloured by height), the radar, Nav2's plan, the street route, the stop zone</td>
+</tr>
+<tr>
+<td>Image</td>
+<td>the camera, with the detector's boxes (<code>/perception/detections/image</code>)</td>
+</tr>
+<tr>
+<td>Map</td>
+<td>the car's GPS position on a street map</td>
+</tr>
+<tr>
+<td>Light</td>
+<td>green, or red with "STOP" when the sensor watchdog stops Nav2</td>
+</tr>
+<tr>
+<td>Plot</td>
+<td>measured against commanded speed</td>
+</tr>
+<tr>
+<td>Raw message</td>
+<td><code>/vehicle/status</code>: mode, armed, e-stop, faults</td>
+</tr>
+</tbody>
+</table></div>
+<p>Its setting names were checked against Lichtblick's own code, and a test keeps every
+topic in it matching <code>docs/interfaces.yaml</code>. Not yet opened against the car. In the
+simulator: <code>pixi run sim foxglove:=true</code>, then <code>ws://localhost:8765</code>.</p>
 </section>
 <section class="card"><h2 id="gazebo-on-a-mac">Gazebo on a Mac</h2>
 <p>On macOS, Gazebo's window has to run as a separate program from the simulator.

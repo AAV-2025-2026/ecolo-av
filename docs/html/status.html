@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">12 min read · 4 sections</div></header>
+<div class="meta">13 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -175,7 +175,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>The lidar in Nav2 (15 Oct)</td>
 <td><code>aav_lidar</code> <code>lidar_scan</code> -&gt; the local costmap's <code>lidar_layer</code> and <code>collision_monitor</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post. On the car: the stock velodyne driver since 20 Oct, on in <code>orin.yaml</code> and <code>all.yaml</code>: <span class="badge b-works">works</span> against a pretend VLP-16 (<code>tools/fake_vlp16.py</code>), the chain at 10 Hz; <span class="badge b-untested">untested</span> with the real lidar</td>
+<td><span class="badge b-works">works</span> in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post (0.57 m on 20 Oct). <strong>Under load it can be late:</strong> on 20 Oct, run beside other jobs on the Mac, it stopped 0.13 m past the post's face; alone, 0.57 m before. Watch the Orin's load on the car. On the car: the stock velodyne driver since 20 Oct, on in <code>orin.yaml</code> and <code>all.yaml</code>: <span class="badge b-works">works</span> against a pretend VLP-16 (<code>tools/fake_vlp16.py</code>), the chain at 10 Hz; <span class="badge b-untested">untested</span> with the real lidar</td>
 </tr>
 <tr>
 <td>Sensor watchdog (15 Oct)</td>

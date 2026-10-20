@@ -408,6 +408,15 @@ sudo dd if=/dev/rdiskN bs=4m | gzip &gt; ~/aav-backup/&lt;machine&gt;.img.gz</co
 <section class="card"><h2 id="step-4-the-read-only-checks">Step 4: the read-only checks</h2>
 <h3 id="the-block-for-every-linux-machine">The block for every Linux machine</h3>
 <div class="admonition note">
+<p class="admonition-title">The logins, from the Keychain (20 Oct)</p>
+<pre><code>Each line of `~/aav-audit/hosts.txt` may name a Keychain entry as its third column
+(`JETSON aavjetson@192.168.1.140 aav-jetson`). The survey then gets that machine's
+password from the Mac's Keychain itself (`tools/keychain_askpass.sh`): nobody copies
+passwords, and none is ever written to a file. Add an entry with
+`security add-generic-password -s aav-jetson -a aavjetson -w` (it asks).
+</code></pre>
+</div>
+<div class="admonition note">
 <p class="admonition-title">Now a script: <code>pixi run survey</code></p>
 <pre><code>[FRIDAY-TODO.md](../FRIDAY-TODO.md) part 2: `tools/machine_survey.sh` does all of the block
 below and more (boot scripts, who holds each device, camera and power errors, code and

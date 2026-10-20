@@ -3,7 +3,7 @@
 Sim check: start Gazebo's road world headless, then test the car's whole graph in it.
 
     pixi run sim-check                     (about 2 minutes, on this computer only)
-    pixi run -e ml sim-check --perception  (adds the detector, RF-DETR by default, and the stop sign: 2 more minutes)
+    pixi run -e ml sim-check --perception  (adds the detector and the stop sign: 2 more minutes)
     pixi run sim-check --obstacle          (adds a box for the radar stand-in: 2 more minutes)
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
     pixi run sim-check --lidar-obstacle    (the lidar alone, radar off, stops for a post: a
@@ -1537,7 +1537,8 @@ def main():
     args = sys.argv[1:]
     perception = '--perception' in args
     if perception and importlib.util.find_spec('ultralytics') is None:
-        print('--perception needs the detector (PyTorch): pixi run -e ml sim-check --perception', file=sys.stderr)
+        print('--perception needs the detector: pixi run -e ml sim-check --perception',
+              file=sys.stderr)
         return 2
     lidar = '--no-lidar' not in args
     checks = ([check_sensors, check_cameras] + ([check_lidar, check_lidar_scan] if lidar else [])

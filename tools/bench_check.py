@@ -3,7 +3,7 @@
 Bench check: start bench mode, then test the whole car graph on this computer.
 
     pixi run bench-check          (about 2 minutes; nothing else on the network sees it)
-    pixi run -e ml bench-check --perception    (adds the detector, RF-DETR by default, and the stop sign: 3 minutes)
+    pixi run -e ml bench-check --perception    (adds the detector and the stop sign: 3 minutes)
     pixi run bench-check --obstacle            (adds a box for the radar: 3 minutes)
     pixi run bench-check --lane   (adds lane keeping, in a second bench run: 1 more minute)
 
