@@ -245,7 +245,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/system/source</code></td>
 <td><code>aav_interfaces/msg/DataSource</code></td>
-<td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>replay_source</code>, <code>carla_adapter</code></td>
+<td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>mock_lidar</code>, <code>replay_source</code>, <code>carla_adapter</code></td>
 <td><code>hud</code>, <code>map</code>, <code>actuator_test</code>, <code>goto_driver</code>, <code>goto_cli</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.</td>
@@ -472,7 +472,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>lidar_driver</code></td>
 <td><code>lidar_cloud</code></td>
 <td>car</td>
-<td>The roof Velodyne VLP-16's UDP packets as they come (the stock velodyne_driver, aav_sensors sensors.launch.py lidar:=true), one turn (0.1 s, about 76 packets) a message, frame lidar_link. It reads only packets from lidar_ip (192.168.1.201, the 16 Oct audit) on lidar_port (2368), so it runs on the computer they're sent to - the Jetson. lidar_cloud turns them into /sensors/lidar/points.</td>
+<td>The roof Velodyne VLP-16's UDP packets as they come (the stock velodyne_driver, aav_sensors sensors.launch.py lidar:=true), one turn (0.1 s, about 76 packets) a message, frame lidar_link. It reads only packets from lidar_ip (192.168.1.201, the 16 Oct audit) on lidar_port (2368), so it runs on the computer they're sent to - the Jetson. lidar_cloud turns them into /sensors/lidar/points. In bench mode (lidar:=true), mock_lidar sends it the bench world's packets on 127.0.0.1:2369, so the same driver runs.</td>
 </tr>
 <tr>
 <td><code>/sensors/lidar/points</code></td>

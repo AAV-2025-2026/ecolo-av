@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar</h1>
-<div class="meta">22 min read · 11 sections</div></header>
+<div class="meta">24 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -723,6 +723,59 @@ pixi run bash -c 'tools/ros.sh --local ros2 launch aav_sensors sensors.launch.py
 </tr>
 </tbody>
 </table></div>
+<p><strong>In bench mode:</strong> <code>pixi run bench lidar:=true</code> adds <code>mock_lidar</code>, the same packets but of
+the bench world: its boxes (<code>obstacle:=true</code>) and the flat ground, seen from where the
+model car really is. The stock driver reads them, and Nav2 and collision_monitor read its
+points, as on the car. <code>pixi run bench-check --lidar</code> adds a check: a box that only the
+lidar sees, which the car must stop for.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Checked 20 Oct, Ben's Mac</th>
+<th>Got</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud</td>
+<td>12,768 points a turn (the ground's rings and the box), 9.3 Hz <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>The box, 15 m ahead</td>
+<td>Nav2's scan: 15.0 m from <code>base_link</code> <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td><code>mock_lidar</code>'s own cost</td>
+<td>8% of one core</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The roof lidar's blind zone.</strong> It sits 1.8 m up, and its lowest laser points 15 degrees
+down. So it sees the ground from 6.7 m out, and anything 1 m tall only from 3 m out.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Height of the thing</th>
+<th>The lidar loses it closer than</th>
+<th>In the stop zone (0-1 m past the bumper)?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 m (the bench's box, a child)</td>
+<td>3.0 m from the lidar: 2.1 m past the bumper</td>
+<td><strong>not seen at all</strong></td>
+</tr>
+<tr>
+<td>1.5 m (a car, a person)</td>
+<td>1.1 m from the lidar: 0.2 m past the bumper</td>
+<td>seen, from 0.2 m on</td>
+</tr>
+</tbody>
+</table></div>
+<p>Close and low is the radar's job (on the bumper, 0.45 m up), and why collision_monitor
+reads both. bench-check's lidar box is therefore 1.5 m tall. Measure the lidar's real
+height (<code>vehicle.yaml</code> <code>lidar_link</code>) at the audit: the numbers move with it.</p>
 <p><span class="badge b-untested">untested</span> with the real lidar: next on the car, <code>pixi run car orin</code>, and the points in
 Lichtblick. <code>ros2 topic hz</code> on a Mac shows the cloud at 0.5 Hz: it listens best effort,
 and big messages lost that way are lost whole. A reliable subscriber sees 10 Hz.</p>

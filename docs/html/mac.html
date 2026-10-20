@@ -325,8 +325,29 @@ menu, import it from that file. One screen shows:</p>
 </tbody>
 </table></div>
 <p>Its setting names were checked against Lichtblick's own code, and a test keeps every
-topic in it matching <code>docs/interfaces.yaml</code>. Not yet opened against the car. In the
-simulator: <code>pixi run sim foxglove:=true</code>, then <code>ws://localhost:8765</code>.</p>
+topic in it matching <code>docs/interfaces.yaml</code>. In the simulator: <code>pixi run sim
+foxglove:=true</code>, then <code>ws://localhost:8765</code>.</p>
+<p><strong>Check a bridge serves the layout</strong> (no ROS needed): <code>pixi run layout-check</code> (the sim
+here) or <code>pixi run layout-check ws://192.168.1.140:8765</code> (the Jetson). Each topic is
+served, off (it needs a part that's off by default) or MISSING.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Result (20 Oct)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run sim world:=road foxglove:=true perception:=true</code></td>
+<td>11 of 13 served; 2 off: the ghost marker (<code>ghost:=true</code>), the street route (needs a route)</td>
+</tr>
+<tr>
+<td>the car</td>
+<td>not yet</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="gazebo-on-a-mac">Gazebo on a Mac</h2>
 <p>On macOS, Gazebo's window has to run as a separate program from the simulator.

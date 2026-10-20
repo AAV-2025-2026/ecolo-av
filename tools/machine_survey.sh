@@ -73,8 +73,14 @@ ip -details link show type can 2>/dev/null                  # CAN interfaces, if
 echo "-- NetworkManager connections (names only):"
 have nmcli && nmcli -t -f NAME,TYPE,DEVICE connection show 2>/dev/null
 ls /etc/netplan 2>/dev/null
-echo "-- listening ports (who owns each):"
-maybe_sudo ss -tulpn || ss -tuln
+echo "-- listening ports (who owns each; without sudo, root's show no program):"
+if have ss; then maybe_sudo ss -tulpn || ss -tuln
+elif have netstat; then maybe_sudo netstat -tulpn || netstat -an      # older Linux, QNX
+else echo "neither ss nor netstat"; fi
+echo "-- connections now (who talks to whom: the lidar's UDP 2368, ROS, the HUD):"
+if have ss; then maybe_sudo ss -tunp state established || ss -tun state established
+  echo "-- UDP sockets bound (lidar, wheel encoder, DDS):"; maybe_sudo ss -uanp || ss -uan
+elif have netstat; then netstat -an 2>/dev/null | grep -iE 'established|udp'; fi
 
 section "ROS environment"
 ls /opt/ros 2>/dev/null
@@ -137,11 +143,26 @@ section "hardware: USB"
 have lsusb && { lsusb; lsusb -t 2>/dev/null; }
 echo "-- serial ports (listed, never opened):"
 ls -l /dev/serial/by-id /dev/serial/by-path 2>/dev/null
-ls -l /dev/ttyUSB* /dev/ttyACM* /dev/ttyAMA* /dev/ttyTHS* /dev/serial0 /dev/serial1 2>/dev/null
-echo "-- who holds them open:"
-for p in /dev/ttyUSB* /dev/ttyACM* /dev/ttyAMA* /dev/ttyTHS* /dev/video*; do
-  [[ -e $p ]] && have fuser && { o=$(maybe_sudo fuser -v "$p" 2>&1 | tail -n +2); [[ -n $o ]] && echo "$p: $o"; }
+SERIAL="/dev/ttyUSB* /dev/ttyACM* /dev/ttyAMA* /dev/ttyTHS* /dev/ttyGS* /dev/rfcomm* /dev/serial0 /dev/serial1 /dev/ser[0-9]*"
+ls -l $SERIAL 2>/dev/null                                  # /dev/ser*: QNX's serial ports
+echo "-- each one: what's plugged in (from udev; the port itself is not opened):"
+for p in $SERIAL; do
+  [[ -e $p ]] || continue
+  have udevadm || break
+  echo "$p: $(udevadm info -q property -n "$p" 2>/dev/null |
+    grep -E '^ID_(VENDOR|MODEL|SERIAL_SHORT|USB_DRIVER|PATH)=' | tr '\n' ' ')"
 done
+echo "-- who holds them open:"
+for p in $SERIAL /dev/video*; do
+  [[ -e $p ]] || continue
+  if have fuser; then o=$(maybe_sudo fuser -v "$p" 2>&1 | tail -n +2)
+  elif have lsof; then o=$(maybe_sudo lsof "$p" 2>/dev/null | tail -n +2)
+  else o=''; fi
+  [[ -n $o ]] && echo "$p: $o"
+done
+echo "-- serial consoles (a login on a UART: a board on it would read a login prompt):"
+grep -oE 'console=[^ ]+' /proc/cmdline 2>/dev/null
+systemctl list-units --no-pager --no-legend 'serial-getty@*' 2>/dev/null
 echo "-- udev rules added by hand (stable device names):"
 ls -la /etc/udev/rules.d 2>/dev/null; cat /etc/udev/rules.d/*.rules 2>/dev/null | grep -v '^#' | grep -v '^$' | head -60
 
