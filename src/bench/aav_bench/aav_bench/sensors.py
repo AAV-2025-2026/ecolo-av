@@ -17,19 +17,27 @@ and frame, so nothing downstream changes.
   mock_radar    /vehicle/bench/truth -> /sensors/radar/points (PointCloud2, best effort),
                 10 Hz                                                           radar_link
                 the bench world's obstacle boxes, when obstacle is true; else empty
+  mock_lidar    /vehicle/bench/truth -> UDP packets, as the roof's VLP-16 sends them, to
+                127.0.0.1:2369, 754 a second: the bench world's boxes (obstacle) and the
+                flat ground. The stock velodyne driver reads them, as on the car
+                (aav_sensors sensors.launch.py lidar:=true), and publishes
+                /sensors/lidar/points                                           lidar_link
 
 Each one also says, once and latched, on /system/source (aav_interfaces/DataSource), that
 its topic is BENCH: a stand-in, not the real device. The HUD shows a BENCH banner.
 
 spine_sim publishes /vehicle/bench/truth: where the model car really is. The real drivers are
-aav_imu_yahboom, ublox_gps, battery_monitor, usb_cam (aav_sensors) and ti_ros2_driver.
+aav_imu_yahboom, ublox_gps, battery_monitor, usb_cam (aav_sensors), ti_ros2_driver and,
+for the lidar, the same velodyne driver mock_lidar feeds.
 """
 
 import math
 import random
 import signal
+import socket
+import time
 
-from aav_bench import models, pictures
+from aav_bench import models, pictures, vlp16
 from aav_description import vehicle
 from aav_interfaces.msg import DataSource, SensorSource
 from cv_bridge import CvBridge
@@ -285,6 +293,61 @@ class MockRadar(Node):
             header, RADAR_FIELDS, [(x, y, z, 1.0, v) for x, y, z, v in points]))
 
 
+class MockLidar(Node):
+    """
+    The roof's VLP-16, as UDP packets: below the driver, so the driver itself is tested.
+
+    Its pose comes from vehicle.yaml (lidar_link); it sees the same boxes as mock_radar
+    (bench.yaml), read on every packet, so a test can place them:
+    ros2 param set /mock_lidar obstacle true
+    """
+
+    ANNOUNCE = ('lidar', '/sensors/lidar/points')   # for /system/source
+
+    def __init__(self):
+        super().__init__('mock_lidar')
+        self.address = (self.declare_parameter('host', '127.0.0.1').value,
+                        self.declare_parameter('port', 2369).value)
+        self.declare_parameter('obstacle', False)
+        self.declare_parameter('boxes', [15.0, -0.5, 16.0, 0.5])
+        self.declare_parameter('box_height', 1.0)
+        mount = vehicle.load()['sensors']['lidar_link']
+        self.lidar = models.Lidar(mount['xyz'], [math.radians(e) for e in vlp16.ELEVATIONS],
+                                  self.declare_parameter('max_range', 100.0).value)
+        self.add_on_set_parameters_callback(self.check)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sender = vlp16.Sender(lambda data: self.sock.sendto(data, self.address),
+                                   time.monotonic())
+        self.truth = None
+        self.create_subscription(Odometry, TRUTH, self.on_truth, 10)
+        # 100 times a second, the packets due since the last time: about 8 each.
+        self.create_timer(0.01, self.tick)
+
+    def check(self, params):
+        for p in params:
+            if p.name == 'boxes' and len(p.value) % 4:
+                return SetParametersResult(successful=False,
+                                           reason='boxes needs x1, y1, x2, y2 per box')
+        return SetParametersResult(successful=True)
+
+    def on_truth(self, msg: Odometry):
+        self.truth = truth_from(msg)
+
+    def tick(self):
+        if self.truth is None:
+            self.sender.start = time.monotonic()   # nothing due before the car is there
+            return
+        truth = self.truth
+        obstacles = (models.boxes(self.get_parameter('boxes').value)
+                     if self.get_parameter('obstacle').value else [])
+        height = self.get_parameter('box_height').value
+
+        def ranges(bearing_deg):
+            return models.lidar_ranges(self.lidar, truth, obstacles, height,
+                                       math.radians(bearing_deg))
+        self.sender.catch_up(time.monotonic(), ranges, int(time.time() * 1e6))
+
+
 def announce(node, name, topic):
     """Say once, latched, that this topic comes from a bench stand-in (/system/source)."""
     latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
@@ -332,3 +395,7 @@ def camera():
 
 def radar():
     run(MockRadar)
+
+
+def lidar():
+    run(MockLidar)

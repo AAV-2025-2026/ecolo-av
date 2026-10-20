@@ -154,3 +154,32 @@ def test_the_radar_is_sparse_seeded_and_measures_closing_speed():
     assert 0 < len(sparse) < len(returns(truth(), [AHEAD]))
     assert sparse == returns(truth(speed=1.0), [AHEAD], keep=0.5)
     assert all(v < -0.9 for *_, v in sparse), 'closing at about the car speed'
+
+
+LIDAR = models.Lidar([0.9, 0.0, 1.8], [math.radians(e) for e in (-15, -5, -1, 1, 15)], 100.0)
+
+
+def test_a_lidar_sees_the_ground_with_its_low_lasers_and_nothing_with_its_high_ones():
+    r = models.lidar_ranges(LIDAR, truth(), [], 1.0, 0.0)
+    # -15 deg: the ground 6.72 m away along it, 1.8 / sin(15); -1 deg: 103 m, past 100.
+    assert r[0] == pytest.approx(1.8 / math.sin(math.radians(15)))
+    assert r[1] == pytest.approx(1.8 / math.sin(math.radians(5)))
+    assert r[2:] == [0.0, 0.0, 0.0]
+
+
+def test_a_lidar_sees_a_box_ahead_with_the_lasers_that_meet_it_below_its_top():
+    box = models.boxes([15.9, -1.0, 16.9, 1.0])     # its face 15 m from the lidar (x 0.9)
+    r = models.lidar_ranges(LIDAR, truth(), box, 1.0, 0.0)
+    assert r[0] == pytest.approx(1.8 / math.sin(math.radians(15)))   # the ground first
+    # -5 deg meets the face 0.49 m up; -1 deg at 1.54 m, over the 1 m box: it flies on.
+    assert r[1] == pytest.approx(15.0 / math.cos(math.radians(5)))
+    assert r[2] == 0.0
+
+
+def test_a_lidar_bearing_is_clockwise_from_the_cars_heading():
+    box = models.boxes([0.4, -5.0, 1.4, -4.0])      # 4 m to the right of the lidar
+    right = models.lidar_ranges(LIDAR, truth(), box, 1.0, math.pi / 2)
+    left = models.lidar_ranges(LIDAR, truth(), box, 1.0, -math.pi / 2)
+    # -15 deg meets it 0.73 m up, before the ground (6.72 m); -5 deg clears its top.
+    assert right[0] == pytest.approx(4.0 / math.cos(math.radians(15)))
+    assert left[0] == pytest.approx(1.8 / math.sin(math.radians(15)))   # the ground

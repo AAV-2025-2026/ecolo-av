@@ -37,6 +37,15 @@ mock_radar:
     height_noise: 0.1         # m: a radar's elevation is poor
     rate_hz: 10.0
 
+mock_lidar:
+  ros__parameters:
+    # The roof's VLP-16 (bench.launch.py lidar:=true): the same boxes as mock_radar, as
+    # obstacle:=true puts them there, and the flat ground. Its place: vehicle.yaml lidar_link.
+    obstacle: false
+    boxes: [15.0, -0.5, 16.0, 0.5]
+    box_height: 1.0           # m
+    max_range: 100.0          # m along the beam, as the VLP-16's manual has it
+
 mock_gps:
   ros__parameters:
     stddev: 0.5               # m: plain GPS is 2-3 m, RTK 0.02 m (Q18 decides)

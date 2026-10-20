@@ -27,6 +27,7 @@ setup(
             'mock_battery = aav_bench.sensors:battery',
             'mock_camera = aav_bench.sensors:camera',
             'mock_radar = aav_bench.sensors:radar',
+            'mock_lidar = aav_bench.sensors:lidar',
         ],
     },
 )

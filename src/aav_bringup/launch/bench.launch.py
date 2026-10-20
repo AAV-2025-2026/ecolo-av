@@ -4,10 +4,11 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
   ros2 launch aav_bringup bench.launch.py [nav:=true] [teleop:=false] [rviz:=false]
       [perception:=false] [lane:=false|true|fake] [hud:=false] [arm:=true] [foxglove:=false]
       [start_y:=0.0] [start_yaw:=0.0] [bend_radius:=] [obstacle:=false]
-      [camera_obstacles:=false] [reversing:=true]
+      [camera_obstacles:=false] [reversing:=true] [lidar:=false]
   pixi run bench                            (the same)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
   pixi run bench lane:=true start_y:=0.3    (lane keeping, from 0.3 m left of the centre)
+  pixi run bench lidar:=true obstacle:=true (the roof lidar, through its real driver)
 
 Above the hardware, everything is the car's own: spine_bridge and its CAN frames, the
 EKFs with GPS, twist_mux, ego, the drivers and Nav2. Below it, stand-ins, on the same
@@ -21,6 +22,11 @@ topics and frames as the real devices:
                             radar_clusters (aav_radar_clusters, Rust) clusters its points,
                             and Nav2's local costmap marks them (navigation.launch.py
                             radar:=true)
+  mock_lidar                with lidar:=true: the roof's VLP-16, as UDP packets of the
+                            bench world (its boxes and the ground) to 127.0.0.1:2369.
+                            Below the driver: the stock velodyne driver (aav_sensors
+                            sensors.launch.py lidar:=true, as on the car) reads them, and
+                            Nav2's costmap and collision_monitor read its points
 
 camera_obstacles:=true adds aav_yolo's camera_obstacles (the detectors' boxes as points on
 the road, from mock_camera's lens) and the local costmap's camera layer. The bench camera
@@ -63,7 +69,7 @@ def include(package, launch_file, **args):
 def launch_setup(context):
     flag = {n: LaunchConfiguration(n).perform(context).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'hud', 'arm', 'foxglove',
-                      'obstacle', 'camera_obstacles', 'reversing')}
+                      'obstacle', 'camera_obstacles', 'reversing', 'lidar')}
     lane = LaunchConfiguration('lane').perform(context).lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -112,11 +118,20 @@ def launch_setup(context):
              parameters=[bench_config, {'obstacle': flag['obstacle']}]),
         include('aav_radar_clusters', 'radar_clusters.launch.py', minimum_points='5'),
     ]
+    if flag['lidar']:
+        # The pretend lidar sends to 2369, not the real one's 2368: the two never mix.
+        actions += [
+            Node(package='aav_bench', executable='mock_lidar', name='mock_lidar',
+                 parameters=[bench_config, {'obstacle': flag['obstacle'], 'port': 2369}]),
+            include('aav_sensors', 'sensors.launch.py', imu='false', gps='false',
+                    lidar='true', lidar_ip='127.0.0.1', lidar_port='2369'),
+        ]
     if flag['nav']:
         # mock_radar always runs, so Nav2's local costmap always reads the radar.
         actions.append(include('aav_navigation', 'navigation.launch.py',
                                map=os.path.join(share('aav_navigation'), 'maps', 'empty.yaml'),
-                               radar='true', camera_obstacles=flag['camera_obstacles'],
+                               radar='true', lidar=str(flag['lidar']).lower(),
+                               camera_obstacles=flag['camera_obstacles'],
                                reversing=str(flag['reversing']).lower()))
     # The sensor watchdog guards Nav2 and the AI slot (lane keeping) as on the car, always:
     # the mux's sensors lock needs its heartbeat (aav_mux mux.launch.py sensor_lock).
@@ -185,6 +200,9 @@ def generate_launch_description():
         DeclareLaunchArgument('obstacle', default_value='false',
                               description="a box in the car's lane, 15 m ahead, that the "
                                           'pretend radar sees'),
+        DeclareLaunchArgument('lidar', default_value='false',
+                              description="the roof lidar: mock_lidar's packets through the "
+                                          'stock velodyne driver, into Nav2'),
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="the detectors' boxes into the local costmap"),
         DeclareLaunchArgument('reversing', default_value='true',

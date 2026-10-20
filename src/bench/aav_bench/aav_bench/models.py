@@ -261,3 +261,44 @@ def radar_returns(radar: Radar, truth: Truth, obstacles: Sequence[Box], height: 
         z = rng.uniform(0.1, height) - radar.xyz[2] + rng.gauss(0.0, height_noise)
         points.append((r * math.cos(a), r * math.sin(a), z, -truth.speed * math.cos(a)))
     return points
+
+
+@dataclass
+class Lidar:
+    """A spinning lidar on the car: where it sits, its lasers' angles, how far it sees."""
+
+    xyz: Sequence[float]          # m, on the car (lidar_link in vehicle.yaml)
+    elevations: Sequence[float]   # rad above the horizon, one per laser
+    max_range: float              # m, along the beam
+
+
+def lidar_ranges(lidar: Lidar, truth: Truth, obstacles: Sequence[Box], height: float,
+                 bearing: float) -> List[float]:
+    """
+    Return each laser's distance along its beam at a bearing, 0 where it sees nothing.
+
+    bearing: rad, clockwise from the car's heading, as a spinning lidar counts it. A laser
+    stops at the nearest box face it meets between the ground and the box's `height`, or
+    else at the flat ground (lasers aimed down), or sees nothing (lasers aimed up, or past
+    max_range). Each box face is a wall: a beam that clears its top flies on.
+    """
+    ox, oy = offset(truth, lidar.xyz)
+    heading = truth.yaw - bearing
+    dx, dy = math.cos(heading), math.sin(heading)
+    walls = sorted(r for r in (ray_hits_box(ox, oy, dx, dy, b) for b in obstacles)
+                   if r is not None and r > 0.0)
+    mount = lidar.xyz[2]
+    out = []
+    for elevation in lidar.elevations:
+        slope = math.tan(elevation)
+        across = None              # m along the ground to what this laser hits
+        for r in walls:
+            if 0.0 <= mount + r * slope <= height:
+                across = r
+                break
+        if slope < 0.0:
+            ground = mount / -slope
+            across = ground if across is None else min(across, ground)
+        beam = across / math.cos(elevation) if across is not None else 0.0
+        out.append(beam if beam <= lidar.max_range else 0.0)
+    return out

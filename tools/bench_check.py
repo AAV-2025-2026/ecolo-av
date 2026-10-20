@@ -5,6 +5,7 @@ Bench check: start bench mode, then test the whole car graph on this computer.
     pixi run bench-check          (about 2 minutes; nothing else on the network sees it)
     pixi run -e ml bench-check --perception    (adds the detector and the stop sign: 3 minutes)
     pixi run bench-check --obstacle            (adds a box for the radar: 3 minutes)
+    pixi run bench-check --lidar               (adds a box for the lidar alone: 3 minutes)
     pixi run bench-check --lane   (adds lane keeping, in a second bench run: 1 more minute)
 
 1. Starts bench.launch.py on a private ROS domain, local to this computer.
@@ -20,6 +21,8 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 7. With --obstacle: a box as wide as the lane appears 15 m ahead, which only the pretend
    radar sees, and Nav2 drives 30 m. collision_monitor's stop zone must stop the car before the
    box; once the box is taken away, the car must go on to the goal.
+   With --lidar: bench mode with lidar:=true, and the same again with a box only the
+   pretend lidar sees (mock_lidar's VLP-16 packets, read by the stock velodyne driver).
 8. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
    the car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there. Its own start-up and graph checks come first.
@@ -115,7 +118,8 @@ class Probe(Node):
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  lambda m: self.monitor.append(
                                      (time.monotonic(), m.action_type, m.polygon_name)), 10)
-        self.radar_params = self.create_client(SetParameters, '/mock_radar/set_parameters')
+        self.box_params = {s: self.create_client(SetParameters, f'/mock_{s}/set_parameters')
+                           for s in ('radar', 'lidar')}
 
     def on_truth(self, msg):
         self.truth = msg
@@ -175,16 +179,20 @@ class Probe(Node):
         self.spin_for(10.0, lambda: future.done())
         return future.result() if future.done() else None
 
-    def set_radar(self, obstacle, boxes=None):
-        """Put the bench's boxes where the pretend radar sees them, or take them away."""
+    def set_box(self, sensor, obstacle, boxes=None, height=None):
+        """Put the bench's boxes where a pretend sensor sees them, or take them away."""
         params = [Parameter(name='obstacle', value=ParameterValue(
             type=ParameterType.PARAMETER_BOOL, bool_value=obstacle))]
+        if height is not None:
+            params.append(Parameter(name='box_height', value=ParameterValue(
+                type=ParameterType.PARAMETER_DOUBLE, double_value=height)))
         if boxes is not None:
             params.append(Parameter(name='boxes', value=ParameterValue(
                 type=ParameterType.PARAMETER_DOUBLE_ARRAY, double_array_value=boxes)))
-        if not self.radar_params.wait_for_service(timeout_sec=10.0):
+        client = self.box_params[sensor]
+        if not client.wait_for_service(timeout_sec=10.0):
             return False
-        future = self.radar_params.call_async(SetParameters.Request(parameters=params))
+        future = client.call_async(SetParameters.Request(parameters=params))
         self.spin_for(10.0, lambda: future.done())
         return future.done() and all(r.successful for r in future.result().results)
 
@@ -272,17 +280,22 @@ def yaw_of(msg):
     return math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
 
 
-def check_obstacle(probe, ahead=15.0, goal=30.0):
+def check_obstacle(probe, ahead=15.0, goal=30.0, sensor='radar'):
     """
-    Put a box `ahead` m in the lane: the stop zone must stop the car before it.
+    Put a box `ahead` m in the lane, seen by `sensor` alone: the stop zone must stop the car.
 
     The box spans the lane, as a stalled car or a barrier would: Nav2's turn command still
     flips with the GPS (N7), and the car can drift a metre or more off its line, so a narrow
     box tests that drift, not the stop. On a busy computer a gap in commands can latch the
     spine: the check arms it again, as a safety driver would. The stop zone must still be
     what stopped the car.
+
+    For the lidar, the box is 1.5 m tall, as a car or a person: the roof lidar (1.8 m up,
+    its lowest laser 15 degrees down) can't see the radar's 1 m box closer than 3 m, and
+    the stop zone, 0-1 m past the bumper, is 0.9-1.9 m from it. That blind zone is the
+    radar's (docs/perception.md, "The roof lidar").
     """
-    name = 'obstacle'
+    name = 'obstacle' if sensor == 'radar' else f'obstacle ({sensor} only)'
     if not probe.arm_and_hold():
         result(name, False, 'the spine would not stay armed')
         return
@@ -299,8 +312,9 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
     # A box 1 m deep and as wide as the lane, its near face `ahead` m in front of the bumper.
     bx, by = x0 + (front + ahead + 0.5) * c, y0 + (front + ahead + 0.5) * s
     half = LANE_WIDTH / 2.0
-    if not probe.set_radar(True, [bx - 0.5, by - half, bx + 0.5, by + half]):
-        result(name, False, 'could not place the box (mock_radar parameters)')
+    height = 1.5 if sensor == 'lidar' else None
+    if not probe.set_box(sensor, True, [bx - 0.5, by - half, bx + 0.5, by + half], height):
+        result(name, False, f'could not place the box (mock_{sensor} parameters)')
         return
     target = NavigateToPose.Goal()
     target.pose.header.frame_id = 'map'
@@ -311,7 +325,7 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
     probe.spin_for(10.0, lambda: sent.done())
     if not sent.done() or not sent.result().accepted:
         result(name, False, 'Nav2 refused the goal')
-        probe.set_radar(False)
+        probe.set_box(sensor, False)
         return
     done = sent.result().get_result_async()
     t0, seen = time.monotonic(), len(probe.monitor)
@@ -328,7 +342,7 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
             still = still or time.monotonic()
             if time.monotonic() - still > 3.0:      # stood still for 3 s: take the box away
                 gap = ahead - along()
-                probe.set_radar(False)
+                probe.set_box(sensor, False)
         else:
             still = None
     states = probe.monitor[seen:]
@@ -343,7 +357,7 @@ def check_obstacle(probe, ahead=15.0, goal=30.0):
     result(name, ok, f'{where} (top speed {top:.2f} m/s), stop zone fired: {stop_zone}; box '
                      f'taken away, Nav2 goal {"reached" if reached else "not reached"} '
                      f'{along():.1f} m on{paused}')
-    probe.set_radar(False)
+    probe.set_box(sensor, False)
 
 
 def check_lane_keeping(probe):
@@ -523,10 +537,14 @@ def main():
         checks.append(check_stop_sign)
     if '--obstacle' in args:
         checks.append(check_obstacle)
+    lidar = '--lidar' in args
+    if lidar:
+        checks.append(lambda probe: check_obstacle(probe, sensor='lidar'))
     # AAV_BENCH_LOG: another place for the logs, so two checks at once keep their own.
     log = os.environ.get('AAV_BENCH_LOG', '/tmp/aav-bench-check.log')
     logs = [log]
-    session([f'perception:={str(perception).lower()}'], checks, logs[0])
+    session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],
+            checks, logs[0])
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.

@@ -163,8 +163,17 @@ menu, import it from that file. One screen shows:
 | Raw message | `/vehicle/status`: mode, armed, e-stop, faults |
 
 Its setting names were checked against Lichtblick's own code, and a test keeps every
-topic in it matching `docs/interfaces.yaml`. Not yet opened against the car. In the
-simulator: `pixi run sim foxglove:=true`, then `ws://localhost:8765`.
+topic in it matching `docs/interfaces.yaml`. In the simulator: `pixi run sim
+foxglove:=true`, then `ws://localhost:8765`.
+
+**Check a bridge serves the layout** (no ROS needed): `pixi run layout-check` (the sim
+here) or `pixi run layout-check ws://192.168.1.140:8765` (the Jetson). Each topic is
+served, off (it needs a part that's off by default) or MISSING.
+
+| Where | Result (20 Oct) |
+|---|---|
+| `pixi run sim world:=road foxglove:=true perception:=true` | 11 of 13 served; 2 off: the ghost marker (`ghost:=true`), the street route (needs a route) |
+| the car | not yet |
 
 ## Gazebo on a Mac
 
