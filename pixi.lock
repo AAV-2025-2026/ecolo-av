@@ -303,6 +303,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libopenvino-tensorflow-lite-frontend-2026.3.0-h0542e35_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libopus-1.6.1-hebe6cf0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libparu-1.0.0-hc6afc67_7100101.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpcap-1.10.6-hba70eea_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpciaccess-0.19-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libplacebo-7.360.1-hc50b9dd_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpng-1.6.59-h922cc85_0.conda
@@ -659,6 +660,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-twist-mux-4.5.0-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-ublox-2.3.0-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-usb-cam-0.8.1-hb0f4dca_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-velodyne-2.5.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-vision-msgs-4.1.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-xacro-2.1.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-ackermann-msgs-2.0.2-np2py312h1bab3cf_25.conda
@@ -1074,6 +1076,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-urdfdom-6.0-py312h2261104_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-urdfdom-headers-3.0-py312h24bf083_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-usb-cam-0.8.1-np2py312hbe9f5f6_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-driver-2.5.1-np2py312h141819e_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-laserscan-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-msgs-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-pointcloud-2.5.1-np2py312hee7bc04_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-vision-msgs-4.1.1-np2py312h1bab3cf_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-visualization-msgs-5.3.8-np2py312h1bab3cf_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-xacro-2.1.1-np2py312h1bab3cf_25.conda
@@ -1348,6 +1355,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libopenvino-tensorflow-lite-frontend-2026.3.0-ha85bb2c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libopus-1.6.1-h29ee22c_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libparu-1.0.0-h3c4952c_7100102.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libpcap-1.10.6-hdfae76f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libpciaccess-0.19-he30d5cf_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libplacebo-7.360.1-ha018e38_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libpng-1.6.59-hf9b7768_0.conda
@@ -1700,6 +1708,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-twist-mux-4.5.0-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-ublox-2.3.0-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-usb-cam-0.8.1-he8cfe8b_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-velodyne-2.5.1-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-vision-msgs-4.1.1-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-xacro-2.1.1-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-ackermann-msgs-2.0.2-np2py312h9c6c671_25.conda
@@ -2115,6 +2124,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-urdfdom-6.0-py312h5baf20b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-urdfdom-headers-3.0-py312h9804fc4_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-usb-cam-0.8.1-np2py312h75cd963_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-2.5.1-np2py312h9c6c671_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-driver-2.5.1-np2py312h9b54986_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-laserscan-2.5.1-np2py312h9c6c671_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-msgs-2.5.1-np2py312h9c6c671_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-pointcloud-2.5.1-np2py312h44cbaa5_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-vision-msgs-4.1.1-np2py312h9c6c671_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-visualization-msgs-5.3.8-np2py312h9c6c671_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-xacro-2.1.1-np2py312h9c6c671_25.conda
@@ -2482,6 +2496,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenvino-tensorflow-lite-frontend-2026.3.0-haa2453c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopus-1.6.1-h74c22ad_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libparu-1.0.0-h317a14d_7100102.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpcap-1.10.6-h0404426_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libplacebo-7.360.1-hca394fb_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpng-1.6.59-hf5e6511_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpq-18.6-h0a198e3_3.conda
@@ -2682,6 +2697,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-turtlesim-1.8.4-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-twist-mux-4.5.0-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-ublox-2.3.0-h60d57d3_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-velodyne-2.5.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-vision-msgs-4.1.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-xacro-2.1.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-ackermann-msgs-2.0.2-np2py312h3d3361c_25.conda
@@ -3090,6 +3106,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdf-parser-plugin-2.10.1-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdfdom-6.0-py312h23657be_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdfdom-headers-3.0-py312h3dea895_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-driver-2.5.1-np2py312h0ca6330_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-laserscan-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-msgs-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-pointcloud-2.5.1-np2py312h72e6c66_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-vision-msgs-4.1.1-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-visualization-msgs-5.3.8-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-xacro-2.1.1-np2py312h3d3361c_25.conda
@@ -3456,6 +3477,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libopencv-5.0.0-qt6_h6a47383_609.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libopus-1.6.1-had63097_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libparu-1.0.0-hf1a04d7_7100102.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/libpcap-1.10.6-hccdbece_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libplacebo-7.360.1-h1ed201f_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libpng-1.6.59-h4382c61_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libpq-18.6-h58a6bad_3.conda
@@ -3659,6 +3681,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-turtlesim-1.8.4-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-twist-mux-4.5.0-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-ublox-2.3.0-h0dc7051_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-velodyne-2.5.1-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-vision-msgs-4.1.1-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-xacro-2.1.1-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-ackermann-msgs-2.0.2-np2py312hc8bd825_25.conda
@@ -4067,6 +4090,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-urdf-parser-plugin-2.10.1-np2py312hc8bd825_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-urdfdom-6.0-py312h33bd558_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-urdfdom-headers-3.0-py312heb41dfb_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-2.5.1-np2py312hc8bd825_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-driver-2.5.1-np2py312h27cf99e_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-laserscan-2.5.1-np2py312hc8bd825_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-msgs-2.5.1-np2py312hc8bd825_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-pointcloud-2.5.1-np2py312hc10fd3c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-vision-msgs-4.1.1-np2py312hc8bd825_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-visualization-msgs-5.3.8-np2py312hc8bd825_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-xacro-2.1.1-np2py312hc8bd825_25.conda
@@ -5018,6 +5046,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenvino-tensorflow-lite-frontend-2026.3.0-haa2453c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopus-1.6.1-h74c22ad_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libparu-1.0.0-h317a14d_7100102.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpcap-1.10.6-h0404426_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libplacebo-7.360.1-hca394fb_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpng-1.6.59-hf5e6511_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpq-18.6-h0a198e3_3.conda
@@ -5220,6 +5249,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-turtlesim-1.8.4-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-twist-mux-4.5.0-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-ublox-2.3.0-h60d57d3_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-velodyne-2.5.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-vision-msgs-4.1.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-xacro-2.1.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-ackermann-msgs-2.0.2-np2py312h3d3361c_25.conda
@@ -5628,6 +5658,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdf-parser-plugin-2.10.1-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdfdom-6.0-py312h23657be_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdfdom-headers-3.0-py312h3dea895_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-driver-2.5.1-np2py312h0ca6330_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-laserscan-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-msgs-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-pointcloud-2.5.1-np2py312h72e6c66_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-vision-msgs-4.1.1-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-visualization-msgs-5.3.8-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-xacro-2.1.1-np2py312h3d3361c_25.conda
@@ -5925,6 +5960,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libopenvino-tensorflow-lite-frontend-2026.3.0-h0542e35_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libopus-1.6.1-hebe6cf0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libparu-1.0.0-hc6afc67_7100101.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpcap-1.10.6-hba70eea_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpciaccess-0.19-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libplacebo-7.360.1-hc50b9dd_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpng-1.6.59-h922cc85_0.conda
@@ -6310,6 +6346,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-twist-mux-4.5.0-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-ublox-2.3.0-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-usb-cam-0.8.1-hb0f4dca_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-velodyne-2.5.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-vision-msgs-4.1.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-xacro-2.1.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-ackermann-msgs-2.0.2-np2py312h1bab3cf_25.conda
@@ -6725,6 +6762,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-urdfdom-6.0-py312h2261104_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-urdfdom-headers-3.0-py312h24bf083_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-usb-cam-0.8.1-np2py312hbe9f5f6_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-driver-2.5.1-np2py312h141819e_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-laserscan-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-msgs-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-pointcloud-2.5.1-np2py312hee7bc04_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-vision-msgs-4.1.1-np2py312h1bab3cf_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-visualization-msgs-5.3.8-np2py312h1bab3cf_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-xacro-2.1.1-np2py312h1bab3cf_25.conda
@@ -6999,6 +7041,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libopenvino-tensorflow-lite-frontend-2026.3.0-ha85bb2c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libopus-1.6.1-h29ee22c_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libparu-1.0.0-h3c4952c_7100102.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libpcap-1.10.6-hdfae76f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libpciaccess-0.19-he30d5cf_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libplacebo-7.360.1-ha018e38_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libpng-1.6.59-hf9b7768_0.conda
@@ -7380,6 +7423,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-twist-mux-4.5.0-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-ublox-2.3.0-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-usb-cam-0.8.1-he8cfe8b_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-velodyne-2.5.1-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-vision-msgs-4.1.1-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-xacro-2.1.1-he8cfe8b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-ackermann-msgs-2.0.2-np2py312h9c6c671_25.conda
@@ -7795,6 +7839,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-urdfdom-6.0-py312h5baf20b_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-urdfdom-headers-3.0-py312h9804fc4_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-usb-cam-0.8.1-np2py312h75cd963_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-2.5.1-np2py312h9c6c671_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-driver-2.5.1-np2py312h9b54986_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-laserscan-2.5.1-np2py312h9c6c671_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-msgs-2.5.1-np2py312h9c6c671_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-pointcloud-2.5.1-np2py312h44cbaa5_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-vision-msgs-4.1.1-np2py312h9c6c671_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-visualization-msgs-5.3.8-np2py312h9c6c671_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-xacro-2.1.1-np2py312h9c6c671_25.conda
@@ -8189,6 +8238,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenvino-tensorflow-lite-frontend-2026.3.0-haa2453c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopus-1.6.1-h74c22ad_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libparu-1.0.0-h317a14d_7100102.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpcap-1.10.6-h0404426_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libplacebo-7.360.1-hca394fb_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpng-1.6.59-hf5e6511_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpq-18.6-h0a198e3_3.conda
@@ -8391,6 +8441,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-turtlesim-1.8.4-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-twist-mux-4.5.0-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-ublox-2.3.0-h60d57d3_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-velodyne-2.5.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-vision-msgs-4.1.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-xacro-2.1.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-ackermann-msgs-2.0.2-np2py312h3d3361c_25.conda
@@ -8799,6 +8850,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdf-parser-plugin-2.10.1-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdfdom-6.0-py312h23657be_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdfdom-headers-3.0-py312h3dea895_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-driver-2.5.1-np2py312h0ca6330_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-laserscan-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-msgs-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-pointcloud-2.5.1-np2py312h72e6c66_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-vision-msgs-4.1.1-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-visualization-msgs-5.3.8-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-xacro-2.1.1-np2py312h3d3361c_25.conda
@@ -9192,6 +9248,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libopencv-5.0.0-qt6_h6a47383_609.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libopus-1.6.1-had63097_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libparu-1.0.0-hf1a04d7_7100102.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/libpcap-1.10.6-hccdbece_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libplacebo-7.360.1-h1ed201f_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libpng-1.6.59-h4382c61_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/libpq-18.6-h58a6bad_3.conda
@@ -9397,6 +9454,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-turtlesim-1.8.4-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-twist-mux-4.5.0-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-ublox-2.3.0-h0dc7051_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-velodyne-2.5.1-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-vision-msgs-4.1.1-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-xacro-2.1.1-h0dc7051_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-ackermann-msgs-2.0.2-np2py312hc8bd825_25.conda
@@ -9805,6 +9863,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-urdf-parser-plugin-2.10.1-np2py312hc8bd825_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-urdfdom-6.0-py312h33bd558_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-urdfdom-headers-3.0-py312heb41dfb_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-2.5.1-np2py312hc8bd825_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-driver-2.5.1-np2py312h27cf99e_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-laserscan-2.5.1-np2py312hc8bd825_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-msgs-2.5.1-np2py312hc8bd825_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-pointcloud-2.5.1-np2py312hc10fd3c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-vision-msgs-4.1.1-np2py312hc8bd825_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-visualization-msgs-5.3.8-np2py312hc8bd825_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-xacro-2.1.1-np2py312hc8bd825_25.conda
@@ -10094,6 +10157,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libopenvino-tensorflow-lite-frontend-2026.3.0-h0542e35_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libopus-1.6.1-hebe6cf0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libparu-1.0.0-hc6afc67_7100101.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libpcap-1.10.6-hba70eea_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpciaccess-0.19-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libplacebo-7.360.1-hc50b9dd_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libpng-1.6.59-h922cc85_0.conda
@@ -10505,6 +10569,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-twist-mux-4.5.0-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-ublox-2.3.0-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-usb-cam-0.8.1-hb0f4dca_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-velodyne-2.5.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-vision-msgs-4.1.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-xacro-2.1.1-hb0f4dca_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-ackermann-msgs-2.0.2-np2py312h1bab3cf_25.conda
@@ -10920,6 +10985,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-urdfdom-6.0-py312h2261104_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-urdfdom-headers-3.0-py312h24bf083_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-usb-cam-0.8.1-np2py312hbe9f5f6_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-driver-2.5.1-np2py312h141819e_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-laserscan-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-msgs-2.5.1-np2py312h1bab3cf_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-pointcloud-2.5.1-np2py312hee7bc04_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-vision-msgs-4.1.1-np2py312h1bab3cf_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-visualization-msgs-5.3.8-np2py312h1bab3cf_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-xacro-2.1.1-np2py312h1bab3cf_25.conda
@@ -11338,6 +11408,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopenvino-tensorflow-lite-frontend-2026.3.0-haa2453c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libopus-1.6.1-h74c22ad_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libparu-1.0.0-h317a14d_7100102.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpcap-1.10.6-h0404426_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libplacebo-7.360.1-hca394fb_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpng-1.6.59-hf5e6511_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpq-18.6-h0a198e3_3.conda
@@ -11551,6 +11622,7 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-turtlesim-1.8.4-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-twist-mux-4.5.0-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-ublox-2.3.0-h60d57d3_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-velodyne-2.5.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-vision-msgs-4.1.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-xacro-2.1.1-h60d57d3_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-ackermann-msgs-2.0.2-np2py312h3d3361c_25.conda
@@ -11959,6 +12031,11 @@ environments:
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdf-parser-plugin-2.10.1-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdfdom-6.0-py312h23657be_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-urdfdom-headers-3.0-py312h3dea895_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-driver-2.5.1-np2py312h0ca6330_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-laserscan-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-msgs-2.5.1-np2py312h3d3361c_25.conda
+      - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-pointcloud-2.5.1-np2py312h72e6c66_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-vision-msgs-4.1.1-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-visualization-msgs-5.3.8-np2py312h3d3361c_25.conda
       - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-xacro-2.1.1-np2py312h3d3361c_25.conda
@@ -16834,6 +16911,19 @@ packages:
     - libparu >=1.0.0,<2.0a0
   size: 89738
   timestamp: 1741963824815
+- conda: https://conda.anaconda.org/conda-forge/linux-64/libpcap-1.10.6-hba70eea_0.conda
+  sha256: 4c439d1a9b1c6ad4a49422cc8d808882a5907fa286bd462cf051a0738cdc0f96
+  md5: 143f84e20dc0c2062e08f16710cedc12
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=14
+  license: BSD-3-Clause
+  license_family: BSD
+  run_exports:
+    weak:
+    - libpcap >=1.10.6,<1.11.0a0
+  size: 219290
+  timestamp: 1768737469487
 - conda: https://conda.anaconda.org/conda-forge/linux-64/libpciaccess-0.19-hb03c661_1.conda
   sha256: addc80c69d362a9e6c40305c493139a8e9ee504b2f45a6687dbdaa9da3c6183c
   md5: 35fa2b34bbced424e6976d30f5fde576
@@ -25167,6 +25257,18 @@ packages:
     - libparu >=1.0.0,<2.0a0
   size: 91197
   timestamp: 1742288911376
+- conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libpcap-1.10.6-hdfae76f_0.conda
+  sha256: 182e8ba58e9c2f0764c181ecb08404c772e48c1dbf4ee56d77a7acc52bf75bb0
+  md5: 0a1378448d99c1b48d2bd6f53165e8bc
+  depends:
+  - libgcc >=14
+  license: BSD-3-Clause
+  license_family: BSD
+  run_exports:
+    weak:
+    - libpcap >=1.10.6,<1.11.0a0
+  size: 230146
+  timestamp: 1768738856711
 - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libpciaccess-0.19-he30d5cf_1.conda
   sha256: 2161dacebeb075187f20ba35529297e7d4f6d456a89c4474062782436dbe3735
   md5: b1cb4a94819281ecb0391438e0be505c
@@ -31379,7 +31481,7 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/truststore?source=compressed-mapping
+  - pkg:pypi/truststore?source=hash-mapping
   run_exports: {}
   size: 24467
   timestamp: 1791873594717
@@ -35493,6 +35595,18 @@ packages:
     - libparu >=1.0.0,<2.0a0
   size: 94992
   timestamp: 1742289016223
+- conda: https://conda.anaconda.org/conda-forge/osx-64/libpcap-1.10.6-hccdbece_0.conda
+  sha256: 5e006241fff01d9c67ca52f657b0e4105da1bc89b9acb97e37645e4f5bbd2b5e
+  md5: 2aae936912f63ee8e9a9a6e9eb81cd6b
+  depends:
+  - __osx >=10.13
+  license: BSD-3-Clause
+  license_family: BSD
+  run_exports:
+    weak:
+    - libpcap >=1.10.6,<1.11.0a0
+  size: 273318
+  timestamp: 1768737753680
 - conda: https://conda.anaconda.org/conda-forge/osx-64/libplacebo-7.360.1-h1ed201f_1.conda
   sha256: 498086d67adc639e28f36185db7310ac6f2900baf842c3229172ba97f3bf5bcf
   md5: 99d6bda5b07ada8527c9542113106b60
@@ -39482,7 +39596,7 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/fonttools?source=compressed-mapping
+  - pkg:pypi/fonttools?source=hash-mapping
   run_exports: {}
   size: 3049510
   timestamp: 1791995330764
@@ -42743,6 +42857,19 @@ packages:
     - libparu >=1.0.0,<2.0a0
   size: 84753
   timestamp: 1742288952863
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/libpcap-1.10.6-h0404426_0.conda
+  sha256: c8303c0f10d1fb2b7f0e459b32000e345ebe60ad6ee0834b4d98246e27c7dbcd
+  md5: 81c495f2ea517dc263d9c52d32fdf636
+  depends:
+  - __osx >=11.0
+  license: BSD-3-Clause
+  license_family: BSD
+  purls: []
+  run_exports:
+    weak:
+    - libpcap >=1.10.6,<1.11.0a0
+  size: 267170
+  timestamp: 1768737904063
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libplacebo-7.360.1-hca394fb_1.conda
   sha256: 7b50ecb8b110540b5b980ba94499fe760947e079bc119a7fac02dfb3df9cfb53
   md5: dff7f8dd3053f3253d79171216aa1db7
@@ -45700,7 +45827,7 @@ packages:
   - python_abi 3.12.* *_cp312
   license: BSD-2-Clause
   purls:
-  - pkg:pypi/wrapt?source=compressed-mapping
+  - pkg:pypi/wrapt?source=hash-mapping
   run_exports: {}
   size: 147917
   timestamp: 1792013639985
@@ -46340,6 +46467,13 @@ packages:
   - ros2-usb-cam ==0.8.1
   size: 2006
   timestamp: 1791440632519
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-velodyne-2.5.1-hb0f4dca_25.conda
+  sha256: 2288cbcfedb8e148b0a7dcb8f40579eadcece11a3c98a80571277b94b862020c
+  md5: b781f8109ed8ef9e769075ae9b84baaa
+  depends:
+  - ros2-velodyne ==2.5.1
+  size: 2012
+  timestamp: 1791438996882
 - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros-jazzy-vision-msgs-4.1.1-hb0f4dca_25.conda
   sha256: 8c6d861f640738bb1aeb8e395cd312aa9ee79470da600fefe61d0da1341afffe
   md5: 8e68b8d67cb0828866cbd61092d3edd8
@@ -55572,6 +55706,128 @@ packages:
   license: BSD-3-Clause
   size: 271792
   timestamp: 1791440028269
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-2.5.1-np2py312h1bab3cf_25.conda
+  sha256: 135694080e52fc7073ab80f5613b440adf3ecd8450086adfb2bdd63d74879ae0
+  md5: cd63b223f986b2ffe2e8e3989dfc8853
+  depends:
+  - python
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-ros-workspace
+  - ros2-velodyne-driver
+  - ros2-velodyne-laserscan
+  - ros2-velodyne-msgs
+  - ros2-velodyne-pointcloud
+  - libgcc >=15
+  - libstdcxx >=15
+  - __glibc >=2.28,<3.0.a0
+  - numpy >=1.25,<3
+  - python_abi 3.12.* *_cp312
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  license: BSD-3-Clause
+  size: 27559
+  timestamp: 1791437821567
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-driver-2.5.1-np2py312h141819e_25.conda
+  sha256: 9d983c0a4bd2130e391515a534039c4d42f1ea6ef5e5828087b5281b49f93257
+  md5: e269011ec5df01ce1cdaf2d7c9522b3e
+  depends:
+  - libpcap
+  - python
+  - ros2-diagnostic-updater
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-tf2-ros
+  - ros2-velodyne-msgs
+  - libgcc >=15
+  - libstdcxx >=15
+  - __glibc >=2.28,<3.0.a0
+  - numpy >=1.25,<3
+  - python_abi 3.12.* *_cp312
+  - libpcap >=1.10.6,<1.11.0a0
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  license: BSD-3-Clause
+  size: 235854
+  timestamp: 1791437564483
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-laserscan-2.5.1-np2py312h1bab3cf_25.conda
+  sha256: ea01013f27e69504951782a4b638fe33f7a8094a85d20360204d77b1c775888d
+  md5: ee30cb2ac1f8a265e77a49b557b64396
+  depends:
+  - python
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-sensor-msgs
+  - libstdcxx >=15
+  - libgcc >=15
+  - __glibc >=2.28,<3.0.a0
+  - numpy >=1.25,<3
+  - python_abi 3.12.* *_cp312
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  license: BSD-3-Clause
+  size: 196076
+  timestamp: 1791436246715
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-msgs-2.5.1-np2py312h1bab3cf_25.conda
+  sha256: 0d989c558ce11da078117947855e62fbb763d265e721e49a7ce147786219929a
+  md5: 81172a4f94039018076426e2a867ad86
+  depends:
+  - python
+  - ros2-builtin-interfaces
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-ros-workspace
+  - ros2-rosidl-default-runtime
+  - ros2-std-msgs
+  - __glibc >=2.28,<3.0.a0
+  - libstdcxx >=15
+  - libgcc >=15
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - numpy >=1.25,<3
+  - python_abi 3.12.* *_cp312
+  license: BSD-3-Clause
+  size: 98327
+  timestamp: 1791433700027
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-velodyne-pointcloud-2.5.1-np2py312hee7bc04_25.conda
+  sha256: 076b99835b9dd81f9bb47f880ff226d5d94d5054f6cd8a37339accc0fdd7ee48
+  md5: decfd6f37fef7631d104cc1c368c9435
+  depends:
+  - eigen
+  - eigen-abi-devel
+  - libboost-devel
+  - libgl-devel
+  - libopengl-devel
+  - pcl
+  - python
+  - ros2-angles
+  - ros2-diagnostic-updater
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-geometry-msgs
+  - ros2-message-filters
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-sensor-msgs
+  - ros2-tf2
+  - ros2-tf2-ros
+  - ros2-velodyne-msgs
+  - vtk-base
+  - yaml-cpp
+  - libgcc >=15
+  - __glibc >=2.28,<3.0.a0
+  - libstdcxx >=15
+  - libopengl >=1.7.0,<2.0a0
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - libgl >=1.7.0,<2.0a0
+  - vtk-base >=9.7.0,<9.7.1.0a0
+  - libboost >=1.90.0,<1.91.0a0
+  - python_abi 3.12.* *_cp312
+  - yaml-cpp >=0.8.0,<0.9.0a0
+  - pcl >=1.15.1,<1.15.2.0a0
+  - eigen-abi >=5.0.1.80,<5.0.1.81.0a0
+  - numpy >=1.25,<3
+  license: BSD-3-Clause
+  size: 371950
+  timestamp: 1791437536955
 - conda: https://conda.anaconda.org/robostack-jazzy/linux-64/ros2-vision-msgs-4.1.1-np2py312h1bab3cf_25.conda
   sha256: b356292637ec5762f09e2d5a991a23e5dc010901459e25add7fc30ab55f4bf9c
   md5: 9abbf57649e491a9a7291929a5f93c12
@@ -55881,6 +56137,13 @@ packages:
   - ros2-usb-cam ==0.8.1
   size: 2014
   timestamp: 1791456529933
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-velodyne-2.5.1-he8cfe8b_25.conda
+  sha256: 16a1b4565cd7ab84affc89eb2a461dde0a331cfcd507cb6f9975d60686d4a970
+  md5: da7dd253c24eadcd9ff6ef8deb378866
+  depends:
+  - ros2-velodyne ==2.5.1
+  size: 2018
+  timestamp: 1791454871770
 - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros-jazzy-vision-msgs-4.1.1-he8cfe8b_25.conda
   sha256: 1f6f7b5bda1bd3b34a782bf6423bdf60a5a022043a97df8c693b369975058cdc
   md5: 8cd49984a98a1712e5380d2c744a526a
@@ -65113,6 +65376,128 @@ packages:
   license: BSD-3-Clause
   size: 274225
   timestamp: 1791455856693
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-2.5.1-np2py312h9c6c671_25.conda
+  sha256: e2e3ade559d43c6b588d6da57a7948e288c3141289b2aed7a72e27112354b7e5
+  md5: 14eacf28a4e8adfd20061498d5e7ee09
+  depends:
+  - python
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-ros-workspace
+  - ros2-velodyne-driver
+  - ros2-velodyne-laserscan
+  - ros2-velodyne-msgs
+  - ros2-velodyne-pointcloud
+  - libstdcxx >=15
+  - libgcc >=15
+  - __glibc >=2.28,<3.0.a0
+  - python_abi 3.12.* *_cp312
+  - numpy >=1.25,<3
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  license: BSD-3-Clause
+  size: 27548
+  timestamp: 1791453783613
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-driver-2.5.1-np2py312h9b54986_25.conda
+  sha256: 7719a23d685eb37367f62462f9edf8ccd2f3ee18f2142b27c2bcc033b55e611f
+  md5: 2e8073644a1ce8888fba91d84944ad0b
+  depends:
+  - libpcap
+  - python
+  - ros2-diagnostic-updater
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-tf2-ros
+  - ros2-velodyne-msgs
+  - libstdcxx >=15
+  - libgcc >=15
+  - __glibc >=2.28,<3.0.a0
+  - libpcap >=1.10.6,<1.11.0a0
+  - python_abi 3.12.* *_cp312
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - numpy >=1.25,<3
+  license: BSD-3-Clause
+  size: 237092
+  timestamp: 1791453489381
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-laserscan-2.5.1-np2py312h9c6c671_25.conda
+  sha256: 99c4f1f0b8977e32aa1ce7ca6301726cebf4c7decf5fa1b29b4642004046aca2
+  md5: 665be252b94090203c1a015ad84a75c8
+  depends:
+  - python
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-sensor-msgs
+  - libstdcxx >=15
+  - libgcc >=15
+  - __glibc >=2.28,<3.0.a0
+  - python_abi 3.12.* *_cp312
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - numpy >=1.25,<3
+  license: BSD-3-Clause
+  size: 197832
+  timestamp: 1791451841094
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-msgs-2.5.1-np2py312h9c6c671_25.conda
+  sha256: fa52a07af260ab550bb4baf3cdecac79e6101455f90ce3f816b4fd0cfef64dd4
+  md5: 667f5e10368a19755c638466a181701e
+  depends:
+  - python
+  - ros2-builtin-interfaces
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-ros-workspace
+  - ros2-rosidl-default-runtime
+  - ros2-std-msgs
+  - __glibc >=2.28,<3.0.a0
+  - libgcc >=15
+  - libstdcxx >=15
+  - numpy >=1.25,<3
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - python_abi 3.12.* *_cp312
+  license: BSD-3-Clause
+  size: 104002
+  timestamp: 1791449860512
+- conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-velodyne-pointcloud-2.5.1-np2py312h44cbaa5_25.conda
+  sha256: 60736e986e913e425f07b4ad47eea9b86a85aaab65f3fdd0a029e4a9ef89d095
+  md5: 576e1346d9f2e0f22322b9743ccd5600
+  depends:
+  - eigen
+  - eigen-abi-devel
+  - libboost-devel
+  - libgl-devel
+  - libopengl-devel
+  - pcl
+  - python
+  - ros2-angles
+  - ros2-diagnostic-updater
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-geometry-msgs
+  - ros2-message-filters
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-sensor-msgs
+  - ros2-tf2
+  - ros2-tf2-ros
+  - ros2-velodyne-msgs
+  - vtk-base
+  - yaml-cpp
+  - libgcc >=15
+  - libstdcxx >=15
+  - __glibc >=2.28,<3.0.a0
+  - libgl >=1.7.0,<2.0a0
+  - python_abi 3.12.* *_cp312
+  - eigen-abi >=5.0.1.100,<5.0.1.101.0a0
+  - pcl >=1.15.1,<1.15.2.0a0
+  - yaml-cpp >=0.8.0,<0.9.0a0
+  - numpy >=1.25,<3
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - libboost >=1.90.0,<1.91.0a0
+  - libopengl >=1.7.0,<2.0a0
+  - vtk-base >=9.7.0,<9.7.1.0a0
+  license: BSD-3-Clause
+  size: 373708
+  timestamp: 1791453455756
 - conda: https://conda.anaconda.org/robostack-jazzy/linux-aarch64/ros2-vision-msgs-4.1.1-np2py312h9c6c671_25.conda
   sha256: e6193977a26d8d9f70b955b36505b04f01a7070fe1f299c64e9392725d91df85
   md5: 775e9cf3de11bc5f2d2d99774b089a39
@@ -65408,6 +65793,13 @@ packages:
   - ros2-ublox ==2.3.0
   size: 1977
   timestamp: 1791472056661
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-velodyne-2.5.1-h0dc7051_25.conda
+  sha256: 738837ad16e5c765ede590a4d13699ba2898a2daca0cfdfa1954c69726cb336e
+  md5: c51dd20ea2a9481fc2241ed8b915e6aa
+  depends:
+  - ros2-velodyne ==2.5.1
+  size: 1999
+  timestamp: 1791477018115
 - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros-jazzy-vision-msgs-4.1.1-h0dc7051_25.conda
   sha256: c12d33083e4978f1018d2515dd0462e6e92639c9d82fc69a1b9972a40810bf1a
   md5: 3275e8c64f88a44fff85dc64cdfc8456
@@ -73990,6 +74382,119 @@ packages:
   license: BSD-3-Clause
   size: 6601
   timestamp: 1791427870677
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-2.5.1-np2py312hc8bd825_25.conda
+  sha256: 0b4b8ed26032669ac383f3cbc61a1bdfa492a521ca11d3e6af5c7081538dea77
+  md5: 405468c5ce6805bd462027f6820f481f
+  depends:
+  - python
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-ros-workspace
+  - ros2-velodyne-driver
+  - ros2-velodyne-laserscan
+  - ros2-velodyne-msgs
+  - ros2-velodyne-pointcloud
+  - libcxx >=21
+  - __osx >=14.0
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - numpy >=1.25,<3
+  - python_abi 3.12.* *_cp312
+  license: BSD-3-Clause
+  size: 29500
+  timestamp: 1791472155482
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-driver-2.5.1-np2py312h27cf99e_25.conda
+  sha256: faa299b8c077cbe950b53a17fa625c47e50f073240969b6289b37a9810fe5e34
+  md5: 18ebbc574835577e68d054bfd458dafe
+  depends:
+  - libpcap
+  - python
+  - ros2-diagnostic-updater
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-tf2-ros
+  - ros2-velodyne-msgs
+  - __osx >=14.0
+  - libcxx >=21
+  - libpcap >=1.10.6,<1.11.0a0
+  - numpy >=1.25,<3
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - python_abi 3.12.* *_cp312
+  license: BSD-3-Clause
+  size: 199939
+  timestamp: 1791471645701
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-laserscan-2.5.1-np2py312hc8bd825_25.conda
+  sha256: 2acdddb2c0d778992bf872ed88df785e7bd42233fc33c38cb4aaa60b0e9b98a9
+  md5: 8e8a261f3f3b8845900e3d7ac852ac45
+  depends:
+  - python
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-sensor-msgs
+  - libcxx >=21
+  - __osx >=14.0
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - numpy >=1.25,<3
+  - python_abi 3.12.* *_cp312
+  license: BSD-3-Clause
+  size: 164518
+  timestamp: 1791467062160
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-msgs-2.5.1-np2py312hc8bd825_25.conda
+  sha256: a711e1a447fbdfd3b6c5146f719057eb6710c7e138b580f2428871159fd25c6d
+  md5: 08b05f67ed5dca11b241b4dce68afaf4
+  depends:
+  - python
+  - ros2-builtin-interfaces
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-ros-workspace
+  - ros2-rosidl-default-runtime
+  - ros2-std-msgs
+  - __osx >=14.0
+  - libcxx >=21
+  - python_abi 3.12.* *_cp312
+  - numpy >=1.25,<3
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  license: BSD-3-Clause
+  size: 96703
+  timestamp: 1791456110890
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-velodyne-pointcloud-2.5.1-np2py312hc10fd3c_25.conda
+  sha256: 7ff718144a09ab0230d4e3b1c6c2600577331518ea39cfdebfe0bba97f7d5ce5
+  md5: ade67f5f7097311f75a2b62427540db8
+  depends:
+  - eigen
+  - eigen-abi-devel
+  - libboost-devel
+  - pcl
+  - python
+  - ros2-angles
+  - ros2-diagnostic-updater
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-geometry-msgs
+  - ros2-message-filters
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-sensor-msgs
+  - ros2-tf2
+  - ros2-tf2-ros
+  - ros2-velodyne-msgs
+  - vtk-base
+  - yaml-cpp
+  - libcxx >=21
+  - __osx >=14.0
+  - python_abi 3.12.* *_cp312
+  - eigen-abi >=5.0.1.80,<5.0.1.81.0a0
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - libboost >=1.90.0,<1.91.0a0
+  - yaml-cpp >=0.8.0,<0.9.0a0
+  - pcl >=1.15.1,<1.15.2.0a0
+  - numpy >=1.25,<3
+  - vtk-base >=9.7.0,<9.7.1.0a0
+  license: BSD-3-Clause
+  size: 274532
+  timestamp: 1791471511522
 - conda: https://conda.anaconda.org/robostack-jazzy/osx-64/ros2-vision-msgs-4.1.1-np2py312hc8bd825_25.conda
   sha256: 787323ffdec17f789bb392ba0c7f6e17ba752a4027e109fb19e8e3ec7be4339e
   md5: 5930cae9806ff77cdc11f46aae609c20
@@ -74279,6 +74784,13 @@ packages:
   - ros2-ublox ==2.3.0
   size: 1978
   timestamp: 1791441291287
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-velodyne-2.5.1-h60d57d3_25.conda
+  sha256: 916bc98692214f49830f71262d91205e55462930e93d2cf0d01bec97783cc246
+  md5: cac872332ccd508e33cf81a824b54ef2
+  depends:
+  - ros2-velodyne ==2.5.1
+  size: 1990
+  timestamp: 1791443842754
 - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros-jazzy-vision-msgs-4.1.1-h60d57d3_25.conda
   sha256: 03a58d16af9b3cfc1cbd48165a671b49162493c63999305b93c2622ffc84de73
   md5: 24475ad1d02bc00ae00c0b08db7e063a
@@ -82861,6 +83373,119 @@ packages:
   license: BSD-3-Clause
   size: 6576
   timestamp: 1791427801367
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-2.5.1-np2py312h3d3361c_25.conda
+  sha256: e1b138bbdaa08e0ed85569a488148a527aa0aeeb9a3dbe69ce9d9f6d15c73721
+  md5: 1f9cf923df68dc53c67b3c7cbd499062
+  depends:
+  - python
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-ros-workspace
+  - ros2-velodyne-driver
+  - ros2-velodyne-laserscan
+  - ros2-velodyne-msgs
+  - ros2-velodyne-pointcloud
+  - __osx >=14.0
+  - libcxx >=21
+  - python_abi 3.12.* *_cp312
+  - numpy >=1.25,<3
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  license: BSD-3-Clause
+  size: 29535
+  timestamp: 1791441339967
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-driver-2.5.1-np2py312h0ca6330_25.conda
+  sha256: ffceb31729610a9bf8fd3d6889b08ce669120daea643bc1b7f8ca327ccf5467b
+  md5: 5eaf7f23c9bf4cf6418449d1135a0ab4
+  depends:
+  - libpcap
+  - python
+  - ros2-diagnostic-updater
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-tf2-ros
+  - ros2-velodyne-msgs
+  - __osx >=14.0
+  - libcxx >=21
+  - numpy >=1.25,<3
+  - libpcap >=1.10.6,<1.11.0a0
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - python_abi 3.12.* *_cp312
+  license: BSD-3-Clause
+  size: 187349
+  timestamp: 1791441001199
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-laserscan-2.5.1-np2py312h3d3361c_25.conda
+  sha256: db5579420fa748a0960394f175bee236796d6430661e13c94af7380239b08135
+  md5: 33b6b5efe9e3655bb4481b530f5cd353
+  depends:
+  - python
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-sensor-msgs
+  - __osx >=14.0
+  - libcxx >=21
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - python_abi 3.12.* *_cp312
+  - numpy >=1.25,<3
+  license: BSD-3-Clause
+  size: 154630
+  timestamp: 1791438995354
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-msgs-2.5.1-np2py312h3d3361c_25.conda
+  sha256: 7a0575b346b3ed9ea1238c8bc11dccce3d589afe3a50c0944d25a7317dde2322
+  md5: 9fa1f01e12654cfc411de589e23af67f
+  depends:
+  - python
+  - ros2-builtin-interfaces
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-ros-workspace
+  - ros2-rosidl-default-runtime
+  - ros2-std-msgs
+  - __osx >=14.0
+  - libcxx >=21
+  - python_abi 3.12.* *_cp312
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  - numpy >=1.25,<3
+  license: BSD-3-Clause
+  size: 95375
+  timestamp: 1791435950432
+- conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-velodyne-pointcloud-2.5.1-np2py312h72e6c66_25.conda
+  sha256: 889f2574dce7a9782c2d04258f014e6f281439d33727cdd6394819c42822eb6c
+  md5: af154e4a3725db8301949249208709ec
+  depends:
+  - eigen
+  - eigen-abi-devel
+  - libboost-devel
+  - pcl
+  - python
+  - ros2-angles
+  - ros2-diagnostic-updater
+  - ros2-distro-mutex 0.19.* jazzy_*
+  - ros2-geometry-msgs
+  - ros2-message-filters
+  - ros2-rclcpp
+  - ros2-rclcpp-components
+  - ros2-ros-workspace
+  - ros2-sensor-msgs
+  - ros2-tf2
+  - ros2-tf2-ros
+  - ros2-velodyne-msgs
+  - vtk-base
+  - yaml-cpp
+  - libcxx >=21
+  - __osx >=14.0
+  - pcl >=1.15.1,<1.15.2.0a0
+  - libboost >=1.90.0,<1.91.0a0
+  - python_abi 3.12.* *_cp312
+  - numpy >=1.25,<3
+  - eigen-abi >=5.0.1.100,<5.0.1.101.0a0
+  - yaml-cpp >=0.8.0,<0.9.0a0
+  - vtk-base >=9.7.0,<9.7.1.0a0
+  - ros2-distro-mutex >=0.19.0,<0.20.0a0
+  license: BSD-3-Clause
+  size: 260774
+  timestamp: 1791440933669
 - conda: https://conda.anaconda.org/robostack-jazzy/osx-arm64/ros2-vision-msgs-4.1.1-np2py312h3d3361c_25.conda
   sha256: 5fa054baffc23ce1c213e536d26fbb9c2f5e8b4d5f1eae5ebb1f3bc6798b40ed
   md5: 92fe588cfbcbf3e5a364db056d7a161e

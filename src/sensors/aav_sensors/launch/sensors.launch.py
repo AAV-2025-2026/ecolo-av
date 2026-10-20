@@ -2,7 +2,7 @@
 Sensor drivers: each publishes raw data in its own frame; nothing here fuses anything.
 
   ros2 launch aav_sensors sensors.launch.py [imu:=true] [gps:=true] [radar:=false]
-      [battery:=false] [gps_driver:=ublox]
+      [lidar:=false] [battery:=false] [gps_driver:=ublox]
 
   IMU     imu_node -> /sensors/imu/data_raw -> imu_filter_madgwick -> /sensors/imu/data
           imu_node is aav_imu_yahboom, in Rust (it replaced the 2025-26 C++ driver).
@@ -14,9 +14,15 @@ Sensor drivers: each publishes raw data in its own frame; nothing here fuses any
             ublox_dgnss  ublox_dgnss -> ublox_nav_sat_fix_hp: a u-blox F9P over libusb,
                          the 2024-25 choice. apt only: the car, not Pixi
   radar   ti_ros2_driver pcl_pub -> /sensors/radar/points (PointCloud2, frame radar_link)
+  lidar   the stock velodyne driver, for the roof's Velodyne VLP-16 (found at the 16 Oct
+          audit: 192.168.1.201, sending UDP to the Jetson only):
+            lidar_driver (velodyne_driver)   UDP packets -> /sensors/lidar/packets
+            lidar_cloud (velodyne_pointcloud) -> /sensors/lidar/points (PointCloud2,
+                                                 frame lidar_link)
+          lidar_ip and lidar_port pick the sender: the lidar, or tools/fake_vlp16.py
   battery battery_monitor -> /vehicle/battery (BatteryState)
 
-Frames (imu_link, gps_link, radar_link) come from aav_description; run its
+Frames (imu_link, gps_link, radar_link, lidar_link) come from aav_description; run its
 description.launch.py too, or nothing can place these readings on the car.
 Run this file on the machine the sensors are plugged into.
 """
@@ -107,6 +113,29 @@ def gps(driver, config, use_sim_time):
     )]
 
 
+def lidar(ip, port, use_sim_time):
+    """Return the stock velodyne driver's two nodes, set up for the car's VLP-16."""
+    calibration = os.path.join(get_package_share_directory('velodyne_pointcloud'), 'params',
+                               'VLP16db.yaml')
+    return [
+        # The UDP packets as they come, a scan's worth (one turn, 0.1 s) per message.
+        Node(package='velodyne_driver', executable='velodyne_driver_node',
+             name='lidar_driver',
+             parameters=[{'device_ip': ip, 'port': port, 'model': 'VLP16', 'rpm': 600.0,
+                          'frame_id': 'lidar_link', 'gps_time': False}, use_sim_time],
+             remappings=[('velodyne_packets', '/sensors/lidar/packets')]),
+        # The packets as points: the VLP-16's 16 lasers, through its factory calibration.
+        # Unorganised: rays that hit nothing are left out, as Gazebo's cloud has them.
+        Node(package='velodyne_pointcloud', executable='velodyne_transform_node',
+             name='lidar_cloud',
+             parameters=[{'calibration': calibration, 'model': 'VLP16', 'min_range': 0.9,
+                          'max_range': 100.0, 'organize_cloud': False, 'fixed_frame': '',
+                          'target_frame': ''}, use_sim_time],
+             remappings=[('velodyne_packets', '/sensors/lidar/packets'),
+                         ('velodyne_points', '/sensors/lidar/points')]),
+    ]
+
+
 def launch_setup(context):
     def arg(name):
         return LaunchConfiguration(name).perform(context)
@@ -150,6 +179,8 @@ def launch_setup(context):
                 'topic': '/sensors/radar/points',
             }, use_sim_time],
         ))
+    if on('lidar'):
+        actions += lidar(arg('lidar_ip'), int(arg('lidar_port')), use_sim_time)
     if on('battery'):
         # The Victron VE.Direct cable. Its `port` parameter defaults to the udev name
         # /dev/aav/battery.
@@ -162,6 +193,13 @@ def generate_launch_description():
         DeclareLaunchArgument('imu', default_value='true'),
         DeclareLaunchArgument('gps', default_value='true'),
         DeclareLaunchArgument('radar', default_value='false'),
+        DeclareLaunchArgument('lidar', default_value='false',
+                              description='the roof Velodyne VLP-16, through the stock '
+                                          'velodyne driver'),
+        DeclareLaunchArgument('lidar_ip', default_value='192.168.1.201',
+                              description="the lidar's address: only its packets are read"),
+        DeclareLaunchArgument('lidar_port', default_value='2368',
+                              description='the UDP port the lidar sends its data to'),
         DeclareLaunchArgument('battery', default_value='false'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('gps_driver', default_value='ublox',

@@ -325,9 +325,10 @@ car. The team's Tentative choice was a new Pico 2 or STM32, and a Pico 2 program
 CAN master); Orin #2 (new) does the heavy seeing: cameras, lidar, costmaps and Nav2. A
 slow camera frame then can't delay a brake command. See <a href="learn-car.html">The car, box by box</a>.</p>
 <h3 id="is-there-a-lidar">Is there a lidar?</h3>
-<p>There is one on the roof (from the photos). There is <strong>no lidar driver</strong> in our code, and
-its model is unknown (Q22). Gazebo has a generic one to try: <code>pixi run sim world:=road
-lidar:=true</code> (<a href="simulation.html#the-lidar-gazebo-only">Simulation</a>).</p>
+<p>Yes: a Velodyne VLP-16 on the roof (the 16 Oct audit). We run the stock ROS <code>velodyne</code>
+driver for it, no code of our own: <code>pixi run car orin</code> starts it on the Jetson, where the
+lidar sends its data (<a href="perception.html#the-roof-lidar">Perception</a>). Gazebo has a generic
+one too: <code>pixi run sim world:=road</code> (<a href="simulation.html#the-lidar-gazebo-only">Simulation</a>).</p>
 <h3 id="how-does-the-car-know-where-it-is">How does the car know where it is?</h3>
 <p>Two EKFs from <code>robot_localization</code>:</p>
 <div class="table-wrap"><table>

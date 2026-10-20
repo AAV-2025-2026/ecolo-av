@@ -295,6 +295,48 @@ More in [Bench mode](bench.md).
 - [[later]] Next: the radar's points into the local costmap (the ObstacleLayer, written and
   switched off) and `collision_monitor`.
 
+## The roof lidar
+
+A Velodyne VLP-16 (the 16 Oct audit: 192.168.1.201, 10 turns a second, sending UDP to the
+Jetson only). We write no driver: the stock ROS `velodyne` package (BSD, from RoboStack)
+reads it. There is no Rust ROS driver for it; if one appears, it can replace this behind
+the same topic.
+
+```
+VLP-16 --UDP 2368--> lidar_driver --/sensors/lidar/packets--> lidar_cloud --/sensors/lidar/points-->
+    lidar_scan (aav_lidar) --/sensors/lidar/scan--> Nav2's lidar_layer and collision_monitor
+```
+
+| Part | Where |
+|---|---|
+| The two driver nodes | `aav_sensors` `sensors.launch.py lidar:=true` (`lidar_ip`, `lidar_port`) |
+| On the car | the `lidar` part of `car.launch.py`: on in `orin.yaml` and `all.yaml`; `lidar:=false` turns it off everywhere |
+| Calibration | the VLP-16's factory file, `VLP16db.yaml`, from the package |
+| Where it sits | `vehicle.yaml` `lidar_link` (a guess: measure it, Q1-Q9) |
+
+**Without the car:** `tools/fake_vlp16.py` sends real VLP-16 packets of a made-up scene, a
+post 6 m ahead and a ring at 15 m:
+
+```bash
+python3 tools/fake_vlp16.py &                                   # port 2369, not the lidar's
+pixi run bash -c 'tools/ros.sh --local ros2 launch aav_sensors sensors.launch.py \
+    imu:=false gps:=false lidar:=true lidar_ip:=127.0.0.1 lidar_port:=2369'
+```
+
+Checked 20 Oct on Ben's Mac, with `lidar_scan` too:
+
+| | Expected | Got |
+|---|---|---|
+| Cloud | `lidar_link`, 16 lasers a turn | 29,184 points, `lidar_link` [[works]] |
+| The post | 6 m | 5.80-6.00 m (the 15-degree lasers see it shorter) [[works]] |
+| The ring | 15 m | 14.89 m [[works]] |
+| Nav2's scan, ahead | 6 m + 0.90 m (where the lidar sits) | 6.75 m: the nearest laser inside the obstacle heights sees 5.85 m [[works]] |
+| Rates | 10 Hz | packets, cloud, scan: 9.9-10.0 Hz [[works]] |
+
+[[untested]] with the real lidar: next on the car, `pixi run car orin`, and the points in
+Lichtblick. `ros2 topic hz` on a Mac shows the cloud at 0.5 Hz: it listens best effort,
+and big messages lost that way are lost whole. A reliable subscriber sees 10 Hz.
+
 ## On the car
 
 `car.launch.py` starts perception as parts, like the rest of the car. Each machine file

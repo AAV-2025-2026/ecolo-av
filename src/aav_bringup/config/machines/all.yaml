@@ -10,6 +10,7 @@ parts:
   imu: true
   gps: true
   radar: false
+  lidar: true            # the roof Velodyne VLP-16
   battery: false
   camera: false          # TODO which cameras (Q22). usb_cam is Linux only
   detector: true         # RF-DETR, as yolo_detector_all. Needs PyTorch: pixi run -e ml car all

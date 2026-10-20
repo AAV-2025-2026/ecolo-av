@@ -5,15 +5,15 @@ The real car. One launch file for every machine; a machine file picks the parts.
       [gps:=true] [gps_driver:=ublox] [map:=<map yaml>] [start_x:=0] [start_y:=0]
       [start_yaw:=0] [max_speed:=0.3]
       [reversing:=false]  (true lets Nav2 drive backwards: blind, the team decides first)
-      [lidar:=false]      (true: Nav2 reads /sensors/lidar/points; the roof lidar has no
-                           driver yet, so nothing publishes it)
+      [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [ghost:=false]      (true: a pretend person in Nav2's view, where Nav2 runs, for
                            stopping tests with nothing real to hit: pixi run ghost ahead 10)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
 same ROS_DOMAIN_ID, so the parts find each other over the network; see docs/platforms.md.
-The arguments win over the machine file: gps:=false starts no GPS driver anywhere. A part
+The arguments win over the machine file: gps:=false starts no GPS driver anywhere, and
+lidar:=false no lidar. A part
 that can't run here (no PyTorch, no model file, no usb_cam) is skipped with a warning.
 
 Parts and what they start:
@@ -26,6 +26,8 @@ Parts and what they start:
   goto            /goto action (drive to a GPS point, stop there) -> /drivers/goto/cmd_vel
   imu, gps,       sensor drivers (on the machine the device is plugged into);
   radar, battery  gps_driver picks the GPS's: ublox (the default), nmea or ublox_dgnss
+  lidar           the roof Velodyne VLP-16, through the stock velodyne driver ->
+                  /sensors/lidar/points. On the machine its packets go to: the Jetson
   camera          usb_cam -> /sensors/camera/front_left/image_raw (Linux only)
   detector        YOLO on /sensors/camera/front_left/image_raw -> /perception/detections, as
                   yolo_detector_<machine>, with the machine file's model
@@ -44,8 +46,8 @@ Parts and what they start:
   navigation      Nav2 -> /drivers/nav/cmd_vel. Nav2's local costmap reads the sensors
                   this machine runs: with radar, /sensors/radar/points, and
                   collision_monitor stops Nav2 for radar points just ahead; with
-                  camera_obstacles, the camera's points; with lidar:=true (off: no lidar
-                  driver yet), /sensors/lidar/points
+                  camera_obstacles, the camera's points; with lidar, /sensors/lidar/points
+                  (and collision_monitor stops Nav2 for lidar points, or a silent lidar)
   spine           backend: CAN spine (ros2_socketcan + spine_bridge)
   legacy_uart     backend: today's ESP32 over UART (the Pi wired to it)
   legacy_encoder  today's wheel encoder over UDP
@@ -73,9 +75,9 @@ from launch_ros.actions import Node
 import yaml
 
 PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'goto', 'imu', 'gps', 'radar',
-         'battery', 'camera', 'detector', 'stop_signs', 'radar_clusters', 'camera_obstacles',
-         'lane', 'localization', 'navigation', 'spine', 'legacy_uart', 'legacy_encoder',
-         'foxglove')
+         'lidar', 'battery', 'camera', 'detector', 'stop_signs', 'radar_clusters',
+         'camera_obstacles', 'lane', 'localization', 'navigation', 'spine', 'legacy_uart',
+         'legacy_encoder', 'foxglove')
 # What a machine file holds: the parts, and the detector's settings.
 SECTIONS = ('parts', 'detector')
 # Each model format: what runs it, besides PyTorch and Ultralytics, and how to make it.
@@ -198,7 +200,8 @@ def launch_setup(context):
 
     def on(name):
         # A launch argument can switch a part off, wherever the machine file has it.
-        return bool(parts.get(name, False)) and (name != 'gps' or flag('gps'))
+        return (bool(parts.get(name, False)) and (name != 'gps' or flag('gps'))
+                and (name != 'lidar' or flag('lidar')))
 
     actions = []
     if on('description'):
@@ -219,9 +222,9 @@ def launch_setup(context):
         actions.append(include('aav_scripted', 'scripted.launch.py'))
     if on('goto'):
         actions.append(include('aav_goto', 'goto.launch.py'))
-    if any(on(s) for s in ('imu', 'gps', 'radar', 'battery')):
+    if any(on(s) for s in ('imu', 'gps', 'radar', 'lidar', 'battery')):
         actions.append(include('aav_sensors', 'sensors.launch.py',
-                               imu=on('imu'), gps=on('gps'), radar=on('radar'),
+                               imu=on('imu'), gps=on('gps'), radar=on('radar'), lidar=on('lidar'),
                                battery=on('battery'), gps_driver=arg('gps_driver')))
     if on('camera'):
         if installed('usb_cam'):
@@ -258,8 +261,8 @@ def launch_setup(context):
         # off, so none can leak in from another file.
         actions.append(include('aav_navigation', 'navigation.launch.py',
                                map=arg('map') or empty_map, radar=on('radar'),
-                               lidar=flag('lidar'), ghost=flag('ghost'),
-                               collision_monitor=on('radar') or flag('lidar') or flag('ghost'),
+                               lidar=on('lidar'), ghost=flag('ghost'),
+                               collision_monitor=on('radar') or on('lidar') or flag('ghost'),
                                camera_obstacles=on('camera_obstacles'),
                                reversing=flag('reversing')))
     if on('spine'):
@@ -289,12 +292,11 @@ def generate_launch_description():
                                           'until the receiver is known: Q18'),
         DeclareLaunchArgument('map', default_value='',
                               description='Map YAML for Nav2 (default: the empty map)'),
-        # Off until the roof lidar has a driver (probably a Velodyne: audit N6). Gazebo
-        # tries it today (sim.launch.py lidar:=true).
-        DeclareLaunchArgument('lidar', default_value='false',
-                              description='true: Nav2 reads the roof lidar on '
-                                          '/sensors/lidar/points. Nothing publishes it on '
-                                          'the car yet'),
+        # The roof's Velodyne VLP-16 (the 16 Oct audit), where the machine file has the
+        # lidar part: its driver, and Nav2 reading it. false switches it off everywhere.
+        DeclareLaunchArgument('lidar', default_value='true',
+                              description='false: no lidar driver, and Nav2 without the '
+                                          'lidar, whatever the machine file says'),
         # Off unless asked for: a pretend person, for stopping tests on the real car with
         # nothing real to hit (aav_ghost, docs/ghost-obstacles.md). Where Nav2 runs.
         DeclareLaunchArgument('ghost', default_value='false',

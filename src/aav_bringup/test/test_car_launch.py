@@ -161,16 +161,27 @@ def test_the_map_and_the_start_pose_reach_their_launch_files():
     assert default.endswith(os.path.join('maps', 'empty.yaml'))
 
 
-def test_the_lidar_stays_off_and_the_watchdog_guards_nav2():
-    sent = included(started(CAR, machine='all'))
+def test_the_lidar_runs_where_its_packets_go_and_nav2_reads_it():
+    # The Jetson (orin) gets the VLP-16's packets: its driver runs there, and Nav2 there
+    # reads it, with collision_monitor watching it.
+    sent = included(started(CAR, machine='orin'))
+    assert sent['sensors.launch.py']['lidar'] == 'true'
     nav = sent['navigation.launch.py']
-    # No driver publishes the roof lidar yet: Nav2 mustn't wait for it.
-    assert (nav['lidar'], nav['collision_monitor']) == ('false', nav['radar'])
+    assert (nav['lidar'], nav['collision_monitor']) == ('true', 'true')
+    # lidar:=false switches it off everywhere, whatever the machine file says.
+    off = included(started(CAR, machine='orin', lidar='false'))
+    assert off['sensors.launch.py']['lidar'] == 'false'
+    assert (off['navigation.launch.py']['lidar'],
+            off['navigation.launch.py']['collision_monitor']) == ('false', 'false')
+    # A machine without the part starts no driver.
+    assert 'sensors.launch.py' not in included(started(CAR, machine='laptop'))
+
+
+def test_the_watchdog_guards_nav2():
+    sent = included(started(CAR, machine='all'))
     assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,local,global,gps'
     no_gps = included(started(CAR, machine='all', gps='false'))
     assert 'gps' not in no_gps['watchdog.launch.py']['inputs']
-    assert included(started(CAR, machine='all', lidar='true'))['navigation.launch.py'][
-        'collision_monitor'] == 'true'
 
 
 def test_bad_values_stop_the_launch():

@@ -268,7 +268,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5
 | **Find it** | switch port LIDAR, then its address in the router's client list or `arp -a` |
 | **Log in** | none. If it has a web page, open it and only read it |
 | **Look for** | the model and its IP; which computer receives its packets (on the Orin: `ss -uapn` shows the port); any driver in a workspace |
-| **Answers** | Q22, car-photos #3. Our code has no lidar driver yet |
+| **Answers** | Q22, car-photos #3. Since 20 Oct we run the stock velodyne driver for it |
 | **Photograph** | its label (model, serial) on the roof tripod |
 
 ### The router (Linksys EA3500)

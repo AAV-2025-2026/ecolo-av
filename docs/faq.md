@@ -136,9 +136,10 @@ slow camera frame then can't delay a brake command. See [The car, box by box](le
 
 ### Is there a lidar?
 
-There is one on the roof (from the photos). There is **no lidar driver** in our code, and
-its model is unknown (Q22). Gazebo has a generic one to try: `pixi run sim world:=road
-lidar:=true` ([Simulation](simulation.md#the-lidar-gazebo-only)).
+Yes: a Velodyne VLP-16 on the roof (the 16 Oct audit). We run the stock ROS `velodyne`
+driver for it, no code of our own: `pixi run car orin` starts it on the Jetson, where the
+lidar sends its data ([Perception](perception.md#the-roof-lidar)). Gazebo has a generic
+one too: `pixi run sim world:=road` ([Simulation](simulation.md#the-lidar-gazebo-only)).
 
 ### How does the car know where it is?
 

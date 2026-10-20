@@ -175,7 +175,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>The lidar in Nav2 (15 Oct)</td>
 <td><code>aav_lidar</code> <code>lidar_scan</code> -&gt; the local costmap's <code>lidar_layer</code> and <code>collision_monitor</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post. <span class="badge b-missing">missing</span> on the car: no lidar driver, so <code>car.launch.py lidar:=false</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post. On the car: the stock velodyne driver since 20 Oct, on in <code>orin.yaml</code> and <code>all.yaml</code>: <span class="badge b-works">works</span> against a pretend VLP-16 (<code>tools/fake_vlp16.py</code>), the chain at 10 Hz; <span class="badge b-untested">untested</span> with the real lidar</td>
 </tr>
 <tr>
 <td>Sensor watchdog (15 Oct)</td>
@@ -279,8 +279,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Lidar</td>
-<td>on the car's roof (photo, 14 Oct); no driver in our code yet; model unknown (Q22). A generic 16-beam one in Gazebo (<code>/sensors/lidar/points</code>, on by default), which Nav2 reads since 15 Oct</td>
-<td><span class="badge b-missing">missing</span> on the car</td>
+<td>a Velodyne VLP-16 on the roof (the 16 Oct audit: 192.168.1.201, sending to the Jetson). The stock <code>velodyne</code> driver (<code>aav_sensors</code> <code>lidar:=true</code>, the <code>lidar</code> part in <code>car.launch.py</code>) -&gt; <code>/sensors/lidar/points</code>; a generic 16-beam one in Gazebo</td>
+<td><span class="badge b-works">works</span> against <code>tools/fake_vlp16.py</code>: a post 6 m ahead came out at 5.80-6.00 m, Nav2's scan 6.75 m from <code>base_link</code>, 10 Hz (20 Oct). <span class="badge b-untested">untested</span> with the real lidar</td>
 </tr>
 </tbody>
 </table></div>

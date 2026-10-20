@@ -10,6 +10,7 @@ parts:
   imu: true             # TODO is the IMU on the Orin's USB?
   gps: true             # TODO is the u-blox on the Orin's USB?
   radar: false          # perception, later
+  lidar: true           # the roof Velodyne VLP-16: it sends its UDP packets to the Jetson only
   battery: false
   camera: false         # TODO which cameras (Q22), and are they on the Orin's USB?
   detector: true        # RF-DETR, as yolo_detector_orin. Needs JetPack's PyTorch: the reflash (Q24)

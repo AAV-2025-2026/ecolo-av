@@ -20,6 +20,8 @@
   <!-- The cameras (cameras.launch.py): Linux only -->
   <exec_depend>usb_cam</exec_depend>
   <exec_depend>ti_ros2_driver</exec_depend>
+  <exec_depend>velodyne_driver</exec_depend>
+  <exec_depend>velodyne_pointcloud</exec_depend>
   <exec_depend>battery_monitor</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>

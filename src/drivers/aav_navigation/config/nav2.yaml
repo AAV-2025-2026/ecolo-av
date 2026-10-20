@@ -165,9 +165,9 @@ local_costmap:
       #   obstacle_layer  radar:=true, where a radar runs: the bench, Gazebo's road and
       #                   test_lot worlds, and the car with its radar part
       #   camera_layer    camera_obstacles:=true, off until the cameras are calibrated (Q22)
-      #   lidar_layer     lidar:=true, where a lidar runs: Gazebo (on by default). Not the
-      #                   car yet: no driver for its lidar. Without it the launch file takes
-      #                   the layer out of this list
+      #   lidar_layer     lidar:=true, where a lidar runs: Gazebo (on by default), and the
+      #                   car's VLP-16 (the stock velodyne driver, car.launch.py's lidar
+      #                   part). Without it the launch file takes the layer out of this list
       #   ghost_layer     ghost:=true: aav_ghost's pretend person (docs/ghost-obstacles.md).
       #                   Without it the launch file takes the layer out of this list
       plugins: ["static_layer", "obstacle_layer", "camera_layer", "lidar_layer",

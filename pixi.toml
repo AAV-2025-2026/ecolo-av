@@ -125,6 +125,7 @@ ros-jazzy-vision-msgs = ">=4.1.1,<5"
 ros-jazzy-cv-bridge = ">=4.1.0,<5"
 ros-jazzy-image-publisher = ">=5.0.13,<6"
 ros-jazzy-camera-info-manager = ">=5.1.8,<6"
+ros-jazzy-velodyne = ">=2.5.1,<3"
 
 [target.linux.dependencies]   # SocketCAN and usb_cam are Linux-only
 ros-jazzy-ros2-socketcan = ">=1.4.0,<2"

@@ -30,8 +30,8 @@ Obstacles, from where the sensors are:
                           with its radar part; Gazebo's road world): the local costmap's
                           obstacle layer reads it, so Nav2 stops for what the radar sees
   lidar:=true             where a lidar publishes /sensors/lidar/points (Gazebo's road and
-                          test_lot worlds; not the car yet: its lidar has no driver, so
-                          car.launch.py leaves it off): lidar_scan flattens it, the local
+                          test_lot worlds; the car's VLP-16, where car.launch.py's lidar
+                          part runs): lidar_scan flattens it, the local
                           costmap's lidar_layer reads it, and collision_monitor too
   collision_monitor       radar or lidar unless set: it stops the car for radar or lidar
                           points in the stop zone ahead, whatever the costmap says. A

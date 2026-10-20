@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar</h1>
-<div class="meta">20 min read · 10 sections</div></header>
+<div class="meta">22 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -65,7 +65,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-chain">The chain</a><a href="#the-packages">The packages</a><a href="#stop-signs">Stop signs</a><a href="#models">Models</a><a href="#better-models-to-try">Better models to try</a><a href="#where-it-runs">Where it runs</a><a href="#lane-keeping">Lane keeping</a><a href="#radar-clustering">Radar clustering</a><a href="#on-the-car">On the car</a><a href="#still-to-do">Still to do</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-chain">The chain</a><a href="#the-packages">The packages</a><a href="#stop-signs">Stop signs</a><a href="#models">Models</a><a href="#better-models-to-try">Better models to try</a><a href="#where-it-runs">Where it runs</a><a href="#lane-keeping">Lane keeping</a><a href="#radar-clustering">Radar clustering</a><a href="#the-roof-lidar">The roof lidar</a><a href="#on-the-car">On the car</a><a href="#still-to-do">Still to do</a></nav>
 <div class="lead"><p>What the car sees, and what it does about it. All of it runs on the bench today. On the
 car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).</p></div>
 <section class="card"><h2 id="the-chain">The chain</h2>
@@ -647,6 +647,85 @@ names, passed on as they are.</p>
 <li><span class="badge b-later">later</span> Next: the radar's points into the local costmap (the ObstacleLayer, written and
   switched off) and <code>collision_monitor</code>.</li>
 </ul>
+</section>
+<section class="card"><h2 id="the-roof-lidar">The roof lidar</h2>
+<p>A Velodyne VLP-16 (the 16 Oct audit: 192.168.1.201, 10 turns a second, sending UDP to the
+Jetson only). We write no driver: the stock ROS <code>velodyne</code> package (BSD, from RoboStack)
+reads it. There is no Rust ROS driver for it; if one appears, it can replace this behind
+the same topic.</p>
+<pre class="highlight"><code>VLP-16 --UDP 2368--&gt; lidar_driver --/sensors/lidar/packets--&gt; lidar_cloud --/sensors/lidar/points--&gt;
+    lidar_scan (aav_lidar) --/sensors/lidar/scan--&gt; Nav2's lidar_layer and collision_monitor</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The two driver nodes</td>
+<td><code>aav_sensors</code> <code>sensors.launch.py lidar:=true</code> (<code>lidar_ip</code>, <code>lidar_port</code>)</td>
+</tr>
+<tr>
+<td>On the car</td>
+<td>the <code>lidar</code> part of <code>car.launch.py</code>: on in <code>orin.yaml</code> and <code>all.yaml</code>; <code>lidar:=false</code> turns it off everywhere</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>the VLP-16's factory file, <code>VLP16db.yaml</code>, from the package</td>
+</tr>
+<tr>
+<td>Where it sits</td>
+<td><code>vehicle.yaml</code> <code>lidar_link</code> (a guess: measure it, Q1-Q9)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Without the car:</strong> <code>tools/fake_vlp16.py</code> sends real VLP-16 packets of a made-up scene, a
+post 6 m ahead and a ring at 15 m:</p>
+<pre class="highlight"><code class="language-bash">python3 tools/fake_vlp16.py &amp;                                   # port 2369, not the lidar's
+pixi run bash -c 'tools/ros.sh --local ros2 launch aav_sensors sensors.launch.py \
+    imu:=false gps:=false lidar:=true lidar_ip:=127.0.0.1 lidar_port:=2369'</code></pre>
+<p>Checked 20 Oct on Ben's Mac, with <code>lidar_scan</code> too:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Expected</th>
+<th>Got</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud</td>
+<td><code>lidar_link</code>, 16 lasers a turn</td>
+<td>29,184 points, <code>lidar_link</code> <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>The post</td>
+<td>6 m</td>
+<td>5.80-6.00 m (the 15-degree lasers see it shorter) <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>The ring</td>
+<td>15 m</td>
+<td>14.89 m <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Nav2's scan, ahead</td>
+<td>6 m + 0.90 m (where the lidar sits)</td>
+<td>6.75 m: the nearest laser inside the obstacle heights sees 5.85 m <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Rates</td>
+<td>10 Hz</td>
+<td>packets, cloud, scan: 9.9-10.0 Hz <span class="badge b-works">works</span></td>
+</tr>
+</tbody>
+</table></div>
+<p><span class="badge b-untested">untested</span> with the real lidar: next on the car, <code>pixi run car orin</code>, and the points in
+Lichtblick. <code>ros2 topic hz</code> on a Mac shows the cloud at 0.5 Hz: it listens best effort,
+and big messages lost that way are lost whole. A reliable subscriber sees 10 Hz.</p>
 </section>
 <section class="card"><h2 id="on-the-car">On the car</h2>
 <p><code>car.launch.py</code> starts perception as parts, like the rest of the car. Each machine file
