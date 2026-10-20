@@ -224,7 +224,7 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tr>
 <td><code>aav_yolo</code></td>
 <td>perception</td>
-<td>YOLO on the camera's images, and the stop-sign watcher</td>
+<td>RF-DETR (the default) or YOLO on the camera's images, and the stop-sign watcher</td>
 <td><span class="badge b-works">works</span> on the bench</td>
 <td>2024-25 <code>camera_ros2_ws</code></td>
 </tr>
@@ -470,7 +470,7 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td><code>aav_yolo</code>: <code>yolo_detector</code></td>
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>/perception/detections</code>, <code>/perception/detections/image</code></td>
-<td>a <code>.pt</code>, <code>.mlpackage</code> or <code>.engine</code> model; needs the <code>ml</code> environment</td>
+<td><code>detector:=rfdetr</code> (a <code>.pth</code>, the default) or <code>yolo</code> (a <code>.pt</code>, <code>.mlpackage</code> or <code>.engine</code>); needs the <code>ml</code> environment</td>
 </tr>
 <tr>
 <td><code>aav_yolo</code>: <code>stop_sign_watcher</code></td>

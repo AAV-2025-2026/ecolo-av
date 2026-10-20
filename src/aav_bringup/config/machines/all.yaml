@@ -12,7 +12,7 @@ parts:
   radar: false
   battery: false
   camera: false          # TODO which cameras (Q22). usb_cam is Linux only
-  detector: true         # YOLO, as yolo_detector_all. Needs PyTorch: pixi run -e ml car all
+  detector: true         # RF-DETR, as yolo_detector_all. Needs PyTorch: pixi run -e ml car all
   stop_signs: true
   radar_clusters: false  # with the radar
   camera_obstacles: false  # TODO with calibrated cameras (Q22): boxes into Nav2's costmap
@@ -26,4 +26,5 @@ parts:
 
 # The detector's settings: aav_yolo detector.launch.py's arguments.
 detector:
-  model: models/yolo11n.pt   # PyTorch, so it runs on any computer: CUDA, Metal or the CPU
+  detector: rfdetr   # models/rf-detr-nano.pth, PyTorch: CUDA, Metal or the CPU. Or:
+  # detector: yolo   # models/yolo11n.pt

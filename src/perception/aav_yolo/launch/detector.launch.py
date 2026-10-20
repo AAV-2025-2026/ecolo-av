@@ -1,12 +1,16 @@
 """
-The YOLO detector, on the camera's images.
+The object detector, on the camera's images: RF-DETR by default, or YOLO.
 
-  pixi run detect                       # the stock model, on /sensors/camera/front_left/image_raw
+  pixi run detect                       # RF-DETR Nano, on /sensors/camera/front_left/image_raw
   pixi run detect picture:=src/perception/aav_yolo/test/stop_sign.jpg   # a test picture
-  pixi run detect model:=models/best.pt labels:="stop sign"
+  pixi run detect detector:=yolo        # YOLO instead (models/yolo11n.pt)
+  pixi run detect detector:=yolo model:=models/best.pt labels:="stop sign"
 
 What you can set:
-  model       the model file (.pt, .mlpackage or .engine). Default: models/yolo11n.pt
+  detector    rfdetr (the default: RF-DETR, Apache-2.0) or yolo (YOLO, AGPL-3.0)
+  model       the model file; empty (the default) = the detector's own:
+              rfdetr: models/rf-detr-nano.pth (or rf-detr-small.pth...)
+              yolo:   models/yolo11n.pt (or a .mlpackage, Core ML; or a .engine, TensorRT)
   device      auto (the default): the GPU this computer has, CUDA or a Mac's Metal, else
               the CPU. Or PyTorch's own names: cuda, cuda:N, mps (Metal) or cpu. A .engine
               or .mlpackage model picks its own hardware
@@ -24,22 +28,21 @@ The detector runs as `python3 -m aav_yolo.detector`: the python3 of the environm
 started the launch, so the ml environment's PyTorch is the one it finds.
 """
 
-import os
-
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
-ROOT = os.environ.get('PIXI_PROJECT_ROOT', os.getcwd())
-
 
 def generate_launch_description():
     arg = LaunchConfiguration
     picture = PythonExpression(["'", arg('picture'), "' != ''"])
     return LaunchDescription([
-        DeclareLaunchArgument('model', default_value=os.path.join(ROOT, 'models', 'yolo11n.pt')),
+        DeclareLaunchArgument('detector', default_value='rfdetr',
+                              description='rfdetr (RF-DETR) or yolo (YOLO)'),
+        DeclareLaunchArgument('model', default_value='',
+                              description="the model file; empty = the detector's own"),
         DeclareLaunchArgument('device', default_value='auto'),
         DeclareLaunchArgument('confidence', default_value='0.5'),
         DeclareLaunchArgument('labels', default_value=''),
@@ -61,7 +64,8 @@ def generate_launch_description():
             name=arg('node_name'), output='screen', emulate_tty=True,
             cmd=['python3', '-m', 'aav_yolo.detector', '--ros-args',
                  '-r', ['__node:=', arg('node_name')],
-                 '-p', ['model:=', arg('model')],
+                 '-p', ['detector:=', arg('detector')],
+                 '-p', ['model:="', arg('model'), '"'],
                  '-p', ['device:=', arg('device')],
                  '-p', ['confidence:=', arg('confidence')],
                  '-p', ['labels:="', arg('labels'), '"'],

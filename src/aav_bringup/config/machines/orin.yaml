@@ -12,7 +12,7 @@ parts:
   radar: false          # perception, later
   battery: false
   camera: false         # TODO which cameras (Q22), and are they on the Orin's USB?
-  detector: true        # YOLO, as yolo_detector_orin. Needs JetPack's PyTorch: the reflash (Q24)
+  detector: true        # RF-DETR, as yolo_detector_orin. Needs JetPack's PyTorch: the reflash (Q24)
   stop_signs: true      # the stop-sign watcher: one per car, next to the mux
   radar_clusters: false # with the radar, later
   camera_obstacles: false # TODO with calibrated cameras (Q22): boxes into Nav2's costmap,
@@ -27,4 +27,7 @@ parts:
 
 # The detector's settings: aav_yolo detector.launch.py's arguments.
 detector:
-  model: models/yolo11n.engine  # TensorRT, built on the Orin itself: python3 tools/build_engine.py
+  detector: rfdetr      # RF-DETR Nano on the GPU, through PyTorch (models/rf-detr-nano.pth).
+                        # Untested on the Orin. Its TensorRT engine is later; YOLO's is ready:
+  # detector: yolo
+  # model: models/yolo11n.engine  # TensorRT, built on the Orin itself: python3 tools/build_engine.py

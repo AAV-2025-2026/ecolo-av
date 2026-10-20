@@ -28,7 +28,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_carla` | backends | a CARLA adapter (CARLA's Python client) | [[untested]] never run against a server | new |
 | `aav_interfaces` | interfaces | our messages: `VehicleStatus`, `ScriptedDrive`, `GoTo` | [[works]] builds | new |
 | `aav_bringup` | bringup | the five profiles, perception on the car, the machine files, the RViz layout | [[works]] turtle, sim, replay, bench | new |
-| `aav_yolo` | perception | YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
+| `aav_yolo` | perception | RF-DETR (the default) or YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
 | `aav_radar_clusters` | perception | radar clustering (DBSCAN), with a box round each object (Rust) | [[works]] on the bench and in Gazebo | new: a rewrite of the 2025-26 `Nav_Radar` C++ node |
 | `aav_lane_finder` | perception | the lane lines in the camera's pictures, as `/perception/lane/geometry` (OpenCV) | [[works]] on the bench | new |
 | `aav_lane_geometry` | perception | lane keeping: a driver on `/drivers/ai/cmd_vel` | [[works]] on the bench, with `aav_lane_finder` | 2025-26 `Lane_Detection_ROS2` |
@@ -80,7 +80,7 @@ perception came in on 10 October, the lane finder on 11 October.
 
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
-| `aav_yolo`: `yolo_detector` | `/sensors/camera/front_left/image_raw` | `/perception/detections`, `/perception/detections/image` | a `.pt`, `.mlpackage` or `.engine` model; needs the `ml` environment |
+| `aav_yolo`: `yolo_detector` | `/sensors/camera/front_left/image_raw` | `/perception/detections`, `/perception/detections/image` | `detector:=rfdetr` (a `.pth`, the default) or `yolo` (a `.pt`, `.mlpackage` or `.engine`); needs the `ml` environment |
 | `aav_yolo`: `stop_sign_watcher` | `/perception/detections` | `/perception/stop_sign` | twist_mux's stop-sign lock, priority 30 |
 | `aav_radar_clusters`: `radar_clusters` | `/sensors/radar/points` | `/perception/radar/clusters`, `/perception/radar/cluster_boxes` | DBSCAN, in Rust; eps 0.8 m, 15 points (5 on the bench and in Gazebo) |
 | `aav_lane_finder`: `lane_finder` | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info` | `/perception/lane/geometry`, `/perception/lane/image` | a bird's-eye view, sliding windows, a curve per line; the camera's place from `vehicle.yaml` |

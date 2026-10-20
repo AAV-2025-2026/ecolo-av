@@ -54,3 +54,12 @@ change, never the logic:
 - `aav_yolo/detector.py`, `aav_yolo/camera_obstacles.py`, `aav_yolo/stop_sign_watcher.py`,
   `config/camera_obstacles.yaml`, `launch/detector.launch.py`: `/camera/...` ->
   `/sensors/camera/front_left/...`, `/perception/stop` -> `/perception/stop_sign`.
+- 2026-10-20: RF-DETR, and a switch between it and YOLO (Ben: "Lets switch to RF-DETR").
+  `detector.py` takes a `detector` parameter, `rfdetr` (the default) or `yolo`; `model`
+  may be empty, for the detector's own file (`models/rf-detr-nano.pth`,
+  `models/yolo11n.pt`). The two run behind one `detect()`; the picture's boxes are drawn
+  by our own `draw()` for both, instead of Ultralytics' `result.plot()`. New in
+  `boxes.py`, with tests: `check_detector`, `rfdetr_size`, `boxes_from_corners` and
+  `corners`; `pick_device` treats `.pth` as PyTorch. The launch file takes `detector:=`,
+  and its `model` default is empty. The package, the node (`yolo_detector`) and the
+  topics keep their names.

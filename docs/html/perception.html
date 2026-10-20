@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Perception: cameras, YOLO, stop signs, lanes and radar · AAV 2026–27</title>
+<title>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar · AAV 2026–27</title>
 <link rel="stylesheet" href="style.css">
 </head><body>
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
-<h1>Perception: cameras, YOLO, stop signs, lanes and radar</h1>
-<div class="meta">19 min read · 10 sections</div></header>
+<h1>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar</h1>
+<div class="meta">20 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -88,7 +88,7 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 </tr>
 <tr>
 <td>The pink box</td>
-<td>the real YOLO model (the stock one) found the sign: "stop sign", 0.90 = 90% sure</td>
+<td>the real YOLO model (the stock one) found the sign: "stop sign", 0.90 = 90% sure. (Saved before RF-DETR became the default, 20 Oct; it draws a red box)</td>
 </tr>
 <tr>
 <td>When</td>
@@ -111,8 +111,8 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 <tr>
 <td><code>aav_yolo</code></td>
 <td>2024-25 <code>camera_ros2_ws</code> (<code>yolo_ros2</code>)</td>
-<td>the detector: camera images in, <code>vision_msgs</code> detections out; and the stop-sign watcher</td>
-<td><span class="badge b-works">works</span> on the bench, with the stock model</td>
+<td>the detector (RF-DETR or YOLO): camera images in, <code>vision_msgs</code> detections out; and the stop-sign watcher</td>
+<td><span class="badge b-works">works</span> on the bench, with either stock model</td>
 </tr>
 <tr>
 <td><code>aav_radar_clusters</code></td>
@@ -178,10 +178,72 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 The lock keeps stop signs away from the e-stop.</p>
 </section>
 <section class="card"><h2 id="models">Models</h2>
-<p>Model files stay out of git, in <code>models/</code>. <code>pixi run get-models</code> downloads the stock
-YOLO11 nano model (5.6 MB, its checksum pinned). It was trained on the COCO dataset, and
-"stop sign" is one of its 80 classes, so we don't need the 2024-25 team's model to start.</p>
-<p>One model, three formats. Each computer with a GPU runs its own (Ben, 10 Oct), and the
+<h3 id="two-detectors-one-switch">Two detectors, one switch</h3>
+<p>Since 20 Oct the detector runs <strong>RF-DETR</strong> (Ben: "Lets switch to RF-DETR... switch ... to
+yolo with a parameter"). YOLO is one argument away. Both publish the same
+<code>/perception/detections</code>, so the stop-sign watcher and the rest can't tell which ran.</p>
+<pre class="highlight"><code class="language-bash">pixi run detect                        # RF-DETR Nano (the default)
+pixi run detect detector:=yolo         # YOLO11 nano</code></pre>
+<p>In a machine file: <code>detector: {detector: yolo}</code> under its <code>detector:</code> settings.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>detector:=</code></th>
+<th>Model (empty <code>model:=</code>)</th>
+<th>Licence</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rfdetr</code> (default)</td>
+<td><code>models/rf-detr-nano.pth</code></td>
+<td>Apache-2.0 (Roboflow)</td>
+<td>saw Gazebo's stop sign from 20 m, YOLO from 10 m; more people found (<a href="model-comparison.html">Model comparison</a>)</td>
+</tr>
+<tr>
+<td><code>yolo</code></td>
+<td><code>models/yolo11n.pt</code>, or its <code>.mlpackage</code> / <code>.engine</code></td>
+<td>AGPL-3.0 (Ultralytics)</td>
+<td>smaller (6 MB), and its TensorRT engine for the Orin is written</td>
+</tr>
+</tbody>
+</table></div>
+<p>Tested 20 Oct on Ben's Mac (GPU, Metal), on the test stop-sign picture at 10 frames a second:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Found</th>
+<th>Time per frame</th>
+<th><code>bench-check --perception</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RF-DETR Nano</td>
+<td>stop sign, 0.96</td>
+<td>32 ms</td>
+<td><span class="badge b-works">works</span> the lock came on at 20.7 m (sign at 25 m); stood still; goal reached</td>
+</tr>
+<tr>
+<td>YOLO11n</td>
+<td>stop sign, 0.97</td>
+<td>32 ms</td>
+<td><span class="badge b-works">works</span> (earlier runs)</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>pixi run get-models</code> downloads both into <code>models/</code> (RF-DETR's is 366 MB: a training
+checkpoint), each checked against its pinned checksum: a model file is a Python pickle,
+so a wrong one could run code. Both know COCO's 80 classes, "stop sign" among them, so we
+don't need the 2024-25 team's model to start. Another RF-DETR size: name the file after
+it, such as <code>models/rf-detr-small.pth</code>, and pass <code>model:=</code>.</p>
+<p>RF-DETR runs on PyTorch: CUDA (the Orin), Metal (a Mac) or the CPU. Its TensorRT engine
+for the Orin is <span class="badge b-later">later</span>: until then the Orin runs it through PyTorch on its GPU,
+<span class="badge b-untested">untested</span>.</p>
+<h3 id="yolos-three-formats">YOLO's three formats</h3>
+<p>One YOLO model, three formats. Each computer with a GPU runs its own (Ben, 10 Oct), and the
 detector loads any of them. The machine file names the one to use:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -251,7 +313,7 @@ far more pictures may do better:</p>
 <tbody>
 <tr>
 <td>Everyday objects, stop signs included</td>
-<td>YOLO11 (ours now), RT-DETR, RF-DETR</td>
+<td>RF-DETR (ours now), YOLO11 and YOLO26 (<code>detector:=yolo</code>), RT-DETR</td>
 </tr>
 <tr>
 <td>Anything named in words, like "traffic cone"</td>

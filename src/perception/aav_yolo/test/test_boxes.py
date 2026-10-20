@@ -1,7 +1,8 @@
 import re
 from types import SimpleNamespace
 
-from aav_yolo.boxes import boxes_from_result, normal_label, parse_labels, pick_device
+from aav_yolo.boxes import (Box, boxes_from_corners, boxes_from_result, check_detector, corners,
+                            normal_label, parse_labels, pick_device, rfdetr_size)
 import numpy as np
 import pytest
 
@@ -48,6 +49,7 @@ def test_parse_labels():
 
 
 PT, ENGINE, MLPACKAGE = 'models/yolo11n.pt', 'models/yolo11n.engine', 'models/yolo11n.mlpackage'
+PTH = 'models/rf-detr-nano.pth'
 ORIN, MAC, PC = (1, False), (0, True), (0, False)   # (NVIDIA GPUs, Metal)
 
 
@@ -55,6 +57,8 @@ ORIN, MAC, PC = (1, False), (0, True), (0, False)   # (NVIDIA GPUs, Metal)
     ('auto', PT, ORIN, 'cuda:0'),            # auto: the GPU this computer has
     ('auto', PT, MAC, 'mps'),
     ('auto', PT, PC, 'cpu'),
+    ('auto', PTH, ORIN, 'cuda:0'),           # RF-DETR's .pth is PyTorch too
+    ('auto', PTH, MAC, 'mps'),
     ('cuda', PT, ORIN, 'cuda'),              # PyTorch's own names, passed on as they are
     ('cuda:1', PT, (2, False), 'cuda:1'),
     ('mps', PT, MAC, 'mps'),
@@ -87,3 +91,59 @@ def test_pick_device_says_what_to_use_instead(requested, machine, says):
 def test_a_misspelt_device_is_an_error_even_for_tensorrt():
     with pytest.raises(ValueError, match='isn.t a device name'):
         pick_device('gpu', ENGINE, *ORIN)
+
+
+@pytest.mark.parametrize('detector, model, expect', [
+    ('rfdetr', '', 'models/rf-detr-nano.pth'),       # empty: the detector's own model
+    ('yolo', '', 'models/yolo11n.pt'),
+    (' RFDETR ', '', 'models/rf-detr-nano.pth'),
+    ('rfdetr', 'models/rf-detr-small.pth', 'models/rf-detr-small.pth'),
+    ('yolo', ENGINE, ENGINE),
+    ('yolo', MLPACKAGE, MLPACKAGE),
+])
+def test_check_detector(detector, model, expect):
+    assert check_detector(detector, model) == expect
+
+
+@pytest.mark.parametrize('detector, model, says', [
+    ('detr', '', 'use rfdetr or yolo'),
+    ('rfdetr', PT, 'it is a yolo model, so use detector:=yolo'),
+    ('yolo', PTH, 'it is a rfdetr model, so use detector:=rfdetr'),
+    ('rfdetr', 'models/weights.onnx', 'it takes .pth'),
+])
+def test_check_detector_says_what_to_use_instead(detector, model, says):
+    with pytest.raises(ValueError, match=re.escape(says)):
+        check_detector(detector, model)
+
+
+@pytest.mark.parametrize('model, expect', [
+    ('models/rf-detr-nano.pth', 'RFDETRNano'),
+    ('/x/rf-detr-small.pth', 'RFDETRSmall'),
+    ('Large_RFDETR.pth', 'RFDETRLarge'),
+])
+def test_rfdetr_size(model, expect):
+    assert rfdetr_size(model) == expect
+
+
+@pytest.mark.parametrize('model', ['models/checkpoint_best_regular.pth', 'small-or-nano.pth'])
+def test_rfdetr_size_needs_one_size_in_the_name(model):
+    with pytest.raises(ValueError, match='name the file after its size'):
+        rfdetr_size(model)
+
+
+RFDETR_COCO = {1: 'person', 13: 'stop sign'}    # rfdetr's COCO numbers, not Ultralytics'
+
+
+def test_boxes_from_corners():
+    boxes = boxes_from_corners([[10, 20, 50, 100], [0, 0, 4, 4]], [0.9, 0.6], [13, 1],
+                               RFDETR_COCO)
+    assert boxes == [Box('stop sign', 0.9, 30.0, 60.0, 40.0, 80.0),
+                     Box('person', 0.6, 2.0, 2.0, 4.0, 4.0)]
+    assert [b.label for b in boxes_from_corners([[0, 0, 1, 1]] * 2, [0.9, 0.9], [13, 1],
+                                                RFDETR_COCO, ['Stop_Sign'])] == ['stop sign']
+    assert boxes_from_corners([[0, 0, 1, 1]], [0.9], [99], RFDETR_COCO)[0].label == '99'
+
+
+def test_corners_are_whole_pixels():
+    assert corners(Box('x', 1.0, 30.4, 60.0, 40.0, 80.0)) == {'x1': 10, 'y1': 20,
+                                                              'x2': 50, 'y2': 100}

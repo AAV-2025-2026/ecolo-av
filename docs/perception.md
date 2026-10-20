@@ -1,4 +1,4 @@
-# Perception: cameras, YOLO, stop signs, lanes and radar
+# Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar
 
 What the car sees, and what it does about it. All of it runs on the bench today. On the
 car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).
@@ -17,14 +17,14 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 | In the picture | What it is |
 |---|---|
 | The road, the sky and the sign | a drawing, not a photo: the bench's pretend camera (`mock_camera`) draws them from where the model car is. The sign grows as the car gets closer |
-| The pink box | the real YOLO model (the stock one) found the sign: "stop sign", 0.90 = 90% sure |
+| The pink box | the real YOLO model (the stock one) found the sign: "stop sign", 0.90 = 90% sure. (Saved before RF-DETR became the default, 20 Oct; it draws a red box) |
 | When | `pixi run -e ml bench-check --perception` saved it the moment the car stopped, about 5 m before the sign |
 
 ## The packages
 
 | Package | From | Does | State |
 |---|---|---|---|
-| `aav_yolo` | 2024-25 `camera_ros2_ws` (`yolo_ros2`) | the detector: camera images in, `vision_msgs` detections out; and the stop-sign watcher | [[works]] on the bench, with the stock model |
+| `aav_yolo` | 2024-25 `camera_ros2_ws` (`yolo_ros2`) | the detector (RF-DETR or YOLO): camera images in, `vision_msgs` detections out; and the stop-sign watcher | [[works]] on the bench, with either stock model |
 | `aav_radar_clusters` | ours (Rust): a rewrite of the 2025-26 `Nav_Radar` C++ node | DBSCAN groups the radar's points into objects, with a box round each | [[works]] on the bench and in Gazebo |
 | `aav_lane_geometry` | 2025-26 `Lane_Detection_ROS2` | lane keeping's steering half, as a driver on `/drivers/ai/cmd_vel` | [[works]] on a pretend lane. The line finder is [[missing]] |
 | `aav_sensors` `cameras.launch.py` | 2024-25 `cameras` (the calibrations) | `usb_cam` with `left.ini` and `right.ini` | [[untested]] Linux only; the camera models are Q22 |
@@ -54,11 +54,44 @@ The lock keeps stop signs away from the e-stop.
 
 ## Models
 
-Model files stay out of git, in `models/`. `pixi run get-models` downloads the stock
-YOLO11 nano model (5.6 MB, its checksum pinned). It was trained on the COCO dataset, and
-"stop sign" is one of its 80 classes, so we don't need the 2024-25 team's model to start.
+### Two detectors, one switch
 
-One model, three formats. Each computer with a GPU runs its own (Ben, 10 Oct), and the
+Since 20 Oct the detector runs **RF-DETR** (Ben: "Lets switch to RF-DETR... switch ... to
+yolo with a parameter"). YOLO is one argument away. Both publish the same
+`/perception/detections`, so the stop-sign watcher and the rest can't tell which ran.
+
+```bash
+pixi run detect                        # RF-DETR Nano (the default)
+pixi run detect detector:=yolo         # YOLO11 nano
+```
+
+In a machine file: `detector: {detector: yolo}` under its `detector:` settings.
+
+| `detector:=` | Model (empty `model:=`) | Licence | Why |
+|---|---|---|---|
+| `rfdetr` (default) | `models/rf-detr-nano.pth` | Apache-2.0 (Roboflow) | saw Gazebo's stop sign from 20 m, YOLO from 10 m; more people found ([Model comparison](model-comparison.md)) |
+| `yolo` | `models/yolo11n.pt`, or its `.mlpackage` / `.engine` | AGPL-3.0 (Ultralytics) | smaller (6 MB), and its TensorRT engine for the Orin is written |
+
+Tested 20 Oct on Ben's Mac (GPU, Metal), on the test stop-sign picture at 10 frames a second:
+
+| | Found | Time per frame | `bench-check --perception` |
+|---|---|---|---|
+| RF-DETR Nano | stop sign, 0.96 | 32 ms | [[works]] the lock came on at 20.7 m (sign at 25 m); stood still; goal reached |
+| YOLO11n | stop sign, 0.97 | 32 ms | [[works]] (earlier runs) |
+
+`pixi run get-models` downloads both into `models/` (RF-DETR's is 366 MB: a training
+checkpoint), each checked against its pinned checksum: a model file is a Python pickle,
+so a wrong one could run code. Both know COCO's 80 classes, "stop sign" among them, so we
+don't need the 2024-25 team's model to start. Another RF-DETR size: name the file after
+it, such as `models/rf-detr-small.pth`, and pass `model:=`.
+
+RF-DETR runs on PyTorch: CUDA (the Orin), Metal (a Mac) or the CPU. Its TensorRT engine
+for the Orin is [[later]]: until then the Orin runs it through PyTorch on its GPU,
+[[untested]].
+
+### YOLO's three formats
+
+One YOLO model, three formats. Each computer with a GPU runs its own (Ben, 10 Oct), and the
 detector loads any of them. The machine file names the one to use:
 
 | Format | Runs on | Make it with | Machine file |
@@ -101,7 +134,7 @@ far more pictures may do better:
 
 | Job | Open models |
 |---|---|
-| Everyday objects, stop signs included | YOLO11 (ours now), RT-DETR, RF-DETR |
+| Everyday objects, stop signs included | RF-DETR (ours now), YOLO11 and YOLO26 (`detector:=yolo`), RT-DETR |
 | Anything named in words, like "traffic cone" | YOLO-World, Grounding DINO, OWLv2 |
 | Lane lines and the drivable area | YOLOPv2, TwinLiteNet |
 | Distance from one camera | Depth Anything V2 |

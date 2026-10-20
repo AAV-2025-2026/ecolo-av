@@ -67,9 +67,33 @@ def test_every_machine_file_loads_and_starts(machine):
     started(CAR, machine=machine)
 
 
-def test_the_model_suits_each_machine():
-    assert CAR.load_machine('orin')['detector']['model'] == 'models/yolo11n.engine'
-    assert CAR.load_machine('laptop')['detector']['model'] == 'models/yolo11n.mlpackage'
+@pytest.mark.parametrize('machine', ['orin', 'laptop', 'all'])
+def test_every_machine_runs_rfdetr(machine):
+    # RF-DETR is the car's detector since 20 Oct; YOLO stays one line away in each file.
+    assert CAR.load_machine(machine)['detector']['detector'] == 'rfdetr'
+    assert 'model' not in CAR.load_machine(machine)['detector']   # rf-detr-nano.pth
+
+
+def test_the_detector_needs_its_own_library(monkeypatch, tmp_path):
+    asked = []
+    monkeypatch.setattr(CAR, 'lacks', lambda modules: (asked.append(modules), ('python3', []))[1])
+    context = context_for(CAR, machine='orin')
+    rfdetr, yolo = tmp_path / 'rf-detr-nano.pth', tmp_path / 'yolo11n.pt'
+    rfdetr.write_text('')
+    yolo.write_text('')
+    sent = included(CAR.detector(context, 'orin', {'detector': 'rfdetr', 'model': str(rfdetr)}))
+    assert sent['detector.launch.py']['detector'] == 'rfdetr'
+    sent = included(CAR.detector(context, 'orin', {'detector': 'yolo', 'model': str(yolo)}))
+    assert sent['detector.launch.py']['detector'] == 'yolo'
+    assert asked == [['torch', 'rfdetr'], ['torch', 'ultralytics']]
+
+
+def test_a_model_the_detector_cant_load_is_an_error():
+    context = context_for(CAR, machine='orin')
+    with pytest.raises(RuntimeError, match='use detector:=yolo'):
+        CAR.detector(context, 'orin', {'detector': 'rfdetr', 'model': 'models/yolo11n.engine'})
+    with pytest.raises(RuntimeError, match='use rfdetr or yolo'):
+        CAR.detector(context, 'orin', {'detector': 'detr'})
 
 
 def test_gps_false_turns_the_gps_off_where_the_machine_file_has_it():
@@ -192,7 +216,8 @@ def test_the_detector_is_named_after_its_machine(monkeypatch, tmp_path):
     model.write_text('')
     monkeypatch.setattr(CAR, 'lacks', lambda modules: ('python3', []))
     context = context_for(CAR, machine='orin')
-    sent = included(CAR.detector(context, 'orin', {'model': str(model), 'confidence': 0.6}))
+    sent = included(CAR.detector(context, 'orin', {'detector': 'yolo', 'model': str(model),
+                                                   'confidence': 0.6}))
     assert sent['detector.launch.py']['node_name'] == 'yolo_detector_orin'
     assert sent['detector.launch.py']['model'] == str(model)
     assert sent['detector.launch.py']['labels'] == 'stop sign'
@@ -206,9 +231,11 @@ def test_the_detector_is_named_after_its_machine(monkeypatch, tmp_path):
 def test_the_detector_is_skipped_without_pytorch_or_its_model(monkeypatch, tmp_path):
     context = context_for(CAR, machine='orin')
     monkeypatch.setattr(CAR, 'lacks', lambda modules: ('python3', ['torch']))
-    assert CAR.detector(context, 'orin', {'model': 'models/yolo11n.pt'}) == []
+    assert CAR.detector(context, 'orin', {}) == []
     monkeypatch.setattr(CAR, 'lacks', lambda modules: ('python3', []))
-    assert CAR.detector(context, 'orin', {'model': str(tmp_path / 'none.engine')}) == []
+    assert CAR.detector(context, 'orin', {'model': str(tmp_path / 'rf-detr-none.pth')}) == []
+    assert CAR.detector(context, 'orin', {'detector': 'yolo',
+                                          'model': str(tmp_path / 'none.engine')}) == []
 
 
 @pytest.mark.parametrize('machine', MACHINES)

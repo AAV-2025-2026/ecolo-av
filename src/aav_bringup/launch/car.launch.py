@@ -80,6 +80,7 @@ PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'goto', 'imu', 'gps'
 SECTIONS = ('parts', 'detector')
 # Each model format: what runs it, besides PyTorch and Ultralytics, and how to make it.
 FORMATS = {
+    '.pth': ([], 'pixi run get-models'),
     '.pt': ([], 'pixi run get-models'),
     '.mlpackage': (['coremltools'], 'pixi run -e ml export-coreml (on a Mac)'),
     '.engine': (['tensorrt'], 'python3 tools/build_engine.py (on this computer)'),
@@ -149,10 +150,10 @@ def lacks(modules):
 
 
 def detector(context, machine, settings):
-    """Return the detector part: YOLO as yolo_detector_<machine>, or why it can't start."""
+    """Return the detector part, as yolo_detector_<machine>, or why it can't start."""
     if not isinstance(settings, dict):
         raise RuntimeError(f'{machine}.yaml: give the detector settings, such as '
-                           f'"detector: {{model: models/yolo11n.pt}}"')
+                           f'"detector: {{detector: rfdetr}}"')
     path = launch_file('aav_yolo', 'detector.launch.py')
     declared = (PythonLaunchDescriptionSource(path).get_launch_description(context)
                 .get_launch_arguments())
@@ -162,10 +163,16 @@ def detector(context, machine, settings):
     # Every argument, its own defaults included, so none can leak in from another file.
     defaults = {a.name: perform_substitutions(context, a.default_value) for a in declared
                 if a.default_value is not None}
-    args = {**defaults, 'labels': 'stop sign', 'model': 'models/yolo11n.pt', **settings}
-    model = os.path.join(workspace(), os.path.expanduser(str(args['model'])))
+    args = {**defaults, 'labels': 'stop sign', **settings}
+    from aav_yolo.boxes import check_detector   # here: only machines with a detector need it
+    try:
+        model = check_detector(str(args['detector']), str(args['model']))
+    except ValueError as e:
+        raise RuntimeError(f'{machine}.yaml: {e}')
+    model = os.path.join(workspace(), os.path.expanduser(model))
     runtime, make = FORMATS.get(os.path.splitext(model)[1], ([], 'docs/perception.md'))
-    python, missing = lacks(['torch', 'ultralytics', *runtime])
+    library = 'rfdetr' if str(args['detector']).strip().lower() == 'rfdetr' else 'ultralytics'
+    python, missing = lacks(['torch', library, *runtime])
     if missing:
         return skipped('detector', f'{python} has no {", ".join(missing)}. On a laptop: '
                                    f'pixi run -e ml car {machine}. On the Orin: '
