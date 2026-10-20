@@ -132,7 +132,7 @@ topics:
   # --- the system: what kind of run this is ---
   /system/source:
     type: aav_interfaces/msg/DataSource
-    pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, replay_source, carla_adapter]
+    pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, mock_lidar, replay_source, carla_adapter]
     sub: [hud, map, actuator_test, goto_driver, goto_cli]
     live: [turtle, sim, car, replay, bench]
     note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.
@@ -301,7 +301,7 @@ topics:
     pub: [lidar_driver]
     sub: [lidar_cloud]
     live: [car]
-    note: The roof Velodyne VLP-16's UDP packets as they come (the stock velodyne_driver, aav_sensors sensors.launch.py lidar:=true), one turn (0.1 s, about 76 packets) a message, frame lidar_link. It reads only packets from lidar_ip (192.168.1.201, the 16 Oct audit) on lidar_port (2368), so it runs on the computer they're sent to - the Jetson. lidar_cloud turns them into /sensors/lidar/points.
+    note: The roof Velodyne VLP-16's UDP packets as they come (the stock velodyne_driver, aav_sensors sensors.launch.py lidar:=true), one turn (0.1 s, about 76 packets) a message, frame lidar_link. It reads only packets from lidar_ip (192.168.1.201, the 16 Oct audit) on lidar_port (2368), so it runs on the computer they're sent to - the Jetson. lidar_cloud turns them into /sensors/lidar/points. In bench mode (lidar:=true), mock_lidar sends it the bench world's packets on 127.0.0.1:2369, so the same driver runs.
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [lidar_cloud, gz_lidar_bridge, carla_adapter]

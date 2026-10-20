@@ -173,3 +173,30 @@ def test_who_may_have_a_ghost():
     assert sent_to_navigation(CAR, machine='all')['ghost'] == 'false'
     car = sent_to_navigation(CAR, machine='all', ghost='true')
     assert (car['ghost'], car['collision_monitor']) == ('true', 'true')
+
+
+def bench_lidar_parts(**args):
+    """Return (the mock_lidar node's parameters, sensors.launch.py's arguments) from bench."""
+    mock, sensors = None, None
+    for a in BENCH.launch_setup(context_for(BENCH, **args)):
+        if isinstance(a, Node) and a._Node__node_name == 'mock_lidar':
+            # Normalised: each name and value is a tuple of substitutions.
+            context = LaunchContext()
+            mock = {perform_substitutions(context, k): v
+                    for k, v in a._Node__parameters[-1].items()}
+        elif isinstance(a, IncludeLaunchDescription):
+            a.launch_description_source.get_launch_description(LaunchContext())
+            if os.path.basename(a.launch_description_source.location) == 'sensors.launch.py':
+                sensors = dict(a.launch_arguments)
+    return mock, sensors
+
+
+def test_the_bench_lidar_feeds_the_cars_own_driver_and_nav2():
+    assert bench_lidar_parts() == (None, None)
+    assert sent_to_navigation(BENCH)['lidar'] == 'false'
+    mock, sensors = bench_lidar_parts(lidar='true')
+    # mock_lidar sends where the stock driver listens: this computer, not the real 2368.
+    assert sensors['lidar'] == 'true' and sensors['lidar_ip'] == '127.0.0.1'
+    assert sensors['lidar_port'] == '2369' == str(mock['port'])
+    assert sensors['imu'] == sensors['gps'] == 'false'      # the bench's mocks stand there
+    assert sent_to_navigation(BENCH, lidar='true')['lidar'] == 'true'

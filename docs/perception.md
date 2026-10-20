@@ -333,6 +333,30 @@ Checked 20 Oct on Ben's Mac, with `lidar_scan` too:
 | Nav2's scan, ahead | 6 m + 0.90 m (where the lidar sits) | 6.75 m: the nearest laser inside the obstacle heights sees 5.85 m [[works]] |
 | Rates | 10 Hz | packets, cloud, scan: 9.9-10.0 Hz [[works]] |
 
+**In bench mode:** `pixi run bench lidar:=true` adds `mock_lidar`, the same packets but of
+the bench world: its boxes (`obstacle:=true`) and the flat ground, seen from where the
+model car really is. The stock driver reads them, and Nav2 and collision_monitor read its
+points, as on the car. `pixi run bench-check --lidar` adds a check: a box that only the
+lidar sees, which the car must stop for.
+
+| Checked 20 Oct, Ben's Mac | Got |
+|---|---|
+| Cloud | 12,768 points a turn (the ground's rings and the box), 9.3 Hz [[works]] |
+| The box, 15 m ahead | Nav2's scan: 15.0 m from `base_link` [[works]] |
+| `mock_lidar`'s own cost | 8% of one core |
+
+**The roof lidar's blind zone.** It sits 1.8 m up, and its lowest laser points 15 degrees
+down. So it sees the ground from 6.7 m out, and anything 1 m tall only from 3 m out.
+
+| Height of the thing | The lidar loses it closer than | In the stop zone (0-1 m past the bumper)? |
+|---|---|---|
+| 1 m (the bench's box, a child) | 3.0 m from the lidar: 2.1 m past the bumper | **not seen at all** |
+| 1.5 m (a car, a person) | 1.1 m from the lidar: 0.2 m past the bumper | seen, from 0.2 m on |
+
+Close and low is the radar's job (on the bumper, 0.45 m up), and why collision_monitor
+reads both. bench-check's lidar box is therefore 1.5 m tall. Measure the lidar's real
+height (`vehicle.yaml` `lidar_link`) at the audit: the numbers move with it.
+
 [[untested]] with the real lidar: next on the car, `pixi run car orin`, and the points in
 Lichtblick. `ros2 topic hz` on a Mac shows the cloud at 0.5 Hz: it listens best effort,
 and big messages lost that way are lost whole. A reliable subscriber sees 10 Hz.
