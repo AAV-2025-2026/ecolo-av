@@ -122,3 +122,31 @@ Two more, for the automatic drivers only (Nav2 and the AI slot; never a person o
 !!! warning "Today's car has no layer 5"
   The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays
   on. Keep the wheels off the ground and the e-stop in hand: see [Firmware](firmware.md).
+
+## 8. The real graph, three ways
+
+The same layers, as they really run: `pixi run graph-picture` saved each one from a live
+profile on Ben's Mac (20 Oct). Read them left to right. The middle stays the same in all
+three; only the left edge (where the data comes from) and the right edge (who plays the
+car) change.
+
+| Profile | Nodes, topics | Look for |
+|---|---|---|
+| `pixi run turtle` | 9, 23 | the whole command path on one line: `scripted_driver` → `twist_mux` → `ego` → `turtlesim_adapter`, and `/vehicle/odom` back into `ekf_local` |
+| `pixi run bench` | 27, 50 | the stand-ins on the left (`mock_*`, `spine_sim`); `/vehicle/bench/truth` feeding every mock; `spine_bridge` and `spine_sim` talking over `/can/tx`, `/can/rx` |
+| `pixi run sim` (empty world) | 19, 38 | no mocks: `gz_bridge` brings in `/gazebo/imu` and `/gazebo/navsat`, and `gazebo_adapter` turns them into `/sensors/...` |
+
+### The turtle
+
+![The turtle profile's graph](img/graph-turtle.svg)
+
+### Bench mode
+
+![Bench mode's graph](img/graph-bench.svg)
+
+### Gazebo
+
+![Gazebo's graph](img/graph-sim.svg)
+
+The PNGs beside them (`docs/img/graph-*.png`) are for slides. To see it live: start a
+profile, then `pixi run graph`.
