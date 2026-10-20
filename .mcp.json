@@ -4,6 +4,11 @@
       "type": "stdio",
       "command": "pixi",
       "args": ["run", "--frozen", "-e", "mcp", "mcp"]
+    },
+    "aav-drive": {
+      "type": "stdio",
+      "command": "pixi",
+      "args": ["run", "--frozen", "-e", "mcp", "drive-server"]
     }
   }
 }

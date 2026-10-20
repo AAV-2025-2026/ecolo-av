@@ -203,6 +203,43 @@ The second plan is what Qwen3.5-4B made of it; the default model refuses it outr
 
 The drive server alone, for another AI app: `pixi run -e mcp drive-server`.
 
+## Claude as the driver
+
+The drive server doesn't care which model calls its tools. Claude Code can be the "brain"
+instead of the local model: same tools, same limits, same mux priority.
+
+```text
+  you ──► Claude Code ──MCP, stdio──► drive server ──► /scripted_drive, Nav2 ──► twist_mux ──► ego
+```
+
+| Step | Do |
+|---|---|
+| 1 | `pixi run sim` (or `turtle`, or `bench`) in one terminal |
+| 2 | start `claude` in this folder, in a second terminal. The first time, it asks to trust the project's MCP servers: say yes to `aav-drive` |
+| 3 | type, for example, "drive 5 m forward, then turn left 90 degrees with a 5 m radius" |
+| 4 | Claude Code asks before each tool call: read the call, then allow it |
+
+`.mcp.json` lists two servers: `aav` (read-only: the docs, the contract, the live graph)
+and `aav-drive` (this one). The Claude desktop app works too: add the same `aav-drive`
+entry to its own config, with `cwd` set to this folder.
+
+| Question | Answer |
+|---|---|
+| Can it drive the real car? | No. `.mcp.json` starts the server without `--car`, through `tools/ros.sh --local`: it refuses unless it sees a simulator or stand-in on this computer only |
+| Does Claude steer? | No. Each tool runs a whole move here, ramps included, through the scripted driver (priority 50) or Nav2 (20). The joystick and keyboard always win; the e-stop and the watchdog still apply |
+| What if the internet drops? | The move in progress finishes on its own; closing Claude cancels any drive still running |
+| What does it cost? | Claude's own usage; the local model (`talk`) costs nothing and needs no internet, so it stays the car's default |
+
+Tested 20 Oct, Ben's Mac, Gazebo headless, through an MCP client speaking to the server
+exactly as Claude Code does (not yet through Claude Code itself):
+
+| Call | Result |
+|---|---|
+| list the tools | `status`, `drive`, `turn`, `go_to_gps`, `stop`, `estop`, `wait`, `check` |
+| `check(drive, 50 m at 5 m/s)` | refused: "speed is limited to 1 m/s (asked 5 m/s)" |
+| `drive(5 m, 0.5 m/s)` | done: 5.08 m in 11.5 s, heading change -0.3° |
+| `status()` after | `mux_driver: scripted`, GPS fix, e-stop off |
+
 ## Tested on the stand-ins
 
 15 October, Ben's Mac, the default model, each on a private ROS domain with
