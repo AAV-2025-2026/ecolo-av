@@ -50,7 +50,7 @@ So every path it returns is one our car can follow.
 | Setting (`nav2.yaml`) | Ours | Means |
 |---|---|---|
 | `motion_model_for_search` | `DUBIN` | forward only. `REEDS_SHEPP` (forward and back) with `reversing:=true` ([Reversing](#reversing)) |
-| `minimum_turning_radius` | 2.87 m | set by the launch file: wheelbase ÷ tan(max steer) |
+| `minimum_turning_radius` | 3.59 m | set by the launch file: wheelbase ÷ tan(max steer) = 2.87 m, × 1.25, so the controller has steering to spare |
 | `angle_quantization_bins` | 72 | headings in 5° steps |
 | `max_planning_time` | 5.0 s | give up after this |
 | `tolerance` | 0.5 m | a goal inside an obstacle: plan to within 0.5 m |

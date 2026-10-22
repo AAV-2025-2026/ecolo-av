@@ -68,7 +68,9 @@ def test_nav2_rewrites_keys():
                       'controller_server.ros__parameters.MPPI.vx_min',
                       'lidar_scan.ros__parameters.min_height',
                       'lidar_scan.ros__parameters.max_height'}
-    assert r['minimum_turning_radius'] == r['min_turning_r']
+    # The planner leaves the controller some steering; MPPI knows the car's real lock.
+    assert float(r['minimum_turning_radius']) == pytest.approx(
+        float(r['min_turning_r']) * vehicle.PLAN_TURN_MARGIN, abs=2e-3)
     # RewrittenYaml can't index into a list: none of these may try.
     assert not any(key.split('.')[-1].isdigit() for key in r)
 

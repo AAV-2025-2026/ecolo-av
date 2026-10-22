@@ -180,6 +180,11 @@ def reverse_limit(v, reversing):
     return -float(v['max_reverse_speed']) if reversing else 0.0
 
 
+# The planner plans turns this much wider than the car's tightest, so the controller has
+# steering left to stay on the path. At full lock in the plan, both controllers cut the last
+# turn before a goal, arrived 0.5 m off and facing wrong, and drove round again (22 Oct).
+PLAN_TURN_MARGIN = 1.25
+
 # Nav2's path followers (docs/controllers.md): rpp, Regulated Pure Pursuit, chases a point
 # ahead on the path; mppi samples thousands of futures through its Ackermann model.
 CONTROLLERS = ('rpp', 'mppi')
@@ -201,8 +206,8 @@ def nav2_rewrites(v, reversing=False):
         'footprint': footprint(v),
         'lidar_scan.ros__parameters.min_height': f'{low:.3f}',
         'lidar_scan.ros__parameters.max_height': f'{high:.3f}',
-        'minimum_turning_radius': f'{r:.3f}',   # SmacPlannerHybrid
-        'min_turning_r': f'{r:.3f}',            # MPPI AckermannConstraints
+        'minimum_turning_radius': f'{r * PLAN_TURN_MARGIN:.3f}',  # SmacPlannerHybrid
+        'min_turning_r': f'{r:.3f}',            # MPPI AckermannConstraints: the car's own
         'collision_monitor.ros__parameters.StopZone.points': polygon(stop_zone_points(v)),
         'planner_server.ros__parameters.GridBased.motion_model_for_search':
             'REEDS_SHEPP' if reversing else 'DUBIN',

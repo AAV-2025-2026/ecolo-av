@@ -3,8 +3,9 @@
 # Started by aav_navigation/launch/navigation.launch.py, which fills in from
 # aav_description/config/vehicle.yaml (so don't edit these here):
 #   footprint                 the body outline            (both costmaps)
-#   minimum_turning_radius    wheelbase / tan(max steer)   (SmacPlannerHybrid)
-#   min_turning_r             the same                     (MPPI, if you switch to it)
+#   minimum_turning_radius    wheelbase / tan(max steer) x 1.25, so the controller has
+#                             steering to spare (SmacPlannerHybrid; vehicle.PLAN_TURN_MARGIN)
+#   min_turning_r             wheelbase / tan(max steer)   (MPPI: the car's own lock)
 #   StopZone.points           the box ahead of the bumper  (collision_monitor)
 #   min_height, max_height    the lidar's obstacle heights (lidar_scan, aav_lidar)
 # and the map file, and the behaviour tree paths. Where a radar runs (radar:=true), it
@@ -328,10 +329,14 @@ global_costmap:
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: true
+      # Wider and gentler than the local costmap's, so the planner's paths keep to the
+      # middle of a lane where there's room. With 2.0 m and 3.0 its path passed a corner
+      # 0.86 m from base_link, and the collision monitor's stop box (1 m ahead) stopped the
+      # car there (PLAN.md M8, 22 Oct).
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 2.0     # m; at least the car's circumscribed radius, 1.93
-        cost_scaling_factor: 3.0
+        inflation_radius: 3.0     # m
+        cost_scaling_factor: 1.0
       always_send_full_costmap: true
 
 map_server:
@@ -349,7 +354,7 @@ planner_server:
       motion_model_for_search: "DUBIN"     # set by the launch file: forward only, or REEDS_SHEPP
       # A path that reverses costs reverse_penalty times as much a metre: forward wins
       # unless reversing saves a lot (a goal behind the car, a three-point turn).
-      minimum_turning_radius: 2.86         # set by the launch file
+      minimum_turning_radius: 3.59         # set by the launch file
       angle_quantization_bins: 72
       tolerance: 0.5
       allow_unknown: true
