@@ -312,11 +312,11 @@ way") spoiled one:</p>
 <tbody>
 <tr>
 <td><strong>Stuck facing a wall</strong></td>
-<td>after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. The stop box only looks straight ahead, even in a turn: a box that turns with the steering (Nav2's <code>VelocityPolygon</code>) would see what's really ahead</td>
+<td>after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. These were real near misses, not false stops, so the fix is a way out: reversing (Nav2's back-up), off on the car until the team decides</td>
 </tr>
 <tr>
-<td><strong>MPPI's forward U-turn</strong></td>
-<td>in a 14 m lane it went wide, then round the building, instead of the planned U-turn</td>
+<td><strong>MPPI's U-turn</strong></td>
+<td>forward, in the 14 m lane, it went wide or round the building in 3 of 4 runs; Pure Pursuit managed it in 2. With reversing (<code>--reversing</code>), the planner drew a three-point turn, but MPPI never reversed: it drove on to the far wall</td>
 </tr>
 <tr>
 <td>~~The box in the lane~~</td>

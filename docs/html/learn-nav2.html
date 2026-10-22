@@ -293,7 +293,8 @@ paths with sharp corners: fine for a robot that spins on the spot, not for a car
 </tr>
 </tbody>
 </table></div>
-<p><strong>Done</strong> when within 0.5 m and 0.5 rad of the goal. <strong>Stuck</strong> if it moves less than
+<p><strong>Done</strong> when within 1.0 m and 0.75 rad (43°) of the goal: no tighter than GPS without RTK
+can tell (22 Oct; tighter, the car looped to fix misses it couldn't see). <strong>Stuck</strong> if it moves less than
 0.5 m in 10 s.</p>
 </section>
 <section class="card"><h2 id="3-costmaps-in-one-line-each">3. Costmaps, in one line each</h2>
