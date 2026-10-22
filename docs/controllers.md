@@ -107,7 +107,7 @@ Still open:
 |---|---|
 | **Stuck facing a wall** | after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. The stop box only looks straight ahead, even in a turn: a box that turns with the steering (Nav2's `VelocityPolygon`) would see what's really ahead |
 | **MPPI's forward U-turn** | in a 14 m lane it went wide, then round the building, instead of the planned U-turn |
-| **The box in the lane** | steering round it needs the obstacle in the planner's map (PLAN.md M5) |
+| ~~The box in the lane~~ | done, 03:40: the planner now sees the radar and lidar. Both controllers drove round the box, 2.6 m (Pure Pursuit) and 3.8 m (MPPI) clear, and reached the goal ([Costmaps](costmaps.md)) |
 
 ## Results, 22 October, first runs
 

@@ -4,7 +4,8 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
       [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
       [camera_obstacles:=false] [ghost:=false]
-      [reversing:=false] [max_speed:=] [controller:=mppi] [use_sim_time:=false]
+      [reversing:=false] [max_speed:=] [controller:=mppi] [plan_around:=true]
+      [use_sim_time:=false]
       [autostart:=true]
 
 Starts only the Nav2 servers a car needs (not nav2_bringup's full list: no AMCL, since
@@ -84,11 +85,11 @@ def flag(context, name):
 
 
 def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False,
-               controller=vehicle.DEFAULT_CONTROLLER):
+               controller=vehicle.DEFAULT_CONTROLLER, plan_around=True):
     """Return a temporary copy of nav2.yaml, tuned by vehicle.nav2_tuned (no ROS there)."""
     with open(source) as f:
         cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed, radar, lidar,
-                                 ghost, controller)
+                                 ghost, controller, plan_around)
     out = tempfile.NamedTemporaryFile('w', prefix='nav2_', suffix='.yaml', delete=False)
     with out:
         yaml.safe_dump(cfg, out)
@@ -126,7 +127,8 @@ def nodes(context):
     speed = LaunchConfiguration('max_speed').perform(context).strip()
     controller = LaunchConfiguration('controller').perform(context).strip().lower()
     source = tuned_copy(f'{share}/config/nav2.yaml', v, reversing,
-                        float(speed) if speed else None, radar, lidar, ghost, controller)
+                        float(speed) if speed else None, radar, lidar, ghost, controller,
+                        flag(context, 'plan_around'))
     params = ParameterFile(
         RewrittenYaml(source_file=source, param_rewrites=rewrites, convert_types=True),
         allow_substs=True)
@@ -216,6 +218,10 @@ def generate_launch_description():
         DeclareLaunchArgument('controller', default_value=vehicle.DEFAULT_CONTROLLER,
                               description='mppi or rpp (Regulated Pure Pursuit): what '
                                           'follows the path. docs/controllers.md'),
+        DeclareLaunchArgument('plan_around', default_value='true',
+                              description='true: the planner sees the radar and lidar too, '
+                                          'and plans round what they see; false: the map '
+                                          'only, so the car stops for it (the stop tests)'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('autostart', default_value='true'),
         OpaqueFunction(function=nodes),

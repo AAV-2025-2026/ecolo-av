@@ -220,7 +220,7 @@ def nav2_rewrites(v, reversing=False):
 
 
 def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False,
-               ghost=False, controller=DEFAULT_CONTROLLER):
+               ghost=False, controller=DEFAULT_CONTROLLER, plan_around=True):
     """
     Return a copy of nav2.yaml's settings (`nav2`, loaded) with what RewrittenYaml can't write.
 
@@ -240,7 +240,11 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
     - the local costmap's lidar_layer, only with the lidar: a layer that is there but
       disabled still subscribes to its topic;
     - with `ghost` (aav_ghost), the ghost as one more source, and its own layer,
-      ghost_layer: it only adds a pretend obstacle, never clears the real sensors' marks.
+      ghost_layer: it only adds a pretend obstacle, never clears the real sensors' marks;
+    - with `radar` or `lidar` and `plan_around`, the same sensor layers in the planner's
+      costmap too, so it plans round what they see (the ghost stays out: the car must stop
+      for it). Without plan_around the planner sees only the map, and the car stops for
+      what's in its way: the stop zone's tests.
     """
     if controller not in CONTROLLERS:
         raise ValueError(f'controller:={controller}: pick one of {", ".join(CONTROLLERS)}')
@@ -258,6 +262,18 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
     local = out['local_costmap']['local_costmap']['ros__parameters']
     gone = {layer for layer, on in (('lidar_layer', lidar), ('ghost_layer', ghost)) if not on}
     local['plugins'] = [p for p in local['plugins'] if p not in gone]
+    # The planner sees what the sensors see too, so it plans round an obstacle that isn't on
+    # the map (PLAN.md M5): a copy of each running sensor's layer, before the inflation.
+    # Not the ghost: it tests the stop, and the car must stop for it, not steer round it.
+    planner = out['global_costmap']['global_costmap']['ros__parameters']
+    seen = [layer for layer, on in (('obstacle_layer', radar), ('lidar_layer', lidar))
+            if on and plan_around]
+    for layer in seen:
+        planner[layer] = copy.deepcopy(local[layer])
+        planner[layer]['enabled'] = True
+    if seen:
+        at = planner['plugins'].index('inflation_layer')
+        planner['plugins'] = planner['plugins'][:at] + seen + planner['plugins'][at:]
     smoother = out['velocity_smoother']['ros__parameters']
     smoother['min_velocity'] = ([reverse_limit(v, reversing)] +
                                 [float(x) for x in smoother['min_velocity'][1:]])

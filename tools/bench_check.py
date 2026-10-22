@@ -543,7 +543,10 @@ def main():
     # AAV_BENCH_LOG: another place for the logs, so two checks at once keep their own.
     log = os.environ.get('AAV_BENCH_LOG', '/tmp/aav-bench-check.log')
     logs = [log]
-    session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],
+    # With --obstacle the planner is blind to the box (it spans the lane, and the bench's map
+    # is empty: it would plan off the road round it), so the stop zone must stop the car.
+    session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
+            + (['plan_around:=false'] if '--obstacle' in args else []),
             checks, logs[0])
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take

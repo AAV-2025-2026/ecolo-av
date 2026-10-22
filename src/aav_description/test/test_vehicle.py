@@ -94,7 +94,10 @@ NAV2_SMALL = {
     'collision_monitor': {'ros__parameters': {'observation_sources': ['radar']}},
     'local_costmap': {'local_costmap': {'ros__parameters': {
         'plugins': ['static_layer', 'obstacle_layer', 'lidar_layer', 'ghost_layer',
-                    'inflation_layer']}}},
+                    'inflation_layer'],
+        'obstacle_layer': {'enabled': False}, 'lidar_layer': {}}}},
+    'global_costmap': {'global_costmap': {'ros__parameters': {
+        'plugins': ['static_layer', 'inflation_layer']}}},
 }
 
 
@@ -191,6 +194,28 @@ def test_mppi_follows_the_path_under_the_name_the_trees_ask_for():
     assert mppi[servers]['ros__parameters']['MPPI'] == nav2[servers]['ros__parameters']['MPPI']
     with pytest.raises(ValueError, match='pick one of rpp, mppi'):
         vehicle.nav2_tuned(nav2, v, controller='dwb')
+
+
+def test_the_planner_sees_the_sensors_but_not_the_ghost():
+    v = {'max_reverse_speed': 0.4}
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    planner = 'global_costmap'
+
+    def layers(**sensors):
+        cfg = vehicle.nav2_tuned(nav2, v, **sensors)[planner][planner]['ros__parameters']
+        return cfg['plugins'], cfg
+
+    assert layers(radar=False, lidar=False)[0] == ['static_layer', 'inflation_layer']
+    plugins, cfg = layers(radar=True, lidar=True, ghost=True)
+    assert plugins == ['static_layer', 'obstacle_layer', 'lidar_layer', 'inflation_layer']
+    assert cfg['obstacle_layer']['enabled'] is True          # the local one waits for launch
+    assert cfg['lidar_layer']['lidar']['topic'] == '/sensors/lidar/scan'
+    assert 'ghost_layer' not in plugins
+    assert layers(radar=False, lidar=True)[0] == ['static_layer', 'lidar_layer',
+                                                  'inflation_layer']
+    # plan_around:=false: the planner sees only the map, for the stop zone's tests.
+    assert layers(radar=True, lidar=True, plan_around=False)[0] == ['static_layer',
+                                                                    'inflation_layer']
 
 
 def test_every_rewrite_lands_on_a_key_nav2_yaml_has():

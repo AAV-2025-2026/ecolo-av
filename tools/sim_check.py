@@ -4,7 +4,12 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
 
     pixi run sim-check                     (about 2 minutes, on this computer only)
     pixi run -e ml sim-check --perception  (adds the detector and the stop sign: 2 more minutes)
-    pixi run sim-check --obstacle          (adds a box for the radar stand-in: 2 more minutes)
+    pixi run sim-check --obstacle          (adds a box for the radar stand-in: 2 more minutes;
+                                            the planner blind to it, plan_around:=false, so
+                                            the stop zone must stop the car)
+    pixi run sim-check --plan-around       (a box in the lane the planner sees: the car must
+                                            drive round it without stopping, in a second
+                                            run: 3 more minutes)
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
     pixi run sim-check --lidar-obstacle    (the lidar alone, radar off, stops for a post: a
                                             second run, 3 more minutes)
@@ -779,6 +784,71 @@ def check_lane_keeping(probe):
            f'{start:+.2f} m to {end:+.2f} m, within {100 * LANE_BAND:.0f} cm after '
            f'{settled:.1f} s and {at(t0 + settled)[1] - x0:.1f} m, overshoot {100 * over:.0f} '
            f'cm, heading {heading:+.3f} rad, over {driven:.0f} s; {finder}')
+
+
+def check_plan_around(probe, ahead=15.0, goal=30.0, depth=1.0):
+    """
+    Put the box `ahead` m in the lane: the car must drive round it, not stop for it.
+
+    The planner sees the sensors (plan_around, the default), so it plans round the box; the
+    car must reach the goal past it without the stop zone firing.
+    """
+    body = vehicle.load()['vehicle']['body']
+    front = body['length'] - body['rear_overhang']
+    x0, y0 = probe.xy(probe.truth)
+    h = yaw_of(probe.truth)
+    c, s = math.cos(h), math.sin(h)
+    centre = front + ahead + depth / 2.0
+    bx, by = x0 + centre * c, y0 + centre * s
+    if not gz_service('create', 'gz.msgs.EntityFactory',
+                      f'sdf_filename: "{OBSTACLE}", name: "obstacle", '
+                      f'pose: {{position: {{x: {bx}, y: {by}, z: 0}}, '
+                      f'orientation: {{z: {math.sin(h / 2.0)}, w: {math.cos(h / 2.0)}}}}}'):
+        result('plan around', False, "could not place the box (Gazebo's create service)")
+        return
+    start = len(probe.track)
+    seen = len(probe.monitor)
+    done = probe.go_to(x0 + goal * c, y0 + goal * s, h)
+    if done is None:
+        result('plan around', False, 'no Nav2, or it refused the goal')
+    else:
+        probe.spin_for(240.0, done.done)
+    gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
+    if done is None:
+        return
+    drive = probe.track[start:]
+    # The car's centre line, base_link to the bumper, against the box's centre: less half
+    # the car's width and half the box.
+    gaps = []
+    for _, x, y, yaw, _ in drive:
+        ux, uy = math.cos(yaw), math.sin(yaw)
+        k = max(0.0, min(front, (bx - x) * ux + (by - y) * uy))
+        gaps.append(math.hypot(bx - x - k * ux, by - y - k * uy) - body['width'] / 2.0
+                    - depth / 2.0)
+    stood = stood_still(drive)
+    stop_zone = any(a == CollisionMonitorState.STOP for a, _ in probe.monitor[seen:])
+    reached = done.done() and done.result().status == 4
+    x, y = probe.xy(probe.truth)
+    passed = (x - x0) * c + (y - y0) * s > centre + depth
+    clear = min(gaps) if gaps else float('nan')
+    ok = reached and passed and not stop_zone and stood < 3.0 and clear > 0.3
+    result('plan around', ok,
+           f'{"reached" if reached else "did not reach"} the goal {goal:.0f} m on, '
+           f'{clear:.2f} m clear of the box at the closest, stood still {stood:.1f} s at the '
+           f'longest, stop zone fired: {stop_zone}')
+
+
+def stood_still(track, still=0.02):
+    """Return the longest stand-still (s) in a track of (t, x, y, yaw, v), once moving."""
+    longest, since, moving = 0.0, None, False
+    for t, _, _, _, v in track:
+        moving = moving or v > 0.5
+        if moving and abs(v) < still:
+            since = t if since is None else since
+            longest = max(longest, t - since)
+        else:
+            since = None
+    return longest
 
 
 def check_lidar_obstacle(probe):
@@ -1566,7 +1636,9 @@ def main():
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     if '--goto-only' not in args:
-        session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}'],
+        # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
+        session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
+                + (['plan_around:=false'] if '--obstacle' in args else []),
                 checks, logs[0])
     else:
         logs = []
@@ -1574,8 +1646,13 @@ def main():
         # Its own run, with the radar off: only the lidar can stop the car for the post.
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-lidar{ext}')
-        session(['radar:=false', 'lidar:=true'], [check_lidar_obstacle], logs[-1], 'lidar',
-                ignore=RADAR_TOPICS, radar=False)
+        session(['radar:=false', 'lidar:=true', 'plan_around:=false'], [check_lidar_obstacle],
+                logs[-1], 'lidar', ignore=RADAR_TOPICS, radar=False)
+    if '--plan-around' in args:
+        # Its own run: the planner sees the radar and lidar (the default), so it plans round.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-around{ext}')
+        session([f'lidar:={str(lidar).lower()}'], [check_plan_around], logs[-1], 'around')
     if '--ghost' in args:
         # Its own run: the ghost is one more collision_monitor source, beside the radar and
         # the lidar, so the other runs keep the graph the car has.

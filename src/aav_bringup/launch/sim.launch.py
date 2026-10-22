@@ -7,6 +7,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [hud_web:=false] [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [sim_speed:=] [reversing:=true] [controller:=mppi]
+      [plan_around:=true]
       [watchdog:=true] [faults:=false] [spine:=false] [arm:=true] [ghost:=false]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
@@ -47,6 +48,8 @@ bench's argument names:
                       ego refuses it outside a simulator
   controller:=rpp     Nav2 follows the path with Regulated Pure Pursuit, not MPPI (the
                       default): pixi run controller-compare drives both (docs/controllers.md)
+  plan_around:=false  Nav2's planner sees only the map, not the radar and lidar: the car
+                      stops for an obstacle instead of planning round it (the stop tests)
   watchdog:=true      the sensor watchdog (aav_safety): twist_mux's sensors lock stops Nav2
                       and the AI slot when the wheels, the IMU, the GPS or an EKF go quiet,
                       NaN or frozen, or the GPS jumps; and the camera, where something
@@ -104,7 +107,7 @@ def launch_setup(context):
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
                       'hud_web', 'map', 'foxglove', 'reversing', 'watchdog', 'faults',
-                      'ghost')}
+                      'ghost', 'plan_around')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -159,7 +162,8 @@ def launch_setup(context):
                                camera_obstacles=flag['camera_obstacles'],
                                max_speed=arg('sim_speed'),
                                reversing=str(flag['reversing']).lower(),
-                               controller=controller))
+                               controller=controller,
+                               plan_around=str(flag['plan_around']).lower()))
     if flag['watchdog']:
         # What this world has, and the camera only where something reads it: watching it
         # costs one more stream of pictures.
@@ -281,5 +285,9 @@ def generate_launch_description():
         DeclareLaunchArgument('controller', default_value=vehicle.DEFAULT_CONTROLLER,
                               description='mppi or rpp (Regulated Pure Pursuit): what '
                                           "follows Nav2's path (docs/controllers.md)"),
+        DeclareLaunchArgument('plan_around', default_value='true',
+                              description="true: Nav2's planner plans round what the radar "
+                                          'and lidar see; false: the map only, so the car '
+                                          'stops for it'),
         OpaqueFunction(function=launch_setup),
     ])

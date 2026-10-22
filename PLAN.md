@@ -9,10 +9,10 @@ tracker. Only the **MPPI track** (M1-M9) is new. The 15 October plan's S and C i
 the end, mapped to these numbers.
 
 > **The short version**
-> - **Software, built and tested in simulation: about 40%** of the committed tasks. **Proven on the car: about 5%** (the audits).
+> - **Software, built and tested in simulation: about 42%** of the committed tasks. **Proven on the car: about 5%** (the audits).
 > - **Ahead:** the drivers, ego, the muxes, Gazebo, Nav2, A to B, the HUD. **Behind:** everything that needs the car or new parts: power, calibration, the closed loop.
 > - **Next gate, 30 Oct (Know the car):** the car isn't measured yet. That's the most urgent job.
-> - **MPPI:** switchable today (`controller:=mppi`), tuned for the car in Gazebo, and compared with Regulated Pure Pursuit by `pixi run controller-compare` ([controllers](docs/controllers.md)).
+> - **MPPI:** Nav2's default since 22 Oct, tuned for the car in Gazebo, and compared with Regulated Pure Pursuit by `pixi run controller-compare` (`controller:=rpp` for the old one; [controllers](docs/controllers.md)). It steers round an obstacle the sensors see.
 > - **Status:** ✅ done · 🧪 done in simulation only · 🔧 started · ⬜ not started · 🎯 stretch.
 
 ## How far along, by sub-project
@@ -23,15 +23,15 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | # | Sub-project | In software | On the car | Weakest point |
 |---|---|---:|---:|---|
 | 1 | Integration and platform | 50% | 5% | no sensor mux or output mux node; the Orin and Pis not upgraded |
-| 2 | Simulation and testing | 58% | 0% | sensor noise from guesses; no sim-versus-real report |
+| 2 | Simulation and testing | 60% | 0% | sensor noise from guesses; no sim-versus-real report |
 | 3 | Vehicle hardware and actuation | 33% | 5% | the car isn't measured; the Rust spine never flashed |
 | 4 | Power and electrical | 4% | 0% | not started: needs the car and the parts |
 | 5 | Ego and vehicle control | 48% | 0% | no jerk limit; stop-at-distance lives in the A-to-B driver |
 | 6 | Localization and calibration | 16% | 0% | no calibration yet; the heading jumps at walking pace |
-| 7 | Drivers and local planning | 58% | 0% | the real lot's map; Nav2 cuts corners too close |
-| 8 | Perception | 42% | 0% | no labelled pictures of the lot; no lidar clustering |
+| 7 | Drivers and local planning | 63% | 0% | the real lot's map; a forward-only car stuck facing a wall |
+| 8 | Perception | 43% | 0% | no labelled pictures of the lot; no lidar clustering |
 | 9 | Heads-up display and tools | 62% | 0% | not tried on the Pi 5; no HUD heartbeat |
-| | **All committed tasks** | **about 41%** | **about 5%** | |
+| | **All committed tasks** | **about 42%** | **about 5%** | |
 
 ## The gates
 
@@ -156,11 +156,11 @@ the next concrete step.
 | T7.2 | Scripted and replay drivers | 4 Dec | 🧪 | 80 | the "same path twice within 0.03 m" check |
 | T7.3 | GPS A to B in Gazebo | 18 Dec | 🧪 | 100 | |
 | T7.4 | Hand-drawn costmap of the lot | 11 Dec | 🔧 | 20 | choose the lot; `tools/make_map.py` draws it |
-| T7.5 | Nav2 in Gazebo | 5 Feb | 🧪 | 80 | the corner problem (M8) |
+| T7.5 | Nav2 in Gazebo | 5 Feb | 🧪 | 90 | the corner problem fixed (M8); left: stuck facing a wall, forward only (TODO 18) |
 | T7.6 | Language-model driver | 29 Jan | 🧪 | 90 | |
 | T7.7 | GPS A to B on the car | 26 Feb | ⬜ | 0 | 🎯 the year's demonstration |
 | T7.8 | Nav2 on the car | 26 Mar | ⬜ | 0 | |
-| T7.9 | MPPI | Mar | 🧪 | 50 | now a track of its own: M1-M9 below |
+| T7.9 | MPPI | Mar | 🧪 | 70 | the default since 22 Oct; a track of its own: M1-M9 below |
 
 ### 8 · Perception
 
@@ -170,7 +170,7 @@ the next concrete step.
 | T8.2 | Pipeline: decode, undistort, detect, track, publish | 15 Jan | 🔧 | 40 | the YOLO node exists; undistortion and ByteTrack don't |
 | T8.3 | Detector comparison | 12 Feb | 🔧 | 50 | done on the Mac ([newer models](docs/model-comparison.md)); TensorRT on the Orin |
 | T8.4 | Lidar clustering | 29 Jan | 🔧 | 30 | today a height band (`aav_lidar`); add clustering |
-| T8.5 | Lidar costmap layer | 19 Feb | 🧪 | 90 | Nav2 stops for it in Gazebo; "plans around it" needs the global costmap (M5) |
+| T8.5 | Lidar costmap layer | 19 Feb | 🧪 | 100 | in Gazebo Nav2 stops for it, and plans round it (M5, 22 Oct) |
 | T8.6 | Live on the car (stretch) | Mar | 🎯 | 0 | |
 
 ### 9 · Heads-up display and operator tools
@@ -205,13 +205,13 @@ too". It shares the car's model with ego, as the proposal says (section 8.3).
 |---|---|---|---|
 | M1 | `controller:=mppi`: one argument switches Nav2's path follower | ✅ 22 Oct | |
 | M2 | Its limits from `vehicle.yaml`: turning radius, outline, top and reverse speed | ✅ | its braking limit from ego (done by hand: `ax_min` = ego's -2.0) |
-| M3 | Tuned for a car, not a robot, in Gazebo | 🧪 22 Oct | it crept at 0.2 m/s and drifted; now about 0.95 m/s ([why](docs/controllers.md#making-mppi-drive)) |
-| M4 | The comparison: `pixi run controller-compare` | 🧪 22 Oct | the same routes, the box, CPU; results in [controllers](docs/controllers.md) |
-| M5 | Steering round an obstacle | ⬜ | the planner's map has no sensors, so its path goes through the box. Try the lidar in the global costmap, in Gazebo |
+| M3 | Tuned for a car, not a robot, in Gazebo | ✅ 22 Oct | moving within 0.5 s at 0.95 m/s; turns to a goal's heading from 2.5 m out ([why](docs/controllers.md#making-mppi-drive)). Open: its forward U-turn in a 14 m lane |
+| M4 | The comparison: `pixi run controller-compare` | ✅ 22 Oct | six runs overnight; MPPI did at least as well in each. **MPPI is the default** since 22 Oct ([controllers](docs/controllers.md)) |
+| M5 | Steering round an obstacle | ✅ 22 Oct, Gazebo | the planner's costmap has the radar and lidar (`plan_around:=true`); both controllers drove round the box 2.6-3.8 m clear. `sim-check --plan-around` |
 | M6 | Its CPU on the Orin | ⬜ | with the load report (T1.7) |
-| M7 | MPPI on the car | ⬜ | after Nav2 with Regulated Pure Pursuit passes on the car (T7.8) |
-| M8 | **The corner problem** (both controllers) | ⬜ | the planner's path passes a corner closer than the collision monitor's 1 m stop box allows: the car stops and, forward only, can't get out. Raise the global costmap's cost near walls, or plan with the stop box's margin |
-| M9 | **The heading jumps** at walking pace (both) | ⬜ | the global EKF reads GPS noise as heading. A heading source (the F9R's own fused heading, or two antennas) with T6.4 |
+| M7 | MPPI on the car | ⬜ | after Nav2 passes on the car (T7.8); MPPI is the default now |
+| M8 | **The corner problem** (both controllers) | ✅ 22 Oct, Gazebo | the planner's costmap inflates 3.0 m gently, and it plans turns 1.25 x wider than full lock: both kept clear of the building. Left: after a wide turn the car can stop facing a wall, and forward only it can't get out (TODO 18) |
+| M9 | **The heading jumps** at walking pace (both) | 🧪 | measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. A heading source (the F9R's fused heading, or two antennas) with T6.4 |
 
 ## Where the proposal and the repo disagree
 

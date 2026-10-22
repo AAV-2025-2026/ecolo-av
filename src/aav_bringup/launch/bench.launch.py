@@ -4,7 +4,7 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
   ros2 launch aav_bringup bench.launch.py [nav:=true] [teleop:=false] [rviz:=false]
       [perception:=false] [lane:=false|true|fake] [hud:=false] [arm:=true] [foxglove:=false]
       [start_y:=0.0] [start_yaw:=0.0] [bend_radius:=] [obstacle:=false]
-      [camera_obstacles:=false] [reversing:=true] [lidar:=false]
+      [camera_obstacles:=false] [reversing:=true] [lidar:=false] [plan_around:=true]
   pixi run bench                            (the same)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
   pixi run bench lane:=true start_y:=0.3    (lane keeping, from 0.3 m left of the centre)
@@ -69,7 +69,7 @@ def include(package, launch_file, **args):
 def launch_setup(context):
     flag = {n: LaunchConfiguration(n).perform(context).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'hud', 'arm', 'foxglove',
-                      'obstacle', 'camera_obstacles', 'reversing', 'lidar')}
+                      'obstacle', 'camera_obstacles', 'reversing', 'lidar', 'plan_around')}
     lane = LaunchConfiguration('lane').perform(context).lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -132,7 +132,8 @@ def launch_setup(context):
                                map=os.path.join(share('aav_navigation'), 'maps', 'empty.yaml'),
                                radar='true', lidar=str(flag['lidar']).lower(),
                                camera_obstacles=flag['camera_obstacles'],
-                               reversing=str(flag['reversing']).lower()))
+                               reversing=str(flag['reversing']).lower(),
+                               plan_around=str(flag['plan_around']).lower()))
     # The sensor watchdog guards Nav2 and the AI slot (lane keeping) as on the car, always:
     # the mux's sensors lock needs its heartbeat (aav_mux mux.launch.py sensor_lock).
     actions.append(include('aav_safety', 'watchdog.launch.py',
@@ -208,5 +209,9 @@ def generate_launch_description():
         DeclareLaunchArgument('reversing', default_value='true',
                               description='Nav2 may drive backwards: on here, off on the car '
                                           '(docs/learn-nav2.md)'),
+        DeclareLaunchArgument('plan_around', default_value='true',
+                              description="true: Nav2's planner plans round what the radar "
+                                          'and lidar see; false: the map only, so the car '
+                                          'stops for it (bench-check --obstacle)'),
         OpaqueFunction(function=launch_setup),
     ])

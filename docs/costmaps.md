@@ -19,17 +19,19 @@ The settings are in `src/drivers/aav_navigation/config/nav2.yaml`.
 | Size | 20 m x 20 m rolling window, centred on the car | the size of the map that `map_server` loads |
 | Cell size | 0.10 m (200 x 200 cells) | 0.25 m |
 | Updates | 5 Hz | 1 Hz |
-| Layers | static (the map), the radar, the cameras, inflation | static (the map), inflation |
-| Sensors | the radar where it runs; the cameras when switched on (below) | none: Nav2 plans as if the road is clear |
+| Layers | static (the map), the radar, the cameras, the lidar, inflation | static (the map), the radar, the lidar, inflation |
+| Sensors | the radar and lidar where they run; the cameras when switched on (below) | the radar and lidar where they run (since 22 Oct): the planner plans round what they see. `plan_around:=false` for the map only |
+| Inflation | 2.0 m, cost scaling 3.0 | 3.0 m, cost scaling 1.0: gentler and wider, so paths keep to the middle of a lane |
 
 A 20 m window means 10 m ahead and behind, about 5 s of driving at 2 m/s, the most this
 car is meant to do this year. Make it larger only if the car gets faster.
 
 - **Footprint:** the car's outline, made from `body` in `vehicle.yaml` by the launch
   file. Nav2 checks that it doesn't enter lethal cells.
-- **Inflation:** 2.0 m with cost scaling 3.0: at least the car's circumscribed radius,
-  1.93 m. This keeps paths away from walls rather
-  than scraping them.
+- **Inflation:** at least the car's circumscribed radius, 1.93 m. This keeps paths away
+  from walls rather than scraping them. The planner's is wider (22 Oct): with 2.0 m its
+  path passed a building's corner 0.86 m away, and the collision monitor stopped the car
+  there ([Path followers](controllers.md)).
 
 ## Obstacles from the sensors
 
@@ -87,11 +89,14 @@ more off its line, N7 below, and once it passed beside the box.)
 | The car stands still | 0.42 m before the box, from 1.02 m/s (0.53 m in a second run). With the lane-wide box on `main`: 0.44 m, and 0.26 m with the car starting 8° off the road |
 | The box is taken away | `collision_monitor` lets go at once; Nav2's recovery clears the costmap and the car drives on to the goal |
 
-!!! note "Nav2 stops; it doesn't steer around"
-  The global costmap has no sensor layer, so the planner never knows about the box. The
-  car waits; if the box stays, the goal fails after Nav2's recoveries (23 s on the bench).
-  Steering around needs the radar in the global costmap too, and room: the car turns no
-  tighter than 2.86 m.
+!!! note "Since 22 Oct, Nav2 steers round it"
+  The table above is with `plan_around:=false`: the planner sees only the map, so the car
+  stops and waits (the stop zone's tests run like that). By default the global costmap
+  has the radar and lidar too, so the planner plans round the box where there's room: in
+  Gazebo the car passed it 3.9 m clear and never stopped (`pixi run sim-check
+  --plan-around`). Where the map leaves no room round it, the car stops as before. On
+  the bench the map is empty, so the planner would leave the road: `bench-check
+  --obstacle` runs with `plan_around:=false`.
 
 ### Try it
 
