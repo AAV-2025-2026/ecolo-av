@@ -4,7 +4,9 @@ The real car. One launch file for every machine; a machine file picks the parts.
   ros2 launch aav_bringup car.launch.py machine:=orin
       [gps:=true] [gps_driver:=ublox] [map:=<map yaml>] [start_x:=0] [start_y:=0]
       [start_yaw:=0] [max_speed:=0.3]
-      [reversing:=false]  (true lets Nav2 drive backwards: blind, the team decides first)
+      [reversing:=true]   (Nav2 may back up, at 0.5 m/s at most, where the machine runs
+                           something that sees behind: the lidar or camera_obstacles.
+                           Without, it stays forward only and says why. false: never)
       [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [ghost:=false]      (true: a pretend person in Nav2's view, where Nav2 runs, for
                            stopping tests with nothing real to hit: pixi run ghost ahead 10)
@@ -63,6 +65,7 @@ import re
 import shutil
 import subprocess
 
+from aav_description import vehicle
 from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
@@ -257,6 +260,14 @@ def launch_setup(context):
         # because included launch files share launch arguments.
         empty_map = os.path.join(get_package_share_directory('aav_navigation'), 'maps',
                                  'empty.yaml')
+        # Nav2 backs up only if something here sees behind the car (Ben, 22 Oct: "Yes the
+        # car can reverse"); collision_monitor then watches a box behind the rear bumper.
+        reversing = flag('reversing')
+        blind = vehicle.blind_behind(reversing, radar=on('radar'), lidar=on('lidar'),
+                                     camera_obstacles=on('camera_obstacles'))
+        if blind:
+            get_logger('car.launch.py').warning(f'reversing: {blind}')
+            reversing = False
         # The local costmap reads the sensors this machine runs. Each is passed, on or
         # off, so none can leak in from another file.
         actions.append(include('aav_navigation', 'navigation.launch.py',
@@ -264,7 +275,7 @@ def launch_setup(context):
                                lidar=on('lidar'), ghost=flag('ghost'),
                                collision_monitor=on('radar') or on('lidar') or flag('ghost'),
                                camera_obstacles=on('camera_obstacles'),
-                               reversing=flag('reversing')))
+                               reversing=reversing))
     if on('spine'):
         actions.append(include('aav_spine', 'spine.launch.py'))
     if on('legacy_uart') or on('legacy_encoder'):
@@ -306,10 +317,12 @@ def generate_launch_description():
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0',
                               description='Heading at start, rad counter-clockwise from east'),
-        # Off until the team decides: the radar faces forward, so nothing sees behind the car.
-        # People can still reverse (joystick, keyboard, RC); this is Nav2 only.
-        DeclareLaunchArgument('reversing', default_value='false',
-                              description='true: Nav2 may drive backwards, blind '
-                                          '(docs/learn-nav2.md). Off until the team decides'),
+        # On since 22 Oct (Ben: "Yes the car can reverse"), where something sees behind
+        # (vehicle.blind_behind). People can always reverse (joystick, keyboard, RC); this
+        # is Nav2 only.
+        DeclareLaunchArgument('reversing', default_value='true',
+                              description='true: Nav2 may back up, with the lidar or '
+                                          'camera_obstacles watching behind '
+                                          '(docs/learn-nav2.md); false: forward only'),
         OpaqueFunction(function=launch_setup),
     ])

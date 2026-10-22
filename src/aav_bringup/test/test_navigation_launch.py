@@ -125,13 +125,14 @@ def test_mppi_unless_regulated_pure_pursuit_is_asked_for():
 
 
 def test_who_may_reverse():
-    # Gazebo and the bench: yes. The car: no, until the team decides.
+    # Gazebo and the bench: yes. The car too since 22 Oct, where the lidar sees behind it
+    # (test_car_launch.py: without it, forward only).
     assert sent_to_navigation(SIM)['reversing'] == 'true'
     assert sent_to_navigation(SIM, reversing='false')['reversing'] == 'false'
     assert sent_to_navigation(SIM, sim_speed='3')['max_speed'] == '3'
     assert sent_to_navigation(BENCH)['reversing'] == 'true'
-    assert sent_to_navigation(CAR, machine='all')['reversing'] == 'false'
-    assert sent_to_navigation(CAR, machine='all', reversing='true')['reversing'] == 'true'
+    assert sent_to_navigation(CAR, machine='all')['reversing'] == 'true'
+    assert sent_to_navigation(CAR, machine='all', reversing='false')['reversing'] == 'false'
 
 
 def whole_file(**args):

@@ -470,13 +470,28 @@ collision_monitor:
     base_shift_correction: false
     stop_pub_timeout: 2.0     # s of zeros after a stop; then twist_mux's nav slot times out
     polygons: ["StopZone"]
-    # Three radar (or lidar) points in this box stop the car. From the front bumper to 1 m ahead of
-    # it, 0.2 m wider than the body each side: aav_description vehicle.py stop_zone_points,
-    # from vehicle.yaml's body (it says why 1 m).
+    # Three radar (or lidar) points in this box stop the car. Which box depends on the way
+    # the command goes: going forward, from the front bumper to 1 m ahead of it; reversing,
+    # from the rear bumper to 1 m behind it (only the lidar or the camera obstacles see
+    # there). Each 0.2 m wider than the body each side: aav_description vehicle.py
+    # stop_zone_points and rear_stop_zone_points, from vehicle.yaml's body (they say why 1 m).
     StopZone:
-      type: "polygon"
+      type: "velocity_polygon"
       action_type: "stop"
-      points: "[[2.8, 0.7], [2.8, -0.7], [1.8, -0.7], [1.8, 0.7]]"   # set by the launch file
+      holonomic: false
+      velocity_polygons: ["forward", "backward"]
+      forward:                  # standing still counts as forward: the first that fits
+        points: "[[2.8, 0.7], [2.8, -0.7], [1.8, -0.7], [1.8, 0.7]]"   # set by the launch file
+        linear_min: 0.0
+        linear_max: 10.0
+        theta_min: -10.0
+        theta_max: 10.0
+      backward:
+        points: "[[-0.2, 0.7], [-0.2, -0.7], [-1.2, -0.7], [-1.2, 0.7]]"  # set by the launch file
+        linear_min: -10.0
+        linear_max: 0.0
+        theta_min: -10.0
+        theta_max: 10.0
       min_points: 3             # a radar is noisy: one stray point mustn't stop the car
       visualize: true           # for RViz, on polygon_pub_topic
       polygon_pub_topic: /safety/collision_monitor/stop_zone

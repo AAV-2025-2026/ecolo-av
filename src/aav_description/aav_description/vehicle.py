@@ -7,7 +7,9 @@ The launch files use this so the car's measurements live in one file:
     v = vehicle.load()['vehicle']
     vehicle.min_turning_radius(v)    # Nav2 SmacPlannerHybrid, MPPI Ackermann
     vehicle.footprint(v)             # Nav2 costmaps
-    vehicle.stop_zone_points(v)      # Nav2 collision_monitor
+    vehicle.stop_zone_points(v)      # Nav2 collision_monitor: ahead, going forward
+    vehicle.rear_stop_zone_points(v) # ... and behind, reversing
+    vehicle.blind_behind(reversing, lidar=..., camera_obstacles=...)  # may Nav2 reverse?
     vehicle.obstacle_heights(v)      # the lidar's band of obstacle heights (lidar_scan)
     vehicle.nav2_rewrites(v, reversing)         # Nav2's file: forward only, or reversing too
     vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar, ghost,  # what
@@ -118,6 +120,38 @@ def stop_zone_points(v, ahead=STOP_ZONE_AHEAD, margin=STOP_ZONE_MARGIN):
     return [[front + ahead, half], [front + ahead, -half], [front, -half], [front, half]]
 
 
+# The stop zone while reversing, behind the rear bumper. Reversing is at most
+# max_reverse_speed (0.5 m/s): ego's 2 m/s^2 stops it in 0.06 m, 0.4 s of delay adds 0.2 m;
+# the rest is margin for the lidar's noise and a guessed rear overhang.
+STOP_ZONE_BEHIND = 1.0  # m
+
+
+def rear_stop_zone_points(v, behind=STOP_ZONE_BEHIND, margin=STOP_ZONE_MARGIN):
+    """Return the reversing stop zone's corners: from the rear bumper to `behind` past it."""
+    body = v['body']
+    rear = -body['rear_overhang']
+    half = body['width'] / 2.0 + margin
+    return [[rear, half], [rear, -half], [rear - behind, -half], [rear - behind, half]]
+
+
+# What can see behind the car, for collision_monitor's reversing zone: the roof lidar
+# (all round) and the camera obstacles (the rear camera's detections). Not the radar:
+# it faces forward.
+SEES_BEHIND = ('lidar', 'camera_obstacles')
+
+
+def blind_behind(reversing, **sensors):
+    """
+    Why Nav2 must not reverse with these sensors, or None if it may.
+
+    sensors: name=True for each one running (lidar=..., radar=..., camera_obstacles=...).
+    """
+    if not reversing or any(sensors.get(name) for name in SEES_BEHIND):
+        return None
+    return ('nothing sees behind the car (the radar faces forward): Nav2 stays forward '
+            'only. Start the lidar or camera_obstacles to let it reverse')
+
+
 # The lidar's obstacles: what lies between these heights above the road (base_link's z).
 # Below: the road itself, kerbs, and the ground the lidar sees as its beams tilt with the
 # car (0.3 m is the ground 10 m away, with the car pitched 1.7 degrees). Above the car's
@@ -211,7 +245,10 @@ def nav2_rewrites(v, reversing=False):
         'lidar_scan.ros__parameters.max_height': f'{high:.3f}',
         'minimum_turning_radius': f'{r * PLAN_TURN_MARGIN:.3f}',  # SmacPlannerHybrid
         'min_turning_r': f'{r:.3f}',            # MPPI AckermannConstraints: the car's own
-        'collision_monitor.ros__parameters.StopZone.points': polygon(stop_zone_points(v)),
+        'collision_monitor.ros__parameters.StopZone.forward.points':
+            polygon(stop_zone_points(v)),
+        'collision_monitor.ros__parameters.StopZone.backward.points':
+            polygon(rear_stop_zone_points(v)),
         'planner_server.ros__parameters.GridBased.motion_model_for_search':
             'REEDS_SHEPP' if reversing else 'DUBIN',
         'controller_server.ros__parameters.FollowPath.allow_reversing': str(reversing).lower(),

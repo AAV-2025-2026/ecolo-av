@@ -177,6 +177,17 @@ def test_the_lidar_runs_where_its_packets_go_and_nav2_reads_it():
     assert 'sensors.launch.py' not in included(started(CAR, machine='laptop'))
 
 
+def test_nav2_reverses_where_the_lidar_sees_behind():
+    # Ben, 22 Oct: "Yes the car can reverse". On the Jetson the roof lidar watches behind.
+    assert included(started(CAR, machine='orin'))['navigation.launch.py']['reversing'] == 'true'
+    # Without it nothing sees behind (the radar faces forward): forward only.
+    blind = included(started(CAR, machine='orin', lidar='false'))['navigation.launch.py']
+    assert blind['reversing'] == 'false'
+    # reversing:=false: never, lidar or not.
+    off = included(started(CAR, machine='orin', reversing='false'))['navigation.launch.py']
+    assert off['reversing'] == 'false'
+
+
 def test_the_watchdog_guards_nav2():
     sent = included(started(CAR, machine='all'))
     assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,local,global,gps'

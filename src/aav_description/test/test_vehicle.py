@@ -58,11 +58,41 @@ def test_stop_zone_is_ahead_of_the_bumper_and_wider_than_the_body():
         '[[2.800, 0.700], [2.800, -0.700], [1.800, -0.700], [1.800, 0.700]]'
 
 
+def test_reversing_stop_zone_is_behind_the_rear_bumper():
+    v = {'body': {'length': 2.0, 'width': 1.0, 'rear_overhang': 0.2}}
+    pts = vehicle.rear_stop_zone_points(v, behind=1.0, margin=0.2)
+    xs = sorted({round(p[0], 6) for p in pts})
+    ys = sorted({round(p[1], 6) for p in pts})
+    assert xs == [-1.2, -0.2] and ys == [-0.7, 0.7]
+
+
+def test_nav2_reverses_only_if_something_sees_behind():
+    assert vehicle.blind_behind(False) is None                  # forward only: nothing to see
+    assert vehicle.blind_behind(True, lidar=True) is None       # the roof lidar, all round
+    assert vehicle.blind_behind(True, camera_obstacles=True) is None   # the rear camera
+    why = vehicle.blind_behind(True, radar=True, lidar=False)   # the radar faces forward
+    assert why and 'forward only' in why
+
+
+def test_the_stop_zone_turns_round_with_the_command():
+    # collision_monitor picks the box by the command's speed: ahead going forward (and
+    # standing still), behind reversing. Both cover every turn rate.
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    zone = nav2['collision_monitor']['ros__parameters']['StopZone']
+    assert zone['type'] == 'velocity_polygon' and zone['holonomic'] is False
+    forward, backward = (zone[name] for name in zone['velocity_polygons'])
+    assert forward['linear_min'] == 0.0 < forward['linear_max']
+    assert backward['linear_min'] < 0.0 == backward['linear_max']
+    for box in (forward, backward):
+        assert box['theta_min'] <= -1.0 and box['theta_max'] >= 1.0
+
+
 def test_nav2_rewrites_keys():
     v = vehicle.load(CONFIG)['vehicle']
     r = vehicle.nav2_rewrites(v)
     assert set(r) == {'footprint', 'minimum_turning_radius', 'min_turning_r',
-                      'collision_monitor.ros__parameters.StopZone.points',
+                      'collision_monitor.ros__parameters.StopZone.forward.points',
+                      'collision_monitor.ros__parameters.StopZone.backward.points',
                       'planner_server.ros__parameters.GridBased.motion_model_for_search',
                       'controller_server.ros__parameters.FollowPath.allow_reversing',
                       'controller_server.ros__parameters.MPPI.vx_min',

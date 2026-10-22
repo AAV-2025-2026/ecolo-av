@@ -13,6 +13,8 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
     pixi run sim-check --lidar-obstacle    (the lidar alone, radar off, stops for a post: a
                                             second run, 3 more minutes)
+    pixi run sim-check --rear-obstacle     (backing up, the lidar stops the car for a post
+                                            behind it: a second run, 3 more minutes)
     pixi run sim-check --ghost             (a pretend person only Nav2 sees, aav_ghost: a
                                             second run, 3 more minutes)
     pixi run sim-check --faults            (sensor failures on purpose, each while Nav2 drives:
@@ -55,6 +57,8 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    lidar guards Nav2. A person-sized post (0.5 x 0.5 x 1.8 m) in the lane 15 m ahead: the
    stop zone must stop the car before it from the lidar's scan, and the post must show in
    the local costmap; once the post is gone, the car must go on to the goal.
+   With --rear-obstacle, the same backing up: the goal 15 m behind the car, the post 6 m
+   behind the rear bumper, and the stop zone behind the car must stop it.
 9. With --ghost: Gazebo again, with ghost:=true (aav_ghost): nothing in Gazebo, only a
    pretend person 15 m past the bumper in Nav2's view (its own costmap layer and
    collision_monitor source), placed through ghost_obstacle's parameters as
@@ -667,24 +671,28 @@ def costmap_peak(grid, x, y, radius):
 
 
 def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name='obstacle',
-                   costmap=False):
+                   costmap=False, backwards=False):
     """
     Put a model `ahead` m in the lane: the stop zone must stop the car before it.
 
     model is the bench's box (1 m deep) unless given; the lidar's check uses the post
     (0.5 m). With costmap, the local costmap must also mark it while the car stands there.
+    backwards: the model and the goal are behind the car, which must back up to them, and
+    the stop zone behind the rear bumper must stop it.
     """
     body = vehicle.load()['vehicle']['body']
-    front = body['length'] - body['rear_overhang']   # base_link to the front bumper
+    # base_link to the bumper the car drives towards: the front one, or the rear one.
+    front = body['rear_overhang'] if backwards else body['length'] - body['rear_overhang']
+    way = -1.0 if backwards else 1.0
     x0, y0 = probe.xy(probe.truth)
     h = yaw_of(probe.truth)
-    c, s = math.cos(h), math.sin(h)
+    c, s = way * math.cos(h), way * math.sin(h)     # the way the car goes
 
     def along():
         x, y = probe.xy(probe.truth)
         return (x - x0) * c + (y - y0) * s
 
-    # Its near face `ahead` m in front of the bumper, on the car's line.
+    # Its near face `ahead` m past the bumper, on the car's line.
     bx, by = x0 + (front + ahead + depth / 2.0) * c, y0 + (front + ahead + depth / 2.0) * s
     if not gz_service('create', 'gz.msgs.EntityFactory',
                       f'sdf_filename: "{model}", name: "obstacle", '
@@ -696,26 +704,43 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
     if costmap:
         sub = probe.create_subscription(OccupancyGrid, '/local_costmap/costmap',
                                         lambda m: newest.update(grid=m), 2)
-    done = probe.go_to(x0 + goal * c, y0 + goal * s, h)
+    done = probe.go_to(x0 + goal * c, y0 + goal * s, h)    # facing as it started
     if done is None:
         result(name, False, 'no Nav2, or it refused the goal')
         gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
         return
     seen, top, still, gap, peak = len(probe.monitor), 0.0, None, None, None
+    moving = 0.3 if backwards else 0.5      # m/s: it has got going (reversing: 0.5 at most)
+    furthest, fired = 0.0, None             # m towards the model; when the stop zone fired
+
+    def take_away():
+        nonlocal gap, peak
+        gap = ahead - furthest              # the closest the bumper came
+        if 'grid' in newest:
+            peak = costmap_peak(newest['grid'], bx, by, depth / 2.0 + 0.5)
+        gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
+
     end = time.monotonic() + 240.0
     while time.monotonic() < end and not done.done():
         probe.spin_for(0.1)
-        v = probe.truth.twist.twist.linear.x
+        v = way * probe.truth.twist.twist.linear.x
         top = max(top, v)
-        if gap is None and top > 0.5 and abs(v) < 0.02:
+        if gap is not None:
+            continue
+        furthest = max(furthest, along())
+        if fired is None and any(a == CollisionMonitorState.STOP and p == 'StopZone'
+                                 for a, p in probe.monitor[seen:]):
+            fired = probe.now()
+        if top > moving and abs(v) < 0.02:
             still = still if still is not None else probe.now()
             if probe.now() - still > 3.0:      # stood still for 3 s: take the box away
-                gap = ahead - along()
-                if 'grid' in newest:
-                    peak = costmap_peak(newest['grid'], bx, by, depth / 2.0 + 0.5)
-                gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
+                take_away()
         else:
             still = None
+            # Stopped, then rocking: the controller may pull away (forward, while backing
+            # up) and try again, the stop zone stopping it each time. Take it away anyway.
+            if fired is not None and probe.now() - fired > 8.0:
+                take_away()
     if costmap:
         probe.destroy_subscription(sub)
     stop_zone = any(a == CollisionMonitorState.STOP and p == 'StopZone'
@@ -724,7 +749,7 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
     passed = along() > front + ahead + depth
     marked = not costmap or (peak is not None and peak >= 99)
     ok = gap is not None and 0.0 < gap < 2.0 and stop_zone and reached and passed and marked
-    where = f'stood still {gap:.2f} m before it' if gap is not None else 'never stopped'
+    where = f'came within {gap:.2f} m of it' if gap is not None else 'never stopped'
     mark = ''
     if costmap:
         mark = (f'; the local costmap {peak} of 100 there' if peak is not None
@@ -854,6 +879,19 @@ def stood_still(track, still=0.02):
 def check_lidar_obstacle(probe):
     """Stop for a post only the lidar sees (the radar is off), and mark it in the costmap."""
     check_obstacle(probe, model=POST, depth=0.5, name='lidar obstacle', costmap=True)
+
+
+def check_rear_obstacle(probe):
+    """
+    Back up to a goal 15 m behind, with a post 6 m behind the rear bumper: stop before it.
+
+    The stop zone behind the car (it turns round with the command) and the lidar, which
+    sees all round, must stop it; once the post is gone the car must back on to the goal.
+    15 m: a reverse metre costs the planner 2, so a longer goal could make a forward loop
+    cheaper than backing straight there.
+    """
+    check_obstacle(probe, ahead=6.0, goal=15.0, model=POST, depth=0.5, name='rear obstacle',
+                   costmap=True, backwards=True)
 
 
 def set_ghost(probe, client, **values):
@@ -1648,6 +1686,12 @@ def main():
         logs.append(f'{stem}-lidar{ext}')
         session(['radar:=false', 'lidar:=true', 'plan_around:=false'], [check_lidar_obstacle],
                 logs[-1], 'lidar', ignore=RADAR_TOPICS, radar=False)
+    if '--rear-obstacle' in args:
+        # Its own run, as --lidar-obstacle: the radar off, and the post behind the car.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-rear{ext}')
+        session(['radar:=false', 'lidar:=true', 'plan_around:=false', 'reversing:=true'],
+                [check_rear_obstacle], logs[-1], 'rear', ignore=RADAR_TOPICS, radar=False)
     if '--plan-around' in args:
         # Its own run: the planner sees the radar and lidar (the default), so it plans round.
         stem, ext = os.path.splitext(log)
