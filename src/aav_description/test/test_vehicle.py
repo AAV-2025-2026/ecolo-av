@@ -69,7 +69,9 @@ def test_reversing_stop_zone_is_behind_the_rear_bumper():
 def test_nav2_reverses_only_if_something_sees_behind():
     assert vehicle.blind_behind(False) is None                  # forward only: nothing to see
     assert vehicle.blind_behind(True, lidar=True) is None       # the roof lidar, all round
-    assert vehicle.blind_behind(True, camera_obstacles=True) is None   # the rear camera
+    assert vehicle.blind_behind(True, rear_camera=True) is None # the rear camera's obstacles
+    # camera_obstacles alone reads the front camera: it doesn't see behind.
+    assert vehicle.blind_behind(True, camera_obstacles=True)
     why = vehicle.blind_behind(True, radar=True, lidar=False)   # the radar faces forward
     assert why and 'forward only' in why
 

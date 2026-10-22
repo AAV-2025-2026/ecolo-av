@@ -5,7 +5,7 @@ The real car. One launch file for every machine; a machine file picks the parts.
       [gps:=true] [gps_driver:=ublox] [map:=<map yaml>] [start_x:=0] [start_y:=0]
       [start_yaw:=0] [max_speed:=0.3]
       [reversing:=true]   (Nav2 may back up, at 0.5 m/s at most, where the machine runs
-                           something that sees behind: the lidar or camera_obstacles.
+                           something that sees behind: the lidar.
                            Without, it stays forward only and says why. false: never)
       [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [ghost:=false]      (true: a pretend person in Nav2's view, where Nav2 runs, for
@@ -263,8 +263,7 @@ def launch_setup(context):
         # Nav2 backs up only if something here sees behind the car (Ben, 22 Oct: "Yes the
         # car can reverse"); collision_monitor then watches a box behind the rear bumper.
         reversing = flag('reversing')
-        blind = vehicle.blind_behind(reversing, radar=on('radar'), lidar=on('lidar'),
-                                     camera_obstacles=on('camera_obstacles'))
+        blind = vehicle.blind_behind(reversing, radar=on('radar'), lidar=on('lidar'))
         if blind:
             get_logger('car.launch.py').warning(f'reversing: {blind}')
             reversing = False
@@ -321,8 +320,8 @@ def generate_launch_description():
         # (vehicle.blind_behind). People can always reverse (joystick, keyboard, RC); this
         # is Nav2 only.
         DeclareLaunchArgument('reversing', default_value='true',
-                              description='true: Nav2 may back up, with the lidar or '
-                                          'camera_obstacles watching behind '
+                              description='true: Nav2 may back up, with the lidar '
+                                          'watching behind '
                                           '(docs/learn-nav2.md); false: forward only'),
         OpaqueFunction(function=launch_setup),
     ])

@@ -135,7 +135,7 @@ Navigate (up to 6 tries)
 
 One switch, `reversing:=`, on `navigation.launch.py`. **On everywhere since 22 Oct** (Ben:
 "Yes the car can reverse"), but on the car only where something sees behind it: the roof
-lidar or the camera obstacles (the radar faces forward). Without one, `car.launch.py`
+lidar (the radar faces forward; the rear camera, later). Without one, `car.launch.py`
 keeps Nav2 forward only and says why (`vehicle.blind_behind`).
 
 | | `reversing:=false` | `reversing:=true` (the default: the car, Gazebo, the bench) |
@@ -155,7 +155,7 @@ reversing at the same number, whoever drives.
 |---|---|
 | `vehicle.yaml` | `max_reverse_speed: 0.50` |
 | `aav_description/vehicle.py` | `nav2_rewrites(v, reversing)` (planner, controller, MPPI) and `nav2_tuned(...)` (the smoother's list, written into a copy of `nav2.yaml`) |
-| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=true` in all three; the car's needs the lidar or camera obstacles running |
+| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=true` in all three; the car's needs the lidar running |
 | Gazebo check | `pixi run sim-check --rear-obstacle`: backing up, the car stops for a post behind it (0.75 m short, 22 Oct) |
 | Tests | `test_vehicle.py` (the values, and that each rewrite lands on a real key); `test_behavior_trees.py` (the two trees differ only by BackUp, inside the reverse speed) |
 
@@ -169,7 +169,7 @@ the costmap. So it still stops the car if the planner, the controller or the cos
 | Setting | Ours |
 |---|---|
 | Stop zone | going forward (or standing): a box from the front bumper to 1 m ahead. Reversing: a box from the rear bumper to 1 m behind. Each 0.2 m wider than the car each side. Nav2's `velocity_polygon` picks one by the command's speed |
-| Behind the car | only the lidar (all round) and the camera obstacles see there, not the radar |
+| Behind the car | only the lidar sees there (all round), not the radar. The rear camera's obstacles: later (TODO 25) |
 | Points needed | 3 (one stray radar point mustn't stop the car) |
 | Radar silent for | 1.0 s → stop |
 | Guards | **only Nav2**. The joystick and keyboard reach `twist_mux` without it |

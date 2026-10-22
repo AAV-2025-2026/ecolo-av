@@ -84,7 +84,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Camera images are subscribed reliably, not best effort | measured on the Mac: best effort lost every image |
 | The code lives in `git@github.com:zander1976/aav.git`, public (Q25; Ben, 15 Oct) | Ben |
 | CI runs `pixi run test` on Linux for every push, and on a Mac every night | Ben |
-| Nav2 may back up on the car (at 0.5 m/s at most), where the lidar or the camera obstacles watch behind it; collision_monitor then guards a box behind the rear bumper | Ben, 22 Oct: "Yes the car can reverse" |
+| Nav2 may back up on the car (at 0.5 m/s at most), where the lidar watches behind it (the rear camera later); collision_monitor then guards a box behind the rear bumper | Ben, 22 Oct: "Yes the car can reverse" |
 | Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant | Ben: "This is a school project" |
 | The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before the audit on the car's network: see [Simulation](simulation.md) |
 | The car's red e-stop button always stops the car, whatever our software does. We don't rewire it; the spine only listens, through a spare contact, to report it and to stay stopped afterwards | Ben: "this already has an estop so we don't want to break that"; "I just want it to work" |

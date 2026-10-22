@@ -9,7 +9,7 @@ The launch files use this so the car's measurements live in one file:
     vehicle.footprint(v)             # Nav2 costmaps
     vehicle.stop_zone_points(v)      # Nav2 collision_monitor: ahead, going forward
     vehicle.rear_stop_zone_points(v) # ... and behind, reversing
-    vehicle.blind_behind(reversing, lidar=..., camera_obstacles=...)  # may Nav2 reverse?
+    vehicle.blind_behind(reversing, lidar=..., rear_camera=...)  # may Nav2 reverse?
     vehicle.obstacle_heights(v)      # the lidar's band of obstacle heights (lidar_scan)
     vehicle.nav2_rewrites(v, reversing)         # Nav2's file: forward only, or reversing too
     vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar, ghost,  # what
@@ -135,21 +135,22 @@ def rear_stop_zone_points(v, behind=STOP_ZONE_BEHIND, margin=STOP_ZONE_MARGIN):
 
 
 # What can see behind the car, for collision_monitor's reversing zone: the roof lidar
-# (all round) and the camera obstacles (the rear camera's detections). Not the radar:
-# it faces forward.
-SEES_BEHIND = ('lidar', 'camera_obstacles')
+# (all round), and the rear camera's detections (camera_obstacles, rear_camera=True: its
+# detector reads the rear picture). Not the radar: it faces forward. Not camera_obstacles
+# alone: by default it reads the front left camera only.
+SEES_BEHIND = ('lidar', 'rear_camera')
 
 
 def blind_behind(reversing, **sensors):
     """
     Why Nav2 must not reverse with these sensors, or None if it may.
 
-    sensors: name=True for each one running (lidar=..., radar=..., camera_obstacles=...).
+    sensors: name=True for each one running (lidar=..., radar=..., rear_camera=...).
     """
     if not reversing or any(sensors.get(name) for name in SEES_BEHIND):
         return None
     return ('nothing sees behind the car (the radar faces forward): Nav2 stays forward '
-            'only. Start the lidar or camera_obstacles to let it reverse')
+            'only. Start the lidar (or the rear camera\'s obstacles) to let it reverse')
 
 
 # The lidar's obstacles: what lies between these heights above the road (base_link's z).

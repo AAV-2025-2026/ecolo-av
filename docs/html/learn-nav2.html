@@ -365,7 +365,7 @@ standard tree, changed for a car.</p>
 <section class="card"><h2 id="reversing">Reversing</h2>
 <p>One switch, <code>reversing:=</code>, on <code>navigation.launch.py</code>. <strong>On everywhere since 22 Oct</strong> (Ben:
 "Yes the car can reverse"), but on the car only where something sees behind it: the roof
-lidar or the camera obstacles (the radar faces forward). Without one, <code>car.launch.py</code>
+lidar (the radar faces forward; the rear camera, later). Without one, <code>car.launch.py</code>
 keeps Nav2 forward only and says why (<code>vehicle.blind_behind</code>).</p>
 <div class="table-wrap"><table>
 <thead>
@@ -429,7 +429,7 @@ reversing at the same number, whoever drives.</p>
 </tr>
 <tr>
 <td><code>car.launch.py</code>, <code>sim.launch.py</code>, <code>bench.launch.py</code></td>
-<td><code>reversing:=true</code> in all three; the car's needs the lidar or camera obstacles running</td>
+<td><code>reversing:=true</code> in all three; the car's needs the lidar running</td>
 </tr>
 <tr>
 <td>Gazebo check</td>
@@ -460,7 +460,7 @@ the costmap. So it still stops the car if the planner, the controller or the cos
 </tr>
 <tr>
 <td>Behind the car</td>
-<td>only the lidar (all round) and the camera obstacles see there, not the radar</td>
+<td>only the lidar sees there (all round), not the radar. The rear camera's obstacles: later (TODO 25)</td>
 </tr>
 <tr>
 <td>Points needed</td>
