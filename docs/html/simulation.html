@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">40 min read · 8 sections</div></header>
+<div class="meta">41 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -192,7 +192,7 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 <tr>
 <td><code>faults</code></td>
 <td><code>false</code></td>
-<td><code>true</code>: the front left picture goes through <code>gazebo_adapter</code> too, so it can freeze on purpose</td>
+<td><code>true</code>: the front left picture goes through <code>gazebo_camera</code> too, so it can freeze on purpose</td>
 </tr>
 <tr>
 <td><code>actuator_model</code></td>
@@ -323,8 +323,8 @@ real-time factor at 0.98-0.99.</p>
 </tbody>
 </table></div>
 <p>Each one carries the same name, type and frame as the real device's, so the software above
-can't tell. <code>/gazebo/*</code> topics are Gazebo's own side of <code>gazebo_adapter</code>, not in the
-contract.</p>
+can't tell. <code>/gazebo/*</code> topics are Gazebo's own side of <code>gazebo_adapter</code> and the sensor
+nodes, not in the contract.</p>
 <p><img alt="What the three simulated cameras see, at the start of the road world" src="../img/sim-cameras.png" /></p>
 <p>Where each sensor sits (15 Oct, until Friday's tape measure): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from <code>vehicle.yaml</code>. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.</p>
 <h3 id="what-isnt-simulated">What isn't simulated</h3>
@@ -435,20 +435,60 @@ ones once the tests are done: no code changes.
   Gazebo and prints these numbers back (<a href="actuator-tests.html">Actuator tests</a>). On 15 Oct
   all but the throttle deadband came back within a few percent.</li>
 <li><strong>The IMU feels the model</strong> (15 Oct): Gazebo's own IMU never felt the car speed up,
-  brake or turn (it reads only gravity, noise and contact bumps). <code>gazebo_adapter</code> puts
-  the model's forward and sideways acceleration at <code>imu_link</code> in its place, with the
-  configured noise (<code>aav_gazebo/imu.py</code>). The EKFs use only the yaw rate, so nothing
+  brake or turn (it reads only gravity, noise and contact bumps). <code>gazebo_imu</code> puts
+  the car's forward and sideways acceleration at <code>imu_link</code> in its place (worked out from
+  Gazebo's odometry, which follows the model), with the configured noise
+  (<code>aav_gazebo/imu.py</code>). The EKFs use only the yaw rate, so nothing
   else changes.</li>
 </ul>
 <p>How the simulated car connects:</p>
 <ul>
 <li>Gazebo plays the car, with Ackermann steering, an IMU and a GPS.</li>
-<li><code>gazebo_adapter</code> turns those into the real drivers' topics: <code>/vehicle/odom</code>,
-  <code>/sensors/imu/data_raw</code> and <code>/sensors/gps/fix</code>.</li>
-<li>The IMU filter, both EKFs and <code>navsat_transform</code> run with the car's own configs, on
-  simulated time.</li>
-<li>Map (0, 0) is where the car starts, facing east.</li>
-<li>In the road world, the car also has its front camera and a radar stand-in.</li>
+<li>
+<p>Nodes of ours turn those into the real drivers' topics, one per part, as on the car:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Gives</th>
+<th>On the car, instead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gazebo_adapter</code></td>
+<td>the car: <code>/vehicle/odom</code>, the wheels, the actuators, the status</td>
+<td><code>spine_bridge</code></td>
+</tr>
+<tr>
+<td><code>gazebo_imu</code></td>
+<td><code>/sensors/imu/data_raw</code></td>
+<td><code>imu_node</code> (Rust)</td>
+</tr>
+<tr>
+<td><code>gazebo_gps</code></td>
+<td><code>/sensors/gps/fix</code></td>
+<td><code>ublox_gps</code></td>
+</tr>
+<tr>
+<td><code>gazebo_radar</code></td>
+<td><code>/sensors/radar/points</code> (road world)</td>
+<td>the TI driver</td>
+</tr>
+<tr>
+<td><code>gazebo_camera</code></td>
+<td>the front left picture, only with <code>faults:=true</code></td>
+<td><code>usb_cam</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Each is a process of its own, so each runs on its own core: until 22 Oct one Python
+node did all of it on one thread, and the IMU sometimes went quiet behind it.
+- The IMU filter, both EKFs and <code>navsat_transform</code> run with the car's own configs, on
+simulated time.
+- Map (0, 0) is where the car starts, facing east.
+- In the road world, the car also has its front camera and a radar stand-in.</p>
+</li>
 </ul>
 <p>To drive it:</p>
 <ul>
@@ -631,7 +671,7 @@ bench's road, built in 3D, so the car's own camera and radar can see it.</p>
 </tr>
 <tr>
 <td>Radar</td>
-<td>a lidar shaped like the TI radar: 8.4 m, 120 degrees, 61 x 3 rays, 10 Hz. <code>gazebo_adapter</code> keeps the rays that hit something, with the TI driver's fields</td>
+<td>a lidar shaped like the TI radar: 8.4 m, 120 degrees, 61 x 3 rays, 10 Hz. <code>gazebo_radar</code> keeps the rays that hit something, with the TI driver's fields</td>
 <td><code>/sensors/radar/points</code>, best effort, in <code>radar_link</code></td>
 </tr>
 <tr>
@@ -981,7 +1021,9 @@ pixi run sim-fault clear                  # after a GPS jump: a person says the 
 </tbody>
 </table></div>
 <p><code>freeze</code> sends the last good message again, with fresh stamps: it looks alive. It's a
-parameter of <code>gazebo_adapter</code> (<code>fault.&lt;sensor&gt;</code>); the logic is <code>aav_gazebo/faults.py</code>.</p>
+parameter, <code>fault.&lt;sensor&gt;</code>, of that sensor's node (<code>gazebo_gps</code>, <code>gazebo_imu</code>,
+<code>gazebo_radar</code>, <code>gazebo_camera</code>; the wheels' is <code>gazebo_adapter</code>'s). The logic is
+<code>aav_gazebo/faults.py</code>.</p>
 <h3 id="the-sensor-watchdog">The sensor watchdog</h3>
 <p><code>aav_safety</code>'s <code>sensor_watchdog</code> watches what Nav2 and the AI slot need. While one isn't
 right, its twist_mux lock (priority 30, as the stop sign) holds them; people and tests

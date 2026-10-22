@@ -89,6 +89,8 @@ the reason beside each):
 | The car looped at goals it had reached: the EKF put it 0.6 m off (GPS noise 0.5 m), over the 0.5 m tolerance | goals count within 1.0 m: as good as GPS without RTK. Tighten with RTK |
 | Pure Pursuit arrives facing the wrong way (it aims only at a point) | MPPI is the default |
 
+![Run e: both controllers reach all four goals. Pure Pursuit loops twice at the first; for the U-turn both swing out east](img/controllers-lot-after.svg)
+
 Four lot runs after them (the EKF recorded too). The Fast DDS stalls (see "Found on the
 way") spoiled one:
 

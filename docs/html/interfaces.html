@@ -334,10 +334,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/imu/data_raw</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
-<td><code>imu_node</code>, <code>gazebo_adapter</code>, <code>mock_imu</code>, <code>carla_adapter</code></td>
+<td><code>imu_node</code>, <code>gazebo_imu</code>, <code>mock_imu</code>, <code>carla_adapter</code></td>
 <td><code>imu_filter_madgwick</code>, <code>actuator_test</code></td>
 <td>sim, car, replay, bench</td>
-<td>Gyro and accelerometer in imu_link, with covariances; no orientation.</td>
+<td>Gyro and accelerometer in imu_link, with covariances; no orientation. In Gazebo, gazebo_imu adds the car's own acceleration, worked out from Gazebo's odometry.</td>
 </tr>
 <tr>
 <td><code>/sensors/imu/mag</code></td>
@@ -358,7 +358,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
-<td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_adapter</code>, <code>mock_gps</code>, <code>carla_adapter</code></td>
+<td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_gps</code>, <code>mock_gps</code>, <code>carla_adapter</code></td>
 <td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>goto_driver</code></td>
 <td>sim, car, replay, bench</td>
 <td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
@@ -390,10 +390,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/radar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
-<td><code>radar</code>, <code>mock_radar</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
+<td><code>radar</code>, <code>mock_radar</code>, <code>gazebo_radar</code>, <code>carla_adapter</code></td>
 <td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
-<td>The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_adapter makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.</td>
+<td>The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_radar makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.</td>
 </tr>
 <tr>
 <td><code>/vehicle/battery</code></td>
@@ -414,10 +414,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_camera</code>, <code>carla_adapter</code></td>
 <td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
-<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_adapter first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its camera fault (freeze, stop).</td>
+<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop).</td>
 </tr>
 <tr>
 <td><code>/sensors/camera/front_left/image_raw/compressed</code></td>
@@ -609,7 +609,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>gz_bridge</code></td>
 <td>-</td>
 <td>sim</td>
-<td>Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges and gazebo_adapter.</td>
+<td>Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).</td>
 </tr>
 <tr>
 <td><code>/vehicle/gazebo/spine_outputs</code></td>

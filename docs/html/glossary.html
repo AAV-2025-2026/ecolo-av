@@ -502,7 +502,7 @@
 </tr>
 <tr>
 <td>MPPI</td>
-<td>Model-predictive path integral: a Nav2 controller that tries thousands of futures through a model of the car. <code>controller:=mppi</code> instead of Regulated Pure Pursuit</td>
+<td>Model-predictive path integral: Nav2's controller on our car (since 22 Oct). It tries thousands of futures through a model of the car. <code>controller:=rpp</code> for Regulated Pure Pursuit instead</td>
 <td><a href="controllers.html">path followers</a></td>
 </tr>
 <tr>
@@ -620,8 +620,8 @@
 </tr>
 <tr>
 <td>Regulated Pure Pursuit</td>
-<td>Nav2's controller: steers toward a point ahead on the path</td>
-<td><code>nav2.yaml</code></td>
+<td>a Nav2 controller: steers toward a point ahead on the path. Ours until 22 Oct; <code>controller:=rpp</code></td>
+<td><a href="controllers.html">path followers</a></td>
 </tr>
 <tr>
 <td>REP-103, REP-105</td>

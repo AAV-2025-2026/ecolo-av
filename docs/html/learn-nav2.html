@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-nav2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Nav2 from zero</h1>
-<div class="meta">10 min read · 11 sections</div></header>
+<div class="meta">11 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -110,7 +110,7 @@ GPS is in <a href="../../READ-ME-MAPS-AND-POSITION.md">Maps and position</a>.</p
 <tr>
 <td><strong>Controller</strong></td>
 <td>steers along that path</td>
-<td>Regulated Pure Pursuit, on the local costmap, 20 Hz</td>
+<td>MPPI (or Regulated Pure Pursuit: <code>controller:=rpp</code>), on the local costmap, 20 Hz (<a href="controllers.html">path followers</a>)</td>
 </tr>
 <tr>
 <td><strong>Velocity smoother</strong></td>
@@ -175,8 +175,8 @@ paths with sharp corners: fine for a robot that spins on the spot, not for a car
 </tr>
 <tr>
 <td><code>minimum_turning_radius</code></td>
-<td>2.87 m</td>
-<td>set by the launch file: wheelbase ÷ tan(max steer)</td>
+<td>3.59 m</td>
+<td>set by the launch file: wheelbase ÷ tan(max steer) = 2.87 m, × 1.25, so the controller has steering to spare</td>
 </tr>
 <tr>
 <td><code>angle_quantization_bins</code></td>
@@ -202,6 +202,9 @@ paths with sharp corners: fine for a robot that spins on the spot, not for a car
 </table></div>
 </section>
 <section class="card"><h2 id="2-the-controller-regulated-pure-pursuit">2. The controller: Regulated Pure Pursuit</h2>
+<p>Since 22 Oct the default is MPPI, which tries 2000 futures through a model of the car
+(<a href="controllers.html">path followers</a>). Pure pursuit is still the easiest way in, and
+<code>controller:=rpp</code> brings it back.</p>
 <p><strong>Pure pursuit</strong> is how you steer a bike: look at a point on the path a little ahead (the
 <strong>carrot</strong>), and turn so you'd arc through it.</p>
 <pre class="highlight"><code class="language-text">            carrot ●   (on the path, the lookahead distance ahead)

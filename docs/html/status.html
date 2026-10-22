@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">13 min read · 4 sections</div></header>
+<div class="meta">14 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -149,6 +149,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (<code>reversing:=true</code>, 15 Oct): on in Gazebo and on the bench, off on the car; its settings are tested; <span class="badge b-works">works</span> in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s</td>
 </tr>
 <tr>
+<td>Path followers (22 Oct)</td>
+<td>Nav2's MPPI (default) or Regulated Pure Pursuit, <code>controller:=rpp</code>; <code>pixi run controller-compare</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: in the lot both reached all 4 goals in the best run; MPPI reached the first goal cleanly in every run. <code>sim-check --obstacle</code> passes with MPPI. Open: stuck facing a wall after a wide turn (forward only); MPPI's forward U-turn (<a href="controllers.html">Path followers</a>). <span class="badge b-untested">untested</span> on the Orin</td>
+</tr>
+<tr>
 <td>twist_mux</td>
 <td><code>aav_mux</code></td>
 <td><span class="badge b-works">works</span></td>
@@ -157,6 +162,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td>ego</td>
 <td><code>aav_ego</code></td>
 <td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>ego's body model (22 Oct)</td>
+<td><code>aav_ego</code> <code>dynamics.py</code>: the mass (181 kg), <code>payload</code>, the centre of mass, the tyres</td>
+<td><span class="badge b-works">works</span> in its tests: a load slows speeding up, tight turns slow the car. The numbers are guesses until the car is weighed (<a href="car_measurements.html#weight-and-balance">Car numbers</a>)</td>
 </tr>
 <tr>
 <td>turtlesim</td>

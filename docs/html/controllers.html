@@ -7,7 +7,7 @@
 <!-- Generated from docs/controllers.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Path followers: Regulated Pure Pursuit and MPPI</h1>
-<div class="meta">11 min read · 7 sections</div></header>
+<div class="meta">14 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -66,16 +66,16 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-each-one-does">What each one does</a><a href="#switch-between-them">Switch between them</a><a href="#compare-them">Compare them</a><a href="#results-22-october">Results, 22 October</a><a href="#making-mppi-drive">Making MPPI drive</a><a href="#found-on-the-way">Found on the way</a><a href="#limits-of-this-comparison">Limits of this comparison</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-each-one-does">What each one does</a><a href="#switch-between-them">Switch between them</a><a href="#compare-them">Compare them</a><a href="#after-the-fixes-night-of-22-october">After the fixes, night of 22 October</a><a href="#results-22-october-first-runs">Results, 22 October, first runs</a><a href="#making-mppi-drive">Making MPPI drive</a><a href="#found-on-the-way">Found on the way</a><a href="#limits-of-this-comparison">Limits of this comparison</a></nav>
 <div class="lead"><p>Nav2's planner draws a path; a <strong>controller</strong> turns it into a speed and a turn, 20 times a
 second. We have two, and a script that compares them on the same drives in Gazebo.</p>
 <blockquote>
 <p><strong>The short version</strong>
-- <strong>Regulated Pure Pursuit (RPP)</strong> is the default: it chases a point 2-4 m ahead on the path. Simple and steady.
-- <strong>MPPI</strong> tries 2000 possible futures every cycle through a model of the car, and picks the best blend. It can steer around things the planner didn't know about; it costs more computer.
-- <strong>Switch:</strong> <code>controller:=mppi</code> on <code>sim.launch.py</code> or <code>navigation.launch.py</code>.
-- <strong>Compare:</strong> <code>pixi run controller-compare</code> (about 25 min, headless, on this computer only).
-- <strong>Results, 22 Oct (Gazebo, one run each):</strong> neither is ready to be the only one. MPPI went round the building where Regulated Pure Pursuit stopped at its corner; Regulated Pure Pursuit was twice as quick to the first goal, where MPPI looped to fix its heading. Both stopped before the box. MPPI used twice the CPU. <strong>Regulated Pure Pursuit stays the default</strong> until MPPI stops looping at goals.</p>
+- <strong>MPPI</strong> is the default (since 22 Oct): it tries 2000 possible futures every cycle through a model of the car, and picks the best blend. It turns to a goal's heading; it costs more computer.
+- <strong>Regulated Pure Pursuit (RPP)</strong> is the other choice: it chases a point 2-4 m ahead on the path. Simple and light, but it aims only at a point, so it often arrives at a goal facing the wrong way.
+- <strong>Switch:</strong> <code>controller:=rpp</code> on <code>sim.launch.py</code> or <code>navigation.launch.py</code>.
+- <strong>Compare:</strong> <code>pixi run controller-compare</code> (about 25 min, headless, on this computer only; <code>--legs 1</code> for a quick check).
+- <strong>Results, night of 22 Oct (Gazebo's lot, four runs):</strong> after five fixes (below), MPPI reached the first goal in 29-30 s in every run; Pure Pursuit looped there in two of three. In the best run both reached all 4 goals. MPPI uses twice the CPU (20% of a Mac core).</p>
 </blockquote></div>
 <section class="card"><h2 id="what-each-one-does">What each one does</h2>
 <div class="table-wrap"><table>
@@ -234,7 +234,98 @@ really was (Gazebo's ground truth). Forward only, as on the car. The results go 
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="results-22-october">Results, 22 October</h2>
+<section class="card"><h2 id="after-the-fixes-night-of-22-october">After the fixes, night of 22 October</h2>
+<p>Five changes, each found from a run that failed (all in <code>nav2.yaml</code> or <code>vehicle.py</code>, with
+the reason beside each):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What went wrong</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MPPI reached the goal, then drove a full circle to face the right way</td>
+<td>MPPI turns to the goal's heading from 2.5 m out (<code>GoalAngleCritic</code>), not 0.5 m</td>
+</tr>
+<tr>
+<td>The planner's path passed the building's corner 0.86 m away; the collision monitor's box stopped the car</td>
+<td>the planner's costmap inflates 3.0 m, gently: paths keep to the middle of a lane</td>
+</tr>
+<tr>
+<td>The plan ended in a full-lock turn; both controllers cut it and missed</td>
+<td>the planner plans turns 1.25 x wider than full lock (<code>vehicle.PLAN_TURN_MARGIN</code>)</td>
+</tr>
+<tr>
+<td>The car looped at goals it had reached: the EKF put it 0.6 m off (GPS noise 0.5 m), over the 0.5 m tolerance</td>
+<td>goals count within 1.0 m: as good as GPS without RTK. Tighten with RTK</td>
+</tr>
+<tr>
+<td>Pure Pursuit arrives facing the wrong way (it aims only at a point)</td>
+<td>MPPI is the default</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="Run e: both controllers reach all four goals. Pure Pursuit loops twice at the first; for the U-turn both swing out east" src="../img/controllers-lot-after.svg" /></p>
+<p>Four lot runs after them (the EKF recorded too). The Fast DDS stalls (see "Found on the
+way") spoiled one:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Regulated Pure Pursuit</th>
+<th>MPPI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>c (01:58)</td>
+<td>3 of 4 goals; first goal 29 s</td>
+<td>3 of 4; first goal 29 s</td>
+</tr>
+<tr>
+<td>d (02:10)</td>
+<td>stopped by a stall at the first goal</td>
+<td>1 of 4: stalls</td>
+</tr>
+<tr>
+<td>e (02:20)</td>
+<td><strong>4 of 4</strong>, but looped at the first goal (81 m for 21)</td>
+<td><strong>4 of 4</strong></td>
+</tr>
+<tr>
+<td>f (02:45)</td>
+<td>0 of 4: looped at the first goal, stopped facing the building</td>
+<td>2 of 4: its U-turn went round the building, stopped facing it</td>
+</tr>
+</tbody>
+</table></div>
+<p>Still open:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Stuck facing a wall</strong></td>
+<td>after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. The stop box only looks straight ahead, even in a turn: a box that turns with the steering (Nav2's <code>VelocityPolygon</code>) would see what's really ahead</td>
+</tr>
+<tr>
+<td><strong>MPPI's forward U-turn</strong></td>
+<td>in a 14 m lane it went wide, then round the building, instead of the planned U-turn</td>
+</tr>
+<tr>
+<td><strong>The box in the lane</strong></td>
+<td>steering round it needs the obstacle in the planner's map (PLAN.md M5)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="results-22-october-first-runs">Results, 22 October, first runs</h2>
 <p>Gazebo's test lot on Ben's Mac (M4 Max), headless, 1 m/s, forward only, with MPPI's
 settings from "Making MPPI drive" below. One run each: read small differences as noise.</p>
 <p><img alt="Where each controller took the car in the test lot" src="../img/controllers-lot.svg" /></p>
@@ -403,13 +494,15 @@ path. The settings and their reasons are in <code>nav2.yaml</code>, above the <c
   21 October. Lowering the filter's heading noise helped but didn't cure it: a heading
   source (two GPS antennas, or the F9R's own fused heading) is the real fix. Open, for
   localization (proposal T6.3).</li>
-<li><strong>Late data, twice, on an otherwise punctual Mac.</strong> Once <code>map → odom</code> was 1.4 s old
-  just after start-up, and Nav2 refused the goal ("Transform data too old"). Once, six
-  minutes into a run, the IMU and wheel speed went silent for 0.5-0.8 s, and the sensor
-  watchdog stopped Nav2. Measured for a minute, parked and driving with MPPI, the same
-  simulator kept real time (0.99) with every topic under 80 ms late, using 3 of the Mac's
-  16 cores. So it isn't the Mac's size: Gazebo's main loop is 89% of one core, and our
-  Python <code>gazebo_adapter</code> relays the IMU and wheel speed from one thread. Either can hiccup.</li>
+<li><strong>Late data: it was the messaging, not the Mac.</strong> Several runs were stopped by the
+  sensor watchdog: the IMU, the wheels and both EKFs silent for 0.5-2 s at once, with the
+  Mac 77% idle. Splitting Gazebo's adapter into one node per sensor (as on the car) didn't
+  stop it. A bare publisher and subscriber beside Gazebo showed why: the publisher always
+  on time, its messages up to 0.48 s late through Fast DDS, never over 0.05 s through
+  Cyclone DDS. <code>AAV_RMW=cyclone</code> uses Cyclone (<a href="mac.html">Your Mac</a>).</li>
+<li><strong>The global EKF is up to 0.7 m off</strong> in Gazebo (0.5 m GPS noise), its heading up to
+  25°. In the slow stretches of the night's drives its heading stayed under 6°: the ±20°
+  above was a car creeping for many seconds. The comparison now reports both per leg.</li>
 </ul>
 </section>
 <section class="card"><h2 id="limits-of-this-comparison">Limits of this comparison</h2>
