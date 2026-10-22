@@ -100,7 +100,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | microcontroller | a small chip that runs one program, no operating system | ESP32, Pico 2 |
 | mock | a pretend sensor or board, for tests | `mock_imu`, `spine_sim` |
 | Motor-Pi | the Raspberry Pi 4 that drives the ESP32 today, over UART | the 2025-26 path |
-| MPPI | a Nav2 controller we could use instead of Regulated Pure Pursuit | `nav2.yaml` |
+| MPPI | Model-predictive path integral: a Nav2 controller that tries thousands of futures through a model of the car. `controller:=mppi` instead of Regulated Pure Pursuit | [path followers](controllers.md) |
 | Nav2 | ROS 2's navigation stack: plans a path and follows it | `src/drivers/aav_navigation` |
 | `NavSatFix` | a ROS message: latitude, longitude, altitude | `/sensors/gps/fix` |
 | `navsat_transform` | turns GPS fixes into map x and y, and back | `/localization/gps/odom` |

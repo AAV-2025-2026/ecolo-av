@@ -104,6 +104,24 @@ def test_a_faster_nav2_keeps_reversing_slow():
     assert s['velocity_smoother']['min_velocity'][0] == pytest.approx(-REVERSE)
 
 
+def test_regulated_pure_pursuit_unless_mppi_is_asked_for():
+    rpp = settings()['controller_server']['FollowPath']
+    assert rpp['plugin'].endswith('::RegulatedPurePursuitController')
+    s = settings(controller='mppi', reversing='true', max_speed='3')
+    follow = s['controller_server']['FollowPath']
+    assert follow['plugin'] == 'nav2_mppi_controller::MPPIController'
+    # The car's turning circle reaches MPPI's Ackermann model too, through RewrittenYaml.
+    v = vehicle.load()['vehicle']
+    assert follow['AckermannConstraints']['min_turning_r'] == pytest.approx(
+        vehicle.min_turning_radius(v), abs=1e-3)
+    assert follow['vx_min'] == pytest.approx(-REVERSE)
+    assert follow['vx_max'] == 3.0
+    assert follow['enforce_path_inversion'] is True
+    assert s['velocity_smoother']['max_velocity'][0] == 3.0
+    assert sent_to_navigation(SIM)['controller'] == 'rpp'
+    assert sent_to_navigation(SIM, controller='mppi')['controller'] == 'mppi'
+
+
 def test_who_may_reverse():
     # Gazebo and the bench: yes. The car: no, until the team decides.
     assert sent_to_navigation(SIM)['reversing'] == 'true'

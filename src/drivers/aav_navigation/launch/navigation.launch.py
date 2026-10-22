@@ -4,14 +4,16 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
       [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
       [camera_obstacles:=false] [ghost:=false]
-      [reversing:=false] [max_speed:=] [use_sim_time:=false] [autostart:=true]
+      [reversing:=false] [max_speed:=] [controller:=rpp] [use_sim_time:=false]
+      [autostart:=true]
 
 Starts only the Nav2 servers a car needs (not nav2_bringup's full list: no AMCL, since
 robot_localization does localization, no docking or route server):
 
   map_server        the map (default: maps/empty.yaml, everything free)
   planner_server    SmacPlannerHybrid: drivable paths for a car
-  controller_server Regulated Pure Pursuit -> cmd_vel_nav
+  controller_server Regulated Pure Pursuit -> cmd_vel_nav; controller:=mppi for MPPI
+                    instead, with its Ackermann model (docs/controllers.md)
   behavior_server   wait, backup, drive_on_heading (no spin)
   bt_navigator      navigate_to_pose, navigate_through_poses (behavior_trees/*_car*.xml)
   waypoint_follower follow_waypoints, follow_gps_waypoints (lat/lon via /fromLL)
@@ -81,11 +83,11 @@ def flag(context, name):
     return LaunchConfiguration(name).perform(context).lower() == 'true'
 
 
-def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False):
+def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False, controller='rpp'):
     """Return a temporary copy of nav2.yaml, tuned by vehicle.nav2_tuned (no ROS there)."""
     with open(source) as f:
         cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed, radar, lidar,
-                                 ghost)
+                                 ghost, controller)
     out = tempfile.NamedTemporaryFile('w', prefix='nav2_', suffix='.yaml', delete=False)
     with out:
         yaml.safe_dump(cfg, out)
@@ -116,13 +118,14 @@ def nodes(context):
         LOCAL + 'camera_layer.enabled': str(camera).lower(),
     })
     # A copy of nav2.yaml with the values RewrittenYaml can't write (lists: the velocity
-    # smoother's limits, collision_monitor's sources, the costmap's layers), and
-    # max_speed:= (sim.launch.py sim_speed:=). In the file, not as
+    # smoother's limits, collision_monitor's sources, the costmap's layers), the
+    # controller, and max_speed:= (sim.launch.py sim_speed:=). In the file, not as
     # per-node dicts after it: nav2.yaml names its nodes, and a named entry beats a later
     # dict when the launch sets a global parameter (sim.launch.py's use_sim_time).
     speed = LaunchConfiguration('max_speed').perform(context).strip()
+    controller = LaunchConfiguration('controller').perform(context).strip().lower()
     source = tuned_copy(f'{share}/config/nav2.yaml', v, reversing,
-                        float(speed) if speed else None, radar, lidar, ghost)
+                        float(speed) if speed else None, radar, lidar, ghost, controller)
     params = ParameterFile(
         RewrittenYaml(source_file=source, param_rewrites=rewrites, convert_types=True),
         allow_substs=True)
@@ -209,6 +212,9 @@ def generate_launch_description():
         DeclareLaunchArgument('reversing', default_value='false',
                               description='true: Nav2 may drive backwards (blind: nothing '
                                           'senses behind the car). docs/learn-nav2.md'),
+        DeclareLaunchArgument('controller', default_value='rpp',
+                              description='rpp (Regulated Pure Pursuit) or mppi: what '
+                                          'follows the path. docs/controllers.md'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('autostart', default_value='true'),
         OpaqueFunction(function=nodes),

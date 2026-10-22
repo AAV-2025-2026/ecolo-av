@@ -10,8 +10,8 @@ The launch files use this so the car's measurements live in one file:
     vehicle.stop_zone_points(v)      # Nav2 collision_monitor
     vehicle.obstacle_heights(v)      # the lidar's band of obstacle heights (lidar_scan)
     vehicle.nav2_rewrites(v, reversing)         # Nav2's file: forward only, or reversing too
-    vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar, ghost)  # what
-                                                                # RewrittenYaml can't write
+    vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar, ghost,  # what
+                       controller)                              # RewrittenYaml can't write
     vehicle.ego_params(v)            # ego
     vehicle.wheel_angles(v, centre)  # each front wheel's angle for a centre (bicycle) angle
     vehicle.centre_angle(v, inner, outer)       # the reverse: from M5's two measured angles
@@ -150,6 +150,11 @@ def reverse_limit(v, reversing):
     return -float(v['max_reverse_speed']) if reversing else 0.0
 
 
+# Nav2's path followers (docs/controllers.md): rpp, Regulated Pure Pursuit, chases a point
+# ahead on the path; mppi samples thousands of futures through its Ackermann model.
+CONTROLLERS = ('rpp', 'mppi')
+
+
 def nav2_rewrites(v, reversing=False):
     """
     Values to substitute into aav_navigation/config/nav2.yaml.
@@ -177,13 +182,17 @@ def nav2_rewrites(v, reversing=False):
 
 
 def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False,
-               ghost=False):
+               ghost=False, controller='rpp'):
     """
     Return a copy of nav2.yaml's settings (`nav2`, loaded) with what RewrittenYaml can't write.
 
     RewrittenYaml writes only strings and numbers: a list comes out as a string, and an
     index into a list (`min_velocity.0`) raises a TypeError. So the launch file writes
     these into a copy of the file instead:
+    - the controller (CONTROLLERS): rpp keeps FollowPath, Regulated Pure Pursuit; mppi
+      puts a copy of the MPPI block under FollowPath, the name the behaviour trees ask
+      for, with the reverse speed (vx_min) and, with `reversing`, enforce_path_inversion
+      (it changes direction where the planner's path does);
     - the velocity smoother's lowest speed, the last stop for a negative speed inside Nav2:
       0, or -max_reverse_speed with `reversing`;
     - with `max_speed` (m/s, sim.launch.py sim_speed:=), the controller's speed and the
@@ -194,7 +203,16 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
     - with `ghost` (aav_ghost), the ghost as one more source, and its own layer,
       ghost_layer: it only adds a pretend obstacle, never clears the real sensors' marks.
     """
+    if controller not in CONTROLLERS:
+        raise ValueError(f'controller:={controller}: pick one of {", ".join(CONTROLLERS)}')
     out = copy.deepcopy(nav2)
+    servers = out['controller_server']['ros__parameters']
+    if controller == 'mppi':
+        # A copy, so the MPPI block stays where nav2_rewrites' MPPI.vx_min expects it.
+        mppi = copy.deepcopy(servers['MPPI'])
+        mppi['vx_min'] = reverse_limit(v, reversing)
+        mppi['enforce_path_inversion'] = bool(reversing)
+        servers['FollowPath'] = mppi
     monitor = out['collision_monitor']['ros__parameters']
     monitor['observation_sources'] = [name for name, on in (('radar', radar), ('lidar', lidar),
                                                             ('ghost', ghost)) if on]
@@ -205,7 +223,7 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
     smoother['min_velocity'] = ([reverse_limit(v, reversing)] +
                                 [float(x) for x in smoother['min_velocity'][1:]])
     if max_speed is not None:
-        follow = out['controller_server']['ros__parameters']['FollowPath']
-        follow['desired_linear_vel'] = float(max_speed)
+        follow = servers['FollowPath']
+        follow['vx_max' if controller == 'mppi' else 'desired_linear_vel'] = float(max_speed)
         smoother['max_velocity'][0] = float(max_speed)
     return out

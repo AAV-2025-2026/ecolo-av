@@ -6,8 +6,8 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [hud_web:=false] [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
-      [actuator_model:=true] [sim_speed:=] [reversing:=true] [watchdog:=true]
-      [faults:=false] [spine:=false] [arm:=true] [ghost:=false]
+      [actuator_model:=true] [sim_speed:=] [reversing:=true] [controller:=rpp]
+      [watchdog:=true] [faults:=false] [spine:=false] [arm:=true] [ghost:=false]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
   pixi run sim world:=test_lot sim_speed:=3 hud:=true   Gazebo, RViz, Nav2 and the HUD window
@@ -45,6 +45,8 @@ bench's argument names:
   sim_speed:=3        a higher top speed (m/s, up to 5), for ego and Nav2, in Gazebo only:
                       the car's 1.0 m/s cap (ego.yaml, nav2.yaml) is for its first drives.
                       ego refuses it outside a simulator
+  controller:=mppi    Nav2 follows the path with MPPI, not Regulated Pure Pursuit (rpp):
+                      pixi run controller-compare drives both (docs/controllers.md)
   watchdog:=true      the sensor watchdog (aav_safety): twist_mux's sensors lock stops Nav2
                       and the AI slot when the wheels, the IMU, the GPS or an EKF go quiet,
                       NaN or frozen, or the GPS jumps; and the camera, where something
@@ -69,6 +71,7 @@ camera's parts need world:=road. Every node runs on simulated time.
 
 import os
 
+from aav_description import vehicle
 from aav_gazebo import worlds
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
@@ -105,6 +108,9 @@ def launch_setup(context):
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
+    controller = arg('controller').lower()
+    if controller not in vehicle.CONTROLLERS:
+        raise ValueError(f'controller:={controller}: pick one of {", ".join(vehicle.CONTROLLERS)}')
     gazebo_share = FindPackageShare('aav_gazebo').perform(context)
     sensors = worlds.has_sensors(worlds.world_file(gazebo_share, world))
     # Each only where the world renders it, as gazebo.launch.py decides.
@@ -152,7 +158,8 @@ def launch_setup(context):
                                collision_monitor=radar or lidar or flag['ghost'],
                                camera_obstacles=flag['camera_obstacles'],
                                max_speed=arg('sim_speed'),
-                               reversing=str(flag['reversing']).lower()))
+                               reversing=str(flag['reversing']).lower(),
+                               controller=controller))
     if flag['watchdog']:
         # What this world has, and the camera only where something reads it: watching it
         # costs one more stream of pictures.
@@ -271,5 +278,8 @@ def generate_launch_description():
                               description='Nav2 may drive backwards, at up to '
                                           "vehicle.yaml's max_reverse_speed "
                                           '(docs/learn-nav2.md, Reversing)'),
+        DeclareLaunchArgument('controller', default_value='rpp',
+                              description='rpp (Regulated Pure Pursuit) or mppi: what '
+                                          "follows Nav2's path (docs/controllers.md)"),
         OpaqueFunction(function=launch_setup),
     ])

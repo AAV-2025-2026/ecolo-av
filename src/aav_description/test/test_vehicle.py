@@ -161,6 +161,30 @@ def test_max_speed_raises_the_controller_and_the_smoother_together():
     assert smoother['min_velocity'] == [-0.4, 0.0, -1.0]   # reversing stays as slow
 
 
+def test_mppi_follows_the_path_under_the_name_the_trees_ask_for():
+    # The behaviour trees ask for FollowPath: mppi puts a copy of the MPPI block there.
+    v = {'max_reverse_speed': 0.4}
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    servers = 'controller_server'
+    rpp = vehicle.nav2_tuned(nav2, v)[servers]['ros__parameters']
+    assert rpp['FollowPath'] == nav2[servers]['ros__parameters']['FollowPath']
+    assert 'RegulatedPurePursuit' in rpp['FollowPath']['plugin']
+    mppi = vehicle.nav2_tuned(nav2, v, reversing=True, max_speed=3, controller='mppi')
+    follow = mppi[servers]['ros__parameters']['FollowPath']
+    assert follow['plugin'] == 'nav2_mppi_controller::MPPIController'
+    assert follow['motion_model'] == 'Ackermann'
+    assert (follow['vx_min'], follow['vx_max']) == (-0.4, 3.0)
+    assert follow['enforce_path_inversion'] is True     # it reverses where the path does
+    assert 'desired_linear_vel' not in follow
+    forward = vehicle.nav2_tuned(nav2, v, controller='mppi')[servers]['ros__parameters']
+    assert (forward['FollowPath']['vx_min'], forward['FollowPath']['vx_max']) == (0.0, 1.0)
+    assert forward['FollowPath']['enforce_path_inversion'] is False
+    # The MPPI block itself stays as the file has it, where nav2_rewrites expects it.
+    assert mppi[servers]['ros__parameters']['MPPI'] == nav2[servers]['ros__parameters']['MPPI']
+    with pytest.raises(ValueError, match='pick one of rpp, mppi'):
+        vehicle.nav2_tuned(nav2, v, controller='dwb')
+
+
 def test_every_rewrite_lands_on_a_key_nav2_yaml_has():
     # RewrittenYaml drops a whole dotted path that isn't in the file, silently.
     nav2 = yaml.safe_load(NAV2_YAML.read_text())

@@ -115,36 +115,53 @@ controller_server:
       max_robot_pose_search_dist: 10.0
       stateful: true
 
-    # Alternative controller, not loaded: put "MPPI" in controller_plugins (and select it)
-    # to try it. Its Ackermann model limits curvature to 1 / min_turning_r.
+    # Alternative controller: controller:=mppi (navigation.launch.py, sim.launch.py) puts a
+    # copy of this block under FollowPath (docs/controllers.md). Its Ackermann model limits
+    # curvature to 1 / min_turning_r.
+    #
+    # Tuned in Gazebo on 22 Oct (docs/controllers.md, "Making MPPI drive"). With Nav2's
+    # robot settings it crept at 0.2 m/s and drifted off a straight path:
+    #   wz_std 0.4 -> 0.1   the car turns at most 0.35 rad/s at 1 m/s (full lock), so 0.4 made
+    #                       nearly every fast sample a full-lock swerve, and slow ones won
+    #   vx_std 0.2 -> 0.4   and temperature 0.3 -> 0.15: try bigger speed changes, and follow
+    #                       the best samples more closely, so the speed builds up
+    #   ax_max 1.0 -> 3.0   1.0 clipped most of each sample's speed-up (0.05 m/s per 0.05 s
+    #                       step) while letting it slow by 0.1: its futures drifted slower.
+    #                       Only MPPI's own planning: ego and the velocity smoother still hold
+    #                       the car to its real 1 m/s^2. ax_min stays at ego's -2.0, so MPPI
+    #                       never counts on braking harder than the car can
     MPPI:
       plugin: "nav2_mppi_controller::MPPIController"
       motion_model: "Ackermann"
       AckermannConstraints:
         min_turning_r: 2.86                 # set by the launch file
-      time_steps: 56
-      model_dt: 0.05
-      batch_size: 2000
-      vx_std: 0.2
+      time_steps: 56                        # x model_dt = 2.8 s ahead: 2.8 m at 1 m/s
+      model_dt: 0.05                        # = 1 / controller_frequency
+      batch_size: 2000                      # futures tried each cycle
+      vx_std: 0.4                           # m/s: how far the samples stray in speed
       vy_std: 0.2
-      wz_std: 0.4
+      wz_std: 0.1                           # rad/s: ... and in turn rate
       vx_max: 1.0
       vx_min: 0.0                           # set by the launch file: -max_reverse_speed to reverse
       vy_max: 0.0
       wz_max: 0.6
-      ax_max: 1.0
-      ax_min: -2.0
+      ax_max: 3.0                           # m/s^2, MPPI's planning only (see above)
+      ax_min: -2.0                          # m/s^2: ego's max_deceleration
       ay_max: 0.0
       ay_min: 0.0
       az_max: 1.0
       iteration_count: 1
       prune_distance: 3.0
-      transform_tolerance: 0.1
-      temperature: 0.3
+      transform_tolerance: 0.5              # s, as FollowPath's: a busy computer's map -> odom
+      temperature: 0.15                     # lower: the best futures count for more
       gamma: 0.015
-      visualize: false
+      visualize: false                      # true: its futures on /trajectories, for RViz
       critics: ["ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic",
                 "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"]
+      CostCritic:
+        consider_footprint: true            # the car's 2 x 1 m outline, not a circle: without
+                                            # it Nav2 warns "Inconsistent configuration in
+                                            # collision checking" (21 Oct)
 
 local_costmap:
   local_costmap:

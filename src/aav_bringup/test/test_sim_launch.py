@@ -210,6 +210,8 @@ def test_bad_values_stop_the_launch():
         started(SIM, world='moon')
     with pytest.raises(ValueError, match='lane:=maybe'):
         started(SIM, lane='maybe')
+    with pytest.raises(ValueError, match='controller:=dwb: pick one of rpp, mppi'):
+        started(SIM, controller='dwb')
 
 
 def test_gazebo_bridges_the_sensors_only_where_the_world_renders_them():
