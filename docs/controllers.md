@@ -109,7 +109,7 @@ Still open:
 | **The U-turn, forward only** | in the 14 m lane, MPPI went wide or round the building in 3 of 4 runs; Pure Pursuit managed it in 2. With reversing it works (below) |
 | ~~The box in the lane~~ | done, 03:40: the planner now sees the radar and lidar. Both controllers drove round the box, 2.6 m (Pure Pursuit) and 3.8 m (MPPI) clear, and reached the goal ([Costmaps](costmaps.md)) |
 
-## With reversing: three-point turns, 22 October, 05:30
+## With reversing: three-point turns, 22 October, 04:35
 
 `--reversing` lets Nav2 back up, as it may in Gazebo and on the bench (never on the car
 yet: nothing senses behind it). At first MPPI never reversed. Three settings stopped it:
