@@ -100,7 +100,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | microcontroller | a small chip that runs one program, no operating system | ESP32, Pico 2 |
 | mock | a pretend sensor or board, for tests | `mock_imu`, `spine_sim` |
 | Motor-Pi | the Raspberry Pi 4 that drives the ESP32 today, over UART | the 2025-26 path |
-| MPPI | Model-predictive path integral: a Nav2 controller that tries thousands of futures through a model of the car. `controller:=mppi` instead of Regulated Pure Pursuit | [path followers](controllers.md) |
+| MPPI | Model-predictive path integral: Nav2's controller on our car (since 22 Oct). It tries thousands of futures through a model of the car. `controller:=rpp` for Regulated Pure Pursuit instead | [path followers](controllers.md) |
 | Nav2 | ROS 2's navigation stack: plans a path and follows it | `src/drivers/aav_navigation` |
 | `NavSatFix` | a ROS message: latitude, longitude, altitude | `/sensors/gps/fix` |
 | `navsat_transform` | turns GPS fixes into map x and y, and back | `/localization/gps/odom` |
@@ -126,7 +126,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | radar | radio waves that find objects ahead | the TI radar, `/sensors/radar/points` |
 | raylib | a small graphics library; our Rust HUD uses it | `src/hud/aav_hud_raylib` |
 | RC | Radio Control: a hand-held transmitter | the FlySky override |
-| Regulated Pure Pursuit | Nav2's controller: steers toward a point ahead on the path | `nav2.yaml` |
+| Regulated Pure Pursuit | a Nav2 controller: steers toward a point ahead on the path. Ours until 22 Oct; `controller:=rpp` | [path followers](controllers.md) |
 | REP-103, REP-105 | ROS's rules for units and frames | `CLAUDE.md` |
 | RoboStack | ROS 2 packaged for Pixi and conda | `pixi.toml` |
 | ROS 2 | Robot Operating System: programs (nodes) that talk over topics | everywhere |

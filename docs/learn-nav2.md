@@ -24,7 +24,7 @@ GPS is in [Maps and position](../READ-ME-MAPS-AND-POSITION.md).
 | **Goal** | where to go: a pose in the `map` frame | RViz's 2D Goal Pose, an action call, or GPS waypoints from the HUD |
 | **bt_navigator** | the boss: runs a behaviour tree that calls the others | `behavior_trees/navigate_to_pose_car.xml` |
 | **Planner** | finds a path from here to the goal | Smac Hybrid-A*, on the global costmap |
-| **Controller** | steers along that path | Regulated Pure Pursuit, on the local costmap, 20 Hz |
+| **Controller** | steers along that path | MPPI (or Regulated Pure Pursuit: `controller:=rpp`), on the local costmap, 20 Hz ([path followers](controllers.md)) |
 | **Velocity smoother** | caps speed and acceleration | 1.0 m/s, 1.0 m/s² up, 2.0 m/s² down |
 | **collision_monitor** | last-moment stop for radar points ahead | only where the radar runs |
 | **Out** | `/drivers/nav/cmd_vel` → `twist_mux` (priority 20) → ego | |
@@ -57,6 +57,10 @@ So every path it returns is one our car can follow.
 | `smooth_path` | true | smooth the corners afterwards |
 
 ## 2. The controller: Regulated Pure Pursuit
+
+Since 22 Oct the default is MPPI, which tries 2000 futures through a model of the car
+([path followers](controllers.md)). Pure pursuit is still the easiest way in, and
+`controller:=rpp` brings it back.
 
 **Pure pursuit** is how you steer a bike: look at a point on the path a little ahead (the
 **carrot**), and turn so you'd arc through it.

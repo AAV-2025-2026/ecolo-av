@@ -6,7 +6,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [hud_web:=false] [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
-      [actuator_model:=true] [sim_speed:=] [reversing:=true] [controller:=rpp]
+      [actuator_model:=true] [sim_speed:=] [reversing:=true] [controller:=mppi]
       [watchdog:=true] [faults:=false] [spine:=false] [arm:=true] [ghost:=false]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
@@ -45,8 +45,8 @@ bench's argument names:
   sim_speed:=3        a higher top speed (m/s, up to 5), for ego and Nav2, in Gazebo only:
                       the car's 1.0 m/s cap (ego.yaml, nav2.yaml) is for its first drives.
                       ego refuses it outside a simulator
-  controller:=mppi    Nav2 follows the path with MPPI, not Regulated Pure Pursuit (rpp):
-                      pixi run controller-compare drives both (docs/controllers.md)
+  controller:=rpp     Nav2 follows the path with Regulated Pure Pursuit, not MPPI (the
+                      default): pixi run controller-compare drives both (docs/controllers.md)
   watchdog:=true      the sensor watchdog (aav_safety): twist_mux's sensors lock stops Nav2
                       and the AI slot when the wheels, the IMU, the GPS or an EKF go quiet,
                       NaN or frozen, or the GPS jumps; and the camera, where something
@@ -278,8 +278,8 @@ def generate_launch_description():
                               description='Nav2 may drive backwards, at up to '
                                           "vehicle.yaml's max_reverse_speed "
                                           '(docs/learn-nav2.md, Reversing)'),
-        DeclareLaunchArgument('controller', default_value='rpp',
-                              description='rpp (Regulated Pure Pursuit) or mppi: what '
+        DeclareLaunchArgument('controller', default_value=vehicle.DEFAULT_CONTROLLER,
+                              description='mppi or rpp (Regulated Pure Pursuit): what '
                                           "follows Nav2's path (docs/controllers.md)"),
         OpaqueFunction(function=launch_setup),
     ])

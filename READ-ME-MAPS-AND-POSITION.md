@@ -110,7 +110,7 @@ A **costmap** is a grid laid on the ground. Each cell holds a cost:
 | Size | 200 m × 200 m (from the map file) | 20 m × 20 m, moves with the car |
 | Cell size | 25 cm | 10 cm |
 | Filled from | a map file: `empty` (all free) or `example_lot` | the map, plus live sensors: radar, camera detections (lidar later) |
-| Used by | the **planner**: Smac Hybrid-A*, which only plans turns the car can make | the **controller**: Regulated Pure Pursuit, which steers along the plan |
+| Used by | the **planner**: Smac Hybrid-A*, which only plans turns the car can make | the **controller**: MPPI, which steers along the plan |
 | File | `src/drivers/aav_navigation/config/nav2.yaml` | the same |
 
 Why the local one is in `odom`: if it were in `map`, every GPS hop would shift the obstacles under the car.

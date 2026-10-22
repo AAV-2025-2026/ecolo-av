@@ -4,7 +4,7 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
       [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
       [camera_obstacles:=false] [ghost:=false]
-      [reversing:=false] [max_speed:=] [controller:=rpp] [use_sim_time:=false]
+      [reversing:=false] [max_speed:=] [controller:=mppi] [use_sim_time:=false]
       [autostart:=true]
 
 Starts only the Nav2 servers a car needs (not nav2_bringup's full list: no AMCL, since
@@ -12,8 +12,8 @@ robot_localization does localization, no docking or route server):
 
   map_server        the map (default: maps/empty.yaml, everything free)
   planner_server    SmacPlannerHybrid: drivable paths for a car
-  controller_server Regulated Pure Pursuit -> cmd_vel_nav; controller:=mppi for MPPI
-                    instead, with its Ackermann model (docs/controllers.md)
+  controller_server MPPI, with its Ackermann model -> cmd_vel_nav; controller:=rpp for
+                    Regulated Pure Pursuit instead (docs/controllers.md)
   behavior_server   wait, backup, drive_on_heading (no spin)
   bt_navigator      navigate_to_pose, navigate_through_poses (behavior_trees/*_car*.xml)
   waypoint_follower follow_waypoints, follow_gps_waypoints (lat/lon via /fromLL)
@@ -83,7 +83,8 @@ def flag(context, name):
     return LaunchConfiguration(name).perform(context).lower() == 'true'
 
 
-def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False, controller='rpp'):
+def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False,
+               controller=vehicle.DEFAULT_CONTROLLER):
     """Return a temporary copy of nav2.yaml, tuned by vehicle.nav2_tuned (no ROS there)."""
     with open(source) as f:
         cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed, radar, lidar,
@@ -212,8 +213,8 @@ def generate_launch_description():
         DeclareLaunchArgument('reversing', default_value='false',
                               description='true: Nav2 may drive backwards (blind: nothing '
                                           'senses behind the car). docs/learn-nav2.md'),
-        DeclareLaunchArgument('controller', default_value='rpp',
-                              description='rpp (Regulated Pure Pursuit) or mppi: what '
+        DeclareLaunchArgument('controller', default_value=vehicle.DEFAULT_CONTROLLER,
+                              description='mppi or rpp (Regulated Pure Pursuit): what '
                                           'follows the path. docs/controllers.md'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('autostart', default_value='true'),

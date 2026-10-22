@@ -14,7 +14,7 @@ The settings are in `src/drivers/aav_navigation/config/nav2.yaml`.
 
 | | Local costmap | Global costmap |
 |---|---|---|
-| Used by | the controller (Regulated Pure Pursuit), each step | the planner (SmacPlannerHybrid), once per path |
+| Used by | the controller (MPPI), each step | the planner (SmacPlannerHybrid), once per path |
 | Frame | `odom`: smooth, moves with the car | `map`: fixed to the ground by GPS |
 | Size | 20 m x 20 m rolling window, centred on the car | the size of the map that `map_server` loads |
 | Cell size | 0.10 m (200 x 200 cells) | 0.25 m |

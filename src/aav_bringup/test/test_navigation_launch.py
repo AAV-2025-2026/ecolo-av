@@ -98,15 +98,17 @@ def test_reversing_plans_follows_and_backs_up_at_the_cars_reverse_speed():
 
 
 def test_a_faster_nav2_keeps_reversing_slow():
-    s = settings(reversing='true', max_speed='3')
+    s = settings(reversing='true', max_speed='3', controller='rpp')
     assert s['controller_server']['FollowPath']['desired_linear_vel'] == 3.0
     assert s['velocity_smoother']['max_velocity'][0] == 3.0
     assert s['velocity_smoother']['min_velocity'][0] == pytest.approx(-REVERSE)
 
 
-def test_regulated_pure_pursuit_unless_mppi_is_asked_for():
-    rpp = settings()['controller_server']['FollowPath']
+def test_mppi_unless_regulated_pure_pursuit_is_asked_for():
+    rpp = settings(controller='rpp')['controller_server']['FollowPath']
     assert rpp['plugin'].endswith('::RegulatedPurePursuitController')
+    assert settings()['controller_server']['FollowPath']['plugin'] == (
+        'nav2_mppi_controller::MPPIController')
     s = settings(controller='mppi', reversing='true', max_speed='3')
     follow = s['controller_server']['FollowPath']
     assert follow['plugin'] == 'nav2_mppi_controller::MPPIController'
@@ -118,8 +120,8 @@ def test_regulated_pure_pursuit_unless_mppi_is_asked_for():
     assert follow['vx_max'] == 3.0
     assert follow['enforce_path_inversion'] is True
     assert s['velocity_smoother']['max_velocity'][0] == 3.0
-    assert sent_to_navigation(SIM)['controller'] == 'rpp'
-    assert sent_to_navigation(SIM, controller='mppi')['controller'] == 'mppi'
+    assert sent_to_navigation(SIM)['controller'] == 'mppi'
+    assert sent_to_navigation(SIM, controller='rpp')['controller'] == 'rpp'
 
 
 def test_who_may_reverse():

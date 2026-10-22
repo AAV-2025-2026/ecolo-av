@@ -65,7 +65,7 @@ I term, so it can't grow huge while the car is stuck.
 
 | Loop | Measures | Moves | Runs on | Rate |
 |---|---|---|---|---|
-| **Path** | where the car is (`ekf_local`) vs the plan | speed and turn rate | Orin #1: Nav2's Regulated Pure Pursuit | 20 Hz |
+| **Path** | where the car is (`ekf_local`) vs the plan | speed and turn rate | Orin #1: Nav2's MPPI | 20 Hz |
 | **Speed** | wheel speed (KEFC: Hall wheel nodes) | throttle DAC, brake Jrk | the control board: `spine-core` | every board tick (10 ms in the Pico 2 program) |
 | **Steering angle** | the KTC-100 pot | the steering motor | inside the steering Jrk G2 | the Jrk's own loop |
 | Brake position | the actuator's own feedback, if it has one | the brake motor | inside the brake Jrk G2 | to confirm (KEFC list) |

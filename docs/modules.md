@@ -204,7 +204,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 
 | | |
 |---|---|
-| **Does** | Nav2 set up for a car: SmacPlannerHybrid, Regulated Pure Pursuit, costmaps, the collision monitor, and the maps |
+| **Does** | Nav2 set up for a car: SmacPlannerHybrid, MPPI (or Regulated Pure Pursuit), costmaps, the collision monitor, and the maps |
 | **Why** | drives to a goal or along GPS waypoints, around obstacles |
 | **Runs on** | the Orin |
 | **In → out** | `/localization/odom/local`, TF, `/map`, `/goal_pose`, `/sensors/radar/points`, `/perception/camera_obstacles` → `/drivers/nav/cmd_vel`, `/plan`, `/safety/collision_monitor/state` |

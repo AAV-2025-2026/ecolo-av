@@ -4,11 +4,11 @@ Nav2's planner draws a path; a **controller** turns it into a speed and a turn, 
 second. We have two, and a script that compares them on the same drives in Gazebo.
 
 > **The short version**
-> - **Regulated Pure Pursuit (RPP)** is the default: it chases a point 2-4 m ahead on the path. Simple and steady.
-> - **MPPI** tries 2000 possible futures every cycle through a model of the car, and picks the best blend. It can steer around things the planner didn't know about; it costs more computer.
-> - **Switch:** `controller:=mppi` on `sim.launch.py` or `navigation.launch.py`.
-> - **Compare:** `pixi run controller-compare` (about 25 min, headless, on this computer only).
-> - **Results, 22 Oct (Gazebo, one run each):** neither is ready to be the only one. MPPI went round the building where Regulated Pure Pursuit stopped at its corner; Regulated Pure Pursuit was twice as quick to the first goal, where MPPI looped to fix its heading. Both stopped before the box. MPPI used twice the CPU. **Regulated Pure Pursuit stays the default** until MPPI stops looping at goals.
+> - **MPPI** is the default (since 22 Oct): it tries 2000 possible futures every cycle through a model of the car, and picks the best blend. It turns to a goal's heading; it costs more computer.
+> - **Regulated Pure Pursuit (RPP)** is the other choice: it chases a point 2-4 m ahead on the path. Simple and light, but it aims only at a point, so it often arrives at a goal facing the wrong way.
+> - **Switch:** `controller:=rpp` on `sim.launch.py` or `navigation.launch.py`.
+> - **Compare:** `pixi run controller-compare` (about 25 min, headless, on this computer only; `--legs 1` for a quick check).
+> - **Results, night of 22 Oct (Gazebo's lot, four runs):** after five fixes (below), MPPI reached the first goal in 29-30 s in every run; Pure Pursuit looped there in two of three. In the best run both reached all 4 goals. MPPI uses twice the CPU (20% of a Mac core).
 
 ## What each one does
 
@@ -76,7 +76,38 @@ What the numbers mean (`tools/drive_metrics.py`):
 | Closest to the box | the car's outline to the box's |
 | Controller CPU | `controller_server`'s share of one core |
 
-## Results, 22 October
+## After the fixes, night of 22 October
+
+Five changes, each found from a run that failed (all in `nav2.yaml` or `vehicle.py`, with
+the reason beside each):
+
+| What went wrong | Fix |
+|---|---|
+| MPPI reached the goal, then drove a full circle to face the right way | MPPI turns to the goal's heading from 2.5 m out (`GoalAngleCritic`), not 0.5 m |
+| The planner's path passed the building's corner 0.86 m away; the collision monitor's box stopped the car | the planner's costmap inflates 3.0 m, gently: paths keep to the middle of a lane |
+| The plan ended in a full-lock turn; both controllers cut it and missed | the planner plans turns 1.25 x wider than full lock (`vehicle.PLAN_TURN_MARGIN`) |
+| The car looped at goals it had reached: the EKF put it 0.6 m off (GPS noise 0.5 m), over the 0.5 m tolerance | goals count within 1.0 m: as good as GPS without RTK. Tighten with RTK |
+| Pure Pursuit arrives facing the wrong way (it aims only at a point) | MPPI is the default |
+
+Four lot runs after them (the EKF recorded too). The Fast DDS stalls (see "Found on the
+way") spoiled one:
+
+| Run | Regulated Pure Pursuit | MPPI |
+|---|---|---|
+| c (01:58) | 3 of 4 goals; first goal 29 s | 3 of 4; first goal 29 s |
+| d (02:10) | stopped by a stall at the first goal | 1 of 4: stalls |
+| e (02:20) | **4 of 4**, but looped at the first goal (81 m for 21) | **4 of 4** |
+| f (02:45) | 0 of 4: looped at the first goal, stopped facing the building | 2 of 4: its U-turn went round the building, stopped facing it |
+
+Still open:
+
+| | |
+|---|---|
+| **Stuck facing a wall** | after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. The stop box only looks straight ahead, even in a turn: a box that turns with the steering (Nav2's `VelocityPolygon`) would see what's really ahead |
+| **MPPI's forward U-turn** | in a 14 m lane it went wide, then round the building, instead of the planned U-turn |
+| **The box in the lane** | steering round it needs the obstacle in the planner's map (PLAN.md M5) |
+
+## Results, 22 October, first runs
 
 Gazebo's test lot on Ben's Mac (M4 Max), headless, 1 m/s, forward only, with MPPI's
 settings from "Making MPPI drive" below. One run each: read small differences as noise.
@@ -140,13 +171,15 @@ path. The settings and their reasons are in `nav2.yaml`, above the `MPPI` block.
   21 October. Lowering the filter's heading noise helped but didn't cure it: a heading
   source (two GPS antennas, or the F9R's own fused heading) is the real fix. Open, for
   localization (proposal T6.3).
-- **Late data, twice, on an otherwise punctual Mac.** Once `map → odom` was 1.4 s old
-  just after start-up, and Nav2 refused the goal ("Transform data too old"). Once, six
-  minutes into a run, the IMU and wheel speed went silent for 0.5-0.8 s, and the sensor
-  watchdog stopped Nav2. Measured for a minute, parked and driving with MPPI, the same
-  simulator kept real time (0.99) with every topic under 80 ms late, using 3 of the Mac's
-  16 cores. So it isn't the Mac's size: Gazebo's main loop is 89% of one core, and our
-  Python `gazebo_adapter` relays the IMU and wheel speed from one thread. Either can hiccup.
+- **Late data: it was the messaging, not the Mac.** Several runs were stopped by the
+  sensor watchdog: the IMU, the wheels and both EKFs silent for 0.5-2 s at once, with the
+  Mac 77% idle. Splitting Gazebo's adapter into one node per sensor (as on the car) didn't
+  stop it. A bare publisher and subscriber beside Gazebo showed why: the publisher always
+  on time, its messages up to 0.48 s late through Fast DDS, never over 0.05 s through
+  Cyclone DDS. `AAV_RMW=cyclone` uses Cyclone ([Your Mac](mac.md)).
+- **The global EKF is up to 0.7 m off** in Gazebo (0.5 m GPS noise), its heading up to
+  25°. In the slow stretches of the night's drives its heading stayed under 6°: the ±20°
+  above was a car creeping for many seconds. The comparison now reports both per leg.
 
 ## Limits of this comparison
 

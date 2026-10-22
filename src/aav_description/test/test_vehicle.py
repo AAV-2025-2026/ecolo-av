@@ -98,11 +98,16 @@ NAV2_SMALL = {
 }
 
 
+def small(v, **args):
+    """nav2_tuned on NAV2_SMALL: it has no MPPI block, so Regulated Pure Pursuit."""
+    return vehicle.nav2_tuned(NAV2_SMALL, v, controller='rpp', **args)
+
+
 def test_the_lidar_feeds_the_costmap_and_the_stop_zone_only_when_it_runs():
     v = {'max_reverse_speed': 0.4}
 
     def picked(**sensors):
-        cfg = vehicle.nav2_tuned(NAV2_SMALL, v, **sensors)
+        cfg = small(v, **sensors)
         return (cfg['collision_monitor']['ros__parameters']['observation_sources'],
                 cfg['local_costmap']['local_costmap']['ros__parameters']['plugins'])
 
@@ -118,7 +123,7 @@ def test_the_ghost_is_its_own_source_and_layer_only_when_asked_for():
     v = {'max_reverse_speed': 0.4}
 
     def picked(**sensors):
-        cfg = vehicle.nav2_tuned(NAV2_SMALL, v, **sensors)
+        cfg = small(v, **sensors)
         return (cfg['collision_monitor']['ros__parameters']['observation_sources'],
                 cfg['local_costmap']['local_costmap']['ros__parameters']['plugins'])
 
@@ -144,8 +149,8 @@ def test_the_lidar_ignores_the_road_and_what_the_car_passes_under():
 def test_the_smoother_gets_the_reverse_speed_as_a_list():
     v = {'max_reverse_speed': 0.4}
     smoother = 'velocity_smoother'
-    forward = vehicle.nav2_tuned(NAV2_SMALL, v)[smoother]['ros__parameters']
-    back = vehicle.nav2_tuned(NAV2_SMALL, v, reversing=True)[smoother]['ros__parameters']
+    forward = small(v)[smoother]['ros__parameters']
+    back = small(v, reversing=True)[smoother]['ros__parameters']
     assert forward['min_velocity'] == [0.0, 0.0, -1.0]
     assert back['min_velocity'] == [-0.4, 0.0, -1.0]
     # A copy: the loaded file stays as it was.
@@ -154,9 +159,9 @@ def test_the_smoother_gets_the_reverse_speed_as_a_list():
 
 def test_max_speed_raises_the_controller_and_the_smoother_together():
     v = {'max_reverse_speed': 0.4}
-    same = vehicle.nav2_tuned(NAV2_SMALL, v)
+    same = small(v)
     assert same['controller_server'] == NAV2_SMALL['controller_server']
-    fast = vehicle.nav2_tuned(NAV2_SMALL, v, reversing=True, max_speed=3)
+    fast = small(v, reversing=True, max_speed=3)
     assert fast['controller_server']['ros__parameters']['FollowPath']['desired_linear_vel'] == 3.0
     smoother = fast['velocity_smoother']['ros__parameters']
     assert smoother['max_velocity'] == [3.0, 0.0, 1.0]
@@ -168,7 +173,8 @@ def test_mppi_follows_the_path_under_the_name_the_trees_ask_for():
     v = {'max_reverse_speed': 0.4}
     nav2 = yaml.safe_load(NAV2_YAML.read_text())
     servers = 'controller_server'
-    rpp = vehicle.nav2_tuned(nav2, v)[servers]['ros__parameters']
+    assert vehicle.DEFAULT_CONTROLLER == 'mppi'
+    rpp = vehicle.nav2_tuned(nav2, v, controller='rpp')[servers]['ros__parameters']
     assert rpp['FollowPath'] == nav2[servers]['ros__parameters']['FollowPath']
     assert 'RegulatedPurePursuit' in rpp['FollowPath']['plugin']
     mppi = vehicle.nav2_tuned(nav2, v, reversing=True, max_speed=3, controller='mppi')

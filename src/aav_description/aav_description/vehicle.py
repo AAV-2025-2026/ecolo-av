@@ -186,8 +186,11 @@ def reverse_limit(v, reversing):
 PLAN_TURN_MARGIN = 1.25
 
 # Nav2's path followers (docs/controllers.md): rpp, Regulated Pure Pursuit, chases a point
-# ahead on the path; mppi samples thousands of futures through its Ackermann model.
+# ahead on the path; mppi samples thousands of futures through its Ackermann model. MPPI is
+# the default since 22 Oct: in Gazebo it did at least as well in every run, and it turns to
+# a goal's heading, which Pure Pursuit can't (it aims only at a point).
 CONTROLLERS = ('rpp', 'mppi')
+DEFAULT_CONTROLLER = 'mppi'
 
 
 def nav2_rewrites(v, reversing=False):
@@ -217,14 +220,15 @@ def nav2_rewrites(v, reversing=False):
 
 
 def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False,
-               ghost=False, controller='rpp'):
+               ghost=False, controller=DEFAULT_CONTROLLER):
     """
     Return a copy of nav2.yaml's settings (`nav2`, loaded) with what RewrittenYaml can't write.
 
     RewrittenYaml writes only strings and numbers: a list comes out as a string, and an
     index into a list (`min_velocity.0`) raises a TypeError. So the launch file writes
     these into a copy of the file instead:
-    - the controller (CONTROLLERS): rpp keeps FollowPath, Regulated Pure Pursuit; mppi
+    - the controller (CONTROLLERS, DEFAULT_CONTROLLER): rpp keeps FollowPath, Regulated
+      Pure Pursuit; mppi
       puts a copy of the MPPI block under FollowPath, the name the behaviour trees ask
       for, with the reverse speed (vx_min) and, with `reversing`, enforce_path_inversion
       (it changes direction where the planner's path does);

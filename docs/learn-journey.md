@@ -104,7 +104,7 @@ Nav2 is just another driver, at priority 20. Its command joins the same path at 
 | 1 | You, in RViz: "2D Goal Pose" | `/goal_pose` | `geometry_msgs/PoseStamped` | once | the goal is off the map | `ros2 topic echo /goal_pose` |
 | 2 | `bt_navigator` starts the action | `/navigate_to_pose` | `NavigateToPose` action | once | | `ros2 action list` |
 | 3 | `planner_server` (SmacPlannerHybrid: paths a car can drive) | `/plan` | `nav_msgs/Path` | when asked | no path fits the turning circle | RViz shows the path |
-| 4 | `controller_server` (Regulated Pure Pursuit) | `cmd_vel_nav` | `TwistStamped` | 20 Hz | no TF `map → odom → base_link` | `ros2 topic hz /cmd_vel_nav` |
+| 4 | `controller_server` (MPPI) | `cmd_vel_nav` | `TwistStamped` | 20 Hz | no TF `map → odom → base_link` | `ros2 topic hz /cmd_vel_nav` |
 | 5 | `velocity_smoother` | `/drivers/nav/cmd_vel`, or `/control/cmd_vel_smoothed` where the radar runs | `TwistStamped` | 20 Hz | | `ros2 topic echo /drivers/nav/cmd_vel` |
 | 6 | `collision_monitor` (only where the radar runs) | `/drivers/nav/cmd_vel` | `TwistStamped` | 20 Hz | a radar point in the 1 m stop zone, or a silent radar: it sends zero | `ros2 topic echo /safety/collision_monitor/state` |
 | 7 | `twist_mux`, then ego and the backend | as in sections 1 to 3 | | | the joystick, the keyboard or a stop sign outranks Nav2 | `ros2 topic echo /control/cmd_vel` |
