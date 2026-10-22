@@ -6,8 +6,9 @@ ego: /control/cmd_vel (TwistStamped from twist_mux) -> /ego/actuator_cmd (Ackerm
 max_speed (m/s) caps the forward speed below config/ego.yaml's, for a first drive on
 stands; empty (the default) keeps ego.yaml's. It can only lower the cap, never raise it.
 
-The wheelbase, the steering limit and the reverse speed come from
-aav_description/config/vehicle.yaml; the other limits from config/ego.yaml.
+The wheelbase, the steering limit, the reverse speed and the body (mass, track, centre of
+mass, tyre grip, the throttle's and brake's accelerations) come from
+aav_description/config/vehicle.yaml; the other limits and the payload from config/ego.yaml.
 """
 
 import os
@@ -27,13 +28,13 @@ SIM_MAX_SPEED = 5.0  # m/s: sim_max_speed's ceiling, about 18 km/h
 
 
 def ego_node(context):
-    v = vehicle.load()['vehicle']
+    car = vehicle.load()
     params = [
         # ego.yaml as a dict, not the file: the file names the node (ego:), and a named
         # entry beats the later caps below whenever the launch also sets a global
         # parameter (sim.launch.py's use_sim_time). As dicts, the last one wins.
         dict(CONFIG),
-        vehicle.ego_params(v),
+        vehicle.ego_params(car),
         {'use_sim_time': LaunchConfiguration('use_sim_time')},
     ]
     cap = context.launch_configurations.get('max_speed', '').strip()

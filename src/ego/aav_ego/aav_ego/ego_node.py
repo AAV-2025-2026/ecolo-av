@@ -3,8 +3,10 @@ ego: the virtual car between the command mux and the backends.
 
 Subscribes  control/cmd_vel   geometry_msgs/TwistStamped (or Twist, use_stamped:=false)
 Publishes   ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped, at rate_hz
-Parameters  the limits, read at start-up; only max_steering_rate may change while running
-            (ackermann.LIVE_LIMITS: the actuator tests lift it for test 3.11, on stands)
+Parameters  the limits (ackermann.Limits) and the body (dynamics.Body: mass, payload,
+            track, centre of mass height, tyre grip, the throttle's and brake's
+            accelerations, the sideways limit), read at start-up. Only max_steering_rate
+            and payload may change while running (ackermann.LIVE_LIMITS)
 
 Every backend (the CAN spine, the legacy serial bridge, turtlesim, Gazebo,
 CARLA) consumes the same /ego/actuator_cmd, so the drivers never know which
@@ -18,10 +20,12 @@ fix the clock (chrony) rather than the car stopping for no visible reason.
 
 import signal
 
-from aav_ego.ackermann import EgoModel, Limits, live_change
+from aav_ego import dynamics
+from aav_ego.ackermann import EgoModel, Limits, live_change, LIVE_LIMITS
+from aav_ego.dynamics import Body
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist, TwistStamped
-from rcl_interfaces.msg import SetParametersResult
+from rcl_interfaces.msg import ParameterDescriptor, SetParametersResult
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -32,18 +36,14 @@ class Ego(Node):
 
     def __init__(self):
         super().__init__('ego')
-        defaults = Limits()
-        p = {
-            name: self.declare_parameter(name, getattr(defaults, name)).value
-            for name in vars(defaults)
-        }
-        self.limits = Limits(**p)
+        self.limits = Limits(**self.declare_all(Limits()))
+        self.body = Body(**self.declare_all(Body()))
         self.timeout = self.declare_parameter('cmd_timeout', 0.3).value
         rate = self.declare_parameter('rate_hz', 50.0).value
         self.frame_id = self.declare_parameter('frame_id', 'base_link').value
         use_stamped = self.declare_parameter('use_stamped', True).value
 
-        self.model = EgoModel(self.limits)
+        self.model = EgoModel(self.limits, self.body)
         self.cmd = None          # (v, w)
         self.cmd_time = None     # rclpy Time the command arrived
         self.last_tick = None
@@ -59,6 +59,25 @@ class Ego(Node):
         self.get_logger().info(
             f'wheelbase {self.limits.wheelbase} m, max steering '
             f'{self.limits.max_steering_angle} rad, max speed {self.limits.max_speed} m/s')
+        self.log_body()
+
+    def declare_all(self, defaults):
+        """Declare a parameter for each field of a dataclass; return {name: value}."""
+        # The live ones take whole numbers too: `ros2 param set /ego payload 80`.
+        return {name: self.declare_parameter(
+                    name, float(value),
+                    ParameterDescriptor(dynamic_typing=name in LIVE_LIMITS)).value
+                for name, value in vars(defaults).items()}
+
+    def log_body(self):
+        lim = self.limits
+        for line in dynamics.describe(self.body, lim.wheelbase, lim.max_steering_angle,
+                                      lim.max_speed, lim.max_acceleration,
+                                      lim.max_deceleration):
+            if line.startswith('WARNING'):
+                self.get_logger().warning(line[len('WARNING: '):])
+            else:
+                self.get_logger().info(line)
 
     def on_set_parameters(self, params):
         for p in params:
@@ -69,6 +88,9 @@ class Ego(Node):
             if p.name == 'max_steering_rate':
                 self.limits.max_steering_rate = float(p.value)
                 self.get_logger().warning(f'max_steering_rate is now {p.value} rad/s')
+            elif p.name == 'payload':
+                self.body.payload = float(p.value)
+                self.log_body()
         return SetParametersResult(successful=True)
 
     def on_stamped(self, msg: TwistStamped):

@@ -122,8 +122,14 @@ Y). Write which way each points:
 | # | How | Measured (kg or lb: say which) |
 |---|---|---|
 | M7 | 4 bathroom scales, one under each wheel, on the flat. Or one scale, a wheel at a time, the other three on blocks of the same height | FL: ____ FR: ____ RL: ____ RR: ____ total: ____ |
+| M7b | **The rear lifted:** put both rear wheels on blocks of the same height (20-30 cm, chocked, someone holding the car), the front wheels still on their scales. Weigh the two front wheels again, and measure the blocks' height | FL: ____ FR: ____ block height: ____ cm |
+| M7c | Nobody aboard for M7 and M7b; nothing loose in the car. Write down anything that's usually aboard but wasn't (a battery out, a laptop) | |
 
-Ben's estimate is about 400 lb (181 kg). The four corners also show where the weight sits.
+Ben's estimate is about 400 lb (181 kg). The four corners show where the weight sits
+along the car (the **centre of mass**); M7b shows how high it sits. Ego uses both: a
+heavy load slows speeding up and braking, and a high centre of mass on the car's narrow
+track (77 cm) lowers the speed at which it could tip in a turn. The maths:
+`vehicle.centre_of_mass()` in `aav_description/vehicle.py` (docs/car_measurements.md).
 
 ## 7. Tips
 

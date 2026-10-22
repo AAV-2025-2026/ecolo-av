@@ -105,6 +105,9 @@
       <geometry><box size="${body['length']} ${body['width']} ${body['height'] - R}"/></geometry>
     </collision>
     <inertial>
+      <!-- At vehicle.yaml's centre of mass, not the box's middle (0.825 m high, top-heavy
+           on a 0.77 m track); the box's inertia stays an approximation. -->
+      <origin xyz="${veh['centre_of_mass']['x'] - (body['length'] / 2 - body['rear_overhang'])} 0 ${veh['centre_of_mass']['height'] - (R + (body['height'] - R) / 2)}"/>
       <mass value="${veh['mass']}"/>
       <xacro:box_inertia m="${veh['mass']}" x="${body['length']}" y="${body['width']}" z="${body['height'] - R}"/>
     </inertial>

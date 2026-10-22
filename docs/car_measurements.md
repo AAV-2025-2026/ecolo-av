@@ -6,7 +6,7 @@ other part reads them from there, so a number only ever changes in one place.
 | Who reads it | What it takes |
 |---|---|
 | `urdf/aav.urdf.xacro`, then `robot_state_publisher`, then `/tf_static` | body, wheels, and every sensor's mount (the frames) |
-| `aav_ego` (ego.launch.py) | wheelbase, steering limit |
+| `aav_ego` (ego.launch.py) | wheelbase, steering limit, reverse speed; and its body: mass, track, centre of mass, tyre grip, the throttle's and brake's accelerations |
 | `aav_spine` (spine.launch.py) | wheelbase, track |
 | `aav_legacy` (legacy.launch.py) | wheel diameter, encoder counts per revolution |
 | `aav_navigation` (navigation.launch.py) | footprint (both costmaps), minimum turning radius (SmacPlannerHybrid) |
@@ -58,7 +58,52 @@ Why it matters:
    front wheels. The value in the file is the "virtual" centre wheel. A good
    approximation is atan(wheelbase / R), where R is the turning radius to the middle of
    the rear axle. Measure R by driving a full circle at full lock at walking pace.
-5. **Mass:** use a vehicle scale if you can get to one. Only Gazebo uses it.
+5. **Mass and centre of mass:** four bathroom scales, then the rear lifted
+   (READ-ME-MEASURE-THE-CAR.md, M7 and M7b). See "Weight and balance" below.
+
+## Weight and balance
+
+Ego knows the car's weight (`aav_ego/dynamics.py`). Most of it is guessed today.
+
+| `vehicle.yaml` | Today | Measured by |
+|---|---|---|
+| `mass` | 181 kg (Ben: about 400 lb) | M7: the four scales added up |
+| `centre_of_mass.x` | 0.70 m ahead of the rear axle (a guess) | M7: wheelbase × front ÷ total |
+| `centre_of_mass.height` | 0.55 m (a guess) | M7b: the rear lifted, the front weighed again |
+| `tyre_grip` | 0.7 g (dry asphalt: 0.7-0.9) | test 4.3: full brake; if the wheels skid, the deceleration in g |
+| `actuators.max_accel`, `max_brake` | 1.5 and 3.0 m/s², empty | tests 4.1 and 4.3; 4.9 and 4.10 again with a person aboard |
+
+What ego does with them:
+
+| The load (people, cargo) changes | The load doesn't change |
+|---|---|
+| how hard the car can speed up: the same motor, more mass | how fast it may take a turn: sliding and tipping don't depend on the mass |
+| how hard it can brake, so how far it needs to stop | |
+| the energy in a crash: ½ m v² | |
+
+- **Speeding up:** ego never asks for more than the motor can give the loaded car:
+  `max_accel × mass ÷ (mass + payload)`.
+- **Turns:** ego slows the car so the sideways acceleration stays under 2 m/s², or under
+  half of what slides or tips the car if that is lower. It keeps the turn the driver asked
+  for and lowers the speed, so the car stays on its path. At full lock (2.86 m) that is
+  2.4 m/s: it only matters above the car's 1 m/s, so today in the simulator.
+- **Braking:** never softened. If the load means the brakes can't stop the car as fast as
+  ego plans (`max_deceleration`), ego warns at start-up and when the payload changes.
+- **Payload** is a parameter (ego.yaml, 0 kg): `ros2 param set /ego payload 80` when
+  someone gets in.
+
+Tipping matters on this car: a 77 cm track is narrow for a 1.5 m tall car. The car tips
+when the sideways acceleration reaches g × (track ÷ 2) ÷ (height of the centre of mass):
+6.9 m/s² at 0.55 m high, but 3.8 m/s² at 1 m. Ego keeps to half of that.
+
+From M7 and M7b (any unit, as long as all four are the same):
+
+```python
+from aav_description import vehicle
+v = vehicle.load()['vehicle']
+x, height = vehicle.centre_of_mass(v, front=FL + FR, rear=RL + RR,
+                                   front_lifted=FL2 + FR2, lift=0.25)   # lift in m
+```
 
 ## Look at it
 

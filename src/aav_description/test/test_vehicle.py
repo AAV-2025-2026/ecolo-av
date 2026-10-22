@@ -213,9 +213,30 @@ def test_nav2_yaml_is_forward_only_until_the_launch_file_says():
     assert grid['motion_model_for_search'] == 'DUBIN'
 
 
-def test_ego_gets_the_reverse_speed():
-    v = vehicle.load(CONFIG)['vehicle']
-    assert vehicle.ego_params(v)['max_reverse_speed'] == v['max_reverse_speed']
+def test_ego_gets_the_reverse_speed_and_the_body():
+    car = vehicle.load(CONFIG)
+    v, params = car['vehicle'], vehicle.ego_params(car)
+    assert params['max_reverse_speed'] == v['max_reverse_speed']
+    assert params['mass'] == v['mass']
+    assert params['cg_height'] == v['centre_of_mass']['height']
+    assert params['full_throttle_accel'] == car['actuators']['max_accel']
+    assert params['full_brake_decel'] == car['actuators']['max_brake']
+    assert all(isinstance(value, float) for value in params.values())
+
+
+def test_the_centre_of_mass_from_the_scales():
+    v = {'wheelbase': 1.57, 'wheel_diameter': 0.30}
+    # A made-up car: 181 kg, centre of mass 0.70 m ahead of the rear axle, 0.55 m up.
+    total, x, h, r, lift = 181.0, 0.70, 0.55, 0.15, 0.25
+    front = total * x / 1.57
+    assert vehicle.centre_of_mass(v, front, total - front) == (pytest.approx(x), None)
+    # Lift the rear: work out the front's new weight from the pitched car's geometry.
+    tilt = math.asin(lift / 1.57)
+    along, up = (math.cos(tilt), -math.sin(tilt)), (math.sin(tilt), math.cos(tilt))
+    cg_ahead = x * along[0] + (h - r) * up[0]        # of the rear axle, level ground
+    front_lifted = total * cg_ahead / (1.57 * math.cos(tilt))
+    got_x, got_h = vehicle.centre_of_mass(v, front, total - front, front_lifted, lift)
+    assert (got_x, got_h) == (pytest.approx(x), pytest.approx(h))
 
 
 def test_the_firmware_copies_match_vehicle_yaml():

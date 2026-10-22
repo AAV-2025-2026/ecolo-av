@@ -2,7 +2,8 @@
 #
 # Read by:
 #   urdf/aav.urdf.xacro          -> TF frames for every sensor (robot_state_publisher)
-#   aav_bringup launch files     -> ego (wheelbase, steering limit, reverse speed), aav_spine
+#   aav_bringup launch files     -> ego (wheelbase, steering limit, reverse speed, and its body:
+#                                   mass, track, centre of mass, tyre grip, actuators), aav_spine
 #                                   (wheelbase, track), aav_legacy encoder (wheel diameter),
 #                                   Nav2 (footprint, minimum turning radius, reverse speed)
 #   firmware/spine (spine-core)  -> keeps copies of the steering limit and the reverse speed;
@@ -32,6 +33,11 @@ vehicle:
     rear_overhang: 0.20     # rear bumper behind the rear axle. TODO measure
   mass: 181.0               # kg: Ben's estimate, about 400 lb (15 Oct). TODO weigh (audit M7).
                             # Was 272, a CARLA stand-in; the 2025-26 braking model used 60
+  centre_of_mass:           # empty car (docs/car_measurements.md, "Weight and balance")
+    x: 0.70                 # m ahead of the rear axle. GUESS: TODO M7, wheelbase x front / total
+    height: 0.55            # m above the ground. GUESS: TODO M7b, the rear lifted
+  tyre_grip: 0.7            # g: the most the tyres push before they slide. GUESS (dry asphalt
+                            # 0.7-0.9): TODO test 4.3, if full brake skids the wheels
   encoder_counts_per_rev: 8 # spokes on the encoder wheel (Wheel_Encoders wiznet.ino:29)
 
 # How the car answers its commands: the actuator model in Gazebo (aav_gazebo

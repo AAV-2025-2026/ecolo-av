@@ -12,7 +12,8 @@ The launch files use this so the car's measurements live in one file:
     vehicle.nav2_rewrites(v, reversing)         # Nav2's file: forward only, or reversing too
     vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar, ghost,  # what
                        controller)                              # RewrittenYaml can't write
-    vehicle.ego_params(v)            # ego
+    vehicle.ego_params(vehicle.load())          # ego: the whole file (the actuators too)
+    vehicle.centre_of_mass(v, front, rear, front_lifted, lift)   # from the scales (M7, M7b)
     vehicle.wheel_angles(v, centre)  # each front wheel's angle for a centre (bicycle) angle
     vehicle.centre_angle(v, inner, outer)       # the reverse: from M5's two measured angles
     vehicle.gazebo_steering_limit(v) # Gazebo's AckermannSteering steering_limit
@@ -130,12 +131,41 @@ def obstacle_heights(v):
     return GROUND_CLEARANCE, float(v['body']['height']) + OVERHEAD_MARGIN
 
 
-def ego_params(v):
+def ego_params(cfg):
+    """Return what ego takes from vehicle.yaml (the whole file): its geometry and its body."""
+    v, act = cfg['vehicle'], cfg['actuators']
     return {
         'wheelbase': float(v['wheelbase']),
         'max_steering_angle': float(v['max_steering_angle']),
         'max_reverse_speed': float(v['max_reverse_speed']),
+        'mass': float(v['mass']),
+        'track': float(v['track']),
+        'cg_height': float(v['centre_of_mass']['height']),
+        'tyre_grip': float(v['tyre_grip']),
+        'full_throttle_accel': float(act['max_accel']),
+        'full_brake_decel': float(act['max_brake']),
     }
+
+
+def centre_of_mass(v, front, rear, front_lifted=None, lift=None):
+    """
+    Return the centre of mass from the scales: (x ahead of the rear axle, height), m.
+
+    front, rear: the weight on each axle, level (READ-ME-MEASURE-THE-CAR.md, M7; any unit).
+    front_lifted, lift: the front axle again with both rear wheels on blocks `lift` m high
+    (M7b). Without them the height is None.
+
+    Level, the front axle carries the share of the weight that x is of the wheelbase.
+    Lifted, the car tips forward by asin(lift / L), and a centre of mass h - r above the
+    axles moves (h - r) tan(tilt) forward, so the front gains W (h - r) tan(tilt) / L.
+    """
+    L, total = float(v['wheelbase']), float(front + rear)
+    x = L * front / total
+    if front_lifted is None or not lift:
+        return x, None
+    tilt = math.asin(lift / L)
+    r = float(v['wheel_diameter']) / 2.0
+    return x, r + L * (front_lifted - front) / (total * math.tan(tilt))
 
 
 def spine_params(v):

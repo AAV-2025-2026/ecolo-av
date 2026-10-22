@@ -11,6 +11,10 @@ only ask for turns the car can make, so this conversion is exact for them.
 
 A car can't turn on the spot: with v near 0 the formula has no answer, so ego
 keeps the wheels where they are until the car moves.
+
+With a Body (dynamics.py: the car's mass, load, track, centre of mass and tyres), ego also
+never asks the loaded car to speed up harder than its motor can, and slows it for a turn
+so the sideways acceleration stays within the body's limit.
 """
 
 from __future__ import annotations
@@ -18,6 +22,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 from typing import Optional, Tuple
+
+from aav_ego import dynamics
+from aav_ego.dynamics import Body
 
 
 @dataclass
@@ -32,10 +39,12 @@ class Limits:
     min_speed_for_steering: float = 0.05  # m/s; below this the steering holds
 
 
-# The only limit a running ego lets anyone change (ros2 param set /ego ...), and its range.
-# The actuator tests lift it for test 3.11, on stands, so they time the steering motor,
-# not ego's own ramp; they put it back afterwards. Every other limit is read at start-up.
-LIVE_LIMITS = {'max_steering_rate': (0.05, 5.0)}   # rad/s
+# What a running ego lets anyone change (ros2 param set /ego ...), and its range.
+# max_steering_rate: the actuator tests lift it for test 3.11, on stands, so they time the
+# steering motor, not ego's own ramp; they put it back afterwards. payload: when people get
+# in or out (dynamics.LIVE_BODY). Everything else is read at start-up.
+LIVE_LIMITS = {'max_steering_rate': (0.05, 5.0),   # rad/s
+               **dynamics.LIVE_BODY}
 
 
 def live_change(name: str, value) -> Optional[str]:
@@ -47,7 +56,7 @@ def live_change(name: str, value) -> Optional[str]:
         if not lo <= value <= hi:
             return f'{name} must be between {lo} and {hi}'
         return None
-    if name in vars(Limits()):
+    if name in vars(Limits()) or name in vars(Body()):
         return f'{name} is read only at start-up: restart ego to change it'
     return None
 
@@ -69,23 +78,35 @@ def turn_rate(v: float, d: float, wheelbase: float) -> float:
     return v * math.tan(d) / wheelbase
 
 
-def slew_speed(current: float, target: float, lim: Limits, dt: float) -> Tuple[float, float]:
-    """Move the speed toward target within the limits; return (speed, rate used)."""
+def slew_speed(current: float, target: float, lim: Limits, dt: float,
+               speed_up: Optional[float] = None) -> Tuple[float, float]:
+    """
+    Move the speed toward target within the limits; return (speed, rate used).
+
+    speed_up (m/s^2), if given, replaces lim.max_acceleration: the body's lower limit.
+    """
     if current != 0.0 and target != 0.0 and (current > 0.0) != (target > 0.0):
         target = 0.0  # change direction through a stop
     speeding_up = abs(target) > abs(current)
-    rate = lim.max_acceleration if speeding_up else lim.max_deceleration
+    up = lim.max_acceleration if speed_up is None else speed_up
+    rate = up if speeding_up else lim.max_deceleration
     step = rate * dt
     if target > current:
         return min(target, current + step), rate
     return max(target, current - step), rate
 
 
+def curvature(steering: float, wheelbase: float) -> float:
+    """Return how sharply the path bends (1/m) for a front-wheel angle: tan of it over L."""
+    return math.tan(steering) / wheelbase
+
+
 class EgoModel:
     """The car as ego sees it: the speed and steering it last commanded."""
 
-    def __init__(self, limits: Limits):
+    def __init__(self, limits: Limits, body: Optional[Body] = None):
         self.lim = limits
+        self.body = body
         self.speed = 0.0
         self.steering = 0.0
 
@@ -104,7 +125,16 @@ class EgoModel:
             # Keep the requested curvature w / v even when the speed is capped.
             target_d = steering_angle(v, w, lim, self.steering)
             target_v = clamp(v, -lim.max_reverse_speed, lim.max_speed)
-        self.speed, accel = slew_speed(self.speed, target_v, lim, dt)
+        speed_up = None
+        if self.body is not None:
+            speed_up = min(lim.max_acceleration, dynamics.speed_up_limit(self.body))
+            # The sharper of the turn now and the one the wheels are heading for: slow down
+            # before the wheels get there, and speed up only once they've come back.
+            k = max(abs(curvature(target_d, lim.wheelbase)),
+                    abs(curvature(self.steering, lim.wheelbase)))
+            cap = dynamics.curve_speed(self.body, k)
+            target_v = clamp(target_v, -cap, cap)
+        self.speed, accel = slew_speed(self.speed, target_v, lim, dt, speed_up)
         step = lim.max_steering_rate * dt
         self.steering = clamp(target_d, self.steering - step, self.steering + step)
         return self.speed, self.steering, accel
