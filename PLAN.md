@@ -26,7 +26,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | 2 | Simulation and testing | 60% | 0% | sensor noise from guesses; no sim-versus-real report |
 | 3 | Vehicle hardware and actuation | 33% | 5% | the car isn't measured; the Rust spine never flashed |
 | 4 | Power and electrical | 4% | 0% | not started: needs the car and the parts |
-| 5 | Ego and vehicle control | 48% | 0% | no jerk limit; stop-at-distance lives in the A-to-B driver |
+| 5 | Ego and vehicle control | 50% | 0% | stop-at-distance lives in the A-to-B driver |
 | 6 | Localization and calibration | 16% | 0% | no calibration yet; the heading jumps at walking pace |
 | 7 | Drivers and local planning | 63% | 0% | the real lot's map; a forward-only car stuck facing a wall |
 | 8 | Perception | 43% | 0% | no labelled pictures of the lot; no lidar clustering |
@@ -127,7 +127,7 @@ the next concrete step.
 |---|---|---|---|---:|---|
 | T5.1 | Command mux | 6 Nov | ✅ | 100 | |
 | T5.2 | Ego v1 | 6 Nov | ✅ | 100 | |
-| T5.3 | Speed profile: acceleration, jerk, stop at a distance | 27 Nov | 🔧 | 60 | add the jerk limit; move the stop-at-distance curve from the A-to-B driver into ego, or agree it stays (D4) |
+| T5.3 | Speed profile: acceleration, jerk, stop at a distance | 27 Nov | 🔧 | 75 | jerk limit done 22 Oct (`max_jerk` 2.0 m/s³, speeding up only; `sim-check --obstacle` passes). Left: move the stop-at-distance curve from the A-to-B driver into ego, or agree it stays (D4) |
 | T5.4 | Turning limits: steering rate, sideways acceleration | 11 Dec | 🧪 | 90 | done 22 Oct with the weight model ([car numbers](docs/car_measurements.md#weight-and-balance)); the Gazebo check "a tight turn slows to the computed speed" |
 | T5.5 | Measured parameters | 18 Dec | ⬜ | 0 | after T3.8 |
 | T5.6 | Joystick drives | Dec-Jan | 🔧 | 30 | done in Gazebo; on stands after Gate 2 |

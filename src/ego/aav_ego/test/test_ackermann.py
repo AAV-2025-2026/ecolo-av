@@ -1,7 +1,7 @@
 import math
 
-from aav_ego.ackermann import EgoModel, Limits, live_change, slew_speed, steering_angle
-from aav_ego.ackermann import turn_rate
+from aav_ego.ackermann import ease_speed, EgoModel, Limits, live_change, slew_speed
+from aav_ego.ackermann import steering_angle, turn_rate
 from aav_ego.dynamics import Body
 import pytest
 
@@ -128,3 +128,63 @@ def test_the_payload_changes_while_running():
     assert 'between' in live_change('payload', -1)
     assert 'restart ego' in live_change('mass', 200.0)
     assert 'restart ego' in live_change('max_lateral_accel', 3.0)
+
+
+def accelerations(model, cmd, seconds, dt=0.02):
+    """Each tick's change of speed (m/s^2), and the last speed."""
+    out, speed = [], model.speed
+    for _ in range(int(round(seconds / dt))):
+        before = speed
+        speed = model.step(cmd, dt)[0]
+        out.append((speed - before) / dt)
+    return out, speed
+
+
+def test_speeding_up_eases_in_and_out():
+    lim = Limits(max_speed=2.0, max_acceleration=1.0, max_jerk=2.0)
+    accels, speed = accelerations(EgoModel(lim), (1.0, 0.0), 3.0)
+    assert accels[0] == pytest.approx(0.04)                 # 2 m/s^3 x 0.02 s, not 1.0
+    assert max(accels) == pytest.approx(1.0)                # the limit, after 0.5 s
+    assert speed == pytest.approx(1.0)                      # there, without passing it
+    changes = [abs(b - a) for a, b in zip([0.0] + accels, accels)]
+    assert max(changes) <= 2.0 * 0.02 + 1e-6                # never more than the jerk
+    # 0 to 1 m/s: 0.5 s easing in, 0.5 s at 1 m/s^2, 0.5 s easing out.
+    moving = [a for a in accels if a > 0.0]
+    assert len(moving) * 0.02 == pytest.approx(1.5, abs=0.1)
+
+
+def test_braking_is_never_eased():
+    lim = Limits(max_speed=2.0, max_acceleration=1.0, max_deceleration=2.0, max_jerk=2.0)
+    model = EgoModel(lim)
+    run(model, (1.0, 0.0), 3.0, dt=0.02)
+    assert model.step((0.0, 0.0), 0.02)[0] == pytest.approx(1.0 - 2.0 * 0.02)
+    assert model.step(None, 0.02)[0] == pytest.approx(1.0 - 4.0 * 0.02)   # silence too
+
+
+def test_reversing_eases_in_too():
+    lim = Limits(max_reverse_speed=0.5, max_acceleration=1.0, max_jerk=2.0)
+    accels, speed = accelerations(EgoModel(lim), (-0.5, 0.0), 2.0)
+    assert accels[0] == pytest.approx(-0.04)
+    assert speed == pytest.approx(-0.5)
+
+
+def test_ease_speed_alone():
+    # Already pushing at 1 m/s^2, far from the target: keeps the push.
+    assert ease_speed(0.0, 5.0, 1.0, 1.0, 2.0, 0.1) == pytest.approx((0.1, 1.0))
+    # Near the target: no more push than easing off one jerk step a tick can still take back.
+    assert ease_speed(0.99, 1.0, 0.2, 1.0, 2.0, 0.01)[1] == pytest.approx(0.190, abs=1e-3)
+    # Too late for that: it eases off at the jerk, and stops at the target, not past it.
+    speed, accel = ease_speed(0.999, 1.0, 1.0, 1.0, 2.0, 0.01)
+    assert accel == pytest.approx(0.98) and speed == 1.0
+    assert ease_speed(1.0, 1.0, 0.5, 1.0, 2.0, 0.01) == (1.0, 0.0)
+
+
+def test_every_setting_in_ego_yaml_is_one_ego_reads():
+    # A misspelt name in ego.yaml would be declared by nobody, and silently do nothing.
+    import pathlib
+    import yaml
+    path = pathlib.Path(__file__).resolve().parents[1] / 'config' / 'ego.yaml'
+    names = set(yaml.safe_load(path.read_text())['ego']['ros__parameters'])
+    node_own = {'cmd_timeout', 'rate_hz', 'frame_id', 'use_stamped'}
+    assert names <= set(vars(Limits())) | set(vars(Body())) | node_own
+    assert 'max_jerk' in names

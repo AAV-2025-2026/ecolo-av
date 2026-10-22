@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-control.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Control from zero</h1>
-<div class="meta">10 min read · 9 sections</div></header>
+<div class="meta">11 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -412,6 +412,18 @@ behind a stop that a higher layer asked for.</p>
 <td>2.5 m/s²</td>
 </tr>
 <tr>
+<td>Jerk, speeding up</td>
+<td>2.0 m/s³ (<code>max_jerk</code>): the push builds over 0.5 s, and eases off before the set speed</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Jerk, slowing down</td>
+<td>none: a stop starts at once</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
 <td>Steering rate</td>
 <td>0.6 rad/s</td>
 <td>-</td>
@@ -430,7 +442,7 @@ behind a stop that a higher layer asked for.</p>
 <tbody>
 <tr>
 <td>0 → 1.0 m/s</td>
-<td>1 s</td>
+<td>1.5 s: 0.5 s building up, 0.5 s at 1.0 m/s², 0.5 s easing off</td>
 </tr>
 <tr>
 <td>Stop from 1.0 m/s, at 2.0 m/s²</td>

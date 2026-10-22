@@ -9,6 +9,8 @@ ego:
     max_speed: 1.0              # m/s forward
     max_acceleration: 1.0       # m/s^2
     max_deceleration: 2.0       # m/s^2 (also how hard it stops when commands go stale)
+    max_jerk: 2.0               # m/s^3: speeding up, the push builds over 0.5 s and eases
+                                # off before the set speed. Braking: never softened
     max_steering_rate: 0.6      # rad/s at the virtual centre wheel
     min_speed_for_steering: 0.05
     payload: 0.0                # kg aboard: people, cargo. ros2 param set /ego payload 80

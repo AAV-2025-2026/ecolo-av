@@ -15,6 +15,10 @@ keeps the wheels where they are until the car moves.
 With a Body (dynamics.py: the car's mass, load, track, centre of mass and tyres), ego also
 never asks the loaded car to speed up harder than its motor can, and slows it for a turn
 so the sideways acceleration stays within the body's limit.
+
+Speeding up is also jerk-limited (max_jerk): the push builds up and eases off, so people
+aboard aren't thrown back. Slowing down never is: a stop, from the collision monitor or a
+silent driver, starts at once.
 """
 
 from __future__ import annotations
@@ -37,6 +41,7 @@ class Limits:
     max_deceleration: float = 2.0        # m/s^2 while slowing down
     max_steering_rate: float = 0.6       # rad/s
     min_speed_for_steering: float = 0.05  # m/s; below this the steering holds
+    max_jerk: float = 0.0                # m/s^3 while speeding up; 0: no limit
 
 
 # What a running ego lets anyone change (ros2 param set /ego ...), and its range.
@@ -96,6 +101,26 @@ def slew_speed(current: float, target: float, lim: Limits, dt: float,
     return max(target, current - step), rate
 
 
+def ease_speed(current: float, target: float, accel: float, rate: float, jerk: float,
+               dt: float) -> Tuple[float, float]:
+    """
+    Speed up toward target, the acceleration changing at most `jerk` m/s^3; return (speed, accel).
+
+    accel is the signed acceleration of the last tick. It never passes `rate`, and eases off
+    near the target: from acceleration a, easing off one jerk step a tick still gains
+    a^2 / (2 jerk) + a dt / 2 m/s, so a is kept where that fits in what is left.
+    """
+    gap = target - current
+    if gap == 0.0:
+        return current, 0.0
+    sign = 1.0 if gap > 0.0 else -1.0
+    held = max(0.0, accel * sign)          # the push already in this direction
+    ease_off = jerk * (math.sqrt((dt / 2.0) ** 2 + 2.0 * abs(gap) / jerk) - dt / 2.0)
+    a = min(held + jerk * dt, rate, max(ease_off, held - jerk * dt))
+    step = min(a * dt, abs(gap))
+    return current + sign * step, sign * a
+
+
 def curvature(steering: float, wheelbase: float) -> float:
     """Return how sharply the path bends (1/m) for a front-wheel angle: tan of it over L."""
     return math.tan(steering) / wheelbase
@@ -109,6 +134,7 @@ class EgoModel:
         self.body = body
         self.speed = 0.0
         self.steering = 0.0
+        self.accel = 0.0         # m/s^2, signed: the last tick's change of speed
 
     def step(self, cmd: Optional[Tuple[float, float]], dt: float) -> Tuple[float, float, float]:
         """
@@ -134,7 +160,14 @@ class EgoModel:
                     abs(curvature(self.steering, lim.wheelbase)))
             cap = dynamics.curve_speed(self.body, k)
             target_v = clamp(target_v, -cap, cap)
+        before = self.speed
         self.speed, accel = slew_speed(self.speed, target_v, lim, dt, speed_up)
+        if lim.max_jerk > 0.0 and abs(self.speed) > abs(before):
+            # Speeding up, so toward target_v (a change of direction stops first).
+            self.speed, signed = ease_speed(before, target_v, self.accel, accel,
+                                            lim.max_jerk, dt)
+            accel = abs(signed)
+        self.accel = (self.speed - before) / dt if dt > 0.0 else 0.0
         step = lim.max_steering_rate * dt
         self.steering = clamp(target_d, self.steering - step, self.steering + step)
         return self.speed, self.steering, accel

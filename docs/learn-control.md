@@ -143,13 +143,15 @@ behind a stop that a higher layer asked for.
 | Reverse | 0.5 m/s (`vehicle.yaml`: one number for all three) | 0.5 m/s, with `reversing:=true`; else 0 | 0.5 m/s, RC too |
 | Speeding up | 1.0 m/s² | 1.0 m/s² | 1.5 m/s² |
 | Slowing down | 2.0 m/s² | 2.0 m/s² | 2.5 m/s² |
+| Jerk, speeding up | 2.0 m/s³ (`max_jerk`): the push builds over 0.5 s, and eases off before the set speed | - | - |
+| Jerk, slowing down | none: a stop starts at once | - | - |
 | Steering rate | 0.6 rad/s | - | 0.6 rad/s |
 
 What those mean at 1.0 m/s:
 
 | | Takes |
 |---|---|
-| 0 → 1.0 m/s | 1 s |
+| 0 → 1.0 m/s | 1.5 s: 0.5 s building up, 0.5 s at 1.0 m/s², 0.5 s easing off |
 | Stop from 1.0 m/s, at 2.0 m/s² | 0.5 s and **0.25 m** |
 | Full left (+0.5) → full right (−0.5) | 1.7 s |
 
