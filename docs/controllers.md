@@ -131,8 +131,15 @@ Run n, the whole lot tour, both controllers: **all 8 goals reached**.
 ![Run n, reversing allowed: both make the U-turn by backing up. MPPI's turn is wider, and it backs up once at home](img/controllers-lot-reversing.svg)
 
 Run q (05:10), the same with ego's new jerk limit: **all 8 goals again**. MPPI's first goal
-cost it a back-up (72 s, was 30): in that leg the EKF had the car 57° and 1.1 m off, the
-worst tonight (the heading jumps, PLAN M9).
+cost it a back-up (72 s, was 30): it drove past the goal (the EKF was right then, within
+0.4 m and 10°), and while it backed up the EKF's heading swung to 57° off.
+
+That swing is not a reversing bug. A probe in Gazebo (22 Oct) drove 15 s each way: the
+wheel speed keeps its sign and the turn rates match the truth backwards too, and the
+global EKF's heading wandered up to ±25° at 0.5 m/s **in both directions**. Over all
+tonight's runs it is worse in reverse (median 11° off, against 4° forward at the same
+speed) because reversing comes slowly, just after a stop: where GPS tells the heading
+least. The fix is a heading source (PLAN M9).
 
 Forward only (run o, 04:46, same settings): the first two goals for both, but the U-turn
 failed for both again, as in run j: each swung wide and stopped facing the east wall.

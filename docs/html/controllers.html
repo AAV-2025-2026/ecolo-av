@@ -7,7 +7,7 @@
 <!-- Generated from docs/controllers.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Path followers: Regulated Pure Pursuit and MPPI</h1>
-<div class="meta">16 min read · 9 sections</div></header>
+<div class="meta">17 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -379,8 +379,14 @@ yet: nothing senses behind it). At first MPPI never reversed. Three settings sto
 </table></div>
 <p><img alt="Run n, reversing allowed: both make the U-turn by backing up. MPPI's turn is wider, and it backs up once at home" src="../img/controllers-lot-reversing.svg" /></p>
 <p>Run q (05:10), the same with ego's new jerk limit: <strong>all 8 goals again</strong>. MPPI's first goal
-cost it a back-up (72 s, was 30): in that leg the EKF had the car 57° and 1.1 m off, the
-worst tonight (the heading jumps, PLAN M9).</p>
+cost it a back-up (72 s, was 30): it drove past the goal (the EKF was right then, within
+0.4 m and 10°), and while it backed up the EKF's heading swung to 57° off.</p>
+<p>That swing is not a reversing bug. A probe in Gazebo (22 Oct) drove 15 s each way: the
+wheel speed keeps its sign and the turn rates match the truth backwards too, and the
+global EKF's heading wandered up to ±25° at 0.5 m/s <strong>in both directions</strong>. Over all
+tonight's runs it is worse in reverse (median 11° off, against 4° forward at the same
+speed) because reversing comes slowly, just after a stop: where GPS tells the heading
+least. The fix is a heading source (PLAN M9).</p>
 <p>Forward only (run o, 04:46, same settings): the first two goals for both, but the U-turn
 failed for both again, as in run j: each swung wide and stopped facing the east wall.
 In a 14 m lane a forward U-turn barely fits; backing up is the way.</p>
