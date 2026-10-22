@@ -7,7 +7,7 @@
 <!-- Generated from docs/controllers.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Path followers: Regulated Pure Pursuit and MPPI</h1>
-<div class="meta">14 min read · 8 sections</div></header>
+<div class="meta">16 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -66,7 +66,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-each-one-does">What each one does</a><a href="#switch-between-them">Switch between them</a><a href="#compare-them">Compare them</a><a href="#after-the-fixes-night-of-22-october">After the fixes, night of 22 October</a><a href="#results-22-october-first-runs">Results, 22 October, first runs</a><a href="#making-mppi-drive">Making MPPI drive</a><a href="#found-on-the-way">Found on the way</a><a href="#limits-of-this-comparison">Limits of this comparison</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-each-one-does">What each one does</a><a href="#switch-between-them">Switch between them</a><a href="#compare-them">Compare them</a><a href="#after-the-fixes-night-of-22-october">After the fixes, night of 22 October</a><a href="#with-reversing-three-point-turns-22-october-0530">With reversing: three-point turns, 22 October, 05:30</a><a href="#results-22-october-first-runs">Results, 22 October, first runs</a><a href="#making-mppi-drive">Making MPPI drive</a><a href="#found-on-the-way">Found on the way</a><a href="#limits-of-this-comparison">Limits of this comparison</a></nav>
 <div class="lead"><p>Nav2's planner draws a path; a <strong>controller</strong> turns it into a speed and a turn, 20 times a
 second. We have two, and a script that compares them on the same drives in Gazebo.</p>
 <blockquote>
@@ -315,8 +315,8 @@ way") spoiled one:</p>
 <td>after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. These were real near misses, not false stops, so the fix is a way out: reversing (Nav2's back-up), off on the car until the team decides</td>
 </tr>
 <tr>
-<td><strong>MPPI's U-turn</strong></td>
-<td>forward, in the 14 m lane, it went wide or round the building in 3 of 4 runs; Pure Pursuit managed it in 2. With reversing (<code>--reversing</code>), the planner drew a three-point turn, but MPPI never reversed: it drove on to the far wall</td>
+<td><strong>The U-turn, forward only</strong></td>
+<td>in the 14 m lane, MPPI went wide or round the building in 3 of 4 runs; Pure Pursuit managed it in 2. With reversing it works (below)</td>
 </tr>
 <tr>
 <td>~~The box in the lane~~</td>
@@ -324,6 +324,62 @@ way") spoiled one:</p>
 </tr>
 </tbody>
 </table></div>
+</section>
+<section class="card"><h2 id="with-reversing-three-point-turns-22-october-0530">With reversing: three-point turns, 22 October, 05:30</h2>
+<p><code>--reversing</code> lets Nav2 back up, as it may in Gazebo and on the bench (never on the car
+yet: nothing senses behind it). At first MPPI never reversed. Three settings stopped it:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What went wrong</th>
+<th>Fix (only when reversing)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MPPI never backed up, though the plan did (runs h, k)</td>
+<td>no <code>PreferForwardCritic</code>: the planner already decides where to reverse (<code>reverse_penalty</code>)</td>
+</tr>
+<tr>
+<td>It ignored which way the path pointed</td>
+<td><code>PathAngleCritic</code> mode 2 (follow the path's own direction); a cusp counts within 0.5 m and 0.6 rad</td>
+</tr>
+<tr>
+<td>Nav2 cancelled the turn 10 times as "stuck": rocking back and forth moves less than 0.5 m</td>
+<td><code>PoseProgressChecker</code> (always on): turning 0.5 rad counts as moving too</td>
+</tr>
+</tbody>
+</table></div>
+<p>Run n, the whole lot tour, both controllers: <strong>all 8 goals reached</strong>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Turn back (14 m lane)</th>
+<th>Pure Pursuit</th>
+<th>MPPI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time</td>
+<td>74 s</td>
+<td>71 s</td>
+</tr>
+<tr>
+<td>Driven</td>
+<td>22.9 m</td>
+<td>34.9 m</td>
+</tr>
+<tr>
+<td>Reversals</td>
+<td>10, with 4 stops: it dithers at each cusp</td>
+<td>2: one clean three-point turn, but wide</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="Run n, reversing allowed: both make the U-turn by backing up. MPPI's turn is wider, and it backs up once at home" src="../img/controllers-lot-reversing.svg" /></p>
+<p>Still to do: MPPI drives on east a few metres before it backs up, where the plan backs
+up at once. Whether the car may reverse is the team's call: it needs something that sees behind it.</p>
 </section>
 <section class="card"><h2 id="results-22-october-first-runs">Results, 22 October, first runs</h2>
 <p>Gazebo's test lot on Ben's Mac (M4 Max), headless, 1 m/s, forward only, with MPPI's

@@ -106,8 +106,32 @@ Still open:
 | | |
 |---|---|
 | **Stuck facing a wall** | after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. These were real near misses, not false stops, so the fix is a way out: reversing (Nav2's back-up), off on the car until the team decides |
-| **MPPI's U-turn** | forward, in the 14 m lane, it went wide or round the building in 3 of 4 runs; Pure Pursuit managed it in 2. With reversing (`--reversing`), the planner drew a three-point turn, but MPPI never reversed: it drove on to the far wall |
+| **The U-turn, forward only** | in the 14 m lane, MPPI went wide or round the building in 3 of 4 runs; Pure Pursuit managed it in 2. With reversing it works (below) |
 | ~~The box in the lane~~ | done, 03:40: the planner now sees the radar and lidar. Both controllers drove round the box, 2.6 m (Pure Pursuit) and 3.8 m (MPPI) clear, and reached the goal ([Costmaps](costmaps.md)) |
+
+## With reversing: three-point turns, 22 October, 05:30
+
+`--reversing` lets Nav2 back up, as it may in Gazebo and on the bench (never on the car
+yet: nothing senses behind it). At first MPPI never reversed. Three settings stopped it:
+
+| What went wrong | Fix (only when reversing) |
+|---|---|
+| MPPI never backed up, though the plan did (runs h, k) | no `PreferForwardCritic`: the planner already decides where to reverse (`reverse_penalty`) |
+| It ignored which way the path pointed | `PathAngleCritic` mode 2 (follow the path's own direction); a cusp counts within 0.5 m and 0.6 rad |
+| Nav2 cancelled the turn 10 times as "stuck": rocking back and forth moves less than 0.5 m | `PoseProgressChecker` (always on): turning 0.5 rad counts as moving too |
+
+Run n, the whole lot tour, both controllers: **all 8 goals reached**.
+
+| Turn back (14 m lane) | Pure Pursuit | MPPI |
+|---|---|---|
+| Time | 74 s | 71 s |
+| Driven | 22.9 m | 34.9 m |
+| Reversals | 10, with 4 stops: it dithers at each cusp | 2: one clean three-point turn, but wide |
+
+![Run n, reversing allowed: both make the U-turn by backing up. MPPI's turn is wider, and it backs up once at home](img/controllers-lot-reversing.svg)
+
+Still to do: MPPI drives on east a few metres before it backs up, where the plan backs
+up at once. Whether the car may reverse is the team's call: it needs something that sees behind it.
 
 ## Results, 22 October, first runs
 
