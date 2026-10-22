@@ -9,13 +9,24 @@ Everything Ben asked for since 21 Oct, in one place. Progress is updated as each
 and each step is committed. Ben's words: `docs/history/messages-2026-10-22.md`. The
 proposal's full list: [PLAN.md](PLAN.md).
 
+**The night in one table** (22 Oct, 06:10; all in Gazebo, all pushed):
+
+| | Result |
+|---|---|
+| MPPI | the default; reaches every goal of the lot tour, U-turn included when it may reverse |
+| Obstacles | the planner steers round what the radar and lidar see |
+| Heading | the global EKF's heading: worst per leg 7-16° (was up to 76°) |
+| ego | a jerk limit; the weight model checked at 3 m/s |
+| Gazebo | steering within 3% of the model; one node per sensor; `sim-check` nightly in CI (on trial) |
+| ⚠️ For you | may the car reverse? Cyclone DDS for the team? mount the GPS antenna over the rear axle |
+
 | # | Task | Status | Progress |
 |---|---|---|---|
 | 1 | MPPI as a choice (`controller:=mppi`), and a script that compares it with Regulated Pure Pursuit | ✅ done | `f22dc4b8`; results in `docs/controllers.md` |
 | 2 | ego knows the car's weight (181 kg) and its body | ✅ done | `7e76850f`; the centre of mass is a guess until the car is weighed (task 14) |
 | 3 | The proposal as a to-do list with % done | ✅ done | `PLAN.md`, `b70300d7` |
 | 4 | The AAV colour: the email's blue | ✅ done | `da411333` |
-| 5 | Email Ben as work lands | 🔧 ongoing | part 1 ~01:30; part 2 ~02:50 (every goal reached; the DDS finding); part 3 ~03:20 (MPPI default; Cyclone); part 4 ~04:06 (round the box; the U-turn; the early push); part 5 04:38 (three-point turns); part 6 05:14 (jerk limit, steering check, nightly Gazebo; the part 4 time corrected) |
+| 5 | Email Ben as work lands | 🔧 ongoing | part 1 ~01:30; part 2 ~02:50 (every goal reached; the DDS finding); part 3 ~03:20 (MPPI default; Cyclone); part 4 ~04:06 (round the box; the U-turn; the early push); part 5 04:38 (three-point turns); part 6 05:14 (jerk limit, steering check, nightly Gazebo; the part 4 time corrected); part 7 06:08 (the EKF heading; the antenna mount; part 6 corrected) |
 | 6 | MPPI loops at goals | ✅ fixed (`7697778f`), confirming in 8 | it now turns to the goal's heading from 2.5 m out: left turn 28 s, 21.4 m (was 58 s, 47.5 m with a loop); round the building reached. Confirm in the full comparison (task 8) |
 | 7 | The corner problem (PLAN.md M8): the car stops at the building's corner | ✅ fixed | the planner's path passed 0.86 m from the corner. Now the planner's costmap inflates 3.0 m, gently (1.0), so paths keep to the middle of a lane; and it plans turns 1.25 x wider than full lock (`vehicle.PLAN_TURN_MARGIN`), so the controller has steering to spare. Lot run, 02:00: both kept clear of the building, both reached the first goal in 29 s, each reached 3 of 4 goals (were 1 and 2) |
 | 17 | The car still sometimes circles a goal it just missed (a different goal each run) | 🔧 testing a fix | not the heading: the comparison now records where the global EKF put the car, and at walking pace its heading is good (worst 5°). Its **position** is up to 0.7 m off (Gazebo's GPS noise is 0.5 m), but the goal tolerance was 0.5 m: the car chased GPS noise with a loop. Tolerance now 1.0 m ("GPS without RTK is good to about a metre"); tighten with RTK. Run e, 02:20: **all 8 goals reached**, both controllers. Still extra driving on 2 legs (RPP's left turn 81 m for 21; MPPI's turn back 68 m) |
