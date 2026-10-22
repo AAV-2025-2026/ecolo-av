@@ -9,7 +9,7 @@ tracker. Only the **MPPI track** (M1-M9) is new. The 15 October plan's S and C i
 the end, mapped to these numbers.
 
 > **The short version**
-> - **Software, built and tested in simulation: about 42%** of the committed tasks. **Proven on the car: about 5%** (the audits).
+> - **Software, built and tested in simulation: about 43%** of the committed tasks. **Proven on the car: about 5%** (the audits).
 > - **Ahead:** the drivers, ego, the muxes, Gazebo, Nav2, A to B, the HUD. **Behind:** everything that needs the car or new parts: power, calibration, the closed loop.
 > - **Next gate, 30 Oct (Know the car):** the car isn't measured yet. That's the most urgent job.
 > - **MPPI:** Nav2's default since 22 Oct, tuned for the car in Gazebo, and compared with Regulated Pure Pursuit by `pixi run controller-compare` (`controller:=rpp` for the old one; [controllers](docs/controllers.md)). It steers round an obstacle the sensors see.
@@ -23,15 +23,15 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | # | Sub-project | In software | On the car | Weakest point |
 |---|---|---:|---:|---|
 | 1 | Integration and platform | 50% | 5% | no sensor mux or output mux node; the Orin and Pis not upgraded |
-| 2 | Simulation and testing | 60% | 0% | sensor noise from guesses; no sim-versus-real report |
+| 2 | Simulation and testing | 63% | 0% | sensor noise from guesses; no sim-versus-real report; the nightly Gazebo job on trial |
 | 3 | Vehicle hardware and actuation | 33% | 5% | the car isn't measured; the Rust spine never flashed |
 | 4 | Power and electrical | 4% | 0% | not started: needs the car and the parts |
 | 5 | Ego and vehicle control | 50% | 0% | stop-at-distance lives in the A-to-B driver |
-| 6 | Localization and calibration | 16% | 0% | no calibration yet; the heading jumps at walking pace |
-| 7 | Drivers and local planning | 63% | 0% | the real lot's map; a forward-only car stuck facing a wall |
+| 6 | Localization and calibration | 18% | 0% | no calibration yet; the heading is much better in Gazebo (22 Oct), not yet checked with the real IMU |
+| 7 | Drivers and local planning | 64% | 0% | the real lot's map; forward only, a U-turn in a narrow lane can end facing a wall (reversing fixes it) |
 | 8 | Perception | 43% | 0% | no labelled pictures of the lot; no lidar clustering |
 | 9 | Heads-up display and tools | 62% | 0% | not tried on the Pi 5; no HUD heartbeat |
-| | **All committed tasks** | **about 42%** | **about 5%** | |
+| | **All committed tasks** | **about 43%** | **about 5%** | |
 
 ## The gates
 
