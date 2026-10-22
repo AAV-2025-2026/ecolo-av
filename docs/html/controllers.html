@@ -377,7 +377,7 @@ yet: nothing senses behind it). At first MPPI never reversed. Three settings sto
 </tr>
 </tbody>
 </table></div>
-<p><img alt="Run n, reversing allowed: both make the U-turn by backing up. MPPI's turn is wider, and it backs up once at home" src="../img/controllers-lot-reversing.svg" /></p>
+<p><img alt="Run r, reversing allowed: both make the U-turn by backing up; MPPI's turn is wider" src="../img/controllers-lot-reversing.svg" /></p>
 <p>Run q (05:10), the same with ego's new jerk limit: <strong>all 8 goals again</strong>. MPPI's first goal
 cost it a back-up (72 s, was 30): it drove past the goal (the EKF was right then, within
 0.4 m and 10°), and while it backed up the EKF's heading swung to 57° off.</p>
@@ -387,6 +387,10 @@ global EKF's heading wandered up to ±25° at 0.5 m/s <strong>in both directions
 tonight's runs it is worse in reverse (median 11° off, against 4° forward at the same
 speed) because reversing comes slowly, just after a stop: where GPS tells the heading
 least. The fix is a heading source (PLAN M9).</p>
+<p>Run r (06:04), after the global EKF's heading was fixed (yaw noise 0.01,
+<a href="learn-localization.html">Learn: localization</a>): <strong>all 8 goals</strong>, and the EKF's worst
+heading per leg 7-16° (runs n and q: 14-76°). MPPI's tour: 29, 53, 71 and 65 s, no
+detours; its way home took 65 s (was 94-102). The picture above is this run.</p>
 <p>Forward only (run o, 04:46, same settings): the first two goals for both, but the U-turn
 failed for both again, as in run j: each swung wide and stopped facing the east wall.
 In a 14 m lane a forward U-turn barely fits; backing up is the way.</p>

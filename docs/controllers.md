@@ -128,7 +128,7 @@ Run n, the whole lot tour, both controllers: **all 8 goals reached**.
 | Driven | 22.9 m | 34.9 m |
 | Reversals | 10, with 4 stops: it dithers at each cusp | 2: one clean three-point turn, but wide |
 
-![Run n, reversing allowed: both make the U-turn by backing up. MPPI's turn is wider, and it backs up once at home](img/controllers-lot-reversing.svg)
+![Run r, reversing allowed: both make the U-turn by backing up; MPPI's turn is wider](img/controllers-lot-reversing.svg)
 
 Run q (05:10), the same with ego's new jerk limit: **all 8 goals again**. MPPI's first goal
 cost it a back-up (72 s, was 30): it drove past the goal (the EKF was right then, within
@@ -140,6 +140,11 @@ global EKF's heading wandered up to ±25° at 0.5 m/s **in both directions**. Ov
 tonight's runs it is worse in reverse (median 11° off, against 4° forward at the same
 speed) because reversing comes slowly, just after a stop: where GPS tells the heading
 least. The fix is a heading source (PLAN M9).
+
+Run r (06:04), after the global EKF's heading was fixed (yaw noise 0.01,
+[Learn: localization](learn-localization.md)): **all 8 goals**, and the EKF's worst
+heading per leg 7-16° (runs n and q: 14-76°). MPPI's tour: 29, 53, 71 and 65 s, no
+detours; its way home took 65 s (was 94-102). The picture above is this run.
 
 Forward only (run o, 04:46, same settings): the first two goals for both, but the U-turn
 failed for both again, as in run j: each swung wide and stopped facing the east wall.

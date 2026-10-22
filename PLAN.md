@@ -140,7 +140,7 @@ the next concrete step.
 |---|---|---|---|---:|---|
 | T6.1 | Sensor positions | 13 Nov | 🔧 | 20 | the sheet, S1-S8 |
 | T6.2 | Time sync (chrony) | 27 Nov | 🔧 | 10 | |
-| T6.3 | Filters in Gazebo | 11 Dec | 🧪 | 80 | 0.15 m done; **fix the heading jumps at walking pace** (M9) |
+| T6.3 | Filters in Gazebo | 11 Dec | 🧪 | 90 | 0.15 m done; the heading jumps at walking pace much smaller (22 Oct: yaw noise, M9); check against the real IMU's gyro bias |
 | T6.4 | GPS on UBX with RTK | 11 Dec | 🔧 | 30 | `ublox_dgnss` is in the environment; the new receiver (KEFC) |
 | T6.5 | IMU calibration (Allan variance) | 18 Dec | ⬜ | 0 | |
 | T6.6 | Camera intrinsics | 22 Jan | ⬜ | 0 | |
@@ -211,7 +211,7 @@ too". It shares the car's model with ego, as the proposal says (section 8.3).
 | M6 | Its CPU on the Orin | ⬜ | with the load report (T1.7) |
 | M7 | MPPI on the car | ⬜ | after Nav2 passes on the car (T7.8); MPPI is the default now |
 | M8 | **The corner problem** (both controllers) | ✅ 22 Oct, Gazebo | the planner's costmap inflates 3.0 m gently, and it plans turns 1.25 x wider than full lock: both kept clear of the building. Left: after a wide turn the car can stop facing a wall, and forward only it can't get out (TODO 18) |
-| M9 | **The heading jumps** at walking pace (both) | 🧪 | measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. A heading source (the F9R's fused heading, or two antennas) with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, [why](docs/learn-gps.md#mount-the-antenna-over-the-rear-axle)): mount it over the axle |
+| M9 | **The heading jumps** at walking pace (both) | 🧪 | measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. A heading source (the F9R's fused heading, or two antennas) with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, [why](docs/learn-gps.md#mount-the-antenna-over-the-rear-axle)): mount it over the axle. **Much better since 22 Oct, 06:00:** the global EKF's yaw noise 0.06 → 0.01; the lot tour's worst heading per leg 7-16° (was 14-76°) |
 
 ## Where the proposal and the repo disagree
 

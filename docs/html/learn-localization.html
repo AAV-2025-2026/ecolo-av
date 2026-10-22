@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-localization.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Localization from zero</h1>
-<div class="meta">9 min read · 9 sections</div></header>
+<div class="meta">10 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -447,6 +447,10 @@ metres, radians, x forward, y left, z up.</p>
 <td>no magnetometer, so the IMU's heading is only relative. The start heading comes from <code>start_yaw</code>; GPS corrects it once the car moves</td>
 </tr>
 <tr>
+<td><strong>The heading trusts the turn rate</strong></td>
+<td>yaw process noise 0.01, not the stock 0.06: the gyro and wheels give the turn rate well, so the heading follows them and GPS only nudges it. With 0.06 it wandered up to ±25° at walking pace (below)</td>
+</tr>
+<tr>
 <td><strong>Each backend sets its own covariance</strong></td>
 <td>the spine works out the turn rate from the measured steering. Today's encoder can't, so it sends a huge covariance (1e3), and the EKF ignores that part</td>
 </tr>
@@ -465,6 +469,10 @@ metres, radians, x forward, y left, z up.</p>
 <tr>
 <td>Gazebo</td>
 <td>both EKFs within 0.2 m, parked</td>
+</tr>
+<tr>
+<td>Gazebo, driving (22 Oct)</td>
+<td>the global EKF's heading, 3 min forward and back at 0.5-1 m/s: median 2.6° off, worst 14° (yaw noise 0.06: median 6.2-6.7°, worst 39-54°). From a start 29° wrong: right within 10 s. With a gyro biased 0.6°/s: median 3.8°</td>
 </tr>
 <tr>
 <td>Bench</td>

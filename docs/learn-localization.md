@@ -166,6 +166,7 @@ Three choices worth knowing:
 |---|---|
 | **vy = 0 is fused** | a car can't slide sideways. Telling the filter so keeps it honest |
 | **Yaw rate only, never yaw** | no magnetometer, so the IMU's heading is only relative. The start heading comes from `start_yaw`; GPS corrects it once the car moves |
+| **The heading trusts the turn rate** | yaw process noise 0.01, not the stock 0.06: the gyro and wheels give the turn rate well, so the heading follows them and GPS only nudges it. With 0.06 it wandered up to ±25° at walking pace (below) |
 | **Each backend sets its own covariance** | the spine works out the turn rate from the measured steering. Today's encoder can't, so it sends a huge covariance (1e3), and the EKF ignores that part |
 
 With `gps:=false`, `ekf_global` doesn't run, and a fixed `map → odom` (zero) stands in.
@@ -175,6 +176,7 @@ With `gps:=false`, `ekf_global` doesn't run, and a fixed `map → odom` (zero) s
 | Where | Result |
 |---|---|
 | Gazebo | both EKFs within 0.2 m, parked |
+| Gazebo, driving (22 Oct) | the global EKF's heading, 3 min forward and back at 0.5-1 m/s: median 2.6° off, worst 14° (yaw noise 0.06: median 6.2-6.7°, worst 39-54°). From a start 29° wrong: right within 10 s. With a gyro biased 0.6°/s: median 3.8° |
 | Bench | 0.03-0.3 m from the truth |
 | The car | never run yet |
 
