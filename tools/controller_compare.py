@@ -8,6 +8,7 @@ Both drive the test lot, headless, and are measured against where the car really
     pixi run controller-compare --tours obstacle   (only the box in the lane)
     pixi run controller-compare --controllers mppi
     pixi run controller-compare --speed 3          (Nav2 and ego up to 3 m/s: sim_speed:=3)
+    pixi run controller-compare --tours lot --legs 1   (only the first leg: a quick check)
 
 For each tour and controller it:
 1. starts sim.launch.py world:=test_lot gui:=false rviz:=false controller:=<rpp|mppi>
@@ -314,6 +315,11 @@ def stop(launch, grace=30.0):
     return False
 
 
+def tour_legs(tour, args):
+    """Return the tour's legs to drive: all, or only the first --legs."""
+    return TOURS[tour]['legs'][:args.legs]
+
+
 def session(tour, controller, args, out_dir, body, used):
     """Start the simulator for one tour and controller, drive its legs, stop it."""
     plan = TOURS[tour]
@@ -342,9 +348,9 @@ def session(tour, controller, args, out_dir, body, used):
             if not (up and rec.spin_for(UP_TIME, rec.nav.server_is_ready)):
                 print(f'   it never came up: see {log_path}', flush=True)
                 return [(tour, name, controller, None, ['never came up'], {})
-                        for name, *_ in plan['legs']]
+                        for name, *_ in tour_legs(tour, args)]
             rec.spin_for(SETTLE)
-            for name, x, y, heading in plan['legs']:
+            for name, x, y, heading in tour_legs(tour, args):
                 leg, notes = drive_leg(rec, launch.pid, (x, y, math.radians(heading)),
                                        args.speed or 1.0, body, obstacle)
                 row = drive_metrics.summary(leg)
@@ -376,7 +382,7 @@ def report(results, args, started):
              f'{args.speed or 1.0:g} m/s. One run each. What each number means: '
              'tools/drive_metrics.py.', '']
     for tour in args.tours:
-        for name, x, y, heading in TOURS[tour]['legs']:
+        for name, x, y, heading in tour_legs(tour, args):
             legs = [(c, row, notes) for t, n, c, row, notes, _ in results
                     if t == tour and n == name]
             lines += [f'## {tour}: {name} (to {x:g}, {y:g}, facing {heading:g} deg)', '']
@@ -388,7 +394,7 @@ def report(results, args, started):
     return '\n'.join(lines)
 
 
-def picture(results, tour):
+def picture(results, tour, args):
     """Return an SVG of one tour on the test lot: each controller's track, the first plans."""
     with open(MAP_SPEC) as f:
         spec = yaml.safe_load(f)
@@ -409,7 +415,7 @@ def picture(results, tour):
                        [(x, y) for r in legs for _, x, y in r[5]['track']], False))
     plans = [p for r in runs if r[2] == runs[0][2] for p in r[5]['plan']] if runs else []
     tracks.append(('the first plan of each leg', '#868e96', plans, True))
-    marks = [(x, y, name) for name, x, y, _ in TOURS[tour]['legs']]
+    marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args)]
     return drive_metrics.svg((ox, oy, ox + w, oy + h), tracks, blocks, marks)
 
 
@@ -420,6 +426,8 @@ def main():
     parser.add_argument('--tours', nargs='+', choices=list(TOURS), default=list(TOURS))
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
+    parser.add_argument('--legs', type=int, default=None,
+                        help="only each tour's first N legs (each starts where the last ended)")
     parser.add_argument('--out', help='where the results go (default: log/controller-compare/)')
     args = parser.parse_args()
     started = datetime.datetime.now()
@@ -437,7 +445,7 @@ def main():
         f.write(text)
     for tour in args.tours:
         with open(os.path.join(out_dir, f'{tour}.svg'), 'w') as f:
-            f.write(picture(results, tour))
+            f.write(picture(results, tour, args))
     with open(os.path.join(out_dir, 'results.json'), 'w') as f:
         json.dump([{'tour': t, 'leg': n, 'controller': c, 'row': row, 'notes': notes, **drawn}
                    for t, n, c, row, notes, drawn in results], f, indent=1, default=str)

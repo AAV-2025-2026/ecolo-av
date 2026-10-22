@@ -3,6 +3,30 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## Working list, from 22 October (Claude works from this; Ben checks it in the morning)
+
+Everything Ben asked for since 21 Oct, in one place. Progress is updated as each step lands,
+and each step is committed. Ben's words: `docs/history/messages-2026-10-22.md`. The
+proposal's full list: [PLAN.md](PLAN.md).
+
+| # | Task | Status | Progress |
+|---|---|---|---|
+| 1 | MPPI as a choice (`controller:=mppi`), and a script that compares it with Regulated Pure Pursuit | ✅ done | `f22dc4b8`; results in `docs/controllers.md` |
+| 2 | ego knows the car's weight (181 kg) and its body | ✅ done | `7e76850f`; the centre of mass is a guess until the car is weighed (task 14) |
+| 3 | The proposal as a to-do list with % done | ✅ done | `PLAN.md`, `b70300d7` |
+| 4 | The AAV colour: the email's blue | ✅ done | `da411333` |
+| 5 | Email Ben as work lands | 🔧 ongoing | part 1 sent, 22 Oct ~01:30 |
+| 6 | MPPI loops at goals | 🔧 fixed, to confirm | it now turns to the goal's heading from 2.5 m out: left turn 28 s, 21.4 m (was 58 s, 47.5 m with a loop); round the building reached. Confirm in the full comparison (task 8) |
+| 7 | The corner problem (PLAN.md M8): the car stops at the building's corner | 🔧 trying | the planner's path passed 0.86 m from the corner. Trying a wider, gentler inflation in the global costmap (3.0 m, 1.0). Untested |
+| 8 | Run the full comparison again with 6 and 7; update `docs/controllers.md` | ⬜ | about 25 min |
+| 9 | Make MPPI the default, if it now does as well as Pure Pursuit (Ben: "I thought we decided to go mppi") | ⬜ | after 8 |
+| 10 | **Split `gazebo_adapter` into one node per sensor**, as on the car, so each runs on its own core (Ben, 22 Oct). Rust for any part still late | ⬜ | today it's one Python thread doing the IMU, GPS, wheels, radar cloud and the 50 Hz actuator model: the likely cause of the late IMU |
+| 11 | A long timing test (10 min, parked and driving) to catch the rare late data, before and after 10 | ⬜ | a 1 min test was clean: real time 0.99, every topic under 80 ms late |
+| 12 | Steer round the box in the lane: sensors in the planner's map (PLAN.md M5) | ⬜ | |
+| 13 | The global EKF's heading jumps at walking pace (PLAN.md M9, T6.3) | ⬜ | needs a heading source; lower noise helped a little |
+| 14 | Weigh the car, front and back, then with the rear lifted (M7, M7b) | ⬜ needs the team | `READ-ME-MEASURE-THE-CAR.md` |
+| 15 | Gazebo check: a tight turn at `sim_speed:=3` slows to ego's curve speed | ⬜ | |
+
 ## Where we stopped (15 Oct, morning)
 
 Everything from the night of 14-15 Oct is on `main` and pushed. GitHub's Linux CI is green

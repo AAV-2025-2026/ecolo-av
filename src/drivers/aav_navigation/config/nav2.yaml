@@ -162,6 +162,12 @@ controller_server:
         consider_footprint: true            # the car's 2 x 1 m outline, not a circle: without
                                             # it Nav2 warns "Inconsistent configuration in
                                             # collision checking" (21 Oct)
+      GoalAngleCritic:
+        threshold_to_consider: 2.5          # m: turn to the goal's heading from 2.5 m out.
+                                            # Nav2's 0.5 m is for robots that turn in place:
+                                            # the car then drove a loop at the goal (22 Oct)
+      PathAlignCritic:
+        use_path_orientations: true         # the Hybrid-A* path's headings are drivable
 
 local_costmap:
   local_costmap:
