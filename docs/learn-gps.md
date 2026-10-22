@@ -152,9 +152,27 @@ From the datum:
 
 It also:
 - removes the antenna's offset, using TF `base_link → gps_link`: that's why the antenna's
-  spot in `vehicle.yaml` matters;
+  spot in `vehicle.yaml` matters (and where it is mounted: below);
 - serves `/fromLL` (lat/lon → x, y) and `/toLL` (back). The HUD's route reaches Nav2
   through `/fromLL`.
+
+### Mount the antenna over the rear axle
+
+To remove the offset, `navsat_transform` turns it by the car's heading **as the global EKF
+believes it** (`map → base_link`). A heading error then moves the GPS position sideways,
+and the EKF corrects its heading from that. Driving forward, the two agree. Reversing,
+they pull the wrong way, and the heading gets worse.
+
+Measured in Gazebo (22 Oct; two runs of each; 15 s legs at 0.5 m/s, forward and back):
+
+| Antenna | Heading off, reversing (median) | Forward (median) | Worst |
+|---|---:|---:|---:|
+| 0.8 m ahead of the rear axle (today's guess) | 7.5-12.8° | 3.7-6.7° | 39-54° |
+| **over the rear axle** | 4.6-6.6° | 5.1-7.5° | 26-31° |
+
+So put the antenna **above the rear axle** if the mount allows (any height). Then the
+offset doesn't turn with the heading, and reversing is as good as forward. A heading
+source (PLAN M9) would fix it too.
 
 ## 7. GPS in Gazebo and on the bench
 

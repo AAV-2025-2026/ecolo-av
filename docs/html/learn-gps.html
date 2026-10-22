@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-gps.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>GPS from zero</h1>
-<div class="meta">10 min read · 9 sections</div></header>
+<div class="meta">12 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -429,10 +429,43 @@ checks the first step: is there any data at all?
 <p>It also:</p>
 <ul>
 <li>removes the antenna's offset, using TF <code>base_link → gps_link</code>: that's why the antenna's
-  spot in <code>vehicle.yaml</code> matters;</li>
+  spot in <code>vehicle.yaml</code> matters (and where it is mounted: below);</li>
 <li>serves <code>/fromLL</code> (lat/lon → x, y) and <code>/toLL</code> (back). The HUD's route reaches Nav2
   through <code>/fromLL</code>.</li>
 </ul>
+<h3 id="mount-the-antenna-over-the-rear-axle">Mount the antenna over the rear axle</h3>
+<p>To remove the offset, <code>navsat_transform</code> turns it by the car's heading <strong>as the global EKF
+believes it</strong> (<code>map → base_link</code>). A heading error then moves the GPS position sideways,
+and the EKF corrects its heading from that. Driving forward, the two agree. Reversing,
+they pull the wrong way, and the heading gets worse.</p>
+<p>Measured in Gazebo (22 Oct; two runs of each; 15 s legs at 0.5 m/s, forward and back):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Antenna</th>
+<th style="text-align: right;">Heading off, reversing (median)</th>
+<th style="text-align: right;">Forward (median)</th>
+<th style="text-align: right;">Worst</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.8 m ahead of the rear axle (today's guess)</td>
+<td style="text-align: right;">7.5-12.8°</td>
+<td style="text-align: right;">3.7-6.7°</td>
+<td style="text-align: right;">39-54°</td>
+</tr>
+<tr>
+<td><strong>over the rear axle</strong></td>
+<td style="text-align: right;">4.6-6.6°</td>
+<td style="text-align: right;">5.1-7.5°</td>
+<td style="text-align: right;">26-31°</td>
+</tr>
+</tbody>
+</table></div>
+<p>So put the antenna <strong>above the rear axle</strong> if the mount allows (any height). Then the
+offset doesn't turn with the heading, and reversing is as good as forward. A heading
+source (PLAN M9) would fix it too.</p>
 </section>
 <section class="card"><h2 id="7-gps-in-gazebo-and-on-the-bench">7. GPS in Gazebo and on the bench</h2>
 <div class="table-wrap"><table>
