@@ -525,7 +525,8 @@ collision_monitor:
       topic: /sensors/lidar/scan
       enabled: true
     # The detectors' boxes on the road (aav_yolo camera_obstacles), every camera's newest:
-    # people and cars ahead, and behind with the rear camera. Only with camera_obstacles.
+    # people and cars ahead, and behind with the rear camera. Only with camera_guard: where a
+    # detector really feeds it, since a silent source stops the car.
     camera:
       type: "pointcloud"
       topic: /perception/camera_obstacles

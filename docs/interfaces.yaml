@@ -348,7 +348,7 @@ topics:
     type: sensor_msgs/msg/PointCloud2
     pub: [camera_obstacles]
     sub: [local_costmap, collision_monitor]
-    note: Where each detected object stands on the road, in base_link (z = 0) - points 0.1 m apart along its box's bottom edge, out to 12 m from the camera. Each message carries every camera's newest points (those heard in the last max_age, 1 s), so the rear camera's stay while the front one's pictures come in. Only the listed COCO classes (people, cyclists, cars...), never stop signs. The local costmap's camera layer marks them, and collision_monitor stops for them (ahead going forward, behind reversing) - bench.launch.py camera_obstacles:=true, or the car's camera_obstacles part next to navigation. Off until the cameras are calibrated (Q22).
+    note: Where each detected object stands on the road, in base_link (z = 0) - points 0.1 m apart along its box's bottom edge, out to 12 m from the camera. Each message carries every camera's newest points (those heard in the last max_age, 1 s), so the rear camera's stay while the front one's pictures come in. Only the listed COCO classes (people, cyclists, cars...), never stop signs. The local costmap's camera layer marks them, and with camera_guard (the car, once a detector reads the rear camera for people) collision_monitor stops for them, ahead going forward and behind reversing - bench.launch.py camera_obstacles:=true, or the car's camera_obstacles part next to navigation. Off until the cameras are calibrated (Q22).
   /perception/camera_view:
     type: sensor_msgs/msg/PointCloud2
     pub: [camera_obstacles]

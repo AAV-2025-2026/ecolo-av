@@ -292,8 +292,9 @@ def launch_setup(context):
                                map=arg('map') or empty_map, radar=on('radar'),
                                lidar=on('lidar'), ghost=flag('ghost'),
                                collision_monitor=(on('radar') or on('lidar') or flag('ghost')
-                                                  or on('camera_obstacles')),
+                                                  or rear_camera),
                                camera_obstacles=on('camera_obstacles'),
+                               camera_guard=rear_camera,
                                reversing=reversing))
     if on('spine'):
         actions.append(include('aav_spine', 'spine.launch.py'))

@@ -42,6 +42,9 @@ Obstacles, from where the sensors are:
   camera_obstacles:=true  the local costmap's camera layer reads aav_yolo camera_obstacles
                           (the detectors' boxes on the road). Off until the cameras are
                           calibrated (Q22)
+  camera_guard:=true      collision_monitor stops for them too, and when they go silent:
+                          only where a detector really reads the cameras for people (the
+                          car, with the rear camera: car.launch.py sets it)
   ghost:=true             a pretend person (aav_ghost ghost_obstacle, docs/ghost-obstacles.md):
                           its own costmap layer and collision_monitor source, so it only
                           adds. No ghost until someone places one: pixi run ghost ahead 10
@@ -109,7 +112,9 @@ def nodes(context):
     # Empty: wherever a sensor (or the ghost) can feed it.
     monitor = LaunchConfiguration('collision_monitor').perform(context).strip().lower()
     camera = flag(context, 'camera_obstacles')
-    collision_monitor = ((radar or lidar or ghost or camera) if monitor == ''
+    # Only where a detector feeds them: a silent source stops Nav2.
+    guard = camera and flag(context, 'camera_guard')
+    collision_monitor = ((radar or lidar or ghost or guard) if monitor == ''
                          else monitor == 'true')
     reversing = flag(context, 'reversing')
 
@@ -133,7 +138,7 @@ def nodes(context):
     controller = LaunchConfiguration('controller').perform(context).strip().lower()
     source = tuned_copy(f'{share}/config/nav2.yaml', v, reversing,
                         float(speed) if speed else None, radar, lidar, ghost, controller,
-                        flag(context, 'plan_around'), camera)
+                        flag(context, 'plan_around'), guard)
     params = ParameterFile(
         RewrittenYaml(source_file=source, param_rewrites=rewrites, convert_types=True),
         allow_substs=True)
@@ -210,6 +215,10 @@ def generate_launch_description():
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="true: the local costmap's camera layer reads "
                                           '/perception/camera_obstacles'),
+        DeclareLaunchArgument('camera_guard', default_value='false',
+                              description='true (with camera_obstacles): collision_monitor '
+                                          'stops for the camera obstacles too, and when '
+                                          'they go silent'),
         DeclareLaunchArgument('ghost', default_value='false',
                               description='true: a pretend person (aav_ghost), its own '
                                           'costmap layer and collision_monitor source; '

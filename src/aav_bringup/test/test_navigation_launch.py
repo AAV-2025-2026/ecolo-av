@@ -221,3 +221,13 @@ def test_the_bench_lidar_feeds_the_cars_own_driver_and_nav2():
     assert sensors['lidar_port'] == '2369' == str(mock['port'])
     assert sensors['imu'] == sensors['gps'] == 'false'      # the bench's mocks stand there
     assert sent_to_navigation(BENCH, lidar='true')['lidar'] == 'true'
+
+
+def test_the_camera_guards_the_stop_zone_only_where_asked():
+    # camera_obstacles alone: the costmap reads it, collision_monitor doesn't (a bench or
+    # Gazebo with no people detector would never move: a silent source stops Nav2).
+    costmap_only = whole_file(camera_obstacles='true', radar='true')
+    sources = costmap_only['collision_monitor']['ros__parameters']['observation_sources']
+    assert 'camera' not in sources
+    guarded = whole_file(camera_obstacles='true', camera_guard='true', radar='true')
+    assert 'camera' in guarded['collision_monitor']['ros__parameters']['observation_sources']
