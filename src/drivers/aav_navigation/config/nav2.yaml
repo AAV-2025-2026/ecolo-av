@@ -85,7 +85,10 @@ controller_server:
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       stateful: true
-      xy_goal_tolerance: 0.5      # m. GPS without RTK is good to about a metre
+      # m. GPS without RTK is good to about a metre: in Gazebo (0.5 m noise) the global EKF
+      # was up to 0.7 m off the truth. With 0.5 the car, believing itself 0.6 m off at the
+      # goal, drove a loop to fix it (22 Oct). Tighten it once the car has RTK.
+      xy_goal_tolerance: 1.0
       yaw_goal_tolerance: 0.5     # rad. A car can't fix its heading in place
 
     # Regulated Pure Pursuit: follows the planner's path; output angular.z = v * curvature,

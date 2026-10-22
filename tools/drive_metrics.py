@@ -20,6 +20,7 @@ summary() turns that into one row: see COLUMNS for what each number means. svg()
 drives on the map.
 """
 
+import bisect
 import math
 from xml.sax.saxutils import escape
 
@@ -139,6 +140,27 @@ def off_path(truth, plans):
     return out
 
 
+def belief_errors(truth, belief):
+    """
+    Return (position gaps m, heading gaps rad): each belief against the truth nearest in time.
+
+    belief is where the global EKF thought the car was, (t, x, y, yaw), as truth is: what
+    Nav2 steers by. Its gap from the truth is localization's error, not the controller's.
+    """
+    if not truth:
+        return [], []
+    times = [t for t, *_ in truth]
+    gaps, turns = [], []
+    for t, x, y, yaw in belief:
+        i = bisect.bisect_left(times, t)
+        near = min((j for j in (i - 1, i) if 0 <= j < len(truth)),
+                   key=lambda j: abs(times[j] - t))
+        _, tx, ty, tyaw = truth[near]
+        gaps.append(math.hypot(x - tx, y - ty))
+        turns.append(abs(angle_diff(yaw, tyaw)))
+    return gaps, turns
+
+
 def rms_rate(samples):
     """Return the root mean square (per s) of how fast a value changes, from [(t, value)]."""
     rates = [(b[1] - a[1]) / (b[0] - a[0]) for a, b in zip(samples, samples[1:])
@@ -177,6 +199,7 @@ def summary(leg):
     """Return one row of numbers for a leg (see COLUMNS)."""
     truth = leg['truth']
     gaps = off_path(truth, leg['plans'])
+    lost, turned = belief_errors(truth, leg.get('belief', []))
     route = leg['plans'][0][1] if leg['plans'] else []
     row = {
         'reached': bool(leg['reached']),
@@ -195,6 +218,8 @@ def summary(leg):
         'reversals': reversals(truth),
         'clearance_m': clearance(truth, leg.get('obstacle'), leg['body']),
         'cpu_percent': leg.get('cpu'),
+        'belief_max_m': max(lost) if lost else math.nan,
+        'belief_heading_max_deg': math.degrees(max(turned)) if turned else math.nan,
     }
     if truth:
         _, x, y, yaw = truth[-1]
@@ -223,6 +248,8 @@ COLUMNS = [
     ('reversals', 'Reversals', '{:d}'),
     ('clearance_m', 'Closest to the box (m)', '{:.2f}'),
     ('cpu_percent', 'controller CPU (%)', '{:.0f}'),
+    ('belief_max_m', 'Where the EKF put the car: off, worst (m)', '{:.2f}'),
+    ('belief_heading_max_deg', "The EKF's heading: off, worst (deg)", '{:.0f}'),
 ]
 
 

@@ -138,12 +138,12 @@ class Recorder(Node):
             Parameter('use_sim_time', value=True)])
         self.recording = False
         self.truth, self.plans, self.steering, self.asked = [], [], [], []
+        self.belief = []
         self.last_truth = self.glob = None
         self.lock, self.locked, self.states = None, False, set()
         self.monitor, self.monitor_stops = None, 0
         self.create_subscription(Odometry, '/vehicle/gazebo/truth', self.on_truth, 10)
-        self.create_subscription(Odometry, '/localization/odom/global',
-                                 lambda m: setattr(self, 'glob', m), 10)
+        self.create_subscription(Odometry, '/localization/odom/global', self.on_global, 10)
         self.create_subscription(Path, '/plan', self.on_plan, 10)
         self.create_subscription(AckermannDriveStamped, '/ego/actuator_cmd', self.on_steering,
                                  10)
@@ -157,6 +157,7 @@ class Recorder(Node):
 
     def start(self):
         self.truth, self.plans, self.steering, self.asked = [], [], [], []
+        self.belief = []
         self.locked, self.states, self.monitor_stops = False, set(), 0
         self.recording = True
 
@@ -166,6 +167,13 @@ class Recorder(Node):
             p = msg.pose.pose.position
             self.truth.append((seconds(msg.header.stamp), p.x, p.y,
                                yaw_of(msg.pose.pose.orientation)))
+
+    def on_global(self, msg):
+        self.glob = msg
+        if self.recording:
+            p = msg.pose.pose.position
+            self.belief.append((seconds(msg.header.stamp), p.x, p.y,
+                                yaw_of(msg.pose.pose.orientation)))
 
     def on_plan(self, msg):
         if self.recording:
@@ -270,7 +278,8 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle):
                      (': ' + '; '.join(sorted(rec.states)) if rec.states else ''))
     if rec.monitor_stops:
         notes.append(f'collision_monitor stopped the car {rec.monitor_stops}x')
-    leg = {'truth': rec.truth, 'plans': rec.plans, 'steering': rec.steering,
+    leg = {'truth': rec.truth, 'belief': rec.belief, 'plans': rec.plans,
+           'steering': rec.steering,
            'asked': rec.asked, 'start': start, 'end': end, 'goal': goal, 'reached': reached,
            'cpu': (100.0 * (cpu1 - cpu0) / (wall1 - wall0)
                    if None not in (cpu0, cpu1) and wall1 > wall0 else None),
@@ -354,8 +363,11 @@ def session(tour, controller, args, out_dir, body, used):
                 leg, notes = drive_leg(rec, launch.pid, (x, y, math.radians(heading)),
                                        args.speed or 1.0, body, obstacle)
                 row = drive_metrics.summary(leg)
-                drawn = {'track': [[round(v, 2) for v in s[:3]]
+                # t, x, y, yaw: where the car was, and where the global EKF put it.
+                drawn = {'track': [[round(v, 3) for v in s]
                                    for s in drive_metrics.thin(leg['truth'], TRACK_EVERY)],
+                         'belief': [[round(v, 3) for v in s]
+                                    for s in drive_metrics.thin(leg['belief'], TRACK_EVERY)],
                          'plan': [[round(x, 2), round(y, 2)]
                                   for x, y in (leg['plans'][0][1][::4] if leg['plans'] else [])]}
                 rows.append((tour, name, controller, row, notes, drawn))
@@ -412,7 +424,7 @@ def picture(results, tour, args):
     for controller in dict.fromkeys(c for _, _, c, *_ in runs):
         legs = [r for r in runs if r[2] == controller]
         tracks.append((f'{controller}: where the car went', COLOURS.get(controller, 'black'),
-                       [(x, y) for r in legs for _, x, y in r[5]['track']], False))
+                       [(x, y) for r in legs for _, x, y, *_ in r[5]['track']], False))
     plans = [p for r in runs if r[2] == runs[0][2] for p in r[5]['plan']] if runs else []
     tracks.append(('the first plan of each leg', '#868e96', plans, True))
     marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args)]

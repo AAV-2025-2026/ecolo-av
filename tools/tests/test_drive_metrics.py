@@ -149,3 +149,13 @@ def test_the_picture_puts_north_up():
     building = root.findall(ns + 'rect')[1]                     # after the white page
     assert (building.get('x'), building.get('y')) == ('240.0', '120.0')   # its north-west
     assert [t.text for t in root.findall(ns + 'text')] == ['goal <1>', 'rpp', 'plan', '10 m']
+
+
+def test_where_the_ekf_put_the_car_against_the_truth():
+    truth = [(t * 0.1, t * 0.1, 0.0, 0.0) for t in range(20)]       # east at 1 m/s
+    # The EKF: 0.3 m to the side, then 20 degrees off, matched by the nearest time.
+    belief = [(0.52, 0.5, 0.3, 0.0), (1.49, 1.5, 0.0, math.radians(20))]
+    gaps, turns = m.belief_errors(truth, belief)
+    assert gaps == [pytest.approx(0.3), pytest.approx(0.0, abs=1e-9)]
+    assert turns == [pytest.approx(0.0), pytest.approx(math.radians(20))]
+    assert m.belief_errors([], belief) == ([], [])
