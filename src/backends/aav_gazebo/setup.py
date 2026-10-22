@@ -34,6 +34,10 @@ setup(
     entry_points={
         'console_scripts': [
             'gazebo_adapter = aav_gazebo.gazebo_adapter:main',
+            'gazebo_imu = aav_gazebo.gazebo_imu:main',
+            'gazebo_gps = aav_gazebo.gazebo_gps:main',
+            'gazebo_radar = aav_gazebo.gazebo_radar:main',
+            'gazebo_camera = aav_gazebo.gazebo_camera:main',
         ],
     },
 )

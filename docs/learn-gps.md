@@ -161,7 +161,7 @@ It also:
 | | Gazebo (`pixi run sim`) | Bench (`pixi run bench`) | The car |
 |---|---|---|---|
 | Made by | Gazebo's `navsat` sensor on `gps_link` | `mock_gps` | `ublox_gps` |
-| Path | `/aav/navsat` → `/gazebo/navsat` → `gazebo_adapter` → `/sensors/gps/fix` | straight to `/sensors/gps/fix` | straight to `/sensors/gps/fix` |
+| Path | `/aav/navsat` → `/gazebo/navsat` → `gazebo_gps` → `/sensors/gps/fix` | straight to `/sensors/gps/fix` | straight to `/sensors/gps/fix` |
 | Rate | 5 Hz | 5 Hz | 1 Hz (factory) |
 | Noise | 4.5e-6° (about 0.5 m) per fix | 0.5 m per fix | unknown until we log it |
 | Status | always `STATUS_FIX` | always `STATUS_FIX` | depends on the sky |
@@ -206,7 +206,7 @@ and y near 11.
 | The datum, navsat_transform | `src/localization/aav_localization/config/navsat.yaml` |
 | The antenna's spot on the car | `src/aav_description/config/vehicle.yaml` (`gps_link`) |
 | Gazebo's GPS sensor | `src/aav_description/urdf/aav.gazebo.xacro` (`navsat`) |
-| Gazebo → our topic name | `src/backends/aav_gazebo/aav_gazebo/gazebo_adapter.py` |
+| Gazebo → our topic name | `src/backends/aav_gazebo/aav_gazebo/gazebo_gps.py` |
 | The bench's pretend GPS | `src/bench/aav_bench/aav_bench/sensors.py` (`MockGps`) |
 | The device name `/dev/aav/gps` | `tools/udev/99-aav.rules` |
 | The contract | `docs/interfaces.yaml`: `/sensors/gps/fix`, `/localization/gps/*` |

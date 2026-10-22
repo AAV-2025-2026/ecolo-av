@@ -1,10 +1,11 @@
 """
 Sensor faults on purpose, in Gazebo: what a broken sensor sends instead. No ROS here.
 
-gazebo_adapter passes each simulated sensor on through a Fault (READ-ME-FULL-SIMULATION.md
-step 6; docs/simulation.md, "Sensor failures on purpose"). Set one while the sim runs:
+Each of Gazebo's sensor nodes passes its sensor on through a Fault (NODES; READ-ME-FULL-
+SIMULATION.md step 6; docs/simulation.md, "Sensor failures on purpose"). Set one while the
+sim runs:
 
-    pixi run sim-fault gps stop        (ros2 param set /gazebo_adapter fault.gps stop)
+    pixi run sim-fault gps stop        (ros2 param set /gazebo_gps fault.gps stop)
     pixi run sim-fault gps ok          (back to normal)
 
 The modes, and what they stand for on the car:
@@ -19,7 +20,7 @@ The modes, and what they stand for on the car:
 
 The sensors: gps (/sensors/gps/fix), imu (/sensors/imu/data_raw), odom (the wheels:
 /vehicle/odom and /vehicle/wheels), radar (/sensors/radar/points) and camera (the front
-left camera's picture, only with faults:=true, which routes it through the adapter).
+left camera's picture, only with faults:=true, which routes it through gazebo_camera).
 """
 
 import copy
@@ -31,6 +32,15 @@ SENSORS = {
     'odom': ('ok', 'stop', 'freeze', 'nan'),
     'radar': ('ok', 'stop', 'freeze'),
     'camera': ('ok', 'stop', 'freeze'),
+}
+# Which node passes each sensor on, and so takes its fault.<sensor> parameter: one node
+# per sensor (relay.py); the wheels go with the car, in gazebo_adapter.
+NODES = {
+    'gps': 'gazebo_gps',
+    'imu': 'gazebo_imu',
+    'odom': 'gazebo_adapter',
+    'radar': 'gazebo_radar',
+    'camera': 'gazebo_camera',
 }
 JUMP_NORTH = 20.0               # m
 METRES_PER_DEGREE = 111195.0    # of latitude, on a 6371 km Earth
@@ -89,10 +99,10 @@ CAMERA_RELAYED = '/gazebo/camera/front_left/image_raw'
 
 def relayed(bridge):
     """
-    Return the road bridge's entries with the front left picture sent to the adapter.
+    Return the road bridge's entries with the front left picture sent to gazebo_camera.
 
     bridge is bridge_road.yaml, loaded. The picture goes to CAMERA_RELAYED instead, for
-    gazebo_adapter to pass on through its camera fault (gazebo.launch.py faults:=true).
+    gazebo_camera to pass on through its fault (gazebo.launch.py faults:=true).
     """
     out = copy.deepcopy(bridge)
     for entry in out:

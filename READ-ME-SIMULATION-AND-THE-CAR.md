@@ -59,10 +59,10 @@ Most of the software doesn't know whether it's driving a real car or a pretend o
 **How it gets there:**
 
 ```text
-Gazebo sensor → ros_gz_bridge → /gazebo/... → gazebo_adapter → the real drivers' topic names
+Gazebo sensor → ros_gz_bridge → /gazebo/... → one node per sensor → the real drivers' topic names
 ```
 
-`gazebo_adapter` renames everything to the **same names the real drivers use** (`/sensors/gps/fix`, `/sensors/imu/data_raw`, `/vehicle/odom`). The software above can't tell the difference.
+`gazebo_adapter` (the car), `gazebo_imu`, `gazebo_gps` and `gazebo_radar` rename everything to the **same names the real drivers use** (`/sensors/gps/fix`, `/sensors/imu/data_raw`, `/vehicle/odom`). The software above can't tell the difference. One process each, as each sensor on the car has its own driver.
 
 ![The simulated car in Gazebo](docs/img/gazebo-car.png)
 

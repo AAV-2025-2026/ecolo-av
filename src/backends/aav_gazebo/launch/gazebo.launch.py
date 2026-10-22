@@ -134,7 +134,8 @@ def launch_setup(context):
         gz_args = '-r -s ' + ('--headless-rendering ' if sensors and not MAC else '') + world
     else:
         gz_args = '-r ' + world
-    v = vehicle.load()['vehicle']
+    car = vehicle.load()
+    v = car['vehicle']
     sim_time = {'use_sim_time': True}
     start = ['-y', LaunchConfiguration('start_y').perform(context),
              '-Y', LaunchConfiguration('start_yaw').perform(context)]
@@ -156,11 +157,22 @@ def launch_setup(context):
                          sim_time]),
         Node(package='aav_gazebo', executable='gazebo_adapter', name='gazebo_adapter',
              parameters=[{'wheelbase': float(v['wheelbase']), 'rendered': sensors,
-                          'radar': radar, 'camera_relay': relay,
-                          'lidar': lidar, 'wheel_radius': float(v['wheel_diameter']) / 2.0,
+                          'radar': radar, 'lidar': lidar,
+                          'wheel_radius': float(v['wheel_diameter']) / 2.0,
                           'actuator_model': flag(context, 'actuator_model'),
                           'spine': spine}, sim_time]),
+        # Each sensor in a process of its own, as on the car: none waits behind another.
+        Node(package='aav_gazebo', executable='gazebo_imu', name='gazebo_imu',
+             parameters=[{'imu_x': float(car['sensors']['imu_link']['xyz'][0])}, sim_time]),
+        Node(package='aav_gazebo', executable='gazebo_gps', name='gazebo_gps',
+             parameters=[sim_time]),
     ]
+    if radar:
+        actions.append(Node(package='aav_gazebo', executable='gazebo_radar',
+                            name='gazebo_radar', parameters=[sim_time]))
+    if relay:
+        actions.append(Node(package='aav_gazebo', executable='gazebo_camera',
+                            name='gazebo_camera', parameters=[sim_time]))
     if spine:
         actions += spine_in_the_loop(context, v, sim_time)
     if gui and MAC:
@@ -171,7 +183,7 @@ def launch_setup(context):
     if sensors:
         bridge = os.path.join(share, 'config', 'bridge_road.yaml')
         if relay:
-            # The front left picture to gazebo_adapter, which passes it on through its fault.
+            # The front left picture to gazebo_camera, which passes it on through its fault.
             with open(bridge) as f:
                 entries = faults.relayed(yaml.safe_load(f))
             out = tempfile.NamedTemporaryFile('w', prefix='bridge_road_', suffix='.yaml',

@@ -1,6 +1,6 @@
 import math
 
-from aav_gazebo.imu import body_acceleration
+from aav_gazebo.imu import body_acceleration, Speedometer
 import pytest
 
 
@@ -24,3 +24,18 @@ def test_a_steady_left_turn_pulls_left():
 def test_right_turn_and_a_growing_yaw_rate():
     assert body_acceleration(0.0, 2.0, -0.1)[1] == pytest.approx(-0.2)
     assert body_acceleration(0.0, 0.0, 0.0, yaw_accel=0.4, x=0.5)[1] == pytest.approx(0.2)
+
+
+def test_the_speedometer_differentiates_gazebos_odometry():
+    s = Speedometer()
+    assert not s.ready
+    s.update(0.0, 10.00)
+    assert s.ready and s.accel == 0.0             # one message: no change seen yet
+    s.update(0.02, 10.02)                         # 50 Hz, speeding up at 1 m/s^2
+    assert s.accel == pytest.approx(1.0)
+    s.update(0.02, 10.02)                         # the same stamp again: keep the last
+    assert s.accel == pytest.approx(1.0)
+    s.update(0.0, 10.04)
+    assert (s.speed, s.accel) == (0.0, pytest.approx(-1.0))
+    s.update(0.0, 0.5)                            # the world was reset: the clock went back
+    assert s.accel == 0.0

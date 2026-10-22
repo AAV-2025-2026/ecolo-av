@@ -101,7 +101,7 @@ All about it: [Learn: GPS](learn-gps.md).
 | **Bad at** | few points; poor height; clutter close up. Publishes best effort: subscribe best effort |
 | **Driver** | `ti_ros2_driver` (from the 2025-26 `Nav_Radar`), then `radar_clusters` (`aav_radar_clusters`, Rust) groups the points |
 | **Used by** | the local costmap's obstacle layer, and `collision_monitor` |
-| **Gazebo** | yes, in the road world: a lidar shaped like the radar (`/gazebo/radar/points`, turned into ours by `gazebo_adapter`) |
+| **Gazebo** | yes, in the road world: a lidar shaped like the radar (`/gazebo/radar/points`, turned into ours by `gazebo_radar`) |
 | **Bench** | `mock_radar` draws points on the bench's boxes |
 
 ## 8. Cameras: Pi 5s at the windscreen

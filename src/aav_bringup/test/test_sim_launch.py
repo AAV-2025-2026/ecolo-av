@@ -218,10 +218,14 @@ def test_gazebo_bridges_the_sensors_only_where_the_world_renders_them():
     actions = started(GAZEBO, world='empty', gui='false')
     assert 'gz_road_bridge' not in names(actions)
     assert parameters(node(actions, 'gazebo_adapter'))['radar'] is False
+    # One node per sensor, as on the car; the radar's only where the world renders it.
+    assert {'gazebo_imu', 'gazebo_gps'} <= names(actions)
+    assert not {'gazebo_radar', 'gazebo_camera'} & names(actions)
     for world in ('road', 'test_lot'):
         actions = started(GAZEBO, world=world, gui='false')
         assert 'gz_road_bridge' in names(actions), world
         assert parameters(node(actions, 'gazebo_adapter'))['radar'] is True, world
+        assert 'gazebo_radar' in names(actions), world
         assert parameters(node(actions, 'gz_road_bridge'))['config_file'].endswith(
             'bridge_road.yaml'), world
 

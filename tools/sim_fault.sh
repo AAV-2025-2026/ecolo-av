@@ -19,4 +19,9 @@ if [[ $# -ne 2 ]]; then
   sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
   exit 2
 fi
-exec ros2 param set /gazebo_adapter "fault.$1" "$2"
+# Each sensor's own node takes its fault (aav_gazebo faults.py, NODES).
+case "$1" in
+  odom) node=gazebo_adapter ;;
+  *) node="gazebo_$1" ;;
+esac
+exec ros2 param set "/$node" "fault.$1" "$2"

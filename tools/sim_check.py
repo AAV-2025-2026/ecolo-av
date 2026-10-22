@@ -58,7 +58,7 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    it; once the ghost is switched off, the car must go on to the goal, through where it
    stood.
 10. With --faults: Gazebo again (faults:=true), and for each fault in FAULTS: Nav2 drives,
-   the fault goes on (gazebo_adapter's fault.<sensor>), and the car must stop within
+   the fault goes on (fault.<sensor>, on its node: faults.NODES), and the car must stop within
    REACT seconds, stopped by the sensor watchdog's lock or collision_monitor; then the
    fault goes off, and the lock must open again. Two faults are of the watchdog itself:
    `watchdog hang` stops its process (SIGSTOP, then SIGCONT to mend it) and `watchdog
@@ -117,6 +117,7 @@ os.environ['GZ_IP'] = '127.0.0.1'
 os.environ['GZ_PARTITION'] = os.environ.get('AAV_SIM_PARTITION', f'sim_check_{DOMAIN}')
 
 from aav_description import vehicle  # noqa: E402
+from aav_gazebo.faults import NODES as FAULT_NODES  # noqa: E402
 from aav_interfaces.action import GoTo, ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import ActuatorState, SpineOutputs, VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
@@ -911,10 +912,22 @@ def signal_watchdog(mode):
     return True
 
 
-def set_fault(probe, client, sensor, mode):
-    """Set gazebo_adapter's fault.<sensor>, or signal the watchdog; True if it took it."""
+def fault_client(probe, sensor):
+    """Return a parameter client for the node that takes this sensor's fault."""
+    clients = probe.__dict__.setdefault('fault_clients', {})
+    node = FAULT_NODES[sensor]
+    if node not in clients:
+        clients[node] = AsyncParameterClient(probe, node)
+    return clients[node]
+
+
+def set_fault(probe, sensor, mode):
+    """Set the sensor node's fault.<sensor>, or signal the watchdog; True if it took it."""
     if sensor == 'watchdog':
         return signal_watchdog(mode)
+    client = fault_client(probe, sensor)
+    if not client.wait_for_services(timeout_sec=10.0):
+        return False
     sent = client.set_parameters([Parameter(f'fault.{sensor}', value=mode)])
     probe.spin_for(10.0, sent.done)
     return sent.done() and all(r.successful for r in sent.result().results)
@@ -939,8 +952,7 @@ def drive_on(probe):
 
 def check_faults(probe, watchdog=True):
     """Each fault in FAULTS while Nav2 drives: the car must stop, and something say why."""
-    client = AsyncParameterClient(probe, 'gazebo_adapter')
-    if not client.wait_for_services(timeout_sec=20.0):
+    if not fault_client(probe, 'odom').wait_for_services(timeout_sec=20.0):
         result('faults', False, "no gazebo_adapter parameters: can't set a fault")
         return
     clear = probe.create_client(Trigger, '/safety/sensor_watchdog/clear')
@@ -962,8 +974,8 @@ def check_faults(probe, watchdog=True):
             continue
         seen = len(probe.monitor)
         x0, y0 = probe.xy(probe.truth)
-        if not set_fault(probe, client, sensor, mode):
-            result(name, False, 'gazebo_adapter refused the fault')
+        if not set_fault(probe, sensor, mode):
+            result(name, False, f'{FAULT_NODES.get(sensor, sensor)} refused the fault')
             continue
         t0, stopped_at, locked, silent, why = probe.now(), None, False, False, ''
         # Frozen wheels at a speed the car keeps are still right: they go wrong only once
@@ -1026,7 +1038,7 @@ def check_faults(probe, watchdog=True):
             result(name, ok, detail)
             continue
         # Mend it, and let the car's software settle before the next.
-        set_fault(probe, client, sensor, 'ok')
+        set_fault(probe, sensor, 'ok')
         if mode == 'jump' or (sensor, mode) == ('odom', 'freeze'):
             # Latched: a person checks the position (or the wheels), then clears it.
             probe.spin_for(30.0, lambda: math.hypot(*(a - b for a, b in zip(
@@ -1414,9 +1426,7 @@ def goto_stops(probe, name, stop, mend=None, react=4.0):
 
 def gps_fault(mode):
     def set_it(probe, *_):
-        client = AsyncParameterClient(probe, 'gazebo_adapter')
-        if client.wait_for_services(timeout_sec=10.0):
-            set_fault(probe, client, 'gps', mode)
+        set_fault(probe, 'gps', mode)
     return set_it
 
 

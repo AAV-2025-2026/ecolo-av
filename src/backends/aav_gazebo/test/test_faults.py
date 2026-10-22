@@ -64,3 +64,9 @@ def test_each_sensor_has_only_its_own_faults():
     assert 'no sensor' in faults.check('lidar', 'stop')
     with pytest.raises(ValueError):
         Fault('radar').switch('nan')
+
+
+def test_every_sensor_has_one_node_for_its_fault():
+    assert set(faults.NODES) == set(faults.SENSORS)
+    assert faults.NODES['odom'] == 'gazebo_adapter'          # the wheels go with the car
+    assert len(set(faults.NODES.values())) == len(faults.NODES)

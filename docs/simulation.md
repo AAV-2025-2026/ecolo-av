@@ -56,7 +56,7 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 | `lidar` | `true` | the simulated roof lidar, in the road and test_lot worlds, read by Nav2 ([below](#the-lidar-gazebo-only)); `false` drops it |
 | `radar` | `true` | the radar stand-in, in the road and test_lot worlds; `false`: the lidar alone guards Nav2 |
 | `watchdog` | `true` | the sensor watchdog: stops Nav2 and the AI slot when a sensor fails ([below](#sensor-failures-on-purpose)) |
-| `faults` | `false` | `true`: the front left picture goes through `gazebo_adapter` too, so it can freeze on purpose |
+| `faults` | `false` | `true`: the front left picture goes through `gazebo_camera` too, so it can freeze on purpose |
 | `actuator_model` | `true` | the car answers like `vehicle.yaml`'s `actuators:` say ([below](#the-actuator-model)); `false`: the old instant car, to compare |
 
 ### What Gazebo simulates
@@ -81,8 +81,8 @@ real-time factor at 0.98-0.99.
 | "This is a simulation" | (`gazebo_adapter`) | `/system/source`, latched: every sensor above is SIM | once | - | all |
 
 Each one carries the same name, type and frame as the real device's, so the software above
-can't tell. `/gazebo/*` topics are Gazebo's own side of `gazebo_adapter`, not in the
-contract.
+can't tell. `/gazebo/*` topics are Gazebo's own side of `gazebo_adapter` and the sensor
+nodes, not in the contract.
 
 ![What the three simulated cameras see, at the start of the road world](img/sim-cameras.png)
 
@@ -144,15 +144,26 @@ ego's angle ──────────────────────�
   Gazebo and prints these numbers back ([Actuator tests](actuator-tests.md)). On 15 Oct
   all but the throttle deadband came back within a few percent.
 - **The IMU feels the model** (15 Oct): Gazebo's own IMU never felt the car speed up,
-  brake or turn (it reads only gravity, noise and contact bumps). `gazebo_adapter` puts
-  the model's forward and sideways acceleration at `imu_link` in its place, with the
-  configured noise (`aav_gazebo/imu.py`). The EKFs use only the yaw rate, so nothing
+  brake or turn (it reads only gravity, noise and contact bumps). `gazebo_imu` puts
+  the car's forward and sideways acceleration at `imu_link` in its place (worked out from
+  Gazebo's odometry, which follows the model), with the configured noise
+  (`aav_gazebo/imu.py`). The EKFs use only the yaw rate, so nothing
   else changes.
 
 How the simulated car connects:
 - Gazebo plays the car, with Ackermann steering, an IMU and a GPS.
-- `gazebo_adapter` turns those into the real drivers' topics: `/vehicle/odom`,
-  `/sensors/imu/data_raw` and `/sensors/gps/fix`.
+- Nodes of ours turn those into the real drivers' topics, one per part, as on the car:
+
+  | Node | Gives | On the car, instead |
+  |---|---|---|
+  | `gazebo_adapter` | the car: `/vehicle/odom`, the wheels, the actuators, the status | `spine_bridge` |
+  | `gazebo_imu` | `/sensors/imu/data_raw` | `imu_node` (Rust) |
+  | `gazebo_gps` | `/sensors/gps/fix` | `ublox_gps` |
+  | `gazebo_radar` | `/sensors/radar/points` (road world) | the TI driver |
+  | `gazebo_camera` | the front left picture, only with `faults:=true` | `usb_cam` |
+
+  Each is a process of its own, so each runs on its own core: until 22 Oct one Python
+  node did all of it on one thread, and the IMU sometimes went quiet behind it.
 - The IMU filter, both EKFs and `navsat_transform` run with the car's own configs, on
   simulated time.
 - Map (0, 0) is where the car starts, facing east.
@@ -259,7 +270,7 @@ bench's road, built in 3D, so the car's own camera and radar can see it.
 | Sensor | In Gazebo | On ROS |
 |---|---|---|
 | Front camera | 640 x 360, 86 degrees across, 10 Hz: the bench camera's picture and lens (the 2024-25 calibration at a third of its size) | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info`, in `camera_left_link` |
-| Radar | a lidar shaped like the TI radar: 8.4 m, 120 degrees, 61 x 3 rays, 10 Hz. `gazebo_adapter` keeps the rays that hit something, with the TI driver's fields | `/sensors/radar/points`, best effort, in `radar_link` |
+| Radar | a lidar shaped like the TI radar: 8.4 m, 120 degrees, 61 x 3 rays, 10 Hz. `gazebo_radar` keeps the rays that hit something, with the TI driver's fields | `/sensors/radar/points`, best effort, in `radar_link` |
 | Where the car really is | Gazebo's own pose, like the bench's `/vehicle/bench/truth` | `/vehicle/gazebo/truth`, for checks only |
 
 | Lidar (on by default) | a generic 16-beam spinning lidar: 360 degrees in 1800 steps, 15 degrees down to 15 up, 0.5-100 m, 3 cm of noise, 10 Hz | `/sensors/lidar/points`, reliable, in `lidar_link` |
@@ -417,7 +428,9 @@ pixi run sim-fault clear                  # after a GPS jump: a person says the 
 | `camera` | `/sensors/camera/front_left/image_raw` (with `faults:=true`) | `stop`, `freeze` |
 
 `freeze` sends the last good message again, with fresh stamps: it looks alive. It's a
-parameter of `gazebo_adapter` (`fault.<sensor>`); the logic is `aav_gazebo/faults.py`.
+parameter, `fault.<sensor>`, of that sensor's node (`gazebo_gps`, `gazebo_imu`,
+`gazebo_radar`, `gazebo_camera`; the wheels' is `gazebo_adapter`'s). The logic is
+`aav_gazebo/faults.py`.
 
 ### The sensor watchdog
 
