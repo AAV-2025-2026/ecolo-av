@@ -241,7 +241,9 @@ replace the number and delete the <code>TODO</code>.</p>
 <li><strong>Turns:</strong> ego slows the car so the sideways acceleration stays under 2 m/s², or under
   half of what slides or tips the car if that is lower. It keeps the turn the driver asked
   for and lowers the speed, so the car stays on its path. At full lock (2.86 m) that is
-  2.4 m/s: it only matters above the car's 1 m/s, so today in the simulator.</li>
+  2.4 m/s: it only matters above the car's 1 m/s, so today in the simulator. Checked in
+  Gazebo (22 Oct, <code>sim_speed:=3</code>): asked 3 m/s at full lock, ego allowed 2.40 m/s and the
+  car held 2.37-2.43 m/s, 1.9-2.0 m/s² sideways.</li>
 <li><strong>Braking:</strong> never softened. If the load means the brakes can't stop the car as fast as
   ego plans (<code>max_deceleration</code>), ego warns at start-up and when the payload changes.</li>
 <li><strong>Payload</strong> is a parameter (ego.yaml, 0 kg): <code>ros2 param set /ego payload 80</code> when
