@@ -7,7 +7,7 @@
 <!-- Generated from docs/controllers.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Path followers: Regulated Pure Pursuit and MPPI</h1>
-<div class="meta">17 min read · 9 sections</div></header>
+<div class="meta">18 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -392,8 +392,12 @@ least. The fix is a heading source (PLAN M9).</p>
 heading per leg 7-16° (runs n and q: 14-76°). MPPI's tour: 29, 53, 71 and 65 s, no
 detours; its way home took 65 s (was 94-102). The picture above is this run.</p>
 <p>Forward only (run o, 04:46, same settings): the first two goals for both, but the U-turn
-failed for both again, as in run j: each swung wide and stopped facing the east wall.
-In a 14 m lane a forward U-turn barely fits; backing up is the way.</p>
+failed for both again, as in run j: each swung wide and stopped facing the east wall.</p>
+<p>Forward only <strong>after the EKF fix</strong> (run s, 06:16): <strong>all 8 goals, no stops</strong>. Both made
+the U-turn as a loop: Pure Pursuit a tight one (57 s, 45 m), MPPI a wide one into the
+open space to the east (86 s, 67 m). One run, so not yet proof; but runs j and o failed
+exactly there, while the EKF's heading swung.</p>
+<p><img alt="Run s, forward only, after the EKF fix: both make the U-turn as a loop; MPPI's is wider" src="../img/controllers-lot-forward-ekf.svg" /></p>
 <p>Still to do: MPPI drives on east a few metres before it backs up, where the plan backs
 up at once. Whether the car may reverse is the team's call: it needs something that sees behind it.</p>
 </section>

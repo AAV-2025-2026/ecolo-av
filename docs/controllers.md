@@ -148,7 +148,13 @@ detours; its way home took 65 s (was 94-102). The picture above is this run.
 
 Forward only (run o, 04:46, same settings): the first two goals for both, but the U-turn
 failed for both again, as in run j: each swung wide and stopped facing the east wall.
-In a 14 m lane a forward U-turn barely fits; backing up is the way.
+
+Forward only **after the EKF fix** (run s, 06:16): **all 8 goals, no stops**. Both made
+the U-turn as a loop: Pure Pursuit a tight one (57 s, 45 m), MPPI a wide one into the
+open space to the east (86 s, 67 m). One run, so not yet proof; but runs j and o failed
+exactly there, while the EKF's heading swung.
+
+![Run s, forward only, after the EKF fix: both make the U-turn as a loop; MPPI's is wider](img/controllers-lot-forward-ekf.svg)
 
 Still to do: MPPI drives on east a few metres before it backs up, where the plan backs
 up at once. Whether the car may reverse is the team's call: it needs something that sees behind it.
