@@ -26,6 +26,7 @@ from xml.sax.saxutils import escape
 
 STILL = 0.05        # m/s: slower than this is standing still
 STOP_TIME = 1.0     # s: a stand-still at least this long, between moving, is a stop
+SWITCH = 1.5        # m: a new plan this far from the last, on average, took another route
 MOVED = 0.1         # m from where it began: the car has started
 
 
@@ -140,6 +141,22 @@ def off_path(truth, plans):
     return out
 
 
+def route_switches(plans, apart=SWITCH):
+    """
+    Return how many times a new plan took another route: on average `apart` m off the last.
+
+    Only the new plan's part ahead, where it overlaps the last one's ground: each of its
+    points against the last plan. A plan that only grows or shrinks at its end isn't one.
+    """
+    switches = 0
+    for (_, before), (_, after) in zip(plans, plans[1:]):
+        if len(before) < 2 or len(after) < 2:
+            continue
+        gaps = [path_distance(p, before) for p in after[:max(2, len(after) // 2)]]
+        switches += sum(gaps) / len(gaps) > apart
+    return switches
+
+
 def belief_errors(truth, belief):
     """
     Return (position gaps m, heading gaps rad): each belief against the truth nearest in time.
@@ -200,6 +217,7 @@ def summary(leg):
     truth = leg['truth']
     gaps = off_path(truth, leg['plans'])
     lost, turned = belief_errors(truth, leg.get('belief', []))
+    switched = route_switches(leg['plans'])
     route = leg['plans'][0][1] if leg['plans'] else []
     row = {
         'reached': bool(leg['reached']),
@@ -218,6 +236,7 @@ def summary(leg):
         'reversals': reversals(truth),
         'clearance_m': clearance(truth, leg.get('obstacle'), leg['body']),
         'cpu_percent': leg.get('cpu'),
+        'route_switches': switched,
         'belief_max_m': max(lost) if lost else math.nan,
         'belief_heading_max_deg': math.degrees(max(turned)) if turned else math.nan,
     }
@@ -248,6 +267,7 @@ COLUMNS = [
     ('reversals', 'Reversals', '{:d}'),
     ('clearance_m', 'Closest to the box (m)', '{:.2f}'),
     ('cpu_percent', 'controller CPU (%)', '{:.0f}'),
+    ('route_switches', 'The planner changed its route (times)', '{:d}'),
     ('belief_max_m', 'Where the EKF put the car: off, worst (m)', '{:.2f}'),
     ('belief_heading_max_deg', "The EKF's heading: off, worst (deg)", '{:.0f}'),
 ]

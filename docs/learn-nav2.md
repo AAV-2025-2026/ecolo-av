@@ -97,7 +97,8 @@ The arc's curvature = 2 × (how far the carrot is to the side) ÷ (lookahead)².
 | `use_rotate_to_heading` | **false** | a car can't spin on the spot |
 | `allow_reversing` | false | true with `reversing:=true`: it follows a path backwards ([Reversing](#reversing)) |
 
-**Done** when within 0.5 m and 0.5 rad of the goal. **Stuck** if it moves less than
+**Done** when within 1.0 m and 0.75 rad (43°) of the goal: no tighter than GPS without RTK
+can tell (22 Oct; tighter, the car looped to fix misses it couldn't see). **Stuck** if it moves less than
 0.5 m in 10 s.
 
 ## 3. Costmaps, in one line each

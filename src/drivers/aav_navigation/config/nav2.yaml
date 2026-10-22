@@ -89,7 +89,10 @@ controller_server:
       # was up to 0.7 m off the truth. With 0.5 the car, believing itself 0.6 m off at the
       # goal, drove a loop to fix it (22 Oct). Tighten it once the car has RTK.
       xy_goal_tolerance: 1.0
-      yaw_goal_tolerance: 0.5     # rad. A car can't fix its heading in place
+      # rad (43 degrees). A car can't fix its heading in place: a miss costs a loop. The
+      # global EKF's heading was up to 25 degrees off in Gazebo; with 0.5 (29) both
+      # controllers, cutting the plan's last bend, arrived 35 off and looped (22 Oct).
+      yaw_goal_tolerance: 0.75
 
     # Regulated Pure Pursuit: follows the planner's path; output angular.z = v * curvature,
     # which ego turns back into a steering angle. The planner already respects the turning

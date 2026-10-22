@@ -160,3 +160,12 @@ def test_where_the_ekf_put_the_car_against_the_truth():
     assert gaps == [pytest.approx(0.3), pytest.approx(0.0, abs=1e-9)]
     assert turns == [pytest.approx(0.0), pytest.approx(math.radians(20))]
     assert m.belief_errors([], belief) == ([], [])
+
+
+def test_a_plan_that_takes_another_route_counts():
+    east = [(float(x), 0.0) for x in range(11)]
+    shorter = [(float(x), 0.0) for x in range(2, 11)]                # the car moved on
+    north = [(2.0, 0.0)] + [(2.0 + x, 4.0) for x in range(9)]        # round the other side
+    plans = [(0.0, east), (1.0, shorter), (2.0, north), (3.0, north), (4.0, [])]
+    assert m.route_switches(plans) == 1
+    assert m.route_switches([]) == 0
