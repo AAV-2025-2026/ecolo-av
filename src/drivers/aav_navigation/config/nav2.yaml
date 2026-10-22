@@ -79,8 +79,12 @@ controller_server:
     use_realtime_priority: false
 
     progress_checker:
-      plugin: "nav2_controller::SimpleProgressChecker"
+      # Turning counts as progress too: in a three-point turn the car rocks back
+      # and forth and moves less than 0.5 m, and the simple checker gave up on
+      # it ten times in one turn (22 Oct).
+      plugin: "nav2_controller::PoseProgressChecker"
       required_movement_radius: 0.5
+      required_movement_angle: 0.5
       movement_time_allowance: 10.0
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -175,6 +179,11 @@ controller_server:
                                             # the car then drove a loop at the goal (22 Oct)
       PathAlignCritic:
         use_path_orientations: true         # the Hybrid-A* path's headings are drivable
+      # Where the path changes direction (a three-point turn, reversing:=true only): MPPI
+      # stops there and reverses once it is this close. Nav2's 0.2 m is under the GPS's
+      # error: the car missed the point and drove on to a wall (22 Oct).
+      inversion_xy_tolerance: 0.5           # m
+      inversion_yaw_tolerance: 0.6          # rad
 
 local_costmap:
   local_costmap:

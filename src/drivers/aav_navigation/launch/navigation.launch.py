@@ -62,6 +62,8 @@ Send a goal: RViz "2D Goal Pose" (publishes /goal_pose), or
     "{pose: {header: {frame_id: map}, pose: {position: {x: 20.0, y: 5.0}}}}"
 """
 
+import atexit
+import os
 import tempfile
 
 from aav_description import vehicle
@@ -93,6 +95,8 @@ def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False,
     out = tempfile.NamedTemporaryFile('w', prefix='nav2_', suffix='.yaml', delete=False)
     with out:
         yaml.safe_dump(cfg, out)
+    # The nodes read it as they start; gone when the launch ends (1000 were left, 22 Oct).
+    atexit.register(os.remove, out.name)
     return out.name
 
 

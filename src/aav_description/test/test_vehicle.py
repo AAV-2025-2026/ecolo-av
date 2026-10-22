@@ -186,10 +186,14 @@ def test_mppi_follows_the_path_under_the_name_the_trees_ask_for():
     assert follow['motion_model'] == 'Ackermann'
     assert (follow['vx_min'], follow['vx_max']) == (-0.4, 3.0)
     assert follow['enforce_path_inversion'] is True     # it reverses where the path does
+    assert follow['PathAngleCritic']['mode'] == 2       # ...in the path's own direction
+    assert 'PreferForwardCritic' not in follow['critics']   # the planner chose to reverse
     assert 'desired_linear_vel' not in follow
     forward = vehicle.nav2_tuned(nav2, v, controller='mppi')[servers]['ros__parameters']
     assert (forward['FollowPath']['vx_min'], forward['FollowPath']['vx_max']) == (0.0, 1.0)
     assert forward['FollowPath']['enforce_path_inversion'] is False
+    assert 'mode' not in forward['FollowPath'].get('PathAngleCritic', {})
+    assert 'PreferForwardCritic' in forward['FollowPath']['critics']
     # The MPPI block itself stays as the file has it, where nav2_rewrites expects it.
     assert mppi[servers]['ros__parameters']['MPPI'] == nav2[servers]['ros__parameters']['MPPI']
     with pytest.raises(ValueError, match='pick one of rpp, mppi'):

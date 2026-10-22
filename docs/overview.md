@@ -98,7 +98,7 @@ finder).
 | Nav2 behaviours | `BackUp`, `DriveOnHeading`, `Wait` | no `Spin`: a car can't |
 | Nav2 navigator | `NavigateToPose`, `NavigateThroughPoses` | with our car behaviour trees, adapted from Nav2's |
 | Nav2 waypoints | `WaitAtWaypoint` | GPS waypoints come through the same server |
-| Nav2 checkers | `SimpleGoalChecker`, `SimpleProgressChecker` | when a goal counts as reached |
+| Nav2 checkers | `SimpleGoalChecker`, `PoseProgressChecker` | when a goal counts as reached; when the car counts as stuck (turning counts as moving) |
 | Costmaps | `StaticLayer`, `InflationLayer`, `ObstacleLayer` (twice) | the radar's obstacle layer is on where the radar runs; the cameras' layer is off until they're calibrated (Q22) |
 | Nav2 safety | `collision_monitor` | stops Nav2 for radar points in a 1 m zone ahead of the bumper. It guards Nav2 only |
 | Gazebo | `AckermannSteering`, `JointStatePublisher`, `Imu`, `NavSat`, `Physics`, `SceneBroadcaster`, `UserCommands` | the simulated car, its sensors, and the world |

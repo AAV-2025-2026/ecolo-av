@@ -255,6 +255,13 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
         mppi = copy.deepcopy(servers['MPPI'])
         mppi['vx_min'] = reverse_limit(v, reversing)
         mppi['enforce_path_inversion'] = bool(reversing)
+        if reversing:
+            # Follow the path in the direction the planner asks for, backwards too (mode 2:
+            # Smac's paths carry it). Forward only, mode 0: turn towards the path.
+            mppi.setdefault('PathAngleCritic', {})['mode'] = 2
+            # The planner already decides when to reverse (reverse_penalty); a critic
+            # against all reversing kept MPPI from backing up at all (22 Oct).
+            mppi['critics'] = [c for c in mppi['critics'] if c != 'PreferForwardCritic']
         servers['FollowPath'] = mppi
     monitor = out['collision_monitor']['ros__parameters']
     monitor['observation_sources'] = [name for name, on in (('radar', radar), ('lidar', lidar),

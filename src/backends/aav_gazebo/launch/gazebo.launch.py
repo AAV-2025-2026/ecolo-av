@@ -59,6 +59,7 @@ the simulator renders with EGL (--headless-rendering). follow:=true points the w
 camera at the car once the window is up.
 """
 
+import atexit
 import os
 import sys
 import tempfile
@@ -190,6 +191,7 @@ def launch_setup(context):
                                               delete=False)
             with out:
                 yaml.safe_dump(entries, out)
+            atexit.register(os.remove, out.name)    # read as the bridge starts
             bridge = out.name
         actions.append(Node(
             package='ros_gz_bridge', executable='parameter_bridge', name='gz_road_bridge',
