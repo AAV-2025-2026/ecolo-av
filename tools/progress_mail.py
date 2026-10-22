@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Email a progress update as a red-and-white HTML page (the car's colours).
+Email a progress update as a blue-and-white HTML page (the AAV's sky blue, Ben 22 Oct).
 
 Purpose: let people follow the work from a phone. Write the update in a small markdown
 subset, and this renders and sends it. Standard library only, so it runs anywhere.
@@ -36,7 +36,9 @@ import smtplib
 import socket
 import sys
 
-RED = '#C8102E'
+BLUE = '#B8E2F8'     # the fill: the banner, table headers, callouts; dark text on it
+INK = '#155E8C'      # the same blue, deep enough for headings and links on white
+TINT = '#EEF8FD'     # a callout's background
 DARK = '#222222'
 GREY = '#F4F4F4'
 CONFIG = Path.home() / '.config' / 'aav' / 'mail.env'
@@ -62,7 +64,7 @@ def inline(text):
     out = re.sub(r'`([^`]+)`', r'<code style="background:#eee;padding:1px 4px;'
                  r'border-radius:3px;font-family:Menlo,Consolas,monospace">\1</code>', out)
     out = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', out)
-    out = re.sub(r'\[([^\]]+)\]\(([^)\s]+)\)', rf'<a style="color:{RED}" href="\2">\1</a>', out)
+    out = re.sub(r'\[([^\]]+)\]\(([^)\s]+)\)', rf'<a style="color:{INK}" href="\2">\1</a>', out)
     return out
 
 
@@ -71,7 +73,7 @@ def table(rows):
     cells = [[c.strip().replace('\\|', '|') for c in re.split(r'(?<!\\)\|', r.strip().strip('|'))]
              for r in rows if not re.fullmatch(r'\s*\|?[\s:|-]+\|?\s*', r)]
     head, body = cells[0], cells[1:]
-    th = ''.join(f'<th style="background:{RED};color:#fff;text-align:left;padding:6px 10px">'
+    th = ''.join(f'<th style="background:{BLUE};color:{DARK};text-align:left;padding:6px 10px">'
                  f'{inline(c)}</th>' for c in head)
     trs = ''.join(
         '<tr>' + ''.join(f'<td style="padding:6px 10px;background:{GREY if i % 2 else "#fff"};'
@@ -118,8 +120,8 @@ def render_body(markdown):
                        f'{inline(s[4:])}</h3>')
         elif s.startswith('## '):
             flush()
-            out.append(f'<h2 style="color:{RED};margin:20px 0 6px;font-size:19px;'
-                       f'border-bottom:2px solid {RED};padding-bottom:3px">{inline(s[3:])}</h2>')
+            out.append(f'<h2 style="color:{INK};margin:20px 0 6px;font-size:19px;'
+                       f'border-bottom:2px solid {BLUE};padding-bottom:3px">{inline(s[3:])}</h2>')
         elif s.startswith('|'):
             if para or bullets:
                 flush()
@@ -130,7 +132,7 @@ def render_body(markdown):
             bullets.append(s[2:])
         elif s.startswith('> '):
             flush()
-            out.append(f'<div style="border-left:5px solid {RED};background:#FDECEE;'
+            out.append(f'<div style="border-left:5px solid {BLUE};background:{TINT};'
                        f'padding:8px 12px;margin:8px 0 12px">{inline(s[2:])}</div>')
         elif bullets and line.startswith('  '):
             bullets[-1] += ' ' + s          # a wrapped bullet
@@ -147,8 +149,8 @@ def render(subject, markdown, greeting='Hello Ben'):
 <meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:{DARK};
 font-size:15px;line-height:1.45">
-<div style="background:{RED};color:#fff;padding:14px 18px">
-<div style="font-size:12px;letter-spacing:2px;opacity:.9">AAV 2026–27 · AUTONOMY STACK</div>
+<div style="background:{BLUE};color:{DARK};padding:14px 18px">
+<div style="font-size:12px;letter-spacing:2px;opacity:.8">AAV 2026–27 · AUTONOMY STACK</div>
 <div style="font-size:21px;font-weight:bold;margin-top:4px">{html.escape(subject)}</div></div>
 <div style="padding:12px 18px;max-width:760px">
 <p style="font-size:16px;margin:10px 0">{html.escape(greeting)} 👋</p>

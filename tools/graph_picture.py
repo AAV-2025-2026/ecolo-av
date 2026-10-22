@@ -104,10 +104,10 @@ def main():
         members = sorted(n for n, layer in nodes.items() if layer == i)
         lines.append(f'  rung{i} [style=invis, shape=point, width=0];')
         lines.append(f'  subgraph cluster_{i} {{ label={quote(title)}; fontsize=13; '
-                     f'color="#C8102E"; style="rounded";')
+                     f'color="#155E8C"; style="rounded";')
         for n in members:
             lines.append(f'    {quote(n)} [shape=box, style="rounded,filled", '
-                         f'fillcolor={quote(colour)}, color="#C8102E"];')
+                         f'fillcolor={quote(colour)}, color="#155E8C"];')
         lines.append('  }')
         lines.append('  { rank=same; ' + f'rung{i}; ' + ' '.join(quote(n) for n in members)
                      + ' }')
