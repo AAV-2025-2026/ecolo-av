@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">41 min read · 8 sections</div></header>
+<div class="meta">42 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -910,6 +910,7 @@ the frames come out right (<code>sim-check</code> tests them).</p>
 pixi run -e ml sim-check --perception --obstacle  # and the stop sign, and the box
 pixi run sim-check --lane                         # and lane keeping, in a second run
 pixi run sim-check --lidar-obstacle               # and the lidar alone (radar off) stops for a post
+pixi run sim-check --plan-around                  # and Nav2 drives round a box it sees, without stopping
 pixi run sim-check --ghost                        # and a pretend person only Nav2 sees, in a second run
 pixi run sim-check --faults                       # and sensor failures on purpose (below)
 pixi run sim-check --faults --no-watchdog         # the same, a report of what happens without the watchdog
@@ -957,6 +958,10 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 <tr>
 <td><code>pixi run sim-check --obstacle --lidar-obstacle</code> (15 Oct, the lidar into Nav2; twice)</td>
 <td>all pass: the box 0.32-0.46 m ahead with radar and lidar; with the radar off, the lidar alone stopped the car 0.16-0.55 m before a person-sized post, the costmap 100 of 100 there; both goals reached once they were gone</td>
+</tr>
+<tr>
+<td><code>AAV_RMW=cyclone pixi run sim-check --obstacle --lidar-obstacle --plan-around</code>, <code>--ghost</code> (22 Oct, MPPI, the planner seeing the sensors)</td>
+<td>all pass: with <code>plan_around:=false</code> the box 0.37 m ahead, the post 0.26 m; with the planner seeing them, round the box 3.9 m clear, never stopped; the ghost 0.13 m</td>
 </tr>
 <tr>
 <td><code>pixi run sim-check --faults</code> (15 Oct)</td>

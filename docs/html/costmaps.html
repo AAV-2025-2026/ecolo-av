@@ -7,7 +7,7 @@
 <!-- Generated from docs/costmaps.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Maps and costmaps</h1>
-<div class="meta">14 min read · 7 sections</div></header>
+<div class="meta">15 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -114,13 +114,18 @@ The settings are in <code>src/drivers/aav_navigation/config/nav2.yaml</code>.</p
 </tr>
 <tr>
 <td>Layers</td>
-<td>static (the map), the radar, the cameras, inflation</td>
-<td>static (the map), inflation</td>
+<td>static (the map), the radar, the cameras, the lidar, inflation</td>
+<td>static (the map), the radar, the lidar, inflation</td>
 </tr>
 <tr>
 <td>Sensors</td>
-<td>the radar where it runs; the cameras when switched on (below)</td>
-<td>none: Nav2 plans as if the road is clear</td>
+<td>the radar and lidar where they run; the cameras when switched on (below)</td>
+<td>the radar and lidar where they run (since 22 Oct): the planner plans round what they see. <code>plan_around:=false</code> for the map only</td>
+</tr>
+<tr>
+<td>Inflation</td>
+<td>2.0 m, cost scaling 3.0</td>
+<td>3.0 m, cost scaling 1.0: gentler and wider, so paths keep to the middle of a lane</td>
 </tr>
 </tbody>
 </table></div>
@@ -129,9 +134,10 @@ car is meant to do this year. Make it larger only if the car gets faster.</p>
 <ul>
 <li><strong>Footprint:</strong> the car's outline, made from <code>body</code> in <code>vehicle.yaml</code> by the launch
   file. Nav2 checks that it doesn't enter lethal cells.</li>
-<li><strong>Inflation:</strong> 2.0 m with cost scaling 3.0: at least the car's circumscribed radius,
-  1.93 m. This keeps paths away from walls rather
-  than scraping them.</li>
+<li><strong>Inflation:</strong> at least the car's circumscribed radius, 1.93 m. This keeps paths away
+  from walls rather than scraping them. The planner's is wider (22 Oct): with 2.0 m its
+  path passed a building's corner 0.86 m away, and the collision monitor stopped the car
+  there (<a href="controllers.html">Path followers</a>).</li>
 </ul>
 </section>
 <section class="card"><h2 id="obstacles-from-the-sensors">Obstacles from the sensors</h2>
@@ -246,11 +252,14 @@ more off its line, N7 below, and once it passed beside the box.)</p>
 </tbody>
 </table></div>
 <div class="admonition note">
-<p class="admonition-title">Nav2 stops; it doesn't steer around</p>
-<p>The global costmap has no sensor layer, so the planner never knows about the box. The
-car waits; if the box stays, the goal fails after Nav2's recoveries (23 s on the bench).
-Steering around needs the radar in the global costmap too, and room: the car turns no
-tighter than 2.86 m.</p>
+<p class="admonition-title">Since 22 Oct, Nav2 steers round it</p>
+<p>The table above is with <code>plan_around:=false</code>: the planner sees only the map, so the car
+stops and waits (the stop zone's tests run like that). By default the global costmap
+has the radar and lidar too, so the planner plans round the box where there's room: in
+Gazebo the car passed it 3.9 m clear and never stopped (<code>pixi run sim-check
+--plan-around</code>). Where the map leaves no room round it, the car stops as before. On
+the bench the map is empty, so the planner would leave the road: <code>bench-check
+--obstacle</code> runs with <code>plan_around:=false</code>.</p>
 </div>
 <h3 id="try-it">Try it</h3>
 <div class="table-wrap"><table>
