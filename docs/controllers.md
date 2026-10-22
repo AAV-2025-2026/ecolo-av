@@ -105,14 +105,14 @@ Still open:
 
 | | |
 |---|---|
-| **Stuck facing a wall** | after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. These were real near misses, not false stops, so the fix is a way out: reversing (Nav2's back-up), off on the car until the team decides |
+| **Stuck facing a wall** | after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. These were real near misses, not false stops, so the fix is a way out: reversing (Nav2's back-up). **On for the car since 22 Oct**, where the lidar watches behind it |
 | **The U-turn, forward only** | in the 14 m lane, MPPI went wide or round the building in 3 of 4 runs; Pure Pursuit managed it in 2. With reversing it works (below) |
 | ~~The box in the lane~~ | done, 03:40: the planner now sees the radar and lidar. Both controllers drove round the box, 2.6 m (Pure Pursuit) and 3.8 m (MPPI) clear, and reached the goal ([Costmaps](costmaps.md)) |
 
 ## With reversing: three-point turns, 22 October, 04:35
 
-`--reversing` lets Nav2 back up, as it may in Gazebo and on the bench (never on the car
-yet: nothing senses behind it). At first MPPI never reversed. Three settings stopped it:
+`--reversing` lets Nav2 back up, as it may in Gazebo, on the bench, and since 22 Oct on
+the car, where the lidar watches behind it ([Reversing](learn-nav2.md#reversing)). At first MPPI never reversed. Three settings stopped it:
 
 | What went wrong | Fix (only when reversing) |
 |---|---|
@@ -162,7 +162,7 @@ only, a U-turn in a 14 m lane is still about a coin toss; backing up makes it re
 ![Run s, forward only, after the EKF fix: both make the U-turn as a loop; MPPI's is wider. In run t MPPI's loop met the north wall](img/controllers-lot-forward-ekf.svg)
 
 Still to do: MPPI drives on east a few metres before it backs up, where the plan backs
-up at once. Whether the car may reverse is the team's call: it needs something that sees behind it.
+up at once. The car may reverse since 22 Oct (Ben), where the lidar watches behind it.
 
 ## Results, 22 October, first runs
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-nav2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Nav2 from zero</h1>
-<div class="meta">11 min read · 11 sections</div></header>
+<div class="meta">12 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -352,8 +352,8 @@ standard tree, changed for a car.</p>
 <td>a car can't turn on the spot</td>
 </tr>
 <tr>
-<td><strong>No BackUp</strong> on the car</td>
-<td>nothing senses what's behind the car. With <code>reversing:=true</code> (Gazebo, the bench), the <code>*_car_reversing.xml</code> trees back up 1 m at 0.25 m/s after the wait</td>
+<td><strong>BackUp only with reversing</strong></td>
+<td>the <code>*_car_reversing.xml</code> trees back up 1 m at 0.25 m/s after the wait. Without something that sees behind the car, the <code>*_car.xml</code> trees: no BackUp</td>
 </tr>
 <tr>
 <td>Server timeouts 1 s, not Nav2's 20 ms</td>
@@ -363,14 +363,16 @@ standard tree, changed for a car.</p>
 </table></div>
 </section>
 <section class="card"><h2 id="reversing">Reversing</h2>
-<p>One switch, <code>reversing:=</code>, on <code>navigation.launch.py</code>. Nothing senses what is behind the
-car (the radar faces forward), so it is <strong>off on the car</strong> and on in Gazebo and on the bench.</p>
+<p>One switch, <code>reversing:=</code>, on <code>navigation.launch.py</code>. <strong>On everywhere since 22 Oct</strong> (Ben:
+"Yes the car can reverse"), but on the car only where something sees behind it: the roof
+lidar or the camera obstacles (the radar faces forward). Without one, <code>car.launch.py</code>
+keeps Nav2 forward only and says why (<code>vehicle.blind_behind</code>).</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th></th>
-<th><code>reversing:=false</code> (the car)</th>
-<th><code>reversing:=true</code> (Gazebo, the bench)</th>
+<th><code>reversing:=false</code></th>
+<th><code>reversing:=true</code> (the default: the car, Gazebo, the bench)</th>
 </tr>
 </thead>
 <tbody>
@@ -399,6 +401,11 @@ car (the radar faces forward), so it is <strong>off on the car</strong> and on i
 <td><code>*_car.xml</code>: no BackUp</td>
 <td><code>*_car_reversing.xml</code>: BackUp 1 m at 0.25 m/s</td>
 </tr>
+<tr>
+<td>collision_monitor</td>
+<td>the box ahead</td>
+<td>the box ahead going forward, a box behind reversing (<a href="#5-collision_monitor-the-last-word">5</a>)</td>
+</tr>
 </tbody>
 </table></div>
 <p>The 0.5 m/s is <code>max_reverse_speed</code> in <code>vehicle.yaml</code>: the one reverse speed for the whole car.
@@ -422,7 +429,11 @@ reversing at the same number, whoever drives.</p>
 </tr>
 <tr>
 <td><code>car.launch.py</code>, <code>sim.launch.py</code>, <code>bench.launch.py</code></td>
-<td><code>reversing:=</code> false, true, true</td>
+<td><code>reversing:=true</code> in all three; the car's needs the lidar or camera obstacles running</td>
+</tr>
+<tr>
+<td>Gazebo check</td>
+<td><code>pixi run sim-check --rear-obstacle</code>: backing up, the car stops for a post behind it (0.75 m short, 22 Oct)</td>
 </tr>
 <tr>
 <td>Tests</td>
@@ -445,7 +456,11 @@ the costmap. So it still stops the car if the planner, the controller or the cos
 <tbody>
 <tr>
 <td>Stop zone</td>
-<td>a box from the front bumper to 1 m ahead, 0.2 m wider than the car each side</td>
+<td>going forward (or standing): a box from the front bumper to 1 m ahead. Reversing: a box from the rear bumper to 1 m behind. Each 0.2 m wider than the car each side. Nav2's <code>velocity_polygon</code> picks one by the command's speed</td>
+</tr>
+<tr>
+<td>Behind the car</td>
+<td>only the lidar (all round) and the camera obstacles see there, not the radar</td>
 </tr>
 <tr>
 <td>Points needed</td>
@@ -461,8 +476,10 @@ the costmap. So it still stops the car if the planner, the controller or the cos
 </tr>
 </tbody>
 </table></div>
-<p>It runs only with <code>radar:=true</code>: on the bench, on the car with its radar, and in Gazebo's
-road world (<code>pixi run sim world:=road</code>), whose car has a radar stand-in.</p>
+<p>It runs with the radar or the lidar: on the bench, on the car, and in Gazebo's road and
+test_lot worlds.</p>
+<p>When it stops the car backing up, the controller may pull forward and try again; each
+try stops at the box. Nothing is hit, but the car rocks until the way is clear.</p>
 </section>
 <section class="card"><h2 id="6-gps-waypoints">6. GPS waypoints</h2>
 <pre class="highlight"><code class="language-text">HUD route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to map x, y ─► one goal after another</code></pre>

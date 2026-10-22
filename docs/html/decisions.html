@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">20 min read · 10 sections</div></header>
+<div class="meta">21 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -346,6 +346,10 @@ answer.</p>
 <tr>
 <td>CI runs <code>pixi run test</code> on Linux for every push, and on a Mac every night</td>
 <td>Ben</td>
+</tr>
+<tr>
+<td>Nav2 may back up on the car (at 0.5 m/s at most), where the lidar or the camera obstacles watch behind it; collision_monitor then guards a box behind the rear bumper</td>
+<td>Ben, 22 Oct: "Yes the car can reverse"</td>
 </tr>
 <tr>
 <td>Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant</td>

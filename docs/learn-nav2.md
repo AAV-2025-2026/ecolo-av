@@ -128,21 +128,24 @@ Navigate (up to 6 tries)
 | Changed for a car | Why |
 |---|---|
 | **No Spin** | a car can't turn on the spot |
-| **No BackUp** on the car | nothing senses what's behind the car. With `reversing:=true` (Gazebo, the bench), the `*_car_reversing.xml` trees back up 1 m at 0.25 m/s after the wait |
+| **BackUp only with reversing** | the `*_car_reversing.xml` trees back up 1 m at 0.25 m/s after the wait. Without something that sees behind the car, the `*_car.xml` trees: no BackUp |
 | Server timeouts 1 s, not Nav2's 20 ms | a busy computer failed whole goals (the bench, 11 Oct) |
 
 ## Reversing
 
-One switch, `reversing:=`, on `navigation.launch.py`. Nothing senses what is behind the
-car (the radar faces forward), so it is **off on the car** and on in Gazebo and on the bench.
+One switch, `reversing:=`, on `navigation.launch.py`. **On everywhere since 22 Oct** (Ben:
+"Yes the car can reverse"), but on the car only where something sees behind it: the roof
+lidar or the camera obstacles (the radar faces forward). Without one, `car.launch.py`
+keeps Nav2 forward only and says why (`vehicle.blind_behind`).
 
-| | `reversing:=false` (the car) | `reversing:=true` (Gazebo, the bench) |
+| | `reversing:=false` | `reversing:=true` (the default: the car, Gazebo, the bench) |
 |---|---|---|
 | Planner (`motion_model_for_search`) | `DUBIN`: forward only | `REEDS_SHEPP`: forward and back; a reverse metre costs 2x (`reverse_penalty`) |
 | Controller (`allow_reversing`) | false | true: follows the backward parts |
 | MPPI's `vx_min` | 0 | -0.5 m/s |
 | Velocity smoother's lowest speed | 0 | -0.5 m/s |
 | Behaviour trees | `*_car.xml`: no BackUp | `*_car_reversing.xml`: BackUp 1 m at 0.25 m/s |
+| collision_monitor | the box ahead | the box ahead going forward, a box behind reversing ([5](#5-collision_monitor-the-last-word)) |
 
 The 0.5 m/s is `max_reverse_speed` in `vehicle.yaml`: the one reverse speed for the whole car.
 ego and the spine (`MAX_REVERSE_SPEED` in `spine-core`, also for the RC transmitter) cap
@@ -152,7 +155,8 @@ reversing at the same number, whoever drives.
 |---|---|
 | `vehicle.yaml` | `max_reverse_speed: 0.50` |
 | `aav_description/vehicle.py` | `nav2_rewrites(v, reversing)` (planner, controller, MPPI) and `nav2_tuned(...)` (the smoother's list, written into a copy of `nav2.yaml`) |
-| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=` false, true, true |
+| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=true` in all three; the car's needs the lidar or camera obstacles running |
+| Gazebo check | `pixi run sim-check --rear-obstacle`: backing up, the car stops for a post behind it (0.75 m short, 22 Oct) |
 | Tests | `test_vehicle.py` (the values, and that each rewrite lands on a real key); `test_behavior_trees.py` (the two trees differ only by BackUp, inside the reverse speed) |
 
 People can always reverse (joystick, keyboard, RC): this switch is Nav2's only.
@@ -164,13 +168,17 @@ the costmap. So it still stops the car if the planner, the controller or the cos
 
 | Setting | Ours |
 |---|---|
-| Stop zone | a box from the front bumper to 1 m ahead, 0.2 m wider than the car each side |
+| Stop zone | going forward (or standing): a box from the front bumper to 1 m ahead. Reversing: a box from the rear bumper to 1 m behind. Each 0.2 m wider than the car each side. Nav2's `velocity_polygon` picks one by the command's speed |
+| Behind the car | only the lidar (all round) and the camera obstacles see there, not the radar |
 | Points needed | 3 (one stray radar point mustn't stop the car) |
 | Radar silent for | 1.0 s → stop |
 | Guards | **only Nav2**. The joystick and keyboard reach `twist_mux` without it |
 
-It runs only with `radar:=true`: on the bench, on the car with its radar, and in Gazebo's
-road world (`pixi run sim world:=road`), whose car has a radar stand-in.
+It runs with the radar or the lidar: on the bench, on the car, and in Gazebo's road and
+test_lot worlds.
+
+When it stops the car backing up, the controller may pull forward and try again; each
+try stops at the box. Nothing is hit, but the car rocks until the way is clear.
 
 ## 6. GPS waypoints
 
