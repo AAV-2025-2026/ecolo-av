@@ -150,7 +150,7 @@ def blind_behind(reversing, **sensors):
     if not reversing or any(sensors.get(name) for name in SEES_BEHIND):
         return None
     return ('nothing sees behind the car (the radar faces forward): Nav2 stays forward '
-            'only. Start the lidar (or the rear camera\'s obstacles) to let it reverse')
+            "only. Start the lidar (or the rear camera's obstacles) to let it reverse")
 
 
 # The lidar's obstacles: what lies between these heights above the road (base_link's z).
