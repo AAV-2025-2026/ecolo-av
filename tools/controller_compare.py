@@ -9,6 +9,7 @@ Both drive the test lot, headless, and are measured against where the car really
     pixi run controller-compare --controllers mppi
     pixi run controller-compare --speed 3          (Nav2 and ego up to 3 m/s: sim_speed:=3)
     pixi run controller-compare --tours lot --legs 1   (only the first leg: a quick check)
+    pixi run controller-compare --reversing        (Nav2 may reverse: not yet on the car)
 
 For each tour and controller it:
 1. starts sim.launch.py world:=test_lot gui:=false rviz:=false controller:=<rpp|mppi>
@@ -336,8 +337,9 @@ def session(tour, controller, args, out_dir, body, used):
     command = ['ros2', 'launch', 'aav_bringup', 'sim.launch.py', 'world:=test_lot',
                'gui:=false', 'rviz:=false', f'controller:={controller}',
                # Forward only, as on the car (the sim's default lets Nav2 reverse; MPPI
-               # then dithered between forward and back at the start, 22 Oct).
-               'reversing:=false']
+               # then dithered between forward and back at the start, 22 Oct), unless
+               # --reversing: Nav2 may then back out of a dead end.
+               f'reversing:={str(args.reversing).lower()}']
     if plan['obstacle']:
         command.append('obstacle:=true')
     if args.speed:
@@ -391,7 +393,9 @@ def report(results, args, started):
     """Return results.md: for each leg, a table with one row per controller."""
     lines = [f'# Controller comparison, {started:%Y-%m-%d %H:%M}', '',
              f"Gazebo's test lot, headless, on this computer; Nav2 and ego at up to "
-             f'{args.speed or 1.0:g} m/s. One run each. What each number means: '
+             f'{args.speed or 1.0:g} m/s, ' +
+             ('reversing allowed' if args.reversing else 'forward only') +
+             '. One run each. What each number means: '
              'tools/drive_metrics.py.', '']
     for tour in args.tours:
         for name, x, y, heading in tour_legs(tour, args):
@@ -438,6 +442,9 @@ def main():
     parser.add_argument('--tours', nargs='+', choices=list(TOURS), default=list(TOURS))
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
+    parser.add_argument('--reversing', action='store_true',
+                        help='let Nav2 reverse (reversing:=true); forward only otherwise, as '
+                             'on the car')
     parser.add_argument('--legs', type=int, default=None,
                         help="only each tour's first N legs (each starts where the last ended)")
     parser.add_argument('--out', help='where the results go (default: log/controller-compare/)')

@@ -105,8 +105,8 @@ Still open:
 
 | | |
 |---|---|
-| **Stuck facing a wall** | after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. The stop box only looks straight ahead, even in a turn: a box that turns with the steering (Nav2's `VelocityPolygon`) would see what's really ahead |
-| **MPPI's forward U-turn** | in a 14 m lane it went wide, then round the building, instead of the planned U-turn |
+| **Stuck facing a wall** | after a loop or a wide turn the collision monitor stops the car facing a wall, and forward only it can't get out. A person has to. These were real near misses, not false stops, so the fix is a way out: reversing (Nav2's back-up), off on the car until the team decides |
+| **MPPI's U-turn** | forward, in the 14 m lane, it went wide or round the building in 3 of 4 runs; Pure Pursuit managed it in 2. With reversing (`--reversing`), the planner drew a three-point turn, but MPPI never reversed: it drove on to the far wall |
 | ~~The box in the lane~~ | done, 03:40: the planner now sees the radar and lidar. Both controllers drove round the box, 2.6 m (Pure Pursuit) and 3.8 m (MPPI) clear, and reached the goal ([Costmaps](costmaps.md)) |
 
 ## Results, 22 October, first runs
