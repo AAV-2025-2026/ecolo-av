@@ -197,6 +197,28 @@ If the window stays empty, or the car never appears, run `export GZ_IP=127.0.0.1
 terminals and start again: Gazebo's two programs then find each other on the Mac itself.
 On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on Linux.
 
+### Late messages: try Cyclone DDS
+
+If the sensor watchdog says a sensor went quiet ("STALE") for half a second, or Nav2
+refuses a goal with "Transform data too old", the messages were late, not the Mac.
+
+| Test, 25 min beside Gazebo, 22 Oct | Fast DDS (the default) | Cyclone DDS |
+|---|---|---|
+| A 50 Hz publisher's own timer, worst gap | 0.03 s | 0.03 s |
+| Its subscriber, worst gap | **0.48 s** | **0.05 s** |
+| Gaps over 0.1 s | 9 | 0 |
+
+Every program that talks to the simulator needs the same one:
+
+```bash
+AAV_RMW=cyclone pixi run sim          # this terminal
+AAV_RMW=cyclone pixi run ros2 topic list   # and every other
+```
+
+`AAV_RMW=cyclone pixi run sim-check` passes everything, with the rear camera at its full
+10 Hz (7-8 Hz on Fast DDS). Fast DDS stays the default until the team decides: the car's
+computers talk to each other through it too.
+
 ## macOS hides one setting from ROS
 
 | What happens | Why it matters | What we do |
