@@ -3,9 +3,13 @@
    tools/build_docs.py copies this into docs/html/. */
 
 :root {
-  --red: #C8102E;
-  --red-dark: #8E0B20;
-  --tint: #FDECEE;
+  /* The AAV's sky blue (Ben, 22 Oct): --blue is a fill, with dark text on it; --blue-ink is
+     the same blue, deep enough for headings, links and borders on the light page. */
+  --blue: #B8E2F8;
+  --blue-ink: #155E8C;
+  --blue-dark: #0E4466;
+  --tint: #EEF8FD;
+  --red: #C8102E;     /* only for "needs you": an alarm, not the brand */
   --ink: #1E1E1E;
   --muted: #5C5C5C;
   --line: #E3DED6;
@@ -27,7 +31,7 @@ body {
 }
 
 /* Title bar, menu, "on this page" */
-.bar { background: var(--red); color: #fff; padding: 18px 24px 16px; }
+.bar { background: var(--blue); color: var(--ink); padding: 18px 24px 16px; }
 .bar .kicker { font-size: 12px; letter-spacing: 2px; opacity: 0.9; }
 .bar h1 { margin: 4px 0 2px; font-size: 30px; line-height: 1.25; }
 .bar .meta { font-size: 13px; opacity: 0.9; }
@@ -39,8 +43,8 @@ body {
   color: var(--ink); text-decoration: none; font-size: 14px;
   padding: 3px 11px; border-radius: 999px; border: 1px solid transparent;
 }
-.menu a:hover { border-color: var(--red); }
-.menu a.here { background: var(--red); color: #fff; }
+.menu a:hover { border-color: var(--blue-ink); }
+.menu a.here { background: var(--blue); color: var(--ink); }
 .menu .sep { color: var(--muted); font-size: 13px; margin-left: 10px; }
 main { max-width: 920px; margin: 0 auto; padding: 18px 16px 30px; }
 .toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 16px; align-items: center; }
@@ -49,23 +53,23 @@ main { max-width: 920px; margin: 0 auto; padding: 18px 16px 30px; }
   font-size: 14px; color: var(--ink); text-decoration: none;
   background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 2px 9px;
 }
-.toc a:hover { border-color: var(--red); }
+.toc a:hover { border-color: var(--blue-ink); }
 
 /* Text */
 .lead { font-size: 19px; margin: 4px 0 18px; }
 .lead p { max-width: 62ch; }
 .card {
-  background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--red);
+  background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--blue);
   border-radius: 10px; padding: 4px 22px 12px; margin: 0 0 18px;
 }
-h2 { color: var(--red); font-size: 23px; line-height: 1.3; margin: 12px 0 8px; }
+h2 { color: var(--blue-ink); font-size: 23px; line-height: 1.3; margin: 12px 0 8px; }
 h3 { font-size: 18px; margin: 18px 0 6px; }
 p, li { max-width: 70ch; }
 ul, ol { padding-left: 26px; }
 li { margin: 4px 0; }
 li > p { margin: 4px 0; }
-em { font-style: normal; font-weight: 600; color: var(--red-dark); }
-a { color: var(--red-dark); }
+em { font-style: normal; font-weight: 600; color: var(--blue-dark); }
+a { color: var(--blue-ink); }
 hr { border: none; border-top: 1px solid var(--line); margin: 18px 0; }
 
 /* Code */
@@ -83,17 +87,17 @@ pre code { background: none; padding: 0; color: inherit; font-size: 14px; }
 .table-wrap { overflow-x: auto; margin: 8px 0 14px; }
 .card table { width: 100%; }
 table { border-collapse: collapse; font-size: 15px; }
-th { background: var(--red); color: #fff; text-align: left; padding: 7px 10px; font-weight: bold; }
+th { background: var(--blue); color: var(--ink); text-align: left; padding: 7px 10px; font-weight: bold; }
 td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 tr:nth-child(even) td { background: #FAF7F2; }
-table.pages td.num { font-weight: bold; color: var(--red); text-align: right; }
+table.pages td.num { font-weight: bold; color: var(--blue-ink); text-align: right; }
 table.pages td.time { white-space: nowrap; color: var(--muted); }
 table.pages td.group { background: #fff; color: var(--muted); font-size: 13px; padding-top: 14px; }
 
 /* Callouts and badges */
 blockquote, .admonition {
   margin: 10px 0 14px; padding: 8px 14px; background: var(--tint);
-  border-left: 6px solid var(--red); border-radius: 6px;
+  border-left: 6px solid var(--blue); border-radius: 6px;
 }
 blockquote p, .admonition p { margin: 4px 0; }
 .admonition.warning, .admonition.danger { background: #FFF3E3; border-left-color: #D9822B; }
@@ -119,7 +123,7 @@ img { max-width: 100%; height: auto; display: block; margin: 10px auto; }
   display: block; flex: 1; max-width: 48%; background: #fff; border: 1px solid var(--line); border-radius: 8px;
   padding: 10px 14px; text-decoration: none; color: var(--ink); font-weight: bold;
 }
-.prevnext a:hover { border-color: var(--red); }
+.prevnext a:hover { border-color: var(--blue-ink); }
 .prevnext .next { text-align: right; margin-left: auto; }
 .prevnext small { display: block; color: var(--muted); font-size: 12px; font-weight: normal; }
 footer { text-align: center; color: var(--muted); font-size: 13px; padding: 10px 16px 28px; }
@@ -143,7 +147,7 @@ body.print { background: #fff; font-size: 15px; }
 .print pre code { font-size: 12px; white-space: pre-wrap; }
 .print a { text-decoration: none; }
 .print .cover { padding-top: 12mm; }
-.print .cover .kicker { color: var(--red); letter-spacing: 3px; font-size: 12px; }
+.print .cover .kicker { color: var(--blue-ink); letter-spacing: 3px; font-size: 12px; }
 .print .cover h1 { font-size: 34px; margin: 8px 0 4px; color: var(--ink); }
 .print .cover .sub { font-size: 18px; color: var(--muted); margin: 0 0 10mm; }
 .print .cover table { width: 100%; }
@@ -158,20 +162,20 @@ body.print { background: #fff; font-size: 15px; }
 .tile {
   display: inline-block; vertical-align: top; width: 31.6%; margin: 0 2.6% 12px 0;
   min-height: 96px; padding: 10px 12px; font-size: 14px; background: var(--card);
-  border: 1px solid var(--line); border-top: 4px solid var(--red); border-radius: 8px;
+  border: 1px solid var(--line); border-top: 4px solid var(--blue); border-radius: 8px;
 }
 .tile:nth-child(3n) { margin-right: 0; }
-.tile b { display: block; font-size: 32px; line-height: 1.1; color: var(--red); }
+.tile b { display: block; font-size: 32px; line-height: 1.1; color: var(--blue-ink); }
 .tile span { display: block; color: var(--muted); line-height: 1.35; }
 @media (max-width: 600px) {
   .tile { width: 48.7%; }
   .tile:nth-child(3n) { margin-right: 2.6%; }
   .tile:nth-child(2n) { margin-right: 0; }
 }
-.print.release .cover { border-top: 6mm solid var(--red); padding-top: 7mm; }
+.print.release .cover { border-top: 6mm solid var(--blue); padding-top: 7mm; }
 .print.release .cover .tile { min-height: 78px; margin-bottom: 9px; padding: 8px 12px; }
 .print.release .cover h1 { font-size: 40px; }
-.print.release .inside-title { margin: 5mm 0 1mm; color: var(--red); }
+.print.release .inside-title { margin: 5mm 0 1mm; color: var(--blue-ink); }
 .print.release .inside { columns: 2; column-gap: 9mm; margin: 0; padding: 0; list-style: none; }
 .print.release .inside li {
   display: flex; justify-content: space-between; break-inside: avoid; font-size: 12px;
