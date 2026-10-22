@@ -393,11 +393,31 @@ heading per leg 7-16° (runs n and q: 14-76°). MPPI's tour: 29, 53, 71 and 65 s
 detours; its way home took 65 s (was 94-102). The picture above is this run.</p>
 <p>Forward only (run o, 04:46, same settings): the first two goals for both, but the U-turn
 failed for both again, as in run j: each swung wide and stopped facing the east wall.</p>
-<p>Forward only <strong>after the EKF fix</strong> (run s, 06:16): <strong>all 8 goals, no stops</strong>. Both made
-the U-turn as a loop: Pure Pursuit a tight one (57 s, 45 m), MPPI a wide one into the
-open space to the east (86 s, 67 m). One run, so not yet proof; but runs j and o failed
-exactly there, while the EKF's heading swung.</p>
-<p><img alt="Run s, forward only, after the EKF fix: both make the U-turn as a loop; MPPI's is wider" src="../img/controllers-lot-forward-ekf.svg" /></p>
+<p>Forward only <strong>after the EKF fix</strong>, two runs:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Pure Pursuit</th>
+<th>MPPI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>s (06:16)</td>
+<td>4 of 4; the U-turn as a tight loop (45 m)</td>
+<td>4 of 4; the U-turn as a wide loop (67 m)</td>
+</tr>
+<tr>
+<td>t (06:26)</td>
+<td>4 of 4, but two loops at the first goal (104 m for 21)</td>
+<td>2 of 4: its U-turn loop ran into the north wall, stopped facing it</td>
+</tr>
+</tbody>
+</table></div>
+<p>The EKF's heading was good in both (worst 12°), so it was not the only cause. Forward
+only, a U-turn in a 14 m lane is still about a coin toss; backing up makes it reliable.</p>
+<p><img alt="Run s, forward only, after the EKF fix: both make the U-turn as a loop; MPPI's is wider. In run t MPPI's loop met the north wall" src="../img/controllers-lot-forward-ekf.svg" /></p>
 <p>Still to do: MPPI drives on east a few metres before it backs up, where the plan backs
 up at once. Whether the car may reverse is the team's call: it needs something that sees behind it.</p>
 </section>
