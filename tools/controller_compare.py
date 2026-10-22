@@ -424,8 +424,8 @@ def picture(results, tour, args):
     for controller in dict.fromkeys(c for _, _, c, *_ in runs):
         legs = [r for r in runs if r[2] == controller]
         tracks.append((f'{controller}: where the car went', COLOURS.get(controller, 'black'),
-                       [(x, y) for r in legs for _, x, y, *_ in r[5]['track']], False))
-    plans = [p for r in runs if r[2] == runs[0][2] for p in r[5]['plan']] if runs else []
+                       [[(x, y) for r in legs for _, x, y, *_ in r[5]['track']]], False))
+    plans = [r[5]['plan'] for r in runs if r[2] == runs[0][2]] if runs else []
     tracks.append(('the first plan of each leg', '#868e96', plans, True))
     marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args)]
     return drive_metrics.svg((ox, oy, ox + w, oy + h), tracks, blocks, marks)

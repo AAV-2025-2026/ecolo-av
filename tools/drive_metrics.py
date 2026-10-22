@@ -278,7 +278,8 @@ def svg(bounds, tracks, blocks=(), marks=(), scale=8.0):
     Return an SVG picture of drives in the map frame (x east, y north: north is up).
 
     bounds  (x0, y0, x1, y1)                     m: the part of the map to show
-    tracks  [(label, colour, [(x, y)], dashed)]  lines: where a car went, a plan
+    tracks  [(label, colour, [[(x, y)]], dashed)]  lines, one key entry each: where a car
+                                                 went, the plans (one line per leg)
     blocks  [(x0, y0, x1, y1, colour)]           rectangles: walls, a building, the box
     marks   [(x, y, label)]                      dots with a name: the goals
     A key below the map names each track, beside a 10 m scale bar.
@@ -297,8 +298,10 @@ def svg(bounds, tracks, blocks=(), marks=(), scale=8.0):
         left, top = at(min(bx0, bx1), max(by0, by1))
         out.append(f'<rect x="{left:.1f}" y="{top:.1f}" width="{abs(bx1 - bx0) * scale:.1f}" '
                    f'height="{abs(by1 - by0) * scale:.1f}" fill="{colour}"/>')
-    for _, colour, points, dashed in tracks:
-        if points:
+    for _, colour, lines, dashed in tracks:
+        for points in lines:
+            if not points:
+                continue
             line = ' '.join('{:.1f},{:.1f}'.format(*at(x, y)) for x, y in points)
             out.append(f'<polyline points="{line}" fill="none" stroke="{colour}" '
                        'stroke-width="2.5" stroke-linejoin="round"' +

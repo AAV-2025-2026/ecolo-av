@@ -134,15 +134,16 @@ def test_the_table_has_a_column_each_and_leaves_out_numbers_nobody_has():
 
 
 def test_the_picture_puts_north_up():
-    tracks = [('rpp', 'blue', [(0.0, 0.0), (10.0, 5.0)], False),
-              ('plan', 'grey', [(0.0, 0.0), (10.0, 0.0)], True)]
+    # Two plans, two lines: one leg's end isn't joined to the next one's start.
+    tracks = [('rpp', 'blue', [[(0.0, 0.0), (10.0, 5.0)]], False),
+              ('plan', 'grey', [[(0.0, 0.0), (10.0, 0.0)], [(20.0, 0.0), (30.0, 0.0)]], True)]
     blocks = [(20.0, 20.0, 40.0, 35.0, 'grey')]
     text = m.svg((-10.0, -10.0, 70.0, 50.0), tracks, blocks, [(10.0, 5.0, 'goal <1>')])
     root = ET.fromstring(text)                                  # well-formed, names escaped
     ns = '{http://www.w3.org/2000/svg}'
     assert float(root.get('width')) == 640.0                    # 80 m at 8 px/m
     lines = root.findall(ns + 'polyline')
-    assert len(lines) == 2
+    assert len(lines) == 3
     # Map (0, 0) is 10 m right of the left edge and 50 m below the top: y points up.
     assert lines[0].get('points').split()[:2] == ['80.0,400.0', '160.0,360.0']
     assert lines[1].get('stroke-dasharray') and not lines[0].get('stroke-dasharray')
