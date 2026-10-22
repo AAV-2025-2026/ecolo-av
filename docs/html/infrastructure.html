@@ -778,6 +778,9 @@ previous teams' orgs are public, so nothing is pushed there.</p>
 </table></div>
 <p>CI (<code>.github/workflows/test.yml</code>) runs <code>pixi run test</code> on Linux for every push and pull
 request, and on a Mac every night. The results are on the repo's Actions tab.</p>
+<p>Every night it also runs <code>sim-check --obstacle</code> (Gazebo, headless) on Linux: the job
+<code>sim</code>. New on 22 Oct and still on trial: GitHub's computers have no GPU, so the cameras
+render in software, and a failure there doesn't fail the night yet (<code>continue-on-error</code>).</p>
 <h3 id="reading-a-ci-failure-without-signing-in">Reading a CI failure without signing in</h3>
 <p>A job's log needs a GitHub sign-in. Its <strong>annotations</strong> don't: when the test step fails,
 <code>tools/ci_annotate.py</code> prints one annotation per failing test, with its error message.</p>

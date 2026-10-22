@@ -231,6 +231,10 @@ previous teams' orgs are public, so nothing is pushed there.
 CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux for every push and pull
 request, and on a Mac every night. The results are on the repo's Actions tab.
 
+Every night it also runs `sim-check --obstacle` (Gazebo, headless) on Linux: the job
+`sim`. New on 22 Oct and still on trial: GitHub's computers have no GPU, so the cameras
+render in software, and a failure there doesn't fail the night yet (`continue-on-error`).
+
 ### Reading a CI failure without signing in
 
 A job's log needs a GitHub sign-in. Its **annotations** don't: when the test step fails,

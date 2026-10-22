@@ -130,6 +130,10 @@ Run n, the whole lot tour, both controllers: **all 8 goals reached**.
 
 ![Run n, reversing allowed: both make the U-turn by backing up. MPPI's turn is wider, and it backs up once at home](img/controllers-lot-reversing.svg)
 
+Run q (), the same with ego's new jerk limit: **all 8 goals again**. MPPI's first goal
+cost it a back-up (72 s, was 30): in that leg the EKF had the car 57° and 1.1 m off, the
+worst tonight (the heading jumps, PLAN M9).
+
 Forward only (run o, 04:46, same settings): the first two goals for both, but the U-turn
 failed for both again, as in run j: each swung wide and stopped facing the east wall.
 In a 14 m lane a forward U-turn barely fits; backing up is the way.

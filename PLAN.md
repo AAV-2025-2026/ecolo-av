@@ -90,7 +90,7 @@ the next concrete step.
 | T2.3 | Gazebo car | 4 Dec | ✅ | 100 | checked 22 Oct: a 10° steer gives 9.05-9.14 m for the predicted 8.90 m (+2-3%); 20° and full lock also within 3% ([simulation](docs/simulation.md#what-gazebo-simulates)) |
 | T2.4 | Noise matched to the real sensors | Jan | 🔧 | 20 | needs recordings from the car |
 | T2.5 | Replay driver and comparison | 18 Dec | 🔧 | 60 | the replay driver exists; write the drive-comparison script (`tools/drive_metrics.py` is a start) |
-| T2.6 | Integration tests in CI, nightly | mid-Jan | 🔧 | 50 | `sim-check` exists; run it headless in the nightly job |
+| T2.6 | Integration tests in CI, nightly | mid-Jan | 🔧 | 70 | the nightly job `sim` runs `sim-check --obstacle` headless (22 Oct), on trial: watch its first nights, then let a failure count |
 | T2.7 | Sim-versus-real report | Gates 3, 4 | ⬜ | 0 | needs the car |
 | T2.8 | Ghost obstacles | 5 Feb | 🧪 | 80 | on stands, then the lot |
 | T2.9 | CARLA target (stretch) | Mar | 🎯 | 40 | adapter built; needs the NVIDIA machine |
