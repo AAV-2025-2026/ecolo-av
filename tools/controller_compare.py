@@ -32,8 +32,8 @@ are aav_gazebo worlds/test_lot.sdf):
 
 What each number means: drive_metrics.py (COLUMNS). The results go to
 log/controller-compare/<time>/: results.md, a picture of each tour (<tour>.svg: where each
-controller took the car), results.json (the numbers, and each leg's track and first plan)
-and each run's launch log.
+controller took the car), results.json (the numbers; each leg's track, the EKF's belief,
+the controller's speed command and its first plan) and each run's launch log.
 """
 
 import argparse
@@ -370,6 +370,9 @@ def session(tour, controller, args, out_dir, body, used):
                                    for s in drive_metrics.thin(leg['truth'], TRACK_EVERY)],
                          'belief': [[round(v, 3) for v in s]
                                     for s in drive_metrics.thin(leg['belief'], TRACK_EVERY)],
+                         # t, speed: what the controller asked for, before the smoother.
+                         'asked': [[round(v, 3) for v in s]
+                                   for s in drive_metrics.thin(leg['asked'], TRACK_EVERY)],
                          'plan': [[round(x, 2), round(y, 2)]
                                   for x, y in (leg['plans'][0][1][::4] if leg['plans'] else [])]}
                 rows.append((tour, name, controller, row, notes, drawn))
