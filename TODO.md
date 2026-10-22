@@ -30,6 +30,7 @@ proposal's full list: [PLAN.md](PLAN.md).
 | 12 | Steer round the box in the lane: sensors in the planner's map (PLAN.md M5) | ✅ done | the planner's costmap gets the radar and lidar layers (`plan_around:=true`, the default). Both controllers drove round the box 2.6-3.8 m clear. New `sim-check --plan-around` passes (3.9 m clear, no stop); the stop tests run with `plan_around:=false` and still pass (`sim-check --obstacle --lidar-obstacle`, `bench-check --obstacle`) |
 | 13 | The global EKF's heading jumps at walking pace (PLAN.md M9, T6.3) | ⬜ | needs a heading source; lower noise helped a little |
 | 14 | Weigh the car, front and back, then with the rear lifted (M7, M7b) | ⬜ needs the team | `READ-ME-MEASURE-THE-CAR.md` |
+| 21 | Gazebo check: a 10° steer gives the predicted radius within 5% (PLAN T2.3) | ✅ done | 22 Oct, 04:55: 9.05-9.14 m for 8.90 m (+2-3%); 20° and full lock also within 3%. `docs/simulation.md` |
 | 15 | Gazebo check: a tight turn at `sim_speed:=3` slows to ego's curve speed | ✅ done | asked 3 m/s at full lock: ego allowed 2.40 m/s (the computed limit), the car held 2.37-2.43 m/s with 1.9-2.0 m/s² sideways (limit 2.0); straight, 3.1 m/s. Probe: `/tmp/aav-probe/curve_probe.py` (not in git) |
 
 ## Where we stopped (15 Oct, morning)

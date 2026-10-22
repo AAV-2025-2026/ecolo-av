@@ -80,6 +80,18 @@ real-time factor at 0.98-0.99.
 | Each wheel's speed | `/world/aav/model/aav/joint_state` | `/vehicle/wheels` (m/s, all four) | 50 Hz | none | all |
 | "This is a simulation" | (`gazebo_adapter`) | `/system/source`, latched: every sensor above is SIM | once | - | all |
 
+**Steering, checked 22 Oct** (PLAN T2.3): driven at 1 m/s on a fixed steer, the Gazebo car's
+circle against the bicycle model's (wheelbase ÷ tan(steer)):
+
+| Steer | Model | Gazebo | Off |
+|---|---:|---:|---:|
+| 10° left | 8.90 m | 9.05 m | +1.7% |
+| 10° right | 8.90 m | 9.14 m | +2.7% |
+| 20° left | 4.31 m | 4.43 m | +2.7% |
+| full lock, 28.6° | 2.87 m | 2.93 m | +2.1% |
+
+All within the 5% asked. It turns 2-3% wide: tyre slip in Gazebo, or the measured point not quite on the rear axle.
+
 Each one carries the same name, type and frame as the real device's, so the software above
 can't tell. `/gazebo/*` topics are Gazebo's own side of `gazebo_adapter` and the sensor
 nodes, not in the contract.

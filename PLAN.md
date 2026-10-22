@@ -87,7 +87,7 @@ the next concrete step.
 |---|---|---|---|---:|---|
 | T2.1 | TurtleSim target | 6 Nov | ✅ | 100 | |
 | T2.2 | Ecolo URDF | 20 Nov | 🔧 | 60 | built from `vehicle.yaml`; needs the measurements (T3.2) |
-| T2.3 | Gazebo car | 4 Dec | 🧪 | 90 | check "a 10° steer gives the predicted radius within 5%" |
+| T2.3 | Gazebo car | 4 Dec | ✅ | 100 | checked 22 Oct: a 10° steer gives 9.05-9.14 m for the predicted 8.90 m (+2-3%); 20° and full lock also within 3% ([simulation](docs/simulation.md#what-gazebo-simulates)) |
 | T2.4 | Noise matched to the real sensors | Jan | 🔧 | 20 | needs recordings from the car |
 | T2.5 | Replay driver and comparison | 18 Dec | 🔧 | 60 | the replay driver exists; write the drive-comparison script (`tools/drive_metrics.py` is a start) |
 | T2.6 | Integration tests in CI, nightly | mid-Jan | 🔧 | 50 | `sim-check` exists; run it headless in the nightly job |
@@ -156,7 +156,7 @@ the next concrete step.
 | T7.2 | Scripted and replay drivers | 4 Dec | 🧪 | 80 | the "same path twice within 0.03 m" check |
 | T7.3 | GPS A to B in Gazebo | 18 Dec | 🧪 | 100 | |
 | T7.4 | Hand-drawn costmap of the lot | 11 Dec | 🔧 | 20 | choose the lot; `tools/make_map.py` draws it |
-| T7.5 | Nav2 in Gazebo | 5 Feb | 🧪 | 90 | the corner problem fixed (M8); left: stuck facing a wall, forward only (TODO 18) |
+| T7.5 | Nav2 in Gazebo | 5 Feb | 🧪 | 90 | the corner problem fixed (M8); allowed to reverse, both controllers reach every lot goal, U-turn included (22 Oct). Left: forward only, stuck facing a wall (TODO 18) |
 | T7.6 | Language-model driver | 29 Jan | 🧪 | 90 | |
 | T7.7 | GPS A to B on the car | 26 Feb | ⬜ | 0 | 🎯 the year's demonstration |
 | T7.8 | Nav2 on the car | 26 Mar | ⬜ | 0 | |
@@ -205,7 +205,7 @@ too". It shares the car's model with ego, as the proposal says (section 8.3).
 |---|---|---|---|
 | M1 | `controller:=mppi`: one argument switches Nav2's path follower | ✅ 22 Oct | |
 | M2 | Its limits from `vehicle.yaml`: turning radius, outline, top and reverse speed | ✅ | its braking limit from ego (done by hand: `ax_min` = ego's -2.0) |
-| M3 | Tuned for a car, not a robot, in Gazebo | ✅ 22 Oct | moving within 0.5 s at 0.95 m/s; turns to a goal's heading from 2.5 m out ([why](docs/controllers.md#making-mppi-drive)). Open: its forward U-turn in a 14 m lane |
+| M3 | Tuned for a car, not a robot, in Gazebo | ✅ 22 Oct | moving within 0.5 s at 0.95 m/s; turns to a goal's heading from 2.5 m out ([why](docs/controllers.md#making-mppi-drive)). Its U-turn in a 14 m lane: forward only it swings wide and fails; allowed to reverse it makes a three-point turn (22 Oct, [controllers](docs/controllers.md)) |
 | M4 | The comparison: `pixi run controller-compare` | ✅ 22 Oct | six runs overnight; MPPI did at least as well in each. **MPPI is the default** since 22 Oct ([controllers](docs/controllers.md)) |
 | M5 | Steering round an obstacle | ✅ 22 Oct, Gazebo | the planner's costmap has the radar and lidar (`plan_around:=true`); both controllers drove round the box 2.6-3.8 m clear. `sim-check --plan-around` |
 | M6 | Its CPU on the Orin | ⬜ | with the load report (T1.7) |

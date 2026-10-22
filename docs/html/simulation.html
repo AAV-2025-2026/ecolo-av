@@ -322,6 +322,45 @@ real-time factor at 0.98-0.99.</p>
 </tr>
 </tbody>
 </table></div>
+<p><strong>Steering, checked 22 Oct</strong> (PLAN T2.3): driven at 1 m/s on a fixed steer, the Gazebo car's
+circle against the bicycle model's (wheelbase ÷ tan(steer)):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Steer</th>
+<th style="text-align: right;">Model</th>
+<th style="text-align: right;">Gazebo</th>
+<th style="text-align: right;">Off</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10° left</td>
+<td style="text-align: right;">8.90 m</td>
+<td style="text-align: right;">9.05 m</td>
+<td style="text-align: right;">+1.7%</td>
+</tr>
+<tr>
+<td>10° right</td>
+<td style="text-align: right;">8.90 m</td>
+<td style="text-align: right;">9.14 m</td>
+<td style="text-align: right;">+2.7%</td>
+</tr>
+<tr>
+<td>20° left</td>
+<td style="text-align: right;">4.31 m</td>
+<td style="text-align: right;">4.43 m</td>
+<td style="text-align: right;">+2.7%</td>
+</tr>
+<tr>
+<td>full lock, 28.6°</td>
+<td style="text-align: right;">2.87 m</td>
+<td style="text-align: right;">2.93 m</td>
+<td style="text-align: right;">+2.1%</td>
+</tr>
+</tbody>
+</table></div>
+<p>All within the 5% asked. It turns 2-3% wide: tyre slip in Gazebo, or the measured point not quite on the rear axle.</p>
 <p>Each one carries the same name, type and frame as the real device's, so the software above
 can't tell. <code>/gazebo/*</code> topics are Gazebo's own side of <code>gazebo_adapter</code> and the sensor
 nodes, not in the contract.</p>
