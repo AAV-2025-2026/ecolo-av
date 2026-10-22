@@ -5,7 +5,8 @@ The real car. One launch file for every machine; a machine file picks the parts.
       [gps:=true] [gps_driver:=ublox] [map:=<map yaml>] [start_x:=0] [start_y:=0]
       [start_yaw:=0] [max_speed:=0.3]
       [reversing:=true]   (Nav2 may back up, at 0.5 m/s at most, where the machine runs
-                           something that sees behind: the lidar.
+                           something that sees behind: the lidar, or camera_obstacles with
+                           a detector on the rear camera that keeps people.
                            Without, it stays forward only and says why. false: never)
       [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [ghost:=false]      (true: a pretend person in Nav2's view, where Nav2 runs, for
@@ -189,6 +190,19 @@ def detector(context, machine, settings):
     return [include('aav_yolo', 'detector.launch.py', **args)]
 
 
+REAR_IMAGE = '/sensors/camera/rear/image_raw'
+
+
+def watches_behind(settings):
+    """Return True if this detector reads the rear camera and keeps people (it sees behind)."""
+    if not isinstance(settings, dict):
+        return False
+    extra = [t.strip() for t in str(settings.get('extra_images', '')).split(',')]
+    labels = [t.strip().lower() for t in str(settings.get('labels', 'stop sign')).split(',')
+              if t.strip()]
+    return REAR_IMAGE in extra and (not labels or 'person' in labels)
+
+
 def launch_setup(context):
     def arg(name):
         return LaunchConfiguration(name).perform(context)
@@ -263,7 +277,12 @@ def launch_setup(context):
         # Nav2 backs up only if something here sees behind the car (Ben, 22 Oct: "Yes the
         # car can reverse"); collision_monitor then watches a box behind the rear bumper.
         reversing = flag('reversing')
-        blind = vehicle.blind_behind(reversing, radar=on('radar'), lidar=on('lidar'))
+        # The rear camera counts once its detector reads it and keeps people (machine file:
+        # detector: {extra_images: /sensors/camera/rear/image_raw, labels: ""}).
+        rear_camera = (on('camera_obstacles') and on('detector')
+                       and watches_behind(config.get('detector')))
+        blind = vehicle.blind_behind(reversing, radar=on('radar'), lidar=on('lidar'),
+                                     rear_camera=rear_camera)
         if blind:
             get_logger('car.launch.py').warning(f'reversing: {blind}')
             reversing = False
@@ -272,7 +291,8 @@ def launch_setup(context):
         actions.append(include('aav_navigation', 'navigation.launch.py',
                                map=arg('map') or empty_map, radar=on('radar'),
                                lidar=on('lidar'), ghost=flag('ghost'),
-                               collision_monitor=on('radar') or on('lidar') or flag('ghost'),
+                               collision_monitor=(on('radar') or on('lidar') or flag('ghost')
+                                                  or on('camera_obstacles')),
                                camera_obstacles=on('camera_obstacles'),
                                reversing=reversing))
     if on('spine'):

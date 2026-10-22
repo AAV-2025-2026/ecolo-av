@@ -76,6 +76,16 @@ def test_nav2_reverses_only_if_something_sees_behind():
     assert why and 'forward only' in why
 
 
+def test_the_camera_obstacles_guard_the_stop_zone_too():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    monitor = vehicle.nav2_tuned(nav2, v, lidar=True, camera=True)['collision_monitor']
+    assert monitor['ros__parameters']['observation_sources'] == ['radar', 'lidar', 'camera']
+    assert monitor['ros__parameters']['camera']['topic'] == '/perception/camera_obstacles'
+    plain = vehicle.nav2_tuned(nav2, v)['collision_monitor']['ros__parameters']
+    assert 'camera' not in plain['observation_sources']
+
+
 def test_the_stop_zone_turns_round_with_the_command():
     # collision_monitor picks the box by the command's speed: ahead going forward (and
     # standing still), behind reversing. Both cover every turn rate.

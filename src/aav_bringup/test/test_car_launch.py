@@ -188,6 +188,15 @@ def test_nav2_reverses_where_the_lidar_sees_behind():
     assert off['reversing'] == 'false'
 
 
+def test_the_rear_camera_sees_behind_only_when_its_detector_reads_it_for_people():
+    rear = '/sensors/camera/rear/image_raw'
+    assert CAR.watches_behind({'extra_images': rear, 'labels': ''})
+    assert CAR.watches_behind({'extra_images': f'/a, {rear}', 'labels': 'person, car'})
+    assert not CAR.watches_behind({'extra_images': rear})            # stop signs only
+    assert not CAR.watches_behind({'labels': ''})                    # the front camera only
+    assert not CAR.watches_behind(None)
+
+
 def test_the_watchdog_guards_nav2():
     sent = included(started(CAR, machine='all'))
     assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,local,global,gps'

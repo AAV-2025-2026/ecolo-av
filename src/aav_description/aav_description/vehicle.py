@@ -258,7 +258,7 @@ def nav2_rewrites(v, reversing=False):
 
 
 def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False,
-               ghost=False, controller=DEFAULT_CONTROLLER, plan_around=True):
+               ghost=False, controller=DEFAULT_CONTROLLER, plan_around=True, camera=False):
     """
     Return a copy of nav2.yaml's settings (`nav2`, loaded) with what RewrittenYaml can't write.
 
@@ -274,7 +274,8 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
       0, or -max_reverse_speed with `reversing`;
     - with `max_speed` (m/s, sim.launch.py sim_speed:=), the controller's speed and the
       smoother's top speed;
-    - the sensors collision_monitor reads: the radar, the lidar or both;
+    - the sensors collision_monitor reads: the radar, the lidar, and with `camera` the
+      camera obstacles (each camera's detections on the road: behind too, with the rear one);
     - the local costmap's lidar_layer, only with the lidar: a layer that is there but
       disabled still subscribes to its topic;
     - with `ghost` (aav_ghost), the ghost as one more source, and its own layer,
@@ -303,7 +304,8 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
         servers['FollowPath'] = mppi
     monitor = out['collision_monitor']['ros__parameters']
     monitor['observation_sources'] = [name for name, on in (('radar', radar), ('lidar', lidar),
-                                                            ('ghost', ghost)) if on]
+                                                            ('camera', camera), ('ghost', ghost))
+                                      if on]
     local = out['local_costmap']['local_costmap']['ros__parameters']
     gone = {layer for layer, on in (('lidar_layer', lidar), ('ghost_layer', ghost)) if not on}
     local['plugins'] = [p for p in local['plugins'] if p not in gone]

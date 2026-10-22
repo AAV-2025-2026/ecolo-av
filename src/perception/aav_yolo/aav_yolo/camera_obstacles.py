@@ -8,11 +8,15 @@ Subscribes  /perception/detections        vision_msgs/Detection2DArray, from eve
                                           (default /sensors/camera/front_left/camera_info):
                                           each lens, kept by the frame it names
 Publishes   /perception/camera_obstacles  sensor_msgs/PointCloud2 in base_link: where each
-                                          counted box's bottom edge meets the road
+                                          counted box's bottom edge meets the road, from
+                                          every camera heard in the last max_age s
             /perception/camera_view       sensor_msgs/PointCloud2 in base_link: the far edge
-                                          of what that camera sees, on the road. The costmap
-                                          clears its camera layer out to it
+                                          of what those cameras see, on the road. The
+                                          costmap clears its camera layer out to it
 Reads TF    base_link -> each camera's frame (vehicle.yaml, through the URDF)
+
+Every camera's newest points go out together, each time (recent.py): so a person behind
+the car doesn't vanish with every front picture, for the costmap or collision_monitor.
 
 Only the listed classes count (people, cyclists, cars...), and stop signs never do: they
 lock twist_mux instead (stop_sign_watcher). The maths is in ground.py: a pinhole camera
@@ -27,6 +31,7 @@ Needs no PyTorch: it runs in the default environment.
 import signal
 
 from aav_yolo import ground
+from aav_yolo.recent import Recent
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -48,6 +53,7 @@ class CameraObstacles(Node):
         self.step = self.declare_parameter('step', 0.1).value
         self.view_range = self.declare_parameter('view_range', 12.0).value
         self.base = self.declare_parameter('base_frame', 'base_link').value
+        self.recent = Recent(self.declare_parameter('max_age', 1.0).value)
         topics = self.declare_parameter('camera_info_topics',
                                         ['/sensors/camera/front_left/camera_info']).value
         self.lenses = {}
@@ -103,10 +109,13 @@ class CameraObstacles(Node):
                                         self.step, self.max_range)
         # The picture's time, so the costmap places the points where the car was then.
         header = Header(stamp=msg.header.stamp, frame_id=self.base)
-        edge = ground.view_edge(lens, mount, self.view_range, self.step)
+        now = Time.from_msg(msg.header.stamp).nanoseconds * 1e-9
+        self.recent.update(frame, now, points,
+                           ground.view_edge(lens, mount, self.view_range, self.step))
         self.obstacles.publish(point_cloud2.create_cloud_xyz32(
-            header, [(x, y, 0.0) for x, y in points]))
-        self.view.publish(point_cloud2.create_cloud_xyz32(header, [(x, y, 0.0) for x, y in edge]))
+            header, [(x, y, 0.0) for x, y in self.recent.obstacles(now)]))
+        self.view.publish(point_cloud2.create_cloud_xyz32(
+            header, [(x, y, 0.0) for x, y in self.recent.view(now)]))
 
 
 def main():

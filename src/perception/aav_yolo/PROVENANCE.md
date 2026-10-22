@@ -63,3 +63,9 @@ change, never the logic:
   `corners`; `pick_device` treats `.pth` as PyTorch. The launch file takes `detector:=`,
   and its `model` default is empty. The package, the node (`yolo_detector`) and the
   topics keep their names.
+- 2026-10-22: the rear camera, so camera_obstacles can see behind a reversing car (Ben:
+  "Yes the car can reverse"). `detector.py` and `launch/detector.launch.py` take
+  `extra_images`: more camera topics for the same model. `camera_obstacles.py` publishes
+  every camera's newest points together, each time (new, our own: `aav_yolo/recent.py`,
+  tested in `test/test_recent.py`), and `config/camera_obstacles.yaml` lists the rear
+  camera's CameraInfo and `max_age`.

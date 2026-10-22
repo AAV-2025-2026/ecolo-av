@@ -87,11 +87,11 @@ def flag(context, name):
 
 
 def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False,
-               controller=vehicle.DEFAULT_CONTROLLER, plan_around=True):
+               controller=vehicle.DEFAULT_CONTROLLER, plan_around=True, camera=False):
     """Return a temporary copy of nav2.yaml, tuned by vehicle.nav2_tuned (no ROS there)."""
     with open(source) as f:
         cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed, radar, lidar,
-                                 ghost, controller, plan_around)
+                                 ghost, controller, plan_around, camera)
     out = tempfile.NamedTemporaryFile('w', prefix='nav2_', suffix='.yaml', delete=False)
     with out:
         yaml.safe_dump(cfg, out)
@@ -108,8 +108,9 @@ def nodes(context):
     ghost = flag(context, 'ghost')
     # Empty: wherever a sensor (or the ghost) can feed it.
     monitor = LaunchConfiguration('collision_monitor').perform(context).strip().lower()
-    collision_monitor = (radar or lidar or ghost) if monitor == '' else monitor == 'true'
     camera = flag(context, 'camera_obstacles')
+    collision_monitor = ((radar or lidar or ghost or camera) if monitor == ''
+                         else monitor == 'true')
     reversing = flag(context, 'reversing')
 
     v = vehicle.load()['vehicle']
@@ -132,7 +133,7 @@ def nodes(context):
     controller = LaunchConfiguration('controller').perform(context).strip().lower()
     source = tuned_copy(f'{share}/config/nav2.yaml', v, reversing,
                         float(speed) if speed else None, radar, lidar, ghost, controller,
-                        flag(context, 'plan_around'))
+                        flag(context, 'plan_around'), camera)
     params = ParameterFile(
         RewrittenYaml(source_file=source, param_rewrites=rewrites, convert_types=True),
         allow_substs=True)

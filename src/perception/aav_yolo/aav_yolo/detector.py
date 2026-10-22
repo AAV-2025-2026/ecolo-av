@@ -5,6 +5,9 @@ Subscribes  image              sensor_msgs/Image (the launch file maps it to
                                /sensors/camera/front_left/image_raw)
             image/compressed   sensor_msgs/CompressedImage instead, with compressed:=true
                                (image_transport's JPEG topic: for a laptop on WiFi)
+            extra_images       more cameras for the same model, comma-separated topics
+                               (such as /sensors/camera/rear/image_raw): one model on
+                               the GPU, each camera's newest picture in turn
 Publishes   detections         vision_msgs/Detection2DArray (/perception/detections), with
                                the image's header: its stamp, and its camera's frame
             detections/image   sensor_msgs/Image: the picture with the boxes drawn on
@@ -110,6 +113,8 @@ class Detector(Node):
         self.labels = parse_labels(self.declare_parameter('labels', '').value)
         publish_image = self.declare_parameter('publish_image', True).value
         self.compressed = self.declare_parameter('compressed', False).value
+        extra = [t.strip() for t in
+                 self.declare_parameter('extra_images', '').value.split(',') if t.strip()]
         try:
             model = check_detector(detector, model)
         except ValueError as e:
@@ -139,12 +144,14 @@ class Detector(Node):
         # image_transport's naming: the JPEG pictures are <image topic>/compressed. Resolve
         # 'image' first, so a remapping of it (image:=/sensors/camera/front_left/image_raw)
         # carries over.
-        topic = self.resolve_topic_name('image')
-        if self.compressed:
-            topic += '/compressed'
-            self.create_subscription(CompressedImage, topic, self.on_image, LATEST)
-        else:
-            self.create_subscription(Image, topic, self.on_image, LATEST)
+        topics = [self.resolve_topic_name('image')] + extra
+        for topic in topics:
+            if self.compressed:
+                self.create_subscription(CompressedImage, topic + '/compressed', self.on_image,
+                                         LATEST)
+            else:
+                self.create_subscription(Image, topic, self.on_image, LATEST)
+        topic = ', '.join(topics)
         self.frames, self.busy_s, self.since = 0, 0.0, time.monotonic()
         keep = ', '.join(self.labels) if self.labels else 'every label'
         self.get_logger().info(f'{detector}: {model} on '

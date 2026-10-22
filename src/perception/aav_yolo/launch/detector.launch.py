@@ -17,6 +17,8 @@ What you can set:
   confidence  the lowest score kept, 0 to 1
   labels      the labels to keep, comma-separated; empty keeps them all
   image       the camera topic to read
+  extra_images  more camera topics for the same model, comma-separated (the rear camera:
+              /sensors/camera/rear/image_raw); empty, the default: none
   compressed  true: read <image>/compressed (JPEG) instead: for a laptop on the car's WiFi
   picture     an image or video file, published as the camera (image_publisher), for tests
   node_name   the node's name: yolo_detector, or yolo_detector_<machine> on the car. One
@@ -47,6 +49,8 @@ def generate_launch_description():
         DeclareLaunchArgument('confidence', default_value='0.5'),
         DeclareLaunchArgument('labels', default_value=''),
         DeclareLaunchArgument('image', default_value='/sensors/camera/front_left/image_raw'),
+        DeclareLaunchArgument('extra_images', default_value='',
+                              description='more camera topics, comma-separated'),
         DeclareLaunchArgument('compressed', default_value='false',
                               description='read <image>/compressed (JPEG), for WiFi'),
         DeclareLaunchArgument('picture', default_value=''),
@@ -70,6 +74,7 @@ def generate_launch_description():
                  '-p', ['confidence:=', arg('confidence')],
                  '-p', ['labels:="', arg('labels'), '"'],
                  '-p', ['compressed:=', arg('compressed')],
+                 '-p', ['extra_images:="', arg('extra_images'), '"'],
                  '-p', ['use_sim_time:=', arg('use_sim_time')],
                  '-r', ['image:=', arg('image')],
                  '-r', 'detections:=/perception/detections',

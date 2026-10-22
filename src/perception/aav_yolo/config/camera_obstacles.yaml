@@ -10,7 +10,10 @@ camera_obstacles:
                           # degree more than vehicle.yaml says moves the point 2 m
     step: 0.1             # m between points along a box's bottom edge: the costmap's cells
     view_range: 12.0      # m: the costmap's camera layer is cleared out to here
-    # Each camera's CameraInfo: its lens, kept by the frame it names. Add the right
-    # camera's (/sensors/camera/front_right/camera_info) once a detector reads it.
-    camera_info_topics: [/sensors/camera/front_left/camera_info]
+    max_age: 1.0          # s: a camera silent this long drops out of what is published
+    # Each camera's CameraInfo: its lens, kept by the frame it names. The rear one counts
+    # once a detector reads its picture (detector extra_images); add the right camera's
+    # (/sensors/camera/front_right/camera_info) the same way.
+    camera_info_topics: [/sensors/camera/front_left/camera_info,
+                         /sensors/camera/rear/camera_info]
     base_frame: base_link

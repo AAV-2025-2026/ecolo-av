@@ -524,6 +524,14 @@ collision_monitor:
       type: "scan"
       topic: /sensors/lidar/scan
       enabled: true
+    # The detectors' boxes on the road (aav_yolo camera_obstacles), every camera's newest:
+    # people and cars ahead, and behind with the rear camera. Only with camera_obstacles.
+    camera:
+      type: "pointcloud"
+      topic: /perception/camera_obstacles
+      min_height: -0.5          # m, in base_link: the points lie on the road (z = 0)
+      max_height: 2.0
+      enabled: true
     # The ghost (ghost:=true): a pretend person, so the stop zone can be tested with
     # nothing real to hit. It adds points; it never hides the radar's or the lidar's.
     ghost:
