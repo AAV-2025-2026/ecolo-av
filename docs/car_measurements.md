@@ -39,9 +39,9 @@ REP-103 and REP-105 conventions:
 
 Why it matters:
 - `navsat_transform` uses `base_link -> gps_link` to remove the antenna offset from every
-  GPS fix, so measure the antenna itself, not the receiver box. Better still, mount it
-  over the rear axle: then a heading error can't move the GPS position, and reversing
-  keeps its heading ([Learn: GPS](learn-gps.md#mount-the-antenna-over-the-rear-axle)).
+  GPS fix, so measure the antenna itself, not the receiver box. It is mounted over the rear
+  axle (Ben, 23 Oct), which is best: a heading error can't move the GPS position, and
+  reversing keeps its heading ([Learn: GPS](learn-gps.md#mount-the-antenna-over-the-rear-axle)).
 - The EKFs use `imu_link` to rotate IMU readings into the car's frame. If the IMU is
   mounted turned or upside down, its `rpy` must say so, or yaw comes out backwards.
 

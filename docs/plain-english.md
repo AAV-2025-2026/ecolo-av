@@ -267,7 +267,7 @@ More checks in Gazebo, the same day:
 | drive 30 m forward, then Ctrl-C | the agent called `stop()`; the drive was cancelled; the car stopped at 11.7 m |
 | estop | `/safety/estop` true |
 | drive 5 m forward (still e-stopped) | **refused** by the server: "the e-stop is on" |
-| drive to a point 10 m east of the GPS fix | Nav2 reached it: the car moved 10.0 m and 11.3 m in two runs (the antenna is 0.8 m ahead of `base_link`; Nav2's tolerance is 0.5 m) |
+| drive to a point 10 m east of the GPS fix | Nav2 reached it: the car moved 10.0 m and 11.3 m in two runs (then, the antenna was taken as 0.8 m ahead of `base_link`; Nav2's tolerance is 0.5 m) |
 
 The first e-stop test found a bug: a server started **after** the e-stop never heard it,
 because `/safety/estop` is sent five times and its sender goes away. The server now asks

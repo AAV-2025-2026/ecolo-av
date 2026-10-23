@@ -66,7 +66,8 @@ sensors:
     xyz: [0.50, 0.00, 0.40]   # TODO measure
     rpy: [0.0, 0.0, 0.0]      # TODO: how the IMU is turned relative to the car
   gps_link:
-    xyz: [0.80, 0.00, 1.50]   # TODO measure: the antenna, not the receiver box
+    xyz: [0.00, 0.00, 1.50]   # over the rear axle (Ben, 23 Oct: "its already there"). TODO measure
+                              # its height, and that it's really at x = 0: the antenna, not the box
     rpy: [0.0, 0.0, 0.0]
   # Where Ben placed them (15 Oct), until Friday's tape measure (audit M6): the radar on the
   # grill, two cameras up top looking forward, one at the back looking back, the lidar on

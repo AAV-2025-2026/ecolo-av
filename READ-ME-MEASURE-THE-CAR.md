@@ -99,7 +99,7 @@ of its window** (the band that spins or glows).
 
 | # | Sensor | Measure its | Guess today x / y / z (cm) | **x** | **y** | **z** | **Pointing / tilt / lean** (°) |
 |---|---|---|---|---|---|---|---|
-| S1 | **GPS antenna** | puck centre | 80 / 0 / 150 | | | | (not needed). If it can move: **over the rear axle** (x = 0) is best ([why](docs/learn-gps.md#mount-the-antenna-over-the-rear-axle)) |
+| S1 | **GPS antenna** | puck centre | 0 / 0 / 150 | | | | (not needed). Ben, 23 Oct: it is **over the rear axle** already: check x is about 0, and measure its height ([why it matters](docs/learn-gps.md#mount-the-antenna-over-the-rear-axle)) |
 | S2 | **IMU** | board centre | 50 / 0 / 40 | | | | see below |
 | S3 | **Radar** (TI mmWave, on the grill) | the middle of its flat front face | 180 / 0 / 45 | | | | 0 / __ / __ |
 | S4 | **Front left camera** | lens centre | 175 / +29 / 155 | | | | 0 / __ / __ |

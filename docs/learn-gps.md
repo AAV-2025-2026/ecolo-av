@@ -100,7 +100,7 @@ Which one stays is open question **Q18** (Tentative: `ublox`).
 | Field | Example | Means |
 |---|---|---|
 | `header.stamp` | | when the fix was taken |
-| `header.frame_id` | `gps_link` | **the antenna**, not the box. Its spot on the car is in `vehicle.yaml`: 0.80 m forward, 1.50 m up |
+| `header.frame_id` | `gps_link` | **the antenna**, not the box. Its spot on the car is in `vehicle.yaml`: over the rear axle (x = 0), 1.50 m up (a guess until measured) |
 | `status.status` | 0 | -1 no fix, 0 fix, 1 SBAS, 2 GBAS (ground-based corrections) |
 | `status.service` | 1 | which systems: 1 GPS, 2 GLONASS, 4 BeiDou, 8 Galileo (added together) |
 | `latitude` | 45.3860 | degrees, + north |
