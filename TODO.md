@@ -14,12 +14,12 @@ The reasons for each choice: [decisions](docs/decisions.md#decided-on-22-and-23-
 | 28 | Cyclone DDS the default on every computer | ✅ `pixi.toml`, `tools/ros.sh`, `pixi run doctor`, the docs. To check at the car: it uses one network card |
 | 29 | The GPS antenna over the rear axle in `vehicle.yaml` (x = 0) | ✅ its height still to measure (S1) |
 | 30 | The wheel sensors: an Arduino sends CAN frames, the Orin decodes them (PLAN D2) | ✅ decided; the frames are `aav.dbc` 0x200, 0x201 |
-| 31 | Fix the nightly Gazebo test (failed on its first night, 23 Oct) | 🔧 branch `wt/ci-sim-nightly` |
+| 31 | Fix the nightly Gazebo test (failed on its first night, 23 Oct) | ✅ merged: software graphics on GitHub, and the scripted drive keeps the simulator's time (task 23). First GitHub run: the night of 23 Oct |
 | 32 | The 10-minute timing test (task 11), Fast DDS against Cyclone | ⬜ after the other jobs, on a quiet Mac |
 | 33 | The HUD heartbeat to the safety watchdog (PLAN T9.8) | 🔧 branch `wt/hud-heartbeat` |
 | 34 | The sensor mux and output mux (PLAN T1.5, D3, S-4) | 🔧 branch `wt/sensor-output-mux` |
 | 35 | The CAN bridge (`aav_spine`) in Rust (PLAN T1.8) | 🔧 branch `wt/rust-can-bridge` |
-| 36 | A bandwidth budget: every sensor's rate and size, each link's load, the CAN bus load (PLAN T1.7) | 🔧 branch `wt/bandwidth` |
+| 36 | A bandwidth budget: every sensor's rate and size, each link's load, the CAN bus load (PLAN T1.7) | ✅ merged: [bandwidth](docs/bandwidth.md), `pixi run bandwidth`, `pixi run can-load`. Raw cameras are the only risk; CAN 8.5% |
 
 ## Working list, from 22 October (Claude works from this; Ben checks it in the morning)
 
