@@ -6,17 +6,22 @@
 //! goes the other way, as a command; a 10 ms timer on the ROS thread sends the burst of
 //! `true`s (hud_core::estop), so a slow frame can't delay it.
 //!
+//! The same timer sends the heartbeat (hud_core::heartbeat): the window counts the frames
+//! it draws, and a beat goes out only while that count rises. So a beat proves both the
+//! screen and the timer that sends the e-stop are running.
+//!
 //! QoS, as aav_hud's (docs/hud.md):
 //! - small messages: best effort (SensorDataQoS), which takes reliable and best-effort
 //!   publishers alike (ublox publishes /sensors/gps/fix best effort);
 //! - pictures: reliable, depth 1; best effort loses most big messages over WiFi;
 //! - the e-stop: reliable, depth 10, what spine_bridge and legacy_uart_bridge use;
+//! - the heartbeat: reliable, depth 10, as the sensor watchdog subscribes;
 //! - `/system/source`: reliable, transient local, depth 1, so the HUD gets each
 //!   announcer's one message even when it starts later.
 
 use std::{
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         mpsc::{self, Receiver, SyncSender, TrySendError},
         Arc,
     },
@@ -29,6 +34,7 @@ use hud_core::{
     config::{HudConfig, Topic, NODE_NAME},
     estop::EstopButton,
     gps::{Fix, RawFix},
+    heartbeat::{Frames, Heartbeat},
     origin::{Announcement, Entry, Origin},
     picture::Picture,
     state::{Battery, EstopReport, Update},
@@ -38,7 +44,7 @@ use hud_core::{
 use rclrs::*;
 use ros_env::aav_interfaces::msg::{DataSource, VehicleStatus as VehicleStatusMsg};
 use ros_env::sensor_msgs::msg::{BatteryState, Image, NavSatFix};
-use ros_env::std_msgs::msg::{Bool, String as StringMsg};
+use ros_env::std_msgs::msg::{Bool, String as StringMsg, UInt64};
 
 /// How many updates may wait for the screen. More are dropped: the screen is stuck,
 /// and news that old is no use.
@@ -55,6 +61,8 @@ enum Command {
 pub struct RosSource {
     updates: Receiver<Update>,
     commands: SyncSender<Command>,
+    /// The frames the window has drawn: the heartbeat's count.
+    frames: Arc<AtomicU64>,
     stopped: Arc<AtomicBool>,
     executor: Arc<ExecutorCommands>,
     thread: Option<JoinHandle<()>>,
@@ -72,11 +80,18 @@ impl RosSource {
         let (update_tx, updates) = mpsc::sync_channel(QUEUE);
         let (commands, command_rx) = mpsc::sync_channel(16);
         let stopped = Arc::new(AtomicBool::new(false));
+        let frames = Arc::new(AtomicU64::new(0));
         let thread = {
             let stopped = Arc::clone(&stopped);
+            let frames = Arc::clone(&frames);
             thread::Builder::new().name("ros".into()).spawn(move || {
                 let mut ready = Some(ready_tx);
-                if let Err(e) = spin(args, config, update_tx, command_rx, &mut ready) {
+                let links = Links {
+                    updates: update_tx,
+                    commands: command_rx,
+                    frames,
+                };
+                if let Err(e) = spin(args, config, links, &mut ready) {
                     match ready.take() {
                         Some(tx) => {
                             let _ = tx.send(Err(e));
@@ -104,6 +119,7 @@ impl RosSource {
         let source = Self {
             updates,
             commands,
+            frames,
             stopped,
             executor,
             thread: Some(thread),
@@ -127,6 +143,10 @@ impl crate::source::DataSource for RosSource {
         }
     }
 
+    fn frame_drawn(&mut self) {
+        self.frames.fetch_add(1, Ordering::Relaxed);
+    }
+
     fn has_stopped(&self) -> bool {
         self.stopped.load(Ordering::SeqCst)
     }
@@ -141,14 +161,28 @@ impl Drop for RosSource {
     }
 }
 
+/// What joins the ROS thread to the window.
+struct Links {
+    /// News for the screen.
+    updates: SyncSender<Update>,
+    /// The screen's requests (the e-stop button).
+    commands: Receiver<Command>,
+    /// The frames the window has drawn, for the heartbeat.
+    frames: Arc<AtomicU64>,
+}
+
 /// The ROS thread: makes the node, says it's ready, then spins until halted.
 fn spin(
     args: Vec<String>,
     config: HudConfig,
-    tx: SyncSender<Update>,
-    commands: Receiver<Command>,
+    links: Links,
     ready: &mut Option<mpsc::Sender<Ready>>,
 ) -> Result<()> {
+    let Links {
+        updates: tx,
+        commands,
+        frames,
+    } = links;
     let context = Context::new(args, InitOptions::default())?;
     let mut executor = context.create_basic_executor();
     let node = executor.create_node(NODE_NAME)?;
@@ -212,10 +246,28 @@ fn spin(
     let estop_qos = QoSProfile::topics_default().reliable().keep_last(10);
     let estop_pub: Publisher<Bool> =
         node.create_publisher(config.topic(Topic::Estop).qos(estop_qos))?;
+    let heartbeat_qos = QoSProfile::topics_default().reliable().keep_last(10);
+    let heartbeat_pub: Publisher<UInt64> =
+        node.create_publisher(config.topic(Topic::Heartbeat).qos(heartbeat_qos))?;
+    // One timer for both: a beat says the e-stop's sender runs too.
     let _estop_timer = node.create_timer_repeating(ESTOP_TICK, {
         let node = Arc::clone(&node);
         let mut button = EstopButton::default();
+        let mut heartbeat = Heartbeat::default();
+        let mut beat_failed = false;
         move || {
+            let drawn = Frames(frames.load(Ordering::Relaxed));
+            if let Some(Frames(count)) = heartbeat.poll(Instant::now(), drawn) {
+                match heartbeat_pub.publish(UInt64 { data: count }) {
+                    Ok(()) => beat_failed = false,
+                    // Once per run of failures, not 10 times a second.
+                    Err(e) if !beat_failed => {
+                        beat_failed = true;
+                        log_error!(node.logger(), "the heartbeat wasn't published: {e}");
+                    }
+                    Err(_) => {}
+                }
+            }
             while let Ok(Command::PressEstop) = commands.try_recv() {
                 log_warn!(node.logger(), "e-stop pressed on the HUD: publishing true");
                 button.press(Instant::now());
@@ -366,21 +418,26 @@ mod tests {
         assert_eq!(Origin::from(SensorSource::REPLAY), Origin::Replay);
     }
 
-    /// The real node: one press of the button reaches another node as five trues, and
-    /// the screen hears that it was sent to a subscriber. Needs ROS sourced; runs on
-    /// this computer only, on ROS_DOMAIN_ID (93 unless set), with a topic of its own.
+    /// The real node, as another node hears it: beats 10 times a second while the window
+    /// draws, with a rising count, and none before or after; and one press of the button
+    /// is five trues, with the window frozen too, each reported to the screen as sent to a
+    /// subscriber. One test: the Ctrl-C handler can be set once per process. Needs ROS
+    /// sourced; runs on this computer only, on ROS_DOMAIN_ID (93 unless set), with topics
+    /// of its own.
     #[test]
-    fn one_press_reaches_a_subscriber_as_five_trues() -> Result<()> {
+    fn beats_while_the_window_draws_and_a_press_is_five_trues() -> Result<()> {
         use crate::source::DataSource;
-        use std::sync::atomic::AtomicUsize;
+        use std::sync::{atomic::AtomicUsize, Mutex};
 
         if std::env::var_os("ROS_DOMAIN_ID").is_none() {
             std::env::set_var("ROS_DOMAIN_ID", "93");
         }
         std::env::set_var("ROS_AUTOMATIC_DISCOVERY_RANGE", "LOCALHOST");
-        let topic = format!("/hud_test_{}/estop", std::process::id());
+        let prefix = format!("/hud_test_{}", std::process::id());
+        let (estop, heartbeat) = (format!("{prefix}/estop"), format!("{prefix}/heartbeat"));
         let mut config = HudConfig::default();
-        config.set_topic(Topic::Estop, topic.clone());
+        config.set_topic(Topic::Estop, estop.clone());
+        config.set_topic(Topic::Heartbeat, heartbeat.clone());
         let (mut hud, _) = RosSource::start(vec!["hud".into()], config)?;
 
         let context = Context::default_from_env()?;
@@ -388,24 +445,58 @@ mod tests {
         let listener = executor.create_node("hud_test_listener")?;
         let trues = Arc::new(AtomicUsize::new(0));
         let falses = Arc::new(AtomicUsize::new(0));
-        let _sub = listener.create_subscription(topic.as_str().reliable().keep_last(10), {
-            let (trues, falses) = (Arc::clone(&trues), Arc::clone(&falses));
-            move |m: Bool| {
-                let n = if m.data { &trues } else { &falses };
-                n.fetch_add(1, Ordering::SeqCst);
-            }
-        })?;
-        // Give discovery a moment, so the first message isn't lost before it matches.
-        executor.spin(SpinOptions::default().timeout(Duration::from_millis(1500)));
+        let _estop_sub =
+            listener.create_subscription(estop.as_str().reliable().keep_last(10), {
+                let (trues, falses) = (Arc::clone(&trues), Arc::clone(&falses));
+                move |m: Bool| {
+                    let n = if m.data { &trues } else { &falses };
+                    n.fetch_add(1, Ordering::SeqCst);
+                }
+            })?;
+        let beats = Arc::new(Mutex::new(Vec::<u64>::new()));
+        let _beat_sub =
+            listener.create_subscription(heartbeat.as_str().reliable().keep_last(10), {
+                let beats = Arc::clone(&beats);
+                move |m: UInt64| beats.lock().expect("not poisoned").push(m.data)
+            })?;
+        let count = || beats.lock().expect("not poisoned").len();
+        let spin = |executor: &mut Executor, ms| {
+            executor.spin(SpinOptions::default().timeout(Duration::from_millis(ms)));
+        };
+
+        // Discovery, and nothing drawn yet: no beats, however long the node runs.
+        spin(&mut executor, 1500);
+        assert_eq!(count(), 0, "beats before the first frame");
+
+        // Draw at about 30 frames a second for 2 s.
+        let end = Instant::now() + Duration::from_secs(2);
+        while Instant::now() < end {
+            hud.frame_drawn();
+            spin(&mut executor, 33);
+        }
+        let drawing = count();
+        assert!((15..=21).contains(&drawing), "{drawing} beats in 2 s");
+        {
+            let got = beats.lock().expect("not poisoned");
+            assert!(got.windows(2).all(|w| w[1] > w[0]), "{got:?}");
+        }
+
+        // The window stops drawing; the button still works.
         hud.press_estop();
         let deadline = Instant::now() + Duration::from_secs(3);
         while trues.load(Ordering::SeqCst) < 5 && Instant::now() < deadline {
-            executor.spin(SpinOptions::default().timeout(Duration::from_millis(100)));
+            spin(&mut executor, 100);
         }
-        // A little longer: a sixth would be a bug.
-        executor.spin(SpinOptions::default().timeout(Duration::from_millis(300)));
+        // A little longer: a sixth would be a bug, and so would more beats.
+        spin(&mut executor, 1000);
         assert_eq!(trues.load(Ordering::SeqCst), 5);
         assert_eq!(falses.load(Ordering::SeqCst), 0);
+        // At most one beat already on its way when the window stopped.
+        assert!(
+            count() <= drawing + 1,
+            "{} beats after the window stopped",
+            count() - drawing
+        );
         let reports: Vec<Update> = hud
             .drain(Instant::now())
             .into_iter()

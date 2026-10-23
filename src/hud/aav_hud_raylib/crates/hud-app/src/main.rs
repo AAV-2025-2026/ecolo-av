@@ -9,6 +9,8 @@
 //!             camera_topic          sensor_msgs/Image             the camera panel
 //!             source_topic          aav_interfaces/DataSource     latched: the SIMULATED banner
 //! Publishes   estop_topic           std_msgs/Bool                 only true: the e-stop button
+//!             heartbeat_topic       std_msgs/UInt64               10 Hz while the screen draws:
+//!                                                                 frames drawn (hud_core::heartbeat)
 //! Parameters  the topics above, and stale_after (s)
 //!
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread and
@@ -177,6 +179,8 @@ fn run(opts: &Options, mut source: Box<dyn DataSource>, config: HudConfig) -> Re
         let mut d = rl.begin_drawing(&thread);
         ui.draw(&mut d, &state, now, label, hover);
         drop(d);
+        // On the screen now: the heartbeat may say so.
+        source.frame_drawn();
 
         if let Some(path) = &opts.screenshot {
             if now.duration_since(started) > SCREENSHOT_AFTER {

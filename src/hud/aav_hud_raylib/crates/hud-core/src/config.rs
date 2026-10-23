@@ -30,6 +30,8 @@ pub enum Topic {
     Source,
     /// The sensor watchdog's verdict (aav_safety): a banner over the camera unless OK.
     Watchdog,
+    /// `/hud/heartbeat`, sent: the screen is alive (hud_core::heartbeat).
+    Heartbeat,
 }
 
 impl Topic {
@@ -43,9 +45,14 @@ impl Topic {
         Topic::Camera,
     ];
 
-    /// The topics that aren't listed: the e-stop (sent), the source (latched), and the
-    /// watchdog (a banner of its own).
-    pub const UNLISTED: [Topic; 3] = [Topic::Estop, Topic::Source, Topic::Watchdog];
+    /// The topics that aren't listed: the e-stop and the heartbeat (sent), the source
+    /// (latched), and the watchdog (a banner of its own).
+    pub const UNLISTED: [Topic; 4] = [
+        Topic::Estop,
+        Topic::Source,
+        Topic::Watchdog,
+        Topic::Heartbeat,
+    ];
 
     /// The ROS parameter that holds this topic's name.
     pub fn parameter(self) -> &'static str {
@@ -59,6 +66,7 @@ impl Topic {
             Self::Estop => "estop_topic",
             Self::Source => "source_topic",
             Self::Watchdog => "watchdog_topic",
+            Self::Heartbeat => "heartbeat_topic",
         }
     }
 }
@@ -75,6 +83,7 @@ pub struct HudConfig {
     pub estop_topic: String,
     pub source_topic: String,
     pub watchdog_topic: String,
+    pub heartbeat_topic: String,
     /// Seconds without a message before a topic shows STALE.
     pub stale_after: f64,
 }
@@ -129,6 +138,7 @@ impl HudConfig {
             Topic::Estop => &self.estop_topic,
             Topic::Source => &self.source_topic,
             Topic::Watchdog => &self.watchdog_topic,
+            Topic::Heartbeat => &self.heartbeat_topic,
         }
     }
 
@@ -144,6 +154,7 @@ impl HudConfig {
             Topic::Estop => &mut self.estop_topic,
             Topic::Source => &mut self.source_topic,
             Topic::Watchdog => &mut self.watchdog_topic,
+            Topic::Heartbeat => &mut self.heartbeat_topic,
         };
         *slot = name;
     }

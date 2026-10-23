@@ -10,6 +10,7 @@
 //! | [`origin`] | `/system/source`: real, simulated, bench or replay, per topic |
 //! | [`picture`] | a camera picture turned into RGBA pixels for the screen |
 //! | [`estop`] | the e-stop button: five `true`s, 0.1 s apart, never `false` |
+//! | [`heartbeat`] | `/hud/heartbeat` to the sensor watchdog: 10 Hz while the screen draws |
 //! | [`watchdog`] | the sensor watchdog's verdict, as a banner (the map window's too) |
 //! | [`state`] | everything above, as one value the screen draws |
 //! | [`format`] | numbers turned into short text for the screen |
@@ -20,6 +21,7 @@ pub mod estop;
 pub mod format;
 pub mod gps;
 pub mod health;
+pub mod heartbeat;
 pub mod origin;
 pub mod picture;
 pub mod screen;
