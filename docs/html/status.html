@@ -181,7 +181,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Gazebo's road world</td>
 <td><code>aav_gazebo</code> <code>world:=road</code></td>
-<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code>, <code>--obstacle</code>, <code>--lidar-obstacle</code>, <code>--faults</code>, <code>--spine</code> and <code>--perception</code> pass. <span class="badge b-untested">untested</span> on Linux, which needs EGL (<a href="simulation.html">Simulation</a>)</td>
+<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code>, <code>--obstacle</code>, <code>--lidar-obstacle</code>, <code>--faults</code>, <code>--spine</code> and <code>--perception</code> pass. On Linux with no GPU, through <code>tools/software_gl.sh</code>: <span class="badge b-works">works</span> on oirp-spss, 23 Oct (<code>sim-check --obstacle</code>: the sensors and the stop; the nightly CI job uses it) (<a href="simulation.html">Simulation</a>)</td>
 </tr>
 <tr>
 <td>The lidar in Nav2 (15 Oct)</td>

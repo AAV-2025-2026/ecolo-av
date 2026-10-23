@@ -188,8 +188,11 @@ To drive it:
 
 !!! tip "No GPU, or in a virtual machine?"
   Start it with `gui:=false`, and watch in RViz or Foxglove instead. The empty and
-  test_lot worlds render nothing, so they run anywhere. The road world renders the camera:
-  on Linux without a screen, that needs EGL (untested).
+  test_lot worlds render nothing, so they run anywhere. The road world renders the cameras
+  and the lidar: on Linux with no GPU, start it through `tools/software_gl.sh`, as
+  `tools/software_gl.sh pixi run sim gui:=false` (Mesa's software OpenGL). Without it,
+  Gazebo crashes as the world loads (`Unable to load Ogre Plugin`), and the car never
+  appears. [[works]] on oirp-spss, 23 Oct.
 
 !!! tip "The car never appears?"
   If the log keeps saying `Requesting list of world names`, Gazebo's programs can't find

@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">42 min read · 8 sections</div></header>
+<div class="meta">43 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -538,8 +538,11 @@ simulated time.
 <div class="admonition tip">
 <p class="admonition-title">No GPU, or in a virtual machine?</p>
 <p>Start it with <code>gui:=false</code>, and watch in RViz or Foxglove instead. The empty and
-test_lot worlds render nothing, so they run anywhere. The road world renders the camera:
-on Linux without a screen, that needs EGL (untested).</p>
+test_lot worlds render nothing, so they run anywhere. The road world renders the cameras
+and the lidar: on Linux with no GPU, start it through <code>tools/software_gl.sh</code>, as
+<code>tools/software_gl.sh pixi run sim gui:=false</code> (Mesa's software OpenGL). Without it,
+Gazebo crashes as the world loads (<code>Unable to load Ogre Plugin</code>), and the car never
+appears. <span class="badge b-works">works</span> on oirp-spss, 23 Oct.</p>
 </div>
 <div class="admonition tip">
 <p class="admonition-title">The car never appears?</p>

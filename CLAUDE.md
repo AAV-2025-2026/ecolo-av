@@ -113,6 +113,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
   that writes to ROS, or a file outside git to read: `tools/tests/test_mcp_parts.py` checks.
 - Gazebo on oirp-spss also needs `GZ_IP=127.0.0.1` (multicast doesn't loop back there)
   and its own `GZ_PARTITION`; without them the car never spawns.
+  The road world's cameras need `tools/software_gl.sh` in front there (no GPU, as on
+  GitHub's runners): `tools/software_gl.sh pixi run sim-check`.
 
 ## Git
 
