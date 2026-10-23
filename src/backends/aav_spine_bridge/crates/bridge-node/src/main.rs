@@ -1,6 +1,11 @@
 //! spine_bridge: the ROS side of the CAN spine, in Rust.
 //!
-//! Subscribes  ego/actuator_cmd      ackermann_msgs/AckermannDriveStamped
+//! Subscribes  control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
+//!                                   command, from the output mux (aav_io_mux): control/car/
+//!                                   for source real, control/bench/ for bench,
+//!                                   control/gazebo/ for sim. Never /ego/actuator_cmd
+//!                                   itself: on the car, only an output mux that found
+//!                                   every source REAL reaches this node
 //!             safety/estop          std_msgs/Bool
 //!             can/rx                can_msgs/Frame  (ros2_socketcan's receiver on the car;
 //!                                   spine_sim on the bench and in Gazebo)
@@ -28,8 +33,8 @@
 //! firmware/can/aav.dbc, packed by the firmware's own code (spine-core), and the logic is
 //! the `spine-bridge` crate, with no ROS. /vehicle/odom's speed is the front wheel nodes'
 //! mean while both are fresh, otherwise the spine's measured speed. DRIVE_CMD goes out at
-//! 50 Hz only while /ego/actuator_cmd is fresh: if ego stops, the bridge stops sending and
-//! the spine's own watchdog brakes the car. Where it differs from the Python, on purpose:
+//! 50 Hz only while ego's command is fresh: if ego (or the output mux) stops, the bridge
+//! stops sending and the spine's own watchdog brakes the car. Where it differs from the Python, on purpose:
 //! it ignores extended-ID frames (another device's, never ours), and its parameters are
 //! read-only (it reads them once, as the Python did).
 
@@ -132,7 +137,7 @@ fn main() -> Result<()> {
     // One worker: its callbacks take turns with the state, as the Python's did.
     let worker = node.create_worker(state);
     let _command = worker.create_subscription(
-        "ego/actuator_cmd",
+        source.commands(),
         |s: &mut State, msg: AckermannDriveStamped| {
             let now = s.now();
             s.bridge.command(
@@ -174,7 +179,7 @@ fn main() -> Result<()> {
             Drive::Send(cmd) => s.send(DRIVE_CMD_ID, &cmd.encode()),
             Drive::Stale => log_warn!(
                 s.logger.throttle(WARN_EVERY),
-                "no fresh /ego/actuator_cmd; the spine will brake"
+                "no fresh command from ego and the output mux; the spine will brake"
             ),
             Drive::NoCommand => {}
         }
@@ -270,6 +275,16 @@ impl Source {
             other => Err(anyhow!(
                 "source:={other}: use one of ['bench', 'real', 'sim']"
             )),
+        }
+    }
+
+    /// Where ego's commands come from: the output mux's topic for the target this bridge
+    /// plays (aav_io_mux provenance.TARGETS). The real car's only from target car.
+    fn commands(self) -> &'static str {
+        match self {
+            Source::Real => "control/car/actuator_cmd",
+            Source::Bench => "control/bench/actuator_cmd",
+            Source::Sim => "control/gazebo/actuator_cmd",
         }
     }
 

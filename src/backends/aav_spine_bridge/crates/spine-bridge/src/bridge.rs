@@ -207,7 +207,7 @@ impl Bridge {
 
     // Orin -> spine
 
-    /// ego's latest command (/ego/actuator_cmd), received at `now`.
+    /// ego's latest command (from the output mux), received at `now`.
     pub fn command(&mut self, command: Command, now: Duration) {
         self.command = Some((command, now));
     }

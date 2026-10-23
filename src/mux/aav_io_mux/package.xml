@@ -18,6 +18,8 @@
   <test_depend>ament_flake8</test_depend>
   <test_depend>python3-pytest</test_depend>
   <test_depend>aav_spine</test_depend>
+  <!-- test_real_backend_guard.py runs the Rust spine_bridge too. -->
+  <test_depend>aav_spine_bridge</test_depend>
   <test_depend>can_msgs</test_depend>
 
   <export>
