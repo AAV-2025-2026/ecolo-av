@@ -61,9 +61,10 @@ class OutputMux(Node):
         self.create_subscription(SourceCheck, 'system/sensor_mux/state', self.on_check, 10)
         self.create_subscription(DataSource, 'system/source', self.on_source, ANNOUNCEMENTS)
         self.create_service(Trigger, 'safety/output_mux/clear', self.on_clear)
+        # Little work beside the commands, so a command never waits long behind it: the
+        # graph (who still announces) twice a second, and the state with it.
         steady = Clock(clock_type=ClockType.STEADY_TIME)
-        self.create_timer(0.1, self.tick, clock=steady)
-        self.create_timer(0.5, self.publish_state, clock=steady)
+        self.create_timer(0.5, self.tick_and_publish, clock=steady)
         self.get_logger().info(f'target:={self.target}: ego/actuator_cmd -> {topic}, while '
                                f'every source is {provenance.kind_name(self.gate.expected)}')
 
@@ -71,16 +72,21 @@ class OutputMux(Node):
         self.gate.report = provenance.Report(time.monotonic(), msg.source, msg.ok,
                                              tuple(msg.problems), tuple(msg.doubts))
         self.tick()
+        self.publish_state(changes_only=True)
 
     def on_source(self, msg):
         self.heard[msg.announcer] = entries_of(msg)
         self.tick()
+        self.publish_state(changes_only=True)
 
     def tick(self):
         """Re-judge: the live announcements, the sensor mux's age."""
         self.gate.entries = provenance.live_entries(self.heard, announcers_alive(self))
         self.gate.update(time.monotonic())
-        self.publish_state(changes_only=True)
+
+    def tick_and_publish(self):
+        self.tick()
+        self.publish_state()
 
     def on_cmd(self, msg):
         if self.gate.is_open(time.monotonic()):
