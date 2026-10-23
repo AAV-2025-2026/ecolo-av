@@ -10,10 +10,17 @@ failing test case (from colcon's JUnit files in build/), and the end of the step
 when no test case failed (tools/test.sh, lint or the build stopped first).
 
   python3 tools/ci_annotate.py [log] [build]      (defaults: test.log, build)
+
+The nightly Gazebo job (`sim`) uses --sim: one annotation per FAIL line of sim-check's own
+output (or its end, if none), then the errors in each launch log (Gazebo's crash, a node
+that died), the last of them:
+
+  python3 tools/ci_annotate.py --sim sim.log sim-logs/aav-sim-check.log
 """
 
 import glob
 import os
+import re
 import sys
 import xml.etree.ElementTree as ET
 
@@ -73,7 +80,49 @@ def annotations(log, build):
     return out
 
 
+# A launch log's lines worth reading first: ROS's errors, Gazebo's ([Err]), a process
+# that died, a crash.
+ERRORS = re.compile(r'\[ERROR\]|\[Err\]|process has died|Segmentation fault|Traceback|'
+                    r'Error:|error while loading')
+COLOUR = re.compile(r'\x1b\[[0-9;]*m')
+
+
+def error_lines(log, count=MESSAGE_LINES):
+    """Return the last `count` error lines of a launch log, colours removed."""
+    try:
+        with open(log, errors='replace') as f:
+            lines = [COLOUR.sub('', line).rstrip() for line in f]
+    except OSError:
+        return [f'no {log}']
+    found = [line for line in lines if ERRORS.search(line)]
+    return found[-count:] if found else [f'no errors in {len(lines)} lines']
+
+
+def sim_annotations(log, launch_logs):
+    """Return the workflow command lines for a failed sim-check."""
+    try:
+        with open(log, errors='replace') as f:
+            failed = [line.strip() for line in f if line.startswith('FAIL ')]
+    except OSError:
+        failed = []
+    room = LIMIT + 1 - len(launch_logs)
+    out = [f'::error title=sim-check::{escape(line)}' for line in failed[:room]]
+    if not failed:
+        out.append(f'::error title=the end of sim-check::'
+                   f'{escape(tail(log) or f"no {log}")}')
+    for launch_log in launch_logs:
+        title = f'{os.path.basename(launch_log)}, its last errors'
+        out.append(f'::error title={escape_property(title)}::'
+                   f'{escape(chr(10).join(error_lines(launch_log)))}')
+    return out
+
+
 def main(argv):
+    if len(argv) > 1 and argv[1] == '--sim':
+        log = argv[2] if len(argv) > 2 else 'sim.log'
+        for line in sim_annotations(log, argv[3:]):
+            print(line)
+        return
     log = argv[1] if len(argv) > 1 else 'test.log'
     build = argv[2] if len(argv) > 2 else 'build'
     for line in annotations(log, build):

@@ -233,7 +233,8 @@ request, and on a Mac every night. The results are on the repo's Actions tab.
 
 Every night it also runs `sim-check --obstacle` (Gazebo, headless) on Linux: the job
 `sim`. New on 22 Oct and still on trial: GitHub's computers have no GPU, so the cameras
-render in software, and a failure there doesn't fail the night yet (`continue-on-error`).
+render in software (Mesa's llvmpipe, through `tools/software_gl.sh`), and a failure there
+doesn't fail the night yet (`continue-on-error`).
 
 ### Reading a CI failure without signing in
 
@@ -247,6 +248,13 @@ A job's log needs a GitHub sign-in. Its **annotations** don't: when the test ste
 
 Without a sign-in GitHub allows 60 of these calls an hour, so don't poll fast. A step keeps
 at most 10 annotations: 9 failing tests, then the rest by name, or the log's last 40 lines.
+
+The `sim` job's annotations (`ci_annotate.py --sim`): each `FAIL` line of sim-check, then
+the launch log's last errors (Gazebo's crash, a node that died). Its whole logs (sim-check's
+output, the launch log, every node's ROS log) are kept 14 days as the artifact `sim-logs`.
+Anyone can list artifacts
+(`https://api.github.com/repos/zander1976/aav/actions/artifacts`), but downloading one
+needs a sign-in: on the run's page, or `gh run download <run id> -n sim-logs`.
 
 !!! note "PowerShell on the Linux runner"
   GitHub's Ubuntu runners set `PSModulePath`, which makes colcon set each package's

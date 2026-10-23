@@ -50,3 +50,46 @@ def test_at_most_ten(tmp_path):
     out = ci_annotate.annotations(str(tmp_path / 'none.log'), str(tmp_path / 'build'))
     assert len(out) == 10
     assert out[-1].startswith('::error title=6 more failing tests::')
+
+
+# The nightly sim job's first failure (23 Oct), as oirp-spss showed it: Gazebo crashed.
+LAUNCH_LOG = """[INFO] [launch]: All log files can be found below /tmp/x
+[gazebo-1] \x1b[1;31m[Err] [Ogre2RenderEngine.cc:752] \x1b[0mUnable to load Ogre Plugin
+[gazebo-1] Segmentation fault (Address not mapped to object [(nil)])
+[INFO] [ekf_global-15]: process started
+[ERROR] [gazebo-1]: process has died [pid 1, exit code -11]
+"""
+
+
+def test_sim_fail_lines_and_launch_errors(tmp_path):
+    step = tmp_path / 'sim.log'
+    step.write_text('Starting...\nPASS  graph vs contract: 0 failures\n'
+                    'FAIL  start-up: nothing from: truth, in 120 s\n| table |\n')
+    launch = tmp_path / 'aav-sim-check.log'
+    launch.write_text(LAUNCH_LOG)
+    out = ci_annotate.sim_annotations(str(step), [str(launch)])
+    assert out == [
+        '::error title=sim-check::FAIL  start-up: nothing from: truth, in 120 s',
+        '::error title=aav-sim-check.log%2C its last errors::'
+        '[gazebo-1] [Err] [Ogre2RenderEngine.cc:752] Unable to load Ogre Plugin%0A'
+        '[gazebo-1] Segmentation fault (Address not mapped to object [(nil)])%0A'
+        '[ERROR] [gazebo-1]: process has died [pid 1, exit code -11]',
+    ]
+
+
+def test_sim_without_fail_lines_or_logs(tmp_path):
+    step = tmp_path / 'sim.log'
+    step.write_text('Traceback (most recent call last):\nKeyError: x\n')
+    out = ci_annotate.sim_annotations(str(step), [str(tmp_path / 'gone.log')])
+    assert out[0] == ('::error title=the end of sim-check::'
+                      'Traceback (most recent call last):%0AKeyError: x%0A')
+    assert out[1].endswith(f'::no {tmp_path}/gone.log')
+    assert len(ci_annotate.sim_annotations(str(tmp_path / 'none.log'), [])) == 1
+
+
+def test_sim_at_most_ten(tmp_path):
+    step = tmp_path / 'sim.log'
+    step.write_text(''.join(f'FAIL  check {n}\n' for n in range(12)))
+    out = ci_annotate.sim_annotations(str(step), ['a.log', 'b.log'])
+    assert len(out) == 10
+    assert out[-2].startswith('::error title=a.log')

@@ -107,4 +107,23 @@ jobs:
       - name: pixi run sim-check --obstacle
         env:
           QT_QPA_PLATFORM: offscreen
-        run: tools/software_gl.sh pixi run --locked sim-check --obstacle
+          AAV_SIM_LOG: ${{ github.workspace }}/sim-logs/aav-sim-check.log
+          ROS_LOG_DIR: ${{ github.workspace }}/sim-logs/ros
+        run: |
+          mkdir -p sim-logs
+          tools/software_gl.sh pixi run --locked sim-check --obstacle 2>&1 | tee sim-logs/sim.log
+      # Readable without signing in: sim-check's FAIL lines and the launch log's last errors.
+      - name: Failures as annotations (readable without signing in)
+        if: failure() && hashFiles('sim-logs/sim.log') != ''
+        run: python3 tools/ci_annotate.py --sim sim-logs/sim.log sim-logs/aav-sim-check.log
+      # Everything: sim-check's output, the launch log, each node's ROS log. Anyone can list
+      # a public repo's artifacts (api.github.com/repos/zander1976/aav/actions/artifacts),
+      # but downloading one needs a GitHub sign-in (or a token).
+      - name: Keep the logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sim-logs
+          path: sim-logs/
+          retention-days: 14
+          if-no-files-found: ignore

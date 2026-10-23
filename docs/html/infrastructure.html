@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">16 min read · 11 sections</div></header>
+<div class="meta">17 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -780,7 +780,8 @@ previous teams' orgs are public, so nothing is pushed there.</p>
 request, and on a Mac every night. The results are on the repo's Actions tab.</p>
 <p>Every night it also runs <code>sim-check --obstacle</code> (Gazebo, headless) on Linux: the job
 <code>sim</code>. New on 22 Oct and still on trial: GitHub's computers have no GPU, so the cameras
-render in software, and a failure there doesn't fail the night yet (<code>continue-on-error</code>).</p>
+render in software (Mesa's llvmpipe, through <code>tools/software_gl.sh</code>), and a failure there
+doesn't fail the night yet (<code>continue-on-error</code>).</p>
 <h3 id="reading-a-ci-failure-without-signing-in">Reading a CI failure without signing in</h3>
 <p>A job's log needs a GitHub sign-in. Its <strong>annotations</strong> don't: when the test step fails,
 <code>tools/ci_annotate.py</code> prints one annotation per failing test, with its error message.</p>
@@ -804,6 +805,12 @@ render in software, and a failure there doesn't fail the night yet (<code>contin
 </table></div>
 <p>Without a sign-in GitHub allows 60 of these calls an hour, so don't poll fast. A step keeps
 at most 10 annotations: 9 failing tests, then the rest by name, or the log's last 40 lines.</p>
+<p>The <code>sim</code> job's annotations (<code>ci_annotate.py --sim</code>): each <code>FAIL</code> line of sim-check, then
+the launch log's last errors (Gazebo's crash, a node that died). Its whole logs (sim-check's
+output, the launch log, every node's ROS log) are kept 14 days as the artifact <code>sim-logs</code>.
+Anyone can list artifacts
+(<code>https://api.github.com/repos/zander1976/aav/actions/artifacts</code>), but downloading one
+needs a sign-in: on the run's page, or <code>gh run download &lt;run id&gt; -n sim-logs</code>.</p>
 <div class="admonition note">
 <p class="admonition-title">PowerShell on the Linux runner</p>
 <p>GitHub's Ubuntu runners set <code>PSModulePath</code>, which makes colcon set each package's
