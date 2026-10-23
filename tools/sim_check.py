@@ -75,6 +75,9 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    twist_mux's lock timeout. `odom freeze` counts from when the frozen wheels go wrong
    (the car's speed or turn changes: Nav2 slows or steers), as they're right till then,
    and has FROZEN_REACT s: a speed that stays wrong needs the GPS's 6 s window.
+   `hud stop`: the watchdog also wants the HUD's heartbeat here (watch_hud:=true); with no
+   screen, the check beats for it (/hud/heartbeat, 10 Hz, a rising count) and stops, as a
+   frozen HUD does.
    With --no-watchdog it only reports, without the watchdog's own two.
 11. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
    car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
@@ -144,7 +147,7 @@ from rclpy.qos import qos_profile_sensor_data  # noqa: E402
 from robot_localization.srv import ToLL  # noqa: E402
 from sensor_msgs.msg import CameraInfo, Image, LaserScan, PointCloud2  # noqa: E402
 from sensor_msgs_py import point_cloud2  # noqa: E402
-from std_msgs.msg import Bool, String  # noqa: E402
+from std_msgs.msg import Bool, String, UInt64  # noqa: E402
 from std_srvs.srv import SetBool, Trigger  # noqa: E402
 from vision_msgs.msg import Detection2DArray  # noqa: E402
 from visualization_msgs.msg import Marker  # noqa: E402
@@ -178,7 +181,8 @@ LOOKAHEAD = 3.0         # m: where lane_finder measures the offset (its config, 
 # (aav_safety config/sensor_watchdog.yaml) and collision_monitor's source_timeout set how
 # soon each must stop the car: REACT gives each that, plus ego's stop.
 # The watchdog's own two: hang (mended by SIGCONT) early; kill last, as nothing mends it.
-FAULTS = [('gps', 'stop'), ('watchdog', 'hang'), ('imu', 'stop'), ('odom', 'stop'),
+FAULTS = [('gps', 'stop'), ('watchdog', 'hang'), ('hud', 'stop'), ('imu', 'stop'),
+          ('odom', 'stop'),
           ('odom', 'freeze'), ('camera', 'freeze'), ('radar', 'stop'), ('imu', 'freeze'),
           ('gps', 'jump'), ('gps', 'nan'), ('odom', 'nan'), ('imu', 'nan'), ('watchdog', 'kill')]
 REACT = 6.0             # s of Gazebo's time from the fault to standing still
@@ -285,6 +289,11 @@ class Probe(Node):
         self.fail_safe = True                # twist_mux's sensors lock holds on silence
         self.create_subscription(Bool, '/safety/sensor_watchdog/lock', self.on_lock, 10)
         self.create_subscription(String, '/safety/sensor_watchdog/state', self.on_state, 10)
+        # The HUD's heartbeat, standing in for its screen (--faults, watch_hud:=true):
+        # 10 Hz with a rising count while hud_beating, the way aav_hud_raylib sends it.
+        self.hud_beating, self.hud_frames = False, 0
+        self.hud_beat = self.create_publisher(UInt64, '/hud/heartbeat', 10)
+        self.create_timer(0.1, self.beat_for_the_hud)
         self.disagreed = False      # the wheels' cross check ever said DISAGREE
         self.gaps = {}              # its worst gaps, from /diagnostics
         self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diagnostics, 10)
@@ -361,6 +370,11 @@ class Probe(Node):
 
     def speed(self):
         return self.truth.twist.twist.linear.x
+
+    def beat_for_the_hud(self):
+        if self.hud_beating:
+            self.hud_frames += 3            # 30 frames a second, as the HUD draws
+            self.hud_beat.publish(UInt64(data=self.hud_frames))
 
     def on_state(self, msg):
         self.state = msg.data
@@ -1033,6 +1047,9 @@ def set_fault(probe, sensor, mode):
     """Set the sensor node's fault.<sensor>, or signal the watchdog; True if it took it."""
     if sensor == 'watchdog':
         return signal_watchdog(mode)
+    if sensor == 'hud':
+        probe.hud_beating = mode == 'ok'    # the screen froze, or draws again
+        return True
     client = fault_client(probe, sensor)
     if not client.wait_for_services(timeout_sec=10.0):
         return False
@@ -1065,9 +1082,10 @@ def check_faults(probe, watchdog=True):
         return
     clear = probe.create_client(Trigger, '/safety/sensor_watchdog/clear')
     probe.fail_safe = watchdog
+    probe.hud_beating = True    # the screen draws, until its fault
     for sensor, mode in FAULTS:
-        if sensor == 'watchdog' and not watchdog:
-            continue            # no watchdog to hang or kill
+        if sensor in ('watchdog', 'hud') and not watchdog:
+            continue            # no watchdog to hang or kill, or to want the HUD
         name = f'fault {sensor} {mode}'
         if not probe.spin_for(30.0, lambda: not probe.locked()) and watchdog:
             result(name, False, f'the watchdog was still locked before it: {probe.state}')
@@ -1710,7 +1728,8 @@ def main():
         watchdog = '--no-watchdog' not in args
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-faults{ext}')
-        session(['faults:=true', 'lidar:=false', f'watchdog:={str(watchdog).lower()}'],
+        session(['faults:=true', 'lidar:=false', f'watchdog:={str(watchdog).lower()}',
+                 f'watch_hud:={str(watchdog).lower()}'],
                 [lambda probe: check_faults(probe, watchdog)], logs[-1], 'faults')
     if '--goto' in args or '--goto-only' in args:
         # Its own runs, one per speed (sim_speed is ego's cap, set at launch): the empty
