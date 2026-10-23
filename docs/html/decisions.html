@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">21 min read · 10 sections</div></header>
+<div class="meta">24 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -66,7 +66,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-labels">How to read the labels</a><a href="#decided">Decided</a><a href="#tentative">Tentative</a><a href="#proposed-for-the-next-team-meeting">Proposed: for the next team meeting</a><a href="#ground-rules">Ground rules</a><a href="#decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</a><a href="#decided-on-11-october">Decided on 11 October</a><a href="#decided-on-15-october">Decided on 15 October</a><a href="#open-questions">Open questions</a><a href="#also-waiting-on-the-team">Also waiting on the team</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-labels">How to read the labels</a><a href="#decided">Decided</a><a href="#tentative">Tentative</a><a href="#proposed-for-the-next-team-meeting">Proposed: for the next team meeting</a><a href="#ground-rules">Ground rules</a><a href="#decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</a><a href="#decided-on-11-october">Decided on 11 October</a><a href="#decided-on-15-october">Decided on 15 October</a><a href="#decided-on-22-and-23-october">Decided on 22 and 23 October</a><a href="#open-questions">Open questions</a><a href="#also-waiting-on-the-team">Also waiting on the team</a></nav>
 <div class="lead"><p>What the team has decided, what's still open, and the 34 numbered questions. The source
 is the team design doc, <em>AAV 2026–27 Autonomy Stack — Architecture &amp; Plan</em> (a Claude Doc,
 revision 61 on 10 October 2026). This page is a short copy, so you don't have to hunt.
@@ -154,7 +154,7 @@ answer.</p>
 <tr>
 <td>9</td>
 <td>Develop on Macs too, with Pixi and RoboStack</td>
-<td>The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; both use Fast DDS</td>
+<td>The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; all use Cyclone DDS (23 Oct, below)</td>
 </tr>
 </tbody>
 </table></div>
@@ -348,10 +348,6 @@ answer.</p>
 <td>Ben</td>
 </tr>
 <tr>
-<td>Nav2 may back up on the car (at 0.5 m/s at most), where the lidar watches behind it (the rear camera later); collision_monitor then guards a box behind the rear bumper</td>
-<td>Ben, 22 Oct: "Yes the car can reverse"</td>
-</tr>
-<tr>
 <td>Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant</td>
 <td>Ben: "This is a school project"</td>
 </tr>
@@ -434,6 +430,60 @@ answer.</p>
 <tr>
 <td>Topic names by area: <code>/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code>, with the areas <code>/sensors/</code>, <code>/vehicle/</code>, <code>/can/</code>, <code>/localization/</code>, <code>/perception/</code>, <code>/drivers/</code>, <code>/control/</code>, <code>/ego/</code>, <code>/safety/</code>, <code>/hud/</code> (<a href="naming.html">Topic areas</a>). Each driver gets its own: <code>/drivers/keyboard/cmd_vel</code>, <code>/drivers/joy/cmd_vel</code></td>
 <td>Ben, 00:30: "The drivers all need to be in a /drivers/keybaord, etc type stuff as an example."</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-22-and-23-october">Decided on 22 and 23 October</h2>
+<p>What we changed, and why.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Why</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cyclone DDS on every computer</strong>, the Macs and the car's. Pixi sets it; <code>AAV_RMW=fastdds</code> goes back for one run</td>
+<td>Fast DDS delivered messages up to <strong>0.48 s late</strong> beside Gazebo, while their sender was on time; Cyclone never over <strong>0.05 s</strong> (25 min each, 22 Oct). The late messages had made sensors look dead and Nav2 refuse goals. <code>sim-check</code> passes on Cyclone, the rear camera at its full 10 Hz. Both are free and open source, and fully supported in Jazzy. To check at the car: Cyclone uses one network card (<a href="mac.html#why-we-use-cyclone-dds">Your Mac</a>)</td>
+<td>Ben, 23 Oct: "yes lets do it"</td>
+</tr>
+<tr>
+<td><strong>MPPI is Nav2's default path follower</strong>; Regulated Pure Pursuit stays as <code>controller:=rpp</code></td>
+<td>In every lot run in Gazebo it did at least as well. It reached the first goal cleanly in 4 of 4 runs; Pure Pursuit looped there in 2 of 3, as it aims at a point and arrives facing the wrong way (<a href="controllers.html">Path followers</a>)</td>
+<td>Ben, 22 Oct: "I thought we decided to go mppi"</td>
+</tr>
+<tr>
+<td><strong>The car may back up</strong> (0.5 m/s at most), where the lidar watches behind it (the rear camera later); collision_monitor then guards a box behind the rear bumper</td>
+<td>Driving forward only, a U-turn in a narrow lane works about half the time and can leave the car facing a wall. Allowed to reverse, it makes a three-point turn and reaches every goal</td>
+<td>Ben, 22 Oct: "Yes the car can reverse"</td>
+</tr>
+<tr>
+<td><strong>The GPS antenna is over the rear axle</strong> (<code>vehicle.yaml</code>: x = 0)</td>
+<td>It's already there on the car. That is the best spot: our position software corrects for the antenna's offset using the car's heading, so with no offset a heading error can't move the GPS position. In Gazebo, reversing's heading error halved (<a href="learn-gps.html#mount-the-antenna-over-the-rear-axle">Learn: GPS</a>)</td>
+<td>Ben, 23 Oct: "its already there"</td>
+</tr>
+<tr>
+<td><strong>The wheel sensors are read by an Arduino</strong>, which sends CAN frames; the Orin reads the bus and publishes them in ROS</td>
+<td>The hardware side's plan. The frames are in <code>aav.dbc</code> already (0x200, 0x201), and the Orin's side decodes them, so the Arduino only has to send them. An exception to "Rust for all firmware": it's the hardware lead's board</td>
+<td>Ben, 23 Oct, for the hardware side</td>
+</tr>
+<tr>
+<td><strong>Goals count within 1.0 m and 0.75 rad</strong></td>
+<td>GPS without RTK is good to about a metre. At 0.5 m the car chased GPS noise and looped round goals it had reached</td>
+<td>22 Oct, from the Gazebo runs</td>
+</tr>
+<tr>
+<td><strong>ego eases into speed</strong>: a jerk limit of 2.0 m/s³, speeding up only</td>
+<td>A smoother start for the people in the car. A stop is never softened: braking starts at once</td>
+<td>22 Oct, the proposal's T5.3</td>
+</tr>
+<tr>
+<td><strong>The global EKF trusts the gyro and wheels for heading</strong>; GPS only nudges it (yaw noise 0.06 → 0.01)</td>
+<td>At walking pace its heading jumped up to 76°; now the worst per leg is 7-16° in Gazebo. To check with the real IMU</td>
+<td>22 Oct, from the Gazebo runs</td>
 </tr>
 </tbody>
 </table></div>

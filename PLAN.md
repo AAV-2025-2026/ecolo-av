@@ -211,7 +211,7 @@ too". It shares the car's model with ego, as the proposal says (section 8.3).
 | M6 | Its CPU on the Orin | ⬜ | with the load report (T1.7) |
 | M7 | MPPI on the car | ⬜ | after Nav2 passes on the car (T7.8); MPPI is the default now |
 | M8 | **The corner problem** (both controllers) | ✅ 22 Oct, Gazebo | the planner's costmap inflates 3.0 m gently, and it plans turns 1.25 x wider than full lock: both kept clear of the building. Left: after a wide turn the car can stop facing a wall, and forward only it can't get out (TODO 18) |
-| M9 | **The heading jumps** at walking pace (both) | 🧪 | measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. A heading source (the F9R's fused heading, or two antennas) with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, [why](docs/learn-gps.md#mount-the-antenna-over-the-rear-axle)): mount it over the axle. **Much better since 22 Oct, 06:00:** the global EKF's yaw noise 0.06 → 0.01; the lot tour's worst heading per leg 7-16° (was 14-76°) |
+| M9 | **The heading jumps** at walking pace (both) | 🧪 | measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. A heading source (the F9R's fused heading, or two antennas) with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, [why](docs/learn-gps.md#mount-the-antenna-over-the-rear-axle)): on the car it is over the axle already (Ben, 23 Oct). **Much better since 22 Oct, 06:00:** the global EKF's yaw noise 0.06 → 0.01; the lot tour's worst heading per leg 7-16° (was 14-76°) |
 
 ## Where the proposal and the repo disagree
 
@@ -220,7 +220,7 @@ For the team to decide; then change one of them.
 | # | Proposal | Repo today | Suggest |
 |---|---|---|---|
 | D1 | Topic names such as `/control/cmd`, `/vehicle/ackermann_cmd`, `/odometry/local` (section 3.3) | `/control/cmd_vel`, `/ego/actuator_cmd`, `/localization/odom/local` ([naming](docs/naming.md)) | change the proposal's table: the repo's names are built and tested |
-| D2 | Hall-sensor wheel nodes on Arduino Unos, in Arduino C++ | the rule "Rust for all firmware" (Ben, 10 Oct); the wheel logic in Rust (`wheel-core`) and the Pico 2 wheel encoder | decide: Unos in C++ (simple, short sketches) or the Rust boards |
+| D2 | Hall-sensor wheel nodes on Arduino Unos, in Arduino C++ | the rule "Rust for all firmware" (Ben, 10 Oct); the wheel logic in Rust (`wheel-core`) and the Pico 2 wheel encoder | ✅ **decided 23 Oct** (Ben, for the hardware side): an Arduino reads the sensors and sends CAN frames; the Orin decodes them and publishes. The proposal stands |
 | D3 | A sensor mux and an output mux as nodes; `target:=`, `source:=` | the target is chosen at launch; stand-ins kept local | the nodes add the "simulated data can't reach the car" mark: worth building |
 | D4 | The stop-at-distance planner inside ego (T5.3) | inside the A-to-B driver (`aav_goto`) | either; ego is where the proposal promises it |
 | D5 | MPPI a stretch goal in March (T7.9) | switchable and compared now | put MPPI in the committed plan, in Gazebo; on the car as the stretch |

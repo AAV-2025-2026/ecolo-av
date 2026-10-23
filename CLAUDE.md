@@ -56,6 +56,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
     10 Oct): the spine first. The 2025-26 C++ boards keep running until each one's Rust
     version replaces it. Logic goes in crates like `spine-core` and `aav-inputs` (tested
     on a laptop), drivers against `embedded-hal` 1.0. The plan: `docs/rust-firmware.md`;
+  - the exception: the wheel sensors' Arduino, the hardware lead's board, sends CAN frames
+    from Arduino C++ (Ben, 23 Oct). The Orin decodes them (`aav.dbc` 0x200, 0x201);
   - no micro-ROS for now: a board talks plain CAN, UART or UDP to a ROS node on Linux,
     which publishes (Ben, 10 Oct). Tentative: we think again once we see the hardware
     (Ben, 11 Oct);

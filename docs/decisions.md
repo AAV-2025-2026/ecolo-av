@@ -28,7 +28,7 @@ answer.
 | 6 | ROS 2 Jazzy on every computer | Humble support ends in May 2027, Jazzy's in May 2029. ROS can't mix versions, so every computer moves together (Ben, 9 Oct) |
 | 7 | One repo and one workspace, with folders by layer of the picture | One place to build, test and document everything |
 | 8 | Languages: Python for the ROS nodes we write; Rust for the firmware, the drivers and the ports of the inherited C++; no C++ of our own (Ben, 10 Oct) | Our nodes run at 50 Hz or less, and the hard timing lives in the firmware. The spine logic is already Rust (`spine-core`) |
-| 9 | Develop on Macs too, with Pixi and RoboStack | The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; both use Fast DDS |
+| 9 | Develop on Macs too, with Pixi and RoboStack | The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; all use Cyclone DDS (23 Oct, below) |
 
 ## Tentative
 
@@ -84,7 +84,6 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Camera images are subscribed reliably, not best effort | measured on the Mac: best effort lost every image |
 | The code lives in `git@github.com:zander1976/aav.git`, public (Q25; Ben, 15 Oct) | Ben |
 | CI runs `pixi run test` on Linux for every push, and on a Mac every night | Ben |
-| Nav2 may back up on the car (at 0.5 m/s at most), where the lidar watches behind it (the rear camera later); collision_monitor then guards a box behind the rear bumper | Ben, 22 Oct: "Yes the car can reverse" |
 | Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant | Ben: "This is a school project" |
 | The stand-ins (`turtle`, `sim`, `bench`, `view`, and the keyboard with `--sim` or `--local`) stay on the computer they run on, so a pretend car can never reach the real one | a safety choice, before the audit on the car's network: see [Simulation](simulation.md) |
 | The car's red e-stop button always stops the car, whatever our software does. We don't rewire it; the spine only listens, through a spare contact, to report it and to stay stopped afterwards | Ben: "this already has an estop so we don't want to break that"; "I just want it to work" |
@@ -110,6 +109,21 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Decision | By |
 |---|---|
 | Topic names by area: `/<area>/<device or node>/<thing>`, with the areas `/sensors/`, `/vehicle/`, `/can/`, `/localization/`, `/perception/`, `/drivers/`, `/control/`, `/ego/`, `/safety/`, `/hud/` ([Topic areas](naming.md)). Each driver gets its own: `/drivers/keyboard/cmd_vel`, `/drivers/joy/cmd_vel` | Ben, 00:30: "The drivers all need to be in a /drivers/keybaord, etc type stuff as an example." |
+
+## Decided on 22 and 23 October
+
+What we changed, and why.
+
+| Decision | Why | By |
+|---|---|---|
+| **Cyclone DDS on every computer**, the Macs and the car's. Pixi sets it; `AAV_RMW=fastdds` goes back for one run | Fast DDS delivered messages up to **0.48 s late** beside Gazebo, while their sender was on time; Cyclone never over **0.05 s** (25 min each, 22 Oct). The late messages had made sensors look dead and Nav2 refuse goals. `sim-check` passes on Cyclone, the rear camera at its full 10 Hz. Both are free and open source, and fully supported in Jazzy. To check at the car: Cyclone uses one network card ([Your Mac](mac.md#why-we-use-cyclone-dds)) | Ben, 23 Oct: "yes lets do it" |
+| **MPPI is Nav2's default path follower**; Regulated Pure Pursuit stays as `controller:=rpp` | In every lot run in Gazebo it did at least as well. It reached the first goal cleanly in 4 of 4 runs; Pure Pursuit looped there in 2 of 3, as it aims at a point and arrives facing the wrong way ([Path followers](controllers.md)) | Ben, 22 Oct: "I thought we decided to go mppi" |
+| **The car may back up** (0.5 m/s at most), where the lidar watches behind it (the rear camera later); collision_monitor then guards a box behind the rear bumper | Driving forward only, a U-turn in a narrow lane works about half the time and can leave the car facing a wall. Allowed to reverse, it makes a three-point turn and reaches every goal | Ben, 22 Oct: "Yes the car can reverse" |
+| **The GPS antenna is over the rear axle** (`vehicle.yaml`: x = 0) | It's already there on the car. That is the best spot: our position software corrects for the antenna's offset using the car's heading, so with no offset a heading error can't move the GPS position. In Gazebo, reversing's heading error halved ([Learn: GPS](learn-gps.md#mount-the-antenna-over-the-rear-axle)) | Ben, 23 Oct: "its already there" |
+| **The wheel sensors are read by an Arduino**, which sends CAN frames; the Orin reads the bus and publishes them in ROS | The hardware side's plan. The frames are in `aav.dbc` already (0x200, 0x201), and the Orin's side decodes them, so the Arduino only has to send them. An exception to "Rust for all firmware": it's the hardware lead's board | Ben, 23 Oct, for the hardware side |
+| **Goals count within 1.0 m and 0.75 rad** | GPS without RTK is good to about a metre. At 0.5 m the car chased GPS noise and looped round goals it had reached | 22 Oct, from the Gazebo runs |
+| **ego eases into speed**: a jerk limit of 2.0 m/s³, speeding up only | A smoother start for the people in the car. A stop is never softened: braking starts at once | 22 Oct, the proposal's T5.3 |
+| **The global EKF trusts the gyro and wheels for heading**; GPS only nudges it (yaw noise 0.06 → 0.01) | At walking pace its heading jumped up to 76°; now the worst per leg is 7-16° in Gazebo. To check with the real IMU | 22 Oct, from the Gazebo runs |
 
 ## Open questions
 
