@@ -10,11 +10,11 @@
 # sets it to SUBNET before this script runs, so "keep the user's value" kept SUBNET and
 # --local never was local (found 15 Oct, when a network blocked multicast).
 #
-# AAV_RMW=cyclone: ROS's messages go through Cyclone DDS instead of Fast DDS (the default).
-# On a Mac beside Gazebo, Fast DDS delivered some messages up to 0.48 s late while their
-# publisher was on time; Cyclone, never over 0.05 s (22 Oct, docs/mac.md). Every program
-# that talks to it needs the same: AAV_RMW=cyclone pixi run sim, and in the other terminal
-# too. AAV_RMW=fastdds for the default.
+# ROS's messages go through Cyclone DDS, the team's choice (Ben, 23 Oct; pixi.toml sets it
+# too). On a Mac beside Gazebo, Fast DDS delivered some messages up to 0.48 s late while
+# their publisher was on time; Cyclone, never over 0.05 s (22 Oct, docs/mac.md).
+# AAV_RMW=fastdds goes back to Fast DDS for one run. Every program that talks to it needs
+# the same: AAV_RMW=fastdds pixi run sim, and in the other terminal too.
 cd "$(dirname "$0")/.."
 local=false
 if [[ "${1:-}" == "--local" ]]; then
@@ -42,8 +42,7 @@ if [[ "$local" == true ]]; then
   fi
 fi
 case "${AAV_RMW:-}" in
-  "") ;;
-  cyclone) export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp ;;
+  ""|cyclone) export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp ;;
   fastdds) export RMW_IMPLEMENTATION=rmw_fastrtps_cpp ;;
   *) echo "AAV_RMW=$AAV_RMW: use cyclone or fastdds" >&2; exit 2 ;;
 esac

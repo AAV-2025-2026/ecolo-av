@@ -121,10 +121,11 @@ def main():
         say('FIX', 'Workspace', 'not built: `pixi run build`')
 
     rmw = env.get('RMW_IMPLEMENTATION', '')
-    if rmw in ('', 'rmw_fastrtps_cpp'):
-        say('OK', 'Middleware', 'Fast DDS, the same as the car')
+    if rmw == 'rmw_cyclonedds_cpp':
+        say('OK', 'Middleware', 'Cyclone DDS, the same as the car')
     else:
-        say('FIX', 'Middleware', f'{rmw}: the car uses Fast DDS. `unset RMW_IMPLEMENTATION`')
+        say('FIX', 'Middleware',
+            f'{rmw or "Fast DDS"}: the car uses Cyclone DDS. Run this as `pixi run doctor`')
 
     domain = env.get('ROS_DOMAIN_ID', '')
     if domain:

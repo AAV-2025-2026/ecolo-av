@@ -39,7 +39,7 @@ estop = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /safety/estop std_msgs/m
 estop-clear = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /safety/estop std_msgs/msg/Bool "{data: false}"', description = "Clear the e-stop" }
 gz-window = { cmd = "tools/ros.sh tools/gz_window.sh", description = "Gazebo's window again, following the car, for a simulator already running" }
 doctor = { cmd = "tools/ros.sh python3 tools/doctor.py", description = "Can this computer join the car's ROS network? Says what to fix" }
-shm-clean = { cmd = "fastdds shm clean", description = "Remove Fast DDS shared-memory files left by ROS programs that died: nodes that hang at start-up, or a sim that never spawns the car (docs/run.md)" }
+shm-clean = { cmd = "fastdds shm clean", description = "Remove Fast DDS shared-memory files left by ROS programs that died (only with AAV_RMW=fastdds; Cyclone, the default, leaves none): nodes that hang at start-up, or a sim that never spawns the car (docs/run.md)" }
 net-map = { cmd = "bash tools/net_map.sh", description = "Map the network you're on: every machine, its maker (a guess), open ports, and the ROS domains heard. Read-only; no ROS needed" }
 survey = { cmd = "bash tools/survey_car.sh", description = "Survey every car computer in a hosts file over ssh, read-only: pixi run survey ~/aav-audit/hosts.txt (FRIDAY-TODO.md)" }
 layout-check = { cmd = "python3 tools/layout_check.py", description = "Is every topic in our Lichtblick layout served by a foxglove_bridge? pixi run layout-check ws://192.168.1.140:8765 (default: the sim on this computer)" }
@@ -141,6 +141,13 @@ coreutils = ">=9.12,<10"
 
 # Macs: the ROS libraries are built for macOS 14, and Rust aims at macOS 11 unless told,
 # so every Rust link warned. pixi.toml already needs macOS 14 (see platforms above).
+# ROS's messages go through Cyclone DDS on every computer (Ben, 23 Oct). On a Mac beside
+# Gazebo, Fast DDS delivered some up to 0.48 s late; Cyclone never over 0.05 s (docs/mac.md).
+# Every computer that talks to another must use the same one. AAV_RMW=fastdds (tools/ros.sh)
+# goes back to Fast DDS for one run. Cyclone comes with ros-jazzy-desktop.
+[activation.env]
+RMW_IMPLEMENTATION = "rmw_cyclonedds_cpp"
+
 [target.osx.activation.env]
 MACOSX_DEPLOYMENT_TARGET = "14.0"
 

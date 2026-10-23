@@ -595,7 +595,7 @@ path. The settings and their reasons are in <code>nav2.yaml</code>, above the <c
   Mac 77% idle. Splitting Gazebo's adapter into one node per sensor (as on the car) didn't
   stop it. A bare publisher and subscriber beside Gazebo showed why: the publisher always
   on time, its messages up to 0.48 s late through Fast DDS, never over 0.05 s through
-  Cyclone DDS. <code>AAV_RMW=cyclone</code> uses Cyclone (<a href="mac.html">Your Mac</a>).</li>
+  Cyclone DDS. Cyclone is the default since 23 Oct (<a href="mac.html#why-we-use-cyclone-dds">Your Mac</a>).</li>
 <li><strong>The global EKF is up to 0.7 m off</strong> in Gazebo (0.5 m GPS noise), its heading up to
   25°. In the slow stretches of the night's drives its heading stayed under 6°: the ±20°
   above was a car creeping for many seconds. The comparison now reports both per leg.</li>

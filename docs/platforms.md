@@ -58,7 +58,7 @@ ROS 2 has no master. Nodes find each other by multicast on the local network.
 | 1 | The same `ROS_DOMAIN_ID` (1–101) in every machine's `~/.bashrc` | the 2025-26 dashboard used 10 and its UI used 0, so they never met |
 | 2 | One network that allows multicast, such as the car's own router | campus WiFi often blocks it; then list the computers in `ROS_STATIC_PEERS` |
 | 3 | Keep `ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET` | set it to `LOCALHOST` to keep a laptop's experiments off the car |
-| 4 | One middleware everywhere: Fast DDS, the default | different middlewares may not talk to each other |
+| 4 | One middleware everywhere: Cyclone DDS (Ben, 23 Oct), set by Pixi | different middlewares may not talk to each other; Fast DDS delivered messages late ([Your Mac](mac.md#why-we-use-cyclone-dds)) |
 | 5 | Clocks in sync: chrony, with the Orin as the time server | TF and the EKFs reject messages from a wrong clock |
 | 6 | Virtual machines on bridged networking, not NAT | so the VM gets its own address on the car's network |
 

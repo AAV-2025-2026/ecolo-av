@@ -57,7 +57,7 @@ Hold `i` to drive.
 |---|---|---|
 | 1 | Join the car's own WiFi router | campus WiFi blocks the traffic ROS uses to find other computers |
 | 2 | `export ROS_DOMAIN_ID=42` in each terminal | ROS only talks within one domain. Ours is 42, so it never mixes with the 2025-26 software (`pixi run net-map` shows which domains theirs uses) |
-| 3 | Leave the middleware alone | the Mac's Pixi install and Ubuntu both use Fast DDS |
+| 3 | Leave the middleware alone | Pixi sets Cyclone DDS on every computer, the car's too (Ben, 23 Oct). Mixed middlewares may not talk |
 | 4 | When macOS asks whether `python3` or `rviz2` may accept incoming connections, click Allow | otherwise the firewall blocks the car's replies |
 | 4b | System Settings → Privacy & Security → **Local Network**: turn on your terminal app (Terminal, iTerm, VS Code) | since macOS 15, apps need this to reach other machines on the network. macOS asks once; if you said no, nothing on the car answers |
 | 5 | Run `pixi run doctor` | it checks steps 1–4, and whether it can see the car, and says what to fix |
@@ -197,27 +197,34 @@ If the window stays empty, or the car never appears, run `export GZ_IP=127.0.0.1
 terminals and start again: Gazebo's two programs then find each other on the Mac itself.
 On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on Linux.
 
-### Late messages: try Cyclone DDS
+### Why we use Cyclone DDS
 
-If the sensor watchdog says a sensor went quiet ("STALE") for half a second, or Nav2
-refuses a goal with "Transform data too old", the messages were late, not the Mac.
+Cyclone DDS has been the team's middleware since 23 Oct (Ben: "yes lets do it"). Pixi sets
+it everywhere (`RMW_IMPLEMENTATION` in `pixi.toml`), so there's nothing to type.
 
-| Test, 25 min beside Gazebo, 22 Oct | Fast DDS (the default) | Cyclone DDS |
+Before, on Fast DDS, the sensor watchdog said a sensor went quiet ("STALE") for half a
+second, and Nav2 refused goals with "Transform data too old". The messages were late,
+not the Mac:
+
+| Test, 25 min beside Gazebo, 22 Oct | Fast DDS (the old default) | Cyclone DDS (now) |
 |---|---|---|
 | A 50 Hz publisher's own timer, worst gap | 0.03 s | 0.03 s |
 | Its subscriber, worst gap | **0.48 s** | **0.05 s** |
 | Gaps over 0.1 s | 9 | 0 |
 
-Every program that talks to the simulator needs the same one:
+`sim-check` passes everything on Cyclone, with the rear camera at its full 10 Hz (7-8 Hz
+on Fast DDS).
+
+To go back to Fast DDS for one run, every program that talks to it needs the same:
 
 ```bash
-AAV_RMW=cyclone pixi run sim          # this terminal
-AAV_RMW=cyclone pixi run ros2 topic list   # and every other
+AAV_RMW=fastdds pixi run sim               # this terminal
+AAV_RMW=fastdds pixi run ros2 topic list   # and every other
 ```
 
-`AAV_RMW=cyclone pixi run sim-check` passes everything, with the rear camera at its full
-10 Hz (7-8 Hz on Fast DDS). Fast DDS stays the default until the team decides: the car's
-computers talk to each other through it too.
+⚠️ **To check at the car:** Cyclone uses one network card, not all of them as Fast DDS
+did. A computer with two (the localization Pi has Ethernet and Carleton's WiFi) may pick
+the wrong one. Then name the car's network in a `CYCLONEDDS_URI` file on that computer.
 
 ## macOS hides one setting from ROS
 
