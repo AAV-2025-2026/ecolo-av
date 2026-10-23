@@ -199,9 +199,12 @@ def test_the_rear_camera_sees_behind_only_when_its_detector_reads_it_for_people(
 
 def test_the_watchdog_guards_nav2():
     sent = included(started(CAR, machine='all'))
-    assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,local,global,gps'
+    assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,local,global,gps,hud'
     no_gps = included(started(CAR, machine='all', gps='false'))
     assert 'gps' not in no_gps['watchdog.launch.py']['inputs']
+    # The safety drivers rely on the HUD: watched unless the session has no screen.
+    no_hud = included(started(CAR, machine='all', watch_hud='false'))
+    assert 'hud' not in no_hud['watchdog.launch.py']['inputs'].split(',')
 
 
 def test_bad_values_stop_the_launch():

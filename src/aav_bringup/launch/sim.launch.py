@@ -8,7 +8,8 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [sim_speed:=] [reversing:=true] [controller:=mppi]
       [plan_around:=true]
-      [watchdog:=true] [faults:=false] [spine:=false] [arm:=true] [ghost:=false]
+      [watchdog:=true] [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
+      [ghost:=false]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
   pixi run sim world:=test_lot sim_speed:=3 hud:=true   Gazebo, RViz, Nav2 and the HUD window
@@ -53,7 +54,11 @@ bench's argument names:
   watchdog:=true      the sensor watchdog (aav_safety): twist_mux's sensors lock stops Nav2
                       and the AI slot when the wheels, the IMU, the GPS or an EKF go quiet,
                       NaN or frozen, or the GPS jumps; and the camera, where something
-                      reads it (perception, lane, camera_obstacles, faults)
+                      reads it (perception, lane, camera_obstacles, faults). With
+                      hud:=true, the HUD too: its /hud/heartbeat stops when its screen
+                      freezes or dies
+  watch_hud:=true     the watchdog watches /hud/heartbeat without the HUD window: something
+                      else beats (sim-check --faults stands in for the screen)
   faults:=true        the front left picture through gazebo_adapter, so its fault.camera
                       works (pixi run sim-fault camera freeze); the other faults always do
   spine:=true         the spine in the loop: ego -> spine_bridge -> CAN frames -> spine_sim
@@ -107,7 +112,7 @@ def launch_setup(context):
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
                       'hud_web', 'map', 'foxglove', 'reversing', 'watchdog', 'faults',
-                      'ghost', 'plan_around')}
+                      'ghost', 'plan_around', 'watch_hud')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -170,7 +175,8 @@ def launch_setup(context):
         camera = sensors and (flag['perception'] or flag['camera_obstacles'] or lane != 'false'
                               or flag['faults'])
         inputs = (['odom', 'imu', 'gps', 'local', 'global'] + (['camera'] if camera else [])
-                  + (['radar'] if radar else []))
+                  + (['radar'] if radar else [])
+                  + (['hud'] if flag['hud'] or flag['watch_hud'] else []))
         actions.append(include(context, 'aav_safety', 'watchdog.launch.py',
                                inputs=','.join(inputs), use_sim_time='true'))
     if flag['teleop']:
@@ -269,6 +275,9 @@ def generate_launch_description():
         DeclareLaunchArgument('watchdog', default_value='true',
                               description='the sensor watchdog: stops Nav2 and the AI slot '
                                           'when a sensor they need fails (aav_safety)'),
+        DeclareLaunchArgument('watch_hud', default_value='false',
+                              description="the watchdog also wants the HUD's heartbeat, "
+                                          'with no HUD window (hud:=true watches it anyway)'),
         DeclareLaunchArgument('faults', default_value='false',
                               description='route the front left picture through '
                                           'gazebo_adapter, for fault.camera'),

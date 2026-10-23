@@ -81,6 +81,11 @@ topics:
     sub: [hud, map]
     live: [sim]
     note: One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD and the map window show it as a banner, red for STOP or when it goes silent (then twist_mux holds Nav2 too).
+  /hud/heartbeat:
+    type: std_msgs/msg/UInt64
+    pub: [hud]
+    sub: [sensor_watchdog]
+    note: The HUD's screen is alive - the number of frames it has drawn, 10 Hz, sent only while that number rises, from the same 10 ms timer that sends the e-stop button's messages, so it stops when the screen or the e-stop's sender freezes or dies. The sensor watchdog's hud input (kind heartbeat, 1 s; car.launch.py watch_hud:=true, the default; sim.launch.py with hud:=true or watch_hud:=true) - silent, or a count that stops rising, locks twist_mux's sensors lock like a dead sensor - Nav2 and the AI slot stop, people and the e-stop never. Reliable, depth 10.
   /safety/collision_monitor/state:
     type: nav2_msgs/msg/CollisionMonitorState
     pub: [collision_monitor]
