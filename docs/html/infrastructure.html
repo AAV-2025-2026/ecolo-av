@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">16 min read · 11 sections</div></header>
+<div class="meta">17 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -57,6 +57,7 @@
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="esp32-bench.html">ESP32 first flash</a>
 <a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
 <a href="car-install.html">From a USB stick</a>
 <a href="car-screens.html">The two screens</a>
 <a href="car-photos.html">Car photos</a>
@@ -359,6 +360,14 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td>the running graph against the contract: <code>pixi run check sim</code></td>
 </tr>
 <tr>
+<td><code>bandwidth</code></td>
+<td>every topic's rate, size and MB/s, biggest first: <code>pixi run bandwidth --local</code> beside <code>pixi run sim</code>. <a href="bandwidth.html">Bandwidth</a></td>
+</tr>
+<tr>
+<td><code>can-load</code></td>
+<td>how busy the CAN bus is, from <code>firmware/can/aav.dbc</code></td>
+</tr>
+<tr>
 <td><code>estop</code>, <code>estop-clear</code></td>
 <td>stop every driver; let them go again</td>
 </tr>
@@ -481,6 +490,16 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 <td><code>doctor.py</code></td>
 <td>network checks for joining the car</td>
 <td><code>pixi run doctor</code></td>
+</tr>
+<tr>
+<td><code>bandwidth.py</code>, <code>topic_load.py</code></td>
+<td>measures every topic's rate and load; the numbers (no ROS)</td>
+<td><code>pixi run bandwidth</code></td>
+</tr>
+<tr>
+<td><code>can_load.py</code></td>
+<td>the CAN bus load from the DBC's frames and rates (no ROS)</td>
+<td><code>pixi run can-load</code></td>
 </tr>
 <tr>
 <td><code>record.sh</code></td>
