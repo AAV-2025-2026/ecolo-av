@@ -1619,7 +1619,7 @@ they already build and test with stock Rust.</p>
 <code>src/backends/aav_spine_bridge</code> (PLAN.md T1.8). It packs and unpacks the frames with the
 firmware's own <code>spine-core</code> code, so both ends of the bus share one implementation of
 <code>aav.dbc</code>.</p>
-<pre class="highlight"><code class="language-text"> /ego/actuator_cmd, /safety/estop ──&gt; spine_bridge ──&gt; /can/tx ──&gt; ros2_socketcan ──&gt; can0
+<pre class="highlight"><code class="language-text"> /control/car/actuator_cmd, /safety/estop ──&gt; spine_bridge ──&gt; /can/tx ──&gt; ros2_socketcan ──&gt; can0
  can0 ──&gt; ros2_socketcan ──&gt; /can/rx ──&gt; spine_bridge ──&gt; /vehicle/odom, wheels, status...
                  (the spine: 0x180, 0x181; the wheel sensors' Arduino: 0x200, 0x201)</code></pre>
 <div class="table-wrap"><table>
@@ -1635,6 +1635,10 @@ firmware's own <code>spine-core</code> code, so both ends of the bus share one i
 <td><code>spine-bridge</code>: the logic, no ROS (arming edge, command timeout, e-stop, the wheel pairing, odometry). <code>bridge-node</code>: the rclrs node</td>
 </tr>
 <tr>
+<td>Commands</td>
+<td><code>/control/&lt;target&gt;/actuator_cmd</code> from the output mux, by the <code>source</code> parameter (real: <code>car</code>, bench: <code>bench</code>, sim: <code>gazebo</code>), as the Python node: never <code>/ego/actuator_cmd</code></td>
+</tr>
+<tr>
 <td>The bus</td>
 <td>the same <code>/can/tx</code> and <code>/can/rx</code> topics as the Python node: <code>ros2_socketcan</code> on the Orin (Linux); <code>spine_sim</code> on the bench and in Gazebo, so Macs work too</td>
 </tr>
@@ -1644,7 +1648,7 @@ firmware's own <code>spine-core</code> code, so both ends of the bus share one i
 </tr>
 <tr>
 <td>Checked, 23 Oct</td>
-<td><code>bench-check</code>: <span class="badge b-works">works</span> with both bridges, the same results. <code>sim-check --spine</code>, on a Mac busy with other runs: both e-stops and arming pass with both bridges; the drive and Nav2 checks failed with both. Run it again on a quiet machine</td>
+<td><code>bench-check</code>: <span class="badge b-works">works</span> with both bridges, the same results. <code>sim-check --spine</code> (Gazebo, the spine in the loop): <span class="badge b-works">works</span> with the Rust one, every check (Nav2 goal, commands lost, both e-stops, not armed). <code>test_real_backend_guard.py</code> (<code>aav_io_mux</code>): neither bridge hears <code>/ego/actuator_cmd</code>, and a SIM source stops every DRIVE_CMD</td>
 </tr>
 <tr>
 <td>Default</td>

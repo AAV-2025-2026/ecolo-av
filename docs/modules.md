@@ -275,7 +275,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 | **Language** | the node runs in Rust by default: `aav_spine_bridge`, on `spine-core`'s CAN code. `bridge:=python` runs this package's Python one. Both read `config/spine.yaml` |
 | **Status** | [[works]] on the bench against `spine_sim`, both languages. No spine board on the car yet |
 | **Run alone** | `ros2 launch aav_spine spine.launch.py [bridge:=rust\|python]` |
-| **Test** | `test/test_can_codec.py`, `test_spine_bridge.py`; the Rust: `cargo test -p spine-bridge` (the same cases, and the shared vectors); `pixi run bench-check` |
+| **Test** | `test/test_can_codec.py`, `test_spine_bridge.py`; the Rust: `cargo test -p spine-bridge` (the same cases, and the shared vectors); both: `aav_io_mux`'s `test_real_backend_guard.py`, `pixi run bench-check [--python-bridge]` |
 | **Read first** | `aav_spine/can_codec.py`, then `firmware/can/aav.dbc` |
 
 ### aav_legacy
