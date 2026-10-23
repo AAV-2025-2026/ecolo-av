@@ -36,6 +36,8 @@ if command -v cargo >/dev/null; then
   (cd src/sensors/aav_imu_yahboom && cargo test -q -p yahboom-protocol)
   echo "== src/perception/aav_radar_clusters: DBSCAN, the boxes, the C++ node's answers"
   (cd src/perception/aav_radar_clusters && cargo test -q --locked -p radar-clustering)
+  echo "== src/backends/aav_spine_bridge: the Rust CAN bridge's logic, the shared CAN vectors"
+  (cd src/backends/aav_spine_bridge && cargo test -q --locked -p spine-bridge)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
   echo "== src/hud/aav_hud_raylib: the HUD's state, GPS, e-stop and formatting; the map's maths"
   (cd src/hud/aav_hud_raylib && cargo test -q --locked -p hud-core -p map-core)

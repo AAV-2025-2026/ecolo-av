@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+# spine-bridge: the bridge's logic, on the firmware's own CAN code (spine-core). No ROS:
+#   cargo test -p spine-bridge
+# bridge-node: the ROS node (rclrs). colcon builds it through CMakeLists.txt.
+members = ["crates/spine-bridge", "crates/bridge-node"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false

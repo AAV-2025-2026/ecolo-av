@@ -1,0 +1,24 @@
+//! spine_bridge's logic, with no ROS: what the Orin sends the spine over CAN, and what it
+//! makes of the frames it hears.
+//!
+//! The frames are `firmware/can/aav.dbc`, packed by the firmware's own code
+//! (`spine-core`'s `protocol`), so the bridge and the spine share one implementation.
+//! The ROS node (`bridge-node`) only turns messages into calls here and [`Update`]s back
+//! into messages. A port of aav_spine's `spine_bridge.py` and `wheel_speed.py`; its tests
+//! carry their cases.
+//!
+//! - [`Bridge::drive`]: DRIVE_CMD at 50 Hz while ego's command is fresh, with the arming
+//!   edge (armed=0 frames before armed=1);
+//! - [`Bridge::set_estop`], [`Bridge::estop_frame`]: ESTOP_CMD, at once on a change and
+//!   as a 10 Hz heartbeat;
+//! - [`Bridge::receive`]: VEHICLE_FEEDBACK, VEHICLE_STATUS and the front wheel nodes'
+//!   WHEEL_SPEED_L and WHEEL_SPEED_R, into [`Update`]s.
+
+mod bridge;
+pub mod wheels;
+
+pub use bridge::{
+    ArmError, Arming, BadFrame, Bridge, Command, Drive, Geometry, Motion, Settings, Status, Update,
+};
+pub use spine_core::protocol::{DriveCmd, EstopCmd, Mode, DRIVE_CMD_ID, ESTOP_CMD_ID};
+pub use wheels::{Direction, Reading, Side};
