@@ -19,6 +19,16 @@ pub enum FrameError {
     UnknownId,
 }
 
+impl core::fmt::Display for FrameError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(match self {
+            FrameError::WrongLength => "wrong length for its ID",
+            FrameError::BadChecksum => "bad checksum",
+            FrameError::UnknownId => "unknown CAN ID",
+        })
+    }
+}
+
 /// Who drives the actuators.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -135,6 +145,26 @@ pub fn decode_incoming(id: u16, data: &[u8]) -> Result<Incoming, FrameError> {
         ESTOP_CMD_ID => EstopCmd::decode(data).map(Incoming::Estop),
         DRIVE_CMD_ID => DriveCmd::decode(data).map(Incoming::Drive),
         _ => Err(FrameError::UnknownId),
+    }
+}
+
+/// Any frame the Orin receives: the spine's two, and the front wheel nodes'.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Report {
+    Feedback(VehicleFeedback),
+    Status(VehicleStatus),
+    WheelSpeed(WheelSpeed),
+}
+
+/// Decode a frame addressed to the Orin (spine_bridge).
+pub fn decode_report(id: u16, data: &[u8]) -> Result<Report, FrameError> {
+    match id {
+        VEHICLE_FEEDBACK_ID => VehicleFeedback::decode(data).map(Report::Feedback),
+        VEHICLE_STATUS_ID => VehicleStatus::decode(data).map(Report::Status),
+        _ => match Wheel::from_id(id) {
+            Some(wheel) => WheelSpeed::decode(wheel, data).map(Report::WheelSpeed),
+            None => Err(FrameError::UnknownId),
+        },
     }
 }
 
@@ -423,6 +453,43 @@ mod tests {
         .encode();
         assert_eq!(
             WheelSpeed::decode(Wheel::Right, &frame),
+            Err(FrameError::BadChecksum)
+        );
+    }
+
+    #[test]
+    fn reports_are_told_apart_by_id() {
+        let wheel = WheelSpeed {
+            wheel: Wheel::Right,
+            wheel_speed: 0.5,
+            pulse_count: 9,
+            direction_known: true,
+            counter: 4,
+        };
+        assert_eq!(
+            decode_report(WHEEL_SPEED_R_ID, &wheel.encode()),
+            Ok(Report::WheelSpeed(wheel))
+        );
+        let status = VehicleStatus {
+            mode: Mode::Computer,
+            armed: true,
+            estop_active: false,
+            throttle: 10.0,
+            brake: 0.0,
+            faults: 0,
+            counter: 1,
+        };
+        assert_eq!(
+            decode_report(VEHICLE_STATUS_ID, &status.encode()),
+            Ok(Report::Status(status))
+        );
+        // The spine's own frames are not reports, and a report under the wrong ID fails.
+        assert_eq!(
+            decode_report(ESTOP_CMD_ID, &[0, 0]),
+            Err(FrameError::UnknownId)
+        );
+        assert_eq!(
+            decode_report(VEHICLE_FEEDBACK_ID, &status.encode()),
             Err(FrameError::BadChecksum)
         );
     }
