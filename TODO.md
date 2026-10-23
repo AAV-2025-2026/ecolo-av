@@ -17,7 +17,7 @@ The reasons for each choice: [decisions](docs/decisions.md#decided-on-22-and-23-
 | 31 | Fix the nightly Gazebo test (failed on its first night, 23 Oct) | ✅ merged: software graphics on GitHub, and the scripted drive keeps the simulator's time (task 23). First GitHub run: the night of 23 Oct |
 | 32 | The 10-minute timing test (task 11), Fast DDS against Cyclone | ⬜ after the other jobs, on a quiet Mac |
 | 33 | The HUD heartbeat to the safety watchdog (PLAN T9.8) | ✅ merged: `/hud/heartbeat` at 10 Hz while the screen draws; silent 1 s, Nav2 and the AI stop (not latched); on the car by default (`watch_hud:=false` without a HUD). Questions for the team: latch it? the Flutter app and map window? Found: `sim-check --faults` `odom freeze` flaky |
-| 34 | The sensor mux and output mux (PLAN T1.5, D3, S-4) | 🔧 branch `wt/sensor-output-mux` |
+| 34 | The sensor mux and output mux (PLAN T1.5, D3, S-4) | ✅ merged: `aav_io_mux`; backends read only `/control/<target>/actuator_cmd`, filled only while every source is REAL ([sources and targets](docs/sources-and-targets.md)). Questions for the team: "check, not copy" (D3); a bench with a real spine and pretend sensors; the HUD showing the gate; `spine_bridge` refusing to arm while it's shut |
 | 35 | The CAN bridge (`aav_spine`) in Rust (PLAN T1.8) | 🔧 branch `wt/rust-can-bridge` |
 | 36 | A bandwidth budget: every sensor's rate and size, each link's load, the CAN bus load (PLAN T1.7) | ✅ merged: [bandwidth](docs/bandwidth.md), `pixi run bandwidth`, `pixi run can-load`. Raw cameras are the only risk; CAN 8.5% |
 
