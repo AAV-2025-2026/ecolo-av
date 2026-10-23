@@ -110,7 +110,7 @@ pictures **compressed** over the network, and keep the lidar's points on the Ori
                                                                |
   CAM1-PI (Pi camera) ----1G--+                                | 1G
   CAM2-PI (USB camera) ---1G--+                                |
-  LIDAR (VLP-16) ---------1G--+---- TP-Link TL-SG116E ---------+
+  LIDAR (VLP-16) -------100M--+---- TP-Link TL-SG116E ---------+
   LOCALIZATION-PI --------1G--+     16 ports x 1 Gbit/s
   DASH (HUD screen) ------1G--+                                |
   MOTOR-PI ---------------1G--+                                | 1G
@@ -118,8 +118,9 @@ pictures **compressed** over the network, and keep the lidar's points on the Ori
        IMU, GPS, radar: USB serial into a Pi (or the Orin)     |
                                                                | CAN 500 kbit/s
                                           spine (ESP32), wheel-sensor Arduino</code></pre>
-<p>1G = gigabit Ethernet: 125 MB/s each way, about 110 MB/s real. The switch can carry
-every port at full speed at once, so the limit is <strong>each cable</strong>, mostly the Orin's.</p>
+<p>1G = gigabit Ethernet: 125 MB/s each way, about 110 MB/s real (the VLP-16's own port is
+100 Mbit/s). The switch can carry every port at full speed at once, so the limit is
+<strong>each cable</strong>, mostly the Orin's.</p>
 </section>
 <section class="card"><h2 id="the-budget-one-row-per-stream">The budget: one row per stream</h2>
 <p>On the car, as planned (Q22 picks the cameras; the rates are ours or the 21 Oct audit's).</p>
@@ -593,6 +594,12 @@ it out from the DBC, so it stays right when the contract changes:</p>
 <td>802.11n (the router: a Linksys EA3500 in the photos): 300-450 Mbit/s on paper, <strong>~20-50 Mbit/s real</strong>, shared, less in a metal car</td>
 <td>what each laptop opens</td>
 <td>⚠️ see below</td>
+</tr>
+<tr>
+<td>The lidar's port</td>
+<td>100 Mbit/s</td>
+<td>7.5 Mbit/s</td>
+<td>✅ 7.5%</td>
 </tr>
 <tr>
 <td>CAN</td>

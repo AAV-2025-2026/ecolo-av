@@ -25,7 +25,7 @@ How sure each number is:
                                                                |
   CAM1-PI (Pi camera) ----1G--+                                | 1G
   CAM2-PI (USB camera) ---1G--+                                |
-  LIDAR (VLP-16) ---------1G--+---- TP-Link TL-SG116E ---------+
+  LIDAR (VLP-16) -------100M--+---- TP-Link TL-SG116E ---------+
   LOCALIZATION-PI --------1G--+     16 ports x 1 Gbit/s
   DASH (HUD screen) ------1G--+                                |
   MOTOR-PI ---------------1G--+                                | 1G
@@ -35,8 +35,9 @@ How sure each number is:
                                           spine (ESP32), wheel-sensor Arduino
 ```
 
-1G = gigabit Ethernet: 125 MB/s each way, about 110 MB/s real. The switch can carry
-every port at full speed at once, so the limit is **each cable**, mostly the Orin's.
+1G = gigabit Ethernet: 125 MB/s each way, about 110 MB/s real (the VLP-16's own port is
+100 Mbit/s). The switch can carry every port at full speed at once, so the limit is
+**each cable**, mostly the Orin's.
 
 ## The budget: one row per stream
 
@@ -106,6 +107,7 @@ it out from the DBC, so it stays right when the contract changes:
 | A Pi 5's USB 3.0 | 5 Gbit/s | | ✅ room for a raw camera |
 | USB serial (IMU, GPS, radar) | at most ~0.09 MB/s each, at 921,600 baud | under 0.2 MB/s together | ✅ |
 | **WiFi** to laptops | 802.11n (the router: a Linksys EA3500 in the photos): 300-450 Mbit/s on paper, **~20-50 Mbit/s real**, shared, less in a metal car | what each laptop opens | ⚠️ see below |
+| The lidar's port | 100 Mbit/s | 7.5 Mbit/s | ✅ 7.5% |
 | CAN | 500 kbit/s | 42.6 kbit/s | ✅ 8.5% |
 | Inside one computer | memory, several GB/s | raw cameras into the detector on the Orin: 93 MB/s each | ✅ but CPU: see Cyclone below |
 
