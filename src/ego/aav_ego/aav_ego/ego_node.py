@@ -9,8 +9,8 @@ Parameters  the limits (ackermann.Limits) and the body (dynamics.Body: mass, pay
             and payload may change while running (ackermann.LIVE_LIMITS)
 
 Every backend (the CAN spine, the legacy serial bridge, turtlesim, Gazebo,
-CARLA) consumes the same /ego/actuator_cmd, so the drivers never know which
-car they are driving.
+CARLA) gets the same /ego/actuator_cmd, through the output mux (aav_io_mux), so
+the drivers never know which car they are driving.
 
 A command is stale cmd_timeout seconds after it ARRIVED (like twist_mux), not
 after its header stamp: the joystick may run on a Pi whose clock is off, and a

@@ -5,7 +5,8 @@ The car itself: its actuators, wheels and odometry, as the spine is on the car. 
 sensor has a node of its own, as on the car (relay.py; one process each, so each runs on
 its own core, Ben 22 Oct): gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera.
 
-Subscribes  ego/actuator_cmd      ackermann_msgs/AckermannDriveStamped (not with spine)
+Subscribes  control/gazebo/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
+                                  command, from the output mux (aav_io_mux; not with spine)
             vehicle/gazebo/spine_outputs  aav_interfaces/SpineOutputs, only with spine:
                                   spine_sim's throttle, brake, gear and steering target
             gazebo/odom           nav_msgs/Odometry   (bridged from the Ackermann system)
@@ -37,7 +38,7 @@ brake, and the model turns those, and ego's steering angle, into what the car do
 the numbers in vehicle.yaml's `actuators:` section. actuator_model:=false gives the old
 behaviour instead, to compare: the speed within Gazebo's old limits, an instant steer.
 Gazebo's own limits (aav.gazebo.xacro) are wide, so the model, not Gazebo, limits. No
-/ego/actuator_cmd for cmd_timeout s: the target speed drops to 0, as the spine's watchdog.
+command for cmd_timeout s: the target speed drops to 0, as the spine's watchdog.
 
 The spine in the loop (spine:=true, READ-ME-FULL-SIMULATION.md step 4): ego's commands go
 to spine_bridge instead, and over the CAN topics to spine_sim, which runs the spine's own
@@ -141,7 +142,8 @@ class GazeboAdapter(Node):
             self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
             self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
             self.wheels_pub = self.create_publisher(WheelSpeeds, 'vehicle/wheels', 10)
-            self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
+            self.create_subscription(AckermannDriveStamped, 'control/gazebo/actuator_cmd',
+                                     self.on_cmd, 10)
         self.create_subscription(Odometry, 'gazebo/odom', self.on_odom, 10)
         self.create_subscription(JointState, 'joint_states', self.on_joints, 10)
         self.create_timer(1.0 / rate, self.tick)

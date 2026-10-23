@@ -231,6 +231,17 @@ def test_the_sensor_watchdog_runs_wherever_the_mux_does():
             assert sent['mux.launch.py'].get('sensor_lock', 'true') == 'true', machine
 
 
+def test_the_output_mux_runs_next_to_ego_for_the_real_car():
+    # The real backends read only /control/car/actuator_cmd: the output mux, target car,
+    # must run wherever ego does, and nowhere else (two would both judge the same ego).
+    for machine in MACHINES:
+        parts = CAR.load_machine(machine)['parts']
+        sent = included(started(CAR, machine=machine))
+        assert ('io_mux.launch.py' in sent) == bool(parts.get('ego')), machine
+        if parts.get('ego'):
+            assert sent['io_mux.launch.py'] == {'target': 'car', 'source': 'real'}, machine
+
+
 def test_lane_keeping_is_off_until_a_machine_file_turns_it_on(monkeypatch):
     # control_interface drives whenever it sees a lane, so no machine file has it on yet.
     for machine in MACHINES:

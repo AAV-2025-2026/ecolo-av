@@ -135,6 +135,9 @@ def launch_setup(context):
                 sensor_lock=flag['watchdog']),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
                 sim_max_speed=arg('sim_speed')),
+        # ego's commands go to Gazebo (gazebo_adapter, or spine_bridge with spine:=true)
+        # only while every source is SIM (aav_io_mux).
+        include(context, 'aav_io_mux', 'io_mux.launch.py', target='gazebo', source='sim'),
         include(context, 'aav_scripted', 'scripted.launch.py', use_sim_time='true'),
         include(context, 'aav_goto', 'goto.launch.py', use_sim_time='true',
                 watchdog=arg('watchdog')),

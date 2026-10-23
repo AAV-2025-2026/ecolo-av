@@ -1,7 +1,9 @@
 """
 Phase 0 on any laptop: turtlesim as the car.
 
-Runs the real mux, ego, scripted driver and ekf_local. No hardware, no Gazebo.
+Runs the real mux, ego, scripted driver and ekf_local. No hardware, no Gazebo. The
+sensor mux and the output mux (aav_io_mux, target turtle) pass ego's commands to the
+turtle while everything is SIM.
 
   ros2 launch aav_bringup turtle.launch.py [teleop:=false]
 
@@ -33,6 +35,8 @@ def generate_launch_description():
         # No sensor watchdog here, so no heartbeat for the mux's sensors lock to need.
         include('aav_mux', 'mux.launch.py', sensor_lock='false'),
         include('aav_ego', 'ego.launch.py'),
+        # ego's commands go to the turtle only while everything is SIM (aav_io_mux).
+        include('aav_io_mux', 'io_mux.launch.py', target='turtle', source='sim'),
         include('aav_scripted', 'scripted.launch.py'),
         include('aav_description', 'description.launch.py'),
         include('aav_localization', 'localization.launch.py', gps='false'),

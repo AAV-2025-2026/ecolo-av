@@ -23,7 +23,10 @@ Parts and what they start:
   description     robot_state_publisher (+ joint_state_publisher): the car's frames
   mux, ego        twist_mux -> /control/cmd_vel -> ego -> /ego/actuator_cmd; with the
                   mux, the sensor watchdog (aav_safety): it stops Nav2 and the AI slot when
-                  a sensor they need fails, and they stop too if it goes quiet
+                  a sensor they need fails, and they stop too if it goes quiet. With ego,
+                  the sensor mux and the output mux (aav_io_mux, target car): ego's
+                  commands reach /control/car/actuator_cmd, and so the backends, only
+                  while every source is REAL
   teleop          joystick -> /drivers/joy/cmd_vel, e-stop button -> /safety/estop
   scripted        /scripted_drive action -> /drivers/scripted/cmd_vel
   goto            /goto action (drive to a GPS point, stop there) -> /drivers/goto/cmd_vel
@@ -233,6 +236,10 @@ def launch_setup(context):
                                inputs='odom,imu,local,global' + (',gps' if flag('gps') else '')))
     if on('ego'):
         actions.append(include('aav_ego', 'ego.launch.py'))
+        # Next to ego: the sensor mux and the output mux. The real backends (spine_bridge,
+        # legacy_uart_bridge, on any machine) read only /control/car/actuator_cmd, which
+        # carries ego's commands only while every source on the network is REAL.
+        actions.append(include('aav_io_mux', 'io_mux.launch.py', target='car', source='real'))
     if on('teleop'):
         actions.append(include('aav_teleop', 'teleop.launch.py'))
     if on('scripted'):
