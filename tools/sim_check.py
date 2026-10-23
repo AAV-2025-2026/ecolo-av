@@ -24,8 +24,9 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run sim-check --no-lidar          (without the simulated roof lidar: lidar:=false)
     pixi run sim-check --spine             (adds the spine in the loop, spine:=true: its
                                             stops, e-stops and arming, in a second run: 3
-                                            more minutes)
-    pixi run sim-check --goto              (drives to points and stops there, at 1 and 3 m/s,
+                                            more minutes; --python-bridge runs aav_spine's
+                                            Python spine_bridge there, not the Rust one)
+    pixi run sim-check --goto             (drives to points and stops there, at 1 and 3 m/s,
                                             in the empty world: two more runs, 8 more minutes;
                                             --goto-only skips the road world's run)
 
@@ -1758,7 +1759,9 @@ def main():
         # Its own run: the spine in the loop (spine:=true). No lidar: a lighter run.
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-spine{ext}')
-        session(['spine:=true', 'lidar:=false'],
+        # --python-bridge: aav_spine's Python spine_bridge instead of the Rust one.
+        bridge = ['bridge:=python'] if '--python-bridge' in args else []
+        session(['spine:=true', 'lidar:=false'] + bridge,
                 [lambda probe: check_drive(probe, spine=True), armed_first(check_nav_goal),
                  check_wheels_vs_imu,
                  lambda probe: check_command_lost(probe, True),
