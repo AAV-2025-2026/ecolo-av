@@ -15,7 +15,6 @@ The joystick outranks this driver in twist_mux, so a person can always take over
 import math
 import signal
 import threading
-import time
 
 from aav_interfaces.action import ScriptedDrive
 from aav_scripted.speed_profile import SpeedProfile, STOPPED
@@ -95,7 +94,7 @@ class ScriptedDriver(Node):
         t0 = self.get_clock().now()
         feedback = ScriptedDrive.Feedback()
         finished = Future()
-        loop = {'tick': 0, 'last': time.monotonic(), 'zeros': 0}
+        loop = {'tick': 0, 'last': t0.nanoseconds * 1e-9, 'zeros': 0}
 
         def tick():
             if profile.phase == STOPPED:
@@ -114,8 +113,11 @@ class ScriptedDriver(Node):
             # fires late, and a fixed step stretched the whole profile (bench, 10 Oct:
             # 22 m instead of 6.5 m). The cap only stops a long stall from jumping the
             # profile; ego and the spine limit how fast the speed can change anyway.
-            now = time.monotonic()
-            dt, loop['last'] = min(now - loop['last'], 0.5), now
+            # The node's clock, so Gazebo's time in a simulator: a simulator slower than
+            # real time (no GPU, 4 cores: GitHub's runners, 23 Oct) shrank a wall-clock
+            # profile instead (2.5 m instead of 6.5 m). On the car it is the wall clock.
+            now = self.get_clock().now().nanoseconds * 1e-9
+            dt, loop['last'] = min(max(now - loop['last'], 0.0), 0.5), now
             v = profile.step(dt, travelled)
             self.publish(v, g.curvature)
             if loop['tick'] % 5 == 0:
