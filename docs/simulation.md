@@ -412,6 +412,7 @@ Ran on Ben's Mac, 15 Oct, after the topic renaming:
 | `pixi run sim-check --obstacle --lidar-obstacle` (15 Oct, the lidar into Nav2; twice) | all pass: the box 0.32-0.46 m ahead with radar and lidar; with the radar off, the lidar alone stopped the car 0.16-0.55 m before a person-sized post, the costmap 100 of 100 there; both goals reached once they were gone |
 | `AAV_RMW=cyclone pixi run sim-check --obstacle --lidar-obstacle --plan-around`, `--ghost` (22 Oct, MPPI, the planner seeing the sensors) | all pass: with `plan_around:=false` the box 0.37 m ahead, the post 0.26 m; with the planner seeing them, round the box 3.9 m clear, never stopped; the ghost 0.13 m |
 | `pixi run sim-check --faults` (15 Oct) | all 10 faults pass: the car stood still 1.7-4.1 s after each, and the watchdog (or `collision_monitor`, for the radar) said why; then let go |
+| `AAV_RMW=cyclone pixi run sim-check --faults` (23 Oct, two runs, three other Gazebos on the Mac) | the new `hud stop` passes both times: stood still 2.5 s after the heartbeat stopped, "STOP: hud STALE", then drove again. 12 of the other 13 pass; `odom freeze` failed both times ([still to do](#still-to-do)) |
 | `pixi run sim-check --faults --no-watchdog` (15 Oct) | the before column [below](#what-the-car-does-before-and-after): only the radar stopped the car |
 | `pixi run sim-check --spine` (15 Oct) | all 21 pass: the spine profile's graph, drive, EKF and a Nav2 goal; the command stream lost: full brake 209 ms, still 0.66 s, latched; both e-stops: brake within 12 ms, latched; disarmed: no motion ([the spine in the loop](#the-spine-in-the-loop-spinetrue)) |
 
@@ -462,9 +463,10 @@ the camera), on the map window (a banner across the map), in the log and on
 | local, global | the EKFs' `/localization/odom/*` | quiet 0.5 s; NaN | stop |
 | camera | the front left picture | quiet 1 s; the same picture for 1 s **while the wheels turn** | stop (only where something reads it: perception, lane, camera obstacles) |
 | radar | `/sensors/radar/points` | quiet 1 s | warn: `collision_monitor` already stops Nav2 |
+| hud | `/hud/heartbeat` (the [HUD's](hud.md#the-heartbeat) screen is alive) | quiet 1 s; the count stuck for 1 s | stop (only where a HUD is expected: the car, `hud:=true`, `watch_hud:=true`) |
 
 It runs in Gazebo (`watchdog:=true`), on the bench (always), and on the car next to the
-mux (odom, IMU, GPS, the EKFs). The checks are `aav_safety/watchdog.py` and
+mux (odom, IMU, GPS, the EKFs, the HUD). The checks are `aav_safety/watchdog.py` and
 `wheel_check.py`, with no ROS, and their tests.
 
 ### If the watchdog itself dies
@@ -549,6 +551,7 @@ lock, frozen wheels).
 | Radar stopped (`radar stop`) | ✅ stood still 2.5 s after it: `collision_monitor`'s "invalid source" | ✅ the same, 2.5 s; the watchdog warns too |
 | Wheels frozen (`odom freeze`) | ❌ drove on 10.9 m in 15 s, nothing said | ✅ 3.4-4.8 s after the wheels went wrong (Nav2 steered), 2.2-3.9 m: "odom DISAGREE (the wheels and the IMU disagree ... turn 0.28 rad/s)" (two runs) |
 | Watchdog hung (`watchdog hang`: SIGSTOP) | ❌ by design: the old lock never expired, so nothing stopped Nav2 (not run) | ✅ 2.7 s, 1.4-1.5 m: twist_mux's 1 s lock timeout; drove again after SIGCONT |
+| HUD frozen or dead (`hud stop`, 23 Oct: the check stops beating for it) | ❌ nothing watched the screen (not run) | ✅ 2.5 s, 1.2 m: "hud STALE" (two runs); drove again once it beat |
 | Watchdog killed (`watchdog kill`: SIGKILL, the last fault) | ❌ the same (not run) | ✅ 2.6-2.8 s, 1.2-1.5 m, then held 10 s more with Nav2 still asking (top speed 0.00 m/s) |
 
 "Nothing said": no warning in the log, nothing on the HUD (only the HUD's GPS line
@@ -566,6 +569,7 @@ timing jumps with the fixes' stamps, plus 5 m for their noise.
 | ~~The map window~~ | done 15 Oct: the same banner as the HUD. Not seen on a screen yet |
 | The cross check's limits on the car | Gazebo's numbers. Read `worst_*_gap` on `/diagnostics` after a normal drive. A sloping lot, the real IMU's mounting and the real GPS's noise all change them |
 | A frozen wheel at a speed the car keeps | not caught until the speed or turn changes: harmless till then, but the EKF's position drifts if the car really changes speed slowly under 0.3 m/s |
+| `odom freeze` is flaky (23 Oct) | failed in both `--faults` runs, and once in two on its own with no HUD watched: the wheels went wrong, but no DISAGREE. Not from the heartbeat; why is not known yet |
 | The real car's faults | the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog |
 
 ## Replay a recorded drive

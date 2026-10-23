@@ -30,7 +30,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | 6 | Localization and calibration | 18% | 0% | no calibration yet; the heading is much better in Gazebo (22 Oct), not yet checked with the real IMU |
 | 7 | Drivers and local planning | 64% | 0% | the real lot's map; forward only, a U-turn in a narrow lane can end facing a wall (reversing fixes it) |
 | 8 | Perception | 43% | 0% | no labelled pictures of the lot; no lidar clustering |
-| 9 | Heads-up display and tools | 62% | 0% | not tried on the Pi 5; no HUD heartbeat |
+| 9 | Heads-up display and tools | 68% | 0% | not tried on the Pi 5 |
 | | **All committed tasks** | **about 43%** | **about 5%** | |
 
 ## The gates
@@ -56,7 +56,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | Position | two EKFs and navsat_transform: within 0.15 m of Gazebo's truth; replay within 0.03 m | `src/localization` |
 | Drivers | joystick, keyboard, scripted, replay, GPS A to B, Nav2, plain English (local model), street routes | `src/drivers` |
 | Nav2 | Smac Hybrid-A*, Regulated Pure Pursuit **or MPPI**, collision monitor, ghost obstacles | `src/drivers/aav_navigation` |
-| Safety | a sensor watchdog (13 faults, all stop the car in Gazebo); the collision monitor; the spine's timeout (not flashed) | `src/safety`, `firmware/spine` |
+| Safety | a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels only sometimes since 23 Oct); the collision monitor; the spine's timeout (not flashed) | `src/safety`, `firmware/spine` |
 | Screens | the raylib HUD and the map window, full screen at boot (ready to install) | `src/hud` |
 | Perception | YOLO (Core ML, TensorRT export), a measured comparison with RF-DETR and YOLO26, radar clustering, a lidar layer | `src/perception`, [newer models](docs/model-comparison.md) |
 | The car | two read-only audits: every computer, port and connection; irreplaceable files copied off | `docs/history/` |
@@ -184,7 +184,7 @@ the next concrete step.
 | T9.5 | Faults, battery and health | 18 Dec | 🧪 | 70 | rail voltages (T4.5) |
 | T9.6 | Boot and crash tests | 18 Dec | 🔧 | 50 | on the Pi |
 | T9.7 | The language model's plan on screen | 29 Jan | 🔧 | 50 | |
-| T9.8 | HUD stop and heartbeat | 29 Jan | 🔧 | 40 | the stop button exists; the heartbeat to the watchdog doesn't |
+| T9.8 | HUD stop and heartbeat | 29 Jan | 🧪 | 80 | done 23 Oct: `/hud/heartbeat` while the screen draws; the watchdog stops Nav2 without it (car: `watch_hud:=true`). Passes in Gazebo (`sim-check --faults`, `hud stop`) and with the real window on a Mac. Next: on the car's screen computer; the Flutter app has none |
 
 ### Safety (cross-cutting)
 

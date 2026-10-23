@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">42 min read · 8 sections</div></header>
+<div class="meta">43 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1007,6 +1007,10 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 <td>all 10 faults pass: the car stood still 1.7-4.1 s after each, and the watchdog (or <code>collision_monitor</code>, for the radar) said why; then let go</td>
 </tr>
 <tr>
+<td><code>AAV_RMW=cyclone pixi run sim-check --faults</code> (23 Oct, two runs, three other Gazebos on the Mac)</td>
+<td>the new <code>hud stop</code> passes both times: stood still 2.5 s after the heartbeat stopped, "STOP: hud STALE", then drove again. 12 of the other 13 pass; <code>odom freeze</code> failed both times (<a href="#still-to-do">still to do</a>)</td>
+</tr>
+<tr>
 <td><code>pixi run sim-check --faults --no-watchdog</code> (15 Oct)</td>
 <td>the before column <a href="#what-the-car-does-before-and-after">below</a>: only the radar stopped the car</td>
 </tr>
@@ -1120,10 +1124,16 @@ the camera), on the map window (a banner across the map), in the log and on
 <td>quiet 1 s</td>
 <td>warn: <code>collision_monitor</code> already stops Nav2</td>
 </tr>
+<tr>
+<td>hud</td>
+<td><code>/hud/heartbeat</code> (the <a href="hud.html#the-heartbeat">HUD's</a> screen is alive)</td>
+<td>quiet 1 s; the count stuck for 1 s</td>
+<td>stop (only where a HUD is expected: the car, <code>hud:=true</code>, <code>watch_hud:=true</code>)</td>
+</tr>
 </tbody>
 </table></div>
 <p>It runs in Gazebo (<code>watchdog:=true</code>), on the bench (always), and on the car next to the
-mux (odom, IMU, GPS, the EKFs). The checks are <code>aav_safety/watchdog.py</code> and
+mux (odom, IMU, GPS, the EKFs, the HUD). The checks are <code>aav_safety/watchdog.py</code> and
 <code>wheel_check.py</code>, with no ROS, and their tests.</p>
 <h3 id="if-the-watchdog-itself-dies">If the watchdog itself dies</h3>
 <p>The lock is <strong>fail-safe</strong> (15 Oct). The watchdog sends <code>false</code> 10 times a second: a
@@ -1312,6 +1322,11 @@ lock, frozen wheels).</p>
 <td>✅ 2.7 s, 1.4-1.5 m: twist_mux's 1 s lock timeout; drove again after SIGCONT</td>
 </tr>
 <tr>
+<td>HUD frozen or dead (<code>hud stop</code>, 23 Oct: the check stops beating for it)</td>
+<td>❌ nothing watched the screen (not run)</td>
+<td>✅ 2.5 s, 1.2 m: "hud STALE" (two runs); drove again once it beat</td>
+</tr>
+<tr>
 <td>Watchdog killed (<code>watchdog kill</code>: SIGKILL, the last fault)</td>
 <td>❌ the same (not run)</td>
 <td>✅ 2.6-2.8 s, 1.2-1.5 m, then held 10 s more with Nav2 still asking (top speed 0.00 m/s)</td>
@@ -1354,6 +1369,10 @@ timing jumps with the fixes' stamps, plus 5 m for their noise.</p>
 <tr>
 <td>A frozen wheel at a speed the car keeps</td>
 <td>not caught until the speed or turn changes: harmless till then, but the EKF's position drifts if the car really changes speed slowly under 0.3 m/s</td>
+</tr>
+<tr>
+<td><code>odom freeze</code> is flaky (23 Oct)</td>
+<td>failed in both <code>--faults</code> runs, and once in two on its own with no HUD watched: the wheels went wrong, but no DISAGREE. Not from the heartbeat; why is not known yet</td>
 </tr>
 <tr>
 <td>The real car's faults</td>

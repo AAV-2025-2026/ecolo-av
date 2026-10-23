@@ -172,6 +172,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD and the map window show it as a banner, red for STOP or when it goes silent (then twist_mux holds Nav2 too).</td>
 </tr>
 <tr>
+<td><code>/hud/heartbeat</code></td>
+<td><code>std_msgs/msg/UInt64</code></td>
+<td><code>hud</code></td>
+<td><code>sensor_watchdog</code></td>
+<td>-</td>
+<td>The HUD's screen is alive - the number of frames it has drawn, 10 Hz, sent only while that number rises, from the same 10 ms timer that sends the e-stop button's messages, so it stops when the screen or the e-stop's sender freezes or dies. The sensor watchdog's hud input (kind heartbeat, 1 s; car.launch.py watch_hud:=true, the default; sim.launch.py with hud:=true or watch_hud:=true) - silent, or a count that stops rising, locks twist_mux's sensors lock like a dead sensor - Nav2 and the AI slot stop, people and the e-stop never. Reliable, depth 10.</td>
+</tr>
+<tr>
 <td><code>/safety/collision_monitor/state</code></td>
 <td><code>nav2_msgs/msg/CollisionMonitorState</code></td>
 <td><code>collision_monitor</code></td>

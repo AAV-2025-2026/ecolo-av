@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">33 min read · 13 sections</div></header>
+<div class="meta">35 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -110,6 +110,10 @@ a second program. Each opens full screen on its own monitor at boot:
 <td>the button: <code>/safety/estop</code> true 5 times, 0.1 s apart. Never false. Says whether anything heard it</td>
 </tr>
 <tr>
+<td>(nothing on screen)</td>
+<td>the heartbeat, <code>/hud/heartbeat</code>: below</td>
+</tr>
+<tr>
 <td>Topics</td>
 <td>every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where <code>/system/source</code> names it</td>
 </tr>
@@ -159,6 +163,68 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
 <li><code>--monitor NAME|N</code> picks the monitor (its name exactly, or its number);
   <code>--list-monitors</code> prints them. A missing monitor is an error, never a guess.</li>
 </ul>
+<h3 id="the-heartbeat">The heartbeat</h3>
+<p>The safety drivers rely on this screen, so the sensor watchdog must know it's alive
+(23 Oct, PLAN T9.8).</p>
+<pre class="highlight"><code class="language-text"> window draws a frame --&gt; count + 1
+ every 10 ms, the e-stop's timer (ROS thread):
+     0.1 s since the last beat, and the count rose?  --&gt; /hud/heartbeat = count (10 Hz)
+ sensor_watchdog, input hud:  quiet 1 s, or the count stuck 1 s  --&gt; STOP: Nav2 and the AI slot</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What fails</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The window freezes</td>
+<td>the count stops rising: no more beats</td>
+</tr>
+<tr>
+<td>The ROS thread freezes</td>
+<td>the timer stops: no beats, and no e-stop either. The watchdog stops Nav2</td>
+</tr>
+<tr>
+<td>The program dies</td>
+<td>no beats. systemd restarts it in 5 s; the lock opens once it beats again</td>
+</tr>
+<tr>
+<td>The HUD never started</td>
+<td>the watchdog says <code>hud NEVER</code>: Nav2 never drives</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Watched?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Car</td>
+<td>yes: <code>car.launch.py watch_hud:=true</code>, the default. <code>watch_hud:=false</code> for a session with no HUD screen</td>
+</tr>
+<tr>
+<td>Gazebo</td>
+<td>with <code>hud:=true</code> (the window), or <code>watch_hud:=true</code> (something else beats)</td>
+</tr>
+<tr>
+<td>Bench, turtle, CARLA</td>
+<td>no: no HUD window there</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>People, the joystick and the e-stop are never held by it: only Nav2 and the AI slot.</li>
+<li>The e-stop button doesn't depend on it. It's the same timer, so a beat also proves the
+  e-stop's sender runs.</li>
+<li>The logic: <code>hud-core</code> <code>heartbeat</code> (no ROS). The watchdog's side: <code>kind: heartbeat</code> in
+  <code>aav_safety</code>'s <code>sensor_watchdog.yaml</code>.</li>
+</ul>
 <h3 id="tested-15-october-a-mac">Tested (15 October, a Mac)</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -199,6 +265,18 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
 <tr>
 <td>The SIMULATED / BENCH / REPLAY banner (15 Oct)</td>
 <td>its logic: <code>cargo test</code> (hud-core <code>origin</code>, and the message's numbers in hud-app). Not seen on screen yet: the window couldn't open from that session</td>
+</tr>
+<tr>
+<td>The heartbeat, through the real node (23 Oct, <code>cargo test</code>)</td>
+<td>none before the first frame; 15-21 beats in 2 s of drawing, each count higher; none once drawing stops, and the e-stop's 5 trues still go out</td>
+</tr>
+<tr>
+<td>The heartbeat, the real window and the watchdog (23 Oct, private domain)</td>
+<td>9.3 beats a second; <code>hud NEVER</code> before it opened, <code>OK</code> while it ran; frozen (SIGSTOP) or closed: <code>hud STALE</code> and the lock on within about 1 s; thawed: <code>OK</code> again</td>
+</tr>
+<tr>
+<td>The heartbeat in Gazebo (23 Oct, <code>sim-check --faults</code>, <code>hud stop</code>, twice)</td>
+<td>the check beats in the window's place; when it stops, Nav2's car stands still 2.5 s later</td>
 </tr>
 </tbody>
 </table></div>
