@@ -7,6 +7,7 @@ Bench check: start bench mode, then test the whole car graph on this computer.
     pixi run bench-check --obstacle            (adds a box for the radar: 3 minutes)
     pixi run bench-check --lidar               (adds a box for the lidar alone: 3 minutes)
     pixi run bench-check --lane   (adds lane keeping, in a second bench run: 1 more minute)
+    pixi run bench-check --python-bridge       (aav_spine's Python spine_bridge, not the Rust one)
 
 1. Starts bench.launch.py on a private ROS domain, local to this computer.
 2. Checks the running graph against docs/interfaces.yaml (check_graph.py --profile bench).
@@ -551,15 +552,16 @@ def main():
     logs = [log]
     # With --obstacle the planner is blind to the box (it spans the lane, and the bench's map
     # is empty: it would plan off the road round it), so the stop zone must stop the car.
+    bridge = ['bridge:=python'] if '--python-bridge' in args else []
     session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
-            + (['plan_around:=false'] if '--obstacle' in args else []),
+            + (['plan_around:=false'] if '--obstacle' in args else []) + bridge,
             checks, logs[0])
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-lane{ext}')
-        session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'],
+        session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'] + bridge,
                 [check_lane_keeping], logs[1], 'lane')
 
     print('\n| Check | Result | Detail |\n|---|---|---|')

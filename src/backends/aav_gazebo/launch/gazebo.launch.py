@@ -4,6 +4,7 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
   ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road] [gui:=true]
       [follow:=true] [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
       [radar:=true] [actuator_model:=true] [faults:=false] [spine:=false] [arm:=true]
+      [bridge:=rust|python]
 
   /control/gazebo/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
                        (the actuator model: vehicle.yaml's actuators:, unless
@@ -22,8 +23,9 @@ runs the spine's firmware logic (spine-core) on its CAN frames, on Gazebo's cloc
   gazebo_adapter ──> /vehicle/gazebo/wheels, /vehicle/gazebo/steering ──> spine_sim
   spine_sim ──> /can/rx ──> spine_bridge ──> /vehicle/odom, status, steering, wheels...
 
-Still one backend: spine_bridge alone reads ego's commands (/control/gazebo/actuator_cmd, from the
-output mux). arm:=true (the default)
+Still one backend: spine_bridge alone reads ego's commands (/control/gazebo/actuator_cmd,
+from the output mux); bridge:= picks its language, rust (aav_spine_bridge, the default)
+or python (aav_spine). arm:=true (the default)
 arms the spine 12 s after start-up, as the bench does; /spine/arm arms it again after a
 stop. The hardware e-stop and driver faults are the bench's: /vehicle/bench/hw_estop and
 /vehicle/bench/driver_faults.
@@ -67,6 +69,7 @@ import tempfile
 
 from aav_description import vehicle
 from aav_gazebo import faults, worlds
+from aav_spine import bridges
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,
                             OpaqueFunction, TimerAction)
@@ -99,7 +102,8 @@ def spine_in_the_loop(context, v, sim_time):
     """spine_bridge and spine_sim: the car's CAN path, and the spine's own logic."""
     spine_share = FindPackageShare('aav_spine').perform(context)
     actions = [
-        Node(package='aav_spine', executable='spine_bridge', name='spine_bridge',
+        Node(package=bridges.package(LaunchConfiguration('bridge').perform(context)),
+             executable=bridges.EXECUTABLE, name='spine_bridge',
              parameters=[os.path.join(spine_share, 'config', 'spine.yaml'),
                          vehicle.spine_params(v),
                          # /system/source: everything under it is Gazebo's.
@@ -243,5 +247,8 @@ def generate_launch_description():
                                           'of the actuator model'),
         DeclareLaunchArgument('arm', default_value='true',
                               description='with spine:=true: arm the spine after 12 s'),
+        DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
+                              description='with spine:=true: spine_bridge in rust '
+                                          '(aav_spine_bridge) or python (aav_spine)'),
         OpaqueFunction(function=launch_setup),
     ])

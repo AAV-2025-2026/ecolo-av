@@ -290,3 +290,14 @@ def test_each_machine_files_detector_settings_are_known(machine, monkeypatch):
     CAR.detector(context_for(CAR, machine=machine), machine, settings)
     with pytest.raises(RuntimeError, match='takes no'):
         CAR.detector(context_for(CAR, machine=machine), machine, {'modle': 'x.pt'})
+
+
+def test_the_spine_bridge_is_the_rust_one_unless_asked():
+    # aav_spine_bridge (Rust) took over from aav_spine's Python node, which stays for now.
+    spine = load('aav_spine', 'spine.launch.py')
+    assert nodes(spine.bridge(context_for(spine))) == {('aav_spine_bridge', 'spine_bridge')}
+    assert nodes(spine.bridge(context_for(spine, bridge='python'))) == {
+        ('aav_spine', 'spine_bridge')}
+    bench = load('aav_bringup', 'bench.launch.py')
+    assert ('aav_spine_bridge', 'spine_bridge') in nodes(started(bench))
+    assert ('aav_spine', 'spine_bridge') in nodes(started(bench, bridge='python'))

@@ -284,3 +284,17 @@ def test_the_lidar_is_on_by_default():
     off = started(GAZEBO, world='road', gui='false', lidar='false')
     assert included(off)['description.launch.py']['lidar'] == 'false'
     assert 'gz_lidar_bridge' not in names(off)
+
+
+def test_the_spine_in_the_loop_runs_the_rust_bridge_unless_asked():
+    def bridge(**args):
+        actions = started(GAZEBO, world='empty', gui='false', spine='true', **args)
+        a = node(actions, 'spine_bridge')
+        return a.node_package, a.node_executable
+
+    assert bridge() == ('aav_spine_bridge', 'spine_bridge')
+    assert bridge(bridge='python') == ('aav_spine', 'spine_bridge')
+    sent = included(started(SIM, spine='true', bridge='python'))['gazebo.launch.py']
+    assert sent['bridge'] == 'python'
+    with pytest.raises(ValueError, match='bridge:=cpp'):
+        bridge(bridge='cpp')

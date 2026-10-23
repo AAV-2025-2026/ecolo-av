@@ -17,6 +17,8 @@
   <exec_depend>aav_interfaces</exec_depend>
   <exec_depend>aav_description</exec_depend>
   <exec_depend>ros2_socketcan</exec_depend>
+  <!-- The Rust spine_bridge, which the launch files start by default (aav_spine.bridges). -->
+  <exec_depend>aav_spine_bridge</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 

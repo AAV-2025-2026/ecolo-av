@@ -5,7 +5,9 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
       [perception:=false] [lane:=false|true|fake] [hud:=false] [arm:=true] [foxglove:=false]
       [start_y:=0.0] [start_yaw:=0.0] [bend_radius:=] [obstacle:=false]
       [camera_obstacles:=false] [reversing:=true] [lidar:=false] [plan_around:=true]
+      [bridge:=rust|python]
   pixi run bench                            (the same)
+  pixi run bench bridge:=python             (aav_spine's Python spine_bridge, not the Rust one)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
   pixi run bench lane:=true start_y:=0.3    (lane keeping, from 0.3 m left of the centre)
   pixi run bench lidar:=true obstacle:=true (the roof lidar, through its real driver)
@@ -47,6 +49,7 @@ its job.
 import os
 
 from aav_description import vehicle
+from aav_spine import bridges
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,
                             OpaqueFunction, TimerAction)
@@ -97,7 +100,8 @@ def launch_setup(context):
                          ('imu/data', '/sensors/imu/data'),
                          ('imu/mag', '/sensors/imu/mag')]),
         include('aav_localization', 'localization.launch.py', gps='true'),
-        Node(package='aav_spine', executable='spine_bridge', name='spine_bridge',
+        Node(package=bridges.package(LaunchConfiguration('bridge').perform(context)),
+             executable=bridges.EXECUTABLE, name='spine_bridge',
              parameters=[os.path.join(share('aav_spine'), 'config', 'spine.yaml'),
                          vehicle.spine_params(v),
                          # /system/source: the spine is spine_sim, not the real board.
@@ -215,5 +219,8 @@ def generate_launch_description():
                               description="true: Nav2's planner plans round what the radar "
                                           'and lidar see; false: the map only, so the car '
                                           'stops for it (bench-check --obstacle)'),
+        DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
+                              description='spine_bridge in rust (aav_spine_bridge) or python '
+                                          '(aav_spine)'),
         OpaqueFunction(function=launch_setup),
     ])
