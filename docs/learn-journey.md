@@ -70,7 +70,7 @@ Today's car would drive through the 2025-26 hardware, with our `aav_legacy` back
 
 | # | Who | Topic or wire | Message | Rate | What can go wrong | Watch it |
 |---|---|---|---|---|---|---|
-| 5 | ROS 2 over Ethernet, Orin → Motor-Pi | `/ego/actuator_cmd` | the same | 50 Hz | a different `ROS_DOMAIN_ID`; the network | on the Pi: `ros2 topic hz /ego/actuator_cmd` |
+| 5 | the output mux, then ROS 2 over Ethernet, Orin → Motor-Pi | `/control/car/actuator_cmd` | the same | 50 Hz | any source not REAL (`/safety/output_mux/state` says STOP); a different `ROS_DOMAIN_ID`; the network | on the Pi: `ros2 topic hz /control/car/actuator_cmd` |
 | 6 | `legacy_uart_bridge` on the Motor-Pi | UART `/dev/ttyAMA0`, 115200 baud | 13 bytes: steering, speed, accel, checksum | 50 Hz | stale for 0.3 s, or `/safety/estop` true: it sends brake frames | the node's log |
 | 7 | the ESP32 (2025-26 firmware) | I2C | Jrk targets, a DAC value | each frame | **no timeout**: if frames stop, the last throttle stays on | nothing comes back |
 | 8 | Jrk G2 #1, Jrk G2 #2, the DAC | wires | steering, brake, throttle voltage | | the throttle is open loop: no speed feedback | watch the car, wheels off the ground |

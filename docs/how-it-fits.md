@@ -99,6 +99,18 @@ Most of the numbers are still guesses: see [Car numbers](car_measurements.md).
 Each backend reports the car's speed back on `/vehicle/odom`. That closes the loop into
 the EKFs.
 
+### The output mux: one target, and the real car only on real data
+
+No backend reads `/ego/actuator_cmd` itself. The **output mux** (`target:=`) passes ego's
+command on to its target's own topic, and the **sensor mux** (`source:=`) checks where
+the data comes from. See [Sources and targets](sources-and-targets.md).
+
+```text
+ego ─/ego/actuator_cmd─► output_mux ─/control/car/actuator_cmd─► spine_bridge, legacy_uart_bridge
+                           ▲  (only while every source is REAL; else silent, latched)
+        sensor_mux ────────┘  /system/sensor_mux/state
+```
+
 ## 7. Safety layers
 
 From the person outward. Each layer works even if everything after it fails.
@@ -108,6 +120,7 @@ From the person outward. Each layer works even if everything after it fails.
 | 1 | Joystick deadman (priority 100) | held with the sticks centred |
 | 2 | `/safety/estop` | it's true: the mux blocks every driver, and the car backends brake |
 | 3 | ego's timeout | no command arrives for 0.3 s |
+| 3a | The output mux | any source isn't REAL (a simulator, the bench, a replay on the network), or the sensor mux says no or goes quiet: it sends nothing, latched |
 | 4 | `spine_bridge` | ego is quiet for 0.1 s: it stops sending drive frames |
 | 5 | The spine's watchdog | no valid frame for 100 ms: throttle off, brake on |
 | 6 | RC override switch, hardware e-stop, driver faults | always: handled in the firmware |

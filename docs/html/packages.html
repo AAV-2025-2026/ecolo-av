@@ -7,7 +7,7 @@
 <!-- Generated from docs/packages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>What each package does</h1>
-<div class="meta">14 min read · 11 sections</div></header>
+<div class="meta">15 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -164,6 +165,13 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>mux</td>
 <td>twist_mux: the priorities and the e-stop lock</td>
 <td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_io_mux</code></td>
+<td>mux</td>
+<td>the sensor mux and the output mux: simulated data never drives the real car</td>
+<td><span class="badge b-works">works</span> turtle, Gazebo and the bench; <span class="badge b-untested">untested</span> on the car</td>
 <td>new</td>
 </tr>
 <tr>
@@ -452,6 +460,12 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td><code>/ego/actuator_cmd</code>, 50 times a second</td>
 <td>1.0 m/s top speed, ±0.5 rad, brakes after 0.3 s without a command</td>
 </tr>
+<tr>
+<td><code>aav_io_mux</code></td>
+<td><code>/ego/actuator_cmd</code>, <code>/system/source</code>, who publishes each sensor</td>
+<td><code>/control/&lt;target&gt;/actuator_cmd</code>, <code>/system/sensor_mux/state</code>, <code>/safety/output_mux/state</code></td>
+<td>the real car's commands only while every source is REAL: <a href="sources-and-targets.html">Sources and targets</a></td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -501,7 +515,7 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 </table></div>
 </section>
 <section class="card"><h2 id="backends">Backends</h2>
-<p>Each backend reads <code>/ego/actuator_cmd</code> and reports the car's speed on <code>/vehicle/odom</code>.
+<p>Each backend reads ego's commands from the output mux (<code>/control/&lt;target&gt;/actuator_cmd</code>) and reports the car's speed on <code>/vehicle/odom</code>.
 Only one runs at a time.</p>
 <div class="table-wrap"><table>
 <thead>

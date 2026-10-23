@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">14 min read · 4 sections</div></header>
+<div class="meta">15 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -157,6 +158,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td>twist_mux</td>
 <td><code>aav_mux</code></td>
 <td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Sensor mux and output mux (23 Oct)</td>
+<td><code>aav_io_mux</code>: <code>source:=</code>, <code>target:=</code>, <code>stack.launch.py</code></td>
+<td><span class="badge b-works">works</span> in its tests: with Gazebo announcing SIM, the real backend (<code>spine_bridge</code>) sent no drive frame. In every profile: the turtle drove through it; <code>sim-check</code> and <code>bench-check</code> passed with it (23 Oct, on a busy Mac). <span class="badge b-untested">untested</span> on the car (<a href="sources-and-targets.html">Sources and targets</a>)</td>
 </tr>
 <tr>
 <td>ego</td>

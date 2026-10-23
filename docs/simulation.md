@@ -1,6 +1,6 @@
 # Simulation: Gazebo, replay, and when nothing moves
 
-Every backend takes the same `/ego/actuator_cmd`, so the drivers, mux, ego and
+Every backend takes the same ego command (through the output mux), so the drivers, mux, ego and
 localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
 the ladder one rung at a time.
 
@@ -148,7 +148,7 @@ ego's angle ──────────────────────�
   passes `vehicle.gazebo_steering_limit` (0.578) instead: the middle wheel then reaches
   0.5. Measured: 0.484 rad at full lock, the last 3% tyre slip ([Actuator tests](actuator-tests.md)).
 - `actuator_model:=false` keeps the old behaviour (in the adapter), to compare the two.
-- No `/ego/actuator_cmd` for 0.2 s: the model brakes to a stop, like the spine's watchdog.
+- No command for 0.2 s: the model brakes to a stop, like the spine's watchdog.
   For the spine's real watchdog, e-stops and arming: [`spine:=true`](#the-spine-in-the-loop-spinetrue).
 - Plot command against measured: `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`
   (Foxglove or PlotJuggler).
@@ -215,7 +215,7 @@ pixi run sim-check --spine                # tests it (3 more minutes)
 
 | | Direct path (default) | `spine:=true` |
 |---|---|---|
-| Takes `/ego/actuator_cmd` | `gazebo_adapter` | `spine_bridge` (only one backend at a time) |
+| Takes ego's commands (`/control/gazebo/actuator_cmd`) | `gazebo_adapter` | `spine_bridge` (only one backend at a time) |
 | Speed loop | a Python copy in `actuator_model.py` | the spine's own, in Rust |
 | Ego goes quiet | brakes after 0.2 s | full brake after 0.2 s (0.1 + 0.1), **latched** |
 | `/safety/estop` | twist_mux stops the drivers: brake 0.46 s | ESTOP_CMD to the spine: brake within 12 ms, latched |
@@ -610,7 +610,7 @@ Work down the chain:
 | 1 | Is a driver publishing? | `ros2 topic hz /drivers/keyboard/cmd_vel` (or `joy`, `scripted`, `nav`) |
 | 2 | Did the mux pick it? | `ros2 topic echo /control/cmd_vel`. If it's silent, look for a latched e-stop: `ros2 topic echo /safety/estop` |
 | 3 | Is ego converting it? | `ros2 topic echo /ego/actuator_cmd`: it's always 50 Hz, so look at the speed |
-| 4 | Is a backend listening? | `ros2 topic info /ego/actuator_cmd -v` |
+| 4 | Is the output mux open, and a backend listening? | `ros2 topic echo /safety/output_mux/state` says OPEN; `ros2 topic info /control/gazebo/actuator_cmd -v` |
 | 5 | In Gazebo or replay: is everything on sim time? | a node on wall-clock time ignores sim-time messages |
 | 6 | Does the graph match the contract? | `pixi run check sim` (or `road`, `replay`) |
 | 7 | Is the sensor watchdog holding Nav2? | `ros2 topic echo /safety/sensor_watchdog/state`: anything but OK says which sensor and why |

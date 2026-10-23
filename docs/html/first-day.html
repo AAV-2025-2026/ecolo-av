@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -182,7 +183,8 @@ path a real drive takes:</p>
 <li>click the refresh button after you start or stop something.</li>
 </ul>
 <p>Follow the chain from section 2: <code>teleop_twist_keyboard</code> → <code>/drivers/keyboard/cmd_vel</code> →
-<code>twist_mux</code> → <code>/control/cmd_vel</code> → <code>ego</code> → <code>/ego/actuator_cmd</code> → <code>turtlesim_adapter</code>.</p>
+<code>twist_mux</code> → <code>/control/cmd_vel</code> → <code>ego</code> → <code>/ego/actuator_cmd</code> → <code>output_mux</code> →
+<code>/control/turtle/actuator_cmd</code> → <code>turtlesim_adapter</code>.</p>
 <p>Then check the graph against the team's contract:</p>
 <pre class="highlight"><code class="language-bash">pixi run check turtle</code></pre>
 <p><strong>You should see</strong> <code>0 failed</code> at the end. The contract is <code>docs/interfaces.yaml</code>: every

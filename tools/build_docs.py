@@ -77,6 +77,8 @@ PAGES = [
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),
     ('actuator-tests.md', 'Actuator tests', 'Measure how the car moves: on stands, in a lot'),
     ('ghost-obstacles.md', 'Ghost obstacles', 'A pretend person only Nav2 sees: test stopping'),
+    ('sources-and-targets.md', 'Sources and targets',
+     'The sensor mux and the output mux: simulated data never drives the car'),
     ('mcp.md', 'AI apps (MCP)', 'Claude and other AI apps: read the project and the graph'),
     ('plain-english.md', 'Plain English', 'Type what the car should do; a model plans it'),
     ('model-comparison.md', 'Newer models', 'YOLO26 and RF-DETR vs YOLO11; newer local LLMs'),

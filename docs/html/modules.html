@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">32 min read · 15 sections</div></header>
+<div class="meta">33 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -144,7 +145,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><a href="#mux-and-ego">Mux and ego</a></td>
-<td><code>aav_mux</code>, <code>aav_ego</code></td>
+<td><code>aav_mux</code>, <code>aav_io_mux</code>, <code>aav_ego</code></td>
 </tr>
 <tr>
 <td><a href="#backends">Backends</a></td>
@@ -799,6 +800,53 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 </tbody>
 </table></div>
+<h3 id="aav_io_mux">aav_io_mux</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Does</strong></td>
+<td>the sensor mux checks that every sensor comes from one source (<code>source:=</code>); the output mux sends ego's command to one target (<code>target:=</code>), the real car only while every source is REAL</td>
+</tr>
+<tr>
+<td><strong>Why</strong></td>
+<td>simulated data must never drive the real car (S-4)</td>
+</tr>
+<tr>
+<td><strong>Runs on</strong></td>
+<td>the Orin, next to ego</td>
+</tr>
+<tr>
+<td><strong>In → out</strong></td>
+<td><code>/ego/actuator_cmd</code>, <code>/system/source</code>, the ROS graph → <code>/control/&lt;target&gt;/actuator_cmd</code>, <code>/system/sensor_mux/state</code>, <code>/safety/output_mux/state</code></td>
+</tr>
+<tr>
+<td><strong>Origin</strong></td>
+<td>ours (the proposal's sensor and output muxes)</td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td><span class="badge b-works">works</span> in its tests and in every profile; <span class="badge b-untested">untested</span> on the car</td>
+</tr>
+<tr>
+<td><strong>Run alone</strong></td>
+<td><code>ros2 launch aav_io_mux io_mux.launch.py target:=car</code></td>
+</tr>
+<tr>
+<td><strong>Test</strong></td>
+<td><code>test/test_provenance.py</code> (in <code>tools/test.sh</code>), <code>test/test_real_backend_guard.py</code> (<code>pixi run test</code>)</td>
+</tr>
+<tr>
+<td><strong>Read first</strong></td>
+<td><code>aav_io_mux/provenance.py</code>, then <a href="sources-and-targets.html">Sources and targets</a></td>
+</tr>
+</tbody>
+</table></div>
 <h3 id="aav_ego">aav_ego</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -848,7 +896,8 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </table></div>
 </section>
 <section class="card"><h2 id="backends">Backends</h2>
-<p>Exactly one runs at a time. Each reads <code>/ego/actuator_cmd</code> and reports <code>/vehicle/odom</code>.</p>
+<p>Exactly one runs at a time. Each reads ego's commands from the output mux, on its own
+<code>/control/&lt;target&gt;/actuator_cmd</code>, and reports <code>/vehicle/odom</code>.</p>
 <h3 id="aav_spine">aav_spine</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -872,7 +921,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/ego/actuator_cmd</code>, <code>/safety/estop</code>, <code>/can/rx</code> → <code>/can/tx</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/vehicle/joint_states</code>; service <code>/spine/arm</code></td>
+<td><code>/control/car/actuator_cmd</code> (or <code>bench</code>, <code>gazebo</code>), <code>/safety/estop</code>, <code>/can/rx</code> → <code>/can/tx</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/vehicle/joint_states</code>; service <code>/spine/arm</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
@@ -919,7 +968,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/ego/actuator_cmd</code>, <code>/safety/estop</code> → serial <code>/dev/ttyAMA0</code> (use <code>/dev/serial0</code>); UDP port 10111 → <code>/vehicle/odom</code></td>
+<td><code>/control/car/actuator_cmd</code>, <code>/safety/estop</code> → serial <code>/dev/ttyAMA0</code> (use <code>/dev/serial0</code>); UDP port 10111 → <code>/vehicle/odom</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
@@ -966,7 +1015,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/ego/actuator_cmd</code>, <code>/turtle1/pose</code> → <code>/turtle1/cmd_vel</code>, <code>/vehicle/odom</code></td>
+<td><code>/control/turtle/actuator_cmd</code>, <code>/turtle1/pose</code> → <code>/turtle1/cmd_vel</code>, <code>/vehicle/odom</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
@@ -1013,7 +1062,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/ego/actuator_cmd</code>, <code>/gazebo/odom</code>, <code>/gazebo/imu</code>, <code>/gazebo/navsat</code>, <code>/gazebo/radar/points</code> → <code>/gazebo/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/sensors/imu/data_raw</code>, <code>/sensors/gps/fix</code>, <code>/sensors/radar/points</code>. The road world's bridges add <code>/sensors/camera/front_left/*</code>, <code>/sensors/lidar/points</code> and <code>/vehicle/gazebo/truth</code></td>
+<td><code>/control/gazebo/actuator_cmd</code>, <code>/gazebo/odom</code>, <code>/gazebo/imu</code>, <code>/gazebo/navsat</code>, <code>/gazebo/radar/points</code> → <code>/gazebo/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/sensors/imu/data_raw</code>, <code>/sensors/gps/fix</code>, <code>/sensors/radar/points</code>. The road world's bridges add <code>/sensors/camera/front_left/*</code>, <code>/sensors/lidar/points</code> and <code>/vehicle/gazebo/truth</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
@@ -1060,7 +1109,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/ego/actuator_cmd</code>, <code>/safety/estop</code> → odom, status, IMU, GPS, cameras, radar, lidar, <code>/clock</code>, <code>/vehicle/carla/truth</code></td>
+<td><code>/control/carla/actuator_cmd</code>, <code>/safety/estop</code> → odom, status, IMU, GPS, cameras, radar, lidar, <code>/clock</code>, <code>/vehicle/carla/truth</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>

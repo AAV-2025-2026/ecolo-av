@@ -20,6 +20,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_language` | drivers | plain English: a local model plans drive tools, you say yes | [[works]] Gazebo and the turtle | new |
 | `aav_navigation` | drivers | Nav2, set up for a car, and the maps | [[works]] goals reached in Gazebo | new |
 | `aav_mux` | mux | twist_mux: the priorities and the e-stop lock | [[works]] | new |
+| `aav_io_mux` | mux | the sensor mux and the output mux: simulated data never drives the real car | [[works]] turtle, Gazebo and the bench; [[untested]] on the car | new |
 | `aav_ego` | ego | one command → speed and steering the car can do | [[works]] | new |
 | `aav_spine` | backends | the real car: ego's commands as CAN frames | [[works]] on the bench, against `spine_sim`; no spine board yet | new |
 | `aav_legacy` | backends | today's car: the 2025-26 ESP32 over UART, and the wheel encoder | [[untested]] on the car | new, for the 2025-26 protocols |
@@ -73,6 +74,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `aav_navigation` | `/localization/odom/local`, `/map`, `/goal_pose` | `/drivers/nav/cmd_vel`, `/plan` | SmacPlannerHybrid and MPPI (or Regulated Pure Pursuit); GPS waypoints through `/follow_gps_waypoints` |
 | `aav_mux` (twist_mux) | every `/drivers/<driver>/cmd_vel`, `/safety/estop` | `/control/cmd_vel` | priorities: [Build a driver](howto-driver.md) |
 | `aav_ego` | `/control/cmd_vel` | `/ego/actuator_cmd`, 50 times a second | 1.0 m/s top speed, ±0.5 rad, brakes after 0.3 s without a command |
+| `aav_io_mux` | `/ego/actuator_cmd`, `/system/source`, who publishes each sensor | `/control/<target>/actuator_cmd`, `/system/sensor_mux/state`, `/safety/output_mux/state` | the real car's commands only while every source is REAL: [Sources and targets](sources-and-targets.md) |
 
 ## Perception
 
@@ -88,7 +90,7 @@ perception came in on 10 October, the lane finder on 11 October.
 
 ## Backends
 
-Each backend reads `/ego/actuator_cmd` and reports the car's speed on `/vehicle/odom`.
+Each backend reads ego's commands from the output mux (`/control/<target>/actuator_cmd`) and reports the car's speed on `/vehicle/odom`.
 Only one runs at a time.
 
 | Package | Plays the car with | Also |

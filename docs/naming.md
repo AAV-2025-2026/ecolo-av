@@ -24,11 +24,11 @@ same areas as the folders under `src/`, plus `/system/` for the whole run.
 | `/localization/` | where the car is | the EKFs, navsat_transform |
 | `/perception/` | what the car sees | the detectors, the lane finder, radar clusters |
 | `/drivers/` | one command per driver | joystick, keyboard, scripted, Nav2, AI, replay |
-| `/control/` | the chosen command | twist_mux, the smoother |
+| `/control/` | the chosen command; ego's command for one target, `/control/<target>/actuator_cmd` | twist_mux, the smoother, the output mux (23 Oct) |
 | `/ego/` | the command for the wheels | ego |
 | `/safety/` | e-stop, collision monitor | the HUD button, collision_monitor |
 | `/hud/` | what only the screen needs | the HUD |
-| `/system/` | what kind of run this is: `/system/source` (real, sim, bench, replay) | the backends, the bench, a replay (added 15 Oct, `READ-ME-FULL-SIMULATION.md`) |
+| `/system/` | what kind of run this is: `/system/source` (real, sim, bench, replay); the sensor mux's check, `/system/sensor_mux/state` | the backends, the bench, a replay (added 15 Oct, `READ-ME-FULL-SIMULATION.md`); the sensor mux (23 Oct) |
 
 Global names stay global, because every ROS tool expects them: `/tf`, `/tf_static`,
 `/clock`, `/robot_description`, `/joint_states`, `/diagnostics`, `/rosout`,
@@ -85,7 +85,7 @@ config files name their nodes `/**/joy_node` and so on, so they match in any nam
 | `/cmd_vel/remote` (it was the keyboard) | `/drivers/keyboard/cmd_vel` (twist_mux's slot `keyboard`) |
 | `/cmd_vel` (twist_mux out) | `/control/cmd_vel` |
 | `/cmd_vel_smoothed` | `/control/cmd_vel_smoothed` |
-| `/ego/actuator_cmd` | unchanged |
+| `/ego/actuator_cmd` | unchanged; since 23 Oct the backends read `/control/<target>/actuator_cmd`, from the output mux ([Sources and targets](sources-and-targets.md)) |
 | `/estop` | `/safety/estop` |
 | `/collision_monitor_state` | `/safety/collision_monitor/state` |
 | `/collision_monitor/stop_zone`, `.../collision_points_marker` | `/safety/collision_monitor/stop_zone`, `.../collision_points_marker` |

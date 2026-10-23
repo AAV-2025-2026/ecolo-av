@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -286,6 +287,13 @@ files hand them to every part that needs them.</p>
 </table></div>
 <p>Each backend reports the car's speed back on <code>/vehicle/odom</code>. That closes the loop into
 the EKFs.</p>
+<h3 id="the-output-mux-one-target-and-the-real-car-only-on-real-data">The output mux: one target, and the real car only on real data</h3>
+<p>No backend reads <code>/ego/actuator_cmd</code> itself. The <strong>output mux</strong> (<code>target:=</code>) passes ego's
+command on to its target's own topic, and the <strong>sensor mux</strong> (<code>source:=</code>) checks where
+the data comes from. See <a href="sources-and-targets.html">Sources and targets</a>.</p>
+<pre class="highlight"><code class="language-text">ego ─/ego/actuator_cmd─► output_mux ─/control/car/actuator_cmd─► spine_bridge, legacy_uart_bridge
+                           ▲  (only while every source is REAL; else silent, latched)
+        sensor_mux ────────┘  /system/sensor_mux/state</code></pre>
 </section>
 <section class="card"><h2 id="7-safety-layers">7. Safety layers</h2>
 <p>From the person outward. Each layer works even if everything after it fails.</p>
@@ -312,6 +320,11 @@ the EKFs.</p>
 <td>3</td>
 <td>ego's timeout</td>
 <td>no command arrives for 0.3 s</td>
+</tr>
+<tr>
+<td>3a</td>
+<td>The output mux</td>
+<td>any source isn't REAL (a simulator, the bench, a replay on the network), or the sensor mux says no or goes quiet: it sends nothing, latched</td>
 </tr>
 <tr>
 <td>4</td>

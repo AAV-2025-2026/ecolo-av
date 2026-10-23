@@ -3,7 +3,7 @@ turtlesim as the car: the quickest whole-loop test, on any laptop.
 
   ros2 launch aav_turtlesim turtlesim.launch.py
 
-  /ego/actuator_cmd ──> turtlesim_adapter ──> /turtle1/cmd_vel ──> turtlesim
+  /control/turtle/actuator_cmd ──> turtlesim_adapter ──> /turtle1/cmd_vel ──> turtlesim
   /turtle1/pose ──> turtlesim_adapter ──> /vehicle/odom
 
 The turtle steers like the car (same wheelbase, bicycle model). Its world is

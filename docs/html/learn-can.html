@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -508,7 +509,7 @@ one-line command prints every value.
 <tbody>
 <tr>
 <td><code>spine_bridge</code></td>
-<td>0.1 s without <code>/ego/actuator_cmd</code></td>
+<td>0.1 s without a command (<code>/control/car/actuator_cmd</code>)</td>
 <td><code>src/backends/aav_spine/config/spine.yaml</code></td>
 </tr>
 <tr>
@@ -527,7 +528,7 @@ one-line command prints every value.
 reboot never restarts the car by itself (<a href="firmware.html">Firmware</a>).</p>
 </section>
 <section class="card"><h2 id="8-from-ros-to-the-wire">8. From ROS to the wire</h2>
-<pre class="highlight"><code class="language-text">/ego/actuator_cmd ─► spine_bridge ─► /can/tx ─► socket_can_sender ─► can0 ─► the bus
+<pre class="highlight"><code class="language-text">/ego/actuator_cmd ─► output_mux ─► spine_bridge ─► /can/tx ─► socket_can_sender ─► can0 ─► the bus
 the bus ─► can0 ─► socket_can_receiver ─► /can/rx ─► spine_bridge ─► /vehicle/odom, /vehicle/status</code></pre>
 <div class="table-wrap"><table>
 <thead>

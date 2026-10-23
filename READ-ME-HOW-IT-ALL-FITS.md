@@ -29,7 +29,7 @@ deeper on two parts of this page.
 |---|---|---|---|---|
 | 1 | Boards | CAN frames, UART bytes | the boards | unit tests on a laptop (`spine-core`, `wheel-core`); the bench's spine simulator |
 | 2 | Sensors | `/sensors/...` topics | the Pi or Orin the device plugs into | Gazebo (all sensors); the car |
-| 3 | Backend | `/vehicle/odom`, `/vehicle/status` up; `/ego/actuator_cmd` down | Orin #1 (CAN); Motor-Pi (today) | turtle, bench, Gazebo |
+| 3 | Backend | `/vehicle/odom`, `/vehicle/status` up; `/control/<target>/actuator_cmd` down (from the output mux) | Orin #1 (CAN); Motor-Pi (today) | turtle, bench, Gazebo |
 | 4 | Where am I | TF `map → odom → base_link`, `/localization/...` | Orin #1 | turtle (local only), bench, Gazebo, replay a bag |
 | 5 | Perception | `/perception/...` | Orin #2 (later); Orin #1 or a laptop today | bench (`--perception`), Gazebo road world |
 | 6 | Drivers | `/drivers/<name>/cmd_vel` | Orin; laptop for keyboard/joystick | turtle, bench, Gazebo |

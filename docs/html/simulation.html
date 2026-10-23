@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -67,7 +68,7 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#the-test-ladder">The test ladder</a><a href="#more-drivers-in-the-turtle-run">More drivers in the turtle run</a><a href="#gazebo">Gazebo</a><a href="#the-road-world-the-cars-whole-graph">The road world: the car&#x27;s whole graph</a><a href="#sensor-failures-on-purpose">Sensor failures on purpose</a><a href="#replay-a-recorded-drive">Replay a recorded drive</a><a href="#carla-reopened">CARLA: reopened</a><a href="#when-nothing-moves">When nothing moves</a></nav>
-<div class="lead"><p>Every backend takes the same <code>/ego/actuator_cmd</code>, so the drivers, mux, ego and
+<div class="lead"><p>Every backend takes the same ego command (through the output mux), so the drivers, mux, ego and
 localization run unchanged whether the "car" is a turtle, Gazebo, or the real thing. Climb
 the ladder one rung at a time.</p>
 <p><code>pixi run sim</code> and <code>pixi run turtle</code> stay on this computer: other terminals here see them,
@@ -466,7 +467,7 @@ ones once the tests are done: no code changes.
   passes <code>vehicle.gazebo_steering_limit</code> (0.578) instead: the middle wheel then reaches
   0.5. Measured: 0.484 rad at full lock, the last 3% tyre slip (<a href="actuator-tests.html">Actuator tests</a>).</li>
 <li><code>actuator_model:=false</code> keeps the old behaviour (in the adapter), to compare the two.</li>
-<li>No <code>/ego/actuator_cmd</code> for 0.2 s: the model brakes to a stop, like the spine's watchdog.
+<li>No command for 0.2 s: the model brakes to a stop, like the spine's watchdog.
   For the spine's real watchdog, e-stops and arming: <a href="#the-spine-in-the-loop-spinetrue"><code>spine:=true</code></a>.</li>
 <li>Plot command against measured: <code>/vehicle/steering</code>, <code>/vehicle/throttle</code>, <code>/vehicle/brake</code>
   (Foxglove or PlotJuggler).</li>
@@ -566,7 +567,7 @@ pixi run sim-check --spine                # tests it (3 more minutes)</code></pr
 </thead>
 <tbody>
 <tr>
-<td>Takes <code>/ego/actuator_cmd</code></td>
+<td>Takes ego's commands (<code>/control/gazebo/actuator_cmd</code>)</td>
 <td><code>gazebo_adapter</code></td>
 <td><code>spine_bridge</code> (only one backend at a time)</td>
 </tr>
@@ -1417,8 +1418,8 @@ as <code>replay</code> (priority 40). It's open loop, so the car drifts from the
 </tr>
 <tr>
 <td>4</td>
-<td>Is a backend listening?</td>
-<td><code>ros2 topic info /ego/actuator_cmd -v</code></td>
+<td>Is the output mux open, and a backend listening?</td>
+<td><code>ros2 topic echo /safety/output_mux/state</code> says OPEN; <code>ros2 topic info /control/gazebo/actuator_cmd -v</code></td>
 </tr>
 <tr>
 <td>5</td>

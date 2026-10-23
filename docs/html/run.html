@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -163,7 +164,7 @@ pixi run build     # compiles our packages, in about 15 s</code></pre>
 </tbody>
 </table></div>
 <p>Hold the key down: the turtle stops about half a second after you let go. The path is
-keyboard → <code>/drivers/keyboard/cmd_vel</code> → twist_mux → ego → <code>/ego/actuator_cmd</code> → turtle.</p>
+keyboard → <code>/drivers/keyboard/cmd_vel</code> → twist_mux → ego → <code>/ego/actuator_cmd</code> → output_mux → turtle.</p>
 <div class="admonition note">
 <p class="admonition-title">Is this different from the regular turtlesim?</p>
 <p>No, it's the stock turtlesim. Our <code>turtlesim_adapter</code> steers it with the car's bicycle
