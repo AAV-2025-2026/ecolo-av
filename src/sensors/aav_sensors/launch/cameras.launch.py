@@ -46,6 +46,6 @@ def generate_launch_description():
         DeclareLaunchArgument('left', default_value='/dev/aav/camera_left'),
         DeclareLaunchArgument('right', default_value='',
                               description='the right camera, e.g. /dev/aav/camera_right'),
-        camera('left', LaunchConfiguration('left'), '/camera'),
+        camera('left', LaunchConfiguration('left'), '/sensors/camera/front_left'),
         camera('right', LaunchConfiguration('right'), '/sensors/camera/front_right'),
     ])
