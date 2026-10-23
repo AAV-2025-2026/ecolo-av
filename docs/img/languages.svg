@@ -66,6 +66,6 @@
   <path class="line" d="M400,381 L468,381"/>
   <text class="lbl" x="434" y="373" text-anchor="middle">CAN</text>
   <rect class="ours" x="470" y="352" width="410" height="58" rx="8"/>
-  <text class="t" x="675" y="376" text-anchor="middle">spine_bridge: a Python node</text>
-  <text class="s" x="675" y="396" text-anchor="middle">turns CAN frames into ROS topics, and back</text>
+  <text class="t" x="675" y="376" text-anchor="middle">spine_bridge: a Rust node (rclrs)</text>
+  <text class="s" x="675" y="396" text-anchor="middle">CAN frames to ROS topics and back, on spine-core</text>
 </svg>
