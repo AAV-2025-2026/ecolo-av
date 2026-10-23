@@ -31,6 +31,8 @@ carla-car = { cmd = "tools/ros.sh --local ros2 launch aav_bringup carla.launch.p
 ghost = { cmd = "tools/ros.sh ros2 run aav_ghost ghost", description = "A pretend person in Nav2's view, with sim or car ghost:=true: pixi run ghost ahead 10 (m past the bumper), ghost at 20 0 (map x y), ghost size 0.3 1.2, ghost off; ghost --local ... for Gazebo on this computer (docs/ghost-obstacles.md)" }
 car = { cmd = "tools/ros.sh ros2 launch aav_bringup car.launch.py machine:={{ machine }}", args = [{ arg = "machine", default = "all" }], description = "The real car: pixi run car orin (or motor_pi, laptop, all)" }
 view = { cmd = "tools/ros.sh --local ros2 launch aav_description view.launch.py", description = "The car model in RViz (this computer only)" }
+bandwidth = { cmd = "tools/ros.sh python3 tools/bandwidth.py", description = "Measure every topic of a running system: Hz, message size, MB/s, as one table, biggest first (--seconds 30, --include /sensors, --markdown; docs/bandwidth.md)" }
+can-load = { cmd = "python3 tools/can_load.py", description = "How busy the CAN bus is: every frame in firmware/can/aav.dbc, its size and rate, and the bus load at its bitrate (docs/bandwidth.md)" }
 graph = { cmd = "tools/ros.sh rqt_graph", description = "Live picture of nodes and topics" }
 graph-picture = { cmd = "tools/ros.sh python3 tools/graph_picture.py", description = "Save the running graph as docs/img/graph.svg and .png (start a profile first)" }
 check = { cmd = "tools/ros.sh python3 tools/check_graph.py --profile {{ profile }}", args = [{ arg = "profile", default = "turtle" }], description = "Running graph vs the contract: pixi run check [turtle|sim|road|spine|car|replay|bench]" }

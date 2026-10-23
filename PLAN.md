@@ -77,7 +77,7 @@ the next concrete step.
 | T1.4 | Raspberry Pis to Ubuntu 24.04 | 27 Nov | 🔧 | 10 | one imaging script; the car kit is ready (`pixi run car-kit`) |
 | T1.5 | One launch, `target:=` and `source:=`; the sensor mux and output mux | 4 Dec | 🔧 | 40 | today: one launch per target (`turtle`, `sim`, `bench`, `car`). Write the two mux nodes, or agree that launch-time choice is enough (decision D3 below) |
 | T1.6 | Contract test | 4 Dec | ✅ | 80 | add topic rates to the nightly check |
-| T1.7 | Measure the computers and the network | 18 Dec | 🔧 | 20 | the load report on the Mac (22 Oct, below); then the Orin |
+| T1.7 | Measure the computers and the network | 18 Dec | 🔧 | 35 | the load report on the Mac (22 Oct, below); the bandwidth budget (23 Oct, [bandwidth](docs/bandwidth.md)): only raw cameras overflow a link, CAN 8.5% busy; `pixi run bandwidth` measured Gazebo (33-35 MB/s). Next: run it on the car, then the Orin's CPU |
 | T1.8 | Port to Rust, one module at a time | Jan-Mar | 🔧 | 50 | IMU and radar done; next the CAN bridge (`aav_spine`) and the battery monitor |
 | T1.9 | Second Orin (stretch) | Feb-Mar | 🎯 | 0 | KEFC decision, 2 Nov |
 

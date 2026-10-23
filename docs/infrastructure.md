@@ -117,6 +117,8 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `graph` | rqt_graph: nodes and topics, live |
 | `graph-picture` | saves the running graph as `docs/img/graph.svg` and `.png` |
 | `check` | the running graph against the contract: `pixi run check sim` |
+| `bandwidth` | every topic's rate, size and MB/s, biggest first: `pixi run bandwidth --local` beside `pixi run sim`. [Bandwidth](bandwidth.md) |
+| `can-load` | how busy the CAN bus is, from `firmware/can/aav.dbc` |
 | `estop`, `estop-clear` | stop every driver; let them go again |
 | `doctor` | can this computer join the car's ROS network? |
 | `rust-listener` | the Rust example: prints ego's commands |
@@ -148,6 +150,8 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `check_graph.py` | compares a running system with `docs/interfaces.yaml` | `pixi run check <profile>` |
 | `gen_interfaces_md.py` | makes the Topics page from the contract | see the contracts table |
 | `doctor.py` | network checks for joining the car | `pixi run doctor` |
+| `bandwidth.py`, `topic_load.py` | measures every topic's rate and load; the numbers (no ROS) | `pixi run bandwidth` |
+| `can_load.py` | the CAN bus load from the DBC's frames and rates (no ROS) | `pixi run can-load` |
 | `record.sh` | records a drive into `bags/` | `pixi run tools/record.sh <name>` |
 | `replay_commands.sh` | plays a recorded drive's commands back into the mux | `pixi run tools/ros.sh tools/replay_commands.sh <bag>` |
 | `make_map.py` | draws a Nav2 map from a short spec | `pixi run python tools/make_map.py <spec>` |
