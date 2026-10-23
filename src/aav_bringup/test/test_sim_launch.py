@@ -142,6 +142,17 @@ def test_faults_route_the_camera_and_the_watchdog_can_be_left_out():
     assert 'watchdog.launch.py' not in included(started(SIM, world='road', watchdog='false'))
 
 
+def test_the_watchdog_wants_the_hud_only_where_one_runs():
+    assert 'hud' not in included(started(SIM))['watchdog.launch.py']['inputs'].split(',')
+    sent = included(started(SIM, hud='true'))
+    assert 'hud.launch.py' in sent
+    assert 'hud' in sent['watchdog.launch.py']['inputs'].split(',')
+    # sim-check --faults: no window, the check itself beats for it.
+    sent = included(started(SIM, watch_hud='true'))
+    assert 'hud.launch.py' not in sent
+    assert 'hud' in sent['watchdog.launch.py']['inputs'].split(',')
+
+
 def test_the_mux_needs_the_watchdogs_heartbeat_only_where_it_runs():
     assert included(started(SIM))['mux.launch.py']['sensor_lock'] == 'true'
     # Without the watchdog, nothing would ever open the fail-safe lock: Nav2 couldn't drive.

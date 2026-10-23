@@ -27,6 +27,7 @@ a second program. Each opens full screen on its own monitor at boot:
 | Controls | steering (left of centre = left), throttle, brake |
 | Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange **SIMULATED** / **BENCH** / **REPLAY** band along its bottom when `/system/source` says any data isn't the real car's; the sensor watchdog's banner (15 Oct): red **STOP: gps STALE (...)** while it holds Nav2, amber for a warning, red **SENSOR WATCHDOG SILENT** if it stops talking (twist_mux then holds Nav2 for its silence) ([simulation](simulation.md#sensor-failures-on-purpose)) |
 | E-STOP | the button: `/safety/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
+| (nothing on screen) | the heartbeat, `/hud/heartbeat`: below |
 | Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where `/system/source` names it |
 | GPS | is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age |
 
@@ -59,6 +60,37 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 - `--monitor NAME|N` picks the monitor (its name exactly, or its number);
   `--list-monitors` prints them. A missing monitor is an error, never a guess.
 
+### The heartbeat
+
+The safety drivers rely on this screen, so the sensor watchdog must know it's alive
+(23 Oct, PLAN T9.8).
+
+```text
+ window draws a frame --> count + 1
+ every 10 ms, the e-stop's timer (ROS thread):
+     0.1 s since the last beat, and the count rose?  --> /hud/heartbeat = count (10 Hz)
+ sensor_watchdog, input hud:  quiet 1 s, or the count stuck 1 s  --> STOP: Nav2 and the AI slot
+```
+
+| What fails | What happens |
+|---|---|
+| The window freezes | the count stops rising: no more beats |
+| The ROS thread freezes | the timer stops: no beats, and no e-stop either. The watchdog stops Nav2 |
+| The program dies | no beats. systemd restarts it in 5 s; the lock opens once it beats again |
+| The HUD never started | the watchdog says `hud NEVER`: Nav2 never drives |
+
+| Profile | Watched? |
+|---|---|
+| Car | yes: `car.launch.py watch_hud:=true`, the default. `watch_hud:=false` for a session with no HUD screen |
+| Gazebo | with `hud:=true` (the window), or `watch_hud:=true` (something else beats) |
+| Bench, turtle, CARLA | no: no HUD window there |
+
+- People, the joystick and the e-stop are never held by it: only Nav2 and the AI slot.
+- The e-stop button doesn't depend on it. It's the same timer, so a beat also proves the
+  e-stop's sender runs.
+- The logic: `hud-core` `heartbeat` (no ROS). The watchdog's side: `kind: heartbeat` in
+  `aav_safety`'s `sensor_watchdog.yaml`.
+
 ### Tested (15 October, a Mac)
 
 | What | Result |
@@ -71,6 +103,9 @@ Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
 | A click on the window's button | not tested: macOS blocks clicks from scripts  |
 | The sensor watchdog's banner (15 Oct) | its logic: `cargo test` (hud-core `watchdog`, `state`), shared with the map window. Not seen on screen yet |
 | The SIMULATED / BENCH / REPLAY banner (15 Oct) | its logic: `cargo test` (hud-core `origin`, and the message's numbers in hud-app). Not seen on screen yet: the window couldn't open from that session |
+| The heartbeat, through the real node (23 Oct, `cargo test`) | none before the first frame; 15-21 beats in 2 s of drawing, each count higher; none once drawing stops, and the e-stop's 5 trues still go out |
+| The heartbeat, the real window and the watchdog (23 Oct, private domain) | 9.3 beats a second; `hud NEVER` before it opened, `OK` while it ran; frozen (SIGSTOP) or closed: `hud STALE` and the lock on within about 1 s; thawed: `OK` again |
+| The heartbeat in Gazebo (23 Oct, `sim-check --faults`, `hud stop`, twice) | the check beats in the window's place; when it stops, Nav2's car stands still 2.5 s later |
 
 ### What it shows with each backend
 

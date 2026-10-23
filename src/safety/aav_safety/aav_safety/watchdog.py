@@ -15,13 +15,18 @@ What counts as wrong, per input (each check only where its rule asks for it):
           max_age), as navsat_transform ignores those fixes too
   FROZEN  the same values again and again for frozen_after seconds (a driver stuck,
           sending its last message with fresh stamps). For a camera only while the car
-          moves: a still car in a still world sees the same picture
+          moves: a still car in a still world sees the same picture. For a heartbeat: its
+          count stopped rising
   JUMP    two GPS fixes further apart than max_jump_speed allows in the time between
           their stamps, plus jump_margin for the fixes' own noise. Latched: the position
           after a jump can't be trusted until a person says so (clear())
   DISAGREE  the wheels' speed or turn against the IMU's and the GPS's, where the odom
           rule has a cross_check (wheel_check.py): a wheel speed frozen while the car
           speeds up, brakes, turns or drives on faster. Latched, as a jump
+
+A heartbeat input (kind heartbeat) is a program saying it is alive, not a sensor: the
+HUD's /hud/heartbeat, the number of frames its screen has drawn. Silence (STALE, or NEVER
+before its first) means the screen froze or died; a count that stops rising is FROZEN.
 
 Times are seconds on the node's clock (Gazebo's, in the simulator).
 """
@@ -39,7 +44,7 @@ NAN = 'NAN'
 FROZEN = 'FROZEN'
 JUMP = 'JUMP'
 
-KINDS = ('odom', 'imu', 'gps', 'image', 'cloud')
+KINDS = ('odom', 'imu', 'gps', 'image', 'cloud', 'heartbeat')
 EARTH_RADIUS = 6371000.0    # m
 MOVING = 0.2                # m/s: faster than this, the camera's picture must change
 

@@ -11,6 +11,9 @@ The real car. One launch file for every machine; a machine file picks the parts.
       [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [ghost:=false]      (true: a pretend person in Nav2's view, where Nav2 runs, for
                            stopping tests with nothing real to hit: pixi run ghost ahead 10)
+      [watch_hud:=true]   (the safety drivers rely on the HUD: the sensor watchdog stops
+                           Nav2 and the AI slot while its /hud/heartbeat is missing. false:
+                           a session with no HUD screen, said in the test card)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
@@ -23,7 +26,8 @@ Parts and what they start:
   description     robot_state_publisher (+ joint_state_publisher): the car's frames
   mux, ego        twist_mux -> /control/cmd_vel -> ego -> /ego/actuator_cmd; with the
                   mux, the sensor watchdog (aav_safety): it stops Nav2 and the AI slot when
-                  a sensor they need fails, and they stop too if it goes quiet
+                  a sensor they need fails, or the HUD's screen (watch_hud), and they stop
+                  too if it goes quiet
   teleop          joystick -> /drivers/joy/cmd_vel, e-stop button -> /safety/estop
   scripted        /scripted_drive action -> /drivers/scripted/cmd_vel
   goto            /goto action (drive to a GPS point, stop there) -> /drivers/goto/cmd_vel
@@ -228,9 +232,11 @@ def launch_setup(context):
         # The sensor watchdog, next to the mux: twist_mux's sensors lock stops Nav2 and the
         # AI slot when the wheels, the IMU, the GPS or an EKF fail (aav_safety), and when
         # the watchdog itself goes quiet (the lock's 1 s timeout). Nav2 and the sensors may
-        # run on other machines: it watches their topics over the network.
+        # run on other machines: it watches their topics over the network. The HUD starts
+        # on its own (aav-hud.service), wherever the screen is: its heartbeat says it lives.
         actions.append(include('aav_safety', 'watchdog.launch.py',
-                               inputs='odom,imu,local,global' + (',gps' if flag('gps') else '')))
+                               inputs='odom,imu,local,global' + (',gps' if flag('gps') else '')
+                               + (',hud' if flag('watch_hud') else '')))
     if on('ego'):
         actions.append(include('aav_ego', 'ego.launch.py'))
     if on('teleop'):
@@ -333,6 +339,11 @@ def generate_launch_description():
         DeclareLaunchArgument('ghost', default_value='false',
                               description="true: a pretend person in Nav2's view, placed "
                                           'with pixi run ghost ahead 10 (it only adds)'),
+        # The safety drivers rely on the HUD (PLAN T9.8): no heartbeat, no Nav2.
+        DeclareLaunchArgument('watch_hud', default_value='true',
+                              description='true: the sensor watchdog stops Nav2 and the AI '
+                                          "slot while the HUD's /hud/heartbeat is missing; "
+                                          'false: a session with no HUD screen'),
         DeclareLaunchArgument('start_x', default_value='0.0'),
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0',

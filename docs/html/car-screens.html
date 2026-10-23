@@ -311,6 +311,12 @@ bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --screens             # b
 </tr>
 </tbody>
 </table></div>
+<blockquote>
+<p><strong>No HUD, no Nav2.</strong> The HUD sends a <a href="hud.html#the-heartbeat">heartbeat</a>. On the car,
+the sensor watchdog stops Nav2 and the AI slot while it's missing: stopping <code>aav-hud</code>
+holds them too. A session with no HUD screen: <code>car.launch.py watch_hud:=false</code>, written
+on the test card.</p>
+</blockquote>
 </section>
 <section class="card"><h2 id="the-2025-26-way-for-comparison">The 2025-26 way, for comparison</h2>
 <p>Their UI Pi started three scripts from systemd system services (<code>hud/scripts/*_bootup.sh</code>):

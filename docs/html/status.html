@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">14 min read · 4 sections</div></header>
+<div class="meta">15 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -192,7 +192,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Sensor watchdog (15 Oct)</td>
 <td><code>aav_safety</code> <code>sensor_watchdog</code>: a twist_mux lock, the HUD's banner</td>
-<td><span class="badge b-works">works</span> in Gazebo: all 13 faults on purpose (<code>pixi run sim-fault</code>, <code>sim-check --faults</code>) stop Nav2 and say why, frozen wheels (cross-checked with the IMU and GPS) and the watchdog's own death (a fail-safe lock) too. On the bench, <code>bench-check</code> passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. <span class="badge b-untested">untested</span> on the car (<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>)</td>
+<td><span class="badge b-works">works</span> in Gazebo: the faults on purpose (<code>pixi run sim-fault</code>, <code>sim-check --faults</code>) stop Nav2 and say why, 14 now with the HUD's heartbeat (23 Oct: a frozen or dead HUD stops Nav2 on the car, <code>watch_hud</code>; <a href="hud.html#the-heartbeat">HUD</a>), frozen wheels (cross-checked with the IMU and GPS) and the watchdog's own death (a fail-safe lock) too. Frozen wheels were caught in 1 of 4 tries on 23 Oct (flaky, not yet known why). On the bench, <code>bench-check</code> passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. <span class="badge b-untested">untested</span> on the car (<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>)</td>
 </tr>
 <tr>
 <td>Real car</td>
@@ -282,7 +282,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>HUD in Rust (raylib)</td>
 <td><code>aav_hud_raylib</code></td>
-<td><span class="badge b-works">works</span> on a Mac: <code>--demo</code>, and as a node fed by <code>ros2 topic pub</code>; its e-stop reaches a subscriber as 5 trues. <span class="badge b-works">works</span> next to bench mode too. <span class="badge b-untested">untested</span> on a Pi and on the car's screen</td>
+<td><span class="badge b-works">works</span> on a Mac: <code>--demo</code>, and as a node fed by <code>ros2 topic pub</code>; its e-stop reaches a subscriber as 5 trues. Its heartbeat (23 Oct): the real window beat at 9.3 Hz, and freezing or closing it made the watchdog say <code>hud STALE</code> in 1 s. <span class="badge b-works">works</span> next to bench mode too. <span class="badge b-untested">untested</span> on a Pi and on the car's screen</td>
 </tr>
 <tr>
 <td>CARLA</td>

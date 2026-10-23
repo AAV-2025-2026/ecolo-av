@@ -108,6 +108,11 @@ Already installed? Just the screens: `bash ~/aav-jazzy/aav/tools/car_screens_ins
 | Never start them | `bash ~/aav-jazzy/aav/tools/car_screens_install.sh uninstall` (keeps `screens.env`) |
 | Try one by hand | `~/aav-jazzy/aav.sh ros2 launch aav_hud_raylib map.launch.py fullscreen:=true monitor:=HDMI-1` |
 
+> **No HUD, no Nav2.** The HUD sends a [heartbeat](hud.md#the-heartbeat). On the car,
+> the sensor watchdog stops Nav2 and the AI slot while it's missing: stopping `aav-hud`
+> holds them too. A session with no HUD screen: `car.launch.py watch_hud:=false`, written
+> on the test card.
+
 ## The 2025-26 way, for comparison
 
 Their UI Pi started three scripts from systemd system services (`hud/scripts/*_bootup.sh`):

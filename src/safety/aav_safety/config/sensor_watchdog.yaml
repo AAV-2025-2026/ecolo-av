@@ -57,6 +57,12 @@ sensor_watchdog:
       max_age: 1.0
       stop: true
       frozen_after: 1.0         # only while the wheels turn: a still car sees a still picture
+    hud:                        # the HUD's screen (aav_hud_raylib): the safety drivers watch
+      topic: /hud/heartbeat     # it, so a frozen or dead screen stops Nav2 and the AI slot.
+      kind: heartbeat           # Watched only where the launch expects a HUD (watch_hud)
+      max_age: 1.0              # 10 beats; a slow frame (a resize) mustn't stop the car
+      stop: true
+      frozen_after: 1.0         # beats whose frame count stopped rising
     radar:                      # collision_monitor stops Nav2 itself when it goes quiet
       topic: /sensors/radar/points
       kind: cloud

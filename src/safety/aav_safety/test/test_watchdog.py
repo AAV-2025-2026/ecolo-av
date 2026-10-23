@@ -10,6 +10,7 @@ GPS = Rule('gps', '/sensors/gps/fix', 'gps', max_age=2.0, max_jump_speed=15.0)
 CAMERA = Rule('camera', '/sensors/camera/front_left/image_raw', 'image', max_age=1.0,
               frozen_after=1.0)
 RADAR = Rule('radar', '/sensors/radar/points', 'cloud', max_age=1.0, stop=False)
+HUD = Rule('hud', '/hud/heartbeat', 'heartbeat', max_age=1.0, frozen_after=1.0)
 HERE = (45.3860, -75.6960)
 
 
@@ -99,6 +100,26 @@ def test_a_still_camera_is_frozen_only_while_the_car_moves():
     for k in range(30, 45):                           # driving: the picture must change
         cam.arrived(k * 0.1, digest='street', speed=1.0)
     assert state(dog, 'camera', 4.4) == FROZEN
+
+
+def test_the_hud_must_beat_before_and_while_nav2_drives():
+    dog = Watchdog([HUD])
+    hud = dog.watches['hud']
+    assert state(dog, 'hud', 0.0) == NEVER and dog.locked(0.0)     # no screen yet
+    for k in range(1, 11):                            # 10 Hz, the frames it has drawn
+        hud.arrived(k * 0.1, digest=3 * k)
+    assert state(dog, 'hud', 1.5) == OK and not dog.locked(1.5)
+    assert state(dog, 'hud', 2.1) == STALE and dog.locked(2.1)     # frozen or dead
+    hud.arrived(2.2, digest=0)                        # restarted: its count from 0 again
+    assert not dog.locked(2.2)
+
+
+def test_a_hud_that_beats_without_drawing_is_frozen():
+    dog = Watchdog([HUD])
+    hud = dog.watches['hud']
+    for k in range(1, 30):                            # still sent, the count stuck
+        hud.arrived(k * 0.1, digest=42)
+    assert state(dog, 'hud', 2.9) == FROZEN and dog.locked(2.9)
 
 
 def test_a_warn_input_never_stops_the_drivers():

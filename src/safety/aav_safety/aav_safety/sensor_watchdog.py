@@ -11,6 +11,9 @@ Subscribes  each input's topic, as config/sensor_watchdog.yaml says (the launch 
             localization/odom/global  nav_msgs/Odometry
             sensors/camera/front_left/image_raw  sensor_msgs/Image (reliable, newest only)
             sensors/radar/points      sensor_msgs/PointCloud2 (best effort)
+            hud/heartbeat             std_msgs/UInt64: the HUD's screen is alive (the
+                                      frames it has drawn, 10 Hz), where the launch
+                                      expects a HUD
             sensors/imu/data          also for the odom input's cross check, if no imu
                                       input watches it
 Publishes   safety/sensor_watchdog/lock   std_msgs/Bool, at rate_hz: true while an input
@@ -31,7 +34,7 @@ What each check means is in watchdog.py (no ROS there). Each change of state is 
 once: a warning when an input goes wrong, info when it is back.
 
 Parameters  inputs (the names to watch), rate_hz (10), and for each name: topic, kind
-            (odom, imu, gps, image, cloud), max_age (s), stop (bool), frozen_after (s, 0
+            (odom, imu, gps, image, cloud, heartbeat), max_age (s), stop (bool), frozen_after (s, 0
             off), max_jump_speed (m/s, 0 off), jump_margin (m); for an odom input,
             cross_check (bool: the wheels against the IMU, wheel_check.py), cross_window
             (s), cross_speed_tolerance (m/s), cross_yaw_tolerance (rad/s), cross_persist (s),
@@ -51,11 +54,12 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import Image, Imu, NavSatFix, NavSatStatus, PointCloud2
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, String, UInt64
 from std_srvs.srv import Trigger
 
 IMU_TOPIC = '/sensors/imu/data'     # what the odom input's cross check reads
-TYPES = {'odom': Odometry, 'imu': Imu, 'gps': NavSatFix, 'image': Image, 'cloud': PointCloud2}
+TYPES = {'odom': Odometry, 'imu': Imu, 'gps': NavSatFix, 'image': Image, 'cloud': PointCloud2,
+         'heartbeat': UInt64}
 
 
 def odom_values(msg):
@@ -154,6 +158,9 @@ class SensorWatchdog(Node):
             # A frozen camera repeats its whole picture: a sample of it is enough.
             watch.arrived(now, digest=zlib.crc32(bytes(memoryview(msg.data)[::997])),
                           speed=self.speed)
+        elif rule.kind == 'heartbeat':
+            # The count must keep rising: the same count again is a screen that stopped.
+            watch.arrived(now, digest=msg.data)
         else:
             watch.arrived(now)
 
