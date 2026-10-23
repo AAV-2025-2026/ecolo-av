@@ -14,6 +14,8 @@ The real car. One launch file for every machine; a machine file picks the parts.
       [watch_hud:=true]   (the safety drivers rely on the HUD: the sensor watchdog stops
                            Nav2 and the AI slot while its /hud/heartbeat is missing. false:
                            a session with no HUD screen, said in the test card)
+      [bridge:=rust]      (spine_bridge's language, where the machine runs the spine: rust,
+                           aav_spine_bridge; or python, aav_spine's)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
@@ -73,6 +75,7 @@ import shutil
 import subprocess
 
 from aav_description import vehicle
+from aav_spine import bridges
 from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
@@ -309,7 +312,8 @@ def launch_setup(context):
                                camera_guard=rear_camera,
                                reversing=reversing))
     if on('spine'):
-        actions.append(include('aav_spine', 'spine.launch.py'))
+        bridges.package(arg('bridge'))   # rust or python: refuse anything else now
+        actions.append(include('aav_spine', 'spine.launch.py', bridge=arg('bridge')))
     if on('legacy_uart') or on('legacy_encoder'):
         actions.append(include('aav_legacy', 'legacy.launch.py',
                                uart=on('legacy_uart'), encoder=on('legacy_encoder')))
@@ -361,5 +365,8 @@ def generate_launch_description():
                               description='true: Nav2 may back up, with the lidar '
                                           'watching behind '
                                           '(docs/learn-nav2.md); false: forward only'),
+        DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
+                              description='spine_bridge in rust (aav_spine_bridge) or python '
+                                          '(aav_spine), where the machine runs the spine'),
         OpaqueFunction(function=launch_setup),
     ])

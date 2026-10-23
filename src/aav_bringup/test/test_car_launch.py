@@ -301,3 +301,12 @@ def test_the_spine_bridge_is_the_rust_one_unless_asked():
     bench = load('aav_bringup', 'bench.launch.py')
     assert ('aav_spine_bridge', 'spine_bridge') in nodes(started(bench))
     assert ('aav_spine', 'spine_bridge') in nodes(started(bench, bridge='python'))
+
+
+def test_the_car_passes_its_bridge_choice_to_the_spine(monkeypatch):
+    monkeypatch.setattr(CAR, 'load_machine', lambda machine: {'parts': {'spine': True}})
+    assert included(started(CAR, machine='orin'))['spine.launch.py']['bridge'] == 'rust'
+    sent = included(started(CAR, machine='orin', bridge='python'))['spine.launch.py']
+    assert sent['bridge'] == 'python'
+    with pytest.raises(ValueError, match='bridge:=cpp'):
+        started(CAR, machine='orin', bridge='cpp')
