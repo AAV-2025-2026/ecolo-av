@@ -7,5 +7,8 @@
 std_msgs/Header header
 uint8 source              # what source:= asked for: a SensorSource value (REAL, SIM...)
 bool ok                   # every sensor and every announcement agrees with it
-string[] problems         # one line each, for people: empty when ok
+string[] problems         # certain, one line each: an announcement of another source, or a
+                          # doubt that lasted. The output mux latches a stop
+string[] doubts           # what the ROS graph suggests, not yet for long (two publishers on
+                          # a sensor, one nobody announces). The output mux waits, closed
 SensorSource[] sensors    # each sensor that publishes, and the source it was found to be

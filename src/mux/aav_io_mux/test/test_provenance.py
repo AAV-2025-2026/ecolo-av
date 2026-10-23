@@ -94,12 +94,36 @@ def test_a_stand_in_that_announces_anything_is_caught_even_without_a_sensor():
     assert not check.ok and 'battery is BENCH (mock_battery)' in check.problems
 
 
+TWO = ('imu: 2 publishers on /sensors/imu/data_raw (imu_yahboom, rosbag2_player): two '
+       'sources at once')
+
+
 def test_two_publishers_on_one_sensor_are_two_sources():
     # A bag playing beside the real driver: the bag announces nothing.
     check = p.check_sensors(REAL, [], {IMU: ['imu_yahboom', 'rosbag2_player']})
     assert not check.ok
-    assert check.problems == ('imu: 2 publishers on /sensors/imu/data_raw (imu_yahboom, '
-                              'rosbag2_player): two sources at once',)
+    assert check.problems == () and check.doubts == (TWO,)
+
+
+def test_a_doubt_becomes_a_problem_once_it_lasts():
+    hold = p.Hold(hold=5.0)
+    two = p.check_sensors(REAL, [], {IMU: ['imu_yahboom', 'rosbag2_player']})
+    assert hold.judge(0.0, two).doubts == (TWO,)
+    assert hold.judge(4.9, two).problems == ()
+    late = hold.judge(5.0, two)
+    assert late.problems == (TWO,) and late.doubts == () and not late.ok
+
+
+def test_a_doubt_that_goes_away_starts_again():
+    # Discovery: a publisher seen before its announcement, for a moment.
+    hold = p.Hold(hold=5.0)
+    unknown = p.check_sensors(SIM, [], {IMU: ['_NODE_NAME_UNKNOWN_']})
+    known = p.check_sensors(SIM, gazebo(IMU), {IMU: ['gazebo_imu']})
+    assert hold.judge(0.0, unknown).doubts
+    assert hold.judge(3.0, known).ok
+    assert hold.judge(4.0, unknown).doubts and hold.judge(8.9, unknown).problems == ()
+    # An announcement of another source never waits.
+    assert hold.judge(9.0, p.check_sensors(REAL, gazebo(IMU), {IMU: ['gazebo_imu']})).problems
 
 
 def test_gazebo_in_gazebo_is_fine_and_absent_sensors_are_not_faults():
@@ -112,8 +136,8 @@ def test_gazebo_in_gazebo_is_fine_and_absent_sensors_are_not_faults():
 def test_an_unannounced_sensor_in_a_simulator_is_a_real_one():
     check = p.check_sensors(SIM, gazebo(IMU), {IMU: ['gazebo_imu'], GPS: ['ublox_gps_node']})
     assert not check.ok
-    assert check.problems == ('gps: /sensors/gps/fix from ublox_gps_node, which nobody '
-                              'announces on /system/source: a real driver?',)
+    assert check.doubts == ('gps: /sensors/gps/fix from ublox_gps_node, which nobody '
+                            'announces on /system/source: a real driver?',)
 
 
 def test_a_real_actuator_in_a_simulator_is_caught():
@@ -139,7 +163,8 @@ def ok(t, source=REAL):
 def test_the_car_opens_only_after_settling_with_all_real():
     gate = Gate('car')
     assert not gate.is_open(0.0)
-    assert gate.state(0.0) == 'WAIT - car: waiting for the sensor mux'
+    assert gate.state(0.0) == ('WAIT - car: waiting for the sensor mux '
+                               '(/system/sensor_mux/state)')
     gate.report = ok(0.5)
     assert not gate.is_open(0.5)
     assert gate.state(1.0).startswith('WAIT - car: all REAL, settling')
@@ -189,7 +214,7 @@ def test_clearing_is_refused_while_anything_is_wrong():
 
 def test_the_sensor_mux_saying_no_latches_with_its_reasons():
     gate = Gate('car')
-    gate.report = Report(0.0, REAL, False, ('imu: 2 publishers',))
+    gate.report = Report(0.0, REAL, False, problems=('imu: 2 publishers',))
     assert not gate.is_open(0.0)
     assert gate.latched == ('imu: 2 publishers',)
 
@@ -201,12 +226,32 @@ def test_a_sensor_mux_checking_for_the_wrong_source_latches():
     assert gate.latched == ('the sensor mux checks for SIM, target car needs REAL',)
 
 
-def test_a_silent_sensor_mux_stops_the_car():
-    gate = Gate('car', settle=0.0)
+def test_a_silent_sensor_mux_stops_the_car_until_it_speaks_again():
+    gate = Gate('car', settle=1.0)
     gate.report = ok(0.0)
-    assert gate.is_open(0.5)
-    assert not gate.is_open(1.6)
-    assert gate.latched == ('the sensor mux went quiet (1.6 s)',)
+    gate.update(0.0)
+    assert gate.is_open(2.5)
+    assert not gate.is_open(3.1)
+    assert gate.state(3.1) == 'WAIT - car: the sensor mux is quiet (3.1 s)'
+    assert gate.latched == ()           # no evidence of a wrong source: only waits
+    gate.report = ok(4.0)
+    gate.update(4.0)                    # as the node does when a report arrives
+    assert not gate.is_open(4.5)        # settling again
+    assert gate.is_open(5.0)
+
+
+def test_the_sensor_mux_unsure_holds_the_gate_without_latching():
+    gate = Gate('car', settle=0.0)
+    gate.report = Report(0.0, REAL, False, doubts=(TWO,))
+    assert not gate.is_open(0.0)
+    assert gate.latched == ()
+    assert gate.state(0.0) == 'WAIT - car: unsure: ' + TWO
+    gate.report = ok(1.0)
+    assert gate.is_open(1.0)
+    # The doubt lasted: the sensor mux says problem, and the stop latches.
+    gate.report = Report(6.0, REAL, False, problems=(TWO,))
+    assert not gate.is_open(6.0)
+    assert gate.latched == (TWO,)
 
 
 def test_gazebo_refuses_a_real_backend_in_its_graph():

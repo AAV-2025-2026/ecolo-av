@@ -8,13 +8,17 @@ Publishes   system/sensor_mux/state  aav_interfaces/SourceCheck, 2 Hz: the verdi
 
 Parameters  source (real; sim, bench or replay), period (0.5 s), startup (2.0 s: silent
             while discovery settles, so the output mux waits rather than judging an
-            unfinished graph)
+            unfinished graph), hold (5.0 s: how long a graph doubt lasts before it counts)
 
 It moves no data. Each launch starts only the chosen source's drivers or stand-ins on the
 canonical topics (/sensors/..., /vehicle/odom...); this node checks, from the ROS graph,
 that each of those topics has at most one publisher, and that /system/source says it
 comes from `source` (provenance.check_sensors). So the pictures and point clouds cost
 nothing extra. An announcement counts only while its announcer is alive.
+
+An announcement of another source is a problem at once. What the graph suggests is a
+doubt until it has lasted `hold` s (provenance.Hold): a node can be seen publishing
+before its announcement arrives, or before its name is known.
 """
 
 import signal
@@ -53,6 +57,7 @@ class SensorMux(Node):
         self.expected = provenance.source_of(source)
         period = self.declare_parameter('period', 0.5).value
         self.ready_at = time.monotonic() + self.declare_parameter('startup', 2.0).value
+        self.hold = provenance.Hold(self.declare_parameter('hold', 5.0).value)
         self.heard = {}
         self.last_problems = None
         self.pub = self.create_publisher(SourceCheck, 'system/sensor_mux/state', 10)
@@ -71,21 +76,27 @@ class SensorMux(Node):
         entries = provenance.live_entries(self.heard, announcers_alive(self))
         publishers = {topic: [i.node_name for i in self.get_publishers_info_by_topic(topic)]
                       for _, topic in provenance.SENSORS}
-        check = provenance.check_sensors(self.expected, entries, publishers)
-        msg = SourceCheck(source=check.source, ok=check.ok, problems=list(check.problems))
+        check = self.hold.judge(time.monotonic(), provenance.check_sensors(
+            self.expected, entries, publishers))
+        msg = SourceCheck(source=check.source, ok=check.ok, problems=list(check.problems),
+                          doubts=list(check.doubts))
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.sensors = [SensorSource(name=s.name, topic=s.topic, source=s.kind)
                        for s in check.sensors]
         self.pub.publish(msg)
-        if check.problems != self.last_problems:
-            if check.ok:
+        verdict = (check.problems, check.doubts)
+        if verdict != self.last_problems:
+            want = provenance.kind_name(self.expected)
+            if check.problems:
+                self.get_logger().error(f'NOT {want}: ' + '; '.join(check.problems))
+            elif check.doubts:
+                self.get_logger().warning(f'unsure (for {self.hold.hold:g} s): '
+                                          + '; '.join(check.doubts))
+            else:
                 found = ', '.join(f'{s.name} {provenance.kind_name(s.kind)}'
                                   for s in check.sensors) or 'no sensors yet'
-                self.get_logger().info(f'all {provenance.kind_name(self.expected)}: {found}')
-            else:
-                self.get_logger().error('NOT ' + provenance.kind_name(self.expected) + ': '
-                                        + '; '.join(check.problems))
-            self.last_problems = check.problems
+                self.get_logger().info(f'all {want}: {found}')
+            self.last_problems = verdict
 
 
 def main(args=None):
