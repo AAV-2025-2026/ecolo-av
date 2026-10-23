@@ -505,7 +505,7 @@ firmware's own `spine-core` code, so both ends of the bus share one implementati
 `aav.dbc`.
 
 ```text
- /ego/actuator_cmd, /safety/estop ──> spine_bridge ──> /can/tx ──> ros2_socketcan ──> can0
+ /control/car/actuator_cmd, /safety/estop ──> spine_bridge ──> /can/tx ──> ros2_socketcan ──> can0
  can0 ──> ros2_socketcan ──> /can/rx ──> spine_bridge ──> /vehicle/odom, wheels, status...
                  (the spine: 0x180, 0x181; the wheel sensors' Arduino: 0x200, 0x201)
 ```
