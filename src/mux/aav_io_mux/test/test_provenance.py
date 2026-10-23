@@ -1,0 +1,228 @@
+"""The sensor mux's and the output mux's rules (provenance.py): no ROS needed."""
+
+from aav_io_mux import provenance as p
+from aav_io_mux.provenance import BENCH, Entry, Gate, REAL, REPLAY, Report, SIM
+import pytest
+
+IMU = '/sensors/imu/data_raw'
+GPS = '/sensors/gps/fix'
+CAMERA = '/sensors/camera/front_left/image_raw'
+
+
+def gazebo(*topics, kind=SIM):
+    return [Entry('gazebo_adapter', t.split('/')[-2], t, kind) for t in topics]
+
+
+# --- sources and targets ---
+
+def test_each_target_needs_its_own_source_and_topic():
+    assert p.target_of('car') == REAL
+    assert p.target_of('gazebo') == p.target_of('turtle') == p.target_of('carla') == SIM
+    assert p.target_of('bench') == BENCH
+    assert p.command_topic('car') == '/control/car/actuator_cmd'
+    assert p.command_topic('gazebo') == '/control/gazebo/actuator_cmd'
+
+
+@pytest.mark.parametrize('bad', ['', 'real', 'Car', 'sim'])
+def test_an_unknown_target_is_refused(bad):
+    with pytest.raises(ValueError, match='target:='):
+        p.command_topic(bad)
+
+
+def test_a_launch_takes_the_targets_own_source_and_no_other():
+    assert p.choose('car', '') == ('car', 'real')
+    assert p.choose('gazebo', 'sim') == ('gazebo', 'sim')
+    assert p.choose('bench', '') == ('bench', 'bench')
+    assert p.choose('', 'replay') == ('', 'replay')
+    with pytest.raises(ValueError, match='target:=car needs source:=real, not sim'):
+        p.choose('car', 'sim')
+    with pytest.raises(ValueError, match='target:=gazebo needs source:=sim, not real'):
+        p.choose('gazebo', 'real')
+    with pytest.raises(ValueError, match='give target'):
+        p.choose('', '')
+
+
+def test_sources_by_name():
+    assert [p.source_of(s) for s in ('real', 'sim', 'bench', 'replay')] == [
+        REAL, SIM, BENCH, REPLAY]
+    with pytest.raises(ValueError, match='source:='):
+        p.source_of('gazebo')
+
+
+def test_an_unknown_number_is_never_real():
+    assert p.kind_name(7) == 'UNKNOWN(7)'
+    assert p.foreign([Entry('new_node', 'imu', IMU, 7)], REAL) == ['imu is UNKNOWN(7) (new_node)']
+
+
+# --- announcements ---
+
+def test_an_announcement_counts_only_while_its_announcer_is_alive():
+    heard = {'gazebo_adapter': gazebo(IMU), 'legacy_uart_bridge': [
+        Entry('legacy_uart_bridge', 'actuators', '', REAL)]}
+    assert [e.announcer for e in p.live_entries(heard, {'legacy_uart_bridge'})] == [
+        'legacy_uart_bridge']
+    assert p.live_entries(heard, set()) == []
+
+
+def test_foreign_lists_what_isnt_the_source_asked_for():
+    entries = gazebo(IMU) + [Entry('spine_bridge', 'odometry', '/vehicle/odom', REAL)]
+    assert p.foreign(entries, REAL) == ['imu is SIM (gazebo_adapter)']
+    assert p.foreign(entries, SIM) == ['odometry is REAL (spine_bridge)']
+
+
+# --- the sensor mux ---
+
+def test_the_car_with_its_stock_drivers_is_all_real():
+    # ublox_gps and the IMU driver announce nothing; legacy_uart_bridge says REAL.
+    check = p.check_sensors(REAL, [Entry('legacy_uart_bridge', 'actuators', '', REAL)],
+                            {IMU: ['imu_yahboom'], GPS: ['ublox_gps_node']})
+    assert check.ok and check.problems == ()
+    assert [(s.name, s.kind) for s in check.sensors] == [('imu', REAL), ('gps', REAL)]
+
+
+def test_gazebo_on_the_cars_network_is_caught():
+    check = p.check_sensors(REAL, gazebo(IMU), {IMU: ['gazebo_imu']})
+    assert not check.ok
+    assert check.problems == ('imu is SIM (gazebo_adapter)',)
+    assert check.sensors[0].kind == SIM
+
+
+def test_a_stand_in_that_announces_anything_is_caught_even_without_a_sensor():
+    # mock_battery says BENCH, and no watched topic has a publisher yet.
+    check = p.check_sensors(REAL, [Entry('mock_battery', 'battery', '/vehicle/battery', BENCH)],
+                            {})
+    assert not check.ok and 'battery is BENCH (mock_battery)' in check.problems
+
+
+def test_two_publishers_on_one_sensor_are_two_sources():
+    # A bag playing beside the real driver: the bag announces nothing.
+    check = p.check_sensors(REAL, [], {IMU: ['imu_yahboom', 'rosbag2_player']})
+    assert not check.ok
+    assert check.problems == ('imu: 2 publishers on /sensors/imu/data_raw (imu_yahboom, '
+                              'rosbag2_player): two sources at once',)
+
+
+def test_gazebo_in_gazebo_is_fine_and_absent_sensors_are_not_faults():
+    check = p.check_sensors(SIM, gazebo(IMU, GPS, CAMERA),
+                            {IMU: ['gazebo_imu'], GPS: ['gazebo_gps']})
+    assert check.ok
+    assert [s.name for s in check.sensors] == ['imu', 'gps']
+
+
+def test_an_unannounced_sensor_in_a_simulator_is_a_real_one():
+    check = p.check_sensors(SIM, gazebo(IMU), {IMU: ['gazebo_imu'], GPS: ['ublox_gps_node']})
+    assert not check.ok
+    assert check.problems == ('gps: /sensors/gps/fix from ublox_gps_node, which nobody '
+                              'announces on /system/source: a real driver?',)
+
+
+def test_a_real_actuator_in_a_simulator_is_caught():
+    check = p.check_sensors(SIM, gazebo(IMU) + [Entry('legacy_uart_bridge', 'actuators', '',
+                                                      REAL)], {IMU: ['gazebo_imu']})
+    assert check.problems == ('actuators is REAL (legacy_uart_bridge)',)
+
+
+def test_the_bench_and_a_replay():
+    bench = [Entry('mock_imu', 'imu', IMU, BENCH)]
+    assert p.check_sensors(BENCH, bench, {IMU: ['mock_imu']}).ok
+    replay = [Entry('replay_source', 'imu', IMU, REPLAY)]
+    assert p.check_sensors(REPLAY, replay, {IMU: ['rosbag2_player']}).ok
+    assert not p.check_sensors(BENCH, replay, {IMU: ['rosbag2_player']}).ok
+
+
+# --- the output mux ---
+
+def ok(t, source=REAL):
+    return Report(time=t, source=source, ok=True)
+
+
+def test_the_car_opens_only_after_settling_with_all_real():
+    gate = Gate('car')
+    assert not gate.is_open(0.0)
+    assert gate.state(0.0) == 'WAIT - car: waiting for the sensor mux'
+    gate.report = ok(0.5)
+    assert not gate.is_open(0.5)
+    assert gate.state(1.0).startswith('WAIT - car: all REAL, settling')
+    gate.report = ok(2.4)
+    assert gate.is_open(2.5)
+    assert gate.state(2.5) == 'OPEN - car: every source REAL'
+
+
+def test_waiting_for_the_sensor_mux_never_latches():
+    gate = Gate('car')
+    for t in range(10):
+        assert not gate.is_open(float(t))
+    assert gate.latched == ()
+
+
+def test_a_simulated_source_cant_drive_the_real_car_and_the_stop_latches():
+    gate = Gate('car')
+    gate.report = ok(0.0)
+    assert not gate.is_open(0.0)
+    gate.report = ok(2.0)
+    assert gate.is_open(2.0)
+    # Gazebo starts somewhere on the car's network.
+    gate.entries = gazebo(CAMERA)
+    assert not gate.is_open(2.1)
+    assert gate.state(2.1) == ('STOP - target car needs REAL - front_left is SIM '
+                               '(gazebo_adapter) - latched: /safety/output_mux/clear')
+    # Gazebo goes away: still stopped, until a person clears it.
+    gate.entries = []
+    gate.report = ok(3.0)
+    assert not gate.is_open(3.0)
+    assert gate.clear(3.0)[0]
+    assert not gate.is_open(4.0)          # settling again
+    gate.report = ok(5.0)
+    assert gate.is_open(5.0)
+
+
+def test_clearing_is_refused_while_anything_is_wrong():
+    gate = Gate('car')
+    gate.report = ok(0.0)
+    gate.update(0.0)
+    gate.entries = gazebo(IMU)
+    gate.update(0.1)
+    done, why = gate.clear(0.2)
+    assert not done and why == 'still wrong: imu is SIM (gazebo_adapter)'
+    assert gate.latched
+
+
+def test_the_sensor_mux_saying_no_latches_with_its_reasons():
+    gate = Gate('car')
+    gate.report = Report(0.0, REAL, False, ('imu: 2 publishers',))
+    assert not gate.is_open(0.0)
+    assert gate.latched == ('imu: 2 publishers',)
+
+
+def test_a_sensor_mux_checking_for_the_wrong_source_latches():
+    gate = Gate('car')
+    gate.report = ok(0.0, source=SIM)
+    assert not gate.is_open(0.0)
+    assert gate.latched == ('the sensor mux checks for SIM, target car needs REAL',)
+
+
+def test_a_silent_sensor_mux_stops_the_car():
+    gate = Gate('car', settle=0.0)
+    gate.report = ok(0.0)
+    assert gate.is_open(0.5)
+    assert not gate.is_open(1.6)
+    assert gate.latched == ('the sensor mux went quiet (1.6 s)',)
+
+
+def test_gazebo_refuses_a_real_backend_in_its_graph():
+    gate = Gate('gazebo', settle=0.0)
+    gate.report = ok(0.0, source=SIM)
+    gate.entries = gazebo(IMU)
+    assert gate.is_open(0.0)
+    gate.entries.append(Entry('legacy_uart_bridge', 'actuators', '', REAL))
+    assert not gate.is_open(0.1)
+    assert gate.latched == ('actuators is REAL (legacy_uart_bridge)',)
+
+
+def test_the_bench_needs_bench_sources():
+    gate = Gate('bench', settle=0.0)
+    gate.report = ok(0.0, source=BENCH)
+    gate.entries = [Entry('mock_imu', 'imu', IMU, BENCH)]
+    assert gate.is_open(0.0)
+    gate.entries.append(Entry('gazebo_adapter', 'gps', GPS, SIM))
+    assert not gate.is_open(0.1)
