@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_spine_bridge</name>
   <version>0.1.0</version>
-  <description>spine_bridge in Rust (rclrs): the same node as aav_spine's Python one, topic for topic. It turns ego's commands (/control/It turns /ego/actuator_cmd and /safety/estop into CAN frameslt;targetIt turns /ego/actuator_cmd and /safety/estop into CAN framesgt;/actuator_cmd, from the output mux, by its source parameter) and /safety/estop into CAN frames (firmware/can/aav.dbc, packed by the firmware's own spine-core) on /can/tx, and the spine's and the front wheel nodes' frames from /can/rx into /vehicle/odom, /vehicle/wheels, /vehicle/status and the rest. Its parameters are aav_spine's config/spine.yaml.</description>
+  <description>spine_bridge in Rust (rclrs): the same node as aav_spine's Python one, topic for topic. It turns ego's commands (/control/&lt;target&gt;/actuator_cmd, from the output mux, by its source parameter) and /safety/estop into CAN frames (firmware/can/aav.dbc, packed by the firmware's own spine-core) on /can/tx, and the spine's and the front wheel nodes' frames from /can/rx into /vehicle/odom, /vehicle/wheels, /vehicle/status and the rest. Its parameters are aav_spine's config/spine.yaml.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 
