@@ -1,17 +1,20 @@
 """
-legacy_uart_bridge: drive today's ESP32 firmware from /ego/actuator_cmd.
+legacy_uart_bridge: drive today's ESP32 firmware from ego's commands.
 
 Interim backend until the CAN spine exists. Runs on the computer wired to
 the ESP32's UART (today the Motor Pi, /dev/ttyAMA0).
 
-Subscribes  ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped
+Subscribes  control/car/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's command,
+                              from the output mux (aav_io_mux, target car), which sends it
+                              only while every source is REAL. Never /ego/actuator_cmd
             safety/estop      std_msgs/Bool (true: full brake now, until false)
 Publishes   system/source     aav_interfaces/DataSource, latched: the actuators are REAL
 Writes      13-byte frames at rate_hz on the serial port (see legacy_protocol)
 
-Throttle is open loop: speed / full_throttle_speed. If /ego/actuator_cmd goes
-stale, or /safety/estop is true, the bridge sends brake frames. It can't protect against its own
-crash, because the firmware has no timeout; fix that in the firmware first.
+Throttle is open loop: speed / full_throttle_speed. If the command goes stale (ego or the
+output mux stopped), or /safety/estop is true, the bridge sends brake frames. It can't
+protect against its own crash, because the firmware has no timeout; fix that in the
+firmware first.
 """
 
 import signal
@@ -43,7 +46,8 @@ class LegacyUartBridge(Node):
         self.cmd_time = None
         self.last_steering = 0.0
         self.estop = False
-        self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
+        self.create_subscription(AckermannDriveStamped, 'control/car/actuator_cmd',
+                                 self.on_cmd, 10)
         self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
         self.create_timer(1.0 / rate, self.tick)
         # Say once, latched, that this drives the real car (/system/source).

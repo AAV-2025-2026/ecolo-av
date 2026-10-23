@@ -69,7 +69,8 @@ pixi run graph      # rqt_graph
 - click the refresh button after you start or stop something.
 
 Follow the chain from section 2: `teleop_twist_keyboard` → `/drivers/keyboard/cmd_vel` →
-`twist_mux` → `/control/cmd_vel` → `ego` → `/ego/actuator_cmd` → `turtlesim_adapter`.
+`twist_mux` → `/control/cmd_vel` → `ego` → `/ego/actuator_cmd` → `output_mux` →
+`/control/turtle/actuator_cmd` → `turtlesim_adapter`.
 
 Then check the graph against the team's contract:
 

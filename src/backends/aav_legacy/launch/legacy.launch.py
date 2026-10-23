@@ -3,7 +3,7 @@ Today's car (2025-26 hardware) as a backend, until the CAN spine exists.
 
   ros2 launch aav_legacy legacy.launch.py [uart:=true] [encoder:=true]
 
-  /ego/actuator_cmd, /safety/estop ──> legacy_uart_bridge ──> 13-byte frames ──> ESP32
+  /control/car/actuator_cmd, /safety/estop ──> legacy_uart_bridge ──> 13-byte frames ──> ESP32
   Pico 2 wheel encoder ──UDP:10111──> encoder_udp ──> /vehicle/odom (speed only)
 
 Run legacy_uart_bridge on the Pi wired to the ESP32's UART, encoder_udp anywhere

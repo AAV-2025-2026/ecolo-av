@@ -194,7 +194,7 @@ ego goes quiet ──0.1 s──► spine_bridge stops sending DRIVE_CMD
 
 | Layer | Timeout | File |
 |---|---|---|
-| `spine_bridge` | 0.1 s without `/ego/actuator_cmd` | `src/backends/aav_spine/config/spine.yaml` |
+| `spine_bridge` | 0.1 s without a command (`/control/car/actuator_cmd`) | `src/backends/aav_spine/config/spine.yaml` |
 | The spine's watchdog | 200 ms today, **100 ms** in the KEFC plan | `spine-core/src/spine.rs` (`cmd_timeout_ms`) |
 | The KEFC control board | 100 ms → brake | the KEFC PDF |
 
@@ -204,7 +204,7 @@ reboot never restarts the car by itself ([Firmware](firmware.md)).
 ## 8. From ROS to the wire
 
 ```text
-/ego/actuator_cmd ─► spine_bridge ─► /can/tx ─► socket_can_sender ─► can0 ─► the bus
+/ego/actuator_cmd ─► output_mux ─► spine_bridge ─► /can/tx ─► socket_can_sender ─► can0 ─► the bus
 the bus ─► can0 ─► socket_can_receiver ─► /can/rx ─► spine_bridge ─► /vehicle/odom, /vehicle/status
 ```
 

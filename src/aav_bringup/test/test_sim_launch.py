@@ -94,9 +94,12 @@ def test_the_defaults_start_what_pixi_run_sim_always_has():
     actions = started(SIM)
     sent = included(actions)
     assert set(sent) == {'gazebo.launch.py', 'mux.launch.py', 'ego.launch.py',
-                         'scripted.launch.py', 'goto.launch.py', 'localization.launch.py',
-                         'navigation.launch.py', 'watchdog.launch.py'}
+                         'io_mux.launch.py', 'scripted.launch.py', 'goto.launch.py',
+                         'localization.launch.py', 'navigation.launch.py',
+                         'watchdog.launch.py'}
     assert sent['gazebo.launch.py']['world'] == 'empty'
+    # ego's commands reach Gazebo through the output mux, only while everything is SIM.
+    assert sent['io_mux.launch.py'] == {'target': 'gazebo', 'source': 'sim'}
     nav = sent['navigation.launch.py']
     assert (nav['radar'], nav['lidar'], nav['collision_monitor'], nav['camera_obstacles']) == (
         'false', 'false', 'false', 'false')

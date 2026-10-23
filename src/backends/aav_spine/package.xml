@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_spine</name>
   <version>0.1.0</version>
-  <description>Backend for the real car on the CAN spine: spine_bridge turns /ego/actuator_cmd and /safety/estop into CAN frames (firmware/can/aav.dbc) through ros2_socketcan, and the spine's feedback into /vehicle/odom, /vehicle/status and /vehicle/joint_states.</description>
+  <description>Backend for the real car on the CAN spine: spine_bridge turns ego's commands (/control/car/actuator_cmd, from the output mux) and /safety/estop into CAN frames (firmware/can/aav.dbc) through ros2_socketcan, and the spine's feedback into /vehicle/odom, /vehicle/status and /vehicle/joint_states.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 

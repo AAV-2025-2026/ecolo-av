@@ -1349,8 +1349,26 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
   radius" = 87.6°. Ctrl-C stopped a 30 m drive at 11.7 m; a drive while e-stopped was refused.
 - **Credit:** the design follows Ben's SYSC 4415 A3 ReAct agent and his `mcpsearch`.
 
+## 23 October: the sensor mux and the output mux
+
+### "go" for T1.5 / D3 / S-4: simulated data must never reach the car.
+
+- **Built:** `aav_io_mux`. The sensor mux (`source:=`) checks, from the ROS graph and
+  `/system/source`, that each sensor comes from the one source asked for. The output mux
+  (`target:=`) sends ego's command to `/control/<target>/actuator_cmd`; the real car's
+  only while every source is REAL, else a latched, silent stop.
+- **Choice made:** check, don't copy. Republishing the cameras and point clouds would
+  double their traffic; a launch starts only the chosen source, and the check catches a
+  stray publisher (two on one topic). Written down in
+  [Sources and targets](../sources-and-targets.md).
+- **One launch:** `stack.launch.py target:=turtle|gazebo|bench|car|carla`; the pixi tasks
+  are unchanged.
+
 ## Open threads
 
+- **D3, the muxes (23 Oct):** built and tested in every profile; for the team: agree
+  "check, not copy", and whether a bench with a real spine board and pretend sensors needs
+  a deliberate exception (today the output mux refuses it). On the car next.
 - **CARLA (15 Oct, Q31 reopened):** the adapter and Carleton's map download are ready and tested without a server. Left: run it on the NVIDIA computer (0.10 for Town10, 0.9.16 for Carleton's streets), and check the IMU's roll and pitch signs, the radar's speed sign and the GPS line-up ([CARLA](../carla.md)).
 - **Plain English (15 Oct):** works in Gazebo and the turtle; untested on the bench and
   the car. Before the car: the scripted driver on stands, steering feedback, a safety

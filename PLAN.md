@@ -22,7 +22,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 
 | # | Sub-project | In software | On the car | Weakest point |
 |---|---|---:|---:|---|
-| 1 | Integration and platform | 50% | 5% | no sensor mux or output mux node; the Orin and Pis not upgraded |
+| 1 | Integration and platform | 55% | 5% | the Orin and Pis not upgraded; the sensor and output muxes not yet run on the car |
 | 2 | Simulation and testing | 63% | 0% | sensor noise from guesses; no sim-versus-real report; the nightly Gazebo job on trial |
 | 3 | Vehicle hardware and actuation | 33% | 5% | the car isn't measured; the Rust spine never flashed |
 | 4 | Power and electrical | 4% | 0% | not started: needs the car and the parts |
@@ -75,7 +75,7 @@ the next concrete step.
 | T1.2 | Bring in the earlier teams' code | 20 Nov | ✅ | 100 | |
 | T1.3 | Orin backup and upgrade to JetPack 7.2.1 | 27 Nov | 🔧 | 10 | full disk image, then test the restore (irreplaceable files already copied off) |
 | T1.4 | Raspberry Pis to Ubuntu 24.04 | 27 Nov | 🔧 | 10 | one imaging script; the car kit is ready (`pixi run car-kit`) |
-| T1.5 | One launch, `target:=` and `source:=`; the sensor mux and output mux | 4 Dec | 🔧 | 40 | today: one launch per target (`turtle`, `sim`, `bench`, `car`). Write the two mux nodes, or agree that launch-time choice is enough (decision D3 below) |
+| T1.5 | One launch, `target:=` and `source:=`; the sensor mux and output mux | 4 Dec | 🧪 | 80 | built 23 Oct (`aav_io_mux`, `stack.launch.py target:=`; [sources and targets](docs/sources-and-targets.md)): every profile runs both muxes; `sim-check` and `bench-check` pass with them. Next: on the car, `/safety/output_mux/state` says OPEN with only the car's own nodes; the team agrees D3 |
 | T1.6 | Contract test | 4 Dec | ✅ | 80 | add topic rates to the nightly check |
 | T1.7 | Measure the computers and the network | 18 Dec | 🔧 | 35 | the load report on the Mac (22 Oct, below); the bandwidth budget (23 Oct, [bandwidth](docs/bandwidth.md)): only raw cameras overflow a link, CAN 8.5% busy; `pixi run bandwidth` measured Gazebo (33-35 MB/s). Next: run it on the car, then the Orin's CPU |
 | T1.8 | Port to Rust, one module at a time | Jan-Mar | 🔧 | 50 | IMU and radar done; next the CAN bridge (`aav_spine`) and the battery monitor |
@@ -193,7 +193,7 @@ the next concrete step.
 | S-1 | A written test card for every car session | ⬜ | a template in the repo |
 | S-2 | Written permission for the lot (November) | ⬜ | |
 | S-3 | Geofence: everything outside the test area blocked on the map | 🔧 | the lot's map (T7.4) |
-| S-4 | Simulated messages can never reach the car | 🔧 | stand-ins run `--local` today; the sensor mux would mark them (T1.5) |
+| S-4 | Simulated messages can never reach the car | 🧪 | two layers: stand-ins run `--local`; and (23 Oct) the real backends read only `/control/car/actuator_cmd`, which the output mux fills only while every source is REAL, else a latched stop. Tested: with Gazebo announcing SIM, `spine_bridge` sent no drive frame. Next: the same on the car |
 | S-5 | Speed capped at 1 m/s in the firmware and in ego | 🔧 | ego ✅; the firmware's cap with T3.6 |
 
 ## The MPPI track (new)
@@ -221,7 +221,7 @@ For the team to decide; then change one of them.
 |---|---|---|---|
 | D1 | Topic names such as `/control/cmd`, `/vehicle/ackermann_cmd`, `/odometry/local` (section 3.3) | `/control/cmd_vel`, `/ego/actuator_cmd`, `/localization/odom/local` ([naming](docs/naming.md)) | change the proposal's table: the repo's names are built and tested |
 | D2 | Hall-sensor wheel nodes on Arduino Unos, in Arduino C++ | the rule "Rust for all firmware" (Ben, 10 Oct); the wheel logic in Rust (`wheel-core`) and the Pico 2 wheel encoder | ✅ **decided 23 Oct** (Ben, for the hardware side): an Arduino reads the sensors and sends CAN frames; the Orin decodes them and publishes. The proposal stands |
-| D3 | A sensor mux and an output mux as nodes; `target:=`, `source:=` | the target is chosen at launch; stand-ins kept local | the nodes add the "simulated data can't reach the car" mark: worth building |
+| D3 | A sensor mux and an output mux as nodes; `target:=`, `source:=` | built 23 Oct as nodes (`aav_io_mux`). The sensor mux **checks** where each sensor comes from instead of republishing it (no doubled camera or lidar traffic); the launch picks the source | agree "check, not copy" ([why](docs/sources-and-targets.md#why-check-not-copy)), and change the proposal's wording |
 | D4 | The stop-at-distance planner inside ego (T5.3) | inside the A-to-B driver (`aav_goto`) | either; ego is where the proposal promises it |
 | D5 | MPPI a stretch goal in March (T7.9) | switchable and compared now | put MPPI in the committed plan, in Gazebo; on the car as the stretch |
 | D6 | Ego enforces the lateral acceleration (T5.4) | done 22 Oct, with the car's weight | the proposal can cite it |

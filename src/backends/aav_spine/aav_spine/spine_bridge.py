@@ -1,7 +1,11 @@
 """
 spine_bridge: the ROS side of the CAN spine.
 
-Subscribes  ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped
+Subscribes  control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
+                              command, from the output mux (aav_io_mux) - control/car/ for
+                              source real, control/bench/ for bench, control/gazebo/ for
+                              sim. Never /ego/actuator_cmd itself: on the car, only an
+                              output mux that found every source REAL reaches this node
             safety/estop      std_msgs/Bool
             can/rx            can_msgs/Frame  (ros2_socketcan receiver)
 Publishes   can/tx            can_msgs/Frame  (ros2_socketcan sender)
@@ -24,8 +28,8 @@ Frames are defined in firmware/can/aav.dbc and packed by can_codec.
 /vehicle/odom's speed is the front wheel nodes' mean (WHEEL_SPEED_L/R, turned into
 the rear axle's speed by wheel_speed), while both are fresh; otherwise the spine's
 own measured_speed from VEHICLE_FEEDBACK.
-DRIVE_CMD goes out at 50 Hz only while /ego/actuator_cmd is fresh. If ego
-stops, the bridge stops sending and the spine's own watchdog brakes the car.
+DRIVE_CMD goes out at 50 Hz only while ego's command is fresh. If ego (or the
+output mux) stops, the bridge stops sending and the spine's own watchdog brakes the car.
 
 Arming always sends a few armed=0 frames before armed=1: the spine only arms on
 that edge. It also clears latches the bridge can't see (a hardware e-stop, a
@@ -52,6 +56,10 @@ from std_srvs.srv import SetBool
 
 # /system/source: what the `source` parameter may say.
 SOURCES = {'real': SensorSource.REAL, 'bench': SensorSource.BENCH, 'sim': SensorSource.SIM}
+# Where ego's commands come from, for each source: the output mux's topic for the target
+# this bridge plays (aav_io_mux provenance.TARGETS). The real car's only from target car.
+COMMANDS = {'real': 'control/car/actuator_cmd', 'bench': 'control/bench/actuator_cmd',
+            'sim': 'control/gazebo/actuator_cmd'}
 # What this node publishes, for /system/source.
 ANNOUNCED = (('vehicle', '/vehicle/status'), ('odometry', '/vehicle/odom'),
              ('steering', '/vehicle/steering'), ('throttle', '/vehicle/throttle'),
@@ -100,7 +108,7 @@ class SpineBridge(Node):
         latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                              durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.source_pub = self.create_publisher(DataSource, 'system/source', latched)
-        self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
+        self.create_subscription(AckermannDriveStamped, COMMANDS[source], self.on_cmd, 10)
         self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
         self.create_subscription(Frame, 'can/rx', self.on_frame, 100)
         self.create_service(SetBool, 'spine/arm', self.on_arm)
@@ -165,7 +173,8 @@ class SpineBridge(Node):
             return
         age = (self.get_clock().now() - self.cmd_time).nanoseconds * 1e-9
         if age > self.cmd_timeout:
-            self.get_logger().warning('no fresh /ego/actuator_cmd; the spine will brake',
+            self.get_logger().warning('no fresh command from ego and the output mux; the '
+                                      'spine will brake',
                                       throttle_duration_sec=2.0)
             return
         armed = self.armed and self.disarm_frames == 0

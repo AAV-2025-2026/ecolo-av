@@ -5,7 +5,7 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
       [follow:=true] [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
       [radar:=true] [actuator_model:=true] [faults:=false] [spine:=false] [arm:=true]
 
-  /ego/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
+  /control/gazebo/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
                        (the actuator model: vehicle.yaml's actuators:, unless
                         actuator_model:=false)
   Gazebo odometry, IMU, NavSat ──bridge──> gazebo_adapter ──> /vehicle/odom,
@@ -17,12 +17,13 @@ spine:=true puts the spine in the loop (READ-ME-FULL-SIMULATION.md step 4): the 
 spine_bridge takes ego's commands instead of gazebo_adapter, and spine_sim (car:=gazebo)
 runs the spine's firmware logic (spine-core) on its CAN frames, on Gazebo's clock:
 
-  /ego/actuator_cmd ──> spine_bridge ──> /can/tx ──> spine_sim (the spine's logic)
+  /control/gazebo/actuator_cmd ──> spine_bridge ──> /can/tx ──> spine_sim (the spine's logic)
   spine_sim ──> /vehicle/gazebo/spine_outputs ──> gazebo_adapter (the actuator model) ──> Gazebo
   gazebo_adapter ──> /vehicle/gazebo/wheels, /vehicle/gazebo/steering ──> spine_sim
   spine_sim ──> /can/rx ──> spine_bridge ──> /vehicle/odom, status, steering, wheels...
 
-Still one backend: spine_bridge alone reads /ego/actuator_cmd. arm:=true (the default)
+Still one backend: spine_bridge alone reads ego's commands (/control/gazebo/actuator_cmd, from the
+output mux). arm:=true (the default)
 arms the spine 12 s after start-up, as the bench does; /spine/arm arms it again after a
 stop. The hardware e-stop and driver faults are the bench's: /vehicle/bench/hw_estop and
 /vehicle/bench/driver_faults.

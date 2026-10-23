@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">36 min read · 4 sections</div></header>
+<div class="meta">40 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -248,17 +249,73 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/ego/actuator_cmd</code></td>
 <td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
 <td><code>ego</code></td>
-<td><code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
+<td><code>output_mux</code></td>
 <td>turtle, sim, car, bench</td>
-<td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. Exactly one backend runs - in Gazebo's spine profile (spine:=true) that is spine_bridge, and gazebo_adapter doesn't read it.</td>
+<td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. No backend reads it - the output mux passes it on to the one target's /control/<target>/actuator_cmd (aav_io_mux, docs/sources-and-targets.md).</td>
+</tr>
+<tr>
+<td><code>/control/car/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>spine_bridge</code>, <code>legacy_uart_bridge</code></td>
+<td>car</td>
+<td>The real car's commands - ego's /ego/actuator_cmd, passed on unchanged by output_mux target:=car, and only while the sensor mux says every source is REAL and nothing on /system/source says otherwise. Anything else and it sends nothing - latched until /safety/output_mux/clear on evidence (an announcement of another source, the sensor mux's problems), only held shut on doubt (the sensor mux not heard or quiet for 3 s, or its doubts); the backends' own timeouts brake (spine_bridge 0.1 s then the spine's 100 ms, legacy_uart_bridge 0.3 s). The real backends read only this topic (spine_bridge with source real), so a simulator's ego can't reach them.</td>
+</tr>
+<tr>
+<td><code>/control/gazebo/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>gazebo_adapter</code>, <code>spine_bridge</code></td>
+<td>sim</td>
+<td>Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim.</td>
+</tr>
+<tr>
+<td><code>/control/bench/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>spine_bridge</code></td>
+<td>bench</td>
+<td>The bench's commands, from output_mux target:=bench, while every source is BENCH - into spine_bridge with source bench, then spine_sim.</td>
+</tr>
+<tr>
+<td><code>/control/turtle/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>turtlesim_adapter</code></td>
+<td>turtle</td>
+<td>The turtle's commands, from output_mux target:=turtle, while every source is SIM.</td>
+</tr>
+<tr>
+<td><code>/control/carla/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>carla_adapter</code></td>
+<td>-</td>
+<td>CARLA's commands, from output_mux target:=carla, while every source is SIM (carla.launch.py; untested, needs the NVIDIA computer).</td>
+</tr>
+<tr>
+<td><code>/safety/output_mux/state</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>output_mux</code></td>
+<td>-</td>
+<td>turtle, sim, car, bench</td>
+<td>One line for people, 2 Hz and on each change - OPEN (passing ego's commands on), WAIT (closed, not latched - the sensor mux not heard yet or quiet for 3 s, its doubts, or settling for 2 s after all clear) or STOP (latched, and why, such as "STOP - target car needs REAL - camera_front_left is SIM (gazebo_adapter)"). The target first, such as "OPEN - car".</td>
 </tr>
 <tr>
 <td><code>/system/source</code></td>
 <td><code>aav_interfaces/msg/DataSource</code></td>
 <td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>mock_lidar</code>, <code>replay_source</code>, <code>carla_adapter</code></td>
-<td><code>hud</code>, <code>map</code>, <code>actuator_test</code>, <code>goto_driver</code>, <code>goto_cli</code></td>
+<td><code>hud</code>, <code>map</code>, <code>actuator_test</code>, <code>goto_driver</code>, <code>goto_cli</code>, <code>sensor_mux</code>, <code>output_mux</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL.</td>
+<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.</td>
+</tr>
+<tr>
+<td><code>/system/sensor_mux/state</code></td>
+<td><code>aav_interfaces/msg/SourceCheck</code></td>
+<td><code>sensor_mux</code></td>
+<td><code>output_mux</code></td>
+<td>turtle, sim, car, replay, bench</td>
+<td>The sensor mux's verdict, 2 Hz (aav_io_mux sensor_mux, source:=real, sim, bench or replay) - ok when each sensor topic it watches (provenance.SENSORS - the IMU, GPS, cameras, radar, lidar, wheels, odometry, battery) has at most one publisher, that publisher's source as /system/source says (an unannounced one counts as REAL - the car's stock drivers can't announce), and every announcement equals source. An announcement of another source is a problem at once; a graph finding (two publishers, an unannounced one in a simulator) is a doubt until it has lasted 5 s (provenance.Hold), as a node can be seen before its announcement or its name arrive. Silent for its first 2 s, while discovery settles. It relays no data - it checks where the data comes from - so the heavy topics (pictures, point clouds) cost nothing extra.</td>
 </tr>
 <tr>
 <td><code>/vehicle/odom</code></td>
@@ -837,6 +894,12 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>robot_localization/srv/SetPose</code></td>
 <td><code>ekf_global</code></td>
 <td>Re-seed the start pose by hand (heading!).</td>
+</tr>
+<tr>
+<td><code>/safety/output_mux/clear</code></td>
+<td><code>std_srvs/srv/Trigger</code></td>
+<td><code>output_mux</code></td>
+<td>A person reopens the output mux after it latched STOP. Refused, with the reason, while the evidence remains (a simulated source still announced, the sensor mux still reporting a problem); once accepted, commands flow again after 2 s of all clear.</td>
 </tr>
 <tr>
 <td><code>/safety/sensor_watchdog/clear</code></td>

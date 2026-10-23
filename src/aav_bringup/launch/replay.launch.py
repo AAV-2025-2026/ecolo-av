@@ -53,6 +53,11 @@ def launch_setup(context):
              remappings=[('imu/data_raw', '/sensors/imu/data_raw'),
                          ('imu/data', '/sensors/imu/data')]),
         include('aav_localization', 'localization.launch.py'),
+        # The sensor mux checks that only the bag plays the sensors (REPLAY). No output
+        # mux: a replay drives nothing.
+        IncludeLaunchDescription(
+            os.path.join(share('aav_io_mux'), 'launch', 'io_mux.launch.py'),
+            launch_arguments={'target': '', 'source': 'replay'}.items()),
         # Latched, and again every 10 s (a late subscriber gets it either way).
         ExecuteProcess(name='replay_source', output='log', cmd=[
             'ros2', 'topic', 'pub', '-n', 'replay_source', '-r', '0.1',

@@ -30,7 +30,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | [Sensors](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver` |
 | [Description and localization](#description-and-localization) | `aav_description`, `aav_localization` |
 | [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_goto`, `aav_language`, `aav_navigation` |
-| [Mux and ego](#mux-and-ego) | `aav_mux`, `aav_ego` |
+| [Mux and ego](#mux-and-ego) | `aav_mux`, `aav_io_mux`, `aav_ego` |
 | [Backends](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla` |
 | [Perception](#perception) | `aav_yolo`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry` |
 | [HUD](#hud) | `aav_hud`, `aav_hud_raylib` |
@@ -230,6 +230,20 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Test** | `pixi run estop` while the turtle drives |
 | **Read first** | `config/twist_mux.yaml` (the priorities) |
 
+### aav_io_mux
+
+| | |
+|---|---|
+| **Does** | the sensor mux checks that every sensor comes from one source (`source:=`); the output mux sends ego's command to one target (`target:=`), the real car only while every source is REAL |
+| **Why** | simulated data must never drive the real car (S-4) |
+| **Runs on** | the Orin, next to ego |
+| **In → out** | `/ego/actuator_cmd`, `/system/source`, the ROS graph → `/control/<target>/actuator_cmd`, `/system/sensor_mux/state`, `/safety/output_mux/state` |
+| **Origin** | ours (the proposal's sensor and output muxes) |
+| **Status** | [[works]] in its tests and in every profile; [[untested]] on the car |
+| **Run alone** | `ros2 launch aav_io_mux io_mux.launch.py target:=car` |
+| **Test** | `test/test_provenance.py` (in `tools/test.sh`), `test/test_real_backend_guard.py` (`pixi run test`) |
+| **Read first** | `aav_io_mux/provenance.py`, then [Sources and targets](sources-and-targets.md) |
+
 ### aav_ego
 
 | | |
@@ -246,7 +260,8 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 
 ## Backends
 
-Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle/odom`.
+Exactly one runs at a time. Each reads ego's commands from the output mux, on its own
+`/control/<target>/actuator_cmd`, and reports `/vehicle/odom`.
 
 ### aav_spine
 
@@ -255,7 +270,7 @@ Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle
 | **Does** | sends ego's commands to the spine board as CAN frames, and turns its replies into speed and status |
 | **Why** | the future real car: one CAN bus between the Orin and the actuators |
 | **Runs on** | the Orin (`spine: false` until the spine exists) |
-| **In → out** | `/ego/actuator_cmd`, `/safety/estop`, `/can/rx` → `/can/tx`, `/vehicle/odom`, `/vehicle/status`, `/vehicle/joint_states`; service `/spine/arm` |
+| **In → out** | `/control/car/actuator_cmd` (or `bench`, `gazebo`), `/safety/estop`, `/can/rx` → `/can/tx`, `/vehicle/odom`, `/vehicle/status`, `/vehicle/joint_states`; service `/spine/arm` |
 | **Origin** | ours; `ros2_socketcan` (stock, Linux only) puts the frames on the wire |
 | **Status** | [[works]] on the bench against `spine_sim`. No spine board on the car yet |
 | **Run alone** | `ros2 launch aav_spine spine.launch.py` |
@@ -269,7 +284,7 @@ Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle
 | **Does** | drives today's ESP32 with 13-byte UART frames, and turns the wheel encoder's UDP packets into speed |
 | **Why** | it lets our stack drive the car as it is today, before the spine exists |
 | **Runs on** | the Motor Pi (`motor_pi.yaml`): the ESP32 is wired to it, and the encoder sends only to it |
-| **In → out** | `/ego/actuator_cmd`, `/safety/estop` → serial `/dev/ttyAMA0` (use `/dev/serial0`); UDP port 10111 → `/vehicle/odom` |
+| **In → out** | `/control/car/actuator_cmd`, `/safety/estop` → serial `/dev/ttyAMA0` (use `/dev/serial0`); UDP port 10111 → `/vehicle/odom` |
 | **Origin** | ours, written for the 2025-26 protocols (`AAV_cortex`, `Wheel_Encoders`) |
 | **Status** | [[untested]] on the car. The ESP32 has no command timeout: wheels off the ground first |
 | **Run alone** | `ros2 launch aav_legacy legacy.launch.py` (on the Motor Pi) |
@@ -283,7 +298,7 @@ Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle
 | **Does** | drives the turtlesim turtle like a car (bicycle model) |
 | **Why** | the fastest way to try a driver, the mux and ego on a laptop |
 | **Runs on** | any laptop |
-| **In → out** | `/ego/actuator_cmd`, `/turtle1/pose` → `/turtle1/cmd_vel`, `/vehicle/odom` |
+| **In → out** | `/control/turtle/actuator_cmd`, `/turtle1/pose` → `/turtle1/cmd_vel`, `/vehicle/odom` |
 | **Origin** | ours, on stock turtlesim |
 | **Status** | [[works]] |
 | **Run alone** | `pixi run turtle` |
@@ -297,7 +312,7 @@ Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle
 | **Does** | puts Gazebo's simulated car behind the real car's topics, with an IMU and GPS; in the road world, a camera, a radar stand-in and (with `lidar:=true`) a roof lidar |
 | **Why** | Nav2 and the EKFs can be tested with the same settings as on the car |
 | **Runs on** | any laptop (headless on oirp-spss) |
-| **In → out** | `/ego/actuator_cmd`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat`, `/gazebo/radar/points` → `/gazebo/cmd_vel`, `/vehicle/odom`, `/vehicle/status`, `/sensors/imu/data_raw`, `/sensors/gps/fix`, `/sensors/radar/points`. The road world's bridges add `/sensors/camera/front_left/*`, `/sensors/lidar/points` and `/vehicle/gazebo/truth` |
+| **In → out** | `/control/gazebo/actuator_cmd`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat`, `/gazebo/radar/points` → `/gazebo/cmd_vel`, `/vehicle/odom`, `/vehicle/status`, `/sensors/imu/data_raw`, `/sensors/gps/fix`, `/sensors/radar/points`. The road world's bridges add `/sensors/camera/front_left/*`, `/sensors/lidar/points` and `/vehicle/gazebo/truth` |
 | **Origin** | ours, on stock Gazebo Harmonic and `ros_gz` |
 | **Status** | [[works]] headless on Linux and a Mac; its window on a Mac |
 | **Run alone** | `pixi run sim` (`gui:=false` on a Mac) |
@@ -311,7 +326,7 @@ Exactly one runs at a time. Each reads `/ego/actuator_cmd` and reports `/vehicle
 | **Does** | a CARLA car as the car: the same topics as Gazebo's, from CARLA's Python client |
 | **Why** | photo-real towns and cameras; Carleton's streets from OpenStreetMap ([CARLA](carla.md)) |
 | **Runs on** | a Linux x86_64 computer that can reach a CARLA server (TCP 2000-2001); not a Mac |
-| **In → out** | `/ego/actuator_cmd`, `/safety/estop` → odom, status, IMU, GPS, cameras, radar, lidar, `/clock`, `/vehicle/carla/truth` |
+| **In → out** | `/control/carla/actuator_cmd`, `/safety/estop` → odom, status, IMU, GPS, cameras, radar, lidar, `/clock`, `/vehicle/carla/truth` |
 | **Origin** | ours (15 Oct); the axis rules follow carla-ros-bridge (MIT) |
 | **Status** | [[untested]] built and tested without a server; never run against CARLA (Q31) |
 | **Run alone** | `ros2 launch aav_carla carla.launch.py host:=<server>`; the whole stack: `pixi run carla-car host:=<server>` |

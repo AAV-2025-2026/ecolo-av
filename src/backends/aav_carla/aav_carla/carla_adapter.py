@@ -6,8 +6,9 @@ through ROS: no carla-ros-bridge, and not CARLA's built-in ROS 2 (which stalls o
 docs/carla.md). So it works with CARLA 0.10 (Unreal Engine 5) and 0.9.16 (Unreal Engine 4)
 alike, and ROS discovery can stay on this computer while the server is anywhere.
 
-Subscribes  ego/actuator_cmd      ackermann_msgs/AckermannDriveStamped: the speed and the
-                                  steering angle, sized for our car (vehicle.yaml)
+Subscribes  control/carla/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's speed
+                                  and steering angle, sized for our car (vehicle.yaml), from
+                                  the output mux (aav_io_mux, target carla)
             safety/estop          std_msgs/Bool: true brakes at once, until false
 Publishes   clock                 rosgraph_msgs/Clock: CARLA's simulated time, each step
             vehicle/odom          nav_msgs/Odometry, twist only, like aav_spine
@@ -145,7 +146,8 @@ class CarlaAdapter(Node):
         self.imu_pub = self.create_publisher(Imu, 'sensors/imu/data_raw', 10)
         self.fix_pub = self.create_publisher(NavSatFix, 'sensors/gps/fix', 10)
         reliable = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
-        self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
+        self.create_subscription(AckermannDriveStamped, 'control/carla/actuator_cmd',
+                                 self.on_cmd, 10)
         self.create_subscription(Bool, 'safety/estop', self.on_estop, reliable)
         self.announce(sensors.sources(self.chosen))
 

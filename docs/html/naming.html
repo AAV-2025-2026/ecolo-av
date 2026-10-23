@@ -7,7 +7,7 @@
 <!-- Generated from docs/naming.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Topic names by area (Done, 15 October)</h1>
-<div class="meta">7 min read · 5 sections</div></header>
+<div class="meta">8 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -118,8 +119,8 @@ same areas as the folders under <code>src/</code>, plus <code>/system/</code> fo
 </tr>
 <tr>
 <td><code>/control/</code></td>
-<td>the chosen command</td>
-<td>twist_mux, the smoother</td>
+<td>the chosen command; ego's command for one target, <code>/control/&lt;target&gt;/actuator_cmd</code></td>
+<td>twist_mux, the smoother, the output mux (23 Oct)</td>
 </tr>
 <tr>
 <td><code>/ego/</code></td>
@@ -138,8 +139,8 @@ same areas as the folders under <code>src/</code>, plus <code>/system/</code> fo
 </tr>
 <tr>
 <td><code>/system/</code></td>
-<td>what kind of run this is: <code>/system/source</code> (real, sim, bench, replay)</td>
-<td>the backends, the bench, a replay (added 15 Oct, <code>READ-ME-FULL-SIMULATION.md</code>)</td>
+<td>what kind of run this is: <code>/system/source</code> (real, sim, bench, replay); the sensor mux's check, <code>/system/sensor_mux/state</code></td>
+<td>the backends, the bench, a replay (added 15 Oct, <code>READ-ME-FULL-SIMULATION.md</code>); the sensor mux (23 Oct)</td>
 </tr>
 </tbody>
 </table></div>
@@ -333,7 +334,7 @@ config files name their nodes <code>/**/joy_node</code> and so on, so they match
 </tr>
 <tr>
 <td><code>/ego/actuator_cmd</code></td>
-<td>unchanged</td>
+<td>unchanged; since 23 Oct the backends read <code>/control/&lt;target&gt;/actuator_cmd</code>, from the output mux (<a href="sources-and-targets.html">Sources and targets</a>)</td>
 </tr>
 <tr>
 <td><code>/estop</code></td>

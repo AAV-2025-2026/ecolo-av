@@ -20,10 +20,11 @@ def test_the_defaults_start_the_same_stack_as_gazebo():
     actions = started(BRINGUP, host='192.0.2.10')
     sent = included(actions)
     assert set(sent) == {'carla.launch.py', 'mux.launch.py', 'ego.launch.py',
-                         'scripted.launch.py', 'localization.launch.py',
+                         'io_mux.launch.py', 'scripted.launch.py', 'localization.launch.py',
                          'radar_clusters.launch.py', 'navigation.launch.py',
                          'watchdog.launch.py'}
     assert sent['carla.launch.py']['host'] == '192.0.2.10'
+    assert sent['io_mux.launch.py'] == {'target': 'carla', 'source': 'sim'}
     nav = sent['navigation.launch.py']
     assert (nav['radar'], nav['lidar'], nav['collision_monitor']) == ('true', 'true', 'true')
     assert nav['map'].endswith(os.path.join('maps', 'empty.yaml'))

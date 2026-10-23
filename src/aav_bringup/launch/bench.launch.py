@@ -86,6 +86,8 @@ def launch_setup(context):
         include('aav_description', 'description.launch.py'),
         include('aav_mux', 'mux.launch.py'),
         include('aav_ego', 'ego.launch.py'),
+        # ego's commands go to spine_bridge (source bench) only while everything is BENCH.
+        include('aav_io_mux', 'io_mux.launch.py', target='bench', source='bench'),
         include('aav_scripted', 'scripted.launch.py'),
         include('aav_goto', 'goto.launch.py'),
         Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',

@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -263,12 +264,12 @@ run on the real car yet: the car still runs the 2025-26 code, on Humble.
 <tbody>
 <tr>
 <td>5</td>
-<td>ROS 2 over Ethernet, Orin → Motor-Pi</td>
-<td><code>/ego/actuator_cmd</code></td>
+<td>the output mux, then ROS 2 over Ethernet, Orin → Motor-Pi</td>
+<td><code>/control/car/actuator_cmd</code></td>
 <td>the same</td>
 <td>50 Hz</td>
-<td>a different <code>ROS_DOMAIN_ID</code>; the network</td>
-<td>on the Pi: <code>ros2 topic hz /ego/actuator_cmd</code></td>
+<td>any source not REAL (<code>/safety/output_mux/state</code> says STOP); a different <code>ROS_DOMAIN_ID</code>; the network</td>
+<td>on the Pi: <code>ros2 topic hz /control/car/actuator_cmd</code></td>
 </tr>
 <tr>
 <td>6</td>

@@ -49,6 +49,7 @@
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
 <a href="model-comparison.html">Newer models</a>
@@ -156,7 +157,7 @@ publishes the same thing drops in, and nothing downstream changes.</p>
 <td><code>ublox_gps</code>, <code>nmea_navsat_driver</code>, <code>ublox_dgnss</code>, <code>gazebo_gps</code></td>
 </tr>
 <tr>
-<td>Backend: <code>/ego/actuator_cmd</code> in, <code>/vehicle/odom</code> out</td>
+<td>Backend: <code>/control/&lt;target&gt;/actuator_cmd</code> in (ego's, through the output mux), <code>/vehicle/odom</code> out</td>
 <td><code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 </tr>
 </tbody>

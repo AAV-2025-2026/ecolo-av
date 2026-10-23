@@ -317,6 +317,9 @@ class Probe(Node):
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  lambda m: self.monitor.append((m.action_type, m.polygon_name)),
                                  10)
+        self.output_mux = ''   # the output mux's state: OPEN, WAIT or STOP (aav_io_mux)
+        self.create_subscription(String, '/safety/output_mux/state',
+                                 lambda m: setattr(self, 'output_mux', m.data), 10)
 
     def on_truth(self, msg):
         self.truth = msg
@@ -352,6 +355,9 @@ class Probe(Node):
 
     def arm_and_hold(self, tries=3):
         """Arm, and wait until the spine has stayed armed for 2 s (bench_check.py's)."""
+        # Ego's commands reach spine_bridge only once the output mux is open; armed before
+        # that, the spine's watchdog latches it again at once.
+        self.spin_for(60.0, lambda: self.output_mux.startswith('OPEN'))
         for _ in range(tries):
             self.arm()
             if self.spin_for(3.0, self.armed) and not self.spin_for(2.0,

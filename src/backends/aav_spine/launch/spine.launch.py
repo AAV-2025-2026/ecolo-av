@@ -3,7 +3,8 @@ The real car on the CAN spine: ros2_socketcan + spine_bridge.
 
   ros2 launch aav_spine spine.launch.py [interface:=can0]
 
-  /ego/actuator_cmd, /safety/estop ──> spine_bridge ──> /can/tx ──> socket_can_sender ──> can0
+  /control/car/actuator_cmd (the output mux), /safety/estop ──> spine_bridge ──> /can/tx
+      ──> socket_can_sender ──> can0
   can0 ──> socket_can_receiver ──> /can/rx ──> spine_bridge ──> /vehicle/odom,
                                                                     /vehicle/status,
                                                                     /vehicle/joint_states

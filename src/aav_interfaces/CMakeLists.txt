@@ -9,6 +9,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/VehicleStatus.msg"
   "msg/SensorSource.msg"
   "msg/DataSource.msg"
+  "msg/SourceCheck.msg"
   "msg/ActuatorState.msg"
   "msg/WheelSpeeds.msg"
   "msg/SpineOutputs.msg"

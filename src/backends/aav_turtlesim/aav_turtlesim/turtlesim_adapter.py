@@ -1,7 +1,8 @@
 """
 turtlesim_adapter: drive the turtlesim turtle like a car.
 
-Subscribes  ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped
+Subscribes  control/turtle/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
+                              command, from the output mux (aav_io_mux, target turtle)
             turtle1/pose      turtlesim/Pose
 Publishes   turtle1/cmd_vel   geometry_msgs/Twist (bicycle model: w = v tan(d) / L)
             vehicle/odom      nav_msgs/Odometry (twist only), so ekf_local can run
@@ -42,7 +43,8 @@ class TurtlesimAdapter(Node):
         self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
         self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
         self.steering = 0.0
-        self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
+        self.create_subscription(AckermannDriveStamped, 'control/turtle/actuator_cmd',
+                                 self.on_cmd, 10)
         self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
         self.create_subscription(Pose, 'turtle1/pose', self.on_pose, 10)
 

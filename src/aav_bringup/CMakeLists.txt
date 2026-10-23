@@ -16,6 +16,9 @@ if(BUILD_TESTING)
   # CARLA as the car: the same stack as Gazebo's, and carla_adapter's parameters.
   ament_add_pytest_test(test_carla_launch test/test_carla_launch.py
     APPEND_ENV AMENT_PREFIX_PATH=${CMAKE_INSTALL_PREFIX})
+  # target:= and source:=: one launch for every target, and each profile's two muxes.
+  ament_add_pytest_test(test_stack_launch test/test_stack_launch.py
+    APPEND_ENV AMENT_PREFIX_PATH=${CMAKE_INSTALL_PREFIX})
   # Nav2's settings with and without reversing, as navigation.launch.py writes them.
   ament_add_pytest_test(test_navigation_launch test/test_navigation_launch.py
     APPEND_ENV AMENT_PREFIX_PATH=${CMAKE_INSTALL_PREFIX})
