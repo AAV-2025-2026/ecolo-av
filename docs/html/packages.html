@@ -185,9 +185,16 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tr>
 <td><code>aav_spine</code></td>
 <td>backends</td>
-<td>the real car: ego's commands as CAN frames</td>
+<td>the real car: ego's commands as CAN frames. Its Python <code>spine_bridge</code>, the config and the launch file</td>
 <td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>; no spine board yet</td>
 <td>new</td>
+</tr>
+<tr>
+<td><code>aav_spine_bridge</code></td>
+<td>backends</td>
+<td>the same <code>spine_bridge</code> in Rust, on the firmware's own CAN code (<code>spine-core</code>); the default since 23 Oct (<code>bridge:=python</code> for the other)</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>; no spine board yet</td>
+<td>new: a port of <code>aav_spine</code>'s node (T1.8)</td>
 </tr>
 <tr>
 <td><code>aav_legacy</code></td>
@@ -528,7 +535,7 @@ Only one runs at a time.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>aav_spine</code></td>
+<td><code>aav_spine</code> (<code>aav_spine_bridge</code>: the node, in Rust)</td>
 <td>CAN frames on <code>/can/tx</code> (through ros2_socketcan, Linux only)</td>
 <td><code>/vehicle/status</code>; the service <code>/spine/arm</code>; stops sending drive frames when ego goes quiet for 0.1 s</td>
 </tr>
@@ -618,7 +625,7 @@ Only one runs at a time.</p>
 <tr>
 <td><code>spine/crates/spine-core</code></td>
 <td>the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder</td>
-<td><span class="badge b-works">works</span> 70 tests, and the bench</td>
+<td><span class="badge b-works">works</span> 71 tests, and the bench</td>
 </tr>
 <tr>
 <td><code>spine/crates/wheel-core</code></td>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/languages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Python, C++ and Rust</h1>
-<div class="meta">4 min read · 6 sections</div></header>
+<div class="meta">5 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -116,6 +116,11 @@ programs only meet through messages.</p></div>
 <td>The radar clustering, <code>aav_radar_clusters</code></td>
 <td>Rust (<code>rclrs</code>)</td>
 <td>A rewrite of the 2025-26 C++ node, which it replaced on 15 Oct</td>
+</tr>
+<tr>
+<td>The CAN bridge, <code>aav_spine_bridge</code></td>
+<td>Rust (<code>rclrs</code>)</td>
+<td>A port of <code>aav_spine</code>'s Python node (T1.8), on the firmware's own CAN code. The default since 23 Oct; the Python one stays until the Rust one has run on the car</td>
 </tr>
 <tr>
 <td>The spine firmware, <code>firmware/spine</code></td>

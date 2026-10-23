@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">40 min read · 14 sections</div></header>
+<div class="meta">42 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -68,7 +68,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-todays-esp32-15-oct">The spine on today&#x27;s ESP32 (15 Oct)</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#the-wheel-encoder-on-a-pico-2-15-oct">The wheel encoder on a Pico 2 (15 Oct)</a><a href="#the-status-display-on-a-pico-2-15-oct">The status display on a Pico 2 (15 Oct)</a><a href="#what-is-untested-on-the-two-new-boards">What is untested on the two new boards</a><a href="#the-esp32-boards-of-the-kefc-plan-15-oct">The ESP32 boards of the KEFC plan (15 Oct)</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#why-rust-at-this-level">Why Rust at this level</a><a href="#what-runs-where">What runs where</a><a href="#the-layers">The layers</a><a href="#the-framework-the-rtos-part">The framework: the &quot;RTOS&quot; part</a><a href="#the-spine-on-todays-esp32-15-oct">The spine on today&#x27;s ESP32 (15 Oct)</a><a href="#the-spine-on-a-pico-2-11-oct">The spine on a Pico 2 (11 Oct)</a><a href="#the-wheel-encoder-on-a-pico-2-15-oct">The wheel encoder on a Pico 2 (15 Oct)</a><a href="#the-status-display-on-a-pico-2-15-oct">The status display on a Pico 2 (15 Oct)</a><a href="#what-is-untested-on-the-two-new-boards">What is untested on the two new boards</a><a href="#the-esp32-boards-of-the-kefc-plan-15-oct">The ESP32 boards of the KEFC plan (15 Oct)</a><a href="#the-can-bridge-on-the-orin-in-rust-23-oct">The CAN bridge on the Orin, in Rust (23 Oct)</a><a href="#todays-boards-and-their-rust-versions">Today&#x27;s boards, and their Rust versions</a><a href="#toolchains">Toolchains</a><a href="#done-so-far">Done so far</a><a href="#next">Next</a></nav>
 <div class="lead"><p>Ben's direction (10 October 2026): write the firmware and the hardware drivers in Rust,
 not C or C++, even where the ROS nodes above stay in Python. The 2025-26 C++ firmware keeps
 running today's car until a Rust version replaces each board. This page is the plan, and
@@ -96,7 +96,7 @@ what's done so far.</p></div>
 </tr>
 <tr>
 <td>The spine is already Rust</td>
-<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (70 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2</td>
+<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (71 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2</td>
 </tr>
 </tbody>
 </table></div>
@@ -1614,6 +1614,47 @@ they already build and test with stock Rust.</p>
 </tbody>
 </table></div>
 </section>
+<section class="card"><h2 id="the-can-bridge-on-the-orin-in-rust-23-oct">The CAN bridge on the Orin, in Rust (23 Oct)</h2>
+<p><code>spine_bridge</code>, the ROS node between ego and the CAN bus, has a Rust twin:
+<code>src/backends/aav_spine_bridge</code> (PLAN.md T1.8). It packs and unpacks the frames with the
+firmware's own <code>spine-core</code> code, so both ends of the bus share one implementation of
+<code>aav.dbc</code>.</p>
+<pre class="highlight"><code class="language-text"> /ego/actuator_cmd, /safety/estop ──&gt; spine_bridge ──&gt; /can/tx ──&gt; ros2_socketcan ──&gt; can0
+ can0 ──&gt; ros2_socketcan ──&gt; /can/rx ──&gt; spine_bridge ──&gt; /vehicle/odom, wheels, status...
+                 (the spine: 0x180, 0x181; the wheel sensors' Arduino: 0x200, 0x201)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Crates</td>
+<td><code>spine-bridge</code>: the logic, no ROS (arming edge, command timeout, e-stop, the wheel pairing, odometry). <code>bridge-node</code>: the rclrs node</td>
+</tr>
+<tr>
+<td>The bus</td>
+<td>the same <code>/can/tx</code> and <code>/can/rx</code> topics as the Python node: <code>ros2_socketcan</code> on the Orin (Linux); <code>spine_sim</code> on the bench and in Gazebo, so Macs work too</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>the Python node's test cases, and the shared vectors (<code>firmware/can/test_vectors.json</code>) through the whole bridge: <code>cargo test -p spine-bridge</code></td>
+</tr>
+<tr>
+<td>Checked, 23 Oct</td>
+<td><code>bench-check</code>: <span class="badge b-works">works</span> with both bridges, the same results. <code>sim-check --spine</code>, on a Mac busy with other runs: both e-stops and arming pass with both bridges; the drive and Nav2 checks failed with both. Run it again on a quiet machine</td>
+</tr>
+<tr>
+<td>Default</td>
+<td>Rust since 23 Oct, in <code>spine.launch.py</code>, the bench and Gazebo's spine profile. <code>bridge:=python</code> runs aav_spine's node, kept until the Rust one has run on the car</td>
+</tr>
+</tbody>
+</table></div>
+<p>The wheel sensors are read by an Arduino (the hardware lead's board, Ben, 23 Oct), which
+sends WHEEL_SPEED_L and WHEEL_SPEED_R as <code>aav.dbc</code> says; both bridges decode them the same way.</p>
+</section>
 <section class="card"><h2 id="todays-boards-and-their-rust-versions">Today's boards, and their Rust versions</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -1705,8 +1746,8 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tbody>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, <code>MAX_REVERSE_SPEED</code>, from vehicle.yaml</td>
-<td>70</td>
+<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, <code>MAX_REVERSE_SPEED</code>, from vehicle.yaml. Since 23 Oct, <code>decode_report</code> for the Orin's side (the Rust CAN bridge)</td>
+<td>71</td>
 </tr>
 <tr>
 <td><code>aav-inputs</code> (10 Oct)</td>

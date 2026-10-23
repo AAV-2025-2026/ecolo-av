@@ -19,7 +19,12 @@ pixi run build                          # once, and after every change
 pixi run bench                          # the car's software, with stand-ins
 pixi run bench-check                    # start it and test it: about 2 minutes
 pixi run -e ml bench perception:=true   # add YOLO and the stop sign
+pixi run bench-check --python-bridge     # the same check with the Python spine_bridge
 ```
+
+`spine_bridge` is the Rust one (`aav_spine_bridge`) since 23 Oct; `bridge:=python` runs
+`aav_spine`'s Python one. On 23 Oct both passed `bench-check`: scripted drive 4.99 m (Rust)
+and 4.98 m (Python), both e-stops from 1.11 m/s to a stop.
 
 While it runs, in more terminals: `pixi run graph` (rqt_graph), `pixi run rviz`,
 `pixi run keyboard --local` (you drive, at the keyboard priority), or `pixi run check bench`.

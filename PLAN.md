@@ -78,7 +78,7 @@ the next concrete step.
 | T1.5 | One launch, `target:=` and `source:=`; the sensor mux and output mux | 4 Dec | 🧪 | 80 | built 23 Oct (`aav_io_mux`, `stack.launch.py target:=`; [sources and targets](docs/sources-and-targets.md)): every profile runs both muxes; `sim-check` and `bench-check` pass with them. Next: on the car, `/safety/output_mux/state` says OPEN with only the car's own nodes; the team agrees D3 |
 | T1.6 | Contract test | 4 Dec | ✅ | 80 | add topic rates to the nightly check |
 | T1.7 | Measure the computers and the network | 18 Dec | 🔧 | 35 | the load report on the Mac (22 Oct, below); the bandwidth budget (23 Oct, [bandwidth](docs/bandwidth.md)): only raw cameras overflow a link, CAN 8.5% busy; `pixi run bandwidth` measured Gazebo (33-35 MB/s). Next: run it on the car, then the Orin's CPU |
-| T1.8 | Port to Rust, one module at a time | Jan-Mar | 🔧 | 50 | IMU and radar done; next the CAN bridge (`aav_spine`) and the battery monitor |
+| T1.8 | Port to Rust, one module at a time | Jan-Mar | 🔧 | 65 | IMU, radar and the CAN bridge done (`aav_spine_bridge`, the default since 23 Oct; the Python one goes once the Rust has run on the car); next the battery monitor |
 | T1.9 | Second Orin (stretch) | Feb-Mar | 🎯 | 0 | KEFC decision, 2 Nov |
 
 ### 2 · Simulation and testing

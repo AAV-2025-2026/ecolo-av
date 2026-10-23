@@ -929,16 +929,20 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <td>ours; <code>ros2_socketcan</code> (stock, Linux only) puts the frames on the wire</td>
 </tr>
 <tr>
+<td><strong>Language</strong></td>
+<td>the node runs in Rust by default: <code>aav_spine_bridge</code>, on <code>spine-core</code>'s CAN code. <code>bridge:=python</code> runs this package's Python one. Both read <code>config/spine.yaml</code></td>
+</tr>
+<tr>
 <td><strong>Status</strong></td>
-<td><span class="badge b-works">works</span> on the bench against <code>spine_sim</code>. No spine board on the car yet</td>
+<td><span class="badge b-works">works</span> on the bench against <code>spine_sim</code>, both languages. No spine board on the car yet</td>
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
-<td><code>ros2 launch aav_spine spine.launch.py</code></td>
+<td><code>ros2 launch aav_spine spine.launch.py [bridge:=rust\|python]</code></td>
 </tr>
 <tr>
 <td><strong>Test</strong></td>
-<td><code>test/test_can_codec.py</code>, <code>test_spine_bridge.py</code>; <code>pixi run bench-check</code></td>
+<td><code>test/test_can_codec.py</code>, <code>test_spine_bridge.py</code>; the Rust: <code>cargo test -p spine-bridge</code> (the same cases, and the shared vectors); <code>pixi run bench-check</code></td>
 </tr>
 <tr>
 <td><strong>Read first</strong></td>

@@ -12,7 +12,7 @@ what's done so far.
 | The same code on the chip and on a laptop | the logic is plain `no_std` Rust, so `cargo test` checks it on any laptop, with no board |
 | Mistakes caught when it compiles | no stray pointers, no data races between an interrupt and the main loop |
 | One driver for every board | a driver written against `embedded-hal` runs on an ESP32, a Pico, an STM32, and on the Pi under Linux |
-| The spine is already Rust | `spine-core`: modes, arming, the watchdog, the speed loop, the CAN frames (70 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2 |
+| The spine is already Rust | `spine-core`: modes, arming, the watchdog, the speed loop, the CAN frames (71 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2 |
 
 ## What runs where
 
@@ -497,6 +497,30 @@ they already build and test with stock Rust.
 | 2 | Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel | the car |
 | 3 | `boards/esp32-umod --features can`: the real CAN pins, from the control board's schematic | the schematic |
 
+## The CAN bridge on the Orin, in Rust (23 Oct)
+
+`spine_bridge`, the ROS node between ego and the CAN bus, has a Rust twin:
+`src/backends/aav_spine_bridge` (PLAN.md T1.8). It packs and unpacks the frames with the
+firmware's own `spine-core` code, so both ends of the bus share one implementation of
+`aav.dbc`.
+
+```text
+ /ego/actuator_cmd, /safety/estop ──> spine_bridge ──> /can/tx ──> ros2_socketcan ──> can0
+ can0 ──> ros2_socketcan ──> /can/rx ──> spine_bridge ──> /vehicle/odom, wheels, status...
+                 (the spine: 0x180, 0x181; the wheel sensors' Arduino: 0x200, 0x201)
+```
+
+| | |
+|---|---|
+| Crates | `spine-bridge`: the logic, no ROS (arming edge, command timeout, e-stop, the wheel pairing, odometry). `bridge-node`: the rclrs node |
+| The bus | the same `/can/tx` and `/can/rx` topics as the Python node: `ros2_socketcan` on the Orin (Linux); `spine_sim` on the bench and in Gazebo, so Macs work too |
+| Tests | the Python node's test cases, and the shared vectors (`firmware/can/test_vectors.json`) through the whole bridge: `cargo test -p spine-bridge` |
+| Checked, 23 Oct | `bench-check`: [[works]] with both bridges, the same results. `sim-check --spine`, on a Mac busy with other runs: both e-stops and arming pass with both bridges; the drive and Nav2 checks failed with both. Run it again on a quiet machine |
+| Default | Rust since 23 Oct, in `spine.launch.py`, the bench and Gazebo's spine profile. `bridge:=python` runs aav_spine's node, kept until the Rust one has run on the car |
+
+The wheel sensors are read by an Arduino (the hardware lead's board, Ben, 23 Oct), which
+sends WHEEL_SPEED_L and WHEEL_SPEED_R as `aav.dbc` says; both bridges decode them the same way.
+
 ## Today's boards, and their Rust versions
 
 | Board (2025-26, C++) | Does | Rust version |
@@ -526,7 +550,7 @@ Rust.
 
 | Crate | Does | Tests |
 |---|---|---|
-| `spine-core` | the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (`DirectCmd`, for the UART link) and a speed loop with no wheel speed (`SpeedFeedback::None`). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, `MAX_REVERSE_SPEED`, from vehicle.yaml | 70 |
+| `spine-core` | the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (`DirectCmd`, for the UART link) and a speed loop with no wheel speed (`SpeedFeedback::None`). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, `MAX_REVERSE_SPEED`, from vehicle.yaml. Since 23 Oct, `decode_report` for the Orin's side (the Rust CAN bridge) | 71 |
 | `aav-inputs` (10 Oct) | clean inputs for every board: a `Debouncer` for switches and buttons, with separate times each way (an e-stop trips at once, and must stay released before it counts), and a `Lockout` for counting fast signals such as encoder spokes | 9 |
 | `jrk-g2` (10 Oct) | the Pololu Jrk G2 over I2C: set target, stop, feedback, error flags. Checked against Pololu's guide | 14 |
 | `ad5311` (10 Oct) | the throttle DAC (an AD5311; TI's DAC101C081 takes the same bytes), capped at 700 of 1023 | 10 |

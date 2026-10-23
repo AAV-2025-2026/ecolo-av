@@ -272,9 +272,10 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 | **Runs on** | the Orin (`spine: false` until the spine exists) |
 | **In → out** | `/control/car/actuator_cmd` (or `bench`, `gazebo`), `/safety/estop`, `/can/rx` → `/can/tx`, `/vehicle/odom`, `/vehicle/status`, `/vehicle/joint_states`; service `/spine/arm` |
 | **Origin** | ours; `ros2_socketcan` (stock, Linux only) puts the frames on the wire |
-| **Status** | [[works]] on the bench against `spine_sim`. No spine board on the car yet |
-| **Run alone** | `ros2 launch aav_spine spine.launch.py` |
-| **Test** | `test/test_can_codec.py`, `test_spine_bridge.py`; `pixi run bench-check` |
+| **Language** | the node runs in Rust by default: `aav_spine_bridge`, on `spine-core`'s CAN code. `bridge:=python` runs this package's Python one. Both read `config/spine.yaml` |
+| **Status** | [[works]] on the bench against `spine_sim`, both languages. No spine board on the car yet |
+| **Run alone** | `ros2 launch aav_spine spine.launch.py [bridge:=rust\|python]` |
+| **Test** | `test/test_can_codec.py`, `test_spine_bridge.py`; the Rust: `cargo test -p spine-bridge` (the same cases, and the shared vectors); `pixi run bench-check` |
 | **Read first** | `aav_spine/can_codec.py`, then `firmware/can/aav.dbc` |
 
 ### aav_legacy

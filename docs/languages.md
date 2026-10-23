@@ -23,6 +23,7 @@ programs only meet through messages.
 | Stock packages: Nav2, the EKFs, twist_mux | C++ | Not ours: we only configure them |
 | The IMU driver, `aav_imu_yahboom` | Rust (`rclrs`) | Ben's rewrite of the 2025-26 C++ driver, which it replaced on 11 Oct |
 | The radar clustering, `aav_radar_clusters` | Rust (`rclrs`) | A rewrite of the 2025-26 C++ node, which it replaced on 15 Oct |
+| The CAN bridge, `aav_spine_bridge` | Rust (`rclrs`) | A port of `aav_spine`'s Python node (T1.8), on the firmware's own CAN code. The default since 23 Oct; the Python one stays until the Rust one has run on the car |
 | The spine firmware, `firmware/spine` | Rust, `no_std` | Memory-safe, and its logic is tested on a laptop |
 | Today's ESP32 firmware | C++ (Arduino) | Inherited. The spine (Rust) replaces it |
 | The wheel encoder and status display Pico 2s | Rust, Embassy | Rewrites of the 2025-26 C++, 15 Oct; not yet flashed |

@@ -7,7 +7,7 @@
 <!-- Generated from docs/bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Bench mode: the whole car on one computer</h1>
-<div class="meta">13 min read · 11 sections</div></header>
+<div class="meta">14 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -82,7 +82,11 @@ graph-picture</code> draws this from whatever is running.</p>
 <pre class="highlight"><code class="language-bash">pixi run build                          # once, and after every change
 pixi run bench                          # the car's software, with stand-ins
 pixi run bench-check                    # start it and test it: about 2 minutes
-pixi run -e ml bench perception:=true   # add YOLO and the stop sign</code></pre>
+pixi run -e ml bench perception:=true   # add YOLO and the stop sign
+pixi run bench-check --python-bridge     # the same check with the Python spine_bridge</code></pre>
+<p><code>spine_bridge</code> is the Rust one (<code>aav_spine_bridge</code>) since 23 Oct; <code>bridge:=python</code> runs
+<code>aav_spine</code>'s Python one. On 23 Oct both passed <code>bench-check</code>: scripted drive 4.99 m (Rust)
+and 4.98 m (Python), both e-stops from 1.11 m/s to a stop.</p>
 <p>While it runs, in more terminals: <code>pixi run graph</code> (rqt_graph), <code>pixi run rviz</code>,
 <code>pixi run keyboard --local</code> (you drive, at the keyboard priority), or <code>pixi run check bench</code>.
 The bench stays on this computer, like the sim: these terminals see it, other computers
