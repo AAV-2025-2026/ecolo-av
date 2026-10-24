@@ -26,8 +26,12 @@ sensor_watchdog:
       cross_speed_tolerance: 0.3  # m/s: the wheels' change in speed vs the IMU's
       cross_yaw_tolerance: 0.15   # rad/s: the wheels' turn rate vs the gyro's
       cross_persist: 1.0        # s a gap must last
-      cross_gps_window: 6.0     # s of fixes (5 Hz in Gazebo): the speeds of fitted lines
-      cross_gps_tolerance: 0.3  # m/s: the wheels' vs the GPS's
+      # The GPS: a long window, so a tight tolerance. Nav2's MPPI plans from the wheels'
+      # speed, so frozen wheels keep the car only 0.1-0.2 m/s faster than they say: 0.3
+      # never caught that (24 Oct). Gazebo, normal driving, worst gap: 0.14 m/s over 6 s,
+      # 0.05 over 10 s (230 s of driving, replayed).
+      cross_gps_window: 10.0    # s of fixes (5 Hz in Gazebo): the speeds of fitted lines
+      cross_gps_tolerance: 0.15  # m/s: the wheels' vs the GPS's
     imu:                        # the filtered IMU: the EKFs' turn rate
       topic: /sensors/imu/data
       kind: imu

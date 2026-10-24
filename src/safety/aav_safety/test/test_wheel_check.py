@@ -96,7 +96,7 @@ def test_normal_driving_with_a_noisy_gps_never_latches():
         check = WheelCheck()
         assert drive(check, lambda t: ramp(t, top=0.8), turn=lambda t: 0.3 * math.sin(t / 3),
                      end=60.0, noise=0.2, rng=rng, gps_noise=0.5) is None, seed
-        assert check.worst[2] < 0.25, seed
+        assert check.worst[2] < 0.1, seed     # under the 0.15 tolerance, with room
 
 
 def test_wheels_frozen_at_the_wrong_speed_latch_from_the_gps():
@@ -109,6 +109,19 @@ def test_wheels_frozen_at_the_wrong_speed_latch_from_the_gps():
         check = WheelCheck()
         t = drive(check, speed, frozen_at=9.0, end=40.0, rng=rng, gps_noise=0.5)
         assert t is not None and t < 22.0, seed
+        assert 'GPS' in check.update(t)
+
+
+def test_wheels_frozen_while_mppi_keeps_the_car_a_little_faster_latch_from_the_gps():
+    # Nav2's MPPI plans from the wheels' speed: frozen at 0.2 m/s, the car settles at
+    # about 0.4 (Gazebo, 24 Oct). Too steady for the IMU; the GPS sees it within its window.
+    def speed(t):
+        return min(0.4, ramp(t, accel=0.3))
+    for seed in range(5):
+        rng = random.Random(seed)
+        check = WheelCheck()
+        t = drive(check, speed, frozen_at=1.7, end=40.0, rng=rng, gps_noise=0.5)
+        assert t is not None and t - 1.7 < 15.0, seed
         assert 'GPS' in check.update(t)
 
 

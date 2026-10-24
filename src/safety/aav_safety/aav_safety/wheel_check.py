@@ -13,8 +13,11 @@ as the car's speed or turn changes, and the GPS can once the speed is wrong for 
   gps     over the last `gps_window` s, the speed of a straight line fitted to the GPS
           fixes against the same fitted to where the wheels (and the gyro) say the car
           went. Slower, but it sees a speed that stays wrong: wheels frozen at 0.5 m/s
-          while the car drives on at 1. Both tracks are fitted the same way, so a turn
-          shortens both alike. Off without a GPS; a window with a jump in it is skipped
+          while the car drives on at 1, or at 0.2 while Nav2's MPPI, which plans from the
+          speed the wheels say, keeps the car at 0.4 (24 Oct). The window is long so the
+          tolerance can be tight: a fitted line's noise falls as the window grows. Both
+          tracks are fitted the same way, so a turn shortens both alike. Off without a
+          GPS; a window with a jump in it is skipped
 
 When any gap stays over its tolerance for `persist` s, the wheels count as wrong:
 DISAGREE, latched like a GPS jump, until a person clears it (the watchdog's clear service).
@@ -51,8 +54,8 @@ class CrossCheck:
     yaw_tolerance: float = 0.15     # rad/s: mean turn rates, over the window
     persist: float = 1.0            # s a gap must last before it counts
     bias_time: float = 10.0         # s: how fast the IMU's forward offset is learnt
-    gps_window: float = 6.0         # s of GPS fixes fitted
-    gps_tolerance: float = 0.3      # m/s: the wheels' fitted speed vs the GPS's
+    gps_window: float = 10.0        # s of GPS fixes fitted
+    gps_tolerance: float = 0.15     # m/s: the wheels' fitted speed vs the GPS's
 
     def __post_init__(self):
         for name in ('window', 'speed_tolerance', 'yaw_tolerance', 'bias_time',
