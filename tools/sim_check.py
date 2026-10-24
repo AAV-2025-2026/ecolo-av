@@ -73,9 +73,11 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    fault goes off, and the lock must open again. Two faults are of the watchdog itself:
    `watchdog hang` stops its process (SIGSTOP, then SIGCONT to mend it) and `watchdog
    kill` kills it (the last fault: nothing mends it). Its silence must hold Nav2 through
-   twist_mux's lock timeout. `odom freeze` counts from when the frozen wheels go wrong
-   (the car's speed or turn changes: Nav2 slows or steers), as they're right till then,
-   and has FROZEN_REACT s: a speed that stays wrong needs the GPS's 6 s window.
+   twist_mux's lock timeout. `odom freeze` goes on at FROZEN_AT m/s, while the car still
+   speeds up, and counts from when the frozen wheels go wrong by more than the cross
+   check's tolerances (the car's speed or turn changes: Nav2 speeds up, slows or steers),
+   as they're right till then, and has FROZEN_REACT s: a speed that stays wrong needs the
+   GPS's 10 s window.
    `hud stop`: the watchdog also wants the HUD's heartbeat here (watch_hud:=true); with no
    screen, the check beats for it (/hud/heartbeat, 10 Hz, a rising count) and stops, as a
    frozen HUD does.
@@ -109,6 +111,7 @@ AAV_SIM_PARTITION pick the ROS domain and the Gazebo partition (a random domain 
 """
 
 import bisect
+import collections
 import importlib.util
 import math
 import os
@@ -188,12 +191,13 @@ FAULTS = [('gps', 'stop'), ('watchdog', 'hang'), ('hud', 'stop'), ('imu', 'stop'
           ('gps', 'jump'), ('gps', 'nan'), ('odom', 'nan'), ('imu', 'nan'), ('watchdog', 'kill')]
 REACT = 6.0             # s of Gazebo's time from the fault to standing still
 STILL = 0.05            # m/s: standing still
-WRONG_SPEED = 0.2       # m/s and rad/s from the frozen values: frozen wheels now wrong
-WRONG_TURN = 0.1
+DRIVING = 0.5           # m/s: the car drives, so a fault can go on
+# `odom freeze` goes on sooner, while the car still speeds up. Nav2's MPPI plans from the
+# speed the wheels say, so frozen wheels keep the car only a little faster than them:
+# frozen at 0.5 m/s, it drove on at 0.6, under any tolerance the GPS's noise allows; at
+# 0.2, it drives on at about 0.4, which the GPS part sees (24 Oct, docs/simulation.md).
+FROZEN_AT = 0.2         # m/s
 FROZEN_WAIT = 30.0      # s of Gazebo's time for frozen wheels to go wrong (Nav2 slows, turns)
-# s from frozen wheels going wrong to standing still: the IMU sees a quick change at once,
-# but a speed that stays wrong needs the GPS's 6 s window (sensor_watchdog.yaml).
-FROZEN_REACT = 10.0
 HELD = 10.0             # s of Gazebo's time the car must stay still with no watchdog at all
 with open(os.path.join(ROOT, 'src', 'mux', 'aav_mux', 'config', 'twist_mux.yaml')) as f:
     # s of silence from the watchdog before twist_mux's sensors lock holds Nav2 itself
@@ -203,6 +207,9 @@ with open(os.path.join(ROOT, 'src', 'safety', 'aav_safety', 'config',
                        'sensor_watchdog.yaml')) as f:
     # the wheels' cross check against the IMU: its tolerances
     CROSS = yaml.safe_load(f)['sensor_watchdog']['ros__parameters']['odom']
+# s from frozen wheels going wrong to standing still: the IMU sees a quick change at once,
+# but a speed that stays wrong needs the GPS's window, then the persist time and the stop.
+FROZEN_REACT = CROSS['cross_gps_window'] + CROSS['cross_persist'] + 3.0
 LAUNCH = {}             # the running launch: its process group and log (session())
 
 # The spine in the loop (--spine). spine_bridge stops sending DRIVE_CMD cmd_timeout s after
@@ -1065,9 +1072,9 @@ def set_fault(probe, sensor, mode):
     return sent.done() and all(r.successful for r in sent.result().results)
 
 
-def drive_on(probe):
+def drive_on(probe, speed=DRIVING):
     """
-    Send Nav2 15 m on, along the road; wait until the car drives at 0.5 m/s.
+    Send Nav2 15 m on, along the road; wait until the car drives at `speed` m/s.
 
     East until x = 60 m, then west back to x = 0 (the map ends at 100 m): Nav2 turns the
     car round between the two, so the wait allows for a three-point turn.
@@ -1078,7 +1085,7 @@ def drive_on(probe):
     done = probe.go_to(x + (15.0 if east else -15.0), y, 0.0 if east else math.pi)
     if done is None:
         return None
-    probe.spin_for(120.0, lambda: probe.truth.twist.twist.linear.x > 0.5 or done.done())
+    probe.spin_for(120.0, lambda: probe.truth.twist.twist.linear.x > speed or done.done())
     return done
 
 
@@ -1097,10 +1104,12 @@ def check_faults(probe, watchdog=True):
         if not probe.spin_for(30.0, lambda: not probe.locked()) and watchdog:
             result(name, False, f'the watchdog was still locked before it: {probe.state}')
             continue
-        done = drive_on(probe)
+        frozen = (sensor, mode) == ('odom', 'freeze')
+        speed = FROZEN_AT if frozen else DRIVING
+        done = drive_on(probe, speed)
         if done is not None and done.done():
-            done = drive_on(probe)      # it turned round and arrived: once more, ahead
-        if done is None or probe.truth.twist.twist.linear.x <= 0.5:
+            done = drive_on(probe, speed)   # it turned round and arrived: once more, ahead
+        if done is None or probe.truth.twist.twist.linear.x <= speed:
             result(name, False, 'Nav2 would not drive before the fault')
             if done is not None:
                 probe.goal.cancel_goal_async()
@@ -1112,9 +1121,12 @@ def check_faults(probe, watchdog=True):
             continue
         t0, stopped_at, locked, silent, why = probe.now(), None, False, False, ''
         # Frozen wheels at a speed the car keeps are still right: they go wrong only once
-        # the car's speed or turn changes (wheel_check.py), so the clock starts then.
-        frozen = (sensor, mode) == ('odom', 'freeze')
+        # the car's speed or turn changes (wheel_check.py), so the clock starts then: once
+        # they're wrong by more than the cross check's tolerances, as it measures them (the
+        # speed against the GPS's; the turn rate as a mean over its window, so Nav2's small
+        # weaving doesn't count).
         held_v, held_w = probe.truth.twist.twist.linear.x, probe.truth.twist.twist.angular.z
+        turns = collections.deque()         # (t, the truth's turn rate) over the window
         wrong = None if frozen else 0.0     # s after the fault: the wheels' values are wrong
         react = FROZEN_REACT if frozen else REACT
 
@@ -1131,9 +1143,14 @@ def check_faults(probe, watchdog=True):
                 why = probe.state
             silent = silent or probe.silent()
             twist = probe.truth.twist.twist
-            if wrong is None and (abs(twist.linear.x - held_v) > WRONG_SPEED
-                                  or abs(twist.angular.z - held_w) > WRONG_TURN):
-                wrong = probe.now() - t0
+            if wrong is None and frozen:
+                turns.append((probe.now(), twist.angular.z))
+                while turns[0][0] < probe.now() - CROSS['cross_window']:
+                    turns.popleft()
+                turn = sum(w for _, w in turns) / len(turns)
+                if (abs(twist.linear.x - held_v) > CROSS['cross_gps_tolerance']
+                        or abs(turn - held_w) > CROSS['cross_yaw_tolerance']):
+                    wrong = probe.now() - t0
             if stopped_at is None and abs(twist.linear.x) < STILL:
                 stopped_at = probe.now() - t0
         x1, y1 = probe.xy(probe.truth)
