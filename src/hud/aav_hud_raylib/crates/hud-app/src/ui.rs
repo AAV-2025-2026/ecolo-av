@@ -11,21 +11,26 @@
 //! |   12 km/h      | (STOP SIGN banner)       |  sent / failed         |
 //! |                | (SIMULATED banner)       |                        |
 //! +----------------+--------------------------+------------------------+
-//! | STEERING  ---  | TOPICS                   | GPS                    |
-//! | THROTTLE  ===  |  /vehicle/status  SIM OK |  RTK FIXED             |
-//! | BRAKE     ===  |  /sensors/gps/fix  STALE |  lat, lon, accuracy    |
+//! | (icon) GO      | TOPICS                   | GPS                    |
+//! | all REAL       |  /vehicle/status  SIM OK |  RTK FIXED             |
+//! +----------------+  /sensors/gps/fix  STALE |  lat, lon, accuracy    |
+//! | STEERING  ---  |                          |                        |
+//! | THROTTLE  ===  |                          |                        |
+//! | BRAKE     ===  |                          |                        |
 //! +--------------------------------------------------------------------+
-//!
-//! The orange SIMULATED / BENCH / REPLAY banner shows whenever `/system/source` says any
-//! data isn't from the real car; each topic it names gets a REAL / SIM tag under TOPICS.
-//! +----------------+--------------------------+------------------------+
 //! ```
+//!
+//! The GO / STOP panel answers "may the car move?" for the safety drivers: a colour, an
+//! icon, a word and the one main reason (hud_core::gate). The orange SIMULATED / BENCH /
+//! REPLAY banner shows whenever `/system/source` says any data isn't from the real car;
+//! each topic it names gets a REAL / SIM tag under TOPICS.
 
 use std::time::Instant;
 
 use hud_core::{
     config::Topic,
     format,
+    gate::{Light, Verdict},
     gps::FixKind,
     health::Health,
     origin::Origin,
@@ -71,7 +76,8 @@ mod area {
     pub type Area = (f32, f32, f32, f32);
     pub const STRIP: Area = (8.0, 8.0, 1264.0, 76.0);
     pub const SPEED: Area = (8.0, 94.0, 430.0, 300.0);
-    pub const CONTROLS: Area = (8.0, 404.0, 430.0, 308.0);
+    pub const GATE: Area = (8.0, 404.0, 430.0, 176.0);
+    pub const CONTROLS: Area = (8.0, 590.0, 430.0, 122.0);
     pub const CAMERA: Area = (448.0, 94.0, 504.0, 300.0);
     pub const TOPICS: Area = (448.0, 404.0, 504.0, 308.0);
     pub const ESTOP: Area = (962.0, 94.0, 310.0, 184.0);
@@ -189,6 +195,7 @@ impl Ui {
         let vehicle = Fresh::of(state, Topic::VehicleStatus, now, state.vehicle);
         strip(&mut c, state, &vehicle, now, source);
         speed(&mut c, &vehicle);
+        gate(&mut c, &state.verdict(now));
         controls(&mut c, &vehicle);
         camera(&mut c, state, now, self.camera.as_ref(), blink);
         topics(&mut c, state, now);
@@ -304,6 +311,51 @@ impl Canvas<'_, '_> {
     fn panel(&mut self, a: area::Area, caption: &str) {
         self.fill(a, PANEL);
         self.text(a.0 + 14.0, a.1 + 10.0, 18.0, caption, CAPTION);
+    }
+
+    /// The light's icon, centred at `centre` (canvas units), radius `r`: a tick in a
+    /// circle (GO), a pause sign (WAIT), a stop sign (STOP), a question mark (no gate).
+    fn icon(&mut self, light: Light, centre: (f32, f32), r: f32, fill: Color, ink: Color) {
+        let s = self.scale;
+        let at = |x: f32, y: f32| Vector2::new(s.x0 + x * s.k, s.y0 + y * s.k);
+        let (cx, cy) = centre;
+        let (k, c) = (s.k, at(cx, cy));
+        if light == Light::Stop {
+            // An octagon, flat on top, as a road's stop sign: a rim, and a bar across.
+            self.d.draw_poly(c, 8, r * k, 22.5, ink);
+            self.d.draw_poly(c, 8, (r - 6.0) * k, 22.5, fill);
+        } else {
+            self.d.draw_circle_v(c, r * k, ink);
+            self.d.draw_circle_v(c, (r - 6.0) * k, fill);
+        }
+        let rect = |x: f32, y: f32, w: f32, h: f32| {
+            Rectangle::new(
+                s.x0 + (cx + x * r) * k,
+                s.y0 + (cy + y * r) * k,
+                w * r * k,
+                h * r * k,
+            )
+        };
+        match light {
+            Light::Stop => self.d.draw_rectangle_rec(rect(-0.6, -0.16, 1.2, 0.32), ink),
+            Light::Go => {
+                let thick = r * 0.2 * k;
+                let (a, b, e) = (
+                    at(cx - r * 0.45, cy + r * 0.02),
+                    at(cx - r * 0.12, cy + r * 0.36),
+                    at(cx + r * 0.48, cy - r * 0.34),
+                );
+                self.d.draw_line_ex(a, b, thick, ink);
+                self.d.draw_line_ex(b, e, thick, ink);
+                self.d.draw_circle_v(b, thick / 2.0, ink);
+            }
+            Light::Wait => {
+                self.d
+                    .draw_rectangle_rec(rect(-0.32, -0.42, 0.2, 0.84), ink);
+                self.d.draw_rectangle_rec(rect(0.12, -0.42, 0.2, 0.84), ink);
+            }
+            Light::Unknown => self.centred(cx, cy - r * 0.55, r * 1.1, "?", ink),
+        }
     }
 
     /// Text that fits in `max_w`: shrinks it down to `min_size`, no smaller.
@@ -440,29 +492,47 @@ fn speed(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
     }
 }
 
-/// Steering, throttle and brake, as bars.
+/// May the car move? The whole panel in the light's colour, its icon, the word, the one
+/// main reason, and what a person can do (hud_core::gate).
+fn gate(c: &mut Canvas, verdict: &Verdict) {
+    let a = area::GATE;
+    let (fill, ink) = match verdict.light {
+        Light::Go => (GOOD, Color::BLACK),
+        Light::Wait => (WARN, Color::BLACK),
+        Light::Stop => (ESTOP_RED, TEXT),
+        Light::Unknown => (PANEL, CAPTION),
+    };
+    c.fill(a, fill);
+    let r = 52.0;
+    let centre = (a.0 + 22.0 + r, a.1 + a.3 / 2.0);
+    c.icon(verdict.light, centre, r, fill, ink);
+    let x = a.0 + 2.0 * r + 44.0;
+    let w = a.0 + a.2 - 14.0 - x;
+    c.fitted(x, a.1 + 14.0, 64.0, w, verdict.headline, ink);
+    c.fitted(x, a.1 + 88.0, 30.0, w, &verdict.reason, ink);
+    c.fitted(x, a.1 + 132.0, 20.0, w, verdict.hint, ink);
+}
+
+/// Steering, throttle and brake, as bars: one row each.
 fn controls(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
     let a = area::CONTROLS;
-    c.panel(a, "CONTROLS");
-    let (x, w) = (a.0 + 20.0, a.2 - 40.0);
+    c.fill(a, PANEL);
+    let (x, right) = (a.0 + 16.0, a.0 + a.2 - 16.0);
+    let (bar_x, bar_w) = (x + 130.0, right - 96.0 - (x + 130.0));
     let v = vehicle.value;
     let steer_deg = v.map(|v| v.steering_angle.to_degrees());
-    let rows = [
-        ("STEERING", a.1 + 44.0),
-        ("THROTTLE", a.1 + 132.0),
-        ("BRAKE", a.1 + 220.0),
-    ];
-    for (i, (label, y)) in rows.into_iter().enumerate() {
-        c.text(x, y, 20.0, label, CAPTION);
-        let track = (x, y + 30.0, w, 36.0);
-        c.bar(track, BACKGROUND);
+    let rows = ["STEERING", "THROTTLE", "BRAKE"];
+    for (i, label) in rows.into_iter().enumerate() {
+        let y = a.1 + 12.0 + i as f32 * 36.0;
+        c.text(x, y + 4.0, 18.0, label, CAPTION);
+        c.bar((bar_x, y + 2.0, bar_w, 26.0), BACKGROUND);
         let value = match (i, v) {
             (_, None) => "--".to_owned(),
             (0, Some(_)) => format::steering(steer_deg.unwrap_or(0.0)),
             (1, Some(v)) => format!("{:.0} %", v.throttle.get() * 100.0),
             (_, Some(v)) => format!("{:.0} %", v.brake.get() * 100.0),
         };
-        c.right(x + w, y, 22.0, &value, vehicle.colour(TEXT));
+        c.right(right, y + 3.0, 20.0, &value, vehicle.colour(TEXT));
         let Some(v) = v else { continue };
         let fill = vehicle.colour(match i {
             0 => TEXT,
@@ -472,13 +542,13 @@ fn controls(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
         if i == 0 {
             // Centre = straight; left of centre = turning left (positive, REP-103).
             let k = (steer_deg.unwrap_or(0.0) / STEERING_RANGE_DEG).clamp(-1.0, 1.0);
-            let mid = x + w / 2.0;
-            c.bar((mid - 1.0, y + 26.0, 2.0, 44.0), CAPTION);
-            let marker = mid - k * (w / 2.0 - 6.0);
-            c.bar((marker - 6.0, y + 30.0, 12.0, 36.0), fill);
+            let mid = bar_x + bar_w / 2.0;
+            c.bar((mid - 1.0, y, 2.0, 30.0), CAPTION);
+            let marker = mid - k * (bar_w / 2.0 - 5.0);
+            c.bar((marker - 5.0, y + 2.0, 10.0, 26.0), fill);
         } else {
             let level = if i == 1 { v.throttle } else { v.brake };
-            c.bar((x, y + 30.0, w * level.get(), 36.0), fill);
+            c.bar((bar_x, y + 2.0, bar_w * level.get(), 26.0), fill);
         }
     }
 }

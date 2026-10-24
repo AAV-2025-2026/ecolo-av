@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">27 min read · 12 sections</div></header>
+<div class="meta">28 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -526,6 +526,16 @@ answer.</p>
 <td><strong>The detector package is <code>aav_detector</code></strong>, was <code>aav_yolo</code>; its node is <code>object_detector</code> (<code>object_detector_&lt;machine&gt;</code> on the car), was <code>yolo_detector</code>. Topics, parameters and <code>detector:=yolo</code> stay</td>
 <td>It runs RF-DETR Nano by default now, YOLO only as an option, so a name with "yolo" in it misled. <code>detector:=yolo</code> keeps its name: it names the model family</td>
 <td>Ben, 24 Oct: "aav detector yes"</td>
+</tr>
+<tr>
+<td><strong>A HUD that drops out holds Nav2 until a person clears it</strong> (latched, <code>hud LOST</code>). One dropout within 5 s of its first beat is forgiven; any other latches, even once it beats again. A person checks the screen, then <code>pixi run watchdog-clear</code> (the same service as a GPS jump)</td>
+<td>The safety drivers rely on the screen. A HUD that crashed once may crash again; driving on by itself after systemd restarts it hides that. A window's slow first frames shouldn't need a person, so start-up gets one free dropout. The watchdog's own stalls never latch it (<a href="hud.html#the-heartbeat">HUD</a>)</td>
+<td>Ben, 24 Oct</td>
+</tr>
+<tr>
+<td><strong>The HUD shows whether the car may move</strong>: GO, WAIT, STOP or AUTO STOP, a colour, an icon and the one main reason (the e-stop, the output mux's gate, the sensor watchdog)</td>
+<td>The safety drivers need one answer at a glance, short words, colour and a shape, not a log line (<a href="hud.html#may-the-car-move-the-go-stop-panel">HUD</a>)</td>
+<td>Ben, 24 Oct</td>
 </tr>
 </tbody>
 </table></div>

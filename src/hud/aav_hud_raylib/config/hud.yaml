@@ -12,5 +12,6 @@ hud:
     estop_topic: /safety/estop                            # std_msgs/msg/Bool: published, only ever true
     source_topic: /system/source                          # aav_interfaces/msg/DataSource, latched: the SIMULATED banner
     watchdog_topic: /safety/sensor_watchdog/state         # std_msgs/msg/String: the sensor watchdog's verdict, a banner unless OK
+    output_mux_topic: /safety/output_mux/state            # std_msgs/msg/String: the output mux's gate, OPEN / WAIT / STOP: the GO / STOP panel
     heartbeat_topic: /hud/heartbeat                       # std_msgs/msg/UInt64: published, 10 Hz while the screen draws (frames drawn)
     stale_after: 1.0                                      # s: a topic this quiet shows STALE

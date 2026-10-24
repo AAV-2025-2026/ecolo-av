@@ -10,6 +10,7 @@ pub use crate::watchdog::Alarm;
 
 use crate::{
     config::{HudConfig, Topic},
+    gate::{self, Verdict},
     gps::Fix,
     health::{Health, LastSeen},
     origin::{Announcement, Origins},
@@ -66,6 +67,8 @@ pub enum Update {
     Source(Announcement),
     /// The sensor watchdog's verdict: "OK", or "STOP: ..." / "WARN: ...".
     Watchdog(String),
+    /// The output mux's gate: "OPEN - ...", "WAIT - ..." or "STOP - ...".
+    OutputMux(String),
 }
 
 impl Update {
@@ -79,6 +82,7 @@ impl Update {
             Self::Battery(_) => Some(Topic::Battery),
             Self::Picture(_) | Self::BadPicture(_) => Some(Topic::Camera),
             Self::Watchdog(_) => Some(Topic::Watchdog),
+            Self::OutputMux(_) => Some(Topic::OutputMux),
             // Latched, sent once: its age says nothing about the data.
             Self::Estop(_) | Self::Source(_) => None,
         }
@@ -102,6 +106,8 @@ pub struct HudState {
     pub origins: Origins,
     /// The sensor watchdog's last verdict.
     pub watchdog: Option<String>,
+    /// The output mux's last state.
+    pub output_mux: Option<String>,
     new_picture: Option<Picture>,
     last_seen: HashMap<Topic, LastSeen>,
 }
@@ -134,6 +140,7 @@ impl HudState {
             Update::Estop(report) => self.estop = Some(report),
             Update::Source(a) => self.origins.apply(a),
             Update::Watchdog(w) => self.watchdog = Some(w),
+            Update::OutputMux(g) => self.output_mux = Some(g),
         }
     }
 
@@ -160,6 +167,25 @@ impl HudState {
     /// ([`watchdog::alarm`]: the map window shows the same).
     pub fn sensor_alarm(&self, now: Instant) -> Option<Alarm> {
         watchdog::alarm(self.health(Topic::Watchdog, now), self.watchdog.as_deref())
+    }
+
+    /// May the car move? GO / WAIT / STOP and the one main reason ([`gate::verdict`]).
+    pub fn verdict(&self, now: Instant) -> Verdict {
+        let fresh = self.health(Topic::VehicleStatus, now).is_ok();
+        let estop_on = fresh && self.vehicle.is_some_and(|v| v.estop_active);
+        // The output mux speaks twice a second: its own, longer limit.
+        let limit = self.config.stale_after().max(gate::GATE_QUIET);
+        let gate_health = self
+            .last_seen
+            .get(&Topic::OutputMux)
+            .copied()
+            .unwrap_or_default()
+            .health(now, limit);
+        gate::verdict(
+            estop_on,
+            (gate_health, self.output_mux.as_deref()),
+            (self.health(Topic::Watchdog, now), self.watchdog.as_deref()),
+        )
     }
 
     /// Every listened topic's name and health, in screen order.
@@ -215,6 +241,44 @@ mod tests {
             s.sensor_alarm(later),
             Some(Alarm::Stop("SENSOR WATCHDOG SILENT".into()))
         );
+    }
+
+    #[test]
+    fn the_verdict_follows_the_gate_the_watchdog_and_the_estop() {
+        use crate::gate::Light;
+        let start = Instant::now();
+        let mut s = HudState::new(HudConfig::default());
+        assert_eq!(s.verdict(start).light, Light::Unknown); // nothing heard yet
+        s.apply(
+            Update::OutputMux("OPEN - car: every source REAL".into()),
+            start,
+        );
+        assert_eq!(s.verdict(start).light, Light::Go);
+        // 1.5 s later: past stale_after (1 s), not yet the gate's own 2 s.
+        let later = start + Duration::from_millis(1500);
+        assert_eq!(s.verdict(later).light, Light::Go);
+        let silent = start + Duration::from_secs(3);
+        assert_eq!(s.verdict(silent).reason, "gate silent");
+        s.apply(
+            Update::OutputMux("OPEN - car: every source REAL".into()),
+            silent,
+        );
+        s.apply(Update::Watchdog("STOP: gps STALE (x)".into()), silent);
+        assert_eq!(s.verdict(silent).reason, "GPS STALE");
+        let stopped = VehicleStatus {
+            estop_active: true,
+            ..VehicleStatus::default()
+        };
+        s.apply(Update::Vehicle(stopped), silent);
+        assert_eq!(s.verdict(silent).reason, "E-STOP ON");
+        // An old status says nothing about the e-stop now.
+        let old = silent + Duration::from_secs(2);
+        s.apply(
+            Update::OutputMux("OPEN - car: every source REAL".into()),
+            old,
+        );
+        s.apply(Update::Watchdog("OK".into()), old);
+        assert_eq!(s.verdict(old).light, Light::Go);
     }
 
     #[test]

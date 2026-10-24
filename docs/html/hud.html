@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">35 min read · 13 sections</div></header>
+<div class="meta">39 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -102,8 +102,12 @@ a second program. Each opens full screen on its own monitor at boot:
 <td>km/h, big. Grey with "OLD" when <code>/vehicle/status</code> stops</td>
 </tr>
 <tr>
+<td>GO / STOP (24 Oct)</td>
+<td>may the car move? A colour, an icon, a word, the one main reason: <a href="#may-the-car-move-the-go-stop-panel">below</a></td>
+</tr>
+<tr>
 <td>Controls</td>
-<td>steering (left of centre = left), throttle, brake</td>
+<td>steering (left of centre = left), throttle, brake: one row each</td>
 </tr>
 <tr>
 <td>Camera</td>
@@ -127,6 +131,120 @@ a second program. Each opens full screen on its own monitor at boot:
 </tr>
 </tbody>
 </table></div>
+<h3 id="may-the-car-move-the-go-stop-panel">May the car move? (the GO / STOP panel)</h3>
+<p>For the safety drivers (Ben, 24 Oct: "fix the hud?"). Under the speed, the whole panel in
+one colour:</p>
+<pre class="highlight"><code class="language-text"> +-------------------------------+   +-------------------------------+
+ |  (tick)   GO                  |   |  (stop    STOP                |
+ |           all REAL            |   |   sign)   GPS is SIM          |
+ |           the car may move    |   |           clear: pixi run     |
+ +-------------------------------+   |           gate-clear          |
+        green                        +-------------------------------+
+                                            red</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Colour and icon</th>
+<th>Word</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>green, a tick</td>
+<td><strong>GO</strong></td>
+<td>the gate is open; nothing holds the drivers</td>
+</tr>
+<tr>
+<td>amber, a pause sign</td>
+<td><strong>WAIT</strong></td>
+<td>the gate is shut for now; it opens by itself</td>
+</tr>
+<tr>
+<td>red, a stop sign</td>
+<td><strong>STOP</strong></td>
+<td>nothing reaches the car (people's commands too), until fixed or cleared</td>
+</tr>
+<tr>
+<td>red, a stop sign</td>
+<td><strong>AUTO STOP</strong></td>
+<td>Nav2 and the AI slot are held; people can still drive</td>
+</tr>
+<tr>
+<td>grey, a question mark</td>
+<td><strong>NO GATE</strong></td>
+<td>no output mux heard: nothing reaches the car</td>
+</tr>
+</tbody>
+</table></div>
+<p>The one main reason, the first that applies:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Who says no</th>
+<th>Reason on screen</th>
+<th>Small line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>the car's e-stop (<code>/vehicle/status</code>)</td>
+<td>E-STOP ON</td>
+<td>clear: pixi run estop-clear</td>
+</tr>
+<tr>
+<td>2</td>
+<td>the output mux, latched (<a href="sources-and-targets.html">sources and targets</a>)</td>
+<td>GPS is SIM, 2 sources: IMU, sensor mux wants SIM...</td>
+<td>clear: pixi run gate-clear</td>
+</tr>
+<tr>
+<td>3</td>
+<td>the output mux, silent 2 s</td>
+<td>gate silent</td>
+<td>nothing reaches the car</td>
+</tr>
+<tr>
+<td>4</td>
+<td>the sensor watchdog, silent</td>
+<td>watchdog silent</td>
+<td>people can still drive</td>
+</tr>
+<tr>
+<td>5</td>
+<td>the sensor watchdog's lock: its first input that stops</td>
+<td>GPS STALE, HUD LOST, WHEELS DISAGREE...</td>
+<td>people can still drive; latched ones: clear: pixi run watchdog-clear</td>
+</tr>
+<tr>
+<td>6</td>
+<td>the output mux, waiting</td>
+<td>settling, sensor mux quiet, unsure: GPS...</td>
+<td>opens by itself</td>
+</tr>
+<tr>
+<td>7</td>
+<td>nothing heard from the output mux</td>
+<td>no output mux heard</td>
+<td>nothing reaches the car</td>
+</tr>
+<tr>
+<td>-</td>
+<td>none of these</td>
+<td>all REAL (or all SIM, in a simulator)</td>
+<td>the car may move</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The logic: <code>hud-core</code> <code>gate</code> (no ROS), with tests. It reads the two one-line states,
+  <code>/safety/output_mux/state</code> and <code>/safety/sensor_watchdog/state</code>. A line it doesn't
+  know shows as it is, never as GO.</li>
+<li>The camera's red watchdog banner stays: it has every input's detail.</li>
+<li><code>--demo</code> walks through GO, WAIT, AUTO STOP (the GPS silent) and STOP (a SIM camera).</li>
+</ul>
 <h3 id="run-it">Run it</h3>
 <pre class="highlight"><code class="language-bash">pixi run hud-demo                  # pretend data: no ROS, no car, any Mac
 pixi run build &amp;&amp; pixi run hud     # the real node (ros2 launch aav_hud_raylib hud.launch.py)
@@ -192,7 +310,7 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
 </tr>
 <tr>
 <td>The program dies</td>
-<td>no beats. systemd restarts it in 5 s; the lock opens once it beats again</td>
+<td>no beats. systemd restarts it in 5 s; Nav2 stays held (<strong>latched</strong>, below)</td>
 </tr>
 <tr>
 <td>The HUD never started</td>
@@ -200,6 +318,44 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
 </tr>
 </tbody>
 </table></div>
+<p><strong>Latched (Ben, 24 Oct: a HUD that keeps crashing holds Nav2 until a person clears it):</strong></p>
+<pre class="highlight"><code class="language-text"> first beat ──► 5 s grace ──────────────► running
+   one dropout in the grace: forgiven      any dropout: hud LOST, latched
+   (held only while it lasts)              (held even once it beats again)
+
+ a person checks the screen ──► pixi run watchdog-clear ──► Nav2 may drive</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A slow first frame, within 5 s of the first beat</td>
+<td>held while it lasts, then drives by itself (once)</td>
+</tr>
+<tr>
+<td>A crash, a freeze or a closed window after that</td>
+<td><code>hud LOST</code>: held, even once systemd restarts it</td>
+</tr>
+<tr>
+<td>A HUD that keeps crashing while it starts</td>
+<td>the second dropout latches</td>
+</tr>
+<tr>
+<td><code>pixi run watchdog-clear</code></td>
+<td>Nav2 drives again, if the HUD beats; the grace starts again</td>
+</tr>
+<tr>
+<td>The watchdog itself stalled (a busy computer)</td>
+<td>not the HUD's fault: nothing latches</td>
+</tr>
+</tbody>
+</table></div>
+<p>The rule is <code>latch: true</code> on the <code>hud</code> input (<code>sensor_watchdog.yaml</code>, <code>latch_grace: 5.0</code>),
+in <code>aav_safety</code> <code>watchdog.py</code>, with tests. The HUD shows it: <strong>AUTO STOP, HUD LOST</strong>.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -281,6 +437,26 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
 <tr>
 <td>The heartbeat in Gazebo (23 Oct, <code>sim-check --faults</code>, <code>hud stop</code>, twice)</td>
 <td>the check beats in the window's place; when it stops, Nav2's car stands still 2.5 s later</td>
+</tr>
+<tr>
+<td>The GO / STOP panel's logic (24 Oct, <code>cargo test</code>, hud-core <code>gate</code>, <code>state</code>)</td>
+<td>every state and reason above; the output mux's lines as its own tests have them, and one from the live output mux next to the turtle (latched by a node announcing a REAL GPS: "GPS is REAL"; cleared by the service)</td>
+</tr>
+<tr>
+<td>The output mux's line through the real node (24 Oct, <code>cargo test</code>, hud-app)</td>
+<td>published by another node, it reaches the screen</td>
+</tr>
+<tr>
+<td>The GO / STOP panel on screen (24 Oct)</td>
+<td><strong>not seen yet</strong>: the Mac's lid was shut, so no window could open. To do: <code>pixi run hud-demo --screenshot docs/img/hud-gate.png</code></td>
+</tr>
+<tr>
+<td>The HUD latch (24 Oct, <code>aav_safety</code> tests)</td>
+<td>a start-up dropout forgiven; any later one latched until cleared; a crash loop latches the second time; a stalled watchdog latches nothing</td>
+</tr>
+<tr>
+<td>The HUD latch in Gazebo (24 Oct, <code>sim-check --faults</code>, <code>hud stop</code>)</td>
+<td>stood still 2.4 s after the beats stopped: "hud LOST"; beating again, still held 5 s later; cleared, Nav2 drove again. 25 of 25 faults pass</td>
 </tr>
 </tbody>
 </table></div>

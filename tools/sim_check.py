@@ -80,7 +80,8 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    GPS's 10 s window.
    `hud stop`: the watchdog also wants the HUD's heartbeat here (watch_hud:=true); with no
    screen, the check beats for it (/hud/heartbeat, 10 Hz, a rising count) and stops, as a
-   frozen HUD does.
+   frozen HUD does. Latched: beating again, it must still hold Nav2 (hud LOST) 5 s later,
+   until the check clears it (/safety/sensor_watchdog/clear), as a person would.
    With --no-watchdog it only reports, without the watchdog's own two.
 11. With --lane: Gazebo again, with lane keeping (lane:=true) and nothing else driving, the
    car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
@@ -121,6 +122,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -298,10 +300,12 @@ class Probe(Node):
         self.create_subscription(Bool, '/safety/sensor_watchdog/lock', self.on_lock, 10)
         self.create_subscription(String, '/safety/sensor_watchdog/state', self.on_state, 10)
         # The HUD's heartbeat, standing in for its screen (--faults, watch_hud:=true):
-        # 10 Hz with a rising count while hud_beating, the way aav_hud_raylib sends it.
+        # 10 Hz with a rising count while hud_beating, the way aav_hud_raylib sends it. On
+        # its own thread, as the HUD's: a check that waits without spinning (a service, an
+        # action server) mustn't look like a dropout, which latches the watchdog.
         self.hud_beating, self.hud_frames = False, 0
         self.hud_beat = self.create_publisher(UInt64, '/hud/heartbeat', 10)
-        self.create_timer(0.1, self.beat_for_the_hud)
+        threading.Thread(target=self.beat_for_the_hud, daemon=True).start()
         self.disagreed = False      # the wheels' cross check ever said DISAGREE
         self.gaps = {}              # its worst gaps, from /diagnostics
         self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diagnostics, 10)
@@ -386,9 +390,15 @@ class Probe(Node):
         return self.truth.twist.twist.linear.x
 
     def beat_for_the_hud(self):
-        if self.hud_beating:
+        while rclpy.ok():
+            time.sleep(0.1)
+            if not self.hud_beating:
+                continue
             self.hud_frames += 3            # 30 frames a second, as the HUD draws
-            self.hud_beat.publish(UInt64(data=self.hud_frames))
+            try:
+                self.hud_beat.publish(UInt64(data=self.hud_frames))
+            except Exception:               # the check is over: the node has gone
+                return
 
     def on_state(self, msg):
         self.state = msg.data
@@ -1189,7 +1199,15 @@ def check_faults(probe, watchdog=True):
             continue
         # Mend it, and let the car's software settle before the next.
         set_fault(probe, sensor, 'ok')
-        if mode == 'jump' or (sensor, mode) == ('odom', 'freeze'):
+        if sensor == 'hud':
+            # Latched (Ben, 24 Oct): a HUD that beats again still holds Nav2, as hud LOST,
+            # until a person clears it (below).
+            probe.spin_for(5.0)
+            held = probe.locked() and 'hud LOST' in probe.state
+            ok = ok and held
+            detail += ('; beating again, still held 5 s later (hud LOST) until cleared'
+                       if held else f'; beating again, NOT held 5 s later: {probe.state}')
+        if mode == 'jump' or (sensor, mode) == ('odom', 'freeze') or sensor == 'hud':
             # Latched: a person checks the position (or the wheels), then clears it.
             probe.spin_for(30.0, lambda: math.hypot(*(a - b for a, b in zip(
                 probe.xy(probe.glob), probe.xy(probe.truth)))) < 2.0)

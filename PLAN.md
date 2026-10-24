@@ -181,10 +181,10 @@ the next concrete step.
 | T9.2 | Feasibility on the Pi 5 | 13 Nov | 🔧 | 30 | build `aav_hud_raylib` on 64-bit ARM |
 | T9.3 | HUD v1 | 4 Dec | 🧪 | 90 | |
 | T9.4 | Map view | 18 Dec | 🧪 | 90 | the real lot's image (T7.4) |
-| T9.5 | Faults, battery and health | 18 Dec | 🧪 | 70 | rail voltages (T4.5) |
+| T9.5 | Faults, battery and health | 18 Dec | 🧪 | 75 | 24 Oct: the HUD's GO / STOP panel says whether the car may move, and the one main reason (the e-stop, the output mux's gate, the sensor watchdog). Next: rail voltages (T4.5) |
 | T9.6 | Boot and crash tests | 18 Dec | 🔧 | 50 | on the Pi |
 | T9.7 | The language model's plan on screen | 29 Jan | 🔧 | 50 | |
-| T9.8 | HUD stop and heartbeat | 29 Jan | 🧪 | 80 | done 23 Oct: `/hud/heartbeat` while the screen draws; the watchdog stops Nav2 without it (car: `watch_hud:=true`). Passes in Gazebo (`sim-check --faults`, `hud stop`) and with the real window on a Mac. Next: on the car's screen computer; the Flutter app has none |
+| T9.8 | HUD stop and heartbeat | 29 Jan | 🧪 | 80 | done 23 Oct: `/hud/heartbeat` while the screen draws; the watchdog stops Nav2 without it (car: `watch_hud:=true`). Passes in Gazebo (`sim-check --faults`, `hud stop`) and with the real window on a Mac. 24 Oct (Ben): latched, a dropout after the HUD's first 5 s holds Nav2 until `pixi run watchdog-clear`. Next: on the car's screen computer; the Flutter app has none |
 
 ### Safety (cross-cutting)
 

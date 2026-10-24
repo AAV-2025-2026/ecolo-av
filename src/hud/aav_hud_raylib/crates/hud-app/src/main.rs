@@ -8,6 +8,10 @@
 //!             battery_topic         sensor_msgs/BatteryState      the strip's battery
 //!             camera_topic          sensor_msgs/Image             the camera panel
 //!             source_topic          aav_interfaces/DataSource     latched: the SIMULATED banner
+//!             watchdog_topic        std_msgs/String               the sensor watchdog: a banner,
+//!                                                                 and the GO / STOP panel
+//!             output_mux_topic      std_msgs/String               the output mux's gate: the
+//!                                                                 GO / STOP panel (hud_core::gate)
 //! Publishes   estop_topic           std_msgs/Bool                 only true: the e-stop button
 //!             heartbeat_topic       std_msgs/UInt64               10 Hz while the screen draws:
 //!                                                                 frames drawn (hud_core::heartbeat)

@@ -30,6 +30,8 @@ pub enum Topic {
     Source,
     /// The sensor watchdog's verdict (aav_safety): a banner over the camera unless OK.
     Watchdog,
+    /// The output mux's gate (aav_io_mux): OPEN, WAIT or STOP, in the GO / STOP panel.
+    OutputMux,
     /// `/hud/heartbeat`, sent: the screen is alive (hud_core::heartbeat).
     Heartbeat,
 }
@@ -46,11 +48,12 @@ impl Topic {
     ];
 
     /// The topics that aren't listed: the e-stop and the heartbeat (sent), the source
-    /// (latched), and the watchdog (a banner of its own).
-    pub const UNLISTED: [Topic; 4] = [
+    /// (latched), the watchdog (a banner of its own) and the output mux (its own panel).
+    pub const UNLISTED: [Topic; 5] = [
         Topic::Estop,
         Topic::Source,
         Topic::Watchdog,
+        Topic::OutputMux,
         Topic::Heartbeat,
     ];
 
@@ -66,6 +69,7 @@ impl Topic {
             Self::Estop => "estop_topic",
             Self::Source => "source_topic",
             Self::Watchdog => "watchdog_topic",
+            Self::OutputMux => "output_mux_topic",
             Self::Heartbeat => "heartbeat_topic",
         }
     }
@@ -83,6 +87,7 @@ pub struct HudConfig {
     pub estop_topic: String,
     pub source_topic: String,
     pub watchdog_topic: String,
+    pub output_mux_topic: String,
     pub heartbeat_topic: String,
     /// Seconds without a message before a topic shows STALE.
     pub stale_after: f64,
@@ -138,6 +143,7 @@ impl HudConfig {
             Topic::Estop => &self.estop_topic,
             Topic::Source => &self.source_topic,
             Topic::Watchdog => &self.watchdog_topic,
+            Topic::OutputMux => &self.output_mux_topic,
             Topic::Heartbeat => &self.heartbeat_topic,
         }
     }
@@ -154,6 +160,7 @@ impl HudConfig {
             Topic::Estop => &mut self.estop_topic,
             Topic::Source => &mut self.source_topic,
             Topic::Watchdog => &mut self.watchdog_topic,
+            Topic::OutputMux => &mut self.output_mux_topic,
             Topic::Heartbeat => &mut self.heartbeat_topic,
         };
         *slot = name;

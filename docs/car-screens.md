@@ -112,6 +112,10 @@ Already installed? Just the screens: `bash ~/aav-jazzy/aav/tools/car_screens_ins
 > the sensor watchdog stops Nav2 and the AI slot while it's missing: stopping `aav-hud`
 > holds them too. A session with no HUD screen: `car.launch.py watch_hud:=false`, written
 > on the test card.
+>
+> **Latched (24 Oct).** Once the HUD has run 5 s, a crash, freeze or stop holds Nav2
+> even after systemd restarts it: the screen says **AUTO STOP, HUD LOST**. A person
+> checks the screen, then `pixi run watchdog-clear`.
 
 ## The 2025-26 way, for comparison
 

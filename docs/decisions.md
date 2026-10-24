@@ -134,6 +134,8 @@ What we changed, and why.
 | Decision | Why | By |
 |---|---|---|
 | **The detector package is `aav_detector`**, was `aav_yolo`; its node is `object_detector` (`object_detector_<machine>` on the car), was `yolo_detector`. Topics, parameters and `detector:=yolo` stay | It runs RF-DETR Nano by default now, YOLO only as an option, so a name with "yolo" in it misled. `detector:=yolo` keeps its name: it names the model family | Ben, 24 Oct: "aav detector yes" |
+| **A HUD that drops out holds Nav2 until a person clears it** (latched, `hud LOST`). One dropout within 5 s of its first beat is forgiven; any other latches, even once it beats again. A person checks the screen, then `pixi run watchdog-clear` (the same service as a GPS jump) | The safety drivers rely on the screen. A HUD that crashed once may crash again; driving on by itself after systemd restarts it hides that. A window's slow first frames shouldn't need a person, so start-up gets one free dropout. The watchdog's own stalls never latch it ([HUD](hud.md#the-heartbeat)) | Ben, 24 Oct |
+| **The HUD shows whether the car may move**: GO, WAIT, STOP or AUTO STOP, a colour, an icon and the one main reason (the e-stop, the output mux's gate, the sensor watchdog) | The safety drivers need one answer at a glance, short words, colour and a shape, not a log line ([HUD](hud.md#may-the-car-move-the-go-stop-panel)) | Ben, 24 Oct |
 
 ## Open questions
 

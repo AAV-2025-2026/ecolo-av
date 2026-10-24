@@ -16,6 +16,7 @@
 //! - pictures: reliable, depth 1; best effort loses most big messages over WiFi;
 //! - the e-stop: reliable, depth 10, what spine_bridge and legacy_uart_bridge use;
 //! - the heartbeat: reliable, depth 10, as the sensor watchdog subscribes;
+//! - the watchdog's and the output mux's one-line states: reliable, depth 1;
 //! - `/system/source`: reliable, transient local, depth 1, so the HUD gets each
 //!   announcer's one message even when it starts later.
 
@@ -233,6 +234,15 @@ fn spin(
             move |m: StringMsg| send(&tx, Update::Watchdog(m.data))
         },
     )?;
+    let _output_mux = node.create_subscription(
+        config
+            .topic(Topic::OutputMux)
+            .qos(QoSProfile::topics_default().reliable().keep_last(1)),
+        {
+            let tx = tx.clone();
+            move |m: StringMsg| send(&tx, Update::OutputMux(m.data))
+        },
+    )?;
 
     let latched = QoSProfile::topics_default()
         .reliable()
@@ -421,7 +431,8 @@ mod tests {
     /// The real node, as another node hears it: beats 10 times a second while the window
     /// draws, with a rising count, and none before or after; and one press of the button
     /// is five trues, with the window frozen too, each reported to the screen as sent to a
-    /// subscriber. One test: the Ctrl-C handler can be set once per process. Needs ROS
+    /// subscriber. Then the output mux's line reaches the screen, as the GO / STOP panel
+    /// reads it. One test: the Ctrl-C handler can be set once per process. Needs ROS
     /// sourced; runs on this computer only, on ROS_DOMAIN_ID (93 unless set), with topics
     /// of its own.
     #[test]
@@ -438,6 +449,8 @@ mod tests {
         let mut config = HudConfig::default();
         config.set_topic(Topic::Estop, estop.clone());
         config.set_topic(Topic::Heartbeat, heartbeat.clone());
+        let gate = format!("{prefix}/output_mux_state");
+        config.set_topic(Topic::OutputMux, gate.clone());
         let (mut hud, _) = RosSource::start(vec!["hud".into()], config)?;
 
         let context = Context::default_from_env()?;
@@ -506,6 +519,23 @@ mod tests {
         assert!(reports.iter().all(
             |u| matches!(u, Update::Estop(EstopReport::Sent { subscribers }) if *subscribers >= 1)
         ));
+
+        // The output mux says it latched: the screen gets its line.
+        let gate_pub: Publisher<StringMsg> =
+            listener.create_publisher(gate.as_str().reliable().keep_last(10))?;
+        let line = "STOP - target car needs REAL - gps is SIM (gazebo_adapter) - latched: x";
+        let mut heard = Vec::new();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while heard.is_empty() && Instant::now() < deadline {
+            gate_pub.publish(StringMsg { data: line.into() })?;
+            spin(&mut executor, 200);
+            heard.extend(
+                hud.drain(Instant::now())
+                    .into_iter()
+                    .filter(|u| matches!(u, Update::OutputMux(_))),
+            );
+        }
+        assert!(matches!(heard.first(), Some(Update::OutputMux(l)) if l == line));
         Ok(())
     }
 }

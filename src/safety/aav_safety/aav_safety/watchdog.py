@@ -23,6 +23,17 @@ What counts as wrong, per input (each check only where its rule asks for it):
   DISAGREE  the wheels' speed or turn against the IMU's and the GPS's, where the odom
           rule has a cross_check (wheel_check.py): a wheel speed frozen while the car
           speeds up, brakes, turns or drives on faster. Latched, as a jump
+  LOST    where the rule says latch (the HUD's heartbeat): the input went wrong (STALE,
+          FROZEN...) after its start-up. Latched: a program that died or froze once may
+          do it again, so a person looks before Nav2 drives again (clear())
+
+The latch rule (Ben, 24 Oct: a HUD that keeps crashing holds Nav2 until a person clears
+it): one dropout is forgiven while the input starts, within latch_grace seconds of its
+first OK (a window opening, its first slow frames): it only holds the drivers
+while it lasts, as before. Any other dropout latches LOST, even once it is back. update(),
+once a tick, makes that call. After a stall of the watchdog itself (a busy computer,
+SIGSTOP), seen on a steady clock, it decides nothing for `settle` s: the silence it sees
+then is its own, while the queued messages (and, in a simulator, the clock) catch up.
 
 A heartbeat input (kind heartbeat) is a program saying it is alive, not a sensor: the
 HUD's /hud/heartbeat, the number of frames its screen has drawn. Silence (STALE, or NEVER
@@ -50,6 +61,7 @@ STALE = 'STALE'
 NAN = 'NAN'
 FROZEN = 'FROZEN'
 JUMP = 'JUMP'
+LOST = 'LOST'
 
 KINDS = ('odom', 'imu', 'gps', 'image', 'cloud', 'heartbeat', 'detections')
 EARTH_RADIUS = 6371000.0    # m
@@ -70,6 +82,8 @@ class Rule:
     jump_margin: float = 5.0    # m more, for the noise of two fixes (0.5 m each, in Gazebo)
     cross_check: Optional[CrossCheck] = None    # odom only: the wheels against the IMU
     frame_id: str = ''          # detections only: the camera whose messages count
+    latch: bool = False         # a dropout after its start-up latches LOST, until clear()
+    latch_grace: float = 5.0    # s after its first OK: one dropout forgiven
 
     def __post_init__(self):
         if self.kind not in KINDS:
@@ -84,6 +98,8 @@ class Rule:
         if self.kind == 'detections' and self.frozen_after > 0.0:
             raise ValueError(f'{self.name}: detections have no frozen check (an empty list '
                              'repeats on a clear road)')
+        if not self.latch_grace >= 0.0:
+            raise ValueError(f'{self.name}: latch_grace must be 0 or more seconds')
 
     def counts(self, frame_id: str) -> bool:
         """Report whether a message from this frame is this input's (detections: its camera)."""
@@ -114,6 +130,11 @@ class Watch:
         self.same_since = None     # when the values stopped changing
         self.fix = None            # the newest good GPS fix: (stamp, latitude, longitude)
         self.jumped = None         # the jump that latched, as text, until clear()
+        # Latch rules (rule.latch), kept by update().
+        self.first_good = None     # the first update() it was OK at: the grace starts
+        self.was_ok = False        # OK at the last update()
+        self.forgiven = False      # the one dropout of its start-up is spent
+        self.lost = None           # (what it went, when): latched until clear()
         # The wheels against the IMU (odom only): fed by arrived() and imu().
         self.cross = WheelCheck(rule.cross_check) if rule.cross_check is not None else None
         # Its traffic, for people (diagnostics: Lichtblick's "Sensors health" layout).
@@ -167,6 +188,15 @@ class Watch:
 
     def state(self, now: float) -> Tuple[str, str]:
         """Return (OK or what is wrong, a few words for a person)."""
+        if self.lost is not None:
+            went, since = self.lost
+            current, _ = self.current(now)
+            return LOST, (f'went {went} {now - since:.0f} s ago, {current} now: clear it '
+                          'once it runs right')
+        return self.current(now)
+
+    def current(self, now: float) -> Tuple[str, str]:
+        """Return (state, words) as the input is now, without a latched LOST."""
         rule = self.rule
         if self.jumped is not None:
             return JUMP, f'jumped {self.jumped}: clear it once the position is right'
@@ -205,17 +235,62 @@ class Watch:
         self.count, self.window, self.gap = 0, now, 0.0
         return out
 
+    def update(self, now: float):
+        """Latch rules: latch a dropout, unless it is the one of its start-up. Once a tick."""
+        if not self.rule.latch or self.lost is not None:
+            return
+        state, _ = self.current(now)
+        if state == OK:
+            self.was_ok = True
+            if self.first_good is None:
+                self.first_good = now
+        elif self.was_ok:
+            self.was_ok = False
+            if not self.forgiven and now - self.first_good <= self.rule.latch_grace:
+                self.forgiven = True        # starting up: holds only while it lasts
+            else:
+                self.lost = (state, now)
+
     def clear(self):
+        """Forget what latched; a latch rule starts afresh, with its grace again."""
         self.jumped = None
         if self.cross is not None:
             self.cross.clear()
+        self.lost, self.first_good, self.was_ok, self.forgiven = None, None, False, False
 
 
 class Watchdog:
     """Every input's Watch, and the verdict: whether the automatic drivers may drive."""
 
-    def __init__(self, rules: Sequence[Rule]):
+    def __init__(self, rules: Sequence[Rule], stall: float = 0.5, settle: float = 3.0):
+        """
+        stall: steady s between two update()s that mean the watchdog itself was stopped.
+
+        settle: steady s after such a stall in which nothing latches.
+        """
         self.watches = {r.name: Watch(r) for r in rules}
+        self.stall, self.settle = stall, settle
+        self.ticked = None          # the last update()'s steady time
+        self.quiet_until = None     # steady time: no latching before it
+
+    def update(self, now: float, steady: float):
+        """
+        Note the time, once a tick: where a rule says latch, a dropout latches here.
+
+        now is the node's clock (Gazebo's, in a simulator); steady a steady clock's
+        seconds (time.monotonic()). After more than `stall` steady s since the last tick,
+        the watchdog itself was stopped (a busy computer, SIGSTOP): the inputs look silent
+        only because it didn't listen. Nothing latches for `settle` s, while their queued
+        messages arrive. Only a steady clock sees the stall: a simulator's clock catches
+        up in small steps, from its queued messages too.
+        """
+        if self.ticked is not None and steady - self.ticked > self.stall:
+            self.quiet_until = steady + self.settle
+        self.ticked = steady
+        if self.quiet_until is not None and steady < self.quiet_until:
+            return
+        for watch in self.watches.values():
+            watch.update(now)
 
     def imu(self, now: float, forward: float, yaw_rate: float):
         """Note an IMU sample for every cross check: forward m/s^2, yaw rate rad/s."""
@@ -249,10 +324,11 @@ class Watchdog:
         wrong = [(n, s, d, stops) for n, s, d, stops in self.states(now) if s != OK]
         if not wrong:
             return 'OK'
+        wrong.sort(key=lambda w: not w[3])      # what stops the drivers first: the HUD's reason
         verdict = 'STOP' if any(stops for *_, stops in wrong) else 'WARN'
         return verdict + ': ' + '; '.join(f'{n} {s} ({d})' for n, s, d, _ in wrong)
 
     def clear(self):
-        """Forget latched GPS jumps and wheel disagreements (a person checked)."""
+        """Forget latched GPS jumps, wheel disagreements and lost inputs (a person checked)."""
         for watch in self.watches.values():
             watch.clear()
