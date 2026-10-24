@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">25 min read · 11 sections</div></header>
+<div class="meta">26 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -476,6 +476,11 @@ answer.</p>
 <td><strong>The cameras stream to the Orin with MediaMTX, compressed (H.264) on the Pi</strong>; the Orin unpacks them with NVIDIA's video hardware, then OpenCV and the object detector (RF-DETR Nano, in TensorRT) run on them, in one program per camera</td>
 <td>The camera Pi already runs MediaMTX with no ROS, and stays as it is. H.264 is about 10 times smaller than JPEG; raw pictures (83 MB/s each) never cross the network. People can watch the same stream in a browser. The cost, a little more delay (5-10 cm at 1 m/s), is to measure. <code>camera_ros</code> (ROS on the Pi) stays the fallback (<a href="../../TODO.md">TODO 37b</a>)</td>
 <td>Ben, 23 Oct: "mediamtx on the pi to the orin seems like the best choice"</td>
+</tr>
+<tr>
+<td><strong>TensorRT runs the detector on the Orin; OpenCV is whatever JetPack ships</strong> (4.x if that's it)</td>
+<td>TensorRT is NVIDIA's own and the fastest on the Orin. OpenCV only undistorts and finds lanes, so its version matters little, and JetPack's needs no build of our own</td>
+<td>Ben, 23 Oct: "tensorrt is definately the best choice. if htat is opencv 4 then thats what we use"</td>
 </tr>
 <tr>
 <td><strong>The detector is RF-DETR Nano</strong>, not YOLO</td>
