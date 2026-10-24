@@ -464,10 +464,10 @@ GPS points.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td>Wheel speed: today <code>encoder_udp</code>; later <code>spine_bridge</code></td>
+<td>Wheel speed: <code>spine_bridge role:=sensors</code>, from the wheel sensors on the Orin's CAN bus (the 2025-26 car: <code>encoder_udp</code>)</td>
 <td><code>/vehicle/odom</code></td>
 <td><code>nav_msgs/Odometry</code> (speed only)</td>
-<td>10 Hz today; 50 Hz with the spine</td>
+<td>about 100 Hz (<code>encoder_udp</code>: 10 Hz)</td>
 <td>both EKFs</td>
 </tr>
 <tr>

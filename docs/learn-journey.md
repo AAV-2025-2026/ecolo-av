@@ -118,7 +118,7 @@ The car tells the software what it really did. This closes the loop.
 
 | # | From | Topic | Message | Rate | Read by |
 |---|---|---|---|---|---|
-| 1 | Wheel speed: today `encoder_udp`; later `spine_bridge` | `/vehicle/odom` | `nav_msgs/Odometry` (speed only) | 10 Hz today; 50 Hz with the spine | both EKFs |
+| 1 | Wheel speed: `spine_bridge role:=sensors`, from the wheel sensors on the Orin's CAN bus (the 2025-26 car: `encoder_udp`) | `/vehicle/odom` | `nav_msgs/Odometry` (speed only) | about 100 Hz (`encoder_udp`: 10 Hz) | both EKFs |
 | 2 | IMU: `imu_node` (Yahboom) | `/sensors/imu/data_raw` | `sensor_msgs/Imu` | as the device sends | `imu_filter_madgwick` |
 | 3 | `imu_filter_madgwick` | `/sensors/imu/data` | `sensor_msgs/Imu`, with an orientation | the same | both EKFs |
 | 4 | GPS: `ublox_gps` | `/sensors/gps/fix` | `sensor_msgs/NavSatFix` | 1 Hz | `navsat_transform` |

@@ -223,11 +223,15 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>Today</strong></td>
-<td>an optical encoder (8 spokes) on a Pico 2, sending UDP packets every 0.1 s to <code>encoder_udp</code> (<code>aav_legacy</code>). It is reported fouled</td>
+<td>an Arduino (the hardware lead's) reads the wheel sensors and sends CAN frames 0x200 and 0x201 straight to the Orin (Ben, 23 Oct; the hardware lead confirms: <a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>)</td>
 </tr>
 <tr>
-<td><strong>After KEFC</strong></td>
-<td>Hall sensors reading the holes in the two front brake rotors, each on an ESP32-CAN-X2 wheel node, sending CAN frames 0x200 and 0x201 at 100 Hz (Proposed)</td>
+<td><strong>The 2025-26 encoder</strong></td>
+<td>an optical encoder (8 spokes) on a Pico 2, sending UDP packets every 0.1 s to <code>encoder_udp</code> (<code>aav_legacy</code>). It was reported fouled; off in our machine files since 23 Oct</td>
+</tr>
+<tr>
+<td><strong>The KEFC plan</strong></td>
+<td>Hall sensors reading the holes in the two front brake rotors, each on an ESP32-CAN-X2 wheel node, the same frames at 100 Hz (Proposed)</td>
 </tr>
 <tr>
 <td><strong>Good at</strong></td>
@@ -239,7 +243,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>Driver</strong></td>
-<td><code>encoder_udp</code> today; <code>spine_bridge</code> on CAN</td>
+<td><code>spine_bridge role:=sensors</code> on the Orin (CAN); <code>encoder_udp</code> for the 2025-26 encoder</td>
 </tr>
 <tr>
 <td><strong>Gazebo</strong></td>

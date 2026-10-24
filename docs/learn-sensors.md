@@ -46,11 +46,12 @@ Every frame's position on the car is in `src/aav_description/config/vehicle.yaml
 | | |
 |---|---|
 | **Measures** | how fast the wheels turn → forward speed |
-| **Today** | an optical encoder (8 spokes) on a Pico 2, sending UDP packets every 0.1 s to `encoder_udp` (`aav_legacy`). It is reported fouled |
-| **After KEFC** | Hall sensors reading the holes in the two front brake rotors, each on an ESP32-CAN-X2 wheel node, sending CAN frames 0x200 and 0x201 at 100 Hz (Proposed) |
+| **Today** | an Arduino (the hardware lead's) reads the wheel sensors and sends CAN frames 0x200 and 0x201 straight to the Orin (Ben, 23 Oct; the hardware lead confirms: [Today's wiring](can-plan.md#todays-wiring-23-october)) |
+| **The 2025-26 encoder** | an optical encoder (8 spokes) on a Pico 2, sending UDP packets every 0.1 s to `encoder_udp` (`aav_legacy`). It was reported fouled; off in our machine files since 23 Oct |
+| **The KEFC plan** | Hall sensors reading the holes in the two front brake rotors, each on an ESP32-CAN-X2 wheel node, the same frames at 100 Hz (Proposed) |
 | **Good at** | smooth, fast, never jumps |
 | **Bad at** | wheel slip; a wrong wheel size (ours, 0.30 m, is a guess) adds up |
-| **Driver** | `encoder_udp` today; `spine_bridge` on CAN |
+| **Driver** | `spine_bridge role:=sensors` on the Orin (CAN); `encoder_udp` for the 2025-26 encoder |
 | **Gazebo** | yes: `gazebo_adapter` reads the car model's motion |
 
 ## 4. Steering angle
