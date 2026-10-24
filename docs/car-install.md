@@ -5,8 +5,9 @@ sudo**, and **without touching** the 2025-26 Humble software. It all goes in one
 `~/aav-jazzy`. Deleting that folder undoes everything.
 
 !!! warning "Not on the car yet"
-    The kit is made and checked on a Mac. The install itself is [[untested]] on ARM Linux:
-    Friday is its first run. Do the [audit](audit-friday.md) first: back up, then install.
+    The kit is made and checked on a Mac, and installed offline on 64-bit ARM Linux by CI
+    on every push (GitHub's ARM runner, Ubuntu 24.04). On the Orin and the Pis it is
+    [[untested]]: Friday is its first run there. Do the [audit](audit-friday.md) first: back up, then install.
 
 ## The plan in one picture
 
@@ -21,7 +22,7 @@ sudo**, and **without touching** the 2025-26 Humble software. It all goes in one
 | 1 | Mac | `pixi run car-kit` | 26 s with Pixi's cache full; else the time to download 1.6 GB |
 | 2 | Mac | copy `car-kit/` to a stick | a few minutes |
 | 3 | car | `bash .../car_install.sh --dry-run` | 1 min (the checksums) |
-| 4 | car | `bash .../car_install.sh` | [[untested]] on ARM. A Mac took 91 s; guess 10 min on the Orin, 30-60 min on a Pi 4 |
+| 4 | car | `bash .../car_install.sh` | GitHub's ARM runner (4 cores, 16 GB), `--all`, no network: 4.5 min (24 Oct). A Mac took 91 s; guess 10 min on the Orin, 30-60 min on a Pi 4 |
 | 5 | car | `~/aav-jazzy/aav.sh tools/car_listen.sh` | seconds |
 
 ## 1. Make the kit (on a Mac, with internet)
@@ -162,4 +163,5 @@ GitHub, so `git pull` in `~/aav-jazzy/aav` works once the computer has a GitHub 
 | `car_install.sh --dry-run` on a Mac | [[works]] it refuses: not Linux, not aarch64, nothing changed |
 | the same installer on a Mac, with a Mac pack, the network blocked | [[works]] 15 Oct: unpack 44 s, build all 25 packages 43 s (the Rust ones from the kit's crates), run again 16 s; `aav.sh` cleared a Humble `PYTHONPATH` and set domain 42 |
 | `car_listen.sh` | [[works]] on a Mac (bash 3.2); its Linux parts (sysfs, /proc, `ss`) are [[untested]] |
+| `car-kit`, then `car_install.sh --all` on 64-bit ARM Linux, no network | [[works]] 24 Oct, CI's job `car-kit` (every push): GitHub's ARM runner, Ubuntu 24.04; the kit 1 min, the install and the build of every package, the HUD too, 4.5 min |
 | the install on the Orin or a Pi | [[untested]]: Friday |

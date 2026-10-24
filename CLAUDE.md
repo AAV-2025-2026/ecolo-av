@@ -122,8 +122,9 @@ These are the conventions decided so far. They apply to people and to Claude ses
   15 Oct), so nothing secret ever goes in it. Push `main` there once the full
   `pixi run test` passes (not just `tools/test.sh`: it skips the launch-file tests).
   Never force-push it, and push nowhere else.
-- CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux for every push to `main`
-  and every pull request, and on a Mac every night.
+- CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux, x86_64 and 64-bit ARM
+  (the car's computers), for every push to `main` and every pull request, with the car
+  kit installed offline on ARM; and on a Mac every night (`docs/infrastructure.md`).
 - Commit messages give the intention: what changed, and why. No attribution lines (no
   `Co-Authored-By`, no "Generated with"). It's a school project: the README's Credits
   section says who did what.

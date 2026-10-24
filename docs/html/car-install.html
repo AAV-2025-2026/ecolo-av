@@ -76,8 +76,9 @@ sudo</strong>, and <strong>without touching</strong> the 2025-26 Humble software
 <code>~/aav-jazzy</code>. Deleting that folder undoes everything.</p>
 <div class="admonition warning">
 <p class="admonition-title">Not on the car yet</p>
-<pre><code>The kit is made and checked on a Mac. The install itself is [[untested]] on ARM Linux:
-Friday is its first run. Do the [audit](audit-friday.md) first: back up, then install.
+<pre><code>The kit is made and checked on a Mac, and installed offline on 64-bit ARM Linux by CI
+on every push (GitHub's ARM runner, Ubuntu 24.04). On the Orin and the Pis it is
+[[untested]]: Friday is its first run there. Do the [audit](audit-friday.md) first: back up, then install.
 </code></pre>
 </div></div>
 <section class="card"><h2 id="the-plan-in-one-picture">The plan in one picture</h2>
@@ -116,7 +117,7 @@ Friday is its first run. Do the [audit](audit-friday.md) first: back up, then in
 <td>4</td>
 <td>car</td>
 <td><code>bash .../car_install.sh</code></td>
-<td><span class="badge b-untested">untested</span> on ARM. A Mac took 91 s; guess 10 min on the Orin, 30-60 min on a Pi 4</td>
+<td>GitHub's ARM runner (4 cores, 16 GB), <code>--all</code>, no network: 4.5 min (24 Oct). A Mac took 91 s; guess 10 min on the Orin, 30-60 min on a Pi 4</td>
 </tr>
 <tr>
 <td>5</td>
@@ -396,6 +397,10 @@ GitHub, so <code>git pull</code> in <code>~/aav-jazzy/aav</code> works once the 
 <tr>
 <td><code>car_listen.sh</code></td>
 <td><span class="badge b-works">works</span> on a Mac (bash 3.2); its Linux parts (sysfs, /proc, <code>ss</code>) are <span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td><code>car-kit</code>, then <code>car_install.sh --all</code> on 64-bit ARM Linux, no network</td>
+<td><span class="badge b-works">works</span> 24 Oct, CI's job <code>car-kit</code> (every push): GitHub's ARM runner, Ubuntu 24.04; the kit 1 min, the install and the build of every package, the HUD too, 4.5 min</td>
 </tr>
 <tr>
 <td>the install on the Orin or a Pi</td>

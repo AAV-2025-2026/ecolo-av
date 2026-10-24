@@ -241,9 +241,9 @@ request, and on a Mac every night. The results are on the repo's Actions tab.
 | Job | Computer | When | What |
 |---|---|---|---|
 | `linux` | Ubuntu 24.04, x86_64 | every push to `main`, every pull request | `pixi run test`, the MCP server |
-| `arm` | Ubuntu 24.04, **64-bit ARM**, like the Orin and the Pis | the same | `pixi run test`; the HUD and the map window built as ARM programs, and each drawn once on a virtual screen (picture: the artifact `arm-screens`) |
+| `arm` | Ubuntu 24.04, **64-bit ARM**, like the Orin and the Pis | the same | 12 min: `pixi run test`; the HUD and the map window built as ARM programs, and each drawn once on a virtual screen (picture: the artifact `arm-screens`) |
 | `mac` | macOS 15, Apple Silicon | every night | `pixi run test`, the MCP server |
-| `car-kit` | Ubuntu 24.04, 64-bit ARM | every night | `pixi run car-kit`, then `car_install.sh --all` with **no network** (its own network namespace), as on the car ([car install](car-install.md)) |
+| `car-kit` | Ubuntu 24.04, 64-bit ARM | every push to `main`, every pull request | `pixi run car-kit`, then `car_install.sh --all` with **no network** (its own network namespace), as on the car ([car install](car-install.md)): 6 min |
 | `sim` | Ubuntu 24.04, x86_64 | every night | `sim-check --obstacle` in Gazebo, below |
 
 Every job also runs from the Actions tab (Run workflow).
