@@ -49,6 +49,7 @@ Parameters  inputs (the names to watch), rate_hz (10), and for each name: topic,
 """
 
 import signal
+import time
 import zlib
 
 from aav_safety.watchdog import NEVER, OK, Rule, Watchdog
@@ -117,8 +118,9 @@ class SensorWatchdog(Node):
                               float(param('jump_margin', 5.0)), cross,
                               str(param('frame_id', '')), bool(param('latch', False)),
                               float(param('latch_grace', 5.0))))
-        # Five ticks without one: the watchdog itself was stopped, so nothing latches then.
-        self.dog = Watchdog(rules, stall=5.0 / rate)
+        # Five ticks' time without one, on a steady clock: the watchdog itself was stopped,
+        # so nothing latches for 3 s after.
+        self.dog = Watchdog(rules, stall=max(0.5, 5.0 / rate))
         self.speed = None      # the wheels' newest speed, for the camera's frozen check
         for rule in rules:
             if rule.kind == 'image':
@@ -190,7 +192,7 @@ class SensorWatchdog(Node):
 
     def tick(self):
         now = self.now()
-        self.dog.update(now)
+        self.dog.update(now, time.monotonic())
         states = self.dog.states(now)
         locked = any(stops for *_, stops in states)
         self.lock_pub.publish(Bool(data=locked))

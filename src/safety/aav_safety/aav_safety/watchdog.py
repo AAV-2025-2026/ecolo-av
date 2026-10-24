@@ -31,8 +31,9 @@ The latch rule (Ben, 24 Oct: a HUD that keeps crashing holds Nav2 until a person
 it): one dropout is forgiven while the input starts, within latch_grace seconds of its
 first OK (a window opening, its first slow frames): it only holds the drivers
 while it lasts, as before. Any other dropout latches LOST, even once it is back. update(),
-once a tick, makes that call; after a stall of the watchdog itself (a busy computer,
-SIGSTOP) it skips a tick, as the silence it sees then is its own.
+once a tick, makes that call. After a stall of the watchdog itself (a busy computer,
+SIGSTOP), seen on a steady clock, it decides nothing for `settle` s: the silence it sees
+then is its own, while the queued messages (and, in a simulator, the clock) catch up.
 
 A heartbeat input (kind heartbeat) is a program saying it is alive, not a sensor: the
 HUD's /hud/heartbeat, the number of frames its screen has drawn. Silence (STALE, or NEVER
@@ -232,25 +233,35 @@ class Watch:
 class Watchdog:
     """Every input's Watch, and the verdict: whether the automatic drivers may drive."""
 
-    def __init__(self, rules: Sequence[Rule], stall: float = 0.5):
-        """stall: s between two update()s that means the watchdog itself was stopped."""
-        self.watches = {r.name: Watch(r) for r in rules}
-        self.stall = stall
-        self.updated = None         # the last update()'s time
+    def __init__(self, rules: Sequence[Rule], stall: float = 0.5, settle: float = 3.0):
+        """
+        stall: steady s between two update()s that mean the watchdog itself was stopped.
 
-    def update(self, now: float):
+        settle: steady s after such a stall in which nothing latches.
+        """
+        self.watches = {r.name: Watch(r) for r in rules}
+        self.stall, self.settle = stall, settle
+        self.ticked = None          # the last update()'s steady time
+        self.quiet_until = None     # steady time: no latching before it
+
+    def update(self, now: float, steady: float):
         """
         Note the time, once a tick: where a rule says latch, a dropout latches here.
 
-        After more than `stall` s since the last tick, the watchdog itself was stopped (a
-        busy computer, SIGSTOP): the inputs look silent only because it didn't listen,
-        and their messages are still on their way. That tick decides nothing; the next does.
+        now is the node's clock (Gazebo's, in a simulator); steady a steady clock's
+        seconds (time.monotonic()). After more than `stall` steady s since the last tick,
+        the watchdog itself was stopped (a busy computer, SIGSTOP): the inputs look silent
+        only because it didn't listen. Nothing latches for `settle` s, while their queued
+        messages arrive. Only a steady clock sees the stall: a simulator's clock catches
+        up in small steps, from its queued messages too.
         """
-        stalled = self.updated is not None and now - self.updated > self.stall
-        self.updated = now
-        if not stalled:
-            for watch in self.watches.values():
-                watch.update(now)
+        if self.ticked is not None and steady - self.ticked > self.stall:
+            self.quiet_until = steady + self.settle
+        self.ticked = steady
+        if self.quiet_until is not None and steady < self.quiet_until:
+            return
+        for watch in self.watches.values():
+            watch.update(now)
 
     def imu(self, now: float, forward: float, yaw_rate: float):
         """Note an IMU sample for every cross check: forward m/s^2, yaw rate rad/s."""

@@ -131,7 +131,7 @@ def beat(dog, start, end, rate=10.0, count=None):
     while start + k / rate <= end + 1e-9:
         t = start + k / rate
         hud.arrived(t, digest=(count or 0) + k + 1)
-        dog.update(t)
+        dog.update(t, t)
         k += 1
 
 
@@ -139,7 +139,7 @@ def tick(dog, start, end):
     """Tick the watchdog at 10 Hz from start to end (s), with nothing arriving."""
     k = 0
     while start + k * 0.1 <= end + 1e-9:
-        dog.update(start + k * 0.1)
+        dog.update(start + k * 0.1, start + k * 0.1)
         k += 1
 
 
@@ -181,6 +181,7 @@ def test_a_cleared_hud_gets_its_grace_again():
     tick(dog, 20.1, 22.0)
     dog.clear()                                       # cleared while it is still dead
     assert state(dog, 'hud', 22.0) == STALE           # still holds, not latched
+    tick(dog, 22.1, 29.9)
     beat(dog, 30.0, 31.0)                             # restarted; a slow frame
     tick(dog, 31.1, 32.5)
     assert state(dog, 'hud', 32.5) == STALE
@@ -189,14 +190,21 @@ def test_a_cleared_hud_gets_its_grace_again():
 
 
 def test_a_stalled_watchdog_latches_nothing():
-    # The watchdog itself stopped for 3 s (SIGSTOP): its first tick back sees the HUD
+    # The watchdog itself stopped for 3 s (SIGSTOP): its first ticks back see the HUD
     # silent, as its beats still wait in the queue. They arrive, and nothing latched.
-    dog = Watchdog([LATCHED_HUD], stall=0.5)
+    dog = Watchdog([LATCHED_HUD], stall=0.5, settle=3.0)
     beat(dog, 0.0, 20.0)
-    dog.update(23.0)                                  # the first tick after the stall
-    assert state(dog, 'hud', 23.0) == STALE
-    beat(dog, 23.0, 25.0, count=1000)                 # the queued beats, then new ones
-    assert state(dog, 'hud', 25.0) == OK and not dog.locked(25.0)
+    tick(dog, 23.0, 24.0)                             # the first ticks after the stall
+    assert state(dog, 'hud', 24.0) == STALE
+    beat(dog, 24.1, 30.0, count=1000)                 # the queued beats, then new ones
+    assert state(dog, 'hud', 30.0) == OK and not dog.locked(30.0)
+
+
+def test_a_hud_that_dies_in_a_stall_still_latches_after_it():
+    dog = Watchdog([LATCHED_HUD], stall=0.5, settle=3.0)
+    beat(dog, 0.0, 20.0)
+    tick(dog, 23.0, 27.0)                             # it never comes back
+    assert state(dog, 'hud', 27.0) == LOST
 
 
 def test_a_rule_without_latch_never_latches():
