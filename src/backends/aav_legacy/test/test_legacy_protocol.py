@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 
 from aav_legacy.legacy_protocol import (
-    encoder_counts, EncoderSpeed, LegacyMapping, metres_per_count, pack_frame, stop_command,
-    to_legacy, unpack_frame)
+    crc8, encoder_counts, EncoderSpeed, FRAME_V2_LEN, FrameV2, LegacyMapping, metres_per_count,
+    pack_frame, pack_frame_v2, stop_command, to_legacy, unpack_frame, unpack_frame_v2)
 import pytest
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -146,3 +146,82 @@ def test_rust_vectors_decode_here():
         values = unpack_frame(bytes(case['bytes']))
         in_range = all(abs(v) <= 1.0 for v in values)  # False for NaN
         assert in_range == (case['cpp'] is not None), case['name']
+
+
+@pytest.mark.skipif(not VECTORS.exists(), reason='not in a full checkout')
+def test_rust_v2_vectors_are_what_this_module_sends():
+    gen = load_generator()
+    doc = json.loads(VECTORS.read_text())
+    assert [c['bytes'] for c in doc['v2_cases']] == [list(f) for _, _, f, _ in gen.V2_CASES]
+    assert doc['v2_stream'] == list(gen.V2_STREAM)
+
+
+@pytest.mark.skipif(not VECTORS.exists(), reason='not in a full checkout')
+def test_rust_v2_vectors_decode_here_as_in_the_firmware():
+    doc = json.loads(VECTORS.read_text())
+    for case in doc['v2_cases']:
+        frame = bytes(case['bytes'])
+        if case['error']:
+            with pytest.raises(ValueError):
+                unpack_frame_v2(frame)
+            continue
+        f = unpack_frame_v2(frame)
+        assert (f.counter, f.armed, f.estop) == (case['counter'], case['armed'],
+                                                 case['estop']), case['name']
+        in_range = all(abs(v) <= 1.0 for v in (f.steering, f.speed, f.accel))
+        assert in_range == (case['cpp'] is not None), case['name']
+
+
+# --- Version 2 (TODO 50) ---
+
+
+def test_crc8_is_the_can_frames_crc():
+    # CRC-8/SAE-J1850's published check value, as aav.dbc's frames use.
+    assert crc8(b'123456789') == 0x4B
+
+
+def test_v2_layout():
+    frame = pack_frame_v2(0.5, -0.25, 0.0, 200, armed=True, estop=False)
+    assert len(frame) == FRAME_V2_LEN == 17
+    assert frame[:2] == bytes([0xA5, 2])
+    assert (frame[14], frame[15]) == (200, 0x01)
+    assert frame[16] == crc8(frame[1:16])
+    assert unpack_frame_v2(frame) == FrameV2(0.5, -0.25, 0.0, 200, True, False)
+    assert pack_frame_v2(0, 0, -1, 0, armed=False, estop=True)[15] == 0x02
+
+
+def test_v2_clamps_values_and_wraps_the_counter():
+    f = unpack_frame_v2(pack_frame_v2(2.0, -3.0, 9.0, 256 + 7, True, False))
+    assert (f.steering, f.speed, f.accel, f.counter) == (1.0, -1.0, 1.0, 7)
+
+
+def test_v2_catches_every_one_and_two_bit_error():
+    """CRC-8/SAE-J1850 over these 15 bytes: checked by trying them all."""
+    frame = pack_frame_v2(0.2, 0.3, -0.1, 42, True, False)
+    bits = range(8, FRAME_V2_LEN * 8)   # after the sync byte
+    flipped = [bytearray(frame) for _ in bits]
+
+    def flip(b, bit):
+        b[bit // 8] ^= 0x80 >> (bit % 8)
+
+    for b, bit in zip(flipped, bits):
+        flip(b, bit)
+        with pytest.raises(ValueError):
+            unpack_frame_v2(bytes(b))
+    for i in bits:
+        for j in range(i + 1, FRAME_V2_LEN * 8):
+            b = bytearray(frame)
+            flip(b, i)
+            flip(b, j)
+            with pytest.raises(ValueError):
+                unpack_frame_v2(bytes(b))
+
+
+def test_v2_turns_down_a_v1_frame_and_unknown_flags():
+    with pytest.raises(ValueError):
+        unpack_frame_v2(pack_frame(0.0, 0.5, 0.0) + bytes(4))
+    bad = bytearray(pack_frame_v2(0, 0, 0, 1, True, False))
+    bad[15] = 0x80
+    bad[16] = crc8(bytes(bad[1:16]))
+    with pytest.raises(ValueError):
+        unpack_frame_v2(bytes(bad))

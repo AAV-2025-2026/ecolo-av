@@ -17,6 +17,16 @@ AAV_uMod_Firmware/src/modules/ros2_handler.cpp:17-80):
   The firmware sends nothing back and has NO command timeout: if frames stop,
   the last throttle stays on. See docs/firmware.md before driving.
 
+Version 2 of the UART frame (TODO 50, for the Rust ESP32 firmware, legacy-link's
+FrameV2): 17 bytes,
+  0xA5 (sync), 2 (version), the same three float32, the Orin's counter (u8),
+  flags (bit 0 armed, bit 1 e-stop), then CRC-8/SAE-J1850 of bytes 1..15:
+  polynomial 0x1D, start 0xFF, final XOR 0xFF, as every frame in firmware/can/aav.dbc.
+  The counter is the Orin's heartbeat: the output mux adds one for each command it
+  passes on (/control/car/heartbeat); the Motor Pi only copies it. The ESP32 brakes
+  when it hasn't changed for 100 ms, however many frames still arrive.
+  Both sides check firmware/spine/crates/legacy-link/vectors.json.
+
 UDP from the wheel encoder (Wheel_Encoders, wiznet.ino:9-19,110-131):
   a 4-byte big-endian int32: signed spoke count since the previous packet,
   about every 100 ms, to port 10111. 8 spokes per wheel revolution. It sends
@@ -34,6 +44,11 @@ import struct
 from typing import Optional, Tuple
 
 FRAME_LEN = 13
+FRAME_V2_LEN = 17
+SYNC = 0xA5
+VERSION = 2
+FLAG_ARMED = 0x01
+FLAG_ESTOP = 0x02
 
 # Scale negative steering by this, so both sides get the firmware's 1550 counts per unit.
 NEGATIVE_STEERING_GAIN = 1550 / 1950
@@ -81,6 +96,51 @@ def unpack_frame(frame: bytes) -> Tuple[float, float, float]:
     if len(frame) != FRAME_LEN or sum(frame[:12]) & 0xFF != frame[12]:
         raise ValueError('bad legacy frame')
     return struct.unpack('<fff', frame[:12])
+
+
+@dataclass(frozen=True)
+class FrameV2:
+    """One version 2 frame's contents."""
+
+    steering: float
+    speed: float
+    accel: float
+    counter: int     # the Orin's heartbeat, 0..255
+    armed: bool      # the Motor Pi has a fresh command and no e-stop
+    estop: bool      # /safety/estop is on
+
+
+def crc8(data: bytes) -> int:
+    """Return the CRC-8/SAE-J1850 of `data` (0x4B for b'123456789')."""
+    crc = 0xFF
+    for byte in data:
+        crc ^= byte
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1D) & 0xFF if crc & 0x80 else (crc << 1) & 0xFF
+    return crc ^ 0xFF
+
+
+def pack_frame_v2(steering: float, speed: float, accel: float, counter: int,
+                  armed: bool, estop: bool) -> bytes:
+    """Return a version 2 frame: the values clamped to -1..1, the counter as it came."""
+    flags = (FLAG_ARMED if armed else 0) | (FLAG_ESTOP if estop else 0)
+    body = (bytes([VERSION])
+            + struct.pack('<fff', clamp1(steering), clamp1(speed), clamp1(accel))
+            + bytes([counter & 0xFF, flags]))
+    return bytes([SYNC]) + body + bytes([crc8(body)])
+
+
+def unpack_frame_v2(frame: bytes) -> FrameV2:
+    """Decode a version 2 frame (for tests and bench tools). Raises ValueError if invalid."""
+    if len(frame) != FRAME_V2_LEN or frame[0] != SYNC:
+        raise ValueError('not a version 2 frame')
+    if crc8(frame[1:16]) != frame[16]:
+        raise ValueError('bad CRC')
+    if frame[1] != VERSION or frame[15] & ~(FLAG_ARMED | FLAG_ESTOP):
+        raise ValueError('unknown version or flags')
+    steering, speed, accel = struct.unpack('<fff', frame[2:14])
+    return FrameV2(steering, speed, accel, frame[14], bool(frame[15] & FLAG_ARMED),
+                   bool(frame[15] & FLAG_ESTOP))
 
 
 def encoder_counts(packet: bytes) -> int:

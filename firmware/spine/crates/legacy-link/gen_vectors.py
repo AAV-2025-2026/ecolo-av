@@ -7,6 +7,10 @@ to_legacy, stop_command): what the Motor-Pi sends today. The expected Jrk and DA
 come from a line-by-line model of the 2025-26 C++ (ros2_handler.cpp, jrk_g2.cpp), in
 single-precision floats as the ESP32 computes them.
 
+Version 2 (TODO 50): the bytes come from aav_legacy's uart_relay (what legacy_uart_bridge
+sends with frame_version 2) and pack_frame_v2; the expected result is the frame's
+counter and flags, or why it is turned down, and the same targets.
+
 Writes:
   firmware/spine/crates/legacy-link/vectors.json     (read by aav_legacy's tests)
   firmware/spine/crates/legacy-link/tests/vectors.rs (read by `cargo test`)
@@ -33,6 +37,14 @@ spec = importlib.util.spec_from_file_location('legacy_protocol', PROTOCOL)
 lp = importlib.util.module_from_spec(spec)
 sys.modules['legacy_protocol'] = lp  # dataclasses look the module up while loading
 spec.loader.exec_module(lp)
+
+# uart_relay imports aav_legacy.legacy_protocol: give it the module loaded above.
+sys.modules.setdefault('aav_legacy', type(sys)('aav_legacy'))
+sys.modules['aav_legacy.legacy_protocol'] = lp
+spec = importlib.util.spec_from_file_location('aav_legacy.uart_relay',
+                                              PROTOCOL.parent / 'uart_relay.py')
+relay_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(relay_module)
 
 
 def f32(x):
@@ -132,6 +144,90 @@ STREAM = (bytes([0x00, 0xFF, 0x13]) + lp.pack_frame(0.1, 0.2, 0.0)
 STREAM_FRAMES = cpp_parse(STREAM)
 
 
+def relay_frame(counter, cmd=None, estop=False, now=1.0):
+    """What legacy_uart_bridge sends (frame_version 2): ego's command at `now`, or none."""
+    relay = relay_module.Relay(M, cmd_timeout=0.3, version=2)
+    relay.heartbeat(counter)
+    relay.set_estop(estop)
+    if cmd is not None:
+        relay.command(*cmd, now)
+    return relay.frame(now)
+
+
+def with_byte(frame, at, value, fix_crc=True):
+    """A frame with one byte changed, its CRC made right again (or not)."""
+    b = bytearray(frame)
+    b[at] = value
+    if fix_crc:
+        b[16] = lp.crc8(bytes(b[1:16]))
+    return bytes(b)
+
+
+def raw_frame_v2(steering, speed, accel, counter):
+    """pack_frame_v2 without its clamp: for values the firmware must turn down."""
+    body = bytes([2]) + struct.pack('<fff', steering, speed, accel) + bytes([counter, 1])
+    return bytes([0xA5]) + body + bytes([lp.crc8(body)])
+
+
+GOOD = lp.pack_frame_v2(0.2, 0.3, 0.0, 9, True, False)
+
+# (name, how the frame was made, the frame's bytes, the error the firmware gives or None)
+V2_CASES = [
+    ('v2_drive', 'relay: heartbeat 7, to_legacy(1.5, 0.25)', relay_frame(7, (1.5, 0.25)), None),
+    ('v2_stand_still', 'relay: heartbeat 8, to_legacy(0.0, 0.0)',
+     relay_frame(8, (0.0, 0.0)), None),
+    ('v2_stale_stop', 'relay: heartbeat 8, no command', relay_frame(8), None),
+    ('v2_estop', 'relay: heartbeat 9, to_legacy(1.0, 0.1), e-stop on',
+     relay_frame(9, (1.0, 0.1), estop=True), None),
+    ('v2_counter_255', 'relay: heartbeat 255, to_legacy(0.6, 0.0)',
+     relay_frame(255, (0.6, 0.0)), None),
+    ('v2_counter_0', 'relay: heartbeat 0 (after 255), to_legacy(0.6, 0.0)',
+     relay_frame(0, (0.6, 0.0)), None),
+    ('v2_counter_is_the_sync_byte', 'relay: heartbeat 0xA5, to_legacy(-0.9, -0.1)',
+     relay_frame(0xA5, (-0.9, -0.1)), None),
+    ('v2_clamped', 'pack_frame_v2(2, -3, 9), counter 1, armed',
+     lp.pack_frame_v2(2.0, -3.0, 9.0, 1, True, False), None),
+    ('v2_out_of_range', 'raw (1.5, 0, 0), counter 3', raw_frame_v2(1.5, 0.0, 0.0, 3), None),
+    ('v2_bad_crc', 'GOOD with its CRC flipped', with_byte(GOOD, 16, GOOD[16] ^ 0xFF, False),
+     'Checksum'),
+    ('v2_one_bit_flipped', 'GOOD with bit 0 of the speed flipped',
+     with_byte(GOOD, 6, GOOD[6] ^ 0x01, False), 'Checksum'),
+    ('v2_wrong_sync', 'GOOD starting 0x5A', with_byte(GOOD, 0, 0x5A, False), 'Sync'),
+    ('v2_version_3', 'GOOD as version 3, its CRC right', with_byte(GOOD, 1, 3), 'Version'),
+    ('v2_unknown_flag', 'GOOD with flag bit 2, its CRC right', with_byte(GOOD, 15, 0x05),
+     'Flags'),
+]
+
+
+def v2_parse(stream):
+    """Split a stream as legacy-link's ParserV2 does: wait for 0xA5, take 17 bytes; a bad
+    frame is dropped, and the search starts again at the next 0xA5 inside it."""
+    buf, out = [], []
+    for b in stream:
+        if not buf and b != 0xA5:
+            continue
+        buf.append(b)
+        if len(buf) == 17:
+            try:
+                lp.unpack_frame_v2(bytes(buf))
+                out.append(bytes(buf))
+                buf = []
+            except ValueError:
+                rest = buf[1:]
+                buf = rest[rest.index(0xA5):] if 0xA5 in rest else []
+    return out
+
+
+# Noise, a frame, a frame's tail, a frame with a bad CRC, three good frames (one with the
+# counter 0xA5): what a Pi rebooting mid-frame, or a loose wire, gives.
+V2_STREAM = (bytes([0x00, 0xFF, 0x13]) + relay_frame(1, (1.0, 0.1))
+             + relay_frame(2, (1.0, 0.1))[6:]
+             + with_byte(relay_frame(3, (1.0, 0.1)), 16, 0x00, False)
+             + relay_frame(4, (1.0, 0.1)) + relay_frame(0xA5, (1.0, 0.1))
+             + relay_frame(0xA6, (0.0, 0.0)))
+V2_STREAM_FRAMES = v2_parse(V2_STREAM)
+
+
 def rust_throttle(t):
     if t == 'cut':
         return 'Throttle::Cut'
@@ -145,12 +241,13 @@ def hexes(bs):
     return ', '.join(f'0x{b:02x}' for b in bs)
 
 
-def rust_tests(cases):
+def rust_tests(cases, v2):
     out = ['// Generated by gen_vectors.py from legacy_protocol.py and a model of the',
            "// 2025-26 C++. Do not edit. Checks that this crate reads the Motor-Pi's",
            '// bytes, and sends the devices the targets, as the C++ did.',
            '',
-           'use legacy_link::{Frame, FrameError, Parser, Targets, Throttle};',
+           ('use legacy_link::{Flags, Frame, FrameError, FrameV2, Parser, ParserV2, Targets, '
+            'Throttle};'),
            '']
     for c in cases:
         out += ['#[test]', f"fn {c['name']}() {{",
@@ -181,6 +278,41 @@ def rust_tests(cases):
             '    let expected: Vec<[u8; 13]> = vec![']
     out += [f'        [{hexes(f)}],' for f in STREAM_FRAMES]
     out += ['    ];', '    assert_eq!(found, expected);', '}', '']
+    for c in v2:
+        out += ['#[test]', f"fn {c['name']}() {{", f"    // {c['made_by']}",
+                f"    let bytes = [{hexes(c['bytes'])}];"]
+        if c['error']:
+            out += [f"    assert_eq!(FrameV2::decode(&bytes), Err(FrameError::{c['error']}));",
+                    '}', '']
+            continue
+        armed = 'true' if c['armed'] else 'false'
+        estop = 'true' if c['estop'] else 'false'
+        out += ['    let frame = FrameV2::decode(&bytes).expect("a valid frame");',
+                f"    assert_eq!(frame.counter, {c['counter']});",
+                f'    assert_eq!(frame.flags, Flags {{ armed: {armed}, estop: {estop} }});',
+                '    assert_eq!(frame.encode(), bytes);']
+        t = c['cpp']
+        if t is None:
+            out.append('    assert_eq!(frame.values.check(), Err(FrameError::OutOfRange));')
+        else:
+            out += ['    assert_eq!(',
+                    '        frame.values.check().expect("in range").targets(),',
+                    f"        Targets {{ steering: {t['steering']}, brake: {t['brake']}, "
+                    f"throttle: {rust_throttle(t['throttle'])} }}",
+                    '    );']
+        out += ['}', '']
+    out += ['#[test]', 'fn v2_a_stream_with_noise() {',
+            f'    let stream = [{hexes(V2_STREAM)}];',
+            '    let mut parser = ParserV2::new();',
+            '    let found: Vec<[u8; 17]> = stream',
+            '        .iter()',
+            '        .filter_map(|&b| parser.push(b))',
+            '        .filter_map(Result::ok)',
+            '        .map(|f| f.encode())',
+            '        .collect();',
+            '    let expected: Vec<[u8; 17]> = vec![']
+    out += [f'        [{hexes(f)}],' for f in V2_STREAM_FRAMES]
+    out += ['    ];', '    assert_eq!(found, expected);', '}', '']
     return '\n'.join(out)
 
 
@@ -191,18 +323,32 @@ def main():
         cases.append({'name': name, 'made_by': made_by, 'bytes': list(frame),
                       'values': [steering, speed, accel],
                       'cpp': cpp_targets(steering, speed, accel)})
+    v2 = []
+    for name, made_by, frame, error in V2_CASES:
+        case = {'name': name, 'made_by': made_by, 'bytes': list(frame), 'error': error}
+        if error is None:
+            steering, speed, accel = struct.unpack('<fff', frame[2:14])
+            case.update(counter=frame[14], armed=bool(frame[15] & 1),
+                        estop=bool(frame[15] & 2), cpp=cpp_targets(steering, speed, accel))
+        v2.append(case)
     doc = {'note': 'Generated by gen_vectors.py. bytes: what the Motor-Pi sends; '
                    'cpp: the Jrk and DAC targets the 2025-26 ESP32 firmware set for them '
                    '(null: it turned the frame down).',
            'cases': [{k: v for k, v in c.items() if k != 'values'} for c in cases],
            'stream': list(STREAM),
-           'stream_frames': [list(f) for f in STREAM_FRAMES]}
+           'stream_frames': [list(f) for f in STREAM_FRAMES],
+           'v2_note': 'Version 2 (TODO 50): bytes, what legacy_uart_bridge sends with '
+                      'frame_version 2; error, why the firmware turns it down (null: it '
+                      'takes it); counter and flags as it reads them; cpp, the targets.',
+           'v2_cases': v2,
+           'v2_stream': list(V2_STREAM),
+           'v2_stream_frames': [list(f) for f in V2_STREAM_FRAMES]}
     JSON_OUT.write_text(json.dumps(doc, indent=1) + '\n')
     RUST_OUT.parent.mkdir(exist_ok=True)
-    RUST_OUT.write_text(rust_tests(cases))
+    RUST_OUT.write_text(rust_tests(cases, v2))
     if shutil.which('rustfmt'):
         subprocess.run(['rustfmt', '--edition', '2021', str(RUST_OUT)], check=True)
-    print(f'wrote {len(cases)} cases and a stream of {len(STREAM)} bytes '
+    print(f'wrote {len(cases)} cases, {len(v2)} version 2 cases and two streams '
           f'to {JSON_OUT.relative_to(ROOT)} and {RUST_OUT.relative_to(ROOT)}')
 
 

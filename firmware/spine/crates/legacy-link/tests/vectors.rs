@@ -2,7 +2,7 @@
 // 2025-26 C++. Do not edit. Checks that this crate reads the Motor-Pi's
 // bytes, and sends the devices the targets, as the C++ did.
 
-use legacy_link::{Frame, FrameError, Parser, Targets, Throttle};
+use legacy_link::{Flags, Frame, FrameError, FrameV2, Parser, ParserV2, Targets, Throttle};
 
 #[test]
 fn stand_still() {
@@ -448,6 +448,346 @@ fn a_stream_with_noise() {
         ],
         [
             0xcd, 0xcc, 0x4c, 0x3e, 0x9a, 0x99, 0x99, 0xbe, 0x00, 0x00, 0x00, 0x00, 0xad,
+        ],
+    ];
+    assert_eq!(found, expected);
+}
+
+#[test]
+fn v2_drive() {
+    // relay: heartbeat 7, to_legacy(1.5, 0.25)
+    let bytes = [
+        0xa5, 0x02, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x07,
+        0x01, 0x03,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 7);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: true,
+            estop: false
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(
+        frame.values.check().expect("in range").targets(),
+        Targets {
+            steering: 2725,
+            brake: 400,
+            throttle: Throttle::Drive {
+                code: 350,
+                reverse: false
+            }
+        }
+    );
+}
+
+#[test]
+fn v2_stand_still() {
+    // relay: heartbeat 8, to_legacy(0.0, 0.0)
+    let bytes = [
+        0xa5, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9a, 0x99, 0x99, 0xbe, 0x08,
+        0x01, 0xb6,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 8);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: true,
+            estop: false
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(
+        frame.values.check().expect("in range").targets(),
+        Targets {
+            steering: 1950,
+            brake: 1050,
+            throttle: Throttle::Cut
+        }
+    );
+}
+
+#[test]
+fn v2_stale_stop() {
+    // relay: heartbeat 8, no command
+    let bytes = [
+        0xa5, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xbf, 0x08,
+        0x00, 0xe2,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 8);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: false,
+            estop: false
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(
+        frame.values.check().expect("in range").targets(),
+        Targets {
+            steering: 1950,
+            brake: 3500,
+            throttle: Throttle::Cut
+        }
+    );
+}
+
+#[test]
+fn v2_estop() {
+    // relay: heartbeat 9, to_legacy(1.0, 0.1), e-stop on
+    let bytes = [
+        0xa5, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0xbf, 0x09,
+        0x02, 0x94,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 9);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: false,
+            estop: true
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(
+        frame.values.check().expect("in range").targets(),
+        Targets {
+            steering: 1950,
+            brake: 3500,
+            throttle: Throttle::Cut
+        }
+    );
+}
+
+#[test]
+fn v2_counter_255() {
+    // relay: heartbeat 255, to_legacy(0.6, 0.0)
+    let bytes = [
+        0xa5, 0x02, 0x00, 0x00, 0x00, 0x00, 0xcd, 0xcc, 0x4c, 0x3e, 0x00, 0x00, 0x00, 0x00, 0xff,
+        0x01, 0xc0,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 255);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: true,
+            estop: false
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(
+        frame.values.check().expect("in range").targets(),
+        Targets {
+            steering: 1950,
+            brake: 400,
+            throttle: Throttle::Drive {
+                code: 140,
+                reverse: false
+            }
+        }
+    );
+}
+
+#[test]
+fn v2_counter_0() {
+    // relay: heartbeat 0 (after 255), to_legacy(0.6, 0.0)
+    let bytes = [
+        0xa5, 0x02, 0x00, 0x00, 0x00, 0x00, 0xcd, 0xcc, 0x4c, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x81,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 0);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: true,
+            estop: false
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(
+        frame.values.check().expect("in range").targets(),
+        Targets {
+            steering: 1950,
+            brake: 400,
+            throttle: Throttle::Drive {
+                code: 140,
+                reverse: false
+            }
+        }
+    );
+}
+
+#[test]
+fn v2_counter_is_the_sync_byte() {
+    // relay: heartbeat 0xA5, to_legacy(-0.9, -0.1)
+    let bytes = [
+        0xa5, 0x02, 0x2d, 0xca, 0x22, 0xbe, 0x9a, 0x99, 0x99, 0xbe, 0x00, 0x00, 0x00, 0x00, 0xa5,
+        0x01, 0xcb,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 165);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: true,
+            estop: false
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(
+        frame.values.check().expect("in range").targets(),
+        Targets {
+            steering: 1640,
+            brake: 400,
+            throttle: Throttle::Drive {
+                code: 210,
+                reverse: true
+            }
+        }
+    );
+}
+
+#[test]
+fn v2_clamped() {
+    // pack_frame_v2(2, -3, 9), counter 1, armed
+    let bytes = [
+        0xa5, 0x02, 0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x80, 0x3f, 0x01,
+        0x01, 0xb8,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 1);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: true,
+            estop: false
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(
+        frame.values.check().expect("in range").targets(),
+        Targets {
+            steering: 3500,
+            brake: 400,
+            throttle: Throttle::Drive {
+                code: 700,
+                reverse: true
+            }
+        }
+    );
+}
+
+#[test]
+fn v2_out_of_range() {
+    // raw (1.5, 0, 0), counter 3
+    let bytes = [
+        0xa5, 0x02, 0x00, 0x00, 0xc0, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03,
+        0x01, 0x68,
+    ];
+    let frame = FrameV2::decode(&bytes).expect("a valid frame");
+    assert_eq!(frame.counter, 3);
+    assert_eq!(
+        frame.flags,
+        Flags {
+            armed: true,
+            estop: false
+        }
+    );
+    assert_eq!(frame.encode(), bytes);
+    assert_eq!(frame.values.check(), Err(FrameError::OutOfRange));
+}
+
+#[test]
+fn v2_bad_crc() {
+    // GOOD with its CRC flipped
+    let bytes = [
+        0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0x9a, 0x99, 0x99, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x09,
+        0x01, 0x27,
+    ];
+    assert_eq!(FrameV2::decode(&bytes), Err(FrameError::Checksum));
+}
+
+#[test]
+fn v2_one_bit_flipped() {
+    // GOOD with bit 0 of the speed flipped
+    let bytes = [
+        0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0x9b, 0x99, 0x99, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x09,
+        0x01, 0xd8,
+    ];
+    assert_eq!(FrameV2::decode(&bytes), Err(FrameError::Checksum));
+}
+
+#[test]
+fn v2_wrong_sync() {
+    // GOOD starting 0x5A
+    let bytes = [
+        0x5a, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0x9a, 0x99, 0x99, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x09,
+        0x01, 0xd8,
+    ];
+    assert_eq!(FrameV2::decode(&bytes), Err(FrameError::Sync));
+}
+
+#[test]
+fn v2_version_3() {
+    // GOOD as version 3, its CRC right
+    let bytes = [
+        0xa5, 0x03, 0xcd, 0xcc, 0x4c, 0x3e, 0x9a, 0x99, 0x99, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x09,
+        0x01, 0xe3,
+    ];
+    assert_eq!(FrameV2::decode(&bytes), Err(FrameError::Version));
+}
+
+#[test]
+fn v2_unknown_flag() {
+    // GOOD with flag bit 2, its CRC right
+    let bytes = [
+        0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0x9a, 0x99, 0x99, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x09,
+        0x05, 0xac,
+    ];
+    assert_eq!(FrameV2::decode(&bytes), Err(FrameError::Flags));
+}
+
+#[test]
+fn v2_a_stream_with_noise() {
+    let stream = [
+        0x00, 0xff, 0x13, 0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0xab, 0xaa, 0xaa, 0x3e, 0x00, 0x00,
+        0x00, 0x00, 0x01, 0x01, 0x18, 0xab, 0xaa, 0xaa, 0x3e, 0x00, 0x00, 0x00, 0x00, 0x02, 0x01,
+        0xcc, 0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0xab, 0xaa, 0xaa, 0x3e, 0x00, 0x00, 0x00, 0x00,
+        0x03, 0x01, 0x00, 0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0xab, 0xaa, 0xaa, 0x3e, 0x00, 0x00,
+        0x00, 0x00, 0x04, 0x01, 0x79, 0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0xab, 0xaa, 0xaa, 0x3e,
+        0x00, 0x00, 0x00, 0x00, 0xa5, 0x01, 0x89, 0xa5, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x9a, 0x99, 0x99, 0xbe, 0xa6, 0x01, 0xe5,
+    ];
+    let mut parser = ParserV2::new();
+    let found: Vec<[u8; 17]> = stream
+        .iter()
+        .filter_map(|&b| parser.push(b))
+        .filter_map(Result::ok)
+        .map(|f| f.encode())
+        .collect();
+    let expected: Vec<[u8; 17]> = vec![
+        [
+            0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0xab, 0xaa, 0xaa, 0x3e, 0x00, 0x00, 0x00, 0x00,
+            0x01, 0x01, 0x18,
+        ],
+        [
+            0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0xab, 0xaa, 0xaa, 0x3e, 0x00, 0x00, 0x00, 0x00,
+            0x04, 0x01, 0x79,
+        ],
+        [
+            0xa5, 0x02, 0xcd, 0xcc, 0x4c, 0x3e, 0xab, 0xaa, 0xaa, 0x3e, 0x00, 0x00, 0x00, 0x00,
+            0xa5, 0x01, 0x89,
+        ],
+        [
+            0xa5, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9a, 0x99, 0x99, 0xbe,
+            0xa6, 0x01, 0xe5,
         ],
     ];
     assert_eq!(found, expected);

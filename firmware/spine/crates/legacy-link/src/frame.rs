@@ -1,9 +1,10 @@
-//! One frame: steering, speed and accel, each -1..1.
+//! One frame's values: steering, speed and accel, each -1..1; and the version 1 frame.
 
 /// The link's speed: 115200 baud, 8N1 (`main.cpp`: `Serial1.begin(115200, ...)`).
 pub const BAUD: u32 = 115_200;
 
-/// Bytes in a frame. There is no header: the checksum is the only way to find a frame.
+/// Bytes in a version 1 frame. There is no header: the checksum is the only way to find
+/// a frame.
 pub const FRAME_LEN: usize = 13;
 
 /// One frame's values, as the Motor-Pi sent them.
@@ -20,10 +21,18 @@ pub struct Frame {
 /// Why a frame was turned down.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FrameError {
-    /// The last byte isn't the sum of the other twelve.
+    /// Version 1: the last byte isn't the sum of the other twelve. Version 2: the CRC-8
+    /// doesn't match.
     Checksum,
     /// A value is outside -1..1, or not a number. The C++ then ramped the throttle to 0.
     OutOfRange,
+    /// Version 2: a byte outside a frame that isn't the sync byte (0xA5): noise, or a
+    /// frame's tail after a bad CRC.
+    Sync,
+    /// Version 2: the CRC matches, but the version byte isn't 2.
+    Version,
+    /// Version 2: a flag bit this firmware doesn't know is set.
+    Flags,
 }
 
 impl Frame {
