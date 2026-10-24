@@ -353,10 +353,7 @@ def ibus_frame(channels: List[int]) -> bytes:
 
 
 def rc_channels(switch: str, throttle: int = FULL_STICK) -> List[int]:
-    """Return the 14 channels: the mode switch (CH6) at `switch`, the throttle stick as given.
-
-    The steering stick centred, the gear switch (CH5) on forward.
-    """
+    """Return the 14 channels: the mode switch (CH6) at `switch`, the throttle as given."""
     ch = [1500] * 14
     ch[5] = SWITCH[switch]
     ch[2] = throttle
@@ -691,7 +688,7 @@ def run(qemu: Path, flash: Path, cycles: int, rc: bool = True):
 
 
 def rc_run(fw: Firmware, orin: Orin, mapping: LegacyMapping) -> List[RcPhase]:
-    """The RC's three modes, through the firmware: the phases of RC_PHASES, in order."""
+    """Run the RC's three modes through the firmware: the phases of RC_PHASES, in order."""
     drive = to_legacy(*DRIVE, mapping)
     still = to_legacy(*STAND_STILL, mapping)
     phases: List[RcPhase] = []

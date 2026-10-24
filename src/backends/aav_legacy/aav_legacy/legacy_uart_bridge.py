@@ -11,6 +11,15 @@ Subscribes  control/car/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego'
                               per command passed on (TODO 50)
             safety/estop      std_msgs/Bool (true: full brake now, until false)
 Publishes   system/source     aav_interfaces/DataSource, latched: the actuators are REAL
+            and, only with uplink true (the ESP32's uplink frames on its TX1; TODO 50, 48):
+            vehicle/status    aav_interfaces/VehicleStatus, 10 Hz: mode, armed, e-stop, faults
+            vehicle/steering  aav_interfaces/ActuatorState: ego's angle, the Jrk's position
+            vehicle/brake     aav_interfaces/ActuatorState: the ESP32's brake, the Jrk's
+            vehicle/rc        aav_interfaces/RcSticks: the RC's mode switch and sticks
+                              (rc_driver turns them into /drivers/rc/cmd_vel)
+Reads       uplink frames on the same serial port (uplink_reader, legacy_protocol), with
+            uplink true. Off by default: GPIO17 to the Pi's RX is the hardware lead's to
+            confirm, and the firmware needs --features uplink
 Writes      frames at rate_hz on the serial port (uart_relay, legacy_protocol):
             frame_version 2   17 bytes, with the Orin's counter, armed and e-stop flags and
                               a CRC-8: for the Rust ESP32 firmware, which brakes when the
@@ -27,7 +36,9 @@ C++ firmware has no timeout.
 
 import signal
 
-from aav_interfaces.msg import DataSource, Heartbeat, SensorSource
+from aav_interfaces.msg import (ActuatorState, DataSource, Heartbeat, RcSticks, SensorSource,
+                                VehicleStatus)
+from aav_legacy import uplink_reader as ur
 from aav_legacy.legacy_protocol import LegacyMapping
 from aav_legacy.uart_relay import Relay
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -48,6 +59,8 @@ class LegacyUartBridge(Node):
         rate = self.declare_parameter('rate_hz', 50.0).value
         timeout = self.declare_parameter('cmd_timeout', 0.3).value
         version = self.declare_parameter('frame_version', 2).value
+        self.uplink = self.declare_parameter('uplink', False).value
+        uplink_timeout = self.declare_parameter('uplink_timeout', 0.2).value
         defaults = LegacyMapping()
         mapping = LegacyMapping(**{
             k: self.declare_parameter(k, v).value for k, v in vars(defaults).items()})
@@ -58,6 +71,15 @@ class LegacyUartBridge(Node):
         self.create_subscription(Heartbeat, 'control/car/heartbeat', self.on_heartbeat, 10)
         self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
         self.create_timer(1.0 / rate, self.tick)
+        self.reader = ur.UplinkReader(uplink_timeout)
+        self.last_status = None
+        self.uplink_was_fresh = False
+        if self.uplink:
+            self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
+            self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
+            self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
+            self.rc_pub = self.create_publisher(RcSticks, 'vehicle/rc', 10)
+            self.create_timer(0.01, self.read_uplink)
         # Say once, latched, that this drives the real car (/system/source).
         latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                              durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -66,6 +88,12 @@ class LegacyUartBridge(Node):
         announcement.header.stamp = self.get_clock().now().to_msg()
         announcement.sensors = [SensorSource(name='actuators', topic='',
                                              source=SensorSource.REAL)]
+        if self.uplink:
+            announcement.sensors += [
+                SensorSource(name=name, topic=topic, source=SensorSource.REAL)
+                for name, topic in (('vehicle', '/vehicle/status'),
+                                    ('steering', '/vehicle/steering'),
+                                    ('brake', '/vehicle/brake'), ('rc', '/vehicle/rc'))]
         self.source_pub.publish(announcement)
         if version == 1:
             self.get_logger().warning(
@@ -94,6 +122,44 @@ class LegacyUartBridge(Node):
             self.serial.write(self.relay.frame(self.now()))
         except serial.SerialException as e:
             self.get_logger().error(f'serial write failed: {e}', throttle_duration_sec=2.0)
+
+    def read_uplink(self):
+        """Read the ESP32's uplink frames (100 Hz), and publish each one."""
+        now = self.now()
+        try:
+            data = self.serial.read(self.serial.in_waiting or 1)
+        except serial.SerialException as e:
+            self.get_logger().error(f'serial read failed: {e}', throttle_duration_sec=2.0)
+            return
+        stamp = self.get_clock().now().to_msg()
+        for u in self.reader.feed(data, now):
+            self.publish_uplink(u, stamp, now)
+        fresh = self.reader.fresh(now)
+        if fresh != self.uplink_was_fresh:
+            if fresh:
+                self.get_logger().info('uplink: frames from the ESP32')
+            else:
+                self.get_logger().warning(
+                    'uplink: no frame from the ESP32 for '
+                    f'{self.reader.timeout:.1f} s (TX1 wired? firmware built with uplink?)')
+            self.uplink_was_fresh = fresh
+
+    def publish_uplink(self, u, stamp, now):
+        rc = RcSticks(**ur.rc_fields(u))
+        rc.header.stamp = stamp
+        self.rc_pub.publish(rc)
+        command = self.relay.cmd[1] if self.relay.fresh(now) else None
+        for pub, (cmd, measured) in ((self.steering_pub, ur.steering_state(u, command)),
+                                     (self.brake_pub, ur.brake_state(u))):
+            msg = ActuatorState(command=float(cmd), measured=float(measured))
+            msg.header.stamp = stamp
+            pub.publish(msg)
+        if self.last_status is None or now - self.last_status >= 0.1:
+            self.last_status = now
+            status = VehicleStatus(**ur.status_fields(u))
+            status.header.stamp = stamp
+            status.header.frame_id = 'base_link'
+            self.status_pub.publish(status)
 
     def destroy_node(self):
         try:

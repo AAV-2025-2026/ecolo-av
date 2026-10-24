@@ -175,10 +175,10 @@ def test_the_orins_frames_move_freeze_or_break():
 # --- The uplink and the RC (TODO 50, 48) ---
 
 def up(**changes):
-    fields = dict(sequence=0, echo=None, mode=q.MODE_COMPUTER, switch=q.SWITCH_NONE,
-                  armed=True, estop=False, faults=0, steering=0.0, brake_position=0.0,
-                  throttle_out=0.2, brake_out=0.0, rc_throttle=0.0, rc_steering=0.0,
-                  rc_brake=False)
+    fields = {'sequence': 0, 'echo': None, 'mode': q.MODE_COMPUTER, 'switch': q.SWITCH_NONE,
+              'armed': True, 'estop': False, 'faults': 0, 'steering': 0.0,
+              'brake_position': 0.0, 'throttle_out': 0.2, 'brake_out': 0.0,
+              'rc_throttle': 0.0, 'rc_steering': 0.0, 'rc_brake': False}
     fields.update(changes)
     return q.Uplink(**fields)
 

@@ -298,7 +298,7 @@ RUST_SWITCH = {lp.SWITCH_NONE: 'NoSignal', lp.SWITCH_COMPUTER: 'Computer',
 
 
 def rust_f32(x):
-    """A float32 as Rust, bit for bit."""
+    """Return a float32 as Rust, bit for bit."""
     return f"f32::from_bits(0x{struct.unpack('<I', struct.pack('<f', x))[0]:08x})"
 
 

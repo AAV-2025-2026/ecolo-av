@@ -12,6 +12,12 @@ legacy_uart_bridge:
     # (docs/esp32-bench.md): it carries the Orin's counter, and the ESP32 brakes 100 ms
     # after it stops changing. The bridge's own default is 2.
     frame_version: 1
+    # The ESP32's uplink frames, back on the same port (TODO 50, 48): /vehicle/status,
+    # steering, brake and /vehicle/rc (the RC's mode switch and sticks, for rc_driver).
+    # false until the hardware lead confirms the wire from the ESP32's TX1 (GPIO17) to the
+    # Pi's RX, and the Rust firmware is flashed with --features uplink (docs/esp32-bench.md).
+    uplink: false
+    uplink_timeout: 0.2         # s without a frame: the uplink is stale (they come at 50 Hz)
     max_steering_angle: 0.5     # rad at full lock. TODO measure
     # TODO check: +1 must steer RIGHT for this to be -1. The 2025-26 joystick config had
     # invert_steer: true (joy_teleop_ackerman/config/joy_params.yaml), which suggests the

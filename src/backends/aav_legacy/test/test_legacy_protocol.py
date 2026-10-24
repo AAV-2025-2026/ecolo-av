@@ -232,10 +232,10 @@ def test_v2_turns_down_a_v1_frame_and_unknown_flags():
 # --- The uplink, ESP32 -> Motor Pi (TODO 50, 48) ---
 
 def uplink(**changes):
-    fields = dict(sequence=3, echo=17, mode=MODE_COMPUTER, switch=SWITCH_RC_VIA_ROS,
-                  armed=True, estop=False, faults=0x0100, steering=0.125, brake_position=None,
-                  throttle_out=0.25, brake_out=0.0, rc_throttle=0.5, rc_steering=-0.75,
-                  rc_brake=False)
+    fields = {'sequence': 3, 'echo': 17, 'mode': MODE_COMPUTER, 'switch': SWITCH_RC_VIA_ROS,
+              'armed': True, 'estop': False, 'faults': 0x0100, 'steering': 0.125,
+              'brake_position': None, 'throttle_out': 0.25, 'brake_out': 0.0,
+              'rc_throttle': 0.5, 'rc_steering': -0.75, 'rc_brake': False}
     fields.update(changes)
     return Uplink(**fields)
 
