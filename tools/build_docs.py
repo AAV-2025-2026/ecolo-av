@@ -74,6 +74,7 @@ PAGES = [
     ('languages.md', 'Languages', 'Python, C++ and Rust: what goes where, and why'),
     ('run.md', 'Run it', 'Mac or Linux: install, build, every command'),
     ('mac.md', 'Your Mac', 'Set up the Mac, join the car, drive and watch'),
+    ('foxglove.md', 'Watch from a laptop', 'Foxglove and Lichtblick: connect, the layouts, bandwidth'),
     ('simulation.md', 'Simulation', 'Gazebo, replay, CARLA, and when nothing moves'),
     ('carla.md', 'CARLA', "Photo-real towns and Carleton's streets: UE5 vs UE4, the twin"),
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),

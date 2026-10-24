@@ -109,7 +109,7 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.
 | `localization`, `navigation` | the two EKFs and `navsat_transform`; Nav2. Its costmap reads the `radar` and `camera_obstacles` parts on the same computer, and `collision_monitor` comes with the radar |
 | `spine` | the CAN bus (Linux only): with `actuators:=uart`, the wheel sensors only (`spine_bridge role:=sensors`, no CAN sender); with `actuators:=can`, the CAN spine backend |
 | `legacy_uart`, `legacy_encoder` | today's backend, the ESP32 over UART (not with `actuators:=can`); the 2025-26 UDP wheel encoder (never beside `spine`) |
-| `foxglove` | `foxglove_bridge`, on port 8765 |
+| `foxglove` | `foxglove_bridge`, on port 8765: watch only, the WiFi topic list ([Watch from a laptop](foxglove.md)) |
 
 A part that can't run on that computer (no PyTorch, no model file, no `usb_cam`) is
 skipped with a warning, and the rest starts.

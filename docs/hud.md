@@ -433,7 +433,7 @@ touches it.
   takes it too.
 - The press also cancels the HUD's route, so clearing the e-stop doesn't restart the trip.
 - The HUD never clears it. Clearing stays a person's deliberate act, from a laptop:
-  `pixi run estop-clear`, or Foxglove.
+  `pixi run estop-clear` (Foxglove only on a simulator: the car's bridge only watches).
 - No answer, or nothing subscribes to `/safety/estop`: the app shows a red message, "E-STOP
   FAILED ... Press the car's red e-stop button."
 
@@ -578,7 +578,8 @@ pixi run get-hud-map      # into maps/places/, linked into hud/flutter_pi/assets
 | Data | from OpenStreetMap: © OpenStreetMap contributors, under the ODbL. The app shows that credit |
 
 Keep the Flutter app or not: Q29. Meanwhile, **Foxglove** works as the operator's screen:
-`foxglove_bridge`, on port 8765, shows speed, the map, paths and costmaps.
+`foxglove_bridge`, on port 8765, shows speed, the map, paths and costmaps
+([Watch from a laptop](foxglove.md)).
 
 ## Before running it on the car
 

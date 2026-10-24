@@ -39,7 +39,7 @@ don't.
 | `lane` | `false` | lane keeping on a pretend straight lane: the car drives itself on `/drivers/ai/cmd_vel` |
 | `hud` | `false` | the HUD's web server, on 127.0.0.1:5000 |
 | `arm` | `true` | arms the spine 12 s after start-up |
-| `rviz`, `foxglove` | `false` | RViz; foxglove_bridge on port 8765 |
+| `rviz`, `foxglove` | `false` | RViz; foxglove_bridge on 127.0.0.1:8765, with the camera's preview ([Watch from a laptop](foxglove.md)) |
 | `obstacle` | `false` | a 1 m box in the lane 15 m ahead, which only the pretend radar sees: Nav2 stops for it |
 | `camera_obstacles` | `false` | the detectors' boxes into Nav2's local costmap ([Costmaps](costmaps.md)) |
 
