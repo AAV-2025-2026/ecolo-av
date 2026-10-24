@@ -23,6 +23,10 @@ twist_mux:
         topic: /drivers/joy/cmd_vel
         timeout: 0.5
         priority: 100
+      rc:                       # a person with the RC transmitter, its mode switch on RC via
+        topic: /drivers/rc/cmd_vel  # ROS (aav_rc rc_driver, from the ESP32's uplink; TODO 48).
+        timeout: 0.5            # Proposed: below the joystick's deadman (the safety driver
+        priority: 95            # in the seat), above the keyboard. RC direct never comes here
       keyboard:                 # someone driving from a laptop: tools/keyboard.sh, or
         topic: /drivers/keyboard/cmd_vel  # or Foxglove's teleop panel (stand-ins only)
         timeout: 0.5

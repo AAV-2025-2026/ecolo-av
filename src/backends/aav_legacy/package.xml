@@ -14,6 +14,8 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>aav_description</exec_depend>
   <exec_depend>aav_interfaces</exec_depend>
+  <!-- rc_driver, started beside the bridge (legacy.launch.py rc:=true). -->
+  <exec_depend>aav_rc</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 
@@ -21,6 +23,8 @@
   <test_depend>python3-pytest</test_depend>
   <!-- test_heartbeat_chain.py runs the muxes with the bridge. -->
   <test_depend>aav_io_mux</test_depend>
+  <!-- test_uplink_chain.py runs rc_driver with the bridge. -->
+  <test_depend>aav_rc</test_depend>
 
   <export>
     <build_type>ament_python</build_type>
