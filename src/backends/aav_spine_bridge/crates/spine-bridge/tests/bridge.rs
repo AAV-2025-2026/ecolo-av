@@ -1,10 +1,11 @@
 //! The cases of aav_spine's test_spine_bridge.py: the DRIVE_CMD stream (the arming edge,
 //! going quiet with ego, the e-stop) and the odometry from the wheel nodes.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use spine_bridge::{
-    ArmError, Arming, Bridge, Command, Drive, Geometry, Motion, Reading, Role, Settings, Update,
+    ArmError, Arming, Bridge, Command, Drive, Geometry, Motion, Reading, Role, Settings, Target,
+    Update,
 };
 use spine_core::protocol::{
     VehicleFeedback, Wheel, WheelSpeed, VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID,
@@ -18,10 +19,19 @@ const SETTINGS: Settings = Settings {
     },
     cmd_timeout: Duration::from_millis(100),
     wheel_timeout: Duration::from_millis(100),
+    target: Target::Car,
+    gate_timeout: Duration::from_millis(1500),
 };
 
 fn ms(t: u64) -> Duration {
     Duration::from_millis(t)
+}
+
+/// /spine/arm with the safety gate OPEN (tests/gate.rs has it shut).
+fn arm(bridge: &mut Bridge, on: bool) -> Result<Arming, ArmError> {
+    let now = Instant::now();
+    bridge.output_mux_state("OPEN - car: every source REAL", now);
+    bridge.arm(on, now)
 }
 
 fn close(a: f64, b: f64) -> bool {
@@ -55,7 +65,7 @@ fn armed_flags(bridge: &mut Bridge, frames: usize) -> Vec<bool> {
 fn arming_sends_the_edge() {
     let mut bridge = commanded(1.0);
     assert_eq!(armed_flags(&mut bridge, 2), [false, false]);
-    assert_eq!(bridge.arm(true), Ok(Arming::Armed));
+    assert_eq!(arm(&mut bridge, true), Ok(Arming::Armed));
     assert_eq!(
         armed_flags(&mut bridge, 5),
         [false, false, false, true, true]
@@ -67,9 +77,9 @@ fn arming_again_sends_the_edge_again() {
     // The spine may have latched without the bridge knowing: a hardware e-stop, a
     // timeout, a driver fault or a reboot. Arming again has to clear that.
     let mut bridge = commanded(1.0);
-    bridge.arm(true).ok();
+    arm(&mut bridge, true).ok();
     armed_flags(&mut bridge, 5);
-    bridge.arm(true).ok();
+    arm(&mut bridge, true).ok();
     assert_eq!(
         armed_flags(&mut bridge, 5),
         [false, false, false, true, true]
@@ -79,10 +89,10 @@ fn arming_again_sends_the_edge_again() {
 #[test]
 fn estop_disarms_and_refuses_arming() {
     let mut bridge = commanded(1.0);
-    bridge.arm(true).ok();
+    arm(&mut bridge, true).ok();
     let sent = bridge.set_estop(true);
     assert!(sent.is_some_and(|f| f.estop_request), "sent at once");
-    assert_eq!(bridge.arm(true), Err(ArmError::EstopActive));
+    assert_eq!(arm(&mut bridge, true), Err(ArmError::EstopActive));
     assert_eq!(armed_flags(&mut bridge, 5), [false; 5]);
     // The same request again changes nothing: it waits for the heartbeat.
     assert_eq!(bridge.set_estop(true), None);
@@ -93,13 +103,13 @@ fn estop_disarms_and_refuses_arming() {
 fn disarming_works_even_in_an_estop() {
     let mut bridge = commanded(1.0);
     bridge.set_estop(true);
-    assert_eq!(bridge.arm(false), Ok(Arming::Disarmed));
+    assert_eq!(arm(&mut bridge, false), Ok(Arming::Disarmed));
 }
 
 #[test]
 fn stale_command_stops_the_stream() {
     let mut bridge = commanded(1.0);
-    bridge.arm(true).ok();
+    arm(&mut bridge, true).ok();
     assert_eq!(bridge.drive(ms(150)), Drive::Stale);
     assert_eq!(Bridge::new(SETTINGS).drive(ms(0)), Drive::NoCommand);
 }
@@ -308,7 +318,7 @@ fn sensors_never_make_a_drive_frame() {
         },
         ms(0),
     );
-    bridge.arm(true).ok();
+    arm(&mut bridge, true).ok();
     assert!((0..10).all(|_| bridge.drive(ms(0)) == Drive::NoCommand));
 }
 

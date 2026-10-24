@@ -8,7 +8,9 @@ one (aav_spine_bridge, the default) as its own program. Ego's commands go in on
 /ego/actuator_cmd; what reaches the car is spine_bridge's DRIVE_CMD frames on /can/tx.
 
   all REAL                      -> DRIVE_CMD frames flow
-  Gazebo announces SIM as well  -> no DRIVE_CMD frame at all, and the output mux says STOP
+  Gazebo announces SIM as well  -> no DRIVE_CMD frame at all, the output mux says STOP,
+                                   and /spine/arm is refused with its reason (Ben, 24 Oct);
+                                   Gazebo gone and the stop cleared: OPEN, and it arms
   a simulator's own ego         -> spine_bridge doesn't even listen to /ego/actuator_cmd
   role sensors (only the wheel  -> the mux still opens, and not one frame on /can/tx (no
   nodes on CAN: can-plan.md)       publisher there at all); it announces only the wheels
@@ -35,6 +37,7 @@ try:
     from rclpy.executors import SingleThreadedExecutor
     from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
     from std_msgs.msg import String
+    from std_srvs.srv import SetBool, Trigger
     HAVE_ROS = True
 except ImportError:
     HAVE_ROS = False
@@ -72,9 +75,12 @@ class Run:
         self.test = rclpy.create_node('guard_test')
         self.nodes.append(self.test)
         self.drive_frames = 0
+        self.armed_frames = 0
         self.can_frames = 0
         self.announced = {}
         self.state = ''
+        self.arm_client = self.test.create_client(SetBool, '/spine/arm')
+        self.clear_client = self.test.create_client(Trigger, '/safety/output_mux/clear')
         self.ego = self.test.create_publisher(AckermannDriveStamped, '/ego/actuator_cmd', 10)
         self.test.create_subscription(Frame, '/can/tx', self.on_frame, 100)
         self.test.create_subscription(String, '/safety/output_mux/state', self.on_state, 10)
@@ -120,6 +126,7 @@ class Run:
         self.can_frames += 1
         if f.id == cc.DRIVE_CMD_ID:
             self.drive_frames += 1
+            self.armed_frames += bool(cc.unpack(f.id, bytes(f.data[:f.dlc]))['armed'])
 
     def on_state(self, msg):
         self.state = msg.data
@@ -132,6 +139,24 @@ class Run:
             cmd.drive.speed = 0.5
             self.ego.publish(cmd)
             self.executor.spin_once(timeout_sec=0.02)
+
+    def call(self, client, request):
+        """Call a service, driving meanwhile; return (success, message)."""
+        end = time.monotonic() + START
+        while not client.service_is_ready():
+            assert time.monotonic() < end, f'no {client.srv_name}'
+            self.drive(0.1)
+        future = client.call_async(request)
+        while not future.done():
+            assert time.monotonic() < end, f'no answer from {client.srv_name}'
+            self.drive(0.02)
+        return future.result().success, future.result().message
+
+    def arm(self):
+        return self.call(self.arm_client, SetBool.Request(data=True))
+
+    def clear(self):
+        return self.call(self.clear_client, Trigger.Request())
 
     def close(self):
         if self.process:
@@ -161,7 +186,7 @@ def run(request):
 def test_all_real_reaches_the_cars_backend(run):
     run.drive(4.0)
     assert run.state == 'OPEN - car: every source REAL'
-    assert run.drive_frames > 20
+    assert run.drive_frames > 20 and run.armed_frames == 0
 
 
 @pytest.mark.parametrize('run', [{'gazebo': True, 'bridge': b} for b in BRIDGES],
@@ -171,6 +196,26 @@ def test_a_simulated_source_cant_drive_the_real_backend(run):
     assert run.state.startswith('STOP - target car needs REAL'), run.state
     assert 'camera_front_left is SIM (gazebo_adapter)' in run.state
     assert run.drive_frames == 0
+    # Ben, 24 Oct: the bridge refuses to arm while the gate is shut, and says why.
+    success, message = run.arm()
+    assert not success, message
+    assert message.startswith('the safety gate is shut: STOP - target car needs REAL'), message
+    assert run.armed_frames == 0
+    # Gazebo goes, a person clears the stop, the gate opens: now it arms.
+    run.nodes.remove(run.gazebo)
+    run.executor.remove_node(run.gazebo)
+    run.gazebo.destroy_node()
+    end = time.monotonic() + START
+    while not run.clear()[0]:
+        assert time.monotonic() < end, run.state
+        run.drive(0.5)
+    while not run.state.startswith('OPEN'):
+        assert time.monotonic() < end, run.state
+        run.drive(0.1)
+    run.drive(0.5)
+    assert run.arm() == (True, 'armed')
+    run.drive(0.5)
+    assert run.armed_frames > 5
 
 
 @pytest.mark.parametrize('run', [{'bridge': b} for b in BRIDGES], indirect=True, ids=BRIDGES)

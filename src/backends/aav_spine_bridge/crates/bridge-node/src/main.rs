@@ -7,7 +7,8 @@
 //!                                   itself: on the car, only an output mux that found
 //!                                   every source REAL reaches this node
 //!             safety/estop          std_msgs/Bool
-//!             can/rx                can_msgs/Frame  (ros2_socketcan's receiver on the car;
+//!             safety/output_mux/state  std_msgs/String: the safety gate, for /spine/arm
+//!             can/rx               can_msgs/Frame  (ros2_socketcan's receiver on the car;
 //!                                   spine_sim on the bench and in Gazebo)
 //! Publishes   can/tx                can_msgs/Frame  (ros2_socketcan's sender)
 //!             vehicle/odom          nav_msgs/Odometry  (twist only, in base_link)
@@ -24,15 +25,19 @@
 //!             system/source         aav_interfaces/DataSource, latched: REAL on the car,
 //!                                   BENCH on the bench, SIM in Gazebo's spine profile (the
 //!                                   `source` parameter)
-//! Service     spine/arm             std_srvs/SetBool
-//! Parameters  wheelbase, track (m), cmd_timeout, wheel_timeout (s), drive_rate_hz,
-//!             estop_rate_hz, speed_variance, yaw_rate_variance, steering_joints, source,
-//!             role; aav_spine's config/spine.yaml
+//! Service     spine/arm             std_srvs/SetBool: refused during an e-stop, and while
+//!                                   the safety gate is shut: the output mux not OPEN for
+//!                                   this bridge's target, or quiet for gate_timeout s
+//!                                   (Ben, 24 Oct). Disarming always works
+//! Parameters  wheelbase, track (m), cmd_timeout, wheel_timeout, gate_timeout (s),
+//!             drive_rate_hz, estop_rate_hz, speed_variance, yaw_rate_variance,
+//!             steering_joints, source, role; aav_spine's config/spine.yaml
 //!
 //! role:=spine (the default) is all of the above. role:=sensors is for a car driven
 //! another way (today's: the ESP32, through the Motor Pi's UART, docs/can-plan.md): the
 //! node only reads the wheel nodes' frames on can/rx, and has
-//!   no can/tx publisher, no safety/estop subscription, no spine/arm service, and none
+//!   no can/tx publisher, no safety/estop or safety/output_mux/state subscription, no
+//!   spine/arm service, and none
 //!   of vehicle/status, joint_states, steering, throttle, brake;
 //!   vehicle/odom from the wheels alone (their mean while both are fresh; the yaw rate
 //!   unmeasured: the steering angle isn't on the bus), and vehicle/wheels;
@@ -49,7 +54,10 @@
 //! it ignores extended-ID frames (another device's, never ours), and its parameters are
 //! read-only (it reads them once, as the Python did).
 
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use rclrs::*;
@@ -61,10 +69,10 @@ use ros_env::builtin_interfaces::msg::Time;
 use ros_env::can_msgs::msg::Frame;
 use ros_env::nav_msgs::msg::Odometry;
 use ros_env::sensor_msgs::msg::JointState;
-use ros_env::std_msgs::msg::{Bool, Header};
+use ros_env::std_msgs::msg::{Bool, Header, String as StringMsg};
 use ros_env::std_srvs::srv::{SetBool, SetBool_Request, SetBool_Response};
 use spine_bridge::{
-    Bridge, Command, Drive, Geometry, Motion, Reading, Role, Settings, Status, Update,
+    Bridge, Command, Drive, Geometry, Motion, Reading, Role, Settings, Status, Target, Update,
     DRIVE_CMD_ID, ESTOP_CMD_ID,
 };
 
@@ -103,6 +111,8 @@ fn main() -> Result<()> {
         },
         cmd_timeout: seconds("cmd_timeout", params.cmd_timeout.get())?,
         wheel_timeout: seconds("wheel_timeout", params.wheel_timeout.get())?,
+        target: source.target(),
+        gate_timeout: seconds("gate_timeout", params.gate_timeout.get())?,
     };
     let drive_period = period("drive_rate_hz", params.drive_rate_hz.get())?;
     let estop_period = period("estop_rate_hz", params.estop_rate_hz.get())?;
@@ -205,13 +215,15 @@ fn main() -> Result<()> {
 /// Role spine only: what drives the car. Kept alive as long as the node.
 struct DriveSide {
     _estop: WorkerSubscription<Bool, State>,
+    _gate: WorkerSubscription<StringMsg, State>,
     _arm: WorkerService<SetBool, State>,
     _drive: WorkerTimer<State>,
     _heartbeat: WorkerTimer<State>,
 }
 
 impl DriveSide {
-    /// /safety/estop, /spine/arm, and the DRIVE_CMD and ESTOP_CMD timers.
+    /// /safety/estop, /safety/output_mux/state, /spine/arm, and the DRIVE_CMD and
+    /// ESTOP_CMD timers.
     fn create(
         worker: &Worker<State>,
         drive_period: Duration,
@@ -222,15 +234,23 @@ impl DriveSide {
                 s.send(ESTOP_CMD_ID, &frame.encode());
             }
         })?;
+        // The safety gate, on a steady clock: a paused simulation can't keep an old OPEN.
+        let _gate = worker.create_subscription(
+            "safety/output_mux/state",
+            |s: &mut State, msg: StringMsg| s.bridge.output_mux_state(&msg.data, Instant::now()),
+        )?;
         let _arm = worker.create_service::<SetBool, _>(
             "spine/arm",
             |s: &mut State, request: SetBool_Request| {
-                let (success, message) = match s.bridge.arm(request.data) {
+                let (success, message) = match s.bridge.arm(request.data, Instant::now()) {
                     Ok(arming) => {
                         log_info!(&s.logger, "{arming}");
                         (true, arming.to_string())
                     }
-                    Err(refused) => (false, refused.to_string()),
+                    Err(refused) => {
+                        log_warn!(&s.logger, "arm refused: {refused}");
+                        (false, refused.to_string())
+                    }
                 };
                 SetBool_Response { success, message }
             },
@@ -253,6 +273,7 @@ impl DriveSide {
             })?;
         Ok(Self {
             _estop,
+            _gate,
             _arm,
             _drive,
             _heartbeat,
@@ -270,6 +291,7 @@ struct Params {
     track: ReadOnlyParameter<f64>,
     cmd_timeout: ReadOnlyParameter<f64>,
     wheel_timeout: ReadOnlyParameter<f64>,
+    gate_timeout: ReadOnlyParameter<f64>,
     drive_rate_hz: ReadOnlyParameter<f64>,
     estop_rate_hz: ReadOnlyParameter<f64>,
     speed_variance: ReadOnlyParameter<f64>,
@@ -293,6 +315,7 @@ impl Params {
             track: number("track", 0.77)?,                         // m
             cmd_timeout: number("cmd_timeout", 0.1)?,              // s
             wheel_timeout: number("wheel_timeout", 0.1)?,          // s
+            gate_timeout: number("gate_timeout", 1.5)?,            // s
             drive_rate_hz: number("drive_rate_hz", 50.0)?,         // Hz
             estop_rate_hz: number("estop_rate_hz", 10.0)?,         // Hz
             speed_variance: number("speed_variance", 0.01)?,       // (m/s)²
@@ -354,6 +377,15 @@ impl Source {
             Source::Real => "control/car/actuator_cmd",
             Source::Bench => "control/bench/actuator_cmd",
             Source::Sim => "control/gazebo/actuator_cmd",
+        }
+    }
+
+    /// The output mux whose gate must be OPEN to arm: the target in [`Source::commands`].
+    fn target(self) -> Target {
+        match self {
+            Source::Real => Target::Car,
+            Source::Bench => Target::Bench,
+            Source::Sim => Target::Gazebo,
         }
     }
 

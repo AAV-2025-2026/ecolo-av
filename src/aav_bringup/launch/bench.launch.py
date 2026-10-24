@@ -41,9 +41,10 @@ lane:=true runs lane keeping: lane_finder reads the pretend camera, control_inte
 steers on /drivers/ai/cmd_vel. lane:=fake feeds control_interface a pretend straight lane instead.
 
 arm:=true arms the spine after 12 s, once Nav2 is up, the way `ros2 service call
-/spine/arm std_srvs/srv/SetBool "{data: true}"` does. Arming earlier, while everything
-starts, risks a gap in commands that latches the spine again: its 200 ms watchdog doing
-its job.
+/spine/arm std_srvs/srv/SetBool "{data: true}"` does: aav_spine's arm_when_open asks
+each second until the output mux says OPEN, since spine_bridge refuses to arm while the
+safety gate is shut (Ben, 24 Oct). Arming earlier, while everything starts, risks a gap
+in commands that latches the spine again: its 200 ms watchdog doing its job.
 """
 
 import os
@@ -51,8 +52,8 @@ import os
 from aav_description import vehicle
 from aav_spine import bridges
 from launch import LaunchDescription
-from launch.actions import (DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription,
-                            OpaqueFunction, TimerAction)
+from launch.actions import (DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction,
+                            TimerAction)
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -171,10 +172,10 @@ def launch_setup(context):
             package='rviz2', executable='rviz2', name='rviz2',
             arguments=['-d', os.path.join(share('aav_bringup'), 'rviz', 'bench.rviz')]))
     if flag['arm']:
-        actions.append(TimerAction(period=12.0, actions=[ExecuteProcess(
-            name='arm_spine', output='screen',
-            cmd=['ros2', 'service', 'call', '/spine/arm', 'std_srvs/srv/SetBool',
-                 '{data: true}'])]))
+        # Once the safety gate is OPEN: spine_bridge refuses before.
+        actions.append(TimerAction(period=12.0, actions=[Node(
+            package='aav_spine', executable='arm_when_open', name='arm_when_open',
+            output='screen')]))
     return actions
 
 
