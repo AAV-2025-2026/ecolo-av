@@ -170,3 +170,112 @@ def test_the_orins_frames_move_freeze_or_break():
     assert counters == [1, 2, 2, 2]
     with pytest.raises(ValueError):
         unpack_frame_v2(orin.frames(values, bad_crc=True)())
+
+
+# --- The uplink and the RC (TODO 50, 48) ---
+
+def up(**changes):
+    fields = dict(sequence=0, echo=None, mode=q.MODE_COMPUTER, switch=q.SWITCH_NONE,
+                  armed=True, estop=False, faults=0, steering=0.0, brake_position=0.0,
+                  throttle_out=0.2, brake_out=0.0, rc_throttle=0.0, rc_steering=0.0,
+                  rc_brake=False)
+    fields.update(changes)
+    return q.Uplink(**fields)
+
+
+def uplink_run(stop_after=0.12, echo_lag=1, frozen=False):
+    """
+    Return one cycle's frames sent and uplinks seen, at 50 Hz each, as CYCLE times them.
+
+    The echo is the counter sent `echo_lag` frames before; `stop_after` s after the last
+    frame an uplink says stopped with fault 1.
+    """
+    kind = 'frozen' if frozen else 'silence'
+    cycle = q.Cycle(100.7, 101.0, 102.0, 102.6, 103.2, kind=kind)
+    sent = [q.Sent(100.7 + i * 0.02, i + 1) for i in range(66)]   # to 102.0
+    ups, seq = [], 0
+    for i in range(125):
+        h = 100.705 + i * 0.02
+        before = [s for s in sent if s.host <= h]
+        echo = before[-1 - echo_lag].counter if len(before) > echo_lag else None
+        stopped = h > 102.0 + stop_after
+        ups.append((h, up(sequence=seq, echo=echo,
+                          mode=q.MODE_STOPPED if stopped else q.MODE_COMPUTER,
+                          armed=not stopped, faults=q.CMD_TIMEOUT if stopped else 0)))
+        seq = (seq + 1) & 0xFF
+    return cycle, ups, sent
+
+
+def test_a_good_uplink_passes():
+    r = q.judge_uplink(*uplink_run())
+    assert r.ok, r.problems
+    assert 45 <= r.rate_hz <= 55
+    assert r.echo_ok and r.computer
+    assert 120 <= r.stopped_ms <= 140
+
+
+def test_a_stale_echo_fails():
+    r = q.judge_uplink(*uplink_run(echo_lag=20))   # 0.4 s old
+    assert not r.echo_ok
+    assert any('echoes not among' in p for p in r.problems)
+
+
+def test_a_late_stop_in_the_uplink_fails():
+    r = q.judge_uplink(*uplink_run(stop_after=0.4))
+    assert any('said stopped after' in p for p in r.problems)
+
+
+def test_the_echo_must_freeze_with_the_counter():
+    cycle, ups, sent = uplink_run(frozen=True, echo_lag=0)
+    r = q.judge_uplink(cycle, ups, sent)
+    assert r.frozen_echo, r.problems     # nothing sent in the gap: the echo stays
+    sent += [q.Sent(102.1, 200)]         # a new counter in the gap: it moves
+    ups = [(h, up(sequence=u.sequence, echo=200 if h > 102.1 else u.echo, mode=u.mode,
+                  armed=u.armed, faults=u.faults)) for h, u in ups]
+    assert q.judge_uplink(cycle, ups, sent).frozen_echo is False
+
+
+def test_lost_uplinks_are_counted_through_the_wrap():
+    seqs = [253, 254, 255, 0, 1, 3]
+    assert q.lost_uplinks([(0.0, up(sequence=s)) for s in seqs]) == 1
+
+
+def test_the_ibus_frame_is_the_receivers():
+    frame = q.ibus_frame(q.rc_channels('via_ros'))
+    assert len(frame) == 32 and frame[:2] == b'\x20\x40'
+    assert int.from_bytes(frame[30:], 'little') == (0xFFFF - sum(frame[:30])) & 0xFFFF
+    # CH6 (index 5) is the mode switch, in the middle for RC via ROS.
+    assert int.from_bytes(frame[12:14], 'little') == 1500
+
+
+def rc_lines(dac, brake=400, start=100.0, end=101.0):
+    """DEVICES lines every 50 ms; the firmware's clock is the host's minus 100 s."""
+    return [q.parse_line(devices(int((t - 100) * 1000), brake, dac), t)
+            for t in [start + i * 0.05 for i in range(int((end - start) / 0.05) + 1)]]
+
+
+def test_rc_via_ros_must_not_drive_from_the_sticks():
+    phase = q.RcPhase('via_ros_still', 100.0, 101.0)
+    ups = [(100.0 + i * 0.02, up(switch=q.SWITCH_RC_VIA_ROS, rc_throttle=1.0))
+           for i in range(50)]
+    lines = rc_lines(dac=0)
+    clock = q.ClockMap.fit(lines)
+    assert q.judge_rc(phase, ups, lines, clock).ok
+    lines = rc_lines(dac=200)
+    r = q.judge_rc(phase, ups, lines, q.ClockMap.fit(lines))
+    assert any('drove from the sticks' in p for p in r.problems)
+
+
+def test_a_lost_rc_must_say_fault_256_and_brake():
+    phase = q.RcPhase('direct_lost', 100.0, 101.0, rc_stop=100.0)
+    lost = up(switch=q.SWITCH_NONE, mode=q.MODE_RC_DIRECT, faults=q.RC_SIGNAL_LOST,
+              throttle_out=0.0, brake_out=1.0)
+    ups = [(100.0 + i * 0.02, lost if i >= 6 else up(switch=q.SWITCH_RC_DIRECT))
+           for i in range(50)]
+    lines = rc_lines(dac=0, brake=q.BRAKE_FULL)
+    r = q.judge_rc(phase, ups, lines, q.ClockMap.fit(lines))
+    assert r.ok, r.problems
+    assert r.ms == pytest.approx(120)
+    ups = [(h, up(switch=q.SWITCH_RC_DIRECT)) for h, _ in ups]   # never lost
+    r = q.judge_rc(phase, ups, lines, q.ClockMap.fit(lines))
+    assert any('fault 256' in p for p in r.problems)

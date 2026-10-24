@@ -86,7 +86,7 @@ esp-build = { cmd = "tools/esp32.sh build", description = "Build the Rust firmwa
 esp-flash = { cmd = "tools/esp32.sh flash", description = "Build and flash the Rust firmware onto the ESP32 control board on the USB cable, then show its log (bench only: docs/esp32-bench.md)" }
 # Before the board: the same firmware in Espressif's QEMU, with no hardware at all.
 esp-qemu-tools = { cmd = "tools/esp32.sh qemu-tools", description = "Download Espressif's QEMU (GPL-2.0, about 4 MB) and its libgcrypt into vendor/qemu, to run the ESP32 firmware with no board (once; macOS arm64)" }
-esp-qemu-check = { cmd = "tools/esp32.sh qemu", description = "Boot the ESP32 firmware in QEMU and check it brakes within 0.2 s when the Orin's heartbeat stops (no frames, a frozen counter, bad CRCs), and stays braked until a stop (docs/esp32-bench.md)" }
+esp-qemu-check = { cmd = "tools/esp32.sh qemu", description = "Boot the ESP32 firmware in QEMU and check it brakes within 0.2 s when the Orin's heartbeat stops (no frames, a frozen counter, bad CRCs), and stays braked until a stop; its uplink frames (the counter's echo, the mode); and the RC's modes: via ROS, direct, and a lost RC in each (docs/esp32-bench.md)" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"
