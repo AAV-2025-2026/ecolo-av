@@ -12,7 +12,7 @@ touching the others.
 
 | Sensor | Driver | Publishes |
 |---|---|---|
-| Wheel speed | today `encoder_udp` (in `aav_legacy`); later the spine | `/vehicle/odom` |
+| Wheel speed | an Arduino on the Orin's CAN bus (0x200, 0x201), read by `spine_bridge role:=sensors` ([Today's wiring](can-plan.md#todays-wiring-23-october)) | `/vehicle/odom`, `/vehicle/wheels` |
 | IMU (Yahboom, USB) | `aav_imu_yahboom` (Rust), then the stock `imu_filter_madgwick` | `/sensors/imu/data_raw`, then `/sensors/imu/data` |
 | GPS (u-blox, USB) | the stock `ublox_gps`; or `nmea_navsat_driver`, or `ublox_dgnss` on the car | `/sensors/gps/fix` |
 | The car's shape | the stock `robot_state_publisher`, from `vehicle.yaml` | `/tf_static`: where each sensor sits |
@@ -90,14 +90,29 @@ Most of the numbers are still guesses: see [Car numbers](car_measurements.md).
 
 | Backend | Package | Does |
 |---|---|---|
-| The real car | `aav_spine` | `/ego/actuator_cmd` into CAN frames, for the spine firmware |
-| Today's car | `aav_legacy` | into UART frames, for the 2025-26 ESP32 firmware |
+| The car, today (`actuators:=uart`) | `aav_legacy` | `legacy_uart_bridge` on the Motor Pi: UART frames for the ESP32 |
+| The CAN spine, later (`actuators:=can`) | `aav_spine_bridge` | `spine_bridge` on the Orin: CAN frames for the spine firmware |
 | turtlesim | `aav_turtlesim` | the stock turtlesim, steered with the bicycle model |
 | Gazebo | `aav_gazebo` | a simulated car with an IMU and GPS, on the real car's topics |
 | CARLA | `aav_carla` | adapter ready, untested: needs the NVIDIA computer ([CARLA](carla.md)) |
 
 Each backend reports the car's speed back on `/vehicle/odom`. That closes the loop into
-the EKFs.
+the EKFs. On today's car the UART link sends nothing back, so the wheel sensors on the
+Orin's CAN bus do it.
+
+### The car's wiring, today
+
+As Ben understands it (23 Oct; the hardware lead confirms). Details:
+[The CAN plan](can-plan.md#todays-wiring-23-october).
+
+```text
+         ┌──────────── Orin ────────────┐                   Motor Pi
+ego ─► output_mux ─/control/car/actuator_cmd─ network ─► legacy_uart_bridge ─UART─► ESP32
+                                │                                                 throttle
+CAN ─► socket_can_receiver ─► spine_bridge role:=sensors ─► /vehicle/odom,        steering
+ ▲     (no sender)            (sends nothing)               /vehicle/wheels       brake
+ └─ wheel sensors' Arduino (0x200, 0x201), and other sensors?
+```
 
 ### The output mux: one target, and the real car only on real data
 
@@ -106,8 +121,9 @@ command on to its target's own topic, and the **sensor mux** (`source:=`) checks
 the data comes from. See [Sources and targets](sources-and-targets.md).
 
 ```text
-ego ─/ego/actuator_cmd─► output_mux ─/control/car/actuator_cmd─► spine_bridge, legacy_uart_bridge
-                           ▲  (only while every source is REAL; else silent, latched)
+ego ─/ego/actuator_cmd─► output_mux ─/control/car/actuator_cmd─► legacy_uart_bridge (today),
+                           ▲                                      or spine_bridge role spine
+                           │  (only while every source is REAL; else silent, latched)
         sensor_mux ────────┘  /system/sensor_mux/state
 ```
 
@@ -121,8 +137,8 @@ From the person outward. Each layer works even if everything after it fails.
 | 2 | `/safety/estop` | it's true: the mux blocks every driver, and the car backends brake |
 | 3 | ego's timeout | no command arrives for 0.3 s |
 | 3a | The output mux | any source isn't REAL (a simulator, the bench, a replay on the network), or the sensor mux says no or goes quiet: it sends nothing, latched |
-| 4 | `spine_bridge` | ego is quiet for 0.1 s: it stops sending drive frames |
-| 5 | The spine's watchdog | no valid frame for 100 ms: throttle off, brake on |
+| 4 | The backend | ego is quiet: `legacy_uart_bridge` sends brake frames after 0.3 s; `spine_bridge` (CAN spine) stops sending drive frames after 0.1 s |
+| 5 | The firmware's watchdog | no valid frame for 100 ms: throttle off, brake on. The Rust ESP32 firmware, on the UART link today, or the CAN spine |
 | 6 | RC override switch, hardware e-stop, driver faults | always: handled in the firmware |
 
 Two more, for the automatic drivers only (Nav2 and the AI slot; never a person or a test):

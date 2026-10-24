@@ -7,7 +7,7 @@
 <!-- Generated from docs/sources-and-targets.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Sources and targets: the sensor mux and the output mux</h1>
-<div class="meta">6 min read · 7 sections</div></header>
+<div class="meta">7 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -297,7 +297,7 @@ a Mac at load 30-45): the gaps between commands were the same before and after i
 </tr>
 <tr>
 <td><code>aav_io_mux/test/test_real_backend_guard.py</code></td>
-<td>the real nodes with <code>spine_bridge</code> (source real): all REAL, its DRIVE_CMD frames flow; Gazebo announcing SIM, <strong>none</strong>; and <code>spine_bridge</code> never listens to <code>/ego/actuator_cmd</code></td>
+<td>the real nodes with <code>spine_bridge</code> (source real): all REAL, its DRIVE_CMD frames flow; Gazebo announcing SIM, <strong>none</strong>; and <code>spine_bridge</code> never listens to <code>/ego/actuator_cmd</code>. With <code>role:=sensors</code> (today's wiring: the Orin's CAN bus has only sensors), the mux still opens, not one frame reaches <code>/can/tx</code>, and it announces only the wheels</td>
 </tr>
 <tr>
 <td><code>aav_bringup/test/test_stack_launch.py</code></td>

@@ -66,13 +66,16 @@ ROS 2 has no master. Nodes find each other by multicast on the local network.
 
 ## On the car: what runs where
 
-The design puts everything on the Orin. Until the spine exists, the Motor Pi still talks
-to today's ESP32. The files in `src/aav_bringup/config/machines/` say what runs where:
+As the car is wired today (Ben, 23 Oct; the hardware lead confirms), the Motor Pi drives
+the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
+([Today's wiring](can-plan.md#todays-wiring-23-october)). `car.launch.py actuators:=uart`
+(the default) is that; `actuators:=can` is the KEFC plan's CAN spine. The files in
+`src/aav_bringup/config/machines/` say what runs where:
 
 | Machine file | Runs |
 |---|---|
-| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the YOLO detector (`yolo_detector_orin`, TensorRT) and the stop-sign watcher |
-| `motor_pi.yaml` | `legacy_uart_bridge` and `encoder_udp`: the ESP32 is wired to it, and the encoder sends its packets to it |
+| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the YOLO detector (`yolo_detector_orin`, TensorRT) and the stop-sign watcher; the CAN bus (`spine_bridge role:=sensors`: the wheels) |
+| `motor_pi.yaml` | `legacy_uart_bridge`: the ESP32 is wired to it. The 2025-26 UDP encoder (`encoder_udp`) is off: the wheels are on CAN now |
 | `laptop.yaml` | the joystick, on the safety driver's laptop. Its detector (`yolo_detector_laptop`, Core ML) is off until it reads compressed images |
 | `all.yaml` | everything on one computer, for the bench. Its detector is `yolo_detector_all` |
 
@@ -103,7 +106,8 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.
 | `radar_clusters` | the radar's clustering |
 | `camera_obstacles` | the detectors' boxes as points on the road, for Nav2's costmap ([Costmaps](costmaps.md)) |
 | `localization`, `navigation` | the two EKFs and `navsat_transform`; Nav2. Its costmap reads the `radar` and `camera_obstacles` parts on the same computer, and `collision_monitor` comes with the radar |
-| `spine`, `legacy_uart`, `legacy_encoder` | the backends: the CAN spine, or today's ESP32 and wheel encoder |
+| `spine` | the CAN bus (Linux only): with `actuators:=uart`, the wheel sensors only (`spine_bridge role:=sensors`, no CAN sender); with `actuators:=can`, the CAN spine backend |
+| `legacy_uart`, `legacy_encoder` | today's backend, the ESP32 over UART (not with `actuators:=can`); the 2025-26 UDP wheel encoder (never beside `spine`) |
 | `foxglove` | `foxglove_bridge`, on port 8765 |
 
 A part that can't run on that computer (no PyTorch, no model file, no `usb_cam`) is

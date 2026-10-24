@@ -11,8 +11,9 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 
 | Box | Implemented by | Status |
 |---|---|---|
-| Wheel speed, today's car | `aav_legacy` `encoder_udp` (one wheel, into `/vehicle/odom`) | [[untested]] needs the car |
-| Wheel speed, the CAN wheel nodes (KEFC plan, CAN v0.2.0) | `spine_bridge`: WHEEL_SPEED_L/R (0x200, 0x201) into `/vehicle/wheels` and `/vehicle/odom`'s speed; `wheel-core` (the nodes' logic) | [[works]] on the bench, against `spine_sim`'s wheel frames (15 Oct). [[missing]] on the car: no wheel node boards yet |
+| Wheel speed, the 2025-26 encoder | `aav_legacy` `encoder_udp` (one wheel, into `/vehicle/odom`) | [[untested]] needs the car. Off in `motor_pi.yaml` since 23 Oct: the wheels are on CAN now |
+| Wheel speed, the CAN wheel sensors (CAN v0.2.0) | `spine_bridge`: WHEEL_SPEED_L/R (0x200, 0x201) into `/vehicle/wheels` and `/vehicle/odom`'s speed; `wheel-core` (the KEFC nodes' logic) | [[works]] on the bench, against `spine_sim`'s wheel frames (15 Oct) |
+| The Orin's CAN bus for sensors only (today's wiring, 23 Oct; the hardware lead confirms) | `spine_bridge role:=sensors`, `car.launch.py actuators:=uart` (the default): no CAN sender, no drive frames; `/vehicle/odom` from the wheels alone | [[works]] in tests (24 Oct, Mac): the Rust node fed wheel frames gave `/vehicle/odom` 1.1 m/s from 1.0 and 1.2, no `/can/tx`; the output mux's guard test. [[untested]] on the car: we haven't seen the Arduino's frames yet ([Today's wiring](can-plan.md#todays-wiring-23-october)) |
 | IMU | `aav_imu_yahboom` (Rust) + `imu_filter_madgwick` | [[untested]] needs the device; gives the 2025-26 C++ driver's answers, bit for bit |
 | GPS | `ublox_gps` (the stock u-blox driver); `nmea` and `ublox_dgnss` are options | [[untested]] in Pixi on every computer; needs the device. The default is Tentative (Q18) |
 | Car model | `aav_description` | [[works]] numbers are guesses |

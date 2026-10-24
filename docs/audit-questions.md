@@ -91,3 +91,20 @@ How to measure each, as a sheet to fill in: [READ-ME-MEASURE-THE-CAR.md](../READ
 |---|---|---|---|
 | P1 | Each 12 V → 5 V converter: its rating, and what it feeds. The dash one showed 3.48 A | the label; follow the wires | a Pi 5 wants 5 A; brown-outs look like software crashes |
 | P2 | What powers the Orin, and from which fuse? | follow the cable | the KEFC power plan |
+
+## 8. The car's wiring, for the hardware lead (23 Oct)
+
+Ben's picture of the wiring (23 Oct), and what our code now assumes:
+[Today's wiring](can-plan.md#todays-wiring-23-october). **Not confirmed**: the hardware
+lead decides, and these answers may change it.
+
+| # | Question | Why it matters |
+|---|---|---|
+| H1 ⚠️ | Is the Motor Pi to ESP32 link serial (UART)? Which port, which speed? Is it the Pi called CORTEX (.120), which ran `uart_bridge` on 21 Oct? | `legacy_uart_bridge` assumes `/dev/ttyAMA0` at 115200 (D3); `motor_pi.yaml` |
+| H2 | Does the ESP32 read the steering angle? And the brake position? How (the Jrk G2s' feedback, a pot)? | `/vehicle/steering`'s measured angle, a better `/vehicle/odom` in turns (a yaw rate), and checking the actuators. The UART link sends nothing back today |
+| H3 | What else is on the CAN bus, besides the wheel sensors? Their IDs and rates? | `aav.dbc`: new frames, and the bus load ([Bandwidth](bandwidth.md)). Their IDs must not clash with 0x010-0x201 |
+| H4 | The wheel sensors' Arduino: which board and CAN chip? One Arduino for both wheels, or one each? Does it send `aav.dbc` 0x200 and 0x201 as they are (CRC-8, counter, 100 Hz)? | the Orin decodes only those frames; a wrong checksum is dropped and counted |
+| H5 | Can the wheel sensors tell direction (two sensors per wheel, quadrature)? | `direction_known`: today the Orin signs the speed from the last command, which is wrong when the car is pushed or rolls back |
+| H6 | Is the 2025-26 wheel encoder (the Pico 2, UDP to the Motor Pi) still on the car? | it is off in `motor_pi.yaml`; turn it on only where the CAN wheel sensors aren't |
+| H7 | The CAN bus: 500 kbit/s? Terminated at both ends? Which interface on the Orin (`can0`, the 40-pin header's CAN, a USB adapter)? | `spine.launch.py interface:=`, and `ip link set can0 up type can bitrate 500000` |
+| H8 | Will the ESP32 ever move onto CAN (the KEFC plan), or stay on the Motor Pi? | `actuators:=can` stays ready for it; until then `uart` |

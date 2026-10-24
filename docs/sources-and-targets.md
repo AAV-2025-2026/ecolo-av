@@ -114,7 +114,7 @@ a Mac at load 30-45): the gaps between commands were the same before and after i
 | Test | Checks |
 |---|---|
 | `aav_io_mux/test/test_provenance.py` | the rules, no ROS: 30 cases |
-| `aav_io_mux/test/test_real_backend_guard.py` | the real nodes with `spine_bridge` (source real): all REAL, its DRIVE_CMD frames flow; Gazebo announcing SIM, **none**; and `spine_bridge` never listens to `/ego/actuator_cmd` |
+| `aav_io_mux/test/test_real_backend_guard.py` | the real nodes with `spine_bridge` (source real): all REAL, its DRIVE_CMD frames flow; Gazebo announcing SIM, **none**; and `spine_bridge` never listens to `/ego/actuator_cmd`. With `role:=sensors` (today's wiring: the Orin's CAN bus has only sensors), the mux still opens, not one frame reaches `/can/tx`, and it announces only the wheels |
 | `aav_bringup/test/test_stack_launch.py` | `target:=` picks the profile; a wrong `source:=` is refused; every profile runs the two muxes with its own target |
 | `pixi run sim-check`, `pixi run bench-check` | the whole graph with both muxes: contract, drive, e-stops. Passed 23 Oct |
 | the turtle (`pixi run turtle`) | OPEN; a scripted drive moved the turtle at 0.86 m/s |

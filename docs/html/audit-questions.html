@@ -7,7 +7,7 @@
 <!-- Generated from docs/audit-questions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Friday&#x27;s questions: what only the car can tell us</h1>
-<div class="meta">9 min read · 7 sections</div></header>
+<div class="meta">12 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -68,7 +68,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#1-safety">1. Safety</a><a href="#2-the-drive-path-today">2. The drive path (today)</a><a href="#3-can-the-kefc-plan">3. CAN (the KEFC plan)</a><a href="#4-sensors">4. Sensors</a><a href="#5-computers-and-network-we-look-at-this-together">5. Computers and network (we look at this together)</a><a href="#6-measurements-for-vehicleyaml-q1">6. Measurements for vehicle.yaml (Q1)</a><a href="#7-power">7. Power</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#1-safety">1. Safety</a><a href="#2-the-drive-path-today">2. The drive path (today)</a><a href="#3-can-the-kefc-plan">3. CAN (the KEFC plan)</a><a href="#4-sensors">4. Sensors</a><a href="#5-computers-and-network-we-look-at-this-together">5. Computers and network (we look at this together)</a><a href="#6-measurements-for-vehicleyaml-q1">6. Measurements for vehicle.yaml (Q1)</a><a href="#7-power">7. Power</a><a href="#8-the-cars-wiring-for-the-hardware-lead-23-oct">8. The car&#x27;s wiring, for the hardware lead (23 Oct)</a></nav>
 <div class="lead"><p>Every hardware question the code is waiting on, in one list for Friday 16 October. Each
 row says how to answer it and what the answer unblocks. Write the answers into
 <code>docs/history/audit-2026-10-16-car.md</code> (no passwords or keys).</p>
@@ -427,6 +427,62 @@ row says how to answer it and what the answer unblocks. Write the answers into
 <td>What powers the Orin, and from which fuse?</td>
 <td>follow the cable</td>
 <td>the KEFC power plan</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="8-the-cars-wiring-for-the-hardware-lead-23-oct">8. The car's wiring, for the hardware lead (23 Oct)</h2>
+<p>Ben's picture of the wiring (23 Oct), and what our code now assumes:
+<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>. <strong>Not confirmed</strong>: the hardware
+lead decides, and these answers may change it.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H1 ⚠️</td>
+<td>Is the Motor Pi to ESP32 link serial (UART)? Which port, which speed? Is it the Pi called CORTEX (.120), which ran <code>uart_bridge</code> on 21 Oct?</td>
+<td><code>legacy_uart_bridge</code> assumes <code>/dev/ttyAMA0</code> at 115200 (D3); <code>motor_pi.yaml</code></td>
+</tr>
+<tr>
+<td>H2</td>
+<td>Does the ESP32 read the steering angle? And the brake position? How (the Jrk G2s' feedback, a pot)?</td>
+<td><code>/vehicle/steering</code>'s measured angle, a better <code>/vehicle/odom</code> in turns (a yaw rate), and checking the actuators. The UART link sends nothing back today</td>
+</tr>
+<tr>
+<td>H3</td>
+<td>What else is on the CAN bus, besides the wheel sensors? Their IDs and rates?</td>
+<td><code>aav.dbc</code>: new frames, and the bus load (<a href="bandwidth.html">Bandwidth</a>). Their IDs must not clash with 0x010-0x201</td>
+</tr>
+<tr>
+<td>H4</td>
+<td>The wheel sensors' Arduino: which board and CAN chip? One Arduino for both wheels, or one each? Does it send <code>aav.dbc</code> 0x200 and 0x201 as they are (CRC-8, counter, 100 Hz)?</td>
+<td>the Orin decodes only those frames; a wrong checksum is dropped and counted</td>
+</tr>
+<tr>
+<td>H5</td>
+<td>Can the wheel sensors tell direction (two sensors per wheel, quadrature)?</td>
+<td><code>direction_known</code>: today the Orin signs the speed from the last command, which is wrong when the car is pushed or rolls back</td>
+</tr>
+<tr>
+<td>H6</td>
+<td>Is the 2025-26 wheel encoder (the Pico 2, UDP to the Motor Pi) still on the car?</td>
+<td>it is off in <code>motor_pi.yaml</code>; turn it on only where the CAN wheel sensors aren't</td>
+</tr>
+<tr>
+<td>H7</td>
+<td>The CAN bus: 500 kbit/s? Terminated at both ends? Which interface on the Orin (<code>can0</code>, the 40-pin header's CAN, a USB adapter)?</td>
+<td><code>spine.launch.py interface:=</code>, and <code>ip link set can0 up type can bitrate 500000</code></td>
+</tr>
+<tr>
+<td>H8</td>
+<td>Will the ESP32 ever move onto CAN (the KEFC plan), or stay on the Motor Pi?</td>
+<td><code>actuators:=can</code> stays ready for it; until then <code>uart</code></td>
 </tr>
 </tbody>
 </table></div></section>
