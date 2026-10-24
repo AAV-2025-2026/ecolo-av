@@ -47,10 +47,16 @@ jobs:
           key: pixi-pkgs-${{ runner.os }}-${{ hashFiles('pixi.lock') }}
           restore-keys: pixi-pkgs-${{ runner.os }}-
       - name: pixi run test
+        # A hung test fails the step (and so gets annotated) instead of the job being
+        # cancelled at its limit with nothing to read; pytest prints every thread's stack
+        # once a test has run 5 min (the Mac nightly of 24 Oct ran past 90 min).
+        timeout-minutes: 45
+        env:
+          PYTEST_ADDOPTS: -o faulthandler_timeout=300
         run: pixi run --locked test 2>&1 | tee test.log
       - name: Failures as annotations (readable without signing in)
         # Not when the run failed before the tests (GitHub down, say): no test.log.
-        if: failure() && hashFiles('test.log') != ''
+        if: (failure() || cancelled()) && hashFiles('test.log') != ''
         run: python3 tools/ci_annotate.py test.log build
       - name: The MCP server, over stdio
         run: pixi run --locked -e mcp python3 tools/tests/mcp_smoke.py
@@ -71,10 +77,16 @@ jobs:
           key: pixi-pkgs-${{ runner.os }}-${{ hashFiles('pixi.lock') }}
           restore-keys: pixi-pkgs-${{ runner.os }}-
       - name: pixi run test
+        # A hung test fails the step (and so gets annotated) instead of the job being
+        # cancelled at its limit with nothing to read; pytest prints every thread's stack
+        # once a test has run 5 min (the Mac nightly of 24 Oct ran past 90 min).
+        timeout-minutes: 45
+        env:
+          PYTEST_ADDOPTS: -o faulthandler_timeout=300
         run: pixi run --locked test 2>&1 | tee test.log
       - name: Failures as annotations (readable without signing in)
         # Not when the run failed before the tests (GitHub down, say): no test.log.
-        if: failure() && hashFiles('test.log') != ''
+        if: (failure() || cancelled()) && hashFiles('test.log') != ''
         run: python3 tools/ci_annotate.py test.log build
       - name: The MCP server, over stdio
         run: pixi run --locked -e mcp python3 tools/tests/mcp_smoke.py
