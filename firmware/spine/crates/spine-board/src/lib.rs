@@ -20,7 +20,7 @@
 //! |---|---|
 //! | [`board`] | the [`Board`] trait: what differs from chip to chip |
 //! | [`calibration`] | today's numbers: addresses, steering, brake, throttle, direction |
-//! | [`link`] | where the commands come from: CAN, or the 2025-26 UART link ([`CommandLink`]) |
+//! | [`link`] | where the commands come from: CAN, or the Motor-Pi's UART link, version 2 (the Orin's heartbeat) or 1 ([`CommandLink`]) |
 //! | [`actuators`] | drives the devices from `Outputs` in a safe order, and reads them |
 //! | [`wheel`] | the speed, from the wheel encoder's counter; two spoke sensors, counted |
 //! | [`spine_board`] | the loop: [`SpineBoard`] |
@@ -57,7 +57,7 @@ pub mod wheel;
 pub use actuators::{Actuators, Devices, Readings};
 pub use board::{Board, CanFrame, WheelCount};
 pub use calibration::Calibration;
-pub use link::{CanLink, CommandLink, LegacyLink};
+pub use link::{CanLink, CommandLink, FrameVersion, LegacyLink, LinkStats};
 pub use spine_board::SpineBoard;
 pub use stand_in::{DeviceTargets, StandInBus};
 pub use wheel::{SpokeSensors, WheelSpeed};

@@ -5,6 +5,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import esp32_qemu as q  # noqa: E402
+from aav_legacy.legacy_protocol import unpack_frame_v2  # noqa: E402,I100
 import pytest  # noqa: E402
 
 # Lines as the firmware prints them on UART0, colour codes and all.
@@ -128,3 +129,44 @@ def test_the_table_has_a_row_per_cycle():
     rows = [r for r in text.splitlines() if r.startswith('| ') and r[2].isdigit()]
     assert len(rows) == 2
     assert rows[0].endswith('| pass |') and rows[1].endswith('| FAIL |')
+
+
+# --- Version 2: the Orin's counter (TODO 50) ---
+
+def link(t, *, bad=0, repeats=0):
+    return (f'INFO - LINK t={t} frames=100 bad={bad} skipped=0 repeats={repeats} '
+            f'counter=7')
+
+
+def with_links(lines, before, after):
+    """Add a LINK line before the gap (at 1.8 s) and one after it (at 2.8 s)."""
+    extra = [q.parse_line(link(1800, **before), 101.8 + 0.001),
+             q.parse_line(link(2800, **after), 102.8 + 0.001)]
+    return sorted(lines + extra, key=lambda ln: ln.host)
+
+
+def test_link_lines_are_read():
+    ln = q.parse_line(link(5, bad=3), 1.0)
+    assert (ln.kind, ln.get('bad'), ln.get('counter')) == ('LINK', 3, 7)
+
+
+@pytest.mark.parametrize('kind,field', [('frozen', 'repeats'), ('bad_crc', 'bad')])
+def test_a_gap_of_frames_must_be_counted(kind, field):
+    cycle = q.Cycle(100.7, 101.0, 102.0, 102.6, 103.2, kind=kind, gap_frames=30)
+    lines = with_links(firmware(), {field: 1}, {field: 31})
+    r = q.judge(cycle, lines, q.ClockMap.fit(lines))
+    assert r.ok, r.problems
+    assert r.counted == 30
+    lines = with_links(firmware(), {field: 1}, {field: 11})
+    r = q.judge(cycle, lines, q.ClockMap.fit(lines))
+    assert any(f'only 10 counted as {field}' in p for p in r.problems)
+
+
+def test_the_orins_frames_move_freeze_or_break():
+    orin = q.Orin()
+    values = q.to_legacy(*q.DRIVE, q.LegacyMapping())
+    moving, frozen = orin.frames(values), orin.frames(values, move=False)
+    counters = [unpack_frame_v2(f()).counter for f in (moving, moving, frozen, frozen)]
+    assert counters == [1, 2, 2, 2]
+    with pytest.raises(ValueError):
+        unpack_frame_v2(orin.frames(values, bad_crc=True)())

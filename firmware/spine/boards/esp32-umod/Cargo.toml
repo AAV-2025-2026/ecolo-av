@@ -13,12 +13,17 @@ publish = false
 
 [features]
 # Where the computer's commands come from. Exactly one.
-#   legacy-uart: the Motor-Pi's 13-byte frames on GPIO16, as today: a drop-in for
-#                firmware/legacy/aav_umod_esp32.
+#   legacy-uart: the Motor-Pi's frames on GPIO16: version 2, with the Orin's heartbeat
+#                counter, armed and e-stop flags and a CRC-8 (TODO 50). The ESP32
+#                brakes when the counter hasn't changed for 100 ms.
 #   can:         the frames of firmware/can/aav.dbc on the ESP32's TWAI (CAN) controller.
 default = ["legacy-uart"]
 legacy-uart = []
 can = []
+# With legacy-uart: the 2025-26 13-byte frame instead of version 2, as the C++ read it
+# (firmware/legacy/aav_umod_esp32): no counter, so no heartbeat; the 100 ms timeout only
+# sees the Motor-Pi's own frames. The fallback until version 2 is proven on the bench.
+link-v1 = []
 # Run in Espressif's QEMU (tools/esp32.sh qemu), never on the car: stand-in devices on
 # the I2C bus, and a busy-wait tick instead of interrupts (src/main.rs says why).
 qemu = []

@@ -8,8 +8,14 @@
 //!
 //! | Feature | Link | Use |
 //! |---|---|---|
-//! | `legacy-uart` (default) | the Motor-Pi's 13-byte frames on UART1 | today: a drop-in for the C++, with `aav_legacy`'s `legacy_uart_bridge` |
+//! | `legacy-uart` (default) | the Motor-Pi's version 2 frames on UART1, with the Orin's heartbeat | `aav_legacy`'s `legacy_uart_bridge` with `frame_version: 2` |
+//! | `legacy-uart` + `link-v1` | the Motor-Pi's 2025-26 13-byte frames | a drop-in for the C++: `frame_version: 1`, no heartbeat |
 //! | `can` | `firmware/can/aav.dbc` on the TWAI controller | the KEFC plan: the Orin's `spine_bridge` |
+//!
+//! The heartbeat (TODO 50): each version 2 frame carries a counter the Orin's output mux
+//! makes and the Motor-Pi only copies. A frame whose counter hasn't changed isn't a
+//! command, so 100 ms after the counter stops, the spine's watchdog brakes, cuts the
+//! throttle and latches, however many frames still arrive (`spine_board::LegacyLink`).
 //!
 //! | Part | How |
 //! |---|---|
@@ -21,7 +27,7 @@
 //! | the wheel speed | none on this board (the encoder talks to the Motor-Pi): the speed loop runs open loop |
 //! | the e-stop's spare contact | an input, with `estop-input`, once it is wired (Q6) |
 //! | the hardware watchdog | TIMG1's: fed after every tick; a hang or a panic resets the chip within 100 ms |
-//! | the log | UART0, the USB cable: a status line every 200 ms, as the C++ printed, and an event line at each change |
+//! | the log | UART0, the USB cable: a status line every 200 ms, as the C++ printed, an event line at each change, and (`legacy-uart`) a link line with the frame counts |
 //!
 //! With `--features qemu`, it runs in Espressif's QEMU instead (`tools/esp32.sh qemu`;
 //! `docs/esp32-bench.md`, "Before the board: the emulator"). Two things differ, both only
@@ -50,6 +56,8 @@ compile_error!(
 compile_error!("pick a link: `legacy-uart` or `can`");
 #[cfg(all(feature = "qemu", feature = "can"))]
 compile_error!("`qemu` runs the Motor-Pi UART link only: QEMU has no CAN (TWAI)");
+#[cfg(all(feature = "link-v1", not(feature = "legacy-uart")))]
+compile_error!("`link-v1` is a frame of the Motor-Pi UART link: build it with `legacy-uart`");
 
 #[cfg(feature = "can")]
 mod can;
@@ -291,8 +299,10 @@ async fn main(_spawner: Spawner) -> ! {
         env!("CARGO_PKG_VERSION"),
         if cfg!(feature = "can") {
             "CAN"
+        } else if cfg!(feature = "link-v1") {
+            "Motor-Pi UART, version 1 frames (no heartbeat)"
         } else {
-            "Motor-Pi UART"
+            "Motor-Pi UART, version 2 frames (the Orin's heartbeat)"
         },
         if cfg!(feature = "qemu") {
             ", in QEMU with stand-in devices"
@@ -377,7 +387,12 @@ async fn main(_spawner: Spawner) -> ! {
         let motor_pi_rx = UartRx::new(p.UART1, motor_pi_config)
             .map(|rx| rx.with_rx(pins.motor_pi_rx))
             .unwrap_or_else(|e| panic!("Motor-Pi UART: {:?}", e));
-        let link = spine_board::LegacyLink::new(motor_pi_rx, cal);
+        let version = if cfg!(feature = "link-v1") {
+            spine_board::FrameVersion::V1
+        } else {
+            spine_board::FrameVersion::V2
+        };
+        let link = spine_board::LegacyLink::new(motor_pi_rx, cal, version);
         SpineBoard::with_link(board, devices, ibus_rx, link, cal, config)
     };
     #[cfg(feature = "can")]
@@ -413,6 +428,8 @@ async fn main(_spawner: Spawner) -> ! {
         }
         if ticks.is_multiple_of(STATUS_EVERY_TICKS) {
             log_line("STATUS", now, &out);
+            #[cfg(feature = "legacy-uart")]
+            link_line(now, &spine.link().stats());
         }
         #[cfg(feature = "qemu")]
         {
@@ -444,6 +461,22 @@ fn log_line(kind: &str, now: u32, out: &Outputs) {
         out.reverse,
         out.steering_target,
         out.faults
+    );
+}
+
+/// The Motor-Pi link's counts since boot, with each status line: frames taken, turned
+/// down (`bad`), bytes outside a frame (`skipped`), frames with the same counter as the
+/// one before (`repeats`), and the last counter (-1: none yet).
+#[cfg(feature = "legacy-uart")]
+fn link_line(now: u32, s: &spine_board::LinkStats) {
+    info!(
+        "LINK t={} frames={} bad={} skipped={} repeats={} counter={}",
+        now,
+        s.frames,
+        s.bad,
+        s.skipped,
+        s.repeats,
+        s.counter.map_or(-1, i32::from)
     );
 }
 

@@ -1,5 +1,5 @@
 """
-The ESP32 firmware in QEMU: check it brakes when the Motor-Pi's frames stop.
+The ESP32 firmware in QEMU: check it brakes when the Orin's heartbeat stops.
 
 `pixi run esp-qemu-check` (tools/esp32.sh qemu) builds the Rust firmware with
 `--features qemu`, makes a flash image, and runs this. No ROS here, so the tests run
@@ -9,17 +9,28 @@ emulator", has the picture and the results.
   this script --frames--> unix socket --> QEMU UART1 --> the firmware's LegacyLink
   this script <--lines--- unix socket <-- QEMU UART0 <-- the firmware's log
 
-The frames are the real protocol: aav_legacy's own `pack_frame`, at the bridge's 50 Hz,
-with its drive and stale-stop values. The firmware logs three kinds of line (src/main.rs):
+The frames are the real protocol: aav_legacy's own `pack_frame_v2` (version 2, TODO 50),
+at the bridge's 50 Hz, with ego's values (`to_legacy`) and the Orin's counter, which
+moves by one a frame while the Orin is alive. The firmware logs four kinds of line
+(src/main.rs):
 
   EVENT   t=<ms> mode=.. armed=.. estop=.. throttle=.. brake=.. ... faults=..  on a change
   STATUS  the same, every 200 ms
+  LINK    t=<ms> frames=.. bad=.. skipped=.. repeats=.. counter=..  with each STATUS: the
+          link's counts since boot
   DEVICES t=<ms> steering=<Jrk> brake=<Jrk> dac=<code> expander=..  what the stand-in
           devices were last told: the bytes the car's Jrks and DAC would get
 
-Each cycle: stop frames (the arming edge), drive frames, silence (the heartbeat stops),
-drive frames again without a stop (it must stay latched). The next cycle's stop frames
-re-arm it.
+Each cycle: stand-still frames (the hold brake: the arming edge's stop), drive frames,
+a gap, then drive frames again with a moving counter but no stop (it must stay
+latched). The next cycle's stand-still frames re-arm it. The gap is one of three kinds:
+
+  silence   no frames at all: the Motor-Pi or its cable is gone
+  frozen    drive frames at 50 Hz, the counter frozen: the Pi alive, the Orin gone
+  bad_crc   drive frames at 50 Hz, the counter moving, every CRC wrong: a bad cable.
+            Each must be ignored (and counted: LINK bad=), so the heartbeat stops too
+
+Each must brake within 100-200 ms of the last good frame with a new counter.
 
 Times: `t` is the firmware's clock (esp-hal's Instant, from QEMU's virtual clock, which
 follows the host's clock without -icount). The host notes when each line arrives;
@@ -42,7 +53,8 @@ from typing import Iterable, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src/backends/aav_legacy'))
-from aav_legacy.legacy_protocol import LegacyMapping, pack_frame, stop_command, to_legacy  # noqa: E402,E501
+from aav_legacy.legacy_protocol import (  # noqa: E402
+    LegacyMapping, pack_frame, pack_frame_v2, stop_command, to_legacy)
 
 # The firmware's numbers (spine-core's SpineConfig, spine-board's Calibration::TODAY).
 TIMEOUT_MS = 100            # cmd_timeout_ms
@@ -53,6 +65,8 @@ BRAKE_RELEASED = 400
 
 RATE_HZ = 50.0              # legacy_uart_bridge's rate_hz
 DRIVE = (0.6, 0.0)          # ego's command while driving: 0.6 m/s, straight
+STAND_STILL = (0.0, 0.0)    # ego standing still: the hold brake, a stop
+KINDS = ('silence', 'frozen', 'bad_crc')
 EFUSE_REV3 = bytes.fromhex(  # chip revision 3, as ESP-IDF's `idf.py qemu` writes it
     '00000000000000000000000000800000000000000000100000000000000000000000000000000000'
     + '00' * 80 + '00000000')
@@ -68,7 +82,7 @@ class Line:
     """One line of the firmware's log, and when it reached this computer."""
 
     host: float                 # s, time.monotonic()
-    kind: str                   # EVENT, STATUS, DEVICES, or TEXT
+    kind: str                   # EVENT, STATUS, LINK, DEVICES, or TEXT
     t: Optional[int] = None     # the firmware's ms since boot
     fields: dict = field(default_factory=dict)
     text: str = ''
@@ -88,9 +102,9 @@ class Line:
 
 
 def parse_line(text: str, host: float) -> Line:
-    """Read one log line; anything that isn't EVENT, STATUS or DEVICES is TEXT."""
+    """Read one log line; anything that isn't EVENT, STATUS, LINK or DEVICES is TEXT."""
     text = ANSI.sub('', text).strip()
-    for kind in ('EVENT', 'STATUS', 'DEVICES'):
+    for kind in ('EVENT', 'STATUS', 'LINK', 'DEVICES'):
         marker = kind + ' t='
         at = text.find(marker)
         if at >= 0:
@@ -130,9 +144,11 @@ class Cycle:
 
     stop_from: float
     drive_from: float
-    last_frame: float           # the last drive frame before the silence
+    last_frame: float           # the last good drive frame with a new counter
     resume_from: float          # drive frames again, without a stop
     end: float
+    kind: str = 'silence'       # the gap: silence, frozen or bad_crc (KINDS)
+    gap_frames: int = 0         # frames sent in the gap
 
 
 @dataclass
@@ -147,6 +163,10 @@ class Result:
     fault_bit: bool = False                 # the timeout event has CMD_TIMEOUT
     stopped: bool = False                   # it says throttle 0, brake 1.00, not armed
     latched: Optional[bool] = None          # fresh frames without a stop didn't drive
+    kind: str = 'silence'
+    gap_frames: int = 0                     # frames sent in the gap
+    counted: Optional[int] = None           # the firmware's count of them: LINK repeats
+                                            # (frozen) or bad (bad_crc)
     problems: List[str] = field(default_factory=list)
 
     @property
@@ -157,7 +177,7 @@ class Result:
 
 def judge(cycle: Cycle, lines: List[Line], clock: ClockMap) -> Result:
     """Check one cycle against what the firmware logged."""
-    r = Result()
+    r = Result(kind=cycle.kind, gap_frames=cycle.gap_frames)
     fw = clock.to_firmware_ms
     t_drive, t_last = fw(cycle.drive_from), fw(cycle.last_frame)
     t_resume, t_end = fw(cycle.resume_from), fw(cycle.end)
@@ -215,6 +235,20 @@ def judge(cycle: Cycle, lines: List[Line], clock: ClockMap) -> Result:
                               + (moved or moved_devices)[0].text)
         elif not all(ln.get('faults') & CMD_TIMEOUT for ln in resumed):
             r.problems.append('the timeout fault bit cleared without a stop')
+
+    # The gap's frames: each one ignored, and counted (LINK lines).
+    if cycle.kind in ('frozen', 'bad_crc'):
+        counter = 'repeats' if cycle.kind == 'frozen' else 'bad'
+        links = [ln for ln in timed if ln.kind == 'LINK']
+        before = [ln for ln in links if ln.t <= t_last]
+        after = [ln for ln in links if ln.t >= t_resume + 30]
+        if not before or not after:
+            r.problems.append('no LINK lines around the gap')
+        else:
+            r.counted = after[0].get(counter) - before[-1].get(counter)
+            if r.counted < cycle.gap_frames - 1:
+                r.problems.append(f'{cycle.gap_frames} {cycle.kind} frames sent, only '
+                                  f'{r.counted} counted as {counter}')
     return r
 
 
@@ -289,8 +323,11 @@ class Firmware:
         raise RuntimeError('timed out waiting for the firmware; its log:\n'
                            + '\n'.join(ln.text for ln in self.snapshot()[-30:]))
 
-    def send_for(self, values: Tuple[float, float, float], seconds: float) -> float:
-        """Send one frame every 20 ms for `seconds`; return when the last one went."""
+    def send_for(self, values: Tuple[float, float, float], seconds: float,
+                 frames=None) -> Tuple[float, int]:
+        """Send one frame every 20 ms for `seconds`; return when the last went, and how
+        many. `frames()` makes each frame (version 2, the Orin's counter); by default
+        the version 1 frame of `values`."""
         frame = pack_frame(*values)
         start = time.monotonic()
         n = 0
@@ -298,11 +335,11 @@ class Firmware:
         while True:
             due = start + n / RATE_HZ
             if due - start >= seconds:
-                return last
+                return last, n
             pause = due - time.monotonic()
             if pause > 0:
                 time.sleep(pause)
-            self.motor.sendall(frame)
+            self.motor.sendall(frames() if frames else frame)
             last = time.monotonic()
             n += 1
 
@@ -313,25 +350,52 @@ class Firmware:
         self.proc.wait()
 
 
+class Orin:
+    """The Orin's counter and the Motor-Pi's frames: legacy_uart_bridge, frame_version 2."""
+
+    def __init__(self):
+        self.counter = 0
+
+    def frames(self, values, move=True, armed=True, bad_crc=False):
+        """Return a frame maker: each call, the next frame (the counter +1, or frozen)."""
+        def make():
+            if move:
+                self.counter = (self.counter + 1) & 0xFF
+            frame = pack_frame_v2(*values, counter=self.counter, armed=armed, estop=False)
+            if bad_crc:
+                frame = frame[:-1] + bytes([frame[-1] ^ 0xFF])
+            return frame
+        return make
+
+
 def run(qemu: Path, flash: Path, cycles: int) -> Tuple[List[Result], ClockMap, List[Line]]:
-    """Boot the firmware, run the cycles, and judge each one."""
+    """Boot the firmware, run the cycles (their gaps in turn: KINDS), judge each one."""
     mapping = LegacyMapping()
     drive = to_legacy(*DRIVE, mapping)
-    stale = stop_command(mapping)
+    still = to_legacy(*STAND_STILL, mapping)
+    orin = Orin()
     with tempfile.TemporaryDirectory(prefix='esp-qemu-', dir='/tmp') as tmp:
         fw = Firmware(qemu, flash, Path(tmp))
         try:
             fw.wait_for(lambda ln: ln.kind == 'STATUS', timeout=30)
             plan = []
-            for _ in range(cycles):
+            for i in range(cycles):
+                kind = KINDS[i % len(KINDS)]
                 stop_from = time.monotonic()
-                fw.send_for(stale, 0.3)
+                fw.send_for(still, 0.3, orin.frames(still))
                 drive_from = time.monotonic()
-                last = fw.send_for(drive, 1.0)
-                time.sleep(0.6)
+                last, _ = fw.send_for(drive, 1.0, orin.frames(drive))
+                if kind == 'silence':
+                    time.sleep(0.6)
+                    gap = 0
+                else:
+                    gap_frames = (orin.frames(drive, move=False) if kind == 'frozen'
+                                  else orin.frames(drive, bad_crc=True))
+                    _, gap = fw.send_for(drive, 0.6, gap_frames)
                 resume_from = time.monotonic()
-                fw.send_for(drive, 0.6)
-                plan.append(Cycle(stop_from, drive_from, last, resume_from, time.monotonic()))
+                fw.send_for(drive, 0.6, orin.frames(drive))
+                plan.append(Cycle(stop_from, drive_from, last, resume_from, time.monotonic(),
+                                  kind, gap))
             time.sleep(0.3)
             lines = fw.snapshot()
         finally:
@@ -344,14 +408,19 @@ def table(results: List[Result], clock: ClockMap) -> str:
     """Return the results as a markdown table, for the docs."""
     def ms(v):
         return '-' if v is None else f'{v:.0f}'
-    rows = ['| Cycle | Drove (DAC peak) | Timeout, firmware ms | Seen on host, ms '
-            '| Full brake + DAC 0, ms | Fault bit 1 | Latched until a stop | Result |',
-            '|---|---|---|---|---|---|---|---|']
+    def gap(r):
+        if r.kind == 'silence':
+            return '-'
+        return f'{r.gap_frames} sent, {"-" if r.counted is None else r.counted} counted'
+    rows = ['| Cycle | Gap | Drove (DAC peak) | Timeout, firmware ms | Seen on host, ms '
+            '| Full brake + DAC 0, ms | Fault bit 1 | Gap frames ignored | Latched until a stop '
+            '| Result |',
+            '|---|---|---|---|---|---|---|---|---|---|']
     for i, r in enumerate(results, 1):
         rows.append(
-            f'| {i} | {"yes" if r.drove else "no"} ({r.dac_rose}) | {ms(r.timeout_fw_ms)} '
-            f'| {ms(r.timeout_host_ms)} | {ms(r.brake_full_fw_ms)} '
-            f'| {"yes" if r.fault_bit else "no"} | {"yes" if r.latched else "no"} '
+            f'| {i} | {r.kind} | {"yes" if r.drove else "no"} ({r.dac_rose}) '
+            f'| {ms(r.timeout_fw_ms)} | {ms(r.timeout_host_ms)} | {ms(r.brake_full_fw_ms)} '
+            f'| {"yes" if r.fault_bit else "no"} | {gap(r)} | {"yes" if r.latched else "no"} '
             f'| {"pass" if r.ok else "FAIL"} |')
     rows.append('')
     rows.append(f'Clocks: firmware {clock.rate:.3f} s per host s over the run.')
@@ -362,7 +431,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[1])
     ap.add_argument('--qemu', type=Path, required=True, help='qemu-system-xtensa')
     ap.add_argument('--flash', type=Path, required=True, help='the merged 4 MB flash image')
-    ap.add_argument('--cycles', type=int, default=3)
+    ap.add_argument('--cycles', type=int, default=6,
+                    help='cycles, their gaps in turn: silence, frozen, bad_crc')
     ap.add_argument('--log', type=Path, help='save the firmware log here')
     args = ap.parse_args(argv)
     results, clock, lines = run(args.qemu, args.flash, args.cycles)
@@ -375,8 +445,8 @@ def main(argv=None) -> int:
         for p in r.problems:
             print(f'cycle {i}: {p}')
     ok = all(r.ok for r in results)
-    print('PASS: it brakes when the frames stop, and stays braked until a stop frame'
-          if ok else 'FAIL')
+    print('PASS: it brakes when the Orin\'s counter stops (no frames, frozen, bad CRCs), '
+          'and stays braked until a stop' if ok else 'FAIL')
     return 0 if ok else 1
 
 

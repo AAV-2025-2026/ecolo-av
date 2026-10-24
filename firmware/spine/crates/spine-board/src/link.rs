@@ -3,15 +3,15 @@
 //! | Link | Wire | Commands | Reports back |
 //! |---|---|---|---|
 //! | [`CanLink`] | CAN, through [`Board::can_receive`] (`firmware/can/aav.dbc`) | DRIVE_CMD (a speed), ESTOP_CMD | VEHICLE_FEEDBACK, VEHICLE_STATUS |
-//! | [`LegacyLink`] | the Motor-Pi's UART, 13-byte frames (`legacy-link`) | throttle, brake and steering as they are: `DirectCmd` | nothing: the link goes one way |
+//! | [`LegacyLink`] | the Motor-Pi's UART (`legacy-link`): version 2 frames with the Orin's heartbeat, or the 2025-26 13-byte frames | throttle, brake and steering as they are: `DirectCmd`; version 2's e-stop flag | nothing: the link goes one way |
 //!
 //! [`SpineBoard`](crate::SpineBoard) takes either; the rest of the loop is the same.
 
 use crate::board::{Board, CanFrame};
 use crate::calibration::Calibration;
 use embedded_io::{Read, ReadReady};
-use legacy_link::{FrameError, Parser, Targets, Throttle};
-use spine_core::protocol::{decode_incoming, FrameError as CanError, Incoming};
+use legacy_link::{Frame, FrameError, FrameV2, Heartbeat, Parser, ParserV2, Targets, Throttle};
+use spine_core::protocol::{decode_incoming, EstopCmd, FrameError as CanError, Incoming};
 use spine_core::{DirectCmd, Inputs};
 
 /// Limits on one tick's work, so a flood of frames or bytes can't stall the loop.
@@ -63,7 +63,40 @@ impl CommandLink for CanLink {
     }
 }
 
-/// The 2025-26 UART link from the Motor-Pi (`legacy_uart_bridge`), byte for byte.
+/// Which frame the Motor-Pi sends (`legacy_uart_bridge`'s `frame_version`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrameVersion {
+    /// The 2025-26 13-byte frame: no counter, no flags, a sum checksum.
+    V1,
+    /// 17 bytes with the Orin's heartbeat counter, armed and e-stop flags and a CRC-8
+    /// (TODO 50).
+    V2,
+}
+
+/// What the link has seen since boot, for the log.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LinkStats {
+    /// Frames that passed their checksum or CRC.
+    pub frames: u32,
+    /// Frames turned down: a checksum or CRC, a version, a flag. Each one is ignored.
+    pub bad: u32,
+    /// Bytes outside a frame (version 2): noise, or the rest of a bad frame.
+    pub skipped: u32,
+    /// Version 2 frames whose counter hadn't changed: they don't count as a command.
+    pub repeats: u32,
+    /// The last counter seen (version 2).
+    pub counter: Option<u8>,
+}
+
+enum Decoder {
+    V1(Parser),
+    V2 {
+        parser: ParserV2,
+        heartbeat: Heartbeat,
+    },
+}
+
+/// The UART link from the Motor-Pi (`legacy_uart_bridge`).
 ///
 /// Each frame becomes the Jrk and DAC targets the C++ set for it (`legacy-link`), then a
 /// [`DirectCmd`] in spine units, through the calibration, so the devices get the same
@@ -78,22 +111,49 @@ impl CommandLink for CanLink {
 /// | a bad checksum | one byte dropped | the same; a bad-frame fault bit |
 ///
 /// The direction only changes with throttle: a stop or an idle frame keeps the last one.
+///
+/// Version 2 adds the heartbeat (TODO 50). A frame is a command only when its counter
+/// changed since the frame before ([`Heartbeat`]); one with the same counter is ignored,
+/// so the spine's 100 ms watchdog times out when the Orin stops, however many frames the
+/// Motor-Pi still sends: brake full, throttle 0, latched, fault bit 1 (`CMD_TIMEOUT`).
+///
+/// | Version 2 frame | Here |
+/// |---|---|
+/// | the counter changed | a command, as above |
+/// | the counter didn't change | ignored: no command, the watchdog isn't fed |
+/// | `armed` clear | a stop: throttle 0, the frame's brake |
+/// | `estop` set | an e-stop at once, whatever the counter; released only by a frame with a new counter and `estop` clear |
+/// | a bad CRC, version or flag | ignored; a bad-frame fault bit |
 pub struct LegacyLink<U> {
     uart: U,
-    parser: Parser,
+    decoder: Decoder,
     cal: Calibration,
     last: Option<DirectCmd>,
+    stats: LinkStats,
 }
 
 impl<U: Read + ReadReady> LegacyLink<U> {
     /// `uart`: the Motor-Pi's serial port, at [`legacy_link::BAUD`], 8N1.
-    pub fn new(uart: U, cal: Calibration) -> Self {
+    pub fn new(uart: U, cal: Calibration, version: FrameVersion) -> Self {
+        let decoder = match version {
+            FrameVersion::V1 => Decoder::V1(Parser::new()),
+            FrameVersion::V2 => Decoder::V2 {
+                parser: ParserV2::new(),
+                heartbeat: Heartbeat::new(),
+            },
+        };
         LegacyLink {
             uart,
-            parser: Parser::new(),
+            decoder,
             cal,
             last: None,
+            stats: LinkStats::default(),
         }
+    }
+
+    /// What the link has seen since boot.
+    pub fn stats(&self) -> LinkStats {
+        self.stats
     }
 
     /// The command for one frame's targets.
@@ -113,30 +173,103 @@ impl<U: Read + ReadReady> LegacyLink<U> {
         }
     }
 
-    fn take(&mut self, result: Result<legacy_link::Frame, FrameError>, inputs: &mut Inputs) {
-        let cmd = match result {
-            Ok(frame) => self.command(&frame.targets()),
-            Err(FrameError::OutOfRange) => {
+    /// The command for a frame's values, or none. A value outside -1..1 is a bad frame:
+    /// the C++'s "packet rejected", the throttle ramps to 0, the rest stays.
+    fn command_for(&self, values: Frame, inputs: &mut Inputs) -> Option<DirectCmd> {
+        match values.check() {
+            Ok(values) => Some(self.command(&values.targets())),
+            Err(_) => {
                 inputs.bad_frame = true;
-                // The C++: "packet rejected", the throttle ramps to 0, the rest stays.
-                let Some(last) = self.last else {
-                    return;
-                };
-                DirectCmd {
+                self.last.map(|last| DirectCmd {
                     throttle: 0.0,
                     ..last
-                }
+                })
             }
-            Err(FrameError::Checksum) => {
+        }
+    }
+
+    /// The tick's command: a stop in any frame this tick wins, so an arming edge isn't lost.
+    fn give(&mut self, cmd: DirectCmd, inputs: &mut Inputs) {
+        self.last = Some(cmd);
+        if inputs.direct_cmd.is_none_or(|old| !old.stop) {
+            inputs.direct_cmd = Some(cmd);
+        }
+    }
+
+    fn take_v1(&mut self, result: Result<Frame, FrameError>, inputs: &mut Inputs) {
+        let values = match result {
+            Ok(frame) => frame,
+            // The parser checks the range itself: the values are gone.
+            Err(FrameError::OutOfRange) => {
+                self.stats.frames += 1;
+                inputs.bad_frame = true;
+                if let Some(last) = self.last {
+                    self.give(
+                        DirectCmd {
+                            throttle: 0.0,
+                            ..last
+                        },
+                        inputs,
+                    );
+                }
+                return;
+            }
+            Err(_) => {
+                self.stats.bad += 1;
                 inputs.bad_frame = true;
                 return;
             }
         };
-        self.last = Some(cmd);
-        // A stop in any frame this tick wins, so an arming edge isn't lost.
-        if inputs.direct_cmd.is_none_or(|old| !old.stop) {
-            inputs.direct_cmd = Some(cmd);
+        self.stats.frames += 1;
+        if let Some(cmd) = self.command_for(values, inputs) {
+            self.give(cmd, inputs);
         }
+    }
+
+    fn take_v2(&mut self, result: Result<FrameV2, FrameError>, inputs: &mut Inputs) {
+        let frame = match result {
+            Ok(frame) => frame,
+            Err(FrameError::Sync) => {
+                self.stats.skipped += 1;
+                inputs.bad_frame = true;
+                return;
+            }
+            Err(_) => {
+                self.stats.bad += 1;
+                inputs.bad_frame = true;
+                return;
+            }
+        };
+        self.stats.frames += 1;
+        self.stats.counter = Some(frame.counter);
+        // An e-stop is always safe to obey: whatever the counter, and it wins in a tick.
+        if frame.flags.estop {
+            inputs.estop_cmd = Some(EstopCmd {
+                estop_request: true,
+                counter: frame.counter,
+            });
+        }
+        let Decoder::V2 { heartbeat, .. } = &mut self.decoder else {
+            return;
+        };
+        if !heartbeat.fresh(frame.counter) {
+            self.stats.repeats += 1;
+            return;
+        }
+        if !frame.flags.estop && inputs.estop_cmd.is_none() {
+            inputs.estop_cmd = Some(EstopCmd {
+                estop_request: false,
+                counter: frame.counter,
+            });
+        }
+        let Some(mut cmd) = self.command_for(frame.values, inputs) else {
+            return;
+        };
+        if !frame.flags.armed {
+            cmd.throttle = 0.0;
+            cmd.stop = true;
+        }
+        self.give(cmd, inputs);
     }
 }
 
@@ -150,8 +283,17 @@ impl<U: Read + ReadReady> CommandLink for LegacyLink<U> {
             match self.uart.read(&mut buf) {
                 Ok(n) if n > 0 => {
                     for &byte in &buf[..n] {
-                        if let Some(result) = self.parser.push(byte) {
-                            self.take(result, inputs);
+                        match &mut self.decoder {
+                            Decoder::V1(parser) => {
+                                if let Some(result) = parser.push(byte) {
+                                    self.take_v1(result, inputs);
+                                }
+                            }
+                            Decoder::V2 { parser, .. } => {
+                                if let Some(result) = parser.push(byte) {
+                                    self.take_v2(result, inputs);
+                                }
+                            }
                         }
                     }
                 }
@@ -191,7 +333,7 @@ mod tests {
     }
 
     fn link() -> LegacyLink<FakeUart> {
-        LegacyLink::new(FakeUart::default(), Calibration::TODAY)
+        LegacyLink::new(FakeUart::default(), Calibration::TODAY, FrameVersion::V1)
     }
 
     /// The devices' targets for a command, through today's calibration.
@@ -266,5 +408,142 @@ mod tests {
     #[test]
     fn nothing_goes_back() {
         assert!(link().send(&mut FakeBoard::new(), 0x181, &[0; 8]));
+    }
+
+    // --- Version 2: the heartbeat (TODO 50) ---
+
+    fn v2(steering: f32, speed: f32, accel: f32, counter: u8, armed: bool) -> [u8; 17] {
+        v2_flags(steering, speed, accel, counter, armed, false)
+    }
+
+    fn v2_flags(
+        steering: f32,
+        speed: f32,
+        accel: f32,
+        counter: u8,
+        armed: bool,
+        estop: bool,
+    ) -> [u8; 17] {
+        FrameV2 {
+            values: Frame {
+                steering,
+                speed,
+                accel,
+            },
+            counter,
+            flags: legacy_link::Flags { armed, estop },
+        }
+        .encode()
+    }
+
+    fn link_v2() -> LegacyLink<FakeUart> {
+        LegacyLink::new(FakeUart::default(), Calibration::TODAY, FrameVersion::V2)
+    }
+
+    #[test]
+    fn v2_a_frame_counts_only_when_its_counter_changed() {
+        let mut l = link_v2();
+        // The first frame proves nothing: it only sets the counter.
+        assert_eq!(
+            receive(&mut l, &v2(0.5, 0.5, 0.0, 10, true)).direct_cmd,
+            None
+        );
+        let cmd = receive(&mut l, &v2(0.5, 0.5, 0.0, 11, true))
+            .direct_cmd
+            .unwrap();
+        assert_eq!(targets(&cmd), (2725, 400, 350));
+        // The same counter again: a stuck Pi, or an Orin gone quiet. Ignored.
+        for _ in 0..5 {
+            assert_eq!(
+                receive(&mut l, &v2(0.5, 0.5, 0.0, 11, true)).direct_cmd,
+                None
+            );
+        }
+        assert!(receive(&mut l, &v2(0.5, 0.5, 0.0, 12, true))
+            .direct_cmd
+            .is_some());
+        let s = l.stats();
+        assert_eq!((s.frames, s.repeats, s.bad, s.counter), (8, 6, 0, Some(12)));
+    }
+
+    #[test]
+    fn v2_not_armed_is_a_stop() {
+        let mut l = link_v2();
+        receive(&mut l, &v2(0.0, 0.0, 0.0, 1, true));
+        let cmd = receive(&mut l, &v2(0.4, 0.8, -1.0, 2, false))
+            .direct_cmd
+            .unwrap();
+        assert!(cmd.stop && cmd.throttle == 0.0);
+        assert_eq!(targets(&cmd).1, 3500);
+        // Even with throttle in the values.
+        let cmd = receive(&mut l, &v2(0.0, 0.8, 0.0, 3, false))
+            .direct_cmd
+            .unwrap();
+        assert!(cmd.stop && cmd.throttle == 0.0);
+    }
+
+    #[test]
+    fn v2_the_estop_flag_works_whatever_the_counter() {
+        let mut l = link_v2();
+        receive(&mut l, &v2(0.0, 0.0, 0.0, 1, true));
+        receive(&mut l, &v2(0.0, 0.5, 0.0, 2, true));
+        // The same counter: no command, but the e-stop still comes through.
+        let inputs = receive(&mut l, &v2_flags(0.0, 0.0, -1.0, 2, false, true));
+        assert_eq!(inputs.direct_cmd, None);
+        assert!(inputs.estop_cmd.unwrap().estop_request);
+        // A release needs a new counter.
+        assert_eq!(
+            receive(&mut l, &v2(0.0, 0.0, -1.0, 2, false)).estop_cmd,
+            None
+        );
+        let inputs = receive(&mut l, &v2(0.0, 0.0, -1.0, 3, false));
+        assert!(!inputs.estop_cmd.unwrap().estop_request);
+        // A request and a release in one tick: the request wins.
+        let both = [
+            v2_flags(0.0, 0.0, -1.0, 4, false, true),
+            v2(0.0, 0.0, -1.0, 5, false),
+        ];
+        assert!(
+            receive(&mut l, &both.concat())
+                .estop_cmd
+                .unwrap()
+                .estop_request
+        );
+    }
+
+    #[test]
+    fn v2_a_bad_crc_is_ignored_and_counted() {
+        let mut l = link_v2();
+        receive(&mut l, &v2(0.0, 0.0, 0.0, 1, true));
+        let mut bad = v2(0.0, 0.9, 0.0, 2, true);
+        bad[16] ^= 0xFF;
+        let inputs = receive(&mut l, &bad);
+        assert!(inputs.bad_frame);
+        assert_eq!(inputs.direct_cmd, None);
+        assert_eq!(l.stats().bad, 1);
+        // The next good frame, counter 3, still comes.
+        assert!(receive(&mut l, &v2(0.0, 0.25, 0.0, 3, true))
+            .direct_cmd
+            .is_some());
+    }
+
+    #[test]
+    fn v2_ignores_version_1_frames() {
+        let mut l = link_v2();
+        for i in 0..20 {
+            let inputs = receive(&mut l, &frame(0.0, 0.5 + i as f32 / 100.0, 0.0));
+            assert_eq!(inputs.direct_cmd, None);
+        }
+        assert_eq!(l.stats().frames, 0);
+    }
+
+    #[test]
+    fn v2_out_of_range_cuts_the_throttle() {
+        let mut l = link_v2();
+        receive(&mut l, &v2(0.0, 0.0, 0.0, 1, true));
+        receive(&mut l, &v2(0.5, 0.5, 0.0, 2, true));
+        let inputs = receive(&mut l, &v2(2.0, 0.5, 0.0, 3, true));
+        assert!(inputs.bad_frame);
+        assert_eq!(targets(&inputs.direct_cmd.unwrap()), (2725, 400, 0));
     }
 }

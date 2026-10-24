@@ -138,6 +138,11 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady, L: CommandLink> SpineBoard<B, I2C,
         &mut self.board
     }
 
+    /// The command link, to read what it has seen (its stats, say).
+    pub fn link(&mut self) -> &mut L {
+        &mut self.link
+    }
+
     /// The devices and their state, to read something else from them.
     pub fn actuators(&mut self) -> &mut Actuators<I2C> {
         &mut self.actuators
@@ -450,11 +455,11 @@ mod legacy_loop_tests {
     use super::SpineBoard;
     use crate::actuators::Devices;
     use crate::calibration::Calibration;
-    use crate::link::LegacyLink;
+    use crate::link::{FrameVersion, LegacyLink};
     use crate::rig::{BusState, FakeBoard, FakeBus, FakeUart, BRAKE, DAC, STEER};
     use core::cell::RefCell;
     use jrk_g2::command::set_target;
-    use legacy_link::Frame;
+    use legacy_link::{Flags, Frame, FrameV2};
     use spine_core::protocol::Mode;
     use spine_core::{faults, Outputs, SpeedFeedback, SpineConfig};
     use std::rc::Rc;
@@ -469,6 +474,10 @@ mod legacy_loop_tests {
 
     impl LegacyRig {
         fn new() -> Self {
+            Self::with_version(FrameVersion::V1)
+        }
+
+        fn with_version(version: FrameVersion) -> Self {
             let bus = FakeBus::default();
             let (motor_pi, receiver) = (FakeUart::default(), FakeUart::default());
             let cal = Calibration::TODAY;
@@ -479,7 +488,7 @@ mod legacy_loop_tests {
                 },
                 ..SpineConfig::default()
             };
-            let link = LegacyLink::new(motor_pi.clone(), cal);
+            let link = LegacyLink::new(motor_pi.clone(), cal, version);
             let board = FakeBoard::new();
             let mut sb = SpineBoard::with_link(board, devices, receiver.clone(), link, cal, config);
             sb.init();
@@ -502,6 +511,37 @@ mod legacy_loop_tests {
             self.motor_pi.0.borrow_mut().extend(bytes);
             self.sb.board().now += 20;
             self.sb.tick()
+        }
+
+        /// One version 2 frame, then a 20 ms tick.
+        fn frame_v2(&mut self, speed: f32, accel: f32, counter: u8, armed: bool) -> Outputs {
+            let bytes = FrameV2 {
+                values: Frame {
+                    steering: 0.0,
+                    speed,
+                    accel,
+                },
+                counter,
+                flags: Flags {
+                    armed,
+                    estop: false,
+                },
+            }
+            .encode();
+            self.motor_pi.0.borrow_mut().extend(bytes);
+            self.sb.board().now += 20;
+            self.sb.tick()
+        }
+
+        /// `n` version 2 frames, the counter moving by one each (from `*counter`).
+        fn moving(&mut self, n: usize, speed: f32, accel: f32, counter: &mut u8) -> Outputs {
+            (0..n)
+                .map(|_| {
+                    *counter = counter.wrapping_add(1);
+                    self.frame_v2(speed, accel, *counter, true)
+                })
+                .last()
+                .unwrap()
         }
 
         fn frames(&mut self, n: usize, steering: f32, speed: f32, accel: f32) -> Outputs {
@@ -595,5 +635,112 @@ mod legacy_loop_tests {
         rig.receiver.0.borrow_mut().extend(rc);
         let out = rig.frame(0.0, 0.5, 0.0);
         assert_eq!(out.mode, Mode::Rc);
+    }
+
+    // --- Version 2: the Orin's heartbeat (TODO 50) ---
+
+    /// Armed (a stand-still frame: the hold brake is a stop), then driving at speed 0.5.
+    fn driving_v2() -> (LegacyRig, u8) {
+        let mut rig = LegacyRig::with_version(FrameVersion::V2);
+        let mut counter = 0;
+        rig.moving(5, 0.0, -0.3, &mut counter);
+        let out = rig.moving(100, 0.5, 0.0, &mut counter);
+        assert_eq!(out.mode, Mode::Computer);
+        assert_eq!(rig.dac(), 350);
+        (rig, counter)
+    }
+
+    #[test]
+    fn v2_a_moving_counter_drives() {
+        driving_v2();
+    }
+
+    #[test]
+    fn v2_a_frozen_counter_brakes_within_the_timeout_though_frames_still_come() {
+        let (mut rig, counter) = driving_v2();
+        // The Pi keeps sending the same drive frame at 50 Hz: the Orin stopped.
+        let mut braked_after = None;
+        for i in 1..=15 {
+            let out = rig.frame_v2(0.5, 0.0, counter, true);
+            if braked_after.is_none() && out.faults & faults::CMD_TIMEOUT != 0 {
+                braked_after = Some(i * 20);
+                assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+            }
+        }
+        // 100 ms after the last new counter, at the next 20 ms tick.
+        assert_eq!(braked_after, Some(120));
+        assert_eq!(rig.dac(), 0);
+        assert_eq!(rig.last(BRAKE), Some(set_target(3500).to_vec()));
+        // The 15, and the very first frame after boot, which only set the counter.
+        assert_eq!(rig.sb.link().stats().repeats, 16);
+    }
+
+    #[test]
+    fn v2_after_a_heartbeat_loss_it_stays_braked_until_a_stop() {
+        let (mut rig, mut counter) = driving_v2();
+        for _ in 0..10 {
+            rig.frame_v2(0.5, 0.0, counter, true);
+        }
+        // The counter moves again, still driving: latched, no throttle.
+        let out = rig.moving(20, 0.5, 0.0, &mut counter);
+        assert_eq!(out.mode, Mode::Manual);
+        assert_ne!(out.faults & faults::CMD_TIMEOUT, 0);
+        assert_eq!(rig.dac(), 0);
+        // A stop with a new counter (ego standing still), then driving again: re-armed.
+        rig.moving(3, 0.0, -0.3, &mut counter);
+        let out = rig.moving(100, 0.5, 0.0, &mut counter);
+        assert_eq!(out.mode, Mode::Computer);
+        assert_eq!(rig.dac(), 350);
+    }
+
+    #[test]
+    fn v2_stop_frames_with_a_frozen_counter_do_not_re_arm() {
+        // The bridge's stale stops while the Orin is gone carry the last counter: they
+        // must not count as the arming edge's stop.
+        let (mut rig, mut counter) = driving_v2();
+        for _ in 0..20 {
+            rig.frame_v2(0.0, -1.0, counter, false);
+        }
+        let out = rig.moving(30, 0.5, 0.0, &mut counter);
+        assert_eq!(out.mode, Mode::Manual);
+        assert_eq!(rig.dac(), 0);
+    }
+
+    #[test]
+    fn v2_bad_crc_frames_are_ignored_so_the_heartbeat_stops() {
+        let (mut rig, mut counter) = driving_v2();
+        let mut out = rig.sb.tick();
+        for _ in 0..10 {
+            counter = counter.wrapping_add(1);
+            let mut bytes = FrameV2 {
+                values: Frame {
+                    steering: 0.0,
+                    speed: 0.5,
+                    accel: 0.0,
+                },
+                counter,
+                flags: Flags {
+                    armed: true,
+                    estop: false,
+                },
+            }
+            .encode();
+            bytes[16] ^= 0x5A;
+            rig.motor_pi.0.borrow_mut().extend(bytes);
+            rig.sb.board().now += 20;
+            out = rig.sb.tick();
+        }
+        assert_ne!(out.faults & faults::CMD_TIMEOUT, 0);
+        assert_eq!(rig.dac(), 0);
+        assert_eq!(rig.sb.link().stats().bad, 10);
+    }
+
+    #[test]
+    fn v2_ignores_version_1_frames_so_never_drives() {
+        let mut rig = LegacyRig::with_version(FrameVersion::V2);
+        rig.arm(); // version 1 stop frames
+        let out = rig.frames(100, 0.0, 0.5, 0.0);
+        assert_eq!(out.mode, Mode::Manual);
+        assert_eq!(rig.dac(), 0);
     }
 }

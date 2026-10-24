@@ -4,7 +4,7 @@
 # usage: tools/esp32.sh tools          install Espressif's Rust and espflash (once)
 #        tools/esp32.sh build [args]   build it (args go to cargo: --no-default-features --features can)
 #        tools/esp32.sh flash [args]   build, flash it on the USB cable, show its log (args go to espflash)
-#        tools/esp32.sh check          build both links, with clippy; "skipped" without the toolchain
+#        tools/esp32.sh check          build both links (and version 1 frames), with clippy; "skipped" without the toolchain
 #        tools/esp32.sh qemu-tools     download Espressif's QEMU into vendor/qemu (once; macOS arm64)
 #        tools/esp32.sh qemu [args]    build with --features qemu, boot it in QEMU, and check it
 #                                      brakes when the Motor-Pi's frames stop (args go to
@@ -171,8 +171,9 @@ case "${1:-}" in
     cargo clippy -q --release --locked --no-default-features \
       --features can,estop-input --target-dir target/can -- -D warnings
     cargo clippy -q --release --locked --features qemu --target-dir target/qemu -- -D warnings
+    cargo clippy -q --release --locked --features link-v1 --target-dir target/v1 -- -D warnings
     cargo build -q --release --locked
-    echo "builds: the Motor-Pi UART link (default), CAN, and the QEMU build"
+    echo "builds: the Motor-Pi UART link (version 2, the default; version 1), CAN, and the QEMU build"
     ;;
   *)
     sed -n '2,12p' "$0" >&2
