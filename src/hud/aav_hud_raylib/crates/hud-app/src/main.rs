@@ -43,7 +43,7 @@ use crate::{demo::Demo, source::DataSource, ui::Ui};
 
 const USAGE: &str = "\
 usage: hud [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors] [--config FILE]
-           [--screenshot FILE] [--ros-args ...]
+           [--screenshot FILE [--screenshot-after SECONDS]] [--ros-args ...]
 
   --demo             pretend data: no ROS, no car
   --fullscreen       fill the screen (F11 switches too)
@@ -52,9 +52,12 @@ usage: hud [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors] [--confi
   --list-monitors    print the monitors' numbers, names and sizes, then quit
   --config FILE      topic names from FILE instead of the built-in config/hud.yaml
   --screenshot FILE  save the window as a PNG after 4 s, then quit (for the docs)
+  --screenshot-after SECONDS
+                     when to save it instead: the demo's STOP is at 50 s, AUTO STOP at 37 s
   --ros-args ...     passed to ROS, e.g. --ros-args -p gps_topic:=/localization/gps/fix";
 
-/// When --screenshot saves its picture: once the data has had time to arrive.
+/// When --screenshot saves its picture, unless --screenshot-after says otherwise: once the
+/// data has had time to arrive.
 const SCREENSHOT_AFTER: Duration = Duration::from_secs(4);
 
 /// The command line, before `--ros-args`.
@@ -66,6 +69,7 @@ struct Options {
     list_monitors: bool,
     config: Option<PathBuf>,
     screenshot: Option<PathBuf>,
+    screenshot_after: Option<Duration>,
 }
 
 impl Options {
@@ -88,6 +92,14 @@ impl Options {
                 }
                 "--screenshot" => {
                     opts.screenshot = Some(it.next().context("--screenshot needs a file")?.into())
+                }
+                "--screenshot-after" => {
+                    let s = it.next().context("--screenshot-after needs seconds")?;
+                    let secs: f64 = s.parse().with_context(|| format!("not seconds: {s:?}"))?;
+                    opts.screenshot_after = Some(
+                        Duration::try_from_secs_f64(secs)
+                            .with_context(|| format!("not a time: {s:?}"))?,
+                    );
                 }
                 "-h" | "--help" => {
                     println!("{USAGE}");
@@ -187,7 +199,7 @@ fn run(opts: &Options, mut source: Box<dyn DataSource>, config: HudConfig) -> Re
         source.frame_drawn();
 
         if let Some(path) = &opts.screenshot {
-            if now.duration_since(started) > SCREENSHOT_AFTER {
+            if now.duration_since(started) > opts.screenshot_after.unwrap_or(SCREENSHOT_AFTER) {
                 save_screenshot(&mut rl, &thread, path)?;
                 break;
             }
@@ -236,6 +248,22 @@ mod tests {
         assert!(o.fullscreen);
         assert!(Options::parse(&args(&["--config"])).is_err());
         assert!(Options::parse(&args(&["--bogus"])).is_err());
+    }
+
+    #[test]
+    fn options_take_a_screenshot_time() {
+        let o = Options::parse(&args(&[
+            "--screenshot",
+            "a.png",
+            "--screenshot-after",
+            "50",
+        ]))
+        .expect("valid");
+        assert_eq!(o.screenshot, Some(PathBuf::from("a.png")));
+        assert_eq!(o.screenshot_after, Some(Duration::from_secs(50)));
+        assert!(Options::parse(&args(&["--screenshot-after", "soon"])).is_err());
+        assert!(Options::parse(&args(&["--screenshot-after", "-1"])).is_err());
+        assert!(Options::parse(&args(&["--screenshot-after"])).is_err());
     }
 
     #[test]

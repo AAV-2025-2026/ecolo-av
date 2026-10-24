@@ -37,6 +37,16 @@ a second program. Each opens full screen on its own monitor at boot:
 For the safety drivers (Ben, 24 Oct: "fix the hud?"). Under the speed, the whole panel in
 one colour:
 
+![The GO panel, bottom left, with pretend data (Ben, 24 Oct)](img/hud-gate.png)
+
+| STOP: a simulated camera on the car's network (latched) | AUTO STOP: the GPS went quiet |
+|---|---|
+| ![STOP](img/hud-gate-stop.png) | ![AUTO STOP](img/hud-gate-autostop.png) |
+
+Taken with `pixi run hud-demo --screenshot FILE --screenshot-after 50` (STOP) and `37.5`
+(AUTO STOP): the demo goes round GO, WAIT, AUTO STOP and STOP every minute.
+
+
 ```text
  +-------------------------------+   +-------------------------------+
  |  (tick)   GO                  |   |  (stop    STOP                |
@@ -172,7 +182,7 @@ in `aav_safety` `watchdog.py`, with tests. The HUD shows it: **AUTO STOP, HUD LO
 | The heartbeat in Gazebo (23 Oct, `sim-check --faults`, `hud stop`, twice) | the check beats in the window's place; when it stops, Nav2's car stands still 2.5 s later |
 | The GO / STOP panel's logic (24 Oct, `cargo test`, hud-core `gate`, `state`) | every state and reason above; the output mux's lines as its own tests have them, and one from the live output mux next to the turtle (latched by a node announcing a REAL GPS: "GPS is REAL"; cleared by the service) |
 | The output mux's line through the real node (24 Oct, `cargo test`, hud-app) | published by another node, it reaches the screen |
-| The GO / STOP panel on screen (24 Oct) | **not seen yet**: the Mac's lid was shut, so no window could open. To do: `pixi run hud-demo --screenshot docs/img/hud-gate.png` |
+| The GO / STOP panel on screen (24 Oct) | ✅ seen: Ben ran `pixi run hud-demo --screenshot docs/img/hud-gate.png` (GO, green, "all REAL"; the picture above). STOP and AUTO STOP seen too (24 Oct, the pictures above) |
 | The HUD latch (24 Oct, `aav_safety` tests) | a start-up dropout forgiven; any later one latched until cleared; a crash loop latches the second time; a stalled watchdog latches nothing |
 | The HUD latch in Gazebo (24 Oct, `sim-check --faults`, `hud stop`) | stood still 2.4 s after the beats stopped: "hud LOST"; beating again, still held 5 s later; cleared, Nav2 drove again. 25 of 25 faults pass |
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">39 min read · 13 sections</div></header>
+<div class="meta">40 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -134,6 +134,23 @@ a second program. Each opens full screen on its own monitor at boot:
 <h3 id="may-the-car-move-the-go-stop-panel">May the car move? (the GO / STOP panel)</h3>
 <p>For the safety drivers (Ben, 24 Oct: "fix the hud?"). Under the speed, the whole panel in
 one colour:</p>
+<p><img alt="The GO panel, bottom left, with pretend data (Ben, 24 Oct)" src="../img/hud-gate.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>STOP: a simulated camera on the car's network (latched)</th>
+<th>AUTO STOP: the GPS went quiet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="STOP" src="../img/hud-gate-stop.png" /></td>
+<td><img alt="AUTO STOP" src="../img/hud-gate-autostop.png" /></td>
+</tr>
+</tbody>
+</table></div>
+<p>Taken with <code>pixi run hud-demo --screenshot FILE --screenshot-after 50</code> (STOP) and <code>37.5</code>
+(AUTO STOP): the demo goes round GO, WAIT, AUTO STOP and STOP every minute.</p>
 <pre class="highlight"><code class="language-text"> +-------------------------------+   +-------------------------------+
  |  (tick)   GO                  |   |  (stop    STOP                |
  |           all REAL            |   |   sign)   GPS is SIM          |
@@ -448,7 +465,7 @@ in <code>aav_safety</code> <code>watchdog.py</code>, with tests. The HUD shows i
 </tr>
 <tr>
 <td>The GO / STOP panel on screen (24 Oct)</td>
-<td><strong>not seen yet</strong>: the Mac's lid was shut, so no window could open. To do: <code>pixi run hud-demo --screenshot docs/img/hud-gate.png</code></td>
+<td>✅ seen: Ben ran <code>pixi run hud-demo --screenshot docs/img/hud-gate.png</code> (GO, green, "all REAL"; the picture above). STOP and AUTO STOP seen too (24 Oct, the pictures above)</td>
 </tr>
 <tr>
 <td>The HUD latch (24 Oct, <code>aav_safety</code> tests)</td>
