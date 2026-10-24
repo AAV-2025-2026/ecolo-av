@@ -120,6 +120,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `bandwidth` | every topic's rate, size and MB/s, biggest first: `pixi run bandwidth --local` beside `pixi run sim`. [Bandwidth](bandwidth.md) |
 | `can-load` | how busy the CAN bus is, from `firmware/can/aav.dbc` |
 | `estop`, `estop-clear` | stop every driver; let them go again |
+| `gate-clear` | a person reopens the output mux after it latched STOP ([sources and targets](sources-and-targets.md)) |
 | `watchdog-clear` | a person says all is right again: clears the sensor watchdog's latched faults (a lost HUD, a GPS jump, wheels that disagreed) |
 | `doctor` | can this computer join the car's ROS network? |
 | `rust-listener` | the Rust example: prints ego's commands |

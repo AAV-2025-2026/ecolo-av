@@ -2,8 +2,10 @@
 //!
 //! It walks through what the screen must show: the speed going up and down, a fault now
 //! and then, a stop sign every 25 s, and the GPS cycling through 3D, RTK float, RTK
-//! fixed, no fix and silence (40 s). The e-stop button stops the pretend car; a pretend
-//! laptop clears it 10 s later, so the demo keeps going.
+//! fixed, no fix and silence (40 s). The GO / STOP panel follows (hud_core::gate): the
+//! pretend watchdog holds Nav2 while the GPS is silent, and every 60 s the pretend output
+//! mux waits, then latches a stop for a simulated camera. The e-stop button stops the
+//! pretend car; a pretend laptop clears it 10 s later, so the demo keeps going.
 
 use std::{
     f32::consts::TAU,
@@ -38,16 +40,20 @@ enum Stream {
     StopSign,
     Battery,
     Camera,
+    Watchdog,
+    OutputMux,
 }
 
 impl Stream {
-    const ALL: [Stream; 6] = [
+    const ALL: [Stream; 8] = [
         Stream::Vehicle,
         Stream::Gps,
         Stream::GpsFiltered,
         Stream::StopSign,
         Stream::Battery,
         Stream::Camera,
+        Stream::Watchdog,
+        Stream::OutputMux,
     ];
 
     fn period(self) -> Duration {
@@ -57,6 +63,8 @@ impl Stream {
             Self::StopSign => 200,
             Self::Battery => 1000,
             Self::Camera => 100,
+            Self::Watchdog => 100,
+            Self::OutputMux => 500,
         })
     }
 }
@@ -64,7 +72,7 @@ impl Stream {
 /// The demo source.
 pub struct Demo {
     start: Instant,
-    due: [Instant; 6],
+    due: [Instant; 8],
     button: EstopButton,
     estop_since: Option<Instant>,
     /// The pretend car's speed when the e-stop came, to brake from.
@@ -76,7 +84,7 @@ impl Demo {
     pub fn new(now: Instant) -> Self {
         Self {
             start: now,
-            due: [now; 6],
+            due: [now; 8],
             button: EstopButton::default(),
             estop_since: None,
             speed_at_estop: 0.0,
@@ -104,6 +112,8 @@ impl Demo {
                 Picture::from_image("rgb8", PICTURE_W, PICTURE_H, PICTURE_W * 3, &road(t))
                     .map_or_else(|e| Update::BadPicture(e.to_string()), Update::Picture),
             ),
+            Stream::Watchdog => Some(Update::Watchdog(watchdog(t).into())),
+            Stream::OutputMux => Some(Update::OutputMux(output_mux(t).into())),
         }
     }
 
@@ -203,6 +213,29 @@ fn gps(t: f32) -> Option<Fix> {
     Some(Fix::from(raw))
 }
 
+/// The pretend sensor watchdog at `t`: it holds Nav2 once the GPS has been silent 2 s.
+fn watchdog(t: f32) -> &'static str {
+    if (36.0..40.0).contains(&(t % 40.0)) {
+        "STOP: gps STALE (nothing for 2.0 s (more than 2 s))"
+    } else {
+        "OK"
+    }
+}
+
+/// The pretend output mux at `t`: a minute's cycle of WAIT, OPEN, and a latched STOP that
+/// a pretend laptop clears.
+fn output_mux(t: f32) -> &'static str {
+    match t % 60.0 {
+        p if p < 2.0 => "WAIT - car: all REAL, settling for 2 s",
+        p if (46.0..54.0).contains(&p) => {
+            "STOP - target car needs REAL - camera_front_left is SIM (gazebo_adapter) - \
+             latched: /safety/output_mux/clear"
+        }
+        p if (54.0..56.0).contains(&p) => "WAIT - car: all REAL, settling for 2 s",
+        _ => "OPEN - car: every source REAL",
+    }
+}
+
 /// The pretend EKF's position: the same circle, always a fix.
 fn filtered(t: f32) -> Fix {
     let (latitude, longitude) = circle(t);
@@ -281,6 +314,18 @@ mod tests {
         let car = demo.vehicle(later + Duration::from_secs(3));
         assert!(car.estop_active);
         assert!(car.speed.0 < 0.1);
+    }
+
+    #[test]
+    fn the_go_stop_panel_walks_through_its_states() {
+        use hud_core::gate::{verdict, Light};
+        use hud_core::health::Health;
+        let ok = Health::Ok(Duration::ZERO);
+        let light = |t| verdict(false, (ok, Some(output_mux(t))), (ok, Some(watchdog(t)))).light;
+        assert_eq!(light(1.0), Light::Wait);
+        assert_eq!(light(10.0), Light::Go);
+        assert_eq!(light(37.0), Light::Stop); // the GPS silent: AUTO STOP
+        assert_eq!(light(50.0), Light::Stop); // the gate latched
     }
 
     #[test]
