@@ -163,7 +163,7 @@ pixi run sim-check --spine        # proves it: the normal checks, then the spine
 | One backend | `spine_bridge` alone reads ego's commands (`/control/gazebo/actuator_cmd`, from the output mux). `gazebo_adapter` then only drives the actuator model from the spine's outputs, and no longer publishes `/vehicle/*` |
 | `/system/source` | still **SIM**: `spine_bridge` says so (`source:=sim`) |
 | The clock | `spine_sim` ticks every 10 ms of Gazebo's time, so the spine's 100 ms watchdog counts Gazebo's time |
-| Arming | `arm:=true` (the default) arms it 12 s after start-up, as the bench does. After a stop: `ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"` |
+| Arming | `arm:=true` (the default) arms it 12 s after start-up, as the bench does, once the output mux says `OPEN` (`arm_when_open` asks each second). After a stop: `ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"`. Refused while the safety gate is shut |
 | Hardware e-stop | the bench's: `/vehicle/bench/hw_estop` (true = pressed) |
 | The contract | profile `spine` in `docs/interfaces.yaml` (`pixi run check spine`) |
 

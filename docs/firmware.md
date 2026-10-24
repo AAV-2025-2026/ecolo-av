@@ -74,7 +74,8 @@ Who wins, highest first:
 
 The computer must arm (`/spine/arm`) before it drives: at power-up, and after an e-stop,
 a timeout or a driver fault. Arming sends `armed = 0`, then `armed = 1`. A glitch or a
-reboot never restarts the car by itself.
+reboot never restarts the car by itself. `spine_bridge` refuses to arm while the safety
+gate is shut: the output mux not `OPEN` ([sources and targets](sources-and-targets.md)).
 
 ## The CAN contract
 

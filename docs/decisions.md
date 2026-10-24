@@ -129,6 +129,13 @@ What we changed, and why.
 | **ego eases into speed**: a jerk limit of 2.0 m/s³, speeding up only | A smoother start for the people in the car. A stop is never softened: braking starts at once | 22 Oct, the proposal's T5.3 |
 | **The global EKF trusts the gyro and wheels for heading**; GPS only nudges it (yaw noise 0.06 → 0.01) | At walking pace its heading jumped up to 76°; now the worst per leg is 7-16° in Gazebo. To check with the real IMU | 22 Oct, from the Gazebo runs |
 
+## Decided on 24 October
+
+| Decision | Why | By |
+|---|---|---|
+| **`spine_bridge` refuses to arm while the safety gate is shut**: `/spine/arm` says no unless the output mux said `OPEN` for the bridge's own target in the last 1.5 s, and says why. Both bridges, Rust and Python; disarming always works. The bench and Gazebo arm through `arm_when_open`, which waits for `OPEN` | While the gate is shut, the bridge gets no commands, so an armed spine only latched again at once: arming said "armed" and did nothing. Now the answer is honest, and names the reason (a STOP's cause, a quiet mux). `legacy_uart_bridge` has no arm step ([Arming waits for OPEN](sources-and-targets.md#arming-waits-for-open)) | Ben, 24 Oct |
+| **The muxes err shut on discovery's order**: a node on `/system/source` not heard yet holds the gate; an announcement counts before its node shows in the graph. **Test runs take a ROS domain nobody uses** | A guard test's SIM case let frames through once: another run on the same random domain (cross-talk, seen the same day in a Gazebo check). Across processes the graph can show an announcer 30 ms before its message: small, but it erred open ([Sources and targets](sources-and-targets.md#what-it-cant-catch)) | 24 Oct, from a test that failed on main |
+
 ## Open questions
 
 The design doc numbers 34 questions, and doesn't rank them. **Bold** marks the ones that

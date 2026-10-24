@@ -1364,6 +1364,13 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 - **One launch:** `stack.launch.py target:=turtle|gazebo|bench|car|carla`; the pixi tasks
   are unchanged.
 
+### "Should the control board refuse to arm while the safety gate is shut?" Yes. (24 Oct)
+
+- **Built:** `/spine/arm` (both `spine_bridge`s) refuses unless the output mux said `OPEN`
+  for the bridge's own target within 1.5 s, and says why. The bench and Gazebo arm
+  through `arm_when_open`, which waits for `OPEN`. `legacy_uart_bridge` has no arm step
+  ([Arming waits for OPEN](../sources-and-targets.md#arming-waits-for-open)).
+
 ## Open threads
 
 - **D3, the muxes (23 Oct):** built and tested in every profile; for the team: agree

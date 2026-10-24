@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">44 min read · 4 sections</div></header>
+<div class="meta">45 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -298,9 +298,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/output_mux/state</code></td>
 <td><code>std_msgs/msg/String</code></td>
 <td><code>output_mux</code></td>
-<td>-</td>
+<td><code>spine_bridge</code></td>
 <td>turtle, sim, car, bench</td>
-<td>One line for people, 2 Hz and on each change - OPEN (passing ego's commands on), WAIT (closed, not latched - the sensor mux not heard yet or quiet for 3 s, its doubts, or settling for 2 s after all clear) or STOP (latched, and why, such as "STOP - target car needs REAL - camera_front_left is SIM (gazebo_adapter)"). The target first, such as "OPEN - car".</td>
+<td>One line for people, 2 Hz and on each change - OPEN (passing ego's commands on), WAIT (closed, not latched - the sensor mux not heard yet or quiet for 3 s, its doubts, a node on /system/source whose announcement hasn't arrived yet, or settling for 2 s after all clear) or STOP (latched, and why, such as "STOP - target car needs REAL - camera_front_left is SIM (gazebo_adapter)"). The target first, such as "OPEN - car". spine_bridge (role spine) reads it as the safety gate - /spine/arm is refused unless it said OPEN for the bridge's own target within gate_timeout (1.5 s); Ben, 24 Oct.</td>
 </tr>
 <tr>
 <td><code>/system/source</code></td>
@@ -880,7 +880,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/spine/arm</code></td>
 <td><code>std_srvs/srv/SetBool</code></td>
 <td><code>spine_bridge</code></td>
-<td>The spine ignores drive commands until armed; refused while /safety/estop is true. On the car with the CAN spine (actuators:=can), the bench and Gazebo's spine profile; not with role:=sensors.</td>
+<td>The spine ignores drive commands until armed. Refused while /safety/estop is true, and while the safety gate is shut - /safety/output_mux/state not OPEN for the bridge's target (car, bench or gazebo by its source), or not heard for gate_timeout (1.5 s) - with the reason, starting "the safety gate is shut" (Ben, 24 Oct). Disarming always works. The bench and Gazebo's spine profile arm through arm_when_open (aav_spine), which asks each second until the gate opens. On the car with the CAN spine (actuators:=can), the bench and Gazebo's spine profile; not with role:=sensors.</td>
 </tr>
 <tr>
 <td><code>/fromLL</code></td>
