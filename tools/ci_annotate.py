@@ -75,9 +75,34 @@ def annotations(log, build):
         names = '\n'.join(t for t, _ in found[LIMIT:])
         out.append(f'::error title={len(found) - LIMIT} more failing tests::{escape(names)}')
     elif tail(log) or not found:
+        # No failing test case: the build itself failed (23 Oct, twice). The tail alone
+        # showed only "Starting >>>" lines: say which package failed and why, first.
+        broken = build_errors(log)
+        if broken:
+            out.append(f'::error title=the build failed::{escape(broken)}')
         end = tail(log) or f'no {log}, and no failing test case in {build}/'
         out.append(f'::error title=the end of the test step::{escape(end)}')
     return out
+
+
+# colcon's lines for a package that failed, and the compilers' errors.
+BUILD_ERRORS = re.compile(r'^(Failed|Aborted) +<<<|^error(\[E\d+\])?:|^E: |CMake Error|'
+                          r'^\S+:\d+:\d+: error|failed to (download|get|fetch|select)|'
+                          r'Summary: .*failed')
+
+
+def build_errors(log, count=MESSAGE_LINES):
+    """Return a failed build's error lines, each with the line after it; '' if none."""
+    try:
+        with open(log, errors='replace') as f:
+            lines = [COLOUR.sub('', line.rstrip()) for line in f]
+    except OSError:
+        return ''
+    keep = set()
+    for i, line in enumerate(lines):
+        if BUILD_ERRORS.search(line):
+            keep.update(range(i, min(i + 2, len(lines))))
+    return '\n'.join(lines[i] for i in sorted(keep)[:count])
 
 
 # A launch log's lines worth reading first: ROS's errors, Gazebo's ([Err]), a process

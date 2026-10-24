@@ -93,3 +93,16 @@ def test_sim_at_most_ten(tmp_path):
     out = ci_annotate.sim_annotations(str(step), ['a.log', 'b.log'])
     assert len(out) == 10
     assert out[-2].startswith('::error title=a.log')
+
+
+def test_a_failed_build_says_which_package_and_why(tmp_path):
+    log = tmp_path / 'test.log'
+    log.write_text('Starting >>> aav_spine_bridge\n'
+                   'error: failed to download from `https://index.crates.io/ra/nd/rand`\n'
+                   'Caused by: timeout\n'
+                   'Failed   <<< aav_spine_bridge [12.0s, exited with code 101]\n'
+                   'Summary: 30 packages finished, 1 package failed: aav_spine_bridge\n')
+    out = ci_annotate.annotations(str(log), str(tmp_path / 'build'))
+    assert out[0].startswith('::error title=the build failed::error: failed to download')
+    assert out[0].count('Summary:') == 1
+    assert 'Caused by: timeout' in out[0] and 'Failed   <<< aav_spine_bridge' in out[0]
