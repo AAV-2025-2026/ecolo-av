@@ -46,4 +46,9 @@ case "${AAV_RMW:-}" in
   fastdds) export RMW_IMPLEMENTATION=rmw_fastrtps_cpp ;;
   *) echo "AAV_RMW=$AAV_RMW: use cyclone or fastdds" >&2; exit 2 ;;
 esac
+# This computer's own Cyclone settings, if it has any (the car's network card, say), after
+# the team's (tools/cyclonedds.xml): later files win.
+if [[ -f "$HOME/.config/aav/cyclonedds.xml" ]]; then
+  export CYCLONEDDS_URI="${CYCLONEDDS_URI:+$CYCLONEDDS_URI,}file://$HOME/.config/aav/cyclonedds.xml"
+fi
 exec "$@"

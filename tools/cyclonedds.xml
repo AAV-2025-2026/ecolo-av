@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Cyclone DDS settings for every computer (pixi.toml sets CYCLONEDDS_URI to this file).
+     MaxAutoParticipantIndex: how many ROS programs may run on one computer when discovery
+     stays on it (ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST, as pixi run sim and the checks do).
+     ROS's default is 32; the whole Gazebo graph starts more, and the 33rd failed with
+     "Failed to find a free participant index" (oirp-spss, 23 Oct: 13 of 45 refused; with
+     120, none). A computer's own settings (say, the car's network card) go in
+     ~/.config/aav/cyclonedds.xml: tools/ros.sh adds that file after this one. -->
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain id="any">
+    <Discovery>
+      <MaxAutoParticipantIndex>120</MaxAutoParticipantIndex>
+    </Discovery>
+  </Domain>
+</CycloneDDS>

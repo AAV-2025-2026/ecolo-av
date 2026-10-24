@@ -149,6 +149,8 @@ coreutils = ">=9.12,<10"
 # goes back to Fast DDS for one run. Cyclone comes with ros-jazzy-desktop.
 [activation.env]
 RMW_IMPLEMENTATION = "rmw_cyclonedds_cpp"
+# Its settings: room for the whole Gazebo graph on one computer (tools/cyclonedds.xml).
+CYCLONEDDS_URI = "file://$PIXI_PROJECT_ROOT/tools/cyclonedds.xml"
 
 [target.osx.activation.env]
 MACOSX_DEPLOYMENT_TARGET = "14.0"
