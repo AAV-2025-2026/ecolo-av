@@ -69,6 +69,8 @@ PAGES = [
     ('perception.md', 'Perception', 'Cameras, YOLO, stop signs, lanes and radar'),
     ('camera-pipeline.md', 'Camera pipeline',
      "The Pi's H.264 stream to detections on the Orin: settings, measured delay"),
+    ('camera-calibration.md', 'Camera calibration',
+     'At the car: print the board, run camera_calibration on the stream, file the result'),
     ('older-code.md', 'Older code', "The previous teams' repos: what we have, what's missing"),
     ('ros2.md', 'ROS 2', 'Nodes, topics and tools; stock packages vs our code'),
     ('languages.md', 'Languages', 'Python, C++ and Rust: what goes where, and why'),

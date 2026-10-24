@@ -8,8 +8,10 @@ settings and why, what was measured on a Mac, and what to check at the car.
     - The camera Pi streams **H.264** (1280x720, 15 fps, 2 Mbit/s) with **MediaMTX**.
     - On the Orin, **one program per camera** (`camera_stream`) unpacks it, undistorts
       it and runs **RF-DETR Nano**. Raw pictures never cross the network.
-    - On a Mac, the whole chain takes **26 ms** from the picture to its detections
-      (GStreamer decoding). Measured with `pixi run stream-check`.
+    - On a Mac, the whole chain takes **27 ms** from the picture to its detections:
+      GStreamer with VideoToolbox, now the default. Measured with `pixi run stream-check`.
+    - Calibrating the cameras at the car: `pixi run calibrate-camera`
+      ([camera calibration](camera-calibration.md)).
 
 ## The picture
 
@@ -38,11 +40,13 @@ The same for `front_right`, in a second program.
 |---|---|---|
 | The Pi's settings | `src/sensors/aav_camera_stream/pi/mediamtx.yml` | install: `pi/README.md` [[untested]] on the Pi |
 | The node | `aav_camera_stream/camera_stream.py` | one per camera |
-| Its logic, no ROS | `decoders.py`, `reader.py`, `latest.py`, `lens.py`, `timecode.py`, `models.py` | 41 tests |
+| Its logic, no ROS | `decoders.py`, `reader.py`, `latest.py`, `lens.py`, `timecode.py`, `models.py`, `calibration.py` | 55 tests |
 | The detector | `aav_detector.detectors.load_detector` | imported, not copied |
 | Start it, the car | `car.launch.py machine:=orin`: its `camera_stream` part, set in `orin.yaml` | [below](#on-the-car-carlaunchpy) |
 | Start it, by hand | `ros2 launch aav_camera_stream camera_stream.launch.py host:=<pi> decoder:=gst-nvidia` | on the Orin |
 | Test it | `pixi run -e ml stream-check` | a Mac, no car |
+| A Mac's decoder | the `gst` environment in `pixi.toml`: `pixi install -e gst` | [below](#decoding-on-a-mac) |
+| Calibrate a camera | `pixi run calibrate-camera front_left` | [camera calibration](camera-calibration.md) |
 
 ## On the car: `car.launch.py`
 
@@ -115,7 +119,7 @@ Check it at the car, and fix it on the router.
 | Transport | RTSP over TCP | wired, so nothing is lost; a frame never arrives broken |
 | Who may publish | the Pi itself only | anyone may watch |
 | Decoder, Orin | GStreamer `nvv4l2decoder` | NVIDIA's hardware; JetPack's own `/usr/bin/gst-launch-1.0` |
-| Decoder, Mac | GStreamer `avdec_h264` (`--gst`) | ffmpeg holds back 2 frames (below) |
+| Decoder, Mac | GStreamer `vtdec` (VideoToolbox, Apple's hardware): the default, `decoder:=auto` | ffmpeg holds back 2 frames (below) |
 | Newest only | yes | a slow detector drops frames, never falls behind |
 | Stamp | arrival − `delay` (0.06 s) | an **estimate**: measure it at the car |
 
@@ -123,19 +127,57 @@ Check it at the car, and fix it on the router.
     NVIDIA's GStreamer plugins come with JetPack, not Pixi. The node runs JetPack's
     `gst-launch-1.0` and reads raw pictures from its pipe (2.7 MB each, 41 MB/s:
     nothing for a pipe). So the node needs no GStreamer of its own, and the same code
-    runs on a Mac with ffmpeg or GStreamer. `decoder:=opencv` decodes inside the
+    runs on a Mac with the `gst` environment's GStreamer, or ffmpeg. `decoder:=opencv` decodes inside the
     process instead, with an OpenCV built with GStreamer or FFmpeg.
+
+## Decoding on a Mac
+
+`decoder:=auto` (the default) picks the decoder when the node starts:
+
+```text
+ the gst environment there?  ──no──►  ffmpeg, with a warning: "pixi install -e gst"
+ (.pixi/envs/gst)                       (135 ms slower)
+        │ yes
+        ▼
+ vtdec decodes 3 test pictures? ──yes──►  gst-mac: VideoToolbox, Apple's hardware
+        │ no (a virtual Mac)
+        ▼
+ avdec_h264 there? ──yes──►  gst-soft, with a warning   ──no──►  ffmpeg, with a warning
+```
+
+| Computer | `auto` gives | Note |
+|---|---|---|
+| A Mac with `pixi install -e gst` | `gst-mac` (vtdec) | measured below |
+| A Mac without it | `ffmpeg` | works; 135 ms slower; the log says how to fix it |
+| A Linux PC with `pixi install -e gst` | `gst-soft` (avdec_h264) | [[untested]] on Linux |
+| The Orin | `orin.yaml` says `gst-nvidia` | JetPack's GStreamer, not Pixi's |
+
+!!! note "Why its own environment"
+    GStreamer's RTSP plugins aren't in the default environment, and adding them there
+    means re-solving it (one re-solve on 23 Oct pulled Python 3.14). The `gst`
+    environment has only GStreamer: adding it to `pixi.lock` changed no other
+    environment's packages (all 22 environment-platform pairs compared, 24 Oct). The node
+    runs its `gst-launch-1.0` as the child program, as on the Orin.
+
+`/diagnostics` says which decoder runs (`decoder`); `stream-check` checks a Mac gets
+`gst-mac`.
 
 ## Measured on a Mac (24 Oct)
 
-`pixi run -e ml stream-check`, Ben's Mac (Apple silicon), load average 2-5, other
-helpers' work running. Gazebo's road world, the car rolling at 0.3 m/s towards the stop
+`pixi run -e ml stream-check`, Ben's Mac (Apple silicon), other helpers' work running
+(load average 5-12). Gazebo's road world, the car rolling at 0.3 m/s towards the stop
 sign, 60 s each. **measured**:
 
 | Decoder | Time code → decoded | → detections published | Detector |
 |---|---|---|---|
-| GStreamer (`--gst`) | **3 ms** median, 6 p95, 8 worst | **26 ms** median, 36 p95, 42 worst | 21 ms |
-| ffmpeg (the default) | 136 ms median, 144 p95, 173 worst | 160 ms median, 174 p95, 215 worst | 22 ms |
+| **`vtdec`** (VideoToolbox: the default, `auto`) | **4 ms** median, 7 p95 | **27 ms** median, 38 p95 | 21 ms |
+| `avdec_h264` (software, `--gst`) | 4 ms median, 6 p95, 45 worst | 27 ms median, 32 p95, 94 worst | 22 ms |
+| ffmpeg (`--decoder ffmpeg`; the default until 24 Oct) | 136 ms median, 144 p95, 173 worst | 160 ms median, 174 p95, 215 worst | 22 ms |
+
+- **vtdec and avdec_h264 are as fast** here: the gain is over ffmpeg, about 130 ms.
+  The CPU was the same too (camera_stream with its decoder: 29% and 28% of a core).
+- vtdec, run twice: the same medians; the worst 309 ms in the first run, 85 ms in the
+  second. Both with the load average at 8-13: other helpers' Gazebo runs.
 
 | What | Gazebo | Noisy photo (`--pattern`) |
 |---|---|---|
@@ -151,8 +193,8 @@ sign, 60 s each. **measured**:
     Measured hop by hop: OpenH264 and x264 encode in 2 ms; MediaMTX adds nothing
     measurable; **ffmpeg's decoder program** holds back about 2 frames, with every
     low-delay flag tried (`-flags low_delay`, slice threads, one thread, `-fflags
-    nobuffer`). GStreamer doesn't. So the Orin uses GStreamer, and so should a Mac
-    (`--gst`). OpenCV's FFmpeg reader was worse (over 1 s behind).
+    nobuffer`). GStreamer doesn't. So the Orin uses GStreamer, and so does a Mac now
+    (`decoder:=auto`). OpenCV's FFmpeg reader was worse (over 1 s behind).
 
 The time code: a row of black and white squares in the top left corner, carrying the
 time in ms, drawn before encoding and read after decoding (`timecode.py`). It survives
@@ -182,14 +224,18 @@ So on the car, camera to detections: about **50-100 ms** (a guess).
 | Stamp error | the same: the stopwatch in the picture vs the detection's stamp | set `delay` to the difference |
 | Clock | `chronyc tracking` on the Pi and the Orin | under 1 ms apart |
 | The car's launch | `pixi run car orin`, after the engine is built; then `ros2 topic echo /safety/sensor_watchdog/state` | no `front_left_stream` or `front_right_stream` in it; pull the Pi's cable: `STALE` within 1-2 s |
+| Calibrate each camera | `pixi run calibrate-camera front_left --host <pi>`, then `front_right` ([how](camera-calibration.md)) | the window's numbers green; the files committed |
+| The stop-sign distance | a real stop sign 4.7 m ahead (tape measure); `stop_sign_watcher`'s log | it locks at 4.5-5 m; its log names each camera's focal length |
+| A Mac decoding | on the Mac: `ros2 launch aav_camera_stream camera_stream.launch.py host:=<pi> cameras:=front_left detector:=none`; its log | `by gst-mac`, not a warning about ffmpeg |
 
 ## Still open
 
 | Item | Note |
 |---|---|
-| Calibrations | the ribbon cameras have none: `config/cameras.yaml` leaves them empty (no undistortion). The 2024-25 `left.ini` is another camera's (Q22) |
+| Calibrations | the ribbon cameras have none yet: `config/cameras.yaml` leaves them empty (no undistortion). **Ready for the car:** `pixi run calibrate-camera` ([how](camera-calibration.md)). The 2024-25 `left.ini` is another camera's (Q22) |
 | `car.launch.py` | done ([above](#on-the-car-carlaunchpy)): [[untested]] on the Orin. Needs the engine built there first |
 | The sensor watchdog | done: watches each stream's detections. [[untested]] at the car |
-| The stop sign's size | `stop_sign_watcher` stops for a box 55 px tall: set for the bench's and Gazebo's lens. The ribbon cameras' lens at 1280x720 differs: check the distance at the car |
+| The stop sign's size | done (24 Oct): a distance, 4.7 m, from each camera's focal length ([perception](perception.md#how-far-the-boxs-height-and-the-lens-24-oct)). Needs the calibration, then a check with a real sign at the car |
+| A Mac's decoder | done (24 Oct): GStreamer with VideoToolbox by default ([above](#decoding-on-a-mac)) |
 | Lane finder and HUD | read `image_raw` too: `publish_image:=true` on the Orin (no network), or the preview |
 | A rear camera | the QNX Pi's doesn't work today; a USB camera's `ffmpeg` example is in `pi/mediamtx.yml` |

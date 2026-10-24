@@ -7,7 +7,7 @@
 <!-- Generated from docs/work.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Work: what&#x27;s done, and what needs doing</h1>
-<div class="meta">12 min read · 7 sections</div></header>
+<div class="meta">13 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -40,6 +40,7 @@
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -282,7 +283,7 @@ steps, what's done, and the work left in each area. Who owns each area is Q33: s
 <ul>
 <li>Find the 2024-25 team's trained <code>best.pt</code>, and back up the 2025-26 detector from the Orin.</li>
 <li>~~Write the lane finder~~: done 11 Oct, <code>aav_lane_finder</code>. Next: tune it on the real camera's pictures.</li>
-<li>Identify the cameras (Q22); fill in their udev names; set the stop-sign distance (<code>min_height_px</code>) for the real camera.</li>
+<li>Identify the cameras (Q22); fill in their udev names; calibrate them (<code>pixi run calibrate-camera</code>, <a href="camera-calibration.html">how</a>): the stop-sign distance (4.7 m) then uses their lens.</li>
 <li>TensorRT on the Orin, after the reflash (Q24): <code>python3 tools/build_engine.py</code> there.</li>
 </ul>
 <h3 id="the-hud">The HUD</h3>

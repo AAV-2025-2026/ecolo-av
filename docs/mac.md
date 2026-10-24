@@ -41,7 +41,11 @@ Later, `git pull` in `~/aav` fetches newer work.
 ```bash
 pixi install       # ROS 2 Jazzy: about 7 GB, the first time only
 pixi run build     # our packages
+pixi install -e gst   # GStreamer (small): the camera stream's fast decoder, VideoToolbox
 ```
+
+Without the last one, the camera stream still works, with ffmpeg: 135 ms slower, and it
+says so ([camera pipeline](camera-pipeline.md#decoding-on-a-mac)).
 
 **5. Check it:** `pixi run turtle` in one terminal and `pixi run keyboard` in another.
 Hold `i` to drive.
