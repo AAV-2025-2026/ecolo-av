@@ -80,12 +80,12 @@ topics:
     pub: [sensor_watchdog]
     sub: [hud, map]
     live: [sim]
-    note: One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD and the map window show it as a banner, red for STOP or when it goes silent (then twist_mux holds Nav2 too).
+    note: One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, those that stop first, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD and the map window show it as a banner, and the HUD the first input in its GO / STOP panel, red for STOP or when it goes silent (then twist_mux holds Nav2 too).
   /hud/heartbeat:
     type: std_msgs/msg/UInt64
     pub: [hud]
     sub: [sensor_watchdog]
-    note: The HUD's screen is alive - the number of frames it has drawn, 10 Hz, sent only while that number rises, from the same 10 ms timer that sends the e-stop button's messages, so it stops when the screen or the e-stop's sender freezes or dies. The sensor watchdog's hud input (kind heartbeat, 1 s; car.launch.py watch_hud:=true, the default; sim.launch.py with hud:=true or watch_hud:=true) - silent, or a count that stops rising, locks twist_mux's sensors lock like a dead sensor - Nav2 and the AI slot stop, people and the e-stop never. Reliable, depth 10.
+    note: The HUD's screen is alive - the number of frames it has drawn, 10 Hz, sent only while that number rises, from the same 10 ms timer that sends the e-stop button's messages, so it stops when the screen or the e-stop's sender freezes or dies. The sensor watchdog's hud input (kind heartbeat, 1 s; car.launch.py watch_hud:=true, the default; sim.launch.py with hud:=true or watch_hud:=true) - silent, or a count that stops rising, locks twist_mux's sensors lock like a dead sensor - Nav2 and the AI slot stop, people and the e-stop never. Latched (Ben, 24 Oct) - a dropout after the HUD's start-up holds them as hud LOST, even once it beats again, until a person calls /safety/sensor_watchdog/clear; one dropout within 5 s of its first beat is forgiven. Reliable, depth 10.
   /safety/collision_monitor/state:
     type: nav2_msgs/msg/CollisionMonitorState
     pub: [collision_monitor]
@@ -167,9 +167,9 @@ topics:
   /safety/output_mux/state:
     type: std_msgs/msg/String
     pub: [output_mux]
-    sub: []
+    sub: [hud]
     live: [turtle, sim, car, bench]
-    note: One line for people, 2 Hz and on each change - OPEN (passing ego's commands on), WAIT (closed, not latched - the sensor mux not heard yet or quiet for 3 s, its doubts, or settling for 2 s after all clear) or STOP (latched, and why, such as "STOP - target car needs REAL - camera_front_left is SIM (gazebo_adapter)"). The target first, such as "OPEN - car".
+    note: One line for people, 2 Hz and on each change - OPEN (passing ego's commands on), WAIT (closed, not latched - the sensor mux not heard yet or quiet for 3 s, its doubts, or settling for 2 s after all clear) or STOP (latched, and why, such as "STOP - target car needs REAL - camera_front_left is SIM (gazebo_adapter)"). The target first, such as "OPEN - car". The HUD's GO / STOP panel shows it, with the first reason.
 
   # --- the system: what kind of run this is ---
   /system/source:
@@ -617,7 +617,7 @@ services:
   /safety/sensor_watchdog/clear:
     type: std_srvs/srv/Trigger
     server: sensor_watchdog
-    note: A person says the position is right again after a GPS jump, which the watchdog latches (pixi run sim-fault clear in Gazebo).
+    note: A person says all is right again after a fault the watchdog latches - a GPS jump, wheels that disagreed with the IMU and GPS, a HUD that dropped out (LOST). pixi run watchdog-clear (pixi run sim-fault clear in Gazebo).
   /drivers/nav/route/follow:
     type: std_srvs/srv/Trigger
     server: street_router

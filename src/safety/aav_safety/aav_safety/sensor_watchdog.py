@@ -30,8 +30,9 @@ Publishes   safety/sensor_watchdog/lock   std_msgs/Bool, at rate_hz: true while 
                                           what is wrong, for the HUD and people
             diagnostics                   diagnostic_msgs/DiagnosticArray, once a second:
                                           one status per input (rqt_robot_monitor, Foxglove)
-Serves      safety/sensor_watchdog/clear  std_srvs/Trigger: forget a latched GPS jump or
-                                          wheel disagreement, once a person has checked
+Serves      safety/sensor_watchdog/clear  std_srvs/Trigger: forget a latched GPS jump,
+                                          wheel disagreement or lost HUD (LOST), once a
+                                          person has checked (pixi run watchdog-clear)
 
 What each check means is in watchdog.py (no ROS there). Each change of state is logged
 once: a warning when an input goes wrong, info when it is back.
@@ -39,7 +40,8 @@ once: a warning when an input goes wrong, info when it is back.
 Parameters  inputs (the names to watch), rate_hz (10), and for each name: topic, kind
             (odom, imu, gps, image, cloud, heartbeat, detections), max_age (s), stop
             (bool), frozen_after (s, 0 off), max_jump_speed (m/s, 0 off), jump_margin
-            (m), frame_id (detections: the camera's frame); for an odom input,
+            (m), frame_id (detections: the camera's frame), latch (bool: a dropout after
+            its start-up latches LOST, the HUD's), latch_grace (s); for an odom input,
             cross_check (bool: the wheels against the IMU, wheel_check.py), cross_window
             (s), cross_speed_tolerance (m/s), cross_yaw_tolerance (rad/s), cross_persist (s),
             cross_gps_window (s), cross_gps_tolerance (m/s): the GPS's fixes join the check
@@ -113,8 +115,10 @@ class SensorWatchdog(Node):
                               float(param('frozen_after', 0.0)),
                               float(param('max_jump_speed', 0.0)),
                               float(param('jump_margin', 5.0)), cross,
-                              str(param('frame_id', ''))))
-        self.dog = Watchdog(rules)
+                              str(param('frame_id', '')), bool(param('latch', False)),
+                              float(param('latch_grace', 5.0))))
+        # Five ticks without one: the watchdog itself was stopped, so nothing latches then.
+        self.dog = Watchdog(rules, stall=5.0 / rate)
         self.speed = None      # the wheels' newest speed, for the camera's frozen check
         for rule in rules:
             if rule.kind == 'image':
@@ -186,6 +190,7 @@ class SensorWatchdog(Node):
 
     def tick(self):
         now = self.now()
+        self.dog.update(now)
         states = self.dog.states(now)
         locked = any(stops for *_, stops in states)
         self.lock_pub.publish(Bool(data=locked))
@@ -236,7 +241,8 @@ class SensorWatchdog(Node):
     def on_clear(self, request, response):
         self.dog.clear()
         response.success = True
-        response.message = 'latched GPS jumps and wheel disagreements forgotten'
+        response.message = ('latched GPS jumps, wheel disagreements and lost inputs (the '
+                            'HUD) forgotten')
         self.get_logger().warning('cleared by a person: ' + response.message)
         return response
 

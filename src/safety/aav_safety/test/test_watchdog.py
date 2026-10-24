@@ -1,7 +1,7 @@
 import math
 
 from aav_safety import watchdog
-from aav_safety.watchdog import FROZEN, JUMP, NAN, NEVER, OK, Rule, STALE, Watchdog
+from aav_safety.watchdog import FROZEN, JUMP, LOST, NAN, NEVER, OK, Rule, STALE, Watchdog
 import pytest
 
 ODOM = Rule('odom', '/vehicle/odom', 'odom', max_age=0.5)
@@ -11,6 +11,8 @@ CAMERA = Rule('camera', '/sensors/camera/front_left/image_raw', 'image', max_age
               frozen_after=1.0)
 RADAR = Rule('radar', '/sensors/radar/points', 'cloud', max_age=1.0, stop=False)
 HUD = Rule('hud', '/hud/heartbeat', 'heartbeat', max_age=1.0, frozen_after=1.0)
+LATCHED_HUD = Rule('hud', '/hud/heartbeat', 'heartbeat', max_age=1.0, frozen_after=1.0,
+                   latch=True, latch_grace=5.0)
 HERE = (45.3860, -75.6960)
 
 
@@ -120,6 +122,96 @@ def test_a_hud_that_beats_without_drawing_is_frozen():
     for k in range(1, 30):                            # still sent, the count stuck
         hud.arrived(k * 0.1, digest=42)
     assert state(dog, 'hud', 2.9) == FROZEN and dog.locked(2.9)
+
+
+def beat(dog, start, end, rate=10.0, count=None):
+    """Beat for the HUD from start to end (s), the watchdog ticking at 10 Hz."""
+    hud = dog.watches['hud']
+    k = 0
+    while start + k / rate <= end + 1e-9:
+        t = start + k / rate
+        hud.arrived(t, digest=(count or 0) + k + 1)
+        dog.update(t)
+        k += 1
+
+
+def tick(dog, start, end):
+    """Tick the watchdog at 10 Hz from start to end (s), with nothing arriving."""
+    k = 0
+    while start + k * 0.1 <= end + 1e-9:
+        dog.update(start + k * 0.1)
+        k += 1
+
+
+def test_one_dropout_while_the_hud_starts_is_forgiven():
+    dog = Watchdog([LATCHED_HUD])
+    beat(dog, 0.0, 2.0)                               # the window opens...
+    tick(dog, 2.1, 3.5)                               # ...a slow first frame
+    assert state(dog, 'hud', 3.5) == STALE and dog.locked(3.5)
+    beat(dog, 3.6, 10.0, count=100)
+    assert state(dog, 'hud', 10.0) == OK and not dog.locked(10.0)   # back on its own
+
+
+def test_a_hud_that_drops_out_after_its_start_up_latches_until_cleared():
+    dog = Watchdog([LATCHED_HUD])
+    beat(dog, 0.0, 20.0)
+    tick(dog, 20.1, 22.0)                             # it died
+    assert state(dog, 'hud', 22.0) == LOST and dog.locked(22.0)
+    beat(dog, 27.0, 40.0)                             # systemd restarted it: still held
+    s, detail = dog.watches['hud'].state(40.0)
+    assert s == LOST and 'STALE' in detail and 'OK now' in detail
+    assert dog.locked(40.0)
+    assert dog.summary(40.0).startswith('STOP: hud LOST')
+    dog.clear()                                       # a person looked
+    assert state(dog, 'hud', 40.0) == OK and not dog.locked(40.0)
+
+
+def test_a_hud_that_keeps_crashing_while_it_starts_latches_the_second_time():
+    dog = Watchdog([LATCHED_HUD])
+    beat(dog, 0.0, 2.0)
+    tick(dog, 2.1, 3.5)                               # one: forgiven
+    beat(dog, 3.6, 5.0)
+    tick(dog, 5.1, 6.5)                               # two, still within the grace
+    assert state(dog, 'hud', 6.5) == LOST
+
+
+def test_a_cleared_hud_gets_its_grace_again():
+    dog = Watchdog([LATCHED_HUD])
+    beat(dog, 0.0, 20.0)
+    tick(dog, 20.1, 22.0)
+    dog.clear()                                       # cleared while it is still dead
+    assert state(dog, 'hud', 22.0) == STALE           # still holds, not latched
+    beat(dog, 30.0, 31.0)                             # restarted; a slow frame
+    tick(dog, 31.1, 32.5)
+    assert state(dog, 'hud', 32.5) == STALE
+    beat(dog, 32.6, 40.0, count=50)
+    assert not dog.locked(40.0)
+
+
+def test_a_stalled_watchdog_latches_nothing():
+    # The watchdog itself stopped for 3 s (SIGSTOP): its first tick back sees the HUD
+    # silent, as its beats still wait in the queue. They arrive, and nothing latched.
+    dog = Watchdog([LATCHED_HUD], stall=0.5)
+    beat(dog, 0.0, 20.0)
+    dog.update(23.0)                                  # the first tick after the stall
+    assert state(dog, 'hud', 23.0) == STALE
+    beat(dog, 23.0, 25.0, count=1000)                 # the queued beats, then new ones
+    assert state(dog, 'hud', 25.0) == OK and not dog.locked(25.0)
+
+
+def test_a_rule_without_latch_never_latches():
+    dog = Watchdog([HUD])
+    beat(dog, 0.0, 20.0)
+    tick(dog, 20.1, 22.0)
+    beat(dog, 27.0, 28.0)
+    assert state(dog, 'hud', 28.0) == OK
+
+
+def test_the_summary_puts_what_stops_first():
+    dog = Watchdog([RADAR, ODOM])
+    dog.watches['odom'].arrived(0.0, (0.0,))
+    assert dog.summary(0.6).startswith('STOP: odom STALE')
+    assert 'radar NEVER' in dog.summary(0.6)
 
 
 def test_a_warn_input_never_stops_the_drivers():

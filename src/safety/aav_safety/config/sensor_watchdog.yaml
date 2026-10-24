@@ -80,9 +80,14 @@ sensor_watchdog:
     hud:                       # the HUD's screen (aav_hud_raylib): the safety drivers watch
       topic: /hud/heartbeat     # it, so a frozen or dead screen stops Nav2 and the AI slot.
       kind: heartbeat           # Watched only where the launch expects a HUD (watch_hud)
-      max_age: 1.0              # 10 beats; a slow frame (a resize) mustn't stop the car
+      max_age: 1.0              # 10 beats: a slow frame of a second or more is a dropout
       stop: true
       frozen_after: 1.0         # beats whose frame count stopped rising
+      # A HUD that keeps crashing holds Nav2 until a person clears it (Ben, 24 Oct): a
+      # dropout latches LOST, even once it beats again; `pixi run watchdog-clear`. One
+      # dropout within 5 s of its first beat is forgiven: the window starting up.
+      latch: true
+      latch_grace: 5.0          # s
     radar:                      # collision_monitor stops Nav2 itself when it goes quiet
       topic: /sensors/radar/points
       kind: cloud
