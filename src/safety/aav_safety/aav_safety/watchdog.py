@@ -116,6 +116,11 @@ class Watch:
         self.jumped = None         # the jump that latched, as text, until clear()
         # The wheels against the IMU (odom only): fed by arrived() and imu().
         self.cross = WheelCheck(rule.cross_check) if rule.cross_check is not None else None
+        # Its traffic, for people (diagnostics: Lichtblick's "Sensors health" layout).
+        self.count = 0             # messages since the window began
+        self.window = None         # when the window began: the first message, then traffic()
+        self.gap = 0.0             # the longest gap between two messages in the window
+        self.worst_gap = 0.0       # the longest since the first message
 
     def arrived(self, now: float, values: Sequence[float] = (), digest=None,
                 fix: Optional[Tuple[float, float]] = None, has_fix: bool = True,
@@ -128,6 +133,12 @@ class Watch:
         say nothing about how far apart they were taken.
         """
         rule = self.rule
+        if self.heard is None:
+            self.window = now
+        else:
+            self.gap = max(self.gap, now - self.heard)
+            self.worst_gap = max(self.worst_gap, self.gap)
+        self.count += 1
         self.heard = now
         if rule.kind == 'gps' and (not has_fix or fix is None or not finite(fix)):
             self.bad = 'NO FIX'
@@ -175,6 +186,24 @@ class Watch:
                 and now - self.same_since > rule.frozen_after):
             return FROZEN, f'the same for {now - self.same_since:.1f} s'
         return OK, f'{age:.1f} s old'
+
+    def traffic(self, now: float) -> Tuple[float, float, float]:
+        """
+        Return (messages a second, longest gap, longest gap ever) in s, and start a new window.
+
+        The window runs from the last call (or the first message) to now. Its longest gap
+        counts the silence since the newest message too, so a sensor that just stopped
+        shows at once. All zero before the first message.
+        """
+        if self.heard is None:
+            return 0.0, 0.0, 0.0
+        span = now - self.window
+        rate = self.count / span if span > 0.0 else 0.0
+        gap = max(self.gap, now - self.heard)
+        self.worst_gap = max(self.worst_gap, gap)
+        out = (rate, gap, self.worst_gap)
+        self.count, self.window, self.gap = 0, now, 0.0
+        return out
 
     def clear(self):
         self.jumped = None

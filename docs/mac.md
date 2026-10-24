@@ -150,29 +150,19 @@ WiFi connection, with no ROS on the Mac.
 
 In either app: Open connection → Foxglove WebSocket → `ws://<the Orin's IP>:8765`.
 
-**Our layout** (20 Oct): `src/aav_bringup/lichtblick/car.json`. In Lichtblick's Layouts
-menu, import it from that file. One screen shows:
+**Our layouts** (24 Oct): `tools/foxglove/driving.json`, `sensors-health.json` and
+`map.json`. In the app's Layouts menu, import one from its file. What each shows, where
+each bridge listens, and how much it costs the WiFi: [Watch from a laptop](foxglove.md).
+In the simulator: `pixi run sim foxglove:=true`, then `ws://localhost:8765`.
 
-| Panel | Shows |
+**Check a bridge serves the layouts** (no ROS needed): `pixi run layout-check` (the sim
+here) or `pixi run layout-check ws://192.168.1.140:8765` (the Jetson); add `--data` to
+measure what each topic sends. Each topic is served, off (it needs a part that's off by
+default) or MISSING.
+
+| Where | Result (24 Oct) |
 |---|---|
-| 3D, following the car | the lidar's points (coloured by height), the radar, Nav2's plan, the street route, the stop zone |
-| Image | the camera, with the detector's boxes (`/perception/detections/image`) |
-| Map | the car's GPS position on a street map |
-| Light | green, or red with "STOP" when the sensor watchdog stops Nav2 |
-| Plot | measured against commanded speed |
-| Raw message | `/vehicle/status`: mode, armed, e-stop, faults |
-
-Its setting names were checked against Lichtblick's own code, and a test keeps every
-topic in it matching `docs/interfaces.yaml`. In the simulator: `pixi run sim
-foxglove:=true`, then `ws://localhost:8765`.
-
-**Check a bridge serves the layout** (no ROS needed): `pixi run layout-check` (the sim
-here) or `pixi run layout-check ws://192.168.1.140:8765` (the Jetson). Each topic is
-served, off (it needs a part that's off by default) or MISSING.
-
-| Where | Result (20 Oct) |
-|---|---|
-| `pixi run sim world:=road foxglove:=true perception:=true` | 11 of 13 served; 2 off: the ghost marker (`ghost:=true`), the street route (needs a route) |
+| `pixi run sim world:=road foxglove:=true` | 23 of 26 served; 3 off: the ghost marker (`ghost:=true`), the street route (needs a route). All three layouts at once: 1.4 Mbit/s |
 | the car | not yet |
 
 ## Gazebo on a Mac

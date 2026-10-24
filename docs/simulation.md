@@ -254,7 +254,7 @@ Gazebo, RViz, Nav2 and the HUD window together. Give goals with RViz's 2D Goal P
 | Argument | Opens |
 |---|---|
 | `hud:=true` | the HUD window (`aav_hud_raylib`, the same as `pixi run hud`) |
-| `foxglove:=true` | the Foxglove bridge on 127.0.0.1:8765: open Lichtblick, then `ws://localhost:8765` |
+| `foxglove:=true` | the Foxglove bridge on 127.0.0.1:8765: open Lichtblick, then `ws://localhost:8765` and a layout from `tools/foxglove/` ([Watch from a laptop](foxglove.md)) |
 | `hud_web:=true` | the Flutter app's web server on 127.0.0.1:5000 (this was `hud:=true` before 15 Oct) |
 | Tried, 15 Oct | the parking lot, sim speed 3, the HUD on: a 36 m Nav2 goal reached |
 

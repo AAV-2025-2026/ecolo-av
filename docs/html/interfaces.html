@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">44 min read · 4 sections</div></header>
+<div class="meta">45 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -45,6 +45,7 @@
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
@@ -108,7 +109,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>teleop_twist_keyboard</code></td>
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>-</td>
-<td>Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic.</td>
+<td>Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic - on the stand-ins only, as the car's bridge only watches (foxglove.launch.py).</td>
 </tr>
 <tr>
 <td><code>/drivers/tests/cmd_vel</code></td>
@@ -585,10 +586,18 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/perception/camera/front_left/preview/compressed</code></td>
 <td><code>sensor_msgs/msg/CompressedImage</code></td>
-<td><code>camera_stream_front_left</code></td>
+<td><code>camera_stream_front_left</code>, <code>preview_jpeg_front_left</code></td>
+<td><code>foxglove_bridge</code></td>
 <td>-</td>
+<td>A small JPEG of the undistorted picture with the boxes drawn on, 320 px wide, once a second (preview_period, preview_width) - for Foxglove, Lichtblick (tools/foxglove/driving.json) or the HUD; a few kB, so it fits WiFi. People can also watch the camera Pi's own stream in a browser (WebRTC, http://<pi>:8889/front_left). On the stand-ins (sim, bench, CARLA with foxglove:=true), preview_jpeg_front_left makes it instead (image_transport republish, foxglove.launch.py) - the whole picture, no boxes, once a second.</td>
+</tr>
+<tr>
+<td><code>/perception/camera/front_left/preview</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>preview_throttle_front_left</code></td>
+<td><code>preview_jpeg_front_left</code></td>
 <td>-</td>
-<td>A small JPEG of the undistorted picture with the boxes drawn on, 320 px wide, once a second (preview_period, preview_width) - for Foxglove, Lichtblick or the HUD; a few kB, so it fits WiFi. People can also watch the camera Pi's own stream in a browser (WebRTC, http://<pi>:8889/front_left).</td>
+<td>Stand-ins only (foxglove.launch.py foxglove_preview, with foxglove:=true) - the camera's raw picture once a second (topic_tools throttle), on its way to preview/compressed. The bridge's WiFi list leaves it out.</td>
 </tr>
 <tr>
 <td><code>/perception/camera/front_right/preview/compressed</code></td>

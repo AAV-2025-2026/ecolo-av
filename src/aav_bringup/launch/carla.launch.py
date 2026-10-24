@@ -90,10 +90,14 @@ def launch_setup(context):
     if flag['teleop']:
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
     if flag['foxglove']:
-        # This computer only, like the rest (tools/ros.sh --local).
-        actions.append(Node(package='foxglove_bridge', executable='foxglove_bridge',
-                            name='foxglove_bridge',
-                            parameters=[{'port': 8765, 'address': '127.0.0.1'}]))
+        # This computer only, like the rest (tools/ros.sh --local): from a Mac, through an
+        # SSH tunnel (docs/foxglove.md). The front camera's preview, as on the car.
+        cameras = arg('cameras').lower() == 'true'
+        actions.append(include(context, 'aav_bringup', 'foxglove.launch.py',
+                               foxglove_address='127.0.0.1', foxglove_port='8765',
+                               use_sim_time='true', foxglove_control='true',
+                               foxglove_topics='wifi',
+                               foxglove_preview='front_left' if cameras else ''))
     if flag['rviz']:
         actions.append(Node(
             package='rviz2', executable='rviz2', name='rviz2',
@@ -113,7 +117,8 @@ def generate_launch_description():
                               description='RViz: needs a screen (the CARLA computer may '
                                           'have none)'),
         DeclareLaunchArgument('foxglove', default_value='false',
-                              description='foxglove_bridge on 127.0.0.1:8765 (Lichtblick)'),
+                              description='foxglove_bridge on 127.0.0.1:8765, for Lichtblick '
+                                          'or Foxglove (foxglove.launch.py)'),
         DeclareLaunchArgument('watchdog', default_value='true',
                               description='the sensor watchdog (aav_safety)'),
         DeclareLaunchArgument('sim_speed', default_value='',

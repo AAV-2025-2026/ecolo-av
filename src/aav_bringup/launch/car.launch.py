@@ -80,7 +80,9 @@ Parts and what they start:
   legacy_uart     backend with actuators:=uart: today's ESP32 over UART (the Pi wired to it)
   legacy_encoder  the 2025-26 wheel encoder over UDP (a Pico 2). Not where the spine part
                   runs: both would publish /vehicle/odom, and the output mux stops for two
-  foxglove        foxglove_bridge on port 8765, for Foxglove Studio on a laptop
+  foxglove        foxglove_bridge on port 8765 (foxglove.launch.py), for Foxglove or
+                  Lichtblick on a laptop: watch only, and no raw cameras or full lidar
+                  over the WiFi (docs/foxglove.md)
 
 The detector runs as `python3 -m aav_detector.detector`, the python3 of the environment that
 starts this file: on a laptop, the ml environment's PyTorch (pixi run -e ml car laptop);
@@ -524,8 +526,14 @@ def launch_setup(context):
     if uart or encoder:
         actions.append(include('aav_legacy', 'legacy.launch.py', uart=uart, encoder=encoder))
     if on('foxglove'):
-        actions.append(Node(package='foxglove_bridge', executable='foxglove_bridge',
-                            name='foxglove_bridge', parameters=[{'port': 8765}]))
+        # On the car's network (every interface: its addresses aren't fixed yet), for
+        # watching only: anyone on its WiFi reaches the bridge, so no client may publish,
+        # set parameters or call services. The WiFi topic list; camera_stream makes the
+        # pictures' previews itself.
+        actions.append(include('aav_bringup', 'foxglove.launch.py',
+                               foxglove_address='0.0.0.0', foxglove_port=8765,
+                               use_sim_time=False, foxglove_control=False,
+                               foxglove_topics='wifi', foxglove_preview=''))
     return actions
 
 

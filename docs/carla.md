@@ -130,6 +130,9 @@ To watch from a Mac, share ROS on purpose, on a network with no real car on the 
 AAV_DISCOVERY=SUBNET pixi run carla-car host:=127.0.0.1 foxglove:=true
 ```
 
+The bridge listens on 127.0.0.1 only: from the Mac, `ssh -L 8765:127.0.0.1:8765
+<the CARLA computer>`, then `ws://localhost:8765` ([Watch from a laptop](foxglove.md)).
+
 ## What the adapter publishes
 
 The same topics as Gazebo, so nothing else can tell them apart

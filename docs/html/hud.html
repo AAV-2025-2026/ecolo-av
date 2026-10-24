@@ -45,6 +45,7 @@
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
@@ -1098,7 +1099,7 @@ touches it.</p>
   takes it too.</li>
 <li>The press also cancels the HUD's route, so clearing the e-stop doesn't restart the trip.</li>
 <li>The HUD never clears it. Clearing stays a person's deliberate act, from a laptop:
-  <code>pixi run estop-clear</code>, or Foxglove.</li>
+  <code>pixi run estop-clear</code> (Foxglove only on a simulator: the car's bridge only watches).</li>
 <li>No answer, or nothing subscribes to <code>/safety/estop</code>: the app shows a red message, "E-STOP
   FAILED ... Press the car's red e-stop button."</li>
 </ul>
@@ -1375,7 +1376,8 @@ Ottawa. It's too big for git, so a task downloads it:</p>
 </tbody>
 </table></div>
 <p>Keep the Flutter app or not: Q29. Meanwhile, <strong>Foxglove</strong> works as the operator's screen:
-<code>foxglove_bridge</code>, on port 8765, shows speed, the map, paths and costmaps.</p>
+<code>foxglove_bridge</code>, on port 8765, shows speed, the map, paths and costmaps
+(<a href="foxglove.html">Watch from a laptop</a>).</p>
 </section>
 <section class="card"><h2 id="before-running-it-on-the-car">Before running it on the car</h2>
 <ul>

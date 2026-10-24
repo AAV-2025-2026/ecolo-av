@@ -29,7 +29,9 @@ Publishes   safety/sensor_watchdog/lock   std_msgs/Bool, at rate_hz: true while 
             safety/sensor_watchdog/state  std_msgs/String, at rate_hz: OK, or STOP/WARN and
                                           what is wrong, for the HUD and people
             diagnostics                   diagnostic_msgs/DiagnosticArray, once a second:
-                                          one status per input (rqt_robot_monitor, Foxglove)
+                                          one status per input (rqt_robot_monitor, Foxglove,
+                                          Lichtblick): its state, messages a second, the
+                                          longest gap in that second and ever
 Serves      safety/sensor_watchdog/clear  std_srvs/Trigger: forget a latched GPS jump or
                                           wheel disagreement, once a person has checked
 
@@ -218,7 +220,11 @@ class SensorWatchdog(Node):
             rule = watch.rule
             level = (DiagnosticStatus.OK if state == OK else
                      DiagnosticStatus.ERROR if stops else DiagnosticStatus.WARN)
-            values = [KeyValue(key='max_age', value=f'{rule.max_age:g}'),
+            rate, gap, worst_gap = watch.traffic(self.now())
+            values = [KeyValue(key='rate_hz', value=f'{rate:.1f}'),
+                      KeyValue(key='longest_gap_s', value=f'{gap:.2f}'),
+                      KeyValue(key='worst_gap_s', value=f'{worst_gap:.2f}'),
+                      KeyValue(key='max_age', value=f'{rule.max_age:g}'),
                       KeyValue(key='stops', value=str(rule.stop).lower())]
             if watch.cross is not None:
                 # For tuning the tolerances on the car: how close normal driving comes.
@@ -229,7 +235,9 @@ class SensorWatchdog(Node):
                                KeyValue(key=f'worst_{key}',
                                         value=f'{watch.cross.worst[i]:.3f}')]
             out.status.append(DiagnosticStatus(
-                level=level, name=f'sensor_watchdog: {name}', message=f'{state}: {detail}',
+                level=level, name=f'sensor_watchdog: {name}',
+                # The rate and the gap in the line itself: a summary panel shows them.
+                message=f'{state}: {detail}, {rate:.1f} Hz, longest gap {gap:.2f} s',
                 hardware_id=rule.topic, values=values))
         self.diag_pub.publish(out)
 

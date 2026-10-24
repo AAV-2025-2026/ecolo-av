@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watch from a laptop: Foxglove and Lichtblick · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/foxglove.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Watch from a laptop: Foxglove and Lichtblick</h1>
+<div class="meta">5 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a class="here" href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-two-apps">The two apps</a><a href="#connect-from-a-mac-3-steps">Connect from a Mac: 3 steps</a><a href="#which-layout">Which layout</a><a href="#where-each-bridge-listens">Where each bridge listens</a><a href="#bandwidth-the-wifi-list">Bandwidth: the WiFi list</a><a href="#check-it-without-the-app">Check it without the app</a><a href="#tested">Tested</a></nav>
+<div class="lead"><p>Watch the car, or a simulator, from any laptop. No ROS on the laptop: one app, one
+WebSocket. Built in on 24 October (Ben asked on 11 Oct; go-ahead 24 Oct).</p>
+<pre class="highlight"><code class="language-text">  car or simulator                                    your laptop
+  ROS topics ──&gt; foxglove_bridge (port 8765) ~~WiFi~~&gt; Lichtblick or Foxglove
+                 only the small topics                 + a layout from tools/foxglove/</code></pre></div>
+<section class="card"><h2 id="the-two-apps">The two apps</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Lichtblick</th>
+<th>Foxglove</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What</td>
+<td>the open-source fork of Foxglove Studio, kept by BMW</td>
+<td>the company's own app, newer</td>
+</tr>
+<tr>
+<td>Licence</td>
+<td>MPL-2.0: free, open source</td>
+<td>proprietary: a free plan with an account</td>
+</tr>
+<tr>
+<td>Account</td>
+<td>none</td>
+<td>needed</td>
+</tr>
+<tr>
+<td>Get it</td>
+<td>github.com/lichtblick-suite/lichtblick, Releases (Mac: <code>...-mac-universal.dmg</code>)</td>
+<td>foxglove.dev/download</td>
+</tr>
+<tr>
+<td>Our pick</td>
+<td>✅ the default (our rule: open source first, Ben, 15 Oct)</td>
+<td>works the same way</td>
+</tr>
+</tbody>
+</table></div>
+<p>The bridge itself, <code>foxglove_bridge</code>, is MIT and already in our Pixi environment.</p>
+</section>
+<section class="card"><h2 id="connect-from-a-mac-3-steps">Connect from a Mac: 3 steps</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Start a bridge: <code>pixi run sim foxglove:=true</code> (or <code>bench</code>, <code>carla-car</code>); on the car it runs already (the Orin's <code>foxglove</code> part)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>In the app: <strong>Open connection → Foxglove WebSocket</strong>, then <code>ws://localhost:8765</code> (a simulator here) or <code>ws://&lt;the Orin's IP&gt;:8765</code> (the car; <code>pixi run net-map</code> finds it)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Layouts → Import from file</strong>: pick one from <code>tools/foxglove/</code> (below)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Lichtblick's Mac app isn't notarized: the first time, right-click it in Applications →
+Open → Open (<a href="mac.html#watch-without-ros-lichtblick">Your Mac</a>).</p>
+</section>
+<section class="card"><h2 id="which-layout">Which layout</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layout</th>
+<th>File</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Driving</strong></td>
+<td><code>tools/foxglove/driving.json</code></td>
+<td>3D view following the car: its model, the lidar's scan, the local costmap, Nav2's plan and goal, the radar and its clusters, the camera's obstacles, the stop zone. The camera preview. Speed and steering, measured against commanded. E-stop, the sensor watchdog, the output gate</td>
+</tr>
+<tr>
+<td><strong>Sensors health</strong></td>
+<td><code>tools/foxglove/sensors-health.json</code></td>
+<td>every <code>/diagnostics</code> status: the watchdog's per sensor with its <strong>rate (Hz) and longest gap</strong>; EKFs, twist_mux, the camera streams. Whether every sensor comes from the right source. A timeline of stops and e-stops</td>
+</tr>
+<tr>
+<td><strong>Map</strong></td>
+<td><code>tools/foxglove/map.json</code></td>
+<td>the car on a street map: the EKF's position (blue) and the raw GPS (orange); fix or no fix; the street route's status</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">The map needs the internet</p>
+<pre><code>The map panel loads OpenStreetMap's tiles from the web. At the car with no internet,
+it shows the dots on a blank map.
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="where-each-bridge-listens">Where each bridge listens</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Started by</th>
+<th>Listens on</th>
+<th>A client may</th>
+<th>Topics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run sim foxglove:=true</code></td>
+<td>127.0.0.1 (this computer)</td>
+<td>watch, send a goal, drive (<code>/drivers/keyboard/cmd_vel</code>), e-stop</td>
+<td>WiFi list, plus the camera preview</td>
+</tr>
+<tr>
+<td><code>pixi run bench foxglove:=true</code></td>
+<td>127.0.0.1</td>
+<td>the same</td>
+<td>the same</td>
+</tr>
+<tr>
+<td><code>pixi run carla-car ... foxglove:=true</code></td>
+<td>127.0.0.1: from a Mac, <code>ssh -L 8765:127.0.0.1:8765 &lt;the CARLA computer&gt;</code>, then <code>ws://localhost:8765</code></td>
+<td>the same</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>the car (<code>foxglove</code> part: Orin, <code>all</code>)</td>
+<td>every network the Orin is on</td>
+<td><strong>watch only</strong>: anyone on the car's WiFi reaches it</td>
+<td>WiFi list</td>
+</tr>
+</tbody>
+</table></div>
+<p>One file does it for all of them: <code>src/aav_bringup/launch/foxglove.launch.py</code>, with the
+list in <code>src/aav_bringup/config/foxglove_bridge.yaml</code>.</p>
+</section>
+<section class="card"><h2 id="bandwidth-the-wifi-list">Bandwidth: the WiFi list</h2>
+<p>The bridge sends only what a panel opens. The danger is one click on a big topic over the
+car's WiFi, about 2.5 MB/s for every laptop together (<a href="bandwidth.html">Bandwidth</a>). So the
+list leaves these out:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Left out</th>
+<th>Size</th>
+<th>Watch instead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>raw cameras, <code>.../image_raw</code>, and their JPEGs</td>
+<td>93 MB/s; 4.5 MB/s</td>
+<td><code>/perception/camera/front_left/preview/compressed</code>: 320 px, once a second, a few kB</td>
+</tr>
+<tr>
+<td>the detector's and lane finder's pictures</td>
+<td>raw pictures</td>
+<td>the preview (the car's has the boxes drawn on)</td>
+</tr>
+<tr>
+<td>the lidar's points and packets</td>
+<td>~7 MB/s</td>
+<td><code>/sensors/lidar/scan</code>, 3 kB</td>
+</tr>
+<tr>
+<td>Nav2's costmap layers one by one</td>
+<td>40-640 kB each</td>
+<td><code>/local_costmap/costmap</code>, all layers in one</td>
+</tr>
+</tbody>
+</table></div>
+<p>Measured, 24 Oct, in Gazebo's road world, while Nav2 drove: <strong>all three layouts open at
+once: 170 kB/s (1.4 Mbit/s)</strong>. The costmap is the biggest part (64 kB/s), then the odometry
+and the scan. On a cable, <code>ros2 launch aav_bringup foxglove.launch.py foxglove_topics:=all</code>
+lets everything through.</p>
+</section>
+<section class="card"><h2 id="check-it-without-the-app">Check it without the app</h2>
+<pre class="highlight"><code class="language-bash">pixi run layout-check                       # the sim here: is every topic served?
+pixi run layout-check ws://192.168.1.140:8765 --data   # the car: and how much each sends</code></pre>
+</section>
+<section class="card"><h2 id="tested">Tested</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run sim world:=road foxglove:=true</code>, 24 Oct, own domain</td>
+<td>bridge on 127.0.0.1 only; 23 of 26 layout topics served, 3 off as expected (ghost, street route); the camera preview at 1 Hz, 13-16 kB/s</td>
+</tr>
+<tr>
+<td>A goal sent through the bridge (as Lichtblick's 3D panel does)</td>
+<td>Nav2 planned and the car drove 20 m</td>
+</tr>
+<tr>
+<td><code>pixi run bench foxglove:=true</code></td>
+<td>22 of 26 served; the bench has no lidar unless <code>lidar:=true</code></td>
+</tr>
+<tr>
+<td>A watch-only bridge (the car's settings)</td>
+<td>publishing refused: "Server does not support clientPublish"</td>
+</tr>
+<tr>
+<td>The layouts in the Lichtblick app</td>
+<td>the setting names were checked against Lichtblick 1.29's own code; not yet opened in the app by a person</td>
+</tr>
+<tr>
+<td>The car</td>
+<td><strong>untested</strong></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="mac.html"><small>Previous</small>← Your Mac</a>
+<a class="next" href="simulation.html"><small>Next</small>Simulation →</a></nav>
+</main>
+<footer>Source: <code>docs/foxglove.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

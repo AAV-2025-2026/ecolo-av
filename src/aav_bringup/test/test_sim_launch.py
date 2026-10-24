@@ -211,8 +211,8 @@ def test_the_screens_and_lichtblick():
     sent = included(started(SIM, hud='true', map='true'))
     assert sent['hud.launch.py'] == {} and sent['map.launch.py'] == {}
     assert included(started(SIM, hud_web='true'))['hud.launch.py'] == {'use_sim_time': 'true'}
-    fox = parameters(node(started(SIM, foxglove='true'), 'foxglove_bridge'))
-    assert (fox['port'], fox['address']) == (8765, '127.0.0.1')  # this computer only
+    fox = included(started(SIM, foxglove='true'))['foxglove.launch.py']
+    assert fox['foxglove_address'] == '127.0.0.1'  # this computer only: test_foxglove_launch
 
 
 def test_a_pretend_lane_needs_no_camera():

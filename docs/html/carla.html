@@ -45,6 +45,7 @@
 <a href="languages.html">Languages</a>
 <a href="run.html">Run it</a>
 <a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
 <a class="here" href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
@@ -298,6 +299,8 @@ over TCP, not ROS.</p>
 <p>To watch from a Mac, share ROS on purpose, on a network with no real car on the same
 <code>ROS_DOMAIN_ID</code>:</p>
 <pre class="highlight"><code class="language-bash">AAV_DISCOVERY=SUBNET pixi run carla-car host:=127.0.0.1 foxglove:=true</code></pre>
+<p>The bridge listens on 127.0.0.1 only: from the Mac, <code>ssh -L 8765:127.0.0.1:8765
+&lt;the CARLA computer&gt;</code>, then <code>ws://localhost:8765</code> (<a href="foxglove.html">Watch from a laptop</a>).</p>
 </section>
 <section class="card"><h2 id="what-the-adapter-publishes">What the adapter publishes</h2>
 <p>The same topics as Gazebo, so nothing else can tell them apart

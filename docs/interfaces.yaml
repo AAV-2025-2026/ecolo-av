@@ -38,7 +38,7 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [teleop_twist_keyboard]
     sub: [twist_mux, language_drive]
-    note: Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic.
+    note: Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic - on the stand-ins only, as the car's bridge only watches (foxglove.launch.py).
   /drivers/tests/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [actuator_test]
@@ -383,9 +383,14 @@ topics:
     note: The object detector's boxes in pixels (RF-DETR Nano by default, or YOLO); header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. object_detector (aav_detector) in bench mode and pixi run detect; on the car object_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay. It sends one for every picture, boxes or none, so the sensor watchdog watches each streamed camera here (kind detections, by its frame_id - front_left_stream, front_right_stream; silent 1 s locks Nav2 and the AI slot), where car.launch.py starts the streams (its camera_stream part, the Orin), and the car's detector part then doesn't start for those cameras.
   /perception/camera/front_left/preview/compressed:
     type: sensor_msgs/msg/CompressedImage
-    pub: [camera_stream_front_left]
-    sub: []
-    note: A small JPEG of the undistorted picture with the boxes drawn on, 320 px wide, once a second (preview_period, preview_width) - for Foxglove, Lichtblick or the HUD; a few kB, so it fits WiFi. People can also watch the camera Pi's own stream in a browser (WebRTC, http://<pi>:8889/front_left).
+    pub: [camera_stream_front_left, preview_jpeg_front_left]
+    sub: [foxglove_bridge]
+    note: A small JPEG of the undistorted picture with the boxes drawn on, 320 px wide, once a second (preview_period, preview_width) - for Foxglove, Lichtblick (tools/foxglove/driving.json) or the HUD; a few kB, so it fits WiFi. People can also watch the camera Pi's own stream in a browser (WebRTC, http://<pi>:8889/front_left). On the stand-ins (sim, bench, CARLA with foxglove:=true), preview_jpeg_front_left makes it instead (image_transport republish, foxglove.launch.py) - the whole picture, no boxes, once a second.
+  /perception/camera/front_left/preview:
+    type: sensor_msgs/msg/Image
+    pub: [preview_throttle_front_left]
+    sub: [preview_jpeg_front_left]
+    note: Stand-ins only (foxglove.launch.py foxglove_preview, with foxglove:=true) - the camera's raw picture once a second (topic_tools throttle), on its way to preview/compressed. The bridge's WiFi list leaves it out.
   /perception/camera/front_right/preview/compressed:
     type: sensor_msgs/msg/CompressedImage
     pub: [camera_stream_front_right]
