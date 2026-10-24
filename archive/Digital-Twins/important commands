@@ -1,0 +1,141 @@
+#open unreal engine:
+
+cd /media/aav/DataDrive1/DigitalTwins/carla_laptop/carla
+make launch
+
+if make launch doesnt work run this:
+export UE4_ROOT=/media/aav/DataDrive1/UnrealEngine_4.26
+cd /media/aav/DataDrive1/DigitalTwins/carla_laptop/carla
+
+
+
+/media/aav/DataDrive1/UnrealEngine_4.26/Engine/Binaries/Linux/UE4Editor \
+/media/aav/DataDrive1/DigitalTwins/carla_laptop/carla/Unreal/CarlaUE4/CarlaUE4.uproject
+
+Run this if it is too slow
+sudo fallocate -l 16G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+free -h
+
+
+
+#to launch carla source:
+cd /media/aav/DataDrive1/DigitalTwins/carla_laptop/carla/Dist/CARLA_Shipping_9a82b437e-dirty/LinuxNoEditor
+./CarlaUE4.sh
+
+
+some files paths: 
+project root: 
+/media/aav/DataDrive1/DigitalTwins/carla_laptop/carla
+
+
+map file: 
+/media/aav/DataDrive1/DigitalTwins/carla_laptop/carla/Unreal/CarlaUE4/Content/Carla/Maps/CarletonUniversity/CarletonUniversity.umap
+
+
+package config for the map:
+Unreal/CarlaUE4/Content/Carla/Config/CarletonUniversity.Package.json
+
+vehicle blueprint:
+Unreal/CarlaUE4/Content/Carla/Blueprints/Vehicles/
+
+
+unreal engine path: (building carla or running unreal editor here)
+/media/aav/DataDrive1/UnrealEngine_4.26
+
+environment variable for unreal engine (should not be changed)
+UE4_ROOT=/media/aav/DataDrive1/UnrealEngine_4.26
+
+export UE4_ROOT=/media/aav/DataDrive1/DigitalTwins/UnrealEngine_4.26_full
+export CC=/usr/bin/gcc
+export CXX=/usr/bin/g++
+export C_INCLUDE_PATH=/usr/include
+export CPLUS_INCLUDE_PATH=/usr/include
+cd /media/aav/DataDrive1/DigitalTwins/carla_laptop/carla
+make LibCarla
+
+
+march 22nd:
+
+to open unreal engine: 
+
+cd /media/aav/DataDrive1/DigitalTwins/carla_laptop/carla
+
+make launch
+
+
+edit map so that unreal engine references it before cooking
+
+
+now to open carla with map: 
+
+cd /media/aav/DataDrive1/DigitalTwins/carla_laptop/carla/Unreal/CarlaUE4/LinuxNoEditor
+
+./CarlaUE4.sh -carla-map=CarletonUniversity
+
+To launch carla-ros-bridge
+cd /media/aav/DataDrive1/DigitalTwins/carla-ros-bridge
+source ./install/setup.bash
+
+ros2 launch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch.py
+
+
+java -jar /media/aav/DataDrive1/DigitalTwins/OSM2World-latest-bin/OSM2World.jar \
+    convert \
+    --input map.osm \
+    --output carleton.obj \
+    --config /media/aav/DataDrive1/DigitalTwins/OSM2World-latest-bin/standard.properties \
+    --textures \
+    --materials \
+    --terrain \
+    --buildings \
+    --roads
+
+
+grep -i "natural=tree" map.osm | head
+
+
+converting osm to xodr 
+python3 osm_to_xodr.py \
+    -i /media/aav/DataDrive1/DigitalTwins/CarletonMap/map.osm \
+    -o /media/aav/DataDrive1/DigitalTwins/CarletonMap/carleton.xodr
+
+
+import carla
+client = carla.Client("localhost", 2000)
+client.set_timeout(5.0)
+print("\n=== Available CARLA Maps ===")
+for m in client.get_available_maps():
+    print(m)
+    
+    
+    
+    
+./CarlaUE4.sh -carla-map=/Game/Carla/Maps/CarletonUniversity
+
+import carla
+
+client = carla.Client("localhost", 2000)
+client.set_timeout(10.0)
+
+world = client.get_world()  # or client.load_world("Town01")
+town_name = world.get_map().name
+
+print("Loaded town:", town_name)
+
+
+
+netconvert \
+    --osm-files map.osm \
+    --opendrive-output carleton_fixed.xodr \
+    --proj.utm \
+    --geometry.remove=false \
+    --offset.disable-normalization=false \
+    --junctions.join=true \
+    --no-internal-links=false
+
+
+
+

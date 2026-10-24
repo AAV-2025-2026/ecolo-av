@@ -1,0 +1,75 @@
+#Drive car in P7 environment
+Launch carla
+cd Digital_Twins/CARLA/CARLA_0.9.15/
+./CarlaUE4.sh
+
+open new terminal
+cd PythonAPI/util
+python3 config.py --xodr-path=/home/aav/Digital_Twins/p7.xodr
+
+open ner terminal
+cd
+cd Digital_Twins/CARLA-0.9.15-ROS2-Bridge
+source ./install/setup.bash
+Launch your fixed ROS bridge file
+ros2 launch carla_ros_bridge copy_of_carla_ros_bridge_with_example_ego_vehicle.launch.py
+
+
+Run your control node
+ros2 run my_vehicle_control_pkg ego_control
+
+
+Run GNSS ros2 node
+ros2 run my_vehicle_control_pkg gnss_converter
+
+#GPS simulation 
+new terminal:
+Launch carla
+cd Digital_Twins/CARLA/CARLA_0.9.15/
+./CarlaUE4.sh
+
+To run GPS coordinate simulation
+
+new terminal:
+cd
+cd Digital_Twins/CARLA/CARLA_0.9.15/PythonAPI/util
+python3 config.py --osm-path=/home/aav/Digital_Twins/p7.osm
+
+
+cd
+cd Digital_Twins/
+python3 map_trial.py
+
+
+Using real gps data
+1. Launch carla
+cd Digital_Twins/CARLA/CARLA_0.9.15/
+./CarlaUE4.sh
+
+2. Launch p7
+cd PythonAPI/util
+python3 config.py --xodr-path=/home/aav/Digital_Twins/p7.xodr
+
+3.Launch your fixed ROS bridge file
+ros2 launch carla_ros_bridge copy_of_carla_ros_bridge_with_example_ego_vehicle.launch.py
+
+4. Launch GNSS node
+ros2 run my_vehicle_control_pkg gnss_converter
+
+
+5. Launch path for real-wolrd gps
+
+  
+ros2 run my_vehicle_control_pkg gps_path_follower \
+  --ros-args -p goals:="[45.3839, -75.6992, 45.3845, -75.6982, 45.3851, -75.6972]"
+
+  
+
+
+
+
+commands for ros2 node following live gps data
+ros2 run my_vehicle_control_pkg live_gps_follower
+
+
+
