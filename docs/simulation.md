@@ -416,6 +416,7 @@ Ran on Ben's Mac, 15 Oct, after the topic renaming:
 | `AAV_RMW=cyclone pixi run sim-check --obstacle --lidar-obstacle --plan-around`, `--ghost` (22 Oct, MPPI, the planner seeing the sensors) | all pass: with `plan_around:=false` the box 0.37 m ahead, the post 0.26 m; with the planner seeing them, round the box 3.9 m clear, never stopped; the ghost 0.13 m |
 | `pixi run sim-check --faults` (15 Oct) | all 10 faults pass: the car stood still 1.7-4.1 s after each, and the watchdog (or `collision_monitor`, for the radar) said why; then let go |
 | `AAV_RMW=cyclone pixi run sim-check --faults` (23 Oct, two runs, three other Gazebos on the Mac) | the new `hud stop` passes both times: stood still 2.5 s after the heartbeat stopped, "STOP: hud STALE", then drove again. 12 of the other 13 pass; `odom freeze` failed both times ([still to do](#still-to-do)) |
+| `pixi run sim-check --faults` (24 Oct, three runs, after [frozen wheels and MPPI](#frozen-wheels-and-mppi)) | **all 25 pass, three times out of three**. `odom freeze`: still 7.8-10.4 s after it, "the wheels and the GPS disagree"; normal driving's worst GPS gap 0.04-0.08 m/s (the limit 0.15) |
 | `pixi run sim-check --faults --no-watchdog` (15 Oct) | the before column [below](#what-the-car-does-before-and-after): only the radar stopped the car |
 | `pixi run sim-check --spine` (15 Oct) | all 21 pass: the spine profile's graph, drive, EKF and a Nav2 goal; the command stream lost: full brake 209 ms, still 0.66 s, latched; both e-stops: brake within 12 ms, latched; disarmed: no motion ([the spine in the loop](#the-spine-in-the-loop-spinetrue)) |
 
@@ -504,18 +505,53 @@ speed that looks like a car at a steady speed. `wheel_check.py` cross-checks the
 |---|---|---|
 | The IMU's acceleration | over 1.5 s: the wheels' change in speed vs the forward acceleration, added up | a frozen speed while the car speeds up or brakes |
 | The IMU's gyro | over 1.5 s: the mean turn rates | a frozen turn rate while the car steers |
-| The GPS | over 6 s: the speed of a line fitted to the fixes vs one fitted to where the wheels say the car went | a speed that **stays** wrong |
+| The GPS | over 10 s: the speed of a line fitted to the fixes vs one fitted to where the wheels say the car went | a speed that **stays** wrong |
 
-Any gap over its limit (0.3 m/s, 0.15 rad/s, 0.3 m/s) for 1 s is **DISAGREE**, latched
+Any gap over its limit (0.3 m/s, 0.15 rad/s, 0.15 m/s) for 1 s is **DISAGREE**, latched
 until `pixi run sim-fault clear`. Wheels frozen at a speed the car really keeps are still
 right, so nothing is said until the car's speed or turn changes. A frozen IMU or GPS is
 left out (its own input says FROZEN), not blamed on the wheels.
 
 Normal driving, Gazebo (sim-check's `wheels vs IMU and GPS`, the obstacle's braking too):
-worst speed gap 0.09-0.15 m/s and turn 0.006-0.010 rad/s (8 runs), GPS 0.12-0.14 m/s
-(5 runs): half the limits or less. The limits are **Gazebo's**: on
+worst speed gap 0.09-0.15 m/s and turn 0.006-0.010 rad/s (8 runs): half the limits or
+less. The GPS: 0.12-0.14 m/s over the old 6 s window (5 runs), 0.04-0.08 m/s over 10 s
+(4 runs, [below](#frozen-wheels-and-mppi)): half the limit or less. The limits are **Gazebo's**: on
 the car, read `worst_*_gap` on `/diagnostics` after a normal drive, and set them well
 above.
+
+#### Frozen wheels and MPPI
+
+Found 24 Oct, when `odom freeze` failed in most `--faults` runs. Since 22 Oct MPPI is
+Nav2's default, and MPPI plans from the speed the wheels say. So frozen wheels hold the
+car **near the frozen speed**: it drives on only 0.1-0.2 m/s faster.
+
+```text
+ Regulated Pure Pursuit:  wheels frozen at 0.5 m/s, Nav2 still asks 1 m/s  -> 0.5 m/s wrong: caught
+ MPPI:                    wheels frozen at 0.5 m/s, Nav2 asks about 0.6    -> 0.1 m/s wrong
+                          wheels frozen at 0.2 m/s, Nav2 asks about 0.4    -> 0.2 m/s wrong
+```
+
+| Run (Gazebo, Ben's Mac, the `odom freeze` fault 4 times) | Caught |
+|---|---|
+| MPPI, frozen at 0.5 m/s, the old limits (GPS 6 s, 0.3 m/s) | 1 of 4: the other three drove on 9-12 m, nothing said |
+| Regulated Pure Pursuit (`controller:=rpp`), the same | 4 of 4: still 5-8 s after the fault |
+| MPPI, frozen at 0.2 m/s, the old limits | 1 of 4 |
+| MPPI, frozen at 0.2 m/s, **GPS 10 s, 0.15 m/s** | **4 of 4**: still 8-10 s after the fault, "the wheels 0.20 m/s, the GPS 0.35-0.39 m/s" |
+
+Why the change is safe: a longer window makes the GPS's fitted speed much less noisy.
+230 s of normal driving, replayed through `wheel_check.py`:
+
+| GPS window | Worst gap, normal driving |
+|---|---|
+| 6 s | 0.14 m/s |
+| 8 s | 0.09 m/s |
+| 10 s | 0.05 m/s |
+| 12 s | 0.04 m/s |
+
+10 s and 0.15 m/s: twice the worst noise or more (three `sim-check --faults` runs saw
+0.04-0.08 m/s), and a big error is caught as fast as before. Still not caught: wheels wrong by under 0.15 m/s (frozen at 0.5 under MPPI).
+`sim-check --faults` now freezes them at 0.2 m/s, while the car still speeds up, and
+counts them wrong only once they're off by more than these limits.
 
 ### The global EKF and a GPS jump
 
@@ -553,7 +589,7 @@ lock, frozen wheels).
 | Wheels NaN (`odom nan`) | ❌ drove on 6.3 m, nothing said | ✅ 1.7 s, 0.8 m: "odom NAN" |
 | Camera frozen (`camera freeze`) | ❌ drove on 7.6 m; on the HUD a frozen picture looks live | ✅ 2.9 s, 4.5 m: "camera FROZEN" |
 | Radar stopped (`radar stop`) | ✅ stood still 2.5 s after it: `collision_monitor`'s "invalid source" | ✅ the same, 2.5 s; the watchdog warns too |
-| Wheels frozen (`odom freeze`) | ❌ drove on 10.9 m in 15 s, nothing said | ✅ 3.4-4.8 s after the wheels went wrong (Nav2 steered), 2.2-3.9 m: "odom DISAGREE (the wheels and the IMU disagree ... turn 0.28 rad/s)" (two runs) |
+| Wheels frozen (`odom freeze`) | ❌ drove on 10.9 m in 15 s, nothing said | ✅ 3.4-4.8 s after the wheels went wrong (Nav2 steered), 2.2-3.9 m: "odom DISAGREE (the wheels and the IMU disagree ... turn 0.28 rad/s)" (two runs). 24 Oct, MPPI, frozen at 0.2 m/s: still 7.8-10.4 s after the fault, 3.0-4.1 m: "the wheels and the GPS disagree" ([why](#frozen-wheels-and-mppi)) |
 | Watchdog hung (`watchdog hang`: SIGSTOP) | ❌ by design: the old lock never expired, so nothing stopped Nav2 (not run) | ✅ 2.7 s, 1.4-1.5 m: twist_mux's 1 s lock timeout; drove again after SIGCONT |
 | HUD frozen or dead (`hud stop`, 23 Oct: the check stops beating for it) | ❌ nothing watched the screen (not run) | ✅ 2.5 s, 1.2 m: "hud STALE" (two runs); drove again once it beat |
 | Watchdog killed (`watchdog kill`: SIGKILL, the last fault) | ❌ the same (not run) | ✅ 2.6-2.8 s, 1.2-1.5 m, then held 10 s more with Nav2 still asking (top speed 0.00 m/s) |
@@ -572,8 +608,8 @@ timing jumps with the fixes' stamps, plus 5 m for their noise.
 | ~~The EKF's own guard against a GPS jump~~ | done 15 Oct, partly: it holds while the watchdog stops the car ([above](#the-global-ekf-and-a-gps-jump)). A car that drives on takes the jump after a few seconds |
 | ~~The map window~~ | done 15 Oct: the same banner as the HUD. Not seen on a screen yet |
 | The cross check's limits on the car | Gazebo's numbers. Read `worst_*_gap` on `/diagnostics` after a normal drive. A sloping lot, the real IMU's mounting and the real GPS's noise all change them |
-| A frozen wheel at a speed the car keeps | not caught until the speed or turn changes: harmless till then, but the EKF's position drifts if the car really changes speed slowly under 0.3 m/s |
-| `odom freeze` is flaky (23 Oct) | failed in both `--faults` runs, and once in two on its own with no HUD watched: the wheels went wrong, but no DISAGREE. Not from the heartbeat; why is not known yet |
+| A frozen wheel at a speed the car keeps | not caught until the speed or turn changes by more than the limits: harmless till then, but the EKF's position drifts if the car is under 0.15 m/s faster or slower than the wheels say (MPPI keeps it near them: [frozen wheels and MPPI](#frozen-wheels-and-mppi)) |
+| ~~`odom freeze` is flaky (23 Oct)~~ | found and fixed 24 Oct: MPPI keeps the car near the frozen speed, under the GPS's old 0.3 m/s ([frozen wheels and MPPI](#frozen-wheels-and-mppi)) |
 | The real car's faults | the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog |
 
 ## Replay a recorded drive
