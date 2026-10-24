@@ -14,7 +14,8 @@ It moves no data. Each launch starts only the chosen source's drivers or stand-i
 canonical topics (/sensors/..., /vehicle/odom...); this node checks, from the ROS graph,
 that each of those topics has at most one publisher, and that /system/source says it
 comes from `source` (provenance.check_sensors). So the pictures and point clouds cost
-nothing extra. An announcement counts only while its announcer is alive.
+nothing extra. An announcement counts while its announcer is alive, and before the graph
+shows it; a node on /system/source not heard yet is a doubt (provenance.Announcers).
 
 An announcement of another source is a problem at once. What the graph suggests is a
 doubt until it has lasted `hold` s (provenance.Hold): a node can be seen publishing
@@ -58,7 +59,7 @@ class SensorMux(Node):
         period = self.declare_parameter('period', 0.5).value
         self.ready_at = time.monotonic() + self.declare_parameter('startup', 2.0).value
         self.hold = provenance.Hold(self.declare_parameter('hold', 5.0).value)
-        self.heard = {}
+        self.announcers = provenance.Announcers()
         self.last_problems = None
         self.pub = self.create_publisher(SourceCheck, 'system/sensor_mux/state', 10)
         self.create_subscription(DataSource, 'system/source', self.on_source, ANNOUNCEMENTS)
@@ -68,16 +69,18 @@ class SensorMux(Node):
                                f'{provenance.kind_name(self.expected)}')
 
     def on_source(self, msg):
-        self.heard[msg.announcer] = entries_of(msg)
+        self.announcers.hear(msg.announcer, entries_of(msg), time.monotonic())
 
     def tick(self):
-        if time.monotonic() < self.ready_at:
+        now = time.monotonic()
+        if now < self.ready_at:
             return
-        entries = provenance.live_entries(self.heard, announcers_alive(self))
+        alive = announcers_alive(self)
         publishers = {topic: [i.node_name for i in self.get_publishers_info_by_topic(topic)]
                       for _, topic in provenance.SENSORS}
-        check = self.hold.judge(time.monotonic(), provenance.check_sensors(
-            self.expected, entries, publishers))
+        check = self.hold.judge(now, provenance.check_sensors(
+            self.expected, self.announcers.entries(alive, now), publishers,
+            unheard=self.announcers.unheard(alive)))
         msg = SourceCheck(source=check.source, ok=check.ok, problems=list(check.problems),
                           doubts=list(check.doubts))
         msg.header.stamp = self.get_clock().now().to_msg()

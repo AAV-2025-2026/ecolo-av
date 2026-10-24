@@ -7,7 +7,7 @@ The sensor mux (sensor_mux.py) and the output mux (output_mux.py) ask these func
 |---|---|
 | The sources and targets, and each target's topic and source | SOURCES, TARGETS, command_topic |
 | A launch's target:= and source:=, checked before anything starts | choose |
-| Forget an announcement once its announcer has gone | live_entries |
+| Forget an announcement once its announcer has gone; doubt one not heard yet | Announcers |
 | Any announcement that isn't the source this run asked for | foreign |
 | Each sensor: one publisher, from the source asked for | check_sensors |
 | What the ROS graph suggests counts once it lasts (discovery takes a moment) | Hold |
@@ -22,7 +22,8 @@ young) only holds the gate shut.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from typing import Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import (Collection, Dict, Iterable, List, Mapping, Optional, Sequence, Set,
+                    Tuple)
 
 # aav_interfaces/SensorSource's values.
 REAL, SIM, BENCH, REPLAY = 0, 1, 2, 3
@@ -104,16 +105,44 @@ class Entry:
     kind: int        # REAL, SIM, BENCH or REPLAY
 
 
-def live_entries(announcements: Mapping[str, Sequence[Entry]],
-                 alive: Collection[str]) -> List[Entry]:
+@dataclass
+class Announcers:
     """
-    Every entry whose announcer still publishes /system/source (alive: their node names).
+    /system/source as heard, against the nodes the ROS graph shows publishing it.
 
-    An announcement is latched, so it outlives nothing: once Gazebo stops, its SIM entries
-    stop counting, and a latched stop can be cleared.
+    The message and the graph arrive separately, and either can come first (24 Oct,
+    measured: in one process together; across processes the graph up to 30 ms ahead).
+    Both gaps err shut:
+
+    | Announcer | Its entries |
+    |---|---|
+    | heard, and in the graph | count |
+    | heard, not in the graph yet | count, for up to `grace` s (from a live writer) |
+    | heard, seen in the graph, now gone | forgotten: once Gazebo stops, a stop can be cleared |
+    | in the graph, not heard yet | a doubt (`unheard`): its announcement may say SIM |
     """
-    return [e for announcer, entries in announcements.items() if announcer in alive
-            for e in entries]
+
+    grace: float = 10.0
+    heard: Dict[str, Tuple[float, List[Entry]]] = field(default_factory=dict)
+    seen: Set[str] = field(default_factory=set)   # heard, then seen in the graph
+
+    def hear(self, announcer: str, entries: Sequence[Entry], now: float) -> None:
+        """Keep an announcement, heard at `now` (s, a steady clock)."""
+        self.heard[announcer] = (now, list(entries))
+        self.seen.discard(announcer)
+
+    def entries(self, alive: Collection[str], now: float) -> List[Entry]:
+        """Every entry that counts now; alive: the nodes publishing /system/source."""
+        self.seen |= set(alive) & self.heard.keys()
+        return [e for announcer, (time, entries) in self.heard.items()
+                if announcer in alive
+                or (announcer not in self.seen and now - time < self.grace)
+                for e in entries]
+
+    def unheard(self, alive: Collection[str]) -> List[str]:
+        """One doubt per node publishing /system/source whose announcement hasn't come."""
+        return [f'{a} publishes /system/source, its announcement not heard yet'
+                for a in sorted(set(alive) - self.heard.keys())]
 
 
 def foreign(entries: Iterable[Entry], expected: int) -> List[str]:
@@ -152,7 +181,8 @@ class Check:
 
 def check_sensors(expected: int, entries: Sequence[Entry],
                   publishers: Mapping[str, Sequence[str]],
-                  watched: Sequence[Tuple[str, str]] = SENSORS) -> Check:
+                  watched: Sequence[Tuple[str, str]] = SENSORS,
+                  unheard: Sequence[str] = ()) -> Check:
     """
     Check that each watched sensor topic comes from exactly one source: `expected`.
 
@@ -160,9 +190,10 @@ def check_sensors(expected: int, entries: Sequence[Entry],
     it now. A topic nobody publishes is absent, not a fault (the sensor watchdog minds
     silence). A publisher nobody announced counts as REAL: the car's stock drivers
     (ublox_gps, velodyne, usb_cam) can't announce, and a stand-in always does.
+    unheard: Announcers.unheard, doubts like the rest.
     """
     problems = foreign(entries, expected)
-    doubts = []
+    doubts = list(unheard)
     sensors = []
     for name, topic in watched:
         pubs = tuple(sorted(set(publishers.get(topic, ()))))
@@ -232,6 +263,7 @@ class Gate:
     stale_after: float = 3.0        # s: a quieter sensor mux closes the gate (waits)
     report: Optional[Report] = None
     entries: List[Entry] = field(default_factory=list)
+    unheard: List[str] = field(default_factory=list)   # Announcers.unheard: waits
     latched: Tuple[str, ...] = ()   # why it stopped, while latched
     clear_since: Optional[float] = None
 
@@ -255,6 +287,7 @@ class Gate:
             if not self.report.problems and not self.report.doubts:
                 problems.append('the sensor mux says no')
         problems += foreign(self.entries, self.expected)
+        waits += self.unheard
         return problems, waits
 
     def update(self, now: float) -> None:

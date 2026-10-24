@@ -37,7 +37,6 @@ drivers and the spine. The launch logs go to /tmp/aav-bench-check.log and, with 
 import bisect
 import math
 import os
-import random
 import signal
 import subprocess
 import sys
@@ -46,8 +45,13 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # A private domain and localhost only, set before rclpy starts: the check can't disturb a
-# car or another laptop, and nothing out there can disturb it.
-os.environ['ROS_DOMAIN_ID'] = os.environ.get('AAV_BENCH_DOMAIN', str(random.randint(150, 230)))
+# car or another laptop, and nothing out there can disturb it. One nobody on this
+# computer uses now (aav_io_mux domains): another run on the same domain would mix in.
+if 'AAV_BENCH_DOMAIN' in os.environ:
+    os.environ['ROS_DOMAIN_ID'] = os.environ['AAV_BENCH_DOMAIN']
+else:
+    from aav_io_mux.domains import free_domain
+    os.environ['ROS_DOMAIN_ID'] = str(free_domain())
 os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
 
 from aav_description import vehicle  # noqa: E402
