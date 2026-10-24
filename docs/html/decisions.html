@@ -473,9 +473,14 @@ answer.</p>
 <td>Ben, 23 Oct, for the hardware side</td>
 </tr>
 <tr>
-<td><strong>The cameras stream to the Orin with MediaMTX, compressed (H.264) on the Pi</strong>; the Orin unpacks them with NVIDIA's video hardware, then OpenCV and the object detector run on them, in one program per camera</td>
+<td><strong>The cameras stream to the Orin with MediaMTX, compressed (H.264) on the Pi</strong>; the Orin unpacks them with NVIDIA's video hardware, then OpenCV and the object detector (RF-DETR Nano, in TensorRT) run on them, in one program per camera</td>
 <td>The camera Pi already runs MediaMTX with no ROS, and stays as it is. H.264 is about 10 times smaller than JPEG; raw pictures (83 MB/s each) never cross the network. People can watch the same stream in a browser. The cost, a little more delay (5-10 cm at 1 m/s), is to measure. <code>camera_ros</code> (ROS on the Pi) stays the fallback (<a href="../../TODO.md">TODO 37b</a>)</td>
 <td>Ben, 23 Oct: "mediamtx on the pi to the orin seems like the best choice"</td>
+</tr>
+<tr>
+<td><strong>The detector is RF-DETR Nano</strong>, not YOLO</td>
+<td>In our comparison it saw the stop sign from 20 m (YOLO11n: 10 m) and found more people, with no false finds. Its licence is Apache-2.0; YOLO's is AGPL-3.0. Its cost: bigger weights, not yet timed on the Orin (<a href="model-comparison.html">newer models</a>)</td>
+<td>Ben, 23 Oct: "I thought we were skipping yolo and using the other one"</td>
 </tr>
 <tr>
 <td><strong>Goals count within 1.0 m and 0.75 rad</strong></td>
