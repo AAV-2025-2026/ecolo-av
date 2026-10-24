@@ -164,8 +164,12 @@ def launch_setup(context):
     if flag['hud']:
         actions.append(include('aav_hud', 'hud.launch.py'))
     if flag['foxglove']:
-        actions.append(Node(package='foxglove_bridge', executable='foxglove_bridge',
-                            name='foxglove_bridge', parameters=[{'port': 8765}]))
+        # This computer only, like the rest of the bench (tools/ros.sh --local), with the
+        # pretend camera's small preview, as camera_stream makes on the car.
+        actions.append(include('aav_bringup', 'foxglove.launch.py',
+                               foxglove_address='127.0.0.1', foxglove_port='8765',
+                               use_sim_time='false', foxglove_control='true',
+                               foxglove_topics='wifi', foxglove_preview='front_left'))
     if flag['rviz']:
         actions.append(Node(
             package='rviz2', executable='rviz2', name='rviz2',
@@ -195,7 +199,8 @@ def generate_launch_description():
         DeclareLaunchArgument('arm', default_value='true',
                               description='arm the spine after 12 s'),
         DeclareLaunchArgument('foxglove', default_value='false',
-                              description='foxglove_bridge on port 8765'),
+                              description='foxglove_bridge on 127.0.0.1:8765, for Lichtblick '
+                                          'or Foxglove (foxglove.launch.py)'),
         DeclareLaunchArgument('start_y', default_value='0.0',
                               description="m: start the car this far left of the road's centre"),
         DeclareLaunchArgument('start_yaw', default_value='0.0',

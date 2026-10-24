@@ -38,7 +38,9 @@ bench's argument names:
   map:=true           the map window (aav_hud_raylib, as pixi run map): Nav2's map, the
                       car, the plan, the distance left. Needs a screen
   foxglove:=true      foxglove_bridge on 127.0.0.1:8765, for Lichtblick or Foxglove on this
-                      computer: open ws://localhost:8765
+                      computer: open ws://localhost:8765 and a layout from tools/foxglove/
+                      (foxglove.launch.py: the car's topic list, and the front camera's
+                      preview where the world renders it; docs/foxglove.md)
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
   lidar:=false        no roof lidar. It's on by default (15 Oct): a simulated 16-beam
                       lidar on /sensors/lidar/points, which Nav2 reads as a 2D scan
@@ -213,10 +215,13 @@ def launch_setup(context):
     if flag['map']:
         actions.append(include(context, 'aav_hud_raylib', 'map.launch.py'))
     if flag['foxglove']:
-        # This computer only, like the rest of the simulator (tools/ros.sh --local).
-        actions.append(Node(package='foxglove_bridge', executable='foxglove_bridge',
-                            name='foxglove_bridge',
-                            parameters=[{'port': 8765, 'address': '127.0.0.1'}]))
+        # This computer only, like the rest of the simulator (tools/ros.sh --local), and
+        # the front camera's small preview where the world renders cameras, as on the car.
+        actions.append(include(context, 'aav_bringup', 'foxglove.launch.py',
+                               foxglove_address='127.0.0.1', foxglove_port=8765,
+                               use_sim_time=True, foxglove_control=True,
+                               foxglove_topics='wifi',
+                               foxglove_preview='front_left' if sensors else ''))
     if flag['rviz']:
         actions.append(Node(
             package='rviz2', executable='rviz2', name='rviz2',

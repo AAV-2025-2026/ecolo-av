@@ -24,7 +24,7 @@ twist_mux:
         timeout: 0.5
         priority: 100
       keyboard:                 # someone driving from a laptop: tools/keyboard.sh, or
-        topic: /drivers/keyboard/cmd_vel  # Foxglove's teleop panel set to this topic
+        topic: /drivers/keyboard/cmd_vel  # or Foxglove's teleop panel (stand-ins only)
         timeout: 0.5
         priority: 90
       tests:                    # aav_actuator_tests: READ-ME-TESTS.md stages 3-4 (pixi run
