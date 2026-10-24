@@ -77,19 +77,17 @@ there, and save a copy, without changing anything.</strong> This page is steps 2
 <a href="car-photos.html">Car photos</a>.</p>
 <div class="admonition warning">
 <p class="admonition-title">Read-only first</p>
-<pre><code>Look, copy and photograph. Don't install, upgrade, reflash, restart services, change
-the network, or drive. The "don't" list is at the end of this page.
-</code></pre>
+<p>Look, copy and photograph. Don't install, upgrade, reflash, restart services, change
+the network, or drive. The "don't" list is at the end of this page.</p>
 </div>
 <p><strong>The plan for the whole day</strong> (audit, network, our stack on the car):
 <a href="../../READ-ME-FRIDAY.md">READ-ME-FRIDAY.md</a>. <strong>Every question to answer:</strong>
 <a href="audit-questions.html">Friday's questions</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">After the backups: our stack, from a USB stick</p>
-<pre><code>If the team agrees, once a machine is backed up: [From a USB stick](car-install.md)
-puts our Jazzy in `~/aav-jazzy` with no internet and no sudo, and leaves Humble alone.
-Its `car_listen.sh` is read-only: it says which devices our drivers could open.
-</code></pre>
+<p>If the team agrees, once a machine is backed up: <a href="car-install.html">From a USB stick</a>
+puts our Jazzy in <code>~/aav-jazzy</code> with no internet and no sudo, and leaves Humble alone.
+Its <code>car_listen.sh</code> is read-only: it says which devices our drivers could open.</p>
 </div></div>
 <section class="card"><h2 id="the-day-in-one-picture">The day in one picture</h2>
 <pre class="highlight"><code class="language-text"> 1. Safe and powered  →  2. Find each machine  →  3. Back it up  →  4. Read-only checks
@@ -153,11 +151,10 @@ Its `car_listen.sh` is read-only: it says which devices our drivers could open.
 <section class="card"><h2 id="remember-the-car-speaks-humble-not-our-names">Remember: the car speaks Humble, not our names</h2>
 <div class="admonition note">
 <p class="admonition-title">Use ros2 topic list; don't assume our names</p>
-<pre><code>The car runs the 2025-26 software on **ROS 2 Humble**, with **its own topic names**
-(such as `/gps/fix`, `/cmd_vel`). Our names, like `/sensors/gps/fix`, only exist in our
-Jazzy code. On the car, list what is really there with `ros2 topic list -t`, and write
-down the names you see. Humble and Jazzy don't mix: don't run our stack against it.
-</code></pre>
+<p>The car runs the 2025-26 software on <strong>ROS 2 Humble</strong>, with <strong>its own topic names</strong>
+(such as <code>/gps/fix</code>, <code>/cmd_vel</code>). Our names, like <code>/sensors/gps/fix</code>, only exist in our
+Jazzy code. On the car, list what is really there with <code>ros2 topic list -t</code>, and write
+down the names you see. Humble and Jazzy don't mix: don't run our stack against it.</p>
 </div>
 </section>
 <section class="card"><h2 id="what-to-bring">What to bring</h2>
@@ -414,20 +411,18 @@ sudo dd if=/dev/rdiskN bs=4m | gzip &gt; ~/aav-backup/&lt;machine&gt;.img.gz</co
 <h3 id="the-block-for-every-linux-machine">The block for every Linux machine</h3>
 <div class="admonition note">
 <p class="admonition-title">The logins, from the Keychain (20 Oct)</p>
-<pre><code>Each line of `~/aav-audit/hosts.txt` may name a Keychain entry as its third column
-(`JETSON aavjetson@192.168.1.140 aav-jetson`). The survey then gets that machine's
-password from the Mac's Keychain itself (`tools/keychain_askpass.sh`): nobody copies
+<p>Each line of <code>~/aav-audit/hosts.txt</code> may name a Keychain entry as its third column
+(<code>JETSON aavjetson@192.168.1.140 aav-jetson</code>). The survey then gets that machine's
+password from the Mac's Keychain itself (<code>tools/keychain_askpass.sh</code>): nobody copies
 passwords, and none is ever written to a file. Add an entry with
-`security add-generic-password -s aav-jetson -a aavjetson -w` (it asks).
-</code></pre>
+<code>security add-generic-password -s aav-jetson -a aavjetson -w</code> (it asks).</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Now a script: <code>pixi run survey</code></p>
-<pre><code>[FRIDAY-TODO.md](../FRIDAY-TODO.md) part 2: `tools/machine_survey.sh` does all of the block
+<p><a href="../../FRIDAY-TODO.md">FRIDAY-TODO.md</a> part 2: <code>tools/machine_survey.sh</code> does all of the block
 below and more (boot scripts, who holds each device, camera and power errors, code and
-weights found only here), on every machine in `~/aav-audit/hosts.txt`. The block below
-stays as the by-hand version.
-</code></pre>
+weights found only here), on every machine in <code>~/aav-audit/hosts.txt</code>. The block below
+stays as the by-hand version.</p>
 </div>
 <p>Save this as <code>audit.sh</code> <strong>on your laptop</strong>, then run it from the laptop:</p>
 <pre class="highlight"><code class="language-bash">ssh &lt;user&gt;@&lt;ip&gt; 'bash -s' &lt; audit.sh &gt; ~/aav-audit/&lt;switch label&gt;.txt 2&gt;&amp;1</code></pre>
@@ -976,11 +971,10 @@ stay out of git; pick a few small ones for <code>docs/img/car/</code> afterwards
 day answered.</p>
 <div class="admonition warning">
 <p class="admonition-title">No secrets in the write-up</p>
-<pre><code>Before you commit, search the file:
-`grep -n -i -E "pass|psk|token|secret|key|ntrip" docs/history/audit-2026-10-16-car.md`.
+<p>Before you commit, search the file:
+<code>grep -n -i -E "pass|psk|token|secret|key|ntrip" docs/history/audit-2026-10-16-car.md</code>.
 For each hit, write only where the secret is and what kind it is (as
-[Older code](older-code.md) does). The raw outputs in `~/aav-audit/` stay off git.
-</code></pre>
+<a href="older-code.html">Older code</a> does). The raw outputs in <code>~/aav-audit/</code> stay off git.</p>
 </div>
 <p>Commit the page on its own branch, then <code>pixi run docs</code> if you link it from a page.</p>
 </section>

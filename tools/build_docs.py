@@ -147,12 +147,29 @@ def loosen(text):
     return '\n'.join(out) + '\n'
 
 
+def callouts(text):
+    """
+    Indent each `!!! note` box's body by two spaces, not four.
+
+    The pages indent a box's body by four spaces, as MkDocs does; with tab_length 2
+    that read as a code block inside the box (found 24 Oct). Fences inside move with it.
+    """
+    out, inside = [], False
+    for line in text.splitlines():
+        if line.startswith('!!! '):
+            inside = True
+        elif inside and line.strip() and not line.startswith('    '):
+            inside = False
+        out.append(line[2:] if inside and line.startswith('    ') else line)
+    return '\n'.join(out) + '\n'
+
+
 def convert(text):
     md = markdown.Markdown(
         extensions=['tables', 'attr_list', 'def_list', 'md_in_html', 'sane_lists', 'toc',
                     'admonition', 'pymdownx.superfences'],
         tab_length=2)  # our lists nest by two spaces
-    return md.convert(loosen(text))
+    return md.convert(loosen(callouts(text)))
 
 
 def fix_links(body, pdf=False):

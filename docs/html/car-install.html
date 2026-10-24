@@ -76,9 +76,8 @@ sudo</strong>, and <strong>without touching</strong> the 2025-26 Humble software
 <code>~/aav-jazzy</code>. Deleting that folder undoes everything.</p>
 <div class="admonition warning">
 <p class="admonition-title">Not on the car yet</p>
-<pre><code>The kit is made and checked on a Mac. The install itself is [[untested]] on ARM Linux:
-Friday is its first run. Do the [audit](audit-friday.md) first: back up, then install.
-</code></pre>
+<p>The kit is made and checked on a Mac. The install itself is <span class="badge b-untested">untested</span> on ARM Linux:
+Friday is its first run. Do the <a href="audit-friday.html">audit</a> first: back up, then install.</p>
 </div></div>
 <section class="card"><h2 id="the-plan-in-one-picture">The plan in one picture</h2>
 <pre class="highlight"><code class="language-text">  Mac (internet)                    USB stick                 car computer (no internet)
@@ -273,10 +272,9 @@ bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --dry-run</code></pre>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">What it never touches</p>
-<pre><code>`sudo`, `/opt/ros` (Humble), `~/.bashrc`, `~/.cargo`, system services, the network
-settings. Everything is in `~/aav-jazzy`. Only `--screens` adds files outside it:
-two systemd *user* units and an autostart entry in `~/.config`.
-</code></pre>
+<p><code>sudo</code>, <code>/opt/ros</code> (Humble), <code>~/.bashrc</code>, <code>~/.cargo</code>, system services, the network
+settings. Everything is in <code>~/aav-jazzy</code>. Only <code>--screens</code> adds files outside it:
+two systemd <em>user</em> units and an autostart entry in <code>~/.config</code>.</p>
 </div>
 </section>
 <section class="card"><h2 id="4-look-read-only-car_listen">4. Look, read-only: car_listen</h2>
@@ -353,9 +351,8 @@ theirs never see each other: no mixed Humble and Jazzy messages, no topic clashe
 terminal set (<code>AMENT_PREFIX_PATH</code>, <code>PYTHONPATH</code>...). Pixi and cargo never go online.</p>
 <div class="admonition warning">
 <p class="admonition-title">Before <code>car</code></p>
-<pre><code>Wheels off the ground, the e-stop in a hand, and the 2025-26 software stopped
-([Platforms](platforms.md), "The first hardware test"). Not on Friday's audit.
-</code></pre>
+<p>Wheels off the ground, the e-stop in a hand, and the 2025-26 software stopped
+(<a href="platforms.html">Platforms</a>, "The first hardware test"). Not on Friday's audit.</p>
 </div>
 </section>
 <section class="card"><h2 id="undo">Undo</h2>

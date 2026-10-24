@@ -183,9 +183,8 @@ actuator. The output mux's guard test checks this, in Rust and in Python.</p>
 </table></div>
 <div class="admonition warning">
 <p class="admonition-title">Give every machine the same <code>actuators:=</code></p>
-<pre><code>`actuators:=can` on the Orin and `uart` on the Motor Pi would start two backends. The
-wiring makes it moot (the ESP32 listens on one link), but don't mix them.
-</code></pre>
+<p><code>actuators:=can</code> on the Orin and <code>uart</code> on the Motor Pi would start two backends. The
+wiring makes it moot (the ESP32 listens on one link), but don't mix them.</p>
 </div>
 <p>The 2025-26 UDP wheel encoder (<code>encoder_udp</code>, a Pico 2) is off in <code>motor_pi.yaml</code>: the
 wheels are on CAN now, and two <code>/vehicle/odom</code> publishers would stop the output mux.</p>
@@ -338,10 +337,9 @@ see <a href="esp32-bench.html">First flash on the bench</a>. Open questions for 
 </table></div>
 <div class="admonition note">
 <p class="admonition-title">Rust on an ESP32</p>
-<pre><code>The ESP32 and ESP32-S3 use Xtensa cores. Rust needs Espressif's toolchain
-(`espup`), not the stock one in Pixi. It is well supported: `esp-hal` has Embassy and a
-CAN (TWAI) driver.
-</code></pre>
+<p>The ESP32 and ESP32-S3 use Xtensa cores. Rust needs Espressif's toolchain
+(<code>espup</code>), not the stock one in Pixi. It is well supported: <code>esp-hal</code> has Embassy and a
+CAN (TWAI) driver.</p>
 </div>
 </section>
 <section class="card"><h2 id="still-to-confirm-from-the-pdf">Still to confirm (from the PDF)</h2>

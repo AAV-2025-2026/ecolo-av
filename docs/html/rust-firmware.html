@@ -219,10 +219,9 @@ Since 24 Oct it boots in Espressif's QEMU, and brakes there when the Motor-Pi's 
 heartbeat stops though the frames still come (<a href="#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>).</p>
 <div class="admonition warning">
 <p class="admonition-title">The C++ stays</p>
-<pre><code>The car runs `firmware/legacy/aav_umod_esp32` today. It stays in the repo, and on the
+<p>The car runs <code>firmware/legacy/aav_umod_esp32</code> today. It stays in the repo, and on the
 car, until the Rust program has been flashed and proven on the car
-([First flash on the bench](esp32-bench.md)). Only then is the C++ removed.
-</code></pre>
+(<a href="esp32-bench.html">First flash on the bench</a>). Only then is the C++ removed.</p>
 </div>
 <pre class="highlight"><code class="language-text">                       one CommandLink trait (spine-board)
 Motor-Pi ── UART, v2 frames ───────► LegacyLink ─┐
@@ -390,10 +389,9 @@ open loop.</p>
 </table></div>
 <div class="admonition warning">
 <p class="admonition-title">Where does the CAN transceiver connect?</p>
-<pre><code>SparkFun's schematic of the ESP32 MicroMod has **no net on MicroMod's CAN pads**
+<p>SparkFun's schematic of the ESP32 MicroMod has <strong>no net on MicroMod's CAN pads</strong>
 (41, 43). If the carrier wires U7 to those pads, CAN never reaches the ESP32. Find
-where U7's TXD and RXD go before using `can`. GPIO 25 and 26 are free, and are a guess.
-</code></pre>
+where U7's TXD and RXD go before using <code>can</code>. GPIO 25 and 26 are free, and are a guess.</p>
 </div>
 <h3 id="the-toolchain-installed-15-oct">The toolchain (installed 15 Oct)</h3>
 <p>The ESP32 is Xtensa: the stock Rust, and Pixi's, can't build for it. <code>pixi run esp-tools</code>

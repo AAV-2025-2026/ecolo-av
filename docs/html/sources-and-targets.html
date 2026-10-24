@@ -77,17 +77,18 @@ from, and the <strong>output mux</strong> sends ego's commands to one target, th
 everything is real. Package <code>aav_io_mux</code>, built 23 Oct.</p>
 <div class="admonition note">
 <p class="admonition-title">The short version</p>
-<pre><code>- **Source:** where the sensor data comes from: `real`, `sim`, `bench` or `replay`.
-- **Target:** who plays the car: `car`, `gazebo`, `bench`, `turtle` or `carla`.
-- Every backend reads only its own target's topic, `/control/&lt;target&gt;/actuator_cmd`.
-  Nothing reads `/ego/actuator_cmd` directly any more.
-- The real car's topic carries commands only while **every** source is REAL. One SIM
-  or BENCH anywhere on the network, and it goes silent, **latched**: the car brakes.
-- Reopen it, once the cause is gone: `pixi run gate-clear` (the service
-  `/safety/output_mux/clear`).
-- The HUD shows it (24 Oct): a red **STOP** with the reason, such as "GPS is SIM";
-  amber **WAIT**; green **GO** ([HUD](hud.md#may-the-car-move-the-go-stop-panel)).
-</code></pre>
+<ul>
+<li><strong>Source:</strong> where the sensor data comes from: <code>real</code>, <code>sim</code>, <code>bench</code> or <code>replay</code>.</li>
+<li><strong>Target:</strong> who plays the car: <code>car</code>, <code>gazebo</code>, <code>bench</code>, <code>turtle</code> or <code>carla</code>.</li>
+<li>Every backend reads only its own target's topic, <code>/control/&lt;target&gt;/actuator_cmd</code>.
+  Nothing reads <code>/ego/actuator_cmd</code> directly any more.</li>
+<li>The real car's topic carries commands only while <strong>every</strong> source is REAL. One SIM
+  or BENCH anywhere on the network, and it goes silent, <strong>latched</strong>: the car brakes.</li>
+<li>Reopen it, once the cause is gone: <code>pixi run gate-clear</code> (the service
+  <code>/safety/output_mux/clear</code>).</li>
+<li>The HUD shows it (24 Oct): a red <strong>STOP</strong> with the reason, such as "GPS is SIM";
+  amber <strong>WAIT</strong>; green <strong>GO</strong> (<a href="hud.html#may-the-car-move-the-go-stop-panel">HUD</a>).</li>
+</ul>
 </div></div>
 <section class="card"><h2 id="the-picture">The picture</h2>
 <pre class="highlight"><code class="language-text"> sources                       checked by                    targets
@@ -403,12 +404,11 @@ own. The frame: <a href="rust-firmware.html#the-heartbeat-version-2-of-the-seria
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Two runs on one ROS domain see each other</p>
-<pre><code>On 24 Oct a guard test's REAL `spine_bridge`, on the same random domain as a Gazebo
-check (193), latched that check's output mux. The guard test, `sim_check.py` and
-`bench_check.py` now take a domain nobody on the computer uses
-(`aav_io_mux/domains.py`: a probe node sees no other node or topic for 1.5 s). The
-guard test also fails, naming them, if another run's nodes turn up later.
-</code></pre>
+<p>On 24 Oct a guard test's REAL <code>spine_bridge</code>, on the same random domain as a Gazebo
+check (193), latched that check's output mux. The guard test, <code>sim_check.py</code> and
+<code>bench_check.py</code> now take a domain nobody on the computer uses
+(<code>aav_io_mux/domains.py</code>: a probe node sees no other node or topic for 1.5 s). The
+guard test also fails, naming them, if another run's nodes turn up later.</p>
 </div>
 </section>
 <section class="card"><h2 id="tests">Tests</h2>

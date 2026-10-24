@@ -201,9 +201,8 @@ shows the big picture. Read that one first if you haven't.</p></div>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Where do our corrections come from?</p>
-<pre><code>Not known yet. The switch has a port labelled **RTK-PI**, so the 2025-26 car probably
-had a corrections setup. Friday's audit should find out ([Car photos](car-photos.md)).
-</code></pre>
+<p>Not known yet. The switch has a port labelled <strong>RTK-PI</strong>, so the 2025-26 car probably
+had a corrections setup. Friday's audit should find out (<a href="car-photos.html">Car photos</a>).</p>
 </div>
 </section>
 <section class="card"><h2 id="3-our-receiver-u-blox-zed-f9r">3. Our receiver: u-blox ZED-F9R</h2>
@@ -245,9 +244,8 @@ had a corrections setup. Friday's audit should find out ([Car photos](car-photos
 KEFC plan replaces it with a board that has a screw-on antenna connector.</p>
 <div class="admonition warning">
 <p class="admonition-title">Never tried with our code</p>
-<pre><code>Our GPS driver (`ublox_gps`) has **never run** with this receiver. Friday's audit
-checks the first step: is there any data at all?
-</code></pre>
+<p>Our GPS driver (<code>ublox_gps</code>) has <strong>never run</strong> with this receiver. Friday's audit
+checks the first step: is there any data at all?</p>
 </div>
 <h3 id="the-driver-three-choices">The driver: three choices</h3>
 <p><code>sensors.launch.py gps_driver:=...</code> picks one. Each publishes <code>/sensors/gps/fix</code>.</p>
@@ -590,9 +588,8 @@ the real receiver, once we have logs from it (Q18).</p>
 and y near 11.</p>
 <div class="admonition note">
 <p class="admonition-title">Nothing on the topic?</p>
-<pre><code>`ublox_dgnss` publishes best effort. Add `--qos-reliability best_effort` to
-`ros2 topic echo`. Indoors, a real receiver has no fix at all: go outside.
-</code></pre>
+<p><code>ublox_dgnss</code> publishes best effort. Add <code>--qos-reliability best_effort</code> to
+<code>ros2 topic echo</code>. Indoors, a real receiver has no fix at all: go outside.</p>
 </div>
 </section>
 <section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
