@@ -12,6 +12,7 @@ The reasons for each choice: [decisions](docs/decisions.md#decided-on-22-and-23-
 | # | Task | Status |
 |---|---|---|
 | 28 | Cyclone DDS the default on every computer | ✅ `pixi.toml`, `tools/ros.sh`, `pixi run doctor`, the docs. To check at the car: it uses one network card |
+| 28b | Cyclone's limit of 32 ROS programs per computer (found 23 Oct on Linux: Gazebo's 33rd, the sensor watchdog, failed) | ✅ `tools/cyclonedds.xml` raises it to 120. oirp-spss: 45 test programs, 13 refused before, 0 after; `sim-check --obstacle`, `--spine`, `--plan-around` pass, `--faults` 24 of 25 (`odom freeze`, the known flake); colcon's 4 failures there are the HUD it can't build (no libclang) |
 | 29 | The GPS antenna over the rear axle in `vehicle.yaml` (x = 0) | ✅ its height still to measure (S1) |
 | 30 | The wheel sensors: an Arduino sends CAN frames, the Orin decodes them (PLAN D2) | ✅ decided; the frames are `aav.dbc` 0x200, 0x201 |
 | 31 | Fix the nightly Gazebo test (failed on its first night, 23 Oct) | ✅ merged: software graphics on GitHub, and the scripted drive keeps the simulator's time (task 23). First GitHub run: the night of 23 Oct |
