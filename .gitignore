@@ -54,6 +54,8 @@ yarn-error.log*
 
 # The USB kit for the car's computers (pixi run car-kit): made again in a minute
 /car-kit/
+# What the laptop takes to the car (pixi run car-day-build): the ESP32 firmware, its logs
+/car-day/
 
 # Drives recorded with tools/record.sh, and logs
 /bags/

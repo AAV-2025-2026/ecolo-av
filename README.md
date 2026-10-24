@@ -8,6 +8,10 @@ Jetson AGX Orin and the Raspberry Pis); Pixi on Macs and other Linux machines.
 
 > **The plan for the year:** [PROPOSAL.md](PROPOSAL.md): everything done so far, what's left, how sure we are. What's left to build, in order: [PLAN.md](PLAN.md).
 >
+> **Car day:** [READ-ME-CAR-DAY.md](READ-ME-CAR-DAY.md), the runbook: ten sessions at the
+> car, in order, each with who, how long, the commands and what you should see. Before you
+> leave: `pixi run car-day-build`, then `pixi run car-day-check` until it says 0 missing.
+>
 > **This Friday (16 Oct):** [FRIDAY-TODO.md](FRIDAY-TODO.md), the tick-list: log in to every
 > machine and survey it. [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md): the audit, the network,
 > and our stack on the car, step by step.
