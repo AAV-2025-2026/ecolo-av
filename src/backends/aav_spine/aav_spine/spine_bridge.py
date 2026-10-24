@@ -34,6 +34,14 @@ output mux) stops, the bridge stops sending and the spine's own watchdog brakes 
 Arming always sends a few armed=0 frames before armed=1: the spine only arms on
 that edge. It also clears latches the bridge can't see (a hardware e-stop, a
 command timeout, a driver fault, a spine reboot).
+
+role:=spine (the default) is all of the above. role:=sensors is for a car driven another
+way (today's: the ESP32, through the Motor Pi's UART; docs/can-plan.md). The node only
+reads the wheel nodes' frames: no can/tx, no safety/estop, no spine/arm, no timers, and
+none of vehicle/status, joint_states, steering, throttle, brake. vehicle/odom comes from
+the wheels alone (their mean while both are fresh; no yaw rate: the steering angle isn't
+on the bus), and system/source names only odometry and wheels. It still reads
+control/<target>/actuator_cmd, only to sign a wheel that sends a magnitude.
 """
 
 import math
@@ -41,6 +49,7 @@ import signal
 
 from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
 from aav_interfaces.msg import WheelSpeeds
+from aav_spine import bridges
 from aav_spine import can_codec as cc
 from aav_spine import wheel_speed as ws
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -64,7 +73,10 @@ COMMANDS = {'real': 'control/car/actuator_cmd', 'bench': 'control/bench/actuator
 ANNOUNCED = (('vehicle', '/vehicle/status'), ('odometry', '/vehicle/odom'),
              ('steering', '/vehicle/steering'), ('throttle', '/vehicle/throttle'),
              ('brake', '/vehicle/brake'), ('wheels', '/vehicle/wheels'))
+# In role sensors: the wheels only, never the actuators.
+ANNOUNCED_SENSORS = (('odometry', '/vehicle/odom'), ('wheels', '/vehicle/wheels'))
 NAN = float('nan')
+UNKNOWN = 1e3   # the covariance of what isn't measured
 
 
 class SpineBridge(Node):
@@ -86,6 +98,9 @@ class SpineBridge(Node):
         source = self.declare_parameter('source', 'real').value
         if source not in SOURCES:
             raise ValueError(f'source:={source}: use one of {sorted(SOURCES)}')
+        self.role = self.declare_parameter('role', bridges.ROLES[0]).value
+        bridges.check_role(self.role)
+        self.sends = self.role == 'spine'
 
         self.cmd = None
         self.cmd_time = None
@@ -97,30 +112,37 @@ class SpineBridge(Node):
         self.bad_frames = 0
         self.wheels = ws.FrontWheels(wheel_timeout)
 
-        self.to_can = self.create_publisher(Frame, 'can/tx', 50)
         self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
-        self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
         self.wheel_pub = self.create_publisher(WheelSpeeds, 'vehicle/wheels', 10)
-        self.joint_pub = self.create_publisher(JointState, 'vehicle/joint_states', 10)
-        self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
-        self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
-        self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
         latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                              durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.source_pub = self.create_publisher(DataSource, 'system/source', latched)
+        # In role sensors, only to sign a wheel that sends a magnitude.
         self.create_subscription(AckermannDriveStamped, COMMANDS[source], self.on_cmd, 10)
-        self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
         self.create_subscription(Frame, 'can/rx', self.on_frame, 100)
-        self.create_service(SetBool, 'spine/arm', self.on_arm)
-        self.create_timer(1.0 / drive_hz, self.send_drive)
-        self.create_timer(1.0 / estop_hz, self.send_estop)
-        self.announce(SOURCES[source])
+        if self.sends:
+            self.to_can = self.create_publisher(Frame, 'can/tx', 50)
+            self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
+            self.joint_pub = self.create_publisher(JointState, 'vehicle/joint_states', 10)
+            self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
+            self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
+            self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
+            self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
+            self.create_service(SetBool, 'spine/arm', self.on_arm)
+            self.create_timer(1.0 / drive_hz, self.send_drive)
+            self.create_timer(1.0 / estop_hz, self.send_estop)
+        else:
+            # Only the wheel nodes count: a spine's frames are not this role's.
+            self.FROM_BUS = cc.WHEEL_SPEED_IDS
+            self.get_logger().info(
+                'role sensors: reading the wheel nodes only; nothing is sent on CAN')
+        self.announce(SOURCES[source], ANNOUNCED if self.sends else ANNOUNCED_SENSORS)
 
-    def announce(self, kind):
+    def announce(self, kind, announced):
         """Say once, latched, where this node's data comes from (/system/source)."""
         msg = DataSource(announcer=self.get_name())
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.sensors = [SensorSource(name=n, topic=t, source=kind) for n, t in ANNOUNCED]
+        msg.sensors = [SensorSource(name=n, topic=t, source=kind) for n, t in announced]
         self.source_pub.publish(msg)
 
     def actuator(self, stamp, command, measured):
@@ -229,6 +251,30 @@ class SpineBridge(Node):
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = 'base_link'
         self.wheel_pub.publish(msg)
+        # Role sensors: no spine sends VEHICLE_FEEDBACK, so the wheels alone give
+        # /vehicle/odom, while both are fresh (else nothing: the watchdog sees it stop).
+        # No steering angle on this bus: the front mean as it is, and no yaw rate (the EKF
+        # takes it from the IMU).
+        front = r.mean()
+        if not self.sends and front is not None:
+            self.publish_odom(msg.header.stamp, front, None)
+
+    def publish_odom(self, stamp, speed, yaw_rate):
+        """Publish /vehicle/odom: base_link's speed, and its yaw rate if known (else None)."""
+        odom = Odometry()
+        odom.header.stamp = stamp
+        odom.header.frame_id = 'odom'
+        odom.child_frame_id = 'base_link'
+        odom.twist.twist.linear.x = speed
+        odom.twist.twist.angular.z = 0.0 if yaw_rate is None else yaw_rate
+        cov = [0.0] * 36
+        cov[0] = self.speed_var          # vx
+        cov[7] = 1e-4                    # vy: a car doesn't slide sideways
+        cov[14] = cov[21] = cov[28] = UNKNOWN  # vz, roll and pitch rates: not measured
+        cov[35] = UNKNOWN if yaw_rate is None else self.yaw_rate_var
+        odom.twist.covariance = cov
+        odom.pose.covariance = [UNKNOWN if i % 7 == 0 else 0.0 for i in range(36)]
+        self.odom_pub.publish(odom)
 
     def publish_feedback(self, v):
         self.feedback = v
@@ -236,20 +282,7 @@ class SpineBridge(Node):
         steer = v['measured_steering_angle']
         front = self.wheels.reading(self.now_s(), self.drive_sign()).mean()
         speed = v['measured_speed'] if front is None else ws.rear_axle_speed(front, steer)
-        odom = Odometry()
-        odom.header.stamp = now
-        odom.header.frame_id = 'odom'
-        odom.child_frame_id = 'base_link'
-        odom.twist.twist.linear.x = speed
-        odom.twist.twist.angular.z = speed * math.tan(steer) / self.wheelbase
-        cov = [0.0] * 36
-        cov[0] = self.speed_var          # vx
-        cov[7] = 1e-4                    # vy: a car doesn't slide sideways
-        cov[14] = cov[21] = cov[28] = 1e3  # vz, roll and pitch rates: not measured
-        cov[35] = self.yaw_rate_var      # yaw rate
-        odom.twist.covariance = cov
-        odom.pose.covariance = [1e3 if i % 7 == 0 else 0.0 for i in range(36)]
-        self.odom_pub.publish(odom)
+        self.publish_odom(now, speed, speed * math.tan(steer) / self.wheelbase)
 
         js = JointState()
         js.header.stamp = now

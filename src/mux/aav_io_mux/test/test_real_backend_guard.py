@@ -10,6 +10,8 @@ one (aav_spine_bridge, the default) as its own program. Ego's commands go in on
   all REAL                      -> DRIVE_CMD frames flow
   Gazebo announces SIM as well  -> no DRIVE_CMD frame at all, and the output mux says STOP
   a simulator's own ego         -> spine_bridge doesn't even listen to /ego/actuator_cmd
+  role sensors (only the wheel  -> the mux still opens, and not one frame on /can/tx (no
+  nodes on CAN: can-plan.md)       publisher there at all); it announces only the wheels
 """
 
 import os
@@ -51,10 +53,10 @@ START = 20.0
 class Run:
     """The muxes, a spine_bridge and a test node, spun together."""
 
-    def __init__(self, gazebo=False, bridge='python'):
+    def __init__(self, gazebo=False, bridge='python', role='spine'):
         os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
         domain = random.randint(150, 230)
-        rclpy.init(args=ARGS, domain_id=domain)
+        rclpy.init(args=ARGS + ['-p', f'spine_bridge:role:={role}'], domain_id=domain)
         self.executor = SingleThreadedExecutor()
         self.nodes = [SensorMux(), OutputMux()]
         self.process = None
@@ -65,15 +67,18 @@ class Run:
                                    'aav_spine_bridge', 'spine_bridge')
             env = dict(os.environ, ROS_DOMAIN_ID=str(domain))
             self.process = subprocess.Popen(
-                [program, '--ros-args', '-p', 'source:=real'], env=env,
+                [program, '--ros-args', '-p', 'source:=real', '-p', f'role:={role}'], env=env,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         self.test = rclpy.create_node('guard_test')
         self.nodes.append(self.test)
         self.drive_frames = 0
+        self.can_frames = 0
+        self.announced = {}
         self.state = ''
         self.ego = self.test.create_publisher(AckermannDriveStamped, '/ego/actuator_cmd', 10)
         self.test.create_subscription(Frame, '/can/tx', self.on_frame, 100)
         self.test.create_subscription(String, '/safety/output_mux/state', self.on_state, 10)
+        self.test.create_subscription(DataSource, '/system/source', self.on_source, LATCHED)
         if gazebo:
             # As gazebo_adapter announces: under its name, so it counts as alive.
             self.gazebo = rclpy.create_node('gazebo_adapter')
@@ -101,7 +106,18 @@ class Run:
             assert self.process.poll() is None, 'the Rust spine_bridge stopped'
             self.executor.spin_once(timeout_sec=0.1)
 
+    def bridge_publishers(self):
+        try:
+            return {name for name, _ in
+                    self.test.get_publisher_names_and_types_by_node('spine_bridge', '/')}
+        except Exception:   # not discovered yet
+            return set()
+
+    def on_source(self, msg):
+        self.announced[msg.announcer] = {s.name for s in msg.sensors}
+
     def on_frame(self, f):
+        self.can_frames += 1
         if f.id == cc.DRIVE_CMD_ID:
             self.drive_frames += 1
 
@@ -163,3 +179,16 @@ def test_the_real_backend_never_hears_ego_directly(run):
     topics = run.bridge_topics()
     assert '/ego/actuator_cmd' not in topics
     assert '/control/car/actuator_cmd' in topics
+
+
+@pytest.mark.parametrize('run', [{'bridge': b, 'role': 'sensors'} for b in BRIDGES],
+                         indirect=True, ids=BRIDGES)
+def test_the_can_sensors_path_never_drives(run):
+    # Today's wiring: legacy_uart_bridge drives through the Motor Pi, and the Orin's CAN
+    # bus has only sensors on it, so its spine_bridge only listens, and no actuator.
+    run.drive(4.0)
+    assert run.state == 'OPEN - car: every source REAL'
+    assert run.can_frames == 0
+    assert '/can/tx' not in run.bridge_publishers()
+    assert '/vehicle/odom' in run.bridge_publishers()
+    assert run.announced.get('spine_bridge') == {'odometry', 'wheels'}

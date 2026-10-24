@@ -12,13 +12,17 @@
 //! - [`Bridge::set_estop`], [`Bridge::estop_frame`]: ESTOP_CMD, at once on a change and
 //!   as a 10 Hz heartbeat;
 //! - [`Bridge::receive`]: VEHICLE_FEEDBACK, VEHICLE_STATUS and the front wheel nodes'
-//!   WHEEL_SPEED_L and WHEEL_SPEED_R, into [`Update`]s.
+//!   WHEEL_SPEED_L and WHEEL_SPEED_R, into [`Update`]s;
+//! - [`Role`]: `Spine` does all of that. `Sensors` only listens to the wheel nodes and
+//!   never sends, for a car driven another way (today's: the ESP32, through the Motor
+//!   Pi's UART; docs/can-plan.md).
 
 mod bridge;
 pub mod wheels;
 
 pub use bridge::{
-    ArmError, Arming, BadFrame, Bridge, Command, Drive, Geometry, Motion, Settings, Status, Update,
+    ArmError, Arming, BadFrame, Bridge, Command, Drive, Geometry, Motion, Role, Settings, Status,
+    UnknownRole, Update,
 };
 pub use spine_core::protocol::{DriveCmd, EstopCmd, Mode, DRIVE_CMD_ID, ESTOP_CMD_ID};
 pub use wheels::{Direction, Reading, Side};

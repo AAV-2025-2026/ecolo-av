@@ -4,13 +4,14 @@
 use std::time::Duration;
 
 use spine_bridge::{
-    ArmError, Arming, Bridge, Command, Drive, Geometry, Motion, Reading, Settings, Update,
+    ArmError, Arming, Bridge, Command, Drive, Geometry, Motion, Reading, Role, Settings, Update,
 };
 use spine_core::protocol::{
     VehicleFeedback, Wheel, WheelSpeed, VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID,
 };
 
 const SETTINGS: Settings = Settings {
+    role: Role::Spine,
     geometry: Geometry {
         wheelbase: 1.57,
         track: 0.77,
@@ -261,4 +262,86 @@ fn bad_frames_are_counted_and_others_ignored() {
     // Someone else's frame on the bus is not an error.
     assert_eq!(bridge.receive(0x123, &[1, 2, 3], ms(0)), Ok(None));
     assert_eq!(bridge.bad_frames(), 2);
+}
+
+// Role sensors: the car is driven through the Motor Pi's UART, and the Orin only reads the
+// wheel nodes on its CAN bus (docs/can-plan.md, "Today's wiring").
+
+const SENSORS: Settings = Settings {
+    role: Role::Sensors,
+    ..SETTINGS
+};
+
+fn status_frame() -> [u8; 8] {
+    spine_core::protocol::VehicleStatus {
+        mode: spine_core::protocol::Mode::Computer,
+        armed: true,
+        estop_active: false,
+        throttle: 25.0,
+        brake: 0.0,
+        faults: 0,
+        counter: 0,
+    }
+    .encode()
+}
+
+#[test]
+fn the_role_parameter_names_spine_or_sensors() {
+    assert_eq!("spine".parse(), Ok(Role::Spine));
+    assert_eq!("sensors".parse(), Ok(Role::Sensors));
+    let wrong = "drive".parse::<Role>().expect_err("not a role");
+    assert_eq!(
+        wrong.to_string(),
+        r#"role:=drive: use one of ["spine", "sensors"]"#
+    );
+    assert_eq!(Role::default(), Role::Spine);
+    assert!(Role::Spine.sends() && !Role::Sensors.sends());
+}
+
+#[test]
+fn sensors_never_make_a_drive_frame() {
+    let mut bridge = Bridge::new(SENSORS);
+    bridge.command(
+        Command {
+            speed: 1.0,
+            ..Command::default()
+        },
+        ms(0),
+    );
+    bridge.arm(true).ok();
+    assert!((0..10).all(|_| bridge.drive(ms(0)) == Drive::NoCommand));
+}
+
+#[test]
+fn sensors_read_the_wheels_and_ignore_a_spines_frames() {
+    let mut bridge = Bridge::new(SENSORS);
+    assert_eq!(
+        bridge.receive(VEHICLE_FEEDBACK_ID, &feedback(1.0, 0.2), ms(0)),
+        Ok(None)
+    );
+    assert_eq!(
+        bridge.receive(VEHICLE_STATUS_ID, &status_frame(), ms(0)),
+        Ok(None)
+    );
+    wheels(&mut bridge, Wheel::Left, 0.8, ms(0));
+    let r = wheels(&mut bridge, Wheel::Right, 1.0, ms(0))
+        .or_else(|| wheels(&mut bridge, Wheel::Left, 0.8, ms(1)))
+        .expect("a wheel reading");
+    assert!(r.mean().is_some_and(|m| close(m, 0.9)));
+}
+
+#[test]
+fn sensors_sign_the_wheels_by_the_command() {
+    // One Hall sensor sees only a magnitude, and no spine reports the measured speed:
+    // the last command says which way the car goes.
+    let mut bridge = Bridge::new(SENSORS);
+    bridge.command(
+        Command {
+            speed: -0.5,
+            ..Command::default()
+        },
+        ms(0),
+    );
+    let r = wheels(&mut bridge, Wheel::Left, 0.5, ms(0)).expect("published alone");
+    assert!(close(r.left.speed, -0.5));
 }

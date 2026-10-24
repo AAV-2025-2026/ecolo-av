@@ -131,3 +131,63 @@ def test_a_quiet_wheel_reads_nan(bridge):
     receive(bridge, cc.WHEEL_SPEED_L_ID, {'wheel_speed': 1.0})
     assert wheels[-1].front_left == pytest.approx(1.0)
     assert math.isnan(wheels[-1].front_right)   # never heard from
+
+
+# Role sensors: the car is driven through the Motor Pi's UART, and the Orin only reads the
+# wheel nodes on its CAN bus (docs/can-plan.md, "Today's wiring").
+
+@pytest.fixture
+def sensors():
+    rclpy.init(args=['--ros-args', '-p', 'role:=sensors'])
+    try:
+        node = SpineBridge()
+        yield node
+        node.destroy_node()
+    finally:
+        rclpy.shutdown()
+
+
+def names(found):
+    return {name for name, _ in found}
+
+
+def test_sensors_have_no_way_to_drive(sensors):
+    me = (sensors.get_name(), sensors.get_namespace())
+    publishers = names(sensors.get_publisher_names_and_types_by_node(*me))
+    assert '/can/tx' not in publishers
+    assert '/vehicle/status' not in publishers and '/vehicle/steering' not in publishers
+    assert {'/vehicle/odom', '/vehicle/wheels'} <= publishers
+    assert '/spine/arm' not in names(sensors.get_service_names_and_types_by_node(*me))
+    assert '/safety/estop' not in names(sensors.get_subscriber_names_and_types_by_node(*me))
+    assert not hasattr(sensors, 'to_can')
+
+
+def test_sensors_give_odometry_from_the_wheels_alone(sensors):
+    odom = capture(sensors.odom_pub)
+    wheels = capture(sensors.wheel_pub)
+    # A spine's frame is not this role's: no odometry from it.
+    receive(sensors, cc.VEHICLE_FEEDBACK_ID, {'measured_speed': 5.0})
+    assert odom == []
+    receive(sensors, cc.WHEEL_SPEED_L_ID, {'wheel_speed': 1.0})
+    assert odom == []                               # the right wheel never heard: no mean
+    receive(sensors, cc.WHEEL_SPEED_R_ID, {'wheel_speed': 1.2})
+    receive(sensors, cc.WHEEL_SPEED_L_ID, {'wheel_speed': 1.0})
+    assert wheels[-1].front_right == pytest.approx(1.2)
+    assert odom[-1].twist.twist.linear.x == pytest.approx(1.1)
+    assert odom[-1].twist.covariance[35] >= 1e3    # no yaw rate: the IMU's job
+
+
+def test_sensors_sign_the_wheels_by_the_command(sensors):
+    wheels = capture(sensors.wheel_pub)
+    fresh_command(sensors, speed=-0.5)
+    receive(sensors, cc.WHEEL_SPEED_L_ID, {'wheel_speed': 0.5})
+    assert wheels[-1].front_left == pytest.approx(-0.5)
+
+
+def test_an_unknown_role_is_refused():
+    rclpy.init(args=['--ros-args', '-p', 'role:=drive'])
+    try:
+        with pytest.raises(ValueError, match='role:=drive'):
+            SpineBridge()
+    finally:
+        rclpy.shutdown()

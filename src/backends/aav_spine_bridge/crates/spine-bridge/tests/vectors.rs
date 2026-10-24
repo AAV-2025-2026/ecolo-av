@@ -5,13 +5,14 @@
 use std::{fs, path::PathBuf, time::Duration};
 
 use serde_json::Value;
-use spine_bridge::{Bridge, Command, Drive, Geometry, Settings, Update};
+use spine_bridge::{Bridge, Command, Drive, Geometry, Role, Settings, Update};
 use spine_core::protocol::{
     DRIVE_CMD_ID, ESTOP_CMD_ID, VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID, WHEEL_SPEED_L_ID,
     WHEEL_SPEED_R_ID,
 };
 
 const SETTINGS: Settings = Settings {
+    role: Role::Spine,
     geometry: Geometry {
         wheelbase: 1.57,
         track: 0.77,
