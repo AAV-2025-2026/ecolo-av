@@ -54,6 +54,8 @@ The gaps, in turn:
 | 5 | frozen | yes (140) | 118 ms | 30 of 30 | yes | yes |
 | 6 | bad_crc | yes (140) | 111 ms | 30 of 30 | yes | yes |
 
+A second run, inside `pixi run test`, passed too: 111 to 120 ms.
+
 The check fails when it should: with the counter rule turned off on purpose, the frozen
 cycle kept driving (no timeout, 0 repeats counted) and failed.
 

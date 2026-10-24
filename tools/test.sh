@@ -64,7 +64,7 @@ if command -v cargo >/dev/null; then
   echo "== firmware/spine/boards/esp32-umod: the spine on today's ESP32 control board"
   tools/esp32.sh check
   # The same firmware in Espressif's QEMU (pixi run esp-qemu-tools): the heartbeat check.
-  echo "== the ESP32 firmware in QEMU: it brakes when the Motor-Pi's frames stop"
+  echo "== the ESP32 firmware in QEMU: it brakes when the Orin's heartbeat stops"
   tools/esp32.sh qemu
 else
   echo "skipped: no cargo here (pixi run test has it; or install Rust with rustup)"
