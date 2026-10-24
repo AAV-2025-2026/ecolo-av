@@ -7,7 +7,7 @@
 <!-- Generated from docs/esp32-bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>First flash on the bench: the Rust ESP32</h1>
-<div class="meta">8 min read · 7 sections</div></header>
+<div class="meta">11 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -106,13 +106,116 @@ Espressif's ESP32 emulator (QEMU).</p>
 </tr>
 <tr>
 <td><code>pixi run esp-qemu-check</code></td>
-<td>builds with <code>--features qemu</code>, boots it, runs 3 cycles, prints the table</td>
+<td>builds with <code>--features qemu</code>, boots it, runs 6 cycles, prints the table</td>
 </tr>
 </tbody>
 </table></div>
-<p>Each cycle: stop frames, drive frames (0.6 m/s), <strong>silence</strong>, then drive frames again
-with no stop first.</p>
-<h3 id="results-24-oct-bens-mac">Results, 24 Oct (Ben's Mac)</h3>
+<p>Each cycle: stand-still frames (the arming stop), drive frames (0.6 m/s), a <strong>gap</strong>, then
+drive frames again with no stop first. Since 24 Oct the frames are version 2, with the
+Orin's counter moving one a frame (TODO 50,
+<a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>).
+The gaps, in turn:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>The Motor Pi sends</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>silence</td>
+<td>nothing</td>
+<td>the Pi or its cable is gone</td>
+</tr>
+<tr>
+<td>frozen</td>
+<td>drive frames at 50 Hz, the <strong>same counter</strong></td>
+<td>the Pi alive, the Orin gone</td>
+</tr>
+<tr>
+<td>bad_crc</td>
+<td>drive frames at 50 Hz, the counter moving, <strong>every CRC wrong</strong></td>
+<td>a bad cable: each frame ignored and counted</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="results-with-the-heartbeat-24-oct-bens-mac">Results with the heartbeat, 24 Oct (Ben's Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Cycle</th>
+<th>Gap</th>
+<th>Drove (DAC peak)</th>
+<th>Brake full + DAC 0 after the last new counter</th>
+<th>Gap frames ignored</th>
+<th>Fault bit 1</th>
+<th>Stays braked until a stop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>silence</td>
+<td>yes (140)</td>
+<td>119 ms</td>
+<td>-</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>2</td>
+<td>frozen</td>
+<td>yes (140)</td>
+<td>113 ms</td>
+<td>30 of 30 (<code>repeats</code>)</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>bad_crc</td>
+<td>yes (140)</td>
+<td>112 ms</td>
+<td>30 of 30 (<code>bad</code>)</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>4</td>
+<td>silence</td>
+<td>yes (140)</td>
+<td>113 ms</td>
+<td>-</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>5</td>
+<td>frozen</td>
+<td>yes (140)</td>
+<td>118 ms</td>
+<td>30 of 30</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>bad_crc</td>
+<td>yes (140)</td>
+<td>111 ms</td>
+<td>30 of 30</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<p>The check fails when it should: with the counter rule turned off on purpose, the frozen
+cycle kept driving (no timeout, 0 repeats counted) and failed.</p>
+<p>The firmware logs a <code>LINK</code> line with each <code>STATUS</code>: <code>frames=</code>, <code>bad=</code>, <code>skipped=</code>,
+<code>repeats=</code>, <code>counter=</code>.</p>
+<h3 id="results-before-the-heartbeat-24-oct-version-1-frames-silence-only">Results before the heartbeat, 24 Oct (version 1 frames, silence only)</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -171,7 +274,7 @@ over each run they agreed to 0.1 %.</p>
 <td>✅ the real code</td>
 </tr>
 <tr>
-<td>The UART link: frames, checksum, resync (<code>legacy-link</code>)</td>
+<td>The UART link: version 2 frames, the CRC, resync, the counter rule (<code>legacy-link</code>)</td>
 <td>✅ the real code, real bytes on UART1</td>
 </tr>
 <tr>
@@ -238,8 +341,12 @@ over each run they agreed to 0.1 %.</p>
 <td>flashing and the log</td>
 </tr>
 <tr>
-<td>The Motor-Pi running <code>aav_legacy</code> (<code>pixi run car</code> profile, or <code>legacy.launch.py</code>)</td>
-<td>sends the frames</td>
+<td>The Motor-Pi running <code>aav_legacy</code> (<code>pixi run car</code> profile, or <code>legacy.launch.py</code>), with <strong><code>frame_version: 2</code></strong> in <code>legacy.yaml</code></td>
+<td>sends version 2 frames, with the Orin's counter. The car's file says 1 while the C++ is on</td>
+</tr>
+<tr>
+<td>The Orin running the output mux (the car profile), or a laptop as the Orin</td>
+<td>makes the counter: no Orin, no heartbeat, the car stays braked</td>
 </tr>
 <tr>
 <td>The RC transmitter</td>
@@ -274,7 +381,7 @@ over each run they agreed to 0.1 %.</p>
 </tr>
 <tr>
 <td>3</td>
-<td><code>pixi run esp-build</code></td>
+<td><code>pixi run esp-build</code> (version 2 frames; <code>-- --features link-v1</code> for the 13-byte ones)</td>
 <td><code>Finished</code>; the program is <code>firmware/spine/boards/esp32-umod/target/xtensa-esp32-none-elf/release/spine-esp32-umod</code></td>
 </tr>
 </tbody>
@@ -303,7 +410,7 @@ over each run they agreed to 0.1 %.</p>
 <tr>
 <td>3</td>
 <td>read the first lines</td>
-<td><code>spine-esp32-umod 0.1.0, link: Motor-Pi UART; the last reset: …</code></td>
+<td><code>spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat); the last reset: …</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -332,8 +439,8 @@ over each run they agreed to 0.1 %.</p>
 </tr>
 <tr>
 <td>3</td>
-<td>Start the Motor-Pi's bridge, with ego stale</td>
-<td>the bridge sends stop frames: brake stays full</td>
+<td>Start the Motor-Pi's bridge (<code>frame_version: 2</code>), with ego stale</td>
+<td>the bridge sends stop frames: brake stays full. <code>LINK</code> shows <code>frames=</code> rising, <code>bad=0</code>, <code>counter=</code> still</td>
 </tr>
 <tr>
 <td>4</td>
@@ -366,6 +473,21 @@ over each run they agreed to 0.1 %.</p>
 <td>brake stays on until ego is stale or stops (a stop frame), then it drives again</td>
 </tr>
 <tr>
+<td>9a</td>
+<td>While driving, stop the Orin's output mux (or unplug the Orin's network), the bridge still running</td>
+<td>within 0.2 s: brake full, throttle 0, <code>faults</code> has 1, though <code>LINK frames=</code> still rises; <code>repeats=</code> rises instead. The heartbeat (TODO 50)</td>
+</tr>
+<tr>
+<td>9b</td>
+<td>Bring the Orin back</td>
+<td>stays braked until ego stands still (a stop with a new counter), then drives</td>
+</tr>
+<tr>
+<td>9c</td>
+<td><code>/safety/estop</code> true while driving</td>
+<td><code>estop=true</code> at once, brake full</td>
+</tr>
+<tr>
 <td>10</td>
 <td>RC override switch on, gear forward, a little throttle</td>
 <td><code>mode=Rc</code>, blue LED, wheels turn; ROS commands ignored</td>
@@ -387,7 +509,7 @@ over each run they agreed to 0.1 %.</p>
 </tr>
 <tr>
 <td>14</td>
-<td>10 minutes of 1 to 13, mixed</td>
+<td>10 minutes of 1 to 13 (and 9a-9c), mixed</td>
 <td>no unexpected resets in the log (<code>the last reset:</code> stays the power-on one)</td>
 </tr>
 </tbody>
@@ -411,7 +533,7 @@ over each run they agreed to 0.1 %.</p>
 </tr>
 <tr>
 <td>2</td>
-<td><code>pixi run -e firmware legacy-esp32 -t upload</code> (PlatformIO builds and flashes the C++; <code>src/secrets.h</code> for its WiFi)</td>
+<td><code>pixi run -e firmware legacy-esp32 -t upload</code> (PlatformIO builds and flashes the C++; <code>src/secrets.h</code> for its WiFi). Set <code>frame_version: 1</code> back in <code>legacy.yaml</code>: the C++ reads only the 13-byte frame</td>
 </tr>
 <tr>
 <td>3</td>

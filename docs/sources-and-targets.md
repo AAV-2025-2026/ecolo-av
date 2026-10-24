@@ -102,6 +102,28 @@ The output mux itself is one more hop for ego's commands. Measured on the bench 
 a Mac at load 30-45): the gaps between commands were the same before and after it
 (median 19-21 ms); the long gaps at start-up were ego's own, before the hop.
 
+## The heartbeat to the ESP32 (24 Oct)
+
+TODO 50 (Ben, 24 Oct). With each command it passes on, the output mux also sends a
+counter, +1 each time, on `/control/<target>/heartbeat`. So the counter moves **only
+while the gate is OPEN**.
+
+```text
+ output_mux ── /control/car/actuator_cmd ──► legacy_uart_bridge ── UART, v2 frames ──► ESP32
+  (OPEN)    └─ /control/car/heartbeat ─────►   (Motor Pi: copies     counter frozen
+               counter 1, 2 ... 255, 0          the counter)          100 ms ─► brake
+```
+
+| The gate | The counter | The ESP32 |
+|---|---|---|
+| OPEN, ego at 50 Hz | moves | drives |
+| WAIT or STOP | stops | brakes 100 ms later, latched |
+| the Orin, its network or ego gone | stops (the Pi keeps sending, with the old counter) | brakes 100 ms later, latched |
+
+The Pi only copies it, so a Pi cut off from the Orin can't keep the car going. Only the
+real car's `legacy_uart_bridge` reads it; `spine_bridge`'s DRIVE_CMD has a counter of its
+own. The frame: [the heartbeat](rust-firmware.md#the-heartbeat-version-2-of-the-serial-frame-24-oct).
+
 ## What it can't catch
 
 - A stand-in that announces nothing and runs **instead of** the real driver (one
@@ -120,3 +142,4 @@ a Mac at load 30-45): the gaps between commands were the same before and after i
 | `aav_bringup/test/test_stack_launch.py` | `target:=` picks the profile; a wrong `source:=` is refused; every profile runs the two muxes with its own target |
 | `pixi run sim-check`, `pixi run bench-check` | the whole graph with both muxes: contract, drive, e-stops. Passed 23 Oct |
 | the turtle (`pixi run turtle`) | OPEN; a scripted drive moved the turtle at 0.86 m/s |
+| `aav_io_mux/test/test_heartbeat.py`, `aav_legacy/test/test_heartbeat_chain.py` | the counter: +1 a command, wraps in a byte; the muxes and `legacy_uart_bridge` on a pseudo-terminal: the frames carry the mux's counter, frozen when ego stops; a shut gate sends **no** heartbeat |

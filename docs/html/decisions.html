@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">28 min read · 12 sections</div></header>
+<div class="meta">29 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -530,6 +530,11 @@ answer.</p>
 <tr>
 <td><strong>A HUD that drops out holds Nav2 until a person clears it</strong> (latched, <code>hud LOST</code>). One dropout within 5 s of its first beat is forgiven; any other latches, even once it beats again. A person checks the screen, then <code>pixi run watchdog-clear</code> (the same service as a GPS jump)</td>
 <td>The safety drivers rely on the screen. A HUD that crashed once may crash again; driving on by itself after systemd restarts it hides that. A window's slow first frames shouldn't need a person, so start-up gets one free dropout. The watchdog's own stalls never latch it (<a href="hud.html#the-heartbeat">HUD</a>)</td>
+<td>Ben, 24 Oct</td>
+</tr>
+<tr>
+<td><strong>The heartbeat starts on the Orin and ends on the ESP32; the Pi only relays it</strong> (TODO 50). The output mux adds 1 to a counter for each command it passes on (<code>/control/&lt;target&gt;/heartbeat</code>); <code>legacy_uart_bridge</code> copies it into a <strong>version 2 serial frame</strong> (17 bytes: <code>0xA5</code>, version 2, the three values, the counter, armed and e-stop flags, CRC-8/SAE-J1850); the ESP32 brakes, latched, when it hasn't changed for 100 ms. The 13-byte frame stays as a fallback (<code>--features link-v1</code>, <code>frame_version: 1</code>); the car's <code>legacy.yaml</code> keeps 1 until the Rust firmware is flashed</td>
+<td>The Pi could be cut off from the Orin and still send frames, so a heartbeat the Pi makes proves nothing. The counter shows the last node on the Orin is alive <strong>and</strong> its gate is open. The CRC is the CAN plan's, so the team learns one. The C++ on the car reads only version 1, and could misread version 2 (<a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>)</td>
 <td>Ben, 24 Oct</td>
 </tr>
 <tr>

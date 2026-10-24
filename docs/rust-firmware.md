@@ -57,7 +57,8 @@ Ben, 15 October: "We should port all cpp to rust." In the KEFC plan
 the 2025-26 C++ in `firmware/legacy/aav_umod_esp32`. It builds; it has **never been
 flashed** [[untested]]. Merged on 15 Oct at Ben's request; flashing waits for his go-ahead.
 Since 24 Oct it boots in Espressif's QEMU, and brakes there when the Motor-Pi's frames stop
-([the emulator](esp32-bench.md#before-the-board-the-emulator)).
+([the emulator](esp32-bench.md#before-the-board-the-emulator)), and when the Orin's
+heartbeat stops though the frames still come ([the heartbeat](#the-heartbeat-version-2-of-the-serial-frame-24-oct)).
 
 !!! warning "The C++ stays"
     The car runs `firmware/legacy/aav_umod_esp32` today. It stays in the repo, and on the
@@ -66,7 +67,7 @@ Since 24 Oct it boots in Espressif's QEMU, and brakes there when the Motor-Pi's 
 
 ```text
                        one CommandLink trait (spine-board)
-Motor-Pi ── UART, 13-byte frames ──► LegacyLink ─┐
+Motor-Pi ── UART, v2 frames ───────► LegacyLink ─┐
                                                   ├─► spine-core ─► spine-board ─► 2 Jrk G2, DAC, PCA9555
 Orin ───── CAN, aav.dbc v0.2.0 ────► CanLink ────┘   (Spine::step)    (I2C 21/22)
 RC receiver ── iBUS, GPIO32 ─────────────────────────────┘
@@ -74,7 +75,8 @@ RC receiver ── iBUS, GPIO32 ────────────────
 
 | Feature | Link | For |
 |---|---|---|
-| `legacy-uart` (default) | the Motor-Pi's 13-byte frames on GPIO16 | **today**: a drop-in for the C++, with `aav_legacy` unchanged |
+| `legacy-uart` (default) | the Motor-Pi's frames on GPIO16: **version 2**, with the Orin's heartbeat (below) | `aav_legacy`'s bridge with `frame_version: 2` |
+| `legacy-uart` + `link-v1` | the 2025-26 13-byte frames | the fallback: a drop-in for the C++ (`frame_version: 1`), no heartbeat |
 | `can` | `firmware/can/aav.dbc` v0.2.0 on the ESP32's TWAI controller, 500 kbit/s | the KEFC plan: `spine_bridge` on the Orin. Its pins are unknown (below) |
 | `estop-input` (off) | the e-stop's spare contact on GPIO27 | once it is wired (Q6) |
 | `qemu` (off) | stand-in devices on the I2C bus, and a busy-wait tick | Espressif's QEMU only, never the car ([the emulator](esp32-bench.md#before-the-board-the-emulator)) |
@@ -162,20 +164,90 @@ All three give the same steering and brake targets and DAC code for each frame.
 reach the fake I2C bus. The steering goes through radians and back: every target from 400
 to 3500 survives the round trip (tested).
 
+### The heartbeat: version 2 of the serial frame (24 Oct)
+
+TODO 50. Ben, 24 Oct: "Don't i want a heartbeat coming from the orin and have that travel
+to the esp32. The pi could be off the network and still be sending messages to the 32
+right?" Then: "yes build it".
+
+```text
+ Orin                              Motor Pi                          ESP32
+ ego ─► output mux ─► actuator_cmd ─► legacy_uart_bridge ─ UART ─► LegacyLink ─► spine-core
+        (gate OPEN)    heartbeat ───►  copies the counter   v2      counter new?   100 ms
+        counter +1 per command         never makes one     frames   yes: a command watchdog
+                                       stale: stops, the            no: ignored    ─► brake
+                                       same counter
+```
+
+| Where | Does | Code |
+|---|---|---|
+| **Orin**: the output mux | +1 for each command it passes on, so only while its gate is OPEN; `/control/car/heartbeat` (`aav_interfaces/Heartbeat`: the command's header, `uint8 counter`) | `aav_io_mux/heartbeat.py`, `output_mux.py` |
+| **Motor Pi**: the bridge | copies the last counter into every frame, 50 Hz. Ego or the mux quiet: its stale-stop frames, the counter unchanged | `aav_legacy/uart_relay.py` |
+| **ESP32** | a frame is a command only when its counter changed. Unchanged for 100 ms: the spine's watchdog trips: brake full, throttle 0, **latched**, fault bit 1 (`CMD_TIMEOUT`, the same as a lost link) | `legacy-link::Heartbeat`, `spine-board::LegacyLink` |
+
+#### The frame, 17 bytes
+
+| Byte | Field | Notes |
+|---|---|---|
+| 0 | sync `0xA5` | where a frame starts; a bad frame: start again at the next `0xA5` in it |
+| 1 | version `2` | |
+| 2-5 | steering, f32 LE | -1..1, as version 1 |
+| 6-9 | speed, f32 LE | -1..1, as version 1 |
+| 10-13 | accel, f32 LE | -1..1; below -0.05 brakes, as version 1 |
+| 14 | counter, u8 | the Orin's, copied; 255 then 0 |
+| 15 | flags | bit 0 **armed** (fresh command, no e-stop); bit 1 **e-stop**; others must be 0 |
+| 16 | CRC-8 of bytes 1-15 | **CRC-8/SAE-J1850**: poly 0x1D, start 0xFF, final XOR 0xFF; check "123456789" → 0x4B. The same CRC as every CAN frame in `aav.dbc` |
+
+Over these 16 bytes it catches every 1-bit and 2-bit error, and every burst up to 8 bits
+(the 1- and 2-bit cases tried one by one in `test_legacy_protocol.py`).
+
+#### What the ESP32 does with a frame
+
+| Frame | The ESP32 |
+|---|---|
+| counter changed | a command (the same targets as version 1) |
+| counter the same | ignored: no command. A repeat now and then is normal (two 50 Hz clocks) |
+| the first frame after boot | only sets the counter |
+| `armed` clear | a stop: throttle 0, the frame's brake |
+| `e-stop` set | e-stop at once, **whatever the counter**; only a frame with a new counter and the flag clear releases it |
+| bad CRC, version or flag bit | ignored, counted (`LINK bad=`), fault bit 2 |
+| a version 1 frame | never matches: ignored, so the car stays braked |
+
+After a heartbeat timeout it stays braked until a stop with a **new** counter (ego standing
+still: the hold brake), then a drive. The bridge's stale stops carry the old counter, so they
+can't re-arm it.
+
+#### Which version, where
+
+| End | Default | Why |
+|---|---|---|
+| Rust firmware | version 2; `--features link-v1` for version 1 | both our ends speak it |
+| `legacy_uart_bridge` | `frame_version: 2` in the code | the same |
+| the car's `legacy.yaml` | **`frame_version: 1`** | the car's ESP32 still runs the C++, which reads only version 1, and its resync could misread a version 2 stream. Set 2 the day the Rust is flashed ([the bench](esp32-bench.md)) |
+
+Tests: `cargo test -p legacy-link -p spine-board`; aav_legacy's `test_uart_relay.py`,
+`test_legacy_protocol.py` (the shared vectors: 14 version 2 cases and a noisy stream, in
+`legacy-link/vectors.json`) and `test_heartbeat_chain.py` (the muxes and the bridge on a
+pseudo-terminal); `pixi run esp-qemu-check` (a frozen counter, bad CRCs, silence).
+
+Next: an **uplink frame** ESP32 → Pi (mode, faults, the counter echoed, the Jrks'
+positions, the RC sticks for TODO 48). Not built: GPIO17 (TX1) to the Pi's RX is set up
+in the C++ but never used, so the wire is the hardware lead's to confirm first.
+
 ### The C++ beside the Rust
 
 Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: Ben decides.
 
 | C++ behaviour | Where | Rust | |
 |---|---|---|---|
-| Frame: 13 bytes, 3 × f32 LE, sum checksum | `ros2_handler.cpp` | `legacy-link::Frame` | same |
+| Frame: 13 bytes, 3 × f32 LE, sum checksum | `ros2_handler.cpp` | `legacy-link::Frame` | same with `link-v1`; ⚠️ the default is version 2: 17 bytes, the Orin's counter, flags, a CRC-8 (above) |
 | Resync: bad sum drops one byte | `ros2_handler.cpp` | `legacy-link::Parser` | same |
 | Values outside -1..1 turned down, DAC ramps to 0 | `ros2_handler.cpp` | `LegacyLink`: the last command, throttle 0 | same |
 | Steering: 1950 + s × 1950 (s ≤ 0) or × 1550; clamped 400..3500 | `ros2_handler.cpp`, `setSteer()` | `Frame::targets`, then radians, then the same target | same target; ⚠️ reached at 0.6 rad/s (spine-core's steering rate limit), not at once |
 | Brake: accel < -0.05 → clamp(\|a\| × 3500, 400, 3500), DAC cut at once | `ros2_handler.cpp` | `Frame::targets` → `DirectCmd` | same |
 | Throttle: \|v\| < 0.03 → ramp to 0; else DAC \|v\| × 700, direction from the sign | `ros2_handler.cpp` | `Frame::targets` → `DirectCmd` | same code; ⚠️ ramp up 600 codes/s (C++: 6 a frame = 300/s at 50 Hz), down at once (C++: 12 a frame) |
 | Direction pin set before the throttle, even while it runs | `ros2_handler.cpp` | `spine-board`: only with the DAC at 0 | ⚠️ safer: fixes bug 5 |
-| No command timeout: the last throttle stays on | — | spine-core: 100 ms (CAN v0.2.0), then throttle 0 and full brake | ⚠️ new. The bridge sends 50 Hz |
+| No command timeout: the last throttle stays on | — | spine-core: 100 ms (CAN v0.2.0), then throttle 0 and full brake; with version 2, 100 ms without a new Orin counter | ⚠️ new. The bridge sends 50 Hz |
 | Drives on the first frame after boot | — | spine-core boots latched: a stop frame (accel < -0.05) first, then drive frames | ⚠️ new. The bridge sends stop frames whenever ego is stale, so this happens by itself |
 | After a timeout, frames drive again at once | — | latched until a stop frame | ⚠️ new |
 | RC override: CH6 (index 5) between 1500 and 2200 | `main.cpp` | `ibus::RcMap::TODAY` | same |
@@ -197,7 +269,7 @@ Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: Be
 | WiFi, the status web page, the WebSocket log, the I2C scan page | `web_handler.cpp` | gone | ⚠️ the log is on the USB cable |
 | OTA update page, no password | `main.cpp` | gone: flash on the USB cable | ⚠️ safer |
 | Status line every 200 ms | `publishStatus()` | `STATUS t=… mode=… throttle=… brake=… faults=…`, and an `EVENT` line at each change | ⚠️ another format; only `tools/esp32_qemu.py` parses it |
-| Nothing sent back to the Motor-Pi | — | nothing | same |
+| Nothing sent back to the Motor-Pi | — | nothing | same; an uplink frame is the next step (above) |
 
 ### For Ben to decide
 
@@ -563,8 +635,8 @@ Rust.
 | `pca9555` (10 Oct) | the 16-bit I/O expander: the direction output | 6 |
 | `ibus` (10 Oct) | the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's `RcInput`, with the gear switch's brake position | 24 |
 | `mcp2515` (11 Oct) | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters for our IDs, send, receive, error state and bus-off | 34 |
-| `legacy-link` (15 Oct) | the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself | 31 |
-| `spine-board` (10 Oct) | the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The `Board` trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to `wheel-encoder` on 15 Oct). Since 15 Oct, the `CommandLink` trait: `CanLink` or `LegacyLink` | 57 |
+| `legacy-link` (15 Oct) | the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself. Since 24 Oct, version 2: the Orin's counter, flags, a CRC-8 (TODO 50) | 57 |
+| `spine-board` (10 Oct) | the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The `Board` trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to `wheel-encoder` on 15 Oct). Since 15 Oct, the `CommandLink` trait: `CanLink` or `LegacyLink`; since 24 Oct, `LegacyLink` reads version 2 frames and their heartbeat | 72 |
 | `wheel-encoder` (15 Oct) | the two spoke sensors, shared by the spine and the wheel encoder; the wheel encoder's UDP packet, checked against examples `aav_legacy` checks too | 12 |
 | `sentinel` (15 Oct) | the status display: its I2C packet, 13 LCD pages, the knob, the beeps, the matrix, the link's watchdog | 40 |
 | `hd44780` (15 Oct) | the display's 16x2 LCD, 4-bit on GPIO pins | 5 |

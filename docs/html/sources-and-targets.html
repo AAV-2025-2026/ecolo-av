@@ -7,7 +7,7 @@
 <!-- Generated from docs/sources-and-targets.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Sources and targets: the sensor mux and the output mux</h1>
-<div class="meta">7 min read · 7 sections</div></header>
+<div class="meta">8 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -70,7 +70,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-each-one-checks">What each one checks</a><a href="#open-wait-stop">Open, wait, stop</a><a href="#one-launch-target">One launch, target:=</a><a href="#why-check-not-copy">Why check, not copy</a><a href="#what-it-cant-catch">What it can&#x27;t catch</a><a href="#tests">Tests</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-each-one-checks">What each one checks</a><a href="#open-wait-stop">Open, wait, stop</a><a href="#one-launch-target">One launch, target:=</a><a href="#why-check-not-copy">Why check, not copy</a><a href="#the-heartbeat-to-the-esp32-24-oct">The heartbeat to the ESP32 (24 Oct)</a><a href="#what-it-cant-catch">What it can&#x27;t catch</a><a href="#tests">Tests</a></nav>
 <div class="lead"><p>Simulated data must never drive the real car (PLAN.md S-4, T1.5, decision D3). Two
 nodes at the edges of the stack make sure: the <strong>sensor mux</strong> checks where the data comes
 from, and the <strong>output mux</strong> sends ego's commands to one target, the real car only while
@@ -276,6 +276,43 @@ instead, and let each launch start only the chosen source:</p>
 a Mac at load 30-45): the gaps between commands were the same before and after it
 (median 19-21 ms); the long gaps at start-up were ego's own, before the hop.</p>
 </section>
+<section class="card"><h2 id="the-heartbeat-to-the-esp32-24-oct">The heartbeat to the ESP32 (24 Oct)</h2>
+<p>TODO 50 (Ben, 24 Oct). With each command it passes on, the output mux also sends a
+counter, +1 each time, on <code>/control/&lt;target&gt;/heartbeat</code>. So the counter moves <strong>only
+while the gate is OPEN</strong>.</p>
+<pre class="highlight"><code class="language-text"> output_mux ── /control/car/actuator_cmd ──► legacy_uart_bridge ── UART, v2 frames ──► ESP32
+  (OPEN)    └─ /control/car/heartbeat ─────►   (Motor Pi: copies     counter frozen
+               counter 1, 2 ... 255, 0          the counter)          100 ms ─► brake</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>The gate</th>
+<th>The counter</th>
+<th>The ESP32</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPEN, ego at 50 Hz</td>
+<td>moves</td>
+<td>drives</td>
+</tr>
+<tr>
+<td>WAIT or STOP</td>
+<td>stops</td>
+<td>brakes 100 ms later, latched</td>
+</tr>
+<tr>
+<td>the Orin, its network or ego gone</td>
+<td>stops (the Pi keeps sending, with the old counter)</td>
+<td>brakes 100 ms later, latched</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Pi only copies it, so a Pi cut off from the Orin can't keep the car going. Only the
+real car's <code>legacy_uart_bridge</code> reads it; <code>spine_bridge</code>'s DRIVE_CMD has a counter of its
+own. The frame: <a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>.</p>
+</section>
 <section class="card"><h2 id="what-it-cant-catch">What it can't catch</h2>
 <ul>
 <li>A stand-in that announces nothing and runs <strong>instead of</strong> the real driver (one
@@ -314,6 +351,10 @@ a Mac at load 30-45): the gaps between commands were the same before and after i
 <tr>
 <td>the turtle (<code>pixi run turtle</code>)</td>
 <td>OPEN; a scripted drive moved the turtle at 0.86 m/s</td>
+</tr>
+<tr>
+<td><code>aav_io_mux/test/test_heartbeat.py</code>, <code>aav_legacy/test/test_heartbeat_chain.py</code></td>
+<td>the counter: +1 a command, wraps in a byte; the muxes and <code>legacy_uart_bridge</code> on a pseudo-terminal: the frames carry the mux's counter, frozen when ego stops; a shut gate sends <strong>no</strong> heartbeat</td>
 </tr>
 </tbody>
 </table></div></section>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">43 min read · 15 sections</div></header>
+<div class="meta">48 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -215,7 +215,8 @@ chip's HAL.</p>
 the 2025-26 C++ in <code>firmware/legacy/aav_umod_esp32</code>. It builds; it has <strong>never been
 flashed</strong> <span class="badge b-untested">untested</span>. Merged on 15 Oct at Ben's request; flashing waits for his go-ahead.
 Since 24 Oct it boots in Espressif's QEMU, and brakes there when the Motor-Pi's frames stop
-(<a href="esp32-bench.html#before-the-board-the-emulator">the emulator</a>).</p>
+(<a href="esp32-bench.html#before-the-board-the-emulator">the emulator</a>), and when the Orin's
+heartbeat stops though the frames still come (<a href="#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>).</p>
 <div class="admonition warning">
 <p class="admonition-title">The C++ stays</p>
 <pre><code>The car runs `firmware/legacy/aav_umod_esp32` today. It stays in the repo, and on the
@@ -224,7 +225,7 @@ car, until the Rust program has been flashed and proven on the car
 </code></pre>
 </div>
 <pre class="highlight"><code class="language-text">                       one CommandLink trait (spine-board)
-Motor-Pi ── UART, 13-byte frames ──► LegacyLink ─┐
+Motor-Pi ── UART, v2 frames ───────► LegacyLink ─┐
                                                   ├─► spine-core ─► spine-board ─► 2 Jrk G2, DAC, PCA9555
 Orin ───── CAN, aav.dbc v0.2.0 ────► CanLink ────┘   (Spine::step)    (I2C 21/22)
 RC receiver ── iBUS, GPIO32 ─────────────────────────────┘</code></pre>
@@ -239,8 +240,13 @@ RC receiver ── iBUS, GPIO32 ────────────────
 <tbody>
 <tr>
 <td><code>legacy-uart</code> (default)</td>
-<td>the Motor-Pi's 13-byte frames on GPIO16</td>
-<td><strong>today</strong>: a drop-in for the C++, with <code>aav_legacy</code> unchanged</td>
+<td>the Motor-Pi's frames on GPIO16: <strong>version 2</strong>, with the Orin's heartbeat (below)</td>
+<td><code>aav_legacy</code>'s bridge with <code>frame_version: 2</code></td>
+</tr>
+<tr>
+<td><code>legacy-uart</code> + <code>link-v1</code></td>
+<td>the 2025-26 13-byte frames</td>
+<td>the fallback: a drop-in for the C++ (<code>frame_version: 1</code>), no heartbeat</td>
 </tr>
 <tr>
 <td><code>can</code></td>
@@ -508,6 +514,172 @@ installs Espressif's, for one user, with no admin rights. It needs <code>rustup<
 <code>spine-board</code>'s tests then drive frames through the whole loop and check the same targets
 reach the fake I2C bus. The steering goes through radians and back: every target from 400
 to 3500 survives the round trip (tested).</p>
+<h3 id="the-heartbeat-version-2-of-the-serial-frame-24-oct">The heartbeat: version 2 of the serial frame (24 Oct)</h3>
+<p>TODO 50. Ben, 24 Oct: "Don't i want a heartbeat coming from the orin and have that travel
+to the esp32. The pi could be off the network and still be sending messages to the 32
+right?" Then: "yes build it".</p>
+<pre class="highlight"><code class="language-text"> Orin                              Motor Pi                          ESP32
+ ego ─► output mux ─► actuator_cmd ─► legacy_uart_bridge ─ UART ─► LegacyLink ─► spine-core
+        (gate OPEN)    heartbeat ───►  copies the counter   v2      counter new?   100 ms
+        counter +1 per command         never makes one     frames   yes: a command watchdog
+                                       stale: stops, the            no: ignored    ─► brake
+                                       same counter</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Does</th>
+<th>Code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Orin</strong>: the output mux</td>
+<td>+1 for each command it passes on, so only while its gate is OPEN; <code>/control/car/heartbeat</code> (<code>aav_interfaces/Heartbeat</code>: the command's header, <code>uint8 counter</code>)</td>
+<td><code>aav_io_mux/heartbeat.py</code>, <code>output_mux.py</code></td>
+</tr>
+<tr>
+<td><strong>Motor Pi</strong>: the bridge</td>
+<td>copies the last counter into every frame, 50 Hz. Ego or the mux quiet: its stale-stop frames, the counter unchanged</td>
+<td><code>aav_legacy/uart_relay.py</code></td>
+</tr>
+<tr>
+<td><strong>ESP32</strong></td>
+<td>a frame is a command only when its counter changed. Unchanged for 100 ms: the spine's watchdog trips: brake full, throttle 0, <strong>latched</strong>, fault bit 1 (<code>CMD_TIMEOUT</code>, the same as a lost link)</td>
+<td><code>legacy-link::Heartbeat</code>, <code>spine-board::LegacyLink</code></td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="the-frame-17-bytes">The frame, 17 bytes</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Byte</th>
+<th>Field</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>sync <code>0xA5</code></td>
+<td>where a frame starts; a bad frame: start again at the next <code>0xA5</code> in it</td>
+</tr>
+<tr>
+<td>1</td>
+<td>version <code>2</code></td>
+<td></td>
+</tr>
+<tr>
+<td>2-5</td>
+<td>steering, f32 LE</td>
+<td>-1..1, as version 1</td>
+</tr>
+<tr>
+<td>6-9</td>
+<td>speed, f32 LE</td>
+<td>-1..1, as version 1</td>
+</tr>
+<tr>
+<td>10-13</td>
+<td>accel, f32 LE</td>
+<td>-1..1; below -0.05 brakes, as version 1</td>
+</tr>
+<tr>
+<td>14</td>
+<td>counter, u8</td>
+<td>the Orin's, copied; 255 then 0</td>
+</tr>
+<tr>
+<td>15</td>
+<td>flags</td>
+<td>bit 0 <strong>armed</strong> (fresh command, no e-stop); bit 1 <strong>e-stop</strong>; others must be 0</td>
+</tr>
+<tr>
+<td>16</td>
+<td>CRC-8 of bytes 1-15</td>
+<td><strong>CRC-8/SAE-J1850</strong>: poly 0x1D, start 0xFF, final XOR 0xFF; check "123456789" → 0x4B. The same CRC as every CAN frame in <code>aav.dbc</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Over these 16 bytes it catches every 1-bit and 2-bit error, and every burst up to 8 bits
+(the 1- and 2-bit cases tried one by one in <code>test_legacy_protocol.py</code>).</p>
+<h4 id="what-the-esp32-does-with-a-frame">What the ESP32 does with a frame</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Frame</th>
+<th>The ESP32</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>counter changed</td>
+<td>a command (the same targets as version 1)</td>
+</tr>
+<tr>
+<td>counter the same</td>
+<td>ignored: no command. A repeat now and then is normal (two 50 Hz clocks)</td>
+</tr>
+<tr>
+<td>the first frame after boot</td>
+<td>only sets the counter</td>
+</tr>
+<tr>
+<td><code>armed</code> clear</td>
+<td>a stop: throttle 0, the frame's brake</td>
+</tr>
+<tr>
+<td><code>e-stop</code> set</td>
+<td>e-stop at once, <strong>whatever the counter</strong>; only a frame with a new counter and the flag clear releases it</td>
+</tr>
+<tr>
+<td>bad CRC, version or flag bit</td>
+<td>ignored, counted (<code>LINK bad=</code>), fault bit 2</td>
+</tr>
+<tr>
+<td>a version 1 frame</td>
+<td>never matches: ignored, so the car stays braked</td>
+</tr>
+</tbody>
+</table></div>
+<p>After a heartbeat timeout it stays braked until a stop with a <strong>new</strong> counter (ego standing
+still: the hold brake), then a drive. The bridge's stale stops carry the old counter, so they
+can't re-arm it.</p>
+<h4 id="which-version-where">Which version, where</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>End</th>
+<th>Default</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rust firmware</td>
+<td>version 2; <code>--features link-v1</code> for version 1</td>
+<td>both our ends speak it</td>
+</tr>
+<tr>
+<td><code>legacy_uart_bridge</code></td>
+<td><code>frame_version: 2</code> in the code</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>the car's <code>legacy.yaml</code></td>
+<td><strong><code>frame_version: 1</code></strong></td>
+<td>the car's ESP32 still runs the C++, which reads only version 1, and its resync could misread a version 2 stream. Set 2 the day the Rust is flashed (<a href="esp32-bench.html">the bench</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Tests: <code>cargo test -p legacy-link -p spine-board</code>; aav_legacy's <code>test_uart_relay.py</code>,
+<code>test_legacy_protocol.py</code> (the shared vectors: 14 version 2 cases and a noisy stream, in
+<code>legacy-link/vectors.json</code>) and <code>test_heartbeat_chain.py</code> (the muxes and the bridge on a
+pseudo-terminal); <code>pixi run esp-qemu-check</code> (a frozen counter, bad CRCs, silence).</p>
+<p>Next: an <strong>uplink frame</strong> ESP32 → Pi (mode, faults, the counter echoed, the Jrks'
+positions, the RC sticks for TODO 48). Not built: GPIO17 (TX1) to the Pi's RX is set up
+in the C++ but never used, so the wire is the hardware lead's to confirm first.</p>
 <h3 id="the-c-beside-the-rust">The C++ beside the Rust</h3>
 <p>Every behaviour of <code>aav_umod_esp32</code>, and where it is now. ⚠️ = different: Ben decides.</p>
 <div class="table-wrap"><table>
@@ -524,7 +696,7 @@ to 3500 survives the round trip (tested).</p>
 <td>Frame: 13 bytes, 3 × f32 LE, sum checksum</td>
 <td><code>ros2_handler.cpp</code></td>
 <td><code>legacy-link::Frame</code></td>
-<td>same</td>
+<td>same with <code>link-v1</code>; ⚠️ the default is version 2: 17 bytes, the Orin's counter, flags, a CRC-8 (above)</td>
 </tr>
 <tr>
 <td>Resync: bad sum drops one byte</td>
@@ -565,7 +737,7 @@ to 3500 survives the round trip (tested).</p>
 <tr>
 <td>No command timeout: the last throttle stays on</td>
 <td>—</td>
-<td>spine-core: 100 ms (CAN v0.2.0), then throttle 0 and full brake</td>
+<td>spine-core: 100 ms (CAN v0.2.0), then throttle 0 and full brake; with version 2, 100 ms without a new Orin counter</td>
 <td>⚠️ new. The bridge sends 50 Hz</td>
 </tr>
 <tr>
@@ -698,7 +870,7 @@ to 3500 survives the round trip (tested).</p>
 <td>Nothing sent back to the Motor-Pi</td>
 <td>—</td>
 <td>nothing</td>
-<td>same</td>
+<td>same; an uplink frame is the next step (above)</td>
 </tr>
 </tbody>
 </table></div>
@@ -1802,13 +1974,13 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 </tr>
 <tr>
 <td><code>legacy-link</code> (15 Oct)</td>
-<td>the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself</td>
-<td>31</td>
+<td>the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself. Since 24 Oct, version 2: the Orin's counter, flags, a CRC-8 (TODO 50)</td>
+<td>57</td>
 </tr>
 <tr>
 <td><code>spine-board</code> (10 Oct)</td>
-<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to <code>wheel-encoder</code> on 15 Oct). Since 15 Oct, the <code>CommandLink</code> trait: <code>CanLink</code> or <code>LegacyLink</code></td>
-<td>57</td>
+<td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to <code>wheel-encoder</code> on 15 Oct). Since 15 Oct, the <code>CommandLink</code> trait: <code>CanLink</code> or <code>LegacyLink</code>; since 24 Oct, <code>LegacyLink</code> reads version 2 frames and their heartbeat</td>
+<td>72</td>
 </tr>
 <tr>
 <td><code>wheel-encoder</code> (15 Oct)</td>
