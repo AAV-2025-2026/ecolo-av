@@ -1,10 +1,10 @@
 # The safety driver's laptop, joystick plugged in. RViz/Foxglove run here too, by hand.
 parts:
   teleop: true
-  detector: true    # RF-DETR on this laptop's GPU, as yolo_detector_laptop: pixi run -e ml car laptop
+  detector: true    # RF-DETR on this laptop's GPU, as object_detector_laptop: pixi run -e ml car laptop
                     # (in the default environment, the part says what's missing and is skipped)
 
-# The detector's settings: aav_yolo detector.launch.py's arguments.
+# The detector's settings: aav_detector detector.launch.py's arguments.
 detector:
   detector: rfdetr                  # models/rf-detr-nano.pth: a Mac's GPU (Metal), or CUDA.
   # model: models/rf-detr-nano.mlpackage  # Core ML, on a Mac: 10 ms a picture, not 16.

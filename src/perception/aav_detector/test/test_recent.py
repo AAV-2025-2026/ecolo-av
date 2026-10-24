@@ -1,6 +1,6 @@
 """recent: every camera's newest obstacle points, published together."""
 
-from aav_yolo.recent import Recent
+from aav_detector.recent import Recent
 
 
 def test_both_cameras_count_every_time():

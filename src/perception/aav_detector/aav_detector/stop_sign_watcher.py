@@ -14,7 +14,7 @@ Needs no PyTorch: it runs in the default environment.
 
 import signal
 
-from aav_yolo.stop_sign import StopRule, StopSignWatcher
+from aav_detector.stop_sign import StopRule, StopSignWatcher
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node

@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Optional, Tuple
 
-from aav_yolo.boxes import normal_label
+from aav_detector.boxes import normal_label
 
 CLEAR, STOPPING, PASSING = 'clear', 'stopping', 'passing'
 

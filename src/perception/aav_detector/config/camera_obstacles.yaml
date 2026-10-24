@@ -1,4 +1,4 @@
-# camera_obstacles (aav_yolo): the detectors' boxes as points on the road, for Nav2's
+# camera_obstacles (aav_detector): the detectors' boxes as points on the road, for Nav2's
 # local costmap. Off by default until the cameras are calibrated (Q22).
 camera_obstacles:
   ros__parameters:

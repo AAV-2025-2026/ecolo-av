@@ -73,7 +73,7 @@
 <div class="lead"><p>What the car sees, and what it does about it. All of it runs on the bench today. On the
 car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).</p></div>
 <section class="card"><h2 id="the-chain">The chain</h2>
-<pre class="highlight"><code>camera ─► yolo_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
+<pre class="highlight"><code>camera ─► object_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
                                                                     (a lock on twist_mux)
 lane finder (missing) ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
 radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/radar/clusters, /perception/radar/cluster_boxes</code></pre>
@@ -113,7 +113,7 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 </thead>
 <tbody>
 <tr>
-<td><code>aav_yolo</code></td>
+<td><code>aav_detector</code></td>
 <td>2024-25 <code>camera_ros2_ws</code> (<code>yolo_ros2</code>)</td>
 <td>the detector (RF-DETR or YOLO): camera images in, <code>vision_msgs</code> detections out; and the stop-sign watcher</td>
 <td><span class="badge b-works">works</span> on the bench, with either stock model</td>
@@ -376,7 +376,7 @@ on the Orin, once it's on JetPack 7.2 (Q24):</p>
 </ul>
 <h3 id="in-another-program">In another program</h3>
 <p>The models don't need ROS. Any Python program can load one, as the detector node does:</p>
-<pre class="highlight"><code class="language-python">from aav_yolo.detectors import load_detector
+<pre class="highlight"><code class="language-python">from aav_detector.detectors import load_detector
 
 model = load_detector()          # RF-DETR Nano: once, it takes a few seconds
 boxes = model.detect(bgr)        # an OpenCV picture: H x W x 3, BGR
@@ -400,7 +400,7 @@ for box in boxes:                # in that picture's pixels
 </tr>
 </tbody>
 </table></div>
-<p>The code: <code>aav_yolo/detectors.py</code> (the models), <code>aav_yolo/detr.py</code> (RF-DETR's maths for
+<p>The code: <code>aav_detector/detectors.py</code> (the models), <code>aav_detector/detr.py</code> (RF-DETR's maths for
 an exported model, NumPy only), with their tests.</p>
 <h3 id="the-2024-25-teams-model">The 2024-25 team's model</h3>
 <p>Their own model, <code>best.pt</code>, is in no repo: their code loaded it from
@@ -477,7 +477,7 @@ far more pictures may do better:</p>
 </tr>
 </tbody>
 </table></div>
-<p>The detector runs as <code>python3 -m aav_yolo.detector</code>, so it uses the <code>python3</code> of the
+<p>The detector runs as <code>python3 -m aav_detector.detector</code>, so it uses the <code>python3</code> of the
 environment that starts it: the <code>ml</code> environment's PyTorch on a laptop, JetPack's on the
 Orin.</p>
 <h3 id="one-gpu-setting-for-every-computer">One GPU setting for every computer</h3>
@@ -533,8 +533,8 @@ names, passed on as they are.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>node_name:=yolo_detector_macbook</code></td>
-<td>the node's name. Each computer with a GPU runs its own detector, under its own name: <code>car.launch.py</code> calls it <code>yolo_detector_&lt;machine&gt;</code>. All of them publish on <code>/perception/detections</code></td>
+<td><code>node_name:=object_detector_macbook</code></td>
+<td>the node's name. Each computer with a GPU runs its own detector, under its own name: <code>car.launch.py</code> calls it <code>object_detector_&lt;machine&gt;</code>. All of them publish on <code>/perception/detections</code></td>
 </tr>
 <tr>
 <td><code>compressed:=true</code></td>
@@ -543,7 +543,7 @@ names, passed on as they are.</p>
 </tbody>
 </table></div>
 <p>From a Mac on the car's network, by hand:
-<code>pixi run detect node_name:=yolo_detector_macbook compressed:=true</code>.</p>
+<code>pixi run detect node_name:=object_detector_macbook compressed:=true</code>.</p>
 <h3 id="the-ml-environment">The ml environment</h3>
 <p>A separate Pixi environment, so nobody downloads PyTorch unless they want it: PyTorch
 2.13, Ultralytics 8.4, coremltools 9 (Macs only) and NumPy 2.3.</p>
@@ -907,7 +907,7 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
 </tr>
 <tr>
 <td><code>detector</code></td>
-<td>RF-DETR Nano, as <code>yolo_detector_&lt;machine&gt;</code> → <code>/perception/detections</code></td>
+<td>RF-DETR Nano, as <code>object_detector_&lt;machine&gt;</code> → <code>/perception/detections</code></td>
 <td>the Orin, in TensorRT (<code>models/rf-detr-nano.engine</code>: build it there first). The laptop's reads compressed images</td>
 </tr>
 <tr>
@@ -944,7 +944,7 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
   Raw images are too big for WiFi, so the cameras should also publish compressed ones.</p>
 </li>
 <li>
-<p><strong>Into the costmap:</strong> <code>camera_obstacles</code> (in <code>aav_yolo</code>) puts each box where it meets
+<p><strong>Into the costmap:</strong> <code>camera_obstacles</code> (in <code>aav_detector</code>) puts each box where it meets
   the road: its bottom edge, seen through the camera's lens from its height and tilt
   (<code>vehicle.yaml</code>, through TF). The local costmap's camera layer marks those points. Off
   until the cameras are calibrated (Q22); then turn the <code>camera_obstacles</code> part on in the
@@ -970,7 +970,7 @@ read the same way.</p>
 <h3 id="isaac-ros-nvidia">Isaac ROS (NVIDIA)</h3>
 <ul>
 <li><strong>Not needed for the detector:</strong> it already uses TensorRT on the Orin, through
-  TensorRT's own Python module (<code>aav_yolo/detectors.py</code>).</li>
+  TensorRT's own Python module (<code>aav_detector/detectors.py</code>).</li>
 <li><strong>Jazzy:</strong> Isaac ROS 4.6 (18 Aug 2026) is the last release for Jazzy, and supports the
   Orin on JetPack 7.2. Isaac ROS 5.0 (21 Sept 2026) moved to ROS 2 Lyrical.</li>
 <li><strong>Later, maybe:</strong> nvblox (a costmap from cameras), visual SLAM and stereo depth. It runs

@@ -32,7 +32,7 @@ PLAN.md item S6, 16 Oct 2026. Two questions:
 | 16 language models on the 23-request test, through MLX | **yes** | the same Mac |
 | One model through the new OpenAI-compatible backend (`mlx_lm.server`) | **yes** | the same Mac |
 | Anything on the Orin: TensorRT, llama.cpp with CUDA, TensorRT-LLM | **no**: no Orin here | [[untested]] |
-| RF-DETR inside the detector node (`aav_yolo`) | **yes**, since 20 Oct, and the default: PyTorch, Core ML (24 Oct) and TensorRT (written, [[untested]]) | Ben's Mac; [Perception](perception.md#models) |
+| RF-DETR inside the detector node (`aav_detector`) | **yes**, since 20 Oct, and the default: PyTorch, Core ML (24 Oct) and TensorRT (written, [[untested]]) | Ben's Mac; [Perception](perception.md#models) |
 | The car's own camera pictures | **no**: none recorded yet (C1, C6) | [[needs-you]] |
 | Ollama, llama.cpp on the Mac | **no**: neither is installed here | |
 
@@ -122,7 +122,7 @@ The Gazebo frames: the front left camera (640 x 360) on the road world's centre 
 
 - **Our repo is public**, so sharing the source is easy. But it has **no licence file**
   yet: by default that means "all rights reserved", which doesn't fit with AGPL code in
-  the same program. With YOLO, the team should put the repo, or at least `aav_yolo`,
+  the same program. With YOLO, the team should put the repo, or at least `aav_detector`,
   under AGPL-3.0 (a team decision; not legal advice).
 - **The network clause**: if the HUD's web page ever shows YOLO's boxes to people over the
   network, that counts as use over a network.

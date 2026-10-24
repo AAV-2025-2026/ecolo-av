@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>aav_yolo</name>
+  <name>aav_detector</name>
   <version>0.1.0</version>
   <description>A YOLO detector: camera images in, vision_msgs/Detection2DArray out. Finds stop signs with the stock YOLO11 model, or the team's own. Needs PyTorch and Ultralytics (the Pixi ml environment). Also the stop-sign watcher, and camera_obstacles: the detections as points on the road, for Nav2's local costmap (no PyTorch needed for either).</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>

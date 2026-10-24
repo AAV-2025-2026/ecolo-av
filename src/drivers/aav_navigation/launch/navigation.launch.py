@@ -39,7 +39,7 @@ Obstacles, from where the sensors are:
   collision_monitor       radar or lidar unless set: it stops the car for radar or lidar
                           points in the stop zone ahead, whatever the costmap says. A
                           silent radar or lidar stops Nav2 too
-  camera_obstacles:=true  the local costmap's camera layer reads aav_yolo camera_obstacles
+  camera_obstacles:=true  the local costmap's camera layer reads aav_detector camera_obstacles
                           (the detectors' boxes on the road). Off until the cameras are
                           calibrated (Q22)
   camera_guard:=true      collision_monitor stops for them too, and when they go silent:

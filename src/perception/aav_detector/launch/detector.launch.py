@@ -2,7 +2,7 @@
 The object detector, on the camera's images: RF-DETR by default, or YOLO.
 
   pixi run detect                       # RF-DETR Nano, on /sensors/camera/front_left/image_raw
-  pixi run detect picture:=src/perception/aav_yolo/test/stop_sign.jpg   # a test picture
+  pixi run detect picture:=src/perception/aav_detector/test/stop_sign.jpg   # a test picture
   pixi run detect detector:=yolo        # YOLO instead (models/yolo11n.pt)
   pixi run detect detector:=yolo model:=models/best.pt labels:="stop sign"
 
@@ -21,12 +21,12 @@ What you can set:
               /sensors/camera/rear/image_raw); empty, the default: none
   compressed  true: read <image>/compressed (JPEG) instead: for a laptop on the car's WiFi
   picture     an image or video file, published as the camera (image_publisher), for tests
-  node_name   the node's name: yolo_detector, or yolo_detector_<machine> on the car. One
+  node_name   the node's name: object_detector, or object_detector_<machine> on the car. One
               detector per computer, each under its own name, all on /perception/detections
   use_sim_time  true in Gazebo (sim.launch.py): the detector is a process, not a launch_ros
               Node, so launch_ros's SetParameter doesn't reach it
 
-The detector runs as `python3 -m aav_yolo.detector`: the python3 of the environment that
+The detector runs as `python3 -m aav_detector.detector`: the python3 of the environment that
 started the launch, so the ml environment's PyTorch is the one it finds.
 """
 
@@ -54,7 +54,7 @@ def generate_launch_description():
         DeclareLaunchArgument('compressed', default_value='false',
                               description='read <image>/compressed (JPEG), for WiFi'),
         DeclareLaunchArgument('picture', default_value=''),
-        DeclareLaunchArgument('node_name', default_value='yolo_detector'),
+        DeclareLaunchArgument('node_name', default_value='object_detector'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         Node(
             package='image_publisher', executable='image_publisher_node', name='test_camera',
@@ -66,7 +66,7 @@ def generate_launch_description():
         ),
         ExecuteProcess(
             name=arg('node_name'), output='screen', emulate_tty=True,
-            cmd=['python3', '-m', 'aav_yolo.detector', '--ros-args',
+            cmd=['python3', '-m', 'aav_detector.detector', '--ros-args',
                  '-r', ['__node:=', arg('node_name')],
                  '-p', ['detector:=', arg('detector')],
                  '-p', ['model:="', arg('model'), '"'],

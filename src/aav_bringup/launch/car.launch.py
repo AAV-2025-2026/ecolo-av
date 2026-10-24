@@ -54,7 +54,7 @@ Parts and what they start:
                   detections (<camera>_stream). The pictures stay inside: image_raw only
                   with the lane part (publish_image). docs/camera-pipeline.md
   detector        YOLO on /sensors/camera/front_left/image_raw -> /perception/detections, as
-                  yolo_detector_<machine>, with the machine file's model. Not for a camera
+                  object_detector_<machine>, with the machine file's model. Not for a camera
                   the camera_stream part streams: its own detector replaces this one
   stop_signs      stop_sign_watcher -> /perception/stop_sign, twist_mux's stop-sign lock (the
                   lock is in aav_mux's config). One per car, next to the mux
@@ -82,7 +82,7 @@ Parts and what they start:
                   runs: both would publish /vehicle/odom, and the output mux stops for two
   foxglove        foxglove_bridge on port 8765, for Foxglove Studio on a laptop
 
-The detector runs as `python3 -m aav_yolo.detector`, the python3 of the environment that
+The detector runs as `python3 -m aav_detector.detector`, the python3 of the environment that
 starts this file: on a laptop, the ml environment's PyTorch (pixi run -e ml car laptop);
 on the Orin, JetPack's (docs/perception.md).
 """
@@ -212,7 +212,7 @@ def check_model(machine, kind, model):
     A detector and a model file that don't go together is an error: the machine file is
     wrong, on every computer.
     """
-    from aav_yolo.boxes import check_detector   # here: only machines with a detector need it
+    from aav_detector.boxes import check_detector   # here: only machines with a detector need it
     try:
         model = check_detector(kind, model)
     except ValueError as e:
@@ -231,19 +231,19 @@ def check_model(machine, kind, model):
 
 
 def detector(context, machine, settings):
-    """Return the detector part, as yolo_detector_<machine>, or why it can't start."""
+    """Return the detector part, as object_detector_<machine>, or why it can't start."""
     if not isinstance(settings, dict):
         raise RuntimeError(f'{machine}.yaml: give the detector settings, such as '
                            f'"detector: {{detector: rfdetr}}"')
-    defaults = arguments(context, machine, 'aav_yolo', 'detector.launch.py', settings,
+    defaults = arguments(context, machine, 'aav_detector', 'detector.launch.py', settings,
                          'the detector', fixed=('node_name', 'picture'))
     args = {**defaults, 'labels': 'stop sign', **settings}
     model, why = check_model(machine, str(args['detector']), str(args['model']))
     if why:
         return skipped('detector', why)
     args.update(model=model, picture='',
-                node_name='yolo_detector_' + re.sub(r'\W', '_', machine))
-    return [include('aav_yolo', 'detector.launch.py', **args)]
+                node_name='object_detector_' + re.sub(r'\W', '_', machine))
+    return [include('aav_detector', 'detector.launch.py', **args)]
 
 
 def image_topic(camera):
@@ -275,7 +275,7 @@ def stream_labels(obstacles):
     """
     labels = ['stop sign']
     if obstacles:
-        path = os.path.join(get_package_share_directory('aav_yolo'), 'config',
+        path = os.path.join(get_package_share_directory('aav_detector'), 'config',
                             'camera_obstacles.yaml')
         with open(path) as f:
             classes = yaml.safe_load(f)['camera_obstacles']['ros__parameters']['classes']
@@ -443,13 +443,13 @@ def launch_setup(context):
     if run_detector:
         actions += detector(context, machine, config.get('detector') or {})
     if on('stop_signs'):
-        actions.append(Node(package='aav_yolo', executable='stop_sign_watcher',
+        actions.append(Node(package='aav_detector', executable='stop_sign_watcher',
                             name='stop_sign_watcher'))
     if on('radar_clusters'):
         actions.append(include('aav_radar_clusters', 'radar_clusters.launch.py',
                                mock=False, eps=0.8, minimum_points=15, radar_rviz=False))
     if on('camera_obstacles'):
-        config_file = os.path.join(get_package_share_directory('aav_yolo'), 'config',
+        config_file = os.path.join(get_package_share_directory('aav_detector'), 'config',
                                    'camera_obstacles.yaml')
         parameters = [config_file]
         if streaming:
@@ -467,7 +467,7 @@ def launch_setup(context):
                     f'camera_obstacles: {", ".join(blind)}: no calibration '
                     '(aav_camera_stream config/cameras.yaml), so no lens: those boxes '
                     "won't reach Nav2's costmap")
-        actions.append(Node(package='aav_yolo', executable='camera_obstacles',
+        actions.append(Node(package='aav_detector', executable='camera_obstacles',
                             name='camera_obstacles', parameters=parameters))
     if on('lane'):
         actions += [include('aav_lane_finder', 'lane_finder.launch.py', debug_image=False),

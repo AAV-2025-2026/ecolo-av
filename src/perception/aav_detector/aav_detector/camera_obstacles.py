@@ -30,8 +30,8 @@ Needs no PyTorch: it runs in the default environment.
 
 import signal
 
-from aav_yolo import ground
-from aav_yolo.recent import Recent
+from aav_detector import ground
+from aav_detector.recent import Recent
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node

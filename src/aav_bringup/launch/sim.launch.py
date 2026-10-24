@@ -189,15 +189,15 @@ def launch_setup(context):
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
     if flag['perception']:
         actions += [
-            include(context, 'aav_yolo', 'detector.launch.py', labels='stop sign',
+            include(context, 'aav_detector', 'detector.launch.py', labels='stop sign',
                     use_sim_time='true'),
-            Node(package='aav_yolo', executable='stop_sign_watcher', name='stop_sign_watcher',
+            Node(package='aav_detector', executable='stop_sign_watcher', name='stop_sign_watcher',
                  parameters=[{'use_sim_time': True}]),
         ]
     if flag['camera_obstacles']:
-        actions.append(Node(package='aav_yolo', executable='camera_obstacles',
+        actions.append(Node(package='aav_detector', executable='camera_obstacles',
                             name='camera_obstacles',
-                            parameters=[os.path.join(FindPackageShare('aav_yolo')
+                            parameters=[os.path.join(FindPackageShare('aav_detector')
                                                      .perform(context), 'config',
                                                      'camera_obstacles.yaml'),
                                         {'use_sim_time': True}]))
@@ -236,7 +236,7 @@ def generate_launch_description():
         DeclareLaunchArgument('gui', default_value='true', description='Gazebo window'),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument('perception', default_value='false',
-                              description='YOLO and the stop-sign watcher (the ml '
+                              description='the object detector and the stop-sign watcher (the ml '
                                           'environment; world:=road)'),
         DeclareLaunchArgument('lane', default_value='false',
                               description='true: lane keeping (lane_finder and '

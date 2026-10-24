@@ -41,7 +41,7 @@ os.environ.setdefault('PYTORCH_ENABLE_MPS_FALLBACK', '1')
 os.environ.setdefault('YOLO_AUTOINSTALL', 'false')   # Ultralytics must never pip-install
 
 CLASSES = ('person', 'stop sign')
-CONFIDENCE = 0.5            # the detector node's (aav_yolo detector.py)
+CONFIDENCE = 0.5            # the detector node's (aav_detector detector.py)
 LOW = 0.1                   # what the models are asked for: best scores below 0.5 still show
 USER_AGENT = 'aav-capstone-model-comparison/0.1 (Carleton University school project)'
 

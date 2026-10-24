@@ -30,7 +30,7 @@ topics and frames as the real devices:
                             sensors.launch.py lidar:=true, as on the car) reads them, and
                             Nav2's costmap and collision_monitor read its points
 
-camera_obstacles:=true adds aav_yolo's camera_obstacles (the detectors' boxes as points on
+camera_obstacles:=true adds aav_detector's camera_obstacles (the detectors' boxes as points on
 the road, from mock_camera's lens) and the local costmap's camera layer. The bench camera
 draws only stop signs, which never count: publish a detection by hand to see it work.
 
@@ -148,13 +148,13 @@ def launch_setup(context):
         actions.append(include('aav_teleop', 'teleop.launch.py'))
     if flag['perception']:
         actions += [
-            include('aav_yolo', 'detector.launch.py', labels='stop sign'),
-            Node(package='aav_yolo', executable='stop_sign_watcher', name='stop_sign_watcher'),
+            include('aav_detector', 'detector.launch.py', labels='stop sign'),
+            Node(package='aav_detector', executable='stop_sign_watcher', name='stop_sign_watcher'),
         ]
     if flag['camera_obstacles']:
-        actions.append(Node(package='aav_yolo', executable='camera_obstacles',
+        actions.append(Node(package='aav_detector', executable='camera_obstacles',
                             name='camera_obstacles',
-                            parameters=[os.path.join(share('aav_yolo'), 'config',
+                            parameters=[os.path.join(share('aav_detector'), 'config',
                                                      'camera_obstacles.yaml')]))
     if lane in ('true', 'fake'):
         actions.append(include('aav_lane_geometry', 'lane_follower.launch.py',
@@ -185,7 +185,8 @@ def generate_launch_description():
                               description='true if a joystick is plugged into this computer'),
         DeclareLaunchArgument('rviz', default_value='false'),
         DeclareLaunchArgument('perception', default_value='false',
-                              description='YOLO and the stop-sign watcher (the ml environment)'),
+                              description='the object detector and the stop-sign watcher '
+                                          '(the ml environment)'),
         DeclareLaunchArgument('lane', default_value='false',
                               description='true: lane keeping (lane_finder and control_interface, '
                                           'on /drivers/ai/cmd_vel); fake: the same on a '

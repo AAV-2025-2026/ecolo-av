@@ -21,7 +21,7 @@ settings and why, what was measured on a Mac, and what to check at the car.
                   │ (OpenH264,  ────────────────► │ decoder (child program)      │
                   │  software)      2 Mbit/s each │  GStreamer nvv4l2decoder     │
                   │ :8554/front_left              │ undistort (OpenCV)           │
-                  │ :8554/front_right             │ RF-DETR Nano (aav_yolo)      │
+                  │ :8554/front_right             │ RF-DETR Nano (aav_detector)      │
                   │ :8889 WebRTC ──► a browser    └──────┬───────────────────────┘
                                                          ▼
                         /perception/detections   (~0.5 kB, every picture)
@@ -39,7 +39,7 @@ The same for `front_right`, in a second program.
 | The Pi's settings | `src/sensors/aav_camera_stream/pi/mediamtx.yml` | install: `pi/README.md` [[untested]] on the Pi |
 | The node | `aav_camera_stream/camera_stream.py` | one per camera |
 | Its logic, no ROS | `decoders.py`, `reader.py`, `latest.py`, `lens.py`, `timecode.py`, `models.py` | 41 tests |
-| The detector | `aav_yolo.detectors.load_detector` | imported, not copied |
+| The detector | `aav_detector.detectors.load_detector` | imported, not copied |
 | Start it, the car | `car.launch.py machine:=orin`: its `camera_stream` part, set in `orin.yaml` | [below](#on-the-car-carlaunchpy) |
 | Start it, by hand | `ros2 launch aav_camera_stream camera_stream.launch.py host:=<pi> decoder:=gst-nvidia` | on the Orin |
 | Test it | `pixi run -e ml stream-check` | a Mac, no car |

@@ -31,6 +31,7 @@ changes their launch files and executables.
 |---|---|---|
 | `maincar` (the HUD's web server) | `aav_hud` | done, 10 October |
 | `lane_geometry`, `object_detection`, `yolo_ros2` | `aav_lane_geometry`, `aav_object_detection`, `aav_yolo` | done, 10 October, when perception came in. `aav_object_detection` became `aav_radar_clusters` (Rust), 15 October |
+| `aav_yolo`, its node `yolo_detector` | `aav_detector`, `object_detector` | done, 24 October: it runs RF-DETR Nano by default, YOLO only with `detector:=yolo` |
 | `yahboom_imu_cpp` | `aav_imu_yahboom` | done, 11 October: Ben's Rust rewrite replaced it |
 | `ti_ros2_driver` | `aav_radar_ti` | proposed [[needs-you]] |
 | `battery_monitor` | `aav_battery_victron` | proposed [[needs-you]] |

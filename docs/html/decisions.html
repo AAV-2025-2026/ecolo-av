@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">27 min read · 11 sections</div></header>
+<div class="meta">27 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -69,7 +69,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-labels">How to read the labels</a><a href="#decided">Decided</a><a href="#tentative">Tentative</a><a href="#proposed-for-the-next-team-meeting">Proposed: for the next team meeting</a><a href="#ground-rules">Ground rules</a><a href="#decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</a><a href="#decided-on-11-october">Decided on 11 October</a><a href="#decided-on-15-october">Decided on 15 October</a><a href="#decided-on-22-and-23-october">Decided on 22 and 23 October</a><a href="#open-questions">Open questions</a><a href="#also-waiting-on-the-team">Also waiting on the team</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-labels">How to read the labels</a><a href="#decided">Decided</a><a href="#tentative">Tentative</a><a href="#proposed-for-the-next-team-meeting">Proposed: for the next team meeting</a><a href="#ground-rules">Ground rules</a><a href="#decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</a><a href="#decided-on-11-october">Decided on 11 October</a><a href="#decided-on-15-october">Decided on 15 October</a><a href="#decided-on-22-and-23-october">Decided on 22 and 23 October</a><a href="#decided-on-24-october">Decided on 24 October</a><a href="#open-questions">Open questions</a><a href="#also-waiting-on-the-team">Also waiting on the team</a></nav>
 <div class="lead"><p>What the team has decided, what's still open, and the 34 numbered questions. The source
 is the team design doc, <em>AAV 2026–27 Autonomy Stack — Architecture &amp; Plan</em> (a Claude Doc,
 revision 61 on 10 October 2026). This page is a short copy, so you don't have to hunt.
@@ -375,7 +375,7 @@ answer.</p>
 <td>Ben, 10 Oct: "Lets try to get a fully functioning thing going on"</td>
 </tr>
 <tr>
-<td>Inference: TensorRT on the Orin (a <code>.engine</code> built there), Core ML on the MacBook Pro (a <code>.mlpackage</code>), both in our <code>aav_yolo</code> node. Isaac ROS's TensorRT detectors are the Orin's upgrade path</td>
+<td>Inference: TensorRT on the Orin (a <code>.engine</code> built there), Core ML on the MacBook Pro (a <code>.mlpackage</code>), both in our <code>aav_detector</code> node. Isaac ROS's TensorRT detectors are the Orin's upgrade path</td>
 <td>Ben, 10 Oct: "TensorRT on the Orin and CoreML ... on the macbook pro"</td>
 </tr>
 <tr>
@@ -507,6 +507,24 @@ answer.</p>
 <td><strong>The global EKF trusts the gyro and wheels for heading</strong>; GPS only nudges it (yaw noise 0.06 → 0.01)</td>
 <td>At walking pace its heading jumped up to 76°; now the worst per leg is 7-16° in Gazebo. To check with the real IMU</td>
 <td>22 Oct, from the Gazebo runs</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-24-october">Decided on 24 October</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Why</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The detector package is <code>aav_detector</code></strong>, was <code>aav_yolo</code>; its node is <code>object_detector</code> (<code>object_detector_&lt;machine&gt;</code> on the car), was <code>yolo_detector</code>. Topics, parameters and <code>detector:=yolo</code> stay</td>
+<td>It runs RF-DETR Nano by default now, YOLO only as an option, so a name with "yolo" in it misled. <code>detector:=yolo</code> keeps its name: it names the model family</td>
+<td>Ben, 24 Oct: "aav detector yes"</td>
 </tr>
 </tbody>
 </table></div>

@@ -34,9 +34,9 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'src' / 'perception' / 'aav_yolo'))
+sys.path.insert(0, str(ROOT / 'src' / 'perception' / 'aav_detector'))
 sys.path.insert(0, str(ROOT / 'tools'))
-TEST_PICTURE = ROOT / 'src' / 'perception' / 'aav_yolo' / 'test' / 'stop_sign.jpg'
+TEST_PICTURE = ROOT / 'src' / 'perception' / 'aav_detector' / 'test' / 'stop_sign.jpg'
 # What each kind of model needs, and where each comes from.
 TENSORRT = {
     'tensorrt': "TensorRT's Python module, from JetPack (sudo apt install python3-libnvinfer)",
@@ -103,7 +103,7 @@ def check(engine):
     """Run a new RF-DETR engine on the test stop sign: print the score and the time."""
     import cv2
 
-    from aav_yolo.detectors import load_detector
+    from aav_detector.detectors import load_detector
     model = load_detector('rfdetr', str(engine), root='/')
     picture = cv2.imread(str(TEST_PICTURE))
     boxes = model.detect(picture, 0.5)

@@ -28,7 +28,7 @@ Options:
   --gst              decode with GStreamer (gst-soft), as the Orin does, instead of the
                      ffmpeg program, which holds back about 2 frames (135 ms). GStreamer's
                      RTSP plugins aren't in this environment: pixi exec fetches them once
-  --pattern          no Gazebo: aav_yolo's stop-sign photo, moving, with noise (the
+  --pattern          no Gazebo: aav_detector's stop-sign photo, moving, with noise (the
                      noise makes the encoder work as on a real camera)
   --sign-at X        put Gazebo's stop sign X m ahead of the car (25)
   --drive V          roll the car towards it at V m/s while measuring (0.3), so the
@@ -78,7 +78,7 @@ import yaml  # noqa: E402
 
 MEDIAMTX = os.path.join(ROOT, 'vendor', 'mediamtx', 'mediamtx')
 PI_CONFIG = os.path.join(ROOT, 'src', 'sensors', 'aav_camera_stream', 'pi', 'mediamtx.yml')
-PHOTO = os.path.join(ROOT, 'src', 'perception', 'aav_yolo', 'test', 'stop_sign.jpg')
+PHOTO = os.path.join(ROOT, 'src', 'perception', 'aav_detector', 'test', 'stop_sign.jpg')
 WIDTH, HEIGHT, FPS = 1280, 720, 15              # the Pi's stream (pi/mediamtx.yml)
 BITRATE = 2_000_000                             # bit/s
 GZ_FOCAL = 343.0                                # Gazebo's camera at 640x360 (sensors xacro)

@@ -2,7 +2,7 @@
 camera_stream: one camera's H.264 stream (RTSP, from MediaMTX) to detections, in one process.
 
   camera Pi: MediaMTX ──RTSP H.264──> decoder ──> undistort ──> detector ──> detections
-                                     (child)     (OpenCV)     (aav_yolo)
+                                     (child)     (OpenCV)     (aav_detector)
 
 Pulls rtsp://<pi>:8554/<camera>, decodes it (decoders.py: ffmpeg, or GStreamer with
 NVIDIA's hardware on the Orin), undistorts each picture (lens.py) and runs the detector
@@ -134,7 +134,7 @@ class CameraStream(Node):
             raise SystemExit(f'source:={source}: use one of {", ".join(SOURCES)}')
         try:
             decoders.check(decoder, transport)
-            from aav_yolo.boxes import parse_labels
+            from aav_detector.boxes import parse_labels
             self.labels = parse_labels(labels)
             self.undistort = None
             if calibration:
@@ -252,7 +252,7 @@ class CameraStream(Node):
         self.work_ms.add(1000.0 * (time.monotonic() - t0))
 
     def preview(self, header, frame, boxes):
-        from aav_yolo.detector import draw
+        from aav_detector.detector import draw
         picture = draw(frame, boxes) if boxes else frame
         scale = self.preview_width / picture.shape[1]
         small = cv2.resize(picture, (self.preview_width, int(round(picture.shape[0] * scale))),

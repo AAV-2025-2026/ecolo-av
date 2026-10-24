@@ -32,7 +32,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_goto`, `aav_language`, `aav_navigation` |
 | [Mux and ego](#mux-and-ego) | `aav_mux`, `aav_io_mux`, `aav_ego` |
 | [Backends](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla` |
-| [Perception](#perception) | `aav_yolo`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry` |
+| [Perception](#perception) | `aav_detector`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry` |
 | [HUD](#hud) | `aav_hud`, `aav_hud_raylib` |
 | [Bench](#bench) | `aav_spine_sim`, `aav_bench` |
 | [Messages and bringup](#messages-and-bringup) | `aav_interfaces`, `aav_bringup` |
@@ -338,7 +338,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 
 [Perception](perception.md) has the details.
 
-### aav_yolo
+### aav_detector
 
 | | |
 |---|---|
@@ -348,9 +348,9 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 | **In → out** | `/sensors/camera/front_left/image_raw` → `/perception/detections` → `/perception/stop_sign`, `/perception/camera_obstacles`, `/perception/camera_view` |
 | **Origin** | inherited, rewritten: 2024-25 `camera_ros2_ws` (and `camera_Yolo_detection` for `training/`) |
 | **Status** | [[works]] on the bench, with the stock YOLO model. The team's trained model is lost |
-| **Run alone** | `pixi run get-models`, then `pixi run detect picture:=src/perception/aav_yolo/test/stop_sign.jpg` |
+| **Run alone** | `pixi run get-models`, then `pixi run detect picture:=src/perception/aav_detector/test/stop_sign.jpg` |
 | **Test** | `test/` (in `tools/test.sh`); `pixi run bench-check --perception` |
-| **Read first** | `aav_yolo/stop_sign.py` |
+| **Read first** | `aav_detector/stop_sign.py` |
 
 ### aav_radar_clusters
 

@@ -162,7 +162,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | W5500 | an Ethernet chip for small boards | the wheel encoder today |
 | watchdog | a timer that acts if a program stops checking in | the spine, the ESP32 |
 | wheel node | a small CAN board that reads one wheel's speed | 0x200 left, 0x201 right (KEFC) |
-| YOLO | a fast neural network that finds objects in a picture | `aav_yolo`, stop signs |
+| YOLO | a fast neural network that finds objects in a picture | `aav_detector`, stop signs |
 
 ## Try it
 

@@ -1,6 +1,6 @@
 import math
 
-from aav_yolo import ground
+from aav_detector import ground
 import pytest
 
 # The bench camera: 640 x 360, 343 px focal length, centred; 1.2 m up, 1.8 m ahead of

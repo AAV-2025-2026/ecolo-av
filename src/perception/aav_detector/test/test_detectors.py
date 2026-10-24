@@ -1,8 +1,8 @@
 import importlib.util
 import os
 
-from aav_yolo.boxes import Box
-from aav_yolo.detectors import keep_labels, load_detector, RfdetrExported
+from aav_detector.boxes import Box
+from aav_detector.detectors import keep_labels, load_detector, RfdetrExported
 import numpy as np
 import pytest
 

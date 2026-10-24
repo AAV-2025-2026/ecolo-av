@@ -273,7 +273,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>Stop signs</td>
-<td><code>aav_yolo</code>: RF-DETR (default since 20 Oct) or YOLO, <code>detector:=</code></td>
+<td><code>aav_detector</code>: RF-DETR (default since 20 Oct) or YOLO, <code>detector:=</code></td>
 <td><span class="badge b-works">works</span> on the bench with both stock models: RF-DETR's lock came on at 20.7 m, the sign at 25 m (20 Oct). <code>sim-check --perception</code> in Gazebo with RF-DETR (24 Oct): first seen at x = 5.9 m, the sign at 25 m; the car stopped with its bumper 4.4 m before it. <span class="badge b-untested">untested</span> on the Orin: its TensorRT engine is written, not built</td>
 </tr>
 <tr>

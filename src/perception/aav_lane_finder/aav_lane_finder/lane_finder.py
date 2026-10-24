@@ -37,7 +37,7 @@ from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CameraInfo, Image
 
 # Only the newest picture, and reliable: a camera picture is too big for one UDP packet,
-# and best effort loses the whole picture when one piece is lost (aav_yolo's detector).
+# and best effort loses the whole picture when one piece is lost (aav_detector's object detector).
 LATEST = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
                     reliability=ReliabilityPolicy.RELIABLE)
 # The distortion models OpenCV's projectPoints knows.

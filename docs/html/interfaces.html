@@ -482,7 +482,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
 <td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_camera</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code></td>
-<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
+<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
 <td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop). On the car with the camera stream (aav_camera_stream), camera_stream_front_left publishes it only with publish_image:=true - every undistorted picture, for another node on the same computer; the pictures otherwise stay inside it.</td>
 </tr>
@@ -490,7 +490,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/camera/front_left/image_raw/compressed</code></td>
 <td><code>sensor_msgs/msg/CompressedImage</code></td>
 <td><code>camera_left</code>, <code>test_camera</code>, <code>mock_camera</code></td>
-<td><code>yolo_detector</code>, <code>yolo_detector_laptop</code></td>
+<td><code>object_detector</code>, <code>object_detector_laptop</code></td>
 <td>-</td>
 <td>The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera only while something reads it). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true; the laptop's machine file). On the bench, pixi run -e ml laptop-bench.</td>
 </tr>
@@ -577,10 +577,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/perception/detections</code></td>
 <td><code>vision_msgs/msg/Detection2DArray</code></td>
-<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
+<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
 <td><code>stop_sign_watcher</code>, <code>camera_obstacles</code>, <code>sensor_watchdog</code></td>
 <td>-</td>
-<td>YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay. It sends one for every picture, boxes or none, so the sensor watchdog watches each streamed camera here (kind detections, by its frame_id - front_left_stream, front_right_stream; silent 1 s locks Nav2 and the AI slot), where car.launch.py starts the streams (its camera_stream part, the Orin), and the car's detector part then doesn't start for those cameras.</td>
+<td>The object detector's boxes in pixels (RF-DETR Nano by default, or YOLO); header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. object_detector (aav_detector) in bench mode and pixi run detect; on the car object_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay. It sends one for every picture, boxes or none, so the sensor watchdog watches each streamed camera here (kind detections, by its frame_id - front_left_stream, front_right_stream; silent 1 s locks Nav2 and the AI slot), where car.launch.py starts the streams (its camera_stream part, the Orin), and the car's detector part then doesn't start for those cameras.</td>
 </tr>
 <tr>
 <td><code>/perception/camera/front_left/preview/compressed</code></td>
@@ -601,7 +601,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/perception/detections/image</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code></td>
+<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code></td>
 <td>-</td>
 <td>-</td>
 <td>The camera picture with the boxes drawn on, for RViz or Foxglove.</td>

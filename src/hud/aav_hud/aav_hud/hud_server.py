@@ -58,7 +58,7 @@ from std_msgs.msg import Bool
 # Best effort takes both kinds of publisher: ublox publishes /sensors/gps/fix best effort,
 # the others are reliable. These messages are small, so losing one costs nothing.
 SMALL = qos_profile_sensor_data
-# Pictures: reliable, as best effort loses most big messages over UDP (aav_yolo measured
+# Pictures: reliable, as best effort loses most big messages over UDP (aav_detector measured
 # it on a Mac), and only the newest one.
 PICTURES = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
                       reliability=ReliabilityPolicy.RELIABLE)

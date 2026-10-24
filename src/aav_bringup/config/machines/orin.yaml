@@ -15,7 +15,7 @@ parts:
   camera: false         # a USB camera here (usb_cam): the front ones come by camera_stream
   camera_stream: true   # the two front cameras' H.264 streams from the camera Pi, each with
                         # RF-DETR inside its node (camera_stream below; docs/camera-pipeline.md)
-  detector: false       # yolo_detector_orin, on image_raw: camera_stream's own detectors
+  detector: false       # object_detector_orin, on image_raw: camera_stream's own detectors
                         # replace it. Only for a camera that isn't streamed (its image:)
   stop_signs: true      # the stop-sign watcher: one per car, next to the mux
   radar_clusters: false # with the radar, later

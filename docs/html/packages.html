@@ -240,7 +240,7 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>new</td>
 </tr>
 <tr>
-<td><code>aav_yolo</code></td>
+<td><code>aav_detector</code></td>
 <td>perception</td>
 <td>RF-DETR (the default) or YOLO on the camera's images, and the stop-sign watcher</td>
 <td><span class="badge b-works">works</span> on the bench</td>
@@ -491,13 +491,13 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 </thead>
 <tbody>
 <tr>
-<td><code>aav_yolo</code>: <code>yolo_detector</code></td>
+<td><code>aav_detector</code>: <code>object_detector</code></td>
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>/perception/detections</code>, <code>/perception/detections/image</code></td>
 <td><code>detector:=rfdetr</code> (the default: a <code>.pth</code>, or its <code>rf-detr-*.mlpackage</code> or <code>.engine</code>) or <code>yolo</code> (a <code>.pt</code>, <code>.mlpackage</code> or <code>.engine</code>); needs the <code>ml</code> environment, or JetPack's PyTorch and TensorRT</td>
 </tr>
 <tr>
-<td><code>aav_yolo</code>: <code>stop_sign_watcher</code></td>
+<td><code>aav_detector</code>: <code>stop_sign_watcher</code></td>
 <td><code>/perception/detections</code></td>
 <td><code>/perception/stop_sign</code></td>
 <td>twist_mux's stop-sign lock, priority 30</td>

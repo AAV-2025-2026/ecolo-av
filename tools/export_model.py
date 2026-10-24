@@ -30,7 +30,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'src' / 'perception' / 'aav_yolo'))
+sys.path.insert(0, str(ROOT / 'src' / 'perception' / 'aav_detector'))
 FORMATS = {'coreml': '.mlpackage', 'onnx': '.onnx'}
 NEEDS = {'coreml': 'coremltools', 'onnx': 'onnx'}
 
@@ -39,7 +39,7 @@ def export_rfdetr(pth: Path, fmt: str, out: Path) -> Path:
     """Export an RF-DETR .pth to `fmt`, as the file `out`; return `out`."""
     import rfdetr
 
-    from aav_yolo.boxes import rfdetr_size
+    from aav_detector.boxes import rfdetr_size
     model = getattr(rfdetr, rfdetr_size(str(pth)))(pretrain_weights=str(pth), device='cpu')
     # rfdetr names its file itself (rfdetr-nano_fp32.mlpackage): make it in a folder of
     # its own, then move it to our name.

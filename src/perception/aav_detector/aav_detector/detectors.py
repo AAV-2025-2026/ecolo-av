@@ -4,10 +4,10 @@ The detectors as plain Python objects: load a model once, then detect(picture) -
 No ROS here, so any program can use them: the detector node (detector.py), a camera
 stream's own program, a script.
 
-    from aav_yolo.detectors import load_detector
+    from aav_detector.detectors import load_detector
     model = load_detector()                     # RF-DETR Nano: models/rf-detr-nano.pth
     boxes = model.detect(bgr)                   # an OpenCV picture: H x W x 3, BGR, uint8
-    for box in boxes:                           # aav_yolo.boxes.Box, in that picture's pixels
+    for box in boxes:                           # aav_detector.boxes.Box, in that picture's pixels
         print(box.label, box.score, box.cx, box.cy, box.width, box.height)
 
 load_detector(detector, model, device) takes the node's own parameters:
@@ -33,9 +33,9 @@ from __future__ import annotations
 import os
 from typing import Callable, List, Optional, Sequence, Union
 
-from aav_yolo.boxes import (Box, boxes_from_corners, boxes_from_result, check_detector,
-                            normal_label, parse_labels, pick_device, rfdetr_size)
-from aav_yolo.detr import decode, input_size, preprocess, split_outputs
+from aav_detector.boxes import (Box, boxes_from_corners, boxes_from_result, check_detector,
+                                normal_label, parse_labels, pick_device, rfdetr_size)
+from aav_detector.detr import decode, input_size, preprocess, split_outputs
 import numpy as np
 
 Labels = Union[None, str, Sequence[str]]

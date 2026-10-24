@@ -16,14 +16,14 @@ What you can set:
   delay       s from the camera to here, taken off each picture's stamp (measure it:
               docs/camera-pipeline.md)
   detector    rfdetr (the default), yolo or none; model, device, confidence, labels as
-              aav_yolo's detector.launch.py
+              aav_detector's detector.launch.py
   preview_period  s between small JPEG previews (0: none)
   source      real (the car), or sim, bench, replay for a stand-in stream
   time_code   true: read tools/stream_check.py's time code, to measure the delay
 
 The nodes run as `python3 -m aav_camera_stream.camera_stream`: the python3 of the
 environment that started the launch, so `pixi run -e ml` gives them PyTorch, as for
-aav_yolo's detector.
+aav_detector's object detector.
 """
 
 import atexit

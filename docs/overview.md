@@ -122,7 +122,7 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | Their UART and encoder protocols | 2025-26 `AAV_cortex`, `Wheel_Encoders` | `aav_legacy` | rewritten in Python |
 | Lane keeping | 2025-26 `Lane_Detection_ROS2` | `src/perception/aav_lane_geometry` | brought in: a driver on `/drivers/ai/cmd_vel` |
 | Radar clustering (C++) | 2025-26 `Nav_Radar` | `src/perception/aav_radar_clusters` | rewritten in Rust; the C++ went on 15 Oct |
-| A YOLO stop-sign detector | 2024-25 `camera_ros2_ws` | `src/perception/aav_yolo` | rewritten: detections out, and a stop-sign watcher |
+| A YOLO stop-sign detector | 2024-25 `camera_ros2_ws` | `src/perception/aav_detector` | rewritten: detections out, and a stop-sign watcher |
 | The car's geometry | 2025-26 `Motor_Steering` (`Ackermann.m`) | `vehicle.yaml`, `docs/reference/` | numbers carried over, still guesses |
 | The joystick's button map | 2025-26 `joy_teleop_ackerman` | `aav_teleop` | carried over |
 | CARLA's axis rules | `carla-ros-bridge` (MIT) | `aav_carla` | rewritten, untested |

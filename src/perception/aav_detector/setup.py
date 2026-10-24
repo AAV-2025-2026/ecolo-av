@@ -2,7 +2,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = 'aav_yolo'
+package_name = 'aav_detector'
 
 setup(
     name=package_name,
@@ -25,9 +25,9 @@ setup(
     extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
-            'detector = aav_yolo.detector:main',
-            'stop_sign_watcher = aav_yolo.stop_sign_watcher:main',
-            'camera_obstacles = aav_yolo.camera_obstacles:main',
+            'detector = aav_detector.detector:main',
+            'stop_sign_watcher = aav_detector.stop_sign_watcher:main',
+            'camera_obstacles = aav_detector.camera_obstacles:main',
         ],
     },
 )

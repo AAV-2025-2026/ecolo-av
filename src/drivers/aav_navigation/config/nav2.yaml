@@ -235,7 +235,7 @@ local_costmap:
           raytrace_min_range: 0.0
           raytrace_max_range: 8.4
           observation_persistence: 0.2   # s: both radar frames of each update, not just one
-      # The detectors' boxes, as points on the road (aav_yolo camera_obstacles). Its own
+      # The detectors' boxes, as points on the road (aav_detector camera_obstacles). Its own
       # layer, so its clearing never wipes the radar's marks. Each update clears what the
       # camera sees, then marks the boxes of the last 0.3 s, from every detector.
       camera_layer:
@@ -524,7 +524,7 @@ collision_monitor:
       type: "scan"
       topic: /sensors/lidar/scan
       enabled: true
-    # The detectors' boxes on the road (aav_yolo camera_obstacles), every camera's newest:
+    # The detectors' boxes on the road (aav_detector camera_obstacles), every camera's newest:
     # people and cars ahead, and behind with the rear camera. Only with camera_guard: where a
     # detector really feeds it, since a silent source stops the car.
     camera:

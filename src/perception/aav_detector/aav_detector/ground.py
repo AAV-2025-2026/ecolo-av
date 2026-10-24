@@ -17,7 +17,7 @@ from dataclasses import dataclass
 import math
 from typing import List, Optional, Sequence, Tuple
 
-from aav_yolo.boxes import normal_label
+from aav_detector.boxes import normal_label
 
 Vec3 = Tuple[float, float, float]
 Matrix = Tuple[Vec3, Vec3, Vec3]

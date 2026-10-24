@@ -90,7 +90,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 | Our C++ moves to Rust: the IMU driver (Ben's twin), the radar clustering (a Rust ROS node), the encoder and display Picos (Embassy); the spine replaces the ESP32. Stock ROS packages stay | Ben, 10 Oct: "Can we change all the c++ to rust?" |
 | ML: a detector on each machine with a GPU (the Orin, a laptop), each under its own name; no device aliases | Ben, 10 Oct: "the orin be one node and/or my laptop be another node" |
 | The order of work: the high-level pieces first, then Ackermann done properly (reversing, both wheels' angles, the steering curve), then the C++ ported to Rust, then every file rewritten to its language's own conventions, until the whole car works | Ben, 10 Oct: "Lets try to get a fully functioning thing going on" |
-| Inference: TensorRT on the Orin (a `.engine` built there), Core ML on the MacBook Pro (a `.mlpackage`), both in our `aav_yolo` node. Isaac ROS's TensorRT detectors are the Orin's upgrade path | Ben, 10 Oct: "TensorRT on the Orin and CoreML ... on the macbook pro" |
+| Inference: TensorRT on the Orin (a `.engine` built there), Core ML on the MacBook Pro (a `.mlpackage`), both in our `aav_detector` node. Isaac ROS's TensorRT detectors are the Orin's upgrade path | Ben, 10 Oct: "TensorRT on the Orin and CoreML ... on the macbook pro" |
 | A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own `mcp` environment | Ben: "Yes, read-only": see [AI apps (MCP)](mcp.md) |
 | Today's C++ boards build with PlatformIO, in a `firmware` environment. Its downloads go into `vendor/platformio/` | Ben: "We want everybody to be able to build this out of the box" |
 | CARLA next to Gazebo, through our own adapter (CARLA's Python client), not its ROS 2 link | reopened by Ben 15 Oct ("I think we want carla 5 not 4"): see Q31 and [CARLA](carla.md) |
@@ -128,6 +128,12 @@ What we changed, and why.
 | **Goals count within 1.0 m and 0.75 rad** | GPS without RTK is good to about a metre. At 0.5 m the car chased GPS noise and looped round goals it had reached | 22 Oct, from the Gazebo runs |
 | **ego eases into speed**: a jerk limit of 2.0 m/s³, speeding up only | A smoother start for the people in the car. A stop is never softened: braking starts at once | 22 Oct, the proposal's T5.3 |
 | **The global EKF trusts the gyro and wheels for heading**; GPS only nudges it (yaw noise 0.06 → 0.01) | At walking pace its heading jumped up to 76°; now the worst per leg is 7-16° in Gazebo. To check with the real IMU | 22 Oct, from the Gazebo runs |
+
+## Decided on 24 October
+
+| Decision | Why | By |
+|---|---|---|
+| **The detector package is `aav_detector`**, was `aav_yolo`; its node is `object_detector` (`object_detector_<machine>` on the car), was `yolo_detector`. Topics, parameters and `detector:=yolo` stay | It runs RF-DETR Nano by default now, YOLO only as an option, so a name with "yolo" in it misled. `detector:=yolo` keeps its name: it names the model family | Ben, 24 Oct: "aav detector yes" |
 
 ## Open questions
 

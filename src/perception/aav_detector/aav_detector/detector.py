@@ -23,15 +23,15 @@ The models themselves are in detectors.py, with no ROS: other programs load them
 
 It needs PyTorch and rfdetr or Ultralytics, from the ml environment. Try it:
   pixi run get-models                                                # once
-  pixi run detect picture:=src/perception/aav_yolo/test/stop_sign.jpg
-  pixi run detect detector:=yolo picture:=src/perception/aav_yolo/test/stop_sign.jpg
+  pixi run detect picture:=src/perception/aav_detector/test/stop_sign.jpg
+  pixi run detect detector:=yolo picture:=src/perception/aav_detector/test/stop_sign.jpg
 """
 
 import signal
 import time
 
-from aav_yolo.boxes import corners, parse_labels
-from aav_yolo.detectors import load_detector
+from aav_detector.boxes import corners, parse_labels
+from aav_detector.detectors import load_detector
 import cv2
 from cv_bridge import CvBridge
 import rclpy
@@ -67,7 +67,7 @@ def draw(frame, boxes):
 class Detector(Node):
 
     def __init__(self):
-        super().__init__('yolo_detector')
+        super().__init__('object_detector')
         detector = self.declare_parameter('detector', 'rfdetr').value
         model = self.declare_parameter('model', '').value
         device = self.declare_parameter('device', 'auto').value

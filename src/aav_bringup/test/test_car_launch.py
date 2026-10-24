@@ -231,7 +231,7 @@ def test_bad_values_stop_the_launch():
 def test_one_stop_sign_watcher_next_to_the_mux():
     for machine in MACHINES:
         parts = CAR.load_machine(machine)['parts']
-        watcher = ('aav_yolo', 'stop_sign_watcher') in nodes(started(CAR, machine=machine))
+        watcher = ('aav_detector', 'stop_sign_watcher') in nodes(started(CAR, machine=machine))
         assert watcher == bool(parts.get('mux')), machine
 
 
@@ -275,7 +275,7 @@ def test_the_detector_is_named_after_its_machine(monkeypatch, tmp_path):
     context = context_for(CAR, machine='orin')
     sent = included(CAR.detector(context, 'orin', {'detector': 'yolo', 'model': str(model),
                                                    'confidence': 0.6}))
-    assert sent['detector.launch.py']['node_name'] == 'yolo_detector_orin'
+    assert sent['detector.launch.py']['node_name'] == 'object_detector_orin'
     assert sent['detector.launch.py']['model'] == str(model)
     assert sent['detector.launch.py']['labels'] == 'stop sign'
     assert sent['detector.launch.py']['picture'] == ''
@@ -434,13 +434,13 @@ def test_the_orin_streams_both_front_cameras_with_rfdetr_inside(orin_kit):
         'real', 'false', 'false')
     assert stream['labels'] == 'stop sign'
     assert stream['publish_image'] == 'false'                  # the pictures stay inside
-    # The stream's own detector: no yolo_detector_orin beside it.
+    # The stream's own detector: no object_detector_orin beside it.
     assert 'detector.launch.py' not in sent
     # The watchdog, next to the mux here, watches both through their detections.
     inputs = sent['watchdog.launch.py']['inputs'].split(',')
     assert inputs[-2:] == ['front_left_stream', 'front_right_stream']
     # The stop-sign watcher reads the same /perception/detections.
-    assert ('aav_yolo', 'stop_sign_watcher') in nodes(started(CAR, machine='orin'))
+    assert ('aav_detector', 'stop_sign_watcher') in nodes(started(CAR, machine='orin'))
 
 
 def test_the_orin_today_skips_the_streams_and_says_why(monkeypatch, tmp_path):

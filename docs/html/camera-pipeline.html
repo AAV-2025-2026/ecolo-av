@@ -90,7 +90,7 @@ settings and why, what was measured on a Mac, and what to check at the car.</p>
                   │ (OpenH264,  ────────────────► │ decoder (child program)      │
                   │  software)      2 Mbit/s each │  GStreamer nvv4l2decoder     │
                   │ :8554/front_left              │ undistort (OpenCV)           │
-                  │ :8554/front_right             │ RF-DETR Nano (aav_yolo)      │
+                  │ :8554/front_right             │ RF-DETR Nano (aav_detector)      │
                   │ :8889 WebRTC ──► a browser    └──────┬───────────────────────┘
                                                          ▼
                         /perception/detections   (~0.5 kB, every picture)
@@ -126,7 +126,7 @@ settings and why, what was measured on a Mac, and what to check at the car.</p>
 </tr>
 <tr>
 <td>The detector</td>
-<td><code>aav_yolo.detectors.load_detector</code></td>
+<td><code>aav_detector.detectors.load_detector</code></td>
 <td>imported, not copied</td>
 </tr>
 <tr>

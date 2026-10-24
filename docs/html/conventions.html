@@ -7,7 +7,7 @@
 <!-- Generated from docs/conventions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Names and code style</h1>
-<div class="meta">5 min read · 5 sections</div></header>
+<div class="meta">6 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -172,6 +172,11 @@ changes their launch files and executables.</p>
 <td><code>lane_geometry</code>, <code>object_detection</code>, <code>yolo_ros2</code></td>
 <td><code>aav_lane_geometry</code>, <code>aav_object_detection</code>, <code>aav_yolo</code></td>
 <td>done, 10 October, when perception came in. <code>aav_object_detection</code> became <code>aav_radar_clusters</code> (Rust), 15 October</td>
+</tr>
+<tr>
+<td><code>aav_yolo</code>, its node <code>yolo_detector</code></td>
+<td><code>aav_detector</code>, <code>object_detector</code></td>
+<td>done, 24 October: it runs RF-DETR Nano by default, YOLO only with <code>detector:=yolo</code></td>
 </tr>
 <tr>
 <td><code>yahboom_imu_cpp</code></td>

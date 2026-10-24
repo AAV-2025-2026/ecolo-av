@@ -79,3 +79,9 @@ change, never the logic:
   `export/_runtime`. `boxes.py`: `family()` tells an RF-DETR export from a YOLO one by
   its name (`rf-detr-nano.engine`), and `check_detector` uses it. Tests:
   `test/test_detr.py`, `test/test_detectors.py`, more in `test/test_boxes.py`.
+- 2026-10-24: the package `aav_yolo` is renamed `aav_detector`, its module and
+  `resource/` marker with it, and the node `yolo_detector` is `object_detector`
+  (`object_detector_<machine>` on the car). It runs RF-DETR Nano by default, so "yolo" in
+  the name misled (Ben, 24 Oct: "aav detector yes"). Only names change: the
+  executables, parameters, topics and `detector:=yolo` stay. The paths above that say
+  `aav_yolo/` are now `aav_detector/`.

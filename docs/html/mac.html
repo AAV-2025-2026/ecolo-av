@@ -241,7 +241,7 @@ e-stop always win. Keep both in someone's hands whenever the Mac drives.</p>
 </div>
 </section>
 <section class="card"><h2 id="ml-on-your-mac-against-the-bench">ML on your Mac, against the bench</h2>
-<p>On the car, the laptop runs its own detector (<code>yolo_detector_laptop</code>, RF-DETR Nano on
+<p>On the car, the laptop runs its own detector (<code>object_detector_laptop</code>, RF-DETR Nano on
 Metal) on the camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -270,7 +270,7 @@ Metal) on the camera's JPEG pictures, which suit WiFi. At home, the bench plays 
 </tbody>
 </table></div>
 <ul>
-<li><strong>See it:</strong> <code>pixi run graph</code> shows <code>yolo_detector_laptop</code> reading
+<li><strong>See it:</strong> <code>pixi run graph</code> shows <code>object_detector_laptop</code> reading
   <code>/sensors/camera/front_left/image_raw/compressed</code>, and publishing <code>/perception/detections</code>.</li>
 <li><strong>Stop at the sign too:</strong> start the bench with <code>pixi run -e ml bench perception:=true</code>. It
   runs its own detector and the stop-sign watcher, as the Orin would; the watcher then hears

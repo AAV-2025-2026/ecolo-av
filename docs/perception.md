@@ -6,7 +6,7 @@ car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).
 ## The chain
 
 ```
-camera ─► yolo_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
+camera ─► object_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
                                                                     (a lock on twist_mux)
 lane finder (missing) ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
 radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/radar/clusters, /perception/radar/cluster_boxes
@@ -24,7 +24,7 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 
 | Package | From | Does | State |
 |---|---|---|---|
-| `aav_yolo` | 2024-25 `camera_ros2_ws` (`yolo_ros2`) | the detector (RF-DETR or YOLO): camera images in, `vision_msgs` detections out; and the stop-sign watcher | [[works]] on the bench, with either stock model |
+| `aav_detector` | 2024-25 `camera_ros2_ws` (`yolo_ros2`) | the detector (RF-DETR or YOLO): camera images in, `vision_msgs` detections out; and the stop-sign watcher | [[works]] on the bench, with either stock model |
 | `aav_radar_clusters` | ours (Rust): a rewrite of the 2025-26 `Nav_Radar` C++ node | DBSCAN groups the radar's points into objects, with a box round each | [[works]] on the bench and in Gazebo |
 | `aav_lane_geometry` | 2025-26 `Lane_Detection_ROS2` | lane keeping's steering half, as a driver on `/drivers/ai/cmd_vel` | [[works]] on a pretend lane. The line finder is [[missing]] |
 | `aav_sensors` `cameras.launch.py` | 2024-25 `cameras` (the calibrations) | `usb_cam` with `left.ini` and `right.ini` | [[untested]] Linux only; the camera models are Q22 |
@@ -156,7 +156,7 @@ on the Orin, once it's on JetPack 7.2 (Q24):
 The models don't need ROS. Any Python program can load one, as the detector node does:
 
 ```python
-from aav_yolo.detectors import load_detector
+from aav_detector.detectors import load_detector
 
 model = load_detector()          # RF-DETR Nano: once, it takes a few seconds
 boxes = model.detect(bgr)        # an OpenCV picture: H x W x 3, BGR
@@ -169,7 +169,7 @@ for box in boxes:                # in that picture's pixels
 | `load_detector(detector='rfdetr', model='', device='auto')` | the node's own parameters; `model` picks the format (`.pth`, `.mlpackage`, `.engine`) |
 | `model.detect(bgr, confidence=0.5, labels=None)` | `labels`: only these, such as `'stop sign'` or `['stop sign', 'person']` |
 
-The code: `aav_yolo/detectors.py` (the models), `aav_yolo/detr.py` (RF-DETR's maths for
+The code: `aav_detector/detectors.py` (the models), `aav_detector/detr.py` (RF-DETR's maths for
 an exported model, NumPy only), with their tests.
 
 ### The 2024-25 team's model
@@ -206,7 +206,7 @@ far more pictures may do better:
 | A Linux PC | `pixi run -e ml`: PyTorch on the CPU (CUDA builds later) | not measured (the CPU of a Mac: 74 ms) |
 | The Orin, on JetPack 7.2 | JetPack's CUDA 13.2.1 and TensorRT 10.16.2, not Pixi's: the `.engine` | not yet: `build_engine.py` prints it |
 
-The detector runs as `python3 -m aav_yolo.detector`, so it uses the `python3` of the
+The detector runs as `python3 -m aav_detector.detector`, so it uses the `python3` of the
 environment that starts it: the `ml` environment's PyTorch on a laptop, JetPack's on the
 Orin.
 
@@ -234,11 +234,11 @@ names, passed on as they are.
 
 | Setting | Does |
 |---|---|
-| `node_name:=yolo_detector_macbook` | the node's name. Each computer with a GPU runs its own detector, under its own name: `car.launch.py` calls it `yolo_detector_<machine>`. All of them publish on `/perception/detections` |
+| `node_name:=object_detector_macbook` | the node's name. Each computer with a GPU runs its own detector, under its own name: `car.launch.py` calls it `object_detector_<machine>`. All of them publish on `/perception/detections` |
 | `compressed:=true` | reads `/sensors/camera/front_left/image_raw/compressed`, the JPEG pictures `usb_cam` already publishes. Raw pictures are too big for WiFi |
 
 From a Mac on the car's network, by hand:
-`pixi run detect node_name:=yolo_detector_macbook compressed:=true`.
+`pixi run detect node_name:=object_detector_macbook compressed:=true`.
 
 ### The ml environment
 
@@ -421,7 +421,7 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 | Part | Starts | Where |
 |---|---|---|
 | `camera` | `usb_cam` → `/sensors/camera/front_left/image_raw` (Linux only) | off everywhere until the cameras are known (Q22) |
-| `detector` | RF-DETR Nano, as `yolo_detector_<machine>` → `/perception/detections` | the Orin, in TensorRT (`models/rf-detr-nano.engine`: build it there first). The laptop's reads compressed images |
+| `detector` | RF-DETR Nano, as `object_detector_<machine>` → `/perception/detections` | the Orin, in TensorRT (`models/rf-detr-nano.engine`: build it there first). The laptop's reads compressed images |
 | `stop_signs` | `stop_sign_watcher` → `/perception/stop_sign` | one per car, next to the mux: the Orin |
 | `radar_clusters` | DBSCAN on `/sensors/radar/points` | off until the radar is on the car |
 | `camera_obstacles` | the boxes as points on the road → `/perception/camera_obstacles`, for Nav2's costmap | off until the cameras are calibrated (Q22); then next to `navigation`: the Orin |
@@ -434,7 +434,7 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 
 - **From a Mac:** a Mac on the car's network can run the detector on the car's cameras.
   Raw images are too big for WiFi, so the cameras should also publish compressed ones.
-- **Into the costmap:** `camera_obstacles` (in `aav_yolo`) puts each box where it meets
+- **Into the costmap:** `camera_obstacles` (in `aav_detector`) puts each box where it meets
   the road: its bottom edge, seen through the camera's lens from its height and tilt
   (`vehicle.yaml`, through TF). The local costmap's camera layer marks those points. Off
   until the cameras are calibrated (Q22); then turn the `camera_obstacles` part on in the
@@ -450,7 +450,7 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 ### Isaac ROS (NVIDIA)
 
 - **Not needed for the detector:** it already uses TensorRT on the Orin, through
-  TensorRT's own Python module (`aav_yolo/detectors.py`).
+  TensorRT's own Python module (`aav_detector/detectors.py`).
 - **Jazzy:** Isaac ROS 4.6 (18 Aug 2026) is the last release for Jazzy, and supports the
   Orin on JetPack 7.2. Isaac ROS 5.0 (21 Sept 2026) moved to ROS 2 Lyrical.
 - **Later, maybe:** nvblox (a costmap from cameras), visual SLAM and stereo depth. It runs

@@ -74,10 +74,10 @@ the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 
 | Machine file | Runs |
 |---|---|
-| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the YOLO detector (`yolo_detector_orin`, TensorRT) and the stop-sign watcher; the CAN bus (`spine_bridge role:=sensors`: the wheels) |
+| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the object detector (`object_detector_orin`, RF-DETR Nano in TensorRT) and the stop-sign watcher; the CAN bus (`spine_bridge role:=sensors`: the wheels) |
 | `motor_pi.yaml` | `legacy_uart_bridge`: the ESP32 is wired to it. The 2025-26 UDP encoder (`encoder_udp`) is off: the wheels are on CAN now |
-| `laptop.yaml` | the joystick, on the safety driver's laptop. Its detector (`yolo_detector_laptop`, Core ML) is off until it reads compressed images |
-| `all.yaml` | everything on one computer, for the bench. Its detector is `yolo_detector_all` |
+| `laptop.yaml` | the joystick, on the safety driver's laptop. Its detector (`object_detector_laptop`, Core ML) is off until it reads compressed images |
+| `all.yaml` | everything on one computer, for the bench. Its detector is `object_detector_all` |
 
 On each computer, run `ros2 launch aav_bringup car.launch.py machine:=<its file>`, or
 `pixi run car <its file>` with Pixi.
@@ -102,7 +102,7 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.
 | `imu`, `gps`, `radar`, `battery` | the sensor drivers, on the computer each is plugged into |
 | `camera` | the front camera: `usb_cam`, Linux only |
 | `camera_stream` | the front cameras' H.264 streams from the camera Pi, one `camera_stream_<camera>` each, with the detector inside; the sensor watchdog watches them ([camera pipeline](camera-pipeline.md#on-the-car-carlaunchpy)). On in `orin.yaml` |
-| `detector` | YOLO, as `yolo_detector_<machine>`, with the model the file names ([Models](perception.md#models)). Not for a camera `camera_stream` streams |
+| `detector` | the object detector (RF-DETR Nano, or YOLO), as `object_detector_<machine>`, with the model the file names ([Models](perception.md#models)). Not for a camera `camera_stream` streams |
 | `stop_signs` | the stop-sign watcher: one per car, next to the mux |
 | `radar_clusters` | the radar's clustering |
 | `camera_obstacles` | the detectors' boxes as points on the road, for Nav2's costmap ([Costmaps](costmaps.md)) |

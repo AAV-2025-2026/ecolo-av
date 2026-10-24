@@ -203,7 +203,7 @@ the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 <tbody>
 <tr>
 <td><code>orin.yaml</code></td>
-<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the YOLO detector (<code>yolo_detector_orin</code>, TensorRT) and the stop-sign watcher; the CAN bus (<code>spine_bridge role:=sensors</code>: the wheels)</td>
+<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the object detector (<code>object_detector_orin</code>, RF-DETR Nano in TensorRT) and the stop-sign watcher; the CAN bus (<code>spine_bridge role:=sensors</code>: the wheels)</td>
 </tr>
 <tr>
 <td><code>motor_pi.yaml</code></td>
@@ -211,11 +211,11 @@ the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 </tr>
 <tr>
 <td><code>laptop.yaml</code></td>
-<td>the joystick, on the safety driver's laptop. Its detector (<code>yolo_detector_laptop</code>, Core ML) is off until it reads compressed images</td>
+<td>the joystick, on the safety driver's laptop. Its detector (<code>object_detector_laptop</code>, Core ML) is off until it reads compressed images</td>
 </tr>
 <tr>
 <td><code>all.yaml</code></td>
-<td>everything on one computer, for the bench. Its detector is <code>yolo_detector_all</code></td>
+<td>everything on one computer, for the bench. Its detector is <code>object_detector_all</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -269,7 +269,7 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.</p>
 </tr>
 <tr>
 <td><code>detector</code></td>
-<td>YOLO, as <code>yolo_detector_&lt;machine&gt;</code>, with the model the file names (<a href="perception.html#models">Models</a>). Not for a camera <code>camera_stream</code> streams</td>
+<td>the object detector (RF-DETR Nano, or YOLO), as <code>object_detector_&lt;machine&gt;</code>, with the model the file names (<a href="perception.html#models">Models</a>). Not for a camera <code>camera_stream</code> streams</td>
 </tr>
 <tr>
 <td><code>stop_signs</code></td>

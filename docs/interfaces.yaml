@@ -306,13 +306,13 @@ topics:
   /sensors/camera/front_left/image_raw:
     type: sensor_msgs/msg/Image
     pub: [camera_left, mock_camera, test_camera, gz_road_bridge, gazebo_camera, carla_adapter, camera_stream_front_left]
-    sub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, hud_server, lane_finder, hud, sensor_watchdog]
+    sub: [object_detector, object_detector_orin, object_detector_laptop, object_detector_all, hud_server, lane_finder, hud, sensor_watchdog]
     live: [bench, road]
     note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop). On the car with the camera stream (aav_camera_stream), camera_stream_front_left publishes it only with publish_image:=true - every undistorted picture, for another node on the same computer; the pictures otherwise stay inside it.
   /sensors/camera/front_left/image_raw/compressed:
     type: sensor_msgs/msg/CompressedImage
     pub: [camera_left, test_camera, mock_camera]
-    sub: [yolo_detector, yolo_detector_laptop]
+    sub: [object_detector, object_detector_laptop]
     note: The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera only while something reads it). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true; the laptop's machine file). On the bench, pixi run -e ml laptop-bench.
   /sensors/camera/front_left/camera_info:
     type: sensor_msgs/msg/CameraInfo
@@ -378,9 +378,9 @@ topics:
     note: A box round each radar cluster, for RViz - a DELETEALL first, then one CUBE per cluster, its id the cluster number.
   /perception/detections:
     type: vision_msgs/msg/Detection2DArray
-    pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all, camera_stream_front_left, camera_stream_front_right]
+    pub: [object_detector, object_detector_orin, object_detector_laptop, object_detector_all, camera_stream_front_left, camera_stream_front_right]
     sub: [stop_sign_watcher, camera_obstacles, sensor_watchdog]
-    note: YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay. It sends one for every picture, boxes or none, so the sensor watchdog watches each streamed camera here (kind detections, by its frame_id - front_left_stream, front_right_stream; silent 1 s locks Nav2 and the AI slot), where car.launch.py starts the streams (its camera_stream part, the Orin), and the car's detector part then doesn't start for those cameras.
+    note: The object detector's boxes in pixels (RF-DETR Nano by default, or YOLO); header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. object_detector (aav_detector) in bench mode and pixi run detect; on the car object_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay. It sends one for every picture, boxes or none, so the sensor watchdog watches each streamed camera here (kind detections, by its frame_id - front_left_stream, front_right_stream; silent 1 s locks Nav2 and the AI slot), where car.launch.py starts the streams (its camera_stream part, the Orin), and the car's detector part then doesn't start for those cameras.
   /perception/camera/front_left/preview/compressed:
     type: sensor_msgs/msg/CompressedImage
     pub: [camera_stream_front_left]
@@ -393,7 +393,7 @@ topics:
     note: The same, for the front right camera.
   /perception/detections/image:
     type: sensor_msgs/msg/Image
-    pub: [yolo_detector, yolo_detector_orin, yolo_detector_laptop, yolo_detector_all]
+    pub: [object_detector, object_detector_orin, object_detector_laptop, object_detector_all]
     sub: []
     note: The camera picture with the boxes drawn on, for RViz or Foxglove.
   /perception/stop_sign:

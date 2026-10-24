@@ -114,7 +114,7 @@ All about it: [Learn: GPS](learn-gps.md).
 | **Good at** | the only sensor that reads lanes, signs and lights |
 | **Bad at** | no distance by itself; glare, dark; big messages (use the compressed topic over WiFi) |
 | **Driver** | `usb_cam` (Linux only), with the 2024-25 calibration `left.ini` |
-| **Used by** | `aav_yolo` (stop signs, objects), `aav_lane_finder`, the HUD |
+| **Used by** | `aav_detector` (stop signs, objects), `aav_lane_finder`, the HUD |
 | **Gazebo** | yes, in the road world: 640 x 360, 10 Hz, the bench camera's lens |
 | **Bench** | `mock_camera` draws the bench road |
 | **KEFC** | adds a rear camera (Cam3) |

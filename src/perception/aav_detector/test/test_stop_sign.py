@@ -1,4 +1,4 @@
-from aav_yolo.stop_sign import CLEAR, PASSING, STOPPING, StopRule, StopSignWatcher
+from aav_detector.stop_sign import CLEAR, PASSING, STOPPING, StopRule, StopSignWatcher
 
 RULE = StopRule(min_height_px=72.0, min_score=0.5, hold_s=4.0, ignore_s=10.0)
 NEAR = [('stop sign', 0.9, 100.0)]

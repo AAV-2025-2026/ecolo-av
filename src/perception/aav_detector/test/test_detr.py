@@ -1,6 +1,6 @@
 import importlib.util
 
-from aav_yolo.detr import decode, input_size, preprocess, split_outputs
+from aav_detector.detr import decode, input_size, preprocess, split_outputs
 import numpy as np
 import pytest
 

@@ -1,8 +1,9 @@
 import re
 from types import SimpleNamespace
 
-from aav_yolo.boxes import (Box, boxes_from_corners, boxes_from_result, check_detector, corners,
-                            family, normal_label, parse_labels, pick_device, rfdetr_size)
+from aav_detector.boxes import (Box, boxes_from_corners, boxes_from_result, check_detector,
+                                corners, family, normal_label, parse_labels, pick_device,
+                                rfdetr_size)
 import numpy as np
 import pytest
 
