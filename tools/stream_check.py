@@ -22,12 +22,12 @@ Options:
   --encoder E        openh264 (the default: what MediaMTX's rpiCamera runs on a Pi 5) or
                      x264 (ultrafast, zerolatency: what ffmpeg runs for a USB camera)
   --detector D       rfdetr (the default), yolo or none
-  --decoder D        the node's decoder (ffmpeg); --hwaccel H, ffmpeg's (videotoolbox);
-                     --program P, the decoder program (a gst-launch-1.0 with the RTSP
-                     plugins, for gst-soft or gst-mac: docs/camera-pipeline.md)
-  --gst              decode with GStreamer (gst-soft), as the Orin does, instead of the
-                     ffmpeg program, which holds back about 2 frames (135 ms). GStreamer's
-                     RTSP plugins aren't in this environment: pixi exec fetches them once
+  --decoder D        the node's decoder: auto (the default, as the node's: GStreamer from
+                     the gst environment, with VideoToolbox, vtdec, on a Mac; this check
+                     installs it once, pixi install --locked -e gst), ffmpeg (to compare:
+                     it holds back about 2 frames, 135 ms), gst-mac, gst-soft...;
+                     --hwaccel H, ffmpeg's (videotoolbox); --program P, the decoder program
+  --gst              gst-soft: GStreamer's software decoder (avdec_h264), to compare
   --pattern          no Gazebo: aav_detector's stop-sign photo, moving, with noise (the
                      noise makes the encoder work as on a real camera)
   --sign-at X        put Gazebo's stop sign X m ahead of the car (25)
@@ -43,6 +43,7 @@ this computer's), the wired network between the Pi and the Orin, and the Orin's 
 
 import json
 import os
+import platform
 import random
 import shutil
 import signal
@@ -307,20 +308,15 @@ def move_sign(ahead):
     return done.returncode == 0 and 'data: true' in done.stdout
 
 
-# GStreamer with its RTSP plugins, from conda-forge but outside this Pixi environment (so
-# the shared environment isn't changed): pixi exec keeps it in its own cache.
-GST_SPECS = ['gstreamer=1.26', 'gst-plugins-base=1.26', 'gst-plugins-good=1.26',
-             'gst-plugins-bad=1.26', 'gst-libav=1.26']   # h264parse is in -bad
-
-
-def gstreamer():
-    """Return the path of a gst-launch-1.0 with rtspsrc and avdec_h264 (pixi exec)."""
-    argv = ['pixi', 'exec'] + [a for spec in GST_SPECS for a in ('--spec', spec)]
-    done = subprocess.run(argv + ['--', 'which', 'gst-launch-1.0'], capture_output=True,
-                          text=True, timeout=600)
-    path = done.stdout.strip().splitlines()[-1] if done.stdout.strip() else ''
-    if done.returncode != 0 or not os.path.isabs(path):
-        raise SystemExit(f'--gst: no GStreamer from pixi exec: {done.stderr.strip()[-300:]}')
+def gst_environment():
+    """Return the gst environment's gst-launch-1.0 (pixi.toml), installing it once."""
+    from aav_camera_stream import decoders
+    if not decoders.pixi_gst(ROOT):
+        print('GStreamer, once: pixi install --locked -e gst', flush=True)
+        subprocess.run(['pixi', 'install', '--locked', '-e', 'gst'], cwd=ROOT, timeout=900)
+    path = decoders.pixi_gst(ROOT)
+    if not path:
+        raise SystemExit('No GStreamer: pixi install --locked -e gst failed (above)')
     return path
 
 
@@ -333,11 +329,14 @@ def main():
     seconds = float(option(args, '--seconds', '60'))
     encoder = option(args, '--encoder', 'openh264')
     detector = option(args, '--detector', 'rfdetr')
-    decoder = option(args, '--decoder', 'ffmpeg')
+    decoder = option(args, '--decoder', 'auto')
     hwaccel = option(args, '--hwaccel', '')
     program = option(args, '--program', '')
     if '--gst' in args:
-        decoder, program = 'gst-soft', gstreamer()
+        decoder = 'gst-soft'
+    if decoder in ('auto', 'gst-mac', 'gst-soft') and not program and sys.platform in (
+            'darwin', 'linux') and platform.machine() in ('arm64', 'x86_64'):
+        program = gst_environment()     # the node finds it there too; checked here first
     sign_at = float(option(args, '--sign-at', '25'))
     speed = float(option(args, '--drive', '0.3'))
     pattern = '--pattern' in args
@@ -420,6 +419,13 @@ def main():
                if up else f'nothing through in 180 s (see {LOG}-camera_stream.log)')
         if not up:
             return 1
+        # auto on a Mac must find VideoToolbox; elsewhere, what it picked is only reported.
+        chosen = check.status.get('decoder', '?')
+        mac_auto = decoder == 'auto' and sys.platform == 'darwin'
+        result('decoder', chosen == 'gst-mac' if mac_auto else None,
+               f'{chosen} (asked for {decoder})' + (
+                   f'; a Mac should get gst-mac: see {LOG}-camera_stream.log'
+                   if mac_auto and chosen != 'gst-mac' else ''))
         check.spin_for(5.0)                       # settle: the first frames are slow
         rx0, tx0, tracks = api_bytes(api_port)
         groups = {name: p.pid for name, p in programs.procs.items()}

@@ -7,10 +7,12 @@ What you can set:
   cameras     which, comma-separated: front_left,front_right (config/cameras.yaml)
   host        the camera Pi's address (127.0.0.1: a MediaMTX on this computer)
   port        its RTSP port, 8554
-  decoder     ffmpeg (any Mac or Linux), gst-nvidia (the Orin: NVIDIA's hardware),
-              gst-soft, gst-mac, opencv (aav_camera_stream decoders.py)
+  decoder     auto (the default: GStreamer with VideoToolbox on a Mac, from
+              pixi install -e gst; ffmpeg on Linux), ffmpeg, gst-nvidia (the Orin:
+              NVIDIA's hardware), gst-soft, gst-mac, opencv (aav_camera_stream decoders.py)
   pipeline    a GStreamer pipeline instead of the decoder's own ({url}, {width}...)
-  program     the decoder program, if not the preset's (gst-nvidia: /usr/bin/gst-launch-1.0)
+  program     the decoder program, if not the preset's (gst-nvidia: /usr/bin/gst-launch-1.0;
+              gst-mac, gst-soft: the gst environment's, .pixi/envs/gst)
   hwaccel     ffmpeg's -hwaccel, such as videotoolbox on a Mac; empty: software
   width, height, fps  the stream's: 1280, 720, 15 (pi/mediamtx.yml)
   delay       s from the camera to here, taken off each picture's stamp (measure it:
@@ -40,7 +42,8 @@ ARGS = [
     ('cameras', 'front_left,front_right', 'comma-separated: config/cameras.yaml names'),
     ('host', '127.0.0.1', "the camera Pi's address"),
     ('port', '8554', 'its RTSP port'),
-    ('decoder', 'ffmpeg', 'ffmpeg, gst-nvidia (the Orin), gst-soft, gst-mac or opencv'),
+    ('decoder', 'auto', 'auto (a Mac: GStreamer, VideoToolbox), ffmpeg, gst-nvidia (the '
+                        'Orin), gst-soft, gst-mac or opencv'),
     ('pipeline', '', "a GStreamer pipeline instead of the decoder's own"),
     ('program', '', "the decoder program's path, if not the preset's"),
     ('hwaccel', '', "ffmpeg's -hwaccel (videotoolbox on a Mac); empty: software"),

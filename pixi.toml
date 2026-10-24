@@ -27,7 +27,8 @@ bench-check = { cmd = "tools/ros.sh --local python3 tools/bench_check.py", descr
 sim-check = { cmd = "tools/ros.sh --local python3 tools/sim_check.py", description = "Start Gazebo's road world headless and test the car's whole graph in it: contract, sensors, a drive (2 min); --perception (with -e ml), --obstacle, --lidar-obstacle, --plan-around, --ghost, --faults, --lane add more" }
 controller-compare = { cmd = "tools/ros.sh --local python3 tools/controller_compare.py", description = "Drive Regulated Pure Pursuit and MPPI over the same routes in Gazebo's test lot, headless, and compare them: time, how far off the path, steering work, the box in the lane, CPU (about 15 min; --tours, --controllers, --speed; docs/controllers.md)" }
 timing-test = { cmd = "tools/ros.sh --local python3 tools/timing_test.py", description = "Are messages on time? Gazebo's test lot headless, 5 min parked then 5 min driving Nav2's lot tour: each key topic's worst gap and late messages, topics quiet together, watchdog STALEs, CPU (AAV_RMW=fastdds to compare; --parked 60 --driving 60; docs/mac.md)" }
-stream-check = { cmd = "tools/ros.sh --local python3 tools/stream_check.py", description = "The camera stream end to end, without the car: Gazebo's camera, H.264 at the Pi's settings, a local MediaMTX, camera_stream and its detector; measures the delay, the bitrate, the CPU (this computer only; pixi run get-mediamtx first; -e ml for RF-DETR, or --detector none; docs/camera-pipeline.md)" }
+stream-check = { cmd = "tools/ros.sh --local python3 tools/stream_check.py", description = "The camera stream end to end, without the car: Gazebo's camera, H.264 at the Pi's settings, a local MediaMTX, camera_stream and its detector; measures the delay, the bitrate, the CPU (this computer only; pixi run get-mediamtx first; -e ml for RF-DETR, or --detector none; decodes as the node does by default: GStreamer from the gst environment, VideoToolbox on a Mac; --decoder ffmpeg to compare; docs/camera-pipeline.md)" }
+calibrate-camera = { cmd = "tools/ros.sh --local python3 tools/calibrate_camera.py", description = "Calibrate a streamed camera with ROS's camera_calibration at the car: pixi run calibrate-camera board (the checkerboard to print), then calibrate-camera front_left [--host <camera Pi>] [--square <m>]: files config/calibrations/front_left.yaml for aav_camera_stream (docs/camera-calibration.md)" }
 sim-fault = { cmd = "tools/ros.sh --local tools/sim_fault.sh", description = "Make a Gazebo sensor fail on purpose next to pixi run sim: sim-fault gps stop, sim-fault gps ok (gps, imu, odom, radar, camera; stop, freeze, nan, jump)" }
 carla-car = { cmd = "tools/ros.sh --local ros2 launch aav_bringup carla.launch.py", description = "CARLA as the car: pixi run carla-car host:=<the CARLA computer> [town:=Town10HD_Opt] [osm:=maps/carla/carleton.osm]. Linux x86_64 with CARLA's Python client; ROS stays on this computer, CARLA can be anywhere (docs/carla.md)" }
 ghost = { cmd = "tools/ros.sh ros2 run aav_ghost ghost", description = "A pretend person in Nav2's view, with sim or car ghost:=true: pixi run ghost ahead 10 (m past the bumper), ghost at 20 0 (map x y), ghost size 0.3 1.2, ghost off; ghost --local ... for Gazebo on this computer (docs/ghost-obstacles.md)" }
@@ -245,6 +246,40 @@ pyvalhalla = "==3.9.1"
 get-routes = { cmd = "tools/get_routes.sh", description = "Download OpenStreetMap's Ottawa (about 50 MB, from BBBike) into maps/routes/ and build Valhalla's street graph from it (a minute or two): pixi run -e routes get-routes" }
 router = { cmd = "tools/router.sh", description = "Start the street router (Valhalla) on 127.0.0.1:8002, for street_route: pixi run -e routes router (pixi run -e routes get-routes first)" }
 
+# GStreamer, for the camera stream's decoder on a Mac or a Linux PC (aav_camera_stream,
+# decoders.py): rtspsrc (-good), h264parse and, on a Mac, vtdec, VideoToolbox's hardware
+# decoder (-bad), avdec_h264 (gst-libav). Its own small environment, no ROS, so adding it
+# changed no other environment's packages (24 Oct: re-solving the default one is risky).
+# The node runs .pixi/envs/gst/bin/gst-launch-1.0 as a child program: `pixi install -e
+# gst`, once. Without it, ffmpeg: about 135 ms slower (docs/camera-pipeline.md). The Orin
+# has JetPack's own GStreamer, with NVIDIA's decoder.
+[feature.gst]
+platforms = ["linux-64", "mac", "mac-intel"]
+
+[feature.gst.dependencies]
+gstreamer = ">=1.28.6,<1.29"
+gst-plugins-base = ">=1.28.6,<1.29"
+gst-plugins-good = ">=1.28.6,<1.29"
+gst-plugins-bad = ">=1.28.6,<1.29"
+gst-libav = ">=1.28.6,<1.29"
+
+# ROS's stock camera calibrator (camera_calibration, BSD), for pixi run calibrate-camera
+# (tools/calibrate_camera.py, docs/camera-calibration.md). Its own environment for the
+# same reason as gst: ros-jazzy-desktop doesn't have it, and adding it to the default
+# environment means a re-solve. It talks to the default one's nodes over Cyclone DDS.
+[feature.calib]
+platforms = ["linux-64", "linux-aarch64", "mac"]
+
+[feature.calib.dependencies]
+python = ">=3.12,<3.13"
+ros-jazzy-camera-calibration = ">=5.0.13,<6"
+ros-jazzy-rmw-cyclonedds-cpp = ">=2.2.4,<3"
+semver = ">=3.1.0,<4"   # camera_calibration imports it; RoboStack's package doesn't say so
+
+[feature.calib.activation.env]
+RMW_IMPLEMENTATION = "rmw_cyclonedds_cpp"
+CYCLONEDDS_URI = "file://$PIXI_PROJECT_ROOT/tools/cyclonedds.xml"
+
 # Today's C++ boards (the 2025-26 ESP32 and Picos), until the Rust spine replaces them.
 # PlatformIO builds and flashes them. Its own downloads (the ESP32 compilers and
 # framework, about 1 GB) go into vendor/platformio, which git ignores. No ROS here.
@@ -265,4 +300,6 @@ mcp = { features = ["mcp"] }
 llm = { features = ["llm", "mcp"] }
 firmware = { features = ["firmware"], no-default-feature = true }
 routes = { features = ["routes"], no-default-feature = true }
+gst = { features = ["gst"], no-default-feature = true }
+calib = { features = ["calib"], no-default-feature = true }
 
