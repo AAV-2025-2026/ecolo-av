@@ -3,16 +3,27 @@
 //! | Link | Wire | Commands | Reports back |
 //! |---|---|---|---|
 //! | [`CanLink`] | CAN, through [`Board::can_receive`] (`firmware/can/aav.dbc`) | DRIVE_CMD (a speed), ESTOP_CMD | VEHICLE_FEEDBACK, VEHICLE_STATUS |
-//! | [`LegacyLink`] | the Motor-Pi's UART (`legacy-link`): version 2 frames with the Orin's heartbeat, or the 2025-26 13-byte frames | throttle, brake and steering as they are: `DirectCmd`; version 2's e-stop flag | nothing: the link goes one way |
+//! | [`LegacyLink`] | the Motor-Pi's UART (`legacy-link`): version 2 frames with the Orin's heartbeat, or the 2025-26 13-byte frames | throttle, brake and steering as they are: `DirectCmd`; version 2's e-stop flag | with an uplink ([`LegacyLink::with_uplink`]): the [`Uplink`] status frame at 50 Hz on TX1; otherwise nothing |
 //!
-//! [`SpineBoard`](crate::SpineBoard) takes either; the rest of the loop is the same.
+//! [`SpineBoard`](crate::SpineBoard) takes either; the rest of the loop is the same. After
+//! each tick it hands the link a [`Report`]: what the spine decided, the RC, the Jrks'
+//! positions.
 
+use crate::actuators::Positions;
 use crate::board::{Board, CanFrame};
 use crate::calibration::Calibration;
-use embedded_io::{Read, ReadReady};
-use legacy_link::{Frame, FrameError, FrameV2, Heartbeat, Parser, ParserV2, Targets, Throttle};
-use spine_core::protocol::{decode_incoming, EstopCmd, FrameError as CanError, Incoming};
-use spine_core::{DirectCmd, Inputs};
+use crate::spine_board::Every;
+use core::convert::Infallible;
+use embedded_io::{Read, ReadReady, Write};
+use legacy_link::{
+    DriveMode, Frame, FrameError, FrameV2, Heartbeat, ModeSwitch, Parser, ParserV2, Sticks,
+    Targets, Throttle, Uplink,
+};
+use spine_core::protocol::{decode_incoming, EstopCmd, FrameError as CanError, Incoming, Mode};
+use spine_core::{DirectCmd, Inputs, Outputs, RcInput, RcSwitch};
+
+/// The uplink's period: 50 frames a second.
+pub const UPLINK_PERIOD_MS: u32 = 20;
 
 /// Limits on one tick's work, so a flood of frames or bytes can't stall the loop.
 const MAX_CAN_FRAMES: usize = 32;
@@ -27,6 +38,21 @@ pub trait CommandLink {
     /// Send one of the spine's reports (a CAN ID and its bytes). True if it went, or if
     /// this link has no way back; false if it should have gone and didn't.
     fn send<B: Board>(&mut self, board: &mut B, id: u16, data: &[u8]) -> bool;
+
+    /// After each tick: what the spine decided, for a link with a status of its own
+    /// to send (the UART's uplink). Nothing by default.
+    fn report<B: Board>(&mut self, _board: &mut B, _report: &Report) {}
+}
+
+/// One tick, as the spine saw it: for a link's status frame.
+#[derive(Debug, Clone, Copy)]
+pub struct Report {
+    pub now_ms: u32,
+    pub outputs: Outputs,
+    /// The RC this tick, or none (silent, or its mode switch out of range).
+    pub rc: Option<RcInput>,
+    /// Where the steering and brake motors are, if known.
+    pub positions: Positions,
 }
 
 /// CAN, through the board's CAN controller: the frames of `firmware/can/aav.dbc`.
@@ -86,6 +112,27 @@ pub struct LinkStats {
     pub repeats: u32,
     /// The last counter seen (version 2).
     pub counter: Option<u8>,
+    /// Uplink frames sent, and writes that failed (with an uplink).
+    pub uplinks: u32,
+    pub uplink_errors: u32,
+}
+
+/// No uplink: a link that sends nothing back ([`LegacyLink::new`]).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct NoUplink;
+
+impl embedded_io::ErrorType for NoUplink {
+    type Error = Infallible;
+}
+
+impl Write for NoUplink {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Infallible> {
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> Result<(), Infallible> {
+        Ok(())
+    }
 }
 
 enum Decoder {
@@ -124,17 +171,35 @@ enum Decoder {
 /// | `armed` clear | a stop: throttle 0, the frame's brake |
 /// | `estop` set | an e-stop at once, whatever the counter; released only by a frame with a new counter and `estop` clear |
 /// | a bad CRC, version or flag | ignored; a bad-frame fault bit |
-pub struct LegacyLink<U> {
+///
+/// With an uplink (TODO 50, 48: [`LegacyLink::with_uplink`], TX1 on today's board), it
+/// sends an [`Uplink`] status frame every 20 ms: the mode, the mode switch, the faults,
+/// the last Orin counter taken (its echo), the Jrks' positions and the RC sticks.
+pub struct LegacyLink<U, T = NoUplink> {
     uart: U,
+    tx: Option<T>,
     decoder: Decoder,
     cal: Calibration,
     last: Option<DirectCmd>,
     stats: LinkStats,
+    uplink_due: Every,
+    sequence: u8,
 }
 
-impl<U: Read + ReadReady> LegacyLink<U> {
-    /// `uart`: the Motor-Pi's serial port, at [`legacy_link::BAUD`], 8N1.
+impl<U: Read + ReadReady> LegacyLink<U, NoUplink> {
+    /// `uart`: the Motor-Pi's serial port, at [`legacy_link::BAUD`], 8N1. No uplink.
     pub fn new(uart: U, cal: Calibration, version: FrameVersion) -> Self {
+        LegacyLink::build(uart, None, cal, version)
+    }
+}
+
+impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
+    /// The same, and the uplink's frames on `tx`: the same port's TX, 115200 8N1.
+    pub fn with_uplink(uart: U, tx: T, cal: Calibration, version: FrameVersion) -> Self {
+        LegacyLink::build(uart, Some(tx), cal, version)
+    }
+
+    fn build(uart: U, tx: Option<T>, cal: Calibration, version: FrameVersion) -> Self {
         let decoder = match version {
             FrameVersion::V1 => Decoder::V1(Parser::new()),
             FrameVersion::V2 => Decoder::V2 {
@@ -144,16 +209,58 @@ impl<U: Read + ReadReady> LegacyLink<U> {
         };
         LegacyLink {
             uart,
+            tx,
             decoder,
             cal,
             last: None,
             stats: LinkStats::default(),
+            uplink_due: Every::new(UPLINK_PERIOD_MS),
+            sequence: 0,
         }
     }
 
     /// What the link has seen since boot.
     pub fn stats(&self) -> LinkStats {
         self.stats
+    }
+
+    /// The uplink frame for a tick: `sequence`, then what the report says.
+    pub fn uplink_frame(&self, report: &Report, sequence: u8) -> Uplink {
+        let out = &report.outputs;
+        let mode = match out.mode {
+            Mode::Manual => DriveMode::Stopped,
+            Mode::Rc => DriveMode::RcDirect,
+            Mode::Computer => DriveMode::Computer,
+        };
+        let (switch, sticks) = match report.rc {
+            None => (ModeSwitch::NoSignal, Sticks::default()),
+            Some(rc) => (
+                match rc.switch {
+                    RcSwitch::Computer => ModeSwitch::Computer,
+                    RcSwitch::ViaRos => ModeSwitch::RcViaRos,
+                    RcSwitch::Direct => ModeSwitch::RcDirect,
+                },
+                Sticks {
+                    throttle: rc.throttle,
+                    steering: rc.steering,
+                    brake: rc.brake,
+                },
+            ),
+        };
+        Uplink {
+            sequence,
+            echo: self.stats.counter,
+            mode,
+            switch,
+            armed: out.armed,
+            estop: out.estop_active,
+            faults: out.faults,
+            steering: report.positions.steering,
+            brake_position: report.positions.brake,
+            throttle_out: out.throttle,
+            brake_out: out.brake,
+            sticks,
+        }
     }
 
     /// The command for one frame's targets.
@@ -273,7 +380,7 @@ impl<U: Read + ReadReady> LegacyLink<U> {
     }
 }
 
-impl<U: Read + ReadReady> CommandLink for LegacyLink<U> {
+impl<U: Read + ReadReady, T: Write> CommandLink for LegacyLink<U, T> {
     fn receive<B: Board>(&mut self, _board: &mut B, inputs: &mut Inputs) {
         let mut buf = [0; 64];
         for _ in 0..MAX_UART_READS {
@@ -302,9 +409,26 @@ impl<U: Read + ReadReady> CommandLink for LegacyLink<U> {
         }
     }
 
-    /// The link goes one way: nothing to send, and nothing lost.
+    /// The CAN frames have no place on this link: nothing to send, and nothing lost.
     fn send<B: Board>(&mut self, _board: &mut B, _id: u16, _data: &[u8]) -> bool {
         true
+    }
+
+    /// The uplink frame, every 20 ms, if this link has an uplink.
+    fn report<B: Board>(&mut self, _board: &mut B, report: &Report) {
+        if self.tx.is_none() || !self.uplink_due.due(report.now_ms) {
+            return;
+        }
+        let bytes = self.uplink_frame(report, self.sequence).encode();
+        let Some(tx) = self.tx.as_mut() else {
+            return;
+        };
+        if tx.write_all(&bytes).is_ok() {
+            self.stats.uplinks = self.stats.uplinks.wrapping_add(1);
+            self.sequence = self.sequence.wrapping_add(1);
+        } else {
+            self.stats.uplink_errors = self.stats.uplink_errors.wrapping_add(1);
+        }
     }
 }
 
@@ -313,7 +437,7 @@ mod tests {
     extern crate std;
 
     use super::*;
-    use crate::rig::{FakeBoard, FakeUart};
+    use crate::rig::{FakeBoard, FakeTx, FakeUart};
     use legacy_link::Frame;
 
     fn frame(steering: f32, speed: f32, accel: f32) -> [u8; 13] {
@@ -325,7 +449,7 @@ mod tests {
         .encode()
     }
 
-    fn receive(link: &mut LegacyLink<FakeUart>, bytes: &[u8]) -> Inputs {
+    fn receive<T: embedded_io::Write>(link: &mut LegacyLink<FakeUart, T>, bytes: &[u8]) -> Inputs {
         link.uart.0.borrow_mut().extend(bytes.iter().copied());
         let mut inputs = Inputs::default();
         link.receive(&mut FakeBoard::new(), &mut inputs);
@@ -408,6 +532,112 @@ mod tests {
     #[test]
     fn nothing_goes_back() {
         assert!(link().send(&mut FakeBoard::new(), 0x181, &[0; 8]));
+        // Without an uplink a report sends nothing either.
+        let mut l = link();
+        l.report(&mut FakeBoard::new(), &report(0, None));
+        assert_eq!(l.stats().uplinks, 0);
+    }
+
+    // --- The uplink (TODO 50, 48) ---
+
+    use crate::actuators::Positions;
+    use legacy_link::{DriveMode, ModeSwitch, Uplink, UPLINK_LEN};
+    use spine_core::protocol::Mode;
+    use spine_core::{Outputs, RcInput, RcSwitch};
+    use std::vec::Vec;
+
+    fn report(now_ms: u32, rc: Option<RcInput>) -> Report {
+        Report {
+            now_ms,
+            outputs: Outputs {
+                mode: Mode::Computer,
+                throttle: 0.25,
+                brake: 0.0,
+                reverse: false,
+                steering_target: 0.1,
+                armed: true,
+                estop_active: false,
+                faults: 0x0100,
+            },
+            rc,
+            positions: Positions {
+                steering: Some(0.1),
+                brake: None,
+            },
+        }
+    }
+
+    fn frames(tx: &FakeTx) -> Vec<Uplink> {
+        tx.0.borrow()
+            .chunks(UPLINK_LEN)
+            .map(|c| Uplink::decode(c.try_into().unwrap()).unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn the_uplink_sends_a_status_every_20_ms() {
+        let tx = FakeTx::default();
+        let mut l = LegacyLink::with_uplink(
+            FakeUart::default(),
+            tx.clone(),
+            Calibration::TODAY,
+            FrameVersion::V2,
+        );
+        let mut board = FakeBoard::new();
+        // A tick every 10 ms for 100 ms: 5 frames, numbered.
+        for t in (0..100).step_by(10) {
+            l.report(&mut board, &report(t, None));
+        }
+        let sent = frames(&tx);
+        assert_eq!(sent.len(), 5);
+        assert_eq!(l.stats().uplinks, 5);
+        let seq: Vec<u8> = sent.iter().map(|u| u.sequence).collect();
+        assert_eq!(seq, [0, 1, 2, 3, 4]);
+        let u = sent[0];
+        assert_eq!(
+            (u.mode, u.switch, u.armed, u.faults),
+            (DriveMode::Computer, ModeSwitch::NoSignal, true, 0x0100)
+        );
+        assert_eq!(
+            (u.steering, u.brake_position, u.echo),
+            (Some(0.1), None, None)
+        );
+        assert_eq!((u.throttle_out, u.brake_out), (0.25, 0.0));
+    }
+
+    #[test]
+    fn the_uplink_echoes_the_last_orin_counter_and_the_sticks() {
+        let tx = FakeTx::default();
+        let mut l = LegacyLink::with_uplink(
+            FakeUart::default(),
+            tx.clone(),
+            Calibration::TODAY,
+            FrameVersion::V2,
+        );
+        receive(&mut l, &v2(0.0, 0.0, 0.0, 41, true));
+        receive(&mut l, &v2(0.0, 0.0, 0.0, 42, true));
+        let rc = RcInput {
+            switch: RcSwitch::ViaRos,
+            throttle: 0.5,
+            steering: -0.25,
+            brake: false,
+        };
+        l.report(&mut FakeBoard::new(), &report(0, Some(rc)));
+        let u = frames(&tx)[0];
+        assert_eq!(u.echo, Some(42));
+        assert_eq!(u.switch, ModeSwitch::RcViaRos);
+        assert_eq!((u.sticks.throttle, u.sticks.steering), (0.5, -0.25));
+        // Version 1 frames carry no counter: nothing to echo.
+        let tx = FakeTx::default();
+        let mut l = LegacyLink::with_uplink(
+            FakeUart::default(),
+            tx.clone(),
+            Calibration::TODAY,
+            FrameVersion::V1,
+        );
+        receive(&mut l, &frame(0.0, 0.0, -1.0));
+        l.report(&mut FakeBoard::new(), &report(0, None));
+        assert_eq!(frames(&tx)[0].echo, None);
     }
 
     // --- Version 2: the heartbeat (TODO 50) ---

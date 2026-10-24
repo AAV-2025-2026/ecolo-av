@@ -25,15 +25,27 @@
 //!        0xA5  2   steering  speed  accel   counter  flags  CRC-8/SAE-J1850 of 1..15
 //! ```
 //!
-//! The link only goes one way: the ESP32 sends nothing back on it.
+//! The uplink ([`Uplink`], TODO 50 and 48) goes the other way, ESP32 to Motor-Pi on TX1
+//! (GPIO17), 50 times a second: the mode, the transmitter's mode switch, the faults, the
+//! last Orin counter taken (its echo), the Jrks' positions and the RC sticks. 35 bytes,
+//! the same sync byte, version and CRC-8:
+//!
+//! ```text
+//!  byte  0     1  2     3    4     5     6       7      8..9    10..33         34
+//!        0xA5  2  kind  seq  echo  mode  switch  flags  faults  six f32 values CRC-8 of 1..33
+//! ```
+//!
+//! Version 1 goes one way only: the 2025-26 C++ sent nothing back.
 #![no_std]
 
 mod frame;
 mod parser;
 mod targets;
+mod uplink;
 mod v2;
 
 pub use frame::{Frame, FrameError, BAUD, FRAME_LEN};
 pub use parser::{Parser, ParserV2};
 pub use targets::{Targets, Throttle, BRAKE_FULL, BRAKE_RELEASED, DAC_CAP, STEER_CENTRE};
+pub use uplink::{DriveMode, ModeSwitch, Sticks, Uplink, KIND_STATUS, UPLINK_LEN};
 pub use v2::{crc8, Flags, FrameV2, Heartbeat, FRAME_V2_LEN, SYNC, VERSION};

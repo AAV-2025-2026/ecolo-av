@@ -159,6 +159,25 @@ impl embedded_io::ReadReady for FakeUart {
     }
 }
 
+/// A serial port's TX: every byte written, in order.
+#[derive(Clone, Default)]
+pub struct FakeTx(pub Rc<RefCell<Vec<u8>>>);
+
+impl embedded_io::ErrorType for FakeTx {
+    type Error = embedded_io::ErrorKind;
+}
+
+impl embedded_io::Write for FakeTx {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        self.0.borrow_mut().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
 /// A whole spine on fakes, after `init()`, with the clock at 1000 ms.
 pub struct Rig {
     pub sb: SpineBoard<FakeBoard, FakeBus, FakeUart>,

@@ -27,6 +27,17 @@ FrameV2): 17 bytes,
   when it hasn't changed for 100 ms, however many frames still arrive.
   Both sides check firmware/spine/crates/legacy-link/vectors.json.
 
+The uplink (TODO 50, 48; legacy-link's Uplink): ESP32 -> Motor Pi on the ESP32's TX1
+(GPIO17), 50 Hz, only with the firmware's `uplink` feature (the wire is the hardware
+lead's to confirm). 35 bytes:
+  0xA5, 2 (version), 1 (kind: status), sequence, echo (the last Orin counter the ESP32
+  took), mode (0 stopped, 1 RC direct, 2 computer: VehicleStatus.mode's numbers),
+  switch (the transmitter's mode switch: 0 no signal, 1 computer, 2 RC via ROS,
+  3 RC direct), flags (bit 0 armed, 1 e-stop active, 2 echo valid, 3 steering known,
+  4 brake position known, 5 gear on brake), faults (u16 LE), six float32 (steering rad,
+  brake position 0..1, throttle out, brake out, RC throttle -1..1, RC steering -1..1),
+  then CRC-8/SAE-J1850 of bytes 1..33. Unknown positions are NaN, their flag clear.
+
 UDP from the wheel encoder (Wheel_Encoders, wiznet.ino:9-19,110-131):
   a 4-byte big-endian int32: signed spoke count since the previous packet,
   about every 100 ms, to port 10111. 8 spokes per wheel revolution. It sends
@@ -141,6 +152,111 @@ def unpack_frame_v2(frame: bytes) -> FrameV2:
     steering, speed, accel = struct.unpack('<fff', frame[2:14])
     return FrameV2(steering, speed, accel, frame[14], bool(frame[15] & FLAG_ARMED),
                    bool(frame[15] & FLAG_ESTOP))
+
+
+# --- The uplink: the ESP32's status ---
+
+UPLINK_LEN = 35
+KIND_STATUS = 1
+# Byte 5: who drives, as VehicleStatus.mode.
+MODE_STOPPED, MODE_RC_DIRECT, MODE_COMPUTER = 0, 1, 2
+# Byte 6: the transmitter's mode switch.
+SWITCH_NONE, SWITCH_COMPUTER, SWITCH_RC_VIA_ROS, SWITCH_RC_DIRECT = 0, 1, 2, 3
+# Byte 7.
+UP_ARMED, UP_ESTOP, UP_ECHO, UP_STEERING, UP_BRAKE, UP_STICK_BRAKE = (1 << i for i in range(6))
+UP_FLAGS = 0x3F
+
+
+@dataclass(frozen=True)
+class Uplink:
+    """One uplink status frame. None: not known (no echo yet, no position)."""
+
+    sequence: int
+    echo: Optional[int]
+    mode: int                       # MODE_*
+    switch: int                     # SWITCH_*
+    armed: bool
+    estop: bool
+    faults: int
+    steering: Optional[float]       # rad, + left, the steering Jrk's position
+    brake_position: Optional[float]  # 0..1, the brake Jrk's position
+    throttle_out: float             # 0..1, what the ESP32 drives the throttle with
+    brake_out: float                # 0..1, and the brake
+    rc_throttle: float              # -1..1, + forward (the gear switch gives the sign)
+    rc_steering: float              # -1..1, + left
+    rc_brake: bool                  # the gear switch on brake
+
+
+def pack_uplink(u: Uplink) -> bytes:
+    """Return the 35 bytes the ESP32 sends for `u` (for tests and the bench)."""
+    flags = ((UP_ARMED if u.armed else 0) | (UP_ESTOP if u.estop else 0)
+             | (UP_ECHO if u.echo is not None else 0)
+             | (UP_STEERING if u.steering is not None else 0)
+             | (UP_BRAKE if u.brake_position is not None else 0)
+             | (UP_STICK_BRAKE if u.rc_brake else 0))
+    nan = float('nan')
+    body = (bytes([VERSION, KIND_STATUS, u.sequence & 0xFF,
+                   (u.echo or 0) & 0xFF, u.mode, u.switch, flags])
+            + struct.pack('<H6f', u.faults & 0xFFFF,
+                          nan if u.steering is None else u.steering,
+                          nan if u.brake_position is None else u.brake_position,
+                          u.throttle_out, u.brake_out, u.rc_throttle, u.rc_steering))
+    return bytes([SYNC]) + body + bytes([crc8(body)])
+
+
+def unpack_uplink(frame: bytes) -> Uplink:
+    """Decode an uplink frame. Raises ValueError if it isn't a good one."""
+    if len(frame) != UPLINK_LEN or frame[0] != SYNC:
+        raise ValueError('not an uplink frame')
+    if crc8(frame[1:34]) != frame[34]:
+        raise ValueError('bad CRC')
+    if frame[1] != VERSION or frame[2] != KIND_STATUS:
+        raise ValueError('unknown version or kind')
+    sequence, echo, mode, switch, flags = frame[3:8]
+    if flags & ~UP_FLAGS or mode > MODE_COMPUTER or switch > SWITCH_RC_DIRECT:
+        raise ValueError('unknown flags, mode or switch')
+    faults, steering, brake, throttle_out, brake_out, rc_t, rc_s = struct.unpack(
+        '<H6f', frame[8:34])
+    return Uplink(sequence, echo if flags & UP_ECHO else None, mode, switch,
+                  bool(flags & UP_ARMED), bool(flags & UP_ESTOP), faults,
+                  steering if flags & UP_STEERING else None,
+                  brake if flags & UP_BRAKE else None,
+                  throttle_out, brake_out, rc_t, rc_s, bool(flags & UP_STICK_BRAKE))
+
+
+class UplinkParser:
+    """
+    Bytes in, uplink frames out: as legacy-link's ParserV2 finds version 2 frames.
+
+    Wait for 0xA5, take 35 bytes; a bad frame is dropped (and counted in `bad`), and
+    the search starts again at the next 0xA5 inside it. Bytes outside a frame count
+    in `skipped`.
+    """
+
+    def __init__(self):
+        self.buf = bytearray()
+        self.bad = 0
+        self.skipped = 0
+
+    def feed(self, data: bytes) -> list:
+        """Return the good frames in `data` (with what came before), oldest first."""
+        out = []
+        for b in data:
+            if not self.buf and b != SYNC:
+                self.skipped += 1
+                continue
+            self.buf.append(b)
+            if len(self.buf) < UPLINK_LEN:
+                continue
+            try:
+                out.append(unpack_uplink(bytes(self.buf)))
+                self.buf.clear()
+            except ValueError:
+                self.bad += 1
+                rest = self.buf[1:]
+                at = rest.find(SYNC)
+                self.buf = rest[at:] if at >= 0 else bytearray()
+        return out
 
 
 def encoder_counts(packet: bytes) -> int:

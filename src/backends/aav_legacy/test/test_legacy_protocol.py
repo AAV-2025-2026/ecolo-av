@@ -4,7 +4,9 @@ from pathlib import Path
 
 from aav_legacy.legacy_protocol import (
     crc8, encoder_counts, EncoderSpeed, FRAME_V2_LEN, FrameV2, LegacyMapping, metres_per_count,
-    pack_frame, pack_frame_v2, stop_command, to_legacy, unpack_frame, unpack_frame_v2)
+    MODE_COMPUTER, MODE_STOPPED, pack_frame, pack_frame_v2, pack_uplink, stop_command,
+    SWITCH_NONE, SWITCH_RC_VIA_ROS, to_legacy, unpack_frame, unpack_frame_v2, unpack_uplink,
+    Uplink, UPLINK_LEN, UplinkParser)
 import pytest
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -225,3 +227,64 @@ def test_v2_turns_down_a_v1_frame_and_unknown_flags():
     bad[16] = crc8(bytes(bad[1:16]))
     with pytest.raises(ValueError):
         unpack_frame_v2(bytes(bad))
+
+
+# --- The uplink, ESP32 -> Motor Pi (TODO 50, 48) ---
+
+def uplink(**changes):
+    fields = dict(sequence=3, echo=17, mode=MODE_COMPUTER, switch=SWITCH_RC_VIA_ROS,
+                  armed=True, estop=False, faults=0x0100, steering=0.125, brake_position=None,
+                  throttle_out=0.25, brake_out=0.0, rc_throttle=0.5, rc_steering=-0.75,
+                  rc_brake=False)
+    fields.update(changes)
+    return Uplink(**fields)
+
+
+def test_uplink_layout():
+    frame = pack_uplink(uplink())
+    assert len(frame) == UPLINK_LEN == 35
+    assert frame[:8] == bytes([0xA5, 2, 1, 3, 17, MODE_COMPUTER, SWITCH_RC_VIA_ROS, 0b1101])
+    assert frame[8:10] == bytes([0x00, 0x01])
+    assert frame[34] == crc8(frame[1:34])
+    assert unpack_uplink(frame) == uplink()
+    # Unknown: no echo, no positions; NaN on the wire, None here.
+    quiet = uplink(echo=None, steering=None, mode=MODE_STOPPED, switch=SWITCH_NONE)
+    assert unpack_uplink(pack_uplink(quiet)) == quiet
+
+
+def test_uplink_catches_every_one_bit_error():
+    """CRC-8 over 33 bytes: every 1-bit error (2-bit: all but 1 of 36,856, tried once)."""
+    frame = pack_uplink(uplink())
+    for bit in range(8, UPLINK_LEN * 8):
+        b = bytearray(frame)
+        b[bit // 8] ^= 0x80 >> (bit % 8)
+        with pytest.raises(ValueError):
+            unpack_uplink(bytes(b))
+
+
+def test_uplink_parser_finds_frames_after_noise_and_a_bad_frame():
+    good = [pack_uplink(uplink(sequence=i)) for i in range(4)]
+    bad = bytearray(good[1])
+    bad[20] ^= 0x10
+    stream = b'\x00\x13' + good[0] + good[1][:10] + bytes(bad) + good[2] + good[3]
+    parser = UplinkParser()
+    found = []
+    for at in range(0, len(stream), 7):     # in pieces, as a serial port gives them
+        found += parser.feed(stream[at:at + 7])
+    assert [u.sequence for u in found] == [0, 2, 3]
+    assert parser.bad >= 1 and parser.skipped >= 2
+
+
+@pytest.mark.skipif(not VECTORS.exists(), reason='not in a full checkout')
+def test_rust_uplink_vectors_are_what_this_module_packs_and_reads():
+    gen = load_generator()
+    doc = json.loads(VECTORS.read_text())
+    cases = doc['uplink_cases']
+    good = [c for c in cases if c['error'] is None]
+    assert [c['bytes'] for c in good] == [list(pack_uplink(u)) for _, _, u in gen.UPLINK_CASES]
+    for c in good:
+        assert unpack_uplink(bytes(c['bytes'])) == Uplink(**c['fields']), c['name']
+    for c in cases:
+        if c['error']:
+            with pytest.raises(ValueError):
+                unpack_uplink(bytes(c['bytes']))
