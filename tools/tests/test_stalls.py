@@ -62,18 +62,30 @@ def test_topics_quiet_together_are_one_stall():
             + s.late_gaps('/gps', steady(10, 60, holes=[(40.0, 40.6)])))
     (stall,) = s.stalls(gaps, least=2)
     assert stall.topics == ['/ekf', '/imu', '/wheels']
-    assert stall.start == pytest.approx(20.01, abs=0.02)
-    assert stall.end == pytest.approx(20.8, abs=0.03)
+    # From when the second topic went quiet (the EKF, 30 Hz) to when the first came back.
+    assert stall.start == pytest.approx(20.03, abs=0.02)
+    assert stall.end == pytest.approx(20.7, abs=0.04)
     # The GPS's own hole, alone, is late but no stall; with least=1 it is one too.
     assert len(s.stalls(gaps, least=1)) == 2
     assert s.stalls(gaps, least=4) == []
 
 
-def test_a_chain_of_overlaps_is_one_stall():
+def test_a_chain_of_overlaps_is_not_one_long_stall():
+    # Never three quiet at once: no stall of three. Two at once, twice, briefly.
     gaps = [s.Gap('/a', 0.0, 1.0, 0.0), s.Gap('/b', 0.9, 2.0, 0.0), s.Gap('/c', 1.9, 3.0, 0.0)]
-    (stall,) = s.stalls(gaps, least=3)
-    assert (stall.start, stall.end) == (0.0, 3.0)
-    assert stall.length == 3.0
+    assert s.stalls(gaps, least=3) == []
+    first, second = s.stalls(gaps, least=2)
+    assert (first.start, first.end, first.topics) == (0.9, 1.0, ['/a', '/b'])
+    assert (second.start, second.end, second.topics) == (1.9, 2.0, ['/b', '/c'])
+
+
+def test_a_topic_late_again_and_again_does_not_chain_a_stall():
+    # A camera late every second for 200 s, the IMU quiet once with it: one short stall.
+    gaps = [s.Gap('/camera', t, t + 1.2, 0.1) for t in range(200)]
+    gaps.append(s.Gap('/imu', 50.5, 51.0, 0.0))
+    (stall,) = s.stalls(gaps, least=2)
+    assert stall.topics == ['/camera', '/imu']
+    assert stall.length == pytest.approx(0.5)
 
 
 def test_one_topic_late_twice_in_a_row_is_not_a_stall():

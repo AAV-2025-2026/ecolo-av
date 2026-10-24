@@ -90,6 +90,7 @@ STALL_TOPICS = 3        # key topics quiet together: a stall
 UP_TIME = 150.0         # s for Gazebo and the EKF, then again for Nav2
 READY_TIME = 30.0       # s for the sensor watchdog to let Nav2 drive
 CPU_EVERY = 10.0        # s between samples of the computer's load
+GIVE_UP = 4             # goals failed in a row: the car is stuck, stop driving
 
 
 class Arrivals(bandwidth.Meters):
@@ -222,25 +223,33 @@ def drive(node, seconds):
     legs = TOURS['lot']['legs']
     changes, notes = [], []
     end = time.monotonic() + seconds
-    leg = 0
+    leg = failed = 0
     while time.monotonic() < end:
         name, x, y, heading = legs[leg % len(legs)]
         changes.append(time.monotonic())
         handle = send_goal(node, x, y, heading)
         if handle is None:
             notes.append(f'Nav2 refused "{name}"')
-            node.spin_for(2.0)
-            leg += 1
-            continue
-        result = handle.get_result_async()
-        node.spin_for(end - time.monotonic(), result.done)
-        if result.done():
-            status = result.result().status
-            if status != GoalStatus.STATUS_SUCCEEDED:
-                notes.append(f'"{name}": Nav2 gave up (status {status})')
+            failed += 1
         else:
-            node.wait(handle.cancel_goal_async(), 5.0)
+            result = handle.get_result_async()
+            node.spin_for(end - time.monotonic(), result.done)
+            if not result.done():
+                node.wait(handle.cancel_goal_async(), 5.0)
+            elif result.result().status == GoalStatus.STATUS_SUCCEEDED:
+                failed = 0
+            else:
+                notes.append(f'"{name}": Nav2 gave up (status {result.result().status})')
+                failed += 1
         leg += 1
+        if failed >= GIVE_UP:
+            # Stuck (23 Oct: facing a wall, every plan "Start occupied"): sending goals
+            # thousands of times would measure Nav2's refusals, not driving.
+            notes.append(f'stuck: {failed} goals in a row failed; stopped driving '
+                         f'{end - time.monotonic():.0f} s early')
+            break
+        if failed:
+            node.spin_for(2.0)
     changes.append(time.monotonic())
     return changes, notes, leg
 
@@ -355,7 +364,9 @@ def main():
     with open(log_path, 'w') as log:
         launch = subprocess.Popen(
             ['ros2', 'launch', 'aav_bringup', 'sim.launch.py', 'world:=test_lot', 'gui:=false',
-             'rviz:=false', 'reversing:=false'],
+             # Reversing, as the car may now (Ben, 22 Oct): forward only, the lot tour's
+             # U-turn can end facing a wall, and the drive stops there (23 Oct).
+             'rviz:=false', 'reversing:=true'],
             cwd=ROOT, env=dict(os.environ), stdout=log, stderr=subprocess.STDOUT,
             start_new_session=True)
         rclpy.init()

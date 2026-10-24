@@ -16,6 +16,7 @@ The input is each topic's arrival times (s, one clock for all, such as time.mono
 Also two readers for the computer's own load, from `ps` and `top` (macOS and Linux).
 """
 
+from collections import Counter
 from dataclasses import dataclass, field
 import math
 import re
@@ -115,24 +116,34 @@ def summary(arrivals, window):
 
 def stalls(gaps, least=2):
     """
-    Return the times when at least `least` different topics were quiet together.
+    Return the times when at least `least` different topics were quiet at the same moment.
 
-    Quiet times that overlap join one stall (a chain: A overlaps B, B overlaps C), which
-    lasts from the first one's start to the last one's end.
+    A stall lasts while that many are quiet together, and lists every topic quiet during
+    it. Quiet times that only overlap in a chain (A with B, then B with C) are not one long
+    stall: a topic late again and again (a camera, 23 Oct) once chained 236 s of them.
     """
+    events = []
+    for gap in gaps:
+        if gap.end > gap.quiet_from:
+            events.append((gap.quiet_from, 1, gap.topic))
+            events.append((gap.end, -1, gap.topic))
+    events.sort(key=lambda e: (e[0], e[1]))     # at the same moment, an end comes first
+    quiet = Counter()
     found = []
     current = None
-    for gap in sorted(gaps, key=lambda g: g.quiet_from):
-        if current is not None and gap.quiet_from <= current.end:
-            current.end = max(current.end, gap.end)
-            if gap.topic not in current.topics:
-                current.topics.append(gap.topic)
-            continue
-        current = Stall(gap.quiet_from, gap.end, [gap.topic])
-        found.append(current)
-    for stall in found:
-        stall.topics.sort()
-    return [s for s in found if len(s.topics) >= least]
+    for moment, change, topic in events:
+        quiet[topic] += change
+        if quiet[topic] <= 0:
+            del quiet[topic]
+        if len(quiet) >= least:
+            if current is None:
+                current = Stall(moment, moment, [])
+                found.append(current)
+            current.topics = sorted(set(current.topics) | set(quiet))
+        elif current is not None:
+            current.end = moment
+            current = None
+    return found
 
 
 def ps_seconds(text):

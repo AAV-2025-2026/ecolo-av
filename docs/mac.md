@@ -220,7 +220,7 @@ The whole graph, 10 min each (`pixi run timing-test`, Gazebo's lot, 23 Oct):
 | Global EKF, worst gap | 0.99 s | 0.09 s |
 | Front camera, worst gap | 4.51 s | 0.14 s |
 | Camera pictures over 0.5 s late | 198 | 0 |
-| Many topics silent together | 20 times | 0 |
+| 3 or more key topics silent at the same moment | 490 times, the longest 2.4 s | 0 |
 | The sensor watchdog stopped Nav2 | 5 times | 0 |
 
 `sim-check` passes everything on Cyclone, with the rear camera at its full 10 Hz (7-8 Hz
