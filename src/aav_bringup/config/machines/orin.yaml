@@ -12,8 +12,11 @@ parts:
   radar: false          # perception, later
   lidar: true           # the roof Velodyne VLP-16: it sends its UDP packets to the Jetson only
   battery: false
-  camera: false         # TODO which cameras (Q22), and are they on the Orin's USB?
-  detector: true        # RF-DETR, as yolo_detector_orin. Needs JetPack's PyTorch and TensorRT: the reflash (Q24)
+  camera: false         # a USB camera here (usb_cam): the front ones come by camera_stream
+  camera_stream: true   # the two front cameras' H.264 streams from the camera Pi, each with
+                        # RF-DETR inside its node (camera_stream below; docs/camera-pipeline.md)
+  detector: false       # yolo_detector_orin, on image_raw: camera_stream's own detectors
+                        # replace it. Only for a camera that isn't streamed (its image:)
   stop_signs: true      # the stop-sign watcher: one per car, next to the mux
   radar_clusters: false # with the radar, later
   camera_obstacles: false # TODO with calibrated cameras (Q22): boxes into Nav2's costmap,
@@ -28,11 +31,20 @@ parts:
   legacy_encoder: false # the 2025-26 Pico sent only to the Motor Pi: see motor_pi.yaml
   foxglove: true
 
-# The detector's settings: aav_yolo detector.launch.py's arguments.
-detector:
-  detector: rfdetr                    # RF-DETR Nano, in TensorRT (Ben, 23 Oct). Untested here.
+# The camera streams' settings: aav_camera_stream camera_stream.launch.py's arguments
+# (the car sets source, time_code and use_sim_time itself). Untested on the Orin.
+camera_stream:
+  host: 192.168.1.108       # CAM1-PI, the front camera Pi (the 21 Oct net map; it was also
+                            # seen at .102, the same card). TODO fix it on the router
+  cameras: front_left,front_right   # rtsp://<host>:8554/<camera>, from its MediaMTX
+  decoder: gst-nvidia       # NVIDIA's hardware decoder, through JetPack's
+                            # /usr/bin/gst-launch-1.0
+  detector: rfdetr                    # RF-DETR Nano, in TensorRT (Ben, 23 Oct).
   model: models/rf-detr-nano.engine   # built on the Orin itself: python3 tools/build_engine.py.
                                       # Until then the part is skipped, and says so. Or
-                                      # delete this line: models/rf-detr-nano.pth, PyTorch.
+                                      # delete this line: models/rf-detr-nano.pth, PyTorch;
+                                      # or detector: none, the streams with no stop signs.
   # detector: yolo                    # YOLO instead, also in TensorRT:
   # model: models/yolo11n.engine      # python3 tools/build_engine.py models/yolo11n.pt
+  # labels: stop sign       # the default: stop signs, and with the camera_obstacles part
+                            # its road users too

@@ -24,11 +24,11 @@ The real car. One launch file for every machine; a machine file picks the parts.
                            Give every machine the same value)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
-(orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
-same ROS_DOMAIN_ID, so the parts find each other over the network; see docs/platforms.md.
-The arguments win over the machine file: gps:=false starts no GPS driver anywhere, and
-lidar:=false no lidar. A part
-that can't run here (no PyTorch, no model file, no usb_cam) is skipped with a warning.
+(orin, motor_pi, laptop, all), and the detector's and the camera streams' settings
+there. Every machine uses the same ROS_DOMAIN_ID, so the parts find each other over the
+network; see docs/platforms.md. The arguments win over the machine file: gps:=false starts
+no GPS driver anywhere, and lidar:=false no lidar. A part that can't run here (no
+PyTorch, no model file, no usb_cam, no decoder program) is skipped with a warning.
 
 Parts and what they start:
   description     robot_state_publisher (+ joint_state_publisher): the car's frames
@@ -46,8 +46,16 @@ Parts and what they start:
   lidar           the roof Velodyne VLP-16, through the stock velodyne driver ->
                   /sensors/lidar/points. On the machine its packets go to: the Jetson
   camera          usb_cam -> /sensors/camera/front_left/image_raw (Linux only)
+  camera_stream   the front cameras' H.264 streams from the camera Pi's MediaMTX (RTSP,
+                  port 8554): one camera_stream_<camera> node each (aav_camera_stream),
+                  which decodes, undistorts and runs its own detector ->
+                  /perception/detections, with the machine file's host, decoder and model.
+                  Where the mux runs too, the sensor watchdog watches each camera's
+                  detections (<camera>_stream). The pictures stay inside: image_raw only
+                  with the lane part (publish_image). docs/camera-pipeline.md
   detector        YOLO on /sensors/camera/front_left/image_raw -> /perception/detections, as
-                  yolo_detector_<machine>, with the machine file's model
+                  yolo_detector_<machine>, with the machine file's model. Not for a camera
+                  the camera_stream part streams: its own detector replaces this one
   stop_signs      stop_sign_watcher -> /perception/stop_sign, twist_mux's stop-sign lock (the
                   lock is in aav_mux's config). One per car, next to the mux
   radar_clusters  DBSCAN (aav_radar_clusters, Rust) on /sensors/radar/points ->
@@ -98,11 +106,12 @@ from launch_ros.actions import Node
 import yaml
 
 PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'goto', 'imu', 'gps', 'radar',
-         'lidar', 'battery', 'camera', 'detector', 'stop_signs', 'radar_clusters',
+         'lidar', 'battery', 'camera', 'camera_stream', 'detector', 'stop_signs',
+         'radar_clusters',
          'camera_obstacles', 'lane', 'localization', 'navigation', 'spine', 'legacy_uart',
          'legacy_encoder', 'foxglove')
-# What a machine file holds: the parts, and the detector's settings.
-SECTIONS = ('parts', 'detector')
+# What a machine file holds: the parts, the detector's settings and the camera streams'.
+SECTIONS = ('parts', 'detector', 'camera_stream')
 # Each model format: what runs it, besides PyTorch and Ultralytics, and how to make it.
 FORMATS = {
     '.pth': ([], 'pixi run get-models'),
@@ -175,39 +184,162 @@ def lacks(modules):
                                   capture_output=True, text=True).stdout.split()
 
 
+def found(program):
+    """Return the program's path if this computer has it (an absolute path, or on PATH)."""
+    return shutil.which(program)
+
+
+def arguments(context, machine, package, name, settings, what, fixed=()):
+    """
+    Return every argument of a launch file, at its own defaults: to pass them all.
+
+    Passing every one means none can leak in from another file. A machine file setting
+    the file doesn't take, or one of `fixed` (the car decides those), is an error.
+    """
+    declared = (PythonLaunchDescriptionSource(launch_file(package, name))
+                .get_launch_description(context).get_launch_arguments())
+    unknown = set(settings) - ({a.name for a in declared} - set(fixed))
+    if unknown:
+        raise RuntimeError(f'{machine}.yaml: {what} takes no {sorted(unknown)}')
+    return {a.name: perform_substitutions(context, a.default_value) for a in declared
+            if a.default_value is not None}
+
+
+def check_model(machine, kind, model):
+    """
+    Return (the model file, made absolute, None), or (None, why it can't run here).
+
+    A detector and a model file that don't go together is an error: the machine file is
+    wrong, on every computer.
+    """
+    from aav_yolo.boxes import check_detector   # here: only machines with a detector need it
+    try:
+        model = check_detector(kind, model)
+    except ValueError as e:
+        raise RuntimeError(f'{machine}.yaml: {e}')
+    model = os.path.join(workspace(), os.path.expanduser(model))
+    runtime, make = FORMATS.get(os.path.splitext(model)[1], ([], 'docs/perception.md'))
+    library = 'rfdetr' if kind.strip().lower() == 'rfdetr' else 'ultralytics'
+    python, missing = lacks(['torch', library, *runtime])
+    if missing:
+        return None, (f'{python} has no {", ".join(missing)}. On a laptop: '
+                      f'pixi run -e ml car {machine}. On the Orin: '
+                      "JetPack's PyTorch and TensorRT (docs/perception.md)")
+    if not os.path.exists(model):
+        return None, f'{model} is missing. Make it with {make}'
+    return model, None
+
+
 def detector(context, machine, settings):
     """Return the detector part, as yolo_detector_<machine>, or why it can't start."""
     if not isinstance(settings, dict):
         raise RuntimeError(f'{machine}.yaml: give the detector settings, such as '
                            f'"detector: {{detector: rfdetr}}"')
-    path = launch_file('aav_yolo', 'detector.launch.py')
-    declared = (PythonLaunchDescriptionSource(path).get_launch_description(context)
-                .get_launch_arguments())
-    unknown = set(settings) - ({a.name for a in declared} - {'node_name', 'picture'})
-    if unknown:
-        raise RuntimeError(f'{machine}.yaml: the detector takes no {sorted(unknown)}')
-    # Every argument, its own defaults included, so none can leak in from another file.
-    defaults = {a.name: perform_substitutions(context, a.default_value) for a in declared
-                if a.default_value is not None}
+    defaults = arguments(context, machine, 'aav_yolo', 'detector.launch.py', settings,
+                         'the detector', fixed=('node_name', 'picture'))
     args = {**defaults, 'labels': 'stop sign', **settings}
-    from aav_yolo.boxes import check_detector   # here: only machines with a detector need it
-    try:
-        model = check_detector(str(args['detector']), str(args['model']))
-    except ValueError as e:
-        raise RuntimeError(f'{machine}.yaml: {e}')
-    model = os.path.join(workspace(), os.path.expanduser(model))
-    runtime, make = FORMATS.get(os.path.splitext(model)[1], ([], 'docs/perception.md'))
-    library = 'rfdetr' if str(args['detector']).strip().lower() == 'rfdetr' else 'ultralytics'
-    python, missing = lacks(['torch', library, *runtime])
-    if missing:
-        return skipped('detector', f'{python} has no {", ".join(missing)}. On a laptop: '
-                                   f'pixi run -e ml car {machine}. On the Orin: '
-                                   "JetPack's PyTorch and TensorRT (docs/perception.md)")
-    if not os.path.exists(model):
-        return skipped('detector', f'{model} is missing. Make it with {make}')
+    model, why = check_model(machine, str(args['detector']), str(args['model']))
+    if why:
+        return skipped('detector', why)
     args.update(model=model, picture='',
                 node_name='yolo_detector_' + re.sub(r'\W', '_', machine))
     return [include('aav_yolo', 'detector.launch.py', **args)]
+
+
+def image_topic(camera):
+    return f'/sensors/camera/{camera}/image_raw'
+
+
+STREAMED = 'front_left,front_right'     # camera_stream.launch.py's own default
+
+
+def streamed(settings):
+    """Return the cameras a machine file's camera_stream settings name (or the default two)."""
+    cameras = settings.get('cameras', STREAMED) if isinstance(settings, dict) else STREAMED
+    return [c.strip() for c in str(cameras).split(',') if c.strip()]
+
+
+def detector_images(settings):
+    """Return every camera topic the detector part reads, from its machine file settings."""
+    settings = settings if isinstance(settings, dict) else {}
+    extra = [t.strip() for t in str(settings.get('extra_images', '')).split(',') if t.strip()]
+    return [str(settings.get('image', image_topic('front_left'))), *extra]
+
+
+def stream_labels(obstacles):
+    """
+    Return the labels the streams keep: stop signs, and with camera_obstacles its classes.
+
+    The car's detector part keeps stop signs only, for stop_sign_watcher; camera_obstacles
+    needs the road users too.
+    """
+    labels = ['stop sign']
+    if obstacles:
+        path = os.path.join(get_package_share_directory('aav_yolo'), 'config',
+                            'camera_obstacles.yaml')
+        with open(path) as f:
+            classes = yaml.safe_load(f)['camera_obstacles']['ros__parameters']['classes']
+        labels += [c for c in classes if c not in labels]
+    return ','.join(labels)
+
+
+# The car decides these: its sources are real, no stream check's time code, no sim clock.
+STREAM_FIXED = ('source', 'time_code', 'use_sim_time')
+
+
+def camera_streams(context, machine, settings, labels, publish_image):
+    """
+    Return the camera_stream part and the cameras it streams; or skip it, saying why.
+
+    One camera_stream_<camera> node per camera (aav_camera_stream camera_stream.launch.py),
+    each pulling rtsp://<host>:8554/<camera> from the camera Pi and running its own
+    detector. Skipped, like the detector part, where the decoder program, PyTorch or the
+    model file is missing: a stream without its detector would look healthy and see no
+    stop signs. detector: none in the machine file runs the streams without, on purpose.
+    """
+    if not isinstance(settings, dict) or not settings.get('host'):
+        raise RuntimeError(f"{machine}.yaml: give the camera streams' settings, with the "
+                           "camera Pi's address, such as "
+                           '"camera_stream: {host: 192.168.1.108, decoder: gst-nvidia}"')
+    defaults = arguments(context, machine, 'aav_camera_stream', 'camera_stream.launch.py',
+                         settings, 'camera_stream', fixed=STREAM_FIXED)
+    args = {**defaults, 'labels': labels, 'publish_image': publish_image, **settings,
+            'source': 'real', 'time_code': False, 'use_sim_time': False}
+    cameras = streamed(args)
+    if not cameras:
+        raise RuntimeError(f'{machine}.yaml: camera_stream streams no cameras')
+    args['cameras'] = ','.join(cameras)
+    decoder = str(args['decoder'])
+    if decoder != 'opencv':
+        from aav_camera_stream import decoders   # only machines with the streams need it
+        try:
+            program = decoders.command(decoder, 'rtsp://pi/camera', 2, 2,
+                                       str(args['transport']), str(args['program']),
+                                       str(args['pipeline']), str(args['hwaccel']))[0]
+        except ValueError as e:
+            raise RuntimeError(f'{machine}.yaml: camera_stream: {e}')
+        if not found(program):
+            return skipped('camera_stream', f'decoder:={decoder} runs {program}, which this '
+                                            "computer lacks (gst-nvidia: the Orin's JetPack "
+                                            'GStreamer)'), []
+    kind = str(args['detector']).strip().lower()
+    if kind != 'none':
+        model, why = check_model(machine, kind, str(args['model']))
+        if why:
+            return skipped('camera_stream', why + '. Or detector: none in camera_stream: '
+                                                  'the streams and previews only, no stop '
+                                                  'signs'), []
+        args['model'] = model
+    return [include('aav_camera_stream', 'camera_stream.launch.py', **args)], cameras
+
+
+def uncalibrated(cameras):
+    """Return the streamed cameras with no lens file (aav_camera_stream config/cameras.yaml)."""
+    path = os.path.join(get_package_share_directory('aav_camera_stream'), 'config',
+                        'cameras.yaml')
+    with open(path) as f:
+        known = yaml.safe_load(f)['cameras']
+    return [c for c in cameras if not (known.get(c) or {}).get('calibration')]
 
 
 REAR_IMAGE = '/sensors/camera/rear/image_raw'
@@ -243,6 +375,33 @@ def launch_setup(context):
         return (bool(parts.get(name, False)) and (name != 'gps' or flag('gps'))
                 and (name != 'lidar' or flag('lidar')))
 
+    # The camera streams first: what they stream decides the detector part and what the
+    # sensor watchdog watches. The detector part reads image_raw, which the streams keep
+    # inside: so for a streamed camera the stream's own detector replaces it.
+    streams, streaming = [], []
+    intended = streamed(config.get('camera_stream')) if on('camera_stream') else []
+    if on('camera_stream'):
+        if on('camera') and 'front_left' in intended:
+            raise RuntimeError(f'{machine}.yaml: the camera part (usb_cam) and camera_stream '
+                               'both give front_left: pick one')
+        streams, streaming = camera_streams(
+            context, machine, config.get('camera_stream'),
+            stream_labels(on('camera_obstacles')),
+            # The lane finder reads the front left picture, here: no network in between.
+            publish_image=on('lane') and 'front_left' in intended)
+    run_detector = on('detector')
+    if run_detector and intended:
+        images = detector_images(config.get('detector'))
+        taken = [i for i in images if i in {image_topic(c) for c in intended}]
+        if taken == images:
+            skipped('detector', 'the camera_stream part runs the detector for '
+                                f'{", ".join(intended)}, in its own nodes')
+            run_detector = False
+        elif taken:
+            raise RuntimeError(f'{machine}.yaml: the detector reads {", ".join(taken)}, '
+                               'which camera_stream keeps inside: set its image and '
+                               'extra_images to the other cameras only')
+
     actions = []
     if on('description'):
         actions.append(include('aav_description', 'description.launch.py'))
@@ -253,9 +412,11 @@ def launch_setup(context):
         # the watchdog itself goes quiet (the lock's 1 s timeout). Nav2 and the sensors may
         # run on other machines: it watches their topics over the network. The HUD starts
         # on its own (aav-hud.service), wherever the screen is: its heartbeat says it lives.
+        # And each camera stream this machine starts, through its detections.
         actions.append(include('aav_safety', 'watchdog.launch.py',
                                inputs='odom,imu,local,global' + (',gps' if flag('gps') else '')
-                               + (',hud' if flag('watch_hud') else '')))
+                               + (',hud' if flag('watch_hud') else '')
+                               + ''.join(f',{c}_stream' for c in streaming)))
     if on('ego'):
         actions.append(include('aav_ego', 'ego.launch.py'))
         # Next to ego: the sensor mux and the output mux. The real backends (spine_bridge,
@@ -278,7 +439,8 @@ def launch_setup(context):
                                    left='/dev/aav/camera_left', right=''))
         else:
             actions += skipped('camera', 'usb_cam is not installed here (it is Linux only)')
-    if on('detector'):
+    actions += streams
+    if run_detector:
         actions += detector(context, machine, config.get('detector') or {})
     if on('stop_signs'):
         actions.append(Node(package='aav_yolo', executable='stop_sign_watcher',
@@ -287,10 +449,26 @@ def launch_setup(context):
         actions.append(include('aav_radar_clusters', 'radar_clusters.launch.py',
                                mock=False, eps=0.8, minimum_points=15, radar_rviz=False))
     if on('camera_obstacles'):
+        config_file = os.path.join(get_package_share_directory('aav_yolo'), 'config',
+                                   'camera_obstacles.yaml')
+        parameters = [config_file]
+        if streaming:
+            # Each stream's lens too: camera_stream publishes it with its detections, once
+            # the camera has a calibration. Without one, its boxes can't reach the road.
+            with open(config_file) as f:
+                topics = yaml.safe_load(f)['camera_obstacles']['ros__parameters'][
+                    'camera_info_topics']
+            topics += [f'/sensors/camera/{c}/camera_info' for c in streaming
+                       if f'/sensors/camera/{c}/camera_info' not in topics]
+            parameters.append({'camera_info_topics': topics})
+            blind = uncalibrated(streaming)
+            if blind:
+                get_logger('car.launch.py').warning(
+                    f'camera_obstacles: {", ".join(blind)}: no calibration '
+                    '(aav_camera_stream config/cameras.yaml), so no lens: those boxes '
+                    "won't reach Nav2's costmap")
         actions.append(Node(package='aav_yolo', executable='camera_obstacles',
-                            name='camera_obstacles',
-                            parameters=[os.path.join(get_package_share_directory('aav_yolo'),
-                                                     'config', 'camera_obstacles.yaml')]))
+                            name='camera_obstacles', parameters=parameters))
     if on('lane'):
         actions += [include('aav_lane_finder', 'lane_finder.launch.py', debug_image=False),
                     include('aav_lane_geometry', 'lane_follower.launch.py', fake=False)]
@@ -308,7 +486,7 @@ def launch_setup(context):
         reversing = flag('reversing')
         # The rear camera counts once its detector reads it and keeps people (machine file:
         # detector: {extra_images: /sensors/camera/rear/image_raw, labels: ""}).
-        rear_camera = (on('camera_obstacles') and on('detector')
+        rear_camera = (on('camera_obstacles') and run_detector
                        and watches_behind(config.get('detector')))
         blind = vehicle.blind_behind(reversing, radar=on('radar'), lidar=on('lidar'),
                                      rear_camera=rear_camera)

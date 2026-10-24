@@ -16,6 +16,7 @@ from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
 from launch_ros.utilities import evaluate_parameters
 import pytest
+import yaml
 
 
 def load(package, name):
@@ -71,9 +72,11 @@ def test_every_machine_file_loads_and_starts(machine):
 @pytest.mark.parametrize('machine', ['orin', 'laptop', 'all'])
 def test_every_machine_runs_rfdetr(machine):
     # RF-DETR is the car's detector since 20 Oct; YOLO stays one line away in each file.
-    assert CAR.load_machine(machine)['detector']['detector'] == 'rfdetr'
+    # The Orin runs it inside its camera streams, the others in the detector part.
+    section = 'camera_stream' if machine == 'orin' else 'detector'
+    assert CAR.load_machine(machine)[section]['detector'] == 'rfdetr'
     # The Orin runs it in TensorRT (Ben, 23 Oct); the others its .pth, through PyTorch.
-    model = CAR.load_machine(machine)['detector'].get('model')
+    model = CAR.load_machine(machine)[section].get('model')
     assert model == ('models/rf-detr-nano.engine' if machine == 'orin' else None)
 
 
@@ -395,3 +398,152 @@ def test_the_sensors_role_starts_no_can_sender():
         assert any(p.get('role') == role for p in given), role
     with pytest.raises(ValueError, match='role:=drive'):
         spine.bus(context_for(spine, role='drive'))
+
+
+# The camera streams (aav_camera_stream, docs/camera-pipeline.md): the camera Pi's H.264
+# streams to the Orin, one node per front camera, each with its own detector.
+
+@pytest.fixture
+def orin_kit(monkeypatch, tmp_path):
+    """Make this computer the Orin to be: JetPack's GStreamer and TensorRT, the engine built."""
+    (tmp_path / 'models').mkdir()
+    (tmp_path / 'models' / 'rf-detr-nano.engine').write_text('')
+    monkeypatch.setattr(CAR, 'workspace', lambda: str(tmp_path))
+    monkeypatch.setattr(CAR, 'lacks', lambda modules: ('python3', []))
+    monkeypatch.setattr(CAR, 'found', lambda program: program)
+    return tmp_path
+
+
+def with_parts(monkeypatch, machine='orin', **parts):
+    """Return the machine file, with some parts switched on or off."""
+    config = CAR.load_machine(machine)
+    config = {**config, 'parts': {**config['parts'], **parts}}
+    monkeypatch.setattr(CAR, 'load_machine', lambda name: config)
+    return config
+
+
+def test_the_orin_streams_both_front_cameras_with_rfdetr_inside(orin_kit):
+    sent = included(started(CAR, machine='orin'))
+    stream = sent['camera_stream.launch.py']
+    assert stream['host'] == '192.168.1.108'                     # CAM1-PI
+    assert stream['cameras'] == 'front_left,front_right'
+    assert stream['decoder'] == 'gst-nvidia'
+    assert (stream['detector'], stream['model']) == (
+        'rfdetr', str(orin_kit / 'models' / 'rf-detr-nano.engine'))
+    assert (stream['source'], stream['time_code'], stream['use_sim_time']) == (
+        'real', 'false', 'false')
+    assert stream['labels'] == 'stop sign'
+    assert stream['publish_image'] == 'false'                  # the pictures stay inside
+    # The stream's own detector: no yolo_detector_orin beside it.
+    assert 'detector.launch.py' not in sent
+    # The watchdog, next to the mux here, watches both through their detections.
+    inputs = sent['watchdog.launch.py']['inputs'].split(',')
+    assert inputs[-2:] == ['front_left_stream', 'front_right_stream']
+    # The stop-sign watcher reads the same /perception/detections.
+    assert ('aav_yolo', 'stop_sign_watcher') in nodes(started(CAR, machine='orin'))
+
+
+def test_the_orin_today_skips_the_streams_and_says_why(monkeypatch, tmp_path):
+    # No engine yet (it's built on the Orin itself), or no PyTorch here: no streams, so
+    # the watchdog doesn't wait for them, and the old detector part doesn't start instead.
+    monkeypatch.setattr(CAR, 'workspace', lambda: str(tmp_path))
+    monkeypatch.setattr(CAR, 'found', lambda program: program)
+    for lacking in ([], ['tensorrt']):
+        monkeypatch.setattr(CAR, 'lacks', lambda modules, m=lacking: ('python3', m))
+        sent = included(started(CAR, machine='orin'))
+        assert 'camera_stream.launch.py' not in sent
+        assert 'detector.launch.py' not in sent
+        assert '_stream' not in sent['watchdog.launch.py']['inputs']
+
+
+def test_no_decoder_program_skips_the_streams(orin_kit, monkeypatch):
+    asked = []
+    monkeypatch.setattr(CAR, 'found', lambda program: asked.append(program))
+    assert 'camera_stream.launch.py' not in included(started(CAR, machine='orin'))
+    assert asked == ['/usr/bin/gst-launch-1.0']                 # JetPack's own
+
+
+def test_detector_none_streams_without_pytorch(monkeypatch, tmp_path):
+    monkeypatch.setattr(CAR, 'found', lambda program: program)
+    monkeypatch.setattr(CAR, 'lacks', lambda modules: ('python3', ['torch']))
+    config = with_parts(monkeypatch)
+    config['camera_stream'] = {**config['camera_stream'], 'detector': 'none', 'model': ''}
+    sent = included(started(CAR, machine='orin'))
+    assert sent['camera_stream.launch.py']['detector'] == 'none'
+    assert 'front_left_stream' in sent['watchdog.launch.py']['inputs']
+
+
+def test_the_stream_settings_are_checked(orin_kit, monkeypatch):
+    config = with_parts(monkeypatch)
+    streams = dict(config['camera_stream'])
+    for bad, match in (({'hots': 'pi'}, 'takes no'),
+                       ({'source': 'sim'}, 'takes no'),           # the car's own: real
+                       ({'decoder': 'nvdec'}, 'decoder:=nvdec'),
+                       ({'model': 'models/yolo11n.engine'}, 'use detector:=yolo'),
+                       ({'cameras': ' , '}, 'no cameras')):
+        config['camera_stream'] = {**streams, **bad}
+        with pytest.raises(RuntimeError, match=match):
+            started(CAR, machine='orin')
+    config['camera_stream'] = {k: v for k, v in streams.items() if k != 'host'}
+    with pytest.raises(RuntimeError, match="camera Pi's address"):
+        started(CAR, machine='orin')
+
+
+def test_the_detector_part_never_reads_a_streamed_camera(orin_kit, monkeypatch):
+    config = with_parts(monkeypatch, detector=True)
+    config['detector'] = {'detector': 'rfdetr'}
+    orin_kit.joinpath('models', 'rf-detr-nano.pth').write_text('')
+    # Its default image is the front left camera's, which the stream keeps inside.
+    assert 'detector.launch.py' not in included(started(CAR, machine='orin'))
+    # A camera that isn't streamed: it runs.
+    config['detector'] = {'detector': 'rfdetr', 'image': '/sensors/camera/rear/image_raw'}
+    assert included(started(CAR, machine='orin'))['detector.launch.py']['image'] == \
+        '/sensors/camera/rear/image_raw'
+    # Both kinds at once: the machine file must choose.
+    config['detector'] = {'detector': 'rfdetr', 'extra_images': '/sensors/camera/rear/image_raw'}
+    with pytest.raises(RuntimeError, match='keeps inside'):
+        started(CAR, machine='orin')
+    # Without the streams the detector part reads front_left as before.
+    with_parts(monkeypatch, detector=True, camera_stream=False)['detector'] = {}
+    assert 'detector.launch.py' in included(started(CAR, machine='orin'))
+
+
+def test_usb_cam_and_the_stream_never_both_give_front_left(orin_kit, monkeypatch):
+    with_parts(monkeypatch, camera=True)
+    with pytest.raises(RuntimeError, match='pick one'):
+        started(CAR, machine='orin')
+
+
+def test_camera_obstacles_gets_the_streams_lenses_and_road_users(orin_kit, monkeypatch):
+    with_parts(monkeypatch, camera_obstacles=True)
+    actions = started(CAR, machine='orin')
+    labels = included(actions)['camera_stream.launch.py']['labels'].split(',')
+    assert labels[0] == 'stop sign' and 'person' in labels and 'car' in labels
+    [node] = [a for a in actions
+              if isinstance(a, Node) and a.node_executable == 'camera_obstacles']
+    given = [p for p in evaluate_parameters(context_for(CAR), node._Node__parameters)
+             if isinstance(p, dict)]
+    topics = [p['camera_info_topics'] for p in given if 'camera_info_topics' in p][-1]
+    assert '/sensors/camera/front_left/camera_info' in topics
+    assert '/sensors/camera/front_right/camera_info' in topics
+    assert '/sensors/camera/rear/camera_info' in topics            # kept from its file
+
+
+def test_the_lane_finder_gets_the_front_left_picture_from_the_stream(orin_kit, monkeypatch):
+    with_parts(monkeypatch, lane=True)
+    assert included(started(CAR, machine='orin'))['camera_stream.launch.py'][
+        'publish_image'] == 'true'
+
+
+def test_the_watchdog_has_a_rule_for_every_streamed_camera():
+    # car.launch.py asks for <camera>_stream: each must exist, for that camera's frame.
+    share = get_package_share_directory
+    with open(os.path.join(share('aav_camera_stream'), 'config', 'cameras.yaml')) as f:
+        cameras = yaml.safe_load(f)['cameras']
+    with open(os.path.join(share('aav_safety'), 'config', 'sensor_watchdog.yaml')) as f:
+        rules = yaml.safe_load(f)['sensor_watchdog']['ros__parameters']
+    for camera, settings in cameras.items():
+        rule = rules[f'{camera}_stream']
+        assert (rule['topic'], rule['kind']) == ('/perception/detections', 'detections')
+        assert rule['frame_id'] == settings['frame_id'], camera
+        assert rule['stop'] is True, camera

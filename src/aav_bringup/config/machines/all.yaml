@@ -14,6 +14,7 @@ parts:
   lidar: true            # the roof Velodyne VLP-16
   battery: false
   camera: false          # TODO which cameras (Q22). usb_cam is Linux only
+  camera_stream: false   # the camera Pi's streams: on the Orin (orin.yaml has the settings)
   detector: true         # RF-DETR, as yolo_detector_all. Needs PyTorch: pixi run -e ml car all
   stop_signs: true
   radar_clusters: false  # with the radar
