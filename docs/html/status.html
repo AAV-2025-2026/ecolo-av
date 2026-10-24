@@ -240,7 +240,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>ESP32 board program (Rust)</td>
 <td><code>firmware/spine/boards/esp32-umod</code></td>
-<td><span class="badge b-untested">untested</span> builds with Espressif's Rust (<code>pixi run esp-tools</code>), both links; never flashed. Merged 15 Oct; the C++ stays on the car until it is proven. <a href="esp32-bench.html">First flash on the bench</a></td>
+<td><span class="badge b-untested">untested</span> builds with Espressif's Rust (<code>pixi run esp-tools</code>), both links; never flashed. Merged 15 Oct; the C++ stays on the car until it is proven. In QEMU (24 Oct): brakes 111-119 ms after the Motor Pi's frames stop, and latches (<code>pixi run esp-qemu-check</code>). <a href="esp32-bench.html">First flash on the bench</a></td>
 </tr>
 <tr>
 <td>Spine board program</td>

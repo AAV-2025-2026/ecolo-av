@@ -7,7 +7,7 @@
 <!-- Generated from docs/esp32-bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>First flash on the bench: the Rust ESP32</h1>
-<div class="meta">5 min read · 6 sections</div></header>
+<div class="meta">8 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -70,11 +70,11 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
 <div class="lead"><p>The plan for the first time the Rust program (<code>firmware/spine/boards/esp32-umod</code>) goes onto
 the car's ESP32 control board. Do it with Ben, <strong>wheels off the ground</strong>, with the C++
 ready to go back on. What the program is: <a href="rust-firmware.html">Rust firmware</a>.</p>
-<p><span class="badge b-untested">untested</span> Nothing here has been done yet.</p>
+<p><span class="badge b-untested">untested</span> Nothing here has been done on a board yet. The emulator has (next section).</p>
 <div class="admonition warning">
 <p class="admonition-title">Before you start</p>
 <pre><code>- The car on stands: **all four wheels off the ground**.
@@ -84,6 +84,142 @@ ready to go back on. What the program is: <a href="rust-firmware.html">Rust firm
 - Know how to roll back (the last section). Try it once before the first flash.
 </code></pre>
 </div></div>
+<section class="card"><h2 id="before-the-board-the-emulator">Before the board: the emulator</h2>
+<p>TODO 45 (Ben, 24 Oct): "if it doesn't get a heartbeat then it applys the breaks and stops
+the acceleration". Proven first with no hardware at all: the same firmware, in
+Espressif's ESP32 emulator (QEMU).</p>
+<pre class="highlight"><code class="language-text"> tools/esp32_qemu.py                         QEMU: an ESP32, running our firmware
+   aav_legacy's frames, 50 Hz ──► UART1 ──► LegacyLink ──► spine-core ──► drivers
+   reads the log          ◄────── UART0 ◄── EVENT / STATUS / DEVICES lines   │
+                                                       stand-in Jrks, DAC ◄──┘</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run esp-qemu-tools</code></td>
+<td>downloads QEMU into <code>vendor/qemu</code> (once, 22 MB; macOS on Apple silicon)</td>
+</tr>
+<tr>
+<td><code>pixi run esp-qemu-check</code></td>
+<td>builds with <code>--features qemu</code>, boots it, runs 3 cycles, prints the table</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each cycle: stop frames, drive frames (0.6 m/s), <strong>silence</strong>, then drive frames again
+with no stop first.</p>
+<h3 id="results-24-oct-bens-mac">Results, 24 Oct (Ben's Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Cycle</th>
+<th>Drove (DAC peak)</th>
+<th>Timeout after the last frame</th>
+<th>Full brake (3500) + DAC 0</th>
+<th>Fault bit 1</th>
+<th>Stays braked until a stop frame</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>yes (140)</td>
+<td>116 ms</td>
+<td>116 ms</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>2</td>
+<td>yes (140)</td>
+<td>113 ms</td>
+<td>113 ms</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>yes (140)</td>
+<td>113 ms</td>
+<td>113 ms</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<p>Over five runs: <strong>111 to 119 ms</strong>, every cycle passed. That is the 100 ms timeout, plus
+up to two 10 ms ticks (the tick that reads the last frame, the tick that notices).
+Within the 0.2 s of check 8 below. The check fails above 200 ms: a firmware built with a
+400 ms timeout, on purpose, failed it (410-417 ms).</p>
+<p>The times are the firmware's own clock. QEMU's clock follows the Mac's (no <code>-icount</code>):
+over each run they agreed to 0.1 %.</p>
+<h3 id="what-it-did-and-didnt-exercise">What it did and didn't exercise</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>In QEMU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>spine-core, the 100 ms timeout, the latch, the re-arm</td>
+<td>✅ the real code</td>
+</tr>
+<tr>
+<td>The UART link: frames, checksum, resync (<code>legacy-link</code>)</td>
+<td>✅ the real code, real bytes on UART1</td>
+</tr>
+<tr>
+<td>The Jrk, DAC and expander drivers, and their order</td>
+<td>✅ the real code; the bytes go to stand-ins</td>
+</tr>
+<tr>
+<td>The hardware watchdog (TIMG1, 100 ms)</td>
+<td>✅ on and fed; it never fired</td>
+</tr>
+<tr>
+<td>The Jrks, the DAC, the expander themselves</td>
+<td>❌ stand-ins (<code>spine_board::StandInBus</code>): QEMU can't add I2C devices</td>
+</tr>
+<tr>
+<td>Embassy's timer and interrupts</td>
+<td>❌ a busy-wait tick instead: QEMU's interrupt matrix has no status registers</td>
+</tr>
+<tr>
+<td>The RC receiver (iBUS), the LEDs, CAN</td>
+<td>❌ silent, unwired, not built</td>
+</tr>
+<tr>
+<td>The real chip's timing, the Motor Pi, the cable</td>
+<td>❌ the bench, below</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="found-on-the-way">Found on the way</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Fixed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The firmware never turned the FPU on: it relied on the chip's reset state. QEMU starts with it off, and the first interrupt crashed (a double exception)</td>
+<td>✅ <code>enable_fpu()</code> in <code>main.rs</code>, on every build</td>
+</tr>
+<tr>
+<td>The log had no times</td>
+<td>✅ <code>t=</code> (ms since boot) on every line, and an <code>EVENT</code> line at each change</td>
+</tr>
+</tbody>
+</table></div>
+</section>
 <section class="card"><h2 id="what-you-need">What you need</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -187,7 +323,7 @@ ready to go back on. What the program is: <a href="rust-firmware.html">Rust firm
 <tr>
 <td>1</td>
 <td>Power on, nothing else</td>
-<td>brake pulled (3500), steering centred (1950), DAC 0 V. Log: <code>STATUS mode=Manual … faults=0x0000</code>. Status LED blinks fast</td>
+<td>brake pulled (3500), steering centred (1950), DAC 0 V. Log: <code>STATUS t=… mode=Manual … faults=0x0000</code>. Status LED blinks fast</td>
 </tr>
 <tr>
 <td>2</td>
@@ -222,7 +358,7 @@ ready to go back on. What the program is: <a href="rust-firmware.html">Rust firm
 <tr>
 <td>8</td>
 <td>While driving, stop the bridge (Ctrl-C)</td>
-<td>within 0.2 s: throttle 0, brake full, <code>faults</code> has 1 (timeout)</td>
+<td>within 0.2 s: throttle 0, brake full, <code>faults</code> has 1 (timeout). The <code>EVENT</code> line's <code>t=</code> says when (QEMU: 111-119 ms)</td>
 </tr>
 <tr>
 <td>9</td>
