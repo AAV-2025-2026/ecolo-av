@@ -41,6 +41,7 @@
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -115,7 +116,10 @@ cd ~/aav</code></pre>
 <p>Later, <code>git pull</code> in <code>~/aav</code> fetches newer work.</p>
 <p><strong>4. Install ROS and build:</strong></p>
 <pre class="highlight"><code class="language-bash">pixi install       # ROS 2 Jazzy: about 7 GB, the first time only
-pixi run build     # our packages</code></pre>
+pixi run build     # our packages
+pixi install -e gst   # GStreamer (small): the camera stream's fast decoder, VideoToolbox</code></pre>
+<p>Without the last one, the camera stream still works, with ffmpeg: 135 ms slower, and it
+says so (<a href="camera-pipeline.html#decoding-on-a-mac">camera pipeline</a>).</p>
 <p><strong>5. Check it:</strong> <code>pixi run turtle</code> in one terminal and <code>pixi run keyboard</code> in another.
 Hold <code>i</code> to drive.</p>
 </section>

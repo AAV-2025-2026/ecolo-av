@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar</h1>
-<div class="meta">27 min read · 11 sections</div></header>
+<div class="meta">28 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -41,6 +41,7 @@
 <a href="routes.html">Street routes</a>
 <a class="here" href="perception.html">Perception</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -159,7 +160,7 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 </tr>
 <tr>
 <td>Stopping</td>
-<td>a stop sign's box is 72 px tall or more, with a score of 0.5 or more</td>
+<td>a stop sign 4.7 m away or closer, with a score of 0.5 or more</td>
 <td>on, for 4 s: about 1 s to stop, then a 3 s wait</td>
 </tr>
 <tr>
@@ -177,8 +178,40 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
   stopped.</li>
 <li><strong>On the bench</strong>, Nav2 drove toward the sign at 25 m. The lock came on 4.7 m before it,
   the car stopped, waited, and went on to its goal 40 m away.</li>
-<li><strong>72 px</strong> suits the bench camera (360 px high): about 3.5 m from the sign. Set
-  <code>min_height_px</code> again for the real camera.</li>
+</ul>
+<h3 id="how-far-the-boxs-height-and-the-lens-24-oct">How far: the box's height and the lens (24 Oct)</h3>
+<pre class="highlight"><code class="language-text">                        focal length (px) x 0.75 m        a stop sign: 0.75 m tall
+  distance to the sign = ─────────────────────────────
+                            box height (px)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Camera</th>
+<th>Focal length</th>
+<th>The box at 4.7 m</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gazebo's and the bench's (640x360)</td>
+<td>343 px</td>
+<td>55 px (the old rule)</td>
+</tr>
+<tr>
+<td>A 1280x720 ribbon camera (once calibrated)</td>
+<td>about 900-1400 px (a guess)</td>
+<td>130-220 px</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Each camera's own lens:</strong> the watcher keeps each camera's focal length (<code>fy</code>) from its
+  <code>CameraInfo</code>, by the detections' <code>frame_id</code>. So the same 4.7 m works for any camera.</li>
+<li><strong>No <code>CameraInfo</code> yet</strong> (an uncalibrated camera): it uses <code>focal_px</code> (343) and warns.
+  On the car that means stopping too early: calibrate first
+  (<a href="camera-calibration.html">camera calibration</a>).</li>
+<li><strong>Parameters:</strong> <code>stop_distance_m</code> (4.7), <code>sign_height_m</code> (0.75), <code>focal_px</code> (343),
+  <code>camera_info_topics</code>, <code>min_score</code>, <code>hold_s</code>, <code>ignore_s</code>.</li>
 </ul>
 <p>Last year, a stop sign set off the real e-stop, and the HUD cleared it every half second.
 The lock keeps stop signs away from the e-stop.</p>
@@ -1006,8 +1039,8 @@ read the same way.</p>
 <td>Q22</td>
 </tr>
 <tr>
-<td><code>min_height_px</code> for the real camera</td>
-<td>the cameras</td>
+<td>Calibrate the ribbon cameras, so the stop-sign distance uses their lens: <code>pixi run calibrate-camera</code> (<a href="camera-calibration.html">how</a>)</td>
+<td>the car</td>
 </tr>
 <tr>
 <td>RF-DETR's TensorRT engine on the Orin: <code>python3 tools/build_engine.py</code>, then time it</td>

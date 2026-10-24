@@ -106,7 +106,7 @@ From the design doc's next steps, in order.
 
 - Find the 2024-25 team's trained `best.pt`, and back up the 2025-26 detector from the Orin.
 - ~~Write the lane finder~~: done 11 Oct, `aav_lane_finder`. Next: tune it on the real camera's pictures.
-- Identify the cameras (Q22); fill in their udev names; set the stop-sign distance (`min_height_px`) for the real camera.
+- Identify the cameras (Q22); fill in their udev names; calibrate them (`pixi run calibrate-camera`, [how](camera-calibration.md)): the stop-sign distance (4.7 m) then uses their lens.
 - TensorRT on the Orin, after the reflash (Q24): `python3 tools/build_engine.py` there.
 
 ### The HUD

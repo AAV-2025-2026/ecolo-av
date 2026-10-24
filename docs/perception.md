@@ -36,7 +36,7 @@ The watcher turns the detector's boxes into a lock on twist_mux.
 | State | When | The lock |
 |---|---|---|
 | Clear | no stop sign close enough | off |
-| Stopping | a stop sign's box is 72 px tall or more, with a score of 0.5 or more | on, for 4 s: about 1 s to stop, then a 3 s wait |
+| Stopping | a stop sign 4.7 m away or closer, with a score of 0.5 or more | on, for 4 s: about 1 s to stop, then a 3 s wait |
 | Passing | after the 4 s | off, and signs are ignored for 10 s, so the car can drive past this one |
 
 - **The lock** has priority 30. It holds Nav2 (20) and the AI slot (10), and never a
@@ -46,8 +46,27 @@ The watcher turns the detector's boxes into a lock on twist_mux.
   stopped.
 - **On the bench**, Nav2 drove toward the sign at 25 m. The lock came on 4.7 m before it,
   the car stopped, waited, and went on to its goal 40 m away.
-- **72 px** suits the bench camera (360 px high): about 3.5 m from the sign. Set
-  `min_height_px` again for the real camera.
+
+### How far: the box's height and the lens (24 Oct)
+
+```text
+                        focal length (px) x 0.75 m        a stop sign: 0.75 m tall
+  distance to the sign = ─────────────────────────────
+                            box height (px)
+```
+
+| Camera | Focal length | The box at 4.7 m |
+|---|---|---|
+| Gazebo's and the bench's (640x360) | 343 px | 55 px (the old rule) |
+| A 1280x720 ribbon camera (once calibrated) | about 900-1400 px (a guess) | 130-220 px |
+
+- **Each camera's own lens:** the watcher keeps each camera's focal length (`fy`) from its
+  `CameraInfo`, by the detections' `frame_id`. So the same 4.7 m works for any camera.
+- **No `CameraInfo` yet** (an uncalibrated camera): it uses `focal_px` (343) and warns.
+  On the car that means stopping too early: calibrate first
+  ([camera calibration](camera-calibration.md)).
+- **Parameters:** `stop_distance_m` (4.7), `sign_height_m` (0.75), `focal_px` (343),
+  `camera_info_topics`, `min_score`, `hold_s`, `ignore_s`.
 
 Last year, a stop sign set off the real e-stop, and the HUD cleared it every half second.
 The lock keeps stop signs away from the e-stop.
@@ -465,6 +484,6 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 | Back up the Orin: the 2025-26 detector lives only there | before any reflash |
 | The line finder | someone: classic OpenCV, or a model |
 | The cameras' models and udev names | Q22 |
-| `min_height_px` for the real camera | the cameras |
+| Calibrate the ribbon cameras, so the stop-sign distance uses their lens: `pixi run calibrate-camera` ([how](camera-calibration.md)) | the car |
 | RF-DETR's TensorRT engine on the Orin: `python3 tools/build_engine.py`, then time it | the reflash (Q24) |
 | The radar into the costmap | the ObstacleLayer settings |
