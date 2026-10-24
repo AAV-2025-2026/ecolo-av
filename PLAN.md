@@ -38,7 +38,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | Gate | Date | Passes when | Today |
 |---|---|---|---|
 | 1. Know the car | 30 Oct | audit written up; every dimension measured, with its method | 🔧 audits done 16 and 21 Oct ([car audit](docs/history/audit-2026-10-21-car.md)); **nothing measured yet** ([the sheet](READ-ME-MEASURE-THE-CAR.md)) |
-| 2. Safe to move | 27 Nov | the timeout brakes within 100 ms and latches; both e-stops stop the car | 🔧 the Rust spine has the 100 ms timeout (321 tests), never flashed; today's ESP32 firmware has no timeout |
+| 2. Safe to move | 27 Nov | the timeout brakes within 100 ms and latches; both e-stops stop the car | 🔧 the Rust spine has the 100 ms timeout (321 tests); in QEMU (24 Oct) it brakes 111-120 ms after the last frame and latches ([emulator](docs/esp32-bench.md#before-the-board-the-emulator)): 100 ms of silence, then the next 10 ms tick. Never flashed; today's ESP32 firmware has no timeout |
 | 3. Closed loop | 18 Dec | steering angle, wheel speed, brake position read back and tracked | ⬜ the sensors aren't fitted; the CAN messages and the logic exist |
 | 4. Drives itself | 26 Feb | GPS A to B, within 1 m, five runs, no takeover | 🧪 in Gazebo: every stop within 0.4 m of B |
 | 5. Handover | 2 Apr | scorecard; every layer documented; simulation in 30 minutes | 🔧 docs and onboarding exist; the scorecard doesn't |
@@ -104,7 +104,7 @@ the next concrete step.
 | T3.3 | Steering range and centre | 20 Nov | ⬜ | 10 | `pixi run actuator-test` has the sweeps; the car on stands |
 | T3.4 | Linkage re-mount (if needed) | 4 Dec | ⬜ | 0 | after T3.3 |
 | T3.5 | CAN bus, wheel nodes, brake sensor | 11 Dec | 🔧 | 30 | the message set (`firmware/can/aav.dbc`) and the logic exist; the parts are on the KEFC list |
-| T3.6 | Spine firmware in Rust | 27 Nov | 🔧 | 60 | flash it on the bench first ([ESP32 bench](docs/esp32-bench.md)) |
+| T3.6 | Spine firmware in Rust | 27 Nov | 🔧 | 65 | 24 Oct: boots in QEMU and brakes 111-120 ms after the Motor Pi's frames stop (`pixi run esp-qemu-check`). Next: flash it on the bench ([ESP32 bench](docs/esp32-bench.md)) |
 | T3.7 | Bench rig | 20 Nov | 🔧 | 40 | `pixi run bench` covers the software; build the board |
 | T3.8 | Hardware test suite | 18 Dec | 🔧 | 60 | the scripts exist (READ-ME-TESTS stages 3-4); run them on stands |
 | T3.9 | Brake and throttle loops | 22 Jan | 🔧 | 20 | the PI loop is in `spine-core`; tune it on stands. With today's guessed gains it overshoots about 15% (the Gazebo model, 22 Oct: 0.57 m/s backing up for 0.5): TODO 27 |

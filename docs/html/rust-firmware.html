@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">42 min read · 15 sections</div></header>
+<div class="meta">43 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -213,7 +213,9 @@ chip's HAL.</p>
 (<a href="can-plan.html">CAN plan</a>), the ESP32 control board already on the car becomes the spine.
 <code>firmware/spine/boards/esp32-umod</code> is that board's program in Rust: the replacement for
 the 2025-26 C++ in <code>firmware/legacy/aav_umod_esp32</code>. It builds; it has <strong>never been
-flashed</strong> <span class="badge b-untested">untested</span>. Merged on 15 Oct at Ben's request; flashing waits for his go-ahead.</p>
+flashed</strong> <span class="badge b-untested">untested</span>. Merged on 15 Oct at Ben's request; flashing waits for his go-ahead.
+Since 24 Oct it boots in Espressif's QEMU, and brakes there when the Motor-Pi's frames stop
+(<a href="esp32-bench.html#before-the-board-the-emulator">the emulator</a>).</p>
 <div class="admonition warning">
 <p class="admonition-title">The C++ stays</p>
 <pre><code>The car runs `firmware/legacy/aav_umod_esp32` today. It stays in the repo, and on the
@@ -249,6 +251,11 @@ RC receiver ── iBUS, GPIO32 ────────────────
 <td><code>estop-input</code> (off)</td>
 <td>the e-stop's spare contact on GPIO27</td>
 <td>once it is wired (Q6)</td>
+</tr>
+<tr>
+<td><code>qemu</code> (off)</td>
+<td>stand-in devices on the I2C bus, and a busy-wait tick</td>
+<td>Espressif's QEMU only, never the car (<a href="esp32-bench.html#before-the-board-the-emulator">the emulator</a>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -459,8 +466,16 @@ installs Espressif's, for one user, with no admin rights. It needs <code>rustup<
 <td>builds, flashes the board on the USB cable, shows its log: <a href="esp32-bench.html">bench only</a></td>
 </tr>
 <tr>
+<td><code>pixi run esp-qemu-tools</code></td>
+<td>downloads Espressif's QEMU into <code>vendor/qemu</code> (once; macOS arm64)</td>
+</tr>
+<tr>
+<td><code>pixi run esp-qemu-check</code></td>
+<td>boots it in QEMU; checks it brakes when the frames stop (<a href="esp32-bench.html#before-the-board-the-emulator">the emulator</a>)</td>
+</tr>
+<tr>
 <td><code>tools/test.sh</code></td>
-<td>also builds both, with clippy, where the toolchain is; "skipped" where not</td>
+<td>also builds both, with clippy, where the toolchain is, and runs the QEMU check where QEMU is; "skipped" where not</td>
 </tr>
 </tbody>
 </table></div>
@@ -676,8 +691,8 @@ to 3500 survives the round trip (tested).</p>
 <tr>
 <td>Status line every 200 ms</td>
 <td><code>publishStatus()</code></td>
-<td><code>STATUS mode=… throttle=… brake=… faults=…</code></td>
-<td>⚠️ another format; nothing parses it</td>
+<td><code>STATUS t=… mode=… throttle=… brake=… faults=…</code>, and an <code>EVENT</code> line at each change</td>
+<td>⚠️ another format; only <code>tools/esp32_qemu.py</code> parses it</td>
 </tr>
 <tr>
 <td>Nothing sent back to the Motor-Pi</td>
@@ -751,7 +766,7 @@ to 3500 survives the round trip (tested).</p>
 <tbody>
 <tr>
 <td>Everything on the real ESP32</td>
-<td>never flashed</td>
+<td>never flashed; in QEMU only (the timeout, the UART link, the drivers' bytes)</td>
 <td><a href="esp32-bench.html">the bench plan</a></td>
 </tr>
 <tr>

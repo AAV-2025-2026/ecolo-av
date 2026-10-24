@@ -24,6 +24,7 @@
 //! | [`actuators`] | drives the devices from `Outputs` in a safe order, and reads them |
 //! | [`wheel`] | the speed, from the wheel encoder's counter; two spoke sensors, counted |
 //! | [`spine_board`] | the loop: [`SpineBoard`] |
+//! | [`stand_in`] | stand-in devices on a bus, for a board with none wired (QEMU) |
 //!
 //! A board crate, in outline:
 //!
@@ -50,6 +51,7 @@ pub mod link;
 #[cfg(test)]
 mod rig;
 pub mod spine_board;
+pub mod stand_in;
 pub mod wheel;
 
 pub use actuators::{Actuators, Devices, Readings};
@@ -57,4 +59,5 @@ pub use board::{Board, CanFrame, WheelCount};
 pub use calibration::Calibration;
 pub use link::{CanLink, CommandLink, LegacyLink};
 pub use spine_board::SpineBoard;
+pub use stand_in::{DeviceTargets, StandInBus};
 pub use wheel::{SpokeSensors, WheelSpeed};

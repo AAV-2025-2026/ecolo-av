@@ -56,6 +56,8 @@ Ben, 15 October: "We should port all cpp to rust." In the KEFC plan
 `firmware/spine/boards/esp32-umod` is that board's program in Rust: the replacement for
 the 2025-26 C++ in `firmware/legacy/aav_umod_esp32`. It builds; it has **never been
 flashed** [[untested]]. Merged on 15 Oct at Ben's request; flashing waits for his go-ahead.
+Since 24 Oct it boots in Espressif's QEMU, and brakes there when the Motor-Pi's frames stop
+([the emulator](esp32-bench.md#before-the-board-the-emulator)).
 
 !!! warning "The C++ stays"
     The car runs `firmware/legacy/aav_umod_esp32` today. It stays in the repo, and on the
@@ -75,6 +77,7 @@ RC receiver ── iBUS, GPIO32 ────────────────
 | `legacy-uart` (default) | the Motor-Pi's 13-byte frames on GPIO16 | **today**: a drop-in for the C++, with `aav_legacy` unchanged |
 | `can` | `firmware/can/aav.dbc` v0.2.0 on the ESP32's TWAI controller, 500 kbit/s | the KEFC plan: `spine_bridge` on the Orin. Its pins are unknown (below) |
 | `estop-input` (off) | the e-stop's spare contact on GPIO27 | once it is wired (Q6) |
+| `qemu` (off) | stand-in devices on the I2C bus, and a busy-wait tick | Espressif's QEMU only, never the car ([the emulator](esp32-bench.md#before-the-board-the-emulator)) |
 
 DBC v0.2.0 (merged 15 Oct) adds the wheel frames 0x200 and 0x201 and a 100 ms timeout;
 `spine-core` uses the 100 ms on both links (the bridges send at 50 Hz). Still to do: on
@@ -139,7 +142,9 @@ The board's `rust-toolchain.toml` picks `esp`; `tools/esp32.sh` reads the export
 | `pixi run esp-build` | builds the default (Motor-Pi UART) program |
 | `pixi run esp-build --no-default-features --features can` | builds the CAN one |
 | `pixi run esp-flash` | builds, flashes the board on the USB cable, shows its log: [bench only](esp32-bench.md) |
-| `tools/test.sh` | also builds both, with clippy, where the toolchain is; "skipped" where not |
+| `pixi run esp-qemu-tools` | downloads Espressif's QEMU into `vendor/qemu` (once; macOS arm64) |
+| `pixi run esp-qemu-check` | boots it in QEMU; checks it brakes when the frames stop ([the emulator](esp32-bench.md#before-the-board-the-emulator)) |
+| `tools/test.sh` | also builds both, with clippy, where the toolchain is, and runs the QEMU check where QEMU is; "skipped" where not |
 
 ### Proof it speaks the C++'s language
 
@@ -191,7 +196,7 @@ Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: Be
 | Hardware watchdog | none | 100 ms | ⚠️ new |
 | WiFi, the status web page, the WebSocket log, the I2C scan page | `web_handler.cpp` | gone | ⚠️ the log is on the USB cable |
 | OTA update page, no password | `main.cpp` | gone: flash on the USB cable | ⚠️ safer |
-| Status line every 200 ms | `publishStatus()` | `STATUS mode=… throttle=… brake=… faults=…` | ⚠️ another format; nothing parses it |
+| Status line every 200 ms | `publishStatus()` | `STATUS t=… mode=… throttle=… brake=… faults=…`, and an `EVENT` line at each change | ⚠️ another format; only `tools/esp32_qemu.py` parses it |
 | Nothing sent back to the Motor-Pi | — | nothing | same |
 
 ### For Ben to decide
@@ -211,7 +216,7 @@ Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: Be
 
 | What | Why | Next |
 |---|---|---|
-| Everything on the real ESP32 | never flashed | [the bench plan](esp32-bench.md) |
+| Everything on the real ESP32 | never flashed; in QEMU only (the timeout, the UART link, the drivers' bytes) | [the bench plan](esp32-bench.md) |
 | The FIFO reads keeping up | a tick takes a few ms of I2C; the FIFO holds about 28 ms of iBUS | watch for RC dropouts in the log |
 | The watchdog reset | TIMG1's watchdog, never seen to fire | hang the loop on purpose, on the bench |
 | CAN | the pins are unknown | find U7's wiring, then a USB-CAN adapter |
