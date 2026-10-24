@@ -42,7 +42,7 @@ with no stop first.
 | 2 | yes (140) | 113 ms | 113 ms | yes | yes |
 | 3 | yes (140) | 113 ms | 113 ms | yes | yes |
 
-Over five runs: **111 to 119 ms**, every cycle passed. That is the 100 ms timeout, plus
+Over six runs: **111 to 120 ms**, every cycle passed. That is the 100 ms timeout, plus
 up to two 10 ms ticks (the tick that reads the last frame, the tick that notices).
 Within the 0.2 s of check 8 below. The check fails above 200 ms: a firmware built with a
 400 ms timeout, on purpose, failed it (410-417 ms).
@@ -111,7 +111,7 @@ Do them in order. Stop at the first one that fails, and roll back.
 | 5 | Steer left from ROS | the wheels turn **left**. If right: the steering sign (Q2), in `legacy.yaml` |
 | 6 | Stop from ROS | throttle 0; the bridge's hold brake: target 1050, as the C++ gave it |
 | 7 | Reverse slowly | the direction changes only with the DAC at 0; the wheels turn backwards |
-| 8 | While driving, stop the bridge (Ctrl-C) | within 0.2 s: throttle 0, brake full, `faults` has 1 (timeout). The `EVENT` line's `t=` says when (QEMU: 111-119 ms) |
+| 8 | While driving, stop the bridge (Ctrl-C) | within 0.2 s: throttle 0, brake full, `faults` has 1 (timeout). The `EVENT` line's `t=` says when (QEMU: 111-120 ms) |
 | 9 | Start the bridge again | brake stays on until ego is stale or stops (a stop frame), then it drives again |
 | 10 | RC override switch on, gear forward, a little throttle | `mode=Rc`, blue LED, wheels turn; ROS commands ignored |
 | 11 | RC: switch the transmitter off | within 0.1 s: brake full, `faults` has 256 (RC lost) |

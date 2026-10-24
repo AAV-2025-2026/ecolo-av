@@ -151,7 +151,7 @@ with no stop first.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Over five runs: <strong>111 to 119 ms</strong>, every cycle passed. That is the 100 ms timeout, plus
+<p>Over six runs: <strong>111 to 120 ms</strong>, every cycle passed. That is the 100 ms timeout, plus
 up to two 10 ms ticks (the tick that reads the last frame, the tick that notices).
 Within the 0.2 s of check 8 below. The check fails above 200 ms: a firmware built with a
 400 ms timeout, on purpose, failed it (410-417 ms).</p>
@@ -358,7 +358,7 @@ over each run they agreed to 0.1 %.</p>
 <tr>
 <td>8</td>
 <td>While driving, stop the bridge (Ctrl-C)</td>
-<td>within 0.2 s: throttle 0, brake full, <code>faults</code> has 1 (timeout). The <code>EVENT</code> line's <code>t=</code> says when (QEMU: 111-119 ms)</td>
+<td>within 0.2 s: throttle 0, brake full, <code>faults</code> has 1 (timeout). The <code>EVENT</code> line's <code>t=</code> says when (QEMU: 111-120 ms)</td>
 </tr>
 <tr>
 <td>9</td>
