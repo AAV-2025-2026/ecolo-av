@@ -19,6 +19,7 @@
 <a href="work.html">Work</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <span class="sep">Learn:</span>
@@ -84,9 +85,8 @@ page starts at the two wires and ends with one of our frames, decoded byte by by
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Status</p>
-<pre><code>The CAN code is written and tested against a simulator. **No real CAN bus has carried
-our frames yet**: the parts are still to buy ([CAN plan](can-plan.md)).
-</code></pre>
+<p>The CAN code is written and tested against a simulator. <strong>No real CAN bus has carried
+our frames yet</strong>: the parts are still to buy (<a href="can-plan.html">CAN plan</a>).</p>
 </div></div>
 <section class="card"><h2 id="the-picture">The picture</h2>
 <p><img alt="The bus, and one DRIVE_CMD byte by byte" src="../img/can-bus.svg" /></p>
@@ -444,9 +444,8 @@ DBC is still v0.1.0.</p>
 -750, so -0.75 m/s.</p>
 <div class="admonition note">
 <p class="admonition-title">Check it yourself</p>
-<pre><code>The decode above was checked with our own codec. See **Try it** below: the same
-one-line command prints every value.
-</code></pre>
+<p>The decode above was checked with our own codec. See <strong>Try it</strong> below: the same
+one-line command prints every value.</p>
 </div>
 </section>
 <section class="card"><h2 id="6-why-a-counter-and-a-crc-of-our-own">6. Why a counter and a CRC of our own</h2>
@@ -596,9 +595,8 @@ the bus ─► can0 ─► socket_can_receiver ─► /can/rx ─► spine_bridg
 They are not in Pixi.</p>
 <div class="admonition warning">
 <p class="admonition-title">Never cansend a DRIVE_CMD to the car</p>
-<pre><code>A hand-typed `0x100` with `armed = 1` can move the car. On the real bus, only listen.
-Practise sending on `vcan0`.
-</code></pre>
+<p>A hand-typed <code>0x100</code> with <code>armed = 1</code> can move the car. On the real bus, only listen.
+Practise sending on <code>vcan0</code>.</p>
 </div>
 </section>
 <section class="card"><h2 id="try-it">Try it</h2>

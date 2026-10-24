@@ -19,6 +19,7 @@
 <a href="work.html">Work</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <span class="sep">Learn:</span>
@@ -75,13 +76,14 @@
 real car, with nothing real to hit. PLAN.md item S4, built 16 Oct.</p>
 <div class="admonition note">
 <p class="admonition-title">The short version</p>
-<pre><code>- Start with `ghost:=true`: `pixi run sim ghost:=true`, or `pixi run car &lt;machine&gt;
-  ghost:=true` on the computer that runs Nav2. Off by default.
-- Place it: `pixi run ghost ahead 10` (10 m past the front bumper). Take it away:
-  `pixi run ghost off`. In Gazebo, add `--local`: `pixi run ghost --local ahead 10`.
-- It **only adds**. It never clears or hides what the radar or the lidar sees.
-- It only stops **Nav2**. The joystick, the keyboard and the tests drive through it.
-</code></pre>
+<ul>
+<li>Start with <code>ghost:=true</code>: <code>pixi run sim ghost:=true</code>, or <code>pixi run car &lt;machine&gt;
+  ghost:=true</code> on the computer that runs Nav2. Off by default.</li>
+<li>Place it: <code>pixi run ghost ahead 10</code> (10 m past the front bumper). Take it away:
+  <code>pixi run ghost off</code>. In Gazebo, add <code>--local</code>: <code>pixi run ghost --local ahead 10</code>.</li>
+<li>It <strong>only adds</strong>. It never clears or hides what the radar or the lidar sees.</li>
+<li>It only stops <strong>Nav2</strong>. The joystick, the keyboard and the tests drive through it.</li>
+</ul>
 </div></div>
 <section class="card"><h2 id="how-it-fits">How it fits</h2>
 <pre class="highlight"><code class="language-text"> pixi run ghost ahead 10
@@ -214,15 +216,13 @@ and <code>inf</code> everywhere else. With no ghost, the scan is all <code>inf</
 </ol>
 <div class="admonition warning">
 <p class="admonition-title">A ghost is not a safety test of the sensors</p>
-<pre><code>It tests Nav2's reaction: the costmap, the controller, collision_monitor, ego, the
-brakes. It doesn't test whether the radar or the lidar would have **seen** a person.
-</code></pre>
+<p>It tests Nav2's reaction: the costmap, the controller, collision_monitor, ego, the
+brakes. It doesn't test whether the radar or the lidar would have <strong>seen</strong> a person.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">A silent ghost stops Nav2</p>
-<pre><code>With `ghost:=true`, collision_monitor expects the scan. If `ghost_obstacle` dies, Nav2
-stops after 1 s, like a silent radar. That's on purpose: fail-safe.
-</code></pre>
+<p>With <code>ghost:=true</code>, collision_monitor expects the scan. If <code>ghost_obstacle</code> dies, Nav2
+stops after 1 s, like a silent radar. That's on purpose: fail-safe.</p>
 </div>
 </section>
 <section class="card"><h2 id="the-test-in-gazebo">The test in Gazebo</h2>

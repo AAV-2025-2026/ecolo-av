@@ -33,10 +33,11 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 13    # PAGES[:13] are the reading list
-LEARN_END = 23     # PAGES[13:23] are the learn pages; the rest are reference
+READ_FIRST = 14    # PAGES[:14] are the reading list
+LEARN_END = 24     # PAGES[14:24] are the learn pages; the rest are reference
 
-# (file in docs/, menu title, what it's for)
+# (file in docs/, menu title, what it's for). A name in ROOT_PAGES is a page kept at the
+# repository's root instead (a READ-ME), built the same way.
 PAGES = [
     ('index.md', 'Start here', 'The picture, and where to go next'),
     ('overview.md', 'Overview', 'Everything in aav: ours, stock, inherited, missing'),
@@ -49,6 +50,7 @@ PAGES = [
     ('work.md', 'Work', "The plan, what's done, what needs doing"),
     ('audit-friday.md', 'Audit, 16 Oct', 'The hardware audit, machine by machine'),
     ('audit-questions.md', 'Audit questions', 'What only the car can tell us'),
+    ('car-day.md', 'Car day', 'The day at the car, session by session; the preflight'),
     ('decisions.md', 'Decisions', 'Decided, Tentative, Proposed, and Q1–Q34'),
     ('infrastructure.md', 'Infrastructure', 'The repo, Pixi, the contracts, profiles, computers'),
     ('learn-car.md', 'The car, box by box', 'Every computer, board and wire on the car'),
@@ -102,6 +104,10 @@ PAGES = [
     ('hud.md', 'HUD', 'The in-car screen: Rust and raylib; the Flutter app'),
 ]
 BUILT = {name for name, _, _ in PAGES}
+# The pages kept at the root: their name here -> their file, from the root.
+ROOT_PAGES = {'car-day.md': 'READ-ME-CAR-DAY.md'}
+# Links to them from docs/ (../READ-ME-CAR-DAY.md) go to the built page.
+ROOT_LINKS = {'../' + file: name for name, file in ROOT_PAGES.items()}
 RELEASE = 'release-notes.md'   # also printed on its own, with a cover, to share
 RELEASE_PDF = 'aav-release-notes.pdf'
 # The release notes' own PDF: a running footer, and the cover on a page of its own.
@@ -147,12 +153,29 @@ def loosen(text):
     return '\n'.join(out) + '\n'
 
 
+def callouts(text):
+    """
+    Indent each `!!! note` box's body by two spaces, not four.
+
+    The pages indent a box's body by four spaces, as MkDocs does; with tab_length 2
+    that read as a code block inside the box (found 24 Oct). Fences inside move with it.
+    """
+    out, inside = [], False
+    for line in text.splitlines():
+        if line.startswith('!!! '):
+            inside = True
+        elif inside and line.strip() and not line.startswith('    '):
+            inside = False
+        out.append(line[2:] if inside and line.startswith('    ') else line)
+    return '\n'.join(out) + '\n'
+
+
 def convert(text):
     md = markdown.Markdown(
         extensions=['tables', 'attr_list', 'def_list', 'md_in_html', 'sane_lists', 'toc',
                     'admonition', 'pymdownx.superfences'],
         tab_length=2)  # our lists nest by two spaces
-    return md.convert(loosen(text))
+    return md.convert(loosen(callouts(text)))
 
 
 def fix_links(body, pdf=False):
@@ -167,12 +190,32 @@ def fix_links(body, pdf=False):
         if re.match(r'[a-z]+:|#|/', url):
             return m.group(0)
         path, _, frag = url.partition('#')
+        path = ROOT_LINKS.get(path, path)
         if path in BUILT:
             if pdf:
                 return f'{attr}="#{slug(path)}{"--" + frag if frag else ""}"'
             return f'{attr}="{slug(path)}.html{"#" + frag if frag else ""}"'
         return f'{attr}="../{url}"'
     return re.sub(r'(href|src)="([^"]*)"', fix, body)
+
+
+def from_root(text):
+    """
+    Make a root page's links relative to docs/, as the other pages' are.
+
+    docs/x.md becomes x.md; tools/x.py becomes ../tools/x.py.
+    """
+    def fix(m):
+        url = m.group(1)
+        if re.match(r'[a-z]+:|#|/', url):
+            return m.group(0)
+        return '](' + (url[5:] if url.startswith('docs/') else '../' + url) + ')'
+    return re.sub(r'\]\(([^)\s]+)\)', fix, text)
+
+
+def source_of(name):
+    """Return the page's markdown file, from the repository's root."""
+    return ROOT_PAGES.get(name, f'docs/{name}')
 
 
 def badges(body):
@@ -255,13 +298,14 @@ def prev_next(i):
 
 def web_page(i, source, title, mins, intro, sections):
     toc = ''.join(f'<a href="#{sid}">{html.escape(text)}</a>' for sid, text, _ in sections)
+    md = source_of(source)
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)} · AAV 2026–27</title>
 <link rel="stylesheet" href="style.css">
 </head><body>
-<!-- Generated from docs/{source} by tools/build_docs.py. Edit the markdown, not this file. -->
+<!-- Generated from {md} by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>{html.escape(title)}</h1>
 <div class="meta">{mins} min read · {len(sections)} sections</div></header>
@@ -271,7 +315,7 @@ def web_page(i, source, title, mins, intro, sections):
 {page_body(intro, sections)}
 <nav class="prevnext">{prev_next(i)}</nav>
 </main>
-<footer>Source: <code>docs/{source}</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+<footer>Source: <code>{md}</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>
 """
 
@@ -323,7 +367,9 @@ def main():
     shutil.copyfile(STYLE, OUT / 'style.css')
     pages = []
     for name, title, purpose in PAGES:
-        text = (DOCS / name).read_text(encoding='utf-8')
+        text = (ROOT / source_of(name)).read_text(encoding='utf-8')
+        if name in ROOT_PAGES:
+            text = from_root(text)
         pages.append((name, title, purpose, minutes(text), convert(text)))
     listing = [(n, t, p, m) for n, t, p, m, _ in pages]
 
