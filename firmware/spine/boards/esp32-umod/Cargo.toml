@@ -19,6 +19,9 @@ publish = false
 default = ["legacy-uart"]
 legacy-uart = []
 can = []
+# Run in Espressif's QEMU (tools/esp32.sh qemu), never on the car: stand-in devices on
+# the I2C bus, and a busy-wait tick instead of interrupts (src/main.rs says why).
+qemu = []
 # The e-stop's spare contact on an input pin. Off until it is wired (Q6): an unwired
 # input floats, and would trip and release at random.
 estop-input = []

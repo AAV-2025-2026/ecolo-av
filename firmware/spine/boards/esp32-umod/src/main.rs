@@ -21,7 +21,14 @@
 //! | the wheel speed | none on this board (the encoder talks to the Motor-Pi): the speed loop runs open loop |
 //! | the e-stop's spare contact | an input, with `estop-input`, once it is wired (Q6) |
 //! | the hardware watchdog | TIMG1's: fed after every tick; a hang or a panic resets the chip within 100 ms |
-//! | the log | UART0, the USB cable: a status line every 200 ms, as the C++ printed |
+//! | the log | UART0, the USB cable: a status line every 200 ms, as the C++ printed, and an event line at each change |
+//!
+//! With `--features qemu`, it runs in Espressif's QEMU instead (`tools/esp32.sh qemu`;
+//! `docs/esp32-bench.md`, "Before the board: the emulator"). Two things differ, both only
+//! in that build: stand-in devices on the I2C bus (`spine_board::StandInBus`: QEMU has
+//! none of ours), and a busy-wait for the 10 ms tick instead of Embassy's timer (QEMU's
+//! interrupt matrix has no status registers, so esp-hal can't tell which peripheral
+//! interrupted). The spine, the UART link, its decoder and the drivers are the same code.
 //!
 //! After any reset the spine is safe by itself: `SpineBoard::init` puts the throttle at 0
 //! and the brake on, and `spine-core` boots latched: it drives only after a stop (a stop
@@ -32,6 +39,8 @@
 //! program is in its path.
 #![no_std]
 #![no_main]
+// For one instruction: turning the floating-point unit on (`enable_fpu`).
+#![feature(asm_experimental_arch)]
 
 #[cfg(all(feature = "legacy-uart", feature = "can"))]
 compile_error!(
@@ -39,6 +48,8 @@ compile_error!(
 );
 #[cfg(not(any(feature = "legacy-uart", feature = "can")))]
 compile_error!("pick a link: `legacy-uart` or `can`");
+#[cfg(all(feature = "qemu", feature = "can"))]
+compile_error!("`qemu` runs the Motor-Pi UART link only: QEMU has no CAN (TWAI)");
 
 #[cfg(feature = "can")]
 mod can;
@@ -46,15 +57,20 @@ mod pins;
 
 use core::cell::RefCell;
 use embassy_executor::Spawner;
-use embassy_time::{Duration, Ticker};
+use embassy_time::Duration;
 use embedded_hal_bus::i2c::RefCellDevice;
 use esp_hal::gpio::{AnyPin, Level, Output, OutputConfig};
+#[cfg(not(feature = "qemu"))]
 use esp_hal::i2c::master::{self as i2c, I2c};
-use esp_hal::time::{Instant, Rate};
+use esp_hal::time::Instant;
+#[cfg(not(feature = "qemu"))]
+use esp_hal::time::Rate;
 use esp_hal::timer::timg::{MwdtStage, TimerGroup};
 use esp_hal::uart::{self, UartRx};
 use log::{info, warn};
 use spine_board::{Board, Calibration, CanFrame, Devices, SpineBoard, WheelCount};
+#[cfg(feature = "qemu")]
+use spine_board::{DeviceTargets, StandInBus};
 use spine_core::protocol::Mode;
 use spine_core::{Outputs, SpeedFeedback, SpineConfig};
 use {esp_backtrace as _, esp_println as _};
@@ -71,6 +87,7 @@ const TICK: Duration = Duration::from_millis(10);
 const WATCHDOG_MS: u64 = 100;
 
 /// I2C to the Jrk G2s, the DAC and the expander: 100 kHz, as the C++ (`Wire`'s default).
+#[cfg(not(feature = "qemu"))]
 const I2C_KHZ: u32 = 100;
 
 /// The car's top speed at full throttle, for the open speed loop: this board has no wheel
@@ -174,6 +191,74 @@ impl Leds {
     }
 }
 
+/// Turns on the floating-point unit (coprocessor 0), before any interrupt or `f32`.
+///
+/// esp-hal saves the FPU's registers on every interrupt (`float-save-restore`), and
+/// nothing in esp-hal or the runtime turns the FPU on: it relies on CPENABLE's state at
+/// reset, which the Xtensa ISA leaves undefined. Espressif's QEMU starts with it off, so
+/// the first interrupt was a double exception there (`docs/esp32-bench.md`, "Before the
+/// board: the emulator"). Setting it is harmless on a chip that already has it on.
+fn enable_fpu() {
+    // SAFETY: writes only CPENABLE (bit 0: the FPU), then waits for it to take effect.
+    unsafe {
+        core::arch::asm!("movi {0}, 1", "wsr.cpenable {0}", "rsync", out(reg) _);
+    }
+}
+
+/// The 10 ms tick: Embassy's timer on the chip; a busy-wait in QEMU, where interrupts
+/// can't be dispatched (the module docs).
+struct Pace {
+    #[cfg(not(feature = "qemu"))]
+    ticker: embassy_time::Ticker,
+    #[cfg(feature = "qemu")]
+    next: Instant,
+}
+
+impl Pace {
+    fn new() -> Self {
+        Pace {
+            #[cfg(not(feature = "qemu"))]
+            ticker: embassy_time::Ticker::every(TICK),
+            #[cfg(feature = "qemu")]
+            next: Instant::now(),
+        }
+    }
+
+    async fn next(&mut self) {
+        #[cfg(not(feature = "qemu"))]
+        self.ticker.next().await;
+        #[cfg(feature = "qemu")]
+        {
+            self.next += esp_hal::time::Duration::from_millis(TICK.as_millis());
+            while Instant::now() < self.next {}
+        }
+    }
+}
+
+/// What an event line reports: it is printed whenever one of these changes.
+#[derive(Clone, Copy, PartialEq)]
+struct Summary {
+    mode: Mode,
+    armed: bool,
+    estop: bool,
+    throttle_on: bool,
+    brake: f32,
+    faults: u16,
+}
+
+impl From<&Outputs> for Summary {
+    fn from(out: &Outputs) -> Self {
+        Summary {
+            mode: out.mode,
+            armed: out.armed,
+            estop: out.estop_active,
+            throttle_on: out.throttle > 0.0,
+            brake: out.brake,
+            faults: out.faults,
+        }
+    }
+}
+
 /// Milliseconds since boot. It wraps after 49 days, as `spine-core` expects.
 fn now_ms() -> u32 {
     Instant::now().duration_since_epoch().as_millis() as u32
@@ -183,12 +268,16 @@ fn now_ms() -> u32 {
 
 #[esp_rtos::main]
 async fn main(_spawner: Spawner) -> ! {
+    enable_fpu();
     esp_println::logger::init_logger(log::LevelFilter::Info);
     let p = esp_hal::init(esp_hal::Config::default());
 
-    // Embassy's clock, on TIMG0.
-    let timg0 = TimerGroup::new(p.TIMG0);
-    esp_rtos::start(timg0.timer0, p.FROM_CPU_INTR0);
+    // Embassy's clock, on TIMG0. Not in QEMU: its first interrupt would never clear.
+    #[cfg(not(feature = "qemu"))]
+    {
+        let timg0 = TimerGroup::new(p.TIMG0);
+        esp_rtos::start(timg0.timer0, p.FROM_CPU_INTR0);
+    }
 
     // The watchdog first: from here on, a hang anywhere resets the chip.
     let mut watchdog = TimerGroup::new(p.TIMG1).wdt;
@@ -198,12 +287,17 @@ async fn main(_spawner: Spawner) -> ! {
     );
     watchdog.enable();
     info!(
-        "spine-esp32-umod {}, link: {}; the last reset: {:?}",
+        "spine-esp32-umod {}, link: {}{}; the last reset: {:?}",
         env!("CARGO_PKG_VERSION"),
         if cfg!(feature = "can") {
             "CAN"
         } else {
             "Motor-Pi UART"
+        },
+        if cfg!(feature = "qemu") {
+            ", in QEMU with stand-in devices"
+        } else {
+            ""
         },
         esp_hal::system::reset_reason()
     );
@@ -211,10 +305,19 @@ async fn main(_spawner: Spawner) -> ! {
     // The pin map (src/pins.rs, docs/rust-firmware.md).
     let pins = pins::take_pins!(p);
 
-    let i2c_config = i2c::Config::default().with_frequency(Rate::from_khz(I2C_KHZ));
-    let i2c_bus = match I2c::new(p.I2C0, i2c_config) {
-        Ok(i2c) => RefCell::new(i2c.with_sda(pins.sda).with_scl(pins.scl)),
-        Err(e) => panic!("I2C at {} kHz: {:?}", I2C_KHZ, e), // a constant: never on the car
+    #[cfg(not(feature = "qemu"))]
+    let i2c_bus = {
+        let i2c_config = i2c::Config::default().with_frequency(Rate::from_khz(I2C_KHZ));
+        match I2c::new(p.I2C0, i2c_config) {
+            Ok(i2c) => RefCell::new(i2c.with_sda(pins.sda).with_scl(pins.scl)),
+            Err(e) => panic!("I2C at {} kHz: {:?}", I2C_KHZ, e), // a constant: never on the car
+        }
+    };
+    // QEMU has none of the car's devices on its I2C bus: stand-ins answer instead.
+    #[cfg(feature = "qemu")]
+    let i2c_bus = {
+        let _ = (p.I2C0, pins.sda, pins.scl);
+        RefCell::new(StandInBus::new(&Calibration::TODAY))
     };
 
     let ibus_config = uart::Config::default().with_baudrate(ibus::BAUD);
@@ -291,33 +394,70 @@ async fn main(_spawner: Spawner) -> ! {
         );
     }
 
-    let mut ticker = Ticker::every(TICK);
+    let mut pace = Pace::new();
     let mut ticks: u32 = 0;
+    let mut last: Option<Summary> = None;
+    #[cfg(feature = "qemu")]
+    let mut last_devices = DeviceTargets::default();
     loop {
         let out = spine.tick();
+        let now = now_ms();
         let board = spine.board();
         board.leds.show(&out, ticks);
         #[cfg(feature = "can")]
-        board.can.service(now_ms());
+        board.can.service(now);
+        let summary = Summary::from(&out);
+        if last != Some(summary) {
+            log_line("EVENT", now, &out);
+            last = Some(summary);
+        }
         if ticks.is_multiple_of(STATUS_EVERY_TICKS) {
-            status_line(&out);
+            log_line("STATUS", now, &out);
+        }
+        #[cfg(feature = "qemu")]
+        {
+            let devices = i2c_bus.borrow().devices();
+            if devices != last_devices {
+                devices_line(now, &devices);
+                last_devices = devices;
+            }
         }
         watchdog.feed();
         ticks = ticks.wrapping_add(1);
-        ticker.next().await;
+        pace.next().await;
     }
 }
 
-/// One line on the USB cable: what the spine decided, and its faults.
-fn status_line(out: &Outputs) {
+/// One line on the USB cable: what the spine decided, and its faults. `STATUS` every
+/// 200 ms, `EVENT` when the mode, arming, e-stop, throttle on or off, brake or faults
+/// change. `t` is milliseconds since boot.
+fn log_line(kind: &str, now: u32, out: &Outputs) {
     info!(
-        "STATUS mode={:?} armed={} throttle={:.2} brake={:.2} reverse={} steer={:.3} faults={:#06x}",
+        "{} t={} mode={:?} armed={} estop={} throttle={:.2} brake={:.2} reverse={} steer={:.3} faults={:#06x}",
+        kind,
+        now,
         out.mode,
         out.armed,
+        out.estop_active,
         out.throttle,
         out.brake,
         out.reverse,
         out.steering_target,
         out.faults
+    );
+}
+
+/// In QEMU: what the stand-in devices were last told, whenever it changes. These are the
+/// bytes the car's Jrks, DAC and expander would have got.
+#[cfg(feature = "qemu")]
+fn devices_line(now: u32, d: &DeviceTargets) {
+    let show = |v: Option<u16>| v.map_or(-1, i32::from);
+    info!(
+        "DEVICES t={} steering={} brake={} dac={} expander={:#06x}",
+        now,
+        show(d.steering),
+        show(d.brake),
+        show(d.dac),
+        d.expander.unwrap_or(0)
     );
 }

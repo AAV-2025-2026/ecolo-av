@@ -87,8 +87,9 @@ case "${1:-}" in
     cargo clippy -q --release --locked -- -D warnings
     cargo clippy -q --release --locked --no-default-features \
       --features can,estop-input --target-dir target/can -- -D warnings
+    cargo clippy -q --release --locked --features qemu --target-dir target/qemu -- -D warnings
     cargo build -q --release --locked
-    echo "builds: the Motor-Pi UART link (default), and CAN"
+    echo "builds: the Motor-Pi UART link (default), CAN, and the QEMU build"
     ;;
   *)
     sed -n '2,8p' "$0" >&2
