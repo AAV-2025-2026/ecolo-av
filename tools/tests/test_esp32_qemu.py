@@ -215,7 +215,7 @@ def test_a_good_uplink_passes():
 
 
 def test_a_stale_echo_fails():
-    r = q.judge_uplink(*uplink_run(echo_lag=20))   # 0.4 s old
+    r = q.judge_uplink(*uplink_run(echo_lag=40))   # 0.8 s old
     assert not r.echo_ok
     assert any('echoes not among' in p for p in r.problems)
 
@@ -279,3 +279,57 @@ def test_a_lost_rc_must_say_fault_256_and_brake():
     ups = [(h, up(switch=q.SWITCH_RC_DIRECT)) for h, _ in ups]   # never lost
     r = q.judge_rc(phase, ups, lines, q.ClockMap.fit(lines))
     assert any('fault 256' in p for p in r.problems)
+
+
+# --- A loaded computer (24 Oct): the next cycle's stop must not count as driving again ---
+
+def with_counters(lines, resume=7, after=8):
+    """Give each status line a counter=: `resume` from 2.6 s; add the next cycle's stop."""
+    out = []
+    for ln in lines:
+        if ln.kind in ('EVENT', 'STATUS'):
+            c = resume if ln.t >= 2600 else 3
+            ln = q.parse_line(ln.text + f' counter={c}', ln.host)
+        out.append(ln)
+    # The next cycle's stand-still frame, counter 8: armed, the hold brake. On a loaded
+    # computer its line can fall inside the resume window by the clocks.
+    nxt = status(3150, armed=True, throttle=0.0, brake=0.21, kind='EVENT') + f' counter={after}'
+    return sorted(out + [q.parse_line(nxt, 103.15 + 0.001)], key=lambda ln: ln.host)
+
+
+def test_the_next_cycles_stop_is_not_driving_again_with_counters():
+    lines = with_counters(firmware())
+    cycle = q.Cycle(100.7, 101.0, 102.0, 102.6, 103.2, resume_counters=frozenset({7}))
+    r = q.judge(cycle, lines, q.ClockMap.fit(lines))
+    assert r.ok, r.problems
+    # By the clocks alone (no counters known), the same line looks like driving again.
+    r = q.judge(q.Cycle(100.7, 101.0, 102.0, 102.6, 103.2), lines, q.ClockMap.fit(lines))
+    assert any('drove again' in p for p in r.problems)
+
+
+def test_a_later_cycle_on_the_same_counter_after_the_wrap_does_not_count():
+    # The counter is one byte: two cycles on, a drive frame carries 7 again.
+    lines = with_counters(firmware())
+    later = status(3400, armed=True, throttle=0.2, brake=0.0, kind='EVENT') + ' counter=7'
+    lines = lines + [q.parse_line(later, 103.4 + 0.001)]
+    cycle = q.Cycle(100.7, 101.0, 102.0, 102.6, 103.2, resume_counters=frozenset({7}))
+    r = q.judge(cycle, lines, q.ClockMap.fit(lines))
+    assert r.ok, r.problems
+
+
+def test_driving_again_on_a_resume_counter_still_fails():
+    lines = with_counters(firmware(latched=False))
+    cycle = q.Cycle(100.7, 101.0, 102.0, 102.6, 103.2, resume_counters=frozenset({7}))
+    r = q.judge(cycle, lines, q.ClockMap.fit(lines))
+    assert any('drove again' in p for p in r.problems)
+
+
+def test_a_local_clock_fit_ignores_a_drift_elsewhere_in_the_run():
+    # Early lines arrive 1 ms after printing; later the clocks have drifted 300 ms.
+    early = [q.parse_line(status(t, armed=False, throttle=0, brake=1), 100 + t / 1000 + 0.001)
+             for t in range(0, 1000, 200)]
+    late = [q.parse_line(status(t, armed=False, throttle=0, brake=1), 100.301 + t / 1000)
+            for t in range(10000, 11000, 200)]
+    lines = early + late
+    assert q.ClockMap.fit(lines).offset == pytest.approx(100.001)
+    assert q.ClockMap.fit_local(lines, 110.3, 111.3).offset == pytest.approx(100.301)

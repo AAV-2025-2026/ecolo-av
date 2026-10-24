@@ -457,13 +457,19 @@ async fn main(_spawner: Spawner) -> ! {
         board.leds.show(&out, ticks);
         #[cfg(feature = "can")]
         board.can.service(now);
+        // The last Orin counter taken (-1: none, or not this link): it ties each line to a
+        // frame, whatever the clocks do (tools/esp32_qemu.py).
+        #[cfg(feature = "legacy-uart")]
+        let counter = spine.link().stats().counter.map_or(-1, i32::from);
+        #[cfg(not(feature = "legacy-uart"))]
+        let counter = -1;
         let summary = Summary::from(&out);
         if last != Some(summary) {
-            log_line("EVENT", now, &out);
+            log_line("EVENT", now, &out, counter);
             last = Some(summary);
         }
         if ticks.is_multiple_of(STATUS_EVERY_TICKS) {
-            log_line("STATUS", now, &out);
+            log_line("STATUS", now, &out, counter);
             #[cfg(feature = "legacy-uart")]
             link_line(now, &spine.link().stats());
         }
@@ -483,10 +489,10 @@ async fn main(_spawner: Spawner) -> ! {
 
 /// One line on the USB cable: what the spine decided, and its faults. `STATUS` every
 /// 200 ms, `EVENT` when the mode, arming, e-stop, throttle on or off, brake or faults
-/// change. `t` is milliseconds since boot.
-fn log_line(kind: &str, now: u32, out: &Outputs) {
+/// change. `t` is milliseconds since boot; `counter` the last Orin counter taken (-1: none).
+fn log_line(kind: &str, now: u32, out: &Outputs, counter: i32) {
     info!(
-        "{} t={} mode={:?} armed={} estop={} throttle={:.2} brake={:.2} reverse={} steer={:.3} faults={:#06x}",
+        "{} t={} mode={:?} armed={} estop={} throttle={:.2} brake={:.2} reverse={} steer={:.3} faults={:#06x} counter={}",
         kind,
         now,
         out.mode,
@@ -496,7 +502,8 @@ fn log_line(kind: &str, now: u32, out: &Outputs) {
         out.brake,
         out.reverse,
         out.steering_target,
-        out.faults
+        out.faults,
+        counter
     );
 }
 

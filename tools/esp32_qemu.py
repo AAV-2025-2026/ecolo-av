@@ -78,8 +78,11 @@ BRAKE_FULL = 3500           # the brake Jrk's target, full on
 BRAKE_RELEASED = 400
 
 RC_SIGNAL_LOST = 0x0100     # faults::RC_SIGNAL_LOST
-UPLINK_LIMIT_MS = 250       # the timeout, a tick, and up to 20 ms to the next uplink frame
-ECHO_WINDOW = 0.15          # s: an echo must be a counter sent this recently
+# The uplink is judged by when its frames reach this computer, which a loaded host delays
+# (the firmware's own times, from its log, are judged against LIMIT_MS): the timeout, a
+# tick, up to 20 ms to the next uplink frame, and room for the host's scheduling.
+UPLINK_LIMIT_MS = 400
+ECHO_WINDOW = 0.5           # s: an echo must be a counter sent this recently
 
 # The RC (TODO 48): the mode switch on CH6 (index 5), the proposal (RcMap::THREE_POSITION).
 SWITCH = {'computer': 1000, 'via_ros': 1500, 'direct': 2000}
@@ -155,6 +158,18 @@ class ClockMap:
         rate = (last.t - first.t) / 1000 / span if span > 0 else 1.0
         return cls(offset, rate)
 
+    @classmethod
+    def fit_local(cls, lines: Iterable[Line], start: float, end: float,
+                  margin: float = 1.0) -> 'ClockMap':
+        """
+        Fit the clocks on the lines that arrived between `start` and `end` (host s).
+
+        One cycle's own map: on a loaded computer QEMU's clock can drift from the host's
+        over a run, so the fastest line of the whole run (fit) can be seconds away.
+        """
+        near = [ln for ln in lines if start - margin <= ln.host <= end + margin]
+        return cls.fit(near if len(near) >= 2 else lines)
+
     def to_firmware_ms(self, host: float) -> float:
         """Return the firmware's ms at a host time."""
         return (host - self.offset) * 1000
@@ -173,6 +188,9 @@ class Cycle:
     end: float
     kind: str = 'silence'       # the gap: silence, frozen or bad_crc (KINDS)
     gap_frames: int = 0         # frames sent in the gap
+    # The counters of the frames sent from resume_from to end. A line whose counter= is one
+    # of them is the firmware's word while those frames were the latest: no clock needed.
+    resume_counters: frozenset = frozenset()
 
 
 @dataclass
@@ -243,8 +261,23 @@ def judge(cycle: Cycle, lines: List[Line], clock: ClockMap) -> Result:
         if r.brake_full_fw_ms > LIMIT_MS:
             r.problems.append(f'full brake after {r.brake_full_fw_ms:.0f} ms')
 
-    # Fresh frames, no stop first: it must stay stopped (esp32-bench.md step 9).
-    resumed = [ln for ln in status if t_resume <= ln.t <= t_end]
+    # Fresh frames, no stop first: it must stay stopped (esp32-bench.md step 9). Which
+    # lines came while they were the latest: by their counter= where the firmware prints
+    # it, so the next cycle's stop frames never count however the clocks drift (seen on a
+    # loaded computer, 24 Oct); else by the clocks.
+    # The counter is one byte, so a later cycle sends the same numbers again: take only the
+    # first unbroken run of lines on these counters.
+    if cycle.resume_counters and all('counter' in ln.fields for ln in status):
+        resumed = []
+        for ln in (ln for ln in status if ln.t >= t_resume - 500):
+            if ln.get('counter') in cycle.resume_counters:
+                resumed.append(ln)
+            elif resumed:
+                break
+        if resumed:
+            t_resume, t_end = resumed[0].t, resumed[-1].t
+    else:
+        resumed = [ln for ln in status if t_resume <= ln.t <= t_end]
     moved = [ln for ln in resumed if ln.get('armed') or ln.get('throttle') > 0
              or ln.get('brake') < 1.0]
     moved_devices = [ln for ln in devices if t_resume <= ln.t <= t_end
@@ -669,9 +702,11 @@ def run(qemu: Path, flash: Path, cycles: int, rc: bool = True):
                                   else orin.frames(drive, bad_crc=True))
                     _, gap = fw.send_for(drive, 0.6, gap_frames)
                 resume_from = time.monotonic()
+                first = len(orin.sent)
                 fw.send_for(drive, 0.6, orin.frames(drive))
+                counters = frozenset(s.counter for s in orin.sent[first:])
                 plan.append(Cycle(stop_from, drive_from, last, resume_from, time.monotonic(),
-                                  kind, gap))
+                                  kind, gap, counters))
             if rc:
                 rc_phases = rc_run(fw, orin, mapping)
             fw.ibus.send(None)
@@ -681,9 +716,10 @@ def run(qemu: Path, flash: Path, cycles: int, rc: bool = True):
         finally:
             fw.stop()
     clock = ClockMap.fit(lines)
-    results = [judge(c, lines, clock) for c in plan]
+    results = [judge(c, lines, ClockMap.fit_local(lines, c.stop_from, c.end)) for c in plan]
     uplink = [judge_uplink(c, ups, orin.sent) for c in plan]
-    rc_results = [judge_rc(p, ups, lines, clock) for p in rc_phases]
+    rc_results = [judge_rc(p, ups, lines, ClockMap.fit_local(lines, p.start, p.end))
+                  for p in rc_phases]
     return results, uplink, rc_results, clock, lines, ups
 
 
