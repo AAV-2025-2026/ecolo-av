@@ -140,24 +140,24 @@ jobs:
             fi
           done
       # Xvfb is a screen in memory; Mesa draws in software (no GPU here). --demo: pretend
-      # data, no ROS. Each program saves a picture after 4 s and quits.
+      # data, no ROS. Each program saves a picture after 4 s and quits. ros2 run, as on the
+      # car: ROS's setup puts the environment's libraries on the loader's path.
       - name: The HUD and the map window, drawn once
         timeout-minutes: 5
         run: |
-          sudo apt-get install -y -qq xvfb > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb > /dev/null
           mkdir -p screens
           for prog in hud map; do
-            xvfb-run -a -s '-screen 0 1920x1080x24' pixi run --locked \
-              "install/aav_hud_raylib/lib/aav_hud_raylib/$prog" --demo \
-              --screenshot "$PWD/screens/$prog.png" 2>&1 | tail -20
-            if [[ ! -s screens/$prog.png ]]; then
-              echo "::error title=aav_hud_raylib::$prog drew no picture on ARM"
+            if ! xvfb-run -a -s '-screen 0 1920x1080x24' pixi run --locked tools/ros.sh --local \
+                 ros2 run aav_hud_raylib "$prog" --demo --screenshot "$PWD/screens/$prog.png" \
+                 > "screens/$prog.log" 2>&1 || [[ ! -s screens/$prog.png ]]; then
+              echo "::error title=aav_hud_raylib $prog drew no picture on ARM::$(tail -25 "screens/$prog.log" | python3 -c 'import sys; print(sys.stdin.read().replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))')"
               exit 1
             fi
             echo "$prog: $(file -b "screens/$prog.png")"
           done
       - name: Keep the pictures
-        if: always() && hashFiles('screens/*.png') != ''
+        if: always() && hashFiles('screens/*') != ''
         uses: actions/upload-artifact@v7
         with:
           name: arm-screens
@@ -204,8 +204,9 @@ jobs:
         timeout-minutes: 50
         run: |
           # As the runner's own user (car_install.sh refuses root), in a network namespace
-          # whose only network is its own loopback.
-          sudo unshare --net -- sh -c "ip link set lo up && exec sudo -u $(id -un) -H env PATH='$PATH' bash car-kit/car_install.sh --all" 2>&1 | tee car-install.log
+          # whose only network is its own loopback. sudo sets PSModulePath again (the
+          # runner's /etc/environment): empty, or colcon picks PowerShell, see env above.
+          sudo unshare --net -- sh -c "ip link set lo up && exec sudo -u $(id -un) -H env PATH='$PATH' PSModulePath= bash car-kit/car_install.sh --all" 2>&1 | tee car-install.log
           if grep -q "some packages didn't build" car-install.log; then
             grep -E '^(Failed|Aborted) +<<<|^Summary' "$HOME/aav-jazzy/build.log" || true
             exit 1
