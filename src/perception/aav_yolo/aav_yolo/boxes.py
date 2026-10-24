@@ -2,9 +2,11 @@
 The detectors' boxes as plain values, which labels to keep, and where the model runs.
 
 Two detectors, picked by the detector parameter:
-  rfdetr  RF-DETR (Roboflow, Apache-2.0), a transformer: the default since 20 Oct 2026. It
-          saw Gazebo's stop sign from 20 m, YOLO from 10 m (docs/model-comparison.md)
-  yolo    YOLO (Ultralytics, AGPL-3.0): .pt, .mlpackage (Core ML) or .engine (TensorRT)
+  rfdetr  RF-DETR (Roboflow, Apache-2.0), a transformer: the default since 20 Oct 2026, and
+          the car's (Ben, 23 Oct). It saw Gazebo's stop sign from 20 m, YOLO from 10 m
+          (docs/model-comparison.md). .pth (PyTorch), .mlpackage (Core ML) or .engine
+          (TensorRT), the last two named after it: rf-detr-nano.mlpackage
+  yolo   YOLO (Ultralytics, AGPL-3.0): .pt, .mlpackage (Core ML) or .engine (TensorRT)
 
 No ROS or PyTorch imports, so the tests run anywhere.
 """
@@ -23,13 +25,33 @@ DEFAULT_MODELS = {
     'yolo': 'models/yolo11n.pt',
 }
 MODEL_TYPES = {
-    'rfdetr': ('.pth',),
+    'rfdetr': ('.pth', '.mlpackage', '.engine'),
     'yolo': ('.pt', '.mlpackage', '.engine'),
 }
 # RF-DETR's sizes, as the rfdetr library names their classes. The size is in the file's
 # name: rf-detr-nano.pth, rf-detr-small.pth...
 RFDETR_SIZES = {'nano': 'RFDETRNano', 'small': 'RFDETRSmall', 'medium': 'RFDETRMedium',
                 'base': 'RFDETRBase', 'large': 'RFDETRLarge'}
+# An exported model (.mlpackage, .engine) is RF-DETR's when its name says so.
+RFDETR_NAME = re.compile(r'rf[-_]?detr', re.IGNORECASE)
+
+
+def family(model: str) -> Optional[str]:
+    """
+    Return which detector a model file is for, from its name: 'rfdetr', 'yolo' or None.
+
+    A .pth is RF-DETR's and a .pt YOLO's. A .mlpackage or an .engine can be either: it is
+    RF-DETR's when its name has rf-detr in it (rf-detr-nano.engine), else YOLO's
+    (yolo11n.engine).
+    """
+    name = os.path.basename(model.rstrip('/'))
+    if name.endswith('.pth'):
+        return 'rfdetr'
+    if name.endswith('.pt'):
+        return 'yolo'
+    if name.endswith(('.mlpackage', '.engine')):
+        return 'rfdetr' if RFDETR_NAME.search(name) else 'yolo'
+    return None
 
 
 def check_detector(detector: str, model: str) -> str:
@@ -44,11 +66,12 @@ def check_detector(detector: str, model: str) -> str:
         raise ValueError(f"detector '{detector}' isn't one we have: use "
                          f"{' or '.join(DEFAULT_MODELS)}")
     model = model or DEFAULT_MODELS[name]
-    if not model.endswith(MODEL_TYPES[name]):
-        other = next((d for d, types in MODEL_TYPES.items() if model.endswith(types)), None)
+    other = family(model)
+    if other != name:
         hint = f': it is a {other} model, so use detector:={other}' if other else ''
+        named = ', named rf-detr-...' if name == 'rfdetr' else ''
         raise ValueError(f"{name} can't load {model} (it takes "
-                         f"{', '.join(MODEL_TYPES[name])}){hint}")
+                         f"{', '.join(MODEL_TYPES[name])}{named}){hint}")
     return model
 
 

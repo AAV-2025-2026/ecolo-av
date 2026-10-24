@@ -13,11 +13,13 @@ Publishes   detections         vision_msgs/Detection2DArray (/perception/detecti
             detections/image   sensor_msgs/Image: the picture with the boxes drawn on
 
 The detector parameter picks the model family; the rest of the car can't tell which:
-  rfdetr  RF-DETR (the default): a .pth file, such as models/rf-detr-nano.pth. PyTorch.
-  yolo    YOLO: .pt (PyTorch), .mlpackage (Core ML, on Macs) or .engine (TensorRT, on the
-          Orin: build it there).
+  rfdetr  RF-DETR Nano (the default, and the car's): models/rf-detr-nano.pth (PyTorch), or
+          its exports: rf-detr-nano.mlpackage (Core ML, on Macs), rf-detr-nano.engine
+          (TensorRT, on the Orin: build it there)
+  yolo    YOLO: .pt (PyTorch), .mlpackage (Core ML, on Macs) or .engine (TensorRT)
 model is the file, empty for the detector's default. device (PyTorch only): auto (the GPU
 this computer has), or PyTorch's own names: cuda, cuda:N, mps (a Mac's GPU), cpu.
+The models themselves are in detectors.py, with no ROS: other programs load them too.
 
 It needs PyTorch and rfdetr or Ultralytics, from the ml environment. Try it:
   pixi run get-models                                                # once
@@ -25,12 +27,11 @@ It needs PyTorch and rfdetr or Ultralytics, from the ml environment. Try it:
   pixi run detect detector:=yolo picture:=src/perception/aav_yolo/test/stop_sign.jpg
 """
 
-import os
 import signal
 import time
 
-from aav_yolo.boxes import (boxes_from_corners, boxes_from_result, check_detector, corners,
-                            parse_labels, pick_device, rfdetr_size)
+from aav_yolo.boxes import corners, parse_labels
+from aav_yolo.detectors import load_detector
 import cv2
 from cv_bridge import CvBridge
 import rclpy
@@ -50,44 +51,6 @@ LATEST = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
 # room for only one, a busy subscriber may never finish a frame before the next replaces it.
 PICTURES = QoSProfile(depth=3, history=HistoryPolicy.KEEP_LAST,
                       reliability=ReliabilityPolicy.RELIABLE)
-
-
-class Yolo:
-    """YOLO, through Ultralytics: any of its file types."""
-
-    def __init__(self, model, device, image_size):
-        from ultralytics import YOLO
-        self.model = YOLO(model, task='detect')
-        self.kwargs = {'imgsz': image_size, **({'device': device} if device else {})}
-
-    def detect(self, frame, confidence, labels):
-        result = self.model.predict(frame, conf=confidence, verbose=False, **self.kwargs)[0]
-        return boxes_from_result(result, labels)
-
-
-class Rfdetr:
-    """RF-DETR, through Roboflow's rfdetr library: a .pth file, on PyTorch."""
-
-    def __init__(self, model, device, logger):
-        import rfdetr
-        from rfdetr.assets.coco_classes import COCO_CLASSES
-        self.names = dict(COCO_CLASSES)
-        self.model = getattr(rfdetr, rfdetr_size(model))(pretrain_weights=model, device=device)
-        # Traced (TorchScript) is the fast path; a device it can't trace runs it plain.
-        # rfdetr 1.11 calls it inference(), older versions optimize_for_inference().
-        optimise = getattr(self.model, 'inference', None) or self.model.optimize_for_inference
-        try:
-            optimise()
-        except Exception as e:  # noqa: B902 - any tracing failure: run untraced instead
-            logger.info(f'RF-DETR runs untraced here ({e.__class__.__name__})')
-            optimise(compile=False)
-
-    def detect(self, frame, confidence, labels):
-        # rfdetr reads pictures as RGB; cv_bridge gives BGR.
-        found = self.model.predict(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
-                                   threshold=confidence)
-        return boxes_from_corners(found.xyxy.tolist(), found.confidence.tolist(),
-                                  found.class_id.tolist(), self.names, labels)
 
 
 def draw(frame, boxes):
@@ -115,26 +78,12 @@ class Detector(Node):
         self.compressed = self.declare_parameter('compressed', False).value
         extra = [t.strip() for t in
                  self.declare_parameter('extra_images', '').value.split(',') if t.strip()]
-        try:
-            model = check_detector(detector, model)
-        except ValueError as e:
-            raise SystemExit(str(e))
         # A relative file (the defaults: models/...) is from the repository's root.
-        model = os.path.join(os.environ.get('PIXI_PROJECT_ROOT', os.getcwd()),
-                             os.path.expanduser(model))
         try:
-            import torch
-        except ImportError as e:
-            raise SystemExit(f'{e}: run the detector in the ml environment (pixi run detect)')
-        try:
-            self.device = pick_device(device, model, torch.cuda.device_count(),
-                                      torch.backends.mps.is_available())
-        except ValueError as e:
+            self.model = load_detector(detector, model, device, image_size,
+                                       log=self.get_logger().info)
+        except (ValueError, FileNotFoundError) as e:
             raise SystemExit(str(e))
-        try:
-            self.model = (Rfdetr(model, self.device, self.get_logger())
-                          if detector.strip().lower() == 'rfdetr'
-                          else Yolo(model, self.device, image_size))
         except ImportError as e:
             raise SystemExit(f'{e}: run the detector in the ml environment (pixi run detect)')
         self.bridge = CvBridge()
@@ -154,8 +103,8 @@ class Detector(Node):
         topic = ', '.join(topics)
         self.frames, self.busy_s, self.since = 0, 0.0, time.monotonic()
         keep = ', '.join(self.labels) if self.labels else 'every label'
-        self.get_logger().info(f'{detector}: {model} on '
-                               f'{self.device or "its own choice of hardware"}, '
+        self.get_logger().info(f'{self.model.detector}: {self.model.model} on '
+                               f'{self.model.device}, '
                                f'reading {topic}; keeping {keep}, at confidence '
                                f'{self.confidence} or more')
 

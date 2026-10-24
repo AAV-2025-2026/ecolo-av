@@ -2,7 +2,7 @@ import re
 from types import SimpleNamespace
 
 from aav_yolo.boxes import (Box, boxes_from_corners, boxes_from_result, check_detector, corners,
-                            normal_label, parse_labels, pick_device, rfdetr_size)
+                            family, normal_label, parse_labels, pick_device, rfdetr_size)
 import numpy as np
 import pytest
 
@@ -100,6 +100,9 @@ def test_a_misspelt_device_is_an_error_even_for_tensorrt():
     ('rfdetr', 'models/rf-detr-small.pth', 'models/rf-detr-small.pth'),
     ('yolo', ENGINE, ENGINE),
     ('yolo', MLPACKAGE, MLPACKAGE),
+    ('rfdetr', 'models/rf-detr-nano.mlpackage', 'models/rf-detr-nano.mlpackage'),  # Core ML
+    ('rfdetr', 'models/rf-detr-nano.engine', 'models/rf-detr-nano.engine'),        # TensorRT
+    ('rfdetr', 'models/RFDETR_small.engine', 'models/RFDETR_small.engine'),
 ])
 def test_check_detector(detector, model, expect):
     assert check_detector(detector, model) == expect
@@ -109,11 +112,27 @@ def test_check_detector(detector, model, expect):
     ('detr', '', 'use rfdetr or yolo'),
     ('rfdetr', PT, 'it is a yolo model, so use detector:=yolo'),
     ('yolo', PTH, 'it is a rfdetr model, so use detector:=rfdetr'),
-    ('rfdetr', 'models/weights.onnx', 'it takes .pth'),
+    ('rfdetr', 'models/weights.onnx', 'it takes .pth, .mlpackage, .engine, named rf-detr-'),
+    ('rfdetr', ENGINE, 'it is a yolo model, so use detector:=yolo'),     # yolo11n.engine
+    ('rfdetr', MLPACKAGE, 'it is a yolo model, so use detector:=yolo'),
+    ('yolo', 'models/rf-detr-nano.engine', 'it is a rfdetr model, so use detector:=rfdetr'),
 ])
 def test_check_detector_says_what_to_use_instead(detector, model, says):
     with pytest.raises(ValueError, match=re.escape(says)):
         check_detector(detector, model)
+
+
+@pytest.mark.parametrize('model, expect', [
+    ('models/rf-detr-nano.pth', 'rfdetr'),
+    ('models/yolo11n.pt', 'yolo'),
+    ('models/rf-detr-nano.engine', 'rfdetr'),       # exports: the name says which
+    ('/x/rf-detr-nano.mlpackage/', 'rfdetr'),       # a folder, as the shell completes it
+    ('models/yolo11n.engine', 'yolo'),
+    ('models/best.mlpackage', 'yolo'),              # the 2024-25 team's, exported
+    ('models/rf-detr-nano.onnx', None),             # only a step to the .engine
+])
+def test_family(model, expect):
+    assert family(model) == expect
 
 
 @pytest.mark.parametrize('model, expect', [

@@ -69,3 +69,13 @@ change, never the logic:
   every camera's newest points together, each time (new, our own: `aav_yolo/recent.py`,
   tested in `test/test_recent.py`), and `config/camera_obstacles.yaml` lists the rear
   camera's CameraInfo and `max_age`.
+- 2026-10-24: RF-DETR Nano is the car's detector (Ben, 23 Oct: "I thought we were skipping
+  yolo and using the other one"), in TensorRT on the Orin. The models move out of
+  `detector.py` into `aav_yolo/detectors.py` (new, our own, no ROS): `load_detector()`
+  and one class per runtime, each with `detect(bgr, confidence, labels)`, so a camera
+  stream's own program can load them too. New runtimes for RF-DETR's exports: Core ML
+  (`.mlpackage`) and TensorRT (`.engine`); their pre- and post-processing is
+  `aav_yolo/detr.py` (new, our own, NumPy only), which mirrors rfdetr 1.11's private
+  `export/_runtime`. `boxes.py`: `family()` tells an RF-DETR export from a YOLO one by
+  its name (`rf-detr-nano.engine`), and `check_detector` uses it. Tests:
+  `test/test_detr.py`, `test/test_detectors.py`, more in `test/test_boxes.py`.
