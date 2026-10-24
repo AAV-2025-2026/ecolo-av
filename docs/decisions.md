@@ -52,6 +52,8 @@ answer.
 | A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree | A car can't turn on the spot. The config already does this |
 | The RC transmitter stays the top-priority override, in hardware | It works today, and doesn't depend on any computer |
 | The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car | A reboot or a glitch never restarts the car by itself. It's in `spine-core` since 10 Oct |
+| **The RC mode switch, three positions (TODO 48, 24 Oct):** CH6 (index 5, the 2025-26 `RC_EN_CH`) **low = computer, middle = RC via ROS, high = RC direct**; thresholds below 1301, 1301-1700, above 1700 (`ibus::RcMap::THREE_POSITION`). Needs a three-position switch on CH6 (the transmitter's aux-channel menu); a two-position switch still gives computer and RC direct. The team and the hardware lead decide; CH6's switch type and a free channel: question H10 ([audit questions](audit-questions.md)) | One switch, in the order of "how much the computer does". RC direct stays the fallback that needs no computer. Moving the switch from low to high passes RC via ROS, which drives only through ego's limits. Today's firmware builds keep the 2025-26 reading (>1500 = RC); only `--features uplink` reads three positions. Losing the RC in either RC position brakes (fault 256) |
+| **RC via ROS at twist_mux priority 95** (TODO 48): below the joystick's deadman (100), above the keyboard (90) | A person with the RC is a person, so above every program. The joystick's holder sits in the car, so the deadman still wins. The ESP32 can't tell who in ROS made a command, so `rc_driver` sends zeros too while on RC via ROS, to keep Nav2 out |
 
 ## Ground rules
 
