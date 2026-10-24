@@ -24,12 +24,55 @@ a second program. Each opens full screen on its own monitor at boot:
 |---|---|
 | Top strip | mode, armed, gear (D/R/P), e-stop on/off, battery, faults |
 | Speed | km/h, big. Grey with "OLD" when `/vehicle/status` stops |
-| Controls | steering (left of centre = left), throttle, brake |
+| GO / STOP (24 Oct) | may the car move? A colour, an icon, a word, the one main reason: [below](#may-the-car-move-the-go-stop-panel) |
+| Controls | steering (left of centre = left), throttle, brake: one row each |
 | Camera | the picture (rgb8, bgr8, rgba8, bgra8, mono8); a STOP SIGN banner over it; a big orange **SIMULATED** / **BENCH** / **REPLAY** band along its bottom when `/system/source` says any data isn't the real car's; the sensor watchdog's banner (15 Oct): red **STOP: gps STALE (...)** while it holds Nav2, amber for a warning, red **SENSOR WATCHDOG SILENT** if it stops talking (twist_mux then holds Nav2 for its silence) ([simulation](simulation.md#sensor-failures-on-purpose)) |
 | E-STOP | the button: `/safety/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
 | (nothing on screen) | the heartbeat, `/hud/heartbeat`: below |
 | Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where `/system/source` names it |
 | GPS | is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age |
+
+### May the car move? (the GO / STOP panel)
+
+For the safety drivers (Ben, 24 Oct: "fix the hud?"). Under the speed, the whole panel in
+one colour:
+
+```text
+ +-------------------------------+   +-------------------------------+
+ |  (tick)   GO                  |   |  (stop    STOP                |
+ |           all REAL            |   |   sign)   GPS is SIM          |
+ |           the car may move    |   |           clear: pixi run     |
+ +-------------------------------+   |           gate-clear          |
+        green                        +-------------------------------+
+                                            red
+```
+
+| Colour and icon | Word | Means |
+|---|---|---|
+| green, a tick | **GO** | the gate is open; nothing holds the drivers |
+| amber, a pause sign | **WAIT** | the gate is shut for now; it opens by itself |
+| red, a stop sign | **STOP** | nothing reaches the car (people's commands too), until fixed or cleared |
+| red, a stop sign | **AUTO STOP** | Nav2 and the AI slot are held; people can still drive |
+| grey, a question mark | **NO GATE** | no output mux heard: nothing reaches the car |
+
+The one main reason, the first that applies:
+
+| # | Who says no | Reason on screen | Small line |
+|---|---|---|---|
+| 1 | the car's e-stop (`/vehicle/status`) | E-STOP ON | clear: pixi run estop-clear |
+| 2 | the output mux, latched ([sources and targets](sources-and-targets.md)) | GPS is SIM, 2 sources: IMU, sensor mux wants SIM... | clear: pixi run gate-clear |
+| 3 | the output mux, silent 2 s | gate silent | nothing reaches the car |
+| 4 | the sensor watchdog, silent | watchdog silent | people can still drive |
+| 5 | the sensor watchdog's lock: its first input that stops | GPS STALE, HUD LOST, WHEELS DISAGREE... | people can still drive; latched ones: clear: pixi run watchdog-clear |
+| 6 | the output mux, waiting | settling, sensor mux quiet, unsure: GPS... | opens by itself |
+| 7 | nothing heard from the output mux | no output mux heard | nothing reaches the car |
+| - | none of these | all REAL (or all SIM, in a simulator) | the car may move |
+
+- The logic: `hud-core` `gate` (no ROS), with tests. It reads the two one-line states,
+  `/safety/output_mux/state` and `/safety/sensor_watchdog/state`. A line it doesn't
+  know shows as it is, never as GO.
+- The camera's red watchdog banner stays: it has every input's detail.
+- `--demo` walks through GO, WAIT, AUTO STOP (the GPS silent) and STOP (a SIM camera).
 
 ### Run it
 
@@ -76,8 +119,29 @@ The safety drivers rely on this screen, so the sensor watchdog must know it's al
 |---|---|
 | The window freezes | the count stops rising: no more beats |
 | The ROS thread freezes | the timer stops: no beats, and no e-stop either. The watchdog stops Nav2 |
-| The program dies | no beats. systemd restarts it in 5 s; the lock opens once it beats again |
+| The program dies | no beats. systemd restarts it in 5 s; Nav2 stays held (**latched**, below) |
 | The HUD never started | the watchdog says `hud NEVER`: Nav2 never drives |
+
+**Latched (Ben, 24 Oct: a HUD that keeps crashing holds Nav2 until a person clears it):**
+
+```text
+ first beat ──► 5 s grace ──────────────► running
+   one dropout in the grace: forgiven      any dropout: hud LOST, latched
+   (held only while it lasts)              (held even once it beats again)
+
+ a person checks the screen ──► pixi run watchdog-clear ──► Nav2 may drive
+```
+
+| Case | What happens |
+|---|---|
+| A slow first frame, within 5 s of the first beat | held while it lasts, then drives by itself (once) |
+| A crash, a freeze or a closed window after that | `hud LOST`: held, even once systemd restarts it |
+| A HUD that keeps crashing while it starts | the second dropout latches |
+| `pixi run watchdog-clear` | Nav2 drives again, if the HUD beats; the grace starts again |
+| The watchdog itself stalled (a busy computer) | not the HUD's fault: nothing latches |
+
+The rule is `latch: true` on the `hud` input (`sensor_watchdog.yaml`, `latch_grace: 5.0`),
+in `aav_safety` `watchdog.py`, with tests. The HUD shows it: **AUTO STOP, HUD LOST**.
 
 | Profile | Watched? |
 |---|---|
@@ -106,6 +170,11 @@ The safety drivers rely on this screen, so the sensor watchdog must know it's al
 | The heartbeat, through the real node (23 Oct, `cargo test`) | none before the first frame; 15-21 beats in 2 s of drawing, each count higher; none once drawing stops, and the e-stop's 5 trues still go out |
 | The heartbeat, the real window and the watchdog (23 Oct, private domain) | 9.3 beats a second; `hud NEVER` before it opened, `OK` while it ran; frozen (SIGSTOP) or closed: `hud STALE` and the lock on within about 1 s; thawed: `OK` again |
 | The heartbeat in Gazebo (23 Oct, `sim-check --faults`, `hud stop`, twice) | the check beats in the window's place; when it stops, Nav2's car stands still 2.5 s later |
+| The GO / STOP panel's logic (24 Oct, `cargo test`, hud-core `gate`, `state`) | every state and reason above; the output mux's lines as its own tests have them, and one from the live output mux next to the turtle (latched by a node announcing a REAL GPS: "GPS is REAL"; cleared by the service) |
+| The output mux's line through the real node (24 Oct, `cargo test`, hud-app) | published by another node, it reaches the screen |
+| The GO / STOP panel on screen (24 Oct) | **not seen yet**: the Mac's lid was shut, so no window could open. To do: `pixi run hud-demo --screenshot docs/img/hud-gate.png` |
+| The HUD latch (24 Oct, `aav_safety` tests) | a start-up dropout forgiven; any later one latched until cleared; a crash loop latches the second time; a stalled watchdog latches nothing |
+| The HUD latch in Gazebo (24 Oct, `sim-check --faults`, `hud stop`) | stood still 2.4 s after the beats stopped: "hud LOST"; beating again, still held 5 s later; cleared, Nav2 drove again. 25 of 25 faults pass |
 
 ### What it shows with each backend
 

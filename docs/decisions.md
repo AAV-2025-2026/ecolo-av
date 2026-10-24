@@ -129,6 +129,13 @@ What we changed, and why.
 | **ego eases into speed**: a jerk limit of 2.0 m/s³, speeding up only | A smoother start for the people in the car. A stop is never softened: braking starts at once | 22 Oct, the proposal's T5.3 |
 | **The global EKF trusts the gyro and wheels for heading**; GPS only nudges it (yaw noise 0.06 → 0.01) | At walking pace its heading jumped up to 76°; now the worst per leg is 7-16° in Gazebo. To check with the real IMU | 22 Oct, from the Gazebo runs |
 
+## Decided on 24 October
+
+| Decision | Why | By |
+|---|---|---|
+| **A HUD that drops out holds Nav2 until a person clears it** (latched, `hud LOST`). One dropout within 5 s of its first beat is forgiven; any other latches, even once it beats again. A person checks the screen, then `pixi run watchdog-clear` (the same service as a GPS jump) | The safety drivers rely on the screen. A HUD that crashed once may crash again; driving on by itself after systemd restarts it hides that. A window's slow first frames shouldn't need a person, so start-up gets one free dropout. The watchdog's own stalls never latch it ([HUD](hud.md#the-heartbeat)) | Ben, 24 Oct |
+| **The HUD shows whether the car may move**: GO, WAIT, STOP or AUTO STOP, a colour, an icon and the one main reason (the e-stop, the output mux's gate, the sensor watchdog) | The safety drivers need one answer at a glance, short words, colour and a shape, not a log line ([HUD](hud.md#may-the-car-move-the-go-stop-panel)) | Ben, 24 Oct |
+
 ## Open questions
 
 The design doc numbers 34 questions, and doesn't rank them. **Bold** marks the ones that

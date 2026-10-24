@@ -1041,7 +1041,7 @@ car stops, <strong>safely and loudly</strong>.</p>
 <pre class="highlight"><code class="language-bash">pixi run sim world:=road faults:=true     # faults:=true only for the camera
 pixi run sim-fault gps stop               # the GPS goes quiet
 pixi run sim-fault gps ok                 # mended
-pixi run sim-fault clear                  # after a GPS jump: a person says the position is right</code></pre>
+pixi run sim-fault clear                  # after a GPS jump or a lost HUD: a person says all is right</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1143,7 +1143,7 @@ the camera), on the map window (a banner across the map), in the log and on
 <tr>
 <td>hud</td>
 <td><code>/hud/heartbeat</code> (the <a href="hud.html#the-heartbeat">HUD's</a> screen is alive)</td>
-<td>quiet 1 s; the count stuck for 1 s</td>
+<td>quiet 1 s; the count stuck for 1 s; after its first 5 s, <strong>latched</strong> as <code>hud LOST</code> until cleared (24 Oct)</td>
 <td>stop (only where a HUD is expected: the car, <code>hud:=true</code>, <code>watch_hud:=true</code>)</td>
 </tr>
 </tbody>
@@ -1406,7 +1406,7 @@ lock, frozen wheels).</p>
 <tr>
 <td>HUD frozen or dead (<code>hud stop</code>, 23 Oct: the check stops beating for it)</td>
 <td>❌ nothing watched the screen (not run)</td>
-<td>✅ 2.5 s, 1.2 m: "hud STALE" (two runs); drove again once it beat</td>
+<td>✅ 2.5 s, 1.2 m: "hud STALE" (two runs); drove again once it beat. <strong>24 Oct, latched:</strong> 2.4 s, 1.2 m: "hud LOST"; beating again, still held 5 s later; drove again once cleared</td>
 </tr>
 <tr>
 <td>Watchdog killed (<code>watchdog kill</code>: SIGKILL, the last fault)</td>

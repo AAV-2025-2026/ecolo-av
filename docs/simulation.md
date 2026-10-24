@@ -435,7 +435,7 @@ car stops, **safely and loudly**.
 pixi run sim world:=road faults:=true     # faults:=true only for the camera
 pixi run sim-fault gps stop               # the GPS goes quiet
 pixi run sim-fault gps ok                 # mended
-pixi run sim-fault clear                  # after a GPS jump: a person says the position is right
+pixi run sim-fault clear                  # after a GPS jump or a lost HUD: a person says all is right
 ```
 
 | Sensor | Topic it breaks | Faults |
@@ -468,7 +468,7 @@ the camera), on the map window (a banner across the map), in the log and on
 | camera | the front left picture | quiet 1 s; the same picture for 1 s **while the wheels turn** | stop (only where something reads it: perception, lane, camera obstacles) |
 | radar | `/sensors/radar/points` | quiet 1 s | warn: `collision_monitor` already stops Nav2 |
 | front_left_stream, front_right_stream | a front camera's stream, through its detections on `/perception/detections` (its `frame_id` only: [camera pipeline](camera-pipeline.md#the-sensor-watchdog)) | quiet 1 s; NaN in a box | stop (the car, where `car.launch.py` starts the streams) |
-| hud | `/hud/heartbeat` (the [HUD's](hud.md#the-heartbeat) screen is alive) | quiet 1 s; the count stuck for 1 s | stop (only where a HUD is expected: the car, `hud:=true`, `watch_hud:=true`) |
+| hud | `/hud/heartbeat` (the [HUD's](hud.md#the-heartbeat) screen is alive) | quiet 1 s; the count stuck for 1 s; after its first 5 s, **latched** as `hud LOST` until cleared (24 Oct) | stop (only where a HUD is expected: the car, `hud:=true`, `watch_hud:=true`) |
 
 It runs in Gazebo (`watchdog:=true`), on the bench (always), and on the car next to the
 mux (odom, IMU, GPS, the EKFs, the HUD, and the camera streams it starts). The checks are `aav_safety/watchdog.py` and
@@ -591,7 +591,7 @@ lock, frozen wheels).
 | Radar stopped (`radar stop`) | ✅ stood still 2.5 s after it: `collision_monitor`'s "invalid source" | ✅ the same, 2.5 s; the watchdog warns too |
 | Wheels frozen (`odom freeze`) | ❌ drove on 10.9 m in 15 s, nothing said | ✅ 3.4-4.8 s after the wheels went wrong (Nav2 steered), 2.2-3.9 m: "odom DISAGREE (the wheels and the IMU disagree ... turn 0.28 rad/s)" (two runs). 24 Oct, MPPI, frozen at 0.2 m/s: still 7.8-10.4 s after the fault, 3.0-4.1 m: "the wheels and the GPS disagree" ([why](#frozen-wheels-and-mppi)) |
 | Watchdog hung (`watchdog hang`: SIGSTOP) | ❌ by design: the old lock never expired, so nothing stopped Nav2 (not run) | ✅ 2.7 s, 1.4-1.5 m: twist_mux's 1 s lock timeout; drove again after SIGCONT |
-| HUD frozen or dead (`hud stop`, 23 Oct: the check stops beating for it) | ❌ nothing watched the screen (not run) | ✅ 2.5 s, 1.2 m: "hud STALE" (two runs); drove again once it beat |
+| HUD frozen or dead (`hud stop`, 23 Oct: the check stops beating for it) | ❌ nothing watched the screen (not run) | ✅ 2.5 s, 1.2 m: "hud STALE" (two runs); drove again once it beat. **24 Oct, latched:** 2.4 s, 1.2 m: "hud LOST"; beating again, still held 5 s later; drove again once cleared |
 | Watchdog killed (`watchdog kill`: SIGKILL, the last fault) | ❌ the same (not run) | ✅ 2.6-2.8 s, 1.2-1.5 m, then held 10 s more with Nav2 still asking (top speed 0.00 m/s) |
 
 "Nothing said": no warning in the log, nothing on the HUD (only the HUD's GPS line
