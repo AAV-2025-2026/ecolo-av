@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">31 min read · 12 sections</div></header>
+<div class="meta">32 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -245,6 +245,14 @@ answer.</p>
 <tr>
 <td>The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car</td>
 <td>A reboot or a glitch never restarts the car by itself. It's in <code>spine-core</code> since 10 Oct</td>
+</tr>
+<tr>
+<td><strong>The RC mode switch, three positions (TODO 48, 24 Oct):</strong> CH6 (index 5, the 2025-26 <code>RC_EN_CH</code>) <strong>low = computer, middle = RC via ROS, high = RC direct</strong>; thresholds below 1301, 1301-1700, above 1700 (<code>ibus::RcMap::THREE_POSITION</code>). Needs a three-position switch on CH6 (the transmitter's aux-channel menu); a two-position switch still gives computer and RC direct. The team and the hardware lead decide; CH6's switch type and a free channel: question H10 (<a href="audit-questions.html">audit questions</a>)</td>
+<td>One switch, in the order of "how much the computer does". RC direct stays the fallback that needs no computer. Moving the switch from low to high passes RC via ROS, which drives only through ego's limits. Today's firmware builds keep the 2025-26 reading (&gt;1500 = RC); only <code>--features uplink</code> reads three positions. Losing the RC in either RC position brakes (fault 256)</td>
+</tr>
+<tr>
+<td><strong>RC via ROS at twist_mux priority 95</strong> (TODO 48): below the joystick's deadman (100), above the keyboard (90)</td>
+<td>A person with the RC is a person, so above every program. The joystick's holder sits in the car, so the deadman still wins. The ESP32 can't tell who in ROS made a command, so <code>rc_driver</code> sends zeros too while on RC via ROS, to keep Nav2 out</td>
 </tr>
 </tbody>
 </table></div>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">48 min read · 4 sections</div></header>
+<div class="meta">50 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -110,6 +110,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>-</td>
 <td>Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic - on the stand-ins only, as the car's bridge only watches (foxglove.launch.py).</td>
+</tr>
+<tr>
+<td><code>/drivers/rc/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>rc_driver</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 95 (proposed, TODO 48) - a person with the RC transmitter, below the joystick's deadman (100), above the keyboard (90). rc_driver (aav_rc) turns /vehicle/rc into a command only while the transmitter's mode switch is on RC via ROS - throttle stick x max_speed (1.0 m/s; reverse 0.5), steering stick x the steering limit, as a turn rate by the bicycle model - at the uplink's 50 Hz, zeros included, so nothing below it drives. It publishes one zero when the switch leaves RC via ROS; if /vehicle/rc goes quiet while on RC via ROS it keeps publishing zeros (a stop) until the uplink comes back. RC direct never comes here - the ESP32 drives from the sticks itself.</td>
 </tr>
 <tr>
 <td><code>/drivers/tests/cmd_vel</code></td>
@@ -370,18 +378,18 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/vehicle/status</code></td>
 <td><code>aav_interfaces/msg/VehicleStatus</code></td>
-<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code>, <code>legacy_uart_bridge</code></td>
 <td><code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
 <td>turtle, sim, bench</td>
-<td>Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.</td>
+<td>Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. legacy_uart_bridge publishes it, 10 Hz, only with uplink true (the ESP32's uplink frame on TX1, TODO 50 - off until its wire is confirmed) - speed NaN (that ESP32 has no wheel speed), steering_angle the steering Jrk's position or NaN; mode COMPUTER also while the transmitter's switch is on RC via ROS (/vehicle/rc has the switch).</td>
 </tr>
 <tr>
 <td><code>/vehicle/steering</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
-<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code>, <code>legacy_uart_bridge</code></td>
 <td><code>actuator_test</code></td>
 <td>turtle, sim, bench</td>
-<td>The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too.</td>
+<td>The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too. legacy_uart_bridge (uplink true, 50 Hz) - command ego's steering_angle while fresh (else NaN), measured the steering Jrk's scaled feedback in rad (NaN when the Jrk has no feedback set up).</td>
 </tr>
 <tr>
 <td><code>/vehicle/throttle</code></td>
@@ -394,10 +402,18 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/vehicle/brake</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
-<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code>, <code>legacy_uart_bridge</code></td>
 <td><code>actuator_test</code></td>
 <td>sim, bench</td>
-<td>The brake, 0..1. As /vehicle/throttle.</td>
+<td>The brake, 0..1. As /vehicle/throttle. legacy_uart_bridge (uplink true, 50 Hz) - command what the ESP32 drives the brake Jrk with, measured the brake Jrk's position (NaN when unknown).</td>
+</tr>
+<tr>
+<td><code>/vehicle/rc</code></td>
+<td><code>aav_interfaces/msg/RcSticks</code></td>
+<td><code>legacy_uart_bridge</code></td>
+<td><code>rc_driver</code></td>
+<td>-</td>
+<td>The RC transmitter as the car's ESP32 reads it (TODO 48), from its uplink frame, 50 Hz, only with uplink true - the mode switch (none, computer, RC via ROS, RC direct; the proposed three positions of CH6), the throttle stick signed by the gear switch, the steering stick (both -1..1, + forward, + left), the gear switch on brake. The channels and their calibration stay in the firmware (ibus RcMap).</td>
 </tr>
 <tr>
 <td><code>/vehicle/wheels</code></td>

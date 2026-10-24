@@ -7,7 +7,7 @@
 <!-- Generated from docs/esp32-bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>First flash on the bench: the Rust ESP32</h1>
-<div class="meta">11 min read · 7 sections</div></header>
+<div class="meta">16 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -70,7 +70,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
 <div class="lead"><p>The plan for the first time the Rust program (<code>firmware/spine/boards/esp32-umod</code>) goes onto
 the car's ESP32 control board. Do it with Ben, <strong>wheels off the ground</strong>, with the C++
 ready to go back on. What the program is: <a href="rust-firmware.html">Rust firmware</a>.</p>
@@ -89,9 +89,11 @@ ready to go back on. What the program is: <a href="rust-firmware.html">Rust firm
 the acceleration". Proven first with no hardware at all: the same firmware, in
 Espressif's ESP32 emulator (QEMU).</p>
 <pre class="highlight"><code class="language-text"> tools/esp32_qemu.py                         QEMU: an ESP32, running our firmware
-   aav_legacy's frames, 50 Hz ──► UART1 ──► LegacyLink ──► spine-core ──► drivers
-   reads the log          ◄────── UART0 ◄── EVENT / STATUS / DEVICES lines   │
-                                                       stand-in Jrks, DAC ◄──┘</code></pre>
+   aav_legacy's frames, 50 Hz ──► UART1 RX ──► LegacyLink ──► spine-core ──► drivers
+   reads the uplink frames ◄───── UART1 TX ◄── its status, 50 Hz      │        │
+   fake iBUS, every 7 ms ───────► UART2 RX ──► the RC receiver ───────┘        │
+   reads the log          ◄────── UART0    ◄── EVENT / STATUS / DEVICES lines  │
+                                                       stand-in Jrks, DAC ◄────┘</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -106,7 +108,7 @@ Espressif's ESP32 emulator (QEMU).</p>
 </tr>
 <tr>
 <td><code>pixi run esp-qemu-check</code></td>
-<td>builds with <code>--features qemu</code>, boots it, runs 6 cycles, prints the table</td>
+<td>builds with <code>--features qemu,uplink</code>, boots it, runs 6 cycles, then the RC's modes, prints three tables (<code>-- --no-rc</code> skips the RC)</td>
 </tr>
 </tbody>
 </table></div>
@@ -216,6 +218,132 @@ The gaps, in turn:</p>
 cycle kept driving (no timeout, 0 repeats counted) and failed.</p>
 <p>The firmware logs a <code>LINK</code> line with each <code>STATUS</code>: <code>frames=</code>, <code>bad=</code>, <code>skipped=</code>,
 <code>repeats=</code>, <code>counter=</code>.</p>
+<h3 id="results-the-uplink-and-the-rcs-modes-24-oct-bens-mac">Results: the uplink and the RC's modes, 24 Oct (Ben's Mac)</h3>
+<p>TODO 50's uplink and TODO 48's modes (<a href="rust-firmware.html#the-uplink-the-esp32s-status-back-to-the-pi-24-oct">the uplink</a>).
+The same run as the heartbeat's cycles (111-119 ms, all passed).</p>
+<p>Each cycle's uplink frames:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Cycle</th>
+<th>Gap</th>
+<th>Frames a second</th>
+<th>Echo = a counter just sent</th>
+<th>Computer, armed while driving</th>
+<th>Said stopped + fault 1 after</th>
+<th>Echo stays frozen in the gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>silence</td>
+<td>50</td>
+<td>yes</td>
+<td>yes</td>
+<td>121 ms</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2</td>
+<td>frozen</td>
+<td>51</td>
+<td>yes</td>
+<td>yes</td>
+<td>118 ms</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>bad_crc</td>
+<td>51</td>
+<td>yes</td>
+<td>yes</td>
+<td>115 ms</td>
+<td>-</td>
+</tr>
+<tr>
+<td>4</td>
+<td>silence</td>
+<td>50</td>
+<td>yes</td>
+<td>yes</td>
+<td>129 ms</td>
+<td>-</td>
+</tr>
+<tr>
+<td>5</td>
+<td>frozen</td>
+<td>51</td>
+<td>yes</td>
+<td>yes</td>
+<td>118 ms</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>bad_crc</td>
+<td>50</td>
+<td>yes</td>
+<td>yes</td>
+<td>128 ms</td>
+<td>-</td>
+</tr>
+</tbody>
+</table></div>
+<p>No uplink frame lost over the run (the sequence numbers).</p>
+<p>Then the RC, with fake iBUS frames on UART2 (CH6: 1500 = RC via ROS, 2000 = RC direct;
+the throttle stick full, the gear forward):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Does</th>
+<th>Seen</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>RC via ROS; the frames say stand still</td>
+<td>the uplink says RC via ROS, computer, RC throttle 1.0; <strong>the DAC stays 0</strong></td>
+<td>pass</td>
+</tr>
+<tr>
+<td>2</td>
+<td>RC via ROS; the frames drive</td>
+<td>the DAC follows the frames (140)</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>3</td>
+<td>RC direct; the frames say stand still</td>
+<td>mode RC direct; <strong>the sticks drive</strong> (DAC 346)</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>4</td>
+<td>RC direct, then the receiver silent</td>
+<td>fault 256 after <strong>119 ms</strong>, brake full, DAC 0</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>5</td>
+<td>RC via ROS, driving, then the receiver silent</td>
+<td>fault 256 after <strong>117 ms</strong>, brake full, DAC 0</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>6</td>
+<td>the receiver back on RC via ROS, drive frames, no stop</td>
+<td>stays stopped and latched</td>
+<td>pass</td>
+</tr>
+</tbody>
+</table></div>
+<p>The check fails when it should: built with the two-position map instead (<code>RcMap::TODAY</code>),
+steps 1, 2, 5 and 6 failed.</p>
 <h3 id="results-before-the-heartbeat-24-oct-version-1-frames-silence-only">Results before the heartbeat, 24 Oct (version 1 frames, silence only)</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -279,6 +407,14 @@ over each run they agreed to 0.1 %.</p>
 <td>✅ the real code, real bytes on UART1</td>
 </tr>
 <tr>
+<td>The uplink: the status frame on UART1's TX, its echo, the mode</td>
+<td>✅ the real code; read by aav_legacy's own <code>UplinkParser</code></td>
+</tr>
+<tr>
+<td>The RC receiver (iBUS on UART2), the three modes, a lost RC</td>
+<td>✅ the real code; the frames are fake, made by the script</td>
+</tr>
+<tr>
 <td>The Jrk, DAC and expander drivers, and their order</td>
 <td>✅ the real code; the bytes go to stand-ins</td>
 </tr>
@@ -295,8 +431,12 @@ over each run they agreed to 0.1 %.</p>
 <td>❌ a busy-wait tick instead: QEMU's interrupt matrix has no status registers</td>
 </tr>
 <tr>
-<td>The RC receiver (iBUS), the LEDs, CAN</td>
-<td>❌ silent, unwired, not built</td>
+<td>The Jrks' real feedback</td>
+<td>❌ the stand-ins say "analog" and report their target</td>
+</tr>
+<tr>
+<td>The LEDs, CAN</td>
+<td>❌ unwired, not built</td>
 </tr>
 <tr>
 <td>The real chip's timing, the Motor Pi, the cable</td>
@@ -351,7 +491,11 @@ over each run they agreed to 0.1 %.</p>
 </tr>
 <tr>
 <td>The RC transmitter</td>
-<td>the override</td>
+<td>the override; for the three modes, a three-position switch on CH6 (H10)</td>
+</tr>
+<tr>
+<td>For the uplink: the wire from the ESP32's TX1 (GPIO17) to the Pi's RX, confirmed by the hardware lead (H9)</td>
+<td>the status back up; without it, skip "The uplink and the RC modes"</td>
 </tr>
 <tr>
 <td>A multimeter</td>
@@ -517,6 +661,109 @@ over each run they agreed to 0.1 %.</p>
 </table></div>
 <p>Compare with the C++ (the table "The C++ beside the Rust" in
 <a href="rust-firmware.html">Rust firmware</a>): the differences marked ⚠️ are expected.</p>
+</section>
+<section class="card"><h2 id="the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</h2>
+<p>Only once the hardware lead says TX1 (GPIO17) reaches the Pi's RX (H9). Wheels still off
+the ground; checks 1 to 14 passed first.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pixi run esp-flash -- --features uplink</code> (or <code>tools/esp32.sh build --features uplink</code>, then flash). The first log line ends <code>with the uplink on TX1 and the three-position mode switch</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>legacy.yaml</code>: <code>frame_version: 2</code>, <strong><code>uplink: true</code></strong>; restart the bridge</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>U1</td>
+<td>Bridge running, nothing else</td>
+<td>the bridge logs <code>uplink: frames from the ESP32</code>; <code>ros2 topic hz /vehicle/rc</code> about 50; <code>/vehicle/status</code> 10. The ESP32's <code>LINK</code> line: <code>uplinks=</code> rising, <code>uplink_errors=0</code></td>
+</tr>
+<tr>
+<td>U2</td>
+<td>Unplug TX1's wire</td>
+<td>within 0.2 s the bridge warns <code>no frame from the ESP32</code>; the car still brakes and drives as before (the uplink is only news)</td>
+</tr>
+<tr>
+<td>U3</td>
+<td>Drive slowly from ROS</td>
+<td><code>/vehicle/status</code> mode 2 (computer), armed; the echo follows the Orin's counter (<code>/control/car/heartbeat</code>)</td>
+</tr>
+<tr>
+<td>U4</td>
+<td>Steer by hand from ROS, left then right</td>
+<td><code>/vehicle/steering</code> measured follows, + left. NaN: that Jrk has no feedback set up (D6)</td>
+</tr>
+<tr>
+<td>U5</td>
+<td>Brake from ROS (stop)</td>
+<td><code>/vehicle/brake</code> measured rises to about the command (0.3 hold, 1.0 full)</td>
+</tr>
+<tr>
+<td>U6</td>
+<td>Stop the Orin's output mux</td>
+<td><code>/vehicle/status</code> faults has 1 within 0.2 s, mode 0</td>
+</tr>
+<tr>
+<td>R1</td>
+<td>Transmitter on, CH6 <strong>low</strong></td>
+<td><code>/vehicle/rc</code> mode_switch 1 (computer); the sticks move its numbers, but nothing drives</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>CH6 <strong>middle</strong> (RC via ROS), sticks centred</td>
+<td>mode_switch 2; <code>rc_driver</code> logs <code>RC via ROS</code>; <code>/drivers/rc/cmd_vel</code> zeros at 50 Hz; twist_mux passes it (<code>/control/cmd_vel</code>)</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>A little throttle, gear forward</td>
+<td>the wheels turn, <strong>through ego</strong>: its speed and steering-rate limits; <code>/vehicle/status</code> mode 2</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>Steer with the stick while rolling</td>
+<td>the wheels steer (standing still they don't: the bicycle model)</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>Transmitter off while on RC via ROS</td>
+<td>within 0.1 s: brake full, faults 256; stays braked when it comes back, until the stick is centred (a stop), then drives</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>CH6 <strong>high</strong> (RC direct)</td>
+<td><code>/vehicle/status</code> mode 1; the ESP32 drives from the sticks, as check 10; ROS can't</td>
+</tr>
+<tr>
+<td>R7</td>
+<td>Transmitter off while on RC direct</td>
+<td>as check 11: brake full, faults 256</td>
+</tr>
+<tr>
+<td>R8</td>
+<td>Stop the bridge while on RC via ROS</td>
+<td>the heartbeat stops: brake full within 0.2 s (fault 1). RC direct still works: the fallback</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="4-roll-back-to-the-c">4. Roll back to the C++</h2>
 <p>Any time something is wrong:</p>
