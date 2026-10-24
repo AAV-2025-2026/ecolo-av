@@ -71,7 +71,9 @@ def test_every_machine_file_loads_and_starts(machine):
 def test_every_machine_runs_rfdetr(machine):
     # RF-DETR is the car's detector since 20 Oct; YOLO stays one line away in each file.
     assert CAR.load_machine(machine)['detector']['detector'] == 'rfdetr'
-    assert 'model' not in CAR.load_machine(machine)['detector']   # rf-detr-nano.pth
+    # The Orin runs it in TensorRT (Ben, 23 Oct); the others its .pth, through PyTorch.
+    model = CAR.load_machine(machine)['detector'].get('model')
+    assert model == ('models/rf-detr-nano.engine' if machine == 'orin' else None)
 
 
 def test_the_detector_needs_its_own_library(monkeypatch, tmp_path):
@@ -86,6 +88,12 @@ def test_the_detector_needs_its_own_library(monkeypatch, tmp_path):
     sent = included(CAR.detector(context, 'orin', {'detector': 'yolo', 'model': str(yolo)}))
     assert sent['detector.launch.py']['detector'] == 'yolo'
     assert asked == [['torch', 'rfdetr'], ['torch', 'ultralytics']]
+    # RF-DETR's TensorRT engine needs TensorRT too.
+    engine = tmp_path / 'rf-detr-nano.engine'
+    engine.write_text('')
+    sent = included(CAR.detector(context, 'orin', {'detector': 'rfdetr', 'model': str(engine)}))
+    assert sent['detector.launch.py']['model'] == str(engine)
+    assert asked[-1] == ['torch', 'rfdetr', 'tensorrt']
 
 
 def test_a_model_the_detector_cant_load_is_an_error():

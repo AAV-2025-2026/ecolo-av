@@ -1679,7 +1679,7 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
 def main():
     args = sys.argv[1:]
     perception = '--perception' in args
-    if perception and importlib.util.find_spec('ultralytics') is None:
+    if perception and importlib.util.find_spec('rfdetr') is None:   # the detector's default
         print('--perception needs the detector: pixi run -e ml sim-check --perception',
               file=sys.stderr)
         return 2

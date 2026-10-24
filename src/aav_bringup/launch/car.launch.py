@@ -97,8 +97,9 @@ SECTIONS = ('parts', 'detector')
 FORMATS = {
     '.pth': ([], 'pixi run get-models'),
     '.pt': ([], 'pixi run get-models'),
-    '.mlpackage': (['coremltools'], 'pixi run -e ml export-coreml (on a Mac)'),
-    '.engine': (['tensorrt'], 'python3 tools/build_engine.py (on this computer)'),
+    '.mlpackage': (['coremltools'], 'pixi run -e ml export-coreml [its .pth or .pt] (on a Mac)'),
+    '.engine': (['tensorrt'], 'python3 tools/build_engine.py [its .pth or .pt] (on this '
+                              'computer, with the python3 of JetPack)'),
 }
 # Prints the modules a python3 lacks. find_spec looks without importing: no time at all.
 MISSING = ('import importlib.util as u, sys; '
