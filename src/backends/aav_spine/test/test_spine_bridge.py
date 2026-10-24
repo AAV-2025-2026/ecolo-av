@@ -59,6 +59,9 @@ def test_arming_sends_the_edge(bridge):
     fresh_command(bridge)
     assert armed_flags(bridge, 2) == [False, False]
     assert arm(bridge).success
+    # Fresh again: on a loaded machine the first command went stale before this (24 Oct),
+    # and the bridge rightly sent nothing.
+    fresh_command(bridge)
     assert armed_flags(bridge, 5) == [False, False, False, True, True]
 
 
@@ -69,6 +72,7 @@ def test_arming_again_sends_the_edge_again(bridge):
     arm(bridge)
     armed_flags(bridge, 5)
     arm(bridge)
+    fresh_command(bridge)
     assert armed_flags(bridge, 5) == [False, False, False, True, True]
 
 
