@@ -1,0 +1,23 @@
+[Unit]
+Description=AAV GNSS Node and RTK Stream
+
+[Service]
+Type=simple
+User=<YOUR_USERNAME>
+
+# 1. Set the working directory to your ROS 2 workspace
+WorkingDirectory=/home/<YOUR_USERNAME>/<YOUR_WORKSPACE>
+
+# 2. Define the isolated environment variables
+Environment="HOME=/home/<YOUR_USERNAME>"
+Environment="ROS_DOMAIN_ID=0"
+
+# 3. Define the path to the wrapper script
+ExecStart=/bin/bash /home/<YOUR_USERNAME>/start_gnss.sh
+
+# Automatically restart if the node crashes
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

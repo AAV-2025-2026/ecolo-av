@@ -1,0 +1,22 @@
+# Colcon / ROS2 build artifacts
+build/
+install/
+log/
+
+# Python cache files
+*.pyc
+__pycache__/
+
+# Editor / IDE files
+.vscode/
+*.swp
+*.swo
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Optional: temporary files
+*.tmp
+*.bak
