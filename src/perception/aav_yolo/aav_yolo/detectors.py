@@ -150,9 +150,11 @@ class RfdetrTensorrt(RfdetrExported):
         self.torch = torch
         self.model, self.device = model, 'tensorrt'
         self.names = coco_names()
-        logger = trt.Logger(trt.Logger.WARNING)
-        with open(model, 'rb') as f, trt.Runtime(logger) as runtime:
-            self.engine = runtime.deserialize_cuda_engine(f.read())
+        # The logger and runtime must outlive the engine they made: keep all three.
+        self.logger = trt.Logger(trt.Logger.WARNING)
+        self.runtime = trt.Runtime(self.logger)
+        with open(model, 'rb') as f:
+            self.engine = self.runtime.deserialize_cuda_engine(f.read())
         if self.engine is None:
             raise RuntimeError(f"{model}: TensorRT can't load it. An engine runs only on "
                                'the GPU and TensorRT version that built it: build it here, '
