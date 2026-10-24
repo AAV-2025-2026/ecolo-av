@@ -406,7 +406,11 @@ on Fast DDS).</p>
 AAV_RMW=fastdds pixi run ros2 topic list   # and every other</code></pre>
 <p>⚠️ <strong>To check at the car:</strong> Cyclone uses one network card, not all of them as Fast DDS
 did. A computer with two (the localization Pi has Ethernet and Carleton's WiFi) may pick
-the wrong one. Then name the car's network in a <code>CYCLONEDDS_URI</code> file on that computer.</p>
+the wrong one. Then name the car's network in <code>~/.config/aav/cyclonedds.xml</code> on that computer:
+<code>tools/ros.sh</code> adds it after the team's settings (<code>tools/cyclonedds.xml</code>).</p>
+<p>The team's settings raise one limit: ROS lets 32 programs share one computer when
+discovery stays on it, and the whole Gazebo graph starts more. On Linux the 33rd failed
+("Failed to find a free participant index"); with 120, 45 test programs all started.</p>
 </section>
 <section class="card"><h2 id="macos-hides-one-setting-from-ros">macOS hides one setting from ROS</h2>
 <div class="table-wrap"><table>
