@@ -177,3 +177,28 @@ def test_detections_rules_are_checked():
     with pytest.raises(ValueError, match='frozen'):
         Rule('x', '/perception/detections', 'detections', max_age=1.0,
              frame_id='camera_left_link', frozen_after=1.0)
+
+
+def test_traffic_is_the_rate_and_the_gaps_for_people():
+    watch = Watchdog([IMU]).watches['imu']
+    assert watch.traffic(5.0) == (0.0, 0.0, 0.0)      # nothing yet
+    for i in range(10):                               # 10 Hz for a second
+        watch.arrived(10.0 + i * 0.1, (0.0, 0.0, float(i)), digest=i)
+    rate, gap, worst = watch.traffic(10.95)
+    assert rate == pytest.approx(10 / 0.95)
+    assert gap == pytest.approx(0.1) and worst == pytest.approx(0.1)
+    watch.arrived(11.5, (0.0, 0.0, 1.0), digest=10)   # 0.6 s of silence, then one
+    rate, gap, worst = watch.traffic(12.0)
+    assert rate == pytest.approx(1 / 1.05)
+    assert gap == pytest.approx(0.6) and worst == pytest.approx(0.6)
+
+
+def test_traffic_counts_a_silence_that_has_not_ended():
+    watch = Watchdog([ODOM]).watches['odom']
+    watch.arrived(1.0, (0.0, 0.0))
+    watch.traffic(1.5)
+    rate, gap, worst = watch.traffic(4.0)             # silent since 1.0
+    assert rate == 0.0 and gap == pytest.approx(3.0) and worst == pytest.approx(3.0)
+    watch.arrived(4.1, (0.0, 0.0))
+    _, gap, worst = watch.traffic(4.2)
+    assert gap == pytest.approx(3.1) and worst == pytest.approx(3.1)
