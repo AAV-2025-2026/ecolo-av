@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>aav_camera_stream</name>
+  <version>0.1.0</version>
+  <description>One node per camera: pulls the camera Pi's RTSP H.264 stream (MediaMTX), decodes it (ffmpeg, or GStreamer with NVIDIA's decoder on the Orin), undistorts it with OpenCV and runs aav_yolo's detector on it in the same process. Publishes detections, the lens, a small preview and diagnostics. Also the camera Pi's MediaMTX settings (pi/). docs/camera-pipeline.md.</description>
+  <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
+  <license>TODO</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>aav_interfaces</exec_depend>
+  <exec_depend>aav_yolo</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>vision_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
