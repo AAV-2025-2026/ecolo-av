@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">26 min read · 11 sections</div></header>
+<div class="meta">27 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -471,6 +471,11 @@ answer.</p>
 <td><strong>The wheel sensors are read by an Arduino</strong>, which sends CAN frames; the Orin reads the bus and publishes them in ROS</td>
 <td>The hardware side's plan. The frames are in <code>aav.dbc</code> already (0x200, 0x201), and the Orin's side decodes them, so the Arduino only has to send them. An exception to "Rust for all firmware": it's the hardware lead's board</td>
 <td>Ben, 23 Oct, for the hardware side</td>
+</tr>
+<tr>
+<td><em>Tentative, until the hardware lead confirms:</em> <strong>today's car is driven through the Motor Pi's UART</strong>, and <strong>the Orin reads its CAN bus for sensors only</strong> (<code>car.launch.py actuators:=uart</code>, the default; <code>spine_bridge role:=sensors</code>). The CAN spine stays one argument away (<code>actuators:=can</code>)</td>
+<td>Ben's picture of the wiring: the actuators on the ESP32, with the Motor Pi as its network interface; the CAN bus straight to the Orin, with the wheel sensors. A <code>role</code> on <code>spine_bridge</code>, not a new node: the wheel decoding is already there and tested, and the sensors role has no way to send (<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>)</td>
+<td>Ben, 23 Oct: "the motor controllers are on the esp32 with a pi as its network interface"</td>
 </tr>
 <tr>
 <td><strong>The cameras stream to the Orin with MediaMTX, compressed (H.264) on the Pi</strong>; the Orin unpacks them with NVIDIA's video hardware, then OpenCV and the object detector (RF-DETR Nano, in TensorRT) run on them, in one program per camera</td>

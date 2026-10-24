@@ -1,4 +1,4 @@
-# The KEFC CAN plan and our CAN contract (14 October)
+# The CAN bus: today's wiring, and the KEFC plan
 
 Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and throttle on
 a CAN bus. Our code already has a CAN contract, `firmware/can/aav.dbc` (v0.1.0). This page
@@ -10,7 +10,63 @@ node boards is **the hardware lead's decision**, with the team (Ben, 15 Oct: "I 
 on the other people to make the final decisions. There is a hardware lead that isn't me").
 No parts are ordered until then.
 
-## The plan in one picture
+## Today's wiring (23 October)
+
+**As Ben understands it; the hardware lead confirms.** Ben, 23 Oct: "the motor controllers
+are on the esp32 with a pi as its network interface ... The can bus will be tied directory
+to the orin not going thorugh the esp32. That will have the wheel encoders".
+
+```text
+                         network (ROS 2)
+Orin ───────────────────────────────────────────── Motor Pi ── UART? ── ESP32
+ │  ego, output mux                               legacy_uart_bridge     throttle, steering,
+ │                                                                       brake (maybe the steering
+ └─ CAN ──┬──────────────┐                                               angle, brake position)
+          │              │
+   wheel sensors     other sensors?
+   (an Arduino:      (not known yet)
+    0x200, 0x201)
+```
+
+| | Today's wiring | The KEFC plan (below) |
+|---|---|---|
+| Who drives the actuators | the ESP32, reached through the **Motor Pi** (probably serial) | the ESP32, on **CAN** |
+| The car's backend | `legacy_uart_bridge` on the Motor Pi | `spine_bridge`, role spine, on the Orin |
+| What the Orin's CAN bus carries | **sensors only**: the wheel frames, and a few others | drive commands, feedback, the wheel frames |
+| The wheel sensors | an Arduino (the hardware lead's board, Arduino C++) | a Rust ESP32-CAN-X2 per wheel |
+| The frames | the same: `aav.dbc` 0x200, 0x201 | the same |
+| `car.launch.py` | `actuators:=uart` (the default) | `actuators:=can` |
+
+### What runs where, today
+
+| Machine | Runs | Topics |
+|---|---|---|
+| Orin | `socket_can_receiver` (no sender) and `spine_bridge role:=sensors` | `/can/rx` in; `/vehicle/odom`, `/vehicle/wheels` out |
+| Motor Pi | `legacy_uart_bridge` | `/control/car/actuator_cmd` in (from the output mux); UART frames out |
+
+`spine_bridge role:=sensors` **can't drive**: it has no `/can/tx` publisher, no
+`/spine/arm` service and no `/safety/estop` subscription, and it ignores the spine's
+frames (0x180, 0x181). On `/system/source` it names only `odometry` and `wheels`, never an
+actuator. The output mux's guard test checks this, in Rust and in Python.
+
+| `/vehicle/odom`, role sensors | How |
+|---|---|
+| Speed | the two front wheels' mean, while both are fresh. One stale: nothing (the sensor watchdog sees it stop) |
+| Sign | the wheel's, if it measures it; else the last command's (one Hall sensor can't tell direction) |
+| Yaw rate | not measured (covariance 1e3): the steering angle isn't on this bus. `ekf_local` takes it from the IMU |
+
+!!! warning "Give every machine the same `actuators:=`"
+    `actuators:=can` on the Orin and `uart` on the Motor Pi would start two backends. The
+    wiring makes it moot (the ESP32 listens on one link), but don't mix them.
+
+The 2025-26 UDP wheel encoder (`encoder_udp`, a Pico 2) is off in `motor_pi.yaml`: the
+wheels are on CAN now, and two `/vehicle/odom` publishers would stop the output mux.
+
+The Rust ESP32 firmware's 100 ms command timeout then sits on the UART link, not on CAN:
+see [First flash on the bench](esp32-bench.md). Open questions for the hardware lead:
+[Questions](audit-questions.md#8-the-cars-wiring-for-the-hardware-lead-23-oct).
+
+## The KEFC plan in one picture
 
 ```text
 Orin #1 ── CAN Pal (40-pin header) ──┬──────────────┬──────────────┐

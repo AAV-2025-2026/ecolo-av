@@ -16,6 +16,12 @@ The real car. One launch file for every machine; a machine file picks the parts.
                            a session with no HUD screen, said in the test card)
       [bridge:=rust]      (spine_bridge's language, where the machine runs the spine: rust,
                            aav_spine_bridge; or python, aav_spine's)
+      [actuators:=uart]   (who drives the car: docs/can-plan.md. uart, the car as wired
+                           today (Ben, 23 Oct; the hardware lead confirms): the ESP32,
+                           through legacy_uart_bridge on the Motor Pi, and the Orin's CAN
+                           bus for sensors only (spine_bridge role:=sensors). can: the
+                           KEFC plan's CAN spine drives, and legacy_uart doesn't start.
+                           Give every machine the same value)
 
 machine: config/machines/<machine>.yaml lists which parts run on that computer
 (orin, motor_pi, laptop, all), and the detector's settings there. Every machine uses the
@@ -59,9 +65,13 @@ Parts and what they start:
                   collision_monitor stops Nav2 for radar points just ahead; with
                   camera_obstacles, the camera's points; with lidar, /sensors/lidar/points
                   (and collision_monitor stops Nav2 for lidar points, or a silent lidar)
-  spine           backend: CAN spine (ros2_socketcan + spine_bridge)
-  legacy_uart     backend: today's ESP32 over UART (the Pi wired to it)
-  legacy_encoder  today's wheel encoder over UDP
+  spine           the CAN bus, on the machine it is wired to (the Orin): ros2_socketcan +
+                  spine_bridge. actuators:=uart: role sensors, the wheel nodes' frames
+                  into /vehicle/odom and /vehicle/wheels, nothing sent (no CAN sender
+                  starts). actuators:=can: role spine, the backend. Linux only (SocketCAN)
+  legacy_uart     backend with actuators:=uart: today's ESP32 over UART (the Pi wired to it)
+  legacy_encoder  the 2025-26 wheel encoder over UDP (a Pico 2). Not where the spine part
+                  runs: both would publish /vehicle/odom, and the output mux stops for two
   foxglove        foxglove_bridge on port 8765, for Foxglove Studio on a laptop
 
 The detector runs as `python3 -m aav_yolo.detector`, the python3 of the environment that
@@ -224,6 +234,9 @@ def launch_setup(context):
     machine = arg('machine')
     config = load_machine(machine)
     parts = config['parts']
+    # Who drives the car (docs/can-plan.md): uart, today's wiring, leaves the CAN bus to
+    # the sensors (spine_bridge role sensors); can, the KEFC spine (role spine).
+    role = bridges.role_for(arg('actuators'))
 
     def on(name):
         # A launch argument can switch a part off, wherever the machine file has it.
@@ -312,12 +325,26 @@ def launch_setup(context):
                                camera_obstacles=on('camera_obstacles'),
                                camera_guard=rear_camera,
                                reversing=reversing))
+    # Exactly one backend: legacy_uart_bridge with actuators:=uart, the CAN spine with can.
+    uart, encoder = on('legacy_uart'), on('legacy_encoder')
     if on('spine'):
         bridges.package(arg('bridge'))   # rust or python: refuse anything else now
-        actions.append(include('aav_spine', 'spine.launch.py', bridge=arg('bridge')))
-    if on('legacy_uart') or on('legacy_encoder'):
-        actions.append(include('aav_legacy', 'legacy.launch.py',
-                               uart=on('legacy_uart'), encoder=on('legacy_encoder')))
+        if installed('ros2_socketcan'):
+            actions.append(include('aav_spine', 'spine.launch.py', bridge=arg('bridge'),
+                                   role=role))
+        else:
+            actions += skipped('spine', 'ros2_socketcan is not installed here (SocketCAN is '
+                                        'Linux only)')
+        if encoder:
+            skipped('legacy_encoder', 'the CAN wheel nodes give /vehicle/odom here; two '
+                                      'publishers would stop the output mux')
+            encoder = False
+    if uart and role == 'spine':
+        skipped('legacy_uart', 'actuators:=can: the CAN spine drives the car, and only one '
+                               'backend may')
+        uart = False
+    if uart or encoder:
+        actions.append(include('aav_legacy', 'legacy.launch.py', uart=uart, encoder=encoder))
     if on('foxglove'):
         actions.append(Node(package='foxglove_bridge', executable='foxglove_bridge',
                             name='foxglove_bridge', parameters=[{'port': 8765}]))
@@ -369,5 +396,11 @@ def generate_launch_description():
         DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
                               description='spine_bridge in rust (aav_spine_bridge) or python '
                                           '(aav_spine), where the machine runs the spine'),
+        # The car's wiring, as Ben described it on 23 Oct (the hardware lead confirms):
+        # the ESP32 through the Motor Pi's UART, the Orin's CAN bus for sensors.
+        DeclareLaunchArgument('actuators', default_value=bridges.DEFAULT_ACTUATORS,
+                              description='uart: legacy_uart_bridge drives (the Motor Pi), '
+                                          'the CAN bus is read for sensors only; can: the '
+                                          'CAN spine drives. The same on every machine'),
         OpaqueFunction(function=launch_setup),
     ])

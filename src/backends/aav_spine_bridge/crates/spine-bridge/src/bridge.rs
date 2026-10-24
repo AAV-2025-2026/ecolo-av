@@ -1,6 +1,6 @@
 //! The bridge's state: what it sends the spine, and what it makes of what it hears.
 
-use std::{fmt, time::Duration};
+use std::{fmt, str::FromStr, time::Duration};
 
 use spine_core::protocol::{
     decode_report, DriveCmd, EstopCmd, FrameError, Mode, Report, VehicleFeedback, VehicleStatus,
@@ -38,9 +38,66 @@ impl Geometry {
     }
 }
 
+/// What the bridge does on its bus (the `role` parameter).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Role {
+    /// The CAN spine drives the car: the bridge sends DRIVE_CMD and ESTOP_CMD, and reads
+    /// every frame back.
+    #[default]
+    Spine,
+    /// The car is driven another way (today: the ESP32, through the Motor Pi's UART). The
+    /// bridge only listens, and only to the wheel nodes: it never sends a frame, and it
+    /// ignores VEHICLE_FEEDBACK and VEHICLE_STATUS, which only a spine sends.
+    Sensors,
+}
+
+impl Role {
+    /// The names the `role` parameter takes.
+    pub const NAMES: [&'static str; 2] = ["spine", "sensors"];
+
+    /// The bridge sends frames on the bus: DRIVE_CMD and ESTOP_CMD.
+    pub fn sends(self) -> bool {
+        self == Role::Spine
+    }
+}
+
+/// A `role` parameter that is neither `spine` nor `sensors`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnknownRole(pub String);
+
+impl fmt::Display for UnknownRole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "role:={}: use one of {:?}", self.0, Role::NAMES)
+    }
+}
+
+impl std::error::Error for UnknownRole {}
+
+impl FromStr for Role {
+    type Err = UnknownRole;
+
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        match name {
+            "spine" => Ok(Role::Spine),
+            "sensors" => Ok(Role::Sensors),
+            other => Err(UnknownRole(other.into())),
+        }
+    }
+}
+
+impl fmt::Display for Role {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Role::Spine => "spine",
+            Role::Sensors => "sensors",
+        })
+    }
+}
+
 /// The bridge's settings: its ROS parameters.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Settings {
+    pub role: Role,
     pub geometry: Geometry,
     /// Stop sending DRIVE_CMD when ego's last command is older.
     pub cmd_timeout: Duration,
@@ -238,9 +295,10 @@ impl Bridge {
         }
     }
 
-    /// The DRIVE_CMD tick (50 Hz): a frame only while ego's command is fresh.
+    /// The DRIVE_CMD tick (50 Hz): a frame only while ego's command is fresh, and never in
+    /// [`Role::Sensors`] (its node has no tick; this is the second lock).
     pub fn drive(&mut self, now: Duration) -> Drive {
-        let Some((cmd, time)) = self.command else {
+        let Some((cmd, time)) = self.command.filter(|_| self.settings.role.sends()) else {
             return Drive::NoCommand;
         };
         if now.saturating_sub(time) > self.settings.cmd_timeout {
@@ -269,7 +327,8 @@ impl Bridge {
     // spine -> Orin
 
     /// One frame from the bus (/can/rx), at `now`. Frames for other IDs are not ours:
-    /// `Ok(None)`, as is a wheel frame that waits for its partner.
+    /// `Ok(None)`, as is a wheel frame that waits for its partner. In [`Role::Sensors`]
+    /// only the wheel nodes' frames count: a spine's are `Ok(None)` too.
     pub fn receive(
         &mut self,
         id: u16,
@@ -289,6 +348,7 @@ impl Bridge {
             }
         };
         Ok(match report {
+            Report::Feedback(_) | Report::Status(_) if !self.settings.role.sends() => None,
             Report::Feedback(feedback) => Some(Update::Motion(self.motion(feedback, now))),
             Report::Status(status) => Some(Update::Status(self.status(status))),
             Report::WheelSpeed(frame) => self

@@ -14,6 +14,7 @@ from launch.actions import IncludeLaunchDescription
 from launch.conditions import InvalidConditionExpressionError
 from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
+from launch_ros.utilities import evaluate_parameters
 import pytest
 
 
@@ -311,10 +312,86 @@ def test_the_spine_bridge_is_the_rust_one_unless_asked():
     assert ('aav_spine', 'spine_bridge') in nodes(started(bench, bridge='python'))
 
 
-def test_the_car_passes_its_bridge_choice_to_the_spine(monkeypatch):
+@pytest.fixture
+def socketcan(monkeypatch):
+    """ros2_socketcan as if installed (it's Linux only), so the spine part starts."""
+    real = CAR.installed
+    monkeypatch.setattr(CAR, 'installed', lambda p: p == 'ros2_socketcan' or real(p))
+
+
+def test_the_car_passes_its_bridge_choice_to_the_spine(monkeypatch, socketcan):
     monkeypatch.setattr(CAR, 'load_machine', lambda machine: {'parts': {'spine': True}})
     assert included(started(CAR, machine='orin'))['spine.launch.py']['bridge'] == 'rust'
     sent = included(started(CAR, machine='orin', bridge='python'))['spine.launch.py']
     assert sent['bridge'] == 'python'
     with pytest.raises(ValueError, match='bridge:=cpp'):
         started(CAR, machine='orin', bridge='cpp')
+
+
+# The car's wiring, as Ben described it on 23 Oct (the hardware lead confirms): the
+# actuators on the ESP32, driven through the Motor Pi's UART; the CAN bus straight to the
+# Orin, with the wheel sensors on it (docs/can-plan.md).
+
+def test_the_car_as_wired_today(socketcan):
+    # The Orin reads its CAN bus for the wheels only...
+    orin = included(started(CAR, machine='orin'))
+    assert orin['spine.launch.py']['role'] == 'sensors'
+    assert 'legacy.launch.py' not in orin
+    # ...and the Motor Pi drives the ESP32, with no UDP encoder beside the CAN wheels.
+    motor_pi = included(started(CAR, machine='motor_pi'))
+    assert motor_pi['legacy.launch.py'] == {'uart': 'true', 'encoder': 'false'}
+    assert 'spine.launch.py' not in motor_pi
+    # One computer with everything: the same two.
+    everything = included(started(CAR, machine='all'))
+    assert everything['spine.launch.py']['role'] == 'sensors'
+    assert everything['legacy.launch.py'] == {'uart': 'true', 'encoder': 'false'}
+
+
+def test_actuators_can_makes_the_can_spine_the_one_backend(socketcan):
+    assert included(started(CAR, machine='orin', actuators='can'))['spine.launch.py'][
+        'role'] == 'spine'
+    assert 'legacy.launch.py' not in included(started(CAR, machine='motor_pi',
+                                                      actuators='can'))
+    everything = included(started(CAR, machine='all', actuators='can'))
+    assert everything['spine.launch.py']['role'] == 'spine'
+    assert 'legacy.launch.py' not in everything
+    with pytest.raises(ValueError, match='actuators:=pwm'):
+        started(CAR, machine='orin', actuators='pwm')
+
+
+def test_the_udp_encoder_never_runs_beside_the_can_wheels(monkeypatch, socketcan):
+    # Both would publish /vehicle/odom: the sensor mux would doubt, and the output mux stop.
+    monkeypatch.setattr(CAR, 'load_machine', lambda machine: {'parts': {
+        'spine': True, 'legacy_uart': True, 'legacy_encoder': True}})
+    assert included(started(CAR, machine='orin'))['legacy.launch.py'] == {
+        'uart': 'true', 'encoder': 'false'}
+    monkeypatch.setattr(CAR, 'load_machine', lambda machine: {'parts': {
+        'legacy_uart': True, 'legacy_encoder': True}})
+    assert included(started(CAR, machine='orin'))['legacy.launch.py']['encoder'] == 'true'
+
+
+def test_no_socketcan_skips_the_can_bus(monkeypatch):
+    monkeypatch.setattr(CAR, 'installed', lambda p: p != 'ros2_socketcan')
+    sent = included(started(CAR, machine='orin'))
+    assert 'spine.launch.py' not in sent
+
+
+def test_the_sensors_role_starts_no_can_sender():
+    spine = load('aav_spine', 'spine.launch.py')
+
+    def socketcan_parts(**args):
+        # The path as written: ros2_socketcan is Linux only, so it may not resolve here.
+        return {part for a in spine.bus(context_for(spine, **args))
+                for part in ('receiver', 'sender')
+                if f'socket_can_{part}.launch.py' in str(a.launch_description_source.location)}
+
+    assert socketcan_parts(role='sensors') == {'receiver'}
+    assert socketcan_parts() == {'receiver', 'sender'}
+    for role in ('sensors', 'spine'):
+        context = context_for(spine, role=role)
+        [node] = spine.bridge(context)
+        given = [p for p in evaluate_parameters(context, node._Node__parameters)
+                 if isinstance(p, dict)]
+        assert any(p.get('role') == role for p in given), role
+    with pytest.raises(ValueError, match='role:=drive'):
+        spine.bus(context_for(spine, role='drive'))

@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">33 min read · 15 sections</div></header>
+<div class="meta">34 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -914,11 +914,11 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><strong>Why</strong></td>
-<td>the future real car: one CAN bus between the Orin and the actuators</td>
+<td>the future real car: one CAN bus between the Orin and the actuators. Today (<code>role:=sensors</code>, <code>car.launch.py actuators:=uart</code>): only reads the wheel sensors on the Orin's CAN bus, and sends nothing (<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>)</td>
 </tr>
 <tr>
 <td><strong>Runs on</strong></td>
-<td>the Orin (<code>spine: false</code> until the spine exists)</td>
+<td>the Orin (<code>spine: true</code> in <code>orin.yaml</code>: the CAN bus is wired to it)</td>
 </tr>
 <tr>
 <td><strong>In → out</strong></td>

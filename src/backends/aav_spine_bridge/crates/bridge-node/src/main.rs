@@ -26,8 +26,19 @@
 //!                                   `source` parameter)
 //! Service     spine/arm             std_srvs/SetBool
 //! Parameters  wheelbase, track (m), cmd_timeout, wheel_timeout (s), drive_rate_hz,
-//!             estop_rate_hz, speed_variance, yaw_rate_variance, steering_joints, source;
-//!             aav_spine's config/spine.yaml
+//!             estop_rate_hz, speed_variance, yaw_rate_variance, steering_joints, source,
+//!             role; aav_spine's config/spine.yaml
+//!
+//! role:=spine (the default) is all of the above. role:=sensors is for a car driven
+//! another way (today's: the ESP32, through the Motor Pi's UART, docs/can-plan.md): the
+//! node only reads the wheel nodes' frames on can/rx, and has
+//!   no can/tx publisher, no safety/estop subscription, no spine/arm service, and none
+//!   of vehicle/status, joint_states, steering, throttle, brake;
+//!   vehicle/odom from the wheels alone (their mean while both are fresh; the yaw rate
+//!   unmeasured: the steering angle isn't on the bus), and vehicle/wheels;
+//!   system/source: only odometry and wheels, never the actuators.
+//! It still reads control/<target>/actuator_cmd, only to sign a wheel that sends a
+//! magnitude (one Hall sensor can't tell which way it turns).
 //!
 //! The same node as aav_spine's spine_bridge.py, topic for topic. The frames are
 //! firmware/can/aav.dbc, packed by the firmware's own code (spine-core), and the logic is
@@ -53,11 +64,11 @@ use ros_env::sensor_msgs::msg::JointState;
 use ros_env::std_msgs::msg::{Bool, Header};
 use ros_env::std_srvs::srv::{SetBool, SetBool_Request, SetBool_Response};
 use spine_bridge::{
-    Bridge, Command, Drive, Geometry, Motion, Reading, Settings, Status, Update, DRIVE_CMD_ID,
-    ESTOP_CMD_ID,
+    Bridge, Command, Drive, Geometry, Motion, Reading, Role, Settings, Status, Update,
+    DRIVE_CMD_ID, ESTOP_CMD_ID,
 };
 
-/// What this node publishes, for /system/source.
+/// What this node publishes, for /system/source, in role spine.
 const ANNOUNCED: [(&str, &str); 6] = [
     ("vehicle", "/vehicle/status"),
     ("odometry", "/vehicle/odom"),
@@ -66,6 +77,9 @@ const ANNOUNCED: [(&str, &str); 6] = [
     ("brake", "/vehicle/brake"),
     ("wheels", "/vehicle/wheels"),
 ];
+/// In role sensors: the wheels only. No actuators.
+const ANNOUNCED_SENSORS: [(&str, &str); 2] =
+    [("odometry", "/vehicle/odom"), ("wheels", "/vehicle/wheels")];
 /// How often a repeated warning may be logged.
 const WARN_EVERY: Duration = Duration::from_secs(2);
 /// Covariance of what isn't measured: z, roll and pitch, and the whole pose.
@@ -80,7 +94,9 @@ fn main() -> Result<()> {
 
     let params = Params::declare(&node)?;
     let source = Source::parse(&params.source.get())?;
+    let role: Role = params.role.get().parse()?;
     let settings = Settings {
+        role,
         geometry: Geometry {
             wheelbase: params.wheelbase.get(),
             track: params.track.get(),
@@ -103,15 +119,28 @@ fn main() -> Result<()> {
             .map(|j| j.to_string())
             .collect(),
         out: Outputs {
-            can: node.create_publisher("can/tx".keep_last(50))?,
             odom: node.create_publisher("vehicle/odom")?,
-            status: node.create_publisher("vehicle/status")?,
             wheels: node.create_publisher("vehicle/wheels")?,
-            joints: node.create_publisher("vehicle/joint_states")?,
-            steering: node.create_publisher("vehicle/steering")?,
-            throttle: node.create_publisher("vehicle/throttle")?,
-            brake: node.create_publisher("vehicle/brake")?,
+            // In role sensors, none of these exist: nothing to put on the bus, and no
+            // topic the actuators would own.
+            spine: if role.sends() {
+                Some(SpineOutputs {
+                    can: node.create_publisher("can/tx".keep_last(50))?,
+                    status: node.create_publisher("vehicle/status")?,
+                    joints: node.create_publisher("vehicle/joint_states")?,
+                    steering: node.create_publisher("vehicle/steering")?,
+                    throttle: node.create_publisher("vehicle/throttle")?,
+                    brake: node.create_publisher("vehicle/brake")?,
+                })
+            } else {
+                None
+            },
         },
+    };
+    let announced: &[(&str, &str)] = if role.sends() {
+        &ANNOUNCED
+    } else {
+        &ANNOUNCED_SENSORS
     };
 
     // Said once, latched: where this node's data comes from.
@@ -124,7 +153,7 @@ fn main() -> Result<()> {
             frame_id: String::new(),
         },
         announcer: node.name(),
-        sensors: ANNOUNCED
+        sensors: announced
             .iter()
             .map(|(name, topic)| SensorSource {
                 name: (*name).into(),
@@ -136,6 +165,7 @@ fn main() -> Result<()> {
 
     // One worker: its callbacks take turns with the state, as the Python's did.
     let worker = node.create_worker(state);
+    // In role sensors, only to sign a wheel that sends a magnitude.
     let _command = worker.create_subscription(
         source.commands(),
         |s: &mut State, msg: AckermannDriveStamped| {
@@ -151,49 +181,83 @@ fn main() -> Result<()> {
             );
         },
     )?;
-    let _estop = worker.create_subscription("safety/estop", |s: &mut State, msg: Bool| {
-        if let Some(frame) = s.bridge.set_estop(msg.data) {
-            s.send(ESTOP_CMD_ID, &frame.encode());
-        }
-    })?;
     let _frames = worker
         .create_subscription("can/rx".keep_last(100), |s: &mut State, frame: Frame| {
             s.on_frame(&frame)
         })?;
-    let _arm = worker.create_service::<SetBool, _>(
-        "spine/arm",
-        |s: &mut State, request: SetBool_Request| {
-            let (success, message) = match s.bridge.arm(request.data) {
-                Ok(arming) => {
-                    log_info!(&s.logger, "{arming}");
-                    (true, arming.to_string())
-                }
-                Err(refused) => (false, refused.to_string()),
-            };
-            SetBool_Response { success, message }
-        },
-    )?;
-    let _drive = worker.create_timer_repeating(drive_period.node_time(), |s: &mut State| {
-        let now = s.now();
-        match s.bridge.drive(now) {
-            Drive::Send(cmd) => s.send(DRIVE_CMD_ID, &cmd.encode()),
-            Drive::Stale => log_warn!(
-                s.logger.throttle(WARN_EVERY),
-                "no fresh command from ego and the output mux; the spine will brake"
-            ),
-            Drive::NoCommand => {}
-        }
-    })?;
-    let _heartbeat = worker.create_timer_repeating(estop_period.node_time(), |s: &mut State| {
-        let frame = s.bridge.estop_frame();
-        s.send(ESTOP_CMD_ID, &frame.encode());
-    })?;
+    let _drive_side = if role.sends() {
+        Some(DriveSide::create(&worker, drive_period, estop_period)?)
+    } else {
+        log_info!(
+            node.logger(),
+            "role sensors: reading the wheel nodes only; nothing is sent on CAN"
+        );
+        None
+    };
 
     // Ctrl-C, or launch stopping us: stop spinning, and exit cleanly.
     let commands = Arc::clone(executor.commands());
     ctrlc::set_handler(move || commands.halt_spinning())?;
     executor.spin(SpinOptions::default()).first_error()?;
     Ok(())
+}
+
+/// Role spine only: what drives the car. Kept alive as long as the node.
+struct DriveSide {
+    _estop: WorkerSubscription<Bool, State>,
+    _arm: WorkerService<SetBool, State>,
+    _drive: WorkerTimer<State>,
+    _heartbeat: WorkerTimer<State>,
+}
+
+impl DriveSide {
+    /// /safety/estop, /spine/arm, and the DRIVE_CMD and ESTOP_CMD timers.
+    fn create(
+        worker: &Worker<State>,
+        drive_period: Duration,
+        estop_period: Duration,
+    ) -> Result<Self> {
+        let _estop = worker.create_subscription("safety/estop", |s: &mut State, msg: Bool| {
+            if let Some(frame) = s.bridge.set_estop(msg.data) {
+                s.send(ESTOP_CMD_ID, &frame.encode());
+            }
+        })?;
+        let _arm = worker.create_service::<SetBool, _>(
+            "spine/arm",
+            |s: &mut State, request: SetBool_Request| {
+                let (success, message) = match s.bridge.arm(request.data) {
+                    Ok(arming) => {
+                        log_info!(&s.logger, "{arming}");
+                        (true, arming.to_string())
+                    }
+                    Err(refused) => (false, refused.to_string()),
+                };
+                SetBool_Response { success, message }
+            },
+        )?;
+        let _drive = worker.create_timer_repeating(drive_period.node_time(), |s: &mut State| {
+            let now = s.now();
+            match s.bridge.drive(now) {
+                Drive::Send(cmd) => s.send(DRIVE_CMD_ID, &cmd.encode()),
+                Drive::Stale => log_warn!(
+                    s.logger.throttle(WARN_EVERY),
+                    "no fresh command from ego and the output mux; the spine will brake"
+                ),
+                Drive::NoCommand => {}
+            }
+        })?;
+        let _heartbeat =
+            worker.create_timer_repeating(estop_period.node_time(), |s: &mut State| {
+                let frame = s.bridge.estop_frame();
+                s.send(ESTOP_CMD_ID, &frame.encode());
+            })?;
+        Ok(Self {
+            _estop,
+            _arm,
+            _drive,
+            _heartbeat,
+        })
+    }
 }
 
 /// The node's parameters: aav_spine's config/spine.yaml, and the car's wheelbase and track
@@ -212,6 +276,7 @@ struct Params {
     yaw_rate_variance: ReadOnlyParameter<f64>,
     steering_joints: ReadOnlyParameter<Arc<[Arc<str>]>>,
     source: ReadOnlyParameter<Arc<str>>,
+    role: ReadOnlyParameter<Arc<str>>,
 }
 
 impl Params {
@@ -239,6 +304,10 @@ impl Params {
             source: node
                 .declare_parameter("source")
                 .default("real".into())
+                .read_only()?,
+            role: node
+                .declare_parameter("role")
+                .default("spine".into())
                 .read_only()?,
         })
     }
@@ -298,10 +367,16 @@ impl Source {
 }
 
 struct Outputs {
-    can: Publisher<Frame>,
     odom: Publisher<Odometry>,
-    status: Publisher<VehicleStatus>,
     wheels: Publisher<WheelSpeeds>,
+    /// Role spine only; `None` in role sensors.
+    spine: Option<SpineOutputs>,
+}
+
+/// The bus, and the topics only a spine fills.
+struct SpineOutputs {
+    can: Publisher<Frame>,
+    status: Publisher<VehicleStatus>,
     joints: Publisher<JointState>,
     steering: Publisher<ActuatorState>,
     throttle: Publisher<ActuatorState>,
@@ -336,8 +411,11 @@ impl State {
         }
     }
 
-    /// Puts one frame on /can/tx.
+    /// Puts one frame on /can/tx. In role sensors there is no /can/tx: nothing is sent.
     fn send(&self, id: u16, data: &[u8]) {
+        let Some(spine) = &self.out.spine else {
+            return;
+        };
         let mut frame = Frame {
             header: self.header(""),
             id: id.into(),
@@ -345,7 +423,7 @@ impl State {
             ..Frame::default()
         };
         frame.data.iter_mut().zip(data).for_each(|(d, b)| *d = *b);
-        if let Err(e) = self.out.can.publish(frame) {
+        if let Err(e) = spine.can.publish(frame) {
             log_warn!(self.logger.throttle(WARN_EVERY), "/can/tx: {e}");
         }
     }
@@ -379,19 +457,24 @@ impl State {
         }
     }
 
-    fn publish_motion(&self, m: &Motion) -> Result<(), RclrsError> {
-        let stamp = self.stamp();
+    /// /vehicle/odom: base_link's speed, and its yaw rate if it is known.
+    fn publish_odom(
+        &self,
+        stamp: Time,
+        speed: f64,
+        yaw_rate: Option<f64>,
+    ) -> Result<(), RclrsError> {
         let [speed_variance, yaw_rate_variance] = self.variances;
         let mut odom = Odometry {
             header: Header {
-                stamp: stamp.clone(),
+                stamp,
                 frame_id: "odom".into(),
             },
             child_frame_id: "base_link".into(),
             ..Odometry::default()
         };
-        odom.twist.twist.linear.x = m.speed;
-        odom.twist.twist.angular.z = m.yaw_rate;
+        odom.twist.twist.linear.x = speed;
+        odom.twist.twist.angular.z = yaw_rate.unwrap_or(0.0);
         // vx, vy, vz, roll, pitch and yaw rates, on the diagonal.
         let twist_diagonal = [
             speed_variance,
@@ -399,7 +482,7 @@ impl State {
             UNKNOWN,
             UNKNOWN,
             UNKNOWN,
-            yaw_rate_variance,
+            yaw_rate.map_or(UNKNOWN, |_| yaw_rate_variance),
         ];
         for (i, variance) in twist_diagonal.into_iter().enumerate() {
             odom.twist.covariance[i * 7] = variance;
@@ -409,9 +492,16 @@ impl State {
             .iter_mut()
             .step_by(7)
             .for_each(|c| *c = UNKNOWN);
-        self.out.odom.publish(odom)?;
+        self.out.odom.publish(odom)
+    }
 
-        self.out.joints.publish(JointState {
+    fn publish_motion(&self, m: &Motion) -> Result<(), RclrsError> {
+        let stamp = self.stamp();
+        self.publish_odom(stamp.clone(), m.speed, Some(m.yaw_rate))?;
+        let Some(spine) = &self.out.spine else {
+            return Ok(());
+        };
+        spine.joints.publish(JointState {
             header: Header {
                 stamp: stamp.clone(),
                 frame_id: String::new(),
@@ -421,7 +511,7 @@ impl State {
             ..JointState::default()
         })?;
 
-        self.out.steering.publish(actuator(
+        spine.steering.publish(actuator(
             stamp,
             m.steering_command.unwrap_or(f32::NAN),
             m.steering_angle as f32,
@@ -429,9 +519,12 @@ impl State {
     }
 
     fn publish_status(&self, s: &Status) -> Result<(), RclrsError> {
+        let Some(spine) = &self.out.spine else {
+            return Ok(());
+        };
         let header = self.header("base_link");
         let stamp = header.stamp.clone();
-        self.out.status.publish(VehicleStatus {
+        spine.status.publish(VehicleStatus {
             header,
             mode: s.mode as u8,
             armed: s.armed,
@@ -442,23 +535,33 @@ impl State {
             brake: s.brake,
             faults: s.faults,
         })?;
-        self.out
+        spine
             .throttle
             .publish(actuator(stamp.clone(), f32::NAN, s.throttle))?;
-        self.out.brake.publish(actuator(stamp, f32::NAN, s.brake))
+        spine.brake.publish(actuator(stamp, f32::NAN, s.brake))
     }
 
     fn publish_wheels(&self, r: &Reading) -> Result<(), RclrsError> {
         let nan_unless_fresh =
             |side: &spine_bridge::Side| side.fresh_speed().map_or(f32::NAN, |speed| speed as f32);
+        let header = self.header("base_link");
+        let stamp = header.stamp.clone();
         self.out.wheels.publish(WheelSpeeds {
-            header: self.header("base_link"),
+            header,
             front_left: nan_unless_fresh(&r.left),
             front_right: nan_unless_fresh(&r.right),
             rear_left: f32::NAN,
             rear_right: f32::NAN,
             direction_measured: r.direction_measured,
-        })
+        })?;
+        // Role sensors: no spine sends VEHICLE_FEEDBACK, so the wheels alone give
+        // /vehicle/odom, while both are fresh (else nothing: the watchdog sees it stop).
+        // No steering angle on this bus: the front mean as it is, and no yaw rate (the
+        // EKF takes it from the IMU).
+        match (&self.out.spine, r.mean()) {
+            (None, Some(speed)) => self.publish_odom(stamp, speed, None),
+            _ => Ok(()),
+        }
     }
 }
 

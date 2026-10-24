@@ -87,8 +87,8 @@ touching the others.</p></div>
 <tbody>
 <tr>
 <td>Wheel speed</td>
-<td>today <code>encoder_udp</code> (in <code>aav_legacy</code>); later the spine</td>
-<td><code>/vehicle/odom</code></td>
+<td>an Arduino on the Orin's CAN bus (0x200, 0x201), read by <code>spine_bridge role:=sensors</code> (<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>)</td>
+<td><code>/vehicle/odom</code>, <code>/vehicle/wheels</code></td>
 </tr>
 <tr>
 <td>IMU (Yahboom, USB)</td>
@@ -260,14 +260,14 @@ files hand them to every part that needs them.</p>
 </thead>
 <tbody>
 <tr>
-<td>The real car</td>
-<td><code>aav_spine</code></td>
-<td><code>/ego/actuator_cmd</code> into CAN frames, for the spine firmware</td>
+<td>The car, today (<code>actuators:=uart</code>)</td>
+<td><code>aav_legacy</code></td>
+<td><code>legacy_uart_bridge</code> on the Motor Pi: UART frames for the ESP32</td>
 </tr>
 <tr>
-<td>Today's car</td>
-<td><code>aav_legacy</code></td>
-<td>into UART frames, for the 2025-26 ESP32 firmware</td>
+<td>The CAN spine, later (<code>actuators:=can</code>)</td>
+<td><code>aav_spine_bridge</code></td>
+<td><code>spine_bridge</code> on the Orin: CAN frames for the spine firmware</td>
 </tr>
 <tr>
 <td>turtlesim</td>
@@ -287,13 +287,24 @@ files hand them to every part that needs them.</p>
 </tbody>
 </table></div>
 <p>Each backend reports the car's speed back on <code>/vehicle/odom</code>. That closes the loop into
-the EKFs.</p>
+the EKFs. On today's car the UART link sends nothing back, so the wheel sensors on the
+Orin's CAN bus do it.</p>
+<h3 id="the-cars-wiring-today">The car's wiring, today</h3>
+<p>As Ben understands it (23 Oct; the hardware lead confirms). Details:
+<a href="can-plan.html#todays-wiring-23-october">The CAN plan</a>.</p>
+<pre class="highlight"><code class="language-text">         ┌──────────── Orin ────────────┐                   Motor Pi
+ego ─► output_mux ─/control/car/actuator_cmd─ network ─► legacy_uart_bridge ─UART─► ESP32
+                                │                                                 throttle
+CAN ─► socket_can_receiver ─► spine_bridge role:=sensors ─► /vehicle/odom,        steering
+ ▲     (no sender)            (sends nothing)               /vehicle/wheels       brake
+ └─ wheel sensors' Arduino (0x200, 0x201), and other sensors?</code></pre>
 <h3 id="the-output-mux-one-target-and-the-real-car-only-on-real-data">The output mux: one target, and the real car only on real data</h3>
 <p>No backend reads <code>/ego/actuator_cmd</code> itself. The <strong>output mux</strong> (<code>target:=</code>) passes ego's
 command on to its target's own topic, and the <strong>sensor mux</strong> (<code>source:=</code>) checks where
 the data comes from. See <a href="sources-and-targets.html">Sources and targets</a>.</p>
-<pre class="highlight"><code class="language-text">ego ─/ego/actuator_cmd─► output_mux ─/control/car/actuator_cmd─► spine_bridge, legacy_uart_bridge
-                           ▲  (only while every source is REAL; else silent, latched)
+<pre class="highlight"><code class="language-text">ego ─/ego/actuator_cmd─► output_mux ─/control/car/actuator_cmd─► legacy_uart_bridge (today),
+                           ▲                                      or spine_bridge role spine
+                           │  (only while every source is REAL; else silent, latched)
         sensor_mux ────────┘  /system/sensor_mux/state</code></pre>
 </section>
 <section class="card"><h2 id="7-safety-layers">7. Safety layers</h2>
@@ -329,13 +340,13 @@ the data comes from. See <a href="sources-and-targets.html">Sources and targets<
 </tr>
 <tr>
 <td>4</td>
-<td><code>spine_bridge</code></td>
-<td>ego is quiet for 0.1 s: it stops sending drive frames</td>
+<td>The backend</td>
+<td>ego is quiet: <code>legacy_uart_bridge</code> sends brake frames after 0.3 s; <code>spine_bridge</code> (CAN spine) stops sending drive frames after 0.1 s</td>
 </tr>
 <tr>
 <td>5</td>
-<td>The spine's watchdog</td>
-<td>no valid frame for 100 ms: throttle off, brake on</td>
+<td>The firmware's watchdog</td>
+<td>no valid frame for 100 ms: throttle off, brake on. The Rust ESP32 firmware, on the UART link today, or the CAN spine</td>
 </tr>
 <tr>
 <td>6</td>

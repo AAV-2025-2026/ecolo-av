@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The KEFC CAN plan and our CAN contract (14 October) · AAV 2026–27</title>
+<title>The CAN bus: today&#x27;s wiring, and the KEFC plan · AAV 2026–27</title>
 <link rel="stylesheet" href="style.css">
 </head><body>
 <!-- Generated from docs/can-plan.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
-<h1>The KEFC CAN plan and our CAN contract (14 October)</h1>
-<div class="meta">4 min read · 5 sections</div></header>
+<h1>The CAN bus: today&#x27;s wiring, and the KEFC plan</h1>
+<div class="meta">7 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -68,7 +68,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-plan-in-one-picture">The plan in one picture</a><a href="#what-already-matches">What already matches</a><a href="#what-is-different">What is different</a><a href="#what-changes-in-the-code">What changes in the code</a><a href="#still-to-confirm-from-the-pdf">Still to confirm (from the PDF)</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#todays-wiring-23-october">Today&#x27;s wiring (23 October)</a><a href="#the-kefc-plan-in-one-picture">The KEFC plan in one picture</a><a href="#what-already-matches">What already matches</a><a href="#what-is-different">What is different</a><a href="#what-changes-in-the-code">What changes in the code</a><a href="#still-to-confirm-from-the-pdf">Still to confirm (from the PDF)</a></nav>
 <div class="lead"><p>Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and throttle on
 a CAN bus. Our code already has a CAN contract, <code>firmware/can/aav.dbc</code> (v0.1.0). This page
 compares the two, and says what changes.</p>
@@ -77,7 +77,121 @@ use it (merged 15 Oct, so the software is ready). Whether the car gets CAN and t
 node boards is <strong>the hardware lead's decision</strong>, with the team (Ben, 15 Oct: "I am waiting
 on the other people to make the final decisions. There is a hardware lead that isn't me").
 No parts are ordered until then.</p></div>
-<section class="card"><h2 id="the-plan-in-one-picture">The plan in one picture</h2>
+<section class="card"><h2 id="todays-wiring-23-october">Today's wiring (23 October)</h2>
+<p><strong>As Ben understands it; the hardware lead confirms.</strong> Ben, 23 Oct: "the motor controllers
+are on the esp32 with a pi as its network interface ... The can bus will be tied directory
+to the orin not going thorugh the esp32. That will have the wheel encoders".</p>
+<pre class="highlight"><code class="language-text">                         network (ROS 2)
+Orin ───────────────────────────────────────────── Motor Pi ── UART? ── ESP32
+ │  ego, output mux                               legacy_uart_bridge     throttle, steering,
+ │                                                                       brake (maybe the steering
+ └─ CAN ──┬──────────────┐                                               angle, brake position)
+          │              │
+   wheel sensors     other sensors?
+   (an Arduino:      (not known yet)
+    0x200, 0x201)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Today's wiring</th>
+<th>The KEFC plan (below)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Who drives the actuators</td>
+<td>the ESP32, reached through the <strong>Motor Pi</strong> (probably serial)</td>
+<td>the ESP32, on <strong>CAN</strong></td>
+</tr>
+<tr>
+<td>The car's backend</td>
+<td><code>legacy_uart_bridge</code> on the Motor Pi</td>
+<td><code>spine_bridge</code>, role spine, on the Orin</td>
+</tr>
+<tr>
+<td>What the Orin's CAN bus carries</td>
+<td><strong>sensors only</strong>: the wheel frames, and a few others</td>
+<td>drive commands, feedback, the wheel frames</td>
+</tr>
+<tr>
+<td>The wheel sensors</td>
+<td>an Arduino (the hardware lead's board, Arduino C++)</td>
+<td>a Rust ESP32-CAN-X2 per wheel</td>
+</tr>
+<tr>
+<td>The frames</td>
+<td>the same: <code>aav.dbc</code> 0x200, 0x201</td>
+<td>the same</td>
+</tr>
+<tr>
+<td><code>car.launch.py</code></td>
+<td><code>actuators:=uart</code> (the default)</td>
+<td><code>actuators:=can</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-runs-where-today">What runs where, today</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine</th>
+<th>Runs</th>
+<th>Topics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Orin</td>
+<td><code>socket_can_receiver</code> (no sender) and <code>spine_bridge role:=sensors</code></td>
+<td><code>/can/rx</code> in; <code>/vehicle/odom</code>, <code>/vehicle/wheels</code> out</td>
+</tr>
+<tr>
+<td>Motor Pi</td>
+<td><code>legacy_uart_bridge</code></td>
+<td><code>/control/car/actuator_cmd</code> in (from the output mux); UART frames out</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>spine_bridge role:=sensors</code> <strong>can't drive</strong>: it has no <code>/can/tx</code> publisher, no
+<code>/spine/arm</code> service and no <code>/safety/estop</code> subscription, and it ignores the spine's
+frames (0x180, 0x181). On <code>/system/source</code> it names only <code>odometry</code> and <code>wheels</code>, never an
+actuator. The output mux's guard test checks this, in Rust and in Python.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>/vehicle/odom</code>, role sensors</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed</td>
+<td>the two front wheels' mean, while both are fresh. One stale: nothing (the sensor watchdog sees it stop)</td>
+</tr>
+<tr>
+<td>Sign</td>
+<td>the wheel's, if it measures it; else the last command's (one Hall sensor can't tell direction)</td>
+</tr>
+<tr>
+<td>Yaw rate</td>
+<td>not measured (covariance 1e3): the steering angle isn't on this bus. <code>ekf_local</code> takes it from the IMU</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Give every machine the same <code>actuators:=</code></p>
+<pre><code>`actuators:=can` on the Orin and `uart` on the Motor Pi would start two backends. The
+wiring makes it moot (the ESP32 listens on one link), but don't mix them.
+</code></pre>
+</div>
+<p>The 2025-26 UDP wheel encoder (<code>encoder_udp</code>, a Pico 2) is off in <code>motor_pi.yaml</code>: the
+wheels are on CAN now, and two <code>/vehicle/odom</code> publishers would stop the output mux.</p>
+<p>The Rust ESP32 firmware's 100 ms command timeout then sits on the UART link, not on CAN:
+see <a href="esp32-bench.html">First flash on the bench</a>. Open questions for the hardware lead:
+<a href="audit-questions.html#8-the-cars-wiring-for-the-hardware-lead-23-oct">Questions</a>.</p>
+</section>
+<section class="card"><h2 id="the-kefc-plan-in-one-picture">The KEFC plan in one picture</h2>
 <pre class="highlight"><code class="language-text">Orin #1 ── CAN Pal (40-pin header) ──┬──────────────┬──────────────┐
   EKF, ego, spine_bridge             │              │              │
                               AAV control board  Wheel node L   Wheel node R

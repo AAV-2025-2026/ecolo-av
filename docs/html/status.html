@@ -86,14 +86,19 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </thead>
 <tbody>
 <tr>
-<td>Wheel speed, today's car</td>
+<td>Wheel speed, the 2025-26 encoder</td>
 <td><code>aav_legacy</code> <code>encoder_udp</code> (one wheel, into <code>/vehicle/odom</code>)</td>
-<td><span class="badge b-untested">untested</span> needs the car</td>
+<td><span class="badge b-untested">untested</span> needs the car. Off in <code>motor_pi.yaml</code> since 23 Oct: the wheels are on CAN now</td>
 </tr>
 <tr>
-<td>Wheel speed, the CAN wheel nodes (KEFC plan, CAN v0.2.0)</td>
-<td><code>spine_bridge</code>: WHEEL_SPEED_L/R (0x200, 0x201) into <code>/vehicle/wheels</code> and <code>/vehicle/odom</code>'s speed; <code>wheel-core</code> (the nodes' logic)</td>
-<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>'s wheel frames (15 Oct). <span class="badge b-missing">missing</span> on the car: no wheel node boards yet</td>
+<td>Wheel speed, the CAN wheel sensors (CAN v0.2.0)</td>
+<td><code>spine_bridge</code>: WHEEL_SPEED_L/R (0x200, 0x201) into <code>/vehicle/wheels</code> and <code>/vehicle/odom</code>'s speed; <code>wheel-core</code> (the KEFC nodes' logic)</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>'s wheel frames (15 Oct)</td>
+</tr>
+<tr>
+<td>The Orin's CAN bus for sensors only (today's wiring, 23 Oct; the hardware lead confirms)</td>
+<td><code>spine_bridge role:=sensors</code>, <code>car.launch.py actuators:=uart</code> (the default): no CAN sender, no drive frames; <code>/vehicle/odom</code> from the wheels alone</td>
+<td><span class="badge b-works">works</span> in tests (24 Oct, Mac): the Rust node fed wheel frames gave <code>/vehicle/odom</code> 1.1 m/s from 1.0 and 1.2, no <code>/can/tx</code>; the output mux's guard test. <span class="badge b-untested">untested</span> on the car: we haven't seen the Arduino's frames yet (<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>)</td>
 </tr>
 <tr>
 <td>IMU</td>

@@ -37,8 +37,8 @@
 
   <!-- sensors -->
   <rect class="stock" x="110" y="30" width="150" height="56" rx="8"/>
-  <text class="t" x="185" y="54" text-anchor="middle">wheel + steer</text>
-  <text class="s" x="185" y="72" text-anchor="middle">spine (CAN) / encoder</text>
+  <text class="t" x="185" y="54" text-anchor="middle">wheel speed</text>
+  <text class="s" x="185" y="72" text-anchor="middle">Arduino → CAN → Orin</text>
   <rect class="stock" x="275" y="30" width="120" height="56" rx="8"/>
   <text class="t" x="335" y="54" text-anchor="middle">IMU</text>
   <text class="s" x="335" y="72" text-anchor="middle">USB</text>
@@ -119,11 +119,11 @@
 
   <!-- backends -->
   <rect class="stock" x="110" y="676" width="150" height="56" rx="8"/>
-  <text class="t" x="185" y="700" text-anchor="middle">real car</text>
-  <text class="s" x="185" y="718" text-anchor="middle">aav_spine → CAN</text>
-  <rect class="stock" x="275" y="676" width="150" height="56" rx="8"/>
-  <text class="t" x="350" y="700" text-anchor="middle">today's car</text>
-  <text class="s" x="350" y="718" text-anchor="middle">aav_legacy → UART</text>
+  <text class="t" x="185" y="700" text-anchor="middle">the car, today</text>
+  <text class="s" x="185" y="718" text-anchor="middle">Motor Pi → UART</text>
+  <rect class="later" x="275" y="676" width="150" height="56" rx="8"/>
+  <text class="t" x="350" y="700" text-anchor="middle">CAN spine</text>
+  <text class="s" x="350" y="718" text-anchor="middle">KEFC plan · later</text>
   <rect class="stock" x="440" y="676" width="130" height="56" rx="8"/>
   <text class="t" x="505" y="700" text-anchor="middle">turtlesim</text>
   <text class="s" x="505" y="718" text-anchor="middle">laptop test</text>
@@ -137,11 +137,11 @@
   <path class="redline" d="M455,618 L355,676"/>
   <path class="redline" d="M480,618 L505,676"/>
   <path class="redline" d="M505,618 L645,676"/>
-  <text class="lbl" x="620" y="650">/ego/actuator_cmd · one at a time</text>
+  <text class="lbl" x="620" y="650">output mux · one target at a time</text>
 
   <!-- firmware -->
   <rect class="ours" x="110" y="780" width="315" height="56" rx="8"/>
-  <text class="t" x="267" y="804" text-anchor="middle">spine firmware (Rust, ESP32)</text>
+  <text class="t" x="267" y="804" text-anchor="middle">ESP32 firmware (C++, then Rust)</text>
   <text class="s" x="267" y="822" text-anchor="middle">watchdog · limits · speed loop · RC override</text>
   <path class="line" d="M185,732 L185,780"/>
   <path class="line" d="M350,732 L350,780"/>

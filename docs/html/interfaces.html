@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">40 min read · 4 sections</div></header>
+<div class="meta">41 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -307,7 +307,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>mock_lidar</code>, <code>replay_source</code>, <code>carla_adapter</code></td>
 <td><code>hud</code>, <code>map</code>, <code>actuator_test</code>, <code>goto_driver</code>, <code>goto_cli</code>, <code>sensor_mux</code>, <code>output_mux</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.</td>
+<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in - with role:=sensors (today's wiring, the Orin's CAN bus with only the wheel sensors) only odometry and wheels, never an actuator; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.</td>
 </tr>
 <tr>
 <td><code>/system/sensor_mux/state</code></td>
@@ -323,7 +323,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
 <td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.</td>
+<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.</td>
 </tr>
 <tr>
 <td><code>/vehicle/status</code></td>
@@ -363,7 +363,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>gazebo_adapter</code>, <code>spine_bridge</code>, <code>carla_adapter</code></td>
 <td><code>actuator_test</code></td>
 <td>sim, bench</td>
-<td>Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. The 2025-26 car (aav_legacy) has one encoder, read only as /vehicle/odom.</td>
+<td>Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. With today's wiring the front two come from the wheel sensors' Arduino on the Orin's CAN bus (spine_bridge role:=sensors). The 2025-26 car's UDP encoder (aav_legacy encoder_udp, off since 23 Oct) is read only as /vehicle/odom.</td>
 </tr>
 <tr>
 <td><code>/vehicle/joint_states</code></td>
@@ -387,7 +387,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>spine_bridge</code></td>
 <td><code>socket_can_sender</code>, <code>spine_sim</code></td>
 <td>bench, spine</td>
-<td>DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc).</td>
+<td>DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc). Only spine_bridge role:=spine (the CAN spine, car.launch.py actuators:=can) publishes it; with role:=sensors (today's wiring) nobody does, and no socket_can_sender starts.</td>
 </tr>
 <tr>
 <td><code>/can/rx</code></td>
@@ -395,7 +395,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>socket_can_receiver</code>, <code>spine_sim</code></td>
 <td><code>spine_bridge</code></td>
 <td>bench, spine</td>
-<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench and in Gazebo's spine profile, spine_sim sends them all.</td>
+<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench and in Gazebo's spine profile, spine_sim sends them all. With today's wiring the bus has only the wheel sensors (an Arduino) and others not yet known; spine_bridge role:=sensors reads only 0x200 and 0x201.</td>
 </tr>
 <tr>
 <td><code>/sensors/imu/data_raw</code></td>
@@ -863,7 +863,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/spine/arm</code></td>
 <td><code>std_srvs/srv/SetBool</code></td>
 <td><code>spine_bridge</code></td>
-<td>The spine ignores drive commands until armed; refused while /safety/estop is true. On the car, the bench and Gazebo's spine profile.</td>
+<td>The spine ignores drive commands until armed; refused while /safety/estop is true. On the car with the CAN spine (actuators:=can), the bench and Gazebo's spine profile; not with role:=sensors.</td>
 </tr>
 <tr>
 <td><code>/fromLL</code></td>

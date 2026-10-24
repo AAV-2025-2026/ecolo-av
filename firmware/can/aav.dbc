@@ -83,10 +83,10 @@ BO_ 513 WHEEL_SPEED_R: 8 WHEEL_R
 
 
 CM_ "AAV CAN frame map, version 0.2.0 (15 Oct 2026: the KEFC plan, docs/can-plan.md). Classic CAN at 500 kbit/s, 11-bit IDs, little-endian signals. The last byte of every frame is a CRC-8/SAE-J1850 (poly 0x1D, init 0xFF, not reflected, xorout 0xFF) over the ID low byte, the ID high byte, then the other data bytes. counter is a 4-bit rolling counter per frame ID. Reference implementations: src/backends/aav_spine/aav_spine/can_codec.py and firmware/spine/crates/spine-core/src/protocol.rs, both checked against test_vectors.json.";
-CM_ BU_ ORIN "The autonomy computer, running aav_spine spine_bridge through ros2_socketcan.";
-CM_ BU_ SPINE "The spine: the AAV control board already on the car (an ESP32 MicroMod), with the steering and brake drivers (two Jrk G2), the throttle DAC, the RC receiver and the hardware e-stop input. The name SPINE stays from v0.1.0, where it was a new Pico 2.";
-CM_ BU_ WHEEL_L "The left front wheel node: an ESP32-CAN-X2 (ESP32-S3) counting a Hall sensor on the brake rotor holes.";
-CM_ BU_ WHEEL_R "The right front wheel node: the same board on the right front wheel.";
+CM_ BU_ ORIN "The autonomy computer, running spine_bridge through ros2_socketcan. The CAN bus is wired straight to it (Ben, 23 Oct 2026; the hardware lead confirms). With today's wiring it only listens (spine_bridge role sensors: the wheel frames) and the ESP32 is driven over the Motor Pi's UART; with the CAN spine (role spine) it sends ESTOP_CMD and DRIVE_CMD too. docs/can-plan.md.";
+CM_ BU_ SPINE "The spine: the AAV control board already on the car (an ESP32 MicroMod), with the steering and brake drivers (two Jrk G2), the throttle DAC, the RC receiver and the hardware e-stop input. The name SPINE stays from v0.1.0, where it was a new Pico 2. Not on the bus with today's wiring: the ESP32 is reached through the Motor Pi's UART (the KEFC plan puts it here).";
+CM_ BU_ WHEEL_L "The left front wheel sensor: the hardware lead's Arduino, in Arduino C++ (Ben, 23 Oct 2026), counting a Hall sensor on the brake rotor holes. One Arduino may send both WHEEL_SPEED frames: the node names are the frames' senders, not boards. The KEFC plan had an ESP32-CAN-X2 per wheel.";
+CM_ BU_ WHEEL_R "The right front wheel sensor: as WHEEL_L, on the right front wheel.";
 CM_ BO_ 16 "Software e-stop request, from /safety/estop. Sent on every change and at 10 Hz.";
 CM_ BO_ 256 "Drive command, from /ego/actuator_cmd, at 50 Hz. With no valid frame for 100 ms the spine cuts throttle, brakes and holds the steering.";
 CM_ BO_ 384 "Measured motion, at 50 Hz.";

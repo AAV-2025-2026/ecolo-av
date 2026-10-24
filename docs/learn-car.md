@@ -87,7 +87,7 @@ transceiver chip (U7) fitted? The audit checks.
 |---|---|---|---|
 | IMU (Yahboom) | turn rate and acceleration | USB, to which computer? | `aav_imu_yahboom` |
 | GPS (u-blox ZED-F9R) | latitude and longitude | USB to the RTK-Pi | `ublox_gps` (the default) |
-| Wheel speed | how fast the wheels turn | today UDP to the Motor-Pi; later CAN | `encoder_udp`; later `spine_bridge` |
+| Wheel speed | how fast the wheels turn | CAN, straight to the Orin, from an Arduino (Ben, 23 Oct; was UDP to the Motor-Pi) | `spine_bridge role:=sensors` (was `encoder_udp`) |
 | Lidar, on the roof (*photos*) | 3D points around the car | Ethernet | **no driver yet**; model unknown (Q22) |
 | Cameras | pictures | ribbon cable into a Pi 5, then Ethernet | `usb_cam`, which expects a USB camera: a mismatch to sort out (Q22) |
 | TI radar | points ahead of the car | USB | `ti_ros2_driver`; not seen in the photos |

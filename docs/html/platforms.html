@@ -7,7 +7,7 @@
 <!-- Generated from docs/platforms.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Platforms: Ubuntu, the car&#x27;s computers, networking</h1>
-<div class="meta">8 min read · 7 sections</div></header>
+<div class="meta">9 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -187,8 +187,11 @@ source install/setup.bash                          # in every new terminal</code
 <p><code>ros2 doctor --report</code> and <code>ros2 multicast send</code> / <code>receive</code> diagnose most problems.</p>
 </section>
 <section class="card"><h2 id="on-the-car-what-runs-where">On the car: what runs where</h2>
-<p>The design puts everything on the Orin. Until the spine exists, the Motor Pi still talks
-to today's ESP32. The files in <code>src/aav_bringup/config/machines/</code> say what runs where:</p>
+<p>As the car is wired today (Ben, 23 Oct; the hardware lead confirms), the Motor Pi drives
+the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
+(<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>). <code>car.launch.py actuators:=uart</code>
+(the default) is that; <code>actuators:=can</code> is the KEFC plan's CAN spine. The files in
+<code>src/aav_bringup/config/machines/</code> say what runs where:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -199,11 +202,11 @@ to today's ESP32. The files in <code>src/aav_bringup/config/machines/</code> say
 <tbody>
 <tr>
 <td><code>orin.yaml</code></td>
-<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the YOLO detector (<code>yolo_detector_orin</code>, TensorRT) and the stop-sign watcher</td>
+<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the YOLO detector (<code>yolo_detector_orin</code>, TensorRT) and the stop-sign watcher; the CAN bus (<code>spine_bridge role:=sensors</code>: the wheels)</td>
 </tr>
 <tr>
 <td><code>motor_pi.yaml</code></td>
-<td><code>legacy_uart_bridge</code> and <code>encoder_udp</code>: the ESP32 is wired to it, and the encoder sends its packets to it</td>
+<td><code>legacy_uart_bridge</code>: the ESP32 is wired to it. The 2025-26 UDP encoder (<code>encoder_udp</code>) is off: the wheels are on CAN now</td>
 </tr>
 <tr>
 <td><code>laptop.yaml</code></td>
@@ -280,8 +283,12 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.</p>
 <td>the two EKFs and <code>navsat_transform</code>; Nav2. Its costmap reads the <code>radar</code> and <code>camera_obstacles</code> parts on the same computer, and <code>collision_monitor</code> comes with the radar</td>
 </tr>
 <tr>
-<td><code>spine</code>, <code>legacy_uart</code>, <code>legacy_encoder</code></td>
-<td>the backends: the CAN spine, or today's ESP32 and wheel encoder</td>
+<td><code>spine</code></td>
+<td>the CAN bus (Linux only): with <code>actuators:=uart</code>, the wheel sensors only (<code>spine_bridge role:=sensors</code>, no CAN sender); with <code>actuators:=can</code>, the CAN spine backend</td>
+</tr>
+<tr>
+<td><code>legacy_uart</code>, <code>legacy_encoder</code></td>
+<td>today's backend, the ESP32 over UART (not with <code>actuators:=can</code>); the 2025-26 UDP wheel encoder (never beside <code>spine</code>)</td>
 </tr>
 <tr>
 <td><code>foxglove</code></td>
