@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="default">
+
+    <include><uri>model://ground_plane</uri></include>
+    <include><uri>model://sun</uri></include>
+
+    <model name="brake_car">
+      <static>false</static>
+
+      <!-- Base (fixed part of actuator) -->
+      <link name="act_base">
+        <pose>0 0 0.2 0 0 0</pose>
+      </link>
+
+      <!-- Rod (moving part) -->
+      <link name="act_rod">
+        <pose>0 0 0.35 0 0 0</pose>
+      </link>
+
+      <!-- Prismatic Joint -->
+      <joint name="brake_joint" type="prismatic">
+        <parent>act_base</parent>
+        <child>act_rod</child>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>0.0</lower>
+            <upper>0.15</upper>
+          </limit>
+        </axis>
+      </joint>
+
+      <!-- Brake controller (PID + keyboard) -->
+      <plugin name="brake_controller" filename="libbrake_controller.so"/>
+
+      <!-- Joint state publisher -->
+      <plugin name="joint_state_pub" filename="libjoint_state_plugin.so"/>
+      
+    </model>
+
+  </world>
+</sdf>
+
