@@ -4,6 +4,7 @@ stream_check: the camera stream end to end on one computer, without the car.
   Gazebo's front camera ──ROS──> this check: scaled to 1280x720, time code drawn on
       ──raw──> ffmpeg (H.264, the Pi's settings) ──RTSP──> a local MediaMTX
       ──RTSP──> camera_stream_front_left (decode, undistort, RF-DETR) ──> detections
+      ──> the sensor watchdog (aav_safety), watching the camera as on the car
 
   pixi run -e ml stream-check            # RF-DETR Nano, as on the car (needs PyTorch)
   pixi run stream-check --detector none  # the stream alone, no PyTorch
@@ -12,6 +13,8 @@ Measures, over the last --seconds (60): the delay from the time code being drawn
 picture leaving the decoder, and to its detections being published (median, 95th
 percentile, worst); the bitrate on the wire (MediaMTX's own count); the size of the
 detections and the previews; the frame rates and the frames dropped; each program's CPU.
+And the sensor watchdog's front_left_stream input, as car.launch.py starts it: OK all
+through the measurement, then STALE soon after the encoder stops (the stream lost).
 Prints a table and exits 1 if a check fails.
 
 Options:
@@ -69,6 +72,7 @@ from rclpy.node import Node  # noqa: E402
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy  # noqa: E402
 from rclpy.serialization import serialize_message  # noqa: E402
 from sensor_msgs.msg import CompressedImage, Image  # noqa: E402
+from std_msgs.msg import String  # noqa: E402
 from vision_msgs.msg import Detection2DArray  # noqa: E402
 import yaml  # noqa: E402
 
@@ -83,6 +87,7 @@ LATEST = QoSProfile(depth=1, history=HistoryPolicy.KEEP_LAST,
                     reliability=ReliabilityPolicy.RELIABLE)
 RESULTS = []
 LOG = os.environ.get('AAV_STREAM_LOG', '/tmp/aav-stream-check')
+WATCHED = f'{CAMERA}_stream'                    # the sensor watchdog's input for it
 
 
 def result(name, ok, detail):
@@ -202,6 +207,9 @@ class Check(Node):
                                  f'/perception/camera/{CAMERA}/preview/compressed',
                                  self.on_preview, 10)
         self.create_subscription(DiagnosticArray, '/diagnostics', self.on_diag, 10)
+        self.watchdog = []          # (time, the sensor watchdog's state line)
+        self.create_subscription(String, '/safety/sensor_watchdog/state',
+                                 lambda m: self.watchdog.append((time.monotonic(), m.data)), 10)
         self.photo = None
         if pattern:
             photo = cv2.imread(PHOTO)
@@ -401,6 +409,9 @@ def main():
              '-p', f'detector:={detector}', '-p', f'calibration:={calibration}',
              '-p', 'publish_camera_info:=false', '-p', 'time_code:=true',
              '-p', 'source:=sim'], log=True)
+        # The sensor watchdog, watching this camera through its detections (car.launch.py).
+        programs.start('watchdog', ['ros2', 'launch', 'aav_safety', 'watchdog.launch.py',
+                                    f'inputs:={WATCHED}'], log=True)
         # Up: pictures through and, with a model, its first detections (loading takes time).
         up = check.spin_for(180.0, lambda: check.status is not None
                             and check.status.get('connected') == 'true'
@@ -413,8 +424,8 @@ def main():
         rx0, tx0, tracks = api_bytes(api_port)
         groups = {name: p.pid for name, p in programs.procs.items()}
         cpu0 = cpu_by_group(groups.values())
-        det0, prev0, fed0, gz0 = (len(check.detections), len(check.previews), check.fed,
-                                  check.gz_frames)
+        det0, prev0, fed0, gz0, dog0 = (len(check.detections), len(check.previews),
+                                        check.fed, check.gz_frames, len(check.watchdog))
         x0 = check.x
         t0 = time.monotonic()
         if not pattern and speed > 0:
@@ -429,6 +440,24 @@ def main():
         status = check.status or {}
         dets = check.detections[det0:]
         previews = check.previews[prev0:]
+        states = [text for _, text in check.watchdog[dog0:]]
+        wrong = [text for text in states if WATCHED in text]
+        result('watchdog', bool(states) and not wrong,
+               f'{WATCHED} OK in all {len(states)} of its states' if states and not wrong
+               else f'{len(wrong)} of {len(states)} states name {WATCHED}: '
+                    f'{wrong[0] if wrong else "none heard"} (see {LOG}-watchdog.log)')
+        # The stream lost: the encoder (the Pi, here) stops. The detections stop with it.
+        lost = time.monotonic()
+        os.killpg(programs.procs['encoder'].pid, signal.SIGKILL)
+
+        def stale_at():
+            return next((t for t, text in check.watchdog
+                         if t > lost and f'{WATCHED} STALE' in text), None)
+
+        stale = check.spin_for(10.0, lambda: stale_at() is not None)
+        result('watchdog, stream lost', stale,
+               f'{WATCHED} STALE {stale_at() - lost:.1f} s after the encoder stopped (its '
+               'rule: silent 1 s)' if stale else 'not STALE 10 s after the encoder stopped')
 
         mbit = 8 * (rx1 - rx0) / span / 1e6
         props = tracks[0].get('codecProps', {}) if tracks else {}
