@@ -95,8 +95,11 @@ class OutputMux(Node):
     def on_clear(self, request, response):
         self.tick()
         response.success, response.message = self.gate.clear(time.monotonic())
-        log = self.get_logger().warning if response.success else self.get_logger().error
-        log(f'clear: {response.message}')
+        # Two call sites: rclpy refuses one that logs at two severities.
+        if response.success:
+            self.get_logger().warning(f'clear: {response.message}')
+        else:
+            self.get_logger().error(f'clear: {response.message}')
         self.publish_state(changes_only=True)
         return response
 
