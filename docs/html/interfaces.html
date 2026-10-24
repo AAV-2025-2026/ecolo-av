@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">43 min read · 4 sections</div></header>
+<div class="meta">44 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -578,9 +578,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/perception/detections</code></td>
 <td><code>vision_msgs/msg/Detection2DArray</code></td>
 <td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
-<td><code>stop_sign_watcher</code>, <code>camera_obstacles</code></td>
+<td><code>stop_sign_watcher</code>, <code>camera_obstacles</code>, <code>sensor_watchdog</code></td>
 <td>-</td>
-<td>YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay.</td>
+<td>YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay. It sends one for every picture, boxes or none, so the sensor watchdog watches each streamed camera here (kind detections, by its frame_id - front_left_stream, front_right_stream; silent 1 s locks Nav2 and the AI slot), where car.launch.py starts the streams (its camera_stream part, the Orin), and the car's detector part then doesn't start for those cameras.</td>
 </tr>
 <tr>
 <td><code>/perception/camera/front_left/preview/compressed</code></td>

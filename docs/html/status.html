@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">16 min read · 4 sections</div></header>
+<div class="meta">17 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -265,6 +265,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td>Camera</td>
 <td><code>usb_cam</code>, the <code>camera</code> part of <code>car.launch.py</code></td>
 <td><span class="badge b-untested">untested</span> Linux only, off until the camera is fitted; the models are Q22</td>
+</tr>
+<tr>
+<td>Front cameras, streamed</td>
+<td>the camera Pi's MediaMTX -&gt; <code>camera_stream_front_left</code>, <code>_front_right</code> (the <code>camera_stream</code> part, <code>orin.yaml</code>), the detector inside; the sensor watchdog watches their detections</td>
+<td><span class="badge b-works">works</span> on a Mac (<code>pixi run -e ml stream-check --gst</code>: 26 ms to detections; the watchdog OK, then STALE when the stream stops). <span class="badge b-untested">untested</span> on the Orin and the Pi: skipped there until RF-DETR's TensorRT engine is built (<a href="camera-pipeline.html">camera pipeline</a>)</td>
 </tr>
 <tr>
 <td>Stop signs</td>

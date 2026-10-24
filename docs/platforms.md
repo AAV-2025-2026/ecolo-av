@@ -101,7 +101,8 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.
 | `scripted` | the scripted driver |
 | `imu`, `gps`, `radar`, `battery` | the sensor drivers, on the computer each is plugged into |
 | `camera` | the front camera: `usb_cam`, Linux only |
-| `detector` | YOLO, as `yolo_detector_<machine>`, with the model the file names ([Models](perception.md#models)) |
+| `camera_stream` | the front cameras' H.264 streams from the camera Pi, one `camera_stream_<camera>` each, with the detector inside; the sensor watchdog watches them ([camera pipeline](camera-pipeline.md#on-the-car-carlaunchpy)). On in `orin.yaml` |
+| `detector` | YOLO, as `yolo_detector_<machine>`, with the model the file names ([Models](perception.md#models)). Not for a camera `camera_stream` streams |
 | `stop_signs` | the stop-sign watcher: one per car, next to the mux |
 | `radar_clusters` | the radar's clustering |
 | `camera_obstacles` | the detectors' boxes as points on the road, for Nav2's costmap ([Costmaps](costmaps.md)) |

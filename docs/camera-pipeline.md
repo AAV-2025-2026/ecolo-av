@@ -40,8 +40,66 @@ The same for `front_right`, in a second program.
 | The node | `aav_camera_stream/camera_stream.py` | one per camera |
 | Its logic, no ROS | `decoders.py`, `reader.py`, `latest.py`, `lens.py`, `timecode.py`, `models.py` | 41 tests |
 | The detector | `aav_yolo.detectors.load_detector` | imported, not copied |
-| Start it | `ros2 launch aav_camera_stream camera_stream.launch.py host:=<pi> decoder:=gst-nvidia` | on the Orin |
+| Start it, the car | `car.launch.py machine:=orin`: its `camera_stream` part, set in `orin.yaml` | [below](#on-the-car-carlaunchpy) |
+| Start it, by hand | `ros2 launch aav_camera_stream camera_stream.launch.py host:=<pi> decoder:=gst-nvidia` | on the Orin |
 | Test it | `pixi run -e ml stream-check` | a Mac, no car |
+
+## On the car: `car.launch.py`
+
+```text
+ orin.yaml                          car.launch.py machine:=orin
+ ─────────                          ───────────────────────────
+ parts:                             camera_stream_front_left  ──┐
+   camera_stream: true      ──────► camera_stream_front_right ──┤
+   detector: false                                              │ /perception/detections
+ camera_stream:                                                 ├──► stop_sign_watcher
+   host: 192.168.1.108  (CAM1-PI)                               ├──► camera_obstacles (when on)
+   decoder: gst-nvidia                                          └──► sensor_watchdog:
+   model: models/rf-detr-nano.engine                                 front_left_stream,
+                                                                     front_right_stream
+```
+
+The Pi's address is the one the 21 Oct net map found (CAM1-PI; also seen at `.102`).
+Check it at the car, and fix it on the router.
+
+### What starts, by what the Orin has
+
+| The Orin has | What starts |
+|---|---|
+| JetPack's GStreamer, PyTorch, TensorRT, the engine built | both streams, RF-DETR inside each; the watchdog watches both |
+| no engine yet (**today**) | no streams; a warning says how to build it (`python3 tools/build_engine.py`) |
+| `detector: none` in `camera_stream` | the streams and previews, **no stop signs**; the watchdog still watches |
+| no `/usr/bin/gst-launch-1.0` | no streams; a warning |
+
+### The rules
+
+| Rule | Why |
+|---|---|
+| The detector part doesn't start for a streamed camera | the pictures stay inside the stream's node: its own detector replaces it |
+| Labels: `stop sign`; with `camera_obstacles`, its road users too | the stop-sign watcher, and the costmap's camera layer |
+| `camera_obstacles` gets each stream's `camera_info` | its lens; none until the cameras are calibrated (a warning says so) |
+| `image_raw` only with the `lane` part | the lane finder reads it, on the same computer |
+| `usb_cam` and a stream can't both give `front_left` | two publishers: the output mux would stop |
+
+### The sensor watchdog
+
+| Input | Watches | Wrong when | Then |
+|---|---|---|---|
+| `front_left_stream`, `front_right_stream` | `/perception/detections`, only its camera's `frame_id` | quiet 1 s; NaN in a box | stop Nav2 and the AI slot |
+
+### Tried on a Mac (24 Oct)
+
+| Run | Result |
+|---|---|
+| `pixi run -e ml stream-check --gst` (the watchdog as on the car) | `front_left_stream` OK in all 604 of its states over 60 s; **STALE 1.1 s** after the encoder stopped |
+| `car.launch.py` itself, with a stand-in machine file: two test streams from a local MediaMTX, `decoder: ffmpeg`, RF-DETR (`.pth`) | both nodes started from the part; 15 detections a second from each camera; the watchdog watched both; the right stream's sender stopped: `front_right_stream STALE`, the left one stayed OK |
+| The Orin, the Pi, the real cameras | [[untested]] |
+
+!!! note "Why the detections, not `/diagnostics`"
+    The node sends detections for **every picture**, boxes or none: 15 a second, so 1 s
+    of silence is a sure sign, as for a camera's pictures. `/diagnostics` comes once a
+    second, and its frame rate is over 5 s. Nothing checks for a frozen picture: an
+    empty list repeats on a clear road, and a stuck Pi camera stops the stream instead.
 
 ## The settings, and why
 
@@ -123,13 +181,15 @@ So on the car, camera to detections: about **50-100 ms** (a guess).
 | Delay, end to end | film a phone's stopwatch next to the Orin's screen, which shows the preview (or the stopwatch itself) | under 150 ms |
 | Stamp error | the same: the stopwatch in the picture vs the detection's stamp | set `delay` to the difference |
 | Clock | `chronyc tracking` on the Pi and the Orin | under 1 ms apart |
+| The car's launch | `pixi run car orin`, after the engine is built; then `ros2 topic echo /safety/sensor_watchdog/state` | no `front_left_stream` or `front_right_stream` in it; pull the Pi's cable: `STALE` within 1-2 s |
 
 ## Still open
 
 | Item | Note |
 |---|---|
 | Calibrations | the ribbon cameras have none: `config/cameras.yaml` leaves them empty (no undistortion). The 2024-25 `left.ini` is another camera's (Q22) |
-| `car.launch.py` | doesn't start the streams yet: a machine part for the Orin, with `decoder:=gst-nvidia` |
-| The sensor watchdog | watches `/sensors/camera/front_left/image_raw`, which this node publishes only with `publish_image:=true`. Watch its `/diagnostics` instead? |
+| `car.launch.py` | done ([above](#on-the-car-carlaunchpy)): [[untested]] on the Orin. Needs the engine built there first |
+| The sensor watchdog | done: watches each stream's detections. [[untested]] at the car |
+| The stop sign's size | `stop_sign_watcher` stops for a box 55 px tall: set for the bench's and Gazebo's lens. The ribbon cameras' lens at 1280x720 differs: check the distance at the car |
 | Lane finder and HUD | read `image_raw` too: `publish_image:=true` on the Orin (no network), or the preview |
 | A rear camera | the QNX Pi's doesn't work today; a USB camera's `ffmpeg` example is in `pi/mediamtx.yml` |

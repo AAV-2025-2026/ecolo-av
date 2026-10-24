@@ -466,10 +466,11 @@ the camera), on the map window (a banner across the map), in the log and on
 | local, global | the EKFs' `/localization/odom/*` | quiet 0.5 s; NaN | stop |
 | camera | the front left picture | quiet 1 s; the same picture for 1 s **while the wheels turn** | stop (only where something reads it: perception, lane, camera obstacles) |
 | radar | `/sensors/radar/points` | quiet 1 s | warn: `collision_monitor` already stops Nav2 |
+| front_left_stream, front_right_stream | a front camera's stream, through its detections on `/perception/detections` (its `frame_id` only: [camera pipeline](camera-pipeline.md#the-sensor-watchdog)) | quiet 1 s; NaN in a box | stop (the car, where `car.launch.py` starts the streams) |
 | hud | `/hud/heartbeat` (the [HUD's](hud.md#the-heartbeat) screen is alive) | quiet 1 s; the count stuck for 1 s | stop (only where a HUD is expected: the car, `hud:=true`, `watch_hud:=true`) |
 
 It runs in Gazebo (`watchdog:=true`), on the bench (always), and on the car next to the
-mux (odom, IMU, GPS, the EKFs, the HUD). The checks are `aav_safety/watchdog.py` and
+mux (odom, IMU, GPS, the EKFs, the HUD, and the camera streams it starts). The checks are `aav_safety/watchdog.py` and
 `wheel_check.py`, with no ROS, and their tests.
 
 ### If the watchdog itself dies

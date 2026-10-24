@@ -264,8 +264,12 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.</p>
 <td>the front camera: <code>usb_cam</code>, Linux only</td>
 </tr>
 <tr>
+<td><code>camera_stream</code></td>
+<td>the front cameras' H.264 streams from the camera Pi, one <code>camera_stream_&lt;camera&gt;</code> each, with the detector inside; the sensor watchdog watches them (<a href="camera-pipeline.html#on-the-car-carlaunchpy">camera pipeline</a>). On in <code>orin.yaml</code></td>
+</tr>
+<tr>
 <td><code>detector</code></td>
-<td>YOLO, as <code>yolo_detector_&lt;machine&gt;</code>, with the model the file names (<a href="perception.html#models">Models</a>)</td>
+<td>YOLO, as <code>yolo_detector_&lt;machine&gt;</code>, with the model the file names (<a href="perception.html#models">Models</a>). Not for a camera <code>camera_stream</code> streams</td>
 </tr>
 <tr>
 <td><code>stop_signs</code></td>

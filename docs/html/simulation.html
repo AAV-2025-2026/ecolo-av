@@ -1131,6 +1131,12 @@ the camera), on the map window (a banner across the map), in the log and on
 <td>warn: <code>collision_monitor</code> already stops Nav2</td>
 </tr>
 <tr>
+<td>front_left_stream, front_right_stream</td>
+<td>a front camera's stream, through its detections on <code>/perception/detections</code> (its <code>frame_id</code> only: <a href="camera-pipeline.html#the-sensor-watchdog">camera pipeline</a>)</td>
+<td>quiet 1 s; NaN in a box</td>
+<td>stop (the car, where <code>car.launch.py</code> starts the streams)</td>
+</tr>
+<tr>
 <td>hud</td>
 <td><code>/hud/heartbeat</code> (the <a href="hud.html#the-heartbeat">HUD's</a> screen is alive)</td>
 <td>quiet 1 s; the count stuck for 1 s</td>
@@ -1139,7 +1145,7 @@ the camera), on the map window (a banner across the map), in the log and on
 </tbody>
 </table></div>
 <p>It runs in Gazebo (<code>watchdog:=true</code>), on the bench (always), and on the car next to the
-mux (odom, IMU, GPS, the EKFs, the HUD). The checks are <code>aav_safety/watchdog.py</code> and
+mux (odom, IMU, GPS, the EKFs, the HUD, and the camera streams it starts). The checks are <code>aav_safety/watchdog.py</code> and
 <code>wheel_check.py</code>, with no ROS, and their tests.</p>
 <h3 id="if-the-watchdog-itself-dies">If the watchdog itself dies</h3>
 <p>The lock is <strong>fail-safe</strong> (15 Oct). The watchdog sends <code>false</code> 10 times a second: a

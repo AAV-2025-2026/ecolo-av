@@ -16,7 +16,8 @@ touching the others.
 | IMU (Yahboom, USB) | `aav_imu_yahboom` (Rust), then the stock `imu_filter_madgwick` | `/sensors/imu/data_raw`, then `/sensors/imu/data` |
 | GPS (u-blox, USB) | the stock `ublox_gps`; or `nmea_navsat_driver`, or `ublox_dgnss` on the car | `/sensors/gps/fix` |
 | The car's shape | the stock `robot_state_publisher`, from `vehicle.yaml` | `/tf_static`: where each sensor sits |
-| Lidar, cameras | next year | |
+| Lidar (Velodyne VLP-16, roof) | the stock `velodyne` driver, on the Orin | `/sensors/lidar/points` |
+| Front cameras (the camera Pi) | MediaMTX on the Pi streams H.264; on the Orin one `camera_stream_<camera>` each decodes it and runs the detector inside ([camera pipeline](camera-pipeline.md)) | `/perception/detections`: no raw pictures on the network |
 
 Each driver publishes a standard message in its own frame. Another IMU or GPS can replace
 it without changing anything downstream.
@@ -146,7 +147,7 @@ Two more, for the automatic drivers only (Nav2 and the AI slot; never a person o
 | Layer | Stops Nav2 when |
 |---|---|
 | collision_monitor | radar or lidar points in the stop zone just ahead; or the radar or lidar goes quiet for 1 s |
-| The sensor watchdog (`aav_safety`) | the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps; the wheels disagree with the IMU or the GPS; the HUD's screen freezes or dies (its [heartbeat](hud.md#the-heartbeat), on the car); the watchdog itself goes quiet (fail-safe: twist_mux's lock times out). A twist_mux lock, shown on the HUD and the map window ([simulation](simulation.md#sensor-failures-on-purpose)) |
+| The sensor watchdog (`aav_safety`) | the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps; the wheels disagree with the IMU or the GPS; the HUD's screen freezes or dies (its [heartbeat](hud.md#the-heartbeat), on the car); a front camera's stream goes quiet (its detections, on the car); the watchdog itself goes quiet (fail-safe: twist_mux's lock times out). A twist_mux lock, shown on the HUD and the map window ([simulation](simulation.md#sensor-failures-on-purpose)) |
 
 !!! warning "Today's car has no layer 5"
   The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays

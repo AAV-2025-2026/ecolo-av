@@ -7,7 +7,7 @@
 <!-- Generated from docs/how-it-fits.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>How it fits together</h1>
-<div class="meta">9 min read · 9 sections</div></header>
+<div class="meta">10 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -107,9 +107,14 @@ touching the others.</p></div>
 <td><code>/tf_static</code>: where each sensor sits</td>
 </tr>
 <tr>
-<td>Lidar, cameras</td>
-<td>next year</td>
-<td></td>
+<td>Lidar (Velodyne VLP-16, roof)</td>
+<td>the stock <code>velodyne</code> driver, on the Orin</td>
+<td><code>/sensors/lidar/points</code></td>
+</tr>
+<tr>
+<td>Front cameras (the camera Pi)</td>
+<td>MediaMTX on the Pi streams H.264; on the Orin one <code>camera_stream_&lt;camera&gt;</code> each decodes it and runs the detector inside (<a href="camera-pipeline.html">camera pipeline</a>)</td>
+<td><code>/perception/detections</code>: no raw pictures on the network</td>
 </tr>
 </tbody>
 </table></div>
@@ -371,7 +376,7 @@ the data comes from. See <a href="sources-and-targets.html">Sources and targets<
 </tr>
 <tr>
 <td>The sensor watchdog (<code>aav_safety</code>)</td>
-<td>the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps; the wheels disagree with the IMU or the GPS; the HUD's screen freezes or dies (its <a href="hud.html#the-heartbeat">heartbeat</a>, on the car); the watchdog itself goes quiet (fail-safe: twist_mux's lock times out). A twist_mux lock, shown on the HUD and the map window (<a href="simulation.html#sensor-failures-on-purpose">simulation</a>)</td>
+<td>the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps; the wheels disagree with the IMU or the GPS; the HUD's screen freezes or dies (its <a href="hud.html#the-heartbeat">heartbeat</a>, on the car); a front camera's stream goes quiet (its detections, on the car); the watchdog itself goes quiet (fail-safe: twist_mux's lock times out). A twist_mux lock, shown on the HUD and the map window (<a href="simulation.html#sensor-failures-on-purpose">simulation</a>)</td>
 </tr>
 </tbody>
 </table></div>

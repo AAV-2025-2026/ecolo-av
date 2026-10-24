@@ -7,7 +7,7 @@
 <!-- Generated from docs/camera-pipeline.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The camera pipeline: Pi to detections (24 October)</h1>
-<div class="meta">8 min read · 7 sections</div></header>
+<div class="meta">11 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -69,7 +69,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-is-where">What is where</a><a href="#the-settings-and-why">The settings, and why</a><a href="#measured-on-a-mac-24-oct">Measured on a Mac (24 Oct)</a><a href="#what-it-cant-measure-here">What it can&#x27;t measure here</a><a href="#at-the-car-what-to-check">At the car: what to check</a><a href="#still-open">Still open</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-is-where">What is where</a><a href="#on-the-car-carlaunchpy">On the car: car.launch.py</a><a href="#the-settings-and-why">The settings, and why</a><a href="#measured-on-a-mac-24-oct">Measured on a Mac (24 Oct)</a><a href="#what-it-cant-measure-here">What it can&#x27;t measure here</a><a href="#at-the-car-what-to-check">At the car: what to check</a><a href="#still-open">Still open</a></nav>
 <div class="lead"><p>Ben decided it on 23 Oct ("mediamtx on the pi to the orin seems like the best choice";
 <a href="decisions.html#decided-on-22-and-23-october">decisions</a>). This page is how it's built, the
 settings and why, what was measured on a Mac, and what to check at the car.</p>
@@ -130,7 +130,12 @@ settings and why, what was measured on a Mac, and what to check at the car.</p>
 <td>imported, not copied</td>
 </tr>
 <tr>
-<td>Start it</td>
+<td>Start it, the car</td>
+<td><code>car.launch.py machine:=orin</code>: its <code>camera_stream</code> part, set in <code>orin.yaml</code></td>
+<td><a href="#on-the-car-carlaunchpy">below</a></td>
+</tr>
+<tr>
+<td>Start it, by hand</td>
 <td><code>ros2 launch aav_camera_stream camera_stream.launch.py host:=&lt;pi&gt; decoder:=gst-nvidia</code></td>
 <td>on the Orin</td>
 </tr>
@@ -141,6 +146,128 @@ settings and why, what was measured on a Mac, and what to check at the car.</p>
 </tr>
 </tbody>
 </table></div>
+</section>
+<section class="card"><h2 id="on-the-car-carlaunchpy">On the car: <code>car.launch.py</code></h2>
+<pre class="highlight"><code class="language-text"> orin.yaml                          car.launch.py machine:=orin
+ ─────────                          ───────────────────────────
+ parts:                             camera_stream_front_left  ──┐
+   camera_stream: true      ──────► camera_stream_front_right ──┤
+   detector: false                                              │ /perception/detections
+ camera_stream:                                                 ├──► stop_sign_watcher
+   host: 192.168.1.108  (CAM1-PI)                               ├──► camera_obstacles (when on)
+   decoder: gst-nvidia                                          └──► sensor_watchdog:
+   model: models/rf-detr-nano.engine                                 front_left_stream,
+                                                                     front_right_stream</code></pre>
+<p>The Pi's address is the one the 21 Oct net map found (CAM1-PI; also seen at <code>.102</code>).
+Check it at the car, and fix it on the router.</p>
+<h3 id="what-starts-by-what-the-orin-has">What starts, by what the Orin has</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>The Orin has</th>
+<th>What starts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>JetPack's GStreamer, PyTorch, TensorRT, the engine built</td>
+<td>both streams, RF-DETR inside each; the watchdog watches both</td>
+</tr>
+<tr>
+<td>no engine yet (<strong>today</strong>)</td>
+<td>no streams; a warning says how to build it (<code>python3 tools/build_engine.py</code>)</td>
+</tr>
+<tr>
+<td><code>detector: none</code> in <code>camera_stream</code></td>
+<td>the streams and previews, <strong>no stop signs</strong>; the watchdog still watches</td>
+</tr>
+<tr>
+<td>no <code>/usr/bin/gst-launch-1.0</code></td>
+<td>no streams; a warning</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-rules">The rules</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The detector part doesn't start for a streamed camera</td>
+<td>the pictures stay inside the stream's node: its own detector replaces it</td>
+</tr>
+<tr>
+<td>Labels: <code>stop sign</code>; with <code>camera_obstacles</code>, its road users too</td>
+<td>the stop-sign watcher, and the costmap's camera layer</td>
+</tr>
+<tr>
+<td><code>camera_obstacles</code> gets each stream's <code>camera_info</code></td>
+<td>its lens; none until the cameras are calibrated (a warning says so)</td>
+</tr>
+<tr>
+<td><code>image_raw</code> only with the <code>lane</code> part</td>
+<td>the lane finder reads it, on the same computer</td>
+</tr>
+<tr>
+<td><code>usb_cam</code> and a stream can't both give <code>front_left</code></td>
+<td>two publishers: the output mux would stop</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-sensor-watchdog">The sensor watchdog</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Watches</th>
+<th>Wrong when</th>
+<th>Then</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>front_left_stream</code>, <code>front_right_stream</code></td>
+<td><code>/perception/detections</code>, only its camera's <code>frame_id</code></td>
+<td>quiet 1 s; NaN in a box</td>
+<td>stop Nav2 and the AI slot</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="tried-on-a-mac-24-oct">Tried on a Mac (24 Oct)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run -e ml stream-check --gst</code> (the watchdog as on the car)</td>
+<td><code>front_left_stream</code> OK in all 604 of its states over 60 s; <strong>STALE 1.1 s</strong> after the encoder stopped</td>
+</tr>
+<tr>
+<td><code>car.launch.py</code> itself, with a stand-in machine file: two test streams from a local MediaMTX, <code>decoder: ffmpeg</code>, RF-DETR (<code>.pth</code>)</td>
+<td>both nodes started from the part; 15 detections a second from each camera; the watchdog watched both; the right stream's sender stopped: <code>front_right_stream STALE</code>, the left one stayed OK</td>
+</tr>
+<tr>
+<td>The Orin, the Pi, the real cameras</td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Why the detections, not <code>/diagnostics</code></p>
+<pre><code>The node sends detections for **every picture**, boxes or none: 15 a second, so 1 s
+of silence is a sure sign, as for a camera's pictures. `/diagnostics` comes once a
+second, and its frame rate is over 5 s. Nothing checks for a frozen picture: an
+empty list repeats on a clear road, and a stuck Pi camera stops the stream instead.
+</code></pre>
+</div>
 </section>
 <section class="card"><h2 id="the-settings-and-why">The settings, and why</h2>
 <div class="table-wrap"><table>
@@ -400,6 +527,11 @@ OpenH264 at 2 Mbit/s (a test checks).</p>
 <td><code>chronyc tracking</code> on the Pi and the Orin</td>
 <td>under 1 ms apart</td>
 </tr>
+<tr>
+<td>The car's launch</td>
+<td><code>pixi run car orin</code>, after the engine is built; then <code>ros2 topic echo /safety/sensor_watchdog/state</code></td>
+<td>no <code>front_left_stream</code> or <code>front_right_stream</code> in it; pull the Pi's cable: <code>STALE</code> within 1-2 s</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -418,11 +550,15 @@ OpenH264 at 2 Mbit/s (a test checks).</p>
 </tr>
 <tr>
 <td><code>car.launch.py</code></td>
-<td>doesn't start the streams yet: a machine part for the Orin, with <code>decoder:=gst-nvidia</code></td>
+<td>done (<a href="#on-the-car-carlaunchpy">above</a>): <span class="badge b-untested">untested</span> on the Orin. Needs the engine built there first</td>
 </tr>
 <tr>
 <td>The sensor watchdog</td>
-<td>watches <code>/sensors/camera/front_left/image_raw</code>, which this node publishes only with <code>publish_image:=true</code>. Watch its <code>/diagnostics</code> instead?</td>
+<td>done: watches each stream's detections. <span class="badge b-untested">untested</span> at the car</td>
+</tr>
+<tr>
+<td>The stop sign's size</td>
+<td><code>stop_sign_watcher</code> stops for a box 55 px tall: set for the bench's and Gazebo's lens. The ribbon cameras' lens at 1280x720 differs: check the distance at the car</td>
 </tr>
 <tr>
 <td>Lane finder and HUD</td>
