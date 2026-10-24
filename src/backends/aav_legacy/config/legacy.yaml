@@ -6,6 +6,12 @@ legacy_uart_bridge:
     baud: 115200
     rate_hz: 50.0
     cmd_timeout: 0.3
+    # The serial frame (TODO 50; docs/rust-firmware.md, "The heartbeat"). 1 while the car's
+    # ESP32 runs the 2025-26 C++, which reads only the 13-byte frame: a version 2 stream
+    # can be misread by its resync. 2 the day the Rust firmware is flashed
+    # (docs/esp32-bench.md): it carries the Orin's counter, and the ESP32 brakes 100 ms
+    # after it stops changing. The bridge's own default is 2.
+    frame_version: 1
     max_steering_angle: 0.5     # rad at full lock. TODO measure
     # TODO check: +1 must steer RIGHT for this to be -1. The 2025-26 joystick config had
     # invert_steer: true (joy_teleop_ackerman/config/joy_params.yaml), which suggests the

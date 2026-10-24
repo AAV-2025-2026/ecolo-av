@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_legacy</name>
   <version>0.1.0</version>
-  <description>Interim backend for the 2025-26 hardware: drives the ESP32's 13-byte UART protocol from ego's commands (/control/car/actuator_cmd, from the output mux), and turns the UDP wheel encoder into /vehicle/odom. Replaced by aav_spine once the CAN spine exists.</description>
+  <description>Interim backend for the 2025-26 hardware: drives the ESP32's UART protocol (version 2 with the Orin's heartbeat, or the 13-byte version 1) from ego's commands (/control/car/actuator_cmd, from the output mux), and turns the UDP wheel encoder into /vehicle/odom. Replaced by aav_spine once the CAN spine exists.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 
@@ -19,6 +19,8 @@
 
   <test_depend>ament_flake8</test_depend>
   <test_depend>python3-pytest</test_depend>
+  <!-- test_heartbeat_chain.py runs the muxes with the bridge. -->
+  <test_depend>aav_io_mux</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

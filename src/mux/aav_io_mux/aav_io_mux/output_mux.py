@@ -6,6 +6,9 @@ Subscribes  ego/actuator_cmd          ackermann_msgs/AckermannDriveStamped (ego,
             system/source             aav_interfaces/DataSource, latched
 Publishes   control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
                                       command, unchanged, while the gate is open
+            control/<target>/heartbeat  aav_interfaces/Heartbeat: one for each command passed
+                                      on, counter +1 (a byte), so it moves only while OPEN.
+                                      The Motor Pi relays it to the ESP32 (TODO 50)
             safety/output_mux/state   std_msgs/String, 2 Hz and on each change: OPEN, WAIT
                                       or STOP, the target, and why
 Serves      safety/output_mux/clear   std_srvs/Trigger: a person reopens a latched stop
@@ -32,8 +35,8 @@ doubts. Its clock is a steady one, not simulated time.
 import signal
 import time
 
-from aav_interfaces.msg import DataSource, SourceCheck
-from aav_io_mux import provenance
+from aav_interfaces.msg import DataSource, Heartbeat, SourceCheck
+from aav_io_mux import heartbeat, provenance
 from aav_io_mux.sensor_mux import ANNOUNCEMENTS, announcers_alive, entries_of
 from ackermann_msgs.msg import AckermannDriveStamped
 import rclpy
@@ -57,6 +60,9 @@ class OutputMux(Node):
         self.last_state = None
         self.out = self.create_publisher(AckermannDriveStamped, topic, 10)
         self.state_pub = self.create_publisher(String, 'safety/output_mux/state', 10)
+        self.counter = heartbeat.Counter()
+        self.heartbeat = self.create_publisher(Heartbeat, heartbeat.heartbeat_topic(self.target),
+                                               10)
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(SourceCheck, 'system/sensor_mux/state', self.on_check, 10)
         self.create_subscription(DataSource, 'system/source', self.on_source, ANNOUNCEMENTS)
@@ -91,6 +97,7 @@ class OutputMux(Node):
     def on_cmd(self, msg):
         if self.gate.is_open(time.monotonic()):
             self.out.publish(msg)
+            self.heartbeat.publish(Heartbeat(header=msg.header, counter=self.counter.beat()))
 
     def on_clear(self, request, response):
         self.tick()

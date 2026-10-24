@@ -145,7 +145,7 @@ STREAM_FRAMES = cpp_parse(STREAM)
 
 
 def relay_frame(counter, cmd=None, estop=False, now=1.0):
-    """What legacy_uart_bridge sends (frame_version 2): ego's command at `now`, or none."""
+    """Return what legacy_uart_bridge sends (frame_version 2): ego's command, or none."""
     relay = relay_module.Relay(M, cmd_timeout=0.3, version=2)
     relay.heartbeat(counter)
     relay.set_estop(estop)
@@ -155,7 +155,7 @@ def relay_frame(counter, cmd=None, estop=False, now=1.0):
 
 
 def with_byte(frame, at, value, fix_crc=True):
-    """A frame with one byte changed, its CRC made right again (or not)."""
+    """Return a frame with one byte changed, its CRC made right again (or not)."""
     b = bytearray(frame)
     b[at] = value
     if fix_crc:
@@ -200,8 +200,12 @@ V2_CASES = [
 
 
 def v2_parse(stream):
-    """Split a stream as legacy-link's ParserV2 does: wait for 0xA5, take 17 bytes; a bad
-    frame is dropped, and the search starts again at the next 0xA5 inside it."""
+    """
+    Split a stream as legacy-link's ParserV2 does.
+
+    Wait for 0xA5, take 17 bytes; a bad frame is dropped, and the search starts again at
+    the next 0xA5 inside it.
+    """
     buf, out = [], []
     for b in stream:
         if not buf and b != 0xA5:

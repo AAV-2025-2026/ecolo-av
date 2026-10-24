@@ -55,6 +55,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'src/backends/aav_legacy'))
 from aav_legacy.legacy_protocol import (  # noqa: E402
     LegacyMapping, pack_frame, pack_frame_v2, stop_command, to_legacy)
+STOP_COMMAND = stop_command  # the bridge's stale stop, for the tests
 
 # The firmware's numbers (spine-core's SpineConfig, spine-board's Calibration::TODAY).
 TIMEOUT_MS = 100            # cmd_timeout_ms
@@ -165,8 +166,7 @@ class Result:
     latched: Optional[bool] = None          # fresh frames without a stop didn't drive
     kind: str = 'silence'
     gap_frames: int = 0                     # frames sent in the gap
-    counted: Optional[int] = None           # the firmware's count of them: LINK repeats
-                                            # (frozen) or bad (bad_crc)
+    counted: Optional[int] = None           # the firmware's count: LINK repeats or bad
     problems: List[str] = field(default_factory=list)
 
     @property
@@ -325,9 +325,12 @@ class Firmware:
 
     def send_for(self, values: Tuple[float, float, float], seconds: float,
                  frames=None) -> Tuple[float, int]:
-        """Send one frame every 20 ms for `seconds`; return when the last went, and how
-        many. `frames()` makes each frame (version 2, the Orin's counter); by default
-        the version 1 frame of `values`."""
+        """
+        Send one frame every 20 ms for `seconds`; return when the last went, and how many.
+
+        `frames()` makes each frame (version 2, the Orin's counter); by default the
+        version 1 frame of `values`.
+        """
         frame = pack_frame(*values)
         start = time.monotonic()
         n = 0
@@ -408,6 +411,7 @@ def table(results: List[Result], clock: ClockMap) -> str:
     """Return the results as a markdown table, for the docs."""
     def ms(v):
         return '-' if v is None else f'{v:.0f}'
+
     def gap(r):
         if r.kind == 'silence':
             return '-'
@@ -445,7 +449,7 @@ def main(argv=None) -> int:
         for p in r.problems:
             print(f'cycle {i}: {p}')
     ok = all(r.ok for r in results)
-    print('PASS: it brakes when the Orin\'s counter stops (no frames, frozen, bad CRCs), '
+    print('PASS: it brakes when the counter of the Orin stops (no frames, frozen, bad CRCs), '
           'and stays braked until a stop' if ok else 'FAIL')
     return 0 if ok else 1
 
