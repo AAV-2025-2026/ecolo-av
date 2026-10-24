@@ -9,6 +9,8 @@
 //!
 //! - [`Bridge::drive`]: DRIVE_CMD at 50 Hz while ego's command is fresh, with the arming
 //!   edge (armed=0 frames before armed=1);
+//! - [`Bridge::arm`]: refused during an e-stop, and while the safety gate is shut
+//!   ([`OutputGate`]: the output mux not OPEN for this bridge's [`Target`], or quiet);
 //! - [`Bridge::set_estop`], [`Bridge::estop_frame`]: ESTOP_CMD, at once on a change and
 //!   as a 10 Hz heartbeat;
 //! - [`Bridge::receive`]: VEHICLE_FEEDBACK, VEHICLE_STATUS and the front wheel nodes'
@@ -18,11 +20,13 @@
 //!   Pi's UART; docs/can-plan.md).
 
 mod bridge;
+mod gate;
 pub mod wheels;
 
 pub use bridge::{
     ArmError, Arming, BadFrame, Bridge, Command, Drive, Geometry, Motion, Role, Settings, Status,
     UnknownRole, Update,
 };
+pub use gate::{GateShut, OutputGate, Target, UnknownTarget, GATE_SHUT};
 pub use spine_core::protocol::{DriveCmd, EstopCmd, Mode, DRIVE_CMD_ID, ESTOP_CMD_ID};
 pub use wheels::{Direction, Reading, Side};

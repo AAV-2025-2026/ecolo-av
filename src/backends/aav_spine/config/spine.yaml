@@ -6,6 +6,9 @@ spine_bridge:
                               # 5 of ego's 50 Hz messages. Plus the spine's 100 ms
                               # watchdog (spine-core cmd_timeout_ms), the car brakes at
                               # most 0.2 s after ego stops.
+    gate_timeout: 1.5         # s: /spine/arm is refused unless the output mux said OPEN
+                              # for this bridge's target within this time (it says its
+                              # state twice a second). Ben, 24 Oct
     drive_rate_hz: 50.0       # DRIVE_CMD rate; the spine's watchdog is 100 ms
     estop_rate_hz: 10.0       # ESTOP_CMD heartbeat (also sent at once on change)
     speed_variance: 0.01      # (m/s)^2 on /vehicle/odom vx. TODO from a bag

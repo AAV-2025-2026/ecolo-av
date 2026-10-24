@@ -25,9 +25,10 @@ runs the spine's firmware logic (spine-core) on its CAN frames, on Gazebo's cloc
 
 Still one backend: spine_bridge alone reads ego's commands (/control/gazebo/actuator_cmd,
 from the output mux); bridge:= picks its language, rust (aav_spine_bridge, the default)
-or python (aav_spine). arm:=true (the default)
-arms the spine 12 s after start-up, as the bench does; /spine/arm arms it again after a
-stop. The hardware e-stop and driver faults are the bench's: /vehicle/bench/hw_estop and
+or python (aav_spine). arm:=true (the default) arms the spine 12 s after start-up, as
+the bench does, once the output mux says OPEN (aav_spine's arm_when_open: spine_bridge
+refuses while the safety gate is shut); /spine/arm arms it again after a stop. The
+hardware e-stop and driver faults are the bench's: /vehicle/bench/hw_estop and
 /vehicle/bench/driver_faults.
 
 The road world also renders the car's camera and its radar stand-in, a lidar shaped like
@@ -115,10 +116,11 @@ def spine_in_the_loop(context, v, sim_time):
                           'max_steering': float(v['max_steering_angle'])}, sim_time]),
     ]
     if flag(context, 'arm'):
-        actions.append(TimerAction(period=12.0, actions=[ExecuteProcess(
-            name='arm_spine', output='screen',
-            cmd=['ros2', 'service', 'call', '/spine/arm', 'std_srvs/srv/SetBool',
-                 '{data: true}'])]))
+        # Once the safety gate is OPEN: spine_bridge refuses before. On a steady clock,
+        # not Gazebo's.
+        actions.append(TimerAction(period=12.0, actions=[Node(
+            package='aav_spine', executable='arm_when_open', name='arm_when_open',
+            output='screen')]))
     return actions
 
 

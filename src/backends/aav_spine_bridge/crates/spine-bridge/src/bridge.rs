@@ -1,11 +1,16 @@
 //! The bridge's state: what it sends the spine, and what it makes of what it hears.
 
-use std::{fmt, str::FromStr, time::Duration};
+use std::{
+    fmt,
+    str::FromStr,
+    time::{Duration, Instant},
+};
 
 use spine_core::protocol::{
     decode_report, DriveCmd, EstopCmd, FrameError, Mode, Report, VehicleFeedback, VehicleStatus,
 };
 
+use crate::gate::{GateShut, OutputGate, Target};
 use crate::wheels::{rear_axle_speed, Direction, FrontWheels, Reading};
 
 /// Armed=0 frames sent before armed=1: the spine arms only on that edge.
@@ -103,6 +108,11 @@ pub struct Settings {
     pub cmd_timeout: Duration,
     /// A wheel node quiet for longer is stale.
     pub wheel_timeout: Duration,
+    /// The output mux whose gate must be OPEN to arm: the one this bridge's commands come
+    /// from.
+    pub target: Target,
+    /// An older /safety/output_mux/state counts as silence: arming is refused.
+    pub gate_timeout: Duration,
 }
 
 /// ego's command (ackermann_msgs/AckermannDrive): m/s, rad (+ left), m/s², rad/s.
@@ -142,20 +152,37 @@ impl fmt::Display for Arming {
 }
 
 /// Why /spine/arm refused.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArmError {
     EstopActive,
+    /// The output mux isn't OPEN for this bridge's target, or has gone quiet (Ben, 24 Oct):
+    /// armed now, the spine would only latch again, with no commands coming.
+    GateShut(GateShut),
 }
 
 impl fmt::Display for ArmError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ArmError::EstopActive => f.write_str("e-stop is active; clear /safety/estop first"),
+            ArmError::GateShut(shut) => shut.fmt(f),
         }
     }
 }
 
-impl std::error::Error for ArmError {}
+impl std::error::Error for ArmError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            ArmError::EstopActive => None,
+            ArmError::GateShut(shut) => Some(shut),
+        }
+    }
+}
+
+impl From<GateShut> for ArmError {
+    fn from(shut: GateShut) -> Self {
+        ArmError::GateShut(shut)
+    }
+}
 
 /// A received frame that failed its checks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -239,6 +266,7 @@ pub struct Bridge {
     /// armed=0 frames still to send before arming.
     disarm_frames: u8,
     estop: bool,
+    gate: OutputGate,
     drive_counter: Counter,
     estop_counter: Counter,
     feedback: Option<VehicleFeedback>,
@@ -254,6 +282,7 @@ impl Bridge {
             armed: false,
             disarm_frames: 0,
             estop: false,
+            gate: OutputGate::new(settings.target, settings.gate_timeout),
             drive_counter: Counter::default(),
             estop_counter: Counter::default(),
             feedback: None,
@@ -279,12 +308,24 @@ impl Bridge {
         changed.then(|| self.estop_frame())
     }
 
-    /// /spine/arm. Arming always sends a few armed=0 frames first: the spine arms only on
-    /// that edge, and it also clears latches the bridge can't see (a hardware e-stop, a
-    /// command timeout, a driver fault, a spine reboot).
-    pub fn arm(&mut self, arm: bool) -> Result<Arming, ArmError> {
+    /// /safety/output_mux/state: the output mux's line, heard at `at` (a steady clock).
+    pub fn output_mux_state(&mut self, line: &str, at: Instant) {
+        self.gate.heard(line, at);
+    }
+
+    /// /spine/arm, at `now` (a steady clock, as [`Bridge::output_mux_state`]'s). Refused
+    /// during an e-stop, and while the safety gate is shut: the output mux not OPEN for
+    /// this bridge's target, or not heard for `gate_timeout`. Disarming always works.
+    ///
+    /// Arming always sends a few armed=0 frames first: the spine arms only on that edge,
+    /// and it also clears latches the bridge can't see (a hardware e-stop, a command
+    /// timeout, a driver fault, a spine reboot).
+    pub fn arm(&mut self, arm: bool, now: Instant) -> Result<Arming, ArmError> {
         if arm && self.estop {
             return Err(ArmError::EstopActive);
+        }
+        if arm {
+            self.gate.check(now)?;
         }
         self.armed = arm;
         if arm {

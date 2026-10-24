@@ -17,7 +17,7 @@ try:
     from can_msgs.msg import Frame
     import rclpy
     from rclpy.duration import Duration
-    from std_msgs.msg import Bool
+    from std_msgs.msg import Bool, String
     from std_srvs.srv import SetBool
 except ImportError:
     SpineBridge = None
@@ -44,7 +44,10 @@ def fresh_command(node, speed=1.0):
     node.cmd_time = node.get_clock().now()
 
 
-def arm(node, on=True):
+def arm(node, on=True, gate='OPEN - car: every source REAL'):
+    """/spine/arm, the output mux having just said `gate` (None: not heard)."""
+    if gate is not None:
+        node.on_gate(String(data=gate))
     return node.on_arm(SetBool.Request(data=on), SetBool.Response())
 
 
@@ -74,6 +77,23 @@ def test_arming_again_sends_the_edge_again(bridge):
     arm(bridge)
     fresh_command(bridge)
     assert armed_flags(bridge, 5) == [False, False, False, True, True]
+
+
+def test_the_safety_gate_shut_refuses_arming(bridge):
+    # Ben, 24 Oct: never armed while the output mux withholds the commands.
+    stop = 'STOP - target car needs REAL - imu is SIM (gazebo_adapter) - latched: ...'
+    fresh_command(bridge)
+    for gate, says in ((None, '/safety/output_mux/state'),
+                       ('WAIT - car: all REAL, settling for 2 s', 'settling'),
+                       (stop, stop), ('OPEN - gazebo: every source SIM', 'another target')):
+        answer = arm(bridge, gate=gate)
+        assert not answer.success, gate
+        assert answer.message.startswith('the safety gate is shut'), answer.message
+        assert says in answer.message, answer.message
+    fresh_command(bridge)
+    assert armed_flags(bridge, 5) == [False] * 5
+    assert arm(bridge, on=False, gate=None).success   # disarming always works
+    assert arm(bridge).success                        # OPEN for the car
 
 
 def test_estop_disarms_and_refuses_arming(bridge):

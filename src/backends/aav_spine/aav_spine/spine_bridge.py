@@ -7,6 +7,7 @@ Subscribes  control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped:
                               sim. Never /ego/actuator_cmd itself: on the car, only an
                               output mux that found every source REAL reaches this node
             safety/estop      std_msgs/Bool
+            safety/output_mux/state  std_msgs/String: the safety gate, for spine/arm
             can/rx            can_msgs/Frame  (ros2_socketcan receiver)
 Publishes   can/tx            can_msgs/Frame  (ros2_socketcan sender)
             vehicle/odom      nav_msgs/Odometry  (twist only, in base_link)
@@ -22,7 +23,10 @@ Publishes   can/tx            can_msgs/Frame  (ros2_socketcan sender)
             system/source     aav_interfaces/DataSource, latched: REAL on the car, BENCH on
                               the bench, SIM in Gazebo's spine profile (the `source`
                               parameter)
-Service     spine/arm         std_srvs/SetBool
+Service     spine/arm         std_srvs/SetBool: refused during an e-stop, and while the
+                              safety gate is shut: the output mux not OPEN for this
+                              bridge's target, or quiet for gate_timeout s (Ben, 24 Oct;
+                              output_gate). Disarming always works
 
 Frames are defined in firmware/can/aav.dbc and packed by can_codec.
 /vehicle/odom's speed is the front wheel nodes' mean (WHEEL_SPEED_L/R, turned into
@@ -37,7 +41,8 @@ command timeout, a driver fault, a spine reboot).
 
 role:=spine (the default) is all of the above. role:=sensors is for a car driven another
 way (today's: the ESP32, through the Motor Pi's UART; docs/can-plan.md). The node only
-reads the wheel nodes' frames: no can/tx, no safety/estop, no spine/arm, no timers, and
+reads the wheel nodes' frames: no can/tx, no safety/estop or safety/output_mux/state, no
+spine/arm, no timers, and
 none of vehicle/status, joint_states, steering, throttle, brake. vehicle/odom comes from
 the wheels alone (their mean while both are fresh; no yaw rate: the steering angle isn't
 on the bus), and system/source names only odometry and wheels. It still reads
@@ -46,11 +51,13 @@ control/<target>/actuator_cmd, only to sign a wheel that sends a magnitude.
 
 import math
 import signal
+import time
 
 from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
 from aav_interfaces.msg import WheelSpeeds
 from aav_spine import bridges
 from aav_spine import can_codec as cc
+from aav_spine import output_gate
 from aav_spine import wheel_speed as ws
 from ackermann_msgs.msg import AckermannDriveStamped
 from can_msgs.msg import Frame
@@ -60,7 +67,7 @@ from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 from std_srvs.srv import SetBool
 
 # /system/source: what the `source` parameter may say.
@@ -89,6 +96,7 @@ class SpineBridge(Node):
         self.track = self.declare_parameter('track', 0.77).value
         self.cmd_timeout = self.declare_parameter('cmd_timeout', 0.1).value
         wheel_timeout = self.declare_parameter('wheel_timeout', 0.1).value
+        gate_timeout = self.declare_parameter('gate_timeout', output_gate.TIMEOUT).value
         drive_hz = self.declare_parameter('drive_rate_hz', 50.0).value
         estop_hz = self.declare_parameter('estop_rate_hz', 10.0).value
         self.speed_var = self.declare_parameter('speed_variance', 0.01).value
@@ -107,6 +115,7 @@ class SpineBridge(Node):
         self.armed = False
         self.disarm_frames = 0   # armed=0 frames still to send before arming
         self.estop = False
+        self.gate = output_gate.OutputGate(output_gate.TARGETS[source], gate_timeout)
         self.counters = {}
         self.feedback = None
         self.bad_frames = 0
@@ -128,6 +137,7 @@ class SpineBridge(Node):
             self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
             self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
             self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
+            self.create_subscription(String, 'safety/output_mux/state', self.on_gate, 10)
             self.create_service(SetBool, 'spine/arm', self.on_arm)
             self.create_timer(1.0 / drive_hz, self.send_drive)
             self.create_timer(1.0 / estop_hz, self.send_estop)
@@ -165,10 +175,20 @@ class SpineBridge(Node):
         if changed:
             self.send_estop()
 
+    def on_gate(self, msg):
+        # A steady clock: in Gazebo the node's is simulated, and may pause.
+        self.gate.heard(msg.data, time.monotonic())
+
     def on_arm(self, request, response):
+        refusal = None
         if request.data and self.estop:
+            refusal = 'e-stop is active; clear /safety/estop first'
+        elif request.data:
+            refusal = self.gate.refusal(time.monotonic())
+        if refusal:
             response.success = False
-            response.message = 'e-stop is active; clear /safety/estop first'
+            response.message = refusal
+            self.get_logger().warning(f'arm refused: {refusal}')
             return response
         if request.data:
             self.disarm_frames = 3   # the spine arms on armed 0 -> 1, every time

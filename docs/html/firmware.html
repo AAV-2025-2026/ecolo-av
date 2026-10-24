@@ -7,7 +7,7 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">14 min read · 9 sections</div></header>
+<div class="meta">15 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -225,7 +225,8 @@ code.</p>
 </table></div>
 <p>The computer must arm (<code>/spine/arm</code>) before it drives: at power-up, and after an e-stop,
 a timeout or a driver fault. Arming sends <code>armed = 0</code>, then <code>armed = 1</code>. A glitch or a
-reboot never restarts the car by itself.</p>
+reboot never restarts the car by itself. <code>spine_bridge</code> refuses to arm while the safety
+gate is shut: the output mux not <code>OPEN</code> (<a href="sources-and-targets.html">sources and targets</a>).</p>
 </section>
 <section class="card"><h2 id="the-can-contract">The CAN contract</h2>
 <p><code>firmware/can/aav.dbc</code> is the source of truth: classic CAN at 500 kbit/s, 11-bit IDs,

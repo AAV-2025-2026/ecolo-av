@@ -28,8 +28,10 @@ out, and each backend's own timeout brakes the car (spine_bridge 0.1 s, then the
 Evidence latches the stop: an announcement of another source, or the sensor mux's
 problems. It stays stopped until a person calls /safety/output_mux/clear, which works
 only once the evidence has gone. Doubt only holds it shut, and it reopens by itself after
-`settle` s of all clear: a sensor mux not heard yet or quiet for `stale_after` s, or its
-doubts. Its clock is a steady one, not simulated time.
+`settle` s of all clear: a sensor mux not heard yet or quiet for `stale_after` s, its
+doubts, or a node on /system/source whose announcement hasn't arrived yet. An
+announcement heard before its node shows in the graph counts at once
+(provenance.Announcers). Its clock is a steady one, not simulated time.
 """
 
 import signal
@@ -56,7 +58,7 @@ class OutputMux(Node):
         self.gate = provenance.Gate(self.target,
                                     settle=self.declare_parameter('settle', 2.0).value,
                                     stale_after=self.declare_parameter('stale_after', 3.0).value)
-        self.heard = {}
+        self.announcers = provenance.Announcers()
         self.last_state = None
         self.out = self.create_publisher(AckermannDriveStamped, topic, 10)
         self.state_pub = self.create_publisher(String, 'safety/output_mux/state', 10)
@@ -81,14 +83,17 @@ class OutputMux(Node):
         self.publish_state(changes_only=True)
 
     def on_source(self, msg):
-        self.heard[msg.announcer] = entries_of(msg)
+        self.announcers.hear(msg.announcer, entries_of(msg), time.monotonic())
         self.tick()
         self.publish_state(changes_only=True)
 
     def tick(self):
-        """Re-judge: the live announcements, the sensor mux's age."""
-        self.gate.entries = provenance.live_entries(self.heard, announcers_alive(self))
-        self.gate.update(time.monotonic())
+        """Re-judge: the live announcements, any not heard yet, the sensor mux's age."""
+        now = time.monotonic()
+        alive = announcers_alive(self)
+        self.gate.entries = self.announcers.entries(alive, now)
+        self.gate.unheard = self.announcers.unheard(alive)
+        self.gate.update(now)
 
     def tick_and_publish(self):
         self.tick()
@@ -102,8 +107,11 @@ class OutputMux(Node):
     def on_clear(self, request, response):
         self.tick()
         response.success, response.message = self.gate.clear(time.monotonic())
-        log = self.get_logger().warning if response.success else self.get_logger().error
-        log(f'clear: {response.message}')
+        # Two call sites: rclpy refuses one that logs at two severities.
+        if response.success:
+            self.get_logger().warning(f'clear: {response.message}')
+        else:
+            self.get_logger().error(f'clear: {response.message}')
         self.publish_state(changes_only=True)
         return response
 

@@ -108,7 +108,8 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
 Times are Gazebo's, simulated; only the limits on waiting are wall-clock. Prints a table and
 exits 1 if anything failed. The launch logs go to /tmp/aav-sim-check.log and, with --lane,
 /tmp/aav-sim-check-lane.log: AAV_SIM_LOG=/tmp/mine.log moves them. AAV_SIM_DOMAIN and
-AAV_SIM_PARTITION pick the ROS domain and the Gazebo partition (a random domain otherwise).
+AAV_SIM_PARTITION pick the ROS domain and the Gazebo partition (otherwise a domain nobody
+on this computer uses now).
 """
 
 import bisect
@@ -116,7 +117,6 @@ import collections
 import importlib.util
 import math
 import os
-import random
 import re
 import signal
 import subprocess
@@ -127,8 +127,14 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # A private ROS domain and Gazebo partition, on this computer only, set before rclpy
-# starts: the check can't disturb a car, another laptop or someone else's simulator.
-DOMAIN = os.environ.get('AAV_SIM_DOMAIN', str(random.randint(150, 230)))
+# starts: the check can't disturb a car, another laptop or someone else's simulator. The
+# domain is one nobody on this computer uses now (aav_io_mux domains: on 24 Oct a guard
+# test's spine_bridge, on the same random domain, latched a check's output mux).
+if 'AAV_SIM_DOMAIN' in os.environ:
+    DOMAIN = os.environ['AAV_SIM_DOMAIN']
+else:
+    from aav_io_mux.domains import free_domain
+    DOMAIN = str(free_domain())
 os.environ['ROS_DOMAIN_ID'] = DOMAIN
 os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
 os.environ['GZ_IP'] = '127.0.0.1'

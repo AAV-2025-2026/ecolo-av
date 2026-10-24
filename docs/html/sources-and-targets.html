@@ -7,7 +7,7 @@
 <!-- Generated from docs/sources-and-targets.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Sources and targets: the sensor mux and the output mux</h1>
-<div class="meta">8 min read · 8 sections</div></header>
+<div class="meta">11 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -70,7 +70,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-each-one-checks">What each one checks</a><a href="#open-wait-stop">Open, wait, stop</a><a href="#one-launch-target">One launch, target:=</a><a href="#why-check-not-copy">Why check, not copy</a><a href="#the-heartbeat-to-the-esp32-24-oct">The heartbeat to the ESP32 (24 Oct)</a><a href="#what-it-cant-catch">What it can&#x27;t catch</a><a href="#tests">Tests</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-each-one-checks">What each one checks</a><a href="#open-wait-stop">Open, wait, stop</a><a href="#arming-waits-for-open">Arming waits for OPEN</a><a href="#one-launch-target">One launch, target:=</a><a href="#why-check-not-copy">Why check, not copy</a><a href="#the-heartbeat-to-the-esp32-24-oct">The heartbeat to the ESP32 (24 Oct)</a><a href="#what-it-cant-catch">What it can&#x27;t catch</a><a href="#tests">Tests</a></nav>
 <div class="lead"><p>Simulated data must never drive the real car (PLAN.md S-4, T1.5, decision D3). Two
 nodes at the edges of the stack make sure: the <strong>sensor mux</strong> checks where the data comes
 from, and the <strong>output mux</strong> sends ego's commands to one target, the real car only while
@@ -184,14 +184,90 @@ replay), so it can't pass for real.</p>
 <td>doubt</td>
 <td>a busy computer can delay it; it never latches</td>
 </tr>
+<tr>
+<td>A node on <code>/system/source</code> whose announcement hasn't arrived</td>
+<td>doubt; evidence once it lasts 5 s</td>
+<td>the graph can show it before its message (up to 30 ms across processes, measured 24 Oct); the message may say SIM</td>
+</tr>
+<tr>
+<td>An announcement whose node isn't in the graph yet</td>
+<td>counts at once (for up to 10 s)</td>
+<td>the message can come first; only once its node has been seen and gone is it forgotten</td>
+</tr>
 </tbody>
 </table></div>
-<div class="admonition warning">
-<p class="admonition-title">Arm the spine only once it says OPEN</p>
-<pre><code>Until then `spine_bridge` gets no commands, so the spine's 100 ms watchdog latches it
-again at once. `bench_check.py` and `sim_check.py` wait for OPEN before they arm.
-</code></pre>
-</div>
+</section>
+<section class="card"><h2 id="arming-waits-for-open">Arming waits for OPEN</h2>
+<p>Until the gate is <code>OPEN</code>, <code>spine_bridge</code> gets no commands, so an armed spine's 100 ms
+watchdog would latch it again at once. So <code>spine_bridge</code> <strong>refuses to arm</strong> while the
+gate is shut (Ben, 24 Oct), and says why.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>/spine/arm</code> (true) when the output mux...</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>says <code>OPEN</code> for this bridge's target, within 1.5 s</td>
+<td><code>armed</code></td>
+</tr>
+<tr>
+<td>says <code>WAIT</code> or <code>STOP</code></td>
+<td>refused: <code>the safety gate is shut: &lt;its line&gt;; arm once it says OPEN</code></td>
+</tr>
+<tr>
+<td>hasn't been heard, or is quiet for 1.5 s (<code>gate_timeout</code>)</td>
+<td>refused: no word, or quiet for so long</td>
+</tr>
+<tr>
+<td>says <code>OPEN</code> for another target (<code>gazebo</code>, on the car)</td>
+<td>refused: not this bridge's gate</td>
+</tr>
+<tr>
+<td>says anything, during an e-stop</td>
+<td>refused: the e-stop first</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>The bridge's <code>source:=</code></th>
+<th>Its target</th>
+<th>Its gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>real</code></td>
+<td><code>car</code></td>
+<td><code>OPEN - car: ...</code></td>
+</tr>
+<tr>
+<td><code>bench</code></td>
+<td><code>bench</code></td>
+<td><code>OPEN - bench: ...</code></td>
+</tr>
+<tr>
+<td><code>sim</code> (Gazebo, <code>spine:=true</code>)</td>
+<td><code>gazebo</code></td>
+<td><code>OPEN - gazebo: ...</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Disarming always works.</li>
+<li>Both bridges, Rust and Python, say the same words (<code>spine-bridge</code>'s <code>gate.rs</code>,
+  <code>aav_spine/output_gate.py</code>). Their clock for "quiet" is a steady one, not Gazebo's.</li>
+<li><code>role:=sensors</code> has no <code>/spine/arm</code>, so nothing to refuse.</li>
+<li><code>legacy_uart_bridge</code> (today's car, through the Motor Pi) has no arm step: the output
+  mux's silence makes it brake after 0.3 s.</li>
+<li>The bench and Gazebo (<code>arm:=true</code>) start <code>arm_when_open</code> (<code>aav_spine</code>) after 12 s. It
+  asks each second until the gate opens, then exits. It gives up after 120 s, or at once
+  on an e-stop. <code>bench_check.py</code> and <code>sim_check.py</code> also wait for OPEN before they arm.</li>
+</ul>
 <p>When it sends nothing, each backend's own timeout brakes, as when ego stops: <code>spine_bridge</code>
 after 0.1 s (then the spine's 100 ms watchdog), <code>legacy_uart_bridge</code> after 0.3 s, Gazebo
 after 0.2 s. The clear service refuses while anything is still wrong, and says what.</p>
@@ -321,7 +397,19 @@ own. The frame: <a href="rust-firmware.html#the-heartbeat-version-2-of-the-seria
   allowed on the car (<a href="ghost-obstacles.html">ghost obstacles</a>).</li>
 <li>The first 4 s after start: the sensor mux stays quiet 2 s while discovery settles, and
   the output mux waits 2 s more. Nothing drives in that time.</li>
+<li>A simulator started <strong>later</strong>, on the car's network: commands flow until its
+  announcement arrives, then stop at once (latched). The guard test checks it takes
+  under 1 s.</li>
 </ul>
+<div class="admonition warning">
+<p class="admonition-title">Two runs on one ROS domain see each other</p>
+<pre><code>On 24 Oct a guard test's REAL `spine_bridge`, on the same random domain as a Gazebo
+check (193), latched that check's output mux. The guard test, `sim_check.py` and
+`bench_check.py` now take a domain nobody on the computer uses
+(`aav_io_mux/domains.py`: a probe node sees no other node or topic for 1.5 s). The
+guard test also fails, naming them, if another run's nodes turn up later.
+</code></pre>
+</div>
 </section>
 <section class="card"><h2 id="tests">Tests</h2>
 <div class="table-wrap"><table>
@@ -334,11 +422,15 @@ own. The frame: <a href="rust-firmware.html#the-heartbeat-version-2-of-the-seria
 <tbody>
 <tr>
 <td><code>aav_io_mux/test/test_provenance.py</code></td>
-<td>the rules, no ROS: 30 cases</td>
+<td>the rules, no ROS: 34 cases, with the graph and the announcement in either order</td>
 </tr>
 <tr>
 <td><code>aav_io_mux/test/test_real_backend_guard.py</code></td>
-<td>the real nodes with <code>spine_bridge</code> (source real): all REAL, its DRIVE_CMD frames flow; Gazebo announcing SIM, <strong>none</strong>; and <code>spine_bridge</code> never listens to <code>/ego/actuator_cmd</code>. With <code>role:=sensors</code> (today's wiring: the Orin's CAN bus has only sensors), the mux still opens, not one frame reaches <code>/can/tx</code>, and it announces only the wheels</td>
+<td>the real nodes with <code>spine_bridge</code> (source real), Rust and Python: all REAL, its DRIVE_CMD frames flow; Gazebo announcing SIM, <strong>none</strong>, and <code>/spine/arm</code> refused with the STOP's reason; Gazebo gone and the stop cleared, <code>OPEN</code>, and it arms (armed frames follow); Gazebo starting late, the frames stop within 1 s; a node on <code>/system/source</code> not heard yet, <code>WAIT</code> and no frames, then <code>STOP</code> once it says SIM; and <code>spine_bridge</code> never listens to <code>/ego/actuator_cmd</code>. With <code>role:=sensors</code> (today's wiring: the Orin's CAN bus has only sensors), the mux still opens, not one frame reaches <code>/can/tx</code>, and it announces only the wheels</td>
+</tr>
+<tr>
+<td><code>spine-bridge</code>'s <code>tests/gate.rs</code>, <code>aav_spine/test/test_output_gate.py</code></td>
+<td>the arming rule, no ROS: not heard, WAIT, STOP, quiet, another target, OPEN; the same cases in both languages</td>
 </tr>
 <tr>
 <td><code>aav_bringup/test/test_stack_launch.py</code></td>

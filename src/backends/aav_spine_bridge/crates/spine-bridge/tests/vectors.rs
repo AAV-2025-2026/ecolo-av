@@ -2,10 +2,14 @@
 //! through the whole bridge: the frames it sends must be those bytes, and the frames it
 //! receives must come out as the decoded values, in ROS's units.
 
-use std::{fs, path::PathBuf, time::Duration};
+use std::{
+    fs,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 use serde_json::Value;
-use spine_bridge::{Bridge, Command, Drive, Geometry, Role, Settings, Update};
+use spine_bridge::{Bridge, Command, Drive, Geometry, Role, Settings, Target, Update};
 use spine_core::protocol::{
     DRIVE_CMD_ID, ESTOP_CMD_ID, VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID, WHEEL_SPEED_L_ID,
     WHEEL_SPEED_R_ID,
@@ -19,6 +23,8 @@ const SETTINGS: Settings = Settings {
     },
     cmd_timeout: Duration::from_millis(100),
     wheel_timeout: Duration::from_millis(100),
+    target: Target::Car,
+    gate_timeout: Duration::from_millis(1500),
 };
 const NOW: Duration = Duration::ZERO;
 
@@ -85,7 +91,9 @@ fn drive_bytes(v: &Vector) -> Vec<u8> {
     );
     let armed = flag(&v.values, "armed");
     if armed {
-        bridge.arm(true).ok();
+        let now = Instant::now();
+        bridge.output_mux_state("OPEN - car: every source REAL", now);
+        bridge.arm(true, now).ok();
     }
     let counter = num(&v.values, "counter") as u8;
     (0..40)

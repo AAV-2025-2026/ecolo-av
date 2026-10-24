@@ -56,12 +56,53 @@ def test_an_unknown_number_is_never_real():
 
 # --- announcements ---
 
-def test_an_announcement_counts_only_while_its_announcer_is_alive():
-    heard = {'gazebo_adapter': gazebo(IMU), 'legacy_uart_bridge': [
-        Entry('legacy_uart_bridge', 'actuators', '', REAL)]}
-    assert [e.announcer for e in p.live_entries(heard, {'legacy_uart_bridge'})] == [
+def heard(*announcements, now=0.0):
+    a = p.Announcers()
+    for entries in announcements:
+        a.hear(entries[0].announcer, entries, now)
+    return a
+
+
+LEGACY = [Entry('legacy_uart_bridge', 'actuators', '', REAL)]
+
+
+def test_an_announcement_is_forgotten_once_its_announcer_has_gone():
+    a = heard(gazebo(IMU), LEGACY)
+    both = {'gazebo_adapter', 'legacy_uart_bridge'}
+    assert {e.announcer for e in a.entries(both, 1.0)} == both
+    # Gazebo stops: its SIM entries stop counting, so a stop can be cleared.
+    assert [e.announcer for e in a.entries({'legacy_uart_bridge'}, 2.0)] == [
         'legacy_uart_bridge']
-    assert p.live_entries(heard, set()) == []
+    assert a.entries(set(), 3.0) == []
+
+
+def test_an_announcement_counts_before_the_graph_shows_its_announcer():
+    # The message can come first (24 Oct): ignoring it would let a SIM source through.
+    a = heard(gazebo(IMU), now=10.0)
+    assert [e.announcer for e in a.entries(set(), 10.2)] == ['gazebo_adapter']
+    assert p.foreign(a.entries(set(), 10.2), REAL) == ['imu is SIM (gazebo_adapter)']
+    # Never in the graph at all: forgotten after the grace (a short-lived publisher).
+    assert a.entries(set(), 10.0 + a.grace) == []
+
+
+def test_an_announcer_heard_again_is_fresh():
+    a = heard(gazebo(IMU), now=0.0)
+    a.entries({'gazebo_adapter'}, 1.0)          # seen in the graph
+    a.hear('gazebo_adapter', gazebo(IMU), 50.0)   # Gazebo started again
+    assert len(a.entries(set(), 50.1)) == 1      # counts before the graph shows it again
+
+
+def test_an_announcer_in_the_graph_not_heard_yet_is_a_doubt():
+    # The graph can come first, by up to 30 ms across processes (24 Oct): wait for its
+    # announcement, which may say SIM.
+    a = heard(LEGACY)
+    alive = {'legacy_uart_bridge', 'gazebo_adapter'}
+    assert a.unheard(alive) == [
+        'gazebo_adapter publishes /system/source, its announcement not heard yet']
+    check = p.check_sensors(REAL, a.entries(alive, 0.0), {}, unheard=a.unheard(alive))
+    assert not check.ok and not check.problems and len(check.doubts) == 1
+    a.hear('gazebo_adapter', gazebo(IMU), 0.1)
+    assert a.unheard(alive) == []
 
 
 def test_foreign_lists_what_isnt_the_source_asked_for():
@@ -252,6 +293,20 @@ def test_the_sensor_mux_unsure_holds_the_gate_without_latching():
     gate.report = Report(6.0, REAL, False, problems=(TWO,))
     assert not gate.is_open(6.0)
     assert gate.latched == (TWO,)
+
+
+def test_an_announcer_not_heard_yet_holds_the_gate_and_its_sim_latches():
+    unheard = 'gazebo_adapter publishes /system/source, its announcement not heard yet'
+    gate = Gate('car', settle=0.0)
+    gate.report = ok(0.0)
+    assert gate.is_open(0.0)
+    gate.unheard = [unheard]
+    assert not gate.is_open(0.1) and gate.latched == ()
+    assert gate.state(0.1) == f'WAIT - car: {unheard}'
+    # Its announcement arrives: SIM, a stop.
+    gate.unheard, gate.entries = [], gazebo(CAMERA)
+    assert not gate.is_open(0.2)
+    assert gate.latched == ('front_left is SIM (gazebo_adapter)',)
 
 
 def test_gazebo_refuses_a_real_backend_in_its_graph():

@@ -356,7 +356,8 @@ between it and the mux, as on a car with a radar.</p>
 </tbody>
 </table></div>
 <p>After an e-stop, a driver fault or a gap in commands, the spine latches. Arm it again, as
-on the car.</p>
+on the car. <code>spine_bridge</code> refuses while the safety gate is shut (the output mux not
+<code>OPEN</code>), and says why: <code>ros2 topic echo /safety/output_mux/state</code> shows the gate.</p>
 </section>
 <section class="card"><h2 id="bench-check">bench-check</h2>
 <p><code>pixi run bench-check</code> starts the bench on a private ROS domain, on this computer only, so

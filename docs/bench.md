@@ -109,7 +109,8 @@ In a terminal opened with `pixi shell`, then `source install/setup.zsh`
 | The truth against the EKF | `ros2 topic echo /vehicle/bench/truth` and `ros2 topic echo /localization/odom/global` |
 
 After an e-stop, a driver fault or a gap in commands, the spine latches. Arm it again, as
-on the car.
+on the car. `spine_bridge` refuses while the safety gate is shut (the output mux not
+`OPEN`), and says why: `ros2 topic echo /safety/output_mux/state` shows the gate.
 
 ## bench-check
 
