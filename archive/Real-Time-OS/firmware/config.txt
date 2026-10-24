@@ -1,0 +1,7 @@
+[rpi4]
+arm_64bit=1
+force_turbo=1
+enable_uart=1
+gpu_mem=16
+max_framebuffers=2
+kernel=ifs-rpi4.bin
