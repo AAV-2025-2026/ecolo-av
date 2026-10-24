@@ -16,6 +16,9 @@ pub const GET_VARIABLES: u8 = 0xE5;
 /// (section 13, "Get variables (one-byte commands)"). Some of them clear the
 /// variable as a side effect: see [`TAKE_ERRORS_HALTING`].
 pub const GET_VARIABLE_16: u8 = 0xA1;
+/// "Get RAM settings": then the offset; read up to 15 bytes back. The settings the Jrk
+/// is running with (section 13; Pololu's Arduino library, `JrkG2::getRAMSettings`).
+pub const GET_RAM_SETTINGS: u8 = 0xEA;
 
 /// The highest target the Jrk takes (section 11, "Set target").
 pub const MAX_TARGET: u16 = 4095;
@@ -27,6 +30,13 @@ pub mod offset {
     pub const SCALED_FEEDBACK: u8 = 0x06;
     pub const ERROR_FLAGS_HALTING: u8 = 0x12;
     pub const ERROR_FLAGS_OCCURRED: u8 = 0x14;
+}
+
+/// Where each setting sits (section 6, "Setting reference"; Pololu's Arduino library,
+/// `SettingOffset`).
+pub mod setting {
+    /// One byte: 0 none, 1 analog, 2 frequency.
+    pub const FEEDBACK_MODE: u8 = 0x18;
 }
 
 /// 0xB3: read "Error flags halting", and clear its latched bits (section 13).

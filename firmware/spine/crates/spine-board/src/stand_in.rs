@@ -9,7 +9,7 @@
 //!
 //! | Address (today's) | Device | What it keeps | What it answers |
 //! |---|---|---|---|
-//! | steering (0x05) | Jrk G2 | the target | scaled feedback = the target; no errors |
+//! | steering (0x05) | Jrk G2 | the target | analog feedback; scaled feedback = the target; no errors |
 //! | brake (0x04) | Jrk G2 | the target | the same |
 //! | DAC (0x0C) | AD5311 | the code | the code |
 //! | expander (0x20) | PCA9555 | the output levels | 0 |
@@ -19,7 +19,7 @@
 
 use crate::calibration::{Addresses, Calibration};
 use embedded_hal::i2c::{ErrorKind, ErrorType, I2c, NoAcknowledgeSource, Operation};
-use jrk_g2::command::{offset, GET_VARIABLE_16, SET_TARGET};
+use jrk_g2::command::{offset, GET_RAM_SETTINGS, GET_VARIABLE_16, SET_TARGET};
 
 /// The PCA9555's command byte for its output port pair (SCPS131J, 8.5.2.2).
 const EXPANDER_OUTPUT: u8 = 0x02;
@@ -99,6 +99,8 @@ impl StandInBus {
         match command {
             // Scaled feedback: where the motor is. The stand-in is always there.
             Some(SCALED_FEEDBACK) => jrk_target.unwrap_or(0).to_le_bytes(),
+            // Its only setting asked for, the feedback mode: 1, analog.
+            Some(GET_RAM_SETTINGS) => [1, 0],
             // Error flags, and everything else: 0, no errors.
             _ => [0, 0],
         }
@@ -219,6 +221,7 @@ mod tests {
         let mut jrk = jrk_g2::JrkG2::new(&mut bus, cal.addresses.steering);
         jrk.set_target(2725).unwrap();
         assert_eq!(jrk.scaled_feedback().unwrap(), 2725);
+        assert_eq!(jrk.feedback_mode().unwrap(), jrk_g2::FeedbackMode::Analog);
         assert_eq!(jrk.take_error_flags().unwrap().0, 0);
     }
 

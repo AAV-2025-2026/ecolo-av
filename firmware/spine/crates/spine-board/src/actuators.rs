@@ -16,6 +16,11 @@
 //! The throttle rises at most `rise_per_s`, and falls at once. It stays at 0 while
 //! the brake is on, while the direction changes, and while the expander isn't set up.
 //!
+//! Each tick it also reads both Jrks: their errors, and where each motor is (their
+//! scaled feedback, as the 2024-25 `FinalRev` firmware read the steering with
+//! `getScaledFeedback()`). It asks each Jrk once for its feedback mode: a Jrk with no
+//! analog feedback set up has no position to give, and its position stays unknown.
+//!
 //! A failed transfer sets the device's fault bit; `spine-core` then stops the car and
 //! waits for the computer to arm again. The expander has no bit of its own: the
 //! direction belongs to the throttle, so it uses THROTTLE_DAC.
@@ -51,12 +56,24 @@ impl<I2C: I2c> Devices<I2C> {
     }
 }
 
+/// Where the motors are, this tick: `None` when unknown (the Jrk has no analog
+/// feedback set up, it hasn't said yet, or the read failed).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Positions {
+    /// The steering (rad, positive left).
+    pub steering: Option<f32>,
+    /// The brake (0 released .. 1 full).
+    pub brake: Option<f32>,
+}
+
 /// What the devices said this tick.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Readings {
     /// The steering angle from the Jrk's scaled feedback (rad, positive left).
-    /// If the read failed, the last good value.
+    /// If the read failed, the last good value; 0 if there never was one.
     pub steering: f32,
+    /// This tick's positions, or unknown.
+    pub positions: Positions,
     /// STEERING_DRIVER or BRAKE_DRIVER: a failed read, or a Jrk error.
     pub faults: u16,
 }
@@ -74,6 +91,9 @@ pub struct Actuators<I2C> {
     expander_ready: bool,
     last_ms: Option<u32>,
     steering: f32,
+    /// Each Jrk's feedback: a position, or not; `None` until it has said.
+    steering_feedback: Option<bool>,
+    brake_feedback: Option<bool>,
 }
 
 impl<I2C: I2c> Actuators<I2C> {
@@ -87,6 +107,8 @@ impl<I2C: I2c> Actuators<I2C> {
             expander_ready: false,
             last_ms: None,
             steering: 0.0,
+            steering_feedback: None,
+            brake_feedback: None,
         }
     }
 
@@ -100,22 +122,36 @@ impl<I2C: I2c> Actuators<I2C> {
             | self.write_steering(0.0)
     }
 
-    /// Read the steering feedback and both Jrks' errors. The error read clears the
-    /// Jrk's latched errors, as the C++ did; `spine-core` keeps the car stopped
-    /// until the computer arms again.
+    /// Read both Jrks: where each motor is, and their errors. The error read clears
+    /// the Jrk's latched errors, as the C++ did; `spine-core` keeps the car stopped
+    /// until the computer arms again. A failed position read is the Jrk's fault bit.
     pub fn read(&mut self) -> Readings {
         let mut bits = 0;
-        match self.dev.steering.scaled_feedback() {
-            Ok(feedback) => self.steering = self.cal.steering.angle(feedback),
-            Err(_) => bits |= faults::STEERING_DRIVER,
+        let steering = match position(&mut self.dev.steering, &mut self.steering_feedback) {
+            Ok(target) => target.map(|t| self.cal.steering.angle(t)),
+            Err(()) => {
+                bits |= faults::STEERING_DRIVER;
+                None
+            }
+        };
+        if let Some(angle) = steering {
+            self.steering = angle;
         }
         bits |= jrk_fault(
             self.dev.steering.take_error_flags(),
             faults::STEERING_DRIVER,
         );
+        let brake = match position(&mut self.dev.brake, &mut self.brake_feedback) {
+            Ok(target) => target.map(|t| self.cal.brake.fraction(t)),
+            Err(()) => {
+                bits |= faults::BRAKE_DRIVER;
+                None
+            }
+        };
         bits |= jrk_fault(self.dev.brake.take_error_flags(), faults::BRAKE_DRIVER);
         Readings {
             steering: self.steering,
+            positions: Positions { steering, brake },
             faults: bits,
         }
     }
@@ -240,6 +276,22 @@ impl<I2C: I2c> Actuators<I2C> {
             Ok(()) => 0,
             Err(_) => faults::STEERING_DRIVER,
         }
+    }
+}
+
+/// A Jrk's position, in target units: `Ok(None)` if it has no analog feedback, or
+/// hasn't said yet (its feedback mode is asked once, and again after a failed ask);
+/// `Err` if the position read failed.
+fn position<I2C: I2c>(
+    jrk: &mut JrkG2<I2C>,
+    is_position: &mut Option<bool>,
+) -> Result<Option<u16>, ()> {
+    if is_position.is_none() {
+        *is_position = jrk.feedback_mode().ok().map(|mode| mode.is_position());
+    }
+    match is_position {
+        Some(true) => jrk.scaled_feedback().map(Some).map_err(|_| ()),
+        _ => Ok(None),
     }
 }
 
@@ -507,29 +559,79 @@ mod tests {
         bus.done();
     }
 
+    fn mode(addr: u8, mode: u8) -> T {
+        T::write_read(addr, vec![0xEA, 0x18], vec![mode])
+    }
+    fn scaled(addr: u8, value: u16) -> T {
+        T::write_read(addr, vec![0xA7], value.to_le_bytes().to_vec())
+    }
+    fn errors(addr: u8, flags: u16) -> T {
+        T::write_read(addr, vec![0xB3], flags.to_le_bytes().to_vec())
+    }
+
     #[test]
-    fn read_gives_the_steering_angle_and_the_jrk_faults() {
+    fn read_gives_the_positions_and_the_jrk_faults() {
         let mut t = init();
-        // 2260 is 0.1 rad left. Steering: only "awaiting command"; brake: no power.
+        // First read: each Jrk says its feedback is analog (1), once. 2260 is 0.1 rad
+        // left; 1950 is half the brake. Steering: only "awaiting command"; brake: no
+        // power.
         t.extend([
-            T::write_read(STEER, vec![0xA7], 2260_u16.to_le_bytes().to_vec()),
-            T::write_read(STEER, vec![0xB3], vec![0x01, 0x00]),
-            T::write_read(BRAKE, vec![0xB3], vec![0x02, 0x00]),
+            mode(STEER, 1),
+            scaled(STEER, 2260),
+            errors(STEER, 0x0001),
+            mode(BRAKE, 1),
+            scaled(BRAKE, 1950),
+            errors(BRAKE, 0x0002),
         ]);
-        // Then the feedback read fails: the last good angle stays.
+        // Then the steering's read fails: the last good angle stays, the position is
+        // unknown this tick, and it is the steering's fault.
         t.extend([
-            T::write_read(STEER, vec![0xA7], vec![0, 0]).with_error(ErrorKind::Other),
-            T::write_read(STEER, vec![0xB3], vec![0x00, 0x00]),
-            T::write_read(BRAKE, vec![0xB3], vec![0x00, 0x00]),
+            scaled(STEER, 0).with_error(ErrorKind::Other),
+            errors(STEER, 0),
+            scaled(BRAKE, 3500),
+            errors(BRAKE, 0),
         ]);
         let (mut a, mut bus) = actuators(&t);
         a.init();
         let r = a.read();
         assert!((r.steering - 0.1).abs() < 1e-6);
+        assert!((r.positions.steering.unwrap() - 0.1).abs() < 1e-6);
+        assert!((r.positions.brake.unwrap() - 0.5).abs() < 1e-6);
         assert_eq!(r.faults, faults::BRAKE_DRIVER);
         let r = a.read();
         assert!((r.steering - 0.1).abs() < 1e-6);
+        assert_eq!(r.positions.steering, None);
+        assert_eq!(r.positions.brake, Some(1.0));
         assert_eq!(r.faults, faults::STEERING_DRIVER);
+        bus.done();
+    }
+
+    #[test]
+    fn a_jrk_without_feedback_has_no_position_and_no_fault() {
+        let mut t = init();
+        // The steering has none (0); the brake doesn't answer the question at first.
+        t.extend([
+            mode(STEER, 0),
+            errors(STEER, 0),
+            mode(BRAKE, 0).with_error(ErrorKind::Other),
+            errors(BRAKE, 0),
+        ]);
+        // Asked once: the steering isn't asked again; the brake is, and says analog.
+        t.extend([
+            errors(STEER, 0),
+            mode(BRAKE, 1),
+            scaled(BRAKE, 400),
+            errors(BRAKE, 0),
+        ]);
+        let (mut a, mut bus) = actuators(&t);
+        a.init();
+        let r = a.read();
+        assert_eq!(r.positions, Positions::default());
+        assert_eq!((r.steering, r.faults), (0.0, 0));
+        let r = a.read();
+        assert_eq!(r.positions.steering, None);
+        assert_eq!(r.positions.brake, Some(0.0));
+        assert_eq!(r.faults, 0);
         bus.done();
     }
 

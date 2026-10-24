@@ -34,11 +34,41 @@ mod flags;
 pub use command::MAX_TARGET;
 pub use flags::ErrorFlags;
 
-use command::offset;
+use command::{offset, setting};
 use embedded_hal::i2c::I2c;
 
 /// A new Jrk's I2C address (section 13). Today's car uses 0x05 and 0x04.
 pub const DEFAULT_ADDRESS: u8 = 0x0B;
+
+/// Where the Jrk's feedback comes from: its "Feedback mode" setting (section 6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FeedbackMode {
+    /// No sensor: open-loop speed control. The feedback reads 0, and means nothing.
+    None,
+    /// A voltage on the FBA pin, from a potentiometer, say: a position.
+    Analog,
+    /// Pulses on the FBT pin: a speed.
+    Frequency,
+    /// A value this driver doesn't know.
+    Other(u8),
+}
+
+impl FeedbackMode {
+    /// The mode for the setting's byte.
+    pub fn from_byte(byte: u8) -> FeedbackMode {
+        match byte {
+            0 => FeedbackMode::None,
+            1 => FeedbackMode::Analog,
+            2 => FeedbackMode::Frequency,
+            other => FeedbackMode::Other(other),
+        }
+    }
+
+    /// True if the scaled feedback says where the motor is: analog feedback only.
+    pub fn is_position(self) -> bool {
+        self == FeedbackMode::Analog
+    }
+}
 
 /// One Jrk G2 on an I2C bus.
 #[derive(Debug)]
@@ -89,6 +119,17 @@ impl<I2C: I2c> JrkG2<I2C> {
     /// when the Jrk's feedback is calibrated (section 10).
     pub fn scaled_feedback(&mut self) -> Result<u16, I2C::Error> {
         self.read_u16(command::GET_VARIABLE_16 + offset::SCALED_FEEDBACK)
+    }
+
+    /// Where the feedback comes from: the "Feedback mode" setting the Jrk runs with.
+    /// The 2024-25 firmware read the steering's position as the scaled feedback
+    /// (`getScaledFeedback()`); that is a position only when this is
+    /// [`FeedbackMode::Analog`].
+    pub fn feedback_mode(&mut self) -> Result<FeedbackMode, I2C::Error> {
+        let mut buf = [0; 1];
+        let cmd = [command::GET_RAM_SETTINGS, setting::FEEDBACK_MODE];
+        self.i2c.write_read(self.address, &cmd, &mut buf)?;
+        Ok(FeedbackMode::from_byte(buf[0]))
     }
 
     /// What is stopping the motor now ("Error flags halting"). Clears nothing.
@@ -199,6 +240,23 @@ mod tests {
                 ErrorFlags(ErrorFlags::HARD_OVERCURRENT)
             );
         });
+    }
+
+    #[test]
+    fn feedback_mode_reads_one_ram_setting() {
+        let expected = [
+            T::write_read(STEERING, vec![0xEA, 0x18], vec![0x01]),
+            T::write_read(STEERING, vec![0xEA, 0x18], vec![0x00]),
+            T::write_read(STEERING, vec![0xEA, 0x18], vec![0x07]),
+        ];
+        with_jrk(STEERING, &expected, |j| {
+            assert_eq!(j.feedback_mode().unwrap(), FeedbackMode::Analog);
+            assert_eq!(j.feedback_mode().unwrap(), FeedbackMode::None);
+            assert_eq!(j.feedback_mode().unwrap(), FeedbackMode::Other(7));
+        });
+        assert!(FeedbackMode::Analog.is_position());
+        assert!(!FeedbackMode::None.is_position());
+        assert!(!FeedbackMode::Frequency.is_position());
     }
 
     #[test]

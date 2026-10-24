@@ -54,7 +54,7 @@ pub mod spine_board;
 pub mod stand_in;
 pub mod wheel;
 
-pub use actuators::{Actuators, Devices, Readings};
+pub use actuators::{Actuators, Devices, Positions, Readings};
 pub use board::{Board, CanFrame, WheelCount};
 pub use calibration::Calibration;
 pub use link::{CanLink, CommandLink, FrameVersion, LegacyLink, LinkStats};

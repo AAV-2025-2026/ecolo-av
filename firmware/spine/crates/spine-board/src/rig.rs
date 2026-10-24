@@ -32,6 +32,10 @@ pub struct BusState {
     pub failing: Vec<u8>,
     /// The steering Jrk's scaled feedback.
     pub steering_feedback: u16,
+    /// The brake Jrk's scaled feedback.
+    pub brake_feedback: u16,
+    /// What a Jrk says its feedback mode is, if not 1 (analog): (address, mode).
+    pub feedback_modes: Vec<(u8, u8)>,
     /// The error flags each Jrk reports: (address, flags).
     pub jrk_errors: Vec<(u8, u16)>,
 }
@@ -62,6 +66,12 @@ impl I2c for FakeBus {
                     read = true;
                     let value = match (address, command) {
                         (STEER, Some(0xA7)) => s.steering_feedback,
+                        (BRAKE, Some(0xA7)) => s.brake_feedback,
+                        (a, Some(0xEA)) => s
+                            .feedback_modes
+                            .iter()
+                            .find(|m| m.0 == a)
+                            .map_or(1, |m| u16::from(m.1)),
                         (a, Some(0xB3)) => {
                             s.jrk_errors.iter().find(|e| e.0 == a).map_or(0, |e| e.1)
                         }
