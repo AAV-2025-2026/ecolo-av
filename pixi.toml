@@ -1,0 +1,31 @@
+[workspace]
+name = "ecolo-av"
+version = "0.1.0"
+description = "Single code base for the Ecolo autonomous vehicle (SYSC 4907)"
+channels = ["robostack-jazzy", "conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[dependencies]
+# ROS 2 Jazzy from RoboStack
+ros-jazzy-ros-base = "*"
+ros-jazzy-turtlesim = "*"
+ros-jazzy-teleop-twist-keyboard = "*"
+colcon-common-extensions = "*"
+# Tests and tools
+pytest = "*"
+pyyaml = "*"
+rust = "*"
+
+[tasks]
+# Demo: run each in its own terminal
+turtlesim = "ros2 run turtlesim turtlesim_node"
+teleop = "ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/turtle1/cmd_vel"
+
+# Contract
+contract-readme = "python tools/contract_readme.py"
+contract-check = "python tools/contract_readme.py --check"
+
+# Tests (CI runs `pixi run test`)
+test-py = "pytest tests"
+test-rust = { cmd = "cargo test", cwd = "firmware/spine" }
+test = { depends-on = ["contract-check", "test-py", "test-rust"] }

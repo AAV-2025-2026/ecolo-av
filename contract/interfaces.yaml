@@ -1,0 +1,183 @@
+# Interface contract: every topic between layers, with its rate and latency budget.
+# Source: project proposal, section 3.3 (final, 23 Oct 2026).
+# Edit this file, then run `pixi run contract-readme` to regenerate README.md.
+#
+# Fields:
+#   topic           ROS topic name. <name> and * are placeholders.
+#   type            Message type, or "custom (...)" until the message is defined.
+#   transport       ros (a ROS 2 topic) or can (CAN frames, not visible to ROS).
+#   from, to        Producing and consuming layer.
+#   rate_hz         Publish rate. A list [min, max] means a range.
+#   max_latency_ms  Latency budget for this hop.
+#   notes           Optional.
+
+version: 1
+
+topics:
+  # Drivers, command mux, ego
+  - topic: /drivers/<name>/cmd
+    type: geometry_msgs/msg/TwistStamped
+    transport: ros
+    from: each driver
+    to: command mux
+    rate_hz: 20
+    max_latency_ms: 50
+
+  - topic: /control/cmd
+    type: geometry_msgs/msg/TwistStamped
+    transport: ros
+    from: command mux
+    to: ego
+    rate_hz: 20
+    max_latency_ms: 20
+
+  - topic: /vehicle/ackermann_cmd
+    type: ackermann_msgs/msg/AckermannDriveStamped
+    transport: ros
+    from: ego
+    to: output mux
+    rate_hz: 50
+    max_latency_ms: 20
+
+  # CAN bridge and spine
+  - topic: /vehicle/steer_cmd
+    type: CAN frames
+    transport: can
+    from: CAN bridge
+    to: spine
+    rate_hz: 50
+    max_latency_ms: 10
+
+  - topic: /vehicle/brake_cmd
+    type: CAN frames
+    transport: can
+    from: CAN bridge
+    to: spine
+    rate_hz: 50
+    max_latency_ms: 10
+
+  - topic: /vehicle/throttle_cmd
+    type: CAN frames
+    transport: can
+    from: CAN bridge
+    to: spine
+    rate_hz: 50
+    max_latency_ms: 10
+
+  - topic: /vehicle/wheel_speed
+    type: custom (both front wheels)
+    transport: ros
+    from: wheel nodes
+    to: CAN bridge
+    rate_hz: 100
+    max_latency_ms: 10
+
+  - topic: /vehicle/steer_angle
+    type: custom (Float32 with header)
+    transport: ros
+    from: spine
+    to: CAN bridge
+    rate_hz: 50
+    max_latency_ms: 20
+
+  - topic: /vehicle/brake_pos
+    type: custom (Float32 with header)
+    transport: ros
+    from: spine
+    to: CAN bridge
+    rate_hz: 50
+    max_latency_ms: 20
+
+  # Sensors
+  - topic: /sensors/imu
+    type: sensor_msgs/msg/Imu
+    transport: ros
+    from: IMU driver
+    to: sensor mux
+    rate_hz: 100
+    max_latency_ms: 10
+
+  - topic: /sensors/gps/fix
+    type: sensor_msgs/msg/NavSatFix
+    transport: ros
+    from: GPS driver
+    to: sensor mux
+    rate_hz: 10
+    max_latency_ms: 100
+
+  - topic: /sensors/lidar/points
+    type: sensor_msgs/msg/PointCloud2
+    transport: ros
+    from: lidar driver
+    to: perception
+    rate_hz: 10
+    max_latency_ms: 100
+
+  - topic: /sensors/camera_*/image/compressed
+    type: sensor_msgs/msg/CompressedImage
+    transport: ros
+    from: camera Pi
+    to: perception
+    rate_hz: [15, 30]
+    max_latency_ms: 100
+
+  # Localization
+  - topic: /odometry/local
+    type: nav_msgs/msg/Odometry
+    transport: ros
+    from: local EKF
+    to: drivers, HUD
+    rate_hz: 50
+    max_latency_ms: 20
+
+  - topic: /odometry/global
+    type: nav_msgs/msg/Odometry
+    transport: ros
+    from: global EKF
+    to: drivers, HUD
+    rate_hz: 20
+    max_latency_ms: 20
+
+  # Safety, power, hardware test mode
+  - topic: /safety/state
+    type: custom
+    transport: ros
+    from: watchdog
+    to: HUD, ego
+    rate_hz: 10
+    max_latency_ms: 100
+
+  - topic: /power/battery
+    type: sensor_msgs/msg/BatteryState
+    transport: ros
+    from: battery monitor
+    to: HUD
+    rate_hz: 1
+    max_latency_ms: 1000
+
+  - topic: /hw/steer
+    type: custom (goal and state)
+    transport: ros
+    from: laptop or test script
+    to: CAN bridge
+    rate_hz: 50
+    max_latency_ms: 20
+    notes: Both directions. Test mode only.
+
+  - topic: /hw/brake
+    type: custom (goal and state)
+    transport: ros
+    from: laptop or test script
+    to: CAN bridge
+    rate_hz: 50
+    max_latency_ms: 20
+    notes: Both directions. Test mode only.
+
+  - topic: /hw/throttle
+    type: custom (goal and state)
+    transport: ros
+    from: laptop or test script
+    to: CAN bridge
+    rate_hz: 50
+    max_latency_ms: 20
+    notes: Both directions. Test mode only.

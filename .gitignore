@@ -1,0 +1,21 @@
+# Pixi environment (recreated by `pixi install`)
+.pixi/
+
+# colcon output (run colcon from the repo root)
+/build/
+/install/
+/log/
+
+# Cargo output
+target/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets: never commit credentials. Keep them next to the repo, not in it.
+.env
+*.env
+*-adminsdk-*.json
+secrets/
