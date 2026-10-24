@@ -7,6 +7,9 @@ PLAN.md item S6, 16 Oct 2026. Two questions:
    "drive 10 m forward" into the drive server's tool calls?
 
 > **The short version**
+> - **Now: RF-DETR Nano is the car's detector** (Ben, 23 Oct: "I thought we were skipping
+>   yolo and using the other one"), the detector node's default, in TensorRT on the Orin.
+>   YOLO stays as `detector:=yolo` ([Perception](perception.md#models)).
 > - **Camera: try RF-DETR Nano next, on the Orin.** It saw Gazebo's stop sign from
 >   **20 m** (YOLO11n: 10 m) and found people in 4 of 5 photos (YOLO11n: 3), with no
 >   false finds. It's **Apache-2.0**, so the AGPL question goes away. On a Mac it is as
@@ -29,7 +32,7 @@ PLAN.md item S6, 16 Oct 2026. Two questions:
 | 16 language models on the 23-request test, through MLX | **yes** | the same Mac |
 | One model through the new OpenAI-compatible backend (`mlx_lm.server`) | **yes** | the same Mac |
 | Anything on the Orin: TensorRT, llama.cpp with CUDA, TensorRT-LLM | **no**: no Orin here | [[untested]] |
-| RF-DETR inside the detector node (`aav_yolo`) | **no**: only in the comparison script | [[later]] |
+| RF-DETR inside the detector node (`aav_yolo`) | **yes**, since 20 Oct, and the default: PyTorch, Core ML (24 Oct) and TensorRT (written, [[untested]]) | Ben's Mac; [Perception](perception.md#models) |
 | The car's own camera pictures | **no**: none recorded yet (C1, C6) | [[needs-you]] |
 | Ollama, llama.cpp on the Mac | **no**: neither is installed here | |
 
@@ -132,7 +135,7 @@ The Gazebo frames: the front left camera (640 x 360) on the road world's centre 
 | | Orin (TensorRT) | Mac (Core ML) |
 |---|---|---|
 | YOLO11, YOLO26 | `yolo export format=engine half=True` on the Orin: `tools/build_engine.py` (written, [[untested]]). YOLO26 needs no NMS step, so the engine is all on the GPU | `yolo export format=coreml`: **ran**, 2 s each, 5-37 MB |
-| RF-DETR | `model.export(format="onnx")`, then TensorRT's `trtexec --fp16` on the Orin, or `format="tensorrt"` with `rfdetr[tensorrt]`. No NMS step either. [[untested]] | `model.export(format="coreml")`: **ran** (the script's Core ML rows). The script reads its raw scores itself |
+| RF-DETR | `tools/build_engine.py` on the Orin (24 Oct): `model.export(format="onnx")`, then TensorRT's own builder in FP16 (what `trtexec --fp16` does). Not `rfdetr[tensorrt]`: it brings PyPI's TensorRT, not JetPack's. No NMS step either. [[untested]] | `pixi run -e ml export-coreml`: `model.export(format="coreml")`, **ran**, 8 s, 108 MB. The detector node runs it: 10 ms a picture, against 16 on Metal |
 
 An engine runs only on the GPU and TensorRT version that built it: build each on the
 Orin itself.

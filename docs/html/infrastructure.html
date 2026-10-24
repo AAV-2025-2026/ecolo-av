@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">17 min read · 11 sections</div></header>
+<div class="meta">18 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -386,11 +386,11 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 </tr>
 <tr>
 <td><code>get-models</code></td>
-<td>downloads the stock YOLO model into <code>models/</code></td>
+<td>downloads the stock RF-DETR Nano and YOLO models into <code>models/</code></td>
 </tr>
 <tr>
 <td><code>export-coreml</code></td>
-<td>makes the Core ML model for a Mac's detector (the <code>ml</code> environment, Macs only)</td>
+<td>makes the Core ML model for a Mac's detector, RF-DETR Nano by default (the <code>ml</code> environment, Macs only)</td>
 </tr>
 <tr>
 <td><code>get-hud-map</code></td>
@@ -554,13 +554,18 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 </tr>
 <tr>
 <td><code>get_models.sh</code></td>
-<td>downloads the stock YOLO model, checksum pinned</td>
+<td>downloads the stock RF-DETR Nano and YOLO models, checksums pinned</td>
 <td><code>pixi run get-models</code></td>
 </tr>
 <tr>
 <td><code>build_engine.py</code></td>
-<td>builds the Orin's TensorRT model, on the Orin itself (JetPack's Python)</td>
+<td>builds the Orin's TensorRT model, RF-DETR Nano by default, on the Orin itself (JetPack's Python)</td>
 <td><code>python3 tools/build_engine.py</code> on the Orin</td>
+</tr>
+<tr>
+<td><code>export_model.py</code></td>
+<td>exports a detector model to Core ML or ONNX (RF-DETR through rfdetr, YOLO through Ultralytics)</td>
+<td><code>pixi run -e ml export-coreml</code></td>
 </tr>
 <tr>
 <td><code>get_hud_map.sh</code></td>

@@ -123,8 +123,8 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `doctor` | can this computer join the car's ROS network? |
 | `rust-listener` | the Rust example: prints ego's commands |
 | `vendor` | downloads the ROS 2 and rclrs source into `vendor/`, to look things up |
-| `get-models` | downloads the stock YOLO model into `models/` |
-| `export-coreml` | makes the Core ML model for a Mac's detector (the `ml` environment, Macs only) |
+| `get-models` | downloads the stock RF-DETR Nano and YOLO models into `models/` |
+| `export-coreml` | makes the Core ML model for a Mac's detector, RF-DETR Nano by default (the `ml` environment, Macs only) |
 | `get-hud-map` | downloads the place database (51 MB) into `maps/places/`, for the map window's search and the Flutter app |
 | `get-street-map` | downloads the map window's offline street map of Ottawa (40 MB) into `maps/streets/` |
 | `get-flutter` | downloads Flutter 3.35.7 into `vendor/flutter`, for the HUD app |
@@ -162,8 +162,9 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `mcp_server.py`, `mcp_parts.py` | the read-only MCP server for AI apps, and its parts | an AI app, through `.mcp.json` |
 | `legacy_firmware.sh` | builds today's ESP32 firmware with PlatformIO | `pixi run -e firmware legacy-esp32` |
 | `tests/` | the tools' own tests: the MCP server's parts and its smoke test, the UF2 converter | inside `pixi run test` |
-| `get_models.sh` | downloads the stock YOLO model, checksum pinned | `pixi run get-models` |
-| `build_engine.py` | builds the Orin's TensorRT model, on the Orin itself (JetPack's Python) | `python3 tools/build_engine.py` on the Orin |
+| `get_models.sh` | downloads the stock RF-DETR Nano and YOLO models, checksums pinned | `pixi run get-models` |
+| `build_engine.py` | builds the Orin's TensorRT model, RF-DETR Nano by default, on the Orin itself (JetPack's Python) | `python3 tools/build_engine.py` on the Orin |
+| `export_model.py` | exports a detector model to Core ML or ONNX (RF-DETR through rfdetr, YOLO through Ultralytics) | `pixi run -e ml export-coreml` |
 | `get_hud_map.sh` | downloads the place database, checksum pinned, once for both users | `pixi run get-hud-map` |
 | `get_street_map.sh` | cuts Ottawa out of Protomaps' world street map, checksums pinned | `pixi run get-street-map` |
 | `get_flutter.sh` | downloads Flutter, checksum pinned | `pixi run get-flutter` |

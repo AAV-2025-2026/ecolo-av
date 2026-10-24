@@ -119,13 +119,13 @@ clock is off: the car's computers keep the time (the Orin serves it, see
 
 ## ML on your Mac, against the bench
 
-On the car, the laptop runs its own detector (`yolo_detector_laptop`, Core ML) on the
-camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:
+On the car, the laptop runs its own detector (`yolo_detector_laptop`, RF-DETR Nano on
+Metal) on the camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:
 
 | Terminal | Run | What it is |
 |---|---|---|
 | 1 | `pixi run bench` | the car's software, with stand-ins for the hardware |
-| 2, once | `pixi run -e ml export-coreml` | makes `models/yolo11n.mlpackage`, the Core ML model (12 s) |
+| 2, once, if you like | `pixi run -e ml export-coreml` | makes `models/rf-detr-nano.mlpackage`, the Core ML model (8 s): 10 ms a picture, not 16. Then uncomment its line in `laptop.yaml` |
 | 2 | `pixi run -e ml laptop-bench` | your laptop's parts, as on the car: the joystick, and its own detector |
 
 - **See it:** `pixi run graph` shows `yolo_detector_laptop` reading

@@ -240,8 +240,8 @@ e-stop always win. Keep both in someone's hands whenever the Mac drives.</p>
 </div>
 </section>
 <section class="card"><h2 id="ml-on-your-mac-against-the-bench">ML on your Mac, against the bench</h2>
-<p>On the car, the laptop runs its own detector (<code>yolo_detector_laptop</code>, Core ML) on the
-camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:</p>
+<p>On the car, the laptop runs its own detector (<code>yolo_detector_laptop</code>, RF-DETR Nano on
+Metal) on the camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -257,9 +257,9 @@ camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:</p>
 <td>the car's software, with stand-ins for the hardware</td>
 </tr>
 <tr>
-<td>2, once</td>
+<td>2, once, if you like</td>
 <td><code>pixi run -e ml export-coreml</code></td>
-<td>makes <code>models/yolo11n.mlpackage</code>, the Core ML model (12 s)</td>
+<td>makes <code>models/rf-detr-nano.mlpackage</code>, the Core ML model (8 s): 10 ms a picture, not 16. Then uncomment its line in <code>laptop.yaml</code></td>
 </tr>
 <tr>
 <td>2</td>

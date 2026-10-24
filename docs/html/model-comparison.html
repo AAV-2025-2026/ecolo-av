@@ -7,7 +7,7 @@
 <!-- Generated from docs/model-comparison.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Newer models, on the same pictures and tasks (S6)</h1>
-<div class="meta">21 min read · 5 sections</div></header>
+<div class="meta">22 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -77,6 +77,9 @@
 </ol>
 <blockquote>
 <p><strong>The short version</strong>
+- <strong>Now: RF-DETR Nano is the car's detector</strong> (Ben, 23 Oct: "I thought we were skipping
+  yolo and using the other one"), the detector node's default, in TensorRT on the Orin.
+  YOLO stays as <code>detector:=yolo</code> (<a href="perception.html#models">Perception</a>).
 - <strong>Camera: try RF-DETR Nano next, on the Orin.</strong> It saw Gazebo's stop sign from
   <strong>20 m</strong> (YOLO11n: 10 m) and found people in 4 of 5 photos (YOLO11n: 3), with no
   false finds. It's <strong>Apache-2.0</strong>, so the AGPL question goes away. On a Mac it is as
@@ -127,8 +130,8 @@
 </tr>
 <tr>
 <td>RF-DETR inside the detector node (<code>aav_yolo</code>)</td>
-<td><strong>no</strong>: only in the comparison script</td>
-<td><span class="badge b-later">later</span></td>
+<td><strong>yes</strong>, since 20 Oct, and the default: PyTorch, Core ML (24 Oct) and TensorRT (written, <span class="badge b-untested">untested</span>)</td>
+<td>Ben's Mac; <a href="perception.html#models">Perception</a></td>
 </tr>
 <tr>
 <td>The car's own camera pictures</td>
@@ -561,8 +564,8 @@ downloads them, and checks each licence on Commons first.</p>
 </tr>
 <tr>
 <td>RF-DETR</td>
-<td><code>model.export(format="onnx")</code>, then TensorRT's <code>trtexec --fp16</code> on the Orin, or <code>format="tensorrt"</code> with <code>rfdetr[tensorrt]</code>. No NMS step either. <span class="badge b-untested">untested</span></td>
-<td><code>model.export(format="coreml")</code>: <strong>ran</strong> (the script's Core ML rows). The script reads its raw scores itself</td>
+<td><code>tools/build_engine.py</code> on the Orin (24 Oct): <code>model.export(format="onnx")</code>, then TensorRT's own builder in FP16 (what <code>trtexec --fp16</code> does). Not <code>rfdetr[tensorrt]</code>: it brings PyPI's TensorRT, not JetPack's. No NMS step either. <span class="badge b-untested">untested</span></td>
+<td><code>pixi run -e ml export-coreml</code>: <code>model.export(format="coreml")</code>, <strong>ran</strong>, 8 s, 108 MB. The detector node runs it: 10 ms a picture, against 16 on Metal</td>
 </tr>
 </tbody>
 </table></div>

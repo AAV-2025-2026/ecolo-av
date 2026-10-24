@@ -7,7 +7,7 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">15 min read · 4 sections</div></header>
+<div class="meta">16 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -263,7 +263,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Stop signs</td>
 <td><code>aav_yolo</code>: RF-DETR (default since 20 Oct) or YOLO, <code>detector:=</code></td>
-<td><span class="badge b-works">works</span> on the bench with both stock models: RF-DETR's lock came on at 20.7 m, the sign at 25 m (20 Oct). <span class="badge b-untested">untested</span> on the Orin</td>
+<td><span class="badge b-works">works</span> on the bench with both stock models: RF-DETR's lock came on at 20.7 m, the sign at 25 m (20 Oct). <code>sim-check --perception</code> in Gazebo with RF-DETR (24 Oct): first seen at x = 5.9 m, the sign at 25 m; the car stopped with its bumper 4.4 m before it. <span class="badge b-untested">untested</span> on the Orin: its TensorRT engine is written, not built</td>
 </tr>
 <tr>
 <td>Lane keeping</td>

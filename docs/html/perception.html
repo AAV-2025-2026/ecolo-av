@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar</h1>
-<div class="meta">24 min read · 11 sections</div></header>
+<div class="meta">27 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -181,13 +181,14 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 The lock keeps stop signs away from the e-stop.</p>
 </section>
 <section class="card"><h2 id="models">Models</h2>
-<h3 id="two-detectors-one-switch">Two detectors, one switch</h3>
-<p>Since 20 Oct the detector runs <strong>RF-DETR</strong> (Ben: "Lets switch to RF-DETR... switch ... to
-yolo with a parameter"). YOLO is one argument away. Both publish the same
-<code>/perception/detections</code>, so the stop-sign watcher and the rest can't tell which ran.</p>
+<h3 id="the-cars-detector-rf-detr-nano">The car's detector: RF-DETR Nano</h3>
+<p><strong>RF-DETR Nano is the car's detector</strong> (Ben, 23 Oct: "I thought we were skipping yolo and
+using the other one"), in <strong>TensorRT on the Orin</strong> (Ben, 23 Oct). It has been the
+detector's default since 20 Oct. YOLO stays one argument away. Both publish the same
+<code>/perception/detections</code>, with the same labels ("stop sign", "person"...), so the
+stop-sign watcher and the rest can't tell which ran.</p>
 <pre class="highlight"><code class="language-bash">pixi run detect                        # RF-DETR Nano (the default)
 pixi run detect detector:=yolo         # YOLO11 nano</code></pre>
-<p>In a machine file: <code>detector: {detector: yolo}</code> under its <code>detector:</code> settings.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -206,48 +207,34 @@ pixi run detect detector:=yolo         # YOLO11 nano</code></pre>
 </tr>
 <tr>
 <td><code>yolo</code></td>
-<td><code>models/yolo11n.pt</code>, or its <code>.mlpackage</code> / <code>.engine</code></td>
+<td><code>models/yolo11n.pt</code></td>
 <td>AGPL-3.0 (Ultralytics)</td>
-<td>smaller (6 MB), and its TensorRT engine for the Orin is written</td>
+<td>smaller (6 MB)</td>
 </tr>
 </tbody>
 </table></div>
-<p>Tested 20 Oct on Ben's Mac (GPU, Metal), on the test stop-sign picture at 10 frames a second:</p>
+<p>In a machine file: <code>detector: {detector: yolo}</code> under its <code>detector:</code> settings.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th></th>
-<th>Found</th>
-<th>Time per frame</th>
-<th><code>bench-check --perception</code></th>
+<th>Checked with RF-DETR Nano, on Ben's Mac</th>
+<th>Result</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>RF-DETR Nano</td>
-<td>stop sign, 0.96</td>
-<td>32 ms</td>
-<td><span class="badge b-works">works</span> the lock came on at 20.7 m (sign at 25 m); stood still; goal reached</td>
+<td><code>pixi run -e ml sim-check --perception</code>, Gazebo, 24 Oct</td>
+<td><span class="badge b-works">works</span> first seen at x = 5.9 m, the sign at 25 m; the lock at 17.9 m (score 0.77, 68 px tall); stopped with the bumper 4.4 m before the sign; goal reached</td>
 </tr>
 <tr>
-<td>YOLO11n</td>
-<td>stop sign, 0.97</td>
-<td>32 ms</td>
-<td><span class="badge b-works">works</span> (earlier runs)</td>
+<td><code>pixi run -e ml bench-check --perception</code>, 20 Oct</td>
+<td><span class="badge b-works">works</span> the lock at 20.7 m; stood still; goal reached</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>pixi run get-models</code> downloads both into <code>models/</code> (RF-DETR's is 366 MB: a training
-checkpoint), each checked against its pinned checksum: a model file is a Python pickle,
-so a wrong one could run code. Both know COCO's 80 classes, "stop sign" among them, so we
-don't need the 2024-25 team's model to start. Another RF-DETR size: name the file after
-it, such as <code>models/rf-detr-small.pth</code>, and pass <code>model:=</code>.</p>
-<p>RF-DETR runs on PyTorch: CUDA (the Orin), Metal (a Mac) or the CPU. Its TensorRT engine
-for the Orin is <span class="badge b-later">later</span>: until then the Orin runs it through PyTorch on its GPU,
-<span class="badge b-untested">untested</span>.</p>
-<h3 id="yolos-three-formats">YOLO's three formats</h3>
-<p>One YOLO model, three formats. Each computer with a GPU runs its own (Ben, 10 Oct), and the
-detector loads any of them. The machine file names the one to use:</p>
+<h3 id="one-model-three-formats">One model, three formats</h3>
+<p>Each computer with a GPU runs its own (Ben, 10 Oct). The detector loads any of them; the
+machine file names the one to use.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -259,49 +246,166 @@ detector loads any of them. The machine file names the one to use:</p>
 </thead>
 <tbody>
 <tr>
-<td><code>.pt</code></td>
-<td>anything, with PyTorch</td>
-<td><code>pixi run get-models</code>, or the training</td>
-<td><code>all.yaml</code></td>
+<td><code>rf-detr-nano.pth</code></td>
+<td>anything, with PyTorch: CUDA, Metal or the CPU</td>
+<td><code>pixi run get-models</code></td>
+<td><code>laptop.yaml</code>, <code>all.yaml</code></td>
 </tr>
 <tr>
-<td><code>.mlpackage</code></td>
+<td><code>rf-detr-nano.mlpackage</code></td>
 <td>Macs, with Core ML</td>
 <td><code>pixi run -e ml export-coreml</code>, on a Mac</td>
-<td><code>laptop.yaml</code></td>
+<td><code>laptop.yaml</code> (one line to uncomment)</td>
 </tr>
 <tr>
-<td><code>.engine</code></td>
+<td><code>rf-detr-nano.engine</code></td>
 <td>the Orin, with TensorRT</td>
 <td><code>python3 tools/build_engine.py</code>, on the Orin itself</td>
 <td><code>orin.yaml</code></td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="core-ml-on-a-mac">Core ML, on a Mac</h3>
 <ul>
-<li><code>pixi run -e ml export-coreml</code> makes <code>models/yolo11n.mlpackage</code> from
-  <code>models/yolo11n.pt</code>, and downloads the <code>.pt</code> first if it's missing.</li>
-<li>Another model: <code>pixi run -e ml export-coreml models/best.pt</code>.</li>
-<li>On an M4 Max the export takes 2 s; the whole command 3 to 10 s.</li>
-<li><span class="badge b-works">works</span> The result found the test stop sign at 0.97.</li>
+<li>YOLO has the same three: <code>yolo11n.pt</code>, and <code>export-coreml models/yolo11n.pt</code> or
+  <code>build_engine.py models/yolo11n.pt</code> for the other two.</li>
+<li>An exported RF-DETR keeps <code>rf-detr</code> in its name. That's how the detector tells it from
+  a YOLO export.</li>
+<li><code>pixi run get-models</code> downloads both <code>.pth</code> and <code>.pt</code> (RF-DETR's is 366 MB: a training
+  checkpoint), each checked against its pinned checksum: a model file is a Python pickle,
+  so a wrong one could run code.</li>
+</ul>
+<h3 id="how-fast-on-bens-mac">How fast, on Ben's Mac</h3>
+<p>24 Oct, M4 Max, the test stop sign at 640 x 360 (the bench camera's size). Model = one
+<code>detect()</code>, pre- and post-processing included, the median of 30. Node = the whole
+callback: the picture in, boxes drawn, both messages out, at 10 frames a second.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Found</th>
+<th>Model</th>
+<th>Node</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RF-DETR Nano, Core ML (<code>.mlpackage</code>)</td>
+<td>stop sign, 0.96</td>
+<td><strong>10 ms</strong></td>
+<td>33 ms</td>
+</tr>
+<tr>
+<td>RF-DETR Nano, PyTorch on Metal (<code>.pth</code>)</td>
+<td>stop sign, 0.96</td>
+<td>16 ms</td>
+<td>41 ms</td>
+</tr>
+<tr>
+<td>YOLO11n, PyTorch on Metal (<code>.pt</code>)</td>
+<td>stop sign, 0.97</td>
+<td>8-12 ms (10 and 16 Oct)</td>
+<td>39 ms</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Core ML in half precision was no faster (12 ms), so the export stays in full precision.</li>
+<li>The Core ML and ONNX (TensorRT's input) exports give PyTorch's box and score to the
+  pixel: 0.959.</li>
+<li>Gazebo shared the Mac during these runs: treat them as rough.</li>
 </ul>
 <h3 id="tensorrt-on-the-orin">TensorRT, on the Orin</h3>
 <p>An engine runs only on the GPU and the TensorRT version that built it. So it's built
 on the Orin, once it's on JetPack 7.2 (Q24):</p>
 <ol>
-<li>Install NVIDIA's PyTorch for Jetson (not PyPI's), then <code>pip install ultralytics onnx</code>.
-   In a venv, make it with <code>--system-site-packages</code>, so it sees JetPack's TensorRT.</li>
+<li>Install NVIDIA's PyTorch and torchvision for Jetson (not PyPI's), then
+   <code>pip install rfdetr onnx</code>. Not <code>rfdetr[tensorrt]</code>: that brings PyPI's TensorRT, not
+   JetPack's. In a venv, make it with <code>--system-site-packages</code>, so it sees JetPack's
+   TensorRT.</li>
 <li>Run <code>python3 tools/build_engine.py</code> in the repo, with JetPack's <code>python3</code>, not
    Pixi's. It checks first, and says what's missing.</li>
-<li>It writes <code>models/yolo11n.engine</code>: half precision (FP16), 640 px.
-   <code>car.launch.py machine:=orin</code> loads it.</li>
+<li>
+<p>It does three steps:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What</th>
+<th>With</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>rf-detr-nano.pth</code> → <code>rf-detr-nano.onnx</code></td>
+<td>rfdetr's own export</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>.onnx</code> → <code>rf-detr-nano.engine</code>, half precision (FP16)</td>
+<td>TensorRT's own builder</td>
+</tr>
+<tr>
+<td>3</td>
+<td>the engine on the test stop sign: its score and ms a picture</td>
+<td>our detector</td>
+</tr>
+</tbody>
+</table></div>
+</li>
+<li>
+<p><code>car.launch.py machine:=orin</code> loads <code>models/rf-detr-nano.engine</code>. Until it's built,
+   the detector part is skipped, and says how to make it.</p>
+</li>
 </ol>
-<p><span class="badge b-untested">untested</span> It needs the Orin: here it only checks, and stops.</p>
-<p>The 2024-25 team's own model, <code>best.pt</code>, is in no repo: their code loaded it from
+<ul>
+<li>By hand, step 2 is <code>trtexec --onnx=models/rf-detr-nano.onnx --fp16
+  --saveEngine=models/rf-detr-nano.engine</code>.</li>
+<li>Step 1 runs on any computer with <code>pip install onnx</code> (ONNX files are portable): then
+  <code>python3 tools/build_engine.py models/rf-detr-nano.onnx</code> on the Orin.</li>
+<li><span class="badge b-untested">untested</span> It needs the Orin: on a Mac it only checks, and stops. Step 1 and the
+  ONNX file's answers were checked on Ben's Mac.</li>
+</ul>
+<h3 id="core-ml-on-a-mac">Core ML, on a Mac</h3>
+<ul>
+<li><code>pixi run -e ml export-coreml</code> makes <code>models/rf-detr-nano.mlpackage</code> from the <code>.pth</code>
+  (8 s), and downloads the <code>.pth</code> first if it's missing.</li>
+<li>YOLO's: <code>pixi run -e ml export-coreml models/yolo11n.pt</code> (2 s).</li>
+<li>Then <code>pixi run detect model:=models/rf-detr-nano.mlpackage</code>. <span class="badge b-works">works</span> stop sign, 0.96.</li>
+</ul>
+<h3 id="in-another-program">In another program</h3>
+<p>The models don't need ROS. Any Python program can load one, as the detector node does:</p>
+<pre class="highlight"><code class="language-python">from aav_yolo.detectors import load_detector
+
+model = load_detector()          # RF-DETR Nano: once, it takes a few seconds
+boxes = model.detect(bgr)        # an OpenCV picture: H x W x 3, BGR
+for box in boxes:                # in that picture's pixels
+    print(box.label, box.score, box.cx, box.cy, box.width, box.height)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Takes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>load_detector(detector='rfdetr', model='', device='auto')</code></td>
+<td>the node's own parameters; <code>model</code> picks the format (<code>.pth</code>, <code>.mlpackage</code>, <code>.engine</code>)</td>
+</tr>
+<tr>
+<td><code>model.detect(bgr, confidence=0.5, labels=None)</code></td>
+<td><code>labels</code>: only these, such as <code>'stop sign'</code> or <code>['stop sign', 'person']</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The code: <code>aav_yolo/detectors.py</code> (the models), <code>aav_yolo/detr.py</code> (RF-DETR's maths for
+an exported model, NumPy only), with their tests.</p>
+<h3 id="the-2024-25-teams-model">The 2024-25 team's model</h3>
+<p>Their own model, <code>best.pt</code>, is in no repo: their code loaded it from
 <code>~/Yolo/Capstone/runs/detect/train7/weights/best.pt</code> on someone's computer. It's
 probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct), which can train
-new models too. Ultralytics' models and code are licensed AGPL-3.0.</p>
+new models too. It is a YOLO model: Ultralytics' models and code are licensed AGPL-3.0.</p>
 </section>
 <section class="card"><h2 id="better-models-to-try">Better models to try</h2>
 <p>The 2024-25 model learned one label from the team's own pictures. Open models trained on
@@ -346,29 +450,29 @@ far more pictures may do better:</p>
 <tr>
 <th>Machine</th>
 <th>How</th>
-<th>Speed (YOLO11 nano, 640 px)</th>
+<th>Speed (RF-DETR Nano, a picture)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>A Mac with Apple silicon</td>
 <td><code>pixi run -e ml</code>: PyTorch on the GPU through Metal</td>
-<td>7.7 ms a frame; 26 ms in the node, with the picture drawn and sent</td>
+<td>16 ms; 41 ms in the node, with the picture drawn and sent</td>
 </tr>
 <tr>
 <td>The same Mac, Core ML</td>
 <td>a <code>.mlpackage</code>: Apple's version of TensorRT</td>
-<td>4.3 ms for the model alone, on the GPU</td>
+<td>10 ms; 33 ms in the node</td>
 </tr>
 <tr>
 <td>A Linux PC</td>
 <td><code>pixi run -e ml</code>: PyTorch on the CPU (CUDA builds later)</td>
-<td>not measured</td>
+<td>not measured (the CPU of a Mac: 74 ms)</td>
 </tr>
 <tr>
 <td>The Orin, on JetPack 7.2</td>
-<td>JetPack's CUDA 13.2.1 and TensorRT 10.16.2, not Pixi's</td>
-<td>not yet</td>
+<td>JetPack's CUDA 13.2.1 and TensorRT 10.16.2, not Pixi's: the <code>.engine</code></td>
+<td>not yet: <code>build_engine.py</code> prints it</td>
 </tr>
 </tbody>
 </table></div>
@@ -802,8 +906,8 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
 </tr>
 <tr>
 <td><code>detector</code></td>
-<td>YOLO, as <code>yolo_detector_&lt;machine&gt;</code> → <code>/perception/detections</code></td>
-<td>the Orin. The laptop's is off until it reads compressed images</td>
+<td>RF-DETR Nano, as <code>yolo_detector_&lt;machine&gt;</code> → <code>/perception/detections</code></td>
+<td>the Orin, in TensorRT (<code>models/rf-detr-nano.engine</code>: build it there first). The laptop's reads compressed images</td>
 </tr>
 <tr>
 <td><code>stop_signs</code></td>
@@ -865,7 +969,7 @@ read the same way.</p>
 <h3 id="isaac-ros-nvidia">Isaac ROS (NVIDIA)</h3>
 <ul>
 <li><strong>Not needed for the detector:</strong> it already uses TensorRT on the Orin, through
-  Ultralytics.</li>
+  TensorRT's own Python module (<code>aav_yolo/detectors.py</code>).</li>
 <li><strong>Jazzy:</strong> Isaac ROS 4.6 (18 Aug 2026) is the last release for Jazzy, and supports the
   Orin on JetPack 7.2. Isaac ROS 5.0 (21 Sept 2026) moved to ROS 2 Lyrical.</li>
 <li><strong>Later, maybe:</strong> nvblox (a costmap from cameras), visual SLAM and stereo depth. It runs
@@ -903,7 +1007,7 @@ read the same way.</p>
 <td>the cameras</td>
 </tr>
 <tr>
-<td>TensorRT on the Orin</td>
+<td>RF-DETR's TensorRT engine on the Orin: <code>python3 tools/build_engine.py</code>, then time it</td>
 <td>the reflash (Q24)</td>
 </tr>
 <tr>

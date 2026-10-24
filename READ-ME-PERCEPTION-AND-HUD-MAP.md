@@ -1,6 +1,8 @@
 # Perception models, the lidar, and a map on the HUD
 
-Written 15 October 2026, for Ben. It answers:
+Written 15 October 2026, for Ben. **Since then:** the detector is RF-DETR Nano, not YOLO
+(Ben, 23 Oct), as TensorRT on the Orin and Core ML on a Mac: see
+[Perception](docs/perception.md#models). YOLO stays as `detector:=yolo`. It answers:
 
 1. YOLO, OpenCV, or the previous teams' trained models?
 2. What do we do with the lidar? Can we just download a model?

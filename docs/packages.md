@@ -83,7 +83,7 @@ perception came in on 10 October, the lane finder on 11 October.
 
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
-| `aav_yolo`: `yolo_detector` | `/sensors/camera/front_left/image_raw` | `/perception/detections`, `/perception/detections/image` | `detector:=rfdetr` (a `.pth`, the default) or `yolo` (a `.pt`, `.mlpackage` or `.engine`); needs the `ml` environment |
+| `aav_yolo`: `yolo_detector` | `/sensors/camera/front_left/image_raw` | `/perception/detections`, `/perception/detections/image` | `detector:=rfdetr` (the default: a `.pth`, or its `rf-detr-*.mlpackage` or `.engine`) or `yolo` (a `.pt`, `.mlpackage` or `.engine`); needs the `ml` environment, or JetPack's PyTorch and TensorRT |
 | `aav_yolo`: `stop_sign_watcher` | `/perception/detections` | `/perception/stop_sign` | twist_mux's stop-sign lock, priority 30 |
 | `aav_radar_clusters`: `radar_clusters` | `/sensors/radar/points` | `/perception/radar/clusters`, `/perception/radar/cluster_boxes` | DBSCAN, in Rust; eps 0.8 m, 15 points (5 on the bench and in Gazebo) |
 | `aav_lane_finder`: `lane_finder` | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info` | `/perception/lane/geometry`, `/perception/lane/image` | a bird's-eye view, sliding windows, a curve per line; the camera's place from `vehicle.yaml` |
