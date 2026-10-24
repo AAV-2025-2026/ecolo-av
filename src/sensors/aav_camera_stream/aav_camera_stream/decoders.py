@@ -161,7 +161,9 @@ class PipeSource:
                 break
             try:
                 os.killpg(proc.pid, sig)
-            except ProcessLookupError:
+            except (ProcessLookupError, PermissionError):
+                # Gone already. macOS says EPERM, not ESRCH, for a group whose last
+                # member has exited but not been reaped (TODO 41, 24 Oct).
                 break
             try:
                 proc.wait(timeout=2.0)
