@@ -212,6 +212,17 @@ not the Mac:
 | Its subscriber, worst gap | **0.48 s** | **0.05 s** |
 | Gaps over 0.1 s | 9 | 0 |
 
+The whole graph, 10 min each (`pixi run timing-test`, Gazebo's lot, 23 Oct):
+
+| 5 min parked | Fast DDS | Cyclone DDS |
+|---|---|---|
+| IMU, worst gap | **1.01 s** | **0.06 s** |
+| Global EKF, worst gap | 0.99 s | 0.09 s |
+| Front camera, worst gap | 4.51 s | 0.14 s |
+| Camera pictures over 0.5 s late | 198 | 0 |
+| Many topics silent together | 20 times | 0 |
+| The sensor watchdog stopped Nav2 | 5 times | 0 |
+
 `sim-check` passes everything on Cyclone, with the rear camera at its full 10 Hz (7-8 Hz
 on Fast DDS).
 

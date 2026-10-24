@@ -7,7 +7,7 @@
 <!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Your Mac: run it, and drive the car</h1>
-<div class="meta">17 min read · 12 sections</div></header>
+<div class="meta">18 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -395,6 +395,48 @@ not the Mac:</p>
 <tr>
 <td>Gaps over 0.1 s</td>
 <td>9</td>
+<td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>The whole graph, 10 min each (<code>pixi run timing-test</code>, Gazebo's lot, 23 Oct):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>5 min parked</th>
+<th>Fast DDS</th>
+<th>Cyclone DDS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMU, worst gap</td>
+<td><strong>1.01 s</strong></td>
+<td><strong>0.06 s</strong></td>
+</tr>
+<tr>
+<td>Global EKF, worst gap</td>
+<td>0.99 s</td>
+<td>0.09 s</td>
+</tr>
+<tr>
+<td>Front camera, worst gap</td>
+<td>4.51 s</td>
+<td>0.14 s</td>
+</tr>
+<tr>
+<td>Camera pictures over 0.5 s late</td>
+<td>198</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Many topics silent together</td>
+<td>20 times</td>
+<td>0</td>
+</tr>
+<tr>
+<td>The sensor watchdog stopped Nav2</td>
+<td>5 times</td>
 <td>0</td>
 </tr>
 </tbody>
