@@ -17,6 +17,11 @@ the HUD app (`hud/flutter_pi`). Its engine files are in `bin/cache/` (3.3 GB), a
 app's packages in `.pub-cache/` (0.24 GB). `pixi run get-flutter` fills it, checked by
 the SHA-256 that Flutter publishes (docs/hud.md).
 
+Espressif's QEMU lives here too, in `vendor/qemu/` (about 22 MB): the ESP32 emulator
+(GPL-2.0, a tool only, never linked into our code) and its libgcrypt (LGPL-2.1+, from
+conda-forge). `pixi run esp-qemu-tools` fills it, checked by the published SHA-256s; macOS
+on Apple silicon only so far. `pixi run esp-qemu-check` uses it (docs/esp32-bench.md).
+
 ## Rules
 
 - **Look, don't touch.** Never edit, build or commit anything in here. Our code lives in
@@ -33,5 +38,6 @@ the SHA-256 that Flutter publishes (docs/hud.md).
 |---|---|
 | `pixi run vendor` | downloads what's missing, at the pinned commits; leaves the rest alone |
 | `pixi run get-flutter` | downloads Flutter 3.35.7 into `vendor/flutter/`, if it isn't there |
+| `pixi run esp-qemu-tools` | downloads Espressif's QEMU and its libgcrypt into `vendor/qemu/` |
 | `python3 tools/vendor.py --check` | says what's there, what's missing, and what's at another commit |
 | `python3 tools/vendor.py --freeze ros2-src` | pins what's checked out now, to update a list |

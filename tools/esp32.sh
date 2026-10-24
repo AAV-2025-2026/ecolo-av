@@ -5,6 +5,10 @@
 #        tools/esp32.sh build [args]   build it (args go to cargo: --no-default-features --features can)
 #        tools/esp32.sh flash [args]   build, flash it on the USB cable, show its log (args go to espflash)
 #        tools/esp32.sh check          build both links, with clippy; "skipped" without the toolchain
+#        tools/esp32.sh qemu-tools     download Espressif's QEMU into vendor/qemu (once; macOS arm64)
+#        tools/esp32.sh qemu [args]    build with --features qemu, boot it in QEMU, and check it
+#                                      brakes when the Motor-Pi's frames stop (args go to
+#                                      tools/esp32_qemu.py); "skipped" without the tools
 #
 # The ESP32 has Xtensa cores, which the stock Rust (and Pixi's) can't build for. `tools`
 # installs, for this user only (no admin rights):
@@ -22,6 +26,20 @@ ESPUP_VERSION=0.18.0
 ESPFLASH_VERSION=4.3.0          # 4.4 and later need rustc 1.95
 XTENSA_RUST_VERSION=1.97.0.0
 XTENSA_GCC_VERSION=16.2.0_20260914
+
+# Espressif's QEMU fork (GPL-2.0; a tool here, never linked in), from Espressif's
+# releases page (espressif/qemu), and the one library of its that Pixi's environment
+# lacks: libgcrypt (LGPL-2.1+), with libgpg-error (LGPL-2.1), from conda-forge. Pixi's
+# environment has its other two, pixman and SDL2. The SHA-256s are the published ones.
+QEMU_RELEASE=esp-develop-9.2.2-20260417
+QEMU_TARBALL=qemu-xtensa-softmmu-esp_develop_9.2.2_20260417-aarch64-apple-darwin.tar.xz
+QEMU_SHA256=bb8c15810565d3df1665dc34962430885e11bc95575b228fb44698146be1e9d6
+QEMU_URL=https://github.com/espressif/qemu/releases/download/$QEMU_RELEASE/$QEMU_TARBALL
+CONDA_FORGE=https://conda.anaconda.org/conda-forge/osx-arm64
+QEMU_LIBS="libgcrypt-lib-1.12.2-hb001647_2:45b1b91ff0b7dcfb2d31ffcdc156be2cb93998d80764f9a1f4bbd6a51e5a318a
+libgpg-error-1.61-h784d473_2:eb84229d2ac791a4241044dc3ad172389beb4a730cc4a2afb1ddbe51e8233d11"
+QEMU_DIR=$ROOT/vendor/qemu
+QEMU_BIN=$QEMU_DIR/$QEMU_RELEASE/qemu/bin/qemu-system-xtensa
 
 TOOLS=$ROOT/vendor/cargo-tools/bin
 EXPORT_FILE=$ROOT/vendor/esp/export-esp.sh
@@ -44,6 +62,54 @@ need_toolchain() {
   # comes first on PATH, and cargo would build with its rustc.
   PATH="$(dirname "$(rustup which --toolchain esp rustc)"):$PATH"
   export PATH
+}
+
+# Download a file, and check its SHA-256; a mismatch deletes it.
+fetch() {
+  local url=$1 out=$2 want=$3
+  curl -fsSL -o "$out" "$url"
+  if [[ "$(shasum -a 256 "$out" | cut -d' ' -f1)" != "$want" ]]; then
+    rm -f "$out"
+    echo "checksum mismatch: $url" >&2
+    exit 1
+  fi
+}
+
+qemu_platform_ok() {
+  [[ "$(uname -s)-$(uname -m)" == Darwin-arm64 ]]
+}
+
+# QEMU looks for its libraries in Homebrew's folders; these are the fallbacks.
+qemu_env() {
+  DYLD_FALLBACK_LIBRARY_PATH="$QEMU_DIR/lib:${CONDA_PREFIX:-$ROOT/.pixi/envs/default}/lib"
+  export DYLD_FALLBACK_LIBRARY_PATH
+}
+
+qemu_tools() {
+  if ! qemu_platform_ok; then
+    echo "Only set up for macOS on Apple silicon so far: Espressif publishes QEMU for" \
+         "Linux too, but its libraries aren't wired up here." >&2
+    exit 1
+  fi
+  local tmp entry name want
+  tmp=$(mktemp -d)
+  # shellcheck disable=SC2064
+  trap "rm -rf '$tmp'" EXIT
+  mkdir -p "$QEMU_DIR/$QEMU_RELEASE" "$QEMU_DIR/lib"
+  fetch "$QEMU_URL" "$tmp/qemu.tar.xz" "$QEMU_SHA256"
+  tar -xJf "$tmp/qemu.tar.xz" -C "$QEMU_DIR/$QEMU_RELEASE"
+  # A .conda package is a zip holding pkg-*.tar.zst: Pixi's bsdtar reads both.
+  for entry in $QEMU_LIBS; do
+    name=${entry%%:*} want=${entry##*:}
+    fetch "$CONDA_FORGE/$name.conda" "$tmp/$name.conda" "$want"
+    mkdir -p "$tmp/$name"
+    bsdtar -xf "$tmp/$name.conda" -C "$tmp/$name"
+    bsdtar -xf "$tmp/$name/pkg-$name.tar.zst" -C "$tmp/$name"
+    cp "$tmp/$name"/lib/*.dylib "$QEMU_DIR/lib/"
+  done
+  qemu_env
+  "$QEMU_BIN" --version | head -1
+  echo "Installed: $QEMU_BIN, and libgcrypt in $QEMU_DIR/lib."
 }
 
 build() {
@@ -76,6 +142,23 @@ case "${1:-}" in
     build
     "$TOOLS/espflash" flash --chip esp32 --monitor "$ELF" "$@"
     ;;
+  qemu-tools)
+    qemu_tools
+    ;;
+  qemu)
+    shift
+    if ! have_toolchain || [[ ! -x $QEMU_BIN ]]; then
+      echo "skipped: needs the Xtensa Rust (pixi run esp-tools) and QEMU (pixi run esp-qemu-tools)"
+      exit 0
+    fi
+    build -q --features qemu --target-dir target/qemu
+    image=$BOARD/target/qemu/flash.bin
+    "$TOOLS/espflash" save-image --chip esp32 --merge --flash-size 4mb \
+      "$BOARD/target/qemu/xtensa-esp32-none-elf/release/spine-esp32-umod" "$image" \
+      >/dev/null 2>&1
+    qemu_env
+    python3 tools/esp32_qemu.py --qemu "$QEMU_BIN" --flash "$image" "$@"
+    ;;
   check)
     if ! have_toolchain; then
       echo "skipped: no Xtensa Rust here (pixi run esp-tools)"
@@ -92,7 +175,7 @@ case "${1:-}" in
     echo "builds: the Motor-Pi UART link (default), CAN, and the QEMU build"
     ;;
   *)
-    sed -n '2,8p' "$0" >&2
+    sed -n '2,12p' "$0" >&2
     exit 2
     ;;
 esac
