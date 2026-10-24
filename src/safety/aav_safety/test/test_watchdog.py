@@ -140,3 +140,40 @@ def test_rules_are_checked():
         Rule('x', '/x', 'lidar', max_age=1.0)
     with pytest.raises(ValueError):
         Rule('x', '/x', 'odom', max_age=0.0)
+
+
+LEFT = Rule('front_left_stream', '/perception/detections', 'detections', max_age=1.0,
+            frame_id='camera_left_link')
+
+
+def test_a_streamed_camera_is_watched_through_its_detections():
+    dog = Watchdog([LEFT])
+    left = dog.watches['front_left_stream']
+    assert state(dog, 'front_left_stream', 0.0) == NEVER and dog.locked(0.0)
+    for k in range(1, 16):                            # 15 a second, boxes or none
+        left.arrived(k / 15.0, ())
+    assert state(dog, 'front_left_stream', 1.5) == OK and not dog.locked(1.5)
+    # The same empty list for seconds is a clear road, not a frozen camera.
+    for k in range(16, 60):
+        left.arrived(k / 15.0, ())
+    assert state(dog, 'front_left_stream', 4.5) == OK
+    # The stream, its decoder or its detector stops: no message at all.
+    assert state(dog, 'front_left_stream', 5.0) == STALE and dog.locked(5.0)
+    left.arrived(5.1, (math.nan, 10.0, 20.0, 30.0, 0.9))     # a broken detector
+    assert state(dog, 'front_left_stream', 5.1) == NAN
+
+
+def test_each_detections_input_counts_only_its_own_camera():
+    assert LEFT.counts('camera_left_link')
+    assert not LEFT.counts('camera_right_link')       # the other stream, same topic
+    assert CAMERA.counts('anything')                  # other kinds have no filter
+
+
+def test_detections_rules_are_checked():
+    with pytest.raises(ValueError, match='frame_id'):
+        Rule('x', '/perception/detections', 'detections', max_age=1.0)
+    with pytest.raises(ValueError, match='frame_id'):
+        Rule('x', '/x', 'image', max_age=1.0, frame_id='camera_left_link')
+    with pytest.raises(ValueError, match='frozen'):
+        Rule('x', '/perception/detections', 'detections', max_age=1.0,
+             frame_id='camera_left_link', frozen_after=1.0)

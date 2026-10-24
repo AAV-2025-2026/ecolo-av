@@ -28,6 +28,13 @@ A heartbeat input (kind heartbeat) is a program saying it is alive, not a sensor
 HUD's /hud/heartbeat, the number of frames its screen has drawn. Silence (STALE, or NEVER
 before its first) means the screen froze or died; a count that stops rising is FROZEN.
 
+A detections input (kind detections) watches a camera through its detector's output: the
+car's camera_stream nodes (aav_camera_stream) keep their pictures inside, and send a
+Detection2DArray for every picture, boxes or none, all on one topic. Only the messages
+whose header.frame_id is the rule's frame_id count, so one input watches one camera.
+Silence means its stream, decoder or detector stopped; NaN, a broken detector. No FROZEN:
+an empty list repeats on a clear road (a stuck Pi camera stops the stream instead).
+
 Times are seconds on the node's clock (Gazebo's, in the simulator).
 """
 
@@ -44,7 +51,7 @@ NAN = 'NAN'
 FROZEN = 'FROZEN'
 JUMP = 'JUMP'
 
-KINDS = ('odom', 'imu', 'gps', 'image', 'cloud', 'heartbeat')
+KINDS = ('odom', 'imu', 'gps', 'image', 'cloud', 'heartbeat', 'detections')
 EARTH_RADIUS = 6371000.0    # m
 MOVING = 0.2                # m/s: faster than this, the camera's picture must change
 
@@ -62,6 +69,7 @@ class Rule:
     max_jump_speed: float = 0.0  # m/s between two GPS fixes: JUMP
     jump_margin: float = 5.0    # m more, for the noise of two fixes (0.5 m each, in Gazebo)
     cross_check: Optional[CrossCheck] = None    # odom only: the wheels against the IMU
+    frame_id: str = ''          # detections only: the camera whose messages count
 
     def __post_init__(self):
         if self.kind not in KINDS:
@@ -70,6 +78,16 @@ class Rule:
             raise ValueError(f'{self.name}: max_age must be a positive number of seconds')
         if self.cross_check is not None and self.kind != 'odom':
             raise ValueError(f'{self.name}: only an odom input has a cross check')
+        if (self.kind == 'detections') != bool(self.frame_id):
+            raise ValueError(f'{self.name}: a detections input, and only one, names its '
+                             "camera's frame_id")
+        if self.kind == 'detections' and self.frozen_after > 0.0:
+            raise ValueError(f'{self.name}: detections have no frozen check (an empty list '
+                             'repeats on a clear road)')
+
+    def counts(self, frame_id: str) -> bool:
+        """Report whether a message from this frame is this input's (detections: its camera)."""
+        return self.kind != 'detections' or frame_id == self.frame_id
 
 
 def finite(values: Sequence[float]) -> bool:

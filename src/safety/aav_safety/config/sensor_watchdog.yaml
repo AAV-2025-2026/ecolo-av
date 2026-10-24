@@ -57,7 +57,23 @@ sensor_watchdog:
       max_age: 1.0
       stop: true
       frozen_after: 1.0         # only while the wheels turn: a still car sees a still picture
-    hud:                        # the HUD's screen (aav_hud_raylib): the safety drivers watch
+    # The car's front cameras, through their camera_stream nodes (aav_camera_stream): the
+    # pictures stay inside each node, which sends its detections for every picture (15 a
+    # second, boxes or none) on one shared topic. Silent 1 s: the camera Pi's stream, the
+    # decoder or the detector stopped. Watched where car.launch.py starts the streams.
+    front_left_stream:
+      topic: /perception/detections
+      kind: detections
+      frame_id: camera_left_link  # only this camera's messages count
+      max_age: 1.0
+      stop: true
+    front_right_stream:
+      topic: /perception/detections
+      kind: detections
+      frame_id: camera_right_link
+      max_age: 1.0
+      stop: true
+    hud:                       # the HUD's screen (aav_hud_raylib): the safety drivers watch
       topic: /hud/heartbeat     # it, so a frozen or dead screen stops Nav2 and the AI slot.
       kind: heartbeat           # Watched only where the launch expects a HUD (watch_hud)
       max_age: 1.0              # 10 beats; a slow frame (a resize) mustn't stop the car
