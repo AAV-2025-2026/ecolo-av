@@ -67,6 +67,8 @@ PAGES = [
     ('controllers.md', 'Path followers', 'Regulated Pure Pursuit and MPPI, side by side'),
     ('routes.md', 'Street routes', 'A destination to GPS waypoints along real streets (Valhalla)'),
     ('perception.md', 'Perception', 'Cameras, YOLO, stop signs, lanes and radar'),
+    ('camera-pipeline.md', 'Camera pipeline',
+     "The Pi's H.264 stream to detections on the Orin: settings, measured delay"),
     ('older-code.md', 'Older code', "The previous teams' repos: what we have, what's missing"),
     ('ros2.md', 'ROS 2', 'Nodes, topics and tools; stock packages vs our code'),
     ('languages.md', 'Languages', 'Python, C++ and Rust: what goes where, and why'),

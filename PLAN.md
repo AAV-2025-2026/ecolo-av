@@ -167,7 +167,7 @@ the next concrete step.
 | # | Task | Due | Status | % | Next |
 |---|---|---|---|---:|---|
 | T8.1 | Record and label 200 frames | 18 Dec | ⬜ | 0 | during the joystick drives |
-| T8.2 | Pipeline: decode, undistort, detect, track, publish | 15 Jan | 🔧 | 45 | the detector node exists, RF-DETR Nano by default, its models loadable without ROS (`aav_yolo/detectors.py`) for the camera-stream program; decoding the stream, undistortion and ByteTrack don't |
+| T8.2 | Pipeline: decode, undistort, detect, track, publish | 15 Jan | 🔧 | 65 | the detector node exists, RF-DETR Nano by default, its models loadable without ROS (`aav_yolo/detectors.py`) for the camera-stream program; the stream itself (`aav_camera_stream`, 24 Oct): decode, undistort, detect, publish, measured on a Mac ([camera pipeline](docs/camera-pipeline.md)), untested on the Orin; ByteTrack doesn't exist yet |
 | T8.3 | Detector comparison | 12 Feb | 🔧 | 60 | done on the Mac ([newer models](docs/model-comparison.md)): **RF-DETR Nano chosen** (Ben, 23 Oct). Its Core ML export runs (10 ms on a Mac); its TensorRT engine build is written (`tools/build_engine.py`): run and time it on the Orin |
 | T8.4 | Lidar clustering | 29 Jan | 🔧 | 30 | today a height band (`aav_lidar`); add clustering |
 | T8.5 | Lidar costmap layer | 19 Feb | 🧪 | 100 | in Gazebo Nav2 stops for it, and plans round it (M5, 22 Oct) |

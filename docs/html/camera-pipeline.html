@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The camera pipeline: Pi to detections (24 October) · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/camera-pipeline.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The camera pipeline: Pi to detections (24 October)</h1>
+<div class="meta">8 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a class="here" href="camera-pipeline.html">Camera pipeline</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-is-where">What is where</a><a href="#the-settings-and-why">The settings, and why</a><a href="#measured-on-a-mac-24-oct">Measured on a Mac (24 Oct)</a><a href="#what-it-cant-measure-here">What it can&#x27;t measure here</a><a href="#at-the-car-what-to-check">At the car: what to check</a><a href="#still-open">Still open</a></nav>
+<div class="lead"><p>Ben decided it on 23 Oct ("mediamtx on the pi to the orin seems like the best choice";
+<a href="decisions.html#decided-on-22-and-23-october">decisions</a>). This page is how it's built, the
+settings and why, what was measured on a Mac, and what to check at the car.</p>
+<div class="admonition tip">
+<p class="admonition-title">The short version</p>
+<pre><code>- The camera Pi streams **H.264** (1280x720, 15 fps, 2 Mbit/s) with **MediaMTX**.
+- On the Orin, **one program per camera** (`camera_stream`) unpacks it, undistorts
+  it and runs **RF-DETR Nano**. Raw pictures never cross the network.
+- On a Mac, the whole chain takes **26 ms** from the picture to its detections
+  (GStreamer decoding). Measured with `pixi run stream-check`.
+</code></pre>
+</div></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<pre class="highlight"><code class="language-text"> camera Pi (Pi 5, no ROS)                         Orin (ROS)
+ ────────────────────────                         ──────────
+ ribbon camera 0 ─┐                               camera_stream_front_left
+ ribbon camera 1 ─┤ MediaMTX        RTSP, TCP     ┌──────────────────────────────┐
+                  │ (OpenH264,  ────────────────► │ decoder (child program)      │
+                  │  software)      2 Mbit/s each │  GStreamer nvv4l2decoder     │
+                  │ :8554/front_left              │ undistort (OpenCV)           │
+                  │ :8554/front_right             │ RF-DETR Nano (aav_yolo)      │
+                  │ :8889 WebRTC ──► a browser    └──────┬───────────────────────┘
+                                                         ▼
+                        /perception/detections   (~0.5 kB, every picture)
+                        /perception/camera/front_left/preview/compressed (4 kB, 1 Hz)
+                        /sensors/camera/front_left/camera_info (with a calibration)
+                        /diagnostics             (its numbers, 1 Hz)</code></pre>
+<p>The same for <code>front_right</code>, in a second program.</p>
+</section>
+<section class="card"><h2 id="what-is-where">What is where</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>File</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The Pi's settings</td>
+<td><code>src/sensors/aav_camera_stream/pi/mediamtx.yml</code></td>
+<td>install: <code>pi/README.md</code> <span class="badge b-untested">untested</span> on the Pi</td>
+</tr>
+<tr>
+<td>The node</td>
+<td><code>aav_camera_stream/camera_stream.py</code></td>
+<td>one per camera</td>
+</tr>
+<tr>
+<td>Its logic, no ROS</td>
+<td><code>decoders.py</code>, <code>reader.py</code>, <code>latest.py</code>, <code>lens.py</code>, <code>timecode.py</code>, <code>models.py</code></td>
+<td>41 tests</td>
+</tr>
+<tr>
+<td>The detector</td>
+<td><code>aav_yolo.detectors.load_detector</code></td>
+<td>imported, not copied</td>
+</tr>
+<tr>
+<td>Start it</td>
+<td><code>ros2 launch aav_camera_stream camera_stream.launch.py host:=&lt;pi&gt; decoder:=gst-nvidia</code></td>
+<td>on the Orin</td>
+</tr>
+<tr>
+<td>Test it</td>
+<td><code>pixi run -e ml stream-check</code></td>
+<td>a Mac, no car</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-settings-and-why">The settings, and why</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Codec</td>
+<td>H.264</td>
+<td>about 10 times smaller than JPEG; every decoder has it</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>MediaMTX's <code>softwareH264</code> (OpenH264)</td>
+<td>the Pi 5 has <strong>no</strong> H.264 hardware</td>
+</tr>
+<tr>
+<td>Size, rate</td>
+<td>1280x720, 15 fps</td>
+<td>enough for the detector (it shrinks to 384 px); half the Pi's work of 1080p</td>
+</tr>
+<tr>
+<td>Bitrate</td>
+<td>2 Mbit/s (max 2.4)</td>
+<td>4 Mbit/s for both: 0.4% of the Orin's cable</td>
+</tr>
+<tr>
+<td>Key frame</td>
+<td>every 15 frames = 1 s</td>
+<td>a lost or new reader waits at most 1 s for a picture</td>
+</tr>
+<tr>
+<td>Profile</td>
+<td>baseline</td>
+<td>no B-frames: no picture waits for a later one</td>
+</tr>
+<tr>
+<td>Focus</td>
+<td>fixed, at infinity</td>
+<td>a lens that refocuses changes its calibration</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td>RTSP over TCP</td>
+<td>wired, so nothing is lost; a frame never arrives broken</td>
+</tr>
+<tr>
+<td>Who may publish</td>
+<td>the Pi itself only</td>
+<td>anyone may watch</td>
+</tr>
+<tr>
+<td>Decoder, Orin</td>
+<td>GStreamer <code>nvv4l2decoder</code></td>
+<td>NVIDIA's hardware; JetPack's own <code>/usr/bin/gst-launch-1.0</code></td>
+</tr>
+<tr>
+<td>Decoder, Mac</td>
+<td>GStreamer <code>avdec_h264</code> (<code>--gst</code>)</td>
+<td>ffmpeg holds back 2 frames (below)</td>
+</tr>
+<tr>
+<td>Newest only</td>
+<td>yes</td>
+<td>a slow detector drops frames, never falls behind</td>
+</tr>
+<tr>
+<td>Stamp</td>
+<td>arrival − <code>delay</code> (0.06 s)</td>
+<td>an <strong>estimate</strong>: measure it at the car</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Why the decoder is a child program</p>
+<pre><code>NVIDIA's GStreamer plugins come with JetPack, not Pixi. The node runs JetPack's
+`gst-launch-1.0` and reads raw pictures from its pipe (2.7 MB each, 41 MB/s:
+nothing for a pipe). So the node needs no GStreamer of its own, and the same code
+runs on a Mac with ffmpeg or GStreamer. `decoder:=opencv` decodes inside the
+process instead, with an OpenCV built with GStreamer or FFmpeg.
+</code></pre>
+</div>
+</section>
+<section class="card"><h2 id="measured-on-a-mac-24-oct">Measured on a Mac (24 Oct)</h2>
+<p><code>pixi run -e ml stream-check</code>, Ben's Mac (Apple silicon), load average 2-5, other
+helpers' work running. Gazebo's road world, the car rolling at 0.3 m/s towards the stop
+sign, 60 s each. <strong>measured</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decoder</th>
+<th>Time code → decoded</th>
+<th>→ detections published</th>
+<th>Detector</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GStreamer (<code>--gst</code>)</td>
+<td><strong>3 ms</strong> median, 6 p95, 8 worst</td>
+<td><strong>26 ms</strong> median, 36 p95, 42 worst</td>
+<td>21 ms</td>
+</tr>
+<tr>
+<td>ffmpeg (the default)</td>
+<td>136 ms median, 144 p95, 173 worst</td>
+<td>160 ms median, 174 p95, 215 worst</td>
+<td>22 ms</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Gazebo</th>
+<th>Noisy photo (<code>--pattern</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>On the wire</td>
+<td>0.13 Mbit/s (simple scenery compresses well)</td>
+<td><strong>2.04 Mbit/s</strong>: a real camera's noise fills the 2 Mbit/s</td>
+</tr>
+<tr>
+<td>Frames</td>
+<td>15.0 fps in, 15.0 worked on, 2-3 dropped a minute</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>Detections</td>
+<td>15 a second, 489 bytes each</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>Previews</td>
+<td>1 a second, 4.0 kB</td>
+<td>5.2 kB</td>
+</tr>
+<tr>
+<td>Stop sign</td>
+<td>in 902 of 906 pictures, from <strong>25 m</strong> down to 7 m</td>
+<td>in every picture</td>
+</tr>
+<tr>
+<td>CPU, encoder (stands in for the Pi)</td>
+<td>2% of a core</td>
+<td>7% of a core</td>
+</tr>
+<tr>
+<td>CPU, <code>camera_stream</code> + its decoder</td>
+<td>29% of a core</td>
+<td>32%</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">ffmpeg's 135 ms</p>
+<pre><code>Measured hop by hop: OpenH264 and x264 encode in 2 ms; MediaMTX adds nothing
+measurable; **ffmpeg's decoder program** holds back about 2 frames, with every
+low-delay flag tried (`-flags low_delay`, slice threads, one thread, `-fflags
+nobuffer`). GStreamer doesn't. So the Orin uses GStreamer, and so should a Mac
+(`--gst`). OpenCV's FFmpeg reader was worse (over 1 s behind).
+</code></pre>
+</div>
+<p>The time code: a row of black and white squares in the top left corner, carrying the
+time in ms, drawn before encoding and read after decoding (<code>timecode.py</code>). It survives
+OpenH264 at 2 Mbit/s (a test checks).</p>
+</section>
+<section class="card"><h2 id="what-it-cant-measure-here">What it can't measure here</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Not measured</th>
+<th>Why</th>
+<th>Estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The camera's exposure and readout, libcamera</td>
+<td>no Pi camera here</td>
+<td>20-40 ms</td>
+</tr>
+<tr>
+<td>The Pi 5 encoding two streams</td>
+<td>its CPU isn't this Mac's</td>
+<td>20-30% of a core each (a Pi 5 core is about 3-4 times slower)</td>
+</tr>
+<tr>
+<td>The cable, Pi to Orin</td>
+<td>one computer</td>
+<td>under 1 ms</td>
+</tr>
+<tr>
+<td>The Orin's hardware decoder</td>
+<td>no Orin here</td>
+<td>a few ms</td>
+</tr>
+<tr>
+<td>RF-DETR Nano in TensorRT on the Orin</td>
+<td>no Orin here</td>
+<td>to time (PLAN T8.3)</td>
+</tr>
+</tbody>
+</table></div>
+<p>So on the car, camera to detections: about <strong>50-100 ms</strong> (a guess).</p>
+</section>
+<section class="card"><h2 id="at-the-car-what-to-check">At the car: what to check</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>How</th>
+<th>Good</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Which camera is which</td>
+<td><code>rpicam-hello --list-cameras</code> on the Pi</td>
+<td>swap <code>rpiCameraCamID</code> if left is 1</td>
+</tr>
+<tr>
+<td>The Pi's CPU, two streams</td>
+<td><code>top</code> while the Orin reads both</td>
+<td>under 50% of the Pi in all; <code>vcgencmd measure_temp</code> under 80 °C</td>
+</tr>
+<tr>
+<td>Bitrate</td>
+<td><code>curl http://127.0.0.1:9997/v3/paths/list</code> on the Pi, twice, 10 s apart</td>
+<td>about 2 Mbit/s each</td>
+</tr>
+<tr>
+<td>The Orin decodes</td>
+<td><code>ros2 launch aav_camera_stream camera_stream.launch.py host:=&lt;pi&gt; decoder:=gst-nvidia detector:=none</code>, then <code>/diagnostics</code></td>
+<td><code>fps_in</code> 15</td>
+</tr>
+<tr>
+<td>Delay, end to end</td>
+<td>film a phone's stopwatch next to the Orin's screen, which shows the preview (or the stopwatch itself)</td>
+<td>under 150 ms</td>
+</tr>
+<tr>
+<td>Stamp error</td>
+<td>the same: the stopwatch in the picture vs the detection's stamp</td>
+<td>set <code>delay</code> to the difference</td>
+</tr>
+<tr>
+<td>Clock</td>
+<td><code>chronyc tracking</code> on the Pi and the Orin</td>
+<td>under 1 ms apart</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="still-open">Still open</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Calibrations</td>
+<td>the ribbon cameras have none: <code>config/cameras.yaml</code> leaves them empty (no undistortion). The 2024-25 <code>left.ini</code> is another camera's (Q22)</td>
+</tr>
+<tr>
+<td><code>car.launch.py</code></td>
+<td>doesn't start the streams yet: a machine part for the Orin, with <code>decoder:=gst-nvidia</code></td>
+</tr>
+<tr>
+<td>The sensor watchdog</td>
+<td>watches <code>/sensors/camera/front_left/image_raw</code>, which this node publishes only with <code>publish_image:=true</code>. Watch its <code>/diagnostics</code> instead?</td>
+</tr>
+<tr>
+<td>Lane finder and HUD</td>
+<td>read <code>image_raw</code> too: <code>publish_image:=true</code> on the Orin (no network), or the preview</td>
+</tr>
+<tr>
+<td>A rear camera</td>
+<td>the QNX Pi's doesn't work today; a USB camera's <code>ffmpeg</code> example is in <code>pi/mediamtx.yml</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="perception.html"><small>Previous</small>← Perception</a>
+<a class="next" href="older-code.html"><small>Next</small>Older code →</a></nav>
+</main>
+<footer>Source: <code>docs/camera-pipeline.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

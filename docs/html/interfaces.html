@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">41 min read · 4 sections</div></header>
+<div class="meta">43 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -39,6 +39,7 @@
 <a href="controllers.html">Path followers</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -304,10 +305,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/system/source</code></td>
 <td><code>aav_interfaces/msg/DataSource</code></td>
-<td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>mock_lidar</code>, <code>replay_source</code>, <code>carla_adapter</code></td>
+<td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>mock_lidar</code>, <code>replay_source</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
 <td><code>hud</code>, <code>map</code>, <code>actuator_test</code>, <code>goto_driver</code>, <code>goto_cli</code>, <code>sensor_mux</code>, <code>output_mux</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in - with role:=sensors (today's wiring, the Orin's CAN bus with only the wheel sensors) only odometry and wheels, never an actuator; legacy_uart_bridge REAL; replay.launch.py REPLAY. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.</td>
+<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in - with role:=sensors (today's wiring, the Orin's CAN bus with only the wheel sensors) only odometry and wheels, never an actuator; legacy_uart_bridge REAL; replay.launch.py REPLAY; each camera_stream_<camera> its camera (camera_front_left...) as its source parameter says, REAL on the car. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.</td>
 </tr>
 <tr>
 <td><code>/system/sensor_mux/state</code></td>
@@ -480,10 +481,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_camera</code>, <code>carla_adapter</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_camera</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code></td>
 <td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
-<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop).</td>
+<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop). On the car with the camera stream (aav_camera_stream), camera_stream_front_left publishes it only with publish_image:=true - every undistorted picture, for another node on the same computer; the pictures otherwise stay inside it.</td>
 </tr>
 <tr>
 <td><code>/sensors/camera/front_left/image_raw/compressed</code></td>
@@ -496,26 +497,26 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/camera/front_left/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
-<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>carla_adapter</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code></td>
 <td><code>lane_finder</code>, <code>camera_obstacles</code></td>
 <td>bench, road</td>
-<td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id.</td>
+<td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id. camera_stream_front_left publishes the undistorted picture's lens (no distortion) with each picture's detections, once the camera has a calibration (aav_camera_stream config/cameras.yaml).</td>
 </tr>
 <tr>
 <td><code>/sensors/camera/front_right/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
-<td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code>, <code>camera_stream_front_right</code></td>
 <td>-</td>
 <td>road</td>
-<td>The front right camera, beside the left one (camera_right_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.</td>
+<td>The front right camera, beside the left one (camera_right_link). On the car its stream goes to camera_stream_front_right (aav_camera_stream), which publishes it only with publish_image:=true. Subscribe reliably, as for the front left one.</td>
 </tr>
 <tr>
 <td><code>/sensors/camera/front_right/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
-<td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code>, <code>camera_stream_front_right</code></td>
 <td>-</td>
 <td>road</td>
-<td>Its lens. In Gazebo, the same as the front left camera's.</td>
+<td>Its lens. In Gazebo, the same as the front left camera's. camera_stream_front_right publishes the undistorted picture's, as for the front left one.</td>
 </tr>
 <tr>
 <td><code>/sensors/camera/rear/image_raw</code></td>
@@ -576,10 +577,26 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/perception/detections</code></td>
 <td><code>vision_msgs/msg/Detection2DArray</code></td>
-<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code></td>
+<td><code>yolo_detector</code>, <code>yolo_detector_orin</code>, <code>yolo_detector_laptop</code>, <code>yolo_detector_all</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
 <td><code>stop_sign_watcher</code>, <code>camera_obstacles</code></td>
 <td>-</td>
-<td>YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop).</td>
+<td>YOLO's boxes in pixels; header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. yolo_detector in bench mode and pixi run detect; on the car yolo_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay.</td>
+</tr>
+<tr>
+<td><code>/perception/camera/front_left/preview/compressed</code></td>
+<td><code>sensor_msgs/msg/CompressedImage</code></td>
+<td><code>camera_stream_front_left</code></td>
+<td>-</td>
+<td>-</td>
+<td>A small JPEG of the undistorted picture with the boxes drawn on, 320 px wide, once a second (preview_period, preview_width) - for Foxglove, Lichtblick or the HUD; a few kB, so it fits WiFi. People can also watch the camera Pi's own stream in a browser (WebRTC, http://<pi>:8889/front_left).</td>
+</tr>
+<tr>
+<td><code>/perception/camera/front_right/preview/compressed</code></td>
+<td><code>sensor_msgs/msg/CompressedImage</code></td>
+<td><code>camera_stream_front_right</code></td>
+<td>-</td>
+<td>-</td>
+<td>The same, for the front right camera.</td>
 </tr>
 <tr>
 <td><code>/perception/detections/image</code></td>
@@ -840,10 +857,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/diagnostics</code></td>
 <td><code>diagnostic_msgs/msg/DiagnosticArray</code></td>
-<td><code>twist_mux</code>, <code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code></td>
+<td><code>twist_mux</code>, <code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
 <td><code>language_drive</code></td>
 <td>-</td>
-<td>ROS's diagnostics. sensor_watchdog reports each input it watches once a second (OK, WARN, ERROR when it stops the car); for the wheels, also the gaps to the IMU (speed_gap, turn_gap, worst_speed_gap, worst_turn_gap), to tune the cross check on the car. twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. pixi run check ignores the topic.</td>
+<td>ROS's diagnostics. sensor_watchdog reports each input it watches once a second (OK, WARN, ERROR when it stops the car); for the wheels, also the gaps to the IMU (speed_gap, turn_gap, worst_speed_gap, worst_turn_gap), to tune the cross check on the car. twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. camera_stream_<camera> reports its stream once a second (status name camera_stream - front_left; ERROR with no pictures, WARN under half the frame rate) - fps_in, fps_out, dropped, decoder_starts, work_ms, detect_ms, delay_s, and with time_code the measured delays (arrival_<em> and detection_</em>_ms - median, p95, max). pixi run check ignores the topic.</td>
 </tr>
 </tbody>
 </table></div>
