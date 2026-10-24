@@ -21,9 +21,11 @@ parts:
   lane: false           # lane keeping, with the camera: it drives whenever it sees a lane
   localization: true
   navigation: true
-  spine: false          # true once the CAN spine exists (and legacy_* false)
+  spine: true           # the CAN bus is wired to the Orin (Ben, 23 Oct; the hardware lead
+                        # confirms): actuators:=uart (today), the wheel nodes only, nothing
+                        # sent; actuators:=can, the CAN spine drives (docs/can-plan.md)
   legacy_uart: false    # runs on motor_pi, which is wired to the ESP32
-  legacy_encoder: false # the Pico sends only to the Motor Pi: see motor_pi.yaml
+  legacy_encoder: false # the 2025-26 Pico sent only to the Motor Pi: see motor_pi.yaml
   foxglove: true
 
 # The detector's settings: aav_yolo detector.launch.py's arguments.

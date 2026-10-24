@@ -1,6 +1,10 @@
-# The Raspberry Pi wired to the ESP32's UART (2025-26 hardware). The serial bridge gets
-# /ego/actuator_cmd and /safety/estop from the Orin over the network. The wheel encoder's Pico
-# sends its UDP packets only to this Pi (192.168.1.193), so its listener runs here too.
+# The Raspberry Pi wired to the ESP32's UART: the ESP32's network interface (Ben, 23 Oct).
+# The serial bridge gets the output mux's /control/car/actuator_cmd and /safety/estop
+# from the Orin over the network. With actuators:=can (the CAN spine) it doesn't start.
 parts:
   legacy_uart: true
-  legacy_encoder: true
+  # The 2025-26 wheel encoder (a Pico 2) sent UDP packets only to this Pi (192.168.1.193).
+  # Off: the wheel sensors are on the Orin's CAN bus now, through an Arduino (Ben, 23 Oct;
+  # orin.yaml's spine part). The Pico wasn't seen on 21 Oct. Turn it back on only with
+  # the Orin's spine part off: two /vehicle/odom publishers stop the output mux.
+  legacy_encoder: false
