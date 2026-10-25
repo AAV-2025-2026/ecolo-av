@@ -490,6 +490,7 @@ The map panel needs the internet for its tiles: offline it shows the dots on a b
 | ☐ | theirs stopped: `aav_serial_bridge` inactive. **Never two drive paths** |
 | ☐ | which ESP32 firmware: the Rust (session 6 passed) or the C++ (**no timeout**: test 3.9 then fails, as expected) |
 | ☐ | `legacy.yaml`'s `frame_version`: 2 with the Rust, 1 with the C++ |
+| ☐ | everyone knows: **the throttle's strength is a guess.** Two guesses disagree by 5 times ([the car's model](docs/vehicle-model.md): full throttle holds 15 m/s by the drag guess, 3 m/s by the ESP32's open loop). 0.3 m/s asked may spin the wheels much faster: the e-stop person watches 3.2 |
 
 | Where | Run |
 |---|---|
@@ -504,7 +505,7 @@ The HUD's GO / STOP panel says whether the car may move, and why not. A latched 
 | # | Test | Expect | If not |
 |---|---|---|---|
 | 3.1 | Nothing pressed | wheels still; the HUD shows 0 | e-stop |
-| 3.2 | Forward, gently | the drive wheels turn **forward**, slowly | backwards: write it down (`legacy_protocol.py`), not fixed at the car |
+| 3.2 | Forward, gently | the drive wheels turn **forward**, slowly | backwards: write it down (`legacy_protocol.py`), not fixed at the car. **Fast:** e-stop, write down the speed (3.12's tachometer), and no ground driving until tests 4.2 and 4.4 |
 | 3.3 | Left | the front wheels turn **left** | right: `steering_sign` (Q2) |
 | 3.4 | Let go of the key | slows to 0 within 0.3 s | |
 | 3.5 | The HUD's e-stop button | brakes at once; nothing moves until `pixi run estop-clear` | |
@@ -515,6 +516,8 @@ The HUD's GO / STOP panel says whether the car may move, and why not. A latched 
 | 3.10 | `pixi run actuator-test steer-sweep --stands` (the laptop) | it asks each wheel angle: the protractor | |
 | 3.11 | `pixi run actuator-test steer-centre --stands` | under 1°, or the offset written down | |
 | 3.12 | Wheel speed: `/vehicle/odom` against a phone tachometer app | within 10% | |
+
+**Not today: the car on the ground.** That waits for tests 4.2 (`coast`) and 4.4 (`throttle-map`): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b).
 
 Then put it back: Ctrl-C everything; theirs again (`sudo systemctl start aav_serial_bridge`)
 only with the C++ on the ESP32 (6d), as the team decides.

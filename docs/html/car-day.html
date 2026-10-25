@@ -7,7 +7,7 @@
 <!-- Generated from READ-ME-CAR-DAY.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">37 min read · 16 sections</div></header>
+<div class="meta">38 min read · 16 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1363,6 +1363,10 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <td>☐</td>
 <td><code>legacy.yaml</code>'s <code>frame_version</code>: 2 with the Rust, 1 with the C++</td>
 </tr>
+<tr>
+<td>☐</td>
+<td>everyone knows: <strong>the throttle's strength is a guess.</strong> Two guesses disagree by 5 times (<a href="vehicle-model.html">the car's model</a>: full throttle holds 15 m/s by the drag guess, 3 m/s by the ESP32's open loop). 0.3 m/s asked may spin the wheels much faster: the e-stop person watches 3.2</td>
+</tr>
 </tbody>
 </table></div>
 <div class="table-wrap"><table>
@@ -1413,7 +1417,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <td>3.2</td>
 <td>Forward, gently</td>
 <td>the drive wheels turn <strong>forward</strong>, slowly</td>
-<td>backwards: write it down (<code>legacy_protocol.py</code>), not fixed at the car</td>
+<td>backwards: write it down (<code>legacy_protocol.py</code>), not fixed at the car. <strong>Fast:</strong> e-stop, write down the speed (3.12's tachometer), and no ground driving until tests 4.2 and 4.4</td>
 </tr>
 <tr>
 <td>3.3</td>
@@ -1477,6 +1481,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 </tr>
 </tbody>
 </table></div>
+<p><strong>Not today: the car on the ground.</strong> That waits for tests 4.2 (<code>coast</code>) and 4.4 (<code>throttle-map</code>): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b).</p>
 <p>Then put it back: Ctrl-C everything; theirs again (<code>sudo systemctl start aav_serial_bridge</code>)
 only with the C++ on the ESP32 (6d), as the team decides.</p>
 <p><strong>Stop point:</strong> 3.1-3.8 pass. Anything that turned the wrong way: written down.</p>
