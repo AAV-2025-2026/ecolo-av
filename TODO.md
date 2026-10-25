@@ -3,6 +3,27 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## 24 October, evening: the car-day kit
+
+Ben, 24 Oct: "Lets get everything prepared so the only thing left it to get into the car."
+
+| # | Task | Status |
+|---|---|---|
+| 51 | **The car-day kit**: one runbook, one preflight | ✅ 24 Oct, `wt/car-day`. [READ-ME-CAR-DAY.md](READ-ME-CAR-DAY.md) (in the docs as "Car day"): sessions 0-10, each with who, how long, what to bring, the commands, what you should see, what to do if not, and 🔒 where the hardware lead must answer first. `pixi run car-day-build` builds the ESP32 firmware (version 2 and `link-v1`) into `car-day/esp32/` (out of git), runs `esp-qemu-check`, builds the C++ way back and the docs PDF; `pixi run car-day-check` (ROS-free, 35 tests) says OK / MISSING with the fix, or REMIND. Built on Ben's Mac: both ELFs, QEMU PASS (111-119 ms), the C++, the PDF, and `models/rf-detr-nano.onnx` (108 MB: the Orin then needs only TensorRT's `trtexec`). Found: on JetPack 6, RF-DETR can't run inside the stream node under Pixi (Python 3.12 vs JetPack 6's 3.10 TensorRT): the streams run, the detector waits for the reflash (Q24). Also fixed: every `!!!` box in the HTML docs showed its text as code (four-space bodies with `tab_length` 2). Seen once: `esp-qemu-check` in `tools/test.sh` failed at load 18 (QEMU starved: the firmware's clock ran 0.82 s per real second, timeouts of 2.3 s); it passed alone a minute later and in the next full run. A flake under load, not the firmware: QEMU has no `-icount` |
+
+**Ready for the car** (the steps are written; each still needs the car):
+
+| TODO | What | Runbook session |
+|---|---|---|
+| 14 | weigh and measure the car (Gate 1, 30 Oct) | 2 |
+| 28 | Cyclone's one network card: the laptop's and the Orin's file | 0, 4c |
+| 37b.1, 37c | RF-DETR's engine (`trtexec` from the ONNX), the Pi file, which camera, CPU, delay, calibration pictures | 4d, 5 |
+| 38, 46, 49, 50 | the hardware lead's questions: H1-H8, the Jrk wires, TX1, CORTEX, the camera Pi's address | 3 |
+| 43 | Foxglove at the car (their bridge holds 8765: ours on 8766) | 8 |
+| 45 | the ESP32: backup, the Rust flash, checks 1-14 and 9a-9c, roll back | 6 |
+| 30, 38 | CAN read-only: the Arduino's 0x200, 0x201 | 7 |
+| T2.7 | bags for the sim-versus-real report | 10 |
+
 ## 23 October: what we can do without the car
 
 Ben, 23 Oct: "yes lets use cyclone and lets add this to a list of stuff we did and the

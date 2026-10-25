@@ -19,6 +19,7 @@
 <a href="work.html">Work</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <span class="sep">Learn:</span>
@@ -250,9 +251,8 @@ lane keeping and the HUD. Each keeps a <code>PROVENANCE.md</code>. See <a href="
 </table></div>
 <div class="admonition warning">
 <p class="admonition-title">Today's car has no layer 6</p>
-<pre><code>The 2025-26 ESP32 firmware has no timeout. If the Motor-Pi dies, the last throttle
-stays on. Wheels off the ground, e-stop in hand: see [Firmware](firmware.md).
-</code></pre>
+<p>The 2025-26 ESP32 firmware has no timeout. If the Motor-Pi dies, the last throttle
+stays on. Wheels off the ground, e-stop in hand: see <a href="firmware.html">Firmware</a>.</p>
 </div>
 <h3 id="how-do-i-press-the-e-stop-from-a-laptop">How do I press the e-stop from a laptop?</h3>
 <p><code>pixi run estop</code> publishes <code>true</code> on <code>/safety/estop</code>. <code>pixi run estop-clear</code> clears it.

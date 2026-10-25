@@ -19,6 +19,7 @@
 <a href="work.html">Work</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <span class="sep">Learn:</span>
@@ -76,12 +77,13 @@ logs what happened, and prints the numbers for <code>vehicle.yaml</code>. Built 
 (15 Oct); the same script runs on the car.</p>
 <div class="admonition note">
 <p class="admonition-title">The short version</p>
-<pre><code>- `pixi run actuator-test --list` shows the tests. Add `--sim` for Gazebo.
-- **On the car:** stage 3 on stands (`--stands`), stage 4 in an empty lot. It asks you
-  to type the test's name first, and never goes above 1 m/s (0.3 on stands).
-- **To stop:** Ctrl-C, the e-stop, or the joystick's deadman. Any of them, any time.
-- It prints the `vehicle.yaml` lines to paste. It never writes the file itself.
-</code></pre>
+<ul>
+<li><code>pixi run actuator-test --list</code> shows the tests. Add <code>--sim</code> for Gazebo.</li>
+<li><strong>On the car:</strong> stage 3 on stands (<code>--stands</code>), stage 4 in an empty lot. It asks you
+  to type the test's name first, and never goes above 1 m/s (0.3 on stands).</li>
+<li><strong>To stop:</strong> Ctrl-C, the e-stop, or the joystick's deadman. Any of them, any time.</li>
+<li>It prints the <code>vehicle.yaml</code> lines to paste. It never writes the file itself.</li>
+</ul>
 </div></div>
 <section class="card"><h2 id="how-it-fits">How it fits</h2>
 <pre class="highlight"><code class="language-text"> actuator_test ──/drivers/tests/cmd_vel──► twist_mux ──► ego ──► backend ──► the car
@@ -262,10 +264,9 @@ then run the rest. Start at walking pace: <code>--max-speed 0.5</code>.</p>
 </table></div>
 <div class="admonition warning">
 <p class="admonition-title">ego's steering rate</p>
-<pre><code>`steer-rate` lifts ego's `max_steering_rate` (0.6 rad/s) to 3 rad/s while it runs, so it
+<p><code>steer-rate</code> lifts ego's <code>max_steering_rate</code> (0.6 rad/s) to 3 rad/s while it runs, so it
 times the motor, not ego, and puts it back after. ego allows a live change to that one
-limit only. If the script is killed (not Ctrl-C), restart ego to be sure.
-</code></pre>
+limit only. If the script is killed (not Ctrl-C), restart ego to be sure.</p>
 </div>
 <h3 id="what-the-car-can-measure-today">What the car can measure today</h3>
 <p>The 2025-26 ESP32 drives the car until the spine replaces it (<code>legacy_uart_bridge</code>).</p>
@@ -445,30 +446,55 @@ The script should give them back:</p>
 drift over 10 m was 0.06 m; the full-lock circle was 6.8 m across, not 5.75 (6.0 m since the fix below).</p>
 <div class="admonition success">
 <p class="admonition-title">Fixed: Gazebo's car now reaches full lock (S3, 15 Oct)</p>
-<pre><code>Told 0.5 rad, the car turned as if 0.433. The cause was Gazebo's Ackermann system
-(gz-sim 8): it turns `steering_limit` into a smallest circle, wheelbase ÷ sin(limit),
+<p>Told 0.5 rad, the car turned as if 0.433. The cause was Gazebo's Ackermann system
+(gz-sim 8): it turns <code>steering_limit</code> into a smallest circle, wheelbase ÷ sin(limit),
 so a limit of 0.5 stopped the middle wheel at 0.447. Tyre slip (about 3%) took the
-rest. Now `vehicle.gazebo_steering_limit` gives Gazebo 0.578, worked out from
-`max_steering_angle`. `vehicle.yaml` and the real car's meaning don't change.
-
-| `circles --sim`, 1 m/s | Before | After |
-|---|---|---|
-| full lock, left / right | 0.433 | 0.485 / 0.484 rad (3% short) |
-| 0.35 rad, left / right | 0.339 | 0.342 / 0.341 |
-| 0.2 rad, left / right | 0.194 | 0.197 / 0.196 |
-| circle across, full lock | 6.8 m | 5.93-5.98 m |
-| Gazebo's wheels at full lock, inside / outside | 0.498 / 0.405 (worked out) | 0.563 / 0.449 (Ackermann: 0.563 / 0.449) |
-
-The wheels now point exactly where Ackermann says. The last 3% is the tyres
-sliding sideways, at every angle: the real car will slide too, and `circles` on the
-car measures it. `steer-sweep --sim` still reads 0.495 (the deadband).
-</code></pre>
+rest. Now <code>vehicle.gazebo_steering_limit</code> gives Gazebo 0.578, worked out from
+<code>max_steering_angle</code>. <code>vehicle.yaml</code> and the real car's meaning don't change.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>circles --sim</code>, 1 m/s</th>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>full lock, left / right</td>
+<td>0.433</td>
+<td>0.485 / 0.484 rad (3% short)</td>
+</tr>
+<tr>
+<td>0.35 rad, left / right</td>
+<td>0.339</td>
+<td>0.342 / 0.341</td>
+</tr>
+<tr>
+<td>0.2 rad, left / right</td>
+<td>0.194</td>
+<td>0.197 / 0.196</td>
+</tr>
+<tr>
+<td>circle across, full lock</td>
+<td>6.8 m</td>
+<td>5.93-5.98 m</td>
+</tr>
+<tr>
+<td>Gazebo's wheels at full lock, inside / outside</td>
+<td>0.498 / 0.405 (worked out)</td>
+<td>0.563 / 0.449 (Ackermann: 0.563 / 0.449)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The wheels now point exactly where Ackermann says. The last 3% is the tyres
+sliding sideways, at every angle: the real car will slide too, and <code>circles</code> on the
+car measures it. <code>steer-sweep --sim</code> still reads 0.495 (the deadband).</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Gazebo's IMU</p>
-<pre><code>Gazebo's own IMU never felt the car speed up or brake (0.00 m/s² while speeding up at
-0.6). `gazebo_imu` now gives it the car's acceleration ([Simulation](simulation.md)).
-</code></pre>
+<p>Gazebo's own IMU never felt the car speed up or brake (0.00 m/s² while speeding up at
+0.6). <code>gazebo_imu</code> now gives it the car's acceleration (<a href="simulation.html">Simulation</a>).</p>
 </div>
 <h3 id="checked-in-gazebo-and-against-a-pretend-real-car-15-oct">Checked in Gazebo and against a pretend real car (15 Oct)</h3>
 <div class="table-wrap"><table>

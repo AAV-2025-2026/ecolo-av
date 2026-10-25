@@ -19,6 +19,7 @@
 <a href="work.html">Work</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <span class="sep">Learn:</span>
@@ -76,10 +77,9 @@ hertz." <strong>Yes.</strong> This page is the budget: every data stream, how bi
 crosses, and whether that wire has room.</p>
 <div class="admonition tip">
 <p class="admonition-title">The answer in one line</p>
-<pre><code>**The cameras are the only danger.** One raw 1080p camera (93 MB/s) fills most of a
+<p><strong>The cameras are the only danger.</strong> One raw 1080p camera (93 MB/s) fills most of a
 gigabit cable; two don't fit. Everything else together is under 2 MB/s. Send
-pictures **compressed** over the network, and keep the lidar's points on the Orin.
-</code></pre>
+pictures <strong>compressed</strong> over the network, and keep the lidar's points on the Orin.</p>
 </div>
 <p>How sure each number is:</p>
 <div class="table-wrap"><table>
@@ -956,10 +956,9 @@ pixi run can-load                           # the CAN bus, from the DBC</code></
 </table></div>
 <div class="admonition warning">
 <p class="admonition-title">Measuring costs bandwidth too</p>
-<pre><code>The meter subscribes to every topic, raw pictures too. On the car, run it **on the
-Orin** (where the big topics already arrive), or `--exclude image_raw` from a laptop
-on WiFi.
-</code></pre>
+<p>The meter subscribes to every topic, raw pictures too. On the car, run it <strong>on the
+Orin</strong> (where the big topics already arrive), or <code>--exclude image_raw</code> from a laptop
+on WiFi.</p>
 </div>
 <p>The code: <code>tools/bandwidth.py</code> (the ROS part), <code>tools/topic_load.py</code> and
 <code>tools/can_load.py</code> (the numbers, no ROS; tests in <code>tools/tests/</code>).</p></section>
