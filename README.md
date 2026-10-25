@@ -11,10 +11,9 @@ Goal for Gate 4 (26 Feb 2027): drive from GPS point A to B at 1 m/s and stop wit
 |---|---|
 | `ros/` | Every ROS 2 package, one folder per layer (proposal section 3.1) |
 | `firmware/` | Rust firmware for the ESP32 spine. Built by Cargo, not colcon |
-| `contract/` | The interface contract: every topic, its rate and latency budget |
 | `tests/` | Tests that span packages |
 | `tools/` | Scripts |
-| `docs/` | Starting guide, decision log |
+| `docs/` | Starting guide, interface contract, decision log |
 | `archive/` | The 27 earlier repositories, with history. Read and port from here |
 
 ## Common commands

@@ -1,6 +1,6 @@
 # Interface contract: every topic between layers, with its rate and latency budget.
 # Source: project proposal, section 3.3 (final, 23 Oct 2026).
-# Edit this file, then run `pixi run contract-readme` to regenerate README.md.
+# Edit this file, then run `pixi run contract-readme` to regenerate interfaces.md.
 #
 # Fields:
 #   topic           ROS topic name. <name> and * are placeholders.
