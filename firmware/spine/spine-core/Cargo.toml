@@ -1,5 +1,0 @@
-[package]
-name = "spine-core"
-version = "0.1.0"
-edition = "2024"
-description = "Hardware-independent spine logic, tested on the host (T3.6)"
