@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The car as a linear model · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/vehicle-model.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The car as a linear model</h1>
+<div class="meta">19 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a class="here" href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#the-symbols">The symbols</a><a href="#1-speed">1. Speed</a><a href="#2-steering">2. Steering</a><a href="#3-the-path-lateral-state-space">3. The path: lateral state space</a><a href="#4-the-delays">4. The delays</a><a href="#5-discrete-time-as-the-computers-run-it">5. Discrete time: as the computers run it</a><a href="#6-gazebos-car-against-the-model">6. Gazebo&#x27;s car against the model</a><a href="#7-which-numbers-are-guesses">7. Which numbers are guesses</a><a href="#what-its-for">What it&#x27;s for</a><a href="#run-it">Run it</a></nav>
+<div class="lead"><p>Ben, 24 Oct: "Do we have a mathematical model for the car now for the ego? ... a matrix
+control thing ... Maybe second order system". Now we do. This page writes the car the
+way SYSC 3600 (Systems and Simulation) would: differential equations, Laplace, transfer
+functions, state space, poles, step responses and Bode margins.</p>
+<div class="admonition note">
+<p class="admonition-title">The short version</p>
+<ul>
+<li><strong>Three parts:</strong> speed (second order, with the spine's PI around it), steering
+  (second order), and the path errors (state space, 3 states).</li>
+<li><strong>Today's numbers are guesses</strong> from <code>vehicle.yaml</code>. The car day's actuator tests
+  measure each one; <code>pixi run vehicle-model --set throttle_lag=0.25</code> redoes it all.</li>
+<li><strong>The spine's speed loop is slow:</strong> it settles in about 13 s. Delays don't matter
+  to it (62° of phase margin even in the worst case).</li>
+<li><strong>The lateral loop is where delays matter:</strong> 52° of phase margin with none, 45°
+  with today's 84 ms, 31° with the worst case (259 ms) at 1 m/s.</li>
+<li><strong>Gazebo's car steers 0.11 s slower than <code>vehicle.yaml</code> says</strong> (measured: an extra lag in
+  Gazebo's own steering). Worth fixing before the sim-versus-real report.</li>
+<li><strong>Nothing here drives the car.</strong> It is for tuning, checking, and the report.</li>
+</ul>
+</div>
+<p><span class="badge b-works">works</span> the maths and its 30 tests (24 Oct, Ben's Mac). <span class="badge b-needs-you">needs you</span> the car day's
+numbers.</p></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<p>The whole chain, from the set speed and the path to the car:</p>
+<pre class="highlight"><code class="language-text"> SPEED (the spine, every 10 ms)
+                     ┌──────────┐ u   ┌────────────┐ u_a ┌──────────────┐  v
+ v_set ──►(+)──e────►│ PI       │────►│ throttle   │────►│ the car      │──┬──► speed
+           ▲ -       │ kp+ki/s  │     │ 1/(τt s+1) │     │ K/(τv s+1)   │  │
+           │         └──────────┘     └────────────┘     └──────────────┘  │
+           └──────────────────── wheel speed (a delay) ◄────────────────────┘
+
+ STEERING AND THE PATH (the controller, every 50 ms)
+                     ┌──────────┐ δcmd ┌─────────────────────┐ δ  ┌────────────────┐
+ path ───►(-)───────►│ pure     │─────►│ Jrk + linkage       │───►│ bicycle        │──┬─► e_y, e_θ
+           ▲         │ pursuit K│      │ ωn²/(s²+2ζωn s+ωn²) │    │ θ'=vδ/L, y'=vθ │  │
+           │         └──────────┘      └─────────────────────┘    └────────────────┘  │
+           └──── camera, detections, the controller's cycle: e^(-sT) ◄────────────────┘</code></pre>
+</section>
+<section class="card"><h2 id="the-symbols">The symbols</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Means</th>
+<th>Today</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v</td>
+<td>speed along the car</td>
+<td>m/s</td>
+<td></td>
+</tr>
+<tr>
+<td>u</td>
+<td>throttle command, 0 to 1</td>
+<td></td>
+<td>the spine</td>
+</tr>
+<tr>
+<td>u_a</td>
+<td>the throttle actually applied</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>a_max</td>
+<td>acceleration at full throttle</td>
+<td>1.5 m/s²</td>
+<td><code>max_accel</code> GUESS</td>
+</tr>
+<tr>
+<td>d</td>
+<td>drag: speed lost per second per m/s</td>
+<td>0.1 /s</td>
+<td><code>drag</code> GUESS</td>
+</tr>
+<tr>
+<td>K = a_max / d</td>
+<td>speed that full throttle would hold</td>
+<td>15 m/s</td>
+<td></td>
+</tr>
+<tr>
+<td>τv = 1 / d</td>
+<td>the car's own time constant</td>
+<td>10 s</td>
+<td></td>
+</tr>
+<tr>
+<td>τt</td>
+<td>the throttle's lag</td>
+<td>0.1 s</td>
+<td><code>throttle_lag</code> GUESS</td>
+</tr>
+<tr>
+<td>kp, ki</td>
+<td>the spine's PI gains</td>
+<td>0.3, 0.1</td>
+<td><code>speed_loop.rs</code></td>
+</tr>
+<tr>
+<td>r</td>
+<td>the steering motor's top speed</td>
+<td>0.8 rad/s</td>
+<td><code>steer_rate</code> GUESS</td>
+</tr>
+<tr>
+<td>τm</td>
+<td>the motor, as a lag (below)</td>
+<td>0.0625 s</td>
+<td></td>
+</tr>
+<tr>
+<td>τl</td>
+<td>the linkage's lag</td>
+<td>0.1 s</td>
+<td><code>steer_lag</code> GUESS</td>
+</tr>
+<tr>
+<td>ωn, ζ</td>
+<td>the steering's natural frequency, damping</td>
+<td>12.6 rad/s, 1.03</td>
+<td></td>
+</tr>
+<tr>
+<td>δ</td>
+<td>the wheel angle (centre wheel), + left</td>
+<td>rad</td>
+<td></td>
+</tr>
+<tr>
+<td>L</td>
+<td>wheelbase</td>
+<td>1.57 m</td>
+<td><code>wheelbase</code> TODO measure</td>
+</tr>
+<tr>
+<td>e_y, e_θ</td>
+<td>sideways and heading error from the path</td>
+<td>m, rad</td>
+<td></td>
+</tr>
+<tr>
+<td>ld</td>
+<td>pure pursuit's lookahead</td>
+<td>1.5 to 4 m</td>
+<td><code>nav2.yaml</code></td>
+</tr>
+<tr>
+<td>T</td>
+<td>a delay</td>
+<td>s</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="1-speed">1. Speed</h2>
+<h3 id="the-differential-equations">The differential equations</h3>
+<p>The throttle reaches its level with a first-order lag:</p>
+<pre class="highlight"><code class="language-text">τt · du_a/dt + u_a = u</code></pre>
+<p>The car speeds up in proportion to the throttle, and drag slows it in proportion to
+its speed:</p>
+<pre class="highlight"><code class="language-text">dv/dt = a_max · u_a − d · v</code></pre>
+<p>Divide by d. It's the textbook first-order form:</p>
+<pre class="highlight"><code class="language-text">τv · dv/dt + v = K · u_a        τv = 1/d = 10 s,   K = a_max/d = 15 m/s</code></pre>
+<h3 id="laplace-and-transfer-functions">Laplace and transfer functions</h3>
+<pre class="highlight"><code class="language-text">V(s) / U_a(s) = K / (τv s + 1)                    the car
+U_a(s) / U(s) = 1 / (τt s + 1)                    the throttle
+P(s) = K / ((τv s + 1)(τt s + 1))                 throttle command to speed</code></pre>
+<p>Poles: s = −1/τv = <strong>−0.1</strong> (the car: slow) and s = −1/τt = <strong>−10</strong> (the throttle: fast).
+Alone, the car reaches 63 % of its final speed after τv = 10 s.</p>
+<h3 id="state-space">State space</h3>
+<pre class="highlight"><code class="language-text">x = [v, u_a]
+
+x' = A x + B u        A = [ −d    a_max ]      B = [  0   ]
+                          [  0   −1/τt  ]          [ 1/τt ]
+y  = C x              C = [ 1  0 ]</code></pre>
+<h3 id="the-spines-speed-loop-around-it">The spine's speed loop around it</h3>
+<p><code>firmware/spine/crates/spine-core/src/speed_loop.rs</code>, while it uses the throttle:</p>
+<pre class="highlight"><code class="language-text">e = v_set − v
+throttle = kp·e + ki·∫e dt          C(s) = kp + ki/s = (kp s + ki)/s</code></pre>
+<p>The closed loop, T(s) = C P / (1 + C P). Leave out the fast throttle lag first: the
+characteristic equation is</p>
+<pre class="highlight"><code class="language-text">s² + (d + a_max·kp) s + a_max·ki = 0
+s² + 0.55 s + 0.15 = 0
+s = −0.275 ± 0.273j          ωn = 0.39 rad/s,   ζ = 0.71</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Loop</th>
+<th>Poles (1/s)</th>
+<th>Rise (10-90 %)</th>
+<th>Overshoot</th>
+<th>Settles (2 %)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the car alone</td>
+<td>−0.1</td>
+<td>22 s</td>
+<td>0</td>
+<td>39 s</td>
+</tr>
+<tr>
+<td>spine PI, no throttle lag</td>
+<td>−0.275 ± 0.273j</td>
+<td>2.7 s</td>
+<td>14 %</td>
+<td>12.9 s</td>
+</tr>
+<tr>
+<td>spine PI + throttle lag</td>
+<td>−0.28 ± 0.28j, −9.5</td>
+<td>2.6 s</td>
+<td>15 %</td>
+<td>12.7 s</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="Step responses" src="../img/vehicle-model-steps.png" /></p>
+<p><strong>What the poles mean for the car:</strong></p>
+<ul>
+<li>The pair at −0.28 ± 0.28j: the car reaches a new speed in about 3 s, overshoots by
+  15 %, and settles in 13 s. Slow, but smooth.</li>
+<li>The overshoot is more than ζ = 0.71 alone gives (about 4 %): the PI adds a zero at
+  −ki/kp = −0.33, near the poles. The spine's ramped set speed hides most of it.</li>
+<li>The pole at −9.5 is the throttle: 30 times faster, so it hardly matters.</li>
+</ul>
+<h3 id="steady-state-the-final-value-theorem">Steady state: the final value theorem</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Final value theorem</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a step, with the spine's PI</td>
+<td>e = 1 / (1 + L(0)), and L(0) = ∞ (the integrator)</td>
+<td><strong>0</strong>: no error left</td>
+</tr>
+<tr>
+<td>a step, P only (ki = 0)</td>
+<td>e = 1 / (1 + kp·K) = 1 / (1 + 0.3 × 15)</td>
+<td>18 % short</td>
+</tr>
+<tr>
+<td>a ramp of 1.5 m/s² (the spine's slew)</td>
+<td>e = r / Kv,  Kv = lim s·L(s) = ki·K = 1.5 /s</td>
+<td>1.0 m/s behind while it ramps</td>
+</tr>
+<tr>
+<td>a ramp of 1.0 m/s² (ego's limit)</td>
+<td>the same</td>
+<td>0.67 m/s behind</td>
+</tr>
+<tr>
+<td>today's open loop (no wheel speed)</td>
+<td>v = K · (target / 3.0)</td>
+<td>5 × the target</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Two guesses disagree</p>
+<p>Today's ESP32 has no wheel speed, so it runs the speed open loop: throttle =
+target / 3.0 m/s (<code>FULL_THROTTLE_SPEED</code>). The model's guesses say full throttle
+holds K = a_max / d = 15 m/s. Both can't be right: either the drag is about 0.5 /s,
+or full throttle gives more than 3 m/s. Tests 4.2 (<code>coast</code>) and 4.4
+(<code>throttle-map</code>) settle it. Until then, keep ego's 1 m/s cap.</p>
+</div>
+<h3 id="what-the-linear-model-leaves-out">What the linear model leaves out</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Nonlinearity</th>
+<th>In the spine</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>throttle 0 to 1</td>
+<td><code>clamp01</code></td>
+<td>big errors saturate: the car speeds up at a_max at most</td>
+</tr>
+<tr>
+<td>the integral 0 to 0.3</td>
+<td><code>integral_limit</code></td>
+<td>anti-windup; holds up to 0.3 × K = 4.5 m/s on the flat</td>
+</tr>
+<tr>
+<td>the brake</td>
+<td>a P loop beyond the 0.2 m/s coast band</td>
+<td>slowing down is a different, P-only loop: B(s) = −b_max / ((s + d)(τb s + 1))</td>
+</tr>
+<tr>
+<td>the set speed's ramp</td>
+<td>1.5 m/s²</td>
+<td>steps become ramps (the table above)</td>
+</tr>
+<tr>
+<td>the throttle's deadband</td>
+<td><code>throttle_deadband</code></td>
+<td>0 today; a real one adds a dead zone at low speed</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="2-steering">2. Steering</h2>
+<p>The Jrk G2 turns the steering motor toward its target at up to r = 0.8 rad/s (a rate
+limit: nonlinear). The linkage follows with a lag τl = 0.1 s.</p>
+<p><strong>Linearising the rate limit.</strong> For a step of size A, the rate limit takes A/r, and its
+average delay is A/(2r). A first-order lag with that delay has</p>
+<pre class="highlight"><code class="language-text">τm = A / (2r) = 0.1 / (2 × 0.8) = 0.0625 s        (for A = 0.1 rad, a lane-keeping step)</code></pre>
+<p>Two lags in a row make a second-order system:</p>
+<pre class="highlight"><code class="language-text">G_s(s) = 1 / ((τm s + 1)(τl s + 1))
+       = ωn² / (s² + 2ζωn s + ωn²)
+
+ωn = 1 / √(τm·τl)                 = 12.6 rad/s
+ζ  = (τm + τl) / (2·√(τm·τl))     = 1.03</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ωn</th>
+<th>ζ</th>
+<th>Rise</th>
+<th>Overshoot</th>
+<th>Settles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>12.6 rad/s</td>
+<td>1.03 (just overdamped)</td>
+<td>0.28 s</td>
+<td>0</td>
+<td>0.49 s</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What it means:</strong> the steering is about 10 times faster than the path loop (ωn 12.6 vs
+about 1 rad/s), so the path loop sees it as a small delay, τs = 2ζ/ωn = 0.16 s.</p>
+<p><strong>What's a guess:</strong> all of it. Two real lags can never overshoot (ζ ≥ 1). If the Jrk's own
+position loop overshoots on the car, read the overshoot off test 3.11's step, and
+<code>--set steer_overshoot=0.1</code> sets ζ from the textbook formula:</p>
+<pre class="highlight"><code class="language-text">overshoot = exp(−ζπ / √(1 − ζ²))        ζ = −ln(OS) / √(π² + ln²(OS))</code></pre>
+<p><strong>Left out:</strong> the rate limit itself (big steps take A/r: full lock from centre takes
+0.6 s), the deadband (0.005 rad), and the software's own rate limits before it (ego and
+the spine: 0.6 rad/s, slower than the motor).</p>
+</section>
+<section class="card"><h2 id="3-the-path-lateral-state-space">3. The path: lateral state space</h2>
+<h3 id="the-kinematic-bicycle">The kinematic bicycle</h3>
+<p>The same model as ego and MPPI, about the rear axle (<code>base_link</code>), the path along x:</p>
+<pre class="highlight"><code class="language-text">x' = v · cos θ
+y' = v · sin θ
+θ' = v · tan δ / L</code></pre>
+<h3 id="linearised-about-driving-straight">Linearised about driving straight</h3>
+<p>Small angles: sin θ ≈ θ, tan δ ≈ δ. With the steering as one lag τs:</p>
+<pre class="highlight"><code class="language-text">e_y' = v · e_θ
+e_θ' = (v / L) · δ
+δ'   = (δcmd − δ) / τs</code></pre>
+<pre class="highlight"><code class="language-text">x = [e_y, e_θ, δ],   u = δcmd
+
+     [ 0   v    0     ]        [  0   ]
+A =  [ 0   0   v/L    ]    B = [  0   ]
+     [ 0   0  −1/τs   ]        [ 1/τs ]</code></pre>
+<p>At 1 m/s, today: <code>A = [[0, 1, 0], [0, 0, 0.637], [0, 0, −6.15]]</code>, <code>B = [0, 0, 6.15]ᵀ</code>.
+<code>lateral(v, steering_order=2)</code> gives the 4-state version with the second-order
+steering (δ' as a state).</p>
+<p><strong>Eigenvalues: 0, 0 and −1/τs = −6.15, at every speed.</strong> The two at 0 are a double
+integrator: steer, and the heading changes; the heading, and the car drifts sideways.
+Left alone, nothing pulls the car back. Speed changes <strong>B's reach</strong> (v and v/L), not the
+eigenvalues; in reverse, v &lt; 0 flips the signs.</p>
+<p>The test checks A against a finite-difference Jacobian of the nonlinear bicycle.</p>
+<h3 id="closing-the-loop-pure-pursuit">Closing the loop: pure pursuit</h3>
+<p>Regulated Pure Pursuit steers for the curvature 2 sin α / ld toward a point ld ahead on
+the path. For small errors:</p>
+<pre class="highlight"><code class="language-text">δcmd = −(2L / ld²) · e_y − (2L / ld) · e_θ          u = −K x</code></pre>
+<p>With no steering lag, the closed loop is</p>
+<pre class="highlight"><code class="language-text">s² + (2v / ld) s + 2v² / ld² = 0        ωn = √2 · v / ld,    ζ = 0.707 at every speed</code></pre>
+<p>RPP's lookahead grows with speed (ld = 1.5 s × v, from 1.5 to 4 m), so v / ld stays the
+same from 1 to 2.7 m/s: <strong>the car corrects in the same time at any of those speeds.</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>v (m/s)</th>
+<th>ld (m)</th>
+<th>Closed-loop poles (with the steering)</th>
+<th>ωn, ζ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.5</td>
+<td>1.5</td>
+<td>−0.35 ± 0.36j, −5.5</td>
+<td>0.50, 0.71</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1.5</td>
+<td>−0.76 ± 0.78j, −4.6</td>
+<td>1.09, 0.70</td>
+</tr>
+<tr>
+<td>2</td>
+<td>3.0</td>
+<td>−0.76 ± 0.78j, −4.6</td>
+<td>1.09, 0.70</td>
+</tr>
+<tr>
+<td>3</td>
+<td>4.0</td>
+<td>−0.87 ± 0.90j, −4.4</td>
+<td>1.25, 0.69</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="Pole map" src="../img/vehicle-model-poles.png" /></p>
+</section>
+<section class="card"><h2 id="4-the-delays">4. The delays</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Delay</th>
+<th>Value</th>
+<th>Where it comes from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>camera to detections</td>
+<td>26 ms median, 42 worst</td>
+<td><a href="camera-pipeline.html">Camera pipeline</a>, on a Mac</td>
+</tr>
+<tr>
+<td>the camera's frame</td>
+<td>67 ms (15 fps): half on average</td>
+<td>the picture's age when taken</td>
+</tr>
+<tr>
+<td>the controller's cycle</td>
+<td>50 ms (20 Hz): half on average</td>
+<td><code>nav2.yaml</code> <code>controller_frequency</code></td>
+</tr>
+<tr>
+<td>the heartbeat</td>
+<td>up to 100 ms</td>
+<td>the most a command may lag before the ESP32 brakes (<a href="hud.html#the-heartbeat">HUD</a>, TODO 50)</td>
+</tr>
+<tr>
+<td>the spine's tick</td>
+<td>10 ms</td>
+<td><code>esp32-umod</code> <code>TICK</code></td>
+</tr>
+<tr>
+<td>the wheel speed's age</td>
+<td>50 ms GUESS</td>
+<td>the time between Hall pulses at low speed</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Lateral loop</th>
+<th>Speed loop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>none</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>typical</td>
+<td>26 + 33 + 25 = <strong>84 ms</strong></td>
+<td>5 + 25 = <strong>30 ms</strong></td>
+</tr>
+<tr>
+<td>worst</td>
+<td>42 + 67 + 50 + 100 = <strong>259 ms</strong></td>
+<td>10 + 100 = <strong>110 ms</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The lateral delays are lane keeping's, by camera. Nav2 following a path from the EKF has
+no camera in the loop (its own delay is the EKF's), so its margins sit between "none" and
+"typical". The heartbeat isn't a delay in normal driving: it is the most a command may
+lag before the brakes take over, so the worst case counts all of it.</p>
+<p><strong>Padé.</strong> A delay e^(−sT) isn't a ratio of polynomials. Padé replaces it with one, so
+poles still make sense:</p>
+<pre class="highlight"><code class="language-text">e^(−sT) ≈ (1 − sT/2 + (sT)²/12) / (1 + sT/2 + (sT)²/12)        (second order)</code></pre>
+<p>The margins below use the exact delay (it only subtracts ωT from the phase); <code>pade()</code>
+is there for pole maps and for simulation.</p>
+<h3 id="the-margins-bode">The margins (Bode)</h3>
+<p><img alt="Bode plots" src="../img/vehicle-model-bode.png" /></p>
+<p><strong>Speed loop</strong> (the spine's PI + the throttle's lag):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Delay</th>
+<th>Phase margin</th>
+<th>Gain margin</th>
+<th>Crossover</th>
+<th>Bandwidth</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>none</td>
+<td>65°</td>
+<td>∞</td>
+<td>0.52 rad/s</td>
+<td>0.70 rad/s</td>
+</tr>
+<tr>
+<td>typical, 30 ms</td>
+<td>64°</td>
+<td>38 dB</td>
+<td>0.52 rad/s</td>
+<td>0.71 rad/s</td>
+</tr>
+<tr>
+<td>worst, 110 ms</td>
+<td>62°</td>
+<td>27 dB</td>
+<td>0.52 rad/s</td>
+<td>0.74 rad/s</td>
+</tr>
+</tbody>
+</table></div>
+<p>Its crossover is so low (0.52 rad/s) that 0.11 s costs only 3°.</p>
+<p><strong>Lateral loop</strong> (pure pursuit + the steering), phase margin / gain margin:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>v (m/s)</th>
+<th>None</th>
+<th>Typical, 84 ms</th>
+<th>Worst, 259 ms</th>
+<th>Extra delay it could still take</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.5</td>
+<td>59° / ∞</td>
+<td>55° / 25 dB</td>
+<td>48° / 16 dB</td>
+<td>1.3 s</td>
+</tr>
+<tr>
+<td>1</td>
+<td>52° / ∞</td>
+<td>45° / 19 dB</td>
+<td>31° / 9 dB</td>
+<td>0.55 s</td>
+</tr>
+<tr>
+<td>2</td>
+<td>52° / ∞</td>
+<td>45° / 19 dB</td>
+<td>31° / 9 dB</td>
+<td>0.55 s</td>
+</tr>
+<tr>
+<td>3</td>
+<td>50° / ∞</td>
+<td>43° / 17 dB</td>
+<td>27° / 8 dB</td>
+<td>0.46 s</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What it means:</strong> every delay costs phase = crossover × delay. At 1 m/s the crossover
+is 1.4 rad/s, so 84 ms costs 7° and the worst case 21°. 30° is the usual lower limit:
+the worst case at 3 m/s (27°) is below it: the car would swing past the path
+before settling. At ego's 1 m/s cap today,
+there's room.</p>
+</section>
+<section class="card"><h2 id="5-discrete-time-as-the-computers-run-it">5. Discrete time: as the computers run it</h2>
+<p>The spine runs every 10 ms; the controllers every 50 ms. <code>scipy.signal.cont2discrete</code>
+with a zero-order hold (the command is held until the next one) gives</p>
+<pre class="highlight"><code class="language-text">x[k+1] = Φ x[k] + Γ u[k]        Φ = e^(AT),   Γ = ∫₀ᵀ e^(Aτ) dτ · B</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Loop</th>
+<th>Period</th>
+<th>Largest |z|</th>
+<th>e^(sT) of the continuous poles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>speed (the spine's own update: integral first, then kp·e + I)</td>
+<td>10 ms</td>
+<td>0.99720</td>
+<td>0.99720</td>
+</tr>
+<tr>
+<td>lateral at 1 m/s, the command one cycle late</td>
+<td>50 ms</td>
+<td>0.960</td>
+<td>0.963</td>
+</tr>
+<tr>
+<td>lateral at 3 m/s, the command one cycle late</td>
+<td>50 ms</td>
+<td>0.954</td>
+<td>0.958</td>
+</tr>
+</tbody>
+</table></div>
+<p>All inside the unit circle: stable. At 10 ms the spine is effectively continuous. The
+tests check the discrete model against the continuous one at every sample, and the
+discrete speed loop against the spine's own code, line by line.</p>
+</section>
+<section class="card"><h2 id="6-gazebos-car-against-the-model">6. Gazebo's car against the model</h2>
+<p>Gazebo's car runs our actuator model (<code>aav_gazebo</code> <code>actuator_model.py</code>, the same
+numbers), then Gazebo's own Ackermann plugin:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Speed</th>
+<th>Steering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the actuator model</td>
+<td><code>vehicle.yaml</code>'s lags, a_max, drag</td>
+<td>rate limit, then <code>steer_lag</code></td>
+</tr>
+<tr>
+<td>Gazebo's plugin, after it</td>
+<td><code>max_acceleration</code> ±10 m/s²: no extra lag to speak of</td>
+<td>each joint turns at <code>steer_p_gain</code> × error: <strong>one more lag, 1/10 = 0.1 s</strong></td>
+</tr>
+<tr>
+<td>the actuator tests in Gazebo (15 Oct)</td>
+<td>give back 1.496 m/s², 0.100 s, 0.100 /s</td>
+<td>give back 0.817 rad/s, 0.105 s: they read the model's angle, not Gazebo's wheels</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Measured in Gazebo (24 Oct, Ben's Mac, headless, its own domain):</strong> <code>actuator-test
+steer-rate --sim</code> drove the steps (centre → full lock → centre, each way), and a
+recorder logged Gazebo's steering joints (<code>/joint_states</code>, made into the centre angle)
+beside the model's angle (<code>/vehicle/steering</code>), 57 s:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Fit: Gazebo's wheels from the model's angle</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>no lag</td>
+<td>16.2 mrad rms off</td>
+</tr>
+<tr>
+<td><strong>a first-order lag</strong></td>
+<td><strong>0.110 s</strong>, 0.5 mrad rms off</td>
+</tr>
+<tr>
+<td>a pure delay instead</td>
+<td>0.110 s, 2.2 mrad rms off</td>
+</tr>
+</tbody>
+</table></div>
+<p>0.110 s = 1/<code>steer_p_gain</code> (0.1 s) + about 10 ms from the adapter's 50 Hz hold. So
+Gazebo's wheels steer 0.11 s later than <code>vehicle.yaml</code> says. Its lateral phase margin:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>v (m/s)</th>
+<th>The model (typical delays)</th>
+<th>Gazebo (+0.1 s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>45°</td>
+<td>37°</td>
+</tr>
+<tr>
+<td>3</td>
+<td>43°</td>
+<td>34°</td>
+</tr>
+</tbody>
+</table></div>
+<p>Gazebo is a little harsher than the car the guesses describe: anything that works there
+has margin to spare. <strong>To make them match</strong> (not done: it changes the simulator): raise
+<code>steer_p_gain</code> to 50 (a 20 ms lag), or take 0.1 s off the steering lag the adapter uses.
+Then measure Gazebo's wheel angle (its joint states) against the model's, for the
+sim-versus-real report (T2.7). Speed: the 15 Oct runs match (0 to 3 m/s in 6.2 s), except
+that Gazebo's car starts rolling about 0.3 s late.</p>
+</section>
+<section class="card"><h2 id="7-which-numbers-are-guesses">7. Which numbers are guesses</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Number</th>
+<th>Today</th>
+<th>Measured by</th>
+<th>Changes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_accel</code></td>
+<td>1.5 m/s²</td>
+<td>4.1 <code>speed-up</code>, 4.4 <code>throttle-map</code></td>
+<td>K, the loop's speed</td>
+</tr>
+<tr>
+<td><code>drag</code></td>
+<td>0.1 /s</td>
+<td>4.2 <code>coast</code></td>
+<td>K and τv: the slow pole</td>
+</tr>
+<tr>
+<td><code>throttle_lag</code></td>
+<td>0.1 s</td>
+<td>4.1 <code>speed-up</code></td>
+<td>the fast speed pole</td>
+</tr>
+<tr>
+<td><code>max_brake</code>, <code>brake_lag</code></td>
+<td>3.0 m/s², 0.2 s</td>
+<td>4.3 <code>brake</code></td>
+<td>the brake loop</td>
+</tr>
+<tr>
+<td><code>steer_rate</code></td>
+<td>0.8 rad/s</td>
+<td>3.11 <code>steer-rate</code></td>
+<td>τm, ωn</td>
+</tr>
+<tr>
+<td><code>steer_lag</code></td>
+<td>0.1 s</td>
+<td>3.11 <code>steer-rate</code> (and 4.5 <code>circles</code>)</td>
+<td>τl, ωn, ζ</td>
+</tr>
+<tr>
+<td>ζ of the steering</td>
+<td>from the two lags</td>
+<td>3.11's step, if it overshoots</td>
+<td><code>steer_overshoot</code></td>
+</tr>
+<tr>
+<td><code>wheelbase</code></td>
+<td>1.57 m</td>
+<td>the tape measure (M-list)</td>
+<td>v/L in A</td>
+</tr>
+<tr>
+<td>the wheel speed's age</td>
+<td>50 ms</td>
+<td>the Arduino's pulse rate (H-list)</td>
+<td>the speed loop's delay</td>
+</tr>
+<tr>
+<td>delays on the Orin</td>
+<td>the Mac's 26 ms</td>
+<td>car day 4d, 5</td>
+<td>the lateral margins</td>
+</tr>
+</tbody>
+</table></div>
+<p>At the car, the actuator tests print the numbers; then:</p>
+<pre class="highlight"><code class="language-bash">pixi run vehicle-model --set throttle_lag=0.25 --set drag=0.3 --set steer_lag=0.15</code></pre>
+<p>In code, <code>model.with_measured(report.yaml)</code> takes the actuator tests' report as it is.</p>
+</section>
+<section class="card"><h2 id="what-its-for">What it's for</h2>
+<h3 id="tuning-the-spines-speed-loop-by-pole-placement">Tuning the spine's speed loop by pole placement</h3>
+<p>Match the closed loop (no throttle lag) to the poles you want:</p>
+<pre class="highlight"><code class="language-text">s² + (d + a_max·kp) s + a_max·ki  =  s² + 2ζωn s + ωn²
+kp = (2ζωn − d) / a_max
+ki = ωn² / a_max</code></pre>
+<p>Example, <code>place_speed_gains(0.9, 1.0)</code>: kp = 1.13, ki = 0.67. Settles in 4.9 s instead
+of 12.7, phase margin still 54° in the worst case. But kp = 1.13 saturates the throttle
+for errors over 0.9 m/s, so it holds only with the ramped set speed. <strong>Not changed:</strong> the
+gains wait for the measured a_max and drag (or the spine would be tuned to guesses).</p>
+<h3 id="checking-the-delays">Checking the delays</h3>
+<p>The margins table is the check: before raising ego's speed cap, make sure the lateral
+loop keeps 30° or more with the Orin's measured delays.</p>
+<h3 id="making-gazebos-car-match-the-real-one">Making Gazebo's car match the real one</h3>
+<p>Fit the car day's numbers, put them in <code>vehicle.yaml</code>, fix Gazebo's extra steering lag
+(section 6), then compare the same step in both: that's the sim-versus-real report.</p>
+<h3 id="after-state-space">After state space</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Next</th>
+<th>What</th>
+<th>Why it fits here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LQR for lane keeping</td>
+<td>choose Q and R; <code>scipy.linalg.solve_continuous_are</code> gives K for u = −Kx</td>
+<td>the same A and B: a better K than pure pursuit's, with a guaranteed 60° phase margin (before delays)</td>
+</tr>
+<tr>
+<td>The EKF</td>
+<td>robot_localization is a Kalman filter on a state-space model</td>
+<td>x' = f(x, u) and its Jacobian: the same linearising as section 3</td>
+</tr>
+<tr>
+<td>Gain scheduling</td>
+<td>K(v)</td>
+<td>A changes with v; RPP's lookahead already does this</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="run-it">Run it</h2>
+<pre class="highlight"><code class="language-bash">pixi run vehicle-model                  # the tables, and the three figures
+pixi run vehicle-model --no-figures     # the tables only</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/ego/aav_ego/aav_ego/vehicle_model.py</code></td>
+<td>the maths: no ROS, numpy and scipy only</td>
+</tr>
+<tr>
+<td><code>src/ego/aav_ego/test/test_vehicle_model.py</code></td>
+<td>27 tests: textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust</td>
+</tr>
+<tr>
+<td><code>tools/vehicle_model.py</code></td>
+<td>the tables and <code>docs/img/vehicle-model-*.png</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="actuator-tests.html"><small>Previous</small>← Actuator tests</a>
+<a class="next" href="ghost-obstacles.html"><small>Next</small>Ghost obstacles →</a></nav>
+</main>
+<footer>Source: <code>docs/vehicle-model.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

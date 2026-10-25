@@ -540,5 +540,6 @@ Copy home: `rsync -a <user>@192.168.1.140:aav-jazzy/aav/bags/ ~/aav-bags/jetson/
 |---|---|
 | The write-up, no secrets | `docs/history/audit-<date>-car.md`, like [21 Oct's](docs/history/audit-2026-10-21-car.md) |
 | The numbers | `vehicle.yaml`; then `pixi run test` and `pixi run view` |
+| The car's linear model, refit | `pixi run vehicle-model`: new poles and margins from the measured lags ([The car as a linear model](docs/vehicle-model.md)) |
 | The answers | `docs/audit-questions.md`; the hardware lead's in `docs/can-plan.md` |
 | Gate 1 and Gate 2 | [PLAN.md](PLAN.md) |

@@ -52,6 +52,7 @@ answer.
 | A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree | A car can't turn on the spot. The config already does this |
 | The RC transmitter stays the top-priority override, in hardware | It works today, and doesn't depend on any computer |
 | The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car | A reboot or a glitch never restarts the car by itself. It's in `spine-core` since 10 Oct |
+| A linear state-space model of the car, for tuning and the report (24 Oct): speed (first order, the spine's PI around it), steering (second order), the path errors (the bicycle, linearised), the delays; `aav_ego` `vehicle_model.py`, `pixi run vehicle-model` | Ben asked for "a matrix control thing ... maybe second order system" (24 Oct), in SYSC 3600's terms (its professor supervises the capstone). It shows what kinematics can't: the speed loop settles in about 13 s; the delays cost the lateral loop phase margin (52° → 31° at 1 m/s in the worst case); Gazebo steers 0.1 s slower than `vehicle.yaml`. It never drives the car; it is refit from the actuator tests ([The car as a linear model](vehicle-model.md)) |
 
 ## Ground rules
 

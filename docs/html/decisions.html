@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">31 min read · 12 sections</div></header>
+<div class="meta">32 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -51,6 +51,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -246,6 +247,10 @@ answer.</p>
 <tr>
 <td>The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car</td>
 <td>A reboot or a glitch never restarts the car by itself. It's in <code>spine-core</code> since 10 Oct</td>
+</tr>
+<tr>
+<td>A linear state-space model of the car, for tuning and the report (24 Oct): speed (first order, the spine's PI around it), steering (second order), the path errors (the bicycle, linearised), the delays; <code>aav_ego</code> <code>vehicle_model.py</code>, <code>pixi run vehicle-model</code></td>
+<td>Ben asked for "a matrix control thing ... maybe second order system" (24 Oct), in SYSC 3600's terms (its professor supervises the capstone). It shows what kinematics can't: the speed loop settles in about 13 s; the delays cost the lateral loop phase margin (52° → 31° at 1 m/s in the worst case); Gazebo steers 0.1 s slower than <code>vehicle.yaml</code>. It never drives the car; it is refit from the actuator tests (<a href="vehicle-model.html">The car as a linear model</a>)</td>
 </tr>
 </tbody>
 </table></div>

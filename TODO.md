@@ -3,6 +3,17 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## 24 October, night: the car as a linear model
+
+Ben, 24 Oct: "Do we have a mathematical model for the car now for the ego? ... a matrix
+control thing ... is that something we should consider? ... Maybe second order system".
+
+| # | Task | Status |
+|---|---|---|
+| 52 | **The car's linear model**, in SYSC 3600's terms ([The car as a linear model](docs/vehicle-model.md)) | ✅ 24 Oct, `wt/vehicle-model`. `aav_ego` `vehicle_model.py` (no ROS; numpy, scipy.signal): speed K/(τs+1) with the throttle lag and the spine's PI (poles −0.28 ± 0.28j: settles in 13 s); the steering as a second-order system (ωn 12.6 rad/s, ζ 1.03); the bicycle linearised, x = [e_y, e_θ, δ], with linearised pure pursuit (ζ 0.707 at every speed); Bode margins with the delays (lateral, 1 m/s: 52° none, 45° typical 84 ms, 31° worst 259 ms); the discrete loops at 100 Hz and 20 Hz. 27 + 3 tests. `pixi run vehicle-model`: the tables, `docs/img/vehicle-model-*.png`. Found: the guesses disagree (drag 0.1 says full throttle holds 15 m/s; the open loop's `FULL_THROTTLE_SPEED` says 3); Gazebo's `steer_p_gain` 10 adds a steering lag after the actuator model: measured in Gazebo (headless, `steer-rate --sim` and `/joint_states`), its wheels follow the model's angle with a 0.110 s first-order lag (0.5 mrad rms) |
+| 52b | **Refit the model from the actuator tests at the car** | ⬜ car day: the tests print the numbers; `pixi run vehicle-model --set throttle_lag=... --set drag=...`; then the speed loop's gains by pole placement (`place_speed_gains`), not before |
+| 52c | Make Gazebo's steering match `vehicle.yaml` | ⬜ proposed: `steer_p_gain` 10 → 50 (a 20 ms lag), or the adapter's steering lag less 0.1 s; then the same step in Gazebo and on the car (T2.7) |
+
 ## 24 October, evening: the car-day kit
 
 Ben, 24 Oct: "Lets get everything prepared so the only thing left it to get into the car."

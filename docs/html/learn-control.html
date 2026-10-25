@@ -51,6 +51,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -613,6 +614,10 @@ does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
 <tr>
 <td>Today's open-loop throttle</td>
 <td><code>src/backends/aav_legacy/config/legacy.yaml</code> (<code>full_throttle_speed</code>)</td>
+</tr>
+<tr>
+<td>The loops as transfer functions and state space: poles, margins, delays</td>
+<td><code>src/ego/aav_ego/aav_ego/vehicle_model.py</code>, <code>pixi run vehicle-model</code> (<a href="vehicle-model.html">The car as a linear model</a>)</td>
 </tr>
 <tr>
 <td>Nav2's controller and smoother</td>

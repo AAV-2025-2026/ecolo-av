@@ -86,6 +86,8 @@ files hand them to every part that needs them.
 | `aav_spine`, `aav_legacy` | the wheelbase, track and wheel size |
 
 Most of the numbers are still guesses: see [Car numbers](car_measurements.md).
+The same numbers make the car's linear model (transfer functions, state space, the
+margins with the delays): [The car as a linear model](vehicle-model.md).
 
 ## 6. Backends: one plays the car
 
