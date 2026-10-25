@@ -42,7 +42,7 @@ A model is the car on paper. Ask it a question before the car can get hurt.
 |---|---|---|
 | How long until it reaches the set speed? | step response (section 5) | about 13 s with the spine's PI |
 | Will it pass the set speed? | the poles' damping ζ (7) | by 15 % on a sudden step |
-| Can we tune the PI without driving? | pole placement (7, [vehicle-model](vehicle-model.md#tuning-the-spines-speed-loop-by-pole-placement)) | yes: pick ζ and ωn, solve for kp, ki |
+| Can we tune the PI without driving? | pole placement (7, [vehicle-model](vehicle-model.md#pole-placement-after-the-car-day)) | yes: pick ζ and ωn, solve for kp, ki |
 | How much camera and network delay is safe? | phase margin (8) | 0.55 s more than today's, at 1 m/s |
 | Does Gazebo behave like the car? | the same step in both, against the model | Gazebo steers 0.11 s late |
 | Is 3 m/s safe on the path? | margins at each speed (8) | worst-case delay: 27°, under the 30° rule |
@@ -300,7 +300,7 @@ The step responses: [vehicle-model's figure](img/vehicle-model-steps.png). The p
 one map: [vehicle-model's pole map](img/vehicle-model-poles.png).
 
 **Placing poles** is tuning on paper: choose where they go, then solve for the gains
-(`place_speed_gains` in [vehicle-model](vehicle-model.md#tuning-the-spines-speed-loop-by-pole-placement)).
+(`place_speed_gains` in [vehicle-model](vehicle-model.md#pole-placement-after-the-car-day)).
 
 ## 8. Frequency response and phase
 

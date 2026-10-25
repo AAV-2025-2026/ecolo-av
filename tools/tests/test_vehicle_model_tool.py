@@ -40,7 +40,12 @@ def test_the_speed_loop_study_prints(capsys):
     assert tool.main(['--speed-loop', '--no-figures']) == 0
     out = capsys.readouterr().out
     assert 'The speed loop against the uncertainty' in out
-    rows = [line for line in out.splitlines() if 'K (the guesses' in line]
+    rows = [line for line in out.splitlines() if 'K (vehicle.yaml)' in line]
     today = next(r for r in rows if r.startswith('today (kp 0.3'))
     smooth = next(r for r in rows if r.startswith("'smooth'"))
     assert ' 17 % ' in today and ' 0 % ' in smooth
+
+
+def test_the_speed_loop_study_follows_the_measured_numbers():
+    model = tool.vm.VehicleModel().with_measured({'drag': 0.5})
+    assert tool.plant_numbers(model, 0.2, 1.0) == {'max_accel': 1.5 * 0.2, 'drag': 0.5}

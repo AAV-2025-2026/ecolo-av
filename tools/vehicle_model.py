@@ -175,14 +175,15 @@ def figures(model, out_dir):
 # ramp and the wheel speed's delay. The plant's gain K = a_max / drag is the guess two
 # sources disagree on by 5x (TODO 52b).
 
-PLANTS = (                       # name, ActuatorConfig changes, VehicleModel changes
-    ('K (the guesses: 15 m/s at full throttle)', {}, {}),
-    ('K/5 by drag (0.5 /s)', {'drag': 0.5}, {'drag': 0.5}),
-    ('K/5 by a weak throttle (0.3 m/s^2)', {'max_accel': 0.3}, {'max_accel': 0.3}),
-    ('2K by a strong throttle (3 m/s^2)', {'max_accel': 3.0}, {'max_accel': 3.0}),
+PLANTS = (                       # name, a_max x, drag x (of vehicle.yaml's, or --set's)
+    ('K (vehicle.yaml)', 1.0, 1.0),
+    ('K/5 by drag (5x)', 1.0, 5.0),
+    ('K/5 by a weak throttle (a_max / 5)', 0.2, 1.0),
+    ('2K by a strong throttle (a_max x 2)', 2.0, 1.0),
 )
-LAGS = (('lag 0.1 s, 30 ms', 0.1, 0.03),     # vehicle.yaml's lag; the typical delay
-        ('lag 0.2 s, 110 ms', 0.2, 0.11))    # the throttle's lag doubled; the worst delay
+LAGS = (('the lag, 30 ms late', 0.1, 0.03),        # vehicle.yaml's lag; the typical delay
+        ('the lag x 2, 110 ms late', 0.2, 0.11))   # the lag doubled; the worst delay
+# (Each lag here is for vehicle.yaml's 0.1 s, and scales with the model's throttle_lag.)
 TARGETS = (0.5, 1.0, 2.0)                    # m/s; reversing is the same law (0.5 checked)
 RAMP = 1.0                                   # m/s^2: ego's max_acceleration
 DT = 0.01                                    # s: the spine's tick
@@ -257,22 +258,32 @@ def response_numbers(speeds, target):
             settle if settle < t[-1] else math.inf, v[-1] / a - 1.0)
 
 
-def speed_loop_rows():
+def plant_numbers(model, accel_x, drag_x):
+    """Return the plant's (a_max, drag): the model's, times the uncertainty's factors."""
+    return {'max_accel': model.max_accel * accel_x, 'drag': model.drag * drag_x}
+
+
+def speed_loop_rows(model):
     """Return the study's table: each design against each plant, the worst of its runs."""
     rows = [['design', 'plant', 'overshoot', 'to 90 %', 'within 5 %', 'end',
              'phase margin (worst)']]
     for name, make, gains in designs():
-        for plant, act, lin in PLANTS:
+        for plant, accel_x, drag_x in PLANTS:
+            act = plant_numbers(model, accel_x, drag_x)
+            lin = act
             worst = [0.0, 0.0, 0.0, 0.0]
             for _, lag, delay in LAGS:
-                cfg = replace_cfg(am.ActuatorConfig(), throttle_lag=lag, **act)
+                cfg = replace_cfg(am.ActuatorConfig(), throttle_lag=lag * model.throttle_lag
+                                  / 0.1, **act)
                 for target in TARGETS:
                     o, r, w, e = response_numbers(ramp_response(make, cfg, target, delay),
                                                   target)
                     worst = [max(worst[0], o), max(worst[1], r), max(worst[2], w),
                              min(worst[3], e)]
-            model = vm.VehicleModel(throttle_lag=LAGS[-1][1], **lin)
-            pm = vm.margins(model.speed_open_loop(gains), LAGS[-1][2]).phase_margin_deg
+            worst_lag = LAGS[-1][1] * model.throttle_lag / 0.1
+            plant_model = vm.VehicleModel(throttle_lag=worst_lag, **lin)
+            pm = vm.margins(plant_model.speed_open_loop(gains),
+                            LAGS[-1][2]).phase_margin_deg
             end = 'reached' if worst[3] > -0.02 else f'{-100 * worst[3]:.0f} % short'
             rows.append([name, plant, f'{100 * worst[0]:.0f} %', seconds(worst[1]),
                          seconds(worst[2]), end, f'{pm:.0f} deg'])
@@ -285,7 +296,7 @@ def seconds(t):
     return f'{t:.1f} s' if math.isfinite(t) else 'never'
 
 
-def speed_loop_figure(out_dir):
+def speed_loop_figure(model, out_dir):
     """Draw today's loop and 'smooth' on each plant: 1 m/s with ego's ramp."""
     import matplotlib
     matplotlib.use('Agg')
@@ -297,8 +308,9 @@ def speed_loop_figure(out_dir):
     loops = {name: make for name, make, _ in designs()}
     today, smooth = list(loops)[0], list(loops)[-1]
     fig, axes = plt.subplots(1, len(PLANTS), figsize=(15, 3.6), sharey=True)
-    for ax, (plant, act, _) in zip(axes, PLANTS):
-        cfg = replace_cfg(am.ActuatorConfig(), throttle_lag=LAGS[0][1], **act)
+    for ax, (plant, accel_x, drag_x) in zip(axes, PLANTS):
+        cfg = replace_cfg(am.ActuatorConfig(), throttle_lag=model.throttle_lag,
+                          **plant_numbers(model, accel_x, drag_x))
         t = np.arange(1, round(30.0 / DT) + 1) * DT
         for name, colour, style in ((today, orange, '--'), (smooth, blue, '-')):
             ax.plot(t, ramp_response(loops[name], cfg, 1.0, LAGS[0][2], 30.0), color=colour,
@@ -348,10 +360,11 @@ def main(argv=None):
     if args.speed_loop:
         print(table('The speed loop against the uncertainty (TODO 27): the worst of '
                     f'{len(LAGS) * len(TARGETS)} runs each ({", ".join(n for n, _, _ in LAGS)}; '
-                    f'{", ".join(f"{v:g}" for v in TARGETS)} m/s)', speed_loop_rows()))
+                    f'{", ".join(f"{v:g}" for v in TARGETS)} m/s); K from a_max '
+                    f'{model.max_accel:g} m/s^2, drag {model.drag:g} /s', speed_loop_rows(model)))
         print()
         if not args.no_figures:
-            f = speed_loop_figure(Path(args.out))
+            f = speed_loop_figure(model, Path(args.out))
             print(f'wrote {f.relative_to(ROOT) if f.is_relative_to(ROOT) else f}')
         return 0
     print(f"The car's linear model, from {Path(args.vehicle).name}"

@@ -131,7 +131,7 @@ step at a time, with our car in every step. Our own numbers live in
 </tr>
 <tr>
 <td>Can we tune the PI without driving?</td>
-<td>pole placement (7, <a href="vehicle-model.html#tuning-the-spines-speed-loop-by-pole-placement">vehicle-model</a>)</td>
+<td>pole placement (7, <a href="vehicle-model.html#pole-placement-after-the-car-day">vehicle-model</a>)</td>
 <td>yes: pick ζ and ωn, solve for kp, ki</td>
 </tr>
 <tr>
@@ -537,7 +537,7 @@ so G's bottom line is det(sI − A), and det(sI − A) = 0 is exactly what eigen
 <p>The step responses: <a href="../img/vehicle-model-steps.png">vehicle-model's figure</a>. The poles on
 one map: <a href="../img/vehicle-model-poles.png">vehicle-model's pole map</a>.</p>
 <p><strong>Placing poles</strong> is tuning on paper: choose where they go, then solve for the gains
-(<code>place_speed_gains</code> in <a href="vehicle-model.html#tuning-the-spines-speed-loop-by-pole-placement">vehicle-model</a>).</p>
+(<code>place_speed_gains</code> in <a href="vehicle-model.html#pole-placement-after-the-car-day">vehicle-model</a>).</p>
 </section>
 <section class="card"><h2 id="8-frequency-response-and-phase">8. Frequency response and phase</h2>
 <p><strong>A Bode plot answers: if the input wiggles at ω, how big and how late is the output?</strong></p>

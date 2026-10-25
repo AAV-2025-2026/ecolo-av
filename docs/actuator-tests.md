@@ -121,6 +121,34 @@ The 2025-26 ESP32 drives the car until the spine replaces it (`legacy_uart_bridg
 | Coasting | ❌ a low speed command still pushes, and 0 brakes | ✅ inside the speed loop's coast band |
 | A fixed brake % (4.3 as written) | ❌ no brake command exists: the tests brake with a normal stop | ❌ the same |
 
+## The speed loop's profile (TODO 27)
+
+The spine's speed loop has two profiles ([Tuning the speed
+loop](vehicle-model.md#tuning-the-speed-loop)): `default`, today's gains (overshoots about
+15%), and `smooth` (no overshoot on the model, robust to the throttle's 5x guess). The
+firmware keeps `default`. Try `smooth` here, in this order:
+
+| When | What to run | What you should see |
+|---|---|---|
+| Before the car | `pixi run sim-check --speed-steps-only --speed-loop smooth` | each step ends within 5%, overshoot under 3% |
+| After 4.1, 4.2, 4.4 (`max_accel`, `drag`) | `pixi run vehicle-model --set max_accel=... --set drag=... --speed-loop` | `smooth` still 0% at K with the measured numbers; if not, redo its gains (pole placement, then b) |
+| Stage 3, on stands, **once the spine closes the loop** (it has the wheel speed) | build the board with `speed_loop: SpeedLoopConfig::smooth()` in its `SpineConfig`; a held step (below) at 0.3 m/s | the wheels reach 0.3 m/s without passing 0.31; `/vehicle/throttle` steady, no jitter |
+| Stage 4, in the lot | the held step at 0.5 and 1.0 m/s, each profile, the same day | the peak speed in `/vehicle/odom` against the target; then pick one |
+
+The held step is a scripted drive, 20 s at the target (the `speed-up` test stops 1 s after
+reaching 95%: too soon to see the peak, which comes 5-7 s in):
+
+```bash
+ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
+  "{target_speed: 0.5, acceleration: 1.0, deceleration: 1.0, hold_time: 20.0}" --feedback
+```
+
+!!! warning "Today's ESP32 has no closed speed loop"
+    It drives the throttle open loop (speed ÷ `full_throttle_speed`), so neither profile
+    runs on the car until the spine gets the wheel speed. On stands the wheels carry no
+    load: the car is nearly a pure integrator there, the case where today's gains overshoot
+    most. The e-stop person watches.
+
 ## What it saves
 
 Each run gets a folder, `~/aav-tests/<date>-<time>-<test>[-sim]/` (`--out` or
