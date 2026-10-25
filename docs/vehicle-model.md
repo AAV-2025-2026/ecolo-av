@@ -13,15 +13,18 @@ process, from a free-body diagram to a simulator, one step at a time.
       (second order), and the path errors (state space, 3 states).
     - **Today's numbers are guesses** from `vehicle.yaml`. The car day's actuator tests
       measure each one; `pixi run vehicle-model --set throttle_lag=0.25` redoes it all.
-    - **The spine's speed loop is slow:** it settles in about 13 s. Delays don't matter
-      to it (62° of phase margin even in the worst case).
+    - **The spine's speed loop is slow:** it settles in about 13 s, and overshoots 15%.
+      Delays don't matter to it (62° of phase margin even in the worst case).
+    - **The `smooth` profile fixes the overshoot** (TODO 27): a setpoint weight. 0%
+      overshoot, settles in 8 s, and holds up when the throttle guess is 5x off. Not
+      the default: it waits for the stands ([Tuning the speed loop](#tuning-the-speed-loop)).
     - **The lateral loop is where delays matter:** 52° of phase margin with none, 45°
       with today's 84 ms, 31° with the worst case (259 ms) at 1 m/s.
     - **Gazebo's car steers 0.11 s slower than `vehicle.yaml` says** (measured: an extra lag in
       Gazebo's own steering). Worth fixing before the sim-versus-real report.
     - **Nothing here drives the car.** It is for tuning, checking, and the report.
 
-[[works]] the maths and its 30 tests (24 Oct, Ben's Mac). [[needs-you]] the car day's
+[[works]] the maths and its 34 tests (24 Oct, Ben's Mac; the speed loop's 25 Oct). [[needs-you]] the car day's
 numbers.
 
 ## The picture
@@ -134,6 +137,7 @@ s = −0.275 ± 0.273j          ωn = 0.39 rad/s,   ζ = 0.71
 | the car alone | −0.1 | 22 s | 0 | 39 s |
 | spine PI, no throttle lag | −0.275 ± 0.273j | 2.7 s | 14 % | 12.9 s |
 | spine PI + throttle lag | −0.28 ± 0.28j, −9.5 | 2.6 s | 15 % | 12.7 s |
+| the `smooth` profile + throttle lag | −0.28, −1.61, −8.2 | 2.5 s | 0 | 7.9 s |
 
 ![Step responses](img/vehicle-model-steps.png)
 
@@ -142,7 +146,9 @@ s = −0.275 ± 0.273j          ωn = 0.39 rad/s,   ζ = 0.71
 - The pair at −0.28 ± 0.28j: the car reaches a new speed in about 3 s, overshoots by
   15 %, and settles in 13 s. Slow, but smooth.
 - The overshoot is more than ζ = 0.71 alone gives (about 4 %): the PI adds a zero at
-  −ki/kp = −0.33, near the poles. The spine's ramped set speed hides most of it.
+  −ki/kp = −0.33, near the poles. The ramped set speed doesn't hide it: Gazebo's car
+  reversed at 0.57 m/s for ego's 0.5 (TODO 27). The fix: [Tuning the speed
+  loop](#tuning-the-speed-loop).
 - The pole at −9.5 is the throttle: 30 times faster, so it hardly matters.
 
 ### Steady state: the final value theorem
@@ -167,7 +173,7 @@ s = −0.275 ± 0.273j          ωn = 0.39 rad/s,   ζ = 0.71
 | Nonlinearity | In the spine | Effect |
 |---|---|---|
 | throttle 0 to 1 | `clamp01` | big errors saturate: the car speeds up at a_max at most |
-| the integral 0 to 0.3 | `integral_limit` | anti-windup; holds up to 0.3 × K = 4.5 m/s on the flat |
+| the integral 0 to 0.3 | `integral_limit` | anti-windup; holds up to 0.3 × K = 4.5 m/s on the flat. **But** if K is really 3 (a 5x weaker throttle), only about 1.4 m/s: 2 m/s needs 0.67 of throttle |
 | the brake | a P loop beyond the 0.2 m/s coast band | slowing down is a different, P-only loop: B(s) = −b_max / ((s + d)(τb s + 1)) |
 | the set speed's ramp | 1.5 m/s² | steps become ramps (the table above) |
 | the throttle's deadband | `throttle_deadband` | 0 today; a real one adds a dead zone at low speed |
@@ -423,7 +429,126 @@ In code, `model.with_measured(report.yaml)` takes the actuator tests' report as 
 
 ## What it's for
 
-### Tuning the spine's speed loop by pole placement
+### Tuning the speed loop
+
+TODO 27: today's loop overshoots about 15%. Gazebo's car reversed at 0.57 m/s for ego's
+0.5; 1.0 gave 1.15, and 2.0 gave 2.20. The ground rules (25 Oct):
+
+- **The firmware's defaults don't change.** The throttle's strength is a guess that two
+  sources disagree on by 5x (TODO 52b): full throttle holds 15 m/s by the drag guess, 3 m/s
+  by the ESP32's open loop. The real gains come from the stands, after the throttle tests.
+- So the fix is a **profile**, ready to switch on, that works across that 5x.
+
+#### Why it overshoots: the PI's zero
+
+Not windup. The throttle is never pinned on the way to 0.5 m/s (it peaks at 0.15), so
+clamping changes nothing (the table below). The cause is the PI's zero:
+
+```text
+T(s) = P (kp s + ki) / (s (1 + C P))       zero at −ki/kp = −0.33,  slow poles −0.28 ± 0.28j
+```
+
+The fix is a **setpoint weight** b: the P term sees only b × the set speed.
+
+```text
+throttle = kp·(b·r − v) + ki·∫(r − v) dt
+T(s) = P (b kp s + ki) / (s (1 + C P))     zero at −ki/(b kp);  the poles don't move
+```
+
+The poles, the margins and how the car rejects a hill don't depend on b. Only the
+response to a new set speed does.
+
+#### The candidates, on the model
+
+`pixi run vehicle-model --speed-loop` runs each one: the spine's own update (Gazebo's port,
+checked against the Rust), ego's 1 m/s² ramp, the wheel speed's delay, and the actuators.
+Each cell is the worst of 6 runs (0.5, 1 and 2 m/s; lag 0.1 s with 30 ms of delay, and lag
+0.2 s with 110 ms).
+
+| Design | Overshoot at K | Settles (5%) at K | K/5 by a weak throttle | Phase margin, worst |
+|---|---|---|---|---|
+| today (kp 0.3, ki 0.1) | 17 % | 13.7 s | 17 %, **29 % short of 2 m/s** | 54° |
+| today + clamping | 17 % | 13.7 s | the same | 54° |
+| today + setpoint weight 0 | 5 % | 8.5 s | 14 %, settles in 57 s | 54° |
+| today + feed-forward (1/a_max) | 5 % | 8.3 s | 12 %; **88 % at 2K** | 54° |
+| pole placement (kp 1.13, ki 0.67) | 30 % | 5.8 s | 11 %, 13 % short | 31° |
+| pole placement + weight 0.3 | 0 % | 4.3 s | **22 %** | 31° |
+| **`smooth`: kp 1.0, ki 0.25, weight 0.75** | **0 %** | **5.7 s** | **8 %, reaches 2 m/s** | **42°** |
+
+Why not the others:
+
+- **Clamping alone** does nothing: there's no windup to stop.
+- **A feed-forward** from the throttle map is only as good as the map: with a stronger
+  throttle than guessed it overshoots 88%.
+- **Pole placement** is fast, but its ζ = 0.9 falls to 0.4 with a 5x weaker throttle
+  (22% overshoot), and its kp 1.13 with ki 0.67 leaves 31° with a 2x stronger one.
+
+#### The design: `smooth`
+
+| Part | Value | Why |
+|---|---|---|
+| kp, ki | 1.0, 0.25 | real poles, −0.28 and −1.32 /s (ζ 1.3): nothing to ring |
+| setpoint weight b | 0.75 | the zero moves to −ki/(b kp) = −0.33, just past the slow pole: no overshoot |
+| integral limit | 1.0 (plus (1 − b)·kp·r) | a weak throttle needs up to full throttle from the integral; today's 0.3 stops 29% short |
+| anti-windup | clamping | no integrating while the throttle is pinned: the bigger limit can't wind up (held back for 20 s, then let go: no surge) |
+
+![Today's loop and smooth, on each plant](img/vehicle-model-speed-loop.png)
+
+#### Across the uncertainty
+
+The same runs, `smooth` against today:
+
+| Plant | Today: overshoot / settles / end | `smooth`: overshoot / settles / end | `smooth`: phase margin, worst |
+|---|---|---|---|
+| K: the guesses (a_max 1.5, drag 0.1) | 17 % / 13.7 s / reached | **0 % / 5.7 s / reached** | 59° |
+| K/5 by drag (0.5 /s) | 0 % / never / 29 % short | **0 % / 11.1 s / reached** | 75° |
+| K/5 by a weak throttle (0.3 m/s²) | 17 % / never / 29 % short | **8 % / 15.3 s / reached** | 64° |
+| 2K by a strong throttle (3 m/s²) | 15 % / 9.2 s / reached | **1 % / 6.9 s / reached** | 42° |
+
+- The throttle's lag doubled is in every cell (the worst case is shown).
+- The weak throttle still overshoots 8%: its ζ falls to 0.73. That throttle can't follow
+  ego's 1 m/s² ramp anyway; test 4.1 would show it, and the gains would be redone.
+- The price: kp 1.0 makes the throttle 3x more sensitive to a noisy wheel speed. Watch
+  `/vehicle/throttle` for jitter on the stands.
+
+#### In Gazebo (25 Oct)
+
+`pixi run sim-check --speed-steps-only --speed-loop <profile>`: Gazebo's empty world,
+headless, a scripted drive ramped at 1 m/s² and held 20 s at each speed; Gazebo's truth.
+Three runs of each profile on Ben's Mac, beside two other helpers' simulators:
+
+| Step | Today: peak (overshoot) | Today: within 5 % after | `smooth`: peak (overshoot) | `smooth`: within 5 % after |
+|---|---|---|---|---|
+| reverse 0.5 m/s | 0.579 (15.9 %) | 10.9 s | 0.500 (0 %) | 4.2 s |
+| forward 1.0 m/s | 1.152 (15.2 %) | 11.0 s | 0.999 (0 %) | 4.7 s |
+| forward 2.0 m/s | 2.202 (10.1 %) | 13.3 s | 1.999 (0 %) | 5.3 s |
+
+- Runs 2 and 3 of today's gains gave the same numbers; so did all three of `smooth`. Run 1 of today's was spoiled by the Mac's load (late commands made
+  gazebo_adapter brake: sim-check reports that, and drives the step again, up to 3 times).
+- At 2 m/s today's loop passes the coast band (2.2), brakes, and the brake resets the
+  integral: the car then sags to 1.76 m/s and takes 10 s to come back. `smooth` never
+  gets there.
+- "After" counts from the moment the car moves: ego, twist_mux and the adapter add about a
+  second before that.
+- **The spine in the loop** (`spine:=true`: spine_sim runs spine-core's Rust), one run
+  each: today's peaks 0.579, 1.151 and 2.194, the same as the actuator model's port;
+  `smooth` 0.500, 0.999 and 1.999.
+- `pixi run sim-check --speed-loop smooth`, the road world with Nav2: all 10 checks pass.
+
+#### What stays, and how to switch
+
+| Where | Default (unchanged) | To try `smooth` |
+|---|---|---|
+| spine-core (`SpeedLoopConfig`) | `default()`: kp 0.3, ki 0.1, b 1, bounds only | `SpeedLoopConfig::smooth()`, or `SpeedLoopProfile::Smooth.config()`, in the board's `SpineConfig` |
+| Gazebo's actuator model | `speed_loop:=default` | `pixi run sim speed_loop:=smooth` |
+| the spine in Gazebo, the bench | `speed_loop:=default` (spine_sim) | `... spine:=true speed_loop:=smooth`, `pixi run bench speed_loop:=smooth` |
+| sim-check | today's | `pixi run sim-check --speed-steps --speed-loop smooth` |
+
+Both copies of the loop, the Rust and Gazebo's Python, check the same examples
+(`firmware/spine/speed_loop_vectors.txt`, both profiles). Where to try it on the car:
+[Actuator tests](actuator-tests.md#the-speed-loops-profile-todo-27).
+
+#### Pole placement, after the car day
 
 Match the closed loop (no throttle lag) to the poles you want:
 
@@ -433,10 +558,9 @@ kp = (2ζωn − d) / a_max
 ki = ωn² / a_max
 ```
 
-Example, `place_speed_gains(0.9, 1.0)`: kp = 1.13, ki = 0.67. Settles in 4.9 s instead
-of 12.7, phase margin still 54° in the worst case. But kp = 1.13 saturates the throttle
-for errors over 0.9 m/s, so it holds only with the ramped set speed. **Not changed:** the
-gains wait for the measured a_max and drag (or the spine would be tuned to guesses).
+With the measured a_max and drag (TODO 52b), place the poles real (ζ ≥ 1), then set b so
+the zero −ki/(b kp) sits just past the slow pole. `smooth` is that recipe, done on today's
+guesses: it is a starting point for the stands, not the answer.
 
 ### Checking the delays
 
@@ -461,10 +585,11 @@ Fit the car day's numbers, put them in `vehicle.yaml`, fix Gazebo's extra steeri
 ```bash
 pixi run vehicle-model                  # the tables, and the three figures
 pixi run vehicle-model --no-figures     # the tables only
+pixi run vehicle-model --speed-loop     # TODO 27: the speed loop's designs, the uncertainty
 ```
 
 | File | What |
 |---|---|
 | `src/ego/aav_ego/aav_ego/vehicle_model.py` | the maths: no ROS, numpy and scipy only |
-| `src/ego/aav_ego/test/test_vehicle_model.py` | 27 tests: textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust |
+| `src/ego/aav_ego/test/test_vehicle_model.py` | 30 tests: textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight |
 | `tools/vehicle_model.py` | the tables and `docs/img/vehicle-model-*.png` |

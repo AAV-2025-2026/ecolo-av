@@ -5,7 +5,7 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
       [perception:=false] [lane:=false|true|fake] [hud:=false] [arm:=true] [foxglove:=false]
       [start_y:=0.0] [start_yaw:=0.0] [bend_radius:=] [obstacle:=false]
       [camera_obstacles:=false] [reversing:=true] [lidar:=false] [plan_around:=true]
-      [bridge:=rust|python]
+      [bridge:=rust|python] [speed_loop:=default|smooth]
   pixi run bench                            (the same)
   pixi run bench bridge:=python             (aav_spine's Python spine_bridge, not the Rust one)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
@@ -112,7 +112,9 @@ def launch_setup(context):
         Node(package='aav_spine_sim', executable='spine_sim', name='spine_sim',
              parameters=[{'wheelbase': float(v['wheelbase']), 'track': float(v['track']),
                           'wheel_radius': float(v['wheel_diameter']) / 2,
-                          'max_steering': float(v['max_steering_angle']), **start}]),
+                          'max_steering': float(v['max_steering_angle']),
+                          'speed_loop': LaunchConfiguration('speed_loop').perform(context),
+                          **start}]),
         Node(package='aav_bench', executable='mock_imu', name='mock_imu',
              parameters=[bench_config]),
         Node(package='aav_bench', executable='mock_gps', name='mock_gps',
@@ -229,5 +231,8 @@ def generate_launch_description():
         DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
                               description='spine_bridge in rust (aav_spine_bridge) or python '
                                           '(aav_spine)'),
+        DeclareLaunchArgument('speed_loop', default_value='default',
+                              description="spine_sim's speed loop profile: default (today's "
+                                          'gains) or smooth (TODO 27, docs/vehicle-model.md)'),
         OpaqueFunction(function=launch_setup),
     ])

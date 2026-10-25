@@ -27,7 +27,8 @@
 //!             /vehicle/gazebo/spine_outputs aav_interfaces/SpineOutputs  throttle, brake, reverse
 //!                                           and steering target, every tick (100 Hz)
 //! Parameters  car (model), wheelbase, track, wheel_radius (m), max_steering (rad), start_x,
-//!             start_y (m), start_yaw (rad)
+//!             start_y (m), start_yaw (rad), speed_loop (default: the spine's speed loop
+//!             profile, default or smooth: spine-core SpeedLoopProfile, TODO 27)
 //!
 //! A thread runs the spine at 100 Hz, like the board's main loop; the main thread spins.
 
@@ -41,7 +42,9 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Result};
-use bench_car::{Bench, Car, MeasuredCar, PlantConfig, Pose, BENCH_WHEELS};
+use bench_car::{
+    Bench, Car, MeasuredCar, PlantConfig, Pose, SpeedLoopProfile, SpineConfig, BENCH_WHEELS,
+};
 use rclrs::*;
 use ros_env::aav_interfaces::msg::{ActuatorState, SpineOutputs, WheelSpeeds};
 use ros_env::builtin_interfaces::msg::Time;
@@ -102,6 +105,19 @@ fn main() -> Result<()> {
         yaw: param("start_yaw", 0.0)?,
         ..Pose::default()
     };
+    let profile_name = node
+        .declare_parameter::<Arc<str>>("speed_loop")
+        .default("default".into())
+        .read_only()?
+        .get();
+    let profile: SpeedLoopProfile = profile_name
+        .parse()
+        .map_err(|e| anyhow!("speed_loop:={profile_name}: {e}"))?;
+    let spine = SpineConfig {
+        speed_loop: profile.config(),
+        ..SpineConfig::default()
+    };
+    log_info!(node.logger(), "The speed loop's profile: {}", profile.name());
     let mut wheels = BENCH_WHEELS;
     wheels.wheel_radius = param("wheel_radius", 0.15)? as f32;
     let bad_wheels = |e| anyhow!("bad wheel settings: {e:?}");
@@ -120,7 +136,7 @@ fn main() -> Result<()> {
     // The subscriptions live in `_keep`, as long as main.
     let (spine_loop, _keep) = match kind {
         CarKind::Model => {
-            let bench = Bench::new(Default::default(), plant, start, wheels).map_err(bad_wheels)?;
+            let bench = Bench::new(spine, plant, start, wheels).map_err(bad_wheels)?;
             log_info!(
                 node.logger(),
                 "The spine's firmware logic, driving a model car (wheelbase {} m). Arm it \
@@ -142,7 +158,7 @@ fn main() -> Result<()> {
         }
         CarKind::Gazebo => {
             let car = MeasuredCar::new(plant.ticks_per_metre);
-            let bench = Bench::with_car(Default::default(), car, wheels).map_err(bad_wheels)?;
+            let bench = Bench::with_car(spine, car, wheels).map_err(bad_wheels)?;
             log_info!(
                 node.logger(),
                 "The spine's firmware logic, driving Gazebo's car through the actuator model, \

@@ -48,7 +48,9 @@ spine_sim on vehicle/gazebo/wheels and vehicle/gazebo/steering; spine_bridge pub
 car's /vehicle/* from the spine's CAN frames. Exactly one backend still takes ego's
 commands: spine_bridge. If spine_sim goes quiet for cmd_timeout s, the car brakes fully.
 
-Parameters  actuator_model (true), spine (false), rate_hz (50), cmd_timeout (0.2 s), wheelbase,
+Parameters  actuator_model (true), speed_loop (default: the actuator model's speed loop
+            profile, 'default' or 'smooth', TODO 27), spine (false), rate_hz (50),
+            cmd_timeout (0.2 s), wheelbase,
             wheel_radius, rendered (the world renders cameras), radar, lidar (what
             /system/source announces), fault.odom (ok), speed_variance
 
@@ -64,7 +66,8 @@ import signal
 
 from aav_description import vehicle
 from aav_gazebo import faults, sources, wheels
-from aav_gazebo.actuator_model import ActuatorConfig, Actuators, Demand, Ideal
+from aav_gazebo.actuator_model import (ActuatorConfig, Actuators, Demand, Ideal,
+                                       speed_loop_profile)
 from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, SpineOutputs
 from aav_interfaces.msg import VehicleStatus
 from aav_interfaces.msg import WheelSpeeds
@@ -115,9 +118,11 @@ class GazeboAdapter(Node):
         modelled = self.declare_parameter('actuator_model', True).value
         if self.spine and not modelled:
             raise ValueError('spine:=true drives the actuator model: actuator_model must be true')
+        profile = self.declare_parameter('speed_loop', 'default').value
         if modelled:
-            self.model = Actuators(config)
-            self.get_logger().info(f'the actuator model, from vehicle.yaml: {config}')
+            self.model = Actuators(config, speed_loop_profile(profile))
+            self.get_logger().info(f'the actuator model, from vehicle.yaml: {config}; '
+                                   f'speed loop: {profile}')
         else:
             self.model = Ideal(config)
             self.get_logger().info("no actuator model: Gazebo's old limits, an instant steer")

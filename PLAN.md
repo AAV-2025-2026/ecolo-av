@@ -107,7 +107,7 @@ the next concrete step.
 | T3.6 | Spine firmware in Rust | 27 Nov | 🔧 | 70 | 24 Oct: boots in QEMU and brakes 111-120 ms after the Motor Pi's frames stop (`pixi run esp-qemu-check`). The same day, TODO 50: the version 2 serial frame carries the Orin's heartbeat (counter, flags, CRC-8); QEMU brakes 111-120 ms after the counter freezes or the CRCs go bad. Next: flash it on the bench ([ESP32 bench](docs/esp32-bench.md)), with `frame_version: 2` |
 | T3.7 | Bench rig | 20 Nov | 🔧 | 40 | `pixi run bench` covers the software; build the board |
 | T3.8 | Hardware test suite | 18 Dec | 🔧 | 60 | the scripts exist (READ-ME-TESTS stages 3-4); run them on stands |
-| T3.9 | Brake and throttle loops | 22 Jan | 🔧 | 20 | the PI loop is in `spine-core`; tune it on stands. With today's guessed gains it overshoots about 15% (the Gazebo model, 22 Oct: 0.57 m/s backing up for 0.5): TODO 27 |
+| T3.9 | Brake and throttle loops | 22 Jan | 🔧 | 20 | the PI loop is in `spine-core`; tune it on stands. With today's guessed gains it overshoots about 15% (the Gazebo model, 22 Oct: 0.57 m/s backing up for 0.5). A `smooth` profile (setpoint weight) is ready to try on stands, 0% in the model and Gazebo: TODO 27 |
 
 ### 4 · Power and electrical
 

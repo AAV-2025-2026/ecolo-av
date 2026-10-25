@@ -29,6 +29,12 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run sim-check --goto             (drives to points and stops there, at 1 and 3 m/s,
                                             in the empty world: two more runs, 8 more minutes;
                                             --goto-only skips the road world's run)
+    pixi run sim-check --speed-steps       (the speed loop's steps, TODO 27: reverse 0.5,
+                                            then 1.0 and 2.0 m/s, in the empty world: one
+                                            more run, 3 more minutes; --speed-steps-only
+                                            skips the road world's run)
+    pixi run sim-check --speed-loop smooth (every run with that speed loop profile:
+                                            speed_loop:=smooth, docs/vehicle-model.md)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -104,6 +110,15 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    At 1 m/s also: a lat/lon B (through /toLL and /fromLL), a 250 m B refused, and a drive
    stopped by a cancel (Ctrl-C), the e-stop and a GPS fault (the driver's own timeout and
    the sensor watchdog's lock).
+
+13. With --speed-steps: Gazebo's empty world, nothing else driving. A scripted drive
+   (ramped at ego's 1 m/s^2) holds each of SPEED_STEPS for 20 s: reverse at 0.5, then 1.0
+   and 2.0 m/s. Each must end within 5 % of its target; its overshoot and the time to stay
+   within 5 % are reported (Gazebo's truth). With --speed-loop smooth, the overshoot must
+   also stay under 3 % (the profile's promise, TODO 27). On a busy computer ego's commands
+   can reach gazebo_adapter late (over its 0.2 s cmd_timeout), and it brakes: a step with
+   such a brake below its target is driven again, up to 3 times, and only reported (no
+   pass or fail) if every try was spoiled. The samples go to /tmp/aav-sim-speed-steps.csv.
 
 Times are Gazebo's, simulated; only the limits on waiting are wall-clock. Prints a table and
 exits 1 if anything failed. The launch logs go to /tmp/aav-sim-check.log and, with --lane,
@@ -1441,6 +1456,12 @@ def print_stops():
 # metres away, and degrees to the left of the car's nose, each from where the last stopped.
 GOTO_TARGETS = [(10.0, 0.0), (30.0, 45.0), (60.0, -30.0), (30.0, 150.0)]
 GOTO_SPEEDS = (1.0, 3.0)        # m/s: the car's ego cap, and Gazebo's sim_speed 3
+SPEED_STEPS = (-0.5, 1.0, 2.0)  # m/s: TODO 27's steps (reversing is capped at 0.5)
+SPEED_HOLD = 20.0               # s at each step
+SPEED_BAND = 0.05               # the band a step must end, and settle, in (of its target)
+SPEED_TRIES = 3                 # drives of a step, while late commands spoil them
+# Each step's samples (profile, target, try, s, m/s), for a plot: AAV_SIM_SPEED_LOG moves it.
+SPEED_LOG = os.environ.get('AAV_SIM_SPEED_LOG', '/tmp/aav-sim-speed-steps.csv')
 GOTO_TOLERANCE = 2.0            # m from B, by Gazebo's truth: READ-ME-TESTS 5.2 without RTK
 GOTO_PAST = 0.5                 # m past B, along the car's heading, by its own EKF: GPS noise
 GOTO_DECEL = (0.6, 1.25)        # x the planned deceleration (half max_brake): the band
@@ -1639,8 +1660,116 @@ def check_goto(probe, speed):
         probe.spin_for(30.0, lambda: not probe.locked())
 
 
+def step_numbers(samples, target):
+    """
+    Return (overshoot, time to settle, end) of one step: samples (t, speed), in time order.
+
+    Overshoot: past |target|, as a fraction. Settle: from the moment the car moves until the
+    speed stays within SPEED_BAND of the target (None if it never does). End: the mean
+    speed of the last 3 s. Times from the first move: before it, only the system's delay.
+    """
+    a = abs(target)
+    moving = [(t, abs(v)) for t, v in samples if abs(v) > 0.02]
+    if not moving:
+        return None, None, None
+    t0, end_t = moving[0][0], moving[-1][0]
+    overshoot = max(0.0, max(v for _, v in moving) / a - 1.0)
+    settle = t0
+    for t, v in moving:
+        if abs(v - a) > SPEED_BAND * a:
+            settle = t
+    last = [v for t, v in moving if t >= end_t - 3.0]
+    settled = settle - t0 if settle < end_t - 1.0 else None
+    return overshoot, settled, sum(last) / len(last)
+
+
+def dropouts(demands, samples, target, start, end):
+    """
+    Return how many brake demands came while the car was below its target.
+
+    Below the target (and its coast band) the speed loop never brakes: only a command
+    that arrived too late does (gazebo_adapter's cmd_timeout, 0.2 s: the target drops
+    to 0). That is the computer's load, not the loop: such a step is driven again.
+    """
+    count = 0
+    for stamp, _, brake in demands:
+        if start <= stamp <= end and brake > 0.0:
+            i = bisect.bisect_left(samples, (stamp,))
+            near = samples[min(i, len(samples) - 1)][1] if samples else 0.0
+            count += abs(near) < abs(target) + 0.05     # the loop brakes past + 0.2
+    return count
+
+
+def speed_step(probe, target):
+    """Drive one held step; return (its samples, from its start; brake dropouts)."""
+    probe.spin_for(30.0, lambda: abs(probe.speed()) < 0.02)      # from a standstill
+    # Times on Gazebo's truth's stamps, the samples' own clock: the scripted driver's
+    # phases as the latest truth sample when each was heard.
+    start = probe.track[-1][0]
+    slowing = []
+
+    def on_feedback(msg):
+        if msg.feedback.phase == ScriptedDrive.Feedback.PHASE_DECELERATE and not slowing:
+            slowing.append(probe.track[-1][0])
+
+    sent = probe.drive.send_goal_async(ScriptedDrive.Goal(
+        target_speed=target, acceleration=1.0, deceleration=1.0, hold_time=SPEED_HOLD),
+        feedback_callback=on_feedback)
+    probe.spin_for(10.0, lambda: sent.done())
+    if not sent.done() or not sent.result().accepted:
+        return None, 0
+    done = sent.result().get_result_async()
+    probe.spin_for(5.0 * SPEED_HOLD, lambda: done.done())
+    end = slowing[0] if slowing else probe.track[-1][0]
+    samples = [(t, v) for t, _, _, _, v in probe.track if start <= t <= end]
+    # Until the car moves, the hold brake is still on: not a late command.
+    moved = next((t for t, v in samples if abs(v) > 0.02), end)
+    return [(t - start, v) for t, v in samples], dropouts(probe.demands, samples, target,
+                                                          moved + 0.5, end)
+
+
+def check_speed_steps(probe, profile):
+    """Hold each of SPEED_STEPS with a scripted drive; check its end, report its overshoot."""
+    if not probe.drive.wait_for_server(timeout_sec=20.0):
+        result('speed steps', False, 'no scripted driver')
+        return
+    for target in SPEED_STEPS:
+        name = f'speed step {target:+g} m/s ({profile})'
+        for attempt in range(1, SPEED_TRIES + 1):
+            samples, late = speed_step(probe, target)
+            if samples is None or not late:
+                break
+        if samples is None:
+            result(name, False, 'refused')
+            continue
+        with open(SPEED_LOG, 'a') as log:
+            log.writelines(f'{profile},{target:g},{attempt},{t:.3f},{v:.4f}\n'
+                           for t, v in samples)
+        overshoot, settle, end = step_numbers(samples, target)
+        if end is None:
+            result(name, False, "the car never moved (Gazebo's truth)")
+            continue
+        tries = f' ({attempt} tries: late commands braked the others)' if attempt > 1 else ''
+        peak = max(abs(v) for _, v in samples)
+        within = (f'within 5 % {settle:.1f} s after it moved' if settle is not None
+                  else 'never within 5 %')
+        detail = (f'peak {peak:.3f} m/s: overshoot {100 * overshoot:.1f} %, {within}, '
+                  f'{end:.3f} m/s at the end')
+        if late:
+            # Every try was spoiled by the computer's load: not the loop's fault.
+            result(name, None, f'{detail}; {late} late-command brakes in each of '
+                               f'{SPEED_TRIES} tries: the computer is too busy to judge it')
+            continue
+        ends_right = abs(end - abs(target)) <= SPEED_BAND * abs(target)
+        smooth_ok = profile != 'smooth' or overshoot < 0.03
+        result(name, ends_right and smooth_ok, detail + tries)
+
+
 LIDAR_TOPICS = ('/sensors/lidar/points', '/sensors/lidar/scan')
 WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/state')
+
+
+EVERY_RUN = []   # launch arguments every session adds: --speed-loop's
 
 
 def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spine=False,
@@ -1666,7 +1795,7 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
           f"partition {env['GZ_PARTITION']} (this computer only)...", flush=True)
     log = open(log_path, 'w')
     launch = subprocess.Popen(['ros2', 'launch', 'aav_bringup', 'sim.launch.py', f'world:={world}',
-                               'gui:=false', 'rviz:=false', *launch_args],
+                               'gui:=false', 'rviz:=false', *launch_args, *EVERY_RUN],
                               cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
                               start_new_session=True)
     LAUNCH.update(pgid=launch.pid, log=log_path)
@@ -1755,9 +1884,17 @@ def main():
         # The direct path's stop times, to compare with the spine's below.
         checks += [lambda probe: check_command_lost(probe, False),
                    lambda probe: check_estop(probe, False)]
+    profile = 'default'
+    if '--speed-loop' in args:
+        at = args.index('--speed-loop')
+        if at + 1 >= len(args) or args[at + 1] not in ('default', 'smooth'):
+            print('--speed-loop takes default or smooth', file=sys.stderr)
+            return 2
+        profile = args[at + 1]
+        EVERY_RUN.append(f'speed_loop:={profile}')
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
-    if '--goto-only' not in args:
+    if '--goto-only' not in args and '--speed-steps-only' not in args:
         # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
         session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
                 + (['plan_around:=false'] if '--obstacle' in args else []),
@@ -1806,6 +1943,13 @@ def main():
             session(['nav:=false', 'lidar:=false', 'radar:=false', f'sim_speed:={speed:g}'],
                     [lambda probe, v=speed: check_goto(probe, v)], logs[-1],
                     f'goto {speed:g} m/s', ignore=('/map',), world='empty')
+    if '--speed-steps' in args or '--speed-steps-only' in args:
+        # Its own run: the empty world, nothing else driving (no Nav2), ego's cap at 2 m/s.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-speed{ext}')
+        session(['nav:=false', 'lidar:=false', 'radar:=false', 'sim_speed:=2'],
+                [lambda probe: check_speed_steps(probe, profile)], logs[-1],
+                f'speed steps, {profile}', ignore=('/map',), world='empty')
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.

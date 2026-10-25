@@ -1,14 +1,20 @@
+import importlib.util
 import math
 from pathlib import Path
 
 from aav_gazebo.actuator_model import (ActuatorConfig, Actuators, Demand, Ideal, lag,
-                                       SpeedLoop, SpeedLoopConfig)
+                                       speed_loop_profile, SPEED_LOOP_PROFILES, SpeedLoop,
+                                       SpeedLoopConfig)
 import pytest
 import yaml
 
 DT = 0.02   # gazebo_adapter's 50 Hz
 VEHICLE_YAML = (Path(__file__).resolve().parents[3] / 'aav_description' / 'config'
                 / 'vehicle.yaml')
+ROOT = Path(__file__).resolve().parents[4]
+VECTORS = ROOT / 'firmware/spine/speed_loop_vectors.txt'
+GENERATOR = ROOT / 'firmware/spine/gen_speed_loop_vectors.py'
+SPEED_LOOP_RS = ROOT / 'firmware/spine/crates/spine-core/src/speed_loop.rs'
 
 
 def run(model, speed, steer, seconds):
@@ -181,3 +187,88 @@ def test_the_spines_demand_drives_the_actuators_directly():
 def test_drive_refuses_a_zero_step():
     with pytest.raises(ValueError):
         Actuators().drive(Demand(0.0, 0.0, False), 0.0, 0.0)
+
+
+# --- the speed loop's profiles (TODO 27) ------------------------------------------------
+
+def ramped(cfg, target, seconds=40.0, car=ActuatorConfig()):
+    """Drive the model car with ego's 1 m/s^2 ramp up to target; return every speed."""
+    model = Actuators(car, cfg)
+    speeds, command = [], 0.0
+    for _ in range(round(seconds / DT)):
+        command = math.copysign(min(abs(target), abs(command) + 1.0 * DT), target)
+        speeds.append(model.step(command, 0.0, DT).speed)
+    return speeds
+
+
+@pytest.mark.parametrize('target', [-0.5, 0.5, 1.0, 2.0])
+def test_today_overshoots_and_smooth_does_not(target):
+    # TODO 27, as Gazebo showed it: 0.5 -> 0.57, 1.0 -> 1.15, 2.0 -> 2.20.
+    today = ramped(SPEED_LOOP_PROFILES['default'], target)
+    assert max(abs(v) for v in today) > 1.09 * abs(target)
+    smooth = ramped(SPEED_LOOP_PROFILES['smooth'], target)
+    assert max(abs(v) for v in smooth) < 1.01 * abs(target)
+    assert abs(smooth[-1]) == pytest.approx(abs(target), rel=0.01)
+
+
+def test_smooth_reaches_2_m_s_on_a_throttle_5_times_weaker():
+    weak = ActuatorConfig(max_accel=0.3)       # TODO 52b: the throttle's 5x uncertainty
+    assert abs(ramped(SPEED_LOOP_PROFILES['default'], 2.0, 60.0, weak)[-1]) < 1.6
+    assert ramped(SPEED_LOOP_PROFILES['smooth'], 2.0, 60.0, weak)[-1] == pytest.approx(
+        2.0, rel=0.02)
+
+
+def test_profiles_go_by_name():
+    assert speed_loop_profile('default') == SpeedLoopConfig()
+    assert speed_loop_profile('smooth').setpoint_weight == 0.75
+    with pytest.raises(ValueError):
+        speed_loop_profile('fast')
+    with pytest.raises(ValueError):
+        SpeedLoop(SpeedLoopConfig(anti_windup='wind'))
+
+
+def test_the_profiles_match_spine_core():
+    """The same names and numbers as speed_loop.rs (Default and SpeedLoopConfig::smooth)."""
+    import re
+    src = SPEED_LOOP_RS.read_text()
+    default = src[src.index('impl Default for SpeedLoopConfig'):]
+    smooth = src[src.index('pub fn smooth() -> Self'):]
+    for block, cfg in ((default, SPEED_LOOP_PROFILES['default']),
+                       (smooth, SPEED_LOOP_PROFILES['smooth'])):
+        body = block[:block.index('}')]
+        for name in ('kp', 'ki', 'integral_limit', 'setpoint_weight'):
+            found = re.search(rf'\b{name}: ([\d.]+)', body)
+            assert found and float(found.group(1)) == getattr(cfg, name), name
+        windup = re.search(r'anti_windup: AntiWindup::(\w+)', body).group(1)
+        assert windup.lower() == cfg.anti_windup
+    assert set(re.findall(r'SpeedLoopProfile::\w+ => "(\w+)"', src)) == set(SPEED_LOOP_PROFILES)
+
+
+def load_generator():
+    spec = importlib.util.spec_from_file_location('gen_speed_loop_vectors', GENERATOR)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_shared_examples_are_up_to_date():
+    """speed_loop_vectors.txt is what this port gives today (spine-core checks the same)."""
+    assert VECTORS.read_text() == load_generator().text(), \
+        'run python3 firmware/spine/gen_speed_loop_vectors.py'
+
+
+def test_the_port_matches_the_shared_examples():
+    cases, loop = 0, None
+    for line in VECTORS.read_text().splitlines():
+        if not line.strip() or line.startswith('#'):
+            continue
+        if line.startswith('case '):
+            loop = SpeedLoop(speed_loop_profile(line.split()[2]))
+            cases += 1
+            continue
+        target, measured, dt, throttle, brake, reverse = line.split()
+        d = loop.update(float(target), float(measured), float(dt))
+        assert d.throttle == pytest.approx(float(throttle), abs=1e-6)
+        assert d.brake == pytest.approx(float(brake), abs=1e-6)
+        assert d.reverse == (reverse == '1')
+    assert cases >= 8

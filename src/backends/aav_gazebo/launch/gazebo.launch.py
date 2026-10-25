@@ -111,6 +111,7 @@ def spine_in_the_loop(context, v, sim_time):
                          {'source': 'sim'}, sim_time]),
         Node(package='aav_spine_sim', executable='spine_sim', name='spine_sim',
              parameters=[{'car': 'gazebo', 'wheelbase': float(v['wheelbase']),
+                          'speed_loop': LaunchConfiguration('speed_loop').perform(context),
                           'track': float(v['track']),
                           'wheel_radius': float(v['wheel_diameter']) / 2,
                           'max_steering': float(v['max_steering_angle'])}, sim_time]),
@@ -168,6 +169,7 @@ def launch_setup(context):
                           'radar': radar, 'lidar': lidar,
                           'wheel_radius': float(v['wheel_diameter']) / 2.0,
                           'actuator_model': flag(context, 'actuator_model'),
+                          'speed_loop': LaunchConfiguration('speed_loop').perform(context),
                           'spine': spine}, sim_time]),
         # Each sensor in a process of its own, as on the car: none waits behind another.
         Node(package='aav_gazebo', executable='gazebo_imu', name='gazebo_imu',
@@ -240,6 +242,10 @@ def generate_launch_description():
         DeclareLaunchArgument('actuator_model', default_value='true',
                               description="the actuators as vehicle.yaml's actuators: say "
                                           "(gazebo_adapter); false: Gazebo's old instant car"),
+        DeclareLaunchArgument('speed_loop', default_value='default',
+                              description="the speed loop's profile: default (today's gains) "
+                                          'or smooth (TODO 27, docs/vehicle-model.md); in '
+                                          'the actuator model, or spine_sim with spine:=true'),
         DeclareLaunchArgument('faults', default_value='false',
                               description='true: the front left picture goes through '
                                           'gazebo_adapter, so fault.camera can freeze it'),

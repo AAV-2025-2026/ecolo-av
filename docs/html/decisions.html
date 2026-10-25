@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">34 min read · 13 sections</div></header>
+<div class="meta">35 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -257,6 +257,10 @@ answer.</p>
 <tr>
 <td><strong>RC via ROS at twist_mux priority 95</strong> (TODO 48): below the joystick's deadman (100), above the keyboard (90)</td>
 <td>A person with the RC is a person, so above every program. The joystick's holder sits in the car, so the deadman still wins. The ESP32 can't tell who in ROS made a command, so <code>rc_driver</code> sends zeros too while on RC via ROS, to keep Nav2 out</td>
+</tr>
+<tr>
+<td><strong>The speed loop's <code>smooth</code> profile, to try on stands (TODO 27, 25 Oct):</strong> a setpoint weight (b 0.75), kp 1.0, ki 0.25, the integral's limit 1.0 with clamping. <strong>Not the default:</strong> the firmware keeps today's gains until the stands; switch with <code>SpeedLoopConfig::smooth()</code> on a board, <code>speed_loop:=smooth</code> in sim and bench (<a href="vehicle-model.html#tuning-the-speed-loop">Tuning the speed loop</a>)</td>
+<td>Today's loop overshoots about 15% (0.57 m/s for 0.5) because of the PI's zero, not windup. The weight moves the zero and leaves the poles and margins alone. On the model: no overshoot at the guessed throttle, none at a 5x drag, 8% at a 5x weaker throttle (today 17%, and 29% short of 2 m/s); phase margin 42° or more up to a 2x stronger throttle, its lag doubled, 110 ms late. The real gains still come from the measured a_max and drag (TODO 52b)</td>
 </tr>
 <tr>
 <td>A linear state-space model of the car, for tuning and the report (24 Oct): speed (first order, the spine's PI around it), steering (second order), the path errors (the bicycle, linearised), the delays; <code>aav_ego</code> <code>vehicle_model.py</code>, <code>pixi run vehicle-model</code></td>

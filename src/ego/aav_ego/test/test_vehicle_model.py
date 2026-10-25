@@ -1,5 +1,6 @@
 """The linear model's maths against textbook cases, the nonlinear car, and the firmware."""
 
+from dataclasses import replace
 import math
 from pathlib import Path
 import re
@@ -148,6 +149,41 @@ def test_the_spine_s_numbers_match_the_rust():
     assert int(tick.group(1)) / 1000 == g.tick
     full = re.search(r'const FULL_THROTTLE_SPEED: f32 = ([\d.]+);', board)
     assert float(full.group(1)) == vm.FULL_THROTTLE_SPEED
+
+
+def test_the_smooth_profile_matches_the_rust():
+    src = (ROOT / 'firmware/spine/crates/spine-core/src/speed_loop.rs').read_text()
+    block = src[src.index('pub fn smooth() -> Self'):]
+    block = block[:block.index('}')]
+    for name in ('kp', 'ki', 'integral_limit', 'setpoint_weight'):
+        assert float(re.search(rf'\b{name}: ([\d.]+)', block).group(1)) == \
+            getattr(vm.SMOOTH, name)
+    assert vm.SpeedLoopGains().setpoint_weight == 1.0
+
+
+def test_a_setpoint_weight_moves_only_the_zero(car):
+    plain = car.speed_closed_loop()
+    np.testing.assert_allclose(vm.poles(car.speed_closed_loop(vm.SMOOTH)),
+                               vm.poles(car.speed_closed_loop(replace(vm.SMOOTH,
+                                                                      setpoint_weight=1.0))))
+    # Weight 1 is the plain PI's T = L / (1 + L), zero at -ki / kp.
+    same = car.speed_closed_loop(replace(car.gains, setpoint_weight=1.0))
+    np.testing.assert_allclose(same[0], plain[0])
+    np.testing.assert_allclose(same[1], plain[1])
+    g = vm.SMOOTH
+    np.testing.assert_allclose(np.roots(car.speed_closed_loop(g)[0]),
+                               [-g.ki / (g.setpoint_weight * g.kp)])
+    assert vm.dc_gain(car.speed_closed_loop(g)) == pytest.approx(1.0)
+
+
+def test_the_smooth_profile_does_not_overshoot_today_s_does(car):
+    t, y = vm.step(car.speed_closed_loop(), t_end=60.0)
+    assert vm.step_info(t, y).overshoot == pytest.approx(0.148, abs=0.005)   # TODO 27
+    t, y = vm.step(car.speed_closed_loop(vm.SMOOTH), t_end=60.0)
+    info = vm.step_info(t, y)
+    assert info.overshoot < 0.001
+    assert info.settling_time < 9.0                     # today's: 12.7 s
+    assert all(abs(p.imag) < 1e-9 for p in vm.poles(car.speed_closed_loop(vm.SMOOTH)))
 
 
 def test_the_controller_numbers_match_nav2():
