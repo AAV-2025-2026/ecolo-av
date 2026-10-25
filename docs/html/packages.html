@@ -133,6 +133,13 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>new</td>
 </tr>
 <tr>
+<td><code>aav_gps_heading</code></td>
+<td>localization</td>
+<td><code>gps_heading</code>: the heading from the GPS receiver's velocity, for <code>ekf_global</code></td>
+<td><span class="badge b-works">works</span> Gazebo</td>
+<td>new</td>
+</tr>
+<tr>
 <td><code>aav_teleop</code></td>
 <td>drivers</td>
 <td>joystick → <code>/drivers/joy/cmd_vel</code>, plus an e-stop button</td>
@@ -396,7 +403,7 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 </tr>
 <tr>
 <td><code>aav_localization</code>: <code>ekf_global</code></td>
-<td>the same, plus <code>/localization/gps/odom</code></td>
+<td>the same, plus <code>/localization/gps/odom</code> and <code>/localization/gps/heading</code></td>
 <td><code>/localization/odom/global</code>, map → odom</td>
 <td>stays near the truth; use it to plan</td>
 </tr>

@@ -471,7 +471,8 @@ they pull the wrong way, and the heading gets worse.</p>
 </table></div>
 <p>So put the antenna <strong>above the rear axle</strong> if the mount allows (any height). Then the
 offset doesn't turn with the heading, and reversing is as good as forward. A heading
-source (PLAN M9) would fix it too.</p>
+source helps too: since 25 Oct the receiver's own velocity gives one while the car moves
+(<code>gps_heading</code>, <a href="learn-localization.html#where-the-heading-comes-from-todo-13">Learn: localization</a>).</p>
 </section>
 <section class="card"><h2 id="7-gps-in-gazebo-and-on-the-bench">7. GPS in Gazebo and on the bench</h2>
 <div class="table-wrap"><table>
@@ -507,6 +508,12 @@ source (PLAN M9) would fix it too.</p>
 <td>4.5e-6° (about 0.5 m) per fix</td>
 <td>0.5 m per fix</td>
 <td>unknown until we log it</td>
+</tr>
+<tr>
+<td>Velocity (<code>/sensors/gps/fix_velocity</code>)</td>
+<td><code>gazebo_gps</code>: the car's true motion + 0.05 m/s noise</td>
+<td>none</td>
+<td><code>ublox_gps</code>, from the Doppler shift</td>
 </tr>
 <tr>
 <td>Status</td>

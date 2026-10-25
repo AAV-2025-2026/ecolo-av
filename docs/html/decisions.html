@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">34 min read · 13 sections</div></header>
+<div class="meta">35 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -590,6 +590,11 @@ answer.</p>
 <td><strong>Tests never use the network</strong> (<code>pixi run test</code> and <code>tools/test.sh</code> set <code>ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST</code>), and <strong>colcon tests one package at a time</strong></td>
 <td>On GitHub's Mac a test on the network never ended: Cyclone DDS's multicast reader can't be stopped there (TODO 42). On one computer and one domain, two packages' tests side by side heard each other. One at a time costs 14 s</td>
 <td>the same</td>
+</tr>
+<tr>
+<td><strong>The global EKF takes the heading from the GPS receiver's velocity</strong> while the car moves (<code>gps_heading</code>, <code>aav_gps_heading</code>; <code>gps_heading:=false</code> leaves it out). Gazebo's GPS now has a velocity too</td>
+<td>The receiver measures its velocity from the Doppler shift, good to 0.05 m/s while the position wanders by half a metre: its direction is the heading (turned round when reversing). In Gazebo, 4 runs each at walking pace: heading off by a median 1.6-2.1° (was 2.2-2.8), worst 8.5-13.6° (was 11.4-27.1), forward and reversing alike. The magnetometer (motors), lidar matching (not installed, and no north) and robot_localization's own settings (no effect with a datum) were looked at and not taken (<a href="learn-localization.html#where-the-heading-comes-from-todo-13">Learn: localization</a>)</td>
+<td>Ben's go-ahead, 24 Oct (TODO 13)</td>
 </tr>
 </tbody>
 </table></div>

@@ -151,6 +151,7 @@ From `src/localization/aav_localization/config/`. Both run at 30 Hz, in 2D
 | `/vehicle/odom` (the backend) | wheel speed, turn rate | vx, vy, vyaw | vx, vy, vyaw |
 | `/sensors/imu/data` | the gyro | vyaw | vyaw |
 | `/localization/gps/odom` (navsat_transform) | GPS as map x, y | - | **x, y** |
+| `/localization/gps/heading` (gps_heading) | the heading, from the GPS receiver's velocity, while the car moves | - | **yaw** |
 
 | | `ekf_local` | `ekf_global` |
 |---|---|---|
@@ -165,7 +166,7 @@ Three choices worth knowing:
 | Choice | Why |
 |---|---|
 | **vy = 0 is fused** | a car can't slide sideways. Telling the filter so keeps it honest |
-| **Yaw rate only, never yaw** | no magnetometer, so the IMU's heading is only relative. The start heading comes from `start_yaw`; GPS corrects it once the car moves |
+| **The IMU gives the turn rate, never the heading** | no magnetometer, so the IMU's heading is only relative. The start heading comes from `start_yaw`; once the car moves, the GPS receiver's own velocity says which way it points (below) |
 | **The heading trusts the turn rate** | yaw process noise 0.01, not the stock 0.06: the gyro and wheels give the turn rate well, so the heading follows them and GPS only nudges it. With 0.06 it wandered up to ±25° at walking pace (below) |
 | **Each backend sets its own covariance** | the spine works out the turn rate from the measured steering. Today's encoder can't, so it sends a huge covariance (1e3), and the EKF ignores that part |
 
@@ -177,8 +178,64 @@ With `gps:=false`, `ekf_global` doesn't run, and a fixed `map → odom` (zero) s
 |---|---|
 | Gazebo | both EKFs within 0.2 m, parked |
 | Gazebo, driving (22 Oct) | the global EKF's heading, 3 min forward and back at 0.5-1 m/s: median 2.6° off, worst 14° (yaw noise 0.06: median 6.2-6.7°, worst 39-54°). From a start 29° wrong: right within 10 s. With a gyro biased 0.6°/s: median 3.8° |
+| Gazebo, driving (25 Oct) | with the heading from the GPS velocity (below), 5 Hz GPS, 4 runs each: median **1.6-2.1°** off (was 2.2-2.8), 95 % of the time under 4.9-6.0° (was 7.2-9.1), worst 8.5-13.6° (was 11.4-27.1), forward and reversing alike |
+| Gazebo, harder (25 Oct, 2 runs each) | a gyro biased 0.6°/s: median 1.5-1.9° (was 3.3-4.3). Started 30° wrong: under 5° after 5.4-6.1 s (was 7.8-10.0), 3 s of it parked |
 | Bench | 0.03-0.3 m from the truth |
 | The car | never run yet |
+
+### Where the heading comes from (TODO 13)
+
+One GPS antenna can't tell which way the car points while it stands still. Once it moves,
+three things can:
+
+```text
+  GPS fixes, one after another      the receiver's own velocity      a compass
+     •  •   •  • ─▶ (0.5 m noise:     ──▶ (Doppler: 0.05 m/s,          🧭 (the motors
+     slow to settle)                   so 6° at 0.5 m/s, 3° at 1 m/s)  bend it)
+```
+
+The global EKF had only the first. **Now it has the second too**: `gps_heading`
+(`aav_gps_heading`) turns the receiver's velocity (`/sensors/gps/fix_velocity`, from
+`ublox_gps`) into a heading on `/localization/gps/heading`:
+
+| Step | What it does |
+|---|---|
+| 1 | direction of the velocity = where the antenna goes |
+| 2 | reversing (the wheels say so): turn it round 180° |
+| 3 | an antenna off the rear axle swings out in a turn: take that out (0 today: it's over the axle) |
+| 4 | slower than 0.3 m/s, or the GPS's speed and the wheels' disagree by 0.3 m/s: say nothing |
+| 5 | how sure: the velocity's noise across the travel ÷ the speed, plus 2° |
+
+robot_localization can't do this alone: it turns a world-frame velocity into the car's
+frame with its own heading, so a wrong heading never shows.
+
+What we looked at (`pixi run heading-check`: Gazebo, 3.5 min forward and back at
+0.5-1 m/s, against the truth):
+
+| Option | Verdict |
+|---|---|
+| **(a) The GPS velocity's direction** | **kept**: every number better (table above). No stock package does it; ours is small: `gps_heading.py`, its sums in `course.py`, tested without ROS |
+| (b) The magnetometer, through `imu_filter_madgwick` (`use_mag`) | not now: the Yahboom's `/sensors/imu/mag` is raw counts, not tesla; it needs a calibration away from steel, and the motors' current moves it while driving; Ottawa's declination is 12.5° W. Gazebo can't show the motors' effect, so a sim test would flatter it |
+| (c) Lidar scan matching | not in our environment (no KISS-ICP, slam_toolbox, rf2o); a new dependency. It gives turn, not north: it helps the local EKF, not this |
+| (d) Settings: `use_odometry_yaw`, `yaw_offset`, `differential` | no effect with a datum: `navsat_transform` only uses them to set the map frame, which the datum fixes. `differential` on GPS would throw away its position |
+
+**The receiver's rate matters.** The car's receiver sends one fix a second from the
+factory; Gazebo's sends five. At 1 fix a second (3 runs without, 2 with): median
+2.2-3.1° (was 2.8-5.4), worst 10.1-16.9° (was 10.4-21.2). Five a second is a receiver
+setting (u-center, once), for whoever sets it up (Q18).
+
+**What's left**, beyond software. Built in software; the hardware lead decides:
+
+| Upgrade | Heading | Standing still? |
+|---|---|---|
+| Today: one antenna, velocity + gyro | 1.6-2.1° median, worst ~14°, in Gazebo | no: the gyro carries it |
+| RTK (the ZED-F9R can, with a base station or NTRIP) | position to 1-2 cm, so the fixes' own heading gets ~25 times better | no |
+| Two antennas (a moving base, e.g. two ZED-F9P), 1 m apart | about 0.4° | **yes** |
+| The ZED-F9R's own fusion (its built-in IMU, `publish.esf` in `ublox_gps.yaml`) | to measure: it needs a calibration drive | after calibrating |
+
+Real GPS errors drift slowly, not fresh each fix as in Gazebo ([Learn: GPS](learn-gps.md)):
+that hurts the heading from fixes more than the heading from velocity, so on the car the
+gain should be at least as big. To check with the first drive's bag.
 
 ## Try it
 
@@ -203,6 +260,8 @@ That's the GPS soaking up the drift.
 | GPS to metres | `src/localization/aav_localization/config/navsat.yaml` |
 | How they start, and topic names | `src/localization/aav_localization/launch/localization.launch.py` |
 | The IMU filter | `src/sensors/aav_sensors/config/imu_filter.yaml` |
+| The heading from the GPS velocity | `src/localization/aav_gps_heading` (`course.py`: the sums, no ROS) |
+| Measure the heading in Gazebo | `pixi run heading-check` (`tools/heading_check.py`) |
 | Sensor positions on the car | `src/aav_description/config/vehicle.yaml` |
 | Wheel speed into `/vehicle/odom` | `aav_spine/spine_bridge.py`, `aav_legacy` `encoder_udp.py`, `aav_gazebo/gazebo_adapter.py` |
 | Why the EKFs meet in TF, not on a topic | [Topic areas](naming.md) |

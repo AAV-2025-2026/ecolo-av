@@ -28,7 +28,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | Layer | Modules |
 |---|---|
 | [Sensors](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver` |
-| [Description and localization](#description-and-localization) | `aav_description`, `aav_localization` |
+| [Description and localization](#description-and-localization) | `aav_description`, `aav_localization`, `aav_gps_heading` |
 | [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_goto`, `aav_language`, `aav_navigation` |
 | [Mux and ego](#mux-and-ego) | `aav_mux`, `aav_io_mux`, `aav_ego` |
 | [Backends](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla` |
@@ -127,6 +127,20 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Run alone** | `ros2 launch aav_localization localization.launch.py` (with a backend and the sensors) |
 | **Test** | `pixi run check sim`; replay a bag ([Simulation](simulation.md)) |
 | **Read first** | `config/ekf_local.yaml`; why there are two: [Topic areas](naming.md#why-the-two-ekfs-dont-talk) |
+
+### aav_gps_heading
+
+| | |
+|---|---|
+| **Does** | `gps_heading`: the car's heading from the GPS receiver's velocity, turned round when reversing, for the global EKF |
+| **Why** | one antenna's fixes alone gave a heading that wandered at walking pace (TODO 13) |
+| **Runs on** | the Orin |
+| **In → out** | `/sensors/gps/fix_velocity`, `/vehicle/odom` → `/localization/gps/heading` (Imu: an orientation only) |
+| **Origin** | ours: no stock package does it |
+| **Status** | [[works]] in Gazebo (`pixi run heading-check`: median heading error 1.6-2.1°, was 2.2-2.8). Car: needs `gps_driver:=ublox` |
+| **Run alone** | starts with `localization.launch.py` (`gps_heading:=false` leaves it out) |
+| **Test** | `test/test_course.py` (in `tools/test.sh`) |
+| **Read first** | `aav_gps_heading/course.py` |
 
 ## Drivers
 

@@ -14,8 +14,8 @@ mkdir -p bags
 # messages (/vehicle/status).
 exec tools/ros.sh ros2 bag record -o "$out" --topics \
   /vehicle/odom /vehicle/status /vehicle/joint_states \
-  /sensors/imu/data_raw /sensors/imu/data /sensors/imu/mag /sensors/gps/fix /vehicle/battery \
+  /sensors/imu/data_raw /sensors/imu/data /sensors/imu/mag /sensors/gps/fix /sensors/gps/fix_velocity /vehicle/battery \
   /drivers/joy/joy /safety/estop /control/cmd_vel /drivers/joy/cmd_vel /drivers/keyboard/cmd_vel /drivers/scripted/cmd_vel /drivers/nav/cmd_vel \
   /ego/actuator_cmd /can/tx /can/rx \
-  /localization/odom/local /localization/odom/global /localization/gps/odom /localization/gps/fix \
+  /localization/odom/local /localization/odom/global /localization/gps/odom /localization/gps/fix /localization/gps/heading \
   /tf /tf_static /robot_description /plan /goal_pose /clock

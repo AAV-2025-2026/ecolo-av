@@ -172,7 +172,8 @@ Measured in Gazebo (22 Oct; two runs of each; 15 s legs at 0.5 m/s, forward and 
 
 So put the antenna **above the rear axle** if the mount allows (any height). Then the
 offset doesn't turn with the heading, and reversing is as good as forward. A heading
-source (PLAN M9) would fix it too.
+source helps too: since 25 Oct the receiver's own velocity gives one while the car moves
+(`gps_heading`, [Learn: localization](learn-localization.md#where-the-heading-comes-from-todo-13)).
 
 ## 7. GPS in Gazebo and on the bench
 
@@ -182,6 +183,7 @@ source (PLAN M9) would fix it too.
 | Path | `/aav/navsat` → `/gazebo/navsat` → `gazebo_gps` → `/sensors/gps/fix` | straight to `/sensors/gps/fix` | straight to `/sensors/gps/fix` |
 | Rate | 5 Hz | 5 Hz | 1 Hz (factory) |
 | Noise | 4.5e-6° (about 0.5 m) per fix | 0.5 m per fix | unknown until we log it |
+| Velocity (`/sensors/gps/fix_velocity`) | `gazebo_gps`: the car's true motion + 0.05 m/s noise | none | `ublox_gps`, from the Doppler shift |
 | Status | always `STATUS_FIX` | always `STATUS_FIX` | depends on the sky |
 | Origin | the world's `spherical_coordinates` = our datum | the datum | the earth |
 

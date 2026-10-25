@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">34 min read · 15 sections</div></header>
+<div class="meta">35 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -144,7 +144,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 </tr>
 <tr>
 <td><a href="#description-and-localization">Description and localization</a></td>
-<td><code>aav_description</code>, <code>aav_localization</code></td>
+<td><code>aav_description</code>, <code>aav_localization</code>, <code>aav_gps_heading</code></td>
 </tr>
 <tr>
 <td><a href="#drivers">Drivers</a></td>
@@ -471,6 +471,53 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 <tr>
 <td><strong>Read first</strong></td>
 <td><code>config/ekf_local.yaml</code>; why there are two: <a href="naming.html#why-the-two-ekfs-dont-talk">Topic areas</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="aav_gps_heading">aav_gps_heading</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Does</strong></td>
+<td><code>gps_heading</code>: the car's heading from the GPS receiver's velocity, turned round when reversing, for the global EKF</td>
+</tr>
+<tr>
+<td><strong>Why</strong></td>
+<td>one antenna's fixes alone gave a heading that wandered at walking pace (TODO 13)</td>
+</tr>
+<tr>
+<td><strong>Runs on</strong></td>
+<td>the Orin</td>
+</tr>
+<tr>
+<td><strong>In → out</strong></td>
+<td><code>/sensors/gps/fix_velocity</code>, <code>/vehicle/odom</code> → <code>/localization/gps/heading</code> (Imu: an orientation only)</td>
+</tr>
+<tr>
+<td><strong>Origin</strong></td>
+<td>ours: no stock package does it</td>
+</tr>
+<tr>
+<td><strong>Status</strong></td>
+<td><span class="badge b-works">works</span> in Gazebo (<code>pixi run heading-check</code>: median heading error 1.6-2.1°, was 2.2-2.8). Car: needs <code>gps_driver:=ublox</code></td>
+</tr>
+<tr>
+<td><strong>Run alone</strong></td>
+<td>starts with <code>localization.launch.py</code> (<code>gps_heading:=false</code> leaves it out)</td>
+</tr>
+<tr>
+<td><strong>Test</strong></td>
+<td><code>test/test_course.py</code> (in <code>tools/test.sh</code>)</td>
+</tr>
+<tr>
+<td><strong>Read first</strong></td>
+<td><code>aav_gps_heading/course.py</code></td>
 </tr>
 </tbody>
 </table></div>

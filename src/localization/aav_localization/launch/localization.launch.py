@@ -4,14 +4,17 @@ Localization: two EKFs, each fed by the raw sensors; GPS comes in through navsat
 Neither EKF reads the other's topic. They meet only in TF: ekf_global publishes
 map -> odom, worked out on top of ekf_local's odom -> base_link.
 
-  ros2 launch aav_localization localization.launch.py [gps:=true]
+  ros2 launch aav_localization localization.launch.py [gps:=true] [gps_heading:=true]
       [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [use_sim_time:=false]
 
   /vehicle/odom, /sensors/imu/data ──> ekf_local ──> /localization/odom/local, TF odom -> base_link
-  /vehicle/odom, /sensors/imu/data, /localization/gps/odom ──> ekf_global
-      ──> /localization/odom/global, TF map -> odom
+  /vehicle/odom, /sensors/imu/data, /localization/gps/odom, /localization/gps/heading
+      ──> ekf_global ──> /localization/odom/global, TF map -> odom
   /sensors/gps/fix, /localization/odom/global ──> navsat_transform
       ──> /localization/gps/odom, /localization/gps/fix
+  /sensors/gps/fix_velocity, /vehicle/odom ──> gps_heading (aav_gps_heading)
+      ──> /localization/gps/heading: the heading from the receiver's velocity, while the
+      car moves (TODO 13). gps_heading:=false leaves it out
 
 start_x, start_y, start_yaw: where the car is when this starts, in the map frame
 (metres east and north of the datum, yaw in radians counter-clockwise from east).
@@ -24,7 +27,7 @@ static map -> odom identity stands in, so map-frame tools still work.
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -58,6 +61,7 @@ def generate_launch_description():
     use_sim_time = {'use_sim_time': LaunchConfiguration('use_sim_time')}
     return LaunchDescription([
         DeclareLaunchArgument('gps', default_value='true'),
+        DeclareLaunchArgument('gps_heading', default_value='true'),
         DeclareLaunchArgument('start_x', default_value='0.0'),
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0'),
@@ -83,6 +87,15 @@ def generate_launch_description():
                         ('odometry/gps', '/localization/gps/odom'),
                         ('odometry/filtered', '/localization/odom/global')],
             condition=IfCondition(LaunchConfiguration('gps')),
+        ),
+        Node(
+            package='aav_gps_heading',
+            executable='gps_heading',
+            name='gps_heading',
+            parameters=[use_sim_time],
+            condition=IfCondition(PythonExpression([
+                "'", LaunchConfiguration('gps'), "' == 'true' and '",
+                LaunchConfiguration('gps_heading'), "' == 'true'"])),
         ),
         Node(
             package='tf2_ros',
