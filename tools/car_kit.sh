@@ -85,9 +85,9 @@ cp "$(fetch "$PIXI_URL" "$PIXI_SHA256" pixi)" "$OUT/bin/pixi"
 chmod +x "$OUT/bin/pixi-unpack" "$OUT/bin/pixi"
 
 step "Rust crates for our Rust packages (cargo vendor)"
-# Every Rust workspace colcon builds has its Cargo.lock in src/. One vendor folder for all.
+# Every Rust workspace colcon builds has its Cargo.lock in ros/. One vendor folder for all.
 set --
-for lock in $(git ls-files 'src/*Cargo.lock'); do
+for lock in $(git ls-files 'ros/*Cargo.lock'); do
   if [[ $# == 0 ]]; then set -- --manifest-path "${lock%.lock}.toml"
   else set -- "$@" --sync "${lock%.lock}.toml"; fi
   echo "  ${lock%/Cargo.lock}"

@@ -79,7 +79,7 @@ LANE_START = 0.3        # m left of the road's centre
 LANE_BAND = 0.05        # m either side of the centre
 LANE_TIME = 30.0        # s of driving, from when the car starts moving
 LOOKAHEAD = 3.0         # m: where lane_finder measures the offset (its config, lookahead)
-with open(os.path.join(ROOT, 'src', 'bench', 'aav_bench', 'config', 'bench.yaml')) as f:
+with open(os.path.join(ROOT, 'ros', 'sim', 'aav_bench', 'config', 'bench.yaml')) as f:
     ROAD = yaml.safe_load(f)['mock_camera']['ros__parameters']
 ROAD_Y = ROAD['road_y']            # m: the centre
 LANE_WIDTH = ROAD['lane_width']    # m between the lines: the obstacle check's box spans it

@@ -21,8 +21,8 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'src' / 'ego' / 'aav_ego'))
-sys.path.insert(0, str(ROOT / 'src' / 'backends' / 'aav_gazebo'))
+sys.path.insert(0, str(ROOT / 'ros' / 'ego' / 'aav_ego'))
+sys.path.insert(0, str(ROOT / 'ros' / 'sim' / 'aav_gazebo'))
 
 from aav_ego import vehicle_model as vm  # noqa: E402, I100
 from aav_gazebo import actuator_model as am  # noqa: E402

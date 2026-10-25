@@ -91,7 +91,7 @@ READY_TIME = 30.0       # s for the sensor watchdog to let Nav2 drive, before ea
 LEG_TIME = 60.0         # s for each leg, plus 4 s for every metre at the top speed
 TRACK_EVERY = 0.5       # s between the saved track's points
 # The test lot's drawing (tools/make_map.py made the map from it): the picture's background.
-MAP_SPEC = os.path.join(ROOT, 'src', 'drivers', 'aav_navigation', 'maps',
+MAP_SPEC = os.path.join(ROOT, 'ros', 'drivers', 'aav_navigation', 'maps',
                         'example_lot.spec.yaml')
 COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c'}
 

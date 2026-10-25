@@ -19,7 +19,7 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'src' / 'ego' / 'aav_ego'))
+sys.path.insert(0, str(ROOT / 'ros' / 'ego' / 'aav_ego'))
 
 from aav_ego import vehicle_model as vm  # noqa: E402
 import numpy as np  # noqa: E402

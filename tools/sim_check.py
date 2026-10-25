@@ -184,11 +184,11 @@ import yaml  # noqa: E402
 RESULTS = []
 
 # The road world is the bench world (test_worlds.py checks it): its road, sign and camera.
-with open(os.path.join(ROOT, 'src', 'bench', 'aav_bench', 'config', 'bench.yaml')) as f:
+with open(os.path.join(ROOT, 'ros', 'sim', 'aav_bench', 'config', 'bench.yaml')) as f:
     BENCH = yaml.safe_load(f)['mock_camera']['ros__parameters']
 ROAD_Y = BENCH['road_y']                # m: the lane's centre line
 SIGN_X = BENCH['stop_signs'][0]         # m east: the stop sign
-MODELS = os.path.join(ROOT, 'src', 'backends', 'aav_gazebo', 'models')
+MODELS = os.path.join(ROOT, 'ros', 'sim', 'aav_gazebo', 'models')
 OBSTACLE = os.path.join(MODELS, 'obstacle', 'model.sdf')   # the bench's 1 m box
 POST = os.path.join(MODELS, 'post', 'model.sdf')           # 0.5 x 0.5 x 1.8 m: a person
 # What the radar adds to the road world's graph: absent with radar:=false.
@@ -223,11 +223,11 @@ DRIVING = 0.5           # m/s: the car drives, so a fault can go on
 FROZEN_AT = 0.2         # m/s
 FROZEN_WAIT = 30.0      # s of Gazebo's time for frozen wheels to go wrong (Nav2 slows, turns)
 HELD = 10.0             # s of Gazebo's time the car must stay still with no watchdog at all
-with open(os.path.join(ROOT, 'src', 'mux', 'aav_mux', 'config', 'twist_mux.yaml')) as f:
+with open(os.path.join(ROOT, 'ros', 'command_mux', 'aav_mux', 'config', 'twist_mux.yaml')) as f:
     # s of silence from the watchdog before twist_mux's sensors lock holds Nav2 itself
     LOCK_TIMEOUT = yaml.safe_load(f)['twist_mux']['ros__parameters']['locks']['sensors'][
         'timeout']
-with open(os.path.join(ROOT, 'src', 'safety', 'aav_safety', 'config',
+with open(os.path.join(ROOT, 'ros', 'safety', 'aav_safety', 'config',
                        'sensor_watchdog.yaml')) as f:
     # the wheels' cross check against the IMU: its tolerances
     CROSS = yaml.safe_load(f)['sensor_watchdog']['ros__parameters']['odom']
@@ -240,7 +240,7 @@ LAUNCH = {}             # the running launch: its process group and log (session
 # ego's last command (spine.yaml), and the spine's watchdog brakes fully 0.1 s after its
 # last DRIVE_CMD (spine-core cmd_timeout_ms). On the direct path gazebo_adapter's own
 # cmd_timeout (0.2 s) does both. TICKS allows for each one's tick and the frames' trip.
-with open(os.path.join(ROOT, 'src', 'backends', 'aav_spine', 'config', 'spine.yaml')) as f:
+with open(os.path.join(ROOT, 'ros', 'can_bridge', 'aav_spine', 'config', 'spine.yaml')) as f:
     BRIDGE_TIMEOUT = yaml.safe_load(f)['spine_bridge']['ros__parameters']['cmd_timeout']
 SPINE_WATCHDOG = 0.1    # s: spine-core's cmd_timeout_ms
 DIRECT_TIMEOUT = 0.2    # s: gazebo_adapter's cmd_timeout

@@ -30,7 +30,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'src' / 'perception' / 'aav_detector'))
+sys.path.insert(0, str(ROOT / 'ros' / 'perception' / 'aav_detector'))
 FORMATS = {'coreml': '.mlpackage', 'onnx': '.onnx'}
 NEEDS = {'coreml': 'coremltools', 'onnx': 'onnx'}
 

@@ -17,7 +17,7 @@ import socket
 import sys
 
 # web.py, events.py and png.py have no ROS imports: the package's folder is enough.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src' / 'hud' / 'aav_hud'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ros' / 'hud' / 'aav_hud'))
 
 from aav_hud import events, png  # noqa: E402
 from aav_hud.web import HudWeb  # noqa: E402

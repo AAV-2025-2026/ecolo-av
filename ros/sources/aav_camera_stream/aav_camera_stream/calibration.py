@@ -27,8 +27,8 @@ import tarfile
 from aav_camera_stream import lens as lenses
 
 RESULT = '/tmp/calibrationdata.tar.gz'     # where camera_calibration's SAVE puts it
-FOLDER = os.path.join('src', 'sensors', 'aav_camera_stream', 'config', 'calibrations')
-CAMERAS = os.path.join('src', 'sensors', 'aav_camera_stream', 'config', 'cameras.yaml')
+FOLDER = os.path.join('ros', 'sources', 'aav_camera_stream', 'config', 'calibrations')
+CAMERAS = os.path.join('ros', 'sources', 'aav_camera_stream', 'config', 'cameras.yaml')
 A4_LANDSCAPE_MM = (297.0, 210.0)
 
 

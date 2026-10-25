@@ -78,8 +78,8 @@ from vision_msgs.msg import Detection2DArray  # noqa: E402
 import yaml  # noqa: E402
 
 MEDIAMTX = os.path.join(ROOT, 'vendor', 'mediamtx', 'mediamtx')
-PI_CONFIG = os.path.join(ROOT, 'src', 'sensors', 'aav_camera_stream', 'pi', 'mediamtx.yml')
-PHOTO = os.path.join(ROOT, 'src', 'perception', 'aav_detector', 'test', 'stop_sign.jpg')
+PI_CONFIG = os.path.join(ROOT, 'ros', 'sources', 'aav_camera_stream', 'pi', 'mediamtx.yml')
+PHOTO = os.path.join(ROOT, 'ros', 'perception', 'aav_detector', 'test', 'stop_sign.jpg')
 WIDTH, HEIGHT, FPS = 1280, 720, 15              # the Pi's stream (pi/mediamtx.yml)
 BITRATE = 2_000_000                             # bit/s
 GZ_FOCAL = 343.0                                # Gazebo's camera at 640x360 (sensors xacro)

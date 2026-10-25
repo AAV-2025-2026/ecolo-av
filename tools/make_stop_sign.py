@@ -22,7 +22,7 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-MODEL = ROOT / 'src' / 'backends' / 'aav_gazebo' / 'models' / 'stop_sign'
+MODEL = ROOT / 'ros' / 'sim' / 'aav_gazebo' / 'models' / 'stop_sign'
 
 ACROSS = 0.75         # m between opposite flats: the common Ontario size (Ra-1, 750 mm)
 THICKNESS = 0.004     # m: the plate, front face to back

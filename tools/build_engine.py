@@ -34,9 +34,9 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'src' / 'perception' / 'aav_detector'))
+sys.path.insert(0, str(ROOT / 'ros' / 'perception' / 'aav_detector'))
 sys.path.insert(0, str(ROOT / 'tools'))
-TEST_PICTURE = ROOT / 'src' / 'perception' / 'aav_detector' / 'test' / 'stop_sign.jpg'
+TEST_PICTURE = ROOT / 'ros' / 'perception' / 'aav_detector' / 'test' / 'stop_sign.jpg'
 # What each kind of model needs, and where each comes from.
 TENSORRT = {
     'tensorrt': "TensorRT's Python module, from JetPack (sudo apt install python3-libnvinfer)",

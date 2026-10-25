@@ -12,7 +12,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
-CONFIG = ROOT / 'src' / 'localization' / 'aav_localization' / 'config'
+CONFIG = ROOT / 'ros' / 'localization' / 'aav_localization' / 'config'
 GPS_NOISE = 0.5         # m, 1 sigma: Gazebo's GPS (gazebo_adapter)
 JUMP = 20.0             # m: pixi run sim-fault gps jump (aav_gazebo faults.py)
 
