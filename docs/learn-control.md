@@ -11,6 +11,9 @@ shows each loop on our car and the limits and timeouts around them.
 - the Ackermann and bicycle models, and what ego does with them;
 - rate limits, timeouts and safe states.
 
+The maths under the loops (state space, transfer functions, poles, Bode) is in
+[Learn: state space](learn-state-space.md).
+
 ## 1. Open loop vs closed loop
 
 | | Open loop | Closed loop |
@@ -205,6 +208,7 @@ does. The spine only listens to it ([Firmware](firmware.md)).
 | The speed loop (PI) | `firmware/spine/crates/spine-core/src/speed_loop.rs` |
 | Spine limits, watchdog, safe-state choices | `firmware/spine/crates/spine-core/src/spine.rs`, `watchdog.rs`, `limits.rs` |
 | Today's open-loop throttle | `src/backends/aav_legacy/config/legacy.yaml` (`full_throttle_speed`) |
+| State space from zero: models, simulators, poles, Bode, shocks and roll | `tools/state_space_demo.py`, `pixi run state-space-demo` ([Learn: state space](learn-state-space.md)) |
 | The loops as transfer functions and state space: poles, margins, delays | `src/ego/aav_ego/aav_ego/vehicle_model.py`, `pixi run vehicle-model` ([The car as a linear model](vehicle-model.md)) |
 | Nav2's controller and smoother | `src/drivers/aav_navigation/config/nav2.yaml` |
 | Driver timeouts and priorities | `src/mux/aav_mux/config/twist_mux.yaml` |

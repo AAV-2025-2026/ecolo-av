@@ -52,6 +52,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -84,7 +85,9 @@ shows each loop on our car and the limits and timeouts around them.</p>
 <li>where each loop closes on our car;</li>
 <li>the Ackermann and bicycle models, and what ego does with them;</li>
 <li>rate limits, timeouts and safe states.</li>
-</ul></div>
+</ul>
+<p>The maths under the loops (state space, transfer functions, poles, Bode) is in
+<a href="learn-state-space.html">Learn: state space</a>.</p></div>
 <section class="card"><h2 id="1-open-loop-vs-closed-loop">1. Open loop vs closed loop</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -615,6 +618,10 @@ does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
 <tr>
 <td>Today's open-loop throttle</td>
 <td><code>src/backends/aav_legacy/config/legacy.yaml</code> (<code>full_throttle_speed</code>)</td>
+</tr>
+<tr>
+<td>State space from zero: models, simulators, poles, Bode, shocks and roll</td>
+<td><code>tools/state_space_demo.py</code>, <code>pixi run state-space-demo</code> (<a href="learn-state-space.html">Learn: state space</a>)</td>
 </tr>
 <tr>
 <td>The loops as transfer functions and state space: poles, margins, delays</td>
