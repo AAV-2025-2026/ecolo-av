@@ -178,7 +178,7 @@ the next concrete step.
 | # | Task | Due | Status | % | Next |
 |---|---|---|---|---:|---|
 | T9.1 | Layout | 6 Nov | ✅ | 80 | agree it with the safety drivers |
-| T9.2 | Feasibility on the Pi 5 | 13 Nov | 🔧 | 30 | build `aav_hud_raylib` on 64-bit ARM |
+| T9.2 | Feasibility on the Pi 5 | 13 Nov | 🔧 | 60 | 25 Oct: `aav_hud_raylib` builds on 64-bit ARM Linux, and the HUD and the map window draw there (CI's `arm` job, every push; software OpenGL). Next: on the Pi 5 itself, its frame rate on its GPU |
 | T9.3 | HUD v1 | 4 Dec | 🧪 | 90 | |
 | T9.4 | Map view | 18 Dec | 🧪 | 90 | the real lot's image (T7.4) |
 | T9.5 | Faults, battery and health | 18 Dec | 🧪 | 75 | 24 Oct: the HUD's GO / STOP panel says whether the car may move, and the one main reason (the e-stop, the output mux's gate, the sensor watchdog). Next: rail voltages (T4.5) |

@@ -140,6 +140,13 @@ What we changed, and why.
 | **`spine_bridge` refuses to arm while the safety gate is shut**: `/spine/arm` says no unless the output mux said `OPEN` for the bridge's own target in the last 1.5 s, and says why. Both bridges, Rust and Python; disarming always works. The bench and Gazebo arm through `arm_when_open`, which waits for `OPEN` | While the gate is shut, the bridge gets no commands, so an armed spine only latched again at once: arming said "armed" and did nothing. Now the answer is honest, and names the reason (a STOP's cause, a quiet mux). `legacy_uart_bridge` has no arm step ([Arming waits for OPEN](sources-and-targets.md#arming-waits-for-open)) | Ben, 24 Oct |
 | **The muxes err shut on discovery's order**: a node on `/system/source` not heard yet holds the gate; an announcement counts before its node shows in the graph. **Test runs take a ROS domain nobody uses** | A guard test's SIM case let frames through once: another run on the same random domain (cross-talk, seen the same day in a Gazebo check). Across processes the graph can show an announcer 30 ms before its message: small, but it erred open ([Sources and targets](sources-and-targets.md#what-it-cant-catch)) | 24 Oct, from a test that failed on main |
 
+## Decided on 25 October
+
+| Decision | Why | By |
+|---|---|---|
+| **CI tests on 64-bit ARM Linux too, on every push**: `pixi run test` and the HUD drawn once (job `arm`), and the car kit installed with no network (job `car-kit`), on GitHub's free ARM runner | The Orin and the Pis are ARM; nothing had built there before the car day. 12 and 7 min beside the Linux job, so every push, not nightly: a break shows on the push that made it ([CI](infrastructure.md#sharing-the-code)) | Ben's go-ahead, 24 Oct: everything that can be done without the car |
+| **Tests never use the network** (`pixi run test` and `tools/test.sh` set `ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST`), and **colcon tests one package at a time** | On GitHub's Mac a test on the network never ended: Cyclone DDS's multicast reader can't be stopped there (TODO 42). On one computer and one domain, two packages' tests side by side heard each other. One at a time costs 14 s | the same |
+
 ## Open questions
 
 The design doc numbers 34 questions, and doesn't rank them. **Bold** marks the ones that

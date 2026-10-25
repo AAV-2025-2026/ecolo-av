@@ -157,7 +157,9 @@ def test_the_counter_comes_from_the_mux_and_the_bridge_only_relays_it(run):
     # Ego stops: the bridge keeps sending, stops now, and the counter stays put.
     run.spin(0.5)
     quiet = run.spin(1.0)
-    assert len(quiet) > 30
+    # 50 a second on a laptop; GitHub's Mac (a slow VM, one executor for four nodes) wrote
+    # 12 and 23 (25 Oct). What matters: it keeps sending, and the counter stays put.
+    assert len(quiet) > 10
     assert changes(quiet) == 0
     assert all(not f.armed and f.accel == -1.0 and f.speed == 0.0 for f in quiet)
 
