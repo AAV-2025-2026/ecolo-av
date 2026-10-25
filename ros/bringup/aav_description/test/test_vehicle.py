@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 CONFIG = Path(__file__).resolve().parents[1] / 'config' / 'vehicle.yaml'
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 SPINE_RS = ROOT / 'firmware/spine/crates/spine-core/src/spine.rs'
 NAV2_YAML = ROOT / 'ros/drivers/aav_navigation/config/nav2.yaml'
 

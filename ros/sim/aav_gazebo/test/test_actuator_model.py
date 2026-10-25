@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 DT = 0.02   # gazebo_adapter's 50 Hz
-VEHICLE_YAML = (Path(__file__).resolve().parents[3] / 'aav_description' / 'config'
+VEHICLE_YAML = (Path(__file__).resolve().parents[3] / 'bringup' / 'aav_description' / 'config'
                 / 'vehicle.yaml')
 ROOT = Path(__file__).resolve().parents[4]
 VECTORS = ROOT / 'firmware/spine/speed_loop_vectors.txt'
