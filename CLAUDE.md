@@ -151,6 +151,8 @@ EGM artifact directory: docs/designs
 - A feature's commit carries its `docs/features.md` row: a new feature gets a row under
   its type; a changed one gets its Why, Status or Who updated. A fix or a refactor needs
   none. `tools/tests/test_features.py` checks the table's shape.
+- A new `pixi run` task gets a row in README.md's "Every command" (and a setup step in
+  "Set things up" if it needs one). `tools/tests/test_readme_commands.py` checks.
 - Docs go in `docs/`, under plain names (`docs/car-day.md`, not `READ-ME-CAR-DAY.md`). The
   root keeps only `README.md`, `CLAUDE.md`, `TODO.md` and the build files.
 - Commit in small steps that each pass `tools/test.sh`. Don't commit build output: no
