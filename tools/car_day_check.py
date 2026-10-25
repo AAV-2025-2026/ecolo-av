@@ -250,6 +250,25 @@ def check_mediamtx(root):
     return Line('MISSING', 'MediaMTX', 'no vendor/mediamtx', 'pixi run get-mediamtx')
 
 
+# The car has no internet: the pixi environments the laptop uses there go on at home.
+CAR_ENVS = {
+    'gst': ('GStreamer', "the camera stream's fast decoder (else ffmpeg, ~135 ms slower)"),
+    'calib': ('calibrator', 'ROS camera_calibration, for session 5 (about 1 GB)'),
+}
+
+
+def check_envs(root):
+    """Return a line for each pixi environment the laptop needs at the car."""
+    lines = []
+    for env, (what, why) in CAR_ENVS.items():
+        if (root / '.pixi' / 'envs' / env / 'conda-meta').is_dir():
+            lines.append(Line('OK', what, f'.pixi/envs/{env}: {why}'))
+        else:
+            lines.append(Line('MISSING', what, f'no .pixi/envs/{env}: {why}',
+                              f'pixi install -e {env}'))
+    return lines
+
+
 # --- the ESP32 -----------------------------------------------------------------------
 
 def tree_id(root, folder):
@@ -499,6 +518,7 @@ def checks(root):
     lines = [check_repo(root), check_build(root), check_kit(root), check_stick(root)]
     lines += check_models(root)
     lines.append(check_mediamtx(root))
+    lines += check_envs(root)
     toolchains = run(['rustup', 'toolchain', 'list'])[1] if shutil.which('rustup') else None
     lines.append(check_esp_tools(root, toolchains))
     lines += check_firmware(root)

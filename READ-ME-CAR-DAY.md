@@ -345,13 +345,13 @@ The same venv also runs the engine once on the test stop sign, with the score an
 | 7 | The Pi's CPU, both streams on: `top` on the Pi, then `vcgencmd measure_temp` | under 50% of the Pi; under 80 °C | write down the numbers anyway |
 | 8 | Bitrate: `curl http://127.0.0.1:9997/v3/paths/list` on the Pi, twice, 10 s apart | `bytesSent` up about 2.5 MB each 10 s (2 Mbit/s) | |
 | 9 | **The delay:** a stopwatch on phone 1 in front of the camera, the browser view beside it; phone 2 films both | the difference between the two times: under 150 ms. Do 3 photos | write down what you got |
-| 10 | **Calibration pictures:** on the laptop, `mkdir -p ~/aav-calib`, then `pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png`: one picture a second for 30 s, while someone moves the checkerboard slowly (near, far, the corners, tilted). Then the same for `front_right` | 30 pictures each, the whole board in every one | |
+| 10 | **Calibration:** the printed checkerboard (`pixi run calibrate-camera board`, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: `pixi run calibrate-camera front_left --host 192.168.1.108 --square <measured, in m>`; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for `front_right` | `src/sensors/aav_camera_stream/config/calibrations/front_left.yaml` (and `front_right`) written; commit them at home | the window shows no picture: the stream (step 6). As a backup, save pictures: `mkdir -p ~/aav-calib`, then `pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png` |
 
-At home: the delay goes in `orin.yaml`'s `camera_stream` `delay` (0.06 s today); the
-calibration is worked out with OpenCV from the pictures (Q22; the script is still to
-write), into `config/cameras.yaml`.
+At home: the delay goes in `orin.yaml`'s `camera_stream` `delay` (0.06 s today); commit
+the two calibration files (`docs/camera-calibration.md`). Until they're in, the stop-sign
+rule uses Gazebo's lens and the car stops too early.
 
-**Stop point:** both streams at 15 fps on the Orin, the delay measured, the pictures taken.
+**Stop point:** both streams at 15 fps on the Orin, the delay measured, both cameras calibrated.
 
 ## Session 6: the ESP32
 

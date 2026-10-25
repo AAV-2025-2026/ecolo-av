@@ -278,3 +278,10 @@ def test_every_line_has_a_known_status_on_this_checkout():
     lines = cdc.checks(ROOT)
     assert {ln.status for ln in lines} <= set(cdc.STATUSES)
     assert all(ln.fix for ln in lines if ln.status == 'MISSING')
+
+
+def test_the_car_needs_its_pixi_environments_installed_at_home(tmp_path):
+    (tmp_path / '.pixi' / 'envs' / 'gst' / 'conda-meta').mkdir(parents=True)
+    gst, calib = cdc.check_envs(tmp_path)
+    assert gst.status == 'OK'
+    assert calib.status == 'MISSING' and calib.fix == 'pixi install -e calib'
