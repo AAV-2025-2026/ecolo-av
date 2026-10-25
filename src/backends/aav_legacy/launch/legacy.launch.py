@@ -1,9 +1,12 @@
 """
 Today's car (2025-26 hardware) as a backend, until the CAN spine exists.
 
-  ros2 launch aav_legacy legacy.launch.py [uart:=true] [encoder:=true]
+  ros2 launch aav_legacy legacy.launch.py [uart:=true] [encoder:=true] [rc:=true]
 
-  /control/car/actuator_cmd, /safety/estop ──> legacy_uart_bridge ──> 13-byte frames ──> ESP32
+  /control/car/actuator_cmd, /safety/estop ──> legacy_uart_bridge ──> frames ──> ESP32
+  ESP32 ──uplink (legacy.yaml uplink: true)──> legacy_uart_bridge ──> /vehicle/status,
+      /vehicle/steering, /vehicle/brake, /vehicle/rc ──> rc_driver (aav_rc, with rc:=true)
+      ──> /drivers/rc/cmd_vel, only while the RC's mode switch is on RC via ROS (TODO 48)
   Pico 2 wheel encoder ──UDP:10111──> encoder_udp ──> /vehicle/odom (speed only)
 
 Run legacy_uart_bridge on the Pi wired to the ESP32's UART, encoder_udp anywhere
@@ -15,7 +18,7 @@ from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import AndSubstitution, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -27,6 +30,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('uart', default_value='true'),
         DeclareLaunchArgument('encoder', default_value='true'),
+        DeclareLaunchArgument('rc', default_value='true',
+                              description='rc_driver beside the bridge: it drives only on RC '
+                                          'via ROS, with the uplink on'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         Node(
             package='aav_legacy',
@@ -44,5 +50,15 @@ def generate_launch_description():
                                  'counts_per_rev': int(v['encoder_counts_per_rev'])},
                         use_sim_time],
             condition=IfCondition(LaunchConfiguration('encoder')),
+        ),
+        Node(
+            package='aav_rc',
+            executable='rc_driver',
+            name='rc_driver',
+            parameters=[{'max_reverse_speed': float(v['max_reverse_speed']),
+                         'max_steering_angle': float(v['max_steering_angle']),
+                         'wheelbase': float(v['wheelbase'])}, use_sim_time],
+            condition=IfCondition(AndSubstitution(LaunchConfiguration('uart'),
+                                                  LaunchConfiguration('rc'))),
         ),
     ])

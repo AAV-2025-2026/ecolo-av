@@ -12,6 +12,13 @@
 //! | `legacy-uart` + `link-v1` | the Motor-Pi's 2025-26 13-byte frames | a drop-in for the C++: `frame_version: 1`, no heartbeat |
 //! | `can` | `firmware/can/aav.dbc` on the TWAI controller | the KEFC plan: the Orin's `spine_bridge` |
 //!
+//! With `uplink` (off until the hardware lead confirms the wire from TX1, GPIO17, to the
+//! Motor-Pi's RX: TODO 50, 48), the link also sends a status frame back every 20 ms
+//! (`legacy_link::Uplink`): the mode, the RC mode switch, the faults, the last Orin
+//! counter taken, the Jrks' positions and the RC sticks. The same build reads the RC's
+//! mode switch with three positions (`ibus::RcMap::THREE_POSITION`): computer, RC via
+//! ROS (the sticks go up, a ROS driver turns them into commands) and RC direct.
+//!
 //! The heartbeat (TODO 50): each version 2 frame carries a counter the Orin's output mux
 //! makes and the Motor-Pi only copies. A frame whose counter hasn't changed isn't a
 //! command, so 100 ms after the counter stops, the spine's watchdog brakes, cuts the
@@ -22,7 +29,7 @@
 //! | the spine's loop | `SpineBoard::tick` every 10 ms, on Embassy's thread executor |
 //! | steering, brake, throttle, direction | the two Jrk G2s, the DAC and the PCA9555, on one blocking I2C bus at 100 kHz |
 //! | the RC receiver | iBUS on UART2, read from its 128-byte FIFO each tick (about 28 ms of iBUS) |
-//! | the Motor-Pi | UART1, read the same way (`legacy-uart`) |
+//! | the Motor-Pi | UART1, read the same way (`legacy-uart`); with `uplink`, its TX sends the status frame every 20 ms |
 //! | CAN | TWAI at 500 kbit/s, polled each tick (`can`) |
 //! | the wheel speed | none on this board (the encoder talks to the Motor-Pi): the speed loop runs open loop |
 //! | the e-stop's spare contact | an input, with `estop-input`, once it is wired (Q6) |
@@ -58,6 +65,8 @@ compile_error!("pick a link: `legacy-uart` or `can`");
 compile_error!("`qemu` runs the Motor-Pi UART link only: QEMU has no CAN (TWAI)");
 #[cfg(all(feature = "link-v1", not(feature = "legacy-uart")))]
 compile_error!("`link-v1` is a frame of the Motor-Pi UART link: build it with `legacy-uart`");
+#[cfg(all(feature = "uplink", not(feature = "legacy-uart")))]
+compile_error!("`uplink` sends on the Motor-Pi UART link's TX: build it with `legacy-uart`");
 
 #[cfg(feature = "can")]
 mod can;
@@ -295,7 +304,7 @@ async fn main(_spawner: Spawner) -> ! {
     );
     watchdog.enable();
     info!(
-        "spine-esp32-umod {}, link: {}{}; the last reset: {:?}",
+        "spine-esp32-umod {}, link: {}{}{}; the last reset: {:?}",
         env!("CARGO_PKG_VERSION"),
         if cfg!(feature = "can") {
             "CAN"
@@ -303,6 +312,11 @@ async fn main(_spawner: Spawner) -> ! {
             "Motor-Pi UART, version 1 frames (no heartbeat)"
         } else {
             "Motor-Pi UART, version 2 frames (the Orin's heartbeat)"
+        },
+        if cfg!(feature = "uplink") {
+            ", with the uplink on TX1 and the three-position mode switch"
+        } else {
+            ""
         },
         if cfg!(feature = "qemu") {
             ", in QEMU with stand-in devices"
@@ -365,6 +379,13 @@ async fn main(_spawner: Spawner) -> ! {
     };
 
     // The spine: the devices first, safe at once (throttle 0, brake on).
+    // With the uplink, the RC's mode switch has a middle position: RC via ROS.
+    #[cfg(feature = "uplink")]
+    let cal = Calibration {
+        rc: ibus::RcMap::THREE_POSITION,
+        ..Calibration::TODAY
+    };
+    #[cfg(not(feature = "uplink"))]
     let cal = Calibration::TODAY;
     let devices = Devices::new(
         RefCellDevice::new(&i2c_bus),
@@ -384,15 +405,30 @@ async fn main(_spawner: Spawner) -> ! {
     #[cfg(feature = "legacy-uart")]
     let mut spine = {
         let motor_pi_config = uart::Config::default().with_baudrate(legacy_link::BAUD);
-        let motor_pi_rx = UartRx::new(p.UART1, motor_pi_config)
-            .map(|rx| rx.with_rx(pins.motor_pi_rx))
-            .unwrap_or_else(|e| panic!("Motor-Pi UART: {:?}", e));
         let version = if cfg!(feature = "link-v1") {
             spine_board::FrameVersion::V1
         } else {
             spine_board::FrameVersion::V2
         };
-        let link = spine_board::LegacyLink::new(motor_pi_rx, cal, version);
+        #[cfg(not(feature = "uplink"))]
+        let link = {
+            let motor_pi_rx = UartRx::new(p.UART1, motor_pi_config)
+                .map(|rx| rx.with_rx(pins.motor_pi_rx))
+                .unwrap_or_else(|e| panic!("Motor-Pi UART: {:?}", e));
+            spine_board::LegacyLink::new(motor_pi_rx, cal, version)
+        };
+        // The same UART, both ways: RX on GPIO16, the uplink's TX on GPIO17.
+        #[cfg(feature = "uplink")]
+        let link = {
+            let (motor_pi_rx, motor_pi_tx) = esp_hal::uart::Uart::new(p.UART1, motor_pi_config)
+                .map(|u| {
+                    u.with_rx(pins.motor_pi_rx)
+                        .with_tx(pins.motor_pi_tx)
+                        .split()
+                })
+                .unwrap_or_else(|e| panic!("Motor-Pi UART: {:?}", e));
+            spine_board::LegacyLink::with_uplink(motor_pi_rx, motor_pi_tx, cal, version)
+        };
         SpineBoard::with_link(board, devices, ibus_rx, link, cal, config)
     };
     #[cfg(feature = "can")]
@@ -421,13 +457,19 @@ async fn main(_spawner: Spawner) -> ! {
         board.leds.show(&out, ticks);
         #[cfg(feature = "can")]
         board.can.service(now);
+        // The last Orin counter taken (-1: none, or not this link): it ties each line to a
+        // frame, whatever the clocks do (tools/esp32_qemu.py).
+        #[cfg(feature = "legacy-uart")]
+        let counter = spine.link().stats().counter.map_or(-1, i32::from);
+        #[cfg(not(feature = "legacy-uart"))]
+        let counter = -1;
         let summary = Summary::from(&out);
         if last != Some(summary) {
-            log_line("EVENT", now, &out);
+            log_line("EVENT", now, &out, counter);
             last = Some(summary);
         }
         if ticks.is_multiple_of(STATUS_EVERY_TICKS) {
-            log_line("STATUS", now, &out);
+            log_line("STATUS", now, &out, counter);
             #[cfg(feature = "legacy-uart")]
             link_line(now, &spine.link().stats());
         }
@@ -447,10 +489,10 @@ async fn main(_spawner: Spawner) -> ! {
 
 /// One line on the USB cable: what the spine decided, and its faults. `STATUS` every
 /// 200 ms, `EVENT` when the mode, arming, e-stop, throttle on or off, brake or faults
-/// change. `t` is milliseconds since boot.
-fn log_line(kind: &str, now: u32, out: &Outputs) {
+/// change. `t` is milliseconds since boot; `counter` the last Orin counter taken (-1: none).
+fn log_line(kind: &str, now: u32, out: &Outputs, counter: i32) {
     info!(
-        "{} t={} mode={:?} armed={} estop={} throttle={:.2} brake={:.2} reverse={} steer={:.3} faults={:#06x}",
+        "{} t={} mode={:?} armed={} estop={} throttle={:.2} brake={:.2} reverse={} steer={:.3} faults={:#06x} counter={}",
         kind,
         now,
         out.mode,
@@ -460,23 +502,27 @@ fn log_line(kind: &str, now: u32, out: &Outputs) {
         out.brake,
         out.reverse,
         out.steering_target,
-        out.faults
+        out.faults,
+        counter
     );
 }
 
 /// The Motor-Pi link's counts since boot, with each status line: frames taken, turned
 /// down (`bad`), bytes outside a frame (`skipped`), frames with the same counter as the
-/// one before (`repeats`), and the last counter (-1: none yet).
+/// one before (`repeats`), the last counter (-1: none yet), and the uplink frames sent
+/// and failed (0 without `uplink`).
 #[cfg(feature = "legacy-uart")]
 fn link_line(now: u32, s: &spine_board::LinkStats) {
     info!(
-        "LINK t={} frames={} bad={} skipped={} repeats={} counter={}",
+        "LINK t={} frames={} bad={} skipped={} repeats={} counter={} uplinks={} uplink_errors={}",
         now,
         s.frames,
         s.bad,
         s.skipped,
         s.repeats,
-        s.counter.map_or(-1, i32::from)
+        s.counter.map_or(-1, i32::from),
+        s.uplinks,
+        s.uplink_errors
     );
 }
 

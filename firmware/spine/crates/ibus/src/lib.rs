@@ -19,12 +19,12 @@
 //!
 //! let mut receiver = Receiver::new(100);
 //! let mut sticks = [1500; 14];
-//! sticks[5] = 2000; // override switch on
+//! sticks[5] = 2000; // the mode switch on RC direct
 //! for byte in encode(&Channels(sticks)) {
 //!     receiver.push(byte, 0);
 //! }
 //! let rc = receiver.channels(0).and_then(|c| RcMap::default().rc_input(&c));
-//! assert!(rc.unwrap().override_switch);
+//! assert_eq!(rc.unwrap().switch, spine_core::RcSwitch::Direct);
 //! ```
 #![no_std]
 

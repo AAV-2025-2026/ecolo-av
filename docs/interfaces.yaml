@@ -39,6 +39,11 @@ topics:
     pub: [teleop_twist_keyboard]
     sub: [twist_mux, language_drive]
     note: Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic - on the stand-ins only, as the car's bridge only watches (foxglove.launch.py).
+  /drivers/rc/cmd_vel:
+    type: geometry_msgs/msg/TwistStamped
+    pub: [rc_driver]
+    sub: [twist_mux, language_drive]
+    note: Priority 95 (proposed, TODO 48) - a person with the RC transmitter, below the joystick's deadman (100), above the keyboard (90). rc_driver (aav_rc) turns /vehicle/rc into a command only while the transmitter's mode switch is on RC via ROS - throttle stick x max_speed (1.0 m/s; reverse 0.5), steering stick x the steering limit, as a turn rate by the bicycle model - at the uplink's 50 Hz, zeros included, so nothing below it drives. It publishes one zero when the switch leaves RC via ROS; if /vehicle/rc goes quiet while on RC via ROS it keeps publishing zeros (a stop) until the uplink comes back. RC direct never comes here - the ESP32 drives from the sticks itself.
   /drivers/tests/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [actuator_test]
@@ -223,16 +228,16 @@ topics:
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
-    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter]
+    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter, legacy_uart_bridge]
     sub: [hud_server, hud, language_drive]
     live: [turtle, sim, bench]
-    note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove.
+    note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. legacy_uart_bridge publishes it, 10 Hz, only with uplink true (the ESP32's uplink frame on TX1, TODO 50 - off until its wire is confirmed) - speed NaN (that ESP32 has no wheel speed), steering_angle the steering Jrk's position or NaN; mode COMPUTER also while the transmitter's switch is on RC via ROS (/vehicle/rc has the switch).
   /vehicle/steering:
     type: aav_interfaces/msg/ActuatorState
-    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter]
+    pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter, legacy_uart_bridge]
     sub: [actuator_test]
     live: [turtle, sim, bench]
-    note: The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too.
+    note: The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too. legacy_uart_bridge (uplink true, 50 Hz) - command ego's steering_angle while fresh (else NaN), measured the steering Jrk's scaled feedback in rad (NaN when the Jrk has no feedback set up).
   /vehicle/throttle:
     type: aav_interfaces/msg/ActuatorState
     pub: [spine_bridge, gazebo_adapter, carla_adapter]
@@ -241,10 +246,15 @@ topics:
     note: The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.
   /vehicle/brake:
     type: aav_interfaces/msg/ActuatorState
-    pub: [spine_bridge, gazebo_adapter, carla_adapter]
+    pub: [spine_bridge, gazebo_adapter, carla_adapter, legacy_uart_bridge]
     sub: [actuator_test]
     live: [sim, bench]
-    note: The brake, 0..1. As /vehicle/throttle.
+    note: The brake, 0..1. As /vehicle/throttle. legacy_uart_bridge (uplink true, 50 Hz) - command what the ESP32 drives the brake Jrk with, measured the brake Jrk's position (NaN when unknown).
+  /vehicle/rc:
+    type: aav_interfaces/msg/RcSticks
+    pub: [legacy_uart_bridge]
+    sub: [rc_driver]
+    note: The RC transmitter as the car's ESP32 reads it (TODO 48), from its uplink frame, 50 Hz, only with uplink true - the mode switch (none, computer, RC via ROS, RC direct; the proposed three positions of CH6), the throttle stick signed by the gear switch, the steering stick (both -1..1, + forward, + left), the gear switch on brake. The channels and their calibration stay in the firmware (ibus RcMap).
   /vehicle/wheels:
     type: aav_interfaces/msg/WheelSpeeds
     pub: [gazebo_adapter, spine_bridge, carla_adapter]

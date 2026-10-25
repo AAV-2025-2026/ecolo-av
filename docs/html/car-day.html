@@ -960,16 +960,16 @@ its TensorRT version).</p>
 </tr>
 <tr>
 <td>10</td>
-<td><strong>Calibration pictures:</strong> on the laptop, <code>mkdir -p ~/aav-calib</code>, then <code>pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png</code>: one picture a second for 30 s, while someone moves the checkerboard slowly (near, far, the corners, tilted). Then the same for <code>front_right</code></td>
-<td>30 pictures each, the whole board in every one</td>
-<td></td>
+<td><strong>Calibration:</strong> the printed checkerboard (<code>pixi run calibrate-camera board</code>, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: <code>pixi run calibrate-camera front_left --host 192.168.1.108 --square &lt;measured, in m&gt;</code>; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for <code>front_right</code></td>
+<td><code>src/sensors/aav_camera_stream/config/calibrations/front_left.yaml</code> (and <code>front_right</code>) written; commit them at home</td>
+<td>the window shows no picture: the stream (step 6). As a backup, save pictures: <code>mkdir -p ~/aav-calib</code>, then <code>pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>At home: the delay goes in <code>orin.yaml</code>'s <code>camera_stream</code> <code>delay</code> (0.06 s today); the
-calibration is worked out with OpenCV from the pictures (Q22; the script is still to
-write), into <code>config/cameras.yaml</code>.</p>
-<p><strong>Stop point:</strong> both streams at 15 fps on the Orin, the delay measured, the pictures taken.</p>
+<p>At home: the delay goes in <code>orin.yaml</code>'s <code>camera_stream</code> <code>delay</code> (0.06 s today); commit
+the two calibration files (<code>docs/camera-calibration.md</code>). Until they're in, the stop-sign
+rule uses Gazebo's lens and the car stops too early.</p>
+<p><strong>Stop point:</strong> both streams at 15 fps on the Orin, the delay measured, both cameras calibrated.</p>
 </section>
 <section class="card"><h2 id="session-6-the-esp32">Session 6: the ESP32</h2>
 <p><strong>Who:</strong> the laptop person, the e-stop person, the hardware lead. <strong>How long:</strong> 90 min.

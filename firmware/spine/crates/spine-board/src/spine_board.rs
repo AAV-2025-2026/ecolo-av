@@ -11,12 +11,13 @@
 //! | 5 | the steering and brake Jrks | `measured_steering`; `driver_faults`, with last tick's write errors |
 //!
 //! Then `Spine::step`, then `Actuators::apply`, then VEHICLE_FEEDBACK every 20 ms
-//! and VEHICLE_STATUS every 100 ms, through the link (the UART link drops them).
+//! and VEHICLE_STATUS every 100 ms, through the link (the UART link drops them), then
+//! the tick's [`Report`] to the link (the UART link's uplink frame, every 20 ms).
 
 use crate::actuators::{Actuators, Devices};
 use crate::board::Board;
 use crate::calibration::Calibration;
-use crate::link::{CanLink, CommandLink};
+use crate::link::{CanLink, CommandLink, Report};
 use crate::wheel::WheelSpeed;
 use aav_inputs::Debouncer;
 use embedded_hal::i2c::I2c;
@@ -130,6 +131,13 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady, L: CommandLink> SpineBoard<B, I2C,
         let out = self.spine.step(&inputs);
         self.write_faults = self.actuators.apply(&out, now);
         self.send_frames(now, &inputs, wheel.count, &out);
+        let report = Report {
+            now_ms: now,
+            outputs: out,
+            rc: inputs.rc,
+            positions: readings.positions,
+        };
+        self.link.report(&mut self.board, &report);
         out
     }
 
@@ -194,13 +202,13 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady, L: CommandLink> SpineBoard<B, I2C,
 
 /// A job due every `period_ms`, on average.
 #[derive(Debug, Clone, Copy)]
-struct Every {
+pub(crate) struct Every {
     period_ms: u32,
     next_ms: Option<u32>,
 }
 
 impl Every {
-    const fn new(period_ms: u32) -> Self {
+    pub(crate) const fn new(period_ms: u32) -> Self {
         Every {
             period_ms,
             next_ms: None,
@@ -208,7 +216,7 @@ impl Every {
     }
 
     /// True if the job is due at `now_ms`; then the next one is booked.
-    fn due(&mut self, now_ms: u32) -> bool {
+    pub(crate) fn due(&mut self, now_ms: u32) -> bool {
         let next = *self.next_ms.get_or_insert(now_ms);
         if (now_ms.wrapping_sub(next) as i32) < 0 {
             return false;
@@ -456,7 +464,7 @@ mod legacy_loop_tests {
     use crate::actuators::Devices;
     use crate::calibration::Calibration;
     use crate::link::{FrameVersion, LegacyLink};
-    use crate::rig::{BusState, FakeBoard, FakeBus, FakeUart, BRAKE, DAC, STEER};
+    use crate::rig::{BusState, FakeBoard, FakeBus, FakeTx, FakeUart, BRAKE, DAC, STEER};
     use core::cell::RefCell;
     use jrk_g2::command::set_target;
     use legacy_link::{Flags, Frame, FrameV2};
@@ -466,7 +474,7 @@ mod legacy_loop_tests {
     use std::vec::Vec;
 
     struct LegacyRig {
-        sb: SpineBoard<FakeBoard, FakeBus, FakeUart, LegacyLink<FakeUart>>,
+        sb: SpineBoard<FakeBoard, FakeBus, FakeUart, LegacyLink<FakeUart, FakeTx>>,
         bus: Rc<RefCell<BusState>>,
         motor_pi: FakeUart,
         receiver: FakeUart,
@@ -488,7 +496,8 @@ mod legacy_loop_tests {
                 },
                 ..SpineConfig::default()
             };
-            let link = LegacyLink::new(motor_pi.clone(), cal, version);
+            // With an uplink, as the board builds it with `uplink`: the frames down are the same.
+            let link = LegacyLink::with_uplink(motor_pi.clone(), FakeTx::default(), cal, version);
             let board = FakeBoard::new();
             let mut sb = SpineBoard::with_link(board, devices, receiver.clone(), link, cal, config);
             sb.init();
@@ -742,5 +751,206 @@ mod legacy_loop_tests {
         let out = rig.frames(100, 0.0, 0.5, 0.0);
         assert_eq!(out.mode, Mode::Manual);
         assert_eq!(rig.dac(), 0);
+    }
+}
+
+/// The uplink and the RC via ROS, through the whole loop (TODO 50, 48).
+#[cfg(test)]
+mod uplink_loop_tests {
+    extern crate std;
+    use super::SpineBoard;
+    use crate::actuators::Devices;
+    use crate::calibration::Calibration;
+    use crate::link::{FrameVersion, LegacyLink};
+    use crate::rig::{FakeBoard, FakeBus, FakeTx, FakeUart};
+    use ibus::RcMap;
+    use legacy_link::{DriveMode, Flags, Frame, FrameV2, ModeSwitch, Uplink, UPLINK_LEN};
+    use spine_core::protocol::Mode;
+    use spine_core::{faults, Outputs, SpeedFeedback, SpineConfig};
+    use std::vec::Vec;
+
+    struct Rig {
+        sb: SpineBoard<FakeBoard, FakeBus, FakeUart, LegacyLink<FakeUart, FakeTx>>,
+        bus: FakeBus,
+        motor_pi: FakeUart,
+        receiver: FakeUart,
+        uplink: FakeTx,
+        counter: u8,
+    }
+
+    impl Rig {
+        /// The board as `esp32-umod` builds it with `uplink`: version 2 frames, the
+        /// three-position mode switch.
+        fn new() -> Self {
+            let bus = FakeBus::default();
+            let (motor_pi, receiver, uplink) =
+                (FakeUart::default(), FakeUart::default(), FakeTx::default());
+            let cal = Calibration {
+                rc: RcMap::THREE_POSITION,
+                ..Calibration::TODAY
+            };
+            let devices = Devices::new(bus.clone(), bus.clone(), bus.clone(), bus.clone(), &cal);
+            let config = SpineConfig {
+                speed_feedback: SpeedFeedback::None {
+                    full_throttle_speed: 3.0,
+                },
+                ..SpineConfig::default()
+            };
+            let link =
+                LegacyLink::with_uplink(motor_pi.clone(), uplink.clone(), cal, FrameVersion::V2);
+            let mut sb = SpineBoard::with_link(
+                FakeBoard::new(),
+                devices,
+                receiver.clone(),
+                link,
+                cal,
+                config,
+            );
+            sb.init();
+            Rig {
+                sb,
+                bus,
+                motor_pi,
+                receiver,
+                uplink,
+                counter: 0,
+            }
+        }
+
+        /// One iBUS frame: the mode switch, the throttle stick, the gear forward.
+        fn rc(&mut self, switch: u16, throttle: u16) {
+            let mut ch = [1500; ibus::CHANNELS];
+            ch[5] = switch;
+            ch[2] = throttle;
+            ch[4] = 1000; // forward
+            self.receiver
+                .0
+                .borrow_mut()
+                .extend(ibus::encode(&ibus::Channels(ch)));
+        }
+
+        /// One version 2 frame with the next counter (speed, accel), then two 10 ms
+        /// ticks, an iBUS frame before each when `rc` says so.
+        fn step(&mut self, speed: f32, accel: f32, rc: Option<(u16, u16)>) -> Outputs {
+            self.counter = self.counter.wrapping_add(1);
+            let frame = FrameV2 {
+                values: Frame {
+                    steering: 0.0,
+                    speed,
+                    accel,
+                },
+                counter: self.counter,
+                flags: Flags {
+                    armed: true,
+                    estop: false,
+                },
+            };
+            self.motor_pi.0.borrow_mut().extend(frame.encode());
+            let mut out = None;
+            for _ in 0..2 {
+                if let Some((switch, throttle)) = rc {
+                    self.rc(switch, throttle);
+                }
+                self.sb.board().now += 10;
+                out = Some(self.sb.tick());
+            }
+            out.unwrap()
+        }
+
+        fn steps(&mut self, n: usize, speed: f32, accel: f32, rc: Option<(u16, u16)>) -> Outputs {
+            (0..n).map(|_| self.step(speed, accel, rc)).last().unwrap()
+        }
+
+        fn uplinks(&self) -> Vec<Uplink> {
+            self.uplink
+                .0
+                .borrow()
+                .chunks(UPLINK_LEN)
+                .map(|c| Uplink::decode(c.try_into().unwrap()).unwrap())
+                .collect()
+        }
+
+        fn last_uplink(&self) -> Uplink {
+            *self.uplinks().last().unwrap()
+        }
+
+        fn dac(&self) -> u16 {
+            let state = self.bus.0.borrow();
+            let w = state.writes.iter().rev().find(|w| w.0 == crate::rig::DAC);
+            w.map_or(0, |w| ad5311::decode([w.1[0], w.1[1]]).code)
+        }
+    }
+
+    const VIA_ROS: u16 = 1500;
+    const DIRECT: u16 = 2000;
+    const FULL: u16 = 1000; // the throttle stick, all the way
+
+    #[test]
+    fn the_uplink_echoes_the_counter_at_50_hz() {
+        let mut rig = Rig::new();
+        rig.steps(5, 0.0, -0.3, None); // the arming stop
+        let out = rig.steps(50, 0.5, 0.0, None);
+        assert_eq!(out.mode, Mode::Computer);
+        let ups = rig.uplinks();
+        assert_eq!(ups.len(), 55); // one every 20 ms: 110 ticks of 10 ms
+        let last = rig.last_uplink();
+        assert_eq!(last.echo, Some(rig.counter));
+        assert_eq!((last.mode, last.armed), (DriveMode::Computer, true));
+        assert_eq!(last.switch, ModeSwitch::NoSignal);
+        // The stand-in fake bus answers analog feedback: both positions known.
+        assert!(last.steering.is_some() && last.brake_position.is_some());
+        assert!(ups
+            .windows(2)
+            .all(|w| w[1].sequence == w[0].sequence.wrapping_add(1)));
+    }
+
+    #[test]
+    fn rc_via_ros_sends_the_sticks_up_and_drives_only_from_the_frames() {
+        let mut rig = Rig::new();
+        let rc = Some((VIA_ROS, FULL));
+        rig.steps(5, 0.0, -0.3, rc);
+        // The sticks say full throttle; the frames say stand still: it stands still.
+        let out = rig.steps(50, 0.0, -0.3, rc);
+        assert_eq!(out.mode, Mode::Computer);
+        assert_eq!(rig.dac(), 0);
+        let up = rig.last_uplink();
+        assert_eq!(up.switch, ModeSwitch::RcViaRos);
+        assert_eq!(up.mode, DriveMode::Computer);
+        assert_eq!(up.sticks.throttle, 1.0);
+        // The frames drive (as the ROS driver's commands would): the DAC follows them.
+        rig.steps(100, 0.5, 0.0, rc);
+        assert_eq!(rig.dac(), 350);
+    }
+
+    #[test]
+    fn rc_direct_drives_from_the_sticks_whatever_the_frames_say() {
+        let mut rig = Rig::new();
+        rig.steps(5, 0.0, -0.3, Some((VIA_ROS, FULL)));
+        let out = rig.steps(100, 0.0, -0.3, Some((DIRECT, FULL)));
+        assert_eq!(out.mode, Mode::Rc);
+        assert!(rig.dac() > 0);
+        let up = rig.last_uplink();
+        assert_eq!(
+            (up.mode, up.switch),
+            (DriveMode::RcDirect, ModeSwitch::RcDirect)
+        );
+    }
+
+    #[test]
+    fn losing_the_rc_via_ros_brakes_with_fault_256() {
+        let mut rig = Rig::new();
+        let rc = Some((VIA_ROS, 1500));
+        rig.steps(5, 0.0, -0.3, rc);
+        rig.steps(100, 0.5, 0.0, rc);
+        assert_eq!(rig.dac(), 350);
+        // The receiver goes silent; the frames still drive. 100 ms later: braked.
+        let out = rig.steps(8, 0.5, 0.0, None);
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        assert_ne!(out.faults & faults::RC_SIGNAL_LOST, 0);
+        assert_eq!(rig.dac(), 0);
+        let up = rig.last_uplink();
+        assert_eq!(up.switch, ModeSwitch::NoSignal);
+        assert_eq!(up.mode, DriveMode::Stopped);
+        assert_ne!(up.faults & faults::RC_SIGNAL_LOST, 0);
     }
 }

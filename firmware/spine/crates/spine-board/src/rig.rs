@@ -32,6 +32,10 @@ pub struct BusState {
     pub failing: Vec<u8>,
     /// The steering Jrk's scaled feedback.
     pub steering_feedback: u16,
+    /// The brake Jrk's scaled feedback.
+    pub brake_feedback: u16,
+    /// What a Jrk says its feedback mode is, if not 1 (analog): (address, mode).
+    pub feedback_modes: Vec<(u8, u8)>,
     /// The error flags each Jrk reports: (address, flags).
     pub jrk_errors: Vec<(u8, u16)>,
 }
@@ -62,6 +66,12 @@ impl I2c for FakeBus {
                     read = true;
                     let value = match (address, command) {
                         (STEER, Some(0xA7)) => s.steering_feedback,
+                        (BRAKE, Some(0xA7)) => s.brake_feedback,
+                        (a, Some(0xEA)) => s
+                            .feedback_modes
+                            .iter()
+                            .find(|m| m.0 == a)
+                            .map_or(1, |m| u16::from(m.1)),
                         (a, Some(0xB3)) => {
                             s.jrk_errors.iter().find(|e| e.0 == a).map_or(0, |e| e.1)
                         }
@@ -146,6 +156,25 @@ impl embedded_io::Read for FakeUart {
 impl embedded_io::ReadReady for FakeUart {
     fn read_ready(&mut self) -> Result<bool, Self::Error> {
         Ok(!self.0.borrow().is_empty())
+    }
+}
+
+/// A serial port's TX: every byte written, in order.
+#[derive(Clone, Default)]
+pub struct FakeTx(pub Rc<RefCell<Vec<u8>>>);
+
+impl embedded_io::ErrorType for FakeTx {
+    type Error = embedded_io::ErrorKind;
+}
+
+impl embedded_io::Write for FakeTx {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        self.0.borrow_mut().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
     }
 }
 

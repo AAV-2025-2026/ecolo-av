@@ -24,6 +24,11 @@ can = []
 # (firmware/legacy/aav_umod_esp32): no counter, so no heartbeat; the 100 ms timeout only
 # sees the Motor-Pi's own frames. The fallback until version 2 is proven on the bench.
 link-v1 = []
+# With legacy-uart: send the uplink status frame (legacy_link::Uplink) back to the Motor-Pi
+# on TX1 (GPIO17) every 20 ms, and read the RC's mode switch with three positions
+# (computer, RC via ROS, RC direct: ibus::RcMap::THREE_POSITION). Off until the hardware
+# lead confirms the wire from GPIO17 to the Motor-Pi's RX (TODO 50, 48).
+uplink = []
 # Run in Espressif's QEMU (tools/esp32.sh qemu), never on the car: stand-in devices on
 # the I2C bus, and a busy-wait tick instead of interrupts (src/main.rs says why).
 qemu = []
