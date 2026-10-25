@@ -146,6 +146,7 @@ from aav_interfaces.action import GoTo, ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import ActuatorState, SpineOutputs, VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticArray  # noqa: E402
+import gz_crash  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
 from nav_msgs.msg import OccupancyGrid, Odometry  # noqa: E402
@@ -1643,9 +1644,11 @@ WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/stat
 
 
 def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spine=False,
-            world='road'):
+            world='road', retry=True):
     """
     Start sim.launch.py's world with these arguments, run the checks, and stop it.
+
+    retry: if Gazebo itself crashes while starting (gz_crash), start once more.
 
     spine: the spine is in the loop (spine:=true): its status must come, and it must arm.
     world: road (the camera and radar must run, the road profile) or empty (only the truth
@@ -1669,6 +1672,7 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
     LAUNCH.update(pgid=launch.pid, log=log_path)
     rclpy.init()
     probe = Probe()
+    again = False
     try:
         def missing():
             return [n for n, m in (('truth', probe.truth), ('global EKF', probe.glob),
@@ -1685,7 +1689,16 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
         nav = 'nav:=false' not in launch_args
         nav_up = up and (not nav or probe.spin_for(120.0, probe.nav.server_is_ready))
         if not up:
-            detail = f'nothing from: {", ".join(missing())}, in 120 s'
+            log.flush()
+            with open(log_path) as text:
+                crash = gz_crash.gazebo_crashed(text.read())
+            if crash and retry:
+                result(f'start-up{tag}', None, f'Gazebo crashed while starting ({crash}): '
+                       f'once more (log: {log_path})')
+                again = True
+                return
+            detail = f'nothing from: {", ".join(missing())}, in 120 s' + (
+                f' (Gazebo: {crash}, twice)' if crash else '')
         elif not nav_up:
             detail = ('the sensors run, but Nav2 never came up in 120 s (its lifecycle '
                       f'manager stalled? See {log_path})')
@@ -1715,6 +1728,11 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
         except subprocess.TimeoutExpired:
             os.killpg(launch.pid, signal.SIGKILL)
         log.close()
+        if again:
+            # Its own log: the crashed one stays for a look.
+            stem, ext = os.path.splitext(log_path)
+            session(launch_args, checks, f'{stem}-retry{ext}', label, ignore, radar, spine,
+                    world, retry=False)
 
 
 def main():
