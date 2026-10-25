@@ -52,6 +52,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -178,6 +179,11 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td>ego</td>
 <td><code>aav_ego</code></td>
 <td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>The car's linear model (24 Oct)</td>
+<td><code>aav_ego</code> <code>vehicle_model.py</code>, <code>pixi run vehicle-model</code>: transfer functions, state space, Bode margins with the delays; never drives the car</td>
+<td><span class="badge b-works">works</span> in its 30 tests (textbook cases, the bicycle's Jacobian, discrete vs continuous). Every actuator number a guess until the actuator tests (<a href="vehicle-model.html">The car as a linear model</a>)</td>
 </tr>
 <tr>
 <td>ego's body model (22 Oct)</td>
