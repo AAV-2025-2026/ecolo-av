@@ -166,8 +166,10 @@
       <child link="${name}_steering_link"/>
       <origin xyz="${L} ${y} ${R}"/>
       <axis xyz="0 0 1"/>
-      <!-- The inner wheel turns further than the virtual centre wheel. -->
-      <limit lower="${-1.3 * max_steer}" upper="${1.3 * max_steer}" effort="100" velocity="1.0"/>
+      <!-- The inner wheel turns further than the virtual centre wheel. velocity: Gazebo
+           holds the joint to it, and at 1.0 its wheels turned only 0.63 rad/s, slower than
+           the actuator model's steer_rate (TODO 52c): far over it, so the model limits. -->
+      <limit lower="${-1.3 * max_steer}" upper="${1.3 * max_steer}" effort="100" velocity="5.0"/>
     </joint>
     <xacro:wheel name="${name}" side="${side}"/>
     <joint name="${name}_wheel_joint" type="continuous">
