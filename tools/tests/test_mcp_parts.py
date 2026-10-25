@@ -33,7 +33,8 @@ def test_short_names():
     assert parts.find_page('docs/perception.md', FILES) == 'docs/perception.md'
     assert parts.find_page('README', FILES) == 'README.md'
     assert parts.find_page('conversation', FILES) == 'docs/history/conversation.md'
-    assert parts.find_page('vehicle.yaml', FILES) == 'ros/bringup/aav_description/config/vehicle.yaml'
+    assert (parts.find_page('vehicle.yaml', FILES)
+            == 'ros/bringup/aav_description/config/vehicle.yaml')
 
 
 def test_nothing_outside_the_list():

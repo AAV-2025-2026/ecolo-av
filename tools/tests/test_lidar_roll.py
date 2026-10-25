@@ -19,7 +19,8 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-for path in ('tools', 'ros/ego/aav_ego', 'ros/bringup/aav_description', 'ros/perception/aav_lidar'):
+for path in ('tools', 'ros/ego/aav_ego', 'ros/bringup/aav_description',
+             'ros/perception/aav_lidar'):
     sys.path.insert(0, str(ROOT / path))
 try:
     import numpy as np
