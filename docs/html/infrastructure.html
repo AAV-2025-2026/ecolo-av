@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">18 min read · 11 sections</div></header>
+<div class="meta">19 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -816,6 +816,49 @@ previous teams' orgs are public, so nothing is pushed there.</p>
 </table></div>
 <p>CI (<code>.github/workflows/test.yml</code>) runs <code>pixi run test</code> on Linux for every push and pull
 request, and on a Mac every night. The results are on the repo's Actions tab.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>Computer</th>
+<th>When</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linux</code></td>
+<td>Ubuntu 24.04, x86_64</td>
+<td>every push to <code>main</code>, every pull request</td>
+<td><code>pixi run test</code>, the MCP server</td>
+</tr>
+<tr>
+<td><code>arm</code></td>
+<td>Ubuntu 24.04, <strong>64-bit ARM</strong>, like the Orin and the Pis</td>
+<td>the same</td>
+<td>12 min: <code>pixi run test</code>; the HUD and the map window built as ARM programs, and each drawn once on a virtual screen (picture: the artifact <code>arm-screens</code>)</td>
+</tr>
+<tr>
+<td><code>mac</code></td>
+<td>macOS 15, Apple Silicon</td>
+<td>every night</td>
+<td><code>pixi run test</code>, the MCP server</td>
+</tr>
+<tr>
+<td><code>car-kit</code></td>
+<td>Ubuntu 24.04, 64-bit ARM</td>
+<td>every push to <code>main</code>, every pull request</td>
+<td><code>pixi run car-kit</code>, then <code>car_install.sh --all</code> with <strong>no network</strong> (its own network namespace), as on the car (<a href="car-install.html">car install</a>): 6 min</td>
+</tr>
+<tr>
+<td><code>sim</code></td>
+<td>Ubuntu 24.04, x86_64</td>
+<td>every night</td>
+<td><code>sim-check --obstacle</code> in Gazebo, below</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every job also runs from the Actions tab (Run workflow).</p>
 <p>Every night it also runs <code>sim-check --obstacle</code> (Gazebo, headless) on Linux: the job
 <code>sim</code>. New on 22 Oct and still on trial: GitHub's computers have no GPU, so the cameras
 render in software (Mesa's llvmpipe, through <code>tools/software_gl.sh</code>), and a failure there

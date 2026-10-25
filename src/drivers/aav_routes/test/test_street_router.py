@@ -4,13 +4,17 @@ Test street_router in one process, with a fake router, navsat_transform and Nav2
 A destination in, the route out, then sent to Nav2 only when asked. The router is a
 fake over HTTP.
 
-Needs ROS sourced: `colcon test` runs it. It uses absolute names, so give the run its
-own ROS_DOMAIN_ID on a shared machine.
+Needs ROS sourced: `colcon test` runs it. It stays on this computer, on a domain of its
+own (it uses absolute names). Before, on GitHub's Macs it reached the network and never
+ended (TODO 42): stopping Cyclone DDS, the last node joins the thread that reads
+multicast, which waits for a packet the computer sends itself, and that one never came.
 """
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import os
 from pathlib import Path
+import random
 import threading
 import time
 
@@ -72,7 +76,8 @@ class Ros:
     """street_router, and a fake car (fix, /fromLL, Nav2), spun in a thread."""
 
     def __init__(self, **params):
-        rclpy.init()
+        os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
+        rclpy.init(domain_id=random.randint(150, 230))
         self.node = StreetRouter(parameter_overrides=[Parameter(k, value=v)
                                                       for k, v in params.items()])
         self.car = rclpy.create_node('fake_car')

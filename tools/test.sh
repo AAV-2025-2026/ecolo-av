@@ -10,6 +10,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PYTHONDONTWRITEBYTECODE=1
+# Tests never reach the network: no car on the same WiFi hears them, and on GitHub's Macs
+# a test's ROS program that used multicast never ended (Cyclone DDS, TODO 42).
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 
 # Each package's tests import the package, so pytest runs from inside it.
 # (aav_gazebo's adapter test imports ROS messages, so only `colcon test` runs that one.)
