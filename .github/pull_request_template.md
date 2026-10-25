@@ -2,6 +2,6 @@
 
 ## Checklist
 
-- [ ] `tools/test.sh` passes (and `pixi run test` before it goes to `main`)
+- [ ] Pulled first: `git merge upstream/main` into this branch, then `tools/test.sh` and `pixi run test` pass
 - [ ] A new or changed feature has its row in `docs/features.md`: type, why, who, date, status
 - [ ] Docs changed? `pixi run docs`, and the HTML committed

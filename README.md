@@ -17,6 +17,7 @@ Every page is in [`docs/`](docs/). The ones people ask for most:
 |---|---|
 | [The plan](docs/plan.md) | what's left to build, in order, by the gates |
 | [Features](docs/features.md) | what the software does, why, and who built it |
+| [Git](docs/git.md) | your fork, branches and worktrees; **pull first**, then a pull request |
 | [Car day](docs/car-day.md) | the runbook at the car: `pixi run car-day-build`, then `pixi run car-day-check` until it says 0 missing |
 | [Every test](docs/tests.md) | every test, in order: simulator, bench, stands, lot, the whole drive |
 | [Measure the car](docs/measure-the-car.md) | the sheet for whoever measures the car |
@@ -41,7 +42,7 @@ New to the team? Do these in order, on a Mac or on Linux.
 |---|---|---|
 | 1 | Mac only: `xcode-select --install` | a few minutes, once |
 | 2 | Install Pixi: the `curl` line below, then open a new terminal | under a minute, once |
-| 3 | Get the code: `git clone` it from GitHub (ask Ben to add you to `AAV-2025-2026/ecolo-av`) | seconds |
+| 3 | Get the code: fork `AAV-2025-2026/ecolo-av` on GitHub, then clone your fork ([Git](docs/git.md)) | a minute |
 | 4 | `pixi install` | the first time, a few minutes: it downloads about 4 GB |
 | 5 | `pixi run build`, then `pixi run test` | a few minutes the first time |
 | 6 | `pixi run turtle`, or `pixi run sim` | ready |
@@ -51,7 +52,8 @@ The same steps, as commands:
 ```bash
 xcode-select --install                        # 1. Mac only: Apple's git and compiler
 curl -fsSL https://pixi.sh/install.sh | sh    # 2. Pixi; then open a new terminal
-git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av && cd ~/ecolo-av   # 3. the code
+git clone git@github.com:<you>/ecolo-av.git ~/ecolo-av && cd ~/ecolo-av   # 3. your fork
+git remote add upstream git@github.com:AAV-2025-2026/ecolo-av.git       #    the team's repo
 pixi install                                  # 4. ROS 2 Jazzy and every dependency
 pixi run build && pixi run test               # 5. our packages, then every test
 pixi run turtle                               # 6. terminal 1: a turtle that steers like the car

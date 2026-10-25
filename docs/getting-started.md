@@ -20,8 +20,9 @@ Close and reopen your terminal, then check:
 
 ## 2. Get the code
 
-The repository is public: https://github.com/AAV-2025-2026/ecolo-av. To push, ask the
-integration lead to add you, and put an SSH key on your GitHub account.
+The repository is public: https://github.com/AAV-2025-2026/ecolo-av. To read and run it,
+clone it as below. To send changes, fork it and clone your fork instead, with an SSH key on
+your GitHub account: [Git](git.md).
 
     git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av
     cd ~/ecolo-av

@@ -27,6 +27,8 @@ pixi run build                                # our packages, about 20 s
 pixi run test                                 # every test
 ```
 
+To send changes later, work from your own fork: [Git](git.md).
+
 **You should see** at the end of the tests: `77 tests, 0 errors, 0 failures`. Then your
 laptop is set up. If not, see [When something doesn't work](#when-something-doesnt-work).
 

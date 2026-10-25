@@ -33,8 +33,8 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 19    # PAGES[:19] are the reading list
-LEARN_END = 30     # PAGES[19:30] are the learn pages; the rest are reference
+READ_FIRST = 20    # PAGES[:20] are the reading list
+LEARN_END = 31     # PAGES[20:31] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for). A name in ROOT_PAGES is a page kept at the
 # repository's root instead, built the same way (none since 25 Oct: every page is in docs/).
@@ -44,6 +44,7 @@ PAGES = [
     ('release-notes.md', 'Release notes', 'Release 0.1: what this version does, at a glance'),
     ('getting-started.md', 'Getting started', 'A new laptop to the turtle in 30 minutes (T1.1)'),
     ('first-day.md', 'Your first day', 'Install, the turtle, rqt_graph, Gazebo, Nav2'),
+    ('git.md', 'Git', 'Your fork, branches, worktrees; pull first, then a pull request'),
     ('how-it-fits.md', 'How it fits', 'What each box does, and the safety layers'),
     ('start-up.md', 'Bottom-up', 'Each layer from the device up; start-up; testing each layer'),
     ('team.md', 'Starting points', 'One per team member: read, run, first tasks'),

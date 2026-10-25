@@ -23,14 +23,15 @@ Then open a new terminal, so that it finds `pixi`.
 
 ## 2. Get the code
 
-The repository is on GitHub, `AAV-2025-2026/ecolo-av` (private: ask Ben for access):
+The repository is on GitHub, `AAV-2025-2026/ecolo-av` (public):
 
 ```bash
 git clone git@github.com:AAV-2025-2026/ecolo-av.git ecolo-av
-cd aav
+cd ecolo-av
 ```
 
-Later, `git pull` fetches new work.
+Later, `git pull` fetches new work. To send changes, use your own fork and pull requests:
+[Git](git.md).
 
 ## 3. Install ROS, then build
 
