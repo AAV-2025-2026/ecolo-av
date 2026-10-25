@@ -5,6 +5,9 @@ control thing ... Maybe second order system". Now we do. This page writes the ca
 way SYSC 3600 (Systems and Simulation) would: differential equations, Laplace, transfer
 functions, state space, poles, step responses and Bode margins.
 
+**New to this, or rusty?** Start with [Learn: state space](learn-state-space.md): the whole
+process, from a free-body diagram to a simulator, one step at a time.
+
 !!! note "The short version"
     - **Three parts:** speed (second order, with the spine's PI around it), steering
       (second order), and the path errors (state space, 3 states).
