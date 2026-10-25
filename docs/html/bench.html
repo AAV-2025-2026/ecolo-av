@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bench mode: the whole car on one computer · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Bench mode: the whole car on one computer</h1>
+<div class="meta">14 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a class="here" href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#run-it">Run it</a><a href="#whats-real-and-whats-a-stand-in">What&#x27;s real, and what&#x27;s a stand-in</a><a href="#the-stand-ins">The stand-ins</a><a href="#poke-it">Poke it</a><a href="#bench-check">bench-check</a><a href="#lane-keeping">Lane keeping</a><a href="#what-the-bench-has-found-already">What the bench has found already</a><a href="#replacing-a-stand-in-with-the-real-thing">Replacing a stand-in with the real thing</a><a href="#limits">Limits</a><a href="#files">Files</a></nav>
+<div class="lead"><p>The real car's software, running on a laptop, with a stand-in for every piece of
+hardware. Use it to test anything between the drivers and the spine before the car, or
+the board, exists. It runs on a Mac or on Linux.</p></div>
+<section class="card"><h2 id="in-one-picture">In one picture</h2>
+<p><img alt="The bench's running graph" src="../img/bench-graph.svg" /></p>
+<p>Read it left to right: the stand-ins for the hardware, the sensors, perception,
+localization, the drivers and the HUD, the mux and ego, then the backend. <code>pixi run
+graph-picture</code> draws this from whatever is running.</p>
+</section>
+<section class="card"><h2 id="run-it">Run it</h2>
+<pre class="highlight"><code class="language-bash">pixi run build                          # once, and after every change
+pixi run bench                          # the car's software, with stand-ins
+pixi run bench-check                    # start it and test it: about 2 minutes
+pixi run -e ml bench perception:=true   # add YOLO and the stop sign
+pixi run bench-check --python-bridge     # the same check with the Python spine_bridge</code></pre>
+<p><code>spine_bridge</code> is the Rust one (<code>aav_spine_bridge</code>) since 23 Oct; <code>bridge:=python</code> runs
+<code>aav_spine</code>'s Python one. On 23 Oct both passed <code>bench-check</code>: scripted drive 5.02 m (Rust)
+and 5.03 m (Python), both e-stops from 1.11 m/s to a stop.</p>
+<p>While it runs, in more terminals: <code>pixi run graph</code> (rqt_graph), <code>pixi run rviz</code>,
+<code>pixi run keyboard --local</code> (you drive, at the keyboard priority), or <code>pixi run check bench</code>.
+The bench stays on this computer, like the sim: these terminals see it, other computers
+don't.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Default</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nav</code></td>
+<td><code>true</code></td>
+<td>Nav2: goals from RViz's 2D Goal Pose</td>
+</tr>
+<tr>
+<td><code>teleop</code></td>
+<td><code>false</code></td>
+<td>the joystick, if one is plugged in</td>
+</tr>
+<tr>
+<td><code>perception</code></td>
+<td><code>false</code></td>
+<td>YOLO and the stop-sign watcher. Needs <code>pixi run -e ml</code></td>
+</tr>
+<tr>
+<td><code>lane</code></td>
+<td><code>false</code></td>
+<td>lane keeping on a pretend straight lane: the car drives itself on <code>/drivers/ai/cmd_vel</code></td>
+</tr>
+<tr>
+<td><code>hud</code></td>
+<td><code>false</code></td>
+<td>the HUD's web server, on 127.0.0.1:5000</td>
+</tr>
+<tr>
+<td><code>arm</code></td>
+<td><code>true</code></td>
+<td>arms the spine 12 s after start-up</td>
+</tr>
+<tr>
+<td><code>rviz</code>, <code>foxglove</code></td>
+<td><code>false</code></td>
+<td>RViz; foxglove_bridge on 127.0.0.1:8765, with the camera's preview (<a href="foxglove.html">Watch from a laptop</a>)</td>
+</tr>
+<tr>
+<td><code>obstacle</code></td>
+<td><code>false</code></td>
+<td>a 1 m box in the lane 15 m ahead, which only the pretend radar sees: Nav2 stops for it</td>
+</tr>
+<tr>
+<td><code>camera_obstacles</code></td>
+<td><code>false</code></td>
+<td>the detectors' boxes into Nav2's local costmap (<a href="costmaps.html">Costmaps</a>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="whats-real-and-whats-a-stand-in">What's real, and what's a stand-in</h2>
+<p>Every stand-in uses the real device's topic, message type and frame, so nothing above it
+can tell the difference.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>On the bench</th>
+<th>On the car</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drivers, twist_mux, ego</td>
+<td>the car's own</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>Localization</td>
+<td>the car's own: both EKFs and <code>navsat_transform</code>, with GPS</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>The spine bridge</td>
+<td>the car's own: <code>spine_bridge</code> and its CAN frames</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>The CAN bus</td>
+<td>the topics <code>/can/tx</code> and <code>/can/rx</code></td>
+<td><code>ros2_socketcan</code> and <code>can0</code></td>
+</tr>
+<tr>
+<td>The spine board and actuators</td>
+<td><code>spine_sim</code>: the firmware's own logic on a model car</td>
+<td>the spine board, two Jrk G2s, the throttle DAC</td>
+</tr>
+<tr>
+<td>IMU</td>
+<td><code>mock_imu</code></td>
+<td><code>aav_imu_yahboom</code></td>
+</tr>
+<tr>
+<td>GPS</td>
+<td><code>mock_gps</code></td>
+<td><code>ublox_gps</code> (the default), <code>gps_nmea</code> or <code>ublox_dgnss</code>: <code>gps_driver:=</code> picks</td>
+</tr>
+<tr>
+<td>Camera</td>
+<td><code>mock_camera</code></td>
+<td><code>usb_cam</code></td>
+</tr>
+<tr>
+<td>Radar</td>
+<td><code>mock_radar</code></td>
+<td><code>ti_ros2_driver</code></td>
+</tr>
+<tr>
+<td>Battery</td>
+<td><code>mock_battery</code></td>
+<td><code>battery_monitor</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-stand-ins">The stand-ins</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stand-in</th>
+<th>Package</th>
+<th>Publishes</th>
+<th>How it works</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spine_sim</code></td>
+<td><code>aav_spine_sim</code> (Rust)</td>
+<td><code>/can/rx</code>, <code>/vehicle/bench/truth</code></td>
+<td>runs spine-core's <code>Spine::step</code> 100 times a second, as the board will, and drives a model car with the outputs</td>
+</tr>
+<tr>
+<td><code>mock_imu</code></td>
+<td><code>aav_bench</code></td>
+<td><code>/sensors/imu/data_raw</code>, <code>/sensors/imu/mag</code></td>
+<td>the model's turn rate and acceleration, plus noise and a small gyro drift</td>
+</tr>
+<tr>
+<td><code>mock_gps</code></td>
+<td><code>aav_bench</code></td>
+<td><code>/sensors/gps/fix</code></td>
+<td>where the antenna is, as latitude and longitude, with 0.5 m of noise, 5 times a second</td>
+</tr>
+<tr>
+<td><code>mock_camera</code></td>
+<td><code>aav_bench</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
+<td>draws a road, and each stop sign at its real size when it's in view</td>
+</tr>
+<tr>
+<td><code>mock_battery</code></td>
+<td><code>aav_bench</code></td>
+<td><code>/vehicle/battery</code></td>
+<td>a 48 V pack draining over two hours (a guess until Q8)</td>
+</tr>
+<tr>
+<td><code>mock_radar</code></td>
+<td><code>aav_bench</code></td>
+<td><code>/sensors/radar/points</code></td>
+<td>sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there</td>
+</tr>
+</tbody>
+</table></div>
+<p>The bench world is <code>aav_bench/config/bench.yaml</code>. The model car starts at the map's origin
+(the GPS datum), facing east. A stop sign stands 25 m ahead, 2 m to the right. With
+<code>obstacle:=true</code>, a 1 m box stands in the lane 15 m ahead; a test can move it, or take it
+away, with <code>mock_radar</code>'s parameters.</p>
+<p>Nav2 on the bench always has the radar in its local costmap, and <code>collision_monitor</code>
+between it and the mux, as on a car with a radar.</p>
+<h3 id="the-model-car">The model car</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>The model</th>
+<th>The number (a guess)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Steering motor</td>
+<td>turns the wheels toward the target at a fixed rate</td>
+<td>0.8 rad/s, stops at ±0.5 rad</td>
+</tr>
+<tr>
+<td>Throttle</td>
+<td>full throttle accelerates</td>
+<td>2 m/s²</td>
+</tr>
+<tr>
+<td>Brake</td>
+<td>full brake decelerates, and never reverses the car</td>
+<td>4 m/s²</td>
+</tr>
+<tr>
+<td>Drag</td>
+<td>rolling resistance and air</td>
+<td>0.1 per second</td>
+</tr>
+<tr>
+<td>Wheel encoder</td>
+<td>counts per metre</td>
+<td>100</td>
+</tr>
+<tr>
+<td>Movement</td>
+<td>the bicycle model, the same one ego uses</td>
+<td>wheelbase from <code>vehicle.yaml</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Measure the car (Q1-Q5), and these numbers can match it.</p>
+</section>
+<section class="card"><h2 id="poke-it">Poke it</h2>
+<p>In a terminal opened with <code>pixi shell</code>, then <code>source install/setup.zsh</code>
+(<code>setup.bash</code> on Linux):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>To test</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A scripted drive</td>
+<td><code>ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive "{target_speed: 1.0, acceleration: 0.5, deceleration: 1.0, hold_time: 5.0}"</code></td>
+</tr>
+<tr>
+<td>A Nav2 goal</td>
+<td>RViz's 2D Goal Pose, or the command in <a href="first-day.html">Your first day</a></td>
+</tr>
+<tr>
+<td>The e-stop</td>
+<td><code>pixi run estop</code>, then <code>pixi run estop-clear</code></td>
+</tr>
+<tr>
+<td>The hardware e-stop</td>
+<td><code>ros2 topic pub -t 3 /vehicle/bench/hw_estop std_msgs/msg/Bool "{data: true}"</code>, then <code>false</code></td>
+</tr>
+<tr>
+<td>A driver failing</td>
+<td><code>ros2 topic pub -t 3 /vehicle/bench/driver_faults std_msgs/msg/UInt16 "{data: 8}"</code> (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder)</td>
+</tr>
+<tr>
+<td>Arming again</td>
+<td><code>ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"</code></td>
+</tr>
+<tr>
+<td>The truth against the EKF</td>
+<td><code>ros2 topic echo /vehicle/bench/truth</code> and <code>ros2 topic echo /localization/odom/global</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>After an e-stop, a driver fault or a gap in commands, the spine latches. Arm it again, as
+on the car. <code>spine_bridge</code> refuses while the safety gate is shut (the output mux not
+<code>OPEN</code>), and says why: <code>ros2 topic echo /safety/output_mux/state</code> shows the gate.</p>
+</section>
+<section class="card"><h2 id="bench-check">bench-check</h2>
+<p><code>pixi run bench-check</code> starts the bench on a private ROS domain, on this computer only, so
+nothing on the network sees it. Then it runs these checks. Results on Ben's Mac, 10 October:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>What passes</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start-up</td>
+<td>the spine arms and stays armed; both EKFs run</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Graph against the contract</td>
+<td>every topic marked live on the bench has its publisher and type (<code>check_graph.py --profile bench</code>)</td>
+<td><span class="badge b-works">works</span> 0 failures</td>
+</tr>
+<tr>
+<td>Scripted drive</td>
+<td>4.5-8 m for a 6.5 m plan: the speed loop trails the plan by about a second</td>
+<td><span class="badge b-works">works</span> 4.9-6.2 m over the day's runs</td>
+</tr>
+<tr>
+<td>Global EKF against the truth</td>
+<td>under 1.5 m apart</td>
+<td><span class="badge b-works">works</span> 0.06 m</td>
+</tr>
+<tr>
+<td>Software e-stop</td>
+<td>1 m/s to a stop, and the spine reports it</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Hardware e-stop</td>
+<td>the same, from <code>/vehicle/bench/hw_estop</code></td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Stop sign (<code>pixi run -e ml bench-check --perception</code>)</td>
+<td>Nav2 drives 40 m east: the car stops before the sign, waits, and reaches the goal</td>
+<td><span class="badge b-works">works</span> locked 4.7 m before the sign, stopped, reached the goal</td>
+</tr>
+<tr>
+<td>Obstacle (<code>pixi run bench-check --obstacle</code>)</td>
+<td>a box as wide as the lane, 15 m ahead, Nav2 driving 30 m: <code>collision_monitor</code>'s stop zone stops the car before it; with the box gone, the car reaches the goal. If a busy computer latches the spine, the check arms it again</td>
+<td><span class="badge b-works">works</span> on <code>main</code>, 11 Oct: stood still 0.44 m before the box, from 0.95 m/s; reached the goal once the box was gone</td>
+</tr>
+</tbody>
+</table></div>
+<p>Run it after changing anything between the drivers and the spine.</p>
+</section>
+<section class="card"><h2 id="lane-keeping">Lane keeping</h2>
+<p>The whole lane-keeping loop runs on the bench. <code>mock_camera</code> draws the road from where the
+car really is, <code>lane_finder</code> finds the lines, and <code>control_interface</code> steers on
+<code>/drivers/ai/cmd_vel</code>.</p>
+<pre class="highlight"><code class="language-bash">pixi run bench lane:=true nav:=false start_y:=0.3   # from 0.3 m left of the centre
+pixi run bench-check --lane                         # the same, measured: 1 more minute</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Default</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lane</code></td>
+<td><code>false</code></td>
+<td><code>true</code>: lane keeping from the camera (<code>lane_finder</code>, <code>control_interface</code>). <code>fake</code>: <code>control_interface</code> on a pretend lane, without the camera</td>
+</tr>
+<tr>
+<td><code>start_y</code></td>
+<td><code>0.0</code></td>
+<td>m: start the car this far left of the road's centre (- = right)</td>
+</tr>
+<tr>
+<td><code>start_yaw</code></td>
+<td><code>0.0</code></td>
+<td>rad: start it turned this far left of the road. The EKFs still think it faces east</td>
+</tr>
+<tr>
+<td><code>bend_radius</code></td>
+<td>straight</td>
+<td>m: bend the road from 30 m on, + to the left, - to the right</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The road</strong> (<code>bench.yaml</code>): one lane 3.5 m wide, running east along y = 0, with
+  0.15 m lines and 0.5 m of tarmac outside them.</li>
+<li><strong>The picture follows the car:</strong> each pixel below the horizon is traced down to the
+  ground and coloured by where it lands on the road. About 4 ms a picture.</li>
+<li><strong>Nothing else drives:</strong> <code>nav:=false</code> leaves out Nav2, which outranks lane keeping.</li>
+</ul>
+<h3 id="what-bench-check-lane-checks">What <code>bench-check --lane</code> checks</h3>
+<p>After the usual checks, it starts the bench again, with lane keeping, the car 0.3 m left of
+the centre.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>What passes</th>
+<th>Result, Ben's Mac, 11 October: 6 runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start-up, graph against the contract</td>
+<td>as above, with lane keeping running</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Lane keeping</td>
+<td>back within 5 cm of the centre by 25 s of driving, and still there at 30 s; under 10 cm past the centre; both lines seen in 9 pictures of 10</td>
+<td><span class="badge b-works">works</span> 0.30 m to 0.00 m: within 5 cm after 5.6-6.7 s (about 5 m of road), 2 cm past the centre at most</td>
+</tr>
+<tr>
+<td>The finder against the truth</td>
+<td>(reported)</td>
+<td>0.8-1.2 cm out on average, both lines in every picture</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>A busy computer:</strong> a gap of 100 ms in the commands latches the spine, and the car
+  stops. The check arms it again, as a safety driver would, and only counts the time the
+  car moves. It says how many times that happened.</li>
+<li><strong>A bend</strong> isn't in the check. By hand, with <code>bend_radius:=60</code> (left, from 30 m on): the
+  car cuts in up to 8 cm as the bend comes into view, then runs 4-5 cm inside the centre
+  round it, both lines seen in every picture.</li>
+</ul>
+</section>
+<section class="card"><h2 id="what-the-bench-has-found-already">What the bench has found already</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Found</th>
+<th>Fixed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asked to stop, the spine's speed loop let the car coast under 0.2 m/s, so it crept on</td>
+<td>the speed loop brakes to a standstill</td>
+</tr>
+<tr>
+<td>The scripted driver stepped its plan by a fixed time; on a busy computer a 6.5 m drive went 22 m</td>
+<td>it measures the time that really passed</td>
+</tr>
+<tr>
+<td>The scripted driver used a whole CPU core while idle (an rclpy executor bug)</td>
+<td>one thread and a timer</td>
+</tr>
+<tr>
+<td>On a Mac, best-effort subscribers lost every camera image</td>
+<td>the detector subscribes reliably</td>
+</tr>
+<tr>
+<td>The HUD listened to a topic called <code>/true</code>: included launch files share their arguments</td>
+<td>the argument is <code>gps_topic</code> now</td>
+</tr>
+<tr>
+<td>The speed loop lags a ramp by about a second, and overshoots by 12%, with the model's numbers</td>
+<td><span class="badge b-needs-you">needs you</span> tune <code>kp</code> and <code>ki</code> on the car</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="replacing-a-stand-in-with-the-real-thing">Replacing a stand-in with the real thing</h2>
+<p>Start the real part, and stop the stand-in: same topic, same type, same frame.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stand-in</th>
+<th>The real part</th>
+<th>Started by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spine_sim</code></td>
+<td>the spine board, on CAN</td>
+<td><code>aav_spine spine.launch.py</code> (ros2_socketcan, Linux)</td>
+</tr>
+<tr>
+<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_radar</code></td>
+<td>the drivers</td>
+<td><code>aav_sensors sensors.launch.py</code></td>
+</tr>
+<tr>
+<td><code>mock_camera</code></td>
+<td><code>usb_cam</code></td>
+<td><code>aav_sensors cameras.launch.py</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="limits">Limits</h2>
+<ul>
+<li>The model car is simple: no wheel slip, no slopes, and an instant brake. Its numbers are
+  guesses.</li>
+<li>Everything runs in real time. A busy laptop can delay commands past the spine's 100 ms
+  watchdog, which then latches the spine, as it should.</li>
+<li>On Ctrl-C, some nodes print a traceback, or a stack trace from deep in ROS's messaging,
+  while they shut down. It's harmless.</li>
+<li>The pretend radar sees only the boxes, not the stop sign; the camera doesn't draw the
+  boxes.</li>
+<li>Parked, the EKFs' heading drifts with <code>mock_imu</code>'s gyro bias, a few degrees a minute
+  (10.5 degrees after about 2 minutes, 11 Oct), until the car drives and GPS corrects it.</li>
+</ul>
+</section>
+<section class="card"><h2 id="files">Files</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/aav_bringup/launch/bench.launch.py</code></td>
+<td>the profile</td>
+</tr>
+<tr>
+<td><code>src/bench/aav_spine_sim</code></td>
+<td><code>spine_sim</code>: <code>crates/bench-car</code> (the model and the loop, 16 tests, no ROS) and <code>crates/spine-sim</code> (the ROS node)</td>
+</tr>
+<tr>
+<td><code>src/bench/aav_bench</code></td>
+<td>the pretend sensors, their tests, and <code>config/bench.yaml</code></td>
+</tr>
+<tr>
+<td><code>tools/bench_check.py</code></td>
+<td><code>pixi run bench-check</code></td>
+</tr>
+<tr>
+<td><code>tools/graph_picture.py</code></td>
+<td><code>pixi run graph-picture</code>: the picture at the top</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="carla.html"><small>Previous</small>← CARLA</a>
+<a class="next" href="actuator-tests.html"><small>Next</small>Actuator tests →</a></nav>
+</main>
+<footer>Source: <code>docs/bench.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

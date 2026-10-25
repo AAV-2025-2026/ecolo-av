@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" font-family="Verdana, 'DejaVu Sans', Arial, Helvetica, sans-serif" font-size="14">
+  <title>The two EKFs: local for smooth driving, global for the true position</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C8102E"/>
+    </marker>
+    <style>
+      .stock { fill:#F2F2F2; stroke:#999; stroke-width:1.2; }
+      .key   { fill:#FFFFFF; stroke:#555; stroke-width:2; }
+      .band  { fill:#FDECEE; stroke:#C8102E; stroke-width:1.2; }
+      .t  { fill:#222; font-weight:bold; }
+      .s  { fill:#555; font-size:12px; }
+      .lbl { fill:#C8102E; font-size:12px; font-weight:bold; }
+      .layer { fill:#C8102E; font-size:12px; font-weight:bold; letter-spacing:1px; }
+      .plain { stroke:#555; stroke-width:1.5; fill:none; }
+      .line { stroke:#555; stroke-width:1.5; fill:none; marker-end:url(#arr); }
+      .redline { stroke:#C8102E; stroke-width:2.2; fill:none; marker-end:url(#arrRed); }
+      .dash { stroke:#999; stroke-width:1.3; fill:none; stroke-dasharray:4 4; marker-end:url(#arr); }
+    </style>
+  </defs>
+
+  <text class="layer" x="20" y="24">SENSORS</text>
+  <text class="layer" x="320" y="24">FILTERS (robot_localization)</text>
+  <text class="layer" x="640" y="24">WHAT THEY PUBLISH</text>
+
+  <!-- inputs -->
+  <rect class="stock" x="20" y="40" width="210" height="56" rx="8"/>
+  <text class="t" x="125" y="64" text-anchor="middle">wheel speed</text>
+  <text class="s" x="125" y="82" text-anchor="middle">/vehicle/odom</text>
+  <rect class="stock" x="20" y="130" width="210" height="56" rx="8"/>
+  <text class="t" x="125" y="154" text-anchor="middle">IMU (turn rate)</text>
+  <text class="s" x="125" y="172" text-anchor="middle">/sensors/imu/data</text>
+  <rect class="stock" x="20" y="310" width="210" height="56" rx="8"/>
+  <text class="t" x="125" y="334" text-anchor="middle">GPS</text>
+  <text class="s" x="125" y="352" text-anchor="middle">/sensors/gps/fix (lat, lon)</text>
+
+  <!-- wheels and IMU go to both filters -->
+  <path class="plain" d="M230,68 L262,68 M230,158 L262,158 M262,68 L262,225"/>
+  <path class="line" d="M262,85 L320,85"/>
+  <path class="line" d="M262,225 L320,225"/>
+
+  <!-- the filters -->
+  <rect class="key" x="320" y="50" width="250" height="70" rx="8"/>
+  <text class="t" x="445" y="78" text-anchor="middle">ekf_local</text>
+  <text class="s" x="445" y="98" text-anchor="middle">smooth · never jumps · drifts</text>
+  <rect class="key" x="320" y="190" width="250" height="70" rx="8"/>
+  <text class="t" x="445" y="218" text-anchor="middle">ekf_global</text>
+  <text class="s" x="445" y="238" text-anchor="middle">same inputs + GPS · stays true</text>
+  <rect class="stock" x="320" y="310" width="250" height="56" rx="8"/>
+  <text class="t" x="445" y="334" text-anchor="middle">navsat_transform</text>
+  <text class="s" x="445" y="352" text-anchor="middle">lat, lon → map x, y</text>
+
+  <path class="line" d="M230,338 L320,338"/>
+  <path class="redline" d="M420,310 L420,262"/>
+  <text class="lbl" x="412" y="291" text-anchor="end">/localization/gps/odom</text>
+  <path class="dash" d="M500,260 L500,308"/>
+  <text class="s" x="508" y="291">heading</text>
+
+  <!-- outputs -->
+  <rect class="band" x="640" y="50" width="240" height="70" rx="8"/>
+  <text class="t" x="760" y="72" text-anchor="middle">/localization/odom/local</text>
+  <text class="s" x="760" y="91" text-anchor="middle">TF odom → base_link</text>
+  <text class="s" x="760" y="109" text-anchor="middle">to steer (Nav2 controller)</text>
+  <rect class="band" x="640" y="190" width="240" height="70" rx="8"/>
+  <text class="t" x="760" y="212" text-anchor="middle">/localization/odom/global</text>
+  <text class="s" x="760" y="231" text-anchor="middle">TF map → odom</text>
+  <text class="s" x="760" y="249" text-anchor="middle">to plan (Nav2 planner)</text>
+  <path class="redline" d="M570,85 L638,85"/>
+  <path class="redline" d="M570,225 L638,225"/>
+
+  <!-- the TF chain -->
+  <text class="layer" x="20" y="400">THE TF CHAIN: EACH LINK HAS EXACTLY ONE OWNER</text>
+  <rect class="band" x="20" y="412" width="130" height="44" rx="8"/>
+  <text class="t" x="85" y="439" text-anchor="middle">map</text>
+  <rect class="band" x="260" y="412" width="130" height="44" rx="8"/>
+  <text class="t" x="325" y="439" text-anchor="middle">odom</text>
+  <rect class="band" x="500" y="412" width="150" height="44" rx="8"/>
+  <text class="t" x="575" y="439" text-anchor="middle">base_link</text>
+  <rect class="stock" x="730" y="412" width="150" height="44" rx="8"/>
+  <text class="s" x="805" y="438" text-anchor="middle">imu_link · gps_link</text>
+  <path class="redline" d="M150,434 L258,434"/>
+  <text class="lbl" x="204" y="426" text-anchor="middle">ekf_global</text>
+  <path class="redline" d="M390,434 L498,434"/>
+  <text class="lbl" x="444" y="426" text-anchor="middle">ekf_local</text>
+  <path class="line" d="M650,434 L728,434"/>
+  <text class="s" x="689" y="426" text-anchor="middle">URDF</text>
+</svg>

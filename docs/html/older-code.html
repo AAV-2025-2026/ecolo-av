@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The older code: what we have, and what&#x27;s missing · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/older-code.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The older code: what we have, and what&#x27;s missing</h1>
+<div class="meta">12 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a class="here" href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#the-2025-26-repos-one-by-one">The 2025-26 repos, one by one</a><a href="#the-2024-25-repos">The 2024-25 repos</a><a href="#what-no-repo-provides">What no repo provides</a><a href="#red-flags-in-the-old-repos">Red flags in the old repos</a><a href="#how-to-read-the-older-code-safely">How to read the older code safely</a><a href="#bringing-more-code-in">Bringing more code in</a></nav>
+<div class="lead"><p>The previous teams left 32 repos in two public GitHub orgs: <code>AAV-2025-2026</code> (the 2025-26
+team, 19 repos) and <code>Carleton-AAV-Capstone</code> (the 2024-25 team, 13 repos). This page says
+what each one is, what's already in <code>aav</code>, what's worth pulling in next, and what no
+repo provides. Surveyed on 10 October 2026, from the 14 clones in <code>~/Code/aav</code>.</p>
+<h3 id="earlier-teams-found-15-october">Earlier teams (found 15 October)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Team</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Carleton-AAV</code> (org, made Sept 2022)</td>
+<td>2022-23</td>
+<td>2 public repos: <code>Legacy-AAV-Control-Code</code> (the 2021-22 team's Arduino scooter code, "most likely no longer of use") and <code>AI-Development-Scripts</code> (Colab notebooks for vision models)</td>
+</tr>
+<tr>
+<td><code>KeshwarmenMulliah/Carleton_AAV_UWB_Localisation</code></td>
+<td>2022-23</td>
+<td>UWB radio localisation scripts, one person's repo</td>
+</tr>
+<tr>
+<td><code>CollinDang24/AAV-Wheel-Encoders</code></td>
+<td>2025-26</td>
+<td>a personal copy of the wheel encoder repo (6 Oct 2026)</td>
+</tr>
+</tbody>
+</table></div>
+<p>No 2023-24 org has been found. A repo with more documentation is said to exist: it may
+be private (an org's private repos don't show to non-members), or not on GitHub.</p></div>
+<section class="card"><h2 id="in-one-picture">In one picture</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Repos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Already in <code>aav</code> (all or part)</td>
+<td>AAV_cortex, Motor_Steering (its numbers), User-Interface, Wheel_Encoders, yahboom-IMU, Lane_Detection_ROS2, Nav_Radar; from 2024-25: Battery-Monitor-ROS, camera_ros2_ws, camera_Yolo_detection, cameras</td>
+</tr>
+<tr>
+<td>Replaced by stock ROS packages</td>
+<td>Navigation_PathPlanning_ObstacleAvoidance, Navigation-LocalPathGenerator-rf_cpp, Obstacle_Avoidance_logic, Odometry, Real-Time-OS, joy_teleop_ackerman</td>
+</tr>
+<tr>
+<td>Looked at, then dropped (15 Oct)</td>
+<td>Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69, if the HUD's routes ever need it); the HUD's place database (<code>pixi run get-hud-map</code> downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's <code>FinalRev</code> (below); AAV_dashboard (its README is now <code>docs/reference/2025-26-camera-system</code>)</td>
+</tr>
+<tr>
+<td>Empty</td>
+<td>Navigation-BehaviorPlanning</td>
+</tr>
+<tr>
+<td>Not surveyed yet</td>
+<td>three 2025-26 repos and seven 2024-25 repos (the tables below)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-2025-26-repos-one-by-one">The 2025-26 repos, one by one</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Repo</th>
+<th>What it is</th>
+<th>Language, hardware</th>
+<th>State</th>
+<th>In <code>aav</code>?</th>
+<th>Pull in next?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AAV_cortex</td>
+<td>the ESP32 actuator firmware (RC override, the Pi's UART), a Pico 2 status display, a Pi serial bridge</td>
+<td>C++ (PlatformIO, Pico SDK), Python ROS 2; ESP32, Pico 2</td>
+<td>working, on branch <code>6-pico2-aav-firmware</code></td>
+<td>partly: <code>firmware/legacy/</code>, and its UART protocol in <code>aav_legacy</code></td>
+<td>the Pi-side display script, if the status display stays</td>
+</tr>
+<tr>
+<td>Motor-Control</td>
+<td>the 2024-25 micro-ROS motor firmware: a fork</td>
+<td>C++, micro-ROS; ESP32</td>
+<td>inactive since 2025</td>
+<td>no</td>
+<td>no. What it taught us: branch <code>FinalRev</code> (4166ec0) reads the steering's position from the <strong>steering Jrk G2's own feedback</strong>, <code>jrk_steer.getScaledFeedback()</code>, 0-4095 mapped to -1..+1 (<code>src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187</code>). So the Jrk may already have a position sensor wired (TEAM-TODO B6, audit D6, D7)</td>
+</tr>
+<tr>
+<td>Motor_Steering</td>
+<td>a Pi speed controller and UART bridge, an ESP32 add-on, sims, MATLAB steering geometry</td>
+<td>Python ROS 2, C++, MATLAB; Pi 5, ESP32</td>
+<td>prototype</td>
+<td>partly: its geometry in <code>docs/reference/</code> and <code>vehicle.yaml</code></td>
+<td>its 250 ms link timeout idea, for today's ESP32 (but braking, not releasing)</td>
+</tr>
+<tr>
+<td>Navigation-BehaviorPlanning</td>
+<td>a README title</td>
+<td>none</td>
+<td>empty</td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Navigation-LocalPathGenerator</td>
+<td>follows an OSRM route from GPS: the current step, a local path, a speed</td>
+<td>Python ROS 2</td>
+<td>prototype; nothing feeds it</td>
+<td>no</td>
+<td>maybe its OSRM parser, to turn the HUD's route into Nav2 GPS waypoints</td>
+</tr>
+<tr>
+<td>Navigation-LocalPathGenerator-rf_cpp</td>
+<td>a C++ rewrite of the above</td>
+<td>C++17</td>
+<td>prototype</td>
+<td>no</td>
+<td>no: Nav2 does this</td>
+</tr>
+<tr>
+<td>Navigation_PathPlanning_ObstacleAvoidance</td>
+<td>a GPS-goal grid planner (A<em>, D</em> Lite) with lidar obstacles</td>
+<td>C++, PCL; Orin</td>
+<td>prototype, with a crash bug</td>
+<td>no</td>
+<td>no: Nav2 does this</td>
+</tr>
+<tr>
+<td>Obstacle_Avoidance_logic</td>
+<td>a lidar costmap and braking-distance e-stop</td>
+<td>one C++ file</td>
+<td>can't build: no package files</td>
+<td>no</td>
+<td>no: Nav2's obstacle layer and collision monitor</td>
+</tr>
+<tr>
+<td>Odometry</td>
+<td>merges a SLAM pose and the IMU into <code>/odom</code></td>
+<td>Python ROS 2</td>
+<td>prototype; nothing publishes its input</td>
+<td>no</td>
+<td>no: robot_localization does this</td>
+</tr>
+<tr>
+<td>Real-Time-OS</td>
+<td>a QNX layer: command picking, a SQLite logger, body control, a QNX image for a Pi 4</td>
+<td>C, C++; Pi 4 on QNX 8</td>
+<td>prototype: its own README lists the watchdog, e-stop and CAN as not done</td>
+<td>no</td>
+<td>no: twist_mux, the spine's watchdog and <code>ros2 bag</code> cover it ("No QNX" is Tentative, Q23)</td>
+</tr>
+<tr>
+<td>User-Interface</td>
+<td>the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search</td>
+<td>Dart/Flutter, Python ROS 2; the UI Pi</td>
+<td>a working demo, on mock data</td>
+<td>partly: <code>hud/</code>, <code>src/hud/maincar</code></td>
+<td><strong>its place database <code>ottawa.db</code> (51 MB)</strong>: the ported app still needs it</td>
+</tr>
+<tr>
+<td>Wheel_Encoders</td>
+<td>a Pico 2 that counts wheel spokes and sends them over Ethernet</td>
+<td>Arduino C++; Pico 2, W5500</td>
+<td>working demo</td>
+<td>yes: rewritten in Rust (<code>firmware/spine/boards/wheel-encoder-pico2</code>, 15 Oct), and <code>aav_legacy</code></td>
+<td>its 3D-printed case files</td>
+</tr>
+<tr>
+<td>joy_teleop_ackerman</td>
+<td>joystick to Ackermann commands, with deadman buttons</td>
+<td>Python ROS 2</td>
+<td>working</td>
+<td>no: stock teleop replaced it; its button map lives on in <code>aav_teleop</code></td>
+<td>no</td>
+</tr>
+<tr>
+<td>yahboom-IMU</td>
+<td>the Yahboom IMU driver</td>
+<td>C++ ROS 2; Pi 4</td>
+<td>working</td>
+<td>yes, rewritten in Rust: <code>src/sensors/aav_imu_yahboom</code> (the C++ copy went on 11 Oct)</td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+<p>The five not cloned here:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Repo</th>
+<th>What GitHub says</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lane_Detection_ROS2</td>
+<td>none</td>
+<td>the controller is in <code>aav</code>: <code>src/perception/aav_lane_geometry</code>, a driver on <code>/drivers/ai/cmd_vel</code>. The lane finder isn't in the repo</td>
+</tr>
+<tr>
+<td>Nav_Radar</td>
+<td>none</td>
+<td>in <code>aav</code>: <code>ti_ros2_driver</code>; the clustering, rewritten in Rust, as <code>aav_radar_clusters</code></td>
+</tr>
+<tr>
+<td>AAV_dashboard</td>
+<td>the <strong>camera system's README</strong> (main @ 5a26e15): CSI cameras → MediaMTX RTSP on the camera Pis (port 8554) → the Jetson's <code>camera_decode</code> (NVDEC) → <code>/camera/cam1/image_raw</code>, <code>cam2</code> → YOLOv8 on TensorRT → <code>/aav/stop_sign_*</code>; domain 10. The code itself is only on the Jetson, <code>~/Desktop/aav/Camera</code>. Plus a small web dashboard (ports 8080, 9090)</td>
+<td>the README: <code>docs/reference/2025-26-camera-system</code> (15 Oct). The code: copy on Friday</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>an older copy of the wheel-encoder Pico program, <code>Wheel_Encoders.cpp</code> (master @ a520646)</td>
+<td>no: Wheel_Encoders is the newer one, now in Rust</td>
+</tr>
+<tr>
+<td>Navigation-GlobalMapRouter---Abandoned---</td>
+<td>none</td>
+<td>abandoned</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-2024-25-repos">The 2024-25 repos</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Repo</th>
+<th>What GitHub says</th>
+<th>In <code>aav</code>?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GNSS</td>
+<td>GNSS code for the car (u-blox, with RTK corrections)</td>
+<td>surveyed in depth; replaced by the stock u-blox driver</td>
+</tr>
+<tr>
+<td>Battery-Monitor-ROS</td>
+<td>battery monitor ROS code</td>
+<td>yes: <code>src/sensors/battery_monitor</code></td>
+</tr>
+<tr>
+<td>camera_ros2_ws</td>
+<td>Python</td>
+<td>yes: rewritten as <code>src/perception/aav_detector</code></td>
+</tr>
+<tr>
+<td>camera_Yolo_detection</td>
+<td>Python, 72 MB</td>
+<td>2 files: <code>aav_detector/training</code>. The trained <code>best.pt</code> isn't in it</td>
+</tr>
+<tr>
+<td>cameras</td>
+<td>publishes camera feeds to ROS 2</td>
+<td>its 4 calibration files: <code>aav_sensors/config/cameras</code>, used by <code>cameras.launch.py</code></td>
+</tr>
+<tr>
+<td>AutoCtrl_uRos</td>
+<td>C++</td>
+<td>Motor-Control is a fork of it</td>
+</tr>
+<tr>
+<td>emergency-stop</td>
+<td>a browser e-stop</td>
+<td>not surveyed: it may answer Q6</td>
+</tr>
+<tr>
+<td>Braking</td>
+<td>C++</td>
+<td>not surveyed</td>
+</tr>
+<tr>
+<td>Simulation</td>
+<td>Python (CARLA work)</td>
+<td>not surveyed</td>
+</tr>
+<tr>
+<td>Power-Management-Documentation-2024-25</td>
+<td>power documentation</td>
+<td>not surveyed: it may answer Q8</td>
+</tr>
+<tr>
+<td>AAV_board</td>
+<td>none</td>
+<td>not surveyed</td>
+</tr>
+<tr>
+<td>AAV_ROS_Interfaces</td>
+<td>common ROS interfaces</td>
+<td>not surveyed</td>
+</tr>
+<tr>
+<td>ROS2_test</td>
+<td>a test repo</td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-no-repo-provides">What no repo provides</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Missing</th>
+<th>Where <code>aav</code> stands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensors</td>
+<td>a GPS driver that anything runs; a lidar driver; camera streaming and the stop-sign detector (both only on the car's Orin); steering feedback (only 2024-25's <code>FinalRev</code>); a fine enough wheel speed; magnetometer calibration</td>
+<td>GPS: the stock driver, model unknown (Q18). Lidar and cameras: next year</td>
+</tr>
+<tr>
+<td>Localization</td>
+<td>a URDF, TF, a working estimator</td>
+<td><span class="badge b-works">works</span> the EKFs and <code>navsat_transform</code>, in sim</td>
+</tr>
+<tr>
+<td>Navigation</td>
+<td>any planner whose output reached the motors; the HUD's route into GPS waypoints; lidar or radar costmap inputs</td>
+<td><span class="badge b-works">works</span> Nav2 in Gazebo</td>
+</tr>
+<tr>
+<td>Drivers</td>
+<td>anything beyond RC and the joystick</td>
+<td><span class="badge b-works">works</span> scripted, keyboard; the joystick is <span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>Ego</td>
+<td>a command layer with limits and a timeout; calibrations from radians to the actuators' counts</td>
+<td><span class="badge b-works">works</span> ego; the calibrations are TODO</td>
+</tr>
+<tr>
+<td>The spine</td>
+<td>any CAN code; a watchdog that brakes; feedback frames; the hardware e-stop in code</td>
+<td><span class="badge b-works">works</span> the logic (<code>spine-core</code>); the board code is <span class="badge b-missing">missing</span></td>
+</tr>
+<tr>
+<td>HUD</td>
+<td>real data: it only ever showed mock data</td>
+<td><span class="badge b-untested">untested</span> its port is still to do</td>
+</tr>
+<tr>
+<td>Simulation</td>
+<td>a whole-car simulator</td>
+<td><span class="badge b-works">works</span> Gazebo</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Back up the car before any reflash</p>
+<p>Some work exists only on the car's computers: the stop-sign detector, <code>camera_decode</code>,
+the three nodes in the 2025-26 team's rqt_graph photo, and the OSRM map data. Image the
+Orin and the Pis first.</p>
+</div>
+</section>
+<section class="card"><h2 id="red-flags-in-the-old-repos">Red flags in the old repos</h2>
+<p>The repos are public. Deleting a file doesn't remove it from the history.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where (no values here)</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A GitHub personal access token</td>
+<td>User-Interface: <code>Project_Documents/UI_notes.txt</code></td>
+<td>revoke it (Q34)</td>
+</tr>
+<tr>
+<td>Two Firebase service-account private keys</td>
+<td>User-Interface: 7 JSON files under <code>Database/</code> and <code>MainCar/</code></td>
+<td>revoke them (Q34)</td>
+</tr>
+<tr>
+<td>The team WiFi password</td>
+<td>AAV_cortex and Motor-Control: several firmware files</td>
+<td>change it (Q34)</td>
+</tr>
+<tr>
+<td>Build output and binaries</td>
+<td>User-Interface (<code>node_modules</code>, 24,438 files), AAV_cortex, Real-Time-OS (a 33 MB QNX image), Motor_Steering, joy_teleop_ackerman</td>
+<td>don't copy them into <code>aav</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>aav</code> and its history contain none of these secrets.</p>
+</section>
+<section class="card"><h2 id="how-to-read-the-older-code-safely">How to read the older code safely</h2>
+<p>The "In <code>aav</code>?" columns above already map each repo to its module here; each module's
+card is in <a href="modules.html">Every module</a>. To read the originals:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Do</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read the clones next to <code>aav</code> (<code>~/Code/aav/</code> on Ben's Mac, <code>/home/ben/aav/</code> on oirp-spss)</td>
+<td>they are read-only copies: never build, fix or commit in them</td>
+</tr>
+<tr>
+<td>Search only them: <code>grep -r --exclude-dir=aav --exclude-dir=aav-linux-build-output &lt;word&gt; .</code> from <code>~/Code/aav</code></td>
+<td>so the search skips our own code and the build output</td>
+</tr>
+<tr>
+<td>Check the branch first: <code>git -C &lt;repo&gt; branch -a</code></td>
+<td>the working code is often not on <code>main</code> (AAV_cortex: <code>6-pico2-aav-firmware</code>; Motor-Control: <code>FinalRev</code>)</td>
+</tr>
+<tr>
+<td>Start from the <code>PROVENANCE.md</code> of the module that came from it</td>
+<td>it names the repo, branch and commit we copied, and every change since</td>
+</tr>
+<tr>
+<td>When a search hits a token, key or password, close the file</td>
+<td>write down only where it is and what kind (the "Red flags" table). Never paste it into notes, chat or an AI app</td>
+</tr>
+<tr>
+<td>Don't run the old scripts or flash the old firmware from the clones</td>
+<td>some reach the car's WiFi or flash a board; the car's own copies are what Friday's <a href="audit-friday.html">audit</a> records</td>
+</tr>
+<tr>
+<td>Expect the old topic names (<code>/cmd_vel</code>, <code>/gps/fix</code>, ...)</td>
+<td>they're Humble-era; ours start with their area (<a href="naming.html">Topic areas</a>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="bringing-more-code-in">Bringing more code in</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Copy only source, never build output</td>
+<td>the old repos committed <code>build/</code>, <code>install/</code>, <code>log/</code> and <code>node_modules</code></td>
+</tr>
+<tr>
+<td>Give it a <code>PROVENANCE.md</code>: the repo, branch and commit, and every change since</td>
+<td>so anyone can trace it back</td>
+</tr>
+<tr>
+<td>Prefer a stock ROS package when one does the job</td>
+<td>most of the old bugs were in home-made versions of stock packages</td>
+</tr>
+<tr>
+<td>Big data (like the 51 MB <code>ottawa.db</code>) gets a download step, not git</td>
+<td>GitHub warns at 50 MB and refuses files over 100 MB</td>
+</tr>
+<tr>
+<td>Check for secrets before the first commit</td>
+<td>the old repos leaked three kinds</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="camera-calibration.html"><small>Previous</small>← Camera calibration</a>
+<a class="next" href="ros2.html"><small>Next</small>ROS 2 →</a></nav>
+</main>
+<footer>Source: <code>docs/older-code.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

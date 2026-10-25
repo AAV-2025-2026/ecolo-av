@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghost obstacles: a pretend person for Nav2 · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/ghost-obstacles.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Ghost obstacles: a pretend person for Nav2</h1>
+<div class="meta">4 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a class="here" href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-it-fits">How it fits</a><a href="#why-it-cant-hide-a-real-obstacle">Why it can&#x27;t hide a real obstacle</a><a href="#the-commands">The commands</a><a href="#its-settings">Its settings</a><a href="#on-the-real-car">On the real car</a><a href="#the-test-in-gazebo">The test in Gazebo</a></nav>
+<div class="lead"><p>A ghost is a person (or a post) that only Nav2 can see. Use it to test stopping on the
+real car, with nothing real to hit. PLAN.md item S4, built 16 Oct.</p>
+<div class="admonition note">
+<p class="admonition-title">The short version</p>
+<ul>
+<li>Start with <code>ghost:=true</code>: <code>pixi run sim ghost:=true</code>, or <code>pixi run car &lt;machine&gt;
+  ghost:=true</code> on the computer that runs Nav2. Off by default.</li>
+<li>Place it: <code>pixi run ghost ahead 10</code> (10 m past the front bumper). Take it away:
+  <code>pixi run ghost off</code>. In Gazebo, add <code>--local</code>: <code>pixi run ghost --local ahead 10</code>.</li>
+<li>It <strong>only adds</strong>. It never clears or hides what the radar or the lidar sees.</li>
+<li>It only stops <strong>Nav2</strong>. The joystick, the keyboard and the tests drive through it.</li>
+</ul>
+</div></div>
+<section class="card"><h2 id="how-it-fits">How it fits</h2>
+<pre class="highlight"><code class="language-text"> pixi run ghost ahead 10
+        │ (parameters)
+        ▼
+ ghost_obstacle ──/safety/ghost/scan──┬──► local costmap: its own ghost_layer
+   (aav_ghost)     (LaserScan, 10 Hz) └──► collision_monitor: its own ghost source
+        │                                      │ stop zone
+        └──/safety/ghost/marker──► RViz        ▼
+                                          /drivers/nav/cmd_vel = 0</code></pre>
+<p>The scan is what a perfect 2D lidar at <code>base_link</code> would see of the ghost: its near side,
+and <code>inf</code> everywhere else. With no ghost, the scan is all <code>inf</code>.</p>
+</section>
+<section class="card"><h2 id="why-it-cant-hide-a-real-obstacle">Why it can't hide a real obstacle</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>The ghost's own</th>
+<th>So</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local costmap</td>
+<td><code>ghost_layer</code>, a layer of its own</td>
+<td>its clearing wipes only old ghosts, never the radar's or the lidar's marks</td>
+</tr>
+<tr>
+<td>collision_monitor</td>
+<td><code>ghost</code>, a source of its own</td>
+<td>it adds points to the stop zone; the radar's and the lidar's still count</td>
+</tr>
+<tr>
+<td>Global costmap</td>
+<td>nothing</td>
+<td>the planner plans as before; the controller and the stop zone react</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-commands">The commands</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run ghost ahead 10</code></td>
+<td>a ghost 10 m past the front bumper, on the car's heading, where the car is <strong>now</strong>. Then it stays put</td>
+</tr>
+<tr>
+<td><code>pixi run ghost at 20 0</code></td>
+<td>a ghost at map x 20, y 0 (m)</td>
+</tr>
+<tr>
+<td><code>pixi run ghost size 0.3 1.2</code></td>
+<td>a post instead of a person (width, height in m)</td>
+</tr>
+<tr>
+<td><code>pixi run ghost on</code></td>
+<td>the last ghost again (<code>ahead</code>: in front of the car again)</td>
+</tr>
+<tr>
+<td><code>pixi run ghost off</code></td>
+<td>take it away</td>
+</tr>
+<tr>
+<td><code>pixi run ghost --local ...</code></td>
+<td>the same, for Gazebo or the bench on this computer</td>
+</tr>
+</tbody>
+</table></div>
+<p>The same with ROS's own tools: <code>ros2 param set /ghost_obstacle enabled true</code>. Use
+<code>10.0</code>, not <code>10</code>, for a number: ROS refuses an integer for a decimal parameter.</p>
+</section>
+<section class="card"><h2 id="its-settings">Its settings</h2>
+<p><code>src/safety/aav_ghost/config/ghost_obstacle.yaml</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Default</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>enabled</code></td>
+<td><code>false</code></td>
+<td>no ghost until someone asks</td>
+</tr>
+<tr>
+<td><code>ahead</code></td>
+<td><code>10.0</code> m</td>
+<td>from the front bumper to the ghost's near edge. Negative: use <code>x</code>, <code>y</code></td>
+</tr>
+<tr>
+<td><code>x</code>, <code>y</code></td>
+<td><code>0.0</code> m</td>
+<td>where, in <code>frame</code>, when <code>ahead</code> is negative</td>
+</tr>
+<tr>
+<td><code>frame</code></td>
+<td><code>map</code></td>
+<td>the ghost stands still in this frame</td>
+</tr>
+<tr>
+<td><code>width</code>, <code>height</code></td>
+<td><code>0.5</code>, <code>1.7</code> m</td>
+<td>a person</td>
+</tr>
+<tr>
+<td><code>rate_hz</code></td>
+<td><code>10.0</code></td>
+<td>the scan's rate</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="on-the-real-car">On the real car</h2>
+<ol>
+<li>Start the car with <code>ghost:=true</code> on the machine that runs Nav2.</li>
+<li>Clear lot, wheels on the ground, the safety driver holding the joystick.</li>
+<li><code>pixi run ghost ahead 15</code>, then send Nav2 a goal past it.</li>
+<li>The car must stop 0-2 m before the ghost. <code>pixi run ghost off</code>: it drives on.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">A ghost is not a safety test of the sensors</p>
+<p>It tests Nav2's reaction: the costmap, the controller, collision_monitor, ego, the
+brakes. It doesn't test whether the radar or the lidar would have <strong>seen</strong> a person.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">A silent ghost stops Nav2</p>
+<p>With <code>ghost:=true</code>, collision_monitor expects the scan. If <code>ghost_obstacle</code> dies, Nav2
+stops after 1 s, like a silent radar. That's on purpose: fail-safe.</p>
+</div>
+</section>
+<section class="card"><h2 id="the-test-in-gazebo">The test in Gazebo</h2>
+<p><code>pixi run sim-check --ghost</code> (<code>READ-ME-TESTS.md</code> 1.15): a second Gazebo
+run with <code>ghost:=true</code>. A ghost 15 m ahead; Nav2 drives 30 m.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Must</th>
+<th>How it's measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>stop 0-2 m before the ghost</td>
+<td>the bumper to the ghost, in the ghost's own scan: what Nav2 sees</td>
+</tr>
+<tr>
+<td>who stopped it</td>
+<td>the stop zone (<code>/safety/collision_monitor/state</code>), or the controller's own collision check on the costmap, which can stop it first. Either counts</td>
+</tr>
+<tr>
+<td>the local costmap marks it</td>
+<td>99 or more of 100 there</td>
+</tr>
+<tr>
+<td>drive on once it's off</td>
+<td>Nav2's goal reached, past where the ghost stood</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="vehicle-model.html"><small>Previous</small>← The car as a linear model</a>
+<a class="next" href="sources-and-targets.html"><small>Next</small>Sources and targets →</a></nav>
+</main>
+<footer>Source: <code>docs/ghost-obstacles.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

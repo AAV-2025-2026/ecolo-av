@@ -1,0 +1,22 @@
+# ego: the limits every driver gets, whatever it asks for. wheelbase, max_steering_angle,
+# max_reverse_speed and the body (mass, track, cg_height, tyre_grip, full_throttle_accel,
+# full_brake_decel) come from aav_description/config/vehicle.yaml (the launch file passes
+# them), so they are not set here.
+#
+# Start slow. Raise max_speed per test plan, not in passing.
+ego:
+  ros__parameters:
+    max_speed: 1.0              # m/s forward
+    max_acceleration: 1.0       # m/s^2
+    max_deceleration: 2.0       # m/s^2 (also how hard it stops when commands go stale)
+    max_jerk: 2.0               # m/s^3: speeding up, the push builds over 0.5 s and eases
+                                # off before the set speed. Braking: never softened
+    max_steering_rate: 0.6      # rad/s at the virtual centre wheel
+    min_speed_for_steering: 0.05
+    payload: 0.0                # kg aboard: people, cargo. ros2 param set /ego payload 80
+    max_lateral_accel: 2.0      # m/s^2 sideways in a turn: ego slows the car to keep under it
+                                # (and under half of what slides or tips it: aav_ego dynamics.py)
+    cmd_timeout: 0.3            # s since the last /control/cmd_vel ARRIVED, then stop
+    rate_hz: 50.0
+    frame_id: base_link
+    use_stamped: true

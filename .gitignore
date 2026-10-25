@@ -1,21 +1,116 @@
-# Pixi environment (recreated by `pixi install`)
-.pixi/
+# What git should never track: build output, downloads, local settings, secrets.
+# Rule of thumb: if a command can make it again, it doesn't go in git.
 
-# colcon output (run colcon from the repo root)
+# colcon build output (machine-specific; never commit)
 /build/
 /install/
 /log/
 
-# Cargo output
-target/
-
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.eggs/
+.coverage
+htmlcov/
 
-# Secrets: never commit credentials. Keep them next to the repo, not in it.
+# Rust (Cargo.lock IS committed: the firmware is a binary)
+target/
+
+# C and C++ with CMake: the firmware, the Pico SDK boards, examples
+**/CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+compile_commands.json
+*.o
+*.obj
+# ...but Gazebo's meshes are Wavefront OBJ files: text, made by tools/make_stop_sign.py
+!src/backends/aav_gazebo/models/**/*.obj
+
+# Firmware: PlatformIO, Arduino and Pico SDK build folders, and what they make
+.pio/
+firmware/**/build/
+*.elf
+*.uf2
+firmware/**/*.map
+firmware/**/*.hex
+firmware/**/*.bin
+
+# The HUD: Flutter and Dart (hud/flutter_pi/.gitignore has the full list)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/flutter/ephemeral/
+**/Flutter/ephemeral/
+hud/**/build/
+
+# Node, for any web or JavaScript UI
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# The USB kit for the car's computers (pixi run car-kit): made again in a minute
+/car-kit/
+# What the laptop takes to the car (pixi run car-day-build): the ESP32 firmware, its logs
+/car-day/
+
+# Drives recorded with tools/record.sh, and logs
+/bags/
+*.log
+
+# Downloaded third-party source (vendor/README.md says what and how): only the list
+# of repositories is committed; `pixi run vendor` downloads the rest.
+/vendor/*
+!/vendor/README.md
+!/vendor/*.repos
+!/vendor/COLCON_IGNORE
+
+# Model files, downloaded or trained (models/README.md says which): only the README is
+# committed; `pixi run get-models` downloads the stock model.
+/models/*
+!/models/README.md
+# The place database (51 MB), the Flutter app's copy: `pixi run get-hud-map` downloads it.
+/hud/flutter_pi/assets/databases/
+# The map window's street map (40 MB) and the tool that cuts it (`pixi run get-street-map`),
+# and its place database (`pixi run get-hud-map`).
+/maps/
+
+# Secrets: copy the .example file and fill it in locally
+secrets.h
 .env
+.env.*
+!.env.example
+
+# Local environments and editors
+.venv/
+venv/
+.vscode/
+.idea/
+.cache/
+*.swp
+*~
+.DS_Store
+._*
+Thumbs.db
+
+# Pixi environments (pixi.lock IS committed)
+.pixi/*
+!.pixi/config.toml
+
+# The PDF is rebuilt on demand (pixi run docs); the HTML pages are committed.
+/docs/html/aav-docs.pdf
+/docs/html/aav-release-notes.pdf
+
+# Ben's full-size car photos (62 MB of HEIC): small copies are in docs/img/car/
+/images/
+
+# Claude Code helpers' worktrees and local settings
+/.claude/
+
+# Secrets: never commit credentials (from ecolo-av's first .gitignore)
 *.env
 *-adminsdk-*.json
 secrets/

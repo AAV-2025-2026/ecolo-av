@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Mac: run it, and drive the car · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/mac.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Your Mac: run it, and drive the car</h1>
+<div class="meta">18 min read · 12 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a class="here" href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#ml-on-your-mac-against-the-bench">ML on your Mac, against the bench</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#macos-hides-one-setting-from-ros">macOS hides one setting from ROS</a><a href="#three-more-things-the-bench-found-on-a-mac">Three more things the bench found on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
+<div class="lead"><p>Three ways to use a Mac with the car. Use Pixi to run ROS on the Mac itself, and to
+drive. Lichtblick only watches, but needs no setup. Ubuntu in a VM is the fallback.</p></div>
+<section class="card"><h2 id="three-ways">Three ways</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Way</th>
+<th>Gives you</th>
+<th>Setup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. ROS on the Mac, with Pixi</td>
+<td>everything: keyboard driving, e-stop, RViz, rqt, the turtle, Gazebo</td>
+<td>about 30 minutes and 7 GB, once</td>
+</tr>
+<tr>
+<td>2. Lichtblick or Foxglove, no ROS on the Mac</td>
+<td>watching: 3D view, plots, topics, logs</td>
+<td>install an app</td>
+</tr>
+<tr>
+<td>3. Ubuntu in a VM (UTM)</td>
+<td>the same setup as the car's computers</td>
+<td>about an hour; the 3D view is slower</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="set-up-the-mac-once">Set up the Mac (once)</h2>
+<p><strong>1. Apple's command-line tools:</strong> git and the C++ compiler. If they're installed
+already, it says so.</p>
+<pre class="highlight"><code class="language-bash">xcode-select --install</code></pre>
+<p><strong>2. Pixi</strong>, then open a new terminal:</p>
+<pre class="highlight"><code class="language-bash">curl -fsSL https://pixi.sh/install.sh | sh</code></pre>
+<p><strong>3. The code.</strong> Clone it from GitHub. You need access to <code>zander1976/aav</code> (ask Ben),
+and an SSH key on your GitHub account:</p>
+<pre class="highlight"><code class="language-bash">git clone git@github.com:zander1976/aav.git ~/aav
+cd ~/aav</code></pre>
+<p>Later, <code>git pull</code> in <code>~/aav</code> fetches newer work.</p>
+<p><strong>4. Install ROS and build:</strong></p>
+<pre class="highlight"><code class="language-bash">pixi install       # ROS 2 Jazzy: about 7 GB, the first time only
+pixi run build     # our packages
+pixi install -e gst   # GStreamer (small): the camera stream's fast decoder, VideoToolbox</code></pre>
+<p>Without the last one, the camera stream still works, with ffmpeg: 135 ms slower, and it
+says so (<a href="camera-pipeline.html#decoding-on-a-mac">camera pipeline</a>).</p>
+<p><strong>5. Check it:</strong> <code>pixi run turtle</code> in one terminal and <code>pixi run keyboard</code> in another.
+Hold <code>i</code> to drive.</p>
+</section>
+<section class="card"><h2 id="join-the-cars-network">Join the car's network</h2>
+<div class="admonition warning">
+<p class="admonition-title">The car must run Jazzy too</p>
+<p>Today's car runs the 2025-26 software on ROS 2 Humble, and Humble and Jazzy don't
+mix. Put this stack on the car first: <a href="platforms.html">Platforms</a> shows how, with or
+without a reflash.</p>
+</div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do this</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Join the car's own WiFi router</td>
+<td>campus WiFi blocks the traffic ROS uses to find other computers</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>export ROS_DOMAIN_ID=42</code> in each terminal</td>
+<td>ROS only talks within one domain. Ours is 42, so it never mixes with the 2025-26 software (<code>pixi run net-map</code> shows which domains theirs uses)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Leave the middleware alone</td>
+<td>Pixi sets Cyclone DDS on every computer, the car's too (Ben, 23 Oct). Mixed middlewares may not talk</td>
+</tr>
+<tr>
+<td>4</td>
+<td>When macOS asks whether <code>python3</code> or <code>rviz2</code> may accept incoming connections, click Allow</td>
+<td>otherwise the firewall blocks the car's replies</td>
+</tr>
+<tr>
+<td>4b</td>
+<td>System Settings → Privacy &amp; Security → <strong>Local Network</strong>: turn on your terminal app (Terminal, iTerm, VS Code)</td>
+<td>since macOS 15, apps need this to reach other machines on the network. macOS asks once; if you said no, nothing on the car answers</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Run <code>pixi run doctor</code></td>
+<td>it checks steps 1–4, and whether it can see the car, and says what to fix</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="see-whats-on-the-network-pixi-run-net-map">See what's on the network: <code>pixi run net-map</code></h3>
+<p>It lists every machine on the network you've joined: IP, name, MAC, a guess at the maker
+(Raspberry Pi, NVIDIA, Espressif = an ESP32), open ports (SSH, web, Foxglove), and the
+<strong>ROS domains each machine is talking in</strong>. It needs no ROS and no login, and changes
+nothing: it pings, knocks on a few ports, and listens.</p>
+<pre class="highlight"><code class="language-bash">pixi run net-map                       # about 25 s
+pixi run net-map --listen 30 --out ~/net-map.md</code></pre>
+<ul>
+<li>It hears <strong>Humble and Jazzy alike</strong>: it reads the raw discovery packets, not ROS. So it
+  shows which domain the 2025-26 software uses without logging in to anything.</li>
+<li>"No ROS discovery heard" with ROS running means multicast isn't reaching the Mac:
+  WiFi routers often drop it. Try Ethernet, or <code>ROS_STATIC_PEERS</code> below.</li>
+<li>On a Mac, programs started by Python see an empty ARP table (Local Network privacy),
+  so <code>net-map</code> reads it from bash. If the MAC column is empty, check step 4b.</li>
+<li>Tried on Ben's home network, 15 Oct: 13 machines in 25 s, and a test talker on domain
+  77 heard. <strong>Not yet tried on the car.</strong></li>
+</ul>
+<h3 id="the-cars-own-topics">The car's own topics</h3>
+<p><code>pixi run tools/ros.sh ros2 topic list</code> should then list the car's topics. If they don't
+show up:</p>
+<ul>
+<li>Check that the Mac and the car's computers have addresses on the same network.</li>
+<li>Name the computers directly: add <code>export ROS_STATIC_PEERS=&lt;the Orin's IP&gt;</code> on the Mac,
+  and the Mac's IP on the Orin. This is Jazzy's way around blocked multicast.</li>
+<li>Turn off the Mac's firewall for a minute, to see whether it's the cause.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">The stand-ins stay on your Mac</p>
+<p><code>pixi run turtle</code>, <code>sim</code>, <code>bench</code> and <code>view</code> only talk to this computer, whatever your
+domain and peers say. So a pretend car never meets the real one. The keyboard, <code>estop</code>
+and RViz do reach the car: that's their job. <code>pixi run keyboard --local</code> keeps the
+keyboard on your Mac too.</p>
+</div>
+<p>If RViz shows the car but drops data ("extrapolation" errors), or the doctor says the
+clock is off: the car's computers keep the time (the Orin serves it, see
+<a href="platforms.html">Platforms</a>). Set the Mac from the Orin once with
+<code>sudo sntp -sS &lt;the Orin's IP&gt;</code>.</p>
+</section>
+<section class="card"><h2 id="drive-and-watch-from-the-mac">Drive and watch from the Mac</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Want</th>
+<th>Run this on the Mac</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive with the keyboard</td>
+<td><code>pixi run keyboard</code></td>
+</tr>
+<tr>
+<td>Stop everything</td>
+<td><code>pixi run estop</code>, then <code>pixi run estop-clear</code> when it's safe</td>
+</tr>
+<tr>
+<td>The 3D view: map, costmaps, path, the car</td>
+<td><code>pixi run rviz</code></td>
+</tr>
+<tr>
+<td>Nodes and topics, live</td>
+<td><code>pixi run graph</code></td>
+</tr>
+<tr>
+<td>Be the safety driver's joystick laptop</td>
+<td><code>pixi run car laptop</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Driving the real car</p>
+<p>The keyboard has priority 90. The safety driver's joystick (100) and the hardware
+e-stop always win. Keep both in someone's hands whenever the Mac drives.</p>
+</div>
+</section>
+<section class="card"><h2 id="ml-on-your-mac-against-the-bench">ML on your Mac, against the bench</h2>
+<p>On the car, the laptop runs its own detector (<code>object_detector_laptop</code>, RF-DETR Nano on
+Metal) on the camera's JPEG pictures, which suit WiFi. At home, the bench plays the car:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Terminal</th>
+<th>Run</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pixi run bench</code></td>
+<td>the car's software, with stand-ins for the hardware</td>
+</tr>
+<tr>
+<td>2, once, if you like</td>
+<td><code>pixi run -e ml export-coreml</code></td>
+<td>makes <code>models/rf-detr-nano.mlpackage</code>, the Core ML model (8 s): 10 ms a picture, not 16. Then uncomment its line in <code>laptop.yaml</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pixi run -e ml laptop-bench</code></td>
+<td>your laptop's parts, as on the car: the joystick, and its own detector</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>See it:</strong> <code>pixi run graph</code> shows <code>object_detector_laptop</code> reading
+  <code>/sensors/camera/front_left/image_raw/compressed</code>, and publishing <code>/perception/detections</code>.</li>
+<li><strong>Stop at the sign too:</strong> start the bench with <code>pixi run -e ml bench perception:=true</code>. It
+  runs its own detector and the stop-sign watcher, as the Orin would; the watcher then hears
+  both detectors, as on the car.</li>
+<li><strong>Tried on Ben's Mac, 11 Oct:</strong> Core ML took 21 ms a picture and kept up with all 10
+  pictures a second. It saw the bench's stop sign from 20 m (score 0.52), and at 0.95 from
+  5 m.</li>
+</ul>
+</section>
+<section class="card"><h2 id="watch-without-ros-lichtblick">Watch without ROS: Lichtblick</h2>
+<p>The car runs <code>foxglove_bridge</code>, so any Foxglove-compatible viewer can watch it over one
+WiFi connection, with no ROS on the Mac.</p>
+<ul>
+<li><strong>Lichtblick:</strong> free, open source, no account. Download the Mac app from
+  github.com/lichtblick-suite/lichtblick (releases).
+  The Mac app (<code>lichtblick-&lt;version&gt;-mac-universal.dmg</code>, under Assets) isn't notarized by
+  Apple, so macOS may refuse to open it: right-click it in Applications → Open → Open.
+  Check the download against the <code>sha512</code> in <code>latest-mac.yml</code>, in the same release.</li>
+<li><strong>Foxglove:</strong> the same idea; its free plan needs an account.</li>
+</ul>
+<p>In either app: Open connection → Foxglove WebSocket → <code>ws://&lt;the Orin's IP&gt;:8765</code>.</p>
+<p><strong>Our layouts</strong> (24 Oct): <code>tools/foxglove/driving.json</code>, <code>sensors-health.json</code> and
+<code>map.json</code>. In the app's Layouts menu, import one from its file. What each shows, where
+each bridge listens, and how much it costs the WiFi: <a href="foxglove.html">Watch from a laptop</a>.
+In the simulator: <code>pixi run sim foxglove:=true</code>, then <code>ws://localhost:8765</code>.</p>
+<p><strong>Check a bridge serves the layouts</strong> (no ROS needed): <code>pixi run layout-check</code> (the sim
+here) or <code>pixi run layout-check ws://192.168.1.140:8765</code> (the Jetson); add <code>--data</code> to
+measure what each topic sends. Each topic is served, off (it needs a part that's off by
+default) or MISSING.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Result (24 Oct)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run sim world:=road foxglove:=true</code></td>
+<td>23 of 26 served; 3 off: the ghost marker (<code>ghost:=true</code>), the street route (needs a route). All three layouts at once: 1.4 Mbit/s</td>
+</tr>
+<tr>
+<td>the car</td>
+<td>not yet</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="gazebo-on-a-mac">Gazebo on a Mac</h2>
+<p>On macOS, Gazebo's window has to run as a separate program from the simulator.
+<code>pixi run sim</code> starts both, and points the window's camera at the car:</p>
+<pre class="highlight"><code class="language-bash">pixi run sim               # the simulator, its window, and RViz
+pixi run gz-window         # opens the window again, if you closed it
+pixi run sim follow:=false # a free camera instead of one that follows the car</code></pre>
+<p>Cameras and lidars inside Gazebo can crash it on some Macs. Ours don't: in the road world
+(<code>pixi run sim world:=road</code>), the cameras, the radar stand-in and the roof
+lidar render with no window, on Metal, at their full rates (Ben's Mac, 15 Oct). The lidar
+was off by default for a while: with YOLO too it failed, but those runs shared the Mac with a stray simulator. On a quiet Mac (15 Oct afternoon) everything together passed twice, so it's on by default
+(<a href="simulation.html#the-lidar-gazebo-only">Simulation</a>). If Gazebo crashes, use the empty
+world, which renders nothing.</p>
+<p>If the window stays empty, or the car never appears, run <code>export GZ_IP=127.0.0.1</code> in both
+terminals and start again: Gazebo's two programs then find each other on the Mac itself.
+On Ben's Mac the simulator ran without it (10 Oct); it fixed the same symptom on Linux.</p>
+<h3 id="why-we-use-cyclone-dds">Why we use Cyclone DDS</h3>
+<p>Cyclone DDS has been the team's middleware since 23 Oct (Ben: "yes lets do it"). Pixi sets
+it everywhere (<code>RMW_IMPLEMENTATION</code> in <code>pixi.toml</code>), so there's nothing to type.</p>
+<p>Before, on Fast DDS, the sensor watchdog said a sensor went quiet ("STALE") for half a
+second, and Nav2 refused goals with "Transform data too old". The messages were late,
+not the Mac:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Test, 25 min beside Gazebo, 22 Oct</th>
+<th>Fast DDS (the old default)</th>
+<th>Cyclone DDS (now)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A 50 Hz publisher's own timer, worst gap</td>
+<td>0.03 s</td>
+<td>0.03 s</td>
+</tr>
+<tr>
+<td>Its subscriber, worst gap</td>
+<td><strong>0.48 s</strong></td>
+<td><strong>0.05 s</strong></td>
+</tr>
+<tr>
+<td>Gaps over 0.1 s</td>
+<td>9</td>
+<td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>The whole graph, 10 min each (<code>pixi run timing-test</code>, Gazebo's lot, 23 Oct):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>5 min parked</th>
+<th>Fast DDS</th>
+<th>Cyclone DDS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMU, worst gap</td>
+<td><strong>1.01 s</strong></td>
+<td><strong>0.06 s</strong></td>
+</tr>
+<tr>
+<td>Global EKF, worst gap</td>
+<td>0.99 s</td>
+<td>0.09 s</td>
+</tr>
+<tr>
+<td>Front camera, worst gap</td>
+<td>4.51 s</td>
+<td>0.14 s</td>
+</tr>
+<tr>
+<td>Camera pictures over 0.5 s late</td>
+<td>198</td>
+<td>0</td>
+</tr>
+<tr>
+<td>3 or more key topics silent at the same moment</td>
+<td>490 times, the longest 2.4 s</td>
+<td>0</td>
+</tr>
+<tr>
+<td>The sensor watchdog stopped Nav2</td>
+<td>5 times</td>
+<td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>sim-check</code> passes everything on Cyclone, with the rear camera at its full 10 Hz (7-8 Hz
+on Fast DDS).</p>
+<p>To go back to Fast DDS for one run, every program that talks to it needs the same:</p>
+<pre class="highlight"><code class="language-bash">AAV_RMW=fastdds pixi run sim               # this terminal
+AAV_RMW=fastdds pixi run ros2 topic list   # and every other</code></pre>
+<p>⚠️ <strong>To check at the car:</strong> Cyclone uses one network card, not all of them as Fast DDS
+did. A computer with two (the localization Pi has Ethernet and Carleton's WiFi) may pick
+the wrong one. Then name the car's network in <code>~/.config/aav/cyclonedds.xml</code> on that computer:
+<code>tools/ros.sh</code> adds it after the team's settings (<code>tools/cyclonedds.xml</code>).</p>
+<p>The team's settings raise one limit: ROS lets 32 programs share one computer when
+discovery stays on it, and the whole Gazebo graph starts more. On Linux the 33rd failed
+("Failed to find a free participant index"); with 120, 45 test programs all started.</p>
+</section>
+<section class="card"><h2 id="macos-hides-one-setting-from-ros">macOS hides one setting from ROS</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What happens</th>
+<th>Why it matters</th>
+<th>What we do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>macOS's System Integrity Protection (SIP) deletes <code>DYLD_LIBRARY_PATH</code> whenever one of Apple's own programs starts, such as <code>/bin/sh</code>, <code>/bin/bash</code> or <code>/usr/bin/env</code></td>
+<td>ROS finds our own message libraries (<code>aav_interfaces</code>) through that setting. Without it: "Could not load library"</td>
+<td>for <code>colcon test</code>: the Mac environment adds GNU <code>coreutils</code>, whose <code>env</code> isn't Apple's</td>
+</tr>
+<tr>
+<td>A script that starts with <code>#!/usr/bin/env bash</code> loses the setting too</td>
+<td><code>ros2 bag record</code> couldn't record <code>/vehicle/status</code></td>
+<td>scripts run <code>ros2</code> through <code>tools/ros.sh</code>, which sets it last: <code>tools/record.sh</code> does</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two rules follow, for anyone writing scripts:</p>
+<ul>
+<li>On a Mac, a script that runs <code>ros2</code> with our messages must run it through <code>tools/ros.sh</code>.</li>
+<li>Inside Pixi on a Mac, <code>ls</code>, <code>date</code>, <code>stat</code> and friends are the GNU versions, the same as
+  on Linux and the car. Outside Pixi, the Mac's own versions are unchanged.</li>
+</ul>
+</section>
+<section class="card"><h2 id="three-more-things-the-bench-found-on-a-mac">Three more things the bench found on a Mac</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What happens</th>
+<th>Why</th>
+<th>What we do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A best-effort subscriber gets no camera images at all</td>
+<td>an image is too big for one UDP packet, and best effort drops the whole image when one piece is lost</td>
+<td>subscribe to images reliably, keeping only the newest frame</td>
+</tr>
+<tr>
+<td><code>ros2 topic hz</code> on a camera or lidar shows nothing</td>
+<td>Jazzy's <code>hz</code> always subscribes best effort, with no option to change it</td>
+<td>count them reliably: <code>ros2 topic echo --qos-reliability reliable --field header.stamp &lt;topic&gt;</code></td>
+</tr>
+<tr>
+<td>A Python node with <code>MultiThreadedExecutor</code> uses a whole CPU core</td>
+<td>rclpy 7.1.12's multi-threaded executor spins whenever any subscription gets messages</td>
+<td>use the default single-threaded executor; <code>scripted_driver</code> now does</td>
+</tr>
+<tr>
+<td>A script started through <code>#!/usr/bin/env python3</code> can't load our messages</td>
+<td>macOS drops <code>DYLD_LIBRARY_PATH</code> when <code>/usr/bin/env</code> starts</td>
+<td>launch such scripts with <code>prefix='python3'</code>, as <code>aav_lane_geometry</code> does</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</h2>
+<ol>
+<li>Install UTM (free) from mac.getutm.app.</li>
+<li>Make a VM from the Ubuntu 24.04 <strong>arm64</strong> image, from cdimage.ubuntu.com.</li>
+<li>Network: <strong>Bridged</strong>, so the VM gets its own address on the car's network.</li>
+<li>Display: UTM's GPU-accelerated option (experimental) for RViz. Inside the VM,
+   <code>glxinfo -B</code> should not say <code>llvmpipe</code>.</li>
+<li>Inside the VM, install Jazzy as on <a href="platforms.html">Platforms</a>, or use Pixi as above.</li>
+</ol>
+</section>
+<section class="card"><h2 id="if-something-breaks">If something breaks</h2>
+<p>Paste these into Claude (or a team chat), and it can usually say what to fix:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The command, and the last 20 lines it printed</td>
+<td>copy them from Terminal</td>
+</tr>
+<tr>
+<td>What the doctor says</td>
+<td><code>pixi run doctor</code></td>
+</tr>
+<tr>
+<td>Which Mac</td>
+<td><code>sw_vers; uname -m; pixi --version</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="whats-been-tested">What's been tested</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The Pixi environment resolves for Macs (Apple Silicon and Intel, macOS 14+)</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Steps 3 to 5 from a fresh copy of the bundle: clone, install, build, <code>pixi run test</code>, the turtle</td>
+<td><span class="badge b-works">works</span> on Linux, and on an Apple Silicon Mac (macOS 27), 10 Oct</td>
+</tr>
+<tr>
+<td>Building on a Mac</td>
+<td><span class="badge b-works">works</span> 19 packages in 18 s; 24 packages in 15 s on 10 Oct evening</td>
+</tr>
+<tr>
+<td>Bench mode, <code>pixi run bench-check</code></td>
+<td><span class="badge b-works">works</span> 7 of 7, with perception (<code>-e ml</code>)</td>
+</tr>
+<tr>
+<td>YOLO on the Mac's GPU (Metal)</td>
+<td><span class="badge b-works">works</span> 7.7 ms a frame; Core ML 4.3 ms</td>
+</tr>
+<tr>
+<td>The laptop's own detector against the bench (<code>laptop-bench</code>)</td>
+<td><span class="badge b-works">works</span> 11 Oct: Core ML on the compressed pictures, 21 ms each; it saw the stop sign from 20 m</td>
+</tr>
+<tr>
+<td><code>pixi run test</code> on a Mac</td>
+<td><span class="badge b-works">works</span> all green, after the <code>coreutils</code> fix above</td>
+</tr>
+<tr>
+<td>The turtle, driving it the keyboard's way, the scripted drive, the e-stop</td>
+<td><span class="badge b-works">works</span> on Linux and the Mac. The real keyboard keys are <span class="badge b-untested">untested</span> on a Mac</td>
+</tr>
+<tr>
+<td>Gazebo without its window, and a Nav2 goal</td>
+<td><span class="badge b-works">works</span> on the Mac, without <code>GZ_IP</code></td>
+</tr>
+<tr>
+<td>Gazebo's window on a Mac</td>
+<td><span class="badge b-works">works</span> 10 Oct: <code>pixi run sim</code> opens it; the car drives in it (pictures in <a href="first-day.html">Your first day</a>)</td>
+</tr>
+<tr>
+<td>Gazebo's cameras and lidar on a Mac</td>
+<td><span class="badge b-works">works</span> 15 Oct: headless, about 10 Hz each; with YOLO too, <code>-e ml sim-check --perception</code> passed 2 of 2 on a quiet Mac, so the lidar is on by default</td>
+</tr>
+<tr>
+<td>RViz and rqt_graph on a Mac</td>
+<td><span class="badge b-untested">untested</span> they open without errors (RViz logs one shader warning); nobody has looked at them yet</td>
+</tr>
+<tr>
+<td>Recording a drive (<code>tools/record.sh</code>)</td>
+<td><span class="badge b-works">works</span> on the Mac, after the <code>tools/ros.sh</code> fix above</td>
+</tr>
+<tr>
+<td>The Rust listener</td>
+<td><span class="badge b-works">works</span> on the Mac: builds in 15 s</td>
+</tr>
+<tr>
+<td>Joystick on a Mac</td>
+<td><span class="badge b-untested">untested</span> An old macOS joystick bug is fixed in the version we use.</td>
+</tr>
+<tr>
+<td>The Mac on the car's network</td>
+<td><span class="badge b-untested">untested</span> the car still runs Humble</td>
+</tr>
+<tr>
+<td><code>pixi run doctor</code></td>
+<td><span class="badge b-works">works</span> on Linux and the Mac</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="run.html"><small>Previous</small>← Run it</a>
+<a class="next" href="foxglove.html"><small>Next</small>Watch from a laptop →</a></nav>
+</main>
+<footer>Source: <code>docs/mac.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

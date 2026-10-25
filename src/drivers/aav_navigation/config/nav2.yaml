@@ -1,0 +1,541 @@
+# Nav2 for the AAV: a car (Ackermann steering) on Jazzy, Nav2 1.3.13.
+#
+# Started by aav_navigation/launch/navigation.launch.py, which fills in from
+# aav_description/config/vehicle.yaml (so don't edit these here):
+#   footprint                 the body outline            (both costmaps)
+#   minimum_turning_radius    wheelbase / tan(max steer) x 1.25, so the controller has
+#                             steering to spare (SmacPlannerHybrid; vehicle.PLAN_TURN_MARGIN)
+#   min_turning_r             wheelbase / tan(max steer)   (MPPI: the car's own lock)
+#   StopZone.points           the box ahead of the bumper  (collision_monitor)
+#   min_height, max_height    the lidar's obstacle heights (lidar_scan, aav_lidar)
+# and the map file, and the behaviour tree paths. Where a radar runs (radar:=true), it
+# also turns on the local costmap's obstacle_layer and starts collision_monitor; with
+# camera_obstacles:=true, the camera_layer. Where a lidar runs (lidar:=true), it starts
+# lidar_scan, keeps the lidar_layer and adds the lidar to collision_monitor's sources
+# (vehicle.nav2_tuned: lists, so written into a copy of this file). With ghost:=true
+# (aav_ghost, docs/ghost-obstacles.md), it starts ghost_obstacle, keeps the ghost_layer
+# and adds the ghost to collision_monitor's sources: a pretend person, added on top of
+# what the real sensors see.
+#
+# Reversing (navigation.launch.py reversing:=true; off unless asked for, docs/learn-nav2.md)
+# also sets, from vehicle.yaml's max_reverse_speed:
+#   motion_model_for_search   DUBIN (forward only) or REEDS_SHEPP (forward and back)
+#   allow_reversing           Regulated Pure Pursuit follows a path backwards
+#   vx_min                    MPPI's lowest speed: 0, or -max_reverse_speed
+#   min_velocity              the velocity smoother's lowest speed: the same (a list, so
+#                             the launch file writes it into a copy of this file)
+# and picks the behaviour trees with BackUp (*_car_reversing.xml).
+#
+# Topics: Nav2 reads /localization/odom/local (ekf_local) and TF map -> odom -> base_link
+# (robot_localization). Its velocity output goes controller -> velocity_smoother ->
+# /drivers/nav/cmd_vel (TwistStamped) -> twist_mux -> /control/cmd_vel -> ego, which turns it into a
+# steering angle. With the radar, collision_monitor sits between the smoother and
+# /drivers/nav/cmd_vel. Nav2 never talks to the wheels.
+#
+# Jazzy publishes Twist unless enable_stamped_cmd_vel is true on each node (checked in
+# nav2_util/twist_publisher.hpp: the default is false on Jazzy).
+#
+# Parameter names checked against the 1.3.13 sources (nav2_bringup/params/nav2_params.yaml,
+# smac_planner_hybrid.cpp, regulated_pure_pursuit parameter_handler.cpp, MPPI optimizer.cpp
+# and motion_models.hpp, velocity_smoother.cpp, collision_monitor_node.cpp).
+
+bt_navigator:
+  ros__parameters:
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /localization/odom/local
+    bt_loop_duration: 10
+    # ms a tree node waits for a server to take (or cancel) its goal. Nav2's 20, and 200,
+    # failed whole goals on a busy computer (the bench, 11 Oct, load 30-40 on 16 cores);
+    # the Orin will be busy too. A server that's gone still fails the goal within 1 s.
+    default_server_timeout: 1000
+    wait_for_service_timeout: 1000
+    action_server_result_timeout: 900.0
+    navigators: ["navigate_to_pose", "navigate_through_poses"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
+    # Set by the launch file to aav_navigation/behavior_trees/*_car.xml (no Spin).
+    default_nav_to_pose_bt_xml: "set-by-launch"
+    default_nav_through_poses_bt_xml: "set-by-launch"
+    error_code_names:
+      - compute_path_error_code
+      - follow_path_error_code
+
+controller_server:
+  ros__parameters:
+    enable_stamped_cmd_vel: true
+    odom_topic: /localization/odom/local
+    controller_frequency: 20.0
+    costmap_update_timeout: 0.30
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["general_goal_checker"]
+    controller_plugins: ["FollowPath"]
+    use_realtime_priority: false
+
+    progress_checker:
+      # Turning counts as progress too: in a three-point turn the car rocks back
+      # and forth and moves less than 0.5 m, and the simple checker gave up on
+      # it ten times in one turn (22 Oct).
+      plugin: "nav2_controller::PoseProgressChecker"
+      required_movement_radius: 0.5
+      required_movement_angle: 0.5
+      movement_time_allowance: 10.0
+    general_goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      stateful: true
+      # m. GPS without RTK is good to about a metre: in Gazebo (0.5 m noise) the global EKF
+      # was up to 0.7 m off the truth. With 0.5 the car, believing itself 0.6 m off at the
+      # goal, drove a loop to fix it (22 Oct). Tighten it once the car has RTK.
+      xy_goal_tolerance: 1.0
+      # rad (43 degrees). A car can't fix its heading in place: a miss costs a loop. The
+      # global EKF's heading was up to 25 degrees off in Gazebo; with 0.5 (29) both
+      # controllers, cutting the plan's last bend, arrived 35 off and looped (22 Oct).
+      yaw_goal_tolerance: 0.75
+
+    # Regulated Pure Pursuit: follows the planner's path; output angular.z = v * curvature,
+    # which ego turns back into a steering angle. The planner already respects the turning
+    # radius; ego clamps the steering if the controller asks for more.
+    FollowPath:
+      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      desired_linear_vel: 1.0               # m/s. Start slow; ego also caps speed
+      lookahead_dist: 2.0
+      min_lookahead_dist: 1.5               # about the wheelbase or more, or a car weaves
+      max_lookahead_dist: 4.0
+      lookahead_time: 1.5
+      use_velocity_scaled_lookahead_dist: true
+      use_rotate_to_heading: false          # MUST be false for a car: it can't spin in place
+      allow_reversing: false                # set by the launch file: true with REEDS_SHEPP
+      transform_tolerance: 0.5              # s. 0.1 aborted goals when a busy computer's EKF
+                                            # sent map -> odom late (the bench, 11 Oct)
+      min_approach_linear_velocity: 0.1
+      approach_velocity_scaling_dist: 1.0
+      use_collision_detection: true
+      max_allowed_time_to_collision_up_to_carrot: 1.0
+      use_regulated_linear_velocity_scaling: true
+      regulated_linear_scaling_min_radius: 3.0   # slow down in turns tighter than this (m)
+      regulated_linear_scaling_min_speed: 0.25
+      use_cost_regulated_linear_velocity_scaling: false
+      use_fixed_curvature_lookahead: false
+      interpolate_curvature_after_goal: false
+      max_robot_pose_search_dist: 10.0
+      stateful: true
+
+    # Alternative controller: controller:=mppi (navigation.launch.py, sim.launch.py) puts a
+    # copy of this block under FollowPath (docs/controllers.md). Its Ackermann model limits
+    # curvature to 1 / min_turning_r.
+    #
+    # Tuned in Gazebo on 22 Oct (docs/controllers.md, "Making MPPI drive"). With Nav2's
+    # robot settings it crept at 0.2 m/s and drifted off a straight path:
+    #   wz_std 0.4 -> 0.1   the car turns at most 0.35 rad/s at 1 m/s (full lock), so 0.4 made
+    #                       nearly every fast sample a full-lock swerve, and slow ones won
+    #   vx_std 0.2 -> 0.4   and temperature 0.3 -> 0.15: try bigger speed changes, and follow
+    #                       the best samples more closely, so the speed builds up
+    #   ax_max 1.0 -> 3.0   1.0 clipped most of each sample's speed-up (0.05 m/s per 0.05 s
+    #                       step) while letting it slow by 0.1: its futures drifted slower.
+    #                       Only MPPI's own planning: ego and the velocity smoother still hold
+    #                       the car to its real 1 m/s^2. ax_min stays at ego's -2.0, so MPPI
+    #                       never counts on braking harder than the car can
+    MPPI:
+      plugin: "nav2_mppi_controller::MPPIController"
+      motion_model: "Ackermann"
+      AckermannConstraints:
+        min_turning_r: 2.86                 # set by the launch file
+      time_steps: 56                        # x model_dt = 2.8 s ahead: 2.8 m at 1 m/s
+      model_dt: 0.05                        # = 1 / controller_frequency
+      batch_size: 2000                      # futures tried each cycle
+      vx_std: 0.4                           # m/s: how far the samples stray in speed
+      vy_std: 0.2
+      wz_std: 0.1                           # rad/s: ... and in turn rate
+      vx_max: 1.0
+      vx_min: 0.0                           # set by the launch file: -max_reverse_speed to reverse
+      vy_max: 0.0
+      wz_max: 0.6
+      ax_max: 3.0                           # m/s^2, MPPI's planning only (see above)
+      ax_min: -2.0                          # m/s^2: ego's max_deceleration
+      ay_max: 0.0
+      ay_min: 0.0
+      az_max: 1.0
+      iteration_count: 1
+      prune_distance: 3.0
+      transform_tolerance: 0.5              # s, as FollowPath's: a busy computer's map -> odom
+      temperature: 0.15                     # lower: the best futures count for more
+      gamma: 0.015
+      visualize: false                      # true: its futures on /trajectories, for RViz
+      critics: ["ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic",
+                "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"]
+      CostCritic:
+        consider_footprint: true            # the car's 2 x 1 m outline, not a circle: without
+                                            # it Nav2 warns "Inconsistent configuration in
+                                            # collision checking" (21 Oct)
+      GoalAngleCritic:
+        threshold_to_consider: 2.5          # m: turn to the goal's heading from 2.5 m out.
+                                            # Nav2's 0.5 m is for robots that turn in place:
+                                            # the car then drove a loop at the goal (22 Oct)
+      PathAlignCritic:
+        use_path_orientations: true         # the Hybrid-A* path's headings are drivable
+      # Where the path changes direction (a three-point turn, reversing:=true only): MPPI
+      # stops there and reverses once it is this close. Nav2's 0.2 m is under the GPS's
+      # error: the car missed the point and drove on to a wall (22 Oct).
+      inversion_xy_tolerance: 0.5           # m
+      inversion_yaw_tolerance: 0.6          # rad
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_link
+      rolling_window: true        # a square that moves with the car
+      width: 20                   # m: 10 m ahead and behind; at 2 m/s that's 5 s of driving
+      height: 20
+      resolution: 0.10            # m per cell: 200 x 200 cells
+      footprint: "[[1.8, 0.5], [1.8, -0.5], [-0.2, -0.5], [-0.2, 0.5]]"   # set by the launch file
+      footprint_padding: 0.05
+      # The map's obstacles (static_layer), the radar's (obstacle_layer), the cameras'
+      # (camera_layer), the lidar's (lidar_layer), then inflation. The launch file turns
+      # the sensor layers on:
+      #   obstacle_layer  radar:=true, where a radar runs: the bench, Gazebo's road and
+      #                   test_lot worlds, and the car with its radar part
+      #   camera_layer    camera_obstacles:=true, off until the cameras are calibrated (Q22)
+      #   lidar_layer     lidar:=true, where a lidar runs: Gazebo (on by default), and the
+      #                   car's VLP-16 (the stock velodyne driver, car.launch.py's lidar
+      #                   part). Without it the launch file takes the layer out of this list
+      #   ghost_layer     ghost:=true: aav_ghost's pretend person (docs/ghost-obstacles.md).
+      #                   Without it the launch file takes the layer out of this list
+      plugins: ["static_layer", "obstacle_layer", "camera_layer", "lidar_layer",
+                "ghost_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: false              # set by the launch file
+        # Heights in odom, which sits on the road. These bound every source below too.
+        min_obstacle_height: -0.5
+        max_obstacle_height: 2.0
+        observation_sources: radar
+        # The TI radar: sparse (a few points per object), noisy, and no ground returns.
+        # Its points come in radar_link (vehicle.yaml), best effort, 10 times a second.
+        radar:
+          topic: /sensors/radar/points
+          data_type: "PointCloud2"
+          marking: true
+          clearing: true            # each point clears the cells between it and the radar
+          min_obstacle_height: -0.5   # m. A radar's height is poor, and there's no ground
+          max_obstacle_height: 2.0    # to reject: keep low points. Above 2 m is over the car
+          obstacle_min_range: 0.3     # m: closer is the radar's own clutter
+          obstacle_max_range: 8.4     # m: the TI radar's range (ti_ros2_driver cfg/base.cfg)
+          raytrace_min_range: 0.0
+          raytrace_max_range: 8.4
+          observation_persistence: 0.2   # s: both radar frames of each update, not just one
+      # The detectors' boxes, as points on the road (aav_detector camera_obstacles). Its own
+      # layer, so its clearing never wipes the radar's marks. Each update clears what the
+      # camera sees, then marks the boxes of the last 0.3 s, from every detector.
+      camera_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: false              # set by the launch file
+        min_obstacle_height: -0.5   # m: the points lie on the road, z = 0
+        max_obstacle_height: 0.5
+        observation_sources: camera camera_view
+        camera:
+          topic: /perception/camera_obstacles
+          data_type: "PointCloud2"
+          marking: true
+          clearing: false
+          min_obstacle_height: -0.5
+          max_obstacle_height: 0.5
+          obstacle_min_range: 0.0
+          obstacle_max_range: 15.0      # m from base_link: the node keeps 12 m from the camera
+          observation_persistence: 0.3  # s: the newest boxes from each detector
+        camera_view:
+          topic: /perception/camera_view
+          data_type: "PointCloud2"
+          marking: false
+          clearing: true              # clears from the car out to the edge of the view
+          min_obstacle_height: -0.5
+          max_obstacle_height: 0.5
+          raytrace_min_range: 0.0
+          raytrace_max_range: 15.0
+      # The roof lidar, as lidar_scan's 2D scan (below): the nearest thing in each direction
+      # between the road and just over the roof. Its own layer, so its clearing never
+      # wipes the radar's marks: a box too low and close for the roof lidar to see (its
+      # lowest beam, 15 degrees down from 1.8 m, meets a 1 m box only 3 m away) stays in
+      # the radar's layer.
+      lidar_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        min_obstacle_height: -0.5   # m: the scan lies at base_link's height, the road
+        max_obstacle_height: 0.5
+        observation_sources: lidar
+        lidar:
+          topic: /sensors/lidar/scan
+          data_type: "LaserScan"
+          marking: true
+          clearing: true
+          inf_is_valid: true          # no return = nothing there: clear to raytrace range
+          min_obstacle_height: -0.5
+          max_obstacle_height: 0.5
+          obstacle_min_range: 0.0
+          obstacle_max_range: 12.0    # m: past the costmap's 10 m edge, as the car turns
+          raytrace_min_range: 0.0
+          raytrace_max_range: 15.0
+          observation_persistence: 0.0  # s: the newest scan only
+      # The ghost (aav_ghost ghost_obstacle): a pretend person, as the scan a perfect lidar
+      # at base_link would see of it, inf everywhere else. Its own layer, so it only ever
+      # adds: its clearing wipes only old ghosts, never a real sensor's marks.
+      ghost_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        min_obstacle_height: -0.5   # m: the scan lies at base_link's height, the road
+        max_obstacle_height: 0.5
+        observation_sources: ghost
+        ghost:
+          topic: /safety/ghost/scan
+          data_type: "LaserScan"
+          marking: true
+          clearing: true
+          inf_is_valid: true          # inf = no ghost that way: clear to raytrace range
+          min_obstacle_height: -0.5
+          max_obstacle_height: 0.5
+          obstacle_min_range: 0.0
+          obstacle_max_range: 12.0    # m: as the lidar's
+          raytrace_min_range: 0.0
+          raytrace_max_range: 15.0
+          observation_persistence: 0.0  # s: the newest scan only
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        inflation_radius: 2.0     # m; at least the car's circumscribed radius, 1.93
+        cost_scaling_factor: 3.0
+      always_send_full_costmap: true
+
+# The roof lidar's cloud, flattened into a 2D scan around base_link for the local costmap
+# and collision_monitor (navigation.launch.py lidar:=true; aav_lidar lidar_scan). 28,800
+# points at 10 Hz become 720 ranges: Nav2's two readers get 3 kB each instead of 9 MB/s,
+# and the road and anything over the car are gone. One reader of the full cloud.
+lidar_scan:
+  ros__parameters:
+    min_height: 0.3             # m above the road: set by the launch file
+    max_height: 2.0             # m: the same (vehicle.obstacle_heights)
+    angle_min: -3.14159265      # rad: all the way round
+    angle_max: 3.14159265
+    angle_increment: 0.00872665  # 0.5 degrees: 720 ranges
+    range_min: 0.2              # m from base_link
+    range_max: 30.0
+    scan_time: 0.1              # s: the lidar's 10 Hz
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      # Not rolling: the size and resolution come from the map that map_server loads.
+      resolution: 0.25
+      track_unknown_space: true
+      footprint: "[[1.8, 0.5], [1.8, -0.5], [-0.2, -0.5], [-0.2, 0.5]]"   # set by the launch file
+      footprint_padding: 0.05
+      plugins: ["static_layer", "inflation_layer"]
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: true
+      # Wider and gentler than the local costmap's, so the planner's paths keep to the
+      # middle of a lane where there's room. With 2.0 m and 3.0 its path passed a corner
+      # 0.86 m from base_link, and the collision monitor's stop box (1 m ahead) stopped the
+      # car there (PLAN.md M8, 22 Oct).
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        inflation_radius: 3.0     # m
+        cost_scaling_factor: 1.0
+      always_send_full_costmap: true
+
+map_server:
+  ros__parameters:
+    yaml_filename: "set-by-launch"   # aav_navigation/maps/<map>.yaml
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 20.0
+    planner_plugins: ["GridBased"]   # the name the behaviour trees ask for
+    costmap_update_timeout: 1.0
+    # Hybrid-A*: plans paths a car can drive (it respects the turning radius).
+    GridBased:
+      plugin: "nav2_smac_planner::SmacPlannerHybrid"
+      motion_model_for_search: "DUBIN"     # set by the launch file: forward only, or REEDS_SHEPP
+      # A path that reverses costs reverse_penalty times as much a metre: forward wins
+      # unless reversing saves a lot (a goal behind the car, a three-point turn).
+      minimum_turning_radius: 3.59         # set by the launch file
+      angle_quantization_bins: 72
+      tolerance: 0.5
+      allow_unknown: true
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0
+      downsample_costmap: false
+      downsampling_factor: 1
+      reverse_penalty: 2.0
+      change_penalty: 0.0
+      non_straight_penalty: 1.2
+      cost_penalty: 2.0
+      retrospective_penalty: 0.015
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 3.0
+      analytic_expansion_max_cost: 200.0
+      analytic_expansion_max_cost_override: false
+      lookup_table_size: 20.0
+      cache_obstacle_heuristic: false
+      smooth_path: true
+      debug_visualizations: false
+
+behavior_server:
+  ros__parameters:
+    enable_stamped_cmd_vel: true
+    local_costmap_topic: local_costmap/costmap_raw
+    global_costmap_topic: global_costmap/costmap_raw
+    local_footprint_topic: local_costmap/published_footprint
+    global_footprint_topic: global_costmap/published_footprint
+    cycle_frequency: 10.0
+    # No spin (a car can't). backup: only the reversing trees call it (*_car_reversing.xml).
+    behavior_plugins: ["backup", "drive_on_heading", "wait"]
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    drive_on_heading:
+      plugin: "nav2_behaviors::DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    local_frame: odom
+    global_frame: map
+    robot_base_frame: base_link
+    transform_tolerance: 0.1
+    simulate_ahead_time: 2.0
+
+# Runs a list of waypoints, and GPS waypoints: follow_gps_waypoints converts each lat/lon
+# with navsat_transform's /fromLL service, then drives to it.
+waypoint_follower:
+  ros__parameters:
+    global_frame_id: map
+    loop_rate: 20
+    stop_on_failure: false
+    action_server_result_timeout: 900.0
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: true
+      waypoint_pause_duration: 0
+
+# Limits speed and acceleration. scale_velocities keeps w/v (the curvature, so the
+# steering angle) when it has to cut one of them: that matters for a car.
+velocity_smoother:
+  ros__parameters:
+    enable_stamped_cmd_vel: true
+    smoothing_frequency: 20.0
+    scale_velocities: true
+    feedback: "OPEN_LOOP"
+    max_velocity: [1.0, 0.0, 1.0]
+    # x is set by the launch file: 0 forward only, -max_reverse_speed with reversing:=true.
+    # The last stop for a negative speed inside Nav2 (ego and the spine cap it too).
+    min_velocity: [0.0, 0.0, -1.0]
+    max_accel: [1.0, 0.0, 1.5]
+    max_decel: [-2.0, 0.0, -1.5]
+    odom_topic: /localization/odom/local
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+# Wherever a radar or a lidar is (navigation.launch.py radar:=true or lidar:=true;
+# collision_monitor:=false leaves it out): it sits between the smoother and twist_mux
+# (velocity_smoother -> /control/cmd_vel_smoothed -> collision_monitor -> /drivers/nav/cmd_vel)
+# and stops the car when radar or lidar points enter the stop zone. It reads the sensors
+# themselves, not the costmap, so it still
+# stops the car if the costmap, the planner or the controller goes wrong. It only guards
+# Nav2: the other drivers reach twist_mux without it.
+collision_monitor:
+  ros__parameters:
+    enable_stamped_cmd_vel: true
+    base_frame_id: base_link
+    odom_frame_id: odom
+    cmd_vel_in_topic: /control/cmd_vel_smoothed
+    cmd_vel_out_topic: /drivers/nav/cmd_vel
+    state_topic: /safety/collision_monitor/state
+    transform_tolerance: 0.2
+    source_timeout: 1.0       # s: a radar silent this long stops the car too
+    # false: no wait for an odom TF newer than the radar point. With sim time it waited
+    # forever (the clock can't tick while this callback blocks): on a busy Mac the car
+    # never moved (15 Oct). Costs at most speed x 0.1 s of error: 0.1 m at 1 m/s.
+    base_shift_correction: false
+    stop_pub_timeout: 2.0     # s of zeros after a stop; then twist_mux's nav slot times out
+    polygons: ["StopZone"]
+    # Three radar (or lidar) points in this box stop the car. Which box depends on the way
+    # the command goes: going forward, from the front bumper to 1 m ahead of it; reversing,
+    # from the rear bumper to 1 m behind it (only the lidar or the camera obstacles see
+    # there). Each 0.2 m wider than the body each side: aav_description vehicle.py
+    # stop_zone_points and rear_stop_zone_points, from vehicle.yaml's body (they say why 1 m).
+    StopZone:
+      type: "velocity_polygon"
+      action_type: "stop"
+      holonomic: false
+      velocity_polygons: ["forward", "backward"]
+      forward:                  # standing still counts as forward: the first that fits
+        points: "[[2.8, 0.7], [2.8, -0.7], [1.8, -0.7], [1.8, 0.7]]"   # set by the launch file
+        linear_min: 0.0
+        linear_max: 10.0
+        theta_min: -10.0
+        theta_max: 10.0
+      backward:
+        points: "[[-0.2, 0.7], [-0.2, -0.7], [-1.2, -0.7], [-1.2, 0.7]]"  # set by the launch file
+        linear_min: -10.0
+        linear_max: 0.0
+        theta_min: -10.0
+        theta_max: 10.0
+      min_points: 3             # a radar is noisy: one stray point mustn't stop the car
+      visualize: true           # for RViz, on polygon_pub_topic
+      polygon_pub_topic: /safety/collision_monitor/stop_zone
+      enabled: true
+    # Not used: slows the car so it stays 2 s from a collision on its current curve. Add it
+    # to polygons to try it.
+    FootprintApproach:
+      type: "polygon"
+      action_type: "approach"
+      footprint_topic: /local_costmap/published_footprint
+      time_before_collision: 2.0
+      simulation_time_step: 0.1
+      min_points: 3
+      visualize: false
+      enabled: true
+    # Set by the launch file (vehicle.nav2_tuned): the radar, the lidar, the ghost, or any
+    # of them. Any source that goes silent for source_timeout stops the car.
+    observation_sources: ["radar"]
+    radar:
+      type: "pointcloud"
+      topic: /sensors/radar/points
+      min_height: -0.5          # m, in base_link. A radar sees no ground, and its height
+      max_height: 2.0           # is poor: keep low points. Above 2 m is over the car
+      min_range: 0.2            # m from the radar: closer is its own clutter
+      enabled: true
+    # The roof lidar, as lidar_scan's scan (heights already filtered). From the roof it can't
+    # see low things right in front: in the stop zone only what stands over about 1.3 m
+    # (a person, a car, a post), so the radar stays the stop zone's main sensor.
+    lidar:
+      type: "scan"
+      topic: /sensors/lidar/scan
+      enabled: true
+    # The detectors' boxes on the road (aav_detector camera_obstacles), every camera's newest:
+    # people and cars ahead, and behind with the rear camera. Only with camera_guard: where a
+    # detector really feeds it, since a silent source stops the car.
+    camera:
+      type: "pointcloud"
+      topic: /perception/camera_obstacles
+      min_height: -0.5          # m, in base_link: the points lie on the road (z = 0)
+      max_height: 2.0
+      enabled: true
+    # The ghost (ghost:=true): a pretend person, so the stop zone can be tested with
+    # nothing real to hit. It adds points; it never hides the radar's or the lidar's.
+    ghost:
+      type: "scan"
+      topic: /safety/ghost/scan
+      enabled: true

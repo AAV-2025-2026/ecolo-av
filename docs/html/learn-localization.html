@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Localization from zero · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/learn-localization.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Localization from zero</h1>
+<div class="meta">15 min read · 9 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a class="here" href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-odometry-counting-your-steps">1. Odometry: counting your steps</a><a href="#2-the-imu">2. The IMU</a><a href="#3-fusion-two-weak-answers-make-one-good-one">3. Fusion: two weak answers make one good one</a><a href="#4-the-kalman-filter-in-one-tiny-example">4. The Kalman filter, in one tiny example</a><a href="#5-robot_localization-the-stock-ekf">5. robot_localization: the stock EKF</a><a href="#6-frames-map-odom-base_link-rep-105">6. Frames: map, odom, base_link (REP-105)</a><a href="#7-our-two-ekfs-their-real-inputs">7. Our two EKFs: their real inputs</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>"Localization" means: <strong>where is the car, which way is it facing, and how fast is it
+going?</strong> No one sensor answers that well. This page shows how our car mixes several
+weak answers into one good one.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>odometry, and why it drifts;</li>
+<li>what an IMU measures;</li>
+<li>fusion, and the idea behind a Kalman filter, with one tiny example in numbers;</li>
+<li>robot_localization, the stock package we use;</li>
+<li>the frames <code>map</code>, <code>odom</code> and <code>base_link</code> (REP-105), and TF;</li>
+<li>exactly what our two EKFs read, from their config files;</li>
+<li>how to look at all of it on your own computer.</li>
+</ul>
+<p><a href="../../READ-ME-MAPS-AND-POSITION.md">Maps and position</a> has the big picture of the two EKFs
+and the map. This page explains <strong>why</strong> it works.</p></div>
+<section class="card"><h2 id="1-odometry-counting-your-steps">1. Odometry: counting your steps</h2>
+<p><strong>Odometry</strong> = working out where you are from how you've moved.</p>
+<pre class="highlight"><code class="language-text">start ──► 1.0 m/s for 2 s, turning 0.1 rad/s ──► "I'm about 2 m ahead, a bit to the left"</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Our odometry source</th>
+<th>Measures</th>
+<th>Topic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheel speed (today: the Pico 2 encoder; KEFC: Hall sensors on two wheels)</td>
+<td>forward speed</td>
+<td><code>/vehicle/odom</code></td>
+</tr>
+<tr>
+<td>The steering angle (KEFC: the KTC-100 pot, through the Jrk)</td>
+<td>turn rate = speed × tan(angle) ÷ wheelbase</td>
+<td><code>/vehicle/odom</code></td>
+</tr>
+<tr>
+<td>The IMU's gyro</td>
+<td>turn rate</td>
+<td><code>/sensors/imu/data</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="why-it-drifts">Why it drifts</h3>
+<p>Every small error is <strong>added up</strong> forever.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Error</th>
+<th>After 100 m</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheel size off by 1 % (ours is a guess: 0.30 m)</td>
+<td>1 m too far or too short</td>
+</tr>
+<tr>
+<td>Heading off by 1°</td>
+<td><strong>1.7 m</strong> to the side</td>
+</tr>
+<tr>
+<td>Heading off by 5°</td>
+<td>8.7 m to the side</td>
+</tr>
+</tbody>
+</table></div>
+<p>Heading errors hurt most. That's why GPS is needed to stay true over a long drive.</p>
+</section>
+<section class="card"><h2 id="2-the-imu">2. The IMU</h2>
+<p>An <strong>IMU</strong> (inertial measurement unit) is a chip that feels motion.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Measures</th>
+<th>Good</th>
+<th>Bad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gyro</td>
+<td>turn rate (rad/s), on 3 axes</td>
+<td>fast and smooth</td>
+<td>a small bias: the heading creeps</td>
+</tr>
+<tr>
+<td>Accelerometer</td>
+<td>acceleration (m/s²), with gravity</td>
+<td>shows tilt</td>
+<td>noisy; twice-integrated it's useless for position</td>
+</tr>
+<tr>
+<td>Magnetometer</td>
+<td>the earth's magnetic field</td>
+<td>an absolute heading</td>
+<td>fooled by the motor and steel. <strong>Not used by us yet</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Ours: a Yahboom 10-axis IMU on USB. <code>imu_filter_madgwick</code> turns its raw data into a
+relative orientation. The EKFs use only its <strong>yaw rate</strong>: how fast the car turns.</p>
+</section>
+<section class="card"><h2 id="3-fusion-two-weak-answers-make-one-good-one">3. Fusion: two weak answers make one good one</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Strong at</th>
+<th>Weak at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheels + IMU</td>
+<td>smooth, fast (50+ Hz), short-term</td>
+<td>drift over long distances</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td>never drifts</td>
+<td>noisy, slow (1-5 Hz), can jump</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Fusion</strong> keeps the best of each: smooth from the wheels and IMU, true from GPS.</p>
+</section>
+<section class="card"><h2 id="4-the-kalman-filter-in-one-tiny-example">4. The Kalman filter, in one tiny example</h2>
+<p>A Kalman filter keeps two things for every number it tracks:</p>
+<ol>
+<li>a <strong>best guess</strong>;</li>
+<li><strong>how unsure</strong> it is (the variance: the error squared).</li>
+</ol>
+<p>It repeats two steps.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+<th>Uncertainty</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Predict</strong></td>
+<td>move the guess with the odometry</td>
+<td>grows</td>
+</tr>
+<tr>
+<td><strong>Update</strong></td>
+<td>a measurement arrives: move the guess toward it</td>
+<td>shrinks</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="one-dimension-in-numbers">One dimension, in numbers</h3>
+<p>The car drives along a straight road. Position in metres.</p>
+<p><strong>Before:</strong> the wheels say <strong>10.0 m</strong>. After a long drive, they're unsure: variance
+<strong>4</strong> (about ±2 m).</p>
+<p><strong>A GPS fix arrives:</strong> it says <strong>12.0 m</strong>, variance <strong>1</strong> (about ±1 m).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Sum</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>How much to trust GPS: the <strong>gain</strong> K</td>
+<td>4 ÷ (4 + 1)</td>
+<td><strong>0.8</strong></td>
+</tr>
+<tr>
+<td>New guess</td>
+<td>10.0 + 0.8 × (12.0 − 10.0)</td>
+<td><strong>11.6 m</strong></td>
+</tr>
+<tr>
+<td>New variance</td>
+<td>(1 − 0.8) × 4</td>
+<td><strong>0.8</strong> (about ±0.9 m)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>The answer sits <strong>closer to GPS</strong>, because GPS was less unsure.</li>
+<li>The new variance (0.8) is <strong>smaller than either</strong> (4 or 1). Two answers beat one.</li>
+<li>Then the car drives on: predict adds the movement, and the variance grows again
+  until the next fix.</li>
+</ul>
+<p>An <strong>EKF</strong> (extended Kalman filter) does the same with many numbers at once (x, y,
+heading, speeds...), and handles turning, where the maths isn't a straight line.</p>
+</section>
+<section class="card"><h2 id="5-robot_localization-the-stock-ekf">5. robot_localization: the stock EKF</h2>
+<p>We don't write our own filter. <code>robot_localization</code> (version 3.8.3, Jazzy) gives us:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Job</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ekf_node</code></td>
+<td>the filter. We run it <strong>twice</strong>: <code>ekf_local</code> and <code>ekf_global</code></td>
+</tr>
+<tr>
+<td><code>navsat_transform_node</code></td>
+<td>GPS degrees → map metres (<a href="learn-gps.html">Learn: GPS</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each input has a list of 15 true/false values: which parts of the message to use.</p>
+<pre class="highlight"><code class="language-text">x, y, z,   roll, pitch, yaw,   vx, vy, vz,   vroll, vpitch, vyaw,   ax, ay, az</code></pre>
+</section>
+<section class="card"><h2 id="6-frames-map-odom-base_link-rep-105">6. Frames: map, odom, base_link (REP-105)</h2>
+<p><img alt="Frames on our car, from above, and the TF tree" src="../img/frames.svg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Frame</th>
+<th>Is</th>
+<th>Moves?</th>
+<th>Set by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>map</code></td>
+<td>pinned to the earth at the datum. x east, y north</td>
+<td>never</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>odom</code></td>
+<td>where the car started today</td>
+<td>can <strong>hop</strong> a little when GPS corrects it</td>
+<td><code>ekf_global</code> publishes <code>map → odom</code></td>
+</tr>
+<tr>
+<td><code>base_link</code></td>
+<td>the car: on the ground, under the middle of the rear axle. x forward, y left</td>
+<td>smoothly</td>
+<td><code>ekf_local</code> publishes <code>odom → base_link</code></td>
+</tr>
+<tr>
+<td><code>imu_link</code>, <code>gps_link</code>, <code>radar_link</code>, <code>camera_*_link</code></td>
+<td>each sensor</td>
+<td>fixed to the car</td>
+<td><code>robot_state_publisher</code>, from <code>vehicle.yaml</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>REP-105 is the ROS rule for these names. REP-103 sets the units and directions:
+metres, radians, x forward, y left, z up.</p>
+<h3 id="tf-the-frame-tree">TF: the frame tree</h3>
+<p><strong>TF</strong> is ROS's service for "where is frame A, seen from frame B, at time t?"</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A tree</td>
+<td>each frame has <strong>one</strong> parent. <code>map → odom → base_link → gps_link</code></td>
+</tr>
+<tr>
+<td>One publisher per link</td>
+<td>two nodes publishing <code>odom → base_link</code> would fight. That's why <code>imu_filter_madgwick</code> has <code>publish_tf: false</code></td>
+</tr>
+<tr>
+<td><code>/tf</code></td>
+<td>links that move (the EKFs), many times a second</td>
+</tr>
+<tr>
+<td><code>/tf_static</code></td>
+<td>links that never move (sensor mounts), sent once</td>
+</tr>
+<tr>
+<td>Chaining</td>
+<td>ask for <code>map → gps_link</code>; TF multiplies the links in between</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="7-our-two-ekfs-their-real-inputs">7. Our two EKFs: their real inputs</h2>
+<p>From <code>src/localization/aav_localization/config/</code>. Both run at 30 Hz, in 2D
+(<code>two_d_mode: true</code>: no height, roll or pitch).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Input</th>
+<th>What it gives</th>
+<th><code>ekf_local</code> uses</th>
+<th><code>ekf_global</code> uses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/vehicle/odom</code> (the backend)</td>
+<td>wheel speed, turn rate</td>
+<td>vx, vy, vyaw</td>
+<td>vx, vy, vyaw</td>
+</tr>
+<tr>
+<td><code>/sensors/imu/data</code></td>
+<td>the gyro</td>
+<td>vyaw</td>
+<td>vyaw</td>
+</tr>
+<tr>
+<td><code>/localization/gps/odom</code> (navsat_transform)</td>
+<td>GPS as map x, y</td>
+<td>-</td>
+<td><strong>x, y</strong></td>
+</tr>
+<tr>
+<td><code>/localization/gps/heading</code> (gps_heading)</td>
+<td>the heading, from the GPS receiver's velocity, while the car moves</td>
+<td>-</td>
+<td><strong>yaw</strong></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><code>ekf_local</code></th>
+<th><code>ekf_global</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>world_frame</code></td>
+<td><code>odom</code></td>
+<td><code>map</code></td>
+</tr>
+<tr>
+<td>Publishes</td>
+<td><code>/localization/odom/local</code></td>
+<td><code>/localization/odom/global</code></td>
+</tr>
+<tr>
+<td>TF</td>
+<td><code>odom → base_link</code></td>
+<td><code>map → odom</code></td>
+</tr>
+<tr>
+<td>Used by</td>
+<td>Nav2's controller and local costmap</td>
+<td>Nav2's planner and global costmap; navsat_transform</td>
+</tr>
+<tr>
+<td>Starts at</td>
+<td>(0, 0), sure of it</td>
+<td><code>start_x</code>, <code>start_y</code>, <code>start_yaw</code> from the launch file; unsure (yaw ±18°)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three choices worth knowing:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>vy = 0 is fused</strong></td>
+<td>a car can't slide sideways. Telling the filter so keeps it honest</td>
+</tr>
+<tr>
+<td><strong>The IMU gives the turn rate, never the heading</strong></td>
+<td>no magnetometer, so the IMU's heading is only relative. The start heading comes from <code>start_yaw</code>; once the car moves, the GPS receiver's own velocity says which way it points (below)</td>
+</tr>
+<tr>
+<td><strong>The heading trusts the turn rate</strong></td>
+<td>yaw process noise 0.01, not the stock 0.06: the gyro and wheels give the turn rate well, so the heading follows them and GPS only nudges it. With 0.06 it wandered up to ±25° at walking pace (below)</td>
+</tr>
+<tr>
+<td><strong>Each backend sets its own covariance</strong></td>
+<td>the spine works out the turn rate from the measured steering. Today's encoder can't, so it sends a huge covariance (1e3), and the EKF ignores that part</td>
+</tr>
+</tbody>
+</table></div>
+<p>With <code>gps:=false</code>, <code>ekf_global</code> doesn't run, and a fixed <code>map → odom</code> (zero) stands in.</p>
+<h3 id="how-well-it-works">How well it works</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gazebo</td>
+<td>both EKFs within 0.2 m, parked</td>
+</tr>
+<tr>
+<td>Gazebo, driving (22 Oct)</td>
+<td>the global EKF's heading, 3 min forward and back at 0.5-1 m/s: median 2.6° off, worst 14° (yaw noise 0.06: median 6.2-6.7°, worst 39-54°). From a start 29° wrong: right within 10 s. With a gyro biased 0.6°/s: median 3.8°</td>
+</tr>
+<tr>
+<td>Gazebo, driving (25 Oct)</td>
+<td>with the heading from the GPS velocity (below), 5 Hz GPS, 4 runs each: median <strong>1.6-2.1°</strong> off (was 2.2-2.8), 95 % of the time under 4.9-6.0° (was 7.2-9.1), worst 8.5-13.6° (was 11.4-27.1), forward and reversing alike</td>
+</tr>
+<tr>
+<td>Gazebo, harder (25 Oct, 2 runs each)</td>
+<td>a gyro biased 0.6°/s: median 1.5-1.9° (was 3.3-4.3). Started 30° wrong: under 5° after 5.4-6.1 s (was 7.8-10.0), 3 s of it parked</td>
+</tr>
+<tr>
+<td>Bench</td>
+<td>0.03-0.3 m from the truth</td>
+</tr>
+<tr>
+<td>The car</td>
+<td>never run yet</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="where-the-heading-comes-from-todo-13">Where the heading comes from (TODO 13)</h3>
+<p>One GPS antenna can't tell which way the car points while it stands still. Once it moves,
+three things can:</p>
+<pre class="highlight"><code class="language-text">  GPS fixes, one after another      the receiver's own velocity      a compass
+     •  •   •  • ─▶ (0.5 m noise:     ──▶ (Doppler: 0.05 m/s,          🧭 (the motors
+     slow to settle)                   so 6° at 0.5 m/s, 3° at 1 m/s)  bend it)</code></pre>
+<p>The global EKF had only the first. <strong>Now it has the second too</strong>: <code>gps_heading</code>
+(<code>aav_gps_heading</code>) turns the receiver's velocity (<code>/sensors/gps/fix_velocity</code>, from
+<code>ublox_gps</code>) into a heading on <code>/localization/gps/heading</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>direction of the velocity = where the antenna goes</td>
+</tr>
+<tr>
+<td>2</td>
+<td>reversing (the wheels say so): turn it round 180°</td>
+</tr>
+<tr>
+<td>3</td>
+<td>an antenna off the rear axle swings out in a turn: take that out (0 today: it's over the axle)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>slower than 0.3 m/s, or the GPS's speed and the wheels' disagree by 0.3 m/s: say nothing</td>
+</tr>
+<tr>
+<td>5</td>
+<td>how sure: the velocity's noise across the travel ÷ the speed, plus 2°</td>
+</tr>
+</tbody>
+</table></div>
+<p>robot_localization can't do this alone: it turns a world-frame velocity into the car's
+frame with its own heading, so a wrong heading never shows.</p>
+<p>What we looked at (<code>pixi run heading-check</code>: Gazebo, 3.5 min forward and back at
+0.5-1 m/s, against the truth):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>(a) The GPS velocity's direction</strong></td>
+<td><strong>kept</strong>: every number better (table above). No stock package does it; ours is small: <code>gps_heading.py</code>, its sums in <code>course.py</code>, tested without ROS</td>
+</tr>
+<tr>
+<td>(b) The magnetometer, through <code>imu_filter_madgwick</code> (<code>use_mag</code>)</td>
+<td>not now: the Yahboom's <code>/sensors/imu/mag</code> is raw counts, not tesla; it needs a calibration away from steel, and the motors' current moves it while driving; Ottawa's declination is 12.5° W. Gazebo can't show the motors' effect, so a sim test would flatter it</td>
+</tr>
+<tr>
+<td>(c) Lidar scan matching</td>
+<td>not in our environment (no KISS-ICP, slam_toolbox, rf2o); a new dependency. It gives turn, not north: it helps the local EKF, not this</td>
+</tr>
+<tr>
+<td>(d) Settings: <code>use_odometry_yaw</code>, <code>yaw_offset</code>, <code>differential</code></td>
+<td>no effect with a datum: <code>navsat_transform</code> only uses them to set the map frame, which the datum fixes. <code>differential</code> on GPS would throw away its position</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The receiver's rate matters.</strong> The car's receiver sends one fix a second from the
+factory; Gazebo's sends five. At 1 fix a second (3 runs without, 2 with): median
+2.2-3.1° (was 2.8-5.4), worst 10.1-16.9° (was 10.4-21.2). Five a second is a receiver
+setting (u-center, once), for whoever sets it up (Q18).</p>
+<p><strong>What's left</strong>, beyond software. Built in software; the hardware lead decides:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Upgrade</th>
+<th>Heading</th>
+<th>Standing still?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Today: one antenna, velocity + gyro</td>
+<td>1.6-2.1° median, worst ~14°, in Gazebo</td>
+<td>no: the gyro carries it</td>
+</tr>
+<tr>
+<td>RTK (the ZED-F9R can, with a base station or NTRIP)</td>
+<td>position to 1-2 cm, so the fixes' own heading gets ~25 times better</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Two antennas (a moving base, e.g. two ZED-F9P), 1 m apart</td>
+<td>about 0.4°</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>The ZED-F9R's own fusion (its built-in IMU, <code>publish.esf</code> in <code>ublox_gps.yaml</code>)</td>
+<td>to measure: it needs a calibration drive</td>
+<td>after calibrating</td>
+</tr>
+</tbody>
+</table></div>
+<p>Real GPS errors drift slowly, not fresh each fix as in Gazebo (<a href="learn-gps.html">Learn: GPS</a>):
+that hurts the heading from fixes more than the heading from velocity, so on the car the
+gain should be at least as big. To check with the first drive's bag.</p>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You want to see</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start Gazebo, with both EKFs</td>
+<td><code>pixi run sim</code></td>
+</tr>
+<tr>
+<td>The frame tree, and who publishes each link</td>
+<td><code>pixi run tools/ros.sh ros2 run rqt_tf_tree rqt_tf_tree</code></td>
+</tr>
+<tr>
+<td>The car on the map, live</td>
+<td><code>pixi run tools/ros.sh ros2 run tf2_ros tf2_echo map base_link</code></td>
+</tr>
+<tr>
+<td>The GPS correction alone</td>
+<td><code>pixi run tools/ros.sh ros2 run tf2_ros tf2_echo map odom</code></td>
+</tr>
+<tr>
+<td>The local estimate</td>
+<td><code>pixi run tools/ros.sh ros2 topic echo --once /localization/odom/local</code></td>
+</tr>
+<tr>
+<td>Every setting the filter really uses</td>
+<td><code>pixi run tools/ros.sh ros2 param dump /ekf_global</code></td>
+</tr>
+<tr>
+<td>Drive, then watch the numbers change</td>
+<td><code>pixi run keyboard --sim</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Drive in a circle with the keyboard, and watch <code>tf2_echo map odom</code>: it stays small.
+That's the GPS soaking up the drift.</p>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The EKFs' settings</td>
+<td><code>src/localization/aav_localization/config/ekf_local.yaml</code>, <code>ekf_global.yaml</code></td>
+</tr>
+<tr>
+<td>GPS to metres</td>
+<td><code>src/localization/aav_localization/config/navsat.yaml</code></td>
+</tr>
+<tr>
+<td>How they start, and topic names</td>
+<td><code>src/localization/aav_localization/launch/localization.launch.py</code></td>
+</tr>
+<tr>
+<td>The IMU filter</td>
+<td><code>src/sensors/aav_sensors/config/imu_filter.yaml</code></td>
+</tr>
+<tr>
+<td>The heading from the GPS velocity</td>
+<td><code>src/localization/aav_gps_heading</code> (<code>course.py</code>: the sums, no ROS)</td>
+</tr>
+<tr>
+<td>Measure the heading in Gazebo</td>
+<td><code>pixi run heading-check</code> (<code>tools/heading_check.py</code>)</td>
+</tr>
+<tr>
+<td>Sensor positions on the car</td>
+<td><code>src/aav_description/config/vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>Wheel speed into <code>/vehicle/odom</code></td>
+<td><code>aav_spine/spine_bridge.py</code>, <code>aav_legacy</code> <code>encoder_udp.py</code>, <code>aav_gazebo/gazebo_adapter.py</code></td>
+</tr>
+<tr>
+<td>Why the EKFs meet in TF, not on a topic</td>
+<td><a href="naming.html">Topic areas</a></td>
+</tr>
+<tr>
+<td>Frames in the contract</td>
+<td><code>docs/interfaces.yaml</code>, <code>frames:</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="learn-gps.html"><small>Previous</small>← Learn: GPS</a>
+<a class="next" href="learn-control.html"><small>Next</small>Learn: control →</a></nav>
+</main>
+<footer>Source: <code>docs/learn-localization.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

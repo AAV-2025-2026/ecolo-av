@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decisions and open questions · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Decisions and open questions</h1>
+<div class="meta">36 min read · 13 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a class="here" href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-labels">How to read the labels</a><a href="#decided">Decided</a><a href="#tentative">Tentative</a><a href="#proposed-for-the-next-team-meeting">Proposed: for the next team meeting</a><a href="#ground-rules">Ground rules</a><a href="#decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</a><a href="#decided-on-11-october">Decided on 11 October</a><a href="#decided-on-15-october">Decided on 15 October</a><a href="#decided-on-22-and-23-october">Decided on 22 and 23 October</a><a href="#decided-on-24-october">Decided on 24 October</a><a href="#decided-on-25-october">Decided on 25 October</a><a href="#open-questions">Open questions</a><a href="#also-waiting-on-the-team">Also waiting on the team</a></nav>
+<div class="lead"><p>What the team has decided, what's still open, and the 34 numbered questions. The source
+is the team design doc, <em>AAV 2026–27 Autonomy Stack — Architecture &amp; Plan</em> (a Claude Doc,
+revision 61 on 10 October 2026). This page is a short copy, so you don't have to hunt.
+When the two differ, the design doc wins.</p></div>
+<section class="card"><h2 id="how-to-read-the-labels">How to read the labels</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Label</th>
+<th>Means</th>
+<th>What you do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Decided</strong></td>
+<td>the team agreed</td>
+<td>build on it; change it only after a team discussion</td>
+</tr>
+<tr>
+<td><strong>Tentative</strong></td>
+<td>the current direction, until a question is answered</td>
+<td>build on it, but keep it easy to change</td>
+</tr>
+<tr>
+<td><strong>Proposed</strong></td>
+<td>a suggestion waiting for the team</td>
+<td>accept or change it at the next team meeting</td>
+</tr>
+</tbody>
+</table></div>
+<p>Answer a question by its number, for example "Q12: targets". The design doc records the
+answer.</p>
+</section>
+<section class="card"><h2 id="decided">Decided</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Commands follow one path: each driver → <code>twist_mux</code> → <code>ego</code> → one backend</td>
+<td>Only ego talks to a backend; no driver reaches the actuators. Teleop (keyboard, remote, joystick) is a driver too (Ben, 9 Oct)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ego outputs Ackermann: <code>AckermannDriveStamped</code></td>
+<td>The real car, Gazebo, turtlesim and CARLA all take the same message, so a driver can't tell which one is running</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Stock ROS packages: robot_localization (two EKFs), Nav2, nav2_costmap_2d, twist_mux</td>
+<td>They replace the previous team's own estimator, planner, costmaps and command picking, where most of its bugs were</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The joystick can drive the car with no autonomy running</td>
+<td>Done with launch profiles</td>
+</tr>
+<tr>
+<td>5</td>
+<td>A CAN spine replaces the serial link from the Motor Pi to the ESP32</td>
+<td>Which signals cross the bus is still open: Q12</td>
+</tr>
+<tr>
+<td>6</td>
+<td>ROS 2 Jazzy on every computer</td>
+<td>Humble support ends in May 2027, Jazzy's in May 2029. ROS can't mix versions, so every computer moves together (Ben, 9 Oct)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>One repo and one workspace, with folders by layer of the picture</td>
+<td>One place to build, test and document everything</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Languages: Python for the ROS nodes we write; Rust for the firmware, the drivers and the ports of the inherited C++; no C++ of our own (Ben, 10 Oct)</td>
+<td>Our nodes run at 50 Hz or less, and the hard timing lives in the firmware. The spine logic is already Rust (<code>spine-core</code>)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Develop on Macs too, with Pixi and RoboStack</td>
+<td>The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; all use Cyclone DDS (23 Oct, below)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="tentative">Tentative</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Why</th>
+<th>Waits on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No QNX</td>
+<td><code>twist_mux</code> takes over QNX's job of picking which command wins. Hard real-time safety moves into the spine firmware and the hardware e-stop</td>
+<td>Q23</td>
+</tr>
+<tr>
+<td>GPS gives the global position; the model is unknown</td>
+<td>Whether it uses RTK corrections decides how precise GPS A→B can be</td>
+<td>Q18, Q19</td>
+</tr>
+<tr>
+<td>Bare metal waits: only the spine firmware runs without an operating system</td>
+<td>Ben, 9 Oct: "Maybe we will wait on this."</td>
+<td></td>
+</tr>
+<tr>
+<td>The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32</td>
+<td>Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip. A Pico 2 program exists since 11 Oct (<code>boards/pico2</code>)</td>
+<td>Q10–Q13</td>
+</tr>
+<tr>
+<td>The GPS driver: the stock <code>ublox_gps</code> by default; <code>nmea</code> and <code>ublox_dgnss</code> stay as <code>gps_driver:=</code> options</td>
+<td>It's in Pixi on every computer. <code>ublox_dgnss</code>, the 2024-25 choice, is apt-only, so it runs on the car only</td>
+<td>Q18</td>
+</tr>
+<tr>
+<td>The HUD's e-stop button only sets the e-stop. Clearing it stays a person's deliberate act, at the joystick or a laptop</td>
+<td>A stray tap on the screen can't restart the car</td>
+<td>Q29</td>
+</tr>
+<tr>
+<td>Flutter 3.35.7, downloaded into <code>vendor/</code> (<code>pixi run get-flutter</code>)</td>
+<td>Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's <code>pubspec.lock</code></td>
+<td>Q29</td>
+</tr>
+<tr>
+<td>Lane keeping: a classic OpenCV lane finder publishes <code>/perception/lane/geometry</code>; the 2025-26 lane keeping follows it</td>
+<td>No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same</td>
+<td>Q22</td>
+</tr>
+<tr>
+<td>No micro-ROS for now: each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes. To think again once we see the car's hardware</td>
+<td>Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros". 11 Oct: "lets rethink thinks later after we see the hardware"</td>
+<td>seeing the hardware: Q10–Q13</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="proposed-for-the-next-team-meeting">Proposed: for the next team meeting</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Proposal</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TwistStamped</code> on every command topic (<code>/drivers/*/cmd_vel</code>, <code>/control/cmd_vel</code>)</td>
+<td><code>twist_mux</code> expects it, and the timestamp lets ego drop stale commands. The code already does this</td>
+</tr>
+<tr>
+<td>A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree</td>
+<td>A car can't turn on the spot. The config already does this</td>
+</tr>
+<tr>
+<td>The RC transmitter stays the top-priority override, in hardware</td>
+<td>It works today, and doesn't depend on any computer</td>
+</tr>
+<tr>
+<td>The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car</td>
+<td>A reboot or a glitch never restarts the car by itself. It's in <code>spine-core</code> since 10 Oct</td>
+</tr>
+<tr>
+<td><strong>The RC mode switch, three positions (TODO 48, 24 Oct):</strong> CH6 (index 5, the 2025-26 <code>RC_EN_CH</code>) <strong>low = computer, middle = RC via ROS, high = RC direct</strong>; thresholds below 1301, 1301-1700, above 1700 (<code>ibus::RcMap::THREE_POSITION</code>). Needs a three-position switch on CH6 (the transmitter's aux-channel menu); a two-position switch still gives computer and RC direct. The team and the hardware lead decide; CH6's switch type and a free channel: question H10 (<a href="audit-questions.html">audit questions</a>)</td>
+<td>One switch, in the order of "how much the computer does". RC direct stays the fallback that needs no computer. Moving the switch from low to high passes RC via ROS, which drives only through ego's limits. Today's firmware builds keep the 2025-26 reading (&gt;1500 = RC); only <code>--features uplink</code> reads three positions. Losing the RC in either RC position brakes (fault 256)</td>
+</tr>
+<tr>
+<td><strong>RC via ROS at twist_mux priority 95</strong> (TODO 48): below the joystick's deadman (100), above the keyboard (90)</td>
+<td>A person with the RC is a person, so above every program. The joystick's holder sits in the car, so the deadman still wins. The ESP32 can't tell who in ROS made a command, so <code>rc_driver</code> sends zeros too while on RC via ROS, to keep Nav2 out</td>
+</tr>
+<tr>
+<td><strong>The speed loop's <code>smooth</code> profile, to try on stands (TODO 27, 25 Oct):</strong> a setpoint weight (b 0.75), kp 1.0, ki 0.25, the integral's limit 1.0 with clamping. <strong>Not the default:</strong> the firmware keeps today's gains until the stands; switch with <code>SpeedLoopConfig::smooth()</code> on a board, <code>speed_loop:=smooth</code> in sim and bench (<a href="vehicle-model.html#tuning-the-speed-loop">Tuning the speed loop</a>)</td>
+<td>Today's loop overshoots about 15% (0.57 m/s for 0.5) because of the PI's zero, not windup. The weight moves the zero and leaves the poles and margins alone. On the model: no overshoot at the guessed throttle, none at a 5x drag, 8% at a 5x weaker throttle (today 17%, and 29% short of 2 m/s); phase margin 42° or more up to a 2x stronger throttle, its lag doubled, 110 ms late. The real gains still come from the measured a_max and drag (TODO 52b)</td>
+</tr>
+<tr>
+<td>A linear state-space model of the car, for tuning and the report (24 Oct): speed (first order, the spine's PI around it), steering (second order), the path errors (the bicycle, linearised), the delays; <code>aav_ego</code> <code>vehicle_model.py</code>, <code>pixi run vehicle-model</code></td>
+<td>Ben asked for "a matrix control thing ... maybe second order system" (24 Oct), in SYSC 3600's terms (its professor supervises the capstone). It shows what kinematics can't: the speed loop settles in about 13 s; the delays cost the lateral loop phase margin (52° → 31° at 1 m/s in the worst case); Gazebo steers 0.1 s slower than <code>vehicle.yaml</code>. It never drives the car; it is refit from the actuator tests (<a href="vehicle-model.html">The car as a linear model</a>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="ground-rules">Ground rules</h2>
+<p>Rules for people and Claude sessions alike. They live in <code>CLAUDE.md</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>In short</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Units and frames</td>
+<td>metres, radians, seconds; x forward, y left, z up; positive steering = left; <code>map → odom → base_link</code>, with <code>base_link</code> on the ground under the rear axle</td>
+</tr>
+<tr>
+<td>Prefer stock</td>
+<td>stock ROS packages first, then the previous teams' code, then a stub</td>
+</tr>
+<tr>
+<td>Keep the maths out of ROS</td>
+<td>a node's logic lives in a plain module, with its own tests</td>
+</tr>
+<tr>
+<td>No pins in ROS</td>
+<td>pins, I2C addresses and calibration stay in the firmware</td>
+</tr>
+<tr>
+<td>Inherited code</td>
+<td>keeps a <code>PROVENANCE.md</code>: where it came from, and every change since</td>
+</tr>
+<tr>
+<td>Secrets</td>
+<td>never in git, logs or docs: write down only where a secret is</td>
+</tr>
+<tr>
+<td>Git</td>
+<td><code>main</code> lives on GitHub, in <code>zander1976/aav</code> (public), and CI tests every push; small commits, each passing the tests, with messages that give the intention</td>
+</tr>
+<tr>
+<td>Docs</td>
+<td>short pages, sections, tables and pictures; Ben is dyslexic</td>
+</tr>
+<tr>
+<td>Port first</td>
+<td>move everything to Jazzy as it is, then consider rewriting parts in Rust</td>
+</tr>
+<tr>
+<td>Simulators</td>
+<td>Gazebo and bench mode every day; CARLA for the cameras, once the NVIDIA computer runs it (Q31, reopened 15 Oct)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-10-october-on-the-mac">Decided on 10 October, on the Mac</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav/aav</code> is our version of the project. The other folders are the previous teams' code, or downloaded source</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td><code>aav</code> will become the merger of everything, in one organized project</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td>Macs get GNU <code>coreutils</code> in their Pixi environment, so <code>colcon test</code> works on a Mac</td>
+<td>a technical fix: see <a href="mac.html">Your Mac</a></td>
+</tr>
+<tr>
+<td>Firmware and hardware drivers in Rust, not C or C++, even where the ROS nodes stay in Python. The 2025-26 C++ keeps running until each board's Rust version replaces it</td>
+<td>Ben: see <a href="rust-firmware.html">Rust on the hardware</a></td>
+</tr>
+<tr>
+<td>Bring perception in now, not next year: the YOLO detector, the camera calibrations, radar clustering, lane keeping</td>
+<td>Ben: "Lets merge in all of this too"</td>
+</tr>
+<tr>
+<td>Flesh out the whole graph down to the sensors, and stub in what the hardware and firmware don't have yet: bench mode</td>
+<td>Ben: "get as much done as we can and stub in the rest"</td>
+</tr>
+<tr>
+<td>PyTorch and YOLO live in a separate <code>ml</code> environment, so the default one stays small</td>
+<td>a technical choice: see <a href="perception.html">Perception</a></td>
+</tr>
+<tr>
+<td>Camera images are subscribed reliably, not best effort</td>
+<td>measured on the Mac: best effort lost every image</td>
+</tr>
+<tr>
+<td>The code lives in <code>git@github.com:zander1976/aav.git</code>, public (Q25; Ben, 15 Oct)</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td>CI runs <code>pixi run test</code> on Linux for every push, and on a Mac every night</td>
+<td>Ben</td>
+</tr>
+<tr>
+<td>Commit messages give the intention, with no attribution lines. The README's Credits section names the previous teams, the open-source projects and the AI assistant</td>
+<td>Ben: "This is a school project"</td>
+</tr>
+<tr>
+<td>The stand-ins (<code>turtle</code>, <code>sim</code>, <code>bench</code>, <code>view</code>, and the keyboard with <code>--sim</code> or <code>--local</code>) stay on the computer they run on, so a pretend car can never reach the real one</td>
+<td>a safety choice, before the audit on the car's network: see <a href="simulation.html">Simulation</a></td>
+</tr>
+<tr>
+<td>The car's red e-stop button always stops the car, whatever our software does. We don't rewire it; the spine only listens, through a spare contact, to report it and to stay stopped afterwards</td>
+<td>Ben: "this already has an estop so we don't want to break that"; "I just want it to work"</td>
+</tr>
+<tr>
+<td>Our C++ moves to Rust: the IMU driver (Ben's twin), the radar clustering (a Rust ROS node), the encoder and display Picos (Embassy); the spine replaces the ESP32. Stock ROS packages stay</td>
+<td>Ben, 10 Oct: "Can we change all the c++ to rust?"</td>
+</tr>
+<tr>
+<td>ML: a detector on each machine with a GPU (the Orin, a laptop), each under its own name; no device aliases</td>
+<td>Ben, 10 Oct: "the orin be one node and/or my laptop be another node"</td>
+</tr>
+<tr>
+<td>The order of work: the high-level pieces first, then Ackermann done properly (reversing, both wheels' angles, the steering curve), then the C++ ported to Rust, then every file rewritten to its language's own conventions, until the whole car works</td>
+<td>Ben, 10 Oct: "Lets try to get a fully functioning thing going on"</td>
+</tr>
+<tr>
+<td>Inference: TensorRT on the Orin (a <code>.engine</code> built there), Core ML on the MacBook Pro (a <code>.mlpackage</code>), both in our <code>aav_detector</code> node. Isaac ROS's TensorRT detectors are the Orin's upgrade path</td>
+<td>Ben, 10 Oct: "TensorRT on the Orin and CoreML ... on the macbook pro"</td>
+</tr>
+<tr>
+<td>A read-only MCP server lets Claude or another AI app read the docs, the contracts and the live graph. It never writes to ROS, reads only files in git, and has its own <code>mcp</code> environment</td>
+<td>Ben: "Yes, read-only": see <a href="mcp.html">AI apps (MCP)</a></td>
+</tr>
+<tr>
+<td>Today's C++ boards build with PlatformIO, in a <code>firmware</code> environment. Its downloads go into <code>vendor/platformio/</code></td>
+<td>Ben: "We want everybody to be able to build this out of the box"</td>
+</tr>
+<tr>
+<td>CARLA next to Gazebo, through our own adapter (CARLA's Python client), not its ROS 2 link</td>
+<td>reopened by Ben 15 Oct ("I think we want carla 5 not 4"): see Q31 and <a href="carla.html">CARLA</a></td>
+</tr>
+<tr>
+<td>The team's Linux machine with an NVIDIA card trains models. The 2024-25 <code>best.pt</code> is probably on it</td>
+<td>Ben</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-11-october">Decided on 11 October</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Work on what we can try at home, in this order: the full graph with the drivers, ego and the simulators; our C++ to Rust (Python later); the Mac on the network with ML on it, and Nav2; the drivers in Rust, ready to try on a board; then the GUI</td>
+<td>Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to work on"</td>
+</tr>
+<tr>
+<td>micro-ROS goes back from Decided to Tentative: no micro-ROS for now, and we think again once we see the hardware</td>
+<td>Ben, 11:38: "No micro-ROS - lets rethink thinks later after we see the hardware"</td>
+</tr>
+<tr>
+<td>The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29</td>
+<td>Ben, 11:58: "Raylib for the HUD: yes, no, or try it first? yes"</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-15-october">Decided on 15 October</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Topic names by area: <code>/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code>, with the areas <code>/sensors/</code>, <code>/vehicle/</code>, <code>/can/</code>, <code>/localization/</code>, <code>/perception/</code>, <code>/drivers/</code>, <code>/control/</code>, <code>/ego/</code>, <code>/safety/</code>, <code>/hud/</code> (<a href="naming.html">Topic areas</a>). Each driver gets its own: <code>/drivers/keyboard/cmd_vel</code>, <code>/drivers/joy/cmd_vel</code></td>
+<td>Ben, 00:30: "The drivers all need to be in a /drivers/keybaord, etc type stuff as an example."</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-22-and-23-october">Decided on 22 and 23 October</h2>
+<p>What we changed, and why.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Why</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Cyclone DDS on every computer</strong>, the Macs and the car's. Pixi sets it; <code>AAV_RMW=fastdds</code> goes back for one run</td>
+<td>Fast DDS delivered messages up to <strong>0.48 s late</strong> beside Gazebo, while their sender was on time; Cyclone never over <strong>0.05 s</strong> (25 min each, 22 Oct). The late messages had made sensors look dead and Nav2 refuse goals. <code>sim-check</code> passes on Cyclone, the rear camera at its full 10 Hz. Both are free and open source, and fully supported in Jazzy. To check at the car: Cyclone uses one network card (<a href="mac.html#why-we-use-cyclone-dds">Your Mac</a>)</td>
+<td>Ben, 23 Oct: "yes lets do it"</td>
+</tr>
+<tr>
+<td><strong>MPPI is Nav2's default path follower</strong>; Regulated Pure Pursuit stays as <code>controller:=rpp</code></td>
+<td>In every lot run in Gazebo it did at least as well. It reached the first goal cleanly in 4 of 4 runs; Pure Pursuit looped there in 2 of 3, as it aims at a point and arrives facing the wrong way (<a href="controllers.html">Path followers</a>)</td>
+<td>Ben, 22 Oct: "I thought we decided to go mppi"</td>
+</tr>
+<tr>
+<td><strong>The car may back up</strong> (0.5 m/s at most), where the lidar watches behind it (the rear camera later); collision_monitor then guards a box behind the rear bumper</td>
+<td>Driving forward only, a U-turn in a narrow lane works about half the time and can leave the car facing a wall. Allowed to reverse, it makes a three-point turn and reaches every goal</td>
+<td>Ben, 22 Oct: "Yes the car can reverse"</td>
+</tr>
+<tr>
+<td><strong>The GPS antenna is over the rear axle</strong> (<code>vehicle.yaml</code>: x = 0)</td>
+<td>It's already there on the car. That is the best spot: our position software corrects for the antenna's offset using the car's heading, so with no offset a heading error can't move the GPS position. In Gazebo, reversing's heading error halved (<a href="learn-gps.html#mount-the-antenna-over-the-rear-axle">Learn: GPS</a>)</td>
+<td>Ben, 23 Oct: "its already there"</td>
+</tr>
+<tr>
+<td><strong>The wheel sensors are read by an Arduino</strong>, which sends CAN frames; the Orin reads the bus and publishes them in ROS</td>
+<td>The hardware side's plan. The frames are in <code>aav.dbc</code> already (0x200, 0x201), and the Orin's side decodes them, so the Arduino only has to send them. An exception to "Rust for all firmware": it's the hardware lead's board</td>
+<td>Ben, 23 Oct, for the hardware side</td>
+</tr>
+<tr>
+<td><em>Tentative, until the hardware lead confirms:</em> <strong>today's car is driven through the Motor Pi's UART</strong>, and <strong>the Orin reads its CAN bus for sensors only</strong> (<code>car.launch.py actuators:=uart</code>, the default; <code>spine_bridge role:=sensors</code>). The CAN spine stays one argument away (<code>actuators:=can</code>)</td>
+<td>Ben's picture of the wiring: the actuators on the ESP32, with the Motor Pi as its network interface; the CAN bus straight to the Orin, with the wheel sensors. A <code>role</code> on <code>spine_bridge</code>, not a new node: the wheel decoding is already there and tested, and the sensors role has no way to send (<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>)</td>
+<td>Ben, 23 Oct: "the motor controllers are on the esp32 with a pi as its network interface"</td>
+</tr>
+<tr>
+<td><strong>The cameras stream to the Orin with MediaMTX, compressed (H.264) on the Pi</strong>; the Orin unpacks them with NVIDIA's video hardware, then OpenCV and the object detector (RF-DETR Nano, in TensorRT) run on them, in one program per camera</td>
+<td>The camera Pi already runs MediaMTX with no ROS, and stays as it is. H.264 is about 10 times smaller than JPEG; raw pictures (83 MB/s each) never cross the network. People can watch the same stream in a browser. The cost, a little more delay (5-10 cm at 1 m/s), is to measure. <code>camera_ros</code> (ROS on the Pi) stays the fallback (<a href="../../TODO.md">TODO 37b</a>)</td>
+<td>Ben, 23 Oct: "mediamtx on the pi to the orin seems like the best choice"</td>
+</tr>
+<tr>
+<td><strong>TensorRT runs the detector on the Orin; OpenCV is whatever JetPack ships</strong> (4.x if that's it)</td>
+<td>TensorRT is NVIDIA's own and the fastest on the Orin. OpenCV only undistorts and finds lanes, so its version matters little, and JetPack's needs no build of our own</td>
+<td>Ben, 23 Oct: "tensorrt is definately the best choice. if htat is opencv 4 then thats what we use"</td>
+</tr>
+<tr>
+<td><strong>The detector is RF-DETR Nano</strong>, not YOLO</td>
+<td>In our comparison it saw the stop sign from 20 m (YOLO11n: 10 m) and found more people, with no false finds. Its licence is Apache-2.0; YOLO's is AGPL-3.0. Its cost: bigger weights, not yet timed on the Orin (<a href="model-comparison.html">newer models</a>)</td>
+<td>Ben, 23 Oct: "I thought we were skipping yolo and using the other one"</td>
+</tr>
+<tr>
+<td><strong>Goals count within 1.0 m and 0.75 rad</strong></td>
+<td>GPS without RTK is good to about a metre. At 0.5 m the car chased GPS noise and looped round goals it had reached</td>
+<td>22 Oct, from the Gazebo runs</td>
+</tr>
+<tr>
+<td><strong>ego eases into speed</strong>: a jerk limit of 2.0 m/s³, speeding up only</td>
+<td>A smoother start for the people in the car. A stop is never softened: braking starts at once</td>
+<td>22 Oct, the proposal's T5.3</td>
+</tr>
+<tr>
+<td><strong>The global EKF trusts the gyro and wheels for heading</strong>; GPS only nudges it (yaw noise 0.06 → 0.01)</td>
+<td>At walking pace its heading jumped up to 76°; now the worst per leg is 7-16° in Gazebo. To check with the real IMU</td>
+<td>22 Oct, from the Gazebo runs</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-24-october">Decided on 24 October</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Why</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The detector package is <code>aav_detector</code></strong>, was <code>aav_yolo</code>; its node is <code>object_detector</code> (<code>object_detector_&lt;machine&gt;</code> on the car), was <code>yolo_detector</code>. Topics, parameters and <code>detector:=yolo</code> stay</td>
+<td>It runs RF-DETR Nano by default now, YOLO only as an option, so a name with "yolo" in it misled. <code>detector:=yolo</code> keeps its name: it names the model family</td>
+<td>Ben, 24 Oct: "aav detector yes"</td>
+</tr>
+<tr>
+<td><strong>A HUD that drops out holds Nav2 until a person clears it</strong> (latched, <code>hud LOST</code>). One dropout within 5 s of its first beat is forgiven; any other latches, even once it beats again. A person checks the screen, then <code>pixi run watchdog-clear</code> (the same service as a GPS jump)</td>
+<td>The safety drivers rely on the screen. A HUD that crashed once may crash again; driving on by itself after systemd restarts it hides that. A window's slow first frames shouldn't need a person, so start-up gets one free dropout. The watchdog's own stalls never latch it (<a href="hud.html#the-heartbeat">HUD</a>)</td>
+<td>Ben, 24 Oct</td>
+</tr>
+<tr>
+<td><strong>The heartbeat starts on the Orin and ends on the ESP32; the Pi only relays it</strong> (TODO 50). The output mux adds 1 to a counter for each command it passes on (<code>/control/&lt;target&gt;/heartbeat</code>); <code>legacy_uart_bridge</code> copies it into a <strong>version 2 serial frame</strong> (17 bytes: <code>0xA5</code>, version 2, the three values, the counter, armed and e-stop flags, CRC-8/SAE-J1850); the ESP32 brakes, latched, when it hasn't changed for 100 ms. The 13-byte frame stays as a fallback (<code>--features link-v1</code>, <code>frame_version: 1</code>); the car's <code>legacy.yaml</code> keeps 1 until the Rust firmware is flashed</td>
+<td>The Pi could be cut off from the Orin and still send frames, so a heartbeat the Pi makes proves nothing. The counter shows the last node on the Orin is alive <strong>and</strong> its gate is open. The CRC is the CAN plan's, so the team learns one. The C++ on the car reads only version 1, and could misread version 2 (<a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>)</td>
+<td>Ben, 24 Oct</td>
+</tr>
+<tr>
+<td><strong>The HUD shows whether the car may move</strong>: GO, WAIT, STOP or AUTO STOP, a colour, an icon and the one main reason (the e-stop, the output mux's gate, the sensor watchdog)</td>
+<td>The safety drivers need one answer at a glance, short words, colour and a shape, not a log line (<a href="hud.html#may-the-car-move-the-go-stop-panel">HUD</a>)</td>
+<td>Ben, 24 Oct</td>
+</tr>
+<tr>
+<td><strong><code>spine_bridge</code> refuses to arm while the safety gate is shut</strong>: <code>/spine/arm</code> says no unless the output mux said <code>OPEN</code> for the bridge's own target in the last 1.5 s, and says why. Both bridges, Rust and Python; disarming always works. The bench and Gazebo arm through <code>arm_when_open</code>, which waits for <code>OPEN</code></td>
+<td>While the gate is shut, the bridge gets no commands, so an armed spine only latched again at once: arming said "armed" and did nothing. Now the answer is honest, and names the reason (a STOP's cause, a quiet mux). <code>legacy_uart_bridge</code> has no arm step (<a href="sources-and-targets.html#arming-waits-for-open">Arming waits for OPEN</a>)</td>
+<td>Ben, 24 Oct</td>
+</tr>
+<tr>
+<td><strong>The muxes err shut on discovery's order</strong>: a node on <code>/system/source</code> not heard yet holds the gate; an announcement counts before its node shows in the graph. <strong>Test runs take a ROS domain nobody uses</strong></td>
+<td>A guard test's SIM case let frames through once: another run on the same random domain (cross-talk, seen the same day in a Gazebo check). Across processes the graph can show an announcer 30 ms before its message: small, but it erred open (<a href="sources-and-targets.html#what-it-cant-catch">Sources and targets</a>)</td>
+<td>24 Oct, from a test that failed on main</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="decided-on-25-october">Decided on 25 October</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Why</th>
+<th>By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CI tests on 64-bit ARM Linux too, on every push</strong>: <code>pixi run test</code> and the HUD drawn once (job <code>arm</code>), and the car kit installed with no network (job <code>car-kit</code>), on GitHub's free ARM runner</td>
+<td>The Orin and the Pis are ARM; nothing had built there before the car day. 12 and 7 min beside the Linux job, so every push, not nightly: a break shows on the push that made it (<a href="infrastructure.html#sharing-the-code">CI</a>)</td>
+<td>Ben's go-ahead, 24 Oct: everything that can be done without the car</td>
+</tr>
+<tr>
+<td><strong>Tests never use the network</strong> (<code>pixi run test</code> and <code>tools/test.sh</code> set <code>ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST</code>), and <strong>colcon tests one package at a time</strong></td>
+<td>On GitHub's Mac a test on the network never ended: Cyclone DDS's multicast reader can't be stopped there (TODO 42). On one computer and one domain, two packages' tests side by side heard each other. One at a time costs 14 s</td>
+<td>the same</td>
+</tr>
+<tr>
+<td><strong>The global EKF takes the heading from the GPS receiver's velocity</strong> while the car moves (<code>gps_heading</code>, <code>aav_gps_heading</code>; <code>gps_heading:=false</code> leaves it out). Gazebo's GPS now has a velocity too</td>
+<td>The receiver measures its velocity from the Doppler shift, good to 0.05 m/s while the position wanders by half a metre: its direction is the heading (turned round when reversing). In Gazebo, 4 runs each at walking pace: heading off by a median 1.6-2.1° (was 2.2-2.8), worst 8.5-13.6° (was 11.4-27.1), forward and reversing alike. The magnetometer (motors), lidar matching (not installed, and no north) and robot_localization's own settings (no effect with a datum) were looked at and not taken (<a href="learn-localization.html#where-the-heading-comes-from-todo-13">Learn: localization</a>)</td>
+<td>Ben's go-ahead, 24 Oct (TODO 13)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="open-questions">Open questions</h2>
+<p>The design doc numbers 34 questions, and doesn't rank them. <strong>Bold</strong> marks the ones that
+look like they block phase 0 or the first drives: a suggestion, for the team to change.
+The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tape measure.</p>
+<h3 id="the-car">The car</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q</th>
+<th>Topic</th>
+<th>The question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q1</strong></td>
+<td>Dimensions</td>
+<td>Wheelbase, track, overall size, steering limit, top speed? The old code disagrees: 1.3–1.57 m wheelbase</td>
+</tr>
+<tr>
+<td><strong>Q2</strong></td>
+<td>Steering feedback</td>
+<td>Is the steering's position sensor wired to its Jrk G2? How do its counts map to the wheel angle?</td>
+</tr>
+<tr>
+<td><strong>Q3</strong></td>
+<td>Brake</td>
+<td>How far does it travel, how hard does it brake, and what does it do if power is lost? That defines the safe state</td>
+</tr>
+<tr>
+<td><strong>Q4</strong></td>
+<td>Throttle</td>
+<td>Which motor controller does the DAC drive? Does it brake on its own? Is reverse safe while moving?</td>
+</tr>
+<tr>
+<td>Q5</td>
+<td>Wheel encoder</td>
+<td>Which wheel, how many counts per turn, and can it wire straight to the spine?</td>
+</tr>
+<tr>
+<td><strong>Q6</strong></td>
+<td>E-stop</td>
+<td>The car already has one (Ben, 10 Oct). Still open: what kind it is, what it cuts, and how it's wired</td>
+</tr>
+<tr>
+<td>Q7</td>
+<td>RC override</td>
+<td>Does the FlySky stay the top override? How does the spine know RC has taken over?</td>
+</tr>
+<tr>
+<td>Q8</td>
+<td>Power</td>
+<td>Battery voltage, the computers' supplies, and what the actuators do when a computer loses power</td>
+</tr>
+<tr>
+<td>Q9</td>
+<td>Which computers stay</td>
+<td>Orin, UI Pi, Motor Pi, radar Pi, camera Pi, QNX Pi? Suggested: the Orin, the spine and the HUD screen</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-spine-and-the-actuators">The spine and the actuators</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q</th>
+<th>Topic</th>
+<th>The question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q10</strong></td>
+<td>Owner</td>
+<td>Who owns the spine firmware and the CAN frame map?</td>
+</tr>
+<tr>
+<td>Q11</td>
+<td>Starting firmware</td>
+<td>Which firmware is on the ESP32 now? Build on AAV_cortex's, Motor_Steering's add-on, or the 2024-25 <code>FinalRev</code>?</td>
+</tr>
+<tr>
+<td><strong>Q12</strong></td>
+<td>What the spine accepts</td>
+<td>Target speed and steering angle (the speed loop in the firmware), or raw throttle and brake? Suggested: targets</td>
+</tr>
+<tr>
+<td>Q13</td>
+<td>Board</td>
+<td>Add a CAN transceiver to today's ESP32 board, or a new board? Who changes the PCB?</td>
+</tr>
+<tr>
+<td>Q14</td>
+<td>The Orin's side</td>
+<td>Its built-in CAN with a transceiver, or a USB-CAN adapter?</td>
+</tr>
+<tr>
+<td>Q15</td>
+<td>The bus</td>
+<td>Bitrate, connectors, cable route, terminators, and what else shares it</td>
+</tr>
+<tr>
+<td>Q16</td>
+<td>Watchdog</td>
+<td>How long without a command before it acts, how hard it brakes, and what the steering does</td>
+</tr>
+<tr>
+<td>Q17</td>
+<td>Wireless updates</td>
+<td>Keep them? If so, how are they authenticated?</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="sensors-and-localization">Sensors and localization</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q</th>
+<th>Topic</th>
+<th>The question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Q18</strong></td>
+<td>GPS model</td>
+<td>Which receiver is on the car? RTK or plain GPS? One antenna or two? It also picks the ROS driver</td>
+</tr>
+<tr>
+<td>Q19</td>
+<td>Corrections</td>
+<td>If RTK: which correction source, and is there internet at the test site?</td>
+</tr>
+<tr>
+<td>Q20</td>
+<td>IMU</td>
+<td>Keep the Yahboom on USB? Where is it mounted? Is its magnetometer usable on the car?</td>
+</tr>
+<tr>
+<td><strong>Q21</strong></td>
+<td>Test site</td>
+<td>Where do we drive, and who gives permission? A surveyed point there becomes the map origin</td>
+</tr>
+<tr>
+<td>Q22</td>
+<td>Lidar and cameras</td>
+<td>Which models are on the car? Not needed until phase 4, but the URDF and the power budget need them</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="software-and-process">Software and process</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q</th>
+<th>Topic</th>
+<th>The question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Q23</td>
+<td>QNX</td>
+<td>Is it definitely dropped? Is it a course or sponsor requirement?</td>
+</tr>
+<tr>
+<td><strong>Q24</strong></td>
+<td>Jazzy on the car</td>
+<td>Who images and reflashes the Orin, and when? Is there a spare machine to try JetPack 7.2 first? Until then, Pixi can run Jazzy on the car's Ubuntu 22.04</td>
+</tr>
+<tr>
+<td>Q25</td>
+<td>Repo</td>
+<td>A new 2026-27 GitHub organization, or the existing one? <strong>Answered by Ben, 10 Oct: <code>zander1976/aav</code>. Public: Ben, 15 Oct ("Public is what we want for github")</strong></td>
+</tr>
+<tr>
+<td>Q26</td>
+<td>Languages</td>
+<td>Python for all our ROS nodes? C++ or Rust for the spine firmware?</td>
+</tr>
+<tr>
+<td>Q27</td>
+<td>Steering at standstill</td>
+<td>A speed-and-turn-rate command can't steer at zero speed. Should the joystick turn the wheels while stopped?</td>
+</tr>
+<tr>
+<td>Q28</td>
+<td>Joystick handover</td>
+<td>When the hold-to-drive button is released, go back to the autonomous driver, or stay stopped?</td>
+</tr>
+<tr>
+<td>Q29</td>
+<td>HUD</td>
+<td>Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? Partly answered 11 Oct: a raylib HUD replaces the app once it matches</td>
+</tr>
+<tr>
+<td>Q30</td>
+<td>Remote driving</td>
+<td>In scope this year? Over which link, with what latency limit?</td>
+</tr>
+<tr>
+<td>Q31</td>
+<td>CARLA</td>
+<td><strong>Reopened by Ben 15 Oct: research done, adapter ready, needs the NVIDIA machine.</strong> <code>carla_adapter</code> uses CARLA's Python client, so it runs with CARLA 0.10 (Unreal Engine 5) and 0.9.16 alike, without the ROS 2 link that stalls on Jazzy. Town10 on 0.10 for the cameras; Carleton's streets (from OpenStreetMap) only on 0.9.16 for now, as 0.10 can't import maps yet. Never run against a server: no Mac version (<a href="carla.html">CARLA</a>). Was: parked, 10 Oct</td>
+</tr>
+<tr>
+<td><strong>Q32</strong></td>
+<td>Test rules</td>
+<td>Who is the safety driver, what's the speed cap, what's on the pre-drive checklist, who signs it off?</td>
+</tr>
+<tr>
+<td><strong>Q33</strong></td>
+<td>Owners</td>
+<td>Who owns each package?</td>
+</tr>
+<tr>
+<td><strong>Q34</strong></td>
+<td>Secrets</td>
+<td>Have the leaked GitHub token, Firebase keys and WiFi password been revoked or changed? Who controls those accounts?</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="also-waiting-on-the-team">Also waiting on the team</h2>
+<p>From tonight's audits and the Mac work. They're small, but someone has to say yes.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>The choice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ROS_DOMAIN_ID</code></td>
+<td>one number (0–101) for the car and every laptop</td>
+</tr>
+<tr>
+<td>GPS driver</td>
+<td><code>ublox_gps</code> is the default now (Tentative, above); keep it, or go back to <code>ublox_dgnss</code> (the car only). With Q18</td>
+</tr>
+<tr>
+<td><code>/safety/estop</code> reliability (N2)</td>
+<td>send it repeatedly, or make the mux hear it reliably</td>
+</tr>
+<tr>
+<td>Respawning device nodes (N3)</td>
+<td>restart a sensor driver when it dies?</td>
+</tr>
+<tr>
+<td>Nav2's lookahead (N7)</td>
+<td>its turn command flips sign about once a second in the sim</td>
+</tr>
+<tr>
+<td>Package renames</td>
+<td>the inherited packages' new names, in <a href="conventions.html">Conventions</a></td>
+</tr>
+<tr>
+<td>A <code>vendor/</code> folder</td>
+<td>keep downloaded source out of git, with a list to fetch it again</td>
+</tr>
+<tr>
+<td>Stop signs as a twist_mux lock</td>
+<td>priority 30: it holds Nav2 and the AI slot, never a person or a test script; 4 s stop, then 10 s to drive past. Built and working on the bench (Proposed)</td>
+</tr>
+<tr>
+<td>The steering on an e-stop</td>
+<td>hold where it is (<code>ESTOP_STEERING = Hold</code> in <code>spine-core</code>), or centre it (the 2025-26 firmware)</td>
+</tr>
+<tr>
+<td>The brake after boot</td>
+<td><code>IDLE_BRAKE = 0.0</code> lets it go once the e-stop clears; the 2025-26 firmware kept it full on (1.0). ⚠️ Keeping it on may be safer on a slope</td>
+</tr>
+<tr>
+<td>The RC gear switch's brake position</td>
+<td><code>RC_GEAR_BRAKE = SpeedZero</code>: the speed loop brakes to a stop. <code>RcInput</code> now has a brake field, so the old full brake is one constant away</td>
+</tr>
+<tr>
+<td>The remaining renames</td>
+<td><code>ti_ros2_driver</code>, <code>battery_monitor</code>: <a href="conventions.html">Conventions</a></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="car-day.html"><small>Previous</small>← Car day</a>
+<a class="next" href="infrastructure.html"><small>Next</small>Infrastructure →</a></nav>
+</main>
+<footer>Source: <code>docs/decisions.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

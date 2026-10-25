@@ -1,0 +1,31 @@
+# navsat_transform (robot_localization 3.8.3, Jazzy): GPS lat/lon -> map-frame x, y.
+#
+# Subscribes gps/fix, imu, odometry/filtered; publishes odometry/gps and gps/filtered;
+# serves datum, toLL, fromLL, fromLLArray, setUTMZone (names checked in navsat_transform.cpp;
+# the launch file maps them to /sensors/gps/fix, /sensors/imu/data, /localization/odom/global, ...).
+# It also uses TF base_link -> gps_link (from the URDF) to remove the antenna's offset,
+# which is why the antenna position in vehicle.yaml matters.
+#
+# The datum fixes the map frame to the ground: map (0, 0) = the datum's lat/lon, x east,
+# y north. Maps (aav_navigation/maps) and GPS goals all use this frame. The third value
+# rotates the map frame; keep it 0 so x stays east.
+#
+# Datum mode ignores the IMU, so declination and yaw_offset must stay 0 here: they would
+# rotate the map frame. When a calibrated magnetometer gives an absolute heading, switch
+# to wait_for_datum: false and set magnetic_declination_radians. Ottawa is about 12.5
+# degrees WEST in 2026, which robot_localization wants as about +0.22 (west positive, see
+# its Edinburgh example); check the value for the date at
+# https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml
+navsat_transform:
+  ros__parameters:
+    frequency: 30.0
+    delay: 3.0
+    magnetic_declination_radians: 0.0
+    yaw_offset: 0.0
+    zero_altitude: true
+    broadcast_cartesian_transform: false
+    publish_filtered_gps: true
+    use_odometry_yaw: false
+    wait_for_datum: true
+    # TODO: the test site. This placeholder is roughly Carleton University's campus.
+    datum: [45.3860, -75.6960, 0.0]

@@ -1,0 +1,39 @@
+# vendor/ros2-rust/: 9 repositories, each at an exact commit.
+# Made by tools/vendor.py --freeze ros2-rust; download with pixi run vendor.
+repositories:
+  ament_rs:
+    type: git
+    url: https://github.com/ros2-rust/ament_rs.git
+    version: f450e6599c42c2d242cfd921d38e1a18a866728e
+  cargo-ament-build:
+    type: git
+    url: https://github.com/ros2-rust/cargo-ament-build.git
+    version: c6cfc54d3a55a6c8b628b34752dc3dfb3413f555
+  examples:
+    type: git
+    url: https://github.com/ros2-rust/examples.git
+    version: a3940266c160c285c8d7dacb35d7b0f67365be99
+  ros-env:
+    type: git
+    url: https://github.com/ros2-rust/ros-env.git
+    version: a4b79552082f8f3437e722643249302a311c6c18
+  ros2_rust:
+    type: git
+    url: https://github.com/ros2-rust/ros2_rust.git
+    version: 221c4233f625763ee52e120ff482c07ae56552cf
+  ros_introspection:
+    type: git
+    url: https://github.com/ros2-rust/ros_introspection.git
+    version: 2c6b4d704801bf882dff92e0fa750dd1d166214b
+  rosidl_runtime_rs:
+    type: git
+    url: https://github.com/ros2-rust/rosidl_runtime_rs.git
+    version: 21def427689fda0156dd4b0dff28d8d0318af03b
+  rosidl_rust:
+    type: git
+    url: https://github.com/ros2-rust/rosidl_rust.git
+    version: 19d57818dab3b51e418c0893b70b3a1a8b64c495
+  rust-wg:
+    type: git
+    url: https://github.com/ros2-rust/rust-wg.git
+    version: 0e80290b0bbcdf797bed2ed53d45e3b775837a0a

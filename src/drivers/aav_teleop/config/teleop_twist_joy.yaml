@@ -1,0 +1,32 @@
+# teleop_twist_joy (2.6.5, Jazzy): Joy -> TwistStamped on /drivers/joy/cmd_vel (in the namespace /drivers/joy).
+# It publishes only while the enable button (deadman) is held, plus one zero on release.
+#
+# Mapping carried over from the 2025-26 joy_teleop_ackerman config/joy_params.yaml:
+#   axis 0 (stick X) steers, axis 1 (stick Y) is speed, button 0 (trigger) is the deadman,
+#   max speed 1.0 m/s. TODO check the indices on the team's joystick (see joy.yaml).
+#
+# Differences from the old node:
+# - The old node had a separate reverse button (1). Here stick back = reverse while the
+#   trigger is held; ego caps reverse at max_reverse_speed.
+# - The stick sets a turn RATE (angular.z), not a steering angle; ego converts it with the
+#   bicycle model. At full forward speed (1.0 m/s) full stick is about full lock
+#   (w = v tan(0.5) / 1.57 = 0.35 rad/s); slower, full lock comes with less stick. The car
+#   can't steer while stopped (a Twist with v = 0 has no curvature).
+# - inverted_reverse makes the stick act like a steering wheel in reverse: stick left turns
+#   the wheels left, as the old node did.
+/**/teleop_twist_joy_node:      # any namespace: teleop.launch.py puts it in /drivers/joy
+  ros__parameters:
+    publish_stamped_twist: true   # twist_mux and Nav2 on Jazzy use TwistStamped
+    frame: base_link
+    require_enable_button: true
+    enable_button: 0              # trigger (deadman)
+    enable_turbo_button: -1       # no turbo
+    axis_linear:
+      x: 1
+    scale_linear:
+      x: 1.0                      # m/s at full stick
+    axis_angular:
+      yaw: 0
+    scale_angular:
+      yaw: 0.35                   # rad/s at full stick
+    inverted_reverse: true

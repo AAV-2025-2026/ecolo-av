@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 770" font-family="Verdana, Arial, Helvetica, sans-serif" font-size="14">
+  <title>The roadmap: five phases, each adding one layer to the same stack, with a gate between each</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <style>
+      .now   { fill:#FDECEE; stroke:#C8102E; stroke-width:2.5; }
+      .ours  { fill:#FFFFFF; stroke:#C8102E; stroke-width:1.6; }
+      .later { fill:#FFFFFF; stroke:#BBB; stroke-width:1.4; stroke-dasharray:6 4; }
+      .badge { fill:#C8102E; }
+      .badgeLater { fill:#BBB; }
+      .gate  { fill:#FFFFFF; stroke:#555; stroke-width:1.5; }
+      .t   { fill:#222; font-weight:bold; font-size:16px; }
+      .b   { fill:#222; }
+      .s   { fill:#555; font-size:13px; }
+      .g   { fill:#555; font-size:13px; font-style:italic; }
+      .w   { fill:#FFFFFF; font-weight:bold; font-size:13px; }
+      .h1  { fill:#222; font-weight:bold; font-size:20px; }
+      .tag { fill:#C8102E; }
+    </style>
+  </defs>
+
+  <text class="h1" x="30" y="40">The roadmap: each phase adds one layer to the same stack</text>
+  <text class="s" x="30" y="64">Phase 0 needs the most new code. After it, each phase is mostly configuration, and the joystick stays the fallback.</text>
+
+  <!-- the timeline -->
+  <line x1="70" y1="100" x2="70" y2="700" stroke="#999" stroke-width="2"/>
+
+  <!-- Phase 0 -->
+  <rect class="now" x="110" y="90" width="820" height="96" rx="10"/>
+  <circle class="badge" cx="70" cy="138" r="24"/>
+  <text class="w" x="70" y="143" text-anchor="middle">0</text>
+  <text class="t" x="130" y="118">Phase 0 · Joystick hardware test</text>
+  <text class="b" x="130" y="144">Runs: the spine, the joystick, twist_mux and ego. No localization, no Nav2.</text>
+  <text class="s" x="130" y="168">We write: the spine bridge and its CAN firmware, ego, the car's model (URDF).</text>
+  <rect class="tag" x="790" y="102" width="126" height="26" rx="13"/>
+  <text class="w" x="853" y="120" text-anchor="middle">START HERE</text>
+
+  <!-- Gate 0 -->
+  <polygon class="gate" points="70,200 82,212 70,224 58,212"/>
+  <text class="g" x="110" y="217">Gate: the joystick drives the car on stands, then on the ground; stopping ego makes it brake.</text>
+
+  <!-- Phase 1a -->
+  <rect class="ours" x="110" y="236" width="820" height="96" rx="10"/>
+  <circle class="badge" cx="70" cy="284" r="24"/>
+  <text class="w" x="70" y="289" text-anchor="middle">1a</text>
+  <text class="t" x="130" y="264">Phase 1a · Scripted drive</text>
+  <text class="b" x="130" y="290">Adds: wheel speed on /vehicle/odom, and a speed up, hold, slow down profile.</text>
+  <text class="s" x="130" y="314">We write: the scripted-drive action. It needs no GPS, so it tests speed control on its own.</text>
+
+  <!-- Gate 1 -->
+  <polygon class="gate" points="70,346 82,358 70,370 58,358"/>
+  <text class="g" x="110" y="363">Gate: the car holds the speed profile at walking pace.</text>
+
+  <!-- Phases 1b-2 -->
+  <rect class="ours" x="110" y="382" width="820" height="96" rx="10"/>
+  <circle class="badge" cx="70" cy="430" r="24"/>
+  <text class="w" x="70" y="435" text-anchor="middle">1b–2</text>
+  <text class="t" x="130" y="410">Phases 1b–2 · GPS A→B on an empty costmap</text>
+  <text class="b" x="130" y="436">Adds: the IMU, the GPS, both EKFs, Nav2 following GPS waypoints, an empty costmap.</text>
+  <text class="s" x="130" y="460">We write: mostly configuration. Tried in Gazebo before the car.</text>
+
+  <!-- Gate 2 -->
+  <polygon class="gate" points="70,492 82,504 70,516 58,504"/>
+  <text class="g" x="110" y="509">Gate: the car reaches a GPS goal, in Gazebo first and then for real.</text>
+
+  <!-- Phase 3 -->
+  <rect class="ours" x="110" y="528" width="820" height="96" rx="10"/>
+  <circle class="badge" cx="70" cy="576" r="24"/>
+  <text class="w" x="70" y="581" text-anchor="middle">3</text>
+  <text class="t" x="130" y="556">Phase 3 · Nav2 on a pre-drawn costmap</text>
+  <text class="b" x="130" y="582">Adds: a drawn map of the test site, pinned to a surveyed GPS point.</text>
+  <text class="s" x="130" y="606">We write: the map files, with tools/make_map.py.</text>
+
+  <!-- Gate 3 -->
+  <polygon class="gate" points="70,638 82,650 70,662 58,650"/>
+  <text class="g" x="110" y="655">Gate: a fully working car, ready for next year's team.</text>
+
+  <!-- Phase 4 -->
+  <rect class="later" x="110" y="674" width="820" height="80" rx="10"/>
+  <circle class="badgeLater" cx="70" cy="714" r="24"/>
+  <text class="w" x="70" y="719" text-anchor="middle">4</text>
+  <text class="t" x="130" y="702" fill="#777">Phase 4 · Perception: next year</text>
+  <text class="s" x="130" y="728">Adds: lidar and camera obstacles in the same costmap; signs and line following.</text>
+</svg>

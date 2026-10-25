@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Verdana, 'DejaVu Sans', Arial, Helvetica, sans-serif" font-size="14">
+  <title>Where each control loop closes on our car (KEFC plan): path on the Orin, speed on the control board, steering in the Jrk G2</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C8102E"/>
+    </marker>
+    <style>
+      .stock { fill:#F2F2F2; stroke:#999; stroke-width:1.2; }
+      .key   { fill:#FFFFFF; stroke:#555; stroke-width:2; }
+      .band  { fill:#FDECEE; stroke:#C8102E; stroke-width:1.2; }
+      .carb  { fill:#EEEEEE; stroke:#777; stroke-width:1.2; }
+      .t  { fill:#222; font-weight:bold; }
+      .s  { fill:#555; font-size:12px; }
+      .lbl { fill:#C8102E; font-size:12px; font-weight:bold; }
+      .layer { fill:#C8102E; font-size:13px; font-weight:bold; letter-spacing:1px; }
+      .line { stroke:#555; stroke-width:1.8; fill:none; marker-end:url(#arr); }
+      .redline { stroke:#C8102E; stroke-width:2.2; fill:none; marker-end:url(#arrRed); }
+    </style>
+  </defs>
+
+  <!-- column headers -->
+  <text class="layer" x="50" y="28">LOOP 1 · PATH</text>
+  <text class="s" x="50" y="46">Orin #1 · 20 Hz</text>
+  <text class="layer" x="340" y="28">LOOP 2 · SPEED</text>
+  <text class="s" x="340" y="46">the control board (spine-core)</text>
+  <text class="layer" x="630" y="28">LOOP 3 · STEERING</text>
+  <text class="s" x="630" y="46">inside the Jrk G2</text>
+
+  <!-- loop 1 -->
+  <rect class="key" x="50" y="70" width="240" height="60" rx="8"/>
+  <text class="t" x="170" y="96" text-anchor="middle">Nav2 controller</text>
+  <text class="s" x="170" y="116" text-anchor="middle">Regulated Pure Pursuit</text>
+  <path class="line" d="M170,130 L170,178"/>
+  <rect class="key" x="50" y="180" width="240" height="60" rx="8"/>
+  <text class="t" x="170" y="206" text-anchor="middle">twist_mux → ego</text>
+  <text class="s" x="170" y="226" text-anchor="middle">limits · bicycle model · 50 Hz</text>
+
+  <!-- CAN to loops 2 and 3 -->
+  <path class="line" d="M290,200 L338,200"/>
+  <path class="line" d="M270,180 L270,158 L750,158 L750,178"/>
+  <text class="s" x="510" y="118" text-anchor="middle">DRIVE_CMD over CAN, 50 Hz:</text>
+  <text class="t" x="510" y="140" text-anchor="middle" font-size="13">target_speed · steering_angle</text>
+
+  <!-- loop 2 -->
+  <rect class="key" x="340" y="180" width="240" height="60" rx="8"/>
+  <text class="t" x="460" y="206" text-anchor="middle">speed loop (PI)</text>
+  <text class="s" x="460" y="226" text-anchor="middle">error → throttle or brake</text>
+
+  <!-- loop 3 -->
+  <rect class="key" x="630" y="180" width="240" height="60" rx="8"/>
+  <text class="t" x="750" y="206" text-anchor="middle">steering Jrk G2</text>
+  <text class="s" x="750" y="226" text-anchor="middle">angle error → motor</text>
+
+  <!-- the car -->
+  <rect class="carb" x="20" y="290" width="860" height="60" rx="8"/>
+  <text class="t" x="170" y="318" text-anchor="middle">the car moves</text>
+  <text class="s" x="170" y="336" text-anchor="middle">position, heading</text>
+  <text class="t" x="460" y="318" text-anchor="middle">throttle DAC · brake Jrk</text>
+  <text class="s" x="460" y="336" text-anchor="middle">→ motor, brake actuator</text>
+  <text class="t" x="750" y="318" text-anchor="middle">steering motor</text>
+  <text class="s" x="750" y="336" text-anchor="middle">turns the front wheels</text>
+  <path class="line" d="M460,240 L460,288"/>
+  <path class="line" d="M750,240 L750,288"/>
+
+  <!-- sensors -->
+  <rect class="band" x="50" y="400" width="240" height="60" rx="8"/>
+  <text class="t" x="170" y="426" text-anchor="middle">ekf_local</text>
+  <text class="s" x="170" y="446" text-anchor="middle">wheels + IMU → where am I</text>
+  <rect class="band" x="340" y="400" width="240" height="60" rx="8"/>
+  <text class="t" x="460" y="426" text-anchor="middle">wheel speed</text>
+  <text class="s" x="460" y="446" text-anchor="middle">Hall wheel nodes (KEFC)</text>
+  <rect class="band" x="630" y="400" width="240" height="60" rx="8"/>
+  <text class="t" x="750" y="426" text-anchor="middle">KTC-100 pot</text>
+  <text class="s" x="750" y="446" text-anchor="middle">the real wheel angle (KEFC)</text>
+  <path class="line" d="M170,350 L170,398"/>
+  <path class="line" d="M460,350 L460,398"/>
+  <path class="line" d="M750,350 L750,398"/>
+
+  <!-- feedback -->
+  <path class="redline" d="M50,430 L34,430 L34,100 L48,100"/>
+  <path class="redline" d="M340,430 L324,430 L324,226 L338,226"/>
+  <path class="redline" d="M630,430 L614,430 L614,220 L628,220"/>
+
+  <text class="s" x="450" y="492" text-anchor="middle">Red = what each loop measures and feeds back. Outside: slow and clever. Inside: fast, simple, next to the motor.</text>
+  <text class="s" x="450" y="510" text-anchor="middle">Today (the 2025-26 path): the throttle is open loop, and no steering angle comes back.</text>
+</svg>

@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" font-family="Verdana, 'DejaVu Sans', Arial, Helvetica, sans-serif" font-size="14">
+  <title>REP-105 frames on our car: map, odom, base_link and the sensors, seen from above, and the TF tree</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#C8102E"/>
+    </marker>
+    <style>
+      .stock { fill:#F2F2F2; stroke:#999; stroke-width:1.2; }
+      .key   { fill:#FFFFFF; stroke:#555; stroke-width:2; }
+      .band  { fill:#FDECEE; stroke:#C8102E; stroke-width:1.2; }
+      .car   { fill:#FFFFFF; stroke:#222; stroke-width:2; }
+      .t  { fill:#222; font-weight:bold; }
+      .s  { fill:#555; font-size:12px; }
+      .lbl { fill:#C8102E; font-size:12px; font-weight:bold; }
+      .layer { fill:#C8102E; font-size:12px; font-weight:bold; letter-spacing:1px; }
+      .axis { stroke:#222; stroke-width:2.5; fill:none; marker-end:url(#arr); }
+      .axisg { stroke:#777; stroke-width:2; fill:none; marker-end:url(#arr); }
+      .redline { stroke:#C8102E; stroke-width:2.2; fill:none; marker-end:url(#arrRed); }
+      .redash { stroke:#C8102E; stroke-width:2.2; fill:none; stroke-dasharray:7 5; marker-end:url(#arrRed); }
+      .path { stroke:#999; stroke-width:2; fill:none; stroke-dasharray:3 5; }
+      .tree { stroke:#555; stroke-width:1.5; fill:none; }
+      .dot { fill:#C8102E; }
+    </style>
+  </defs>
+
+  <text class="layer" x="20" y="24">SEEN FROM ABOVE</text>
+  <text class="layer" x="600" y="24">THE TF TREE</text>
+
+  <!-- map frame -->
+  <path class="axis" d="M110,420 L210,420"/>
+  <path class="axis" d="M110,420 L110,320"/>
+  <text class="s" x="216" y="424">x east</text>
+  <text class="s" x="80" y="312">y north</text>
+  <circle cx="110" cy="420" r="6" fill="#222"/>
+  <text class="t" x="40" y="452">map</text>
+  <text class="s" x="82" y="452">(0, 0) = the datum, pinned to the earth by GPS</text>
+
+  <!-- odom frame -->
+  <path class="axisg" d="M260,300 L330,300"/>
+  <path class="axisg" d="M260,300 L260,230"/>
+  <circle cx="260" cy="300" r="5" fill="#777"/>
+  <text class="t" x="270" y="325">odom</text>
+  <text class="s" x="270" y="342">where the car started</text>
+
+  <!-- map -> odom -->
+  <path class="redash" d="M116,414 L252,306"/>
+  <text class="lbl" x="200" y="385">ekf_global</text>
+  <text class="s" x="200" y="401">the GPS correction</text>
+
+  <!-- the drive so far -->
+  <path class="redline" d="M266,295 C320,270 350,200 407,184"/>
+  <text class="lbl" x="362" y="282">ekf_local</text>
+  <text class="s" x="362" y="298">the smooth motion</text>
+
+  <!-- the car, facing x (right) -->
+  <rect class="car" x="398" y="150" width="120" height="60" rx="10"/>
+  <rect x="404" y="140" width="22" height="10" fill="#444"/>
+  <rect x="404" y="210" width="22" height="10" fill="#444"/>
+  <rect x="482" y="140" width="22" height="10" fill="#444"/>
+  <rect x="482" y="210" width="22" height="10" fill="#444"/>
+  <path class="axis" d="M415,180 L470,180"/>
+  <path class="axis" d="M415,180 L415,125"/>
+  <circle cx="415" cy="180" r="5" fill="#222"/>
+  <text class="t" x="426" y="112">base_link</text>
+  <text class="s" x="426" y="128">on the ground, mid rear axle</text>
+
+  <!-- sensors -->
+  <circle class="dot" cx="445" cy="165" r="5"/>
+  <circle class="dot" cx="460" cy="198" r="5"/>
+  <circle class="dot" cx="508" cy="168" r="5"/>
+  <circle class="dot" cx="526" cy="180" r="5"/>
+  <text class="s" x="420" y="234">imu 0.5 m · gps 0.8 m ahead</text>
+  <text class="s" x="540" y="166">camera</text>
+  <text class="s" x="540" y="190">radar</text>
+  <text class="s" x="420" y="250">x forward · y left · z up</text>
+
+  <!-- the tree -->
+  <rect class="band" x="600" y="44" width="120" height="36" rx="6"/>
+  <text class="t" x="660" y="67" text-anchor="middle">map</text>
+  <path class="tree" d="M630,80 L630,138 L650,138"/>
+  <text class="lbl" x="640" y="108">ekf_global</text>
+  <rect class="key" x="650" y="120" width="120" height="36" rx="6"/>
+  <text class="t" x="710" y="143" text-anchor="middle">odom</text>
+  <path class="tree" d="M680,156 L680,214 L700,214"/>
+  <text class="lbl" x="690" y="184">ekf_local</text>
+  <rect class="key" x="700" y="196" width="140" height="36" rx="6"/>
+  <text class="t" x="770" y="219" text-anchor="middle">base_link</text>
+  <path class="tree" d="M720,232 L720,408 M720,264 L740,264 M720,300 L740,300 M720,336 L740,336 M720,372 L740,372 M720,408 L740,408"/>
+  <rect class="stock" x="740" y="250" width="150" height="28" rx="6"/>
+  <text class="t" x="815" y="269" text-anchor="middle" font-size="13">imu_link</text>
+  <rect class="stock" x="740" y="286" width="150" height="28" rx="6"/>
+  <text class="t" x="815" y="305" text-anchor="middle" font-size="13">gps_link</text>
+  <rect class="stock" x="740" y="322" width="150" height="28" rx="6"/>
+  <text class="t" x="815" y="341" text-anchor="middle" font-size="13">radar_link</text>
+  <rect class="stock" x="740" y="358" width="150" height="28" rx="6"/>
+  <text class="t" x="815" y="377" text-anchor="middle" font-size="13">camera_left_link</text>
+  <rect class="stock" x="740" y="394" width="150" height="28" rx="6"/>
+  <text class="t" x="815" y="413" text-anchor="middle" font-size="13">camera_right_link</text>
+  <text class="s" x="600" y="448">fixed links: robot_state_publisher,</text>
+  <text class="s" x="600" y="464">from vehicle.yaml</text>
+  <text class="s" x="600" y="488">each link: ONE parent, ONE publisher</text>
+</svg>

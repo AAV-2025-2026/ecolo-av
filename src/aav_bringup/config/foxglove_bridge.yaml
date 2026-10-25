@@ -1,0 +1,29 @@
+# foxglove_bridge's settings, for Foxglove or Lichtblick on a laptop (docs/foxglove.md).
+# foxglove.launch.py adds the address, the port, the clock, and what a client may do.
+#
+# The bridge sends a laptop only the topics it opens, so the danger is one click on a
+# big topic over the car's WiFi (~2.5 MB/s for every laptop together: docs/bandwidth.md).
+# This list leaves those out; foxglove.launch.py topics:=all lets everything through,
+# for a laptop on a cable or this computer.
+foxglove_bridge:
+  ros__parameters:
+    # One pattern: every topic except these (a regex lookahead: the bridge uses
+    # ECMAScript regexes, and so does Python's re, which the tests use).
+    #   .../image_raw, .../image_raw/compressed   the cameras: 93 MB/s raw, 4.5 JPEG
+    #   /perception/detections/image             the detector's picture with boxes (raw)
+    #   /perception/lane/image                   the lane finder's bird's-eye view (raw)
+    #   /perception/camera/<camera>/preview      the stand-ins' small picture before JPEG
+    #   /sensors/lidar/points, /packets          the lidar: ~7 MB/s of points; watch
+    #                                            /sensors/lidar/scan instead (3 kB)
+    #   /local_costmap/<layer>, .../costmap_raw  Nav2's layers one by one (40-640 kB
+    #                                            each), and its costmaps in another type:
+    #                                            watch .../costmap, the layers together
+    # Watch the cameras on /perception/camera/<camera>/preview/compressed: a few kB, once
+    # a second (camera_stream on the car; foxglove.launch.py foxglove_preview elsewhere).
+    topic_whitelist:
+      - '^(?!.*/image_raw(/compressed)?$|/perception/detections/image$|/perception/lane/image$|/perception/camera/[^/]+/preview$|/sensors/lidar/(points|packets)$|/(local|global)_costmap/(costmap_raw|[a-z_]+_layer(_raw)?)(_updates)?$).*$'
+    # A slow laptop drops messages rather than falls behind: 2 MB queued, then drop.
+    send_buffer_limit: 2000000
+    max_qos_depth: 10
+    # The bridge's own CPU and memory, as a topic with an area (docs/naming.md).
+    sysinfo_topic: /system/foxglove_bridge/sysinfo

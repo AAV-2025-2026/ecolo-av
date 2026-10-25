@@ -1,3 +1,44 @@
 [workspace]
-resolver = "3"
-members = ["spine-core"]
+resolver = "2"
+# Every crate here is no_std, and builds and tests on a laptop with `cargo test`.
+# A board crate is not a member: it builds only for its chip's target, with that chip's
+# HAL, so each one under boards/ is a workspace of its own.
+members = [
+    # Logic: no hardware, no dependencies.
+    "crates/spine-core",
+    "crates/aav-inputs",
+    # The other boards' logic: the wheel's spoke sensors and the wheel encoder's UDP
+    # packet; the status display (the sentinel); the CAN wheel nodes (ESP32-S3 boards
+    # on the front wheels).
+    "crates/wheel-encoder",
+    "crates/sentinel",
+    "crates/wheel-core",
+    # The 2025-26 UART link from the Motor-Pi: its frames, resync and the C++'s targets.
+    "crates/legacy-link",
+    # Drivers: the I2C chips and the CAN controller (SPI) against embedded-hal 1.0;
+    # ibus takes bytes; hd44780 is the sentinel's LCD, on GPIO pins.
+    "crates/jrk-g2",
+    "crates/ad5311",
+    "crates/pca9555",
+    "crates/mcp2515",
+    "crates/ibus",
+    "crates/hd44780",
+    # The glue between spine-core and the drivers, for any board.
+    "crates/spine-board",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false
+
+[workspace.dependencies]
+embedded-hal = "1.0"
+# CAN's ID and frame types, shared by the embedded CAN drivers (mcp2515 uses them).
+embedded-can = "0.4"
+# Serial bytes (the RC receiver). 0.7 is what rp235x-hal, embassy and esp-hal take.
+embedded-io = "0.7"
+# Tests only: plays the chips on a laptop. Clones of one mock share its list of
+# expected transfers, so one mock can stand in for a whole bus.
+embedded-hal-mock = { version = "0.11", default-features = false, features = ["eh1"] }

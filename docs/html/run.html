@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run it on a Mac or Linux · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/run.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Run it on a Mac or Linux</h1>
+<div class="meta">4 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a class="here" href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#what-you-need">What you need</a><a href="#1-install-pixi-once">1. Install pixi (once)</a><a href="#2-get-the-code">2. Get the code</a><a href="#3-install-ros-then-build">3. Install ROS, then build</a><a href="#4-drive-the-turtle">4. Drive the turtle</a><a href="#5-more-commands">5. More commands</a><a href="#on-a-mac">On a Mac</a><a href="#when-something-goes-wrong">When something goes wrong</a></nav>
+<div class="lead"><p>Pixi installs ROS 2 Jazzy into this folder: no Homebrew, no admin rights, and the same
+steps on a Mac and on Linux. Then three commands drive a turtle like a car.</p></div>
+<section class="card"><h2 id="what-you-need">What you need</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Mac</th>
+<th>Linux</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System</td>
+<td>macOS 14 (Sonoma) or newer; Apple Silicon or Intel</td>
+<td>64-bit x86: Ubuntu, AlmaLinux …</td>
+</tr>
+<tr>
+<td>Disk space</td>
+<td>about 7 GB</td>
+<td>about 7 GB</td>
+</tr>
+<tr>
+<td>Admin rights</td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td>First</td>
+<td><code>xcode-select --install</code>: Apple's git and compiler</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>Tested</td>
+<td><span class="badge b-works">works</span> on an Apple Silicon Mac, 10 Oct</td>
+<td><span class="badge b-works">works</span> on oirp-spss, 9 Oct</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="1-install-pixi-once">1. Install pixi (once)</h2>
+<pre class="highlight"><code class="language-bash">curl -fsSL https://pixi.sh/install.sh | sh</code></pre>
+<p>Then open a new terminal, so that it finds <code>pixi</code>.</p>
+</section>
+<section class="card"><h2 id="2-get-the-code">2. Get the code</h2>
+<p>The repository is on GitHub, <code>zander1976/aav</code> (private: ask Ben for access):</p>
+<pre class="highlight"><code class="language-bash">git clone git@github.com:zander1976/aav.git aav
+cd aav</code></pre>
+<p>Later, <code>git pull</code> fetches new work.</p>
+</section>
+<section class="card"><h2 id="3-install-ros-then-build">3. Install ROS, then build</h2>
+<pre class="highlight"><code class="language-bash">pixi install       # the first time: downloads ROS 2 Jazzy, about 7 GB
+pixi run build     # compiles our packages, in about 15 s</code></pre>
+</section>
+<section class="card"><h2 id="4-drive-the-turtle">4. Drive the turtle</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Terminal 1</th>
+<th>Terminal 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run turtle</code></td>
+<td><code>pixi run keyboard</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>i</code> / <code>,</code></td>
+<td>forward / reverse</td>
+</tr>
+<tr>
+<td><code>u</code> / <code>o</code></td>
+<td>forward, turning left / right</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>stop</td>
+</tr>
+<tr>
+<td><code>q</code> / <code>z</code></td>
+<td>faster / slower (ego caps it at 1.0 m/s)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Hold the key down: the turtle stops about half a second after you let go. The path is
+keyboard → <code>/drivers/keyboard/cmd_vel</code> → twist_mux → ego → <code>/ego/actuator_cmd</code> → output_mux → turtle.</p>
+<div class="admonition note">
+<p class="admonition-title">Is this different from the regular turtlesim?</p>
+<p>No, it's the stock turtlesim. Our <code>turtlesim_adapter</code> steers it with the car's bicycle
+model, so like the car, it can't turn on the spot.</p>
+</div>
+</section>
+<section class="card"><h2 id="5-more-commands">5. More commands</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run graph</code></td>
+<td>rqt_graph: the nodes and topics, live</td>
+</tr>
+<tr>
+<td><code>pixi run check</code></td>
+<td>compares the running graph with our contract (<code>pixi run check sim</code> for Gazebo)</td>
+</tr>
+<tr>
+<td><code>pixi run view</code></td>
+<td>the car model in RViz</td>
+</tr>
+<tr>
+<td><code>pixi run sim</code></td>
+<td>Gazebo instead of the turtle (<a href="simulation.html">Simulation</a>)</td>
+</tr>
+<tr>
+<td><code>pixi run bench</code></td>
+<td>the real car's software, with stand-ins for the hardware (<a href="bench.html">Bench mode</a>)</td>
+</tr>
+<tr>
+<td><code>pixi run bench-check</code></td>
+<td>starts the bench and tests the whole graph: about 2 minutes</td>
+</tr>
+<tr>
+<td><code>pixi run get-models</code>, then <code>pixi run detect picture:=src/perception/aav_detector/test/stop_sign.jpg</code></td>
+<td>YOLO finds a stop sign in a picture (<a href="perception.html">Perception</a>)</td>
+</tr>
+<tr>
+<td><code>pixi run graph-picture</code></td>
+<td>saves the running graph as a picture</td>
+</tr>
+<tr>
+<td><code>pixi run rviz</code></td>
+<td>RViz with the driving layout</td>
+</tr>
+<tr>
+<td><code>pixi run estop</code>, <code>pixi run estop-clear</code></td>
+<td>stop every driver; let them go again</td>
+</tr>
+<tr>
+<td><code>pixi run doctor</code></td>
+<td>can this computer join the car's network? What to fix</td>
+</tr>
+<tr>
+<td><code>pixi run test</code></td>
+<td>every test</td>
+</tr>
+<tr>
+<td><code>pixi run docs</code></td>
+<td>rebuilds these pages</td>
+</tr>
+<tr>
+<td><code>pixi install -e mcp</code></td>
+<td>the read-only MCP server's environment, for Claude or another AI app (<a href="mcp.html">AI apps</a>)</td>
+</tr>
+<tr>
+<td><code>pixi shell</code>, then <code>source install/setup.bash</code></td>
+<td>a terminal for any <code>ros2</code> command (<code>setup.zsh</code> in a Mac's zsh)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="on-a-mac">On a Mac</h2>
+<p><a href="mac.html">Your Mac</a> has the Mac's own steps: copying the code over, joining the car's
+network, driving and watching the car, and Gazebo.</p>
+</section>
+<section class="card"><h2 id="when-something-goes-wrong">When something goes wrong</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Try</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi: command not found</code></td>
+<td>open a new terminal, or run <code>~/.pixi/bin/pixi</code></td>
+</tr>
+<tr>
+<td>"Not built yet"</td>
+<td><code>pixi run build</code></td>
+</tr>
+<tr>
+<td>The turtle doesn't move</td>
+<td>click into the keyboard terminal, and hold the key. Then see <a href="simulation.html#when-nothing-moves">when nothing moves</a>.</td>
+</tr>
+<tr>
+<td>Odd build errors after <code>git pull</code></td>
+<td>delete <code>build/</code>, <code>install/</code> and <code>log/</code>, then <code>pixi run build</code></td>
+</tr>
+<tr>
+<td>Two computers can't see each other</td>
+<td>the same <code>ROS_DOMAIN_ID</code> on both: see <a href="platforms.html">Platforms</a></td>
+</tr>
+<tr>
+<td>Nodes hang at start-up, or the sim never spawns the car</td>
+<td><code>pixi run shm-clean</code>: it removes Fast DDS's shared-memory files left by programs that died (515 of them on 15 Oct). Only with <code>AAV_RMW=fastdds</code>: Cyclone, the default since 23 Oct, leaves none. Stop every ROS program first</td>
+</tr>
+<tr>
+<td>Another computer can't see my sim or bench</td>
+<td>that's on purpose: the stand-ins stay on their computer. To share one: <code>AAV_DISCOVERY=SUBNET pixi run sim</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="languages.html"><small>Previous</small>← Languages</a>
+<a class="next" href="mac.html"><small>Next</small>Your Mac →</a></nav>
+</main>
+<footer>Source: <code>docs/run.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

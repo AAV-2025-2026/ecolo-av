@@ -1,0 +1,95 @@
+# sensor_watchdog: every input it knows, and how to watch each (aav_safety watchdog.py says
+# what each check means). The launch file picks which inputs run (`inputs`, passed by
+# watchdog.launch.py: not set here, or this file's value would win over the launch's;
+# docs/conventions.md, "A launch override that silently loses").
+#
+#   stop: true   the input is one Nav2 or the AI slot needs: while it isn't OK, twist_mux's
+#                sensors lock holds them (people and tests still drive)
+#   stop: false  only said loudly: the log, /diagnostics, the HUD
+#
+# The ages: about 5 messages at each sensor's rate, and never less than ego's own 0.5 s
+# command timeout. The GPS gets 2 s: a receiver drops a fix now and then, and the EKF
+# carries on from the wheels and the IMU meanwhile.
+sensor_watchdog:
+  ros__parameters:
+    rate_hz: 10.0
+    odom:                       # the wheels' speed: the EKFs' only speed
+      topic: /vehicle/odom
+      kind: odom
+      max_age: 0.5
+      stop: true
+      # The wheels against the IMU (/sensors/imu/data) and the GPS, to catch a frozen
+      # wheel speed: wheel_check.py. Tuned in Gazebo only: on the car, read the worst_*
+      # gaps on /diagnostics after a normal drive, and keep the tolerances well above.
+      cross_check: true
+      cross_window: 1.5         # s
+      cross_speed_tolerance: 0.3  # m/s: the wheels' change in speed vs the IMU's
+      cross_yaw_tolerance: 0.15   # rad/s: the wheels' turn rate vs the gyro's
+      cross_persist: 1.0        # s a gap must last
+      # The GPS: a long window, so a tight tolerance. Nav2's MPPI plans from the wheels'
+      # speed, so frozen wheels keep the car only 0.1-0.2 m/s faster than they say: 0.3
+      # never caught that (24 Oct). Gazebo, normal driving, worst gap: 0.14 m/s over 6 s,
+      # 0.05 over 10 s (230 s of driving, replayed).
+      cross_gps_window: 10.0    # s of fixes (5 Hz in Gazebo): the speeds of fitted lines
+      cross_gps_tolerance: 0.15  # m/s: the wheels' vs the GPS's
+    imu:                        # the filtered IMU: the EKFs' turn rate
+      topic: /sensors/imu/data
+      kind: imu
+      max_age: 0.5
+      stop: true
+      frozen_after: 1.0         # a real IMU's noise never repeats exactly
+    gps:
+      topic: /sensors/gps/fix
+      kind: gps
+      max_age: 2.0
+      stop: true
+      max_jump_speed: 15.0      # m/s: the car can't; a bad fix can (latched: clear it)
+      jump_margin: 5.0          # m more: two noisy fixes 0.2 s apart can be 2.5 m apart
+    local:                      # ekf_local: Nav2's odometry
+      topic: /localization/odom/local
+      kind: odom
+      max_age: 0.5
+      stop: true
+    global:                     # ekf_global: where the car is on the map
+      topic: /localization/odom/global
+      kind: odom
+      max_age: 0.5
+      stop: true
+    camera:                     # the front left camera: stop signs, lane keeping
+      topic: /sensors/camera/front_left/image_raw
+      kind: image
+      max_age: 1.0
+      stop: true
+      frozen_after: 1.0         # only while the wheels turn: a still car sees a still picture
+    # The car's front cameras, through their camera_stream nodes (aav_camera_stream): the
+    # pictures stay inside each node, which sends its detections for every picture (15 a
+    # second, boxes or none) on one shared topic. Silent 1 s: the camera Pi's stream, the
+    # decoder or the detector stopped. Watched where car.launch.py starts the streams.
+    front_left_stream:
+      topic: /perception/detections
+      kind: detections
+      frame_id: camera_left_link  # only this camera's messages count
+      max_age: 1.0
+      stop: true
+    front_right_stream:
+      topic: /perception/detections
+      kind: detections
+      frame_id: camera_right_link
+      max_age: 1.0
+      stop: true
+    hud:                       # the HUD's screen (aav_hud_raylib): the safety drivers watch
+      topic: /hud/heartbeat     # it, so a frozen or dead screen stops Nav2 and the AI slot.
+      kind: heartbeat           # Watched only where the launch expects a HUD (watch_hud)
+      max_age: 1.0              # 10 beats: a slow frame of a second or more is a dropout
+      stop: true
+      frozen_after: 1.0         # beats whose frame count stopped rising
+      # A HUD that keeps crashing holds Nav2 until a person clears it (Ben, 24 Oct): a
+      # dropout latches LOST, even once it beats again; `pixi run watchdog-clear`. One
+      # dropout within 5 s of its first beat is forgiven: the window starting up.
+      latch: true
+      latch_grace: 5.0          # s
+    radar:                      # collision_monitor stops Nav2 itself when it goes quiet
+      topic: /sensors/radar/points
+      kind: cloud
+      max_age: 1.0
+      stop: false

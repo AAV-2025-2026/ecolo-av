@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Topic names by area (Done, 15 October) · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/naming.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Topic names by area (Done, 15 October)</h1>
+<div class="meta">8 min read · 5 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a class="here" href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-rule">The rule</a><a href="#how-the-drivers-get-their-names">How the drivers get their names</a><a href="#old-name-new-name">Old name → new name</a><a href="#left-as-they-were">Left as they were</a><a href="#why-the-two-ekfs-dont-talk">Why the two EKFs don&#x27;t talk</a></nav>
+<div class="lead"><p>Ben, 14 Oct: "Maybe we need more structure like /localization/<command> and
+/drivers/<command> /ego/<command> ... Something that isolates messages into their area."</p>
+<p><strong>Status: Done (15 Oct).</strong> Decided by Ben on 15 Oct ("The drivers all need to be in a
+/drivers/keybaord, etc type stuff as an example."), and renamed everywhere on the branch
+<code>wt/topic-areas</code>, now on <code>main</code>. <code>tools/tests/test_topic_areas.py</code> keeps it that way.</p></div>
+<section class="card"><h2 id="the-rule">The rule</h2>
+<p>The first part of every name is the <strong>area</strong>: the layer of the picture it comes from. The
+same areas as the folders under <code>src/</code>, plus <code>/system/</code> for the whole run.</p>
+<pre class="highlight"><code class="language-text">/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Holds</th>
+<th>Who publishes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/sensors/</code></td>
+<td>raw sensor data</td>
+<td>the drivers on the Pis and the Orins</td>
+</tr>
+<tr>
+<td><code>/vehicle/</code></td>
+<td>what the car says about itself</td>
+<td>the backend (spine, legacy, Gazebo, bench)</td>
+</tr>
+<tr>
+<td><code>/can/</code></td>
+<td>raw CAN frames</td>
+<td>the socketcan bridge</td>
+</tr>
+<tr>
+<td><code>/localization/</code></td>
+<td>where the car is</td>
+<td>the EKFs, navsat_transform</td>
+</tr>
+<tr>
+<td><code>/perception/</code></td>
+<td>what the car sees</td>
+<td>the detectors, the lane finder, radar clusters</td>
+</tr>
+<tr>
+<td><code>/drivers/</code></td>
+<td>one command per driver</td>
+<td>joystick, keyboard, scripted, Nav2, AI, replay</td>
+</tr>
+<tr>
+<td><code>/control/</code></td>
+<td>the chosen command; ego's command for one target, <code>/control/&lt;target&gt;/actuator_cmd</code></td>
+<td>twist_mux, the smoother, the output mux (23 Oct)</td>
+</tr>
+<tr>
+<td><code>/ego/</code></td>
+<td>the command for the wheels</td>
+<td>ego</td>
+</tr>
+<tr>
+<td><code>/safety/</code></td>
+<td>e-stop, collision monitor</td>
+<td>the HUD button, collision_monitor</td>
+</tr>
+<tr>
+<td><code>/hud/</code></td>
+<td>what only the screen needs</td>
+<td>the HUD</td>
+</tr>
+<tr>
+<td><code>/system/</code></td>
+<td>what kind of run this is: <code>/system/source</code> (real, sim, bench, replay); the sensor mux's check, <code>/system/sensor_mux/state</code></td>
+<td>the backends, the bench, a replay (added 15 Oct, <code>READ-ME-FULL-SIMULATION.md</code>); the sensor mux (23 Oct)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Global names stay global, because every ROS tool expects them: <code>/tf</code>, <code>/tf_static</code>,
+<code>/clock</code>, <code>/robot_description</code>, <code>/joint_states</code>, <code>/diagnostics</code>, <code>/rosout</code>,
+<code>/parameter_events</code>. Nav2 keeps its own names for now: <code>/map</code>, <code>/plan</code>, <code>/goal_pose</code>, its
+actions, <code>/cmd_vel_nav</code> and the costmaps' topics.</p>
+</section>
+<section class="card"><h2 id="how-the-drivers-get-their-names">How the drivers get their names</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Driver</th>
+<th>How</th>
+<th>Topics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>joystick</td>
+<td><code>joy_node</code>, <code>teleop_twist_joy_node</code>, <code>joy_teleop</code> run in the namespace <code>/drivers/joy</code></td>
+<td><code>/drivers/joy/joy</code>, <code>/drivers/joy/cmd_vel</code></td>
+</tr>
+<tr>
+<td>keyboard</td>
+<td><code>tools/keyboard.sh</code> runs <code>teleop_twist_keyboard</code> in the namespace <code>/drivers/keyboard</code></td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
+</tr>
+<tr>
+<td>tests</td>
+<td><code>actuator_test</code> publishes <code>drivers/tests/cmd_vel</code></td>
+<td><code>/drivers/tests/cmd_vel</code></td>
+</tr>
+<tr>
+<td>scripted</td>
+<td><code>scripted_driver</code> publishes <code>drivers/scripted/cmd_vel</code></td>
+<td><code>/drivers/scripted/cmd_vel</code></td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td><code>velocity_smoother</code> or <code>collision_monitor</code>, remapped</td>
+<td><code>/drivers/nav/cmd_vel</code></td>
+</tr>
+<tr>
+<td>AI</td>
+<td><code>control_interface</code> (lane keeping)</td>
+<td><code>/drivers/ai/cmd_vel</code></td>
+</tr>
+<tr>
+<td>replay</td>
+<td><code>tools/replay_commands.sh</code></td>
+<td><code>/drivers/replay/cmd_vel</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>A namespace makes the relative names fall into place, with no remaps. The joystick's
+config files name their nodes <code>/**/joy_node</code> and so on, so they match in any namespace.</p>
+</section>
+<section class="card"><h2 id="old-name-new-name">Old name → new name</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Was</th>
+<th>Now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/gps/fix</code></td>
+<td><code>/sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td><code>/gps/fix_velocity</code></td>
+<td><code>/sensors/gps/fix_velocity</code></td>
+</tr>
+<tr>
+<td><code>/gps/vel</code>, <code>/gps/time_reference</code> (NMEA)</td>
+<td><code>/sensors/gps/vel</code>, <code>/sensors/gps/time_reference</code></td>
+</tr>
+<tr>
+<td><code>/imu/data_raw</code>, <code>/imu/mag</code></td>
+<td><code>/sensors/imu/data_raw</code>, <code>/sensors/imu/mag</code></td>
+</tr>
+<tr>
+<td><code>/imu/data</code> (after Madgwick)</td>
+<td><code>/sensors/imu/data</code></td>
+</tr>
+<tr>
+<td><code>/camera/image_raw</code> (and <code>/compressed</code>)</td>
+<td><code>/sensors/camera/front_left/image_raw</code> (and <code>/compressed</code>)</td>
+</tr>
+<tr>
+<td><code>/camera/camera_info</code></td>
+<td><code>/sensors/camera/front_left/camera_info</code></td>
+</tr>
+<tr>
+<td><code>/camera/right/...</code></td>
+<td><code>/sensors/camera/front_right/...</code></td>
+</tr>
+<tr>
+<td>(none yet)</td>
+<td><code>/sensors/camera/rear/...</code></td>
+</tr>
+<tr>
+<td>(none yet: the lidar)</td>
+<td><code>/sensors/lidar/points</code></td>
+</tr>
+<tr>
+<td><code>/radar/points</code></td>
+<td><code>/sensors/radar/points</code></td>
+</tr>
+<tr>
+<td><code>/battery_status</code></td>
+<td><code>/vehicle/battery</code></td>
+</tr>
+<tr>
+<td><code>/battery_monitor_heartbeat</code></td>
+<td><code>/vehicle/battery/heartbeat</code></td>
+</tr>
+<tr>
+<td><code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/vehicle/joint_states</code></td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td>(new: each wheel's speed: Gazebo, and the CAN wheel nodes)</td>
+<td><code>/vehicle/wheels</code> (one topic for both)</td>
+</tr>
+<tr>
+<td><code>/bench/truth</code>, <code>/bench/hw_estop</code>, <code>/bench/driver_faults</code></td>
+<td><code>/vehicle/bench/truth</code>, <code>/vehicle/bench/hw_estop</code>, <code>/vehicle/bench/driver_faults</code></td>
+</tr>
+<tr>
+<td><code>/to_can_bus</code>, <code>/from_can_bus</code></td>
+<td><code>/can/tx</code>, <code>/can/rx</code></td>
+</tr>
+<tr>
+<td><code>/odometry/local</code></td>
+<td><code>/localization/odom/local</code></td>
+</tr>
+<tr>
+<td><code>/odometry/global</code></td>
+<td><code>/localization/odom/global</code></td>
+</tr>
+<tr>
+<td><code>/odometry/gps</code></td>
+<td><code>/localization/gps/odom</code></td>
+</tr>
+<tr>
+<td><code>/gps/filtered</code></td>
+<td><code>/localization/gps/fix</code></td>
+</tr>
+<tr>
+<td><code>/radar/clusters</code>, <code>/radar/cluster_boxes</code></td>
+<td><code>/perception/radar/clusters</code>, <code>/perception/radar/cluster_boxes</code></td>
+</tr>
+<tr>
+<td><code>/lane_geometry</code>, <code>/lane_geometry/image</code></td>
+<td><code>/perception/lane/geometry</code>, <code>/perception/lane/image</code></td>
+</tr>
+<tr>
+<td><code>/lane_geometry_status</code>, <code>/vehicle_state</code> (lane keeping's)</td>
+<td><code>/drivers/ai/lane_status</code>, <code>/drivers/ai/lane_state</code></td>
+</tr>
+<tr>
+<td><code>/perception/stop</code></td>
+<td><code>/perception/stop_sign</code></td>
+</tr>
+<tr>
+<td><code>/perception/detections</code>, <code>/perception/camera_obstacles</code>, <code>/perception/camera_view</code></td>
+<td>unchanged</td>
+</tr>
+<tr>
+<td><code>/joy</code></td>
+<td><code>/drivers/joy/joy</code></td>
+</tr>
+<tr>
+<td><code>/cmd_vel/joy</code>, <code>/cmd_vel/scripted</code>, <code>/cmd_vel/replay</code>, <code>/cmd_vel/nav</code>, <code>/cmd_vel/ai</code></td>
+<td><code>/drivers/joy/cmd_vel</code>, <code>/drivers/scripted/cmd_vel</code>, ...</td>
+</tr>
+<tr>
+<td><code>/cmd_vel/remote</code> (it was the keyboard)</td>
+<td><code>/drivers/keyboard/cmd_vel</code> (twist_mux's slot <code>keyboard</code>)</td>
+</tr>
+<tr>
+<td><code>/cmd_vel</code> (twist_mux out)</td>
+<td><code>/control/cmd_vel</code></td>
+</tr>
+<tr>
+<td><code>/cmd_vel_smoothed</code></td>
+<td><code>/control/cmd_vel_smoothed</code></td>
+</tr>
+<tr>
+<td><code>/ego/actuator_cmd</code></td>
+<td>unchanged; since 23 Oct the backends read <code>/control/&lt;target&gt;/actuator_cmd</code>, from the output mux (<a href="sources-and-targets.html">Sources and targets</a>)</td>
+</tr>
+<tr>
+<td><code>/estop</code></td>
+<td><code>/safety/estop</code></td>
+</tr>
+<tr>
+<td><code>/collision_monitor_state</code></td>
+<td><code>/safety/collision_monitor/state</code></td>
+</tr>
+<tr>
+<td><code>/collision_monitor/stop_zone</code>, <code>.../collision_points_marker</code></td>
+<td><code>/safety/collision_monitor/stop_zone</code>, <code>.../collision_points_marker</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Changed from the proposal, once the code showed it:</p>
+<ul>
+<li><strong><code>/drivers/joy/joy</code>, not <code>/drivers/joy/raw</code>:</strong> it is what the namespace gives <code>joy_node</code>
+  by itself, with no remap.</li>
+<li><strong>Lane keeping's two text topics go under <code>/drivers/ai/</code>:</strong> <code>control_interface</code>, the AI
+  slot's driver, publishes them, not the lane finder.</li>
+<li><strong>The bench's own topics go under <code>/vehicle/bench/</code>:</strong> the bench stands in for the car.</li>
+</ul>
+</section>
+<section class="card"><h2 id="left-as-they-were">Left as they were</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/fromLL</code>, <code>/toLL</code>, <code>/datum</code> (navsat_transform's services)</td>
+<td>Nav2's <code>waypoint_follower</code> calls <code>/fromLL</code> by its absolute name. Moving them needs a remap on two nodes, one of them inside Nav2: not a clean remap</td>
+</tr>
+<tr>
+<td><code>/spine/arm</code>, <code>/scripted_drive</code>, <code>/ekf_*/set_pose</code></td>
+<td>services and actions, not topics: the rule is for topics</td>
+</tr>
+<tr>
+<td><code>/gazebo/cmd_vel</code>, <code>/gazebo/odom</code>, <code>/gazebo/imu</code>, <code>/gazebo/navsat</code></td>
+<td>Gazebo's own side of <code>gazebo_adapter</code> and its sensor nodes, like <code>/turtle1/...</code> for turtlesim; not in the contract</td>
+</tr>
+<tr>
+<td><code>/map</code>, <code>/plan</code>, <code>/goal_pose</code>, <code>/cmd_vel_nav</code>, the costmaps</td>
+<td>Nav2's own, for now</td>
+</tr>
+<tr>
+<td>The HUD back end's HTTP routes (<code>POST /estop</code>, <code>/camera/latest.png</code>)</td>
+<td>web addresses, not topics</td>
+</tr>
+<tr>
+<td>Bags recorded before 15 Oct</td>
+<td>they hold the old names: play them with <code>--remap</code> (for example <code>/cmd_vel:=/control/cmd_vel</code>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="why-the-two-ekfs-dont-talk">Why the two EKFs don't talk</h2>
+<p>The local EKF doesn't feed the global one, and that is on purpose: robot_localization's
+standard setup. Each one fuses the raw sensors itself.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><code>ekf_local</code></th>
+<th><code>ekf_global</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uses</td>
+<td>wheel speed, IMU</td>
+<td>wheel speed, IMU, <strong>GPS</strong></td>
+</tr>
+<tr>
+<td>Gives</td>
+<td>a smooth position that never jumps</td>
+<td>a true position that may jump</td>
+</tr>
+<tr>
+<td>Publishes</td>
+<td><code>odom → base_link</code></td>
+<td><code>map → odom</code></td>
+</tr>
+<tr>
+<td>Who uses it</td>
+<td>Nav2's controller (steering)</td>
+<td>Nav2's planner, the HUD's map</td>
+</tr>
+</tbody>
+</table></div>
+<p>If the global EKF used the local one's output, the same wheel and IMU data would count
+twice, and it would be too sure of itself. Feeding both from the raw sensors avoids that.</p>
+<p>They do meet, but in <strong>TF</strong>, not on a topic: <code>ekf_global</code> publishes only the correction
+<code>map → odom</code>, worked out on top of <code>ekf_local</code>'s <code>odom → base_link</code>. So <code>rqt_graph</code> shows
+no line between them; <code>ros2 run rqt_tf_tree rqt_tf_tree</code> shows the chain. The launch
+file's first line said "the local EKF feeds the global EKF"; it now says this (14 Oct).</p></section>
+<nav class="prevnext"><a class="prev" href="conventions.html"><small>Previous</small>← Conventions</a>
+<a class="next" href="interfaces.html"><small>Next</small>Topics →</a></nav>
+</main>
+<footer>Source: <code>docs/naming.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

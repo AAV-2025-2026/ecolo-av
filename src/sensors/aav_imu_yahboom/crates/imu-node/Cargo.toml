@@ -1,0 +1,21 @@
+[package]
+name = "imu-node"
+description = "imu_node: the Yahboom IMU as ROS 2 topics, rewritten from the 2025-26 C++ driver"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "imu_node"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+# SIGINT, plus SIGTERM and SIGHUP: rclrs 0.8 has no signal handling of its own yet.
+ctrlc = { version = "3", features = ["termination"] }
+rclrs = "0.8"
+# The message types: compiled from the Rust code that ships with Jazzy (AMENT_PREFIX_PATH).
+ros-env = "0.3"
+# No default features: they only add port listing, which needs libudev on Linux.
+serialport = { version = "4", default-features = false }
+yahboom-protocol = { path = "../yahboom-protocol" }

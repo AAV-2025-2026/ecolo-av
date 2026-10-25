@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>aav_sensors</name>
+  <version>0.1.0</version>
+  <description>Sensor configuration and launch: IMU (aav_imu_yahboom, + imu_filter_madgwick), GPS (ublox_gps, nmea_navsat_driver or ublox_dgnss -> /sensors/gps/fix), radar (ti_ros2_driver), battery (battery_monitor), and the cameras (usb_cam) with their calibration files.</description>
+  <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>aav_imu_yahboom</exec_depend>
+  <exec_depend>imu_filter_madgwick</exec_depend>
+  <!-- The GPS: one of three drivers (sensors.launch.py gps_driver:=) -->
+  <exec_depend>ublox_gps</exec_depend>
+  <exec_depend>nmea_navsat_driver</exec_depend>
+  <exec_depend>ublox_dgnss_node</exec_depend>
+  <exec_depend>ublox_nav_sat_fix_hp_node</exec_depend>
+  <exec_depend>rclcpp_components</exec_depend>
+  <!-- The cameras (cameras.launch.py): Linux only -->
+  <exec_depend>usb_cam</exec_depend>
+  <exec_depend>ti_ros2_driver</exec_depend>
+  <exec_depend>velodyne_driver</exec_depend>
+  <exec_depend>velodyne_pointcloud</exec_depend>
+  <exec_depend>battery_monitor</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

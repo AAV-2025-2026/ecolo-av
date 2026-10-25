@@ -1,0 +1,73 @@
+# twist_mux: picks ONE velocity command for ego from all the drivers.
+#
+# Rules (checked in the twist_mux 4.5.0 source, the Jazzy release):
+# - Inputs and output are geometry_msgs/TwistStamped (use_stamped defaults to true).
+# - An input counts while its last message is younger than `timeout` seconds, measured
+#   from when it arrived (header stamps are ignored). Among the inputs that count, the
+#   highest `priority` wins. Priorities are clamped to 1..255.
+# - A lock is std_msgs/Bool. It is locked while its last value was true, OR while its
+#   last message is older than `timeout` (silence: from start-up until the first one
+#   too). Locked, it blocks every input whose priority is BELOW the lock's. timeout 0 =
+#   the lock never expires on silence (topic_handle.hpp, LockTopicHandle::isLocked).
+# - Nothing is published when no input counts; ego then stops after its own timeout.
+# - The output topic is `cmd_vel_out`; aav_mux/launch/mux.launch.py remaps it to /control/cmd_vel.
+#
+# Holding the joystick deadman (with the stick centred) outranks everything: it stops
+# the car. Releasing it hands control back to the next input after 0.5 s. To stop for
+# good, press the e-stop button (or publish /safety/estop true).
+twist_mux:
+  ros__parameters:
+    use_stamped: true
+    topics:
+      joy:                      # safety driver with the joystick (aav_teleop)
+        topic: /drivers/joy/cmd_vel
+        timeout: 0.5
+        priority: 100
+      rc:                       # a person with the RC transmitter, its mode switch on RC via
+        topic: /drivers/rc/cmd_vel  # ROS (aav_rc rc_driver, from the ESP32's uplink; TODO 48).
+        timeout: 0.5            # Proposed: below the joystick's deadman (the safety driver
+        priority: 95            # in the seat), above the keyboard. RC direct never comes here
+      keyboard:                 # someone driving from a laptop: tools/keyboard.sh, or
+        topic: /drivers/keyboard/cmd_vel  # or Foxglove's teleop panel (stand-ins only)
+        timeout: 0.5
+        priority: 90
+      tests:                    # aav_actuator_tests: READ-ME-TESTS.md stages 3-4 (pixi run
+        topic: /drivers/tests/cmd_vel     # actuator-test). Below both people, above every
+        timeout: 0.5            # other program, so Nav2 can't steer into a measurement
+        priority: 60
+      scripted:                 # aav_scripted: a fixed speed profile for a test
+        topic: /drivers/scripted/cmd_vel
+        timeout: 0.5
+        priority: 50
+      replay:                   # a recorded drive played back (tools/replay_commands.sh)
+        topic: /drivers/replay/cmd_vel
+        timeout: 0.5
+        priority: 40
+      goto:                     # aav_goto: drive to one GPS point, stop there (pixi run goto).
+        topic: /drivers/goto/cmd_vel  # Below every person, test and script; above Nav2,
+        timeout: 0.5            # so a forgotten Nav2 goal can't steer it. Below the stop-sign
+        priority: 25            # and sensor locks (30): it drives on GPS, so they hold it
+      nav:                      # Nav2 (aav_navigation)
+        topic: /drivers/nav/cmd_vel
+        timeout: 0.5
+        priority: 20
+      ai:                       # a future learned driver
+        topic: /drivers/ai/cmd_vel
+        timeout: 0.5
+        priority: 10
+    locks:
+      estop:                    # /safety/estop true blocks every input above. The backends also
+        topic: /safety/estop           # brake directly on /safety/estop, so this is the second layer.
+        timeout: 0.0
+        priority: 255
+      stop_sign:                # aav_detector's stop_sign_watcher: true while the car stops for a
+        topic: /perception/stop_sign # sign. Priority 30 holds Nav2 (20) and the AI slot (10), never a
+        timeout: 0.0            # person (100, 90) or a test (60, 50, 40). Never expires on silence:
+        priority: 30            # if the watcher dies while true, the car stays stopped.
+      sensors:                  # aav_safety's sensor_watchdog: true while a sensor Nav2 or the
+        topic: /safety/sensor_watchdog/lock  # AI slot needs is stale, NaN, frozen or jumped.
+        timeout: 1.0            # Fail-safe: the watchdog sends false 10 times a second, so 1 s
+        priority: 30            # of silence (it died, hung, or never started) holds them too.
+                                # Priority 30, as the stop sign: never a person or a test.
+                                # Profiles with no watchdog (the turtle) start the mux with
+                                # sensor_lock:=false: no_sensor_lock.yaml sets this timeout to 0.

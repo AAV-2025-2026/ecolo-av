@@ -1,0 +1,33 @@
+# Everything on one computer: the bench, or the Orin with every device plugged into it.
+# The backend for today's hardware is legacy_uart (actuators:=uart, the default); the CAN
+# bus is read for the wheel sensors only (the spine part: Linux only, skipped elsewhere).
+parts:
+  description: true
+  mux: true
+  ego: true
+  teleop: true
+  scripted: true
+  goto: true
+  imu: true
+  gps: true
+  radar: false
+  lidar: true            # the roof Velodyne VLP-16
+  battery: false
+  camera: false          # TODO which cameras (Q22). usb_cam is Linux only
+  camera_stream: false   # the camera Pi's streams: on the Orin (orin.yaml has the settings)
+  detector: true         # RF-DETR, as object_detector_all. Needs PyTorch: pixi run -e ml car all
+  stop_signs: true
+  radar_clusters: false  # with the radar
+  camera_obstacles: false  # TODO with calibrated cameras (Q22): boxes into Nav2's costmap
+  lane: false            # lane keeping, with the camera: it drives whenever it sees a lane
+  localization: true
+  navigation: true
+  spine: true            # actuators:=uart: the wheel nodes only; actuators:=can: the backend
+  legacy_uart: true      # actuators:=uart: the backend
+  legacy_encoder: false  # the 2025-26 Pico: the wheels are on CAN now (motor_pi.yaml)
+  foxglove: true
+
+# The detector's settings: aav_detector detector.launch.py's arguments.
+detector:
+  detector: rfdetr   # models/rf-detr-nano.pth, PyTorch: CUDA, Metal or the CPU. Or:
+  # detector: yolo   # models/yolo11n.pt

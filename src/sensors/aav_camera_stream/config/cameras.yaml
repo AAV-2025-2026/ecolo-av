@@ -1,0 +1,15 @@
+# Each streamed camera's own settings, read by launch/camera_stream.launch.py (not ROS
+# parameters). Each runs as its own node, camera_stream_<name>, pulling
+# rtsp://<host>:8554/<name> (the paths in pi/mediamtx.yml). What depends on the machine
+# (the Pi's address, the decoder, the detector) is a launch argument instead.
+#
+# calibration: the camera's lens file (INI or YAML, ROS's formats), from the repository's
+# root; empty = not undistorted. The ribbon cameras have none yet (Q22): the 2024-25
+# left.ini and right.ini are another pair's (USB, 1920x1080), so don't use them here.
+cameras:
+  front_left:
+    frame_id: camera_left_link
+    calibration: ''
+  front_right:
+    frame_id: camera_right_link
+    calibration: ''

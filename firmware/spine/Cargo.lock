@@ -3,5 +3,145 @@
 version = 4
 
 [[package]]
+name = "aav-inputs"
+version = "0.1.0"
+
+[[package]]
+name = "ad5311"
+version = "0.1.0"
+dependencies = [
+ "embedded-hal",
+ "embedded-hal-mock",
+]
+
+[[package]]
+name = "embedded-can"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9d2e857f87ac832df68fa498d18ddc679175cf3d2e4aa893988e5601baf9438"
+dependencies = [
+ "nb",
+]
+
+[[package]]
+name = "embedded-hal"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "361a90feb7004eca4019fb28352a9465666b24f840f5c3cddf0ff13920590b89"
+
+[[package]]
+name = "embedded-hal-mock"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9a0f04f8886106faf281c47b6a0e4054a369baedaf63591fdb8da9761f3f379"
+dependencies = [
+ "embedded-hal",
+ "embedded-hal-nb",
+]
+
+[[package]]
+name = "embedded-hal-nb"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fba4268c14288c828995299e59b12babdbe170f6c6d73731af1b4648142e8605"
+dependencies = [
+ "embedded-hal",
+ "nb",
+]
+
+[[package]]
+name = "embedded-io"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9eb1aa714776b75c7e67e1da744b81a129b3ff919c8712b5e1b32252c1f07cc7"
+
+[[package]]
+name = "hd44780"
+version = "0.1.0"
+dependencies = [
+ "embedded-hal",
+]
+
+[[package]]
+name = "ibus"
+version = "0.1.0"
+dependencies = [
+ "spine-core",
+]
+
+[[package]]
+name = "jrk-g2"
+version = "0.1.0"
+dependencies = [
+ "embedded-hal",
+ "embedded-hal-mock",
+]
+
+[[package]]
+name = "legacy-link"
+version = "0.1.0"
+
+[[package]]
+name = "mcp2515"
+version = "0.1.0"
+dependencies = [
+ "embedded-can",
+ "embedded-hal",
+ "embedded-hal-mock",
+]
+
+[[package]]
+name = "nb"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d5439c4ad607c3c23abf66de8c8bf57ba8adcd1f129e699851a6e43935d339d"
+
+[[package]]
+name = "pca9555"
+version = "0.1.0"
+dependencies = [
+ "embedded-hal",
+ "embedded-hal-mock",
+]
+
+[[package]]
+name = "sentinel"
+version = "0.1.0"
+dependencies = [
+ "aav-inputs",
+]
+
+[[package]]
+name = "spine-board"
+version = "0.1.0"
+dependencies = [
+ "aav-inputs",
+ "ad5311",
+ "embedded-hal",
+ "embedded-hal-mock",
+ "embedded-io",
+ "ibus",
+ "jrk-g2",
+ "legacy-link",
+ "pca9555",
+ "spine-core",
+ "wheel-encoder",
+]
+
+[[package]]
 name = "spine-core"
 version = "0.1.0"
+
+[[package]]
+name = "wheel-core"
+version = "0.1.0"
+dependencies = [
+ "spine-core",
+]
+
+[[package]]
+name = "wheel-encoder"
+version = "0.1.0"
+dependencies = [
+ "aav-inputs",
+]

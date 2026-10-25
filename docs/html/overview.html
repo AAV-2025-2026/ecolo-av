@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview: everything in aav · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/overview.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Overview: everything in aav</h1>
+<div class="meta">12 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a class="here" href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#in-numbers">In numbers</a><a href="#the-folders">The folders</a><a href="#our-own-code">Our own code</a><a href="#stock-ros-packages-and-plugins-we-use">Stock ROS packages and plugins we use</a><a href="#code-from-the-previous-teams">Code from the previous teams</a><a href="#whats-missing">What&#x27;s missing</a></nav>
+<div class="lead"><p>The whole project on one page: what's in the repo, the stock ROS packages and plugins it
+uses, the code it took from the previous teams, and what's still missing. Each section
+links to the page with the details. As of early on 11 October 2026.</p></div>
+<section class="card"><h2 id="in-numbers">In numbers</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>How many</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ROS packages that build</td>
+<td>26: 13 in Python, 13 in CMake (one of them in Rust). None parked</td>
+</tr>
+<tr>
+<td>Rust firmware crates</td>
+<td>8: <code>spine-core</code>, <code>aav-inputs</code>, and six device drivers and glue. Plus the spine's board program for a Pico 2</td>
+</tr>
+<tr>
+<td>The previous team's firmware boards, in C++</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Launch profiles</td>
+<td>5: <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code>, <code>bench</code></td>
+</tr>
+<tr>
+<td>Computers in the machine files</td>
+<td>4: <code>orin</code>, <code>motor_pi</code>, <code>laptop</code>, <code>all</code></td>
+</tr>
+<tr>
+<td>Contracts</td>
+<td>3: the topics, the CAN frames, the car's measurements</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>230 in Python and 208 in Rust without ROS; 291 in <code>colcon test</code>; the HUD app's own; the bench checks, with <code>--perception</code>, <code>--lane</code> and <code>--obstacle</code></td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>26 scripts and 34 <code>pixi run</code> tasks</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-folders">The folders</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>What's in it</th>
+<th>More</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/</code></td>
+<td>the ROS 2 packages, one folder per layer</td>
+<td><a href="packages.html">Packages</a></td>
+</tr>
+<tr>
+<td><code>firmware/</code></td>
+<td>the CAN contract, the Rust crates, the spine's Pico 2 program, and the 2025-26 C++ boards</td>
+<td><a href="firmware.html">Firmware</a>, <a href="rust-firmware.html">Rust firmware</a></td>
+</tr>
+<tr>
+<td><code>hud/</code></td>
+<td>the 2025-26 touchscreen app (Flutter), changed for our back end, <code>src/hud/aav_hud</code>. <code>pixi run get-flutter</code> downloads Flutter</td>
+<td><a href="hud.html">HUD</a></td>
+</tr>
+<tr>
+<td><code>tools/</code></td>
+<td>tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server</td>
+<td><a href="infrastructure.html">Infrastructure</a></td>
+</tr>
+<tr>
+<td><code>examples/</code></td>
+<td>a first ROS node in Rust</td>
+<td></td>
+</tr>
+<tr>
+<td><code>docs/</code></td>
+<td>these pages, the topic contract, and the history</td>
+<td></td>
+</tr>
+<tr>
+<td><code>models/</code></td>
+<td>the YOLO models: <code>pixi run get-models</code> downloads them (not in git)</td>
+<td><a href="perception.html">Perception</a></td>
+</tr>
+<tr>
+<td><code>vendor/</code></td>
+<td>other people's source, to look things up: ROS 2 Jazzy and rclrs. Not ours, and not in git: <code>pixi run vendor</code> downloads it</td>
+<td></td>
+</tr>
+<tr>
+<td><code>pixi.toml</code>, <code>pixi.lock</code></td>
+<td>the whole environment: ROS 2 Jazzy, Gazebo, Nav2, Rust, compilers</td>
+<td><a href="infrastructure.html">Infrastructure</a></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="our-own-code">Our own code</h2>
+<p>Written for 2026-27. Most packages are configuration around stock ROS packages; four
+nodes hold real logic of our own (ego, the spine bridge, the scripted driver, the lane
+finder).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Does</th>
+<th>Layer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_ego</code></td>
+<td>ego: one command into a speed and steering angle the car can do</td>
+<td>ego</td>
+</tr>
+<tr>
+<td><code>aav_mux</code></td>
+<td>twist_mux's settings: the priorities and the e-stop lock</td>
+<td>mux</td>
+</tr>
+<tr>
+<td><code>aav_io_mux</code></td>
+<td>the sensor mux and the output mux: simulated data never drives the real car</td>
+<td>mux</td>
+</tr>
+<tr>
+<td><code>aav_scripted</code></td>
+<td>scripted drives: speed up, hold, slow down</td>
+<td>drivers</td>
+</tr>
+<tr>
+<td><code>aav_goto</code></td>
+<td>drive to one GPS point and stop there smoothly</td>
+<td>drivers</td>
+</tr>
+<tr>
+<td><code>aav_language</code></td>
+<td>plain English: a local model plans drive tools, you say yes</td>
+<td>drivers</td>
+</tr>
+<tr>
+<td><code>aav_teleop</code></td>
+<td>the joystick's settings, and its e-stop button</td>
+<td>drivers</td>
+</tr>
+<tr>
+<td><code>aav_navigation</code></td>
+<td>Nav2 set up for a car, and the maps</td>
+<td>drivers</td>
+</tr>
+<tr>
+<td><code>aav_localization</code></td>
+<td>the two EKFs and GPS-to-map: settings only</td>
+<td>localization</td>
+</tr>
+<tr>
+<td><code>aav_description</code></td>
+<td>the car's model and <code>vehicle.yaml</code></td>
+<td>description</td>
+</tr>
+<tr>
+<td><code>aav_sensors</code></td>
+<td>starts the sensor drivers, with their settings. The GPS: <code>ublox_gps</code> by default</td>
+<td>sensors</td>
+</tr>
+<tr>
+<td><code>aav_imu_yahboom</code></td>
+<td>the IMU driver, in Rust (Ben's rewrite of the 2025-26 C++ one)</td>
+<td>sensors</td>
+</tr>
+<tr>
+<td><code>aav_interfaces</code></td>
+<td>our messages: <code>VehicleStatus</code>, <code>ScriptedDrive</code></td>
+<td>interfaces</td>
+</tr>
+<tr>
+<td><code>aav_spine</code></td>
+<td>the real car: ego's commands as CAN frames</td>
+<td>backends</td>
+</tr>
+<tr>
+<td><code>aav_legacy</code></td>
+<td>today's car: the 2025-26 ESP32 and wheel encoder</td>
+<td>backends</td>
+</tr>
+<tr>
+<td><code>aav_turtlesim</code>, <code>aav_gazebo</code>, <code>aav_carla</code></td>
+<td>the turtle, Gazebo's car, a CARLA car (untested)</td>
+<td>backends</td>
+</tr>
+<tr>
+<td><code>aav_bringup</code></td>
+<td>the five profiles, the machine files (each picks its parts, perception too), the RViz layout</td>
+<td>bringup</td>
+</tr>
+<tr>
+<td><code>aav_spine_sim</code>, <code>aav_bench</code></td>
+<td>bench mode: the spine on a laptop, and pretend sensors</td>
+<td>bench</td>
+</tr>
+<tr>
+<td><code>firmware/can</code>, <code>spine-core</code>, <code>aav-inputs</code></td>
+<td>the CAN contract, the spine's logic, clean inputs</td>
+<td>firmware</td>
+</tr>
+<tr>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>legacy-link</code>, <code>spine-board</code></td>
+<td>the spine's device drivers, the 2025-26 UART link, and the glue to spine-core</td>
+<td>firmware</td>
+</tr>
+<tr>
+<td><code>boards/esp32-umod</code></td>
+<td>the spine on today's ESP32 control board, in Rust (Embassy): builds, never flashed</td>
+<td>firmware</td>
+</tr>
+<tr>
+<td><code>boards/pico2</code></td>
+<td>the spine's board program for a Pico 2 (Embassy): builds, never flashed</td>
+<td>firmware</td>
+</tr>
+<tr>
+<td><code>aav_lane_finder</code></td>
+<td>the lane finder: the camera's picture to <code>/perception/lane/geometry</code>, with OpenCV</td>
+<td>perception</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="stock-ros-packages-and-plugins-we-use">Stock ROS packages and plugins we use</h2>
+<p>"Prefer stock" is a ground rule: these do most of the work.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Stock package</th>
+<th>What it does for us</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensors</td>
+<td><code>imu_filter_madgwick</code></td>
+<td>turns the IMU's raw readings into an orientation</td>
+</tr>
+<tr>
+<td>Sensors</td>
+<td><code>ublox_gps</code> (KumarRobotics)</td>
+<td>the u-blox GPS, in Pixi on every computer: the default (Tentative, Q18)</td>
+</tr>
+<tr>
+<td>Sensors</td>
+<td><code>ublox_dgnss</code></td>
+<td>the 2024-25 choice for the same GPS. It isn't in Pixi, so it runs on the car only: <code>gps_driver:=ublox_dgnss</code></td>
+</tr>
+<tr>
+<td>Sensors</td>
+<td><code>nmea_navsat_driver</code></td>
+<td>any GPS that speaks NMEA: <code>gps_driver:=nmea</code></td>
+</tr>
+<tr>
+<td>Sensors</td>
+<td><code>usb_cam</code></td>
+<td>the cameras, with the 2024-25 calibrations (Linux only)</td>
+</tr>
+<tr>
+<td>Perception</td>
+<td><code>vision_msgs</code>, <code>cv_bridge</code>, <code>image_publisher</code></td>
+<td>detections, pictures, and a picture file as a pretend camera</td>
+</tr>
+<tr>
+<td>Perception</td>
+<td>Ultralytics YOLO and PyTorch (not ROS)</td>
+<td>the detector, in the <code>ml</code> environment</td>
+</tr>
+<tr>
+<td>Description</td>
+<td><code>robot_state_publisher</code>, <code>joint_state_publisher</code>, <code>xacro</code></td>
+<td>the car's model and frames</td>
+</tr>
+<tr>
+<td>Localization</td>
+<td><code>robot_localization</code>: <code>ekf_node</code> (twice) and <code>navsat_transform_node</code></td>
+<td>where the car is: <code>ekf_local</code> to steer, <code>ekf_global</code> to plan, GPS into map coordinates</td>
+</tr>
+<tr>
+<td>Localization</td>
+<td><code>tf2_ros</code></td>
+<td>a fixed map-to-odom frame when there's no GPS</td>
+</tr>
+<tr>
+<td>Drivers</td>
+<td><code>joy</code>, <code>teleop_twist_joy</code>, <code>joy_teleop</code></td>
+<td>the joystick, its deadman, its e-stop button</td>
+</tr>
+<tr>
+<td>Drivers</td>
+<td><code>teleop_twist_keyboard</code></td>
+<td>driving from a laptop's keyboard</td>
+</tr>
+<tr>
+<td>Drivers</td>
+<td>Nav2: 8 servers (map, planner, controller, behaviours, navigator, waypoints, velocity smoother, lifecycle)</td>
+<td>plans and drives to a goal</td>
+</tr>
+<tr>
+<td>The mux</td>
+<td><code>twist_mux</code></td>
+<td>picks one command, by priority</td>
+</tr>
+<tr>
+<td>Backends</td>
+<td><code>ros2_socketcan</code></td>
+<td>the CAN bus (Linux only)</td>
+</tr>
+<tr>
+<td>Backends</td>
+<td><code>turtlesim</code>; <code>ros_gz</code> with Gazebo Harmonic</td>
+<td>the turtle; the simulated car</td>
+</tr>
+<tr>
+<td>Watching</td>
+<td><code>rviz2</code>, <code>rqt_graph</code>, <code>rqt_tf_tree</code></td>
+<td>the 3D view, the node graph, the frame tree</td>
+</tr>
+<tr>
+<td>Watching</td>
+<td><code>foxglove_bridge</code></td>
+<td>Foxglove or Lichtblick on a laptop, on the car</td>
+</tr>
+<tr>
+<td>Recording</td>
+<td><code>rosbag2</code>, with MCAP files</td>
+<td><code>tools/record.sh</code> and replay</td>
+</tr>
+<tr>
+<td>Ready, not used yet</td>
+<td><code>rosbridge_server</code></td>
+<td>if the HUD moves off Socket.IO</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-plugins-inside-nav2-and-gazebo">The plugins inside Nav2 and Gazebo</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Plugin</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nav2 planner</td>
+<td><code>SmacPlannerHybrid</code></td>
+<td>plans paths a car can drive: no turning on the spot</td>
+</tr>
+<tr>
+<td>Nav2 controller</td>
+<td><code>MPPI</code></td>
+<td>follows the path, with the car's Ackermann model. <code>controller:=rpp</code> swaps in <code>RegulatedPurePursuit</code> (<a href="controllers.html">path followers</a>)</td>
+</tr>
+<tr>
+<td>Nav2 behaviours</td>
+<td><code>BackUp</code>, <code>DriveOnHeading</code>, <code>Wait</code></td>
+<td>no <code>Spin</code>: a car can't</td>
+</tr>
+<tr>
+<td>Nav2 navigator</td>
+<td><code>NavigateToPose</code>, <code>NavigateThroughPoses</code></td>
+<td>with our car behaviour trees, adapted from Nav2's</td>
+</tr>
+<tr>
+<td>Nav2 waypoints</td>
+<td><code>WaitAtWaypoint</code></td>
+<td>GPS waypoints come through the same server</td>
+</tr>
+<tr>
+<td>Nav2 checkers</td>
+<td><code>SimpleGoalChecker</code>, <code>PoseProgressChecker</code></td>
+<td>when a goal counts as reached; when the car counts as stuck (turning counts as moving)</td>
+</tr>
+<tr>
+<td>Costmaps</td>
+<td><code>StaticLayer</code>, <code>InflationLayer</code>, <code>ObstacleLayer</code> (twice)</td>
+<td>the radar's obstacle layer is on where the radar runs; the cameras' layer is off until they're calibrated (Q22)</td>
+</tr>
+<tr>
+<td>Nav2 safety</td>
+<td><code>collision_monitor</code></td>
+<td>stops Nav2 for radar points in a 1 m zone ahead of the bumper. It guards Nav2 only</td>
+</tr>
+<tr>
+<td>Gazebo</td>
+<td><code>AckermannSteering</code>, <code>JointStatePublisher</code>, <code>Imu</code>, <code>NavSat</code>, <code>Physics</code>, <code>SceneBroadcaster</code>, <code>UserCommands</code></td>
+<td>the simulated car, its sensors, and the world</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="code-from-the-previous-teams">Code from the previous teams</h2>
+<p>Each copy carries a <code>PROVENANCE.md</code>: where it came from, and every change since.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Code</th>
+<th>From</th>
+<th>Now in</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The Yahboom IMU driver (C++)</td>
+<td>2025-26 <code>yahboom-IMU</code></td>
+<td><code>src/sensors/aav_imu_yahboom</code></td>
+<td>rewritten in Rust (Ben); the C++ went on 11 Oct</td>
+</tr>
+<tr>
+<td>The TI radar driver</td>
+<td>2025-26 <code>Nav_Radar</code></td>
+<td><code>src/sensors/ti_ros2_driver</code></td>
+<td>ported; its settings are indoor demos</td>
+</tr>
+<tr>
+<td>The battery monitor</td>
+<td>2024-25 <code>Battery-Monitor-ROS</code></td>
+<td><code>src/sensors/battery_monitor</code></td>
+<td>ported</td>
+</tr>
+<tr>
+<td>Camera calibrations</td>
+<td>2024-25 <code>cameras</code></td>
+<td><code>aav_sensors/config/cameras</code></td>
+<td>used by <code>cameras.launch.py</code></td>
+</tr>
+<tr>
+<td>The HUD's back end (Flask)</td>
+<td>2025-26 <code>User-Interface</code></td>
+<td><code>src/hud/aav_hud</code></td>
+<td>ported to our topics; publishes <code>/safety/estop</code>. 98 tests</td>
+</tr>
+<tr>
+<td>The HUD app (Flutter) and its boot scripts</td>
+<td>2025-26 <code>User-Interface</code></td>
+<td><code>hud/</code></td>
+<td>changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen</td>
+</tr>
+<tr>
+<td>The ESP32 actuator firmware (C++)</td>
+<td>2025-26 <code>AAV_cortex</code></td>
+<td><code>firmware/legacy/aav_umod_esp32</code></td>
+<td>runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers</td>
+</tr>
+<tr>
+<td>The status display (Pico 2)</td>
+<td>2025-26 <code>AAV_cortex</code></td>
+<td><code>firmware/spine/boards/sentinel-pico2</code>, crates <code>sentinel</code>, <code>hd44780</code></td>
+<td>rewritten in Rust, 15 Oct; builds, never flashed; not wired in</td>
+</tr>
+<tr>
+<td>The wheel encoder (Pico 2)</td>
+<td>2025-26 <code>Wheel_Encoders</code></td>
+<td><code>firmware/spine/boards/wheel-encoder-pico2</code>, crate <code>wheel-encoder</code></td>
+<td>rewritten in Rust, 15 Oct; builds, never flashed. The car's board still runs the C++</td>
+</tr>
+<tr>
+<td>Their UART and encoder protocols</td>
+<td>2025-26 <code>AAV_cortex</code>, <code>Wheel_Encoders</code></td>
+<td><code>aav_legacy</code></td>
+<td>rewritten in Python</td>
+</tr>
+<tr>
+<td>Lane keeping</td>
+<td>2025-26 <code>Lane_Detection_ROS2</code></td>
+<td><code>src/perception/aav_lane_geometry</code></td>
+<td>brought in: a driver on <code>/drivers/ai/cmd_vel</code></td>
+</tr>
+<tr>
+<td>Radar clustering (C++)</td>
+<td>2025-26 <code>Nav_Radar</code></td>
+<td><code>src/perception/aav_radar_clusters</code></td>
+<td>rewritten in Rust; the C++ went on 15 Oct</td>
+</tr>
+<tr>
+<td>A YOLO stop-sign detector</td>
+<td>2024-25 <code>camera_ros2_ws</code></td>
+<td><code>src/perception/aav_detector</code></td>
+<td>rewritten: detections out, and a stop-sign watcher</td>
+</tr>
+<tr>
+<td>The car's geometry</td>
+<td>2025-26 <code>Motor_Steering</code> (<code>Ackermann.m</code>)</td>
+<td><code>vehicle.yaml</code>, <code>docs/reference/</code></td>
+<td>numbers carried over, still guesses</td>
+</tr>
+<tr>
+<td>The joystick's button map</td>
+<td>2025-26 <code>joy_teleop_ackerman</code></td>
+<td><code>aav_teleop</code></td>
+<td>carried over</td>
+</tr>
+<tr>
+<td>CARLA's axis rules</td>
+<td><code>carla-ros-bridge</code> (MIT)</td>
+<td><code>aav_carla</code></td>
+<td>rewritten, untested</td>
+</tr>
+</tbody>
+</table></div>
+<p>Replaced by stock packages instead of copied: the 2025-26 path planners, obstacle
+avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> has every repo.</p>
+</section>
+<section class="card"><h2 id="whats-missing">What's missing</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Missing</th>
+<th>More</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The spine</td>
+<td>a test on a real Pico 2 and a 3.3 V CAN module; the car's chip (Q10–Q13); the CAN wiring. The drivers, the glue and a Pico 2 program are written</td>
+<td><a href="rust-firmware.html">Rust firmware</a></td>
+</tr>
+<tr>
+<td>Rust drivers</td>
+<td>the W5500 and the display, if the board keeps them</td>
+<td><a href="rust-firmware.html">Rust firmware</a></td>
+</tr>
+<tr>
+<td>Sensors</td>
+<td>the camera and lidar models (Q22); the GPS model (Q18); the magnetometer in real units</td>
+<td><a href="status.html">Status</a></td>
+</tr>
+<tr>
+<td>Perception</td>
+<td>the 2024-25 team's <code>best.pt</code>; the Orin's TensorRT engine, built on the Orin after its reflash</td>
+<td><a href="perception.html">Perception</a></td>
+</tr>
+<tr>
+<td>The car</td>
+<td>every measurement in <code>vehicle.yaml</code> (Q1); the steering calibration (Q2); Jazzy on its computers (Q24)</td>
+<td><a href="car_measurements.html">Car numbers</a></td>
+</tr>
+<tr>
+<td>Navigation</td>
+<td>the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount; a sensor behind the car before it reverses</td>
+<td><a href="costmaps.html">Costmaps</a></td>
+</tr>
+<tr>
+<td>Drivers</td>
+<td>a first real joystick test; an e-stop message that can't get lost (N2)</td>
+<td><a href="team.html">Starting points</a></td>
+</tr>
+<tr>
+<td>The HUD</td>
+<td>the build for the car's Pi; its tile server and OSRM route data. The map database downloads with <code>pixi run get-hud-map</code></td>
+<td><a href="hud.html">HUD</a></td>
+</tr>
+<tr>
+<td>Simulation</td>
+<td>CARLA: adapter ready, never run (needs the NVIDIA computer). Bench mode works: <a href="bench.html">Bench mode</a></td>
+<td><a href="carla.html">CARLA</a></td>
+</tr>
+<tr>
+<td>The team</td>
+<td>owners (Q33), the leaked secrets changed (Q34), backups before any reflash</td>
+<td><a href="work.html">Work</a></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="index.html"><small>Previous</small>← Start here</a>
+<a class="next" href="release-notes.html"><small>Next</small>Release notes →</a></nav>
+</main>
+<footer>Source: <code>docs/overview.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

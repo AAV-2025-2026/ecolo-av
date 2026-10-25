@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar</h1>
+<div class="meta">28 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a class="here" href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-chain">The chain</a><a href="#the-packages">The packages</a><a href="#stop-signs">Stop signs</a><a href="#models">Models</a><a href="#better-models-to-try">Better models to try</a><a href="#where-it-runs">Where it runs</a><a href="#lane-keeping">Lane keeping</a><a href="#radar-clustering">Radar clustering</a><a href="#the-roof-lidar">The roof lidar</a><a href="#on-the-car">On the car</a><a href="#still-to-do">Still to do</a></nav>
+<div class="lead"><p>What the car sees, and what it does about it. All of it runs on the bench today. On the
+car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).</p></div>
+<section class="card"><h2 id="the-chain">The chain</h2>
+<pre class="highlight"><code>camera ─► object_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
+                                                                    (a lock on twist_mux)
+lane finder (missing) ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
+radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/radar/clusters, /perception/radar/cluster_boxes</code></pre>
+<p><img alt="What the bench camera shows YOLO, about 5 m from the stop sign" src="../img/bench-stop-sign.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>In the picture</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The road, the sky and the sign</td>
+<td>a drawing, not a photo: the bench's pretend camera (<code>mock_camera</code>) draws them from where the model car is. The sign grows as the car gets closer</td>
+</tr>
+<tr>
+<td>The pink box</td>
+<td>the real YOLO model (the stock one) found the sign: "stop sign", 0.90 = 90% sure. (Saved before RF-DETR became the default, 20 Oct; it draws a red box)</td>
+</tr>
+<tr>
+<td>When</td>
+<td><code>pixi run -e ml bench-check --perception</code> saved it the moment the car stopped, about 5 m before the sign</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-packages">The packages</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>From</th>
+<th>Does</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_detector</code></td>
+<td>2024-25 <code>camera_ros2_ws</code> (<code>yolo_ros2</code>)</td>
+<td>the detector (RF-DETR or YOLO): camera images in, <code>vision_msgs</code> detections out; and the stop-sign watcher</td>
+<td><span class="badge b-works">works</span> on the bench, with either stock model</td>
+</tr>
+<tr>
+<td><code>aav_radar_clusters</code></td>
+<td>ours (Rust): a rewrite of the 2025-26 <code>Nav_Radar</code> C++ node</td>
+<td>DBSCAN groups the radar's points into objects, with a box round each</td>
+<td><span class="badge b-works">works</span> on the bench and in Gazebo</td>
+</tr>
+<tr>
+<td><code>aav_lane_geometry</code></td>
+<td>2025-26 <code>Lane_Detection_ROS2</code></td>
+<td>lane keeping's steering half, as a driver on <code>/drivers/ai/cmd_vel</code></td>
+<td><span class="badge b-works">works</span> on a pretend lane. The line finder is <span class="badge b-missing">missing</span></td>
+</tr>
+<tr>
+<td><code>aav_sensors</code> <code>cameras.launch.py</code></td>
+<td>2024-25 <code>cameras</code> (the calibrations)</td>
+<td><code>usb_cam</code> with <code>left.ini</code> and <code>right.ini</code></td>
+<td><span class="badge b-untested">untested</span> Linux only; the camera models are Q22</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="stop-signs">Stop signs</h2>
+<p>The watcher turns the detector's boxes into a lock on twist_mux.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>State</th>
+<th>When</th>
+<th>The lock</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clear</td>
+<td>no stop sign close enough</td>
+<td>off</td>
+</tr>
+<tr>
+<td>Stopping</td>
+<td>a stop sign 4.7 m away or closer, with a score of 0.5 or more</td>
+<td>on, for 4 s: about 1 s to stop, then a 3 s wait</td>
+</tr>
+<tr>
+<td>Passing</td>
+<td>after the 4 s</td>
+<td>off, and signs are ignored for 10 s, so the car can drive past this one</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The lock</strong> has priority 30. It holds Nav2 (20) and the AI slot (10), and never a
+  person (joystick 100, keyboard 90) or a test script (60, 50, 40).</li>
+<li><strong>It only stops the car.</strong> It can't make it move.</li>
+<li><strong>It never expires on silence.</strong> If the watcher dies while the lock is on, the car stays
+  stopped.</li>
+<li><strong>On the bench</strong>, Nav2 drove toward the sign at 25 m. The lock came on 4.7 m before it,
+  the car stopped, waited, and went on to its goal 40 m away.</li>
+</ul>
+<h3 id="how-far-the-boxs-height-and-the-lens-24-oct">How far: the box's height and the lens (24 Oct)</h3>
+<pre class="highlight"><code class="language-text">                        focal length (px) x 0.75 m        a stop sign: 0.75 m tall
+  distance to the sign = ─────────────────────────────
+                            box height (px)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Camera</th>
+<th>Focal length</th>
+<th>The box at 4.7 m</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gazebo's and the bench's (640x360)</td>
+<td>343 px</td>
+<td>55 px (the old rule)</td>
+</tr>
+<tr>
+<td>A 1280x720 ribbon camera (once calibrated)</td>
+<td>about 900-1400 px (a guess)</td>
+<td>130-220 px</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Each camera's own lens:</strong> the watcher keeps each camera's focal length (<code>fy</code>) from its
+  <code>CameraInfo</code>, by the detections' <code>frame_id</code>. So the same 4.7 m works for any camera.</li>
+<li><strong>No <code>CameraInfo</code> yet</strong> (an uncalibrated camera): it uses <code>focal_px</code> (343) and warns.
+  On the car that means stopping too early: calibrate first
+  (<a href="camera-calibration.html">camera calibration</a>).</li>
+<li><strong>Parameters:</strong> <code>stop_distance_m</code> (4.7), <code>sign_height_m</code> (0.75), <code>focal_px</code> (343),
+  <code>camera_info_topics</code>, <code>min_score</code>, <code>hold_s</code>, <code>ignore_s</code>.</li>
+</ul>
+<p>Last year, a stop sign set off the real e-stop, and the HUD cleared it every half second.
+The lock keeps stop signs away from the e-stop.</p>
+</section>
+<section class="card"><h2 id="models">Models</h2>
+<h3 id="the-cars-detector-rf-detr-nano">The car's detector: RF-DETR Nano</h3>
+<p><strong>RF-DETR Nano is the car's detector</strong> (Ben, 23 Oct: "I thought we were skipping yolo and
+using the other one"), in <strong>TensorRT on the Orin</strong> (Ben, 23 Oct). It has been the
+detector's default since 20 Oct. YOLO stays one argument away. Both publish the same
+<code>/perception/detections</code>, with the same labels ("stop sign", "person"...), so the
+stop-sign watcher and the rest can't tell which ran.</p>
+<pre class="highlight"><code class="language-bash">pixi run detect                        # RF-DETR Nano (the default)
+pixi run detect detector:=yolo         # YOLO11 nano</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>detector:=</code></th>
+<th>Model (empty <code>model:=</code>)</th>
+<th>Licence</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rfdetr</code> (default)</td>
+<td><code>models/rf-detr-nano.pth</code></td>
+<td>Apache-2.0 (Roboflow)</td>
+<td>saw Gazebo's stop sign from 20 m, YOLO from 10 m; more people found (<a href="model-comparison.html">Model comparison</a>)</td>
+</tr>
+<tr>
+<td><code>yolo</code></td>
+<td><code>models/yolo11n.pt</code></td>
+<td>AGPL-3.0 (Ultralytics)</td>
+<td>smaller (6 MB)</td>
+</tr>
+</tbody>
+</table></div>
+<p>In a machine file: <code>detector: {detector: yolo}</code> under its <code>detector:</code> settings.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Checked with RF-DETR Nano, on Ben's Mac</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run -e ml sim-check --perception</code>, Gazebo, 24 Oct</td>
+<td><span class="badge b-works">works</span> first seen at x = 5.9 m, the sign at 25 m; the lock at 17.9 m (score 0.77, 68 px tall); stopped with the bumper 4.4 m before the sign; goal reached</td>
+</tr>
+<tr>
+<td><code>pixi run -e ml bench-check --perception</code>, 20 Oct</td>
+<td><span class="badge b-works">works</span> the lock at 20.7 m; stood still; goal reached</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="one-model-three-formats">One model, three formats</h3>
+<p>Each computer with a GPU runs its own (Ben, 10 Oct). The detector loads any of them; the
+machine file names the one to use.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Runs on</th>
+<th>Make it with</th>
+<th>Machine file</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rf-detr-nano.pth</code></td>
+<td>anything, with PyTorch: CUDA, Metal or the CPU</td>
+<td><code>pixi run get-models</code></td>
+<td><code>laptop.yaml</code>, <code>all.yaml</code></td>
+</tr>
+<tr>
+<td><code>rf-detr-nano.mlpackage</code></td>
+<td>Macs, with Core ML</td>
+<td><code>pixi run -e ml export-coreml</code>, on a Mac</td>
+<td><code>laptop.yaml</code> (one line to uncomment)</td>
+</tr>
+<tr>
+<td><code>rf-detr-nano.engine</code></td>
+<td>the Orin, with TensorRT</td>
+<td><code>python3 tools/build_engine.py</code>, on the Orin itself</td>
+<td><code>orin.yaml</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>YOLO has the same three: <code>yolo11n.pt</code>, and <code>export-coreml models/yolo11n.pt</code> or
+  <code>build_engine.py models/yolo11n.pt</code> for the other two.</li>
+<li>An exported RF-DETR keeps <code>rf-detr</code> in its name. That's how the detector tells it from
+  a YOLO export.</li>
+<li><code>pixi run get-models</code> downloads both <code>.pth</code> and <code>.pt</code> (RF-DETR's is 366 MB: a training
+  checkpoint), each checked against its pinned checksum: a model file is a Python pickle,
+  so a wrong one could run code.</li>
+</ul>
+<h3 id="how-fast-on-bens-mac">How fast, on Ben's Mac</h3>
+<p>24 Oct, M4 Max, the test stop sign at 640 x 360 (the bench camera's size). Model = one
+<code>detect()</code>, pre- and post-processing included, the median of 30. Node = the whole
+callback: the picture in, boxes drawn, both messages out, at 10 frames a second.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Found</th>
+<th>Model</th>
+<th>Node</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RF-DETR Nano, Core ML (<code>.mlpackage</code>)</td>
+<td>stop sign, 0.96</td>
+<td><strong>10 ms</strong></td>
+<td>33 ms</td>
+</tr>
+<tr>
+<td>RF-DETR Nano, PyTorch on Metal (<code>.pth</code>)</td>
+<td>stop sign, 0.96</td>
+<td>16 ms</td>
+<td>41 ms</td>
+</tr>
+<tr>
+<td>YOLO11n, PyTorch on Metal (<code>.pt</code>)</td>
+<td>stop sign, 0.97</td>
+<td>8-12 ms (10 and 16 Oct)</td>
+<td>39 ms</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Core ML in half precision was no faster (12 ms), so the export stays in full precision.</li>
+<li>The Core ML and ONNX (TensorRT's input) exports give PyTorch's box and score to the
+  pixel: 0.959.</li>
+<li>Gazebo shared the Mac during these runs: treat them as rough.</li>
+</ul>
+<h3 id="tensorrt-on-the-orin">TensorRT, on the Orin</h3>
+<p>An engine runs only on the GPU and the TensorRT version that built it. So it's built
+on the Orin, once it's on JetPack 7.2 (Q24):</p>
+<ol>
+<li>Install NVIDIA's PyTorch and torchvision for Jetson (not PyPI's), then
+   <code>pip install rfdetr onnx</code>. Not <code>rfdetr[tensorrt]</code>: that brings PyPI's TensorRT, not
+   JetPack's. In a venv, make it with <code>--system-site-packages</code>, so it sees JetPack's
+   TensorRT.</li>
+<li>Run <code>python3 tools/build_engine.py</code> in the repo, with JetPack's <code>python3</code>, not
+   Pixi's. It checks first, and says what's missing.</li>
+<li>
+<p>It does three steps:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What</th>
+<th>With</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>rf-detr-nano.pth</code> → <code>rf-detr-nano.onnx</code></td>
+<td>rfdetr's own export</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>.onnx</code> → <code>rf-detr-nano.engine</code>, half precision (FP16)</td>
+<td>TensorRT's own builder</td>
+</tr>
+<tr>
+<td>3</td>
+<td>the engine on the test stop sign: its score and ms a picture</td>
+<td>our detector</td>
+</tr>
+</tbody>
+</table></div>
+</li>
+<li>
+<p><code>car.launch.py machine:=orin</code> loads <code>models/rf-detr-nano.engine</code>. Until it's built,
+   the detector part is skipped, and says how to make it.</p>
+</li>
+</ol>
+<ul>
+<li>By hand, step 2 is <code>trtexec --onnx=models/rf-detr-nano.onnx --fp16
+  --saveEngine=models/rf-detr-nano.engine</code>.</li>
+<li>Step 1 runs on any computer with <code>pip install onnx</code> (ONNX files are portable): then
+  <code>python3 tools/build_engine.py models/rf-detr-nano.onnx</code> on the Orin.</li>
+<li><span class="badge b-untested">untested</span> It needs the Orin: on a Mac it only checks, and stops. Step 1 and the
+  ONNX file's answers were checked on Ben's Mac.</li>
+</ul>
+<h3 id="core-ml-on-a-mac">Core ML, on a Mac</h3>
+<ul>
+<li><code>pixi run -e ml export-coreml</code> makes <code>models/rf-detr-nano.mlpackage</code> from the <code>.pth</code>
+  (8 s), and downloads the <code>.pth</code> first if it's missing.</li>
+<li>YOLO's: <code>pixi run -e ml export-coreml models/yolo11n.pt</code> (2 s).</li>
+<li>Then <code>pixi run detect model:=models/rf-detr-nano.mlpackage</code>. <span class="badge b-works">works</span> stop sign, 0.96.</li>
+</ul>
+<h3 id="in-another-program">In another program</h3>
+<p>The models don't need ROS. Any Python program can load one, as the detector node does:</p>
+<pre class="highlight"><code class="language-python">from aav_detector.detectors import load_detector
+
+model = load_detector()          # RF-DETR Nano: once, it takes a few seconds
+boxes = model.detect(bgr)        # an OpenCV picture: H x W x 3, BGR
+for box in boxes:                # in that picture's pixels
+    print(box.label, box.score, box.cx, box.cy, box.width, box.height)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Takes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>load_detector(detector='rfdetr', model='', device='auto')</code></td>
+<td>the node's own parameters; <code>model</code> picks the format (<code>.pth</code>, <code>.mlpackage</code>, <code>.engine</code>)</td>
+</tr>
+<tr>
+<td><code>model.detect(bgr, confidence=0.5, labels=None)</code></td>
+<td><code>labels</code>: only these, such as <code>'stop sign'</code> or <code>['stop sign', 'person']</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The code: <code>aav_detector/detectors.py</code> (the models), <code>aav_detector/detr.py</code> (RF-DETR's maths for
+an exported model, NumPy only), with their tests.</p>
+<h3 id="the-2024-25-teams-model">The 2024-25 team's model</h3>
+<p>Their own model, <code>best.pt</code>, is in no repo: their code loaded it from
+<code>~/Yolo/Capstone/runs/detect/train7/weights/best.pt</code> on someone's computer. It's
+probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct), which can train
+new models too. It is a YOLO model: Ultralytics' models and code are licensed AGPL-3.0.</p>
+</section>
+<section class="card"><h2 id="better-models-to-try">Better models to try</h2>
+<p>The 2024-25 model learned one label from the team's own pictures. Open models trained on
+far more pictures may do better:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>Open models</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Everyday objects, stop signs included</td>
+<td>RF-DETR (ours now), YOLO11 and YOLO26 (<code>detector:=yolo</code>), RT-DETR</td>
+</tr>
+<tr>
+<td>Anything named in words, like "traffic cone"</td>
+<td>YOLO-World, Grounding DINO, OWLv2</td>
+</tr>
+<tr>
+<td>Lane lines and the drivable area</td>
+<td>YOLOPv2, TwinLiteNet</td>
+</tr>
+<tr>
+<td>Distance from one camera</td>
+<td>Depth Anything V2</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The fair test:</strong> record the car's cameras once, then run each model on the same
+  recording.</li>
+<li><strong>Several at once:</strong> any number of nodes can read the same camera topic; each
+  publishes its own result.</li>
+<li><strong>Licences:</strong> check each one before it goes on the car.</li>
+</ul>
+</section>
+<section class="card"><h2 id="where-it-runs">Where it runs</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine</th>
+<th>How</th>
+<th>Speed (RF-DETR Nano, a picture)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A Mac with Apple silicon</td>
+<td><code>pixi run -e ml</code>: PyTorch on the GPU through Metal</td>
+<td>16 ms; 41 ms in the node, with the picture drawn and sent</td>
+</tr>
+<tr>
+<td>The same Mac, Core ML</td>
+<td>a <code>.mlpackage</code>: Apple's version of TensorRT</td>
+<td>10 ms; 33 ms in the node</td>
+</tr>
+<tr>
+<td>A Linux PC</td>
+<td><code>pixi run -e ml</code>: PyTorch on the CPU (CUDA builds later)</td>
+<td>not measured (the CPU of a Mac: 74 ms)</td>
+</tr>
+<tr>
+<td>The Orin, on JetPack 7.2</td>
+<td>JetPack's CUDA 13.2.1 and TensorRT 10.16.2, not Pixi's: the <code>.engine</code></td>
+<td>not yet: <code>build_engine.py</code> prints it</td>
+</tr>
+</tbody>
+</table></div>
+<p>The detector runs as <code>python3 -m aav_detector.detector</code>, so it uses the <code>python3</code> of the
+environment that starts it: the <code>ml</code> environment's PyTorch on a laptop, JetPack's on the
+Orin.</p>
+<h3 id="one-gpu-setting-for-every-computer">One GPU setting for every computer</h3>
+<p><code>auto</code>, the default, picks the GPU the computer has. The other values are PyTorch's own
+names, passed on as they are.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>device:=</code></th>
+<th>On the Orin, or an NVIDIA card</th>
+<th>On a Mac</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto</code> (the default)</td>
+<td>CUDA</td>
+<td>Metal</td>
+</tr>
+<tr>
+<td><code>cuda</code>, <code>cuda:N</code></td>
+<td>CUDA: the first card, or card N</td>
+<td>an error: use <code>auto</code> or <code>mps</code></td>
+</tr>
+<tr>
+<td><code>mps</code></td>
+<td>an error: use <code>auto</code> or <code>cuda</code></td>
+<td>Metal</td>
+</tr>
+<tr>
+<td><code>cpu</code></td>
+<td>the CPU</td>
+<td>the CPU</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>A name PyTorch doesn't know, such as <code>gpu</code> or <code>metal</code>, is an error too. It lists the
+  names above.</li>
+<li>A <code>.mlpackage</code> (Core ML) or an <code>.engine</code> (TensorRT) ignores the setting: each picks its
+  own hardware.</li>
+<li>MLX, Apple's own machine-learning library, isn't needed for YOLO: Metal, through
+  PyTorch or Core ML, is the Mac's fast path. MLX could join the <code>ml</code> environment later,
+  for training or for other models.</li>
+</ul>
+<h3 id="one-detector-per-computer-and-wifi">One detector per computer, and WiFi</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>node_name:=object_detector_macbook</code></td>
+<td>the node's name. Each computer with a GPU runs its own detector, under its own name: <code>car.launch.py</code> calls it <code>object_detector_&lt;machine&gt;</code>. All of them publish on <code>/perception/detections</code></td>
+</tr>
+<tr>
+<td><code>compressed:=true</code></td>
+<td>reads <code>/sensors/camera/front_left/image_raw/compressed</code>, the JPEG pictures <code>usb_cam</code> already publishes. Raw pictures are too big for WiFi</td>
+</tr>
+</tbody>
+</table></div>
+<p>From a Mac on the car's network, by hand:
+<code>pixi run detect node_name:=object_detector_macbook compressed:=true</code>.</p>
+<h3 id="the-ml-environment">The ml environment</h3>
+<p>A separate Pixi environment, so nobody downloads PyTorch unless they want it: PyTorch
+2.13, Ultralytics 8.4, coremltools 9 (Macs only) and NumPy 2.3.</p>
+<ul>
+<li>Ultralytics' Core ML export needs NumPy 2.3.5 or older, so the environment pins it.</li>
+<li>conda-forge's torchvision has no Metal version of one step (NMS), so
+  <code>PYTORCH_ENABLE_MPS_FALLBACK=1</code> runs that step on the CPU.</li>
+<li><code>YOLO_AUTOINSTALL=false</code>: Ultralytics must never pip-install into the environment.</li>
+</ul>
+</section>
+<section class="card"><h2 id="lane-keeping">Lane keeping</h2>
+<p>Two nodes, from the camera to the wheels. <code>lane_finder</code> (ours) finds the lane;
+<code>control_interface</code> (the 2025-26 team's) steers by it.</p>
+<pre class="highlight"><code>/sensors/camera/front_left/image_raw ─► lane_finder ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel</code></pre>
+<p><img alt="The bench camera, and what lane_finder found in it" src="../img/lane-finder.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>In the picture</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Left</td>
+<td>the bench camera: the car 0.3 m left of the lane's centre</td>
+</tr>
+<tr>
+<td>Right</td>
+<td>the bird's-eye view: the road from above, 4 m ahead (bottom) to 16 m (top)</td>
+</tr>
+<tr>
+<td>Yellow</td>
+<td>the paint it found</td>
+</tr>
+<tr>
+<td>Boxes</td>
+<td>the sliding windows: green found paint</td>
+</tr>
+<tr>
+<td>Blue, red</td>
+<td>the left and right lines it fitted</td>
+</tr>
+<tr>
+<td>Green line, white line</td>
+<td>the lane's centre, and the car's own line</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-finder">The finder</h3>
+<p>Classic OpenCV, no model. A model can replace it later, on the same topic.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Bird's-eye view</td>
+<td>warps the picture into a map of the road seen from above: 4-16 m ahead, 4 m either side, 5 cm a pixel. From the lens (<code>/sensors/camera/front_left/camera_info</code>) and the camera's place and tilt (<code>vehicle.yaml</code>). It takes the road to be flat</td>
+</tr>
+<tr>
+<td>2. Paint</td>
+<td>a pixel is paint when it's brighter than the road on both sides</td>
+</tr>
+<tr>
+<td>3. Sliding windows</td>
+<td>12 windows climb each line, from where it starts near the car</td>
+</tr>
+<tr>
+<td>4. Fit</td>
+<td>a curve per line, <code>y = a x² + b x + c</code>, in metres, in <code>base_link</code></td>
+</tr>
+<tr>
+<td>5. The answer</td>
+<td>the car's offset, the lane's width, each line's radius, and how sure it is</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Speed:</strong> 0.8 ms a picture on Ben's MacBook Pro (M4 Max), 1.2 ms in the node.
+  <span class="badge b-untested">untested</span> on the Orin, whose cores are slower: expect a few ms.</li>
+<li><strong>The code:</strong> <code>src/perception/aav_lane_finder</code>. <code>birds_eye.py</code> and <code>lane_lines.py</code>
+  hold the maths, with no ROS, and 21 tests, most on pictures of known lanes: straight,
+  off centre, turned, curved, one line, none. <code>lane_finder.py</code> is the node.</li>
+</ul>
+<h3 id="what-it-sends-perceptionlanegeometry">What it sends: /perception/lane/geometry</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vehicle_offset_m</code></td>
+<td>the car from the lane's centre, 3 m ahead (m). + = the car is left of the centre, so it steers right</td>
+</tr>
+<tr>
+<td><code>left_poly_a</code>, <code>_b</code>, <code>_c</code>, and the same for <code>right_</code></td>
+<td>each line as <code>y = a x² + b x + c</code> (m), in <code>base_link</code>: x forward, y left</td>
+</tr>
+<tr>
+<td><code>left_curvature_m</code>, <code>right_</code>, <code>mean_</code></td>
+<td>the radius (m). 9999 = straight, or not seen</td>
+</tr>
+<tr>
+<td><code>curve_direction</code></td>
+<td>+1 bends left, -1 right, 0 straight</td>
+</tr>
+<tr>
+<td><code>lane_width_m</code></td>
+<td>between the lines (m). With one line, the last width seen</td>
+</tr>
+<tr>
+<td><code>left_confidence</code>, <code>left_lane_detected</code>, and the same for <code>right_</code></td>
+<td>0 to 1; a line counts from 0.3</td>
+</tr>
+<tr>
+<td><code>steering_hint</code></td>
+<td>a pure-pursuit wheel angle to the centre (rad, + = left). control_interface doesn't use it</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>One line:</strong> the centre is half a lane beside it.</li>
+<li><strong>No lines:</strong> nothing detected, so control_interface slows down and stops.</li>
+<li><strong>Why 3 m ahead:</strong> an offset at the rear axle says nothing about which way the car
+  points. On the bench, measured there, the car weaved 0.3 m either side and ran off the
+  lane within 20 s. 3 m ahead, it comes back in about 6 s, 2 cm past the centre at most.</li>
+</ul>
+<h3 id="the-steering-control_interface">The steering: control_interface</h3>
+<ul>
+<li>It steers with a PID on the offset, through five states (keep, change, committed,
+  stopping, resuming).</li>
+<li>It publishes on <code>/drivers/ai/cmd_vel</code>, the mux's slot for a learned driver. Every other driver
+  outranks it.</li>
+<li>It asks for 2 m/s; ego caps it at the car's 1 m/s.</li>
+</ul>
+<h3 id="on-the-bench">On the bench</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run bench lane:=true nav:=false start_y:=0.3</code></td>
+<td>lane keeping on the pretend camera, from 0.3 m left of the centre</td>
+</tr>
+<tr>
+<td><code>pixi run bench lane:=fake</code></td>
+<td>control_interface on a pretend lane, without the camera</td>
+</tr>
+<tr>
+<td><code>pixi run bench-check --lane</code></td>
+<td>the same, measured: <span class="badge b-works">works</span> back within 5 cm of the centre in about 6 s, 2 cm past it at most</td>
+</tr>
+<tr>
+<td><code>pixi run bench lane:=true nav:=false bend_radius:=60</code></td>
+<td>a 60 m bend to the left, from 30 m on: <span class="badge b-works">works</span> within 8 cm of the centre, 4-5 cm inside it round the bend</td>
+</tr>
+</tbody>
+</table></div>
+<p>More in <a href="bench.html">Bench mode</a>.</p>
+<h3 id="next">Next</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Waits on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The real camera's place, tilt and lens, in <code>vehicle.yaml</code> and its calibration</td>
+<td>the cameras (Q22)</td>
+</tr>
+<tr>
+<td>Tune the paint test on real pictures: shadows, worn paint, glare</td>
+<td>a recording from the car</td>
+</tr>
+<tr>
+<td>Time it on the Orin</td>
+<td>the reflash (Q24)</td>
+</tr>
+<tr>
+<td>Hills and bumps: the warp takes the road to be flat</td>
+<td>later, with the IMU's pitch</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="radar-clustering">Radar clustering</h2>
+<ul>
+<li><code>radar_clusters</code> runs DBSCAN on <code>/sensors/radar/points</code>. Points within 0.8 m join a cluster,
+  and a cluster needs 15 points (5 on the bench).</li>
+<li>It publishes the clustered points, coloured, and a box round each cluster, for RViz.</li>
+<li>It is Rust (<code>aav_radar_clusters</code>), since 15 Oct. It gives the 2025-26 C++ node's
+  clusters and boxes, bit for bit (94 recorded clouds), with a few fixes: eps is a real
+  distance, noise is left out, old boxes are cleared. Its <code>PROVENANCE.md</code> lists them.</li>
+<li>The C++ package's other programs (filters, ICP, an OctoMap) were demos, never launched:
+  they went with it.</li>
+<li><span class="badge b-later">later</span> Next: the radar's points into the local costmap (the ObstacleLayer, written and
+  switched off) and <code>collision_monitor</code>.</li>
+</ul>
+</section>
+<section class="card"><h2 id="the-roof-lidar">The roof lidar</h2>
+<p>A Velodyne VLP-16 (the 16 Oct audit: 192.168.1.201, 10 turns a second, sending UDP to the
+Jetson only). We write no driver: the stock ROS <code>velodyne</code> package (BSD, from RoboStack)
+reads it. There is no Rust ROS driver for it; if one appears, it can replace this behind
+the same topic.</p>
+<pre class="highlight"><code>VLP-16 --UDP 2368--&gt; lidar_driver --/sensors/lidar/packets--&gt; lidar_cloud --/sensors/lidar/points--&gt;
+    lidar_scan (aav_lidar) --/sensors/lidar/scan--&gt; Nav2's lidar_layer and collision_monitor</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The two driver nodes</td>
+<td><code>aav_sensors</code> <code>sensors.launch.py lidar:=true</code> (<code>lidar_ip</code>, <code>lidar_port</code>)</td>
+</tr>
+<tr>
+<td>On the car</td>
+<td>the <code>lidar</code> part of <code>car.launch.py</code>: on in <code>orin.yaml</code> and <code>all.yaml</code>; <code>lidar:=false</code> turns it off everywhere</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>the VLP-16's factory file, <code>VLP16db.yaml</code>, from the package</td>
+</tr>
+<tr>
+<td>Where it sits</td>
+<td><code>vehicle.yaml</code> <code>lidar_link</code> (a guess: measure it, Q1-Q9)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Without the car:</strong> <code>tools/fake_vlp16.py</code> sends real VLP-16 packets of a made-up scene, a
+post 6 m ahead and a ring at 15 m:</p>
+<pre class="highlight"><code class="language-bash">python3 tools/fake_vlp16.py &amp;                                   # port 2369, not the lidar's
+pixi run bash -c 'tools/ros.sh --local ros2 launch aav_sensors sensors.launch.py \
+    imu:=false gps:=false lidar:=true lidar_ip:=127.0.0.1 lidar_port:=2369'</code></pre>
+<p>Checked 20 Oct on Ben's Mac, with <code>lidar_scan</code> too:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Expected</th>
+<th>Got</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud</td>
+<td><code>lidar_link</code>, 16 lasers a turn</td>
+<td>29,184 points, <code>lidar_link</code> <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>The post</td>
+<td>6 m</td>
+<td>5.80-6.00 m (the 15-degree lasers see it shorter) <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>The ring</td>
+<td>15 m</td>
+<td>14.89 m <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Nav2's scan, ahead</td>
+<td>6 m + 0.90 m (where the lidar sits)</td>
+<td>6.75 m: the nearest laser inside the obstacle heights sees 5.85 m <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Rates</td>
+<td>10 Hz</td>
+<td>packets, cloud, scan: 9.9-10.0 Hz <span class="badge b-works">works</span></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>In bench mode:</strong> <code>pixi run bench lidar:=true</code> adds <code>mock_lidar</code>, the same packets but of
+the bench world: its boxes (<code>obstacle:=true</code>) and the flat ground, seen from where the
+model car really is. The stock driver reads them, and Nav2 and collision_monitor read its
+points, as on the car. <code>pixi run bench-check --lidar</code> adds a check: a box that only the
+lidar sees, which the car must stop for.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Checked 20 Oct, Ben's Mac</th>
+<th>Got</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud</td>
+<td>12,768 points a turn (the ground's rings and the box), 9.3 Hz <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>The box, 15 m ahead</td>
+<td>Nav2's scan: 15.0 m from <code>base_link</code> <span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td><code>mock_lidar</code>'s own cost</td>
+<td>8% of one core</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The roof lidar's blind zone.</strong> It sits 1.8 m up, and its lowest laser points 15 degrees
+down. So it sees the ground from 6.7 m out, and anything 1 m tall only from 3 m out.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Height of the thing</th>
+<th>The lidar loses it closer than</th>
+<th>In the stop zone (0-1 m past the bumper)?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 m (the bench's box, a child)</td>
+<td>3.0 m from the lidar: 2.1 m past the bumper</td>
+<td><strong>not seen at all</strong></td>
+</tr>
+<tr>
+<td>1.5 m (a car, a person)</td>
+<td>1.1 m from the lidar: 0.2 m past the bumper</td>
+<td>seen, from 0.2 m on</td>
+</tr>
+</tbody>
+</table></div>
+<p>Close and low is the radar's job (on the bumper, 0.45 m up), and why collision_monitor
+reads both. bench-check's lidar box is therefore 1.5 m tall. Measure the lidar's real
+height (<code>vehicle.yaml</code> <code>lidar_link</code>) at the audit: the numbers move with it.</p>
+<p><span class="badge b-untested">untested</span> with the real lidar: next on the car, <code>pixi run car orin</code>, and the points in
+Lichtblick. <code>ros2 topic hz</code> on a Mac shows the cloud at 0.5 Hz: it listens best effort,
+and big messages lost that way are lost whole. A reliable subscriber sees 10 Hz.</p>
+</section>
+<section class="card"><h2 id="on-the-car">On the car</h2>
+<p><code>car.launch.py</code> starts perception as parts, like the rest of the car. Each machine file
+turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where">Platforms</a>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Starts</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>camera</code></td>
+<td><code>usb_cam</code> → <code>/sensors/camera/front_left/image_raw</code> (Linux only)</td>
+<td>off everywhere until the cameras are known (Q22)</td>
+</tr>
+<tr>
+<td><code>detector</code></td>
+<td>RF-DETR Nano, as <code>object_detector_&lt;machine&gt;</code> → <code>/perception/detections</code></td>
+<td>the Orin, in TensorRT (<code>models/rf-detr-nano.engine</code>: build it there first). The laptop's reads compressed images</td>
+</tr>
+<tr>
+<td><code>stop_signs</code></td>
+<td><code>stop_sign_watcher</code> → <code>/perception/stop_sign</code></td>
+<td>one per car, next to the mux: the Orin</td>
+</tr>
+<tr>
+<td><code>radar_clusters</code></td>
+<td>DBSCAN on <code>/sensors/radar/points</code></td>
+<td>off until the radar is on the car</td>
+</tr>
+<tr>
+<td><code>camera_obstacles</code></td>
+<td>the boxes as points on the road → <code>/perception/camera_obstacles</code>, for Nav2's costmap</td>
+<td>off until the cameras are calibrated (Q22); then next to <code>navigation</code>: the Orin</td>
+</tr>
+<tr>
+<td><code>lane</code></td>
+<td>to do: the lane finder, then lane keeping</td>
+<td>the lane finder is being written</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Every detector publishes on <code>/perception/detections</code>, so the watcher hears them all.</li>
+<li>
+<p>A detector needs PyTorch: JetPack's on the Orin, the <code>ml</code> environment on a laptop
+  (<code>pixi run -e ml car laptop</code>). Without it, or without its model file, the part is
+  skipped with a warning, and the rest of the car starts.</p>
+</li>
+<li>
+<p><strong>From a Mac:</strong> a Mac on the car's network can run the detector on the car's cameras.
+  Raw images are too big for WiFi, so the cameras should also publish compressed ones.</p>
+</li>
+<li>
+<p><strong>Into the costmap:</strong> <code>camera_obstacles</code> (in <code>aav_detector</code>) puts each box where it meets
+  the road: its bottom edge, seen through the camera's lens from its height and tilt
+  (<code>vehicle.yaml</code>, through TF). The local costmap's camera layer marks those points. Off
+  until the cameras are calibrated (Q22); then turn the <code>camera_obstacles</code> part on in the
+  machine file that runs <code>navigation</code>, the Orin's. <a href="costmaps.html">Costmaps</a> has the details.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Counts</th>
+<th>Never counts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>people, bicycles, cars, motorcycles, buses, trucks, cats, dogs, horses (<code>config/camera_obstacles.yaml</code>)</td>
+<td>stop signs, even if listed: they lock the mux</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each message's camera is its <code>header.frame_id</code>, so every detector, on any camera, is
+read the same way.</p>
+</li>
+</ul>
+<h3 id="isaac-ros-nvidia">Isaac ROS (NVIDIA)</h3>
+<ul>
+<li><strong>Not needed for the detector:</strong> it already uses TensorRT on the Orin, through
+  TensorRT's own Python module (<code>aav_detector/detectors.py</code>).</li>
+<li><strong>Jazzy:</strong> Isaac ROS 4.6 (18 Aug 2026) is the last release for Jazzy, and supports the
+  Orin on JetPack 7.2. Isaac ROS 5.0 (21 Sept 2026) moved to ROS 2 Lyrical.</li>
+<li><strong>Later, maybe:</strong> nvblox (a costmap from cameras), visual SLAM and stereo depth. It runs
+  in NVIDIA's Docker containers, not in Pixi, and has no Mac version: it needs CUDA.
+  <a href="https://nvidia-isaac-ros.github.io/releases/index.html">Releases</a></li>
+</ul>
+</section>
+<section class="card"><h2 id="still-to-do">Still to do</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Waits on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Find <code>best.pt</code> and the training pictures: probably on the team's NVIDIA Linux machine</td>
+<td>SSH to it: later (Ben, 10 Oct)</td>
+</tr>
+<tr>
+<td>Back up the Orin: the 2025-26 detector lives only there</td>
+<td>before any reflash</td>
+</tr>
+<tr>
+<td>The line finder</td>
+<td>someone: classic OpenCV, or a model</td>
+</tr>
+<tr>
+<td>The cameras' models and udev names</td>
+<td>Q22</td>
+</tr>
+<tr>
+<td>Calibrate the ribbon cameras, so the stop-sign distance uses their lens: <code>pixi run calibrate-camera</code> (<a href="camera-calibration.html">how</a>)</td>
+<td>the car</td>
+</tr>
+<tr>
+<td>RF-DETR's TensorRT engine on the Orin: <code>python3 tools/build_engine.py</code>, then time it</td>
+<td>the reflash (Q24)</td>
+</tr>
+<tr>
+<td>The radar into the costmap</td>
+<td>the ObstacleLayer settings</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="routes.html"><small>Previous</small>← Street routes</a>
+<a class="next" href="camera-pipeline.html"><small>Next</small>Camera pipeline →</a></nav>
+</main>
+<footer>Source: <code>docs/perception.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

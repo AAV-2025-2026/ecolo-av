@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Street routes (PLAN S8) · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/routes.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Street routes (PLAN S8)</h1>
+<div class="meta">8 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a class="here" href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#which-router-the-survey">Which router? (the survey)</a><a href="#run-it">Run it</a><a href="#the-parts">The parts</a><a href="#topics">Topics</a><a href="#what-was-tested-16-october-a-mac">What was tested (16 October, a Mac)</a><a href="#things-to-know">Things to know</a></nav>
+<div class="lead"><p>Pick a destination, get the way there <strong>along real streets</strong>, and hand it to Nav2 as GPS
+waypoints. Built 16 October.</p>
+<div class="admonition warning">
+<p class="admonition-title">For real streets later: the lot first</p>
+<p>This is for driving on streets, after the car has proven itself in a lot (PLAN C8, C9).
+A route is only a <strong>suggestion</strong>. Nav2 still plans every step on its own costmaps, and
+twist_mux, the e-stop, ego's limits and timeout, the sensor watchdog and the spine stay
+in charge. Nothing goes to Nav2 until a person asks.</p>
+</div></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<p><img alt="Street routes: destination and GPS fix in, Valhalla asked, waypoints out, Nav2 only on request" src="../img/routes.svg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Who</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>you</td>
+<td>a destination: lat/lon on <code>/drivers/nav/route/destination</code>, or a map point on <code>/drivers/nav/route/goal</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>street_router</code></td>
+<td>asks the router for the way from the car's newest fix (<code>/localization/gps/fix</code>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Valhalla</td>
+<td>answers in OSRM's JSON, offline, from Ottawa's OpenStreetMap</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>street_router</code></td>
+<td>cuts it into waypoints 10-30 m apart; publishes them, a map path, and a status line</td>
+</tr>
+<tr>
+<td>5</td>
+<td>you</td>
+<td><code>/drivers/nav/route/follow</code>: only now does Nav2 get the route (<code>/follow_gps_waypoints</code>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="which-router-the-survey">Which router? (the survey)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Router</th>
+<th>Licence</th>
+<th>Runs offline on a Mac, Linux, the Jetson?</th>
+<th>Graph for Ottawa</th>
+<th>Its answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Valhalla</strong> (picked)</td>
+<td>MIT</td>
+<td><strong>yes, all three, no compiling</strong>: the <code>pyvalhalla</code> wheel (Mac arm64, Linux x86_64 and aarch64) carries <code>valhalla_build_tiles</code> and <code>valhalla_service</code>. Not Intel Macs</td>
+<td>59 MB of tiles, built in <strong>5 s</strong> on an M-series Mac</td>
+<td>its own JSON, <strong>or OSRM's</strong> (<code>"format": "osrm"</code>)</td>
+</tr>
+<tr>
+<td>OSRM</td>
+<td>BSD-2</td>
+<td>Mac: Homebrew. Linux: Docker or build it (C++, Boost). Jetson: build from source</td>
+<td>three steps: extract, partition, customize</td>
+<td>OSRM's JSON</td>
+</tr>
+<tr>
+<td>GraphHopper</td>
+<td>Apache-2.0</td>
+<td>needs Java 17+ (conda-forge's openjdk is 190 MB) and a 40 MB jar</td>
+<td>one import step, at start-up</td>
+<td>its own JSON</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Why Valhalla:</strong> it's the only one that installs through Pixi on every machine we have,
+the Jetson too, with nothing to compile. Its graph builds in seconds. It speaks OSRM's
+format, so our parser reads OSRM too: switch with <code>router: osrm</code> if a team ever runs one.</p>
+<p>Checked 16 Oct: the same route from both, Carleton to Lansdowne. Valhalla: <strong>1986.9 m</strong>.
+OSRM's public demo server, asked once by hand: <strong>1986.4 m</strong>, the same shape.</p>
+</section>
+<section class="card"><h2 id="run-it">Run it</h2>
+<pre class="highlight"><code class="language-bash">pixi run -e routes get-routes    # once: Ottawa (50 MB, BBBike), then the graph
+pixi run -e routes router        # the router, on 127.0.0.1:8002 (keep it running)
+pixi run build
+tools/ros.sh ros2 launch aav_routes street_router.launch.py</code></pre>
+<p>Ask for a route, then send it:</p>
+<pre class="highlight"><code class="language-bash">tools/ros.sh ros2 topic pub --once /drivers/nav/route/destination \
+  geographic_msgs/msg/GeoPointStamped "{position: {latitude: 45.3983, longitude: -75.6838}}"
+tools/ros.sh ros2 topic echo --once /drivers/nav/route/status
+tools/ros.sh ros2 service call /drivers/nav/route/follow std_srvs/srv/Trigger</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where the data goes</th>
+<th>Size</th>
+<th>In git?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maps/routes/download/Ottawa.osm.pbf</code></td>
+<td>49 MB</td>
+<td>no (<code>/maps/</code> is ignored)</td>
+</tr>
+<tr>
+<td><code>maps/routes/tiles/</code></td>
+<td>59 MB</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>maps/routes/valhalla.json</code></td>
+<td>10 kB</td>
+<td>no: <code>get-routes</code> writes it</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>ROUTES_DIR=/elsewhere</code> puts it all somewhere else; <code>ROUTES_PBF=file.osm.pbf</code> uses your
+own extract (Geofabrik's Ontario, 1 GB, for a bigger area).</p>
+</section>
+<section class="card"><h2 id="the-parts">The parts</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>File</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The logic, no ROS</td>
+<td><code>src/drivers/aav_routes/aav_routes/osrm_route.py</code></td>
+<td>the request (Valhalla or OSRM), the answer (GeoJSON or an encoded polyline), the waypoints</td>
+</tr>
+<tr>
+<td>The node</td>
+<td><code>aav_routes/street_router.py</code></td>
+<td>the fix, the destination, the router over HTTP, <code>/fromLL</code>, <code>/toLL</code>, the follow service</td>
+</tr>
+<tr>
+<td>Its settings</td>
+<td><code>config/street_router.yaml</code></td>
+<td>router URL, spacing, <code>max_length</code></td>
+</tr>
+<tr>
+<td>The map window</td>
+<td><code>aav_hud_raylib</code> (Rust)</td>
+<td>draws <code>/drivers/nav/route/path</code> in violet, under Nav2's blue plan</td>
+</tr>
+<tr>
+<td>The tasks</td>
+<td><code>tools/get_routes.sh</code>, <code>tools/router.sh</code></td>
+<td>download and build; start the router</td>
+</tr>
+</tbody>
+</table></div>
+<p>The waypoints reuse the HUD's tested route code (<code>aav_hud/route.py</code>): bends kept,
+headings along the street. Ours adds the gaps Nav2 needs:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>min_spacing</code></td>
+<td>10 m</td>
+<td>Nav2 slows at each waypoint: not too many</td>
+</tr>
+<tr>
+<td><code>max_spacing</code></td>
+<td>30 m</td>
+<td>each goal stays near the car, inside Nav2's costmaps</td>
+</tr>
+<tr>
+<td><code>tolerance</code></td>
+<td>1 m</td>
+<td>a bend may be cut by this much</td>
+</tr>
+<tr>
+<td><code>max_length</code></td>
+<td>3000 m</td>
+<td>longer routes are refused: the lot first</td>
+</tr>
+<tr>
+<td><code>fix_max_age</code></td>
+<td>2 s</td>
+<td>no fresh GPS fix, no route</td>
+</tr>
+<tr>
+<td><code>follow_at_once</code></td>
+<td>false</td>
+<td>true sends every route to Nav2 by itself: not on the car</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="topics">Topics</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/drivers/nav/route/destination</code></td>
+<td><code>geographic_msgs/GeoPointStamped</code></td>
+<td>in: where to go</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/goal</code></td>
+<td><code>geometry_msgs/PoseStamped</code> (map)</td>
+<td>in: where to go, as a map point</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/waypoints</code></td>
+<td><code>geographic_msgs/GeoPath</code>, latched</td>
+<td>out: the GPS waypoints</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/path</code></td>
+<td><code>nav_msgs/Path</code> (map), latched</td>
+<td>out: the route, to draw</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/status</code></td>
+<td><code>std_msgs/String</code>, latched</td>
+<td>out: "route: 1.99 km, about 4 min..." or why not</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/follow</code></td>
+<td><code>std_srvs/Trigger</code> (a service)</td>
+<td>a person sends the route to Nav2</td>
+</tr>
+</tbody>
+</table></div>
+<p>Full contract: <a href="interfaces.html">Topics</a>.</p>
+</section>
+<section class="card"><h2 id="what-was-tested-16-october-a-mac">What was tested (16 October, a Mac)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>osrm_route.py</code> unit tests: 27, on three recorded answers (Valhalla polyline6 and GeoJSON, OSRM's demo) and an error</td>
+<td>all pass</td>
+</tr>
+<tr>
+<td><code>street_router</code> with a fake router, fake <code>/fromLL</code> and fake Nav2 (<code>colcon test</code>): 4</td>
+<td>all pass; nothing reaches Nav2 before <code>follow</code></td>
+</tr>
+<tr>
+<td><code>get-routes</code> on this Mac</td>
+<td>49 MB download, graph in 5 s</td>
+</tr>
+<tr>
+<td>A real route, Carleton (45.3876, -75.6960) to Lansdowne</td>
+<td>1.99 km, 4 min, 76 waypoints</td>
+</tr>
+<tr>
+<td>Gazebo, headless, <code>empty</code> world, private domain: a street 80 m south of the datum</td>
+<td>the car drove it and stopped <strong>0.5 m</strong> from the route's end, in 140 s</td>
+</tr>
+<tr>
+<td><code>map-core</code> test: a street route is shown, never treated as the plan</td>
+<td>passes</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Gazebo, 16 Oct</p>
+<p>Valhalla snapped the car (at the datum) to the nearest street, 30 m west: its
+line at x = -29.6 m, and routed 80 m south along it: 3 waypoints. The map path came back
+through the sim's <code>/fromLL</code> at (-29.6, -0.3) to (-28.9, -80.2). After <code>follow</code>, Nav2
+drove to the street, then down it (x stayed within 1 m of -29), and arrived 0.5 m from
+the end. Gazebo's empty world has no streets drawn: the car drove on open ground.</p>
+</div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Not tested yet</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The map window drawing the route</td>
+<td>the window couldn't open from this session (as for the watchdog banner, <a href="hud.html">HUD</a>); its logic has a test</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/goal</code> with the real <code>/toLL</code></td>
+<td>only the lat/lon destination was driven</td>
+</tr>
+<tr>
+<td>On the car, on the Jetson, on Linux</td>
+<td>not yet; the wheel exists for both</td>
+</tr>
+<tr>
+<td>OSRM run locally</td>
+<td>only its demo server's one recorded answer</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="things-to-know">Things to know</h2>
+<ul>
+<li><strong>Valhalla prints errors while building</strong> about countries ("NOT NULL constraint
+  failed... Finland"). Harmless: a city extract has no country boundaries.</li>
+<li><strong><code>driving_side: "left"</code></strong> in Valhalla's OSRM answers, even in Ottawa. We don't read it.</li>
+<li>The router's time is for <strong>a normal car</strong> on the speed limit, not ours (1 m/s to start).</li>
+<li>Nav2 drives to each waypoint in turn and slows at each: that's why they're 10-30 m apart.</li>
+<li>The data: © OpenStreetMap contributors, ODbL. BBBike's extract changes every week, so
+  <code>get-routes</code> checks it against BBBike's own checksum, not a fixed one.</li>
+<li><strong>No older code copied.</strong> The 2025-26 team's Navigation-LocalPathGenerator read OSRM
+  routes too, and followed them itself (<a href="older-code.html">Older code</a>). Here Nav2 follows,
+  so only a small parser was needed: written new, with tests.</li>
+<li>No API keys, no paid service. A public demo server only for a one-off check by hand,
+  never as the default.</li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="controllers.html"><small>Previous</small>← Path followers</a>
+<a class="next" href="perception.html"><small>Next</small>Perception →</a></nav>
+</main>
+<footer>Source: <code>docs/routes.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

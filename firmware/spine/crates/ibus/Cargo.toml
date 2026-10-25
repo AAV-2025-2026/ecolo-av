@@ -1,0 +1,11 @@
+[package]
+name = "ibus"
+description = "The FlySky iBUS protocol from the RC receiver: a byte-at-a-time parser that resyncs, a silence timeout, and the map to spine-core's RcInput."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# For RcInput only. Like this crate, it is no_std with no dependencies.
+spine-core = { path = "../spine-core" }

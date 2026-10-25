@@ -1,0 +1,11 @@
+[package]
+name = "wheel-encoder"
+description = "The wheel's two spoke sensors, counted the 2025-26 way, and the wheel encoder's UDP packet to the Motor Pi: a big-endian int32 of spokes since the last packet."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Only our own input filters: no_std, no allocator, no hardware access.
+[dependencies]
+aav-inputs = { path = "../aav-inputs" }

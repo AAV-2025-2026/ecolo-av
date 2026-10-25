@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARLA: photo-real towns, and Carleton&#x27;s streets · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/carla.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>CARLA: photo-real towns, and Carleton&#x27;s streets</h1>
+<div class="meta">12 min read · 13 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a class="here" href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#which-carla-5-unreal-engine-5-or-4">Which CARLA: 5 (Unreal Engine 5) or 4?</a><a href="#what-you-need">What you need</a><a href="#1-start-the-server-headless">1. Start the server, headless</a><a href="#2-give-the-adapter-carlas-python-client">2. Give the adapter CARLA&#x27;s Python client</a><a href="#3-run-the-stack">3. Run the stack</a><a href="#what-the-adapter-publishes">What the adapter publishes</a><a href="#a-digital-twin-of-carleton">A digital twin of Carleton</a><a href="#cloud-gpu-instead">Cloud GPU instead</a><a href="#other-ways-we-didnt-pick">Other ways we didn&#x27;t pick</a><a href="#what-works-and-whats-untested">What works and what&#x27;s untested</a><a href="#licences">Licences</a><a href="#sources">Sources</a></nav>
+<div class="lead"><p>CARLA is a driving simulator built on Unreal Engine: real-looking towns, traffic and
+cameras. Gazebo stays our everyday simulator. CARLA is for what Gazebo can't do well:
+testing the cameras and the detectors on real-looking streets.</p>
+<p><strong>Status (15 Oct):</strong> the research is done and the ROS side is built and tested without a
+server. <strong>It has never run against a CARLA server</strong>: there is none here, and CARLA has
+no Mac version. Running it needs the team's NVIDIA Linux computer, or a cloud GPU.</p></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<pre class="highlight"><code> NVIDIA Linux computer                          the same computer (or another Linux PC)
+ +---------------------------+   TCP 2000-2001  +----------------------------------+
+ | CARLA server, headless     | &lt;-------------&gt; | carla_adapter (CARLA's Python    |
+ | (Docker or the package)    |  CARLA's own    |   client) -&gt; our topics          |
+ | Town10, or Carleton's roads|  protocol       | mux, ego, EKFs, Nav2, watchdog   |
+ +---------------------------+                  +----------------------------------+
+                                                     | ROS 2 (only if you share it)
+                                                     v
+                                                 a Mac: Foxglove / Lichtblick, RViz</code></pre>
+<p>The adapter talks to CARLA over TCP, not over ROS. So ROS can stay on one computer
+while CARLA runs anywhere it can reach.</p>
+</section>
+<section class="card"><h2 id="which-carla-5-unreal-engine-5-or-4">Which CARLA: 5 (Unreal Engine 5) or 4?</h2>
+<p>Ben asked for the Unreal Engine 5 version. Both work with our adapter; they're good at
+different things today.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>CARLA 0.10.0 (Unreal Engine 5.5)</th>
+<th>CARLA 0.9.16 (Unreal Engine 4.26)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Released</td>
+<td>19 Dec 2024: still the only UE5 release</td>
+<td>16 Sep 2025: the newest release of any kind</td>
+</tr>
+<tr>
+<td>Looks</td>
+<td>best: new lighting, remodelled Town10</td>
+<td>good</td>
+</tr>
+<tr>
+<td>Maps</td>
+<td><strong>Town10 and Mine01 only</strong></td>
+<td>Towns 1-7, 10, 11, 12, 13, 15</td>
+</tr>
+<tr>
+<td>Weather</td>
+<td>daylight only</td>
+<td>all</td>
+</tr>
+<tr>
+<td>Carleton's map (OpenStreetMap, OpenDRIVE)</td>
+<td><strong>no</strong>: "not supported" in 0.10</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Digital Twin Tool</td>
+<td><strong>no</strong></td>
+<td>yes (experimental)</td>
+</tr>
+<tr>
+<td>Cars</td>
+<td>11</td>
+<td>all of 0.9's, many more</td>
+</tr>
+<tr>
+<td>Built-in ROS 2</td>
+<td>yes, but stalls on Jazzy</td>
+<td>yes, but stalls on Jazzy</td>
+</tr>
+<tr>
+<td>Python client</td>
+<td>in the package (3.8-3.12), not on PyPI</td>
+<td><code>pip install carla==0.9.16</code> (3.10-3.12)</td>
+</tr>
+<tr>
+<td>GPU</td>
+<td>RTX 3070 or better, <strong>16 GB</strong> of video memory</td>
+<td>less: 0.9's docs ask for 6-8 GB</td>
+</tr>
+<tr>
+<td>Disk</td>
+<td>130 GB</td>
+<td>much less</td>
+</tr>
+<tr>
+<td>Docker</td>
+<td><code>carlasim/carla:0.10.0</code> (10.8 GB)</td>
+<td><code>carlasim/carla:0.9.16</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Our advice:</strong> start with 0.10 for Town10's cameras (Ben's choice), and use 0.9.16 for
+Carleton's streets until UE5 can import maps. The same adapter and the same command run
+both: only the server changes.</p>
+</section>
+<section class="card"><h2 id="what-you-need">What you need</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Need</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>An NVIDIA RTX GPU: 16 GB of video memory for 0.10 (RTX 3070 is the floor); less for 0.9.16</td>
+<td>the server</td>
+</tr>
+<tr>
+<td>Ubuntu 22.04 (or Windows 11); the <code>ue5-dev</code> branch also lists 24.04. NVIDIA driver 550 or newer</td>
+<td>the server</td>
+</tr>
+<tr>
+<td>32 GB of RAM, 130 GB of disk (0.10)</td>
+<td>the server</td>
+</tr>
+<tr>
+<td>A Linux x86_64 computer with our pixi environment: the same one is fine</td>
+<td>the adapter and the stack</td>
+</tr>
+<tr>
+<td>CARLA's Python client, <strong>the server's exact version</strong></td>
+<td>the adapter</td>
+</tr>
+</tbody>
+</table></div>
+<p>Not possible: a Mac (no build, no Python client: there is no macOS or arm64 wheel), and
+the car's Jetson Orin (ARM: CARLA ships only Linux x86_64 and Windows).</p>
+</section>
+<section class="card"><h2 id="1-start-the-server-headless">1. Start the server, headless</h2>
+<pre class="highlight"><code class="language-bash"># CARLA 0.10 (Unreal Engine 5), from the package
+./CarlaUnreal.sh -RenderOffScreen -nosound
+# or Docker (check the image's own start command first: untested here)
+docker run --rm --gpus all --net=host carlasim/carla:0.10.0 \
+  bash CarlaUnreal.sh -RenderOffScreen -nosound
+# CARLA 0.9.16 (Unreal Engine 4)
+./CarlaUE4.sh -RenderOffScreen</code></pre>
+<p>It listens on TCP ports <strong>2000 and 2001</strong>. Open both if a firewall is in the way.</p>
+</section>
+<section class="card"><h2 id="2-give-the-adapter-carlas-python-client">2. Give the adapter CARLA's Python client</h2>
+<p>Our pixi environment has no pip, and the client isn't a ROS package. The wheel is a zip
+file, so unpack it beside the repo and point Python at it:</p>
+<pre class="highlight"><code class="language-bash"># CARLA 0.10: the wheel is in the package's PythonAPI folder (cp312 = Python 3.12)
+unzip &lt;carla-0.10&gt;/PythonAPI/dist/carla-0.10.0-cp312-*.whl -d ~/carla-client
+# CARLA 0.9.16: from PyPI
+python3 -m pip download carla==0.9.16 --no-deps --only-binary=:all: \
+  --python-version 3.12 --platform manylinux_2_31_x86_64 -d /tmp/carla-wheel
+unzip /tmp/carla-wheel/carla-0.9.16-*.whl -d ~/carla-client
+export PYTHONPATH=~/carla-client:$PYTHONPATH</code></pre>
+<p>Without it, <code>carla_adapter</code> stops with one line saying how to get it. The client and the
+server must be the same version: the adapter warns when they aren't.</p>
+</section>
+<section class="card"><h2 id="3-run-the-stack">3. Run the stack</h2>
+<pre class="highlight"><code class="language-bash">pixi run build
+pixi run carla-car host:=127.0.0.1                          # the server on this computer
+pixi run carla-car host:=192.168.1.50 town:=Town10HD_Opt    # another computer, Town10
+pixi run carla-car host:=127.0.0.1 osm:=maps/carla/carleton.osm   # Carleton (0.9.16)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Default</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>host</code>, <code>port</code></td>
+<td>127.0.0.1, 2000</td>
+<td>where the server is</td>
+</tr>
+<tr>
+<td><code>town</code></td>
+<td>'' (keep the server's)</td>
+<td>load one of its maps</td>
+</tr>
+<tr>
+<td><code>osm</code>, <code>xodr</code></td>
+<td>''</td>
+<td>build Carleton's roads from a file (0.9.x only)</td>
+</tr>
+<tr>
+<td><code>spawn</code></td>
+<td>'' (spawn point 0)</td>
+<td><code>3</code> = spawn point 3; <code>x,y,yaw</code> = a place in our map frame</td>
+</tr>
+<tr>
+<td><code>frame</code></td>
+<td>auto</td>
+<td><code>world</code>: CARLA's world is our map (Carleton); <code>spawn</code>: the start is (0, 0) facing east</td>
+</tr>
+<tr>
+<td><code>control</code></td>
+<td>ackermann</td>
+<td>CARLA's Ackermann controller; <code>pedals</code>: our speed loop</td>
+</tr>
+<tr>
+<td><code>sync</code>, <code>fixed_delta</code></td>
+<td>true, 0.05 s</td>
+<td>CARLA waits for our step, 20 steps a second</td>
+</tr>
+<tr>
+<td><code>realtime</code></td>
+<td>true</td>
+<td>don't let simulated time outrun the clock</td>
+</tr>
+<tr>
+<td><code>cameras</code>, <code>radar</code>, <code>lidar</code></td>
+<td>true</td>
+<td>which sensors to put on the car</td>
+</tr>
+<tr>
+<td><code>nav</code>, <code>rviz</code>, <code>foxglove</code>, <code>teleop</code></td>
+<td>true, false, false, false</td>
+<td>as in <code>pixi run sim</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-network-rule">The network rule</h3>
+<p><code>pixi run carla-car</code> runs through <code>tools/ros.sh --local</code>, like every stand-in: ROS
+discovery stays on this computer, so the pretend car can never meet the real one. That's
+safe <strong>whether or not the server is on this computer</strong>, because the adapter reaches CARLA
+over TCP, not ROS.</p>
+<p>To watch from a Mac, share ROS on purpose, on a network with no real car on the same
+<code>ROS_DOMAIN_ID</code>:</p>
+<pre class="highlight"><code class="language-bash">AAV_DISCOVERY=SUBNET pixi run carla-car host:=127.0.0.1 foxglove:=true</code></pre>
+<p>The bridge listens on 127.0.0.1 only: from the Mac, <code>ssh -L 8765:127.0.0.1:8765
+&lt;the CARLA computer&gt;</code>, then <code>ws://localhost:8765</code> (<a href="foxglove.html">Watch from a laptop</a>).</p>
+</section>
+<section class="card"><h2 id="what-the-adapter-publishes">What the adapter publishes</h2>
+<p>The same topics as Gazebo, so nothing else can tell them apart
+(<a href="interfaces.html">Interfaces</a>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/vehicle/wheels</code>, <code>/vehicle/steering</code></td>
+<td>the CARLA car's motion</td>
+</tr>
+<tr>
+<td><code>/sensors/imu/data_raw</code></td>
+<td>CARLA's IMU, at <code>imu_link</code></td>
+</tr>
+<tr>
+<td><code>/sensors/gps/fix</code></td>
+<td>the antenna (<code>gps_link</code>) round our datum, plus 0.5 m of noise</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/{front_left,front_right,rear}/image_raw</code> and <code>camera_info</code></td>
+<td>CARLA's cameras, with Gazebo's lens (640 x 360)</td>
+</tr>
+<tr>
+<td><code>/sensors/radar/points</code></td>
+<td>CARLA's radar, with the TI driver's fields</td>
+</tr>
+<tr>
+<td><code>/sensors/lidar/points</code></td>
+<td>CARLA's lidar, 16 beams like Gazebo's</td>
+</tr>
+<tr>
+<td><code>/clock</code>, <code>/system/source</code> (all SIM), <code>/vehicle/carla/truth</code></td>
+<td>the adapter</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every sensor sits where <code>vehicle.yaml</code> puts ours. The CARLA car is bigger than ours, so
+the steering angle is scaled to turn it on <strong>our</strong> car's circle.</p>
+</section>
+<section class="card"><h2 id="a-digital-twin-of-carleton">A digital twin of Carleton</h2>
+<p><strong>Is there a ready-made Ottawa or Carleton map? No.</strong> None was found. We build our own
+from OpenStreetMap: the same data as our map window (<code>ottawa.pmtiles</code>).</p>
+<p>Two ways, both from the same download:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Roads only (our adapter)</th>
+<th>CARLA's Digital Twin Tool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gets</td>
+<td>the roads, lanes and junctions; no buildings</td>
+<td>roads, plus generated buildings and trees</td>
+</tr>
+<tr>
+<td>How</td>
+<td><code>osm:=</code> : CARLA's <code>Osm2Odr</code> converter, then <code>generate_opendrive_world</code></td>
+<td>a plug-in inside the Unreal editor</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>CARLA 0.9.16 (any 0.9.x)</td>
+<td>a source build of 0.9.16 on Linux (its map browser and local files are Linux only)</td>
+</tr>
+<tr>
+<td>Time</td>
+<td>minutes</td>
+<td>about 10 min per 2 x 2 km, and saving can take hours</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>written, untested</td>
+<td>experimental: "not production ready"; no bridges or overpasses</td>
+</tr>
+</tbody>
+</table></div>
+<p>The "standalone" Digital Twin Tool (version 2) was only announced as "coming soon" with
+0.9.16: it hasn't shipped. CARLA 0.10 (UE5) has neither way yet.</p>
+<h3 id="steps-roads-only">Steps (roads only)</h3>
+<ol>
+<li>Download Carleton's map data (once; it stays out of git):
+   <pre class="highlight"><code class="language-bash">pixi run get-carla-osm          # maps/carla/carleton.osm, about 6 MB</code></pre>
+   The box is 900 m west and south, 700 m east and north of our datum: the campus,
+   Bronson Avenue, Colonel By Drive, Sunnyside. <code>CARLA_OSM_AROUND=w,s,e,n</code> (metres)
+   changes it.</li>
+<li>Start CARLA <strong>0.9.16</strong>, then:
+   <pre class="highlight"><code class="language-bash">pixi run carla-car host:=127.0.0.1 osm:=maps/carla/carleton.osm spawn:=0,0,0</code></pre></li>
+<li>Check the line-up: drive to a corner you know and compare <code>/sensors/gps/fix</code> with the
+   map window.</li>
+</ol>
+<h3 id="lining-it-up-with-our-maps">Lining it up with our maps</h3>
+<p>Our map frame is fixed by the datum in <code>navsat.yaml</code> (Carleton, about 45.386, -75.696):
+x east, y north. The adapter builds the CARLA map with a projection centred on that datum
+(<code>+proj=tmerc +lat_0=&lt;datum&gt; +lon_0=&lt;datum&gt;</code>), and no recentring. So:</p>
+<ul>
+<li>CARLA's world origin <strong>is</strong> the datum, and its x points east;</li>
+<li><code>frame:=auto</code> sees that (CARLA's own georeference puts the origin within 20 km of the
+  datum) and uses CARLA's world as our map frame;</li>
+<li>the GPS, Nav2's maps, GPS goals and the map window all agree with the streets CARLA
+  draws.</li>
+</ul>
+<p>A Digital Twin Tool map lines up the same way if its georeference is right: the adapter
+reads where CARLA puts the world origin, and shifts by that.</p>
+</section>
+<section class="card"><h2 id="cloud-gpu-instead">Cloud GPU instead</h2>
+<p>If the NVIDIA computer is busy, a cloud GPU with 16 GB or more runs the server headless in
+Docker. Rough prices (Oct 2026, not checked with each provider):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>GPU</th>
+<th>About</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AWS g6.2xlarge</td>
+<td>L4, 24 GB</td>
+<td>$1 an hour</td>
+</tr>
+<tr>
+<td>AWS g5.2xlarge</td>
+<td>A10G, 24 GB</td>
+<td>$1.20 an hour</td>
+</tr>
+<tr>
+<td>Lambda</td>
+<td>A6000 / A10</td>
+<td>$0.70-1.30 an hour</td>
+</tr>
+</tbody>
+</table></div>
+<p>Run the adapter on the same cloud machine, and watch over Foxglove. Whether Unreal's
+Vulkan renderer works on each instance type is not documented: try before relying on it.</p>
+</section>
+<section class="card"><h2 id="other-ways-we-didnt-pick">Other ways we didn't pick</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Way</th>
+<th>Why not now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CARLA's built-in ROS 2 (<code>--ros2</code>)</td>
+<td>stalls for seconds at a time on Jazzy: its FastDDS 2.11 vs Jazzy's 2.14 (<a href="https://github.com/carla-simulator/carla/issues/9551">issue 9551</a>). A fix (FastDDS 2.14.6, Zenoh) is on the unreleased <code>ue4-dev</code> branch</td>
+</tr>
+<tr>
+<td>carla-ros-bridge</td>
+<td>last commit July 2022; no Jazzy release</td>
+</tr>
+<tr>
+<td>A Humble bridge in a container</td>
+<td>works, but adds a second ROS and a DDS bridge to debug, for nothing the adapter doesn't give</td>
+</tr>
+<tr>
+<td>bringauto's carla-ros-bridge fork</td>
+<td>says it runs Jazzy with 0.9.16: unverified</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-works-and-whats-untested">What works and what's untested</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The conversions: frames, steering, sensors, GPS round the datum</td>
+<td>tested (<code>aav_carla/test</code>, 78 tests)</td>
+</tr>
+<tr>
+<td>Every call to the server</td>
+<td>tested against a pretend <code>carla</code> module, with a drive that checks the signs</td>
+</tr>
+<tr>
+<td>The launch files and their arguments</td>
+<td>tested (<code>test_carla_launch.py</code>)</td>
+</tr>
+<tr>
+<td>Carleton's OpenStreetMap download</td>
+<td>run, 15 Oct: 2,311 ways, 6.2 MB</td>
+</tr>
+<tr>
+<td>The adapter against a real CARLA server, 0.10 or 0.9.16</td>
+<td><strong>untested</strong></td>
+</tr>
+<tr>
+<td>The IMU's roll and pitch rates (they follow carla-ros-bridge)</td>
+<td><strong>untested</strong>: our EKFs use only the yaw rate</td>
+</tr>
+<tr>
+<td>The radar's speed sign</td>
+<td><strong>untested</strong></td>
+</tr>
+<tr>
+<td>Carleton's roads in CARLA, and the GPS line-up</td>
+<td><strong>untested</strong></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="licences">Licences</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Licence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CARLA's code</td>
+<td>MIT</td>
+</tr>
+<tr>
+<td>CARLA's assets (maps, cars)</td>
+<td>CC-BY</td>
+</tr>
+<tr>
+<td>Unreal Engine</td>
+<td>Epic's own terms. Building 0.10 from source needs a GitHub account linked to Epic</td>
+</tr>
+<tr>
+<td>OpenStreetMap data</td>
+<td>ODbL: say "© OpenStreetMap contributors" wherever it shows</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="sources">Sources</h2>
+<ul>
+<li>Releases: <a href="https://github.com/carla-simulator/carla/releases">github.com/carla-simulator/carla/releases</a>;
+  <a href="https://carla.org/2024/12/19/release-0.10.0/">0.10.0 post</a>;
+  <a href="https://carla.org/2025/09/16/release-0.9.16">0.9.16 post</a></li>
+<li>UE5 needs: <a href="https://github.com/carla-simulator/carla/blob/ue5-dev/README.md">ue5-dev README</a>;
+  <a href="https://carla-ue5.readthedocs.io/en/latest/start_quickstart/">UE5 quick start</a></li>
+<li>Python client: <a href="https://pypi.org/project/carla/#files">pypi.org/project/carla</a></li>
+<li>Built-in ROS 2: <a href="https://carla-ue5.readthedocs.io/en/latest/ros2_native/">ros2_native</a>;
+  <a href="https://github.com/carla-simulator/carla/issues/9551">issue 9551</a></li>
+<li>Bridge: <a href="https://github.com/carla-simulator/ros-bridge">carla-simulator/ros-bridge</a></li>
+<li>Digital Twin Tool: <a href="https://carla.readthedocs.io/en/0.9.16/adv_digital_twin/">0.9.16 docs</a>;
+  limits: Richardson and Sprinkle, <em>OpenTwinMap</em>, <a href="https://arxiv.org/abs/2511.21925">arXiv 2511.21925</a></li>
+<li>OpenStreetMap to CARLA: <a href="https://carla.readthedocs.io/en/latest/tuto_G_openstreetmap/">tutorial</a>;
+  <a href="https://carla.readthedocs.io/en/latest/geocoordinates/">geocoordinates</a></li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="simulation.html"><small>Previous</small>← Simulation</a>
+<a class="next" href="bench.html"><small>Next</small>Bench mode →</a></nav>
+</main>
+<footer>Source: <code>docs/carla.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

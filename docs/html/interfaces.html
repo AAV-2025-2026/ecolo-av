@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interfaces · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Interfaces</h1>
+<div class="meta">51 min read · 4 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a class="here" href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#topics">Topics</a><a href="#services">Services</a><a href="#actions">Actions</a><a href="#frames">Frames</a></nav>
+<div class="lead"><p>Generated from <code>docs/interfaces.yaml</code> by <code>tools/gen_interfaces_md.py</code>; edit the YAML.
+Check a running system against it with <code>pixi run check &lt;turtle|sim|road|spine|car|replay|bench&gt;</code>.
+<code>road</code> is the sim in its road world (<code>world:=road</code>): what is live in <code>sim</code> must be live there too. <code>spine</code> is the road world with the spine in the loop (<code>spine:=true</code>): what is live in <code>road</code> must be live there too.</p></div>
+<section class="card"><h2 id="topics">Topics</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Type</th>
+<th>Publishers</th>
+<th>Subscribers</th>
+<th>Must be live in</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/drivers/joy/joy</code></td>
+<td><code>sensor_msgs/msg/Joy</code></td>
+<td><code>joy_node</code></td>
+<td><code>teleop_twist_joy_node</code>, <code>joy_teleop</code></td>
+<td>-</td>
+<td>Joystick axes and buttons, 20 Hz while held. joy_node, teleop_twist_joy_node and joy_teleop run in the namespace /drivers/joy (aav_teleop teleop.launch.py), so their relative topics land here.</td>
+</tr>
+<tr>
+<td><code>/drivers/joy/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>teleop_twist_joy_node</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 100. Only while the deadman (trigger) is held.</td>
+</tr>
+<tr>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>teleop_twist_keyboard</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 90 (twist_mux's keyboard slot). A person driving from a laptop - teleop_twist_keyboard in the namespace /drivers/keyboard (tools/keyboard.sh, stamped:=true), or the Foxglove teleop panel set to this topic - on the stand-ins only, as the car's bridge only watches (foxglove.launch.py).</td>
+</tr>
+<tr>
+<td><code>/drivers/rc/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>rc_driver</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 95 (proposed, TODO 48) - a person with the RC transmitter, below the joystick's deadman (100), above the keyboard (90). rc_driver (aav_rc) turns /vehicle/rc into a command only while the transmitter's mode switch is on RC via ROS - throttle stick x max_speed (1.0 m/s; reverse 0.5), steering stick x the steering limit, as a turn rate by the bicycle model - at the uplink's 50 Hz, zeros included, so nothing below it drives. It publishes one zero when the switch leaves RC via ROS; if /vehicle/rc goes quiet while on RC via ROS it keeps publishing zeros (a stop) until the uplink comes back. RC direct never comes here - the ESP32 drives from the sticks itself.</td>
+</tr>
+<tr>
+<td><code>/drivers/tests/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>actuator_test</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; READ-ME-TESTS.md stages 3-4). It also reads /control/cmd_vel, to stop when someone else takes over.</td>
+</tr>
+<tr>
+<td><code>/drivers/scripted/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>scripted_driver</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 50. Only while a /scripted_drive goal runs. language_drive (aav_language, plain-English driving) only reads the mux inputs' arrival times, to tell who drives.</td>
+</tr>
+<tr>
+<td><code>/drivers/replay/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td>-</td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 40. ros2 bag play of a recorded /control/cmd_vel (tools/replay_commands.sh).</td>
+</tr>
+<tr>
+<td><code>/drivers/goto/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>goto_driver</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 25 - below every person, test and script, above Nav2. Only while a /goto goal runs (aav_goto, pixi run goto; READ-ME-A-TO-B.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>velocity_smoother</code>, <code>collision_monitor</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 20. Nav2. From collision_monitor where the radar or the lidar runs (navigation.launch.py radar:=true or lidar:=true - the bench, the car with its radar part, Gazebo's road and test_lot worlds), else straight from velocity_smoother.</td>
+</tr>
+<tr>
+<td><code>/control/cmd_vel_smoothed</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>velocity_smoother</code></td>
+<td><code>collision_monitor</code></td>
+<td>-</td>
+<td>Nav2's smoothed command, into collision_monitor, where the radar or the lidar runs. It stops the car for radar or lidar points in its stop zone, or when either goes silent; it only guards Nav2.</td>
+</tr>
+<tr>
+<td><code>/safety/sensor_watchdog/lock</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>sensor_watchdog</code></td>
+<td><code>twist_mux</code>, <code>goto_driver</code></td>
+<td>sim</td>
+<td>true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).</td>
+</tr>
+<tr>
+<td><code>/safety/sensor_watchdog/state</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>sensor_watchdog</code></td>
+<td><code>hud</code>, <code>map</code></td>
+<td>sim</td>
+<td>One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, those that stop first, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD and the map window show it as a banner, and the HUD the first input in its GO / STOP panel, red for STOP or when it goes silent (then twist_mux holds Nav2 too).</td>
+</tr>
+<tr>
+<td><code>/hud/heartbeat</code></td>
+<td><code>std_msgs/msg/UInt64</code></td>
+<td><code>hud</code></td>
+<td><code>sensor_watchdog</code></td>
+<td>-</td>
+<td>The HUD's screen is alive - the number of frames it has drawn, 10 Hz, sent only while that number rises, from the same 10 ms timer that sends the e-stop button's messages, so it stops when the screen or the e-stop's sender freezes or dies. The sensor watchdog's hud input (kind heartbeat, 1 s; car.launch.py watch_hud:=true, the default; sim.launch.py with hud:=true or watch_hud:=true) - silent, or a count that stops rising, locks twist_mux's sensors lock like a dead sensor - Nav2 and the AI slot stop, people and the e-stop never. Latched (Ben, 24 Oct) - a dropout after the HUD's start-up holds them as hud LOST, even once it beats again, until a person calls /safety/sensor_watchdog/clear; one dropout within 5 s of its first beat is forgiven. Reliable, depth 10.</td>
+</tr>
+<tr>
+<td><code>/safety/collision_monitor/state</code></td>
+<td><code>nav2_msgs/msg/CollisionMonitorState</code></td>
+<td><code>collision_monitor</code></td>
+<td>-</td>
+<td>-</td>
+<td>What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar or the lidar is silent or its TF is late.</td>
+</tr>
+<tr>
+<td><code>/safety/collision_monitor/stop_zone</code></td>
+<td><code>geometry_msgs/msg/PolygonStamped</code></td>
+<td><code>collision_monitor</code></td>
+<td>-</td>
+<td>-</td>
+<td>The stop zone in base_link, for RViz - from the front bumper to 1 m ahead, 0.2 m wider than the body each side (vehicle.yaml, through aav_description vehicle.py).</td>
+</tr>
+<tr>
+<td><code>/safety/ghost/scan</code></td>
+<td><code>sensor_msgs/msg/LaserScan</code></td>
+<td><code>ghost_obstacle</code></td>
+<td><code>local_costmap</code>, <code>collision_monitor</code></td>
+<td>-</td>
+<td>A pretend person for stopping tests with nothing real to hit (aav_ghost ghost_obstacle, navigation.launch.py ghost:=true - sim.launch.py and car.launch.py pass it; off by default). In base_link, 720 ranges all the way round, 10 Hz - the ghost's near side, inf everywhere else, all inf with no ghost. Read by the local costmap's own ghost_layer and as collision_monitor's ghost source, so it only ever adds an obstacle, never clears or hides a real one. Silent for 1 s, it stops Nav2 like a silent radar. Placed with pixi run ghost (ahead 10, at x y, off). docs/ghost-obstacles.md.</td>
+</tr>
+<tr>
+<td><code>/safety/ghost/marker</code></td>
+<td><code>visualization_msgs/msg/Marker</code></td>
+<td><code>ghost_obstacle</code></td>
+<td>-</td>
+<td>-</td>
+<td>The ghost as a purple cylinder in the map frame, for RViz and Lichtblick; DELETE when it goes.</td>
+</tr>
+<tr>
+<td><code>/safety/collision_monitor/collision_points_marker</code></td>
+<td><code>visualization_msgs/msg/MarkerArray</code></td>
+<td><code>collision_monitor</code></td>
+<td>-</td>
+<td>-</td>
+<td>The radar and lidar points collision_monitor sees, for RViz; sent only while someone listens.</td>
+</tr>
+<tr>
+<td><code>/drivers/ai/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>control_interface</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>-</td>
+<td>Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.</td>
+</tr>
+<tr>
+<td><code>/safety/estop</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>joy_teleop</code>, <code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
+<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>carla_adapter</code>, <code>goto_driver</code></td>
+<td>-</td>
+<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.</td>
+</tr>
+<tr>
+<td><code>/control/cmd_vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>twist_mux</code></td>
+<td><code>ego</code>, <code>actuator_test</code>, <code>goto_driver</code></td>
+<td>turtle, sim, car, bench</td>
+<td>The one command ego obeys. v (m/s) and w (rad/s) in base_link.</td>
+</tr>
+<tr>
+<td><code>/ego/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>ego</code></td>
+<td><code>output_mux</code></td>
+<td>turtle, sim, car, bench</td>
+<td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. No backend reads it - the output mux passes it on to the one target's /control/<target>/actuator_cmd (aav_io_mux, docs/sources-and-targets.md).</td>
+</tr>
+<tr>
+<td><code>/control/car/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>spine_bridge</code>, <code>legacy_uart_bridge</code></td>
+<td>car</td>
+<td>The real car's commands - ego's /ego/actuator_cmd, passed on unchanged by output_mux target:=car, and only while the sensor mux says every source is REAL and nothing on /system/source says otherwise. Anything else and it sends nothing - latched until /safety/output_mux/clear on evidence (an announcement of another source, the sensor mux's problems), only held shut on doubt (the sensor mux not heard or quiet for 3 s, or its doubts); the backends' own timeouts brake (spine_bridge 0.1 s then the spine's 100 ms, legacy_uart_bridge 0.3 s). The real backends read only this topic (spine_bridge with source real), so a simulator's ego can't reach them.</td>
+</tr>
+<tr>
+<td><code>/control/car/heartbeat</code></td>
+<td><code>aav_interfaces/msg/Heartbeat</code></td>
+<td><code>output_mux</code></td>
+<td><code>legacy_uart_bridge</code></td>
+<td>car</td>
+<td>The Orin's heartbeat (TODO 50) - one message for each command output_mux target:=car passes on to /control/car/actuator_cmd, so only while its gate is OPEN; counter +1 each time (u8, 255 then 0), header copied from the command. legacy_uart_bridge (the Motor Pi) copies the last counter into every version 2 serial frame and never makes one up, so a stuck or cut-off Pi can't fake it. The Rust ESP32 firmware brakes, latched, when the counter hasn't changed for 100 ms (docs/rust-firmware.md, "The heartbeat"). spine_bridge doesn't read it - DRIVE_CMD has its own counter.</td>
+</tr>
+<tr>
+<td><code>/control/gazebo/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>gazebo_adapter</code>, <code>spine_bridge</code></td>
+<td>sim</td>
+<td>Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim.</td>
+</tr>
+<tr>
+<td><code>/control/gazebo/heartbeat</code></td>
+<td><code>aav_interfaces/msg/Heartbeat</code></td>
+<td><code>output_mux</code></td>
+<td>-</td>
+<td>sim</td>
+<td>The output mux's heartbeat for Gazebo, as /control/car/heartbeat - one for each command passed on. Nothing reads it here; only the real car's Motor Pi relays it.</td>
+</tr>
+<tr>
+<td><code>/control/bench/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>spine_bridge</code></td>
+<td>bench</td>
+<td>The bench's commands, from output_mux target:=bench, while every source is BENCH - into spine_bridge with source bench, then spine_sim.</td>
+</tr>
+<tr>
+<td><code>/control/bench/heartbeat</code></td>
+<td><code>aav_interfaces/msg/Heartbeat</code></td>
+<td><code>output_mux</code></td>
+<td>-</td>
+<td>bench</td>
+<td>The output mux's heartbeat for the bench, as /control/car/heartbeat - one for each command passed on. Nothing reads it here; only the real car's Motor Pi relays it.</td>
+</tr>
+<tr>
+<td><code>/control/turtle/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>turtlesim_adapter</code></td>
+<td>turtle</td>
+<td>The turtle's commands, from output_mux target:=turtle, while every source is SIM.</td>
+</tr>
+<tr>
+<td><code>/control/turtle/heartbeat</code></td>
+<td><code>aav_interfaces/msg/Heartbeat</code></td>
+<td><code>output_mux</code></td>
+<td>-</td>
+<td>turtle</td>
+<td>The output mux's heartbeat for the turtle, as /control/car/heartbeat - one for each command passed on. Nothing reads it here; only the real car's Motor Pi relays it.</td>
+</tr>
+<tr>
+<td><code>/control/carla/actuator_cmd</code></td>
+<td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
+<td><code>output_mux</code></td>
+<td><code>carla_adapter</code></td>
+<td>-</td>
+<td>CARLA's commands, from output_mux target:=carla, while every source is SIM (carla.launch.py; untested, needs the NVIDIA computer).</td>
+</tr>
+<tr>
+<td><code>/control/carla/heartbeat</code></td>
+<td><code>aav_interfaces/msg/Heartbeat</code></td>
+<td><code>output_mux</code></td>
+<td>-</td>
+<td>-</td>
+<td>The output mux's heartbeat for CARLA, as /control/car/heartbeat - one for each command passed on. Nothing reads it here; only the real car's Motor Pi relays it.</td>
+</tr>
+<tr>
+<td><code>/safety/output_mux/state</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>output_mux</code></td>
+<td><code>hud</code>, <code>spine_bridge</code></td>
+<td>turtle, sim, car, bench</td>
+<td>One line for people, 2 Hz and on each change - OPEN (passing ego's commands on), WAIT (closed, not latched - the sensor mux not heard yet or quiet for 3 s, its doubts, a node on /system/source whose announcement hasn't arrived yet, or settling for 2 s after all clear) or STOP (latched, and why, such as "STOP - target car needs REAL - camera_front_left is SIM (gazebo_adapter)"). The target first, such as "OPEN - car". spine_bridge (role spine) reads it as the safety gate - /spine/arm is refused unless it said OPEN for the bridge's own target within gate_timeout (1.5 s); Ben, 24 Oct. The HUD's GO / STOP panel shows it, with the first reason.</td>
+</tr>
+<tr>
+<td><code>/system/source</code></td>
+<td><code>aav_interfaces/msg/DataSource</code></td>
+<td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>mock_lidar</code>, <code>replay_source</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
+<td><code>hud</code>, <code>map</code>, <code>actuator_test</code>, <code>goto_driver</code>, <code>goto_cli</code>, <code>sensor_mux</code>, <code>output_mux</code></td>
+<td>turtle, sim, car, replay, bench</td>
+<td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in - with role:=sensors (today's wiring, the Orin's CAN bus with only the wheel sensors) only odometry and wheels, never an actuator; legacy_uart_bridge REAL; replay.launch.py REPLAY; each camera_stream_<camera> its camera (camera_front_left...) as its source parameter says, REAL on the car. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.</td>
+</tr>
+<tr>
+<td><code>/system/sensor_mux/state</code></td>
+<td><code>aav_interfaces/msg/SourceCheck</code></td>
+<td><code>sensor_mux</code></td>
+<td><code>output_mux</code></td>
+<td>turtle, sim, car, replay, bench</td>
+<td>The sensor mux's verdict, 2 Hz (aav_io_mux sensor_mux, source:=real, sim, bench or replay) - ok when each sensor topic it watches (provenance.SENSORS - the IMU, GPS, cameras, radar, lidar, wheels, odometry, battery) has at most one publisher, that publisher's source as /system/source says (an unannounced one counts as REAL - the car's stock drivers can't announce), and every announcement equals source. An announcement of another source is a problem at once; a graph finding (two publishers, an unannounced one in a simulator) is a doubt until it has lasted 5 s (provenance.Hold), as a node can be seen before its announcement or its name arrive. Silent for its first 2 s, while discovery settles. It relays no data - it checks where the data comes from - so the heavy topics (pictures, point clouds) cost nothing extra.</td>
+</tr>
+<tr>
+<td><code>/vehicle/odom</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
+<td>turtle, sim, car, replay, bench</td>
+<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.</td>
+</tr>
+<tr>
+<td><code>/vehicle/status</code></td>
+<td><code>aav_interfaces/msg/VehicleStatus</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code>, <code>legacy_uart_bridge</code></td>
+<td><code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
+<td>turtle, sim, bench</td>
+<td>Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. legacy_uart_bridge publishes it, 10 Hz, only with uplink true (the ESP32's uplink frame on TX1, TODO 50 - off until its wire is confirmed) - speed NaN (that ESP32 has no wheel speed), steering_angle the steering Jrk's position or NaN; mode COMPUTER also while the transmitter's switch is on RC via ROS (/vehicle/rc has the switch).</td>
+</tr>
+<tr>
+<td><code>/vehicle/steering</code></td>
+<td><code>aav_interfaces/msg/ActuatorState</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code>, <code>legacy_uart_bridge</code></td>
+<td><code>actuator_test</code></td>
+<td>turtle, sim, bench</td>
+<td>The steering, the virtual centre wheel (rad, + left) - command (from /ego/actuator_cmd) and measured. In Gazebo, measured is the actuator model's angle (its speed, lag, offset and deadband). For plots and the actuator tests; /vehicle/status keeps it too. legacy_uart_bridge (uplink true, 50 Hz) - command ego's steering_angle while fresh (else NaN), measured the steering Jrk's scaled feedback in rad (NaN when the Jrk has no feedback set up).</td>
+</tr>
+<tr>
+<td><code>/vehicle/throttle</code></td>
+<td><code>aav_interfaces/msg/ActuatorState</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
+<td><code>actuator_test</code></td>
+<td>sim, bench</td>
+<td>The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.</td>
+</tr>
+<tr>
+<td><code>/vehicle/brake</code></td>
+<td><code>aav_interfaces/msg/ActuatorState</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code>, <code>legacy_uart_bridge</code></td>
+<td><code>actuator_test</code></td>
+<td>sim, bench</td>
+<td>The brake, 0..1. As /vehicle/throttle. legacy_uart_bridge (uplink true, 50 Hz) - command what the ESP32 drives the brake Jrk with, measured the brake Jrk's position (NaN when unknown).</td>
+</tr>
+<tr>
+<td><code>/vehicle/rc</code></td>
+<td><code>aav_interfaces/msg/RcSticks</code></td>
+<td><code>legacy_uart_bridge</code></td>
+<td><code>rc_driver</code></td>
+<td>-</td>
+<td>The RC transmitter as the car's ESP32 reads it (TODO 48), from its uplink frame, 50 Hz, only with uplink true - the mode switch (none, computer, RC via ROS, RC direct; the proposed three positions of CH6), the throttle stick signed by the gear switch, the steering stick (both -1..1, + forward, + left), the gear switch on brake. The channels and their calibration stay in the firmware (ibus RcMap).</td>
+</tr>
+<tr>
+<td><code>/vehicle/wheels</code></td>
+<td><code>aav_interfaces/msg/WheelSpeeds</code></td>
+<td><code>gazebo_adapter</code>, <code>spine_bridge</code>, <code>carla_adapter</code></td>
+<td><code>actuator_test</code></td>
+<td>sim, bench</td>
+<td>Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. With today's wiring the front two come from the wheel sensors' Arduino on the Orin's CAN bus (spine_bridge role:=sensors). The 2025-26 car's UDP encoder (aav_legacy encoder_udp, off since 23 Oct) is read only as /vehicle/odom.</td>
+</tr>
+<tr>
+<td><code>/vehicle/joint_states</code></td>
+<td><code>sensor_msgs/msg/JointState</code></td>
+<td><code>spine_bridge</code></td>
+<td><code>joint_state_publisher</code></td>
+<td>bench, spine</td>
+<td>Measured front steering joint angles, merged into /joint_states.</td>
+</tr>
+<tr>
+<td><code>/joint_states</code></td>
+<td><code>sensor_msgs/msg/JointState</code></td>
+<td><code>joint_state_publisher</code>, <code>gz_bridge</code></td>
+<td><code>robot_state_publisher</code></td>
+<td>turtle, sim, car, replay, bench</td>
+<td></td>
+</tr>
+<tr>
+<td><code>/can/tx</code></td>
+<td><code>can_msgs/msg/Frame</code></td>
+<td><code>spine_bridge</code></td>
+<td><code>socket_can_sender</code>, <code>spine_sim</code></td>
+<td>bench, spine</td>
+<td>DRIVE_CMD 0x100 at 50 Hz, ESTOP_CMD 0x010 at 10 Hz (firmware/can/aav.dbc). Only spine_bridge role:=spine (the CAN spine, car.launch.py actuators:=can) publishes it; with role:=sensors (today's wiring) nobody does, and no socket_can_sender starts.</td>
+</tr>
+<tr>
+<td><code>/can/rx</code></td>
+<td><code>can_msgs/msg/Frame</code></td>
+<td><code>socket_can_receiver</code>, <code>spine_sim</code></td>
+<td><code>spine_bridge</code></td>
+<td>bench, spine</td>
+<td>VEHICLE_FEEDBACK 0x180 at 50 Hz, VEHICLE_STATUS 0x181 at 10 Hz, WHEEL_SPEED_L 0x200 and WHEEL_SPEED_R 0x201 at 100 Hz. On the bench and in Gazebo's spine profile, spine_sim sends them all. With today's wiring the bus has only the wheel sensors (an Arduino) and others not yet known; spine_bridge role:=sensors reads only 0x200 and 0x201.</td>
+</tr>
+<tr>
+<td><code>/sensors/imu/data_raw</code></td>
+<td><code>sensor_msgs/msg/Imu</code></td>
+<td><code>imu_node</code>, <code>gazebo_imu</code>, <code>mock_imu</code>, <code>carla_adapter</code></td>
+<td><code>imu_filter_madgwick</code>, <code>actuator_test</code></td>
+<td>sim, car, replay, bench</td>
+<td>Gyro and accelerometer in imu_link, with covariances; no orientation. In Gazebo, gazebo_imu adds the car's own acceleration, worked out from Gazebo's odometry.</td>
+</tr>
+<tr>
+<td><code>/sensors/imu/mag</code></td>
+<td><code>sensor_msgs/msg/MagneticField</code></td>
+<td><code>imu_node</code>, <code>mock_imu</code></td>
+<td><code>imu_filter_madgwick</code></td>
+<td>bench</td>
+<td>Raw counts from imu_node (not tesla yet); tesla from mock_imu. The filter ignores it (use_mag false).</td>
+</tr>
+<tr>
+<td><code>/sensors/imu/data</code></td>
+<td><code>sensor_msgs/msg/Imu</code></td>
+<td><code>imu_filter_madgwick</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code></td>
+<td>sim, car, replay, bench</td>
+<td>Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.</td>
+</tr>
+<tr>
+<td><code>/sensors/gps/fix</code></td>
+<td><code>sensor_msgs/msg/NavSatFix</code></td>
+<td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_gps</code>, <code>mock_gps</code>, <code>carla_adapter</code></td>
+<td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>goto_driver</code></td>
+<td>sim, car, replay, bench</td>
+<td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
+</tr>
+<tr>
+<td><code>/sensors/gps/fix_velocity</code></td>
+<td><code>geometry_msgs/msg/TwistWithCovarianceStamped</code></td>
+<td><code>ublox_gps</code>, <code>gazebo_gps</code></td>
+<td><code>gps_heading</code></td>
+<td>sim</td>
+<td>The receiver's velocity, east, north and up (m/s), from the satellites' Doppler (good to about 0.05 m/s), with its variance. gps_heading turns it into a heading. In Gazebo, gazebo_gps works it out from the car's true motion with that noise on top (the bridge drops the NavSat sensor's own). ublox_gps only - gps_driver:=nmea sends /sensors/gps/vel instead, which nothing reads.</td>
+</tr>
+<tr>
+<td><code>/sensors/gps/vel</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>gps_nmea</code></td>
+<td>-</td>
+<td>-</td>
+<td>NMEA's speed and course (gps_driver:=nmea). Nothing fuses it yet.</td>
+</tr>
+<tr>
+<td><code>/sensors/gps/time_reference</code></td>
+<td><code>sensor_msgs/msg/TimeReference</code></td>
+<td><code>gps_nmea</code></td>
+<td>-</td>
+<td>-</td>
+<td>GPS time, from NMEA (gps_driver:=nmea).</td>
+</tr>
+<tr>
+<td><code>/sensors/radar/points</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td><code>radar</code>, <code>mock_radar</code>, <code>gazebo_radar</code>, <code>carla_adapter</code></td>
+<td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code>, <code>sensor_watchdog</code></td>
+<td>bench, road</td>
+<td>The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_radar makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.</td>
+</tr>
+<tr>
+<td><code>/vehicle/battery</code></td>
+<td><code>sensor_msgs/msg/BatteryState</code></td>
+<td><code>battery_state_publisher</code>, <code>mock_battery</code></td>
+<td><code>hud_server</code>, <code>hud</code></td>
+<td>bench</td>
+<td>battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).</td>
+</tr>
+<tr>
+<td><code>/vehicle/battery/heartbeat</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>heartbeat_publisher</code></td>
+<td>-</td>
+<td>-</td>
+<td>battery_monitor's sign of life.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_camera</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code></td>
+<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
+<td>bench, road</td>
+<td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop). On the car with the camera stream (aav_camera_stream), camera_stream_front_left publishes it only with publish_image:=true - every undistorted picture, for another node on the same computer; the pictures otherwise stay inside it.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/front_left/image_raw/compressed</code></td>
+<td><code>sensor_msgs/msg/CompressedImage</code></td>
+<td><code>camera_left</code>, <code>test_camera</code>, <code>mock_camera</code></td>
+<td><code>object_detector</code>, <code>object_detector_laptop</code></td>
+<td>-</td>
+<td>The same pictures as JPEG, from image_transport's compressed plugin (usb_cam and image_publisher publish it by themselves; mock_camera only while something reads it). A detector on a laptop over WiFi reads this one (detector.launch.py compressed:=true; the laptop's machine file). On the bench, pixi run -e ml laptop-bench.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/front_left/camera_info</code></td>
+<td><code>sensor_msgs/msg/CameraInfo</code></td>
+<td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code></td>
+<td><code>lane_finder</code>, <code>camera_obstacles</code>, <code>stop_sign_watcher</code></td>
+<td>bench, road</td>
+<td>The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id; stop_sign_watcher its focal length (fy), to turn a stop sign's box height into a distance. camera_stream_front_left publishes the undistorted picture's lens (no distortion) with each picture's detections, once the camera has a calibration (aav_camera_stream config/cameras.yaml).</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/front_right/image_raw</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code>, <code>camera_stream_front_right</code></td>
+<td>-</td>
+<td>road</td>
+<td>The front right camera, beside the left one (camera_right_link). On the car its stream goes to camera_stream_front_right (aav_camera_stream), which publishes it only with publish_image:=true. Subscribe reliably, as for the front left one.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/front_right/camera_info</code></td>
+<td><code>sensor_msgs/msg/CameraInfo</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code>, <code>camera_stream_front_right</code></td>
+<td><code>stop_sign_watcher</code></td>
+<td>road</td>
+<td>Its lens. In Gazebo, the same as the front left camera's. stop_sign_watcher takes its focal length, as the front left one's. camera_stream_front_right publishes the undistorted picture's, as for the front left one.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/rear/image_raw</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
+<td>-</td>
+<td>road</td>
+<td>The rear camera, looking back (the orange housing on the tailgate) (camera_rear_link). Gazebo's only, in the road world, for now - the car's drivers come with camera_ros (audit N4). Subscribe reliably, as for the front left one.</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/rear/camera_info</code></td>
+<td><code>sensor_msgs/msg/CameraInfo</code></td>
+<td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
+<td><code>stop_sign_watcher</code></td>
+<td>road</td>
+<td>Its lens. In Gazebo, the same as the front left camera's. stop_sign_watcher takes its focal length, as the front left one's.</td>
+</tr>
+<tr>
+<td><code>/sensors/lidar/packets</code></td>
+<td><code>velodyne_msgs/msg/VelodyneScan</code></td>
+<td><code>lidar_driver</code></td>
+<td><code>lidar_cloud</code></td>
+<td>car</td>
+<td>The roof Velodyne VLP-16's UDP packets as they come (the stock velodyne_driver, aav_sensors sensors.launch.py lidar:=true), one turn (0.1 s, about 76 packets) a message, frame lidar_link. It reads only packets from lidar_ip (192.168.1.201, the 16 Oct audit) on lidar_port (2368), so it runs on the computer they're sent to - the Jetson. lidar_cloud turns them into /sensors/lidar/points. In bench mode (lidar:=true), mock_lidar sends it the bench world's packets on 127.0.0.1:2369, so the same driver runs.</td>
+</tr>
+<tr>
+<td><code>/sensors/lidar/points</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td><code>lidar_cloud</code>, <code>gz_lidar_bridge</code>, <code>carla_adapter</code></td>
+<td><code>lidar_scan</code></td>
+<td>road, car</td>
+<td>On the car, the roof Velodyne VLP-16 through the stock velodyne_pointcloud (lidar_cloud, its factory calibration VLP16db.yaml), in lidar_link, 10 Hz, 0.9-100 m, unorganised - rays that hit nothing are left out; fields x, y, z, intensity, ring, time. car.launch.py runs it where the machine file has the lidar part (orin, all); lidar:=false turns it off everywhere. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.</td>
+</tr>
+<tr>
+<td><code>/sensors/lidar/scan</code></td>
+<td><code>sensor_msgs/msg/LaserScan</code></td>
+<td><code>lidar_scan</code></td>
+<td><code>local_costmap</code>, <code>collision_monitor</code></td>
+<td>road, car</td>
+<td>The roof lidar flattened (aav_lidar lidar_scan - navigation.launch.py lidar:=true) - in base_link, 720 ranges all the way round, each the nearest point between 0.3 m and the roof plus 0.5 m (vehicle.obstacle_heights), inf where there is none. Best effort, 10 Hz. Read by the local costmap's lidar_layer and collision_monitor's stop zone. From the roof, the lowest beam (15 degrees down from 1.8 m) meets a 1 m box only 3 m away, so low things close in front are the radar's.</td>
+</tr>
+<tr>
+<td><code>/perception/radar/clusters</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td><code>radar_clusters</code></td>
+<td>-</td>
+<td>bench, road</td>
+<td>The radar points DBSCAN grouped into objects (radar_clusters, aav_radar_clusters, Rust), coloured by cluster, with each point's cluster number in a cluster field; noise left out. The radar cloud's frame and time.</td>
+</tr>
+<tr>
+<td><code>/perception/radar/cluster_boxes</code></td>
+<td><code>visualization_msgs/msg/MarkerArray</code></td>
+<td><code>radar_clusters</code></td>
+<td>-</td>
+<td>bench, road</td>
+<td>A box round each radar cluster, for RViz - a DELETEALL first, then one CUBE per cluster, its id the cluster number.</td>
+</tr>
+<tr>
+<td><code>/perception/detections</code></td>
+<td><code>vision_msgs/msg/Detection2DArray</code></td>
+<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
+<td><code>stop_sign_watcher</code>, <code>camera_obstacles</code>, <code>sensor_watchdog</code></td>
+<td>-</td>
+<td>The object detector's boxes in pixels (RF-DETR Nano by default, or YOLO); header.frame_id names the camera, results[0].hypothesis is the label (e.g. "stop sign") and score. Needs PyTorch - the ml environment, or JetPack's on the Orin. object_detector (aav_detector) in bench mode and pixi run detect; on the car object_detector_<machine>, one per machine with a GPU (car.launch.py's detector part), all on this topic. Not live in car yet - the Orin's waits for JetPack 7.2 (Q24); the laptop's reads the camera's compressed pictures (pixi run -e ml car laptop). With the camera stream (decided 23 Oct; docs/camera-pipeline.md), camera_stream_<camera> runs the same detector (RF-DETR Nano) inside the process that decodes the camera Pi's H.264 stream, one per camera, also on this topic - its boxes in the undistorted picture's pixels, stamped with the picture's arrival minus the stream's measured delay. It sends one for every picture, boxes or none, so the sensor watchdog watches each streamed camera here (kind detections, by its frame_id - front_left_stream, front_right_stream; silent 1 s locks Nav2 and the AI slot), where car.launch.py starts the streams (its camera_stream part, the Orin), and the car's detector part then doesn't start for those cameras.</td>
+</tr>
+<tr>
+<td><code>/perception/camera/front_left/preview/compressed</code></td>
+<td><code>sensor_msgs/msg/CompressedImage</code></td>
+<td><code>camera_stream_front_left</code>, <code>preview_jpeg_front_left</code></td>
+<td><code>foxglove_bridge</code></td>
+<td>-</td>
+<td>A small JPEG of the undistorted picture with the boxes drawn on, 320 px wide, once a second (preview_period, preview_width) - for Foxglove, Lichtblick (tools/foxglove/driving.json) or the HUD; a few kB, so it fits WiFi. People can also watch the camera Pi's own stream in a browser (WebRTC, http://<pi>:8889/front_left). On the stand-ins (sim, bench, CARLA with foxglove:=true), preview_jpeg_front_left makes it instead (image_transport republish, foxglove.launch.py) - the whole picture, no boxes, once a second.</td>
+</tr>
+<tr>
+<td><code>/perception/camera/front_left/preview</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>preview_throttle_front_left</code></td>
+<td><code>preview_jpeg_front_left</code></td>
+<td>-</td>
+<td>Stand-ins only (foxglove.launch.py foxglove_preview, with foxglove:=true) - the camera's raw picture once a second (topic_tools throttle), on its way to preview/compressed. The bridge's WiFi list leaves it out.</td>
+</tr>
+<tr>
+<td><code>/perception/camera/front_right/preview/compressed</code></td>
+<td><code>sensor_msgs/msg/CompressedImage</code></td>
+<td><code>camera_stream_front_right</code></td>
+<td>-</td>
+<td>-</td>
+<td>The same, for the front right camera.</td>
+</tr>
+<tr>
+<td><code>/perception/detections/image</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code></td>
+<td>-</td>
+<td>-</td>
+<td>The camera picture with the boxes drawn on, for RViz or Foxglove.</td>
+</tr>
+<tr>
+<td><code>/perception/stop_sign</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>stop_sign_watcher</code></td>
+<td><code>twist_mux</code>, <code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
+<td>car</td>
+<td>true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.</td>
+</tr>
+<tr>
+<td><code>/perception/camera_obstacles</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td><code>camera_obstacles</code></td>
+<td><code>local_costmap</code>, <code>collision_monitor</code></td>
+<td>-</td>
+<td>Where each detected object stands on the road, in base_link (z = 0) - points 0.1 m apart along its box's bottom edge, out to 12 m from the camera. Each message carries every camera's newest points (those heard in the last max_age, 1 s), so the rear camera's stay while the front one's pictures come in. Only the listed COCO classes (people, cyclists, cars...), never stop signs. The local costmap's camera layer marks them, and with camera_guard (the car, once a detector reads the rear camera for people) collision_monitor stops for them, ahead going forward and behind reversing - bench.launch.py camera_obstacles:=true, or the car's camera_obstacles part next to navigation. Off until the cameras are calibrated (Q22).</td>
+</tr>
+<tr>
+<td><code>/perception/camera_view</code></td>
+<td><code>sensor_msgs/msg/PointCloud2</code></td>
+<td><code>camera_obstacles</code></td>
+<td><code>local_costmap</code></td>
+<td>-</td>
+<td>The far edge of what the cameras see (each one heard in the last second), on the road, 12 m out, in base_link. The camera layer clears up to it before it marks, so old boxes don't linger.</td>
+</tr>
+<tr>
+<td><code>/perception/lane/geometry</code></td>
+<td><code>aav_lane_geometry/msg/LaneGeometry</code></td>
+<td><code>lane_finder</code>, <code>fake_lane_geometry_pub</code></td>
+<td><code>control_interface</code></td>
+<td>-</td>
+<td>One per camera picture, from lane_finder (aav_lane_finder, classic OpenCV), in base_link. vehicle_offset_m - the car from the lane's centre, 3 m ahead (lookahead), + = the car is left of it. Each line as y = a x^2 + b x + c (m), its radius (m; 9999 = straight or not seen) and confidence (0-1); the lane width (m). Bench - lane:=true runs lane_finder, lane:=fake runs fake_lane_geometry_pub (its polynomials are pixels).</td>
+</tr>
+<tr>
+<td><code>/perception/lane/image</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>lane_finder</code></td>
+<td>-</td>
+<td>-</td>
+<td>The bird's-eye view, with the paint, the windows and the lines lane_finder found, for RViz or Foxglove. Only with debug_image true.</td>
+</tr>
+<tr>
+<td><code>/drivers/ai/lane_status</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>control_interface</code></td>
+<td>-</td>
+<td>-</td>
+<td>Lane keeping's state and numbers, as text. Under /drivers/ai, as control_interface (the AI slot's driver) publishes it.</td>
+</tr>
+<tr>
+<td><code>/drivers/ai/lane_state</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>control_interface</code></td>
+<td>-</td>
+<td>-</td>
+<td>Lane keeping's state machine (LANE_KEEP, LANE_CHANGING, ...). Not the car's state - that's /vehicle/status.</td>
+</tr>
+<tr>
+<td><code>/vehicle/bench/truth</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>spine_sim</code></td>
+<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_camera</code>, <code>mock_radar</code></td>
+<td>bench</td>
+<td>Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /localization/odom/global to check the EKFs.</td>
+</tr>
+<tr>
+<td><code>/vehicle/bench/hw_estop</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td>-</td>
+<td><code>spine_sim</code></td>
+<td>-</td>
+<td>true = press the hardware e-stop, on the bench and in Gazebo's spine profile; false = release it. The spine brakes, and needs arming again.</td>
+</tr>
+<tr>
+<td><code>/vehicle/bench/driver_faults</code></td>
+<td><code>std_msgs/msg/UInt16</code></td>
+<td>-</td>
+<td><code>spine_sim</code></td>
+<td>-</td>
+<td>Pretend a driver failed, on the bench and in Gazebo's spine profile. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/truth</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>gz_bridge</code></td>
+<td>-</td>
+<td>sim</td>
+<td>Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/spine_outputs</code></td>
+<td><code>aav_interfaces/msg/SpineOutputs</code></td>
+<td><code>spine_sim</code></td>
+<td><code>gazebo_adapter</code></td>
+<td>spine</td>
+<td>Gazebo's spine profile only (sim.launch.py spine:=true). What the spine's logic (spine-core, in spine_sim) writes to its actuator drivers each tick, 100 Hz on Gazebo's clock - throttle and brake (0..1), reverse, the steering target (rad). On the car these never reach ROS. gazebo_adapter's actuator model turns them into what Gazebo's car does; silent for 0.2 s, it brakes fully.</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/wheels</code></td>
+<td><code>aav_interfaces/msg/WheelSpeeds</code></td>
+<td><code>gazebo_adapter</code></td>
+<td><code>spine_sim</code></td>
+<td>spine</td>
+<td>Gazebo's spine profile only. Gazebo's four wheels, as /vehicle/wheels in the direct profile, for spine_sim - the front two for its wheel nodes' frames, the rear two's mean as the spine's measured speed (its motor encoder).</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/steering</code></td>
+<td><code>aav_interfaces/msg/ActuatorState</code></td>
+<td><code>gazebo_adapter</code></td>
+<td><code>spine_sim</code></td>
+<td>spine</td>
+<td>Gazebo's spine profile only. command = the spine's steering target, measured = the actuator model's angle, which spine_sim sends back in VEHICLE_FEEDBACK.</td>
+</tr>
+<tr>
+<td><code>/vehicle/carla/truth</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>carla_adapter</code></td>
+<td>-</td>
+<td>-</td>
+<td>Where the CARLA car really is (base_link in the map frame, each CARLA step), like /vehicle/gazebo/truth. The map frame is CARLA's world when its map is built round the datum (a Carleton map, osm:=), else the spawn point facing east (aav_carla frames.map_frame). Nothing on the car's side reads it. carla_adapter (aav_bringup carla.launch.py, pixi run carla-car) has never run against a CARLA server, so no profile checks its topics yet (docs/carla.md).</td>
+</tr>
+<tr>
+<td><code>/localization/odom/local</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>ekf_local</code></td>
+<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
+<td>turtle, sim, car, replay, bench</td>
+<td>odom frame. Smooth; drifts.</td>
+</tr>
+<tr>
+<td><code>/localization/odom/global</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>ekf_global</code></td>
+<td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code>, <code>goto_driver</code>, <code>goto_cli</code></td>
+<td>sim, car, replay, bench</td>
+<td>map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it.</td>
+</tr>
+<tr>
+<td><code>/localization/gps/odom</code></td>
+<td><code>nav_msgs/msg/Odometry</code></td>
+<td><code>navsat_transform</code></td>
+<td><code>ekf_global</code></td>
+<td>sim, car, replay, bench</td>
+<td>Each GPS fix as a map-frame position of base_link (antenna offset removed).</td>
+</tr>
+<tr>
+<td><code>/localization/gps/heading</code></td>
+<td><code>sensor_msgs/msg/Imu</code></td>
+<td><code>gps_heading</code></td>
+<td><code>ekf_global</code></td>
+<td>sim, car, replay, bench</td>
+<td>The car's heading from the GPS receiver's velocity (aav_gps_heading, TODO 13) - only an orientation (yaw from east), in base_link, with its variance; turn rate and acceleration covariance -1. Only while the car moves faster than 0.3 m/s and the GPS's speed matches the wheels'; turned round when reversing. The global EKF fuses its yaw. Silent where nothing publishes /sensors/gps/fix_velocity (the bench, gps_driver:=nmea).</td>
+</tr>
+<tr>
+<td><code>/localization/gps/fix</code></td>
+<td><code>sensor_msgs/msg/NavSatFix</code></td>
+<td><code>navsat_transform</code></td>
+<td><code>hud_server</code>, <code>hud</code>, <code>street_router</code></td>
+<td>sim, car, replay, bench</td>
+<td>The global EKF's position as lat/lon, for maps in the HUD or Foxglove, and the start of street_router's routes.</td>
+</tr>
+<tr>
+<td><code>/map</code></td>
+<td><code>nav_msgs/msg/OccupancyGrid</code></td>
+<td><code>map_server</code></td>
+<td><code>global_costmap</code>, <code>local_costmap</code>, <code>map</code></td>
+<td>sim</td>
+<td>Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud_raylib) draws it north up, for the big screen.</td>
+</tr>
+<tr>
+<td><code>/goal_pose</code></td>
+<td><code>geometry_msgs/msg/PoseStamped</code></td>
+<td><code>rviz2</code>, <code>map</code></td>
+<td><code>bt_navigator</code>, <code>map</code></td>
+<td>-</td>
+<td>RViz "2D Goal Pose", or the map window's place search (map, aav_hud_raylib - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
+</tr>
+<tr>
+<td><code>/plan</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>planner_server</code></td>
+<td><code>map</code></td>
+<td>-</td>
+<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud_raylib) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/destination</code></td>
+<td><code>geographic_msgs/msg/GeoPointStamped</code></td>
+<td>-</td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>Where to go, as lat/lon (ros2 topic pub, or a screen). street_router asks the router (Valhalla on this computer, pixi run -e routes router) for the way there along the streets, from the car's newest /localization/gps/fix.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/goal</code></td>
+<td><code>geometry_msgs/msg/PoseStamped</code></td>
+<td>-</td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>Where to go, as a map-frame point (RViz, or a screen); street_router turns it into lat/lon with /toLL, then as /drivers/nav/route/destination.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/waypoints</code></td>
+<td><code>geographic_msgs/msg/GeoPath</code></td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>-</td>
+<td>Transient local (latched). The route as GPS waypoints spaced for Nav2 (10-30 m apart, each facing along the street, the car's own start left out) - what /drivers/nav/route/follow sends to /follow_gps_waypoints.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/path</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>street_router</code></td>
+<td><code>map</code></td>
+<td>-</td>
+<td>Transient local (latched). The whole route in the map frame (each point through /fromLL). The map window (map, aav_hud_raylib) draws it violet under Nav2's blue plan; RViz and Foxglove can too. Not a plan Nav2 follows.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/status</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>-</td>
+<td>Transient local (latched). For people - the route's length and the router's time for a normal car, or why there's no route (no router, no GPS fix, longer than max_length).</td>
+</tr>
+<tr>
+<td><code>/tf</code></td>
+<td><code>tf2_msgs/msg/TFMessage</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>robot_state_publisher</code></td>
+<td>-</td>
+<td>turtle, sim, car, replay, bench</td>
+<td>map -&gt; odom (ekf_global), odom -&gt; base_link (ekf_local), moving joints (robot_state_publisher).</td>
+</tr>
+<tr>
+<td><code>/tf_static</code></td>
+<td><code>tf2_msgs/msg/TFMessage</code></td>
+<td><code>robot_state_publisher</code>, <code>map_to_odom_no_gps</code></td>
+<td>-</td>
+<td>turtle, sim, car, replay, bench</td>
+<td>base_link -&gt; chassis and every sensor frame, from vehicle.yaml through the URDF. With gps:=false, map_to_odom_no_gps adds a fixed map -&gt; odom.</td>
+</tr>
+<tr>
+<td><code>/robot_description</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>robot_state_publisher</code></td>
+<td>-</td>
+<td>turtle, sim, car, replay, bench</td>
+<td></td>
+</tr>
+<tr>
+<td><code>/clock</code></td>
+<td><code>rosgraph_msgs/msg/Clock</code></td>
+<td><code>gz_bridge</code>, <code>carla_adapter</code></td>
+<td>-</td>
+<td>sim, replay</td>
+<td>Simulation time; every node runs with use_sim_time:=true in sim and replay.</td>
+</tr>
+<tr>
+<td><code>/diagnostics</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticArray</code></td>
+<td><code>twist_mux</code>, <code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
+<td><code>language_drive</code></td>
+<td>-</td>
+<td>ROS's diagnostics. sensor_watchdog reports each input it watches once a second (OK, WARN, ERROR when it stops the car); for the wheels, also the gaps to the IMU (speed_gap, turn_gap, worst_speed_gap, worst_turn_gap), to tune the cross check on the car. twist_mux reports each lock once a second ("lock locks.estop" locked or free) - the only place a node started after an e-stop can learn it, since /safety/estop is sent a few times and its senders go away. language_drive refuses to move while it says locked, or while it is silent. camera_stream_<camera> reports its stream once a second (status name camera_stream - front_left; ERROR with no pictures, WARN under half the frame rate) - decoder (the one auto picked - gst-mac on a Mac), fps_in, fps_out, dropped, decoder_starts, work_ms, detect_ms, delay_s, and with time_code the measured delays (arrival_<em> and detection_</em>_ms - median, p95, max). pixi run check ignores the topic.</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="services">Services</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Server</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/spine/arm</code></td>
+<td><code>std_srvs/srv/SetBool</code></td>
+<td><code>spine_bridge</code></td>
+<td>The spine ignores drive commands until armed. Refused while /safety/estop is true, and while the safety gate is shut - /safety/output_mux/state not OPEN for the bridge's target (car, bench or gazebo by its source), or not heard for gate_timeout (1.5 s) - with the reason, starting "the safety gate is shut" (Ben, 24 Oct). Disarming always works. The bench and Gazebo's spine profile arm through arm_when_open (aav_spine), which asks each second until the gate opens. On the car with the CAN spine (actuators:=can), the bench and Gazebo's spine profile; not with role:=sensors.</td>
+</tr>
+<tr>
+<td><code>/fromLL</code></td>
+<td><code>robot_localization/srv/FromLL</code></td>
+<td><code>navsat_transform</code></td>
+<td>Lat/lon -&gt; map x, y. Nav2's follow_gps_waypoints calls it, and goto_driver (aav_goto) for a lat/lon goal, and street_router, for /drivers/nav/route/path.</td>
+</tr>
+<tr>
+<td><code>/toLL</code></td>
+<td><code>robot_localization/srv/ToLL</code></td>
+<td><code>navsat_transform</code></td>
+<td>Map x, y -&gt; lat/lon. street_router calls it for /drivers/nav/route/goal.</td>
+</tr>
+<tr>
+<td><code>/datum</code></td>
+<td><code>robot_localization/srv/SetDatum</code></td>
+<td><code>navsat_transform</code></td>
+<td>Move the map origin (normally set once from navsat.yaml).</td>
+</tr>
+<tr>
+<td><code>/ekf_local/set_pose</code></td>
+<td><code>robot_localization/srv/SetPose</code></td>
+<td><code>ekf_local</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>/ekf_global/set_pose</code></td>
+<td><code>robot_localization/srv/SetPose</code></td>
+<td><code>ekf_global</code></td>
+<td>Re-seed the start pose by hand (heading!).</td>
+</tr>
+<tr>
+<td><code>/safety/output_mux/clear</code></td>
+<td><code>std_srvs/srv/Trigger</code></td>
+<td><code>output_mux</code></td>
+<td>A person reopens the output mux after it latched STOP. Refused, with the reason, while the evidence remains (a simulated source still announced, the sensor mux still reporting a problem); once accepted, commands flow again after 2 s of all clear.</td>
+</tr>
+<tr>
+<td><code>/safety/sensor_watchdog/clear</code></td>
+<td><code>std_srvs/srv/Trigger</code></td>
+<td><code>sensor_watchdog</code></td>
+<td>A person says all is right again after a fault the watchdog latches - a GPS jump, wheels that disagreed with the IMU and GPS, a HUD that dropped out (LOST). pixi run watchdog-clear (pixi run sim-fault clear in Gazebo).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/follow</code></td>
+<td><code>std_srvs/srv/Trigger</code></td>
+<td><code>street_router</code></td>
+<td>A person sends street_router's newest route to Nav2, as a /follow_gps_waypoints goal. Nothing goes to Nav2 without it (unless follow_at_once is set). Nav2, twist_mux, ego and the spine stay in charge.</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="actions">Actions</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Server</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/scripted_drive</code></td>
+<td><code>aav_interfaces/action/ScriptedDrive</code></td>
+<td><code>scripted_driver</code></td>
+<td>Drive a speed profile (accelerate, hold for a time or distance, stop). Phase 1. Sent by language_drive (aav_language) for drive() and turn() - a whole distance, ramps included.</td>
+</tr>
+<tr>
+<td><code>/goto</code></td>
+<td><code>aav_interfaces/action/GoTo</code></td>
+<td><code>goto_driver</code></td>
+<td>Drive to one point B (lat/lon through /fromLL, or map x/y) and stop there - speed up gently, hold, slow down by the distance left at half vehicle.yaml's max_brake. Pure pursuit, turning towards B first. Refuses B over 200 m away or inside the tightest turn; on REAL only with confirmed (pixi run goto asks). Sent by goto_cli (pixi run goto) and tools/sim_check.py --goto.</td>
+</tr>
+<tr>
+<td><code>/navigate_to_pose</code></td>
+<td><code>nav2_msgs/action/NavigateToPose</code></td>
+<td><code>bt_navigator</code></td>
+<td>Drive to one map-frame pose.</td>
+</tr>
+<tr>
+<td><code>/navigate_through_poses</code></td>
+<td><code>nav2_msgs/action/NavigateThroughPoses</code></td>
+<td><code>bt_navigator</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>/follow_waypoints</code></td>
+<td><code>nav2_msgs/action/FollowWaypoints</code></td>
+<td><code>waypoint_follower</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>/follow_gps_waypoints</code></td>
+<td><code>nav2_msgs/action/FollowGPSWaypoints</code></td>
+<td><code>waypoint_follower</code></td>
+<td>Lat/lon waypoints. The HUD (hud_server) sends its locked route here, and street_router its street route on /drivers/nav/route/follow. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="frames">Frames</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Frame</th>
+<th>Parent</th>
+<th>Published by</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>map</code></td>
+<td>-</td>
+<td>ekf_global (map -&gt; odom)</td>
+<td>x east, y north; origin = the navsat datum</td>
+</tr>
+<tr>
+<td><code>odom</code></td>
+<td>map</td>
+<td>ekf_local (odom -&gt; base_link)</td>
+<td>continuous; starts where the car starts</td>
+</tr>
+<tr>
+<td><code>base_link</code></td>
+<td>odom</td>
+<td>-</td>
+<td>on the ground under the rear axle centre; x forward, y left, z up</td>
+</tr>
+<tr>
+<td><code>chassis</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td></td>
+</tr>
+<tr>
+<td><code>imu_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td>vehicle.yaml sensors.imu_link</td>
+</tr>
+<tr>
+<td><code>gps_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td>the antenna</td>
+</tr>
+<tr>
+<td><code>radar_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td></td>
+</tr>
+<tr>
+<td><code>camera_left_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td></td>
+</tr>
+<tr>
+<td><code>camera_right_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td></td>
+</tr>
+<tr>
+<td><code>camera_rear_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td>turned 180 degrees: it looks back</td>
+</tr>
+<tr>
+<td><code>lidar_link</code></td>
+<td>base_link</td>
+<td>robot_state_publisher</td>
+<td>the roof lidar</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="naming.html"><small>Previous</small>← Topic areas</a>
+<a class="next" href="car_measurements.html"><small>Next</small>Car numbers →</a></nav>
+</main>
+<footer>Source: <code>docs/interfaces.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

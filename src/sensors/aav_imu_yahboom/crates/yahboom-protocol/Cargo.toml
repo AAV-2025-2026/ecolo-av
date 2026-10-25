@@ -1,0 +1,8 @@
+[package]
+name = "yahboom-protocol"
+description = "The Yahboom 10-axis IMU's serial frames and units, in plain Rust (no ROS, no_std)"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]

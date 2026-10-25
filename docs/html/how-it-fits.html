@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it fits together · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/how-it-fits.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>How it fits together</h1>
+<div class="meta">10 min read · 9 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a class="here" href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#1-sensors-raw-data">1. Sensors: raw data</a><a href="#2-where-am-i-two-filters">2. Where am I: two filters</a><a href="#3-drivers-propose-the-mux-picks">3. Drivers propose, the mux picks</a><a href="#4-ego-the-virtual-car">4. ego: the virtual car</a><a href="#5-one-car-model-everywhere">5. One car model, everywhere</a><a href="#6-backends-one-plays-the-car">6. Backends: one plays the car</a><a href="#7-safety-layers">7. Safety layers</a><a href="#8-the-real-graph-three-ways">8. The real graph, three ways</a></nav>
+<div class="lead"><p>Everything flows one way: sensors, then "where am I", then drivers, the mux, ego, and one
+backend. The layers only talk through ROS topics, so any box can be swapped without
+touching the others.</p></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<p><img alt="How the stack fits together" src="../img/architecture.svg" /></p>
+</section>
+<section class="card"><h2 id="1-sensors-raw-data">1. Sensors: raw data</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Driver</th>
+<th>Publishes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheel speed</td>
+<td>an Arduino on the Orin's CAN bus (0x200, 0x201), read by <code>spine_bridge role:=sensors</code> (<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>)</td>
+<td><code>/vehicle/odom</code>, <code>/vehicle/wheels</code></td>
+</tr>
+<tr>
+<td>IMU (Yahboom, USB)</td>
+<td><code>aav_imu_yahboom</code> (Rust), then the stock <code>imu_filter_madgwick</code></td>
+<td><code>/sensors/imu/data_raw</code>, then <code>/sensors/imu/data</code></td>
+</tr>
+<tr>
+<td>GPS (u-blox, USB)</td>
+<td>the stock <code>ublox_gps</code>; or <code>nmea_navsat_driver</code>, or <code>ublox_dgnss</code> on the car</td>
+<td><code>/sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>The car's shape</td>
+<td>the stock <code>robot_state_publisher</code>, from <code>vehicle.yaml</code></td>
+<td><code>/tf_static</code>: where each sensor sits</td>
+</tr>
+<tr>
+<td>Lidar (Velodyne VLP-16, roof)</td>
+<td>the stock <code>velodyne</code> driver, on the Orin</td>
+<td><code>/sensors/lidar/points</code></td>
+</tr>
+<tr>
+<td>Front cameras (the camera Pi)</td>
+<td>MediaMTX on the Pi streams H.264; on the Orin one <code>camera_stream_&lt;camera&gt;</code> each decodes it and runs the detector inside (<a href="camera-pipeline.html">camera pipeline</a>)</td>
+<td><code>/perception/detections</code>: no raw pictures on the network</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each driver publishes a standard message in its own frame. Another IMU or GPS can replace
+it without changing anything downstream.</p>
+</section>
+<section class="card"><h2 id="2-where-am-i-two-filters">2. Where am I: two filters</h2>
+<p><img alt="The two EKFs" src="../img/ekf.svg" /></p>
+<ul>
+<li><strong><code>ekf_local</code></strong> fuses the wheels and the IMU. It's smooth and never jumps, but it drifts
+  slowly, like counting your steps. Use it to steer.</li>
+<li><strong><code>ekf_global</code></strong> fuses the same inputs <strong>plus GPS</strong>. It stays near the truth, but can
+  hop a little when a GPS fix arrives. Use it to plan.</li>
+<li><strong><code>navsat_transform</code></strong> turns GPS latitude and longitude into map x and y for
+  <code>ekf_global</code>.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Does the global EKF read the local one?</p>
+<p>In effect, yes. <code>ekf_global</code> publishes only the correction <code>map → odom</code>, worked out on
+top of <code>ekf_local</code>'s <code>odom → base_link</code>. Chained together, they give the car's true
+position, and the local estimate stays smooth.</p>
+</div>
+</section>
+<section class="card"><h2 id="3-drivers-propose-the-mux-picks">3. Drivers propose, the mux picks</h2>
+<p>Every driver publishes a <code>TwistStamped</code> (speed in m/s, turn rate in rad/s) on its own
+topic. None of them knows what kind of vehicle it's driving.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Driver</th>
+<th>Topic</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Joystick: the safety driver</td>
+<td><code>/drivers/joy/cmd_vel</code></td>
+<td>100</td>
+</tr>
+<tr>
+<td>Keyboard, or another remote</td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
+<td>90</td>
+</tr>
+<tr>
+<td>Actuator tests: measure the car (stages 3-4)</td>
+<td><code>/drivers/tests/cmd_vel</code></td>
+<td>60</td>
+</tr>
+<tr>
+<td>Scripted: speed up, hold, slow down</td>
+<td><code>/drivers/scripted/cmd_vel</code></td>
+<td>50</td>
+</tr>
+<tr>
+<td>Replay of a recorded drive</td>
+<td><code>/drivers/replay/cmd_vel</code></td>
+<td>40</td>
+</tr>
+<tr>
+<td>Nav2: drive to a point on the map</td>
+<td><code>/drivers/nav/cmd_vel</code></td>
+<td>20</td>
+</tr>
+<tr>
+<td>AI</td>
+<td><code>/drivers/ai/cmd_vel</code></td>
+<td>10, later</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>twist_mux</code> passes on the highest priority that has spoken in the last 0.5 s, as
+<code>/control/cmd_vel</code>. Publishing <code>true</code> on <code>/safety/estop</code> blocks every driver until someone publishes
+<code>false</code>.</p>
+<p>Teleop is just another driver. The keyboard's commands take the same path as Nav2's:
+mux, ego, then the turtle or the car.</p>
+</section>
+<section class="card"><h2 id="4-ego-the-virtual-car">4. ego: the virtual car</h2>
+<p>ego is the only node that knows the car is a car. Fifty times a second it turns <code>/control/cmd_vel</code>
+into <code>/ego/actuator_cmd</code>: an <code>AckermannDriveStamped</code> with a speed and a steering angle
+(positive is left).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bicycle model</td>
+<td>steering angle = atan(wheelbase × turn rate ÷ speed). A car can't turn on the spot, so at zero speed ego holds the wheels where they are.</td>
+</tr>
+<tr>
+<td>Limits</td>
+<td>1.0 m/s top speed to start; acceleration; steering ±0.5 rad; steering rate</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>no command for 0.3 s: brake to a stop</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="5-one-car-model-everywhere">5. One car model, everywhere</h2>
+<p>The car's numbers live in one file, <code>src/aav_description/config/vehicle.yaml</code>. The launch
+files hand them to every part that needs them.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Uses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ego</td>
+<td>the wheelbase and steering limit, for the bicycle model</td>
+</tr>
+<tr>
+<td>URDF (<code>robot_state_publisher</code>)</td>
+<td>where each sensor sits</td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td>the footprint, and the tightest turn: wheelbase ÷ tan(max steer) = 2.86 m</td>
+</tr>
+<tr>
+<td><code>turtlesim_adapter</code>, <code>gazebo_adapter</code></td>
+<td>the wheelbase, so the turtle and the simulated car turn like the car</td>
+</tr>
+<tr>
+<td><code>aav_spine</code>, <code>aav_legacy</code></td>
+<td>the wheelbase, track and wheel size</td>
+</tr>
+</tbody>
+</table></div>
+<p>Most of the numbers are still guesses: see <a href="car_measurements.html">Car numbers</a>.
+The same numbers make the car's linear model (transfer functions, state space, the
+margins with the delays): <a href="vehicle-model.html">The car as a linear model</a>.</p>
+</section>
+<section class="card"><h2 id="6-backends-one-plays-the-car">6. Backends: one plays the car</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Package</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The car, today (<code>actuators:=uart</code>)</td>
+<td><code>aav_legacy</code></td>
+<td><code>legacy_uart_bridge</code> on the Motor Pi: UART frames for the ESP32</td>
+</tr>
+<tr>
+<td>The CAN spine, later (<code>actuators:=can</code>)</td>
+<td><code>aav_spine_bridge</code></td>
+<td><code>spine_bridge</code> on the Orin: CAN frames for the spine firmware</td>
+</tr>
+<tr>
+<td>turtlesim</td>
+<td><code>aav_turtlesim</code></td>
+<td>the stock turtlesim, steered with the bicycle model</td>
+</tr>
+<tr>
+<td>Gazebo</td>
+<td><code>aav_gazebo</code></td>
+<td>a simulated car with an IMU and GPS, on the real car's topics</td>
+</tr>
+<tr>
+<td>CARLA</td>
+<td><code>aav_carla</code></td>
+<td>adapter ready, untested: needs the NVIDIA computer (<a href="carla.html">CARLA</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each backend reports the car's speed back on <code>/vehicle/odom</code>. That closes the loop into
+the EKFs. On today's car the UART link sends nothing back, so the wheel sensors on the
+Orin's CAN bus do it.</p>
+<h3 id="the-cars-wiring-today">The car's wiring, today</h3>
+<p>As Ben understands it (23 Oct; the hardware lead confirms). Details:
+<a href="can-plan.html#todays-wiring-23-october">The CAN plan</a>.</p>
+<pre class="highlight"><code class="language-text">         ┌──────────── Orin ────────────┐                   Motor Pi
+ego ─► output_mux ─/control/car/actuator_cmd─ network ─► legacy_uart_bridge ─UART─► ESP32
+                                │                                                 throttle
+CAN ─► socket_can_receiver ─► spine_bridge role:=sensors ─► /vehicle/odom,        steering
+ ▲     (no sender)            (sends nothing)               /vehicle/wheels       brake
+ └─ wheel sensors' Arduino (0x200, 0x201), and other sensors?</code></pre>
+<h3 id="the-output-mux-one-target-and-the-real-car-only-on-real-data">The output mux: one target, and the real car only on real data</h3>
+<p>No backend reads <code>/ego/actuator_cmd</code> itself. The <strong>output mux</strong> (<code>target:=</code>) passes ego's
+command on to its target's own topic, and the <strong>sensor mux</strong> (<code>source:=</code>) checks where
+the data comes from. See <a href="sources-and-targets.html">Sources and targets</a>.</p>
+<pre class="highlight"><code class="language-text">ego ─/ego/actuator_cmd─► output_mux ─/control/car/actuator_cmd─► legacy_uart_bridge (today),
+                           ▲                                      or spine_bridge role spine
+                           │  (only while every source is REAL; else silent, latched)
+        sensor_mux ────────┘  /system/sensor_mux/state</code></pre>
+</section>
+<section class="card"><h2 id="7-safety-layers">7. Safety layers</h2>
+<p>From the person outward. Each layer works even if everything after it fails.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Layer</th>
+<th>Stops the car when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Joystick deadman (priority 100)</td>
+<td>held with the sticks centred</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>/safety/estop</code></td>
+<td>it's true: the mux blocks every driver, and the car backends brake</td>
+</tr>
+<tr>
+<td>3</td>
+<td>ego's timeout</td>
+<td>no command arrives for 0.3 s</td>
+</tr>
+<tr>
+<td>3a</td>
+<td>The output mux</td>
+<td>any source isn't REAL (a simulator, the bench, a replay on the network), or the sensor mux says no or goes quiet: it sends nothing, latched</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The backend</td>
+<td>ego is quiet: <code>legacy_uart_bridge</code> sends brake frames after 0.3 s; <code>spine_bridge</code> (CAN spine) stops sending drive frames after 0.1 s</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The firmware's watchdog</td>
+<td>no valid frame for 100 ms: throttle off, brake on. The Rust ESP32 firmware, on the UART link today, or the CAN spine</td>
+</tr>
+<tr>
+<td>6</td>
+<td>RC override switch, hardware e-stop, driver faults</td>
+<td>always: handled in the firmware</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two more, for the automatic drivers only (Nav2 and the AI slot; never a person or a test):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Stops Nav2 when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>collision_monitor</td>
+<td>radar or lidar points in the stop zone just ahead; or the radar or lidar goes quiet for 1 s</td>
+</tr>
+<tr>
+<td>The sensor watchdog (<code>aav_safety</code>)</td>
+<td>the wheels, the IMU, the GPS or an EKF go quiet, send NaN or freeze; the GPS jumps; the wheels disagree with the IMU or the GPS; the HUD's screen freezes or dies (its <a href="hud.html#the-heartbeat">heartbeat</a>, on the car); a front camera's stream goes quiet (its detections, on the car); the watchdog itself goes quiet (fail-safe: twist_mux's lock times out). A twist_mux lock, shown on the HUD and the map window (<a href="simulation.html#sensor-failures-on-purpose">simulation</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Today's car has no layer 5</p>
+<p>The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays
+on. Keep the wheels off the ground and the e-stop in hand: see <a href="firmware.html">Firmware</a>.</p>
+</div>
+</section>
+<section class="card"><h2 id="8-the-real-graph-three-ways">8. The real graph, three ways</h2>
+<p>The same layers, as they really run: <code>pixi run graph-picture</code> saved each one from a live
+profile on Ben's Mac (20 Oct). Read them left to right. The middle stays the same in all
+three; only the left edge (where the data comes from) and the right edge (who plays the
+car) change.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Nodes, topics</th>
+<th>Look for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run turtle</code></td>
+<td>9, 23</td>
+<td>the whole command path on one line: <code>scripted_driver</code> → <code>twist_mux</code> → <code>ego</code> → <code>turtlesim_adapter</code>, and <code>/vehicle/odom</code> back into <code>ekf_local</code></td>
+</tr>
+<tr>
+<td><code>pixi run bench</code></td>
+<td>27, 50</td>
+<td>the stand-ins on the left (<code>mock_*</code>, <code>spine_sim</code>); <code>/vehicle/bench/truth</code> feeding every mock; <code>spine_bridge</code> and <code>spine_sim</code> talking over <code>/can/tx</code>, <code>/can/rx</code></td>
+</tr>
+<tr>
+<td><code>pixi run sim</code> (empty world)</td>
+<td>19, 38</td>
+<td>no mocks: <code>gz_bridge</code> brings in <code>/gazebo/imu</code> and <code>/gazebo/navsat</code>, and <code>gazebo_imu</code> and <code>gazebo_gps</code> turn them into <code>/sensors/...</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-turtle">The turtle</h3>
+<p><img alt="The turtle profile's graph" src="../img/graph-turtle.svg" /></p>
+<h3 id="bench-mode">Bench mode</h3>
+<p><img alt="Bench mode's graph" src="../img/graph-bench.svg" /></p>
+<h3 id="gazebo">Gazebo</h3>
+<p><img alt="Gazebo's graph" src="../img/graph-sim.svg" /></p>
+<p>The PNGs beside them (<code>docs/img/graph-*.png</code>) are for slides. To see it live: start a
+profile, then <code>pixi run graph</code>.</p></section>
+<nav class="prevnext"><a class="prev" href="first-day.html"><small>Previous</small>← Your first day</a>
+<a class="next" href="team.html"><small>Next</small>Starting points →</a></nav>
+</main>
+<footer>Source: <code>docs/how-it-fits.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What each package does · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/packages.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>What each package does</h1>
+<div class="meta">15 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a class="here" href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#at-a-glance">At a glance</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers-the-mux-and-ego">Drivers, the mux and ego</a><a href="#perception">Perception</a><a href="#backends">Backends</a><a href="#bench-mode">Bench mode</a><a href="#interfaces-and-bringup">Interfaces and bringup</a><a href="#firmware">Firmware</a><a href="#the-hud">The HUD</a><a href="#examples">Examples</a></nav>
+<div class="lead"><p>Every ROS package in <code>src/</code>, layer by layer, with what it reads and writes. Then the
+firmware, the HUD and the examples. 26 packages build today, and none is parked:
+perception came in on 10 October, the lane finder on 11 October.</p></div>
+<section class="card"><h2 id="at-a-glance">At a glance</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Layer</th>
+<th>Does</th>
+<th>Status</th>
+<th>Origin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_sensors</code></td>
+<td>sensors</td>
+<td>starts the IMU, GPS, radar, battery and camera drivers, with their configs</td>
+<td><span class="badge b-untested">untested</span> needs the devices</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_imu_yahboom</code></td>
+<td>sensors</td>
+<td>the Yahboom IMU over USB serial (Rust)</td>
+<td><span class="badge b-untested">untested</span> needs the device; the C++ driver's answers, bit for bit</td>
+<td>new: Ben's rewrite of the 2025-26 <code>yahboom-IMU</code> C++ driver</td>
+</tr>
+<tr>
+<td><code>battery_monitor</code></td>
+<td>sensors</td>
+<td>the Victron battery monitor</td>
+<td><span class="badge b-untested">untested</span></td>
+<td>2024-25 <code>Battery-Monitor-ROS</code></td>
+</tr>
+<tr>
+<td><code>ti_ros2_driver</code></td>
+<td>sensors</td>
+<td>the TI mmWave radar, as point clouds</td>
+<td><span class="badge b-untested">untested</span></td>
+<td>2025-26 <code>Nav_Radar</code></td>
+</tr>
+<tr>
+<td><code>aav_description</code></td>
+<td>description</td>
+<td>the car's model (URDF) and <code>vehicle.yaml</code></td>
+<td><span class="badge b-works">works</span> the numbers are guesses</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_localization</code></td>
+<td>localization</td>
+<td>the two EKFs and <code>navsat_transform</code>: configuration only</td>
+<td><span class="badge b-works">works</span> turtle, Gazebo and the bench</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_gps_heading</code></td>
+<td>localization</td>
+<td><code>gps_heading</code>: the heading from the GPS receiver's velocity, for <code>ekf_global</code></td>
+<td><span class="badge b-works">works</span> Gazebo</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_teleop</code></td>
+<td>drivers</td>
+<td>joystick → <code>/drivers/joy/cmd_vel</code>, plus an e-stop button</td>
+<td><span class="badge b-untested">untested</span></td>
+<td>new; the button map from 2025-26 <code>joy_teleop_ackerman</code></td>
+</tr>
+<tr>
+<td><code>aav_scripted</code></td>
+<td>drivers</td>
+<td>scripted drives: speed up, hold, slow down</td>
+<td><span class="badge b-works">works</span> turtle and the bench</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_goto</code></td>
+<td>drivers</td>
+<td>drive to one GPS or map point B, and stop there smoothly</td>
+<td><span class="badge b-works">works</span> in Gazebo (15 Oct); <span class="badge b-untested">untested</span> on the car</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_language</code></td>
+<td>drivers</td>
+<td>plain English: a local model plans drive tools, you say yes</td>
+<td><span class="badge b-works">works</span> Gazebo and the turtle</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_navigation</code></td>
+<td>drivers</td>
+<td>Nav2, set up for a car, and the maps</td>
+<td><span class="badge b-works">works</span> goals reached in Gazebo</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_mux</code></td>
+<td>mux</td>
+<td>twist_mux: the priorities and the e-stop lock</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_io_mux</code></td>
+<td>mux</td>
+<td>the sensor mux and the output mux: simulated data never drives the real car</td>
+<td><span class="badge b-works">works</span> turtle, Gazebo and the bench; <span class="badge b-untested">untested</span> on the car</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_ego</code></td>
+<td>ego</td>
+<td>one command → speed and steering the car can do</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_spine</code></td>
+<td>backends</td>
+<td>the real car: ego's commands as CAN frames. Its Python <code>spine_bridge</code>, the config and the launch file</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>; no spine board yet</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_spine_bridge</code></td>
+<td>backends</td>
+<td>the same <code>spine_bridge</code> in Rust, on the firmware's own CAN code (<code>spine-core</code>); the default since 23 Oct (<code>bridge:=python</code> for the other)</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>; no spine board yet</td>
+<td>new: a port of <code>aav_spine</code>'s node (T1.8)</td>
+</tr>
+<tr>
+<td><code>aav_legacy</code></td>
+<td>backends</td>
+<td>today's car: the 2025-26 ESP32 over UART, and the wheel encoder</td>
+<td><span class="badge b-untested">untested</span> on the car</td>
+<td>new, for the 2025-26 protocols</td>
+</tr>
+<tr>
+<td><code>aav_turtlesim</code></td>
+<td>backends</td>
+<td>turtlesim, steered like the car</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_gazebo</code></td>
+<td>backends</td>
+<td>Gazebo's car behind the real car's topics</td>
+<td><span class="badge b-works">works</span> headless</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_carla</code></td>
+<td>backends</td>
+<td>a CARLA adapter (CARLA's Python client)</td>
+<td><span class="badge b-untested">untested</span> never run against a server</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_interfaces</code></td>
+<td>interfaces</td>
+<td>our messages: <code>VehicleStatus</code>, <code>ScriptedDrive</code>, <code>GoTo</code></td>
+<td><span class="badge b-works">works</span> builds</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_bringup</code></td>
+<td>bringup</td>
+<td>the five profiles, perception on the car, the machine files, the RViz layout</td>
+<td><span class="badge b-works">works</span> turtle, sim, replay, bench</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_detector</code></td>
+<td>perception</td>
+<td>RF-DETR (the default) or YOLO on the camera's images, and the stop-sign watcher</td>
+<td><span class="badge b-works">works</span> on the bench</td>
+<td>2024-25 <code>camera_ros2_ws</code></td>
+</tr>
+<tr>
+<td><code>aav_radar_clusters</code></td>
+<td>perception</td>
+<td>radar clustering (DBSCAN), with a box round each object (Rust)</td>
+<td><span class="badge b-works">works</span> on the bench and in Gazebo</td>
+<td>new: a rewrite of the 2025-26 <code>Nav_Radar</code> C++ node</td>
+</tr>
+<tr>
+<td><code>aav_lane_finder</code></td>
+<td>perception</td>
+<td>the lane lines in the camera's pictures, as <code>/perception/lane/geometry</code> (OpenCV)</td>
+<td><span class="badge b-works">works</span> on the bench</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_lane_geometry</code></td>
+<td>perception</td>
+<td>lane keeping: a driver on <code>/drivers/ai/cmd_vel</code></td>
+<td><span class="badge b-works">works</span> on the bench, with <code>aav_lane_finder</code></td>
+<td>2025-26 <code>Lane_Detection_ROS2</code></td>
+</tr>
+<tr>
+<td><code>aav_hud</code></td>
+<td>hud</td>
+<td>the HUD's web server (Flask, Socket.IO), on our topics</td>
+<td><span class="badge b-works">works</span> on the bench, with the app's e-stop button</td>
+<td>2025-26 <code>User-Interface</code></td>
+</tr>
+<tr>
+<td><code>aav_hud_raylib</code></td>
+<td>hud</td>
+<td>the in-car screen in Rust: one raylib window that is the ROS node <code>hud</code></td>
+<td><span class="badge b-works">works</span> on a Mac: <code>--demo</code>, fed topics, bench mode. <span class="badge b-untested">untested</span> on a Pi and on the car</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_spine_sim</code></td>
+<td>bench</td>
+<td>the spine on a laptop: the firmware's logic on a model car (Rust)</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_bench</code></td>
+<td>bench</td>
+<td>pretend sensors: IMU, GPS, battery and camera</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="sensors">Sensors</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Reads</th>
+<th>Publishes</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_sensors</code></td>
+<td></td>
+<td></td>
+<td><code>sensors.launch.py imu:= gps:= radar:= battery:= gps_driver:=</code>; configs in <code>config/</code></td>
+</tr>
+<tr>
+<td><code>aav_imu_yahboom</code>: <code>imu_node</code></td>
+<td><code>/dev/aav/imu</code></td>
+<td><code>/sensors/imu/data_raw</code>, <code>/sensors/imu/mag</code></td>
+<td><code>/sensors/imu/mag</code> is in raw counts, not tesla, so it's unused</td>
+</tr>
+<tr>
+<td>stock <code>imu_filter_madgwick</code></td>
+<td><code>/sensors/imu/data_raw</code></td>
+<td><code>/sensors/imu/data</code></td>
+<td>magnetometer off</td>
+</tr>
+<tr>
+<td>stock <code>ublox_gps</code> (KumarRobotics' <code>ublox</code>)</td>
+<td><code>/dev/aav/gps</code></td>
+<td><code>/sensors/gps/fix</code></td>
+<td>the default GPS driver, in Pixi too. Leaves the receiver's settings as they are. Tentative until Q18</td>
+</tr>
+<tr>
+<td>stock <code>ublox_dgnss</code></td>
+<td>a u-blox F9P on USB</td>
+<td><code>/sensors/gps/fix</code></td>
+<td><code>gps_driver:=ublox_dgnss</code>. Not in Pixi: the car only</td>
+</tr>
+<tr>
+<td><code>ti_ros2_driver</code></td>
+<td><code>/dev/aav/radar_cmd</code>, <code>/dev/aav/radar_data</code></td>
+<td><code>/sensors/radar/points</code></td>
+<td>its configs are indoor demos</td>
+</tr>
+<tr>
+<td><code>battery_monitor</code></td>
+<td><code>/dev/aav/battery</code></td>
+<td><code>/vehicle/battery</code></td>
+<td></td>
+</tr>
+<tr>
+<td>stock <code>usb_cam</code> (<code>cameras.launch.py</code>)</td>
+<td><code>/dev/aav/camera_left</code>, <code>_right</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code>, <code>/sensors/camera/front_left/camera_info</code></td>
+<td>Linux only; the 2024-25 calibrations</td>
+</tr>
+<tr>
+<td>stock <code>nmea_navsat_driver</code> (<code>gps_nmea.launch.py</code>)</td>
+<td><code>/dev/aav/gps</code></td>
+<td><code>/sensors/gps/fix</code></td>
+<td><code>gps_driver:=nmea</code>: any NMEA receiver</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="description-and-localization">Description and localization</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Reads</th>
+<th>Publishes</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_description</code></td>
+<td><code>vehicle.yaml</code>, <code>/vehicle/joint_states</code></td>
+<td><code>/robot_description</code>, <code>/tf</code>, <code>/tf_static</code></td>
+<td><code>pixi run view</code> shows the model</td>
+</tr>
+<tr>
+<td><code>aav_localization</code>: <code>ekf_local</code></td>
+<td><code>/vehicle/odom</code>, <code>/sensors/imu/data</code></td>
+<td><code>/localization/odom/local</code>, odom → base_link</td>
+<td>smooth; use it to steer</td>
+</tr>
+<tr>
+<td><code>aav_localization</code>: <code>ekf_global</code></td>
+<td>the same, plus <code>/localization/gps/odom</code> and <code>/localization/gps/heading</code></td>
+<td><code>/localization/odom/global</code>, map → odom</td>
+<td>stays near the truth; use it to plan</td>
+</tr>
+<tr>
+<td><code>aav_localization</code>: <code>navsat_transform</code></td>
+<td><code>/sensors/gps/fix</code>, <code>/sensors/imu/data</code>, <code>/localization/odom/global</code></td>
+<td><code>/localization/gps/odom</code>, <code>/localization/gps/fix</code></td>
+<td>the datum in <code>navsat.yaml</code> is a placeholder near Carleton</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="drivers-the-mux-and-ego">Drivers, the mux and ego</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Reads</th>
+<th>Publishes</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_teleop</code></td>
+<td><code>/drivers/joy/joy</code></td>
+<td><code>/drivers/joy/cmd_vel</code> (while the trigger is held), <code>/safety/estop</code></td>
+<td>the button numbers are still TODO</td>
+</tr>
+<tr>
+<td>keyboard (<code>tools/keyboard.sh</code>)</td>
+<td>your keys</td>
+<td><code>/drivers/keyboard/cmd_vel</code></td>
+<td><code>pixi run keyboard</code></td>
+</tr>
+<tr>
+<td><code>aav_actuator_tests</code></td>
+<td><code>/vehicle/odom</code>, <code>/vehicle/steering</code>, <code>/throttle</code>, <code>/brake</code>, <code>/wheels</code>, the IMU, <code>/localization/odom/local</code>, GPS, <code>/safety/estop</code>, <code>/control/cmd_vel</code>, <code>/system/source</code></td>
+<td><code>/drivers/tests/cmd_vel</code></td>
+<td><code>pixi run actuator-test</code>: the stage 3-4 tests; prints <code>vehicle.yaml</code> lines (<a href="actuator-tests.html">Actuator tests</a>)</td>
+</tr>
+<tr>
+<td><code>aav_scripted</code></td>
+<td><code>/localization/odom/local</code></td>
+<td><code>/drivers/scripted/cmd_vel</code></td>
+<td>the action <code>/scripted_drive</code></td>
+</tr>
+<tr>
+<td><code>aav_goto</code></td>
+<td><code>/localization/odom/global</code>, <code>/sensors/gps/fix</code>, <code>/safety/estop</code>, the watchdog's lock, <code>/system/source</code>, <code>/control/cmd_vel</code></td>
+<td><code>/drivers/goto/cmd_vel</code></td>
+<td>the action <code>/goto</code>; calls <code>/fromLL</code> for a lat/lon B. <code>pixi run goto</code> (<a href="../../READ-ME-A-TO-B.md">A to B</a>)</td>
+</tr>
+<tr>
+<td><code>aav_language</code></td>
+<td>your words; odometry, GPS, <code>/diagnostics</code>, <code>/vehicle/status</code></td>
+<td><code>/safety/estop</code> (true only)</td>
+<td>calls <code>/scripted_drive</code> and <code>/follow_gps_waypoints</code>; never publishes a velocity</td>
+</tr>
+<tr>
+<td><code>aav_navigation</code></td>
+<td><code>/localization/odom/local</code>, <code>/map</code>, <code>/goal_pose</code></td>
+<td><code>/drivers/nav/cmd_vel</code>, <code>/plan</code></td>
+<td>SmacPlannerHybrid and MPPI (or Regulated Pure Pursuit); GPS waypoints through <code>/follow_gps_waypoints</code></td>
+</tr>
+<tr>
+<td><code>aav_mux</code> (twist_mux)</td>
+<td>every <code>/drivers/&lt;driver&gt;/cmd_vel</code>, <code>/safety/estop</code></td>
+<td><code>/control/cmd_vel</code></td>
+<td>priorities: <a href="howto-driver.html">Build a driver</a></td>
+</tr>
+<tr>
+<td><code>aav_ego</code></td>
+<td><code>/control/cmd_vel</code></td>
+<td><code>/ego/actuator_cmd</code>, 50 times a second</td>
+<td>1.0 m/s top speed, ±0.5 rad, brakes after 0.3 s without a command</td>
+</tr>
+<tr>
+<td><code>aav_io_mux</code></td>
+<td><code>/ego/actuator_cmd</code>, <code>/system/source</code>, who publishes each sensor</td>
+<td><code>/control/&lt;target&gt;/actuator_cmd</code>, <code>/system/sensor_mux/state</code>, <code>/safety/output_mux/state</code></td>
+<td>the real car's commands only while every source is REAL: <a href="sources-and-targets.html">Sources and targets</a></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="perception">Perception</h2>
+<p><a href="perception.html">Perception</a> has the details.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Reads</th>
+<th>Publishes</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_detector</code>: <code>object_detector</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
+<td><code>/perception/detections</code>, <code>/perception/detections/image</code></td>
+<td><code>detector:=rfdetr</code> (the default: a <code>.pth</code>, or its <code>rf-detr-*.mlpackage</code> or <code>.engine</code>) or <code>yolo</code> (a <code>.pt</code>, <code>.mlpackage</code> or <code>.engine</code>); needs the <code>ml</code> environment, or JetPack's PyTorch and TensorRT</td>
+</tr>
+<tr>
+<td><code>aav_detector</code>: <code>stop_sign_watcher</code></td>
+<td><code>/perception/detections</code></td>
+<td><code>/perception/stop_sign</code></td>
+<td>twist_mux's stop-sign lock, priority 30</td>
+</tr>
+<tr>
+<td><code>aav_radar_clusters</code>: <code>radar_clusters</code></td>
+<td><code>/sensors/radar/points</code></td>
+<td><code>/perception/radar/clusters</code>, <code>/perception/radar/cluster_boxes</code></td>
+<td>DBSCAN, in Rust; eps 0.8 m, 15 points (5 on the bench and in Gazebo)</td>
+</tr>
+<tr>
+<td><code>aav_lane_finder</code>: <code>lane_finder</code></td>
+<td><code>/sensors/camera/front_left/image_raw</code>, <code>/sensors/camera/front_left/camera_info</code></td>
+<td><code>/perception/lane/geometry</code>, <code>/perception/lane/image</code></td>
+<td>a bird's-eye view, sliding windows, a curve per line; the camera's place from <code>vehicle.yaml</code></td>
+</tr>
+<tr>
+<td><code>aav_lane_geometry</code>: <code>control_interface</code></td>
+<td><code>/perception/lane/geometry</code></td>
+<td><code>/drivers/ai/cmd_vel</code></td>
+<td>steers back to the lane's centre, measured 3 m ahead</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="backends">Backends</h2>
+<p>Each backend reads ego's commands from the output mux (<code>/control/&lt;target&gt;/actuator_cmd</code>) and reports the car's speed on <code>/vehicle/odom</code>.
+Only one runs at a time.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Plays the car with</th>
+<th>Also</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_spine</code> (<code>aav_spine_bridge</code>: the node, in Rust)</td>
+<td>CAN frames on <code>/can/tx</code> (through ros2_socketcan, Linux only)</td>
+<td><code>/vehicle/status</code>; the service <code>/spine/arm</code>; stops sending drive frames when ego goes quiet for 0.1 s</td>
+</tr>
+<tr>
+<td><code>aav_legacy</code></td>
+<td>13-byte UART frames to today's ESP32 (<code>/dev/ttyAMA0</code>)</td>
+<td><code>encoder_udp</code>: the wheel encoder's UDP packets into <code>/vehicle/odom</code></td>
+</tr>
+<tr>
+<td><code>aav_turtlesim</code></td>
+<td><code>/turtle1/cmd_vel</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>aav_gazebo</code></td>
+<td><code>/gazebo/cmd_vel</code></td>
+<td>turns Gazebo's IMU and GPS into <code>/sensors/imu/data_raw</code> and <code>/sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td><code>aav_carla</code></td>
+<td>CARLA's Python client (TCP to the server)</td>
+<td>the same sensor topics as Gazebo; untested (<a href="carla.html">CARLA</a>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="bench-mode">Bench mode</h2>
+<p><a href="bench.html">Bench mode</a> runs the car's software with these stand-ins for the hardware.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Stands in for</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_spine_sim</code>: <code>spine_sim</code></td>
+<td>the spine board and the actuators</td>
+<td>answers spine_bridge's CAN frames with spine-core's own logic; publishes <code>/vehicle/bench/truth</code></td>
+</tr>
+<tr>
+<td><code>aav_bench</code></td>
+<td>the IMU, GPS, battery and camera drivers</td>
+<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>; the world is <code>config/bench.yaml</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="interfaces-and-bringup">Interfaces and bringup</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_interfaces</code></td>
+<td><code>VehicleStatus</code> (mode, armed, e-stop, speed, steering, throttle, brake, fault bits) and the <code>ScriptedDrive</code> action</td>
+</tr>
+<tr>
+<td><code>aav_bringup</code></td>
+<td>the profiles <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code>, <code>bench</code>; the machine files <code>orin</code>, <code>motor_pi</code>, <code>laptop</code>, <code>all</code>, which pick the car's parts, perception too; <code>rviz/drive.rviz</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="firmware">Firmware</h2>
+<p>colcon ignores <code>firmware/</code>. It's built with cargo, PlatformIO or the Pico SDK.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What it is</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>can/aav.dbc</code></td>
+<td>the CAN contract: six frames between the Orin, the spine and the two wheel nodes</td>
+<td>v0.2.0 (the KEFC plan), merged 15 Oct</td>
+</tr>
+<tr>
+<td><code>spine/crates/spine-core</code></td>
+<td>the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder</td>
+<td><span class="badge b-works">works</span> 71 tests, and the bench</td>
+</tr>
+<tr>
+<td><code>spine/crates/wheel-core</code></td>
+<td>the front wheel nodes' logic in Rust: pulses to speed, the WHEEL_SPEED frame</td>
+<td><span class="badge b-works">works</span> 9 tests, and the bench; no board yet</td>
+</tr>
+<tr>
+<td><code>spine/crates/aav-inputs</code></td>
+<td>debounced switches, an e-stop that trips at once, counting with a lockout</td>
+<td><span class="badge b-works">works</span> 9 tests</td>
+</tr>
+<tr>
+<td><code>spine/crates/jrk-g2</code></td>
+<td>the Pololu Jrk G2 (steering, brake) over I2C</td>
+<td><span class="badge b-works">works</span> 14 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/crates/ad5311</code></td>
+<td>the throttle DAC over I2C</td>
+<td><span class="badge b-works">works</span> 10 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/crates/pca9555</code></td>
+<td>the I/O expander (direction) over I2C</td>
+<td><span class="badge b-works">works</span> 6 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/crates/ibus</code></td>
+<td>the FlySky RC receiver's protocol</td>
+<td><span class="badge b-works">works</span> 24 tests</td>
+</tr>
+<tr>
+<td><code>spine/crates/mcp2515</code></td>
+<td>the MCP2515 CAN controller over SPI, since a Pico 2 has no CAN</td>
+<td><span class="badge b-works">works</span> 34 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/crates/legacy-link</code></td>
+<td>the 2025-26 UART link: the Motor-Pi's 13-byte frames and the C++'s targets</td>
+<td><span class="badge b-works">works</span> 31 tests, and against the C++ itself</td>
+</tr>
+<tr>
+<td><code>spine/crates/spine-board</code></td>
+<td>the glue: spine-core's outputs to the devices, the devices to its inputs, the <code>Board</code> trait, the <code>CommandLink</code> trait (CAN or UART)</td>
+<td><span class="badge b-works">works</span> 57 tests, against mocks</td>
+</tr>
+<tr>
+<td><code>spine/boards/esp32-umod</code></td>
+<td>the spine on today's ESP32 control board (Embassy): the C++'s pins and devices; the Motor-Pi's UART or CAN</td>
+<td><span class="badge b-untested">untested</span> builds, never flashed</td>
+</tr>
+<tr>
+<td><code>spine/boards/pico2</code></td>
+<td>the spine's board program for a Pico 2 (Embassy): it implements <code>Board</code>, with a 100 ms hardware watchdog</td>
+<td><span class="badge b-untested">untested</span> builds, never flashed. The car's chip is Q10-Q13</td>
+</tr>
+<tr>
+<td><code>spine/crates/wheel-encoder</code></td>
+<td>the spoke sensors (shared with the spine) and the wheel encoder's UDP packet</td>
+<td><span class="badge b-works">works</span> 12 tests, with examples <code>aav_legacy</code> checks too</td>
+</tr>
+<tr>
+<td><code>spine/crates/sentinel</code></td>
+<td>the status display's logic: its I2C packet, 13 LCD pages, the knob, the beeps</td>
+<td><span class="badge b-works">works</span> 40 tests</td>
+</tr>
+<tr>
+<td><code>spine/crates/hd44780</code></td>
+<td>a 16x2 character LCD on six GPIO pins</td>
+<td><span class="badge b-works">works</span> 5 tests, against a fake</td>
+</tr>
+<tr>
+<td><code>spine/boards/wheel-encoder-pico2</code></td>
+<td>the wheel encoder in Rust: spokes to the Motor Pi over UDP, through a W5500</td>
+<td><span class="badge b-untested">untested</span> builds, never flashed</td>
+</tr>
+<tr>
+<td><code>spine/boards/sentinel-pico2</code></td>
+<td>the status display in Rust: an I2C device at 0x42</td>
+<td><span class="badge b-untested">untested</span> builds, never flashed; not wired in</td>
+</tr>
+<tr>
+<td><code>legacy/aav_umod_esp32</code></td>
+<td>the 2025-26 ESP32 that drives today's actuators</td>
+<td>runs the car today: no timeout, an update page with no password. Stays until <code>boards/esp32-umod</code> is proven on the car</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-hud">The HUD</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hud/flutter_pi</code></td>
+<td>the 2025-26 touchscreen app (Flutter): speed, map, camera; since 11 Oct an e-stop button, Cancel and the car's status. <code>pixi run hud-test</code></td>
+</tr>
+<tr>
+<td><code>hud/scripts</code></td>
+<td>the old Pi's start-up scripts</td>
+</tr>
+<tr>
+<td><code>src/hud/aav_hud</code></td>
+<td>its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints, and the e-stop. <a href="hud.html">HUD</a> has what's left</td>
+</tr>
+<tr>
+<td><code>src/hud/aav_hud_raylib</code></td>
+<td>the HUD in Rust (raylib and rclrs), to replace the two above: the driving screen, the e-stop button, GPS and topic health. <code>pixi run hud-demo</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="examples">Examples</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Example</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>examples/rust-listener</code></td>
+<td>a first ROS node in Rust (rclrs): prints ego's commands. <code>pixi run rust-listener</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="team.html"><small>Previous</small>← Starting points</a>
+<a class="next" href="modules.html"><small>Next</small>Every module →</a></nav>
+</main>
+<footer>Source: <code>docs/packages.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

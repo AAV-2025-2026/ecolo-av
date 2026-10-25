@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossary · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/glossary.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Glossary</h1>
+<div class="meta">14 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a class="here" href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#numbers-and-a-to-c">Numbers and A to C</a><a href="#d-to-h">D to H</a><a href="#i-to-n">I to N</a><a href="#o-to-s">O to S</a><a href="#t-to-z">T to Z</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>Every acronym and term in these pages, in plain words, from A to Z.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>what each word means, in one line;</li>
+<li>where on the car or in the code you meet it.</li>
+</ul>
+<p>Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in order.</p></div>
+<section class="card"><h2 id="numbers-and-a-to-c">Numbers and A to C</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Plain words</th>
+<th>Where you meet it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>120 Ω terminator</td>
+<td>a resistor at each end of a CAN bus; without both, frames get garbled</td>
+<td>the CAN Pal and the last wheel node</td>
+</tr>
+<tr>
+<td>A*</td>
+<td>a classic way to find the shortest path on a grid</td>
+<td>the 2025-26 planner, now replaced by Nav2</td>
+</tr>
+<tr>
+<td>AAV</td>
+<td>Accessible Autonomous Vehicle: Carleton's capstone car</td>
+<td>everywhere</td>
+</tr>
+<tr>
+<td>Ackermann</td>
+<td>how a car steers: the front wheels turn, the back ones don't, so it can't spin on the spot</td>
+<td>ego's output</td>
+</tr>
+<tr>
+<td><code>AckermannDriveStamped</code></td>
+<td>a ROS message: a speed and a steering angle, with a time stamp</td>
+<td><code>/ego/actuator_cmd</code></td>
+</tr>
+<tr>
+<td>action</td>
+<td>a ROS request that takes a while and reports progress, like "drive to this point"</td>
+<td><code>/navigate_to_pose</code>, <code>/scripted_drive</code></td>
+</tr>
+<tr>
+<td>actuator</td>
+<td>a motor that moves something: the steering, the brake</td>
+<td>the moving parts</td>
+</tr>
+<tr>
+<td>area</td>
+<td>the first part of a topic name: <code>/sensors/</code>, <code>/drivers/</code>, <code>/control/</code>...</td>
+<td><a href="naming.html">Topic areas</a></td>
+</tr>
+<tr>
+<td>arm</td>
+<td>to tell the spine it may drive; it ignores drive frames until armed</td>
+<td>the service <code>/spine/arm</code></td>
+</tr>
+<tr>
+<td>backend</td>
+<td>the one program that plays the car: the real car, Gazebo or the turtle</td>
+<td><code>src/backends/</code></td>
+</tr>
+<tr>
+<td>bag</td>
+<td>a recording of ROS topics, to play back later</td>
+<td><code>tools/record.sh</code>, <code>bags/</code></td>
+</tr>
+<tr>
+<td><code>base_link</code></td>
+<td>the car's own frame: on the ground, under the middle of the rear axle</td>
+<td>TF</td>
+</tr>
+<tr>
+<td>bench mode</td>
+<td>the car's real software on one computer, with pretend boards and sensors</td>
+<td><code>pixi run bench</code>, <a href="bench.html">Bench mode</a></td>
+</tr>
+<tr>
+<td>bicycle model</td>
+<td>the maths that turns a speed and turn rate into a steering angle</td>
+<td>ego, <code>ackermann.py</code></td>
+</tr>
+<tr>
+<td>bringup</td>
+<td>the launch files that start a whole profile</td>
+<td><code>src/aav_bringup</code></td>
+</tr>
+<tr>
+<td><code>bt_navigator</code></td>
+<td>Nav2's boss: runs a behaviour tree that plans, follows and recovers</td>
+<td>Nav2</td>
+</tr>
+<tr>
+<td>CAN</td>
+<td>Controller Area Network: two twisted wires made for cars; short messages that arrive on time</td>
+<td>the KEFC bus</td>
+</tr>
+<tr>
+<td>CAN Pal</td>
+<td>a small CAN transceiver board on the Orin's 40-pin header</td>
+<td>Orin #1 (KEFC)</td>
+</tr>
+<tr>
+<td>CANable</td>
+<td>a USB-to-CAN adapter for a laptop, to watch or test a bus</td>
+<td>the bench test of CAN</td>
+</tr>
+<tr>
+<td><code>candump</code></td>
+<td>a Linux command that prints every frame on a CAN bus</td>
+<td><code>candump can0</code></td>
+</tr>
+<tr>
+<td>CARLA</td>
+<td>a photo-real driving simulator, on Unreal Engine; next to Gazebo, for the cameras (Q31, <a href="carla.html">CARLA</a>)</td>
+<td><code>src/backends/aav_carla</code></td>
+</tr>
+<tr>
+<td>checksum, CRC</td>
+<td>a few bits worked out from a message, so a garbled one is caught</td>
+<td>every CAN frame (CRC-8)</td>
+</tr>
+<tr>
+<td>CI</td>
+<td>Continuous Integration: GitHub runs the tests on every push</td>
+<td><code>.github/workflows/test.yml</code></td>
+</tr>
+<tr>
+<td>colcon</td>
+<td>the tool that builds a ROS workspace</td>
+<td><code>pixi run build</code></td>
+</tr>
+<tr>
+<td><code>collision_monitor</code></td>
+<td>a Nav2 node that sends zero speed when something enters its stop zone</td>
+<td><code>/safety/collision_monitor/state</code></td>
+</tr>
+<tr>
+<td>costmap</td>
+<td>a grid on the ground: how bad it is to drive in each cell</td>
+<td><a href="costmaps.html">Costmaps</a></td>
+</tr>
+<tr>
+<td>counter</td>
+<td>a number that goes up by one in every frame, so a frozen sender is caught</td>
+<td>every CAN frame</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="d-to-h">D to H</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Plain words</th>
+<th>Where you meet it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D* Lite</td>
+<td>a path planner that repairs its plan as the map changes</td>
+<td>the 2025-26 planner, now replaced</td>
+</tr>
+<tr>
+<td>DAC</td>
+<td>Digital-to-Analog Converter: turns a number into a voltage</td>
+<td>the throttle</td>
+</tr>
+<tr>
+<td>datum</td>
+<td>the one GPS point where the map's (0, 0) sits</td>
+<td><code>navsat.yaml</code></td>
+</tr>
+<tr>
+<td>DBC</td>
+<td>a text file that lists every CAN frame and signal</td>
+<td><code>firmware/can/aav.dbc</code></td>
+</tr>
+<tr>
+<td>DDS</td>
+<td>the network layer under ROS 2 that finds nodes and carries messages</td>
+<td><code>ROS_DOMAIN_ID</code></td>
+</tr>
+<tr>
+<td>deadman</td>
+<td>a button you must hold to drive; let go and the car stops</td>
+<td>the joystick's trigger</td>
+</tr>
+<tr>
+<td>DIN rail</td>
+<td>a metal rail that boxes clip onto</td>
+<td>the Pis at the windscreen</td>
+</tr>
+<tr>
+<td>driver (ROS)</td>
+<td>anything that proposes a command: joystick, keyboard, Nav2...</td>
+<td><code>/drivers/&lt;name&gt;/cmd_vel</code></td>
+</tr>
+<tr>
+<td>driver (device)</td>
+<td>the code that talks to one piece of hardware</td>
+<td><code>src/sensors/</code></td>
+</tr>
+<tr>
+<td>e-stop</td>
+<td>emergency stop</td>
+<td><code>/safety/estop</code>, the red button, the Kar-Tech remote</td>
+</tr>
+<tr>
+<td>ego</td>
+<td>our node that turns the chosen twist into a speed and steering angle, within limits</td>
+<td><code>src/ego/aav_ego</code></td>
+</tr>
+<tr>
+<td>EKF</td>
+<td>Extended Kalman Filter: mixes noisy sensors into one best guess of position</td>
+<td><code>ekf_local</code>, <code>ekf_global</code></td>
+</tr>
+<tr>
+<td>Embassy</td>
+<td>a Rust framework for chips with no operating system</td>
+<td>the spine firmware</td>
+</tr>
+<tr>
+<td><code>embedded-hal</code></td>
+<td>a Rust standard way to talk to pins, I2C and SPI on any chip</td>
+<td><code>firmware/spine</code></td>
+</tr>
+<tr>
+<td>encoder</td>
+<td>a sensor that counts wheel turns</td>
+<td>the Pico 2 today; Hall sensors later</td>
+</tr>
+<tr>
+<td>ESP32</td>
+<td>a small, cheap microcontroller with WiFi</td>
+<td>the control board</td>
+</tr>
+<tr>
+<td>ESP32-CAN-X2</td>
+<td>an ESP32-S3 board with CAN built in</td>
+<td>the two wheel nodes (KEFC)</td>
+</tr>
+<tr>
+<td>Ethernet</td>
+<td>the network cable a laptop uses: lots of data, many computers</td>
+<td>the switch</td>
+</tr>
+<tr>
+<td>firmware</td>
+<td>the program on a microcontroller</td>
+<td><code>firmware/</code></td>
+</tr>
+<tr>
+<td>FlySky</td>
+<td>the RC transmitter and receiver a person can take over with</td>
+<td>iBUS on the ESP32</td>
+</tr>
+<tr>
+<td>Foxglove</td>
+<td>a web app to watch ROS topics, like RViz</td>
+<td><code>foxglove_bridge</code></td>
+</tr>
+<tr>
+<td>frame (CAN)</td>
+<td>one CAN message: an ID and up to 8 bytes</td>
+<td>0x100 <code>DRIVE_CMD</code></td>
+</tr>
+<tr>
+<td>frame (TF)</td>
+<td>a coordinate system, like <code>map</code> or <code>base_link</code></td>
+<td>TF</td>
+</tr>
+<tr>
+<td>Gazebo</td>
+<td>a 3D physics simulator</td>
+<td><code>pixi run sim</code></td>
+</tr>
+<tr>
+<td>GNSS</td>
+<td>Global Navigation Satellite System: GPS and its cousins</td>
+<td>the roof antenna</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td>satellite position: latitude and longitude</td>
+<td><code>/sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>Hall sensor</td>
+<td>a sensor that notices metal or a magnet passing</td>
+<td>the front brake rotors (KEFC)</td>
+</tr>
+<tr>
+<td>HUD</td>
+<td>Head-Up Display: the in-car screen</td>
+<td><a href="hud.html">HUD</a></td>
+</tr>
+<tr>
+<td>Humble</td>
+<td>the ROS 2 version on the car today; support ends May 2027</td>
+<td>the car</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="i-to-n">I to N</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Plain words</th>
+<th>Where you meet it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>I2C</td>
+<td>a two-wire bus between chips on one board</td>
+<td>the ESP32 to the Jrks and the DAC</td>
+</tr>
+<tr>
+<td>iBUS</td>
+<td>the FlySky receiver's serial format</td>
+<td>the ESP32</td>
+</tr>
+<tr>
+<td>IMU</td>
+<td>Inertial Measurement Unit: measures turning and acceleration</td>
+<td>the Yahboom, <code>/sensors/imu/data</code></td>
+</tr>
+<tr>
+<td>inflation</td>
+<td>a soft band of cost around each obstacle in a costmap</td>
+<td>Nav2</td>
+</tr>
+<tr>
+<td>Jazzy</td>
+<td>the ROS 2 version we use; support ends May 2029</td>
+<td>everywhere</td>
+</tr>
+<tr>
+<td>JetPack</td>
+<td>NVIDIA's Ubuntu for the Jetson boards</td>
+<td>the Orin (Q24)</td>
+</tr>
+<tr>
+<td>Jetson AGX Orin</td>
+<td>NVIDIA's small computer with a big GPU</td>
+<td>Orin #1, Orin #2</td>
+</tr>
+<tr>
+<td>Jrk G2</td>
+<td>a Pololu motor driver with feedback: "go to position X"</td>
+<td>steering, brake</td>
+</tr>
+<tr>
+<td>Kar-Tech</td>
+<td>the wireless e-stop on the car</td>
+<td>the safety layer</td>
+</tr>
+<tr>
+<td>KEFC request</td>
+<td>Ben's October 2026 hardware request: the CAN bus, the wheel nodes, a second Orin, a rear camera</td>
+<td><a href="can-plan.html">CAN plan</a></td>
+</tr>
+<tr>
+<td>KTC-100</td>
+<td>a linear position sensor (a potentiometer)</td>
+<td>the steering, new (KEFC)</td>
+</tr>
+<tr>
+<td>launch file</td>
+<td>a Python file that starts many nodes with their settings</td>
+<td><code>src/*/launch/</code></td>
+</tr>
+<tr>
+<td>lidar</td>
+<td>a laser scanner: 3D points around the car</td>
+<td>the roof; no driver yet</td>
+</tr>
+<tr>
+<td>lock (twist_mux)</td>
+<td>a <code>true</code>/<code>false</code> topic that blocks lower drivers</td>
+<td><code>/safety/estop</code>, <code>/perception/stop_sign</code></td>
+</tr>
+<tr>
+<td>Madgwick</td>
+<td>a filter that turns raw IMU data into an orientation</td>
+<td><code>imu_filter_madgwick</code></td>
+</tr>
+<tr>
+<td><code>map</code></td>
+<td>the fixed frame on the earth, pinned to the datum</td>
+<td>TF</td>
+</tr>
+<tr>
+<td>MCAP</td>
+<td>the file format of our bags</td>
+<td><code>tools/record.sh</code></td>
+</tr>
+<tr>
+<td>MCP</td>
+<td>Model Context Protocol: lets an AI app read the project</td>
+<td><a href="mcp.html">AI apps (MCP)</a></td>
+</tr>
+<tr>
+<td>micro-ROS</td>
+<td>ROS on a microcontroller; we don't use it for now</td>
+<td><code>CLAUDE.md</code></td>
+</tr>
+<tr>
+<td>microcontroller</td>
+<td>a small chip that runs one program, no operating system</td>
+<td>ESP32, Pico 2</td>
+</tr>
+<tr>
+<td>mock</td>
+<td>a pretend sensor or board, for tests</td>
+<td><code>mock_imu</code>, <code>spine_sim</code></td>
+</tr>
+<tr>
+<td>Motor-Pi</td>
+<td>the Raspberry Pi 4 that drives the ESP32 today, over UART</td>
+<td>the 2025-26 path</td>
+</tr>
+<tr>
+<td>MPPI</td>
+<td>Model-predictive path integral: Nav2's controller on our car (since 22 Oct). It tries thousands of futures through a model of the car. <code>controller:=rpp</code> for Regulated Pure Pursuit instead</td>
+<td><a href="controllers.html">path followers</a></td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td>ROS 2's navigation stack: plans a path and follows it</td>
+<td><code>src/drivers/aav_navigation</code></td>
+</tr>
+<tr>
+<td><code>NavSatFix</code></td>
+<td>a ROS message: latitude, longitude, altitude</td>
+<td><code>/sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td><code>navsat_transform</code></td>
+<td>turns GPS fixes into map x and y, and back</td>
+<td><code>/localization/gps/odom</code></td>
+</tr>
+<tr>
+<td>NMEA</td>
+<td>a plain-text GPS format</td>
+<td><code>gps_driver:=nmea</code></td>
+</tr>
+<tr>
+<td>node</td>
+<td>one ROS program with one job</td>
+<td><code>ros2 node list</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="o-to-s">O to S</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Plain words</th>
+<th>Where you meet it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>odom</code></td>
+<td>the frame where the car started today: smooth, drifts</td>
+<td>TF</td>
+</tr>
+<tr>
+<td>odometry</td>
+<td>how far and how fast the car moved, from its own sensors</td>
+<td><code>/vehicle/odom</code></td>
+</tr>
+<tr>
+<td>open loop</td>
+<td>sending a command with no measurement back</td>
+<td>today's throttle</td>
+</tr>
+<tr>
+<td>OSM</td>
+<td>OpenStreetMap: a free map of the world</td>
+<td>the HUD only</td>
+</tr>
+<tr>
+<td>OSRM</td>
+<td>a road router that uses OSM</td>
+<td>the HUD's route</td>
+</tr>
+<tr>
+<td>Pico 2</td>
+<td>a Raspberry Pi microcontroller board (RP2350)</td>
+<td>the wheel encoder; a spine program</td>
+</tr>
+<tr>
+<td>Pixi</td>
+<td>installs ROS 2 and every tool without admin rights</td>
+<td><code>pixi run ...</code></td>
+</tr>
+<tr>
+<td>profile</td>
+<td>a set of nodes to start: turtle, sim, bench, car, replay</td>
+<td><code>src/aav_bringup/launch/</code></td>
+</tr>
+<tr>
+<td><code>PROVENANCE.md</code></td>
+<td>a file that says where inherited code came from</td>
+<td>each inherited package</td>
+</tr>
+<tr>
+<td>Q1–Q34</td>
+<td>the team's numbered open questions</td>
+<td><a href="decisions.html">Decisions</a></td>
+</tr>
+<tr>
+<td>QNX</td>
+<td>a real-time operating system the 2025-26 team used; replaced by twist_mux</td>
+<td>the QNX-Pi</td>
+</tr>
+<tr>
+<td>QoS</td>
+<td>Quality of Service: how a topic delivers (reliable or best effort)</td>
+<td><code>docs/interfaces.yaml</code></td>
+</tr>
+<tr>
+<td>radar</td>
+<td>radio waves that find objects ahead</td>
+<td>the TI radar, <code>/sensors/radar/points</code></td>
+</tr>
+<tr>
+<td>raylib</td>
+<td>a small graphics library; our Rust HUD uses it</td>
+<td><code>src/hud/aav_hud_raylib</code></td>
+</tr>
+<tr>
+<td>RC</td>
+<td>Radio Control: a hand-held transmitter</td>
+<td>the FlySky override</td>
+</tr>
+<tr>
+<td>Regulated Pure Pursuit</td>
+<td>a Nav2 controller: steers toward a point ahead on the path. Ours until 22 Oct; <code>controller:=rpp</code></td>
+<td><a href="controllers.html">path followers</a></td>
+</tr>
+<tr>
+<td>REP-103, REP-105</td>
+<td>ROS's rules for units and frames</td>
+<td><code>CLAUDE.md</code></td>
+</tr>
+<tr>
+<td>RoboStack</td>
+<td>ROS 2 packaged for Pixi and conda</td>
+<td><code>pixi.toml</code></td>
+</tr>
+<tr>
+<td>ROS 2</td>
+<td>Robot Operating System: programs (nodes) that talk over topics</td>
+<td>everywhere</td>
+</tr>
+<tr>
+<td><code>ROS_DOMAIN_ID</code></td>
+<td>a number; only computers with the same one see each other</td>
+<td><code>pixi run doctor</code></td>
+</tr>
+<tr>
+<td>RTK</td>
+<td>a GPS correction that gives centimetre accuracy</td>
+<td>the RTK-Pi</td>
+</tr>
+<tr>
+<td>rqt_graph</td>
+<td>a live picture of nodes and topics</td>
+<td><code>pixi run graph</code></td>
+</tr>
+<tr>
+<td>Rust</td>
+<td>the language for our firmware and hardware drivers</td>
+<td><code>firmware/spine</code></td>
+</tr>
+<tr>
+<td>RViz</td>
+<td>ROS's 3D viewer</td>
+<td><code>pixi run rviz</code></td>
+</tr>
+<tr>
+<td>service</td>
+<td>a ROS request with one quick answer</td>
+<td><code>/spine/arm</code>, <code>/fromLL</code></td>
+</tr>
+<tr>
+<td>SmacPlannerHybrid</td>
+<td>Nav2's planner that only plans turns a car can make</td>
+<td><code>nav2.yaml</code></td>
+</tr>
+<tr>
+<td>SocketCAN</td>
+<td>Linux's way to use a CAN bus like a network</td>
+<td><code>can0</code>, <code>ros2_socketcan</code></td>
+</tr>
+<tr>
+<td>spine</td>
+<td>the board that turns CAN commands into steering, brake and throttle</td>
+<td><code>firmware/spine</code>, <code>aav_spine</code></td>
+</tr>
+<tr>
+<td>stamped</td>
+<td>a message with a time stamp and frame</td>
+<td><code>TwistStamped</code></td>
+</tr>
+<tr>
+<td>switch</td>
+<td>joins many Ethernet cables into one network</td>
+<td>TP-Link TL-SG116E</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="t-to-z">T to Z</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Plain words</th>
+<th>Where you meet it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TF</td>
+<td>the tree of frames, and how they move against each other</td>
+<td><code>/tf</code>, <code>map → odom → base_link</code></td>
+</tr>
+<tr>
+<td>topic</td>
+<td>a named channel; nodes publish to it and subscribe to it</td>
+<td><code>ros2 topic list</code></td>
+</tr>
+<tr>
+<td>transceiver</td>
+<td>the chip between a microcontroller and the CAN wires</td>
+<td>U7 on the control board</td>
+</tr>
+<tr>
+<td>turtlesim</td>
+<td>ROS's teaching turtle; our cheapest stand-in for the car</td>
+<td><code>pixi run turtle</code></td>
+</tr>
+<tr>
+<td>twist</td>
+<td>a speed (m/s) and a turn rate (rad/s)</td>
+<td>every driver</td>
+</tr>
+<tr>
+<td><code>TwistStamped</code></td>
+<td>a twist with a time stamp</td>
+<td><code>/drivers/*/cmd_vel</code>, <code>/control/cmd_vel</code></td>
+</tr>
+<tr>
+<td><code>twist_mux</code></td>
+<td>picks one command from all the drivers, by priority</td>
+<td><code>src/mux/aav_mux</code></td>
+</tr>
+<tr>
+<td>UART</td>
+<td>a simple serial line between two chips</td>
+<td>the Motor-Pi to the ESP32</td>
+</tr>
+<tr>
+<td>u-blox ZED-F9R</td>
+<td>the GPS chip on the car</td>
+<td><code>ublox_gps</code></td>
+</tr>
+<tr>
+<td>UDP</td>
+<td>a quick network message with no delivery check</td>
+<td>the wheel encoder today</td>
+</tr>
+<tr>
+<td>URDF</td>
+<td>a file that describes the car's shape and where each sensor sits</td>
+<td><code>src/aav_description/urdf</code></td>
+</tr>
+<tr>
+<td>USB</td>
+<td>the plug on any computer</td>
+<td>the IMU, the GPS board</td>
+</tr>
+<tr>
+<td><code>vehicle.yaml</code></td>
+<td>the only file with the car's measurements</td>
+<td><code>src/aav_description/config</code></td>
+</tr>
+<tr>
+<td>W5500</td>
+<td>an Ethernet chip for small boards</td>
+<td>the wheel encoder today</td>
+</tr>
+<tr>
+<td>watchdog</td>
+<td>a timer that acts if a program stops checking in</td>
+<td>the spine, the ESP32</td>
+</tr>
+<tr>
+<td>wheel node</td>
+<td>a small CAN board that reads one wheel's speed</td>
+<td>0x200 left, 0x201 right (KEFC)</td>
+</tr>
+<tr>
+<td>YOLO</td>
+<td>a fast neural network that finds objects in a picture</td>
+<td><code>aav_detector</code>, stop signs</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<pre class="highlight"><code class="language-bash">pixi run turtle    # terminal 1: start something to look at
+pixi run graph     # terminal 2: nodes and topics, as a picture
+pixi run tools/ros.sh --local ros2 topic list    # every topic
+pixi run tools/ros.sh --local ros2 node list     # every node</code></pre>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Word family</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Topics, services, actions, frames</td>
+<td><code>docs/interfaces.yaml</code></td>
+</tr>
+<tr>
+<td>CAN frames and signals</td>
+<td><code>firmware/can/aav.dbc</code></td>
+</tr>
+<tr>
+<td>The car's parts and sizes</td>
+<td><code>src/aav_description/config/vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>Decisions and Q numbers</td>
+<td><code>docs/decisions.md</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="faq.html"><small>Previous</small>← Questions</a>
+<a class="next" href="learn-sensors.html"><small>Next</small>Learn: sensors →</a></nav>
+</main>
+<footer>Source: <code>docs/glossary.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

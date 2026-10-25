@@ -1,0 +1,38 @@
+[package]
+name = "wheel-encoder-pico2"
+description = "The wheel encoder's board program for a Raspberry Pi Pico 2 (RP2350) with a WIZnet W5500: counts the wheel's spokes and sends them over UDP to the Motor Pi, as the 2025-26 one did."
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false
+
+# A workspace of its own, not a member of firmware/spine's: it builds only for the
+# RP2350 (thumbv8m.main-none-eabihf, set in .cargo/config.toml). The Embassy versions are
+# the spine's (boards/pico2), so the boards move together.
+[workspace]
+
+[dependencies]
+# Ours: the spoke counting and the packet (firmware/spine/crates).
+wheel-encoder = { path = "../../crates/wheel-encoder" }
+
+embassy-rp = { version = "0.10.0", features = ["rp235xa", "time-driver", "critical-section-impl", "unstable-pac", "defmt"] }
+embassy-executor = { version = "0.10.0", features = ["platform-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-time = { version = "0.5.1", features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-sync = "0.8.0"
+# The network: Embassy's IP stack (smoltcp), on the W5500's raw Ethernet frames.
+embassy-net = { version = "0.9.0", features = ["defmt", "udp", "dhcpv4", "proto-ipv4", "medium-ethernet"] }
+embassy-net-wiznet = { version = "0.3.0", features = ["defmt"] }
+embedded-hal-bus = { version = "0.3.0", features = ["async"] }
+static_cell = "2.1.1"
+
+cortex-m = { version = "0.7.7", features = ["inline-asm"] }
+cortex-m-rt = "0.7.5"
+# Logs and panics over a debug probe (probe-rs); without one they go nowhere.
+defmt = "1.0.1"
+defmt-rtt = "1.0.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
+[profile.release]
+debug = 2          # symbols for probe-rs and defmt; they never reach the flash image
+lto = true
+codegen-units = 1

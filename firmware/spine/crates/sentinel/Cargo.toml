@@ -1,0 +1,10 @@
+[package]
+name = "sentinel"
+description = "The status display's logic (the 2025-26 AAV_sentinel Pico 2): the I2C telemetry packet, the 13 pages of the 16x2 LCD, the knob and buttons, the beeps, the 8x8 matrix and the LED bar."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+aav-inputs = { path = "../aav-inputs" }

@@ -1,0 +1,13 @@
+[package]
+name = "pca9555"
+description = "The PCA9555 16-bit I/O expander on I2C: outputs, inputs, polarity and pin directions."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+embedded-hal.workspace = true
+
+[dev-dependencies]
+embedded-hal-mock.workspace = true

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maps and costmaps · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/costmaps.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Maps and costmaps</h1>
+<div class="meta">17 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a class="here" href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-two-costmaps">The two costmaps</a><a href="#obstacles-from-the-sensors">Obstacles from the sensors</a><a href="#what-each-phase-uses">What each phase uses</a><a href="#map-files">Map files</a><a href="#your-first-map-in-ten-minutes">Your first map, in ten minutes</a><a href="#where-the-map-sits-on-the-earth">Where the map sits on the Earth</a><a href="#a-costmap-is-not-a-road-map">A costmap is not a road map</a></nav>
+<div class="lead"><p>A <strong>costmap</strong> is a grid laid on the ground. Every cell holds a cost:</p>
+<ul>
+<li>free (0);</li>
+<li>near something (inflated, 1–252);</li>
+<li>inside something (lethal, 253–254);</li>
+<li>unknown (255).</li>
+</ul>
+<p>Nav2's planner searches the grid for a path the car can drive. Its controller follows that
+path and slows down near high-cost cells. <code>nav2_costmap_2d</code> builds the grids from layers.
+The settings are in <code>src/drivers/aav_navigation/config/nav2.yaml</code>.</p></div>
+<section class="card"><h2 id="the-two-costmaps">The two costmaps</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Local costmap</th>
+<th>Global costmap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Used by</td>
+<td>the controller (MPPI), each step</td>
+<td>the planner (SmacPlannerHybrid), once per path</td>
+</tr>
+<tr>
+<td>Frame</td>
+<td><code>odom</code>: smooth, moves with the car</td>
+<td><code>map</code>: fixed to the ground by GPS</td>
+</tr>
+<tr>
+<td>Size</td>
+<td>20 m x 20 m rolling window, centred on the car</td>
+<td>the size of the map that <code>map_server</code> loads</td>
+</tr>
+<tr>
+<td>Cell size</td>
+<td>0.10 m (200 x 200 cells)</td>
+<td>0.25 m</td>
+</tr>
+<tr>
+<td>Updates</td>
+<td>5 Hz</td>
+<td>1 Hz</td>
+</tr>
+<tr>
+<td>Layers</td>
+<td>static (the map), the radar, the cameras, the lidar, inflation</td>
+<td>static (the map), the radar, the lidar, inflation</td>
+</tr>
+<tr>
+<td>Sensors</td>
+<td>the radar and lidar where they run; the cameras when switched on (below)</td>
+<td>the radar and lidar where they run (since 22 Oct): the planner plans round what they see. <code>plan_around:=false</code> for the map only</td>
+</tr>
+<tr>
+<td>Inflation</td>
+<td>2.0 m, cost scaling 3.0</td>
+<td>3.0 m, cost scaling 1.0: gentler and wider, so paths keep to the middle of a lane</td>
+</tr>
+</tbody>
+</table></div>
+<p>A 20 m window means 10 m ahead and behind, about 5 s of driving at 2 m/s, the most this
+car is meant to do this year. Make it larger only if the car gets faster.</p>
+<ul>
+<li><strong>Footprint:</strong> the car's outline, made from <code>body</code> in <code>vehicle.yaml</code> by the launch
+  file. Nav2 checks that it doesn't enter lethal cells.</li>
+<li><strong>Inflation:</strong> at least the car's circumscribed radius, 1.93 m. This keeps paths away
+  from walls rather than scraping them. The planner's is wider (22 Oct): with 2.0 m its
+  path passed a building's corner 0.86 m away, and the collision monitor stopped the car
+  there (<a href="controllers.html">Path followers</a>).</li>
+</ul>
+</section>
+<section class="card"><h2 id="obstacles-from-the-sensors">Obstacles from the sensors</h2>
+<p>The local costmap has two sensor layers. Each is a stock Nav2 <code>ObstacleLayer</code>, switched on
+by <code>navigation.launch.py</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Reads</th>
+<th>On</th>
+<th>Marks</th>
+<th>Clears</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>obstacle_layer</code></td>
+<td><code>/sensors/radar/points</code> (in <code>radar_link</code>)</td>
+<td><code>radar:=true</code>: the bench always; the car where the machine file that runs <code>navigation</code> also runs <code>radar</code>; never Gazebo (its car has no radar)</td>
+<td>each point 0.3-8.4 m from the radar, -0.5 to 2 m high</td>
+<td>the cells between the radar and each point</td>
+</tr>
+<tr>
+<td><code>camera_layer</code></td>
+<td><code>/perception/camera_obstacles</code>, <code>/perception/camera_view</code></td>
+<td><code>camera_obstacles:=true</code>: the bench's argument, or the car's <code>camera_obstacles</code> part next to <code>navigation</code>. Off until the cameras are calibrated (Q22)</td>
+<td>where each detected object stands on the road, out to 12 m</td>
+<td>everything the camera sees, out to 12 m, before it marks</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why the radar's numbers:</p>
+<ul>
+<li><strong>8.4 m:</strong> the TI radar's range (<code>ti_ros2_driver</code> <code>cfg/base.cfg</code>).</li>
+<li><strong>-0.5 to 2 m high:</strong> a radar sees no ground to reject, and its height is poor, so low
+  points stay. Above 2 m is over the car (1.5 m tall).</li>
+<li><strong>Sparse:</strong> a few points per object. Each 5 Hz update uses the last 0.2 s: both radar
+  frames, not one.</li>
+</ul>
+<p>The camera layer is its own, so its clearing never wipes what the radar marked.
+<a href="perception.html">Perception</a> says how a box becomes a point on the road.</p>
+<h3 id="collision_monitor">collision_monitor</h3>
+<p>Where the radar runs, Nav2's command passes through <code>collision_monitor</code> on its way to
+twist_mux:</p>
+<pre class="highlight"><code>controller -&gt; velocity_smoother -&gt; /control/cmd_vel_smoothed -&gt; collision_monitor -&gt; /drivers/nav/cmd_vel -&gt; twist_mux</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stop zone</td>
+<td>from the front bumper to 1 m ahead, 0.2 m wider than the body each side: made from <code>vehicle.yaml</code> by the launch file</td>
+</tr>
+<tr>
+<td>Why 1 m</td>
+<td>at 1 m/s, ego stops the car in 0.25 m; the radar, mux, ego and brakes add about 0.4 m; the rest is for the radar's noise</td>
+</tr>
+<tr>
+<td>Stops for</td>
+<td>3 radar points in the zone (one stray point mustn't stop the car)</td>
+</tr>
+<tr>
+<td>Also stops</td>
+<td>when the radar is silent for 1 s, or its TF is late</td>
+</tr>
+<tr>
+<td>Reads</td>
+<td>the radar's own points, not the costmap: it still works if the costmap goes wrong</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>It only guards <strong>Nav2</strong>. A person, a test script or the AI slot reach twist_mux without
+  it.</li>
+<li>After a stop it sends zeros for 2 s, then nothing; twist_mux then drops Nav2's slot and
+  ego holds the car.</li>
+<li><code>collision_monitor:=false</code> leaves it out, for a test.</li>
+</ul>
+<h3 id="what-the-car-does-at-an-obstacle">What the car does at an obstacle</h3>
+<p>On the bench (<code>pixi run bench-check --obstacle</code>, 11 October): a box as wide as the lane, 15 m
+ahead, Nav2 driving to a goal 30 m away. (A 1 m box first; but the car can weave a metre or
+more off its line, N7 below, and once it passed beside the box.)</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The radar sees the box</td>
+<td>8.4 m out; the costmap marks it</td>
+</tr>
+<tr>
+<td>About 1 m before it</td>
+<td>both stop the car, within 0.15-0.7 s of each other: <code>collision_monitor</code>'s stop zone (radar points) and Nav2's controller (the costmap). Either can be first</td>
+</tr>
+<tr>
+<td>The car stands still</td>
+<td>0.42 m before the box, from 1.02 m/s (0.53 m in a second run). With the lane-wide box on <code>main</code>: 0.44 m, and 0.26 m with the car starting 8° off the road</td>
+</tr>
+<tr>
+<td>The box is taken away</td>
+<td><code>collision_monitor</code> lets go at once; Nav2's recovery clears the costmap and the car drives on to the goal</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Since 22 Oct, Nav2 steers round it</p>
+<p>The table above is with <code>plan_around:=false</code>: the planner sees only the map, so the car
+stops and waits (the stop zone's tests run like that). By default the global costmap
+has the radar and lidar too, so the planner plans round the box where there's room: in
+Gazebo the car passed it 3.9 m clear and never stopped (<code>pixi run sim-check
+--plan-around</code>). Where the map leaves no room round it, the car stops as before. On
+the bench the map is empty, so the planner would leave the road: <code>bench-check
+--obstacle</code> runs with <code>plan_around:=false</code>.</p>
+</div>
+<h3 id="try-it">Try it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>To see</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The radar and the stop zone</td>
+<td><code>pixi run bench obstacle:=true rviz:=true</code>, then a 2D Goal Pose past the box (15 m east)</td>
+</tr>
+<tr>
+<td>The whole check</td>
+<td><code>pixi run bench-check --obstacle</code> (about 4 minutes)</td>
+</tr>
+<tr>
+<td>A camera detection</td>
+<td><code>pixi run bench camera_obstacles:=true</code>, then publish a pretend person (below)</td>
+</tr>
+</tbody>
+</table></div>
+<p>A pretend person, 0.5 m wide, standing 7 m ahead of the bench camera:</p>
+<pre class="highlight"><code class="language-bash">ros2 topic pub -r 10 /perception/detections vision_msgs/msg/Detection2DArray \
+  "{header: {stamp: now, frame_id: camera_left_link}, detections: [{bbox: {center: {position: {x: 320.0, y: 188.8}}, size_x: 24.5, size_y: 100.0}, results: [{hypothesis: {class_id: person, score: 0.9}}]}]}"</code></pre>
+<p><strong>You should see</strong> points at x = 8.8 m (1.8 m to the camera, then 7 m) on
+<code>/perception/camera_obstacles</code>, and lethal cells there in the local costmap. Change
+<code>person</code> to <code>stop sign</code>: nothing.</p>
+<h3 id="limits">Limits</h3>
+<ul>
+<li><strong>What the radar stops seeing stays marked.</strong> A radar only clears along its points, so
+  a box taken away stays in the costmap until Nav2's recovery clears it (it does, when the
+  car is stuck).</li>
+<li><strong>The camera assumes a flat road</strong>, and ignores the lens's distortion. At 12 m, a camera
+  tilted 1 degree more than <code>vehicle.yaml</code> says puts the point 2 m off.</li>
+<li><strong>A box cut off by the bottom of the picture</strong> is placed at the nearest road the camera
+  sees (2.3 m ahead on the bench): the object is at least that close.</li>
+<li><strong>The numbers are guesses</strong> until the car is measured: the radar's mount (Q1-Q5) and the
+  cameras' (Q22).</li>
+</ul>
+<h3 id="body-roll-and-the-lidar-todo-52e">Body roll and the lidar (TODO 52e)</h3>
+<p><code>lidar_scan</code> keeps points <strong>0.3 m or more above the road</strong>, as if the body were level. In a
+turn the body leans out on its springs. On the outside of the turn the road then rises in
+the car's frame, by about <em>distance out × tan(roll)</em>. Far enough out, the road looks like
+an obstacle.</p>
+<pre class="highlight"><code class="language-text">   level:   lidar ●───────────────────────  road at 0 m: ignored
+   rolled:  lidar ●─────────╲               the road 10 m out sits 0.23 m "up"
+                              ╲___ road     (1.33°): still under 0.3 m</code></pre>
+<p>The highest road point the lidar sees within the costmap's <strong>12 m</strong> (VLP-16 on the roof,
+1.8 m up; <code>aav_lidar</code> <code>ground.py</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Roll</th>
+<th>When</th>
+<th>Highest road point</th>
+<th>An obstacle?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.23°</td>
+<td>1 m/s, full lock (today)</td>
+<td>0.04 m</td>
+<td>no</td>
+</tr>
+<tr>
+<td>1.33°</td>
+<td>ego's limit: 2 m/s² sideways, with the springs' overshoot</td>
+<td>0.23 m, 10 m out</td>
+<td>no</td>
+</tr>
+<tr>
+<td><strong>1.46°</strong></td>
+<td><strong>the limit</strong></td>
+<td>0.30 m</td>
+<td>the edge</td>
+</tr>
+<tr>
+<td>1.95°</td>
+<td>3 m/s on full lock, if ego didn't slow down</td>
+<td>0.39 m, 11.5 m out</td>
+<td><strong>yes</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The verdict: safe up to 4 m/s.</strong> ego slows the car in turns to 2 m/s² sideways
+(<code>max_lateral_accel</code>), which holds the roll to 1.33° at most, even on a sudden full lock.
+At 5 m/s a sudden full lock still overshoots: the wheels turn faster than ego can brake
+(2.4° of roll). The springs are guesses: softer than about 7400 N/m a corner and the margin
+is gone. <code>tools/tests/test_lidar_roll.py</code> checks all of this together, and fails if
+someone raises <code>max_lateral_accel</code> or the 12 m, or lowers the 0.3 m.</p>
+<p>Gazebo has no suspension, so it can't show this. The scan itself (out to 30 m) has road
+in it from about 0.6° of roll, but nothing marks the costmap past 12 m.</p>
+<p><strong>Don't level the cloud with the IMU's roll.</strong> <code>imu_filter_madgwick</code> finds "down" from
+the accelerometer, and in a turn the sideways push looks like tilt: 2 m/s² reads as
+11.5° of roll, about 9 times the real 1.3°. Levelling would need that push taken out
+(speed × turn rate) first.</p>
+</section>
+<section class="card"><h2 id="what-each-phase-uses">What each phase uses</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Map</th>
+<th>What it tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0, 1 (joystick, scripted)</td>
+<td>none</td>
+<td>Nav2 isn't running</td>
+</tr>
+<tr>
+<td>2: Nav2 on an empty costmap</td>
+<td><code>maps/empty.yaml</code>: 200 m x 200 m, all free, 0.25 m cells, centred on the datum</td>
+<td>planning and following within the turning limits, GPS goals</td>
+</tr>
+<tr>
+<td>3: Nav2 on a pre-rendered costmap</td>
+<td>your test site, drawn as a map, e.g. <code>maps/example_lot.yaml</code> (an 80 m x 60 m made-up lot)</td>
+<td>planning around known walls and buildings</td>
+</tr>
+<tr>
+<td>perception</td>
+<td>phase 2 or 3, plus the radar (and the cameras, after Q22)</td>
+<td>the obstacle layers and <code>collision_monitor</code>: on the bench now</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="map-files">Map files</h2>
+<p>A Nav2 map is an image (PGM or PNG) plus a YAML file that says how to read it.
+<code>src/drivers/aav_navigation/maps/README.md</code> covers the format line by line. In short:</p>
+<ul>
+<li>one pixel is one cell;</li>
+<li>white is free, black is blocked, grey is unknown;</li>
+<li><code>resolution</code> is metres per pixel;</li>
+<li><code>origin</code> is the map-frame position of the bottom-left pixel.</li>
+</ul>
+<p>Don't paint maps by hand. Write a short spec and generate them:</p>
+<pre class="highlight"><code class="language-bash">tools/make_map.py src/drivers/aav_navigation/maps/example_lot.spec.yaml</code></pre>
+<p>A spec lists:</p>
+<ul>
+<li>the size in metres east and north;</li>
+<li>the origin;</li>
+<li>blocked rectangles and free rectangles.</li>
+</ul>
+<p><code>tools/make_map.py --help</code> (or the top of the file) shows the format. It needs only
+Python and PyYAML, not ROS.</p>
+</section>
+<section class="card"><h2 id="your-first-map-in-ten-minutes">Your first map, in ten minutes</h2>
+<ol>
+<li>
+<p>Open <code>src/drivers/aav_navigation/maps/example_lot.spec.yaml</code>, and add a box under
+   <code>blocked:</code>:</p>
+<pre><code>```yaml
+  - [15, -3, 18, 3]       # a box across the drive, to plan around
+```
+</code></pre>
+</li>
+<li>
+<p>Make the map again:</p>
+<pre><code>```bash
+pixi run python tools/make_map.py src/drivers/aav_navigation/maps/example_lot.spec.yaml
+pixi run build
+```
+</code></pre>
+<p>It says <code>wrote example_lot.pgm/.yaml: 320 x 240 px, 80 x 60 m</code>.
+3. Start Gazebo with the test lot: <code>pixi run sim world:=test_lot</code>. On a Mac, add
+ <code>gui:=false</code>, then run <code>pixi run gz-window</code> and <code>pixi run rviz</code> in two more terminals.
+4. In RViz, send a <strong>2D Goal Pose</strong> at about (30, 0): 30 m straight ahead, past the box.</p>
+</li>
+</ol>
+<p><strong>You should see</strong> the planned path bend around your box. In the test on 10 October it
+passed at y = 4.4 m, beside a box that ends at y = 3 m.</p>
+<ol start="5">
+<li>Put the map back: <code>git checkout src/drivers/aav_navigation/maps/</code>.</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Two things this teaches</p>
+<ul>
+<li>The box is only in the map, not in Gazebo's world. Nav2 avoids it because the map
+  says so: that's how phase 3 works.</li>
+<li>Leave room in front of an obstacle. The car turns no tighter than 2.86 m, and the
+  costmap keeps 2 m of clearance, so a box 5 m ahead can't be swerved around. (The
+  test tried it: Nav2 reported "collision ahead".)</li>
+</ul>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Known problem, 10 October: the car doesn't finish this drive</p>
+<p>In Gazebo the car follows the curve around the box, but overshoots the goal and ends
+about 6 m off. Nav2 then can't plan a way back, because the car only drives forward,
+so the goal fails. It's open work for the navigation team (N7, the lookahead). A
+straight 8 m goal on the empty map succeeds.</p>
+</div>
+<h3 id="n7-why-nav2s-turn-command-flips-11-october">N7: why Nav2's turn command flips (11 October)</h3>
+<p>In Gazebo, on the empty map, each run on a fresh simulator:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Turn-sign flips a second</th>
+<th>Straight goals (8 m, 25 m)</th>
+<th>The curve to (15, 8)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lookahead 1.5 m (as now)</td>
+<td>0.86-0.99</td>
+<td>0.48-0.71</td>
+</tr>
+<tr>
+<td>Lookahead 3 m (tried)</td>
+<td>0.85-1.44</td>
+<td>0.25-0.52</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Not the lookahead:</strong> a longer one didn't help on straight drives, so it stays 1.5 m.
+  Both reached every straight goal; each failed the curve once.</li>
+<li><strong>The GPS:</strong> the flips come in steps, five times a second, with the fixes. One step in
+  ten turns the global EKF's heading (<code>map -&gt; odom</code>) by more than 4 degrees, and the whole
+  path swings with it.</li>
+<li><strong>Tried, not kept:</strong> with <code>ekf_global</code> trusting GPS less, one step in ten turned it by
+  more than 0.6 degrees, and the flips fell to 0.06-0.5 a second; but one goal then
+  overshot and looped for 45 s.</li>
+<li><strong>Next:</strong> tune <code>ekf_global</code> against the real receiver's noise (Q18).</li>
+</ul>
+</section>
+<section class="card"><h2 id="where-the-map-sits-on-the-earth">Where the map sits on the Earth</h2>
+<p>The map frame is pinned to the ground by the <strong>datum</strong> in
+<code>src/localization/aav_localization/config/navsat.yaml</code>:</p>
+<ul>
+<li>map (0, 0) is the datum's latitude and longitude;</li>
+<li>x points east and y points north.</li>
+</ul>
+<p>So a point 20 m east and 5 m north of the datum is (20, 5) on the map, in Nav2 goals and
+in RViz. The datum in the file now is a placeholder near Carleton.</p>
+<p>To draw the real test site:</p>
+<ol>
+<li>Pick the datum: a corner of the lot, or the start spot. Survey it with the GPS
+   (average a few minutes of fixes) and put its latitude and longitude in <code>navsat.yaml</code>.</li>
+<li>Measure the drivable area in metres east and north of it, with a tape, or by measuring
+   on satellite imagery from the datum.</li>
+<li>Write the spec: the size, then the blocked rectangles (buildings, curbs, parked cars).</li>
+<li>Build the map and drive phase 3 in Gazebo first (<code>world:=test_lot</code> pairs with
+   <code>example_lot</code>).</li>
+</ol>
+</section>
+<section class="card"><h2 id="a-costmap-is-not-a-road-map">A costmap is not a road map</h2>
+<p>The global costmap only says which cells may be driven on. Roads, junctions and routing
+across a city are a separate kind of map: a road graph. Two tools handle that:</p>
+<ul>
+<li><strong>OSRM</strong>, which the HUD already uses. It turns a destination into a route of
+  latitude/longitude points. Those points can become a <code>follow_gps_waypoints</code> goal for
+  Nav2 (see <a href="hud.html">hud.md</a>). Our own offline router for that, Valhalla, and the node
+  that turns its routes into waypoints: <a href="routes.html">Street routes</a>.</li>
+<li><strong>Nav2's Route Server</strong> (<code>nav2_route</code>). It's released for Jazzy, in Nav2 1.3.13 as of
+  October 2026, and follows a hand-made graph of lanes or paths. Consider it if the test site becomes a set of fixed lanes.</li>
+</ul>
+<p>For this year's goals (an empty costmap, then a pre-rendered test site) a grid map plus
+GPS waypoints is enough.</p></section>
+<nav class="prevnext"><a class="prev" href="howto-driver.html"><small>Previous</small>← Build a driver</a>
+<a class="next" href="controllers.html"><small>Next</small>Path followers →</a></nav>
+</main>
+<footer>Source: <code>docs/costmaps.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

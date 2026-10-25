@@ -1,0 +1,34 @@
+# The map window, full screen on the dash's big screen, from the desktop's start until it
+# ends. A systemd *user* unit: it runs as the logged-in user, in the desktop's session,
+# and needs no sudo. docs/car-screens.md.
+#
+# Installed to ~/.config/systemd/user/ by tools/car_screens_install.sh.
+# Its log:   journalctl --user -u aav-map -f
+# Stop it:   systemctl --user stop aav-map      (until the next boot)
+# Never:     systemctl --user disable aav-map
+# Which monitor, the ROS domain, the map's files: ~/.config/aav/screens.env
+
+[Unit]
+Description=AAV map: the map window, full screen on its own monitor
+Documentation=https://github.com/zander1976/aav/blob/main/docs/car-screens.md
+# With the desktop: started once it's up, stopped when it ends.
+After=graphical-session.target
+PartOf=graphical-session.target
+# Keep trying for ever: the car's screen must not stay dark after a crash.
+StartLimitIntervalSec=0
+
+[Service]
+Type=exec
+# aav.sh: our Jazzy, apart from the car's Humble. car_screen.sh reads screens.env.
+ExecStart=%h/aav-jazzy/aav.sh tools/car_screen.sh map
+# Any exit, a crash or a closed window, starts it again 5 s later...
+Restart=always
+RestartSec=5
+# ...except 78: screens.env is wrong or unfinished (the journal says what). Fix, then
+# systemctl --user restart aav-map
+RestartPreventExitStatus=78
+TimeoutStopSec=10
+SyslogIdentifier=aav-map
+
+[Install]
+WantedBy=graphical-session.target

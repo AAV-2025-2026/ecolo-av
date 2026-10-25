@@ -1,0 +1,15 @@
+[package]
+name = "spine-bridge"
+description = "spine_bridge's logic without ROS: ego's commands to CAN frames, the spine's and the wheel nodes' frames to the car's motion"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# The firmware's own frames (firmware/can/aav.dbc): one implementation for both ends.
+spine-core = { path = "../../../../../firmware/spine/crates/spine-core" }
+
+[dev-dependencies]
+# Reads the shared test vectors, firmware/can/test_vectors.json.
+serde_json = "1"

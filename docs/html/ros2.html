@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROS 2 in ten minutes · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/ros2.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>ROS 2 in ten minutes</h1>
+<div class="meta">4 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a class="here" href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-three-parts">The three parts</a><a href="#three-ways-for-nodes-to-talk">Three ways for nodes to talk</a><a href="#the-other-words">The other words</a><a href="#building-packages-colcon-ament">Building: packages, colcon, ament</a><a href="#stock-packages-vs-our-nodes">Stock packages vs our nodes</a><a href="#adding-a-node-in-five-steps">Adding a node, in five steps</a><a href="#looking-inside-a-running-system">Looking inside a running system</a></nav>
+<div class="lead"><p>ROS 2 is three things: a way for programs to send each other messages, a library of
+ready-made programs (Nav2, robot_localization, twist_mux …), and tools to build them and
+look inside. We configure the ready-made programs, and write a few of our own.</p></div>
+<section class="card"><h2 id="the-three-parts">The three parts</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What it is</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Messaging</td>
+<td>Programs, called <strong>nodes</strong>, publish typed messages on named <strong>topics</strong>. Any node on the network can listen. Nodes find each other by themselves.</td>
+<td><code>/control/cmd_vel</code>, <code>/sensors/imu/data</code></td>
+</tr>
+<tr>
+<td>Packages</td>
+<td>Thousands of open-source nodes, configured with YAML</td>
+<td>Nav2, robot_localization, twist_mux, turtlesim</td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>Build, run, inspect, record and visualise</td>
+<td><code>colcon</code>, <code>ros2</code>, RViz, rqt, <code>ros2 bag</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>A ROS release is one tested set of all three. Ours is <strong>Jazzy</strong>, supported until May 2029.</p>
+</section>
+<section class="card"><h2 id="three-ways-for-nodes-to-talk">Three ways for nodes to talk</h2>
+<p><img alt="Topics, services and actions" src="../img/ros2-concepts.svg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Use it for</th>
+<th>Ours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Topic</td>
+<td>anything that streams: sensors, commands, state</td>
+<td><code>/drivers/*/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/tf</code></td>
+</tr>
+<tr>
+<td>Service</td>
+<td>a quick question, or a switch</td>
+<td><code>/spine/arm</code>, <code>/fromLL</code></td>
+</tr>
+<tr>
+<td>Action</td>
+<td>a job that takes seconds, with progress, and can be cancelled</td>
+<td><code>/scripted_drive</code>, <code>/navigate_to_pose</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-other-words">The other words</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Word</th>
+<th>Means</th>
+<th>A bit like</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Message type</td>
+<td>the struct on a topic, defined in a <code>.msg</code> file</td>
+<td>a struct every language shares</td>
+</tr>
+<tr>
+<td>Parameter</td>
+<td>a node's settings, loaded from YAML when it starts</td>
+<td>command-line flags</td>
+</tr>
+<tr>
+<td>Launch file</td>
+<td>a Python script that starts a set of nodes with their settings</td>
+<td><code>docker compose</code></td>
+</tr>
+<tr>
+<td>TF</td>
+<td>where every frame (<code>map</code>, <code>odom</code>, <code>base_link</code>, <code>imu_link</code>) sits, over time</td>
+<td>a scene graph</td>
+</tr>
+<tr>
+<td>QoS</td>
+<td>delivery rules per topic. Mismatched rules mean no connection, and no error.</td>
+<td>TCP vs UDP</td>
+</tr>
+<tr>
+<td>Domain ID</td>
+<td>computers with the same <code>ROS_DOMAIN_ID</code> see each other</td>
+<td>a radio channel</td>
+</tr>
+<tr>
+<td>Bag</td>
+<td>a recording of topics, to play back later</td>
+<td>a flight recorder</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="building-packages-colcon-ament">Building: packages, colcon, ament</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ROS</th>
+<th>What it does</th>
+<th>In Cargo terms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Package</td>
+<td>the unit ROS builds; <code>package.xml</code> lists its dependencies</td>
+<td>a crate and its <code>Cargo.toml</code></td>
+</tr>
+<tr>
+<td>Workspace</td>
+<td>a folder of packages built together. This repository is one.</td>
+<td>a Cargo workspace</td>
+</tr>
+<tr>
+<td><code>colcon build</code></td>
+<td>builds every package in dependency order, in any language</td>
+<td><code>cargo build --workspace</code></td>
+</tr>
+<tr>
+<td>ament</td>
+<td>the build rules underneath: <code>ament_python</code> (setuptools) or <code>ament_cmake</code> (CMake)</td>
+<td>the build backend</td>
+</tr>
+<tr>
+<td><code>source install/setup.bash</code></td>
+<td>puts our built packages on the path</td>
+<td>adding <code>target/</code> to <code>PATH</code></td>
+</tr>
+<tr>
+<td>pixi</td>
+<td>installs ROS itself and every dependency, into this folder</td>
+<td><code>rustup</code>, for the whole toolchain</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="stock-packages-vs-our-nodes">Stock packages vs our nodes</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Stock: we configure</th>
+<th>Ours: we write</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Examples</td>
+<td>Nav2, robot_localization, twist_mux, joy, teleop, turtlesim</td>
+<td>ego, <code>scripted_driver</code>, <code>spine_bridge</code>, the turtlesim and Gazebo adapters</td>
+</tr>
+<tr>
+<td>We change</td>
+<td>YAML files and launch files</td>
+<td>Python code</td>
+</tr>
+<tr>
+<td>Rule</td>
+<td>use these first</td>
+<td>only for glue that's specific to our car</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="adding-a-node-in-five-steps">Adding a node, in five steps</h2>
+<ol>
+<li>Pick the layer's folder, for example <code>src/drivers/</code>.</li>
+<li>Make a Python package: <code>package.xml</code> for the dependencies, <code>setup.py</code> for the entry
+   point.</li>
+<li>Put the logic in a plain module with no ROS imports, and test it. A thin node file
+   does the publishing and subscribing.</li>
+<li>Add its topics to <code>docs/interfaces.yaml</code>, and the node to a launch file.</li>
+<li>Run <code>pixi run build</code>, start it, and check it with <code>pixi run check</code>.</li>
+</ol>
+<p>A complete driver that circles left:</p>
+<pre class="highlight"><code class="language-python">import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import TwistStamped
+
+class Circle(Node):
+    def __init__(self):
+        super().__init__('circle_driver')
+        self.pub = self.create_publisher(TwistStamped, '/drivers/scripted/cmd_vel', 10)
+        self.create_timer(0.1, self.tick)        # ten times a second
+
+    def tick(self):
+        msg = TwistStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.twist.linear.x = 0.5                 # m/s forward
+        msg.twist.angular.z = 0.2                # rad/s, left
+        self.pub.publish(msg)
+
+rclpy.init()
+rclpy.spin(Circle())</code></pre>
+</section>
+<section class="card"><h2 id="looking-inside-a-running-system">Looking inside a running system</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ros2 node list</code>, <code>ros2 node info /ego</code></td>
+<td>what's running; a node's topics and settings</td>
+</tr>
+<tr>
+<td><code>ros2 topic echo /control/cmd_vel</code>, <code>ros2 topic hz /sensors/imu/data</code></td>
+<td>the messages on a topic; how often they come</td>
+</tr>
+<tr>
+<td><code>ros2 param dump /ekf_local</code></td>
+<td>every setting a node is really using</td>
+</tr>
+<tr>
+<td><code>pixi run graph</code> (rqt_graph)</td>
+<td>nodes and topics as a live diagram</td>
+</tr>
+<tr>
+<td><code>rqt_tf_tree</code></td>
+<td>the frame tree, and who publishes each link</td>
+</tr>
+<tr>
+<td><code>pixi run view</code> (RViz)</td>
+<td>the 3D view: the car, the map, costmaps, the path</td>
+</tr>
+<tr>
+<td>Foxglove</td>
+<td>RViz and rqt in one app; good over WiFi (<code>ws://&lt;computer&gt;:8765</code>)</td>
+</tr>
+<tr>
+<td><code>pixi run check</code></td>
+<td>the live graph against our contract, <code>docs/interfaces.yaml</code>; add <code>sim</code>, <code>car</code> or <code>replay</code> for the other setups</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="older-code.html"><small>Previous</small>← Older code</a>
+<a class="next" href="languages.html"><small>Next</small>Languages →</a></nav>
+</main>
+<footer>Source: <code>docs/ros2.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

@@ -1,0 +1,16 @@
+# street_router (aav_routes): street routes for Nav2 (docs/routes.md). For real streets
+# later; the test lot first.
+street_router:
+  ros__parameters:
+    router: valhalla                    # valhalla (ours: pixi run -e routes router) or osrm
+    router_url: http://127.0.0.1:8002   # this computer only; never a paid or public server
+    costing: auto                       # Valhalla's car profile (osrm: always driving)
+    timeout: 5.0                        # s to wait for the router
+    tolerance: 1.0                      # m: waypoints may cut a bend by this much
+    min_spacing: 10.0                   # m between waypoints: Nav2 slows at each one
+    max_spacing: 30.0                   # m: each goal stays inside Nav2's costmaps
+    max_length: 3000.0                  # m: longer routes are refused (the lot first)
+    fix_max_age: 2.0                    # s: an older GPS fix is no start
+    map_frame: map
+    follow_at_once: false               # true: send every route to Nav2 straight away
+    fix_topic: /localization/gps/fix    # navsat_transform's filtered fix

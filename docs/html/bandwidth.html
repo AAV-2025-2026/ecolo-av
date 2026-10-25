@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bandwidth: how much data each sensor sends (23 October) · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/bandwidth.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Bandwidth: how much data each sensor sends (23 October)</h1>
+<div class="meta">16 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a class="here" href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-cars-network">The car&#x27;s network</a><a href="#the-budget-one-row-per-stream">The budget: one row per stream</a><a href="#can-the-bus-has-plenty-of-room">CAN: the bus has plenty of room</a><a href="#the-links-one-by-one">The links, one by one</a><a href="#what-to-do-about-the-big-ones">What to do about the big ones</a><a href="#measured-in-gazebo-23-oct">Measured in Gazebo (23 Oct)</a><a href="#measure-it-yourself">Measure it yourself</a></nav>
+<div class="lead"><p>Ben asked (23 Oct): "Do we need to think about the bandwidth of all the sensors like in
+hertz." <strong>Yes.</strong> This page is the budget: every data stream, how big, which wire it
+crosses, and whether that wire has room.</p>
+<div class="admonition tip">
+<p class="admonition-title">The answer in one line</p>
+<p><strong>The cameras are the only danger.</strong> One raw 1080p camera (93 MB/s) fills most of a
+gigabit cable; two don't fit. Everything else together is under 2 MB/s. Send
+pictures <strong>compressed</strong> over the network, and keep the lidar's points on the Orin.</p>
+</div>
+<p>How sure each number is:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mark</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>measured</strong></td>
+<td><code>pixi run bandwidth</code> in Gazebo on Ben's Mac, 23 Oct</td>
+</tr>
+<tr>
+<td><strong>config</strong></td>
+<td>from our launch files or <code>firmware/can/aav.dbc</code></td>
+</tr>
+<tr>
+<td><strong>audit</strong></td>
+<td>seen on the car, at the 16 Oct and <a href="../history/audit-2026-10-21-car.md">21 Oct</a> audits</td>
+</tr>
+<tr>
+<td><strong>guess</strong></td>
+<td>worked out, not seen. Measure it on the car</td>
+</tr>
+</tbody>
+</table></div></div>
+<section class="card"><h2 id="the-cars-network">The car's network</h2>
+<pre class="highlight"><code class="language-text">  laptops ~~~ WiFi (802.11n: ~20-50 Mbit/s real, shared) ~~~ router
+                                                               |
+  CAM1-PI (Pi camera) ----1G--+                                | 1G
+  CAM2-PI (USB camera) ---1G--+                                |
+  LIDAR (VLP-16) -------100M--+---- TP-Link TL-SG116E ---------+
+  LOCALIZATION-PI --------1G--+     16 ports x 1 Gbit/s
+  DASH (HUD screen) ------1G--+                                |
+  MOTOR-PI ---------------1G--+                                | 1G
+                                                             ORIN
+       IMU, GPS, radar: USB serial into a Pi (or the Orin)     |
+                                                               | CAN 500 kbit/s
+                                          spine (ESP32), wheel-sensor Arduino</code></pre>
+<p>1G = gigabit Ethernet: 125 MB/s each way, about 110 MB/s real (the VLP-16's own port is
+100 Mbit/s). The switch can carry every port at full speed at once, so the limit is
+<strong>each cable</strong>, mostly the Orin's.</p>
+</section>
+<section class="card"><h2 id="the-budget-one-row-per-stream">The budget: one row per stream</h2>
+<p>On the car, as planned (Q22 picks the cameras; the rates are ours or the 21 Oct audit's).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stream</th>
+<th>Topic</th>
+<th style="text-align: right;">Hz</th>
+<th style="text-align: right;">Size</th>
+<th style="text-align: right;">MB/s</th>
+<th style="text-align: right;">Mbit/s</th>
+<th>Made on</th>
+<th>Crosses</th>
+<th>Read by</th>
+<th>How sure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Front camera, <strong>raw</strong> 1920x1080 RGB</td>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">6.2 MB</td>
+<td style="text-align: right;"><strong>93</strong></td>
+<td style="text-align: right;"><strong>746</strong></td>
+<td>its camera's computer</td>
+<td>Ethernet, if a Pi runs the camera</td>
+<td>detector (Orin), HUD (dash), lane finder</td>
+<td>config (<code>cameras.launch.py</code>)</td>
+</tr>
+<tr>
+<td>The same, <strong>JPEG</strong></td>
+<td><code>.../image_raw/compressed</code></td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">~300 kB</td>
+<td style="text-align: right;">4.5</td>
+<td style="text-align: right;">36</td>
+<td>the same</td>
+<td>Ethernet; WiFi to a laptop's detector</td>
+<td>laptop detector, viewers</td>
+<td>guess (JPEG size)</td>
+</tr>
+<tr>
+<td>Second front camera</td>
+<td><code>/sensors/camera/front_right/...</code></td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">as above</td>
+<td style="text-align: right;">93 raw, 4.5 JPEG</td>
+<td style="text-align: right;">746, 36</td>
+<td></td>
+<td></td>
+<td>nothing yet</td>
+<td>config</td>
+</tr>
+<tr>
+<td>Rear camera</td>
+<td><code>/sensors/camera/rear/...</code></td>
+<td style="text-align: right;">15?</td>
+<td style="text-align: right;">as above?</td>
+<td style="text-align: right;">93 raw, 4.5 JPEG</td>
+<td style="text-align: right;"></td>
+<td></td>
+<td></td>
+<td>camera_obstacles (later)</td>
+<td>guess (model unknown)</td>
+</tr>
+<tr>
+<td><strong>All three, raw</strong></td>
+<td></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"><strong>280</strong></td>
+<td style="text-align: right;"><strong>2,240</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Ben's example: 1280x720 RGB, 30 Hz</td>
+<td></td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">2.8 MB</td>
+<td style="text-align: right;">83</td>
+<td style="text-align: right;">664</td>
+<td></td>
+<td></td>
+<td></td>
+<td>arithmetic</td>
+</tr>
+<tr>
+<td>Today's CAM2-PI stream (not ROS)</td>
+<td>RTSP <code>cam1</code></td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">H.264</td>
+<td style="text-align: right;">0.06</td>
+<td style="text-align: right;">0.5</td>
+<td>CAM2-PI</td>
+<td>Ethernet</td>
+<td>nothing in ROS</td>
+<td>audit (16 Oct)</td>
+</tr>
+<tr>
+<td>Lidar packets (VLP-16)</td>
+<td>UDP 2368, then <code>/sensors/lidar/packets</code></td>
+<td style="text-align: right;">754 pkt/s; 10 msg/s</td>
+<td style="text-align: right;">1.2 kB a packet</td>
+<td style="text-align: right;">0.94</td>
+<td style="text-align: right;">7.5</td>
+<td>the lidar</td>
+<td>Ethernet, lidar to Orin</td>
+<td>lidar_driver</td>
+<td>Velodyne's data sheet</td>
+</tr>
+<tr>
+<td>Lidar points</td>
+<td><code>/sensors/lidar/points</code></td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">~0.7 MB</td>
+<td style="text-align: right;">~7</td>
+<td style="text-align: right;">~56</td>
+<td>Orin</td>
+<td>stays on the Orin</td>
+<td>lidar_scan</td>
+<td>guess (~30,000 points x 22 B)</td>
+</tr>
+<tr>
+<td>Lidar, flattened for Nav2</td>
+<td><code>/sensors/lidar/scan</code></td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">2.9 kB</td>
+<td style="text-align: right;">0.03</td>
+<td style="text-align: right;">0.2</td>
+<td>Orin</td>
+<td>stays</td>
+<td>costmap, collision_monitor</td>
+<td>measured</td>
+</tr>
+<tr>
+<td>Radar (TI IWR6843AOP)</td>
+<td><code>/sensors/radar/points</code></td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">&lt;5 kB</td>
+<td style="text-align: right;">&lt;0.05</td>
+<td style="text-align: right;">&lt;0.4</td>
+<td>the Pi it's plugged into</td>
+<td>USB serial, then Ethernet</td>
+<td>radar_clusters, Nav2</td>
+<td>guess (its serial port tops out at 0.09 MB/s)</td>
+</tr>
+<tr>
+<td>IMU (Yahboom)</td>
+<td><code>/sensors/imu/data_raw</code>, <code>/data</code></td>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">324 B</td>
+<td style="text-align: right;">0.13 (both)</td>
+<td style="text-align: right;">1.0</td>
+<td>LOCALIZATION-PI today</td>
+<td>USB serial, then Ethernet</td>
+<td>the filter, the EKFs</td>
+<td>audit (rate), measured (size)</td>
+</tr>
+<tr>
+<td>GPS (ZED-F9R)</td>
+<td><code>/sensors/gps/fix</code></td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">128 B</td>
+<td style="text-align: right;">0.001</td>
+<td style="text-align: right;">0.01</td>
+<td>LOCALIZATION-PI today</td>
+<td>USB, then Ethernet</td>
+<td>navsat_transform</td>
+<td>audit (rate), measured (size)</td>
+</tr>
+<tr>
+<td>Wheel speeds</td>
+<td>CAN 0x200, 0x201, then <code>/vehicle/wheels</code></td>
+<td style="text-align: right;">100 each</td>
+<td style="text-align: right;">8 B a frame; 48 B</td>
+<td style="text-align: right;">0.005</td>
+<td style="text-align: right;">0.04</td>
+<td>the wheel Arduino</td>
+<td>CAN, then stays on the Orin</td>
+<td>the EKFs, the watchdog</td>
+<td>config (DBC)</td>
+</tr>
+<tr>
+<td>Drive command</td>
+<td><code>/ego/actuator_cmd</code>, then CAN 0x100</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">48 B; 8 B</td>
+<td style="text-align: right;">0.002</td>
+<td style="text-align: right;">0.02</td>
+<td>Orin</td>
+<td>CAN (Ethernet to the Motor Pi today)</td>
+<td>the spine</td>
+<td>config, measured</td>
+</tr>
+<tr>
+<td>Twist command</td>
+<td><code>/control/cmd_vel</code></td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">76 B</td>
+<td style="text-align: right;">0.002</td>
+<td style="text-align: right;">0.01</td>
+<td>Orin</td>
+<td>stays</td>
+<td>ego</td>
+<td>measured</td>
+</tr>
+<tr>
+<td>Odometry, both EKFs</td>
+<td><code>/vehicle/odom</code>, <code>/localization/odom/*</code></td>
+<td style="text-align: right;">50, 30, 30</td>
+<td style="text-align: right;">724 B</td>
+<td style="text-align: right;">0.08</td>
+<td style="text-align: right;">0.6</td>
+<td>Orin</td>
+<td>stays</td>
+<td>Nav2, the HUD's map</td>
+<td>measured</td>
+</tr>
+<tr>
+<td>TF</td>
+<td><code>/tf</code></td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">243 B</td>
+<td style="text-align: right;">0.02</td>
+<td style="text-align: right;">0.15</td>
+<td>Orin</td>
+<td>to every viewer</td>
+<td>everyone</td>
+<td>measured</td>
+</tr>
+<tr>
+<td>Local costmap</td>
+<td><code>/local_costmap/costmap</code></td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">40 kB</td>
+<td style="text-align: right;">0.08</td>
+<td style="text-align: right;">0.6</td>
+<td>Orin</td>
+<td>only to a viewer</td>
+<td>RViz, Foxglove</td>
+<td>measured (200 x 200 cells)</td>
+</tr>
+<tr>
+<td>Global costmap</td>
+<td><code>/global_costmap/costmap</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">640 kB</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">5.1</td>
+<td>Orin</td>
+<td>only to a viewer</td>
+<td>RViz, Foxglove</td>
+<td>measured (Gazebo's road map; grows with the map)</td>
+</tr>
+<tr>
+<td>Nav2's plan</td>
+<td><code>/plan</code></td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4-7 kB</td>
+<td style="text-align: right;">0.007</td>
+<td style="text-align: right;">0.06</td>
+<td>Orin</td>
+<td>to the map screen</td>
+<td>map window</td>
+<td>measured</td>
+</tr>
+<tr>
+<td>HUD's pictures (Flutter app)</td>
+<td>HTTP <code>/camera/stream</code></td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">~1 MB PNG</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">40</td>
+<td>hud_server</td>
+<td>stays, if on the dash</td>
+<td>the app</td>
+<td>guess (<code>hud_server.py</code>)</td>
+</tr>
+<tr>
+<td>Foxglove to a laptop</td>
+<td>WebSocket, port 8765</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"><strong>what you open</strong></td>
+<td style="text-align: right;"></td>
+<td>Orin</td>
+<td><strong>WiFi</strong></td>
+<td>Lichtblick, Foxglove</td>
+<td>measured (Gazebo, 24 Oct): our three layouts at once, 0.17 MB/s (<a href="foxglove.html">Watch from a laptop</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Without the cameras, the whole car is about <strong>2 MB/s (16 Mbit/s)</strong>, the lidar's packets half
+of it.</p>
+</section>
+<section class="card"><h2 id="can-the-bus-has-plenty-of-room">CAN: the bus has plenty of room</h2>
+<p>From <code>firmware/can/aav.dbc</code> v0.2.0, at its 500 kbit/s, counting the worst-case bit
+stuffing (an 8-byte frame is 111 bits, up to 135 with stuffing). <code>pixi run can-load</code> works
+it out from the DBC, so it stays right when the contract changes:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Frame</th>
+<th>From</th>
+<th style="text-align: right;">Bytes</th>
+<th style="text-align: right;">Hz</th>
+<th style="text-align: right;">Bits each</th>
+<th style="text-align: right;">kbit/s</th>
+<th style="text-align: right;">Bus %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x010</td>
+<td>ESTOP_CMD</td>
+<td>ORIN</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">0.1</td>
+</tr>
+<tr>
+<td>0x100</td>
+<td>DRIVE_CMD</td>
+<td>ORIN</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">135</td>
+<td style="text-align: right;">6.8</td>
+<td style="text-align: right;">1.4</td>
+</tr>
+<tr>
+<td>0x180</td>
+<td>VEHICLE_FEEDBACK</td>
+<td>SPINE</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">135</td>
+<td style="text-align: right;">6.8</td>
+<td style="text-align: right;">1.4</td>
+</tr>
+<tr>
+<td>0x181</td>
+<td>VEHICLE_STATUS</td>
+<td>SPINE</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">135</td>
+<td style="text-align: right;">1.4</td>
+<td style="text-align: right;">0.3</td>
+</tr>
+<tr>
+<td>0x200</td>
+<td>WHEEL_SPEED_L</td>
+<td>WHEEL_L</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">135</td>
+<td style="text-align: right;">13.5</td>
+<td style="text-align: right;">2.7</td>
+</tr>
+<tr>
+<td>0x201</td>
+<td>WHEEL_SPEED_R</td>
+<td>WHEEL_R</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">135</td>
+<td style="text-align: right;">13.5</td>
+<td style="text-align: right;">2.7</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>TOTAL</strong></td>
+<td></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"><strong>320</strong></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"><strong>42.6</strong></td>
+<td style="text-align: right;"><strong>8.5</strong></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>How busy?</td>
+<td><strong>8.5%</strong> at worst; about 7% without stuffing</td>
+</tr>
+<tr>
+<td>The rule of thumb</td>
+<td>keep a CAN bus under 30-50%, so low-priority frames don't wait</td>
+</tr>
+<tr>
+<td>Room left</td>
+<td>about <strong>800 more 8-byte frames a second</strong> before 30%</td>
+</tr>
+<tr>
+<td>The wheel sensors</td>
+<td>Ben, 23 Oct: an Arduino sends 0x200 and 0x201 to the Orin. Their 200 frames a second are the biggest share (5.4%), and fine. Even 500 Hz each would only reach about 30%</td>
+</tr>
+<tr>
+<td>The Orin's side</td>
+<td>SocketCAN turns each frame into a ROS message on <code>/can/rx</code>: 260 a second, about 40 B each, 0.01 MB/s. Small, but it costs some CPU in Python (<code>spine_bridge</code>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-links-one-by-one">The links, one by one</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Link</th>
+<th>Its limit</th>
+<th>Planned load</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Orin's Ethernet port</strong></td>
+<td>1 Gbit/s, ~110 MB/s</td>
+<td>lidar 0.94 + 3 JPEG cameras 13.5 + the rest 0.5 = <strong>~15 MB/s (14%)</strong></td>
+<td>✅ with JPEG. ❌ with raw pictures from the Pis: 2 cameras = 187 MB/s, <strong>170%</strong></td>
+</tr>
+<tr>
+<td>A camera Pi's port</td>
+<td>1 Gbit/s</td>
+<td>one raw 1080p camera: 93 MB/s (<strong>85%</strong>)</td>
+<td>❌ raw: no room for bursts. ✅ JPEG: 4%</td>
+</tr>
+<tr>
+<td>The dash's port</td>
+<td>1 Gbit/s</td>
+<td>the raylib HUD reads the <strong>raw</strong> front camera: 93 MB/s</td>
+<td>❌ today's HUD code, and a Pi would struggle to draw that many bytes. Give it a small or compressed picture</td>
+</tr>
+<tr>
+<td>A Pi's <strong>USB 2.0</strong></td>
+<td>480 Mbit/s, ~35-40 MB/s real</td>
+<td>a USB camera at 1080p, 15 Hz: 62 MB/s uncompressed (YUYV)</td>
+<td>❌ uncompressed. ✅ as MJPEG, which is why <code>cameras.launch.py</code> asks for MJPEG</td>
+</tr>
+<tr>
+<td>A Pi 5's USB 3.0</td>
+<td>5 Gbit/s</td>
+<td></td>
+<td>✅ room for a raw camera</td>
+</tr>
+<tr>
+<td>USB serial (IMU, GPS, radar)</td>
+<td>at most ~0.09 MB/s each, at 921,600 baud</td>
+<td>under 0.2 MB/s together</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>WiFi</strong> to laptops</td>
+<td>802.11n (the router: a Linksys EA3500 in the photos): 300-450 Mbit/s on paper, <strong>~20-50 Mbit/s real</strong>, shared, less in a metal car</td>
+<td>what each laptop opens</td>
+<td>⚠️ see below</td>
+</tr>
+<tr>
+<td>The lidar's port</td>
+<td>100 Mbit/s</td>
+<td>7.5 Mbit/s</td>
+<td>✅ 7.5%</td>
+</tr>
+<tr>
+<td>CAN</td>
+<td>500 kbit/s</td>
+<td>42.6 kbit/s</td>
+<td>✅ 8.5%</td>
+</tr>
+<tr>
+<td>Inside one computer</td>
+<td>memory, several GB/s</td>
+<td>raw cameras into the detector on the Orin: 93 MB/s each</td>
+<td>✅ but CPU: see Cyclone below</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="wifi-the-laptops">WiFi: the laptops</h3>
+<p>Plan for about <strong>20 Mbit/s (2.5 MB/s)</strong> for all laptops together (a guess: measure it on the
+car). Watching over Foxglove or Lichtblick (port 8765) costs only what you open:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>A laptop opens</th>
+<th style="text-align: right;">MB/s</th>
+<th style="text-align: right;">Mbit/s</th>
+<th>Fits?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Status, TF, odometry, plan, the lidar's scan, the local costmap</td>
+<td style="text-align: right;">~0.2</td>
+<td style="text-align: right;">~1.6</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>One camera, JPEG, 1080p at 15 Hz</td>
+<td style="text-align: right;">4.5</td>
+<td style="text-align: right;">36</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>The same at 640x360, 5 Hz</td>
+<td style="text-align: right;">~0.15</td>
+<td style="text-align: right;">~1.2</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>The lidar's full points</td>
+<td style="text-align: right;">~7</td>
+<td style="text-align: right;">~56</td>
+<td>❌ use the scan</td>
+</tr>
+<tr>
+<td>A raw camera</td>
+<td style="text-align: right;">93</td>
+<td style="text-align: right;">746</td>
+<td>❌ never</td>
+</tr>
+<tr>
+<td>The laptop's own detector (<code>laptop.yaml</code>, <code>compressed: true</code>): one JPEG camera, 15 Hz</td>
+<td style="text-align: right;">4.5</td>
+<td style="text-align: right;">36</td>
+<td>⚠️ too much for WiFi: plug the laptop into the switch (it has free ports), or lower the rate</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-to-do-about-the-big-ones">What to do about the big ones</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do this</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Compress pictures on the camera's own computer</strong>, and send only <code>/compressed</code> over the network</td>
+<td>93 MB/s becomes about 4.5. The USB camera already sends MJPEG: keep it as JPEG instead of unpacking it to RGB and packing it again, if the driver can (check <code>usb_cam</code> and <code>camera_ros</code>, Q22)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Or plug the cameras into the Orin</strong></td>
+<td>then raw pictures never touch the network. The Orin decodes JPEG in hardware (NVJPEG)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Keep the lidar's points on the Orin</strong></td>
+<td>the packets (0.94 MB/s) come in once; the points (~7 MB/s) and the scan stay there</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Lower rates for people</strong></td>
+<td>a screen needs 5 Hz, not 15. Foxglove and Lichtblick can subscribe to a throttled copy (<code>topic_tools throttle</code>)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Give the HUD a small picture</strong></td>
+<td>the raylib HUD and <code>hud_server</code> read the raw front camera. Feed them a 640x360 copy at 5 Hz (3.5 MB/s raw, ~0.15 MB/s JPEG), or teach the HUD JPEG</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Same computer: one process</strong></td>
+<td>where a camera and its reader share the Orin, run them in one process (composable nodes), so the picture is passed, not copied</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Viewers subscribe to one costmap</strong>, not every layer</td>
+<td>each Nav2 layer is its own 40-640 kB topic. RViz or Foxglove opening all of them is 5 MB/s</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Measure on the car</strong> with <code>pixi run bandwidth</code></td>
+<td>every "guess" above becomes a number</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="cyclone-dds-the-default-from-23-oct-ben">Cyclone DDS, the default from 23 Oct (Ben)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Only the wired network</strong> (Cyclone's <code>NetworkInterface</code> set to the Ethernet port)</td>
+<td>the localization Pi is also on Carleton's WiFi, and its ROS traffic goes out on both (21 Oct audit). On the car, ROS belongs on the switch</td>
+</tr>
+<tr>
+<td><strong>Bigger socket buffers</strong> for big messages (Linux <code>net.core.rmem_max</code>, and Cyclone's <code>SocketReceiveBufferSize</code>, about 10 MB)</td>
+<td>a 1 MB message arrives as hundreds of UDP packets; with a small buffer some are dropped and sent again, and the picture is late</td>
+</tr>
+<tr>
+<td>No shared memory unless set up</td>
+<td>Cyclone sends to the same computer over loopback UDP (its shared memory needs Iceoryx). A raw camera into a detector on the same Orin is then a copy through the kernel: fine for bandwidth, costs CPU. Point 6 above avoids it</td>
+</tr>
+<tr>
+<td>Sensors at high rates <strong>best effort</strong></td>
+<td>the IMU at 200 Hz needs no resends: a late reading is worthless. Pictures stay reliable (our rule: best effort loses big messages)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="measured-in-gazebo-23-oct">Measured in Gazebo (23 Oct)</h2>
+<p><code>pixi run bandwidth --local --seconds 30</code> beside <code>pixi run sim world:=road gui:=false
+rviz:=false</code> (Cyclone, its own ROS domain and Gazebo partition), parked; then again while
+Nav2 drove 40 m. Gazebo ran at 0.92-0.98 x real time, so its 10 Hz sensors read 9.2-9.8 Hz.</p>
+<p><strong>These are Gazebo's numbers, not the car's.</strong> Gazebo's cameras are 640x360 (a third of
+the car's), and its lidar is a 16-beam stand-in.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Topic</th>
+<th style="text-align: right;">Hz</th>
+<th style="text-align: right;">Size</th>
+<th style="text-align: right;">MB/s</th>
+<th style="text-align: right;">Mbit/s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/sensors/lidar/points</code></td>
+<td style="text-align: right;">9.2</td>
+<td style="text-align: right;">922 kB</td>
+<td style="text-align: right;">8.5</td>
+<td style="text-align: right;">68</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/front_left/image_raw</code></td>
+<td style="text-align: right;">9.2</td>
+<td style="text-align: right;">691 kB</td>
+<td style="text-align: right;">6.4</td>
+<td style="text-align: right;">51</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/front_right/image_raw</code></td>
+<td style="text-align: right;">9.2</td>
+<td style="text-align: right;">691 kB</td>
+<td style="text-align: right;">6.4</td>
+<td style="text-align: right;">51</td>
+</tr>
+<tr>
+<td><code>/sensors/camera/rear/image_raw</code></td>
+<td style="text-align: right;">9.2</td>
+<td style="text-align: right;">691 kB</td>
+<td style="text-align: right;">6.4</td>
+<td style="text-align: right;">51</td>
+</tr>
+<tr>
+<td><code>/local_costmap/static_layer</code> (and <code>_raw</code>)</td>
+<td style="text-align: right;">1.5</td>
+<td style="text-align: right;">640 kB</td>
+<td style="text-align: right;">1.0 each</td>
+<td style="text-align: right;">7.9 each</td>
+</tr>
+<tr>
+<td><code>/global_costmap/costmap</code> (and 7 more layers)</td>
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">640 kB</td>
+<td style="text-align: right;">0.32 each</td>
+<td style="text-align: right;">2.6 each</td>
+</tr>
+<tr>
+<td><code>/joint_states</code></td>
+<td style="text-align: right;">877</td>
+<td style="text-align: right;">364 B</td>
+<td style="text-align: right;">0.32</td>
+<td style="text-align: right;">2.6</td>
+</tr>
+<tr>
+<td><code>/local_costmap/costmap</code> (and 5 more layers)</td>
+<td style="text-align: right;">1.5</td>
+<td style="text-align: right;">40 kB</td>
+<td style="text-align: right;">0.06 each</td>
+<td style="text-align: right;">0.5 each</td>
+</tr>
+<tr>
+<td><code>/gazebo/radar/points</code> (Gazebo's own)</td>
+<td style="text-align: right;">9.2</td>
+<td style="text-align: right;">6.0 kB</td>
+<td style="text-align: right;">0.06</td>
+<td style="text-align: right;">0.5</td>
+</tr>
+<tr>
+<td><code>/vehicle/wheels</code></td>
+<td style="text-align: right;">869</td>
+<td style="text-align: right;">48 B</td>
+<td style="text-align: right;">0.04</td>
+<td style="text-align: right;">0.3</td>
+</tr>
+<tr>
+<td><code>/vehicle/odom</code></td>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">724 B</td>
+<td style="text-align: right;">0.03</td>
+<td style="text-align: right;">0.3</td>
+</tr>
+<tr>
+<td><code>/sensors/lidar/scan</code></td>
+<td style="text-align: right;">9.2</td>
+<td style="text-align: right;">2.9 kB</td>
+<td style="text-align: right;">0.03</td>
+<td style="text-align: right;">0.2</td>
+</tr>
+<tr>
+<td><code>/tf</code></td>
+<td style="text-align: right;">74</td>
+<td style="text-align: right;">243 B</td>
+<td style="text-align: right;">0.02</td>
+<td style="text-align: right;">0.1</td>
+</tr>
+<tr>
+<td><code>/sensors/imu/data_raw</code></td>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">324 B</td>
+<td style="text-align: right;">0.01</td>
+<td style="text-align: right;">0.1</td>
+</tr>
+<tr>
+<td><code>/ego/actuator_cmd</code></td>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">48 B</td>
+<td style="text-align: right;">0.002</td>
+<td style="text-align: right;">0.02</td>
+</tr>
+<tr>
+<td><code>/sensors/gps/fix</code></td>
+<td style="text-align: right;">4.6</td>
+<td style="text-align: right;">128 B</td>
+<td style="text-align: right;">&lt;0.001</td>
+<td style="text-align: right;">0.005</td>
+</tr>
+<tr>
+<td><strong>All 56 topics that sent</strong></td>
+<td style="text-align: right;"><strong>3,660</strong></td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"><strong>33</strong></td>
+<td style="text-align: right;"><strong>266</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>While driving: the same, plus <code>/control/cmd_vel</code> and Nav2's three command topics at 20 Hz
+(76 B), and <code>/plan</code> at 1 Hz (4-5 kB): <strong>35 MB/s</strong> in all.</p>
+<p>What Gazebo taught us:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Seen</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3 cameras and a lidar are 93% of the bytes</td>
+<td>the same shape as the car, at a smaller size</td>
+</tr>
+<tr>
+<td><code>/joint_states</code> and <code>/vehicle/wheels</code> at ~880 Hz</td>
+<td>Gazebo publishes the wheels every physics step. Gazebo only: the car's wheels are 100 Hz</td>
+</tr>
+<tr>
+<td>Nav2's costmap layers add up to 5 MB/s</td>
+<td>only because the meter subscribed to all 14. Nothing is sent to nobody</td>
+</tr>
+<tr>
+<td>Nothing late: worst gaps 0.1-0.25 s at 10 Hz</td>
+<td>with Cyclone, on a Mac also running other simulators</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="measure-it-yourself">Measure it yourself</h2>
+<pre class="highlight"><code class="language-bash">pixi run bandwidth --local                  # beside pixi run sim, on this computer
+pixi run bandwidth --seconds 30 --markdown  # on the car's network: a table for this page
+pixi run bandwidth --include /sensors       # only some topics (a pattern; repeat it)
+pixi run bandwidth --exclude image_raw      # leave out the raw pictures
+pixi run can-load                           # the CAN bus, from the DBC</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hz</td>
+<td>messages a second over the whole window, by the wall clock</td>
+</tr>
+<tr>
+<td>size, max</td>
+<td>the message as sent (serialized), average and largest</td>
+</tr>
+<tr>
+<td>MB/s, Mbit/s</td>
+<td>Hz x size. 1 MB = 1,000,000 bytes; Mbit = MB x 8, as links are sold</td>
+</tr>
+<tr>
+<td>worst gap s</td>
+<td>the longest wait between two messages: late or bursty data shows here</td>
+</tr>
+<tr>
+<td>from</td>
+<td>the publishing nodes, so you know which computer makes it</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Measuring costs bandwidth too</p>
+<p>The meter subscribes to every topic, raw pictures too. On the car, run it <strong>on the
+Orin</strong> (where the big topics already arrive), or <code>--exclude image_raw</code> from a laptop
+on WiFi.</p>
+</div>
+<p>The code: <code>tools/bandwidth.py</code> (the ROS part), <code>tools/topic_load.py</code> and
+<code>tools/can_load.py</code> (the numbers, no ROS; tests in <code>tools/tests/</code>).</p></section>
+<nav class="prevnext"><a class="prev" href="platforms.html"><small>Previous</small>← Platforms</a>
+<a class="next" href="car-install.html"><small>Next</small>From a USB stick →</a></nav>
+</main>
+<footer>Source: <code>docs/bandwidth.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

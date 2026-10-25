@@ -1,0 +1,50 @@
+# The Jetson Orin in the middle of the car: the decision-making parts, and perception.
+# TODO: set imu/gps/teleop/camera to wherever those USB devices are actually plugged in.
+parts:
+  description: true
+  mux: true
+  ego: true
+  teleop: false         # the joystick receiver: see laptop.yaml
+  scripted: true
+  goto: true            # drive to a GPS point and stop (aav_goto): next to the mux
+  imu: true             # TODO is the IMU on the Orin's USB?
+  gps: true             # TODO is the u-blox on the Orin's USB?
+  radar: false          # perception, later
+  lidar: true           # the roof Velodyne VLP-16: it sends its UDP packets to the Jetson only
+  battery: false
+  camera: false         # a USB camera here (usb_cam): the front ones come by camera_stream
+  camera_stream: true   # the two front cameras' H.264 streams from the camera Pi, each with
+                        # RF-DETR inside its node (camera_stream below; docs/camera-pipeline.md)
+  detector: false       # object_detector_orin, on image_raw: camera_stream's own detectors
+                        # replace it. Only for a camera that isn't streamed (its image:)
+  stop_signs: true      # the stop-sign watcher: one per car, next to the mux
+  radar_clusters: false # with the radar, later
+  camera_obstacles: false # TODO with calibrated cameras (Q22): boxes into Nav2's costmap,
+                          # next to navigation
+  lane: false           # lane keeping, with the camera: it drives whenever it sees a lane
+  localization: true
+  navigation: true
+  spine: true           # the CAN bus is wired to the Orin (Ben, 23 Oct; the hardware lead
+                        # confirms): actuators:=uart (today), the wheel nodes only, nothing
+                        # sent; actuators:=can, the CAN spine drives (docs/can-plan.md)
+  legacy_uart: false    # runs on motor_pi, which is wired to the ESP32
+  legacy_encoder: false # the 2025-26 Pico sent only to the Motor Pi: see motor_pi.yaml
+  foxglove: true
+
+# The camera streams' settings: aav_camera_stream camera_stream.launch.py's arguments
+# (the car sets source, time_code and use_sim_time itself). Untested on the Orin.
+camera_stream:
+  host: 192.168.1.108       # CAM1-PI, the front camera Pi (the 21 Oct net map; it was also
+                            # seen at .102, the same card). TODO fix it on the router
+  cameras: front_left,front_right   # rtsp://<host>:8554/<camera>, from its MediaMTX
+  decoder: gst-nvidia       # NVIDIA's hardware decoder, through JetPack's
+                            # /usr/bin/gst-launch-1.0
+  detector: rfdetr                    # RF-DETR Nano, in TensorRT (Ben, 23 Oct).
+  model: models/rf-detr-nano.engine   # built on the Orin itself: python3 tools/build_engine.py.
+                                      # Until then the part is skipped, and says so. Or
+                                      # delete this line: models/rf-detr-nano.pth, PyTorch;
+                                      # or detector: none, the streams with no stop signs.
+  # detector: yolo                    # YOLO instead, also in TensorRT:
+  # model: models/yolo11n.engine      # python3 tools/build_engine.py models/yolo11n.pt
+  # labels: stop sign       # the default: stop signs, and with the camera_obstacles part
+                            # its road users too

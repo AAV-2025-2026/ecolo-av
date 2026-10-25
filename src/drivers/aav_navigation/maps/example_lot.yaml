@@ -1,0 +1,11 @@
+# example_lot: 80 m x 60 m at 0.25 m/pixel (320 x 240 pixels). Made by tools/make_map.py.
+image: example_lot.pgm
+mode: trinary
+resolution: 0.25
+origin:
+- -10.0
+- -10.0
+- 0.0
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25

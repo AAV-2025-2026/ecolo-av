@@ -1,0 +1,19 @@
+# camera_obstacles (aav_detector): the detectors' boxes as points on the road, for Nav2's
+# local costmap. Off by default until the cameras are calibrated (Q22).
+camera_obstacles:
+  ros__parameters:
+    # COCO classes that count, by the stock model's names. Stop signs never count, even
+    # if listed here: they lock twist_mux instead.
+    classes: [person, bicycle, car, motorcycle, bus, truck, cat, dog, horse]
+    min_score: 0.5        # the lowest detector score that counts, 0 to 1
+    max_range: 12.0       # m from the camera, on the road. At 12 m, a camera tilted 1
+                          # degree more than vehicle.yaml says moves the point 2 m
+    step: 0.1             # m between points along a box's bottom edge: the costmap's cells
+    view_range: 12.0      # m: the costmap's camera layer is cleared out to here
+    max_age: 1.0          # s: a camera silent this long drops out of what is published
+    # Each camera's CameraInfo: its lens, kept by the frame it names. The rear one counts
+    # once a detector reads its picture (detector extra_images); add the right camera's
+    # (/sensors/camera/front_right/camera_info) the same way.
+    camera_info_topics: [/sensors/camera/front_left/camera_info,
+                         /sensors/camera/rear/camera_info]
+    base_frame: base_link

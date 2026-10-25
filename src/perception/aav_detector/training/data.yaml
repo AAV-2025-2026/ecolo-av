@@ -1,0 +1,7 @@
+path: #~/Yolo/Capstone/yolo_data # specify absolute path to the dataset here
+train: ./train/images
+val: ./valid/images
+test: ./test/images
+
+nc: 1
+names: ['Stop_Sign']

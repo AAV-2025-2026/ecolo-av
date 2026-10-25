@@ -1,0 +1,64 @@
+# The bench world and its pretend sensors. Map frame: x east, y north, metres from the GPS
+# datum (aav_localization/config/navsat.yaml). The model car starts at (0, 0), facing east.
+# The world stays put: the sensors see it from wherever the model car really is.
+mock_camera:
+  ros__parameters:
+    # Stop signs, as x, y pairs: one on the right of the road, 25 m ahead of the start.
+    stop_signs: [25.0, -2.0]
+    sign_height: 2.0          # m, the plate's centre above the ground
+    sign_size: 0.75           # m across: the common Ontario size
+    width: 640
+    height: 360
+    focal_px: 343.0           # the 2024-25 calibration (cameras/left.ini) scaled to 640 wide
+    rate_hz: 10.0
+    # The road: one lane between two painted lines, running east. The car starts on its
+    # centre line (spine_sim's start_y moves it). bend_radius bends it from bend_x on.
+    road_y: 0.0               # m north of the datum: the lane's centre line
+    lane_width: 3.5           # m between the lines' centres
+    line_width: 0.15          # m of paint
+    shoulder: 0.5             # m of tarmac outside each line
+    bend_x: 30.0              # m east: past the stop sign
+    bend_radius: 0.0          # m: + bends left, - right, 0 straight
+
+mock_radar:
+  ros__parameters:
+    # Obstacles the pretend radar sees (the camera doesn't draw them). Off by default:
+    # bench.launch.py obstacle:=true puts them there. Boxes as x1, y1, x2, y2, any number:
+    # one 1 m square in the car's lane, 15 m ahead of the start.
+    obstacle: false
+    boxes: [15.0, -0.5, 16.0, 0.5]
+    box_height: 1.0           # m
+    # The TI IWR6843AOP with ti_ros2_driver's cfg/base.cfg: 8.4 m (cfarFovCfg), 10 Hz.
+    max_range: 8.4            # m
+    fov_deg: 120.0            # the antenna's width
+    ray_step_deg: 2.0         # between the model's rays
+    keep: 0.8                 # the share of rays that return a point: a sparse radar
+    range_noise: 0.05         # m
+    height_noise: 0.1         # m: a radar's elevation is poor
+    rate_hz: 10.0
+
+mock_lidar:
+  ros__parameters:
+    # The roof's VLP-16 (bench.launch.py lidar:=true): the same boxes as mock_radar, as
+    # obstacle:=true puts them there, and the flat ground. Its place: vehicle.yaml lidar_link.
+    obstacle: false
+    boxes: [15.0, -0.5, 16.0, 0.5]
+    box_height: 1.0           # m
+    max_range: 100.0          # m along the beam, as the VLP-16's manual has it
+
+mock_gps:
+  ros__parameters:
+    stddev: 0.5               # m: plain GPS is 2-3 m, RTK 0.02 m (Q18 decides)
+    rate_hz: 5.0
+
+mock_imu:
+  ros__parameters:
+    gyro_stddev: 0.02         # rad/s, the same as the real driver claims (config/imu.yaml)
+    accel_stddev: 0.2         # m/s^2
+    gyro_bias: 0.002          # rad/s: a small drift, so the EKF has something to do
+
+mock_battery:
+  ros__parameters:
+    full_voltage: 50.9        # V: a 48 V pack is a guess until Q8 is answered
+    empty_voltage: 46.0
+    hours: 2.0

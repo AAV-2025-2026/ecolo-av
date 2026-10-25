@@ -1,0 +1,79 @@
+{
+  "configById": {
+    "DiagnosticSummary!all": {
+      "topicToRender": "/diagnostics",
+      "minLevel": 0,
+      "pinnedIds": [],
+      "hardwareIdFilter": "",
+      "sortByLevel": true,
+      "secondsUntilStale": 5
+    },
+    "Indicator!watchdog": {
+      "path": "/safety/sensor_watchdog/lock.data",
+      "style": "background",
+      "fallbackColor": "#2e7d32",
+      "fallbackLabel": "Sensors OK (or no watchdog yet)",
+      "rules": [{"operator": "=", "rawValue": "true", "color": "#c62828",
+                 "label": "STOP: a sensor Nav2 needs has failed"}]
+    },
+    "RawMessages!watchdog": {
+      "topicPath": "/safety/sensor_watchdog/state.data",
+      "diffEnabled": false,
+      "expansion": "all"
+    },
+    "Indicator!sources": {
+      "path": "/system/sensor_mux/state.ok",
+      "style": "background",
+      "fallbackColor": "#c62828",
+      "fallbackLabel": "Sources: not all as asked (see below)",
+      "rules": [{"operator": "=", "rawValue": "true", "color": "#2e7d32",
+                 "label": "Sources: every sensor as asked"}]
+    },
+    "RawMessages!sources": {
+      "topicPath": "/system/sensor_mux/state",
+      "diffEnabled": false,
+      "expansion": "all"
+    },
+    "StateTransitions!history": {
+      "paths": [
+        {"value": "/safety/sensor_watchdog/lock.data", "timestampMethod": "receiveTime",
+         "label": "watchdog stop"},
+        {"value": "/safety/output_mux/state.data", "timestampMethod": "receiveTime",
+         "label": "output gate"},
+        {"value": "/system/sensor_mux/state.ok", "timestampMethod": "receiveTime",
+         "label": "sources ok"},
+        {"value": "/vehicle/status.estop_active", "timestampMethod": "receiveTime",
+         "label": "e-stop"}
+      ],
+      "isSynced": true
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 55,
+    "first": {
+      "direction": "column",
+      "splitPercentage": 70,
+      "first": "DiagnosticSummary!all",
+      "second": "StateTransitions!history"
+    },
+    "second": {
+      "direction": "column",
+      "splitPercentage": 12,
+      "first": "Indicator!watchdog",
+      "second": {
+        "direction": "column",
+        "splitPercentage": 25,
+        "first": "RawMessages!watchdog",
+        "second": {
+          "direction": "column",
+          "splitPercentage": 15,
+          "first": "Indicator!sources",
+          "second": "RawMessages!sources"
+        }
+      }
+    }
+  }
+}

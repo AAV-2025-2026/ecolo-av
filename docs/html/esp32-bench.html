@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First flash on the bench: the Rust ESP32 · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/esp32-bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>First flash on the bench: the Rust ESP32</h1>
+<div class="meta">16 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a class="here" href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
+<div class="lead"><p>The plan for the first time the Rust program (<code>firmware/spine/boards/esp32-umod</code>) goes onto
+the car's ESP32 control board. Do it with Ben, <strong>wheels off the ground</strong>, with the C++
+ready to go back on. What the program is: <a href="rust-firmware.html">Rust firmware</a>.</p>
+<p><span class="badge b-untested">untested</span> Nothing here has been done on a board yet. The emulator has (next section).</p>
+<div class="admonition warning">
+<p class="admonition-title">Before you start</p>
+<ul>
+<li>The car on stands: <strong>all four wheels off the ground</strong>.</li>
+<li>A second person at the <strong>red e-stop button</strong>. It cuts power by itself, whatever
+  the program does.</li>
+<li>The RC transmitter on, override switch <strong>off</strong>.</li>
+<li>Know how to roll back (the last section). Try it once before the first flash.</li>
+</ul>
+</div></div>
+<section class="card"><h2 id="before-the-board-the-emulator">Before the board: the emulator</h2>
+<p>TODO 45 (Ben, 24 Oct): "if it doesn't get a heartbeat then it applys the breaks and stops
+the acceleration". Proven first with no hardware at all: the same firmware, in
+Espressif's ESP32 emulator (QEMU).</p>
+<pre class="highlight"><code class="language-text"> tools/esp32_qemu.py                         QEMU: an ESP32, running our firmware
+   aav_legacy's frames, 50 Hz ──► UART1 RX ──► LegacyLink ──► spine-core ──► drivers
+   reads the uplink frames ◄───── UART1 TX ◄── its status, 50 Hz      │        │
+   fake iBUS, every 7 ms ───────► UART2 RX ──► the RC receiver ───────┘        │
+   reads the log          ◄────── UART0    ◄── EVENT / STATUS / DEVICES lines  │
+                                                       stand-in Jrks, DAC ◄────┘</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run esp-qemu-tools</code></td>
+<td>downloads QEMU into <code>vendor/qemu</code> (once, 22 MB; macOS on Apple silicon)</td>
+</tr>
+<tr>
+<td><code>pixi run esp-qemu-check</code></td>
+<td>builds with <code>--features qemu,uplink</code>, boots it, runs 6 cycles, then the RC's modes, prints three tables (<code>-- --no-rc</code> skips the RC)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each cycle: stand-still frames (the arming stop), drive frames (0.6 m/s), a <strong>gap</strong>, then
+drive frames again with no stop first. Since 24 Oct the frames are version 2, with the
+Orin's counter moving one a frame (TODO 50,
+<a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>).
+The gaps, in turn:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>The Motor Pi sends</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>silence</td>
+<td>nothing</td>
+<td>the Pi or its cable is gone</td>
+</tr>
+<tr>
+<td>frozen</td>
+<td>drive frames at 50 Hz, the <strong>same counter</strong></td>
+<td>the Pi alive, the Orin gone</td>
+</tr>
+<tr>
+<td>bad_crc</td>
+<td>drive frames at 50 Hz, the counter moving, <strong>every CRC wrong</strong></td>
+<td>a bad cable: each frame ignored and counted</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="results-with-the-heartbeat-24-oct-bens-mac">Results with the heartbeat, 24 Oct (Ben's Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Cycle</th>
+<th>Gap</th>
+<th>Drove (DAC peak)</th>
+<th>Brake full + DAC 0 after the last new counter</th>
+<th>Gap frames ignored</th>
+<th>Fault bit 1</th>
+<th>Stays braked until a stop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>silence</td>
+<td>yes (140)</td>
+<td>119 ms</td>
+<td>-</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>2</td>
+<td>frozen</td>
+<td>yes (140)</td>
+<td>113 ms</td>
+<td>30 of 30 (<code>repeats</code>)</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>bad_crc</td>
+<td>yes (140)</td>
+<td>112 ms</td>
+<td>30 of 30 (<code>bad</code>)</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>4</td>
+<td>silence</td>
+<td>yes (140)</td>
+<td>113 ms</td>
+<td>-</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>5</td>
+<td>frozen</td>
+<td>yes (140)</td>
+<td>118 ms</td>
+<td>30 of 30</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>bad_crc</td>
+<td>yes (140)</td>
+<td>111 ms</td>
+<td>30 of 30</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<p>A second run, inside <code>pixi run test</code>, passed too: 111 to 120 ms.</p>
+<p>The check fails when it should: with the counter rule turned off on purpose, the frozen
+cycle kept driving (no timeout, 0 repeats counted) and failed.</p>
+<p>The firmware logs a <code>LINK</code> line with each <code>STATUS</code>: <code>frames=</code>, <code>bad=</code>, <code>skipped=</code>,
+<code>repeats=</code>, <code>counter=</code>.</p>
+<h3 id="results-the-uplink-and-the-rcs-modes-24-oct-bens-mac">Results: the uplink and the RC's modes, 24 Oct (Ben's Mac)</h3>
+<p>TODO 50's uplink and TODO 48's modes (<a href="rust-firmware.html#the-uplink-the-esp32s-status-back-to-the-pi-24-oct">the uplink</a>).
+The same run as the heartbeat's cycles (111-119 ms, all passed).</p>
+<p>Each cycle's uplink frames:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Cycle</th>
+<th>Gap</th>
+<th>Frames a second</th>
+<th>Echo = a counter just sent</th>
+<th>Computer, armed while driving</th>
+<th>Said stopped + fault 1 after</th>
+<th>Echo stays frozen in the gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>silence</td>
+<td>50</td>
+<td>yes</td>
+<td>yes</td>
+<td>121 ms</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2</td>
+<td>frozen</td>
+<td>51</td>
+<td>yes</td>
+<td>yes</td>
+<td>118 ms</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>bad_crc</td>
+<td>51</td>
+<td>yes</td>
+<td>yes</td>
+<td>115 ms</td>
+<td>-</td>
+</tr>
+<tr>
+<td>4</td>
+<td>silence</td>
+<td>50</td>
+<td>yes</td>
+<td>yes</td>
+<td>129 ms</td>
+<td>-</td>
+</tr>
+<tr>
+<td>5</td>
+<td>frozen</td>
+<td>51</td>
+<td>yes</td>
+<td>yes</td>
+<td>118 ms</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>6</td>
+<td>bad_crc</td>
+<td>50</td>
+<td>yes</td>
+<td>yes</td>
+<td>128 ms</td>
+<td>-</td>
+</tr>
+</tbody>
+</table></div>
+<p>No uplink frame lost over the run (the sequence numbers).</p>
+<p>Then the RC, with fake iBUS frames on UART2 (CH6: 1500 = RC via ROS, 2000 = RC direct;
+the throttle stick full, the gear forward):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Does</th>
+<th>Seen</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>RC via ROS; the frames say stand still</td>
+<td>the uplink says RC via ROS, computer, RC throttle 1.0; <strong>the DAC stays 0</strong></td>
+<td>pass</td>
+</tr>
+<tr>
+<td>2</td>
+<td>RC via ROS; the frames drive</td>
+<td>the DAC follows the frames (140)</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>3</td>
+<td>RC direct; the frames say stand still</td>
+<td>mode RC direct; <strong>the sticks drive</strong> (DAC 346)</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>4</td>
+<td>RC direct, then the receiver silent</td>
+<td>fault 256 after <strong>119 ms</strong>, brake full, DAC 0</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>5</td>
+<td>RC via ROS, driving, then the receiver silent</td>
+<td>fault 256 after <strong>117 ms</strong>, brake full, DAC 0</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>6</td>
+<td>the receiver back on RC via ROS, drive frames, no stop</td>
+<td>stays stopped and latched</td>
+<td>pass</td>
+</tr>
+</tbody>
+</table></div>
+<p>The check fails when it should: built with the two-position map instead (<code>RcMap::TODAY</code>),
+steps 1, 2, 5 and 6 failed.</p>
+<h3 id="results-before-the-heartbeat-24-oct-version-1-frames-silence-only">Results before the heartbeat, 24 Oct (version 1 frames, silence only)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Cycle</th>
+<th>Drove (DAC peak)</th>
+<th>Timeout after the last frame</th>
+<th>Full brake (3500) + DAC 0</th>
+<th>Fault bit 1</th>
+<th>Stays braked until a stop frame</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>yes (140)</td>
+<td>116 ms</td>
+<td>116 ms</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>2</td>
+<td>yes (140)</td>
+<td>113 ms</td>
+<td>113 ms</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>yes (140)</td>
+<td>113 ms</td>
+<td>113 ms</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<p>Over six runs: <strong>111 to 120 ms</strong>, every cycle passed. That is the 100 ms timeout, plus
+up to two 10 ms ticks (the tick that reads the last frame, the tick that notices).
+Within the 0.2 s of check 8 below. The check fails above 200 ms: a firmware built with a
+400 ms timeout, on purpose, failed it (410-417 ms).</p>
+<p>The times are the firmware's own clock. QEMU's clock follows the Mac's (no <code>-icount</code>):
+over each run they agreed to 0.1 %.</p>
+<h3 id="what-it-did-and-didnt-exercise">What it did and didn't exercise</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>In QEMU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>spine-core, the 100 ms timeout, the latch, the re-arm</td>
+<td>✅ the real code</td>
+</tr>
+<tr>
+<td>The UART link: version 2 frames, the CRC, resync, the counter rule (<code>legacy-link</code>)</td>
+<td>✅ the real code, real bytes on UART1</td>
+</tr>
+<tr>
+<td>The uplink: the status frame on UART1's TX, its echo, the mode</td>
+<td>✅ the real code; read by aav_legacy's own <code>UplinkParser</code></td>
+</tr>
+<tr>
+<td>The RC receiver (iBUS on UART2), the three modes, a lost RC</td>
+<td>✅ the real code; the frames are fake, made by the script</td>
+</tr>
+<tr>
+<td>The Jrk, DAC and expander drivers, and their order</td>
+<td>✅ the real code; the bytes go to stand-ins</td>
+</tr>
+<tr>
+<td>The hardware watchdog (TIMG1, 100 ms)</td>
+<td>✅ on and fed; it never fired</td>
+</tr>
+<tr>
+<td>The Jrks, the DAC, the expander themselves</td>
+<td>❌ stand-ins (<code>spine_board::StandInBus</code>): QEMU can't add I2C devices</td>
+</tr>
+<tr>
+<td>Embassy's timer and interrupts</td>
+<td>❌ a busy-wait tick instead: QEMU's interrupt matrix has no status registers</td>
+</tr>
+<tr>
+<td>The Jrks' real feedback</td>
+<td>❌ the stand-ins say "analog" and report their target</td>
+</tr>
+<tr>
+<td>The LEDs, CAN</td>
+<td>❌ unwired, not built</td>
+</tr>
+<tr>
+<td>The real chip's timing, the Motor Pi, the cable</td>
+<td>❌ the bench, below</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="found-on-the-way">Found on the way</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Fixed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The firmware never turned the FPU on: it relied on the chip's reset state. QEMU starts with it off, and the first interrupt crashed (a double exception)</td>
+<td>✅ <code>enable_fpu()</code> in <code>main.rs</code>, on every build</td>
+</tr>
+<tr>
+<td>The log had no times</td>
+<td>✅ <code>t=</code> (ms since boot) on every line, and an <code>EVENT</code> line at each change</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-you-need">What you need</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A laptop with this repo, <code>pixi run esp-tools</code> done</td>
+<td>builds and flashes</td>
+</tr>
+<tr>
+<td>A USB cable to the ESP32 MicroMod's USB port</td>
+<td>flashing and the log</td>
+</tr>
+<tr>
+<td>The Motor-Pi running <code>aav_legacy</code> (<code>pixi run car</code> profile, or <code>legacy.launch.py</code>), with <strong><code>frame_version: 2</code></strong> in <code>legacy.yaml</code></td>
+<td>sends version 2 frames, with the Orin's counter. The car's file says 1 while the C++ is on</td>
+</tr>
+<tr>
+<td>The Orin running the output mux (the car profile), or a laptop as the Orin</td>
+<td>makes the counter: no Orin, no heartbeat, the car stays braked</td>
+</tr>
+<tr>
+<td>The RC transmitter</td>
+<td>the override; for the three modes, a three-position switch on CH6 (H10)</td>
+</tr>
+<tr>
+<td>For the uplink: the wire from the ESP32's TX1 (GPIO17) to the Pi's RX, confirmed by the hardware lead (H9)</td>
+<td>the status back up; without it, skip "The uplink and the RC modes"</td>
+</tr>
+<tr>
+<td>A multimeter</td>
+<td>the DAC output, the direction pin</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="1-build-and-save-the-c-first">1. Build, and save the C++ first</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pixi run -e firmware legacy-esp32</code></td>
+<td>the C++ still builds: it is the way back</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>vendor/cargo-tools/bin/espflash read-flash 0 0x400000 backup-esp32.bin</code></td>
+<td>a copy of what is on the board now (4 MB). Keep it off git</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>pixi run esp-build</code> (version 2 frames; <code>-- --features link-v1</code> for the 13-byte ones)</td>
+<td><code>Finished</code>; the program is <code>firmware/spine/boards/esp32-umod/target/xtensa-esp32-none-elf/release/spine-esp32-umod</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="2-flash">2. Flash</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>vendor/cargo-tools/bin/espflash list-ports</code></td>
+<td>the board's port (a Mac: <code>/dev/cu.usbserial-…</code>)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pixi run esp-flash</code> (add <code>--port &lt;port&gt;</code> if asked)</td>
+<td>it flashes, resets, and shows the log</td>
+</tr>
+<tr>
+<td>3</td>
+<td>read the first lines</td>
+<td><code>spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat); the last reset: …</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>If it won't connect: hold the board's BOOT button while it starts flashing.</p>
+</section>
+<section class="card"><h2 id="3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</h2>
+<p>Do them in order. Stop at the first one that fails, and roll back.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Power on, nothing else</td>
+<td>brake pulled (3500), steering centred (1950), DAC 0 V. Log: <code>STATUS t=… mode=Manual … faults=0x0000</code>. Status LED blinks fast</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Unplug a Jrk's I2C, then plug it back</td>
+<td>the red LED and a fault bit (8 steering, 16 brake) while it is out</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Start the Motor-Pi's bridge (<code>frame_version: 2</code>), with ego stale</td>
+<td>the bridge sends stop frames: brake stays full. <code>LINK</code> shows <code>frames=</code> rising, <code>bad=0</code>, <code>counter=</code> still</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Drive slowly from ROS (keyboard or joystick, 0.3 m/s)</td>
+<td><code>mode=Computer</code>, green LED, brake lets go (400), the DAC rises smoothly (600 codes a second at most), the wheels turn <strong>forward</strong></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Steer left from ROS</td>
+<td>the wheels turn <strong>left</strong>. If right: the steering sign (Q2), in <code>legacy.yaml</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>Stop from ROS</td>
+<td>throttle 0; the bridge's hold brake: target 1050, as the C++ gave it</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Reverse slowly</td>
+<td>the direction changes only with the DAC at 0; the wheels turn backwards</td>
+</tr>
+<tr>
+<td>8</td>
+<td>While driving, stop the bridge (Ctrl-C)</td>
+<td>within 0.2 s: throttle 0, brake full, <code>faults</code> has 1 (timeout). The <code>EVENT</code> line's <code>t=</code> says when (QEMU: 111-120 ms)</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Start the bridge again</td>
+<td>brake stays on until ego is stale or stops (a stop frame), then it drives again</td>
+</tr>
+<tr>
+<td>9a</td>
+<td>While driving, stop the Orin's output mux (or unplug the Orin's network), the bridge still running</td>
+<td>within 0.2 s: brake full, throttle 0, <code>faults</code> has 1, though <code>LINK frames=</code> still rises; <code>repeats=</code> rises instead. The heartbeat (TODO 50)</td>
+</tr>
+<tr>
+<td>9b</td>
+<td>Bring the Orin back</td>
+<td>stays braked until ego stands still (a stop with a new counter), then drives</td>
+</tr>
+<tr>
+<td>9c</td>
+<td><code>/safety/estop</code> true while driving</td>
+<td><code>estop=true</code> at once, brake full</td>
+</tr>
+<tr>
+<td>10</td>
+<td>RC override switch on, gear forward, a little throttle</td>
+<td><code>mode=Rc</code>, blue LED, wheels turn; ROS commands ignored</td>
+</tr>
+<tr>
+<td>11</td>
+<td>RC: switch the transmitter off</td>
+<td>within 0.1 s: brake full, <code>faults</code> has 256 (RC lost)</td>
+</tr>
+<tr>
+<td>12</td>
+<td>RC override off</td>
+<td>back to the computer, or Manual</td>
+</tr>
+<tr>
+<td>13</td>
+<td>The red e-stop button</td>
+<td>the car stops by itself, as today</td>
+</tr>
+<tr>
+<td>14</td>
+<td>10 minutes of 1 to 13 (and 9a-9c), mixed</td>
+<td>no unexpected resets in the log (<code>the last reset:</code> stays the power-on one)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Compare with the C++ (the table "The C++ beside the Rust" in
+<a href="rust-firmware.html">Rust firmware</a>): the differences marked ⚠️ are expected.</p>
+</section>
+<section class="card"><h2 id="the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</h2>
+<p>Only once the hardware lead says TX1 (GPIO17) reaches the Pi's RX (H9). Wheels still off
+the ground; checks 1 to 14 passed first.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pixi run esp-flash -- --features uplink</code> (or <code>tools/esp32.sh build --features uplink</code>, then flash). The first log line ends <code>with the uplink on TX1 and the three-position mode switch</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>legacy.yaml</code>: <code>frame_version: 2</code>, <strong><code>uplink: true</code></strong>; restart the bridge</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>U1</td>
+<td>Bridge running, nothing else</td>
+<td>the bridge logs <code>uplink: frames from the ESP32</code>; <code>ros2 topic hz /vehicle/rc</code> about 50; <code>/vehicle/status</code> 10. The ESP32's <code>LINK</code> line: <code>uplinks=</code> rising, <code>uplink_errors=0</code></td>
+</tr>
+<tr>
+<td>U2</td>
+<td>Unplug TX1's wire</td>
+<td>within 0.2 s the bridge warns <code>no frame from the ESP32</code>; the car still brakes and drives as before (the uplink is only news)</td>
+</tr>
+<tr>
+<td>U3</td>
+<td>Drive slowly from ROS</td>
+<td><code>/vehicle/status</code> mode 2 (computer), armed; the echo follows the Orin's counter (<code>/control/car/heartbeat</code>)</td>
+</tr>
+<tr>
+<td>U4</td>
+<td>Steer by hand from ROS, left then right</td>
+<td><code>/vehicle/steering</code> measured follows, + left. NaN: that Jrk has no feedback set up (D6)</td>
+</tr>
+<tr>
+<td>U5</td>
+<td>Brake from ROS (stop)</td>
+<td><code>/vehicle/brake</code> measured rises to about the command (0.3 hold, 1.0 full)</td>
+</tr>
+<tr>
+<td>U6</td>
+<td>Stop the Orin's output mux</td>
+<td><code>/vehicle/status</code> faults has 1 within 0.2 s, mode 0</td>
+</tr>
+<tr>
+<td>R1</td>
+<td>Transmitter on, CH6 <strong>low</strong></td>
+<td><code>/vehicle/rc</code> mode_switch 1 (computer); the sticks move its numbers, but nothing drives</td>
+</tr>
+<tr>
+<td>R2</td>
+<td>CH6 <strong>middle</strong> (RC via ROS), sticks centred</td>
+<td>mode_switch 2; <code>rc_driver</code> logs <code>RC via ROS</code>; <code>/drivers/rc/cmd_vel</code> zeros at 50 Hz; twist_mux passes it (<code>/control/cmd_vel</code>)</td>
+</tr>
+<tr>
+<td>R3</td>
+<td>A little throttle, gear forward</td>
+<td>the wheels turn, <strong>through ego</strong>: its speed and steering-rate limits; <code>/vehicle/status</code> mode 2</td>
+</tr>
+<tr>
+<td>R4</td>
+<td>Steer with the stick while rolling</td>
+<td>the wheels steer (standing still they don't: the bicycle model)</td>
+</tr>
+<tr>
+<td>R5</td>
+<td>Transmitter off while on RC via ROS</td>
+<td>within 0.1 s: brake full, faults 256; stays braked when it comes back, until the stick is centred (a stop), then drives</td>
+</tr>
+<tr>
+<td>R6</td>
+<td>CH6 <strong>high</strong> (RC direct)</td>
+<td><code>/vehicle/status</code> mode 1; the ESP32 drives from the sticks, as check 10; ROS can't</td>
+</tr>
+<tr>
+<td>R7</td>
+<td>Transmitter off while on RC direct</td>
+<td>as check 11: brake full, faults 256</td>
+</tr>
+<tr>
+<td>R8</td>
+<td>Stop the bridge while on RC via ROS</td>
+<td>the heartbeat stops: brake full within 0.2 s (fault 1). RC direct still works: the fallback</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="4-roll-back-to-the-c">4. Roll back to the C++</h2>
+<p>Any time something is wrong:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>press the e-stop; unplug the Motor-Pi's bridge</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pixi run -e firmware legacy-esp32 -t upload</code> (PlatformIO builds and flashes the C++; <code>src/secrets.h</code> for its WiFi). Set <code>frame_version: 1</code> back in <code>legacy.yaml</code>: the C++ reads only the 13-byte frame</td>
+</tr>
+<tr>
+<td>3</td>
+<td>or the backup: <code>vendor/cargo-tools/bin/espflash write-bin 0 backup-esp32.bin</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>check the C++ is back: its log says <code>=== ESP32: AAV Controller ===</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="after-the-bench">After the bench</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>Then</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All 14 checks pass</td>
+<td>the same on the ground, at walking speed, with Ben</td>
+</tr>
+<tr>
+<td>Proven on the car</td>
+<td>Ben decides: the C++ in <code>firmware/legacy/aav_umod_esp32</code> is removed, and <code>docs/firmware.md</code> updated</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="rust-firmware.html"><small>Previous</small>← Rust firmware</a>
+<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+</main>
+<footer>Source: <code>docs/esp32-bench.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

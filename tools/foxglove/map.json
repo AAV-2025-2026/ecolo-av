@@ -1,0 +1,51 @@
+{
+  "configById": {
+    "map!gps": {
+      "layer": "map",
+      "zoomLevel": 18,
+      "maxNativeZoom": 18,
+      "followTopic": "/localization/gps/fix",
+      "disabledTopics": [],
+      "topicColors": {
+        "/localization/gps/fix": "#2196f3",
+        "/sensors/gps/fix": "#ff9800"
+      }
+    },
+    "Indicator!fix": {
+      "path": "/sensors/gps/fix.status.status",
+      "style": "background",
+      "fallbackColor": "#2e7d32",
+      "fallbackLabel": "GPS: a fix",
+      "rules": [{"operator": "<", "rawValue": "0", "color": "#c62828",
+                 "label": "GPS: NO FIX"}]
+    },
+    "RawMessages!gps": {
+      "topicPath": "/sensors/gps/fix",
+      "diffEnabled": false,
+      "expansion": "all"
+    },
+    "RawMessages!route": {
+      "topicPath": "/drivers/nav/route/status.data",
+      "diffEnabled": false,
+      "expansion": "all"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "layout": {
+    "direction": "row",
+    "splitPercentage": 70,
+    "first": "map!gps",
+    "second": {
+      "direction": "column",
+      "splitPercentage": 12,
+      "first": "Indicator!fix",
+      "second": {
+        "direction": "column",
+        "splitPercentage": 80,
+        "first": "RawMessages!gps",
+        "second": "RawMessages!route"
+      }
+    }
+  }
+}

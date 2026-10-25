@@ -1,0 +1,20 @@
+# joy_teleop (teleop_tools 2.0.0, Jazzy): one button that sets the software e-stop.
+#
+# A `message_value` command publishes ONCE per press (checked in the source and its
+# test_debounce.py). There is deliberately no release button: clear the e-stop from a
+# laptop (ros2 topic pub --once /safety/estop std_msgs/msg/Bool "{data: false}", or Foxglove).
+# Reason: joy_teleop 2.0.0 treats an empty Joy message as "all pressed", so a button
+# mapped to release could fire by itself; a spurious e-stop is safe, a spurious release
+# is not.
+#
+# TODO pick the button on the team's joystick (not 0: that's the deadman).
+/**/joy_teleop:                 # any namespace: teleop.launch.py puts it in /drivers/joy
+  ros__parameters:
+    estop:
+      type: topic
+      interface_type: std_msgs/msg/Bool
+      topic_name: /safety/estop
+      deadman_buttons: [2]
+      message_value:
+        data:
+          value: true

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Actuator tests: measure how the car moves · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/actuator-tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Actuator tests: measure how the car moves</h1>
+<div class="meta">14 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a class="here" href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-it-fits">How it fits</a><a href="#the-tests">The tests</a><a href="#in-gazebo">In Gazebo</a><a href="#on-the-car">On the car</a><a href="#the-speed-loops-profile-todo-27">The speed loop&#x27;s profile (TODO 27)</a><a href="#what-it-saves">What it saves</a><a href="#proven-in-gazebo-15-oct">Proven in Gazebo (15 Oct)</a><a href="#the-code">The code</a></nav>
+<div class="lead"><p>One script runs the stage-3 and stage-4 tests of <code>READ-ME-TESTS.md</code>: it drives the car,
+logs what happened, and prints the numbers for <code>vehicle.yaml</code>. Built and proven in Gazebo
+(15 Oct); the same script runs on the car.</p>
+<div class="admonition note">
+<p class="admonition-title">The short version</p>
+<ul>
+<li><code>pixi run actuator-test --list</code> shows the tests. Add <code>--sim</code> for Gazebo.</li>
+<li><strong>On the car:</strong> stage 3 on stands (<code>--stands</code>), stage 4 in an empty lot. It asks you
+  to type the test's name first, and never goes above 1 m/s (0.3 on stands).</li>
+<li><strong>To stop:</strong> Ctrl-C, the e-stop, or the joystick's deadman. Any of them, any time.</li>
+<li>It prints the <code>vehicle.yaml</code> lines to paste. It never writes the file itself.</li>
+</ul>
+</div></div>
+<section class="card"><h2 id="how-it-fits">How it fits</h2>
+<pre class="highlight"><code class="language-text"> actuator_test ──/drivers/tests/cmd_vel──► twist_mux ──► ego ──► backend ──► the car
+   (priority 60)                               ▲                    (or Gazebo)
+ joystick 100, keyboard 90 ────────────────────┘ always win
+        │
+        └── reads back: /vehicle/odom (speed), /vehicle/steering, /throttle, /brake,
+            the IMU, /localization/odom/local, GPS, /safety/estop, /system/source</code></pre>
+<p>It's a driver like any other (<a href="howto-driver.html">Build a driver</a>), in twist_mux's <code>tests</code>
+slot: below both people, above Nav2 and every other program.</p>
+</section>
+<section class="card"><h2 id="the-tests">The tests</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Test</th>
+<th>#</th>
+<th>Where</th>
+<th>What it does</th>
+<th>Gives (<code>vehicle.yaml</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>steer-sweep</code></td>
+<td>3.10</td>
+<td>stands</td>
+<td>steps full left → centre → full right and back, 2.5 s each</td>
+<td>angle per command; <code>max_steering_angle</code>, <code>steer_offset</code></td>
+</tr>
+<tr>
+<td><code>steer-rate</code></td>
+<td>3.11</td>
+<td>stands</td>
+<td>centre → full lock → centre, each way</td>
+<td><code>steer_rate</code>, <code>steer_lag</code></td>
+</tr>
+<tr>
+<td><code>steer-centre</code></td>
+<td>3.12</td>
+<td>stands</td>
+<td>straight, then tiny steps (0.002 rad) each way</td>
+<td><code>steer_offset</code>, <code>steer_deadband</code></td>
+</tr>
+<tr>
+<td><code>speed-up</code></td>
+<td>4.1</td>
+<td>lot</td>
+<td>from still to the speed cap</td>
+<td>time to 0.5, 1, 2, 3 m/s; g (wheels and IMU); <code>max_accel</code>, <code>throttle_lag</code></td>
+</tr>
+<tr>
+<td><code>coast</code></td>
+<td>4.2</td>
+<td>lot</td>
+<td>to 2 m/s, then neither throttle nor brake</td>
+<td><code>drag</code></td>
+</tr>
+<tr>
+<td><code>brake</code></td>
+<td>4.3</td>
+<td>lot</td>
+<td>to 1, 2, 3 m/s (up to the cap), then stop</td>
+<td>stopping distance, g; <code>max_brake</code>, <code>brake_lag</code></td>
+</tr>
+<tr>
+<td><code>throttle-map</code></td>
+<td>4.4</td>
+<td>lot</td>
+<td>speed-ups to ¼, ½, ¾ and all of the cap</td>
+<td>throttle % → acceleration; <code>throttle_deadband</code></td>
+</tr>
+<tr>
+<td><code>circles</code></td>
+<td>4.5, 4.6</td>
+<td>lot</td>
+<td>one full circle per angle, both ways, at 1 m/s</td>
+<td>real wheel angle per command; tightest circle</td>
+</tr>
+<tr>
+<td><code>straight</code></td>
+<td>4.7</td>
+<td>lot</td>
+<td>10 m at 0.5 m/s, steering straight</td>
+<td>sideways drift; <code>steer_offset</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The steering tests creep at 0.2 m/s: ego only turns the wheels while the car moves. On
+stands the wheels spin slowly; in Gazebo the car crawls in arcs.</p>
+</section>
+<section class="card"><h2 id="in-gazebo">In Gazebo</h2>
+<pre class="highlight"><code class="language-bash">pixi run sim world:=empty gui:=false rviz:=false nav:=false sim_speed:=3   # terminal 1
+pixi run actuator-test speed-up --sim                                      # terminal 2</code></pre>
+<ul>
+<li><code>sim_speed:=3</code> lets ego go to 3 m/s, so <code>speed-up</code> and <code>brake</code> reach 2 and 3 m/s.</li>
+<li><code>--sim</code> keeps ROS on this computer and uses Gazebo's clock. The script refuses to run
+  without it when Gazebo announces SIM, and with it when anything announces REAL.</li>
+<li><code>nav:=false</code>: nothing else drives. The empty world has room for the circles.</li>
+</ul>
+</section>
+<section class="card"><h2 id="on-the-car">On the car</h2>
+<p>The task is <strong>not</strong> <code>--local</code>, so it reaches the car's computers. Run it from the laptop
+on the car's network, with the car's stack running (<code>pixi run car ...</code>).</p>
+<h3 id="stage-3-on-stands">Stage 3: on stands</h3>
+<pre class="highlight"><code class="language-bash">pixi run actuator-test steer-sweep --stands
+pixi run actuator-test steer-rate --stands
+pixi run actuator-test steer-centre --stands</code></pre>
+<ol>
+<li>The script prints the checklist from <code>READ-ME-TESTS.md</code> stage 3. Check it out loud.</li>
+<li>Type the test's name to start. Anything else cancels; nothing moves.</li>
+<li><strong>No steering sensor yet?</strong> (The 2025-26 ESP32 reports none: TEAM-TODO B6.) At each
+   measuring point the car stops and asks for the angle in degrees: read it with a
+   protractor or a phone app on the wheel. <code>steer-rate</code> then needs a video instead.</li>
+</ol>
+<h3 id="stage-4-in-an-empty-lot">Stage 4: in an empty lot</h3>
+<pre class="highlight"><code class="language-bash">pixi run actuator-test speed-up
+pixi run actuator-test coast
+pixi run actuator-test brake --speeds 0.5 1.0
+pixi run actuator-test circles --angles 0.25 0.5
+pixi run actuator-test straight</code></pre>
+<p>Run <code>coast</code> first: the throttle fit uses <code>vehicle.yaml</code>'s <code>drag</code>. Then paste the drag in,
+then run the rest. Start at walking pace: <code>--max-speed 0.5</code>.</p>
+<h3 id="the-safety-layers">The safety layers</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Typing the test's name</strong></td>
+<td>on the real car (or when nobody announces <code>/system/source</code>), nothing moves until you type it. No keyboard (a script, a pipe): refused</td>
+</tr>
+<tr>
+<td><strong>Speed cap</strong></td>
+<td>1 m/s on the car, 0.3 m/s on stands; <code>--max-speed</code> can lower it, never raise it there</td>
+</tr>
+<tr>
+<td><strong>ego must answer</strong></td>
+<td>on the car, no answer from ego (its speed cap and steering limits): refused. In Gazebo, a warning</td>
+</tr>
+<tr>
+<td><strong>Stage check</strong></td>
+<td>on the car, stage-3 tests need <code>--stands</code>, stage-4 tests refuse it</td>
+</tr>
+<tr>
+<td><strong>Envelope</strong></td>
+<td>each test has a speed, distance and time limit (printed at the start): crossing one stops the car</td>
+</tr>
+<tr>
+<td><strong>Ctrl-C, errors</strong></td>
+<td>zero commands until the car stands still, then it exits. A second Ctrl-C can't cut that short</td>
+</tr>
+<tr>
+<td><strong><code>/safety/estop</code></strong></td>
+<td>stops the test at once (twist_mux's lock and the backend brake too)</td>
+</tr>
+<tr>
+<td><strong>Someone takes over</strong></td>
+<td>the joystick or keyboard outranks the test in twist_mux; the script sees it and stops</td>
+</tr>
+<tr>
+<td><strong>Stale speed</strong></td>
+<td>no <code>/vehicle/odom</code> for 0.5 s: stop</td>
+</tr>
+<tr>
+<td><strong>Nothing through twist_mux</strong></td>
+<td>2 s with no <code>/control/cmd_vel</code>: stop (a lock, or a mux without the <code>tests</code> slot)</td>
+</tr>
+<tr>
+<td><strong>A cut-short run</strong></td>
+<td>still saves its log and table, but prints no <code>vehicle.yaml</code> lines</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">ego's steering rate</p>
+<p><code>steer-rate</code> lifts ego's <code>max_steering_rate</code> (0.6 rad/s) to 3 rad/s while it runs, so it
+times the motor, not ego, and puts it back after. ego allows a live change to that one
+limit only. If the script is killed (not Ctrl-C), restart ego to be sure.</p>
+</div>
+<h3 id="what-the-car-can-measure-today">What the car can measure today</h3>
+<p>The 2025-26 ESP32 drives the car until the spine replaces it (<code>legacy_uart_bridge</code>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Measurement</th>
+<th>Today (ESP32)</th>
+<th>With the spine</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed</td>
+<td>✅ the wheel encoder, <code>/vehicle/odom</code></td>
+<td>✅</td>
+</tr>
+<tr>
+<td>IMU g, yaw rate</td>
+<td>✅ once the IMU runs</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Pose (circles, straight)</td>
+<td>✅ the local EKF; GPS logged too</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Steering angle</td>
+<td>❌ no sensor: type it in on stands</td>
+<td>✅ <code>/vehicle/steering</code></td>
+</tr>
+<tr>
+<td>Throttle and brake levels</td>
+<td>❌ not reported: no <code>max_accel</code> or <code>max_brake</code> fit, only the g figures. A speed command <strong>is</strong> the throttle there: speed ÷ <code>full_throttle_speed</code> (<code>legacy_protocol.py</code>)</td>
+<td>✅ <code>/vehicle/throttle</code>, <code>/vehicle/brake</code></td>
+</tr>
+<tr>
+<td>Coasting</td>
+<td>❌ a low speed command still pushes, and 0 brakes</td>
+<td>✅ inside the speed loop's coast band</td>
+</tr>
+<tr>
+<td>A fixed brake % (4.3 as written)</td>
+<td>❌ no brake command exists: the tests brake with a normal stop</td>
+<td>❌ the same</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-speed-loops-profile-todo-27">The speed loop's profile (TODO 27)</h2>
+<p>The spine's speed loop has two profiles (<a href="vehicle-model.html#tuning-the-speed-loop">Tuning the speed
+loop</a>): <code>default</code>, today's gains (overshoots about
+15%), and <code>smooth</code> (no overshoot on the model, robust to the throttle's 5x guess). The
+firmware keeps <code>default</code>. Try <code>smooth</code> here, in this order:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>What to run</th>
+<th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Before the car</td>
+<td><code>pixi run sim-check --speed-steps-only --speed-loop smooth</code></td>
+<td>each step ends within 5%, overshoot under 3%</td>
+</tr>
+<tr>
+<td>After 4.1, 4.2, 4.4 (<code>max_accel</code>, <code>drag</code>)</td>
+<td><code>pixi run vehicle-model --set max_accel=... --set drag=... --speed-loop</code></td>
+<td><code>smooth</code> still 0% at K with the measured numbers; if not, redo its gains (pole placement, then b)</td>
+</tr>
+<tr>
+<td>Stage 3, on stands, <strong>once the spine closes the loop</strong> (it has the wheel speed)</td>
+<td>build the board with <code>speed_loop: SpeedLoopConfig::smooth()</code> in its <code>SpineConfig</code>; a held step (below) at 0.3 m/s</td>
+<td>the wheels reach 0.3 m/s without passing 0.31; <code>/vehicle/throttle</code> steady, no jitter</td>
+</tr>
+<tr>
+<td>Stage 4, in the lot</td>
+<td>the held step at 0.5 and 1.0 m/s, each profile, the same day</td>
+<td>the peak speed in <code>/vehicle/odom</code> against the target; then pick one</td>
+</tr>
+</tbody>
+</table></div>
+<p>The held step is a scripted drive, 20 s at the target (the <code>speed-up</code> test stops 1 s after
+reaching 95%: too soon to see the peak, which comes 5-7 s in):</p>
+<pre class="highlight"><code class="language-bash">ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
+  "{target_speed: 0.5, acceleration: 1.0, deceleration: 1.0, hold_time: 20.0}" --feedback</code></pre>
+<div class="admonition warning">
+<p class="admonition-title">Today's ESP32 has no closed speed loop</p>
+<p>It drives the throttle open loop (speed ÷ <code>full_throttle_speed</code>), so neither profile
+runs on the car until the spine gets the wheel speed. On stands the wheels carry no
+load: the car is nearly a pure integrator there, the case where today's gains overshoot
+most. The e-stop person watches.</p>
+</div>
+</section>
+<section class="card"><h2 id="what-it-saves">What it saves</h2>
+<p>Each run gets a folder, <code>~/aav-tests/&lt;date&gt;-&lt;time&gt;-&lt;test&gt;[-sim]/</code> (<code>--out</code> or
+<code>$AAV_TESTS_DIR</code> moves it):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>log.csv</code></td>
+<td>50 rows a second: commands, speed, steering, throttle, brake, wheels, IMU, pose, GPS</td>
+</tr>
+<tr>
+<td><code>summary.txt</code></td>
+<td>the table and the <code>vehicle.yaml</code> lines, as printed</td>
+</tr>
+<tr>
+<td><code>meta.yaml</code></td>
+<td>the test, the source, the cap and envelope, ego's limits, <code>vehicle.yaml</code> then, the steps</td>
+</tr>
+<tr>
+<td><code>bag/</code></td>
+<td>with <code>--bag</code>: a rosbag of every topic it reads and sends</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>pixi run actuator-test --analyse &lt;folder&gt;</code> prints the report again from <code>log.csv</code>.</p>
+</section>
+<section class="card"><h2 id="proven-in-gazebo-15-oct">Proven in Gazebo (15 Oct)</h2>
+<p><code>world:=empty</code>, <code>sim_speed:=3</code>, <code>vehicle.yaml</code>'s guessed numbers in the actuator model.
+The script should give them back:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Number</th>
+<th><code>vehicle.yaml</code></th>
+<th>Measured</th>
+<th>Test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_accel</code></td>
+<td>1.5 m/s²</td>
+<td>1.496</td>
+<td><code>speed-up</code>; 1.495 in <code>throttle-map</code></td>
+</tr>
+<tr>
+<td><code>throttle_lag</code></td>
+<td>0.1 s</td>
+<td>0.100</td>
+<td><code>speed-up</code></td>
+</tr>
+<tr>
+<td><code>throttle_deadband</code></td>
+<td>0</td>
+<td>0.113 ⚠️</td>
+<td><code>throttle-map</code>: Gazebo's car starts rolling about 0.3 s after the model does</td>
+</tr>
+<tr>
+<td><code>drag</code></td>
+<td>0.1 /s</td>
+<td>0.100</td>
+<td><code>coast</code></td>
+</tr>
+<tr>
+<td><code>max_brake</code></td>
+<td>3.0 m/s²</td>
+<td>3.045</td>
+<td><code>brake</code></td>
+</tr>
+<tr>
+<td><code>brake_lag</code></td>
+<td>0.2 s</td>
+<td>0.200</td>
+<td><code>brake</code></td>
+</tr>
+<tr>
+<td><code>steer_rate</code></td>
+<td>0.8 rad/s</td>
+<td>0.817</td>
+<td><code>steer-rate</code></td>
+</tr>
+<tr>
+<td><code>steer_lag</code></td>
+<td>0.1 s</td>
+<td>0.105</td>
+<td><code>steer-rate</code></td>
+</tr>
+<tr>
+<td><code>steer_offset</code></td>
+<td>0</td>
+<td>0.000</td>
+<td><code>steer-centre</code>, <code>steer-sweep</code>, <code>straight</code></td>
+</tr>
+<tr>
+<td><code>steer_deadband</code></td>
+<td>0.005 rad</td>
+<td>0.005</td>
+<td><code>steer-centre</code></td>
+</tr>
+<tr>
+<td><code>max_steering_angle</code></td>
+<td>0.5 rad</td>
+<td>0.495</td>
+<td><code>steer-sweep</code> (the deadband leaves 0.005 short)</td>
+</tr>
+<tr>
+<td>real angle, full-lock circle</td>
+<td>0.5 rad</td>
+<td>0.484 (was 0.433)</td>
+<td><code>circles</code>: fixed 15 Oct (below)</td>
+</tr>
+<tr>
+<td>real angle at 0.2 / 0.35 rad</td>
+<td>0.2 / 0.35</td>
+<td>0.196 / 0.341</td>
+<td><code>circles</code>: yaw rate, odometry circle and GPS circle agree within 1%</td>
+</tr>
+</tbody>
+</table></div>
+<p>Other figures from the same runs: 0 → 3 m/s in 6.2 s; IMU and wheel-speed g agree
+(0.054 vs 0.056 g mean); stopping from 1.1 / 2.2 / 3.1 m/s took 1.05 / 2.57 / 4.46 m;
+drift over 10 m was 0.06 m; the full-lock circle was 6.8 m across, not 5.75 (6.0 m since the fix below).</p>
+<div class="admonition success">
+<p class="admonition-title">Fixed: Gazebo's car now reaches full lock (S3, 15 Oct)</p>
+<p>Told 0.5 rad, the car turned as if 0.433. The cause was Gazebo's Ackermann system
+(gz-sim 8): it turns <code>steering_limit</code> into a smallest circle, wheelbase ÷ sin(limit),
+so a limit of 0.5 stopped the middle wheel at 0.447. Tyre slip (about 3%) took the
+rest. Now <code>vehicle.gazebo_steering_limit</code> gives Gazebo 0.578, worked out from
+<code>max_steering_angle</code>. <code>vehicle.yaml</code> and the real car's meaning don't change.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>circles --sim</code>, 1 m/s</th>
+<th>Before</th>
+<th>After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>full lock, left / right</td>
+<td>0.433</td>
+<td>0.485 / 0.484 rad (3% short)</td>
+</tr>
+<tr>
+<td>0.35 rad, left / right</td>
+<td>0.339</td>
+<td>0.342 / 0.341</td>
+</tr>
+<tr>
+<td>0.2 rad, left / right</td>
+<td>0.194</td>
+<td>0.197 / 0.196</td>
+</tr>
+<tr>
+<td>circle across, full lock</td>
+<td>6.8 m</td>
+<td>5.93-5.98 m</td>
+</tr>
+<tr>
+<td>Gazebo's wheels at full lock, inside / outside</td>
+<td>0.498 / 0.405 (worked out)</td>
+<td>0.563 / 0.449 (Ackermann: 0.563 / 0.449)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The wheels now point exactly where Ackermann says. The last 3% is the tyres
+sliding sideways, at every angle: the real car will slide too, and <code>circles</code> on the
+car measures it. <code>steer-sweep --sim</code> still reads 0.495 (the deadband).</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Gazebo's IMU</p>
+<p>Gazebo's own IMU never felt the car speed up or brake (0.00 m/s² while speeding up at
+0.6). <code>gazebo_imu</code> now gives it the car's acceleration (<a href="simulation.html">Simulation</a>).</p>
+</div>
+<h3 id="checked-in-gazebo-and-against-a-pretend-real-car-15-oct">Checked in Gazebo and against a pretend real car (15 Oct)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What was done</th>
+<th>What happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ctrl-C during <code>speed-up</code>, at about 1.5 m/s</td>
+<td>"STOPPING: Ctrl-C"; stood still, exited in 3.2 s</td>
+</tr>
+<tr>
+<td><code>/safety/estop</code> true during <code>speed-up</code></td>
+<td>"STOPPING: /safety/estop is true"; stood still</td>
+</tr>
+<tr>
+<td>The keyboard slot sends zeros during <code>straight</code></td>
+<td>"someone else is driving"; stood still</td>
+</tr>
+<tr>
+<td>Gazebo, without <code>--sim</code></td>
+<td>refused: add <code>--sim</code></td>
+</tr>
+<tr>
+<td>A pretend REAL announcer, no keyboard attached</td>
+<td>checklist printed, then refused</td>
+</tr>
+<tr>
+<td>... a stage-3 test without <code>--stands</code></td>
+<td>refused</td>
+</tr>
+<tr>
+<td>... <code>--sim</code>; <code>--max-speed 1.5</code></td>
+<td>refused; refused</td>
+</tr>
+<tr>
+<td>... typed "yes"</td>
+<td>"Cancelled: nothing moved"</td>
+</tr>
+<tr>
+<td>... typed "speed-up", but no car</td>
+<td>refused: no <code>/vehicle/odom</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-code">The code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/drivers/aav_actuator_tests/aav_actuator_tests/actuator_test.py</code></td>
+<td>the ROS node and the command line</td>
+</tr>
+<tr>
+<td><code>procedures.py</code></td>
+<td>each test's steps</td>
+</tr>
+<tr>
+<td><code>safety.py</code></td>
+<td>the rules: REAL or SIM, caps, envelope, confirmation</td>
+</tr>
+<tr>
+<td><code>analysis.py</code>, <code>reports.py</code></td>
+<td>the maths and the report: no ROS, unit-tested</td>
+</tr>
+<tr>
+<td><code>test/fake_car.py</code></td>
+<td>ego's model + Gazebo's actuator model: the tests check each test gets the numbers back</td>
+</tr>
+<tr>
+<td><code>tools/actuator_test.sh</code></td>
+<td>the pixi task: <code>--local</code> only with <code>--sim</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="bench.html"><small>Previous</small>← Bench mode</a>
+<a class="next" href="learn-state-space.html"><small>Next</small>Learn: state space →</a></nav>
+</main>
+<footer>Source: <code>docs/actuator-tests.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

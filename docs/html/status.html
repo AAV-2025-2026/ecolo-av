@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status: what works and what doesn&#x27;t yet · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Status: what works and what doesn&#x27;t yet</h1>
+<div class="meta">17 min read · 4 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a class="here" href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#each-box-in-the-picture">Each box in the picture</a><a href="#builds-and-tests">Builds and tests</a><a href="#is-it-all-on-jazzy">Is it all on Jazzy?</a><a href="#next">Next</a></nav>
+<div class="lead"><p>Where things stand early on 11 October 2026. "Works" means it ran under ROS 2
+Jazzy through Pixi: on oirp-spss (Linux), and since 10 October on Ben's Mac too. "On the
+bench" means <a href="bench.html">Bench mode</a>: the car's own software, with stand-ins for the
+hardware. "Untested" means the
+code and its config exist, but it hasn't run yet. The plan and the work left are in
+<a href="work.html">Work</a>.</p></div>
+<section class="card"><h2 id="each-box-in-the-picture">Each box in the picture</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Box</th>
+<th>Implemented by</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wheel speed, the 2025-26 encoder</td>
+<td><code>aav_legacy</code> <code>encoder_udp</code> (one wheel, into <code>/vehicle/odom</code>)</td>
+<td><span class="badge b-untested">untested</span> needs the car. Off in <code>motor_pi.yaml</code> since 23 Oct: the wheels are on CAN now</td>
+</tr>
+<tr>
+<td>Wheel speed, the CAN wheel sensors (CAN v0.2.0)</td>
+<td><code>spine_bridge</code>: WHEEL_SPEED_L/R (0x200, 0x201) into <code>/vehicle/wheels</code> and <code>/vehicle/odom</code>'s speed; <code>wheel-core</code> (the KEFC nodes' logic)</td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>'s wheel frames (15 Oct)</td>
+</tr>
+<tr>
+<td>The Orin's CAN bus for sensors only (today's wiring, 23 Oct; the hardware lead confirms)</td>
+<td><code>spine_bridge role:=sensors</code>, <code>car.launch.py actuators:=uart</code> (the default): no CAN sender, no drive frames; <code>/vehicle/odom</code> from the wheels alone</td>
+<td><span class="badge b-works">works</span> in tests (24 Oct, Mac): the Rust node fed wheel frames gave <code>/vehicle/odom</code> 1.1 m/s from 1.0 and 1.2, no <code>/can/tx</code>; the output mux's guard test. <span class="badge b-untested">untested</span> on the car: we haven't seen the Arduino's frames yet (<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>)</td>
+</tr>
+<tr>
+<td>IMU</td>
+<td><code>aav_imu_yahboom</code> (Rust) + <code>imu_filter_madgwick</code></td>
+<td><span class="badge b-untested">untested</span> needs the device; gives the 2025-26 C++ driver's answers, bit for bit</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td><code>ublox_gps</code> (the stock u-blox driver); <code>nmea</code> and <code>ublox_dgnss</code> are options</td>
+<td><span class="badge b-untested">untested</span> in Pixi on every computer; needs the device. The default is Tentative (Q18)</td>
+</tr>
+<tr>
+<td>Car model</td>
+<td><code>aav_description</code></td>
+<td><span class="badge b-works">works</span> numbers are guesses</td>
+</tr>
+<tr>
+<td><code>ekf_local</code></td>
+<td>robot_localization</td>
+<td><span class="badge b-works">works</span> in the turtle run and on the bench</td>
+</tr>
+<tr>
+<td><code>ekf_global</code>, <code>navsat_transform</code></td>
+<td>robot_localization</td>
+<td><span class="badge b-works">works</span> in Gazebo: parked, it stays within 0.2 m. On the bench: 0.03-0.3 m from the truth</td>
+</tr>
+<tr>
+<td>Joystick</td>
+<td><code>aav_teleop</code></td>
+<td><span class="badge b-untested">untested</span></td>
+</tr>
+<tr>
+<td>Keyboard</td>
+<td>teleop_twist_keyboard</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Scripted</td>
+<td><code>aav_scripted</code></td>
+<td><span class="badge b-works">works</span> turtle and the bench</td>
+</tr>
+<tr>
+<td>Goto: GPS A to B (15 Oct)</td>
+<td><code>aav_goto</code>: the <code>/goto</code> action, <code>pixi run goto</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --goto</code> drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half <code>max_brake</code>); a cancel, the e-stop and a GPS fault each stopped it. <span class="badge b-untested">untested</span> on the bench and the car (<a href="../../READ-ME-A-TO-B.md">A to B</a>)</td>
+</tr>
+<tr>
+<td>Plain English</td>
+<td><code>aav_language</code>: a drive tool server (MCP) and a local model (MLX)</td>
+<td><span class="badge b-works">works</span> in Gazebo and the turtle, 15 Oct: "drive 10 m forward" drove 10.02 m in Gazebo, a 90° turn turned 87.6°. Asks before it moves; refuses the real car without <code>--car</code>. <span class="badge b-untested">untested</span> on the bench and the car (<a href="plain-english.html">Plain English</a>)</td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td><code>aav_navigation</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (<code>reversing:=true</code>): on in Gazebo, on the bench, and on the car since 22 Oct where the lidar watches behind it, with a stop zone behind the rear bumper (<span class="badge b-works">works</span> in Gazebo: <code>sim-check --rear-obstacle</code> stopped 0.75 m short of a post); its settings are tested; <span class="badge b-works">works</span> in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s</td>
+</tr>
+<tr>
+<td>Path followers (22 Oct)</td>
+<td>Nav2's MPPI (default) or Regulated Pure Pursuit, <code>controller:=rpp</code>; <code>pixi run controller-compare</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: in the lot both reached all 4 goals in the best run; MPPI reached the first goal cleanly in every run. <code>sim-check --obstacle</code> passes with MPPI. Open: stuck facing a wall after a wide turn (forward only); MPPI's forward U-turn (<a href="controllers.html">Path followers</a>). <span class="badge b-untested">untested</span> on the Orin</td>
+</tr>
+<tr>
+<td>twist_mux</td>
+<td><code>aav_mux</code></td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Sensor mux and output mux (23 Oct)</td>
+<td><code>aav_io_mux</code>: <code>source:=</code>, <code>target:=</code>, <code>stack.launch.py</code></td>
+<td><span class="badge b-works">works</span> in its tests: with Gazebo announcing SIM, the real backend (<code>spine_bridge</code>) sent no drive frame. In every profile: the turtle drove through it; <code>sim-check</code> and <code>bench-check</code> passed with it (23 Oct, on a busy Mac). <span class="badge b-untested">untested</span> on the car (<a href="sources-and-targets.html">Sources and targets</a>)</td>
+</tr>
+<tr>
+<td>ego</td>
+<td><code>aav_ego</code></td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>The car's linear model (24 Oct)</td>
+<td><code>aav_ego</code> <code>vehicle_model.py</code>, <code>pixi run vehicle-model</code>: transfer functions, state space, Bode margins with the delays; never drives the car</td>
+<td><span class="badge b-works">works</span> in its 30 tests (textbook cases, the bicycle's Jacobian, discrete vs continuous). Every actuator number a guess until the actuator tests (<a href="vehicle-model.html">The car as a linear model</a>)</td>
+</tr>
+<tr>
+<td>ego's body model (22 Oct)</td>
+<td><code>aav_ego</code> <code>dynamics.py</code>: the mass (181 kg), <code>payload</code>, the centre of mass, the tyres</td>
+<td><span class="badge b-works">works</span> in its tests: a load slows speeding up, tight turns slow the car. The numbers are guesses until the car is weighed (<a href="car_measurements.html#weight-and-balance">Car numbers</a>)</td>
+</tr>
+<tr>
+<td>turtlesim</td>
+<td><code>aav_turtlesim</code></td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Gazebo</td>
+<td><code>aav_gazebo</code></td>
+<td><span class="badge b-works">works</span> headless on Linux and a Mac; its window on a Mac, with the car driving (10 Oct)</td>
+</tr>
+<tr>
+<td>Gazebo's road world</td>
+<td><code>aav_gazebo</code> <code>world:=road</code></td>
+<td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code>, <code>--obstacle</code>, <code>--lidar-obstacle</code>, <code>--faults</code>, <code>--spine</code> and <code>--perception</code> pass. On Linux with no GPU, through <code>tools/software_gl.sh</code>: <span class="badge b-works">works</span> on oirp-spss, 23 Oct (<code>sim-check --obstacle</code>: the sensors and the stop; the nightly CI job uses it) (<a href="simulation.html">Simulation</a>)</td>
+</tr>
+<tr>
+<td>The lidar in Nav2 (15 Oct)</td>
+<td><code>aav_lidar</code> <code>lidar_scan</code> -&gt; the local costmap's <code>lidar_layer</code> and <code>collision_monitor</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post (0.57 m on 20 Oct). <strong>Under load it can be late:</strong> on 20 Oct, run beside other jobs on the Mac, it stopped 0.13 m past the post's face; alone, 0.57 m before. Watch the Orin's load on the car. On the car: the stock velodyne driver since 20 Oct, on in <code>orin.yaml</code> and <code>all.yaml</code>: <span class="badge b-works">works</span> against a pretend VLP-16 (<code>tools/fake_vlp16.py</code>), the chain at 10 Hz. <strong>In bench mode</strong> (<code>bench lidar:=true</code>, <code>mock_lidar</code>, 20 Oct): <code>bench-check --lidar</code> on oirp-spss stopped the car 0.88 m before a box only the lidar saw, and the radar's own check 0.41 m before its box (<span class="badge b-works">works</span>). On the Mac, under Zoom's load, both failed: the spine latched (commands came late). The roof lidar can't see a 1 m box inside the stop zone: the radar's job (<a href="perception.html">Perception</a>). <strong>Open:</strong> with <code>lidar:=true</code>, bench-check's contract check missed the bench IMU's (or camera's) publisher in 3 of 3 runs, while the EKF got its data; probed by hand, nothing was missing. Not yet explained. <span class="badge b-untested">untested</span> with the real lidar</td>
+</tr>
+<tr>
+<td>Sensor watchdog (15 Oct)</td>
+<td><code>aav_safety</code> <code>sensor_watchdog</code>: a twist_mux lock, the HUD's banner</td>
+<td><span class="badge b-works">works</span> in Gazebo: the faults on purpose (<code>pixi run sim-fault</code>, <code>sim-check --faults</code>) stop Nav2 and say why, 14 now with the HUD's heartbeat (23 Oct: a frozen or dead HUD stops Nav2 on the car, <code>watch_hud</code>; <a href="hud.html#the-heartbeat">HUD</a>), frozen wheels (cross-checked with the IMU and GPS) and the watchdog's own death (a fail-safe lock) too. Frozen wheels were caught in 1 of 4 tries on 23 Oct (flaky, not yet known why). On the bench, <code>bench-check</code> passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. <span class="badge b-untested">untested</span> on the car (<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>)</td>
+</tr>
+<tr>
+<td>Real car</td>
+<td><code>aav_spine</code></td>
+<td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>: arming, driving, both e-stops</td>
+</tr>
+<tr>
+<td>The spine in the loop, in Gazebo (15 Oct)</td>
+<td><code>pixi run sim spine:=true</code>: <code>spine_bridge</code> → CAN topics → <code>spine_sim</code> (<code>car:=gazebo</code>, the spine's logic) → the actuator model</td>
+<td><span class="badge b-works">works</span> on the Mac: <code>pixi run sim-check --spine</code> passes (graph, drive, EKF, a Nav2 goal; commands lost: full brake 195-209 ms and latched; both e-stops: brake within 12 ms, latched; disarmed: no motion). <span class="badge b-untested">untested</span> on Linux (<a href="simulation.html#the-spine-in-the-loop-spinetrue">Simulation</a>)</td>
+</tr>
+<tr>
+<td>Today's car</td>
+<td><code>aav_legacy</code></td>
+<td><span class="badge b-untested">untested</span> on the car</td>
+</tr>
+<tr>
+<td>Spine firmware logic</td>
+<td><code>firmware/spine/crates/spine-core</code></td>
+<td><span class="badge b-works">works</span> 70 tests, on the bench, and in Gazebo (<code>spine:=true</code>)</td>
+</tr>
+<tr>
+<td>Wheel node logic (15 Oct)</td>
+<td><code>firmware/spine/crates/wheel-core</code></td>
+<td><span class="badge b-untested">untested</span> 9 tests; no board crate yet (<code>boards/esp32s3-wheel</code>, <a href="rust-firmware.html">Rust firmware</a>)</td>
+</tr>
+<tr>
+<td>Spine device drivers and glue</td>
+<td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>legacy-link</code>, <code>spine-board</code></td>
+<td><span class="badge b-works">works</span> 176 tests, against mocks; <code>legacy-link</code> also against the 2025-26 C++ itself</td>
+</tr>
+<tr>
+<td>ESP32 board program (Rust)</td>
+<td><code>firmware/spine/boards/esp32-umod</code></td>
+<td><span class="badge b-untested">untested</span> builds with Espressif's Rust (<code>pixi run esp-tools</code>), both links; never flashed. Merged 15 Oct; the C++ stays on the car until it is proven. In QEMU (24 Oct): brakes 111-120 ms after the Motor Pi's frames stop, and latches (<code>pixi run esp-qemu-check</code>). <a href="esp32-bench.html">First flash on the bench</a></td>
+</tr>
+<tr>
+<td>Spine board program</td>
+<td><code>firmware/spine/boards/pico2</code></td>
+<td><span class="badge b-untested">untested</span> builds for a Pico 2, and its UF2 file checks out; never flashed. The car's chip is still Q10–Q13</td>
+</tr>
+<tr>
+<td>Wheel encoder, in Rust (15 Oct)</td>
+<td><code>firmware/spine/boards/wheel-encoder-pico2</code>, crate <code>wheel-encoder</code></td>
+<td><span class="badge b-untested">untested</span> builds, its UF2 checks out, 12 tests; never flashed. Same packet as the C++ (shared examples). The car's Pico 2 still runs the C++</td>
+</tr>
+<tr>
+<td>Status display, in Rust (15 Oct)</td>
+<td><code>firmware/spine/boards/sentinel-pico2</code>, crates <code>sentinel</code>, <code>hd44780</code></td>
+<td><span class="badge b-untested">untested</span> builds, its UF2 checks out, 45 tests; never flashed. Nothing sends it packets yet</td>
+</tr>
+<tr>
+<td>Bench mode</td>
+<td><code>aav_spine_sim</code>, <code>aav_bench</code></td>
+<td><span class="badge b-works">works</span> <code>pixi run bench-check</code>, plus <code>--perception</code> and <code>--lane</code></td>
+</tr>
+<tr>
+<td>Camera</td>
+<td><code>usb_cam</code>, the <code>camera</code> part of <code>car.launch.py</code></td>
+<td><span class="badge b-untested">untested</span> Linux only, off until the camera is fitted; the models are Q22</td>
+</tr>
+<tr>
+<td>Front cameras, streamed</td>
+<td>the camera Pi's MediaMTX -&gt; <code>camera_stream_front_left</code>, <code>_front_right</code> (the <code>camera_stream</code> part, <code>orin.yaml</code>), the detector inside; the sensor watchdog watches their detections</td>
+<td><span class="badge b-works">works</span> on a Mac (<code>pixi run -e ml stream-check --gst</code>: 26 ms to detections; the watchdog OK, then STALE when the stream stops). <span class="badge b-untested">untested</span> on the Orin and the Pi: skipped there until RF-DETR's TensorRT engine is built (<a href="camera-pipeline.html">camera pipeline</a>)</td>
+</tr>
+<tr>
+<td>Stop signs</td>
+<td><code>aav_detector</code>: RF-DETR (default since 20 Oct) or YOLO, <code>detector:=</code></td>
+<td><span class="badge b-works">works</span> on the bench with both stock models: RF-DETR's lock came on at 20.7 m, the sign at 25 m (20 Oct). <code>sim-check --perception</code> in Gazebo with RF-DETR (24 Oct): first seen at x = 5.9 m, the sign at 25 m; the car stopped with its bumper 4.4 m before it. <span class="badge b-untested">untested</span> on the Orin: its TensorRT engine is written, not built</td>
+</tr>
+<tr>
+<td>Lane keeping</td>
+<td><code>aav_lane_finder</code> + <code>aav_lane_geometry</code></td>
+<td><span class="badge b-works">works</span> on the bench: from 0.3 m off the centre line back to within 5 cm in about 6 s</td>
+</tr>
+<tr>
+<td>Radar clustering</td>
+<td><code>aav_radar_clusters</code> (Rust)</td>
+<td><span class="badge b-works">works</span> on the bench and in Gazebo's road world (15 Oct); gives the 2025-26 C++ node's answers, bit for bit</td>
+</tr>
+<tr>
+<td>Obstacles in Nav2</td>
+<td>the radar in the local costmap; <code>collision_monitor</code>'s stop zone; <code>camera_obstacles</code></td>
+<td><span class="badge b-works">works</span> on the bench: the stop zone stops the car 0.3-0.4 m before a box as wide as the lane. Open: the car weaves up to 1.5 m off its line (N7), so it can pass beside a narrow box; the stop zone flickers at its edge. The camera layer is off until the cameras are calibrated (Q22)</td>
+</tr>
+<tr>
+<td>HUD back end and app</td>
+<td><code>aav_hud</code>, <code>hud/</code></td>
+<td><span class="badge b-works">works</span> on the bench: the app's e-stop button stops the car in 0.3 s. <span class="badge b-untested">untested</span> on the car's screen</td>
+</tr>
+<tr>
+<td>HUD in Rust (raylib)</td>
+<td><code>aav_hud_raylib</code></td>
+<td><span class="badge b-works">works</span> on a Mac: <code>--demo</code>, and as a node fed by <code>ros2 topic pub</code>; its e-stop reaches a subscriber as 5 trues. Its heartbeat (23 Oct): the real window beat at 9.3 Hz, and freezing or closing it made the watchdog say <code>hud STALE</code> in 1 s. Since 24 Oct a dropout after its first 5 s is latched (<code>hud LOST</code>, <code>pixi run watchdog-clear</code>), and a GO / STOP panel says whether the car may move (logic tested; not yet seen on screen). <span class="badge b-works">works</span> next to bench mode too. <span class="badge b-untested">untested</span> on a Pi and on the car's screen</td>
+</tr>
+<tr>
+<td>CARLA</td>
+<td><code>aav_carla</code></td>
+<td><span class="badge b-untested">untested</span> adapter built and tested without a server; needs the NVIDIA computer (<a href="carla.html">CARLA</a>)</td>
+</tr>
+<tr>
+<td>Lidar</td>
+<td>a Velodyne VLP-16 on the roof (the 16 Oct audit: 192.168.1.201, sending to the Jetson). The stock <code>velodyne</code> driver (<code>aav_sensors</code> <code>lidar:=true</code>, the <code>lidar</code> part in <code>car.launch.py</code>) -&gt; <code>/sensors/lidar/points</code>; a generic 16-beam one in Gazebo</td>
+<td><span class="badge b-works">works</span> against <code>tools/fake_vlp16.py</code>: a post 6 m ahead came out at 5.80-6.00 m, Nav2's scan 6.75 m from <code>base_link</code>, 10 Hz (20 Oct). <span class="badge b-untested">untested</span> with the real lidar</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="builds-and-tests">Builds and tests</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>colcon build</code>, all 26 packages, Jazzy</td>
+<td><span class="badge b-works">works</span> 11 s on Linux (19 packages, 10 Oct); about 15 s on the Mac (26)</td>
+</tr>
+<tr>
+<td><code>pixi run test</code>: build, tests, lint, <code>colcon test</code></td>
+<td><span class="badge b-works">works</span> all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; <code>colcon test</code> 291, 0 failures; the HUD app's own tests</td>
+</tr>
+<tr>
+<td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim, road, replay and bench</td>
+<td><span class="badge b-works">works</span> 0 failures each (sim and road again on 15 Oct, after the topic renaming)</td>
+</tr>
+<tr>
+<td><code>pixi run bench-check</code> (<code>--perception</code>, <code>--lane</code>, <code>--obstacle</code>)</td>
+<td><span class="badge b-works">works</span> on <code>main</code>, 11 Oct: the default checks, the stop sign, lane keeping and the obstacle</td>
+</tr>
+<tr>
+<td>Sim, headless: drive commands (the keyboard's topic) and Nav2 goals</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>Replay of a recorded drive</td>
+<td><span class="badge b-works">works</span> the EKFs match the recording within 0.03 m</td>
+</tr>
+<tr>
+<td>Car, with no hardware attached</td>
+<td>comes up; only the missing sensors (IMU, GPS) fail the graph check, as expected. Checked again on 11 Oct, with the perception parts</td>
+</tr>
+<tr>
+<td>The same <code>pixi.toml</code> on macOS</td>
+<td><span class="badge b-works">works</span> on an Apple Silicon Mac (macOS 27), 10 Oct: build 18 s, <code>pixi run test</code> all green after one fix (GNU <code>coreutils</code>, see <a href="mac.html">Your Mac</a>)</td>
+</tr>
+<tr>
+<td>On the Mac: the turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, <code>pixi run doctor</code>, recording a drive</td>
+<td><span class="badge b-works">works</span></td>
+</tr>
+<tr>
+<td>On the Mac: Gazebo's window</td>
+<td><span class="badge b-works">works</span> <code>pixi run sim</code> opens it, and the camera follows the car</td>
+</tr>
+<tr>
+<td>On the Mac: RViz, rqt_graph</td>
+<td><span class="badge b-untested">untested</span> they open; nobody has looked at them yet</td>
+</tr>
+<tr>
+<td>The same <code>pixi.toml</code> on the car's ARM computers, on today's Ubuntu 22.04</td>
+<td>resolves; <span class="badge b-untested">untested</span></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="is-it-all-on-jazzy">Is it all on Jazzy?</h2>
+<p>Yes. Everything builds against Jazzy, and the turtle, sim and replay profiles run. Every
+configuration key was checked against what the running Jazzy nodes accept. The fixes were
+small: clean shutdowns, Nav2 on simulated time, and the simulated GPS noise. The details
+are in <code>docs/history/audit-2026-10-10-*.md</code>.</p>
+</section>
+<section class="card"><h2 id="next">Next</h2>
+<ol>
+<li>Join the car's network from the Mac (<code>pixi run doctor</code>), once the car runs Jazzy.</li>
+<li>Pick the team's <code>ROS_DOMAIN_ID</code> and the GPS driver.</li>
+<li>Drive the turtle with the joystick.</li>
+<li>Measure the car, and replace the guesses in <code>vehicle.yaml</code>.</li>
+<li>Choose the spine's microcontroller (Q10–Q17). The Pico 2 program is ready to try on a spare board.</li>
+</ol></section>
+<nav class="prevnext"><a class="prev" href="learn-can.html"><small>Previous</small>← Learn: CAN</a>
+<a class="next" href="howto-driver.html"><small>Next</small>Build a driver →</a></nav>
+</main>
+<footer>Source: <code>docs/status.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

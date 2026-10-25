@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The CAN bus: today&#x27;s wiring, and the KEFC plan · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/can-plan.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The CAN bus: today&#x27;s wiring, and the KEFC plan</h1>
+<div class="meta">7 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a class="here" href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#todays-wiring-23-october">Today&#x27;s wiring (23 October)</a><a href="#the-kefc-plan-in-one-picture">The KEFC plan in one picture</a><a href="#what-already-matches">What already matches</a><a href="#what-is-different">What is different</a><a href="#what-changes-in-the-code">What changes in the code</a><a href="#still-to-confirm-from-the-pdf">Still to confirm (from the PDF)</a></nav>
+<div class="lead"><p>Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and throttle on
+a CAN bus. Our code already has a CAN contract, <code>firmware/can/aav.dbc</code> (v0.1.0). This page
+compares the two, and says what changes.</p>
+<p><strong>Status: built in software, hardware not decided.</strong> DBC v0.2.0, <code>spine_bridge</code> and the bench
+use it (merged 15 Oct, so the software is ready). Whether the car gets CAN and the wheel
+node boards is <strong>the hardware lead's decision</strong>, with the team (Ben, 15 Oct: "I am waiting
+on the other people to make the final decisions. There is a hardware lead that isn't me").
+No parts are ordered until then.</p></div>
+<section class="card"><h2 id="todays-wiring-23-october">Today's wiring (23 October)</h2>
+<p><strong>As Ben understands it; the hardware lead confirms.</strong> Ben, 23 Oct: "the motor controllers
+are on the esp32 with a pi as its network interface ... The can bus will be tied directory
+to the orin not going thorugh the esp32. That will have the wheel encoders".</p>
+<pre class="highlight"><code class="language-text">                         network (ROS 2)
+Orin ───────────────────────────────────────────── Motor Pi ── UART? ── ESP32
+ │  ego, output mux                               legacy_uart_bridge     throttle, steering,
+ │                                                                       brake (maybe the steering
+ └─ CAN ──┬──────────────┐                                               angle, brake position)
+          │              │
+   wheel sensors     other sensors?
+   (an Arduino:      (not known yet)
+    0x200, 0x201)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Today's wiring</th>
+<th>The KEFC plan (below)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Who drives the actuators</td>
+<td>the ESP32, reached through the <strong>Motor Pi</strong> (probably serial)</td>
+<td>the ESP32, on <strong>CAN</strong></td>
+</tr>
+<tr>
+<td>The car's backend</td>
+<td><code>legacy_uart_bridge</code> on the Motor Pi</td>
+<td><code>spine_bridge</code>, role spine, on the Orin</td>
+</tr>
+<tr>
+<td>What the Orin's CAN bus carries</td>
+<td><strong>sensors only</strong>: the wheel frames, and a few others</td>
+<td>drive commands, feedback, the wheel frames</td>
+</tr>
+<tr>
+<td>The wheel sensors</td>
+<td>an Arduino (the hardware lead's board, Arduino C++)</td>
+<td>a Rust ESP32-CAN-X2 per wheel</td>
+</tr>
+<tr>
+<td>The frames</td>
+<td>the same: <code>aav.dbc</code> 0x200, 0x201</td>
+<td>the same</td>
+</tr>
+<tr>
+<td><code>car.launch.py</code></td>
+<td><code>actuators:=uart</code> (the default)</td>
+<td><code>actuators:=can</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-runs-where-today">What runs where, today</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine</th>
+<th>Runs</th>
+<th>Topics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Orin</td>
+<td><code>socket_can_receiver</code> (no sender) and <code>spine_bridge role:=sensors</code></td>
+<td><code>/can/rx</code> in; <code>/vehicle/odom</code>, <code>/vehicle/wheels</code> out</td>
+</tr>
+<tr>
+<td>Motor Pi</td>
+<td><code>legacy_uart_bridge</code></td>
+<td><code>/control/car/actuator_cmd</code> in (from the output mux); UART frames out</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>spine_bridge role:=sensors</code> <strong>can't drive</strong>: it has no <code>/can/tx</code> publisher, no
+<code>/spine/arm</code> service and no <code>/safety/estop</code> subscription, and it ignores the spine's
+frames (0x180, 0x181). On <code>/system/source</code> it names only <code>odometry</code> and <code>wheels</code>, never an
+actuator. The output mux's guard test checks this, in Rust and in Python.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>/vehicle/odom</code>, role sensors</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed</td>
+<td>the two front wheels' mean, while both are fresh. One stale: nothing (the sensor watchdog sees it stop)</td>
+</tr>
+<tr>
+<td>Sign</td>
+<td>the wheel's, if it measures it; else the last command's (one Hall sensor can't tell direction)</td>
+</tr>
+<tr>
+<td>Yaw rate</td>
+<td>not measured (covariance 1e3): the steering angle isn't on this bus. <code>ekf_local</code> takes it from the IMU</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Give every machine the same <code>actuators:=</code></p>
+<p><code>actuators:=can</code> on the Orin and <code>uart</code> on the Motor Pi would start two backends. The
+wiring makes it moot (the ESP32 listens on one link), but don't mix them.</p>
+</div>
+<p>The 2025-26 UDP wheel encoder (<code>encoder_udp</code>, a Pico 2) is off in <code>motor_pi.yaml</code>: the
+wheels are on CAN now, and two <code>/vehicle/odom</code> publishers would stop the output mux.</p>
+<p>The Rust ESP32 firmware's 100 ms command timeout then sits on the UART link, not on CAN:
+see <a href="esp32-bench.html">First flash on the bench</a>. Open questions for the hardware lead:
+<a href="audit-questions.html#8-the-cars-wiring-for-the-hardware-lead-23-oct">Questions</a>.</p>
+</section>
+<section class="card"><h2 id="the-kefc-plan-in-one-picture">The KEFC plan in one picture</h2>
+<pre class="highlight"><code class="language-text">Orin #1 ── CAN Pal (40-pin header) ──┬──────────────┬──────────────┐
+  EKF, ego, spine_bridge             │              │              │
+                              AAV control board  Wheel node L   Wheel node R
+                              ESP32 MicroMod     ESP32-CAN-X2   ESP32-CAN-X2
+                              2 Jrk G2, DAC      Hall sensor    Hall sensor</code></pre>
+<p>120 Ω at each end: on the CAN Pal, and on the last X2 board.</p>
+</section>
+<section class="card"><h2 id="what-already-matches">What already matches</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>KEFC PDF</th>
+<th>Our DBC and code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ROS stops at the CAN bus</td>
+<td>yes</td>
+<td>yes: <code>spine_bridge</code> over <code>ros2_socketcan</code></td>
+</tr>
+<tr>
+<td>One command frame at 50 Hz</td>
+<td>0x100</td>
+<td>0x100 <code>DRIVE_CMD</code>, 50 Hz</td>
+</tr>
+<tr>
+<td>Status frame from the board</td>
+<td>0x180</td>
+<td>0x180 <code>VEHICLE_FEEDBACK</code>, 0x181 <code>VEHICLE_STATUS</code></td>
+</tr>
+<tr>
+<td>A counter and a checksum, so a frozen Orin is caught</td>
+<td>yes</td>
+<td>yes: every frame, CRC-8</td>
+</tr>
+<tr>
+<td>Brake on silence</td>
+<td>100 ms</td>
+<td>100 ms (v0.2.0; it was 200 ms)</td>
+</tr>
+<tr>
+<td>The speed loop on the board, not the Orin</td>
+<td>yes</td>
+<td>yes: <code>spine-core</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-is-different">What is different</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Difference</th>
+<th>KEFC PDF</th>
+<th>Our DBC</th>
+<th>Proposed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Which board is "the spine"</td>
+<td>the existing ESP32 control board</td>
+<td>a new Pico 2</td>
+<td><strong>the ESP32 control board.</strong> It is already on the car, with its CAN plug</td>
+</tr>
+<tr>
+<td>2</td>
+<td>What 0x100 carries</td>
+<td>steering, brake and throttle targets</td>
+<td>target speed and steering angle</td>
+<td><strong>ours.</strong> The PDF's own loop table has the board running the speed loop, so it needs a speed, not a throttle</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0x010</td>
+<td>a heartbeat</td>
+<td>the software e-stop</td>
+<td><strong>ours.</strong> Every frame's counter is already the heartbeat</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Wheel speed</td>
+<td>0x200 left, 0x201 right, 100 Hz</td>
+<td>one <code>wheel_ticks</code> in 0x180</td>
+<td><strong>add 0x200 and 0x201</strong> from the PDF</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Timeout</td>
+<td>100 ms</td>
+<td>200 ms</td>
+<td><strong>100 ms</strong>, from the PDF</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Steering position</td>
+<td>from the KTC-100 pot, via the Jrk</td>
+<td><code>measured_steering_angle</code> in 0x180</td>
+<td>the same: the board reads it from the Jrk</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-changes-in-the-code">What changes in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav.dbc</code></td>
+<td>v0.2.0: add <code>WHEEL_SPEED_L</code> 0x200 and <code>WHEEL_SPEED_R</code> 0x201, node <code>WHEEL_L</code>, <code>WHEEL_R</code>; the timeout to 100 ms; the spine node is the ESP32 board</td>
+</tr>
+<tr>
+<td><code>can_codec.py</code>, <code>protocol.rs</code>, test vectors</td>
+<td>the two new frames, as <code>CLAUDE.md</code> says</td>
+</tr>
+<tr>
+<td><code>spine_bridge</code></td>
+<td>the two wheel speeds into <code>/vehicle/odom</code>, and <code>/vehicle/wheels</code> (the front two; the same topic Gazebo fills)</td>
+</tr>
+<tr>
+<td><code>spine-core</code></td>
+<td>stays: it has no chip in it. A new board crate for the ESP32 (<code>esp-hal</code>, Embassy, the TWAI CAN driver) beside the Pico 2 one</td>
+</tr>
+<tr>
+<td>Wheel nodes</td>
+<td>a small Rust program for the ESP32-CAN-X2 (an ESP32-S3): count pulses, send a frame</td>
+</tr>
+<tr>
+<td>Gazebo, bench</td>
+<td>the bench's spine simulator sends the two wheel frames too</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Rust on an ESP32</p>
+<p>The ESP32 and ESP32-S3 use Xtensa cores. Rust needs Espressif's toolchain
+(<code>espup</code>), not the stock one in Pixi. It is well supported: <code>esp-hal</code> has Embassy and a
+CAN (TWAI) driver.</p>
+</div>
+</section>
+<section class="card"><h2 id="still-to-confirm-from-the-pdf">Still to confirm (from the PDF)</h2>
+<ul>
+<li>The control board's CAN transceiver (U7) is fitted and works. The photos show the
+  CANH/CANL plug (<a href="car-photos.html">The car in photos</a>).</li>
+<li>The steering and brake actuators' wire counts: 5-6 wires means built-in feedback.</li>
+<li>The front brake rotors are steel, and have enough holes for the speed resolution.</li>
+<li>What the brake does when it loses power.</li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="firmware.html"><small>Previous</small>← Firmware</a>
+<a class="next" href="rust-firmware.html"><small>Next</small>Rust firmware →</a></nav>
+</main>
+<footer>Source: <code>docs/can-plan.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

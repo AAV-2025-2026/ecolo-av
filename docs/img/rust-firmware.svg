@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" font-family="Verdana, Arial, Helvetica, sans-serif" font-size="14">
+  <title>The firmware layers: logic, drivers, boards, all in Rust</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#555"/>
+    </marker>
+    <style>
+      .logic  { fill:#FDECEE; stroke:#C8102E; stroke-width:2.5; }
+      .drv    { fill:#FFFFFF; stroke:#C8102E; stroke-width:1.6; }
+      .board  { fill:#FFFFFF; stroke:#C8102E; stroke-width:1.6; }
+      .todo   { fill:#FFFFFF; stroke:#BBB; stroke-width:1.4; stroke-dasharray:6 4; }
+      .chip   { fill:#F2F2F2; stroke:#999; stroke-width:1.2; }
+      .h1 { fill:#222; font-weight:bold; font-size:20px; }
+      .t  { fill:#222; font-weight:bold; font-size:16px; }
+      .b  { fill:#222; }
+      .s  { fill:#555; font-size:13px; }
+      .r  { fill:#C8102E; font-weight:bold; font-size:13px; }
+    </style>
+  </defs>
+
+  <text class="h1" x="30" y="40">The firmware layers, all in Rust</text>
+  <text class="s" x="30" y="64">Read it top to bottom: the logic and the drivers go into one program per board, and that goes onto a chip.</text>
+
+  <!-- Logic -->
+  <rect class="logic" x="30" y="90" width="900" height="120" rx="10"/>
+  <text class="t" x="50" y="118">Logic: the rules</text>
+  <text class="r" x="910" y="118" text-anchor="end">TESTED ON A LAPTOP</text>
+  <text class="b" x="50" y="146">spine-core: modes, arming, watchdog, speed loop, encoder maths, CAN frames (54 tests)</text>
+  <text class="b" x="50" y="170">aav-inputs: debounced switches, an e-stop that trips at once, counting with a lockout (9 tests)</text>
+  <text class="s" x="50" y="194">no_std, no dependencies, no hardware access</text>
+
+  <line x1="480" y1="210" x2="480" y2="236" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- Drivers -->
+  <rect class="drv" x="30" y="240" width="900" height="110" rx="10"/>
+  <text class="t" x="50" y="268">Drivers: one per chip on the car</text>
+  <text class="r" x="910" y="268" text-anchor="end">WRITTEN 10–11 OCT: 137 TESTS</text>
+  <text class="b" x="50" y="296">Jrk G2 (steering, brake) · throttle DAC · PCA9555 · iBUS radio · MCP2515 CAN · spine-board</text>
+  <text class="s" x="50" y="320">against embedded-hal 1.0; checked with embedded-hal-mock, which plays the chip. Still to write: W5500, display</text>
+
+  <line x1="480" y1="350" x2="480" y2="376" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- Boards -->
+  <rect class="todo" x="30" y="380" width="900" height="110" rx="10"/>
+  <text class="t" x="50" y="408">Boards: one small program per board</text>
+  <text class="s" x="910" y="408" text-anchor="end">the Pico 2 program: written 11 Oct, not yet on a board</text>
+  <text class="b" x="50" y="436">pins and timers, Embassy, then a loop: read inputs, call the logic, write outputs</text>
+  <text class="s" x="50" y="460">the spine: boards/pico2, for the bench (the car's chip: Q10–Q13) · the status-display Pico 2</text>
+
+  <line x1="480" y1="490" x2="480" y2="516" stroke="#555" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <!-- Chips -->
+  <rect class="chip" x="30" y="520" width="210" height="56" rx="8"/>
+  <text class="b" x="135" y="554" text-anchor="middle">Pico 2 (ARM)</text>
+  <rect class="chip" x="260" y="520" width="210" height="56" rx="8"/>
+  <text class="b" x="365" y="554" text-anchor="middle">STM32 (ARM)</text>
+  <rect class="chip" x="490" y="520" width="210" height="56" rx="8"/>
+  <text class="b" x="595" y="554" text-anchor="middle">ESP32</text>
+  <rect class="chip" x="720" y="520" width="210" height="56" rx="8"/>
+  <text class="b" x="825" y="546" text-anchor="middle">the Pi, on Linux</text>
+  <text class="s" x="825" y="566" text-anchor="middle">linux-embedded-hal</text>
+</svg>

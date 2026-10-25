@@ -1,0 +1,81 @@
+# MediaMTX settings for the front camera Pi (a Pi 5, Raspberry Pi OS / Debian 13, no ROS).
+# Decided by Ben, 23 Oct: MediaMTX owns the cameras and streams H.264 to the Orin
+# (docs/camera-pipeline.md). Install it: pi/README.md. Written for MediaMTX v1.21.2;
+# anything not set here keeps MediaMTX's default.
+#
+#   rtsp://<pi>:8554/front_left     the left ribbon camera  (the Orin reads these)
+#   rtsp://<pi>:8554/front_right    the right ribbon camera
+#   http://<pi>:8889/front_left     the same, in a browser (WebRTC), for people
+
+logLevel: info
+
+# Who may do what. Anyone on the car's network may watch; only this Pi may publish (the
+# ffmpeg of a USB camera, below) or ask the API.
+authInternalUsers:
+  - user: any
+    ips: []
+    permissions:
+      - action: read
+  - user: any
+    ips: ["127.0.0.1", "::1"]
+    permissions:
+      - action: publish
+      - action: api
+      - action: metrics
+
+# RTSP, for the Orin. It asks for TCP (aav_camera_stream): on a wired network that loses
+# nothing, so a frame never arrives broken. UDP stays on for other players.
+rtsp: true
+rtspAddress: :8554
+rtspTransports: [tcp, udp]
+
+# WebRTC: the lowest-delay way to watch in a browser.
+webrtc: true
+webrtcAddress: :8889
+
+# Not used: off, to save the Pi's CPU and ports.
+rtmp: false
+hls: false
+srt: false
+moq: false
+
+# The API, on this Pi only: `curl http://127.0.0.1:9997/v3/paths/list` shows each camera's
+# bytes sent, to check the bitrate.
+api: true
+apiAddress: 127.0.0.1:9997
+
+# Both ribbon cameras, the same way. The Pi 5 has no H.264 hardware, so MediaMTX encodes
+# in software (OpenH264, baseline profile: no B-frames, low complexity, real time).
+pathDefaults:
+  rpiCameraWidth: 1280
+  rpiCameraHeight: 720
+  rpiCameraFPS: 15
+  rpiCameraCodec: softwareH264
+  rpiCameraH264Profile: baseline
+  rpiCameraBitrate: 2000000     # bit/s: about 2 Mbit/s each
+  rpiCameraIDRPeriod: 15        # frames: a key frame every 1 s at 15 fps
+  # Fixed focus at infinity: a lens that refocuses changes its calibration (undistortion).
+  # Cameras without autofocus ignore these two.
+  rpiCameraAfMode: manual
+  rpiCameraLensPosition: 0.0
+
+paths:
+  # Which port is which: `rpicam-hello --list-cameras` on the Pi (to check at the car).
+  front_left:
+    source: rpiCamera
+    rpiCameraCamID: 0
+  front_right:
+    source: rpiCamera
+    rpiCameraCamID: 1
+
+  # A USB camera instead (today's CAM2-PI has one): ffmpeg captures it and publishes it
+  # here. If the camera sends H.264 itself (v4l2-ctl --list-formats-ext), use
+  # `-input_format h264 -c:v copy` and the Pi does no work; with MJPEG, the Pi only
+  # unpacks and encodes. The same settings as the ribbon cameras, from x264.
+  # rear:
+  #   runOnInit: >-
+  #     ffmpeg -f v4l2 -input_format mjpeg -video_size 1280x720 -framerate 15
+  #     -i /dev/video0 -c:v libx264 -preset ultrafast -tune zerolatency -bf 0 -g 15
+  #     -b:v 2M -maxrate 2M -bufsize 1M -pix_fmt yuv420p
+  #     -f rtsp rtsp://127.0.0.1:$RTSP_PORT/$MTX_PATH
+  #   runOnInitRestart: true

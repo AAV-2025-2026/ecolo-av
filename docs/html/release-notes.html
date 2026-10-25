@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release 0.1: the first pass · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/release-notes.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Release 0.1: the first pass</h1>
+<div class="meta">14 min read · 17 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a class="here" href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#highlights">Highlights</a><a href="#everything-in-one-workspace">Everything in one workspace</a><a href="#driving-one-path-from-any-driver-to-the-wheels">Driving: one path from any driver to the wheels</a><a href="#knowing-where-the-car-is">Knowing where the car is</a><a href="#navigation-built-for-a-car">Navigation built for a car</a><a href="#perception-and-ai-on-every-gpu">Perception and AI on every GPU</a><a href="#firmware-a-can-spine-in-rust">Firmware: a CAN spine, in Rust</a><a href="#from-c-to-rust">From C++ to Rust</a><a href="#simulation-and-bench-mode">Simulation and bench mode</a><a href="#macs-are-first-class">Macs are first-class</a><a href="#the-hud">The HUD</a><a href="#ready-for-ai-tools-the-mcp-server">Ready for AI tools: the MCP server</a><a href="#safety-by-design">Safety by design</a><a href="#quality-tests-contracts-and-docs">Quality: tests, contracts and docs</a><a href="#by-the-numbers">By the numbers</a><a href="#coming-next">Coming next</a><a href="#credits">Credits</a></nav>
+<div class="lead"><p class="release-line">The AAV 2026–27 autonomy stack · 11 October 2026</p>
+
+<div class="pitch"><p><b>The whole car's software, in one place, working end to end.</b>
+Every driver, the virtual car (ego), localization, Nav2, perception and AI on every GPU,
+the spine's firmware in Rust, three simulators and a full set of docs. It builds and
+passes all of its tests, and it drives in simulation and on the bench. Next: the real
+car.</p></div>
+
+<div class="tiles">
+<div class="tile"><b>26</b><span>ROS 2 packages, all building on Jazzy</span></div>
+<div class="tile"><b>11</b><span>repos from the previous teams, merged into one workspace</span></div>
+<div class="tile"><b>3</b><span>AI runtimes: PyTorch, Core ML on Macs, TensorRT on the Orin</span></div>
+<div class="tile"><b>3</b><span>simulators: turtlesim, Gazebo and bench mode, plus replay</span></div>
+<div class="tile"><b>0</b><span>failing tests: 291 colcon, 230 Python, 208 Rust</span></div>
+<div class="tile"><b>2</b><span>platforms, one setup: Linux and macOS</span></div>
+</div></div>
+<section class="card"><h2 id="highlights">Highlights</h2>
+<ul>
+<li><strong>One workspace for the whole car.</strong> Code from 11 of the previous teams' repos, merged
+  and cleaned up, each with a record of where it came from. Six more were replaced by
+  stock ROS packages.</li>
+<li><strong>One command path, from any driver to the wheels.</strong> The joystick, the keyboard,
+  scripted drives, Nav2 and lane keeping all go through one mux and <strong>ego</strong>, the virtual
+  car, which keeps every command within what the car can really do.</li>
+<li><strong>AI on every GPU.</strong> One YOLO detector per computer: Core ML on a MacBook (21 ms a
+  picture; a stop sign seen from 20 m), TensorRT on the Orin, PyTorch anywhere else.</li>
+<li><strong>Navigation built for a car.</strong> Nav2 with a planner for cars, no turning on the spot,
+  GPS waypoints, and a stop zone that halts the car before an obstacle.</li>
+<li><strong>A CAN spine in Rust.</strong> New firmware logic, five device drivers and a Pico 2 program,
+  with watchdogs and a fail-safe e-stop input: 191 tests.</li>
+<li><strong>The whole car, tested without the car.</strong> Bench mode runs the car's own software on
+  one laptop and proves that it drives, stops for both e-stops, stops at a stop sign,
+  keeps its lane and stops for an obstacle.</li>
+<li><strong>Macs are first-class.</strong> One <code>pixi install</code> gives the same ROS 2 Jazzy, Gazebo and Nav2
+  on a Mac as on Linux. No admin rights, no virtual machine.</li>
+<li><strong>Ready for AI tools.</strong> A read-only MCP server lets Claude or another AI app read the
+  docs, the contracts and the live graph, and never move the car.</li>
+</ul>
+</section>
+<section class="card"><h2 id="everything-in-one-workspace">Everything in one workspace</h2>
+<p><strong>Merged in and cleaned up</strong>, each with a <code>PROVENANCE.md</code> (its repo, its commit, every
+change since):</p>
+<ul>
+<li><strong>The ESP32 actuator firmware</strong> (AAV_cortex): it still drives today's car. Its protocol
+  is rewritten in Python, and its device logic in Rust.</li>
+<li><strong>The wheel encoder</strong> (Wheel_Encoders): a Pico 2 that counts spokes, read over Ethernet.</li>
+<li><strong>The IMU driver</strong> (yahboom-IMU): fixed, then rewritten in Rust.</li>
+<li><strong>The TI radar driver and its clustering</strong> (Nav_Radar).</li>
+<li><strong>Lane following</strong> (Lane_Detection_ROS2), now with a lane finder of our own.</li>
+<li><strong>The in-car HUD</strong> (User-Interface): the app and its back end, moved to our topics.</li>
+<li><strong>The steering geometry</strong> (Motor_Steering) and <strong>the joystick's button map</strong>
+  (joy_teleop_ackerman).</li>
+<li><strong>From the 2024-25 team:</strong> the battery monitor, the camera calibrations, and the first
+  YOLO stop-sign detector.</li>
+</ul>
+<p><strong>Replaced by stock ROS packages:</strong> the odometry (robot_localization), the path planners
+(Nav2), the obstacle avoidance (Nav2's costmaps and collision monitor), the QNX layer
+(twist_mux, the spine's watchdog and <code>ros2 bag</code>), and the joystick driver
+(teleop_twist_joy).</p>
+</section>
+<section class="card"><h2 id="driving-one-path-from-any-driver-to-the-wheels">Driving: one path from any driver to the wheels</h2>
+<ul>
+<li><strong>Five drivers:</strong> the joystick (with a deadman button), the keyboard (from any laptop),
+  scripted drives, Nav2, and lane keeping.</li>
+<li><strong>twist_mux</strong> picks one by priority. The e-stop locks them all out.</li>
+<li><strong>ego, the virtual car,</strong> turns the winning command into a speed and steering angle the
+  car can do. It limits speed, acceleration and steering rate, and stops the car when the
+  commands go stale.</li>
+<li><strong>Ackermann all the way:</strong> ego sends Ackermann commands, never raw twists, and
+  Gazebo's car steers the same way.</li>
+<li><strong>One backend at a time:</strong> the turtle, Gazebo, today's car (the 2025-26 ESP32, over
+  UART), or the new CAN spine. A driver can't tell which one is running.</li>
+</ul>
+</section>
+<section class="card"><h2 id="knowing-where-the-car-is">Knowing where the car is</h2>
+<ul>
+<li><strong>Two EKFs</strong> (robot_localization): <code>ekf_local</code> (wheel speed and the IMU) for smooth
+  steering, and <code>ekf_global</code> (adding GPS) for planning.</li>
+<li><strong>Accurate on the bench:</strong> 0.03–0.3 m from the truth. A replayed drive matches its
+  recording within 0.03 m.</li>
+<li><strong>GPS:</strong> the stock u-blox driver by default, with NMEA and <code>ublox_dgnss</code> as options.</li>
+</ul>
+</section>
+<section class="card"><h2 id="navigation-built-for-a-car">Navigation built for a car</h2>
+<ul>
+<li><strong>Nav2, set up for Ackermann steering:</strong> SmacPlannerHybrid plans paths a car can drive,
+  Regulated Pure Pursuit follows them, and there's no Spin behaviour.</li>
+<li><strong>GPS waypoints</strong> go through the same server.</li>
+<li><strong>Obstacles:</strong> the radar feeds the local costmap, and collision_monitor's stop zone
+  halts the car 0.3–0.4 m before an obstacle on the bench.</li>
+<li><strong>Proven in Gazebo and on the bench:</strong> goals of 8 m and 9.5 m in Gazebo, and a 40 m
+  bench route that stops at a stop sign on the way.</li>
+</ul>
+</section>
+<section class="card"><h2 id="perception-and-ai-on-every-gpu">Perception and AI on every GPU</h2>
+<ul>
+<li><strong>YOLO11</strong> (Ultralytics) finds stop signs, cars, people: 80 kinds of everyday object.</li>
+<li><strong>One model, three formats:</strong> <code>.pt</code> for PyTorch anywhere, <code>.mlpackage</code> for Core ML on a
+  Mac, <code>.engine</code> for TensorRT on the Orin.</li>
+<li><strong>Core ML on a MacBook:</strong> 21 ms a picture, so all 10 pictures a second, and the stop sign
+  first seen 20 m away. One command makes the model: <code>pixi run -e ml export-coreml</code>.</li>
+<li><strong>TensorRT on the Orin:</strong> a tool builds the engine on the Orin itself, ready for its
+  JetPack reflash.</li>
+<li><strong>One detector per computer,</strong> each under its own name. The stop-sign watcher hears them
+  all, so a laptop can add a second opinion over WiFi.</li>
+<li><strong>A new lane finder</strong> (OpenCV, 0.78 ms a picture). On the bench, lane keeping brings the
+  car from 0.3 m off the centre line back to within 5 cm in about 6 s.</li>
+<li><strong>Radar clustering</strong> turns the radar's points into objects.</li>
+</ul>
+</section>
+<section class="card"><h2 id="firmware-a-can-spine-in-rust">Firmware: a CAN spine, in Rust</h2>
+<ul>
+<li><strong>The CAN contract</strong> (<code>aav.dbc</code>): every frame between ROS and the spine, tested from both
+  sides against the same vectors.</li>
+<li><strong>spine-core,</strong> the spine's logic: it boots latched, arms only when asked, stops on a
+  200 ms gap in the commands, and holds the e-stop. 54 tests.</li>
+<li><strong>Five device drivers and the glue</strong> (embedded-hal 1.0): the steering and brake motor
+  controllers, the throttle, the I/O expander, the RC receiver and the CAN chip. 137
+  tests.</li>
+<li><strong>A Pico 2 program</strong> (Embassy): CAN, a 100 ms hardware watchdog, and a fail-safe e-stop
+  input (a cut wire reads as pressed). It builds, ready to flash.</li>
+<li><strong>Today's car keeps running:</strong> the 2025-26 C++ boards build in their own Pixi
+  environment, until each Rust version replaces them.</li>
+</ul>
+</section>
+<section class="card"><h2 id="from-c-to-rust">From C++ to Rust</h2>
+<ul>
+<li><strong>The rule:</strong> firmware and hardware drivers in Rust, and our C++ moving to Rust, each
+  written in Rust's own style.</li>
+<li><strong>Done:</strong> the spine; the ESP32's device logic, as Rust drivers; a Rust IMU driver that
+  gives the C++ one's answers, fed the same bytes (<code>pixi run imu-compare</code>); and a first
+  Rust ROS node.</li>
+<li><strong>In the works:</strong> the Rust IMU driver as the only one, and the radar clustering as a
+  Rust node.</li>
+</ul>
+</section>
+<section class="card"><h2 id="simulation-and-bench-mode">Simulation and bench mode</h2>
+<ul>
+<li><strong>turtlesim:</strong> a turtle that steers like the car. The first thing a new member drives.</li>
+<li><strong>Gazebo:</strong> the car in 3D, with Ackermann steering, an IMU and GPS, driven by Nav2 to
+  its goals. Its window works on a Mac.</li>
+<li><strong>Bench mode:</strong> the car's own software on one laptop, with a pretend spine and pretend
+  GPS, IMU, wheels, camera and radar. <code>pixi run bench-check</code> proves the whole chain.</li>
+<li><strong>Replay:</strong> a recorded drive, run through the EKFs again.</li>
+<li><strong>Safe by design:</strong> the stand-ins never leave the computer they run on, so a pretend car
+  can never reach the real one.</li>
+</ul>
+</section>
+<section class="card"><h2 id="macs-are-first-class">Macs are first-class</h2>
+<ul>
+<li><strong>Pixi and RoboStack:</strong> one <code>pixi.toml</code> gives the same ROS 2 Jazzy, Gazebo and Nav2 on a
+  Mac and on any Linux, with no admin rights.</li>
+<li><strong>Fast:</strong> the whole workspace builds in about 15 s on a MacBook Pro, and every test
+  passes.</li>
+<li><strong>ML on the Mac:</strong> the laptop runs its own Core ML detector against the bench
+  (<code>pixi run -e ml laptop-bench</code>), reading the camera's JPEG pictures, as it will over the
+  car's WiFi.</li>
+<li><strong>A network doctor:</strong> <code>pixi run doctor</code> checks that a Mac is ready to join the car.</li>
+</ul>
+</section>
+<section class="card"><h2 id="the-hud">The HUD</h2>
+<ul>
+<li><strong>The 2025-26 touchscreen app,</strong> connected to our topics: an e-stop button, the camera,
+  the car's status and the map.</li>
+<li><strong>Fixed:</strong> the app could never reach its back end. It now connects over WebSocket.</li>
+<li><strong>On the bench,</strong> its e-stop button stopped the car in 0.3 s.</li>
+<li><strong>Next: one Rust program</strong> (raylib and rclrs), decided on 11 October.</li>
+</ul>
+</section>
+<section class="card"><h2 id="ready-for-ai-tools-the-mcp-server">Ready for AI tools: the MCP server</h2>
+<ul>
+<li><strong>What it does:</strong> lets Claude, or any AI app that speaks MCP, read the docs, the three
+  contracts and the live ROS graph, check the graph against the contract, and run the
+  tests.</li>
+<li><strong>What it can't do:</strong> publish, call services or change parameters, so it can't move the
+  car; or read anything outside git. A test checks both.</li>
+</ul>
+</section>
+<section class="card"><h2 id="safety-by-design">Safety by design</h2>
+<ul>
+<li><strong>Four e-stops:</strong> the car's own red button (untouched: it always works), the joystick's
+  button, <code>pixi run estop</code> from any laptop, and the HUD's button.</li>
+<li><strong>Watchdogs at every layer:</strong> ego stops on stale commands (0.3 s), the spine on a
+  200 ms gap, and the Pico 2's hardware watchdog after 100 ms.</li>
+<li><strong>The spine boots latched</strong> and arms only on a deliberate request, so a reboot never
+  restarts the car.</li>
+<li><strong>Start slow:</strong> ego caps the car at 1.0 m/s until the test plan raises it.</li>
+<li><strong>No secrets in git:</strong> checked across the whole history. The old repos' leaked
+  credentials were never copied.</li>
+</ul>
+</section>
+<section class="card"><h2 id="quality-tests-contracts-and-docs">Quality: tests, contracts and docs</h2>
+<ul>
+<li><strong><code>pixi run test</code>:</strong> builds everything, then runs 291 colcon tests, 230 Python and 208
+  Rust: 0 failures. The style check and the HUD app's own tests run too.</li>
+<li><strong>Contracts, checked live:</strong> 58 topics, 6 services, 5 actions and 9 frames in
+  <code>docs/interfaces.yaml</code>, and the running graph is checked against them. The CAN frames
+  and the car's measurements each have a contract too.</li>
+<li><strong>CI:</strong> GitHub Actions runs the suite on Linux for every push, and on a Mac every night.</li>
+<li><strong>29 pages of docs,</strong> in HTML and one PDF, written to scan: a first-day guide, a page
+  per area, the decisions, and every question answered.</li>
+</ul>
+</section>
+<section class="card"><h2 id="by-the-numbers">By the numbers</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>How many</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Built</td>
+<td>9–11 October 2026, about 170 commits</td>
+</tr>
+<tr>
+<td>ROS 2 packages</td>
+<td>26: 13 in Python, 13 in CMake (one of them Rust)</td>
+</tr>
+<tr>
+<td>Rust firmware</td>
+<td>8 crates, and a Pico 2 program</td>
+</tr>
+<tr>
+<td>Launch profiles</td>
+<td>5: turtle, sim, bench, replay, car</td>
+</tr>
+<tr>
+<td>Machine files</td>
+<td>4: the Orin, the Motor Pi, a laptop, everything</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>291 colcon, 230 Python, 208 Rust, and the bench checks</td>
+</tr>
+<tr>
+<td>Docs</td>
+<td>29 pages and 11 pictures</td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>26 scripts and 34 <code>pixi run</code> tasks</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="coming-next">Coming next</h2>
+<ul>
+<li><strong>16 October: the hardware audit</strong> at the car, read-only first: backups, the
+  inventory, the measurements.</li>
+<li><strong>Driving with W A S D,</strong> the car or the turtle.</li>
+<li><strong>Jazzy on the car's computers,</strong> then Phase 0: the car on stands, then at walking pace.</li>
+<li><strong>Ready to merge:</strong> a road world in Gazebo, reversing in Nav2, and the radar clustering
+  in Rust.</li>
+<li><strong>Then:</strong> the board drivers in Rust, and the raylib HUD.</li>
+</ul>
+</section>
+<section class="card"><h2 id="credits">Credits</h2>
+<ul>
+<li><strong>The 2025-26 team</strong> (AAV-2025-2026) and <strong>the 2024-25 team</strong> (Carleton-AAV-Capstone),
+  whose code and lessons this release builds on.</li>
+<li><strong>Open-source projects:</strong> ROS 2 Jazzy, Nav2, robot_localization, twist_mux, imu_tools,
+  Gazebo, RoboStack and Pixi, rclrs, Ultralytics YOLO, embedded-hal and Embassy.</li>
+<li><strong>The full credits</strong> are in the repository's README.</li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="overview.html"><small>Previous</small>← Overview</a>
+<a class="next" href="first-day.html"><small>Next</small>Your first day →</a></nav>
+</main>
+<footer>Source: <code>docs/release-notes.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

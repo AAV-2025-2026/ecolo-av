@@ -1,0 +1,14 @@
+# twist_mux without the sensor watchdog's heartbeat: for profiles that run no watchdog
+# (the turtle, Gazebo with watchdog:=false). mux.launch.py sensor_lock:=false loads it
+# after twist_mux.yaml. Timeout 0: the sensors lock never expires on silence, so with
+# nobody publishing it, it stays open.
+#
+# A file, not a dict in the launch file: under sim.launch.py's SetParameter, launch_ros
+# hands the dict to every node (/**), and rclcpp lets a node's own name (twist_mux: in
+# twist_mux.yaml) win over /**, whatever the order. Seen 15 Oct: Gazebo with
+# watchdog:=false kept the 1 s timeout, and Nav2 never drove.
+twist_mux:
+  ros__parameters:
+    locks:
+      sensors:
+        timeout: 0.0

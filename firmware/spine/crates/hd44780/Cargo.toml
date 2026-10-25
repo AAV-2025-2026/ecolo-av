@@ -1,0 +1,11 @@
+[package]
+name = "hd44780"
+description = "A character LCD with an HD44780 controller (16x2, 20x4), on six GPIO pins in 4-bit mode, write only: against embedded-hal 1.0."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# hd44780-driver on crates.io is still on embedded-hal 0.2; this one is small enough to own.
+[dependencies]
+embedded-hal.workspace = true

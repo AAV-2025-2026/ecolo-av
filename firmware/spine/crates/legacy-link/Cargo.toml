@@ -1,0 +1,10 @@
+[package]
+name = "legacy-link"
+description = "The 2025-26 UART link from the Motor-Pi to the ESP32: 13-byte frames, the ESP32's resync, and its Jrk and DAC targets."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No dependencies: no_std, no allocator, no hardware.
+[dependencies]

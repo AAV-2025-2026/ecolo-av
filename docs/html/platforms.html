@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platforms: Ubuntu, the car&#x27;s computers, networking · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/platforms.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Platforms: Ubuntu, the car&#x27;s computers, networking</h1>
+<div class="meta">9 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a class="here" href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#which-computer-gets-jazzy-how">Which computer gets Jazzy how</a><a href="#ubuntu-2404-install-jazzy">Ubuntu 24.04: install Jazzy</a><a href="#ubuntu-build-this-workspace">Ubuntu: build this workspace</a><a href="#networking-many-computers-one-ros-graph">Networking: many computers, one ROS graph</a><a href="#on-the-car-what-runs-where">On the car: what runs where</a><a href="#try-jazzy-on-the-car-before-the-reflash">Try Jazzy on the car before the reflash</a><a href="#moving-the-orin-to-jetpack-72">Moving the Orin to JetPack 7.2</a></nav>
+<div class="lead"><p>Every computer runs ROS 2 Jazzy. On the car's computers that means Ubuntu 24.04 with the
+official packages. On a Mac or any other Linux, use Pixi: see <a href="run.html">Run it</a>.</p></div>
+<section class="card"><h2 id="which-computer-gets-jazzy-how">Which computer gets Jazzy how</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th>OS</th>
+<th>Jazzy from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jetson AGX Orin</td>
+<td>JetPack 7.2 (Ubuntu 24.04)</td>
+<td>apt. JetPack 6 is Ubuntu 22.04, so reflash first, after a backup. To try it before then: Pixi, below.</td>
+</tr>
+<tr>
+<td>Raspberry Pi 4 or 5</td>
+<td>Ubuntu 24.04 Server (arm64)</td>
+<td>apt; or Pixi on today's OS, below</td>
+</tr>
+<tr>
+<td>Linux laptop</td>
+<td>Ubuntu 24.04</td>
+<td>apt, or Pixi</td>
+</tr>
+<tr>
+<td>Mac</td>
+<td>macOS 14 or newer</td>
+<td>Pixi: <a href="mac.html">Your Mac</a></td>
+</tr>
+<tr>
+<td>oirp-spss</td>
+<td>AlmaLinux 9</td>
+<td>Pixi, with no admin rights</td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>Windows 10 or 11</td>
+<td>WSL2 with Ubuntu 24.04</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every computer on one ROS network must run the same release: Humble and Jazzy don't mix.</p>
+</section>
+<section class="card"><h2 id="ubuntu-2404-install-jazzy">Ubuntu 24.04: install Jazzy</h2>
+<p>The official steps, from docs.ros.org ("Ubuntu (deb packages)"):</p>
+<pre class="highlight"><code class="language-bash">sudo apt install software-properties-common curl
+sudo add-apt-repository universe
+export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F'"' '{print $4}')
+curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release &amp;&amp; echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb"
+sudo dpkg -i /tmp/ros2-apt-source.deb
+sudo apt update &amp;&amp; sudo apt full-upgrade -y
+sudo apt install ros-jazzy-desktop ros-dev-tools     # ros-jazzy-ros-base on the Pis and the Orin
+sudo rosdep init &amp;&amp; rosdep update</code></pre>
+<p>Add <code>source /opt/ros/jazzy/setup.bash</code> to <code>~/.bashrc</code>. To check it, run
+<code>ros2 run demo_nodes_cpp talker</code> in one terminal and <code>ros2 run demo_nodes_py listener</code> in
+another.</p>
+</section>
+<section class="card"><h2 id="ubuntu-build-this-workspace">Ubuntu: build this workspace</h2>
+<pre class="highlight"><code class="language-bash">source /opt/ros/jazzy/setup.bash
+rosdep install --from-paths src --ignore-src -y    # every stock package we use
+colcon build --symlink-install
+source install/setup.bash                          # in every new terminal</code></pre>
+<ul>
+<li><code>--symlink-install</code> links the Python files and configs instead of copying them, so an
+  edit only needs a relaunch. C++ and message changes still need a rebuild.</li>
+<li><code>colcon build --packages-select aav_ego</code> builds just one package.</li>
+<li>After switching branches, delete <code>build/</code>, <code>install/</code> and <code>log/</code>, and rebuild.</li>
+</ul>
+</section>
+<section class="card"><h2 id="networking-many-computers-one-ros-graph">Networking: many computers, one ROS graph</h2>
+<p>ROS 2 has no master. Nodes find each other by multicast on the local network.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The same <code>ROS_DOMAIN_ID</code> (1–101) in every machine's <code>~/.bashrc</code></td>
+<td>the 2025-26 dashboard used 10 and its UI used 0, so they never met</td>
+</tr>
+<tr>
+<td>2</td>
+<td>One network that allows multicast, such as the car's own router</td>
+<td>campus WiFi often blocks it; then list the computers in <code>ROS_STATIC_PEERS</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Keep <code>ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET</code></td>
+<td>set it to <code>LOCALHOST</code> to keep a laptop's experiments off the car</td>
+</tr>
+<tr>
+<td>4</td>
+<td>One middleware everywhere: Cyclone DDS (Ben, 23 Oct), set by Pixi</td>
+<td>different middlewares may not talk to each other; Fast DDS delivered messages late (<a href="mac.html#why-we-use-cyclone-dds">Your Mac</a>)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Clocks in sync: chrony, with the Orin as the time server</td>
+<td>TF and the EKFs reject messages from a wrong clock</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Virtual machines on bridged networking, not NAT</td>
+<td>so the VM gets its own address on the car's network</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>ros2 doctor --report</code> and <code>ros2 multicast send</code> / <code>receive</code> diagnose most problems.</p>
+</section>
+<section class="card"><h2 id="on-the-car-what-runs-where">On the car: what runs where</h2>
+<p>As the car is wired today (Ben, 23 Oct; the hardware lead confirms), the Motor Pi drives
+the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
+(<a href="can-plan.html#todays-wiring-23-october">Today's wiring</a>). <code>car.launch.py actuators:=uart</code>
+(the default) is that; <code>actuators:=can</code> is the KEFC plan's CAN spine. The files in
+<code>src/aav_bringup/config/machines/</code> say what runs where:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine file</th>
+<th>Runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>orin.yaml</code></td>
+<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the object detector (<code>object_detector_orin</code>, RF-DETR Nano in TensorRT) and the stop-sign watcher; the CAN bus (<code>spine_bridge role:=sensors</code>: the wheels)</td>
+</tr>
+<tr>
+<td><code>motor_pi.yaml</code></td>
+<td><code>legacy_uart_bridge</code>: the ESP32 is wired to it. The 2025-26 UDP encoder (<code>encoder_udp</code>) is off: the wheels are on CAN now</td>
+</tr>
+<tr>
+<td><code>laptop.yaml</code></td>
+<td>the joystick, on the safety driver's laptop. Its detector (<code>object_detector_laptop</code>, Core ML) is off until it reads compressed images</td>
+</tr>
+<tr>
+<td><code>all.yaml</code></td>
+<td>everything on one computer, for the bench. Its detector is <code>object_detector_all</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>On each computer, run <code>ros2 launch aav_bringup car.launch.py machine:=&lt;its file&gt;</code>, or
+<code>pixi run car &lt;its file&gt;</code> with Pixi.</p>
+<div class="admonition warning">
+<p class="admonition-title">The first hardware test</p>
+<p>Wheels off the ground, the e-stop in reach, and a low speed limit in <code>ego.yaml</code>. Check
+that positive steering turns left, that the throttle goes the right way, and that the
+car stops when you release the deadman and when you kill the bridge. Today's firmware
+fails the last one: see <a href="firmware.html">Firmware</a>.</p>
+</div>
+<h3 id="the-parts">The parts</h3>
+<p>Each machine file turns parts on (<code>true</code>) or off. A <code>TODO</code> marks a part waiting for its
+hardware: the cameras (Q22), the radar, or which USB port a device is on.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Starts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>description</code></td>
+<td>the car's frames: <code>robot_state_publisher</code></td>
+</tr>
+<tr>
+<td><code>mux</code>, <code>ego</code></td>
+<td><code>twist_mux</code>, then <code>ego</code></td>
+</tr>
+<tr>
+<td><code>teleop</code></td>
+<td>the joystick, and its e-stop button</td>
+</tr>
+<tr>
+<td><code>scripted</code></td>
+<td>the scripted driver</td>
+</tr>
+<tr>
+<td><code>imu</code>, <code>gps</code>, <code>radar</code>, <code>battery</code></td>
+<td>the sensor drivers, on the computer each is plugged into</td>
+</tr>
+<tr>
+<td><code>camera</code></td>
+<td>the front camera: <code>usb_cam</code>, Linux only</td>
+</tr>
+<tr>
+<td><code>camera_stream</code></td>
+<td>the front cameras' H.264 streams from the camera Pi, one <code>camera_stream_&lt;camera&gt;</code> each, with the detector inside; the sensor watchdog watches them (<a href="camera-pipeline.html#on-the-car-carlaunchpy">camera pipeline</a>). On in <code>orin.yaml</code></td>
+</tr>
+<tr>
+<td><code>detector</code></td>
+<td>the object detector (RF-DETR Nano, or YOLO), as <code>object_detector_&lt;machine&gt;</code>, with the model the file names (<a href="perception.html#models">Models</a>). Not for a camera <code>camera_stream</code> streams</td>
+</tr>
+<tr>
+<td><code>stop_signs</code></td>
+<td>the stop-sign watcher: one per car, next to the mux</td>
+</tr>
+<tr>
+<td><code>radar_clusters</code></td>
+<td>the radar's clustering</td>
+</tr>
+<tr>
+<td><code>camera_obstacles</code></td>
+<td>the detectors' boxes as points on the road, for Nav2's costmap (<a href="costmaps.html">Costmaps</a>)</td>
+</tr>
+<tr>
+<td><code>localization</code>, <code>navigation</code></td>
+<td>the two EKFs and <code>navsat_transform</code>; Nav2. Its costmap reads the <code>radar</code> and <code>camera_obstacles</code> parts on the same computer, and <code>collision_monitor</code> comes with the radar</td>
+</tr>
+<tr>
+<td><code>spine</code></td>
+<td>the CAN bus (Linux only): with <code>actuators:=uart</code>, the wheel sensors only (<code>spine_bridge role:=sensors</code>, no CAN sender); with <code>actuators:=can</code>, the CAN spine backend</td>
+</tr>
+<tr>
+<td><code>legacy_uart</code>, <code>legacy_encoder</code></td>
+<td>today's backend, the ESP32 over UART (not with <code>actuators:=can</code>); the 2025-26 UDP wheel encoder (never beside <code>spine</code>)</td>
+</tr>
+<tr>
+<td><code>foxglove</code></td>
+<td><code>foxglove_bridge</code>, on port 8765: watch only, the WiFi topic list (<a href="foxglove.html">Watch from a laptop</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>A part that can't run on that computer (no PyTorch, no model file, no <code>usb_cam</code>) is
+skipped with a warning, and the rest starts.</p>
+<h3 id="the-arguments">The arguments</h3>
+<p>They win over the machine file. With Pixi, put them after <code>--</code>:
+<code>pixi run car orin -- gps:=false</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gps:=false</code></td>
+<td>no GPS anywhere: no driver, and localization without it</td>
+</tr>
+<tr>
+<td><code>gps_driver:=ublox</code></td>
+<td>which GPS driver: <code>ublox</code> (the default, Tentative: Q18), <code>nmea</code>, or <code>ublox_dgnss</code> (apt only, the car)</td>
+</tr>
+<tr>
+<td><code>map:=</code>, <code>start_x:=</code>, <code>start_y:=</code>, <code>start_yaw:=</code></td>
+<td>Nav2's map, and where the car starts on it</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="try-jazzy-on-the-car-before-the-reflash">Try Jazzy on the car before the reflash</h2>
+<p>Pixi also runs on the car's ARM computers, on the Ubuntu 22.04 they have now. So the
+team can try this stack on the car first, and reflash later. It resolves, but is
+untested on the car.</p>
+<div class="admonition note">
+<p class="admonition-title">No internet on the car? Use the USB kit</p>
+<p><code>pixi run car-kit</code> on a Mac makes a 1.8 GB folder that installs all of this offline,
+without sudo, into <code>~/aav-jazzy</code>: <a href="car-install.html">From a USB stick</a>.</p>
+</div>
+<ol>
+<li>Stop the 2025-26 software: it is Humble, and Humble and Jazzy don't mix.</li>
+<li>On the Orin and the Motor Pi, install Pixi and copy the code, as on
+   <a href="mac.html">Your Mac</a> (steps 2 to 4). It needs a 64-bit OS: <code>uname -m</code> must say
+   <code>aarch64</code>.</li>
+<li>Run <code>pixi run car orin</code> on the Orin, and <code>pixi run car motor_pi</code> on the Motor Pi.</li>
+</ol>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Pixi on today's Ubuntu 22.04</th>
+<th>Reflash to JetPack 7.2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What changes on the car</td>
+<td>one folder; delete it to undo</td>
+<td>everything: back up first</td>
+</tr>
+<tr>
+<td>Disk</td>
+<td>about 9 GB on each computer, 13 GB free to install: check the Pis</td>
+<td>the new OS</td>
+</tr>
+<tr>
+<td>Good for</td>
+<td>trying the stack on the car</td>
+<td>the long term: apt, and NVIDIA's ROS packages</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="moving-the-orin-to-jetpack-72">Moving the Orin to JetPack 7.2</h2>
+<p>It's a reflash, not an upgrade:</p>
+<ol>
+<li><strong>Back up</strong> <code>/home/aavjetson</code> and every workspace first. It holds the only copy of the
+   2025-26 YOLO detector and camera/LiDAR setup. Better still, take a full image with
+   <code>l4t_backup_restore.sh</code>.</li>
+<li><strong>Check</strong> <code>cat /etc/nv_tegra_release</code> and the module's part number. Module
+   699-13701-0005-502 has a reported flashing problem; -501 works.</li>
+<li><strong>Flash</strong> with SDK Manager from an Ubuntu 22.04 or 24.04 x86 PC, or use the dev kit's
+   USB installer.</li>
+<li><strong>Install Jazzy</strong> as above. Move the Pis to Ubuntu 24.04 at the same time.</li>
+</ol>
+<p>The reasons and the risks: <a href="../history/conversation.md#so-we-can-upgrade-the-orin-to-jazzy-jetpack-72-test-it-before-committing">history/conversation.md</a>.</p></section>
+<nav class="prevnext"><a class="prev" href="esp32-bench.html"><small>Previous</small>← ESP32 first flash</a>
+<a class="next" href="bandwidth.html"><small>Next</small>Bandwidth →</a></nav>
+</main>
+<footer>Source: <code>docs/platforms.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

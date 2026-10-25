@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Questions people ask · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/faq.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Questions people ask</h1>
+<div class="meta">10 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<span class="sep">Learn:</span>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a class="here" href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<span class="sep">Reference:</span>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-project">The project</a><a href="#safety">Safety</a><a href="#the-hardware">The hardware</a><a href="#working-on-it">Working on it</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>Short, true answers to what a professor or a new teammate asks first. Each one links to
+the page with the detail.</p>
+<p><strong>You'll learn:</strong></p>
+<ul>
+<li>what works today, and what has never run on the car;</li>
+<li>how the car is kept safe, today and after the KEFC changes;</li>
+<li>how to work on the code without the car.</li>
+</ul>
+<p>"Untested" on this page means the code exists but has never run. Words you may not know
+are in the <a href="glossary.html">Glossary</a>.</p></div>
+<section class="card"><h2 id="the-project">The project</h2>
+<h3 id="what-is-this">What is this?</h3>
+<p>The software for Carleton's Accessible Autonomous Vehicle (AAV), a capstone project.
+This repo is the 2026-27 team's: one ROS 2 Jazzy workspace, plus the firmware for the
+boards that move the actuators.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ROS 2 packages</td>
+<td><code>src/</code>, one folder per layer of the picture</td>
+</tr>
+<tr>
+<td>Firmware and the CAN contract</td>
+<td><code>firmware/</code></td>
+</tr>
+<tr>
+<td>Scripts</td>
+<td><code>tools/</code></td>
+</tr>
+<tr>
+<td>These pages</td>
+<td><code>docs/</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="does-the-car-drive-itself-yet">Does the car drive itself yet?</h3>
+<p><strong>No.</strong> None of our code has run on the real car yet.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>What runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>turtlesim</td>
+<td>the command path, on a turtle that steers like the car</td>
+</tr>
+<tr>
+<td>Gazebo</td>
+<td>the whole stack: the EKFs, Nav2 driving to a goal</td>
+</tr>
+<tr>
+<td>Bench mode</td>
+<td>the car's own software, with stand-ins for every board</td>
+</tr>
+<tr>
+<td>The real car</td>
+<td>the 2025-26 team's code, on ROS 2 Humble</td>
+</tr>
+</tbody>
+</table></div>
+<p>Details: <a href="status.html">Status</a>, and <code>READ-ME-SIMULATION-AND-THE-CAR.md</code> at the top of the repo.</p>
+<h3 id="why-not-run-it-on-the-car-today">Why not run it on the car today?</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Blocker</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The car runs Humble; we use Jazzy</td>
+<td>the two can't share one network (Q24)</td>
+</tr>
+<tr>
+<td>Nobody has logged in to its computers yet</td>
+<td>the audit on Friday 16 Oct finds out what runs where</td>
+</tr>
+<tr>
+<td>The drive path is the 2025-26 one</td>
+<td>our <code>aav_legacy</code> backend speaks it, but it is untested</td>
+</tr>
+<tr>
+<td>The CAN parts aren't bought yet</td>
+<td>the KEFC request</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="why-ros-2-jazzy-and-not-humble">Why ROS 2 Jazzy and not Humble?</h3>
+<p>Humble's support ends in May 2027, Jazzy's in May 2029. ROS can't mix versions on one
+network, so every computer moves together. Decided by the team (Decision 6 in
+<a href="decisions.html">Decisions</a>).</p>
+<h3 id="why-not-just-keep-the-2025-26-teams-code">Why not just keep the 2025-26 team's code?</h3>
+<p>Most of their own estimator, planner and command picker was where the bugs were. Stock
+ROS packages now do those jobs:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Their code</th>
+<th>Ours now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>their odometry and SLAM</td>
+<td><code>robot_localization</code>: two EKFs</td>
+</tr>
+<tr>
+<td>their grid planner (A<em>, D</em> Lite)</td>
+<td>Nav2</td>
+</tr>
+<tr>
+<td>the QNX command picker</td>
+<td><code>twist_mux</code></td>
+</tr>
+<tr>
+<td>their lidar costmap and e-stop</td>
+<td>Nav2's costmaps and <code>collision_monitor</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>We kept what works: the ESP32 firmware, the wheel encoder, the IMU and radar drivers,
+lane keeping and the HUD. Each keeps a <code>PROVENANCE.md</code>. See <a href="older-code.html">The older code</a>.</p>
+</section>
+<section class="card"><h2 id="safety">Safety</h2>
+<h3 id="what-stops-the-car-if-the-software-crashes">What stops the car if the software crashes?</h3>
+<p>Layers, from the person outward. Each one works even if the ones after it fail.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Layer</th>
+<th>Stops the car when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Kar-Tech wireless e-stop, red button, RC override</td>
+<td>a person presses it: hardware, beats all software</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Joystick deadman (priority 100)</td>
+<td>held with the stick centred</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>/safety/estop</code></td>
+<td>true: twist_mux blocks every driver, the backends brake</td>
+</tr>
+<tr>
+<td>4</td>
+<td>ego's timeout</td>
+<td>no command for 0.3 s</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>spine_bridge</code></td>
+<td>ego goes quiet: it stops sending drive frames</td>
+</tr>
+<tr>
+<td>6</td>
+<td>The board's watchdog</td>
+<td>no good CAN frame for 100 ms (DBC v0.2.0)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Today's car has no layer 6</p>
+<p>The 2025-26 ESP32 firmware has no timeout. If the Motor-Pi dies, the last throttle
+stays on. Wheels off the ground, e-stop in hand: see <a href="firmware.html">Firmware</a>.</p>
+</div>
+<h3 id="how-do-i-press-the-e-stop-from-a-laptop">How do I press the e-stop from a laptop?</h3>
+<p><code>pixi run estop</code> publishes <code>true</code> on <code>/safety/estop</code>. <code>pixi run estop-clear</code> clears it.
+The HUD's button only ever sets it: clearing is always a person's deliberate act.</p>
+<h3 id="who-wins-when-two-drivers-talk-at-once">Who wins when two drivers talk at once?</h3>
+<p>The highest priority that spoke in the last 0.5 s.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Joystick</th>
+<th>Keyboard</th>
+<th>Scripted</th>
+<th>Replay</th>
+<th>Nav2</th>
+<th>AI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>90</td>
+<td>50</td>
+<td>40</td>
+<td>20</td>
+<td>10</td>
+</tr>
+</tbody>
+</table></div>
+<p>A stop sign (priority 30) holds Nav2 and the AI, never a person. The e-stop (255) holds
+everyone. The table lives in <code>src/mux/aav_mux/config/twist_mux.yaml</code>.</p>
+<h3 id="what-happens-when-i-let-go-of-the-joystick">What happens when I let go of the joystick?</h3>
+<p>Nothing is sent for 0.5 s, then twist_mux hands control to the next driver that is
+talking, such as Nav2. Whether it should stay stopped instead is open (Q28).</p>
+</section>
+<section class="card"><h2 id="the-hardware">The hardware</h2>
+<h3 id="why-move-from-the-motor-pi-to-can">Why move from the Motor-Pi to CAN?</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Today: Motor-Pi, UART</th>
+<th>After KEFC: CAN</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Boxes in the path</td>
+<td>Orin → Motor-Pi → ESP32</td>
+<td>Orin → ESP32</td>
+</tr>
+<tr>
+<td>A frozen computer</td>
+<td>the last throttle stays on</td>
+<td>the board brakes</td>
+</tr>
+<tr>
+<td>A garbled message</td>
+<td>a checksum only</td>
+<td>a counter and a CRC on every frame</td>
+</tr>
+<tr>
+<td>Wheel speed</td>
+<td>a Pico 2 over UDP</td>
+<td>two wheel nodes on the same bus</td>
+</tr>
+</tbody>
+</table></div>
+<p>The plan: <a href="can-plan.html">CAN plan</a> (Proposed).</p>
+<h3 id="which-board-will-run-the-can-firmware">Which board will run the CAN firmware?</h3>
+<p><strong>Still open</strong> (Q10–Q13). The KEFC request uses the ESP32 control board already on the
+car. The team's Tentative choice was a new Pico 2 or STM32, and a Pico 2 program exists
+(untested on a chip). The <a href="can-plan.html">CAN plan</a> proposes the ESP32.</p>
+<h3 id="why-two-orins">Why two Orins?</h3>
+<p>The KEFC request splits the work. Orin #1 keeps control (the EKFs, twist_mux, ego, the
+CAN master); Orin #2 (new) does the heavy seeing: cameras, lidar, costmaps and Nav2. A
+slow camera frame then can't delay a brake command. See <a href="learn-car.html">The car, box by box</a>.</p>
+<h3 id="is-there-a-lidar">Is there a lidar?</h3>
+<p>Yes: a Velodyne VLP-16 on the roof (the 16 Oct audit). We run the stock ROS <code>velodyne</code>
+driver for it, no code of our own: <code>pixi run car orin</code> starts it on the Jetson, where the
+lidar sends its data (<a href="perception.html#the-roof-lidar">Perception</a>). Gazebo has a generic
+one too: <code>pixi run sim world:=road</code> (<a href="simulation.html#the-lidar-gazebo-only">Simulation</a>).</p>
+<h3 id="how-does-the-car-know-where-it-is">How does the car know where it is?</h3>
+<p>Two EKFs from <code>robot_localization</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th><code>ekf_local</code></th>
+<th><code>ekf_global</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Uses</td>
+<td>wheel speed, IMU</td>
+<td>wheel speed, IMU, GPS</td>
+</tr>
+<tr>
+<td>Gives</td>
+<td>smooth, but drifts</td>
+<td>true, but may jump</td>
+</tr>
+</tbody>
+</table></div>
+<p>GPS meets the map at one point, the datum: today a placeholder near Carleton. See
+<code>READ-ME-MAPS-AND-POSITION.md</code> and <a href="naming.html#why-the-two-ekfs-dont-talk">Topic areas</a>.</p>
+<h3 id="does-nav2-follow-the-roads">Does Nav2 follow the roads?</h3>
+<p>Not yet. OpenStreetMap is used only in the HUD, to search places and plan a road route.
+Nav2 gets that route as GPS points, and doesn't know where the road is between them.
+Staying in the lane is lane keeping's job.</p>
+</section>
+<section class="card"><h2 id="working-on-it">Working on it</h2>
+<h3 id="do-i-need-the-car-to-work-on-the-code">Do I need the car to work on the code?</h3>
+<p>No. Almost everything runs on one laptop:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>You get</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run turtle</code></td>
+<td>the command path, on a turtle</td>
+</tr>
+<tr>
+<td><code>pixi run sim</code></td>
+<td>Gazebo: the car, its IMU, GPS and wheel speed; <code>world:=road</code> adds its camera and radar</td>
+</tr>
+<tr>
+<td><code>pixi run bench</code></td>
+<td>the car's real software, with pretend boards</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="can-i-use-a-mac">Can I use a Mac?</h3>
+<p>Yes. Pixi installs the same ROS 2 Jazzy on macOS and on Linux. See <a href="mac.html">Your Mac</a>.</p>
+<h3 id="how-do-i-know-i-didnt-break-anything">How do I know I didn't break anything?</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Checks</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tools/test.sh</code></td>
+<td>the unit tests, the Rust tests, the topic list</td>
+<td>about a minute</td>
+</tr>
+<tr>
+<td><code>pixi run test</code></td>
+<td>all of that, plus the build, the style check and <code>colcon test</code></td>
+<td>a few minutes</td>
+</tr>
+<tr>
+<td><code>pixi run bench-check</code></td>
+<td>the whole car graph: driving, both e-stops</td>
+<td>about 2 minutes</td>
+</tr>
+<tr>
+<td><code>pixi run check turtle</code></td>
+<td>the running graph against <code>docs/interfaces.yaml</code></td>
+<td>seconds</td>
+</tr>
+</tbody>
+</table></div>
+<p>CI runs <code>pixi run test</code> on every push.</p>
+<h3 id="where-is-the-list-of-every-topic">Where is the list of every topic?</h3>
+<p><code>docs/interfaces.yaml</code> is the contract: every topic, its type, who publishes and who
+reads. It is shown as <a href="interfaces.html">Topics</a>. Change it first, then the code.</p>
+<h3 id="why-are-topic-names-like-driversjoycmd_vel">Why are topic names like <code>/drivers/joy/cmd_vel</code>?</h3>
+<p>Each name starts with its area: <code>/sensors/</code>, <code>/drivers/</code>, <code>/control/</code>, <code>/ego/</code>,
+<code>/safety/</code> and so on. You can tell where a message comes from by its name. Decided by
+Ben on 15 Oct: <a href="naming.html">Topic areas</a>.</p>
+<h3 id="why-python-for-the-nodes-and-rust-for-the-firmware">Why Python for the nodes and Rust for the firmware?</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Language</th>
+<th>For</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>the ROS nodes we write</td>
+<td>our nodes run at 50 Hz or less; easy to read and test</td>
+</tr>
+<tr>
+<td>Rust</td>
+<td>firmware and hardware drivers</td>
+<td>the compiler catches memory bugs before they reach the car (Ben, 10 Oct)</td>
+</tr>
+<tr>
+<td>none of our own C++</td>
+<td></td>
+<td>the inherited C++ moves to Rust</td>
+</tr>
+</tbody>
+</table></div>
+<p>See <a href="languages.html">Languages</a>.</p>
+<h3 id="how-do-i-record-a-drive-and-play-it-back">How do I record a drive and play it back?</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Do</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Record</td>
+<td><code>pixi run tools/record.sh &lt;name&gt;</code>: a bag in <code>bags/</code></td>
+</tr>
+<tr>
+<td>Drive it again</td>
+<td><code>pixi run tools/ros.sh tools/replay_commands.sh &lt;bag&gt;</code>: priority 40</td>
+</tr>
+<tr>
+<td>Re-run the EKFs on it</td>
+<td>the <code>replay</code> profile: see <a href="simulation.html">Simulation</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="where-are-the-open-questions">Where are the open questions?</h3>
+<p>In the team design doc, numbered <strong>Q1–Q34</strong>; a short copy is in <a href="decisions.html">Decisions</a>.
+Answer by number: "Q12: ...".</p>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<pre class="highlight"><code class="language-bash">pixi run turtle              # terminal 1: a turtle that steers like the car
+pixi run keyboard --local    # terminal 2: hold i to drive
+pixi run estop               # terminal 3: the turtle stops
+pixi run estop-clear         #             and drives again</code></pre>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What works</td>
+<td><code>docs/status.md</code></td>
+</tr>
+<tr>
+<td>Decisions, Q1–Q34</td>
+<td><code>docs/decisions.md</code></td>
+</tr>
+<tr>
+<td>Driver priorities</td>
+<td><code>src/mux/aav_mux/config/twist_mux.yaml</code></td>
+</tr>
+<tr>
+<td>ego's limits and timeout</td>
+<td><code>src/ego/aav_ego/config/</code></td>
+</tr>
+<tr>
+<td>Every topic</td>
+<td><code>docs/interfaces.yaml</code></td>
+</tr>
+<tr>
+<td>The CAN frames</td>
+<td><code>firmware/can/aav.dbc</code></td>
+</tr>
+<tr>
+<td>The car's measurements</td>
+<td><code>src/aav_description/config/vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>The rules for code and docs</td>
+<td><code>CLAUDE.md</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="learn-journey.html"><small>Previous</small>← A command&#x27;s journey</a>
+<a class="next" href="glossary.html"><small>Next</small>Glossary →</a></nav>
+</main>
+<footer>Source: <code>docs/faq.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>
