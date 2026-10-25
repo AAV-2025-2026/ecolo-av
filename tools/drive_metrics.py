@@ -28,6 +28,7 @@ STILL = 0.05        # m/s: slower than this is standing still
 STOP_TIME = 1.0     # s: a stand-still at least this long, between moving, is a stop
 SWITCH = 1.5        # m: a new plan this far from the last, on average, took another route
 MOVED = 0.1         # m from where it began: the car has started
+GOAL_TOLERANCE = 1.0  # m: Nav2's xy_goal_tolerance (nav2.yaml general_goal_checker)
 
 
 def segment_distance(p, a, b):
@@ -100,6 +101,23 @@ def speeds(truth):
 def travelled(truth):
     """Return the distance (m) the car covered."""
     return sum(math.hypot(b[1] - a[1], b[2] - a[2]) for a, b in zip(truth, truth[1:]))
+
+
+def path_length(path):
+    """Return a path's length (m): [(x, y)]."""
+    return sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(path, path[1:]))
+
+
+def lingered(belief, goal, end, tolerance=GOAL_TOLERANCE):
+    """
+    Return how long (s) the car drove on after the EKF first put it within tolerance of goal.
+
+    Nav2's goal checker uses the same belief: 0 means it stopped as soon as it got there; a
+    car that circles a goal it reached shows here (TODO 17). None if it never got there.
+    """
+    gx, gy = goal[:2]
+    first = next((t for t, x, y, _ in belief if math.hypot(x - gx, y - gy) <= tolerance), None)
+    return None if first is None else max(0.0, end - first)
 
 
 def moving_after(truth, start, distance=MOVED):
@@ -219,10 +237,15 @@ def summary(leg):
     lost, turned = belief_errors(truth, leg.get('belief', []))
     switched = route_switches(leg['plans'])
     route = leg['plans'][0][1] if leg['plans'] else []
+    driven, planned = travelled(truth), path_length(route)
+    near = lingered(leg.get('belief', []), leg['goal'], leg['end'])
     row = {
         'reached': bool(leg['reached']),
         'time_s': leg['end'] - leg['start'],
-        'driven_m': travelled(truth),
+        'driven_m': driven,
+        'route_m': planned if route else math.nan,
+        'detour': driven / planned if planned > 0.0 else math.nan,
+        'lingered_s': math.nan if near is None else near,
         'asked_after_s': first_command(leg.get('asked', []), leg['start']),
         'moving_after_s': moving_after(truth, leg['start']),
         'off_path_mean_m': sum(gaps) / len(gaps) if gaps else math.nan,
@@ -255,6 +278,9 @@ COLUMNS = [
     ('reached', 'Reached the goal', lambda v: 'yes' if v else '**no**'),
     ('time_s', 'Time (s)', '{:.0f}'),
     ('driven_m', 'Driven (m)', '{:.1f}'),
+    ('route_m', 'The first route (m)', '{:.1f}'),
+    ('detour', 'Driven / the first route', '{:.2f}'),
+    ('lingered_s', 'Drove on after the EKF had it at the goal (s)', '{:.1f}'),
     ('asked_after_s', 'Controller asked to move after (s)', '{:.1f}'),
     ('moving_after_s', 'Car moving after (s)', '{:.1f}'),
     ('off_path_mean_m', 'Off the path, mean (m)', '{:.2f}'),
