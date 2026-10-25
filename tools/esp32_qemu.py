@@ -807,8 +807,14 @@ def main(argv=None) -> int:
     ap.add_argument('--no-rc', action='store_true', help='skip the RC modes after the cycles')
     ap.add_argument('--log', type=Path, help='save the firmware log here')
     args = ap.parse_args(argv)
-    results, uplink, rc, clock, lines, ups = run(args.qemu, args.flash, args.cycles,
-                                                 rc=not args.no_rc)
+    try:
+        results, uplink, rc, clock, lines, ups = run(args.qemu, args.flash, args.cycles,
+                                                     rc=not args.no_rc)
+    except ValueError as e:
+        # Seen once on 24 Oct at load 17: QEMU printed almost nothing, so no clocks to map.
+        print(f'FAIL: the firmware in QEMU said too little to judge ({e}). '
+              'A starved computer? Run it again with less else running.')
+        return 1
     if args.log:
         args.log.write_text(''.join(f'{ln.host:.4f} {ln.text}\n' for ln in lines))
     boot = next((ln.text for ln in lines if 'spine-esp32-umod' in ln.text), '(no boot line)')

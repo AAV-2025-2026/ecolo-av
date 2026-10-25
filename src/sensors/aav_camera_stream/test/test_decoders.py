@@ -142,6 +142,20 @@ class Ran:
         return type('Done', (), {'returncode': 1 if failed else 0})()
 
 
+def test_vtdec_gets_a_second_try():
+    class FailsOnce(Ran):
+        def __call__(self, argv, **kwargs):
+            self.argvs.append(argv)
+            tries = sum('-q' in a for a in self.argvs)
+            return type('Done', (), {'returncode': 1 if '-q' in argv and tries == 1 else 0})()
+    run = FailsOnce()
+    assert decoders.gst_works('/g/bin/gst-launch-1.0', 'gst-mac', run=run) == ''
+    assert sum('-q' in a for a in run.argvs) == 2
+    failing = Ran(failing=('-q',))
+    assert 'test picture' in decoders.gst_works('/g/bin/gst-launch-1.0', 'gst-mac', run=failing)
+    assert sum('-q' in a for a in failing.argvs) == 2
+
+
 def test_gst_works_checks_each_element_then_decodes():
     run = Ran()
     assert decoders.gst_works('/g/bin/gst-launch-1.0', 'gst-mac', run=run) == ''

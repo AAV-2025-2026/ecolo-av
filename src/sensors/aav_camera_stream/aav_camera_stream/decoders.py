@@ -142,7 +142,7 @@ def gst_works(program, decoder, env=None, run=subprocess.run):
     Return '' if this gst-launch-1.0 can run the decoder's preset, or say why not.
 
     Every element must exist (gst-inspect-1.0 --exists, next to the program); for gst-mac,
-    vtdec must also decode VTDEC_TEST's pictures.
+    vtdec must also decode VTDEC_TEST's pictures, at the first or the second try.
     """
     inspect = os.path.join(os.path.dirname(program), 'gst-inspect-1.0')
     try:
@@ -150,11 +150,12 @@ def gst_works(program, decoder, env=None, run=subprocess.run):
             if run([inspect, '--exists', element], env=env, capture_output=True,
                    timeout=20).returncode != 0:
                 return f'no {element} in {os.path.dirname(program)}'
-        if decoder == 'gst-mac':
-            done = run([program, '-q', *shlex.split(VTDEC_TEST)], env=env,
-                       capture_output=True, timeout=20)
-            if done.returncode != 0:
-                return 'vtdec could not decode a test picture (no VideoToolbox here?)'
+        # Twice before giving up: once on 24 Oct the first try failed and the next passed
+        # (the gst environment just installed, its plugin cache shared with a worktree's).
+        if decoder == 'gst-mac' and not any(
+                run([program, '-q', *shlex.split(VTDEC_TEST)], env=env,
+                    capture_output=True, timeout=20).returncode == 0 for _ in range(2)):
+            return 'vtdec could not decode a test picture (no VideoToolbox here?)'
     except (OSError, subprocess.TimeoutExpired) as e:
         return f'{program}: {e}'
     return ''

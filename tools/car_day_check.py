@@ -310,7 +310,8 @@ def firmware_lines(build, files, spine_tree, legacy_tree):
         lines.append(Line('MISSING', 'ESP32 Rust', f'built {when}, but firmware/spine '
                           'changed since (or has uncommitted changes)', fix))
     else:
-        lines.append(Line('OK', 'ESP32 Rust', f'v2, v1 and v2-uplink built {when}, in {ESP32_DIR}/'))
+        lines.append(Line('OK', 'ESP32 Rust',
+                          f'v2, v1 and v2-uplink built {when}, in {ESP32_DIR}/'))
     qemu = build.get('esp-qemu-check', '')
     if qemu.startswith('PASS') and spine_now:
         lines.append(Line('OK', 'ESP32 QEMU', f'esp-qemu-check passed {when}: brakes '
