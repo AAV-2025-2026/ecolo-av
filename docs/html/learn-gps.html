@@ -627,31 +627,31 @@ and y near 11.</p>
 <tbody>
 <tr>
 <td>GPS driver settings</td>
-<td><code>src/sensors/aav_sensors/config/ublox_gps.yaml</code></td>
+<td><code>ros/sources/aav_sensors/config/ublox_gps.yaml</code></td>
 </tr>
 <tr>
 <td>Which driver starts</td>
-<td><code>src/sensors/aav_sensors/launch/sensors.launch.py</code> (<code>gps_driver:=</code>)</td>
+<td><code>ros/sources/aav_sensors/launch/sensors.launch.py</code> (<code>gps_driver:=</code>)</td>
 </tr>
 <tr>
 <td>The datum, navsat_transform</td>
-<td><code>src/localization/aav_localization/config/navsat.yaml</code></td>
+<td><code>ros/localization/aav_localization/config/navsat.yaml</code></td>
 </tr>
 <tr>
 <td>The antenna's spot on the car</td>
-<td><code>src/aav_description/config/vehicle.yaml</code> (<code>gps_link</code>)</td>
+<td><code>ros/bringup/aav_description/config/vehicle.yaml</code> (<code>gps_link</code>)</td>
 </tr>
 <tr>
 <td>Gazebo's GPS sensor</td>
-<td><code>src/aav_description/urdf/aav.gazebo.xacro</code> (<code>navsat</code>)</td>
+<td><code>ros/bringup/aav_description/urdf/aav.gazebo.xacro</code> (<code>navsat</code>)</td>
 </tr>
 <tr>
 <td>Gazebo → our topic name</td>
-<td><code>src/backends/aav_gazebo/aav_gazebo/gazebo_gps.py</code></td>
+<td><code>ros/sim/aav_gazebo/aav_gazebo/gazebo_gps.py</code></td>
 </tr>
 <tr>
 <td>The bench's pretend GPS</td>
-<td><code>src/bench/aav_bench/aav_bench/sensors.py</code> (<code>MockGps</code>)</td>
+<td><code>ros/sim/aav_bench/aav_bench/sensors.py</code> (<code>MockGps</code>)</td>
 </tr>
 <tr>
 <td>The device name <code>/dev/aav/gps</code></td>

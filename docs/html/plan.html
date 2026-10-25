@@ -261,12 +261,12 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 <tr>
 <td>Rust</td>
 <td>the spine, the wheel encoder, the status display, the IMU driver, the radar clustering</td>
-<td><code>firmware/spine</code>, <code>src/sensors</code>, <code>src/perception</code></td>
+<td><code>firmware/spine</code>, <code>ros/sources</code>, <code>ros/perception</code></td>
 </tr>
 <tr>
 <td>Ego and the mux</td>
 <td>twist_mux (a person always wins), ego (Ackermann, limits, timeouts), and now the car's weight</td>
-<td><code>src/ego</code>, <code>src/mux</code></td>
+<td><code>ros/ego</code>, <code>ros/command_mux</code>, <code>ros/io_mux</code></td>
 </tr>
 <tr>
 <td>Simulation</td>
@@ -276,32 +276,32 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 <tr>
 <td>Position</td>
 <td>two EKFs and navsat_transform: within 0.15 m of Gazebo's truth; replay within 0.03 m</td>
-<td><code>src/localization</code></td>
+<td><code>ros/localization</code></td>
 </tr>
 <tr>
 <td>Drivers</td>
 <td>joystick, keyboard, scripted, replay, GPS A to B, Nav2, plain English (local model), street routes</td>
-<td><code>src/drivers</code></td>
+<td><code>ros/drivers</code></td>
 </tr>
 <tr>
 <td>Nav2</td>
 <td>Smac Hybrid-A<em>, Regulated Pure Pursuit </em><em>or MPPI</em>*, collision monitor, ghost obstacles</td>
-<td><code>src/drivers/aav_navigation</code></td>
+<td><code>ros/drivers/aav_navigation</code></td>
 </tr>
 <tr>
 <td>Safety</td>
 <td>a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels only sometimes since 23 Oct); the collision monitor; the spine's timeout (not flashed)</td>
-<td><code>src/safety</code>, <code>firmware/spine</code></td>
+<td><code>ros/safety</code>, <code>firmware/spine</code></td>
 </tr>
 <tr>
 <td>Screens</td>
 <td>the raylib HUD and the map window, full screen at boot (ready to install)</td>
-<td><code>src/hud</code></td>
+<td><code>ros/hud</code></td>
 </tr>
 <tr>
 <td>Perception</td>
 <td>YOLO (Core ML, TensorRT export), a measured comparison with RF-DETR and YOLO26, radar clustering, a lidar layer</td>
-<td><code>src/perception</code>, <a href="model-comparison.html">newer models</a></td>
+<td><code>ros/perception</code>, <a href="model-comparison.html">newer models</a></td>
 </tr>
 <tr>
 <td>The car</td>

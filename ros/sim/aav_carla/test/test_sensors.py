@@ -37,7 +37,7 @@ def test_chosen_and_sources():
 
 
 def test_every_sensor_sits_on_a_vehicle_yaml_link():
-    path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'aav_description',
+    path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'bringup', 'aav_description',
                         'config', 'vehicle.yaml')
     with open(path) as f:
         links = yaml.safe_load(f)['sensors']

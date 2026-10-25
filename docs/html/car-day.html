@@ -624,7 +624,7 @@ plumb line, phone level, 4 scales, 2 blocks, a protractor. <strong>Due 30 Oct</s
 </tbody>
 </table></div>
 <p><strong>Stop point:</strong> the sheet photographed. At home the numbers go into
-<code>src/aav_description/config/vehicle.yaml</code>, then <code>pixi run test</code> and <code>pixi run view</code>.</p>
+<code>ros/bringup/aav_description/config/vehicle.yaml</code>, then <code>pixi run test</code> and <code>pixi run view</code>.</p>
 </section>
 <section class="card"><h2 id="session-3-questions-for-the-hardware-lead">Session 3: questions for the hardware lead</h2>
 <p><strong>Who:</strong> the hardware lead, and one person writing. <strong>How long:</strong> 30 min. <strong>Bring:</strong> this
@@ -943,7 +943,7 @@ its TensorRT version).</p>
 </tr>
 <tr>
 <td>4</td>
-<td>Ours, from the laptop: <code>scp src/sensors/aav_camera_stream/pi/mediamtx.yml &lt;user&gt;@192.168.1.108:/tmp/</code>, then <code>ssh &lt;user&gt;@192.168.1.108 'sudo cp /tmp/mediamtx.yml /usr/local/etc/mediamtx.yml &amp;&amp; sudo systemctl restart mediamtx'</code></td>
+<td>Ours, from the laptop: <code>scp ros/sources/aav_camera_stream/pi/mediamtx.yml &lt;user&gt;@192.168.1.108:/tmp/</code>, then <code>ssh &lt;user&gt;@192.168.1.108 'sudo cp /tmp/mediamtx.yml /usr/local/etc/mediamtx.yml &amp;&amp; sudo systemctl restart mediamtx'</code></td>
 <td><code>systemctl status mediamtx</code>: active</td>
 <td>put theirs back (step 2's copy)</td>
 </tr>
@@ -980,7 +980,7 @@ its TensorRT version).</p>
 <tr>
 <td>10</td>
 <td><strong>Calibration:</strong> the printed checkerboard (<code>pixi run calibrate-camera board</code>, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: <code>pixi run calibrate-camera front_left --host 192.168.1.108 --square &lt;measured, in m&gt;</code>; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for <code>front_right</code></td>
-<td><code>src/sensors/aav_camera_stream/config/calibrations/front_left.yaml</code> (and <code>front_right</code>) written; commit them at home</td>
+<td><code>ros/sources/aav_camera_stream/config/calibrations/front_left.yaml</code> (and <code>front_right</code>) written; commit them at home</td>
 <td>the window shows no picture: the stream (step 6). As a backup, save pictures: <code>mkdir -p ~/aav-calib</code>, then <code>pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png</code></td>
 </tr>
 </tbody>
@@ -1055,7 +1055,7 @@ repo.</p>
 </tr>
 <tr>
 <td>3</td>
-<td>On the Motor Pi: <code>legacy.yaml</code> to version 2: in <code>~/aav-jazzy/aav/src/backends/aav_legacy/config/legacy.yaml</code>, <code>frame_version: 2</code>, then <code>~/aav-jazzy/aav.sh build</code></td>
+<td>On the Motor Pi: <code>legacy.yaml</code> to version 2: in <code>~/aav-jazzy/aav/ros/can_bridge/aav_legacy/config/legacy.yaml</code>, <code>frame_version: 2</code>, then <code>~/aav-jazzy/aav.sh build</code></td>
 <td></td>
 <td></td>
 </tr>

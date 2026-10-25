@@ -169,6 +169,9 @@ EGM artifact directory: docs/designs
   the source at the commits in `vendor/*.repos`. Never edit
   or build them. Search them with `grep -r` or `rg -u`: most search tools skip folders
   that git ignores.
+- **`archive/`**: the 2025-26 and 2024-25 teams' repos, as they were, with their history.
+  Reference only: never build, fix or commit in them. They hold leaked credentials: never
+  copy or quote one (Q34).
 - **Not team code, on Ben's machines:** `~/Code/aav/` on his Mac (the old workspace, retired
   25 Oct: `aav/` there is the old copy of this repo, from `zander1976/aav`; and his course
   code `SYSC3313/`, `c_code_example/`, `simplied.c`) and `/home/ben/aav/` on oirp-spss (an

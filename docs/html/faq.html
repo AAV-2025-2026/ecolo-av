@@ -298,7 +298,7 @@ The HUD's button only ever sets it: clearing is always a person's deliberate act
 </tbody>
 </table></div>
 <p>A stop sign (priority 30) holds Nav2 and the AI, never a person. The e-stop (255) holds
-everyone. The table lives in <code>src/mux/aav_mux/config/twist_mux.yaml</code>.</p>
+everyone. The table lives in <code>ros/command_mux/aav_mux/config/twist_mux.yaml</code>.</p>
 <h3 id="what-happens-when-i-let-go-of-the-joystick">What happens when I let go of the joystick?</h3>
 <p>Nothing is sent for 0.5 s, then twist_mux hands control to the next driver that is
 talking, such as Nav2. Whether it should stay stopped instead is open (Q28).</p>
@@ -527,11 +527,11 @@ pixi run estop-clear         #             and drives again</code></pre>
 </tr>
 <tr>
 <td>Driver priorities</td>
-<td><code>src/mux/aav_mux/config/twist_mux.yaml</code></td>
+<td><code>ros/command_mux/aav_mux/config/twist_mux.yaml</code></td>
 </tr>
 <tr>
 <td>ego's limits and timeout</td>
-<td><code>src/ego/aav_ego/config/</code></td>
+<td><code>ros/ego/aav_ego/config/</code></td>
 </tr>
 <tr>
 <td>Every topic</td>
@@ -543,7 +543,7 @@ pixi run estop-clear         #             and drives again</code></pre>
 </tr>
 <tr>
 <td>The car's measurements</td>
-<td><code>src/aav_description/config/vehicle.yaml</code></td>
+<td><code>ros/bringup/aav_description/config/vehicle.yaml</code></td>
 </tr>
 <tr>
 <td>The rules for code and docs</td>

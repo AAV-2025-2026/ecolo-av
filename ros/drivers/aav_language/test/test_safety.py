@@ -8,7 +8,8 @@ import yaml
 
 EGO = {'max_speed': 1.0, 'max_reverse_speed': 0.5, 'max_acceleration': 1.0,
        'max_deceleration': 2.0, 'wheelbase': 1.57, 'max_steering_angle': 0.5}
-MUX_YAML = Path(__file__).resolve().parents[3] / 'mux' / 'aav_mux' / 'config' / 'twist_mux.yaml'
+MUX_YAML = (Path(__file__).resolve().parents[3] / 'command_mux' / 'aav_mux' / 'config'
+            / 'twist_mux.yaml')
 
 
 def test_default_caps_are_the_agreed_ones():

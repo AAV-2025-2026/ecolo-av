@@ -16,11 +16,12 @@ ROOT = Path(__file__).resolve().parents[2]
 def tracked(name):
     # In git, not just on this disk: a fresh clone (CI's) must have it too.
     try:
-        out = subprocess.run(['git', 'ls-files', '--', f'*{name}', name], cwd=ROOT,
+        out = subprocess.run(['git', 'ls-files', '-z', '--', f'*{name}', name], cwd=ROOT,
                              capture_output=True, text=True, check=True).stdout
     except (OSError, subprocess.CalledProcessError):
         pytest.skip('not a git checkout')
-    return {ROOT / p for p in out.split()}
+    # archive/ is the older teams' repos as they were: one CLAUDE.md at its top covers it.
+    return {ROOT / p for p in out.split('\0') if p and not p.startswith('archive/')}
 
 
 def readmes():

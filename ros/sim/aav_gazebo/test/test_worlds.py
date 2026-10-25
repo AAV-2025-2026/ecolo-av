@@ -15,7 +15,7 @@ import yaml
 
 PACKAGE = Path(__file__).resolve().parents[1]
 SRC = PACKAGE.parents[1]
-BENCH = yaml.safe_load((SRC / 'bench' / 'aav_bench' / 'config' / 'bench.yaml').read_text())
+BENCH = yaml.safe_load((SRC / 'sim' / 'aav_bench' / 'config' / 'bench.yaml').read_text())
 CAMERA = BENCH['mock_camera']['ros__parameters']
 RADAR = BENCH['mock_radar']['ros__parameters']
 

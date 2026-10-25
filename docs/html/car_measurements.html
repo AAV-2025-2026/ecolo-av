@@ -88,7 +88,7 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#every-value-is-still-a-guess">Every value is still a guess</a><a href="#the-frames">The frames</a><a href="#how-to-measure">How to measure</a><a href="#weight-and-balance">Weight and balance</a><a href="#look-at-it">Look at it</a><a href="#in-gazebo">In Gazebo</a></nav>
-<div class="lead"><p>The car's measurements live in one file, <code>src/aav_description/config/vehicle.yaml</code>. Every
+<div class="lead"><p>The car's measurements live in one file, <code>ros/bringup/aav_description/config/vehicle.yaml</code>. Every
 other part reads them from there, so a number only ever changes in one place.</p>
 <div class="table-wrap"><table>
 <thead>
@@ -126,7 +126,7 @@ other part reads them from there, so a number only ever changes in one place.</p
 </table></div>
 <p><code>aav_description/aav_description/vehicle.py</code> does the derived maths: turning radius =
 wheelbase / tan(max steering angle), and the footprint polygon from the body. Its tests
-(<code>src/aav_description/test/test_vehicle.py</code>) run without ROS.</p></div>
+(<code>ros/bringup/aav_description/test/test_vehicle.py</code>) run without ROS.</p></div>
 <section class="card"><h2 id="every-value-is-still-a-guess">Every value is still a guess</h2>
 <p>Each <code>TODO</code> in <code>vehicle.yaml</code> came from the previous teams' code, with the file and line
 cited next to it, or is a guess. Two examples: the wheelbase (1.57 m) comes from a MATLAB
@@ -296,7 +296,7 @@ the collision shapes: the body's outline between the bumpers, and the four wheel
 <p>With <code>--symlink-install</code>, later edits to <code>vehicle.yaml</code> only need a relaunch.</p>
 <p>Two other ways to inspect the model:</p>
 <ul>
-<li>Print the generated URDF: <code>xacro src/aav_description/urdf/aav.urdf.xacro</code>.</li>
+<li>Print the generated URDF: <code>xacro ros/bringup/aav_description/urdf/aav.urdf.xacro</code>.</li>
 <li>Draw the frame tree as a diagram: <code>ros2 run rqt_tf_tree rqt_tf_tree</code>.</li>
 </ul>
 </section>

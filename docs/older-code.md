@@ -111,8 +111,8 @@ card is in [Every module](modules.md). To read the originals:
 
 | Do | Why |
 |---|---|
-| Read them in this repo's history: `git show 420805ce:archive/<repo>/<file>`, or list one with `git ls-tree -r --name-only 420805ce archive/<repo>` | the 27 repos came in with their history (24 Oct), and left the working tree on 25 Oct. The local clones are gone |
-| Search them all: `git grep <word> 420805ce -- archive/` | reads every old repo at once, without checking anything out |
+| Read them in `archive/<repo>/` | the 27 repos came in with their history (24 Oct). Read-only: never build, fix or commit in them |
+| Search them all: `grep -r <word> archive/` | every old repo at once; colcon skips the folder |
 | Or on GitHub (`AAV-2025-2026`, `Carleton-AAV-Capstone`) | the originals, with every branch |
 | Check the branch first: `git -C <repo> branch -a` | the working code is often not on `main` (AAV_cortex: `6-pico2-aav-firmware`; Motor-Control: `FinalRev`) |
 | Start from the `PROVENANCE.md` of the module that came from it | it names the repo, branch and commit we copied, and every change since |

@@ -146,7 +146,7 @@ def build_line(events, built_at, newest_src):
         return Line('MISSING', 'build', f'{len(failed)} failed on {when}: '
                     f'{", ".join(failed)}', 'pixi run build (the end of its output says why)')
     if newest_src > built_at:
-        return Line('MISSING', 'build', f'src/ changed since the last build ({when})',
+        return Line('MISSING', 'build', f'ros/ changed since the last build ({when})',
                     'pixi run build')
     count = len(re.findall(r'JobEnded', events))
     return Line('OK', 'build', f'{count} packages built on {when}')

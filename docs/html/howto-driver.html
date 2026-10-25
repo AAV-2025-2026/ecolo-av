@@ -191,15 +191,15 @@ uses 30.</p>
 <section class="card"><h2 id="1-make-the-package">1. Make the package</h2>
 <p>ROS makes the skeleton for you:</p>
 <pre class="highlight"><code class="language-bash">pixi shell                     # a terminal with ROS in it
-cd src/drivers
+cd ros/drivers
 ros2 pkg create aav_circle --build-type ament_python \
   --dependencies rclpy geometry_msgs --node-name circle_driver</code></pre>
-<p>That makes <code>src/drivers/aav_circle/</code> with <code>package.xml</code>, <code>setup.py</code>, a node file and
+<p>That makes <code>ros/drivers/aav_circle/</code> with <code>package.xml</code>, <code>setup.py</code>, a node file and
 style tests. It also prints a list of licences: that's fine, the team hasn't picked one
 yet. The layout rules are in <a href="conventions.html">Conventions</a>.</p>
 </section>
 <section class="card"><h2 id="2-write-the-node">2. Write the node</h2>
-<p>Replace <code>src/drivers/aav_circle/aav_circle/circle_driver.py</code> with:</p>
+<p>Replace <code>ros/drivers/aav_circle/aav_circle/circle_driver.py</code> with:</p>
 <pre class="highlight"><code class="language-python">"""
 circle_driver: drive a slow left circle, to show how a driver works.
 
@@ -256,7 +256,7 @@ thin.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>src/mux/aav_mux/config/twist_mux.yaml</code></td>
+<td><code>ros/command_mux/aav_mux/config/twist_mux.yaml</code></td>
 <td>an input under <code>topics:</code>, shown below</td>
 </tr>
 <tr>
@@ -264,7 +264,7 @@ thin.</p>
 <td>the topic, shown below. Then run <code>pixi run python tools/gen_interfaces_md.py &gt; docs/interfaces.md</code></td>
 </tr>
 <tr>
-<td><code>src/aav_bringup/launch/turtle.launch.py</code> (and <code>sim</code>, and the car's machine files)</td>
+<td><code>ros/bringup/aav_bringup/launch/turtle.launch.py</code> (and <code>sim</code>, and the car's machine files)</td>
 <td>a line that starts it, once it has a launch file</td>
 </tr>
 <tr>

@@ -14,7 +14,7 @@ import yaml
 
 PACKAGE = Path(__file__).resolve().parents[1]
 TREES = PACKAGE / 'behavior_trees'
-VEHICLE = PACKAGE.parents[1] / 'aav_description' / 'config' / 'vehicle.yaml'
+VEHICLE = PACKAGE.parents[1] / 'bringup' / 'aav_description' / 'config' / 'vehicle.yaml'
 NAV2 = PACKAGE / 'config' / 'nav2.yaml'
 NAVIGATORS = ['navigate_to_pose', 'navigate_through_poses']
 
