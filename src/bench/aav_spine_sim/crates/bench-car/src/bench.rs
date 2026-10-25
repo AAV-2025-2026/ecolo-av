@@ -215,14 +215,13 @@ mod tests {
 
     impl Rig {
         fn new() -> Self {
+            Rig::with_spine(SpineConfig::default())
+        }
+
+        fn with_spine(spine: SpineConfig) -> Self {
             Rig {
-                bench: Bench::new(
-                    SpineConfig::default(),
-                    PlantConfig::default(),
-                    Pose::default(),
-                    BENCH_WHEELS,
-                )
-                .expect("the bench's wheel settings are valid"),
+                bench: Bench::new(spine, PlantConfig::default(), Pose::default(), BENCH_WHEELS)
+                    .expect("the bench's wheel settings are valid"),
                 counter: 0,
             }
         }
@@ -292,6 +291,33 @@ mod tests {
             "it went somewhere: {}",
             rig.bench.pose().x
         );
+    }
+
+    /// The highest speed on the way to 1 m/s, and the speed after 25 s.
+    fn peak_and_end(spine: SpineConfig) -> (f32, f32) {
+        let mut rig = Rig::with_spine(spine);
+        rig.arm();
+        let mut peak = 0.0f32;
+        for _ in 0..250 {
+            rig.run(0.1, Some((1.0, 0.0, true)));
+            peak = peak.max(rig.bench.pose().speed);
+        }
+        (peak, rig.bench.pose().speed)
+    }
+
+    #[test]
+    fn the_smooth_speed_loop_does_not_overshoot_on_the_bench() {
+        // TODO 27: the spine's own loop, through the encoder, on the bench's model car.
+        let (peak, end) = peak_and_end(SpineConfig::default());
+        assert!(peak > 1.05, "today's gains overshoot: {peak}");
+        assert!((end - 1.0).abs() < 0.05, "{end}");
+        let smooth = SpineConfig {
+            speed_loop: spine_core::speed_loop::SpeedLoopProfile::Smooth.config(),
+            ..SpineConfig::default()
+        };
+        let (peak, end) = peak_and_end(smooth);
+        assert!(peak < 1.03, "smooth: {peak}");
+        assert!((end - 1.0).abs() < 0.05, "smooth: {end}");
     }
 
     #[test]

@@ -21,9 +21,12 @@ Speed, from the actuator model (aav_gazebo actuator_model.py) with the deadband 
     =>  tau_v * dv/dt + v = K * u_a,    K = a_max / d,  tau_v = 1 / d
     P(s) = K / ((tau_v s + 1)(tau_t s + 1))
 
-The spine's speed loop (spine-core speed_loop.rs) is a PI on the speed error, throttle side:
+The spine's speed loop (spine-core speed_loop.rs) is a PI on the speed error, throttle side,
+with a setpoint weight b (1 today; the 'smooth' profile's 0.75, TODO 27):
 
-    C(s) = kp + ki / s
+    u = kp (b r - v) + ki/s (r - v)
+    C(s) = kp + ki / s                  the loop (what stability and the margins see)
+    C_r(s) = b kp + ki / s              the path from the set speed (where the zero is)
 
 Steering: the Jrk turns the motor toward its target at up to steer_rate (a rate limit:
 nonlinear), and the linkage follows with a first-order lag, steer_lag. For a step of
@@ -69,8 +72,14 @@ class SpeedLoopGains:
     kp: float = 0.3              # throttle per m/s of error
     ki: float = 0.1              # throttle per (m/s x s)
     integral_limit: float = 0.3  # the most throttle the integral may give (anti-windup)
+    setpoint_weight: float = 1.0  # b: the share of the set speed the P term sees
     tick: float = 0.01           # s: SpineBoard::tick every 10 ms (esp32-umod main.rs TICK)
     accel_slew: float = 1.5      # m/s^2: the spine ramps its set speed (spine.rs max_accel)
+
+
+# spine-core's 'smooth' profile (SpeedLoopConfig::smooth, TODO 27): proposed for the car
+# day, not the default. Real poles at -0.28 and -1.32 /s; b moves the zero to -0.33.
+SMOOTH = SpeedLoopGains(kp=1.0, ki=0.25, integral_limit=1.0, setpoint_weight=0.75)
 
 
 @dataclass(frozen=True)
@@ -208,10 +217,29 @@ class VehicleModel:
         plant = self.speed_plant_tf() if throttle_lag else self.car_tf()
         return series(self.speed_controller_tf(gains), plant)
 
+    def speed_reference_tf(self, gains: Optional[SpeedLoopGains] = None) -> TF:
+        """Return the PI's path from the set speed: C_r(s) = b kp + ki / s."""
+        g = gains or self.gains
+        if g.ki == 0.0:
+            return np.array([g.setpoint_weight * g.kp]), np.array([1.0])
+        return np.array([g.setpoint_weight * g.kp, g.ki]), np.array([1.0, 0.0])
+
     def speed_closed_loop(self, gains: Optional[SpeedLoopGains] = None,
                           throttle_lag: bool = True) -> TF:
-        """Set speed to speed: T(s) = L / (1 + L)."""
-        return feedback(self.speed_open_loop(gains, throttle_lag))
+        """
+        Set speed to speed: T(s) = C_r P / (1 + C P); with b = 1, L / (1 + L).
+
+        C and C_r share their denominator (s, or 1 for P only), so the poles are 1 + L's
+        and only the zero moves with b: to -ki / (b kp).
+        """
+        g = gains or self.gains
+        if g.setpoint_weight == 1.0:
+            return feedback(self.speed_open_loop(g, throttle_lag))
+        pn, pd = self.speed_plant_tf() if throttle_lag else self.car_tf()
+        cn, cd = self.speed_controller_tf(g)
+        rn, _ = self.speed_reference_tf(g)
+        return (trim(np.polymul(rn, pn)),
+                trim(np.polyadd(np.polymul(cd, pd), np.polymul(cn, pn))))
 
     def place_speed_gains(self, zeta: float, wn: float) -> SpeedLoopGains:
         """
@@ -670,7 +698,9 @@ def summary(model: VehicleModel) -> List[Tuple[str, List[List[str]]]]:
             ('spine PI, no lag', model.speed_closed_loop(throttle_lag=False),
              model.speed_open_loop(throttle_lag=False)),
             ('spine PI + throttle lag', model.speed_closed_loop(),
-             model.speed_open_loop())):
+             model.speed_open_loop()),
+            ("'smooth' profile + throttle lag", model.speed_closed_loop(SMOOTH),
+             model.speed_open_loop(SMOOTH))):
         t, y = step(tf)
         info = step_info(t, y)
         p = poles(tf)

@@ -34,3 +34,13 @@ def test_gazebo_s_steering_gain():
 def test_a_wrong_key_is_refused():
     with pytest.raises(KeyError):
         tool.main(['--no-figures', '--set', 'throtle_lag=0.2'])
+
+
+def test_the_speed_loop_study_prints(capsys):
+    assert tool.main(['--speed-loop', '--no-figures']) == 0
+    out = capsys.readouterr().out
+    assert 'The speed loop against the uncertainty' in out
+    rows = [line for line in out.splitlines() if 'K (the guesses' in line]
+    today = next(r for r in rows if r.startswith('today (kp 0.3'))
+    smooth = next(r for r in rows if r.startswith("'smooth'"))
+    assert ' 17 % ' in today and ' 0 % ' in smooth

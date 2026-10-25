@@ -16,3 +16,5 @@ pub use bench::{
 };
 pub use car::{Car, MeasuredCar};
 pub use plant::{Plant, PlantConfig, Pose};
+/// The spine's settings, for a bench that picks its own (the speed loop's profile).
+pub use spine_core::{speed_loop::SpeedLoopProfile, SpineConfig};

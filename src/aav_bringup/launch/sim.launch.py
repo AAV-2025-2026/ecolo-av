@@ -6,7 +6,8 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [hud_web:=false] [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
-      [actuator_model:=true] [sim_speed:=] [reversing:=true] [controller:=mppi]
+      [actuator_model:=true] [speed_loop:=default|smooth] [sim_speed:=]
+      [reversing:=true] [controller:=mppi]
       [plan_around:=true]
       [watchdog:=true] [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
       [bridge:=rust|python]
@@ -139,7 +140,8 @@ def launch_setup(context):
         include(context, 'aav_gazebo', 'gazebo.launch.py', world=world, gui=arg('gui'),
                 obstacle=arg('obstacle'), start_y=arg('start_y'), start_yaw=arg('start_yaw'),
                 lidar=arg('lidar'), radar=arg('radar'),
-                actuator_model=arg('actuator_model'), faults=flag['faults'],
+                actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
+                faults=flag['faults'],
                 spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge')),
         include(context, 'aav_mux', 'mux.launch.py', use_sim_time='true',
                 sensor_lock=flag['watchdog']),
@@ -277,6 +279,9 @@ def generate_launch_description():
         DeclareLaunchArgument('actuator_model', default_value='true',
                               description="the actuators as vehicle.yaml's actuators: say; "
                                           "false: Gazebo's old instant car"),
+        DeclareLaunchArgument('speed_loop', default_value='default',
+                              description="the speed loop's profile: default (today's gains) "
+                                          'or smooth (TODO 27, docs/vehicle-model.md)'),
         DeclareLaunchArgument('spine', default_value='false',
                               description='the spine in the loop: spine_bridge, CAN frames '
                                           "and spine_sim (the spine's own logic) before the "

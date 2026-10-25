@@ -8,7 +8,8 @@ and steering it gives (READ-ME-FULL-SIMULATION.md, option A):
     ego's angle ─────────────────────────────────────> Actuators ──> angle  ──> Gazebo
 
   - SpeedLoop: a stand-in for the spine's speed loop (spine-core speed_loop.rs), with its
-    gains, until the spine itself runs in the loop (step 4).
+    gains, until the spine itself runs in the loop (step 4). Its profiles ('default',
+    'smooth': TODO 27) are spine-core's; firmware/spine/speed_loop_vectors.txt checks both.
   - Actuators: throttle % -> acceleration, brake % -> deceleration, coasting drag; the
     steering motor's speed limit, the linkage's lag, the centre offset and a deadband.
     Its numbers are vehicle.yaml's `actuators:` section (guesses until tests 3.10-3.12
@@ -60,11 +61,31 @@ class SpeedLoopConfig:
 
     kp: float = 0.3              # throttle per m/s of error
     ki: float = 0.1              # throttle per (m/s x s)
-    integral_limit: float = 0.3  # the most throttle the integral may add
+    integral_limit: float = 0.3  # the most throttle the integral may add (beyond its share)
+    setpoint_weight: float = 1.0  # b: the share of the target the P term sees (1: plain PI)
+    anti_windup: str = 'bounds'  # 'bounds' (0..limit only) or 'clamp' (and not while pinned)
     brake_gain: float = 0.5      # brake per m/s of overspeed past coast_band
     coast_band: float = 0.2      # m/s too fast that coasting handles
     stopped_speed: float = 0.05  # m/s: slower counts as stopped
     hold_brake: float = 0.3      # brake held while stopped with a zero target
+
+
+# The named parameter sets: spine-core's SpeedLoopProfile (the same names and numbers;
+# firmware/spine/speed_loop_vectors.txt checks both). 'smooth' is TODO 27's design.
+SPEED_LOOP_PROFILES = {
+    'default': SpeedLoopConfig(),
+    'smooth': SpeedLoopConfig(kp=1.0, ki=0.25, integral_limit=1.0, setpoint_weight=0.75,
+                              anti_windup='clamp'),
+}
+
+
+def speed_loop_profile(name):
+    """Return a profile's SpeedLoopConfig by name: 'default' or 'smooth'."""
+    try:
+        return SPEED_LOOP_PROFILES[name]
+    except KeyError:
+        raise ValueError(f'no speed loop profile {name!r}: pick one of '
+                         f'{", ".join(SPEED_LOOP_PROFILES)}') from None
 
 
 @dataclass(frozen=True)
@@ -105,6 +126,8 @@ class SpeedLoop:
     """The spine's speed loop, ported: target and measured speed in, throttle and brake out."""
 
     def __init__(self, cfg=SpeedLoopConfig()):
+        if cfg.anti_windup not in ('bounds', 'clamp'):
+            raise ValueError(f"anti_windup must be 'bounds' or 'clamp', not {cfg.anti_windup!r}")
         self.cfg = cfg
         self.integral = 0.0
         self.reverse = False
@@ -130,12 +153,20 @@ class SpeedLoop:
                 max(c.hold_brake, c.brake_gain * (m - c.coast_band)), 0.0, 1.0)
             return Demand(0.0, brake, self.reverse)
         error = t - m
-        self.integral = clamp(self.integral + c.ki * error * dt, 0.0, c.integral_limit)
+        # The P term sees b x target; the integral holds the rest on top of its own limit.
+        proportional = c.kp * (c.setpoint_weight * t - m)
+        ceiling = c.integral_limit + (1.0 - c.setpoint_weight) * c.kp * t
+        integral = clamp(self.integral + c.ki * error * dt, 0.0, max(0.0, ceiling))
+        demand = proportional + integral
+        pinned = c.anti_windup == 'clamp' and ((demand > 1.0 and error > 0.0)
+                                               or (demand < 0.0 and error < 0.0))
+        if not pinned:
+            self.integral = integral
         overspeed = -error - c.coast_band
         if overspeed > 0.0:
             self.integral = 0.0
             return Demand(0.0, clamp(c.brake_gain * overspeed, 0.0, 1.0), self.reverse)
-        return Demand(clamp(c.kp * error + self.integral, 0.0, 1.0), 0.0, self.reverse)
+        return Demand(clamp(proportional + self.integral, 0.0, 1.0), 0.0, self.reverse)
 
 
 class Actuators:
