@@ -312,9 +312,10 @@ topics:
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
   /sensors/gps/fix_velocity:
     type: geometry_msgs/msg/TwistWithCovarianceStamped
-    pub: [ublox_gps]
-    sub: []
-    note: The receiver's velocity, east, north and up (m/s). Nothing fuses it yet.
+    pub: [ublox_gps, gazebo_gps]
+    sub: [gps_heading]
+    live: [sim]
+    note: The receiver's velocity, east, north and up (m/s), from the satellites' Doppler (good to about 0.05 m/s), with its variance. gps_heading turns it into a heading. In Gazebo, gazebo_gps works it out from the car's true motion with that noise on top (the bridge drops the NavSat sensor's own). ublox_gps only - gps_driver:=nmea sends /sensors/gps/vel instead, which nothing reads.
   /sensors/gps/vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [gps_nmea]
@@ -548,6 +549,12 @@ topics:
     sub: [ekf_global]
     live: [sim, car, replay, bench]
     note: Each GPS fix as a map-frame position of base_link (antenna offset removed).
+  /localization/gps/heading:
+    type: sensor_msgs/msg/Imu
+    pub: [gps_heading]
+    sub: [ekf_global]
+    live: [sim, car, replay, bench]
+    note: The car's heading from the GPS receiver's velocity (aav_gps_heading, TODO 13) - only an orientation (yaw from east), in base_link, with its variance; turn rate and acceleration covariance -1. Only while the car moves faster than 0.3 m/s and the GPS's speed matches the wheels'; turned round when reversing. The global EKF fuses its yaw. Silent where nothing publishes /sensors/gps/fix_velocity (the bench, gps_driver:=nmea).
   /localization/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [navsat_transform]

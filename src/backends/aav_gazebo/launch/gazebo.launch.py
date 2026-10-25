@@ -175,7 +175,9 @@ def launch_setup(context):
         Node(package='aav_gazebo', executable='gazebo_imu', name='gazebo_imu',
              parameters=[{'imu_x': float(car['sensors']['imu_link']['xyz'][0])}, sim_time]),
         Node(package='aav_gazebo', executable='gazebo_gps', name='gazebo_gps',
-             parameters=[sim_time]),
+             parameters=[{'antenna_x': float(car['sensors']['gps_link']['xyz'][0]),
+                          'antenna_y': float(car['sensors']['gps_link']['xyz'][1])},
+                         sim_time]),
     ]
     if radar:
         actions.append(Node(package='aav_gazebo', executable='gazebo_radar',

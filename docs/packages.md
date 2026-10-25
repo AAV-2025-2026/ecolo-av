@@ -14,6 +14,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | `ti_ros2_driver` | sensors | the TI mmWave radar, as point clouds | [[untested]] | 2025-26 `Nav_Radar` |
 | `aav_description` | description | the car's model (URDF) and `vehicle.yaml` | [[works]] the numbers are guesses | new |
 | `aav_localization` | localization | the two EKFs and `navsat_transform`: configuration only | [[works]] turtle, Gazebo and the bench | new |
+| `aav_gps_heading` | localization | `gps_heading`: the heading from the GPS receiver's velocity, for `ekf_global` | [[works]] Gazebo | new |
 | `aav_teleop` | drivers | joystick → `/drivers/joy/cmd_vel`, plus an e-stop button | [[untested]] | new; the button map from 2025-26 `joy_teleop_ackerman` |
 | `aav_scripted` | drivers | scripted drives: speed up, hold, slow down | [[works]] turtle and the bench | new |
 | `aav_goto` | drivers | drive to one GPS or map point B, and stop there smoothly | [[works]] in Gazebo (15 Oct); [[untested]] on the car | new |
@@ -59,7 +60,7 @@ perception came in on 10 October, the lane finder on 11 October.
 |---|---|---|---|
 | `aav_description` | `vehicle.yaml`, `/vehicle/joint_states` | `/robot_description`, `/tf`, `/tf_static` | `pixi run view` shows the model |
 | `aav_localization`: `ekf_local` | `/vehicle/odom`, `/sensors/imu/data` | `/localization/odom/local`, odom → base_link | smooth; use it to steer |
-| `aav_localization`: `ekf_global` | the same, plus `/localization/gps/odom` | `/localization/odom/global`, map → odom | stays near the truth; use it to plan |
+| `aav_localization`: `ekf_global` | the same, plus `/localization/gps/odom` and `/localization/gps/heading` | `/localization/odom/global`, map → odom | stays near the truth; use it to plan |
 | `aav_localization`: `navsat_transform` | `/sensors/gps/fix`, `/sensors/imu/data`, `/localization/odom/global` | `/localization/gps/odom`, `/localization/gps/fix` | the datum in `navsat.yaml` is a placeholder near Carleton |
 
 ## Drivers, the mux and ego

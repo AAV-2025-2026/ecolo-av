@@ -449,13 +449,14 @@ that moves out is a_y ÷ that limit: at the limit, the inside wheels carry nothi
 | roll, for steering | 0.2° | 2° | **no**: the path loop never sees it |
 | rollover | 5 % of the limit | 46 % | **no**, with margin; check again for a higher CG (a roof load) |
 | load on the inside wheels | −5 % | −46 % | **a little**: less grip inside; an open differential spins that wheel sooner |
-| lidar tilt (1.8 m up) | 0.2° | 2°: on the outside of the turn the beams point 2° lower, 0.7 m at 20 m | **yes, for the lidar**: the ground can look like an obstacle |
+| lidar tilt (1.8 m up) | 0.2° | 2°: on the outside of the turn the beams point 2° lower, 0.7 m at 20 m | **it would**, but ego's 2 m/s² limit holds the roll to 1.33°, under the 1.46° where the road shows within 12 m: safe to 4 m/s ([Costmaps](costmaps.md#body-roll-and-the-lidar-todo-52e)) |
 | cameras (1.55 m up) | 5 mm sideways | 5 cm sideways | small; lane geometry may need the IMU's roll |
 | bumps | the body at 2.4 Hz | the same | ride and camera shake, not control |
 
 **When it would matter:** faster (roll grows with v²), tighter turns, a higher CG, softer
-springs, or anything that needs the sensors level. The IMU already measures roll; the EKF
-and the lidar filter can use it.
+springs, or anything that needs the sensors level. Careful with the IMU's roll: in a turn
+its accelerometer feels the sideways push as tilt (2 m/s² reads as 11.5°, against 1.3° of
+real roll), so take out speed × turn rate before levelling anything with it.
 
 ### Kinematic or dynamic bicycle?
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/costmaps.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Maps and costmaps</h1>
-<div class="meta">15 min read · 7 sections</div></header>
+<div class="meta">17 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -310,6 +310,64 @@ the bench the map is empty, so the planner would leave the road: <code>bench-che
 <li><strong>The numbers are guesses</strong> until the car is measured: the radar's mount (Q1-Q5) and the
   cameras' (Q22).</li>
 </ul>
+<h3 id="body-roll-and-the-lidar-todo-52e">Body roll and the lidar (TODO 52e)</h3>
+<p><code>lidar_scan</code> keeps points <strong>0.3 m or more above the road</strong>, as if the body were level. In a
+turn the body leans out on its springs. On the outside of the turn the road then rises in
+the car's frame, by about <em>distance out × tan(roll)</em>. Far enough out, the road looks like
+an obstacle.</p>
+<pre class="highlight"><code class="language-text">   level:   lidar ●───────────────────────  road at 0 m: ignored
+   rolled:  lidar ●─────────╲               the road 10 m out sits 0.23 m "up"
+                              ╲___ road     (1.33°): still under 0.3 m</code></pre>
+<p>The highest road point the lidar sees within the costmap's <strong>12 m</strong> (VLP-16 on the roof,
+1.8 m up; <code>aav_lidar</code> <code>ground.py</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Roll</th>
+<th>When</th>
+<th>Highest road point</th>
+<th>An obstacle?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.23°</td>
+<td>1 m/s, full lock (today)</td>
+<td>0.04 m</td>
+<td>no</td>
+</tr>
+<tr>
+<td>1.33°</td>
+<td>ego's limit: 2 m/s² sideways, with the springs' overshoot</td>
+<td>0.23 m, 10 m out</td>
+<td>no</td>
+</tr>
+<tr>
+<td><strong>1.46°</strong></td>
+<td><strong>the limit</strong></td>
+<td>0.30 m</td>
+<td>the edge</td>
+</tr>
+<tr>
+<td>1.95°</td>
+<td>3 m/s on full lock, if ego didn't slow down</td>
+<td>0.39 m, 11.5 m out</td>
+<td><strong>yes</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The verdict: safe up to 4 m/s.</strong> ego slows the car in turns to 2 m/s² sideways
+(<code>max_lateral_accel</code>), which holds the roll to 1.33° at most, even on a sudden full lock.
+At 5 m/s a sudden full lock still overshoots: the wheels turn faster than ego can brake
+(2.4° of roll). The springs are guesses: softer than about 7400 N/m a corner and the margin
+is gone. <code>tools/tests/test_lidar_roll.py</code> checks all of this together, and fails if
+someone raises <code>max_lateral_accel</code> or the 12 m, or lowers the 0.3 m.</p>
+<p>Gazebo has no suspension, so it can't show this. The scan itself (out to 30 m) has road
+in it from about 0.6° of roll, but nothing marks the costmap past 12 m.</p>
+<p><strong>Don't level the cloud with the IMU's roll.</strong> <code>imu_filter_madgwick</code> finds "down" from
+the accelerometer, and in a turn the sideways push looks like tilt: 2 m/s² reads as
+11.5° of roll, about 9 times the real 1.3°. Levelling would need that push taken out
+(speed × turn rate) first.</p>
 </section>
 <section class="card"><h2 id="what-each-phase-uses">What each phase uses</h2>
 <div class="table-wrap"><table>

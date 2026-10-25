@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">50 min read · 4 sections</div></header>
+<div class="meta">51 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -494,10 +494,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/sensors/gps/fix_velocity</code></td>
 <td><code>geometry_msgs/msg/TwistWithCovarianceStamped</code></td>
-<td><code>ublox_gps</code></td>
-<td>-</td>
-<td>-</td>
-<td>The receiver's velocity, east, north and up (m/s). Nothing fuses it yet.</td>
+<td><code>ublox_gps</code>, <code>gazebo_gps</code></td>
+<td><code>gps_heading</code></td>
+<td>sim</td>
+<td>The receiver's velocity, east, north and up (m/s), from the satellites' Doppler (good to about 0.05 m/s), with its variance. gps_heading turns it into a heading. In Gazebo, gazebo_gps works it out from the car's true motion with that noise on top (the bridge drops the NavSat sensor's own). ublox_gps only - gps_driver:=nmea sends /sensors/gps/vel instead, which nothing reads.</td>
 </tr>
 <tr>
 <td><code>/sensors/gps/vel</code></td>
@@ -818,6 +818,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>ekf_global</code></td>
 <td>sim, car, replay, bench</td>
 <td>Each GPS fix as a map-frame position of base_link (antenna offset removed).</td>
+</tr>
+<tr>
+<td><code>/localization/gps/heading</code></td>
+<td><code>sensor_msgs/msg/Imu</code></td>
+<td><code>gps_heading</code></td>
+<td><code>ekf_global</code></td>
+<td>sim, car, replay, bench</td>
+<td>The car's heading from the GPS receiver's velocity (aav_gps_heading, TODO 13) - only an orientation (yaw from east), in base_link, with its variance; turn rate and acceleration covariance -1. Only while the car moves faster than 0.3 m/s and the GPS's speed matches the wheels'; turned round when reversing. The global EKF fuses its yaw. Silent where nothing publishes /sensors/gps/fix_velocity (the bench, gps_driver:=nmea).</td>
 </tr>
 <tr>
 <td><code>/localization/gps/fix</code></td>

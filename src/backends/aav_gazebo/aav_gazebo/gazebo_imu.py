@@ -10,7 +10,9 @@ Publishes   sensors/imu/data_raw  sensor_msgs/Imu, in imu_link, with covariances
                                   IMU misses it
 
 Parameters  gyro_stddev (0.02 rad/s), accel_stddev (0.2 m/s^2), imu_x (m ahead of
-            base_link: vehicle.yaml's imu_link), fault.imu (ok; stop, freeze, nan)
+            base_link: vehicle.yaml's imu_link), fault.imu (ok; stop, freeze, nan),
+            gyro_bias (rad/s added to the turn rate, 0: a real gyro's offset, for
+            tools/heading_check.py --gyro-bias; may change while running)
 
 One process of its own (relay.py), so the IMU is never late behind another sensor.
 """
@@ -36,6 +38,7 @@ class GazeboImu(SensorRelay):
         self.accel_std = self.declare_parameter('accel_stddev', 0.2).value
         self.accel_var = self.accel_std ** 2
         self.imu_x = self.declare_parameter('imu_x', 0.0).value
+        self.declare_parameter('gyro_bias', 0.0)
         self.speedometer = imu.Speedometer()
         self.pub = self.create_publisher(Imu, 'sensors/imu/data_raw', 10)
         self.create_subscription(Odometry, 'gazebo/odom', self.on_odom, 10)
@@ -54,6 +57,7 @@ class GazeboImu(SensorRelay):
                                               x=self.imu_x)
             msg.linear_acceleration.x = fwd + random.gauss(0.0, self.accel_std)
             msg.linear_acceleration.y = left + random.gauss(0.0, self.accel_std)
+        msg.angular_velocity.z += self.get_parameter('gyro_bias').value
         msg.orientation_covariance[0] = -1.0     # like the real IMU: no orientation
         for i in (0, 4, 8):
             msg.angular_velocity_covariance[i] = self.gyro_var

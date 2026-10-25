@@ -7,8 +7,9 @@
 # Heading: with no magnetometer, the yaw at start comes from initial_state. The car starts
 # on a marked spot facing a known direction; the launch file fills in initial_state from
 # its start_x, start_y and start_yaw arguments (map frame: x east, y north, yaw
-# counter-clockwise from east). After that the gyro carries the heading and GPS positions
-# correct it while the car moves.
+# counter-clockwise from east). After that the gyro carries the heading, and while the car
+# moves the GPS corrects it: the receiver's velocity gives the heading itself (imu1, from
+# gps_heading), its positions nudge it too.
 ekf_global:
   ros__parameters:
     frequency: 30.0
@@ -60,6 +61,22 @@ ekf_global:
     imu0_relative: false
     imu0_queue_size: 10
     imu0_remove_gravitational_acceleration: true
+
+    # The heading from the GPS receiver's velocity (gps_heading, aav_gps_heading): yaw only,
+    # while the car moves faster than 0.3 m/s, forward or reversing. Its variance says how
+    # sure it is (the velocity's noise over the speed). TODO 13, Gazebo 25 Oct, 4 runs each
+    # (pixi run heading-check): heading off by a median 1.6-2.1 deg (was 2.2-2.8), worst
+    # 8.5-13.6 (was 11.4-27.1), forward and reversing alike.
+    imu1: /localization/gps/heading
+    imu1_config: [false, false, false,
+                  false, false, true,
+                  false, false, false,
+                  false, false, false,
+                  false, false, false]
+    imu1_differential: false
+    imu1_relative: false
+    imu1_queue_size: 10
+    imu1_remove_gravitational_acceleration: false
 
     use_control: false
     # Yaw (6th) 0.01, not robot_localization's 0.06: the gyro and the wheels give the turn

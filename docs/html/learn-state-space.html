@@ -908,7 +908,7 @@ that moves out is a_y ÷ that limit: at the limit, the inside wheels carry nothi
 <td>lidar tilt (1.8 m up)</td>
 <td>0.2°</td>
 <td>2°: on the outside of the turn the beams point 2° lower, 0.7 m at 20 m</td>
-<td><strong>yes, for the lidar</strong>: the ground can look like an obstacle</td>
+<td><strong>it would</strong>, but ego's 2 m/s² limit holds the roll to 1.33°, under the 1.46° where the road shows within 12 m: safe to 4 m/s (<a href="costmaps.html#body-roll-and-the-lidar-todo-52e">Costmaps</a>)</td>
 </tr>
 <tr>
 <td>cameras (1.55 m up)</td>
@@ -925,8 +925,9 @@ that moves out is a_y ÷ that limit: at the limit, the inside wheels carry nothi
 </tbody>
 </table></div>
 <p><strong>When it would matter:</strong> faster (roll grows with v²), tighter turns, a higher CG, softer
-springs, or anything that needs the sensors level. The IMU already measures roll; the EKF
-and the lidar filter can use it.</p>
+springs, or anything that needs the sensors level. Careful with the IMU's roll: in a turn
+its accelerometer feels the sideways push as tilt (2 m/s² reads as 11.5°, against 1.3° of
+real roll), so take out speed × turn rate before levelling anything with it.</p>
 <h3 id="kinematic-or-dynamic-bicycle">Kinematic or dynamic bicycle?</h3>
 <p>The <strong>kinematic</strong> bicycle (ours) assumes the tyres go where they point. The <strong>dynamic</strong>
 bicycle lets them slip: each axle pushes sideways C·α (cornering stiffness × slip angle).
