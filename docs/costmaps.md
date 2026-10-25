@@ -129,6 +129,44 @@ ros2 topic pub -r 10 /perception/detections vision_msgs/msg/Detection2DArray \
 - **The numbers are guesses** until the car is measured: the radar's mount (Q1-Q5) and the
   cameras' (Q22).
 
+### Body roll and the lidar (TODO 52e)
+
+`lidar_scan` keeps points **0.3 m or more above the road**, as if the body were level. In a
+turn the body leans out on its springs. On the outside of the turn the road then rises in
+the car's frame, by about *distance out × tan(roll)*. Far enough out, the road looks like
+an obstacle.
+
+```text
+   level:   lidar ●───────────────────────  road at 0 m: ignored
+   rolled:  lidar ●─────────╲               the road 10 m out sits 0.23 m "up"
+                              ╲___ road     (1.33°): still under 0.3 m
+```
+
+The highest road point the lidar sees within the costmap's **12 m** (VLP-16 on the roof,
+1.8 m up; `aav_lidar` `ground.py`):
+
+| Roll | When | Highest road point | An obstacle? |
+|---|---|---|---|
+| 0.23° | 1 m/s, full lock (today) | 0.04 m | no |
+| 1.33° | ego's limit: 2 m/s² sideways, with the springs' overshoot | 0.23 m, 10 m out | no |
+| **1.46°** | **the limit** | 0.30 m | the edge |
+| 1.95° | 3 m/s on full lock, if ego didn't slow down | 0.39 m, 11.5 m out | **yes** |
+
+**The verdict: safe up to 4 m/s.** ego slows the car in turns to 2 m/s² sideways
+(`max_lateral_accel`), which holds the roll to 1.33° at most, even on a sudden full lock.
+At 5 m/s a sudden full lock still overshoots: the wheels turn faster than ego can brake
+(2.4° of roll). The springs are guesses: softer than about 7400 N/m a corner and the margin
+is gone. `tools/tests/test_lidar_roll.py` checks all of this together, and fails if
+someone raises `max_lateral_accel` or the 12 m, or lowers the 0.3 m.
+
+Gazebo has no suspension, so it can't show this. The scan itself (out to 30 m) has road
+in it from about 0.6° of roll, but nothing marks the costmap past 12 m.
+
+**Don't level the cloud with the IMU's roll.** `imu_filter_madgwick` finds "down" from
+the accelerometer, and in a turn the sideways push looks like tilt: 2 m/s² reads as
+11.5° of roll, about 9 times the real 1.3°. Levelling would need that push taken out
+(speed × turn rate) first.
+
 ## What each phase uses
 
 | Phase | Map | What it tests |
