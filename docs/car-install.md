@@ -28,7 +28,7 @@ sudo**, and **without touching** the 2025-26 Humble software. It all goes in one
 ## 1. Make the kit (on a Mac, with internet)
 
 ```bash
-cd ~/aav
+cd ~/ecolo-av
 git checkout main && git pull       # the kit holds what is committed, nothing else
 pixi run car-kit                    # writes car-kit/ (git ignores it)
 ```

@@ -27,7 +27,7 @@ around=${CARLA_OSM_AROUND:-900,900,700,700}
 server=${OVERPASS_SERVER:-https://overpass-api.de/api}
 # Overpass refuses curl's own name (HTTP 406, found 15 Oct): say who we are. A busy server
 # answers 502 or 504: wait and try again.
-fetch=(curl -fsS --retry 2 --retry-delay 10 -A "aav-capstone-get_carla_osm/1.0 (github.com/zander1976/aav)")
+fetch=(curl -fsS --retry 2 --retry-delay 10 -A "aav-capstone-get_carla_osm/1.0 (github.com/AAV-2025-2026/ecolo-av)")
 
 # The datum and the box round it, from the same code carla_adapter uses (no ROS needed).
 read -r lat lon west south east north < <(PYTHONPATH=src/backends/aav_carla python3 -m \

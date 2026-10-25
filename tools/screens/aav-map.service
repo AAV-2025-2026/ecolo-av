@@ -10,7 +10,7 @@
 
 [Unit]
 Description=AAV map: the map window, full screen on its own monitor
-Documentation=https://github.com/zander1976/aav/blob/main/docs/car-screens.md
+Documentation=https://github.com/AAV-2025-2026/ecolo-av/blob/main/docs/car-screens.md
 # With the desktop: started once it's up, stopped when it ends.
 After=graphical-session.target
 PartOf=graphical-session.target

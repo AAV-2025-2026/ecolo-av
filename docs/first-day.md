@@ -13,15 +13,15 @@ you should see.
 | Disk space | about 10 GB |
 | Time | about an hour, most of it the first download |
 | Admin rights | not needed |
-| The code | access to `zander1976/aav` on GitHub (ask Ben), and an SSH key on your GitHub account |
+| The code | access to `AAV-2025-2026/ecolo-av` on GitHub (ask Ben), and an SSH key on your GitHub account |
 
 ## 1. Install everything (once, about 20 minutes)
 
 ```bash
 xcode-select --install                        # Mac only: Apple's git and compiler
 curl -fsSL https://pixi.sh/install.sh | sh    # Pixi; then open a new terminal
-git clone git@github.com:zander1976/aav.git ~/aav   # the code
-cd ~/aav
+git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av   # the code
+cd ~/ecolo-av
 pixi install                                  # ROS 2 Jazzy, about 7 GB
 pixi run build                                # our packages, about 20 s
 pixi run test                                 # every test

@@ -166,7 +166,7 @@ elif [[ -d "$PREFIX/aav" ]]; then
 elif command -v git >/dev/null; then
   git clone -q "$KIT/aav.bundle" "$PREFIX/aav"
   # The stick won't be there later: point origin at GitHub, for when there is internet.
-  git -C "$PREFIX/aav" remote set-url origin git@github.com:zander1976/aav.git
+  git -C "$PREFIX/aav" remote set-url origin git@github.com:AAV-2025-2026/ecolo-av.git
   echo "cloned $(git -C "$PREFIX/aav" log --oneline -1)"
 else
   mkdir -p "$PREFIX/aav"

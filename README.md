@@ -1,4 +1,9 @@
-# AAV 2026–27 autonomy stack
+# ecolo-av: the AAV 2026–27 autonomy stack
+
+Single code base for the Ecolo autonomous vehicle (SYSC 4907, Carleton University).
+Goal for Gate 4 (26 Feb 2027): drive from GPS point A to B at 1 m/s and stop within 1 m.
+
+**New here? Start with [docs/getting-started.md](docs/getting-started.md).**
 
 The ROS 2 workspace and spine firmware for Carleton's autonomous vehicle capstone, built
 by the 2026–27 team. Target: **ROS 2 Jazzy on Ubuntu 24.04** on the car's computers (the
@@ -48,7 +53,7 @@ New to the team? Do these in order, on a Mac or on Linux.
 |---|---|---|
 | 1 | Mac only: `xcode-select --install` | a few minutes, once |
 | 2 | Install Pixi: the `curl` line below, then open a new terminal | under a minute, once |
-| 3 | Get the code: `git clone` it from GitHub (ask Ben to add you to `zander1976/aav`) | seconds |
+| 3 | Get the code: `git clone` it from GitHub (ask Ben to add you to `AAV-2025-2026/ecolo-av`) | seconds |
 | 4 | `pixi install` | the first time, a few minutes: it downloads about 4 GB |
 | 5 | `pixi run build`, then `pixi run test` | a few minutes the first time |
 | 6 | `pixi run turtle`, or `pixi run sim` | ready |
@@ -58,7 +63,7 @@ The same steps, as commands:
 ```bash
 xcode-select --install                        # 1. Mac only: Apple's git and compiler
 curl -fsSL https://pixi.sh/install.sh | sh    # 2. Pixi; then open a new terminal
-git clone git@github.com:zander1976/aav.git ~/aav && cd ~/aav   # 3. the code
+git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av && cd ~/ecolo-av   # 3. the code
 pixi install                                  # 4. ROS 2 Jazzy and every dependency
 pixi run build && pixi run test               # 5. our packages, then every test
 pixi run turtle                               # 6. terminal 1: a turtle that steers like the car

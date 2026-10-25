@@ -42,6 +42,7 @@ PAGES = [
     ('index.md', 'Start here', 'The picture, and where to go next'),
     ('overview.md', 'Overview', 'Everything in aav: ours, stock, inherited, missing'),
     ('release-notes.md', 'Release notes', 'Release 0.1: what this version does, at a glance'),
+    ('getting-started.md', 'Getting started', 'A new laptop to the turtle in 30 minutes (T1.1)'),
     ('first-day.md', 'Your first day', 'Install, the turtle, rqt_graph, Gazebo, Nav2'),
     ('how-it-fits.md', 'How it fits', 'What each box does, and the safety layers'),
     ('team.md', 'Starting points', 'One per team member: read, run, first tasks'),

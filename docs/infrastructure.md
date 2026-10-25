@@ -225,12 +225,12 @@ The development computers:
 
 ## Sharing the code
 
-The repo is on GitHub: `git@github.com:zander1976/aav.git`, public: anyone can read it; ask Ben to add you to push. The
+The repo is on GitHub: `git@github.com:AAV-2025-2026/ecolo-av.git`, public: anyone can read it; ask Ben to add you to push. The
 previous teams' orgs are public, so nothing is pushed there.
 
 | Task | Command |
 |---|---|
-| Get it | `git clone git@github.com:zander1976/aav.git aav` |
+| Get it | `git clone git@github.com:AAV-2025-2026/ecolo-av.git ecolo-av` |
 | Take newer work | `git pull` |
 | Share your work | `pixi run test`, then `git push` |
 | Hand it to a laptop with no GitHub access | `git bundle create ../aav.bundle HEAD main` (keep `HEAD`, or a clone checks out nothing), then `git clone aav.bundle aav` there |
@@ -260,8 +260,8 @@ A job's log needs a GitHub sign-in. Its **annotations** don't: when the test ste
 
 | Step | Open this (`curl -s` works too) |
 |---|---|
-| 1. Find the job | `https://api.github.com/repos/zander1976/aav/commits/<sha>/check-runs`: note the `linux` job's `id` |
-| 2. Read its failures | `https://api.github.com/repos/zander1976/aav/check-runs/<id>/annotations` |
+| 1. Find the job | `https://api.github.com/repos/AAV-2025-2026/ecolo-av/commits/<sha>/check-runs`: note the `linux` job's `id` |
+| 2. Read its failures | `https://api.github.com/repos/AAV-2025-2026/ecolo-av/check-runs/<id>/annotations` |
 
 Without a sign-in GitHub allows 60 of these calls an hour, so don't poll fast. A step keeps
 at most 10 annotations: 9 failing tests, then the rest by name, or the log's last 40 lines.
@@ -270,7 +270,7 @@ The `sim` job's annotations (`ci_annotate.py --sim`): each `FAIL` line of sim-ch
 the launch log's last errors (Gazebo's crash, a node that died). Its whole logs (sim-check's
 output, the launch log, every node's ROS log) are kept 14 days as the artifact `sim-logs`.
 Anyone can list artifacts
-(`https://api.github.com/repos/zander1976/aav/actions/artifacts`), but downloading one
+(`https://api.github.com/repos/AAV-2025-2026/ecolo-av/actions/artifacts`), but downloading one
 needs a sign-in: on the run's page, or `gh run download <run id> -n sim-logs`.
 
 !!! note "PowerShell on the Linux runner"

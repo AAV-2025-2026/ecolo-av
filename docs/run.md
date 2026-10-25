@@ -23,10 +23,10 @@ Then open a new terminal, so that it finds `pixi`.
 
 ## 2. Get the code
 
-The repository is on GitHub, `zander1976/aav` (private: ask Ben for access):
+The repository is on GitHub, `AAV-2025-2026/ecolo-av` (private: ask Ben for access):
 
 ```bash
-git clone git@github.com:zander1976/aav.git aav
+git clone git@github.com:AAV-2025-2026/ecolo-av.git ecolo-av
 cd aav
 ```
 

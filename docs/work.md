@@ -28,7 +28,7 @@ From the design doc's next steps, in order.
 | 3 | **Inventory the car:** take a tape measure and Q1–Q9, Q18, Q20 and Q22 to the car. Photograph the labels on the GPS, the IMU, the motor controller and the actuators | [[needs-you]] |
 | 4 | **Team meeting:** accept or change each Proposed decision, and name an owner per area (Q33) | [[needs-you]] |
 | | **Without the car** | |
-| 5 | **Repo:** on GitHub (`zander1976/aav`, private), with CI running `pixi run test` on Linux and a Mac | [[untested]] CI's first run comes with the first push |
+| 5 | **Repo:** on GitHub (`AAV-2025-2026/ecolo-av`, private), with CI running `pixi run test` on Linux and a Mac | [[untested]] CI's first run comes with the first push |
 | 6 | **Jazzy everywhere:** every developer installs it, with Pixi | [[works]] on oirp-spss and Ben's Mac |
 | 7 | **ego and the turtle with a real joystick:** the first end-to-end chain | [[works]] with the keyboard; the joystick is [[untested]] |
 | 8 | **Scripted driver:** an action, tested in turtlesim | [[works]] |

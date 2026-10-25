@@ -3,8 +3,8 @@
 Turn a failed `pixi run test` into GitHub annotations, which anyone can read.
 
 GitHub hides a job's log from anyone not signed in, but serves its annotations to all:
-  https://api.github.com/repos/zander1976/aav/commits/<sha>/check-runs
-  https://api.github.com/repos/zander1976/aav/check-runs/<id>/annotations
+  https://api.github.com/repos/AAV-2025-2026/ecolo-av/commits/<sha>/check-runs
+  https://api.github.com/repos/AAV-2025-2026/ecolo-av/check-runs/<id>/annotations
 So the workflow runs this after a failed test step. It prints one `::error` line per
 failing test case (from colcon's JUnit files in build/), and the end of the step's log
 when no test case failed (tools/test.sh, lint or the build stopped first).

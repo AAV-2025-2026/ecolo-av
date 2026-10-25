@@ -26,7 +26,7 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-GITHUB = 'https://github.com/zander1976/aav.git'
+GITHUB = 'https://github.com/AAV-2025-2026/ecolo-av.git'
 CAR_DAY = 'car-day'                 # pixi run car-day-build writes here; git ignores it
 ESP32_DIR = f'{CAR_DAY}/esp32'
 FIRMWARES = {                       # what car-day-build saves, and what each is for

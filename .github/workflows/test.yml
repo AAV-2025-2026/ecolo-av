@@ -267,7 +267,7 @@ jobs:
         if: failure() && hashFiles('sim-logs/sim.log') != ''
         run: python3 tools/ci_annotate.py --sim sim-logs/sim.log sim-logs/aav-sim-check.log
       # Everything: sim-check's output, the launch log, each node's ROS log. Anyone can list
-      # a public repo's artifacts (api.github.com/repos/zander1976/aav/actions/artifacts),
+      # a public repo's artifacts (api.github.com/repos/AAV-2025-2026/ecolo-av/actions/artifacts),
       # but downloading one needs a GitHub sign-in (or a token).
       - name: Keep the logs
         if: failure()

@@ -26,15 +26,15 @@ xcode-select --install
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
 
-**3. The code.** Clone it from GitHub. You need access to `zander1976/aav` (ask Ben),
+**3. The code.** Clone it from GitHub. You need access to `AAV-2025-2026/ecolo-av` (ask Ben),
 and an SSH key on your GitHub account:
 
 ```bash
-git clone git@github.com:zander1976/aav.git ~/aav
-cd ~/aav
+git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av
+cd ~/ecolo-av
 ```
 
-Later, `git pull` in `~/aav` fetches newer work.
+Later, `git pull` in `~/ecolo-av` fetches newer work.
 
 **4. Install ROS and build:**
 

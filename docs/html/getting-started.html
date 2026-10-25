@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting started · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/getting-started.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Getting started</h1>
+<div class="meta">2 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a class="here" href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-install-pixi">1. Install Pixi</a><a href="#2-get-the-code">2. Get the code</a><a href="#3-install-the-environment">3. Install the environment</a><a href="#4-run-the-demo">4. Run the demo</a><a href="#5-run-the-tests">5. Run the tests</a><a href="#troubleshooting">Troubleshooting</a></nav>
+<div class="lead"><p>This guide takes a new laptop from nothing to driving the TurtleSim turtle.
+Target: under 30 minutes (T1.1). If it takes longer, tell the integration team where you got stuck.</p>
+<p>Works on Linux (x86-64 and ARM) and macOS (Apple Silicon or Intel). No admin rights needed.
+You need about 10 GB of free disk space. The longer version, with Gazebo and Nav2 too:
+<a href="first-day.html">Your first day</a>.</p></div>
+<section class="card"><h2 id="1-install-pixi">1. Install Pixi</h2>
+<p>Pixi installs ROS 2 Jazzy and every other tool into this project's folder,
+pinned to the same versions for everyone.</p>
+<pre><code>  curl -fsSL https://pixi.sh/install.sh | sh
+</code></pre>
+<p>Close and reopen your terminal, then check:</p>
+<pre><code>  pixi --version
+</code></pre>
+</section>
+<section class="card"><h2 id="2-get-the-code">2. Get the code</h2>
+<p>The repository is public: https://github.com/AAV-2025-2026/ecolo-av. To push, ask the
+integration lead to add you, and put an SSH key on your GitHub account.</p>
+<pre><code>  git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av
+  cd ~/ecolo-av
+</code></pre>
+</section>
+<section class="card"><h2 id="3-install-the-environment">3. Install the environment</h2>
+<pre><code>  pixi install
+</code></pre>
+<p>The first run downloads ROS 2 Jazzy, Gazebo and the toolchains (about 7 GB). Later runs
+are instant. Then build our packages once:</p>
+<pre><code>  pixi run build
+</code></pre>
+</section>
+<section class="card"><h2 id="4-run-the-demo">4. Run the demo</h2>
+<p>Terminal 1:</p>
+<pre><code>  pixi run turtle
+</code></pre>
+<p>A window with a turtle opens. It stands in for the car.</p>
+<p>Terminal 2 (in the same <code>ecolo-av</code> folder):</p>
+<pre><code>  pixi run keyboard --local
+</code></pre>
+<p>Keep terminal 2 focused and press <code>i</code> (forward), <code>u</code> / <code>o</code> (turn), <code>,</code> (reverse) to drive
+the turtle. <code>k</code> stops it. Let go of a key and it stops by itself. <code>Ctrl+C</code> quits.</p>
+</section>
+<section class="card"><h2 id="5-run-the-tests">5. Run the tests</h2>
+<pre><code>  pixi run test
+</code></pre>
+<p>This runs the same checks as CI on every push. All of them should pass.</p>
+</section>
+<section class="card"><h2 id="troubleshooting">Troubleshooting</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The turtle does not move</td>
+<td>Terminal 2 (the keyboard) needs keyboard focus, not the TurtleSim window</td>
+</tr>
+<tr>
+<td><code>pixi: command not found</code></td>
+<td>Reopen the terminal after installing, or add <code>~/.pixi/bin</code> to your <code>PATH</code></td>
+</tr>
+<tr>
+<td>Another network's car or turtles show up</td>
+<td><code>pixi run turtle</code> and <code>keyboard --local</code> stay on this computer. For anything else on shared WiFi: <code>export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST</code></td>
+</tr>
+<tr>
+<td>Something else</td>
+<td><code>pixi run doctor</code> checks the network and the setup (<a href="mac.html">On a Mac</a>)</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="release-notes.html"><small>Previous</small>← Release notes</a>
+<a class="next" href="first-day.html"><small>Next</small>Your first day →</a></nav>
+</main>
+<footer>Source: <code>docs/getting-started.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

@@ -118,8 +118,9 @@ These are the conventions decided so far. They apply to people and to Claude ses
 
 ## Git
 
-- The repo is `git@github.com:zander1976/aav.git` (Q25), **public** on purpose (Ben,
-  15 Oct), so nothing secret ever goes in it. Push `main` there once the full
+- The repo is `git@github.com:AAV-2025-2026/ecolo-av.git`, the team's (Q25), **public**, so
+  nothing secret ever goes in it. Until 25 Oct it was `zander1976/aav`; its whole history
+  came along in the merge. Push `main` there once the full
   `pixi run test` passes (not just `tools/test.sh`: it skips the launch-file tests).
   Never force-push it, and push nowhere else.
 - CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux, x86_64 and 64-bit ARM
@@ -142,10 +143,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
   the source at the commits in `vendor/*.repos`. Never edit
   or build them. Search them with `grep -r` or `rg -u`: most search tools skip folders
   that git ignores.
-- **Next to this repo** (`~/Code/aav/` on Ben's Mac, `/home/ben/aav/` on oirp-spss), and
-  not team code. That folder's own `CLAUDE.md` says what each one is, and what moved into
-  `aav`:
-  - read-only clones of the 2025-26 repos: survey them with
-    `grep -r --exclude-dir=aav --exclude-dir=aav-linux-build-output`;
-  - Ben's own course code: `SYSC3313/`, `c_code_example/` and `simplied.c`;
+- **Not team code, on Ben's machines:** `~/Code/aav/` on his Mac (the old workspace: the
+  repo's first home, and his course code `SYSC3313/`, `c_code_example/`, `simplied.c`) and
+  `/home/ben/aav/` on oirp-spss. The 2025-26 repos are on GitHub (`AAV-2025-2026`); what
+  came from each is in `docs/older-code.md`;
   - on oirp-spss only, `ros2-src/` and `ros2-rust/`, not yet moved into `vendor/`.
