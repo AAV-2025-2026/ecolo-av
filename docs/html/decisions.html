@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">32 min read · 13 sections</div></header>
+<div class="meta">34 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -41,6 +41,7 @@
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -51,6 +52,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -246,6 +248,18 @@ answer.</p>
 <tr>
 <td>The spine boots latched, and arms only on a 0 → 1 edge; a driver fault stops the car</td>
 <td>A reboot or a glitch never restarts the car by itself. It's in <code>spine-core</code> since 10 Oct</td>
+</tr>
+<tr>
+<td><strong>The RC mode switch, three positions (TODO 48, 24 Oct):</strong> CH6 (index 5, the 2025-26 <code>RC_EN_CH</code>) <strong>low = computer, middle = RC via ROS, high = RC direct</strong>; thresholds below 1301, 1301-1700, above 1700 (<code>ibus::RcMap::THREE_POSITION</code>). Needs a three-position switch on CH6 (the transmitter's aux-channel menu); a two-position switch still gives computer and RC direct. The team and the hardware lead decide; CH6's switch type and a free channel: question H10 (<a href="audit-questions.html">audit questions</a>)</td>
+<td>One switch, in the order of "how much the computer does". RC direct stays the fallback that needs no computer. Moving the switch from low to high passes RC via ROS, which drives only through ego's limits. Today's firmware builds keep the 2025-26 reading (&gt;1500 = RC); only <code>--features uplink</code> reads three positions. Losing the RC in either RC position brakes (fault 256)</td>
+</tr>
+<tr>
+<td><strong>RC via ROS at twist_mux priority 95</strong> (TODO 48): below the joystick's deadman (100), above the keyboard (90)</td>
+<td>A person with the RC is a person, so above every program. The joystick's holder sits in the car, so the deadman still wins. The ESP32 can't tell who in ROS made a command, so <code>rc_driver</code> sends zeros too while on RC via ROS, to keep Nav2 out</td>
+</tr>
+<tr>
+<td>A linear state-space model of the car, for tuning and the report (24 Oct): speed (first order, the spine's PI around it), steering (second order), the path errors (the bicycle, linearised), the delays; <code>aav_ego</code> <code>vehicle_model.py</code>, <code>pixi run vehicle-model</code></td>
+<td>Ben asked for "a matrix control thing ... maybe second order system" (24 Oct), in SYSC 3600's terms (its professor supervises the capstone). It shows what kinematics can't: the speed loop settles in about 13 s; the delays cost the lateral loop phase margin (52° → 31° at 1 m/s in the worst case); Gazebo steers 0.1 s slower than <code>vehicle.yaml</code>. It never drives the car; it is refit from the actuator tests (<a href="vehicle-model.html">The car as a linear model</a>)</td>
 </tr>
 </tbody>
 </table></div>

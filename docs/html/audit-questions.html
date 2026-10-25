@@ -7,7 +7,7 @@
 <!-- Generated from docs/audit-questions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Friday&#x27;s questions: what only the car can tell us</h1>
-<div class="meta">12 min read · 8 sections</div></header>
+<div class="meta">13 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -41,6 +41,7 @@
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -51,6 +52,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -455,7 +457,7 @@ lead decides, and these answers may change it.</p>
 <tr>
 <td>H2</td>
 <td>Does the ESP32 read the steering angle? And the brake position? How (the Jrk G2s' feedback, a pot)?</td>
-<td><code>/vehicle/steering</code>'s measured angle, a better <code>/vehicle/odom</code> in turns (a yaw rate), and checking the actuators. The UART link sends nothing back today</td>
+<td><code>/vehicle/steering</code>'s measured angle, a better <code>/vehicle/odom</code> in turns (a yaw rate), and checking the actuators. The Rust firmware reads both Jrks' scaled feedback, and flags a Jrk with no feedback set up as unknown; the uplink (H9) sends it up. D6's <code>--get-settings</code> shows each Jrk's feedback mode</td>
 </tr>
 <tr>
 <td>H3</td>
@@ -486,6 +488,16 @@ lead decides, and these answers may change it.</p>
 <td>H8</td>
 <td>Will the ESP32 ever move onto CAN (the KEFC plan), or stay on the Motor Pi?</td>
 <td><code>actuators:=can</code> stays ready for it; until then <code>uart</code></td>
+</tr>
+<tr>
+<td>H9 ⚠️</td>
+<td>Is the ESP32's <strong>TX1 (GPIO17, MicroMod pad 17)</strong> wired to the Motor Pi's RX (<code>/dev/ttyAMA0</code>'s RX, GPIO15 on a Pi)? The 2025-26 C++ set it up as TX and never sent anything, so the wire may be missing. 3.3 V both sides, a common ground?</td>
+<td>the <strong>uplink</strong> (TODO 50, 48): mode, faults, the counter's echo, the Jrks' positions, the RC sticks. Built and tested in the emulator, but off (<code>--features uplink</code>, <code>uplink: true</code> in <code>legacy.yaml</code>) until this is yes (<a href="esp32-bench.html#the-uplink-and-the-rc-modes-on-the-bench">the bench</a>)</td>
+</tr>
+<tr>
+<td>H10</td>
+<td>The RC transmitter: is CH6 (the 2025-26 <code>RC_EN_CH</code>, index 5) a two- or a three-position switch? If two, can a three-position switch be put on CH6 in the aux-channel menu, or is another channel free (CH7-CH10)? What are the receiver's failsafe values? (Q7)</td>
+<td>the proposed three modes: low computer, middle <strong>RC via ROS</strong>, high RC direct (<a href="decisions.html">decisions</a>, Proposed). The channel and its thresholds are one line in the firmware (<code>ibus::RcMap::THREE_POSITION</code>)</td>
 </tr>
 </tbody>
 </table></div></section>

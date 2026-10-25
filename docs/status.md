@@ -29,6 +29,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | twist_mux | `aav_mux` | [[works]] |
 | Sensor mux and output mux (23 Oct) | `aav_io_mux`: `source:=`, `target:=`, `stack.launch.py` | [[works]] in its tests: with Gazebo announcing SIM, the real backend (`spine_bridge`) sent no drive frame. In every profile: the turtle drove through it; `sim-check` and `bench-check` passed with it (23 Oct, on a busy Mac). [[untested]] on the car ([Sources and targets](sources-and-targets.md)) |
 | ego | `aav_ego` | [[works]] |
+| The car's linear model (24 Oct) | `aav_ego` `vehicle_model.py`, `pixi run vehicle-model`: transfer functions, state space, Bode margins with the delays; never drives the car | [[works]] in its 30 tests (textbook cases, the bicycle's Jacobian, discrete vs continuous). Every actuator number a guess until the actuator tests ([The car as a linear model](vehicle-model.md)) |
 | ego's body model (22 Oct) | `aav_ego` `dynamics.py`: the mass (181 kg), `payload`, the centre of mass, the tyres | [[works]] in its tests: a load slows speeding up, tight turns slow the car. The numbers are guesses until the car is weighed ([Car numbers](car_measurements.md#weight-and-balance)) |
 | turtlesim | `aav_turtlesim` | [[works]] |
 | Gazebo | `aav_gazebo` | [[works]] headless on Linux and a Mac; its window on a Mac, with the car driving (10 Oct) |

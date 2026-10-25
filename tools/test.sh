@@ -19,7 +19,7 @@ export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 for pkg in src/ego/aav_ego src/mux/aav_io_mux src/backends/aav_spine src/backends/aav_legacy \
            src/backends/aav_gazebo src/backends/aav_carla \
            src/drivers/aav_scripted src/drivers/aav_language src/drivers/aav_navigation \
-           src/drivers/aav_actuator_tests src/drivers/aav_goto src/drivers/aav_routes \
+           src/drivers/aav_actuator_tests src/drivers/aav_goto src/drivers/aav_routes src/drivers/aav_rc \
            src/aav_description \
            src/perception/aav_detector src/sensors/aav_camera_stream \
            src/perception/aav_lane_finder src/perception/aav_lidar \

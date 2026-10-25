@@ -315,12 +315,15 @@ def camera_streams(context, machine, settings, labels, publish_image):
     if decoder != 'opencv':
         from aav_camera_stream import decoders   # only machines with the streams need it
         try:
-            program = decoders.command(decoder, 'rtsp://pi/camera', 2, 2,
-                                       str(args['transport']), str(args['program']),
-                                       str(args['pipeline']), str(args['hwaccel']))[0]
+            decoders.check(decoder, str(args['transport']))
+            # auto always finds one (at worst Pixi's ffmpeg); the node picks it.
+            program = '' if decoder == 'auto' else decoders.command(
+                decoder, 'rtsp://pi/camera', 2, 2, str(args['transport']),
+                decoders.choose(decoder, str(args['program']), workspace()).program,
+                str(args['pipeline']), str(args['hwaccel']))[0]
         except ValueError as e:
             raise RuntimeError(f'{machine}.yaml: camera_stream: {e}')
-        if not found(program):
+        if program and not found(program):
             return skipped('camera_stream', f'decoder:={decoder} runs {program}, which this '
                                             "computer lacks (gst-nvidia: the Orin's JetPack "
                                             'GStreamer)'), []
@@ -447,6 +450,13 @@ def launch_setup(context):
     if on('stop_signs'):
         actions.append(Node(package='aav_detector', executable='stop_sign_watcher',
                             name='stop_sign_watcher'))
+        # Its distance needs each camera's focal length, from the stream's CameraInfo.
+        blind = uncalibrated(streaming) if streaming else []
+        if blind:
+            get_logger('car.launch.py').warning(
+                f'stop_sign_watcher: {", ".join(blind)}: no calibration, so no CameraInfo: '
+                "their stop signs are judged with Gazebo's lens (focal_px 343, 640x360), "
+                'wrong at 1280x720. Calibrate them: pixi run calibrate-camera')
     if on('radar_clusters'):
         actions.append(include('aav_radar_clusters', 'radar_clusters.launch.py',
                                mock=False, eps=0.8, minimum_points=15, radar_rviz=False))

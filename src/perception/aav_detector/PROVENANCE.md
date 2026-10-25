@@ -85,3 +85,10 @@ change, never the logic:
   the name misled (Ben, 24 Oct: "aav detector yes"). Only names change: the
   executables, parameters, topics and `detector:=yolo` stay. The paths above that say
   `aav_yolo/` are now `aav_detector/`.
+- 2026-10-24: `stop_sign.py` (our own): the rule is a distance, not a box height.
+  `StopRule.stop_distance_m` (4.7 m: the old 55 px with Gazebo's and the bench's lens,
+  343 px), `sign_height_m` (0.75), `focal_px` (343, for a camera with no CameraInfo);
+  `min_height_px` became a method, from the camera's focal length. `stop_sign_watcher`
+  keeps each camera's fy from its CameraInfo (`camera_info_topics`, by frame_id) and
+  passes it with the boxes, so the same 4.7 m holds for the 1280x720 ribbon cameras once
+  calibrated. Its `min_height_px` parameter is gone. Tests: `test/test_stop_sign.py`.

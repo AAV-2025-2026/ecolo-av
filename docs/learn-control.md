@@ -205,6 +205,7 @@ does. The spine only listens to it ([Firmware](firmware.md)).
 | The speed loop (PI) | `firmware/spine/crates/spine-core/src/speed_loop.rs` |
 | Spine limits, watchdog, safe-state choices | `firmware/spine/crates/spine-core/src/spine.rs`, `watchdog.rs`, `limits.rs` |
 | Today's open-loop throttle | `src/backends/aav_legacy/config/legacy.yaml` (`full_throttle_speed`) |
+| The loops as transfer functions and state space: poles, margins, delays | `src/ego/aav_ego/aav_ego/vehicle_model.py`, `pixi run vehicle-model` ([The car as a linear model](vehicle-model.md)) |
 | Nav2's controller and smoother | `src/drivers/aav_navigation/config/nav2.yaml` |
 | Driver timeouts and priorities | `src/mux/aav_mux/config/twist_mux.yaml` |
 | Wheelbase, track, steering limit | `src/aav_description/config/vehicle.yaml` |

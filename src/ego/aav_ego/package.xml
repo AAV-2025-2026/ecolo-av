@@ -17,6 +17,8 @@
 
   <test_depend>ament_flake8</test_depend>
   <test_depend>python3-pytest</test_depend>
+  <test_depend>python3-numpy</test_depend>   <!-- vehicle_model.py: the linear model, not the node -->
+  <test_depend>python3-scipy</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

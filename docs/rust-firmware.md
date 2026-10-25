@@ -78,6 +78,7 @@ RC receiver ── iBUS, GPIO32 ────────────────
 | `legacy-uart` (default) | the Motor-Pi's frames on GPIO16: **version 2**, with the Orin's heartbeat (below) | `aav_legacy`'s bridge with `frame_version: 2` |
 | `legacy-uart` + `link-v1` | the 2025-26 13-byte frames | the fallback: a drop-in for the C++ (`frame_version: 1`), no heartbeat |
 | `can` | `firmware/can/aav.dbc` v0.2.0 on the ESP32's TWAI controller, 500 kbit/s | the KEFC plan: `spine_bridge` on the Orin. Its pins are unknown (below) |
+| `uplink` (off) | the status frame back on TX1 (GPIO17), and the RC's three-position mode switch | once the hardware lead confirms TX1's wire (H9; [the uplink](#the-uplink-the-esp32s-status-back-to-the-pi-24-oct)) |
 | `estop-input` (off) | the e-stop's spare contact on GPIO27 | once it is wired (Q6) |
 | `qemu` (off) | stand-in devices on the I2C bus, and a busy-wait tick | Espressif's QEMU only, never the car ([the emulator](esp32-bench.md#before-the-board-the-emulator)) |
 
@@ -108,7 +109,7 @@ The same pins as the C++ (`hardware_configs.h`, `main.cpp`). The program's copy 
 | GPIO | MicroMod pad | Signal | Goes to | In the C++ |
 |---|---|---|---|---|
 | 16 | 19 | UART1 RX, 115200 | Motor-Pi TX: the frames | the same |
-| 17 | 17 | not driven | Motor-Pi RX | set up as TX, never used |
+| 17 | 17 | UART1 TX, 115200, with `uplink`; else not driven | Motor-Pi RX: the uplink. **Wire unconfirmed** (H9) [[needs-you]] | set up as TX, never used |
 | 32 | 73 | UART2 RX, 115200, pull-up | FlySky iBUS | the same |
 | 21, 22 | 12, 14 | I2C SDA, SCL, 100 kHz | Jrk steer 0x05, Jrk brake 0x04, DAC 0x0C, PCA9555 0x20 | the same |
 | 2 | — | output | status LED: slow blink = computer drives, fast = it doesn't | on at boot |
@@ -230,9 +231,84 @@ Tests: `cargo test -p legacy-link -p spine-board`; aav_legacy's `test_uart_relay
 `legacy-link/vectors.json`) and `test_heartbeat_chain.py` (the muxes and the bridge on a
 pseudo-terminal); `pixi run esp-qemu-check` (a frozen counter, bad CRCs, silence).
 
-Next: an **uplink frame** ESP32 → Pi (mode, faults, the counter echoed, the Jrks'
-positions, the RC sticks for TODO 48). Not built: GPIO17 (TX1) to the Pi's RX is set up
-in the C++ but never used, so the wire is the hardware lead's to confirm first.
+### The uplink: the ESP32's status, back to the Pi (24 Oct)
+
+TODO 50's next step, and TODO 48's way up. The ESP32 says what it is doing, 50 times a
+second, on **TX1 (GPIO17)**. The 2025-26 C++ set TX1 up and never sent on it, so **the wire
+is the hardware lead's to confirm** (question H9): it is built, and **off**, behind a flag
+at both ends.
+
+```text
+ ESP32                               Motor Pi                          Orin and laptops
+ spine-core ─► Report ─► LegacyLink ─ TX1 ─► legacy_uart_bridge ─► /vehicle/status (10 Hz)
+ the Jrks' feedback ──┘  every 20 ms  35 B   (uplink: true)      ─► /vehicle/steering, /brake
+ the RC receiver ─────┘                                          ─► /vehicle/rc ─► rc_driver
+                                                                    ─► /drivers/rc/cmd_vel
+```
+
+| End | The flag | Off by default because |
+|---|---|---|
+| Rust firmware | `--features uplink` | TX1 isn't driven until the wire is known |
+| `legacy_uart_bridge` | `uplink: true` in `legacy.yaml` | nothing to read until then |
+
+Without it, both ends work as before: version 2 or version 1 frames, nothing back.
+
+#### The frame, 35 bytes
+
+The downlink's sync byte, version and CRC-8 ([above](#the-frame-17-bytes)).
+
+| Byte | Field | Notes |
+|---|---|---|
+| 0 | sync `0xA5` | |
+| 1 | version `2` | |
+| 2 | kind `1` | status; a new kind gets a new number |
+| 3 | sequence, u8 | +1 a frame: a gap means frames were lost |
+| 4 | **echo**, u8 | the last Orin counter the ESP32 took (valid: flag bit 2) |
+| 5 | **mode** | 0 stopped, 1 RC direct, 2 computer: `VehicleStatus.mode`'s numbers |
+| 6 | **mode switch** | 0 no RC signal, 1 computer, 2 RC via ROS, 3 RC direct |
+| 7 | flags | bit 0 armed, 1 e-stop active, 2 echo valid, 3 steering known, 4 brake position known, 5 gear on brake; others 0 |
+| 8-9 | faults, u16 LE | the spine's fault bits (`VehicleStatus.FAULT_*`) |
+| 10-13 | steering position, f32 | rad, + left, from the steering Jrk; NaN when unknown |
+| 14-17 | brake position, f32 | 0 released .. 1 full, from the brake Jrk; NaN when unknown |
+| 18-21 | throttle out, f32 | 0..1, what the ESP32 drives the DAC with |
+| 22-25 | brake out, f32 | 0..1, what it tells the brake Jrk |
+| 26-29 | RC throttle, f32 | -1..1, + forward: the stick, signed by the gear switch |
+| 30-33 | RC steering, f32 | -1..1, + left |
+| 34 | CRC-8 of bytes 1-33 | catches every 1-bit error (2-bit: all but 1 of 36,856, tried once) |
+
+115200 baud: 3 ms a frame, 15 % of the line. It fits the UART's 128-byte FIFO, so the
+write never waits.
+
+#### The Jrks' positions
+
+| Step | How |
+|---|---|
+| Ask once | each Jrk's "Feedback mode" setting (Get RAM settings `0xEA`, offset `0x18`) |
+| Analog feedback | read its scaled feedback each tick (`0xA7`), as the 2024-25 `FinalRev` firmware did with `getScaledFeedback()`; through the calibration into rad, or 0..1 |
+| No feedback set up | unknown: NaN and a clear flag, no fault (TODO 46) |
+| A read fails | unknown this tick; the Jrk's fault bit (8 steering, 16 brake) |
+
+#### The RC's three modes (TODO 48, proposed)
+
+With `uplink`, CH6 (the 2025-26 `RC_EN_CH`, index 5) reads three positions
+(`ibus::RcMap::THREE_POSITION`). A proposal: the team and the hardware lead decide
+([decisions](decisions.md), question H10).
+
+| CH6 | Mode | Who drives | The ESP32 |
+|---|---|---|---|
+| low (below 1301) | **computer** | Nav2, the joystick... | the Pi's frames |
+| middle (1301-1700) | **RC via ROS** | a person, through `rc_driver`, twist_mux (95), ego and the output mux | the Pi's frames; the sticks go up the uplink |
+| high (above 1700) | **RC direct** | a person, with no computer: the fallback | the sticks, as today |
+| no signal | — | nobody | in either RC mode: **full brake**, fault 256; via ROS also latched until a stop |
+
+Without `uplink`, CH6 reads as the C++ did: above 1500 is RC direct. A two-position switch
+gives computer and RC direct with both maps.
+
+Tests: `cargo test -p legacy-link -p spine-board -p spine-core -p ibus -p jrk-g2`; the
+shared vectors (12 uplink cases in `legacy-link/vectors.json`, checked by
+`test_legacy_protocol.py`); aav_legacy's `test_uplink_reader.py` and
+`test_uplink_chain.py` (the bridge and `rc_driver` on ROS); `pixi run esp-qemu-check` (the
+uplink at 50 Hz, its echo, the three modes: [the emulator](esp32-bench.md#before-the-board-the-emulator)).
 
 ### The C++ beside the Rust
 
@@ -250,7 +326,7 @@ Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: Be
 | No command timeout: the last throttle stays on | — | spine-core: 100 ms (CAN v0.2.0), then throttle 0 and full brake; with version 2, 100 ms without a new Orin counter | ⚠️ new. The bridge sends 50 Hz |
 | Drives on the first frame after boot | — | spine-core boots latched: a stop frame (accel < -0.05) first, then drive frames | ⚠️ new. The bridge sends stop frames whenever ego is stale, so this happens by itself |
 | After a timeout, frames drive again at once | — | latched until a stop frame | ⚠️ new |
-| RC override: CH6 (index 5) between 1500 and 2200 | `main.cpp` | `ibus::RcMap::TODAY` | same |
+| RC override: CH6 (index 5) between 1500 and 2200 | `main.cpp` | `ibus::RcMap::TODAY` | same; ⚠️ with `uplink`, three positions: computer, RC via ROS, RC direct ([above](#the-rcs-three-modes-todo-48-proposed)) |
 | RC sticks: CH3 throttle, CH4 steering, CH5 gear: forward < 1200 < brake < 1800 < reverse | `rc_handler.cpp` | `RcMap::TODAY` | same channels and thresholds |
 | RC throttle: stick × 1023, capped at 700 (the top third of the stick does nothing) | `rc_handler.cpp` | stick × 3.0 m/s, open loop: stick × 700, reverse capped at 1.0 m/s (233) | ⚠️ the whole stick works; reverse is slower |
 | RC gear on brake: DAC ramps down, brake full | `rc_handler.cpp` | spine-core `RC_GEAR_BRAKE = SpeedZero`: speed to 0, then the hold brake (0.3) | ⚠️ open choice (`docs/firmware.md`) |
@@ -269,7 +345,7 @@ Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: Be
 | WiFi, the status web page, the WebSocket log, the I2C scan page | `web_handler.cpp` | gone | ⚠️ the log is on the USB cable |
 | OTA update page, no password | `main.cpp` | gone: flash on the USB cable | ⚠️ safer |
 | Status line every 200 ms | `publishStatus()` | `STATUS t=… mode=… throttle=… brake=… faults=…`, and an `EVENT` line at each change | ⚠️ another format; only `tools/esp32_qemu.py` parses it |
-| Nothing sent back to the Motor-Pi | — | nothing | same; an uplink frame is the next step (above) |
+| Nothing sent back to the Motor-Pi | — | nothing; with `uplink`, the status frame every 20 ms on TX1 | same by default; ⚠️ new with `uplink` ([above](#the-uplink-the-esp32s-status-back-to-the-pi-24-oct)) |
 
 ### For Ben to decide
 
@@ -292,6 +368,9 @@ Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: Be
 | The FIFO reads keeping up | a tick takes a few ms of I2C; the FIFO holds about 28 ms of iBUS | watch for RC dropouts in the log |
 | The watchdog reset | TIMG1's watchdog, never seen to fire | hang the loop on purpose, on the bench |
 | CAN | the pins are unknown | find U7's wiring, then a USB-CAN adapter |
+| The uplink on a wire | TX1 to the Pi unconfirmed (H9); QEMU only | [the bench](esp32-bench.md#the-uplink-and-the-rc-modes-on-the-bench) |
+| The Jrks' feedback | their feedback mode unknown (D6); the stand-ins answer analog | read it on the bench, compare with the wheels |
+| RC via ROS end to end | the transmitter, the receiver and the Pi; ROS's part tested on this computer | [the bench](esp32-bench.md#the-uplink-and-the-rc-modes-on-the-bench) |
 
 ## The spine on a Pico 2 (11 Oct)
 

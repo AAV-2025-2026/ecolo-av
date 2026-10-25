@@ -4,10 +4,10 @@ camera_stream: one camera's H.264 stream (RTSP, from MediaMTX) to detections, in
   camera Pi: MediaMTX ──RTSP H.264──> decoder ──> undistort ──> detector ──> detections
                                      (child)     (OpenCV)     (aav_detector)
 
-Pulls rtsp://<pi>:8554/<camera>, decodes it (decoders.py: ffmpeg, or GStreamer with
-NVIDIA's hardware on the Orin), undistorts each picture (lens.py) and runs the detector
-on it here, so raw pictures never cross the network or DDS. Only the newest picture is
-worked on: a slow detector drops frames instead of falling behind.
+Pulls rtsp://<pi>:8554/<camera>, decodes it (decoders.py: GStreamer with NVIDIA's hardware
+on the Orin, with VideoToolbox on a Mac; or ffmpeg), undistorts each picture (lens.py)
+and runs the detector on it here, so raw pictures never cross the network or DDS. Only
+the newest picture is worked on: a slow detector drops frames instead of falling behind.
 
 Subscribes  nothing
 Publishes   /perception/detections               vision_msgs/Detection2DArray: the boxes,
@@ -31,14 +31,14 @@ Publishes   /perception/detections               vision_msgs/Detection2DArray: t
 Stamp: a picture's header.stamp is its arrival minus `delay` (s), the stream's measured
 delay from the camera to here (docs/camera-pipeline.md). Set it from a measurement.
 
-Parameters: camera (front_left), url, frame_id, decoder (ffmpeg, gst-nvidia, gst-soft,
-gst-mac, opencv), pipeline (a GStreamer pipeline instead of the preset), program (the
-decoder program's path), hwaccel (ffmpeg's -hwaccel), transport (tcp or udp), width and
-height (1280x720), fps (15: the stream's, for the report), calibration (an INI or YAML
-file; empty: no undistortion), alpha, delay, detector (rfdetr, yolo or none), model,
-device, confidence, labels, image_size, preview_period, preview_width, publish_image,
-publish_camera_info, time_code (read the test's time code: tools/stream_check.py),
-source (real, sim, bench, replay).
+Parameters: camera (front_left), url, frame_id, decoder (auto: the best this computer
+has, decoders.choose(); ffmpeg, gst-nvidia, gst-soft, gst-mac, opencv), pipeline (a
+GStreamer pipeline instead of the preset), program (the decoder program's path), hwaccel
+(ffmpeg's -hwaccel), transport (tcp or udp), width and height (1280x720), fps (15: the
+stream's, for the report), calibration (an INI or YAML file; empty: no undistortion),
+alpha, delay, detector (rfdetr, yolo or none), model, device, confidence, labels,
+image_size, preview_period, preview_width, publish_image, publish_camera_info, time_code
+(read the test's time code: tools/stream_check.py), source (real, sim, bench, replay).
 """
 
 import os
@@ -108,7 +108,7 @@ class CameraStream(Node):
         url = p('url', f'rtsp://127.0.0.1:8554/{self.camera}').value
         self.frame_id = p('frame_id', FRAMES.get(self.camera,
                                                  f'camera_{self.camera}_link')).value
-        decoder = p('decoder', 'ffmpeg').value
+        decoder = p('decoder', 'auto').value
         pipeline = p('pipeline', '').value
         program = p('program', '').value
         hwaccel = p('hwaccel', '').value
@@ -150,6 +150,14 @@ class CameraStream(Node):
                              'or detector:=none')
         self.lens = self.undistort.lens() if self.undistort else None
 
+        if decoder in ('auto', 'gst-mac', 'gst-soft'):
+            decoder, program, warning = decoders.choose(
+                decoder, program, root,
+                works=lambda gst, preset: decoders.gst_works(gst, preset, decoders.child_env(
+                    os.environ, gst, os.environ.get('CONDA_PREFIX', ''))))
+            if warning:
+                self.get_logger().warning(warning)
+        self.decoder = decoder
         if decoder == 'opencv':
             def make_source():
                 return decoders.OpenCvSource(url, width, height, transport, pipeline)
@@ -263,6 +271,7 @@ class CameraStream(Node):
     def report(self):
         values = {
             'connected': str(self.reader.connected).lower(),
+            'decoder': self.decoder,
             'decoder_starts': str(self.reader.starts),
             'frames_in': str(self.reader.frames),
             'fps_in': f'{self.in_rate.hz():.1f}',

@@ -7,7 +7,7 @@
 <!-- Generated from READ-ME-CAR-DAY.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">36 min read · 16 sections</div></header>
+<div class="meta">38 min read · 16 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -41,6 +41,7 @@
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -51,6 +52,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -421,6 +423,10 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 <tr>
 <td><code>car-day/esp32/spine-esp32-umod-v1.elf</code></td>
 <td>the same, 13-byte frames: if the Motor Pi must stay on version 1</td>
+</tr>
+<tr>
+<td><code>car-day/esp32/spine-esp32-umod-v2-uplink.elf</code></td>
+<td>version 2 with the uplink on TX1 and the three-position RC switch: <strong>only once H9 and H10 say yes</strong> (6e)</td>
 </tr>
 <tr>
 <td><code>car-day/esp32/qemu-check.log</code></td>
@@ -959,16 +965,16 @@ its TensorRT version).</p>
 </tr>
 <tr>
 <td>10</td>
-<td><strong>Calibration pictures:</strong> on the laptop, <code>mkdir -p ~/aav-calib</code>, then <code>pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png</code>: one picture a second for 30 s, while someone moves the checkerboard slowly (near, far, the corners, tilted). Then the same for <code>front_right</code></td>
-<td>30 pictures each, the whole board in every one</td>
-<td></td>
+<td><strong>Calibration:</strong> the printed checkerboard (<code>pixi run calibrate-camera board</code>, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: <code>pixi run calibrate-camera front_left --host 192.168.1.108 --square &lt;measured, in m&gt;</code>; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for <code>front_right</code></td>
+<td><code>src/sensors/aav_camera_stream/config/calibrations/front_left.yaml</code> (and <code>front_right</code>) written; commit them at home</td>
+<td>the window shows no picture: the stream (step 6). As a backup, save pictures: <code>mkdir -p ~/aav-calib</code>, then <code>pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>At home: the delay goes in <code>orin.yaml</code>'s <code>camera_stream</code> <code>delay</code> (0.06 s today); the
-calibration is worked out with OpenCV from the pictures (Q22; the script is still to
-write), into <code>config/cameras.yaml</code>.</p>
-<p><strong>Stop point:</strong> both streams at 15 fps on the Orin, the delay measured, the pictures taken.</p>
+<p>At home: the delay goes in <code>orin.yaml</code>'s <code>camera_stream</code> <code>delay</code> (0.06 s today); commit
+the two calibration files (<code>docs/camera-calibration.md</code>). Until they're in, the stop-sign
+rule uses Gazebo's lens and the car stops too early.</p>
+<p><strong>Stop point:</strong> both streams at 15 fps on the Orin, the delay measured, both cameras calibrated.</p>
 </section>
 <section class="card"><h2 id="session-6-the-esp32">Session 6: the ESP32</h2>
 <p><strong>Who:</strong> the laptop person, the e-stop person, the hardware lead. <strong>How long:</strong> 90 min.
@@ -1183,6 +1189,37 @@ fails, and roll back.</strong> Drive from the laptop: <code>export ROS_DOMAIN_ID
 <p>Or the C++ from source: <code>pixi run -e firmware legacy-esp32 -t upload</code> (<code>src/secrets.h</code> holds
 its WiFi; with the placeholders it can't join the WiFi). The Rust with 13-byte frames:
 <code>car-day/esp32/spine-esp32-umod-v1.elf</code>, <code>frame_version: 1</code>.</p>
+<h3 id="6e-only-if-h9-and-h10-say-yes-the-uplink-and-the-rc-modes">6e. Only if H9 and H10 say yes: the uplink and the RC modes 🔒</h3>
+<p>H9: the ESP32's TX1 (GPIO17) reaches the Motor Pi's RX. H10: CH6 is a three-position
+switch. Both yes, and 1-14 passed:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>vendor/cargo-tools/bin/espflash flash --chip esp32 --monitor car-day/esp32/spine-esp32-umod-v2-uplink.elf</code></td>
+<td>the first log line ends <code>with the uplink on TX1 and the three-position mode switch</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>On the Motor Pi: <code>legacy.yaml</code>, <code>uplink: true</code>, then <code>~/aav-jazzy/aav.sh build</code>, restart the bridge</td>
+<td>the bridge logs <code>uplink: frames from the ESP32</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Steps U1-U6, then R1-R8, in <a href="esp32-bench.html">the bench page</a> ("The uplink and the RC modes")</td>
+<td>as each step says</td>
+</tr>
+</tbody>
+</table></div>
+<p>Either is no: stay on <code>spine-esp32-umod-v2.elf</code> with <code>uplink: false</code>; the car drives as
+before, without the positions coming back.</p>
 <p><strong>Stop point:</strong> 1-14 and 9a-9c pass, or the C++ is back and the reason is written down.</p>
 </section>
 <section class="card"><h2 id="session-7-can-read-only">Session 7: CAN, read-only</h2>
@@ -1326,6 +1363,10 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <td>☐</td>
 <td><code>legacy.yaml</code>'s <code>frame_version</code>: 2 with the Rust, 1 with the C++</td>
 </tr>
+<tr>
+<td>☐</td>
+<td>everyone knows: <strong>the throttle's strength is a guess.</strong> Two guesses disagree by 5 times (<a href="vehicle-model.html">the car's model</a>: full throttle holds 15 m/s by the drag guess, 3 m/s by the ESP32's open loop). 0.3 m/s asked may spin the wheels much faster: the e-stop person watches 3.2</td>
+</tr>
 </tbody>
 </table></div>
 <div class="table-wrap"><table>
@@ -1376,7 +1417,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <td>3.2</td>
 <td>Forward, gently</td>
 <td>the drive wheels turn <strong>forward</strong>, slowly</td>
-<td>backwards: write it down (<code>legacy_protocol.py</code>), not fixed at the car</td>
+<td>backwards: write it down (<code>legacy_protocol.py</code>), not fixed at the car. <strong>Fast:</strong> e-stop, write down the speed (3.12's tachometer), and no ground driving until tests 4.2 and 4.4</td>
 </tr>
 <tr>
 <td>3.3</td>
@@ -1440,6 +1481,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 </tr>
 </tbody>
 </table></div>
+<p><strong>Not today: the car on the ground.</strong> That waits for tests 4.2 (<code>coast</code>) and 4.4 (<code>throttle-map</code>): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b).</p>
 <p>Then put it back: Ctrl-C everything; theirs again (<code>sudo systemctl start aav_serial_bridge</code>)
 only with the C++ on the ESP32 (6d), as the team decides.</p>
 <p><strong>Stop point:</strong> 3.1-3.8 pass. Anything that turned the wrong way: written down.</p>
@@ -1552,6 +1594,10 @@ the sensors' real noise (T2.4) and the replay (T2.5). Bags stay out of git.</p>
 <tr>
 <td>The numbers</td>
 <td><code>vehicle.yaml</code>; then <code>pixi run test</code> and <code>pixi run view</code></td>
+</tr>
+<tr>
+<td>The car's linear model, refit</td>
+<td><code>pixi run vehicle-model</code>: new poles and margins from the measured lags (<a href="vehicle-model.html">The car as a linear model</a>)</td>
 </tr>
 <tr>
 <td>The answers</td>

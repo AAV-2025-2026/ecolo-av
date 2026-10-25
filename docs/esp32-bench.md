@@ -21,15 +21,17 @@ Espressif's ESP32 emulator (QEMU).
 
 ```text
  tools/esp32_qemu.py                         QEMU: an ESP32, running our firmware
-   aav_legacy's frames, 50 Hz ──► UART1 ──► LegacyLink ──► spine-core ──► drivers
-   reads the log          ◄────── UART0 ◄── EVENT / STATUS / DEVICES lines   │
-                                                       stand-in Jrks, DAC ◄──┘
+   aav_legacy's frames, 50 Hz ──► UART1 RX ──► LegacyLink ──► spine-core ──► drivers
+   reads the uplink frames ◄───── UART1 TX ◄── its status, 50 Hz      │        │
+   fake iBUS, every 7 ms ───────► UART2 RX ──► the RC receiver ───────┘        │
+   reads the log          ◄────── UART0    ◄── EVENT / STATUS / DEVICES lines  │
+                                                       stand-in Jrks, DAC ◄────┘
 ```
 
 | Command | Does |
 |---|---|
 | `pixi run esp-qemu-tools` | downloads QEMU into `vendor/qemu` (once, 22 MB; macOS on Apple silicon) |
-| `pixi run esp-qemu-check` | builds with `--features qemu`, boots it, runs 6 cycles, prints the table |
+| `pixi run esp-qemu-check` | builds with `--features qemu,uplink`, boots it, runs 6 cycles, then the RC's modes, prints three tables (`-- --no-rc` skips the RC) |
 
 Each cycle: stand-still frames (the arming stop), drive frames (0.6 m/s), a **gap**, then
 drive frames again with no stop first. Since 24 Oct the frames are version 2, with the
@@ -62,6 +64,39 @@ cycle kept driving (no timeout, 0 repeats counted) and failed.
 The firmware logs a `LINK` line with each `STATUS`: `frames=`, `bad=`, `skipped=`,
 `repeats=`, `counter=`.
 
+### Results: the uplink and the RC's modes, 24 Oct (Ben's Mac)
+
+TODO 50's uplink and TODO 48's modes ([the uplink](rust-firmware.md#the-uplink-the-esp32s-status-back-to-the-pi-24-oct)).
+The same run as the heartbeat's cycles (111-119 ms, all passed).
+
+Each cycle's uplink frames:
+
+| Cycle | Gap | Frames a second | Echo = a counter just sent | Computer, armed while driving | Said stopped + fault 1 after | Echo stays frozen in the gap |
+|---|---|---|---|---|---|---|
+| 1 | silence | 50 | yes | yes | 121 ms | - |
+| 2 | frozen | 51 | yes | yes | 118 ms | yes |
+| 3 | bad_crc | 51 | yes | yes | 115 ms | - |
+| 4 | silence | 50 | yes | yes | 129 ms | - |
+| 5 | frozen | 51 | yes | yes | 118 ms | yes |
+| 6 | bad_crc | 50 | yes | yes | 128 ms | - |
+
+No uplink frame lost over the run (the sequence numbers).
+
+Then the RC, with fake iBUS frames on UART2 (CH6: 1500 = RC via ROS, 2000 = RC direct;
+the throttle stick full, the gear forward):
+
+| Step | Does | Seen | Result |
+|---|---|---|---|
+| 1 | RC via ROS; the frames say stand still | the uplink says RC via ROS, computer, RC throttle 1.0; **the DAC stays 0** | pass |
+| 2 | RC via ROS; the frames drive | the DAC follows the frames (140) | pass |
+| 3 | RC direct; the frames say stand still | mode RC direct; **the sticks drive** (DAC 346) | pass |
+| 4 | RC direct, then the receiver silent | fault 256 after **119 ms**, brake full, DAC 0 | pass |
+| 5 | RC via ROS, driving, then the receiver silent | fault 256 after **117 ms**, brake full, DAC 0 | pass |
+| 6 | the receiver back on RC via ROS, drive frames, no stop | stays stopped and latched | pass |
+
+The check fails when it should: built with the two-position map instead (`RcMap::TODAY`),
+steps 1, 2, 5 and 6 failed.
+
 ### Results before the heartbeat, 24 Oct (version 1 frames, silence only)
 
 | Cycle | Drove (DAC peak) | Timeout after the last frame | Full brake (3500) + DAC 0 | Fault bit 1 | Stays braked until a stop frame |
@@ -84,11 +119,14 @@ over each run they agreed to 0.1 %.
 |---|---|
 | spine-core, the 100 ms timeout, the latch, the re-arm | ✅ the real code |
 | The UART link: version 2 frames, the CRC, resync, the counter rule (`legacy-link`) | ✅ the real code, real bytes on UART1 |
+| The uplink: the status frame on UART1's TX, its echo, the mode | ✅ the real code; read by aav_legacy's own `UplinkParser` |
+| The RC receiver (iBUS on UART2), the three modes, a lost RC | ✅ the real code; the frames are fake, made by the script |
 | The Jrk, DAC and expander drivers, and their order | ✅ the real code; the bytes go to stand-ins |
 | The hardware watchdog (TIMG1, 100 ms) | ✅ on and fed; it never fired |
 | The Jrks, the DAC, the expander themselves | ❌ stand-ins (`spine_board::StandInBus`): QEMU can't add I2C devices |
 | Embassy's timer and interrupts | ❌ a busy-wait tick instead: QEMU's interrupt matrix has no status registers |
-| The RC receiver (iBUS), the LEDs, CAN | ❌ silent, unwired, not built |
+| The Jrks' real feedback | ❌ the stand-ins say "analog" and report their target |
+| The LEDs, CAN | ❌ unwired, not built |
 | The real chip's timing, the Motor Pi, the cable | ❌ the bench, below |
 
 ### Found on the way
@@ -106,7 +144,8 @@ over each run they agreed to 0.1 %.
 | A USB cable to the ESP32 MicroMod's USB port | flashing and the log |
 | The Motor-Pi running `aav_legacy` (`pixi run car` profile, or `legacy.launch.py`), with **`frame_version: 2`** in `legacy.yaml` | sends version 2 frames, with the Orin's counter. The car's file says 1 while the C++ is on |
 | The Orin running the output mux (the car profile), or a laptop as the Orin | makes the counter: no Orin, no heartbeat, the car stays braked |
-| The RC transmitter | the override |
+| The RC transmitter | the override; for the three modes, a three-position switch on CH6 (H10) |
+| For the uplink: the wire from the ESP32's TX1 (GPIO17) to the Pi's RX, confirmed by the hardware lead (H9) | the status back up; without it, skip "The uplink and the RC modes" |
 | A multimeter | the DAC output, the direction pin |
 
 ## 1. Build, and save the C++ first
@@ -153,6 +192,33 @@ Do them in order. Stop at the first one that fails, and roll back.
 
 Compare with the C++ (the table "The C++ beside the Rust" in
 [Rust firmware](rust-firmware.md)): the differences marked ⚠️ are expected.
+
+## The uplink and the RC modes, on the bench
+
+Only once the hardware lead says TX1 (GPIO17) reaches the Pi's RX (H9). Wheels still off
+the ground; checks 1 to 14 passed first.
+
+| Step | Do |
+|---|---|
+| 1 | `pixi run esp-flash -- --features uplink` (or `tools/esp32.sh build --features uplink`, then flash). The first log line ends `with the uplink on TX1 and the three-position mode switch` |
+| 2 | `legacy.yaml`: `frame_version: 2`, **`uplink: true`**; restart the bridge |
+
+| # | Do | Expect |
+|---|---|---|
+| U1 | Bridge running, nothing else | the bridge logs `uplink: frames from the ESP32`; `ros2 topic hz /vehicle/rc` about 50; `/vehicle/status` 10. The ESP32's `LINK` line: `uplinks=` rising, `uplink_errors=0` |
+| U2 | Unplug TX1's wire | within 0.2 s the bridge warns `no frame from the ESP32`; the car still brakes and drives as before (the uplink is only news) |
+| U3 | Drive slowly from ROS | `/vehicle/status` mode 2 (computer), armed; the echo follows the Orin's counter (`/control/car/heartbeat`) |
+| U4 | Steer by hand from ROS, left then right | `/vehicle/steering` measured follows, + left. NaN: that Jrk has no feedback set up (D6) |
+| U5 | Brake from ROS (stop) | `/vehicle/brake` measured rises to about the command (0.3 hold, 1.0 full) |
+| U6 | Stop the Orin's output mux | `/vehicle/status` faults has 1 within 0.2 s, mode 0 |
+| R1 | Transmitter on, CH6 **low** | `/vehicle/rc` mode_switch 1 (computer); the sticks move its numbers, but nothing drives |
+| R2 | CH6 **middle** (RC via ROS), sticks centred | mode_switch 2; `rc_driver` logs `RC via ROS`; `/drivers/rc/cmd_vel` zeros at 50 Hz; twist_mux passes it (`/control/cmd_vel`) |
+| R3 | A little throttle, gear forward | the wheels turn, **through ego**: its speed and steering-rate limits; `/vehicle/status` mode 2 |
+| R4 | Steer with the stick while rolling | the wheels steer (standing still they don't: the bicycle model) |
+| R5 | Transmitter off while on RC via ROS | within 0.1 s: brake full, faults 256; stays braked when it comes back, until the stick is centred (a stop), then drives |
+| R6 | CH6 **high** (RC direct) | `/vehicle/status` mode 1; the ESP32 drives from the sticks, as check 10; ROS can't |
+| R7 | Transmitter off while on RC direct | as check 11: brake full, faults 256 |
+| R8 | Stop the bridge while on RC via ROS | the heartbeat stops: brake full within 0.2 s (fault 1). RC direct still works: the fallback |
 
 ## 4. Roll back to the C++
 

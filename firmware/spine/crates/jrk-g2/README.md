@@ -21,6 +21,7 @@ Today's car has two:
 | `target()` | `0xA3`, reads 2 bytes | the target it is working to |
 | `feedback()` | `0xA5`, reads 2 bytes | the raw sensor reading |
 | `scaled_feedback()` | `0xA7`, reads 2 bytes | the sensor reading, in target units |
+| `feedback_mode()` | `0xEA 0x18`, reads 1 byte | the "Feedback mode" setting: `None`, `Analog` (a position), `Frequency` |
 | `error_flags()` | `0xE5 0x12`, reads 2 bytes | what is stopping the motor; clears nothing |
 | `take_error_flags()` | `0xB3`, reads 2 bytes | the same, and clears latched errors |
 | `take_errors_occurred()` | `0xB5`, reads 2 bytes | every error since the last call; clears them |

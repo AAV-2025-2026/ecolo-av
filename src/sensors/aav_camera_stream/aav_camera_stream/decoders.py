@@ -4,30 +4,38 @@ decoders: turn an RTSP H.264 stream into pictures (numpy BGR arrays), one way pe
 Each computer decodes its own way, picked by the node's decoder parameter:
 
   decoder      runs                                   where
+  auto         the best this computer has (choose())  the default
   ffmpeg       ffmpeg, in software (or hwaccel)       any Mac or Linux, Pixi's own ffmpeg
   gst-nvidia   gst-launch-1.0 with nvv4l2decoder      the Orin: NVIDIA's video hardware
-  gst-soft     gst-launch-1.0 with avdec_h264         any Linux with GStreamer's plugins
-  gst-mac      gst-launch-1.0 with vtdec              a Mac with GStreamer's plugins
+  gst-soft     gst-launch-1.0 with avdec_h264         any computer with GStreamer's plugins
+  gst-mac      gst-launch-1.0 with vtdec              a Mac: VideoToolbox, Apple's hardware
   opencv       OpenCV's VideoCapture, in this process an OpenCV with FFmpeg (or GStreamer,
                                                       given a pipeline ending in appsink)
+
+auto runs the gst environment's GStreamer (pixi install -e gst): on a Mac gst-mac, if
+vtdec decodes a test picture, else gst-soft; on Linux gst-soft. Without it, ffmpeg, with
+a warning (ffmpeg holds back about 2 frames: 135 ms). The Orin's machine file says
+gst-nvidia: no gst environment there (linux-aarch64).
 
 The ffmpeg and gst-* ones run the decoder as a child program that writes raw pictures to
 a pipe (width x height x 3 bytes each). So the node needs no GStreamer of its own: on the
 Orin it runs JetPack's /usr/bin/gst-launch-1.0, whose NVIDIA plugins Pixi doesn't have,
-from Pixi's Python. Every way scales the picture to width x height, so each frame's size
-is known before it arrives.
+and on a Mac the gst environment's, from Pixi's Python. Every way scales the picture to
+width x height, so each frame's size is known before it arrives.
 
 pipeline overrides a preset: a gst-launch-1.0 pipeline with {url}, {width}, {height} and
 {protocols}, ending in `fdsink` (or, for opencv, in `appsink`).
 """
 
+from collections import namedtuple
 import os
 import shlex
 import signal
 import subprocess
+import sys
 import threading
 
-DECODERS = ('ffmpeg', 'gst-nvidia', 'gst-soft', 'gst-mac', 'opencv')
+DECODERS = ('auto', 'ffmpeg', 'gst-nvidia', 'gst-soft', 'gst-mac', 'opencv')
 
 # The GStreamer presets: rtspsrc pulls (latency=0: no jitter buffer; on a wired network
 # packets come in order), the depayloader and parser hand H.264 to a decoder, then the
@@ -53,10 +61,27 @@ GST = {
 }
 # JetPack's own GStreamer, not Pixi's (which has no NVIDIA plugins).
 SYSTEM_GST = '/usr/bin/gst-launch-1.0'
+# A Mac's GStreamer: the gst environment in pixi.toml (pixi install -e gst), not the one the
+# node runs in, so adding it changed no other environment.
+PIXI_GST = os.path.join('.pixi', 'envs', 'gst', 'bin', 'gst-launch-1.0')
+# What each preset needs, checked with gst-inspect-1.0 --exists before auto picks it.
+ELEMENTS = {
+    'gst-soft': ('rtspsrc', 'rtph264depay', 'h264parse', 'avdec_h264', 'videoconvert',
+                 'videoscale', 'fdsink'),
+    'gst-mac': ('rtspsrc', 'rtph264depay', 'h264parse', 'vtdec', 'videoconvert',
+                'videoscale', 'fdsink'),
+}
+# A Mac's hardware can be missing (a virtual machine): encode three small test pictures
+# with VideoToolbox and decode them with vtdec, as the stream's would be (0.2 s).
+VTDEC_TEST = ('videotestsrc num-buffers=3 ! video/x-raw,width=64,height=64 ! vtenc_h264 '
+              '! h264parse ! vtdec ! videoconvert ! video/x-raw,format=BGR ! fakesink')
+FFMPEG_SLOWER = 'ffmpeg holds back about 2 frames: 135 ms more delay'
+Choice = namedtuple('Choice', 'decoder program warning')
 # What a program from outside Pixi must not inherit from it: Pixi's libraries and plugins.
-PIXI_ONLY = ('LD_LIBRARY_PATH', 'GST_PLUGIN_PATH', 'GST_PLUGIN_PATH_1_0',
-             'GST_PLUGIN_SYSTEM_PATH', 'GST_PLUGIN_SYSTEM_PATH_1_0', 'GST_PLUGIN_SCANNER',
-             'GST_PLUGIN_SCANNER_1_0', 'GST_REGISTRY', 'GST_REGISTRY_1_0', 'GIO_MODULE_DIR')
+PIXI_ONLY = ('LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH',
+             'GST_PLUGIN_PATH', 'GST_PLUGIN_PATH_1_0', 'GST_PLUGIN_SYSTEM_PATH',
+             'GST_PLUGIN_SYSTEM_PATH_1_0', 'GST_PLUGIN_SCANNER', 'GST_PLUGIN_SCANNER_1_0',
+             'GST_REGISTRY', 'GST_REGISTRY_1_0', 'GIO_MODULE_DIR')
 
 
 def check(decoder: str, transport: str) -> None:
@@ -96,12 +121,75 @@ def command(decoder, url, width, height, transport='tcp', program='', pipeline='
     check(decoder, transport)
     if decoder == 'opencv':
         raise ValueError('decoder:=opencv decodes in this process: it has no command')
+    if decoder == 'auto':
+        raise ValueError('decoder:=auto: choose() picks the decoder first')
     if decoder == 'ffmpeg' and not pipeline:
         return ffmpeg_command(url, width, height, transport, program, hwaccel)
     if decoder == 'gst-nvidia' and not program:
         program = SYSTEM_GST
     return gst_command(pipeline or GST.get(decoder, GST['gst-soft']), url, width, height,
                        transport, program)
+
+
+def pixi_gst(root):
+    """Return the gst environment's gst-launch-1.0 under the workspace root, or ''."""
+    path = os.path.join(root, PIXI_GST) if root else ''
+    return path if path and os.access(path, os.X_OK) else ''
+
+
+def gst_works(program, decoder, env=None, run=subprocess.run):
+    """
+    Return '' if this gst-launch-1.0 can run the decoder's preset, or say why not.
+
+    Every element must exist (gst-inspect-1.0 --exists, next to the program); for gst-mac,
+    vtdec must also decode VTDEC_TEST's pictures, at the first or the second try.
+    """
+    inspect = os.path.join(os.path.dirname(program), 'gst-inspect-1.0')
+    try:
+        for element in ELEMENTS[decoder]:
+            if run([inspect, '--exists', element], env=env, capture_output=True,
+                   timeout=20).returncode != 0:
+                return f'no {element} in {os.path.dirname(program)}'
+        # Twice before giving up: once on 24 Oct the first try failed and the next passed
+        # (the gst environment just installed, its plugin cache shared with a worktree's).
+        if decoder == 'gst-mac' and not any(
+                run([program, '-q', *shlex.split(VTDEC_TEST)], env=env,
+                    capture_output=True, timeout=20).returncode == 0 for _ in range(2)):
+            return 'vtdec could not decode a test picture (no VideoToolbox here?)'
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return f'{program}: {e}'
+    return ''
+
+
+def choose(decoder, program='', root='', platform=sys.platform, works=gst_works):
+    """
+    Return the Choice (decoder, program, warning) the node runs.
+
+    auto picks GStreamer from the gst environment under root (or program): on a Mac,
+    gst-mac (vtdec) if it decodes, else gst-soft (avdec_h264); on Linux, gst-soft. With no
+    GStreamer that works, ffmpeg, with a warning. gst-mac and gst-soft given with no
+    program run the gst environment's, if it's there. works(program, decoder) returns ''
+    or why that GStreamer can't run that decoder.
+    """
+    gst = program or pixi_gst(root)
+    if decoder in ('gst-mac', 'gst-soft'):
+        return Choice(decoder, gst, '')
+    if decoder != 'auto':
+        return Choice(decoder, program, '')
+    if not gst:
+        return Choice('ffmpeg', '', f'decoder auto: no GStreamer, so ffmpeg ({FFMPEG_SLOWER}).'
+                                    ' On a Mac or a Linux PC, install it once: '
+                                    'pixi install -e gst')
+    why = works(gst, 'gst-mac') if platform == 'darwin' else ''
+    if platform == 'darwin' and not why:
+        return Choice('gst-mac', gst, '')
+    soft = works(gst, 'gst-soft')
+    if not soft:
+        return Choice('gst-soft', gst,
+                      f'decoder auto: {why}; avdec_h264 (software) instead' if why else '')
+    return Choice('ffmpeg', '', f"decoder auto: GStreamer can't decode here "
+                                f"({'; '.join(w for w in (why, soft) if w)}), "
+                                f'so ffmpeg ({FFMPEG_SLOWER})')
 
 
 def child_env(environ, program, prefix):

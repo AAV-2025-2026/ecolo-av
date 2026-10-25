@@ -96,6 +96,7 @@ Step 4 puts the ESP32 firmware here, out of git:
 |---|---|
 | `car-day/esp32/spine-esp32-umod-v2.elf` | the Rust firmware, version 2 frames (the Orin's heartbeat): **the one to flash** |
 | `car-day/esp32/spine-esp32-umod-v1.elf` | the same, 13-byte frames: if the Motor Pi must stay on version 1 |
+| `car-day/esp32/spine-esp32-umod-v2-uplink.elf` | version 2 with the uplink on TX1 and the three-position RC switch: **only once H9 and H10 say yes** (6e) |
 | `car-day/esp32/qemu-check.log` | the emulator's proof: it brakes 111-120 ms after the heartbeat stops |
 | `car-day/esp32/BUILD.txt`, `SHA256SUMS` | when, from which commit; the check reads it |
 
@@ -345,13 +346,13 @@ The same venv also runs the engine once on the test stop sign, with the score an
 | 7 | The Pi's CPU, both streams on: `top` on the Pi, then `vcgencmd measure_temp` | under 50% of the Pi; under 80 °C | write down the numbers anyway |
 | 8 | Bitrate: `curl http://127.0.0.1:9997/v3/paths/list` on the Pi, twice, 10 s apart | `bytesSent` up about 2.5 MB each 10 s (2 Mbit/s) | |
 | 9 | **The delay:** a stopwatch on phone 1 in front of the camera, the browser view beside it; phone 2 films both | the difference between the two times: under 150 ms. Do 3 photos | write down what you got |
-| 10 | **Calibration pictures:** on the laptop, `mkdir -p ~/aav-calib`, then `pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png`: one picture a second for 30 s, while someone moves the checkerboard slowly (near, far, the corners, tilted). Then the same for `front_right` | 30 pictures each, the whole board in every one | |
+| 10 | **Calibration:** the printed checkerboard (`pixi run calibrate-camera board`, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: `pixi run calibrate-camera front_left --host 192.168.1.108 --square <measured, in m>`; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for `front_right` | `src/sensors/aav_camera_stream/config/calibrations/front_left.yaml` (and `front_right`) written; commit them at home | the window shows no picture: the stream (step 6). As a backup, save pictures: `mkdir -p ~/aav-calib`, then `pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png` |
 
-At home: the delay goes in `orin.yaml`'s `camera_stream` `delay` (0.06 s today); the
-calibration is worked out with OpenCV from the pictures (Q22; the script is still to
-write), into `config/cameras.yaml`.
+At home: the delay goes in `orin.yaml`'s `camera_stream` `delay` (0.06 s today); commit
+the two calibration files (`docs/camera-calibration.md`). Until they're in, the stop-sign
+rule uses Gazebo's lens and the car stops too early.
 
-**Stop point:** both streams at 15 fps on the Orin, the delay measured, the pictures taken.
+**Stop point:** both streams at 15 fps on the Orin, the delay measured, both cameras calibrated.
 
 ## Session 6: the ESP32
 
@@ -423,6 +424,20 @@ Or the C++ from source: `pixi run -e firmware legacy-esp32 -t upload` (`src/secr
 its WiFi; with the placeholders it can't join the WiFi). The Rust with 13-byte frames:
 `car-day/esp32/spine-esp32-umod-v1.elf`, `frame_version: 1`.
 
+### 6e. Only if H9 and H10 say yes: the uplink and the RC modes 🔒
+
+H9: the ESP32's TX1 (GPIO17) reaches the Motor Pi's RX. H10: CH6 is a three-position
+switch. Both yes, and 1-14 passed:
+
+| # | Do | You should see |
+|---|---|---|
+| 1 | `vendor/cargo-tools/bin/espflash flash --chip esp32 --monitor car-day/esp32/spine-esp32-umod-v2-uplink.elf` | the first log line ends `with the uplink on TX1 and the three-position mode switch` |
+| 2 | On the Motor Pi: `legacy.yaml`, `uplink: true`, then `~/aav-jazzy/aav.sh build`, restart the bridge | the bridge logs `uplink: frames from the ESP32` |
+| 3 | Steps U1-U6, then R1-R8, in [the bench page](docs/esp32-bench.md) ("The uplink and the RC modes") | as each step says |
+
+Either is no: stay on `spine-esp32-umod-v2.elf` with `uplink: false`; the car drives as
+before, without the positions coming back.
+
 **Stop point:** 1-14 and 9a-9c pass, or the C++ is back and the reason is written down.
 
 ## Session 7: CAN, read-only
@@ -475,6 +490,7 @@ The map panel needs the internet for its tiles: offline it shows the dots on a b
 | ☐ | theirs stopped: `aav_serial_bridge` inactive. **Never two drive paths** |
 | ☐ | which ESP32 firmware: the Rust (session 6 passed) or the C++ (**no timeout**: test 3.9 then fails, as expected) |
 | ☐ | `legacy.yaml`'s `frame_version`: 2 with the Rust, 1 with the C++ |
+| ☐ | everyone knows: **the throttle's strength is a guess.** Two guesses disagree by 5 times ([the car's model](docs/vehicle-model.md): full throttle holds 15 m/s by the drag guess, 3 m/s by the ESP32's open loop). 0.3 m/s asked may spin the wheels much faster: the e-stop person watches 3.2 |
 
 | Where | Run |
 |---|---|
@@ -489,7 +505,7 @@ The HUD's GO / STOP panel says whether the car may move, and why not. A latched 
 | # | Test | Expect | If not |
 |---|---|---|---|
 | 3.1 | Nothing pressed | wheels still; the HUD shows 0 | e-stop |
-| 3.2 | Forward, gently | the drive wheels turn **forward**, slowly | backwards: write it down (`legacy_protocol.py`), not fixed at the car |
+| 3.2 | Forward, gently | the drive wheels turn **forward**, slowly | backwards: write it down (`legacy_protocol.py`), not fixed at the car. **Fast:** e-stop, write down the speed (3.12's tachometer), and no ground driving until tests 4.2 and 4.4 |
 | 3.3 | Left | the front wheels turn **left** | right: `steering_sign` (Q2) |
 | 3.4 | Let go of the key | slows to 0 within 0.3 s | |
 | 3.5 | The HUD's e-stop button | brakes at once; nothing moves until `pixi run estop-clear` | |
@@ -500,6 +516,8 @@ The HUD's GO / STOP panel says whether the car may move, and why not. A latched 
 | 3.10 | `pixi run actuator-test steer-sweep --stands` (the laptop) | it asks each wheel angle: the protractor | |
 | 3.11 | `pixi run actuator-test steer-centre --stands` | under 1°, or the offset written down | |
 | 3.12 | Wheel speed: `/vehicle/odom` against a phone tachometer app | within 10% | |
+
+**Not today: the car on the ground.** That waits for tests 4.2 (`coast`) and 4.4 (`throttle-map`): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b).
 
 Then put it back: Ctrl-C everything; theirs again (`sudo systemctl start aav_serial_bridge`)
 only with the C++ on the ESP32 (6d), as the team decides.
@@ -540,5 +558,6 @@ Copy home: `rsync -a <user>@192.168.1.140:aav-jazzy/aav/bags/ ~/aav-bags/jetson/
 |---|---|
 | The write-up, no secrets | `docs/history/audit-<date>-car.md`, like [21 Oct's](docs/history/audit-2026-10-21-car.md) |
 | The numbers | `vehicle.yaml`; then `pixi run test` and `pixi run view` |
+| The car's linear model, refit | `pixi run vehicle-model`: new poles and margins from the measured lags ([The car as a linear model](docs/vehicle-model.md)) |
 | The answers | `docs/audit-questions.md`; the hardware lead's in `docs/can-plan.md` |
 | Gate 1 and Gate 2 | [PLAN.md](PLAN.md) |

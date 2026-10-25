@@ -11,6 +11,10 @@ Version 2 (TODO 50): the bytes come from aav_legacy's uart_relay (what legacy_ua
 sends with frame_version 2) and pack_frame_v2; the expected result is the frame's
 counter and flags, or why it is turned down, and the same targets.
 
+The uplink (TODO 50, 48), the other way: the bytes come from pack_uplink, which is what
+legacy_uart_bridge reads (unpack_uplink); the Rust Uplink must encode the same fields
+to the same bytes, and turn down the same bad frames.
+
 Writes:
   firmware/spine/crates/legacy-link/vectors.json     (read by aav_legacy's tests)
   firmware/spine/crates/legacy-link/tests/vectors.rs (read by `cargo test`)
@@ -232,6 +236,106 @@ V2_STREAM = (bytes([0x00, 0xFF, 0x13]) + relay_frame(1, (1.0, 0.1))
 V2_STREAM_FRAMES = v2_parse(V2_STREAM)
 
 
+U = lp.Uplink
+# Values exact in float32, so both sides read the same numbers.
+UPLINK_CASES = [
+    ('up_driving', 'computer drives, both positions known, no RC',
+     U(sequence=7, echo=42, mode=lp.MODE_COMPUTER, switch=lp.SWITCH_NONE, armed=True,
+       estop=False, faults=0, steering=0.125, brake_position=0.0, throttle_out=0.25,
+       brake_out=0.0, rc_throttle=0.0, rc_steering=0.0, rc_brake=False)),
+    ('up_rc_via_ros', 'the switch on RC via ROS: the sticks go up, the computer drives',
+     U(sequence=8, echo=43, mode=lp.MODE_COMPUTER, switch=lp.SWITCH_RC_VIA_ROS, armed=True,
+       estop=False, faults=0, steering=-0.0625, brake_position=0.5, throttle_out=0.0,
+       brake_out=0.5, rc_throttle=0.5, rc_steering=-0.75, rc_brake=False)),
+    ('up_rc_direct', 'RC direct, reverse, steering unknown (no feedback on that Jrk)',
+     U(sequence=255, echo=0xA5, mode=lp.MODE_RC_DIRECT, switch=lp.SWITCH_RC_DIRECT,
+       armed=False, estop=False, faults=0, steering=None, brake_position=0.0,
+       throttle_out=0.125, brake_out=0.0, rc_throttle=-0.25, rc_steering=1.0,
+       rc_brake=False)),
+    ('up_timeout', 'the heartbeat stopped: braked, latched, fault 1, the last echo',
+     U(sequence=0, echo=99, mode=lp.MODE_STOPPED, switch=lp.SWITCH_COMPUTER, armed=False,
+       estop=True, faults=0x0001, steering=0.0, brake_position=1.0, throttle_out=0.0,
+       brake_out=1.0, rc_throttle=0.0, rc_steering=0.0, rc_brake=True)),
+    ('up_rc_lost', 'the RC lost via ROS: fault 256, no echo yet (version 1 frames)',
+     U(sequence=1, echo=None, mode=lp.MODE_STOPPED, switch=lp.SWITCH_NONE, armed=False,
+       estop=False, faults=0x0102, steering=None, brake_position=None, throttle_out=0.0,
+       brake_out=1.0, rc_throttle=0.0, rc_steering=0.0, rc_brake=False)),
+]
+UP_GOOD = lp.pack_uplink(UPLINK_CASES[1][2])
+
+
+def with_up_byte(frame, at, value, fix_crc=True):
+    """Return an uplink frame with one byte changed, its CRC made right again (or not)."""
+    b = bytearray(frame)
+    b[at] = value
+    if fix_crc:
+        b[34] = lp.crc8(bytes(b[1:34]))
+    return bytes(b)
+
+
+# (name, how it was made, bytes, the error the Rust decoder gives)
+UPLINK_BAD = [
+    ('up_bad_crc', 'up_rc_via_ros with its CRC flipped',
+     with_up_byte(UP_GOOD, 34, UP_GOOD[34] ^ 0xFF, False), 'Checksum'),
+    ('up_one_bit_flipped', 'up_rc_via_ros with bit 0 of the faults flipped',
+     with_up_byte(UP_GOOD, 8, UP_GOOD[8] ^ 0x01, False), 'Checksum'),
+    ('up_wrong_sync', 'up_rc_via_ros starting 0x5A', with_up_byte(UP_GOOD, 0, 0x5A, False),
+     'Sync'),
+    ('up_kind_2', 'up_rc_via_ros as kind 2, its CRC right', with_up_byte(UP_GOOD, 2, 2),
+     'Version'),
+    ('up_mode_3', 'up_rc_via_ros with mode 3, its CRC right', with_up_byte(UP_GOOD, 5, 3),
+     'Field'),
+    ('up_switch_4', 'up_rc_via_ros with switch 4, its CRC right', with_up_byte(UP_GOOD, 6, 4),
+     'Field'),
+    ('up_unknown_flag', 'up_rc_via_ros with flag bit 6, its CRC right',
+     with_up_byte(UP_GOOD, 7, UP_GOOD[7] | 0x40), 'Flags'),
+]
+
+RUST_MODE = {lp.MODE_STOPPED: 'Stopped', lp.MODE_RC_DIRECT: 'RcDirect',
+             lp.MODE_COMPUTER: 'Computer'}
+RUST_SWITCH = {lp.SWITCH_NONE: 'NoSignal', lp.SWITCH_COMPUTER: 'Computer',
+               lp.SWITCH_RC_VIA_ROS: 'RcViaRos', lp.SWITCH_RC_DIRECT: 'RcDirect'}
+
+
+def rust_f32(x):
+    """Return a float32 as Rust, bit for bit."""
+    return f"f32::from_bits(0x{struct.unpack('<I', struct.pack('<f', x))[0]:08x})"
+
+
+def rust_opt(x, show):
+    return 'None' if x is None else f'Some({show(x)})'
+
+
+def rust_bool(b):
+    return 'true' if b else 'false'
+
+
+def rust_uplink(u):
+    return (f'Uplink {{ sequence: {u.sequence}, echo: {rust_opt(u.echo, str)}, '
+            f'mode: DriveMode::{RUST_MODE[u.mode]}, switch: ModeSwitch::{RUST_SWITCH[u.switch]}, '
+            f'armed: {rust_bool(u.armed)}, estop: {rust_bool(u.estop)}, '
+            f'faults: 0x{u.faults:04x}, steering: {rust_opt(u.steering, rust_f32)}, '
+            f'brake_position: {rust_opt(u.brake_position, rust_f32)}, '
+            f'throttle_out: {rust_f32(u.throttle_out)}, brake_out: {rust_f32(u.brake_out)}, '
+            f'sticks: Sticks {{ throttle: {rust_f32(u.rc_throttle)}, '
+            f'steering: {rust_f32(u.rc_steering)}, brake: {rust_bool(u.rc_brake)} }} }}')
+
+
+def rust_uplink_tests():
+    out = []
+    for name, made_by, u in UPLINK_CASES:
+        out += ['#[test]', f'fn {name}() {{', f'    // {made_by}',
+                f'    let bytes = [{hexes(lp.pack_uplink(u))}];',
+                f'    let expected = {rust_uplink(u)};',
+                '    assert_eq!(Uplink::decode(&bytes), Ok(expected));',
+                '    assert_eq!(expected.encode(), bytes);', '}', '']
+    for name, made_by, frame, error in UPLINK_BAD:
+        out += ['#[test]', f'fn {name}() {{', f'    // {made_by}',
+                f'    let bytes = [{hexes(frame)}];',
+                f'    assert_eq!(Uplink::decode(&bytes), Err(FrameError::{error}));', '}', '']
+    return out
+
+
 def rust_throttle(t):
     if t == 'cut':
         return 'Throttle::Cut'
@@ -250,8 +354,8 @@ def rust_tests(cases, v2):
            "// 2025-26 C++. Do not edit. Checks that this crate reads the Motor-Pi's",
            '// bytes, and sends the devices the targets, as the C++ did.',
            '',
-           ('use legacy_link::{Flags, Frame, FrameError, FrameV2, Parser, ParserV2, Targets, '
-            'Throttle};'),
+           ('use legacy_link::{DriveMode, Flags, Frame, FrameError, FrameV2, ModeSwitch, Parser, '
+            'ParserV2, Sticks, Targets, Throttle, Uplink};'),
            '']
     for c in cases:
         out += ['#[test]', f"fn {c['name']}() {{",
@@ -317,6 +421,7 @@ def rust_tests(cases, v2):
             '    let expected: Vec<[u8; 17]> = vec![']
     out += [f'        [{hexes(f)}],' for f in V2_STREAM_FRAMES]
     out += ['    ];', '    assert_eq!(found, expected);', '}', '']
+    out += rust_uplink_tests()
     return '\n'.join(out)
 
 
@@ -346,13 +451,22 @@ def main():
                       'takes it); counter and flags as it reads them; cpp, the targets.',
            'v2_cases': v2,
            'v2_stream': list(V2_STREAM),
-           'v2_stream_frames': [list(f) for f in V2_STREAM_FRAMES]}
+           'v2_stream_frames': [list(f) for f in V2_STREAM_FRAMES],
+           'uplink_note': 'The uplink (TODO 50, 48), ESP32 to Motor-Pi: bytes, what the '
+                          'ESP32 sends (pack_uplink); fields, what legacy_uart_bridge reads '
+                          '(null: not known); error, why a bad frame is turned down.',
+           'uplink_cases': [{'name': n, 'made_by': m, 'bytes': list(lp.pack_uplink(u)),
+                             'fields': vars(u), 'error': None}
+                            for n, m, u in UPLINK_CASES]
+           + [{'name': n, 'made_by': m, 'bytes': list(f), 'fields': None, 'error': e}
+              for n, m, f, e in UPLINK_BAD]}
     JSON_OUT.write_text(json.dumps(doc, indent=1) + '\n')
     RUST_OUT.parent.mkdir(exist_ok=True)
     RUST_OUT.write_text(rust_tests(cases, v2))
     if shutil.which('rustfmt'):
         subprocess.run(['rustfmt', '--edition', '2021', str(RUST_OUT)], check=True)
-    print(f'wrote {len(cases)} cases, {len(v2)} version 2 cases and two streams '
+    print(f'wrote {len(cases)} cases, {len(v2)} version 2 cases, two streams and '
+          f'{len(UPLINK_CASES) + len(UPLINK_BAD)} uplink cases '
           f'to {JSON_OUT.relative_to(ROOT)} and {RUST_OUT.relative_to(ROOT)}')
 
 

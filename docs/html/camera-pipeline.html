@@ -7,7 +7,7 @@
 <!-- Generated from docs/camera-pipeline.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The camera pipeline: Pi to detections (24 October)</h1>
-<div class="meta">11 min read · 8 sections</div></header>
+<div class="meta">14 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -41,6 +41,7 @@
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
 <a class="here" href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -51,6 +52,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
@@ -71,7 +73,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-is-where">What is where</a><a href="#on-the-car-carlaunchpy">On the car: car.launch.py</a><a href="#the-settings-and-why">The settings, and why</a><a href="#measured-on-a-mac-24-oct">Measured on a Mac (24 Oct)</a><a href="#what-it-cant-measure-here">What it can&#x27;t measure here</a><a href="#at-the-car-what-to-check">At the car: what to check</a><a href="#still-open">Still open</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#what-is-where">What is where</a><a href="#on-the-car-carlaunchpy">On the car: car.launch.py</a><a href="#the-settings-and-why">The settings, and why</a><a href="#decoding-on-a-mac">Decoding on a Mac</a><a href="#measured-on-a-mac-24-oct">Measured on a Mac (24 Oct)</a><a href="#what-it-cant-measure-here">What it can&#x27;t measure here</a><a href="#at-the-car-what-to-check">At the car: what to check</a><a href="#still-open">Still open</a></nav>
 <div class="lead"><p>Ben decided it on 23 Oct ("mediamtx on the pi to the orin seems like the best choice";
 <a href="decisions.html#decided-on-22-and-23-october">decisions</a>). This page is how it's built, the
 settings and why, what was measured on a Mac, and what to check at the car.</p>
@@ -81,8 +83,10 @@ settings and why, what was measured on a Mac, and what to check at the car.</p>
 <li>The camera Pi streams <strong>H.264</strong> (1280x720, 15 fps, 2 Mbit/s) with <strong>MediaMTX</strong>.</li>
 <li>On the Orin, <strong>one program per camera</strong> (<code>camera_stream</code>) unpacks it, undistorts
   it and runs <strong>RF-DETR Nano</strong>. Raw pictures never cross the network.</li>
-<li>On a Mac, the whole chain takes <strong>26 ms</strong> from the picture to its detections
-  (GStreamer decoding). Measured with <code>pixi run stream-check</code>.</li>
+<li>On a Mac, the whole chain takes <strong>27 ms</strong> from the picture to its detections:
+  GStreamer with VideoToolbox, now the default. Measured with <code>pixi run stream-check</code>.</li>
+<li>Calibrating the cameras at the car: <code>pixi run calibrate-camera</code>
+  (<a href="camera-calibration.html">camera calibration</a>).</li>
 </ul>
 </div></div>
 <section class="card"><h2 id="the-picture">The picture</h2>
@@ -124,8 +128,8 @@ settings and why, what was measured on a Mac, and what to check at the car.</p>
 </tr>
 <tr>
 <td>Its logic, no ROS</td>
-<td><code>decoders.py</code>, <code>reader.py</code>, <code>latest.py</code>, <code>lens.py</code>, <code>timecode.py</code>, <code>models.py</code></td>
-<td>41 tests</td>
+<td><code>decoders.py</code>, <code>reader.py</code>, <code>latest.py</code>, <code>lens.py</code>, <code>timecode.py</code>, <code>models.py</code>, <code>calibration.py</code></td>
+<td>55 tests</td>
 </tr>
 <tr>
 <td>The detector</td>
@@ -146,6 +150,16 @@ settings and why, what was measured on a Mac, and what to check at the car.</p>
 <td>Test it</td>
 <td><code>pixi run -e ml stream-check</code></td>
 <td>a Mac, no car</td>
+</tr>
+<tr>
+<td>A Mac's decoder</td>
+<td>the <code>gst</code> environment in <code>pixi.toml</code>: <code>pixi install -e gst</code></td>
+<td><a href="#decoding-on-a-mac">below</a></td>
+</tr>
+<tr>
+<td>Calibrate a camera</td>
+<td><code>pixi run calibrate-camera front_left</code></td>
+<td><a href="camera-calibration.html">camera calibration</a></td>
 </tr>
 </tbody>
 </table></div>
@@ -333,7 +347,7 @@ empty list repeats on a clear road, and a stuck Pi camera stops the stream inste
 </tr>
 <tr>
 <td>Decoder, Mac</td>
-<td>GStreamer <code>avdec_h264</code> (<code>--gst</code>)</td>
+<td>GStreamer <code>vtdec</code> (VideoToolbox, Apple's hardware): the default, <code>decoder:=auto</code></td>
 <td>ffmpeg holds back 2 frames (below)</td>
 </tr>
 <tr>
@@ -353,13 +367,65 @@ empty list repeats on a clear road, and a stuck Pi camera stops the stream inste
 <p>NVIDIA's GStreamer plugins come with JetPack, not Pixi. The node runs JetPack's
 <code>gst-launch-1.0</code> and reads raw pictures from its pipe (2.7 MB each, 41 MB/s:
 nothing for a pipe). So the node needs no GStreamer of its own, and the same code
-runs on a Mac with ffmpeg or GStreamer. <code>decoder:=opencv</code> decodes inside the
+runs on a Mac with the <code>gst</code> environment's GStreamer, or ffmpeg. <code>decoder:=opencv</code> decodes inside the
 process instead, with an OpenCV built with GStreamer or FFmpeg.</p>
 </div>
 </section>
+<section class="card"><h2 id="decoding-on-a-mac">Decoding on a Mac</h2>
+<p><code>decoder:=auto</code> (the default) picks the decoder when the node starts:</p>
+<pre class="highlight"><code class="language-text"> the gst environment there?  ──no──►  ffmpeg, with a warning: "pixi install -e gst"
+ (.pixi/envs/gst)                       (135 ms slower)
+        │ yes
+        ▼
+ vtdec decodes 3 test pictures? ──yes──►  gst-mac: VideoToolbox, Apple's hardware
+        │ no (a virtual Mac)
+        ▼
+ avdec_h264 there? ──yes──►  gst-soft, with a warning   ──no──►  ffmpeg, with a warning</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th><code>auto</code> gives</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A Mac with <code>pixi install -e gst</code></td>
+<td><code>gst-mac</code> (vtdec)</td>
+<td>measured below</td>
+</tr>
+<tr>
+<td>A Mac without it</td>
+<td><code>ffmpeg</code></td>
+<td>works; 135 ms slower; the log says how to fix it</td>
+</tr>
+<tr>
+<td>A Linux PC with <code>pixi install -e gst</code></td>
+<td><code>gst-soft</code> (avdec_h264)</td>
+<td><span class="badge b-untested">untested</span> on Linux</td>
+</tr>
+<tr>
+<td>The Orin</td>
+<td><code>orin.yaml</code> says <code>gst-nvidia</code></td>
+<td>JetPack's GStreamer, not Pixi's</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Why its own environment</p>
+<p>GStreamer's RTSP plugins aren't in the default environment, and adding them there
+means re-solving it (one re-solve on 23 Oct pulled Python 3.14). The <code>gst</code>
+environment has only GStreamer: adding it to <code>pixi.lock</code> changed no other
+environment's packages (all 22 environment-platform pairs compared, 24 Oct). The node
+runs its <code>gst-launch-1.0</code> as the child program, as on the Orin.</p>
+</div>
+<p><code>/diagnostics</code> says which decoder runs (<code>decoder</code>); <code>stream-check</code> checks a Mac gets
+<code>gst-mac</code>.</p>
+</section>
 <section class="card"><h2 id="measured-on-a-mac-24-oct">Measured on a Mac (24 Oct)</h2>
-<p><code>pixi run -e ml stream-check</code>, Ben's Mac (Apple silicon), load average 2-5, other
-helpers' work running. Gazebo's road world, the car rolling at 0.3 m/s towards the stop
+<p><code>pixi run -e ml stream-check</code>, Ben's Mac (Apple silicon), other helpers' work running
+(load average 5-12). Gazebo's road world, the car rolling at 0.3 m/s towards the stop
 sign, 60 s each. <strong>measured</strong>:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -372,19 +438,31 @@ sign, 60 s each. <strong>measured</strong>:</p>
 </thead>
 <tbody>
 <tr>
-<td>GStreamer (<code>--gst</code>)</td>
-<td><strong>3 ms</strong> median, 6 p95, 8 worst</td>
-<td><strong>26 ms</strong> median, 36 p95, 42 worst</td>
+<td><strong><code>vtdec</code></strong> (VideoToolbox: the default, <code>auto</code>)</td>
+<td><strong>4 ms</strong> median, 7 p95</td>
+<td><strong>27 ms</strong> median, 38 p95</td>
 <td>21 ms</td>
 </tr>
 <tr>
-<td>ffmpeg (the default)</td>
+<td><code>avdec_h264</code> (software, <code>--gst</code>)</td>
+<td>4 ms median, 6 p95, 45 worst</td>
+<td>27 ms median, 32 p95, 94 worst</td>
+<td>22 ms</td>
+</tr>
+<tr>
+<td>ffmpeg (<code>--decoder ffmpeg</code>; the default until 24 Oct)</td>
 <td>136 ms median, 144 p95, 173 worst</td>
 <td>160 ms median, 174 p95, 215 worst</td>
 <td>22 ms</td>
 </tr>
 </tbody>
 </table></div>
+<ul>
+<li><strong>vtdec and avdec_h264 are as fast</strong> here: the gain is over ffmpeg, about 130 ms.
+  The CPU was the same too (camera_stream with its decoder: 29% and 28% of a core).</li>
+<li>vtdec, run twice: the same medians; the worst 309 ms in the first run, 85 ms in the
+  second. Both with the load average at 8-13: other helpers' Gazebo runs.</li>
+</ul>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -436,8 +514,8 @@ sign, 60 s each. <strong>measured</strong>:</p>
 <p>Measured hop by hop: OpenH264 and x264 encode in 2 ms; MediaMTX adds nothing
 measurable; <strong>ffmpeg's decoder program</strong> holds back about 2 frames, with every
 low-delay flag tried (<code>-flags low_delay</code>, slice threads, one thread, <code>-fflags
-nobuffer</code>). GStreamer doesn't. So the Orin uses GStreamer, and so should a Mac
-(<code>--gst</code>). OpenCV's FFmpeg reader was worse (over 1 s behind).</p>
+nobuffer</code>). GStreamer doesn't. So the Orin uses GStreamer, and so does a Mac now
+(<code>decoder:=auto</code>). OpenCV's FFmpeg reader was worse (over 1 s behind).</p>
 </div>
 <p>The time code: a row of black and white squares in the top left corner, carrying the
 time in ms, drawn before encoding and read after decoding (<code>timecode.py</code>). It survives
@@ -532,6 +610,21 @@ OpenH264 at 2 Mbit/s (a test checks).</p>
 <td><code>pixi run car orin</code>, after the engine is built; then <code>ros2 topic echo /safety/sensor_watchdog/state</code></td>
 <td>no <code>front_left_stream</code> or <code>front_right_stream</code> in it; pull the Pi's cable: <code>STALE</code> within 1-2 s</td>
 </tr>
+<tr>
+<td>Calibrate each camera</td>
+<td><code>pixi run calibrate-camera front_left --host &lt;pi&gt;</code>, then <code>front_right</code> (<a href="camera-calibration.html">how</a>)</td>
+<td>the window's numbers green; the files committed</td>
+</tr>
+<tr>
+<td>The stop-sign distance</td>
+<td>a real stop sign 4.7 m ahead (tape measure); <code>stop_sign_watcher</code>'s log</td>
+<td>it locks at 4.5-5 m; its log names each camera's focal length</td>
+</tr>
+<tr>
+<td>A Mac decoding</td>
+<td>on the Mac: <code>ros2 launch aav_camera_stream camera_stream.launch.py host:=&lt;pi&gt; cameras:=front_left detector:=none</code>; its log</td>
+<td><code>by gst-mac</code>, not a warning about ffmpeg</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -546,7 +639,7 @@ OpenH264 at 2 Mbit/s (a test checks).</p>
 <tbody>
 <tr>
 <td>Calibrations</td>
-<td>the ribbon cameras have none: <code>config/cameras.yaml</code> leaves them empty (no undistortion). The 2024-25 <code>left.ini</code> is another camera's (Q22)</td>
+<td>the ribbon cameras have none yet: <code>config/cameras.yaml</code> leaves them empty (no undistortion). <strong>Ready for the car:</strong> <code>pixi run calibrate-camera</code> (<a href="camera-calibration.html">how</a>). The 2024-25 <code>left.ini</code> is another camera's (Q22)</td>
 </tr>
 <tr>
 <td><code>car.launch.py</code></td>
@@ -558,7 +651,11 @@ OpenH264 at 2 Mbit/s (a test checks).</p>
 </tr>
 <tr>
 <td>The stop sign's size</td>
-<td><code>stop_sign_watcher</code> stops for a box 55 px tall: set for the bench's and Gazebo's lens. The ribbon cameras' lens at 1280x720 differs: check the distance at the car</td>
+<td>done (24 Oct): a distance, 4.7 m, from each camera's focal length (<a href="perception.html#how-far-the-boxs-height-and-the-lens-24-oct">perception</a>). Needs the calibration, then a check with a real sign at the car</td>
+</tr>
+<tr>
+<td>A Mac's decoder</td>
+<td>done (24 Oct): GStreamer with VideoToolbox by default (<a href="#decoding-on-a-mac">above</a>)</td>
 </tr>
 <tr>
 <td>Lane finder and HUD</td>
@@ -571,7 +668,7 @@ OpenH264 at 2 Mbit/s (a test checks).</p>
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="perception.html"><small>Previous</small>← Perception</a>
-<a class="next" href="older-code.html"><small>Next</small>Older code →</a></nav>
+<a class="next" href="camera-calibration.html"><small>Next</small>Camera calibration →</a></nav>
 </main>
 <footer>Source: <code>docs/camera-pipeline.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

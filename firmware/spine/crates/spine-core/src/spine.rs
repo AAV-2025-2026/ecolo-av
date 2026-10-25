@@ -2,9 +2,15 @@
 //!
 //! Priorities, highest first:
 //! 1. Any e-stop (hardware input or ESTOP_CMD): throttle off, full brake.
-//! 2. The RC transmitter, while its override switch is on.
+//! 2. The RC transmitter, while its mode switch is on RC direct.
 //! 3. The computer, while armed and sending fresh DRIVE_CMD frames.
 //! 4. Otherwise manual: actuators idle.
+//!
+//! The transmitter's mode switch ([`RcSwitch`], TODO 48) has a third position, RC via
+//! ROS: the computer drives, from the sticks the board sends up to it. The spine treats
+//! it as the computer, with one rule more: the RC signal must stay, as in RC direct. A
+//! lost RC signal in either RC position brakes (fault bit `RC_SIGNAL_LOST`); in RC via
+//! ROS it also latches, like a timeout, so the computer must stop, then drive again.
 //!
 //! A driver fault (steering, brake, throttle or encoder) stops the car in any mode.
 //!
@@ -155,11 +161,24 @@ impl Default for SpineConfig {
     }
 }
 
+/// Where the transmitter's mode switch is (TODO 48).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RcSwitch {
+    /// The computer drives; the sticks do nothing.
+    #[default]
+    Computer,
+    /// A person drives with the sticks, through the computer: the board sends them up,
+    /// a ROS driver turns them into commands, and the computer's frames drive.
+    ViaRos,
+    /// A person drives with the sticks, straight from this board: no computer.
+    Direct,
+}
+
 /// The RC receiver, already scaled by the board crate.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RcInput {
-    /// The transmitter's override switch: true = RC drives.
-    pub override_switch: bool,
+    /// The transmitter's mode switch.
+    pub switch: RcSwitch,
     /// -1..1, positive forward.
     pub throttle: f32,
     /// -1..1, positive left.
@@ -257,6 +276,8 @@ pub struct Spine {
     fault_latched: bool,
     seen_disarm: bool,
     mode: Mode,
+    /// The mode switch when the RC was last heard: Computer at boot.
+    rc_switch: RcSwitch,
     speed_setpoint: f32,
     steering_setpoint: f32,
     last_ms: Option<u32>,
@@ -279,6 +300,7 @@ impl Spine {
             fault_latched: false,
             seen_disarm: false,
             mode: Mode::Manual,
+            rc_switch: RcSwitch::Computer,
             speed_setpoint: 0.0,
             steering_setpoint: 0.0,
             last_ms: None,
@@ -333,6 +355,15 @@ impl Spine {
             self.latched = true;
             self.seen_disarm = false;
         }
+        // The RC: lost while its switch was on an RC position (direct or via ROS).
+        if let Some(rc) = i.rc {
+            self.rc_switch = rc.switch;
+        }
+        let rc_lost = i.rc.is_none() && self.rc_switch != RcSwitch::Computer;
+        if rc_lost && self.rc_switch == RcSwitch::ViaRos {
+            self.latched = true;
+            self.seen_disarm = false;
+        }
         let driver_fault = i.driver_faults & faults::STOP != 0;
         if driver_fault {
             self.latched = true;
@@ -351,9 +382,8 @@ impl Spine {
         }
 
         // Mode.
-        let rc_override = i.rc.is_some_and(|rc| rc.override_switch);
-        let rc_lost = self.mode == Mode::Rc && i.rc.is_none();
-        self.mode = if rc_override || rc_lost {
+        let rc_direct = self.rc_switch == RcSwitch::Direct;
+        self.mode = if rc_direct {
             Mode::Rc
         } else if armed_request && !self.latched {
             Mode::Computer
@@ -414,7 +444,7 @@ impl Spine {
             }
             Mode::Rc => {
                 let rc = i.rc.unwrap_or(RcInput {
-                    override_switch: true,
+                    switch: RcSwitch::Direct,
                     throttle: 0.0,
                     steering: 0.0,
                     brake: false,
@@ -726,7 +756,7 @@ mod tests {
     fn hardware_estop_beats_rc() {
         let mut car = Car::new();
         let rc = RcInput {
-            override_switch: true,
+            switch: RcSwitch::Direct,
             throttle: 1.0,
             steering: 0.0,
             brake: false,
@@ -746,7 +776,7 @@ mod tests {
         car.arm();
         car.drive(1.0, 0.0, true, 10);
         let rc = RcInput {
-            override_switch: true,
+            switch: RcSwitch::Direct,
             throttle: 0.0,
             steering: 1.0,
             brake: false,
@@ -764,7 +794,7 @@ mod tests {
     fn rc_signal_loss_brakes() {
         let mut car = Car::new();
         let rc = RcInput {
-            override_switch: true,
+            switch: RcSwitch::Direct,
             throttle: 0.5,
             steering: 0.0,
             brake: false,
@@ -776,6 +806,97 @@ mod tests {
         let out = car.tick(Inputs::default());
         assert_eq!(out.brake, 1.0);
         assert_ne!(out.faults & faults::RC_SIGNAL_LOST, 0);
+    }
+
+    // --- RC via ROS (TODO 48) ---
+
+    fn sticks(switch: RcSwitch) -> RcInput {
+        RcInput {
+            switch,
+            throttle: 1.0,
+            steering: 1.0,
+            brake: false,
+        }
+    }
+
+    impl Car {
+        /// `ticks` of the computer's command, with the RC as given.
+        fn drive_with_rc(
+            &mut self,
+            speed: f32,
+            armed: bool,
+            rc: Option<RcInput>,
+            n: u32,
+        ) -> Outputs {
+            let mut last = None;
+            for _ in 0..n {
+                let cmd = self.cmd(speed, 0.0, armed);
+                last = Some(self.tick(Inputs {
+                    drive_cmd: Some(cmd),
+                    rc,
+                    ..Default::default()
+                }));
+            }
+            last.unwrap()
+        }
+    }
+
+    #[test]
+    fn rc_via_ros_lets_the_computer_drive_and_ignores_the_sticks() {
+        let mut car = Car::new();
+        let rc = Some(sticks(RcSwitch::ViaRos));
+        car.drive_with_rc(0.0, false, rc, 2);
+        let out = car.drive_with_rc(0.0, true, rc, 100);
+        // Full stick, but the computer says stand still: it stands still.
+        assert_eq!((out.mode, out.throttle), (Mode::Computer, 0.0));
+        assert!(out.steering_target.abs() < 1e-6);
+        let out = car.drive_with_rc(1.0, true, rc, 100);
+        assert_eq!(out.mode, Mode::Computer);
+        assert!(out.throttle > 0.0);
+        assert_eq!(out.faults & faults::RC_SIGNAL_LOST, 0);
+    }
+
+    #[test]
+    fn rc_via_ros_brakes_and_latches_when_the_rc_is_lost() {
+        let mut car = Car::new();
+        let rc = Some(sticks(RcSwitch::ViaRos));
+        car.drive_with_rc(0.0, false, rc, 2);
+        car.drive_with_rc(1.0, true, rc, 50);
+        // The receiver goes silent; the computer's commands still come.
+        let out = car.drive_with_rc(1.0, true, None, 1);
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        assert_ne!(out.faults & faults::RC_SIGNAL_LOST, 0);
+        assert_ne!(out.mode, Mode::Computer);
+        let out = car.drive_with_rc(1.0, true, None, 20);
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        // The RC comes back: no drive until the computer stops, then drives again.
+        let out = car.drive_with_rc(1.0, true, rc, 20);
+        assert_eq!((out.mode, out.throttle), (Mode::Manual, 0.0));
+        assert_eq!(out.faults & faults::RC_SIGNAL_LOST, 0);
+        car.drive_with_rc(0.0, false, rc, 2);
+        assert_eq!(car.drive_with_rc(1.0, true, rc, 5).mode, Mode::Computer);
+    }
+
+    #[test]
+    fn rc_lost_on_the_computer_position_changes_nothing() {
+        let mut car = Car::new();
+        let rc = Some(sticks(RcSwitch::Computer));
+        car.drive_with_rc(0.0, false, rc, 2);
+        car.drive_with_rc(1.0, true, rc, 50);
+        let out = car.drive_with_rc(1.0, true, None, 20);
+        assert_eq!(out.mode, Mode::Computer);
+        assert_eq!(out.faults & faults::RC_SIGNAL_LOST, 0);
+    }
+
+    #[test]
+    fn rc_direct_from_via_ros_takes_over_at_once() {
+        let mut car = Car::new();
+        let via_ros = Some(sticks(RcSwitch::ViaRos));
+        car.drive_with_rc(0.0, false, via_ros, 2);
+        car.drive_with_rc(0.0, true, via_ros, 20);
+        let out = car.drive_with_rc(0.0, true, Some(sticks(RcSwitch::Direct)), 30);
+        assert_eq!(out.mode, Mode::Rc);
+        assert!(out.throttle > 0.0, "the sticks drive");
     }
 
     #[test]
@@ -797,7 +918,7 @@ mod tests {
         // Full reverse on the RC stick: the same cap.
         let mut car = Car::new();
         let rc = RcInput {
-            override_switch: true,
+            switch: RcSwitch::Direct,
             throttle: -1.0,
             steering: 0.0,
             brake: false,
@@ -862,7 +983,7 @@ mod tests {
     fn driver_fault_stops_rc_too() {
         let mut car = Car::new();
         let rc = RcInput {
-            override_switch: true,
+            switch: RcSwitch::Direct,
             throttle: 1.0,
             steering: 0.0,
             brake: false,
@@ -958,7 +1079,7 @@ mod tests {
     fn rc_on_brake(cfg: SpineConfig) -> Outputs {
         let mut car = Car::with_config(cfg);
         let rc = RcInput {
-            override_switch: true,
+            switch: RcSwitch::Direct,
             throttle: 0.0,
             steering: 1.0,
             brake: true,
@@ -1102,7 +1223,7 @@ mod tests {
         let out = car.tick(Inputs {
             direct_cmd: Some(direct(0.5, 0.0, 0.0)),
             rc: Some(RcInput {
-                override_switch: true,
+                switch: RcSwitch::Direct,
                 throttle: 0.0,
                 steering: 0.0,
                 brake: false,

@@ -4,6 +4,9 @@
 #                                           Orin's heartbeat): what goes on the board
 #   car-day/esp32/spine-esp32-umod-v1.elf   the same with the 13-byte frames (link-v1), in
 #                                           case the Motor Pi's bridge must stay on version 1
+#   car-day/esp32/spine-esp32-umod-v2-uplink.elf  version 2 with the uplink on TX1 and the
+#                                           three-position RC switch: only once H9 and H10
+#                                           say yes (docs/esp32-bench.md)
 #   car-day/esp32/qemu-check.log            esp-qemu-check: it brakes when the heartbeat stops
 #   car-day/esp32/legacy-esp32.log          the 2025-26 C++ still builds: the way back
 #   car-day/esp32/BUILD.txt, SHA256SUMS     when, from which commit, each step's result
@@ -57,6 +60,13 @@ rc=$?
 result $rc
 V1=$RESULT
 
+step "Version 2 with the uplink and the three-position RC switch (uplink)"
+tools/esp32.sh build -q --features uplink --target-dir target/uplink
+rc=$?
+[[ $rc == 0 ]] && cp "$BOARD/target/uplink/$ELF" "$OUT/spine-esp32-umod-v2-uplink.elf"
+result $rc
+UPLINK=$RESULT
+
 step "esp-qemu-check: the firmware in QEMU brakes when the Orin's heartbeat stops"
 tools/esp32.sh qemu > "$OUT/qemu-check.log" 2>&1
 rc=$?
@@ -93,6 +103,7 @@ firmware/spine: $(tree_id firmware/spine)
 $LEGACY: $(tree_id "$LEGACY")
 v2: $V2
 v1: $V1
+uplink: $UPLINK
 esp-qemu-check: $QEMU
 legacy-esp32: $LEGACY_RESULT
 docs: $DOCS

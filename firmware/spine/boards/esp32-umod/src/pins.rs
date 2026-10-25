@@ -6,7 +6,7 @@
 //! | GPIO | MicroMod pad | Signal | Goes to | From the C++ |
 //! |---|---|---|---|---|
 //! | 16 | 19 (RX1) | UART1 RX, 115200 8N1 | the Motor-Pi's TX: the 13-byte frames | `Serial1.begin(115200, SERIAL_8N1, 16, 17)` |
-//! | 17 | 17 (TX1) | not driven | the Motor-Pi's RX | the C++ set it up as TX, and sent nothing on it |
+//! | 17 | 17 (TX1) | UART1 TX, 115200 8N1, with `--features uplink`; otherwise not driven | the Motor-Pi's RX: the uplink frames. **The wire is UNCONFIRMED** (TODO 50) | the C++ set it up as TX, and sent nothing on it |
 //! | 32 | 73 (G5) | UART2 RX, 115200 8N1, pull-up | the FlySky receiver's iBUS | `IBUS_RX_PIN 32` |
 //! | 33 | 71 (G6) | not driven | — | `IBUS_TX_PIN 33`, never used |
 //! | 21 | 12 | I2C SDA, 100 kHz | Jrk steering 0x05, Jrk brake 0x04, DAC 0x0C, PCA9555 0x20 | `I2C_SDA 21` |
@@ -44,6 +44,8 @@ macro_rules! take_pins {
     ($p:expr) => {
         $crate::pins::Pins {
             motor_pi_rx: $p.GPIO16,
+            #[cfg(feature = "uplink")]
+            motor_pi_tx: $p.GPIO17,
             ibus_rx: $p.GPIO32,
             sda: $p.GPIO21,
             scl: $p.GPIO22,
@@ -65,6 +67,8 @@ pub(crate) use take_pins;
 /// The pins, by what they do.
 pub struct Pins {
     pub motor_pi_rx: esp_hal::peripherals::GPIO16<'static>,
+    #[cfg(feature = "uplink")]
+    pub motor_pi_tx: esp_hal::peripherals::GPIO17<'static>,
     pub ibus_rx: esp_hal::peripherals::GPIO32<'static>,
     pub sda: esp_hal::peripherals::GPIO21<'static>,
     pub scl: esp_hal::peripherals::GPIO22<'static>,

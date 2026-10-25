@@ -6,8 +6,9 @@
 #        tools/esp32.sh flash [args]   build, flash it on the USB cable, show its log (args go to espflash)
 #        tools/esp32.sh check          build both links (and version 1 frames), with clippy; "skipped" without the toolchain
 #        tools/esp32.sh qemu-tools     download Espressif's QEMU into vendor/qemu (once; macOS arm64)
-#        tools/esp32.sh qemu [args]    build with --features qemu, boot it in QEMU, and check it
-#                                      brakes when the Motor-Pi's frames stop (args go to
+#        tools/esp32.sh qemu [args]    build with --features qemu,uplink, boot it in QEMU, and
+#                                      check it brakes when the Motor-Pi's frames stop, its
+#                                      uplink, and the RC's three modes (args go to
 #                                      tools/esp32_qemu.py); "skipped" without the tools
 #
 # The ESP32 has Xtensa cores, which the stock Rust (and Pixi's) can't build for. `tools`
@@ -151,7 +152,8 @@ case "${1:-}" in
       echo "skipped: needs the Xtensa Rust (pixi run esp-tools) and QEMU (pixi run esp-qemu-tools)"
       exit 0
     fi
-    build -q --features qemu --target-dir target/qemu
+    # With the uplink: the check reads its frames on UART1, and feeds iBUS on UART2.
+    build -q --features qemu,uplink --target-dir target/qemu
     image=$BOARD/target/qemu/flash.bin
     "$TOOLS/espflash" save-image --chip esp32 --merge --flash-size 4mb \
       "$BOARD/target/qemu/xtensa-esp32-none-elf/release/spine-esp32-umod" "$image" \
@@ -172,11 +174,13 @@ case "${1:-}" in
       --features can,estop-input --target-dir target/can -- -D warnings
     cargo clippy -q --release --locked --features qemu --target-dir target/qemu -- -D warnings
     cargo clippy -q --release --locked --features link-v1 --target-dir target/v1 -- -D warnings
+    cargo clippy -q --release --locked --features uplink --target-dir target/uplink -- -D warnings
+    cargo clippy -q --release --locked --features qemu,uplink --target-dir target/qemu -- -D warnings
     cargo build -q --release --locked
-    echo "builds: the Motor-Pi UART link (version 2, the default; version 1), CAN, and the QEMU build"
+    echo "builds: the Motor-Pi UART link (version 2, the default; version 1; with the uplink), CAN, and the QEMU builds"
     ;;
   *)
-    sed -n '2,12p' "$0" >&2
+    sed -n '2,13p' "$0" >&2
     exit 2
     ;;
 esac

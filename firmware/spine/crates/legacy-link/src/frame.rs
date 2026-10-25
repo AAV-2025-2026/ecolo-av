@@ -33,6 +33,8 @@ pub enum FrameError {
     Version,
     /// Version 2: a flag bit this firmware doesn't know is set.
     Flags,
+    /// The uplink: a mode or a switch position outside the known ones.
+    Field,
 }
 
 impl Frame {
