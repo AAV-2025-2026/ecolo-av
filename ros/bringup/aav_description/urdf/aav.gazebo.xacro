@@ -29,7 +29,7 @@
            limit that gives the centre wheel max_steering_angle (vehicle.py,
            gazebo_steering_limit). Missing: xacro stops here rather than steer short. -->
       <steering_limit>${float('$(arg gz_steering_limit)')}</steering_limit>
-      <steer_p_gain>10.0</steer_p_gain>  <!-- the default lags over 1 s, and Nav2 weaves -->
+      <steer_p_gain>100.0</steer_p_gain>
       <wheel_base>${L}</wheel_base>
       <wheel_separation>${T}</wheel_separation>
       <wheel_radius>${R}</wheel_radius>

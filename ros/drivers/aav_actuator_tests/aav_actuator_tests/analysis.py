@@ -12,12 +12,14 @@ No ROS here, and no numpy: the tests run with plain Python anywhere. Units are S
 | fit_line, least_squares, fit_throttle | throttle and brake maps, drag | 4.2-4.4, 3.10 |
 | fit_lag | an actuator's first-order lag | 4.1, 4.3 |
 | swing, fit_steer_lag | steering speed from a step; the linkage's lag | 3.11 |
+| fit_follower | how far one signal lags another (Gazebo's wheels behind the model's) | 52c |
 | wheel_angle, fit_circle | the real wheel angle from a circle | 4.5 |
 | drift | sideways drift on a straight line | 4.7 |
 """
 
 from __future__ import annotations
 
+import bisect
 from dataclasses import dataclass
 import math
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -354,6 +356,57 @@ def fit_steer_lag(t: Sequence[float], command: Sequence[float], measured: Sequen
         sim = rate_lag_response(ts, cs, rate, tau, ms[0])
         return sum((a - b) ** 2 for a, b in zip(sim, ms))
     return min(taus, key=error)
+
+
+def interpolate(ts: Sequence[float], values: Sequence[float], t: float) -> float:
+    """Return values at time t, linearly between samples (NaN outside them); ts sorted."""
+    i = bisect.bisect_left(ts, t)
+    if i < len(ts) and ts[i] == t:
+        return values[i]
+    if i == 0 or i >= len(ts):
+        return NAN
+    w = (t - ts[i - 1]) / (ts[i] - ts[i - 1])
+    return values[i - 1] + w * (values[i] - values[i - 1])
+
+
+def rms_error(a: Sequence[float], b: Sequence[float]) -> float:
+    """Return the root mean square of a - b over the finite pairs (NaN if none)."""
+    d = [(x - y) ** 2 for x, y in zip(a, b) if finite(x, y)]
+    return math.sqrt(sum(d) / len(d)) if d else NAN
+
+
+@dataclass(frozen=True)
+class Follower:
+    """How a signal follows a leader, as a first-order lag (fit_follower)."""
+
+    lag: float           # s
+    rms_lagged: float    # rms off with that lag
+    rms_none: float      # rms off with none
+    samples: int
+
+
+def fit_follower(leader: Sequence[Tuple[float, float]], follower: Sequence[Tuple[float, float]],
+                 taus: Sequence[float] = tuple(i * 0.001 for i in range(301))
+                 ) -> Optional[Follower]:
+    """
+    Fit the first-order lag that best turns the leader into the follower.
+
+    Both are [(t, value)], sampled at any times: the leader is read between its samples
+    linearly at each of the follower's. None if fewer than 10 overlap, or the leader
+    never moves. For Gazebo's wheels against the actuator model's angle (TODO 52c).
+    """
+    lead = sorted(leader)
+    lt, lv = [t for t, _ in lead], [v for _, v in lead]
+    pts = [(t, interpolate(lt, lv, t), v) for t, v in sorted(follower)]
+    pts = [p for p in pts if finite(p[1], p[2])]
+    if len(pts) < 10:
+        return None
+    ts, cmd, got = zip(*pts)
+    lag = fit_lag(ts, cmd, got, taus)
+    if lag is None:
+        return None
+    return Follower(lag, rms_error(lag_response(ts, cmd, lag), got), rms_error(cmd, got),
+                    len(pts))
 
 
 def wheel_angle(yaw_rate: float, speed: float, wheelbase: float) -> float:

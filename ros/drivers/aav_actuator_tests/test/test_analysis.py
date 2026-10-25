@@ -100,6 +100,27 @@ def test_swing_and_steer_lag():
     assert an.fit_steer_lag(t, cmd, measured, 0.8) == pytest.approx(0.1, abs=0.006)
 
 
+def test_fit_follower_finds_a_lag_between_differently_sampled_signals():
+    # The leader at 50 Hz (the adapter), the follower at 1 kHz (Gazebo's joints), 30 ms
+    # behind it: the fit reads the leader between its samples.
+    t_lead = [i * 0.02 for i in range(150)]
+    lead = [0.0 if x < 1.0 else min(0.5, 0.8 * (x - 1.0)) for x in t_lead]
+    t_fol = [i * 0.001 for i in range(2980)]
+    fine = [an.interpolate(t_lead, lead, x) for x in t_fol]
+    fol = an.lag_response(t_fol, fine, 0.03)
+    got = an.fit_follower(list(zip(t_lead, lead)), list(zip(t_fol, fol)))
+    assert got.lag == pytest.approx(0.03, abs=0.001)
+    assert got.rms_lagged < 1e-4 < got.rms_none
+    assert an.fit_follower([(0.0, 0.0), (1.0, 0.0)], [(0.5, 0.0)]) is None
+
+
+def test_interpolate_and_rms():
+    assert an.interpolate([0.0, 1.0], [0.0, 2.0], 0.25) == 0.5
+    assert an.interpolate([0.0, 1.0], [0.0, 2.0], 1.0) == 2.0
+    assert math.isnan(an.interpolate([0.0, 1.0], [0.0, 2.0], 1.5))
+    assert an.rms_error([1.0, 2.0, float('nan')], [0.0, 2.0, 1.0]) == pytest.approx(0.5 ** 0.5)
+
+
 def test_wheel_angle_from_yaw_rate():
     # Bicycle model: yaw rate = v tan(d) / L.
     d, v, wb = 0.3, 1.2, 1.57

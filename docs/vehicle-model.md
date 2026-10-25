@@ -20,8 +20,8 @@ process, from a free-body diagram to a simulator, one step at a time.
       the default: it waits for the stands ([Tuning the speed loop](#tuning-the-speed-loop)).
     - **The lateral loop is where delays matter:** 52° of phase margin with none, 45°
       with today's 84 ms, 31° with the worst case (259 ms) at 1 m/s.
-    - **Gazebo's car steers 0.11 s slower than `vehicle.yaml` says** (measured: an extra lag in
-      Gazebo's own steering). Worth fixing before the sim-versus-real report.
+    - **Gazebo's car steers as `vehicle.yaml` says, within 22 ms** (25 Oct; it was 0.11 s
+      late: an extra lag in Gazebo's own steering, now fixed: section 6).
     - **Nothing here drives the car.** It is for tuning, checking, and the report.
 
 [[works]] the maths and its 35 tests: 30 cases in `test_vehicle_model.py`, 5 in
@@ -379,34 +379,56 @@ numbers), then Gazebo's own Ackermann plugin:
 | | Speed | Steering |
 |---|---|---|
 | the actuator model | `vehicle.yaml`'s lags, a_max, drag | rate limit, then `steer_lag` |
-| Gazebo's plugin, after it | `max_acceleration` ±10 m/s²: no extra lag to speak of | each joint turns at `steer_p_gain` × error: **one more lag, 1/10 = 0.1 s** |
+| Gazebo's plugin, after it | `max_acceleration` ±10 m/s²: no extra lag to speak of | each joint turns at `steer_p_gain` × error: **one more lag, 1/`steer_p_gain`** |
 | the actuator tests in Gazebo (15 Oct) | give back 1.496 m/s², 0.100 s, 0.100 /s | give back 0.817 rad/s, 0.105 s: they read the model's angle, not Gazebo's wheels |
 
-**Measured in Gazebo (24 Oct, Ben's Mac, headless, its own domain):** `actuator-test
-steer-rate --sim` drove the steps (centre → full lock → centre, each way), and a
-recorder logged Gazebo's steering joints (`/joint_states`, made into the centre angle)
-beside the model's angle (`/vehicle/steering`), 57 s:
+### Measured, and fixed (TODO 52c, 24-25 Oct)
 
-| Fit: Gazebo's wheels from the model's angle | Result |
-|---|---|
-| no lag | 16.2 mrad rms off |
-| **a first-order lag** | **0.110 s**, 0.5 mrad rms off |
-| a pure delay instead | 0.110 s, 2.2 mrad rms off |
+How: `actuator-test steer-rate --sim` drives the steps (centre → full lock → centre, each
+way) in the empty world, headless, on a ROS domain of its own, while
+`tools/gazebo_steering.py` records Gazebo's two steering joints (`/joint_states`, made into
+the centre wheel's angle) and the model's angle (`/vehicle/steering`), and fits the lag
+between them (`analysis.fit_follower`).
 
-0.110 s = 1/`steer_p_gain` (0.1 s) + about 10 ms from the adapter's 50 Hz hold. So
-Gazebo's wheels steer 0.11 s later than `vehicle.yaml` says. Its lateral phase margin:
+| Gazebo's settings | Lag behind the model | Left over (rms) | Runs |
+|---|---|---|---|
+| `steer_p_gain` 10 (before) | **0.111 s** | 0.5 mrad | 2 |
+| gain 50, joint speed limit 1.0 rad/s | 0.164 s | 19 mrad: not a lag | 1 |
+| gain 100 or 200, joint speed limit 1.0 | 0.07 s | 3 mrad: not a lag | 2 |
+| gain 50, joint speed limit 5.0 | 0.032 s | 0.4 mrad | 1 |
+| **gain 100, joint speed limit 5.0 (now)** | **0.022 s** | 0.4-0.5 mrad | 2 (a third, on a busy Mac: 0.063 s) |
+| gain 200, joint speed limit 5.0 | 0.017 s | 0.5 mrad | 1 |
 
-| v (m/s) | The model (typical delays) | Gazebo (+0.1 s) |
+What it showed:
+
+| Found | Why | Fix |
 |---|---|---|
-| 1 | 45° | 37° |
-| 3 | 43° | 34° |
+| A higher gain alone made it worse | the URDF's steering joints had a 1.0 rad/s speed limit, which Gazebo enforces: its wheels then turned at only 0.63 rad/s, slower than the model's 0.8 | the limit 1.0 → 5.0 rad/s (`aav.urdf.xacro`), far over `steer_rate`, so the model limits, not Gazebo |
+| The lag is 1/gain + 11-12 ms | the adapter sends the model's angle 50 times a second: holding each for 20 ms delays it by 10 ms on average, plus the messaging | `steer_p_gain` 10 → **100** (`aav.gazebo.xacro`) |
+| A busy computer adds more | gazebo_adapter's ticks stall (up to 0.2 s of Gazebo's time) when other simulators run | none needed: run it twice |
 
-Gazebo is a little harsher than the car the guesses describe: anything that works there
-has margin to spare. **To make them match** (not done: it changes the simulator): raise
-`steer_p_gain` to 50 (a 20 ms lag), or take 0.1 s off the steering lag the adapter uses.
-Then measure Gazebo's wheel angle (its joint states) against the model's, for the
-sim-versus-real report (T2.7). Speed: the 15 Oct runs match (0 to 3 m/s in 6.2 s), except
-that Gazebo's car starts rolling about 0.3 s late.
+**Why gain 100, not the other proposal** (take 0.1 s off the adapter's `steer_lag` and let
+Gazebo's gain-10 lag be the linkage):
+
+| | gain 100 (chosen) | the adapter's lag less 0.1 s |
+|---|---|---|
+| Off the model | 22 ms | 11 ms |
+| `/vehicle/steering` | still the wheels' angle, within 0.5 mrad | the motor's, 0.1 s ahead of the wheels: the actuator tests in Gazebo would fit a lag of 0 |
+| A new `steer_lag` from the car day | nothing to change | the xacro's gain must change with it |
+| Gain 200 | would save 5 ms more, but the joint's catch-up after each 20 ms hold nears the 5 rad/s limit if `steer_rate` grows | |
+
+Lateral phase margin (`pixi run vehicle-model`, typical delays):
+
+| v (m/s) | The model | Gazebo before (+0.11 s) | Gazebo now (+20 ms) |
+|---|---|---|---|
+| 1 | 45° | 37° | 43° |
+| 3 | 43° | 34° | 41° |
+
+`tools/tests/test_vehicle_model_tool.py` keeps it so: Gazebo's extra lag (1/gain + the
+hold) at most a quarter of `vehicle.yaml`'s `steer_lag`, and the joints' speed limit at least
+4 × `steer_rate`. Next: the same step on the car (T2.7), for the sim-versus-real report.
+Speed: the 15 Oct runs match (0 to 3 m/s in 6.2 s), except that Gazebo's car starts
+rolling about 0.3 s late.
 
 ## 7. Which numbers are guesses
 
@@ -573,8 +595,8 @@ loop keeps 30° or more with the Orin's measured delays.
 
 ### Making Gazebo's car match the real one
 
-Fit the car day's numbers, put them in `vehicle.yaml`, fix Gazebo's extra steering lag
-(section 6), then compare the same step in both: that's the sim-versus-real report.
+Fit the car day's numbers, put them in `vehicle.yaml` (Gazebo's steering follows them:
+section 6), then compare the same step in both: that's the sim-versus-real report.
 
 ### After state space
 
