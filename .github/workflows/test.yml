@@ -13,7 +13,7 @@ on:
   # main only: a push of a helper's half-done branch (wt/*, archive/*) mailed a failure
   # each time. A pull request still tests its branch.
   push:
-    branches: [main, wt/ci-arm]   # TEMPORARY: wt/ci-arm, to see the new ARM jobs run
+    branches: [main]
   pull_request:
   schedule:
     - cron: "0 7 * * *"   # 03:00 in Ottawa (EDT)
@@ -64,8 +64,7 @@ jobs:
         run: pixi run --locked -e mcp python3 tools/tests/mcp_smoke.py
 
   mac:
-    # TEMPORARY: wt/ci-arm, to find the nightly's hang (TODO 42)
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/wt/ci-arm'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     timeout-minutes: 90
     steps:
