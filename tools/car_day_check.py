@@ -32,6 +32,7 @@ ESP32_DIR = f'{CAR_DAY}/esp32'
 FIRMWARES = {                       # what car-day-build saves, and what each is for
     'spine-esp32-umod-v2.elf': 'Rust, version 2 frames (the heartbeat; the default)',
     'spine-esp32-umod-v1.elf': 'Rust, the 13-byte frames (link-v1)',
+    'spine-esp32-umod-v2-uplink.elf': 'Rust, version 2 with the uplink (once H9, H10 say yes)',
 }
 LEGACY = 'firmware/legacy/aav_umod_esp32'
 MODELS = {
@@ -309,7 +310,7 @@ def firmware_lines(build, files, spine_tree, legacy_tree):
         lines.append(Line('MISSING', 'ESP32 Rust', f'built {when}, but firmware/spine '
                           'changed since (or has uncommitted changes)', fix))
     else:
-        lines.append(Line('OK', 'ESP32 Rust', f'v2 and v1 built {when}, in {ESP32_DIR}/'))
+        lines.append(Line('OK', 'ESP32 Rust', f'v2, v1 and v2-uplink built {when}, in {ESP32_DIR}/'))
     qemu = build.get('esp-qemu-check', '')
     if qemu.startswith('PASS') and spine_now:
         lines.append(Line('OK', 'ESP32 QEMU', f'esp-qemu-check passed {when}: brakes '

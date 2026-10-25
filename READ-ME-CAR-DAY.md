@@ -96,6 +96,7 @@ Step 4 puts the ESP32 firmware here, out of git:
 |---|---|
 | `car-day/esp32/spine-esp32-umod-v2.elf` | the Rust firmware, version 2 frames (the Orin's heartbeat): **the one to flash** |
 | `car-day/esp32/spine-esp32-umod-v1.elf` | the same, 13-byte frames: if the Motor Pi must stay on version 1 |
+| `car-day/esp32/spine-esp32-umod-v2-uplink.elf` | version 2 with the uplink on TX1 and the three-position RC switch: **only once H9 and H10 say yes** (6e) |
 | `car-day/esp32/qemu-check.log` | the emulator's proof: it brakes 111-120 ms after the heartbeat stops |
 | `car-day/esp32/BUILD.txt`, `SHA256SUMS` | when, from which commit; the check reads it |
 
@@ -422,6 +423,20 @@ Any time something is wrong: e-stop, Ctrl-C the bridge, then:
 Or the C++ from source: `pixi run -e firmware legacy-esp32 -t upload` (`src/secrets.h` holds
 its WiFi; with the placeholders it can't join the WiFi). The Rust with 13-byte frames:
 `car-day/esp32/spine-esp32-umod-v1.elf`, `frame_version: 1`.
+
+### 6e. Only if H9 and H10 say yes: the uplink and the RC modes 🔒
+
+H9: the ESP32's TX1 (GPIO17) reaches the Motor Pi's RX. H10: CH6 is a three-position
+switch. Both yes, and 1-14 passed:
+
+| # | Do | You should see |
+|---|---|---|
+| 1 | `vendor/cargo-tools/bin/espflash flash --chip esp32 --monitor car-day/esp32/spine-esp32-umod-v2-uplink.elf` | the first log line ends `with the uplink on TX1 and the three-position mode switch` |
+| 2 | On the Motor Pi: `legacy.yaml`, `uplink: true`, then `~/aav-jazzy/aav.sh build`, restart the bridge | the bridge logs `uplink: frames from the ESP32` |
+| 3 | Steps U1-U6, then R1-R8, in [the bench page](docs/esp32-bench.md) ("The uplink and the RC modes") | as each step says |
+
+Either is no: stay on `spine-esp32-umod-v2.elf` with `uplink: false`; the car drives as
+before, without the positions coming back.
 
 **Stop point:** 1-14 and 9a-9c pass, or the C++ is back and the reason is written down.
 

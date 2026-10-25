@@ -112,7 +112,7 @@ FILES = list(cdc.FIRMWARES) + ['BUILD.txt', 'qemu-check.log']
 def test_all_firmware_built_from_todays_source_is_ok():
     lines = cdc.firmware_lines(BUILD, FILES, 'tree1', 'tree2')
     assert [ln.status for ln in lines] == ['OK', 'OK', 'OK']
-    assert 'v2 and v1' in lines[0].detail
+    assert 'v2, v1 and v2-uplink' in lines[0].detail
 
 
 def test_a_firmware_change_since_makes_the_rust_and_qemu_out_of_date():

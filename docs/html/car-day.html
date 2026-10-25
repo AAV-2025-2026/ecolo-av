@@ -7,7 +7,7 @@
 <!-- Generated from READ-ME-CAR-DAY.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">36 min read · 16 sections</div></header>
+<div class="meta">37 min read · 16 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -422,6 +422,10 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 <tr>
 <td><code>car-day/esp32/spine-esp32-umod-v1.elf</code></td>
 <td>the same, 13-byte frames: if the Motor Pi must stay on version 1</td>
+</tr>
+<tr>
+<td><code>car-day/esp32/spine-esp32-umod-v2-uplink.elf</code></td>
+<td>version 2 with the uplink on TX1 and the three-position RC switch: <strong>only once H9 and H10 say yes</strong> (6e)</td>
 </tr>
 <tr>
 <td><code>car-day/esp32/qemu-check.log</code></td>
@@ -1184,6 +1188,37 @@ fails, and roll back.</strong> Drive from the laptop: <code>export ROS_DOMAIN_ID
 <p>Or the C++ from source: <code>pixi run -e firmware legacy-esp32 -t upload</code> (<code>src/secrets.h</code> holds
 its WiFi; with the placeholders it can't join the WiFi). The Rust with 13-byte frames:
 <code>car-day/esp32/spine-esp32-umod-v1.elf</code>, <code>frame_version: 1</code>.</p>
+<h3 id="6e-only-if-h9-and-h10-say-yes-the-uplink-and-the-rc-modes">6e. Only if H9 and H10 say yes: the uplink and the RC modes 🔒</h3>
+<p>H9: the ESP32's TX1 (GPIO17) reaches the Motor Pi's RX. H10: CH6 is a three-position
+switch. Both yes, and 1-14 passed:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>vendor/cargo-tools/bin/espflash flash --chip esp32 --monitor car-day/esp32/spine-esp32-umod-v2-uplink.elf</code></td>
+<td>the first log line ends <code>with the uplink on TX1 and the three-position mode switch</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>On the Motor Pi: <code>legacy.yaml</code>, <code>uplink: true</code>, then <code>~/aav-jazzy/aav.sh build</code>, restart the bridge</td>
+<td>the bridge logs <code>uplink: frames from the ESP32</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Steps U1-U6, then R1-R8, in <a href="esp32-bench.html">the bench page</a> ("The uplink and the RC modes")</td>
+<td>as each step says</td>
+</tr>
+</tbody>
+</table></div>
+<p>Either is no: stay on <code>spine-esp32-umod-v2.elf</code> with <code>uplink: false</code>; the car drives as
+before, without the positions coming back.</p>
 <p><strong>Stop point:</strong> 1-14 and 9a-9c pass, or the C++ is back and the reason is written down.</p>
 </section>
 <section class="card"><h2 id="session-7-can-read-only">Session 7: CAN, read-only</h2>
