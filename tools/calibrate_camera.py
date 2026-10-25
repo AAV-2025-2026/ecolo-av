@@ -13,7 +13,7 @@ camera_stream (no detector, no undistortion, every picture as image_raw), and op
 camera_calibration's window on it (the calib environment: pixi install --locked -e calib,
 done here once). Move the board until X, Y, Size and Skew are green, press CALIBRATE, then
 SAVE, then close the window. The result (/tmp/calibrationdata.tar.gz) is filed as
-src/sensors/aav_camera_stream/config/calibrations/<camera>.yaml, and config/cameras.yaml
+ros/sources/aav_camera_stream/config/calibrations/<camera>.yaml, and config/cameras.yaml
 points to it: commit both. Everything stays on this computer's own ROS domain (LOCALHOST):
 only the RTSP stream comes over the network.
 

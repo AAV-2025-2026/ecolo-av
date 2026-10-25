@@ -38,7 +38,7 @@ The same for `front_right`, in a second program.
 
 | Part | File | Note |
 |---|---|---|
-| The Pi's settings | `src/sensors/aav_camera_stream/pi/mediamtx.yml` | install: `pi/README.md` [[untested]] on the Pi |
+| The Pi's settings | `ros/sources/aav_camera_stream/pi/mediamtx.yml` | install: `pi/README.md` [[untested]] on the Pi |
 | The node | `aav_camera_stream/camera_stream.py` | one per camera |
 | Its logic, no ROS | `decoders.py`, `reader.py`, `latest.py`, `lens.py`, `timecode.py`, `models.py`, `calibration.py` | 55 tests |
 | The detector | `aav_detector.detectors.load_detector` | imported, not copied |

@@ -167,14 +167,14 @@ with `docs/interfaces.yaml`.
 
 | Hop | Where |
 |---|---|
-| Joystick | `src/drivers/aav_teleop/config/` |
+| Joystick | `ros/drivers/aav_teleop/config/` |
 | Keyboard | `tools/keyboard.sh` |
-| twist_mux priorities | `src/mux/aav_mux/config/twist_mux.yaml` |
-| ego | `src/ego/aav_ego/` (the maths: `ackermann.py`; the limits: `config/`) |
-| Today's backend | `src/backends/aav_legacy/` (`legacy_uart_bridge.py`, `encoder_udp.py`) |
-| The CAN backend | `src/backends/aav_spine/` (`spine_bridge.py`, `can_codec.py`) |
+| twist_mux priorities | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| ego | `ros/ego/aav_ego/` (the maths: `ackermann.py`; the limits: `config/`) |
+| Today's backend | `ros/can_bridge/aav_legacy/` (`legacy_uart_bridge.py`, `encoder_udp.py`) |
+| The CAN backend | `ros/can_bridge/aav_spine/` (`spine_bridge.py`, `can_codec.py`) |
 | The CAN frames | `firmware/can/aav.dbc` |
 | The board's logic | `firmware/spine/crates/spine-core` |
-| Nav2 | `src/drivers/aav_navigation/` |
-| The EKFs | `src/localization/aav_localization/config/` |
+| Nav2 | `ros/drivers/aav_navigation/` |
+| The EKFs | `ros/localization/aav_localization/config/` |
 | Every topic | `docs/interfaces.yaml`, shown as [Topics](interfaces.md) |

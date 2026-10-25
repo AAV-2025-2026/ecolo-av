@@ -19,7 +19,7 @@ import layout_check  # noqa: E402, I100
 
 ROOT = Path(__file__).resolve().parents[2]
 TOPICS = set(yaml.safe_load((ROOT / 'docs/interfaces.yaml').read_text())['topics'])
-BRIDGE = yaml.safe_load((ROOT / 'src/aav_bringup/config/foxglove_bridge.yaml').read_text())
+BRIDGE = yaml.safe_load((ROOT / 'ros/bringup/aav_bringup/config/foxglove_bridge.yaml').read_text())
 WIFI = BRIDGE['foxglove_bridge']['ros__parameters']['topic_whitelist']
 LAYOUTS = {p.stem: json.loads(p.read_text()) for p in layout_check.LAYOUTS}
 

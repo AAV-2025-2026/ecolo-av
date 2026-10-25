@@ -1,0 +1,11 @@
+# Yahboom 10-axis IMU (ros/sources/aav_imu_yahboom, in Rust).
+# Publishes /sensors/imu/data_raw (sensor_msgs/Imu: gyro + accel, no orientation) and /sensors/imu/mag
+# (raw counts, not tesla, so unused). Frame imu_link: its mount is in
+# aav_description/config/vehicle.yaml.
+imu_node:
+  ros__parameters:
+    port: /dev/aav/imu          # udev name (tools/udev/99-aav.rules); was /dev/ttyUSB0
+    baud_rate: 115200
+    frame_id: imu_link
+    gyro_stddev: 0.02           # rad/s. TODO measure: log 5 min standing still, take the std
+    accel_stddev: 0.2           # m/s^2. TODO measure the same way

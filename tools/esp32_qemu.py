@@ -63,7 +63,7 @@ import time
 from typing import Iterable, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'src/backends/aav_legacy'))
+sys.path.insert(0, str(ROOT / 'ros/can_bridge/aav_legacy'))
 from aav_legacy.legacy_protocol import (  # noqa: E402
     LegacyMapping, MODE_COMPUTER, MODE_RC_DIRECT, MODE_STOPPED, pack_frame, pack_frame_v2,
     stop_command, SWITCH_NONE, SWITCH_RC_DIRECT, SWITCH_RC_VIA_ROS, to_legacy, Uplink,

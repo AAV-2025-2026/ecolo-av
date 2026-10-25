@@ -5,7 +5,7 @@
 #
 # Checked by:
 #   firmware/spine/crates/wheel-encoder/tests/vectors.rs   (the Pico 2's Rust)
-#   src/backends/aav_legacy/test/test_legacy_protocol.py   (encoder_udp on the Motor Pi)
+#   ros/can_bridge/aav_legacy/test/test_legacy_protocol.py   (encoder_udp on the Motor Pi)
 #
 # spokes      bytes
 0             00000000

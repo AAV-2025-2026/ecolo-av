@@ -74,7 +74,7 @@ into `/ego/actuator_cmd`: an `AckermannDriveStamped` with a speed and a steering
 
 ## 5. One car model, everywhere
 
-The car's numbers live in one file, `src/aav_description/config/vehicle.yaml`. The launch
+The car's numbers live in one file, `ros/bringup/aav_description/config/vehicle.yaml`. The launch
 files hand them to every part that needs them.
 
 | Part | Uses |

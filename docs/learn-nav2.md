@@ -217,10 +217,10 @@ HUD route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to m
 
 | What | Where |
 |---|---|
-| Every Nav2 setting | `src/drivers/aav_navigation/config/nav2.yaml` |
-| Which servers start; radar and camera switches | `src/drivers/aav_navigation/launch/navigation.launch.py` |
-| The car's behaviour trees | `src/drivers/aav_navigation/behavior_trees/` |
-| Maps | `src/drivers/aav_navigation/maps/` (`empty`, `example_lot`) |
-| Footprint, turning radius, stop zone from the car's size | `src/aav_description/aav_description/vehicle.py` |
-| Nav2's place among the drivers | `src/mux/aav_mux/config/twist_mux.yaml` |
+| Every Nav2 setting | `ros/drivers/aav_navigation/config/nav2.yaml` |
+| Which servers start; radar and camera switches | `ros/drivers/aav_navigation/launch/navigation.launch.py` |
+| The car's behaviour trees | `ros/drivers/aav_navigation/behavior_trees/` |
+| Maps | `ros/drivers/aav_navigation/maps/` (`empty`, `example_lot`) |
+| Footprint, turning radius, stop zone from the car's size | `ros/bringup/aav_description/aav_description/vehicle.py` |
+| Nav2's place among the drivers | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
 | Costmaps in detail; draw a map | [Costmaps](costmaps.md) |

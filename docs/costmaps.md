@@ -8,7 +8,7 @@ A **costmap** is a grid laid on the ground. Every cell holds a cost:
 
 Nav2's planner searches the grid for a path the car can drive. Its controller follows that
 path and slows down near high-cost cells. `nav2_costmap_2d` builds the grids from layers.
-The settings are in `src/drivers/aav_navigation/config/nav2.yaml`.
+The settings are in `ros/drivers/aav_navigation/config/nav2.yaml`.
 
 ## The two costmaps
 
@@ -179,7 +179,7 @@ the accelerometer, and in a turn the sideways push looks like tilt: 2 m/s² read
 ## Map files
 
 A Nav2 map is an image (PGM or PNG) plus a YAML file that says how to read it.
-`src/drivers/aav_navigation/maps/README.md` covers the format line by line. In short:
+`ros/drivers/aav_navigation/maps/README.md` covers the format line by line. In short:
 - one pixel is one cell;
 - white is free, black is blocked, grey is unknown;
 - `resolution` is metres per pixel;
@@ -188,7 +188,7 @@ A Nav2 map is an image (PGM or PNG) plus a YAML file that says how to read it.
 Don't paint maps by hand. Write a short spec and generate them:
 
 ```bash
-tools/make_map.py src/drivers/aav_navigation/maps/example_lot.spec.yaml
+tools/make_map.py ros/drivers/aav_navigation/maps/example_lot.spec.yaml
 ```
 
 A spec lists:
@@ -201,7 +201,7 @@ Python and PyYAML, not ROS.
 
 ## Your first map, in ten minutes
 
-1. Open `src/drivers/aav_navigation/maps/example_lot.spec.yaml`, and add a box under
+1. Open `ros/drivers/aav_navigation/maps/example_lot.spec.yaml`, and add a box under
    `blocked:`:
 
     ```yaml
@@ -211,7 +211,7 @@ Python and PyYAML, not ROS.
 2. Make the map again:
 
     ```bash
-    pixi run python tools/make_map.py src/drivers/aav_navigation/maps/example_lot.spec.yaml
+    pixi run python tools/make_map.py ros/drivers/aav_navigation/maps/example_lot.spec.yaml
     pixi run build
     ```
 
@@ -223,7 +223,7 @@ Python and PyYAML, not ROS.
 **You should see** the planned path bend around your box. In the test on 10 October it
 passed at y = 4.4 m, beside a box that ends at y = 3 m.
 
-5. Put the map back: `git checkout src/drivers/aav_navigation/maps/`.
+5. Put the map back: `git checkout ros/drivers/aav_navigation/maps/`.
 
 !!! note "Two things this teaches"
   - The box is only in the map, not in Gazebo's world. Nav2 avoids it because the map
@@ -260,7 +260,7 @@ In Gazebo, on the empty map, each run on a fresh simulator:
 ## Where the map sits on the Earth
 
 The map frame is pinned to the ground by the **datum** in
-`src/localization/aav_localization/config/navsat.yaml`:
+`ros/localization/aav_localization/config/navsat.yaml`:
 - map (0, 0) is the datum's latitude and longitude;
 - x points east and y points north.
 

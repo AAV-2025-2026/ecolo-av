@@ -60,7 +60,7 @@ the checks tell you if the two disagree.
 |---|---|---|---|
 | `docs/interfaces.yaml` | every topic: its type, who publishes it, who reads it, and in which profiles it must be live | `pixi run check <profile>` on a running system; `pixi run test` checks that the Topics page matches | `pixi run python tools/gen_interfaces_md.py > docs/interfaces.md` |
 | `firmware/can/aav.dbc` | every CAN frame between ROS and the spine | test vectors, shared by the Python codec and the Rust tests | update `can_codec.py` and `protocol.rs`, run `firmware/can/gen_test_vectors.py`, run both test suites |
-| `src/aav_description/config/vehicle.yaml` | every measurement of the car | its unit test; ego, the URDF, Nav2 and the adapters all read it | measure the car: [Car numbers](car_measurements.md) |
+| `ros/bringup/aav_description/config/vehicle.yaml` | every measurement of the car | its unit test; ego, the URDF, Nav2 and the adapters all read it | measure the car: [Car numbers](car_measurements.md) |
 
 ## The environment: Pixi
 
@@ -192,7 +192,7 @@ changes.
 ## The computers, and what runs where
 
 The car runs one ROS graph across several computers. Each one starts `pixi run car
-<machine>`, and `src/aav_bringup/config/machines/<machine>.yaml` switches its parts on.
+<machine>`, and `ros/bringup/aav_bringup/config/machines/<machine>.yaml` switches its parts on.
 
 | Machine | Runs | Today |
 |---|---|---|

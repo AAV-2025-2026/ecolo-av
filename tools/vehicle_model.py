@@ -9,7 +9,7 @@ The car's linear model: print its poles, step responses and margins, and draw th
     pixi run vehicle-model --speed-loop         TODO 27: the speed loop's designs against the
                                                 throttle's 5x uncertainty (and its figure)
 
-The maths: src/ego/aav_ego/aav_ego/vehicle_model.py. The page: docs/vehicle-model.md.
+The maths: ros/ego/aav_ego/aav_ego/vehicle_model.py. The page: docs/vehicle-model.md.
 The figures go to docs/img/vehicle-model-*.png, drawn with matplotlib (in Pixi's default
 environment, through ROS's rqt); without it, the tables only. No ROS needed.
 """
@@ -28,8 +28,8 @@ from aav_ego import vehicle_model as vm  # noqa: E402, I100
 from aav_gazebo import actuator_model as am  # noqa: E402
 import numpy as np  # noqa: E402
 
-VEHICLE_YAML = ROOT / 'src/aav_description/config/vehicle.yaml'
-GAZEBO_XACRO = ROOT / 'src/aav_description/urdf/aav.gazebo.xacro'
+VEHICLE_YAML = ROOT / 'ros/bringup/aav_description/config/vehicle.yaml'
+GAZEBO_XACRO = ROOT / 'ros/bringup/aav_description/urdf/aav.gazebo.xacro'
 IMG = ROOT / 'docs' / 'img'
 
 

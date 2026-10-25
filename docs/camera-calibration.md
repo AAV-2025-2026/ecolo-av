@@ -22,7 +22,7 @@ is the procedure, ready for the car day. It uses ROS's stock calibrator,
                            camera_calibration's window  ◄── you move the board
                                  │ SAVE
                                  ▼
-                           src/sensors/aav_camera_stream/config/calibrations/front_left.yaml
+                           ros/sources/aav_camera_stream/config/calibrations/front_left.yaml
                            config/cameras.yaml:  calibration: <that file>
 ```
 
@@ -87,8 +87,8 @@ The window shows four bars. Each turns green when you have covered enough of it.
 Then commit the two files:
 
 ```bash
-git add src/sensors/aav_camera_stream/config/calibrations/front_left.yaml \
-        src/sensors/aav_camera_stream/config/cameras.yaml
+git add ros/sources/aav_camera_stream/config/calibrations/front_left.yaml \
+        ros/sources/aav_camera_stream/config/cameras.yaml
 ```
 
 A result saved earlier can be filed by hand:

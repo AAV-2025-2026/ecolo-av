@@ -68,8 +68,8 @@ pub const IDLE_BRAKE: f32 = 0.0;
 /// brakes to a stop and holds. The 2025-26 firmware put the brake full on at once.
 pub const RC_GEAR_BRAKE: RcGearBrake = RcGearBrake::SpeedZero;
 
-// Copies of src/aav_description/config/vehicle.yaml, the one place the car's numbers live:
-// the firmware can't read it. src/aav_description/test/test_vehicle.py checks the copies.
+// Copies of ros/bringup/aav_description/config/vehicle.yaml, the one place the car's numbers live:
+// the firmware can't read it. ros/bringup/aav_description/test/test_vehicle.py checks the copies.
 
 /// The virtual centre wheel's steering limit, either way (rad): vehicle.yaml
 /// `max_steering_angle`. TODO(Q1): measure on the car.

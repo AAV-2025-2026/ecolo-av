@@ -39,7 +39,7 @@ Each sensor fails in its own way. Together they cover each other's gaps
 | Lidar (roof) | 3D points all round | 10 Hz (sim) | `/sensors/lidar/points` (sim only) | `sensor_msgs/PointCloud2` | `lidar_link` (sim only) | a generic one, road world, `lidar:=true` |
 | Battery (Victron) | voltage, charge | 1 Hz (bench) | `/vehicle/battery` | `sensor_msgs/BatteryState` | - | no |
 
-Every frame's position on the car is in `src/aav_description/config/vehicle.yaml`.
+Every frame's position on the car is in `ros/bringup/aav_description/config/vehicle.yaml`.
 
 ## 3. Wheel speed
 
@@ -147,13 +147,13 @@ All about it: [Learn: GPS](learn-gps.md).
 
 | What | Where |
 |---|---|
-| Starting the drivers | `src/sensors/aav_sensors/launch/sensors.launch.py`, `cameras.launch.py` |
-| Driver settings | `src/sensors/aav_sensors/config/` (`imu.yaml`, `imu_filter.yaml`, `ublox_gps.yaml`, `cameras/`) |
-| IMU driver | `src/sensors/aav_imu_yahboom` |
-| Radar driver | `src/sensors/ti_ros2_driver` |
-| Battery | `src/sensors/battery_monitor` |
-| Wheel speed | `src/backends/aav_legacy` (today), `src/backends/aav_spine` (CAN) |
-| Sensor positions | `src/aav_description/config/vehicle.yaml` |
-| Gazebo's sensors | `src/aav_description/urdf/aav.gazebo.xacro`, `src/backends/aav_gazebo` |
-| The bench's pretend sensors | `src/bench/aav_bench/aav_bench/sensors.py` |
+| Starting the drivers | `ros/sources/aav_sensors/launch/sensors.launch.py`, `cameras.launch.py` |
+| Driver settings | `ros/sources/aav_sensors/config/` (`imu.yaml`, `imu_filter.yaml`, `ublox_gps.yaml`, `cameras/`) |
+| IMU driver | `ros/sources/aav_imu_yahboom` |
+| Radar driver | `ros/sources/ti_ros2_driver` |
+| Battery | `ros/sources/battery_monitor` |
+| Wheel speed | `ros/can_bridge/aav_legacy` (today), `ros/can_bridge/aav_spine` (CAN) |
+| Sensor positions | `ros/bringup/aav_description/config/vehicle.yaml` |
+| Gazebo's sensors | `ros/bringup/aav_description/urdf/aav.gazebo.xacro`, `ros/sim/aav_gazebo` |
+| The bench's pretend sensors | `ros/sim/aav_bench/aav_bench/sensors.py` |
 | Every topic | `docs/interfaces.yaml`, shown as [Topics](interfaces.md) |

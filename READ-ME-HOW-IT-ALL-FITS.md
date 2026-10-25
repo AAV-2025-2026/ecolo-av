@@ -67,7 +67,7 @@ pixi run car motor_pi    # on the Motor-Pi (today's drive path)
 pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU
 ```
 
-Its **machine file** (`src/aav_bringup/config/machines/<name>.yaml`) lists the parts that run there:
+Its **machine file** (`ros/bringup/aav_bringup/config/machines/<name>.yaml`) lists the parts that run there:
 
 | Machine | Parts that run there |
 |---|---|

@@ -656,7 +656,7 @@ they already build and test with stock Rust.
 ## The CAN bridge on the Orin, in Rust (23 Oct)
 
 `spine_bridge`, the ROS node between ego and the CAN bus, has a Rust twin:
-`src/backends/aav_spine_bridge` (PLAN.md T1.8). It packs and unpacks the frames with the
+`ros/can_bridge/aav_spine_bridge` (PLAN.md T1.8). It packs and unpacks the frames with the
 firmware's own `spine-core` code, so both ends of the bus share one implementation of
 `aav.dbc`.
 

@@ -43,7 +43,7 @@ Why and how: [the heartbeat](../../../../docs/rust-firmware.md#the-heartbeat-ver
 | Witness | Test |
 |---|---|
 | this crate | `cargo test -p legacy-link` |
-| `legacy_protocol.py` | `src/backends/aav_legacy/test/test_legacy_protocol.py` |
+| `legacy_protocol.py` | `ros/can_bridge/aav_legacy/test/test_legacy_protocol.py` |
 | the C++ itself, compiled on the laptop with the stand-ins in `cpp_check/` | `tools/tests/test_legacy_cpp.py` |
 
 After changing `legacy_protocol.py` or this crate:

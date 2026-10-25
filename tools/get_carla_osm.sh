@@ -30,8 +30,8 @@ server=${OVERPASS_SERVER:-https://overpass-api.de/api}
 fetch=(curl -fsS --retry 2 --retry-delay 10 -A "aav-capstone-get_carla_osm/1.0 (github.com/AAV-2025-2026/ecolo-av)")
 
 # The datum and the box round it, from the same code carla_adapter uses (no ROS needed).
-read -r lat lon west south east north < <(PYTHONPATH=src/backends/aav_carla python3 -m \
-  aav_carla.georef src/localization/aav_localization/config/navsat.yaml --around "$around")
+read -r lat lon west south east north < <(PYTHONPATH=ros/sim/aav_carla python3 -m \
+  aav_carla.georef ros/localization/aav_localization/config/navsat.yaml --around "$around")
 echo "datum $lat, $lon; box west $west, south $south, east $east, north $north"
 
 dir=maps/carla

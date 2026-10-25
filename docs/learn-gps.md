@@ -221,12 +221,12 @@ and y near 11.
 
 | What | Where |
 |---|---|
-| GPS driver settings | `src/sensors/aav_sensors/config/ublox_gps.yaml` |
-| Which driver starts | `src/sensors/aav_sensors/launch/sensors.launch.py` (`gps_driver:=`) |
-| The datum, navsat_transform | `src/localization/aav_localization/config/navsat.yaml` |
-| The antenna's spot on the car | `src/aav_description/config/vehicle.yaml` (`gps_link`) |
-| Gazebo's GPS sensor | `src/aav_description/urdf/aav.gazebo.xacro` (`navsat`) |
-| Gazebo → our topic name | `src/backends/aav_gazebo/aav_gazebo/gazebo_gps.py` |
-| The bench's pretend GPS | `src/bench/aav_bench/aav_bench/sensors.py` (`MockGps`) |
+| GPS driver settings | `ros/sources/aav_sensors/config/ublox_gps.yaml` |
+| Which driver starts | `ros/sources/aav_sensors/launch/sensors.launch.py` (`gps_driver:=`) |
+| The datum, navsat_transform | `ros/localization/aav_localization/config/navsat.yaml` |
+| The antenna's spot on the car | `ros/bringup/aav_description/config/vehicle.yaml` (`gps_link`) |
+| Gazebo's GPS sensor | `ros/bringup/aav_description/urdf/aav.gazebo.xacro` (`navsat`) |
+| Gazebo → our topic name | `ros/sim/aav_gazebo/aav_gazebo/gazebo_gps.py` |
+| The bench's pretend GPS | `ros/sim/aav_bench/aav_bench/sensors.py` (`MockGps`) |
 | The device name `/dev/aav/gps` | `tools/udev/99-aav.rules` |
 | The contract | `docs/interfaces.yaml`: `/sensors/gps/fix`, `/localization/gps/*` |

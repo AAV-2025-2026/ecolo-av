@@ -229,7 +229,7 @@ drift over 10 m was 0.06 m; the full-lock circle was 6.8 m across, not 5.75 (6.0
 
 | File | What |
 |---|---|
-| `src/drivers/aav_actuator_tests/aav_actuator_tests/actuator_test.py` | the ROS node and the command line |
+| `ros/drivers/aav_actuator_tests/aav_actuator_tests/actuator_test.py` | the ROS node and the command line |
 | `procedures.py` | each test's steps |
 | `safety.py` | the rules: REAL or SIM, caps, envelope, confirmation |
 | `analysis.py`, `reports.py` | the maths and the report: no ROS, unit-tested |

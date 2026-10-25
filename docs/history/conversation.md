@@ -820,7 +820,7 @@ Ben's brief, over several messages:
   - ego's maths: all 14 tests pass;
   - the CAN spine bridge, plus an interim bridge to today's firmware in `backends/aav_legacy/` (9 tests pass);
   - the turtlesim, Gazebo and CARLA adapters, and the scripted driver (6 tests pass);
-  - one measurements file, `src/aav_description/config/vehicle.yaml`, feeding the URDF, ego, Nav2 and the bridges.
+  - one measurements file, `ros/bringup/aav_description/config/vehicle.yaml`, feeding the URDF, ego, Nav2 and the bridges.
 - **Inherited code:**
   - copied in;
   - the legacy firmware's WiFi name and password moved from `main.cpp` into an untracked `secrets.h`, without printing the values;

@@ -1,6 +1,6 @@
 //! The CAN frames of firmware/can/aav.dbc.
 //!
-//! Keep in step with src/backends/aav_spine/aav_spine/can_codec.py:
+//! Keep in step with ros/can_bridge/aav_spine/aav_spine/can_codec.py:
 //! tests/vectors.rs (generated from the Python codec) checks both put the same
 //! bytes on the bus. Signals are little-endian; the last byte of each frame is
 //! a CRC-8/SAE-J1850 over the ID (low byte, high byte) and the other bytes.

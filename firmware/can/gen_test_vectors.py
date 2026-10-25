@@ -19,7 +19,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-CODEC = ROOT / 'src/backends/aav_spine/aav_spine/can_codec.py'
+CODEC = ROOT / 'ros/can_bridge/aav_spine/aav_spine/can_codec.py'
 JSON_OUT = ROOT / 'firmware/can/test_vectors.json'
 RUST_OUT = ROOT / 'firmware/spine/crates/spine-core/tests/vectors.rs'
 DBC = ROOT / 'firmware/can/aav.dbc'

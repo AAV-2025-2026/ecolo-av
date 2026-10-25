@@ -67,7 +67,7 @@ own extract (Geofabrik's Ontario, 1 GB, for a bigger area).
 
 | Part | File | Does |
 |---|---|---|
-| The logic, no ROS | `src/drivers/aav_routes/aav_routes/osrm_route.py` | the request (Valhalla or OSRM), the answer (GeoJSON or an encoded polyline), the waypoints |
+| The logic, no ROS | `ros/drivers/aav_routes/aav_routes/osrm_route.py` | the request (Valhalla or OSRM), the answer (GeoJSON or an encoded polyline), the waypoints |
 | The node | `aav_routes/street_router.py` | the fix, the destination, the router over HTTP, `/fromLL`, `/toLL`, the follow service |
 | Its settings | `config/street_router.yaml` | router URL, spacing, `max_length` |
 | The map window | `aav_hud_raylib` (Rust) | draws `/drivers/nav/route/path` in violet, under Nav2's blue plan |

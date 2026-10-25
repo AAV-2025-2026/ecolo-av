@@ -13,7 +13,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 |---|---|
 | **Does** | what it does, in one sentence |
 | **Why** | why the car needs it |
-| **Runs on** | which computer, from the machine files in `src/aav_bringup/config/machines/` |
+| **Runs on** | which computer, from the machine files in `ros/bringup/aav_bringup/config/machines/` |
 | **In → out** | topics, frames, CAN frames, serial ports |
 | **Origin** | ours (2026-27), stock (a ROS package), or inherited (from which repo: see its `PROVENANCE.md`) |
 | **Status** | [[works]] ran (where), [[untested]] never ran, [[stub]] a placeholder, [[missing]] not written |
@@ -362,7 +362,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 | **In → out** | `/sensors/camera/front_left/image_raw` → `/perception/detections` → `/perception/stop_sign`, `/perception/camera_obstacles`, `/perception/camera_view` |
 | **Origin** | inherited, rewritten: 2024-25 `camera_ros2_ws` (and `camera_Yolo_detection` for `training/`) |
 | **Status** | [[works]] on the bench, with the stock YOLO model. The team's trained model is lost |
-| **Run alone** | `pixi run get-models`, then `pixi run detect picture:=src/perception/aav_detector/test/stop_sign.jpg` |
+| **Run alone** | `pixi run get-models`, then `pixi run detect picture:=ros/perception/aav_detector/test/stop_sign.jpg` |
 | **Test** | `test/` (in `tools/test.sh`); `pixi run bench-check --perception` |
 | **Read first** | `aav_detector/stop_sign.py` |
 

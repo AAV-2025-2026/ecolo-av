@@ -16,7 +16,7 @@ a second program. Each opens full screen on its own monitor at boot:
 
 ## The HUD in Rust (raylib)
 
-`src/hud/aav_hud_raylib`: one window, which is also the ROS node `hud`.
+`ros/hud/aav_hud_raylib`: one window, which is also the ROS node `hud`.
 
 ![The driving screen, with pretend data (--demo)](img/hud-raylib.png)
 
@@ -94,7 +94,7 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
 ```
 
 Without Pixi: `cargo run -p hud-app --no-default-features -- --demo`, in
-`src/hud/aav_hud_raylib`. The first build compiles raylib (cmake, about a minute).
+`ros/hud/aav_hud_raylib`. The first build compiles raylib (cmake, about a minute).
 
 ### How it's built
 
@@ -207,7 +207,7 @@ nothing publishes that topic there.
 
 ## The map window (big screen)
 
-`src/hud/aav_hud_raylib`, binary `map`: its own window, which is also the ROS node `map`.
+`ros/hud/aav_hud_raylib`, binary `map`: its own window, which is also the ROS node `map`.
 Step 1 (15 October): what Nav2 already knows, drawn north up. Step 2 (15 October): an
 offline street map of Ottawa under it ([below](#the-street-map-under-it)). Step 3
 (15 October): [search for a place](#search-for-a-place-and-drive-there) and send it to
@@ -439,7 +439,7 @@ a bug.
 | Library | `rusqlite` with SQLite built in (MIT; SQLite is public domain) |
 
 Try a search from a terminal: `cargo run --release -p map-core --example search -- tim hortons`
-(in `src/hud/aav_hud_raylib`, with `PLACES=` the file's path).
+(in `ros/hud/aav_hud_raylib`, with `PLACES=` the file's path).
 
 #### For tests and screenshots
 
@@ -483,7 +483,7 @@ Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26
 | Part | Where | What it does |
 |---|---|---|
 | Front end | `hud/flutter_pi/` (Flutter/Dart) | Screens: home (e-stop button, status strip, speed, stop-sign alert), map with destination search, camera page. Talks to the back end over Socket.IO and HTTP. |
-| Back end | `src/hud/aav_hud/` (ROS 2 Python node + Flask) | `hud_server`: reads the car's topics and pushes them to the app (port 5000); sends a locked route to Nav2; publishes the e-stop button's `/safety/estop`. |
+| Back end | `ros/hud/aav_hud/` (ROS 2 Python node + Flask) | `hud_server`: reads the car's topics and pushes them to the app (port 5000); sends a locked route to Nav2; publishes the e-stop button's `/safety/estop`. |
 | Routing | OSRM in Docker (`hud/scripts/osrm_bootup.sh`) | Offline road routing for Ontario on port 5001. The map data file (`ontario-*.osrm`) was on the Pi, not in git. |
 
 The map page also needs a tile server on port 8080 (`/styles/basic-preview/`). It isn't

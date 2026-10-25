@@ -70,7 +70,7 @@ As the car is wired today (Ben, 23 Oct; the hardware lead confirms), the Motor P
 the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 ([Today's wiring](can-plan.md#todays-wiring-23-october)). `car.launch.py actuators:=uart`
 (the default) is that; `actuators:=can` is the KEFC plan's CAN spine. The files in
-`src/aav_bringup/config/machines/` say what runs where:
+`ros/bringup/aav_bringup/config/machines/` say what runs where:
 
 | Machine file | Runs |
 |---|---|

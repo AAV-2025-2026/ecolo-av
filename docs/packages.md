@@ -151,8 +151,8 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 |---|---|
 | `hud/flutter_pi` | the 2025-26 touchscreen app (Flutter): speed, map, camera; since 11 Oct an e-stop button, Cancel and the car's status. `pixi run hud-test` |
 | `hud/scripts` | the old Pi's start-up scripts |
-| `src/hud/aav_hud` | its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints, and the e-stop. [HUD](hud.md) has what's left |
-| `src/hud/aav_hud_raylib` | the HUD in Rust (raylib and rclrs), to replace the two above: the driving screen, the e-stop button, GPS and topic health. `pixi run hud-demo` |
+| `ros/hud/aav_hud` | its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints, and the e-stop. [HUD](hud.md) has what's left |
+| `ros/hud/aav_hud_raylib` | the HUD in Rust (raylib and rclrs), to replace the two above: the driving screen, the e-stop button, GPS and topic health. `pixi run hud-demo` |
 
 ## Examples
 

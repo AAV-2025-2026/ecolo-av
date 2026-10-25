@@ -23,7 +23,7 @@ links to the page with the details. As of early on 11 October 2026.
 |---|---|---|
 | `src/` | the ROS 2 packages, one folder per layer | [Packages](packages.md) |
 | `firmware/` | the CAN contract, the Rust crates, the spine's Pico 2 program, and the 2025-26 C++ boards | [Firmware](firmware.md), [Rust firmware](rust-firmware.md) |
-| `hud/` | the 2025-26 touchscreen app (Flutter), changed for our back end, `src/hud/aav_hud`. `pixi run get-flutter` downloads Flutter | [HUD](hud.md) |
+| `hud/` | the 2025-26 touchscreen app (Flutter), changed for our back end, `ros/hud/aav_hud`. `pixi run get-flutter` downloads Flutter | [HUD](hud.md) |
 | `tools/` | tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server | [Infrastructure](infrastructure.md) |
 | `examples/` | a first ROS node in Rust | |
 | `docs/` | these pages, the topic contract, and the history | |
@@ -110,19 +110,19 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 
 | Code | From | Now in | State |
 |---|---|---|---|
-| The Yahboom IMU driver (C++) | 2025-26 `yahboom-IMU` | `src/sensors/aav_imu_yahboom` | rewritten in Rust (Ben); the C++ went on 11 Oct |
-| The TI radar driver | 2025-26 `Nav_Radar` | `src/sensors/ti_ros2_driver` | ported; its settings are indoor demos |
-| The battery monitor | 2024-25 `Battery-Monitor-ROS` | `src/sensors/battery_monitor` | ported |
+| The Yahboom IMU driver (C++) | 2025-26 `yahboom-IMU` | `ros/sources/aav_imu_yahboom` | rewritten in Rust (Ben); the C++ went on 11 Oct |
+| The TI radar driver | 2025-26 `Nav_Radar` | `ros/sources/ti_ros2_driver` | ported; its settings are indoor demos |
+| The battery monitor | 2024-25 `Battery-Monitor-ROS` | `ros/sources/battery_monitor` | ported |
 | Camera calibrations | 2024-25 `cameras` | `aav_sensors/config/cameras` | used by `cameras.launch.py` |
-| The HUD's back end (Flask) | 2025-26 `User-Interface` | `src/hud/aav_hud` | ported to our topics; publishes `/safety/estop`. 98 tests |
+| The HUD's back end (Flask) | 2025-26 `User-Interface` | `ros/hud/aav_hud` | ported to our topics; publishes `/safety/estop`. 98 tests |
 | The HUD app (Flutter) and its boot scripts | 2025-26 `User-Interface` | `hud/` | changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen |
 | The ESP32 actuator firmware (C++) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_umod_esp32` | runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers |
 | The status display (Pico 2) | 2025-26 `AAV_cortex` | `firmware/spine/boards/sentinel-pico2`, crates `sentinel`, `hd44780` | rewritten in Rust, 15 Oct; builds, never flashed; not wired in |
 | The wheel encoder (Pico 2) | 2025-26 `Wheel_Encoders` | `firmware/spine/boards/wheel-encoder-pico2`, crate `wheel-encoder` | rewritten in Rust, 15 Oct; builds, never flashed. The car's board still runs the C++ |
 | Their UART and encoder protocols | 2025-26 `AAV_cortex`, `Wheel_Encoders` | `aav_legacy` | rewritten in Python |
-| Lane keeping | 2025-26 `Lane_Detection_ROS2` | `src/perception/aav_lane_geometry` | brought in: a driver on `/drivers/ai/cmd_vel` |
-| Radar clustering (C++) | 2025-26 `Nav_Radar` | `src/perception/aav_radar_clusters` | rewritten in Rust; the C++ went on 15 Oct |
-| A YOLO stop-sign detector | 2024-25 `camera_ros2_ws` | `src/perception/aav_detector` | rewritten: detections out, and a stop-sign watcher |
+| Lane keeping | 2025-26 `Lane_Detection_ROS2` | `ros/perception/aav_lane_geometry` | brought in: a driver on `/drivers/ai/cmd_vel` |
+| Radar clustering (C++) | 2025-26 `Nav_Radar` | `ros/perception/aav_radar_clusters` | rewritten in Rust; the C++ went on 15 Oct |
+| A YOLO stop-sign detector | 2024-25 `camera_ros2_ws` | `ros/perception/aav_detector` | rewritten: detections out, and a stop-sign watcher |
 | The car's geometry | 2025-26 `Motor_Steering` (`Ackermann.m`) | `vehicle.yaml`, `docs/reference/` | numbers carried over, still guesses |
 | The joystick's button map | 2025-26 `joy_teleop_ackerman` | `aav_teleop` | carried over |
 | CARLA's axis rules | `carla-ros-bridge` (MIT) | `aav_carla` | rewritten, untested |

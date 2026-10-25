@@ -1,7 +1,7 @@
 //! The UART link from the Motor-Pi to the ESP32 control board: the 2025-26 frame
 //! (version 1), and version 2 with the Orin's heartbeat (TODO 50).
 //!
-//! The ROS side is `src/backends/aav_legacy/aav_legacy/legacy_protocol.py`. The firmware
+//! The ROS side is `ros/can_bridge/aav_legacy/aav_legacy/legacy_protocol.py`. The firmware
 //! side was `firmware/legacy/aav_umod_esp32/src/modules/ros2_handler/ros2_handler.cpp`;
 //! this crate does what it did, so the Rust board is a drop-in replacement.
 //!

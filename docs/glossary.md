@@ -21,18 +21,18 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | actuator | a motor that moves something: the steering, the brake | the moving parts |
 | area | the first part of a topic name: `/sensors/`, `/drivers/`, `/control/`... | [Topic areas](naming.md) |
 | arm | to tell the spine it may drive; it ignores drive frames until armed | the service `/spine/arm` |
-| backend | the one program that plays the car: the real car, Gazebo or the turtle | `src/backends/` |
+| backend | the one program that plays the car: the real car, Gazebo or the turtle | `ros/can_bridge/` and `ros/sim/` |
 | bag | a recording of ROS topics, to play back later | `tools/record.sh`, `bags/` |
 | `base_link` | the car's own frame: on the ground, under the middle of the rear axle | TF |
 | bench mode | the car's real software on one computer, with pretend boards and sensors | `pixi run bench`, [Bench mode](bench.md) |
 | bicycle model | the maths that turns a speed and turn rate into a steering angle | ego, `ackermann.py` |
-| bringup | the launch files that start a whole profile | `src/aav_bringup` |
+| bringup | the launch files that start a whole profile | `ros/bringup/aav_bringup` |
 | `bt_navigator` | Nav2's boss: runs a behaviour tree that plans, follows and recovers | Nav2 |
 | CAN | Controller Area Network: two twisted wires made for cars; short messages that arrive on time | the KEFC bus |
 | CAN Pal | a small CAN transceiver board on the Orin's 40-pin header | Orin #1 (KEFC) |
 | CANable | a USB-to-CAN adapter for a laptop, to watch or test a bus | the bench test of CAN |
 | `candump` | a Linux command that prints every frame on a CAN bus | `candump can0` |
-| CARLA | a photo-real driving simulator, on Unreal Engine; next to Gazebo, for the cameras (Q31, [CARLA](carla.md)) | `src/backends/aav_carla` |
+| CARLA | a photo-real driving simulator, on Unreal Engine; next to Gazebo, for the cameras (Q31, [CARLA](carla.md)) | `ros/sim/aav_carla` |
 | checksum, CRC | a few bits worked out from a message, so a garbled one is caught | every CAN frame (CRC-8) |
 | CI | Continuous Integration: GitHub runs the tests on every push | `.github/workflows/test.yml` |
 | colcon | the tool that builds a ROS workspace | `pixi run build` |
@@ -52,9 +52,9 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | deadman | a button you must hold to drive; let go and the car stops | the joystick's trigger |
 | DIN rail | a metal rail that boxes clip onto | the Pis at the windscreen |
 | driver (ROS) | anything that proposes a command: joystick, keyboard, Nav2... | `/drivers/<name>/cmd_vel` |
-| driver (device) | the code that talks to one piece of hardware | `src/sensors/` |
+| driver (device) | the code that talks to one piece of hardware | `ros/sources/` |
 | e-stop | emergency stop | `/safety/estop`, the red button, the Kar-Tech remote |
-| ego | our node that turns the chosen twist into a speed and steering angle, within limits | `src/ego/aav_ego` |
+| ego | our node that turns the chosen twist into a speed and steering angle, within limits | `ros/ego/aav_ego` |
 | EKF | Extended Kalman Filter: mixes noisy sensors into one best guess of position | `ekf_local`, `ekf_global` |
 | Embassy | a Rust framework for chips with no operating system | the spine firmware |
 | `embedded-hal` | a Rust standard way to talk to pins, I2C and SPI on any chip | `firmware/spine` |
@@ -101,7 +101,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | mock | a pretend sensor or board, for tests | `mock_imu`, `spine_sim` |
 | Motor-Pi | the Raspberry Pi 4 that drives the ESP32 today, over UART | the 2025-26 path |
 | MPPI | Model-predictive path integral: Nav2's controller on our car (since 22 Oct). It tries thousands of futures through a model of the car. `controller:=rpp` for Regulated Pure Pursuit instead | [path followers](controllers.md) |
-| Nav2 | ROS 2's navigation stack: plans a path and follows it | `src/drivers/aav_navigation` |
+| Nav2 | ROS 2's navigation stack: plans a path and follows it | `ros/drivers/aav_navigation` |
 | `NavSatFix` | a ROS message: latitude, longitude, altitude | `/sensors/gps/fix` |
 | `navsat_transform` | turns GPS fixes into map x and y, and back | `/localization/gps/odom` |
 | NMEA | a plain-text GPS format | `gps_driver:=nmea` |
@@ -118,13 +118,13 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | OSRM | a road router that uses OSM | the HUD's route |
 | Pico 2 | a Raspberry Pi microcontroller board (RP2350) | the wheel encoder; a spine program |
 | Pixi | installs ROS 2 and every tool without admin rights | `pixi run ...` |
-| profile | a set of nodes to start: turtle, sim, bench, car, replay | `src/aav_bringup/launch/` |
+| profile | a set of nodes to start: turtle, sim, bench, car, replay | `ros/bringup/aav_bringup/launch/` |
 | `PROVENANCE.md` | a file that says where inherited code came from | each inherited package |
 | Q1–Q34 | the team's numbered open questions | [Decisions](decisions.md) |
 | QNX | a real-time operating system the 2025-26 team used; replaced by twist_mux | the QNX-Pi |
 | QoS | Quality of Service: how a topic delivers (reliable or best effort) | `docs/interfaces.yaml` |
 | radar | radio waves that find objects ahead | the TI radar, `/sensors/radar/points` |
-| raylib | a small graphics library; our Rust HUD uses it | `src/hud/aav_hud_raylib` |
+| raylib | a small graphics library; our Rust HUD uses it | `ros/hud/aav_hud_raylib` |
 | RC | Radio Control: a hand-held transmitter | the FlySky override |
 | Regulated Pure Pursuit | a Nav2 controller: steers toward a point ahead on the path. Ours until 22 Oct; `controller:=rpp` | [path followers](controllers.md) |
 | REP-103, REP-105 | ROS's rules for units and frames | `CLAUDE.md` |
@@ -152,13 +152,13 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | turtlesim | ROS's teaching turtle; our cheapest stand-in for the car | `pixi run turtle` |
 | twist | a speed (m/s) and a turn rate (rad/s) | every driver |
 | `TwistStamped` | a twist with a time stamp | `/drivers/*/cmd_vel`, `/control/cmd_vel` |
-| `twist_mux` | picks one command from all the drivers, by priority | `src/mux/aav_mux` |
+| `twist_mux` | picks one command from all the drivers, by priority | `ros/command_mux/aav_mux` |
 | UART | a simple serial line between two chips | the Motor-Pi to the ESP32 |
 | u-blox ZED-F9R | the GPS chip on the car | `ublox_gps` |
 | UDP | a quick network message with no delivery check | the wheel encoder today |
-| URDF | a file that describes the car's shape and where each sensor sits | `src/aav_description/urdf` |
+| URDF | a file that describes the car's shape and where each sensor sits | `ros/bringup/aav_description/urdf` |
 | USB | the plug on any computer | the IMU, the GPS board |
-| `vehicle.yaml` | the only file with the car's measurements | `src/aav_description/config` |
+| `vehicle.yaml` | the only file with the car's measurements | `ros/bringup/aav_description/config` |
 | W5500 | an Ethernet chip for small boards | the wheel encoder today |
 | watchdog | a timer that acts if a program stops checking in | the spine, the ESP32 |
 | wheel node | a small CAN board that reads one wheel's speed | 0x200 left, 0x201 right (KEFC) |
@@ -179,5 +179,5 @@ pixi run tools/ros.sh --local ros2 node list     # every node
 |---|---|
 | Topics, services, actions, frames | `docs/interfaces.yaml` |
 | CAN frames and signals | `firmware/can/aav.dbc` |
-| The car's parts and sizes | `src/aav_description/config/vehicle.yaml` |
+| The car's parts and sizes | `ros/bringup/aav_description/config/vehicle.yaml` |
 | Decisions and Q numbers | `docs/decisions.md` |

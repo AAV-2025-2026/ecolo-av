@@ -81,7 +81,7 @@ When something fails: [docs/run.md](docs/run.md).
 | `tools/` | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer, the MCP server for AI apps |
 | `examples/` | small runnable examples: a first ROS node in Rust (`rust-listener`) |
 | `docs/` | the docs (markdown sources, the HTML in `docs/html/`), the topic contract, and the history |
-| `hud/` | the 2025-26 touchscreen app. Its back end is ported, as `src/hud/aav_hud` |
+| `hud/` | the 2025-26 touchscreen app. Its back end is ported, as `ros/hud/aav_hud` |
 | `models/` | the YOLO models, downloaded by `pixi run get-models` (not in git) |
 | `vendor/` | the ROS 2 and ros2-rust source, for looking things up. Not ours, and not in git: `pixi run vendor` downloads it |
 

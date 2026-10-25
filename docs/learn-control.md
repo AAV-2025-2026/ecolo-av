@@ -121,7 +121,7 @@ software only ever sends **one** angle: the virtual wheel's.
 ### What ego does
 
 `ego` turns every driver's (speed, turn rate) into (speed, steering angle), 50 times a
-second. `src/ego/aav_ego/aav_ego/ackermann.py`:
+second. `ros/ego/aav_ego/aav_ego/ackermann.py`:
 
 | Step | Detail |
 |---|---|
@@ -198,19 +198,19 @@ does. The spine only listens to it ([Firmware](firmware.md)).
 | The speed loop, with throttle and brake | `pixi run bench`, then `pixi run tools/ros.sh ros2 topic echo /vehicle/status` |
 | Stop everything | `pixi run estop`, then `pixi run estop-clear` |
 | The speed loop's own tests | `cd firmware/spine && pixi run cargo test -p spine-core speed_loop` |
-| ego's maths tests | `cd src/ego/aav_ego && pixi run python3 -m pytest -q test/test_ackermann.py` |
+| ego's maths tests | `cd ros/ego/aav_ego && pixi run python3 -m pytest -q test/test_ackermann.py` |
 
 ## Where this lives in the code
 
 | What | Where |
 |---|---|
-| The bicycle model and ego's limits | `src/ego/aav_ego/aav_ego/ackermann.py`, `config/ego.yaml` |
+| The bicycle model and ego's limits | `ros/ego/aav_ego/aav_ego/ackermann.py`, `config/ego.yaml` |
 | The speed loop (PI) | `firmware/spine/crates/spine-core/src/speed_loop.rs` |
 | Spine limits, watchdog, safe-state choices | `firmware/spine/crates/spine-core/src/spine.rs`, `watchdog.rs`, `limits.rs` |
-| Today's open-loop throttle | `src/backends/aav_legacy/config/legacy.yaml` (`full_throttle_speed`) |
+| Today's open-loop throttle | `ros/can_bridge/aav_legacy/config/legacy.yaml` (`full_throttle_speed`) |
 | State space from zero: models, simulators, poles, Bode, shocks and roll | `tools/state_space_demo.py`, `pixi run state-space-demo` ([Learn: state space](learn-state-space.md)) |
-| The loops as transfer functions and state space: poles, margins, delays | `src/ego/aav_ego/aav_ego/vehicle_model.py`, `pixi run vehicle-model` ([The car as a linear model](vehicle-model.md)) |
-| Nav2's controller and smoother | `src/drivers/aav_navigation/config/nav2.yaml` |
-| Driver timeouts and priorities | `src/mux/aav_mux/config/twist_mux.yaml` |
-| Wheelbase, track, steering limit | `src/aav_description/config/vehicle.yaml` |
+| The loops as transfer functions and state space: poles, margins, delays | `ros/ego/aav_ego/aav_ego/vehicle_model.py`, `pixi run vehicle-model` ([The car as a linear model](vehicle-model.md)) |
+| Nav2's controller and smoother | `ros/drivers/aav_navigation/config/nav2.yaml` |
+| Driver timeouts and priorities | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| Wheelbase, track, steering limit | `ros/bringup/aav_description/config/vehicle.yaml` |
 | The safety layers, in one table | [How it fits](how-it-fits.md) |

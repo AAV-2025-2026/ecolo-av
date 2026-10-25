@@ -147,11 +147,11 @@ see the car.
 
 | What | Where |
 |---|---|
-| Which program runs on which computer | `src/aav_bringup/config/machines/` (`orin`, `motor_pi`, `laptop`, `all`) |
-| Where each sensor sits on the car | `src/aav_description/config/vehicle.yaml` |
-| Today's car | `src/backends/aav_legacy`, `firmware/legacy/` |
-| The CAN car | `src/backends/aav_spine`, `firmware/can/aav.dbc`, `firmware/spine/` |
-| The sensor drivers | `src/sensors/` |
+| Which program runs on which computer | `ros/bringup/aav_bringup/config/machines/` (`orin`, `motor_pi`, `laptop`, `all`) |
+| Where each sensor sits on the car | `ros/bringup/aav_description/config/vehicle.yaml` |
+| Today's car | `ros/can_bridge/aav_legacy`, `firmware/legacy/` |
+| The CAN car | `ros/can_bridge/aav_spine`, `firmware/can/aav.dbc`, `firmware/spine/` |
+| The sensor drivers | `ros/sources/` |
 
 Next: [A command's journey](learn-journey.md) follows one joystick push through these
 boxes.

@@ -26,7 +26,7 @@ import numpy as np  # noqa: E402
 from scipy import linalg, signal  # noqa: E402
 import yaml  # noqa: E402
 
-VEHICLE_YAML = ROOT / 'src/aav_description/config/vehicle.yaml'
+VEHICLE_YAML = ROOT / 'ros/bringup/aav_description/config/vehicle.yaml'
 IMG = ROOT / 'docs' / 'img'
 G = 9.81  # m/s^2
 

@@ -43,18 +43,18 @@ ROS makes the skeleton for you:
 
 ```bash
 pixi shell                     # a terminal with ROS in it
-cd src/drivers
+cd ros/drivers
 ros2 pkg create aav_circle --build-type ament_python \
   --dependencies rclpy geometry_msgs --node-name circle_driver
 ```
 
-That makes `src/drivers/aav_circle/` with `package.xml`, `setup.py`, a node file and
+That makes `ros/drivers/aav_circle/` with `package.xml`, `setup.py`, a node file and
 style tests. It also prints a list of licences: that's fine, the team hasn't picked one
 yet. The layout rules are in [Conventions](conventions.md).
 
 ## 2. Write the node
 
-Replace `src/drivers/aav_circle/aav_circle/circle_driver.py` with:
+Replace `ros/drivers/aav_circle/aav_circle/circle_driver.py` with:
 
 ```python
 """
@@ -110,9 +110,9 @@ Four files learn about the new driver:
 
 | File | Add |
 |---|---|
-| `src/mux/aav_mux/config/twist_mux.yaml` | an input under `topics:`, shown below |
+| `ros/command_mux/aav_mux/config/twist_mux.yaml` | an input under `topics:`, shown below |
 | `docs/interfaces.yaml` | the topic, shown below. Then run `pixi run python tools/gen_interfaces_md.py > docs/interfaces.md` |
-| `src/aav_bringup/launch/turtle.launch.py` (and `sim`, and the car's machine files) | a line that starts it, once it has a launch file |
+| `ros/bringup/aav_bringup/launch/turtle.launch.py` (and `sim`, and the car's machine files) | a line that starts it, once it has a launch file |
 | `tools/test.sh` | the package's folder, once it has unit tests |
 
 The mux input:

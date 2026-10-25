@@ -50,15 +50,15 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | One repo, one environment | ROS 2 Jazzy through Pixi on Linux and Macs, no admin rights; CI on every push, a Mac nightly | `pixi.toml`, `.github/workflows` |
 | The contract | every topic and node in one file, checked against the running graph | `docs/interfaces.yaml`, `pixi run check` |
 | Old code | every 2025-26 and 2024-25 repo surveyed; kept, ported or retired, with reasons | `docs/older-code.md`, each `PROVENANCE.md` |
-| Rust | the spine, the wheel encoder, the status display, the IMU driver, the radar clustering | `firmware/spine`, `src/sensors`, `src/perception` |
-| Ego and the mux | twist_mux (a person always wins), ego (Ackermann, limits, timeouts), and now the car's weight | `src/ego`, `src/mux` |
+| Rust | the spine, the wheel encoder, the status display, the IMU driver, the radar clustering | `firmware/spine`, `ros/sources`, `ros/perception` |
+| Ego and the mux | twist_mux (a person always wins), ego (Ackermann, limits, timeouts), and now the car's weight | `ros/ego`, `ros/command_mux`, `ros/io_mux` |
 | Simulation | TurtleSim; Gazebo with the whole car (cameras, radar, lidar, GPS, IMU, wheel speed, actuator model); the bench with the real CAN messages | `pixi run turtle`, `sim`, `bench` |
-| Position | two EKFs and navsat_transform: within 0.15 m of Gazebo's truth; replay within 0.03 m | `src/localization` |
-| Drivers | joystick, keyboard, scripted, replay, GPS A to B, Nav2, plain English (local model), street routes | `src/drivers` |
-| Nav2 | Smac Hybrid-A*, Regulated Pure Pursuit **or MPPI**, collision monitor, ghost obstacles | `src/drivers/aav_navigation` |
-| Safety | a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels only sometimes since 23 Oct); the collision monitor; the spine's timeout (not flashed) | `src/safety`, `firmware/spine` |
-| Screens | the raylib HUD and the map window, full screen at boot (ready to install) | `src/hud` |
-| Perception | YOLO (Core ML, TensorRT export), a measured comparison with RF-DETR and YOLO26, radar clustering, a lidar layer | `src/perception`, [newer models](docs/model-comparison.md) |
+| Position | two EKFs and navsat_transform: within 0.15 m of Gazebo's truth; replay within 0.03 m | `ros/localization` |
+| Drivers | joystick, keyboard, scripted, replay, GPS A to B, Nav2, plain English (local model), street routes | `ros/drivers` |
+| Nav2 | Smac Hybrid-A*, Regulated Pure Pursuit **or MPPI**, collision monitor, ghost obstacles | `ros/drivers/aav_navigation` |
+| Safety | a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels only sometimes since 23 Oct); the collision monitor; the spine's timeout (not flashed) | `ros/safety`, `firmware/spine` |
+| Screens | the raylib HUD and the map window, full screen at boot (ready to install) | `ros/hud` |
+| Perception | YOLO (Core ML, TensorRT export), a measured comparison with RF-DETR and YOLO26, radar clustering, a lidar layer | `ros/perception`, [newer models](docs/model-comparison.md) |
 | The car | two read-only audits: every computer, port and connection; irreplaceable files copied off | `docs/history/` |
 | Docs | 55 pages for a dyslexic reader, as HTML and PDF | `docs/` |
 

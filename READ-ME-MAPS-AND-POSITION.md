@@ -54,7 +54,7 @@ The `map` frame is flat and in metres, but GPS gives latitude and longitude. The
 
 | Setting | Value | File |
 |---|---|---|
-| Datum | 45.3860 N, -75.6960 (near Carleton: a **placeholder**) | `src/localization/aav_localization/config/navsat.yaml` |
+| Datum | 45.3860 N, -75.6960 (near Carleton: a **placeholder**) | `ros/localization/aav_localization/config/navsat.yaml` |
 | Map (0, 0) | = the datum | |
 | x axis | east | |
 | y axis | north | |
@@ -111,7 +111,7 @@ A **costmap** is a grid laid on the ground. Each cell holds a cost:
 | Cell size | 25 cm | 10 cm |
 | Filled from | a map file: `empty` (all free) or `example_lot` | the map, plus live sensors: radar, camera detections (lidar later) |
 | Used by | the **planner**: Smac Hybrid-A*, which only plans turns the car can make | the **controller**: MPPI, which steers along the plan |
-| File | `src/drivers/aav_navigation/config/nav2.yaml` | the same |
+| File | `ros/drivers/aav_navigation/config/nav2.yaml` | the same |
 
 Why the local one is in `odom`: if it were in `map`, every GPS hop would shift the obstacles under the car.
 

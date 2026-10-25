@@ -53,8 +53,8 @@ Open → Open ([Your Mac](mac.md#watch-without-ros-lichtblick)).
 | `pixi run carla-car ... foxglove:=true` | 127.0.0.1: from a Mac, `ssh -L 8765:127.0.0.1:8765 <the CARLA computer>`, then `ws://localhost:8765` | the same | the same |
 | the car (`foxglove` part: Orin, `all`) | every network the Orin is on | **watch only**: anyone on the car's WiFi reaches it | WiFi list |
 
-One file does it for all of them: `src/aav_bringup/launch/foxglove.launch.py`, with the
-list in `src/aav_bringup/config/foxglove_bridge.yaml`.
+One file does it for all of them: `ros/bringup/aav_bringup/launch/foxglove.launch.py`, with the
+list in `ros/bringup/aav_bringup/config/foxglove_bridge.yaml`.
 
 ## Bandwidth: the WiFi list
 

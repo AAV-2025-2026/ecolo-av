@@ -303,7 +303,7 @@ Classic OpenCV, no model. A model can replace it later, on the same topic.
 
 - **Speed:** 0.8 ms a picture on Ben's MacBook Pro (M4 Max), 1.2 ms in the node.
   [[untested]] on the Orin, whose cores are slower: expect a few ms.
-- **The code:** `src/perception/aav_lane_finder`. `birds_eye.py` and `lane_lines.py`
+- **The code:** `ros/perception/aav_lane_finder`. `birds_eye.py` and `lane_lines.py`
   hold the maths, with no ROS, and 21 tests, most on pictures of known lanes: straight,
   off centre, turned, curved, one line, none. `lane_finder.py` is the node.
 

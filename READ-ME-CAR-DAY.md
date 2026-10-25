@@ -214,7 +214,7 @@ Follow [READ-ME-MEASURE-THE-CAR.md](READ-ME-MEASURE-THE-CAR.md): it is the sheet
 | 5 | Photograph the sheet and the IMU's arrows | | |
 
 **Stop point:** the sheet photographed. At home the numbers go into
-`src/aav_description/config/vehicle.yaml`, then `pixi run test` and `pixi run view`.
+`ros/bringup/aav_description/config/vehicle.yaml`, then `pixi run test` and `pixi run view`.
 
 ## Session 3: questions for the hardware lead
 
@@ -340,13 +340,13 @@ The same venv also runs the engine once on the test stop sign, with the score an
 | 1 | `ssh <user>@192.168.1.108`; `hostname; ip -br addr` | `aav-cam1`; its addresses (.108, .102?) | try .102. Write down which is wired |
 | 2 | Keep theirs: `systemctl status mediamtx`, then `sudo cp /usr/local/etc/mediamtx.yml /usr/local/etc/mediamtx.yml.2025-26` | the service, and its file's place | the file is elsewhere: `status` names it; use that path |
 | 3 | `rpicam-hello --list-cameras` | 2 cameras, 0 and 1 | one: ribbon loose? (N4). USB? `v4l2-ctl --list-devices` |
-| 4 | Ours, from the laptop: `scp src/sensors/aav_camera_stream/pi/mediamtx.yml <user>@192.168.1.108:/tmp/`, then `ssh <user>@192.168.1.108 'sudo cp /tmp/mediamtx.yml /usr/local/etc/mediamtx.yml && sudo systemctl restart mediamtx'` | `systemctl status mediamtx`: active | put theirs back (step 2's copy) |
+| 4 | Ours, from the laptop: `scp ros/sources/aav_camera_stream/pi/mediamtx.yml <user>@192.168.1.108:/tmp/`, then `ssh <user>@192.168.1.108 'sudo cp /tmp/mediamtx.yml /usr/local/etc/mediamtx.yml && sudo systemctl restart mediamtx'` | `systemctl status mediamtx`: active | put theirs back (step 2's copy) |
 | 5 | Which is left: in a browser, `http://192.168.1.108:8889/front_left`; cover the **left** lens with a hand | the picture goes dark | the right one went dark: swap `rpiCameraCamID` 0 and 1 in the file, step 4 again |
 | 6 | The Orin decodes both: `~/aav-jazzy/aav.sh ros2 launch aav_camera_stream camera_stream.launch.py host:=192.168.1.108 decoder:=gst-nvidia detector:=none` | `~/aav-jazzy/aav.sh ros2 topic echo /diagnostics`: `fps_in` 15 for each | no `/usr/bin/gst-launch-1.0`: JetPack's GStreamer is missing, write it down |
 | 7 | The Pi's CPU, both streams on: `top` on the Pi, then `vcgencmd measure_temp` | under 50% of the Pi; under 80 °C | write down the numbers anyway |
 | 8 | Bitrate: `curl http://127.0.0.1:9997/v3/paths/list` on the Pi, twice, 10 s apart | `bytesSent` up about 2.5 MB each 10 s (2 Mbit/s) | |
 | 9 | **The delay:** a stopwatch on phone 1 in front of the camera, the browser view beside it; phone 2 films both | the difference between the two times: under 150 ms. Do 3 photos | write down what you got |
-| 10 | **Calibration:** the printed checkerboard (`pixi run calibrate-camera board`, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: `pixi run calibrate-camera front_left --host 192.168.1.108 --square <measured, in m>`; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for `front_right` | `src/sensors/aav_camera_stream/config/calibrations/front_left.yaml` (and `front_right`) written; commit them at home | the window shows no picture: the stream (step 6). As a backup, save pictures: `mkdir -p ~/aav-calib`, then `pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png` |
+| 10 | **Calibration:** the printed checkerboard (`pixi run calibrate-camera board`, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: `pixi run calibrate-camera front_left --host 192.168.1.108 --square <measured, in m>`; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for `front_right` | `ros/sources/aav_camera_stream/config/calibrations/front_left.yaml` (and `front_right`) written; commit them at home | the window shows no picture: the stream (step 6). As a backup, save pictures: `mkdir -p ~/aav-calib`, then `pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png` |
 
 At home: the delay goes in `orin.yaml`'s `camera_stream` `delay` (0.06 s today); commit
 the two calibration files (`docs/camera-calibration.md`). Until they're in, the stop-sign
@@ -381,7 +381,7 @@ The backup holds the C++'s WiFi password: it's a secret. Never in git (`car-day/
 |---|---|---|---|
 | 1 | On the Motor Pi: stop theirs, `sudo systemctl stop aav_serial_bridge` | `systemctl status aav_serial_bridge`: inactive | never two drive paths |
 | 2 | `vendor/cargo-tools/bin/espflash flash --chip esp32 --monitor car-day/esp32/spine-esp32-umod-v2.elf` | `spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat)` | roll back (6d) |
-| 3 | On the Motor Pi: `legacy.yaml` to version 2: in `~/aav-jazzy/aav/src/backends/aav_legacy/config/legacy.yaml`, `frame_version: 2`, then `~/aav-jazzy/aav.sh build` | | |
+| 3 | On the Motor Pi: `legacy.yaml` to version 2: in `~/aav-jazzy/aav/ros/can_bridge/aav_legacy/config/legacy.yaml`, `frame_version: 2`, then `~/aav-jazzy/aav.sh build` | | |
 | 4 | Start the Orin: `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false` | the output mux makes the heartbeat. Its `foxglove_bridge` can't open port 8765 (theirs holds it): harmless, see session 8 | |
 | 5 | Start the Motor Pi: `~/aav-jazzy/aav.sh car motor_pi` | the ESP32's log: `LINK frames=` rising, `bad=0` | `bad=` rising: the speed or the wire (H1) |
 

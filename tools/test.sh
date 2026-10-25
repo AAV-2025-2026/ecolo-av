@@ -16,15 +16,15 @@ export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 
 # Each package's tests import the package, so pytest runs from inside it.
 # (aav_gazebo's adapter test imports ROS messages, so only `colcon test` runs that one.)
-for pkg in src/ego/aav_ego src/mux/aav_io_mux src/backends/aav_spine src/backends/aav_legacy \
-           src/backends/aav_gazebo src/backends/aav_carla \
-           src/drivers/aav_scripted src/drivers/aav_language src/drivers/aav_navigation \
-           src/drivers/aav_actuator_tests src/drivers/aav_goto src/drivers/aav_routes src/drivers/aav_rc \
-           src/aav_description src/localization/aav_gps_heading \
-           src/perception/aav_detector src/sensors/aav_camera_stream \
-           src/perception/aav_lane_finder src/perception/aav_lidar \
-           src/safety/aav_safety src/safety/aav_ghost \
-           src/bench/aav_bench src/hud/aav_hud; do
+for pkg in ros/ego/aav_ego ros/io_mux/aav_io_mux ros/can_bridge/aav_spine ros/can_bridge/aav_legacy \
+           ros/sim/aav_gazebo ros/sim/aav_carla \
+           ros/drivers/aav_scripted ros/drivers/aav_language ros/drivers/aav_navigation \
+           ros/drivers/aav_actuator_tests ros/drivers/aav_goto ros/drivers/aav_routes ros/drivers/aav_rc \
+           ros/bringup/aav_description ros/localization/aav_gps_heading \
+           ros/perception/aav_detector ros/sources/aav_camera_stream \
+           ros/perception/aav_lane_finder ros/perception/aav_lidar \
+           ros/safety/aav_safety ros/safety/aav_ghost \
+           ros/sim/aav_bench ros/hud/aav_hud; do
   echo "== $pkg"
   (cd "$pkg" && python3 -m pytest -q -p no:cacheprovider)
 done
@@ -35,15 +35,15 @@ python3 -m pytest -q -p no:cacheprovider tools/tests
 echo "== firmware/spine"
 if command -v cargo >/dev/null; then
   (cd firmware/spine && cargo test -q)
-  echo "== src/sensors/aav_imu_yahboom: the IMU's serial frames"
-  (cd src/sensors/aav_imu_yahboom && cargo test -q -p yahboom-protocol)
-  echo "== src/perception/aav_radar_clusters: DBSCAN, the boxes, the C++ node's answers"
-  (cd src/perception/aav_radar_clusters && cargo test -q --locked -p radar-clustering)
-  echo "== src/backends/aav_spine_bridge: the Rust CAN bridge's logic, the shared CAN vectors"
-  (cd src/backends/aav_spine_bridge && cargo test -q --locked -p spine-bridge)
+  echo "== ros/sources/aav_imu_yahboom: the IMU's serial frames"
+  (cd ros/sources/aav_imu_yahboom && cargo test -q -p yahboom-protocol)
+  echo "== ros/perception/aav_radar_clusters: DBSCAN, the boxes, the C++ node's answers"
+  (cd ros/perception/aav_radar_clusters && cargo test -q --locked -p radar-clustering)
+  echo "== ros/can_bridge/aav_spine_bridge: the Rust CAN bridge's logic, the shared CAN vectors"
+  (cd ros/can_bridge/aav_spine_bridge && cargo test -q --locked -p spine-bridge)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
-  echo "== src/hud/aav_hud_raylib: the HUD's state, GPS, e-stop and formatting; the map's maths"
-  (cd src/hud/aav_hud_raylib && cargo test -q --locked -p hud-core -p map-core)
+  echo "== ros/hud/aav_hud_raylib: the HUD's state, GPS, e-stop and formatting; the map's maths"
+  (cd ros/hud/aav_hud_raylib && cargo test -q --locked -p hud-core -p map-core)
   # Every firmware crate must build without the standard library, for the Pico 2's chip.
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"

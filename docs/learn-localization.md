@@ -143,7 +143,7 @@ metres, radians, x forward, y left, z up.
 
 ## 7. Our two EKFs: their real inputs
 
-From `src/localization/aav_localization/config/`. Both run at 30 Hz, in 2D
+From `ros/localization/aav_localization/config/`. Both run at 30 Hz, in 2D
 (`two_d_mode: true`: no height, roll or pitch).
 
 | Input | What it gives | `ekf_local` uses | `ekf_global` uses |
@@ -256,13 +256,13 @@ That's the GPS soaking up the drift.
 
 | What | Where |
 |---|---|
-| The EKFs' settings | `src/localization/aav_localization/config/ekf_local.yaml`, `ekf_global.yaml` |
-| GPS to metres | `src/localization/aav_localization/config/navsat.yaml` |
-| How they start, and topic names | `src/localization/aav_localization/launch/localization.launch.py` |
-| The IMU filter | `src/sensors/aav_sensors/config/imu_filter.yaml` |
-| The heading from the GPS velocity | `src/localization/aav_gps_heading` (`course.py`: the sums, no ROS) |
+| The EKFs' settings | `ros/localization/aav_localization/config/ekf_local.yaml`, `ekf_global.yaml` |
+| GPS to metres | `ros/localization/aav_localization/config/navsat.yaml` |
+| How they start, and topic names | `ros/localization/aav_localization/launch/localization.launch.py` |
+| The IMU filter | `ros/sources/aav_sensors/config/imu_filter.yaml` |
+| The heading from the GPS velocity | `ros/localization/aav_gps_heading` (`course.py`: the sums, no ROS) |
 | Measure the heading in Gazebo | `pixi run heading-check` (`tools/heading_check.py`) |
-| Sensor positions on the car | `src/aav_description/config/vehicle.yaml` |
+| Sensor positions on the car | `ros/bringup/aav_description/config/vehicle.yaml` |
 | Wheel speed into `/vehicle/odom` | `aav_spine/spine_bridge.py`, `aav_legacy` `encoder_udp.py`, `aav_gazebo/gazebo_adapter.py` |
 | Why the EKFs meet in TF, not on a topic | [Topic areas](naming.md) |
 | Frames in the contract | `docs/interfaces.yaml`, `frames:` |

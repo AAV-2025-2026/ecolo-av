@@ -14,7 +14,7 @@ Both start by themselves at login, and come back 5 s after a crash.
 | Small touchscreen, left | ~7" | the instrument cluster: speed, mode, gear, e-stop button, camera, GPS | `hud` | `aav-hud.service` |
 | Innoview monitor, right | ~15" | the map: Nav2's map over Ottawa's streets, place search | `map` | `aav-map.service` |
 
-Both are in `src/hud/aav_hud_raylib` ([HUD](hud.md)).
+Both are in `ros/hud/aav_hud_raylib` ([HUD](hud.md)).
 
 ## How it starts
 

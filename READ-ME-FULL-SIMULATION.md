@@ -44,7 +44,7 @@ What's where:
 |---|---|
 | The messages | `aav_interfaces`: `DataSource` + `SensorSource` (REAL, SIM, BENCH, REPLAY per sensor), `ActuatorState` (command + measured), `WheelSpeeds` |
 | The contract | `docs/interfaces.yaml`; `/system/` is a new topic area (`docs/naming.md`) |
-| The model and its tests | `src/backends/aav_gazebo/aav_gazebo/actuator_model.py`, `test/test_actuator_model.py` |
+| The model and its tests | `ros/sim/aav_gazebo/aav_gazebo/actuator_model.py`, `test/test_actuator_model.py` |
 | How it's documented | `docs/simulation.md`, "The actuator model"; `docs/hud.md` for the banner |
 
 ## 1. The full pipeline, in one picture

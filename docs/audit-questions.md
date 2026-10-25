@@ -71,7 +71,7 @@ The ⚠️ rows matter most: they change what we buy, or whether it's safe to dr
 
 ## 6. Measurements for `vehicle.yaml` (Q1)
 
-Every number in `src/aav_description/config/vehicle.yaml` is a guess. Bring a tape measure.
+Every number in `ros/bringup/aav_description/config/vehicle.yaml` is a guess. Bring a tape measure.
 
 | # | Measure | Today's guess |
 |---|---|---|

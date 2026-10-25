@@ -19,7 +19,7 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-for path in ('tools', 'src/ego/aav_ego', 'src/aav_description', 'src/perception/aav_lidar'):
+for path in ('tools', 'ros/ego/aav_ego', 'ros/bringup/aav_description', 'ros/perception/aav_lidar'):
     sys.path.insert(0, str(ROOT / path))
 try:
     import numpy as np
@@ -46,9 +46,9 @@ def load(relative):
         return yaml.safe_load(f)
 
 
-CAR = load('src/aav_description/config/vehicle.yaml')
-EGO = load('src/ego/aav_ego/config/ego.yaml')['ego']['ros__parameters']
-NAV2 = load('src/drivers/aav_navigation/config/nav2.yaml')
+CAR = load('ros/bringup/aav_description/config/vehicle.yaml')
+EGO = load('ros/ego/aav_ego/config/ego.yaml')['ego']['ros__parameters']
+NAV2 = load('ros/drivers/aav_navigation/config/nav2.yaml')
 LIDAR = CAR['sensors']['lidar_link']['xyz']
 MIN_HEIGHT = vehicle.obstacle_heights(CAR['vehicle'])[0]
 RANGE = (NAV2['local_costmap']['local_costmap']['ros__parameters']['lidar_layer']['lidar']

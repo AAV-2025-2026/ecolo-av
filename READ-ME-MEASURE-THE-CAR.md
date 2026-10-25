@@ -2,7 +2,7 @@
 
 Written 15 October 2026. **Hand this to whoever measures the car.** Fill in the
 "Measured" column, photograph the filled sheet, and send it back. The numbers go into
-`src/aav_description/config/vehicle.yaml`, the one place the software reads them from.
+`ros/bringup/aav_description/config/vehicle.yaml`, the one place the software reads them from.
 Every number there today is a guess.
 
 > **The short version**

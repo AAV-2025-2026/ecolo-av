@@ -51,7 +51,7 @@ The same with ROS's own tools: `ros2 param set /ghost_obstacle enabled true`. Us
 
 ## Its settings
 
-`src/safety/aav_ghost/config/ghost_obstacle.yaml`:
+`ros/safety/aav_ghost/config/ghost_obstacle.yaml`:
 
 | Parameter | Default | Means |
 |---|---|---|

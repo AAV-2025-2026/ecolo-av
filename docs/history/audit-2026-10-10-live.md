@@ -38,21 +38,21 @@ I ran sim, car and replay live; these are the results. **Sim drives from `/cmd_v
 
 **BREAKS**
 
-**B1. Nav2 ignores use_sim_time in sim and replay** — `src/drivers/aav_navigation/launch/navigation.launch.py:46` and `:69`
+**B1. Nav2 ignores use_sim_time in sim and replay** — `ros/drivers/aav_navigation/launch/navigation.launch.py:46` and `:69`
 - **Evidence:** use_sim_time is False on map_server, planner_server, controller_server, behavior_server, bt_navigator, waypoint_follower, velocity_smoother and both costmaps. The controller log says "[tf_help]: Transform data too old when converting from map to odom … Data time: 1791617454s …, Transform time: 46s", then "Failed to transform end pose to global frame".
 - **Cause:** RewrittenYaml only rewrites keys that exist, and `nav2.yaml` has no `use_sim_time` key.
 - **Fix:** line 69 `parameters=[params], remappings=remaps)` -> `parameters=[params, {'use_sim_time': use_sim_time}], remappings=remaps)`, and delete line 46 `'use_sim_time': str(use_sim_time),`. Tested: all 9 nodes then read True.
 
-**B2. Sim GPS noise is applied in degrees** — `src/aav_description/urdf/aav.gazebo.xacro:75`
+**B2. Sim GPS noise is applied in degrees** — `ros/bringup/aav_description/urdf/aav.gazebo.xacro:75`
 - **Evidence:** with the car parked, 47 fixes had a spread of 0.495° latitude and 0.456° longitude (about 55 km). `/odometry/global` sat at (32711, 33210), and the planner logged "Robot is out of bounds of the costmap" 71 times.
 - **Fix:** `<stddev>0.5</stddev>` -> `<stddev>4.5e-6</stddev>`. Tested: spread about 0.5 m, and `ekf_global` stayed within 0.15 m of Gazebo's ground truth.
 
-**B3. Car starts Nav2 without a map** — `src/aav_bringup/launch/car.launch.py:82` and `:101`
+**B3. Car starts Nav2 without a map** — `ros/bringup/aav_bringup/launch/car.launch.py:82` and `:101`
 - **Evidence:** map_server logs "yaml-filename parameter is empty, set map through 'load_map'-service", and `ros2 param get /map_server yaml_filename` returns an empty string.
 - **Cause:** car's empty `map` launch argument is inherited by `navigation.launch.py` and overrides its default at line 88.
 - **Fix:** line 82 -> `nav_args = {'map': arg('map') or os.path.join(FindPackageShare('aav_navigation').perform(context), 'maps', 'empty.yaml')}`
 
-**B4. The GPS driver isn't in the pixi environment** — `src/sensors/aav_sensors/launch/sensors.launch.py:75-96`; `pixi.toml` doesn't list it
+**B4. The GPS driver isn't in the pixi environment** — `ros/sources/aav_sensors/launch/sensors.launch.py:75-96`; `pixi.toml` doesn't list it
 - **Evidence:** "Failed to load node 'ublox_dgnss' of type 'ublox_dgnss::UbloxDGNSSNode' in container '/gps_container': Could not find requested resource in ament index", and the same for ublox_nav_sat_fix_hp. `pixi search` finds no ublox_dgnss on robostack-jazzy, only `ros-jazzy-ublox` 2.3.0 (the ublox_gps driver).
 - **Fix:** the team needs to choose one:
   - install `ros-jazzy-ublox-dgnss` from apt on the Orin (I couldn't check it from here) and only enable gps on apt machines; or
@@ -64,7 +64,7 @@ I ran sim, car and replay live; these are the results. **Sim drives from `/cmd_v
 - **Evidence:** with B1 and B2 fixed, an 8 m straight goal took over 60 s with a detour to (1.6, −9). A second goal wasn't reached in 50 s; the `/cmd_vel/nav` turn rate flipped ±0.333 and the measured yaw rate lagged steering by more than 1 s.
 - **Fix:** add `<steer_p_gain>10.0</steer_p_gain>` after line 27. Tested: both goals succeeded quickly.
 
-**W2. Global costmap inflation is smaller than the car** — `src/drivers/aav_navigation/config/nav2.yaml:182`
+**W2. Global costmap inflation is smaller than the car** — `ros/drivers/aav_navigation/config/nav2.yaml:182`
 - **Evidence:** "[computeCircumscribedCost]: The inflation radius (1.500000) is smaller than the circumscribed radius (1.930026)".
 - **Fix:** `inflation_radius: 1.5` -> `inflation_radius: 2.0`. Tested: the error is gone.
 

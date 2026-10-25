@@ -194,7 +194,7 @@ ego goes quiet ──0.1 s──► spine_bridge stops sending DRIVE_CMD
 
 | Layer | Timeout | File |
 |---|---|---|
-| `spine_bridge` | 0.1 s without a command (`/control/car/actuator_cmd`) | `src/backends/aav_spine/config/spine.yaml` |
+| `spine_bridge` | 0.1 s without a command (`/control/car/actuator_cmd`) | `ros/can_bridge/aav_spine/config/spine.yaml` |
 | The spine's watchdog | 200 ms today, **100 ms** in the KEFC plan | `spine-core/src/spine.rs` (`cmd_timeout_ms`) |
 | The KEFC control board | 100 ms → brake | the KEFC PDF |
 
@@ -239,7 +239,7 @@ They are not in Pixi.
 **Anywhere (Mac or Linux), no ROS:** decode the test vector with our codec.
 
 ```bash
-PYTHONPATH=src/backends/aav_spine python3 -c "from aav_spine.can_codec import unpack; print(unpack(0x100, bytes.fromhex('dc05c409141971ed')))"
+PYTHONPATH=ros/can_bridge/aav_spine python3 -c "from aav_spine.can_codec import unpack; print(unpack(0x100, bytes.fromhex('dc05c409141971ed')))"
 ```
 
 It prints:
@@ -284,9 +284,9 @@ ip -details -statistics link show can0    # error state, error counts
 |---|---|
 | The frame dictionary | `firmware/can/aav.dbc` |
 | The test frames both sides must match | `firmware/can/test_vectors.json`, from `gen_test_vectors.py` |
-| Python codec | `src/backends/aav_spine/aav_spine/can_codec.py` |
-| ROS bridge | `src/backends/aav_spine/aav_spine/spine_bridge.py`, `config/spine.yaml` |
-| Launch with `ros2_socketcan` | `src/backends/aav_spine/launch/spine.launch.py` (`interface:=can0`) |
+| Python codec | `ros/can_bridge/aav_spine/aav_spine/can_codec.py` |
+| ROS bridge | `ros/can_bridge/aav_spine/aav_spine/spine_bridge.py`, `config/spine.yaml` |
+| Launch with `ros2_socketcan` | `ros/can_bridge/aav_spine/launch/spine.launch.py` (`interface:=can0`) |
 | Rust codec, watchdog, counter check | `firmware/spine/crates/spine-core/src/protocol.rs`, `watchdog.rs`, `spine.rs` |
-| The bench's pretend spine | `src/bench/aav_spine_sim` |
+| The bench's pretend spine | `ros/sim/aav_spine_sim` |
 | The KEFC plan vs our DBC | [CAN plan](can-plan.md) |

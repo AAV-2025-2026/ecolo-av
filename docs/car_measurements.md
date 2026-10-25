@@ -1,6 +1,6 @@
 # Car measurements and the URDF
 
-The car's measurements live in one file, `src/aav_description/config/vehicle.yaml`. Every
+The car's measurements live in one file, `ros/bringup/aav_description/config/vehicle.yaml`. Every
 other part reads them from there, so a number only ever changes in one place.
 
 | Who reads it | What it takes |
@@ -14,7 +14,7 @@ other part reads them from there, so a number only ever changes in one place.
 
 `aav_description/aav_description/vehicle.py` does the derived maths: turning radius =
 wheelbase / tan(max steering angle), and the footprint polygon from the body. Its tests
-(`src/aav_description/test/test_vehicle.py`) run without ROS.
+(`ros/bringup/aav_description/test/test_vehicle.py`) run without ROS.
 
 ## Every value is still a guess
 
@@ -136,7 +136,7 @@ colcon build --packages-select aav_description --symlink-install
 With `--symlink-install`, later edits to `vehicle.yaml` only need a relaunch.
 
 Two other ways to inspect the model:
-- Print the generated URDF: `xacro src/aav_description/urdf/aav.urdf.xacro`.
+- Print the generated URDF: `xacro ros/bringup/aav_description/urdf/aav.urdf.xacro`.
 - Draw the frame tree as a diagram: `ros2 run rqt_tf_tree rqt_tf_tree`.
 
 ## In Gazebo

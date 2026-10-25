@@ -57,7 +57,7 @@ A ROS release is one tested set of all three. Ours is **Jazzy**, supported until
 
 ## Adding a node, in five steps
 
-1. Pick the layer's folder, for example `src/drivers/`.
+1. Pick the layer's folder, for example `ros/drivers/`.
 2. Make a Python package: `package.xml` for the dependencies, `setup.py` for the entry
    point.
 3. Put the logic in a plain module with no ROS imports, and test it. A thin node file

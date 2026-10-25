@@ -2,7 +2,7 @@
 """
 Make the Gazebo road world's stop sign: an octagon mesh, and the picture painted on it.
 
-Writes, in src/backends/aav_gazebo/models/stop_sign/:
+Writes, in ros/sim/aav_gazebo/models/stop_sign/:
   meshes/stop_sign.obj                the plate: a flat octagon, its face looking along +x
   materials/textures/stop_sign.png    the face: red, a white rim, STOP in white
 

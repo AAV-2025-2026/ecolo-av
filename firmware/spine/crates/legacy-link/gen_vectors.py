@@ -2,7 +2,7 @@
 """
 Regenerate the UART link's test vectors, from the ROS side's own code.
 
-The bytes come from src/backends/aav_legacy/aav_legacy/legacy_protocol.py (pack_frame,
+The bytes come from ros/can_bridge/aav_legacy/aav_legacy/legacy_protocol.py (pack_frame,
 to_legacy, stop_command): what the Motor-Pi sends today. The expected Jrk and DAC targets
 come from a line-by-line model of the 2025-26 C++ (ros2_handler.cpp, jrk_g2.cpp), in
 single-precision floats as the ESP32 computes them.
@@ -33,7 +33,7 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
-PROTOCOL = ROOT / 'src/backends/aav_legacy/aav_legacy/legacy_protocol.py'
+PROTOCOL = ROOT / 'ros/can_bridge/aav_legacy/aav_legacy/legacy_protocol.py'
 JSON_OUT = HERE / 'vectors.json'
 RUST_OUT = HERE / 'tests/vectors.rs'
 

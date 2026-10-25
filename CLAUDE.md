@@ -18,7 +18,7 @@ These are the conventions decided so far. They apply to people and to Claude ses
   1. update `can_codec.py` and `protocol.rs`;
   2. run `python3 firmware/can/gen_test_vectors.py`;
   3. run both test suites.
-- **`src/aav_description/config/vehicle.yaml`**: the only place car measurements live.
+- **`ros/bringup/aav_description/config/vehicle.yaml`**: the only place car measurements live.
 - **`docs/history/conversation.md`**: the question-and-answer record of how we got here.
   Add new Q&A under its topic, and keep its "Open threads" list current.
 - **`TODO.md`**: the current work list. Ben's requests are kept verbatim in

@@ -40,16 +40,16 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 | Obstacle_Avoidance_logic | a lidar costmap and braking-distance e-stop | one C++ file | can't build: no package files | no | no: Nav2's obstacle layer and collision monitor |
 | Odometry | merges a SLAM pose and the IMU into `/odom` | Python ROS 2 | prototype; nothing publishes its input | no | no: robot_localization does this |
 | Real-Time-OS | a QNX layer: command picking, a SQLite logger, body control, a QNX image for a Pi 4 | C, C++; Pi 4 on QNX 8 | prototype: its own README lists the watchdog, e-stop and CAN as not done | no | no: twist_mux, the spine's watchdog and `ros2 bag` cover it ("No QNX" is Tentative, Q23) |
-| User-Interface | the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search | Dart/Flutter, Python ROS 2; the UI Pi | a working demo, on mock data | partly: `hud/`, `src/hud/maincar` | **its place database `ottawa.db` (51 MB)**: the ported app still needs it |
+| User-Interface | the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search | Dart/Flutter, Python ROS 2; the UI Pi | a working demo, on mock data | partly: `hud/`, `ros/hud/maincar` | **its place database `ottawa.db` (51 MB)**: the ported app still needs it |
 | Wheel_Encoders | a Pico 2 that counts wheel spokes and sends them over Ethernet | Arduino C++; Pico 2, W5500 | working demo | yes: rewritten in Rust (`firmware/spine/boards/wheel-encoder-pico2`, 15 Oct), and `aav_legacy` | its 3D-printed case files |
 | joy_teleop_ackerman | joystick to Ackermann commands, with deadman buttons | Python ROS 2 | working | no: stock teleop replaced it; its button map lives on in `aav_teleop` | no |
-| yahboom-IMU | the Yahboom IMU driver | C++ ROS 2; Pi 4 | working | yes, rewritten in Rust: `src/sensors/aav_imu_yahboom` (the C++ copy went on 11 Oct) | no |
+| yahboom-IMU | the Yahboom IMU driver | C++ ROS 2; Pi 4 | working | yes, rewritten in Rust: `ros/sources/aav_imu_yahboom` (the C++ copy went on 11 Oct) | no |
 
 The five not cloned here:
 
 | Repo | What GitHub says | Status |
 |---|---|---|
-| Lane_Detection_ROS2 | none | the controller is in `aav`: `src/perception/aav_lane_geometry`, a driver on `/drivers/ai/cmd_vel`. The lane finder isn't in the repo |
+| Lane_Detection_ROS2 | none | the controller is in `aav`: `ros/perception/aav_lane_geometry`, a driver on `/drivers/ai/cmd_vel`. The lane finder isn't in the repo |
 | Nav_Radar | none | in `aav`: `ti_ros2_driver`; the clustering, rewritten in Rust, as `aav_radar_clusters` |
 | AAV_dashboard | the **camera system's README** (main @ 5a26e15): CSI cameras → MediaMTX RTSP on the camera Pis (port 8554) → the Jetson's `camera_decode` (NVDEC) → `/camera/cam1/image_raw`, `cam2` → YOLOv8 on TensorRT → `/aav/stop_sign_*`; domain 10. The code itself is only on the Jetson, `~/Desktop/aav/Camera`. Plus a small web dashboard (ports 8080, 9090) | the README: `docs/reference/2025-26-camera-system` (15 Oct). The code: copy on Friday |
 | Speed | an older copy of the wheel-encoder Pico program, `Wheel_Encoders.cpp` (master @ a520646) | no: Wheel_Encoders is the newer one, now in Rust |
@@ -60,8 +60,8 @@ The five not cloned here:
 | Repo | What GitHub says | In `aav`? |
 |---|---|---|
 | GNSS | GNSS code for the car (u-blox, with RTK corrections) | surveyed in depth; replaced by the stock u-blox driver |
-| Battery-Monitor-ROS | battery monitor ROS code | yes: `src/sensors/battery_monitor` |
-| camera_ros2_ws | Python | yes: rewritten as `src/perception/aav_detector` |
+| Battery-Monitor-ROS | battery monitor ROS code | yes: `ros/sources/battery_monitor` |
+| camera_ros2_ws | Python | yes: rewritten as `ros/perception/aav_detector` |
 | camera_Yolo_detection | Python, 72 MB | 2 files: `aav_detector/training`. The trained `best.pt` isn't in it |
 | cameras | publishes camera feeds to ROS 2 | its 4 calibration files: `aav_sensors/config/cameras`, used by `cameras.launch.py` |
 | AutoCtrl_uRos | C++ | Motor-Control is a fork of it |

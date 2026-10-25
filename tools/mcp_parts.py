@@ -26,7 +26,7 @@ MAX_ANSWER = 30_000
 
 # The three contracts, readable alongside the Markdown.
 CONTRACTS = ('docs/interfaces.yaml', 'firmware/can/aav.dbc',
-             'src/aav_description/config/vehicle.yaml')
+             'ros/bringup/aav_description/config/vehicle.yaml')
 
 # Calls that would write to the ROS graph or the car. tools/mcp_server.py must contain
 # none of them; the tests check.

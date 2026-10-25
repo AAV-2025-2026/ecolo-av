@@ -590,6 +590,6 @@ pixi run vehicle-model --speed-loop     # TODO 27: the speed loop's designs, the
 
 | File | What |
 |---|---|
-| `src/ego/aav_ego/aav_ego/vehicle_model.py` | the maths: no ROS, numpy and scipy only |
-| `src/ego/aav_ego/test/test_vehicle_model.py` | 30 tests: textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight |
+| `ros/ego/aav_ego/aav_ego/vehicle_model.py` | the maths: no ROS, numpy and scipy only |
+| `ros/ego/aav_ego/test/test_vehicle_model.py` | 30 tests: textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight |
 | `tools/vehicle_model.py` | the tables and `docs/img/vehicle-model-*.png` |

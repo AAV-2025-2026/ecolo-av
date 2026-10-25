@@ -210,8 +210,8 @@ Start the real part, and stop the stand-in: same topic, same type, same frame.
 
 | File | What it is |
 |---|---|
-| `src/aav_bringup/launch/bench.launch.py` | the profile |
-| `src/bench/aav_spine_sim` | `spine_sim`: `crates/bench-car` (the model and the loop, 16 tests, no ROS) and `crates/spine-sim` (the ROS node) |
-| `src/bench/aav_bench` | the pretend sensors, their tests, and `config/bench.yaml` |
+| `ros/bringup/aav_bringup/launch/bench.launch.py` | the profile |
+| `ros/sim/aav_spine_sim` | `spine_sim`: `crates/bench-car` (the model and the loop, 16 tests, no ROS) and `crates/spine-sim` (the ROS node) |
+| `ros/sim/aav_bench` | the pretend sensors, their tests, and `config/bench.yaml` |
 | `tools/bench_check.py` | `pixi run bench-check` |
 | `tools/graph_picture.py` | `pixi run graph-picture`: the picture at the top |

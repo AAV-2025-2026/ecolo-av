@@ -17,7 +17,7 @@ The scene: a post `width` m wide, `ahead` m in front of the lidar (straight ahea
 fills the bearings within atan(width / 2 / ahead)), and everything else `ring` m away.
 Every laser sees the same distance at a bearing, as if the post and the ring were tall.
 
-The packet itself is aav_bench's (src/bench/aav_bench/aav_bench/vlp16.py), which bench
+The packet itself is aav_bench's (ros/sim/aav_bench/aav_bench/vlp16.py), which bench
 mode's mock_lidar sends too.
 
 No ROS: it only sends UDP. Standard library only, and aav_bench's vlp16 module.
@@ -30,7 +30,7 @@ import socket
 import sys
 import time
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src/bench/aav_bench'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'ros/sim/aav_bench'))
 from aav_bench.vlp16 import ELEVATIONS, PACKETS_PER_S, RPM, Sender  # noqa: E402, I100
 
 

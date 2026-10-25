@@ -295,7 +295,7 @@ What our node (`react.py`) could borrow:
 |---|---|
 | `tools/compare_detectors.py` | the detector comparison; tests in `tools/tests/test_compare_detectors.py` |
 | `tools/sim_frames.py` | Gazebo's stop sign from 7 distances |
-| `src/drivers/aav_language/aav_language/run_eval.py` | the language test: `--models newer`, `--backend openai` |
-| `src/drivers/aav_language/aav_language/llm_openai.py` | the OpenAI-compatible backend; tests in `test/test_llm_openai.py` |
-| `src/drivers/aav_language/aav_language/react.py` | reads Gemma 4's and Mistral 3's tool calls |
+| `ros/drivers/aav_language/aav_language/run_eval.py` | the language test: `--models newer`, `--backend openai` |
+| `ros/drivers/aav_language/aav_language/llm_openai.py` | the OpenAI-compatible backend; tests in `test/test_llm_openai.py` |
+| `ros/drivers/aav_language/aav_language/react.py` | reads Gemma 4's and Mistral 3's tool calls |
 | `~/aav-models/` (not in git) | weights, photos, frames, every score as JSON |

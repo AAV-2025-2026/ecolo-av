@@ -522,4 +522,4 @@ pixi run vehicle-model                    # our car's full model: margins, delay
 | `tools/state_space_demo.py` | the teaching simulator: A, B, C, D; Euler, RK4, exact; poles; quarter-car; roll |
 | `tools/tests/test_state_space_demo.py` | 16 tests: poles = eigenvalues = the TF's roots; Euler converges; the textbook step; sag = m g / k; roll by hand |
 | `docs/img/learn-ss-*.png` | the figures |
-| `src/ego/aav_ego/aav_ego/vehicle_model.py` | our car's model ([The car as a linear model](vehicle-model.md)) |
+| `ros/ego/aav_ego/aav_ego/vehicle_model.py` | our car's model ([The car as a linear model](vehicle-model.md)) |

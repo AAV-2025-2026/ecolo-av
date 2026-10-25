@@ -85,5 +85,5 @@ pixi run keyboard    # terminal 2: hold i to drive, u or o to turn
 | The architecture, its decisions, and open questions Q1–Q34 | the team design doc (a Claude Doc); a short copy in [Decisions](decisions.md) |
 | Every topic: its type, and who publishes and reads it | `docs/interfaces.yaml`, shown as [Topics](interfaces.md) |
 | The CAN frames between the computer and the spine | `firmware/can/aav.dbc`, explained in [Firmware](firmware.md) |
-| The car's measurements | `src/aav_description/config/vehicle.yaml`: [Car numbers](car_measurements.md) |
+| The car's measurements | `ros/bringup/aav_description/config/vehicle.yaml`: [Car numbers](car_measurements.md) |
 | Rules for code, names, secrets and git | `CLAUDE.md` |
