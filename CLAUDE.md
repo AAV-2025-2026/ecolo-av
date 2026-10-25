@@ -21,6 +21,9 @@ These are the conventions decided so far. They apply to people and to Claude ses
 - **`ros/bringup/aav_description/config/vehicle.yaml`**: the only place car measurements live.
 - **`docs/history/conversation.md`**: the question-and-answer record of how we got here.
   Add new Q&A under its topic, and keep its "Open threads" list current.
+- **`docs/features.md`**: every feature, its type, why we built it, and who built it.
+  **A commit that adds or changes a feature updates its row, in the same commit** (Ben,
+  25 Oct). Write the person's name, not "Claude".
 - **`TODO.md`**: the current work list. Ben's requests are kept verbatim in
   `docs/history/messages-*.md`; audits in `docs/history/audit-*.md`.
 
@@ -145,6 +148,11 @@ EGM artifact directory: docs/designs
 - Commit messages give the intention: what changed, and why. No attribution lines (no
   `Co-Authored-By`, no "Generated with"). It's a school project: the README's Credits
   section says who did what.
+- A feature's commit carries its `docs/features.md` row: a new feature gets a row under
+  its type; a changed one gets its Why, Status or Who updated. A fix or a refactor needs
+  none. `tools/tests/test_features.py` checks the table's shape.
+- Docs go in `docs/`, under plain names (`docs/car-day.md`, not `READ-ME-CAR-DAY.md`). The
+  root keeps only `README.md`, `CLAUDE.md`, `TODO.md` and the build files.
 - Commit in small steps that each pass `tools/test.sh`. Don't commit build output: no
   `build/`, `install/`, `log/` or `target/`.
 - To hand the repo to a laptop with no GitHub access:

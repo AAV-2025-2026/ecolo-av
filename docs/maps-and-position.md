@@ -1,6 +1,6 @@
 # Maps and position: from the wheels to OpenStreetMap
 
-Written 15 October 2026, for Ben. It answers:
+Written 15 October 2026. It answers:
 
 1. What does the local EKF give you?
 2. How does it become a position on a real map, with GPS?
@@ -148,4 +148,4 @@ Why the local one is in `odom`: if it were in `map`, every GPS hop would shift t
 | A GPS point as map x/y | `pixi run tools/ros.sh ros2 service call /fromLL robot_localization/srv/FromLL "{ll_point: {latitude: 45.3861, longitude: -75.6959}}"` |
 | The costmaps | in RViz (it opens with `pixi run sim`): add `/local_costmap/costmap` and `/global_costmap/costmap` |
 
-More: [Costmaps](docs/costmaps.md), [How it fits](docs/how-it-fits.md), [HUD](docs/hud.md).
+More: [Costmaps](costmaps.md), [How it fits](how-it-fits.md), [HUD](hud.md).

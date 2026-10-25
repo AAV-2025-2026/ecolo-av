@@ -14,13 +14,18 @@
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +37,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +45,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a class="here" href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +60,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -168,7 +180,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>C++, micro-ROS; ESP32</td>
 <td>inactive since 2025</td>
 <td>no</td>
-<td>no. What it taught us: branch <code>FinalRev</code> (4166ec0) reads the steering's position from the <strong>steering Jrk G2's own feedback</strong>, <code>jrk_steer.getScaledFeedback()</code>, 0-4095 mapped to -1..+1 (<code>src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187</code>). So the Jrk may already have a position sensor wired (TEAM-TODO B6, audit D6, D7)</td>
+<td>no. What it taught us: branch <code>FinalRev</code> (4166ec0) reads the steering's position from the <strong>steering Jrk G2's own feedback</strong>, <code>jrk_steer.getScaledFeedback()</code>, 0-4095 mapped to -1..+1 (<code>src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187</code>). So the Jrk may already have a position sensor wired (team-todo.md B6, audit D6, D7)</td>
 </tr>
 <tr>
 <td>Motor_Steering</td>
@@ -551,7 +563,7 @@ card is in <a href="modules.html">Every module</a>. To read the originals:</p>
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="camera-calibration.html"><small>Previous</small>← Camera calibration</a>
+<nav class="prevnext"><a class="prev" href="team-todo.html"><small>Previous</small>← Team tasks</a>
 <a class="next" href="ros2.html"><small>Next</small>ROS 2 →</a></nav>
 </main>
 <footer>Source: <code>docs/older-code.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

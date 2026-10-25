@@ -4,7 +4,7 @@
 <title>Car day: the runbook · AAV 2026–27</title>
 <link rel="stylesheet" href="style.css">
 </head><body>
-<!-- Generated from READ-ME-CAR-DAY.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<!-- Generated from docs/car-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
 <div class="meta">38 min read · 16 sections</div></header>
@@ -14,13 +14,18 @@
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a class="here" href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +37,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +45,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +60,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -300,7 +312,7 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 </tr>
 <tr>
 <td>☐</td>
-<td>the printed sheet, <a href="../../READ-ME-MEASURE-THE-CAR.md">READ-ME-MEASURE-THE-CAR.md</a>, 2 copies, pens</td>
+<td>the printed sheet, <a href="measure-the-car.html">Measure the car</a>, 2 copies, pens</td>
 <td>session 2</td>
 </tr>
 <tr>
@@ -474,7 +486,7 @@ there stops every ROS program. At the car:
 <p>After step 4, before steps 1, 5 and 6: so the build, the kit and the push are its 3
 missing, and Cyclone a reminder. No secrets: the Keychain is only asked whether each
 entry exists.</p>
-<pre class="highlight"><code class="language-text">Car day: is /Users/ben/Code/aav/aav ready? (READ-ME-CAR-DAY.md)
+<pre class="highlight"><code class="language-text">Car day: is /Users/ben/Code/aav/aav ready? (car-day.md)
 
   MISSING  repo         main at 54304074 has commits GitHub hasn't
                         -&gt; pixi run test, then git push
@@ -498,14 +510,14 @@ entry exists.</p>
   OK       Lichtblick   /Applications/Lichtblick.app
   OK       docs PDF     docs/html/aav-docs.pdf, built 24 Oct 15:48
   REMIND   Cyclone      Cyclone DDS uses one network card: name the car's (the dongle) in ~/.config/aav/cyclonedds-car.xml
-                        -&gt; READ-ME-CAR-DAY.md, session 0
+                        -&gt; car-day.md, session 0
   OK       logins       7 of 7 in the Keychain: aav-cam2, aav-cortex, aav-jetson, aav-desktop, aav-localization, aav-cam1, aav-qnxpi
   OK       SSH key      ~/.ssh/id_ed25519.pub
   OK       disk         275 GB free for bags
-  REMIND   sheet        print READ-ME-MEASURE-THE-CAR.md (2 copies) and a pen
+  REMIND   sheet        print measure-the-car.md (2 copies) and a pen
                         -&gt; session 2
   REMIND   kit bag      stands, the RC transmitter, the e-stop, tape, plumb line, 4 scales, blocks, multimeter, dongle, cable
-                        -&gt; READ-ME-CAR-DAY.md, "What to bring"
+                        -&gt; car-day.md, "What to bring"
   REMIND   questions    the hardware lead is coming? H1-H8 need them
                         -&gt; session 3
 
@@ -567,8 +579,8 @@ entry exists.</p>
 <section class="card"><h2 id="session-2-measure-and-weigh">Session 2: measure and weigh</h2>
 <p><strong>Who:</strong> 2 measurers. <strong>How long:</strong> 90 min. <strong>Bring:</strong> the printed sheet, tape, string,
 plumb line, phone level, 4 scales, 2 blocks, a protractor. <strong>Due 30 Oct</strong> (Gate 1,
-<a href="../../PLAN.md">PLAN</a>).</p>
-<p>Follow <a href="../../READ-ME-MEASURE-THE-CAR.md">READ-ME-MEASURE-THE-CAR.md</a>: it is the sheet.</p>
+<a href="plan.html">PLAN</a>).</p>
+<p>Follow <a href="measure-the-car.html">Measure the car</a>: it is the sheet.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1327,7 +1339,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <td>5</td>
 <td>The same over the car's WiFi</td>
 <td>under 2.5 MB/s for every laptop together</td>
-<td>the WiFi drops multicast? (<a href="../../READ-ME-FRIDAY.md">Friday</a>)</td>
+<td>the WiFi drops multicast? (<a href="../history/friday-2026-10-16.md">Friday</a>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -1607,12 +1619,12 @@ the sensors' real noise (T2.4) and the replay (T2.5). Bags stay out of git.</p>
 </tr>
 <tr>
 <td>Gate 1 and Gate 2</td>
-<td><a href="../../PLAN.md">PLAN.md</a></td>
+<td><a href="plan.html">The plan</a></td>
 </tr>
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="audit-questions.html"><small>Previous</small>← Audit questions</a>
-<a class="next" href="decisions.html"><small>Next</small>Decisions →</a></nav>
+<a class="next" href="tests.html"><small>Next</small>Every test →</a></nav>
 </main>
-<footer>Source: <code>READ-ME-CAR-DAY.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+<footer>Source: <code>docs/car-day.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

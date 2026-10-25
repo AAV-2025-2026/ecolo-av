@@ -1,6 +1,6 @@
 # Friday 16 October: the to-do list
 
-Written 15 October 2026, for Ben and the team. **The goal:** log in to every machine on
+Written 15 October 2026, for the team. **The goal:** log in to every machine on
 the car, and come home with everything we need to finish the hardware layers: what each
 machine runs, what starts it at boot, what is plugged in, the files that exist only on
 the car, and what goes wrong (such as the cameras freezing).
@@ -10,7 +10,7 @@ the car, and what goes wrong (such as the cameras freezing).
 > - **One command surveys every machine:** `pixi run survey ~/aav-audit/hosts.txt`. It's read-only, and saves one file per machine on the Mac.
 > - **Copy what exists only on the car** before anything else happens to it: model weights, unpushed code, maps, calibration, boot scripts.
 > - **The cameras freezing:** ask the team first, then watch one camera for 10 minutes with the power and temperature logged beside it (part 5).
-> - The day's wider plan, and what comes after the audit: [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md). Every question: [docs/audit-questions.md](docs/audit-questions.md).
+> - The day's wider plan, and what comes after the audit: [Friday 16 Oct](friday-2026-10-16.md). Every question: [docs/audit-questions.md](../audit-questions.md).
 
 ```text
  0 ready  →  1 find  →  2 log in + survey  →  3 read  →  4 copy  →  5 errors  →  6 per layer  →  7 write up
@@ -23,7 +23,7 @@ the car, and what goes wrong (such as the cameras freezing).
 |---|---|
 | ☐ | `git pull`, `pixi run build`, `pixi run test` |
 | ☐ | Make sure the `git pull` has commit 426e3a0b (15 Oct): before it, `pixi run sim`, `turtle`, `bench` and `keyboard --local` were **not** kept on the Mac, so a pretend car could have met the real one |
-| ☐ | The Mac checklist in [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md) ("Your Mac on the car's network"): Local Network permission, firewall, Lichtblick, an SSH key |
+| ☐ | The Mac checklist in [Friday 16 Oct](friday-2026-10-16.md) ("Your Mac on the car's network"): Local Network permission, firewall, Lichtblick, an SSH key |
 | ☐ | `pixi run car-kit`, onto a USB stick (for after the audit) |
 | ☐ | An external drive with an **encrypted** volume, 1 TB or more: the copies hold passwords and keys |
 | ☐ | `mkdir -p ~/aav-audit && chmod 700 ~/aav-audit` |
@@ -35,7 +35,7 @@ the car, and what goes wrong (such as the cameras freezing).
 | ☐ | Do | Gives |
 |---|---|---|
 | ☐ | Car on stands, wheels off the ground, e-stop in someone's hand, RC off | nothing can move |
-| ☐ | Mac on the car's switch with the **USB-C Ethernet dongle**, phone hotspot for the internet: the step-by-step is in [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md), "Ethernet dongle and phone hotspot" | |
+| ☐ | Mac on the car's switch with the **USB-C Ethernet dongle**, phone hotspot for the internet: the step-by-step is in [Friday 16 Oct](friday-2026-10-16.md), "Ethernet dongle and phone hotspot" | |
 | ☐ | `pixi run net-map --listen 30 --out ~/aav-audit/net-map.md` | every IP, MAC, maker, open ports, ROS domains |
 | ☐ | The router's client list: a screenshot (check no password shows) | names for the IPs |
 | ☐ | Match each IP to a switch label, and write `~/aav-audit/hosts.txt` (below) | the list for part 2 |
@@ -59,7 +59,7 @@ MOTOR-PI   pi@192.168.1.193
 pixi run survey ~/aav-audit/hosts.txt        # one file per machine: ~/aav-audit/<label>.txt
 ```
 
-It runs [tools/machine_survey.sh](tools/machine_survey.sh) on each machine over ssh. Read-only:
+It runs [tools/machine_survey.sh](../../tools/machine_survey.sh) on each machine over ssh. Read-only:
 no installs, no restarts, never opens a serial port (that can reset an ESP32), never probes
 I2C, uses sudo only if it needs no password. It cuts lines that look like passwords or
 tokens. About 1-3 minutes a machine.
@@ -110,7 +110,7 @@ Each file has sections starting `====`. For each machine, pull out:
 | ☐ | What | Where it probably is | How |
 |---|---|---|---|
 | ☐ | Every home folder | each machine | `rsync -a --exclude .cache <user>@<ip>:~/ /Volumes/<drive>/aav-backup/<label>/home/` |
-| ☐ | `/etc` (services, udev, network) | each machine | `ssh <user>@<ip> 'sudo -n tar czf - /etc' > /Volumes/<drive>/aav-backup/<label>/etc.tgz`. If sudo wants a password: the three commands in [docs/audit-friday.md](docs/audit-friday.md), step 3 |
+| ☐ | `/etc` (services, udev, network) | each machine | `ssh <user>@<ip> 'sudo -n tar czf - /etc' > /Volumes/<drive>/aav-backup/<label>/etc.tgz`. If sudo wants a password: the three commands in [docs/audit-friday.md](../audit-friday.md), step 3 |
 | ☐ | **Model weights**: the stop-sign detector, any `best.pt`, `.engine`, `.onnx` | the Orin (survey: "files that may exist only here") | in the home copy. Write each one's path, size and `sha256sum` |
 | ☐ | **Code not on GitHub**: repos with changed files or unpushed commits; workspaces that aren't git repos | survey: "code on this machine" | in the home copy. List each one in the write-up |
 | ☐ | **`~/Desktop/aav/Camera` on the Jetson**: `camera_decode`, `best.pt` / `best.onnx` / `best.engine` (the stop-sign model), `cameras.yaml` (the Pis' IPs). **In no git repo** | the Jetson | in the home copy; check it's there |
@@ -119,7 +119,7 @@ Each file has sections starting `====`. For each machine, pull out:
 | ☐ | OSRM route data, map tiles, `ottawa.db` | DASH-UI, the Orin; Docker volumes | the home copy; `docker inspect` shows the volume paths |
 | ☐ | Recordings (`.db3`, `.mcap`, `.bag`) | anywhere | in the home copy: useful test data |
 | ☐ | The boot scripts: hand-made `.service` files, crontabs, autostart files | `/etc/systemd/system`, home folders | in the `/etc` and home copies |
-| ☐ | SD-card images of the Pis | only if the team agrees to shut each one down | [docs/audit-friday.md](docs/audit-friday.md), step 3 |
+| ☐ | SD-card images of the Pis | only if the team agrees to shut each one down | [docs/audit-friday.md](../audit-friday.md), step 3 |
 
 What then comes into **git** (later, on a branch): source code only, each with a
 `PROVENANCE.md`. Weights go in `models/` (not in git), with their checksum written down.
@@ -129,7 +129,7 @@ What then comes into **git** (later, on a branch): source code only, each with a
 ### The cameras freezing
 
 **How their cameras work** (found 15 Oct, in the 2025-26 `AAV_dashboard` repo:
-[docs/reference/2025-26-camera-system](docs/reference/2025-26-camera-system/README.md)):
+[docs/reference/2025-26-camera-system](../reference/2025-26-camera-system/README.md)):
 
 ```text
  camera (ribbon) → camera Pi 5: MediaMTX video server, RTSP port 8554 → network
@@ -209,7 +209,7 @@ What our code has today, and what Friday must answer to finish each layer.
 
 ### The dash's two screens (W10)
 
-Our HUD and map are ready to start at boot, one per screen ([docs/car-screens.md](docs/car-screens.md)):
+Our HUD and map are ready to start at boot, one per screen ([docs/car-screens.md](../car-screens.md)):
 they only need these answers. Read-only, on the computer the screens plug into, in its
 desktop's terminal (or over ssh with `DISPLAY=:0`).
 
@@ -230,17 +230,17 @@ desktop's terminal (or over ssh with `DISPLAY=:0`).
 | ☐ | Do |
 |---|---|
 | ☐ | Photograph every label: each computer, the GPS, IMU, lidar, radar, cameras, motor controller, both Jrk G2s, the converters, the switch. Name files by label: `RTK-PI-1.jpg` |
-| ☐ | The tape-measure sheet, M1-M7 and every sensor: [READ-ME-MEASURE-THE-CAR.md](READ-ME-MEASURE-THE-CAR.md). Print it; fill it in; photograph it |
+| ☐ | The tape-measure sheet, M1-M7 and every sensor: [Measure the car](../measure-the-car.md). Print it; fill it in; photograph it |
 
 ## 8. Write it up (no secrets)
 
 | ☐ | Do |
 |---|---|
-| ☐ | `docs/history/audit-2026-10-16-car.md`: the table in [docs/audit-friday.md](docs/audit-friday.md) step 7, plus part 3's notes, part 4's list of what exists only on the car, and part 5's findings |
-| ☐ | Answer each question in [docs/audit-questions.md](docs/audit-questions.md) by its number |
+| ☐ | `docs/history/audit-2026-10-16-car.md`: the table in [docs/audit-friday.md](../audit-friday.md) step 7, plus part 3's notes, part 4's list of what exists only on the car, and part 5's findings |
+| ☐ | Answer each question in [docs/audit-questions.md](../audit-questions.md) by its number |
 | ☐ | `grep -n -i -E "pass|psk|token|secret|key|ntrip" docs/history/audit-2026-10-16-car.md`: write only where a secret is and what kind |
 | ☐ | The raw survey files and backups stay in `~/aav-audit/` and on the encrypted drive: **never in git** |
-| ☐ | Update [TEAM-TODO.md](TEAM-TODO.md), the team's work list: fill its "Audit says" column, fix the sizes, add what the audit found |
+| ☐ | Update [Team tasks](../team-todo.md), the team's work list: fill its "Audit says" column, fix the sizes, add what the audit found |
 
 ## Don't (all day, until part 8 is done)
 

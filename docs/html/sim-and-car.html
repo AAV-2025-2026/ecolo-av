@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulation and the real car: how far we&#x27;ve got · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/sim-and-car.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Simulation and the real car: how far we&#x27;ve got</h1>
+<div class="meta">9 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a class="here" href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-the-big-idea-swap-the-bottom-layer">1. The big idea: swap the bottom layer</a><a href="#2-the-three-bottom-boxes">2. The three bottom boxes</a><a href="#3-does-gazebo-produce-sensor-data-yes">3. Does Gazebo produce sensor data? Yes</a><a href="#4-works-means-in-simulation-or-on-the-bench">4. &quot;Works&quot; means: in simulation or on the bench</a><a href="#5-why-none-of-it-has-run-on-the-car-yet">5. Why none of it has run on the car yet</a><a href="#6-today-vs-after-the-kefc-changes">6. Today vs after the KEFC changes</a><a href="#7-the-plan-in-order">7. The plan, in order</a><a href="#8-try-it-yourself">8. Try it yourself</a></nav>
+<div class="lead"><p>Written 15 October 2026. It answers three questions:</p>
+<ol>
+<li>How far did we get with Gazebo?</li>
+<li>Does it really produce sensor data?</li>
+<li>How does any of it relate to the real car?</li>
+</ol>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Gazebo works</strong>, and it <strong>does produce sensor data</strong>: an IMU, a GPS, wheel speed, a camera, a radar and a lidar, all on <code>main</code>.
+- The three cameras, the radar and the lidar are in the <strong>road world</strong> and the <strong>parking lot</strong>: <code>pixi run sim world:=road</code> or <code>world:=test_lot</code> (all on by default since 15 Oct; <code>lidar:=false</code> drops the lidar).
+- <strong>The lidar is simulation only</strong>: the car's own lidar has no driver in our code yet.
+- <strong>None of our code has run on the real car yet.</strong> Everything "works" in simulation or on the bench only.
+- The point of simulation: the <strong>same nodes</strong> run in all three places. Only the bottom layer changes.</p>
+</blockquote></div>
+<section class="card"><h2 id="1-the-big-idea-swap-the-bottom-layer">1. The big idea: swap the bottom layer</h2>
+<p>Most of the software doesn't know whether it's driving a real car or a pretend one.</p>
+<pre class="highlight"><code class="language-text">            ┌──────────────────────────────────────────────┐
+  THE SAME  │ drivers → twist_mux → ego                    │
+  EVERYWHERE│ EKFs, navsat_transform, Nav2, perception, HUD│
+            └──────────────────────┬───────────────────────┘
+                     /ego/actuator_cmd  ↓      ↑  /vehicle/odom, /imu, /sensors/gps/fix ...
+            ┌──────────────┬────────────────┬────────────────┐
+  SWAPPED   │  Gazebo      │  The bench     │  The real car  │
+            │ (simulator)  │ (stand-ins)    │ (hardware)     │
+            └──────────────┴────────────────┴────────────────┘</code></pre>
+<ul>
+<li>Everything <strong>above</strong> the line is the same code, with the same settings.</li>
+<li>Only the <strong>bottom box</strong> changes. We call it the <strong>backend</strong>, and exactly one runs at a time.</li>
+<li>So if Nav2 drives well in Gazebo, the same Nav2 should drive the car. The only differences are the real sensors' noise and the real motors.</li>
+</ul>
+</section>
+<section class="card"><h2 id="2-the-three-bottom-boxes">2. The three bottom boxes</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Gazebo</th>
+<th>The bench</th>
+<th>The real car</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What it is</td>
+<td>a 3D physics simulator</td>
+<td>stand-in programs: no physics, no 3D</td>
+<td>the car</td>
+</tr>
+<tr>
+<td>Command</td>
+<td><code>pixi run sim</code></td>
+<td><code>pixi run bench</code></td>
+<td>not ready yet</td>
+</tr>
+<tr>
+<td>Who plays the car</td>
+<td>Gazebo's Ackermann car model</td>
+<td><code>aav_spine_sim</code>: the spine's own firmware logic, on a model car</td>
+<td>the boards and motors</td>
+</tr>
+<tr>
+<td>Sensors come from</td>
+<td>Gazebo's sensor models</td>
+<td>small "mock" nodes that pretend</td>
+<td>the real devices</td>
+</tr>
+<tr>
+<td>CAN frames</td>
+<td>no</td>
+<td><strong>yes</strong>: the same frames the real spine will send</td>
+<td>yes, after the KEFC work</td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>Nav2, localization, driving in a world</td>
+<td>the car's own software path, e-stops, CAN</td>
+<td>the truth</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>✅ works on Linux and on the Mac</td>
+<td>✅ works, with its own checks</td>
+<td>❌ never run</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="3-does-gazebo-produce-sensor-data-yes">3. Does Gazebo produce sensor data? Yes</h2>
+<h3 id="in-every-world">In every world</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sensor</th>
+<th>Gazebo makes it</th>
+<th>The car's software sees it as</th>
+<th>Rate</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMU</td>
+<td><code>/aav/imu</code></td>
+<td><code>/sensors/imu/data_raw</code> → filter → <code>/sensors/imu/data</code></td>
+<td>50 Hz</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td><code>/aav/navsat</code></td>
+<td><code>/sensors/gps/fix</code></td>
+<td>5 Hz</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Wheel speed</td>
+<td>from the car model's motion</td>
+<td><code>/vehicle/odom</code></td>
+<td>50 Hz</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Car status</td>
+<td>from the car model</td>
+<td><code>/vehicle/status</code></td>
+<td>50 Hz</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>How it gets there:</strong></p>
+<pre class="highlight"><code class="language-text">Gazebo sensor → ros_gz_bridge → /gazebo/... → one node per sensor → the real drivers' topic names</code></pre>
+<p><code>gazebo_adapter</code> (the car), <code>gazebo_imu</code>, <code>gazebo_gps</code> and <code>gazebo_radar</code> rename everything to the <strong>same names the real drivers use</strong> (<code>/sensors/gps/fix</code>, <code>/sensors/imu/data_raw</code>, <code>/vehicle/odom</code>). The software above can't tell the difference. One process each, as each sensor on the car has its own driver.</p>
+<p><img alt="The simulated car in Gazebo" src="../img/gazebo-car.png" /></p>
+<h3 id="in-the-road-world-pixi-run-sim-worldroad">In the road world (<code>pixi run sim world:=road</code>)</h3>
+<p>Merged from the branch <code>wt/sim-full</code> on 15 Oct. Rates measured on Ben's Mac, on simulated time.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Added</th>
+<th>The car's software sees it as</th>
+<th>Rate</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A road: lane lines, a stop sign, a box in the road (<code>obstacle:=true</code>)</td>
+<td></td>
+<td></td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Three cameras: two on top looking forward, one at the back looking back</td>
+<td><code>/sensors/camera/front_left/image_raw</code>, <code>front_right/...</code>, <code>rear/...</code></td>
+<td>10 Hz</td>
+<td>✅ (15 Oct)</td>
+</tr>
+<tr>
+<td>A radar on the grill (a lidar shaped like it)</td>
+<td><code>/sensors/radar/points</code> (via <code>/gazebo/radar/points</code>)</td>
+<td>10 Hz</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>A 16-beam lidar on the roof</td>
+<td><code>/sensors/lidar/points</code></td>
+<td>10 Hz</td>
+<td>✅ on by default (15 Oct): all sensors together pass on a quiet Mac. Earlier failures came from other programs competing</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="What the three simulated cameras see" src="../img/sim-cameras.png" /></p>
+<ul>
+<li><strong>Cameras and lidars on a Mac:</strong> they render without a window, and didn't crash.</li>
+<li><strong>Checked by</strong> <code>pixi run sim-check</code>: every check passes, on 15 Oct.</li>
+<li><strong>Details:</strong> <a href="simulation.html">Simulation</a>: every sensor's noise, the lidar, what isn't simulated.</li>
+</ul>
+<h3 id="not-simulated-at-all">Not simulated at all</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Why not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The real lidar</td>
+<td>Gazebo's is a generic one: the car's model is unknown (Q22), and has no driver yet</td>
+</tr>
+<tr>
+<td>The magnetometer</td>
+<td>the EKFs don't use it</td>
+</tr>
+<tr>
+<td>The battery</td>
+<td>nothing to simulate yet</td>
+</tr>
+<tr>
+<td>The real CAN boards</td>
+<td>that's the bench's job, not Gazebo's</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="4-works-means-in-simulation-or-on-the-bench">4. "Works" means: in simulation or on the bench</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Gazebo</th>
+<th>Bench</th>
+<th>Real car</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>twist_mux, ego (the command path)</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌ never run</td>
+</tr>
+<tr>
+<td>Both EKFs + navsat_transform</td>
+<td>✅ within 0.2 m parked</td>
+<td>✅ 0.03-0.3 m from the truth</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Nav2 drives to a goal</td>
+<td>✅ 8 m and 9.5 m goals</td>
+<td>✅ 40 m past a stop sign</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Stop sign → the car stops</td>
+<td>✅ (11 Oct)</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Obstacle stop (collision_monitor)</td>
+<td>✅ 0.74 m before the box</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>The spine and CAN frames</td>
+<td></td>
+<td>✅ against the spine simulator</td>
+<td>❌ the board was never flashed</td>
+</tr>
+<tr>
+<td>GPS driver (<code>ublox_gps</code>)</td>
+<td></td>
+<td></td>
+<td>❌ never run with the receiver</td>
+</tr>
+<tr>
+<td>IMU driver</td>
+<td></td>
+<td></td>
+<td>❌ needs the device</td>
+</tr>
+<tr>
+<td>The raylib HUD</td>
+<td>✅ as a ROS node, with test topics</td>
+<td>✅ next to bench mode</td>
+<td>❌ not on the car's screen yet</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="5-why-none-of-it-has-run-on-the-car-yet">5. Why none of it has run on the car yet</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Blocker</th>
+<th>What it means</th>
+<th>Who or when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The car runs ROS 2 Humble; we use Jazzy</strong></td>
+<td>the two can't talk on one network (Q24)</td>
+<td>reflash the Orin, or run our Jazzy through Pixi on its Ubuntu 22.04</td>
+</tr>
+<tr>
+<td><strong>We've never logged in</strong></td>
+<td>we don't know what runs on each Pi</td>
+<td><strong>Friday's audit</strong></td>
+</tr>
+<tr>
+<td><strong>The drive path is still the 2025-26 one</strong></td>
+<td>Motor-Pi + ESP32 over UART/UDP. Our <code>aav_legacy</code> backend speaks it, but has never been tried</td>
+<td>after the audit</td>
+</tr>
+<tr>
+<td><strong>CAN isn't wired yet</strong></td>
+<td>the KEFC parts are still to buy</td>
+<td>after the order</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="6-today-vs-after-the-kefc-changes">6. Today vs after the KEFC changes</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Today on the car</th>
+<th>Our code today</th>
+<th>After KEFC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Computer</td>
+<td>Orin #1 (Humble)</td>
+<td>runs on Jazzy</td>
+<td>Orin #1 (control, EKF) + Orin #2 (perception, Nav2)</td>
+</tr>
+<tr>
+<td>Drive path</td>
+<td>Motor-Pi → ESP32 (UART/UDP)</td>
+<td><code>aav_legacy</code> backend, untested</td>
+<td>Orin → CAN → ESP32 control board (<code>aav_spine</code>)</td>
+</tr>
+<tr>
+<td>Wheel speed</td>
+<td>optical encoder (fouled) on a Pico 2</td>
+<td><code>aav_legacy</code> reads it</td>
+<td>2 Hall sensors → 2 ESP32 wheel nodes → CAN</td>
+</tr>
+<tr>
+<td>Steering feedback</td>
+<td>none (open loop)</td>
+<td><code>measured_steering_angle</code> waits for it</td>
+<td>KTC-100 pot → the Jrk G2</td>
+</tr>
+<tr>
+<td>GPS</td>
+<td>ZED-F9R on a taped u.FL lead</td>
+<td><code>ublox_gps</code> driver, untested</td>
+<td>new ZED-F9R board, screw-on antenna</td>
+</tr>
+<tr>
+<td>Lidar</td>
+<td>on the roof, probably a Velodyne (the 2025-26 code read <code>/velodyne_points</code>)</td>
+<td>a generic one in Gazebo only; no driver</td>
+<td>read on Orin #2</td>
+</tr>
+<tr>
+<td>Cameras</td>
+<td>2 front Pi 5s</td>
+<td><code>usb_cam</code> launch, untested</td>
+<td>+ a rear Pi 5</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="7-the-plan-in-order">7. The plan, in order</h2>
+<ol>
+<li><strong>Done 15 Oct:</strong> the Gazebo camera, radar and lidar, merged into <code>main</code>.</li>
+<li><strong>Friday:</strong> the audit (<code>docs/car-photos.md</code> has the checklist). Find out what really runs.</li>
+<li><strong>Then:</strong> get our stack onto the car, either Jazzy on the Orin or Pixi, and listen first: <code>ros2 topic hz /sensors/gps/fix</code>.</li>
+<li><strong>Then:</strong> drive on stands through <code>aav_legacy</code>, before any CAN work.</li>
+<li><strong>Then:</strong> the KEFC parts, the CAN bench with a CANable, one board at a time.</li>
+</ol>
+</section>
+<section class="card"><h2 id="8-try-it-yourself">8. Try it yourself</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You want to</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>See Gazebo with the car</td>
+<td><code>pixi run sim</code></td>
+</tr>
+<tr>
+<td>See its sensor data</td>
+<td>in another terminal: <code>pixi run tools/ros.sh ros2 topic hz /sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>Look at one GPS message</td>
+<td><code>pixi run tools/ros.sh ros2 topic echo --once /sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>Drive it</td>
+<td><code>pixi run keyboard --sim</code></td>
+</tr>
+<tr>
+<td>Check the whole graph</td>
+<td><code>pixi run check sim</code></td>
+</tr>
+<tr>
+<td>The road world, with cameras, radar and lidar</td>
+<td><code>pixi run sim world:=road</code></td>
+</tr>
+<tr>
+<td>The parking lot, with every sensor</td>
+<td><code>pixi run sim world:=test_lot</code></td>
+</tr>
+<tr>
+<td>Test the road world end to end</td>
+<td><code>pixi run sim-check</code> (2 minutes, no window)</td>
+</tr>
+<tr>
+<td>The bench instead</td>
+<td><code>pixi run bench</code>, then <code>pixi run bench-check</code></td>
+</tr>
+<tr>
+<td>The HUD on top of it</td>
+<td><code>pixi run hud</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>More detail: <a href="simulation.html">Simulation</a>, <a href="bench.html">Bench mode</a>, <a href="status.html">Status</a>.</p></section>
+<nav class="prevnext"><a class="prev" href="simulation.html"><small>Previous</small>← Simulation</a>
+<a class="next" href="full-simulation.html"><small>Next</small>Full simulation →</a></nav>
+</main>
+<footer>Source: <code>docs/sim-and-car.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

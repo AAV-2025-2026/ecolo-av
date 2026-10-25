@@ -198,8 +198,8 @@ What it means:
 |---|---|
 | **Default** | Regulated Pure Pursuit stays the default: quicker, cheaper, and no loops at goals |
 | **MPPI next** | stop the loops: drop or soften `GoalAngleCritic`, or widen its angle threshold, so it accepts the heading it arrives with (the goal checker allows 0.5 rad anyway) |
-| **Both** | the corner problem: the planner's paths pass walls closer than the collision monitor allows (PLAN.md M8) |
-| **Both** | steering round the box needs the obstacle in the planner's map (PLAN.md M5) |
+| **Both** | the corner problem: the planner's paths pass walls closer than the collision monitor allows (plan.md M8) |
+| **Both** | steering round the box needs the obstacle in the planner's map (plan.md M5) |
 
 ## Making MPPI drive
 

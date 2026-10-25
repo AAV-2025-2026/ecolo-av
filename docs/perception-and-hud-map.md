@@ -1,8 +1,8 @@
 # Perception models, the lidar, and a map on the HUD
 
-Written 15 October 2026, for Ben. **Since then:** the detector is RF-DETR Nano, not YOLO
+Written 15 October 2026. **Since then:** the detector is RF-DETR Nano, not YOLO
 (Ben, 23 Oct), as TensorRT on the Orin and Core ML on a Mac: see
-[Perception](docs/perception.md#models). YOLO stays as `detector:=yolo`. It answers:
+[Perception](perception.md#models). YOLO stays as `detector:=yolo`. It answers:
 
 1. YOLO, OpenCV, or the previous teams' trained models?
 2. What do we do with the lidar? Can we just download a model?
@@ -140,7 +140,7 @@ that ... nvidia has some per pixel object detection models."
 | **Drivable area + lanes** | road and lane pixels | TwinLiteNet, YOLOPv2 | a cheap road mask for a small car |
 
 Per-pixel is what our costmap is missing: Nav2 doesn't know where the road is (see
-[READ-ME-MAPS-AND-POSITION.md](READ-ME-MAPS-AND-POSITION.md)). A road mask, projected onto
+[Maps and position](maps-and-position.md)). A road mask, projected onto
 the ground, becomes a costmap layer: off-road = high cost.
 
 ### NVIDIA's options

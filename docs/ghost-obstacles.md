@@ -1,7 +1,7 @@
 # Ghost obstacles: a pretend person for Nav2
 
 A ghost is a person (or a post) that only Nav2 can see. Use it to test stopping on the
-real car, with nothing real to hit. PLAN.md item S4, built 16 Oct.
+real car, with nothing real to hit. plan.md item S4, built 16 Oct.
 
 !!! note "The short version"
     - Start with `ghost:=true`: `pixi run sim ghost:=true`, or `pixi run car <machine>
@@ -79,7 +79,7 @@ The same with ROS's own tools: `ros2 param set /ghost_obstacle enabled true`. Us
 
 ## The test in Gazebo
 
-`pixi run sim-check --ghost` (`READ-ME-TESTS.md` 1.15): a second Gazebo
+`pixi run sim-check --ghost` (`tests.md` 1.15): a second Gazebo
 run with `ghost:=true`. A ghost 15 m ahead; Nav2 drives 30 m.
 
 | Must | How it's measured |

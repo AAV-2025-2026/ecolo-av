@@ -39,7 +39,7 @@ done or built; this page is the rest, **in order**.
 
 ## The machines
 
-As the 21 Oct audit found them ([audit](docs/history/audit-2026-10-21-car.md)).
+As the 21 Oct audit found them ([audit](history/audit-2026-10-21-car.md)).
 Usernames: `~/aav-audit/hosts.txt` on Ben's Mac. Passwords: the Keychain entry (Keychain
 Access → search the entry → Show password). Every address is `192.168.1.x`.
 
@@ -65,7 +65,7 @@ Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
 | ☐ | a USB data cable for the ESP32 board's USB port (check its plug before) | session 6 |
 | ☐ | **stands** for all four wheels, wheel chocks | sessions 1, 6, 9 |
 | ☐ | the **RC transmitter**, charged | sessions 1, 6 |
-| ☐ | the printed sheet, [READ-ME-MEASURE-THE-CAR.md](READ-ME-MEASURE-THE-CAR.md), 2 copies, pens | session 2 |
+| ☐ | the printed sheet, [Measure the car](measure-the-car.md), 2 copies, pens | session 2 |
 | ☐ | tape measure, masking tape, string, a plumb line, a phone level app | session 2 |
 | ☐ | **4 bathroom scales** (or 1 and blocks), 2 blocks 20-30 cm | session 2 |
 | ☐ | a protractor | sessions 2, 9 |
@@ -84,7 +84,7 @@ Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
 | 2 | `pixi run get-models` (once) | `models/rf-detr-nano.pth`, `models/yolo11n.pt` | the internet |
 | 3 | The ONNX for the Orin (box below) | `models/rf-detr-nano.onnx` (108 MB) | skip: session 4 has a slower way |
 | 4 | `pixi run car-day-build` | `v2: PASS`, `v1: PASS`, `esp-qemu-check: PASS`, `legacy-esp32: PASS`, `docs: PASS` | each step's log is in `car-day/esp32/` |
-| 5 | `pixi run car-kit`, then copy `car-kit/` to the stick | `car-kit/` (about 2 GB); `cp -R car-kit /Volumes/<stick>/` | [From a USB stick](docs/car-install.md) |
+| 5 | `pixi run car-kit`, then copy `car-kit/` to the stick | `car-kit/` (about 2 GB); `cp -R car-kit /Volumes/<stick>/` | [From a USB stick](car-install.md) |
 | 6 | The laptop's Cyclone file (box below) | `~/.config/aav/cyclonedds-car.xml` | |
 | 7 | `pixi run net-map` and `pixi run doctor` once | macOS asks about the local network: **Allow** | System Settings → Privacy → Local Network |
 | 8 | **`pixi run car-day-check`** | `0 missing` | run each `->` line it prints, then again |
@@ -114,7 +114,7 @@ Step 4 puts the ESP32 firmware here, out of git:
 
 !!! note "Step 6: Cyclone uses one network card"
     Cyclone DDS (our ROS messaging) picks **one** network card. With the phone's hotspot
-    on WiFi and the car on the dongle, it may pick the wrong one ([Your Mac](docs/mac.md)).
+    on WiFi and the car on the dongle, it may pick the wrong one ([Your Mac](mac.md)).
     Plug the dongle in, find its name (`ifconfig`: the one that appears, such as `en7`),
     and write this file with that name:
 
@@ -143,7 +143,7 @@ missing, and Cyclone a reminder. No secrets: the Keychain is only asked whether 
 entry exists.
 
 ```text
-Car day: is /Users/ben/Code/aav/aav ready? (READ-ME-CAR-DAY.md)
+Car day: is /Users/ben/Code/aav/aav ready? (car-day.md)
 
   MISSING  repo         main at 54304074 has commits GitHub hasn't
                         -> pixi run test, then git push
@@ -167,14 +167,14 @@ Car day: is /Users/ben/Code/aav/aav ready? (READ-ME-CAR-DAY.md)
   OK       Lichtblick   /Applications/Lichtblick.app
   OK       docs PDF     docs/html/aav-docs.pdf, built 24 Oct 15:48
   REMIND   Cyclone      Cyclone DDS uses one network card: name the car's (the dongle) in ~/.config/aav/cyclonedds-car.xml
-                        -> READ-ME-CAR-DAY.md, session 0
+                        -> car-day.md, session 0
   OK       logins       7 of 7 in the Keychain: aav-cam2, aav-cortex, aav-jetson, aav-desktop, aav-localization, aav-cam1, aav-qnxpi
   OK       SSH key      ~/.ssh/id_ed25519.pub
   OK       disk         275 GB free for bags
-  REMIND   sheet        print READ-ME-MEASURE-THE-CAR.md (2 copies) and a pen
+  REMIND   sheet        print measure-the-car.md (2 copies) and a pen
                         -> session 2
   REMIND   kit bag      stands, the RC transmitter, the e-stop, tape, plumb line, 4 scales, blocks, multimeter, dongle, cable
-                        -> READ-ME-CAR-DAY.md, "What to bring"
+                        -> car-day.md, "What to bring"
   REMIND   questions    the hardware lead is coming? H1-H8 need them
                         -> session 3
 
@@ -201,9 +201,9 @@ Car day: is /Users/ben/Code/aav/aav ready? (READ-ME-CAR-DAY.md)
 
 **Who:** 2 measurers. **How long:** 90 min. **Bring:** the printed sheet, tape, string,
 plumb line, phone level, 4 scales, 2 blocks, a protractor. **Due 30 Oct** (Gate 1,
-[PLAN](PLAN.md)).
+[PLAN](plan.md)).
 
-Follow [READ-ME-MEASURE-THE-CAR.md](READ-ME-MEASURE-THE-CAR.md): it is the sheet.
+Follow [Measure the car](measure-the-car.md): it is the sheet.
 
 | # | Do | You should see | If not |
 |---|---|---|---|
@@ -237,7 +237,7 @@ table, a pen. The hardware lead decides these: write down what they say, don't a
 | W7 | **Which Orin:** AGX Orin 32 or 64 GB? (`cat /etc/nv_tegra_release`, session 4, says the JetPack) | the reflash (Q24) |
 | S1-S3 | What the e-stops cut; the brake without power; anything else that stops a frozen Pi | session 9 |
 
-All the other questions: [audit questions](docs/audit-questions.md).
+All the other questions: [audit questions](audit-questions.md).
 
 **Stop point:** the answers written down, with who said them.
 
@@ -264,7 +264,7 @@ before the reflash (T1.3), never after.
 
 ### 4b. Our stack, from the stick
 
-Changes nothing of theirs: everything goes in `~/aav-jazzy` ([From a USB stick](docs/car-install.md)).
+Changes nothing of theirs: everything goes in `~/aav-jazzy` ([From a USB stick](car-install.md)).
 
 | # | Do | You should see | If not |
 |---|---|---|---|
@@ -333,7 +333,7 @@ The same venv also runs the engine once on the test stop sign, with the score an
 ## Session 5: the camera Pi
 
 **Who:** one person, with the laptop. **How long:** 60 min. **Bring:** the checkerboard,
-2 phones. 🔒 C1: which address. The plan and the settings: [camera pipeline](docs/camera-pipeline.md).
+2 phones. 🔒 C1: which address. The plan and the settings: [camera pipeline](camera-pipeline.md).
 
 | # | Do | You should see | If not |
 |---|---|---|---|
@@ -359,7 +359,7 @@ rule uses Gazebo's lens and the car stops too early.
 **Who:** the laptop person, the e-stop person, the hardware lead. **How long:** 90 min.
 **Bring:** the ESP32's USB cable, the RC transmitter, a multimeter.
 🔒 **H1** (the link to the Motor Pi) and **Ben's OK** (on a call):
-[First flash on the bench](docs/esp32-bench.md) says "do it with Ben".
+[First flash on the bench](esp32-bench.md) says "do it with Ben".
 
 **Before:** session 1 done; the Motor Pi and the Orin have our stack (session 4); the
 laptop's USB cable in the ESP32 MicroMod. Every command below runs on the laptop, in the
@@ -387,7 +387,7 @@ The backup holds the C++'s WiFi password: it's a secret. Never in git (`car-day/
 
 ### 6c. The checks, wheels off the ground
 
-From [First flash on the bench](docs/esp32-bench.md), in order. **Stop at the first that
+From [First flash on the bench](esp32-bench.md), in order. **Stop at the first that
 fails, and roll back.** Drive from the laptop: `export ROS_DOMAIN_ID=42`, `pixi run keyboard`.
 
 | # | Do | Expect |
@@ -433,7 +433,7 @@ switch. Both yes, and 1-14 passed:
 |---|---|---|
 | 1 | `vendor/cargo-tools/bin/espflash flash --chip esp32 --monitor car-day/esp32/spine-esp32-umod-v2-uplink.elf` | the first log line ends `with the uplink on TX1 and the three-position mode switch` |
 | 2 | On the Motor Pi: `legacy.yaml`, `uplink: true`, then `~/aav-jazzy/aav.sh build`, restart the bridge | the bridge logs `uplink: frames from the ESP32` |
-| 3 | Steps U1-U6, then R1-R8, in [the bench page](docs/esp32-bench.md) ("The uplink and the RC modes") | as each step says |
+| 3 | Steps U1-U6, then R1-R8, in [the bench page](esp32-bench.md) ("The uplink and the RC modes") | as each step says |
 
 Either is no: stay on `spine-esp32-umod-v2.elf` with `uplink: false`; the car drives as
 before, without the positions coming back.
@@ -455,7 +455,7 @@ before, without the positions coming back.
 | 6 | `ip -details -statistics link show can0` | errors 0 | write the counts down |
 | 7 | `sudo ip link set can0 down` | | |
 
-`role:=sensors` can't drive: no sender, no arm, no e-stop path ([CAN plan](docs/can-plan.md)).
+`role:=sensors` can't drive: no sender, no arm, no e-stop path ([CAN plan](can-plan.md)).
 If other boards are on the bus, `listen-only on` after `bitrate 500000` stops even the
 Orin's acknowledgements; with the Arduino alone, leave it off (someone must acknowledge).
 
@@ -471,8 +471,8 @@ Their `foxglove-bridge` already holds port 8765 on the Orin, so ours goes on 876
 | 1 | Theirs, read-only: `pixi run layout-check ws://192.168.1.140:8765` | their topics (Humble, domain 0); ours aren't there | |
 | 2 | Ours, on the Orin: `~/aav-jazzy/aav.sh ros2 launch aav_bringup foxglove.launch.py foxglove_address:=0.0.0.0 foxglove_port:=8766 foxglove_control:=false` | `listening on port 8766` | |
 | 3 | `pixi run layout-check ws://192.168.1.140:8766 --data` | every layout topic of the running parts served, and kB/s each | missing ones: their part isn't running |
-| 4 | Lichtblick → Open connection → Foxglove WebSocket → `ws://192.168.1.140:8766`; Layouts → Import → `tools/foxglove/driving.json` (then the other two) | the car's model, the gate, the e-stop | [Watch from a laptop](docs/foxglove.md) |
-| 5 | The same over the car's WiFi | under 2.5 MB/s for every laptop together | the WiFi drops multicast? ([Friday](READ-ME-FRIDAY.md)) |
+| 4 | Lichtblick → Open connection → Foxglove WebSocket → `ws://192.168.1.140:8766`; Layouts → Import → `tools/foxglove/driving.json` (then the other two) | the car's model, the gate, the e-stop | [Watch from a laptop](foxglove.md) |
+| 5 | The same over the car's WiFi | under 2.5 MB/s for every laptop together | the WiFi drops multicast? ([Friday](history/friday-2026-10-16.md)) |
 
 The map panel needs the internet for its tiles: offline it shows the dots on a blank map.
 
@@ -490,7 +490,7 @@ The map panel needs the internet for its tiles: offline it shows the dots on a b
 | ☐ | theirs stopped: `aav_serial_bridge` inactive. **Never two drive paths** |
 | ☐ | which ESP32 firmware: the Rust (session 6 passed) or the C++ (**no timeout**: test 3.9 then fails, as expected) |
 | ☐ | `legacy.yaml`'s `frame_version`: 2 with the Rust, 1 with the C++ |
-| ☐ | everyone knows: **the throttle's strength is a guess.** Two guesses disagree by 5 times ([the car's model](docs/vehicle-model.md): full throttle holds 15 m/s by the drag guess, 3 m/s by the ESP32's open loop). 0.3 m/s asked may spin the wheels much faster: the e-stop person watches 3.2 |
+| ☐ | everyone knows: **the throttle's strength is a guess.** Two guesses disagree by 5 times ([the car's model](vehicle-model.md): full throttle holds 15 m/s by the drag guess, 3 m/s by the ESP32's open loop). 0.3 m/s asked may spin the wheels much faster: the e-stop person watches 3.2 |
 
 | Where | Run |
 |---|---|
@@ -556,8 +556,8 @@ Copy home: `rsync -a <user>@192.168.1.140:aav-jazzy/aav/bags/ ~/aav-bags/jetson/
 
 | Do | Where |
 |---|---|
-| The write-up, no secrets | `docs/history/audit-<date>-car.md`, like [21 Oct's](docs/history/audit-2026-10-21-car.md) |
+| The write-up, no secrets | `docs/history/audit-<date>-car.md`, like [21 Oct's](history/audit-2026-10-21-car.md) |
 | The numbers | `vehicle.yaml`; then `pixi run test` and `pixi run view` |
-| The car's linear model, refit | `pixi run vehicle-model`: new poles and margins from the measured lags ([The car as a linear model](docs/vehicle-model.md)) |
+| The car's linear model, refit | `pixi run vehicle-model`: new poles and margins from the measured lags ([The car as a linear model](vehicle-model.md)) |
 | The answers | `docs/audit-questions.md`; the hardware lead's in `docs/can-plan.md` |
-| Gate 1 and Gate 2 | [PLAN.md](PLAN.md) |
+| Gate 1 and Gate 2 | [The plan](plan.md) |

@@ -1,6 +1,6 @@
 # Actuator tests: measure how the car moves
 
-One script runs the stage-3 and stage-4 tests of `READ-ME-TESTS.md`: it drives the car,
+One script runs the stage-3 and stage-4 tests of `tests.md`: it drives the car,
 logs what happened, and prints the numbers for `vehicle.yaml`. Built and proven in Gazebo
 (15 Oct); the same script runs on the car.
 
@@ -67,9 +67,9 @@ pixi run actuator-test steer-rate --stands
 pixi run actuator-test steer-centre --stands
 ```
 
-1. The script prints the checklist from `READ-ME-TESTS.md` stage 3. Check it out loud.
+1. The script prints the checklist from `tests.md` stage 3. Check it out loud.
 2. Type the test's name to start. Anything else cancels; nothing moves.
-3. **No steering sensor yet?** (The 2025-26 ESP32 reports none: TEAM-TODO B6.) At each
+3. **No steering sensor yet?** (The 2025-26 ESP32 reports none: team-todo.md B6.) At each
    measuring point the car stops and asks for the angle in degrees: read it with a
    protractor or a phone app on the wheel. `steer-rate` then needs a video instead.
 

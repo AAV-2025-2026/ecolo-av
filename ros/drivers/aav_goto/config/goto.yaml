@@ -1,4 +1,4 @@
-# goto_driver: drives to one point B and stops there (action /goto; READ-ME-A-TO-B.md).
+# goto_driver: drives to one point B and stops there (action /goto; docs/a-to-b.md).
 # max_brake, wheelbase and max_steering_angle come from aav_description's vehicle.yaml (the
 # launch file passes them), so they are not set here. Ego's caps (max_speed: 1 m/s on the
 # car, sim_speed in Gazebo) cut cruise_speed, acceleration and deceleration further.
@@ -7,12 +7,12 @@ goto_driver:
     rate_hz: 50.0
     cruise_speed: 1.0       # m/s, when the goal gives 0
     acceleration: 0.5       # m/s^2: speeding up, gently
-    brake_fraction: 0.5     # slow down at this much of vehicle.yaml's max_brake (READ-ME-TESTS 5.2)
+    brake_fraction: 0.5     # slow down at this much of vehicle.yaml's max_brake (docs/tests.md 5.2)
     deceleration: 0.0       # m/s^2: 0 = max_brake x brake_fraction; a number overrides it
     # s: start slowing this much sooner, times the speed. The time from the command
     # dropping to the car braking hard: the brake's lag plus the speed loop's coasting
     # band. 0.8 s stops within 5 cm in Gazebo's actuator model (test_drive.py); on the
-    # car, measure it with the brake test (READ-ME-TESTS 4.3) and the first goto drives.
+    # car, measure it with the brake test (docs/tests.md 4.3) and the first goto drives.
     brake_lead: 0.8
     stop_band: 0.05         # m: this close to B, command zero
     creep: 0.1              # m/s: the least it asks for, short of B

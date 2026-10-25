@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maps and position: from the wheels to OpenStreetMap · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/maps-and-position.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Maps and position: from the wheels to OpenStreetMap</h1>
+<div class="meta">8 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a class="here" href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-your-picture-corrected-a-little">1. Your picture, corrected a little</a><a href="#2-the-three-frames">2. The three frames</a><a href="#3-how-xy-meets-latitudelongitude-the-datum">3. How x/y meets latitude/longitude: the datum</a><a href="#4-where-openstreetmap-comes-in">4. Where OpenStreetMap comes in</a><a href="#5-costmaps-the-fine-grained-part">5. Costmaps: the fine-grained part</a><a href="#6-all-the-scales-big-to-small">6. All the scales, big to small</a><a href="#7-what-works-and-whats-missing">7. What works, and what&#x27;s missing</a><a href="#8-try-it">8. Try it</a></nav>
+<div class="lead"><p>Written 15 October 2026. It answers:</p>
+<ol>
+<li>What does the local EKF give you?</li>
+<li>How does it become a position on a real map, with GPS?</li>
+<li>Where does OpenStreetMap come in?</li>
+<li>How do costmaps relate to all of it?</li>
+</ol>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Local EKF:</strong> "how I've moved since I started". Smooth, but it slowly drifts.
+- <strong>Global EKF:</strong> the same, plus GPS. "Where I am on the earth". True, but it can jump a little.
+- The <strong>map frame</strong> is a flat grid in metres, pinned to one GPS point (the <strong>datum</strong>). That's how x/y and latitude/longitude meet.
+- <strong>OpenStreetMap is only in the HUD:</strong> searching places, drawing streets, planning a road route. Nav2 never reads it.
+- <strong>Costmaps</strong> are grids of "how bad is it to drive here". The <strong>global</strong> one is big and coarse (for the whole route). The <strong>local</strong> one is small, fine and live (for what's in front of the car right now).</p>
+</blockquote></div>
+<section class="card"><h2 id="1-your-picture-corrected-a-little">1. Your picture, corrected a little</h2>
+<p>You said: <em>"local EKF gives odometry, then you put it on a map and mix it with GPS."</em></p>
+<p>Close. The mixing with GPS is done by <strong>a second EKF</strong>, not on top of the first one:</p>
+<pre class="highlight"><code class="language-text"> wheels + IMU ──────────────► ekf_local  ──► "odom" position  (smooth, drifts)
+ wheels + IMU + GPS(x,y) ───► ekf_global ──► "map" position   (true, may hop)
+                    ▲
+ GPS lat/lon ─► navsat_transform ─► GPS as x,y in metres</code></pre>
+<ul>
+<li>Both EKFs read the raw sensors. Neither reads the other's topic.</li>
+<li>They meet in <strong>TF</strong>, the tree of coordinate frames: <code>map → odom → base_link</code>.</li>
+</ul>
+</section>
+<section class="card"><h2 id="2-the-three-frames">2. The three frames</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Frame</th>
+<th>Think of it as</th>
+<th>Who sets it</th>
+<th>Good for</th>
+<th>Bad at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>base_link</code></td>
+<td>the car itself: on the ground, under the rear axle</td>
+<td>the car model</td>
+<td>"1 m in front of me"</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>odom</code></td>
+<td>where the car <strong>started</strong>, today</td>
+<td><code>ekf_local</code></td>
+<td>smooth motion, steering</td>
+<td>drifts: after 1 km it may be metres out</td>
+</tr>
+<tr>
+<td><code>map</code></td>
+<td>a fixed grid on the earth</td>
+<td><code>ekf_global</code> + GPS</td>
+<td>"where am I", plans, goals</td>
+<td>can hop when a GPS fix arrives</td>
+</tr>
+</tbody>
+</table></div>
+<p>A picture of the chain:</p>
+<pre class="highlight"><code class="language-text">   map ──(ekf_global: the GPS correction)──► odom ──(ekf_local: the smooth motion)──► base_link</code></pre>
+<ul>
+<li><code>ekf_local</code> says how far the car is from where it started: <code>odom → base_link</code>.</li>
+<li><code>ekf_global</code> says how far "where it started" is from the true spot: <code>map → odom</code>. That small correction soaks up the drift.</li>
+<li>Chain them and you get the car on the map, still smooth.</li>
+</ul>
+</section>
+<section class="card"><h2 id="3-how-xy-meets-latitudelongitude-the-datum">3. How x/y meets latitude/longitude: the datum</h2>
+<p>The <code>map</code> frame is flat and in metres, but GPS gives latitude and longitude. They're joined at <strong>one point</strong>, the datum.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>File</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Datum</td>
+<td>45.3860 N, -75.6960 (near Carleton: a <strong>placeholder</strong>)</td>
+<td><code>src/localization/aav_localization/config/navsat.yaml</code></td>
+</tr>
+<tr>
+<td>Map (0, 0)</td>
+<td>= the datum</td>
+<td></td>
+</tr>
+<tr>
+<td>x axis</td>
+<td>east</td>
+<td></td>
+</tr>
+<tr>
+<td>y axis</td>
+<td>north</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><code>navsat_transform</code> turns each GPS fix into x/y metres from the datum.</li>
+<li>It also answers on request: <code>/fromLL</code> (lat/lon → x/y) and <code>/toLL</code> (x/y → lat/lon).</li>
+<li>That's how a GPS goal becomes a Nav2 goal.</li>
+</ul>
+</section>
+<section class="card"><h2 id="4-where-openstreetmap-comes-in">4. Where OpenStreetMap comes in</h2>
+<p>OpenStreetMap (OSM) is a free map of the world's roads and places. <strong>We use it only in the HUD</strong>, for the person in the seat:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>HUD feature</th>
+<th>Uses</th>
+<th>Where</th>
+<th>In git?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Search "Tim Hortons"</td>
+<td><code>ottawa.db</code>: 606,628 named places from OSM</td>
+<td>the HUD app</td>
+<td>no (51 MB): <code>pixi run get-hud-map</code></td>
+</tr>
+<tr>
+<td>Draw the street map</td>
+<td>a tile server on port 8080</td>
+<td>the dash Pi</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Plan a road route</td>
+<td>OSRM (a road router), Ontario's OSM data, port 5001</td>
+<td>Docker on the dash Pi</td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then the route reaches the car like this:</p>
+<pre class="highlight"><code class="language-text"> HUD: pick a place ─► OSRM: road route (a line of lat/lon points)
+     ─► "lock" the route ─► Nav2: FollowGPSWaypoints
+     ─► /fromLL: each point to map x/y ─► Nav2 drives point to point</code></pre>
+<blockquote>
+<p>⚠️ <strong>Nav2 doesn't know where the road is.</strong> OSRM's points follow the road, but Nav2
+only sees the points, not the road. Between two points it plans across its costmap,
+which today is empty (all free). Staying in the lane is the lane keeper's job
+(<code>aav_lane_finder</code>, <code>aav_lane_geometry</code>). A lane layer in the costmap would be the next step.</p>
+</blockquote>
+<p>This route path is written (the HUD back end and Nav2's GPS waypoints). It has never run with the real OSRM and tile server, which were on the 2025-26 team's Pi.</p>
+</section>
+<section class="card"><h2 id="5-costmaps-the-fine-grained-part">5. Costmaps: the fine-grained part</h2>
+<p>A <strong>costmap</strong> is a grid laid on the ground. Each cell holds a cost:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Cost</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>free: drive here</td>
+</tr>
+<tr>
+<td>low to high</td>
+<td>near something: OK, but further away is better</td>
+</tr>
+<tr>
+<td>lethal</td>
+<td>a wall or an obstacle: never</td>
+</tr>
+<tr>
+<td>unknown</td>
+<td>not seen yet</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Inflation</strong> adds a soft band of cost around every obstacle, as wide as the car (2.0 m for us), so a plan for the car's <strong>centre</strong> also keeps its <strong>corners</strong> clear.</p>
+<h3 id="our-two-costmaps">Our two costmaps</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Global costmap</th>
+<th>Local costmap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Question it answers</td>
+<td>"Which way to the goal?"</td>
+<td>"What's right in front of me?"</td>
+</tr>
+<tr>
+<td>Frame</td>
+<td><code>map</code> (fixed on the earth)</td>
+<td><code>odom</code> (smooth: never jumps)</td>
+</tr>
+<tr>
+<td>Size</td>
+<td>200 m × 200 m (from the map file)</td>
+<td>20 m × 20 m, moves with the car</td>
+</tr>
+<tr>
+<td>Cell size</td>
+<td>25 cm</td>
+<td>10 cm</td>
+</tr>
+<tr>
+<td>Filled from</td>
+<td>a map file: <code>empty</code> (all free) or <code>example_lot</code></td>
+<td>the map, plus live sensors: radar, camera detections (lidar later)</td>
+</tr>
+<tr>
+<td>Used by</td>
+<td>the <strong>planner</strong>: Smac Hybrid-A*, which only plans turns the car can make</td>
+<td>the <strong>controller</strong>: MPPI, which steers along the plan</td>
+</tr>
+<tr>
+<td>File</td>
+<td><code>src/drivers/aav_navigation/config/nav2.yaml</code></td>
+<td>the same</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why the local one is in <code>odom</code>: if it were in <code>map</code>, every GPS hop would shift the obstacles under the car.</p>
+</section>
+<section class="card"><h2 id="6-all-the-scales-big-to-small">6. All the scales, big to small</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Scale</th>
+<th>Thing</th>
+<th>Cell or step</th>
+<th>Job</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>kilometres</td>
+<td>OpenStreetMap + OSRM, in the HUD</td>
+<td>road segments</td>
+<td>"which streets to take"</td>
+</tr>
+<tr>
+<td>tens of metres</td>
+<td>GPS waypoints</td>
+<td>one point every few tens of metres</td>
+<td>breadcrumbs for Nav2</td>
+</tr>
+<tr>
+<td>200 m</td>
+<td>global costmap</td>
+<td>25 cm</td>
+<td>a path the car can drive</td>
+</tr>
+<tr>
+<td>20 m</td>
+<td>local costmap</td>
+<td>10 cm</td>
+<td>dodge what the sensors see</td>
+</tr>
+<tr>
+<td>a few metres</td>
+<td>collision_monitor</td>
+<td>its stop zone</td>
+<td>last-moment stop, whatever Nav2 thinks</td>
+</tr>
+<tr>
+<td>centimetres</td>
+<td>lane keeping</td>
+<td>camera pixels</td>
+<td>stay in the lane</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="7-what-works-and-whats-missing">7. What works, and what's missing</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>navsat_transform</code></td>
+<td>✅ in Gazebo and on the bench. ❌ never on the car</td>
+</tr>
+<tr>
+<td>Nav2 with both costmaps</td>
+<td>✅ in Gazebo and on the bench</td>
+</tr>
+<tr>
+<td>Radar and cameras in the local costmap</td>
+<td>✅ on the bench</td>
+</tr>
+<tr>
+<td>Lidar in the local costmap</td>
+<td>❌ no lidar driver yet</td>
+</tr>
+<tr>
+<td>The real datum</td>
+<td>❌ a placeholder: set it at the test site</td>
+</tr>
+<tr>
+<td>The HUD's route → Nav2</td>
+<td>🔧 written; never run with real OSRM</td>
+</tr>
+<tr>
+<td>A map of the real test site</td>
+<td>❌ only <code>empty</code> and an example lot</td>
+</tr>
+<tr>
+<td>Nav2 knowing about roads and lanes</td>
+<td>❌ the next big step</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="8-try-it">8. Try it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>You want to see</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The two EKFs and the frames</td>
+<td><code>pixi run sim</code>, then <code>pixi run tools/ros.sh ros2 run rqt_tf_tree rqt_tf_tree</code></td>
+</tr>
+<tr>
+<td>The car on the map, live</td>
+<td><code>pixi run tools/ros.sh ros2 run tf2_ros tf2_echo map base_link</code></td>
+</tr>
+<tr>
+<td>A GPS point as map x/y</td>
+<td><code>pixi run tools/ros.sh ros2 service call /fromLL robot_localization/srv/FromLL "{ll_point: {latitude: 45.3861, longitude: -75.6959}}"</code></td>
+</tr>
+<tr>
+<td>The costmaps</td>
+<td>in RViz (it opens with <code>pixi run sim</code>): add <code>/local_costmap/costmap</code> and <code>/global_costmap/costmap</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>More: <a href="costmaps.html">Costmaps</a>, <a href="how-it-fits.html">How it fits</a>, <a href="hud.html">HUD</a>.</p></section>
+<nav class="prevnext"><a class="prev" href="learn-control.html"><small>Previous</small>← Learn: control</a>
+<a class="next" href="learn-nav2.html"><small>Next</small>Learn: Nav2 →</a></nav>
+</main>
+<footer>Source: <code>docs/maps-and-position.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

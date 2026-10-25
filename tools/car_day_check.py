@@ -8,7 +8,7 @@ Each line says OK, MISSING or REMIND, and for MISSING the command that fixes it.
 REMIND is a thing only a person can tick (print the sheet, copy the kit to the stick).
 Nothing here changes anything, needs ROS, or reads a password: the Keychain check asks
 only whether each entry exists (`security find-generic-password -s <entry>`, no `-w`).
-The day itself: READ-ME-CAR-DAY.md. `pixi run car-day-build` makes what it can.
+The day itself: docs/car-day.md. `pixi run car-day-build` makes what it can.
 
 Exit code: 0 when nothing is MISSING (reminders don't count), else 1.
 """
@@ -240,7 +240,7 @@ def check_models(root):
     else:
         lines.append(Line('REMIND', 'model', 'no models/rf-detr-nano.onnx: make it here, '
                           'and the Orin needs only TensorRT (else rfdetr and onnx too)',
-                          'READ-ME-CAR-DAY.md, session 0'))
+                          'docs/car-day.md, session 0'))
     return lines
 
 
@@ -415,7 +415,7 @@ def docs_line(pdf_time, newest_page):
 
 def check_docs(root):
     pdf = root / 'docs' / 'html' / 'aav-docs.pdf'
-    pages = list((root / 'docs').glob('*.md')) + [root / 'READ-ME-CAR-DAY.md']
+    pages = list((root / 'docs').glob('*.md'))
     newest = max((p.stat().st_mtime for p in pages if p.is_file()), default=0)
     return docs_line(pdf.stat().st_mtime if pdf.is_file() else None, newest)
 
@@ -446,7 +446,7 @@ def cyclone_line(pixi_toml, mine, for_the_car):
         return Line('OK', 'Cyclone', f'Cyclone DDS; {CAR_CYCLONE} names '
                     f'{card_named(for_the_car)}: at the car, cp it to {MY_CYCLONE}')
     return Line('REMIND', 'Cyclone', "Cyclone DDS uses one network card: name the car's "
-                f'(the dongle) in {CAR_CYCLONE}', 'READ-ME-CAR-DAY.md, session 0')
+                f'(the dongle) in {CAR_CYCLONE}', 'docs/car-day.md, session 0')
 
 
 def check_cyclone(root):
@@ -471,7 +471,7 @@ def keychain_line(entries, present):
     """entries: [(label, entry)]; present: the set of entries the Keychain has."""
     if not entries:
         return Line('MISSING', 'logins', f'no {HOSTS} (machine, user@ip, Keychain entry)',
-                    'FRIDAY-TODO.md: make the hosts file')
+                    'docs/history/friday-todo-2026-10-16.md: make the hosts file')
     gone = [e for _, e in entries if e not in present]
     if gone:
         return Line('MISSING', 'logins', f'no Keychain entry {", ".join(gone)}',
@@ -508,9 +508,9 @@ def disk_line(free_bytes):
 
 
 REMINDERS = [
-    ('sheet', 'print READ-ME-MEASURE-THE-CAR.md (2 copies) and a pen', 'session 2'),
+    ('sheet', 'print docs/measure-the-car.md (2 copies) and a pen', 'session 2'),
     ('kit bag', 'stands, the RC transmitter, the e-stop, tape, plumb line, 4 scales, '
-     'blocks, multimeter, dongle, cable', 'READ-ME-CAR-DAY.md, "What to bring"'),
+     'blocks, multimeter, dongle, cable', 'docs/car-day.md, "What to bring"'),
     ('questions', 'the hardware lead is coming? H1-H8 need them', 'session 3'),
 ]
 
@@ -553,7 +553,7 @@ def main():
     ap.add_argument('--root', type=Path, default=ROOT, help='the checkout to check')
     args = ap.parse_args()
     root = args.root.resolve()
-    print(f'Car day: is {root} ready? (READ-ME-CAR-DAY.md)\n')
+    print(f'Car day: is {root} ready? (docs/car-day.md)\n')
     return 1 if show(checks(root), sys.stdout.isatty()) else 0
 
 

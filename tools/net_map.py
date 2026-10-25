@@ -293,7 +293,7 @@ def main():
     if re.search(r'inet 169\.254\.', raw):
         print('Note: a network here has only a 169.254.x.x address: nothing on it gave this '
               'computer an address (a plain switch has no DHCP). Set one by hand: '
-              'READ-ME-FRIDAY.md, "Ethernet dongle and phone hotspot".')
+              'docs/history/friday-2026-10-16.md, "Ethernet dongle and phone hotspot".')
     internet = route_interface(default_route())
     try:
         (name, me), why = choose_interface(mine, internet, args.interface)

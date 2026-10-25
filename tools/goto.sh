@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Drive to one point and stop there (READ-ME-A-TO-B.md; aav_goto's goto_cli).
+# Drive to one point and stop there (docs/a-to-b.md; aav_goto's goto_cli).
 #
 # usage: tools/goto.sh (--lat L --lon L | --x X --y Y | --ahead M [--left M]) [--speed V] [--sim]
 #   --sim    Gazebo: this computer only (tools/ros.sh --local), on simulated time

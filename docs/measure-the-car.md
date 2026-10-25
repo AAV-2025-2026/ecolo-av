@@ -99,7 +99,7 @@ of its window** (the band that spins or glows).
 
 | # | Sensor | Measure its | Guess today x / y / z (cm) | **x** | **y** | **z** | **Pointing / tilt / lean** (°) |
 |---|---|---|---|---|---|---|---|
-| S1 | **GPS antenna** | puck centre | 0 / 0 / 150 | | | | (not needed). Ben, 23 Oct: it is **over the rear axle** already: check x is about 0, and measure its height ([why it matters](docs/learn-gps.md#mount-the-antenna-over-the-rear-axle)) |
+| S1 | **GPS antenna** | puck centre | 0 / 0 / 150 | | | | (not needed). Ben, 23 Oct: it is **over the rear axle** already: check x is about 0, and measure its height ([why it matters](learn-gps.md#mount-the-antenna-over-the-rear-axle)) |
 | S2 | **IMU** | board centre | 50 / 0 / 40 | | | | see below |
 | S3 | **Radar** (TI mmWave, on the grill) | the middle of its flat front face | 180 / 0 / 45 | | | | 0 / __ / __ |
 | S4 | **Front left camera** | lens centre | 175 / +29 / 155 | | | | 0 / __ / __ |
@@ -150,4 +150,4 @@ track (77 cm) lowers the speed at which it could tip in a turn. The maths:
 | ☐ | Photograph the sheet, and the IMU's arrows |
 | ☐ | Send it to Ben. The numbers go into `vehicle.yaml`, then `pixi run test` and a look in RViz (`pixi run view`) to check the model matches the photos |
 
-Programmer's detail (what reads each number, the maths): [docs/car_measurements.md](docs/car_measurements.md).
+Programmer's detail (what reads each number, the maths): [docs/car_measurements.md](car_measurements.md).

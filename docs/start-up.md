@@ -1,7 +1,7 @@
 # How it all fits: bottom-up, and what happens at start-up
 
-Written 15 October 2026, for Ben. Read [READ-ME-SIMULATION-AND-THE-CAR.md](READ-ME-SIMULATION-AND-THE-CAR.md)
-and [READ-ME-MAPS-AND-POSITION.md](READ-ME-MAPS-AND-POSITION.md) first, or after: they go
+Written 15 October 2026. Read [Sim and the car](sim-and-car.md)
+and [Maps and position](maps-and-position.md) first, or after: they go
 deeper on two parts of this page.
 
 > **The short version**
@@ -110,7 +110,7 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 |---|---|---|
 | Kar-Tech wireless e-stop, kill switch | hardware | power: overrides everything |
 | HUD button, `pixi run estop` | `/safety/estop` = true | the mux blocks every driver; the backend stops |
-| The computer freezes | ego's 50 Hz stops | the board's timeout brakes: 100 ms in the Rust spine (CAN v0.2.0). Today's C++ ESP32 has none yet (TEAM-TODO B2) |
+| The computer freezes | ego's 50 Hz stops | the board's timeout brakes: 100 ms in the Rust spine (CAN v0.2.0). Today's C++ ESP32 has none yet (team-todo.md B2) |
 | An obstacle | collision_monitor | Nav2's command, before the mux |
 | The person drives | any higher-priority driver | the mux picks them over Nav2 |
 
@@ -136,8 +136,8 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 | try a new driver | the turtle |
 | try perception | `pixi run -e ml sim-check --perception` |
 | see what the car sees | `pixi run hud` next to the bench or Gazebo |
-| drive A to B | [READ-ME-A-TO-B.md](READ-ME-A-TO-B.md) |
-| choose models, or put a map on the HUD | [READ-ME-PERCEPTION-AND-HUD-MAP.md](READ-ME-PERCEPTION-AND-HUD-MAP.md) |
+| drive A to B | [A to B](a-to-b.md) |
+| choose models, or put a map on the HUD | [Perception options](perception-and-hud-map.md) |
 
 ## 5. The gaps, in one list
 
@@ -151,5 +151,5 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 | The datum is a placeholder | GPS goals | measure it at the test site |
 | No start-at-boot | a car that's ready when it's switched on | systemd services, after the audit |
 
-More detail: [Learn: the car, box by box](docs/learn-car.md), [A command's journey](docs/learn-journey.md),
-[Every module](docs/modules.md), [Status](docs/status.md).
+More detail: [Learn: the car, box by box](learn-car.md), [A command's journey](learn-journey.md),
+[Every module](modules.md), [Status](status.md).

@@ -27,7 +27,7 @@ def test_vehicle_yaml_has_every_actuator_number():
     a = ActuatorConfig.from_vehicle(cfg)
     assert set(cfg['actuators']) <= set(vars(a)), 'an unknown key in actuators:'
     assert a.max_steering == cfg['vehicle']['max_steering_angle']
-    # The guesses match Gazebo's old limits (READ-ME-FULL-SIMULATION.md).
+    # The guesses match Gazebo's old limits (docs/full-simulation.md).
     assert a.max_accel == 1.5 and a.max_brake == 3.0
 
 

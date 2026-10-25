@@ -28,11 +28,11 @@ Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd
                                   every sensor Gazebo gives (the sensor nodes' too), is SIM
                                   (sources.py)
 
-Sensor faults on purpose (faults.py, READ-ME-FULL-SIMULATION.md step 6): fault.odom (ok,
+Sensor faults on purpose (faults.py, docs/full-simulation.md step 6): fault.odom (ok,
 stop, freeze, nan), set while it runs (pixi run sim-fault odom stop), changes what
 /vehicle/odom and /vehicle/wheels carry. The other sensors' faults are their nodes'.
 
-The actuator model (actuator_model.py, READ-ME-FULL-SIMULATION.md step 3) sits between
+The actuator model (actuator_model.py, docs/full-simulation.md step 3) sits between
 ego and Gazebo: a stand-in for the spine's speed loop turns ego's speed into throttle and
 brake, and the model turns those, and ego's steering angle, into what the car does, with
 the numbers in vehicle.yaml's `actuators:` section. actuator_model:=false gives the old
@@ -40,7 +40,7 @@ behaviour instead, to compare: the speed within Gazebo's old limits, an instant 
 Gazebo's own limits (aav.gazebo.xacro) are wide, so the model, not Gazebo, limits. No
 command for cmd_timeout s: the target speed drops to 0, as the spine's watchdog.
 
-The spine in the loop (spine:=true, READ-ME-FULL-SIMULATION.md step 4): ego's commands go
+The spine in the loop (spine:=true, docs/full-simulation.md step 4): ego's commands go
 to spine_bridge instead, and over the CAN topics to spine_sim, which runs the spine's own
 firmware logic (spine-core). Its outputs come here, to the actuator model's actuators
 (Actuators.drive: its speed loop is skipped), and what Gazebo's car does goes back to

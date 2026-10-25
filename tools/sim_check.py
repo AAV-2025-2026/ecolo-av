@@ -1462,7 +1462,7 @@ SPEED_BAND = 0.05               # the band a step must end, and settle, in (of i
 SPEED_TRIES = 3                 # drives of a step, while late commands spoil them
 # Each step's samples (profile, target, try, s, m/s), for a plot: AAV_SIM_SPEED_LOG moves it.
 SPEED_LOG = os.environ.get('AAV_SIM_SPEED_LOG', '/tmp/aav-sim-speed-steps.csv')
-GOTO_TOLERANCE = 2.0            # m from B, by Gazebo's truth: READ-ME-TESTS 5.2 without RTK
+GOTO_TOLERANCE = 2.0            # m from B, by Gazebo's truth: docs/tests.md 5.2 without RTK
 GOTO_PAST = 0.5                 # m past B, along the car's heading, by its own EKF: GPS noise
 GOTO_DECEL = (0.6, 1.25)        # x the planned deceleration (half max_brake): the band
 # m/s: the band's floor counts from this top speed. Slower, the stop lasts under a second

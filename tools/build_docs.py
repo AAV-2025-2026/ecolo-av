@@ -33,11 +33,11 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 14    # PAGES[:14] are the reading list
-LEARN_END = 24     # PAGES[14:24] are the learn pages; the rest are reference
+READ_FIRST = 19    # PAGES[:19] are the reading list
+LEARN_END = 30     # PAGES[19:30] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for). A name in ROOT_PAGES is a page kept at the
-# repository's root instead (a READ-ME), built the same way.
+# repository's root instead, built the same way (none since 25 Oct: every page is in docs/).
 PAGES = [
     ('index.md', 'Start here', 'The picture, and where to go next'),
     ('overview.md', 'Overview', 'Everything in aav: ours, stock, inherited, missing'),
@@ -45,13 +45,18 @@ PAGES = [
     ('getting-started.md', 'Getting started', 'A new laptop to the turtle in 30 minutes (T1.1)'),
     ('first-day.md', 'Your first day', 'Install, the turtle, rqt_graph, Gazebo, Nav2'),
     ('how-it-fits.md', 'How it fits', 'What each box does, and the safety layers'),
+    ('start-up.md', 'Bottom-up', 'Each layer from the device up; start-up; testing each layer'),
     ('team.md', 'Starting points', 'One per team member: read, run, first tasks'),
     ('packages.md', 'Packages', 'What each package does, layer by layer'),
     ('modules.md', 'Every module', 'One card per package, crate and board'),
     ('work.md', 'Work', "The plan, what's done, what needs doing"),
+    ('plan.md', 'The plan', 'The proposal as a to-do list: the gates, every task'),
+    ('features.md', 'Features', 'What the software does, why, and who built it'),
     ('audit-friday.md', 'Audit, 16 Oct', 'The hardware audit, machine by machine'),
     ('audit-questions.md', 'Audit questions', 'What only the car can tell us'),
     ('car-day.md', 'Car day', 'The day at the car, session by session; the preflight'),
+    ('tests.md', 'Every test', 'Every test, in order: sim, bench, stands, lot, the drive'),
+    ('measure-the-car.md', 'Measure the car', 'The sheet for whoever measures the car'),
     ('decisions.md', 'Decisions', 'Decided, Tentative, Proposed, and Q1–Q34'),
     ('infrastructure.md', 'Infrastructure', 'The repo, Pixi, the contracts, profiles, computers'),
     ('learn-car.md', 'The car, box by box', 'Every computer, board and wire on the car'),
@@ -62,18 +67,25 @@ PAGES = [
     ('learn-gps.md', 'Learn: GPS', 'GNSS, RTK, NavSatFix, the datum, navsat_transform'),
     ('learn-localization.md', 'Learn: localization', 'Odometry, Kalman, frames, TF, our two EKFs'),
     ('learn-control.md', 'Learn: control', 'Feedback loops, PID, Ackermann, limits, timeouts'),
+    ('maps-and-position.md', 'Maps and position',
+     'From the wheels to OpenStreetMap: frames, the datum, costmaps'),
     ('learn-nav2.md', 'Learn: Nav2', 'Planner, controller, behaviour tree, collision_monitor'),
     ('learn-can.md', 'Learn: CAN', 'CAN from two wires to our DRIVE_CMD, byte by byte'),
     ('status.md', 'Status', "What works, what's untested, what's missing"),
     ('howto-driver.md', 'Build a driver', 'A new driver, from an empty folder to the turtle'),
     ('costmaps.md', 'Costmaps', 'How Nav2 sees obstacles; draw your first map'),
     ('controllers.md', 'Path followers', 'Regulated Pure Pursuit and MPPI, side by side'),
+    ('a-to-b.md', 'A to B', 'Drive from A to B and stop: three ways, and the goto driver'),
     ('routes.md', 'Street routes', 'A destination to GPS waypoints along real streets (Valhalla)'),
     ('perception.md', 'Perception', 'Cameras, YOLO, stop signs, lanes and radar'),
+    ('perception-and-hud-map.md', 'Perception options',
+     'Which model for which job, the lidar, a map on the HUD'),
     ('camera-pipeline.md', 'Camera pipeline',
      "The Pi's H.264 stream to detections on the Orin: settings, measured delay"),
     ('camera-calibration.md', 'Camera calibration',
      'At the car: print the board, run camera_calibration on the stream, file the result'),
+    ('proposal.md', 'Proposal draft', 'The 15 Oct draft: every part, built or left, how sure'),
+    ('team-todo.md', 'Team tasks', 'The work list from before the audit, by area (A-E)'),
     ('older-code.md', 'Older code', "The previous teams' repos: what we have, what's missing"),
     ('ros2.md', 'ROS 2', 'Nodes, topics and tools; stock packages vs our code'),
     ('languages.md', 'Languages', 'Python, C++ and Rust: what goes where, and why'),
@@ -82,6 +94,9 @@ PAGES = [
     ('foxglove.md', 'Watch from a laptop',
      'Foxglove and Lichtblick: connect, the layouts, bandwidth'),
     ('simulation.md', 'Simulation', 'Gazebo, replay, CARLA, and when nothing moves'),
+    ('sim-and-car.md', 'Sim and the car', "What's simulated, what's real, and why"),
+    ('full-simulation.md', 'Full simulation',
+     'The whole car in Gazebo: the pipeline, the actuators'),
     ('carla.md', 'CARLA', "Photo-real towns and Carleton's streets: UE5 vs UE4, the twin"),
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),
     ('actuator-tests.md', 'Actuator tests', 'Measure how the car moves: on stands, in a lot'),
@@ -112,8 +127,8 @@ PAGES = [
 ]
 BUILT = {name for name, _, _ in PAGES}
 # The pages kept at the root: their name here -> their file, from the root.
-ROOT_PAGES = {'car-day.md': 'READ-ME-CAR-DAY.md'}
-# Links to them from docs/ (../READ-ME-CAR-DAY.md) go to the built page.
+ROOT_PAGES = {}
+# Links to them from docs/ (../FILE.md) go to the built page.
 ROOT_LINKS = {'../' + file: name for name, file in ROOT_PAGES.items()}
 RELEASE = 'release-notes.md'   # also printed on its own, with a cover, to share
 RELEASE_PDF = 'aav-release-notes.pdf'

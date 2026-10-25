@@ -71,7 +71,7 @@ perception came in on 10 October, the lane finder on 11 October.
 | keyboard (`tools/keyboard.sh`) | your keys | `/drivers/keyboard/cmd_vel` | `pixi run keyboard` |
 | `aav_actuator_tests` | `/vehicle/odom`, `/vehicle/steering`, `/throttle`, `/brake`, `/wheels`, the IMU, `/localization/odom/local`, GPS, `/safety/estop`, `/control/cmd_vel`, `/system/source` | `/drivers/tests/cmd_vel` | `pixi run actuator-test`: the stage 3-4 tests; prints `vehicle.yaml` lines ([Actuator tests](actuator-tests.md)) |
 | `aav_scripted` | `/localization/odom/local` | `/drivers/scripted/cmd_vel` | the action `/scripted_drive` |
-| `aav_goto` | `/localization/odom/global`, `/sensors/gps/fix`, `/safety/estop`, the watchdog's lock, `/system/source`, `/control/cmd_vel` | `/drivers/goto/cmd_vel` | the action `/goto`; calls `/fromLL` for a lat/lon B. `pixi run goto` ([A to B](../READ-ME-A-TO-B.md)) |
+| `aav_goto` | `/localization/odom/global`, `/sensors/gps/fix`, `/safety/estop`, the watchdog's lock, `/system/source`, `/control/cmd_vel` | `/drivers/goto/cmd_vel` | the action `/goto`; calls `/fromLL` for a lat/lon B. `pixi run goto` ([A to B](a-to-b.md)) |
 | `aav_language` | your words; odometry, GPS, `/diagnostics`, `/vehicle/status` | `/safety/estop` (true only) | calls `/scripted_drive` and `/follow_gps_waypoints`; never publishes a velocity |
 | `aav_navigation` | `/localization/odom/local`, `/map`, `/goal_pose` | `/drivers/nav/cmd_vel`, `/plan` | SmacPlannerHybrid and MPPI (or Regulated Pure Pursuit); GPS waypoints through `/follow_gps_waypoints` |
 | `aav_mux` (twist_mux) | every `/drivers/<driver>/cmd_vel`, `/safety/estop` | `/control/cmd_vel` | priorities: [Build a driver](howto-driver.md) |

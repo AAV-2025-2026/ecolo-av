@@ -30,7 +30,7 @@ driver is added.
 | Scripted | `/drivers/scripted/cmd_vel` | 50 |
 | Replay | `/drivers/replay/cmd_vel` | 40 |
 | Stop-sign and sensor-watchdog locks (block everything below) | `/perception/stop_sign`, `/safety/sensor_watchdog/lock` | 30 |
-| Goto: drive to one GPS point ([A to B](../READ-ME-A-TO-B.md)) | `/drivers/goto/cmd_vel` | 25 |
+| Goto: drive to one GPS point ([A to B](a-to-b.md)) | `/drivers/goto/cmd_vel` | 25 |
 | Nav2 | `/drivers/nav/cmd_vel` | 20 |
 | AI | `/drivers/ai/cmd_vel` | 10 |
 

@@ -14,7 +14,7 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
   Gazebo joints ──bridge──> /joint_states;  Gazebo clock ──bridge──> /clock
   Gazebo's truth ──bridge──> /vehicle/gazebo/truth (where the car really is, for checks)
 
-spine:=true puts the spine in the loop (READ-ME-FULL-SIMULATION.md step 4): the car's own
+spine:=true puts the spine in the loop (docs/full-simulation.md step 4): the car's own
 spine_bridge takes ego's commands instead of gazebo_adapter, and spine_sim (car:=gazebo)
 runs the spine's firmware logic (spine-core) on its CAN frames, on Gazebo's clock:
 

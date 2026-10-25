@@ -14,13 +14,18 @@
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +37,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +45,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +60,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -150,7 +162,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Goto: GPS A to B (15 Oct)</td>
 <td><code>aav_goto</code>: the <code>/goto</code> action, <code>pixi run goto</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --goto</code> drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half <code>max_brake</code>); a cancel, the e-stop and a GPS fault each stopped it. <span class="badge b-untested">untested</span> on the bench and the car (<a href="../../READ-ME-A-TO-B.md">A to B</a>)</td>
+<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --goto</code> drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half <code>max_brake</code>); a cancel, the e-stop and a GPS fault each stopped it. <span class="badge b-untested">untested</span> on the bench and the car (<a href="a-to-b.html">A to B</a>)</td>
 </tr>
 <tr>
 <td>Plain English</td>

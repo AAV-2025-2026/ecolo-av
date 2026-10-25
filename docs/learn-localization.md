@@ -13,7 +13,7 @@ weak answers into one good one.
 - exactly what our two EKFs read, from their config files;
 - how to look at all of it on your own computer.
 
-[Maps and position](../READ-ME-MAPS-AND-POSITION.md) has the big picture of the two EKFs
+[Maps and position](maps-and-position.md) has the big picture of the two EKFs
 and the map. This page explains **why** it works.
 
 ## 1. Odometry: counting your steps

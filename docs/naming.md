@@ -28,7 +28,7 @@ same areas as the folders under `src/`, plus `/system/` for the whole run.
 | `/ego/` | the command for the wheels | ego |
 | `/safety/` | e-stop, collision monitor | the HUD button, collision_monitor |
 | `/hud/` | what only the screen needs | the HUD |
-| `/system/` | what kind of run this is: `/system/source` (real, sim, bench, replay); the sensor mux's check, `/system/sensor_mux/state` | the backends, the bench, a replay (added 15 Oct, `READ-ME-FULL-SIMULATION.md`); the sensor mux (23 Oct) |
+| `/system/` | what kind of run this is: `/system/source` (real, sim, bench, replay); the sensor mux's check, `/system/sensor_mux/state` | the backends, the bench, a replay (added 15 Oct, `full-simulation.md`); the sensor mux (23 Oct) |
 
 Global names stay global, because every ROS tool expects them: `/tf`, `/tf_static`,
 `/clock`, `/robot_description`, `/joint_states`, `/diagnostics`, `/rosout`,

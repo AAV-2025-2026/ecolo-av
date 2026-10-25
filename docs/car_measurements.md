@@ -61,7 +61,7 @@ Why it matters:
    approximation is atan(wheelbase / R), where R is the turning radius to the middle of
    the rear axle. Measure R by driving a full circle at full lock at walking pace.
 5. **Mass and centre of mass:** four bathroom scales, then the rear lifted
-   (READ-ME-MEASURE-THE-CAR.md, M7 and M7b). See "Weight and balance" below.
+   (measure-the-car.md, M7 and M7b). See "Weight and balance" below.
 
 ## Weight and balance
 

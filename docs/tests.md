@@ -1,6 +1,6 @@
 # Every test we've talked about
 
-Written 15 October 2026, for Ben and the team: every test from our talks, in one place,
+Written 15 October 2026, for the team: every test from our talks, in one place,
 in the order to run them. Each one says what it proves, how to run it, and when it passes.
 
 > **The short version**
@@ -30,12 +30,12 @@ Nothing real moves. Run these on any laptop.
 | 1.7 | The HUD with the turtle | `pixi run turtle`, `pixi run hud`, `pixi run keyboard --local` | speed and steering move as you drive | ✅ Ben, 15 Oct |
 | 1.8 | Plain-English driving | `pixi run -e llm talk`: "drive 10 m forward" | drives 10 m (±0.2 m) after you type yes | ✅ Gazebo |
 | 1.9 | **"SIMULATED" on the HUD** | run Gazebo, look at the HUD | an orange SIMULATED banner; REAL / SIM tag per sensor | ⬜ |
-| 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | `pixi run actuator-test <test> --sim` ([docs](docs/actuator-tests.md)) | the script runs end to end and reports g and angles | ✅ 15 Oct: all 9 tests; they give back `vehicle.yaml`'s numbers |
+| 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | `pixi run actuator-test <test> --sim` ([docs](actuator-tests.md)) | the script runs end to end and reports g and angles | ✅ 15 Oct: all 9 tests; they give back `vehicle.yaml`'s numbers |
 | 1.11 | **The lidar alone stops the car** | `pixi run sim-check --lidar-obstacle` (and `--plan-around`: Nav2 drives round a box it sees) | radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone | ✅ 15 Oct: 0.16-0.55 m before it |
 | 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check | ✅ 15 Oct: all 13 |
 | 1.13 | **The spine in the loop** | `pixi run sim-check --spine` | in Gazebo with `spine:=true`: the normal checks pass; ego's commands stopped → the spine brakes fully within 0.28 s and latches; `/safety/estop` and the hardware e-stop → brake within 0.15 s, latched until armed again; disarmed → no motion | ✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms |
-| 1.14 | **Drive to a GPS point, smooth stop** | `pixi run sim-check --goto` ([A to B](READ-ME-A-TO-B.md)) | every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half `max_brake`; a cancel, the e-stop and a GPS fault stop it | ✅ 15 Oct: all within 0.4 m |
-| 1.15 | **Ghost obstacles: a pretend person only Nav2 sees** | `pixi run sim-check --ghost` ([docs](docs/ghost-obstacles.md)) | a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off | ✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too) |
+| 1.14 | **Drive to a GPS point, smooth stop** | `pixi run sim-check --goto` ([A to B](a-to-b.md)) | every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half `max_brake`; a cancel, the e-stop and a GPS fault stop it | ✅ 15 Oct: all within 0.4 m |
+| 1.15 | **Ghost obstacles: a pretend person only Nav2 sees** | `pixi run sim-check --ghost` ([docs](ghost-obstacles.md)) | a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off | ✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too) |
 
 ## Stage 2: the bench
 
@@ -52,7 +52,7 @@ The car's software path with stand-ins for the hardware, and the real CAN frames
 **Before:** all four wheels off the ground; the e-stop in someone's hand; the 2025-26 drive
 software stopped; speed capped (`max_speed:=0.3`).
 
-### 3a. Does it obey? (READ-ME-FRIDAY.md part 5)
+### 3a. Does it obey? (history/friday-2026-10-16.md part 5)
 
 | # | Test | Expect | Status |
 |---|---|---|---|
@@ -64,7 +64,7 @@ software stopped; speed capped (`max_speed:=0.3`).
 | 3.6 | Stop the keyboard program | the bridge brakes: its commands go stale | 🔧 |
 | 3.7 | Ctrl-C the Motor-Pi bridge | it sends a last stop frame | 🔧 |
 | 3.8 | The Kar-Tech e-stop | everything stops | 🔧 |
-| 3.9 | ⚠️ **Unplug the Motor-Pi's serial cable while driving** | the car brakes within 200 ms | ⬜ fails today: the ESP32 has no timeout (TEAM-TODO B2) |
+| 3.9 | ⚠️ **Unplug the Motor-Pi's serial cable while driving** | the car brakes within 200 ms | ⬜ fails today: the ESP32 has no timeout (team-todo.md B2) |
 
 ### 3b. Steering, on stands
 
@@ -78,7 +78,7 @@ software stopped; speed capped (`max_speed:=0.3`).
 ## Stage 4: the car in an empty lot
 
 **Before:** stage 3 passed; the timeout fix (3.9) in; a safety driver; walking pace first.
-The test script (`pixi run actuator-test <test>`, [docs](docs/actuator-tests.md)) logs the IMU (g),
+The test script (`pixi run actuator-test <test>`, [docs](actuator-tests.md)) logs the IMU (g),
 the wheel speed, the pose and the GPS for every test.
 
 ### 4a. Speed up, coast, brake
@@ -117,7 +117,7 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | 4.12 | IMU direction | turning left shows +z rotation; braking shows −x acceleration | ⬜ |
 | 4.13 | Local EKF | drive 10 m straight: the EKF says 10 m (±0.3 m) | ⬜ |
 | 4.14 | Global EKF + GPS | drive a loop: the EKF's track stays within 2 m of the GPS track | ⬜ |
-| 4.15 | Cameras: the freeze | 1 hour with no freeze, power and heat logged (`FRIDAY-TODO.md` part 5) | ⬜ |
+| 4.15 | Cameras: the freeze | 1 hour with no freeze, power and heat logged (`history/friday-todo-2026-10-16.md` part 5) | ⬜ |
 | 4.16 | Radar | `/perception/radar/clusters` shows a person walking in front | ⬜ |
 | 4.17 | Lidar (once it has a driver) | `car.launch.py lidar:=true`: an obstacle shows in RViz's local costmap (`lidar_layer`), and a person in front stops Nav2 | ⬜ no driver yet; ✅ in Gazebo (1.11) |
 | 4.18 | **Sensor failures on the car** | pull the GPS's, the IMU's, the wheel encoder's cable while Nav2 drives at walking pace: the HUD's red banner names it, and the car stops | ⬜ |
@@ -126,8 +126,8 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 
 | # | Test | How | Passes when | Status |
 |---|---|---|---|---|
-| 5.1 | **Scripted drive** | 10 m at 0.5 m/s (`READ-ME-A-TO-B.md`, test 5) | stops 10 m on (±0.5 m), straight | 🔧 in Gazebo, `sim-check`'s 6.5 m plan passes; not yet on the car |
-| 5.2 | **Smooth stop at a GPS point** | `pixi run goto --lat .. --lon ..`: speed up, hold, slow down at **half the measured brake g** (`vehicle.yaml` `max_brake`, from 4.3), stop at B ([A to B](READ-ME-A-TO-B.md)) | stops within 1 m of B (2 m without RTK) | 🔧 in Gazebo 15 Oct (`sim-check --goto`): 10-60 m, any angle, 1 and 3 m/s, every stop within 0.4 m of B, braking 1.4-1.6 m/s² for a plan of 1.5. 🔧 the car: needs 4.3 |
+| 5.1 | **Scripted drive** | 10 m at 0.5 m/s (`a-to-b.md`, test 5) | stops 10 m on (±0.5 m), straight | 🔧 in Gazebo, `sim-check`'s 6.5 m plan passes; not yet on the car |
+| 5.2 | **Smooth stop at a GPS point** | `pixi run goto --lat .. --lon ..`: speed up, hold, slow down at **half the measured brake g** (`vehicle.yaml` `max_brake`, from 4.3), stop at B ([A to B](a-to-b.md)) | stops within 1 m of B (2 m without RTK) | 🔧 in Gazebo 15 Oct (`sim-check --goto`): 10-60 m, any angle, 1 and 3 m/s, every stop within 0.4 m of B, braking 1.4-1.6 m/s² for a plan of 1.5. 🔧 the car: needs 4.3 |
 | 5.3 | Nav2 to a GPS point | the GPS goal, empty lot | reaches B, stops | 🔧 in Gazebo, goals of 8 m and 9.5 m; not yet on the car |
 | 5.4 | **Ghost obstacles** | the real car with a **simulated** person in Nav2's costmap | slows and stops for it, with nothing real to hit | ⬜ |
 | 5.5 | Plain-English driving on the car | `talk --car`: "drive 10 m forward" | the same as 5.1, after you type yes | ⬜ last |
@@ -141,7 +141,7 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | F.3 | Every machine surveyed: what runs, what's plugged in, what exists only there | `pixi run survey ~/aav-audit/hosts.txt` | ✅ Linux CI; 🔧 the car |
 | F.4 | Multicast between the car's machines, wired and WiFi | `ros2 multicast send` / `receive` | 🔧 |
 | F.5 | Clocks within a second | `date` on each | 🔧 |
-| F.6 | The camera freeze: the 10-minute watch | `FRIDAY-TODO.md` part 5 | 🔧 |
+| F.6 | The camera freeze: the 10-minute watch | `history/friday-todo-2026-10-16.md` part 5 | 🔧 |
 
 ## What the tests give back
 
@@ -159,5 +159,5 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 |---|---|---|
 | The SIMULATED banner and REAL / SIM tags | 1.9 | small |
 | Ghost obstacles on the real car | 5.4 | 1 day |
-| The ESP32 timeout | 3.9, and everything after | TEAM-TODO B2 |
+| The ESP32 timeout | 3.9, and everything after | team-todo.md B2 |
 | A driver for the roof lidar (probably a Velodyne) | 4.17 | small, once the model is known |

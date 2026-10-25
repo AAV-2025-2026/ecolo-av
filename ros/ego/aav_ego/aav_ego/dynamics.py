@@ -23,7 +23,7 @@ is heavy (that would only lengthen the stop), and it never steers less sharply i
 
 The numbers come from vehicle.yaml (mass, track, centre_of_mass, tyre_grip, and the
 actuators' max_accel and max_brake) and ego.yaml (payload, max_lateral_accel). Most are
-guesses until the car is weighed and tested: READ-ME-MEASURE-THE-CAR.md, READ-ME-TESTS.md.
+guesses until the car is weighed and tested: docs/measure-the-car.md, docs/tests.md.
 """
 
 from __future__ import annotations

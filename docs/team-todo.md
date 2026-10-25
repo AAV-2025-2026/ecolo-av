@@ -55,27 +55,27 @@ Tick a task by moving it to "Done" at the bottom, with the date and the commit.
 |---|---|---|
 | 1 | A1 is done: the full Orin image **and** a separate copy of `/home/aavjetson`, the detector weights, `camera_decode` and the OSRM data. Restore-test the home copy | ☐ |
 | 2 | Write down from the audit: the JetPack version, the module part number, the disk (eMMC or NVMe), what was running | ☐ |
-| 3 | Agree as a team. **Note:** NVIDIA's Isaac ROS is Humble-only on the Orin today, so JetPack 7.2 + Jazzy means no Isaac ROS for now. We don't use it (`READ-ME-PERCEPTION-AND-HUD-MAP.md`) | ☐ |
+| 3 | Agree as a team. **Note:** NVIDIA's Isaac ROS is Humble-only on the Orin today, so JetPack 7.2 + Jazzy means no Isaac ROS for now. We don't use it (`perception-and-hud-map.md`) | ☐ |
 | 4 | Flash with SDK Manager from an x86 Ubuntu 22.04/24.04 PC, recovery mode, USB-C cable | ☐ |
 | 5 | First boot: user, hostname and IP **as in the network map** (A6), so the other machines still find it | ☐ |
 | 6 | Check CUDA and TensorRT; `sudo nvpmodel -m 0` (full power) if the team wants it | ☐ |
 | 7 | Then A3 | ☐ |
 | ↩ | **Way back:** restore the full image with `l4t_backup_restore.sh` | |
 
-Details: [docs/platforms.md](docs/platforms.md), "Moving the Orin to JetPack 7.2".
+Details: [docs/platforms.md](platforms.md), "Moving the Orin to JetPack 7.2".
 
 ## B. The drive path: throttle, steering, brake, e-stop
 
 | # | Task | Size | Needs | Done when | Audit says | Who |
 |---|---|---|---|---|---|---|
-| B1 | **Our stack drives the car on stands**, through today's ESP32 (`aav_legacy` on the Motor-Pi) | S | the audit (D2-D5); the 2025-26 Motor-Pi software stopped | the 8 tests in `READ-ME-FRIDAY.md` part 5 pass | | |
+| B1 | **Our stack drives the car on stands**, through today's ESP32 (`aav_legacy` on the Motor-Pi) | S | the audit (D2-D5); the 2025-26 Motor-Pi software stopped | the 8 tests in `history/friday-2026-10-16.md` part 5 pass | | |
 | B2 | ⚠️ **A command timeout on the ESP32**: no command for 100 ms → brake. Either flash the Rust ESP32 (`boards/esp32-umod`, merged 15 Oct) after its bench plan, or add a timeout to today's firmware. Close the open update page | M | Ben's go-ahead to flash; a spare ESP32 for the bench (`docs/esp32-bench.md`) | unplug the Motor-Pi's UART while driving on stands → the car brakes | | |
 | B3 | **The e-stop input**: wire the e-stop to the board, so the firmware knows | S | audit S1 (what the Kar-Tech and the mushroom cut) | press each e-stop → `/vehicle/status` shows it | | |
 | B4 | **Brake safe state**: what the brake does with power cut, and at boot | S | audit S2; the Jrk G2 settings (D6) | written in `vehicle.yaml` / the firmware; tested on stands | | |
-| B5 | **Calibrate** steering (centre, full lock each way), throttle (deadband, top speed), brake (travel). The tests are a script: `pixi run actuator-test <test> --stands`, then in the lot ([docs/actuator-tests.md](docs/actuator-tests.md)) | M | B1; the Jrk settings (D6, N9); measurements (M5) | `vehicle.yaml` has measured numbers; the scripted drive goes straight within 0.5 m over 10 m | | |
+| B5 | **Calibrate** steering (centre, full lock each way), throttle (deadband, top speed), brake (travel). The tests are a script: `pixi run actuator-test <test> --stands`, then in the lot ([docs/actuator-tests.md](actuator-tests.md)) | M | B1; the Jrk settings (D6, N9); measurements (M5) | `vehicle.yaml` has measured numbers; the scripted drive goes straight within 0.5 m over 10 m | | |
 | B6 | **Steering position feedback**: the actuator's own pot, or the KTC-100. The 2024-25 firmware read it from the steering Jrk G2 (`getScaledFeedback()`, docs/older-code.md): try that first | M | audit D6, D7 (wire count) | steering angle in `/vehicle/status`, within 1° | | |
 | B7 | **CAN (the KEFC plan)**: **the hardware lead decides** (CAN or not, the wheel boards, the 100 ms timeout), then order the parts | M | audit C1 (is U7 wired to the ESP32?); the hardware lead's decision. The ROS side is ready: CAN v0.2.0 (wheel speed frames, 100 ms timeout) and `spine_bridge`'s `/vehicle/wheels` merged 15 Oct (`can-v2-work`) | `candump` shows the spine's frames on the Orin | | |
-| B8 | **The first drive on the ground**, walking pace, empty lot, safety driver | S | B1, B2, B3, B5 | `READ-ME-A-TO-B.md` test 5: a scripted 10 m at 0.5 m/s | | |
+| B8 | **The first drive on the ground**, walking pace, empty lot, safety driver | S | B1, B2, B3, B5 | `a-to-b.md` test 5: a scripted 10 m at 0.5 m/s | | |
 
 ## C. The sensors
 
@@ -84,7 +84,7 @@ Details: [docs/platforms.md](docs/platforms.md), "Moving the Orin to JetPack 7.2
 | C1 | **GPS** on our driver (`ublox_gps`), with RTK corrections if there's a source | S | audit N1, N2 | `/sensors/gps/fix` at 5-10 Hz; the HUD shows 3D or RTK | | |
 | C2 | **IMU** on our Rust driver; its mounting angles in `vehicle.yaml` | S | audit N3, M6 | `/sensors/imu/data` at 100 Hz; turning left shows +z rotation | | |
 | C3 | **Cameras** on `camera_ros` (ribbon cameras), with their calibration files | M | audit N4; the backed-up calibration | `/sensors/camera/front_left/image_raw` steady for 30 min | | |
-| C4 | **Fix the camera freezes** | M | Friday's 10-minute watch (`FRIDAY-TODO.md` part 5) | 1 hour with no freeze, logged | | |
+| C4 | **Fix the camera freezes** | M | Friday's 10-minute watch (`history/friday-todo-2026-10-16.md` part 5) | 1 hour with no freeze, logged | | |
 | C5 | **Radar** on `ti_ros2_driver`, its clusters in Nav2 | S | audit N7 | `/perception/radar/clusters` while someone walks in front | | |
 | C6 | **Lidar driver**, its points into Nav2's costmap and the collision monitor | M | audit N6 (make, model, IP) | an obstacle in front shows in RViz's local costmap | | |
 | C7 | **Wheel encoder**: alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors: `wheel-core` and `spine_bridge` already read them, 15 Oct) | M | audit D4, C2 | `/vehicle/status` speed matches a GPS speed within 10% at 1 m/s | | |
@@ -100,12 +100,12 @@ Details: [docs/platforms.md](docs/platforms.md), "Moving the Orin to JetPack 7.2
 | D3 | **YOLO on TensorRT** on the Orin; test stock YOLO11 vs the 2025-26 detector on a recording | S | A3; a recording from C3 | ms per frame on the Orin written in `docs/perception.md` | | |
 | D4 | **The HUD and the map on the dash's two screens**, full screen, starting at boot. **Ready to install (15 Oct):** `car_install.sh --screens`, then two monitor names in `~/.config/aav/screens.env` ([below](#d4-in-detail-the-two-screens)) | S | audit W10 (which computer, the outputs' names, X11 or Wayland); auto-login (an admin); E1 | power on → the HUD on the small screen, the map on the big one, both full screen; kill one → back in 5 s | | |
 | D5 | **The HUD's map panel**, with offline tiles of the test area | M | the test area chosen | the car's dot moves on the map in Gazebo, then on the car | | |
-| D6 | **A-to-B**: the test lot's datum, a start spot, then a GPS goal with `pixi run goto --lat .. --lon ..` (the driver, `aav_goto`, is built and proven in Gazebo, 15 Oct) | M | C1, C2, B8; the brake test (4.3) for `max_brake` | `READ-ME-A-TO-B.md` test 5 with a GPS goal: stops within 1 m of B (2 m without RTK) | | |
+| D6 | **A-to-B**: the test lot's datum, a start spot, then a GPS goal with `pixi run goto --lat .. --lon ..` (the driver, `aav_goto`, is built and proven in Gazebo, 15 Oct) | M | C1, C2, B8; the brake test (4.3) for `max_brake` | `a-to-b.md` test 5 with a GPS goal: stops within 1 m of B (2 m without RTK) | | |
 | D7 | **Python to Rust, step 1**: the spine bridge and ego | L | Ben's go-ahead | the same tests pass with the Rust nodes; `bench-check` 7 of 7 | | |
 
 ### D4 in detail: the two screens
 
-How it works: [docs/car-screens.md](docs/car-screens.md). Two systemd *user* units start
+How it works: [docs/car-screens.md](car-screens.md). Two systemd *user* units start
 `hud` and `map` at login, each with `--fullscreen --monitor <name>`.
 
 | Ready (15 Oct, tested on a Mac) | The audit must confirm |

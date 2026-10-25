@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driving from A to B: speed up, drive, slow down, stop · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/a-to-b.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Driving from A to B: speed up, drive, slow down, stop</h1>
+<div class="meta">11 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a class="here" href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-the-three-ways">1. The three ways</a><a href="#2-way-1-the-scripted-drive-today">2. Way 1: the scripted drive (today)</a><a href="#3-way-2-nav2-to-a-gps-point-today">3. Way 2: Nav2 to a GPS point (today)</a><a href="#4-way-3-the-goto-driver">4. Way 3: the goto driver</a><a href="#5-where-am-i-is-the-hard-part">5. &quot;Where am I?&quot; is the hard part</a><a href="#6-do-we-need-a-costmap-or-a-map">6. Do we need a costmap or a map?</a><a href="#7-test-it-step-by-step">7. Test it, step by step</a><a href="#8-what-to-do-first">8. What to do first</a></nav>
+<div class="lead"><p>Written 15 October 2026. The goal: the car drives in a straight line from point
+A to point B, speeding up, holding a speed, slowing down and stopping. This is the KEFC
+request's "accelerate / hold / stop" demo, and the first step to GPS point-to-point.</p>
+<blockquote>
+<p><strong>The short version</strong>
+- There are <strong>three ways</strong>. All three exist now: the third, the goto driver (<code>aav_goto</code>), was built on 15 Oct for the main goal.
+- <strong><code>pixi run goto --lat .. --lon ..</code></strong> drives to B and stops there, slowing at <strong>half the measured braking</strong>.
+- A straight drive in an empty lot needs <strong>no costmap and no map</strong>: only "where am I" and "where is B".
+- The hard part isn't the driving. It's <strong>knowing where the car is and which way it faces</strong> at the start.
+- Test it on the turtle, then the bench, then Gazebo, then the car on stands, then the car.</p>
+</blockquote></div>
+<section class="card"><h2 id="1-the-three-ways">1. The three ways</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>1. Scripted drive</th>
+<th>2. Nav2 to a GPS point</th>
+<th>3. The goto driver (<code>aav_goto</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Idea</td>
+<td>drive a speed profile: speed up, hold for a distance, stop</td>
+<td>give Nav2 point B as latitude/longitude; it plans and steers</td>
+<td>drive the straight line from A to B, holding the line, and stop at B</td>
+</tr>
+<tr>
+<td>Needs GPS?</td>
+<td>no</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Steers to stay on the line?</td>
+<td><strong>no</strong>: wheels straight, it drifts</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Stops exactly at B?</td>
+<td>no: after a distance from the start</td>
+<td>yes, within Nav2's goal tolerance</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Speed profile you choose?</td>
+<td><strong>yes</strong>: acceleration, speed, deceleration</td>
+<td>roughly: Nav2's limits (1 m/s, 1 m/s²)</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td>Avoids obstacles?</td>
+<td>no</td>
+<td><strong>yes</strong> (costmap, collision_monitor)</td>
+<td>no: an open lot, a safety driver</td>
+</tr>
+<tr>
+<td>Exists today?</td>
+<td>✅ <code>aav_scripted</code></td>
+<td>✅ Nav2 + <code>navsat_transform</code></td>
+<td>✅ <code>aav_goto</code> (15 Oct)</td>
+</tr>
+<tr>
+<td>Tested</td>
+<td>turtle, bench</td>
+<td>Gazebo (goals of 8 m and 9.5 m), bench (40 m)</td>
+<td>Gazebo: 10-60 m, any angle, 1 and 3 m/s (<a href="#4-way-3-the-goto-driver">section 4</a>)</td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>the first drive on the car</td>
+<td>point-to-point with obstacles</td>
+<td><strong>the main goal</strong>: GPS A to B with a smooth stop</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Recommendation:</strong> start with <strong>1</strong> on the car on stands, then on the ground. Then <strong>3</strong>
+for the GPS A-to-B demo (tests.md 5.2). Use <strong>2</strong> where there are obstacles.</p>
+</section>
+<section class="card"><h2 id="2-way-1-the-scripted-drive-today">2. Way 1: the scripted drive (today)</h2>
+<p>The <code>scripted_driver</code> drives a speed profile. It knows how far it has gone from
+<code>/localization/odom/local</code> (wheels + IMU), not from GPS.</p>
+<pre class="highlight"><code class="language-text"> speed
+   ▲      hold
+   │    ┌───────┐
+   │   /         \
+   │  / speed up  \ slow down
+   └─/─────────────\────► distance
+     A               stop (about B)</code></pre>
+<pre class="highlight"><code class="language-bash">ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
+  "{target_speed: 1.0, acceleration: 0.5, deceleration: 0.5, hold_distance: 10.0, curvature: 0.0}" \
+  --feedback</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target_speed</code></td>
+<td>m/s to hold (negative = reverse)</td>
+</tr>
+<tr>
+<td><code>acceleration</code>, <code>deceleration</code></td>
+<td>m/s², how fast to speed up and slow down</td>
+</tr>
+<tr>
+<td><code>hold_distance</code></td>
+<td>metres at full speed; 0 = use <code>hold_time</code> (seconds) instead</td>
+</tr>
+<tr>
+<td><code>curvature</code></td>
+<td>0 = straight. It sets a fixed steering angle; it doesn't correct</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Any person driving (keyboard, joystick) overrides it at once. Cancel the goal and it slows down and stops.</li>
+<li><strong>Limits:</strong> with wheels straight but no correction, a slightly-off steering centre makes it curve. Until the KTC-100 gives real steering feedback, expect drift.</li>
+<li><strong>Or in plain English:</strong> <code>pixi run -e llm talk</code>, then type "drive 10 m forward". A local model plans the goal (the whole 10 m, ramps included), shows it, and drives only after you type yes. Stand-ins only for now: <a href="plain-english.html">docs/plain-english.md</a>.</li>
+</ul>
+</section>
+<section class="card"><h2 id="3-way-2-nav2-to-a-gps-point-today">3. Way 2: Nav2 to a GPS point (today)</h2>
+<p>Nav2 plans a path from where the car is to B and steers along it.</p>
+<pre class="highlight"><code class="language-text"> B (lat, lon) ─► /fromLL ─► B (x, y on the map) ─► Nav2 plans ─► Nav2 steers ─► stops at B</code></pre>
+<pre class="highlight"><code class="language-bash">ros2 action send_goal /follow_gps_waypoints nav2_msgs/action/FollowGPSWaypoints \
+  "{gps_poses: [{position: {latitude: 45.38612, longitude: -75.69588, altitude: 0.0},
+                 orientation: {w: 1.0}}]}" --feedback</code></pre>
+<ul>
+<li>The HUD's route uses this same action.</li>
+<li>On an <strong>empty map</strong> (the default, 200 m × 200 m, all free), Nav2's plan is close to a straight line; the planner only respects the car's turning circle.</li>
+<li>Nav2's speed: up to 1.0 m/s, speeding up at up to 1.0 m/s², slowing near the goal (<code>nav2.yaml</code>).</li>
+<li>The radar (and the lidar, later) still fill the local costmap, and collision_monitor still stops for something ahead.</li>
+</ul>
+</section>
+<section class="card"><h2 id="4-way-3-the-goto-driver">4. Way 3: the goto driver</h2>
+<p><code>aav_goto</code> drives to one point B and stops there. B is a GPS point (lat/lon) or a map point.</p>
+<pre class="highlight"><code class="language-text"> pixi run goto ──► /goto action ──► goto_driver ──► /drivers/goto/cmd_vel ──► twist_mux (25) ──► ego
+   lat/lon ──► /fromLL (navsat_transform) ──► B on the map
+   /localization/odom/global (wheels + IMU + GPS) ──► where the car is, how fast</code></pre>
+<h3 id="how-it-drives">How it drives</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Does</th>
+<th>File</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed</td>
+<td>speed up gently (0.5 m/s²), hold the cruise speed, then slow down <strong>by the distance left</strong>: v = √(2·a·d), with a = <strong>half of <code>max_brake</code></strong></td>
+<td><code>approach.py</code></td>
+</tr>
+<tr>
+<td>Steering</td>
+<td>turn towards B first if it is more than 20° off the nose; then pure pursuit along the straight line to B</td>
+<td><code>line.py</code></td>
+</tr>
+<tr>
+<td>One drive</td>
+<td>the two together, tick by tick (50 Hz)</td>
+<td><code>drive.py</code></td>
+</tr>
+<tr>
+<td>Rules</td>
+<td>when it may start, when it must stop, how close is close (1 m with RTK, 2 m without)</td>
+<td><code>rules.py</code></td>
+</tr>
+</tbody>
+</table></div>
+<pre class="highlight"><code class="language-text"> speed
+   ▲          hold (cruise)
+   │      ┌─────────────┐
+   │     /               \   v = √(2 a d): slowing at a = ½ max_brake
+   │    / up 0.5 m/s²     \  stops exactly at B
+   └───/───────────────────\──► distance left to B
+       A                    B</code></pre>
+<p>Slowing by the distance left, not by the clock, corrects itself: if the car slows a little
+late, the distance shrinks faster and the command drops to match.</p>
+<h3 id="why-a-line-driver-and-not-nav2-or-the-scripted-drive">Why a line driver, and not Nav2 or the scripted drive</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Line driver (goto)</th>
+<th>Nav2</th>
+<th>Scripted</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stops <strong>at B</strong>, wherever it started?</td>
+<td>yes: speed from the distance left</td>
+<td>yes, within its goal tolerance</td>
+<td>no: after a distance</td>
+</tr>
+<tr>
+<td>Slows at <strong>half the measured braking</strong>?</td>
+<td>yes: one number from <code>vehicle.yaml</code></td>
+<td>no: its controller and smoother have their own limits</td>
+<td>yes, but not ending at B</td>
+</tr>
+<tr>
+<td>Path</td>
+<td>a straight line: easy to predict and to explain</td>
+<td>a planned path through a costmap</td>
+<td>none: wheels straight</td>
+</tr>
+<tr>
+<td>Parts that must work</td>
+<td>the global EKF and the GPS</td>
+<td>maps, costmaps, planner, controller, behaviour tree</td>
+<td>the local EKF</td>
+</tr>
+<tr>
+<td>Obstacles</td>
+<td>❌ none: open lot, safety driver</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table></div>
+<p>So: <strong>the line driver for the open-lot demo, Nav2 for anything with obstacles.</strong>
+<code>speed_profile.py</code> (the scripted drive's maths) doesn't fit: it slows at a fixed rate from
+wherever it is, so the stop doesn't land on B. <code>approach.py</code> explains it at the top.</p>
+<h3 id="its-safety">Its safety</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>It</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Has its own twist_mux slot</td>
+<td>priority <strong>25</strong>: below every person, test and script; above Nav2; held by the stop-sign and watchdog locks (30)</td>
+</tr>
+<tr>
+<td>Stops at once</td>
+<td>Ctrl-C (cancels the goal), the e-stop, the watchdog's lock <strong>or its silence</strong>, a stale position (0.5 s) or GPS fix (2 s), someone else driving, or the car not moving though asked</td>
+</tr>
+<tr>
+<td>Refuses</td>
+<td>a B over <strong>200 m</strong> away, no position, a B inside the car's tightest turn (it can't reverse)</td>
+</tr>
+<tr>
+<td>Obeys ego</td>
+<td>asks ego for its caps (1 m/s on the car) and plans with them</td>
+</tr>
+<tr>
+<td>Asks first on the real car</td>
+<td><code>/system/source</code> REAL (or nobody announcing): a checklist, then you type <code>goto</code>, as in the <a href="actuator-tests.html">actuator tests</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="run-it">Run it</h3>
+<pre class="highlight"><code class="language-bash">pixi run sim                                     # Gazebo, in one terminal
+pixi run goto --sim --ahead 20                   # 20 m ahead of the car
+pixi run goto --sim --ahead 30 --left 10         # ... and 10 m to its left
+pixi run goto --sim --x 30 --y 5                 # a map point (x east, y north, metres)
+pixi run goto --lat 45.38630 --lon -75.69580     # the real car: a GPS point; it asks first
+pixi run sim-check --goto-only                   # the Gazebo proof below (8 minutes)</code></pre>
+<p>Or the action itself: <code>ros2 action send_goal /goto aav_interfaces/action/GoTo "{x: 20.0, y: 0.0}" --feedback</code>.</p>
+<h3 id="proven-in-gazebo-15-oct">Proven in Gazebo (15 Oct)</h3>
+<p>GAZEBO_RESULTS</p>
+</section>
+<section class="card"><h2 id="5-where-am-i-is-the-hard-part">5. "Where am I?" is the hard part</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answered by</th>
+<th>The catch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where is A, where is B?</td>
+<td>GPS: drive there, record <code>/sensors/gps/fix</code> for 30 s, average it</td>
+<td>needs a good fix; RTK makes it centimetres</td>
+</tr>
+<tr>
+<td>Where is the car now?</td>
+<td><code>ekf_global</code>: wheels + IMU + GPS</td>
+<td>GPS-only is ±1-3 m without RTK</td>
+</tr>
+<tr>
+<td><strong>Which way does it face?</strong></td>
+<td>the gyro tracks <strong>turns</strong>, but nothing knows the starting heading</td>
+<td>⚠️ the gap: see below</td>
+</tr>
+<tr>
+<td>How far has it gone?</td>
+<td><code>ekf_local</code>: wheels + IMU</td>
+<td>drifts slowly; fine over 10-50 m</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-heading-gap">The heading gap</h3>
+<p>The IMU's gyro measures <strong>turning</strong>, not <strong>north</strong>. We don't use the magnetometer (it
+needs calibrating, and the car's motors upset it). Today the start heading comes from
+<code>start_yaw</code>, typed in by hand. The options:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>How</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Park on a marked spot, facing a known way</td>
+<td><code>start_yaw</code> from the marks</td>
+<td>free; good enough for a demo</td>
+</tr>
+<tr>
+<td>Drive straight a few metres first</td>
+<td>the GPS track gives the heading</td>
+<td>a few metres of driving</td>
+</tr>
+<tr>
+<td>The ZED-F9R's own dead reckoning</td>
+<td>it fuses its IMU, wheel ticks and GPS, and outputs a heading</td>
+<td>set it up on the receiver</td>
+</tr>
+<tr>
+<td>Two GPS antennas</td>
+<td>the line between them is the heading</td>
+<td>a second receiver</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Recommendation:</strong> a marked start spot for the first demos; then the ZED-F9R's heading.</p>
+</section>
+<section class="card"><h2 id="6-do-we-need-a-costmap-or-a-map">6. Do we need a costmap or a map?</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>For</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Way 1 (scripted)</td>
+<td>nothing: no GPS, no map</td>
+</tr>
+<tr>
+<td>Way 2 (Nav2)</td>
+<td>the empty map (exists) + the datum at the test site + the sensors for obstacles</td>
+</tr>
+<tr>
+<td>Way 3 (goto)</td>
+<td>the datum, A and B; no costmap. ⚠️ collision_monitor guards only Nav2's commands, not goto's</td>
+</tr>
+<tr>
+<td>Later: a route with curbs and lanes</td>
+<td>a map of the test site (<code>tools/make_map.py</code>), or a lane layer</td>
+</tr>
+</tbody>
+</table></div>
+<p>To make a map of the test lot: drive the edges, record GPS points, and draw them into a
+map with <code>tools/make_map.py</code> (it already makes <code>empty</code> and <code>example_lot</code>).</p>
+</section>
+<section class="card"><h2 id="7-test-it-step-by-step">7. Test it, step by step</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Where</th>
+<th>Run</th>
+<th>Proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Turtle</td>
+<td><code>pixi run turtle</code>, then the scripted goal above</td>
+<td>the speed profile and the action</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Bench</td>
+<td><code>pixi run bench</code>, then the scripted goal; <code>pixi run bench-check</code></td>
+<td>the same through the real CAN frames and the spine logic</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Gazebo</td>
+<td><code>pixi run sim</code>, then the GPS goal above; <code>pixi run sim-check --goto</code></td>
+<td>GPS, both EKFs, Nav2, stopping at B; the goto driver's stop</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Car on stands</td>
+<td><code>pixi run car orin</code> + <code>motor_pi</code>; the scripted goal at 0.3 m/s</td>
+<td>the signs, the speed loop, the e-stops</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Car, empty lot</td>
+<td>scripted at 0.5 m/s, 10 m; then <code>pixi run goto --lat .. --lon ..</code></td>
+<td>the real thing, with a safety driver</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="8-what-to-do-first">8. What to do first</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Friday: find out whether the GPS gives fixes (<code>ros2 topic hz</code> on the RTK-Pi)</td>
+<td>the team</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Pick the test lot; measure its datum</td>
+<td>the team</td>
+</tr>
+<tr>
+<td>3</td>
+<td>A "mark this spot" tool: average <code>/sensors/gps/fix</code> and print lat/lon</td>
+<td>small, ours</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The goto driver (way 3)</td>
+<td>✅ built 15 Oct; on the car after the brake test (4.3) gives <code>max_brake</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>A Gazebo world shaped like the test lot</td>
+<td>ours</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="controllers.html"><small>Previous</small>← Path followers</a>
+<a class="next" href="routes.html"><small>Next</small>Street routes →</a></nav>
+</main>
+<footer>Source: <code>docs/a-to-b.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

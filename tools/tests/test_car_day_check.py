@@ -224,7 +224,7 @@ def test_the_repos_pixi_toml_picks_cyclone():
 
 def test_the_runbooks_cyclone_file_names_a_card_the_check_reads():
     # The runbook's example is what the team copies: the check must understand it.
-    runbook = (ROOT / 'READ-ME-CAR-DAY.md').read_text()
+    runbook = (ROOT / 'docs/car-day.md').read_text()
     xml = re.search(r'(<CycloneDDS.*?</CycloneDDS>)', runbook, re.S).group(1)
     assert cdc.card_named(xml) == 'en7'
     assert cdc.CAR_CYCLONE.replace('~/', '') in runbook

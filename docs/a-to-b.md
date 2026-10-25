@@ -1,6 +1,6 @@
 # Driving from A to B: speed up, drive, slow down, stop
 
-Written 15 October 2026, for Ben. The goal: the car drives in a straight line from point
+Written 15 October 2026. The goal: the car drives in a straight line from point
 A to point B, speeding up, holding a speed, slowing down and stopping. This is the KEFC
 request's "accelerate / hold / stop" demo, and the first step to GPS point-to-point.
 
@@ -26,7 +26,7 @@ request's "accelerate / hold / stop" demo, and the first step to GPS point-to-po
 | Best for | the first drive on the car | point-to-point with obstacles | **the main goal**: GPS A to B with a smooth stop |
 
 **Recommendation:** start with **1** on the car on stands, then on the ground. Then **3**
-for the GPS A-to-B demo (READ-ME-TESTS 5.2). Use **2** where there are obstacles.
+for the GPS A-to-B demo (tests.md 5.2). Use **2** where there are obstacles.
 
 ## 2. Way 1: the scripted drive (today)
 
@@ -58,7 +58,7 @@ ros2 action send_goal /scripted_drive aav_interfaces/action/ScriptedDrive \
 
 - Any person driving (keyboard, joystick) overrides it at once. Cancel the goal and it slows down and stops.
 - **Limits:** with wheels straight but no correction, a slightly-off steering centre makes it curve. Until the KTC-100 gives real steering feedback, expect drift.
-- **Or in plain English:** `pixi run -e llm talk`, then type "drive 10 m forward". A local model plans the goal (the whole 10 m, ramps included), shows it, and drives only after you type yes. Stand-ins only for now: [docs/plain-english.md](docs/plain-english.md).
+- **Or in plain English:** `pixi run -e llm talk`, then type "drive 10 m forward". A local model plans the goal (the whole 10 m, ramps included), shows it, and drives only after you type yes. Stand-ins only for now: [docs/plain-english.md](plain-english.md).
 
 ## 3. Way 2: Nav2 to a GPS point (today)
 
@@ -133,7 +133,7 @@ wherever it is, so the stop doesn't land on B. `approach.py` explains it at the 
 | Stops at once | Ctrl-C (cancels the goal), the e-stop, the watchdog's lock **or its silence**, a stale position (0.5 s) or GPS fix (2 s), someone else driving, or the car not moving though asked |
 | Refuses | a B over **200 m** away, no position, a B inside the car's tightest turn (it can't reverse) |
 | Obeys ego | asks ego for its caps (1 m/s on the car) and plans with them |
-| Asks first on the real car | `/system/source` REAL (or nobody announcing): a checklist, then you type `goto`, as in the [actuator tests](docs/actuator-tests.md) |
+| Asks first on the real car | `/system/source` REAL (or nobody announcing): a checklist, then you type `goto`, as in the [actuator tests](actuator-tests.md) |
 
 ### Run it
 

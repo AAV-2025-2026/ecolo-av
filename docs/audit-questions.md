@@ -5,7 +5,7 @@ row says how to answer it and what the answer unblocks. Write the answers into
 `docs/history/audit-2026-10-16-car.md` (no passwords or keys).
 
 **You'll use it with:** [The hardware audit, step by step](audit-friday.md), and
-[READ-ME-FRIDAY.md](../READ-ME-FRIDAY.md) for the plan of the day.
+[Friday 16 Oct](history/friday-2026-10-16.md) for the plan of the day.
 
 The ⚠️ rows matter most: they change what we buy, or whether it's safe to drive.
 
@@ -83,7 +83,7 @@ Every number in `ros/bringup/aav_description/config/vehicle.yaml` is a guess. Br
 | M6 | the GPS antenna, IMU, radar, each camera and the lidar: x forward, y left, z up from the ground under the rear axle | see `vehicle.yaml` |
 | M7 | mass: 4 bathroom scales, one under each wheel, add them up (or one scale, a wheel at a time, the others on blocks of the same height) | 181 kg, Ben's estimate (about 400 lb) |
 
-How to measure each, as a sheet to fill in: [READ-ME-MEASURE-THE-CAR.md](../READ-ME-MEASURE-THE-CAR.md).
+How to measure each, as a sheet to fill in: [Measure the car](measure-the-car.md).
 
 ## 7. Power
 

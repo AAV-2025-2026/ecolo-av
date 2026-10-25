@@ -3,7 +3,7 @@ The sensor watchdog's logic: is each sensor alive, sane and moving? No ROS here.
 
 sensor_watchdog (the node) tells this module what arrived and when; this module says, for
 each input, OK or what is wrong, and whether the automatic drivers must stop (twist_mux's
-sensors lock). READ-ME-FULL-SIMULATION.md step 6; docs/simulation.md, "Sensor failures
+sensors lock). docs/full-simulation.md step 6; docs/simulation.md, "Sensor failures
 on purpose".
 
 What counts as wrong, per input (each check only where its rule asks for it):

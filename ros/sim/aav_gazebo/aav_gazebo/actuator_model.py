@@ -2,7 +2,7 @@
 The actuator model: how the car answers a command, between ego and Gazebo.
 
 No ROS here. gazebo_adapter steps it at 50 Hz (Gazebo's time) and sends Gazebo the speed
-and steering it gives (READ-ME-FULL-SIMULATION.md, option A):
+and steering it gives (docs/full-simulation.md, option A):
 
     ego's speed ──> SpeedLoop ──> throttle %, brake % ──> Actuators ──> speed  ──> Gazebo
     ego's angle ─────────────────────────────────────> Actuators ──> angle  ──> Gazebo
@@ -13,7 +13,7 @@ and steering it gives (READ-ME-FULL-SIMULATION.md, option A):
   - Actuators: throttle % -> acceleration, brake % -> deceleration, coasting drag; the
     steering motor's speed limit, the linkage's lag, the centre offset and a deadband.
     Its numbers are vehicle.yaml's `actuators:` section (guesses until tests 3.10-3.12
-    and 4.1-4.5 in READ-ME-TESTS.md).
+    and 4.1-4.5 in docs/tests.md).
   - Ideal: the old behaviour, for comparison (actuator_model:=false): the speed follows
     the command within Gazebo's old limits (+1.5 / -3.0 m/s^2), the steering at once.
 

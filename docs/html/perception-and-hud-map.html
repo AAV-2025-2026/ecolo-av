@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perception models, the lidar, and a map on the HUD · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/perception-and-hud-map.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Perception models, the lidar, and a map on the HUD</h1>
+<div class="meta">12 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a class="here" href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-camera-perception-which-tool-for-which-job">1. Camera perception: which tool for which job</a><a href="#2-the-cameras-on-the-car-one-thing-to-fix-first">2. The cameras on the car: one thing to fix first</a><a href="#3-the-lidar-three-steps">3. The lidar: three steps</a><a href="#4-a-map-on-the-hud">4. A map on the HUD</a><a href="#5-better-open-source-options-including-nvidias-per-pixel-models">5. Better open-source options, including NVIDIA&#x27;s per-pixel models</a><a href="#6-what-to-do-in-order">6. What to do, in order</a><a href="#sources-15-oct">Sources (15 Oct)</a></nav>
+<div class="lead"><p>Written 15 October 2026. <strong>Since then:</strong> the detector is RF-DETR Nano, not YOLO
+(Ben, 23 Oct), as TensorRT on the Orin and Core ML on a Mac: see
+<a href="perception.html#models">Perception</a>. YOLO stays as <code>detector:=yolo</code>. It answers:</p>
+<ol>
+<li>YOLO, OpenCV, or the previous teams' trained models?</li>
+<li>What do we do with the lidar? Can we just download a model?</li>
+<li>Can the HUD show a map?</li>
+<li>Are there better open-source models, like NVIDIA's per-pixel ones?</li>
+</ol>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Use stock YOLO for objects</strong> (already wired in): one model, run as TensorRT on the Orin and Core ML on a Mac. <strong>Keep OpenCV for lane lines</strong> (already done: under 1 ms a frame).
+- <strong>The previous teams' trained model is lost</strong> (<code>best.pt</code> was on someone's laptop) and knew one label. Start from stock, and train our own later only if the stock one fails on our recordings.
+- <strong>Lidar: no model to start.</strong> Put its points straight into Nav2's costmap and collision_monitor. Clustering next. A downloaded 3D detector last, and only if needed.
+- <strong>Per-pixel, for where the road is: NVIDIA's CitySemSegFormer</strong> (a ready ONNX file), run with ONNX Runtime, not Isaac ROS: Isaac ROS isn't on Jazzy for the Orin yet.
+- <strong>A map on the HUD: yes.</strong> The raylib HUD can draw offline map tiles with the car's GPS dot on top. Not built yet.</p>
+</blockquote></div>
+<section class="card"><h2 id="1-camera-perception-which-tool-for-which-job">1. Camera perception: which tool for which job</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>Tool</th>
+<th>Why</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stop signs, people, cars, bikes, traffic lights</td>
+<td><strong>YOLO11 nano</strong>, stock, trained on COCO (80 classes)</td>
+<td>one model for many objects; fast; runs on TensorRT and Core ML</td>
+<td>✅ bench, Gazebo road world; ❌ car</td>
+</tr>
+<tr>
+<td>Lane lines</td>
+<td><strong>OpenCV</strong>, classic (<code>aav_lane_finder</code>)</td>
+<td>no training; 0.78 ms a frame; easy to debug</td>
+<td>✅ bench</td>
+</tr>
+<tr>
+<td>How far away is it?</td>
+<td>the lidar or radar (see 3), not the camera</td>
+<td>a camera alone guesses distance badly</td>
+<td>-</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-the-previous-teams-trained">What the previous teams trained</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Team</th>
+<th>Model</th>
+<th>Where it is now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2024-25</td>
+<td>their own YOLO, <code>best.pt</code>, one label, from their own photos</td>
+<td><strong>lost</strong>: their code loaded it from <code>~/Yolo/Capstone/runs/...</code> on someone's computer. The training scripts came across; the pictures and weights didn't</td>
+</tr>
+<tr>
+<td>2022-23</td>
+<td>Colab notebooks for vision models (<code>Carleton-AAV/AI-Development-Scripts</code>)</td>
+<td>notebooks only</td>
+</tr>
+</tbody>
+</table></div>
+<p>We don't know what they started from or how good it was. Stock YOLO11 already knows "stop
+sign", so we start there.</p>
+<h3 id="one-model-three-formats">One model, three formats</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th>Format</th>
+<th>Made by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Orin</td>
+<td><code>yolo11n.engine</code> (TensorRT, half precision)</td>
+<td><code>python3 tools/build_engine.py</code>, on the Orin itself</td>
+</tr>
+<tr>
+<td>Mac</td>
+<td><code>yolo11n.mlpackage</code> (Core ML)</td>
+<td><code>pixi run -e ml export-coreml</code></td>
+</tr>
+<tr>
+<td>Anything</td>
+<td><code>yolo11n.pt</code> (PyTorch)</td>
+<td><code>pixi run get-models</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Measured on a Mac: 7.7 ms a frame through PyTorch and Metal, 4.3 ms through Core ML.</p>
+<h3 id="when-to-train-our-own">When to train our own</h3>
+<ol>
+<li>Record the car's cameras on a real drive (<code>tools/record.sh</code>).</li>
+<li>Run stock YOLO on the recording. Count what it misses.</li>
+<li>Only if it misses too much: label a few hundred of our frames and fine-tune YOLO11 from the stock weights. It's the same code, the same three formats.</li>
+</ol>
+<p>Other open models worth a fair test on the same recording: RT-DETR and RF-DETR (objects),
+YOLO-World (anything named in words, such as "traffic cone"), YOLOPv2 (lanes and drivable
+area), Depth Anything V2 (distance from one camera). Check each licence first: Ultralytics'
+YOLO is AGPL-3.0.</p>
+</section>
+<section class="card"><h2 id="2-the-cameras-on-the-car-one-thing-to-fix-first">2. The cameras on the car: one thing to fix first</h2>
+<p>The photos show <strong>ribbon (CSI) cameras</strong> on the Pi 5s. Our camera driver, <code>usb_cam</code>, only
+reads <strong>USB</strong> cameras. The camera Pis need a libcamera driver instead, such as <code>camera_ros</code>.
+Friday's audit will show what the 2025-26 team ran there.</p>
+</section>
+<section class="card"><h2 id="3-the-lidar-three-steps">3. The lidar: three steps</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What</th>
+<th>Model?</th>
+<th>Gives</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Points into Nav2</strong></td>
+<td>the lidar's point cloud → the local costmap's obstacle layer, and collision_monitor's stop zone</td>
+<td>no</td>
+<td>"something is there, don't drive into it"</td>
+<td>small: configuration, like the radar's</td>
+</tr>
+<tr>
+<td><strong>2. Clusters</strong></td>
+<td>group nearby points into objects (DBSCAN, as we already do for the radar)</td>
+<td>no</td>
+<td>boxes with a position and size</td>
+<td>small: reuse <code>aav_radar_clusters</code></td>
+</tr>
+<tr>
+<td><strong>3. A 3D detector</strong></td>
+<td>a downloaded model labels the points: car, person, cyclist</td>
+<td>yes</td>
+<td>labelled 3D boxes</td>
+<td>big</td>
+</tr>
+</tbody>
+</table></div>
+<p>Step 1 is what keeps the car from hitting things, and it needs no model at all. Most
+student and research cars stop there.</p>
+<h3 id="can-we-download-a-random-model">"Can we download a random model?"</h3>
+<p>Yes, but it's step 3, and it comes with catches:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model family</th>
+<th>Trained on</th>
+<th>The catch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PointPillars</td>
+<td>KITTI, nuScenes (car datasets)</td>
+<td>trained on a different lidar, mounted differently: expect worse results on ours</td>
+</tr>
+<tr>
+<td>CenterPoint</td>
+<td>nuScenes, Waymo</td>
+<td>heavier; wants a big GPU</td>
+</tr>
+<tr>
+<td>NVIDIA TAO PointPillars</td>
+<td>NVIDIA's data</td>
+<td>built for TensorRT on Jetson: the best fit for the Orin</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="camera-lidar-together">Camera + lidar together</h3>
+<p>The usual way: YOLO finds a box in the picture; the lidar points that fall inside that box
+give its distance. That needs the camera and lidar <strong>calibrated</strong> to each other (where each
+one sits on the car, and the camera's lens). It's a later step, after both run on the car.</p>
+<h3 id="in-gazebo-today">In Gazebo today</h3>
+<p><code>pixi run sim world:=road</code> (or <code>world:=test_lot</code>) simulates a generic 16-beam lidar on the roof, on
+<code>/sensors/lidar/points</code>. It's on by default (15 Oct): with the Mac quiet, it runs with
+YOLO and all three cameras. Step 1 can be built and tested there before the real lidar's model is
+known.</p>
+</section>
+<section class="card"><h2 id="4-a-map-on-the-hud">4. A map on the HUD</h2>
+<h3 id="what-exists">What exists</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The 2025-26 Flutter app's map page (<code>flutter_map</code>)</td>
+<td>written; it needs a tile server on the dash Pi, which isn't in git</td>
+</tr>
+<tr>
+<td><code>ottawa.db</code>: 606,628 places for the search box</td>
+<td><code>pixi run get-hud-map</code></td>
+</tr>
+<tr>
+<td>OSRM road routes</td>
+<td>Docker on the dash Pi; data not in git</td>
+</tr>
+<tr>
+<td>The raylib HUD (ours)</td>
+<td>speed, e-stop, GPS panel, camera, topic health. <strong>No map yet</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="how-the-raylib-hud-would-draw-one">How the raylib HUD would draw one</h3>
+<pre class="highlight"><code class="language-text"> map tiles (256 px squares, offline) ─► raylib textures ─► the map panel
+ /localization/gps/fix ─► a dot and an arrow for the car
+ the route (lat/lon points) ─► a line over the tiles</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Make offline <strong>tiles</strong> of the test area once: a folder of PNGs (zoom 15-19 covers a campus)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>The HUD loads the tiles around the car as textures</td>
+</tr>
+<tr>
+<td>3</td>
+<td>lat/lon → tile pixel is a standard formula (Web Mercator)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Draw the car's dot, its heading, and the route on top</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Offline</strong>, so it works without internet in the car.</li>
+<li><strong>The rules:</strong> OpenStreetMap's own tile servers forbid bulk downloads. Render our own tiles from OSM data, or use a provider that allows offline use. Show "© OpenStreetMap contributors" on the screen, as the Flutter app does.</li>
+<li><strong>About a day's work</strong> for a map panel with the car's position. Search and routing come after.</li>
+</ul>
+</section>
+<section class="card"><h2 id="5-better-open-source-options-including-nvidias-per-pixel-models">5. Better open-source options, including NVIDIA's per-pixel models</h2>
+<p>Ben, 15 Oct: "if there is better version of stuff that is open source then lets look at
+that ... nvidia has some per pixel object detection models."</p>
+<h3 id="boxes-vs-per-pixel">Boxes vs per-pixel</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Answers</th>
+<th>Example</th>
+<th>Good for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Detection</strong> (boxes)</td>
+<td>"a stop sign, here"</td>
+<td>YOLO11, RT-DETR, RF-DETR</td>
+<td>signs, people, cars: things to react to</td>
+</tr>
+<tr>
+<td><strong>Semantic segmentation</strong> (per pixel)</td>
+<td>"every pixel: road, sidewalk, car, person..."</td>
+<td>NVIDIA <strong>CitySemSegFormer</strong>, SegFormer, DeepLabV3+</td>
+<td><strong>where the road is</strong>: the drivable area, for the costmap and lane keeping</td>
+</tr>
+<tr>
+<td><strong>Instance segmentation</strong></td>
+<td>per pixel, and which object</td>
+<td>YOLO11-seg, Mask2Former</td>
+<td>both at once</td>
+</tr>
+<tr>
+<td><strong>Drivable area + lanes</strong></td>
+<td>road and lane pixels</td>
+<td>TwinLiteNet, YOLOPv2</td>
+<td>a cheap road mask for a small car</td>
+</tr>
+</tbody>
+</table></div>
+<p>Per-pixel is what our costmap is missing: Nav2 doesn't know where the road is (see
+<a href="maps-and-position.html">Maps and position</a>). A road mask, projected onto
+the ground, becomes a costmap layer: off-road = high cost.</p>
+<h3 id="nvidias-options">NVIDIA's options</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What</th>
+<th>Fits us?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CitySemSegFormer</strong> (NGC, TAO)</td>
+<td>per-pixel, 19 city classes (road, sidewalk, car, person, rider...). A ready ONNX file; the card says it's ready for commercial use</td>
+<td>✅ <strong>the best first try.</strong> Road mIoU 73.6, sidewalk 46.9 on its own test data: check it on ours</td>
+</tr>
+<tr>
+<td><strong>PeopleSemSegNet</strong> (NGC)</td>
+<td>per-pixel people</td>
+<td>a later add-on</td>
+</tr>
+<tr>
+<td><strong>Isaac ROS</strong> (NVIDIA's ROS packages: segmentation, RT-DETR detection, stereo depth, nvblox 3D maps)</td>
+<td>open source (Apache 2.0), TensorRT-fast</td>
+<td>⚠️ <strong>not on our Orin with Jazzy yet</strong>: on Orin it's Isaac ROS 3.2 with JetPack 6 and <strong>Humble</strong>; the Jazzy version runs on Jetson Thor. JetPack 7.2 support is "planned", no date</td>
+</tr>
+<tr>
+<td><strong>TAO Toolkit</strong></td>
+<td>NVIDIA's fine-tuning tools</td>
+<td>for later, if we train on our own pictures</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>So:</strong> use NVIDIA's <strong>models</strong>, not Isaac ROS (yet). A model is just an ONNX file; we run
+it ourselves.</p>
+<h3 id="one-way-to-run-any-model-onnx-runtime">One way to run any model: ONNX Runtime</h3>
+<p>Most open models export to <strong>ONNX</strong>, one file format. ONNX Runtime (in conda-forge for both
+the Mac and the car's ARM computers, version 1.31) runs it on whatever is fastest:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th>ONNX Runtime uses</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Orin</td>
+<td>TensorRT or CUDA (JetPack's build)</td>
+<td>NVIDIA's speed, without Isaac ROS</td>
+</tr>
+<tr>
+<td>Mac</td>
+<td>Core ML</td>
+<td>the Apple GPU</td>
+</tr>
+<tr>
+<td>Any</td>
+<td>the CPU</td>
+<td>slow, but always works</td>
+</tr>
+</tbody>
+</table></div>
+<p>One node, <code>segmenter</code>, with the model file as a setting, could run CitySemSegFormer today
+and TwinLiteNet tomorrow, and publish a road mask on <code>/perception/road/mask</code>. It could even
+be Rust: the <code>ort</code> crate wraps ONNX Runtime.</p>
+<h3 id="licences">Licences</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Licence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>YOLO11 (Ultralytics)</td>
+<td>AGPL-3.0: fine for our open project; a problem if anyone ships it closed</td>
+</tr>
+<tr>
+<td>RT-DETR, RF-DETR</td>
+<td>Apache 2.0</td>
+</tr>
+<tr>
+<td>CitySemSegFormer</td>
+<td>NVIDIA's model licence (commercial use allowed, per the card): read it before redistributing</td>
+</tr>
+<tr>
+<td>SegFormer (the original code)</td>
+<td>NVIDIA's own licence, research use: prefer the TAO model</td>
+</tr>
+<tr>
+<td>OpenCV</td>
+<td>Apache 2.0</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-fair-test">The fair test</h3>
+<ol>
+<li>Record the car's cameras on one drive (<code>tools/record.sh</code>).</li>
+<li>Run each model on the <strong>same</strong> recording: YOLO11 vs RT-DETR vs RF-DETR for boxes;
+   CitySemSegFormer vs TwinLiteNet for the road.</li>
+<li>Compare: what each misses, and milliseconds per frame on the Orin and the Mac.</li>
+<li>Keep the winner; the losers cost nothing.</li>
+</ol>
+</section>
+<section class="card"><h2 id="6-what-to-do-in-order">6. What to do, in order</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Friday: what cameras, lidar and radar are really on the car, and what drives them</td>
+<td>the audit</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>camera_ros</code> instead of <code>usb_cam</code> on the camera Pis</td>
+<td>step 1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The lidar's points into Nav2 (step 1), first in Gazebo</td>
+<td>nothing: can start now</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Record a real drive; run stock YOLO on it; decide whether to train</td>
+<td>the cameras on the car</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The HUD's map panel with offline tiles</td>
+<td>the test area chosen</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Lidar clusters; then camera + lidar calibration</td>
+<td>the lidar on the car</td>
+</tr>
+<tr>
+<td>7</td>
+<td>A <code>segmenter</code> node on ONNX Runtime; try CitySemSegFormer for a road mask, then a road layer in the costmap</td>
+<td>can start now, in Gazebo's road world</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="sources-15-oct">Sources (15 Oct)</h2>
+<ul>
+<li><a href="https://forums.developer.nvidia.com/t/nvidia-isaac-ros-4-0-for-thor-has-arrived/352109">Isaac ROS 4.0 for Thor</a></li>
+<li><a href="https://forums.developer.nvidia.com/t/roadmap-for-isaac-ros-jazzy-on-orin-devices/375982">Roadmap for Isaac ROS Jazzy on Orin</a></li>
+<li><a href="https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_image_segmentation">isaac_ros_image_segmentation</a></li>
+<li><a href="https://catalog.ngc.nvidia.com/orgs/nvidia/teams/tao/models/citysemsegformer">CitySemSegFormer on NGC</a></li>
+<li><a href="https://docs.nvidia.com/tao/tao-toolkit/text/model_zoo/cv_models/citysegformer.html">CitySemSegFormer in the TAO docs</a></li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="perception.html"><small>Previous</small>← Perception</a>
+<a class="next" href="camera-pipeline.html"><small>Next</small>Camera pipeline →</a></nav>
+</main>
+<footer>Source: <code>docs/perception-and-hud-map.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

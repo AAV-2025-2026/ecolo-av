@@ -28,7 +28,7 @@ from aav_goto.line import Point, Pose, reachable
 # sensor_msgs/NavSatStatus.
 STATUS_NO_FIX, STATUS_FIX, STATUS_SBAS_FIX, STATUS_GBAS_FIX = -1, 0, 1, 2
 
-RTK_TOLERANCE = 1.0     # m: READ-ME-TESTS.md 5.2, with an RTK fix
+RTK_TOLERANCE = 1.0     # m: docs/tests.md 5.2, with an RTK fix
 GPS_TOLERANCE = 2.0     # m: without
 CONFIRM_WORD = 'goto'   # what a person types to start a drive on the real car
 

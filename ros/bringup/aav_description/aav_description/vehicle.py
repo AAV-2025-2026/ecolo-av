@@ -46,7 +46,7 @@ def min_turning_radius(v):
 # max_steering_angle is the virtual wheel in the middle of the front axle: the bicycle
 # model's angle, which ego and Nav2 use. With Ackermann steering both front wheels point
 # at one turning centre on the rear axle's line, so the inner wheel turns further and the
-# outer less (READ-ME-MEASURE-THE-CAR.md M5 measures both):
+# outer less (docs/measure-the-car.md M5 measures both):
 #
 #     cot(outer) - cot(inner) = track / wheelbase,   cot(centre) = (cot(inner) + cot(outer)) / 2
 
@@ -186,7 +186,7 @@ def centre_of_mass(v, front, rear, front_lifted=None, lift=None):
     """
     Return the centre of mass from the scales: (x ahead of the rear axle, height), m.
 
-    front, rear: the weight on each axle, level (READ-ME-MEASURE-THE-CAR.md, M7; any unit).
+    front, rear: the weight on each axle, level (docs/measure-the-car.md, M7; any unit).
     front_lifted, lift: the front axle again with both rear wheels on blocks `lift` m high
     (M7b). Without them the height is None.
 
@@ -310,7 +310,7 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
     gone = {layer for layer, on in (('lidar_layer', lidar), ('ghost_layer', ghost)) if not on}
     local['plugins'] = [p for p in local['plugins'] if p not in gone]
     # The planner sees what the sensors see too, so it plans round an obstacle that isn't on
-    # the map (PLAN.md M5): a copy of each running sensor's layer, before the inflation.
+    # the map (docs/plan.md M5): a copy of each running sensor's layer, before the inflation.
     # Not the ghost: it tests the stop, and the car must stop for it, not steer round it.
     planner = out['global_costmap']['global_costmap']['ros__parameters']
     seen = [layer for layer, on in (('obstacle_layer', radar), ('lidar_layer', lidar))

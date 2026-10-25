@@ -37,7 +37,7 @@ boards that move the actuators.
 | Bench mode | the car's own software, with stand-ins for every board |
 | The real car | the 2025-26 team's code, on ROS 2 Humble |
 
-Details: [Status](status.md), and `READ-ME-SIMULATION-AND-THE-CAR.md` at the top of the repo.
+Details: [Status](status.md), and `sim-and-car.md` at the top of the repo.
 
 ### Why not run it on the car today?
 
@@ -151,7 +151,7 @@ Two EKFs from `robot_localization`:
 | Gives | smooth, but drifts | true, but may jump |
 
 GPS meets the map at one point, the datum: today a placeholder near Carleton. See
-`READ-ME-MAPS-AND-POSITION.md` and [Topic areas](naming.md#why-the-two-ekfs-dont-talk).
+`maps-and-position.md` and [Topic areas](naming.md#why-the-two-ekfs-dont-talk).
 
 ### Does Nav2 follow the roads?
 

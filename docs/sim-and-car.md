@@ -1,6 +1,6 @@
 # Simulation and the real car: how far we've got
 
-Written 15 October 2026, for Ben. It answers three questions:
+Written 15 October 2026. It answers three questions:
 
 1. How far did we get with Gazebo?
 2. Does it really produce sensor data?
@@ -64,7 +64,7 @@ Gazebo sensor → ros_gz_bridge → /gazebo/... → one node per sensor → the 
 
 `gazebo_adapter` (the car), `gazebo_imu`, `gazebo_gps` and `gazebo_radar` rename everything to the **same names the real drivers use** (`/sensors/gps/fix`, `/sensors/imu/data_raw`, `/vehicle/odom`). The software above can't tell the difference. One process each, as each sensor on the car has its own driver.
 
-![The simulated car in Gazebo](docs/img/gazebo-car.png)
+![The simulated car in Gazebo](img/gazebo-car.png)
 
 ### In the road world (`pixi run sim world:=road`)
 
@@ -77,11 +77,11 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | A radar on the grill (a lidar shaped like it) | `/sensors/radar/points` (via `/gazebo/radar/points`) | 10 Hz | ✅ |
 | A 16-beam lidar on the roof | `/sensors/lidar/points` | 10 Hz | ✅ on by default (15 Oct): all sensors together pass on a quiet Mac. Earlier failures came from other programs competing |
 
-![What the three simulated cameras see](docs/img/sim-cameras.png)
+![What the three simulated cameras see](img/sim-cameras.png)
 
 - **Cameras and lidars on a Mac:** they render without a window, and didn't crash.
 - **Checked by** `pixi run sim-check`: every check passes, on 15 Oct.
-- **Details:** [Simulation](docs/simulation.md): every sensor's noise, the lidar, what isn't simulated.
+- **Details:** [Simulation](simulation.md): every sensor's noise, the lidar, what isn't simulated.
 
 ### Not simulated at all
 
@@ -150,4 +150,4 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 | The bench instead | `pixi run bench`, then `pixi run bench-check` |
 | The HUD on top of it | `pixi run hud` |
 
-More detail: [Simulation](docs/simulation.md), [Bench mode](docs/bench.md), [Status](docs/status.md).
+More detail: [Simulation](simulation.md), [Bench mode](bench.md), [Status](status.md).

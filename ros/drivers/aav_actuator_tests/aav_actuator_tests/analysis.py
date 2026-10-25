@@ -175,7 +175,7 @@ def start_throttle(throttle: Sequence[float], speed: Sequence[float],
     Return the throttle level where a car that stood still started to move.
 
     That's the level at the last moment it stood still (under `still` m/s) before it drove
-    off (past `moving` m/s): the deadband, as READ-ME-TESTS.md 4.4 puts it, "the throttle
+    off (past `moving` m/s): the deadband, as docs/tests.md 4.4 puts it, "the throttle
     where it starts to move". None if it never started from still.
     """
     last_still = None

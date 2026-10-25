@@ -14,13 +14,18 @@
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +37,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +45,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +60,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a class="here" href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -402,11 +414,11 @@ nodes, not in the contract.</p>
 </tr>
 <tr>
 <td>The real actuators' numbers</td>
-<td>the <a href="#the-actuator-model">actuator model</a> has them, but they're guesses until the tests (<code>READ-ME-TESTS.md</code> 3.10-3.12, 4.1-4.5)</td>
+<td>the <a href="#the-actuator-model">actuator model</a> has them, but they're guesses until the tests (<code>tests.md</code> 3.10-3.12, 4.1-4.5)</td>
 </tr>
 <tr>
 <td>Wheel slip, slopes, the weight</td>
-<td>the model sets the speed; no forces (option B in <code>READ-ME-FULL-SIMULATION.md</code>)</td>
+<td>the model sets the speed; no forces (option B in <code>full-simulation.md</code>)</td>
 </tr>
 <tr>
 <td>A real radar</td>
@@ -419,7 +431,7 @@ nodes, not in the contract.</p>
 </tbody>
 </table></div>
 <h3 id="the-actuator-model">The actuator model</h3>
-<p>Added 15 Oct (<code>READ-ME-FULL-SIMULATION.md</code>, step 3). Gazebo used to set the speed itself
+<p>Added 15 Oct (<code>full-simulation.md</code>, step 3). Gazebo used to set the speed itself
 (+1.5 / -3.0 m/s²) and steer at once. Now <code>gazebo_adapter</code> puts a model of the actuators
 in between, 50 times a second, on Gazebo's clock:</p>
 <pre class="highlight"><code class="language-text">ego's speed ──&gt; speed loop (the spine's, in Python) ──&gt; throttle %, brake %
@@ -560,7 +572,7 @@ each other: they use multicast, and some networks and firewalls block it. Run
 set your own <code>GZ_PARTITION=&lt;any name&gt;</code>, so your simulator doesn't meet someone else's.</p>
 </div>
 <h3 id="the-spine-in-the-loop-spinetrue">The spine in the loop: <code>spine:=true</code></h3>
-<p>Added 15 Oct (<code>READ-ME-FULL-SIMULATION.md</code>, step 4). The car's own <code>spine_bridge</code> and the
+<p>Added 15 Oct (<code>full-simulation.md</code>, step 4). The car's own <code>spine_bridge</code> and the
 bench's <code>spine_sim</code> (the spine's firmware logic, <code>spine-core</code>) go between ego and the
 actuator model:</p>
 <pre class="highlight"><code class="language-text">ego ──&gt; spine_bridge ──CAN frames──&gt; spine_sim ──throttle, brake, gear, steering──&gt; actuator model ──&gt; Gazebo
@@ -613,7 +625,7 @@ pixi run sim-check --spine                # tests it (3 more minutes)</code></pr
 </tr>
 </tbody>
 </table></div>
-<p>Stop times in full: <a href="../../READ-ME-FULL-SIMULATION.md#stop-times-the-direct-path-vs-the-spine">READ-ME-FULL-SIMULATION.md</a>.</p>
+<p>Stop times in full: <a href="full-simulation.html#stop-times-the-direct-path-vs-the-spine">Full simulation</a>.</p>
 <h3 id="faster-in-gazebo-sim_speed">Faster in Gazebo: <code>sim_speed:=</code></h3>
 <p>The car's top speed is 1 m/s (walking pace, <code>ego.yaml</code> and <code>nav2.yaml</code>), for its first
 real drives. In Gazebo, raise it for ego and Nav2 together:</p>
@@ -1040,7 +1052,7 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 say why. So the full graph with YOLO is still a little flaky on a busy Mac.</p>
 </section>
 <section class="card"><h2 id="sensor-failures-on-purpose">Sensor failures on purpose</h2>
-<p>READ-ME-FULL-SIMULATION.md step 6 (15 Oct): make a simulated sensor fail, and check the
+<p>full-simulation.md step 6 (15 Oct): make a simulated sensor fail, and check the
 car stops, <strong>safely and loudly</strong>.</p>
 <h3 id="make-one-fail">Make one fail</h3>
 <pre class="highlight"><code class="language-bash">pixi run sim world:=road faults:=true     # faults:=true only for the camera
@@ -1463,7 +1475,7 @@ timing jumps with the fixes' stamps, plus 5 m for their noise.</p>
 </tr>
 <tr>
 <td>The real car's faults</td>
-<td>the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog</td>
+<td>the same checks with the car on stands (tests.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog</td>
 </tr>
 </tbody>
 </table></div>
@@ -1544,7 +1556,7 @@ as <code>replay</code> (priority 40). It's open loop, so the car drifts from the
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="foxglove.html"><small>Previous</small>← Watch from a laptop</a>
-<a class="next" href="carla.html"><small>Next</small>CARLA →</a></nav>
+<a class="next" href="sim-and-car.html"><small>Next</small>Sim and the car →</a></nav>
 </main>
 <footer>Source: <code>docs/simulation.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

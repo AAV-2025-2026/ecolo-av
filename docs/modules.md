@@ -191,14 +191,14 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | | |
 |---|---|
 | **Does** | an action that drives to one point B (lat/lon or map x/y) and stops there: speed up gently, hold, slow down by the distance left at half the measured braking |
-| **Why** | the main goal (Ben, 15 Oct): GPS A to B with a smooth stop, READ-ME-TESTS 5.2 |
+| **Why** | the main goal (Ben, 15 Oct): GPS A to B with a smooth stop, tests.md 5.2 |
 | **Runs on** | the Orin, next to the mux |
 | **In → out** | the action `/goto`, `/localization/odom/global`, `/sensors/gps/fix` → `/drivers/goto/cmd_vel` (twist_mux priority 25) |
 | **Origin** | ours |
 | **Status** | [[works]] in Gazebo (`pixi run sim-check --goto`, 15 Oct); [[untested]] on the car |
 | **Run alone** | `pixi run sim`, then `pixi run goto --sim --ahead 20` |
 | **Test** | `test/` (in `tools/test.sh`): the speed plan, the steering, the rules, whole drives on a pretend car |
-| **Read first** | [A to B](../READ-ME-A-TO-B.md), then `aav_goto/approach.py` and `line.py` |
+| **Read first** | [A to B](a-to-b.md), then `aav_goto/approach.py` and `line.py` |
 
 ### aav_language
 

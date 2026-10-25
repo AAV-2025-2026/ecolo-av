@@ -31,7 +31,7 @@ twist_mux:
         topic: /drivers/keyboard/cmd_vel  # or Foxglove's teleop panel (stand-ins only)
         timeout: 0.5
         priority: 90
-      tests:                    # aav_actuator_tests: READ-ME-TESTS.md stages 3-4 (pixi run
+      tests:                    # aav_actuator_tests: docs/tests.md stages 3-4 (pixi run
         topic: /drivers/tests/cmd_vel     # actuator-test). Below both people, above every
         timeout: 0.5            # other program, so Nav2 can't steer into a measurement
         priority: 60

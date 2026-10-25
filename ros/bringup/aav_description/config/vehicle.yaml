@@ -41,12 +41,12 @@ vehicle:
   encoder_counts_per_rev: 8 # spokes on the encoder wheel (Wheel_Encoders wiznet.ino:29)
 
 # How the car answers its commands: the actuator model in Gazebo (aav_gazebo
-# actuator_model.py; READ-ME-FULL-SIMULATION.md, step 3). Units: m/s^2, s, rad, 1/s;
+# actuator_model.py; docs/full-simulation.md, step 3). Units: m/s^2, s, rad, 1/s;
 # throttle and brake 0..1.
 #
 # !! EVERY NUMBER HERE IS A GUESS (15 Oct), chosen to match Gazebo's old limits
 # (+1.5 / -3.0 m/s^2) and the bench's spine_sim. TODO measure them on the car:
-# READ-ME-TESTS.md tests 4.1-4.5 (throttle, coasting, brake, circles) and 3.10-3.12
+# docs/tests.md tests 4.1-4.5 (throttle, coasting, brake, circles) and 3.10-3.12
 # (steering sweep, speed, centre). Then delete the GUESS.
 actuators:
   max_accel: 1.5          # m/s^2 at full throttle, on the flat. GUESS: TODO tests 4.1, 4.4

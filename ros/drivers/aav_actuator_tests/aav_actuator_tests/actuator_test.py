@@ -1,5 +1,5 @@
 """
-actuator_test: READ-ME-TESTS.md's stage-3 and stage-4 tests, run as a twist_mux driver.
+actuator_test: docs/tests.md's stage-3 and stage-4 tests, run as a twist_mux driver.
 
     pixi run actuator-test --list                       the tests
     pixi run actuator-test steer-sweep --sim            in Gazebo (this computer only)
@@ -230,7 +230,7 @@ class Run:
         a, node = self.args, self.node
         self.cfg = vehicle.load()
         self.ctx = reports.context(self.cfg)
-        self.say(f'actuator test {self.test.name} (READ-ME-TESTS.md {self.test.number}): '
+        self.say(f'actuator test {self.test.name} (docs/tests.md {self.test.number}): '
                  f'{self.test.title}')
         self.say('Listening for /system/source ...')
         node.spin_for(3.0, lambda: bool(node.sources))
@@ -569,7 +569,7 @@ def list_tests():
 def parse(argv):
     p = argparse.ArgumentParser(
         prog='actuator-test',
-        description="READ-ME-TESTS.md's stage-3 and stage-4 tests: drive, log, report.")
+        description="docs/tests.md's stage-3 and stage-4 tests: drive, log, report.")
     p.add_argument('test', nargs='?', choices=list(pr.TESTS), help='the test to run')
     p.add_argument('--list', action='store_true', help='list the tests')
     p.add_argument('--sim', action='store_true',

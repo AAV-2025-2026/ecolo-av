@@ -34,7 +34,7 @@ from typing import Tuple
 # The feedback's phases (aav_interfaces/action/GoTo).
 TURN, ACCELERATE, HOLD, DECELERATE, STOPPING = 0, 1, 2, 3, 4
 
-BRAKE_FRACTION = 0.5    # of the measured braking: READ-ME-TESTS.md 5.2
+BRAKE_FRACTION = 0.5    # of the measured braking: docs/tests.md 5.2
 
 
 def planned_deceleration(max_brake: float, fraction: float = BRAKE_FRACTION) -> float:

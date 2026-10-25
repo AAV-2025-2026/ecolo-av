@@ -11,31 +11,19 @@ Jetson AGX Orin and the Raspberry Pis); Pixi on Macs and other Linux machines.
 
 **Sensors become telemetry, drivers become one command, and ego moves the car.**
 
-> **The plan for the year:** [PROPOSAL.md](PROPOSAL.md): everything done so far, what's left, how sure we are. What's left to build, in order: [PLAN.md](PLAN.md).
->
-> **Car day:** [READ-ME-CAR-DAY.md](READ-ME-CAR-DAY.md), the runbook: ten sessions at the
-> car, in order, each with who, how long, the commands and what you should see. Before you
-> leave: `pixi run car-day-build`, then `pixi run car-day-check` until it says 0 missing.
->
-> **This Friday (16 Oct):** [FRIDAY-TODO.md](FRIDAY-TODO.md), the tick-list: log in to every
-> machine and survey it. [READ-ME-FRIDAY.md](READ-ME-FRIDAY.md): the audit, the network,
-> and our stack on the car, step by step.
-> After it: [TEAM-TODO.md](TEAM-TODO.md), the team's work list (such as upgrading the Jetson,
-> after its backup).
-> Every test, in order: [READ-ME-TESTS.md](READ-ME-TESTS.md). Measuring the car, a sheet for the team:
-> [READ-ME-MEASURE-THE-CAR.md](READ-ME-MEASURE-THE-CAR.md).
-> The whole car in Gazebo, and what's missing: [READ-ME-FULL-SIMULATION.md](READ-ME-FULL-SIMULATION.md).
->
-> **Read first, in this order** (pages in this folder, written for Ben, 15 Oct):
-> 1. [READ-ME-HOW-IT-ALL-FITS.md](READ-ME-HOW-IT-ALL-FITS.md): the layers bottom-up, what
->    happens at start-up, and how to test each layer.
-> 2. [READ-ME-SIMULATION-AND-THE-CAR.md](READ-ME-SIMULATION-AND-THE-CAR.md): Gazebo, the
->    bench and the car; what's simulated, what's real.
-> 3. [READ-ME-MAPS-AND-POSITION.md](READ-ME-MAPS-AND-POSITION.md): the EKFs, the map
->    frame, OpenStreetMap and costmaps.
-> 4. [READ-ME-A-TO-B.md](READ-ME-A-TO-B.md): driving straight from A to B, three ways.
-> 5. [READ-ME-PERCEPTION-AND-HUD-MAP.md](READ-ME-PERCEPTION-AND-HUD-MAP.md): YOLO vs
->    OpenCV, the lidar, and a map on the HUD.
+Every page is in [`docs/`](docs/). The ones people ask for most:
+
+| Page | What it's for |
+|---|---|
+| [The plan](docs/plan.md) | what's left to build, in order, by the gates |
+| [Features](docs/features.md) | what the software does, why, and who built it |
+| [Car day](docs/car-day.md) | the runbook at the car: `pixi run car-day-build`, then `pixi run car-day-check` until it says 0 missing |
+| [Every test](docs/tests.md) | every test, in order: simulator, bench, stands, lot, the whole drive |
+| [Measure the car](docs/measure-the-car.md) | the sheet for whoever measures the car |
+| [Bottom-up](docs/start-up.md) | each layer from the device up, start-up, and testing each layer |
+| [Sim and the car](docs/sim-and-car.md), [Full simulation](docs/full-simulation.md) | what's simulated, what's real, and what's missing |
+| [Maps and position](docs/maps-and-position.md), [A to B](docs/a-to-b.md) | the EKFs and OpenStreetMap; driving from A to B |
+| [Perception options](docs/perception-and-hud-map.md) | which model for which job, the lidar, a map on the HUD |
 
 ## Read the docs
 

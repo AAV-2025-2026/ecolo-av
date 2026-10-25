@@ -12,7 +12,7 @@ explains how that works, how good it is, and how our car turns it into metres on
 - how to check that GPS data is really arriving;
 - the bench's GPS noise problem (N7 in `TODO.md`).
 
-This page goes deeper than [Maps and position](../READ-ME-MAPS-AND-POSITION.md), which
+This page goes deeper than [Maps and position](maps-and-position.md), which
 shows the big picture. Read that one first if you haven't.
 
 ## 1. GNSS: satellites and clocks

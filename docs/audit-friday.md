@@ -11,7 +11,7 @@ there, and save a copy, without changing anything.** This page is steps 2 and 3 
 
 
 **The plan for the whole day** (audit, network, our stack on the car):
-[READ-ME-FRIDAY.md](../READ-ME-FRIDAY.md). **Every question to answer:**
+[Friday 16 Oct](history/friday-2026-10-16.md). **Every question to answer:**
 [Friday's questions](audit-questions.md).
 
 !!! note "After the backups: our stack, from a USB stick"
@@ -149,7 +149,7 @@ sudo dd if=/dev/rdiskN bs=4m | gzip > ~/aav-backup/<machine>.img.gz
     `security add-generic-password -s aav-jetson -a aavjetson -w` (it asks).
 
 !!! note "Now a script: `pixi run survey`"
-    [FRIDAY-TODO.md](../FRIDAY-TODO.md) part 2: `tools/machine_survey.sh` does all of the block
+    [Friday 16 Oct: the to-do list](history/friday-todo-2026-10-16.md) part 2: `tools/machine_survey.sh` does all of the block
     below and more (boot scripts, who holds each device, camera and power errors, code and
     weights found only here), on every machine in `~/aav-audit/hosts.txt`. The block below
     stays as the by-hand version.

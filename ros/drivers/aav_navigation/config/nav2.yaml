@@ -347,7 +347,7 @@ global_costmap:
       # Wider and gentler than the local costmap's, so the planner's paths keep to the
       # middle of a lane where there's room. With 2.0 m and 3.0 its path passed a corner
       # 0.86 m from base_link, and the collision monitor's stop box (1 m ahead) stopped the
-      # car there (PLAN.md M8, 22 Oct).
+      # car there (docs/plan.md M8, 22 Oct).
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 3.0     # m

@@ -14,13 +14,18 @@
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +37,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +45,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +60,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -130,7 +142,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>actuator_test</code></td>
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>-</td>
-<td>Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; READ-ME-TESTS.md stages 3-4). It also reads /control/cmd_vel, to stop when someone else takes over.</td>
+<td>Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; docs/tests.md stages 3-4). It also reads /control/cmd_vel, to stop when someone else takes over.</td>
 </tr>
 <tr>
 <td><code>/drivers/scripted/cmd_vel</code></td>
@@ -154,7 +166,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>goto_driver</code></td>
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>-</td>
-<td>Priority 25 - below every person, test and script, above Nav2. Only while a /goto goal runs (aav_goto, pixi run goto; READ-ME-A-TO-B.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.</td>
+<td>Priority 25 - below every person, test and script, above Nav2. Only while a /goto goal runs (aav_goto, pixi run goto; docs/a-to-b.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/cmd_vel</code></td>

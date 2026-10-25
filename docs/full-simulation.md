@@ -1,14 +1,14 @@
 # The full simulation: the whole car in Gazebo
 
-Written 15 October 2026, for Ben. The goal (Ben, 15 Oct): "fully simulate the car inside
+Written 15 October 2026. The goal (Ben, 15 Oct): "fully simulate the car inside
 Gazebo with all the sensors, and build the full pipeline." This page says what we have,
 what's missing, and how the car's measurements feed in.
 
 > **The short version**
 > - **Most of it exists.** Gazebo already plays the car: IMU, GPS, wheel speed, three cameras, the radar, the lidar. The same EKFs, Nav2, perception and HUD run on it.
 > - **The big gap is the actuators.** Gazebo's car sets its speed directly, with made-up limits. It ignores the weight, the motor and the brakes. So it doesn't yet speed up, brake or steer like the real car.
-> - **The fix:** an **actuator model** between our commands and Gazebo, filled with the numbers from the tests (`READ-ME-TESTS.md`, stage 4). Then the real firmware logic **in the loop**, as the bench already does. Both built 15 Oct: the model is on by default, the spine with `spine:=true`.
-> - **Measurements come first:** the sheet (`READ-ME-MEASURE-THE-CAR.md`) for where everything is, the tests for how it moves.
+> - **The fix:** an **actuator model** between our commands and Gazebo, filled with the numbers from the tests (`tests.md`, stage 4). Then the real firmware logic **in the loop**, as the bench already does. Both built 15 Oct: the model is on by default, the spine with `spine:=true`.
+> - **Measurements come first:** the sheet (`measure-the-car.md`) for where everything is, the tests for how it moves.
 
 ## Status (15 Oct)
 
@@ -20,7 +20,7 @@ what's missing, and how the car's measurements feed in.
 | 4 | The spine in the loop | ✅ 15 Oct: `pixi run sim spine:=true`. ego's commands go over the CAN frames to the spine's own firmware logic, then the actuator model. `pixi run sim-check --spine` passes: its timeout, both e-stops and arming stop the car ([below](#the-spine-in-the-loop-step-4)) |
 | 5 | The lidar into Nav2 | ✅ 15 Oct: `lidar_scan` (`aav_lidar`) flattens the roof lidar into a 2D scan; the local costmap's `lidar_layer` and `collision_monitor` read it. `lidar:=true` in Gazebo, **off on the car** (no lidar driver yet). With the radar off, the lidar alone stopped the car 0.16-0.55 m before a post |
 | 6 | Sensor failures on purpose | ✅ 15 Oct: `pixi run sim-fault <sensor> <fault>`, and the sensor watchdog (`aav_safety`): it stops Nav2 and the AI slot, and says why on the HUD and the map window. All 13 faults stop the car ([the table](#sensor-failures-before-and-after)), the watchdog's own death and frozen wheels too |
-| 7 | The actuator test script (`READ-ME-TESTS.md` 1.10) | ✅ 15 Oct: `pixi run actuator-test <test> --sim`, all 9 tests in Gazebo; they give back the model's numbers ([docs/actuator-tests.md](docs/actuator-tests.md)). It found Gazebo's IMU blind to the car's acceleration: fixed in `gazebo_adapter` |
+| 7 | The actuator test script (`tests.md` 1.10) | ✅ 15 Oct: `pixi run actuator-test <test> --sim`, all 9 tests in Gazebo; they give back the model's numbers ([docs/actuator-tests.md](actuator-tests.md)). It found Gazebo's IMU blind to the car's acceleration: fixed in `gazebo_adapter` |
 | 8-10 | the real numbers, the test lot, forces | not started |
 
 Tested (15 Oct, Ben's Mac):
@@ -106,7 +106,7 @@ B only if A isn't close enough to the real car.
 
 | From | Measured | Goes into | Changes in Gazebo |
 |---|---|---|---|
-| The sheet (`READ-ME-MEASURE-THE-CAR.md`) | wheelbase, track, wheels, body | `vehicle.yaml` → the model | how it turns; its outline for Nav2 |
+| The sheet (`measure-the-car.md`) | wheelbase, track, wheels, body | `vehicle.yaml` → the model | how it turns; its outline for Nav2 |
 | The sheet | each sensor's x, y, z and angles | `vehicle.yaml` → the sensor frames | what each camera, the radar and the lidar see |
 | Scales (M7) | the weight, per wheel | `vehicle.yaml` | the model's mass (and B, later) |
 | Tests 4.1, 4.4 | acceleration per throttle % | `vehicle.yaml` → the actuator model | how fast it speeds up |
@@ -128,7 +128,7 @@ B only if A isn't close enough to the real car.
 | 4 | **The spine in the loop**: ego → CAN → the spine's logic → the actuator model → Gazebo ✅ 15 Oct | no | 1-2 days |
 | 5 | The lidar into Nav2's costmap and the collision monitor ✅ 15 Oct | no | small |
 | 6 | Sensor failures on purpose, and checks that the car stops ✅ 15 Oct | no | 1 day |
-| 7 | The actuator test script (`READ-ME-TESTS.md` 1.10), run in Gazebo ✅ 15 Oct | no | 1 day |
+| 7 | The actuator test script (`tests.md` 1.10), run in Gazebo ✅ 15 Oct | no | 1 day |
 | 8 | Fill in the real numbers: measurements and tests (`pixi run actuator-test`, on stands then in the lot) | **yes**: Friday, then the lot | - |
 | 9 | A Gazebo copy of the test lot | the lot chosen | 1 day |
 | 10 | B, forces in Gazebo, only if needed | the real numbers | a week |
@@ -182,7 +182,7 @@ Each while driving at 0.8 m/s, Gazebo's road world, Ben's Mac, 15 Oct: three run
 - **Why the spine stops sooner:** it brakes **fully** (`stop_brake` 1.0); the direct path's
   speed loop only slows to a stop.
 - **Its 195-209 ms** is `spine_bridge`'s 0.1 s (`spine.yaml` `cmd_timeout`) plus the
-  spine's own 0.1 s watchdog: inside the car's 200 ms target (`READ-ME-TESTS.md` 3.9).
+  spine's own 0.1 s watchdog: inside the car's 200 ms target (`tests.md` 3.9).
 - **Latched:** after any stop, the spine holds the brake, its drive still asking, until
   someone arms it again. The direct path drives on as soon as commands come back.
 - **Found:** in two of the three runs, the spine latched once during the first drive: ego's 50 Hz
@@ -195,7 +195,7 @@ Each while driving at 0.8 m/s, Gazebo's road world, Ben's Mac, 15 Oct: three run
 
 Each fault while Nav2 drives at about 1 m/s, Gazebo's road world, 15 Oct.
 Before: `pixi run sim-check --faults --no-watchdog`; after: `pixi run sim-check --faults`.
-How to make one, and what the watchdog watches: [docs/simulation.md](docs/simulation.md#sensor-failures-on-purpose).
+How to make one, and what the watchdog watches: [docs/simulation.md](simulation.md#sensor-failures-on-purpose).
 
 | Fault | Before: no watchdog | After: the watchdog |
 |---|---|---|
@@ -218,7 +218,7 @@ turned STALE for a lost GPS). The after column's first ten rows are the last of 
 runs: the first passed too; the second caught a false GPS jump (two fixes delivered at
 once), fixed by timing jumps with the fixes' stamps, plus 5 m for their noise.
 
-**Later on 15 Oct** ([docs/simulation.md](docs/simulation.md#if-the-watchdog-itself-dies)):
+**Later on 15 Oct** ([docs/simulation.md](simulation.md#if-the-watchdog-itself-dies)):
 
 | Gap | Now |
 |---|---|
@@ -233,4 +233,4 @@ same tests on the car, on stands.
 ## Faster drives in Gazebo (15 Oct)
 
 `pixi run sim world:=test_lot sim_speed:=3`: ego and Nav2 up to 3 m/s (5 at most), in
-Gazebo only. The real car keeps 1 m/s. Details: [docs/simulation.md](docs/simulation.md).
+Gazebo only. The real car keeps 1 m/s. Details: [docs/simulation.md](simulation.md).

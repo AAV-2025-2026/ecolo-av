@@ -1,6 +1,6 @@
 # Newer models, on the same pictures and tasks (S6)
 
-PLAN.md item S6, 16 Oct 2026. Two questions:
+plan.md item S6, 16 Oct 2026. Two questions:
 
 1. **Seeing**: is YOLO26 or RF-DETR better than our YOLO11 at people and stop signs?
 2. **Plain English**: is a newer local language model better than Qwen3 at turning

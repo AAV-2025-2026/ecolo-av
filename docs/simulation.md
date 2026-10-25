@@ -108,14 +108,14 @@ Where each sensor sits (15 Oct, until Friday's tape measure): the two front came
 | The magnetometer | the EKFs don't use it |
 | The battery | nothing to simulate yet |
 | The real CAN bus | with `spine:=true` the CAN frames travel as ROS topics (`/can/tx`, `/can/rx`), as on the bench; no bus timing or errors |
-| The real actuators' numbers | the [actuator model](#the-actuator-model) has them, but they're guesses until the tests (`READ-ME-TESTS.md` 3.10-3.12, 4.1-4.5) |
-| Wheel slip, slopes, the weight | the model sets the speed; no forces (option B in `READ-ME-FULL-SIMULATION.md`) |
+| The real actuators' numbers | the [actuator model](#the-actuator-model) has them, but they're guesses until the tests (`tests.md` 3.10-3.12, 4.1-4.5) |
+| Wheel slip, slopes, the weight | the model sets the speed; no forces (option B in `full-simulation.md`) |
 | A real radar | the stand-in is a lidar: it sees every surface, and no speeds of its own |
 | Traffic, people, weather | the worlds are empty but for the road, the sign and the box |
 
 ### The actuator model
 
-Added 15 Oct (`READ-ME-FULL-SIMULATION.md`, step 3). Gazebo used to set the speed itself
+Added 15 Oct (`full-simulation.md`, step 3). Gazebo used to set the speed itself
 (+1.5 / -3.0 m/s²) and steer at once. Now `gazebo_adapter` puts a model of the actuators
 in between, 50 times a second, on Gazebo's clock:
 
@@ -202,7 +202,7 @@ To drive it:
 
 ### The spine in the loop: `spine:=true`
 
-Added 15 Oct (`READ-ME-FULL-SIMULATION.md`, step 4). The car's own `spine_bridge` and the
+Added 15 Oct (`full-simulation.md`, step 4). The car's own `spine_bridge` and the
 bench's `spine_sim` (the spine's firmware logic, `spine-core`) go between ego and the
 actuator model:
 
@@ -226,7 +226,7 @@ pixi run sim-check --spine                # tests it (3 more minutes)
 | Arming | always armed | `/spine/arm`, as on the car |
 | `/system/source` | SIM (`gazebo_adapter`) | SIM (`spine_bridge`, `source:=sim`) |
 
-Stop times in full: [READ-ME-FULL-SIMULATION.md](../READ-ME-FULL-SIMULATION.md#stop-times-the-direct-path-vs-the-spine).
+Stop times in full: [Full simulation](full-simulation.md#stop-times-the-direct-path-vs-the-spine).
 
 ### Faster in Gazebo: `sim_speed:=`
 
@@ -426,7 +426,7 @@ say why. So the full graph with YOLO is still a little flaky on a busy Mac.
 
 ## Sensor failures on purpose
 
-READ-ME-FULL-SIMULATION.md step 6 (15 Oct): make a simulated sensor fail, and check the
+full-simulation.md step 6 (15 Oct): make a simulated sensor fail, and check the
 car stops, **safely and loudly**.
 
 ### Make one fail
@@ -610,7 +610,7 @@ timing jumps with the fixes' stamps, plus 5 m for their noise.
 | The cross check's limits on the car | Gazebo's numbers. Read `worst_*_gap` on `/diagnostics` after a normal drive. A sloping lot, the real IMU's mounting and the real GPS's noise all change them |
 | A frozen wheel at a speed the car keeps | not caught until the speed or turn changes by more than the limits: harmless till then, but the EKF's position drifts if the car is under 0.15 m/s faster or slower than the wheels say (MPPI keeps it near them: [frozen wheels and MPPI](#frozen-wheels-and-mppi)) |
 | ~~`odom freeze` is flaky (23 Oct)~~ | found and fixed 24 Oct: MPPI keeps the car near the frozen speed, under the GPS's old 0.3 m/s ([frozen wheels and MPPI](#frozen-wheels-and-mppi)) |
-| The real car's faults | the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog |
+| The real car's faults | the same checks with the car on stands (tests.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog |
 
 ## Replay a recorded drive
 

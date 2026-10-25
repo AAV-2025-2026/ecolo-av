@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Features: what the car&#x27;s software does, and why · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Features: what the car&#x27;s software does, and why</h1>
+<div class="meta">18 min read · 14 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a class="here" href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#status-values">Status values</a><a href="#sensors">Sensors</a><a href="#localization">Localization</a><a href="#perception">Perception</a><a href="#drivers">Drivers</a><a href="#navigation">Navigation</a><a href="#control">Control</a><a href="#safety">Safety</a><a href="#backends">Backends</a><a href="#firmware">Firmware</a><a href="#simulation">Simulation</a><a href="#hud">HUD</a><a href="#tools">Tools</a><a href="#infrastructure">Infrastructure</a></nav>
+<div class="lead"><p>Every feature of the car's software, one row each, grouped by type.
+Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
+"Why" says the reason for the feature, not how it works. "Who" is the person (or team) who built it.</p></div>
+<section class="card"><h2 id="status-values">Status values</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>planned</td>
+<td>agreed, not built yet</td>
+</tr>
+<tr>
+<td>built</td>
+<td>in the repo, with its unit tests</td>
+</tr>
+<tr>
+<td>sim</td>
+<td>works in Gazebo or the turtle (or bench mode)</td>
+</tr>
+<tr>
+<td>car</td>
+<td>has worked on the real car</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="sensors">Sensors</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMU driver in Rust (<code>aav_imu_yahboom</code>)</td>
+<td>Our C++ moves to Rust; it gives the 2025-26 C++ driver's answers, bit for bit</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>built</td>
+</tr>
+<tr>
+<td>GPS driver: stock <code>ublox_gps</code>, with <code>nmea</code> or <code>ublox_dgnss</code> as options</td>
+<td>A stock driver that installs with Pixi on every computer, while the receiver model is still open (Q18)</td>
+<td>Ben</td>
+<td>2026-10-11</td>
+<td>built</td>
+</tr>
+<tr>
+<td>TI radar driver (<code>ti_ros2_driver</code>)</td>
+<td>The car's radar already worked with it, so we ported it to Jazzy instead of rewriting it</td>
+<td>the 2025-26 team</td>
+<td>2026-10-09</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Battery monitor (<code>battery_monitor</code>)</td>
+<td>Shows the battery's state, so the team sees it before it runs flat</td>
+<td>the 2024-25 team</td>
+<td>2026-10-09</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Roof lidar: the stock <code>velodyne</code> driver</td>
+<td>The car's VLP-16 already speaks to this stock driver; it gives Nav2 a view all round the car</td>
+<td>Ben</td>
+<td>2026-10-20</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Wheel speed from CAN (0x200, 0x201; <code>spine_bridge role:=sensors</code>)</td>
+<td>The hardware lead's Arduino puts the wheel speeds on CAN; the Orin turns them into odometry</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="camera-pipeline.html">Front camera streams</a> (<code>aav_camera_stream</code>)</td>
+<td>H.264 from the camera Pi is about 10 times smaller than JPEG, so both front cameras fit the network</td>
+<td>Ben</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Camera calibrations, and <code>pixi run calibrate-camera</code></td>
+<td>A calibrated lens turns pixels into metres, for the stop-sign distance and camera obstacles</td>
+<td>the 2024-25 team; Ben</td>
+<td>2026-10-09</td>
+<td>built</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="localization">Localization</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Two EKFs and GPS to map (robot_localization)</td>
+<td>Stock filters replace the 2025-26 odometry: a smooth position for steering, a GPS-anchored one for planning</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>GPS outlier gate in <code>ekf_global</code></td>
+<td>A fix 10 sigma off is refused, so one bad GPS jump can't throw the car's position</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Heading from the gyro and wheels</td>
+<td>At walking pace GPS made the heading jump up to 76°; the gyro and wheels hold it steady</td>
+<td>Ben</td>
+<td>2026-10-22</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Heading from the GPS velocity (<code>aav_gps_heading</code>)</td>
+<td>The receiver's Doppler velocity gives a good heading while moving, with no magnetometer</td>
+<td>Ben</td>
+<td>2026-10-25</td>
+<td>sim</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="perception">Perception</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="perception.html">Object detector</a> (<code>aav_detector</code>): RF-DETR Nano, YOLO as an option</td>
+<td>RF-DETR saw a stop sign from 20 m (YOLO11n: 10 m), with no false finds and an Apache-2.0 licence</td>
+<td>Ben</td>
+<td>2026-10-20</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>One detector per computer: Core ML on a Mac</td>
+<td>A laptop adds a second opinion over WiFi, at 21 ms a picture on a MacBook</td>
+<td>Ben</td>
+<td>2026-10-11</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Stop-sign watcher</td>
+<td>Holds the drive commands so the car stops about 4.7 m before a stop sign</td>
+<td>the 2024-25 team, rewritten by Ben</td>
+<td>2026-10-10</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Lane finder (<code>aav_lane_finder</code>)</td>
+<td>Classic OpenCV finds the lane in 0.78 ms a picture, with no model to train</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Lane keeping (<code>aav_lane_geometry</code>)</td>
+<td>Steers back to the lane's centre: on the bench, from 0.3 m off to within 5 cm</td>
+<td>the 2025-26 team</td>
+<td>2026-10-10</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Radar clustering in Rust (<code>aav_radar_clusters</code>)</td>
+<td>Turns radar points into objects; our C++ moves to Rust, with the same answers bit for bit</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Lidar to a 2D scan (<code>aav_lidar</code> <code>lidar_scan</code>)</td>
+<td>Nav2's costmap and stop zone need a flat scan, without the car's own body in it</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="drivers">Drivers</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Keyboard driving (<code>teleop_twist_keyboard</code>)</td>
+<td>Drive the turtle, Gazebo or the car from any laptop, with no joystick</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Joystick with a deadman (<code>aav_teleop</code>)</td>
+<td>The joystick can drive with no autonomy running, and letting go stops the car</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Scripted drives (<code>aav_scripted</code>)</td>
+<td>Repeatable speed-up, hold and slow-down runs, for tests and the first drives</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="a-to-b.html">Goto: GPS A to B</a> (<code>aav_goto</code>)</td>
+<td>The Gate 4 goal: drive to a GPS point and stop within 1 m; in Gazebo it stopped within 0.4 m</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="plain-english.html">Plain English</a> (<code>aav_language</code>)</td>
+<td>Say "drive 10 m forward": a local model plans it, and asks before the car moves</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>RC via ROS (<code>rc_driver</code>) and a three-position mode switch</td>
+<td>A person on the RC transmitter outranks every program, but still passes through ROS's safety checks</td>
+<td>Ben</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="navigation">Navigation</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nav2 set up for a car (<code>aav_navigation</code>)</td>
+<td>A car can't turn on the spot: SmacPlannerHybrid plans paths it can drive, with no Spin</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="controllers.html">MPPI path follower</a>, Pure Pursuit as an option</td>
+<td>MPPI reached the first goal cleanly in 4 of 4 Gazebo runs; Pure Pursuit looped in 2 of 3</td>
+<td>Ben</td>
+<td>2026-10-22</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Reversing, with a stop zone behind the car</td>
+<td>Backing up allows a three-point turn, instead of getting stuck facing a wall</td>
+<td>Ben</td>
+<td>2026-10-22</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Obstacles in the costmap, and a stop zone (<code>collision_monitor</code>)</td>
+<td>Radar and lidar points stop Nav2 before it hits something: 0.3-0.4 m short of a box on the bench</td>
+<td>Ben</td>
+<td>2026-10-11</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Plan around obstacles (<code>plan_around:=true</code>)</td>
+<td>The planner sees the radar and lidar too, so it steers round a box instead of only stopping</td>
+<td>Ben</td>
+<td>2026-10-22</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="routes.html">Street routes</a> (<code>aav_routes</code>, Valhalla)</td>
+<td>Turns a destination into GPS waypoints along real streets, for Nav2 to follow</td>
+<td>Ben</td>
+<td>2026-10-16</td>
+<td>sim</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="control">Control</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ego, the virtual car (<code>aav_ego</code>), with Ackermann output</td>
+<td>Only ego talks to a backend, and every backend takes the same Ackermann message</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Stale-command stop and a speed cap (<code>max_speed:=</code>)</td>
+<td>The car stops when commands go stale, and stays at 1.0 m/s or less until the tests raise it</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Car model and <code>vehicle.yaml</code> (<code>aav_description</code>)</td>
+<td>One file holds every car measurement, so no number is copied or guessed twice</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Body model: mass and curve speed</td>
+<td>ego knows the car weighs about 181 kg, so it slows for tight turns and heavy loads</td>
+<td>Ben</td>
+<td>2026-10-22</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Jerk limit</td>
+<td>A smoother start for the people in the car; braking is never softened</td>
+<td>Ben</td>
+<td>2026-10-22</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="vehicle-model.html">Linear model of the car</a> (<code>vehicle_model.py</code>)</td>
+<td>Transfer functions and state space, to tune the loops and write the report in SYSC 3600's terms</td>
+<td>Ben</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="safety">Safety</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command mux and e-stop lock (<code>aav_mux</code>, twist_mux)</td>
+<td>One command wins by priority, and the e-stop locks every driver out</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Four e-stops</td>
+<td>The car's red button stays untouched; the joystick, <code>pixi run estop</code> and the HUD add three more</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="simulation.html#sensor-failures-on-purpose">Sensor watchdog</a> (<code>aav_safety</code>)</td>
+<td>When a sensor fails or freezes, Nav2 stops loudly and says why, instead of driving blind</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Frozen-wheel cross-check</td>
+<td>Wheels that stop reporting are caught by checking them against the IMU and GPS</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>HUD heartbeat and latch</td>
+<td>The safety drivers rely on the screen, so a frozen HUD holds Nav2 until a person clears it</td>
+<td>Ben</td>
+<td>2026-10-23</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="sources-and-targets.html">Sensor mux and output mux</a> (<code>aav_io_mux</code>)</td>
+<td>Simulated data can never drive the real car, and the spine won't arm while the gate is shut</td>
+<td>Ben</td>
+<td>2026-10-23</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Orin-to-ESP32 heartbeat (serial frame version 2)</td>
+<td>The ESP32 brakes when the Orin stops, even if the Motor Pi still sends: 111-120 ms in QEMU</td>
+<td>Ben</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Stand-ins stay local (<code>tools/ros.sh --local</code>)</td>
+<td>A pretend car in the turtle, Gazebo or bench mode can never reach the real one</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>sim</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="backends">Backends</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Turtlesim backend (<code>aav_turtlesim</code>)</td>
+<td>A turtle that steers like the car: the first thing a new member drives</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Gazebo backend (<code>aav_gazebo</code>)</td>
+<td>The car in 3D with Ackermann steering, an IMU and GPS, to test Nav2 before the car</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Today's car over UART (<code>aav_legacy</code>)</td>
+<td>Drives the 2025-26 ESP32 through the Motor Pi, and reads its wheel encoder, before the CAN spine exists</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Uplink from the ESP32 (<code>legacy_uart_bridge</code>)</td>
+<td>Brings the car's mode, faults, steering and brake positions and RC sticks back into ROS</td>
+<td>Ben</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td>CAN spine bridge (<code>spine_bridge</code>): Rust by default, Python as an option</td>
+<td>ego's commands become CAN frames, decoded by the firmware's own code at both ends</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="carla.html">CARLA adapter</a> (<code>aav_carla</code>)</td>
+<td>Realistic camera pictures, once the NVIDIA computer runs CARLA</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>built</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="firmware">Firmware</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CAN contract (<code>aav.dbc</code>, <code>can_codec.py</code>, test vectors)</td>
+<td>One file defines every frame, tested from both sides against the same vectors</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>CAN v0.2.0: wheel-speed frames, a 100 ms timeout, <code>wheel-core</code></td>
+<td>Puts the wheel sensors on the bus, and stops the car within 100 ms of lost commands</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><code>spine-core</code>: the spine's logic</td>
+<td>Boots latched, arms only on request and brakes on a command gap, so a glitch never restarts the car</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Spine device drivers and glue (<code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>spine-board</code>, <code>legacy-link</code>)</td>
+<td>Each device the spine drives, tested against mocks before any board exists</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Pico 2 spine program (<code>boards/pico2</code>)</td>
+<td>A spine on an ARM chip, with a 100 ms hardware watchdog and a fail-safe e-stop input</td>
+<td>Ben</td>
+<td>2026-10-11</td>
+<td>built</td>
+</tr>
+<tr>
+<td>ESP32 spine in Rust (<code>boards/esp32-umod</code>)</td>
+<td>Replaces the C++ on today's control board with no new hardware; tested in QEMU</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>built</td>
+</tr>
+<tr>
+<td>ESP32 actuator firmware in C++ (<code>aav_umod_esp32</code>)</td>
+<td>It drives today's car, so it stays until its Rust version is proven</td>
+<td>the 2025-26 team</td>
+<td>2026-10-09</td>
+<td>car</td>
+</tr>
+<tr>
+<td>Wheel encoder and status display Pico 2s in Rust</td>
+<td>The 2025-26 C++ boards move to Rust, as decided, sending the same packets</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Speed loop's <code>smooth</code> profile</td>
+<td>Today's gains overshoot about 15%; this one starts smoother, ready to try on stands</td>
+<td>Ben</td>
+<td>2026-10-25</td>
+<td>sim</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="simulation">Simulation</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="simulation.html">Gazebo road world</a></td>
+<td>Lane lines, a stop sign, an obstacle, and the car's camera, radar and roof lidar, to test the whole graph</td>
+<td>Ben</td>
+<td>2026-10-11</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Actuator model</td>
+<td>Lag and limits between ego and Gazebo, so the simulated car answers like a real one</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="bench.html">Bench mode</a> (<code>aav_bench</code>, <code>aav_spine_sim</code>)</td>
+<td>The car's own software on one laptop, with the spine's logic and pretend sensors</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>The spine in the loop (<code>sim spine:=true</code>)</td>
+<td>Gazebo drives through the spine's real logic, so its stops and e-stops get tested</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><code>sim-check</code> and <code>bench-check</code></td>
+<td>One command proves the whole chain drives, stops and keeps its lane</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Sensor failures on purpose (<code>pixi run sim-fault</code>)</td>
+<td>Breaks a sensor in Gazebo, to prove the watchdog catches it</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="ghost-obstacles.html">Ghost obstacles</a> (<code>aav_ghost</code>)</td>
+<td>A pretend person only Nav2 sees, to test stopping with nothing real to hit</td>
+<td>Ben</td>
+<td>2026-10-16</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Record and replay a drive</td>
+<td>A recorded drive runs through the EKFs again, to check them; they match within 0.03 m</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="hud">HUD</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HUD back end (<code>aav_hud</code>)</td>
+<td>Keeps the 2025-26 touchscreen working, on our topics</td>
+<td>the 2025-26 team, ported by Ben</td>
+<td>2026-10-10</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Flutter HUD app: e-stop button, Cancel, camera</td>
+<td>The app could never reach its back end; now its e-stop stops the bench car in 0.3 s</td>
+<td>the 2025-26 team, changed by Ben</td>
+<td>2026-10-11</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="hud.html">Raylib HUD in Rust</a> (<code>aav_hud_raylib</code>), with a SIMULATED banner</td>
+<td>One program that is also its ROS node, and nobody mistakes simulated data for the car</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>GO / STOP panel</td>
+<td>The safety drivers get one answer at a glance: may the car move, and if not, why</td>
+<td>Ben</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Map window: offline street map and place search</td>
+<td>A big-screen map of Nav2's plan over real streets, and a destination picked by name</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Car screens at login</td>
+<td>The HUD and the map start on the car's two screens by themselves</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>built</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="tools">Tools</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Live graph check (<code>pixi run check</code>)</td>
+<td>Compares the running graph with <code>docs/interfaces.yaml</code>, so a wrong topic shows at once</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Network doctor, network map and machine survey</td>
+<td>Tells whether a laptop can join the car's network, and records what's on each computer, read-only</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>car</td>
+</tr>
+<tr>
+<td>Read-only <a href="mcp.html">MCP server</a></td>
+<td>An AI app can read the docs, contracts and live graph, but never move the car</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Car kit (<code>pixi run car-kit</code>)</td>
+<td>Installs our Jazzy on the car's ARM computers from a USB stick, with no internet or admin rights</td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-day.html">Car-day kit</a>: runbook and preflight</td>
+<td>Ten sessions at the car, in order, and a check that the laptop has everything</td>
+<td>Ben</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="actuator-tests.html">Actuator tests</a> (<code>aav_actuator_tests</code>)</td>
+<td>Measures the throttle, brake and steering on stands, and gives the numbers for <code>vehicle.yaml</code></td>
+<td>Ben</td>
+<td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Bandwidth, CAN load and timing tests</td>
+<td>Checks each network link has room, and finds late messages and stalls</td>
+<td>Ben</td>
+<td>2026-10-23</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="foxglove.html">Watch from a laptop</a> (Foxglove and Lichtblick)</td>
+<td>One bridge and three layouts to watch any profile from a laptop</td>
+<td>Ben</td>
+<td>2026-10-24</td>
+<td>sim</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="infrastructure">Infrastructure</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Why</th>
+<th>Who</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One workspace with Pixi and RoboStack, Macs included</td>
+<td>ROS 2 Jazzy, Gazebo, Nav2 and Rust on any Linux or Mac, with no admin rights</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Cyclone DDS on every computer</td>
+<td>Fast DDS delivered messages up to 0.48 s late beside Gazebo; Cyclone never over 0.05 s</td>
+<td>Ben</td>
+<td>2026-10-23</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Launch profiles and machine files (<code>aav_bringup</code>)</td>
+<td>One command per profile (turtle, sim, bench, replay, car), and each computer picks its own parts</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Topic contract and <a href="naming.html">topic names by area</a></td>
+<td>Every topic's publisher, subscriber, type and QoS in one place, named so you see where it belongs</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>built</td>
+</tr>
+<tr>
+<td>CI: Linux and 64-bit ARM on every push, a Mac and Gazebo nightly</td>
+<td>A break shows on the push that made it, including on the car's ARM computers</td>
+<td>Ben</td>
+<td>2026-10-10</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Docs as HTML and PDF, with the Learn pages</td>
+<td>Short pages with tables and pictures, for a dyslexic reader and new team members</td>
+<td>Ben</td>
+<td>2026-10-09</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="getting-started.html">Getting-started guide</a></td>
+<td>A new laptop goes from nothing to driving the turtle in under 30 minutes (T1.1)</td>
+<td>Arsh (arshjameel)</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td>The previous teams' 27 repos, imported with their history</td>
+<td>All the older code and its history in one repo, to read and port from</td>
+<td>Arsh (arshjameel)</td>
+<td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td>One team repo: <code>AAV-2025-2026/ecolo-av</code></td>
+<td>The team's own repo, keeping the whole history of both workspaces</td>
+<td>Ben</td>
+<td>2026-10-25</td>
+<td>built</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="plan.html"><small>Previous</small>← The plan</a>
+<a class="next" href="audit-friday.html"><small>Next</small>Audit, 16 Oct →</a></nav>
+</main>
+<footer>Source: <code>docs/features.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

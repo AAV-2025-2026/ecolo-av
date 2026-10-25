@@ -48,7 +48,7 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [actuator_test]
     sub: [twist_mux, language_drive]
-    note: Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; READ-ME-TESTS.md stages 3-4). It also reads /control/cmd_vel, to stop when someone else takes over.
+    note: Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; docs/tests.md stages 3-4). It also reads /control/cmd_vel, to stop when someone else takes over.
   /drivers/scripted/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [scripted_driver]
@@ -63,7 +63,7 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [goto_driver]
     sub: [twist_mux, language_drive]
-    note: Priority 25 - below every person, test and script, above Nav2. Only while a /goto goal runs (aav_goto, pixi run goto; READ-ME-A-TO-B.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.
+    note: Priority 25 - below every person, test and script, above Nav2. Only while a /goto goal runs (aav_goto, pixi run goto; docs/a-to-b.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.
   /drivers/nav/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother, collision_monitor]

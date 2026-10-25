@@ -13,7 +13,7 @@ turn rate, like the joystick does.
 - our settings, and where they live.
 
 Costmaps have their own page: [Costmaps](costmaps.md). The big picture of maps and
-GPS is in [Maps and position](../READ-ME-MAPS-AND-POSITION.md).
+GPS is in [Maps and position](maps-and-position.md).
 
 ## The picture
 

@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The plan: the proposal as a to-do list · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/plan.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The plan: the proposal as a to-do list</h1>
+<div class="meta">24 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a class="here" href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-far-along-by-sub-project">How far along, by sub-project</a><a href="#the-gates">The gates</a><a href="#whats-done-so-far">What&#x27;s done so far</a><a href="#the-to-do-list">The to-do list</a><a href="#the-mppi-track-new">The MPPI track (new)</a><a href="#where-the-proposal-and-the-repo-disagree">Where the proposal and the repo disagree</a><a href="#the-15-october-numbering">The 15 October numbering</a></nav>
+<div class="lead"><p>Written 22 October 2026 from the team's proposal, "Ecolo: an open, closed-loop autonomous
+vehicle platform" (version 4, the team draft for 23 October). Ben: "Turn that document
+into a todo list that we can work through", and "we do want to put mppi in there too".</p>
+<p>The task numbers (T1.1 ... T9.8) are the proposal's, so the same numbers work in the issue
+tracker. Only the <strong>MPPI track</strong> (M1-M9) is new. The 15 October plan's S and C items are at
+the end, mapped to these numbers.</p>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Software, built and tested in simulation: about 43%</strong> of the committed tasks. <strong>Proven on the car: about 5%</strong> (the audits).
+- <strong>Ahead:</strong> the drivers, ego, the muxes, Gazebo, Nav2, A to B, the HUD. <strong>Behind:</strong> everything that needs the car or new parts: power, calibration, the closed loop.
+- <strong>Next gate, 30 Oct (Know the car):</strong> the car isn't measured yet. That's the most urgent job.
+- <strong>MPPI:</strong> Nav2's default since 22 Oct, tuned for the car in Gazebo, and compared with Regulated Pure Pursuit by <code>pixi run controller-compare</code> (<code>controller:=rpp</code> for the old one; <a href="controllers.html">controllers</a>). It steers round an obstacle the sensors see.
+- <strong>Status:</strong> ✅ done · 🧪 done in simulation only · 🔧 started · ⬜ not started · 🎯 stretch.</p>
+</blockquote></div>
+<section class="card"><h2 id="how-far-along-by-sub-project">How far along, by sub-project</h2>
+<p>The percentages are judgement, task by task (below), not measurement. "In software" counts
+work that runs in Gazebo or on the bench; "on the car" counts only what ran on the car.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Sub-project</th>
+<th style="text-align: right;">In software</th>
+<th style="text-align: right;">On the car</th>
+<th>Weakest point</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Integration and platform</td>
+<td style="text-align: right;">55%</td>
+<td style="text-align: right;">5%</td>
+<td>the Orin and Pis not upgraded; the sensor and output muxes not yet run on the car</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Simulation and testing</td>
+<td style="text-align: right;">63%</td>
+<td style="text-align: right;">0%</td>
+<td>sensor noise from guesses; no sim-versus-real report; the nightly Gazebo job on trial</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Vehicle hardware and actuation</td>
+<td style="text-align: right;">33%</td>
+<td style="text-align: right;">5%</td>
+<td>the car isn't measured; the Rust spine never flashed</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Power and electrical</td>
+<td style="text-align: right;">4%</td>
+<td style="text-align: right;">0%</td>
+<td>not started: needs the car and the parts</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Ego and vehicle control</td>
+<td style="text-align: right;">50%</td>
+<td style="text-align: right;">0%</td>
+<td>stop-at-distance lives in the A-to-B driver</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Localization and calibration</td>
+<td style="text-align: right;">18%</td>
+<td style="text-align: right;">0%</td>
+<td>no calibration yet; the heading is much better in Gazebo (22 Oct), not yet checked with the real IMU</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Drivers and local planning</td>
+<td style="text-align: right;">64%</td>
+<td style="text-align: right;">0%</td>
+<td>the real lot's map; forward only, a U-turn in a narrow lane can end facing a wall (reversing fixes it)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Perception</td>
+<td style="text-align: right;">43%</td>
+<td style="text-align: right;">0%</td>
+<td>no labelled pictures of the lot; no lidar clustering</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Heads-up display and tools</td>
+<td style="text-align: right;">68%</td>
+<td style="text-align: right;">0%</td>
+<td>not tried on the Pi 5</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>All committed tasks</strong></td>
+<td style="text-align: right;"><strong>about 43%</strong></td>
+<td style="text-align: right;"><strong>about 5%</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-gates">The gates</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Gate</th>
+<th>Date</th>
+<th>Passes when</th>
+<th>Today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Know the car</td>
+<td>30 Oct</td>
+<td>audit written up; every dimension measured, with its method</td>
+<td>🔧 audits done 16 and 21 Oct (<a href="../history/audit-2026-10-21-car.md">car audit</a>); <strong>nothing measured yet</strong> (<a href="measure-the-car.html">the sheet</a>)</td>
+</tr>
+<tr>
+<td>2. Safe to move</td>
+<td>27 Nov</td>
+<td>the timeout brakes within 100 ms and latches; both e-stops stop the car</td>
+<td>🔧 the Rust spine has the 100 ms timeout (321 tests); in QEMU (24 Oct) it brakes 111-120 ms after the last frame and latches (<a href="esp32-bench.html#before-the-board-the-emulator">emulator</a>): 100 ms of silence, then the next 10 ms tick. Since 24 Oct the heartbeat comes from the Orin (TODO 50): it brakes 111-120 ms after the Orin's counter stops, though the Motor Pi still sends (<a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>). Never flashed; today's ESP32 firmware has no timeout</td>
+</tr>
+<tr>
+<td>3. Closed loop</td>
+<td>18 Dec</td>
+<td>steering angle, wheel speed, brake position read back and tracked</td>
+<td>⬜ the sensors aren't fitted; the CAN messages and the logic exist</td>
+</tr>
+<tr>
+<td>4. Drives itself</td>
+<td>26 Feb</td>
+<td>GPS A to B, within 1 m, five runs, no takeover</td>
+<td>🧪 in Gazebo: every stop within 0.4 m of B</td>
+</tr>
+<tr>
+<td>5. Handover</td>
+<td>2 Apr</td>
+<td>scorecard; every layer documented; simulation in 30 minutes</td>
+<td>🔧 docs and onboarding exist; the scorecard doesn't</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="whats-done-so-far">What's done so far</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Done</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One repo, one environment</td>
+<td>ROS 2 Jazzy through Pixi on Linux and Macs, no admin rights; CI on every push, a Mac nightly</td>
+<td><code>pixi.toml</code>, <code>.github/workflows</code></td>
+</tr>
+<tr>
+<td>The contract</td>
+<td>every topic and node in one file, checked against the running graph</td>
+<td><code>docs/interfaces.yaml</code>, <code>pixi run check</code></td>
+</tr>
+<tr>
+<td>Old code</td>
+<td>every 2025-26 and 2024-25 repo surveyed; kept, ported or retired, with reasons</td>
+<td><code>docs/older-code.md</code>, each <code>PROVENANCE.md</code></td>
+</tr>
+<tr>
+<td>Rust</td>
+<td>the spine, the wheel encoder, the status display, the IMU driver, the radar clustering</td>
+<td><code>firmware/spine</code>, <code>src/sensors</code>, <code>src/perception</code></td>
+</tr>
+<tr>
+<td>Ego and the mux</td>
+<td>twist_mux (a person always wins), ego (Ackermann, limits, timeouts), and now the car's weight</td>
+<td><code>src/ego</code>, <code>src/mux</code></td>
+</tr>
+<tr>
+<td>Simulation</td>
+<td>TurtleSim; Gazebo with the whole car (cameras, radar, lidar, GPS, IMU, wheel speed, actuator model); the bench with the real CAN messages</td>
+<td><code>pixi run turtle</code>, <code>sim</code>, <code>bench</code></td>
+</tr>
+<tr>
+<td>Position</td>
+<td>two EKFs and navsat_transform: within 0.15 m of Gazebo's truth; replay within 0.03 m</td>
+<td><code>src/localization</code></td>
+</tr>
+<tr>
+<td>Drivers</td>
+<td>joystick, keyboard, scripted, replay, GPS A to B, Nav2, plain English (local model), street routes</td>
+<td><code>src/drivers</code></td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td>Smac Hybrid-A<em>, Regulated Pure Pursuit </em><em>or MPPI</em>*, collision monitor, ghost obstacles</td>
+<td><code>src/drivers/aav_navigation</code></td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels only sometimes since 23 Oct); the collision monitor; the spine's timeout (not flashed)</td>
+<td><code>src/safety</code>, <code>firmware/spine</code></td>
+</tr>
+<tr>
+<td>Screens</td>
+<td>the raylib HUD and the map window, full screen at boot (ready to install)</td>
+<td><code>src/hud</code></td>
+</tr>
+<tr>
+<td>Perception</td>
+<td>YOLO (Core ML, TensorRT export), a measured comparison with RF-DETR and YOLO26, radar clustering, a lidar layer</td>
+<td><code>src/perception</code>, <a href="model-comparison.html">newer models</a></td>
+</tr>
+<tr>
+<td>The car</td>
+<td>two read-only audits: every computer, port and connection; irreplaceable files copied off</td>
+<td><code>docs/history/</code></td>
+</tr>
+<tr>
+<td>Docs</td>
+<td>55 pages for a dyslexic reader, as HTML and PDF</td>
+<td><code>docs/</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-to-do-list">The to-do list</h2>
+<p><strong>Due</strong> is the proposal's date. <strong>%</strong> is how much of the task exists today. <strong>Next</strong> is
+the next concrete step.</p>
+<h3 id="1-integration-and-platform">1 · Integration and platform</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1.1</td>
+<td>Repository, contract and CI</td>
+<td>6 Nov</td>
+<td>✅</td>
+<td style="text-align: right;">90</td>
+<td>time a new laptop through <a href="first-day.html">first day</a>: under 30 min?</td>
+</tr>
+<tr>
+<td>T1.2</td>
+<td>Bring in the earlier teams' code</td>
+<td>20 Nov</td>
+<td>✅</td>
+<td style="text-align: right;">100</td>
+<td></td>
+</tr>
+<tr>
+<td>T1.3</td>
+<td>Orin backup and upgrade to JetPack 7.2.1</td>
+<td>27 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">10</td>
+<td>full disk image, then test the restore (irreplaceable files already copied off)</td>
+</tr>
+<tr>
+<td>T1.4</td>
+<td>Raspberry Pis to Ubuntu 24.04</td>
+<td>27 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">10</td>
+<td>one imaging script; the car kit is ready (<code>pixi run car-kit</code>)</td>
+</tr>
+<tr>
+<td>T1.5</td>
+<td>One launch, <code>target:=</code> and <code>source:=</code>; the sensor mux and output mux</td>
+<td>4 Dec</td>
+<td>🧪</td>
+<td style="text-align: right;">80</td>
+<td>built 23 Oct (<code>aav_io_mux</code>, <code>stack.launch.py target:=</code>; <a href="sources-and-targets.html">sources and targets</a>): every profile runs both muxes; <code>sim-check</code> and <code>bench-check</code> pass with them. Next: on the car, <code>/safety/output_mux/state</code> says OPEN with only the car's own nodes; the team agrees D3</td>
+</tr>
+<tr>
+<td>T1.6</td>
+<td>Contract test</td>
+<td>4 Dec</td>
+<td>✅</td>
+<td style="text-align: right;">80</td>
+<td>add topic rates to the nightly check</td>
+</tr>
+<tr>
+<td>T1.7</td>
+<td>Measure the computers and the network</td>
+<td>18 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">35</td>
+<td>the load report on the Mac (22 Oct, below); the bandwidth budget (23 Oct, <a href="bandwidth.html">bandwidth</a>): only raw cameras overflow a link, CAN 8.5% busy; <code>pixi run bandwidth</code> measured Gazebo (33-35 MB/s). Next: run it on the car, then the Orin's CPU</td>
+</tr>
+<tr>
+<td>T1.8</td>
+<td>Port to Rust, one module at a time</td>
+<td>Jan-Mar</td>
+<td>🔧</td>
+<td style="text-align: right;">65</td>
+<td>IMU, radar and the CAN bridge done (<code>aav_spine_bridge</code>, the default since 23 Oct; the Python one goes once the Rust has run on the car); next the battery monitor</td>
+</tr>
+<tr>
+<td>T1.9</td>
+<td>Second Orin (stretch)</td>
+<td>Feb-Mar</td>
+<td>🎯</td>
+<td style="text-align: right;">0</td>
+<td>KEFC decision, 2 Nov</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="2-simulation-and-testing">2 · Simulation and testing</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T2.1</td>
+<td>TurtleSim target</td>
+<td>6 Nov</td>
+<td>✅</td>
+<td style="text-align: right;">100</td>
+<td></td>
+</tr>
+<tr>
+<td>T2.2</td>
+<td>Ecolo URDF</td>
+<td>20 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">60</td>
+<td>built from <code>vehicle.yaml</code>; needs the measurements (T3.2)</td>
+</tr>
+<tr>
+<td>T2.3</td>
+<td>Gazebo car</td>
+<td>4 Dec</td>
+<td>✅</td>
+<td style="text-align: right;">100</td>
+<td>checked 22 Oct: a 10° steer gives 9.05-9.14 m for the predicted 8.90 m (+2-3%); 20° and full lock also within 3% (<a href="simulation.html#what-gazebo-simulates">simulation</a>)</td>
+</tr>
+<tr>
+<td>T2.4</td>
+<td>Noise matched to the real sensors</td>
+<td>Jan</td>
+<td>🔧</td>
+<td style="text-align: right;">20</td>
+<td>needs recordings from the car</td>
+</tr>
+<tr>
+<td>T2.5</td>
+<td>Replay driver and comparison</td>
+<td>18 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">60</td>
+<td>the replay driver exists; write the drive-comparison script (<code>tools/drive_metrics.py</code> is a start)</td>
+</tr>
+<tr>
+<td>T2.6</td>
+<td>Integration tests in CI, nightly</td>
+<td>mid-Jan</td>
+<td>🔧</td>
+<td style="text-align: right;">70</td>
+<td>the nightly job <code>sim</code> runs <code>sim-check --obstacle</code> headless (22 Oct), on trial: watch its first nights, then let a failure count</td>
+</tr>
+<tr>
+<td>T2.7</td>
+<td>Sim-versus-real report</td>
+<td>Gates 3, 4</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td>needs the car</td>
+</tr>
+<tr>
+<td>T2.8</td>
+<td>Ghost obstacles</td>
+<td>5 Feb</td>
+<td>🧪</td>
+<td style="text-align: right;">80</td>
+<td>on stands, then the lot</td>
+</tr>
+<tr>
+<td>T2.9</td>
+<td>CARLA target (stretch)</td>
+<td>Mar</td>
+<td>🎯</td>
+<td style="text-align: right;">40</td>
+<td>adapter built; needs the NVIDIA machine</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="3-vehicle-hardware-and-actuation">3 · Vehicle hardware and actuation</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T3.1</td>
+<td>Audit</td>
+<td>30 Oct</td>
+<td>🔧</td>
+<td style="text-align: right;">70</td>
+<td>a photo of every connector; the power side</td>
+</tr>
+<tr>
+<td>T3.2</td>
+<td><strong>Measure the car</strong> (and its weight and balance)</td>
+<td>30 Oct</td>
+<td>🔧</td>
+<td style="text-align: right;">10</td>
+<td><strong><a href="measure-the-car.html">the sheet</a></strong>, M1-M7b: tape, angle finder, four bathroom scales</td>
+</tr>
+<tr>
+<td>T3.3</td>
+<td>Steering range and centre</td>
+<td>20 Nov</td>
+<td>⬜</td>
+<td style="text-align: right;">10</td>
+<td><code>pixi run actuator-test</code> has the sweeps; the car on stands</td>
+</tr>
+<tr>
+<td>T3.4</td>
+<td>Linkage re-mount (if needed)</td>
+<td>4 Dec</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td>after T3.3</td>
+</tr>
+<tr>
+<td>T3.5</td>
+<td>CAN bus, wheel nodes, brake sensor</td>
+<td>11 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">30</td>
+<td>the message set (<code>firmware/can/aav.dbc</code>) and the logic exist; the parts are on the KEFC list</td>
+</tr>
+<tr>
+<td>T3.6</td>
+<td>Spine firmware in Rust</td>
+<td>27 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">70</td>
+<td>24 Oct: boots in QEMU and brakes 111-120 ms after the Motor Pi's frames stop (<code>pixi run esp-qemu-check</code>). The same day, TODO 50: the version 2 serial frame carries the Orin's heartbeat (counter, flags, CRC-8); QEMU brakes 111-120 ms after the counter freezes or the CRCs go bad. Next: flash it on the bench (<a href="esp32-bench.html">ESP32 bench</a>), with <code>frame_version: 2</code></td>
+</tr>
+<tr>
+<td>T3.7</td>
+<td>Bench rig</td>
+<td>20 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">40</td>
+<td><code>pixi run bench</code> covers the software; build the board</td>
+</tr>
+<tr>
+<td>T3.8</td>
+<td>Hardware test suite</td>
+<td>18 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">60</td>
+<td>the scripts exist (tests.md stages 3-4); run them on stands</td>
+</tr>
+<tr>
+<td>T3.9</td>
+<td>Brake and throttle loops</td>
+<td>22 Jan</td>
+<td>🔧</td>
+<td style="text-align: right;">20</td>
+<td>the PI loop is in <code>spine-core</code>; tune it on stands. With today's guessed gains it overshoots about 15% (the Gazebo model, 22 Oct: 0.57 m/s backing up for 0.5). A <code>smooth</code> profile (setpoint weight) is ready to try on stands, 0% in the model and Gazebo: TODO 27</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="4-power-and-electrical">4 · Power and electrical</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T4.1</td>
+<td>Power audit</td>
+<td>13 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">5</td>
+<td>clamp meter, every load</td>
+</tr>
+<tr>
+<td>T4.2</td>
+<td>Regulated 5 V supplies</td>
+<td>27 Nov</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td>the ZK-12KX converters (KEFC)</td>
+</tr>
+<tr>
+<td>T4.3</td>
+<td>12 V rail at actuator peak</td>
+<td>27 Nov</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+<tr>
+<td>T4.4</td>
+<td>Battery monitor and temperature</td>
+<td>11 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">20</td>
+<td>the 2024-25 node is in (<code>battery_monitor</code>); the Junctek reader is not</td>
+</tr>
+<tr>
+<td>T4.5</td>
+<td>Rail monitors</td>
+<td>18 Dec</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+<tr>
+<td>T4.6</td>
+<td>Wiring diagram</td>
+<td>18 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">5</td>
+<td>the photos in <a href="car-photos.html">car photos</a> are a start</td>
+</tr>
+<tr>
+<td>T4.7</td>
+<td>One-hour soak test</td>
+<td>18 Dec</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="5-ego-and-vehicle-control">5 · Ego and vehicle control</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T5.1</td>
+<td>Command mux</td>
+<td>6 Nov</td>
+<td>✅</td>
+<td style="text-align: right;">100</td>
+<td></td>
+</tr>
+<tr>
+<td>T5.2</td>
+<td>Ego v1</td>
+<td>6 Nov</td>
+<td>✅</td>
+<td style="text-align: right;">100</td>
+<td></td>
+</tr>
+<tr>
+<td>T5.3</td>
+<td>Speed profile: acceleration, jerk, stop at a distance</td>
+<td>27 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">75</td>
+<td>jerk limit done 22 Oct (<code>max_jerk</code> 2.0 m/s³, speeding up only; <code>sim-check --obstacle</code> passes). Left: move the stop-at-distance curve from the A-to-B driver into ego, or agree it stays (D4)</td>
+</tr>
+<tr>
+<td>T5.4</td>
+<td>Turning limits: steering rate, sideways acceleration</td>
+<td>11 Dec</td>
+<td>🧪</td>
+<td style="text-align: right;">90</td>
+<td>done 22 Oct with the weight model (<a href="car_measurements.html#weight-and-balance">car numbers</a>); the Gazebo check "a tight turn slows to the computed speed"</td>
+</tr>
+<tr>
+<td>T5.5</td>
+<td>Measured parameters</td>
+<td>18 Dec</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td>after T3.8</td>
+</tr>
+<tr>
+<td>T5.6</td>
+<td>Joystick drives</td>
+<td>Dec-Jan</td>
+<td>🔧</td>
+<td style="text-align: right;">30</td>
+<td>done in Gazebo; on stands after Gate 2</td>
+</tr>
+<tr>
+<td>T5.7</td>
+<td>Model validation</td>
+<td>12 Feb</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td>needs recordings</td>
+</tr>
+<tr>
+<td>T5.8</td>
+<td>Rust port of ego</td>
+<td>19 Mar</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="6-localization-and-calibration">6 · Localization and calibration</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T6.1</td>
+<td>Sensor positions</td>
+<td>13 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">20</td>
+<td>the sheet, S1-S8</td>
+</tr>
+<tr>
+<td>T6.2</td>
+<td>Time sync (chrony)</td>
+<td>27 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">10</td>
+<td></td>
+</tr>
+<tr>
+<td>T6.3</td>
+<td>Filters in Gazebo</td>
+<td>11 Dec</td>
+<td>🧪</td>
+<td style="text-align: right;">90</td>
+<td>0.15 m done; the heading jumps at walking pace much smaller (22 Oct: yaw noise, M9); check against the real IMU's gyro bias</td>
+</tr>
+<tr>
+<td>T6.4</td>
+<td>GPS on UBX with RTK</td>
+<td>11 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">30</td>
+<td><code>ublox_dgnss</code> is in the environment; the new receiver (KEFC)</td>
+</tr>
+<tr>
+<td>T6.5</td>
+<td>IMU calibration (Allan variance)</td>
+<td>18 Dec</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+<tr>
+<td>T6.6</td>
+<td>Camera intrinsics</td>
+<td>22 Jan</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+<tr>
+<td>T6.7</td>
+<td>Lidar-camera extrinsics</td>
+<td>12 Feb</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+<tr>
+<td>T6.8</td>
+<td>Filters on the car</td>
+<td>12 Feb</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+<tr>
+<td>T6.9</td>
+<td>Accuracy and drift tests</td>
+<td>26 Feb</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="7-drivers-and-local-planning">7 · Drivers and local planning</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T7.1</td>
+<td>Joystick and remote</td>
+<td>13 Nov</td>
+<td>🧪</td>
+<td style="text-align: right;">90</td>
+<td></td>
+</tr>
+<tr>
+<td>T7.2</td>
+<td>Scripted and replay drivers</td>
+<td>4 Dec</td>
+<td>🧪</td>
+<td style="text-align: right;">80</td>
+<td>the "same path twice within 0.03 m" check</td>
+</tr>
+<tr>
+<td>T7.3</td>
+<td>GPS A to B in Gazebo</td>
+<td>18 Dec</td>
+<td>🧪</td>
+<td style="text-align: right;">100</td>
+<td></td>
+</tr>
+<tr>
+<td>T7.4</td>
+<td>Hand-drawn costmap of the lot</td>
+<td>11 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">20</td>
+<td>choose the lot; <code>tools/make_map.py</code> draws it</td>
+</tr>
+<tr>
+<td>T7.5</td>
+<td>Nav2 in Gazebo</td>
+<td>5 Feb</td>
+<td>🧪</td>
+<td style="text-align: right;">90</td>
+<td>the corner problem fixed (M8); allowed to reverse, both controllers reach every lot goal, U-turn included (22 Oct). Left: forward only, stuck facing a wall (TODO 18)</td>
+</tr>
+<tr>
+<td>T7.6</td>
+<td>Language-model driver</td>
+<td>29 Jan</td>
+<td>🧪</td>
+<td style="text-align: right;">90</td>
+<td></td>
+</tr>
+<tr>
+<td>T7.7</td>
+<td>GPS A to B on the car</td>
+<td>26 Feb</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td>🎯 the year's demonstration</td>
+</tr>
+<tr>
+<td>T7.8</td>
+<td>Nav2 on the car</td>
+<td>26 Mar</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+<tr>
+<td>T7.9</td>
+<td>MPPI</td>
+<td>Mar</td>
+<td>🧪</td>
+<td style="text-align: right;">70</td>
+<td>the default since 22 Oct; a track of its own: M1-M9 below</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="8-perception">8 · Perception</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T8.1</td>
+<td>Record and label 200 frames</td>
+<td>18 Dec</td>
+<td>⬜</td>
+<td style="text-align: right;">0</td>
+<td>during the joystick drives</td>
+</tr>
+<tr>
+<td>T8.2</td>
+<td>Pipeline: decode, undistort, detect, track, publish</td>
+<td>15 Jan</td>
+<td>🔧</td>
+<td style="text-align: right;">65</td>
+<td>the detector node exists, RF-DETR Nano by default, its models loadable without ROS (<code>aav_detector/detectors.py</code>) for the camera-stream program; the stream itself (<code>aav_camera_stream</code>, 24 Oct): decode, undistort, detect, publish, measured on a Mac (<a href="camera-pipeline.html">camera pipeline</a>), untested on the Orin; ByteTrack doesn't exist yet</td>
+</tr>
+<tr>
+<td>T8.3</td>
+<td>Detector comparison</td>
+<td>12 Feb</td>
+<td>🔧</td>
+<td style="text-align: right;">60</td>
+<td>done on the Mac (<a href="model-comparison.html">newer models</a>): <strong>RF-DETR Nano chosen</strong> (Ben, 23 Oct). Its Core ML export runs (10 ms on a Mac); its TensorRT engine build is written (<code>tools/build_engine.py</code>): run and time it on the Orin</td>
+</tr>
+<tr>
+<td>T8.4</td>
+<td>Lidar clustering</td>
+<td>29 Jan</td>
+<td>🔧</td>
+<td style="text-align: right;">30</td>
+<td>today a height band (<code>aav_lidar</code>); add clustering</td>
+</tr>
+<tr>
+<td>T8.5</td>
+<td>Lidar costmap layer</td>
+<td>19 Feb</td>
+<td>🧪</td>
+<td style="text-align: right;">100</td>
+<td>in Gazebo Nav2 stops for it, and plans round it (M5, 22 Oct)</td>
+</tr>
+<tr>
+<td>T8.6</td>
+<td>Live on the car (stretch)</td>
+<td>Mar</td>
+<td>🎯</td>
+<td style="text-align: right;">0</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="9-heads-up-display-and-operator-tools">9 · Heads-up display and operator tools</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Due</th>
+<th>Status</th>
+<th style="text-align: right;">%</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T9.1</td>
+<td>Layout</td>
+<td>6 Nov</td>
+<td>✅</td>
+<td style="text-align: right;">80</td>
+<td>agree it with the safety drivers</td>
+</tr>
+<tr>
+<td>T9.2</td>
+<td>Feasibility on the Pi 5</td>
+<td>13 Nov</td>
+<td>🔧</td>
+<td style="text-align: right;">60</td>
+<td>25 Oct: <code>aav_hud_raylib</code> builds on 64-bit ARM Linux, and the HUD and the map window draw there (CI's <code>arm</code> job, every push; software OpenGL). Next: on the Pi 5 itself, its frame rate on its GPU</td>
+</tr>
+<tr>
+<td>T9.3</td>
+<td>HUD v1</td>
+<td>4 Dec</td>
+<td>🧪</td>
+<td style="text-align: right;">90</td>
+<td></td>
+</tr>
+<tr>
+<td>T9.4</td>
+<td>Map view</td>
+<td>18 Dec</td>
+<td>🧪</td>
+<td style="text-align: right;">90</td>
+<td>the real lot's image (T7.4)</td>
+</tr>
+<tr>
+<td>T9.5</td>
+<td>Faults, battery and health</td>
+<td>18 Dec</td>
+<td>🧪</td>
+<td style="text-align: right;">75</td>
+<td>24 Oct: the HUD's GO / STOP panel says whether the car may move, and the one main reason (the e-stop, the output mux's gate, the sensor watchdog). Next: rail voltages (T4.5)</td>
+</tr>
+<tr>
+<td>T9.6</td>
+<td>Boot and crash tests</td>
+<td>18 Dec</td>
+<td>🔧</td>
+<td style="text-align: right;">50</td>
+<td>on the Pi</td>
+</tr>
+<tr>
+<td>T9.7</td>
+<td>The language model's plan on screen</td>
+<td>29 Jan</td>
+<td>🔧</td>
+<td style="text-align: right;">50</td>
+<td></td>
+</tr>
+<tr>
+<td>T9.8</td>
+<td>HUD stop and heartbeat</td>
+<td>29 Jan</td>
+<td>🧪</td>
+<td style="text-align: right;">80</td>
+<td>done 23 Oct: <code>/hud/heartbeat</code> while the screen draws; the watchdog stops Nav2 without it (car: <code>watch_hud:=true</code>). Passes in Gazebo (<code>sim-check --faults</code>, <code>hud stop</code>) and with the real window on a Mac. 24 Oct (Ben): latched, a dropout after the HUD's first 5 s holds Nav2 until <code>pixi run watchdog-clear</code>. Next: on the car's screen computer; the Flutter app has none</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="safety-cross-cutting">Safety (cross-cutting)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Status</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S-1</td>
+<td>A written test card for every car session</td>
+<td>⬜</td>
+<td>a template in the repo</td>
+</tr>
+<tr>
+<td>S-2</td>
+<td>Written permission for the lot (November)</td>
+<td>⬜</td>
+<td></td>
+</tr>
+<tr>
+<td>S-3</td>
+<td>Geofence: everything outside the test area blocked on the map</td>
+<td>🔧</td>
+<td>the lot's map (T7.4)</td>
+</tr>
+<tr>
+<td>S-4</td>
+<td>Simulated messages can never reach the car</td>
+<td>🧪</td>
+<td>two layers: stand-ins run <code>--local</code>; and (23 Oct) the real backends read only <code>/control/car/actuator_cmd</code>, which the output mux fills only while every source is REAL, else a latched stop. Tested: with Gazebo announcing SIM, <code>spine_bridge</code> sent no drive frame. Next: the same on the car</td>
+</tr>
+<tr>
+<td>S-5</td>
+<td>Speed capped at 1 m/s in the firmware and in ego</td>
+<td>🔧</td>
+<td>ego ✅; the firmware's cap with T3.6</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-mppi-track-new">The MPPI track (new)</h2>
+<p>MPPI was a stretch goal for March (T7.9). Ben, 22 Oct: "we do want to put mppi in there
+too". It shares the car's model with ego, as the proposal says (section 8.3).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Status</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td><code>controller:=mppi</code>: one argument switches Nav2's path follower</td>
+<td>✅ 22 Oct</td>
+<td></td>
+</tr>
+<tr>
+<td>M2</td>
+<td>Its limits from <code>vehicle.yaml</code>: turning radius, outline, top and reverse speed</td>
+<td>✅</td>
+<td>its braking limit from ego (done by hand: <code>ax_min</code> = ego's -2.0)</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>Tuned for a car, not a robot, in Gazebo</td>
+<td>✅ 22 Oct</td>
+<td>moving within 0.5 s at 0.95 m/s; turns to a goal's heading from 2.5 m out (<a href="controllers.html#making-mppi-drive">why</a>). Its U-turn in a 14 m lane: forward only it swings wide and fails; allowed to reverse it makes a three-point turn (22 Oct, <a href="controllers.html">controllers</a>)</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>The comparison: <code>pixi run controller-compare</code></td>
+<td>✅ 22 Oct</td>
+<td>six runs overnight; MPPI did at least as well in each. <strong>MPPI is the default</strong> since 22 Oct (<a href="controllers.html">controllers</a>)</td>
+</tr>
+<tr>
+<td>M5</td>
+<td>Steering round an obstacle</td>
+<td>✅ 22 Oct, Gazebo</td>
+<td>the planner's costmap has the radar and lidar (<code>plan_around:=true</code>); both controllers drove round the box 2.6-3.8 m clear. <code>sim-check --plan-around</code></td>
+</tr>
+<tr>
+<td>M6</td>
+<td>Its CPU on the Orin</td>
+<td>⬜</td>
+<td>with the load report (T1.7)</td>
+</tr>
+<tr>
+<td>M7</td>
+<td>MPPI on the car</td>
+<td>⬜</td>
+<td>after Nav2 passes on the car (T7.8); MPPI is the default now</td>
+</tr>
+<tr>
+<td>M8</td>
+<td><strong>The corner problem</strong> (both controllers)</td>
+<td>✅ 22 Oct, Gazebo</td>
+<td>the planner's costmap inflates 3.0 m gently, and it plans turns 1.25 x wider than full lock: both kept clear of the building. Left: after a wide turn the car can stop facing a wall, and forward only it can't get out (TODO 18)</td>
+</tr>
+<tr>
+<td>M9</td>
+<td><strong>The heading jumps</strong> at walking pace (both)</td>
+<td>🧪</td>
+<td>measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. A heading source (the F9R's fused heading, or two antennas) with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, <a href="learn-gps.html#mount-the-antenna-over-the-rear-axle">why</a>): on the car it is over the axle already (Ben, 23 Oct). <strong>Much better since 22 Oct, 06:00:</strong> the global EKF's yaw noise 0.06 → 0.01; the lot tour's worst heading per leg 7-16° (was 14-76°)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="where-the-proposal-and-the-repo-disagree">Where the proposal and the repo disagree</h2>
+<p>For the team to decide; then change one of them.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Proposal</th>
+<th>Repo today</th>
+<th>Suggest</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>Topic names such as <code>/control/cmd</code>, <code>/vehicle/ackermann_cmd</code>, <code>/odometry/local</code> (section 3.3)</td>
+<td><code>/control/cmd_vel</code>, <code>/ego/actuator_cmd</code>, <code>/localization/odom/local</code> (<a href="naming.html">naming</a>)</td>
+<td>change the proposal's table: the repo's names are built and tested</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>Hall-sensor wheel nodes on Arduino Unos, in Arduino C++</td>
+<td>the rule "Rust for all firmware" (Ben, 10 Oct); the wheel logic in Rust (<code>wheel-core</code>) and the Pico 2 wheel encoder</td>
+<td>✅ <strong>decided 23 Oct</strong> (Ben, for the hardware side): an Arduino reads the sensors and sends CAN frames; the Orin decodes them and publishes. The proposal stands</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>A sensor mux and an output mux as nodes; <code>target:=</code>, <code>source:=</code></td>
+<td>built 23 Oct as nodes (<code>aav_io_mux</code>). The sensor mux <strong>checks</strong> where each sensor comes from instead of republishing it (no doubled camera or lidar traffic); the launch picks the source</td>
+<td>agree "check, not copy" (<a href="sources-and-targets.html#why-check-not-copy">why</a>), and change the proposal's wording</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>The stop-at-distance planner inside ego (T5.3)</td>
+<td>inside the A-to-B driver (<code>aav_goto</code>)</td>
+<td>either; ego is where the proposal promises it</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>MPPI a stretch goal in March (T7.9)</td>
+<td>switchable and compared now</td>
+<td>put MPPI in the committed plan, in Gazebo; on the car as the stretch</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>Ego enforces the lateral acceleration (T5.4)</td>
+<td>done 22 Oct, with the car's weight</td>
+<td>the proposal can cite it</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-15-october-numbering">The 15 October numbering</h2>
+<p><code>docs/</code> still refers to the old items in places:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Old</th>
+<th>Now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1 A → B in Gazebo</td>
+<td>T7.3</td>
+</tr>
+<tr>
+<td>S2 the spine in the loop</td>
+<td>T3.7</td>
+</tr>
+<tr>
+<td>S3 Gazebo steering fix</td>
+<td>T2.3</td>
+</tr>
+<tr>
+<td>S4 ghost obstacles</td>
+<td>T2.8</td>
+</tr>
+<tr>
+<td>S5 touchscreen keyboard</td>
+<td>T9.4</td>
+</tr>
+<tr>
+<td>S6 newer models</td>
+<td>T8.3, T7.6</td>
+</tr>
+<tr>
+<td>S7 Python → Rust</td>
+<td>T1.8, T5.8</td>
+</tr>
+<tr>
+<td>S8 street routes</td>
+<td>(beyond the proposal)</td>
+</tr>
+<tr>
+<td>S9 CARLA</td>
+<td>T2.9</td>
+</tr>
+<tr>
+<td>C1 audit</td>
+<td>T3.1</td>
+</tr>
+<tr>
+<td>C2 measure and weigh</td>
+<td>T3.2</td>
+</tr>
+<tr>
+<td>C3 the safety timeout</td>
+<td>T3.6</td>
+</tr>
+<tr>
+<td>C4 closed-loop sensors</td>
+<td>T3.5</td>
+</tr>
+<tr>
+<td>C5 the Jetson upgrade</td>
+<td>T1.3</td>
+</tr>
+<tr>
+<td>C6 drivers for the real parts</td>
+<td>T6.4, T8.2</td>
+</tr>
+<tr>
+<td>C7 install</td>
+<td>T1.4, T9.6</td>
+</tr>
+<tr>
+<td>C8 stands, then the lot</td>
+<td>T3.8, T5.6</td>
+</tr>
+<tr>
+<td>C9 A → B on the car</td>
+<td>T7.7</td>
+</tr>
+<tr>
+<td>C10 a Gazebo copy of the real lot</td>
+<td>T7.4</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="work.html"><small>Previous</small>← Work</a>
+<a class="next" href="features.html"><small>Next</small>Features →</a></nav>
+</main>
+<footer>Source: <code>docs/plan.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>
