@@ -1,0 +1,36 @@
+wheel_encoder_udp:
+  ros__parameters:
+    bind_host: 0.0.0.0
+    bind_port: 5000
+    expected_period_ms: 100
+    packet_timeout_ms: 300
+    poll_rate_hz: 200.0
+
+speed_estimator:
+  ros__parameters:
+    count_topic: /wheel_encoder/count
+    window_s: 0.1
+    pulses_per_sensor_rev: 8.0
+    sensor_revs_per_wheel_rev: 1.0
+    wheel_diameter_m: 0.30
+
+speed_pid:
+  ros__parameters:
+    input_topic: /cmd_drive
+    input_is_stamped: true
+    measured_speed_topic: /vehicle/speed_mps
+    output_topic: /ackermann_cmd
+    control_rate_hz: 20.0
+    desired_timeout_ms: 300
+    speed_timeout_ms: 300
+    allow_reverse: false
+    stop_speed_threshold_mps: 0.05
+    stop_brake_cmd: 150.0
+    kp: 120.0
+    ki: 20.0
+    kd: 0.0
+    integral_min: -50.0
+    integral_max: 50.0
+    max_throttle_cmd: 250.0
+    max_brake_cmd: 800.0
+    steer_passthrough: true

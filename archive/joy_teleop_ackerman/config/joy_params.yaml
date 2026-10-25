@@ -1,0 +1,12 @@
+joy_to_ackermann:
+  ros__parameters:
+    joy_topic: '/joy'
+    drive_topic: '/driveData'
+    axis_steer: 0          # X-axis: left/right
+    axis_throttle: 1       # Y-axis: forward/back
+    deadman_button: 0      # Trigger
+    max_speed: 1.0
+    max_steer_deg: 30.0
+    deadzone: 0.05
+    invert_steer: true     # Change to true to reverse steering
+    invert_throttle: false  # Keep true or change to false to reverse throttle

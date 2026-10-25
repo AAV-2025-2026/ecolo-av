@@ -1,0 +1,56 @@
+Launch Carla:
+
+/media/aav/DataDrive1/DigitalTwins/carla_laptop/carla/Dist/Carla_Simulator_March25$ 
+./CarlaUE4.sh
+
+
+
+#Start the ROS bridge with RVIZ enabled:
+
+
+cd /media/aav/DataDrive1/Digital_Twins/ros-bridge
+source ./install/setup.bash
+ros2 launch carla_ros_bridge carla_ros_bridge_with_example_ego_vehicle.launch.py
+
+
+
+ Start RVIZ::
+ rviz2
+ 
+ 
+  On rviz add
+ Image - topic rgb_front/camera
+ Lidar - PointCloud2 - topic lidar/PointCloud2
+ TF - topic odometry/Odometry
+ 
+ 
+ 
+ list topics:
+
+ros2 topic list
+
+If ros-bridge crashes
+pkill -9 CarlaUE4 
+pkill -9 UE4Editor
+
+
+To view sensors
+python3 velodyne_to_carla.py
+python3 camera_to_carla.py
+python3 radar_to_carla.CD 
+
+git clone --branch ros2 https://github.com/carla-simulator/ros-bridge.git
+rm -rf build/ install/ log/
+
+colcon build --symlink-install
+
+pip install carla==0.9.15
+
+
+
+
+
+
+
+
+

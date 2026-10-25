@@ -1,0 +1,27 @@
+<<<<<<< HEAD
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android / iOS / IDE
+**/local.properties
+**/android/**/local.properties
+**/android/.gradle
+**/ios/Pods/
+**/ios/Runner.xcworkspace/
+.idea/
+.vscode/
+*.iml
+
+# Misc
+.DS_Store
+*.log
+=======
+.vscode/
+ros2_ws/install
+ros2_ws/build
+>>>>>>> 86d74963d1bc088f23dac54fe6017a319f96151f

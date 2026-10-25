@@ -1,0 +1,20 @@
+aav_uart_bridge:
+  ros__parameters:
+    input_topic: /ackermann_cmd
+    input_is_stamped: true
+    uart_port: /dev/serial0
+    uart_baud: 115200
+    tx_rate_hz: 50.0
+    timeout_ms: 250
+    steer_in_is_rad: true
+    steer_max_rad: 0.45
+    steer_cmd_max: 2000.0
+    steer_deadzone_rad: 0.0
+    accel_to_throttle: 1.0
+    accel_to_brake: 1.0
+    throttle_max: 250
+    brake_max: 4095
+    direction_source: speed
+    dir_fwd_when_positive: true
+    start_armed: false
+    start_estop: true
