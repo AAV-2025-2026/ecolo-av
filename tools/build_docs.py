@@ -40,7 +40,7 @@ LEARN_END = 30     # PAGES[19:30] are the learn pages; the rest are reference
 # repository's root instead, built the same way (none since 25 Oct: every page is in docs/).
 PAGES = [
     ('index.md', 'Start here', 'The picture, and where to go next'),
-    ('overview.md', 'Overview', 'Everything in aav: ours, stock, inherited, missing'),
+    ('overview.md', 'Overview', 'Everything in ecolo-av: ours, stock, inherited, missing'),
     ('release-notes.md', 'Release notes', 'Release 0.1: what this version does, at a glance'),
     ('getting-started.md', 'Getting started', 'A new laptop to the turtle in 30 minutes (T1.1)'),
     ('first-day.md', 'Your first day', 'Install, the turtle, rqt_graph, Gazebo, Nav2'),

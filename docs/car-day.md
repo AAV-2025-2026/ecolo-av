@@ -143,7 +143,7 @@ missing, and Cyclone a reminder. No secrets: the Keychain is only asked whether 
 entry exists.
 
 ```text
-Car day: is /Users/ben/Code/aav/aav ready? (car-day.md)
+Car day: is /Users/ben/Code/ecolo-av ready? (car-day.md)
 
   MISSING  repo         main at 54304074 has commits GitHub hasn't
                         -> pixi run test, then git push

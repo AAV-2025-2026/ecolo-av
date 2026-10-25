@@ -7,7 +7,7 @@
 <!-- Generated from docs/older-code.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The older code: what we have, and what&#x27;s missing</h1>
-<div class="meta">12 min read · 7 sections</div></header>
+<div class="meta">13 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -502,12 +502,16 @@ card is in <a href="modules.html">Every module</a>. To read the originals:</p>
 </thead>
 <tbody>
 <tr>
-<td>Read the clones next to <code>aav</code> (<code>~/Code/aav/</code> on Ben's Mac, <code>/home/ben/aav/</code> on oirp-spss)</td>
-<td>they are read-only copies: never build, fix or commit in them</td>
+<td>Read them in this repo's history: <code>git show 420805ce:archive/&lt;repo&gt;/&lt;file&gt;</code>, or list one with <code>git ls-tree -r --name-only 420805ce archive/&lt;repo&gt;</code></td>
+<td>the 27 repos came in with their history (24 Oct), and left the working tree on 25 Oct. The local clones are gone</td>
 </tr>
 <tr>
-<td>Search only them: <code>grep -r --exclude-dir=aav --exclude-dir=aav-linux-build-output &lt;word&gt; .</code> from <code>~/Code/aav</code></td>
-<td>so the search skips our own code and the build output</td>
+<td>Search them all: <code>git grep &lt;word&gt; 420805ce -- archive/</code></td>
+<td>reads every old repo at once, without checking anything out</td>
+</tr>
+<tr>
+<td>Or on GitHub (<code>AAV-2025-2026</code>, <code>Carleton-AAV-Capstone</code>)</td>
+<td>the originals, with every branch</td>
 </tr>
 <tr>
 <td>Check the branch first: <code>git -C &lt;repo&gt; branch -a</code></td>

@@ -167,8 +167,9 @@ EGM artifact directory: docs/designs
   the source at the commits in `vendor/*.repos`. Never edit
   or build them. Search them with `grep -r` or `rg -u`: most search tools skip folders
   that git ignores.
-- **Not team code, on Ben's machines:** `~/Code/aav/` on his Mac (the old workspace: the
-  repo's first home, and his course code `SYSC3313/`, `c_code_example/`, `simplied.c`) and
-  `/home/ben/aav/` on oirp-spss. The 2025-26 repos are on GitHub (`AAV-2025-2026`); what
+- **Not team code, on Ben's machines:** `~/Code/aav/` on his Mac (the old workspace, retired
+  25 Oct: `aav/` there is the old copy of this repo, from `zander1976/aav`; and his course
+  code `SYSC3313/`, `c_code_example/`, `simplied.c`) and `/home/ben/aav/` on oirp-spss (an
+  old copy too: clone ecolo-av there before working on it). The 2025-26 repos are on GitHub (`AAV-2025-2026`); what
   came from each is in `docs/older-code.md`;
   - on oirp-spss only, `ros2-src/` and `ros2-rust/`, not yet moved into `vendor/`.

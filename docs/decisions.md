@@ -78,7 +78,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 
 | Decision | By |
 |---|---|
-| `aav/aav` is our version of the project. The other folders are the previous teams' code, or downloaded source | Ben |
+| `aav/aav` is our version of the project. The other folders are the previous teams' code, or downloaded source. *Since 25 Oct: `~/Code/ecolo-av`, everything at its root* | Ben |
 | `aav` will become the merger of everything, in one organized project | Ben |
 | Macs get GNU `coreutils` in their Pixi environment, so `colcon test` works on a Mac | a technical fix: see [Your Mac](mac.md) |
 | Firmware and hardware drivers in Rust, not C or C++, even where the ROS nodes stay in Python. The 2025-26 C++ keeps running until each board's Rust version replaces it | Ben: see [Rust on the hardware](rust-firmware.md) |

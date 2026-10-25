@@ -21,7 +21,7 @@ tests, and how a change goes from an idea to the car.
 ## The repo, folder by folder
 
 ```text
-aav/
+ecolo-av/
   CLAUDE.md           the rules, for people and Claude sessions alike
   README.md, TODO.md  the front page; the current work list
   pixi.toml           the environment, and the one-word tasks (pixi run <task>)

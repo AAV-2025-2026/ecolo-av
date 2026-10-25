@@ -1,4 +1,4 @@
-# Overview: everything in aav
+# Overview: everything in ecolo-av
 
 The whole project on one page: what's in the repo, the stock ROS packages and plugins it
 uses, the code it took from the previous teams, and what's still missing. Each section
