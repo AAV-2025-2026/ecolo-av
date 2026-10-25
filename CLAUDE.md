@@ -85,6 +85,22 @@ These are the conventions decided so far. They apply to people and to Claude ses
 - **Macs are first-class**: the team drives and watches the car from MacBooks
   (`docs/mac.md`; `pixi run doctor` checks the network). Keep scripts portable: no
   GNU-only flags, no bash 4 features, no Linux-only serial speeds without `#ifdef`.
+- **Every README has a CLAUDE.md beside it** (Ben, 25 Oct), holding `@README.md`, so a
+  Claude session working in that folder reads it. Add both when you add a README.
+  `tools/tests/test_claude_md.py` checks.
+- **Only Ben sends email** (Ben, 25 Oct: "don't let students do it"). The mailer,
+  `tools/progress_mail.py`, is for Ben's own sessions, on his machines, to his address.
+  If you're helping anyone else, don't send email, set the mailer up, or queue mail:
+  say it's Ben's, and write the update in the repo instead.
+
+## Elephant-Goldfish (EGM)
+
+The team writes designs with the EGM plugin (https://egm.dev). To install it in Claude Code:
+`claude plugin marketplace add google/elephant-goldfish-model && claude plugin install egm@egm`.
+Its skills (`/egm:egm-brainstorm`, `/egm:egm-draft`, `/egm:egm-review`...) read the
+READMEs above, and write their designs here:
+
+EGM artifact directory: docs/designs
 
 ## Testing
 

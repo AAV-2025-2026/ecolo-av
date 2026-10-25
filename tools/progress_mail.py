@@ -2,8 +2,11 @@
 """
 Email a progress update as a blue-and-white HTML page (the AAV's sky blue, Ben 22 Oct).
 
-Purpose: let people follow the work from a phone. Write the update in a small markdown
+Purpose: let Ben follow the work from a phone. Write the update in a small markdown
 subset, and this renders and sends it. Standard library only, so it runs anywhere.
+
+Only Ben sends email (Ben, 25 Oct): this is for his own sessions, on his machines. A Claude
+session helping anyone else must not send, set up or queue mail (CLAUDE.md).
 
     tools/progress_mail.py --subject "Builds on Linux" --file update.md
     tools/progress_mail.py --subject "..." --file update.md --attach docs/html/aav-docs.pdf

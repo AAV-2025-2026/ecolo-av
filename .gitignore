@@ -65,13 +65,15 @@ yarn-error.log*
 # of repositories is committed; `pixi run vendor` downloads the rest.
 /vendor/*
 !/vendor/README.md
+!/vendor/CLAUDE.md
 !/vendor/*.repos
 !/vendor/COLCON_IGNORE
 
 # Model files, downloaded or trained (models/README.md says which): only the README is
-# committed; `pixi run get-models` downloads the stock model.
+# committed (and its CLAUDE.md); `pixi run get-models` downloads the stock model.
 /models/*
 !/models/README.md
+!/models/CLAUDE.md
 # The place database (51 MB), the Flutter app's copy: `pixi run get-hud-map` downloads it.
 /hud/flutter_pi/assets/databases/
 # The map window's street map (40 MB) and the tool that cuts it (`pixi run get-street-map`),

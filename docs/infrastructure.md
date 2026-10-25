@@ -158,7 +158,7 @@ All defined in `pixi.toml`. Run them from the repo's top folder.
 | `replay_commands.sh` | plays a recorded drive's commands back into the mux | `pixi run tools/ros.sh tools/replay_commands.sh <bag>` |
 | `make_map.py` | draws a Nav2 map from a short spec | `pixi run python tools/make_map.py <spec>` |
 | `build_docs.py` | builds the docs pages and the PDF | `pixi run docs` |
-| `progress_mail.py` | emails a blue-and-white progress report | see its docstring |
+| `progress_mail.py` | emails a blue-and-white progress report: Ben only | see its docstring |
 | `bench_check.py` | starts bench mode and tests the whole graph | `pixi run bench-check` |
 | `graph_picture.py` | draws the running graph, grouped by layer | `pixi run graph-picture` |
 | `mcp_server.py`, `mcp_parts.py` | the read-only MCP server for AI apps, and its parts | an AI app, through `.mcp.json` |
