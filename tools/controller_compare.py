@@ -10,6 +10,7 @@ Both drive the test lot, headless, and are measured against where the car really
     pixi run controller-compare --speed 3          (Nav2 and ego up to 3 m/s: sim_speed:=3)
     pixi run controller-compare --tours lot --legs 1   (only the first leg: a quick check)
     pixi run controller-compare --reversing        (Nav2 may reverse, as on the car since 22 Oct)
+    pixi run controller-compare --plans            (keep every plan, not just each leg's first)
 
 For each tour and controller it:
 1. starts sim.launch.py world:=test_lot gui:=false rviz:=false controller:=<rpp|mppi>
@@ -289,7 +290,12 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle):
 
 
 def private(used):
-    """Pick an unused ROS domain (150-230, or AAV_SIM_DOMAIN's) and set it, before rclpy.init."""
+    """
+    Pick an unused ROS domain and Gazebo partition, and set them, before rclpy.init.
+
+    The domain: AAV_SIM_DOMAIN's for the first run, else one from 150-230. The partition:
+    AAV_SIM_PARTITION (default controller_compare), then the domain.
+    """
     first = os.environ.get('AAV_SIM_DOMAIN')
     if first and first not in used:
         domain = first
@@ -297,7 +303,8 @@ def private(used):
         domain = str(random.choice([d for d in range(150, 231) if str(d) not in used]))
     used.add(domain)
     os.environ['ROS_DOMAIN_ID'] = domain
-    os.environ['GZ_PARTITION'] = f'controller_compare_{domain}'
+    prefix = os.environ.get('AAV_SIM_PARTITION', 'controller_compare')
+    os.environ['GZ_PARTITION'] = f'{prefix}_{domain}'
     return domain
 
 
@@ -375,6 +382,12 @@ def session(tour, controller, args, out_dir, body, used):
                                    for s in drive_metrics.thin(leg['asked'], TRACK_EVERY)],
                          'plan': [[round(x, 2), round(y, 2)]
                                   for x, y in (leg['plans'][0][1][::4] if leg['plans'] else [])]}
+                if args.plans:
+                    # Every plan of the leg, each with its time: where the planner sent the
+                    # car as it went (TODO 17: a goal circled after a replan).
+                    drawn['plans'] = [[round(t, 2), [[round(x, 2), round(y, 2)]
+                                                     for x, y in pts[::4] + pts[-1:]]]
+                                      for t, pts in leg['plans']]
                 rows.append((tour, name, controller, row, notes, drawn))
                 print(f'   {name}: ' + ('reached' if row['reached'] else 'NOT reached') +
                       f' in {row["time_s"]:.0f} s, {row["driven_m"]:.1f} m, off the path '
@@ -450,6 +463,8 @@ def main():
                              '22 Oct; forward only otherwise')
     parser.add_argument('--legs', type=int, default=None,
                         help="only each tour's first N legs (each starts where the last ended)")
+    parser.add_argument('--plans', action='store_true',
+                        help='save every plan of each leg in results.json, not just its first')
     parser.add_argument('--out', help='where the results go (default: log/controller-compare/)')
     args = parser.parse_args()
     started = datetime.datetime.now()

@@ -92,6 +92,18 @@ def test_a_leg_summary():
     assert row['moving_after_s'] == pytest.approx(0.1)      # 0.1 m at 1 m/s
     assert row['asked_after_s'] == pytest.approx(0.04)
     assert row['off_route_max_m'] == pytest.approx(0.0, abs=1e-9)
+    assert row['route_m'] == pytest.approx(20.0)
+    assert row['detour'] == pytest.approx(0.5)
+    assert math.isnan(row['lingered_s'])         # no EKF recorded
+
+
+def test_a_car_that_circles_a_goal_it_reached():
+    # TODO 17: the EKF has the car at the goal at t = 9 s, but Nav2 answers at 30 s.
+    belief = [(t, t, 0.0, 0.0) for t in range(12)]
+    assert m.lingered(belief, (10.0, 0.0, 0.0), end=30.0) == pytest.approx(21.0)
+    assert m.lingered(belief, (10.0, 0.0, 0.0), end=9.5) == pytest.approx(0.5)
+    assert m.lingered(belief, (50.0, 0.0, 0.0), end=30.0) is None
+    assert m.path_length([(0.0, 0.0), (3.0, 4.0), (3.0, 5.0)]) == pytest.approx(6.0)
 
 
 def test_how_long_the_car_took_to_start():
