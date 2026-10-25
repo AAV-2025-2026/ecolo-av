@@ -110,7 +110,7 @@ PAGES = [
     ('mcp.md', 'AI apps (MCP)', 'Claude and other AI apps: read the project and the graph'),
     ('plain-english.md', 'Plain English', 'Type what the car should do; a model plans it'),
     ('model-comparison.md', 'Newer models', 'YOLO26 and RF-DETR vs YOLO11; newer local LLMs'),
-    ('firmware.md', 'Firmware', 'src vs firmware, the CAN contract, the spine'),
+    ('firmware.md', 'Firmware', 'ros vs firmware, the CAN contract, the spine'),
     ('can-plan.md', 'CAN plan', "Today's wiring (CAN for sensors), and the KEFC plan"),
     ('rust-firmware.md', 'Rust firmware', 'Rust on the chips: layers, frameworks, toolchains'),
     ('esp32-bench.md', 'ESP32 first flash', 'The Rust ESP32 on the bench: flash, check, undo'),

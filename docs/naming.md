@@ -9,8 +9,9 @@ Ben, 14 Oct: "Maybe we need more structure like /localization/<command> and
 
 ## The rule
 
-The first part of every name is the **area**: the layer of the picture it comes from. The
-same areas as the folders under `src/`, plus `/system/` for the whole run.
+The first part of every name is the **area**: the layer of the picture it comes from. Most
+match a folder under `ros/` (the `/sensors/` topics come from `ros/sources/`), plus
+`/system/` for the whole run.
 
 ```text
 /<area>/<device or node>/<thing>

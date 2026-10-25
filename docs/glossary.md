@@ -89,7 +89,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | Kar-Tech | the wireless e-stop on the car | the safety layer |
 | KEFC request | Ben's October 2026 hardware request: the CAN bus, the wheel nodes, a second Orin, a rear camera | [CAN plan](can-plan.md) |
 | KTC-100 | a linear position sensor (a potentiometer) | the steering, new (KEFC) |
-| launch file | a Python file that starts many nodes with their settings | `src/*/launch/` |
+| launch file | a Python file that starts many nodes with their settings | `ros/*/*/launch/` |
 | lidar | a laser scanner: 3D points around the car | the roof; no driver yet |
 | lock (twist_mux) | a `true`/`false` topic that blocks lower drivers | `/safety/estop`, `/perception/stop_sign` |
 | Madgwick | a filter that turns raw IMU data into an orientation | `imu_filter_madgwick` |

@@ -4,9 +4,9 @@ ROS stops at the CAN bus. Below it, a microcontroller called the spine owns the 
 actuators and the watchdog. This page covers what goes where, the CAN contract, and
 what's left to build.
 
-## src/ vs firmware/
+## ros/ vs firmware/
 
-| | `src/` | `firmware/` |
+| | `ros/` | `firmware/` |
 |---|---|---|
 | Runs on | Linux computers: the Orin, the Pis, laptops | microcontrollers: ESP32, Pico 2 |
 | ROS? | yes | no |

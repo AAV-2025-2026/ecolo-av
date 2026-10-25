@@ -1,6 +1,6 @@
 # What each package does
 
-Every ROS package in `src/`, layer by layer, with what it reads and writes. Then the
+Every ROS package in `ros/`, layer by layer, with what it reads and writes. Then the
 firmware, the HUD and the examples. 26 packages build today, and none is parked:
 perception came in on 10 October, the lane finder on 11 October.
 

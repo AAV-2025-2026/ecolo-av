@@ -9,7 +9,7 @@ tests, and how a change goes from an idea to the car.
 
 | Piece | What it is | Where |
 |---|---|---|
-| The car's software | ROS 2 Jazzy packages, one folder per layer | `src/` |
+| The car's software | ROS 2 Jazzy packages, one folder per area | `ros/` |
 | The car's firmware | the CAN contract, the Rust spine logic and its Pico 2 program, the 2025-26 boards' code | `firmware/` |
 | The touchscreen app | the 2025-26 Flutter HUD, changed for our back end | `hud/` |
 | The environment | ROS, Gazebo, compilers, Python and Rust, all from Pixi | `pixi.toml`, `pixi.lock` |
@@ -26,19 +26,21 @@ ecolo-av/
   README.md, TODO.md  the front page; the current work list
   pixi.toml           the environment, and the one-word tasks (pixi run <task>)
   pixi.lock           the exact version of every package: committed, so every laptop matches
-  src/                ROS 2 packages (colcon builds these)
-    aav_bringup/        whole-system launch profiles: turtle, sim, car, replay, bench
-    aav_description/    the car's model (URDF) and vehicle.yaml, the car's measurements
-    aav_interfaces/     our own messages and actions
-    sensors/            drivers that turn devices into standard messages
-    localization/       the two EKFs and navsat_transform: configuration only
-    drivers/            everything that proposes a command: teleop, scripted, Nav2
-    mux/                twist_mux: picks one command
+  ros/                ROS 2 packages, one folder per area (colcon builds these)
+    bringup/            aav_bringup (the launch profiles: turtle, sim, car, replay, bench)
+                        and aav_description (the URDF and vehicle.yaml, the car's measurements)
+    ecolo_msgs/         aav_interfaces: our own messages and actions
+    sources/            drivers that turn devices into standard messages: IMU, GPS, cameras, radar
+    localization/       the two EKFs and navsat_transform, and the GPS heading
+    perception/         the detector (RF-DETR, YOLO), radar clustering, lanes, the lidar
+    drivers/            everything that proposes a command: teleop, scripted, goto, Nav2
+    command_mux/        twist_mux: picks one command
+    io_mux/             the sensor mux and the output mux: real or simulated, never mixed
     ego/                the virtual car: one command into speed and steering
-    backends/           whatever plays the car: the real car, Gazebo, turtlesim, CARLA
-    perception/         YOLO and the stop-sign watcher, radar clustering, the lane finder, lane keeping
-    hud/                the HUD's web server (aav_hud)
-    bench/              bench mode: the spine on a laptop, and pretend sensors
+    can_bridge/         the real car: the spine bridge (CAN) and today's ESP32 link
+    sim/                whatever plays the car instead: Gazebo, turtlesim, CARLA, bench mode
+    safety/             the sensor watchdog and the ghost obstacles
+    hud/                the in-car screen: its back end and the raylib HUD and map
   firmware/           microcontroller code (colcon ignores it)
     can/                aav.dbc, the CAN contract, and its test vectors
     spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers,
@@ -215,7 +217,7 @@ The development computers:
 | # | Step | Where |
 |---|---|---|
 | 1 | Change the contract first, if the change touches one | the contracts table above |
-| 2 | Write the logic in a plain module, with tests | `src/<layer>/<package>/` |
+| 2 | Write the logic in a plain module, with tests | `ros/<area>/<package>/` |
 | 3 | Keep the node thin, with a docstring of what it reads and writes | the same package |
 | 4 | Register it: a launch profile, the mux (drivers), `tools/test.sh` (tests) | [Build a driver](howto-driver.md) |
 | 5 | `pixi run test`, then the turtle, then `pixi run check sim` in Gazebo | [Simulation](simulation.md) |

@@ -21,7 +21,7 @@ boards that move the actuators.
 
 | Part | Where |
 |---|---|
-| ROS 2 packages | `src/`, one folder per layer of the picture |
+| ROS 2 packages | `ros/`, one folder per area of the picture |
 | Firmware and the CAN contract | `firmware/` |
 | Scripts | `tools/` |
 | These pages | `docs/` |

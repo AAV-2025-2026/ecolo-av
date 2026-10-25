@@ -1,6 +1,6 @@
 # Every module, explained
 
-One card for every ROS package in `src/` and every crate and board in `firmware/`. Each
+One card for every ROS package in `ros/` and every crate and board in `firmware/`. Each
 card answers the same nine questions. [Packages](packages.md) is the short version, in
 tables; this page goes deeper. Written on 15 October 2026, with the topic names by area
 ([Topic areas](naming.md)).

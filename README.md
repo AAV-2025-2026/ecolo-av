@@ -186,7 +186,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 
 | Folder | What's in it |
 |---|---|
-| `src/` | ROS 2 packages, one folder per layer: sensors, localization, drivers, mux, ego, backends, plus the interfaces, the car description and the launch profiles |
+| `ros/` | ROS 2 packages, one folder per area: sources (sensors), localization, perception, drivers, command_mux, io_mux, ego, can_bridge (the real car), sim, safety, hud; bringup has the launch profiles and the car description, ecolo_msgs the interfaces profiles |
 | `firmware/` | the CAN contract (`can/aav.dbc`), the spine's Rust logic and device drivers (`spine/`), and the inherited C++ firmware (`legacy/`) |
 | `tools/` | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer, the MCP server for AI apps |
 | `examples/` | small runnable examples: a first ROS node in Rust (`rust-listener`) |

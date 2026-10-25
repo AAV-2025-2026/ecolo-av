@@ -112,9 +112,9 @@ in its <code>PROVENANCE.md</code>.</p></div>
 <td><code>aav_imu_yahboom</code></td>
 </tr>
 <tr>
-<td>Folder under <code>src/</code></td>
-<td>the layer of the picture</td>
-<td><code>sensors/</code>, <code>localization/</code>, <code>drivers/</code>, <code>mux/</code>, <code>ego/</code>, <code>backends/</code></td>
+<td>Folder under <code>ros/</code></td>
+<td>the area of the picture</td>
+<td><code>sources/</code>, <code>localization/</code>, <code>drivers/</code>, <code>command_mux/</code>, <code>ego/</code>, <code>can_bridge/</code>, <code>sim/</code></td>
 </tr>
 <tr>
 <td>Node and executable</td>
@@ -215,7 +215,7 @@ changes their launch files and executables.</p>
 </table></div>
 </section>
 <section class="card"><h2 id="how-a-package-is-laid-out">How a package is laid out</h2>
-<pre class="highlight"><code class="language-text">src/&lt;layer&gt;/aav_&lt;what&gt;/
+<pre class="highlight"><code class="language-text">ros/&lt;area&gt;/aav_&lt;what&gt;/
   package.xml              its dependencies
   setup.py, setup.cfg      its executables (Python packages)
   aav_&lt;what&gt;/

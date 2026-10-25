@@ -147,7 +147,7 @@ Car day: is /Users/ben/Code/ecolo-av ready? (car-day.md)
 
   MISSING  repo         main at 54304074 has commits GitHub hasn't
                         -> pixi run test, then git push
-  MISSING  build        src/ changed since the last build (24 Oct 15:06)
+  MISSING  build        ros/ changed since the last build (24 Oct 15:06)
                         -> pixi run build
   MISSING  car kit      made 2026-10-20 13:54; its code is 37a7b549, main is 54304074
                         -> pixi run car-kit

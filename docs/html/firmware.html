@@ -87,16 +87,16 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#src-vs-firmware">src/ vs firmware/</a><a href="#how-a-chip-joins-ros-2">How a chip joins ROS 2</a><a href="#one-interface-many-drivers">One interface, many drivers</a><a href="#the-spines-job">The spine&#x27;s job</a><a href="#the-can-contract">The CAN contract</a><a href="#firmwarespine-the-rust-code">firmware/spine: the Rust code</a><a href="#the-cars-two-other-pico-2s-in-rust-15-october">The car&#x27;s two other Pico 2s, in Rust (15 October)</a><a href="#todays-firmware-firmwarelegacy">Today&#x27;s firmware: firmware/legacy/</a><a href="#still-to-decide">Still to decide</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#ros-vs-firmware">ros/ vs firmware/</a><a href="#how-a-chip-joins-ros-2">How a chip joins ROS 2</a><a href="#one-interface-many-drivers">One interface, many drivers</a><a href="#the-spines-job">The spine&#x27;s job</a><a href="#the-can-contract">The CAN contract</a><a href="#firmwarespine-the-rust-code">firmware/spine: the Rust code</a><a href="#the-cars-two-other-pico-2s-in-rust-15-october">The car&#x27;s two other Pico 2s, in Rust (15 October)</a><a href="#todays-firmware-firmwarelegacy">Today&#x27;s firmware: firmware/legacy/</a><a href="#still-to-decide">Still to decide</a></nav>
 <div class="lead"><p>ROS stops at the CAN bus. Below it, a microcontroller called the spine owns the pins, the
 actuators and the watchdog. This page covers what goes where, the CAN contract, and
 what's left to build.</p></div>
-<section class="card"><h2 id="src-vs-firmware">src/ vs firmware/</h2>
+<section class="card"><h2 id="ros-vs-firmware">ros/ vs firmware/</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th></th>
-<th><code>src/</code></th>
+<th><code>ros/</code></th>
 <th><code>firmware/</code></th>
 </tr>
 </thead>

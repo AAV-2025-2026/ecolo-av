@@ -10,7 +10,7 @@ in its `PROVENANCE.md`.
 |---|---|---|
 | Our package | `aav_<what>` | `aav_ego`, `aav_spine`, `aav_teleop` |
 | A device driver package | `aav_<kind>_<maker>`, so drivers of one kind sort together | `aav_imu_yahboom` |
-| Folder under `src/` | the layer of the picture | `sensors/`, `localization/`, `drivers/`, `mux/`, `ego/`, `backends/` |
+| Folder under `ros/` | the area of the picture | `sources/`, `localization/`, `drivers/`, `command_mux/`, `ego/`, `can_bridge/`, `sim/` |
 | Node and executable | what it is, in snake_case; both the same | `ego`, `spine_bridge`, `scripted_driver` |
 | Logic module | a noun, no ROS imports | `ackermann.py`, `can_codec.py`, `vehicle.py` |
 | Topic | absolute: `/<area>/<thing>` | `/drivers/joy/cmd_vel`, `/vehicle/odom`, `/ego/actuator_cmd` |
@@ -39,7 +39,7 @@ changes their launch files and executables.
 ## How a package is laid out
 
 ```text
-src/<layer>/aav_<what>/
+ros/<area>/aav_<what>/
   package.xml              its dependencies
   setup.py, setup.cfg      its executables (Python packages)
   aav_<what>/

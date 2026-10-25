@@ -21,7 +21,7 @@ links to the page with the details. As of early on 11 October 2026.
 
 | Folder | What's in it | More |
 |---|---|---|
-| `src/` | the ROS 2 packages, one folder per layer | [Packages](packages.md) |
+| `ros/` | the ROS 2 packages, one folder per area | [Packages](packages.md) |
 | `firmware/` | the CAN contract, the Rust crates, the spine's Pico 2 program, and the 2025-26 C++ boards | [Firmware](firmware.md), [Rust firmware](rust-firmware.md) |
 | `hud/` | the 2025-26 touchscreen app (Flutter), changed for our back end, `ros/hud/aav_hud`. `pixi run get-flutter` downloads Flutter | [HUD](hud.md) |
 | `tools/` | tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server | [Infrastructure](infrastructure.md) |
