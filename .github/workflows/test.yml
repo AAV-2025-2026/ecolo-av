@@ -79,20 +79,7 @@ jobs:
           path: ~/Library/Caches/rattler/cache/pkgs
           key: pixi-pkgs-${{ runner.os }}-${{ hashFiles('pixi.lock') }}
           restore-keys: pixi-pkgs-${{ runner.os }}-
-      # TEMPORARY (TODO 42): on 24 Oct this branch's run hung after aav_routes' tests in
-      # tools/test.sh had all passed. Run them alone, three times, and say where they stick.
-      - name: Hang probe, aav_routes' tests
-        id: probe
-        continue-on-error: true
-        timeout-minutes: 15
-        working-directory: src/drivers/aav_routes
-        run: |
-          for i in 1 2 3; do
-            pixi run --locked python3 ../../../tools/hang_probe.py 120 \
-              python3 -m pytest -q -p no:cacheprovider
-          done
       - name: pixi run test
-        if: steps.probe.outcome == 'success'
         # A hung test fails the step (and so gets annotated) instead of the job being
         # cancelled at its limit with nothing to read; pytest prints every thread's stack
         # once a test has run 5 min (the Mac nightly of 24 Oct ran past 90 min).

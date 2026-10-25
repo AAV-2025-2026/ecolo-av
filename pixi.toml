@@ -15,7 +15,10 @@ version = "0.1.0"
 [tasks]
 # One word per job. Run from the repository root: `pixi run <task>`.
 build = { cmd = "colcon build --symlink-install", description = "Compile our ROS packages" }
-test = { cmd = "tools/test.sh && tools/lint.sh && colcon test --event-handlers console_cohesion- && colcon test-result --verbose", depends-on = ["build"], env = { ROS_AUTOMATIC_DISCOVERY_RANGE = "LOCALHOST" }, description = "All tests, and the style check, on this computer only (no network)" }
+# test: on this computer only (LOCALHOST: on GitHub's Macs a test's ROS program on the network
+# never ended, TODO 42), and one package at a time: on one computer and one domain, two
+# packages' tests side by side heard each other's nodes (25 Oct). 1 min 55 s, not 1 min 41.
+test = { cmd = "tools/test.sh && tools/lint.sh && colcon test --parallel-workers 1 --event-handlers console_cohesion- && colcon test-result --verbose", depends-on = ["build"], env = { ROS_AUTOMATIC_DISCOVERY_RANGE = "LOCALHOST" }, description = "All tests, and the style check, on this computer only (no network)" }
 lint = { cmd = "tools/lint.sh", description = "Check our Python against ROS's style rules" }
 turtle = { cmd = "tools/ros.sh --local ros2 launch aav_bringup turtle.launch.py", description = "turtlesim as the car (this computer only)" }
 keyboard = { cmd = "tools/ros.sh tools/keyboard.sh", description = "Drive from the keyboard (second terminal)" }
