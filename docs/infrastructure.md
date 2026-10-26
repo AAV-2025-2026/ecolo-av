@@ -244,6 +244,7 @@ request, and on a Mac every night. The results are on the repo's Actions tab.
 | `arm` | Ubuntu 24.04, **64-bit ARM**, like the Orin and the Pis | the same | 12 min: `pixi run test`; the HUD and the map window built as ARM programs, and each drawn once on a virtual screen (picture: the artifact `arm-screens`) |
 | `mac` | macOS 15, Apple Silicon | every night | `pixi run test`, the MCP server |
 | `car-kit` | Ubuntu 24.04, 64-bit ARM | every push to `main`, every pull request | `pixi run car-kit`, then `car_install.sh --all` with **no network** (its own network namespace), as on the car ([car install](car-install.md)): 6 min |
+| `car-kit-22.04` | Ubuntu **22.04**, 64-bit ARM: the car's own OS (JetPack 6) | the same | the same kit, installed offline on the car's Ubuntu. New 26 Oct: allowed to fail until it has passed a few times |
 | `sim` | Ubuntu 24.04, x86_64 | every night | `sim-check --obstacle` in Gazebo, below |
 
 Every job also runs from the Actions tab (Run workflow).
