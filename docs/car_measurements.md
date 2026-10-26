@@ -9,8 +9,10 @@ other part reads them from there, so a number only ever changes in one place.
 | `aav_ego` (ego.launch.py) | wheelbase, steering limit, reverse speed; and its body: mass, track, centre of mass, tyre grip, the throttle's and brake's accelerations |
 | `aav_spine` (spine.launch.py) | wheelbase, track |
 | `aav_legacy` (legacy.launch.py) | wheel diameter, encoder counts per revolution |
-| `aav_navigation` (navigation.launch.py) | footprint (both costmaps), minimum turning radius (SmacPlannerHybrid) |
+| `aav_navigation` (navigation.launch.py) | footprint (both costmaps), minimum turning radius (SmacPlannerHybrid), reverse speed |
 | `aav_turtlesim`, `aav_gazebo` | wheelbase, and in Gazebo the whole model |
+| `aav_goto`, `carla_adapter` | `actuators.max_brake`; `actuators.max_accel` |
+| `firmware/spine` (`spine-core`) | **copies** of `max_steering_angle` and `max_reverse_speed` (it can't read the file). Change both together: `test_vehicle.py` checks they match |
 
 `aav_description/aav_description/vehicle.py` does the derived maths: turning radius =
 wheelbase / tan(max steering angle), and the footprint polygon from the body. Its tests
@@ -34,7 +36,7 @@ REP-103 and REP-105 conventions:
 |---|---|
 | `base_link` | On the ground, under the centre of the rear axle. Everything is measured from here. |
 | `chassis` | The body box, from `body.length/width/height` and `rear_overhang` |
-| `imu_link`, `gps_link`, `radar_link`, `camera_left_link`, `camera_right_link` | `sensors.<name>.xyz` (m) and `rpy` (rad), relative to `base_link` |
+| `imu_link`, `gps_link`, `radar_link`, `camera_left_link`, `camera_right_link`, `camera_rear_link`, `lidar_link` | `sensors.<name>.xyz` (m) and `rpy` (rad), relative to `base_link` |
 | `*_steering_joint`, `*_wheel_joint` | Front wheels steer about z; all wheels spin about y |
 
 Why it matters:
@@ -87,7 +89,7 @@ What ego does with them:
   `max_accel × mass ÷ (mass + payload)`.
 - **Turns:** ego slows the car so the sideways acceleration stays under 2 m/s², or under
   half of what slides or tips the car if that is lower. It keeps the turn the driver asked
-  for and lowers the speed, so the car stays on its path. At full lock (2.86 m) that is
+  for and lowers the speed, so the car stays on its path. At full lock (2.87 m) that is
   2.4 m/s: it only matters above the car's 1 m/s, so today in the simulator. Checked in
   Gazebo (22 Oct, `sim_speed:=3`): asked 3 m/s at full lock, ego allowed 2.40 m/s and the
   car held 2.37-2.43 m/s, 1.9-2.0 m/s² sideways.

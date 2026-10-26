@@ -7,7 +7,7 @@
 <!-- Generated from docs/plain-english.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Plain English: tell the car what to do</h1>
-<div class="meta">17 min read · 9 sections</div></header>
+<div class="meta">18 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -184,6 +184,11 @@ the car; this one exists to.</p>
 <td><code>wait(seconds)</code></td>
 <td>waits between moves</td>
 <td>part of the plan</td>
+</tr>
+<tr>
+<td><code>check(tool, arguments)</code></td>
+<td>asks whether a move would pass the rules, without moving</td>
+<td>no</td>
 </tr>
 <tr>
 <td><code>stop()</code></td>

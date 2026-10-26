@@ -7,7 +7,7 @@
 <!-- Generated from docs/a-to-b.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Driving from A to B: speed up, drive, slow down, stop</h1>
-<div class="meta">11 min read · 8 sections</div></header>
+<div class="meta">12 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -89,7 +89,7 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#1-the-three-ways">1. The three ways</a><a href="#2-way-1-the-scripted-drive-today">2. Way 1: the scripted drive (today)</a><a href="#3-way-2-nav2-to-a-gps-point-today">3. Way 2: Nav2 to a GPS point (today)</a><a href="#4-way-3-the-goto-driver">4. Way 3: the goto driver</a><a href="#5-where-am-i-is-the-hard-part">5. &quot;Where am I?&quot; is the hard part</a><a href="#6-do-we-need-a-costmap-or-a-map">6. Do we need a costmap or a map?</a><a href="#7-test-it-step-by-step">7. Test it, step by step</a><a href="#8-what-to-do-first">8. What to do first</a></nav>
-<div class="lead"><p>Written 15 October 2026. The goal: the car drives in a straight line from point
+<div class="lead"><p>Written 15 October 2026, checked 25 October. The goal: the car drives in a straight line from point
 A to point B, speeding up, holding a speed, slowing down and stopping. This is the KEFC
 request's "accelerate / hold / stop" demo, and the first step to GPS point-to-point.</p>
 <blockquote>
@@ -225,7 +225,7 @@ for the GPS A-to-B demo (tests.md 5.2). Use <strong>2</strong> where there are o
 <li>The HUD's route uses this same action.</li>
 <li>On an <strong>empty map</strong> (the default, 200 m × 200 m, all free), Nav2's plan is close to a straight line; the planner only respects the car's turning circle.</li>
 <li>Nav2's speed: up to 1.0 m/s, speeding up at up to 1.0 m/s², slowing near the goal (<code>nav2.yaml</code>).</li>
-<li>The radar (and the lidar, later) still fill the local costmap, and collision_monitor still stops for something ahead.</li>
+<li>The radar and the roof lidar still fill the local costmap, and collision_monitor still stops for something ahead.</li>
 </ul>
 </section>
 <section class="card"><h2 id="4-way-3-the-goto-driver">4. Way 3: the goto driver</h2>
@@ -360,7 +360,34 @@ pixi run goto --lat 45.38630 --lon -75.69580     # the real car: a GPS point; it
 pixi run sim-check --goto-only                   # the Gazebo proof below (8 minutes)</code></pre>
 <p>Or the action itself: <code>ros2 action send_goal /goto aav_interfaces/action/GoTo "{x: 20.0, y: 0.0}" --feedback</code>.</p>
 <h3 id="proven-in-gazebo-15-oct">Proven in Gazebo (15 Oct)</h3>
-<p>GAZEBO_RESULTS</p>
+<p><code>pixi run sim-check --goto-only</code>, Gazebo's truth as the judge:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Targets 10, 30 and 60 m away, at any angle</td>
+<td>every stop within 0.4 m of B (asked: 2 m)</td>
+</tr>
+<tr>
+<td>At 1 and 3 m/s</td>
+<td>no overshoot</td>
+</tr>
+<tr>
+<td>Braking</td>
+<td>1.4-1.6 m/s², for a plan of 1.5 (half <code>max_brake</code>)</td>
+</tr>
+<tr>
+<td>A cancel, the e-stop, a GPS fault</td>
+<td>each one stopped it</td>
+</tr>
+</tbody>
+</table></div>
+<p>Untested on the bench and on the car: the car needs the brake test (4.3) for <code>max_brake</code> first.</p>
 </section>
 <section class="card"><h2 id="5-where-am-i-is-the-hard-part">5. "Where am I?" is the hard part</h2>
 <div class="table-wrap"><table>
@@ -396,8 +423,9 @@ pixi run sim-check --goto-only                   # the Gazebo proof below (8 min
 </table></div>
 <h3 id="the-heading-gap">The heading gap</h3>
 <p>The IMU's gyro measures <strong>turning</strong>, not <strong>north</strong>. We don't use the magnetometer (it
-needs calibrating, and the car's motors upset it). Today the start heading comes from
-<code>start_yaw</code>, typed in by hand. The options:</p>
+needs calibrating, and the car's motors upset it). The start heading comes from
+<code>start_yaw</code>, typed in by hand; once the car moves, <code>gps_heading</code> (<code>aav_gps_heading</code>)
+gives <code>ekf_global</code> the heading from the GPS receiver's velocity. The options:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -413,9 +441,9 @@ needs calibrating, and the car's motors upset it). Today the start heading comes
 <td>free; good enough for a demo</td>
 </tr>
 <tr>
-<td>Drive straight a few metres first</td>
-<td>the GPS track gives the heading</td>
-<td>a few metres of driving</td>
+<td>Drive a few metres first</td>
+<td>✅ built: <code>gps_heading</code>, from the GPS velocity (median 1.6-2.1° off in Gazebo)</td>
+<td>a few metres of driving; needs <code>gps_driver:=ublox</code> on the car</td>
 </tr>
 <tr>
 <td>The ZED-F9R's own dead reckoning</td>
@@ -429,7 +457,8 @@ needs calibrating, and the car's motors upset it). Today the start heading comes
 </tr>
 </tbody>
 </table></div>
-<p><strong>Recommendation:</strong> a marked start spot for the first demos; then the ZED-F9R's heading.</p>
+<p><strong>Recommendation:</strong> a marked start spot for the first demos, with <code>gps_heading</code> once the
+car moves; then the ZED-F9R's heading if that isn't enough.</p>
 </section>
 <section class="card"><h2 id="6-do-we-need-a-costmap-or-a-map">6. Do we need a costmap or a map?</h2>
 <div class="table-wrap"><table>
@@ -517,7 +546,7 @@ map with <code>tools/make_map.py</code> (it already makes <code>empty</code> and
 <tbody>
 <tr>
 <td>1</td>
-<td>Friday: find out whether the GPS gives fixes (<code>ros2 topic hz</code> on the RTK-Pi)</td>
+<td>At the car: find out whether the GPS gives fixes (<code>ros2 topic hz /sensors/gps/fix</code>)</td>
 <td>the team</td>
 </tr>
 <tr>

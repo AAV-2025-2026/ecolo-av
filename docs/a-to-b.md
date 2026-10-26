@@ -1,6 +1,6 @@
 # Driving from A to B: speed up, drive, slow down, stop
 
-Written 15 October 2026. The goal: the car drives in a straight line from point
+Written 15 October 2026, checked 25 October. The goal: the car drives in a straight line from point
 A to point B, speeding up, holding a speed, slowing down and stopping. This is the KEFC
 request's "accelerate / hold / stop" demo, and the first step to GPS point-to-point.
 
@@ -77,7 +77,7 @@ ros2 action send_goal /follow_gps_waypoints nav2_msgs/action/FollowGPSWaypoints 
 - The HUD's route uses this same action.
 - On an **empty map** (the default, 200 m × 200 m, all free), Nav2's plan is close to a straight line; the planner only respects the car's turning circle.
 - Nav2's speed: up to 1.0 m/s, speeding up at up to 1.0 m/s², slowing near the goal (`nav2.yaml`).
-- The radar (and the lidar, later) still fill the local costmap, and collision_monitor still stops for something ahead.
+- The radar and the roof lidar still fill the local costmap, and collision_monitor still stops for something ahead.
 
 ## 4. Way 3: the goto driver
 
@@ -150,7 +150,16 @@ Or the action itself: `ros2 action send_goal /goto aav_interfaces/action/GoTo "{
 
 ### Proven in Gazebo (15 Oct)
 
-GAZEBO_RESULTS
+`pixi run sim-check --goto-only`, Gazebo's truth as the judge:
+
+| Check | Result |
+|---|---|
+| Targets 10, 30 and 60 m away, at any angle | every stop within 0.4 m of B (asked: 2 m) |
+| At 1 and 3 m/s | no overshoot |
+| Braking | 1.4-1.6 m/s², for a plan of 1.5 (half `max_brake`) |
+| A cancel, the e-stop, a GPS fault | each one stopped it |
+
+Untested on the bench and on the car: the car needs the brake test (4.3) for `max_brake` first.
 
 ## 5. "Where am I?" is the hard part
 
@@ -164,17 +173,19 @@ GAZEBO_RESULTS
 ### The heading gap
 
 The IMU's gyro measures **turning**, not **north**. We don't use the magnetometer (it
-needs calibrating, and the car's motors upset it). Today the start heading comes from
-`start_yaw`, typed in by hand. The options:
+needs calibrating, and the car's motors upset it). The start heading comes from
+`start_yaw`, typed in by hand; once the car moves, `gps_heading` (`aav_gps_heading`)
+gives `ekf_global` the heading from the GPS receiver's velocity. The options:
 
 | Option | How | Cost |
 |---|---|---|
 | Park on a marked spot, facing a known way | `start_yaw` from the marks | free; good enough for a demo |
-| Drive straight a few metres first | the GPS track gives the heading | a few metres of driving |
+| Drive a few metres first | ✅ built: `gps_heading`, from the GPS velocity (median 1.6-2.1° off in Gazebo) | a few metres of driving; needs `gps_driver:=ublox` on the car |
 | The ZED-F9R's own dead reckoning | it fuses its IMU, wheel ticks and GPS, and outputs a heading | set it up on the receiver |
 | Two GPS antennas | the line between them is the heading | a second receiver |
 
-**Recommendation:** a marked start spot for the first demos; then the ZED-F9R's heading.
+**Recommendation:** a marked start spot for the first demos, with `gps_heading` once the
+car moves; then the ZED-F9R's heading if that isn't enough.
 
 ## 6. Do we need a costmap or a map?
 
@@ -202,7 +213,7 @@ map with `tools/make_map.py` (it already makes `empty` and `example_lot`).
 
 | # | Task | Who |
 |---|---|---|
-| 1 | Friday: find out whether the GPS gives fixes (`ros2 topic hz` on the RTK-Pi) | the team |
+| 1 | At the car: find out whether the GPS gives fixes (`ros2 topic hz /sensors/gps/fix`) | the team |
 | 2 | Pick the test lot; measure its datum | the team |
 | 3 | A "mark this spot" tool: average `/sensors/gps/fix` and print lat/lon | small, ours |
 | 4 | The goto driver (way 3) | ✅ built 15 Oct; on the car after the brake test (4.3) gives `max_brake` |

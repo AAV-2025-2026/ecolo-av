@@ -105,12 +105,12 @@ logs what happened, and prints the numbers for <code>vehicle.yaml</code>. Built 
 <section class="card"><h2 id="how-it-fits">How it fits</h2>
 <pre class="highlight"><code class="language-text"> actuator_test ──/drivers/tests/cmd_vel──► twist_mux ──► ego ──► backend ──► the car
    (priority 60)                               ▲                    (or Gazebo)
- joystick 100, keyboard 90 ────────────────────┘ always win
+ joystick 100, RC 95, keyboard 90 ─────────────┘ always win
         │
         └── reads back: /vehicle/odom (speed), /vehicle/steering, /throttle, /brake,
             the IMU, /localization/odom/local, GPS, /safety/estop, /system/source</code></pre>
 <p>It's a driver like any other (<a href="howto-driver.html">Build a driver</a>), in twist_mux's <code>tests</code>
-slot: below both people, above Nav2 and every other program.</p>
+slot: below every person (joystick, RC, keyboard), above Nav2 and every other program.</p>
 </section>
 <section class="card"><h2 id="the-tests">The tests</h2>
 <div class="table-wrap"><table>
@@ -298,7 +298,7 @@ limit only. If the script is killed (not Ctrl-C), restart ego to be sure.</p>
 <tbody>
 <tr>
 <td>Speed</td>
-<td>✅ the wheel encoder, <code>/vehicle/odom</code></td>
+<td>✅ the front wheel sensors (the hardware lead's Arduino on CAN, <code>spine_bridge role:=sensors</code>), <code>/vehicle/odom</code></td>
 <td>✅</td>
 </tr>
 <tr>
@@ -313,12 +313,12 @@ limit only. If the script is killed (not Ctrl-C), restart ego to be sure.</p>
 </tr>
 <tr>
 <td>Steering angle</td>
-<td>❌ no sensor: type it in on stands</td>
+<td>❌ no sensor: type it in on stands (✅ with the uplink, once H9 says yes, if the Jrk has feedback)</td>
 <td>✅ <code>/vehicle/steering</code></td>
 </tr>
 <tr>
 <td>Throttle and brake levels</td>
-<td>❌ not reported: no <code>max_accel</code> or <code>max_brake</code> fit, only the g figures. A speed command <strong>is</strong> the throttle there: speed ÷ <code>full_throttle_speed</code> (<code>legacy_protocol.py</code>)</td>
+<td>❌ not reported: no <code>max_accel</code> or <code>max_brake</code> fit, only the g figures. A speed command <strong>is</strong> the throttle there: speed ÷ <code>full_throttle_speed</code> (<code>legacy_protocol.py</code>). ✅ with the uplink (H9)</td>
 <td>✅ <code>/vehicle/throttle</code>, <code>/vehicle/brake</code></td>
 </tr>
 <tr>

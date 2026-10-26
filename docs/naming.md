@@ -24,10 +24,10 @@ match a folder under `ros/` (the `/sensors/` topics come from `ros/sources/`), p
 | `/can/` | raw CAN frames | the socketcan bridge |
 | `/localization/` | where the car is | the EKFs, navsat_transform |
 | `/perception/` | what the car sees | the detectors, the lane finder, radar clusters |
-| `/drivers/` | one command per driver | joystick, keyboard, scripted, Nav2, AI, replay |
+| `/drivers/` | one command per driver | joystick, RC, keyboard, tests, scripted, replay, go-to, Nav2, AI |
 | `/control/` | the chosen command; ego's command for one target, `/control/<target>/actuator_cmd` | twist_mux, the smoother, the output mux (23 Oct) |
 | `/ego/` | the command for the wheels | ego |
-| `/safety/` | e-stop, collision monitor | the HUD button, collision_monitor |
+| `/safety/` | e-stop, collision monitor, the sensor watchdog's lock, the output mux's state, ghost obstacles | the HUD button, collision_monitor, sensor_watchdog, output_mux, ghost_obstacle |
 | `/hud/` | what only the screen needs | the HUD |
 | `/system/` | what kind of run this is: `/system/source` (real, sim, bench, replay); the sensor mux's check, `/system/sensor_mux/state` | the backends, the bench, a replay (added 15 Oct, `full-simulation.md`); the sensor mux (23 Oct) |
 
@@ -41,9 +41,11 @@ actions, `/cmd_vel_nav` and the costmaps' topics.
 | Driver | How | Topics |
 |---|---|---|
 | joystick | `joy_node`, `teleop_twist_joy_node`, `joy_teleop` run in the namespace `/drivers/joy` | `/drivers/joy/joy`, `/drivers/joy/cmd_vel` |
+| RC | `rc_driver` (`aav_rc`) | `/drivers/rc/cmd_vel` |
 | keyboard | `tools/keyboard.sh` runs `teleop_twist_keyboard` in the namespace `/drivers/keyboard` | `/drivers/keyboard/cmd_vel` |
 | tests | `actuator_test` publishes `drivers/tests/cmd_vel` | `/drivers/tests/cmd_vel` |
 | scripted | `scripted_driver` publishes `drivers/scripted/cmd_vel` | `/drivers/scripted/cmd_vel` |
+| go-to | `goto_driver` (`aav_goto`) | `/drivers/goto/cmd_vel` |
 | Nav2 | `velocity_smoother` or `collision_monitor`, remapped | `/drivers/nav/cmd_vel` |
 | AI | `control_interface` (lane keeping) | `/drivers/ai/cmd_vel` |
 | replay | `tools/replay_commands.sh` | `/drivers/replay/cmd_vel` |

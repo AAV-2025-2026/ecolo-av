@@ -220,7 +220,7 @@ shows the big picture. Read that one first if you haven't.</p></div>
 <div class="admonition note">
 <p class="admonition-title">Where do our corrections come from?</p>
 <p>Not known yet. The switch has a port labelled <strong>RTK-PI</strong>, so the 2025-26 car probably
-had a corrections setup. Friday's audit should find out (<a href="car-photos.html">Car photos</a>).</p>
+had a corrections setup. Still to find out at the car (<a href="audit-questions.html">Audit questions</a>).</p>
 </div>
 </section>
 <section class="card"><h2 id="3-our-receiver-u-blox-zed-f9r">3. Our receiver: u-blox ZED-F9R</h2>
@@ -262,8 +262,8 @@ had a corrections setup. Friday's audit should find out (<a href="car-photos.htm
 KEFC plan replaces it with a board that has a screw-on antenna connector.</p>
 <div class="admonition warning">
 <p class="admonition-title">Never tried with our code</p>
-<p>Our GPS driver (<code>ublox_gps</code>) has <strong>never run</strong> with this receiver. Friday's audit
-checks the first step: is there any data at all?</p>
+<p>Our GPS driver (<code>ublox_gps</code>) has <strong>never run</strong> with this receiver. The first step at
+the car: is there any data at all?</p>
 </div>
 <h3 id="the-driver-three-choices">The driver: three choices</h3>
 <p><code>sensors.launch.py gps_driver:=...</code> picks one. Each publishes <code>/sensors/gps/fix</code>.</p>
@@ -470,7 +470,7 @@ they pull the wrong way, and the heading gets worse.</p>
 </thead>
 <tbody>
 <tr>
-<td>0.8 m ahead of the rear axle (today's guess)</td>
+<td>0.8 m ahead of the rear axle (the old guess, before 23 Oct)</td>
 <td style="text-align: right;">7.5-12.8°</td>
 <td style="text-align: right;">3.7-6.7°</td>
 <td style="text-align: right;">39-54°</td>
@@ -483,7 +483,8 @@ they pull the wrong way, and the heading gets worse.</p>
 </tr>
 </tbody>
 </table></div>
-<p>So put the antenna <strong>above the rear axle</strong> if the mount allows (any height). Then the
+<p>So the antenna belongs <strong>above the rear axle</strong> (any height): it is there already
+(<code>vehicle.yaml</code>, 23 Oct; measure it to be sure). Then the
 offset doesn't turn with the heading, and reversing is as good as forward. A heading
 source helps too: since 25 Oct the receiver's own velocity gives one while the car moves
 (<code>gps_heading</code>, <a href="learn-localization.html#where-the-heading-comes-from-todo-13">Learn: localization</a>).</p>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/start-up.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>How it all fits: bottom-up, and what happens at start-up</h1>
-<div class="meta">10 min read · 5 sections</div></header>
+<div class="meta">11 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -89,7 +89,7 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#1-the-layers-bottom-to-top">1. The layers, bottom to top</a><a href="#2-each-part-of-the-car-from-the-device-up">2. Each part of the car, from the device up</a><a href="#3-what-happens-when-the-car-starts-and-joins-the-network">3. What happens when the car starts and joins the network</a><a href="#4-how-to-test-each-layer-cheapest-first">4. How to test each layer, cheapest first</a><a href="#5-the-gaps-in-one-list">5. The gaps, in one list</a></nav>
-<div class="lead"><p>Written 15 October 2026. Read <a href="sim-and-car.html">Sim and the car</a>
+<div class="lead"><p>Written 15 October 2026, checked 25 October. Read <a href="sim-and-car.html">Sim and the car</a>
 and <a href="maps-and-position.html">Maps and position</a> first, or after: they go
 deeper on two parts of this page.</p>
 <blockquote>
@@ -104,10 +104,10 @@ deeper on two parts of this page.</p>
 <pre class="highlight"><code class="language-text"> 8  People      HUD screen, laptop (Foxglove, RViz), e-stop buttons
  7  Choose      twist_mux picks ONE driver → ego turns it into speed + steering angle
  6  Drivers     keyboard, joystick, scripted drive, Nav2, AI (lane keeping), replay
- 5  Perception  YOLO (cameras), radar clusters, lane finder → costmap, stop sign
+ 5  Perception  RF-DETR (cameras), radar clusters, lidar scan, lane finder → costmap, stop sign
  4  Where am I  ekf_local, ekf_global, navsat_transform
- 3  Backend     ONE of: spine (CAN), legacy (UART, today), Gazebo, bench, turtle
- 2  Sensors     drivers for camera, radar, lidar, IMU, GPS (wheels come via the backend)
+ 3  Backend     ONE of: legacy (UART, today), spine (CAN, later), Gazebo, bench, turtle
+ 2  Sensors     drivers for camera, radar, lidar, IMU, GPS, and the wheels (CAN)
  1  Boards      ESP32 control board, wheel nodes, Jrk G2s, the GPS and IMU chips
  0  Wires       power, Ethernet, CAN, USB, UART</code></pre>
 <div class="table-wrap"><table>
@@ -138,8 +138,8 @@ deeper on two parts of this page.</p>
 <tr>
 <td>3</td>
 <td>Backend</td>
-<td><code>/vehicle/odom</code>, <code>/vehicle/status</code> up; <code>/control/&lt;target&gt;/actuator_cmd</code> down (from the output mux)</td>
-<td>Orin #1 (CAN); Motor-Pi (today)</td>
+<td><code>/vehicle/status</code> up (and <code>/vehicle/odom</code> in the stand-ins); <code>/control/&lt;target&gt;/actuator_cmd</code> down (from the output mux)</td>
+<td>Motor-Pi (today, UART); Orin #1 (the CAN spine, later)</td>
 <td>turtle, bench, Gazebo</td>
 </tr>
 <tr>
@@ -194,20 +194,12 @@ deeper on two parts of this page.</p>
 </thead>
 <tbody>
 <tr>
-<td>Front camera L</td>
-<td>ribbon to a Pi 5</td>
-<td><code>usb_cam</code> ⚠️ USB only: the ribbon cameras need a libcamera driver (<code>camera_ros</code>)</td>
-<td><code>/sensors/camera/front_left/image_raw</code></td>
-<td>YOLO, lane finder, HUD</td>
-<td>❌ untested; driver mismatch</td>
-</tr>
-<tr>
-<td>Front camera R</td>
-<td>ribbon to a Pi 5</td>
-<td>the same</td>
-<td><code>/sensors/camera/front_right/...</code></td>
-<td>(not used yet)</td>
-<td>❌</td>
+<td>Front cameras L and R</td>
+<td>ribbon, both on one Pi 5</td>
+<td>MediaMTX on the Pi streams H.264; on the Orin, <code>aav_camera_stream</code> decodes each, with RF-DETR inside</td>
+<td><code>/perception/detections</code> (no raw pictures on the network)</td>
+<td>stop-sign watcher, sensor watchdog</td>
+<td>✅ on a Mac; ❌ car</td>
 </tr>
 <tr>
 <td>mmWave radar (TI)</td>
@@ -218,12 +210,12 @@ deeper on two parts of this page.</p>
 <td>✅ bench, Gazebo; ❌ car</td>
 </tr>
 <tr>
-<td>Lidar (roof)</td>
+<td>Lidar (roof Velodyne VLP-16)</td>
 <td>Ethernet</td>
-<td><strong>none yet</strong> (model unknown)</td>
-<td><code>/sensors/lidar/points</code> (planned)</td>
-<td>Nav2's costmap, later</td>
-<td>✅ Gazebo only, on by default</td>
+<td>the stock <code>velodyne</code> driver, on by default on the car</td>
+<td><code>/sensors/lidar/points</code></td>
+<td>Nav2's costmap, collision_monitor</td>
+<td>✅ Gazebo, bench, a pretend VLP-16; ❌ the real lidar</td>
 </tr>
 <tr>
 <td>IMU (Yahboom)</td>
@@ -243,19 +235,11 @@ deeper on two parts of this page.</p>
 </tr>
 <tr>
 <td>Wheel speed, today</td>
-<td>optical encoder → Pico 2 → UDP</td>
-<td><code>aav_legacy</code> encoder</td>
-<td><code>/vehicle/odom</code></td>
-<td>both EKFs</td>
-<td>❌ untested</td>
-</tr>
-<tr>
-<td>Wheel speed, KEFC</td>
-<td>Hall sensors → 2 ESP32 → CAN 0x200/0x201</td>
-<td><code>spine_bridge</code></td>
+<td>the hardware lead's Arduino on the Orin's CAN (0x200/0x201)</td>
+<td><code>spine_bridge role:=sensors</code></td>
 <td><code>/vehicle/wheels</code>, <code>/vehicle/odom</code></td>
 <td>both EKFs</td>
-<td>✅ bench (spine_sim sends the frames); ❌ car: no wheel nodes yet</td>
+<td>✅ fed wheel frames by hand; ❌ car. The 2025-26 UDP encoder is off since 23 Oct</td>
 </tr>
 <tr>
 <td>Steering</td>
@@ -291,7 +275,7 @@ board. The board runs the speed loop; each Jrk G2 runs a position loop.</p>
 <h3 id="each-computer-runs-one-command">Each computer runs one command</h3>
 <pre class="highlight"><code class="language-bash">pixi run car orin        # on Orin #1
 pixi run car motor_pi    # on the Motor-Pi (today's drive path)
-pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU</code></pre>
+pixi run -e ml car laptop   # on a laptop at the car: joystick, RF-DETR on its GPU</code></pre>
 <p>Its <strong>machine file</strong> (<code>ros/bringup/aav_bringup/config/machines/&lt;name&gt;.yaml</code>) lists the parts that run there:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -303,15 +287,15 @@ pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU</co
 <tbody>
 <tr>
 <td><code>orin</code></td>
-<td>car model, mux, ego, scripted, IMU, GPS, YOLO, stop-sign watcher, localization, Nav2, Foxglove</td>
+<td>car model, mux, ego, scripted, goto, IMU, GPS, lidar, the two camera streams (RF-DETR inside), stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove</td>
 </tr>
 <tr>
 <td><code>motor_pi</code></td>
-<td>the legacy backend: UART to the ESP32, the wheel encoder over UDP</td>
+<td>the legacy backend: UART to the ESP32</td>
 </tr>
 <tr>
 <td><code>laptop</code></td>
-<td>joystick, YOLO on the laptop's GPU, compressed camera pictures</td>
+<td>joystick, RF-DETR on the laptop's GPU, compressed camera pictures</td>
 </tr>
 <tr>
 <td><code>all</code></td>
@@ -372,17 +356,17 @@ pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU</co
 </tr>
 <tr>
 <td>9</td>
-<td>ego sends "speed 0" 50 times a second, always: the board knows the computer is alive</td>
-<td><code>ros2 topic hz /ego/actuator_cmd</code></td>
+<td>ego sends "speed 0" 50 times a second, always. The output mux passes it on, with its heartbeat, only once every source is REAL (about 4 s after start)</td>
+<td><code>ros2 topic echo /safety/output_mux/state</code> = OPEN</td>
 </tr>
 <tr>
 <td>10</td>
-<td>The backend is <strong>not armed</strong>: it sends no drive commands to the board</td>
+<td>Today's car (<code>actuators:=uart</code>) has no arm step: the output mux's OPEN is the gate. The CAN spine (<code>actuators:=can</code>) starts <strong>not armed</strong></td>
 <td><code>/vehicle/status</code> armed = false</td>
 </tr>
 <tr>
 <td>11</td>
-<td>A person arms it on purpose: <code>ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"</code></td>
+<td>CAN spine only: a person arms it on purpose, once the gate is OPEN: <code>ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"</code></td>
 <td>armed = true</td>
 </tr>
 <tr>
@@ -447,7 +431,7 @@ pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU</co
 <tr>
 <td>The computer freezes</td>
 <td>ego's 50 Hz stops</td>
-<td>the board's timeout brakes: 100 ms in the Rust spine (CAN v0.2.0). Today's C++ ESP32 has none yet (team-todo.md B2)</td>
+<td>the board's timeout brakes: 100 ms in the Rust firmware (the spine, and the Rust ESP32: proven in QEMU, not yet flashed). Today's C++ ESP32 has none (team-todo.md B2)</td>
 </tr>
 <tr>
 <td>An obstacle</td>
@@ -475,7 +459,7 @@ pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU</co
 <tbody>
 <tr>
 <td>1. Unit tests</td>
-<td><code>pixi run test</code></td>
+<td><code>tools/test.sh</code> (<code>pixi run test</code> adds the ROS tests)</td>
 <td>no ROS</td>
 <td>maths, CAN frames, firmware logic</td>
 </tr>
@@ -576,17 +560,12 @@ pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU</co
 <tr>
 <td>Our code has never run on the car</td>
 <td>everything on the car</td>
-<td>Friday's audit; Jazzy or Pixi on the Orin (Q24)</td>
+<td>the audits were 16 and 21 Oct; next, Jazzy or Pixi on the Orin (Q24; <a href="car-day.html">car day</a>)</td>
 </tr>
 <tr>
-<td>The front cameras are ribbon (CSI); our driver is USB-only</td>
-<td>cameras on the car</td>
-<td>swap <code>usb_cam</code> for <code>camera_ros</code> (libcamera) on the camera Pis</td>
-</tr>
-<tr>
-<td>No lidar driver</td>
-<td>lidar on the car</td>
-<td>the model, from the audit</td>
+<td>The camera streams and the lidar driver are untested on the car</td>
+<td>cameras and lidar on the car</td>
+<td>the car day; RF-DETR on the Orin waits for the reflash (Q24)</td>
 </tr>
 <tr>
 <td>No steering sensor</td>
@@ -594,9 +573,9 @@ pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU</co
 <td>the KTC-100 (KEFC)</td>
 </tr>
 <tr>
-<td>Wheel speed: a fouled optical encoder</td>
+<td>Wheel speed: the Arduino's CAN frames never seen yet</td>
 <td>good odometry</td>
-<td>Hall sensors (KEFC)</td>
+<td>the car day: <code>candump can0</code> on the Orin</td>
 </tr>
 <tr>
 <td>The datum is a placeholder</td>
@@ -606,7 +585,7 @@ pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU</co
 <tr>
 <td>No start-at-boot</td>
 <td>a car that's ready when it's switched on</td>
-<td>systemd services, after the audit</td>
+<td>systemd services, once the stack runs on the car</td>
 </tr>
 </tbody>
 </table></div>

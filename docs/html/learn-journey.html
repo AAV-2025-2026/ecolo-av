@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-journey.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>A command&#x27;s journey</h1>
-<div class="meta">11 min read · 8 sections</div></header>
+<div class="meta">12 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -195,9 +195,19 @@ run on the real car yet: the car still runs the 2025-26 code, on Humble.</p>
 <td>100 (the highest)</td>
 </tr>
 <tr>
+<td>RC transmitter, via ROS</td>
+<td><code>/drivers/rc/cmd_vel</code></td>
+<td>95</td>
+</tr>
+<tr>
 <td>keyboard</td>
 <td><code>/drivers/keyboard/cmd_vel</code></td>
 <td>90</td>
+</tr>
+<tr>
+<td>actuator tests</td>
+<td><code>/drivers/tests/cmd_vel</code></td>
+<td>60</td>
 </tr>
 <tr>
 <td>scripted test</td>
@@ -208,6 +218,11 @@ run on the real car yet: the car still runs the 2025-26 code, on Humble.</p>
 <td>replay</td>
 <td><code>/drivers/replay/cmd_vel</code></td>
 <td>40</td>
+</tr>
+<tr>
+<td>goto (drive to a GPS point)</td>
+<td><code>/drivers/goto/cmd_vel</code></td>
+<td>25</td>
 </tr>
 <tr>
 <td>Nav2</td>
@@ -226,7 +241,12 @@ run on the real car yet: the car still runs the 2025-26 code, on Humble.</p>
 </tr>
 <tr>
 <td><strong>lock:</strong> <code>/perception/stop_sign</code> true</td>
-<td>blocks Nav2 and AI</td>
+<td>blocks goto, Nav2 and AI</td>
+<td>30</td>
+</tr>
+<tr>
+<td><strong>lock:</strong> <code>/safety/sensor_watchdog/lock</code> true, or silent 1 s</td>
+<td>blocks goto, Nav2 and AI</td>
 <td>30</td>
 </tr>
 </tbody>
@@ -326,9 +346,10 @@ off the ground and the e-stop in hand: see <a href="firmware.html">Firmware</a>.
 </div>
 </section>
 <section class="card"><h2 id="3-after-the-kefc-changes-can">3. After the KEFC changes: CAN</h2>
-<p>The <code>aav_spine</code> backend replaces the Motor-Pi. It works on the bench, against a pretend
-board (<code>spine_sim</code>). It has never driven the car, and the ESP32's CAN firmware isn't
-written yet.</p>
+<p>With <code>car.launch.py actuators:=can</code>, the CAN spine replaces the Motor-Pi. Today's default
+is <code>actuators:=uart</code> (section 2). The CAN path works on the bench, against a pretend board
+(<code>spine_sim</code>). It has never driven the car. The ESP32's Rust firmware can take CAN
+(<code>esp32-umod</code>, <code>--features can</code>): built, not yet flashed.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -581,7 +602,7 @@ GPS points.</p>
 </tr>
 <tr>
 <td>Today's car</td>
-<td>no <code>/vehicle/status</code>: the legacy backend doesn't send it</td>
+<td>no <code>/vehicle/status</code>: the legacy backend sends it only with <code>uplink: true</code> (<code>legacy.yaml</code>), off until its wire is confirmed</td>
 <td><code>ros2 topic info /vehicle/status</code></td>
 </tr>
 </tbody>

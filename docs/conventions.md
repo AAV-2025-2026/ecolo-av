@@ -13,7 +13,7 @@ in its `PROVENANCE.md`.
 | Folder under `ros/` | the area of the picture | `sources/`, `localization/`, `drivers/`, `command_mux/`, `ego/`, `can_bridge/`, `sim/` |
 | Node and executable | what it is, in snake_case; both the same | `ego`, `spine_bridge`, `scripted_driver` |
 | Logic module | a noun, no ROS imports | `ackermann.py`, `can_codec.py`, `vehicle.py` |
-| Topic | absolute: `/<area>/<thing>` | `/drivers/joy/cmd_vel`, `/vehicle/odom`, `/ego/actuator_cmd` |
+| Topic | absolute: `/<area>/<device or node>/<thing>` ([Topic areas](naming.md)) | `/drivers/joy/cmd_vel`, `/vehicle/odom`, `/ego/actuator_cmd` |
 | Frame | `<thing>_link`, plus `map`, `odom`, `base_link` | `imu_link`, `gps_link` |
 | Parameter | snake_case, SI units, the unit in a comment | `max_speed: 1.0  # m/s` |
 | Config file | `config/<node>.yaml`; its top key is the node's name, or ROS ignores it | `config/ego.yaml` starts with `ego:` |
@@ -64,7 +64,8 @@ ros/<area>/aav_<what>/
    positive steering turns left.
 6. **No pins in ROS.** Pins, I2C addresses and calibration live in the firmware.
 7. **No secrets in git**: only where a secret lives and what kind it is.
-8. **Small commits**, each passing `pixi run test`, each message saying why.
+8. **Small commits**, each passing `tools/test.sh`, each message saying why; the full
+   `pixi run test` before you push ([CONTRIBUTING.md](../CONTRIBUTING.md)).
 9. **Write each language its own way** (Ben, 10 Oct). Ported code is rewritten in the
    new language's style, not copied line by line.
 

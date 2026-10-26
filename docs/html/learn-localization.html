@@ -117,7 +117,7 @@ and the map. This page explains <strong>why</strong> it works.</p></div>
 </thead>
 <tbody>
 <tr>
-<td>Wheel speed (today: the Pico 2 encoder; KEFC: Hall sensors on two wheels)</td>
+<td>Wheel speed (today: the hardware lead's Arduino, on CAN 0x200/0x201)</td>
 <td>forward speed</td>
 <td><code>/vehicle/odom</code></td>
 </tr>
@@ -457,7 +457,7 @@ metres, radians, x forward, y left, z up.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Three choices worth knowing:</p>
+<p>Four choices worth knowing:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -480,7 +480,7 @@ metres, radians, x forward, y left, z up.</p>
 </tr>
 <tr>
 <td><strong>Each backend sets its own covariance</strong></td>
-<td>the spine works out the turn rate from the measured steering. Today's encoder can't, so it sends a huge covariance (1e3), and the EKF ignores that part</td>
+<td>the CAN spine works out the turn rate from the measured steering. Today's wheel sensors can't (no steering angle on the bus), so <code>spine_bridge role:=sensors</code> sends a huge covariance (1e3) for it, and the EKF ignores that part</td>
 </tr>
 </tbody>
 </table></div>

@@ -10,8 +10,10 @@ talks on. Today, and after the KEFC changes.
 
 !!! warning "Mostly from photos"
     Much of this page comes from Ben's photos of 14 October ([Car photos](car-photos.md)).
-    A box marked *photos* is "from the photos, not yet checked". The audit on Friday
-    16 October checks it.
+    A box marked *photos* is "from the photos, not yet checked". The audits of 16 and
+    21 October checked some ([16 Oct](history/audit-2026-10-16-car.md),
+    [21 Oct](history/audit-2026-10-21-car.md)); what's still open is in
+    [Audit questions](audit-questions.md).
 
 !!! note "None of our code has run on the car yet"
     The car still runs the 2025-26 team's code, on ROS 2 Humble. Our code (Jazzy) runs in
@@ -27,7 +29,7 @@ Read it top to bottom:
 |---|---|
 | Ethernet | heavy data: camera pictures, lidar points, GPS, the screens |
 | The brains | two Jetson Orins: one drives, one sees and plans |
-| CAN | small, urgent control messages: steer, brake, speed |
+| CAN | small, urgent messages: today the wheel speeds; with the CAN spine, steer, brake, speed too |
 | Moving parts | the actuators and the motor, wired to the control board |
 | Safety | the buttons that stop the car whatever the software does |
 
@@ -36,7 +38,7 @@ Read it top to bottom:
 | Wire | What it is | Good for | On the car |
 |---|---|---|---|
 | **Ethernet** | the network cable a laptop uses | lots of data, many computers | the switch behind the seat |
-| **CAN** | two twisted wires, built for cars | short messages that must arrive on time | new: the Orin, the control board, two wheel nodes |
+| **CAN** | two twisted wires, built for cars | short messages that must arrive on time | new: the Orin and the wheel sensors' Arduino; the control board too with the CAN spine |
 | **USB** | the plug on any computer | one device into one computer | the IMU; the GPS board into its Pi |
 | **UART** | a simple serial line between two chips | one board talking to one board | today: the Motor-Pi to the ESP32 |
 
@@ -49,8 +51,8 @@ The [Glossary](glossary.md) explains each word.
 | Jetson AGX Orin #1 | the main computer: in our plan, the EKFs, twist_mux, ego | Ethernet | runs the 2025-26 code, on Humble | keeps control; becomes the CAN master |
 | Jetson AGX Orin #2 (64 GB) | cameras, lidar, costmaps, Nav2 planning | Ethernet | not there | **new** |
 | Motor-Pi (Raspberry Pi 4) | turns ego's commands into UART frames for the ESP32 | Ethernet, UART | drives the car | kept until CAN is proven, then retired |
-| Cam1-Pi, Cam2-Pi (Pi 5) | the two front cameras, at the windscreen, each on a ribbon cable (*photos*) | Ethernet | there | the same |
-| Cam3-Pi (Pi 5) | the rear camera (*photos*: a camera is fitted at the back; is it wired?) | Ethernet | maybe | **new** |
+| Cam1-Pi (Pi 5) | both front cameras, at the windscreen, on its two ribbon ports; MediaMTX streams them to the Orin ([Camera pipeline](camera-pipeline.md)) | Ethernet | there | the same |
+| QNX-Pi's camera | the rear camera | Ethernet | doesn't work today: no rear camera for now | **new** (Cam3) |
 | RTK-Pi (Pi, on the ceiling panel) | reads the GPS board over USB (*photos*) | Ethernet, USB | there | the same, with RTK corrections |
 | Dash-UI | the in-car screen, the [HUD](hud.md) (*photos*) | Ethernet | there | the same |
 | ES-Pi | unknown: an e-stop Pi? (*photos*: a port label only) | Ethernet | ? | not in the KEFC picture |
@@ -71,15 +73,15 @@ The [Glossary](glossary.md) explains each word.
 | Box | Does | Wire | Today | After KEFC |
 |---|---|---|---|---|
 | AAV control board | carries the ESP32, two Jrk G2s and the throttle DAC | UART today, CAN after | runs the 2025-26 firmware | becomes the CAN node that steers, brakes and drives |
-| ESP32 MicroMod | the microcontroller on that board | | 2025-26 C++ firmware, **no command timeout** | new Rust firmware: brake after 100 ms of silence, watchdog, speed loop (not written yet for the ESP32) |
-| Wheel encoder (Pico 2 + W5500) | counts wheel spokes, sends them over UDP to the Motor-Pi | Ethernet | runs today | replaced by the wheel nodes |
-| Wheel node L, R (ESP32-CAN-X2) | count Hall-sensor pulses from the front brake-rotor holes; wheel speed on CAN | CAN (0x200 L, 0x201 R, 100 Hz) | not there | **new** |
+| ESP32 MicroMod | the microcontroller on that board | | 2025-26 C++ firmware, **no command timeout** | Rust firmware (`esp32-umod`): brakes after 100 ms of silence, on the UART link or CAN. Built and proven in QEMU, not yet flashed |
+| Wheel encoder (Pico 2 + W5500) | counts wheel spokes, sends them over UDP to the Motor-Pi | Ethernet | the 2025-26 one: off in our machine files since 23 Oct | replaced |
+| Wheel sensors' Arduino (the hardware lead's) | reads the wheel sensors; wheel speed on CAN, straight to the Orin | CAN (0x200 L, 0x201 R) | today (23 Oct) | the same, or the KEFC wheel nodes (Hall sensors, ESP32-CAN-X2, 100 Hz: Proposed) |
 | ZED-F9R GPS board (SparkFun) | GPS position, to a Pi over USB-C | USB | fitted; its antenna lead is held by tape (*photos*) | a new board, same chip, screw-on antenna, RTK |
 
 ![The control board: a Pi 4, the ESP32 MicroMod, two Jrk G2](img/car/control-board.jpg)
 
 The board already has a white CAN plug, labelled CANH / CANL (*photos*). Is its
-transceiver chip (U7) fitted? The audit checks.
+transceiver chip (U7) fitted? Still to check ([Audit questions](audit-questions.md)).
 
 ## The sensors
 
@@ -87,9 +89,9 @@ transceiver chip (U7) fitted? The audit checks.
 |---|---|---|---|
 | IMU (Yahboom) | turn rate and acceleration | USB, to which computer? | `aav_imu_yahboom` |
 | GPS (u-blox ZED-F9R) | latitude and longitude | USB to the RTK-Pi | `ublox_gps` (the default) |
-| Wheel speed | how fast the wheels turn | CAN, straight to the Orin, from an Arduino (Ben, 23 Oct; was UDP to the Motor-Pi) | `spine_bridge role:=sensors` (was `encoder_udp`) |
-| Lidar, on the roof (*photos*) | 3D points around the car | Ethernet | **no driver yet**; model unknown (Q22) |
-| Cameras | pictures | ribbon cable into a Pi 5, then Ethernet | `usb_cam`, which expects a USB camera: a mismatch to sort out (Q22) |
+| Wheel speed | how fast the wheels turn | CAN, straight to the Orin, from the hardware lead's Arduino (23 Oct; was UDP to the Motor-Pi) | `spine_bridge role:=sensors` (was `encoder_udp`) |
+| Lidar, on the roof: Velodyne VLP-16 | 3D points around the car | Ethernet (UDP to the Jetson) | the stock `velodyne` driver (`aav_sensors lidar:=true`); untested with the real lidar |
+| Cameras | pictures | two ribbon cables into one Pi 5, then H.264 over Ethernet | MediaMTX on the Pi → `aav_camera_stream` on the Orin, RF-DETR inside each stream |
 | TI radar | points ahead of the car | USB | `ti_ros2_driver`; not seen in the photos |
 | Battery monitor (Victron) | battery voltage and charge | USB (VE.Direct cable) | `battery_monitor` |
 | Steering position (KTC-100 pot) | where the front wheels point | wire, into the steering Jrk | **new**: the board reads it from the Jrk |
@@ -121,9 +123,9 @@ transceiver chip (U7) fitted? The audit checks.
 
 | | Today | After KEFC |
 |---|---|---|
-| Command path | Orin → Ethernet → Motor-Pi → UART → ESP32 | Orin #1 → CAN → ESP32 control board |
-| If the computer freezes | **the last throttle stays on**: no timeout | the board brakes after 100 ms (DBC v0.2.0, the [CAN plan](can-plan.md)) |
-| Wheel speed | Pico 2 → UDP → Motor-Pi | two wheel nodes → CAN, 100 Hz |
+| Command path | Orin → Ethernet → Motor-Pi → UART → ESP32 (`actuators:=uart`, the default) | the same for now; the CAN spine (Orin #1 → CAN → ESP32) with `actuators:=can` |
+| If the computer freezes | **the last throttle stays on**: the C++ firmware has no timeout | the Rust firmware brakes after 100 ms (proven in QEMU, not yet flashed) |
+| Wheel speed | the hardware lead's Arduino → CAN → the Orin (since 23 Oct) | the same, or two wheel nodes → CAN, 100 Hz |
 | Steering position | not measured | KTC-100 pot through the Jrk |
 | GPS | ZED-F9R, taped antenna lead | new board, screw-on antenna, RTK |
 | Perception and Nav2 | on Orin #1 (in our plan) | on Orin #2 |

@@ -39,7 +39,7 @@ another.
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-rosdep install --from-paths src --ignore-src -y    # every stock package we use
+rosdep install --from-paths ros --ignore-src -y    # every stock package we use
 colcon build --symlink-install
 source install/setup.bash                          # in every new terminal
 ```
@@ -55,7 +55,7 @@ ROS 2 has no master. Nodes find each other by multicast on the local network.
 
 | # | Rule | Why |
 |---|---|---|
-| 1 | The same `ROS_DOMAIN_ID` (1–101) in every machine's `~/.bashrc` | the 2025-26 dashboard used 10 and its UI used 0, so they never met |
+| 1 | The same `ROS_DOMAIN_ID` in every machine's `~/.bashrc`: ours is 42 (0–101 is safe on Linux; Fast DDS breaks above 232) | the 2025-26 dashboard used 10 and its UI used 0, so they never met |
 | 2 | One network that allows multicast, such as the car's own router | campus WiFi often blocks it; then list the computers in `ROS_STATIC_PEERS` |
 | 3 | Keep `ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET` | set it to `LOCALHOST` to keep a laptop's experiments off the car |
 | 4 | One middleware everywhere: Cyclone DDS (Ben, 23 Oct), set by Pixi | different middlewares may not talk to each other; Fast DDS delivered messages late ([Your Mac](mac.md#why-we-use-cyclone-dds)) |
@@ -74,9 +74,9 @@ the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 
 | Machine file | Runs |
 |---|---|
-| `orin.yaml` | description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the object detector (`object_detector_orin`, RF-DETR Nano in TensorRT) and the stop-sign watcher; the CAN bus (`spine_bridge role:=sensors`: the wheels) |
+| `orin.yaml` | description, mux, ego, scripted, goto, the IMU and GPS drivers, the roof lidar (Velodyne), localization, Nav2, Foxglove; the two front camera streams (`camera_stream`, RF-DETR inside each) and the stop-sign watcher; the CAN bus (`spine_bridge role:=sensors`: the wheels) |
 | `motor_pi.yaml` | `legacy_uart_bridge`: the ESP32 is wired to it. The 2025-26 UDP encoder (`encoder_udp`) is off: the wheels are on CAN now |
-| `laptop.yaml` | the joystick, on the safety driver's laptop. Its detector (`object_detector_laptop`, Core ML) is off until it reads compressed images |
+| `laptop.yaml` | the joystick, on the safety driver's laptop, and its own detector (`object_detector_laptop`, RF-DETR Nano) on the compressed pictures: `pixi run -e ml car laptop` |
 | `all.yaml` | everything on one computer, for the bench. Its detector is `object_detector_all` |
 
 On each computer, run `ros2 launch aav_bringup car.launch.py machine:=<its file>`, or
@@ -98,8 +98,9 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.
 | `description` | the car's frames: `robot_state_publisher` |
 | `mux`, `ego` | `twist_mux`, then `ego` |
 | `teleop` | the joystick, and its e-stop button |
-| `scripted` | the scripted driver |
+| `scripted`, `goto` | the scripted driver; the goto driver ([A to B](a-to-b.md)) |
 | `imu`, `gps`, `radar`, `battery` | the sensor drivers, on the computer each is plugged into |
+| `lidar` | the roof Velodyne VLP-16, through the stock `velodyne` driver (it sends to the Jetson only) |
 | `camera` | the front camera: `usb_cam`, Linux only |
 | `camera_stream` | the front cameras' H.264 streams from the camera Pi, one `camera_stream_<camera>` each, with the detector inside; the sensor watchdog watches them ([camera pipeline](camera-pipeline.md#on-the-car-carlaunchpy)). On in `orin.yaml` |
 | `detector` | the object detector (RF-DETR Nano, or YOLO), as `object_detector_<machine>`, with the model the file names ([Models](perception.md#models)). Not for a camera `camera_stream` streams |
@@ -124,6 +125,8 @@ They win over the machine file. With Pixi, put them after `--`:
 | `gps:=false` | no GPS anywhere: no driver, and localization without it |
 | `gps_driver:=ublox` | which GPS driver: `ublox` (the default, Tentative: Q18), `nmea`, or `ublox_dgnss` (apt only, the car) |
 | `map:=`, `start_x:=`, `start_y:=`, `start_yaw:=` | Nav2's map, and where the car starts on it |
+| `lidar:=false` | no lidar anywhere, whatever the machine file says |
+| `actuators:=uart` | who drives the actuators: `uart` (the default: the Motor Pi's `legacy_uart_bridge`) or `can` (the CAN spine) |
 
 ## Try Jazzy on the car before the reflash
 

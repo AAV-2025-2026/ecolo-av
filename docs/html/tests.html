@@ -88,8 +88,8 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#stage-1-the-simulator-gazebo-and-the-turtle">Stage 1: the simulator (Gazebo and the turtle)</a><a href="#stage-2-the-bench">Stage 2: the bench</a><a href="#stage-3-the-car-on-stands-wheels-off-the-ground">Stage 3: the car on stands (wheels off the ground)</a><a href="#stage-4-the-car-in-an-empty-lot">Stage 4: the car in an empty lot</a><a href="#stage-5-the-whole-drive">Stage 5: the whole drive</a><a href="#fridays-checks-not-driving">Friday&#x27;s checks (not driving)</a><a href="#what-the-tests-give-back">What the tests give back</a><a href="#still-to-build-for-these-tests">Still to build for these tests</a></nav>
-<div class="lead"><p>Written 15 October 2026, for the team: every test from our talks, in one place,
+<nav class="toc"><span>On this page:</span><a href="#stage-1-the-simulator-gazebo-and-the-turtle">Stage 1: the simulator (Gazebo and the turtle)</a><a href="#stage-2-the-bench">Stage 2: the bench</a><a href="#stage-3-the-car-on-stands-wheels-off-the-ground">Stage 3: the car on stands (wheels off the ground)</a><a href="#stage-4-the-car-in-an-empty-lot">Stage 4: the car in an empty lot</a><a href="#stage-5-the-whole-drive">Stage 5: the whole drive</a><a href="#checks-at-the-car-not-driving">Checks at the car (not driving)</a><a href="#what-the-tests-give-back">What the tests give back</a><a href="#still-to-build-for-these-tests">Still to build for these tests</a></nav>
+<div class="lead"><p>Written 15 October 2026, checked 25 October, for the team: every test from our talks, in one place,
 in the order to run them. Each one says what it proves, how to run it, and when it passes.</p>
 <blockquote>
 <p><strong>The short version</strong>
@@ -175,7 +175,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td><strong>"SIMULATED" on the HUD</strong></td>
 <td>run Gazebo, look at the HUD</td>
 <td>an orange SIMULATED banner; REAL / SIM tag per sensor</td>
-<td>⬜</td>
+<td>✅ built 15 Oct (its logic tested); not yet seen on a screen</td>
 </tr>
 <tr>
 <td>1.10</td>
@@ -196,7 +196,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td><strong>Sensor failures on purpose</strong></td>
 <td><code>pixi run sim-check --faults</code> (<code>--no-watchdog</code>: what happens without the watchdog)</td>
 <td>each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check</td>
-<td>✅ 15 Oct: all 13</td>
+<td>✅ 15 Oct: all 13; 24 Oct, with the HUD's heartbeat: all 25 checks, 3 runs of 3</td>
 </tr>
 <tr>
 <td>1.13</td>
@@ -325,7 +325,7 @@ software stopped; speed capped (<code>max_speed:=0.3</code>).</p>
 <td>3.9</td>
 <td>⚠️ <strong>Unplug the Motor-Pi's serial cable while driving</strong></td>
 <td>the car brakes within 200 ms</td>
-<td>⬜ fails today: the ESP32 has no timeout (team-todo.md B2)</td>
+<td>⬜ fails with today's C++ ESP32 (team-todo.md B2). The Rust ESP32 firmware brakes 111-120 ms after the last frame in QEMU; not yet flashed</td>
 </tr>
 </tbody>
 </table></div>
@@ -470,7 +470,7 @@ the wheel speed, the pose and the GPS for every test.</p>
 <td><strong>Scales</strong></td>
 <td>4 bathroom scales, one under each wheel, add them up</td>
 <td>the mass, ±2%: the best way</td>
-<td>⬜ Friday</td>
+<td>⬜</td>
 </tr>
 <tr>
 <td>4.9</td>
@@ -539,14 +539,14 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.</p
 </tr>
 <tr>
 <td>4.17</td>
-<td>Lidar (once it has a driver)</td>
-<td><code>car.launch.py lidar:=true</code>: an obstacle shows in RViz's local costmap (<code>lidar_layer</code>), and a person in front stops Nav2</td>
-<td>⬜ no driver yet; ✅ in Gazebo (1.11)</td>
+<td>Lidar (the roof VLP-16, stock <code>velodyne</code> driver)</td>
+<td><code>car.launch.py</code> (lidar on by default): an obstacle shows in RViz's local costmap (<code>lidar_layer</code>), and a person in front stops Nav2</td>
+<td>⬜ untested with the real lidar; ✅ in Gazebo (1.11) and against a pretend VLP-16</td>
 </tr>
 <tr>
 <td>4.18</td>
 <td><strong>Sensor failures on the car</strong></td>
-<td>pull the GPS's, the IMU's, the wheel encoder's cable while Nav2 drives at walking pace: the HUD's red banner names it, and the car stops</td>
+<td>pull the GPS's, the IMU's, the wheel sensors' CAN cable while Nav2 drives at walking pace: the HUD's red banner names it, and the car stops</td>
 <td>⬜</td>
 </tr>
 </tbody>
@@ -602,7 +602,7 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.</p
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="fridays-checks-not-driving">Friday's checks (not driving)</h2>
+<section class="card"><h2 id="checks-at-the-car-not-driving">Checks at the car (not driving)</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -670,24 +670,14 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.</p
 </thead>
 <tbody>
 <tr>
-<td>The SIMULATED banner and REAL / SIM tags</td>
-<td>1.9</td>
-<td>small</td>
-</tr>
-<tr>
 <td>Ghost obstacles on the real car</td>
 <td>5.4</td>
 <td>1 day</td>
 </tr>
 <tr>
-<td>The ESP32 timeout</td>
+<td>The ESP32 timeout on the car: flash the Rust firmware (built, proven in QEMU)</td>
 <td>3.9, and everything after</td>
 <td>team-todo.md B2</td>
-</tr>
-<tr>
-<td>A driver for the roof lidar (probably a Velodyne)</td>
-<td>4.17</td>
-<td>small, once the model is known</td>
 </tr>
 </tbody>
 </table></div></section>

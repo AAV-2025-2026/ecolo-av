@@ -1,5 +1,7 @@
 # The team's work list, after Friday's audit
 
+> **A snapshot from 15 October 2026.** What's true now: [Status](status.md), [The plan](plan.md) and `TODO.md`. The audits ran on 16 and 21 Oct (`docs/history/audit-2026-10-16-car.md`, `audit-2026-10-21-car.md`).
+
 Written 15 October 2026, **before** the audit, as a draft. After Friday, update it from
 what the audit found: tick the "Audit says" column, fix each task's size, and put a name
 in each "Who" (Q33). Each task is sized for one or two people.
@@ -83,11 +85,11 @@ Details: [docs/platforms.md](platforms.md), "Moving the Orin to JetPack 7.2".
 |---|---|---|---|---|---|---|
 | C1 | **GPS** on our driver (`ublox_gps`), with RTK corrections if there's a source | S | audit N1, N2 | `/sensors/gps/fix` at 5-10 Hz; the HUD shows 3D or RTK | | |
 | C2 | **IMU** on our Rust driver; its mounting angles in `vehicle.yaml` | S | audit N3, M6 | `/sensors/imu/data` at 100 Hz; turning left shows +z rotation | | |
-| C3 | **Cameras** on `camera_ros` (ribbon cameras), with their calibration files | M | audit N4; the backed-up calibration | `/sensors/camera/front_left/image_raw` steady for 30 min | | |
+| C3 | **Cameras**, with their calibration files (now: both front ribbon cameras on one Pi 5, MediaMTX → `aav_camera_stream` on the Orin) | M | audit N4; the backed-up calibration | `/sensors/camera/front_left/image_raw` steady for 30 min | | |
 | C4 | **Fix the camera freezes** | M | Friday's 10-minute watch (`history/friday-todo-2026-10-16.md` part 5) | 1 hour with no freeze, logged | | |
 | C5 | **Radar** on `ti_ros2_driver`, its clusters in Nav2 | S | audit N7 | `/perception/radar/clusters` while someone walks in front | | |
-| C6 | **Lidar driver**, its points into Nav2's costmap and the collision monitor | M | audit N6 (make, model, IP) | an obstacle in front shows in RViz's local costmap | | |
-| C7 | **Wheel encoder**: alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors: `wheel-core` and `spine_bridge` already read them, 15 Oct) | M | audit D4, C2 | `/vehicle/status` speed matches a GPS speed within 10% at 1 m/s | | |
+| C6 | **Lidar driver** (done: the roof Velodyne VLP-16 on the stock `velodyne` driver, on by default on the car; untested with the real lidar), its points into Nav2's costmap and the collision monitor | M | audit N6 (make, model, IP) | an obstacle in front shows in RViz's local costmap | | |
+| C7 | **Wheel encoder** (now: the hardware lead's Arduino on the Orin's CAN, 0x200/0x201; the 2025-26 UDP encoder is off since 23 Oct): alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors: `wheel-core` and `spine_bridge` already read them, 15 Oct) | M | audit D4, C2 | `/vehicle/status` speed matches a GPS speed within 10% at 1 m/s | | |
 | C8 | **Stable device names**: USB serial numbers into `tools/udev/99-aav.rules` | S | the survey's "by-id" lists | unplug and replug everything: same names | | |
 | C9 | **Battery**: read the KM110F, or drop it from the plan | S | audit N8 | `/vehicle/battery` shows the voltage, or a decision written down | | |
 
@@ -97,7 +99,7 @@ Details: [docs/platforms.md](platforms.md), "Moving the Orin to JetPack 7.2".
 |---|---|---|---|---|---|---|
 | D1 | **Measure the car**, and replace every guess in `vehicle.yaml` | S | Friday's tape measure (M1-M7) | no "guess" comments left in `vehicle.yaml`; the URDF matches photos in RViz | | |
 | D2 | **Bring in what existed only on the car**: code into git with a `PROVENANCE.md`; weights into `models/` with checksums | M | A1; the audit's list | each item either in git or written off in `docs/older-code.md` | | |
-| D3 | **YOLO on TensorRT** on the Orin; test stock YOLO11 vs the 2025-26 detector on a recording | S | A3; a recording from C3 | ms per frame on the Orin written in `docs/perception.md` | | |
+| D3 | **The detector on TensorRT** on the Orin (RF-DETR Nano by default; YOLO with `detector:=yolo`); test it against the 2025-26 detector on a recording | S | A3; a recording from C3 | ms per frame on the Orin written in `docs/perception.md` | | |
 | D4 | **The HUD and the map on the dash's two screens**, full screen, starting at boot. **Ready to install (15 Oct):** `car_install.sh --screens`, then two monitor names in `~/.config/aav/screens.env` ([below](#d4-in-detail-the-two-screens)) | S | audit W10 (which computer, the outputs' names, X11 or Wayland); auto-login (an admin); E1 | power on → the HUD on the small screen, the map on the big one, both full screen; kill one → back in 5 s | | |
 | D5 | **The HUD's map panel**, with offline tiles of the test area | M | the test area chosen | the car's dot moves on the map in Gazebo, then on the car | | |
 | D6 | **A-to-B**: the test lot's datum, a start spot, then a GPS goal with `pixi run goto --lat .. --lon ..` (the driver, `aav_goto`, is built and proven in Gazebo, 15 Oct) | M | C1, C2, B8; the brake test (4.3) for `max_brake` | `a-to-b.md` test 5 with a GPS goal: stops within 1 m of B (2 m without RTK) | | |

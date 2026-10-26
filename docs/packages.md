@@ -1,57 +1,66 @@
 # What each package does
 
-Every ROS package in `ros/`, layer by layer, with what it reads and writes. Then the
-firmware, the HUD and the examples. 26 packages build today, and none is parked:
-perception came in on 10 October, the lane finder on 11 October.
+Every ROS package in `ros/`, area by area (`ros/<area>/<package>`), with what it reads
+and writes. Then the firmware, the HUD and the examples. 38 packages build today, and
+none is parked.
 
 ## At a glance
 
-| Package | Layer | Does | Status | Origin |
+| Package | Area | Does | Status | Origin |
 |---|---|---|---|---|
-| `aav_sensors` | sensors | starts the IMU, GPS, radar, battery and camera drivers, with their configs | [[untested]] needs the devices | new |
-| `aav_imu_yahboom` | sensors | the Yahboom IMU over USB serial (Rust) | [[untested]] needs the device; the C++ driver's answers, bit for bit | new: Ben's rewrite of the 2025-26 `yahboom-IMU` C++ driver |
-| `battery_monitor` | sensors | the Victron battery monitor | [[untested]] | 2024-25 `Battery-Monitor-ROS` |
-| `ti_ros2_driver` | sensors | the TI mmWave radar, as point clouds | [[untested]] | 2025-26 `Nav_Radar` |
-| `aav_description` | description | the car's model (URDF) and `vehicle.yaml` | [[works]] the numbers are guesses | new |
+| `aav_sensors` | sources | starts the IMU, GPS, lidar, radar, battery and USB camera drivers, with their configs | [[untested]] needs the devices | new |
+| `aav_camera_stream` | sources | one node per front camera: the camera Pi's H.264 stream, decoded, with RF-DETR inside | [[works]] on a Mac; [[untested]] on the Orin | new |
+| `aav_imu_yahboom` | sources | the Yahboom IMU over USB serial (Rust) | [[untested]] needs the device; the C++ driver's answers, bit for bit | new: Ben's rewrite of the 2025-26 `yahboom-IMU` C++ driver |
+| `battery_monitor` | sources | the Victron battery monitor | [[untested]] | 2024-25 `Battery-Monitor-ROS` |
+| `ti_ros2_driver` | sources | the TI mmWave radar, as point clouds | [[untested]] | 2025-26 `Nav_Radar` |
+| `aav_description` | bringup | the car's model (URDF) and `vehicle.yaml` | [[works]] the numbers are guesses | new |
 | `aav_localization` | localization | the two EKFs and `navsat_transform`: configuration only | [[works]] turtle, Gazebo and the bench | new |
 | `aav_gps_heading` | localization | `gps_heading`: the heading from the GPS receiver's velocity, for `ekf_global` | [[works]] Gazebo | new |
 | `aav_teleop` | drivers | joystick → `/drivers/joy/cmd_vel`, plus an e-stop button | [[untested]] | new; the button map from 2025-26 `joy_teleop_ackerman` |
+| `aav_rc` | drivers | the RC transmitter, on "RC via ROS", as a driver (priority 95, proposed) | built 24 Oct; off until the hardware lead confirms the wire (H9) | new |
+| `aav_actuator_tests` | drivers | the stage 3-4 tests, as a driver (priority 60) | [[works]] Gazebo; [[untested]] on the car | new |
 | `aav_scripted` | drivers | scripted drives: speed up, hold, slow down | [[works]] turtle and the bench | new |
 | `aav_goto` | drivers | drive to one GPS or map point B, and stop there smoothly | [[works]] in Gazebo (15 Oct); [[untested]] on the car | new |
 | `aav_language` | drivers | plain English: a local model plans drive tools, you say yes | [[works]] Gazebo and the turtle | new |
 | `aav_navigation` | drivers | Nav2, set up for a car, and the maps | [[works]] goals reached in Gazebo | new |
-| `aav_mux` | mux | twist_mux: the priorities and the e-stop lock | [[works]] | new |
-| `aav_io_mux` | mux | the sensor mux and the output mux: simulated data never drives the real car | [[works]] turtle, Gazebo and the bench; [[untested]] on the car | new |
+| `aav_routes` | drivers | street routes (Valhalla) as GPS waypoints for Nav2 | [[works]] in Gazebo | new |
+| `aav_mux` | command_mux | twist_mux: the priorities, the e-stop lock and the other locks | [[works]] | new |
+| `aav_io_mux` | io_mux | the sensor mux and the output mux: simulated data never drives the real car | [[works]] turtle, Gazebo and the bench; [[untested]] on the car | new |
 | `aav_ego` | ego | one command → speed and steering the car can do | [[works]] | new |
-| `aav_spine` | backends | the real car: ego's commands as CAN frames. Its Python `spine_bridge`, the config and the launch file | [[works]] on the bench, against `spine_sim`; no spine board yet | new |
-| `aav_spine_bridge` | backends | the same `spine_bridge` in Rust, on the firmware's own CAN code (`spine-core`); the default since 23 Oct (`bridge:=python` for the other) | [[works]] on the bench, against `spine_sim`; no spine board yet | new: a port of `aav_spine`'s node (T1.8) |
-| `aav_legacy` | backends | today's car: the 2025-26 ESP32 over UART, and the wheel encoder | [[untested]] on the car | new, for the 2025-26 protocols |
-| `aav_turtlesim` | backends | turtlesim, steered like the car | [[works]] | new |
-| `aav_gazebo` | backends | Gazebo's car behind the real car's topics | [[works]] headless | new |
-| `aav_carla` | backends | a CARLA adapter (CARLA's Python client) | [[untested]] never run against a server | new |
-| `aav_interfaces` | interfaces | our messages: `VehicleStatus`, `ScriptedDrive`, `GoTo` | [[works]] builds | new |
-| `aav_bringup` | bringup | the five profiles, perception on the car, the machine files, the RViz layout | [[works]] turtle, sim, replay, bench | new |
+| `aav_spine` | can_bridge | the CAN spine: ego's commands as CAN frames. Its Python `spine_bridge`, the config and the launch file | [[works]] on the bench, against `spine_sim`; no spine board yet | new |
+| `aav_spine_bridge` | can_bridge | the same `spine_bridge` in Rust, on the firmware's own CAN code (`spine-core`); the default since 23 Oct (`bridge:=python` for the other) | [[works]] on the bench, against `spine_sim`; no spine board yet | new: a port of `aav_spine`'s node (T1.8) |
+| `aav_legacy` | can_bridge | today's car: the 2025-26 ESP32 over UART, through the Motor Pi | [[untested]] on the car | new, for the 2025-26 protocols |
+| `aav_turtlesim` | sim | turtlesim, steered like the car | [[works]] | new |
+| `aav_gazebo` | sim | Gazebo's car behind the real car's topics | [[works]] headless | new |
+| `aav_carla` | sim | a CARLA adapter (CARLA's Python client) | [[untested]] never run against a server | new |
+| `aav_spine_sim` | sim | the spine on a laptop: the firmware's logic on a model car (Rust) | [[works]] | new |
+| `aav_bench` | sim | pretend sensors: IMU, GPS, battery, camera, radar, lidar | [[works]] | new |
+| `aav_safety` | safety | the sensor watchdog: a twist_mux lock (30) when a sensor is stale, NaN, frozen or jumps | [[works]] Gazebo and the bench | new |
+| `aav_ghost` | safety | ghost obstacles: a pretend person only Nav2 sees | [[works]] in Gazebo | new |
+| `aav_interfaces` | ecolo_msgs | our 9 messages (such as `VehicleStatus`, `DataSource`, `Heartbeat`) and 2 actions (`ScriptedDrive`, `GoTo`) | [[works]] builds | new |
+| `aav_bringup` | bringup | the six profiles, `stack.launch.py`, Foxglove, the machine files, the RViz layouts | [[works]] turtle, sim, replay, bench | new |
 | `aav_detector` | perception | RF-DETR (the default) or YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
 | `aav_radar_clusters` | perception | radar clustering (DBSCAN), with a box round each object (Rust) | [[works]] on the bench and in Gazebo | new: a rewrite of the 2025-26 `Nav_Radar` C++ node |
+| `aav_lidar` | perception | `lidar_scan`: the roof lidar's cloud as a 2D scan for Nav2 | [[works]] in Gazebo and the bench | new |
 | `aav_lane_finder` | perception | the lane lines in the camera's pictures, as `/perception/lane/geometry` (OpenCV) | [[works]] on the bench | new |
 | `aav_lane_geometry` | perception | lane keeping: a driver on `/drivers/ai/cmd_vel` | [[works]] on the bench, with `aav_lane_finder` | 2025-26 `Lane_Detection_ROS2` |
 | `aav_hud` | hud | the HUD's web server (Flask, Socket.IO), on our topics | [[works]] on the bench, with the app's e-stop button | 2025-26 `User-Interface` |
 | `aav_hud_raylib` | hud | the in-car screen in Rust: one raylib window that is the ROS node `hud` | [[works]] on a Mac: `--demo`, fed topics, bench mode. [[untested]] on a Pi and on the car | new |
-| `aav_spine_sim` | bench | the spine on a laptop: the firmware's logic on a model car (Rust) | [[works]] | new |
-| `aav_bench` | bench | pretend sensors: IMU, GPS, battery and camera | [[works]] | new |
 
 ## Sensors
 
 | Package | Reads | Publishes | Notes |
 |---|---|---|---|
-| `aav_sensors` | | | `sensors.launch.py imu:= gps:= radar:= battery:= gps_driver:=`; configs in `config/` |
+| `aav_sensors` | | | `sensors.launch.py imu:= gps:= lidar:= radar:= battery:= gps_driver:=`; configs in `config/` |
 | `aav_imu_yahboom`: `imu_node` | `/dev/aav/imu` | `/sensors/imu/data_raw`, `/sensors/imu/mag` | `/sensors/imu/mag` is in raw counts, not tesla, so it's unused |
 | stock `imu_filter_madgwick` | `/sensors/imu/data_raw` | `/sensors/imu/data` | magnetometer off |
 | stock `ublox_gps` (KumarRobotics' `ublox`) | `/dev/aav/gps` | `/sensors/gps/fix` | the default GPS driver, in Pixi too. Leaves the receiver's settings as they are. Tentative until Q18 |
 | stock `ublox_dgnss` | a u-blox F9P on USB | `/sensors/gps/fix` | `gps_driver:=ublox_dgnss`. Not in Pixi: the car only |
 | `ti_ros2_driver` | `/dev/aav/radar_cmd`, `/dev/aav/radar_data` | `/sensors/radar/points` | its configs are indoor demos |
 | `battery_monitor` | `/dev/aav/battery` | `/vehicle/battery` | |
-| stock `usb_cam` (`cameras.launch.py`) | `/dev/aav/camera_left`, `_right` | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info` | Linux only; the 2024-25 calibrations |
+| `aav_camera_stream`: `camera_stream_<camera>` | the camera Pi's RTSP stream (MediaMTX) | `/perception/detections` | the car's two front cameras; RF-DETR inside each node, so no raw pictures on the network ([camera pipeline](camera-pipeline.md)) |
+| stock `velodyne` driver | the roof VLP-16's UDP packets | `/sensors/lidar/points` | `lidar:=true` (on by default on the car); untested with the real lidar |
+| stock `usb_cam` (`cameras.launch.py`) | `/dev/aav/camera_left`, `_right` | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info` | a USB camera only; Linux only; the 2024-25 calibrations |
 | stock `nmea_navsat_driver` (`gps_nmea.launch.py`) | `/dev/aav/gps` | `/sensors/gps/fix` | `gps_driver:=nmea`: any NMEA receiver |
 
 ## Description and localization
@@ -98,7 +107,7 @@ Only one runs at a time.
 | Package | Plays the car with | Also |
 |---|---|---|
 | `aav_spine` (`aav_spine_bridge`: the node, in Rust) | CAN frames on `/can/tx` (through ros2_socketcan, Linux only) | `/vehicle/status`; the service `/spine/arm`; stops sending drive frames when ego goes quiet for 0.1 s |
-| `aav_legacy` | 13-byte UART frames to today's ESP32 (`/dev/ttyAMA0`) | `encoder_udp`: the wheel encoder's UDP packets into `/vehicle/odom` |
+| `aav_legacy` | UART frames to today's ESP32 (`/dev/ttyAMA0`): 13 bytes today, or version 2 (17 bytes) with the output mux's heartbeat | `encoder_udp`: the 2025-26 wheel encoder's UDP packets into `/vehicle/odom` (off on the car since 23 Oct: the wheels are on CAN) |
 | `aav_turtlesim` | `/turtle1/cmd_vel` | |
 | `aav_gazebo` | `/gazebo/cmd_vel` | turns Gazebo's IMU and GPS into `/sensors/imu/data_raw` and `/sensors/gps/fix` |
 | `aav_carla` | CARLA's Python client (TCP to the server) | the same sensor topics as Gazebo; untested ([CARLA](carla.md)) |
@@ -116,8 +125,8 @@ Only one runs at a time.
 
 | Package | Holds |
 |---|---|
-| `aav_interfaces` | `VehicleStatus` (mode, armed, e-stop, speed, steering, throttle, brake, fault bits) and the `ScriptedDrive` action |
-| `aav_bringup` | the profiles `turtle`, `sim`, `car`, `replay`, `bench`; the machine files `orin`, `motor_pi`, `laptop`, `all`, which pick the car's parts, perception too; `rviz/drive.rviz` |
+| `aav_interfaces` | 9 messages: `VehicleStatus` (mode, armed, e-stop, speed, steering, throttle, brake, fault bits), `ActuatorState`, `DataSource`, `SensorSource`, `SourceCheck`, `Heartbeat`, `RcSticks`, `SpineOutputs`, `WheelSpeeds`; 2 actions: `ScriptedDrive`, `GoTo` |
+| `aav_bringup` | the profiles `turtle`, `sim`, `bench`, `car`, `carla`, `replay`; `stack.launch.py target:=`; `foxglove.launch.py`; the machine files `orin`, `motor_pi`, `laptop`, `all`, which pick the car's parts, perception too; the RViz layouts |
 
 ## Firmware
 
@@ -126,7 +135,7 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 | Part | What it is | Status |
 |---|---|---|
 | `can/aav.dbc` | the CAN contract: six frames between the Orin, the spine and the two wheel nodes | v0.2.0 (the KEFC plan), merged 15 Oct |
-| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder | [[works]] 71 tests, and the bench |
+| `spine/crates/spine-core` | the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder | [[works]] 84 tests, and the bench |
 | `spine/crates/wheel-core` | the front wheel nodes' logic in Rust: pulses to speed, the WHEEL_SPEED frame | [[works]] 9 tests, and the bench; no board yet |
 | `spine/crates/aav-inputs` | debounced switches, an e-stop that trips at once, counting with a lockout | [[works]] 9 tests |
 | `spine/crates/jrk-g2` | the Pololu Jrk G2 (steering, brake) over I2C | [[works]] 14 tests, against mocks |
@@ -135,7 +144,7 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 | `spine/crates/ibus` | the FlySky RC receiver's protocol | [[works]] 24 tests |
 | `spine/crates/mcp2515` | the MCP2515 CAN controller over SPI, since a Pico 2 has no CAN | [[works]] 34 tests, against mocks |
 | `spine/crates/legacy-link` | the 2025-26 UART link: the Motor-Pi's 13-byte frames and the C++'s targets; version 2 with the Orin's heartbeat | [[works]] 72 tests, and against the C++ itself |
-| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, the `Board` trait, the `CommandLink` trait (CAN or UART) | [[works]] 57 tests, against mocks |
+| `spine/crates/spine-board` | the glue: spine-core's outputs to the devices, the devices to its inputs, the `Board` trait, the `CommandLink` trait (CAN or UART) | [[works]] 79 tests, against mocks |
 | `spine/boards/esp32-umod` | the spine on today's ESP32 control board (Embassy): the C++'s pins and devices; the Motor-Pi's UART or CAN | [[untested]] builds, never flashed |
 | `spine/boards/pico2` | the spine's board program for a Pico 2 (Embassy): it implements `Board`, with a 100 ms hardware watchdog | [[untested]] builds, never flashed. The car's chip is Q10-Q13 |
 | `spine/crates/wheel-encoder` | the spoke sensors (shared with the spine) and the wheel encoder's UDP packet | [[works]] 12 tests, with examples `aav_legacy` checks too |

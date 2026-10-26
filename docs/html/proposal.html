@@ -7,7 +7,7 @@
 <!-- Generated from docs/proposal.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The proposal: what we plan to do this year, and what&#x27;s already done</h1>
-<div class="meta">16 min read · 7 sections</div></header>
+<div class="meta">17 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -89,7 +89,10 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#1-the-system-in-one-picture">1. The system, in one picture</a><a href="#2-whats-done-by-part">2. What&#x27;s done, by part</a><a href="#3-whats-left-and-how-sure-we-are">3. What&#x27;s left, and how sure we are</a><a href="#4-the-order">4. The order</a><a href="#4b-the-build-plan-15-oct">4b. The build plan (15 Oct)</a><a href="#5-risks">5. Risks</a><a href="#6-ideas-weve-talked-about-not-yet-in-the-plan">6. Ideas we&#x27;ve talked about (not yet in the plan)</a></nav>
-<div class="lead"><p>Written 15 October 2026, for the team (Ben: "a file called proposal that lists
+<div class="lead"><blockquote>
+<p><strong>A snapshot from 15 October 2026.</strong> What's true now: <a href="status.html">Status</a> and <a href="plan.html">The plan</a>.</p>
+</blockquote>
+<p>Written 15 October 2026, for the team (Ben: "a file called proposal that lists
 everything we have talked about that we think we can get working"). This is the <strong>draft</strong>
 for the written proposal: every part of the car, what's built, what's left, and how sure
 we are. Details live in the pages linked from each row.</p>
@@ -165,7 +168,7 @@ we are. Details live in the pages linked from each row.</p>
 </tr>
 <tr>
 <td><strong>Nav2</strong></td>
-<td>paths, obstacles (radar, camera, lidar), collision monitor that stops the car; may reverse in the sim and on the bench, never on the car</td>
+<td>paths, obstacles (radar, camera, lidar), collision monitor that stops the car; may reverse (on the car since 22 Oct, only where the lidar sees behind it)</td>
 <td>🧪 sim: goals reached, stops 0.32-0.46 m before a box; with the lidar alone, 0.16-0.55 m before a post; backs up 5 m</td>
 <td></td>
 </tr>
@@ -189,13 +192,13 @@ we are. Details live in the pages linked from each row.</p>
 </tr>
 <tr>
 <td><strong>Perception</strong></td>
-<td>YOLO11 (stop signs and objects), lane keeping, radar clustering (Rust)</td>
+<td>RF-DETR Nano by default (YOLO11 with <code>detector:=yolo</code>; since 20 Oct), lane keeping, radar clustering (Rust)</td>
 <td>🧪 bench and sim</td>
 <td><a href="perception-and-hud-map.html">perception</a></td>
 </tr>
 <tr>
 <td><strong>Core ML and TensorRT</strong></td>
-<td>the same YOLO model exported for the Mac (Core ML) and the Jetson Orin (TensorRT, built on the Orin)</td>
+<td>the same model (RF-DETR Nano since 24 Oct) exported for the Mac (Core ML) and the Jetson Orin (TensorRT, built on the Orin)</td>
 <td>🧪 Mac done; Orin after its upgrade</td>
 <td><a href="perception.html">perception</a></td>
 </tr>

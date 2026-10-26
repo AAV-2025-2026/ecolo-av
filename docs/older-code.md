@@ -2,8 +2,9 @@
 
 The previous teams left 32 repos in two public GitHub orgs: `AAV-2025-2026` (the 2025-26
 team, 19 repos) and `Carleton-AAV-Capstone` (the 2024-25 team, 13 repos). This page says
-what each one is, what's already in `aav`, what's worth pulling in next, and what no
-repo provides. Surveyed on 10 October 2026, from the 14 clones in `~/Code/aav`.
+what each one is, what's already in this repo ("`aav`" below: ecolo-av since 25 Oct), what's worth
+pulling in next, and what no repo provides. Surveyed on 10 October 2026; since 24 Oct, 27 of
+the repos are in `archive/`, with their history.
 
 ### Earlier teams (found 15 October)
 
@@ -77,12 +78,12 @@ The five not cloned here:
 
 | Area | Missing | Where `aav` stands |
 |---|---|---|
-| Sensors | a GPS driver that anything runs; a lidar driver; camera streaming and the stop-sign detector (both only on the car's Orin); steering feedback (only 2024-25's `FinalRev`); a fine enough wheel speed; magnetometer calibration | GPS: the stock driver, model unknown (Q18). Lidar and cameras: next year |
+| Sensors | a GPS driver that anything runs; a lidar driver; camera streaming and the stop-sign detector (both only on the car's Orin); steering feedback (only 2024-25's `FinalRev`); a fine enough wheel speed; magnetometer calibration | GPS: the stock driver, model unknown (Q18). Lidar: the stock `velodyne` driver (20 Oct). Cameras: `aav_camera_stream` (24 Oct). Both untested on the car |
 | Localization | a URDF, TF, a working estimator | [[works]] the EKFs and `navsat_transform`, in sim |
 | Navigation | any planner whose output reached the motors; the HUD's route into GPS waypoints; lidar or radar costmap inputs | [[works]] Nav2 in Gazebo |
 | Drivers | anything beyond RC and the joystick | [[works]] scripted, keyboard; the joystick is [[untested]] |
 | Ego | a command layer with limits and a timeout; calibrations from radians to the actuators' counts | [[works]] ego; the calibrations are TODO |
-| The spine | any CAN code; a watchdog that brakes; feedback frames; the hardware e-stop in code | [[works]] the logic (`spine-core`); the board code is [[missing]] |
+| The spine | any CAN code; a watchdog that brakes; feedback frames; the hardware e-stop in code | [[works]] the logic (`spine-core`); the board programs (`boards/pico2`, `boards/esp32-umod`) are [[untested]]: never flashed |
 | HUD | real data: it only ever showed mock data | [[untested]] its port is still to do |
 | Simulation | a whole-car simulator | [[works]] Gazebo |
 

@@ -136,7 +136,7 @@ match a folder under <code>ros/</code> (the <code>/sensors/</code> topics come f
 <tr>
 <td><code>/drivers/</code></td>
 <td>one command per driver</td>
-<td>joystick, keyboard, scripted, Nav2, AI, replay</td>
+<td>joystick, RC, keyboard, tests, scripted, replay, go-to, Nav2, AI</td>
 </tr>
 <tr>
 <td><code>/control/</code></td>
@@ -150,8 +150,8 @@ match a folder under <code>ros/</code> (the <code>/sensors/</code> topics come f
 </tr>
 <tr>
 <td><code>/safety/</code></td>
-<td>e-stop, collision monitor</td>
-<td>the HUD button, collision_monitor</td>
+<td>e-stop, collision monitor, the sensor watchdog's lock, the output mux's state, ghost obstacles</td>
+<td>the HUD button, collision_monitor, sensor_watchdog, output_mux, ghost_obstacle</td>
 </tr>
 <tr>
 <td><code>/hud/</code></td>
@@ -186,6 +186,11 @@ actions, <code>/cmd_vel_nav</code> and the costmaps' topics.</p>
 <td><code>/drivers/joy/joy</code>, <code>/drivers/joy/cmd_vel</code></td>
 </tr>
 <tr>
+<td>RC</td>
+<td><code>rc_driver</code> (<code>aav_rc</code>)</td>
+<td><code>/drivers/rc/cmd_vel</code></td>
+</tr>
+<tr>
 <td>keyboard</td>
 <td><code>tools/keyboard.sh</code> runs <code>teleop_twist_keyboard</code> in the namespace <code>/drivers/keyboard</code></td>
 <td><code>/drivers/keyboard/cmd_vel</code></td>
@@ -199,6 +204,11 @@ actions, <code>/cmd_vel_nav</code> and the costmaps' topics.</p>
 <td>scripted</td>
 <td><code>scripted_driver</code> publishes <code>drivers/scripted/cmd_vel</code></td>
 <td><code>/drivers/scripted/cmd_vel</code></td>
+</tr>
+<tr>
+<td>go-to</td>
+<td><code>goto_driver</code> (<code>aav_goto</code>)</td>
+<td><code>/drivers/goto/cmd_vel</code></td>
 </tr>
 <tr>
 <td>Nav2</td>

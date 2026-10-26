@@ -7,7 +7,7 @@
 <!-- Generated from docs/faq.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Questions people ask</h1>
-<div class="meta">10 min read · 6 sections</div></header>
+<div class="meta">11 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -158,7 +158,7 @@ boards that move the actuators.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Details: <a href="status.html">Status</a>, and <code>sim-and-car.md</code> at the top of the repo.</p>
+<p>Details: <a href="status.html">Status</a>, and <a href="sim-and-car.html">Sim and the car</a>.</p>
 <h3 id="why-not-run-it-on-the-car-today">Why not run it on the car today?</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -173,8 +173,8 @@ boards that move the actuators.</p>
 <td>the two can't share one network (Q24)</td>
 </tr>
 <tr>
-<td>Nobody has logged in to its computers yet</td>
-<td>the audit on Friday 16 Oct finds out what runs where</td>
+<td>Our software isn't installed there yet</td>
+<td>the audits (16 and 21 Oct) found what runs where: everything on Humble, ROS domain 0</td>
 </tr>
 <tr>
 <td>The drive path is the 2025-26 one</td>
@@ -279,26 +279,51 @@ The HUD's button only ever sets it: clearing is always a person's deliberate act
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th>Joystick</th>
-<th>Keyboard</th>
-<th>Scripted</th>
-<th>Replay</th>
-<th>Nav2</th>
-<th>AI</th>
+<th>Driver</th>
+<th>Priority</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>Joystick</td>
 <td>100</td>
+</tr>
+<tr>
+<td>RC transmitter</td>
+<td>95</td>
+</tr>
+<tr>
+<td>Keyboard</td>
 <td>90</td>
+</tr>
+<tr>
+<td>Actuator tests</td>
+<td>60</td>
+</tr>
+<tr>
+<td>Scripted</td>
 <td>50</td>
+</tr>
+<tr>
+<td>Replay</td>
 <td>40</td>
+</tr>
+<tr>
+<td>Go-to (one GPS point)</td>
+<td>25</td>
+</tr>
+<tr>
+<td>Nav2</td>
 <td>20</td>
+</tr>
+<tr>
+<td>AI</td>
 <td>10</td>
 </tr>
 </tbody>
 </table></div>
-<p>A stop sign (priority 30) holds Nav2 and the AI, never a person. The e-stop (255) holds
+<p>A lock holds every driver below its priority. A stop sign (30) and the sensor watchdog
+(30) hold go-to, Nav2 and the AI, never a person or a test. The e-stop (255) holds
 everyone. The table lives in <code>ros/command_mux/aav_mux/config/twist_mux.yaml</code>.</p>
 <h3 id="what-happens-when-i-let-go-of-the-joystick">What happens when I let go of the joystick?</h3>
 <p>Nothing is sent for 0.5 s, then twist_mux hands control to the next driver that is
@@ -377,9 +402,10 @@ one too: <code>pixi run sim world:=road</code> (<a href="simulation.html#the-lid
 <p>GPS meets the map at one point, the datum: today a placeholder near Carleton. See
 <code>maps-and-position.md</code> and <a href="naming.html#why-the-two-ekfs-dont-talk">Topic areas</a>.</p>
 <h3 id="does-nav2-follow-the-roads">Does Nav2 follow the roads?</h3>
-<p>Not yet. OpenStreetMap is used only in the HUD, to search places and plan a road route.
-Nav2 gets that route as GPS points, and doesn't know where the road is between them.
-Staying in the lane is lane keeping's job.</p>
+<p>Not by itself. <code>street_router</code> (<code>aav_routes</code>) asks Valhalla, an offline router on
+OpenStreetMap, for the way along the streets, and gives Nav2 that route as GPS points.
+Nav2 doesn't know where the road is between them. Staying in the lane is lane keeping's
+job. See <a href="routes.html">Street routes</a>.</p>
 </section>
 <section class="card"><h2 id="working-on-it">Working on it</h2>
 <h3 id="do-i-need-the-car-to-work-on-the-code">Do I need the car to work on the code?</h3>
@@ -440,7 +466,8 @@ Staying in the lane is lane keeping's job.</p>
 </tr>
 </tbody>
 </table></div>
-<p>CI runs <code>pixi run test</code> on every push.</p>
+<p>CI runs <code>pixi run test</code> on every pull request, in the merge queue, and on each push to
+<code>main</code>.</p>
 <h3 id="where-is-the-list-of-every-topic">Where is the list of every topic?</h3>
 <p><code>docs/interfaces.yaml</code> is the contract: every topic, its type, who publishes and who
 reads. It is shown as <a href="interfaces.html">Topics</a>. Change it first, then the code.</p>

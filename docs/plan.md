@@ -38,7 +38,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | Gate | Date | Passes when | Today |
 |---|---|---|---|
 | 1. Know the car | 30 Oct | audit written up; every dimension measured, with its method | 🔧 audits done 16 and 21 Oct ([car audit](history/audit-2026-10-21-car.md)); **nothing measured yet** ([the sheet](measure-the-car.md)) |
-| 2. Safe to move | 27 Nov | the timeout brakes within 100 ms and latches; both e-stops stop the car | 🔧 the Rust spine has the 100 ms timeout (321 tests); in QEMU (24 Oct) it brakes 111-120 ms after the last frame and latches ([emulator](esp32-bench.md#before-the-board-the-emulator)): 100 ms of silence, then the next 10 ms tick. Since 24 Oct the heartbeat comes from the Orin (TODO 50): it brakes 111-120 ms after the Orin's counter stops, though the Motor Pi still sends ([the heartbeat](rust-firmware.md#the-heartbeat-version-2-of-the-serial-frame-24-oct)). Never flashed; today's ESP32 firmware has no timeout |
+| 2. Safe to move | 27 Nov | the timeout brakes within 100 ms and latches; both e-stops stop the car | 🔧 the Rust spine has the 100 ms timeout (spine-core: 84 tests); in QEMU (24 Oct) it brakes 111-120 ms after the last frame and latches ([emulator](esp32-bench.md#before-the-board-the-emulator)): 100 ms of silence, then the next 10 ms tick. Since 24 Oct the heartbeat comes from the Orin (TODO 50): it brakes 111-120 ms after the Orin's counter stops, though the Motor Pi still sends ([the heartbeat](rust-firmware.md#the-heartbeat-version-2-of-the-serial-frame-24-oct)). Never flashed; today's ESP32 firmware has no timeout |
 | 3. Closed loop | 18 Dec | steering angle, wheel speed, brake position read back and tracked | ⬜ the sensors aren't fitted; the CAN messages and the logic exist |
 | 4. Drives itself | 26 Feb | GPS A to B, within 1 m, five runs, no takeover | 🧪 in Gazebo: every stop within 0.4 m of B |
 | 5. Handover | 2 Apr | scorecard; every layer documented; simulation in 30 minutes | 🔧 docs and onboarding exist; the scorecard doesn't |
@@ -47,7 +47,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 
 | Area | Done | Where |
 |---|---|---|
-| One repo, one environment | ROS 2 Jazzy through Pixi on Linux and Macs, no admin rights; CI on every push, a Mac nightly | `pixi.toml`, `.github/workflows` |
+| One repo, one environment | ROS 2 Jazzy through Pixi on Linux and Macs, no admin rights; CI on Linux (x86_64 and 64-bit ARM) on every push, a Mac nightly | `pixi.toml`, `.github/workflows` |
 | The contract | every topic and node in one file, checked against the running graph | `docs/interfaces.yaml`, `pixi run check` |
 | Old code | every 2025-26 and 2024-25 repo surveyed; kept, ported or retired, with reasons | `docs/older-code.md`, each `PROVENANCE.md` |
 | Rust | the spine, the wheel encoder, the status display, the IMU driver, the radar clustering | `firmware/spine`, `ros/sources`, `ros/perception` |
@@ -55,12 +55,12 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 | Simulation | TurtleSim; Gazebo with the whole car (cameras, radar, lidar, GPS, IMU, wheel speed, actuator model); the bench with the real CAN messages | `pixi run turtle`, `sim`, `bench` |
 | Position | two EKFs and navsat_transform: within 0.15 m of Gazebo's truth; replay within 0.03 m | `ros/localization` |
 | Drivers | joystick, keyboard, scripted, replay, GPS A to B, Nav2, plain English (local model), street routes | `ros/drivers` |
-| Nav2 | Smac Hybrid-A*, Regulated Pure Pursuit **or MPPI**, collision monitor, ghost obstacles | `ros/drivers/aav_navigation` |
-| Safety | a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels only sometimes since 23 Oct); the collision monitor; the spine's timeout (not flashed) | `ros/safety`, `firmware/spine` |
+| Nav2 | Smac Hybrid-A*, **MPPI** (the default) or Regulated Pure Pursuit, collision monitor, ghost obstacles | `ros/drivers/aav_navigation` |
+| Safety | a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels 25 of 25 since 24 Oct); the collision monitor; the spine's timeout (not flashed) | `ros/safety`, `firmware/spine` |
 | Screens | the raylib HUD and the map window, full screen at boot (ready to install) | `ros/hud` |
-| Perception | YOLO (Core ML, TensorRT export), a measured comparison with RF-DETR and YOLO26, radar clustering, a lidar layer | `ros/perception`, [newer models](model-comparison.md) |
+| Perception | RF-DETR Nano by default, YOLO with `detector:=yolo` (Core ML on a Mac; a TensorRT engine for the Orin); the camera streams (`aav_camera_stream`); radar clustering; a lidar layer | `ros/perception`, [newer models](model-comparison.md) |
 | The car | two read-only audits: every computer, port and connection; irreplaceable files copied off | `docs/history/` |
-| Docs | 55 pages for a dyslexic reader, as HTML and PDF | `docs/` |
+| Docs | 77 pages for a dyslexic reader, as HTML and PDF | `docs/` |
 
 ## The to-do list
 
@@ -71,7 +71,7 @@ the next concrete step.
 
 | # | Task | Due | Status | % | Next |
 |---|---|---|---|---:|---|
-| T1.1 | Repository, contract and CI | 6 Nov | ✅ | 90 | time a new laptop through [first day](first-day.md): under 30 min? |
+| T1.1 | Repository, contract and CI | 6 Nov | ✅ | 90 | time a new laptop through [Getting started](getting-started.md) (Arsh, 24 Oct): under 30 min? |
 | T1.2 | Bring in the earlier teams' code | 20 Nov | ✅ | 100 | |
 | T1.3 | Orin backup and upgrade to JetPack 7.2.1 | 27 Nov | 🔧 | 10 | full disk image, then test the restore (irreplaceable files already copied off) |
 | T1.4 | Raspberry Pis to Ubuntu 24.04 | 27 Nov | 🔧 | 10 | one imaging script; the car kit is ready (`pixi run car-kit`) |
@@ -90,7 +90,7 @@ the next concrete step.
 | T2.3 | Gazebo car | 4 Dec | ✅ | 100 | checked 22 Oct: a 10° steer gives 9.05-9.14 m for the predicted 8.90 m (+2-3%); 20° and full lock also within 3% ([simulation](simulation.md#what-gazebo-simulates)) |
 | T2.4 | Noise matched to the real sensors | Jan | 🔧 | 20 | needs recordings from the car |
 | T2.5 | Replay driver and comparison | 18 Dec | 🔧 | 60 | the replay driver exists; write the drive-comparison script (`tools/drive_metrics.py` is a start) |
-| T2.6 | Integration tests in CI, nightly | mid-Jan | 🔧 | 70 | the nightly job `sim` runs `sim-check --obstacle` headless (22 Oct), on trial: watch its first nights, then let a failure count |
+| T2.6 | Integration tests in CI, nightly | mid-Jan | 🔧 | 70 | the nightly job `sim` runs `sim-check --obstacle` headless (22 Oct), on trial: passed 21, 22 and 24 Oct; a Gazebo crash at start is now retried once (TODO 26). Once it passes a few nights in a row, let a failure count |
 | T2.7 | Sim-versus-real report | Gates 3, 4 | ⬜ | 0 | needs the car |
 | T2.8 | Ghost obstacles | 5 Feb | 🧪 | 80 | on stands, then the lot |
 | T2.9 | CARLA target (stretch) | Mar | 🎯 | 40 | adapter built; needs the NVIDIA machine |
@@ -130,7 +130,7 @@ the next concrete step.
 | T5.3 | Speed profile: acceleration, jerk, stop at a distance | 27 Nov | 🔧 | 75 | jerk limit done 22 Oct (`max_jerk` 2.0 m/s³, speeding up only; `sim-check --obstacle` passes). Left: move the stop-at-distance curve from the A-to-B driver into ego, or agree it stays (D4) |
 | T5.4 | Turning limits: steering rate, sideways acceleration | 11 Dec | 🧪 | 90 | done 22 Oct with the weight model ([car numbers](car_measurements.md#weight-and-balance)); the Gazebo check "a tight turn slows to the computed speed" |
 | T5.5 | Measured parameters | 18 Dec | ⬜ | 0 | after T3.8 |
-| T5.6 | Joystick drives | Dec-Jan | 🔧 | 30 | done in Gazebo; on stands after Gate 2 |
+| T5.6 | Joystick drives | Dec-Jan | 🔧 | 20 | the code exists (`aav_teleop`), untested ([status](status.md)): the turtle and Gazebo first; on stands after Gate 2 |
 | T5.7 | Model validation | 12 Feb | ⬜ | 0 | needs recordings |
 | T5.8 | Rust port of ego | 19 Mar | ⬜ | 0 | |
 
@@ -140,8 +140,8 @@ the next concrete step.
 |---|---|---|---|---:|---|
 | T6.1 | Sensor positions | 13 Nov | 🔧 | 20 | the sheet, S1-S8 |
 | T6.2 | Time sync (chrony) | 27 Nov | 🔧 | 10 | |
-| T6.3 | Filters in Gazebo | 11 Dec | 🧪 | 90 | 0.15 m done; the heading jumps at walking pace much smaller (22 Oct: yaw noise, M9); check against the real IMU's gyro bias |
-| T6.4 | GPS on UBX with RTK | 11 Dec | 🔧 | 30 | `ublox_dgnss` is in the environment; the new receiver (KEFC) |
+| T6.3 | Filters in Gazebo | 11 Dec | 🧪 | 90 | 0.15 m done; the heading jumps at walking pace much smaller (22 Oct: yaw noise, M9), and since 25 Oct a heading from the GPS velocity (`aav_gps_heading`: median 1.6-2.1°); check against the real IMU's gyro bias |
+| T6.4 | GPS on UBX with RTK | 11 Dec | 🔧 | 30 | the stock `ublox_gps` driver is in the environment (`ublox_dgnss` is apt-only, the car only); the new receiver (KEFC) |
 | T6.5 | IMU calibration (Allan variance) | 18 Dec | ⬜ | 0 | |
 | T6.6 | Camera intrinsics | 22 Jan | ⬜ | 0 | |
 | T6.7 | Lidar-camera extrinsics | 12 Feb | ⬜ | 0 | |
@@ -152,7 +152,7 @@ the next concrete step.
 
 | # | Task | Due | Status | % | Next |
 |---|---|---|---|---:|---|
-| T7.1 | Joystick and remote | 13 Nov | 🧪 | 90 | |
+| T7.1 | Joystick and remote | 13 Nov | 🔧 | 60 | built, untested ([status](status.md)): drive the turtle with the joystick. RC via ROS (`aav_rc`) works in QEMU, off until H9 and H10 |
 | T7.2 | Scripted and replay drivers | 4 Dec | 🧪 | 80 | the "same path twice within 0.03 m" check |
 | T7.3 | GPS A to B in Gazebo | 18 Dec | 🧪 | 100 | |
 | T7.4 | Hand-drawn costmap of the lot | 11 Dec | 🔧 | 20 | choose the lot; `tools/make_map.py` draws it |
@@ -211,7 +211,7 @@ too". It shares the car's model with ego, as the proposal says (section 8.3).
 | M6 | Its CPU on the Orin | ⬜ | with the load report (T1.7) |
 | M7 | MPPI on the car | ⬜ | after Nav2 passes on the car (T7.8); MPPI is the default now |
 | M8 | **The corner problem** (both controllers) | ✅ 22 Oct, Gazebo | the planner's costmap inflates 3.0 m gently, and it plans turns 1.25 x wider than full lock: both kept clear of the building. Left: after a wide turn the car can stop facing a wall, and forward only it can't get out (TODO 18) |
-| M9 | **The heading jumps** at walking pace (both) | 🧪 | measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. A heading source (the F9R's fused heading, or two antennas) with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, [why](learn-gps.md#mount-the-antenna-over-the-rear-axle)): on the car it is over the axle already (Ben, 23 Oct). **Much better since 22 Oct, 06:00:** the global EKF's yaw noise 0.06 → 0.01; the lot tour's worst heading per leg 7-16° (was 14-76°) |
+| M9 | **The heading jumps** at walking pace (both) | 🧪 | measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. **A heading source since 25 Oct:** the GPS receiver's velocity (`aav_gps_heading`, TODO 13): median 1.6-2.1° at walking pace. RTK or two antennas would do better: the hardware lead decides, with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, [why](learn-gps.md#mount-the-antenna-over-the-rear-axle)): on the car it is over the axle already (Ben, 23 Oct). **Much better since 22 Oct, 06:00:** the global EKF's yaw noise 0.06 → 0.01; the lot tour's worst heading per leg 7-16° (was 14-76°) |
 
 ## Where the proposal and the repo disagree
 
@@ -220,7 +220,7 @@ For the team to decide; then change one of them.
 | # | Proposal | Repo today | Suggest |
 |---|---|---|---|
 | D1 | Topic names such as `/control/cmd`, `/vehicle/ackermann_cmd`, `/odometry/local` (section 3.3) | `/control/cmd_vel`, `/ego/actuator_cmd`, `/localization/odom/local` ([naming](naming.md)) | change the proposal's table: the repo's names are built and tested |
-| D2 | Hall-sensor wheel nodes on Arduino Unos, in Arduino C++ | the rule "Rust for all firmware" (Ben, 10 Oct); the wheel logic in Rust (`wheel-core`) and the Pico 2 wheel encoder | ✅ **decided 23 Oct** (Ben, for the hardware side): an Arduino reads the sensors and sends CAN frames; the Orin decodes them and publishes. The proposal stands |
+| D2 | Hall-sensor wheel nodes on Arduino Unos, in Arduino C++ | the rule "Rust for all firmware" (Ben, 10 Oct); the wheel logic in Rust (`wheel-core`) and the Pico 2 wheel encoder | ✅ **decided 23 Oct** by the hardware lead (passed on by Ben): an Arduino reads the sensors and sends CAN frames; the Orin decodes them and publishes. The proposal stands |
 | D3 | A sensor mux and an output mux as nodes; `target:=`, `source:=` | built 23 Oct as nodes (`aav_io_mux`). The sensor mux **checks** where each sensor comes from instead of republishing it (no doubled camera or lidar traffic); the launch picks the source | agree "check, not copy" ([why](sources-and-targets.md#why-check-not-copy)), and change the proposal's wording |
 | D4 | The stop-at-distance planner inside ego (T5.3) | inside the A-to-B driver (`aav_goto`) | either; ego is where the proposal promises it |
 | D5 | MPPI a stretch goal in March (T7.9) | switchable and compared now | put MPPI in the committed plan, in Gazebo; on the car as the stretch |

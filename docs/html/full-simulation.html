@@ -7,7 +7,7 @@
 <!-- Generated from docs/full-simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The full simulation: the whole car in Gazebo</h1>
-<div class="meta">19 min read · 9 sections</div></header>
+<div class="meta">16 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -89,7 +89,7 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#status-15-oct">Status (15 Oct)</a><a href="#1-the-full-pipeline-in-one-picture">1. The full pipeline, in one picture</a><a href="#2-what-we-have-and-whats-missing">2. What we have, and what&#x27;s missing</a><a href="#3-two-ways-to-model-the-actuators">3. Two ways to model the actuators</a><a href="#4-how-the-measurements-feed-the-simulation">4. How the measurements feed the simulation</a><a href="#5-the-order-to-build-it">5. The order to build it</a><a href="#the-spine-in-the-loop-step-4">The spine in the loop (step 4)</a><a href="#sensor-failures-before-and-after">Sensor failures: before and after</a><a href="#faster-drives-in-gazebo-15-oct">Faster drives in Gazebo (15 Oct)</a></nav>
-<div class="lead"><p>Written 15 October 2026. The goal (Ben, 15 Oct): "fully simulate the car inside
+<div class="lead"><p>Written 15 October 2026, checked 25 October. The goal (Ben, 15 Oct): "fully simulate the car inside
 Gazebo with all the sensors, and build the full pipeline." This page says what we have,
 what's missing, and how the car's measurements feed in.</p>
 <blockquote>
@@ -132,12 +132,12 @@ what's missing, and how the car's measurements feed in.</p>
 <tr>
 <td>5</td>
 <td>The lidar into Nav2</td>
-<td>✅ 15 Oct: <code>lidar_scan</code> (<code>aav_lidar</code>) flattens the roof lidar into a 2D scan; the local costmap's <code>lidar_layer</code> and <code>collision_monitor</code> read it. <code>lidar:=true</code> in Gazebo, <strong>off on the car</strong> (no lidar driver yet). With the radar off, the lidar alone stopped the car 0.16-0.55 m before a post</td>
+<td>✅ 15 Oct: <code>lidar_scan</code> (<code>aav_lidar</code>) flattens the roof lidar into a 2D scan; the local costmap's <code>lidar_layer</code> and <code>collision_monitor</code> read it. <code>lidar:=true</code> in Gazebo, and on the car (the stock <code>velodyne</code> driver, since 20 Oct). With the radar off, the lidar alone stopped the car 0.16-0.55 m before a post</td>
 </tr>
 <tr>
 <td>6</td>
 <td>Sensor failures on purpose</td>
-<td>✅ 15 Oct: <code>pixi run sim-fault &lt;sensor&gt; &lt;fault&gt;</code>, and the sensor watchdog (<code>aav_safety</code>): it stops Nav2 and the AI slot, and says why on the HUD and the map window. All 13 faults stop the car (<a href="#sensor-failures-before-and-after">the table</a>), the watchdog's own death and frozen wheels too</td>
+<td>✅ 15 Oct: <code>pixi run sim-fault &lt;sensor&gt; &lt;fault&gt;</code>, and the sensor watchdog (<code>aav_safety</code>): it stops Nav2 and the AI slot, and says why on the HUD and the map window. All 13 faults stopped the car on 15 Oct, the watchdog's own death and frozen wheels too; on 24 Oct, with the HUD's heartbeat added, all 25 checks passed three times (<a href="simulation.html#what-the-car-does-before-and-after">the table</a>)</td>
 </tr>
 <tr>
 <td>7</td>
@@ -259,7 +259,7 @@ what's missing, and how the car's measurements feed in.</p>
 <tr>
 <td>IMU, GPS, wheel speed</td>
 <td>✅ with noise</td>
-<td>noise levels from the real devices (Friday)</td>
+<td>noise levels from the real devices (the car day)</td>
 </tr>
 <tr>
 <td>3 cameras</td>
@@ -274,7 +274,7 @@ what's missing, and how the car's measurements feed in.</p>
 <tr>
 <td>Lidar (roof)</td>
 <td>✅ a generic 16-beam one, on by default (15 Oct); ✅ Nav2's costmap and the collision monitor read it (step 5)</td>
-<td>its real model (probably a Velodyne), and a driver for the car</td>
+<td>the VLP-16's exact beam pattern; the car's driver is untested with the real lidar</td>
 </tr>
 <tr>
 <td><strong>Throttle and brake</strong></td>
@@ -320,8 +320,8 @@ what's missing, and how the car's measurements feed in.</p>
 </table></div>
 <div class="admonition note">
 <p class="admonition-title">Why the weight hardly matters in Gazebo today</p>
-<p>Gazebo's Ackermann system <strong>sets the wheels' speed</strong> and limits how fast it changes
-(<code>aav.gazebo.xacro</code>: 1.5 m/s² up, 3.0 down). A heavier car gets the same numbers. For the
+<p>Gazebo's Ackermann system <strong>sets the wheels' speed</strong> (<code>aav.gazebo.xacro</code> allows
+±10 m/s², so the actuator model sets the real limits). A heavier car gets the same numbers. For the
 weight to matter, the model must push with a <strong>force</strong> (from the motor) against the
 <strong>mass</strong>. For driving well, what matters most is the <strong>measured g</strong>: how fast the real
 car speeds up and stops. The tests give that directly.</p>
@@ -417,7 +417,7 @@ B only if A isn't close enough to the real car.</p>
 </tr>
 </tbody>
 </table></div>
-<pre class="highlight"><code class="language-text"> Friday: measure  →  vehicle.yaml  →  Gazebo behaves like the car  →  test in Gazebo  →  trust it on the car</code></pre>
+<pre class="highlight"><code class="language-text"> measure the car  →  vehicle.yaml  →  Gazebo behaves like the car  →  test in Gazebo  →  trust it on the car</code></pre>
 </section>
 <section class="card"><h2 id="5-the-order-to-build-it">5. The order to build it</h2>
 <div class="table-wrap"><table>
@@ -475,7 +475,7 @@ B only if A isn't close enough to the real car.</p>
 <tr>
 <td>8</td>
 <td>Fill in the real numbers: measurements and tests (<code>pixi run actuator-test</code>, on stands then in the lot)</td>
-<td><strong>yes</strong>: Friday, then the lot</td>
+<td><strong>yes</strong>: on stands, then the lot</td>
 <td>-</td>
 </tr>
 <tr>
@@ -592,89 +592,10 @@ pixi run sim-check --spine        # proves it: the normal checks, then the spine
 </ul>
 </section>
 <section class="card"><h2 id="sensor-failures-before-and-after">Sensor failures: before and after</h2>
-<p>Each fault while Nav2 drives at about 1 m/s, Gazebo's road world, 15 Oct.
-Before: <code>pixi run sim-check --faults --no-watchdog</code>; after: <code>pixi run sim-check --faults</code>.
-How to make one, and what the watchdog watches: <a href="simulation.html#sensor-failures-on-purpose">docs/simulation.md</a>.</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Fault</th>
-<th>Before: no watchdog</th>
-<th>After: the watchdog</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>GPS lost (<code>gps stop</code>)</td>
-<td>❌ drove on: 10.6 m in 10 s, nothing said. The global EKF carried on from the wheels and IMU (1.1 m out)</td>
-<td>✅ stood still 3.8 s after it, 2.8 m on: "gps STALE"</td>
-</tr>
-<tr>
-<td>GPS NaN (<code>gps nan</code>)</td>
-<td>❌ drove on 10.0 m, nothing said (navsat_transform drops NaN fixes: the same as lost)</td>
-<td>✅ 4.1 s, 2.8 m: "gps STALE (no fix)"</td>
-</tr>
-<tr>
-<td>GPS jumps 20 m (<code>gps jump</code>)</td>
-<td>⚠️ stood still 2.2 s after it, but by accident (Nav2's plan jumped with the map position, 19.3 m out); nothing said</td>
-<td>✅ 1.7 s, 0.7 m: "gps JUMP 20.0 m in 0.20 s", held until a person clears it</td>
-</tr>
-<tr>
-<td>IMU stopped (<code>imu stop</code>)</td>
-<td>❌ drove on 7.2 m, nothing said</td>
-<td>✅ 2.2 s, 1.1 m: "imu STALE"</td>
-</tr>
-<tr>
-<td>IMU frozen (<code>imu freeze</code>)</td>
-<td>❌ drove on 8.4 m, nothing said</td>
-<td>✅ 2.8 s, 1.7 m: "imu FROZEN"</td>
-</tr>
-<tr>
-<td>IMU NaN (<code>imu nan</code>)</td>
-<td>❌ drove on 7.7 m; the global EKF stayed 0.3 m from the truth</td>
-<td>✅ 1.8 s, 1.0 m: "imu NAN"</td>
-</tr>
-<tr>
-<td>Wheels stopped (<code>odom stop</code>)</td>
-<td>❌ drove on 9.0 m, nothing said</td>
-<td>✅ 1.9 s, 0.9 m: "odom STALE"</td>
-</tr>
-<tr>
-<td>Wheels NaN (<code>odom nan</code>)</td>
-<td>❌ drove on 6.3 m, nothing said</td>
-<td>✅ 1.7 s, 0.8 m: "odom NAN"</td>
-</tr>
-<tr>
-<td>Camera frozen (<code>camera freeze</code>)</td>
-<td>❌ drove on 7.6 m; on the HUD a frozen picture looks live</td>
-<td>✅ 2.9 s, 4.5 m: "camera FROZEN"</td>
-</tr>
-<tr>
-<td>Radar stopped (<code>radar stop</code>)</td>
-<td>✅ stood still 2.5 s after it: <code>collision_monitor</code>'s "invalid source"</td>
-<td>✅ the same, 2.5 s; the watchdog warns too</td>
-</tr>
-<tr>
-<td>Wheels frozen (<code>odom freeze</code>, later 15 Oct)</td>
-<td>❌ drove on 10.9 m in 15 s, nothing said</td>
-<td>✅ 3.4-4.8 s after the wheels went wrong (Nav2 steered), 2.2-3.9 m: "odom DISAGREE (the wheels and the IMU disagree)", held until a person clears it</td>
-</tr>
-<tr>
-<td>Watchdog hung (<code>watchdog hang</code>, later 15 Oct)</td>
-<td>❌ by design: the old lock never expired (not run)</td>
-<td>✅ 2.7 s, 1.4-1.5 m: twist_mux's 1 s lock timeout</td>
-</tr>
-<tr>
-<td>Watchdog killed (<code>watchdog kill</code>, later 15 Oct)</td>
-<td>❌ the same (not run)</td>
-<td>✅ 2.6-2.8 s, 1.2-1.5 m, then held 10 s more with Nav2 still asking</td>
-</tr>
-</tbody>
-</table></div>
-<p>"Nothing said": no warning in the log, nothing on the HUD (only the HUD's GPS line
-turned STALE for a lost GPS). The after column's first ten rows are the last of three
-runs: the first passed too; the second caught a false GPS jump (two fixes delivered at
-once), fixed by timing jumps with the fixes' stamps, plus 5 m for their noise.</p>
+<p>Each fault while Nav2 drives, with the watchdog and without it: the whole table, with
+the 24 Oct results, is in <a href="simulation.html#what-the-car-does-before-and-after">Simulation</a>.
+How to make a fault, and what the watchdog watches:
+<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>.</p>
 <p><strong>Later on 15 Oct</strong> (<a href="simulation.html#if-the-watchdog-itself-dies">docs/simulation.md</a>):</p>
 <div class="table-wrap"><table>
 <thead>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-car.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The car, box by box</h1>
-<div class="meta">9 min read · 11 sections</div></header>
+<div class="meta">10 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -100,8 +100,10 @@ talks on. Today, and after the KEFC changes.</p>
 <div class="admonition warning">
 <p class="admonition-title">Mostly from photos</p>
 <p>Much of this page comes from Ben's photos of 14 October (<a href="car-photos.html">Car photos</a>).
-A box marked <em>photos</em> is "from the photos, not yet checked". The audit on Friday
-16 October checks it.</p>
+A box marked <em>photos</em> is "from the photos, not yet checked". The audits of 16 and
+21 October checked some (<a href="../history/audit-2026-10-16-car.md">16 Oct</a>,
+<a href="../history/audit-2026-10-21-car.md">21 Oct</a>); what's still open is in
+<a href="audit-questions.html">Audit questions</a>.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">None of our code has run on the car yet</p>
@@ -129,7 +131,7 @@ the turtle, Gazebo and <a href="bench.html">bench mode</a> only.</p>
 </tr>
 <tr>
 <td>CAN</td>
-<td>small, urgent control messages: steer, brake, speed</td>
+<td>small, urgent messages: today the wheel speeds; with the CAN spine, steer, brake, speed too</td>
 </tr>
 <tr>
 <td>Moving parts</td>
@@ -163,7 +165,7 @@ the turtle, Gazebo and <a href="bench.html">bench mode</a> only.</p>
 <td><strong>CAN</strong></td>
 <td>two twisted wires, built for cars</td>
 <td>short messages that must arrive on time</td>
-<td>new: the Orin, the control board, two wheel nodes</td>
+<td>new: the Orin and the wheel sensors' Arduino; the control board too with the CAN spine</td>
 </tr>
 <tr>
 <td><strong>USB</strong></td>
@@ -215,18 +217,18 @@ the turtle, Gazebo and <a href="bench.html">bench mode</a> only.</p>
 <td>kept until CAN is proven, then retired</td>
 </tr>
 <tr>
-<td>Cam1-Pi, Cam2-Pi (Pi 5)</td>
-<td>the two front cameras, at the windscreen, each on a ribbon cable (<em>photos</em>)</td>
+<td>Cam1-Pi (Pi 5)</td>
+<td>both front cameras, at the windscreen, on its two ribbon ports; MediaMTX streams them to the Orin (<a href="camera-pipeline.html">Camera pipeline</a>)</td>
 <td>Ethernet</td>
 <td>there</td>
 <td>the same</td>
 </tr>
 <tr>
-<td>Cam3-Pi (Pi 5)</td>
-<td>the rear camera (<em>photos</em>: a camera is fitted at the back; is it wired?)</td>
+<td>QNX-Pi's camera</td>
+<td>the rear camera</td>
 <td>Ethernet</td>
-<td>maybe</td>
-<td><strong>new</strong></td>
+<td>doesn't work today: no rear camera for now</td>
+<td><strong>new</strong> (Cam3)</td>
 </tr>
 <tr>
 <td>RTK-Pi (Pi, on the ceiling panel)</td>
@@ -312,21 +314,21 @@ the turtle, Gazebo and <a href="bench.html">bench mode</a> only.</p>
 <td>the microcontroller on that board</td>
 <td></td>
 <td>2025-26 C++ firmware, <strong>no command timeout</strong></td>
-<td>new Rust firmware: brake after 100 ms of silence, watchdog, speed loop (not written yet for the ESP32)</td>
+<td>Rust firmware (<code>esp32-umod</code>): brakes after 100 ms of silence, on the UART link or CAN. Built and proven in QEMU, not yet flashed</td>
 </tr>
 <tr>
 <td>Wheel encoder (Pico 2 + W5500)</td>
 <td>counts wheel spokes, sends them over UDP to the Motor-Pi</td>
 <td>Ethernet</td>
-<td>runs today</td>
-<td>replaced by the wheel nodes</td>
+<td>the 2025-26 one: off in our machine files since 23 Oct</td>
+<td>replaced</td>
 </tr>
 <tr>
-<td>Wheel node L, R (ESP32-CAN-X2)</td>
-<td>count Hall-sensor pulses from the front brake-rotor holes; wheel speed on CAN</td>
-<td>CAN (0x200 L, 0x201 R, 100 Hz)</td>
-<td>not there</td>
-<td><strong>new</strong></td>
+<td>Wheel sensors' Arduino (the hardware lead's)</td>
+<td>reads the wheel sensors; wheel speed on CAN, straight to the Orin</td>
+<td>CAN (0x200 L, 0x201 R)</td>
+<td>today (23 Oct)</td>
+<td>the same, or the KEFC wheel nodes (Hall sensors, ESP32-CAN-X2, 100 Hz: Proposed)</td>
 </tr>
 <tr>
 <td>ZED-F9R GPS board (SparkFun)</td>
@@ -339,7 +341,7 @@ the turtle, Gazebo and <a href="bench.html">bench mode</a> only.</p>
 </table></div>
 <p><img alt="The control board: a Pi 4, the ESP32 MicroMod, two Jrk G2" src="../img/car/control-board.jpg" /></p>
 <p>The board already has a white CAN plug, labelled CANH / CANL (<em>photos</em>). Is its
-transceiver chip (U7) fitted? The audit checks.</p>
+transceiver chip (U7) fitted? Still to check (<a href="audit-questions.html">Audit questions</a>).</p>
 </section>
 <section class="card"><h2 id="the-sensors">The sensors</h2>
 <div class="table-wrap"><table>
@@ -367,20 +369,20 @@ transceiver chip (U7) fitted? The audit checks.</p>
 <tr>
 <td>Wheel speed</td>
 <td>how fast the wheels turn</td>
-<td>CAN, straight to the Orin, from an Arduino (Ben, 23 Oct; was UDP to the Motor-Pi)</td>
+<td>CAN, straight to the Orin, from the hardware lead's Arduino (23 Oct; was UDP to the Motor-Pi)</td>
 <td><code>spine_bridge role:=sensors</code> (was <code>encoder_udp</code>)</td>
 </tr>
 <tr>
-<td>Lidar, on the roof (<em>photos</em>)</td>
+<td>Lidar, on the roof: Velodyne VLP-16</td>
 <td>3D points around the car</td>
-<td>Ethernet</td>
-<td><strong>no driver yet</strong>; model unknown (Q22)</td>
+<td>Ethernet (UDP to the Jetson)</td>
+<td>the stock <code>velodyne</code> driver (<code>aav_sensors lidar:=true</code>); untested with the real lidar</td>
 </tr>
 <tr>
 <td>Cameras</td>
 <td>pictures</td>
-<td>ribbon cable into a Pi 5, then Ethernet</td>
-<td><code>usb_cam</code>, which expects a USB camera: a mismatch to sort out (Q22)</td>
+<td>two ribbon cables into one Pi 5, then H.264 over Ethernet</td>
+<td>MediaMTX on the Pi → <code>aav_camera_stream</code> on the Orin, RF-DETR inside each stream</td>
 </tr>
 <tr>
 <td>TI radar</td>
@@ -497,18 +499,18 @@ transceiver chip (U7) fitted? The audit checks.</p>
 <tbody>
 <tr>
 <td>Command path</td>
-<td>Orin → Ethernet → Motor-Pi → UART → ESP32</td>
-<td>Orin #1 → CAN → ESP32 control board</td>
+<td>Orin → Ethernet → Motor-Pi → UART → ESP32 (<code>actuators:=uart</code>, the default)</td>
+<td>the same for now; the CAN spine (Orin #1 → CAN → ESP32) with <code>actuators:=can</code></td>
 </tr>
 <tr>
 <td>If the computer freezes</td>
-<td><strong>the last throttle stays on</strong>: no timeout</td>
-<td>the board brakes after 100 ms (DBC v0.2.0, the <a href="can-plan.html">CAN plan</a>)</td>
+<td><strong>the last throttle stays on</strong>: the C++ firmware has no timeout</td>
+<td>the Rust firmware brakes after 100 ms (proven in QEMU, not yet flashed)</td>
 </tr>
 <tr>
 <td>Wheel speed</td>
-<td>Pico 2 → UDP → Motor-Pi</td>
-<td>two wheel nodes → CAN, 100 Hz</td>
+<td>the hardware lead's Arduino → CAN → the Orin (since 23 Oct)</td>
+<td>the same, or two wheel nodes → CAN, 100 Hz</td>
 </tr>
 <tr>
 <td>Steering position</td>

@@ -114,7 +114,8 @@ process, from a free-body diagram to a simulator, one step at a time.</p>
 <li><strong>Nothing here drives the car.</strong> It is for tuning, checking, and the report.</li>
 </ul>
 </div>
-<p><span class="badge b-works">works</span> the maths and its 34 tests (24 Oct, Ben's Mac; the speed loop's 25 Oct). <span class="badge b-needs-you">needs you</span> the car day's
+<p><span class="badge b-works">works</span> the maths and its 35 tests: 30 cases in <code>test_vehicle_model.py</code>, 5 in
+<code>tools/tests/test_vehicle_model_tool.py</code> (24 Oct, Ben's Mac; the speed loop's 25 Oct). <span class="badge b-needs-you">needs you</span> the car day's
 numbers.</p></div>
 <section class="card"><h2 id="the-picture">The picture</h2>
 <p>The whole chain, from the set speed and the path to the car:</p>
@@ -486,6 +487,8 @@ Left alone, nothing pulls the car back. Speed changes <strong>B's reach</strong>
 eigenvalues; in reverse, v &lt; 0 flips the signs.</p>
 <p>The test checks A against a finite-difference Jacobian of the nonlinear bicycle.</p>
 <h3 id="closing-the-loop-pure-pursuit">Closing the loop: pure pursuit</h3>
+<p>These margins are for Regulated Pure Pursuit (<code>controller:=rpp</code>). MPPI, the default since
+22 Oct (<a href="controllers.html">Path followers</a>), isn't modelled here.</p>
 <p>Regulated Pure Pursuit steers for the curvature 2 sin α / ld toward a point ld ahead on
 the path. For small errors:</p>
 <pre class="highlight"><code class="language-text">δcmd = −(2L / ld²) · e_y − (2L / ld) · e_θ          u = −K x</code></pre>
@@ -559,7 +562,7 @@ same from 1 to 2.7 m/s: <strong>the car corrects in the same time at any of thos
 <tr>
 <td>the heartbeat</td>
 <td>up to 100 ms</td>
-<td>the most a command may lag before the ESP32 brakes (<a href="hud.html#the-heartbeat">HUD</a>, TODO 50)</td>
+<td>the most a command may lag before the ESP32 brakes (<a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>, TODO 50)</td>
 </tr>
 <tr>
 <td>the spine's tick</td>
@@ -1212,7 +1215,7 @@ pixi run vehicle-model --speed-loop     # TODO 27: the speed loop's designs, the
 </tr>
 <tr>
 <td><code>ros/ego/aav_ego/test/test_vehicle_model.py</code></td>
-<td>30 tests: textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight</td>
+<td>30 test cases (25 functions, 2 of them parametrized): textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight</td>
 </tr>
 <tr>
 <td><code>tools/vehicle_model.py</code></td>

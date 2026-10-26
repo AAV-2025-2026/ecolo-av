@@ -218,7 +218,7 @@
 </tr>
 <tr>
 <td>CI</td>
-<td>Continuous Integration: GitHub runs the tests on every push</td>
+<td>Continuous Integration: GitHub runs the tests on every pull request and push to <code>main</code></td>
 <td><code>.github/workflows/test.yml</code></td>
 </tr>
 <tr>
@@ -337,7 +337,7 @@
 <tr>
 <td>ESP32-CAN-X2</td>
 <td>an ESP32-S3 board with CAN built in</td>
-<td>the two wheel nodes (KEFC)</td>
+<td>proposed for the wheel nodes (KEFC); today the hardware lead's Arduino does that job</td>
 </tr>
 <tr>
 <td>Ethernet</td>
@@ -475,7 +475,7 @@
 <tr>
 <td>lidar</td>
 <td>a laser scanner: 3D points around the car</td>
-<td>the roof; no driver yet</td>
+<td>the roof Velodyne VLP-16, stock <code>velodyne</code> driver, <code>/sensors/lidar/points</code></td>
 </tr>
 <tr>
 <td>lock (twist_mux)</td>
@@ -583,12 +583,12 @@
 <tr>
 <td>OSM</td>
 <td>OpenStreetMap: a free map of the world</td>
-<td>the HUD only</td>
+<td>the map window, street routes, CARLA's campus</td>
 </tr>
 <tr>
 <td>OSRM</td>
 <td>a road router that uses OSM</td>
-<td>the HUD's route</td>
+<td>the 2025-26 HUD's route; <code>street_router</code> can ask one too</td>
 </tr>
 <tr>
 <td>Pico 2</td>
@@ -602,7 +602,7 @@
 </tr>
 <tr>
 <td>profile</td>
-<td>a set of nodes to start: turtle, sim, bench, car, replay</td>
+<td>a set of nodes to start: turtle, sim, bench, car, replay, carla</td>
 <td><code>ros/bringup/aav_bringup/launch/</code></td>
 </tr>
 <tr>
@@ -641,6 +641,11 @@
 <td>the FlySky override</td>
 </tr>
 <tr>
+<td>RF-DETR</td>
+<td>a neural network that finds objects in a picture; RF-DETR Nano is our default detector</td>
+<td><code>aav_detector</code>, <code>aav_camera_stream</code></td>
+</tr>
+<tr>
 <td>Regulated Pure Pursuit</td>
 <td>a Nav2 controller: steers toward a point ahead on the path. Ours until 22 Oct; <code>controller:=rpp</code></td>
 <td><a href="controllers.html">path followers</a></td>
@@ -662,7 +667,7 @@
 </tr>
 <tr>
 <td><code>ROS_DOMAIN_ID</code></td>
-<td>a number; only computers with the same one see each other</td>
+<td>a number, 0–101 (safe on Linux; Fast DDS breaks above 232); only computers with the same one see each other</td>
 <td><code>pixi run doctor</code></td>
 </tr>
 <tr>
@@ -811,7 +816,7 @@
 <tr>
 <td>YOLO</td>
 <td>a fast neural network that finds objects in a picture</td>
-<td><code>aav_detector</code>, stop signs</td>
+<td><code>aav_detector</code> with <code>detector:=yolo</code></td>
 </tr>
 </tbody>
 </table></div>

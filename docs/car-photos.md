@@ -1,11 +1,12 @@
 # The car in photos (14 October)
 
 Ben took 32 photos of the car on 14 October. This page lists what they show, and what
-to check at the audit on Friday 16 Oct ([step by step](audit-friday.md)). The full set is not in git (62 MB). It is in
+the audits were to check ([step by step](audit-friday.md)). The full set is not in git (62 MB). It is in
 `images/` on Ben's Mac.
 
 !!! warning "Read from photos only"
-    Nothing here has been logged into or measured yet. Friday's audit confirms it.
+    This page is from the photos. The audits of 16 and 21 Oct checked them on the car:
+    [16 Oct](history/audit-2026-10-16-car.md), [21 Oct](history/audit-2026-10-21-car.md).
 
 ## The equipment bay (behind the seat)
 
@@ -50,7 +51,7 @@ to check at the audit on Friday 16 Oct ([step by step](audit-friday.md)). The fu
 | Throttle DAC | two blue trim pots, "addr dac", a "Throttle enable" jumper |
 | e-stop trig, e-stop headers | along the bottom edge |
 
-The CAN plug is on the board. Friday: is the transceiver (U7) fitted, and does it work?
+The CAN plug is on the board. Still to check: is the transceiver (U7) fitted, and does it work?
 
 ![The e-stop board: TR and ES LEDs](img/car/estop-board.jpg)
 
@@ -65,7 +66,7 @@ trigger) and **ES** (e-stop status). Beside it, an 8-relay module and fuse block
 
 | What | Notes |
 |---|---|
-| **A 3D lidar** on a printed tripod | **our code has no lidar at all yet.** Its model? (Q22) |
+| **A 3D lidar** on a printed tripod | a Velodyne VLP-16 (16 Oct audit): the stock `velodyne` driver since 20 Oct, on by default on the car; untested with the real lidar |
 | GNSS antenna (black puck) | taped down on a steel plate |
 | 3 stick antennas | the router's WiFi? |
 | A gold SMA bulkhead | its cable goes inside: to the GPS? |
@@ -108,16 +109,17 @@ lists the rear camera as new: is this one connected?
 | A joystick, a keyboard labelled AAV-1 | |
 
 A 12 V → 5 V converter on the dash's fuse block E1-E4 showed **5.08 V at 3.48 A**. A Pi 5
-wants 5 A for full USB power. Friday: what does it feed, and what is its rating?
+wants 5 A for full USB power. To check: what does it feed, and what is its rating?
 
-## For Friday's audit
+## What the audits were to check
 
-How to do each check, machine by machine: [The hardware audit, step by step](audit-friday.md).
+The list for the 16 Oct audit, machine by machine: [The hardware audit, step by step](audit-friday.md).
+What they found: [16 Oct](history/audit-2026-10-16-car.md), [21 Oct](history/audit-2026-10-21-car.md).
 
 | # | Check | Why |
 |---|---|---|
 | 1 | Log in to each Pi and the Orin: `hostname`, OS, ROS version, what runs at boot | the inventory |
-| 2 | RTK-Pi: is the ZED-F9R on `/dev/ttyACM*`? Does `ros2 topic hz /sensors/gps/fix` give anything? | "Is there GPS data?" |
+| 2 | RTK-Pi: is the ZED-F9R on `/dev/ttyACM*`? Does `ros2 topic hz /aav/gps/fix` (the 2025-26 topic) give anything? | "Is there GPS data?" |
 | 3 | The lidar: its model, its IP, which Pi or Orin reads it | the stock velodyne driver since 20 Oct (a VLP-16, the 16 Oct audit) |
 | 4 | ES-Pi and QNX-Pi: what do they run? Are they in the driving path? | not in the KEFC picture |
 | 5 | The control board: is U7 fitted? The steering and brake actuators' wire counts | the KEFC "to confirm" list |

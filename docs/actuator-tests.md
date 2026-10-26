@@ -16,14 +16,14 @@ logs what happened, and prints the numbers for `vehicle.yaml`. Built and proven 
 ```text
  actuator_test ──/drivers/tests/cmd_vel──► twist_mux ──► ego ──► backend ──► the car
    (priority 60)                               ▲                    (or Gazebo)
- joystick 100, keyboard 90 ────────────────────┘ always win
+ joystick 100, RC 95, keyboard 90 ─────────────┘ always win
         │
         └── reads back: /vehicle/odom (speed), /vehicle/steering, /throttle, /brake,
             the IMU, /localization/odom/local, GPS, /safety/estop, /system/source
 ```
 
 It's a driver like any other ([Build a driver](howto-driver.md)), in twist_mux's `tests`
-slot: below both people, above Nav2 and every other program.
+slot: below every person (joystick, RC, keyboard), above Nav2 and every other program.
 
 ## The tests
 
@@ -113,11 +113,11 @@ The 2025-26 ESP32 drives the car until the spine replaces it (`legacy_uart_bridg
 
 | Measurement | Today (ESP32) | With the spine |
 |---|---|---|
-| Speed | ✅ the wheel encoder, `/vehicle/odom` | ✅ |
+| Speed | ✅ the front wheel sensors (the hardware lead's Arduino on CAN, `spine_bridge role:=sensors`), `/vehicle/odom` | ✅ |
 | IMU g, yaw rate | ✅ once the IMU runs | ✅ |
 | Pose (circles, straight) | ✅ the local EKF; GPS logged too | ✅ |
-| Steering angle | ❌ no sensor: type it in on stands | ✅ `/vehicle/steering` |
-| Throttle and brake levels | ❌ not reported: no `max_accel` or `max_brake` fit, only the g figures. A speed command **is** the throttle there: speed ÷ `full_throttle_speed` (`legacy_protocol.py`) | ✅ `/vehicle/throttle`, `/vehicle/brake` |
+| Steering angle | ❌ no sensor: type it in on stands (✅ with the uplink, once H9 says yes, if the Jrk has feedback) | ✅ `/vehicle/steering` |
+| Throttle and brake levels | ❌ not reported: no `max_accel` or `max_brake` fit, only the g figures. A speed command **is** the throttle there: speed ÷ `full_throttle_speed` (`legacy_protocol.py`). ✅ with the uplink (H9) | ✅ `/vehicle/throttle`, `/vehicle/brake` |
 | Coasting | ❌ a low speed command still pushes, and 0 brakes | ✅ inside the speed loop's coast band |
 | A fixed brake % (4.3 as written) | ❌ no brake command exists: the tests brake with a normal stop | ❌ the same |
 

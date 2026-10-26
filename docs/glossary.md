@@ -34,7 +34,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | `candump` | a Linux command that prints every frame on a CAN bus | `candump can0` |
 | CARLA | a photo-real driving simulator, on Unreal Engine; next to Gazebo, for the cameras (Q31, [CARLA](carla.md)) | `ros/sim/aav_carla` |
 | checksum, CRC | a few bits worked out from a message, so a garbled one is caught | every CAN frame (CRC-8) |
-| CI | Continuous Integration: GitHub runs the tests on every push | `.github/workflows/test.yml` |
+| CI | Continuous Integration: GitHub runs the tests on every pull request and push to `main` | `.github/workflows/test.yml` |
 | colcon | the tool that builds a ROS workspace | `pixi run build` |
 | `collision_monitor` | a Nav2 node that sends zero speed when something enters its stop zone | `/safety/collision_monitor/state` |
 | costmap | a grid on the ground: how bad it is to drive in each cell | [Costmaps](costmaps.md) |
@@ -60,7 +60,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | `embedded-hal` | a Rust standard way to talk to pins, I2C and SPI on any chip | `firmware/spine` |
 | encoder | a sensor that counts wheel turns | the Pico 2 today; Hall sensors later |
 | ESP32 | a small, cheap microcontroller with WiFi | the control board |
-| ESP32-CAN-X2 | an ESP32-S3 board with CAN built in | the two wheel nodes (KEFC) |
+| ESP32-CAN-X2 | an ESP32-S3 board with CAN built in | proposed for the wheel nodes (KEFC); today the hardware lead's Arduino does that job |
 | Ethernet | the network cable a laptop uses: lots of data, many computers | the switch |
 | firmware | the program on a microcontroller | `firmware/` |
 | FlySky | the RC transmitter and receiver a person can take over with | iBUS on the ESP32 |
@@ -90,7 +90,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | KEFC request | Ben's October 2026 hardware request: the CAN bus, the wheel nodes, a second Orin, a rear camera | [CAN plan](can-plan.md) |
 | KTC-100 | a linear position sensor (a potentiometer) | the steering, new (KEFC) |
 | launch file | a Python file that starts many nodes with their settings | `ros/*/*/launch/` |
-| lidar | a laser scanner: 3D points around the car | the roof; no driver yet |
+| lidar | a laser scanner: 3D points around the car | the roof Velodyne VLP-16, stock `velodyne` driver, `/sensors/lidar/points` |
 | lock (twist_mux) | a `true`/`false` topic that blocks lower drivers | `/safety/estop`, `/perception/stop_sign` |
 | Madgwick | a filter that turns raw IMU data into an orientation | `imu_filter_madgwick` |
 | `map` | the fixed frame on the earth, pinned to the datum | TF |
@@ -114,11 +114,11 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | `odom` | the frame where the car started today: smooth, drifts | TF |
 | odometry | how far and how fast the car moved, from its own sensors | `/vehicle/odom` |
 | open loop | sending a command with no measurement back | today's throttle |
-| OSM | OpenStreetMap: a free map of the world | the HUD only |
-| OSRM | a road router that uses OSM | the HUD's route |
+| OSM | OpenStreetMap: a free map of the world | the map window, street routes, CARLA's campus |
+| OSRM | a road router that uses OSM | the 2025-26 HUD's route; `street_router` can ask one too |
 | Pico 2 | a Raspberry Pi microcontroller board (RP2350) | the wheel encoder; a spine program |
 | Pixi | installs ROS 2 and every tool without admin rights | `pixi run ...` |
-| profile | a set of nodes to start: turtle, sim, bench, car, replay | `ros/bringup/aav_bringup/launch/` |
+| profile | a set of nodes to start: turtle, sim, bench, car, replay, carla | `ros/bringup/aav_bringup/launch/` |
 | `PROVENANCE.md` | a file that says where inherited code came from | each inherited package |
 | Q1–Q34 | the team's numbered open questions | [Decisions](decisions.md) |
 | QNX | a real-time operating system the 2025-26 team used; replaced by twist_mux | the QNX-Pi |
@@ -126,11 +126,12 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | radar | radio waves that find objects ahead | the TI radar, `/sensors/radar/points` |
 | raylib | a small graphics library; our Rust HUD uses it | `ros/hud/aav_hud_raylib` |
 | RC | Radio Control: a hand-held transmitter | the FlySky override |
+| RF-DETR | a neural network that finds objects in a picture; RF-DETR Nano is our default detector | `aav_detector`, `aav_camera_stream` |
 | Regulated Pure Pursuit | a Nav2 controller: steers toward a point ahead on the path. Ours until 22 Oct; `controller:=rpp` | [path followers](controllers.md) |
 | REP-103, REP-105 | ROS's rules for units and frames | `CLAUDE.md` |
 | RoboStack | ROS 2 packaged for Pixi and conda | `pixi.toml` |
 | ROS 2 | Robot Operating System: programs (nodes) that talk over topics | everywhere |
-| `ROS_DOMAIN_ID` | a number; only computers with the same one see each other | `pixi run doctor` |
+| `ROS_DOMAIN_ID` | a number, 0–101 (safe on Linux; Fast DDS breaks above 232); only computers with the same one see each other | `pixi run doctor` |
 | RTK | a GPS correction that gives centimetre accuracy | the RTK-Pi |
 | rqt_graph | a live picture of nodes and topics | `pixi run graph` |
 | Rust | the language for our firmware and hardware drivers | `firmware/spine` |
@@ -162,7 +163,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | W5500 | an Ethernet chip for small boards | the wheel encoder today |
 | watchdog | a timer that acts if a program stops checking in | the spine, the ESP32 |
 | wheel node | a small CAN board that reads one wheel's speed | 0x200 left, 0x201 right (KEFC) |
-| YOLO | a fast neural network that finds objects in a picture | `aav_detector`, stop signs |
+| YOLO | a fast neural network that finds objects in a picture | `aav_detector` with `detector:=yolo` |
 
 ## Try it
 

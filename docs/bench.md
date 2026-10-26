@@ -18,7 +18,7 @@ graph-picture` draws this from whatever is running.
 pixi run build                          # once, and after every change
 pixi run bench                          # the car's software, with stand-ins
 pixi run bench-check                    # start it and test it: about 2 minutes
-pixi run -e ml bench perception:=true   # add YOLO and the stop sign
+pixi run -e ml bench perception:=true   # add the detector (RF-DETR Nano) and the stop sign
 pixi run bench-check --python-bridge     # the same check with the Python spine_bridge
 ```
 
@@ -35,13 +35,20 @@ don't.
 |---|---|---|
 | `nav` | `true` | Nav2: goals from RViz's 2D Goal Pose |
 | `teleop` | `false` | the joystick, if one is plugged in |
-| `perception` | `false` | YOLO and the stop-sign watcher. Needs `pixi run -e ml` |
+| `perception` | `false` | the object detector (RF-DETR Nano; YOLO with `detector:=yolo`) and the stop-sign watcher. Needs `pixi run -e ml` |
 | `lane` | `false` | lane keeping on a pretend straight lane: the car drives itself on `/drivers/ai/cmd_vel` |
 | `hud` | `false` | the HUD's web server, on 127.0.0.1:5000 |
 | `arm` | `true` | arms the spine 12 s after start-up |
 | `rviz`, `foxglove` | `false` | RViz; foxglove_bridge on 127.0.0.1:8765, with the camera's preview ([Watch from a laptop](foxglove.md)) |
 | `obstacle` | `false` | a 1 m box in the lane 15 m ahead, which only the pretend radar sees: Nav2 stops for it |
 | `camera_obstacles` | `false` | the detectors' boxes into Nav2's local costmap ([Costmaps](costmaps.md)) |
+| `lidar` | `false` | the roof lidar: `mock_lidar`'s packets through the stock velodyne driver, into Nav2 |
+| `plan_around` | `true` | Nav2 plans round what the radar and lidar see; `false`: the car stops for it |
+| `reversing` | `true` | Nav2 may drive backwards |
+| `bridge` | `rust` | which `spine_bridge`: `rust` or `python` |
+| `speed_loop` | `default` | `spine_sim`'s speed loop: `default` or `smooth` ([The car as a linear model](vehicle-model.md)) |
+
+`start_y`, `start_yaw` and `bend_radius` are under [Lane keeping](#lane-keeping).
 
 ## What's real, and what's a stand-in
 
@@ -56,9 +63,10 @@ can tell the difference.
 | The CAN bus | the topics `/can/tx` and `/can/rx` | `ros2_socketcan` and `can0` |
 | The spine board and actuators | `spine_sim`: the firmware's own logic on a model car | the spine board, two Jrk G2s, the throttle DAC |
 | IMU | `mock_imu` | `aav_imu_yahboom` |
-| GPS | `mock_gps` | `ublox_gps` (the default), `gps_nmea` or `ublox_dgnss`: `gps_driver:=` picks |
-| Camera | `mock_camera` | `usb_cam` |
+| GPS | `mock_gps` | `ublox_gps` (the default), `nmea_navsat_driver` or `ublox_dgnss`: `gps_driver:=ublox`, `nmea` or `ublox_dgnss` picks |
+| Camera | `mock_camera` | the front cameras' streams (`aav_camera_stream`), or `usb_cam` for a USB camera |
 | Radar | `mock_radar` | `ti_ros2_driver` |
+| Lidar (`lidar:=true`) | `mock_lidar`: VLP-16 packets to the stock velodyne driver | the roof VLP-16 itself |
 | Battery | `mock_battery` | `battery_monitor` |
 
 ## The stand-ins
@@ -71,6 +79,7 @@ can tell the difference.
 | `mock_camera` | `aav_bench` | `/sensors/camera/front_left/image_raw` | draws a road, and each stop sign at its real size when it's in view |
 | `mock_battery` | `aav_bench` | `/vehicle/battery` | a 48 V pack draining over two hours (a guess until Q8) |
 | `mock_radar` | `aav_bench` | `/sensors/radar/points` | sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there |
+| `mock_lidar` | `aav_bench` | UDP packets to `127.0.0.1:2369` (then the velodyne driver: `/sensors/lidar/points`) | sees the bench world's boxes as the roof VLP-16 would; only with `lidar:=true` |
 
 The bench world is `aav_bench/config/bench.yaml`. The model car starts at the map's origin
 (the GPS datum), facing east. A stop sign stands 25 m ahead, 2 m to the right. With
@@ -191,7 +200,7 @@ Start the real part, and stop the stand-in: same topic, same type, same frame.
 |---|---|---|
 | `spine_sim` | the spine board, on CAN | `aav_spine spine.launch.py` (ros2_socketcan, Linux) |
 | `mock_imu`, `mock_gps`, `mock_battery`, `mock_radar` | the drivers | `aav_sensors sensors.launch.py` |
-| `mock_camera` | `usb_cam` | `aav_sensors cameras.launch.py` |
+| `mock_camera` | the front cameras' streams | `aav_camera_stream camera_stream.launch.py` (the `camera_stream` part) |
 
 ## Limits
 
@@ -211,7 +220,7 @@ Start the real part, and stop the stand-in: same topic, same type, same frame.
 | File | What it is |
 |---|---|
 | `ros/bringup/aav_bringup/launch/bench.launch.py` | the profile |
-| `ros/sim/aav_spine_sim` | `spine_sim`: `crates/bench-car` (the model and the loop, 16 tests, no ROS) and `crates/spine-sim` (the ROS node) |
+| `ros/sim/aav_spine_sim` | `spine_sim`: `crates/bench-car` (the model and the loop, 22 tests, no ROS) and `crates/spine-sim` (the ROS node) |
 | `ros/sim/aav_bench` | the pretend sensors, their tests, and `config/bench.yaml` |
 | `tools/bench_check.py` | `pixi run bench-check` |
 | `tools/graph_picture.py` | `pixi run graph-picture`: the picture at the top |

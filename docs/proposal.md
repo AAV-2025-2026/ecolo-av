@@ -1,5 +1,7 @@
 # The proposal: what we plan to do this year, and what's already done
 
+> **A snapshot from 15 October 2026.** What's true now: [Status](status.md) and [The plan](plan.md).
+
 Written 15 October 2026, for the team (Ben: "a file called proposal that lists
 everything we have talked about that we think we can get working"). This is the **draft**
 for the written proposal: every part of the car, what's built, what's left, and how sure
@@ -35,12 +37,12 @@ we are. Details live in the pages linked from each row.
 | **twist_mux** | picks which driver is in charge (joystick > keyboard > Nav2...) and stops stale ones | ✅ | |
 | **EKFs** | robot_localization: local (wheels + IMU) and global (+ GPS) | 🧪 sim: within 0.15 m of the truth; replay: 0.03 m | [maps and position](maps-and-position.md) |
 | **Maps** | Nav2 maps for an empty world and a test lot; GPS datum ties them to the real world | 🧪 | |
-| **Nav2** | paths, obstacles (radar, camera, lidar), collision monitor that stops the car; may reverse in the sim and on the bench, never on the car | 🧪 sim: goals reached, stops 0.32-0.46 m before a box; with the lidar alone, 0.16-0.55 m before a post; backs up 5 m | |
+| **Nav2** | paths, obstacles (radar, camera, lidar), collision monitor that stops the car; may reverse (on the car since 22 Oct, only where the lidar sees behind it) | 🧪 sim: goals reached, stops 0.32-0.46 m before a box; with the lidar alone, 0.16-0.55 m before a post; backs up 5 m | |
 | **Sensor watchdog** | stops Nav2 when the wheels, IMU, GPS, an EKF or the camera go quiet, NaN or frozen, the GPS jumps, or the wheels disagree with the IMU and GPS; fail-safe if the watchdog itself dies; says why on the HUD and the map window. Faults on purpose in Gazebo (`pixi run sim-fault`) | 🧪 sim: all 13 faults stop the car | [sensor failures](simulation.md#sensor-failures-on-purpose) |
 | **Simulation** | Gazebo: the whole car, 3 cameras, radar, lidar, GPS, IMU, wheel speed, an actuator model, a SIMULATED banner; one command opens everything | 🧪 | [full simulation](full-simulation.md) |
 | **Bench** | the real CAN messages, the spine's logic and both e-stops, without the car | ✅ `bench-check` | |
-| **Perception** | YOLO11 (stop signs and objects), lane keeping, radar clustering (Rust) | 🧪 bench and sim | [perception](perception-and-hud-map.md) |
-| **Core ML and TensorRT** | the same YOLO model exported for the Mac (Core ML) and the Jetson Orin (TensorRT, built on the Orin) | 🧪 Mac done; Orin after its upgrade | [perception](perception.md) |
+| **Perception** | RF-DETR Nano by default (YOLO11 with `detector:=yolo`; since 20 Oct), lane keeping, radar clustering (Rust) | 🧪 bench and sim | [perception](perception-and-hud-map.md) |
+| **Core ML and TensorRT** | the same model (RF-DETR Nano since 24 Oct) exported for the Mac (Core ML) and the Jetson Orin (TensorRT, built on the Orin) | 🧪 Mac done; Orin after its upgrade | [perception](perception.md) |
 | **Instrument cluster (small screen)** | raylib HUD in Rust: speed, mode, gear, e-stop button, camera, GPS, topic health; full screen on its own monitor at boot (ready to install) | 🧪 | [HUD](hud.md), [two screens](car-screens.md) |
 | **Map (big screen)** | Nav2's map over offline Ottawa streets (OpenStreetMap), the car, the path, distance and time left; **search a place and send the car there**; full screen at boot, like the HUD | 🧪 | [HUD](hud.md), [two screens](car-screens.md) |
 | **Plain-English driving** | a local language model (Qwen3, on the Mac with MLX) plans "drive 10 m forward"; you type yes | 🧪 sim: drove 10.02 m | [plain English](plain-english.md) |

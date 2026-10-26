@@ -1,6 +1,6 @@
 # The full simulation: the whole car in Gazebo
 
-Written 15 October 2026. The goal (Ben, 15 Oct): "fully simulate the car inside
+Written 15 October 2026, checked 25 October. The goal (Ben, 15 Oct): "fully simulate the car inside
 Gazebo with all the sensors, and build the full pipeline." This page says what we have,
 what's missing, and how the car's measurements feed in.
 
@@ -18,8 +18,8 @@ what's missing, and how the car's measurements feed in.
 | 2 | `/vehicle/steering`, `/throttle`, `/brake`, `/wheels` | ✅ built: Gazebo all four; the bench and the car (spine_bridge) steering, throttle, brake; turtlesim steering |
 | 3 | The actuator model (A), guessed numbers | ✅ built: `aav_gazebo/actuator_model.py`, numbers in `vehicle.yaml` `actuators:`, on by default (`actuator_model:=false` for the old car) |
 | 4 | The spine in the loop | ✅ 15 Oct: `pixi run sim spine:=true`. ego's commands go over the CAN frames to the spine's own firmware logic, then the actuator model. `pixi run sim-check --spine` passes: its timeout, both e-stops and arming stop the car ([below](#the-spine-in-the-loop-step-4)) |
-| 5 | The lidar into Nav2 | ✅ 15 Oct: `lidar_scan` (`aav_lidar`) flattens the roof lidar into a 2D scan; the local costmap's `lidar_layer` and `collision_monitor` read it. `lidar:=true` in Gazebo, **off on the car** (no lidar driver yet). With the radar off, the lidar alone stopped the car 0.16-0.55 m before a post |
-| 6 | Sensor failures on purpose | ✅ 15 Oct: `pixi run sim-fault <sensor> <fault>`, and the sensor watchdog (`aav_safety`): it stops Nav2 and the AI slot, and says why on the HUD and the map window. All 13 faults stop the car ([the table](#sensor-failures-before-and-after)), the watchdog's own death and frozen wheels too |
+| 5 | The lidar into Nav2 | ✅ 15 Oct: `lidar_scan` (`aav_lidar`) flattens the roof lidar into a 2D scan; the local costmap's `lidar_layer` and `collision_monitor` read it. `lidar:=true` in Gazebo, and on the car (the stock `velodyne` driver, since 20 Oct). With the radar off, the lidar alone stopped the car 0.16-0.55 m before a post |
+| 6 | Sensor failures on purpose | ✅ 15 Oct: `pixi run sim-fault <sensor> <fault>`, and the sensor watchdog (`aav_safety`): it stops Nav2 and the AI slot, and says why on the HUD and the map window. All 13 faults stopped the car on 15 Oct, the watchdog's own death and frozen wheels too; on 24 Oct, with the HUD's heartbeat added, all 25 checks passed three times ([the table](simulation.md#what-the-car-does-before-and-after)) |
 | 7 | The actuator test script (`tests.md` 1.10) | ✅ 15 Oct: `pixi run actuator-test <test> --sim`, all 9 tests in Gazebo; they give back the model's numbers ([docs/actuator-tests.md](actuator-tests.md)). It found Gazebo's IMU blind to the car's acceleration: fixed in `gazebo_adapter` |
 | 8-10 | the real numbers, the test lot, forces | not started |
 
@@ -70,10 +70,10 @@ What's where:
 
 | Part | Today in Gazebo | Missing for the full version |
 |---|---|---|
-| IMU, GPS, wheel speed | ✅ with noise | noise levels from the real devices (Friday) |
+| IMU, GPS, wheel speed | ✅ with noise | noise levels from the real devices (the car day) |
 | 3 cameras | ✅ 15 Oct: two front, one rear | the real lens of each (N4); perception reads only the front left |
 | Radar (grill) | ✅ a stand-in, shaped like the TI radar | its real config file, from the car |
-| Lidar (roof) | ✅ a generic 16-beam one, on by default (15 Oct); ✅ Nav2's costmap and the collision monitor read it (step 5) | its real model (probably a Velodyne), and a driver for the car |
+| Lidar (roof) | ✅ a generic 16-beam one, on by default (15 Oct); ✅ Nav2's costmap and the collision monitor read it (step 5) | the VLP-16's exact beam pattern; the car's driver is untested with the real lidar |
 | **Throttle and brake** | ✅ 15 Oct: the actuator model, with **guessed** numbers | the real numbers, from tests 4.1-4.4 |
 | **Steering** | ✅ 15 Oct: speed, lag, centre offset, deadband, with **guessed** numbers | the real numbers and angles, from tests 3.10-3.12 and 4.5 |
 | Weight | in the model, but hardly matters (see the box below) | the real weight (scales, M7) |
@@ -84,8 +84,8 @@ What's where:
 | Sensor failures | ✅ 15 Oct: `pixi run sim-fault`, and the sensor watchdog stops Nav2 (step 6) | the same on the car, on stands: pull a cable |
 
 !!! note "Why the weight hardly matters in Gazebo today"
-    Gazebo's Ackermann system **sets the wheels' speed** and limits how fast it changes
-    (`aav.gazebo.xacro`: 1.5 m/s² up, 3.0 down). A heavier car gets the same numbers. For the
+    Gazebo's Ackermann system **sets the wheels' speed** (`aav.gazebo.xacro` allows
+    ±10 m/s², so the actuator model sets the real limits). A heavier car gets the same numbers. For the
     weight to matter, the model must push with a **force** (from the motor) against the
     **mass**. For driving well, what matters most is the **measured g**: how fast the real
     car speeds up and stops. The tests give that directly.
@@ -115,7 +115,7 @@ B only if A isn't close enough to the real car.
 | Tests 3.10-3.12, 4.5 | steering: real angles, speed, centre | the actuator model | how it steers |
 
 ```text
- Friday: measure  →  vehicle.yaml  →  Gazebo behaves like the car  →  test in Gazebo  →  trust it on the car
+ measure the car  →  vehicle.yaml  →  Gazebo behaves like the car  →  test in Gazebo  →  trust it on the car
 ```
 
 ## 5. The order to build it
@@ -129,7 +129,7 @@ B only if A isn't close enough to the real car.
 | 5 | The lidar into Nav2's costmap and the collision monitor ✅ 15 Oct | no | small |
 | 6 | Sensor failures on purpose, and checks that the car stops ✅ 15 Oct | no | 1 day |
 | 7 | The actuator test script (`tests.md` 1.10), run in Gazebo ✅ 15 Oct | no | 1 day |
-| 8 | Fill in the real numbers: measurements and tests (`pixi run actuator-test`, on stands then in the lot) | **yes**: Friday, then the lot | - |
+| 8 | Fill in the real numbers: measurements and tests (`pixi run actuator-test`, on stands then in the lot) | **yes**: on stands, then the lot | - |
 | 9 | A Gazebo copy of the test lot | the lot chosen | 1 day |
 | 10 | B, forces in Gazebo, only if needed | the real numbers | a week |
 
@@ -193,30 +193,10 @@ Each while driving at 0.8 m/s, Gazebo's road world, Ben's Mac, 15 Oct: three run
 
 ## Sensor failures: before and after
 
-Each fault while Nav2 drives at about 1 m/s, Gazebo's road world, 15 Oct.
-Before: `pixi run sim-check --faults --no-watchdog`; after: `pixi run sim-check --faults`.
-How to make one, and what the watchdog watches: [docs/simulation.md](simulation.md#sensor-failures-on-purpose).
-
-| Fault | Before: no watchdog | After: the watchdog |
-|---|---|---|
-| GPS lost (`gps stop`) | ❌ drove on: 10.6 m in 10 s, nothing said. The global EKF carried on from the wheels and IMU (1.1 m out) | ✅ stood still 3.8 s after it, 2.8 m on: "gps STALE" |
-| GPS NaN (`gps nan`) | ❌ drove on 10.0 m, nothing said (navsat_transform drops NaN fixes: the same as lost) | ✅ 4.1 s, 2.8 m: "gps STALE (no fix)" |
-| GPS jumps 20 m (`gps jump`) | ⚠️ stood still 2.2 s after it, but by accident (Nav2's plan jumped with the map position, 19.3 m out); nothing said | ✅ 1.7 s, 0.7 m: "gps JUMP 20.0 m in 0.20 s", held until a person clears it |
-| IMU stopped (`imu stop`) | ❌ drove on 7.2 m, nothing said | ✅ 2.2 s, 1.1 m: "imu STALE" |
-| IMU frozen (`imu freeze`) | ❌ drove on 8.4 m, nothing said | ✅ 2.8 s, 1.7 m: "imu FROZEN" |
-| IMU NaN (`imu nan`) | ❌ drove on 7.7 m; the global EKF stayed 0.3 m from the truth | ✅ 1.8 s, 1.0 m: "imu NAN" |
-| Wheels stopped (`odom stop`) | ❌ drove on 9.0 m, nothing said | ✅ 1.9 s, 0.9 m: "odom STALE" |
-| Wheels NaN (`odom nan`) | ❌ drove on 6.3 m, nothing said | ✅ 1.7 s, 0.8 m: "odom NAN" |
-| Camera frozen (`camera freeze`) | ❌ drove on 7.6 m; on the HUD a frozen picture looks live | ✅ 2.9 s, 4.5 m: "camera FROZEN" |
-| Radar stopped (`radar stop`) | ✅ stood still 2.5 s after it: `collision_monitor`'s "invalid source" | ✅ the same, 2.5 s; the watchdog warns too |
-| Wheels frozen (`odom freeze`, later 15 Oct) | ❌ drove on 10.9 m in 15 s, nothing said | ✅ 3.4-4.8 s after the wheels went wrong (Nav2 steered), 2.2-3.9 m: "odom DISAGREE (the wheels and the IMU disagree)", held until a person clears it |
-| Watchdog hung (`watchdog hang`, later 15 Oct) | ❌ by design: the old lock never expired (not run) | ✅ 2.7 s, 1.4-1.5 m: twist_mux's 1 s lock timeout |
-| Watchdog killed (`watchdog kill`, later 15 Oct) | ❌ the same (not run) | ✅ 2.6-2.8 s, 1.2-1.5 m, then held 10 s more with Nav2 still asking |
-
-"Nothing said": no warning in the log, nothing on the HUD (only the HUD's GPS line
-turned STALE for a lost GPS). The after column's first ten rows are the last of three
-runs: the first passed too; the second caught a false GPS jump (two fixes delivered at
-once), fixed by timing jumps with the fixes' stamps, plus 5 m for their noise.
+Each fault while Nav2 drives, with the watchdog and without it: the whole table, with
+the 24 Oct results, is in [Simulation](simulation.md#what-the-car-does-before-and-after).
+How to make a fault, and what the watchdog watches:
+[Simulation](simulation.md#sensor-failures-on-purpose).
 
 **Later on 15 Oct** ([docs/simulation.md](simulation.md#if-the-watchdog-itself-dies)):
 

@@ -24,7 +24,8 @@ process, from a free-body diagram to a simulator, one step at a time.
       Gazebo's own steering). Worth fixing before the sim-versus-real report.
     - **Nothing here drives the car.** It is for tuning, checking, and the report.
 
-[[works]] the maths and its 34 tests (24 Oct, Ben's Mac; the speed loop's 25 Oct). [[needs-you]] the car day's
+[[works]] the maths and its 35 tests: 30 cases in `test_vehicle_model.py`, 5 in
+`tools/tests/test_vehicle_model_tool.py` (24 Oct, Ben's Mac; the speed loop's 25 Oct). [[needs-you]] the car day's
 numbers.
 
 ## The picture
@@ -262,6 +263,9 @@ The test checks A against a finite-difference Jacobian of the nonlinear bicycle.
 
 ### Closing the loop: pure pursuit
 
+These margins are for Regulated Pure Pursuit (`controller:=rpp`). MPPI, the default since
+22 Oct ([Path followers](controllers.md)), isn't modelled here.
+
 Regulated Pure Pursuit steers for the curvature 2 sin α / ld toward a point ld ahead on
 the path. For small errors:
 
@@ -294,7 +298,7 @@ same from 1 to 2.7 m/s: **the car corrects in the same time at any of those spee
 | camera to detections | 26 ms median, 42 worst | [Camera pipeline](camera-pipeline.md), on a Mac |
 | the camera's frame | 67 ms (15 fps): half on average | the picture's age when taken |
 | the controller's cycle | 50 ms (20 Hz): half on average | `nav2.yaml` `controller_frequency` |
-| the heartbeat | up to 100 ms | the most a command may lag before the ESP32 brakes ([HUD](hud.md#the-heartbeat), TODO 50) |
+| the heartbeat | up to 100 ms | the most a command may lag before the ESP32 brakes ([the heartbeat](rust-firmware.md#the-heartbeat-version-2-of-the-serial-frame-24-oct), TODO 50) |
 | the spine's tick | 10 ms | `esp32-umod` `TICK` |
 | the wheel speed's age | 50 ms GUESS | the time between Hall pulses at low speed |
 
@@ -591,5 +595,5 @@ pixi run vehicle-model --speed-loop     # TODO 27: the speed loop's designs, the
 | File | What |
 |---|---|
 | `ros/ego/aav_ego/aav_ego/vehicle_model.py` | the maths: no ROS, numpy and scipy only |
-| `ros/ego/aav_ego/test/test_vehicle_model.py` | 30 tests: textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight |
+| `ros/ego/aav_ego/test/test_vehicle_model.py` | 30 test cases (25 functions, 2 of them parametrized): textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight |
 | `tools/vehicle_model.py` | the tables and `docs/img/vehicle-model-*.png` |

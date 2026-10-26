@@ -89,7 +89,10 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#the-order-in-one-picture">The order, in one picture</a><a href="#how-to-use-this-list">How to use this list</a><a href="#a-the-cars-computers">A. The car&#x27;s computers</a><a href="#b-the-drive-path-throttle-steering-brake-e-stop">B. The drive path: throttle, steering, brake, e-stop</a><a href="#c-the-sensors">C. The sensors</a><a href="#d-our-software-on-the-car">D. Our software on the car</a><a href="#e-power-and-wiring">E. Power and wiring</a><a href="#done">Done</a></nav>
-<div class="lead"><p>Written 15 October 2026, <strong>before</strong> the audit, as a draft. After Friday, update it from
+<div class="lead"><blockquote>
+<p><strong>A snapshot from 15 October 2026.</strong> What's true now: <a href="status.html">Status</a>, <a href="plan.html">The plan</a> and <code>TODO.md</code>. The audits ran on 16 and 21 Oct (<code>docs/history/audit-2026-10-16-car.md</code>, <code>audit-2026-10-21-car.md</code>).</p>
+</blockquote>
+<p>Written 15 October 2026, <strong>before</strong> the audit, as a draft. After Friday, update it from
 what the audit found: tick the "Audit says" column, fix each task's size, and put a name
 in each "Who" (Q33). Each task is sized for one or two people.</p>
 <blockquote>
@@ -408,7 +411,7 @@ in each "Who" (Q33). Each task is sized for one or two people.</p>
 </tr>
 <tr>
 <td>C3</td>
-<td><strong>Cameras</strong> on <code>camera_ros</code> (ribbon cameras), with their calibration files</td>
+<td><strong>Cameras</strong>, with their calibration files (now: both front ribbon cameras on one Pi 5, MediaMTX → <code>aav_camera_stream</code> on the Orin)</td>
 <td>M</td>
 <td>audit N4; the backed-up calibration</td>
 <td><code>/sensors/camera/front_left/image_raw</code> steady for 30 min</td>
@@ -435,7 +438,7 @@ in each "Who" (Q33). Each task is sized for one or two people.</p>
 </tr>
 <tr>
 <td>C6</td>
-<td><strong>Lidar driver</strong>, its points into Nav2's costmap and the collision monitor</td>
+<td><strong>Lidar driver</strong> (done: the roof Velodyne VLP-16 on the stock <code>velodyne</code> driver, on by default on the car; untested with the real lidar), its points into Nav2's costmap and the collision monitor</td>
 <td>M</td>
 <td>audit N6 (make, model, IP)</td>
 <td>an obstacle in front shows in RViz's local costmap</td>
@@ -444,7 +447,7 @@ in each "Who" (Q33). Each task is sized for one or two people.</p>
 </tr>
 <tr>
 <td>C7</td>
-<td><strong>Wheel encoder</strong>: alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors: <code>wheel-core</code> and <code>spine_bridge</code> already read them, 15 Oct)</td>
+<td><strong>Wheel encoder</strong> (now: the hardware lead's Arduino on the Orin's CAN, 0x200/0x201; the 2025-26 UDP encoder is off since 23 Oct): alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors: <code>wheel-core</code> and <code>spine_bridge</code> already read them, 15 Oct)</td>
 <td>M</td>
 <td>audit D4, C2</td>
 <td><code>/vehicle/status</code> speed matches a GPS speed within 10% at 1 m/s</td>
@@ -506,7 +509,7 @@ in each "Who" (Q33). Each task is sized for one or two people.</p>
 </tr>
 <tr>
 <td>D3</td>
-<td><strong>YOLO on TensorRT</strong> on the Orin; test stock YOLO11 vs the 2025-26 detector on a recording</td>
+<td><strong>The detector on TensorRT</strong> on the Orin (RF-DETR Nano by default; YOLO with <code>detector:=yolo</code>); test it against the 2025-26 detector on a recording</td>
 <td>S</td>
 <td>A3; a recording from C3</td>
 <td>ms per frame on the Orin written in <code>docs/perception.md</code></td>

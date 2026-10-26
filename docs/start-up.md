@@ -1,6 +1,6 @@
 # How it all fits: bottom-up, and what happens at start-up
 
-Written 15 October 2026. Read [Sim and the car](sim-and-car.md)
+Written 15 October 2026, checked 25 October. Read [Sim and the car](sim-and-car.md)
 and [Maps and position](maps-and-position.md) first, or after: they go
 deeper on two parts of this page.
 
@@ -17,10 +17,10 @@ deeper on two parts of this page.
  8  People      HUD screen, laptop (Foxglove, RViz), e-stop buttons
  7  Choose      twist_mux picks ONE driver → ego turns it into speed + steering angle
  6  Drivers     keyboard, joystick, scripted drive, Nav2, AI (lane keeping), replay
- 5  Perception  YOLO (cameras), radar clusters, lane finder → costmap, stop sign
+ 5  Perception  RF-DETR (cameras), radar clusters, lidar scan, lane finder → costmap, stop sign
  4  Where am I  ekf_local, ekf_global, navsat_transform
- 3  Backend     ONE of: spine (CAN), legacy (UART, today), Gazebo, bench, turtle
- 2  Sensors     drivers for camera, radar, lidar, IMU, GPS (wheels come via the backend)
+ 3  Backend     ONE of: legacy (UART, today), spine (CAN, later), Gazebo, bench, turtle
+ 2  Sensors     drivers for camera, radar, lidar, IMU, GPS, and the wheels (CAN)
  1  Boards      ESP32 control board, wheel nodes, Jrk G2s, the GPS and IMU chips
  0  Wires       power, Ethernet, CAN, USB, UART
 ```
@@ -29,7 +29,7 @@ deeper on two parts of this page.
 |---|---|---|---|---|
 | 1 | Boards | CAN frames, UART bytes | the boards | unit tests on a laptop (`spine-core`, `wheel-core`); the bench's spine simulator |
 | 2 | Sensors | `/sensors/...` topics | the Pi or Orin the device plugs into | Gazebo (all sensors); the car |
-| 3 | Backend | `/vehicle/odom`, `/vehicle/status` up; `/control/<target>/actuator_cmd` down (from the output mux) | Orin #1 (CAN); Motor-Pi (today) | turtle, bench, Gazebo |
+| 3 | Backend | `/vehicle/status` up (and `/vehicle/odom` in the stand-ins); `/control/<target>/actuator_cmd` down (from the output mux) | Motor-Pi (today, UART); Orin #1 (the CAN spine, later) | turtle, bench, Gazebo |
 | 4 | Where am I | TF `map → odom → base_link`, `/localization/...` | Orin #1 | turtle (local only), bench, Gazebo, replay a bag |
 | 5 | Perception | `/perception/...` | Orin #2 (later); Orin #1 or a laptop today | bench (`--perception`), Gazebo road world |
 | 6 | Drivers | `/drivers/<name>/cmd_vel` | Orin; laptop for keyboard/joystick | turtle, bench, Gazebo |
@@ -40,14 +40,12 @@ deeper on two parts of this page.
 
 | Device | Wire | Driver (ours or stock) | Topic it makes | Who reads it | Status |
 |---|---|---|---|---|---|
-| Front camera L | ribbon to a Pi 5 | `usb_cam` ⚠️ USB only: the ribbon cameras need a libcamera driver (`camera_ros`) | `/sensors/camera/front_left/image_raw` | YOLO, lane finder, HUD | ❌ untested; driver mismatch |
-| Front camera R | ribbon to a Pi 5 | the same | `/sensors/camera/front_right/...` | (not used yet) | ❌ |
+| Front cameras L and R | ribbon, both on one Pi 5 | MediaMTX on the Pi streams H.264; on the Orin, `aav_camera_stream` decodes each, with RF-DETR inside | `/perception/detections` (no raw pictures on the network) | stop-sign watcher, sensor watchdog | ✅ on a Mac; ❌ car |
 | mmWave radar (TI) | USB | `ti_ros2_driver` (inherited) | `/sensors/radar/points` | radar clusters, Nav2's local costmap, collision_monitor | ✅ bench, Gazebo; ❌ car |
-| Lidar (roof) | Ethernet | **none yet** (model unknown) | `/sensors/lidar/points` (planned) | Nav2's costmap, later | ✅ Gazebo only, on by default |
+| Lidar (roof Velodyne VLP-16) | Ethernet | the stock `velodyne` driver, on by default on the car | `/sensors/lidar/points` | Nav2's costmap, collision_monitor | ✅ Gazebo, bench, a pretend VLP-16; ❌ the real lidar |
 | IMU (Yahboom) | USB | `aav_imu_yahboom` (Rust) + Madgwick filter | `/sensors/imu/data` | both EKFs | ✅ Gazebo; ❌ car |
 | GPS (ZED-F9R) | USB to the RTK-Pi | `ublox_gps` (stock) | `/sensors/gps/fix` | navsat_transform, HUD | ✅ Gazebo; ❌ car |
-| Wheel speed, today | optical encoder → Pico 2 → UDP | `aav_legacy` encoder | `/vehicle/odom` | both EKFs | ❌ untested |
-| Wheel speed, KEFC | Hall sensors → 2 ESP32 → CAN 0x200/0x201 | `spine_bridge` | `/vehicle/wheels`, `/vehicle/odom` | both EKFs | ✅ bench (spine_sim sends the frames); ❌ car: no wheel nodes yet |
+| Wheel speed, today | the hardware lead's Arduino on the Orin's CAN (0x200/0x201) | `spine_bridge role:=sensors` | `/vehicle/wheels`, `/vehicle/odom` | both EKFs | ✅ fed wheel frames by hand; ❌ car. The 2025-26 UDP encoder is off since 23 Oct |
 | Steering | Jrk G2 + KTC-100 pot (KEFC) | the control board | `/vehicle/status` (angle) | EKF (later), HUD | ❌ no sensor today (open loop) |
 | Brake | Jrk G2 | the control board | `/vehicle/status` (brake %) | HUD | ❌ |
 | Throttle | DAC → motor controller | the control board | `/vehicle/status` (throttle %) | HUD | ❌ |
@@ -64,16 +62,16 @@ This is the design. It runs this way on the bench and in Gazebo, but never on th
 ```bash
 pixi run car orin        # on Orin #1
 pixi run car motor_pi    # on the Motor-Pi (today's drive path)
-pixi run car laptop      # on a laptop at the car: joystick, YOLO on its GPU
+pixi run -e ml car laptop   # on a laptop at the car: joystick, RF-DETR on its GPU
 ```
 
 Its **machine file** (`ros/bringup/aav_bringup/config/machines/<name>.yaml`) lists the parts that run there:
 
 | Machine | Parts that run there |
 |---|---|
-| `orin` | car model, mux, ego, scripted, IMU, GPS, YOLO, stop-sign watcher, localization, Nav2, Foxglove |
-| `motor_pi` | the legacy backend: UART to the ESP32, the wheel encoder over UDP |
-| `laptop` | joystick, YOLO on the laptop's GPU, compressed camera pictures |
+| `orin` | car model, mux, ego, scripted, goto, IMU, GPS, lidar, the two camera streams (RF-DETR inside), stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove |
+| `motor_pi` | the legacy backend: UART to the ESP32 |
+| `laptop` | joystick, RF-DETR on the laptop's GPU, compressed camera pictures |
 | `all` | everything on one computer (the bench) |
 
 A part that can't run there (no device, no model file, no PyTorch) is **skipped with a warning**, not a crash.
@@ -90,9 +88,9 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 | 6 | `ekf_local` starts as soon as wheel speed and the IMU arrive. `ekf_global` waits for GPS and the datum | `ros2 topic echo /localization/odom/local` |
 | 7 | Nav2 starts its servers in order (lifecycle), loads the map, and waits for a goal | `ros2 lifecycle get /bt_navigator` |
 | 8 | twist_mux is **silent**: no driver is talking | `ros2 topic hz /control/cmd_vel` = nothing |
-| 9 | ego sends "speed 0" 50 times a second, always: the board knows the computer is alive | `ros2 topic hz /ego/actuator_cmd` |
-| 10 | The backend is **not armed**: it sends no drive commands to the board | `/vehicle/status` armed = false |
-| 11 | A person arms it on purpose: `ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"` | armed = true |
+| 9 | ego sends "speed 0" 50 times a second, always. The output mux passes it on, with its heartbeat, only once every source is REAL (about 4 s after start) | `ros2 topic echo /safety/output_mux/state` = OPEN |
+| 10 | Today's car (`actuators:=uart`) has no arm step: the output mux's OPEN is the gate. The CAN spine (`actuators:=can`) starts **not armed** | `/vehicle/status` armed = false |
+| 11 | CAN spine only: a person arms it on purpose, once the gate is OPEN: `ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"` | armed = true |
 | 12 | Now a driver can move the car: hold the joystick trigger, send a scripted drive, or give Nav2 a goal | the HUD |
 
 ### A laptop joining
@@ -110,7 +108,7 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 |---|---|---|
 | Kar-Tech wireless e-stop, kill switch | hardware | power: overrides everything |
 | HUD button, `pixi run estop` | `/safety/estop` = true | the mux blocks every driver; the backend stops |
-| The computer freezes | ego's 50 Hz stops | the board's timeout brakes: 100 ms in the Rust spine (CAN v0.2.0). Today's C++ ESP32 has none yet (team-todo.md B2) |
+| The computer freezes | ego's 50 Hz stops | the board's timeout brakes: 100 ms in the Rust firmware (the spine, and the Rust ESP32: proven in QEMU, not yet flashed). Today's C++ ESP32 has none (team-todo.md B2) |
 | An obstacle | collision_monitor | Nav2's command, before the mux |
 | The person drives | any higher-priority driver | the mux picks them over Nav2 |
 
@@ -118,7 +116,7 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 
 | Rung | Command | Has | Good for |
 |---|---|---|---|
-| 1. Unit tests | `pixi run test` | no ROS | maths, CAN frames, firmware logic |
+| 1. Unit tests | `tools/test.sh` (`pixi run test` adds the ROS tests) | no ROS | maths, CAN frames, firmware logic |
 | 2. Turtle | `pixi run turtle` | a 2D turtle as the car | drivers, mux, ego, scripted drive |
 | 3. Bench | `pixi run bench`, `pixi run bench-check` | pretend sensors, the real CAN frames, the spine's own logic | the car's software path, e-stops, Nav2, stop sign |
 | 4. Gazebo | `pixi run sim world:=road` (or `world:=test_lot`), every sensor on | 3D physics, every sensor | localization, Nav2, perception, A to B |
@@ -143,13 +141,12 @@ A part that can't run there (no device, no model file, no PyTorch) is **skipped 
 
 | Gap | Blocks | Next step |
 |---|---|---|
-| Our code has never run on the car | everything on the car | Friday's audit; Jazzy or Pixi on the Orin (Q24) |
-| The front cameras are ribbon (CSI); our driver is USB-only | cameras on the car | swap `usb_cam` for `camera_ros` (libcamera) on the camera Pis |
-| No lidar driver | lidar on the car | the model, from the audit |
+| Our code has never run on the car | everything on the car | the audits were 16 and 21 Oct; next, Jazzy or Pixi on the Orin (Q24; [car day](car-day.md)) |
+| The camera streams and the lidar driver are untested on the car | cameras and lidar on the car | the car day; RF-DETR on the Orin waits for the reflash (Q24) |
 | No steering sensor | closed-loop steering | the KTC-100 (KEFC) |
-| Wheel speed: a fouled optical encoder | good odometry | Hall sensors (KEFC) |
+| Wheel speed: the Arduino's CAN frames never seen yet | good odometry | the car day: `candump can0` on the Orin |
 | The datum is a placeholder | GPS goals | measure it at the test site |
-| No start-at-boot | a car that's ready when it's switched on | systemd services, after the audit |
+| No start-at-boot | a car that's ready when it's switched on | systemd services, once the stack runs on the car |
 
 More detail: [Learn: the car, box by box](learn-car.md), [A command's journey](learn-journey.md),
 [Every module](modules.md), [Status](status.md).

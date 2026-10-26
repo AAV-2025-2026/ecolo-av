@@ -19,7 +19,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 |---|---|---|---|---|
 | IMU driver in Rust (`aav_imu_yahboom`) | Our C++ moves to Rust; it gives the 2025-26 C++ driver's answers, bit for bit | Ben | 2026-10-10 | built |
 | GPS driver: stock `ublox_gps`, with `nmea` or `ublox_dgnss` as options | A stock driver that installs with Pixi on every computer, while the receiver model is still open (Q18) | Ben | 2026-10-11 | built |
-| TI radar driver (`ti_ros2_driver`) | The car's radar already worked with it, so we ported it to Jazzy instead of rewriting it | the 2025-26 team | 2026-10-09 | built |
+| TI radar driver (`ti_ros2_driver`) | The car's radar already worked with it, so we ported it to Jazzy instead of rewriting it | the 2025-26 team, ported by Ben | 2026-10-09 | built |
 | Battery monitor (`battery_monitor`) | Shows the battery's state, so the team sees it before it runs flat | the 2024-25 team | 2026-10-09 | built |
 | Roof lidar: the stock `velodyne` driver | The car's VLP-16 already speaks to this stock driver; it gives Nav2 a view all round the car | Ben | 2026-10-20 | built |
 | Wheel speed from CAN (0x200, 0x201; `spine_bridge role:=sensors`) | The hardware lead's Arduino puts the wheel speeds on CAN; the Orin turns them into odometry | Ben | 2026-10-15 | sim |
@@ -90,6 +90,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Frozen-wheel cross-check | Wheels that stop reporting are caught by checking them against the IMU and GPS | Ben | 2026-10-15 | sim |
 | HUD heartbeat and latch | The safety drivers rely on the screen, so a frozen HUD holds Nav2 until a person clears it | Ben | 2026-10-23 | sim |
 | [Sensor mux and output mux](sources-and-targets.md) (`aav_io_mux`) | Simulated data can never drive the real car, and the spine won't arm while the gate is shut | Ben | 2026-10-23 | sim |
+| The bridge won't arm while the safety gate is shut (`spine_bridge`, `/spine/arm`) | Arming said "armed" and did nothing while no commands could pass; now it refuses and says why | Ben | 2026-10-24 | sim |
 | Orin-to-ESP32 heartbeat (serial frame version 2) | The ESP32 brakes when the Orin stops, even if the Motor Pi still sends: 111-120 ms in QEMU | Ben | 2026-10-24 | built |
 | Stand-ins stay local (`tools/ros.sh --local`) | A pretend car in the turtle, Gazebo or bench mode can never reach the real one | Ben | 2026-10-10 | sim |
 
@@ -168,3 +169,4 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | [Getting-started guide](getting-started.md) | A new laptop goes from nothing to driving the turtle in under 30 minutes (T1.1) | Arsh (arshjameel) | 2026-10-24 | built |
 | The previous teams' 27 repos, imported with their history | All the older code and its history in one repo, to read and port from | Arsh (arshjameel) | 2026-10-24 | built |
 | One team repo: `AAV-2025-2026/ecolo-av` | The team's own repo, keeping the whole history of both workspaces | Ben | 2026-10-25 | built |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) and the merge queue | One way into `main` for everyone: fork, branch, pull request, review, merge queue | Arsh (arshjameel) | 2026-10-25 | built |

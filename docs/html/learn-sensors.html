@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-sensors.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Sensors from zero</h1>
-<div class="meta">9 min read · 11 sections</div></header>
+<div class="meta">10 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -88,7 +88,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#1-why-so-many-sensors">1. Why so many sensors?</a><a href="#2-all-of-them-on-one-table">2. All of them, on one table</a><a href="#3-wheel-speed">3. Wheel speed</a><a href="#4-steering-angle">4. Steering angle</a><a href="#5-imu-yahboom-10-axis">5. IMU: Yahboom 10-axis</a><a href="#6-gps-u-blox-zed-f9r">6. GPS: u-blox ZED-F9R</a><a href="#7-radar-ti-mmwave">7. Radar: TI mmWave</a><a href="#8-cameras-pi-5s-at-the-windscreen">8. Cameras: Pi 5s at the windscreen</a><a href="#9-lidar-on-the-roof-unknown">9. Lidar: on the roof, unknown</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#1-why-so-many-sensors">1. Why so many sensors?</a><a href="#2-all-of-them-on-one-table">2. All of them, on one table</a><a href="#3-wheel-speed">3. Wheel speed</a><a href="#4-steering-angle">4. Steering angle</a><a href="#5-imu-yahboom-10-axis">5. IMU: Yahboom 10-axis</a><a href="#6-gps-u-blox-zed-f9r">6. GPS: u-blox ZED-F9R</a><a href="#7-radar-ti-mmwave">7. Radar: TI mmWave</a><a href="#8-cameras-one-pi-5-at-the-windscreen">8. Cameras: one Pi 5 at the windscreen</a><a href="#9-lidar-velodyne-vlp-16-on-the-roof">9. Lidar: Velodyne VLP-16 on the roof</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
 <div class="lead"><p>Every sensor on our car: what it measures, how often, which ROS topic and frame it uses,
 what it's good and bad at, which driver reads it, and whether Gazebo can pretend to be it.</p>
 <p><strong>You'll learn:</strong></p>
@@ -101,7 +101,8 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <div class="admonition warning">
 <p class="admonition-title">Nothing here has run on the car yet</p>
 <p>Our drivers work in Gazebo and on the bench. On the real car, every sensor below is
-<span class="badge b-untested">untested</span> until Friday's audit and after (<a href="car-photos.html">Car photos</a>).</p>
+<span class="badge b-untested">untested</span>. The audits of 16 and 21 Oct found what's fitted
+(<a href="../history/audit-2026-10-16-car.md">16 Oct</a>, <a href="../history/audit-2026-10-21-car.md">21 Oct</a>).</p>
 </div></div>
 <section class="card"><h2 id="1-why-so-many-sensors">1. Why so many sensors?</h2>
 <div class="table-wrap"><table>
@@ -154,7 +155,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <tr>
 <td>Wheel speed</td>
 <td>forward speed</td>
-<td>50 Hz (sim); 10 Hz packets today</td>
+<td>50 Hz (sim); 100 Hz CAN frames on the car (<code>aav.dbc</code>)</td>
 <td><code>/vehicle/odom</code></td>
 <td><code>nav_msgs/Odometry</code></td>
 <td><code>base_link</code></td>
@@ -197,22 +198,22 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <td><strong>yes</strong>, in the road world</td>
 </tr>
 <tr>
-<td>Front cameras (Pi 5)</td>
+<td>Front cameras (one Pi 5)</td>
 <td>pictures</td>
-<td>15 fps, 1920 × 1080</td>
-<td><code>/sensors/camera/front_left/image_raw</code></td>
-<td><code>sensor_msgs/Image</code></td>
-<td><code>camera_left_link</code></td>
+<td>15 fps, 1280 × 720, H.264</td>
+<td><code>/perception/detections</code> (the pictures stay in <code>camera_stream</code>; <code>image_raw</code> only with the lane part)</td>
+<td><code>vision_msgs/Detection2DArray</code></td>
+<td><code>camera_left_link</code>, <code>camera_right_link</code></td>
 <td><strong>yes</strong>, in the road world (front left only)</td>
 </tr>
 <tr>
-<td>Lidar (roof)</td>
+<td>Lidar (roof, VLP-16)</td>
 <td>3D points all round</td>
-<td>10 Hz (sim)</td>
-<td><code>/sensors/lidar/points</code> (sim only)</td>
+<td>10 Hz</td>
+<td><code>/sensors/lidar/points</code></td>
 <td><code>sensor_msgs/PointCloud2</code></td>
-<td><code>lidar_link</code> (sim only)</td>
-<td>a generic one, road world, <code>lidar:=true</code></td>
+<td><code>lidar_link</code></td>
+<td>a generic 16-beam one, on by default</td>
 </tr>
 <tr>
 <td>Battery (Victron)</td>
@@ -436,7 +437,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="8-cameras-pi-5s-at-the-windscreen">8. Cameras: Pi 5s at the windscreen</h2>
+<section class="card"><h2 id="8-cameras-one-pi-5-at-the-windscreen">8. Cameras: one Pi 5 at the windscreen</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -450,8 +451,8 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <td>colour pictures</td>
 </tr>
 <tr>
-<td><strong>Rate</strong></td>
-<td>15 fps at 1920 × 1080 (<code>cameras.launch.py</code>)</td>
+<td><strong>On the car</strong></td>
+<td>two ribbon cameras on one Pi 5 (no ROS there): MediaMTX streams each as H.264, 15 fps at 1280 × 720</td>
 </tr>
 <tr>
 <td><strong>Good at</strong></td>
@@ -459,11 +460,11 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>Bad at</strong></td>
-<td>no distance by itself; glare, dark; big messages (use the compressed topic over WiFi)</td>
+<td>no distance by itself; glare, dark; big messages (so the pictures stay inside the Orin)</td>
 </tr>
 <tr>
 <td><strong>Driver</strong></td>
-<td><code>usb_cam</code> (Linux only), with the 2024-25 calibration <code>left.ini</code></td>
+<td><code>aav_camera_stream</code> on the Orin: decodes, undistorts, runs RF-DETR inside each stream (<a href="camera-pipeline.html">Camera pipeline</a>). Not calibrated yet (<a href="camera-calibration.html">how</a>). <code>usb_cam</code> (<code>cameras.launch.py</code>) is only for a USB camera</td>
 </tr>
 <tr>
 <td><strong>Used by</strong></td>
@@ -479,12 +480,12 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td><strong>KEFC</strong></td>
-<td>adds a rear camera (Cam3)</td>
+<td>adds a rear camera (Cam3). The QNX Pi's camera doesn't work today: no rear camera for now</td>
 </tr>
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="9-lidar-on-the-roof-unknown">9. Lidar: on the roof, unknown</h2>
+<section class="card"><h2 id="9-lidar-velodyne-vlp-16-on-the-roof">9. Lidar: Velodyne VLP-16 on the roof</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -498,28 +499,36 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <td>3D points all round, from laser pulses</td>
 </tr>
 <tr>
+<td><strong>Rate</strong></td>
+<td>10 turns a second</td>
+</tr>
+<tr>
 <td><strong>Good at</strong></td>
 <td>exact distances, day or night</td>
 </tr>
 <tr>
 <td><strong>Bad at</strong></td>
-<td>rain and snow; expensive; lots of data</td>
+<td>rain and snow; expensive; lots of data; blind close to the car, low down (<a href="perception.html#the-roof-lidar">Perception</a>)</td>
 </tr>
 <tr>
 <td><strong>On the car</strong></td>
-<td>a 3D lidar on a printed tripod. Model unknown (Q22)</td>
+<td>a VLP-16 on a printed tripod, 192.168.1.201, sending UDP to the Jetson (the 16 Oct audit)</td>
 </tr>
 <tr>
 <td><strong>Driver</strong></td>
-<td><strong>none yet</strong></td>
+<td>the stock <code>velodyne</code> package (<code>aav_sensors lidar:=true</code>), then <code>lidar_scan</code> (<code>aav_lidar</code>) for Nav2. On by default on the car. Tested against <code>tools/fake_vlp16.py</code>; <span class="badge b-untested">untested</span> with the real lidar</td>
+</tr>
+<tr>
+<td><strong>Used by</strong></td>
+<td>the local costmap's lidar layer, and <code>collision_monitor</code></td>
 </tr>
 <tr>
 <td><strong>Gazebo</strong></td>
-<td>a generic 16-beam one, with <code>pixi run sim world:=road lidar:=true</code>. Off by default: on a Mac it made the full graph flaky (<a href="simulation.html#the-lidar-gazebo-only">Simulation</a>)</td>
+<td>a generic 16-beam one, on by default (<code>lidar:=false</code> to drop it)</td>
 </tr>
 <tr>
-<td><strong>Next</strong></td>
-<td>find the model and IP at Friday's audit; it will be read on Orin #2</td>
+<td><strong>Bench</strong></td>
+<td><code>pixi run bench lidar:=true</code>: <code>mock_lidar</code> sends VLP-16 packets of the bench world</td>
 </tr>
 </tbody>
 </table></div>
@@ -595,7 +604,15 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 <tr>
 <td>Wheel speed</td>
-<td><code>ros/can_bridge/aav_legacy</code> (today), <code>ros/can_bridge/aav_spine</code> (CAN)</td>
+<td><code>ros/can_bridge/aav_spine_bridge</code> (Rust, the default) or <code>aav_spine</code> (Python): <code>spine_bridge role:=sensors</code>; <code>ros/can_bridge/aav_legacy</code> (the 2025-26 encoder)</td>
+</tr>
+<tr>
+<td>The front cameras</td>
+<td><code>ros/sources/aav_camera_stream</code></td>
+</tr>
+<tr>
+<td>The lidar's scan for Nav2</td>
+<td><code>ros/perception/aav_lidar</code></td>
 </tr>
 <tr>
 <td>Sensor positions</td>

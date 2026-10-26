@@ -88,22 +88,24 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#1-two-wires-one-bus">1. Two wires, one bus</a><a href="#2-a-frame">2. A frame</a><a href="#3-the-dbc-file-the-dictionary">3. The DBC file: the dictionary</a><a href="#4-our-frames-today-v010">4. Our frames today: v0.1.0</a><a href="#5-one-frame-byte-by-byte">5. One frame, byte by byte</a><a href="#6-why-a-counter-and-a-crc-of-our-own">6. Why a counter and a CRC of our own</a><a href="#7-timeouts-the-car-stops-when-the-talking-stops">7. Timeouts: the car stops when the talking stops</a><a href="#8-from-ros-to-the-wire">8. From ROS to the wire</a><a href="#9-the-bench-tools">9. The bench tools</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#1-two-wires-one-bus">1. Two wires, one bus</a><a href="#2-a-frame">2. A frame</a><a href="#3-the-dbc-file-the-dictionary">3. The DBC file: the dictionary</a><a href="#4-our-frames-v020">4. Our frames: v0.2.0</a><a href="#5-one-frame-byte-by-byte">5. One frame, byte by byte</a><a href="#6-why-a-counter-and-a-crc-of-our-own">6. Why a counter and a CRC of our own</a><a href="#7-timeouts-the-car-stops-when-the-talking-stops">7. Timeouts: the car stops when the talking stops</a><a href="#8-from-ros-to-the-wire">8. From ROS to the wire</a><a href="#9-the-bench-tools">9. The bench tools</a><a href="#try-it">Try it</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
 <div class="lead"><p>CAN is the wire that cars use for small, urgent messages: "steer to 0.25 rad", "I'm
-going 1.4 m/s". The KEFC plan puts our steering, brake and throttle on a CAN bus. This
-page starts at the two wires and ends with one of our frames, decoded byte by byte.</p>
+going 1.4 m/s". Today the Orin's CAN bus carries the front wheel speeds. The KEFC plan
+also puts our steering, brake and throttle on it. This page starts at the two wires and
+ends with one of our frames, decoded byte by byte.</p>
 <p><strong>You'll learn:</strong></p>
 <ul>
 <li>what a CAN bus is, and why it has a 120 Ω resistor at each end;</li>
 <li>what a frame is: ID, length, data, and who wins when two talk at once;</li>
-<li>our frames (v0.1.0), and what the KEFC plan adds (v0.2.0, proposed);</li>
+<li>our six frames (<code>aav.dbc</code> v0.2.0);</li>
 <li>why every frame of ours carries a counter and a CRC;</li>
 <li>the bench tools: a CANable, <code>candump</code>, <code>cansend</code>, <code>ip link</code>, <code>ros2_socketcan</code>.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Status</p>
 <p>The CAN code is written and tested against a simulator. <strong>No real CAN bus has carried
-our frames yet</strong>: the parts are still to buy (<a href="can-plan.html">CAN plan</a>).</p>
+our frames yet.</strong> The first look at the car's bus is car day, session 7
+(<a href="car-day.html">Car day</a>); the wiring is in the <a href="can-plan.html">CAN plan</a>.</p>
 </div></div>
 <section class="card"><h2 id="the-picture">The picture</h2>
 <p><img alt="The bus, and one DRIVE_CMD byte by byte" src="../img/can-bus.svg" /></p>
@@ -164,8 +166,8 @@ our frames yet</strong>: the parts are still to buy (<a href="can-plan.html">CAN
 </tr>
 </tbody>
 </table></div>
-<p>On our car (KEFC plan): one in the <strong>CAN Pal</strong> on the Orin, one on the <strong>last wheel
-node</strong>. Not on the boards in the middle.</p>
+<p>On our car: one at each end of the bus, and none on the boards in the middle. Where
+the ends are is the hardware lead's to say (car day, question H7).</p>
 </section>
 <section class="card"><h2 id="2-a-frame">2. A frame</h2>
 <p>A CAN message is a <strong>frame</strong>. Classic CAN (what we use) looks like this:</p>
@@ -243,7 +245,7 @@ feedback (0x180) every time.</p>
 <td>about 110-135 bits, so about 0.25 ms</td>
 </tr>
 <tr>
-<td>Our frames per second (v0.2)</td>
+<td>Our frames per second (v0.2.0)</td>
 <td>50 + 50 + 10 + 10 + 100 + 100 = <strong>320</strong></td>
 </tr>
 <tr>
@@ -327,7 +329,8 @@ feedback (0x180) every time.</p>
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="4-our-frames-today-v010">4. Our frames today: v0.1.0</h2>
+<section class="card"><h2 id="4-our-frames-v020">4. Our frames: v0.2.0</h2>
+<p><code>aav.dbc</code> v0.2.0 (15 Oct, from the <a href="can-plan.html">KEFC plan</a>):</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -372,39 +375,44 @@ feedback (0x180) every time.</p>
 <td>8</td>
 <td>mode, armed, e-stop, throttle %, brake %, fault bits</td>
 </tr>
+<tr>
+<td>0x200</td>
+<td><code>WHEEL_SPEED_L</code></td>
+<td>left front wheel sensor → Orin</td>
+<td>100 Hz</td>
+<td>8</td>
+<td>wheel speed (m/s), pulse count, direction known</td>
+</tr>
+<tr>
+<td>0x201</td>
+<td><code>WHEEL_SPEED_R</code></td>
+<td>right front wheel sensor → Orin</td>
+<td>100 Hz</td>
+<td>8</td>
+<td>the same, for the right front wheel</td>
+</tr>
 </tbody>
 </table></div>
-<p>"The spine" is the board that drives the actuators. In the KEFC plan, it is the
-existing <strong>ESP32 control board</strong>.</p>
-<h3 id="proposed-for-v020-the-kefc-plan">Proposed for v0.2.0 (the KEFC plan)</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th>Change</th>
-<th>Why</th>
+<th>Board</th>
+<th>Is</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Add <code>WHEEL_SPEED_L</code> <strong>0x200</strong> and <code>WHEEL_SPEED_R</code> <strong>0x201</strong>, 100 Hz</td>
-<td>two ESP32-CAN-X2 wheel nodes, Hall sensors on the front brake-rotor holes</td>
+<td>"The spine"</td>
+<td>the board that drives the actuators: the <strong>ESP32 control board</strong> already on the car. With today's wiring it isn't on the bus: the Motor Pi reaches it over UART</td>
 </tr>
 <tr>
-<td>Add nodes <code>WHEEL_L</code> and <code>WHEEL_R</code></td>
-<td>so the DBC says who sends them</td>
-</tr>
-<tr>
-<td>The timeout from 200 ms to <strong>100 ms</strong></td>
-<td>the KEFC PDF's number</td>
-</tr>
-<tr>
-<td>The spine is the ESP32 board, not a Pico 2</td>
-<td>it's already on the car, with a CAN plug</td>
+<td>The wheel sensors</td>
+<td>the hardware lead's <strong>Arduino</strong> (Arduino C++), counting a Hall sensor on the front brake-rotor holes. One board may send both frames</td>
 </tr>
 </tbody>
 </table></div>
-<p>The layout of the two wheel frames isn't written yet. <strong>Status: Proposed.</strong> The
-DBC is still v0.1.0.</p>
+<p>One Hall sensor can't tell direction, so <code>direction_known</code> = 0, and the Orin takes the sign
+from the drive direction.</p>
 </section>
 <section class="card"><h2 id="5-one-frame-byte-by-byte">5. One frame, byte by byte</h2>
 <p>The test vector <code>drive_forward_left</code> in <code>firmware/can/test_vectors.json</code>:</p>
@@ -507,7 +515,7 @@ one-line command prints every value.</p>
 <td>treats it as <strong>not fresh</strong>; sets <code>BAD_COUNTER</code></td>
 </tr>
 <tr>
-<td>no fresh <code>DRIVE_CMD</code> for 200 ms</td>
+<td>no fresh <code>DRIVE_CMD</code> for 100 ms</td>
 <td>its watchdog trips: <strong>throttle off, brake on, steering held</strong></td>
 </tr>
 </tbody>
@@ -516,7 +524,7 @@ one-line command prints every value.</p>
 </section>
 <section class="card"><h2 id="7-timeouts-the-car-stops-when-the-talking-stops">7. Timeouts: the car stops when the talking stops</h2>
 <pre class="highlight"><code class="language-text">ego goes quiet ──0.1 s──► spine_bridge stops sending DRIVE_CMD
-                          ──0.2 s──► the spine's watchdog: brake</code></pre>
+                          ──0.1 s──► the spine's watchdog: brake</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -533,16 +541,12 @@ one-line command prints every value.</p>
 </tr>
 <tr>
 <td>The spine's watchdog</td>
-<td>200 ms today, <strong>100 ms</strong> in the KEFC plan</td>
+<td><strong>100 ms</strong> (the KEFC PDF's number)</td>
 <td><code>spine-core/src/spine.rs</code> (<code>cmd_timeout_ms</code>)</td>
-</tr>
-<tr>
-<td>The KEFC control board</td>
-<td>100 ms → brake</td>
-<td>the KEFC PDF</td>
 </tr>
 </tbody>
 </table></div>
+<p>So the car brakes at most 0.2 s after ego goes quiet.</p>
 <p>The spine also refuses to drive until it is <strong>armed</strong>: <code>armed = 0</code>, then <code>armed = 1</code>. A
 reboot never restarts the car by itself (<a href="firmware.html">Firmware</a>).</p>
 </section>
@@ -567,7 +571,7 @@ the bus ─► can0 ─► socket_can_receiver ─► /can/rx ─► spine_bridg
 </tr>
 <tr>
 <td><strong><code>spine_bridge</code></strong></td>
-<td>ours: packs and unpacks frames with <code>can_codec.py</code></td>
+<td>ours: packs and unpacks frames. The default is Rust (<code>aav_spine_bridge</code>, with <code>spine-core</code>'s codec); <code>bridge:=python</code> runs <code>aav_spine</code>'s, with <code>can_codec.py</code></td>
 </tr>
 <tr>
 <td><strong>On the bench</strong></td>
@@ -680,7 +684,7 @@ ip -details -statistics link show can0    # error state, error counts</code></pr
 </tr>
 <tr>
 <td>ROS bridge</td>
-<td><code>ros/can_bridge/aav_spine/aav_spine/spine_bridge.py</code>, <code>config/spine.yaml</code></td>
+<td><code>ros/can_bridge/aav_spine_bridge</code> (Rust, the default); <code>ros/can_bridge/aav_spine/aav_spine/spine_bridge.py</code> (Python); <code>config/spine.yaml</code></td>
 </tr>
 <tr>
 <td>Launch with <code>ros2_socketcan</code></td>

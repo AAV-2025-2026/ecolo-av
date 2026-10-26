@@ -80,7 +80,7 @@ Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
 
 | # | Do | You should see | If not |
 |---|---|---|---|
-| 1 | `git checkout main && git pull`, then `pixi run build` | `Summary: ... packages finished` | `pixi run build` again; the end says which package |
+| 1 | `git fetch upstream && git switch main && git merge --ff-only upstream/main` (the team's main: [CONTRIBUTING.md](../CONTRIBUTING.md)), then `pixi run build` | `Summary: ... packages finished` | `pixi run build` again; the end says which package |
 | 2 | `pixi run get-models` (once) | `models/rf-detr-nano.pth`, `models/yolo11n.pt` | the internet |
 | 3 | The ONNX for the Orin (box below) | `models/rf-detr-nano.onnx` (108 MB) | skip: session 4 has a slower way |
 | 4 | `pixi run car-day-build` | `v2: PASS`, `v1: PASS`, `esp-qemu-check: PASS`, `legacy-esp32: PASS`, `docs: PASS` | each step's log is in `car-day/esp32/` |
@@ -138,15 +138,15 @@ Step 4 puts the ESP32 firmware here, out of git:
 
 ### `pixi run car-day-check` on Ben's Mac, 24 Oct
 
-After step 4, before steps 1, 5 and 6: so the build, the kit and the push are its 3
-missing, and Cyclone a reminder. No secrets: the Keychain is only asked whether each
+After step 4, before steps 1, 5 and 6: so the repo, the build and the kit are its 3
+missing, and Cyclone a reminder. (The repo line's advice is today's wording.) No secrets: the Keychain is only asked whether each
 entry exists.
 
 ```text
 Car day: is /Users/ben/Code/ecolo-av ready? (car-day.md)
 
   MISSING  repo         main at 54304074 has commits GitHub hasn't
-                        -> pixi run test, then git push
+                        -> pixi run test, then move them to a branch and open a pull request (CONTRIBUTING.md)
   MISSING  build        ros/ changed since the last build (24 Oct 15:06)
                         -> pixi run build
   MISSING  car kit      made 2026-10-20 13:54; its code is 37a7b549, main is 54304074
@@ -346,7 +346,18 @@ The same venv also runs the engine once on the test stop sign, with the score an
 | 7 | The Pi's CPU, both streams on: `top` on the Pi, then `vcgencmd measure_temp` | under 50% of the Pi; under 80 °C | write down the numbers anyway |
 | 8 | Bitrate: `curl http://127.0.0.1:9997/v3/paths/list` on the Pi, twice, 10 s apart | `bytesSent` up about 2.5 MB each 10 s (2 Mbit/s) | |
 | 9 | **The delay:** a stopwatch on phone 1 in front of the camera, the browser view beside it; phone 2 films both | the difference between the two times: under 150 ms. Do 3 photos | write down what you got |
-| 10 | **Calibration:** the printed checkerboard (`pixi run calibrate-camera board`, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: `pixi run calibrate-camera front_left --host 192.168.1.108 --square <measured, in m>`; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for `front_right` | `ros/sources/aav_camera_stream/config/calibrations/front_left.yaml` (and `front_right`) written; commit them at home | the window shows no picture: the stream (step 6). As a backup, save pictures: `mkdir -p ~/aav-calib`, then `pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png` |
+| 10 | **Calibration:** the steps below, for `front_left`, then `front_right` | `ros/sources/aav_camera_stream/config/calibrations/front_left.yaml` (and `front_right`) written; commit them at home | no picture: the stream (step 6); save pictures as a backup (below) |
+
+Step 10, calibration:
+
+1. The printed checkerboard: 9x6, 25 mm squares (`pixi run calibrate-camera board`).
+   Measure one square with the ruler.
+2. On the laptop: `pixi run calibrate-camera front_left --host 192.168.1.108 --square <measured, in m>`.
+3. Someone moves the board slowly: near, far, the corners, tilted. Wait until the X, Y,
+   Size and Skew bars go green.
+4. CALIBRATE, then SAVE. Then the same for `front_right`.
+5. Backup, if the window shows no picture: `mkdir -p ~/aav-calib`, then
+   `pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png`
 
 At home: the delay goes in `orin.yaml`'s `camera_stream` `delay` (0.06 s today); commit
 the two calibration files (`docs/camera-calibration.md`). Until they're in, the stop-sign

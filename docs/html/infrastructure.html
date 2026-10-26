@@ -7,7 +7,7 @@
 <!-- Generated from docs/infrastructure.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Infrastructure: how the project is put together</h1>
-<div class="meta">19 min read · 11 sections</div></header>
+<div class="meta">16 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -153,13 +153,14 @@ tests, and how a change goes from an idea to the car.</p></div>
   pixi.toml           the environment, and the one-word tasks (pixi run &lt;task&gt;)
   pixi.lock           the exact version of every package: committed, so every laptop matches
   ros/                ROS 2 packages, one folder per area (colcon builds these)
-    bringup/            aav_bringup (the launch profiles: turtle, sim, car, replay, bench)
+    bringup/            aav_bringup (the profiles: turtle, sim, bench, car, carla, replay)
                         and aav_description (the URDF and vehicle.yaml, the car's measurements)
     ecolo_msgs/         aav_interfaces: our own messages and actions
-    sources/            drivers that turn devices into standard messages: IMU, GPS, cameras, radar
+    sources/            drivers that turn devices into standard messages: IMU, GPS, lidar, cameras, radar
     localization/       the two EKFs and navsat_transform, and the GPS heading
     perception/         the detector (RF-DETR, YOLO), radar clustering, lanes, the lidar
-    drivers/            everything that proposes a command: teleop, scripted, goto, Nav2
+    drivers/            everything that proposes a command: teleop, RC, actuator tests, scripted,
+                        goto, plain English, Nav2, street routes
     command_mux/        twist_mux: picks one command
     io_mux/             the sensor mux and the output mux: real or simulated, never mixed
     ego/                the virtual car: one command into speed and steering
@@ -264,7 +265,7 @@ because <code>pixi.lock</code> pins them all.</p>
 </tr>
 <tr>
 <td><code>pixi run -e ml &lt;task&gt;</code></td>
-<td>the same, in the <code>ml</code> environment: PyTorch and YOLO on top of everything else</td>
+<td>the same, in the <code>ml</code> environment: PyTorch, RF-DETR and YOLO on top of everything else</td>
 </tr>
 </tbody>
 </table></div>
@@ -284,7 +285,7 @@ because <code>pixi.lock</code> pins them all.</p>
 </tr>
 <tr>
 <td><code>ml</code></td>
-<td>the default, plus PyTorch, Ultralytics (YOLO) and, on Macs, Core ML tools</td>
+<td>the default, plus PyTorch, RF-DETR, Ultralytics (YOLO) and, on Macs, Core ML tools</td>
 <td>whoever runs the detector: <code>pixi run detect</code>, <code>pixi run -e ml bench perception:=true</code>. Linux PCs and Macs only</td>
 </tr>
 <tr>
@@ -302,6 +303,26 @@ because <code>pixi.lock</code> pins them all.</p>
 <td>Python and PlatformIO, no ROS</td>
 <td>today's C++ boards: <code>pixi run -e firmware legacy-esp32</code></td>
 </tr>
+<tr>
+<td><code>llm</code></td>
+<td><code>mcp</code>, plus MLX (Macs with Apple silicon)</td>
+<td>plain-English driving: <code>pixi run -e llm talk</code> (<a href="plain-english.html">Plain English</a>)</td>
+</tr>
+<tr>
+<td><code>routes</code></td>
+<td>Valhalla, no ROS</td>
+<td>the street router: <code>pixi run -e routes router</code> (<a href="routes.html">Routes</a>)</td>
+</tr>
+<tr>
+<td><code>gst</code></td>
+<td>GStreamer, no ROS</td>
+<td>the camera stream's fast decoder (<a href="camera-pipeline.html">camera pipeline</a>)</td>
+</tr>
+<tr>
+<td><code>calib</code></td>
+<td>ROS's camera_calibration</td>
+<td><code>pixi run calibrate-camera</code> (<a href="camera-calibration.html">camera calibration</a>)</td>
+</tr>
 </tbody>
 </table></div>
 <div class="admonition note">
@@ -313,169 +334,8 @@ commands go through <code>tools/ros.sh</code>. Details: <a href="mac.html">Your 
 </div>
 </section>
 <section class="card"><h2 id="the-one-word-tasks">The one-word tasks</h2>
-<p>All defined in <code>pixi.toml</code>. Run them from the repo's top folder.</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Task</th>
-<th>Does</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>build</code></td>
-<td>compiles our packages (<code>colcon build --symlink-install</code>)</td>
-</tr>
-<tr>
-<td><code>test</code></td>
-<td>every test: unit tests, the Rust spine, style, <code>colcon test</code></td>
-</tr>
-<tr>
-<td><code>lint</code></td>
-<td>ROS's style rules on our Python</td>
-</tr>
-<tr>
-<td><code>turtle</code></td>
-<td>the stack, with turtlesim as the car</td>
-</tr>
-<tr>
-<td><code>keyboard</code></td>
-<td>drive from the keyboard (<code>--sim</code> with Gazebo)</td>
-</tr>
-<tr>
-<td><code>sim</code></td>
-<td>the stack, with Gazebo as the car (<code>gui:=false</code> on a Mac)</td>
-</tr>
-<tr>
-<td><code>bench</code></td>
-<td>the car's own software, with stand-ins for the hardware: <a href="bench.html">Bench mode</a></td>
-</tr>
-<tr>
-<td><code>bench-check</code></td>
-<td>starts the bench and tests the whole graph: contract, drive, e-stops. <code>--perception</code> adds the stop sign, <code>--lane</code> lane keeping</td>
-</tr>
-<tr>
-<td><code>gz-window</code></td>
-<td>Gazebo's window, for a simulator started with <code>gui:=false</code></td>
-</tr>
-<tr>
-<td><code>car</code></td>
-<td>the real car: <code>pixi run car orin</code> (or <code>motor_pi</code>, <code>laptop</code>, <code>all</code>)</td>
-</tr>
-<tr>
-<td><code>view</code></td>
-<td>the car's model in RViz</td>
-</tr>
-<tr>
-<td><code>rviz</code></td>
-<td>RViz with the driving layout: map, costmaps, path, car</td>
-</tr>
-<tr>
-<td><code>graph</code></td>
-<td>rqt_graph: nodes and topics, live</td>
-</tr>
-<tr>
-<td><code>graph-picture</code></td>
-<td>saves the running graph as <code>docs/img/graph.svg</code> and <code>.png</code></td>
-</tr>
-<tr>
-<td><code>check</code></td>
-<td>the running graph against the contract: <code>pixi run check sim</code></td>
-</tr>
-<tr>
-<td><code>bandwidth</code></td>
-<td>every topic's rate, size and MB/s, biggest first: <code>pixi run bandwidth --local</code> beside <code>pixi run sim</code>. <a href="bandwidth.html">Bandwidth</a></td>
-</tr>
-<tr>
-<td><code>can-load</code></td>
-<td>how busy the CAN bus is, from <code>firmware/can/aav.dbc</code></td>
-</tr>
-<tr>
-<td><code>estop</code>, <code>estop-clear</code></td>
-<td>stop every driver; let them go again</td>
-</tr>
-<tr>
-<td><code>gate-clear</code></td>
-<td>a person reopens the output mux after it latched STOP (<a href="sources-and-targets.html">sources and targets</a>)</td>
-</tr>
-<tr>
-<td><code>watchdog-clear</code></td>
-<td>a person says all is right again: clears the sensor watchdog's latched faults (a lost HUD, a GPS jump, wheels that disagreed)</td>
-</tr>
-<tr>
-<td><code>doctor</code></td>
-<td>can this computer join the car's ROS network?</td>
-</tr>
-<tr>
-<td><code>rust-listener</code></td>
-<td>the Rust example: prints ego's commands</td>
-</tr>
-<tr>
-<td><code>vendor</code></td>
-<td>downloads the ROS 2 and rclrs source into <code>vendor/</code>, to look things up</td>
-</tr>
-<tr>
-<td><code>get-models</code></td>
-<td>downloads the stock RF-DETR Nano and YOLO models into <code>models/</code></td>
-</tr>
-<tr>
-<td><code>export-coreml</code></td>
-<td>makes the Core ML model for a Mac's detector, RF-DETR Nano by default (the <code>ml</code> environment, Macs only)</td>
-</tr>
-<tr>
-<td><code>get-hud-map</code></td>
-<td>downloads the place database (51 MB) into <code>maps/places/</code>, for the map window's search and the Flutter app</td>
-</tr>
-<tr>
-<td><code>get-street-map</code></td>
-<td>downloads the map window's offline street map of Ottawa (40 MB) into <code>maps/streets/</code></td>
-</tr>
-<tr>
-<td><code>get-flutter</code></td>
-<td>downloads Flutter 3.35.7 into <code>vendor/flutter</code>, for the HUD app</td>
-</tr>
-<tr>
-<td><code>flutter</code></td>
-<td>runs that Flutter in <code>hud/flutter_pi</code>: <code>pixi run flutter doctor</code></td>
-</tr>
-<tr>
-<td><code>hud-test</code></td>
-<td>the HUD app's own checks and tests, against the real back end</td>
-</tr>
-<tr>
-<td><code>detect</code></td>
-<td>YOLO on the camera's images (the <code>ml</code> environment): <code>pixi run detect picture:=&lt;file&gt;</code></td>
-</tr>
-<tr>
-<td><code>laptop-bench</code></td>
-<td>your laptop's parts, its own detector too, against <code>pixi run bench</code> on the same computer (the <code>ml</code> environment)</td>
-</tr>
-<tr>
-<td><code>docs</code></td>
-<td>rebuilds the docs pages and the PDF</td>
-</tr>
-<tr>
-<td><code>mcp</code></td>
-<td>the read-only MCP server, for AI apps (the <code>mcp</code> environment). The app starts it: <a href="mcp.html">AI apps (MCP)</a></td>
-</tr>
-<tr>
-<td><code>legacy-esp32</code></td>
-<td>builds today's ESP32 firmware with PlatformIO (the <code>firmware</code> environment); <code>-t upload</code> flashes it</td>
-</tr>
-<tr>
-<td><code>spine-uf2</code></td>
-<td>builds the spine's Pico 2 program as a UF2 file, to drag onto the board</td>
-</tr>
-<tr>
-<td><code>spine-tools</code></td>
-<td>installs probe-rs into <code>vendor/cargo-tools</code>, to flash through a debug probe (once)</td>
-</tr>
-<tr>
-<td><code>spine-flash</code></td>
-<td>flashes the spine's program through a debug probe, then shows its logs</td>
-</tr>
-</tbody>
-</table></div>
+<p>All defined in <code>pixi.toml</code>, and run from the repo's top folder: <code>pixi run &lt;task&gt;</code>.
+Every one, with what it does: README's <a href="../../README.md#every-command">Every command</a>.</p>
 </section>
 <section class="card"><h2 id="the-scripts-in-tools">The scripts in tools/</h2>
 <div class="table-wrap"><table>
@@ -672,6 +532,12 @@ changes.</p>
 <td>the parts its machine file switches on</td>
 </tr>
 <tr>
+<td><code>carla</code></td>
+<td><code>pixi run carla-car host:=&lt;the CARLA computer&gt;</code></td>
+<td>a CARLA car (untested against a server)</td>
+<td>the same as <code>sim</code> (<a href="carla.html">CARLA</a>)</td>
+</tr>
+<tr>
 <td><code>replay</code></td>
 <td><code>ros2 launch aav_bringup replay.launch.py</code>, with a bag playing</td>
 <td>a recorded drive</td>
@@ -700,17 +566,17 @@ changes.</p>
 <tbody>
 <tr>
 <td><code>orin</code> (Jetson AGX Orin)</td>
-<td>the car's model, mux, ego, scripted driver, IMU, GPS, localization, Nav2, Foxglove, the detector (TensorRT) and the stop-sign watcher</td>
+<td>the car's model, mux, ego, scripted and goto drivers, IMU, GPS, the roof lidar, the two camera streams (RF-DETR inside), the stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove</td>
 <td>Ubuntu 22.04 and Humble: it must move to Jazzy first (Q24)</td>
 </tr>
 <tr>
 <td><code>motor_pi</code></td>
-<td>the legacy bridges to today's ESP32 (UART) and the wheel encoder (UDP)</td>
+<td>the legacy bridge to today's ESP32 (UART); the 2025-26 UDP encoder is off since 23 Oct</td>
 <td>Humble</td>
 </tr>
 <tr>
 <td><code>laptop</code></td>
-<td>the safety driver's joystick</td>
+<td>the safety driver's joystick, and its own detector (<code>-e ml</code>)</td>
 <td>any laptop with Pixi</td>
 </tr>
 <tr>
@@ -803,8 +669,9 @@ changes.</p>
 </table></div>
 </section>
 <section class="card"><h2 id="sharing-the-code">Sharing the code</h2>
-<p>The repo is on GitHub: <code>git@github.com:AAV-2025-2026/ecolo-av.git</code>, public: anyone can read it; ask Ben to add you to push. The
-previous teams' orgs are public, so nothing is pushed there.</p>
+<p>The repo is on GitHub: <code>git@github.com:AAV-2025-2026/ecolo-av.git</code>, public: anyone can read it.
+Changes reach <code>main</code> only through a pull request from your own fork and the merge queue:
+<a href="../../CONTRIBUTING.md">Contributing</a> has the steps.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -814,16 +681,8 @@ previous teams' orgs are public, so nothing is pushed there.</p>
 </thead>
 <tbody>
 <tr>
-<td>Get it</td>
-<td><code>git clone git@github.com:AAV-2025-2026/ecolo-av.git ecolo-av</code></td>
-</tr>
-<tr>
-<td>Take newer work</td>
-<td><code>git pull</code></td>
-</tr>
-<tr>
-<td>Share your work</td>
-<td><code>pixi run test</code>, then <code>git push</code></td>
+<td>Get it, take newer work, share yours</td>
+<td>fork, clone, branch, pull request: <a href="../../CONTRIBUTING.md">Contributing</a></td>
 </tr>
 <tr>
 <td>Hand it to a laptop with no GitHub access</td>
@@ -831,8 +690,8 @@ previous teams' orgs are public, so nothing is pushed there.</p>
 </tr>
 </tbody>
 </table></div>
-<p>CI (<code>.github/workflows/test.yml</code>) runs <code>pixi run test</code> on Linux for every push and pull
-request, and on a Mac every night. The results are on the repo's Actions tab.</p>
+<p>CI (<code>.github/workflows/test.yml</code>) runs <code>pixi run test</code> on Linux for every push to <code>main</code>,
+every pull request and every merge-queue entry, and on a Mac every night. The results are on the repo's Actions tab.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -846,7 +705,7 @@ request, and on a Mac every night. The results are on the repo's Actions tab.</p
 <tr>
 <td><code>linux</code></td>
 <td>Ubuntu 24.04, x86_64</td>
-<td>every push to <code>main</code>, every pull request</td>
+<td>every push to <code>main</code>, every pull request, the merge queue</td>
 <td><code>pixi run test</code>, the MCP server</td>
 </tr>
 <tr>
@@ -864,7 +723,7 @@ request, and on a Mac every night. The results are on the repo's Actions tab.</p
 <tr>
 <td><code>car-kit</code></td>
 <td>Ubuntu 24.04, 64-bit ARM</td>
-<td>every push to <code>main</code>, every pull request</td>
+<td>the same as <code>linux</code></td>
 <td><code>pixi run car-kit</code>, then <code>car_install.sh --all</code> with <strong>no network</strong> (its own network namespace), as on the car (<a href="car-install.html">car install</a>): 6 min</td>
 </tr>
 <tr>

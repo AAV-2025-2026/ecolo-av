@@ -1,5 +1,7 @@
 # Release 0.1: the first pass
 
+> **A snapshot from 11 October 2026.** What's true now: [Status](status.md) and [Features](features.md).
+
 <p class="release-line">The AAV 2026–27 autonomy stack · 11 October 2026</p>
 
 <div class="pitch"><p><b>The whole car's software, in one place, working end to end.</b>
@@ -112,7 +114,7 @@ change since):
 - **The CAN contract** (`aav.dbc`): every frame between ROS and the spine, tested from both
   sides against the same vectors.
 - **spine-core,** the spine's logic: it boots latched, arms only when asked, stops on a
-  200 ms gap in the commands, and holds the e-stop. 54 tests.
+  200 ms gap in the commands (100 ms since 15 Oct), and holds the e-stop. 54 tests.
 - **Five device drivers and the glue** (embedded-hal 1.0): the steering and brake motor
   controllers, the throttle, the I/O expander, the RC receiver and the CAN chip. 137
   tests.
@@ -126,7 +128,7 @@ change since):
 - **The rule:** firmware and hardware drivers in Rust, and our C++ moving to Rust, each
   written in Rust's own style.
 - **Done:** the spine; the ESP32's device logic, as Rust drivers; a Rust IMU driver that
-  gives the C++ one's answers, fed the same bytes (`pixi run imu-compare`); and a first
+  gives the C++ one's answers, fed the same bytes (the comparison went with the C++ driver); and a first
   Rust ROS node.
 - **In the works:** the Rust IMU driver as the only one, and the radar clustering as a
   Rust node.
@@ -174,7 +176,7 @@ change since):
 - **Four e-stops:** the car's own red button (untouched: it always works), the joystick's
   button, `pixi run estop` from any laptop, and the HUD's button.
 - **Watchdogs at every layer:** ego stops on stale commands (0.3 s), the spine on a
-  200 ms gap, and the Pico 2's hardware watchdog after 100 ms.
+  200 ms gap (100 ms since 15 Oct), and the Pico 2's hardware watchdog after 100 ms.
 - **The spine boots latched** and arms only on a deliberate request, so a reboot never
   restarts the car.
 - **Start slow:** ego caps the car at 1.0 m/s until the test plan raises it.

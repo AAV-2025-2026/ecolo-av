@@ -37,14 +37,14 @@ boards that move the actuators.
 | Bench mode | the car's own software, with stand-ins for every board |
 | The real car | the 2025-26 team's code, on ROS 2 Humble |
 
-Details: [Status](status.md), and `sim-and-car.md` at the top of the repo.
+Details: [Status](status.md), and [Sim and the car](sim-and-car.md).
 
 ### Why not run it on the car today?
 
 | Blocker | What it means |
 |---|---|
 | The car runs Humble; we use Jazzy | the two can't share one network (Q24) |
-| Nobody has logged in to its computers yet | the audit on Friday 16 Oct finds out what runs where |
+| Our software isn't installed there yet | the audits (16 and 21 Oct) found what runs where: everything on Humble, ROS domain 0 |
 | The drive path is the 2025-26 one | our `aav_legacy` backend speaks it, but it is untested |
 | The CAN parts aren't bought yet | the KEFC request |
 
@@ -97,11 +97,20 @@ The HUD's button only ever sets it: clearing is always a person's deliberate act
 
 The highest priority that spoke in the last 0.5 s.
 
-| Joystick | Keyboard | Scripted | Replay | Nav2 | AI |
-|---|---|---|---|---|---|
-| 100 | 90 | 50 | 40 | 20 | 10 |
+| Driver | Priority |
+|---|---|
+| Joystick | 100 |
+| RC transmitter | 95 |
+| Keyboard | 90 |
+| Actuator tests | 60 |
+| Scripted | 50 |
+| Replay | 40 |
+| Go-to (one GPS point) | 25 |
+| Nav2 | 20 |
+| AI | 10 |
 
-A stop sign (priority 30) holds Nav2 and the AI, never a person. The e-stop (255) holds
+A lock holds every driver below its priority. A stop sign (30) and the sensor watchdog
+(30) hold go-to, Nav2 and the AI, never a person or a test. The e-stop (255) holds
 everyone. The table lives in `ros/command_mux/aav_mux/config/twist_mux.yaml`.
 
 ### What happens when I let go of the joystick?
@@ -155,9 +164,10 @@ GPS meets the map at one point, the datum: today a placeholder near Carleton. Se
 
 ### Does Nav2 follow the roads?
 
-Not yet. OpenStreetMap is used only in the HUD, to search places and plan a road route.
-Nav2 gets that route as GPS points, and doesn't know where the road is between them.
-Staying in the lane is lane keeping's job.
+Not by itself. `street_router` (`aav_routes`) asks Valhalla, an offline router on
+OpenStreetMap, for the way along the streets, and gives Nav2 that route as GPS points.
+Nav2 doesn't know where the road is between them. Staying in the lane is lane keeping's
+job. See [Street routes](routes.md).
 
 ## Working on it
 
@@ -184,7 +194,8 @@ Yes. Pixi installs the same ROS 2 Jazzy on macOS and on Linux. See [Your Mac](ma
 | `pixi run bench-check` | the whole car graph: driving, both e-stops | about 2 minutes |
 | `pixi run check turtle` | the running graph against `docs/interfaces.yaml` | seconds |
 
-CI runs `pixi run test` on every push.
+CI runs `pixi run test` on every pull request, in the merge queue, and on each push to
+`main`.
 
 ### Where is the list of every topic?
 

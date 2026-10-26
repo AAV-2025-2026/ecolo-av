@@ -7,7 +7,7 @@
 <!-- Generated from docs/controllers.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Path followers: Regulated Pure Pursuit and MPPI</h1>
-<div class="meta">18 min read · 9 sections</div></header>
+<div class="meta">19 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -145,9 +145,9 @@ second. We have two, and a script that compares them on the same drives in Gazeb
 collision monitor, twist_mux and ego. Everything after the controller is the same.</p>
 </section>
 <section class="card"><h2 id="switch-between-them">Switch between them</h2>
-<pre class="highlight"><code class="language-bash">pixi run sim world:=test_lot controller:=mppi      # Gazebo, MPPI following the path
-ros2 launch aav_navigation navigation.launch.py controller:=mppi</code></pre>
-<p><code>controller:=</code> takes <code>rpp</code> (the default) or <code>mppi</code>. The launch file copies the <code>MPPI</code> block
+<pre class="highlight"><code class="language-bash">pixi run sim world:=test_lot controller:=rpp       # Gazebo, Pure Pursuit following the path
+ros2 launch aav_navigation navigation.launch.py controller:=rpp</code></pre>
+<p><code>controller:=</code> takes <code>mppi</code> (the default) or <code>rpp</code>. For MPPI, the launch file copies the <code>MPPI</code> block
 of <code>nav2.yaml</code> under the name the behaviour trees ask for, <code>FollowPath</code>, and sets its
 turning radius, its reverse speed and its top speed from <code>vehicle.yaml</code>
 (<code>aav_description/vehicle.py</code>, <code>nav2_tuned</code>).</p>
@@ -158,7 +158,8 @@ pixi run controller-compare --tours obstacle   # only the box in the lane
 pixi run controller-compare --controllers mppi --speed 2</code></pre>
 <p>For each tour and controller the script starts Gazebo's test lot with no windows, on a ROS
 domain of its own (this computer only), sends the same goals, and records where the car
-really was (Gazebo's ground truth). Forward only, as on the car. The results go to
+really was (Gazebo's ground truth). Forward only by default; <code>--reversing</code> lets Nav2 back
+up, as it may on the car since 22 Oct. The results go to
 <code>log/controller-compare/&lt;time&gt;/</code>:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -542,7 +543,7 @@ settings from "Making MPPI drive" below. One run each: read small differences as
 <tbody>
 <tr>
 <td><strong>Default</strong></td>
-<td>Regulated Pure Pursuit stays the default: quicker, cheaper, and no loops at goals</td>
+<td>Regulated Pure Pursuit stayed the default then: quicker, cheaper, and no loops at goals. After the fixes above, MPPI is the default since 22 Oct</td>
 </tr>
 <tr>
 <td><strong>MPPI next</strong></td>
@@ -575,7 +576,7 @@ sat still for 13 s, then crept at 0.2 m/s and drifted metres off a straight path
 <tr>
 <td>Its speed flipped between forward and back for 12 s</td>
 <td>the simulator let Nav2 reverse (<code>reversing:=true</code> by default), and MPPI dithered around zero</td>
-<td>the comparison runs forward only, as the car does</td>
+<td>the comparison runs forward only by default (<code>--reversing</code> to allow it)</td>
 </tr>
 <tr>
 <td>Nav2 warned "Inconsistent configuration in collision checking"</td>

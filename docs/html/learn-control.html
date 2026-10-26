@@ -506,12 +506,12 @@ behind a stop that a higher layer asked for.</p>
 </tr>
 <tr>
 <td>The spine's watchdog</td>
-<td>200 ms with no fresh <code>DRIVE_CMD</code> (KEFC: 100 ms)</td>
-<td>throttle off, brake on</td>
+<td>100 ms with no fresh command (<code>DRIVE_CMD</code>, or a UART frame)</td>
+<td>throttle off, brake on, latched</td>
 </tr>
 <tr>
 <td><code>collision_monitor</code></td>
-<td>1.0 s with no radar</td>
+<td>1.0 s with no radar or lidar (where it reads one)</td>
 <td>stops Nav2's commands</td>
 </tr>
 </tbody>

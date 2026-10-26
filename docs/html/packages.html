@@ -7,7 +7,7 @@
 <!-- Generated from docs/packages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>What each package does</h1>
-<div class="meta">15 min read · 11 sections</div></header>
+<div class="meta">17 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -89,15 +89,15 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#at-a-glance">At a glance</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers-the-mux-and-ego">Drivers, the mux and ego</a><a href="#perception">Perception</a><a href="#backends">Backends</a><a href="#bench-mode">Bench mode</a><a href="#interfaces-and-bringup">Interfaces and bringup</a><a href="#firmware">Firmware</a><a href="#the-hud">The HUD</a><a href="#examples">Examples</a></nav>
-<div class="lead"><p>Every ROS package in <code>ros/</code>, layer by layer, with what it reads and writes. Then the
-firmware, the HUD and the examples. 26 packages build today, and none is parked:
-perception came in on 10 October, the lane finder on 11 October.</p></div>
+<div class="lead"><p>Every ROS package in <code>ros/</code>, area by area (<code>ros/&lt;area&gt;/&lt;package&gt;</code>), with what it reads
+and writes. Then the firmware, the HUD and the examples. 38 packages build today, and
+none is parked.</p></div>
 <section class="card"><h2 id="at-a-glance">At a glance</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>Package</th>
-<th>Layer</th>
+<th>Area</th>
 <th>Does</th>
 <th>Status</th>
 <th>Origin</th>
@@ -106,35 +106,42 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <tbody>
 <tr>
 <td><code>aav_sensors</code></td>
-<td>sensors</td>
-<td>starts the IMU, GPS, radar, battery and camera drivers, with their configs</td>
+<td>sources</td>
+<td>starts the IMU, GPS, lidar, radar, battery and USB camera drivers, with their configs</td>
 <td><span class="badge b-untested">untested</span> needs the devices</td>
 <td>new</td>
 </tr>
 <tr>
+<td><code>aav_camera_stream</code></td>
+<td>sources</td>
+<td>one node per front camera: the camera Pi's H.264 stream, decoded, with RF-DETR inside</td>
+<td><span class="badge b-works">works</span> on a Mac; <span class="badge b-untested">untested</span> on the Orin</td>
+<td>new</td>
+</tr>
+<tr>
 <td><code>aav_imu_yahboom</code></td>
-<td>sensors</td>
+<td>sources</td>
 <td>the Yahboom IMU over USB serial (Rust)</td>
 <td><span class="badge b-untested">untested</span> needs the device; the C++ driver's answers, bit for bit</td>
 <td>new: Ben's rewrite of the 2025-26 <code>yahboom-IMU</code> C++ driver</td>
 </tr>
 <tr>
 <td><code>battery_monitor</code></td>
-<td>sensors</td>
+<td>sources</td>
 <td>the Victron battery monitor</td>
 <td><span class="badge b-untested">untested</span></td>
 <td>2024-25 <code>Battery-Monitor-ROS</code></td>
 </tr>
 <tr>
 <td><code>ti_ros2_driver</code></td>
-<td>sensors</td>
+<td>sources</td>
 <td>the TI mmWave radar, as point clouds</td>
 <td><span class="badge b-untested">untested</span></td>
 <td>2025-26 <code>Nav_Radar</code></td>
 </tr>
 <tr>
 <td><code>aav_description</code></td>
-<td>description</td>
+<td>bringup</td>
 <td>the car's model (URDF) and <code>vehicle.yaml</code></td>
 <td><span class="badge b-works">works</span> the numbers are guesses</td>
 <td>new</td>
@@ -159,6 +166,20 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>joystick → <code>/drivers/joy/cmd_vel</code>, plus an e-stop button</td>
 <td><span class="badge b-untested">untested</span></td>
 <td>new; the button map from 2025-26 <code>joy_teleop_ackerman</code></td>
+</tr>
+<tr>
+<td><code>aav_rc</code></td>
+<td>drivers</td>
+<td>the RC transmitter, on "RC via ROS", as a driver (priority 95, proposed)</td>
+<td>built 24 Oct; off until the hardware lead confirms the wire (H9)</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_actuator_tests</code></td>
+<td>drivers</td>
+<td>the stage 3-4 tests, as a driver (priority 60)</td>
+<td><span class="badge b-works">works</span> Gazebo; <span class="badge b-untested">untested</span> on the car</td>
+<td>new</td>
 </tr>
 <tr>
 <td><code>aav_scripted</code></td>
@@ -189,15 +210,22 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>new</td>
 </tr>
 <tr>
+<td><code>aav_routes</code></td>
+<td>drivers</td>
+<td>street routes (Valhalla) as GPS waypoints for Nav2</td>
+<td><span class="badge b-works">works</span> in Gazebo</td>
+<td>new</td>
+</tr>
+<tr>
 <td><code>aav_mux</code></td>
-<td>mux</td>
-<td>twist_mux: the priorities and the e-stop lock</td>
+<td>command_mux</td>
+<td>twist_mux: the priorities, the e-stop lock and the other locks</td>
 <td><span class="badge b-works">works</span></td>
 <td>new</td>
 </tr>
 <tr>
 <td><code>aav_io_mux</code></td>
-<td>mux</td>
+<td>io_mux</td>
 <td>the sensor mux and the output mux: simulated data never drives the real car</td>
 <td><span class="badge b-works">works</span> turtle, Gazebo and the bench; <span class="badge b-untested">untested</span> on the car</td>
 <td>new</td>
@@ -211,57 +239,85 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 </tr>
 <tr>
 <td><code>aav_spine</code></td>
-<td>backends</td>
-<td>the real car: ego's commands as CAN frames. Its Python <code>spine_bridge</code>, the config and the launch file</td>
+<td>can_bridge</td>
+<td>the CAN spine: ego's commands as CAN frames. Its Python <code>spine_bridge</code>, the config and the launch file</td>
 <td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>; no spine board yet</td>
 <td>new</td>
 </tr>
 <tr>
 <td><code>aav_spine_bridge</code></td>
-<td>backends</td>
+<td>can_bridge</td>
 <td>the same <code>spine_bridge</code> in Rust, on the firmware's own CAN code (<code>spine-core</code>); the default since 23 Oct (<code>bridge:=python</code> for the other)</td>
 <td><span class="badge b-works">works</span> on the bench, against <code>spine_sim</code>; no spine board yet</td>
 <td>new: a port of <code>aav_spine</code>'s node (T1.8)</td>
 </tr>
 <tr>
 <td><code>aav_legacy</code></td>
-<td>backends</td>
-<td>today's car: the 2025-26 ESP32 over UART, and the wheel encoder</td>
+<td>can_bridge</td>
+<td>today's car: the 2025-26 ESP32 over UART, through the Motor Pi</td>
 <td><span class="badge b-untested">untested</span> on the car</td>
 <td>new, for the 2025-26 protocols</td>
 </tr>
 <tr>
 <td><code>aav_turtlesim</code></td>
-<td>backends</td>
+<td>sim</td>
 <td>turtlesim, steered like the car</td>
 <td><span class="badge b-works">works</span></td>
 <td>new</td>
 </tr>
 <tr>
 <td><code>aav_gazebo</code></td>
-<td>backends</td>
+<td>sim</td>
 <td>Gazebo's car behind the real car's topics</td>
 <td><span class="badge b-works">works</span> headless</td>
 <td>new</td>
 </tr>
 <tr>
 <td><code>aav_carla</code></td>
-<td>backends</td>
+<td>sim</td>
 <td>a CARLA adapter (CARLA's Python client)</td>
 <td><span class="badge b-untested">untested</span> never run against a server</td>
 <td>new</td>
 </tr>
 <tr>
+<td><code>aav_spine_sim</code></td>
+<td>sim</td>
+<td>the spine on a laptop: the firmware's logic on a model car (Rust)</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_bench</code></td>
+<td>sim</td>
+<td>pretend sensors: IMU, GPS, battery, camera, radar, lidar</td>
+<td><span class="badge b-works">works</span></td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_safety</code></td>
+<td>safety</td>
+<td>the sensor watchdog: a twist_mux lock (30) when a sensor is stale, NaN, frozen or jumps</td>
+<td><span class="badge b-works">works</span> Gazebo and the bench</td>
+<td>new</td>
+</tr>
+<tr>
+<td><code>aav_ghost</code></td>
+<td>safety</td>
+<td>ghost obstacles: a pretend person only Nav2 sees</td>
+<td><span class="badge b-works">works</span> in Gazebo</td>
+<td>new</td>
+</tr>
+<tr>
 <td><code>aav_interfaces</code></td>
-<td>interfaces</td>
-<td>our messages: <code>VehicleStatus</code>, <code>ScriptedDrive</code>, <code>GoTo</code></td>
+<td>ecolo_msgs</td>
+<td>our 9 messages (such as <code>VehicleStatus</code>, <code>DataSource</code>, <code>Heartbeat</code>) and 2 actions (<code>ScriptedDrive</code>, <code>GoTo</code>)</td>
 <td><span class="badge b-works">works</span> builds</td>
 <td>new</td>
 </tr>
 <tr>
 <td><code>aav_bringup</code></td>
 <td>bringup</td>
-<td>the five profiles, perception on the car, the machine files, the RViz layout</td>
+<td>the six profiles, <code>stack.launch.py</code>, Foxglove, the machine files, the RViz layouts</td>
 <td><span class="badge b-works">works</span> turtle, sim, replay, bench</td>
 <td>new</td>
 </tr>
@@ -278,6 +334,13 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td>radar clustering (DBSCAN), with a box round each object (Rust)</td>
 <td><span class="badge b-works">works</span> on the bench and in Gazebo</td>
 <td>new: a rewrite of the 2025-26 <code>Nav_Radar</code> C++ node</td>
+</tr>
+<tr>
+<td><code>aav_lidar</code></td>
+<td>perception</td>
+<td><code>lidar_scan</code>: the roof lidar's cloud as a 2D scan for Nav2</td>
+<td><span class="badge b-works">works</span> in Gazebo and the bench</td>
+<td>new</td>
 </tr>
 <tr>
 <td><code>aav_lane_finder</code></td>
@@ -307,20 +370,6 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td><span class="badge b-works">works</span> on a Mac: <code>--demo</code>, fed topics, bench mode. <span class="badge b-untested">untested</span> on a Pi and on the car</td>
 <td>new</td>
 </tr>
-<tr>
-<td><code>aav_spine_sim</code></td>
-<td>bench</td>
-<td>the spine on a laptop: the firmware's logic on a model car (Rust)</td>
-<td><span class="badge b-works">works</span></td>
-<td>new</td>
-</tr>
-<tr>
-<td><code>aav_bench</code></td>
-<td>bench</td>
-<td>pretend sensors: IMU, GPS, battery and camera</td>
-<td><span class="badge b-works">works</span></td>
-<td>new</td>
-</tr>
 </tbody>
 </table></div>
 </section>
@@ -339,7 +388,7 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td><code>aav_sensors</code></td>
 <td></td>
 <td></td>
-<td><code>sensors.launch.py imu:= gps:= radar:= battery:= gps_driver:=</code>; configs in <code>config/</code></td>
+<td><code>sensors.launch.py imu:= gps:= lidar:= radar:= battery:= gps_driver:=</code>; configs in <code>config/</code></td>
 </tr>
 <tr>
 <td><code>aav_imu_yahboom</code>: <code>imu_node</code></td>
@@ -378,10 +427,22 @@ perception came in on 10 October, the lane finder on 11 October.</p></div>
 <td></td>
 </tr>
 <tr>
+<td><code>aav_camera_stream</code>: <code>camera_stream_&lt;camera&gt;</code></td>
+<td>the camera Pi's RTSP stream (MediaMTX)</td>
+<td><code>/perception/detections</code></td>
+<td>the car's two front cameras; RF-DETR inside each node, so no raw pictures on the network (<a href="camera-pipeline.html">camera pipeline</a>)</td>
+</tr>
+<tr>
+<td>stock <code>velodyne</code> driver</td>
+<td>the roof VLP-16's UDP packets</td>
+<td><code>/sensors/lidar/points</code></td>
+<td><code>lidar:=true</code> (on by default on the car); untested with the real lidar</td>
+</tr>
+<tr>
 <td>stock <code>usb_cam</code> (<code>cameras.launch.py</code>)</td>
 <td><code>/dev/aav/camera_left</code>, <code>_right</code></td>
 <td><code>/sensors/camera/front_left/image_raw</code>, <code>/sensors/camera/front_left/camera_info</code></td>
-<td>Linux only; the 2024-25 calibrations</td>
+<td>a USB camera only; Linux only; the 2024-25 calibrations</td>
 </tr>
 <tr>
 <td>stock <code>nmea_navsat_driver</code> (<code>gps_nmea.launch.py</code>)</td>
@@ -568,8 +629,8 @@ Only one runs at a time.</p>
 </tr>
 <tr>
 <td><code>aav_legacy</code></td>
-<td>13-byte UART frames to today's ESP32 (<code>/dev/ttyAMA0</code>)</td>
-<td><code>encoder_udp</code>: the wheel encoder's UDP packets into <code>/vehicle/odom</code></td>
+<td>UART frames to today's ESP32 (<code>/dev/ttyAMA0</code>): 13 bytes today, or version 2 (17 bytes) with the output mux's heartbeat</td>
+<td><code>encoder_udp</code>: the 2025-26 wheel encoder's UDP packets into <code>/vehicle/odom</code> (off on the car since 23 Oct: the wheels are on CAN)</td>
 </tr>
 <tr>
 <td><code>aav_turtlesim</code></td>
@@ -624,11 +685,11 @@ Only one runs at a time.</p>
 <tbody>
 <tr>
 <td><code>aav_interfaces</code></td>
-<td><code>VehicleStatus</code> (mode, armed, e-stop, speed, steering, throttle, brake, fault bits) and the <code>ScriptedDrive</code> action</td>
+<td>9 messages: <code>VehicleStatus</code> (mode, armed, e-stop, speed, steering, throttle, brake, fault bits), <code>ActuatorState</code>, <code>DataSource</code>, <code>SensorSource</code>, <code>SourceCheck</code>, <code>Heartbeat</code>, <code>RcSticks</code>, <code>SpineOutputs</code>, <code>WheelSpeeds</code>; 2 actions: <code>ScriptedDrive</code>, <code>GoTo</code></td>
 </tr>
 <tr>
 <td><code>aav_bringup</code></td>
-<td>the profiles <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code>, <code>bench</code>; the machine files <code>orin</code>, <code>motor_pi</code>, <code>laptop</code>, <code>all</code>, which pick the car's parts, perception too; <code>rviz/drive.rviz</code></td>
+<td>the profiles <code>turtle</code>, <code>sim</code>, <code>bench</code>, <code>car</code>, <code>carla</code>, <code>replay</code>; <code>stack.launch.py target:=</code>; <code>foxglove.launch.py</code>; the machine files <code>orin</code>, <code>motor_pi</code>, <code>laptop</code>, <code>all</code>, which pick the car's parts, perception too; the RViz layouts</td>
 </tr>
 </tbody>
 </table></div>
@@ -652,7 +713,7 @@ Only one runs at a time.</p>
 <tr>
 <td><code>spine/crates/spine-core</code></td>
 <td>the spine's logic in Rust: modes, arming, the 100 ms watchdog, the speed loop, the encoder</td>
-<td><span class="badge b-works">works</span> 71 tests, and the bench</td>
+<td><span class="badge b-works">works</span> 84 tests, and the bench</td>
 </tr>
 <tr>
 <td><code>spine/crates/wheel-core</code></td>
@@ -697,7 +758,7 @@ Only one runs at a time.</p>
 <tr>
 <td><code>spine/crates/spine-board</code></td>
 <td>the glue: spine-core's outputs to the devices, the devices to its inputs, the <code>Board</code> trait, the <code>CommandLink</code> trait (CAN or UART)</td>
-<td><span class="badge b-works">works</span> 57 tests, against mocks</td>
+<td><span class="badge b-works">works</span> 79 tests, against mocks</td>
 </tr>
 <tr>
 <td><code>spine/boards/esp32-umod</code></td>

@@ -1,6 +1,6 @@
 # Every test we've talked about
 
-Written 15 October 2026, for the team: every test from our talks, in one place,
+Written 15 October 2026, checked 25 October, for the team: every test from our talks, in one place,
 in the order to run them. Each one says what it proves, how to run it, and when it passes.
 
 > **The short version**
@@ -29,10 +29,10 @@ Nothing real moves. Run these on any laptop.
 | 1.6 | The HUD, with pretend data | `pixi run hud-demo` | the window opens with speed, camera, GPS, e-stop | ✅ Ben, 15 Oct |
 | 1.7 | The HUD with the turtle | `pixi run turtle`, `pixi run hud`, `pixi run keyboard --local` | speed and steering move as you drive | ✅ Ben, 15 Oct |
 | 1.8 | Plain-English driving | `pixi run -e llm talk`: "drive 10 m forward" | drives 10 m (±0.2 m) after you type yes | ✅ Gazebo |
-| 1.9 | **"SIMULATED" on the HUD** | run Gazebo, look at the HUD | an orange SIMULATED banner; REAL / SIM tag per sensor | ⬜ |
+| 1.9 | **"SIMULATED" on the HUD** | run Gazebo, look at the HUD | an orange SIMULATED banner; REAL / SIM tag per sensor | ✅ built 15 Oct (its logic tested); not yet seen on a screen |
 | 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | `pixi run actuator-test <test> --sim` ([docs](actuator-tests.md)) | the script runs end to end and reports g and angles | ✅ 15 Oct: all 9 tests; they give back `vehicle.yaml`'s numbers |
 | 1.11 | **The lidar alone stops the car** | `pixi run sim-check --lidar-obstacle` (and `--plan-around`: Nav2 drives round a box it sees) | radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone | ✅ 15 Oct: 0.16-0.55 m before it |
-| 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check | ✅ 15 Oct: all 13 |
+| 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check | ✅ 15 Oct: all 13; 24 Oct, with the HUD's heartbeat: all 25 checks, 3 runs of 3 |
 | 1.13 | **The spine in the loop** | `pixi run sim-check --spine` | in Gazebo with `spine:=true`: the normal checks pass; ego's commands stopped → the spine brakes fully within 0.28 s and latches; `/safety/estop` and the hardware e-stop → brake within 0.15 s, latched until armed again; disarmed → no motion | ✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms |
 | 1.14 | **Drive to a GPS point, smooth stop** | `pixi run sim-check --goto` ([A to B](a-to-b.md)) | every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half `max_brake`; a cancel, the e-stop and a GPS fault stop it | ✅ 15 Oct: all within 0.4 m |
 | 1.15 | **Ghost obstacles: a pretend person only Nav2 sees** | `pixi run sim-check --ghost` ([docs](ghost-obstacles.md)) | a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off | ✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too) |
@@ -64,7 +64,7 @@ software stopped; speed capped (`max_speed:=0.3`).
 | 3.6 | Stop the keyboard program | the bridge brakes: its commands go stale | 🔧 |
 | 3.7 | Ctrl-C the Motor-Pi bridge | it sends a last stop frame | 🔧 |
 | 3.8 | The Kar-Tech e-stop | everything stops | 🔧 |
-| 3.9 | ⚠️ **Unplug the Motor-Pi's serial cable while driving** | the car brakes within 200 ms | ⬜ fails today: the ESP32 has no timeout (team-todo.md B2) |
+| 3.9 | ⚠️ **Unplug the Motor-Pi's serial cable while driving** | the car brakes within 200 ms | ⬜ fails with today's C++ ESP32 (team-todo.md B2). The Rust ESP32 firmware brakes 111-120 ms after the last frame in QEMU; not yet flashed |
 
 ### 3b. Steering, on stands
 
@@ -102,7 +102,7 @@ the wheel speed, the pose and the GPS for every test.
 
 | # | Test | How | Gives | Status |
 |---|---|---|---|---|
-| 4.8 | **Scales** | 4 bathroom scales, one under each wheel, add them up | the mass, ±2%: the best way | ⬜ Friday |
+| 4.8 | **Scales** | 4 bathroom scales, one under each wheel, add them up | the mass, ±2%: the best way | ⬜ |
 | 4.9 | **Speed up twice** | test 4.1 at full throttle, alone, then with a person of known weight (say 80 kg) | mass = 80 × a2 ÷ (a1 − a2), ±10-15%; and the **motor's force** | ⬜ |
 | 4.10 | **Brake twice** | test 4.3 at full brake, alone, then with the same person | the mass again; and the **braking force** | ⬜ |
 
@@ -119,8 +119,8 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | 4.14 | Global EKF + GPS | drive a loop: the EKF's track stays within 2 m of the GPS track | ⬜ |
 | 4.15 | Cameras: the freeze | 1 hour with no freeze, power and heat logged (`history/friday-todo-2026-10-16.md` part 5) | ⬜ |
 | 4.16 | Radar | `/perception/radar/clusters` shows a person walking in front | ⬜ |
-| 4.17 | Lidar (once it has a driver) | `car.launch.py lidar:=true`: an obstacle shows in RViz's local costmap (`lidar_layer`), and a person in front stops Nav2 | ⬜ no driver yet; ✅ in Gazebo (1.11) |
-| 4.18 | **Sensor failures on the car** | pull the GPS's, the IMU's, the wheel encoder's cable while Nav2 drives at walking pace: the HUD's red banner names it, and the car stops | ⬜ |
+| 4.17 | Lidar (the roof VLP-16, stock `velodyne` driver) | `car.launch.py` (lidar on by default): an obstacle shows in RViz's local costmap (`lidar_layer`), and a person in front stops Nav2 | ⬜ untested with the real lidar; ✅ in Gazebo (1.11) and against a pretend VLP-16 |
+| 4.18 | **Sensor failures on the car** | pull the GPS's, the IMU's, the wheel sensors' CAN cable while Nav2 drives at walking pace: the HUD's red banner names it, and the car stops | ⬜ |
 
 ## Stage 5: the whole drive
 
@@ -132,7 +132,7 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | 5.4 | **Ghost obstacles** | the real car with a **simulated** person in Nav2's costmap | slows and stops for it, with nothing real to hit | ⬜ |
 | 5.5 | Plain-English driving on the car | `AAV_DISCOVERY=SUBNET pixi run -e llm talk --car`: "drive 10 m forward" | the same as 5.1, after you type yes | ⬜ last |
 
-## Friday's checks (not driving)
+## Checks at the car (not driving)
 
 | # | Check | Run | Status |
 |---|---|---|---|
@@ -157,7 +157,5 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 
 | What | For | Size |
 |---|---|---|
-| The SIMULATED banner and REAL / SIM tags | 1.9 | small |
 | Ghost obstacles on the real car | 5.4 | 1 day |
-| The ESP32 timeout | 3.9, and everything after | team-todo.md B2 |
-| A driver for the roof lidar (probably a Velodyne) | 4.17 | small, once the model is known |
+| The ESP32 timeout on the car: flash the Rust firmware (built, proven in QEMU) | 3.9, and everything after | team-todo.md B2 |

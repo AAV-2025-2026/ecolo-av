@@ -24,7 +24,7 @@ files you'll work in, and the open questions you own. Everyone starts with
 |---|---|
 | Read first | [How it fits](how-it-fits.md), [Infrastructure](infrastructure.md), [Decisions](decisions.md), [Work](work.md) |
 | Run first | everything in [Your first day](first-day.md), on a Mac and on Linux |
-| First tasks | 1. A team meeting: accept or change each Proposed decision, and name an owner per area (Q33). 2. Secrets (Q34) and backups of the Orin and the Pis. 3. A plan for Jazzy on the car (Q24): Pixi on today's Ubuntu 22.04 first. 4. Done 10 Oct: `aav` is on GitHub (`AAV-2025-2026/ecolo-av`, private), with CI. 5. One `ROS_DOMAIN_ID` for everyone |
+| First tasks | 1. A team meeting: accept or change each Proposed decision, and name an owner per area (Q33). 2. Secrets (Q34) and backups of the Orin and the Pis. 3. A plan for Jazzy on the car (Q24): Pixi on today's Ubuntu 22.04 first. 4. One `ROS_DOMAIN_ID` for everyone. (Done: `ecolo-av` is on GitHub, `AAV-2025-2026/ecolo-av`, public, with CI) |
 | Files | `CLAUDE.md`, `pixi.toml`, `docs/interfaces.yaml`, `ros/bringup/aav_bringup/`, `tools/` |
 | Open questions | Q9, Q23, Q24, Q32, Q33, Q34 |
 
@@ -33,7 +33,7 @@ files you'll work in, and the open questions you own. Everyone starts with
 | | |
 |---|---|
 | Read first | [Firmware](firmware.md), then `firmware/can/aav.dbc` and `firmware/spine/crates/spine-core` |
-| Run first | `pixi run test`: its Rust part is the spine logic's 47 tests |
+| Run first | `pixi run test`: its Rust part includes the spine logic's 84 tests |
 | First tasks | 1. Choose the microcontroller and the board (Q10–Q13). 2. Write the board program: it implements `spine-board`'s `Board` trait; the drivers and glue are written. 3. Bench-test it with a USB-CAN adapter and `candump`: the watchdog, arming, limits. 4. Agree the frame map with ROS (`aav_spine`). Until then, [Bench mode](bench.md) runs `spine-core` on a laptop |
 | Files | `firmware/can/`, `firmware/spine/`, `ros/can_bridge/aav_spine/` |
 | Open questions | Q10–Q17, Q3, Q4, Q6, Q7 |
@@ -59,7 +59,7 @@ Phase 0 on the hardware we have now, before the spine exists.
 | | |
 |---|---|
 | Read first | [How it fits](how-it-fits.md) (section 4, ego), [Car numbers](car_measurements.md) |
-| Run first | `pixi run turtle` and `pixi run keyboard`; then `pixi run rust-listener` prints what ego sends |
+| Run first | `pixi run turtle` and `pixi run keyboard --local`; then `pixi run rust-listener` prints what ego sends |
 | First tasks | 1. Measure the car (Q1) and replace the guesses in `vehicle.yaml`. 2. Decide steering at standstill (Q27). 3. Agree with the spine owner what ego's output means (Q12): target speed, or raw throttle |
 | Files | `ros/ego/aav_ego/` (`ackermann.py` is the maths), `ros/bringup/aav_description/config/vehicle.yaml` |
 | Open questions | Q1, Q12, Q27 |
@@ -70,7 +70,7 @@ Phase 0 on the hardware we have now, before the spine exists.
 |---|---|
 | Read first | [How it fits](how-it-fits.md) (sections 1 and 2), [Simulation](simulation.md) (replay) |
 | Run first | `pixi run sim`, then watch `/localization/odom/local` and `/localization/odom/global` in RViz |
-| First tasks | 1. Identify the GPS (Q18) and pick its driver. 2. The IMU on the car (Q20); its magnetometer is in raw counts, not tesla. 3. Wheel encoder counts per turn (Q5). 4. Record a drive on the car, then tune the EKFs against it with replay. 5. The Rust IMU driver, `aav_imu_yahboom` (in progress) |
+| First tasks | 1. Identify the GPS (Q18) and pick its driver. 2. The IMU on the car (Q20); its magnetometer is in raw counts, not tesla. 3. Wheel encoder counts per turn (Q5). 4. Record a drive on the car, then tune the EKFs against it with replay |
 | Files | `ros/localization/aav_localization/config/`, `ros/sources/` |
 | Open questions | Q5, Q18, Q19, Q20, Q22 |
 
@@ -110,6 +110,6 @@ Phase 0 on the hardware we have now, before the spine exists.
 |---|---|
 | Read first | [Simulation](simulation.md) |
 | Run first | `pixi run sim`, `pixi run check sim`, and the replay of a recorded drive |
-| First tasks | 1. Gazebo's window and RViz on a Mac: confirm what they show. 2. The test lot world against the real site, once Q21 is answered. 3. Recordings from the car, for replay. 4. CARLA, when it supports Jazzy (Q31) |
+| First tasks | 1. Gazebo's window and RViz on a Mac: confirm what they show. 2. The test lot world against the real site, once Q21 is answered. 3. Recordings from the car, for replay. 4. CARLA on the NVIDIA computer: the adapter, `aav_carla`, is ready ([CARLA](carla.md), Q31) |
 | Files | `ros/sim/aav_gazebo/`, `ros/bringup/aav_bringup/launch/sim.launch.py` and `replay.launch.py`, `tools/check_graph.py` |
 | Open questions | Q31, Q32 |

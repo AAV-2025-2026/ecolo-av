@@ -26,7 +26,7 @@ GPS is in [Maps and position](maps-and-position.md).
 | **Planner** | finds a path from here to the goal | Smac Hybrid-A*, on the global costmap |
 | **Controller** | steers along that path | MPPI (or Regulated Pure Pursuit: `controller:=rpp`), on the local costmap, 20 Hz ([path followers](controllers.md)) |
 | **Velocity smoother** | caps speed and acceleration | 1.0 m/s, 1.0 m/s² up, 2.0 m/s² down |
-| **collision_monitor** | last-moment stop for radar points ahead | only where the radar runs |
+| **collision_monitor** | last-moment stop for radar or lidar points ahead | where the radar or the lidar runs |
 | **Out** | `/drivers/nav/cmd_vel` → `twist_mux` (priority 20) → ego | |
 
 Nav2 never talks to the wheels. ego turns its turn rate into a steering angle ([Learn:
@@ -103,15 +103,10 @@ can tell (22 Oct; tighter, the car looped to fix misses it couldn't see). **Stuc
 
 ## 3. Costmaps, in one line each
 
-| | Global | Local |
-|---|---|---|
-| Used by | the planner | the controller |
-| Frame | `map` | `odom` |
-| Size, cells | the map file's size, 25 cm | 20 m × 20 m around the car, 10 cm |
-| Sees obstacles from | the map file only | the map, the radar, the cameras (when on) |
+- **Global:** for the planner, in `map`, the map file's size.
+- **Local:** for the controller, in `odom`, 20 m × 20 m around the car.
 
-Inflation is 2.0 m: wide enough that a path for the car's centre keeps its corners
-clear. Everything else: [Costmaps](costmaps.md).
+Sizes, layers, sensors and inflation: [Costmaps](costmaps.md#the-two-costmaps).
 
 ## 4. The behaviour tree: the boss
 
@@ -163,15 +158,15 @@ People can always reverse (joystick, keyboard, RC): this switch is Nav2's only.
 
 ## 5. collision_monitor: the last word
 
-It sits between the smoother and `twist_mux`, and reads the **radar's own points**, not
-the costmap. So it still stops the car if the planner, the controller or the costmap goes wrong.
+It sits between the smoother and `twist_mux`, and reads the **radar's and the lidar's own
+points**, not the costmap. So it still stops the car if the planner, the controller or the costmap goes wrong.
 
 | Setting | Ours |
 |---|---|
 | Stop zone | going forward (or standing): a box from the front bumper to 1 m ahead. Reversing: a box from the rear bumper to 1 m behind. Each 0.2 m wider than the car each side. Nav2's `velocity_polygon` picks one by the command's speed |
 | Behind the car | only the lidar sees there (all round), not the radar. The rear camera's obstacles: later (TODO 25) |
-| Points needed | 3 (one stray radar point mustn't stop the car) |
-| Radar silent for | 1.0 s → stop |
+| Points needed | 3 (one stray point mustn't stop the car) |
+| Radar or lidar silent for | 1.0 s → stop |
 | Guards | **only Nav2**. The joystick and keyboard reach `twist_mux` without it |
 
 It runs with the radar or the lidar: on the bench, on the car, and in Gazebo's road and
@@ -199,7 +194,7 @@ HUD route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to m
 | Gazebo | reaches 8 m and 9.5 m goals |
 | Bench | drives 40 m past a stop sign; stops for a box in the road |
 | The car | never run yet |
-| The HUD's GPS route → Nav2 | written; never run with the real OSRM server |
+| A street route → Nav2's GPS waypoints | ✅ in Gazebo (Valhalla, [Street routes](routes.md)); untested on the car |
 
 ## Try it
 

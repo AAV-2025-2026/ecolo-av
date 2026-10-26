@@ -88,10 +88,10 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#todays-wiring-23-october">Today&#x27;s wiring (23 October)</a><a href="#the-kefc-plan-in-one-picture">The KEFC plan in one picture</a><a href="#what-already-matches">What already matches</a><a href="#what-is-different">What is different</a><a href="#what-changes-in-the-code">What changes in the code</a><a href="#still-to-confirm-from-the-pdf">Still to confirm (from the PDF)</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#todays-wiring-23-october">Today&#x27;s wiring (23 October)</a><a href="#the-kefc-plan-in-one-picture">The KEFC plan in one picture</a><a href="#what-already-matches">What already matches</a><a href="#what-is-different">What is different</a><a href="#what-changed-in-the-code-15-oct">What changed in the code (15 Oct)</a><a href="#still-to-confirm-from-the-pdf">Still to confirm (from the PDF)</a></nav>
 <div class="lead"><p>Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and throttle on
-a CAN bus. Our code already has a CAN contract, <code>firmware/can/aav.dbc</code> (v0.1.0). This page
-compares the two, and says what changes.</p>
+a CAN bus. Our code had a CAN contract, <code>firmware/can/aav.dbc</code> (v0.1.0). This page
+compares the two. Since 15 Oct, <code>aav.dbc</code> v0.2.0 follows the plan.</p>
 <p><strong>Status: built in software, hardware not decided.</strong> DBC v0.2.0, <code>spine_bridge</code> and the bench
 use it (merged 15 Oct, so the software is ready). Whether the car gets CAN and the wheel
 node boards is <strong>the hardware lead's decision</strong>, with the team (Ben, 15 Oct: "I am waiting
@@ -318,38 +318,45 @@ see <a href="esp32-bench.html">First flash on the bench</a>. Open questions for 
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="what-changes-in-the-code">What changes in the code</h2>
+<section class="card"><h2 id="what-changed-in-the-code-15-oct">What changed in the code (15 Oct)</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>Where</th>
 <th>Change</th>
+<th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>aav.dbc</code></td>
 <td>v0.2.0: add <code>WHEEL_SPEED_L</code> 0x200 and <code>WHEEL_SPEED_R</code> 0x201, node <code>WHEEL_L</code>, <code>WHEEL_R</code>; the timeout to 100 ms; the spine node is the ESP32 board</td>
+<td>done</td>
 </tr>
 <tr>
 <td><code>can_codec.py</code>, <code>protocol.rs</code>, test vectors</td>
 <td>the two new frames, as <code>CLAUDE.md</code> says</td>
+<td>done</td>
 </tr>
 <tr>
 <td><code>spine_bridge</code></td>
 <td>the two wheel speeds into <code>/vehicle/odom</code>, and <code>/vehicle/wheels</code> (the front two; the same topic Gazebo fills)</td>
+<td>done</td>
 </tr>
 <tr>
 <td><code>spine-core</code></td>
 <td>stays: it has no chip in it. A new board crate for the ESP32 (<code>esp-hal</code>, Embassy, the TWAI CAN driver) beside the Pico 2 one</td>
+<td>done: <code>boards/esp32-umod --features can</code>; its CAN pins are unknown</td>
 </tr>
 <tr>
 <td>Wheel nodes</td>
-<td>a small Rust program for the ESP32-CAN-X2 (an ESP32-S3): count pulses, send a frame</td>
+<td>a small Rust program for the ESP32-CAN-X2</td>
+<td>not written: the hardware lead's Arduino sends the frames (23 Oct)</td>
 </tr>
 <tr>
 <td>Gazebo, bench</td>
 <td>the bench's spine simulator sends the two wheel frames too</td>
+<td>done</td>
 </tr>
 </tbody>
 </table></div>

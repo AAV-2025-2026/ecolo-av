@@ -106,7 +106,7 @@ purpose: <code>AAV_DISCOVERY=SUBNET pixi run sim</code>.</p></div>
 </thead>
 <tbody>
 <tr>
-<td>1. Unit tests: <code>pixi run test</code></td>
+<td>1. Unit tests: <code>tools/test.sh</code> (<code>pixi run test</code> adds the ROS tests)</td>
 <td>the maths and protocols, without ROS</td>
 <td>ego's maths, the CAN frames, the spine logic</td>
 </tr>
@@ -387,7 +387,7 @@ circle against the bicycle model's (wheelbase ÷ tan(steer)):</p>
 can't tell. <code>/gazebo/*</code> topics are Gazebo's own side of <code>gazebo_adapter</code> and the sensor
 nodes, not in the contract.</p>
 <p><img alt="What the three simulated cameras see, at the start of the road world" src="../img/sim-cameras.png" /></p>
-<p>Where each sensor sits (15 Oct, until Friday's tape measure): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from <code>vehicle.yaml</code>. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.</p>
+<p>Where each sensor sits (15 Oct, until the car is measured): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from <code>vehicle.yaml</code>. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.</p>
 <h3 id="what-isnt-simulated">What isn't simulated</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -397,10 +397,6 @@ nodes, not in the contract.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>The right and rear cameras</td>
-<td>only the front left camera is in the URDF's Gazebo sensors</td>
-</tr>
 <tr>
 <td>The magnetometer</td>
 <td>the EKFs don't use it</td>
@@ -748,9 +744,10 @@ bench's road, built in 3D, so the car's own camera and radar can see it.</p>
 <p>The radar stand-in isn't a radar: it sees every surface (the sign's post too), and each
 point's speed is the car's own, along the line of sight.</p>
 <h3 id="the-lidar-gazebo-only">The lidar: Gazebo only</h3>
-<p>The car has a lidar on its roof, but its model is unknown (Q22) and our code has no driver
-yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on by default
-(15 Oct)</strong> in the road and test_lot worlds: <code>pixi run sim world:=road</code> or <code>world:=test_lot</code>.</p>
+<p>The car has a Velodyne VLP-16 on its roof, read by the stock <code>velodyne</code> driver (on by
+default on the car; untested with the real lidar). Gazebo has a generic 16-beam one in
+its place. <strong>It's on by default (15 Oct)</strong> in the road and test_lot worlds:
+<code>pixi run sim world:=road</code> or <code>world:=test_lot</code>.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -781,7 +778,7 @@ yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on
 </tr>
 <tr>
 <td>On the Mac, alone</td>
-<td>stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. <code>sim-check --lidar</code> passes</td>
+<td>stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. <code>sim-check</code> passes with it</td>
 </tr>
 <tr>
 <td>On the Mac, with YOLO too, the morning of 15 Oct</td>
@@ -823,7 +820,7 @@ yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on
 </tr>
 <tr>
 <td>Switch</td>
-<td><code>navigation.launch.py lidar:=true</code>. <code>sim.launch.py</code> passes it where the world renders the lidar. <strong>The car: <code>lidar:=false</code></strong>, as no driver publishes its lidar yet (probably a Velodyne: audit N6)</td>
+<td><code>navigation.launch.py lidar:=true</code>. <code>sim.launch.py</code> passes it where the world renders the lidar. The car: on by default (the <code>velodyne</code> driver; <code>car.launch.py lidar:=false</code> turns it off)</td>
 </tr>
 <tr>
 <td>CPU</td>
@@ -865,7 +862,7 @@ angles small depth errors become large range errors.</p>
 <tr>
 <td><code>perception</code></td>
 <td><code>false</code></td>
-<td>YOLO and <code>stop_sign_watcher</code>: twist_mux's stop-sign lock. Needs <code>pixi run -e ml</code></td>
+<td>the object detector (RF-DETR Nano; YOLO with <code>detector:=yolo</code>) and <code>stop_sign_watcher</code>: twist_mux's stop-sign lock. Needs <code>pixi run -e ml</code></td>
 </tr>
 <tr>
 <td><code>lane</code></td>
@@ -880,7 +877,7 @@ angles small depth errors become large range errors.</p>
 <tr>
 <td><code>hud</code></td>
 <td><code>false</code></td>
-<td>the HUD's web server, on 127.0.0.1:5000</td>
+<td>the HUD window (raylib); <code>hud_web:=true</code> for the web server on 127.0.0.1:5000</td>
 </tr>
 <tr>
 <td><code>obstacle</code></td>
@@ -922,7 +919,7 @@ pixi run sim world:=road lane:=true nav:=false start_y:=0.3  # lane keeping alon
 </tr>
 <tr>
 <td>RViz (<code>rviz/road.rviz</code>)</td>
-<td>the map and both costmaps, the plan, the car, the radar's points (magenta) and clusters, the stop zone (red), Gazebo's truth (grey arrows), the camera's picture, and YOLO's boxes with <code>perception:=true</code></td>
+<td>the map and both costmaps, the plan, the car, the radar's points (magenta) and clusters, the stop zone (red), Gazebo's truth (grey arrows), the camera's picture, and the detector's boxes with <code>perception:=true</code></td>
 </tr>
 <tr>
 <td>rqt_graph: <code>pixi run graph</code></td>
@@ -995,7 +992,7 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 <td>all pass: start-up, the contract (0 failures), sensors, a scripted drive of 6.3-6.5 m (plan 6.5 m), the global EKF within 0.1-0.3 m of the truth</td>
 </tr>
 <tr>
-<td><code>pixi run sim-check --lidar --obstacle</code></td>
+<td><code>pixi run sim-check --obstacle</code> (the lidar on)</td>
 <td>all pass: the lidar at 10.0 Hz with 12654 hits; the car stood still 0.79 m before the box; with the box gone, Nav2 reached its goal 29.6 m on</td>
 </tr>
 <tr>

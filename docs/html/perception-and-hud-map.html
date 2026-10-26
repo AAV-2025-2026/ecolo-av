@@ -7,7 +7,7 @@
 <!-- Generated from docs/perception-and-hud-map.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception models, the lidar, and a map on the HUD</h1>
-<div class="meta">12 min read · 7 sections</div></header>
+<div class="meta">13 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -89,7 +89,10 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#1-camera-perception-which-tool-for-which-job">1. Camera perception: which tool for which job</a><a href="#2-the-cameras-on-the-car-one-thing-to-fix-first">2. The cameras on the car: one thing to fix first</a><a href="#3-the-lidar-three-steps">3. The lidar: three steps</a><a href="#4-a-map-on-the-hud">4. A map on the HUD</a><a href="#5-better-open-source-options-including-nvidias-per-pixel-models">5. Better open-source options, including NVIDIA&#x27;s per-pixel models</a><a href="#6-what-to-do-in-order">6. What to do, in order</a><a href="#sources-15-oct">Sources (15 Oct)</a></nav>
-<div class="lead"><p>Written 15 October 2026. <strong>Since then:</strong> the detector is RF-DETR Nano, not YOLO
+<div class="lead"><blockquote>
+<p><strong>A snapshot from 15 October 2026.</strong> What's true now: <a href="status.html">Status</a>, <a href="perception.html">Perception</a>, <a href="camera-pipeline.html">Camera pipeline</a> and <a href="hud.html#the-map-window-big-screen">the HUD's map window</a>.</p>
+</blockquote>
+<p>Written 15 October 2026. <strong>Since then:</strong> the detector is RF-DETR Nano, not YOLO
 (Ben, 23 Oct), as TensorRT on the Orin and Core ML on a Mac: see
 <a href="perception.html#models">Perception</a>. YOLO stays as <code>detector:=yolo</code>. It answers:</p>
 <ol>
@@ -100,11 +103,11 @@
 </ol>
 <blockquote>
 <p><strong>The short version</strong>
-- <strong>Use stock YOLO for objects</strong> (already wired in): one model, run as TensorRT on the Orin and Core ML on a Mac. <strong>Keep OpenCV for lane lines</strong> (already done: under 1 ms a frame).
+- <strong>Use stock YOLO for objects</strong> (answered 23 Oct: RF-DETR Nano by default; YOLO with <code>detector:=yolo</code>): one model, run as TensorRT on the Orin and Core ML on a Mac. <strong>Keep OpenCV for lane lines</strong> (already done: under 1 ms a frame).
 - <strong>The previous teams' trained model is lost</strong> (<code>best.pt</code> was on someone's laptop) and knew one label. Start from stock, and train our own later only if the stock one fails on our recordings.
 - <strong>Lidar: no model to start.</strong> Put its points straight into Nav2's costmap and collision_monitor. Clustering next. A downloaded 3D detector last, and only if needed.
-- <strong>Per-pixel, for where the road is: NVIDIA's CitySemSegFormer</strong> (a ready ONNX file), run with ONNX Runtime, not Isaac ROS: Isaac ROS isn't on Jazzy for the Orin yet.
-- <strong>A map on the HUD: yes.</strong> The raylib HUD can draw offline map tiles with the car's GPS dot on top. Not built yet.</p>
+- <strong>Per-pixel, for where the road is: NVIDIA's CitySemSegFormer</strong> (a ready ONNX file), run with ONNX Runtime, not Isaac ROS: Isaac ROS isn't on Jazzy for the Orin yet (since then: Isaac ROS 4.6 supports the Orin on JetPack 7.2, <a href="perception.html#isaac-ros-nvidia">Perception</a>).
+- <strong>A map on the HUD: yes.</strong> The raylib HUD can draw offline map tiles with the car's GPS dot on top. (Answered: built 15-16 Oct as <a href="hud.html#the-map-window-big-screen">the map window</a>.)</p>
 </blockquote></div>
 <section class="card"><h2 id="1-camera-perception-which-tool-for-which-job">1. Camera perception: which tool for which job</h2>
 <div class="table-wrap"><table>
@@ -203,7 +206,8 @@ YOLO is AGPL-3.0.</p>
 <section class="card"><h2 id="2-the-cameras-on-the-car-one-thing-to-fix-first">2. The cameras on the car: one thing to fix first</h2>
 <p>The photos show <strong>ribbon (CSI) cameras</strong> on the Pi 5s. Our camera driver, <code>usb_cam</code>, only
 reads <strong>USB</strong> cameras. The camera Pis need a libcamera driver instead, such as <code>camera_ros</code>.
-Friday's audit will show what the 2025-26 team ran there.</p>
+(Answered: the audits of 16 and 21 Oct found MediaMTX on the camera Pi. Both front ribbon
+cameras are on one Pi 5: MediaMTX → <code>aav_camera_stream</code> on the Orin, <a href="camera-pipeline.html">Camera pipeline</a>.)</p>
 </section>
 <section class="card"><h2 id="3-the-lidar-three-steps">3. The lidar: three steps</h2>
 <div class="table-wrap"><table>
@@ -304,7 +308,7 @@ known.</p>
 </tr>
 <tr>
 <td>The raylib HUD (ours)</td>
-<td>speed, e-stop, GPS panel, camera, topic health. <strong>No map yet</strong></td>
+<td>speed, e-stop, GPS panel, camera, topic health. <strong>No map yet</strong> (answered: <a href="hud.html#the-map-window-big-screen">the map window</a>, built since)</td>
 </tr>
 </tbody>
 </table></div>
@@ -451,7 +455,7 @@ the Mac and the car's ARM computers, version 1.31) runs it on whatever is fastes
 </tbody>
 </table></div>
 <p>One node, <code>segmenter</code>, with the model file as a setting, could run CitySemSegFormer today
-and TwinLiteNet tomorrow, and publish a road mask on <code>/perception/road/mask</code>. It could even
+and TwinLiteNet tomorrow, and publish a road mask on <code>/perception/road/mask</code> (Proposed: not in <code>interfaces.yaml</code>). It could even
 be Rust: the <code>ort</code> crate wraps ONNX Runtime.</p>
 <h3 id="licences">Licences</h3>
 <div class="table-wrap"><table>
@@ -506,17 +510,17 @@ be Rust: the <code>ort</code> crate wraps ONNX Runtime.</p>
 <tr>
 <td>1</td>
 <td>Friday: what cameras, lidar and radar are really on the car, and what drives them</td>
-<td>the audit</td>
+<td>the audit (answered: audits of 16 and 21 Oct)</td>
 </tr>
 <tr>
 <td>2</td>
 <td><code>camera_ros</code> instead of <code>usb_cam</code> on the camera Pis</td>
-<td>step 1</td>
+<td>step 1 (answered: MediaMTX → <code>aav_camera_stream</code> instead)</td>
 </tr>
 <tr>
 <td>3</td>
 <td>The lidar's points into Nav2 (step 1), first in Gazebo</td>
-<td>nothing: can start now</td>
+<td>nothing (answered: done; the roof VLP-16 through the stock <code>velodyne</code> driver, untested with the real lidar)</td>
 </tr>
 <tr>
 <td>4</td>
@@ -526,7 +530,7 @@ be Rust: the <code>ort</code> crate wraps ONNX Runtime.</p>
 <tr>
 <td>5</td>
 <td>The HUD's map panel with offline tiles</td>
-<td>the test area chosen</td>
+<td>the test area chosen (answered: built as the map window)</td>
 </tr>
 <tr>
 <td>6</td>

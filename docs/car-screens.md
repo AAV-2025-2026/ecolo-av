@@ -4,8 +4,10 @@ Power on the car → the **HUD** fills the small screen, the **map** fills the b
 Both start by themselves at login, and come back 5 s after a crash.
 
 !!! warning "Built, not yet on the car"
-    Everything below is ready in the repo (15 Oct) and [[untested]] on the car. Friday's
-    audit tells us which computer drives the screens and what it calls them.
+    Everything below is ready in the repo (15 Oct) and [[untested]] on the car. The 21 Oct
+    audit found the dash computer: `aav-desktop` (.196), a Pi 4 with Ubuntu 22.04 and
+    Humble, not Jazzy yet ([audit](history/audit-2026-10-21-car.md)). Its monitors' names
+    are still to read with `--list`.
 
 ![The dash: the small touchscreen (left) and the Innoview monitor (right)](img/car/dash-screens.jpg)
 
@@ -70,7 +72,7 @@ number  name                      size         at
 - On X11, the names are the same as `xrandr --listmonitors` shows.
 - On a **Wayland** desktop (Ubuntu 22.04's default on some Pis), our windows run through
   XWayland, and the names may read `XWAYLAND0`, `XWAYLAND1`. Use `--list` and the
-  numbers, or log in to "Ubuntu on Xorg". The audit finds out which (W10).
+  numbers, or log in to "Ubuntu on Xorg". Which one the dash Pi runs: check at the car (W10).
 - raylib draws through GLFW on X11. A computer with no desktop at all (plain KMS/DRM)
   would need raylib built for DRM, with one screen only: not planned.
 
@@ -135,4 +137,4 @@ monitors named in one file. Theirs stay as they are until the team agrees to swi
 | `car_screens_install.sh --dry-run`, `car_install.sh --screens --dry-run` | [[works]] on a Mac: shows the plan, refuses (not Linux), writes nothing |
 | `shellcheck`, `bash -n` | [[works]] |
 | A window on a chosen monitor | [[untested]]: no window could open from the session that built it (plain `--demo` failed the same way) |
-| systemd starting them at login, on the car | [[untested]]: after the audit |
+| systemd starting them at login, on the car | [[untested]]: once the dash computer runs our Jazzy |

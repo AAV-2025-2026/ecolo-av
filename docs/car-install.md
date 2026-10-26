@@ -7,7 +7,8 @@ sudo**, and **without touching** the 2025-26 Humble software. It all goes in one
 !!! warning "Not on the car yet"
     The kit is made and checked on a Mac, and installed offline on 64-bit ARM Linux by CI
     on every push (GitHub's ARM runner, Ubuntu 24.04). On the Orin and the Pis it is
-    [[untested]]: Friday is its first run there. Do the [audit](audit-friday.md) first: back up, then install.
+    [[untested]]: car day is its first run there ([Car day](car-day.md), session 4). Back
+    up first, then install.
 
 ## The plan in one picture
 
@@ -29,7 +30,9 @@ sudo**, and **without touching** the 2025-26 Humble software. It all goes in one
 
 ```bash
 cd ~/ecolo-av
-git checkout main && git pull       # the kit holds what is committed, nothing else
+git fetch upstream && git switch main && git merge --ff-only upstream/main
+                                    # the team's main (CONTRIBUTING.md); the kit holds
+                                    # what is committed, nothing else
 pixi run car-kit                    # writes car-kit/ (git ignores it)
 ```
 
@@ -109,13 +112,13 @@ ESP32.
 |---|---|
 | Wants | the name our config uses, like `/dev/aav/imu` |
 | Found | that device, or the raw one with the right USB IDs (`/dev/ttyUSB0 (no udev name)`): our udev rules need sudo, so they aren't on the car yet |
-| Can open? | `yes`, or `needs group dialout` (an admin adds you later, not Friday) |
+| Can open? | `yes`, or `needs group dialout` (an admin adds you later) |
 | In use by | a program already holding it: the 2025-26 software, probably |
 
 ## Why ROS_DOMAIN_ID 42
 
 A domain is a separate ROS network on the same wires: each one uses its own UDP ports.
-The 2025-26 software uses domain 0 or 10. `aav.sh` always sets **42**, so our nodes and
+The 2025-26 software runs on domain 0 (the 21 Oct audit; their camera README says 10). `aav.sh` always sets **42**, so our nodes and
 theirs never see each other: no mixed Humble and Jazzy messages, no topic clashes.
 
 - To watch our nodes from a Mac: `export ROS_DOMAIN_ID=42` there too.
@@ -137,7 +140,7 @@ terminal set (`AMENT_PREFIX_PATH`, `PYTHONPATH`...). Pixi and cargo never go onl
 
 !!! warning "Before `car`"
     Wheels off the ground, the e-stop in a hand, and the 2025-26 software stopped
-    ([Platforms](platforms.md), "The first hardware test"). Not on Friday's audit.
+    ([Platforms](platforms.md), "The first hardware test"; [Car day](car-day.md), session 9).
 
 ## Undo
 
@@ -164,4 +167,4 @@ GitHub, so `git pull` in `~/aav-jazzy/aav` works once the computer has a GitHub 
 | the same installer on a Mac, with a Mac pack, the network blocked | [[works]] 15 Oct: unpack 44 s, build all 25 packages 43 s (the Rust ones from the kit's crates), run again 16 s; `aav.sh` cleared a Humble `PYTHONPATH` and set domain 42 |
 | `car_listen.sh` | [[works]] on a Mac (bash 3.2); its Linux parts (sysfs, /proc, `ss`) are [[untested]] |
 | `car-kit`, then `car_install.sh --all` on 64-bit ARM Linux, no network | [[works]] 24 Oct, CI's job `car-kit` (every push): GitHub's ARM runner, Ubuntu 24.04; the kit 1 min, the install and the build of every package, the HUD too, 4.5 min |
-| the install on the Orin or a Pi | [[untested]]: Friday |
+| the install on the Orin or a Pi | [[untested]]: car day |

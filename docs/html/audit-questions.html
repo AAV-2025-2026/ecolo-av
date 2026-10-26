@@ -7,7 +7,7 @@
 <!-- Generated from docs/audit-questions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Friday&#x27;s questions: what only the car can tell us</h1>
-<div class="meta">13 min read · 8 sections</div></header>
+<div class="meta">14 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -89,7 +89,10 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#1-safety">1. Safety</a><a href="#2-the-drive-path-today">2. The drive path (today)</a><a href="#3-can-the-kefc-plan">3. CAN (the KEFC plan)</a><a href="#4-sensors">4. Sensors</a><a href="#5-computers-and-network-we-look-at-this-together">5. Computers and network (we look at this together)</a><a href="#6-measurements-for-vehicleyaml-q1">6. Measurements for vehicle.yaml (Q1)</a><a href="#7-power">7. Power</a><a href="#8-the-cars-wiring-for-the-hardware-lead-23-oct">8. The car&#x27;s wiring, for the hardware lead (23 Oct)</a></nav>
-<div class="lead"><p>Every hardware question the code is waiting on, in one list for Friday 16 October. Each
+<div class="lead"><blockquote>
+<p><strong>Sections 1-7 are a snapshot from 16 October 2026.</strong> The audits ran on 16 and 21 Oct (<a href="../history/audit-2026-10-16-car.md">16 Oct</a>, <a href="../history/audit-2026-10-21-car.md">21 Oct</a>). What's true now: <a href="status.html">Status</a>. <strong>Section 8 (H1-H10) is live:</strong> questions for the hardware lead.</p>
+</blockquote>
+<p>Every hardware question the code is waiting on, in one list for Friday 16 October. Each
 row says how to answer it and what the answer unblocks. Write the answers into
 <code>docs/history/audit-2026-10-16-car.md</code> (no passwords or keys).</p>
 <p><strong>You'll use it with:</strong> <a href="audit-friday.html">The hardware audit, step by step</a>, and
@@ -158,7 +161,7 @@ row says how to answer it and what the answer unblocks. Write the answers into
 </tr>
 <tr>
 <td>D2</td>
-<td>What runs on the Motor-Pi, and how does it start (systemd, cron, by hand)?</td>
+<td>What runs on the Motor-Pi, and how does it start (systemd, cron, by hand)? (answered 21 Oct: the Pi called CORTEX, .120, runs <code>aav_serial_bridge</code> as a service)</td>
 <td><code>systemctl list-units</code>, <code>crontab -l</code>, <code>ps aux</code></td>
 <td>stopping it cleanly, and starting it again</td>
 </tr>
@@ -264,9 +267,9 @@ row says how to answer it and what the answer unblocks. Write the answers into
 </tr>
 <tr>
 <td>N4</td>
-<td>The cameras: which model? Which Pi each? CSI ribbon (looks like it) or USB?</td>
+<td>The cameras: which model? Which Pi each? CSI ribbon (looks like it) or USB? (answered in part 21 Oct: MediaMTX on the camera Pis, no ROS)</td>
 <td>the Pis' <code>libcamera-hello --list-cameras</code>, <code>v4l2-ctl --list-devices</code></td>
-<td><code>camera_ros</code> instead of <code>usb_cam</code> (it's in Pixi for the car)</td>
+<td>the camera stream: MediaMTX on the Pi, <code>aav_camera_stream</code> on the Orin (decided 23 Oct)</td>
 </tr>
 <tr>
 <td>N5</td>
@@ -276,7 +279,7 @@ row says how to answer it and what the answer unblocks. Write the answers into
 </tr>
 <tr>
 <td>N6 ⚠️</td>
-<td>The lidar: make, model, IP, and which computer reads it</td>
+<td>The lidar: make, model, IP, and which computer reads it (answered 16 Oct: a Velodyne VLP-16 at .201, read by the Jetson; we run the stock <code>velodyne</code> driver)</td>
 <td>the label on its base; the router's client list; <code>ping</code></td>
 <td>a driver: Velodyne, Ouster and RoboSense drivers are in Pixi for the car; Hesai's isn't</td>
 </tr>
@@ -320,7 +323,7 @@ row says how to answer it and what the answer unblocks. Write the answers into
 </tr>
 <tr>
 <td>W2</td>
-<td>Which <code>ROS_DOMAIN_ID</code> does the 2025-26 software use?</td>
+<td>Which <code>ROS_DOMAIN_ID</code> does the 2025-26 software use? (answered 21 Oct: 0, Humble)</td>
 <td><code>pixi run net-map</code> (the ROS column); <code>printenv | grep ROS</code> on each</td>
 <td>picking ours so the two never mix (our kit uses 42)</td>
 </tr>
@@ -350,7 +353,7 @@ row says how to answer it and what the answer unblocks. Write the answers into
 </tr>
 <tr>
 <td>W7</td>
-<td>The Orin: JetPack version, module part number, free disk</td>
+<td>The Orin: JetPack version, module part number, free disk (answered 21 Oct: AGX Orin dev kit, JetPack 6, L4T R36.4.7)</td>
 <td><code>cat /etc/nv_tegra_release</code>; the label; <code>df -h</code></td>
 <td>the reflash plan (Q24); the kit (13 GB free to install)</td>
 </tr>

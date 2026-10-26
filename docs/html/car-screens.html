@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-screens.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The car&#x27;s two screens</h1>
-<div class="meta">7 min read · 7 sections</div></header>
+<div class="meta">8 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -93,8 +93,10 @@
 Both start by themselves at login, and come back 5 s after a crash.</p>
 <div class="admonition warning">
 <p class="admonition-title">Built, not yet on the car</p>
-<p>Everything below is ready in the repo (15 Oct) and <span class="badge b-untested">untested</span> on the car. Friday's
-audit tells us which computer drives the screens and what it calls them.</p>
+<p>Everything below is ready in the repo (15 Oct) and <span class="badge b-untested">untested</span> on the car. The 21 Oct
+audit found the dash computer: <code>aav-desktop</code> (.196), a Pi 4 with Ubuntu 22.04 and
+Humble, not Jazzy yet (<a href="../history/audit-2026-10-21-car.md">audit</a>). Its monitors' names
+are still to read with <code>--list</code>.</p>
 </div>
 <p><img alt="The dash: the small touchscreen (left) and the Innoview monitor (right)" src="../img/car/dash-screens.jpg" /></p>
 <div class="table-wrap"><table>
@@ -252,7 +254,7 @@ audit tells us which computer drives the screens and what it calls them.</p>
 <li>On X11, the names are the same as <code>xrandr --listmonitors</code> shows.</li>
 <li>On a <strong>Wayland</strong> desktop (Ubuntu 22.04's default on some Pis), our windows run through
   XWayland, and the names may read <code>XWAYLAND0</code>, <code>XWAYLAND1</code>. Use <code>--list</code> and the
-  numbers, or log in to "Ubuntu on Xorg". The audit finds out which (W10).</li>
+  numbers, or log in to "Ubuntu on Xorg". Which one the dash Pi runs: check at the car (W10).</li>
 <li>raylib draws through GLFW on X11. A computer with no desktop at all (plain KMS/DRM)
   would need raylib built for DRM, with one screen only: not planned.</li>
 </ul>
@@ -386,7 +388,7 @@ monitors named in one file. Theirs stay as they are until the team agrees to swi
 </tr>
 <tr>
 <td>systemd starting them at login, on the car</td>
-<td><span class="badge b-untested">untested</span>: after the audit</td>
+<td><span class="badge b-untested">untested</span>: once the dash computer runs our Jazzy</td>
 </tr>
 </tbody>
 </table></div></section>

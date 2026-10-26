@@ -368,7 +368,7 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 <tbody>
 <tr>
 <td>1</td>
-<td><code>git checkout main &amp;&amp; git pull</code>, then <code>pixi run build</code></td>
+<td><code>git fetch upstream &amp;&amp; git switch main &amp;&amp; git merge --ff-only upstream/main</code> (the team's main: <a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a>), then <code>pixi run build</code></td>
 <td><code>Summary: ... packages finished</code></td>
 <td><code>pixi run build</code> again; the end says which package</td>
 </tr>
@@ -484,13 +484,13 @@ there stops every ROS program. At the car:
 <code>rm ~/.config/aav/cyclonedds.xml</code>.</p>
 </div>
 <h3 id="pixi-run-car-day-check-on-bens-mac-24-oct"><code>pixi run car-day-check</code> on Ben's Mac, 24 Oct</h3>
-<p>After step 4, before steps 1, 5 and 6: so the build, the kit and the push are its 3
-missing, and Cyclone a reminder. No secrets: the Keychain is only asked whether each
+<p>After step 4, before steps 1, 5 and 6: so the repo, the build and the kit are its 3
+missing, and Cyclone a reminder. (The repo line's advice is today's wording.) No secrets: the Keychain is only asked whether each
 entry exists.</p>
 <pre class="highlight"><code class="language-text">Car day: is /Users/ben/Code/ecolo-av ready? (car-day.md)
 
   MISSING  repo         main at 54304074 has commits GitHub hasn't
-                        -&gt; pixi run test, then git push
+                        -&gt; pixi run test, then move them to a branch and open a pull request (CONTRIBUTING.md)
   MISSING  build        ros/ changed since the last build (24 Oct 15:06)
                         -&gt; pixi run build
   MISSING  car kit      made 2026-10-20 13:54; its code is 37a7b549, main is 54304074
@@ -980,12 +980,23 @@ its TensorRT version).</p>
 </tr>
 <tr>
 <td>10</td>
-<td><strong>Calibration:</strong> the printed checkerboard (<code>pixi run calibrate-camera board</code>, 9x6, 25 mm squares: measure a square with the ruler). On the laptop: <code>pixi run calibrate-camera front_left --host 192.168.1.108 --square &lt;measured, in m&gt;</code>; someone moves the board slowly (near, far, the corners, tilted) until the X, Y, Size and Skew bars go green, then CALIBRATE, then SAVE. Then the same for <code>front_right</code></td>
+<td><strong>Calibration:</strong> the steps below, for <code>front_left</code>, then <code>front_right</code></td>
 <td><code>ros/sources/aav_camera_stream/config/calibrations/front_left.yaml</code> (and <code>front_right</code>) written; commit them at home</td>
-<td>the window shows no picture: the stream (step 6). As a backup, save pictures: <code>mkdir -p ~/aav-calib</code>, then <code>pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png</code></td>
+<td>no picture: the stream (step 6); save pictures as a backup (below)</td>
 </tr>
 </tbody>
 </table></div>
+<p>Step 10, calibration:</p>
+<ol>
+<li>The printed checkerboard: 9x6, 25 mm squares (<code>pixi run calibrate-camera board</code>).
+   Measure one square with the ruler.</li>
+<li>On the laptop: <code>pixi run calibrate-camera front_left --host 192.168.1.108 --square &lt;measured, in m&gt;</code>.</li>
+<li>Someone moves the board slowly: near, far, the corners, tilted. Wait until the X, Y,
+   Size and Skew bars go green.</li>
+<li>CALIBRATE, then SAVE. Then the same for <code>front_right</code>.</li>
+<li>Backup, if the window shows no picture: <code>mkdir -p ~/aav-calib</code>, then
+   <code>pixi run ffmpeg -rtsp_transport tcp -i rtsp://192.168.1.108:8554/front_left -vf fps=1 -frames:v 30 ~/aav-calib/front_left_%02d.png</code></li>
+</ol>
 <p>At home: the delay goes in <code>orin.yaml</code>'s <code>camera_stream</code> <code>delay</code> (0.06 s today); commit
 the two calibration files (<code>docs/camera-calibration.md</code>). Until they're in, the stop-sign
 rule uses Gazebo's lens and the car stops too early.</p>

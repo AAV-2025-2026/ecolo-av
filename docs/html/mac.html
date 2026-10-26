@@ -88,7 +88,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#ml-on-your-mac-against-the-bench">ML on your Mac, against the bench</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#macos-hides-one-setting-from-ros">macOS hides one setting from ROS</a><a href="#three-more-things-the-bench-found-on-a-mac">Three more things the bench found on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#three-ways">Three ways</a><a href="#set-up-the-mac-once">Set up the Mac (once)</a><a href="#join-the-cars-network">Join the car&#x27;s network</a><a href="#drive-and-watch-from-the-mac">Drive and watch from the Mac</a><a href="#ml-on-your-mac-against-the-bench">ML on your Mac, against the bench</a><a href="#watch-without-ros-lichtblick">Watch without ROS: Lichtblick</a><a href="#gazebo-on-a-mac">Gazebo on a Mac</a><a href="#macos-hides-one-setting-from-ros">macOS hides one setting from ROS</a><a href="#four-more-things-the-bench-found-on-a-mac">Four more things the bench found on a Mac</a><a href="#if-the-native-way-fails-ubuntu-in-utm">If the native way fails: Ubuntu in UTM</a><a href="#if-something-breaks">If something breaks</a><a href="#whats-been-tested">What&#x27;s been tested</a></nav>
 <div class="lead"><p>Three ways to use a Mac with the car. Use Pixi to run ROS on the Mac itself, and to
 drive. Lichtblick only watches, but needs no setup. Ubuntu in a VM is the fallback.</p></div>
 <section class="card"><h2 id="three-ways">Three ways</h2>
@@ -125,11 +125,11 @@ already, it says so.</p>
 <pre class="highlight"><code class="language-bash">xcode-select --install</code></pre>
 <p><strong>2. Pixi</strong>, then open a new terminal:</p>
 <pre class="highlight"><code class="language-bash">curl -fsSL https://pixi.sh/install.sh | sh</code></pre>
-<p><strong>3. The code.</strong> Clone it from GitHub. You need access to <code>AAV-2025-2026/ecolo-av</code> (ask Ben),
-and an SSH key on your GitHub account:</p>
-<pre class="highlight"><code class="language-bash">git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av
+<p><strong>3. The code.</strong> <code>AAV-2025-2026/ecolo-av</code> is public. Fork it on GitHub, put an SSH key on
+your account, and clone your fork, as <a href="../../CONTRIBUTING.md">Contributing</a> shows:</p>
+<pre class="highlight"><code class="language-bash">git clone git@github.com:&lt;your-username&gt;/ecolo-av.git ~/ecolo-av
 cd ~/ecolo-av</code></pre>
-<p>Later, <code>git pull</code> in <code>~/ecolo-av</code> fetches newer work.</p>
+<p>To take newer work and send yours: <a href="../../CONTRIBUTING.md">Contributing</a>.</p>
 <p><strong>4. Install ROS and build:</strong></p>
 <pre class="highlight"><code class="language-bash">pixi install       # ROS 2 Jazzy: about 7 GB, the first time only
 pixi run build     # our packages
@@ -163,7 +163,7 @@ without a reflash.</p>
 <tr>
 <td>2</td>
 <td><code>export ROS_DOMAIN_ID=42</code> in each terminal</td>
-<td>ROS only talks within one domain. Ours is 42, so it never mixes with the 2025-26 software (<code>pixi run net-map</code> shows which domains theirs uses)</td>
+<td>ROS only talks within one domain (0–101 is safe on Linux; Fast DDS breaks above 232). Ours is 42, so it never mixes with the 2025-26 software (<code>pixi run net-map</code> shows which domains theirs uses)</td>
 </tr>
 <tr>
 <td>3</td>
@@ -252,7 +252,7 @@ clock is off: the car's computers keep the time (the Orin serves it, see
 </tr>
 <tr>
 <td>Be the safety driver's joystick laptop</td>
-<td><code>pixi run car laptop</code></td>
+<td><code>pixi run -e ml car laptop</code> (<code>-e ml</code> for its detector)</td>
 </tr>
 </tbody>
 </table></div>
@@ -434,7 +434,7 @@ not the Mac:</p>
 on Fast DDS).</p>
 <p>To go back to Fast DDS for one run, every program that talks to it needs the same:</p>
 <pre class="highlight"><code class="language-bash">AAV_RMW=fastdds pixi run sim               # this terminal
-AAV_RMW=fastdds pixi run ros2 topic list   # and every other</code></pre>
+AAV_RMW=fastdds pixi run tools/ros.sh ros2 topic list   # and every other: AAV_RMW works through tools/ros.sh</code></pre>
 <p>⚠️ <strong>To check at the car:</strong> Cyclone uses one network card, not all of them as Fast DDS
 did. A computer with two (the localization Pi has Ethernet and Carleton's WiFi) may pick
 the wrong one. Then name the car's network in <code>~/.config/aav/cyclonedds.xml</code> on that computer:
@@ -472,7 +472,7 @@ discovery stays on it, and the whole Gazebo graph starts more. On Linux the 33rd
   on Linux and the car. Outside Pixi, the Mac's own versions are unchanged.</li>
 </ul>
 </section>
-<section class="card"><h2 id="three-more-things-the-bench-found-on-a-mac">Three more things the bench found on a Mac</h2>
+<section class="card"><h2 id="four-more-things-the-bench-found-on-a-mac">Four more things the bench found on a Mac</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>

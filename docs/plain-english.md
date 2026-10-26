@@ -47,6 +47,7 @@ High-level moves only. The model never sends a speed or a steering angle by itse
 | `turn(angle_deg, radius_m, direction)` | drives forward along an arc: `direction` "left" or "right" | yes |
 | `go_to_gps(lat, lon)` | Nav2 drives to a point (only when Nav2 runs) | yes |
 | `wait(seconds)` | waits between moves | part of the plan |
+| `check(tool, arguments)` | asks whether a move would pass the rules, without moving | no |
 | `stop()` | cancels the drive: the car slows down and stops | **never** |
 | `estop()` | `/safety/estop` true: every driver stops | **never** |
 

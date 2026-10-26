@@ -1,5 +1,7 @@
 # Perception models, the lidar, and a map on the HUD
 
+> **A snapshot from 15 October 2026.** What's true now: [Status](status.md), [Perception](perception.md), [Camera pipeline](camera-pipeline.md) and [the HUD's map window](hud.md#the-map-window-big-screen).
+
 Written 15 October 2026. **Since then:** the detector is RF-DETR Nano, not YOLO
 (Ben, 23 Oct), as TensorRT on the Orin and Core ML on a Mac: see
 [Perception](perception.md#models). YOLO stays as `detector:=yolo`. It answers:
@@ -10,11 +12,11 @@ Written 15 October 2026. **Since then:** the detector is RF-DETR Nano, not YOLO
 4. Are there better open-source models, like NVIDIA's per-pixel ones?
 
 > **The short version**
-> - **Use stock YOLO for objects** (already wired in): one model, run as TensorRT on the Orin and Core ML on a Mac. **Keep OpenCV for lane lines** (already done: under 1 ms a frame).
+> - **Use stock YOLO for objects** (answered 23 Oct: RF-DETR Nano by default; YOLO with `detector:=yolo`): one model, run as TensorRT on the Orin and Core ML on a Mac. **Keep OpenCV for lane lines** (already done: under 1 ms a frame).
 > - **The previous teams' trained model is lost** (`best.pt` was on someone's laptop) and knew one label. Start from stock, and train our own later only if the stock one fails on our recordings.
 > - **Lidar: no model to start.** Put its points straight into Nav2's costmap and collision_monitor. Clustering next. A downloaded 3D detector last, and only if needed.
-> - **Per-pixel, for where the road is: NVIDIA's CitySemSegFormer** (a ready ONNX file), run with ONNX Runtime, not Isaac ROS: Isaac ROS isn't on Jazzy for the Orin yet.
-> - **A map on the HUD: yes.** The raylib HUD can draw offline map tiles with the car's GPS dot on top. Not built yet.
+> - **Per-pixel, for where the road is: NVIDIA's CitySemSegFormer** (a ready ONNX file), run with ONNX Runtime, not Isaac ROS: Isaac ROS isn't on Jazzy for the Orin yet (since then: Isaac ROS 4.6 supports the Orin on JetPack 7.2, [Perception](perception.md#isaac-ros-nvidia)).
+> - **A map on the HUD: yes.** The raylib HUD can draw offline map tiles with the car's GPS dot on top. (Answered: built 15-16 Oct as [the map window](hud.md#the-map-window-big-screen).)
 
 ## 1. Camera perception: which tool for which job
 
@@ -59,7 +61,8 @@ YOLO is AGPL-3.0.
 
 The photos show **ribbon (CSI) cameras** on the Pi 5s. Our camera driver, `usb_cam`, only
 reads **USB** cameras. The camera Pis need a libcamera driver instead, such as `camera_ros`.
-Friday's audit will show what the 2025-26 team ran there.
+(Answered: the audits of 16 and 21 Oct found MediaMTX on the camera Pi. Both front ribbon
+cameras are on one Pi 5: MediaMTX → `aav_camera_stream` on the Orin, [Camera pipeline](camera-pipeline.md).)
 
 ## 3. The lidar: three steps
 
@@ -104,7 +107,7 @@ known.
 | The 2025-26 Flutter app's map page (`flutter_map`) | written; it needs a tile server on the dash Pi, which isn't in git |
 | `ottawa.db`: 606,628 places for the search box | `pixi run get-hud-map` |
 | OSRM road routes | Docker on the dash Pi; data not in git |
-| The raylib HUD (ours) | speed, e-stop, GPS panel, camera, topic health. **No map yet** |
+| The raylib HUD (ours) | speed, e-stop, GPS panel, camera, topic health. **No map yet** (answered: [the map window](hud.md#the-map-window-big-screen), built since) |
 
 ### How the raylib HUD would draw one
 
@@ -167,7 +170,7 @@ the Mac and the car's ARM computers, version 1.31) runs it on whatever is fastes
 | Any | the CPU | slow, but always works |
 
 One node, `segmenter`, with the model file as a setting, could run CitySemSegFormer today
-and TwinLiteNet tomorrow, and publish a road mask on `/perception/road/mask`. It could even
+and TwinLiteNet tomorrow, and publish a road mask on `/perception/road/mask` (Proposed: not in `interfaces.yaml`). It could even
 be Rust: the `ort` crate wraps ONNX Runtime.
 
 ### Licences
@@ -192,11 +195,11 @@ be Rust: the `ort` crate wraps ONNX Runtime.
 
 | # | Task | Needs |
 |---|---|---|
-| 1 | Friday: what cameras, lidar and radar are really on the car, and what drives them | the audit |
-| 2 | `camera_ros` instead of `usb_cam` on the camera Pis | step 1 |
-| 3 | The lidar's points into Nav2 (step 1), first in Gazebo | nothing: can start now |
+| 1 | Friday: what cameras, lidar and radar are really on the car, and what drives them | the audit (answered: audits of 16 and 21 Oct) |
+| 2 | `camera_ros` instead of `usb_cam` on the camera Pis | step 1 (answered: MediaMTX → `aav_camera_stream` instead) |
+| 3 | The lidar's points into Nav2 (step 1), first in Gazebo | nothing (answered: done; the roof VLP-16 through the stock `velodyne` driver, untested with the real lidar) |
 | 4 | Record a real drive; run stock YOLO on it; decide whether to train | the cameras on the car |
-| 5 | The HUD's map panel with offline tiles | the test area chosen |
+| 5 | The HUD's map panel with offline tiles | the test area chosen (answered: built as the map window) |
 | 6 | Lidar clusters; then camera + lidar calibration | the lidar on the car |
 | 7 | A `segmenter` node on ONNX Runtime; try CitySemSegFormer for a road mask, then a road layer in the costmap | can start now, in Gazebo's road world |
 

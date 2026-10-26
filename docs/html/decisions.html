@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">38 min read · 13 sections</div></header>
+<div class="meta">39 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -155,7 +155,7 @@ answer.</p>
 </tr>
 <tr>
 <td>5</td>
-<td>A CAN spine replaces the serial link from the Motor Pi to the ESP32</td>
+<td>A CAN spine replaces the serial link from the Motor Pi to the ESP32 (today's car drives over UART: see 23 Oct)</td>
 <td>Which signals cross the bus is still open: Q12</td>
 </tr>
 <tr>
@@ -165,7 +165,7 @@ answer.</p>
 </tr>
 <tr>
 <td>7</td>
-<td>One repo and one workspace, with folders by layer of the picture</td>
+<td>One repo and one workspace, with folders by layer of the picture (since 25 Oct, by area: <code>ros/&lt;area&gt;/</code>, below)</td>
 <td>One place to build, test and document everything</td>
 </tr>
 <tr>
@@ -176,7 +176,7 @@ answer.</p>
 <tr>
 <td>9</td>
 <td>Develop on Macs too, with Pixi and RoboStack</td>
-<td>The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; all use Cyclone DDS (23 Oct, below)</td>
+<td>The same Jazzy on macOS and any Linux. The car's computers move to Ubuntu 24.04 (today 22.04: Q24); all use Cyclone DDS (23 Oct, below)</td>
 </tr>
 </tbody>
 </table></div>
@@ -208,7 +208,7 @@ answer.</p>
 </tr>
 <tr>
 <td>The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32</td>
-<td>Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip. A Pico 2 program exists since 11 Oct (<code>boards/pico2</code>)</td>
+<td>Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip. A Pico 2 program exists since 11 Oct (<code>boards/pico2</code>). (The chip is the hardware lead's choice: Q10-Q13)</td>
 <td>Q10–Q13</td>
 </tr>
 <tr>
@@ -254,7 +254,7 @@ answer.</p>
 </tr>
 <tr>
 <td>A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree</td>
-<td>A car can't turn on the spot. The config already does this</td>
+<td>A car can't turn on the spot. The config already does this. (MPPI is the default since 22 Oct: see below)</td>
 </tr>
 <tr>
 <td>The RC transmitter stays the top-priority override, in hardware</td>
@@ -362,7 +362,7 @@ answer.</p>
 <td>Ben: see <a href="rust-firmware.html">Rust on the hardware</a></td>
 </tr>
 <tr>
-<td>Bring perception in now, not next year: the YOLO detector, the camera calibrations, radar clustering, lane keeping</td>
+<td>Bring perception in now, not later: the YOLO detector, the camera calibrations, radar clustering, lane keeping</td>
 <td>Ben: "Lets merge in all of this too"</td>
 </tr>
 <tr>
@@ -466,7 +466,7 @@ answer.</p>
 </thead>
 <tbody>
 <tr>
-<td>Topic names by area: <code>/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code>, with the areas <code>/sensors/</code>, <code>/vehicle/</code>, <code>/can/</code>, <code>/localization/</code>, <code>/perception/</code>, <code>/drivers/</code>, <code>/control/</code>, <code>/ego/</code>, <code>/safety/</code>, <code>/hud/</code> (<a href="naming.html">Topic areas</a>). Each driver gets its own: <code>/drivers/keyboard/cmd_vel</code>, <code>/drivers/joy/cmd_vel</code></td>
+<td>Topic names by area: <code>/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code>, with the areas <code>/sensors/</code>, <code>/vehicle/</code>, <code>/can/</code>, <code>/localization/</code>, <code>/perception/</code>, <code>/drivers/</code>, <code>/control/</code>, <code>/ego/</code>, <code>/safety/</code>, <code>/hud/</code>, <code>/system/</code> (<a href="naming.html">Topic areas</a>). Each driver gets its own: <code>/drivers/keyboard/cmd_vel</code>, <code>/drivers/joy/cmd_vel</code></td>
 <td>Ben, 00:30: "The drivers all need to be in a /drivers/keybaord, etc type stuff as an example."</td>
 </tr>
 </tbody>
@@ -506,7 +506,7 @@ answer.</p>
 <tr>
 <td><strong>The wheel sensors are read by an Arduino</strong>, which sends CAN frames; the Orin reads the bus and publishes them in ROS</td>
 <td>The hardware side's plan. The frames are in <code>aav.dbc</code> already (0x200, 0x201), and the Orin's side decodes them, so the Arduino only has to send them. An exception to "Rust for all firmware": it's the hardware lead's board</td>
-<td>Ben, 23 Oct, for the hardware side</td>
+<td>the hardware lead (passed on by Ben, 23 Oct)</td>
 </tr>
 <tr>
 <td><em>Tentative, until the hardware lead confirms:</em> <strong>today's car is driven through the Motor Pi's UART</strong>, and <strong>the Orin reads its CAN bus for sensors only</strong> (<code>car.launch.py actuators:=uart</code>, the default; <code>spine_bridge role:=sensors</code>). The CAN spine stays one argument away (<code>actuators:=can</code>)</td>
@@ -625,14 +625,24 @@ answer.</p>
 <td>Ben, 25 Oct</td>
 </tr>
 <tr>
-<td><strong>Docs live in <code>docs/</code>, under plain names</strong>; the root keeps README, CLAUDE.md and TODO.md</td>
-<td>Fourteen READ-ME, PLAN, PROPOSAL and TODO pages at the root were hard to find and named oddly. Their information moved; the Friday pages (16 Oct) went to the history</td>
+<td><strong>Docs live in <code>docs/</code>, under plain names</strong>; the root keeps README, CLAUDE.md, CONTRIBUTING.md and TODO.md</td>
+<td>Fourteen READ-ME, PLAN, PROPOSAL and TODO pages at the root were hard to find and named oddly. Their information moved into <code>docs/</code>; the dated pages (the proposal, the Friday audit) carry a snapshot banner</td>
 <td>Ben, 25 Oct</td>
 </tr>
 <tr>
 <td><strong>A features list, <code>docs/features.md</code></strong>: each feature's type, why, who and status, updated in the feature's own commit</td>
 <td>The team's report must say what each person built and why; a rule in CLAUDE.md and a checklist on pull requests keep it current</td>
 <td>Ben, 25 Oct</td>
+</tr>
+<tr>
+<td><strong>ROS packages live in <code>ros/&lt;area&gt;/</code></strong>: sources, localization, perception, drivers, command_mux, ego, io_mux, can_bridge, sim, safety, hud, bringup, ecolo_msgs (was <code>src/&lt;layer&gt;/</code>)</td>
+<td>Each folder matches a box in the picture, so you find a package where its data flows</td>
+<td>Arsh, 25 Oct</td>
+</tr>
+<tr>
+<td><strong><a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a> is the git rule</strong>: fork, branch, pull request, one approval and green CI, then the merge queue</td>
+<td>One way into <code>main</code> for everyone, maintainers included</td>
+<td>Arsh, 25 Oct</td>
 </tr>
 </tbody>
 </table></div>
@@ -674,7 +684,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q5</td>
 <td>Wheel encoder</td>
-<td>Which wheel, how many counts per turn, and can it wire straight to the spine?</td>
+<td>Which wheel, how many counts per turn, and can it wire straight to the spine? <strong>Partly answered:</strong> the wheel sensors go through the hardware lead's Arduino, which sends CAN 0x200/0x201 (23 Oct); one board or two is question H4</td>
 </tr>
 <tr>
 <td><strong>Q6</strong></td>
@@ -783,7 +793,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q22</td>
 <td>Lidar and cameras</td>
-<td>Which models are on the car? Not needed until phase 4, but the URDF and the power budget need them</td>
+<td>Which models are on the car? Not needed until phase 4, but the URDF and the power budget need them. <strong>Partly answered:</strong> a Velodyne VLP-16 on the roof (16 Oct audit); both front ribbon cameras on one Pi 5; the camera models still open</td>
 </tr>
 </tbody>
 </table></div>
@@ -815,7 +825,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q26</td>
 <td>Languages</td>
-<td>Python for all our ROS nodes? C++ or Rust for the spine firmware?</td>
+<td>Python for all our ROS nodes? C++ or Rust for the spine firmware? <strong>Answered: Decided #8 (Ben, 10 Oct)</strong></td>
 </tr>
 <tr>
 <td>Q27</td>
@@ -872,7 +882,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tbody>
 <tr>
 <td><code>ROS_DOMAIN_ID</code></td>
-<td>one number (0–101) for the car and every laptop</td>
+<td>one number for the car and every laptop: 0–101 (safe on Linux; Fast DDS breaks above 232)</td>
 </tr>
 <tr>
 <td>GPS driver</td>

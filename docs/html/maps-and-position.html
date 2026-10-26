@@ -101,7 +101,7 @@
 - <strong>Local EKF:</strong> "how I've moved since I started". Smooth, but it slowly drifts.
 - <strong>Global EKF:</strong> the same, plus GPS. "Where I am on the earth". True, but it can jump a little.
 - The <strong>map frame</strong> is a flat grid in metres, pinned to one GPS point (the <strong>datum</strong>). That's how x/y and latitude/longitude meet.
-- <strong>OpenStreetMap is only in the HUD:</strong> searching places, drawing streets, planning a road route. Nav2 never reads it.
+- <strong>OpenStreetMap is only for people and routes:</strong> the HUD's map window (streets, place search) and the street router (Valhalla). Nav2 never reads it.
 - <strong>Costmaps</strong> are grids of "how bad is it to drive here". The <strong>global</strong> one is big and coarse (for the whole route). The <strong>local</strong> one is small, fine and live (for what's in front of the car right now).</p>
 </blockquote></div>
 <section class="card"><h2 id="1-your-picture-corrected-a-little">1. Your picture, corrected a little</h2>
@@ -199,11 +199,12 @@
 </ul>
 </section>
 <section class="card"><h2 id="4-where-openstreetmap-comes-in">4. Where OpenStreetMap comes in</h2>
-<p>OpenStreetMap (OSM) is a free map of the world's roads and places. <strong>We use it only in the HUD</strong>, for the person in the seat:</p>
+<p>OpenStreetMap (OSM) is a free map of the world's roads and places. <strong>We use it for people
+and for routes</strong>, never inside Nav2. Everything works offline: the data are files.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th>HUD feature</th>
+<th>Feature</th>
 <th>Uses</th>
 <th>Where</th>
 <th>In git?</th>
@@ -211,36 +212,38 @@
 </thead>
 <tbody>
 <tr>
-<td>Search "Tim Hortons"</td>
-<td><code>ottawa.db</code>: 606,628 named places from OSM</td>
-<td>the HUD app</td>
-<td>no (51 MB): <code>pixi run get-hud-map</code></td>
-</tr>
-<tr>
 <td>Draw the street map</td>
-<td>a tile server on port 8080</td>
-<td>the dash Pi</td>
-<td>no</td>
+<td>Ottawa's streets as vector tiles (Protomaps, 40 MB)</td>
+<td>the HUD's map window, under Nav2's map (<a href="hud.html#the-street-map-under-it">HUD</a>)</td>
+<td>no: <code>pixi run get-street-map</code></td>
 </tr>
 <tr>
-<td>Plan a road route</td>
-<td>OSRM (a road router), Ontario's OSM data, port 5001</td>
-<td>Docker on the dash Pi</td>
-<td>no</td>
+<td>Search "Tim Hortons"</td>
+<td><code>ottawa.db</code>: 606,628 named places from OSM (51 MB)</td>
+<td>the HUD's map window (<a href="hud.html#search-for-a-place-and-drive-there">search</a>)</td>
+<td>no: <code>pixi run get-hud-map</code></td>
+</tr>
+<tr>
+<td>Plan a street route</td>
+<td>Valhalla (a road router), Ottawa's OSM data</td>
+<td><code>street_router</code> (<code>aav_routes</code>), on this computer (<a href="routes.html">Street routes</a>)</td>
+<td>no: <code>pixi run -e routes get-routes</code></td>
 </tr>
 </tbody>
 </table></div>
-<p>Then the route reaches the car like this:</p>
-<pre class="highlight"><code class="language-text"> HUD: pick a place ─► OSRM: road route (a line of lat/lon points)
-     ─► "lock" the route ─► Nav2: FollowGPSWaypoints
+<p>A place reaches the car in one of two ways:</p>
+<pre class="highlight"><code class="language-text"> map window: pick a place ─► DRIVE HERE, CONFIRM ─► /goal_pose (inside Nav2's map only)
+
+ street_router: a destination ─► Valhalla: a street route (lat/lon points)
+     ─► a person calls /drivers/nav/route/follow ─► Nav2: FollowGPSWaypoints
      ─► /fromLL: each point to map x/y ─► Nav2 drives point to point</code></pre>
 <blockquote>
-<p>⚠️ <strong>Nav2 doesn't know where the road is.</strong> OSRM's points follow the road, but Nav2
+<p>⚠️ <strong>Nav2 doesn't know where the road is.</strong> The route's points follow the road, but Nav2
 only sees the points, not the road. Between two points it plans across its costmap,
 which today is empty (all free). Staying in the lane is the lane keeper's job
 (<code>aav_lane_finder</code>, <code>aav_lane_geometry</code>). A lane layer in the costmap would be the next step.</p>
 </blockquote>
-<p>This route path is written (the HUD back end and Nav2's GPS waypoints). It has never run with the real OSRM and tile server, which were on the 2025-26 team's Pi.</p>
+<p>Both ways work in Gazebo (16 Oct); neither has run on the car.</p>
 </section>
 <section class="card"><h2 id="5-costmaps-the-fine-grained-part">5. Costmaps: the fine-grained part</h2>
 <p>A <strong>costmap</strong> is a grid laid on the ground. Each cell holds a cost:</p>
@@ -275,50 +278,26 @@ which today is empty (all free). Staying in the lane is the lane keeper's job
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th></th>
-<th>Global costmap</th>
-<th>Local costmap</th>
+<th>Costmap</th>
+<th>Question it answers</th>
+<th>Frame</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Question it answers</td>
-<td>"Which way to the goal?"</td>
-<td>"What's right in front of me?"</td>
-</tr>
-<tr>
-<td>Frame</td>
+<td>Global</td>
+<td>"Which way to the goal?" (the planner)</td>
 <td><code>map</code> (fixed on the earth)</td>
+</tr>
+<tr>
+<td>Local</td>
+<td>"What's right in front of me?" (the controller)</td>
 <td><code>odom</code> (smooth: never jumps)</td>
-</tr>
-<tr>
-<td>Size</td>
-<td>200 m × 200 m (from the map file)</td>
-<td>20 m × 20 m, moves with the car</td>
-</tr>
-<tr>
-<td>Cell size</td>
-<td>25 cm</td>
-<td>10 cm</td>
-</tr>
-<tr>
-<td>Filled from</td>
-<td>a map file: <code>empty</code> (all free) or <code>example_lot</code></td>
-<td>the map, plus live sensors: radar, camera detections (lidar later)</td>
-</tr>
-<tr>
-<td>Used by</td>
-<td>the <strong>planner</strong>: Smac Hybrid-A*, which only plans turns the car can make</td>
-<td>the <strong>controller</strong>: MPPI, which steers along the plan</td>
-</tr>
-<tr>
-<td>File</td>
-<td><code>ros/drivers/aav_navigation/config/nav2.yaml</code></td>
-<td>the same</td>
 </tr>
 </tbody>
 </table></div>
 <p>Why the local one is in <code>odom</code>: if it were in <code>map</code>, every GPS hop would shift the obstacles under the car.</p>
+<p>Sizes, cells, layers and sensors: <a href="costmaps.html#the-two-costmaps">Costmaps</a>.</p>
 </section>
 <section class="card"><h2 id="6-all-the-scales-big-to-small">6. All the scales, big to small</h2>
 <div class="table-wrap"><table>
@@ -333,7 +312,7 @@ which today is empty (all free). Staying in the lane is the lane keeper's job
 <tbody>
 <tr>
 <td>kilometres</td>
-<td>OpenStreetMap + OSRM, in the HUD</td>
+<td>OpenStreetMap + Valhalla (<code>street_router</code>)</td>
 <td>road segments</td>
 <td>"which streets to take"</td>
 </tr>
@@ -393,15 +372,15 @@ which today is empty (all free). Staying in the lane is the lane keeper's job
 </tr>
 <tr>
 <td>Lidar in the local costmap</td>
-<td>❌ no lidar driver yet</td>
+<td>✅ the roof VLP-16 through the stock <code>velodyne</code> driver, tested against a fake lidar; untested with the real one</td>
 </tr>
 <tr>
 <td>The real datum</td>
 <td>❌ a placeholder: set it at the test site</td>
 </tr>
 <tr>
-<td>The HUD's route → Nav2</td>
-<td>🔧 written; never run with real OSRM</td>
+<td>A street route → Nav2</td>
+<td>✅ in Gazebo (<a href="routes.html">Street routes</a>); untested on the car</td>
 </tr>
 <tr>
 <td>A map of the real test site</td>

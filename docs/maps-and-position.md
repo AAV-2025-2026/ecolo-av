@@ -11,7 +11,7 @@ Written 15 October 2026. It answers:
 > - **Local EKF:** "how I've moved since I started". Smooth, but it slowly drifts.
 > - **Global EKF:** the same, plus GPS. "Where I am on the earth". True, but it can jump a little.
 > - The **map frame** is a flat grid in metres, pinned to one GPS point (the **datum**). That's how x/y and latitude/longitude meet.
-> - **OpenStreetMap is only in the HUD:** searching places, drawing streets, planning a road route. Nav2 never reads it.
+> - **OpenStreetMap is only for people and routes:** the HUD's map window (streets, place search) and the street router (Valhalla). Nav2 never reads it.
 > - **Costmaps** are grids of "how bad is it to drive here". The **global** one is big and coarse (for the whole route). The **local** one is small, fine and live (for what's in front of the car right now).
 
 ## 1. Your picture, corrected a little
@@ -65,28 +65,31 @@ The `map` frame is flat and in metres, but GPS gives latitude and longitude. The
 
 ## 4. Where OpenStreetMap comes in
 
-OpenStreetMap (OSM) is a free map of the world's roads and places. **We use it only in the HUD**, for the person in the seat:
+OpenStreetMap (OSM) is a free map of the world's roads and places. **We use it for people
+and for routes**, never inside Nav2. Everything works offline: the data are files.
 
-| HUD feature | Uses | Where | In git? |
+| Feature | Uses | Where | In git? |
 |---|---|---|---|
-| Search "Tim Hortons" | `ottawa.db`: 606,628 named places from OSM | the HUD app | no (51 MB): `pixi run get-hud-map` |
-| Draw the street map | a tile server on port 8080 | the dash Pi | no |
-| Plan a road route | OSRM (a road router), Ontario's OSM data, port 5001 | Docker on the dash Pi | no |
+| Draw the street map | Ottawa's streets as vector tiles (Protomaps, 40 MB) | the HUD's map window, under Nav2's map ([HUD](hud.md#the-street-map-under-it)) | no: `pixi run get-street-map` |
+| Search "Tim Hortons" | `ottawa.db`: 606,628 named places from OSM (51 MB) | the HUD's map window ([search](hud.md#search-for-a-place-and-drive-there)) | no: `pixi run get-hud-map` |
+| Plan a street route | Valhalla (a road router), Ottawa's OSM data | `street_router` (`aav_routes`), on this computer ([Street routes](routes.md)) | no: `pixi run -e routes get-routes` |
 
-Then the route reaches the car like this:
+A place reaches the car in one of two ways:
 
 ```text
- HUD: pick a place ─► OSRM: road route (a line of lat/lon points)
-     ─► "lock" the route ─► Nav2: FollowGPSWaypoints
+ map window: pick a place ─► DRIVE HERE, CONFIRM ─► /goal_pose (inside Nav2's map only)
+
+ street_router: a destination ─► Valhalla: a street route (lat/lon points)
+     ─► a person calls /drivers/nav/route/follow ─► Nav2: FollowGPSWaypoints
      ─► /fromLL: each point to map x/y ─► Nav2 drives point to point
 ```
 
-> ⚠️ **Nav2 doesn't know where the road is.** OSRM's points follow the road, but Nav2
+> ⚠️ **Nav2 doesn't know where the road is.** The route's points follow the road, but Nav2
 > only sees the points, not the road. Between two points it plans across its costmap,
 > which today is empty (all free). Staying in the lane is the lane keeper's job
 > (`aav_lane_finder`, `aav_lane_geometry`). A lane layer in the costmap would be the next step.
 
-This route path is written (the HUD back end and Nav2's GPS waypoints). It has never run with the real OSRM and tile server, which were on the 2025-26 team's Pi.
+Both ways work in Gazebo (16 Oct); neither has run on the car.
 
 ## 5. Costmaps: the fine-grained part
 
@@ -103,23 +106,20 @@ A **costmap** is a grid laid on the ground. Each cell holds a cost:
 
 ### Our two costmaps
 
-| | Global costmap | Local costmap |
+| Costmap | Question it answers | Frame |
 |---|---|---|
-| Question it answers | "Which way to the goal?" | "What's right in front of me?" |
-| Frame | `map` (fixed on the earth) | `odom` (smooth: never jumps) |
-| Size | 200 m × 200 m (from the map file) | 20 m × 20 m, moves with the car |
-| Cell size | 25 cm | 10 cm |
-| Filled from | a map file: `empty` (all free) or `example_lot` | the map, plus live sensors: radar, camera detections (lidar later) |
-| Used by | the **planner**: Smac Hybrid-A*, which only plans turns the car can make | the **controller**: MPPI, which steers along the plan |
-| File | `ros/drivers/aav_navigation/config/nav2.yaml` | the same |
+| Global | "Which way to the goal?" (the planner) | `map` (fixed on the earth) |
+| Local | "What's right in front of me?" (the controller) | `odom` (smooth: never jumps) |
 
 Why the local one is in `odom`: if it were in `map`, every GPS hop would shift the obstacles under the car.
+
+Sizes, cells, layers and sensors: [Costmaps](costmaps.md#the-two-costmaps).
 
 ## 6. All the scales, big to small
 
 | Scale | Thing | Cell or step | Job |
 |---|---|---|---|
-| kilometres | OpenStreetMap + OSRM, in the HUD | road segments | "which streets to take" |
+| kilometres | OpenStreetMap + Valhalla (`street_router`) | road segments | "which streets to take" |
 | tens of metres | GPS waypoints | one point every few tens of metres | breadcrumbs for Nav2 |
 | 200 m | global costmap | 25 cm | a path the car can drive |
 | 20 m | local costmap | 10 cm | dodge what the sensors see |
@@ -133,9 +133,9 @@ Why the local one is in `odom`: if it were in `map`, every GPS hop would shift t
 | `ekf_local`, `ekf_global`, `navsat_transform` | ✅ in Gazebo and on the bench. ❌ never on the car |
 | Nav2 with both costmaps | ✅ in Gazebo and on the bench |
 | Radar and cameras in the local costmap | ✅ on the bench |
-| Lidar in the local costmap | ❌ no lidar driver yet |
+| Lidar in the local costmap | ✅ the roof VLP-16 through the stock `velodyne` driver, tested against a fake lidar; untested with the real one |
 | The real datum | ❌ a placeholder: set it at the test site |
-| The HUD's route → Nav2 | 🔧 written; never run with real OSRM |
+| A street route → Nav2 | ✅ in Gazebo ([Street routes](routes.md)); untested on the car |
 | A map of the real test site | ❌ only `empty` and an example lot |
 | Nav2 knowing about roads and lanes | ❌ the next big step |
 

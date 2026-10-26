@@ -1,6 +1,6 @@
 # Status: what works and what doesn't yet
 
-Where things stand early on 11 October 2026. "Works" means it ran under ROS 2
+Where things stand on 25 October 2026. "Works" means it ran under ROS 2
 Jazzy through Pixi: on oirp-spss (Linux), and since 10 October on Ben's Mac too. "On the
 bench" means [Bench mode](bench.md): the car's own software, with stand-ins for the
 hardware. "Untested" means the
@@ -34,14 +34,16 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | turtlesim | `aav_turtlesim` | [[works]] |
 | Gazebo | `aav_gazebo` | [[works]] headless on Linux and a Mac; its window on a Mac, with the car driving (10 Oct) |
 | Gazebo's road world | `aav_gazebo` `world:=road` | [[works]] on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; `pixi run sim-check`, `--obstacle`, `--lidar-obstacle`, `--faults`, `--spine` and `--perception` pass. On Linux with no GPU, through `tools/software_gl.sh`: [[works]] on oirp-spss, 23 Oct (`sim-check --obstacle`: the sensors and the stop; the nightly CI job uses it) ([Simulation](simulation.md)) |
-| The lidar in Nav2 (15 Oct) | `aav_lidar` `lidar_scan` -> the local costmap's `lidar_layer` and `collision_monitor` | [[works]] in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post (0.57 m on 20 Oct). **Under load it can be late:** on 20 Oct, run beside other jobs on the Mac, it stopped 0.13 m past the post's face; alone, 0.57 m before. Watch the Orin's load on the car. On the car: the stock velodyne driver since 20 Oct, on in `orin.yaml` and `all.yaml`: [[works]] against a pretend VLP-16 (`tools/fake_vlp16.py`), the chain at 10 Hz. **In bench mode** (`bench lidar:=true`, `mock_lidar`, 20 Oct): `bench-check --lidar` on oirp-spss stopped the car 0.88 m before a box only the lidar saw, and the radar's own check 0.41 m before its box ([[works]]). On the Mac, under Zoom's load, both failed: the spine latched (commands came late). The roof lidar can't see a 1 m box inside the stop zone: the radar's job ([Perception](perception.md)). **Open:** with `lidar:=true`, bench-check's contract check missed the bench IMU's (or camera's) publisher in 3 of 3 runs, while the EKF got its data; probed by hand, nothing was missing. Not yet explained. [[untested]] with the real lidar |
-| Sensor watchdog (15 Oct) | `aav_safety` `sensor_watchdog`: a twist_mux lock, the HUD's banner | [[works]] in Gazebo: the faults on purpose (`pixi run sim-fault`, `sim-check --faults`) stop Nav2 and say why, 14 now with the HUD's heartbeat (23 Oct: a frozen or dead HUD stops Nav2 on the car, `watch_hud`; [HUD](hud.md#the-heartbeat)), frozen wheels (cross-checked with the IMU and GPS) and the watchdog's own death (a fail-safe lock) too. Frozen wheels were caught in 1 of 4 tries on 23 Oct (flaky, not yet known why). On the bench, `bench-check` passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. [[untested]] on the car ([Simulation](simulation.md#sensor-failures-on-purpose)) |
+| The lidar in Nav2, in Gazebo (15 Oct) | `aav_lidar` `lidar_scan` -> the local costmap's `lidar_layer` and `collision_monitor` | [[works]] with the radar off: it stopped the car 0.16-0.57 m before a person-sized post. **Under load it can be late:** beside other jobs on the Mac it stopped 0.13 m past the post (20 Oct). Watch the Orin's load on the car |
+| The lidar in Nav2, in bench mode (20 Oct) | `bench lidar:=true`, `mock_lidar` | [[works]] on oirp-spss: `bench-check --lidar` stopped 0.88 m before a box only the lidar saw. On a loaded Mac it failed (the spine latched). **Open:** the contract check missed the bench IMU's (or camera's) publisher in 3 of 3 runs, while the EKF got its data. Not yet explained |
+| The lidar in Nav2, on the car | the stock velodyne driver, on in `orin.yaml` and `all.yaml` (20 Oct) | [[works]] against a pretend VLP-16 (`tools/fake_vlp16.py`), 10 Hz. The roof lidar can't see a 1 m box inside the stop zone: the radar's job ([Perception](perception.md)). [[untested]] with the real lidar |
+| Sensor watchdog (15 Oct) | `aav_safety` `sensor_watchdog`: a twist_mux lock, the HUD's banner | [[works]] in Gazebo: the faults on purpose (`pixi run sim-fault`, `sim-check --faults`) stop Nav2 and say why, 14 now with the HUD's heartbeat (23 Oct: a frozen or dead HUD stops Nav2 on the car, `watch_hud`; [HUD](hud.md#the-heartbeat)), frozen wheels (cross-checked with the IMU and GPS) and the watchdog's own death (a fail-safe lock) too. Frozen wheels: 25 of 25 since 24 Oct (MPPI had hidden them; the GPS check now fits 10 s: [frozen wheels and MPPI](simulation.md#frozen-wheels-and-mppi)). On the bench, `bench-check` passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. [[untested]] on the car ([Simulation](simulation.md#sensor-failures-on-purpose)) |
 | Real car | `aav_spine` | [[works]] on the bench, against `spine_sim`: arming, driving, both e-stops |
 | The spine in the loop, in Gazebo (15 Oct) | `pixi run sim spine:=true`: `spine_bridge` → CAN topics → `spine_sim` (`car:=gazebo`, the spine's logic) → the actuator model | [[works]] on the Mac: `pixi run sim-check --spine` passes (graph, drive, EKF, a Nav2 goal; commands lost: full brake 195-209 ms and latched; both e-stops: brake within 12 ms, latched; disarmed: no motion). [[untested]] on Linux ([Simulation](simulation.md#the-spine-in-the-loop-spinetrue)) |
 | Today's car | `aav_legacy` | [[untested]] on the car |
-| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 70 tests, on the bench, and in Gazebo (`spine:=true`) |
+| Spine firmware logic | `firmware/spine/crates/spine-core` | [[works]] 84 tests, on the bench, and in Gazebo (`spine:=true`) |
 | Wheel node logic (15 Oct) | `firmware/spine/crates/wheel-core` | [[untested]] 9 tests; no board uses it: the hardware lead's Arduino sends WHEEL_SPEED (23 Oct, [Rust firmware](rust-firmware.md)) |
-| Spine device drivers and glue | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `legacy-link`, `spine-board` | [[works]] 176 tests, against mocks; `legacy-link` also against the 2025-26 C++ itself |
+| Spine device drivers and glue | `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `legacy-link`, `spine-board` | [[works]] about 240 tests (`spine-board` 79), against mocks; `legacy-link` also against the 2025-26 C++ itself |
 | ESP32 board program (Rust) | `firmware/spine/boards/esp32-umod` | [[untested]] builds with Espressif's Rust (`pixi run esp-tools`), both links; never flashed. Merged 15 Oct; the C++ stays on the car until it is proven. In QEMU (24 Oct): brakes 111-120 ms after the Motor Pi's frames stop, and latches (`pixi run esp-qemu-check`). [First flash on the bench](esp32-bench.md) |
 | Spine board program | `firmware/spine/boards/pico2` | [[untested]] builds for a Pico 2, and its UF2 file checks out; never flashed. The car's chip is still Q10–Q13 |
 | Wheel encoder, in Rust (15 Oct) | `firmware/spine/boards/wheel-encoder-pico2`, crate `wheel-encoder` | [[untested]] builds, its UF2 checks out, 12 tests; never flashed. Same packet as the C++ (shared examples). The car's Pico 2 still runs the C++ |
@@ -56,14 +58,23 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
 | HUD in Rust (raylib) | `aav_hud_raylib` | [[works]] on a Mac: `--demo`, and as a node fed by `ros2 topic pub`; its e-stop reaches a subscriber as 5 trues. Its heartbeat (23 Oct): the real window beat at 9.3 Hz, and freezing or closing it made the watchdog say `hud STALE` in 1 s. Since 24 Oct a dropout after its first 5 s is latched (`hud LOST`, `pixi run watchdog-clear`), and a GO / STOP panel says whether the car may move (logic tested; not yet seen on screen). [[works]] next to bench mode too. [[untested]] on a Pi and on the car's screen |
 | CARLA | `aav_carla` | [[untested]] adapter built and tested without a server; needs the NVIDIA computer ([CARLA](carla.md)) |
+| Heading from the GPS velocity (25 Oct) | `aav_gps_heading` `gps_heading` -> `ekf_global` (yaw only), `pixi run heading-check` | [[works]] in Gazebo: at walking pace the heading's median error fell from 2.2-2.8° to 1.6-2.1°, forward and reversing. [[untested]] on the car: needs `gps_driver:=ublox` for the velocity |
+| RC via ROS (24 Oct) | `aav_rc` `rc_driver`: `/vehicle/rc` -> `/drivers/rc/cmd_vel` (twist_mux 95); the ESP32's uplink (`--features uplink`) | [[works]] in QEMU (all six RC steps) and in a ROS test. Off until the hardware lead answers H9 and H10. [[untested]] on a real ESP32 and the car |
+| The ESP32's uplink (24 Oct) | `legacy_uart_bridge` `uplink: true` -> `/vehicle/status`, `/vehicle/steering`, `/vehicle/brake`, `/vehicle/rc` | [[works]] in QEMU: 50-51 Hz, 0 frames lost. Off by default. [[untested]] on a real ESP32 and Pi ([ESP32 bench](esp32-bench.md)) |
+| Street routes (16 Oct) | `aav_routes` (Valhalla, offline) | [[works]] in Gazebo: a street route drove to 0.5 m of its end through Nav2 ([Street routes](routes.md)). [[untested]] on the car |
+| Ghost obstacles (16 Oct) | `aav_ghost`, `pixi run ghost` | [[works]] in Gazebo: `sim-check --ghost` stopped 0.21 m before it ([Ghost obstacles](ghost-obstacles.md)). [[untested]] on the car |
+| Actuator tests (15 Oct) | `aav_actuator_tests`, `pixi run actuator-test` | [[works]] in Gazebo. [[untested]] on stands ([Actuator tests](actuator-tests.md)) |
+| The speed loop's `smooth` profile (25 Oct) | spine-core `SpeedLoopProfile`, `speed_loop:=smooth` in sim and bench | [[works]] in the model and Gazebo: overshoot 15% -> 0%. Not the default. [[untested]] on stands |
+| Watch from a laptop (24 Oct) | `foxglove.launch.py`, three layouts in `tools/foxglove/` | [[works]] live with the road sim and the bench: every layout topic served. The layouts not yet opened in the app by hand. [[untested]] at the car ([Foxglove](foxglove.md)) |
+| Car-day kit (24 Oct) | `pixi run car-day-build`, `pixi run car-day-check` | [[works]] on Ben's Mac: both ESP32 builds, QEMU passes, the check's 35 tests ([Car day](car-day.md)) |
 | Lidar | a Velodyne VLP-16 on the roof (the 16 Oct audit: 192.168.1.201, sending to the Jetson). The stock `velodyne` driver (`aav_sensors` `lidar:=true`, the `lidar` part in `car.launch.py`) -> `/sensors/lidar/points`; a generic 16-beam one in Gazebo | [[works]] against `tools/fake_vlp16.py`: a post 6 m ahead came out at 5.80-6.00 m, Nav2's scan 6.75 m from `base_link`, 10 Hz (20 Oct). [[untested]] with the real lidar |
 
 ## Builds and tests
 
 | Check | Result |
 |---|---|
-| `colcon build`, all 26 packages, Jazzy | [[works]] 11 s on Linux (19 packages, 10 Oct); about 15 s on the Mac (26) |
-| `pixi run test`: build, tests, lint, `colcon test` | [[works]] all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; `colcon test` 291, 0 failures; the HUD app's own tests |
+| `colcon build`, all 38 packages, Jazzy | [[works]] on Linux and the Mac (25 Oct) |
+| `pixi run test`: build, tests, lint, `colcon test` | [[works]] 25 Oct: 1182 tests, 0 failures, 4 skipped, 38 packages. CI runs it on Linux (x86_64 and 64-bit ARM) for every push |
 | Live graph vs `docs/interfaces.yaml`: turtle, sim, road, replay and bench | [[works]] 0 failures each (sim and road again on 15 Oct, after the topic renaming) |
 | `pixi run bench-check` (`--perception`, `--lane`, `--obstacle`) | [[works]] on `main`, 11 Oct: the default checks, the stop sign, lane keeping and the obstacle |
 | Sim, headless: drive commands (the keyboard's topic) and Nav2 goals | [[works]] |
@@ -73,7 +84,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | On the Mac: the turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, `pixi run doctor`, recording a drive | [[works]] |
 | On the Mac: Gazebo's window | [[works]] `pixi run sim` opens it, and the camera follows the car |
 | On the Mac: RViz, rqt_graph | [[untested]] they open; nobody has looked at them yet |
-| The same `pixi.toml` on the car's ARM computers, on today's Ubuntu 22.04 | resolves; [[untested]] |
+| The same `pixi.toml` on 64-bit ARM Linux | [[works]] in CI on Ubuntu 24.04 ARM (25 Oct): `pixi run test`, and the car kit installed with no network. [[untested]] on the car's own computers (Ubuntu 22.04, JetPack 6) |
 
 ## Is it all on Jazzy?
 
@@ -88,4 +99,4 @@ are in `docs/history/audit-2026-10-10-*.md`.
 2. Pick the team's `ROS_DOMAIN_ID` and the GPS driver.
 3. Drive the turtle with the joystick.
 4. Measure the car, and replace the guesses in `vehicle.yaml`.
-5. Choose the spine's microcontroller (Q10–Q17). The Pico 2 program is ready to try on a spare board.
+5. Work through the car-day sessions in order ([Car day](car-day.md); TODO.md "Ready for the car").

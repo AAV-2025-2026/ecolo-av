@@ -13,23 +13,25 @@ you should see.
 | Disk space | about 10 GB |
 | Time | about an hour, most of it the first download |
 | Admin rights | not needed |
-| The code | access to `AAV-2025-2026/ecolo-av` on GitHub (ask Ben), and an SSH key on your GitHub account |
+| The code | a GitHub account with an SSH key, and your own fork of `AAV-2025-2026/ecolo-av` (public) |
 
 ## 1. Install everything (once, about 20 minutes)
 
 ```bash
 xcode-select --install                        # Mac only: Apple's git and compiler
 curl -fsSL https://pixi.sh/install.sh | sh    # Pixi; then open a new terminal
-git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av   # the code
+git clone git@github.com:<you>/ecolo-av.git ~/ecolo-av   # your fork
 cd ~/ecolo-av
+git remote add upstream https://github.com/AAV-2025-2026/ecolo-av.git   # the team's repo
 pixi install                                  # ROS 2 Jazzy, about 7 GB
 pixi run build                                # our packages, about 20 s
 pixi run test                                 # every test
 ```
 
-To send changes later, work from your own fork: [Git](git.md).
+Fork first: on GitHub, open `AAV-2025-2026/ecolo-av` and click **Fork**. How changes get
+in: [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**You should see** at the end of the tests: `77 tests, 0 errors, 0 failures`. Then your
+**You should see** at the end of the tests: `0 errors, 0 failures`. Then your
 laptop is set up. If not, see [When something doesn't work](#when-something-doesnt-work).
 
 !!! note "What did that install?"
@@ -41,7 +43,7 @@ laptop is set up. If not, see [When something doesn't work](#when-something-does
 
 | Terminal 1 | Terminal 2 |
 |---|---|
-| `pixi run turtle` | `pixi run keyboard` |
+| `pixi run turtle` | `pixi run keyboard --local` |
 
 **You should see:** a blue window with a turtle. Click into terminal 2 and hold `i`: the
 turtle drives forward. `u` and `o` curve left and right. Let go, and it stops within about
@@ -155,4 +157,4 @@ For walls to plan around, start Gazebo with the test lot instead:
 | The turtle doesn't move | click into the keyboard terminal and hold the key; see [when nothing moves](simulation.md#when-nothing-moves) |
 | The Gazebo window stays empty, or the car never appears | `export GZ_IP=127.0.0.1` in every terminal, then start again |
 | macOS asks whether `python3` or `rviz2` may accept connections | click Allow |
-| Two laptops see each other's robots | give each its own `ROS_DOMAIN_ID` (any number 0–101) |
+| Two laptops see each other's robots | give each its own `ROS_DOMAIN_ID`, 0–101 (safe on Linux; Fast DDS breaks above 232) |

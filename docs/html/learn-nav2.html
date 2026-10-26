@@ -141,8 +141,8 @@ GPS is in <a href="maps-and-position.html">Maps and position</a>.</p></div>
 </tr>
 <tr>
 <td><strong>collision_monitor</strong></td>
-<td>last-moment stop for radar points ahead</td>
-<td>only where the radar runs</td>
+<td>last-moment stop for radar or lidar points ahead</td>
+<td>where the radar or the lidar runs</td>
 </tr>
 <tr>
 <td><strong>Out</strong></td>
@@ -320,39 +320,11 @@ can tell (22 Oct; tighter, the car looped to fix misses it couldn't see). <stron
 0.5 m nor turns 0.5 rad (29°): rocking back and forth in a three-point turn still counts.</p>
 </section>
 <section class="card"><h2 id="3-costmaps-in-one-line-each">3. Costmaps, in one line each</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th></th>
-<th>Global</th>
-<th>Local</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Used by</td>
-<td>the planner</td>
-<td>the controller</td>
-</tr>
-<tr>
-<td>Frame</td>
-<td><code>map</code></td>
-<td><code>odom</code></td>
-</tr>
-<tr>
-<td>Size, cells</td>
-<td>the map file's size, 25 cm</td>
-<td>20 m × 20 m around the car, 10 cm</td>
-</tr>
-<tr>
-<td>Sees obstacles from</td>
-<td>the map file only</td>
-<td>the map, the radar, the cameras (when on)</td>
-</tr>
-</tbody>
-</table></div>
-<p>Inflation is 2.0 m: wide enough that a path for the car's centre keeps its corners
-clear. Everything else: <a href="costmaps.html">Costmaps</a>.</p>
+<ul>
+<li><strong>Global:</strong> for the planner, in <code>map</code>, the map file's size.</li>
+<li><strong>Local:</strong> for the controller, in <code>odom</code>, 20 m × 20 m around the car.</li>
+</ul>
+<p>Sizes, layers, sensors and inflation: <a href="costmaps.html#the-two-costmaps">Costmaps</a>.</p>
 </section>
 <section class="card"><h2 id="4-the-behaviour-tree-the-boss">4. The behaviour tree: the boss</h2>
 <p>A <strong>behaviour tree</strong> (BT) is a flowchart that runs over and over. Ours is Nav2's
@@ -466,8 +438,8 @@ reversing at the same number, whoever drives.</p>
 <p>People can always reverse (joystick, keyboard, RC): this switch is Nav2's only.</p>
 </section>
 <section class="card"><h2 id="5-collision_monitor-the-last-word">5. collision_monitor: the last word</h2>
-<p>It sits between the smoother and <code>twist_mux</code>, and reads the <strong>radar's own points</strong>, not
-the costmap. So it still stops the car if the planner, the controller or the costmap goes wrong.</p>
+<p>It sits between the smoother and <code>twist_mux</code>, and reads the <strong>radar's and the lidar's own
+points</strong>, not the costmap. So it still stops the car if the planner, the controller or the costmap goes wrong.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -486,10 +458,10 @@ the costmap. So it still stops the car if the planner, the controller or the cos
 </tr>
 <tr>
 <td>Points needed</td>
-<td>3 (one stray radar point mustn't stop the car)</td>
+<td>3 (one stray point mustn't stop the car)</td>
 </tr>
 <tr>
-<td>Radar silent for</td>
+<td>Radar or lidar silent for</td>
 <td>1.0 s → stop</td>
 </tr>
 <tr>
@@ -535,8 +507,8 @@ try stops at the box. Nothing is hit, but the car rocks until the way is clear.<
 <td>never run yet</td>
 </tr>
 <tr>
-<td>The HUD's GPS route → Nav2</td>
-<td>written; never run with the real OSRM server</td>
+<td>A street route → Nav2's GPS waypoints</td>
+<td>✅ in Gazebo (Valhalla, <a href="routes.html">Street routes</a>); untested on the car</td>
 </tr>
 </tbody>
 </table></div>

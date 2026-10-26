@@ -34,8 +34,9 @@ AI app ──stdio──► mcp_server.py ──► the docs and contracts (file
 ## Connect Claude Code
 
 1. Once: `pixi run build`, then `pixi install -e mcp`.
-2. Start Claude Code in the repo folder. It finds `.mcp.json` and asks whether to use
-   the `aav` server: say yes.
+2. Start Claude Code in the repo folder. It finds `.mcp.json`, which lists two servers:
+   `aav` (this one, read-only) and `aav-drive` (it drives the stand-ins:
+   [Plain English](plain-english.md#claude-as-the-driver)). Say yes to `aav`.
 3. Type `/mcp` to check: `aav` should say connected.
 
 ## Connect another app
@@ -47,7 +48,7 @@ Give the app the command that starts the server, with full paths:
   "mcpServers": {
     "aav": {
       "command": "/Users/you/.pixi/bin/pixi",
-      "args": ["run", "--manifest-path", "/Users/you/aav/pixi.toml",
+      "args": ["run", "--manifest-path", "/Users/you/ecolo-av/pixi.toml",
                "--frozen", "-e", "mcp", "mcp"]
     }
   }

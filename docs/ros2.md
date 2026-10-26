@@ -57,7 +57,7 @@ A ROS release is one tested set of all three. Ours is **Jazzy**, supported until
 
 ## Adding a node, in five steps
 
-1. Pick the layer's folder, for example `ros/drivers/`.
+1. Pick the area's folder, for example `ros/drivers/`.
 2. Make a Python package: `package.xml` for the dependencies, `setup.py` for the entry
    point.
 3. Put the logic in a plain module with no ROS imports, and test it. A thin node file
@@ -75,12 +75,13 @@ from geometry_msgs.msg import TwistStamped
 class Circle(Node):
     def __init__(self):
         super().__init__('circle_driver')
-        self.pub = self.create_publisher(TwistStamped, '/drivers/scripted/cmd_vel', 10)
+        self.pub = self.create_publisher(TwistStamped, '/drivers/circle/cmd_vel', 10)
         self.create_timer(0.1, self.tick)        # ten times a second
 
     def tick(self):
         msg = TwistStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
         msg.twist.linear.x = 0.5                 # m/s forward
         msg.twist.angular.z = 0.2                # rad/s, left
         self.pub.publish(msg)
@@ -88,6 +89,9 @@ class Circle(Node):
 rclpy.init()
 rclpy.spin(Circle())
 ```
+
+Its topic needs a twist_mux input and a contract entry before it drives anything:
+[Build a driver](howto-driver.md) has the whole recipe.
 
 ## Looking inside a running system
 
@@ -98,6 +102,6 @@ rclpy.spin(Circle())
 | `ros2 param dump /ekf_local` | every setting a node is really using |
 | `pixi run graph` (rqt_graph) | nodes and topics as a live diagram |
 | `rqt_tf_tree` | the frame tree, and who publishes each link |
-| `pixi run view` (RViz) | the 3D view: the car, the map, costmaps, the path |
+| `pixi run rviz` | the 3D view: the car, the map, costmaps, the path (`pixi run view`: the car model alone) |
 | Foxglove | RViz and rqt in one app; good over WiFi (`ws://<computer>:8765`) |
 | `pixi run check` | the live graph against our contract, `docs/interfaces.yaml`; add `sim`, `car` or `replay` for the other setups |

@@ -79,8 +79,8 @@ Measure every x along the x line, every y square to it, and every z straight up 
 
 | # | What | How | Guess today | **Measured** |
 |---|---|---|---|---|
-| M5 | **Full lock left**: each front wheel's angle | turn fully left; measure each front wheel's angle from straight. A protractor on the floor against the tyre, or the phone app on the wheel's face | 29° | inside: ____° outside: ____° |
-| M5b | **Full lock right** | the same, fully right | 29° | inside: ____° outside: ____° |
+| M5 | **Full lock left**: each front wheel's angle | turn fully left; measure each front wheel's angle from straight. A protractor on the floor against the tyre, or the phone app on the wheel's face | inside 32°, outside 26° | inside: ____° outside: ____° |
+| M5b | **Full lock right** | the same, fully right | inside 32°, outside 26° | inside: ____° outside: ____° |
 | M5c | **Turning circle** | at full lock, push or drive one slow full circle; measure the circle the **outside front tyre** draws, across | (none) | left: ____ cm right: ____ cm |
 | M5d | Steering wheel turns, lock to lock | count the turns | (none) | ____ turns |
 
@@ -106,7 +106,8 @@ of its window** (the band that spins or glows).
 | S5 | **Front right camera** | lens centre | 175 / −29 / 155 | | | | 0 / __ / __ |
 | S6 | **Rear camera** (orange housing) | lens centre | −20 / 0 / 90 | | | | 180 / __ / __ |
 | S7 | **Lidar** (roof tripod) | the middle of its window | 90 / 0 / 180 | | | | __ / __ / __ |
-| S8 | Wheel-speed sensor | which wheel? | (rear?) | ______ wheel | | | |
+| S8 | Wheel-speed sensors | the front left and front right wheels (Hall sensors on the brake rotors) | (front, both) | | | | |
+| S8b | Brake rotor holes | count the holes on each front rotor | (none) | L: ____ R: ____ | | | |
 
 **The IMU's direction matters most.** Find the arrows printed on its board (usually X and
 Y). Write which way each points:

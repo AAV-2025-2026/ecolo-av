@@ -7,7 +7,7 @@ steps on a Mac and on Linux. Then three commands drive a turtle like a car.
 
 | | Mac | Linux |
 |---|---|---|
-| System | macOS 14 (Sonoma) or newer; Apple Silicon or Intel | 64-bit x86: Ubuntu, AlmaLinux … |
+| System | macOS 14 (Sonoma) or newer; Apple Silicon or Intel | 64-bit x86 or ARM: Ubuntu, AlmaLinux … |
 | Disk space | about 7 GB | about 7 GB |
 | Admin rights | no | no |
 | First | `xcode-select --install`: Apple's git and compiler | nothing |
@@ -70,7 +70,7 @@ keyboard → `/drivers/keyboard/cmd_vel` → twist_mux → ego → `/ego/actuato
 | `pixi run sim` | Gazebo instead of the turtle ([Simulation](simulation.md)) |
 | `pixi run bench` | the real car's software, with stand-ins for the hardware ([Bench mode](bench.md)) |
 | `pixi run bench-check` | starts the bench and tests the whole graph: about 2 minutes |
-| `pixi run get-models`, then `pixi run detect picture:=ros/perception/aav_detector/test/stop_sign.jpg` | YOLO finds a stop sign in a picture ([Perception](perception.md)) |
+| `pixi run get-models`, then `pixi run detect picture:=ros/perception/aav_detector/test/stop_sign.jpg` | RF-DETR Nano finds a stop sign in a picture (`detector:=yolo` for YOLO; [Perception](perception.md)) |
 | `pixi run graph-picture` | saves the running graph as a picture |
 | `pixi run rviz` | RViz with the driving layout |
 | `pixi run estop`, `pixi run estop-clear` | stop every driver; let them go again |

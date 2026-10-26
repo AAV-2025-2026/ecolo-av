@@ -100,7 +100,7 @@
 - <strong>Now: RF-DETR Nano is the car's detector</strong> (Ben, 23 Oct: "I thought we were skipping
   yolo and using the other one"), the detector node's default, in TensorRT on the Orin.
   YOLO stays as <code>detector:=yolo</code> (<a href="perception.html#models">Perception</a>).
-- <strong>Camera: try RF-DETR Nano next, on the Orin.</strong> It saw Gazebo's stop sign from
+- <strong>Why RF-DETR Nano won (16 Oct).</strong> It saw Gazebo's stop sign from
   <strong>20 m</strong> (YOLO11n: 10 m) and found people in 4 of 5 photos (YOLO11n: 3), with no
   false finds. It's <strong>Apache-2.0</strong>, so the AGPL question goes away. On a Mac it is as
   fast as YOLO11n (16-17 ms vs 12-21 ms). Its cost: 12 times the weights (30 M), and
@@ -186,7 +186,7 @@ as rough, within about 20 %.</p>
 </thead>
 <tbody>
 <tr>
-<td>YOLO11n (ours now)</td>
+<td>YOLO11n (<code>detector:=yolo</code>)</td>
 <td>3/5 (0.65)</td>
 <td>6/10 (0.54)</td>
 <td>10 m</td>
@@ -287,8 +287,9 @@ as rough, within about 20 %.</p>
 <li><strong>Core ML's scores are PyTorch's</strong> to within about 0.06, for YOLO and RF-DETR. Once
   that tipped a picture: YOLO11s found 4 of 5 people through Core ML, 5 on the CPU. The
   table's scores are the CPU's; the Metal ones are the same.</li>
-<li>The watcher stops the car only when the box is 72 px tall (about 3.5 m), so every model
-  sees the sign in time today. Seeing it at 20 m would let the car slow down earlier.</li>
+<li>The watcher stops the car 4.7 m before the sign (a box 55 px tall with Gazebo's lens),
+  so every model sees the sign in time today. Seeing it at 20 m would let the car slow
+  down earlier.</li>
 </ul>
 <h3 id="per-picture-best-person-stop-sign-score-cpu">Per picture (best person / stop-sign score, CPU)</h3>
 <div class="table-wrap"><table>

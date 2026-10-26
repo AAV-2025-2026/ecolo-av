@@ -7,7 +7,7 @@
 <!-- Generated from docs/plan.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The plan: the proposal as a to-do list</h1>
-<div class="meta">24 min read · 7 sections</div></header>
+<div class="meta">25 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -211,7 +211,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 <td>2. Safe to move</td>
 <td>27 Nov</td>
 <td>the timeout brakes within 100 ms and latches; both e-stops stop the car</td>
-<td>🔧 the Rust spine has the 100 ms timeout (321 tests); in QEMU (24 Oct) it brakes 111-120 ms after the last frame and latches (<a href="esp32-bench.html#before-the-board-the-emulator">emulator</a>): 100 ms of silence, then the next 10 ms tick. Since 24 Oct the heartbeat comes from the Orin (TODO 50): it brakes 111-120 ms after the Orin's counter stops, though the Motor Pi still sends (<a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>). Never flashed; today's ESP32 firmware has no timeout</td>
+<td>🔧 the Rust spine has the 100 ms timeout (spine-core: 84 tests); in QEMU (24 Oct) it brakes 111-120 ms after the last frame and latches (<a href="esp32-bench.html#before-the-board-the-emulator">emulator</a>): 100 ms of silence, then the next 10 ms tick. Since 24 Oct the heartbeat comes from the Orin (TODO 50): it brakes 111-120 ms after the Orin's counter stops, though the Motor Pi still sends (<a href="rust-firmware.html#the-heartbeat-version-2-of-the-serial-frame-24-oct">the heartbeat</a>). Never flashed; today's ESP32 firmware has no timeout</td>
 </tr>
 <tr>
 <td>3. Closed loop</td>
@@ -246,7 +246,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 <tbody>
 <tr>
 <td>One repo, one environment</td>
-<td>ROS 2 Jazzy through Pixi on Linux and Macs, no admin rights; CI on every push, a Mac nightly</td>
+<td>ROS 2 Jazzy through Pixi on Linux and Macs, no admin rights; CI on Linux (x86_64 and 64-bit ARM) on every push, a Mac nightly</td>
 <td><code>pixi.toml</code>, <code>.github/workflows</code></td>
 </tr>
 <tr>
@@ -286,12 +286,12 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 </tr>
 <tr>
 <td>Nav2</td>
-<td>Smac Hybrid-A<em>, Regulated Pure Pursuit </em><em>or MPPI</em>*, collision monitor, ghost obstacles</td>
+<td>Smac Hybrid-A<em>, </em><em>MPPI</em>* (the default) or Regulated Pure Pursuit, collision monitor, ghost obstacles</td>
 <td><code>ros/drivers/aav_navigation</code></td>
 </tr>
 <tr>
 <td>Safety</td>
-<td>a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels only sometimes since 23 Oct); the collision monitor; the spine's timeout (not flashed)</td>
+<td>a sensor watchdog (14 faults, the HUD's heartbeat among them, stop the car in Gazebo; frozen wheels 25 of 25 since 24 Oct); the collision monitor; the spine's timeout (not flashed)</td>
 <td><code>ros/safety</code>, <code>firmware/spine</code></td>
 </tr>
 <tr>
@@ -301,7 +301,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 </tr>
 <tr>
 <td>Perception</td>
-<td>YOLO (Core ML, TensorRT export), a measured comparison with RF-DETR and YOLO26, radar clustering, a lidar layer</td>
+<td>RF-DETR Nano by default, YOLO with <code>detector:=yolo</code> (Core ML on a Mac; a TensorRT engine for the Orin); the camera streams (<code>aav_camera_stream</code>); radar clustering; a lidar layer</td>
 <td><code>ros/perception</code>, <a href="model-comparison.html">newer models</a></td>
 </tr>
 <tr>
@@ -311,7 +311,7 @@ work that runs in Gazebo or on the bench; "on the car" counts only what ran on t
 </tr>
 <tr>
 <td>Docs</td>
-<td>55 pages for a dyslexic reader, as HTML and PDF</td>
+<td>77 pages for a dyslexic reader, as HTML and PDF</td>
 <td><code>docs/</code></td>
 </tr>
 </tbody>
@@ -339,7 +339,7 @@ the next concrete step.</p>
 <td>6 Nov</td>
 <td>✅</td>
 <td style="text-align: right;">90</td>
-<td>time a new laptop through <a href="first-day.html">first day</a>: under 30 min?</td>
+<td>time a new laptop through <a href="getting-started.html">Getting started</a> (Arsh, 24 Oct): under 30 min?</td>
 </tr>
 <tr>
 <td>T1.2</td>
@@ -466,7 +466,7 @@ the next concrete step.</p>
 <td>mid-Jan</td>
 <td>🔧</td>
 <td style="text-align: right;">70</td>
-<td>the nightly job <code>sim</code> runs <code>sim-check --obstacle</code> headless (22 Oct), on trial: watch its first nights, then let a failure count</td>
+<td>the nightly job <code>sim</code> runs <code>sim-check --obstacle</code> headless (22 Oct), on trial: passed 21, 22 and 24 Oct; a Gazebo crash at start is now retried once (TODO 26). Once it passes a few nights in a row, let a failure count</td>
 </tr>
 <tr>
 <td>T2.7</td>
@@ -710,8 +710,8 @@ the next concrete step.</p>
 <td>Joystick drives</td>
 <td>Dec-Jan</td>
 <td>🔧</td>
-<td style="text-align: right;">30</td>
-<td>done in Gazebo; on stands after Gate 2</td>
+<td style="text-align: right;">20</td>
+<td>the code exists (<code>aav_teleop</code>), untested (<a href="status.html">status</a>): the turtle and Gazebo first; on stands after Gate 2</td>
 </tr>
 <tr>
 <td>T5.7</td>
@@ -766,7 +766,7 @@ the next concrete step.</p>
 <td>11 Dec</td>
 <td>🧪</td>
 <td style="text-align: right;">90</td>
-<td>0.15 m done; the heading jumps at walking pace much smaller (22 Oct: yaw noise, M9); check against the real IMU's gyro bias</td>
+<td>0.15 m done; the heading jumps at walking pace much smaller (22 Oct: yaw noise, M9), and since 25 Oct a heading from the GPS velocity (<code>aav_gps_heading</code>: median 1.6-2.1°); check against the real IMU's gyro bias</td>
 </tr>
 <tr>
 <td>T6.4</td>
@@ -774,7 +774,7 @@ the next concrete step.</p>
 <td>11 Dec</td>
 <td>🔧</td>
 <td style="text-align: right;">30</td>
-<td><code>ublox_dgnss</code> is in the environment; the new receiver (KEFC)</td>
+<td>the stock <code>ublox_gps</code> driver is in the environment (<code>ublox_dgnss</code> is apt-only, the car only); the new receiver (KEFC)</td>
 </tr>
 <tr>
 <td>T6.5</td>
@@ -835,9 +835,9 @@ the next concrete step.</p>
 <td>T7.1</td>
 <td>Joystick and remote</td>
 <td>13 Nov</td>
-<td>🧪</td>
-<td style="text-align: right;">90</td>
-<td></td>
+<td>🔧</td>
+<td style="text-align: right;">60</td>
+<td>built, untested (<a href="status.html">status</a>): drive the turtle with the joystick. RC via ROS (<code>aav_rc</code>) works in QEMU, off until H9 and H10</td>
 </tr>
 <tr>
 <td>T7.2</td>
@@ -1156,7 +1156,7 @@ too". It shares the car's model with ego, as the proposal says (section 8.3).</p
 <td>M9</td>
 <td><strong>The heading jumps</strong> at walking pace (both)</td>
 <td>🧪</td>
-<td>measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. A heading source (the F9R's fused heading, or two antennas) with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, <a href="learn-gps.html#mount-the-antenna-over-the-rear-axle">why</a>): on the car it is over the axle already (Ben, 23 Oct). <strong>Much better since 22 Oct, 06:00:</strong> the global EKF's yaw noise 0.06 → 0.01; the lot tour's worst heading per leg 7-16° (was 14-76°)</td>
+<td>measured over whole drives (22 Oct night): under 6° when slow, up to 25° at speed; the position is up to 0.7 m off, so goals count within 1.0 m. <strong>A heading source since 25 Oct:</strong> the GPS receiver's velocity (<code>aav_gps_heading</code>, TODO 13): median 1.6-2.1° at walking pace. RTK or two antennas would do better: the hardware lead decides, with T6.4. Reversing is worse while the antenna is ahead of the rear axle (22 Oct, <a href="learn-gps.html#mount-the-antenna-over-the-rear-axle">why</a>): on the car it is over the axle already (Ben, 23 Oct). <strong>Much better since 22 Oct, 06:00:</strong> the global EKF's yaw noise 0.06 → 0.01; the lot tour's worst heading per leg 7-16° (was 14-76°)</td>
 </tr>
 </tbody>
 </table></div>
@@ -1183,7 +1183,7 @@ too". It shares the car's model with ego, as the proposal says (section 8.3).</p
 <td>D2</td>
 <td>Hall-sensor wheel nodes on Arduino Unos, in Arduino C++</td>
 <td>the rule "Rust for all firmware" (Ben, 10 Oct); the wheel logic in Rust (<code>wheel-core</code>) and the Pico 2 wheel encoder</td>
-<td>✅ <strong>decided 23 Oct</strong> (Ben, for the hardware side): an Arduino reads the sensors and sends CAN frames; the Orin decodes them and publishes. The proposal stands</td>
+<td>✅ <strong>decided 23 Oct</strong> by the hardware lead (passed on by Ben): an Arduino reads the sensors and sends CAN frames; the Orin decodes them and publishes. The proposal stands</td>
 </tr>
 <tr>
 <td>D3</td>

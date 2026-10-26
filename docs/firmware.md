@@ -11,7 +11,7 @@ what's left to build.
 | Runs on | Linux computers: the Orin, the Pis, laptops | microcontrollers: ESP32, Pico 2 |
 | ROS? | yes | no |
 | Hardware code | only for devices that plug into Linux by USB or serial: the IMU, GPS, radar | pins, I2C actuator drivers, the RC receiver, the e-stop, timing loops |
-| Reaches ROS | directly | through a bridge node: CAN to `aav_spine`, or today UART to `aav_legacy` |
+| Reaches ROS | directly | through a bridge node: CAN to `spine_bridge` (`aav_spine_bridge`), or today UART to `aav_legacy` |
 
 ROS never sees a pin or an I2C address, only device names like `can0` and `/dev/aav/imu`.
 
@@ -105,7 +105,7 @@ Both sides test against the same generated frames. To change a frame:
 ## firmware/spine: the Rust code
 
 `crates/spine-core` is plain `no_std` Rust: no allocator, no dependencies, no hardware.
-`cargo test` runs its 70 tests on any laptop.
+`cargo test` runs its 84 tests on any laptop.
 
 | Module | Does |
 |---|---|
@@ -153,13 +153,18 @@ Hardware facts from today's car:
 | Throttle: 10-bit DAC | I2C 0x0C | capped at 700 of 1023 |
 | Direction | PCA9555 expander, I2C 0x20 | |
 | I2C bus | SDA GPIO 21, SCL GPIO 22 | |
-| RC receiver: FlySky FS-iA6B | iBUS on GPIO 32, 115200 baud | channel 5 override, 2 throttle, 3 steering, 4 mode. Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7) |
+| RC receiver: FlySky FS-iA6B | iBUS on GPIO 32, 115200 baud | channel 5 override, 2 throttle, 3 steering, 4 gear (forward, brake, reverse). Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7) |
 
 ## The car's two other Pico 2s, in Rust (15 October)
 
 The 2025-26 wheel encoder and status display were C++. Their Rust versions sit next to the
 spine, in `firmware/spine/`. Both build and pass their tests; neither has been flashed:
 [[untested]].
+
+!!! note "The UDP wheel encoder is off (23 Oct)"
+    Today's wheel speed comes from the hardware lead's Arduino on the Orin's CAN bus
+    (0x200, 0x201), read by `spine_bridge role:=sensors`. The 2025-26 UDP encoder is off in
+    `motor_pi.yaml` (`legacy_encoder: false`), so its Rust version waits too.
 
 | Board | Does | Logic (tested on a laptop) | Build |
 |---|---|---|---|
@@ -224,13 +229,19 @@ WiFi details: fine for a test build, but that board can't join the car's WiFi.
 For the team, from the drivers' port. Each is one constant at the top of `spine-core`'s
 `spine.rs`, so the board program and the bench both follow a change:
 
-| Constant | Today | The 2025-26 firmware |
+| Constant | In spine-core | The 2025-26 firmware |
 |---|---|---|
 | `ESTOP_STEERING` | `Hold`: the steering stays where it is on any stop | centred it |
 | `IDLE_BRAKE` | `0.0`: the brake lets go once the e-stop clears | kept it full on (1.0) |
 | `RC_GEAR_BRAKE` | `SpeedZero`: the speed loop brakes to a stop and holds | put the brake full on at once |
 
-⚠️ `IDLE_BRAKE` matters most: on a slope, a car with its brake off can roll.
+⚠️ `IDLE_BRAKE` matters most: on a slope, a car with its brake off can roll. It is a team
+choice:
+
+| Board program | `IDLE_BRAKE` | Why |
+|---|---|---|
+| `spine-core`'s default, `boards/pico2`, the bench | `0.0` | the proposed setting |
+| `boards/esp32-umod` (the car's board) | `1.0` (its own constant, `src/main.rs`) | keeps the C++'s full brake until the team decides: it has no e-stop input yet |
 
 And the design doc's questions Q10–Q17:
 - who owns the spine, and which microcontroller;

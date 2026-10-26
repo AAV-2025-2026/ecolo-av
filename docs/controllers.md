@@ -27,11 +27,11 @@ collision monitor, twist_mux and ego. Everything after the controller is the sam
 ## Switch between them
 
 ```bash
-pixi run sim world:=test_lot controller:=mppi      # Gazebo, MPPI following the path
-ros2 launch aav_navigation navigation.launch.py controller:=mppi
+pixi run sim world:=test_lot controller:=rpp       # Gazebo, Pure Pursuit following the path
+ros2 launch aav_navigation navigation.launch.py controller:=rpp
 ```
 
-`controller:=` takes `rpp` (the default) or `mppi`. The launch file copies the `MPPI` block
+`controller:=` takes `mppi` (the default) or `rpp`. For MPPI, the launch file copies the `MPPI` block
 of `nav2.yaml` under the name the behaviour trees ask for, `FollowPath`, and sets its
 turning radius, its reverse speed and its top speed from `vehicle.yaml`
 (`aav_description/vehicle.py`, `nav2_tuned`).
@@ -46,7 +46,8 @@ pixi run controller-compare --controllers mppi --speed 2
 
 For each tour and controller the script starts Gazebo's test lot with no windows, on a ROS
 domain of its own (this computer only), sends the same goals, and records where the car
-really was (Gazebo's ground truth). Forward only, as on the car. The results go to
+really was (Gazebo's ground truth). Forward only by default; `--reversing` lets Nav2 back
+up, as it may on the car since 22 Oct. The results go to
 `log/controller-compare/<time>/`:
 
 | File | What |
@@ -196,7 +197,7 @@ What it means:
 
 | | |
 |---|---|
-| **Default** | Regulated Pure Pursuit stays the default: quicker, cheaper, and no loops at goals |
+| **Default** | Regulated Pure Pursuit stayed the default then: quicker, cheaper, and no loops at goals. After the fixes above, MPPI is the default since 22 Oct |
 | **MPPI next** | stop the loops: drop or soften `GoalAngleCritic`, or widen its angle threshold, so it accepts the heading it arrives with (the goal checker allows 0.5 rad anyway) |
 | **Both** | the corner problem: the planner's paths pass walls closer than the collision monitor allows (plan.md M8) |
 | **Both** | steering round the box needs the obstacle in the planner's map (plan.md M5) |
@@ -209,7 +210,7 @@ sat still for 13 s, then crept at 0.2 m/s and drifted metres off a straight path
 
 | What we saw | Why | Change |
 |---|---|---|
-| Its speed flipped between forward and back for 12 s | the simulator let Nav2 reverse (`reversing:=true` by default), and MPPI dithered around zero | the comparison runs forward only, as the car does |
+| Its speed flipped between forward and back for 12 s | the simulator let Nav2 reverse (`reversing:=true` by default), and MPPI dithered around zero | the comparison runs forward only by default (`--reversing` to allow it) |
 | Nav2 warned "Inconsistent configuration in collision checking" | MPPI checked a circle; the costmaps use the car's 2 x 1 m outline | `CostCritic.consider_footprint: true` |
 | Fast samples all swerved | it tried turn rates of ±0.4 rad/s, but the car turns at most 0.35 rad/s at 1 m/s (full lock): fast samples left the path, slow ones won | `wz_std` 0.4 → 0.1 |
 | Speed built up by only 0.015 m/s each second | its samples' speed changes were clipped by the 1 m/s² limit (0.05 m/s per step up, but 0.1 down), so its futures drifted slower | `ax_max` 1.0 → 3.0 for its planning only (ego and the smoother still hold the car to 1 m/s²); `ax_min` stays at ego's -2.0 |

@@ -1,6 +1,6 @@
 # Simulation and the real car: how far we've got
 
-Written 15 October 2026. It answers three questions:
+Written 15 October 2026, checked 25 October. It answers three questions:
 
 1. How far did we get with Gazebo?
 2. Does it really produce sensor data?
@@ -9,7 +9,7 @@ Written 15 October 2026. It answers three questions:
 > **The short version**
 > - **Gazebo works**, and it **does produce sensor data**: an IMU, a GPS, wheel speed, a camera, a radar and a lidar, all on `main`.
 > - The three cameras, the radar and the lidar are in the **road world** and the **parking lot**: `pixi run sim world:=road` or `world:=test_lot` (all on by default since 15 Oct; `lidar:=false` drops the lidar).
-> - **The lidar is simulation only**: the car's own lidar has no driver in our code yet.
+> - **The car's lidar** is a roof Velodyne VLP-16: the stock `velodyne` driver, on by default on the car, untested with the real lidar.
 > - **None of our code has run on the real car yet.** Everything "works" in simulation or on the bench only.
 > - The point of simulation: the **same nodes** run in all three places. Only the bottom layer changes.
 
@@ -87,7 +87,7 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 
 | Thing | Why not |
 |---|---|
-| The real lidar | Gazebo's is a generic one: the car's model is unknown (Q22), and has no driver yet |
+| The real lidar | Gazebo's is a generic 16-beam one, not a VLP-16's exact pattern |
 | The magnetometer | the EKFs don't use it |
 | The battery | nothing to simulate yet |
 | The real CAN boards | that's the bench's job, not Gazebo's |
@@ -110,28 +110,28 @@ Merged from the branch `wt/sim-full` on 15 Oct. Rates measured on Ben's Mac, on 
 
 | Blocker | What it means | Who or when |
 |---|---|---|
-| **The car runs ROS 2 Humble; we use Jazzy** | the two can't talk on one network (Q24) | reflash the Orin, or run our Jazzy through Pixi on its Ubuntu 22.04 |
-| **We've never logged in** | we don't know what runs on each Pi | **Friday's audit** |
-| **The drive path is still the 2025-26 one** | Motor-Pi + ESP32 over UART/UDP. Our `aav_legacy` backend speaks it, but has never been tried | after the audit |
-| **CAN isn't wired yet** | the KEFC parts are still to buy | after the order |
+| **The car runs ROS 2 Humble; we use Jazzy** | the two can't talk on one network (Q24) | reflash the Orin, or run our Jazzy through Pixi on its Ubuntu 22.04 (`pixi run car-kit`) |
+| **What runs on each computer** | surveyed in the audits of 16 and 21 Oct (`docs/history/audit-2026-10-16-car.md`, `audit-2026-10-21-car.md`) | done |
+| **The drive path is still the 2025-26 one** | Motor-Pi + the C++ ESP32 over UART. Our `aav_legacy` backend speaks it, but has never been tried | the [car day](car-day.md) |
+| **The CAN bus has only sensors** | the wheel sensors' Arduino on the Orin's CAN; no CAN spine yet | the hardware lead |
 
 ## 6. Today vs after the KEFC changes
 
 | Layer | Today on the car | Our code today | After KEFC |
 |---|---|---|---|
 | Computer | Orin #1 (Humble) | runs on Jazzy | Orin #1 (control, EKF) + Orin #2 (perception, Nav2) |
-| Drive path | Motor-Pi → ESP32 (UART/UDP) | `aav_legacy` backend, untested | Orin → CAN → ESP32 control board (`aav_spine`) |
-| Wheel speed | optical encoder (fouled) on a Pico 2 | `aav_legacy` reads it | 2 Hall sensors → 2 ESP32 wheel nodes → CAN |
+| Drive path | Motor-Pi → the C++ ESP32 (UART) | `aav_legacy` backend (`actuators:=uart`), untested; the Rust ESP32 firmware's 100 ms timeout is proven in QEMU, not yet flashed | Orin → CAN → ESP32 control board (`aav_spine`, `actuators:=can`) |
+| Wheel speed | the hardware lead's Arduino on the Orin's CAN (0x200/0x201) | `spine_bridge role:=sensors`, untested on the car; the 2025-26 UDP encoder is off since 23 Oct | the same frames |
 | Steering feedback | none (open loop) | `measured_steering_angle` waits for it | KTC-100 pot → the Jrk G2 |
 | GPS | ZED-F9R on a taped u.FL lead | `ublox_gps` driver, untested | new ZED-F9R board, screw-on antenna |
-| Lidar | on the roof, probably a Velodyne (the 2025-26 code read `/velodyne_points`) | a generic one in Gazebo only; no driver | read on Orin #2 |
-| Cameras | 2 front Pi 5s | `usb_cam` launch, untested | + a rear Pi 5 |
+| Lidar | a Velodyne VLP-16 on the roof (16 Oct audit) | the stock `velodyne` driver, on by default; untested with the real lidar | read on Orin #2 |
+| Cameras | 2 front ribbon cameras on one Pi 5 | MediaMTX → `aav_camera_stream` on the Orin, RF-DETR inside; untested on the car | + a rear camera |
 
 ## 7. The plan, in order
 
 1. **Done 15 Oct:** the Gazebo camera, radar and lidar, merged into `main`.
-2. **Friday:** the audit (`docs/car-photos.md` has the checklist). Find out what really runs.
-3. **Then:** get our stack onto the car, either Jazzy on the Orin or Pixi, and listen first: `ros2 topic hz /sensors/gps/fix`.
+2. **Done 16 and 21 Oct:** the audits found what really runs.
+3. **Next ([car day](car-day.md)):** get our stack onto the car, either Jazzy on the Orin or Pixi, and listen first: `ros2 topic hz /sensors/gps/fix`.
 4. **Then:** drive on stands through `aav_legacy`, before any CAN work.
 5. **Then:** the KEFC parts, the CAN bench with a CANable, one board at a time.
 

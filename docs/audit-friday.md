@@ -1,5 +1,7 @@
 # The hardware audit, step by step (Friday 16 October)
 
+> **A snapshot from 16 October 2026.** The audits ran on 16 and 21 Oct: [16 Oct](history/audit-2026-10-16-car.md), [21 Oct](history/audit-2026-10-21-car.md). What's true now: [Status](status.md).
+
 The first time the 2026-27 team logs in to the car's computers. The goal: **know what is
 there, and save a copy, without changing anything.** This page is steps 2 and 3 of
 [Work](work.md) ("Backups", "Inventory the car"), and it covers the checklist at the end of
@@ -305,7 +307,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5
 | **Answers** | Q22, car-photos #3. Since 20 Oct we run the stock velodyne driver for it |
 | **Photograph** | its label (model, serial) on the roof tripod |
 
-### The router (Linksys EA3500)
+### The router (Cisco `cisco00956`, found 16 Oct; the old code guessed a Linksys EA3500)
 
 | | |
 |---|---|
@@ -337,7 +339,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5
 
 ## Step 5: measure, and the power
 
-The tape-measure list is [Car numbers](car_measurements.md) (Q1-Q5). Also, from car-photos #7:
+The tape-measure list is [Car numbers](car_measurements.md) (Q1-Q9, Q18, Q20, Q22). Also, from car-photos #7:
 read the rating off each 12 V → 5 V converter, and note what each one feeds (the dash one
 showed 3.5 A; a Pi 5 wants 5 A).
 

@@ -129,7 +129,7 @@ in its <code>PROVENANCE.md</code>.</p></div>
 </tr>
 <tr>
 <td>Topic</td>
-<td>absolute: <code>/&lt;area&gt;/&lt;thing&gt;</code></td>
+<td>absolute: <code>/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code> (<a href="naming.html">Topic areas</a>)</td>
 <td><code>/drivers/joy/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/ego/actuator_cmd</code></td>
 </tr>
 <tr>
@@ -240,7 +240,8 @@ changes their launch files and executables.</p>
    positive steering turns left.</li>
 <li><strong>No pins in ROS.</strong> Pins, I2C addresses and calibration live in the firmware.</li>
 <li><strong>No secrets in git</strong>: only where a secret lives and what kind it is.</li>
-<li><strong>Small commits</strong>, each passing <code>pixi run test</code>, each message saying why.</li>
+<li><strong>Small commits</strong>, each passing <code>tools/test.sh</code>, each message saying why; the full
+   <code>pixi run test</code> before you push (<a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a>).</li>
 <li><strong>Write each language its own way</strong> (Ben, 10 Oct). Ported code is rewritten in the
    new language's style, not copied line by line.</li>
 </ol>

@@ -148,8 +148,9 @@ how AI apps talk to tools like this one.</p>
 <section class="card"><h2 id="connect-claude-code">Connect Claude Code</h2>
 <ol>
 <li>Once: <code>pixi run build</code>, then <code>pixi install -e mcp</code>.</li>
-<li>Start Claude Code in the repo folder. It finds <code>.mcp.json</code> and asks whether to use
-   the <code>aav</code> server: say yes.</li>
+<li>Start Claude Code in the repo folder. It finds <code>.mcp.json</code>, which lists two servers:
+   <code>aav</code> (this one, read-only) and <code>aav-drive</code> (it drives the stand-ins:
+   <a href="plain-english.html#claude-as-the-driver">Plain English</a>). Say yes to <code>aav</code>.</li>
 <li>Type <code>/mcp</code> to check: <code>aav</code> should say connected.</li>
 </ol>
 </section>
@@ -159,7 +160,7 @@ how AI apps talk to tools like this one.</p>
   "mcpServers": {
     "aav": {
       "command": "/Users/you/.pixi/bin/pixi",
-      "args": ["run", "--manifest-path", "/Users/you/aav/pixi.toml",
+      "args": ["run", "--manifest-path", "/Users/you/ecolo-av/pixi.toml",
                "--frozen", "-e", "mcp", "mcp"]
     }
   }

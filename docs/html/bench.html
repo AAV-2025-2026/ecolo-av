@@ -7,7 +7,7 @@
 <!-- Generated from docs/bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Bench mode: the whole car on one computer</h1>
-<div class="meta">14 min read · 11 sections</div></header>
+<div class="meta">15 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -102,7 +102,7 @@ graph-picture</code> draws this from whatever is running.</p>
 <pre class="highlight"><code class="language-bash">pixi run build                          # once, and after every change
 pixi run bench                          # the car's software, with stand-ins
 pixi run bench-check                    # start it and test it: about 2 minutes
-pixi run -e ml bench perception:=true   # add YOLO and the stop sign
+pixi run -e ml bench perception:=true   # add the detector (RF-DETR Nano) and the stop sign
 pixi run bench-check --python-bridge     # the same check with the Python spine_bridge</code></pre>
 <p><code>spine_bridge</code> is the Rust one (<code>aav_spine_bridge</code>) since 23 Oct; <code>bridge:=python</code> runs
 <code>aav_spine</code>'s Python one. On 23 Oct both passed <code>bench-check</code>: scripted drive 5.02 m (Rust)
@@ -133,7 +133,7 @@ don't.</p>
 <tr>
 <td><code>perception</code></td>
 <td><code>false</code></td>
-<td>YOLO and the stop-sign watcher. Needs <code>pixi run -e ml</code></td>
+<td>the object detector (RF-DETR Nano; YOLO with <code>detector:=yolo</code>) and the stop-sign watcher. Needs <code>pixi run -e ml</code></td>
 </tr>
 <tr>
 <td><code>lane</code></td>
@@ -165,8 +165,34 @@ don't.</p>
 <td><code>false</code></td>
 <td>the detectors' boxes into Nav2's local costmap (<a href="costmaps.html">Costmaps</a>)</td>
 </tr>
+<tr>
+<td><code>lidar</code></td>
+<td><code>false</code></td>
+<td>the roof lidar: <code>mock_lidar</code>'s packets through the stock velodyne driver, into Nav2</td>
+</tr>
+<tr>
+<td><code>plan_around</code></td>
+<td><code>true</code></td>
+<td>Nav2 plans round what the radar and lidar see; <code>false</code>: the car stops for it</td>
+</tr>
+<tr>
+<td><code>reversing</code></td>
+<td><code>true</code></td>
+<td>Nav2 may drive backwards</td>
+</tr>
+<tr>
+<td><code>bridge</code></td>
+<td><code>rust</code></td>
+<td>which <code>spine_bridge</code>: <code>rust</code> or <code>python</code></td>
+</tr>
+<tr>
+<td><code>speed_loop</code></td>
+<td><code>default</code></td>
+<td><code>spine_sim</code>'s speed loop: <code>default</code> or <code>smooth</code> (<a href="vehicle-model.html">The car as a linear model</a>)</td>
+</tr>
 </tbody>
 </table></div>
+<p><code>start_y</code>, <code>start_yaw</code> and <code>bend_radius</code> are under <a href="#lane-keeping">Lane keeping</a>.</p>
 </section>
 <section class="card"><h2 id="whats-real-and-whats-a-stand-in">What's real, and what's a stand-in</h2>
 <p>Every stand-in uses the real device's topic, message type and frame, so nothing above it
@@ -213,17 +239,22 @@ can tell the difference.</p>
 <tr>
 <td>GPS</td>
 <td><code>mock_gps</code></td>
-<td><code>ublox_gps</code> (the default), <code>gps_nmea</code> or <code>ublox_dgnss</code>: <code>gps_driver:=</code> picks</td>
+<td><code>ublox_gps</code> (the default), <code>nmea_navsat_driver</code> or <code>ublox_dgnss</code>: <code>gps_driver:=ublox</code>, <code>nmea</code> or <code>ublox_dgnss</code> picks</td>
 </tr>
 <tr>
 <td>Camera</td>
 <td><code>mock_camera</code></td>
-<td><code>usb_cam</code></td>
+<td>the front cameras' streams (<code>aav_camera_stream</code>), or <code>usb_cam</code> for a USB camera</td>
 </tr>
 <tr>
 <td>Radar</td>
 <td><code>mock_radar</code></td>
 <td><code>ti_ros2_driver</code></td>
+</tr>
+<tr>
+<td>Lidar (<code>lidar:=true</code>)</td>
+<td><code>mock_lidar</code>: VLP-16 packets to the stock velodyne driver</td>
+<td>the roof VLP-16 itself</td>
 </tr>
 <tr>
 <td>Battery</td>
@@ -279,6 +310,12 @@ can tell the difference.</p>
 <td><code>aav_bench</code></td>
 <td><code>/sensors/radar/points</code></td>
 <td>sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there</td>
+</tr>
+<tr>
+<td><code>mock_lidar</code></td>
+<td><code>aav_bench</code></td>
+<td>UDP packets to <code>127.0.0.1:2369</code> (then the velodyne driver: <code>/sensors/lidar/points</code>)</td>
+<td>sees the bench world's boxes as the roof VLP-16 would; only with <code>lidar:=true</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -574,8 +611,8 @@ the centre.</p>
 </tr>
 <tr>
 <td><code>mock_camera</code></td>
-<td><code>usb_cam</code></td>
-<td><code>aav_sensors cameras.launch.py</code></td>
+<td>the front cameras' streams</td>
+<td><code>aav_camera_stream camera_stream.launch.py</code> (the <code>camera_stream</code> part)</td>
 </tr>
 </tbody>
 </table></div>
@@ -609,7 +646,7 @@ the centre.</p>
 </tr>
 <tr>
 <td><code>ros/sim/aav_spine_sim</code></td>
-<td><code>spine_sim</code>: <code>crates/bench-car</code> (the model and the loop, 16 tests, no ROS) and <code>crates/spine-sim</code> (the ROS node)</td>
+<td><code>spine_sim</code>: <code>crates/bench-car</code> (the model and the loop, 22 tests, no ROS) and <code>crates/spine-sim</code> (the ROS node)</td>
 </tr>
 <tr>
 <td><code>ros/sim/aav_bench</code></td>

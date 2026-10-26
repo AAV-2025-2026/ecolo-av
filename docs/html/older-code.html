@@ -7,7 +7,7 @@
 <!-- Generated from docs/older-code.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The older code: what we have, and what&#x27;s missing</h1>
-<div class="meta">12 min read · 7 sections</div></header>
+<div class="meta">13 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -91,8 +91,9 @@
 <nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#the-2025-26-repos-one-by-one">The 2025-26 repos, one by one</a><a href="#the-2024-25-repos">The 2024-25 repos</a><a href="#what-no-repo-provides">What no repo provides</a><a href="#red-flags-in-the-old-repos">Red flags in the old repos</a><a href="#how-to-read-the-older-code-safely">How to read the older code safely</a><a href="#bringing-more-code-in">Bringing more code in</a></nav>
 <div class="lead"><p>The previous teams left 32 repos in two public GitHub orgs: <code>AAV-2025-2026</code> (the 2025-26
 team, 19 repos) and <code>Carleton-AAV-Capstone</code> (the 2024-25 team, 13 repos). This page says
-what each one is, what's already in <code>aav</code>, what's worth pulling in next, and what no
-repo provides. Surveyed on 10 October 2026, from the 14 clones in <code>~/Code/aav</code>.</p>
+what each one is, what's already in this repo ("<code>aav</code>" below: ecolo-av since 25 Oct), what's worth
+pulling in next, and what no repo provides. Surveyed on 10 October 2026; since 24 Oct, 27 of
+the repos are in <code>archive/</code>, with their history.</p>
 <h3 id="earlier-teams-found-15-october">Earlier teams (found 15 October)</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -410,7 +411,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Sensors</td>
 <td>a GPS driver that anything runs; a lidar driver; camera streaming and the stop-sign detector (both only on the car's Orin); steering feedback (only 2024-25's <code>FinalRev</code>); a fine enough wheel speed; magnetometer calibration</td>
-<td>GPS: the stock driver, model unknown (Q18). Lidar and cameras: next year</td>
+<td>GPS: the stock driver, model unknown (Q18). Lidar: the stock <code>velodyne</code> driver (20 Oct). Cameras: <code>aav_camera_stream</code> (24 Oct). Both untested on the car</td>
 </tr>
 <tr>
 <td>Localization</td>
@@ -435,7 +436,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>The spine</td>
 <td>any CAN code; a watchdog that brakes; feedback frames; the hardware e-stop in code</td>
-<td><span class="badge b-works">works</span> the logic (<code>spine-core</code>); the board code is <span class="badge b-missing">missing</span></td>
+<td><span class="badge b-works">works</span> the logic (<code>spine-core</code>); the board programs (<code>boards/pico2</code>, <code>boards/esp32-umod</code>) are <span class="badge b-untested">untested</span>: never flashed</td>
 </tr>
 <tr>
 <td>HUD</td>

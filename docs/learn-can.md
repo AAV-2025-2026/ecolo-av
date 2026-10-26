@@ -1,19 +1,21 @@
 # CAN from zero
 
 CAN is the wire that cars use for small, urgent messages: "steer to 0.25 rad", "I'm
-going 1.4 m/s". The KEFC plan puts our steering, brake and throttle on a CAN bus. This
-page starts at the two wires and ends with one of our frames, decoded byte by byte.
+going 1.4 m/s". Today the Orin's CAN bus carries the front wheel speeds. The KEFC plan
+also puts our steering, brake and throttle on it. This page starts at the two wires and
+ends with one of our frames, decoded byte by byte.
 
 **You'll learn:**
 - what a CAN bus is, and why it has a 120 Ω resistor at each end;
 - what a frame is: ID, length, data, and who wins when two talk at once;
-- our frames (v0.1.0), and what the KEFC plan adds (v0.2.0, proposed);
+- our six frames (`aav.dbc` v0.2.0);
 - why every frame of ours carries a counter and a CRC;
 - the bench tools: a CANable, `candump`, `cansend`, `ip link`, `ros2_socketcan`.
 
 !!! note "Status"
     The CAN code is written and tested against a simulator. **No real CAN bus has carried
-    our frames yet**: the parts are still to buy ([CAN plan](can-plan.md)).
+    our frames yet.** The first look at the car's bus is car day, session 7
+    ([Car day](car-day.md)); the wiring is in the [CAN plan](can-plan.md).
 
 ## The picture
 
@@ -40,8 +42,8 @@ A signal running down a wire bounces back off an open end, like a wave in a bath
 | about 120 Ω | one resistor is missing |
 | about 40 Ω | one too many: three resistors |
 
-On our car (KEFC plan): one in the **CAN Pal** on the Orin, one on the **last wheel
-node**. Not on the boards in the middle.
+On our car: one at each end of the bus, and none on the boards in the middle. Where
+the ends are is the hardware lead's to say (car day, question H7).
 
 ## 2. A frame
 
@@ -79,7 +81,7 @@ feedback (0x180) every time.
 | Our bit rate | **500 kbit/s** (`aav.dbc`, and the `ip link` command below) |
 | One bit | 2 µs |
 | One 8-byte frame | about 110-135 bits, so about 0.25 ms |
-| Our frames per second (v0.2) | 50 + 50 + 10 + 10 + 100 + 100 = **320** |
+| Our frames per second (v0.2.0) | 50 + 50 + 10 + 10 + 100 + 100 = **320** |
 | Bus load | about **8 %**: plenty of room |
 
 Every board on the bus must use the same bit rate, or nobody hears anybody.
@@ -117,7 +119,9 @@ SG_ target_speed : 0|16@1- (0.001,0) [-32.768|32.767] "m/s" SPINE
 | `"m/s"` | the unit |
 | `SPINE` | the board that reads it |
 
-## 4. Our frames today: v0.1.0
+## 4. Our frames: v0.2.0
+
+`aav.dbc` v0.2.0 (15 Oct, from the [KEFC plan](can-plan.md)):
 
 | ID | Name | From → to | Rate | Bytes | Carries |
 |---|---|---|---|---|---|
@@ -125,21 +129,16 @@ SG_ target_speed : 0|16@1- (0.001,0) [-32.768|32.767] "m/s" SPINE
 | 0x100 | `DRIVE_CMD` | Orin → spine | 50 Hz | 8 | target speed, steering angle, two limits, armed |
 | 0x180 | `VEHICLE_FEEDBACK` | spine → Orin | 50 Hz | 8 | measured speed and steering, wheel ticks |
 | 0x181 | `VEHICLE_STATUS` | spine → Orin | 10 Hz | 8 | mode, armed, e-stop, throttle %, brake %, fault bits |
+| 0x200 | `WHEEL_SPEED_L` | left front wheel sensor → Orin | 100 Hz | 8 | wheel speed (m/s), pulse count, direction known |
+| 0x201 | `WHEEL_SPEED_R` | right front wheel sensor → Orin | 100 Hz | 8 | the same, for the right front wheel |
 
-"The spine" is the board that drives the actuators. In the KEFC plan, it is the
-existing **ESP32 control board**.
-
-### Proposed for v0.2.0 (the KEFC plan)
-
-| Change | Why |
+| Board | Is |
 |---|---|
-| Add `WHEEL_SPEED_L` **0x200** and `WHEEL_SPEED_R` **0x201**, 100 Hz | two ESP32-CAN-X2 wheel nodes, Hall sensors on the front brake-rotor holes |
-| Add nodes `WHEEL_L` and `WHEEL_R` | so the DBC says who sends them |
-| The timeout from 200 ms to **100 ms** | the KEFC PDF's number |
-| The spine is the ESP32 board, not a Pico 2 | it's already on the car, with a CAN plug |
+| "The spine" | the board that drives the actuators: the **ESP32 control board** already on the car. With today's wiring it isn't on the bus: the Motor Pi reaches it over UART |
+| The wheel sensors | the hardware lead's **Arduino** (Arduino C++), counting a Hall sensor on the front brake-rotor holes. One board may send both frames |
 
-The layout of the two wheel frames isn't written yet. **Status: Proposed.** The
-DBC is still v0.1.0.
+One Hall sensor can't tell direction, so `direction_known` = 0, and the Orin takes the sign
+from the drive direction.
 
 ## 5. One frame, byte by byte
 
@@ -181,7 +180,7 @@ What the spine does (`spine-core`, `spine.rs`):
 |---|---|
 | a bad CRC or wrong length | throws the frame away; sets the fault bit `BAD_CHECKSUM` |
 | the same counter twice | treats it as **not fresh**; sets `BAD_COUNTER` |
-| no fresh `DRIVE_CMD` for 200 ms | its watchdog trips: **throttle off, brake on, steering held** |
+| no fresh `DRIVE_CMD` for 100 ms | its watchdog trips: **throttle off, brake on, steering held** |
 
 The CRC is CRC-8/SAE-J1850 (poly 0x1D, start 0xFF, end XOR 0xFF), the one cars use.
 
@@ -189,14 +188,15 @@ The CRC is CRC-8/SAE-J1850 (poly 0x1D, start 0xFF, end XOR 0xFF), the one cars u
 
 ```text
 ego goes quiet ──0.1 s──► spine_bridge stops sending DRIVE_CMD
-                          ──0.2 s──► the spine's watchdog: brake
+                          ──0.1 s──► the spine's watchdog: brake
 ```
 
 | Layer | Timeout | File |
 |---|---|---|
 | `spine_bridge` | 0.1 s without a command (`/control/car/actuator_cmd`) | `ros/can_bridge/aav_spine/config/spine.yaml` |
-| The spine's watchdog | 200 ms today, **100 ms** in the KEFC plan | `spine-core/src/spine.rs` (`cmd_timeout_ms`) |
-| The KEFC control board | 100 ms → brake | the KEFC PDF |
+| The spine's watchdog | **100 ms** (the KEFC PDF's number) | `spine-core/src/spine.rs` (`cmd_timeout_ms`) |
+
+So the car brakes at most 0.2 s after ego goes quiet.
 
 The spine also refuses to drive until it is **armed**: `armed = 0`, then `armed = 1`. A
 reboot never restarts the car by itself ([Firmware](firmware.md)).
@@ -212,7 +212,7 @@ the bus ─► can0 ─► socket_can_receiver ─► /can/rx ─► spine_bridg
 |---|---|
 | **SocketCAN** | Linux's own CAN support: a CAN adapter shows up as a network device, `can0` |
 | **`ros2_socketcan`** | the stock ROS package: CAN frames ⇄ `can_msgs/Frame` on `/can/tx` and `/can/rx` |
-| **`spine_bridge`** | ours: packs and unpacks frames with `can_codec.py` |
+| **`spine_bridge`** | ours: packs and unpacks frames. The default is Rust (`aav_spine_bridge`, with `spine-core`'s codec); `bridge:=python` runs `aav_spine`'s, with `can_codec.py` |
 | **On the bench** | no real bus: `aav_spine_sim` reads `/can/tx` and answers on `/can/rx` |
 
 SocketCAN is **Linux only**: on a Mac, use the bench, or a Linux machine.
@@ -285,7 +285,7 @@ ip -details -statistics link show can0    # error state, error counts
 | The frame dictionary | `firmware/can/aav.dbc` |
 | The test frames both sides must match | `firmware/can/test_vectors.json`, from `gen_test_vectors.py` |
 | Python codec | `ros/can_bridge/aav_spine/aav_spine/can_codec.py` |
-| ROS bridge | `ros/can_bridge/aav_spine/aav_spine/spine_bridge.py`, `config/spine.yaml` |
+| ROS bridge | `ros/can_bridge/aav_spine_bridge` (Rust, the default); `ros/can_bridge/aav_spine/aav_spine/spine_bridge.py` (Python); `config/spine.yaml` |
 | Launch with `ros2_socketcan` | `ros/can_bridge/aav_spine/launch/spine.launch.py` (`interface:=can0`) |
 | Rust codec, watchdog, counter check | `firmware/spine/crates/spine-core/src/protocol.rs`, `watchdog.rs`, `spine.rs` |
 | The bench's pretend spine | `ros/sim/aav_spine_sim` |

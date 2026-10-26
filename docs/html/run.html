@@ -104,7 +104,7 @@ steps on a Mac and on Linux. Then three commands drive a turtle like a car.</p><
 <tr>
 <td>System</td>
 <td>macOS 14 (Sonoma) or newer; Apple Silicon or Intel</td>
-<td>64-bit x86: Ubuntu, AlmaLinux …</td>
+<td>64-bit x86 or ARM: Ubuntu, AlmaLinux …</td>
 </tr>
 <tr>
 <td>Disk space</td>
@@ -228,7 +228,7 @@ model, so like the car, it can't turn on the spot.</p>
 </tr>
 <tr>
 <td><code>pixi run get-models</code>, then <code>pixi run detect picture:=ros/perception/aav_detector/test/stop_sign.jpg</code></td>
-<td>YOLO finds a stop sign in a picture (<a href="perception.html">Perception</a>)</td>
+<td>RF-DETR Nano finds a stop sign in a picture (<code>detector:=yolo</code> for YOLO; <a href="perception.html">Perception</a>)</td>
 </tr>
 <tr>
 <td><code>pixi run graph-picture</code></td>

@@ -426,7 +426,7 @@ pictures <strong>compressed</strong> over the network, and keep the lidar's poin
 </tr>
 <tr>
 <td>Foxglove to a laptop</td>
-<td>WebSocket, port 8765</td>
+<td>WebSocket, port 8765 (8766 while the 2025-26 bridge holds 8765)</td>
 <td style="text-align: right;"></td>
 <td style="text-align: right;"></td>
 <td style="text-align: right;"><strong>what you open</strong></td>
@@ -557,7 +557,7 @@ it out from the DBC, so it stays right when the contract changes:</p>
 </tr>
 <tr>
 <td>The Orin's side</td>
-<td>SocketCAN turns each frame into a ROS message on <code>/can/rx</code>: 260 a second, about 40 B each, 0.01 MB/s. Small, but it costs some CPU in Python (<code>spine_bridge</code>)</td>
+<td>SocketCAN turns each frame into a ROS message on <code>/can/rx</code>: 260 a second with the CAN spine (200 with today's wiring: the wheels only), about 40 B each, 0.01 MB/s. Small: the Rust <code>spine_bridge</code> (the default) decodes them</td>
 </tr>
 </tbody>
 </table></div>

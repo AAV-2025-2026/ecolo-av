@@ -165,8 +165,8 @@ What those mean at 1.0 m/s:
 | `twist_mux` | 0.5 s per driver | ignores that driver; the next one takes over |
 | `ego` | 0.3 s with no `/control/cmd_vel` | slows to a stop at 2.0 m/s² |
 | `spine_bridge` | 0.1 s with no command (`/control/car/actuator_cmd`) | stops sending `DRIVE_CMD` |
-| The spine's watchdog | 200 ms with no fresh `DRIVE_CMD` (KEFC: 100 ms) | throttle off, brake on |
-| `collision_monitor` | 1.0 s with no radar | stops Nav2's commands |
+| The spine's watchdog | 100 ms with no fresh command (`DRIVE_CMD`, or a UART frame) | throttle off, brake on, latched |
+| `collision_monitor` | 1.0 s with no radar or lidar (where it reads one) | stops Nav2's commands |
 
 !!! warning "Today's car has no board timeout"
     On the 2025-26 path the ESP32 firmware never times out: if commands stop, the last

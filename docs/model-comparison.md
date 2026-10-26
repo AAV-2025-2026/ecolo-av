@@ -10,7 +10,7 @@ plan.md item S6, 16 Oct 2026. Two questions:
 > - **Now: RF-DETR Nano is the car's detector** (Ben, 23 Oct: "I thought we were skipping
 >   yolo and using the other one"), the detector node's default, in TensorRT on the Orin.
 >   YOLO stays as `detector:=yolo` ([Perception](perception.md#models)).
-> - **Camera: try RF-DETR Nano next, on the Orin.** It saw Gazebo's stop sign from
+> - **Why RF-DETR Nano won (16 Oct).** It saw Gazebo's stop sign from
 >   **20 m** (YOLO11n: 10 m) and found people in 4 of 5 photos (YOLO11n: 3), with no
 >   false finds. It's **Apache-2.0**, so the AGPL question goes away. On a Mac it is as
 >   fast as YOLO11n (16-17 ms vs 12-21 ms). Its cost: 12 times the weights (30 M), and
@@ -45,7 +45,7 @@ as rough, within about 20 %.
 
 | Model | Person (photos) | Stop sign (photos + Gazebo) | Gazebo sign seen from | ms CPU | ms Metal | ms Core ML | Weights | Licence |
 |---|---|---|---|---|---|---|---|---|
-| YOLO11n (ours now) | 3/5 (0.65) | 6/10 (0.54) | 10 m | 30 | **12** | 21 | 2.6 M, 6 MB | AGPL-3.0 |
+| YOLO11n (`detector:=yolo`) | 3/5 (0.65) | 6/10 (0.54) | 10 m | 30 | **12** | 21 | 2.6 M, 6 MB | AGPL-3.0 |
 | YOLO11s | **5/5** (0.76) | 7/10 (0.61) | 15 m | 54 | 15 | 37 | 9.5 M, 19 MB | AGPL-3.0 |
 | YOLO26n | 3/5 (0.65) | 6/10 (0.52) | 10 m | 32 | 13 | 20 | 2.6 M, 6 MB | AGPL-3.0 |
 | YOLO26s | 4/5 (0.76) | 7/10 (0.63) | 15 m | 56 | 15 | 36 | 10.0 M, 20 MB | AGPL-3.0 |
@@ -66,8 +66,9 @@ as rough, within about 20 %.
 - **Core ML's scores are PyTorch's** to within about 0.06, for YOLO and RF-DETR. Once
   that tipped a picture: YOLO11s found 4 of 5 people through Core ML, 5 on the CPU. The
   table's scores are the CPU's; the Metal ones are the same.
-- The watcher stops the car only when the box is 72 px tall (about 3.5 m), so every model
-  sees the sign in time today. Seeing it at 20 m would let the car slow down earlier.
+- The watcher stops the car 4.7 m before the sign (a box 55 px tall with Gazebo's lens),
+  so every model sees the sign in time today. Seeing it at 20 m would let the car slow
+  down earlier.
 
 ### Per picture (best person / stop-sign score, CPU)
 

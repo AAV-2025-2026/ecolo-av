@@ -25,16 +25,17 @@ moves the car.**
 |---|---|
 | after everything on one page | [Overview](overview.md) |
 | after what this version does, at a glance | [Release notes](release-notes.md) |
-| new to the team | [Your first day](first-day.md), then your card in [Starting points](team.md) |
+| new to the team | [Getting started](getting-started.md) (30 minutes), then [Your first day](first-day.md) and your card in [Starting points](team.md) |
+| making a change | [CONTRIBUTING.md](../CONTRIBUTING.md): fork, branch, pull request, merge queue |
 | new to the car, or to ROS | [The car, box by box](learn-car.md), then [A command's journey](learn-journey.md); words in the [Glossary](glossary.md) |
 | a professor, or anyone with a question | [Questions people ask](faq.md) |
 | going to the car | [Car day](car-day.md): the runbook, session by session, and `pixi run car-day-check` |
-| at the car for the audit (16 Oct) | [The hardware audit](audit-friday.md) |
+| looking for what the car audit found (16 Oct) | [The hardware audit](audit-friday.md) |
 | putting the whole thing together | [Infrastructure](infrastructure.md), then [Work](work.md) and [Decisions](decisions.md) |
 | looking for what a package does | [Packages](packages.md); the deeper cards in [Every module](modules.md) |
 | writing a driver, or drawing a map | [Build a driver](howto-driver.md), [Costmaps](costmaps.md) |
 | testing the car's software without the car | [Bench mode](bench.md) |
-| working on cameras, YOLO, stop signs or lanes | [Perception](perception.md) |
+| working on cameras, the detector, stop signs or lanes | [Perception](perception.md) |
 | bringing in the previous teams' code | [The older code](older-code.md) |
 | connecting Claude or another AI app | [AI apps (MCP)](mcp.md) |
 
@@ -65,7 +66,7 @@ On a Mac or on Linux, once [pixi is installed](run.md):
 ```bash
 pixi run build       # compile our packages
 pixi run turtle      # terminal 1: a turtle that steers like the car
-pixi run keyboard    # terminal 2: hold i to drive, u or o to turn
+pixi run keyboard --local    # terminal 2: hold i to drive, u or o to turn
 ```
 
 ## Where things live
@@ -86,4 +87,5 @@ pixi run keyboard    # terminal 2: hold i to drive, u or o to turn
 | Every topic: its type, and who publishes and reads it | `docs/interfaces.yaml`, shown as [Topics](interfaces.md) |
 | The CAN frames between the computer and the spine | `firmware/can/aav.dbc`, explained in [Firmware](firmware.md) |
 | The car's measurements | `ros/bringup/aav_description/config/vehicle.yaml`: [Car numbers](car_measurements.md) |
-| Rules for code, names, secrets and git | `CLAUDE.md` |
+| Rules for code, names and secrets | `CLAUDE.md` |
+| How a change gets into `main` | [CONTRIBUTING.md](../CONTRIBUTING.md) |

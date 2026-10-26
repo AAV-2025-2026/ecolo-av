@@ -42,13 +42,17 @@ How twist_mux picks:
 | Driver | Topic | Priority |
 |---|---|---|
 | joystick | `/drivers/joy/cmd_vel` | 100 (the highest) |
+| RC transmitter, via ROS | `/drivers/rc/cmd_vel` | 95 |
 | keyboard | `/drivers/keyboard/cmd_vel` | 90 |
+| actuator tests | `/drivers/tests/cmd_vel` | 60 |
 | scripted test | `/drivers/scripted/cmd_vel` | 50 |
 | replay | `/drivers/replay/cmd_vel` | 40 |
+| goto (drive to a GPS point) | `/drivers/goto/cmd_vel` | 25 |
 | Nav2 | `/drivers/nav/cmd_vel` | 20 |
 | AI (lane keeping) | `/drivers/ai/cmd_vel` | 10 |
 | **lock:** `/safety/estop` true | blocks everyone below 255 | 255 |
-| **lock:** `/perception/stop_sign` true | blocks Nav2 and AI | 30 |
+| **lock:** `/perception/stop_sign` true | blocks goto, Nav2 and AI | 30 |
+| **lock:** `/safety/sensor_watchdog/lock` true, or silent 1 s | blocks goto, Nav2 and AI | 30 |
 
 A driver counts while its last message is under 0.5 s old. Let go of the trigger and,
 0.5 s later, twist_mux hands control to the next driver.
@@ -81,9 +85,10 @@ Today's car would drive through the 2025-26 hardware, with our `aav_legacy` back
 
 ## 3. After the KEFC changes: CAN
 
-The `aav_spine` backend replaces the Motor-Pi. It works on the bench, against a pretend
-board (`spine_sim`). It has never driven the car, and the ESP32's CAN firmware isn't
-written yet.
+With `car.launch.py actuators:=can`, the CAN spine replaces the Motor-Pi. Today's default
+is `actuators:=uart` (section 2). The CAN path works on the bench, against a pretend board
+(`spine_sim`). It has never driven the car. The ESP32's Rust firmware can take CAN
+(`esp32-umod`, `--features can`): built, not yet flashed.
 
 | # | Who | Topic or wire | Message | Rate | What can go wrong | Watch it |
 |---|---|---|---|---|---|---|
@@ -135,7 +140,7 @@ The car tells the software what it really did. This closes the loop.
 | No wheel speed | `ekf_local` drifts, then stops moving | `ros2 topic hz /vehicle/odom` |
 | No IMU | the car's heading never turns | `ros2 topic hz /sensors/imu/data` |
 | No GPS fix | `ekf_global` drifts with `ekf_local` | `ros2 topic echo /sensors/gps/fix` (status −1 = no fix) |
-| Today's car | no `/vehicle/status`: the legacy backend doesn't send it | `ros2 topic info /vehicle/status` |
+| Today's car | no `/vehicle/status`: the legacy backend sends it only with `uplink: true` (`legacy.yaml`), off until its wire is confirmed | `ros2 topic info /vehicle/status` |
 
 Why the two EKFs don't talk on a topic: [Topic areas](naming.md#why-the-two-ekfs-dont-talk).
 

@@ -120,7 +120,7 @@ what's left to build.</p></div>
 <tr>
 <td>Reaches ROS</td>
 <td>directly</td>
-<td>through a bridge node: CAN to <code>aav_spine</code>, or today UART to <code>aav_legacy</code></td>
+<td>through a bridge node: CAN to <code>spine_bridge</code> (<code>aav_spine_bridge</code>), or today UART to <code>aav_legacy</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -318,7 +318,7 @@ from the drive direction.</p>
 </section>
 <section class="card"><h2 id="firmwarespine-the-rust-code">firmware/spine: the Rust code</h2>
 <p><code>crates/spine-core</code> is plain <code>no_std</code> Rust: no allocator, no dependencies, no hardware.
-<code>cargo test</code> runs its 70 tests on any laptop.</p>
+<code>cargo test</code> runs its 84 tests on any laptop.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -453,7 +453,7 @@ board: <span class="badge b-untested">untested</span>. The car's chip is still Q
 <tr>
 <td>RC receiver: FlySky FS-iA6B</td>
 <td>iBUS on GPIO 32, 115200 baud</td>
-<td>channel 5 override, 2 throttle, 3 steering, 4 mode. Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7)</td>
+<td>channel 5 override, 2 throttle, 3 steering, 4 gear (forward, brake, reverse). Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7)</td>
 </tr>
 </tbody>
 </table></div>
@@ -462,6 +462,12 @@ board: <span class="badge b-untested">untested</span>. The car's chip is still Q
 <p>The 2025-26 wheel encoder and status display were C++. Their Rust versions sit next to the
 spine, in <code>firmware/spine/</code>. Both build and pass their tests; neither has been flashed:
 <span class="badge b-untested">untested</span>.</p>
+<div class="admonition note">
+<p class="admonition-title">The UDP wheel encoder is off (23 Oct)</p>
+<p>Today's wheel speed comes from the hardware lead's Arduino on the Orin's CAN bus
+(0x200, 0x201), read by <code>spine_bridge role:=sensors</code>. The 2025-26 UDP encoder is off in
+<code>motor_pi.yaml</code> (<code>legacy_encoder: false</code>), so its Rust version waits too.</p>
+</div>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -561,7 +567,7 @@ car with the RC transmitter's switch in reach.</p>
 <thead>
 <tr>
 <th>Constant</th>
-<th>Today</th>
+<th>In spine-core</th>
 <th>The 2025-26 firmware</th>
 </tr>
 </thead>
@@ -583,7 +589,29 @@ car with the RC transmitter's switch in reach.</p>
 </tr>
 </tbody>
 </table></div>
-<p>⚠️ <code>IDLE_BRAKE</code> matters most: on a slope, a car with its brake off can roll.</p>
+<p>⚠️ <code>IDLE_BRAKE</code> matters most: on a slope, a car with its brake off can roll. It is a team
+choice:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Board program</th>
+<th><code>IDLE_BRAKE</code></th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spine-core</code>'s default, <code>boards/pico2</code>, the bench</td>
+<td><code>0.0</code></td>
+<td>the proposed setting</td>
+</tr>
+<tr>
+<td><code>boards/esp32-umod</code> (the car's board)</td>
+<td><code>1.0</code> (its own constant, <code>src/main.rs</code>)</td>
+<td>keeps the C++'s full brake until the team decides: it has no e-stop input yet</td>
+</tr>
+</tbody>
+</table></div>
 <p>And the design doc's questions Q10–Q17:</p>
 <ul>
 <li>who owns the spine, and which microcontroller;</li>

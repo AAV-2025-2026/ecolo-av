@@ -25,6 +25,7 @@ driver is added.
 |---|---|---|
 | E-stop (a lock: blocks everything below it) | `/safety/estop` | 255 |
 | Joystick, the safety driver | `/drivers/joy/cmd_vel` | 100 |
+| RC transmitter, on "RC via ROS" (proposed) | `/drivers/rc/cmd_vel` | 95 |
 | Keyboard or another remote | `/drivers/keyboard/cmd_vel` | 90 |
 | Actuator tests ([Actuator tests](actuator-tests.md)) | `/drivers/tests/cmd_vel` | 60 |
 | Scripted | `/drivers/scripted/cmd_vel` | 50 |
@@ -35,7 +36,8 @@ driver is added.
 | AI | `/drivers/ai/cmd_vel` | 10 |
 
 **People outrank software.** Give a new software driver a priority below 90. The example
-uses 30.
+uses 15: below 30, so the stop-sign and sensor-watchdog locks hold it too. A lock holds
+only the inputs **below** its own priority, so a driver at 30 would ignore them.
 
 ## 1. Make the package
 
@@ -112,7 +114,7 @@ Four files learn about the new driver:
 |---|---|
 | `ros/command_mux/aav_mux/config/twist_mux.yaml` | an input under `topics:`, shown below |
 | `docs/interfaces.yaml` | the topic, shown below. Then run `pixi run python tools/gen_interfaces_md.py > docs/interfaces.md` |
-| `ros/bringup/aav_bringup/launch/turtle.launch.py` (and `sim`, and the car's machine files) | a line that starts it, once it has a launch file |
+| `ros/bringup/aav_bringup/launch/turtle.launch.py` (and `sim`; on the car, a part in `car.launch.py`'s `PARTS` and the machine files) | a line that starts it, once it has a launch file |
 | `tools/test.sh` | the package's folder, once it has unit tests |
 
 The mux input:
@@ -121,7 +123,7 @@ The mux input:
       circle:                   # aav_circle: an example driver
         topic: /drivers/circle/cmd_vel
         timeout: 0.5
-        priority: 30
+        priority: 15
 ```
 
 The contract entry:
@@ -131,7 +133,7 @@ The contract entry:
     type: geometry_msgs/msg/TwistStamped
     pub: [circle_driver]
     sub: [twist_mux]
-    note: Priority 30. An example driver that drives in circles.
+    note: Priority 15. An example driver that drives in circles.
 ```
 
 ## 4. Try it
@@ -164,7 +166,8 @@ Then `pixi run check turtle` should still say `0 failed`, and Gazebo is the next
 
 ## Safety rules
 
-1. **People outrank software:** priorities below 90.
+1. **People outrank software:** priorities below 90; below 30 for anything the stop-sign
+   and watchdog locks should hold.
 2. **Go quiet when you're done:** stop publishing, and the mux hands control to the next
    driver after 0.5 s.
 3. **Never publish `/control/cmd_vel` or `/ego/actuator_cmd` yourself.** Everything goes through

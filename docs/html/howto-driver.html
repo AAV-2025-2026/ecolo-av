@@ -7,7 +7,7 @@
 <!-- Generated from docs/howto-driver.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Build a driver</h1>
-<div class="meta">6 min read · 10 sections</div></header>
+<div class="meta">7 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -145,6 +145,11 @@ driver is added.</p>
 <td>100</td>
 </tr>
 <tr>
+<td>RC transmitter, on "RC via ROS" (proposed)</td>
+<td><code>/drivers/rc/cmd_vel</code></td>
+<td>95</td>
+</tr>
+<tr>
 <td>Keyboard or another remote</td>
 <td><code>/drivers/keyboard/cmd_vel</code></td>
 <td>90</td>
@@ -187,7 +192,8 @@ driver is added.</p>
 </tbody>
 </table></div>
 <p><strong>People outrank software.</strong> Give a new software driver a priority below 90. The example
-uses 30.</p>
+uses 15: below 30, so the stop-sign and sensor-watchdog locks hold it too. A lock holds
+only the inputs <strong>below</strong> its own priority, so a driver at 30 would ignore them.</p>
 </section>
 <section class="card"><h2 id="1-make-the-package">1. Make the package</h2>
 <p>ROS makes the skeleton for you:</p>
@@ -265,7 +271,7 @@ thin.</p>
 <td>the topic, shown below. Then run <code>pixi run python tools/gen_interfaces_md.py &gt; docs/interfaces.md</code></td>
 </tr>
 <tr>
-<td><code>ros/bringup/aav_bringup/launch/turtle.launch.py</code> (and <code>sim</code>, and the car's machine files)</td>
+<td><code>ros/bringup/aav_bringup/launch/turtle.launch.py</code> (and <code>sim</code>; on the car, a part in <code>car.launch.py</code>'s <code>PARTS</code> and the machine files)</td>
 <td>a line that starts it, once it has a launch file</td>
 </tr>
 <tr>
@@ -278,13 +284,13 @@ thin.</p>
 <pre class="highlight"><code class="language-yaml">      circle:                   # aav_circle: an example driver
         topic: /drivers/circle/cmd_vel
         timeout: 0.5
-        priority: 30</code></pre>
+        priority: 15</code></pre>
 <p>The contract entry:</p>
 <pre class="highlight"><code class="language-yaml">  /drivers/circle/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [circle_driver]
     sub: [twist_mux]
-    note: Priority 30. An example driver that drives in circles.</code></pre>
+    note: Priority 15. An example driver that drives in circles.</code></pre>
 </section>
 <section class="card"><h2 id="4-try-it">4. Try it</h2>
 <pre class="highlight"><code class="language-bash">pixi run build
@@ -332,7 +338,8 @@ pixi run graph                                             # terminal 3</code></
 </section>
 <section class="card"><h2 id="safety-rules">Safety rules</h2>
 <ol>
-<li><strong>People outrank software:</strong> priorities below 90.</li>
+<li><strong>People outrank software:</strong> priorities below 90; below 30 for anything the stop-sign
+   and watchdog locks should hold.</li>
 <li><strong>Go quiet when you're done:</strong> stop publishing, and the mux hands control to the next
    driver after 0.5 s.</li>
 <li><strong>Never publish <code>/control/cmd_vel</code> or <code>/ego/actuator_cmd</code> yourself.</strong> Everything goes through
