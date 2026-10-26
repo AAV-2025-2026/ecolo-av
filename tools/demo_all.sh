@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Start the whole simulated car on this computer, in one go:
-#   Gazebo (the car), the nav screen (RViz), the HUD, and the street-map window.
+#   Gazebo (the car, in the walled test lot), the nav screen (RViz), the HUD, and the
+#   street-map window.
 #
 # Everything runs localhost-only (tools/ros.sh --local), so it shares one ROS graph on
 # this computer and never reaches the real car on the network.
@@ -29,8 +30,14 @@ trap cleanup INT TERM EXIT
 
 start() { "$@" & pids="$pids $!"; }
 
-echo "1/4  Gazebo (the car) — give it ~20s to spawn..."
-start tools/ros.sh --local ros2 launch aav_bringup sim.launch.py
+# The map window draws Ottawa's streets and searches places from two downloads, kept out
+# of git. Without them it starts anyway, with no streets and no search: say so first.
+for f in maps/streets/ottawa.pmtiles:get-street-map maps/places/ottawa.db:get-hud-map; do
+  [ -f "${f%%:*}" ] || echo "note: no ${f%%:*}, so the map window misses it: run pixi run ${f##*:} once"
+done
+
+echo "1/4  Gazebo (the car, in the test lot) — give it ~20s to spawn..."
+start tools/ros.sh --local ros2 launch aav_bringup sim.launch.py world:=test_lot
 sleep 20
 
 echo "2/4  nav screen (RViz: map, costmaps, path, car)..."
