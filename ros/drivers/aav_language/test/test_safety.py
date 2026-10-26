@@ -109,3 +109,27 @@ def test_a_lock_with_a_timeout_locks_on_silence_as_twist_mux_does():
     # A person, a test, still drive.
     assert safety.mux_choice(inputs, {'joy': 0.1}, locks, quiet)['driver'] == 'joy'
     assert safety.mux_choice(inputs, {'scripted': 0.1}, locks, {})['driver'] == 'scripted'
+
+
+def test_holding_locks_by_the_driver_that_carries_the_move():
+    inputs, locks = safety.mux_config(yaml.safe_load(MUX_YAML.read_text()))
+    free = {'estop': False, 'stop_sign': False, 'sensors': False}
+    assert safety.holding_locks('nav', inputs, locks, free) == ()
+    sign = {**free, 'stop_sign': True}
+    # The stop-sign lock (30) holds Nav2 (20), so go_to_gps; not the scripted driver (50).
+    assert safety.holding_locks('nav', inputs, locks, sign) == ('stop_sign',)
+    assert safety.holding_locks('scripted', inputs, locks, sign) == ()
+    # The e-stop (255) holds everyone.
+    assert safety.holding_locks('scripted', inputs, locks, {**free, 'estop': True}) == ('estop',)
+    # An unknown driver counts as the lowest.
+    assert set(safety.holding_locks('nobody', inputs, locks,
+                                    {**sign, 'sensors': True})) == {'stop_sign', 'sensors'}
+
+
+def test_car_unreachable_when_discovery_stays_on_this_computer():
+    # tools/ros.sh --local sets LOCALHOST: --car could then never reach the car.
+    assert safety.car_unreachable(True, 'LOCALHOST', '') is not None
+    assert 'AAV_DISCOVERY=SUBNET' in safety.car_unreachable(True, 'LOCALHOST', '')
+    assert safety.car_unreachable(True, 'SUBNET', '') is None
+    assert safety.car_unreachable(True, 'LOCALHOST', '192.168.1.140') is None
+    assert safety.car_unreachable(False, 'LOCALHOST', '') is None

@@ -200,3 +200,24 @@ def test_every_call_is_logged_with_its_time(tmp_path):
     assert all(x['time'] for x in logged)
     assert [x['ok'] for x in logged] == [True, False, True]
     assert len(path.read_text().splitlines()) == 3
+
+
+def test_a_stop_sign_lock_refuses_go_to_gps_but_not_drive():
+    # twist_mux's stop-sign lock (30) holds Nav2 (20), which carries go_to_gps; the
+    # scripted driver (50), which carries drive and turn, is above it.
+    from pathlib import Path
+    import yaml
+    mux_yaml = (Path(__file__).resolve().parents[3]
+                / 'command_mux/aav_mux/config/twist_mux.yaml')
+    car = FakeBackend()
+    tools = DriveTools(car, mux=safety.mux_config(yaml.safe_load(mux_yaml.read_text())))
+    plain = car.state
+
+    def sign_locked():
+        s = plain()
+        s.mux_locks = {**s.mux_locks, 'stop_sign': True}
+        return s
+    car.state = sign_locked
+    r = tools.go_to_gps(45.3860, -75.6960)
+    assert not r['ok'] and 'stop_sign' in r['message'], r
+    assert tools.drive(5)['ok']
