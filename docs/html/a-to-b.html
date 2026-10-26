@@ -7,7 +7,7 @@
 <!-- Generated from docs/a-to-b.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Driving from A to B: speed up, drive, slow down, stop</h1>
-<div class="meta">12 min read · 8 sections</div></header>
+<div class="meta">15 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -98,7 +98,8 @@ request's "accelerate / hold / stop" demo, and the first step to GPS point-to-po
 - <strong><code>pixi run goto --lat .. --lon ..</code></strong> drives to B and stops there, slowing at <strong>half the measured braking</strong>.
 - A straight drive in an empty lot needs <strong>no costmap and no map</strong>: only "where am I" and "where is B".
 - The hard part isn't the driving. It's <strong>knowing where the car is and which way it faces</strong> at the start.
-- Test it on the turtle, then the bench, then Gazebo, then the car on stands, then the car.</p>
+- Test it on the turtle, then the bench, then Gazebo, then the car on stands, then the car.
+- <strong><code>pixi run atob-score</code></strong> scores a recorded run: speeding up, holding, the stop on B (<a href="#scoring-a-run">Scoring a run</a>).</p>
 </blockquote></div>
 <section class="card"><h2 id="1-the-three-ways">1. The three ways</h2>
 <div class="table-wrap"><table>
@@ -388,6 +389,119 @@ pixi run sim-check --goto-only                   # the Gazebo proof below (8 min
 </tbody>
 </table></div>
 <p>Untested on the bench and on the car: the car needs the brake test (4.3) for <code>max_brake</code> first.</p>
+<h3 id="scoring-a-run">Scoring a run</h3>
+<p><code>pixi run atob-score</code> turns one recorded run into numbers: how well the car sped up, held
+its speed, and stopped on B. The same numbers for Gazebo and for the car.</p>
+<pre class="highlight"><code class="language-bash">pixi run atob-score bags/&lt;run&gt;                              # B from the goto's feedback
+pixi run atob-score bags/&lt;run&gt; --b-latlon 45.38630 -75.69580  # or give B (or --b-xy X Y)
+pixi run atob-score bags/&lt;run&gt; --taped -0.12 0.05           # the car: the tape's stop error
+pixi run atob-score run1.csv run2.csv --json                # CSV runs; JSON out
+pixi run atob-score bags/&lt;run&gt; --save-csv run.csv           # the run as CSV, to share</code></pre>
+<p>The stop error is measured on the line from A to B:</p>
+<pre class="highlight"><code class="language-text">                         + left
+   A ───────────────────── B ──► + past B
+                         - right
+          - short of B</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Number</th>
+<th>Means</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asked to go, to 90 % of the set speed</td>
+<td>the rise time</td>
+<td>s</td>
+</tr>
+<tr>
+<td>Holding: speed error, mean</td>
+<td>measured − set, while holding; + too fast</td>
+<td>m/s</td>
+</tr>
+<tr>
+<td>Speed overshoot</td>
+<td>how far the top speed went over the set speed</td>
+<td>%</td>
+</tr>
+<tr>
+<td>Hardest slowing</td>
+<td>the strongest braking (speed smoothed over 0.5 s)</td>
+<td>m/s²</td>
+</tr>
+<tr>
+<td>Largest jerk</td>
+<td>how suddenly the braking or speeding up changed</td>
+<td>m/s³</td>
+</tr>
+<tr>
+<td>First slowing to stopped</td>
+<td>from the last moment at 90 % of the set speed to standing still</td>
+<td>s</td>
+</tr>
+<tr>
+<td>Rolled after the command hit 0</td>
+<td>the brakes' share of the stop</td>
+<td>m</td>
+</tr>
+<tr>
+<td>The last metre took; crept in it</td>
+<td>a slow creep up to B shows here (under 0.15 m/s)</td>
+<td>s; m</td>
+</tr>
+<tr>
+<td>Stop: past B, left of the line</td>
+<td>where it stopped, by the EKF, the truth (Gazebo) or the tape (car)</td>
+<td>m</td>
+</tr>
+<tr>
+<td>Furthest past B</td>
+<td>the worst moment, even if it rolled back</td>
+<td>m</td>
+</tr>
+<tr>
+<td>GPS part</td>
+<td>real (tape or truth) − the EKF's view</td>
+<td>m</td>
+</tr>
+</tbody>
+</table></div>
+<p>The speeds come from Gazebo's truth in the sim, from the wheels (<code>/vehicle/odom</code>) on the
+car. <code>tools/atob_score.py</code>'s header says which topic gives each number.</p>
+<h3 id="why-tape-the-stop-on-the-car">Why tape the stop on the car</h3>
+<p>The EKF's stop error says how well the <strong>controller</strong> did: the car stopped where it
+<em>thought</em> B was. It can't see its own GPS error.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Error</th>
+<th>Seen by</th>
+<th>Fix it with</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Control: the car didn't stop where it meant to</td>
+<td>the EKF's view</td>
+<td>the speed loop, <code>brake_lead</code>, the deceleration</td>
+</tr>
+<tr>
+<td>GPS: the car isn't where it thinks it is</td>
+<td>the tape minus the EKF (the "GPS part")</td>
+<td>RTK, a better B mark, the antenna offset</td>
+</tr>
+</tbody>
+</table></div>
+<p>So at the car: mark B on the ground, drive, and tape the stop from the mark (along the
+line, then across it). <code>--taped ALONG ACROSS</code> gives the scorer the real answer, and it
+splits the two errors. In Gazebo the truth does the tape's job. The B mark is only as
+good as the GPS that placed it: average the fix for 30 s (section 5).</p>
+<p>To record a run: <code>tools/record.sh</code> records the EKF, the wheels and <code>/control/cmd_vel</code>.
+For B from the goto's feedback, also record <code>/goto/_action/feedback</code> (a hidden topic:
+<code>ros2 bag record --include-hidden-topics</code>), <code>/drivers/goto/cmd_vel</code>, and in Gazebo
+<code>/vehicle/gazebo/truth</code>.</p>
 </section>
 <section class="card"><h2 id="5-where-am-i-is-the-hard-part">5. "Where am I?" is the hard part</h2>
 <div class="table-wrap"><table>
@@ -518,6 +632,12 @@ map with <code>tools/make_map.py</code> (it already makes <code>empty</code> and
 <td>Gazebo</td>
 <td><code>pixi run sim</code>, then the GPS goal above; <code>pixi run sim-check --goto</code></td>
 <td>GPS, both EKFs, Nav2, stopping at B; the goto driver's stop</td>
+</tr>
+<tr>
+<td>3b</td>
+<td>Gazebo, the whole picture</td>
+<td><code>pixi run demo</code>: Gazebo, RViz, the HUD and the map window in one go. Give a goal with RViz's "2D Goal Pose", or the map window's search, then DRIVE HERE and CONFIRM. With a box in the lane and the screens: <code>pixi run sim obstacle:=true hud:=true map:=true</code></td>
+<td>Nav2 planning round things, the screens, a goal set by a person</td>
 </tr>
 <tr>
 <td>4</td>

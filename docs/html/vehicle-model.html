@@ -7,7 +7,7 @@
 <!-- Generated from docs/vehicle-model.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The car as a linear model</h1>
-<div class="meta">30 min read · 11 sections</div></header>
+<div class="meta">32 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -574,6 +574,11 @@ same from 1 to 2.7 m/s: <strong>the car corrects in the same time at any of thos
 <td>50 ms GUESS</td>
 <td>the time between Hall pulses at low speed</td>
 </tr>
+<tr>
+<td>each actuator's dead time</td>
+<td>0 until measured</td>
+<td>the actuator tests' fit: a dead time, then a lag (<code>*_dead_time</code> in <code>vehicle.yaml</code>)</td>
+</tr>
 </tbody>
 </table></div>
 <div class="table-wrap"><table>
@@ -602,6 +607,9 @@ same from 1 to 2.7 m/s: <strong>the car corrects in the same time at any of thos
 </tr>
 </tbody>
 </table></div>
+<p>An actuator's dead time is part of the car, so it adds to <strong>every</strong> case, "none" too:
+<code>speed_delay(case)</code> adds <code>throttle_dead_time</code>, <code>lateral_delay(case)</code> adds
+<code>steer_dead_time</code>. Both are 0 until the car day, so the numbers below don't change yet.</p>
 <p>The lateral delays are lane keeping's, by camera. Nav2 following a path from the EKF has
 no camera in the loop (its own delay is the EKF's), so its margins sit between "none" and
 "typical". The heartbeat isn't a delay in normal driving: it is the most a command may
@@ -975,6 +983,12 @@ rolling about 0.3 s late.</p>
 <td>the speed loop's delay</td>
 </tr>
 <tr>
+<td><code>throttle_dead_time</code>, <code>brake_dead_time</code>, <code>steer_dead_time</code></td>
+<td>0 (not set)</td>
+<td>4.1, 4.3, 3.11: only if the data resolves them</td>
+<td>each loop's delay</td>
+</tr>
+<tr>
 <td>delays on the Orin</td>
 <td>the Mac's 26 ms</td>
 <td>car day 4d, 5</td>
@@ -985,6 +999,14 @@ rolling about 0.3 s late.</p>
 <p>At the car, the actuator tests print the numbers; then:</p>
 <pre class="highlight"><code class="language-bash">pixi run vehicle-model --set throttle_lag=0.25 --set drag=0.3 --set steer_lag=0.15</code></pre>
 <p>In code, <code>model.with_measured(report.yaml)</code> takes the actuator tests' report as it is.</p>
+<p><strong>One key list.</strong> Three readers take <code>vehicle.yaml</code>'s <code>actuators:</code>: this model, Gazebo's
+actuator model and ego. Each one uses a key or lists it as ignored (<code>NOT_LINEAR</code> here,
+<code>IGNORED</code> in <code>actuator_model.py</code>). <code>tools/tests/test_vehicle_model_tool.py</code> fails if a new
+key reaches only one. Gazebo ignores the dead times for now.</p>
+<p><strong>Check the path before you paste.</strong> Each number the tests print says which signal it goes
+from and to (<a href="actuator-tests.html#trusting-the-fits">Trusting the fits</a>). <code>throttle_lag</code> is
+throttle demand → throttle level. Through the wheel speed (today's ESP32) it is the
+throttle <strong>and</strong> the drivetrain together.</p>
 </section>
 <section class="card"><h2 id="what-its-for">What it's for</h2>
 <h3 id="tuning-the-speed-loop">Tuning the speed loop</h3>

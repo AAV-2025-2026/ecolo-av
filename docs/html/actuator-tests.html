@@ -7,7 +7,7 @@
 <!-- Generated from docs/actuator-tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Actuator tests: measure how the car moves</h1>
-<div class="meta">14 min read · 8 sections</div></header>
+<div class="meta">18 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -88,7 +88,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#how-it-fits">How it fits</a><a href="#the-tests">The tests</a><a href="#in-gazebo">In Gazebo</a><a href="#on-the-car">On the car</a><a href="#the-speed-loops-profile-todo-27">The speed loop&#x27;s profile (TODO 27)</a><a href="#what-it-saves">What it saves</a><a href="#proven-in-gazebo-15-oct">Proven in Gazebo (15 Oct)</a><a href="#the-code">The code</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#how-it-fits">How it fits</a><a href="#the-tests">The tests</a><a href="#in-gazebo">In Gazebo</a><a href="#on-the-car">On the car</a><a href="#trusting-the-fits">Trusting the fits</a><a href="#the-speed-loops-profile-todo-27">The speed loop&#x27;s profile (TODO 27)</a><a href="#what-it-saves">What it saves</a><a href="#proven-in-gazebo-15-oct">Proven in Gazebo (15 Oct)</a><a href="#the-code">The code</a></nav>
 <div class="lead"><p>One script runs the stage-3 and stage-4 tests of <code>tests.md</code>: it drives the car,
 logs what happened, and prints the numbers for <code>vehicle.yaml</code>. Built and proven in Gazebo
 (15 Oct); the same script runs on the car.</p>
@@ -333,6 +333,137 @@ limit only. If the script is killed (not Ctrl-C), restart ego to be sure.</p>
 </tr>
 </tbody>
 </table></div>
+<p>What each fit can still give, with what is missing:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Missing</th>
+<th>The fit falls back to</th>
+<th>Gives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Throttle level (ESP32)</td>
+<td>ego's speed ÷ <code>full_throttle_speed</code> → wheel speed</td>
+<td><code>max_accel</code>; the delay only if the pulses resolve it</td>
+</tr>
+<tr>
+<td>Brake level</td>
+<td>brake demand → IMU deceleration</td>
+<td><code>max_brake</code>, <code>brake_lag</code>, <code>brake_dead_time</code></td>
+</tr>
+<tr>
+<td>Brake level <strong>and</strong> demand</td>
+<td>"stop asked for" → IMU deceleration</td>
+<td>the whole stop's dead time and lag; no <code>vehicle.yaml</code> line</td>
+</tr>
+<tr>
+<td>Fine wheel speed (Hall pulses)</td>
+<td>each speed compared with the model's mean since the last pulse</td>
+<td>the gain; a delay under 2 pulse intervals is refused</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="trusting-the-fits">Trusting the fits</h2>
+<p>Each lag fit is now a <strong>dead time, then a lag</strong> (FOPDT). The old fit (a lag alone)
+stays beside it, so you can compare.</p>
+<pre class="highlight"><code class="language-text"> command ──► wait (dead time) ──► first-order lag (τ) ──► measured</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The path is named</strong></td>
+<td>each row and each <code>vehicle.yaml</code> line says <em>from</em> which signal <em>to</em> which: e.g. <code>throttle level -&gt; wheel speed</code>, never <code>cmd_vel -&gt; speed</code> (that would measure ego's ramp and the speed loop too)</td>
+</tr>
+<tr>
+<td><strong>The rms is printed</strong></td>
+<td>with each fit, in the signal's units; the old fit's rms beside it</td>
+</tr>
+<tr>
+<td><strong>True times</strong></td>
+<td>the fits use each message's arrival time (<code>t_*</code> columns), not the 50 Hz copies</td>
+</tr>
+<tr>
+<td><strong>A dead time counts</strong></td>
+<td>only if it is longer than the resolution, and fits at least 1.1 × better than a lag alone</td>
+</tr>
+<tr>
+<td><strong>Refused, with a reason</strong></td>
+<td>a lag shorter than the data can resolve gets no <code>vehicle.yaml</code> line, and a NOTE says why</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The resolution</strong> is two fresh values (Nyquist), plus what noise blurs:</p>
+<pre class="highlight"><code class="language-text">resolution = 2 × (time between fresh values) + rms ÷ (slope × √moving samples)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Fresh values every</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a level at 50 Hz</td>
+<td>0.02 s</td>
+<td>0.04 s</td>
+</tr>
+<tr>
+<td>Hall wheel speed, 8 holes on a 0.30 m wheel, at 1 m/s</td>
+<td>0.118 m ÷ 1 m/s = 0.12 s</td>
+<td>0.24 s</td>
+</tr>
+<tr>
+<td>... at 0.5 m/s</td>
+<td>0.24 s</td>
+<td>0.47 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>So at walking pace a 0.1 s throttle lag can't be read from the wheel speed: use the
+throttle level, or the IMU. <code>analysis.pulse_interval()</code> works it out before a run.</p>
+<p><strong>Steering play</strong> is measured first (<code>steer_play</code>: where it settles after moves up and
+moves down), then the lag is fitted with it. Left out, play looks like a longer lag.</p>
+<p><strong>Tested on pretend data</strong> (<code>test/test_robustness.py</code>) with play, Hall pulses, noise,
+no brake level and known dead times:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Tolerance it meets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dead time + lag, from a level</td>
+<td>10 ms (40 ms with 5% noise)</td>
+</tr>
+<tr>
+<td>steering with 0.02-0.04 rad play</td>
+<td>rate 3%, play 3 mrad, lag 10 ms, dead time 25 ms</td>
+</tr>
+<tr>
+<td>Hall pulses, up to 3 m/s</td>
+<td><code>max_accel</code> 2%; total delay 40 ms or 10%</td>
+</tr>
+<tr>
+<td>Hall pulses, under 1 m/s</td>
+<td><code>max_accel</code> 5%; the 0.15 s delay <strong>refused</strong></td>
+</tr>
+<tr>
+<td>brake from the IMU only</td>
+<td><code>max_brake</code> 2%; lag and dead time 20 ms</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="the-speed-loops-profile-todo-27">The speed loop's profile (TODO 27)</h2>
 <p>The spine's speed loop has two profiles (<a href="vehicle-model.html#tuning-the-speed-loop">Tuning the speed
@@ -395,7 +526,7 @@ most. The e-stop person watches.</p>
 <tbody>
 <tr>
 <td><code>log.csv</code></td>
-<td>50 rows a second: commands, speed, steering, throttle, brake, wheels, IMU, pose, GPS</td>
+<td>50 rows a second: commands, speed, steering, throttle, brake, wheels, IMU, pose, GPS, ego's command; and each value's arrival time (<code>t_speed</code>, <code>t_imu</code>...)</td>
 </tr>
 <tr>
 <td><code>summary.txt</code></td>
@@ -403,7 +534,7 @@ most. The e-stop person watches.</p>
 </tr>
 <tr>
 <td><code>meta.yaml</code></td>
-<td>the test, the source, the cap and envelope, ego's limits, <code>vehicle.yaml</code> then, the steps</td>
+<td>the test, the source, the cap and envelope, ego's limits, <code>vehicle.yaml</code> then, the steps; and <code>shaping</code>: what shaped the commands</td>
 </tr>
 <tr>
 <td><code>bag/</code></td>
@@ -411,7 +542,40 @@ most. The e-stop person watches.</p>
 </tr>
 </tbody>
 </table></div>
-<p><code>pixi run actuator-test --analyse &lt;folder&gt;</code> prints the report again from <code>log.csv</code>.</p>
+<p><code>pixi run actuator-test --analyse &lt;folder&gt;</code> prints the report again from <code>log.csv</code>.
+Older logs (no <code>t_*</code> columns, no <code>shaping</code>) still work: the fits use the rows' times.</p>
+<p><code>shaping</code> in <code>meta.yaml</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Holds</th>
+<th>When unknown</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>backend</code></td>
+<td><code>legacy</code>, <code>spine</code>, <code>gazebo</code>, <code>gazebo-spine</code>, <code>bench</code></td>
+<td><code>unknown</code></td>
+</tr>
+<tr>
+<td><code>speed_loop</code></td>
+<td>the profile (<code>default</code>, <code>smooth</code>), or "none: open loop" on the ESP32</td>
+<td>on the car's spine: built into the firmware, so write it down</td>
+</tr>
+<tr>
+<td><code>full_throttle_speed</code></td>
+<td>the legacy bridge's (its open loop)</td>
+<td><code>unknown</code>, or <code>n/a</code></td>
+</tr>
+<tr>
+<td><code>ego</code>, <code>ego_changed</code></td>
+<td>ego's limits (its ramp is before the backend); what the test lifted</td>
+<td>"ego did not answer"</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="proven-in-gazebo-15-oct">Proven in Gazebo (15 Oct)</h2>
 <p><code>world:=empty</code>, <code>sim_speed:=3</code>, <code>vehicle.yaml</code>'s guessed numbers in the actuator model.
@@ -633,6 +797,10 @@ car measures it. <code>steer-sweep --sim</code> still reads 0.495 (the deadband)
 <tr>
 <td><code>analysis.py</code>, <code>reports.py</code></td>
 <td>the maths and the report: no ROS, unit-tested</td>
+</tr>
+<tr>
+<td><code>test/synthetic.py</code>, <code>test/test_robustness.py</code></td>
+<td>pretend data with play, Hall pulses, noise; the fits must give the numbers back or refuse</td>
 </tr>
 <tr>
 <td><code>test/fake_car.py</code></td>
