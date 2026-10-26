@@ -50,3 +50,12 @@ change, never the logic:
   (and its line in `CMakeLists.txt`): 2025-26 test aids that nothing started.
   `lane_follower.launch.py fake:=true` does what the test launch did. The naming and
   cleanup audit, `docs/designs/2026-10-26_naming-and-cleanup.md`.
+- 26 Oct 2026: `scripts/control_interface.py`: no lane message for `stop_wait_s` now slows
+  the car at `decel_rate`, as lost lines do, instead of one zero command after a fixed
+  2 s (`docs/designs/2026-10-25_DRIFT_REPORT.md`, item 7). `stop_wait_s` was read but
+  never used: it is now that wait, 0.3 s (was 2.0), below twist_mux's 0.5 s for the AI
+  slot. The slow-down moved from the message callback to the 0.1 s watchdog timer, with
+  the time between ticks, not a fixed 0.1 s a message. The watchdog's times are on the
+  node's clock, not `time.time()`. New: `scripts/lane_speed.py` (the rule, no ROS),
+  `test/test_lane_speed.py`; `CMakeLists.txt` installs the module and runs the test;
+  `package.xml` adds the test dependencies.

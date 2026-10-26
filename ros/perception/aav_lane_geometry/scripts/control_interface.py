@@ -8,6 +8,8 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist, TwistStamped
 from std_msgs.msg import String
 from aav_lane_geometry.msg import LaneGeometry
+# aav: the slow-down rule, in a module with no ROS (lane_speed.py, beside this script).
+from lane_speed import AI_SLOT_TIMEOUT_S, stopping_speed
 
 
 class VehicleState:
@@ -55,7 +57,9 @@ class ControlInterface(Node):
         self.declare_parameter('lane_change_offset_threshold', 0.40)
         self.declare_parameter('lane_change_speed', 1.0)
         self.declare_parameter('lane_change_timeout_s', 8.0)
-        self.declare_parameter('stop_wait_s', 2.0)
+        # aav: no lane message for stop_wait_s: slow down. Shorter than twist_mux's 0.5 s
+        # for the AI slot, so the slow-down reaches the car before ego stops it.
+        self.declare_parameter('stop_wait_s', 0.3)
         self.declare_parameter('decel_rate', 0.5)
         self.declare_parameter('accel_rate', 0.3)
         self.declare_parameter('pid_kp', 0.8)
@@ -88,7 +92,11 @@ class ControlInterface(Node):
         self.last_offset = 0.0
         self.offset_rate = 0.0
         self.state_entry_t = time.time()
-        self.last_msg_t = time.time()
+        # aav: the watchdog's times are on the node's clock (Gazebo's under use_sim_time,
+        # as twist_mux's and ego's are).
+        self.last_msg_t = self.now_s()
+        self._tick_t = self.now_s()
+        self._sent_t = self.now_s()
         self.lc_peak_offset = 0.0
         self._last_t = time.time()
 
@@ -102,9 +110,18 @@ class ControlInterface(Node):
 
         self.get_logger().info('Control interface ready. Subscribing to /perception/lane/geometry and publishing /drivers/ai/cmd_vel')
         self.get_logger().info(f'invert_offset_sign={self.invert_offset_sign}')
+        if self.stop_wait >= AI_SLOT_TIMEOUT_S - 0.1:
+            self.get_logger().warning(
+                f'stop_wait_s={self.stop_wait} is not below twist_mux\'s {AI_SLOT_TIMEOUT_S} s '
+                'for the AI slot: when lane messages stop, ego stops the car first, not this '
+                'node\'s slow-down')
+
+    def now_s(self) -> float:
+        """Return the node's clock in seconds (aav)."""
+        return self.get_clock().now().nanoseconds * 1e-9
 
     def geometry_cb(self, msg: LaneGeometry):
-        self.last_msg_t = time.time()
+        self.last_msg_t = self.now_s()
         now = time.time()
         dt = max(now - self._last_t, 1e-4)
         self._last_t = now
@@ -174,11 +191,7 @@ class ControlInterface(Node):
 
         elapsed = time.time() - self.state_entry_t
         if self.current_speed > 0.0:
-            self.current_speed = max(0.0, self.current_speed - self.decel_rate * 0.1)
-            cmd = Twist()
-            cmd.linear.x = self.current_speed
-            cmd.angular.z = self.last_steer
-            self.send(cmd)
+            # aav: watchdog_cb slows the car, at decel_rate, whether messages come or not.
             self.publish_status(msg, f'NO_LANE decelerating t={elapsed:.1f}s')
         else:
             self.send(Twist())
@@ -204,6 +217,7 @@ class ControlInterface(Node):
         out.header.frame_id = 'base_link'
         out.twist = cmd
         self.pub_cmd.publish(out)
+        self._sent_t = self.now_s()
 
     def build_cmd_lane_keep(self, msg: LaneGeometry) -> Twist:
         cmd = Twist()
@@ -235,11 +249,23 @@ class ControlInterface(Node):
         self.pub_stat.publish(s)
 
     def watchdog_cb(self):
-        elapsed = time.time() - self.last_msg_t
-        if elapsed > 2.0 and self.state != VehicleState.NO_LANE_STOPPING:
-            self.get_logger().warning(f'No geometry message for {elapsed:.1f}s -> stopping', throttle_duration_sec=2.0)
-            self.send(Twist())
+        # aav: no message for stop_wait_s slows the car at decel_rate, as lost lines do,
+        # instead of one zero command after 2 s. The slow-down runs here, every 0.1 s, so
+        # it goes on when the messages stop (lane_speed.stopping_speed).
+        now = self.now_s()
+        dt = now - self._tick_t
+        self._tick_t = now
+        elapsed = now - self.last_msg_t
+        if elapsed > self.stop_wait and self.state != VehicleState.NO_LANE_STOPPING:
+            self.get_logger().warning(f'No geometry message for {elapsed:.1f}s -> slowing down', throttle_duration_sec=2.0)
             self.transition(VehicleState.NO_LANE_STOPPING)
+        if self.state == VehicleState.NO_LANE_STOPPING and self.current_speed > 0.0:
+            self.current_speed = stopping_speed(self.current_speed, self.decel_rate, dt,
+                                                now - self._sent_t)
+            cmd = Twist()
+            cmd.linear.x = self.current_speed
+            cmd.angular.z = self.last_steer if self.current_speed > 0.0 else 0.0
+            self.send(cmd)
 
 
 def main(args=None):

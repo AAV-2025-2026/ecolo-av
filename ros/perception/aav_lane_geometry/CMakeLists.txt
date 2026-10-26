@@ -17,10 +17,18 @@ install(PROGRAMS
   scripts/fake_lane_geometry_pub.py
   DESTINATION lib/${PROJECT_NAME}
 )
+# control_interface.py imports it from beside itself.
+install(FILES scripts/lane_speed.py DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch msg
   DESTINATION share/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  # The slow-down rule (no ROS needed).
+  find_package(ament_cmake_pytest REQUIRED)
+  ament_add_pytest_test(test_lane_speed test/test_lane_speed.py)
+endif()
 
 ament_export_dependencies(rosidl_default_runtime)
 ament_package()

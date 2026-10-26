@@ -45,7 +45,7 @@ Every other driver outranks the AI slot, so a person, a test script or Nav2 alwa
 | `lane_change_offset_threshold`, `lane_change_rate_threshold` | 0.40 m, 0.05 m/s | both exceeded: LANE_CHANGING |
 | `lane_change_speed`, `lane_change_timeout_s` | 1.0 m/s, 8 s | |
 | `decel_rate`, `accel_rate` | 0.5, 0.3 m/s² | |
-| `stop_wait_s` | 2 s | read, but not used: no effect |
+| `stop_wait_s` | 0.3 s | no lane message this long: slow down. Keep it below twist_mux's 0.5 s for the AI slot |
 | `pid_kp`, `pid_ki`, `pid_kd` | 0.8, 0.01, 0.3 | |
 | `invert_offset_sign` | true | error = -offset, so + offset steers right |
 
@@ -64,10 +64,14 @@ Fake modes (`mode`): `straight`, `drift_right`, `drift_left`, `sine`, `sharp_cur
 ## Invariants
 
 - Drivers publish `TwistStamped` on `/drivers/<driver>/cmd_vel`: this one only on the AI slot.
-- No lines seen: the car slows at `decel_rate` and stops. It slows only while messages
-  keep arriving (the slow-down runs in the message callback).
-- No message for 2 s: the watchdog sends one zero command at once, a sudden stop, not a
-  slow-down.
+- No lines seen, or no message for `stop_wait_s`: the car slows at `decel_rate` and
+  stops (`NO_LANE_STOPPING`). The slow-down runs on a 0.1 s timer, so it goes on when
+  the messages stop. The rule is `scripts/lane_speed.py` (no ROS).
+- It never starts a slow-down from speed once its own commands have been quiet for
+  twist_mux's 0.5 s: by then ego is already stopping the car, and the slow-down would
+  pull away again. It sends 0 instead.
+- The watchdog's times are on the node's clock: Gazebo's in `pixi run sim`, as
+  twist_mux's and ego's are.
 - Lane width, offsets and radii are metres; turn rate is rad/s, + = left.
 - The scripts should run through `python3`, not their `#!` line: on a Mac, `/usr/bin/env`
   drops the library path their messages need (`docs/mac.md`). The launch file does this
@@ -80,7 +84,12 @@ Fake modes (`mode`): `straight`, `drift_right`, `drift_left`, `sine`, `sharp_cur
 
 ## Verification
 
-This package has no tests of its own.
+| Test | Covers |
+|---|---|
+| `test/test_lane_speed.py` | the slow-down, its stop, and that `stop_wait_s` and the timeout match twist_mux's |
+
+Quick, without ROS: `cd ros/perception/aav_lane_geometry && python3 -m pytest -q`
+(`tools/test.sh` runs it).
 
 ```sh
 pixi run build && colcon test --packages-select aav_lane_geometry && colcon test-result --verbose
