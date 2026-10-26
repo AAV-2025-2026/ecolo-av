@@ -28,6 +28,7 @@ driver is added.
 | RC transmitter, on "RC via ROS" (proposed) | `/drivers/rc/cmd_vel` | 95 |
 | Keyboard or another remote | `/drivers/keyboard/cmd_vel` | 90 |
 | Actuator tests ([Actuator tests](actuator-tests.md)) | `/drivers/tests/cmd_vel` | 60 |
+| No-timeout lock: today's ESP32 firmware (`frame_version: 1`) has no command timeout (blocks everything below) | `/safety/legacy_uart_bridge/lock` | 60 |
 | Scripted | `/drivers/scripted/cmd_vel` | 50 |
 | Replay | `/drivers/replay/cmd_vel` | 40 |
 | Stop-sign and sensor-watchdog locks (block everything below) | `/perception/stop_sign`, `/safety/sensor_watchdog/lock` | 30 |

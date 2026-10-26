@@ -501,6 +501,7 @@ The map panel needs the internet for its tiles: offline it shows the dots on a b
 | ☐ | theirs stopped: `aav_serial_bridge` inactive. **Never two drive paths** |
 | ☐ | which ESP32 firmware: the Rust (session 6 passed) or the C++ (**no timeout**: test 3.9 then fails, as expected) |
 | ☐ | `legacy.yaml`'s `frame_version`: 2 with the Rust, 1 with the C++ |
+| ☐ | with the C++ (1): the bridge's log says `no-timeout lock ON`. twist_mux then holds every program (scripted, point, Nav2, AI); the keyboard and the actuator tests below still drive. Leave `allow_programs_without_timeout: false` |
 | ☐ | everyone knows: **the throttle's strength is a guess.** Two guesses disagree by 5 times ([the car's model](vehicle-model.md): full throttle holds 15 m/s by the drag guess, 3 m/s by the ESP32's open loop). 0.3 m/s asked may spin the wheels much faster: the e-stop person watches 3.2 |
 
 | Where | Run |

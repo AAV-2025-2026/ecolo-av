@@ -51,6 +51,7 @@ How twist_mux picks:
 | Nav2 | `/drivers/nav/cmd_vel` | 20 |
 | AI (lane keeping) | `/drivers/ai/cmd_vel` | 10 |
 | **lock:** `/safety/estop` true | blocks everyone below 255 | 255 |
+| **lock:** `/safety/legacy_uart_bridge/lock` true: the ESP32's firmware has no timeout (`frame_version: 1`) | blocks scripted, replay, point, Nav2 and AI | 60 |
 | **lock:** `/perception/stop_sign` true | blocks point, Nav2 and AI | 30 |
 | **lock:** `/safety/sensor_watchdog/lock` true, or silent 1 s | blocks point, Nav2 and AI | 30 |
 

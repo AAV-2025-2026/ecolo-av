@@ -33,6 +33,9 @@ feedback comes back as `/vehicle/*`. Only one of these runs at a time.
   | `spine_bridge` | 0.1 s | 100 ms (spine-core) | 0.2 s |
   | `legacy_uart_bridge` | 0.3 s | none with `frame_version: 1`, the car's setting today | 0.3 s, and only while the bridge runs |
 - Arming is refused during an e-stop or while the output mux gate is not OPEN.
+- `legacy_uart_bridge` with `frame_version: 1` (no board watchdog) says true on
+  `/safety/legacy_uart_bridge/lock`: twist_mux's no-timeout lock (60) holds every
+  program; only people and the actuator tests drive.
 - The Python and Rust bridges behave the same, topic for topic.
 
 ## Side Effects

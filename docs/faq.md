@@ -110,8 +110,10 @@ The highest priority that spoke in the last 0.5 s.
 | AI | 10 |
 
 A lock holds every driver below its priority. A stop sign (30) and the sensor watchdog
-(30) hold go-to, Nav2 and the AI, never a person or a test. The e-stop (255) holds
-everyone. The table lives in `ros/command_mux/aav_command_mux/config/twist_mux.yaml`.
+(30) hold go-to, Nav2 and the AI, never a person or a test. The no-timeout lock (60)
+holds every program while the car's ESP32 runs firmware with no command timeout
+(`frame_version: 1`): only people and the actuator tests drive then. The e-stop (255)
+holds everyone. The table lives in `ros/command_mux/aav_command_mux/config/twist_mux.yaml`.
 
 ### What happens when I let go of the joystick?
 

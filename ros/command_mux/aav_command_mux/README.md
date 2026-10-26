@@ -43,6 +43,7 @@ Locks (`std_msgs/Bool`; a lock holds every input below its priority):
 | Name | Topic | Priority | Timeout | Notes |
 |---|---|---|---|---|
 | estop | `/safety/estop` | 255 | 0 (never on silence) | the backends also brake on it directly |
+| no_timeout | `/safety/legacy_uart_bridge/lock` | 60 | 0 | `aav_legacy`: true with `frame_version: 1` (firmware with no command timeout); holds every program, not people or the actuator tests |
 | stop_sign | `/perception/stop_sign` | 30 | 0 | `aav_detector`; holds point, Nav2 and AI |
 | sensors | `/safety/sensor_watchdog/lock` | 30 | 1.0 s | `aav_safety`; silence locks too |
 
@@ -58,7 +59,11 @@ Launch arguments:
 - One output: ego obeys only `/control/cmd_vel`. Drivers never talk to the wheels.
 - Highest fresh priority wins; freshness is arrival time, header stamps are ignored.
 - No fresh input: nothing is published, and ego stops after its own timeout.
-- Locks never hold a person (100, 95, 90) or a test (60, 50, 40); estop holds everyone.
+- Locks never hold a person (100, 95, 90); estop holds everyone.
+- `no_timeout` (60) holds every program (scripted 50, replay 40, point, Nav2, AI) while
+  the car's firmware has no command timeout. The actuator tests (60) still pass: a person
+  runs them. Timeout 0: without the legacy bridge it never locks.
+- `stop_sign` and `sensors` (30) never hold a test (60, 50, 40).
 - `sensors` is fail-safe: the watchdog sends false 10 times a second, so 1 s of silence
   locks Nav2, the point driver and AI.
 - `sensor_lock` must be `true` or `false`; anything else raises.

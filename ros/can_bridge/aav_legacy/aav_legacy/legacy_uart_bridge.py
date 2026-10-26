@@ -11,6 +11,10 @@ Subscribes  control/car/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego'
                               per command passed on (TODO 50)
             safety/estop      std_msgs/Bool (true: full brake now, until false)
 Publishes   system/source     aav_interfaces/DataSource, latched: the actuators are REAL
+            safety/legacy_uart_bridge/lock  std_msgs/Bool, latched and again at 5 Hz:
+                              true with frame_version 1 (no firmware timeout), so
+                              twist_mux's no_timeout lock (priority 60) holds every program
+                              and only people and the actuator tests drive; false with 2
             and, only with uplink true (the ESP32's uplink frames on its TX1; TODO 50, 48):
             vehicle/status    aav_interfaces/VehicleStatus, 10 Hz: mode, armed, e-stop, faults
             vehicle/steering  aav_interfaces/ActuatorState: ego's angle, the Jrk's position
@@ -31,7 +35,9 @@ The bridge only relays the counter, never makes one: when ego or the output mux 
 it keeps sending its stale-stop frames (brake, no throttle), with the last counter
 unchanged. If the command goes stale (cmd_timeout) or /safety/estop is true, it sends
 brake frames. With frame_version 1 it can't protect against its own crash, because the
-C++ firmware has no timeout.
+C++ firmware has no timeout: so it locks the programs out (uart_relay.programs_locked).
+allow_programs_without_timeout (default false) lifts that lock, for a supervised stand
+only (wheels off the ground, a person at the e-stop).
 """
 
 import signal
@@ -40,7 +46,7 @@ from aav_interfaces.msg import (ActuatorState, DataSource, Heartbeat, RcSticks, 
                                 VehicleStatus)
 from aav_legacy import uplink_reader as ur
 from aav_legacy.legacy_protocol import LegacyMapping
-from aav_legacy.uart_relay import Relay
+from aav_legacy.uart_relay import programs_locked, Relay
 from ackermann_msgs.msg import AckermannDriveStamped
 import rclpy
 from rclpy.executors import ExternalShutdownException
@@ -60,6 +66,7 @@ class LegacyUartBridge(Node):
         timeout = self.declare_parameter('cmd_timeout', 0.3).value
         version = self.declare_parameter('frame_version', 2).value
         self.uplink = self.declare_parameter('uplink', False).value
+        allow = self.declare_parameter('allow_programs_without_timeout', False).value
         uplink_timeout = self.declare_parameter('uplink_timeout', 0.2).value
         defaults = LegacyMapping()
         mapping = LegacyMapping(**{
@@ -95,10 +102,27 @@ class LegacyUartBridge(Node):
                                     ('steering', '/vehicle/steering'),
                                     ('brake', '/vehicle/brake'), ('rc', '/vehicle/rc'))]
         self.source_pub.publish(announcement)
+        # The no-timeout lock: latched for late joiners that ask for it, and sent again at
+        # 5 Hz, as twist_mux subscribes volatile and would miss a message sent before it
+        # started (on the car it runs on the Orin, this on the Motor Pi).
+        self.lock = Bool(data=programs_locked(version, allow))
+        self.lock_pub = self.create_publisher(Bool, 'safety/legacy_uart_bridge/lock', latched)
+        self.lock_pub.publish(self.lock)
+        self.create_timer(0.2, lambda: self.lock_pub.publish(self.lock))
         if version == 1:
             self.get_logger().warning(
                 'frame_version 1: the C++ firmware has no command timeout and no heartbeat; '
                 'keep the e-stop in reach')
+            if self.lock.data:
+                self.get_logger().warning(
+                    'no-timeout lock ON (/safety/legacy_uart_bridge/lock): twist_mux holds '
+                    'every program (scripted, replay, point, Nav2, AI); people and the '
+                    'actuator tests still drive')
+            else:
+                self.get_logger().error(
+                    'allow_programs_without_timeout: programs may drive through firmware '
+                    'with NO command timeout. Supervised stand only: wheels off the ground, '
+                    'a person at the e-stop')
         else:
             self.get_logger().info(
                 'frame_version 2: relaying the counter of the Orin from control/car/heartbeat; '

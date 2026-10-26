@@ -156,6 +156,9 @@ Two more, for the automatic drivers only (Nav2 and the AI slot; never a person o
 !!! warning "Today's car has no layer 5"
   The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays
   on. Keep the wheels off the ground and the e-stop in hand: see [Firmware](firmware.md).
+  So, with `frame_version: 1`, the bridge locks the programs out: twist_mux's no-timeout
+  lock (60) holds scripted, replay, point, Nav2 and AI. Only people and the actuator
+  tests drive.
 
 ## 8. The real graph, three ways
 

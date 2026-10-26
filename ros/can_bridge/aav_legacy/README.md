@@ -8,7 +8,20 @@ turns the 2025-26 UDP wheel encoder into `/vehicle/odom`. `car.launch.py` starts
 bridge with `actuators:=uart` (today's wiring), on the Motor Pi.
 
 **Read docs/firmware.md before driving.** The ESP32's 2025-26 C++ firmware has no
-command timeout: if the bridge dies, the last throttle stays on.
+command timeout: if the bridge dies, the last throttle stays on. So with
+`frame_version: 1` the bridge locks the programs out (the no-timeout lock, below).
+
+### The no-timeout lock
+
+| `frame_version` | `allow_programs_without_timeout` | `/safety/legacy_uart_bridge/lock` | Who drives |
+|---|---|---|---|
+| 1 (the C++, no timeout) | false (the default) | **true** | people (joy, RC, keyboard) and the actuator tests (60) only |
+| 1 | true: **supervised stand only**, wheels off the ground | false | everyone |
+| 2 (the Rust, brakes after 100 ms) | either | false | everyone |
+
+twist_mux's `no_timeout` lock (priority 60, timeout 0) reads it. It holds every input
+below 60: scripted, replay, point, Nav2, AI. Timeout 0, so where no legacy bridge runs
+it never locks.
 
 ## Interface
 
@@ -27,6 +40,7 @@ command timeout: if the bridge dies, the last throttle stays on.
 | sub | `/control/car/heartbeat` | aav_interfaces/Heartbeat |
 | sub | `/safety/estop` | std_msgs/Bool |
 | pub | `/system/source` (latched, REAL) | aav_interfaces/DataSource |
+| pub | `/safety/legacy_uart_bridge/lock` (latched, and again at 5 Hz) | std_msgs/Bool |
 | pub, `uplink` only | `/vehicle/status` (10 Hz) | aav_interfaces/VehicleStatus |
 | pub, `uplink` only | `/vehicle/steering`, `/vehicle/brake` | aav_interfaces/ActuatorState |
 | pub, `uplink` only | `/vehicle/rc` | aav_interfaces/RcSticks |
@@ -41,6 +55,7 @@ command timeout: if the bridge dies, the last throttle stays on.
 | bridge | `port`, `baud` | `/dev/ttyAMA0`, 115200 | |
 | bridge | `rate_hz`, `cmd_timeout` | 50.0, 0.3 | Hz, s |
 | bridge | `frame_version` | 1 today (C++ firmware); 2 for the Rust firmware | |
+| bridge | `allow_programs_without_timeout` | false; true only on a supervised stand | |
 | bridge | `uplink`, `uplink_timeout` | false, 0.2 | s |
 | bridge | `max_steering_angle` | from `vehicle.yaml` | rad |
 | bridge | `steering_sign` | -1.0 (TODO check) | |
@@ -62,7 +77,7 @@ and `aav_rc`'s `rc_driver` beside the bridge.
 |---|---|---|
 | `legacy_uart_bridge.py`, `encoder_udp.py` | yes | the nodes |
 | `legacy_protocol.py` | no | the frames: `pack_frame` (v1, 13 bytes), `pack_frame_v2` (17 bytes), `unpack_uplink` (35 bytes), `UplinkParser`, `to_legacy`, `stop_command`, `EncoderSpeed` |
-| `uart_relay.py` | no | `Relay`: what to write each tick |
+| `uart_relay.py` | no | `Relay`: what to write each tick; `programs_locked`: the no-timeout lock |
 | `uplink_reader.py` | no | `UplinkReader`, `status_fields`, `steering_state`, `brake_state`, `rc_fields` |
 
 ## Invariants
@@ -74,6 +89,9 @@ and `aav_rc`'s `rc_driver` beside the bridge.
   ESP32 firmware brakes when it hasn't changed for 100 ms.
 - Version 2 frames and the uplink use CRC-8/SAE-J1850, as `aav.dbc`. Both sides check
   `firmware/spine/crates/legacy-link/vectors.json`.
+- With `frame_version: 1` and no override, the lock says true: no program drives
+  through firmware with no command timeout. It is sent again at 5 Hz, as twist_mux's
+  lock subscription is volatile: a mux started (or restarted) later still hears it.
 - ROS's steering is + left; `steering_sign` flips it for the ESP32.
 - `encoder_udp` stops publishing after `timeout_s` of silence, rather than say 0 m/s.
 - Never run `encoder_udp` where the `spine` part runs: two `/vehicle/odom` publishers

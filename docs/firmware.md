@@ -201,7 +201,9 @@ add `-t upload` to flash it. PlatformIO's downloads, about 1.5 GB, go into
 WiFi details: fine for a test build, but that board can't join the car's WiFi.
 
 !!! warning "Before driving on the legacy path"
-  1. **No command timeout.** If frames stop, the last throttle stays on.
+  1. **No command timeout.** If frames stop, the last throttle stays on. So the bridge
+     locks every program out (twist_mux's no-timeout lock, priority 60): only people and
+     the actuator tests drive. `allow_programs_without_timeout: true` lifts it, on stands only.
   2. **The OTA update page has no password.** Anyone on the WiFi can flash the car.
   3. **No feedback.** No speed, steering or faults come back.
   4. **The steering sign is unconfirmed.** Check it with the wheels off the ground.
