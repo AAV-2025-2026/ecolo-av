@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">36 min read · 16 sections</div></header>
+<div class="meta">37 min read · 16 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -155,7 +155,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 <tbody>
 <tr>
 <td><a href="#sensors">sources</a></td>
-<td><code>aav_sensors</code>, <code>aav_imu_yahboom</code>, <code>battery_monitor</code>, <code>ti_ros2_driver</code>; <code>aav_camera_stream</code> (<a href="#more-packages-see-their-readmes">one line</a>)</td>
+<td><code>aav_sensors</code>, <code>aav_imu_yahboom</code>, <code>aav_battery_victron</code>, <code>aav_radar_ti</code>; <code>aav_camera_stream</code> (<a href="#more-packages-see-their-readmes">one line</a>)</td>
 </tr>
 <tr>
 <td><a href="#description-and-localization">bringup, localization</a></td>
@@ -163,11 +163,11 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><a href="#drivers">drivers</a></td>
-<td><code>aav_teleop</code>, <code>aav_actuator_tests</code>, <code>aav_scripted</code>, <code>aav_goto</code>, <code>aav_language</code>, <code>aav_navigation</code>; <code>aav_rc</code>, <code>aav_routes</code> (<a href="#more-packages-see-their-readmes">one line</a>)</td>
+<td><code>aav_teleop</code>, <code>aav_actuator_tests</code>, <code>aav_scripted</code>, <code>aav_drive_to_point</code>, <code>aav_language</code>, <code>aav_navigation</code>; <code>aav_rc</code>, <code>aav_routes</code> (<a href="#more-packages-see-their-readmes">one line</a>)</td>
 </tr>
 <tr>
 <td><a href="#mux-and-ego">command_mux, io_mux, ego</a></td>
-<td><code>aav_mux</code>, <code>aav_io_mux</code>, <code>aav_ego</code></td>
+<td><code>aav_command_mux</code>, <code>aav_io_mux</code>, <code>aav_ego</code></td>
 </tr>
 <tr>
 <td><a href="#backends">can_bridge, sim</a></td>
@@ -303,7 +303,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 </tbody>
 </table></div>
-<h3 id="battery_monitor">battery_monitor</h3>
+<h3 id="aav_battery_victron">aav_battery_victron</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -338,7 +338,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
-<td><code>ros2 run battery_monitor battery_monitor --ros-args -p port:=/dev/ttyUSB0</code></td>
+<td><code>ros2 run aav_battery_victron battery_monitor --ros-args -p port:=/dev/ttyUSB0</code></td>
 </tr>
 <tr>
 <td><strong>Test</strong></td>
@@ -346,11 +346,11 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Read first</strong></td>
-<td><code>battery_monitor/battery_monitor.py</code></td>
+<td><code>aav_battery_victron/battery_monitor.py</code></td>
 </tr>
 </tbody>
 </table></div>
-<h3 id="ti_ros2_driver">ti_ros2_driver</h3>
+<h3 id="aav_radar_ti">aav_radar_ti</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -389,11 +389,11 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Test</strong></td>
-<td><code>ros2 run ti_ros2_driver mock_radar_publisher</code> stands in for it</td>
+<td><code>ros2 run aav_radar_ti mock_radar_publisher</code> stands in for it</td>
 </tr>
 <tr>
 <td><strong>Read first</strong></td>
-<td><code>ti_ros2_driver/pc_publisher.py</code></td>
+<td><code>aav_radar_ti/pc_publisher.py</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -683,7 +683,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 </tbody>
 </table></div>
-<h3 id="aav_goto">aav_goto</h3>
+<h3 id="aav_drive_to_point">aav_drive_to_point</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -706,7 +706,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td>the action <code>/goto</code>, <code>/localization/odom/global</code>, <code>/sensors/gps/fix</code> → <code>/drivers/goto/cmd_vel</code> (twist_mux priority 25)</td>
+<td>the action <code>/drive_to_point</code>, <code>/localization/odom/global</code>, <code>/sensors/gps/fix</code> → <code>/drivers/point/cmd_vel</code> (twist_mux priority 25)</td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
@@ -714,11 +714,11 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Status</strong></td>
-<td><span class="badge b-works">works</span> in Gazebo (<code>pixi run sim-check --goto</code>, 15 Oct); <span class="badge b-untested">untested</span> on the car</td>
+<td><span class="badge b-works">works</span> in Gazebo (<code>pixi run sim-check --drive-to-point</code>, 15 Oct); <span class="badge b-untested">untested</span> on the car</td>
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
-<td><code>pixi run sim</code>, then <code>pixi run goto --sim --ahead 20</code></td>
+<td><code>pixi run sim</code>, then <code>pixi run drive-to-point --sim --ahead 20</code></td>
 </tr>
 <tr>
 <td><strong>Test</strong></td>
@@ -726,7 +726,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Read first</strong></td>
-<td><a href="a-to-b.html">A to B</a>, then <code>aav_goto/approach.py</code> and <code>line.py</code></td>
+<td><a href="a-to-b.html">A to B</a>, then <code>aav_drive_to_point/approach.py</code> and <code>line.py</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -826,7 +826,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </table></div>
 </section>
 <section class="card"><h2 id="mux-and-ego">Mux and ego</h2>
-<h3 id="aav_mux">aav_mux</h3>
+<h3 id="aav_command_mux">aav_command_mux</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -861,7 +861,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
-<td><code>ros2 launch aav_mux mux.launch.py</code></td>
+<td><code>ros2 launch aav_command_mux mux.launch.py</code></td>
 </tr>
 <tr>
 <td><strong>Test</strong></td>
@@ -1240,7 +1240,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
-<td>inherited, rewritten: 2024-25 <code>camera_ros2_ws</code> (and <code>camera_Yolo_detection</code> for <code>training/</code>)</td>
+<td>inherited, rewritten: 2024-25 <code>camera_ros2_ws</code></td>
 </tr>
 <tr>
 <td><strong>Status</strong></td>
@@ -1561,7 +1561,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 <tbody>
 <tr>
 <td><strong>Does</strong></td>
-<td>our own 9 messages (such as <code>VehicleStatus</code>, <code>DataSource</code>, <code>Heartbeat</code>, <code>WheelSpeeds</code>) and 2 actions (<code>ScriptedDrive</code>, <code>GoTo</code>)</td>
+<td>our own 9 messages (such as <code>VehicleStatus</code>, <code>DataSource</code>, <code>Heartbeat</code>, <code>WheelSpeeds</code>) and 2 actions (<code>ScriptedDrive</code>, <code>DriveToPoint</code>)</td>
 </tr>
 <tr>
 <td><strong>Why</strong></td>
@@ -1993,7 +1993,7 @@ until the spine replaces it.</p>
 </tr>
 <tr>
 <td>4</td>
-<td>Is <code>battery_monitor</code>'s Victron on the car?</td>
+<td>Is <code>aav_battery_victron</code>'s Victron on the car?</td>
 </tr>
 </tbody>
 </table></div></section>

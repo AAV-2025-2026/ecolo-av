@@ -161,9 +161,9 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> turtle and the bench</td>
 </tr>
 <tr>
-<td>Goto: GPS A to B (15 Oct)</td>
-<td><code>aav_goto</code>: the <code>/goto</code> action, <code>pixi run goto</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --goto</code> drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half <code>max_brake</code>); a cancel, the e-stop and a GPS fault each stopped it. <span class="badge b-untested">untested</span> on the bench and the car (<a href="a-to-b.html">A to B</a>)</td>
+<td>Drive to point: GPS A to B (15 Oct)</td>
+<td><code>aav_drive_to_point</code>: the <code>/drive_to_point</code> action, <code>pixi run drive-to-point</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --drive-to-point</code> drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half <code>max_brake</code>); a cancel, the e-stop and a GPS fault each stopped it. <span class="badge b-untested">untested</span> on the bench and the car (<a href="a-to-b.html">A to B</a>)</td>
 </tr>
 <tr>
 <td>Plain English</td>
@@ -182,7 +182,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>twist_mux</td>
-<td><code>aav_mux</code></td>
+<td><code>aav_command_mux</code></td>
 <td><span class="badge b-works">works</span></td>
 </tr>
 <tr>
@@ -435,7 +435,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> on an Apple Silicon Mac (macOS 27), 10 Oct: build 18 s, <code>pixi run test</code> all green after one fix (GNU <code>coreutils</code>, see <a href="mac.html">Your Mac</a>)</td>
 </tr>
 <tr>
-<td>On the Mac: the turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, <code>pixi run doctor</code>, recording a drive</td>
+<td>On the Mac: the turtle, Gazebo headless, a Nav2 goal, the docs, <code>pixi run doctor</code>, recording a drive</td>
 <td><span class="badge b-works">works</span></td>
 </tr>
 <tr>

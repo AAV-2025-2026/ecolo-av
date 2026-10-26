@@ -495,7 +495,7 @@ discovery stays on it, and the whole Gazebo graph starts more. On Linux the 33rd
 <tr>
 <td>A Python node with <code>MultiThreadedExecutor</code> uses a whole CPU core</td>
 <td>rclpy 7.1.12's multi-threaded executor spins whenever any subscription gets messages</td>
-<td>use the default single-threaded executor; <code>scripted_driver</code> now does</td>
+<td>use the default single-threaded executor; <code>scripted_driver</code>, <code>point_driver</code> and <code>street_router</code> now do</td>
 </tr>
 <tr>
 <td>A script started through <code>#!/usr/bin/env python3</code> can't load our messages</td>
@@ -600,10 +600,6 @@ discovery stays on it, and the whole Gazebo graph starts more. On Linux the 33rd
 <tr>
 <td>Recording a drive (<code>tools/record.sh</code>)</td>
 <td><span class="badge b-works">works</span> on the Mac, after the <code>tools/ros.sh</code> fix above</td>
-</tr>
-<tr>
-<td>The Rust listener</td>
-<td><span class="badge b-works">works</span> on the Mac: builds in 15 s</td>
 </tr>
 <tr>
 <td>Joystick on a Mac</td>

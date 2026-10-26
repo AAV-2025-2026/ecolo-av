@@ -163,11 +163,6 @@ package, one per row: <a href="packages.html">Packages</a>.</p></div>
 <td><a href="infrastructure.html">Infrastructure</a></td>
 </tr>
 <tr>
-<td><code>examples/</code></td>
-<td>a first ROS node in Rust</td>
-<td></td>
-</tr>
-<tr>
 <td><code>docs/</code></td>
 <td>these pages, the topic contract, and the history</td>
 <td></td>
@@ -215,7 +210,7 @@ finder).</p>
 <td>ego</td>
 </tr>
 <tr>
-<td><code>aav_mux</code></td>
+<td><code>aav_command_mux</code></td>
 <td>twist_mux's settings: the priorities and the locks</td>
 <td>command_mux</td>
 </tr>
@@ -230,7 +225,7 @@ finder).</p>
 <td>drivers</td>
 </tr>
 <tr>
-<td><code>aav_goto</code></td>
+<td><code>aav_drive_to_point</code></td>
 <td>drive to one GPS point and stop there smoothly</td>
 <td>drivers</td>
 </tr>
@@ -564,13 +559,13 @@ finder).</p>
 <tr>
 <td>The TI radar driver</td>
 <td>2025-26 <code>Nav_Radar</code></td>
-<td><code>ros/sources/ti_ros2_driver</code></td>
+<td><code>ros/sources/aav_radar_ti</code></td>
 <td>ported; its settings are indoor demos</td>
 </tr>
 <tr>
 <td>The battery monitor</td>
 <td>2024-25 <code>Battery-Monitor-ROS</code></td>
-<td><code>ros/sources/battery_monitor</code></td>
+<td><code>ros/sources/aav_battery_victron</code></td>
 <td>ported</td>
 </tr>
 <tr>
@@ -583,7 +578,7 @@ finder).</p>
 <td>The HUD app (Flutter), its Flask back end and boot scripts</td>
 <td>2025-26 <code>User-Interface</code></td>
 <td><code>archive/2026-27-flutter-hud/</code></td>
-<td>ported to our topics (10-11 Oct), then archived 25 Oct: the raylib HUD replaced it (Q29). Its route maths lives on in <code>aav_routes/route.py</code>, its place database in <code>pixi run get-hud-map</code></td>
+<td>ported to our topics (10-11 Oct), then archived 25 Oct: the raylib HUD replaced it (Q29). Its route maths lives on in <code>aav_routes/route.py</code>, its place database in <code>pixi run get-places</code></td>
 </tr>
 <tr>
 <td>The ESP32 actuator firmware (C++)</td>
@@ -697,7 +692,7 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>The HUD</td>
-<td>the build for the car's Pi; its tile server and OSRM route data. The map database downloads with <code>pixi run get-hud-map</code></td>
+<td>the build for the car's Pi; its tile server and OSRM route data. The map database downloads with <code>pixi run get-places</code></td>
 <td><a href="hud.html">HUD</a></td>
 </tr>
 <tr>

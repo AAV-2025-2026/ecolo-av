@@ -208,7 +208,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <tr>
 <td>1.14</td>
 <td><strong>Drive to a GPS point, smooth stop</strong></td>
-<td><code>pixi run sim-check --goto</code> (<a href="a-to-b.html">A to B</a>)</td>
+<td><code>pixi run sim-check --drive-to-point</code> (<a href="a-to-b.html">A to B</a>)</td>
 <td>every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half <code>max_brake</code>; a cancel, the e-stop and a GPS fault stop it</td>
 <td>✅ 15 Oct: all within 0.4 m</td>
 </tr>
@@ -574,9 +574,9 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.</p
 <tr>
 <td>5.2</td>
 <td><strong>Smooth stop at a GPS point</strong></td>
-<td><code>pixi run goto --lat .. --lon ..</code>: speed up, hold, slow down at <strong>half the measured brake g</strong> (<code>vehicle.yaml</code> <code>max_brake</code>, from 4.3), stop at B (<a href="a-to-b.html">A to B</a>)</td>
+<td><code>pixi run drive-to-point --lat .. --lon ..</code>: speed up, hold, slow down at <strong>half the measured brake g</strong> (<code>vehicle.yaml</code> <code>max_brake</code>, from 4.3), stop at B (<a href="a-to-b.html">A to B</a>)</td>
 <td>stops within 1 m of B (2 m without RTK)</td>
-<td>🔧 in Gazebo 15 Oct (<code>sim-check --goto</code>): 10-60 m, any angle, 1 and 3 m/s, every stop within 0.4 m of B, braking 1.4-1.6 m/s² for a plan of 1.5. 🔧 the car: needs 4.3</td>
+<td>🔧 in Gazebo 15 Oct (<code>sim-check --drive-to-point</code>): 10-60 m, any angle, 1 and 3 m/s, every stop within 0.4 m of B, braking 1.4-1.6 m/s² for a plan of 1.5. 🔧 the car: needs 4.3</td>
 </tr>
 <tr>
 <td>5.3</td>

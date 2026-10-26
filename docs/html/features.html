@@ -147,14 +147,14 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
-<td>TI radar driver (<code>ti_ros2_driver</code>)</td>
+<td>TI radar driver (<code>aav_radar_ti</code>)</td>
 <td>The car's radar already worked with it, so we ported it to Jazzy instead of rewriting it</td>
 <td>the 2025-26 team, ported by Ben</td>
 <td>2026-10-09</td>
 <td>built</td>
 </tr>
 <tr>
-<td>Battery monitor (<code>battery_monitor</code>)</td>
+<td>Battery monitor (<code>aav_battery_victron</code>)</td>
 <td>Shows the battery's state, so the team sees it before it runs flat</td>
 <td>the 2024-25 team</td>
 <td>2026-10-09</td>
@@ -332,8 +332,8 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>sim</td>
 </tr>
 <tr>
-<td><a href="a-to-b.html">Goto: GPS A to B</a> (<code>aav_goto</code>)</td>
-<td>The Gate 4 goal: drive to a GPS point and stop within 1 m; in Gazebo it stopped within 0.4 m</td>
+<td><a href="a-to-b.html">Drive to point: GPS A to B</a> (<code>aav_drive_to_point</code>)</td>
+<td>The Gate 4 goal: drive to a GPS point and stop within 1 m; in Gazebo it stopped within 0.4 m. Called <code>aav_goto</code> until 26 Oct: renamed so the name says the job (action <code>/drive_to_point</code>, slot <code>point</code>, <code>pixi run drive-to-point</code>)</td>
 <td>Ben</td>
 <td>2026-10-15</td>
 <td>sim</td>
@@ -482,7 +482,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </thead>
 <tbody>
 <tr>
-<td>Command mux and e-stop lock (<code>aav_mux</code>, twist_mux)</td>
+<td>Command mux and e-stop lock (<code>aav_command_mux</code>, twist_mux)</td>
 <td>One command wins by priority, and the e-stop locks every driver out</td>
 <td>Ben</td>
 <td>2026-10-09</td>

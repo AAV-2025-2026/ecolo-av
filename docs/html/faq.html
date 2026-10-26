@@ -324,7 +324,7 @@ The HUD's button only ever sets it: clearing is always a person's deliberate act
 </table></div>
 <p>A lock holds every driver below its priority. A stop sign (30) and the sensor watchdog
 (30) hold go-to, Nav2 and the AI, never a person or a test. The e-stop (255) holds
-everyone. The table lives in <code>ros/command_mux/aav_mux/config/twist_mux.yaml</code>.</p>
+everyone. The table lives in <code>ros/command_mux/aav_command_mux/config/twist_mux.yaml</code>.</p>
 <h3 id="what-happens-when-i-let-go-of-the-joystick">What happens when I let go of the joystick?</h3>
 <p>Nothing is sent for 0.5 s, then twist_mux hands control to the next driver that is
 talking, such as Nav2. Whether it should stay stopped instead is open (Q28).</p>
@@ -555,7 +555,7 @@ pixi run estop-clear         #             and drives again</code></pre>
 </tr>
 <tr>
 <td>Driver priorities</td>
-<td><code>ros/command_mux/aav_mux/config/twist_mux.yaml</code></td>
+<td><code>ros/command_mux/aav_command_mux/config/twist_mux.yaml</code></td>
 </tr>
 <tr>
 <td>ego's limits and timeout</td>

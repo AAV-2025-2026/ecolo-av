@@ -7,7 +7,7 @@
 <!-- Generated from docs/languages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Python, C++ and Rust</h1>
-<div class="meta">5 min read · 6 sections</div></header>
+<div class="meta">6 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -228,9 +228,10 @@ programs only meet through messages.</p></div>
 <li><strong>Message crates ship with Jazzy.</strong> Our Pixi install already has them, for example
   <code>share/sensor_msgs/rust/</code>.</li>
 <li><strong><code>rclrs</code></strong>, the library for writing nodes, comes from crates.io and is still 0.x.</li>
-<li><strong>It works here.</strong> <code>examples/rust-listener</code> (<code>rclrs</code> 0.8, <code>ros-env</code> 0.3) built in 18
-  seconds with plain <code>cargo build</code>, and printed ego's commands live from the turtle run.
-  It runs on a Mac too (<a href="status.html">Status</a>).</li>
+<li><strong>It works here.</strong> The IMU driver (<code>aav_imu_yahboom</code>), the radar clustering, the CAN
+  bridge (<code>aav_spine_bridge</code>) and the HUD are <code>rclrs</code> nodes, built by colcon. A first
+  example, <code>examples/rust-listener</code>, showed it in October; it was removed on 26 Oct,
+  once these real nodes showed the same.</li>
 </ul>
 </section>
 <section class="card"><h2 id="rust-on-the-pi-and-the-esp32">Rust on the Pi and the ESP32</h2>
@@ -276,7 +277,7 @@ programs only meet through messages.</p></div>
 </tr>
 <tr>
 <td>Done</td>
-<td>one <code>rclrs</code> node, built with Cargo in the Pixi environment: <code>pixi run rust-listener</code></td>
+<td>four <code>rclrs</code> nodes: the IMU, the radar clustering, the CAN bridge, the HUD</td>
 </tr>
 <tr>
 <td>Later</td>

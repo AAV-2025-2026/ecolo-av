@@ -429,7 +429,7 @@ in each "Who" (Q33). Each task is sized for one or two people.</p>
 </tr>
 <tr>
 <td>C5</td>
-<td><strong>Radar</strong> on <code>ti_ros2_driver</code>, its clusters in Nav2</td>
+<td><strong>Radar</strong> on <code>aav_radar_ti</code>, its clusters in Nav2</td>
 <td>S</td>
 <td>audit N7</td>
 <td><code>/perception/radar/clusters</code> while someone walks in front</td>
@@ -536,7 +536,7 @@ in each "Who" (Q33). Each task is sized for one or two people.</p>
 </tr>
 <tr>
 <td>D6</td>
-<td><strong>A-to-B</strong>: the test lot's datum, a start spot, then a GPS goal with <code>pixi run goto --lat .. --lon ..</code> (the driver, <code>aav_goto</code>, is built and proven in Gazebo, 15 Oct)</td>
+<td><strong>A-to-B</strong>: the test lot's datum, a start spot, then a GPS goal with <code>pixi run drive-to-point --lat .. --lon ..</code> (the driver, <code>aav_drive_to_point</code>, is built and proven in Gazebo, 15 Oct)</td>
 <td>M</td>
 <td>C1, C2, B8; the brake test (4.3) for <code>max_brake</code></td>
 <td><code>a-to-b.md</code> test 5 with a GPS goal: stops within 1 m of B (2 m without RTK)</td>

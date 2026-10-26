@@ -155,7 +155,7 @@ tests, and how a change goes from an idea to the car.</p></div>
     localization/       the two EKFs and navsat_transform, and the GPS heading
     perception/         the detector (RF-DETR, YOLO), radar clustering, lanes, the lidar
     drivers/            everything that proposes a command: teleop, RC, actuator tests, scripted,
-                        goto, plain English, Nav2, street routes
+                        drive to point, plain English, Nav2, street routes
     command_mux/        twist_mux: picks one command
     io_mux/             the sensor mux and the output mux: real or simulated, never mixed
     ego/                the virtual car: one command into speed and steering
@@ -168,7 +168,6 @@ tests, and how a change goes from an idea to the car.</p></div>
     spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers,
                         and boards/pico2, the spine's board program
     legacy/             the 2025-26 ESP32 and Pico code that runs the car today
-  examples/           rust-listener: a first ROS node in Rust
   models/             trained model files, not in git: pixi run get-models
   tools/              scripts: see the table below
   docs/               these pages; docs/history/ keeps the Q&amp;A, Ben's requests and the audits
@@ -453,9 +452,9 @@ Every one, with what it does: README's <a href="../../README.md#every-command">E
 <td><code>pixi run -e ml export-coreml</code></td>
 </tr>
 <tr>
-<td><code>get_hud_map.sh</code></td>
+<td><code>get_places.sh</code></td>
 <td>downloads the place database into <code>maps/places/</code>, for the map window's search, checksum pinned</td>
-<td><code>pixi run get-hud-map</code></td>
+<td><code>pixi run get-places</code></td>
 </tr>
 <tr>
 <td><code>get_street_map.sh</code></td>
@@ -546,7 +545,7 @@ changes.</p>
 <tbody>
 <tr>
 <td><code>orin</code> (Jetson AGX Orin)</td>
-<td>the car's model, mux, ego, scripted and goto drivers, IMU, GPS, the roof lidar, the two camera streams (RF-DETR inside), the stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove</td>
+<td>the car's model, mux, ego, scripted and point drivers, IMU, GPS, the roof lidar, the two camera streams (RF-DETR inside), the stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove</td>
 <td>Ubuntu 22.04 and Humble: it must move to Jazzy first (Q24)</td>
 </tr>
 <tr>

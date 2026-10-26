@@ -222,7 +222,7 @@ the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 <tbody>
 <tr>
 <td><code>orin.yaml</code></td>
-<td>description, mux, ego, scripted, goto, the IMU and GPS drivers, the roof lidar (Velodyne), localization, Nav2, Foxglove; the two front camera streams (<code>camera_stream</code>, RF-DETR inside each) and the stop-sign watcher; the CAN bus (<code>spine_bridge role:=sensors</code>: the wheels)</td>
+<td>description, mux, ego, scripted, drive_to_point, the IMU and GPS drivers, the roof lidar (Velodyne), localization, Nav2, Foxglove; the two front camera streams (<code>camera_stream</code>, RF-DETR inside each) and the stop-sign watcher; the CAN bus (<code>spine_bridge role:=sensors</code>: the wheels)</td>
 </tr>
 <tr>
 <td><code>motor_pi.yaml</code></td>
@@ -271,8 +271,8 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.</p>
 <td>the joystick, and its e-stop button</td>
 </tr>
 <tr>
-<td><code>scripted</code>, <code>goto</code></td>
-<td>the scripted driver; the goto driver (<a href="a-to-b.html">A to B</a>)</td>
+<td><code>scripted</code>, <code>drive_to_point</code></td>
+<td>the scripted driver; the point driver (<a href="a-to-b.html">A to B</a>)</td>
 </tr>
 <tr>
 <td><code>imu</code>, <code>gps</code>, <code>radar</code>, <code>battery</code></td>

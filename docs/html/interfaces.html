@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">51 min read · 4 sections</div></header>
+<div class="meta">52 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -162,12 +162,12 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>Priority 40. ros2 bag play of a recorded /control/cmd_vel (tools/replay_commands.sh).</td>
 </tr>
 <tr>
-<td><code>/drivers/goto/cmd_vel</code></td>
+<td><code>/drivers/point/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
-<td><code>goto_driver</code></td>
+<td><code>point_driver</code></td>
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>-</td>
-<td>Priority 25 - below every person, test and script, above Nav2. Only while a /goto goal runs (aav_goto, pixi run goto; docs/a-to-b.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.</td>
+<td>Priority 25 - below every person, test and script, above Nav2. Only while a /drive_to_point goal runs (aav_drive_to_point, pixi run drive-to-point; docs/a-to-b.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/cmd_vel</code></td>
@@ -189,9 +189,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/sensor_watchdog/lock</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>sensor_watchdog</code></td>
-<td><code>twist_mux</code>, <code>goto_driver</code></td>
+<td><code>twist_mux</code>, <code>point_driver</code></td>
 <td>sim</td>
-<td>true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).</td>
+<td>true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_command_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).</td>
 </tr>
 <tr>
 <td><code>/safety/sensor_watchdog/state</code></td>
@@ -261,7 +261,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>joy_teleop</code>, <code>hud</code>, <code>language_drive</code></td>
-<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>carla_adapter</code>, <code>goto_driver</code></td>
+<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>carla_adapter</code>, <code>point_driver</code></td>
 <td>-</td>
 <td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button (hud, aav_hud) only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions; language_drive (aav_language) does the same from its estop() tool. Neither ever publishes false.</td>
 </tr>
@@ -269,7 +269,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/control/cmd_vel</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
 <td><code>twist_mux</code></td>
-<td><code>ego</code>, <code>actuator_test</code>, <code>goto_driver</code></td>
+<td><code>ego</code>, <code>actuator_test</code>, <code>point_driver</code></td>
 <td>turtle, sim, car, bench</td>
 <td>The one command ego obeys. v (m/s) and w (rad/s) in base_link.</td>
 </tr>
@@ -373,7 +373,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/system/source</code></td>
 <td><code>aav_interfaces/msg/DataSource</code></td>
 <td><code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>mock_imu</code>, <code>mock_gps</code>, <code>mock_battery</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>mock_lidar</code>, <code>replay_source</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code>, <code>camera_stream_front_right</code></td>
-<td><code>hud</code>, <code>map</code>, <code>actuator_test</code>, <code>goto_driver</code>, <code>goto_cli</code>, <code>sensor_mux</code>, <code>output_mux</code></td>
+<td><code>hud</code>, <code>map</code>, <code>actuator_test</code>, <code>point_driver</code>, <code>point_cli</code>, <code>sensor_mux</code>, <code>output_mux</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in - with role:=sensors (today's wiring, the Orin's CAN bus with only the wheel sensors) only odometry and wheels, never an actuator; legacy_uart_bridge REAL; replay.launch.py REPLAY; each camera_stream_<camera> its camera (camera_front_left...) as its source parameter says, REAL on the car. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.</td>
 </tr>
@@ -501,7 +501,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>ublox_gps</code>, <code>gps_nmea</code>, <code>ublox_nav_sat_fix_hp</code>, <code>gazebo_gps</code>, <code>mock_gps</code>, <code>carla_adapter</code></td>
-<td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>goto_driver</code></td>
+<td><code>navsat_transform</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>point_driver</code></td>
 <td>sim, car, replay, bench</td>
 <td>Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.</td>
 </tr>
@@ -543,7 +543,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>battery_state_publisher</code>, <code>mock_battery</code></td>
 <td><code>hud</code></td>
 <td>bench</td>
-<td>battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).</td>
+<td>aav_battery_victron's node is battery_state_publisher (the Victron VE.Direct cable).</td>
 </tr>
 <tr>
 <td><code>/vehicle/battery/heartbeat</code></td>
@@ -551,7 +551,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>heartbeat_publisher</code></td>
 <td>-</td>
 <td>-</td>
-<td>battery_monitor's sign of life.</td>
+<td>aav_battery_victron's sign of life.</td>
 </tr>
 <tr>
 <td><code>/sensors/camera/front_left/image_raw</code></td>
@@ -821,7 +821,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/global</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_global</code></td>
-<td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code>, <code>goto_driver</code>, <code>goto_cli</code></td>
+<td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code>, <code>point_driver</code>, <code>point_cli</code></td>
 <td>sim, car, replay, bench</td>
 <td>map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.</td>
 </tr>
@@ -977,7 +977,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/fromLL</code></td>
 <td><code>robot_localization/srv/FromLL</code></td>
 <td><code>navsat_transform</code></td>
-<td>Lat/lon -&gt; map x, y. Nav2's follow_gps_waypoints calls it, and goto_driver (aav_goto) for a lat/lon goal, and street_router, for /drivers/nav/route/path.</td>
+<td>Lat/lon -&gt; map x, y. Nav2's follow_gps_waypoints calls it, and point_driver (aav_drive_to_point) for a lat/lon goal, and street_router, for /drivers/nav/route/path.</td>
 </tr>
 <tr>
 <td><code>/toLL</code></td>
@@ -1042,10 +1042,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>Drive a speed profile (accelerate, hold for a time or distance, stop). Phase 1. Sent by language_drive (aav_language) for drive() and turn() - a whole distance, ramps included.</td>
 </tr>
 <tr>
-<td><code>/goto</code></td>
-<td><code>aav_interfaces/action/GoTo</code></td>
-<td><code>goto_driver</code></td>
-<td>Drive to one point B (lat/lon through /fromLL, or map x/y) and stop there - speed up gently, hold, slow down by the distance left at half vehicle.yaml's max_brake. Pure pursuit, turning towards B first. Refuses B over 200 m away or inside the tightest turn; on REAL only with confirmed (pixi run goto asks). Sent by goto_cli (pixi run goto) and tools/sim_check.py --goto.</td>
+<td><code>/drive_to_point</code></td>
+<td><code>aav_interfaces/action/DriveToPoint</code></td>
+<td><code>point_driver</code></td>
+<td>Drive to one point B (lat/lon through /fromLL, or map x/y) and stop there - speed up gently, hold, slow down by the distance left at half vehicle.yaml's max_brake. Pure pursuit, turning towards B first. Refuses B over 200 m away or inside the tightest turn; on REAL only with confirmed (pixi run drive-to-point asks). Sent by point_cli (pixi run drive-to-point) and tools/sim_check.py --drive-to-point.</td>
 </tr>
 <tr>
 <td><code>/navigate_to_pose</code></td>

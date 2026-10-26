@@ -267,7 +267,7 @@ the e-stop, until the spine's watchdog exists.</p>
 </tr>
 <tr>
 <td>Run first</td>
-<td><code>pixi run turtle</code> and <code>pixi run keyboard --local</code>; then <code>pixi run rust-listener</code> prints what ego sends</td>
+<td><code>pixi run turtle</code> and <code>pixi run keyboard --local</code>; then <code>ros2 topic echo /ego/actuator_cmd</code> (inside <code>pixi shell</code>) prints what ego sends</td>
 </tr>
 <tr>
 <td>First tasks</td>
@@ -371,7 +371,7 @@ the e-stop, until the spine's watchdog exists.</p>
 </tr>
 <tr>
 <td>Files</td>
-<td><code>ros/drivers/aav_teleop/</code>, <code>ros/drivers/aav_scripted/</code>, <code>ros/command_mux/aav_mux/config/twist_mux.yaml</code></td>
+<td><code>ros/drivers/aav_teleop/</code>, <code>ros/drivers/aav_scripted/</code>, <code>ros/command_mux/aav_command_mux/config/twist_mux.yaml</code></td>
 </tr>
 <tr>
 <td>Open questions</td>

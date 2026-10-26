@@ -7,7 +7,7 @@
 <!-- Generated from docs/packages.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>What each package does</h1>
-<div class="meta">17 min read · 11 sections</div></header>
+<div class="meta">17 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -88,7 +88,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#at-a-glance">At a glance</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers-the-mux-and-ego">Drivers, the mux and ego</a><a href="#perception">Perception</a><a href="#backends">Backends</a><a href="#bench-mode">Bench mode</a><a href="#interfaces-and-bringup">Interfaces and bringup</a><a href="#firmware">Firmware</a><a href="#the-hud">The HUD</a><a href="#examples">Examples</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#at-a-glance">At a glance</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers-the-mux-and-ego">Drivers, the mux and ego</a><a href="#perception">Perception</a><a href="#backends">Backends</a><a href="#bench-mode">Bench mode</a><a href="#interfaces-and-bringup">Interfaces and bringup</a><a href="#firmware">Firmware</a><a href="#the-hud">The HUD</a></nav>
 <div class="lead"><p>Every ROS package in <code>ros/</code>, area by area (<code>ros/&lt;area&gt;/&lt;package&gt;</code>), with what it reads
 and writes. Then the firmware, the HUD and the examples. 37 packages build today (the
 Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
@@ -126,14 +126,14 @@ Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
 <td>new: Ben's rewrite of the 2025-26 <code>yahboom-IMU</code> C++ driver</td>
 </tr>
 <tr>
-<td><code>battery_monitor</code></td>
+<td><code>aav_battery_victron</code></td>
 <td>sources</td>
 <td>the Victron battery monitor</td>
 <td><span class="badge b-untested">untested</span></td>
 <td>2024-25 <code>Battery-Monitor-ROS</code></td>
 </tr>
 <tr>
-<td><code>ti_ros2_driver</code></td>
+<td><code>aav_radar_ti</code></td>
 <td>sources</td>
 <td>the TI mmWave radar, as point clouds</td>
 <td><span class="badge b-untested">untested</span></td>
@@ -189,7 +189,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
 <td>new</td>
 </tr>
 <tr>
-<td><code>aav_goto</code></td>
+<td><code>aav_drive_to_point</code></td>
 <td>drivers</td>
 <td>drive to one GPS or map point B, and stop there smoothly</td>
 <td><span class="badge b-works">works</span> in Gazebo (15 Oct); <span class="badge b-untested">untested</span> on the car</td>
@@ -217,7 +217,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
 <td>new</td>
 </tr>
 <tr>
-<td><code>aav_mux</code></td>
+<td><code>aav_command_mux</code></td>
 <td>command_mux</td>
 <td>twist_mux: the priorities, the e-stop lock and the other locks</td>
 <td><span class="badge b-works">works</span></td>
@@ -310,7 +310,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
 <tr>
 <td><code>aav_interfaces</code></td>
 <td>ecolo_msgs</td>
-<td>our 9 messages (such as <code>VehicleStatus</code>, <code>DataSource</code>, <code>Heartbeat</code>) and 2 actions (<code>ScriptedDrive</code>, <code>GoTo</code>)</td>
+<td>our 9 messages (such as <code>VehicleStatus</code>, <code>DataSource</code>, <code>Heartbeat</code>) and 2 actions (<code>ScriptedDrive</code>, <code>DriveToPoint</code>)</td>
 <td><span class="badge b-works">works</span> builds</td>
 <td>new</td>
 </tr>
@@ -408,13 +408,13 @@ Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
 <td><code>gps_driver:=ublox_dgnss</code>. Not in Pixi: the car only</td>
 </tr>
 <tr>
-<td><code>ti_ros2_driver</code></td>
+<td><code>aav_radar_ti</code></td>
 <td><code>/dev/aav/radar_cmd</code>, <code>/dev/aav/radar_data</code></td>
 <td><code>/sensors/radar/points</code></td>
 <td>its configs are indoor demos</td>
 </tr>
 <tr>
-<td><code>battery_monitor</code></td>
+<td><code>aav_battery_victron</code></td>
 <td><code>/dev/aav/battery</code></td>
 <td><code>/vehicle/battery</code></td>
 <td></td>
@@ -520,10 +520,10 @@ Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
 <td>the action <code>/scripted_drive</code></td>
 </tr>
 <tr>
-<td><code>aav_goto</code></td>
+<td><code>aav_drive_to_point</code></td>
 <td><code>/localization/odom/global</code>, <code>/sensors/gps/fix</code>, <code>/safety/estop</code>, the watchdog's lock, <code>/system/source</code>, <code>/control/cmd_vel</code></td>
-<td><code>/drivers/goto/cmd_vel</code></td>
-<td>the action <code>/goto</code>; calls <code>/fromLL</code> for a lat/lon B. <code>pixi run goto</code> (<a href="a-to-b.html">A to B</a>)</td>
+<td><code>/drivers/point/cmd_vel</code></td>
+<td>the action <code>/drive_to_point</code>; calls <code>/fromLL</code> for a lat/lon B. <code>pixi run drive-to-point</code> (<a href="a-to-b.html">A to B</a>)</td>
 </tr>
 <tr>
 <td><code>aav_language</code></td>
@@ -538,7 +538,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
 <td>SmacPlannerHybrid and MPPI (or Regulated Pure Pursuit); GPS waypoints through <code>/follow_gps_waypoints</code></td>
 </tr>
 <tr>
-<td><code>aav_mux</code> (twist_mux)</td>
+<td><code>aav_command_mux</code> (twist_mux)</td>
 <td>every <code>/drivers/&lt;driver&gt;/cmd_vel</code>, <code>/safety/estop</code></td>
 <td><code>/control/cmd_vel</code></td>
 <td>priorities: <a href="howto-driver.html">Build a driver</a></td>
@@ -678,7 +678,7 @@ Only one runs at a time.</p>
 <tbody>
 <tr>
 <td><code>aav_interfaces</code></td>
-<td>9 messages: <code>VehicleStatus</code> (mode, armed, e-stop, speed, steering, throttle, brake, fault bits), <code>ActuatorState</code>, <code>DataSource</code>, <code>SensorSource</code>, <code>SourceCheck</code>, <code>Heartbeat</code>, <code>RcSticks</code>, <code>SpineOutputs</code>, <code>WheelSpeeds</code>; 2 actions: <code>ScriptedDrive</code>, <code>GoTo</code></td>
+<td>9 messages: <code>VehicleStatus</code> (mode, armed, e-stop, speed, steering, throttle, brake, fault bits), <code>ActuatorState</code>, <code>DataSource</code>, <code>SensorSource</code>, <code>SourceCheck</code>, <code>Heartbeat</code>, <code>RcSticks</code>, <code>SpineOutputs</code>, <code>WheelSpeeds</code>; 2 actions: <code>ScriptedDrive</code>, <code>DriveToPoint</code></td>
 </tr>
 <tr>
 <td><code>aav_bringup</code></td>
@@ -812,22 +812,6 @@ Only one runs at a time.</p>
 <tr>
 <td><code>archive/2026-27-flutter-hud/</code></td>
 <td>the 2025-26 Flutter app and its Flask back end, archived 25 Oct (Q29). Not built</td>
-</tr>
-</tbody>
-</table></div>
-</section>
-<section class="card"><h2 id="examples">Examples</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Example</th>
-<th>What it is</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>examples/rust-listener</code></td>
-<td>a first ROS node in Rust (rclrs): prints ego's commands. <code>pixi run rust-listener</code></td>
 </tr>
 </tbody>
 </table></div></section>

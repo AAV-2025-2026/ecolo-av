@@ -142,7 +142,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 </tr>
 <tr>
 <td>Looked at, then dropped (15 Oct)</td>
-<td>Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69; <code>street_router</code> does that job now); the HUD's place database (<code>pixi run get-hud-map</code> downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's <code>FinalRev</code> (below); AAV_dashboard (its README is now <code>docs/reference/2025-26-camera-system</code>)</td>
+<td>Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69; <code>street_router</code> does that job now); the HUD's place database (<code>pixi run get-places</code> downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's <code>FinalRev</code> (below); AAV_dashboard (its README is now <code>docs/reference/2025-26-camera-system</code>)</td>
 </tr>
 <tr>
 <td>Empty</td>
@@ -300,7 +300,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Nav_Radar</td>
 <td>none</td>
-<td>in <code>aav</code>: <code>ti_ros2_driver</code>; the clustering, rewritten in Rust, as <code>aav_radar_clusters</code></td>
+<td>in <code>aav</code>: <code>aav_radar_ti</code>; the clustering, rewritten in Rust, as <code>aav_radar_clusters</code></td>
 </tr>
 <tr>
 <td>AAV_dashboard</td>
@@ -338,7 +338,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Battery-Monitor-ROS</td>
 <td>battery monitor ROS code</td>
-<td>yes: <code>ros/sources/battery_monitor</code></td>
+<td>yes: <code>ros/sources/aav_battery_victron</code></td>
 </tr>
 <tr>
 <td>camera_ros2_ws</td>
@@ -348,7 +348,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>camera_Yolo_detection</td>
 <td>Python, 72 MB</td>
-<td>2 files: <code>aav_detector/training</code>. The trained <code>best.pt</code> isn't in it</td>
+<td>no: its training script and <code>data.yaml</code> were in <code>aav_detector/training</code> until 26 Oct, unused. The trained <code>best.pt</code> isn't in it</td>
 </tr>
 <tr>
 <td>cameras</td>

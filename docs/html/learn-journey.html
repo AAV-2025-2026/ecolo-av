@@ -220,8 +220,8 @@ run on the real car yet: the car still runs the 2025-26 code, on Humble.</p>
 <td>40</td>
 </tr>
 <tr>
-<td>goto (drive to a GPS point)</td>
-<td><code>/drivers/goto/cmd_vel</code></td>
+<td>point (drive to a GPS point)</td>
+<td><code>/drivers/point/cmd_vel</code></td>
 <td>25</td>
 </tr>
 <tr>
@@ -241,12 +241,12 @@ run on the real car yet: the car still runs the 2025-26 code, on Humble.</p>
 </tr>
 <tr>
 <td><strong>lock:</strong> <code>/perception/stop_sign</code> true</td>
-<td>blocks goto, Nav2 and AI</td>
+<td>blocks point, Nav2 and AI</td>
 <td>30</td>
 </tr>
 <tr>
 <td><strong>lock:</strong> <code>/safety/sensor_watchdog/lock</code> true, or silent 1 s</td>
-<td>blocks goto, Nav2 and AI</td>
+<td>blocks point, Nav2 and AI</td>
 <td>30</td>
 </tr>
 </tbody>
@@ -643,7 +643,7 @@ with <code>docs/interfaces.yaml</code>.</p>
 </tr>
 <tr>
 <td>twist_mux priorities</td>
-<td><code>ros/command_mux/aav_mux/config/twist_mux.yaml</code></td>
+<td><code>ros/command_mux/aav_command_mux/config/twist_mux.yaml</code></td>
 </tr>
 <tr>
 <td>ego</td>

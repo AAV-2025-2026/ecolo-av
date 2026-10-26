@@ -208,14 +208,24 @@ changes their launch files and executables.</p>
 <td>done, 11 October: Ben's Rust rewrite replaced it</td>
 </tr>
 <tr>
+<td><code>aav_goto</code>, its node <code>goto_driver</code>, action <code>/goto</code> (<code>GoTo</code>), slot <code>goto</code></td>
+<td><code>aav_drive_to_point</code>, <code>point_driver</code>, <code>/drive_to_point</code> (<code>DriveToPoint</code>), slot <code>point</code> (<code>/drivers/point/cmd_vel</code>)</td>
+<td>done, 26 October: "goto" named a keyword, not the job. <code>atob-score</code> still reads bags with the old names</td>
+</tr>
+<tr>
+<td><code>aav_mux</code></td>
+<td><code>aav_command_mux</code></td>
+<td>done, 26 October: there are three muxes; this one is twist_mux's, in <code>ros/command_mux</code></td>
+</tr>
+<tr>
 <td><code>ti_ros2_driver</code></td>
 <td><code>aav_radar_ti</code></td>
-<td>proposed <span class="badge b-needs-you">needs you</span></td>
+<td>done, 26 October. The executables <code>pcl_pub</code> and <code>mock_radar_publisher</code> stay</td>
 </tr>
 <tr>
 <td><code>battery_monitor</code></td>
 <td><code>aav_battery_victron</code></td>
-<td>proposed <span class="badge b-needs-you">needs you</span></td>
+<td>done, 26 October. The executable <code>battery_monitor</code> stays</td>
 </tr>
 </tbody>
 </table></div>
@@ -303,7 +313,7 @@ twist_mux's sensors lock at its 1 s timeout, so Nav2 never drove.</p>
 </thead>
 <tbody>
 <tr>
-<td>Load the YAML yourself and pass it as a dict (<code>ego.launch.py</code>), edit a copy of the file (<code>navigation.launch.py</code>'s <code>faster_copy</code>), or pass a second node-named YAML file after the first (<code>aav_mux</code>'s <code>no_sensor_lock.yaml</code>)</td>
+<td>Load the YAML yourself and pass it as a dict (<code>ego.launch.py</code>), edit a copy of the file (<code>navigation.launch.py</code>'s <code>faster_copy</code>), or pass a second node-named YAML file after the first (<code>aav_command_mux</code>'s <code>no_sensor_lock.yaml</code>)</td>
 <td>put a node-named YAML file first and trust a later dict to override it</td>
 </tr>
 <tr>
