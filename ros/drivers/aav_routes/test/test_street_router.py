@@ -29,7 +29,7 @@ try:
     import rclpy
     from rclpy.action import ActionServer
     from rclpy.callback_groups import ReentrantCallbackGroup
-    from rclpy.executors import MultiThreadedExecutor
+    from rclpy.executors import SingleThreadedExecutor
     from rclpy.parameter import Parameter
     from rclpy.qos import DurabilityPolicy, QoSProfile
     from robot_localization.srv import FromLL
@@ -73,7 +73,12 @@ def router():
 
 
 class Ros:
-    """street_router, and a fake car (fix, /fromLL, Nav2), spun in a thread."""
+    """
+    street_router, and a fake car (fix, /fromLL, Nav2), each spun in a thread of its own.
+
+    street_router gets one thread, as in main(): a service call inside its callbacks
+    must not wait on a second thread to take the answer.
+    """
 
     def __init__(self, **params):
         os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
@@ -97,10 +102,12 @@ class Ros:
             self.car.create_subscription(kind, f'/drivers/nav/route/{name}',
                                          self.got[name].append, latched)
         self.follow = self.car.create_client(Trigger, '/drivers/nav/route/follow')
-        self.executor = MultiThreadedExecutor()
-        self.executor.add_node(self.node)
-        self.executor.add_node(self.car)
-        threading.Thread(target=self.executor.spin, daemon=True).start()
+        self.executors = []
+        for node in (self.node, self.car):
+            executor = SingleThreadedExecutor()
+            executor.add_node(node)
+            threading.Thread(target=executor.spin, daemon=True).start()
+            self.executors.append(executor)
 
     def from_ll(self, request, response):
         # A pretend map: 1 m per micro-degree, enough to see the order kept.
@@ -136,7 +143,8 @@ class Ros:
         return False
 
     def close(self):
-        self.executor.shutdown()
+        for executor in self.executors:
+            executor.shutdown()
         self.node.destroy_node()
         self.car.destroy_node()
         rclpy.try_shutdown()

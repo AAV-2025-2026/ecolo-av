@@ -254,7 +254,7 @@ Two rules follow, for anyone writing scripts:
 |---|---|---|
 | A best-effort subscriber gets no camera images at all | an image is too big for one UDP packet, and best effort drops the whole image when one piece is lost | subscribe to images reliably, keeping only the newest frame |
 | `ros2 topic hz` on a camera or lidar shows nothing | Jazzy's `hz` always subscribes best effort, with no option to change it | count them reliably: `ros2 topic echo --qos-reliability reliable --field header.stamp <topic>` |
-| A Python node with `MultiThreadedExecutor` uses a whole CPU core | rclpy 7.1.12's multi-threaded executor spins whenever any subscription gets messages | use the default single-threaded executor; `scripted_driver` now does |
+| A Python node with `MultiThreadedExecutor` uses a whole CPU core | rclpy 7.1.12's multi-threaded executor spins whenever any subscription gets messages | use the default single-threaded executor; `scripted_driver`, `goto_driver` and `street_router` now do |
 | A script started through `#!/usr/bin/env python3` can't load our messages | macOS drops `DYLD_LIBRARY_PATH` when `/usr/bin/env` starts | launch such scripts with `prefix='python3'`, as `aav_lane_geometry` does |
 
 ## If the native way fails: Ubuntu in UTM

@@ -72,6 +72,9 @@ Modules:
 - Positions are (lat, lon) in degrees; yaw is ENU (0 = east), REP-103.
 - One route at a time. Never a paid or public routing server.
 - Nothing reaches Nav2 without the follow call, unless `follow_at_once`.
+- One thread (`rclpy.spin`): a `MultiThreadedExecutor` spins a whole core (`docs/mac.md`).
+  The service calls inside callbacks are awaited, so they never block it; the router's
+  HTTP request does, for up to `timeout`.
 
 ## Side Effects
 
@@ -91,4 +94,4 @@ runs it). `pixi run test` runs everything.
 | Test | Covers |
 |---|---|
 | `test_osrm_route.py` | parsing, polylines, waypoint spacing, against saved router answers in `test/fixtures/` |
-| `test_street_router.py` | the node in one process, with a fake router, navsat_transform and Nav2: route out, sent to Nav2 only when asked (needs ROS) |
+| `test_street_router.py` | the node on one thread, with a fake router, navsat_transform and Nav2: route out, sent to Nav2 only when asked (needs ROS) |
