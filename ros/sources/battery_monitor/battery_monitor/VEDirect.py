@@ -15,6 +15,7 @@ class VEDirect:
     def __init__(self):
         self.state = VEDirect.SerialState.NL
         self.data = {}
+        self.last_block = {}  # the newest good block alone, without the merged history
         self.currentdict = {}
         self.currentkey = ''
         self.currentvalue = ''
@@ -79,4 +80,5 @@ class VEDirect:
         block.pop('Checksum')
         # Update data
         self.data.update(block)
+        self.last_block = block
         return True
