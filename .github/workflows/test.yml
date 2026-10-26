@@ -1,7 +1,8 @@
 # pixi run test on GitHub's computers, so "it works on my machine" can't creep in.
 #   Linux (Ubuntu 24.04, like the car): every push and every pull request.
-#   Mac (Apple Silicon): every night, and on demand from the Actions tab. Mac minutes use
-#   up a private repo's free allowance much faster than Linux ones, so not on every push.
+#   Mac (Apple Silicon): every night (the team's repo only), and on demand from the
+#   Actions tab. Mac minutes use up a private repo's free allowance much faster than
+#   Linux ones, so not on every push.
 #   64-bit ARM Linux (the car's Orin and Pis): the same tests on every push and pull
 #   request (job arm), and the car kit made and installed offline (job car-kit).
 # The Pixi version matches the one that wrote pixi.lock; raise both together.
@@ -10,10 +11,12 @@
 name: test
 
 on:
-  # main only: a push of a helper's half-done branch (wt/*, archive/*) mailed a failure
-  # each time. A pull request still tests its branch.
+  # Pushes: main in the team's repo, and any branch in a fork (once Actions is turned on
+  # there), so a branch is green before its pull request; each job's `if:` keeps the
+  # team's repo to main. Never a helper's half-done branch (wt/*, archive/*, backup/*):
+  # those mailed a failure each time.
   push:
-    branches: [main]
+    branches-ignore: ['wt/**', 'archive/**', 'backup/**']
   pull_request:
   # The merge queue tests each pull request on top of main and the ones ahead of it.
   merge_group:
@@ -36,7 +39,7 @@ env:
 
 jobs:
   linux:
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && (github.event_name != 'push' || github.ref == 'refs/heads/main' || github.repository != 'AAV-2025-2026/ecolo-av')
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -66,7 +69,7 @@ jobs:
         run: pixi run --locked -e mcp python3 tools/tests/mcp_smoke.py
 
   mac:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'schedule' && github.repository == 'AAV-2025-2026/ecolo-av') || github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     timeout-minutes: 90
     steps:
@@ -100,7 +103,7 @@ jobs:
   # programs, and each drawn once on a virtual screen. pixi.lock has linux-aarch64 already.
   # Every push, like linux: it takes about as long (12 min on 24 Oct), and runs beside it.
   arm:
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && (github.event_name != 'push' || github.ref == 'refs/heads/main' || github.repository != 'AAV-2025-2026/ecolo-av')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
     steps:
@@ -172,7 +175,7 @@ jobs:
   # Every push too: 6 min on 24 Oct (the kit 1 min, the offline install and build 4.5),
   # beside the tests, so a crate or package the kit can't carry fails the push that added it.
   car-kit:
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && (github.event_name != 'push' || github.ref == 'refs/heads/main' || github.repository != 'AAV-2025-2026/ecolo-av')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 45
     steps:
@@ -236,7 +239,7 @@ jobs:
   # in software, tools/software_gl.sh), so a failure here doesn't turn the night red yet. Remove
   # continue-on-error once it has passed a few nights.
   sim:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'schedule' && github.repository == 'AAV-2025-2026/ecolo-av') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     continue-on-error: true
