@@ -131,6 +131,7 @@ Each lands outside git, checksum pinned where the script says.
 | `topic_load.py` | the numbers behind `bandwidth` (no ROS) | - |
 | `stalls.py` | the numbers behind `timing-test` (no ROS) | - |
 | `drive_metrics.py` | the numbers behind `controller-compare` (no ROS) | - |
+| `atob_score.py` | scores A-to-B runs (bag or CSV): speed up, hold, stop on B; EKF vs truth or tape | `atob-score` |
 | `can_load.py` | the CAN bus load from `firmware/can/aav.dbc` | `can-load` |
 | `compare_detectors.py` | YOLO11, YOLO26 and RF-DETR on the same pictures | - |
 | `export_model.py` | a detector to Core ML (Mac) or ONNX (Orin) | `-e ml export-coreml` |
