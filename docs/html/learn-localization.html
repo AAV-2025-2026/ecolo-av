@@ -370,7 +370,7 @@ metres, radians, x forward, y left, z up.</p>
 </table></div>
 </section>
 <section class="card"><h2 id="7-our-two-ekfs-their-real-inputs">7. Our two EKFs: their real inputs</h2>
-<p>From <code>src/localization/aav_localization/config/</code>. Both run at 30 Hz, in 2D
+<p>From <code>ros/localization/aav_localization/config/</code>. Both run at 30 Hz, in 2D
 (<code>two_d_mode: true</code>: no height, roll or pitch).</p>
 <div class="table-wrap"><table>
 <thead>
@@ -669,23 +669,23 @@ That's the GPS soaking up the drift.</p>
 <tbody>
 <tr>
 <td>The EKFs' settings</td>
-<td><code>src/localization/aav_localization/config/ekf_local.yaml</code>, <code>ekf_global.yaml</code></td>
+<td><code>ros/localization/aav_localization/config/ekf_local.yaml</code>, <code>ekf_global.yaml</code></td>
 </tr>
 <tr>
 <td>GPS to metres</td>
-<td><code>src/localization/aav_localization/config/navsat.yaml</code></td>
+<td><code>ros/localization/aav_localization/config/navsat.yaml</code></td>
 </tr>
 <tr>
 <td>How they start, and topic names</td>
-<td><code>src/localization/aav_localization/launch/localization.launch.py</code></td>
+<td><code>ros/localization/aav_localization/launch/localization.launch.py</code></td>
 </tr>
 <tr>
 <td>The IMU filter</td>
-<td><code>src/sensors/aav_sensors/config/imu_filter.yaml</code></td>
+<td><code>ros/sources/aav_sensors/config/imu_filter.yaml</code></td>
 </tr>
 <tr>
 <td>The heading from the GPS velocity</td>
-<td><code>src/localization/aav_gps_heading</code> (<code>course.py</code>: the sums, no ROS)</td>
+<td><code>ros/localization/aav_gps_heading</code> (<code>course.py</code>: the sums, no ROS)</td>
 </tr>
 <tr>
 <td>Measure the heading in Gazebo</td>
@@ -693,7 +693,7 @@ That's the GPS soaking up the drift.</p>
 </tr>
 <tr>
 <td>Sensor positions on the car</td>
-<td><code>src/aav_description/config/vehicle.yaml</code></td>
+<td><code>ros/bringup/aav_description/config/vehicle.yaml</code></td>
 </tr>
 <tr>
 <td>Wheel speed into <code>/vehicle/odom</code></td>

@@ -141,7 +141,7 @@
 <tr>
 <td>backend</td>
 <td>the one program that plays the car: the real car, Gazebo or the turtle</td>
-<td><code>src/backends/</code></td>
+<td><code>ros/can_bridge/</code> and <code>ros/sim/</code></td>
 </tr>
 <tr>
 <td>bag</td>
@@ -166,7 +166,7 @@
 <tr>
 <td>bringup</td>
 <td>the launch files that start a whole profile</td>
-<td><code>src/aav_bringup</code></td>
+<td><code>ros/bringup/aav_bringup</code></td>
 </tr>
 <tr>
 <td><code>bt_navigator</code></td>
@@ -196,7 +196,7 @@
 <tr>
 <td>CARLA</td>
 <td>a photo-real driving simulator, on Unreal Engine; next to Gazebo, for the cameras (Q31, <a href="carla.html">CARLA</a>)</td>
-<td><code>src/backends/aav_carla</code></td>
+<td><code>ros/sim/aav_carla</code></td>
 </tr>
 <tr>
 <td>checksum, CRC</td>
@@ -284,7 +284,7 @@
 <tr>
 <td>driver (device)</td>
 <td>the code that talks to one piece of hardware</td>
-<td><code>src/sensors/</code></td>
+<td><code>ros/sources/</code></td>
 </tr>
 <tr>
 <td>e-stop</td>
@@ -294,7 +294,7 @@
 <tr>
 <td>ego</td>
 <td>our node that turns the chosen twist into a speed and steering angle, within limits</td>
-<td><code>src/ego/aav_ego</code></td>
+<td><code>ros/ego/aav_ego</code></td>
 </tr>
 <tr>
 <td>EKF</td>
@@ -517,7 +517,7 @@
 <tr>
 <td>Nav2</td>
 <td>ROS 2's navigation stack: plans a path and follows it</td>
-<td><code>src/drivers/aav_navigation</code></td>
+<td><code>ros/drivers/aav_navigation</code></td>
 </tr>
 <tr>
 <td><code>NavSatFix</code></td>
@@ -590,7 +590,7 @@
 <tr>
 <td>profile</td>
 <td>a set of nodes to start: turtle, sim, bench, car, replay</td>
-<td><code>src/aav_bringup/launch/</code></td>
+<td><code>ros/bringup/aav_bringup/launch/</code></td>
 </tr>
 <tr>
 <td><code>PROVENANCE.md</code></td>
@@ -620,7 +620,7 @@
 <tr>
 <td>raylib</td>
 <td>a small graphics library; our Rust HUD uses it</td>
-<td><code>src/hud/aav_hud_raylib</code></td>
+<td><code>ros/hud/aav_hud_raylib</code></td>
 </tr>
 <tr>
 <td>RC</td>
@@ -748,7 +748,7 @@
 <tr>
 <td><code>twist_mux</code></td>
 <td>picks one command from all the drivers, by priority</td>
-<td><code>src/mux/aav_mux</code></td>
+<td><code>ros/command_mux/aav_mux</code></td>
 </tr>
 <tr>
 <td>UART</td>
@@ -768,7 +768,7 @@
 <tr>
 <td>URDF</td>
 <td>a file that describes the car's shape and where each sensor sits</td>
-<td><code>src/aav_description/urdf</code></td>
+<td><code>ros/bringup/aav_description/urdf</code></td>
 </tr>
 <tr>
 <td>USB</td>
@@ -778,7 +778,7 @@
 <tr>
 <td><code>vehicle.yaml</code></td>
 <td>the only file with the car's measurements</td>
-<td><code>src/aav_description/config</code></td>
+<td><code>ros/bringup/aav_description/config</code></td>
 </tr>
 <tr>
 <td>W5500</td>
@@ -828,7 +828,7 @@ pixi run tools/ros.sh --local ros2 node list     # every node</code></pre>
 </tr>
 <tr>
 <td>The car's parts and sizes</td>
-<td><code>src/aav_description/config/vehicle.yaml</code></td>
+<td><code>ros/bringup/aav_description/config/vehicle.yaml</code></td>
 </tr>
 <tr>
 <td>Decisions and Q numbers</td>

@@ -98,7 +98,7 @@ is the procedure, ready for the car day. It uses ROS's stock calibrator,
                            camera_calibration's window  ◄── you move the board
                                  │ SAVE
                                  ▼
-                           src/sensors/aav_camera_stream/config/calibrations/front_left.yaml
+                           ros/sources/aav_camera_stream/config/calibrations/front_left.yaml
                            config/cameras.yaml:  calibration: &lt;that file&gt;</code></pre>
 </section>
 <section class="card"><h2 id="what-you-need">What you need</h2>
@@ -262,8 +262,8 @@ is the procedure, ready for the car day. It uses ROS's stock calibrator,
 </tbody>
 </table></div>
 <p>Then commit the two files:</p>
-<pre class="highlight"><code class="language-bash">git add src/sensors/aav_camera_stream/config/calibrations/front_left.yaml \
-        src/sensors/aav_camera_stream/config/cameras.yaml</code></pre>
+<pre class="highlight"><code class="language-bash">git add ros/sources/aav_camera_stream/config/calibrations/front_left.yaml \
+        ros/sources/aav_camera_stream/config/cameras.yaml</code></pre>
 <p>A result saved earlier can be filed by hand:
 <code>pixi run calibrate-camera install front_left /tmp/calibrationdata.tar.gz</code>.</p>
 </section>

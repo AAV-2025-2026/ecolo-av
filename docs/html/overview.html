@@ -145,7 +145,7 @@ links to the page with the details. As of early on 11 October 2026.</p></div>
 </tr>
 <tr>
 <td><code>hud/</code></td>
-<td>the 2025-26 touchscreen app (Flutter), changed for our back end, <code>src/hud/aav_hud</code>. <code>pixi run get-flutter</code> downloads Flutter</td>
+<td>the 2025-26 touchscreen app (Flutter), changed for our back end, <code>ros/hud/aav_hud</code>. <code>pixi run get-flutter</code> downloads Flutter</td>
 <td><a href="hud.html">HUD</a></td>
 </tr>
 <tr>
@@ -498,19 +498,19 @@ finder).</p>
 <tr>
 <td>The Yahboom IMU driver (C++)</td>
 <td>2025-26 <code>yahboom-IMU</code></td>
-<td><code>src/sensors/aav_imu_yahboom</code></td>
+<td><code>ros/sources/aav_imu_yahboom</code></td>
 <td>rewritten in Rust (Ben); the C++ went on 11 Oct</td>
 </tr>
 <tr>
 <td>The TI radar driver</td>
 <td>2025-26 <code>Nav_Radar</code></td>
-<td><code>src/sensors/ti_ros2_driver</code></td>
+<td><code>ros/sources/ti_ros2_driver</code></td>
 <td>ported; its settings are indoor demos</td>
 </tr>
 <tr>
 <td>The battery monitor</td>
 <td>2024-25 <code>Battery-Monitor-ROS</code></td>
-<td><code>src/sensors/battery_monitor</code></td>
+<td><code>ros/sources/battery_monitor</code></td>
 <td>ported</td>
 </tr>
 <tr>
@@ -522,7 +522,7 @@ finder).</p>
 <tr>
 <td>The HUD's back end (Flask)</td>
 <td>2025-26 <code>User-Interface</code></td>
-<td><code>src/hud/aav_hud</code></td>
+<td><code>ros/hud/aav_hud</code></td>
 <td>ported to our topics; publishes <code>/safety/estop</code>. 98 tests</td>
 </tr>
 <tr>
@@ -558,19 +558,19 @@ finder).</p>
 <tr>
 <td>Lane keeping</td>
 <td>2025-26 <code>Lane_Detection_ROS2</code></td>
-<td><code>src/perception/aav_lane_geometry</code></td>
+<td><code>ros/perception/aav_lane_geometry</code></td>
 <td>brought in: a driver on <code>/drivers/ai/cmd_vel</code></td>
 </tr>
 <tr>
 <td>Radar clustering (C++)</td>
 <td>2025-26 <code>Nav_Radar</code></td>
-<td><code>src/perception/aav_radar_clusters</code></td>
+<td><code>ros/perception/aav_radar_clusters</code></td>
 <td>rewritten in Rust; the C++ went on 15 Oct</td>
 </tr>
 <tr>
 <td>A YOLO stop-sign detector</td>
 <td>2024-25 <code>camera_ros2_ws</code></td>
-<td><code>src/perception/aav_detector</code></td>
+<td><code>ros/perception/aav_detector</code></td>
 <td>rewritten: detections out, and a stop-sign watcher</td>
 </tr>
 <tr>

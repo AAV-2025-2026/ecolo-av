@@ -239,7 +239,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search</td>
 <td>Dart/Flutter, Python ROS 2; the UI Pi</td>
 <td>a working demo, on mock data</td>
-<td>partly: <code>hud/</code>, <code>src/hud/maincar</code></td>
+<td>partly: <code>hud/</code>, <code>ros/hud/maincar</code></td>
 <td><strong>its place database <code>ottawa.db</code> (51 MB)</strong>: the ported app still needs it</td>
 </tr>
 <tr>
@@ -263,7 +263,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>the Yahboom IMU driver</td>
 <td>C++ ROS 2; Pi 4</td>
 <td>working</td>
-<td>yes, rewritten in Rust: <code>src/sensors/aav_imu_yahboom</code> (the C++ copy went on 11 Oct)</td>
+<td>yes, rewritten in Rust: <code>ros/sources/aav_imu_yahboom</code> (the C++ copy went on 11 Oct)</td>
 <td>no</td>
 </tr>
 </tbody>
@@ -281,7 +281,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Lane_Detection_ROS2</td>
 <td>none</td>
-<td>the controller is in <code>aav</code>: <code>src/perception/aav_lane_geometry</code>, a driver on <code>/drivers/ai/cmd_vel</code>. The lane finder isn't in the repo</td>
+<td>the controller is in <code>aav</code>: <code>ros/perception/aav_lane_geometry</code>, a driver on <code>/drivers/ai/cmd_vel</code>. The lane finder isn't in the repo</td>
 </tr>
 <tr>
 <td>Nav_Radar</td>
@@ -324,12 +324,12 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Battery-Monitor-ROS</td>
 <td>battery monitor ROS code</td>
-<td>yes: <code>src/sensors/battery_monitor</code></td>
+<td>yes: <code>ros/sources/battery_monitor</code></td>
 </tr>
 <tr>
 <td>camera_ros2_ws</td>
 <td>Python</td>
-<td>yes: rewritten as <code>src/perception/aav_detector</code></td>
+<td>yes: rewritten as <code>ros/perception/aav_detector</code></td>
 </tr>
 <tr>
 <td>camera_Yolo_detection</td>

@@ -20,11 +20,15 @@ Close and reopen your terminal, then check:
 
 ## 2. Get the code
 
-The repository is public: https://github.com/AAV-2025-2026/ecolo-av. To push, ask the
-integration lead to add you, and put an SSH key on your GitHub account.
+The repository is public: https://github.com/AAV-2025-2026/ecolo-av. You work in your
+own fork of it. Put an SSH key on your GitHub account, click **Fork** on that page, then:
 
-    git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av
+    git clone git@github.com:<your-username>/ecolo-av.git ~/ecolo-av
     cd ~/ecolo-av
+    git remote add upstream https://github.com/AAV-2025-2026/ecolo-av.git
+
+Only want to try the demo? `git clone https://github.com/AAV-2025-2026/ecolo-av.git ~/ecolo-av`
+works too. How changes get in: [Contributing](../CONTRIBUTING.md).
 
 ## 3. Install the environment
 

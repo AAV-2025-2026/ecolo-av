@@ -212,7 +212,7 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 </tr>
 </tbody>
 </table></div>
-<p>Every frame's position on the car is in <code>src/aav_description/config/vehicle.yaml</code>.</p>
+<p>Every frame's position on the car is in <code>ros/bringup/aav_description/config/vehicle.yaml</code>.</p>
 </section>
 <section class="card"><h2 id="3-wheel-speed">3. Wheel speed</h2>
 <div class="table-wrap"><table>
@@ -562,39 +562,39 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 <tbody>
 <tr>
 <td>Starting the drivers</td>
-<td><code>src/sensors/aav_sensors/launch/sensors.launch.py</code>, <code>cameras.launch.py</code></td>
+<td><code>ros/sources/aav_sensors/launch/sensors.launch.py</code>, <code>cameras.launch.py</code></td>
 </tr>
 <tr>
 <td>Driver settings</td>
-<td><code>src/sensors/aav_sensors/config/</code> (<code>imu.yaml</code>, <code>imu_filter.yaml</code>, <code>ublox_gps.yaml</code>, <code>cameras/</code>)</td>
+<td><code>ros/sources/aav_sensors/config/</code> (<code>imu.yaml</code>, <code>imu_filter.yaml</code>, <code>ublox_gps.yaml</code>, <code>cameras/</code>)</td>
 </tr>
 <tr>
 <td>IMU driver</td>
-<td><code>src/sensors/aav_imu_yahboom</code></td>
+<td><code>ros/sources/aav_imu_yahboom</code></td>
 </tr>
 <tr>
 <td>Radar driver</td>
-<td><code>src/sensors/ti_ros2_driver</code></td>
+<td><code>ros/sources/ti_ros2_driver</code></td>
 </tr>
 <tr>
 <td>Battery</td>
-<td><code>src/sensors/battery_monitor</code></td>
+<td><code>ros/sources/battery_monitor</code></td>
 </tr>
 <tr>
 <td>Wheel speed</td>
-<td><code>src/backends/aav_legacy</code> (today), <code>src/backends/aav_spine</code> (CAN)</td>
+<td><code>ros/can_bridge/aav_legacy</code> (today), <code>ros/can_bridge/aav_spine</code> (CAN)</td>
 </tr>
 <tr>
 <td>Sensor positions</td>
-<td><code>src/aav_description/config/vehicle.yaml</code></td>
+<td><code>ros/bringup/aav_description/config/vehicle.yaml</code></td>
 </tr>
 <tr>
 <td>Gazebo's sensors</td>
-<td><code>src/aav_description/urdf/aav.gazebo.xacro</code>, <code>src/backends/aav_gazebo</code></td>
+<td><code>ros/bringup/aav_description/urdf/aav.gazebo.xacro</code>, <code>ros/sim/aav_gazebo</code></td>
 </tr>
 <tr>
 <td>The bench's pretend sensors</td>
-<td><code>src/bench/aav_bench/aav_bench/sensors.py</code></td>
+<td><code>ros/sim/aav_bench/aav_bench/sensors.py</code></td>
 </tr>
 <tr>
 <td>Every topic</td>
