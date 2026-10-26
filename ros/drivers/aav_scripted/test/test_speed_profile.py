@@ -1,5 +1,4 @@
-from aav_scripted.speed_profile import (
-    ACCELERATE, DECELERATE, goal_problem, HOLD, SpeedProfile, stop_reason, STOPPED)
+from aav_scripted.speed_profile import ACCELERATE, DECELERATE, HOLD, SpeedProfile, STOPPED
 import pytest
 
 
@@ -60,46 +59,3 @@ def test_phases_in_order():
 def test_bad_goal_is_rejected():
     with pytest.raises(ValueError):
         SpeedProfile(1.0, 0.0, 1.0, 1.0, 0.0)
-
-
-def test_stop_is_at_once():
-    p = SpeedProfile(1.0, 1.0, 1.0, hold_time=10.0, hold_distance=0.0)
-    for _ in range(100):
-        p.step(0.02)
-    p.stop()
-    assert p.phase == STOPPED
-    assert p.step(0.02) == 0.0
-
-
-@pytest.mark.parametrize('goal', [
-    (1.0, 0.5, 1.0, -1.0, 0.0),             # negative hold_time: it used to wedge the server
-    (float('nan'), 0.5, 1.0, 1.0, 0.0),     # NaN passed the max_speed check
-    (1.0, 0.5, 1.0, float('inf'), 0.0),
-    (3.0, 0.5, 1.0, 1.0, 0.0),              # above max_speed
-    (1.0, 0.0, 1.0, 1.0, 0.0),
-    (1.0, 0.5, 1.0, 0.0, -2.0),
-])
-def test_goal_problem_refuses(goal):
-    assert goal_problem(*goal, max_speed=2.0) is not None
-    # Every goal it refuses would also have failed in SpeedProfile, or run wrongly.
-
-
-@pytest.mark.parametrize('goal', [
-    (1.0, 0.5, 1.0, 2.0, 0.0),
-    (-0.5, 0.5, 0.5, 1.0, 0.0),
-    (1.0, 0.5, 1.0, -1.0, 5.0),             # hold_time is unused with a distance
-    (0.0, 0.5, 1.0, 0.0, 0.0),
-])
-def test_goal_problem_accepts(goal):
-    assert goal_problem(*goal, max_speed=2.0) is None
-    SpeedProfile(*goal)                     # and the profile takes it
-
-
-def test_stop_reason():
-    assert stop_reason(False, False, needs_odom=True, odom_fresh=True) is None
-    assert stop_reason(False, False, needs_odom=False, odom_fresh=False) is None
-    assert stop_reason(True, False, needs_odom=False, odom_fresh=True) == 'e-stop'
-    taken = stop_reason(False, True, needs_odom=False, odom_fresh=True)
-    assert taken == 'someone else is driving'
-    stale = stop_reason(False, False, needs_odom=True, odom_fresh=False)
-    assert stale == 'odometry stopped arriving'

@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import signal
 import sys
 from typing import Optional
@@ -132,8 +131,6 @@ def make_tools(args, log) -> DriveTools:
         from aav_language.ros_backend import RosBackend
         backend = RosBackend()
         log_path = default_log_path()
-        return DriveTools(backend, car=args.car, caps=caps, log=log, log_path=log_path,
-                          mux=(backend.mux_inputs, backend.mux_locks))
     return DriveTools(backend, car=args.car, caps=caps, log=log, log_path=log_path)
 
 
@@ -156,12 +153,6 @@ def main(argv: Optional[list] = None):
 
     if args.max_speed > 2.0:
         sys.exit('--max-speed above 2 m/s is not allowed')
-    if not args.fake:
-        why = safety.car_unreachable(args.car,
-                                     os.environ.get('ROS_AUTOMATIC_DISCOVERY_RANGE', ''),
-                                     os.environ.get('ROS_STATIC_PEERS', ''))
-        if why:
-            sys.exit(why)
     if not sys.stdin.isatty():
         # Started by an app (the agent, Claude...): Ctrl-C in the app's terminal reaches
         # this process too, and it must live to send the stop() the app asks for. The app

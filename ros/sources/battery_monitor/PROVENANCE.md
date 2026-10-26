@@ -42,9 +42,3 @@ change, never the logic:
 
 - `battery_monitor/battery_monitor.py`: `/battery_status` -> `/vehicle/battery`,
   `/battery_monitor_heartbeat` -> `/vehicle/battery/heartbeat`.
-- 25 Oct 2026: added `README.md` (EGM sections: Overview, Interface, Invariants, Side
-  Effects, Verification) and `CLAUDE.md`. Docs only: no inherited file changed.
-- 25 Oct 2026: `battery_monitor.py` publishes only when the newest block holds a
-  reading (V, I, SOC or VS), so a history block no longer re-sends old readings;
-  `VEDirect.py` keeps that block as `last_block`. Added `test/test_vedirect.py`.
-- 25 Oct 2026: `package.xml`: a real description in place of "TODO: Package description".

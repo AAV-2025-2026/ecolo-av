@@ -12,7 +12,6 @@ BSP_NODE_NAME = 'battery_state_publisher'
 BSP_TOPIC_NAME = '/vehicle/battery'
 HP_NODE_NAME = 'heartbeat_publisher'
 HP_TOPIC_NAME = '/vehicle/battery/heartbeat'
-READINGS = ('V', 'I', 'SOC', 'VS')
 
 
 class BatteryMonitor:
@@ -31,10 +30,6 @@ class BatteryMonitor:
             and 'SOC' in self.vd.data.keys()
             and 'VS' in self.vd.data.keys()
         ):
-            return
-        # Publish only when this block brought a reading. A monitor also sends blocks of
-        # history (H1, H2...): publishing on those re-sent old readings as new ones.
-        if not any(key in self.vd.last_block for key in READINGS):
             return
         print('Sending Data')
         # Convert from dict to ros msg
