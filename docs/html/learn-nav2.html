@@ -357,16 +357,19 @@ standard tree, changed for a car.</p>
 </table></div>
 </section>
 <section class="card"><h2 id="reversing">Reversing</h2>
-<p>One switch, <code>reversing:=</code>, on <code>navigation.launch.py</code>. <strong>On everywhere since 22 Oct</strong> (Ben:
-"Yes the car can reverse"), but on the car only where something sees behind it: the roof
-lidar (the radar faces forward; the rear camera, later). Without one, <code>car.launch.py</code>
-keeps Nav2 forward only and says why (<code>vehicle.blind_behind</code>).</p>
+<p>One switch, <code>reversing:=</code>, on <code>navigation.launch.py</code>. <strong>On in Gazebo and on the bench;
+off on the car by default since 26 Oct</strong> (design review F2): the wheel sensors can't tell
+direction yet (H5), so a reversing car's speed would read forward. It goes back on once
+H5 is answered. On the car, <code>reversing:=true</code> (Ben, 22 Oct: "Yes the car can reverse")
+works only where something sees behind it: the roof lidar (the radar faces forward; the
+rear camera, later). Without one, <code>car.launch.py</code> keeps Nav2 forward only and says why
+(<code>vehicle.blind_behind</code>).</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th></th>
-<th><code>reversing:=false</code></th>
-<th><code>reversing:=true</code> (the default: the car, Gazebo, the bench)</th>
+<th><code>reversing:=false</code> (the car's default)</th>
+<th><code>reversing:=true</code> (the default: Gazebo, the bench)</th>
 </tr>
 </thead>
 <tbody>
@@ -423,7 +426,7 @@ reversing at the same number, whoever drives.</p>
 </tr>
 <tr>
 <td><code>car.launch.py</code>, <code>sim.launch.py</code>, <code>bench.launch.py</code></td>
-<td><code>reversing:=true</code> in all three; the car's needs the lidar running</td>
+<td><code>reversing:=true</code> by default in sim and bench; <code>false</code> on the car until H5 (<code>reversing:=true</code> there needs the lidar running)</td>
 </tr>
 <tr>
 <td>Gazebo check</td>

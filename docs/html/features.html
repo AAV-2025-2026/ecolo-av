@@ -383,7 +383,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td>Reversing, with a stop zone behind the car</td>
-<td>Backing up allows a three-point turn, instead of getting stuck facing a wall</td>
+<td>Backing up allows a three-point turn, instead of getting stuck facing a wall. Off by default on the car (26 Oct) until the wheel sensors tell direction (H5)</td>
 <td>Ben</td>
 <td>2026-10-22</td>
 <td>sim</td>
@@ -535,6 +535,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>The ESP32 brakes when the Orin stops, even if the Motor Pi still sends: 111-120 ms in QEMU</td>
 <td>Ben</td>
 <td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td>No-timeout lock (<code>legacy_uart_bridge</code>, twist_mux <code>no_timeout</code>, priority 60)</td>
+<td>Today's ESP32 firmware keeps the last throttle if the Orin or the bridge dies, so on it only people and the actuator tests may drive, never a program</td>
+<td>Ben</td>
+<td>2026-10-26</td>
 <td>built</td>
 </tr>
 <tr>

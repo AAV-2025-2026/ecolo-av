@@ -7,7 +7,7 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">15 min read · 9 sections</div></header>
+<div class="meta">16 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -533,7 +533,9 @@ WiFi details: fine for a test build, but that board can't join the car's WiFi.</
 <div class="admonition warning">
 <p class="admonition-title">Before driving on the legacy path</p>
 <ol>
-<li><strong>No command timeout.</strong> If frames stop, the last throttle stays on.</li>
+<li><strong>No command timeout.</strong> If frames stop, the last throttle stays on. So the bridge
+   locks every program out (twist_mux's no-timeout lock, priority 60): only people and
+   the actuator tests drive. <code>allow_programs_without_timeout: true</code> lifts it, on stands only.</li>
 <li><strong>The OTA update page has no password.</strong> Anyone on the WiFi can flash the car.</li>
 <li><strong>No feedback.</strong> No speed, steering or faults come back.</li>
 <li><strong>The steering sign is unconfirmed.</strong> Check it with the wheels off the ground.</li>

@@ -173,7 +173,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Nav2</td>
 <td><code>aav_navigation</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (<code>reversing:=true</code>): on in Gazebo, on the bench, and on the car since 22 Oct where the lidar watches behind it, with a stop zone behind the rear bumper (<span class="badge b-works">works</span> in Gazebo: <code>sim-check --rear-obstacle</code> stopped 0.75 m short of a post); its settings are tested; <span class="badge b-works">works</span> in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s</td>
+<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (<code>reversing:=true</code>): on in Gazebo and on the bench; on the car only with <code>reversing:=true</code> (off by default since 26 Oct: the wheels can't tell direction yet, H5), where the lidar watches behind it, with a stop zone behind the rear bumper (<span class="badge b-works">works</span> in Gazebo: <code>sim-check --rear-obstacle</code> stopped 0.75 m short of a post); its settings are tested; <span class="badge b-works">works</span> in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s</td>
 </tr>
 <tr>
 <td>Path followers (22 Oct)</td>

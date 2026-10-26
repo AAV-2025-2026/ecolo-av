@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">52 min read · 4 sections</div></header>
+<div class="meta">53 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -192,6 +192,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>twist_mux</code>, <code>point_driver</code></td>
 <td>sim</td>
 <td>true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_command_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).</td>
+</tr>
+<tr>
+<td><code>/safety/legacy_uart_bridge/lock</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>legacy_uart_bridge</code></td>
+<td><code>twist_mux</code></td>
+<td>car</td>
+<td>Latched (reliable, transient local, depth 1), and sent again at 5 Hz, as twist_mux's lock subscription is volatile and would miss a latched message sent before it started. true while legacy_uart_bridge runs frame_version 1 - the 2025-26 C++ firmware, which has no command timeout, so a dead bridge or Orin leaves the last throttle on; false with frame_version 2 (the Rust firmware brakes 100 ms after the Orin's counter stops). A twist_mux lock (no_timeout) at priority 60 with timeout 0 - it holds every program below the actuator tests (scripted 50, replay 40, point 25, nav 20, ai 10), never a person (joy, rc, keyboard) or the actuator tests (60, run by a person who types a confirmation). Timeout 0, so where no legacy bridge runs (spine, sim, bench, turtle) it never locks. Once true it stays true in twist_mux until the bridge says false or twist_mux restarts. The bridge's allow_programs_without_timeout (default false, for a supervised stand only) makes it false.</td>
 </tr>
 <tr>
 <td><code>/safety/sensor_watchdog/state</code></td>
