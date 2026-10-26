@@ -2,7 +2,7 @@
 
 import math
 
-from aav_hud import route
+from aav_routes import route
 import pytest
 
 START = (45.3860, -75.6960)     # the navsat datum: Carleton
