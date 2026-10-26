@@ -45,7 +45,7 @@ def test_gazebo_s_joints_can_turn_as_fast_as_the_model():
     # Gazebo holds each steering joint to the URDF's velocity limit: at 1.0 rad/s its wheels
     # turned only 0.63, slower than the model's steer_rate (TODO 52c). The inner wheel turns
     # faster than the centre one, and the gain's catch-up on each 20 ms hold faster still.
-    urdf = (tool.ROOT / 'src/aav_description/urdf/aav.urdf.xacro').read_text()
+    urdf = (tool.ROOT / 'ros/bringup/aav_description/urdf/aav.urdf.xacro').read_text()
     limit = re.search(r'<limit [^>]*upper="\$\{1.3 \* max_steer\}"[^>]*velocity="([\d.]+)"',
                       urdf)
     actuators = yaml.safe_load(tool.VEHICLE_YAML.read_text())['actuators']
