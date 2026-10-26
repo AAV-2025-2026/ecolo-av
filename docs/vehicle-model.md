@@ -301,12 +301,17 @@ same from 1 to 2.7 m/s: **the car corrects in the same time at any of those spee
 | the heartbeat | up to 100 ms | the most a command may lag before the ESP32 brakes ([the heartbeat](rust-firmware.md#the-heartbeat-version-2-of-the-serial-frame-24-oct), TODO 50) |
 | the spine's tick | 10 ms | `esp32-umod` `TICK` |
 | the wheel speed's age | 50 ms GUESS | the time between Hall pulses at low speed |
+| each actuator's dead time | 0 until measured | the actuator tests' fit: a dead time, then a lag (`*_dead_time` in `vehicle.yaml`) |
 
 | Case | Lateral loop | Speed loop |
 |---|---|---|
 | none | 0 | 0 |
 | typical | 26 + 33 + 25 = **84 ms** | 5 + 25 = **30 ms** |
 | worst | 42 + 67 + 50 + 100 = **259 ms** | 10 + 100 = **110 ms** |
+
+An actuator's dead time is part of the car, so it adds to **every** case, "none" too:
+`speed_delay(case)` adds `throttle_dead_time`, `lateral_delay(case)` adds
+`steer_dead_time`. Both are 0 until the car day, so the numbers below don't change yet.
 
 The lateral delays are lane keeping's, by camera. Nav2 following a path from the EKF has
 no camera in the loop (its own delay is the EKF's), so its margins sit between "none" and
@@ -443,6 +448,7 @@ rolling about 0.3 s late.
 | ζ of the steering | from the two lags | 3.11's step, if it overshoots | `steer_overshoot` |
 | `wheelbase` | 1.57 m | the tape measure (M-list) | v/L in A |
 | the wheel speed's age | 50 ms | the Arduino's pulse rate (H-list) | the speed loop's delay |
+| `throttle_dead_time`, `brake_dead_time`, `steer_dead_time` | 0 (not set) | 4.1, 4.3, 3.11: only if the data resolves them | each loop's delay |
 | delays on the Orin | the Mac's 26 ms | car day 4d, 5 | the lateral margins |
 
 At the car, the actuator tests print the numbers; then:
@@ -452,6 +458,16 @@ pixi run vehicle-model --set throttle_lag=0.25 --set drag=0.3 --set steer_lag=0.
 ```
 
 In code, `model.with_measured(report.yaml)` takes the actuator tests' report as it is.
+
+**One key list.** Three readers take `vehicle.yaml`'s `actuators:`: this model, Gazebo's
+actuator model and ego. Each one uses a key or lists it as ignored (`NOT_LINEAR` here,
+`IGNORED` in `actuator_model.py`). `tools/tests/test_vehicle_model_tool.py` fails if a new
+key reaches only one. Gazebo ignores the dead times for now.
+
+**Check the path before you paste.** Each number the tests print says which signal it goes
+from and to ([Trusting the fits](actuator-tests.md#trusting-the-fits)). `throttle_lag` is
+throttle demand → throttle level. Through the wheel speed (today's ESP32) it is the
+throttle **and** the drivetrain together.
 
 ## What it's for
 

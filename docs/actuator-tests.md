@@ -121,6 +121,61 @@ The 2025-26 ESP32 drives the car until the spine replaces it (`legacy_uart_bridg
 | Coasting | ❌ a low speed command still pushes, and 0 brakes | ✅ inside the speed loop's coast band |
 | A fixed brake % (4.3 as written) | ❌ no brake command exists: the tests brake with a normal stop | ❌ the same |
 
+What each fit can still give, with what is missing:
+
+| Missing | The fit falls back to | Gives |
+|---|---|---|
+| Throttle level (ESP32) | ego's speed ÷ `full_throttle_speed` → wheel speed | `max_accel`; the delay only if the pulses resolve it |
+| Brake level | brake demand → IMU deceleration | `max_brake`, `brake_lag`, `brake_dead_time` |
+| Brake level **and** demand | "stop asked for" → IMU deceleration | the whole stop's dead time and lag; no `vehicle.yaml` line |
+| Fine wheel speed (Hall pulses) | each speed compared with the model's mean since the last pulse | the gain; a delay under 2 pulse intervals is refused |
+
+## Trusting the fits
+
+Each lag fit is now a **dead time, then a lag** (FOPDT). The old fit (a lag alone)
+stays beside it, so you can compare.
+
+```text
+ command ──► wait (dead time) ──► first-order lag (τ) ──► measured
+```
+
+| Rule | What it means |
+|---|---|
+| **The path is named** | each row and each `vehicle.yaml` line says *from* which signal *to* which: e.g. `throttle level -> wheel speed`, never `cmd_vel -> speed` (that would measure ego's ramp and the speed loop too) |
+| **The rms is printed** | with each fit, in the signal's units; the old fit's rms beside it |
+| **True times** | the fits use each message's arrival time (`t_*` columns), not the 50 Hz copies |
+| **A dead time counts** | only if it is longer than the resolution, and fits at least 1.1 × better than a lag alone |
+| **Refused, with a reason** | a lag shorter than the data can resolve gets no `vehicle.yaml` line, and a NOTE says why |
+
+**The resolution** is two fresh values (Nyquist), plus what noise blurs:
+
+```text
+resolution = 2 × (time between fresh values) + rms ÷ (slope × √moving samples)
+```
+
+| Signal | Fresh values every | Resolution |
+|---|---|---|
+| a level at 50 Hz | 0.02 s | 0.04 s |
+| Hall wheel speed, 8 holes on a 0.30 m wheel, at 1 m/s | 0.118 m ÷ 1 m/s = 0.12 s | 0.24 s |
+| ... at 0.5 m/s | 0.24 s | 0.47 s |
+
+So at walking pace a 0.1 s throttle lag can't be read from the wheel speed: use the
+throttle level, or the IMU. `analysis.pulse_interval()` works it out before a run.
+
+**Steering play** is measured first (`steer_play`: where it settles after moves up and
+moves down), then the lag is fitted with it. Left out, play looks like a longer lag.
+
+**Tested on pretend data** (`test/test_robustness.py`) with play, Hall pulses, noise,
+no brake level and known dead times:
+
+| Case | Tolerance it meets |
+|---|---|
+| dead time + lag, from a level | 10 ms (40 ms with 5% noise) |
+| steering with 0.02-0.04 rad play | rate 3%, play 3 mrad, lag 10 ms, dead time 25 ms |
+| Hall pulses, up to 3 m/s | `max_accel` 2%; total delay 40 ms or 10% |
+| Hall pulses, under 1 m/s | `max_accel` 5%; the 0.15 s delay **refused** |
+| brake from the IMU only | `max_brake` 2%; lag and dead time 20 ms |
+
 ## The speed loop's profile (TODO 27)
 
 The spine's speed loop has two profiles ([Tuning the speed
@@ -156,12 +211,22 @@ Each run gets a folder, `~/aav-tests/<date>-<time>-<test>[-sim]/` (`--out` or
 
 | File | Holds |
 |---|---|
-| `log.csv` | 50 rows a second: commands, speed, steering, throttle, brake, wheels, IMU, pose, GPS |
+| `log.csv` | 50 rows a second: commands, speed, steering, throttle, brake, wheels, IMU, pose, GPS, ego's command; and each value's arrival time (`t_speed`, `t_imu`...) |
 | `summary.txt` | the table and the `vehicle.yaml` lines, as printed |
-| `meta.yaml` | the test, the source, the cap and envelope, ego's limits, `vehicle.yaml` then, the steps |
+| `meta.yaml` | the test, the source, the cap and envelope, ego's limits, `vehicle.yaml` then, the steps; and `shaping`: what shaped the commands |
 | `bag/` | with `--bag`: a rosbag of every topic it reads and sends |
 
 `pixi run actuator-test --analyse <folder>` prints the report again from `log.csv`.
+Older logs (no `t_*` columns, no `shaping`) still work: the fits use the rows' times.
+
+`shaping` in `meta.yaml`:
+
+| Key | Holds | When unknown |
+|---|---|---|
+| `backend` | `legacy`, `spine`, `gazebo`, `gazebo-spine`, `bench` | `unknown` |
+| `speed_loop` | the profile (`default`, `smooth`), or "none: open loop" on the ESP32 | on the car's spine: built into the firmware, so write it down |
+| `full_throttle_speed` | the legacy bridge's (its open loop) | `unknown`, or `n/a` |
+| `ego`, `ego_changed` | ego's limits (its ramp is before the backend); what the test lifted | "ego did not answer" |
 
 ## Proven in Gazebo (15 Oct)
 
@@ -233,5 +298,6 @@ drift over 10 m was 0.06 m; the full-lock circle was 6.8 m across, not 5.75 (6.0
 | `procedures.py` | each test's steps |
 | `safety.py` | the rules: REAL or SIM, caps, envelope, confirmation |
 | `analysis.py`, `reports.py` | the maths and the report: no ROS, unit-tested |
+| `test/synthetic.py`, `test/test_robustness.py` | pretend data with play, Hall pulses, noise; the fits must give the numbers back or refuse |
 | `test/fake_car.py` | ego's model + Gazebo's actuator model: the tests check each test gets the numbers back |
 | `tools/actuator_test.sh` | the pixi task: `--local` only with `--sim` |

@@ -2,7 +2,7 @@ import importlib.util
 import math
 from pathlib import Path
 
-from aav_gazebo.actuator_model import (ActuatorConfig, Actuators, Demand, Ideal, lag,
+from aav_gazebo.actuator_model import (ActuatorConfig, Actuators, Demand, Ideal, IGNORED, lag,
                                        speed_loop_profile, SPEED_LOOP_PROFILES, SpeedLoop,
                                        SpeedLoopConfig)
 import pytest
@@ -272,3 +272,12 @@ def test_the_port_matches_the_shared_examples():
         assert d.brake == pytest.approx(float(brake), abs=1e-6)
         assert d.reverse == (reverse == '1')
     assert cases >= 8
+
+
+def test_the_dead_times_are_left_out_on_purpose():
+    # Fitted by the actuator tests, used by the linear model; not modelled here yet.
+    cfg = yaml.safe_load(VEHICLE_YAML.read_text())
+    cfg['actuators']['throttle_dead_time'] = 0.05
+    a = ActuatorConfig.from_vehicle(cfg)
+    assert not IGNORED & set(vars(a))
+    assert a.throttle_lag == cfg['actuators']['throttle_lag']

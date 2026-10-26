@@ -345,3 +345,35 @@ def test_the_summary_has_every_table(car):
     assert len(titles) == 7
     for _, rows in vm.summary(car):
         assert all(len(r) == len(rows[0]) for r in rows)
+
+
+# --- dead times: the actuator tests' FOPDT fits, in the model ----------------------------
+
+def test_dead_times_default_to_none_and_come_from_the_report(car):
+    assert (car.throttle_dead_time, car.brake_dead_time, car.steer_dead_time) == (0, 0, 0)
+    m = car.with_measured({'actuators.throttle_dead_time': (0.05, 'test 4.1'),
+                           'actuators.steer_dead_time': 0.03, 'brake_dead_time': 0.08})
+    assert (m.throttle_dead_time, m.steer_dead_time, m.brake_dead_time) == (0.05, 0.03, 0.08)
+    cfg = {'vehicle': {'wheelbase': 1.57, 'max_steering_angle': 0.5},
+           'actuators': {'throttle_dead_time': 0.04}}
+    assert vm.from_config(cfg).throttle_dead_time == 0.04
+
+
+def test_a_dead_time_adds_to_the_loops_delay_and_costs_phase(car):
+    m = car.with_measured(throttle_dead_time=0.1, steer_dead_time=0.05)
+    for case in vm.CASES:
+        assert m.speed_delay(case) == pytest.approx(car.speed_delay(case) + 0.1)
+        assert m.lateral_delay(case) == pytest.approx(car.lateral_delay(case) + 0.05)
+    before = vm.margins(car.lateral_open_loop(1.0), car.lateral_delay('typical'))
+    after = vm.margins(m.lateral_open_loop(1.0), m.lateral_delay('typical'))
+    # Phase lost = crossover x the extra delay.
+    lost = math.degrees(before.gain_crossover * 0.05)
+    assert before.phase_margin_deg - after.phase_margin_deg == pytest.approx(lost, rel=0.02)
+
+
+def test_the_plants_with_their_dead_times_as_pade(car):
+    m = car.with_measured(throttle_dead_time=0.1, brake_dead_time=0.1)
+    assert vm.dc_gain(m.speed_plant_tf(pade_order=2)) == pytest.approx(
+        vm.dc_gain(car.speed_plant_tf()))
+    assert len(m.brake_plant_tf(pade_order=2)[1]) == len(car.brake_plant_tf()[1]) + 2
+    assert m.speed_plant_tf()[1].tolist() == car.speed_plant_tf()[1].tolist()

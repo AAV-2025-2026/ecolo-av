@@ -16,7 +16,8 @@ import fake_car
 import pytest
 
 CFG = ActuatorConfig()   # the same numbers as vehicle.yaml's actuators: today
-CTX = reports.Context(current={'actuators.drag': CFG.drag})
+# The pretend car logs as Gazebo's adapter does: each command with the tick it caused.
+CTX = reports.Context(current={'actuators.drag': CFG.drag}, command_lead=fake_car.DT)
 SETTINGS = pr.Settings(cap=3.0)
 
 
