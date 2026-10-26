@@ -7,7 +7,7 @@
 <!-- Generated from docs/plain-english.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Plain English: tell the car what to do</h1>
-<div class="meta">18 min read · 9 sections</div></header>
+<div class="meta">17 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -277,19 +277,9 @@ server checks it.</p>
 <td><code>DriveTools._may_move</code></td>
 </tr>
 <tr>
-<td>A twist_mux lock</td>
-<td>refused while a lock holds the driver that would carry the move: the stop-sign and sensor locks (30) hold Nav2 (20), so <code>go_to_gps</code>; not the scripted driver (50), so not <code>drive</code> or <code>turn</code></td>
-<td><code>safety.holding_locks</code></td>
-</tr>
-<tr>
 <td>The real car</td>
 <td>refused unless started with <code>--car</code></td>
 <td><code>safety.allowed_here</code></td>
-</tr>
-<tr>
-<td><code>--car</code> that can't reach the car</td>
-<td>refuses to start: the pixi tasks keep ROS on this computer, so run <code>AAV_DISCOVERY=SUBNET pixi run -e mcp drive-server --car</code> (or <code>talk --car</code>)</td>
-<td><code>safety.car_unreachable</code></td>
 </tr>
 <tr>
 <td>A person driving</td>
