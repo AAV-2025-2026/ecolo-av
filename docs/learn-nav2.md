@@ -218,5 +218,5 @@ street route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each t
 | The car's behaviour trees | `ros/drivers/aav_navigation/behavior_trees/` |
 | Maps | `ros/drivers/aav_navigation/maps/` (`empty`, `example_lot`) |
 | Footprint, turning radius, stop zone from the car's size | `ros/bringup/aav_description/aav_description/vehicle.py` |
-| Nav2's place among the drivers | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| Nav2's place among the drivers | `ros/command_mux/aav_command_mux/config/twist_mux.yaml` |
 | Costmaps in detail; draw a map | [Costmaps](costmaps.md) |

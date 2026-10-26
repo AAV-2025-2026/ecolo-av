@@ -24,7 +24,7 @@ Publishes   safety/sensor_watchdog/lock   std_msgs/Bool, at rate_hz: true while 
                                           heartbeat. twist_mux's sensors lock (priority
                                           30): it holds Nav2 and the AI slot, never a
                                           person or a test, and also after 1 s without
-                                          one (aav_mux twist_mux.yaml): a watchdog that
+                                          one (aav_command_mux twist_mux.yaml): a watchdog that
                                           dies or hangs stops them too
             safety/sensor_watchdog/state  std_msgs/String, at rate_hz: OK, or STOP/WARN and
                                           what is wrong, for the HUD and people

@@ -111,7 +111,7 @@ The highest priority that spoke in the last 0.5 s.
 
 A lock holds every driver below its priority. A stop sign (30) and the sensor watchdog
 (30) hold go-to, Nav2 and the AI, never a person or a test. The e-stop (255) holds
-everyone. The table lives in `ros/command_mux/aav_mux/config/twist_mux.yaml`.
+everyone. The table lives in `ros/command_mux/aav_command_mux/config/twist_mux.yaml`.
 
 ### What happens when I let go of the joystick?
 
@@ -246,7 +246,7 @@ pixi run estop-clear         #             and drives again
 |---|---|
 | What works | `docs/status.md` |
 | Decisions, Q1–Q34 | `docs/decisions.md` |
-| Driver priorities | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| Driver priorities | `ros/command_mux/aav_command_mux/config/twist_mux.yaml` |
 | ego's limits and timeout | `ros/ego/aav_ego/config/` |
 | Every topic | `docs/interfaces.yaml` |
 | The CAN frames | `firmware/can/aav.dbc` |

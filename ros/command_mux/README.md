@@ -12,7 +12,7 @@ Picks **one** command for ego from all the drivers: the stock twist_mux, set up 
 
 | Package | What it is |
 |---|---|
-| [aav_mux](./aav_mux/README.md) | twist_mux config: nine inputs (joy 100 … ai 10), locks `estop` (255), `stop_sign` and `sensors` (30) |
+| [aav_command_mux](./aav_command_mux/README.md) | twist_mux config: nine inputs (joy 100 … ai 10), locks `estop` (255), `stop_sign` and `sensors` (30) |
 
 ## Invariants
 

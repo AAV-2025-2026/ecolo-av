@@ -165,7 +165,7 @@ def test_the_mux_needs_the_watchdogs_heartbeat_only_where_it_runs():
     assert included(started(SIM, watchdog='false'))['goto.launch.py']['watchdog'] == 'false'
 
 
-MUX = load('aav_mux', 'mux.launch.py')
+MUX = load('aav_command_mux', 'mux.launch.py')
 
 
 def mux_files(**args):

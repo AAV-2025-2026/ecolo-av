@@ -492,7 +492,7 @@ source: `LockTopicHandle::isLocked`), so 1 s of silence holds Nav2 too.
 | Profile | Watchdog | Lock |
 |---|---|---|
 | Gazebo, `watchdog:=true` (the default) | runs | fail-safe |
-| Gazebo, `watchdog:=false` | none | timeout 0 (`aav_mux` `no_sensor_lock.yaml`) |
+| Gazebo, `watchdog:=false` | none | timeout 0 (`aav_command_mux` `no_sensor_lock.yaml`) |
 | Bench | always runs | fail-safe |
 | Car | next to the mux, wherever Nav2 runs | fail-safe |
 | Turtle | none | timeout 0 |

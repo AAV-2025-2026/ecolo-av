@@ -88,7 +88,7 @@ def launch_setup(context):
     actions = [
         # The car's own software, as car.launch.py starts it.
         include('aav_description', 'description.launch.py'),
-        include('aav_mux', 'mux.launch.py'),
+        include('aav_command_mux', 'mux.launch.py'),
         include('aav_ego', 'ego.launch.py'),
         # ego's commands go to spine_bridge (source bench) only while everything is BENCH.
         include('aav_io_mux', 'io_mux.launch.py', target='bench', source='bench'),
@@ -144,7 +144,7 @@ def launch_setup(context):
                                reversing=str(flag['reversing']).lower(),
                                plan_around=str(flag['plan_around']).lower()))
     # The sensor watchdog guards Nav2 and the AI slot (lane keeping) as on the car, always:
-    # the mux's sensors lock needs its heartbeat (aav_mux mux.launch.py sensor_lock).
+    # the mux's sensors lock needs its heartbeat (aav_command_mux mux.launch.py sensor_lock).
     actions.append(include('aav_safety', 'watchdog.launch.py',
                            inputs='odom,imu,gps,local,global,radar'))
     if flag['teleop']:

@@ -6,7 +6,7 @@ The sensor watchdog. When a sensor Nav2, goto or the AI slot needs dies, lies or
 it stops them, and says why loudly: in the log, on `/diagnostics` and on the HUD. People and
 test scripts can still drive.
 
-It works through a twist_mux lock (priority 30, in `aav_mux`). Each input's checks:
+It works through a twist_mux lock (priority 30, in `aav_command_mux`). Each input's checks:
 
 | State | Means |
 |---|---|

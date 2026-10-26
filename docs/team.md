@@ -91,7 +91,7 @@ Phase 0 on the hardware we have now, before the spine exists.
 | Read first | [Build a driver](howto-driver.md), [How it fits](how-it-fits.md) (section 3) |
 | Run first | `pixi run turtle teleop:=true` with a joystick plugged in: hold the trigger and steer |
 | First tasks | 1. The first real joystick test (untested so far). 2. The e-stop button's message reaches the mux only on a good network (N2): make it robust. 3. Joystick handover (Q28). 4. The scripted drive on the car, phase 1a |
-| Files | `ros/drivers/aav_teleop/`, `ros/drivers/aav_scripted/`, `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| Files | `ros/drivers/aav_teleop/`, `ros/drivers/aav_scripted/`, `ros/command_mux/aav_command_mux/config/twist_mux.yaml` |
 | Open questions | Q7, Q27, Q28, Q30 |
 
 ## HUD and UI

@@ -174,7 +174,7 @@ with `docs/interfaces.yaml`.
 |---|---|
 | Joystick | `ros/drivers/aav_teleop/config/` |
 | Keyboard | `tools/keyboard.sh` |
-| twist_mux priorities | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| twist_mux priorities | `ros/command_mux/aav_command_mux/config/twist_mux.yaml` |
 | ego | `ros/ego/aav_ego/` (the maths: `ackermann.py`; the limits: `config/`) |
 | Today's backend | `ros/can_bridge/aav_legacy/` (`legacy_uart_bridge.py`, `encoder_udp.py`) |
 | The CAN backend | `ros/can_bridge/aav_spine/` (`spine_bridge.py`, `can_codec.py`) |

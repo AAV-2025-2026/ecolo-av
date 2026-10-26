@@ -52,7 +52,7 @@ ROS node `language_drive` (`ros_backend.py`):
 
 | Item | What |
 |---|---|
-| Subscribes | `/localization/odom/local` (`nav_msgs/Odometry`); `/sensors/gps/fix` (`sensor_msgs/NavSatFix`, best effort); `/safety/estop` (`std_msgs/Bool`); `/vehicle/status` (`aav_interfaces/VehicleStatus`); every twist_mux input and lock from `aav_mux`'s `twist_mux.yaml` (arrival times only, to tell who drives); `/diagnostics` (twist_mux's lock report); `/tf`, `/tf_static` |
+| Subscribes | `/localization/odom/local` (`nav_msgs/Odometry`); `/sensors/gps/fix` (`sensor_msgs/NavSatFix`, best effort); `/safety/estop` (`std_msgs/Bool`); `/vehicle/status` (`aav_interfaces/VehicleStatus`); every twist_mux input and lock from `aav_command_mux`'s `twist_mux.yaml` (arrival times only, to tell who drives); `/diagnostics` (twist_mux's lock report); `/tf`, `/tf_static` |
 | Publishes | `/safety/estop` (`std_msgs/Bool`): only true, five times in 0.5 s |
 | Calls | actions `/scripted_drive` (`aav_interfaces/action/ScriptedDrive`), `/follow_gps_waypoints` (`nav2_msgs/action/FollowGPSWaypoints`); `/ego/get_parameters` |
 

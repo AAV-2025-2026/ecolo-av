@@ -1,7 +1,7 @@
 """
 The command mux: every /drivers/<driver>/cmd_vel in, one /control/cmd_vel out (to ego).
 
-  ros2 launch aav_mux mux.launch.py [use_sim_time:=true] [sensor_lock:=true]
+  ros2 launch aav_command_mux mux.launch.py [use_sim_time:=true] [sensor_lock:=true]
 
 See config/twist_mux.yaml for the inputs and their priorities.
 
@@ -20,7 +20,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def config(name):
-    return PathJoinSubstitution([FindPackageShare('aav_mux'), 'config', name])
+    return PathJoinSubstitution([FindPackageShare('aav_command_mux'), 'config', name])
 
 
 def mux(context):

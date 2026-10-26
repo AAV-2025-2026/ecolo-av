@@ -153,7 +153,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | turtlesim | ROS's teaching turtle; our cheapest stand-in for the car | `pixi run turtle` |
 | twist | a speed (m/s) and a turn rate (rad/s) | every driver |
 | `TwistStamped` | a twist with a time stamp | `/drivers/*/cmd_vel`, `/control/cmd_vel` |
-| `twist_mux` | picks one command from all the drivers, by priority | `ros/command_mux/aav_mux` |
+| `twist_mux` | picks one command from all the drivers, by priority | `ros/command_mux/aav_command_mux` |
 | UART | a simple serial line between two chips | the Motor-Pi to the ESP32 |
 | u-blox ZED-F9R | the GPS chip on the car | `ublox_gps` |
 | UDP | a quick network message with no delivery check | the wheel encoder today |

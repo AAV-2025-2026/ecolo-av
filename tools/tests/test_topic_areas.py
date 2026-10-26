@@ -40,8 +40,8 @@ def test_driver_commands_are_drivers_name_cmd_vel():
 
 
 def test_twist_mux_reads_only_driver_topics():
-    mux = yaml.safe_load((ROOT / 'ros' / 'command_mux' / 'aav_mux' / 'config' / 'twist_mux.yaml')
-                         .read_text())['twist_mux']['ros__parameters']
+    path = ROOT / 'ros' / 'command_mux' / 'aav_command_mux' / 'config' / 'twist_mux.yaml'
+    mux = yaml.safe_load(path.read_text())['twist_mux']['ros__parameters']
     for name, entry in mux['topics'].items():
         assert entry['topic'] == f'/drivers/{name}/cmd_vel', entry['topic']
     contract = set(topics())

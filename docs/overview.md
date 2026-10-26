@@ -42,7 +42,7 @@ The main ones. Every package: [Packages](packages.md).
 | Package | Does | Area (`ros/<area>/`) |
 |---|---|---|
 | `aav_ego` | ego: one command into a speed and steering angle the car can do | ego |
-| `aav_mux` | twist_mux's settings: the priorities and the locks | command_mux |
+| `aav_command_mux` | twist_mux's settings: the priorities and the locks | command_mux |
 | `aav_io_mux` | the sensor mux and the output mux: simulated data never drives the real car | io_mux |
 | `aav_scripted` | scripted drives: speed up, hold, slow down | drivers |
 | `aav_goto` | drive to one GPS point and stop there smoothly | drivers |

@@ -24,7 +24,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.
 | `aav_language` | drivers | plain English: a local model plans drive tools, you say yes | [[works]] Gazebo and the turtle | new |
 | `aav_navigation` | drivers | Nav2, set up for a car, and the maps | [[works]] goals reached in Gazebo | new |
 | `aav_routes` | drivers | street routes (Valhalla) as GPS waypoints for Nav2 | [[works]] in Gazebo | new |
-| `aav_mux` | command_mux | twist_mux: the priorities, the e-stop lock and the other locks | [[works]] | new |
+| `aav_command_mux` | command_mux | twist_mux: the priorities, the e-stop lock and the other locks | [[works]] | new |
 | `aav_io_mux` | io_mux | the sensor mux and the output mux: simulated data never drives the real car | [[works]] turtle, Gazebo and the bench; [[untested]] on the car | new |
 | `aav_ego` | ego | one command → speed and steering the car can do | [[works]] | new |
 | `aav_spine` | can_bridge | the CAN spine: ego's commands as CAN frames. Its Python `spine_bridge`, the config and the launch file | [[works]] on the bench, against `spine_sim`; no spine board yet | new |
@@ -82,7 +82,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.
 | `aav_goto` | `/localization/odom/global`, `/sensors/gps/fix`, `/safety/estop`, the watchdog's lock, `/system/source`, `/control/cmd_vel` | `/drivers/goto/cmd_vel` | the action `/goto`; calls `/fromLL` for a lat/lon B. `pixi run goto` ([A to B](a-to-b.md)) |
 | `aav_language` | your words; odometry, GPS, `/diagnostics`, `/vehicle/status` | `/safety/estop` (true only) | calls `/scripted_drive` and `/follow_gps_waypoints`; never publishes a velocity |
 | `aav_navigation` | `/localization/odom/local`, `/map`, `/goal_pose` | `/drivers/nav/cmd_vel`, `/plan` | SmacPlannerHybrid and MPPI (or Regulated Pure Pursuit); GPS waypoints through `/follow_gps_waypoints` |
-| `aav_mux` (twist_mux) | every `/drivers/<driver>/cmd_vel`, `/safety/estop` | `/control/cmd_vel` | priorities: [Build a driver](howto-driver.md) |
+| `aav_command_mux` (twist_mux) | every `/drivers/<driver>/cmd_vel`, `/safety/estop` | `/control/cmd_vel` | priorities: [Build a driver](howto-driver.md) |
 | `aav_ego` | `/control/cmd_vel` | `/ego/actuator_cmd`, 50 times a second | 1.0 m/s top speed, ±0.5 rad, brakes after 0.3 s without a command |
 | `aav_io_mux` | `/ego/actuator_cmd`, `/system/source`, who publishes each sensor | `/control/<target>/actuator_cmd`, `/system/sensor_mux/state`, `/safety/output_mux/state` | the real car's commands only while every source is REAL: [Sources and targets](sources-and-targets.md) |
 

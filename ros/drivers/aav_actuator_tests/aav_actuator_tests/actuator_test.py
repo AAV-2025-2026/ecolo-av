@@ -435,7 +435,7 @@ class Run:
         if not node.mux or wall - node.mux[-1][0] > MUX_SILENT:
             if wall - last['started'] > MUX_SILENT:
                 raise Aborted('twist_mux passes nothing on /control/cmd_vel: is the tests slot '
-                              'in its config (aav_mux twist_mux.yaml)? Or a lock (e-stop, '
+                              'in its config (aav_command_mux twist_mux.yaml)? Or a lock (e-stop, '
                               'stop sign) holds it')
             return
         if recent and safety.taken_over(node.sent, recent[-1][1:]):

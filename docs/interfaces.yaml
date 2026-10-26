@@ -79,7 +79,7 @@ topics:
     pub: [sensor_watchdog]
     sub: [twist_mux, goto_driver]
     live: [sim]
-    note: true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).
+    note: true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_command_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).
   /safety/sensor_watchdog/state:
     type: std_msgs/msg/String
     pub: [sensor_watchdog]

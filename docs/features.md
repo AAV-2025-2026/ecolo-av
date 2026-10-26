@@ -84,7 +84,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 
 | Feature | Why | Who | Date | Status |
 |---|---|---|---|---|
-| Command mux and e-stop lock (`aav_mux`, twist_mux) | One command wins by priority, and the e-stop locks every driver out | Ben | 2026-10-09 | sim |
+| Command mux and e-stop lock (`aav_command_mux`, twist_mux) | One command wins by priority, and the e-stop locks every driver out | Ben | 2026-10-09 | sim |
 | Four e-stops | The car's red button stays untouched; the joystick, `pixi run estop` and the HUD add three more | Ben | 2026-10-10 | sim |
 | [Sensor watchdog](simulation.md#sensor-failures-on-purpose) (`aav_safety`) | When a sensor fails or freezes, Nav2 stops loudly and says why, instead of driving blind | Ben | 2026-10-15 | sim |
 | Frozen-wheel cross-check | Wheels that stop reporting are caught by checking them against the IMU and GPS | Ben | 2026-10-15 | sim |

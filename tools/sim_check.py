@@ -223,7 +223,8 @@ DRIVING = 0.5           # m/s: the car drives, so a fault can go on
 FROZEN_AT = 0.2         # m/s
 FROZEN_WAIT = 30.0      # s of Gazebo's time for frozen wheels to go wrong (Nav2 slows, turns)
 HELD = 10.0             # s of Gazebo's time the car must stay still with no watchdog at all
-with open(os.path.join(ROOT, 'ros', 'command_mux', 'aav_mux', 'config', 'twist_mux.yaml')) as f:
+with open(os.path.join(ROOT, 'ros', 'command_mux', 'aav_command_mux', 'config',
+                       'twist_mux.yaml')) as f:
     # s of silence from the watchdog before twist_mux's sensors lock holds Nav2 itself
     LOCK_TIMEOUT = yaml.safe_load(f)['twist_mux']['ros__parameters']['locks']['sensors'][
         'timeout']

@@ -142,7 +142,7 @@ def launch_setup(context):
                 actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
                 faults=flag['faults'],
                 spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge')),
-        include(context, 'aav_mux', 'mux.launch.py', use_sim_time='true',
+        include(context, 'aav_command_mux', 'mux.launch.py', use_sim_time='true',
                 sensor_lock=flag['watchdog']),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
                 sim_max_speed=arg('sim_speed')),

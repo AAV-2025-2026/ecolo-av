@@ -10,7 +10,7 @@
 #   too). Locked, it blocks every input whose priority is BELOW the lock's. timeout 0 =
 #   the lock never expires on silence (topic_handle.hpp, LockTopicHandle::isLocked).
 # - Nothing is published when no input counts; ego then stops after its own timeout.
-# - The output topic is `cmd_vel_out`; aav_mux/launch/mux.launch.py remaps it to /control/cmd_vel.
+# - The output topic is `cmd_vel_out`; aav_command_mux/launch/mux.launch.py remaps it to /control/cmd_vel.
 #
 # Holding the joystick deadman (with the stick centred) outranks everything: it stops
 # the car. Releasing it hands control back to the next input after 0.5 s. To stop for

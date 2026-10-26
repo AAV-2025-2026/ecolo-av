@@ -40,7 +40,7 @@ Config files (each names its node `/**/<node>`, so it matches in any namespace):
 | `config/teleop_twist_joy.yaml` | deadman button 0 (trigger); axis 1 = speed, 1.0 m/s at full stick; axis 0 = turn rate, 0.35 rad/s at full stick; `inverted_reverse` |
 | `config/estop_button.yaml` | button 2 publishes `/safety/estop` true |
 
-twist_mux priorities: joystick 100, keyboard 90 (`aav_mux`).
+twist_mux priorities: joystick 100, keyboard 90 (`aav_command_mux`).
 
 ## Invariants
 

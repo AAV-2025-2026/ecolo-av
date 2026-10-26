@@ -45,7 +45,7 @@ def test_no_internet_is_a_reminder_not_a_failure():
 
 
 EVENTS_OK = ("[0.6] (aav_ego) JobEnded: {'identifier': 'aav_ego', 'rc': 0}\n"
-             "[0.7] (aav_mux) JobEnded: {'identifier': 'aav_mux', 'rc': 0}\n")
+             "[0.7] (aav_command_mux) JobEnded: {'identifier': 'aav_command_mux', 'rc': 0}\n")
 
 
 def test_a_build_after_the_last_change_is_ok():

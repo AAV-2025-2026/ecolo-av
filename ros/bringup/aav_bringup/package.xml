@@ -10,7 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>aav_description</exec_depend>
-  <exec_depend>aav_mux</exec_depend>
+  <exec_depend>aav_command_mux</exec_depend>
   <exec_depend>aav_io_mux</exec_depend>
   <exec_depend>aav_ego</exec_depend>
   <exec_depend>aav_teleop</exec_depend>

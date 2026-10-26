@@ -112,7 +112,7 @@ Four files learn about the new driver:
 
 | File | Add |
 |---|---|
-| `ros/command_mux/aav_mux/config/twist_mux.yaml` | an input under `topics:`, shown below |
+| `ros/command_mux/aav_command_mux/config/twist_mux.yaml` | an input under `topics:`, shown below |
 | `docs/interfaces.yaml` | the topic, shown below. Then run `pixi run python tools/gen_interfaces_md.py > docs/interfaces.md` |
 | `ros/bringup/aav_bringup/launch/turtle.launch.py` (and `sim`; on the car, a part in `car.launch.py`'s `PARTS` and the machine files) | a line that starts it, once it has a launch file |
 | `tools/test.sh` | the package's folder, once it has unit tests |

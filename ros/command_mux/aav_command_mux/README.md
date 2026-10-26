@@ -1,4 +1,4 @@
-# aav_mux
+# aav_command_mux
 
 The command mux: every `/drivers/<driver>/cmd_vel` in, one `/control/cmd_vel` out, to
 ego. It is the stock `twist_mux`, set up by our config and launch files: no code of our
@@ -20,7 +20,7 @@ the e-stop button, or publish `/safety/estop` true.
 
 | Item | What |
 |---|---|
-| Launch | `ros2 launch aav_mux mux.launch.py [use_sim_time:=false] [sensor_lock:=true]` |
+| Launch | `ros2 launch aav_command_mux mux.launch.py [use_sim_time:=false] [sensor_lock:=true]` |
 | Node | `twist_mux` (package twist_mux), output `cmd_vel_out` remapped to `/control/cmd_vel` |
 | Publishes | `/control/cmd_vel` (`geometry_msgs/TwistStamped`) |
 

@@ -57,7 +57,7 @@ Parts and what they start:
                   object_detector_<machine>, with the machine file's model. Not for a camera
                   the camera_stream part streams: its own detector replaces this one
   stop_signs      stop_sign_watcher -> /perception/stop_sign, twist_mux's stop-sign lock (the
-                  lock is in aav_mux's config). One per car, next to the mux
+                  lock is in aav_command_mux's config). One per car, next to the mux
   radar_clusters  DBSCAN (aav_radar_clusters, Rust) on /sensors/radar/points ->
                   /perception/radar/clusters, /perception/radar/cluster_boxes
   camera_obstacles
@@ -411,7 +411,7 @@ def launch_setup(context):
     if on('description'):
         actions.append(include('aav_description', 'description.launch.py'))
     if on('mux'):
-        actions.append(include('aav_mux', 'mux.launch.py'))
+        actions.append(include('aav_command_mux', 'mux.launch.py'))
         # The sensor watchdog, next to the mux: twist_mux's sensors lock stops Nav2 and the
         # AI slot when the wheels, the IMU, the GPS or an EKF fail (aav_safety), and when
         # the watchdog itself goes quiet (the lock's 1 s timeout). Nav2 and the sensors may

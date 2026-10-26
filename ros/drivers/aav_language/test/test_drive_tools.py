@@ -208,7 +208,7 @@ def test_a_stop_sign_lock_refuses_go_to_gps_but_not_drive():
     from pathlib import Path
     import yaml
     mux_yaml = (Path(__file__).resolve().parents[3]
-                / 'command_mux/aav_mux/config/twist_mux.yaml')
+                / 'command_mux/aav_command_mux/config/twist_mux.yaml')
     car = FakeBackend()
     tools = DriveTools(car, mux=safety.mux_config(yaml.safe_load(mux_yaml.read_text())))
     plain = car.state

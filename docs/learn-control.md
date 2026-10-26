@@ -211,6 +211,6 @@ does. The spine only listens to it ([Firmware](firmware.md)).
 | State space from zero: models, simulators, poles, Bode, shocks and roll | `tools/state_space_demo.py`, `pixi run state-space-demo` ([Learn: state space](learn-state-space.md)) |
 | The loops as transfer functions and state space: poles, margins, delays | `ros/ego/aav_ego/aav_ego/vehicle_model.py`, `pixi run vehicle-model` ([The car as a linear model](vehicle-model.md)) |
 | Nav2's controller and smoother | `ros/drivers/aav_navigation/config/nav2.yaml` |
-| Driver timeouts and priorities | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| Driver timeouts and priorities | `ros/command_mux/aav_command_mux/config/twist_mux.yaml` |
 | Wheelbase, track, steering limit | `ros/bringup/aav_description/config/vehicle.yaml` |
 | The safety layers, in one table | [How it fits](how-it-fits.md) |

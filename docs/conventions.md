@@ -34,6 +34,7 @@ changes their launch files and executables.
 | `lane_geometry`, `object_detection`, `yolo_ros2` | `aav_lane_geometry`, `aav_object_detection`, `aav_yolo` | done, 10 October, when perception came in. `aav_object_detection` became `aav_radar_clusters` (Rust), 15 October |
 | `aav_yolo`, its node `yolo_detector` | `aav_detector`, `object_detector` | done, 24 October: it runs RF-DETR Nano by default, YOLO only with `detector:=yolo` |
 | `yahboom_imu_cpp` | `aav_imu_yahboom` | done, 11 October: Ben's Rust rewrite replaced it |
+| `aav_mux` | `aav_command_mux` | done, 26 October: there are three muxes; this one is twist_mux's, in `ros/command_mux` |
 | `ti_ros2_driver` | `aav_radar_ti` | proposed [[needs-you]] |
 | `battery_monitor` | `aav_battery_victron` | proposed [[needs-you]] |
 
@@ -90,7 +91,7 @@ twist_mux's sensors lock at its 1 s timeout, so Nav2 never drove.
 
 | Do | Don't |
 |---|---|
-| Load the YAML yourself and pass it as a dict (`ego.launch.py`), edit a copy of the file (`navigation.launch.py`'s `faster_copy`), or pass a second node-named YAML file after the first (`aav_mux`'s `no_sensor_lock.yaml`) | put a node-named YAML file first and trust a later dict to override it |
+| Load the YAML yourself and pass it as a dict (`ego.launch.py`), edit a copy of the file (`navigation.launch.py`'s `faster_copy`), or pass a second node-named YAML file after the first (`aav_command_mux`'s `no_sensor_lock.yaml`) | put a node-named YAML file first and trust a later dict to override it |
 | Check the live value: `ros2 param get /<node> <name>` | trust the launch file |
 
 ## Style, and what checks it

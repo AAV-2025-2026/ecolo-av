@@ -31,7 +31,7 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 | [sources](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver`; `aav_camera_stream` ([one line](#more-packages-see-their-readmes)) |
 | [bringup, localization](#description-and-localization) | `aav_description`, `aav_localization`, `aav_gps_heading` |
 | [drivers](#drivers) | `aav_teleop`, `aav_actuator_tests`, `aav_scripted`, `aav_goto`, `aav_language`, `aav_navigation`; `aav_rc`, `aav_routes` ([one line](#more-packages-see-their-readmes)) |
-| [command_mux, io_mux, ego](#mux-and-ego) | `aav_mux`, `aav_io_mux`, `aav_ego` |
+| [command_mux, io_mux, ego](#mux-and-ego) | `aav_command_mux`, `aav_io_mux`, `aav_ego` |
 | [can_bridge, sim](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla`; `aav_spine_bridge` ([one line](#more-packages-see-their-readmes)) |
 | [perception](#perception) | `aav_detector`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry`; `aav_lidar` ([one line](#more-packages-see-their-readmes)) |
 | [hud](#hud) | `aav_hud` |
@@ -232,7 +232,7 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 
 ## Mux and ego
 
-### aav_mux
+### aav_command_mux
 
 | | |
 |---|---|
@@ -242,7 +242,7 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 | **In → out** | every `/drivers/<driver>/cmd_vel`, `/safety/estop`, `/perception/stop_sign` → `/control/cmd_vel` |
 | **Origin** | stock twist_mux; our settings. Replaces 2025-26 `Real-Time-OS`'s command picking |
 | **Status** | [[works]] |
-| **Run alone** | `ros2 launch aav_mux mux.launch.py` |
+| **Run alone** | `ros2 launch aav_command_mux mux.launch.py` |
 | **Test** | `pixi run estop` while the turtle drives |
 | **Read first** | `config/twist_mux.yaml` (the priorities) |
 
