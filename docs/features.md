@@ -155,6 +155,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | [Actuator tests](actuator-tests.md) (`aav_actuator_tests`) | Measures the throttle, brake and steering on stands, and gives the numbers for `vehicle.yaml` | Ben | 2026-10-15 | sim |
 | Bandwidth, CAN load and timing tests | Checks each network link has room, and finds late messages and stalls | Ben | 2026-10-23 | sim |
 | [Watch from a laptop](foxglove.md) (Foxglove and Lichtblick) | One bridge and three layouts to watch any profile from a laptop | Ben | 2026-10-24 | sim |
+| [A-to-B scorer](a-to-b.md) (`pixi run atob-score`) | Numbers for how well the car sped up, held its speed and stopped on B, the same for Gazebo and car runs; a tape-measured stop splits the GPS error from the control error | Ben | 2026-10-26 | built |
 
 ## Infrastructure
 
