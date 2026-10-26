@@ -87,7 +87,7 @@ Details: [docs/platforms.md](platforms.md), "Moving the Orin to JetPack 7.2".
 | C2 | **IMU** on our Rust driver; its mounting angles in `vehicle.yaml` | S | audit N3, M6 | `/sensors/imu/data` at 100 Hz; turning left shows +z rotation | | |
 | C3 | **Cameras**, with their calibration files (now: both front ribbon cameras on one Pi 5, MediaMTX → `aav_camera_stream` on the Orin) | M | audit N4; the backed-up calibration | `/sensors/camera/front_left/image_raw` steady for 30 min | | |
 | C4 | **Fix the camera freezes** | M | Friday's 10-minute watch (`history/friday-todo-2026-10-16.md` part 5) | 1 hour with no freeze, logged | | |
-| C5 | **Radar** on `ti_ros2_driver`, its clusters in Nav2 | S | audit N7 | `/perception/radar/clusters` while someone walks in front | | |
+| C5 | **Radar** on `aav_radar_ti`, its clusters in Nav2 | S | audit N7 | `/perception/radar/clusters` while someone walks in front | | |
 | C6 | **Lidar driver** (done: the roof Velodyne VLP-16 on the stock `velodyne` driver, on by default on the car; untested with the real lidar), its points into Nav2's costmap and the collision monitor | M | audit N6 (make, model, IP) | an obstacle in front shows in RViz's local costmap | | |
 | C7 | **Wheel encoder** (now: the hardware lead's Arduino on the Orin's CAN, 0x200/0x201; the 2025-26 UDP encoder is off since 23 Oct): alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors: `wheel-core` and `spine_bridge` already read them, 15 Oct) | M | audit D4, C2 | `/vehicle/status` speed matches a GPS speed within 10% at 1 m/s | | |
 | C8 | **Stable device names**: USB serial numbers into `tools/udev/99-aav.rules` | S | the survey's "by-id" lists | unplug and replug everything: same names | | |

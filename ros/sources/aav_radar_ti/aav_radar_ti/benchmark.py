@@ -28,7 +28,7 @@ class InstrumentationTimer:
 class Instrumentor:
     json_temp = []
 
-    def BeginSession(self, filepath='./src/ti_ros2_driver/debug/result.json'):
+    def BeginSession(self, filepath='./src/aav_radar_ti/debug/result.json'):
         self.file = open(filepath, 'w')
         self.file.truncate(0)
         self.WriteHeader()

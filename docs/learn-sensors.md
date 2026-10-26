@@ -98,10 +98,10 @@ All about it: [Learn: GPS](learn-gps.md).
 | | |
 |---|---|
 | **Measures** | points (x, y, z) and each point's speed toward or away from the radar |
-| **Rate, range** | 10 Hz; 8.4 m (`ti_ros2_driver` `cfg/base.cfg`) |
+| **Rate, range** | 10 Hz; 8.4 m (`aav_radar_ti` `cfg/base.cfg`) |
 | **Good at** | works in the dark, rain and fog; measures speed directly |
 | **Bad at** | few points; poor height; clutter close up. Publishes best effort: subscribe best effort |
-| **Driver** | `ti_ros2_driver` (from the 2025-26 `Nav_Radar`), then `radar_clusters` (`aav_radar_clusters`, Rust) groups the points |
+| **Driver** | `aav_radar_ti` (from the 2025-26 `Nav_Radar`), then `radar_clusters` (`aav_radar_clusters`, Rust) groups the points |
 | **Used by** | the local costmap's obstacle layer, and `collision_monitor` |
 | **Gazebo** | yes, in the road world: a lidar shaped like the radar (`/gazebo/radar/points`, turned into ours by `gazebo_radar`) |
 | **Bench** | `mock_radar` draws points on the bench's boxes |
@@ -153,8 +153,8 @@ All about it: [Learn: GPS](learn-gps.md).
 | Starting the drivers | `ros/sources/aav_sensors/launch/sensors.launch.py`, `cameras.launch.py` |
 | Driver settings | `ros/sources/aav_sensors/config/` (`imu.yaml`, `imu_filter.yaml`, `ublox_gps.yaml`, `cameras/`) |
 | IMU driver | `ros/sources/aav_imu_yahboom` |
-| Radar driver | `ros/sources/ti_ros2_driver` |
-| Battery | `ros/sources/battery_monitor` |
+| Radar driver | `ros/sources/aav_radar_ti` |
+| Battery | `ros/sources/aav_battery_victron` |
 | Wheel speed | `ros/can_bridge/aav_spine_bridge` (Rust, the default) or `aav_spine` (Python): `spine_bridge role:=sensors`; `ros/can_bridge/aav_legacy` (the 2025-26 encoder) |
 | The front cameras | `ros/sources/aav_camera_stream` |
 | The lidar's scan for Nav2 | `ros/perception/aav_lidar` |

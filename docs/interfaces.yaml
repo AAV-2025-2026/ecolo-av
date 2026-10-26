@@ -337,12 +337,12 @@ topics:
     pub: [battery_state_publisher, mock_battery]
     sub: [hud]
     live: [bench]
-    note: battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).
+    note: aav_battery_victron's node is battery_state_publisher (the Victron VE.Direct cable).
   /vehicle/battery/heartbeat:
     type: std_msgs/msg/String
     pub: [heartbeat_publisher]
     sub: []
-    note: battery_monitor's sign of life.
+    note: aav_battery_victron's sign of life.
   /sensors/camera/front_left/image_raw:
     type: sensor_msgs/msg/Image
     pub: [camera_left, mock_camera, test_camera, gz_road_bridge, gazebo_camera, carla_adapter, camera_stream_front_left]

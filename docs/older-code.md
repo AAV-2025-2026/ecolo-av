@@ -51,7 +51,7 @@ The five not cloned here:
 | Repo | What GitHub says | Status |
 |---|---|---|
 | Lane_Detection_ROS2 | none | the controller is in `aav`: `ros/perception/aav_lane_geometry`, a driver on `/drivers/ai/cmd_vel`. The lane finder isn't in the repo |
-| Nav_Radar | none | in `aav`: `ti_ros2_driver`; the clustering, rewritten in Rust, as `aav_radar_clusters` |
+| Nav_Radar | none | in `aav`: `aav_radar_ti`; the clustering, rewritten in Rust, as `aav_radar_clusters` |
 | AAV_dashboard | the **camera system's README** (main @ 5a26e15): CSI cameras → MediaMTX RTSP on the camera Pis (port 8554) → the Jetson's `camera_decode` (NVDEC) → `/camera/cam1/image_raw`, `cam2` → YOLOv8 on TensorRT → `/aav/stop_sign_*`; domain 10. The code itself is only on the Jetson, `~/Desktop/aav/Camera`. Plus a small web dashboard (ports 8080, 9090) | the README: `docs/reference/2025-26-camera-system` (15 Oct). The code: copy on Friday |
 | Speed | an older copy of the wheel-encoder Pico program, `Wheel_Encoders.cpp` (master @ a520646) | no: Wheel_Encoders is the newer one, now in Rust |
 | Navigation-GlobalMapRouter---Abandoned--- | none | abandoned |
@@ -61,7 +61,7 @@ The five not cloned here:
 | Repo | What GitHub says | In `aav`? |
 |---|---|---|
 | GNSS | GNSS code for the car (u-blox, with RTK corrections) | surveyed in depth; replaced by the stock u-blox driver |
-| Battery-Monitor-ROS | battery monitor ROS code | yes: `ros/sources/battery_monitor` |
+| Battery-Monitor-ROS | battery monitor ROS code | yes: `ros/sources/aav_battery_victron` |
 | camera_ros2_ws | Python | yes: rewritten as `ros/perception/aav_detector` |
 | camera_Yolo_detection | Python, 72 MB | no: its training script and `data.yaml` were in `aav_detector/training` until 26 Oct, unused. The trained `best.pt` isn't in it |
 | cameras | publishes camera feeds to ROS 2 | its 4 calibration files: `aav_sensors/config/cameras`, used by `cameras.launch.py` |

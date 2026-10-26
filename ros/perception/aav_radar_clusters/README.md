@@ -34,7 +34,7 @@ and installs the binary. So `ros2 run` and launch files treat it like any other 
 
 ### Launch
 
-`launch/radar_clusters.launch.py`: the node, plus `mock:=true` (ti_ros2_driver's pretend
+`launch/radar_clusters.launch.py`: the node, plus `mock:=true` (aav_radar_ti's pretend
 radar: use `minimum_points:=5` with it) and `radar_rviz:=true` (RViz with
 `rviz/radar_clusters.rviz`). Arguments `eps`, `minimum_points`.
 

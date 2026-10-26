@@ -19,8 +19,8 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 |---|---|---|---|---|
 | IMU driver in Rust (`aav_imu_yahboom`) | Our C++ moves to Rust; it gives the 2025-26 C++ driver's answers, bit for bit | Ben | 2026-10-10 | built |
 | GPS driver: stock `ublox_gps`, with `nmea` or `ublox_dgnss` as options | A stock driver that installs with Pixi on every computer, while the receiver model is still open (Q18) | Ben | 2026-10-11 | built |
-| TI radar driver (`ti_ros2_driver`) | The car's radar already worked with it, so we ported it to Jazzy instead of rewriting it | the 2025-26 team, ported by Ben | 2026-10-09 | built |
-| Battery monitor (`battery_monitor`) | Shows the battery's state, so the team sees it before it runs flat | the 2024-25 team | 2026-10-09 | built |
+| TI radar driver (`aav_radar_ti`) | The car's radar already worked with it, so we ported it to Jazzy instead of rewriting it | the 2025-26 team, ported by Ben | 2026-10-09 | built |
+| Battery monitor (`aav_battery_victron`) | Shows the battery's state, so the team sees it before it runs flat | the 2024-25 team | 2026-10-09 | built |
 | Roof lidar: the stock `velodyne` driver | The car's VLP-16 already speaks to this stock driver; it gives Nav2 a view all round the car | Ben | 2026-10-20 | built |
 | Wheel speed from CAN (0x200, 0x201; `spine_bridge role:=sensors`) | The hardware lead's Arduino puts the wheel speeds on CAN; the Orin turns them into odometry | Ben | 2026-10-15 | sim |
 | [Front camera streams](camera-pipeline.md) (`aav_camera_stream`) | H.264 from the camera Pi is about 10 times smaller than JPEG, so both front cameras fit the network | Ben | 2026-10-24 | built |

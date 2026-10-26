@@ -116,7 +116,7 @@ the next concrete step.
 | T4.1 | Power audit | 13 Nov | 🔧 | 5 | clamp meter, every load |
 | T4.2 | Regulated 5 V supplies | 27 Nov | ⬜ | 0 | the ZK-12KX converters (KEFC) |
 | T4.3 | 12 V rail at actuator peak | 27 Nov | ⬜ | 0 | |
-| T4.4 | Battery monitor and temperature | 11 Dec | 🔧 | 20 | the 2024-25 node is in (`battery_monitor`); the Junctek reader is not |
+| T4.4 | Battery monitor and temperature | 11 Dec | 🔧 | 20 | the 2024-25 node is in (`aav_battery_victron`); the Junctek reader is not |
 | T4.5 | Rail monitors | 18 Dec | ⬜ | 0 | |
 | T4.6 | Wiring diagram | 18 Dec | 🔧 | 5 | the photos in [car photos](car-photos.md) are a start |
 | T4.7 | One-hour soak test | 18 Dec | ⬜ | 0 | |

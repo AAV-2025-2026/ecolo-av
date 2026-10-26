@@ -4,11 +4,11 @@ Copied on 2026-10-09 from github.com/Carleton-AAV-Capstone/Battery-Monitor-ROS @
 
 Files, unchanged unless listed under Changes:
 
-- `battery_monitor/BatteryStatePublisher.py`
-- `battery_monitor/HeartbeatPublisher.py`
-- `battery_monitor/VEDirect.py`
-- `battery_monitor/__init__.py`
-- `battery_monitor/battery_monitor.py`
+- `aav_battery_victron/BatteryStatePublisher.py`
+- `aav_battery_victron/HeartbeatPublisher.py`
+- `aav_battery_victron/VEDirect.py`
+- `aav_battery_victron/__init__.py`
+- `aav_battery_victron/battery_monitor.py`
 - `package.xml`
 - `setup.cfg`
 - `setup.py`
@@ -18,7 +18,7 @@ Files, unchanged unless listed under Changes:
 
 ## Changes (2026-10-09, porting to Jazzy so it runs)
 
-- Added `resource/battery_monitor`; `setup.py` needs it and the build failed without it.
+- Added `resource/aav_battery_victron`; `setup.py` needs it and the build failed without it.
 - `battery_monitor.py`: import `TimePublisher as HeartbeatPublisher` (the class was never
   called HeartbeatPublisher, so the node crashed on start); stamp `BatteryState.header`.
 - `HeartbeatPublisher.py`: `self.publisher_` -> `self.publisher` (crashed on first publish).
@@ -40,7 +40,7 @@ Files, unchanged unless listed under Changes:
 The topics move to their areas (docs/naming.md, Decided by Ben on 15 Oct). Only names
 change, never the logic:
 
-- `battery_monitor/battery_monitor.py`: `/battery_status` -> `/vehicle/battery`,
+- `aav_battery_victron/battery_monitor.py`: `/battery_status` -> `/vehicle/battery`,
   `/battery_monitor_heartbeat` -> `/vehicle/battery/heartbeat`.
 - 25 Oct 2026: added `README.md` (EGM sections: Overview, Interface, Invariants, Side
   Effects, Verification) and `CLAUDE.md`. Docs only: no inherited file changed.
@@ -48,3 +48,12 @@ change, never the logic:
   reading (V, I, SOC or VS), so a history block no longer re-sends old readings;
   `VEDirect.py` keeps that block as `last_block`. Added `test/test_vedirect.py`.
 - 25 Oct 2026: `package.xml`: a real description in place of "TODO: Package description".
+
+## Renamed (2026-10-26)
+
+- The package `battery_monitor` is `aav_battery_victron` (`aav_<kind>_<maker>`, `docs/conventions.md`):
+  its folder, its module (`battery_monitor/` -> `aav_battery_victron/`), `resource/` marker,
+  `package.xml`, `setup.py`, `setup.cfg`, and the imports in `battery_monitor.py` and
+  `test/test_vedirect.py`. The paths in the list above are the new ones.
+- Only names change: the executable `battery_monitor`, the nodes
+  (`battery_state_publisher`, `heartbeat_publisher`) and the topics stay.

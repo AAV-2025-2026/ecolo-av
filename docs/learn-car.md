@@ -92,8 +92,8 @@ transceiver chip (U7) fitted? Still to check ([Audit questions](audit-questions.
 | Wheel speed | how fast the wheels turn | CAN, straight to the Orin, from the hardware lead's Arduino (23 Oct; was UDP to the Motor-Pi) | `spine_bridge role:=sensors` (was `encoder_udp`) |
 | Lidar, on the roof: Velodyne VLP-16 | 3D points around the car | Ethernet (UDP to the Jetson) | the stock `velodyne` driver (`aav_sensors lidar:=true`); untested with the real lidar |
 | Cameras | pictures | two ribbon cables into one Pi 5, then H.264 over Ethernet | MediaMTX on the Pi → `aav_camera_stream` on the Orin, RF-DETR inside each stream |
-| TI radar | points ahead of the car | USB | `ti_ros2_driver`; not seen in the photos |
-| Battery monitor (Victron) | battery voltage and charge | USB (VE.Direct cable) | `battery_monitor` |
+| TI radar | points ahead of the car | USB | `aav_radar_ti`; not seen in the photos |
+| Battery monitor (Victron) | battery voltage and charge | USB (VE.Direct cable) | `aav_battery_victron` |
 | Steering position (KTC-100 pot) | where the front wheels point | wire, into the steering Jrk | **new**: the board reads it from the Jrk |
 
 ![The roof: the lidar, the GNSS antenna, three stick antennas](img/car/roof-lidar-antennas.jpg)

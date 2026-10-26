@@ -25,7 +25,7 @@ class rospublisher(Node):
         super().__init__('iwr6843aop')
 
         # ros parameters. The ports are the udev names from tools/udev/99-aav.rules.
-        cfg = os.path.join(get_package_share_directory('ti_ros2_driver'), 'cfg', 'base.cfg')
+        cfg = os.path.join(get_package_share_directory('aav_radar_ti'), 'cfg', 'base.cfg')
         self.declare_parameter('cfg_path', cfg)
         self.declare_parameter('command_port', '/dev/aav/radar_cmd')
         self.declare_parameter('data_port', '/dev/aav/radar_data')
@@ -37,7 +37,7 @@ class rospublisher(Node):
         self.declare_parameter('output_RD_heatmap', False)
         self.declare_parameter('debug_mode', False)
         self.declare_parameter(
-            'debug_log_path', os.getcwd() + '/src/ti_ros2_driver/debug/result.json'
+            'debug_log_path', os.getcwd() + '/src/aav_radar_ti/debug/result.json'
         )
         self.cfg_path_ = self.get_parameter('cfg_path').get_parameter_value().string_value
         self.command_port_ = self.get_parameter('command_port').get_parameter_value().string_value

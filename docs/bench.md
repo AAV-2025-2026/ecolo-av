@@ -65,9 +65,9 @@ can tell the difference.
 | IMU | `mock_imu` | `aav_imu_yahboom` |
 | GPS | `mock_gps` | `ublox_gps` (the default), `nmea_navsat_driver` or `ublox_dgnss`: `gps_driver:=ublox`, `nmea` or `ublox_dgnss` picks |
 | Camera | `mock_camera` | the front cameras' streams (`aav_camera_stream`), or `usb_cam` for a USB camera |
-| Radar | `mock_radar` | `ti_ros2_driver` |
+| Radar | `mock_radar` | `aav_radar_ti` |
 | Lidar (`lidar:=true`) | `mock_lidar`: VLP-16 packets to the stock velodyne driver | the roof VLP-16 itself |
-| Battery | `mock_battery` | `battery_monitor` |
+| Battery | `mock_battery` | `aav_battery_victron` |
 
 ## The stand-ins
 

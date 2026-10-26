@@ -122,8 +122,8 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | Code | From | Now in | State |
 |---|---|---|---|
 | The Yahboom IMU driver (C++) | 2025-26 `yahboom-IMU` | `ros/sources/aav_imu_yahboom` | rewritten in Rust (Ben); the C++ went on 11 Oct |
-| The TI radar driver | 2025-26 `Nav_Radar` | `ros/sources/ti_ros2_driver` | ported; its settings are indoor demos |
-| The battery monitor | 2024-25 `Battery-Monitor-ROS` | `ros/sources/battery_monitor` | ported |
+| The TI radar driver | 2025-26 `Nav_Radar` | `ros/sources/aav_radar_ti` | ported; its settings are indoor demos |
+| The battery monitor | 2024-25 `Battery-Monitor-ROS` | `ros/sources/aav_battery_victron` | ported |
 | Camera calibrations | 2024-25 `cameras` | `aav_sensors/config/cameras` | used by `cameras.launch.py` |
 | The HUD app (Flutter), its Flask back end and boot scripts | 2025-26 `User-Interface` | `archive/2026-27-flutter-hud/` | ported to our topics (10-11 Oct), then archived 25 Oct: the raylib HUD replaced it (Q29). Its route maths lives on in `aav_routes/route.py`, its place database in `pixi run get-hud-map` |
 | The ESP32 actuator firmware (C++) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_umod_esp32` | runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers |

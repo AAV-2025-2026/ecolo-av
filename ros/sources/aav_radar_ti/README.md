@@ -1,9 +1,10 @@
-# ti_ros2_driver
+# aav_radar_ti
 
 The driver for the TI IWR6843AOP mmWave radar. It sends the radar a `.cfg` over the
 command port, reads its binary frames from the data port, and publishes a
 `PointCloud2`. Inherited from the 2025-26 team's `AAV-2025-2026/Nav_Radar`: see
-[PROVENANCE.md](./PROVENANCE.md) for the commit and every change since.
+[PROVENANCE.md](./PROVENANCE.md) for the commit and every change since. Called
+`ti_ros2_driver` until 26 Oct 2026.
 
 On the car, `aav_sensors`' `sensors.launch.py radar:=true` starts `pcl_pub` as node
 `radar`, with `cfg/base.cfg`, on `/sensors/radar/points`.
@@ -50,7 +51,7 @@ targets: x, y, z, velocity_x/y/z, acceleration_x/y/z.
 | `frame_id` | `radar_link` |
 | `roi` | '' or `xl_xu;yl_yu;zl_zu` (m) |
 | `publish_target_tracker`, `output_RA_heatmap`, `output_RD_heatmap`, `debug_mode` | false |
-| `debug_log_path` | `<cwd>/src/ti_ros2_driver/debug/result.json` |
+| `debug_log_path` | `<cwd>/src/aav_radar_ti/debug/result.json` |
 
 ### `mock_radar_publisher`
 
@@ -96,7 +97,7 @@ No launch file of its own: `aav_sensors`' `sensors.launch.py radar:=true` starts
 ## Verification
 
 ```sh
-pixi run build && colcon test --packages-select ti_ros2_driver && colcon test-result --verbose
+pixi run build && colcon test --packages-select aav_radar_ti && colcon test-result --verbose
 ```
 
 The tests are the stock lint checks (copyright, flake8, pep257). `pixi run test` runs

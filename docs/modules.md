@@ -28,7 +28,7 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 
 | Area (`ros/<area>/`) | Modules |
 |---|---|
-| [sources](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver`; `aav_camera_stream` ([one line](#more-packages-see-their-readmes)) |
+| [sources](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `aav_battery_victron`, `aav_radar_ti`; `aav_camera_stream` ([one line](#more-packages-see-their-readmes)) |
 | [bringup, localization](#description-and-localization) | `aav_description`, `aav_localization`, `aav_gps_heading` |
 | [drivers](#drivers) | `aav_teleop`, `aav_actuator_tests`, `aav_scripted`, `aav_goto`, `aav_language`, `aav_navigation`; `aav_rc`, `aav_routes` ([one line](#more-packages-see-their-readmes)) |
 | [command_mux, io_mux, ego](#mux-and-ego) | `aav_command_mux`, `aav_io_mux`, `aav_ego` |
@@ -72,7 +72,7 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 | **Test** | `cargo test -p yahboom-protocol` (in `tools/test.sh`) |
 | **Read first** | `crates/yahboom-protocol/src/lib.rs`, then `PROVENANCE.md` |
 
-### battery_monitor
+### aav_battery_victron
 
 | | |
 |---|---|
@@ -82,11 +82,11 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 | **In → out** | `/dev/aav/battery` → `/vehicle/battery` (BatteryState), `/vehicle/battery/heartbeat` (String) |
 | **Origin** | inherited: 2024-25 `Battery-Monitor-ROS`; two start-up crashes fixed |
 | **Status** | [[untested]] needs the device |
-| **Run alone** | `ros2 run battery_monitor battery_monitor --ros-args -p port:=/dev/ttyUSB0` |
+| **Run alone** | `ros2 run aav_battery_victron battery_monitor --ros-args -p port:=/dev/ttyUSB0` |
 | **Test** | only the stock style tests (`colcon test`) |
-| **Read first** | `battery_monitor/battery_monitor.py` |
+| **Read first** | `aav_battery_victron/battery_monitor.py` |
 
-### ti_ros2_driver
+### aav_radar_ti
 
 | | |
 |---|---|
@@ -97,8 +97,8 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 | **Origin** | inherited: 2025-26 `Nav_Radar` @ 6242631882 |
 | **Status** | [[untested]] on the radar; its configs are indoor demos. Its `mock_radar_publisher` [[works]] |
 | **Run alone** | `ros2 launch aav_sensors sensors.launch.py radar:=true imu:=false gps:=false` |
-| **Test** | `ros2 run ti_ros2_driver mock_radar_publisher` stands in for it |
-| **Read first** | `ti_ros2_driver/pc_publisher.py` |
+| **Test** | `ros2 run aav_radar_ti mock_radar_publisher` stands in for it |
+| **Read first** | `aav_radar_ti/pc_publisher.py` |
 
 ## Description and localization
 
@@ -591,4 +591,4 @@ until the spine replaces it.
 | 1 | Which computer runs the HUD: the DASH-UI Pi, or the Innoview screen's computer? |
 | 2 | Is the IMU on the Orin's USB, or on a Pi? (the `orin.yaml` TODO) |
 | 3 | Is the sentinel display on the car, and what feeds it? |
-| 4 | Is `battery_monitor`'s Victron on the car? |
+| 4 | Is `aav_battery_victron`'s Victron on the car? |

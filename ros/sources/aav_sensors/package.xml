@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_sensors</name>
   <version>0.1.0</version>
-  <description>Sensor configuration and launch: IMU (aav_imu_yahboom, + imu_filter_madgwick), GPS (ublox_gps, nmea_navsat_driver or ublox_dgnss -> /sensors/gps/fix), radar (ti_ros2_driver), battery (battery_monitor), and the cameras (usb_cam) with their calibration files.</description>
+  <description>Sensor configuration and launch: IMU (aav_imu_yahboom, + imu_filter_madgwick), GPS (ublox_gps, nmea_navsat_driver or ublox_dgnss -> /sensors/gps/fix), radar (aav_radar_ti), battery (aav_battery_victron), and the cameras (usb_cam) with their calibration files.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 
@@ -19,10 +19,10 @@
   <exec_depend>rclcpp_components</exec_depend>
   <!-- The cameras (cameras.launch.py): Linux only -->
   <exec_depend>usb_cam</exec_depend>
-  <exec_depend>ti_ros2_driver</exec_depend>
+  <exec_depend>aav_radar_ti</exec_depend>
   <exec_depend>velodyne_driver</exec_depend>
   <exec_depend>velodyne_pointcloud</exec_depend>
-  <exec_depend>battery_monitor</exec_depend>
+  <exec_depend>aav_battery_victron</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 

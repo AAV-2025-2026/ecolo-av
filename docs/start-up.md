@@ -41,7 +41,7 @@ deeper on two parts of this page.
 | Device | Wire | Driver (ours or stock) | Topic it makes | Who reads it | Status |
 |---|---|---|---|---|---|
 | Front cameras L and R | ribbon, both on one Pi 5 | MediaMTX on the Pi streams H.264; on the Orin, `aav_camera_stream` decodes each, with RF-DETR inside | `/perception/detections` (no raw pictures on the network) | stop-sign watcher, sensor watchdog | ✅ on a Mac; ❌ car |
-| mmWave radar (TI) | USB | `ti_ros2_driver` (inherited) | `/sensors/radar/points` | radar clusters, Nav2's local costmap, collision_monitor | ✅ bench, Gazebo; ❌ car |
+| mmWave radar (TI) | USB | `aav_radar_ti` (inherited) | `/sensors/radar/points` | radar clusters, Nav2's local costmap, collision_monitor | ✅ bench, Gazebo; ❌ car |
 | Lidar (roof Velodyne VLP-16) | Ethernet | the stock `velodyne` driver, on by default on the car | `/sensors/lidar/points` | Nav2's costmap, collision_monitor | ✅ Gazebo, bench, a pretend VLP-16; ❌ the real lidar |
 | IMU (Yahboom) | USB | `aav_imu_yahboom` (Rust) + Madgwick filter | `/sensors/imu/data` | both EKFs | ✅ Gazebo; ❌ car |
 | GPS (ZED-F9R) | USB to the RTK-Pi | `ublox_gps` (stock) | `/sensors/gps/fix` | navsat_transform, HUD | ✅ Gazebo; ❌ car |

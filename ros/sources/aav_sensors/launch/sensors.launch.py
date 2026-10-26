@@ -13,14 +13,14 @@ Sensor drivers: each publishes raw data in its own frame; nothing here fuses any
             nmea         nmea_navsat_driver: any NMEA receiver (gps_nmea.launch.py)
             ublox_dgnss  ublox_dgnss -> ublox_nav_sat_fix_hp: a u-blox F9P over libusb,
                          the 2024-25 choice. apt only: the car, not Pixi
-  radar   ti_ros2_driver pcl_pub -> /sensors/radar/points (PointCloud2, frame radar_link)
+  radar   aav_radar_ti pcl_pub -> /sensors/radar/points (PointCloud2, frame radar_link)
   lidar   the stock velodyne driver, for the roof's Velodyne VLP-16 (found at the 16 Oct
           audit: 192.168.1.201, sending UDP to the Jetson only):
             lidar_driver (velodyne_driver)   UDP packets -> /sensors/lidar/packets
             lidar_cloud (velodyne_pointcloud) -> /sensors/lidar/points (PointCloud2,
                                                  frame lidar_link)
           lidar_ip and lidar_port pick the sender: the lidar, or tools/fake_vlp16.py
-  battery battery_monitor -> /vehicle/battery (BatteryState)
+  battery aav_battery_victron battery_monitor -> /vehicle/battery (BatteryState)
 
 Frames (imu_link, gps_link, radar_link, lidar_link) come from aav_description; run its
 description.launch.py too, or nothing can place these readings on the car.
@@ -169,9 +169,9 @@ def launch_setup(context):
     if on('radar'):
         # Perception, later: the out-of-box cfg, which publishes x forward, y left.
         actions.append(Node(
-            package='ti_ros2_driver', executable='pcl_pub', name='radar',
+            package='aav_radar_ti', executable='pcl_pub', name='radar',
             parameters=[{
-                'cfg_path': os.path.join(get_package_share_directory('ti_ros2_driver'),
+                'cfg_path': os.path.join(get_package_share_directory('aav_radar_ti'),
                                          'cfg', 'base.cfg'),
                 'command_port': '/dev/aav/radar_cmd',
                 'data_port': '/dev/aav/radar_data',
@@ -184,7 +184,7 @@ def launch_setup(context):
     if on('battery'):
         # The Victron VE.Direct cable. Its `port` parameter defaults to the udev name
         # /dev/aav/battery.
-        actions.append(Node(package='battery_monitor', executable='battery_monitor'))
+        actions.append(Node(package='aav_battery_victron', executable='battery_monitor'))
     return actions
 
 

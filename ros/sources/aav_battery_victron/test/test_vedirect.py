@@ -1,6 +1,6 @@
 """VEDirect: blocks, checksums, and which block arrived last."""
 
-from battery_monitor.VEDirect import VEDirect
+from aav_battery_victron.VEDirect import VEDirect
 
 
 def frame(fields):

@@ -22,18 +22,18 @@ Files, unchanged unless listed under Changes:
 - `cfg/base.cfg`
 - `cfg/rules.txt`
 - `package.xml`
-- `resource/ti_ros2_driver`
+- `resource/aav_radar_ti`
 - `setup.cfg`
 - `setup.py`
 - `test/test_copyright.py`
 - `test/test_flake8.py`
 - `test/test_pep257.py`
-- `ti_ros2_driver/TI.py`
-- `ti_ros2_driver/__init__.py`
-- `ti_ros2_driver/benchmark.py`
-- `ti_ros2_driver/mock_radar_publisher.py`
-- `ti_ros2_driver/pc_publisher.py`
-- `ti_ros2_driver/plotheatmap.py`
+- `aav_radar_ti/TI.py`
+- `aav_radar_ti/__init__.py`
+- `aav_radar_ti/benchmark.py`
+- `aav_radar_ti/mock_radar_publisher.py`
+- `aav_radar_ti/pc_publisher.py`
+- `aav_radar_ti/plotheatmap.py`
 
 ## Changes (2026-10-09)
 
@@ -80,3 +80,14 @@ Removed what nothing outside `archive/` used (the naming and cleanup audit,
 Kept, because something uses them: `pcl_pub` (`pc_publisher.py`), `TI.py`, `cfg/`;
 `benchmark.py` and `plotheatmap.py` (`pc_publisher.py` imports both); and
 `mock_radar_publisher` (`aav_radar_clusters`' `radar_clusters.launch.py mock:=true`).
+
+## Renamed (2026-10-26)
+
+- The package `ti_ros2_driver` is `aav_radar_ti` (`aav_<kind>_<maker>`,
+  `docs/conventions.md`): its folder, its module (`ti_ros2_driver/` -> `aav_radar_ti/`),
+  `resource/` marker, `package.xml`, `setup.py`, `setup.cfg`, and
+  `pc_publisher.py`'s `get_package_share_directory('aav_radar_ti')`. The paths in the
+  list above are the new ones. `pc_publisher.py`'s and `benchmark.py`'s default debug
+  path say `src/aav_radar_ti/debug/result.json`.
+- Only names change: the executables (`pcl_pub`, `mock_radar_publisher`), the nodes and
+  the topics stay.

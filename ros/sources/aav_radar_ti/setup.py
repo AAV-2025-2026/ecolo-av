@@ -3,7 +3,7 @@ import os
 
 from setuptools import setup
 
-package_name = 'ti_ros2_driver'
+package_name = 'aav_radar_ti'
 
 setup(
     name=package_name,
@@ -24,8 +24,8 @@ setup(
     extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
-            'pcl_pub = ti_ros2_driver.pc_publisher:main',
-            'mock_radar_publisher = ti_ros2_driver.mock_radar_publisher:main',
+            'pcl_pub = aav_radar_ti.pc_publisher:main',
+            'mock_radar_publisher = aav_radar_ti.mock_radar_publisher:main',
         ],
     },
 )

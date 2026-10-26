@@ -115,9 +115,9 @@ say "  CAN interfaces:${cans:- none}"
 # part | wants | usb id (vendor:product[:interface]) or "" | group it usually needs
 PARTS="imu (aav_imu_yahboom)|/dev/aav/imu|1a86:7523|dialout
 gps (ublox_gps)|/dev/aav/gps|1546:|dialout
-radar commands (ti_ros2_driver)|/dev/aav/radar_cmd|10c4:ea70:00|dialout
-radar data (ti_ros2_driver)|/dev/aav/radar_data|10c4:ea70:01|dialout
-battery (battery_monitor)|/dev/aav/battery|0403:6015|dialout
+radar commands (aav_radar_ti)|/dev/aav/radar_cmd|10c4:ea70:00|dialout
+radar data (aav_radar_ti)|/dev/aav/radar_data|10c4:ea70:01|dialout
+battery (aav_battery_victron)|/dev/aav/battery|0403:6015|dialout
 ESP32 UART (legacy_uart_bridge)|/dev/ttyAMA0||dialout
 front camera (usb_cam)|/dev/aav/camera_left|video|video"
 

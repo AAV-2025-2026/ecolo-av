@@ -13,9 +13,9 @@ changes between the bench and the car.
 |---|---|
 | `mock_imu` | `aav_imu_yahboom` |
 | `mock_gps` | `ublox_gps` (`aav_sensors`) |
-| `mock_battery` | `battery_monitor` |
+| `mock_battery` | `aav_battery_victron` |
 | `mock_camera` | `usb_cam` (`aav_sensors`) or `aav_camera_stream` |
-| `mock_radar` | `ti_ros2_driver` |
+| `mock_radar` | `aav_radar_ti` |
 | `mock_lidar` | the roof's VLP-16 itself: it sends UDP packets to the stock velodyne driver |
 
 The bench world (`config/bench.yaml`) is in the map frame: x east, y north, metres from

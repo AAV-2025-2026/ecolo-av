@@ -52,7 +52,7 @@ The ⚠️ rows matter most: they change what we buy, or whether it's safe to dr
 | N4 | The cameras: which model? Which Pi each? CSI ribbon (looks like it) or USB? (answered in part 21 Oct: MediaMTX on the camera Pis, no ROS) | the Pis' `libcamera-hello --list-cameras`, `v4l2-ctl --list-devices` | the camera stream: MediaMTX on the Pi, `aav_camera_stream` on the Orin (decided 23 Oct) |
 | N5 | Is the rear camera (orange housing) connected to anything? | follow the ribbon | the KEFC's Cam3 line |
 | N6 ⚠️ | The lidar: make, model, IP, and which computer reads it (answered 16 Oct: a Velodyne VLP-16 at .201, read by the Jetson; we run the stock `velodyne` driver) | the label on its base; the router's client list; `ping` | a driver: Velodyne, Ouster and RoboSense drivers are in Pixi for the car; Hesai's isn't |
-| N7 | The radar: is a TI mmWave radar on the car? Where, and on which USB? | look; `ls /dev/ttyUSB*` | `ti_ros2_driver` |
+| N7 | The radar: is a TI mmWave radar on the car? Where, and on which USB? | look; `ls /dev/ttyUSB*` | `aav_radar_ti` |
 | N8 | The battery monitor (KM110F): any wired data port? | look for a port; its manual | drop the KEFC battery lines, or read it in ROS |
 | N9 | The steering's centre: with the wheels straight, what does the Jrk read? | `jrk2cmd --status` | steering offset; drift in the scripted drive |
 

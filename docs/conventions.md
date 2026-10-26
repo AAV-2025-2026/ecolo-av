@@ -35,8 +35,8 @@ changes their launch files and executables.
 | `aav_yolo`, its node `yolo_detector` | `aav_detector`, `object_detector` | done, 24 October: it runs RF-DETR Nano by default, YOLO only with `detector:=yolo` |
 | `yahboom_imu_cpp` | `aav_imu_yahboom` | done, 11 October: Ben's Rust rewrite replaced it |
 | `aav_mux` | `aav_command_mux` | done, 26 October: there are three muxes; this one is twist_mux's, in `ros/command_mux` |
-| `ti_ros2_driver` | `aav_radar_ti` | proposed [[needs-you]] |
-| `battery_monitor` | `aav_battery_victron` | proposed [[needs-you]] |
+| `ti_ros2_driver` | `aav_radar_ti` | done, 26 October. The executables `pcl_pub` and `mock_radar_publisher` stay |
+| `battery_monitor` | `aav_battery_victron` | done, 26 October. The executable `battery_monitor` stays |
 
 ## How a package is laid out
 

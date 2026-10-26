@@ -13,9 +13,9 @@ starts it.
 |---|---|---|---|
 | IMU | `imu_node` (`aav_imu_yahboom`), then `imu_filter_madgwick` | `/sensors/imu/data_raw`, then `/sensors/imu/data` | `imu_link` |
 | GPS | one of three, picked by `gps_driver` (below) | `/sensors/gps/fix`, and more per driver (below) | `gps_link` |
-| Radar | `pcl_pub` (`ti_ros2_driver`), node `radar`, `cfg/base.cfg` | `/sensors/radar/points` | `radar_link` |
+| Radar | `pcl_pub` (`aav_radar_ti`), node `radar`, `cfg/base.cfg` | `/sensors/radar/points` | `radar_link` |
 | Lidar | `lidar_driver` (`velodyne_driver`), `lidar_cloud` (`velodyne_pointcloud`) | `/sensors/lidar/packets`, `/sensors/lidar/points` | `lidar_link` |
-| Battery | `battery_monitor` | `/vehicle/battery` | none |
+| Battery | `battery_monitor` (`aav_battery_victron`) | `/vehicle/battery` | none |
 | Cameras | `usb_cam`, nodes `camera_left`, `camera_right` | `/sensors/camera/front_{left,right}/image_raw`, `camera_info` | `camera_{left,right}_link` |
 
 | `gps_driver` | Driver | Also publishes | Notes |

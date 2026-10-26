@@ -1,9 +1,9 @@
-# battery_monitor
+# aav_battery_victron
 
 Reads the battery monitor's Victron VE.Direct serial text and publishes it as a
 `sensor_msgs/BatteryState`, plus a heartbeat. Inherited from the 2024-25 team's
 `Carleton-AAV-Capstone/Battery-Monitor-ROS`, ported to Jazzy: see
-[PROVENANCE.md](./PROVENANCE.md).
+[PROVENANCE.md](./PROVENANCE.md). Called `battery_monitor` until 26 Oct 2026.
 
 `aav_sensors`' `sensors.launch.py battery:=true` starts it. In bench mode,
 `aav_bench`'s `mock_battery` stands in.
@@ -71,7 +71,7 @@ Both publish once per good block that holds `V`, `I`, `SOC` and `VS`.
 ## Verification
 
 ```sh
-pixi run build && colcon test --packages-select battery_monitor && colcon test-result --verbose
+pixi run build && colcon test --packages-select aav_battery_victron && colcon test-result --verbose
 ```
 
 The tests are the stock lint checks (copyright, flake8, pep257); there are no unit

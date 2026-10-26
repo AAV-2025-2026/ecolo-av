@@ -1,8 +1,8 @@
-from battery_monitor.BatteryStatePublisher import BatteryStatePublisher
+from aav_battery_victron.BatteryStatePublisher import BatteryStatePublisher
 
 # The class is named TimePublisher.
-from battery_monitor.HeartbeatPublisher import TimePublisher as HeartbeatPublisher
-from battery_monitor.VEDirect import VEDirect
+from aav_battery_victron.HeartbeatPublisher import TimePublisher as HeartbeatPublisher
+from aav_battery_victron.VEDirect import VEDirect
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from sensor_msgs.msg import BatteryState

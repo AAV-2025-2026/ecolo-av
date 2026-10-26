@@ -11,8 +11,8 @@ Flask HUD went to the archive on 25 Oct), and none is parked.
 | `aav_sensors` | sources | starts the IMU, GPS, lidar, radar, battery and USB camera drivers, with their configs | [[untested]] needs the devices | new |
 | `aav_camera_stream` | sources | one node per front camera: the camera Pi's H.264 stream, decoded, with RF-DETR inside | [[works]] on a Mac; [[untested]] on the Orin | new |
 | `aav_imu_yahboom` | sources | the Yahboom IMU over USB serial (Rust) | [[untested]] needs the device; the C++ driver's answers, bit for bit | new: Ben's rewrite of the 2025-26 `yahboom-IMU` C++ driver |
-| `battery_monitor` | sources | the Victron battery monitor | [[untested]] | 2024-25 `Battery-Monitor-ROS` |
-| `ti_ros2_driver` | sources | the TI mmWave radar, as point clouds | [[untested]] | 2025-26 `Nav_Radar` |
+| `aav_battery_victron` | sources | the Victron battery monitor | [[untested]] | 2024-25 `Battery-Monitor-ROS` |
+| `aav_radar_ti` | sources | the TI mmWave radar, as point clouds | [[untested]] | 2025-26 `Nav_Radar` |
 | `aav_description` | bringup | the car's model (URDF) and `vehicle.yaml` | [[works]] the numbers are guesses | new |
 | `aav_localization` | localization | the two EKFs and `navsat_transform`: configuration only | [[works]] turtle, Gazebo and the bench | new |
 | `aav_gps_heading` | localization | `gps_heading`: the heading from the GPS receiver's velocity, for `ekf_global` | [[works]] Gazebo | new |
@@ -55,8 +55,8 @@ Flask HUD went to the archive on 25 Oct), and none is parked.
 | stock `imu_filter_madgwick` | `/sensors/imu/data_raw` | `/sensors/imu/data` | magnetometer off |
 | stock `ublox_gps` (KumarRobotics' `ublox`) | `/dev/aav/gps` | `/sensors/gps/fix` | the default GPS driver, in Pixi too. Leaves the receiver's settings as they are. Tentative until Q18 |
 | stock `ublox_dgnss` | a u-blox F9P on USB | `/sensors/gps/fix` | `gps_driver:=ublox_dgnss`. Not in Pixi: the car only |
-| `ti_ros2_driver` | `/dev/aav/radar_cmd`, `/dev/aav/radar_data` | `/sensors/radar/points` | its configs are indoor demos |
-| `battery_monitor` | `/dev/aav/battery` | `/vehicle/battery` | |
+| `aav_radar_ti` | `/dev/aav/radar_cmd`, `/dev/aav/radar_data` | `/sensors/radar/points` | its configs are indoor demos |
+| `aav_battery_victron` | `/dev/aav/battery` | `/vehicle/battery` | |
 | `aav_camera_stream`: `camera_stream_<camera>` | the camera Pi's RTSP stream (MediaMTX) | `/perception/detections` | the car's two front cameras; RF-DETR inside each node, so no raw pictures on the network ([camera pipeline](camera-pipeline.md)) |
 | stock `velodyne` driver | the roof VLP-16's UDP packets | `/sensors/lidar/points` | `lidar:=true` (on by default on the car); untested with the real lidar |
 | stock `usb_cam` (`cameras.launch.py`) | `/dev/aav/camera_left`, `_right` | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info` | a USB camera only; Linux only; the 2024-25 calibrations |

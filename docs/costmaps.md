@@ -46,7 +46,7 @@ by `navigation.launch.py`.
 | `ghost_layer` | `/safety/ghost/scan` | `ghost:=true` only ([Ghost obstacles](ghost-obstacles.md)) | the pretend person | only old ghosts |
 
 Why the radar's numbers:
-- **8.4 m:** the TI radar's range (`ti_ros2_driver` `cfg/base.cfg`).
+- **8.4 m:** the TI radar's range (`aav_radar_ti` `cfg/base.cfg`).
 - **-0.5 to 2 m high:** a radar sees no ground to reject, and its height is poor, so low
   points stay. Above 2 m is over the car (1.5 m tall).
 - **Sparse:** a few points per object. Each 5 Hz update uses the last 0.2 s: both radar

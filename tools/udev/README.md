@@ -21,7 +21,7 @@ in. It is not installed on the car yet: that needs sudo.
 | `/dev/aav/gps` | an NMEA GPS (gps_nmea) | TODO (Q18) |
 
 Used by, among others: `ros/sources/aav_sensors/config/imu.yaml`, `ublox_gps.yaml`,
-`cameras.launch.py`, `battery_monitor`, `ti_ros2_driver`.
+`cameras.launch.py`, `aav_battery_victron`, `aav_radar_ti`.
 
 Install:
 

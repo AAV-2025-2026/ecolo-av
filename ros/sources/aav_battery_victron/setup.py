@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'battery_monitor'
+package_name = 'aav_battery_victron'
 
 setup(
     name=package_name,
@@ -18,6 +18,6 @@ setup(
     license='Apache-2.0',
     extras_require={'test': ['pytest']},
     entry_points={
-        'console_scripts': ['battery_monitor = battery_monitor.battery_monitor:main'],
+        'console_scripts': ['battery_monitor = aav_battery_victron.battery_monitor:main'],
     },
 )
