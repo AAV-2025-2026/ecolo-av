@@ -120,9 +120,10 @@ These are the conventions decided so far. They apply to people and to Claude ses
 
 - The repo is `git@github.com:AAV-2025-2026/ecolo-av.git`, the team's (Q25), **public**, so
   nothing secret ever goes in it. Until 25 Oct it was `zander1976/aav`; its whole history
-  came along in the merge. Push `main` there once the full
-  `pixi run test` passes (not just `tools/test.sh`: it skips the launch-file tests).
-  Never force-push it, and push nowhere else.
+  came along in the merge. Nobody pushes to `main`: work on a branch in your fork, open
+  a pull request, and the merge queue lands it once CI is green and one teammate
+  approves (`CONTRIBUTING.md`). Run the full `pixi run test` before asking for review
+  (not just `tools/test.sh`: it skips the launch-file tests). Never force-push `main`.
 - CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux, x86_64 and 64-bit ARM
   (the car's computers), for every push to `main` and every pull request, with the car
   kit installed offline on ARM; and on a Mac every night (`docs/infrastructure.md`).

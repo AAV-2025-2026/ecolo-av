@@ -350,7 +350,7 @@ wheels circle the same centre, on the line of the rear axle.</p>
 software only ever sends <strong>one</strong> angle: the virtual wheel's.</p>
 <h3 id="what-ego-does">What ego does</h3>
 <p><code>ego</code> turns every driver's (speed, turn rate) into (speed, steering angle), 50 times a
-second. <code>src/ego/aav_ego/aav_ego/ackermann.py</code>:</p>
+second. <code>ros/ego/aav_ego/aav_ego/ackermann.py</code>:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -590,7 +590,7 @@ does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
 </tr>
 <tr>
 <td>ego's maths tests</td>
-<td><code>cd src/ego/aav_ego &amp;&amp; pixi run python3 -m pytest -q test/test_ackermann.py</code></td>
+<td><code>cd ros/ego/aav_ego &amp;&amp; pixi run python3 -m pytest -q test/test_ackermann.py</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -606,7 +606,7 @@ does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
 <tbody>
 <tr>
 <td>The bicycle model and ego's limits</td>
-<td><code>src/ego/aav_ego/aav_ego/ackermann.py</code>, <code>config/ego.yaml</code></td>
+<td><code>ros/ego/aav_ego/aav_ego/ackermann.py</code>, <code>config/ego.yaml</code></td>
 </tr>
 <tr>
 <td>The speed loop (PI)</td>
@@ -618,7 +618,7 @@ does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
 </tr>
 <tr>
 <td>Today's open-loop throttle</td>
-<td><code>src/backends/aav_legacy/config/legacy.yaml</code> (<code>full_throttle_speed</code>)</td>
+<td><code>ros/can_bridge/aav_legacy/config/legacy.yaml</code> (<code>full_throttle_speed</code>)</td>
 </tr>
 <tr>
 <td>State space from zero: models, simulators, poles, Bode, shocks and roll</td>
@@ -626,19 +626,19 @@ does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
 </tr>
 <tr>
 <td>The loops as transfer functions and state space: poles, margins, delays</td>
-<td><code>src/ego/aav_ego/aav_ego/vehicle_model.py</code>, <code>pixi run vehicle-model</code> (<a href="vehicle-model.html">The car as a linear model</a>)</td>
+<td><code>ros/ego/aav_ego/aav_ego/vehicle_model.py</code>, <code>pixi run vehicle-model</code> (<a href="vehicle-model.html">The car as a linear model</a>)</td>
 </tr>
 <tr>
 <td>Nav2's controller and smoother</td>
-<td><code>src/drivers/aav_navigation/config/nav2.yaml</code></td>
+<td><code>ros/drivers/aav_navigation/config/nav2.yaml</code></td>
 </tr>
 <tr>
 <td>Driver timeouts and priorities</td>
-<td><code>src/mux/aav_mux/config/twist_mux.yaml</code></td>
+<td><code>ros/command_mux/aav_mux/config/twist_mux.yaml</code></td>
 </tr>
 <tr>
 <td>Wheelbase, track, steering limit</td>
-<td><code>src/aav_description/config/vehicle.yaml</code></td>
+<td><code>ros/bringup/aav_description/config/vehicle.yaml</code></td>
 </tr>
 <tr>
 <td>The safety layers, in one table</td>

@@ -516,7 +516,7 @@ one-line command prints every value.</p>
 <tr>
 <td><code>spine_bridge</code></td>
 <td>0.1 s without a command (<code>/control/car/actuator_cmd</code>)</td>
-<td><code>src/backends/aav_spine/config/spine.yaml</code></td>
+<td><code>ros/can_bridge/aav_spine/config/spine.yaml</code></td>
 </tr>
 <tr>
 <td>The spine's watchdog</td>
@@ -605,7 +605,7 @@ Practise sending on <code>vcan0</code>.</p>
 </section>
 <section class="card"><h2 id="try-it">Try it</h2>
 <p><strong>Anywhere (Mac or Linux), no ROS:</strong> decode the test vector with our codec.</p>
-<pre class="highlight"><code class="language-bash">PYTHONPATH=src/backends/aav_spine python3 -c "from aav_spine.can_codec import unpack; print(unpack(0x100, bytes.fromhex('dc05c409141971ed')))"</code></pre>
+<pre class="highlight"><code class="language-bash">PYTHONPATH=ros/can_bridge/aav_spine python3 -c "from aav_spine.can_codec import unpack; print(unpack(0x100, bytes.fromhex('dc05c409141971ed')))"</code></pre>
 <p>It prints:</p>
 <pre class="highlight"><code class="language-text">{'target_speed': 1.5, 'steering_angle': 0.25, 'accel_limit': 1.0, 'steer_rate_limit': 0.5, 'armed': 1, 'counter': 7}</code></pre>
 <p>Change the last <code>d</code> to <code>e</code>: it raises <code>FrameError: DRIVE_CMD: bad checksum</code>.</p>
@@ -663,15 +663,15 @@ ip -details -statistics link show can0    # error state, error counts</code></pr
 </tr>
 <tr>
 <td>Python codec</td>
-<td><code>src/backends/aav_spine/aav_spine/can_codec.py</code></td>
+<td><code>ros/can_bridge/aav_spine/aav_spine/can_codec.py</code></td>
 </tr>
 <tr>
 <td>ROS bridge</td>
-<td><code>src/backends/aav_spine/aav_spine/spine_bridge.py</code>, <code>config/spine.yaml</code></td>
+<td><code>ros/can_bridge/aav_spine/aav_spine/spine_bridge.py</code>, <code>config/spine.yaml</code></td>
 </tr>
 <tr>
 <td>Launch with <code>ros2_socketcan</code></td>
-<td><code>src/backends/aav_spine/launch/spine.launch.py</code> (<code>interface:=can0</code>)</td>
+<td><code>ros/can_bridge/aav_spine/launch/spine.launch.py</code> (<code>interface:=can0</code>)</td>
 </tr>
 <tr>
 <td>Rust codec, watchdog, counter check</td>
@@ -679,7 +679,7 @@ ip -details -statistics link show can0    # error state, error counts</code></pr
 </tr>
 <tr>
 <td>The bench's pretend spine</td>
-<td><code>src/bench/aav_spine_sim</code></td>
+<td><code>ros/sim/aav_spine_sim</code></td>
 </tr>
 <tr>
 <td>The KEFC plan vs our DBC</td>

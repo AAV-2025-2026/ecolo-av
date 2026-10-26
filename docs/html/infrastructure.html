@@ -189,7 +189,7 @@ the checks tell you if the two disagree.</p>
 <td>update <code>can_codec.py</code> and <code>protocol.rs</code>, run <code>firmware/can/gen_test_vectors.py</code>, run both test suites</td>
 </tr>
 <tr>
-<td><code>src/aav_description/config/vehicle.yaml</code></td>
+<td><code>ros/bringup/aav_description/config/vehicle.yaml</code></td>
 <td>every measurement of the car</td>
 <td>its unit test; ego, the URDF, Nav2 and the adapters all read it</td>
 <td>measure the car: <a href="car_measurements.html">Car numbers</a></td>
@@ -673,7 +673,7 @@ changes.</p>
 </section>
 <section class="card"><h2 id="the-computers-and-what-runs-where">The computers, and what runs where</h2>
 <p>The car runs one ROS graph across several computers. Each one starts <code>pixi run car
-&lt;machine&gt;</code>, and <code>src/aav_bringup/config/machines/&lt;machine&gt;.yaml</code> switches its parts on.</p>
+&lt;machine&gt;</code>, and <code>ros/bringup/aav_bringup/config/machines/&lt;machine&gt;.yaml</code> switches its parts on.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>

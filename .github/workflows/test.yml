@@ -15,6 +15,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The merge queue tests each pull request on top of main and the ones ahead of it.
+  merge_group:
   schedule:
     - cron: "0 7 * * *"   # 03:00 in Ottawa (EDT)
   workflow_dispatch:

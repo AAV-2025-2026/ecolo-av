@@ -88,7 +88,7 @@ HUD), and a big ~15" monitor shows the map: <a href="#the-map-window-big-screen"
 a second program. Each opens full screen on its own monitor at boot:
 <a href="car-screens.html">The two screens</a>.</p></div>
 <section class="card"><h2 id="the-hud-in-rust-raylib">The HUD in Rust (raylib)</h2>
-<p><code>src/hud/aav_hud_raylib</code>: one window, which is also the ROS node <code>hud</code>.</p>
+<p><code>ros/hud/aav_hud_raylib</code>: one window, which is also the ROS node <code>hud</code>.</p>
 <p><img alt="The driving screen, with pretend data (--demo)" src="../img/hud-raylib.png" /></p>
 <div class="table-wrap"><table>
 <thead>
@@ -273,7 +273,7 @@ pixi run build &amp;&amp; pixi run hud     # the real node (ros2 launch aav_hud_
 pixi run hud fullscreen:=true      # full screen; F11 switches too
 pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or number</code></pre>
 <p>Without Pixi: <code>cargo run -p hud-app --no-default-features -- --demo</code>, in
-<code>src/hud/aav_hud_raylib</code>. The first build compiles raylib (cmake, about a minute).</p>
+<code>ros/hud/aav_hud_raylib</code>. The first build compiles raylib (cmake, about a minute).</p>
 <h3 id="how-its-built">How it's built</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -546,7 +546,7 @@ With Gazebo, one command does both: <code>pixi run sim world:=test_lot hud:=true
 nothing publishes that topic there.</p>
 </section>
 <section class="card"><h2 id="the-map-window-big-screen">The map window (big screen)</h2>
-<p><code>src/hud/aav_hud_raylib</code>, binary <code>map</code>: its own window, which is also the ROS node <code>map</code>.
+<p><code>ros/hud/aav_hud_raylib</code>, binary <code>map</code>: its own window, which is also the ROS node <code>map</code>.
 Step 1 (15 October): what Nav2 already knows, drawn north up. Step 2 (15 October): an
 offline street map of Ottawa under it (<a href="#the-street-map-under-it">below</a>). Step 3
 (15 October): <a href="#search-for-a-place-and-drive-there">search for a place</a> and send it to
@@ -1123,7 +1123,7 @@ a bug.</p>
 </tbody>
 </table></div>
 <p>Try a search from a terminal: <code>cargo run --release -p map-core --example search -- tim hortons</code>
-(in <code>src/hud/aav_hud_raylib</code>, with <code>PLACES=</code> the file's path).</p>
+(in <code>ros/hud/aav_hud_raylib</code>, with <code>PLACES=</code> the file's path).</p>
 <h4 id="for-tests-and-screenshots">For tests and screenshots</h4>
 <div class="table-wrap"><table>
 <thead>
@@ -1226,7 +1226,7 @@ blank: they came from a tile server on the car's Pi.</p>
 </tr>
 <tr>
 <td>Back end</td>
-<td><code>src/hud/aav_hud/</code> (ROS 2 Python node + Flask)</td>
+<td><code>ros/hud/aav_hud/</code> (ROS 2 Python node + Flask)</td>
 <td><code>hud_server</code>: reads the car's topics and pushes them to the app (port 5000); sends a locked route to Nav2; publishes the e-stop button's <code>/safety/estop</code>.</td>
 </tr>
 <tr>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/getting-started.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Getting started</h1>
-<div class="meta">2 min read · 6 sections</div></header>
+<div class="meta">3 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -91,11 +91,14 @@ pinned to the same versions for everyone.</p>
 </code></pre>
 </section>
 <section class="card"><h2 id="2-get-the-code">2. Get the code</h2>
-<p>The repository is public: https://github.com/AAV-2025-2026/ecolo-av. To push, ask the
-integration lead to add you, and put an SSH key on your GitHub account.</p>
-<pre><code>  git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av
+<p>The repository is public: https://github.com/AAV-2025-2026/ecolo-av. You work in your
+own fork of it. Put an SSH key on your GitHub account, click <strong>Fork</strong> on that page, then:</p>
+<pre><code>  git clone git@github.com:&lt;your-username&gt;/ecolo-av.git ~/ecolo-av
   cd ~/ecolo-av
+  git remote add upstream https://github.com/AAV-2025-2026/ecolo-av.git
 </code></pre>
+<p>Only want to try the demo? <code>git clone https://github.com/AAV-2025-2026/ecolo-av.git ~/ecolo-av</code>
+works too. How changes get in: <a href="../../CONTRIBUTING.md">Contributing</a>.</p>
 </section>
 <section class="card"><h2 id="3-install-the-environment">3. Install the environment</h2>
 <pre><code>  pixi install

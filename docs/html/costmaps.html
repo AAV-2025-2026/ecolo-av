@@ -85,7 +85,7 @@
 </ul>
 <p>Nav2's planner searches the grid for a path the car can drive. Its controller follows that
 path and slows down near high-cost cells. <code>nav2_costmap_2d</code> builds the grids from layers.
-The settings are in <code>src/drivers/aav_navigation/config/nav2.yaml</code>.</p></div>
+The settings are in <code>ros/drivers/aav_navigation/config/nav2.yaml</code>.</p></div>
 <section class="card"><h2 id="the-two-costmaps">The two costmaps</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -405,7 +405,7 @@ the accelerometer, and in a turn the sideways push looks like tilt: 2 m/s² read
 </section>
 <section class="card"><h2 id="map-files">Map files</h2>
 <p>A Nav2 map is an image (PGM or PNG) plus a YAML file that says how to read it.
-<code>src/drivers/aav_navigation/maps/README.md</code> covers the format line by line. In short:</p>
+<code>ros/drivers/aav_navigation/maps/README.md</code> covers the format line by line. In short:</p>
 <ul>
 <li>one pixel is one cell;</li>
 <li>white is free, black is blocked, grey is unknown;</li>
@@ -413,7 +413,7 @@ the accelerometer, and in a turn the sideways push looks like tilt: 2 m/s² read
 <li><code>origin</code> is the map-frame position of the bottom-left pixel.</li>
 </ul>
 <p>Don't paint maps by hand. Write a short spec and generate them:</p>
-<pre class="highlight"><code class="language-bash">tools/make_map.py src/drivers/aav_navigation/maps/example_lot.spec.yaml</code></pre>
+<pre class="highlight"><code class="language-bash">tools/make_map.py ros/drivers/aav_navigation/maps/example_lot.spec.yaml</code></pre>
 <p>A spec lists:</p>
 <ul>
 <li>the size in metres east and north;</li>
@@ -426,7 +426,7 @@ Python and PyYAML, not ROS.</p>
 <section class="card"><h2 id="your-first-map-in-ten-minutes">Your first map, in ten minutes</h2>
 <ol>
 <li>
-<p>Open <code>src/drivers/aav_navigation/maps/example_lot.spec.yaml</code>, and add a box under
+<p>Open <code>ros/drivers/aav_navigation/maps/example_lot.spec.yaml</code>, and add a box under
    <code>blocked:</code>:</p>
 <pre><code>```yaml
   - [15, -3, 18, 3]       # a box across the drive, to plan around
@@ -436,7 +436,7 @@ Python and PyYAML, not ROS.</p>
 <li>
 <p>Make the map again:</p>
 <pre><code>```bash
-pixi run python tools/make_map.py src/drivers/aav_navigation/maps/example_lot.spec.yaml
+pixi run python tools/make_map.py ros/drivers/aav_navigation/maps/example_lot.spec.yaml
 pixi run build
 ```
 </code></pre>
@@ -449,7 +449,7 @@ pixi run build
 <p><strong>You should see</strong> the planned path bend around your box. In the test on 10 October it
 passed at y = 4.4 m, beside a box that ends at y = 3 m.</p>
 <ol start="5">
-<li>Put the map back: <code>git checkout src/drivers/aav_navigation/maps/</code>.</li>
+<li>Put the map back: <code>git checkout ros/drivers/aav_navigation/maps/</code>.</li>
 </ol>
 <div class="admonition note">
 <p class="admonition-title">Two things this teaches</p>
@@ -505,7 +505,7 @@ straight 8 m goal on the empty map succeeds.</p>
 </section>
 <section class="card"><h2 id="where-the-map-sits-on-the-earth">Where the map sits on the Earth</h2>
 <p>The map frame is pinned to the ground by the <strong>datum</strong> in
-<code>src/localization/aav_localization/config/navsat.yaml</code>:</p>
+<code>ros/localization/aav_localization/config/navsat.yaml</code>:</p>
 <ul>
 <li>map (0, 0) is the datum's latitude and longitude;</li>
 <li>x points east and y points north.</li>
