@@ -189,9 +189,22 @@ jobs:
   # of its own), so a package or crate the kit forgot fails here, not in the car park.
   # Every push too: 6 min on 24 Oct (the kit 1 min, the offline install and build 4.5),
   # beside the tests, so a crate or package the kit can't carry fails the push that added it.
+  # Twice: on Ubuntu 24.04, and on 22.04, the car's own OS (JetPack 6 on the Orin). The
+  # 24.04 job keeps the check name `car-kit` (main's required check). The 22.04 one is new
+  # (26 Oct) and allowed to fail until it has passed a few times: then drop continue-on-error.
   car-kit:
+    name: ${{ matrix.name }}
     if: github.event_name != 'schedule' && (github.event_name != 'push' || github.ref == 'refs/heads/main' || github.repository != 'AAV-2025-2026/ecolo-av')
-    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: car-kit
+            os: ubuntu-24.04-arm
+          - name: car-kit-22.04
+            os: ubuntu-22.04-arm
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.name == 'car-kit-22.04' }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
