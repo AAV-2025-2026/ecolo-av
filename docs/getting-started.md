@@ -20,12 +20,15 @@ Close and reopen your terminal, then check:
 
 ## 2. Get the code
 
-The repository is public: https://github.com/AAV-2025-2026/ecolo-av. To read and run it,
-clone it as below. To send changes, fork it and clone your fork instead, with an SSH key on
-your GitHub account: [Git](git.md).
+The repository is public: https://github.com/AAV-2025-2026/ecolo-av. You work in your
+own fork of it. Put an SSH key on your GitHub account, click **Fork** on that page, then:
 
-    git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av
+    git clone git@github.com:<your-username>/ecolo-av.git ~/ecolo-av
     cd ~/ecolo-av
+    git remote add upstream https://github.com/AAV-2025-2026/ecolo-av.git
+
+Only want to try the demo? `git clone https://github.com/AAV-2025-2026/ecolo-av.git ~/ecolo-av`
+works too. How changes get in: [Contributing](../CONTRIBUTING.md).
 
 ## 3. Install the environment
 
@@ -55,7 +58,7 @@ the turtle. `k` stops it. Let go of a key and it stops by itself. `Ctrl+C` quits
 
     pixi run test
 
-This runs the same checks as CI on every push. All of them should pass.
+This runs the same checks CI runs on every pull request. All of them should pass.
 
 ## Troubleshooting
 
