@@ -71,7 +71,7 @@ def gazebo_rows(model):
     for v in vm.lateral_speeds():
         ol = model.lateral_open_loop(v)
         gz = vm.series(ol, (np.array([1.0]), np.array([extra, 1.0])))
-        T = model.delays.lateral('typical')
+        T = model.lateral_delay('typical')
         a, b = vm.margins(ol, T), vm.margins(gz, T)
         rows.append([f'{v:g}', f'PM {a.phase_margin_deg:.0f} deg',
                      f'PM {b.phase_margin_deg:.0f} deg',
@@ -131,8 +131,8 @@ def figures(model, out_dir):
     w = np.logspace(-2, 2, 2000)
     fig, axes = plt.subplots(2, 2, figsize=(12, 6), sharex='col')
     loops = (('Speed loop L(s)', model.speed_open_loop(),
-              lambda c: model.delays.speed(c, model.gains.tick)),
-             ('Lateral loop L(s), 1 m/s', model.lateral_open_loop(1.0), model.delays.lateral))
+              model.speed_delay),
+             ('Lateral loop L(s), 1 m/s', model.lateral_open_loop(1.0), model.lateral_delay))
     for col, (title, ol, delay) in enumerate(loops):
         for case, c, ls in (('none', blue, '-'), ('worst', orange, '--')):
             T = delay(case)

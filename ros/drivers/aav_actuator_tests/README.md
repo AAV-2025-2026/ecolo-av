@@ -40,9 +40,9 @@ Executable `actuator_test` (`ros2 run aav_actuator_tests actuator_test`, wrapped
 
 | Item | What |
 |---|---|
-| Subscribes | `/vehicle/odom` (`nav_msgs/Odometry`); `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake` (`aav_interfaces/ActuatorState`); `/vehicle/wheels` (`aav_interfaces/WheelSpeeds`); `/sensors/imu/data_raw` (`sensor_msgs/Imu`); `/localization/odom/local` (`nav_msgs/Odometry`); `/sensors/gps/fix` (`sensor_msgs/NavSatFix`); `/safety/estop` (`std_msgs/Bool`); `/control/cmd_vel` (`geometry_msgs/TwistStamped`); `/system/source` (`aav_interfaces/DataSource`, latched) |
+| Subscribes | `/vehicle/odom` (`nav_msgs/Odometry`); `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake` (`aav_interfaces/ActuatorState`); `/vehicle/wheels` (`aav_interfaces/WheelSpeeds`); `/sensors/imu/data_raw` (`sensor_msgs/Imu`); `/localization/odom/local` (`nav_msgs/Odometry`); `/sensors/gps/fix` (`sensor_msgs/NavSatFix`); `/safety/estop` (`std_msgs/Bool`); `/control/cmd_vel` (`geometry_msgs/TwistStamped`); `/ego/actuator_cmd` (`ackermann_msgs/AckermannDriveStamped`: what ego told the backend, logged); `/system/source` (`aav_interfaces/DataSource`, latched) |
 | Publishes | `/drivers/tests/cmd_vel` (`geometry_msgs/TwistStamped`), 50 Hz while a test runs |
-| Calls | `/ego/get_parameters` (its limits); `/ego/set_parameters` (`max_steering_rate`, lifted for `steer-rate` only, then put back) |
+| Calls | `/ego/get_parameters` (its limits); `/ego/set_parameters` (`max_steering_rate`, lifted for `steer-rate` only, then put back); `get_parameters` of the backend that runs (`legacy_uart_bridge`, `gazebo_adapter`, `spine_sim`, `spine_bridge`: `reports.SHAPING_PARAMS`), for `meta.yaml` |
 | Runs | `ros2 bag record`, with `--bag` |
 
 Modules (all but the node have no ROS):
@@ -51,8 +51,8 @@ Modules (all but the node have no ROS):
 |---|---|
 | `procedures.py` | the steps: `Step`, `Runner`, `Settings`, `Test`, `TESTS`, `plan()`, `estimate()`, `with_ego_limit()` |
 | `safety.py` | the rules: `Kind`, `source_kind`, `decide`, `confirmed`, `Envelope.breach`, `taken_over`, checklists; caps `REAL_CAP` 1.0, `STANDS_CAP` 0.3, `SIM_DEFAULT_CAP` 3.0, `SIM_MAX_CAP` 5.0 m/s |
-| `analysis.py` | the maths, plain Python (no numpy): `fit_line`, `fit_throttle`, `fit_lag`, `fit_steer_lag`, `stopping`, `time_to_speeds`, `fit_circle`, `wheel_angle`, `drift` |
-| `reports.py` | one run's rows to a `Report`: `analyse()`, `table()`, `yaml_lines()` |
+| `analysis.py` | the maths, plain Python (no numpy): `fit_line`, `fit_throttle`, `fit_lag` (the old fit), `fit_fopdt` (dead time + lag), `fit_speed_response` (through the wheel speed), `fit_steer_lag`, `fit_steer`, `steer_play`, `LagFit`; what can be resolved: `pulse_interval`, `fresh_period`, `time_resolution`, `unresolved`; `stopping`, `time_to_speeds`, `fit_circle`, `wheel_angle`, `drift` |
+| `reports.py` | one run's rows to a `Report`: `analyse()`, `table()`, `yaml_lines()`; `PATHS` (each fit's from -> to), `signal()` (true arrival times), `shaping()` (what shaped the commands) |
 | `actuator_test.py` | the ROS node and the command line |
 
 `aav_goto` reuses `safety.py` (`source_kind`, `taken_over`, `LOT_CHECKLIST`), so both
@@ -69,14 +69,17 @@ agree on what REAL means.
   (twist_mux passing another command for 0.3 s), twist_mux silent for 2 s, the speed,
   distance or time leaving the test's envelope, `/vehicle/odom` stale for 0.5 s.
 - Steering only changes while moving (ego holds it below 0.05 m/s), so stage-3 tests creep.
-- It prints `vehicle.yaml` lines; it never writes `vehicle.yaml`.
+- It prints `vehicle.yaml` lines; it never writes `vehicle.yaml`. Each line names its
+  path (from -> to) and rms; a lag or dead time the data can't resolve gets no line.
+- `log.csv` stays readable by `--analyse` for older runs: new columns go at the end.
 - SI units; positive steering = left.
 
 ## Side Effects
 
 - Publishes `/drivers/tests/cmd_vel`; may change ego's `max_steering_rate` for a while.
 - Writes one folder per run under `~/aav-tests` (or `$AAV_TESTS_DIR`, or `--out`):
-  `log.csv`, `summary.txt`, `meta.yaml`, and with `--bag` a rosbag.
+  `log.csv` (with each value's arrival time, `t_*`), `summary.txt`, `meta.yaml` (with
+  `shaping`: backend, speed loop, ego's limits), and with `--bag` a rosbag.
 - Starts `ros2 bag record` with `--bag`.
 
 ## Verification
@@ -92,4 +95,6 @@ Quick, without ROS: `cd ros/drivers/aav_actuator_tests && python3 -m pytest -q`
 |---|---|
 | `test_procedures.py` | each test's steps, on a fake car |
 | `test_safety.py` | who may run what, caps, envelope, takeover |
-| `test_analysis.py` | the fits and figures |
+| `test_analysis.py` | the fits and figures; the resolution maths |
+| `test_robustness.py` | the fits on pretend data with play, Hall pulses, noise, no brake level, a dead time (`synthetic.py`): the numbers back within a stated tolerance, or refused |
+| `test_reports.py` | true times, paths, `shaping`, old logs, the fallbacks (IMU-only brake, the ESP32's open-loop throttle) |

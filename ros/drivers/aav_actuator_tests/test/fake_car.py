@@ -13,9 +13,10 @@ from aav_ego.ackermann import EgoModel, Limits
 from aav_gazebo.actuator_model import ActuatorConfig, Actuators
 
 NAN = float('nan')
+DT = 0.02   # s: gazebo_adapter's 50 Hz
 
 
-def drive(steps, cfg=ActuatorConfig(), limits=None, dt=0.02, max_time=900.0):
+def drive(steps, cfg=ActuatorConfig(), limits=None, dt=DT, max_time=900.0):
     """Run a test's steps on the pretend car; return the log's rows and the runner."""
     limits = limits or Limits(max_speed=5.0)
     ego = EgoModel(limits)

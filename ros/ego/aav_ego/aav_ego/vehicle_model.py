@@ -46,6 +46,14 @@ Lateral, the kinematic bicycle about the rear axle (base_link), path along x:
     state [e_y, e_theta, delta], input delta_cmd
     A = [[0, v, 0], [0, 0, v/L], [0, 0, -1/tau_s]],   B = [0, 0, 1/tau_s]^T
 
+Dead times: each actuator may also wait before it starts to move (vehicle.yaml
+throttle_dead_time, brake_dead_time, steer_dead_time; 0 until measured). The actuator
+tests fit them with the lags (analysis.fit_fopdt: a dead time, then a first-order lag),
+and the model adds them to its loops' delays (speed_delay, lateral_delay), exactly in
+the margins and as Pade for poles:
+
+    P(s) e^(-s T_t),   T_t = throttle_dead_time
+
 Units: SI and radians (REP-103: positive steering turns left). Every number in
 vehicle.yaml's actuators section is a guess until the car-day tests (docs/actuator-tests.md).
 """
@@ -141,16 +149,21 @@ class Lookahead:
 
 
 # vehicle.yaml keys this model uses, and the ones it leaves out on purpose (nonlinear).
+# Every key under actuators: is in one or the other (tools/tests/test_vehicle_model_tool.py
+# checks, for each reader of that section).
 YAML_KEYS = {
     'vehicle.wheelbase': 'wheelbase',
     'vehicle.max_steering_angle': 'max_steering',
     'actuators.max_accel': 'max_accel',
     'actuators.throttle_lag': 'throttle_lag',
+    'actuators.throttle_dead_time': 'throttle_dead_time',
     'actuators.max_brake': 'max_brake',
     'actuators.brake_lag': 'brake_lag',
+    'actuators.brake_dead_time': 'brake_dead_time',
     'actuators.drag': 'drag',
     'actuators.steer_rate': 'steer_rate',
     'actuators.steer_lag': 'steer_lag',
+    'actuators.steer_dead_time': 'steer_dead_time',
 }
 NOT_LINEAR = {'actuators.throttle_deadband', 'actuators.steer_offset',
               'actuators.steer_deadband'}
@@ -164,11 +177,14 @@ class VehicleModel:
     max_steering: float = 0.50       # rad
     max_accel: float = 1.5           # m/s^2 at full throttle. GUESS: test 4.1, 4.4
     throttle_lag: float = 0.1        # s. GUESS: test 4.1
+    throttle_dead_time: float = 0.0  # s before the throttle moves. Not measured: test 4.1
     max_brake: float = 3.0           # m/s^2 at full brake. GUESS: test 4.3
     brake_lag: float = 0.2           # s. GUESS: test 4.3
+    brake_dead_time: float = 0.0     # s before the brake moves. Not measured: test 4.3
     drag: float = 0.1                # 1/s. GUESS: test 4.2
     steer_rate: float = 0.8          # rad/s, the Jrk motor's top speed. GUESS: test 3.11
     steer_lag: float = 0.1           # s, the linkage. GUESS: test 3.11, 4.5
+    steer_dead_time: float = 0.0     # s before the motor moves. Not measured: test 3.11
     steer_step: float = 0.1          # rad: the step size the rate limit is linearised for
     steer_zeta: Optional[float] = None   # damping, if measured (test 3.11's overshoot)
     gains: SpeedLoopGains = SpeedLoopGains()
@@ -195,14 +211,33 @@ class VehicleModel:
         """Return the throttle actuator: U_a/U = 1 / (tau_t s + 1)."""
         return np.array([1.0]), np.array([self.throttle_lag, 1.0])
 
-    def speed_plant_tf(self) -> TF:
-        """Throttle command to speed: the throttle's lag, then the car."""
-        return series(self.throttle_tf(), self.car_tf())
+    def speed_plant_tf(self, pade_order: int = 0) -> TF:
+        """
+        Throttle command to speed: the throttle's lag, then the car.
 
-    def brake_plant_tf(self) -> TF:
-        """Brake command to speed while moving forward: -b_max / ((s + d)(tau_b s + 1))."""
-        return (np.array([-self.max_brake]),
-                np.polymul([1.0, self.drag], [self.brake_lag, 1.0]))
+        With pade_order > 0, times e^(-s throttle_dead_time) as a Pade approximation (for
+        poles and simulation; margins() takes the delay exactly: speed_delay).
+        """
+        tf = series(self.throttle_tf(), self.car_tf())
+        return with_delay(tf, self.throttle_dead_time, pade_order) if pade_order else tf
+
+    def brake_plant_tf(self, pade_order: int = 0) -> TF:
+        """
+        Brake command to speed while moving forward: -b_max / ((s + d)(tau_b s + 1)).
+
+        With pade_order > 0, times e^(-s brake_dead_time) as a Pade approximation.
+        """
+        tf = (np.array([-self.max_brake]),
+              np.polymul([1.0, self.drag], [self.brake_lag, 1.0]))
+        return with_delay(tf, self.brake_dead_time, pade_order) if pade_order else tf
+
+    def speed_delay(self, case: str) -> float:
+        """Return the speed loop's whole delay (s): the loop's, and the throttle's dead time."""
+        return self.delays.speed(case, self.gains.tick) + self.throttle_dead_time
+
+    def lateral_delay(self, case: str) -> float:
+        """Return the lateral loop's whole delay (s): the loop's, and the steering's dead time."""
+        return self.delays.lateral(case) + self.steer_dead_time
 
     def speed_controller_tf(self, gains: Optional[SpeedLoopGains] = None) -> TF:
         """Return the spine's PI: C(s) = kp + ki / s = (kp s + ki) / s."""
@@ -714,7 +749,7 @@ def summary(model: VehicleModel) -> List[Tuple[str, List[List[str]]]]:
     rows = [['delay case', 'delay s', 'phase margin', 'gain margin', 'crossover rad/s',
              'bandwidth rad/s']]
     for case in CASES:
-        T = model.delays.speed(case, g.tick)
+        T = model.speed_delay(case)
         m = margins(model.speed_open_loop(), T)
         rows.append([case, f'{T:.3f}', f'{m.phase_margin_deg:.1f} deg', fmt_db(m.gain_margin_db),
                      f'{m.gain_crossover:.3f}', f'{m.bandwidth:.3f}'])
@@ -759,11 +794,11 @@ def summary(model: VehicleModel) -> List[Tuple[str, List[List[str]]]]:
                      fmt_poles(np.linalg.eigvals(a)), fmt_poles(cl), wz])
     out.append(('Lateral: path errors, linearised about driving straight', rows))
 
-    rows = [['v m/s'] + [f'PM / GM, {c} ({model.delays.lateral(c) * 1000:.0f} ms)'
+    rows = [['v m/s'] + [f'PM / GM, {c} ({model.lateral_delay(c) * 1000:.0f} ms)'
                          for c in CASES] + ['crossover', 'delay left']]
     for v in lateral_speeds():
         ol = model.lateral_open_loop(v)
-        ms = [margins(ol, model.delays.lateral(c)) for c in CASES]
+        ms = [margins(ol, model.lateral_delay(c)) for c in CASES]
         rows.append([f'{v:g}'] + [f'{m.phase_margin_deg:.0f} deg / {fmt_db(m.gain_margin_db)}'
                                   for m in ms]
                     + [f'{ms[0].gain_crossover:.2f} rad/s',

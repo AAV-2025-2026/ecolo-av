@@ -154,3 +154,79 @@ def test_gps_to_xy():
 
 def test_unwrap():
     assert an.unwrap([3.0, -3.0]) == pytest.approx([3.0, 2 * math.pi - 3.0])
+
+
+# --- what the data can resolve (the maths behind refusing a fit) -------------------------
+
+def test_wheel_pulses():
+    # 8 holes on a 0.30 m wheel: a pulse every pi x 0.30 / 8 = 0.118 m.
+    assert an.pulse_spacing(0.30, 8) == pytest.approx(0.1178, abs=1e-4)
+    assert an.pulse_interval(0.5, 0.30, 8) == pytest.approx(0.2356, abs=1e-4)
+    assert an.pulse_interval(-1.0, 0.30, 8) == pytest.approx(0.1178, abs=1e-4)
+    assert an.pulse_interval(0.0, 0.30, 8) == math.inf
+
+
+def test_fresh_period_counts_new_values_only():
+    t = [i * 0.01 for i in range(100)]
+    held = [float(i // 10) for i in range(100)]        # a new value every 0.1 s, sent at 100 Hz
+    assert an.sample_period(t) == pytest.approx(0.01)
+    assert an.fresh_period(t, held) == pytest.approx(0.1)
+    assert an.fresh_period(t, [1.0] * 100) == math.inf  # never changes: nothing to time
+
+
+def test_time_resolution():
+    assert an.time_resolution(0.02) == pytest.approx(0.04)       # two fresh values in it
+    # Noise 0.01 on a response moving 1 unit/s, over 4 moving samples: 5 ms more.
+    assert an.time_resolution(0.02, 0.01, 1.0, 4) == pytest.approx(0.045)
+    assert an.time_resolution(0.02, 0.01, 0.0) == pytest.approx(0.04)
+
+
+def test_unresolved_says_why():
+    assert an.unresolved('throttle lag', 0.2, 0.1, 'the wheel speed') is None
+    why = an.unresolved('throttle lag', 0.05, 0.24, 'the wheel speed')
+    assert '0.050 s' in why and '0.240 s' in why and 'the wheel speed' in why
+    assert 'never changed' in an.unresolved('lag', 0.1, math.inf, 'the IMU')
+
+
+# --- dead time, then a lag ----------------------------------------------------------------
+
+def test_delayed_and_held():
+    t = [0.0, 0.1, 0.2, 0.3]
+    assert an.delayed(t, t, [0.0, 1.0, 2.0, 3.0], 0.0) == [0.0, 1.0, 2.0, 3.0]
+    assert an.delayed(t, t, [0.0, 1.0, 2.0, 3.0], 0.15) == [0.0, 0.0, 0.0, 1.0]
+    assert an.held(t, t, [0.0, 1.0, 2.0, 3.0], 0.0) == [0.0, 0.0, 1.0, 2.0]
+
+
+def test_fopdt_response_is_exact_between_samples():
+    # A step at 0.05 s, a dead time of 0.03 s and a lag of 0.1 s, read every 0.1 s:
+    # at t, 1 - exp(-(t - 0.08) / 0.1).
+    t = [0.0, 0.1, 0.2, 0.3]
+    got = an.fopdt_response(t, [0.0, 1.0], 0.1, 0.03, cmd_t=[0.0, 0.05])
+    want = [0.0] + [1.0 - math.exp(-(x - 0.08) / 0.1) for x in t[1:]]
+    assert got == pytest.approx(want)
+    assert an.fopdt_response(t, [0.0, 1.0, 1.0, 1.0], 0.0, 0.0) == [0.0, 1.0, 1.0, 1.0]
+
+
+def test_lag_fit_uses_the_dead_time_only_when_it_helps():
+    base = {'rms': 0.010, 'lag_only': 0.2, 'rms_lag_only': 0.030, 'samples': 100,
+            'resolution': 0.04}
+    fit = an.LagFit(tau=0.15, dead_time=0.08, **base)
+    assert fit.dead_resolved and (fit.best_tau, fit.best_dead) == (0.15, 0.08)
+    # Under the resolution, or no better than a lag alone: the lag alone.
+    short = an.LagFit(tau=0.15, dead_time=0.02, **base)
+    assert not short.dead_resolved and (short.best_tau, short.best_dead) == (0.2, 0.0)
+    same = an.LagFit(tau=0.15, dead_time=0.08, **{**base, 'rms_lag_only': 0.0105})
+    assert not same.dead_resolved
+    assert "can't be told" in same.problems('throttle', 'the level')[0]
+    too_short = an.LagFit(tau=0.01, dead_time=0.0, **{**base, 'lag_only': 0.01})
+    assert 'not measured' in too_short.lag_problem('throttle', 'the level')
+
+
+def test_backlash_and_play():
+    assert an.backlash([0.0, 0.1, 0.1, 0.0], 0.04) == pytest.approx([0.0, 0.08, 0.08, 0.02])
+    t = [i * 0.02 for i in range(400)]
+    cmd = [0.0 if x < 2 else 0.3 if x < 4 else 0.0 if x < 6 else -0.3 for x in t]
+    measured = an.backlash(cmd, 0.02)
+    p = an.steer_play(t, cmd, measured)
+    assert (p.width, p.offset) == pytest.approx((0.02, 0.0))
+    assert an.steer_play(t, [0.0 if x < 2 else 0.3 for x in t], measured) is None  # one way

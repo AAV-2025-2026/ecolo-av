@@ -14,6 +14,8 @@ distance or time leave the test's envelope, and when the speed reading goes stal
 real car it asks the person to type the test's name first, and caps the speed at 1 m/s
 (0.3 m/s on stands). Each run goes to its own folder: log.csv, summary.txt, meta.yaml,
 and with --bag a rosbag. It prints vehicle.yaml lines to paste; it never writes them.
+log.csv keeps each value's arrival time (the t_* columns); meta.yaml's shaping says what
+shaped the commands: the backend and its firmware, the speed loop's profile, ego's limits.
 
 Subscribes  vehicle/odom             nav_msgs/Odometry: the measured speed
             vehicle/steering         aav_interfaces/ActuatorState
@@ -25,11 +27,15 @@ Subscribes  vehicle/odom             nav_msgs/Odometry: the measured speed
             sensors/gps/fix          sensor_msgs/NavSatFix
             safety/estop             std_msgs/Bool: true stops the test
             control/cmd_vel          geometry_msgs/TwistStamped: twist_mux's choice
+            ego/actuator_cmd         ackermann_msgs/AckermannDriveStamped: what ego told the
+                                     backend (logged: the fits' plant boundary)
             system/source            aav_interfaces/DataSource, latched: REAL or SIM
 Publishes   drivers/tests/cmd_vel    geometry_msgs/TwistStamped, 50 Hz while a test runs
 Calls       /ego/get_parameters      rcl_interfaces/GetParameters: its limits
             /ego/set_parameters      rcl_interfaces/SetParameters: max_steering_rate, lifted
                                      during steer-rate (3.11) only, then put back
+            /<backend>/get_parameters  the backend's speed loop profile, full throttle
+                                     speed... (reports.SHAPING_PARAMS), for meta.yaml
 Runs        ros2 bag record          with --bag
 
 The logic is in procedures.py (the steps), safety.py (the rules) and reports.py (the
@@ -54,6 +60,7 @@ from aav_actuator_tests import safety
 from aav_actuator_tests.analysis import STOPPED
 from aav_description import vehicle
 from aav_interfaces.msg import ActuatorState, DataSource, WheelSpeeds
+from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import TwistStamped
 from nav_msgs.msg import Odometry
 import rclpy
@@ -93,6 +100,7 @@ class ActuatorTest(Node):
         super().__init__('actuator_test',
                          parameter_overrides=[Parameter('use_sim_time', value=sim)])
         self.v = dict.fromkeys(reports.COLUMNS, NAN)   # the latest of everything
+        self.arrived = {}                              # t_* column -> arrival (s, clock)
         self.odom_time = None
         self.estop = False
         self.sources = {}
@@ -115,6 +123,7 @@ class ActuatorTest(Node):
         self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
         self.create_subscription(TwistStamped, 'control/cmd_vel', self.on_mux, 10)
         self.create_subscription(DataSource, 'system/source', self.on_source, latched)
+        self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_ego, sensor)
         self.ego = AsyncParameterClient(self, 'ego')
 
     # --- listening ---------------------------------------------------------------------
@@ -122,15 +131,21 @@ class ActuatorTest(Node):
     def seconds(self):
         return self.get_clock().now().nanoseconds * 1e-9
 
+    def arrive(self, column):
+        """Note when a message arrived, for its t_* column (true times for the fits)."""
+        self.arrived[column] = self.seconds()
+
     def on_odom(self, msg):
         self.v['speed'] = msg.twist.twist.linear.x
         self.odom_time = self.seconds()
+        self.arrive('t_speed')
 
     def on_actuator(self, name, msg):
         cmd_key = {'steering': 'steer_cmd'}.get(name, f'{name}_cmd')
         val_key = {'steering': 'steer'}.get(name, name)
         self.v[cmd_key] = msg.command
         self.v[val_key] = msg.measured
+        self.arrive(reports.STAMPS[val_key])
         if name == 'steering' and math.isfinite(msg.measured):
             self.has_steering = True
 
@@ -138,19 +153,28 @@ class ActuatorTest(Node):
         for k in ('fl', 'fr', 'rl', 'rr'):
             self.v[f'wheel_{k}'] = getattr(msg, {'fl': 'front_left', 'fr': 'front_right',
                                                  'rl': 'rear_left', 'rr': 'rear_right'}[k])
+        self.arrive('t_wheels')
 
     def on_imu(self, msg):
         self.v['ax'] = msg.linear_acceleration.x
         self.v['ay'] = msg.linear_acceleration.y
         self.v['gz'] = msg.angular_velocity.z
+        self.arrive('t_imu')
 
     def on_pose(self, msg):
         p = msg.pose.pose
         self.v['x'], self.v['y'], self.v['yaw'] = p.position.x, p.position.y, yaw_of(p.orientation)
+        self.arrive('t_pose')
 
     def on_fix(self, msg):
         if msg.status.status >= NavSatStatus.STATUS_FIX:
             self.v['lat'], self.v['lon'] = msg.latitude, msg.longitude
+            self.arrive('t_fix')
+
+    def on_ego(self, msg):
+        self.v['ego_speed'] = msg.drive.speed
+        self.v['ego_steer'] = msg.drive.steering_angle
+        self.arrive('t_ego')
 
     def on_estop(self, msg):
         self.estop = bool(msg.data)
@@ -196,6 +220,23 @@ class ActuatorTest(Node):
         return {n: parameter_value_to_python(v) for n, v in zip(EGO_PARAMS, res.values)
                 if parameter_value_to_python(v) is not None}
 
+    def backend_params(self, seconds=1.0):
+        """Return reports.SHAPING_PARAMS' values from each of those nodes that answers."""
+        running = set(self.get_node_names())
+        out = {}
+        for node, names in reports.SHAPING_PARAMS.items():
+            if node not in running:
+                continue
+            client = AsyncParameterClient(self, node)
+            if not client.wait_for_services(timeout_sec=seconds):
+                continue
+            res = self.wait(client.get_parameters(list(names)), seconds)
+            if res is None:
+                continue
+            values = {n: parameter_value_to_python(v) for n, v in zip(names, res.values)}
+            out[node] = {n: v for n, v in values.items() if v is not None}
+        return out
+
     def set_ego(self, name, value):
         """Set one of ego's parameters; returns why it failed, or None."""
         res = self.wait(self.ego.set_parameters([Parameter(name, value=float(value))]))
@@ -219,6 +260,7 @@ class Run:
         self.bag = None
         self.manual = False
         self.paused = 0.0
+        self.shaping = {}
 
     def say(self, text=''):
         print(text, flush=True)
@@ -250,6 +292,10 @@ class Run:
                          "stack first; on the real car we don't drive without ego's limits")
                 return 1
             self.say('WARNING: ego did not answer (/ego/get_parameters): is the stack running?')
+        self.shaping = reports.shaping(list(node.sources), node.backend_params(), self.ego)
+        self.ctx = reports.with_shaping(self.ctx, self.shaping)
+        self.say(f"Backend: {self.shaping['backend']}; speed loop: "
+                 f"{self.shaping['speed_loop']}")
         wheelbase = float(self.ego.get('wheelbase', self.ctx.wheelbase))
         max_steer = float(self.ego.get('max_steering_angle', self.ctx.max_steering))
         settings = pr.Settings(cap=d.cap, max_steering=max_steer, wheelbase=wheelbase,
@@ -322,6 +368,7 @@ class Run:
                          "may be ego's ramp, not the motor")
             else:
                 self.ego_restore = old
+                self.shaping['ego_changed'] = {'max_steering_rate': self.test.ego_steer_rate}
                 self.say(f"ego's max_steering_rate lifted from {old} to "
                          f'{self.test.ego_steer_rate} rad/s for this test')
         self.folder = run_folder(a.out, self.test.name, self.kind)
@@ -375,6 +422,9 @@ class Run:
         row = dict(v)
         row.update(t=elapsed, phase=cmd.phase, cmd_speed=speed_cmd, cmd_steer=cmd.steering,
                    heading=last['heading'], distance=last['distance'], manual_steer=NAN)
+        # Arrival times on the row's clock: t = now - t0 - paused.
+        offset = self.t0 + self.paused
+        row.update({k: arrived - offset for k, arrived in node.arrived.items()})
         self.rows.append(row)
 
     def check_mux(self):
@@ -512,7 +562,7 @@ def write_files(run, text, lines):
         'envelope': {'max_speed': run.envelope.max_speed,
                      'max_distance': run.envelope.max_distance,
                      'max_time': run.envelope.max_time},
-        'aborted': run.abort, 'ego': run.ego,
+        'aborted': run.abort, 'ego': run.ego, 'shaping': run.shaping,
         'vehicle_yaml': dict(run.ctx.current),
         'wheelbase': run.ctx.wheelbase, 'max_steering': run.ctx.max_steering,
         'gps_x': run.ctx.gps_x,
@@ -548,9 +598,7 @@ def analyse_folder(folder):
         meta = yaml.safe_load(f)
     with open(os.path.join(folder, 'log.csv'), newline='') as f:
         rows = reports.parse_rows(list(csv.DictReader(f)))
-    ctx = reports.Context(wheelbase=meta['wheelbase'], max_steering=meta['max_steering'],
-                          gps_x=meta.get('gps_x', 0.0), current=meta.get('vehicle_yaml', {}))
-    rep = reports.analyse(meta['test'], rows, ctx)
+    rep = reports.analyse(meta['test'], rows, reports.context_from_meta(meta))
     print(reports.table(rep))
     lines = reports.yaml_lines(rep)
     if lines:

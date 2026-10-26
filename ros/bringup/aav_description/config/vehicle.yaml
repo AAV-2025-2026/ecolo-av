@@ -42,7 +42,9 @@ vehicle:
 
 # How the car answers its commands: the actuator model in Gazebo (aav_gazebo
 # actuator_model.py; docs/full-simulation.md, step 3). Units: m/s^2, s, rad, 1/s;
-# throttle and brake 0..1.
+# throttle and brake 0..1. Three readers: actuator_model.py, ego (vehicle.ego_params) and
+# the linear model (aav_ego vehicle_model.py). Each uses a key or lists it as ignored:
+# tools/tests/test_vehicle_model_tool.py checks, so a new key can't reach only one.
 #
 # !! EVERY NUMBER HERE IS A GUESS (15 Oct), chosen to match Gazebo's old limits
 # (+1.5 / -3.0 m/s^2) and the bench's spine_sim. TODO measure them on the car:
@@ -59,6 +61,12 @@ actuators:
   steer_lag: 0.1          # s: the linkage after the motor. GUESS: TODO tests 3.11, 4.5
   steer_offset: 0.0       # rad, + left: the wheels' angle when told straight. GUESS: TODO test 3.12
   steer_deadband: 0.005   # rad: a smaller change doesn't move the motor. GUESS: TODO test 3.10
+  # Dead times: how long each actuator waits before it starts to move, ahead of its lag.
+  # Not measured, so not set: the model takes 0. The actuator tests print a line only when
+  # the data resolves it (docs/actuator-tests.md). Examples of the form, NOT values:
+  # throttle_dead_time: 0.0   # s. GUESS placeholder: TODO test 4.1
+  # brake_dead_time: 0.0      # s. GUESS placeholder: TODO test 4.3
+  # steer_dead_time: 0.0      # s. GUESS placeholder: TODO test 3.11
 
 # Sensor mounts, relative to base_link. xyz in metres, rpy in radians.
 sensors:
