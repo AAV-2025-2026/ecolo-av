@@ -621,7 +621,7 @@ a wheel node on each front wheel. Both chips are Xtensa ESP32s.
 | Board | Chip | Its logic, done and tested | Its board crate |
 |---|---|---|---|
 | The spine: the AAV control board | ESP32 (Xtensa LX6) | `spine-core` and `spine-board`: modes, arming, the 100 ms watchdog, the speed loop, the frames, the Jrk G2s, the DAC, iBUS | written: `boards/esp32-umod --features can` (above). Its CAN pins are a placeholder until the schematic shows them |
-| A wheel node: ESP32-CAN-X2 | ESP32-S3 (Xtensa LX7) | `wheel-core`: pulses and their times to a speed, the zero-speed timeout, the WHEEL_SPEED frame from `spine-core`'s protocol | still to write: `boards/esp32s3-wheel` |
+| A wheel node | the hardware lead's Arduino (23 Oct) | `wheel-core` still pins down a correct WHEEL_SPEED frame: pulses and their times to a speed, the zero-speed timeout | none: the Arduino sends WHEEL_SPEED in Arduino C++, so `boards/esp32s3-wheel` won't be written |
 
 ### What a board crate does
 
@@ -649,9 +649,8 @@ they already build and test with stock Rust.
 
 | # | Step | Waits on |
 |---|---|---|
-| 1 | Write `boards/esp32s3-wheel` (DBC v0.2.0 is merged, 15 Oct) | nothing |
-| 2 | Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel | the car |
-| 3 | `boards/esp32-umod --features can`: the real CAN pins, from the control board's schematic | the schematic |
+| 1 | Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel (for the Arduino's numbers) | the car |
+| 2 | `boards/esp32-umod --features can`: the real CAN pins, from the control board's schematic | the schematic |
 
 ## The CAN bridge on the Orin, in Rust (23 Oct)
 
@@ -707,14 +706,14 @@ Rust.
 
 | Crate | Does | Tests |
 |---|---|---|
-| `spine-core` | the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (`DirectCmd`, for the UART link) and a speed loop with no wheel speed (`SpeedFeedback::None`). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, `MAX_REVERSE_SPEED`, from vehicle.yaml. Since 23 Oct, `decode_report` for the Orin's side (the Rust CAN bridge) | 71 |
+| `spine-core` | the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (`DirectCmd`, for the UART link) and a speed loop with no wheel speed (`SpeedFeedback::None`). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, `MAX_REVERSE_SPEED`, from vehicle.yaml. Since 23 Oct, `decode_report` for the Orin's side (the Rust CAN bridge). Since 25 Oct, open-loop reverse is capped at `MAX_REVERSE_SPEED` too | 84 |
 | `aav-inputs` (10 Oct) | clean inputs for every board: a `Debouncer` for switches and buttons, with separate times each way (an e-stop trips at once, and must stay released before it counts), and a `Lockout` for counting fast signals such as encoder spokes | 9 |
-| `jrk-g2` (10 Oct) | the Pololu Jrk G2 over I2C: set target, stop, feedback, error flags. Checked against Pololu's guide | 14 |
+| `jrk-g2` (10 Oct) | the Pololu Jrk G2 over I2C: set target, stop, feedback, error flags. Checked against Pololu's guide | 15 |
 | `ad5311` (10 Oct) | the throttle DAC (an AD5311; TI's DAC101C081 takes the same bytes), capped at 700 of 1023 | 10 |
 | `pca9555` (10 Oct) | the 16-bit I/O expander: the direction output | 6 |
-| `ibus` (10 Oct) | the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's `RcInput`, with the gear switch's brake position | 24 |
+| `ibus` (10 Oct) | the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's `RcInput`, with the gear switch's brake position | 25 |
 | `mcp2515` (11 Oct) | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters for our IDs, send, receive, error state and bus-off | 34 |
-| `legacy-link` (15 Oct) | the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself. Since 24 Oct, version 2: the Orin's counter, flags, a CRC-8 (TODO 50) | 57 |
+| `legacy-link` (15 Oct) | the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself. Since 24 Oct, version 2: the Orin's counter, flags, a CRC-8 (TODO 50) | 72 |
 | `spine-board` (10 Oct) | the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The `Board` trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to `wheel-encoder` on 15 Oct). Since 15 Oct, the `CommandLink` trait: `CanLink` or `LegacyLink`; since 24 Oct, `LegacyLink` reads version 2 frames and their heartbeat | 72 |
 | `wheel-encoder` (15 Oct) | the two spoke sensors, shared by the spine and the wheel encoder; the wheel encoder's UDP packet, checked against examples `aav_legacy` checks too | 12 |
 | `sentinel` (15 Oct) | the status display: its I2C packet, 13 LCD pages, the knob, the beeps, the matrix, the link's watchdog | 40 |

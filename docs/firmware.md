@@ -122,13 +122,13 @@ and the glue between them and `spine-core`, are written too (10 October):
 
 | Crate | Drives | Tests |
 |---|---|---|
-| `jrk-g2` | the two Pololu Jrk G2s (steering, brake) over I2C | 14 |
+| `jrk-g2` | the two Pololu Jrk G2s (steering, brake) over I2C | 15 |
 | `ad5311` | the throttle DAC over I2C | 10 |
 | `pca9555` | the I/O expander: the direction output | 6 |
-| `ibus` | the FlySky RC receiver | 24 |
+| `ibus` | the FlySky RC receiver | 25 |
 | `mcp2515` | the MCP2515 CAN controller over SPI: a Pico 2 has no CAN of its own | 34 |
-| `legacy-link` | the Motor-Pi's 13-byte UART frames, and the targets the C++ set for them (15 Oct); version 2 with the Orin's heartbeat (24 Oct, TODO 50) | 57 |
-| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits. Commands through CAN or the UART (`CommandLink`) | 57 |
+| `legacy-link` | the Motor-Pi's 13-byte UART frames, and the targets the C++ set for them (15 Oct); version 2 with the Orin's heartbeat (24 Oct, TODO 50) | 72 |
+| `spine-board` | all of them, from `spine-core`'s outputs, in a safe order; their errors become fault bits. Commands through CAN or the UART (`CommandLink`) | 79 |
 
 On a laptop, [Bench mode](bench.md) runs `spine-core` on the CAN frames from `spine_bridge`,
 driving a model car. The plan for all the firmware in Rust is

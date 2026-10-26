@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">51 min read · 4 sections</div></header>
+<div class="meta">52 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -389,7 +389,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/odom</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
-<td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code>, <code>sensor_watchdog</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>gps_heading</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.</td>
 </tr>
@@ -493,7 +493,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/imu/data</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
-<td><code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code>, <code>navsat_transform</code></td>
 <td>sim, car, replay, bench</td>
 <td>Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.</td>
 </tr>
@@ -605,9 +605,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/camera/rear/camera_info</code></td>
 <td><code>sensor_msgs/msg/CameraInfo</code></td>
 <td><code>gz_road_bridge</code>, <code>carla_adapter</code></td>
-<td><code>stop_sign_watcher</code></td>
+<td><code>stop_sign_watcher</code>, <code>camera_obstacles</code></td>
 <td>road</td>
-<td>Its lens. In Gazebo, the same as the front left camera's. stop_sign_watcher takes its focal length, as the front left one's.</td>
+<td>Its lens. In Gazebo, the same as the front left camera's. stop_sign_watcher takes its focal length, as the front left one's; camera_obstacles (off until Q22) uses it to put the rear camera's boxes on the road.</td>
 </tr>
 <tr>
 <td><code>/sensors/lidar/packets</code></td>
@@ -749,7 +749,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/bench/truth</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_sim</code></td>
-<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_camera</code>, <code>mock_radar</code></td>
+<td><code>mock_imu</code>, <code>mock_gps</code>, <code>mock_camera</code>, <code>mock_radar</code>, <code>mock_lidar</code></td>
 <td>bench</td>
 <td>Where the model car really is (map frame, 50 Hz). Only the stand-ins read it; compare it with /localization/odom/global to check the EKFs.</td>
 </tr>
@@ -773,9 +773,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/gazebo/truth</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>gz_bridge</code></td>
-<td>-</td>
+<td><code>gazebo_gps</code></td>
 <td>sim</td>
-<td>Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Nothing on the car's side reads it; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).</td>
+<td>Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Only the stand-ins read it - gazebo_gps, for the receiver's velocity (/sensors/gps/fix_velocity), never for a position; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).</td>
 </tr>
 <tr>
 <td><code>/vehicle/gazebo/spine_outputs</code></td>

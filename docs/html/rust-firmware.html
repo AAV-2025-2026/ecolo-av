@@ -1959,10 +1959,10 @@ a wheel node on each front wheel. Both chips are Xtensa ESP32s.</p>
 <td>written: <code>boards/esp32-umod --features can</code> (above). Its CAN pins are a placeholder until the schematic shows them</td>
 </tr>
 <tr>
-<td>A wheel node: ESP32-CAN-X2</td>
-<td>ESP32-S3 (Xtensa LX7)</td>
-<td><code>wheel-core</code>: pulses and their times to a speed, the zero-speed timeout, the WHEEL_SPEED frame from <code>spine-core</code>'s protocol</td>
-<td>still to write: <code>boards/esp32s3-wheel</code></td>
+<td>A wheel node</td>
+<td>the hardware lead's Arduino (23 Oct)</td>
+<td><code>wheel-core</code> still pins down a correct WHEEL_SPEED frame: pulses and their times to a speed, the zero-speed timeout</td>
+<td>none: the Arduino sends WHEEL_SPEED in Arduino C++, so <code>boards/esp32s3-wheel</code> won't be written</td>
 </tr>
 </tbody>
 </table></div>
@@ -2021,16 +2021,11 @@ they already build and test with stock Rust.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td>Write <code>boards/esp32s3-wheel</code> (DBC v0.2.0 is merged, 15 Oct)</td>
-<td>nothing</td>
-</tr>
-<tr>
-<td>2</td>
-<td>Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel</td>
+<td>Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel (for the Arduino's numbers)</td>
 <td>the car</td>
 </tr>
 <tr>
-<td>3</td>
+<td>2</td>
 <td><code>boards/esp32-umod --features can</code>: the real CAN pins, from the control board's schematic</td>
 <td>the schematic</td>
 </tr>
@@ -2173,8 +2168,8 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tbody>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, <code>MAX_REVERSE_SPEED</code>, from vehicle.yaml. Since 23 Oct, <code>decode_report</code> for the Orin's side (the Rust CAN bridge)</td>
-<td>71</td>
+<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, <code>MAX_REVERSE_SPEED</code>, from vehicle.yaml. Since 23 Oct, <code>decode_report</code> for the Orin's side (the Rust CAN bridge). Since 25 Oct, open-loop reverse is capped at <code>MAX_REVERSE_SPEED</code> too</td>
+<td>84</td>
 </tr>
 <tr>
 <td><code>aav-inputs</code> (10 Oct)</td>
@@ -2184,7 +2179,7 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tr>
 <td><code>jrk-g2</code> (10 Oct)</td>
 <td>the Pololu Jrk G2 over I2C: set target, stop, feedback, error flags. Checked against Pololu's guide</td>
-<td>14</td>
+<td>15</td>
 </tr>
 <tr>
 <td><code>ad5311</code> (10 Oct)</td>
@@ -2199,7 +2194,7 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tr>
 <td><code>ibus</code> (10 Oct)</td>
 <td>the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's <code>RcInput</code>, with the gear switch's brake position</td>
-<td>24</td>
+<td>25</td>
 </tr>
 <tr>
 <td><code>mcp2515</code> (11 Oct)</td>
@@ -2209,7 +2204,7 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tr>
 <td><code>legacy-link</code> (15 Oct)</td>
 <td>the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself. Since 24 Oct, version 2: the Orin's counter, flags, a CRC-8 (TODO 50)</td>
-<td>57</td>
+<td>72</td>
 </tr>
 <tr>
 <td><code>spine-board</code> (10 Oct)</td>
