@@ -77,6 +77,10 @@ def git(root, *args, timeout=20):
 
 # --- the code ------------------------------------------------------------------------
 
+# main only follows the team's main (CONTRIBUTING.md): update it, never push it.
+UPDATE_MAIN = 'git fetch upstream && git merge --ff-only upstream/main'
+
+
 def repo_line(branch, head, remote, relation, dirty):
     """
     Say whether this checkout is what GitHub's main has.
@@ -88,7 +92,7 @@ def repo_line(branch, head, remote, relation, dirty):
                     'internet?)', 'connect, then run this again')
     if branch != 'main':
         return Line('MISSING', 'repo', f'on branch {branch}, not main',
-                    'git checkout main && git pull')
+                    f'git switch main && {UPDATE_MAIN}')
     if dirty:
         return Line('MISSING', 'repo', 'uncommitted changes: the car kit and the builds '
                     'hold only commits', 'commit them, or git stash push -m car-day')
@@ -96,9 +100,10 @@ def repo_line(branch, head, remote, relation, dirty):
         return Line('OK', 'repo', f'main at {head[:8]}, the same as GitHub')
     if relation == 'ahead':
         return Line('MISSING', 'repo', f"main at {head[:8]} has commits GitHub hasn't",
-                    'pixi run test, then git push')
+                    'pixi run test, then move them to a branch and open a pull request '
+                    '(CONTRIBUTING.md)')
     return Line('MISSING', 'repo', f'main at {head[:8]}, GitHub at {remote[:8]}',
-                'git pull')
+                UPDATE_MAIN)
 
 
 def check_repo(root):

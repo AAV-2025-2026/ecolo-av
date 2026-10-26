@@ -44,7 +44,7 @@ PAGES = [
     ('release-notes.md', 'Release notes', 'Release 0.1: what this version does, at a glance'),
     ('getting-started.md', 'Getting started', 'A new laptop to the turtle in 30 minutes (T1.1)'),
     ('first-day.md', 'Your first day', 'Install, the turtle, rqt_graph, Gazebo, Nav2'),
-    ('git.md', 'Git', 'Your fork, branches, worktrees; pull first, then a pull request'),
+    ('git.md', 'Git', 'Rebasing, conflicts, worktrees; the flow is in CONTRIBUTING.md'),
     ('how-it-fits.md', 'How it fits', 'What each box does, and the safety layers'),
     ('start-up.md', 'Bottom-up', 'Each layer from the device up; start-up; testing each layer'),
     ('team.md', 'Starting points', 'One per team member: read, run, first tasks'),

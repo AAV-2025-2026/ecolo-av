@@ -9,11 +9,11 @@ Both drive the test lot, headless, and are measured against where the car really
     pixi run controller-compare --controllers mppi
     pixi run controller-compare --speed 3          (Nav2 and ego up to 3 m/s: sim_speed:=3)
     pixi run controller-compare --tours lot --legs 1   (only the first leg: a quick check)
-    pixi run controller-compare --reversing        (Nav2 may reverse: not yet on the car)
+    pixi run controller-compare --reversing        (Nav2 may reverse, as on the car since 22 Oct)
 
 For each tour and controller it:
 1. starts sim.launch.py world:=test_lot gui:=false rviz:=false controller:=<rpp|mppi>
-   reversing:=false (forward only, as on the car), on a ROS domain and Gazebo partition of
+   reversing:=false (forward only, unless --reversing), on a ROS domain and Gazebo partition of
    its own, on this computer only;
 2. waits for Gazebo's truth, the global EKF and Nav2;
 3. sends each leg's goal in turn, each from where the last one ended, and records where the
@@ -446,8 +446,8 @@ def main():
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
     parser.add_argument('--reversing', action='store_true',
-                        help='let Nav2 reverse (reversing:=true); forward only otherwise, as '
-                             'on the car')
+                        help='let Nav2 reverse (reversing:=true), as on the car since '
+                             '22 Oct; forward only otherwise')
     parser.add_argument('--legs', type=int, default=None,
                         help="only each tour's first N legs (each starts where the last ended)")
     parser.add_argument('--out', help='where the results go (default: log/controller-compare/)')

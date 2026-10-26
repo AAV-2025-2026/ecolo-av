@@ -18,7 +18,7 @@ Every page is in [`docs/`](docs/). The ones people ask for most:
 |---|---|
 | [The plan](docs/plan.md) | what's left to build, in order, by the gates |
 | [Features](docs/features.md) | what the software does, why, and who built it |
-| [Git](docs/git.md) | your fork, branches and worktrees; **pull first**, then a pull request |
+| [Git](docs/git.md) | worktrees, conflicts during a rebase, handy commands; the flow is in [CONTRIBUTING.md](CONTRIBUTING.md) |
 | [Car day](docs/car-day.md) | the runbook at the car: `pixi run car-day-build`, then `pixi run car-day-check` until it says 0 missing |
 | [Every test](docs/tests.md) | every test, in order: simulator, bench, stands, lot, the whole drive |
 | [Measure the car](docs/measure-the-car.md) | the sheet for whoever measures the car |
@@ -43,8 +43,8 @@ New to the team? Do these in order, on a Mac or on Linux.
 |---|---|---|
 | 1 | Mac only: `xcode-select --install` | a few minutes, once |
 | 2 | Install Pixi: the `curl` line below, then open a new terminal | under a minute, once |
-| 3 | Get the code: fork `AAV-2025-2026/ecolo-av` on GitHub, then clone your fork ([Git](docs/git.md)) | a minute |
-| 4 | `pixi install` | the first time, a few minutes: it downloads about 4 GB |
+| 3 | Get the code: fork `AAV-2025-2026/ecolo-av` on GitHub, then clone your fork ([CONTRIBUTING.md](CONTRIBUTING.md)) | a minute |
+| 4 | `pixi install` | the first time, a few minutes: about 7 GB |
 | 5 | `pixi run build`, then `pixi run test` | a few minutes the first time |
 | 6 | `pixi run turtle`, or `pixi run sim` | ready |
 
@@ -58,7 +58,7 @@ git remote add upstream git@github.com:AAV-2025-2026/ecolo-av.git       #    the
 pixi install                                  # 4. ROS 2 Jazzy and every dependency
 pixi run build && pixi run test               # 5. our packages, then every test
 pixi run turtle                               # 6. terminal 1: a turtle that steers like the car
-pixi run keyboard                             #    terminal 2: hold i to drive, u or o to turn
+pixi run keyboard --local                     #    terminal 2: hold i to drive, u or o to turn
 ```
 
 When something fails: [docs/run.md](docs/run.md).
@@ -102,7 +102,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | Command | What it does |
 |---|---|
 | `turtle` | turtlesim plays the car |
-| `keyboard` | drive from the keyboard (a second terminal, with `turtle` or `sim`) |
+| `keyboard` | drive from the keyboard, in a second terminal: `keyboard --local` with `turtle` or `bench`, `keyboard --sim` with `sim`. With no flag it drives whatever shares the ROS domain: on the car's network, the car |
 | `sim` | Gazebo plays the car (`world:=road`, `hud:=true`, `sim_speed:=3`...) |
 | `demo` | the whole simulated car at once: Gazebo, RViz, the HUD and the map window (`demo fullscreen`) |
 | `bench` | the real car's software, with stand-ins for the hardware |
@@ -171,6 +171,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 |---|---|
 | `detect` | the object detector on a picture or the cameras: `detect picture:=<file>` |
 | `laptop-bench` | your laptop's own detector against bench mode |
+| `-e ml export-coreml` | Mac only: the detector as a Core ML model (RF-DETR Nano by default) |
 | `talk` | tell the car what to do in plain English; a local model plans it (turtle, sim or bench only) |
 | `llm-eval` | scores local models on the plain-English test set |
 | `-e mcp mcp`, `-e mcp drive-server` | the MCP servers for Claude: read-only, and the drive tools. Claude starts them |
@@ -252,10 +253,6 @@ Autonomy Stack — Architecture & Plan* (a Claude Doc). Conventions are in
 | The 2025-26 team (GitHub org `AAV-2025-2026`) | the ESP32 actuator firmware, the Pico 2 wheel encoder, the IMU driver, the radar driver and its clustering, lane keeping, the HUD app, and the steering geometry |
 | The 2024-25 team (`Carleton-AAV-Capstone`) | the battery monitor, the camera calibrations, and the first YOLO stop-sign detector |
 | Open-source projects | ROS 2 Jazzy, Nav2, robot_localization, twist_mux, imu_tools, Gazebo, RoboStack and Pixi, rclrs (ros2-rust), Roboflow's RF-DETR (the car's object detector), Ultralytics YOLO, NVIDIA TensorRT, Apple's Core ML Tools, and Rust's embedded-hal |
-| Claude (Anthropic) | an AI assistant that helped write code, tests and these docs, under the team's direction |
-
-Each piece copied from the 2025-26 or 2024-25 team keeps a `PROVENANCE.md`, as the next
-section says.
 
 ## Where the code came from
 

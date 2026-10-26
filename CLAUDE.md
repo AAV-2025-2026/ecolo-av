@@ -65,8 +65,8 @@ These are the conventions decided so far. They apply to people and to Claude ses
     which publishes (Ben, 10 Oct). Tentative: we think again once we see the hardware
     (Ben, 11 Oct);
   - no C++ of our own: the inherited C++ moves to Rust (Ben, 10 Oct). The IMU driver
-    goes to Ben's Rust twin, the radar clustering to a Rust ROS node. Stock ROS packages
-    stay as they are;
+    went to Ben's Rust twin (11 Oct), the radar clustering to a Rust ROS node (15 Oct).
+    Stock ROS packages stay as they are;
   - Rust ROS nodes (rclrs from crates.io: `examples/rust-listener`, `aav_imu_yahboom`)
     are for those ports, the HUD (raylib, Ben, 11 Oct), and later for a node where Rust
     pays off, such as ego.
@@ -111,7 +111,7 @@ EGM artifact directory: docs/designs
   `cargo test` for `firmware/spine`, and the interfaces.md check. Run it before every
   commit.
 - With Jazzy, also run `pixi run build`, `pixi run test` (which adds `colcon test`), and
-  `pixi run check <turtle|sim|car|replay>` against a running system.
+  `pixi run check <turtle|sim|road|spine|car|replay|bench>` against a running system.
 - Pixi + RoboStack provide Jazzy without admin rights: on Ben's AlmaLinux workstation
   (oirp-spss), on Macs, and on any Linux. `pixi.toml` and `pixi.lock` define the
   environment; `pixi run <task>` runs a command inside it. That machine has no screen
@@ -144,7 +144,8 @@ EGM artifact directory: docs/designs
   approves (`CONTRIBUTING.md`). Run the full `pixi run test` before asking for review
   (not just `tools/test.sh`: it skips the launch-file tests). Never force-push `main`.
 - CI (`.github/workflows/test.yml`) runs `pixi run test` on Linux, x86_64 and 64-bit ARM
-  (the car's computers), for every push to `main` and every pull request, with the car
+  (the car's computers), for every push to `main`, every pull request and each pull
+  request in the merge queue, with the car
   kit installed offline on ARM; and on a Mac every night (`docs/infrastructure.md`).
 - Commit messages give the intention: what changed, and why. No attribution lines (no
   `Co-Authored-By`, no "Generated with"). It's a school project: the README's Credits

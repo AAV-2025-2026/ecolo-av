@@ -19,15 +19,17 @@ def test_the_same_commit_as_github_is_ok():
     assert 'f5730bef' in line.detail
 
 
-def test_behind_github_says_pull():
+def test_behind_github_says_update_from_upstream():
     line = cdc.repo_line('main', HEAD, 'a' * 40, 'behind', dirty=False)
-    assert (line.status, line.fix) == ('MISSING', 'git pull')
+    assert (line.status, line.fix) == ('MISSING', cdc.UPDATE_MAIN)
+    assert 'upstream/main' in line.fix
 
 
-def test_ahead_of_github_says_test_then_push():
+def test_ahead_of_github_says_test_then_pull_request_never_push_main():
     line = cdc.repo_line('main', HEAD, 'a' * 40, 'ahead', dirty=False)
     assert line.status == 'MISSING'
-    assert 'pixi run test' in line.fix and 'git push' in line.fix
+    assert 'pixi run test' in line.fix and 'pull request' in line.fix
+    assert 'git push' not in line.fix
 
 
 def test_another_branch_or_uncommitted_changes_are_missing():

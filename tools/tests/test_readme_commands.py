@@ -12,11 +12,19 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def _with_targets(table):
+    """Task names in a pixi table, and in its [target.<platform>.tasks] tables."""
+    names = set(table.get('tasks', {}))
+    for target in table.get('target', {}).values():
+        names |= set(target.get('tasks', {}))
+    return names
+
+
 def tasks():
     spec = tomllib.loads((ROOT / 'pixi.toml').read_text(encoding='utf-8'))
-    names = set(spec.get('tasks', {}))
+    names = _with_targets(spec)
     for feature in spec.get('feature', {}).values():
-        names |= set(feature.get('tasks', {}))
+        names |= _with_targets(feature)
     return names
 
 
