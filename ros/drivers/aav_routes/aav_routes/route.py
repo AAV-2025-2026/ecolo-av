@@ -1,10 +1,10 @@
 """
-The route from the HUD's map, turned into GPS waypoints for Nav2.
+A street route, turned into GPS waypoints for Nav2.
 
 No ROS imports, so the tests run anywhere.
 
-The app sends the OSRM route it drew: a list of {'lat': .., 'lon': ..}, often hundreds of
-points a few metres apart. Nav2's follow_gps_waypoints drives to each waypoint in turn
+A router's route is a list of {'lat': .., 'lon': ..}, often hundreds of points a few
+metres apart. Nav2's follow_gps_waypoints drives to each waypoint in turn
 and slows down at each one, so the route is cut down first:
 
 1. simplify: keep only the points where the route bends (Douglas-Peucker);

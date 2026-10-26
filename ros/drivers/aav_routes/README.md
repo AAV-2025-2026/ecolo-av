@@ -57,12 +57,13 @@ Modules:
 
 | Module | Holds |
 |---|---|
-| `osrm_route.py` | no ROS: `request()`, `parse_response()`, `decode_polyline()`, `waypoints()`, `fill_in()`, `summary()`; `StreetRoute`, `Request`, `RouteError`, `ROUTERS`. Uses `aav_hud`'s `route.py` for the geometry |
+| `osrm_route.py` | no ROS: `request()`, `parse_response()`, `decode_polyline()`, `waypoints()`, `fill_in()`, `summary()`; `StreetRoute`, `Request`, `RouteError`, `ROUTERS`. Uses `route.py` for the geometry |
+| `route.py` | no ROS: `parse_route()`, `simplify()`, `space_out()`, `headings()`, `to_waypoints()`, `remaining()`, `distance()`, `bearing()`, `quaternion()`; `Waypoint`. Moved here from the 2025-26 HUD's back end (`aav_hud`) when that went to `archive/` (25 Oct) |
 | `street_router.py` | the ROS node `StreetRouter` |
 
 ## Invariants
 
-- `osrm_route.py` has no ROS imports.
+- `osrm_route.py` and `route.py` have no ROS imports.
 - One router answer format: OSRM's JSON (Valhalla asked for `"format": "osrm"`).
   Geometry is GeoJSON or an encoded polyline (precision 6).
 - Waypoints: simplified at bends, at least `min_spacing` apart (Nav2 slows at each),

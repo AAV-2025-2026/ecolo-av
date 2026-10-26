@@ -12,7 +12,7 @@ The geometry is a GeoJSON LineString ([lon, lat] pairs) or an encoded polyline (
 format, 5 or 6 decimal places). The route is then cut into waypoints for Nav2's
 follow_gps_waypoints, which drives to each in turn:
 
-1. simplify: keep the points where the street bends (aav_hud's route.py);
+1. simplify: keep the points where the street bends (route.py);
 2. space out: no two waypoints closer than min_spacing (it slows at each one);
 3. fill in: no two further apart than max_spacing, so each goal stays near the car,
    inside Nav2's costmaps;
@@ -24,7 +24,7 @@ Positions are (lat, lon) in degrees; yaw is ENU (0 = east, pi/2 = north), as REP
 import math
 from typing import NamedTuple
 
-from aav_hud import route as geo
+from aav_routes import route as geo
 
 Waypoint = geo.Waypoint
 distance = geo.distance
