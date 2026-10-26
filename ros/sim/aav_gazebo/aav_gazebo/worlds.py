@@ -3,9 +3,9 @@ What each Gazebo world gives the car. No ROS imports: the launch files and tests
 
 A world renders the car's camera and radar stand-in (aav_description's
 aav.sensors.gazebo.xacro) only if it loads Gazebo's Sensors system, which needs a GPU,
-or ogre2 on a Mac. So the world file itself says whether the car has them: today only
-worlds/road.sdf does. The empty and test_lot worlds render nothing, and run headless
-anywhere.
+or ogre2 on a Mac. So the world file itself says whether the car has them: today
+worlds/road.sdf and worlds/test_lot.sdf do. The empty world renders nothing, and runs
+headless anywhere.
 """
 
 from __future__ import annotations

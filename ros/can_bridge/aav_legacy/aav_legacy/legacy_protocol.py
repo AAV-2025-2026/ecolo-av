@@ -1,7 +1,9 @@
 """
 The 2025-26 car's protocols, so the new stack can drive today's hardware.
 
-No ROS imports. Sources (read-only clones in /home/ben/aav):
+No ROS imports. Sources: the 2025-26 team's repos, kept read-only in archive/
+(docs/older-code.md says what came from each; on GitHub in AAV-2025-2026). The
+branches and lines cited below are the repos' own:
 
 UART to the ESP32 (AAV_cortex, branch 6-pico2-aav-firmware,
 AAV_uMod_Firmware/src/modules/ros2_handler.cpp:17-80):

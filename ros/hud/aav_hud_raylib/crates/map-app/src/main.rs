@@ -8,6 +8,9 @@
 //!             source_topic  aav_interfaces/DataSource    latched: the SIMULATED banner
 //!             street_route_topic  nav_msgs/Path          latched: street_router's street route
 //!                                                        (aav_routes), violet, under the plan
+//!             watchdog_topic  std_msgs/String            the sensor watchdog's verdict
+//!                                                        (/safety/sensor_watchdog/state):
+//!                                                        a banner unless OK
 //! Publishes   goal_topic    geometry_msgs/PoseStamped    the place search's goal, map frame,
 //!                                                        only after DRIVE HERE then CONFIRM
 //! Parameters  the topics above, stale_after, plan_stale_after (s), arrive_within (m),

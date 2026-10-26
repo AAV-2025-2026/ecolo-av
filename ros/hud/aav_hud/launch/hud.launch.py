@@ -11,7 +11,8 @@ config/hud_server.yaml. The camera, in a browser on the same computer:
 http://127.0.0.1:5000/camera/stream
 
 The arguments start with hud_ because included launch files share their arguments:
-bench.launch.py and car.launch.py include this file, and a GPS launch file has a `port`.
+bench.launch.py hud:=true and sim.launch.py hud_web:=true include this file, and a GPS launch
+file has a `port`.
 """
 
 from launch import LaunchDescription

@@ -43,3 +43,8 @@ change, never the logic:
   is the AI slot's driver, so what it publishes goes under `/drivers/ai/`).
 - `scripts/fake_lane_geometry_pub.py`, `scripts/geometry_logger.py`,
   `launch/lane_follower.launch.py`: `/lane_geometry` -> `/perception/lane/geometry`.
+- 25 Oct 2026: `launch/control_test.launch.py` starts both scripts with
+  `prefix='python3'`, as `lane_follower.launch.py` does (on a Mac, `/usr/bin/env` drops
+  the library path their messages need: `docs/mac.md`). `scripts/geometry_logger.py`
+  calls `rclpy.try_shutdown()`, as the other two scripts do, so a second Ctrl-C under
+  launch doesn't raise.

@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_navigation</name>
   <version>0.1.0</version>
-  <description>Nav2 configured for the car (SmacPlannerHybrid, Regulated Pure Pursuit, costmap_2d with the car's footprint, no spin), launched as a driver that publishes /drivers/nav/cmd_vel into twist_mux. Also the maps (empty and example) and their specs.</description>
+  <description>Nav2 configured for the car (SmacPlannerHybrid, the MPPI controller by default or Regulated Pure Pursuit with controller:=rpp, costmap_2d with the car's footprint, no spin), launched as a driver that publishes /drivers/nav/cmd_vel into twist_mux. Also the maps (empty and example) and their specs.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 

@@ -127,3 +127,7 @@ change, never the logic:
   `/perception/stop` -> `/perception/stop_sign`, `/battery_status` -> `/vehicle/battery`,
   `/camera/image_raw` -> `/sensors/camera/front_left/image_raw`, `/estop` ->
   `/safety/estop`. The HTTP routes (`POST /estop`, `/camera/...`) are unchanged.
+- 25 Oct 2026: added `README.md` (EGM sections: Overview, Interface, Invariants, Side
+  Effects, Verification) and `CLAUDE.md`. Docs only: no inherited file changed.
+- 25 Oct 2026: `launch/hud.launch.py`: its docstring said car.launch.py includes it; only
+  bench.launch.py `hud:=true` and sim.launch.py `hud_web:=true` do. Docstring only.

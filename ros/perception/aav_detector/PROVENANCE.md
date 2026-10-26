@@ -92,3 +92,7 @@ change, never the logic:
   keeps each camera's fy from its CameraInfo (`camera_info_topics`, by frame_id) and
   passes it with the boxes, so the same 4.7 m holds for the 1280x720 ribbon cameras once
   calibrated. Its `min_height_px` parameter is gone. Tests: `test/test_stop_sign.py`.
+- 2026-10-25: the description in `package.xml` and `setup.py` says what the package is
+  now: the object detector (RF-DETR Nano by default, YOLO with `detector:=yolo`), the
+  stop-sign watcher and camera_obstacles. It still said a YOLO detector with the stock
+  YOLO11 model.
