@@ -671,7 +671,12 @@ Changes reach <code>main</code> only through a pull request from your own fork a
 </tbody>
 </table></div>
 <p>CI (<code>.github/workflows/test.yml</code>) runs <code>pixi run test</code> on Linux for every push to <code>main</code>,
-every pull request and every merge-queue entry, and on a Mac every night. The results are on the repo's Actions tab.</p>
+every pull request and every merge-queue entry, and on a Mac every night. The results are
+on the repo's Actions tab.</p>
+<p><strong>In your fork too.</strong> Turn Actions on once in your fork (its Actions tab, then "I
+understand my workflows, go ahead and enable them"). From then on every push to a branch
+there runs <code>linux</code>, <code>arm</code> and <code>car-kit</code>, so you see green or red before you open the pull
+request. The nightly <code>mac</code> and <code>sim</code> runs stay in the team's repo.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -685,7 +690,7 @@ every pull request and every merge-queue entry, and on a Mac every night. The re
 <tr>
 <td><code>linux</code></td>
 <td>Ubuntu 24.04, x86_64</td>
-<td>every push to <code>main</code>, every pull request, the merge queue</td>
+<td>every push to <code>main</code>, every pull request, the merge queue, a push to a fork's branch</td>
 <td><code>pixi run test</code>, the MCP server</td>
 </tr>
 <tr>
@@ -697,7 +702,7 @@ every pull request and every merge-queue entry, and on a Mac every night. The re
 <tr>
 <td><code>mac</code></td>
 <td>macOS 15, Apple Silicon</td>
-<td>every night</td>
+<td>every night (team's repo)</td>
 <td><code>pixi run test</code>, the MCP server</td>
 </tr>
 <tr>
@@ -709,7 +714,7 @@ every pull request and every merge-queue entry, and on a Mac every night. The re
 <tr>
 <td><code>sim</code></td>
 <td>Ubuntu 24.04, x86_64</td>
-<td>every night</td>
+<td>every night (team's repo)</td>
 <td><code>sim-check --obstacle</code> in Gazebo, below</td>
 </tr>
 </tbody>
