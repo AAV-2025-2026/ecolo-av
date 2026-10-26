@@ -42,6 +42,10 @@ git remote -v
 | `origin` | your fork | push here |
 | `upstream` | the team's repo | fetch from here, never push |
 
+4. Turn CI on in your fork: its **Actions** tab, then **I understand my workflows, go
+   ahead and enable them**. Each push to a branch there then runs the Linux and ARM
+   tests, so you know it's green before you open the pull request.
+
 ## 2. Issues
 
 Every piece of work starts as an issue, so the team can see who is doing what.

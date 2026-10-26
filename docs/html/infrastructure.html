@@ -816,8 +816,13 @@ previous teams' orgs are public, so nothing is pushed there.</p>
 </tr>
 </tbody>
 </table></div>
-<p>CI (<code>.github/workflows/test.yml</code>) runs <code>pixi run test</code> on Linux for every push and pull
-request, and on a Mac every night. The results are on the repo's Actions tab.</p>
+<p>CI (<code>.github/workflows/test.yml</code>) runs <code>pixi run test</code> on Linux for every push to <code>main</code>,
+every pull request and every merge-queue entry, and on a Mac every night. The results are
+on the repo's Actions tab.</p>
+<p><strong>In your fork too.</strong> Turn Actions on once in your fork (its Actions tab, then "I
+understand my workflows, go ahead and enable them"). From then on every push to a branch
+there runs <code>linux</code>, <code>arm</code> and <code>car-kit</code>, so you see green or red before you open the pull
+request. The nightly <code>mac</code> and <code>sim</code> runs stay in the team's repo.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -831,7 +836,7 @@ request, and on a Mac every night. The results are on the repo's Actions tab.</p
 <tr>
 <td><code>linux</code></td>
 <td>Ubuntu 24.04, x86_64</td>
-<td>every push to <code>main</code>, every pull request</td>
+<td>every push to <code>main</code>, every pull request, the merge queue, a push to a fork's branch</td>
 <td><code>pixi run test</code>, the MCP server</td>
 </tr>
 <tr>
@@ -843,19 +848,19 @@ request, and on a Mac every night. The results are on the repo's Actions tab.</p
 <tr>
 <td><code>mac</code></td>
 <td>macOS 15, Apple Silicon</td>
-<td>every night</td>
+<td>every night (team's repo)</td>
 <td><code>pixi run test</code>, the MCP server</td>
 </tr>
 <tr>
 <td><code>car-kit</code></td>
 <td>Ubuntu 24.04, 64-bit ARM</td>
-<td>every push to <code>main</code>, every pull request</td>
+<td>the same as <code>linux</code></td>
 <td><code>pixi run car-kit</code>, then <code>car_install.sh --all</code> with <strong>no network</strong> (its own network namespace), as on the car (<a href="car-install.html">car install</a>): 6 min</td>
 </tr>
 <tr>
 <td><code>sim</code></td>
 <td>Ubuntu 24.04, x86_64</td>
-<td>every night</td>
+<td>every night (team's repo)</td>
 <td><code>sim-check --obstacle</code> in Gazebo, below</td>
 </tr>
 </tbody>
