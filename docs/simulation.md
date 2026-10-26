@@ -59,6 +59,10 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 | `faults` | `false` | `true`: the front left picture goes through `gazebo_camera` too, so it can freeze on purpose |
 | `actuator_model` | `true` | the car answers like `vehicle.yaml`'s `actuators:` say ([below](#the-actuator-model)); `false`: the old instant car, to compare |
 
+**Debugging Gazebo itself:** its source is in `vendor/gazebo/` (`pixi run vendor`), at the
+releases we run. `vendor/README.md` says which library does each job: the steering, the
+sensors, the physics, the ROS bridge.
+
 ### What Gazebo simulates
 
 Rates measured on Ben's Mac, 15 Oct, on simulated time (`ros2 topic hz -s`), with the

@@ -223,6 +223,9 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 </tr>
 </tbody>
 </table></div>
+<p><strong>Debugging Gazebo itself:</strong> its source is in <code>vendor/gazebo/</code> (<code>pixi run vendor</code>), at the
+releases we run. <code>vendor/README.md</code> says which library does each job: the steering, the
+sensors, the physics, the ROS bridge.</p>
 <h3 id="what-gazebo-simulates">What Gazebo simulates</h3>
 <p>Rates measured on Ben's Mac, 15 Oct, on simulated time (<code>ros2 topic hz -s</code>), with the
 real-time factor at 0.98-0.99.</p>
