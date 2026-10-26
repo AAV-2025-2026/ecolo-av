@@ -128,12 +128,15 @@ Navigate (up to 6 tries)
 
 ## Reversing
 
-One switch, `reversing:=`, on `navigation.launch.py`. **On everywhere since 22 Oct** (Ben:
-"Yes the car can reverse"), but on the car only where something sees behind it: the roof
-lidar (the radar faces forward; the rear camera, later). Without one, `car.launch.py`
-keeps Nav2 forward only and says why (`vehicle.blind_behind`).
+One switch, `reversing:=`, on `navigation.launch.py`. **On in Gazebo and on the bench;
+off on the car by default since 26 Oct** (design review F2): the wheel sensors can't tell
+direction yet (H5), so a reversing car's speed would read forward. It goes back on once
+H5 is answered. On the car, `reversing:=true` (Ben, 22 Oct: "Yes the car can reverse")
+works only where something sees behind it: the roof lidar (the radar faces forward; the
+rear camera, later). Without one, `car.launch.py` keeps Nav2 forward only and says why
+(`vehicle.blind_behind`).
 
-| | `reversing:=false` | `reversing:=true` (the default: the car, Gazebo, the bench) |
+| | `reversing:=false` (the car's default) | `reversing:=true` (the default: Gazebo, the bench) |
 |---|---|---|
 | Planner (`motion_model_for_search`) | `DUBIN`: forward only | `REEDS_SHEPP`: forward and back; a reverse metre costs 2x (`reverse_penalty`) |
 | Controller (`allow_reversing`) | false | true: follows the backward parts |
@@ -150,7 +153,7 @@ reversing at the same number, whoever drives.
 |---|---|
 | `vehicle.yaml` | `max_reverse_speed: 0.50` |
 | `aav_description/vehicle.py` | `nav2_rewrites(v, reversing)` (planner, controller, MPPI) and `nav2_tuned(...)` (the smoother's list, written into a copy of `nav2.yaml`) |
-| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=true` in all three; the car's needs the lidar running |
+| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=true` by default in sim and bench; `false` on the car until H5 (`reversing:=true` there needs the lidar running) |
 | Gazebo check | `pixi run sim-check --rear-obstacle`: backing up, the car stops for a post behind it (0.75 m short, 22 Oct) |
 | Tests | `test_vehicle.py` (the values, and that each rewrite lands on a real key); `test_behavior_trees.py` (the two trees differ only by BackUp, inside the reverse speed) |
 

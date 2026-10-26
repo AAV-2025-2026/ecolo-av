@@ -364,7 +364,7 @@ def main():
     with open(log_path, 'w') as log:
         launch = subprocess.Popen(
             ['ros2', 'launch', 'aav_bringup', 'sim.launch.py', 'world:=test_lot', 'gui:=false',
-             # Reversing, as the car may now (Ben, 22 Oct): forward only, the lot tour's
+             # Reversing, as the car's reversing:=true (Ben, 22 Oct): forward only, the lot tour's
              # U-turn can end facing a wall, and the drive stops there (23 Oct).
              'rviz:=false', 'reversing:=true'],
             cwd=ROOT, env=dict(os.environ), stdout=log, stderr=subprocess.STDOUT,

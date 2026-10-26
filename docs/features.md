@@ -64,7 +64,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 |---|---|---|---|---|
 | Nav2 set up for a car (`aav_navigation`) | A car can't turn on the spot: SmacPlannerHybrid plans paths it can drive, with no Spin | Ben | 2026-10-09 | sim |
 | [MPPI path follower](controllers.md), Pure Pursuit as an option | MPPI reached the first goal cleanly in 4 of 4 Gazebo runs; Pure Pursuit looped in 2 of 3 | Ben | 2026-10-22 | sim |
-| Reversing, with a stop zone behind the car | Backing up allows a three-point turn, instead of getting stuck facing a wall | Ben | 2026-10-22 | sim |
+| Reversing, with a stop zone behind the car | Backing up allows a three-point turn, instead of getting stuck facing a wall. Off by default on the car (26 Oct) until the wheel sensors tell direction (H5) | Ben | 2026-10-22 | sim |
 | Obstacles in the costmap, and a stop zone (`collision_monitor`) | Radar and lidar points stop Nav2 before it hits something: 0.3-0.4 m short of a box on the bench | Ben | 2026-10-11 | sim |
 | Plan around obstacles (`plan_around:=true`) | The planner sees the radar and lidar too, so it steers round a box instead of only stopping | Ben | 2026-10-22 | sim |
 | [Street routes](routes.md) (`aav_routes`, Valhalla) | Turns a destination into GPS waypoints along real streets, for Nav2 to follow | Ben | 2026-10-16 | sim |

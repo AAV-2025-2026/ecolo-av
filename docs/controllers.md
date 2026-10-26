@@ -163,7 +163,8 @@ only, a U-turn in a 14 m lane is still about a coin toss; backing up makes it re
 ![Run s, forward only, after the EKF fix: both make the U-turn as a loop; MPPI's is wider. In run t MPPI's loop met the north wall](img/controllers-lot-forward-ekf.svg)
 
 Still to do: MPPI drives on east a few metres before it backs up, where the plan backs
-up at once. The car may reverse since 22 Oct (Ben), where the lidar watches behind it.
+up at once. The car may reverse since 22 Oct (Ben), where the lidar watches behind it; off by
+default on the car since 26 Oct, until the wheels tell direction (H5).
 
 ## Results, 22 October, first runs
 

@@ -149,7 +149,7 @@ avoidance, odometry and QNX layer. [The older code](older-code.md) has every rep
 | Sensors | the camera models (Q22); the GPS model (Q18); the magnetometer in real units; a first run with the real lidar | [Status](status.md) |
 | Perception | the 2024-25 team's `best.pt`; the Orin's TensorRT engine, built on the Orin after its reflash | [Perception](perception.md) |
 | The car | every measurement in `vehicle.yaml` (Q1); the steering calibration (Q2); Jazzy on its computers (Q24) | [Car numbers](car_measurements.md) |
-| Navigation | the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount. Reversing is allowed on the car where the lidar sees behind (22 Oct) | [Costmaps](costmaps.md) |
+| Navigation | the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount. Reversing on the car: off by default until the wheels tell direction (H5, 26 Oct); `reversing:=true` where the lidar sees behind | [Costmaps](costmaps.md) |
 | Drivers | a first real joystick test; an e-stop message that can't get lost (N2) | [Starting points](team.md) |
 | The HUD | the build for the car's Pi; its tile server and OSRM route data. The map database downloads with `pixi run get-places` | [HUD](hud.md) |
 | Simulation | CARLA: adapter ready, never run (needs the NVIDIA computer). Bench mode works: [Bench mode](bench.md) | [CARLA](carla.md) |

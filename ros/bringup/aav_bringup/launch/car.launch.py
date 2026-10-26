@@ -4,10 +4,11 @@ The real car. One launch file for every machine; a machine file picks the parts.
   ros2 launch aav_bringup car.launch.py machine:=orin
       [gps:=true] [gps_driver:=ublox] [map:=<map yaml>] [start_x:=0] [start_y:=0]
       [start_yaw:=0] [max_speed:=0.3]
-      [reversing:=true]   (Nav2 may back up, at 0.5 m/s at most, where the machine runs
-                           something that sees behind: the lidar, or camera_obstacles with
-                           a detector on the rear camera that keeps people.
-                           Without, it stays forward only and says why. false: never)
+      [reversing:=false]  (off on the car by default (26 Oct): the wheel sensors can't
+                           tell direction yet (H5). true: Nav2 may back up, at 0.5 m/s at
+                           most, where the machine runs something that sees behind: the
+                           lidar, or camera_obstacles with a detector on the rear camera
+                           that keeps people. Without, it stays forward only and says why)
       [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [ghost:=false]      (true: a pretend person in Nav2's view, where Nav2 runs, for
                            stopping tests with nothing real to hit: pixi run ghost ahead 10)
@@ -583,13 +584,16 @@ def generate_launch_description():
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0',
                               description='Heading at start, rad counter-clockwise from east'),
-        # On since 22 Oct (Ben: "Yes the car can reverse"), where something sees behind
-        # (vehicle.blind_behind). People can always reverse (joystick, keyboard, RC); this
-        # is Nav2 only.
-        DeclareLaunchArgument('reversing', default_value='true',
-                              description='true: Nav2 may back up, with the lidar '
-                                          'watching behind '
-                                          '(docs/learn-nav2.md); false: forward only'),
+        # Off on the car since 26 Oct (design review F2): the wheel sensors can't tell
+        # direction yet (H5), so a reversing car's speed reads forward. On again once H5
+        # is answered. true (Ben, 22 Oct: "Yes the car can reverse") works where something
+        # sees behind (vehicle.blind_behind). People can always reverse (joystick,
+        # keyboard, RC); this is Nav2 only. sim, bench and carla keep their own true.
+        DeclareLaunchArgument('reversing', default_value='false',
+                              description='false: Nav2 forward only (the default until the '
+                                          'wheels tell direction, H5); true: Nav2 may back '
+                                          'up, with the lidar watching behind '
+                                          '(docs/learn-nav2.md)'),
         DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
                               description='spine_bridge in rust (aav_spine_bridge) or python '
                                           '(aav_spine), where the machine runs the spine'),

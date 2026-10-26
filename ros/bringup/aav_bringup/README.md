@@ -35,7 +35,7 @@ Each launch file's docstring lists all its arguments. The common ones:
 | `perception`, `lane`, `camera_obstacles` | sim, bench | the object detector and the stop-sign watcher; lane keeping; boxes into Nav2's costmap |
 | `hud` | sim, bench | the HUD window (`aav_hud`, raylib); needs a screen |
 | `bridge:=rust\|python` | sim, bench, car | which `spine_bridge` (`aav_spine.bridges`) |
-| `reversing` | car, sim, bench, carla | may Nav2 back up (at 0.5 m/s at most) |
+| `reversing` | car, sim, bench, carla | may Nav2 back up (at 0.5 m/s at most). `true` in sim, bench and carla; `false` on the car until the wheels tell direction (H5) |
 | `max_speed`; `sim_speed` | car; sim, carla | the top speed, m/s |
 | `start_y` (m), `start_yaw` (rad); the car also `start_x` | car, sim, bench | where the car starts in the map frame |
 | `arm` | sim (`spine:=true`), bench | `arm_when_open` arms the spine after 12 s |

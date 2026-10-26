@@ -9,7 +9,7 @@ Both drive the test lot, headless, and are measured against where the car really
     pixi run controller-compare --controllers mppi
     pixi run controller-compare --speed 3          (Nav2 and ego up to 3 m/s: sim_speed:=3)
     pixi run controller-compare --tours lot --legs 1   (only the first leg: a quick check)
-    pixi run controller-compare --reversing        (Nav2 may reverse, as on the car since 22 Oct)
+    pixi run controller-compare --reversing        (Nav2 may reverse: the car's reversing:=true)
     pixi run controller-compare --plans            (keep every plan, not just each leg's first)
 
 For each tour and controller it:
@@ -459,8 +459,8 @@ def main():
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
     parser.add_argument('--reversing', action='store_true',
-                        help='let Nav2 reverse (reversing:=true), as on the car since '
-                             '22 Oct; forward only otherwise')
+                        help="let Nav2 reverse (reversing:=true; the car's own default is "
+                             'false until H5); forward only otherwise')
     parser.add_argument('--legs', type=int, default=None,
                         help="only each tour's first N legs (each starts where the last ended)")
     parser.add_argument('--plans', action='store_true',
