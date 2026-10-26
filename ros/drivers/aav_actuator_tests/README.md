@@ -1,0 +1,95 @@
+# aav_actuator_tests
+
+The actuator tests: `docs/tests.md`'s stage 3 (on stands) and stage 4 (in an empty lot),
+run as a twist_mux driver. Each test drives a fixed set of steps, logs what the car
+did, and prints the `vehicle.yaml` lines to paste (`docs/actuator-tests.md`).
+
+```
+actuator_test -> /drivers/tests/cmd_vel -> twist_mux (60) -> ego -> output mux -> car
+      ^ reads /vehicle/*, IMU, GPS, odometry          -> ~/aav-tests/<run>/
+```
+
+## Overview
+
+```sh
+pixi run actuator-test --list                       # the tests
+pixi run actuator-test steer-sweep --sim            # Gazebo, this computer only
+pixi run actuator-test steer-sweep --stands         # the real car, wheels off the ground
+pixi run actuator-test speed-up                     # the real car, in an empty lot
+pixi run actuator-test --analyse ~/aav-tests/<run>  # a run's report again, from its CSV
+```
+
+| Test | Stage | Measures |
+|---|---|---|
+| `steer-sweep` | 3.10 | command vs measured steering angle |
+| `steer-rate` | 3.11 | the steering's speed, centre to full lock |
+| `steer-centre` | 3.12 | the wheels' straight angle; the deadband |
+| `speed-up` | 4.1 | time to 1, 2, 3 m/s; acceleration |
+| `coast` | 4.2 | the drag |
+| `brake` | 4.3 | stopping distance and deceleration |
+| `throttle-map` | 4.4 | throttle level vs acceleration |
+| `circles` | 4.5 | the real wheel angle, both ways |
+| `straight` | 4.7 | sideways drift over 10 m |
+
+## Interface
+
+Executable `actuator_test` (`ros2 run aav_actuator_tests actuator_test`, wrapped by
+`tools/actuator_test.sh`). Options: `<test>`, `--list`, `--sim`, `--stands`,
+`--max-speed`, `--speeds`, `--angles`, `--max-distance`, `--max-time`, `--out`, `--bag`,
+`--analyse RUN_FOLDER`.
+
+| Item | What |
+|---|---|
+| Subscribes | `/vehicle/odom` (`nav_msgs/Odometry`); `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake` (`aav_interfaces/ActuatorState`); `/vehicle/wheels` (`aav_interfaces/WheelSpeeds`); `/sensors/imu/data_raw` (`sensor_msgs/Imu`); `/localization/odom/local` (`nav_msgs/Odometry`); `/sensors/gps/fix` (`sensor_msgs/NavSatFix`); `/safety/estop` (`std_msgs/Bool`); `/control/cmd_vel` (`geometry_msgs/TwistStamped`); `/system/source` (`aav_interfaces/DataSource`, latched) |
+| Publishes | `/drivers/tests/cmd_vel` (`geometry_msgs/TwistStamped`), 50 Hz while a test runs |
+| Calls | `/ego/get_parameters` (its limits); `/ego/set_parameters` (`max_steering_rate`, lifted for `steer-rate` only, then put back) |
+| Runs | `ros2 bag record`, with `--bag` |
+
+Modules (all but the node have no ROS):
+
+| Module | Holds |
+|---|---|
+| `procedures.py` | the steps: `Step`, `Runner`, `Settings`, `Test`, `TESTS`, `plan()`, `estimate()`, `with_ego_limit()` |
+| `safety.py` | the rules: `Kind`, `source_kind`, `decide`, `confirmed`, `Envelope.breach`, `taken_over`, checklists; caps `REAL_CAP` 1.0, `STANDS_CAP` 0.3, `SIM_DEFAULT_CAP` 3.0, `SIM_MAX_CAP` 5.0 m/s |
+| `analysis.py` | the maths, plain Python (no numpy): `fit_line`, `fit_throttle`, `fit_lag`, `fit_steer_lag`, `stopping`, `time_to_speeds`, `fit_circle`, `wheel_angle`, `drift` |
+| `reports.py` | one run's rows to a `Report`: `analyse()`, `table()`, `yaml_lines()` |
+| `actuator_test.py` | the ROS node and the command line |
+
+`aav_goto` reuses `safety.py` (`source_kind`, `taken_over`, `LOT_CHECKLIST`), so both
+agree on what REAL means.
+
+## Invariants
+
+- `procedures.py`, `safety.py`, `analysis.py`, `reports.py` have no ROS imports.
+- Every rule errs towards "this is the real car": nobody announcing counts as REAL.
+- `--sim` only when `/system/source` says SIM, and SIM only with `--sim`. REPLAY refused.
+- Real car: stage 3 needs `--stands`, stage 4 refuses it. Speed cap 1.0 m/s (0.3 on
+  stands). The person types the test's name to start.
+- Stops (zero commands) on: Ctrl-C, any error, `/safety/estop`, someone else driving
+  (twist_mux passing another command for 0.3 s), twist_mux silent for 2 s, the speed,
+  distance or time leaving the test's envelope, `/vehicle/odom` stale for 0.5 s.
+- Steering only changes while moving (ego holds it below 0.05 m/s), so stage-3 tests creep.
+- It prints `vehicle.yaml` lines; it never writes `vehicle.yaml`.
+- SI units; positive steering = left.
+
+## Side Effects
+
+- Publishes `/drivers/tests/cmd_vel`; may change ego's `max_steering_rate` for a while.
+- Writes one folder per run under `~/aav-tests` (or `$AAV_TESTS_DIR`, or `--out`):
+  `log.csv`, `summary.txt`, `meta.yaml`, and with `--bag` a rosbag.
+- Starts `ros2 bag record` with `--bag`.
+
+## Verification
+
+```sh
+pixi run build && colcon test --packages-select aav_actuator_tests && colcon test-result --verbose
+```
+
+Quick, without ROS: `cd ros/drivers/aav_actuator_tests && python3 -m pytest -q`
+(`tools/test.sh` runs it). `pixi run test` runs everything.
+
+| Test | Covers |
+|---|---|
+| `test_procedures.py` | each test's steps, on a fake car |
+| `test_safety.py` | who may run what, caps, envelope, takeover |
+| `test_analysis.py` | the fits and figures |

@@ -1,5 +1,7 @@
 # pca9555
 
+## Overview
+
 The PCA9555 16-bit I/O expander, on I2C: sixteen pins, P00 to P07 and P10 to P17,
 each an input or an output. Plain `no_std` Rust, written against `embedded-hal` 1.0.
 
@@ -11,7 +13,7 @@ each an input or an output. Plain `no_std` Rust, written against `embedded-hal` 
 
 In every 16-bit value, bit n is pin n: P00 is bit 0, P17 is bit 15.
 
-## API
+## Interface
 
 | Call | Sends | Does |
 |---|---|---|
@@ -23,12 +25,28 @@ In every 16-bit value, bit n is pin n: P00 is bit 0, P17 is bit 15.
 | `set_polarity(mask)` | `0x04`, port 0, port 1 | 1 inverts how an input reads |
 | `read_inputs()` | `0x00`, reads 2 bytes | the level on every pin |
 | `Pin::P00.mask()` | | a pin's bit |
+| `address()` | | the address it was made with |
 | `release()` | | gives the bus back |
+| `BASE_ADDRESS` | | 0x20 |
 
 From TI's PCA9555 data sheet (SCPS131J), section 8.5.2, "Register Map". At power-up
 every pin is an input, the output levels are all high, and nothing is inverted.
 
-## Test
+## Invariants
+
+- It remembers the output levels, starting all high as the chip does, so
+  `set_pin` changes one pin and keeps the other fifteen.
+- `outputs()` is what was last asked for, even if that write failed.
+- Bit n is pin n, everywhere.
+- Bus errors come back as `Result`; nothing panics.
+- Only the chip: which pin means what (P00 is the direction) is `spine-board`'s.
+
+## Side Effects
+
+- I2C writes and reads to the expander. Writing P00 changes the drive direction
+  on today's car.
+
+## Verification
 
 ```sh
 cd firmware/spine

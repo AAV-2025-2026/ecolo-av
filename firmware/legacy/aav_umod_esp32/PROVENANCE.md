@@ -40,5 +40,7 @@ Files, unchanged unless listed under Changes:
   compiled on a laptop by `tools/tests/test_legacy_cpp.py`, to prove the Rust
   replacement (`firmware/spine/boards/esp32-umod`) sets the same targets. This folder
   stays until the Rust one is flashed and proven on the car.
+- 25 Oct 2026: added `README.md` (EGM sections: Overview, Interface, Invariants, Side
+  Effects, Verification) and `CLAUDE.md`. Docs only: no inherited file changed.
 - Nothing else changed. Known problems are listed in `docs/firmware.md`
   (no command timeout, unauthenticated `/update` page, no feedback to the computer).

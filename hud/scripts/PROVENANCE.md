@@ -15,3 +15,5 @@ Files, unchanged unless listed under Changes:
   was renamed from `maincar` (its launch file was `launch.py`). The script still sources
   the old Humble workspace in `/home/aavui`: point it at this repo's
   `install/setup.bash` on the UI Pi.
+- 2026-10-25: `README.md` gained EGM sections (Overview, Interface, Invariants, Side
+  Effects, Verification). The 2025-26 text is kept at its top.

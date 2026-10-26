@@ -65,3 +65,5 @@ Files, unchanged unless listed under Changes:
   - Out-of-box mode remaps axes to x forward / y left; 3D-tracking mode leaves x right /
     y forward (see `TI.py`'s two parsers).
   - The cfg files are indoor demos (9 m range, 10 Hz).
+- 25 Oct 2026: added `README.md` (EGM sections: Overview, Interface, Invariants, Side
+  Effects, Verification) and `CLAUDE.md`. Docs only: no inherited file changed.

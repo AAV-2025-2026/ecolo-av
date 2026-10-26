@@ -1,5 +1,7 @@
 # ibus
 
+## Overview
+
 The FlySky iBUS protocol, from the car's RC receiver (an FS-iA6B). On today's car it
 arrives on GPIO 32 at 115200 baud. Plain `no_std` Rust with no hardware access: the
 board reads the UART and feeds the bytes in.
@@ -14,7 +16,7 @@ A 32-byte frame comes about every 7 ms.
 | 2 to 29 | 14 channels, each a little-endian `u16`: 1000 to 2000 µs |
 | 30, 31 | the checksum, little-endian: 0xFFFF minus the sum of bytes 0 to 29 |
 
-## API
+## Interface
 
 | Item | Does |
 |---|---|
@@ -22,10 +24,17 @@ A 32-byte frame comes about every 7 ms.
 | `Receiver::new(timeout_ms)` | a parser, plus the latest frame and when it came |
 | `Receiver::push(byte, now_ms)` | feeds one byte; true when it completed a frame |
 | `Receiver::channels(now_ms)` | the latest channels, or `None` if silent longer than the timeout |
+| `Receiver::frames()` | good frames so far (wraps) |
 | `RcMap::TODAY` | today's channels and switch points (below); also `RcMap::default()` |
-| `RcMap::rc_input(&channels)` | the `spine_core::RcInput`: override switch, throttle and steering (each -1 to 1), and whether the gear switch is on brake |
+| `RcMap::THREE_POSITION` | the same, with the mode switch's middle as RC via ROS (TODO 48, proposed) |
+| `RcMap`'s public fields | build your own map: channels `mode_switch`, `throttle`, `steering`, `gear`; usable range `valid_above`, `valid_below`; mode switch `direct_above`, `via_ros_above` (`Option`); gear switch `forward_below`, `reverse_above`; sticks `centre`, `half_travel`, `throttle_deadband` |
+| `RcMap::switch(value)` | the `spine_core::RcSwitch` for a mode-switch value: computer, via ROS or direct |
+| `RcMap::rc_input(&channels)` | the `spine_core::RcInput`: mode switch, throttle and steering (each -1 to 1), and whether the gear switch is on brake |
 | `decode`, `encode`, `checksum` | one frame, without a parser |
 | `Channels::get(index)` | one channel; index 0 is the transmitter's CH1 |
+| `BAUD`, `FRAME_LEN`, `CHANNELS`, `HEADER` | 115200, 32, 14, `0x20 0x40` |
+
+It depends only on `spine-core`, for `RcInput` and `RcSwitch`.
 
 ## Today's channels
 
@@ -50,7 +59,23 @@ TODO(Q7), to check on the transmitter:
   transmitter. The timeout here only catches a receiver that goes silent;
 - with Q2: whether +1 really steers left.
 
-## Test
+## Invariants
+
+- `no_std`, no hardware access, no allocation: bytes in, channels out.
+- Only a frame with the right header and checksum counts. A bad frame never
+  refreshes the receiver.
+- A receiver silent for longer than `timeout_ms` reads `None`. The clock may wrap.
+- A channel is usable only strictly between 100 and 2200.
+- Mode switch out of range: `rc_input` is `None` (no usable RC).
+- A stick or the gear switch out of range: zero throttle, straight wheels.
+- Throttle and steering stay between -1 and 1. The crate never sends radians or
+  Jrk counts: that is `spine-board`'s job.
+
+## Side Effects
+
+None. The board reads the UART; this crate only parses what it is given.
+
+## Verification
 
 ```sh
 cd firmware/spine

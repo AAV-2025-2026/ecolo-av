@@ -188,14 +188,49 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 
 | Folder | What's in it |
 |---|---|
-| `ros/` | ROS 2 packages, one folder per area: sources (sensors), localization, perception, drivers, command_mux, io_mux, ego, can_bridge (the real car), sim, safety, hud; bringup has the launch profiles and the car description, ecolo_msgs the interfaces profiles |
-| `firmware/` | the CAN contract (`can/aav.dbc`), the spine's Rust logic and device drivers (`spine/`), and the inherited C++ firmware (`legacy/`) |
-| `tools/` | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer, the MCP server for AI apps |
-| `examples/` | small runnable examples: a first ROS node in Rust (`rust-listener`) |
+| [`ros/`](ros/README.md) | ROS 2 packages, one folder per area: sources (sensors), localization, perception, drivers, command_mux, io_mux, ego, can_bridge (the real car), sim, safety, hud; bringup has the launch profiles and the car description; ecolo_msgs has the team's own message and action types |
+| [`firmware/`](firmware/README.md) | the CAN contract (`can/aav.dbc`), the wheel encoder's UDP packet vectors (`udp/`), the spine's Rust logic and device drivers (`spine/`), and the inherited C++ firmware (`legacy/`) |
+| [`tools/`](tools/README.md) | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer, the MCP server for AI apps |
+| [`examples/`](examples/README.md) | small runnable examples: a first ROS node in Rust (`rust-listener`) |
 | `docs/` | the docs (markdown sources, the HTML in `docs/html/`), the topic contract, and the history |
-| `hud/` | the 2025-26 touchscreen app. Its back end is ported, as `ros/hud/aav_hud` |
-| `models/` | the YOLO models, downloaded by `pixi run get-models` (not in git) |
-| `vendor/` | the ROS 2 and ros2-rust source, for looking things up. Not ours, and not in git: `pixi run vendor` downloads it |
+| [`hud/`](hud/README.md) | the 2025-26 touchscreen app. Its back end is ported, as `ros/hud/aav_hud` |
+| [`models/`](models/README.md) | the detector models: RF-DETR Nano (the default) and YOLO11n, downloaded by `pixi run get-models`, and their exports (`.onnx`, `.mlpackage`). Not in git |
+| [`vendor/`](vendor/README.md) | the ROS 2 and ros2-rust source, for looking things up (`pixi run vendor`); also the downloaded tools: Flutter, MediaMTX, PlatformIO, QEMU, `cargo-tools`, `esp`, `car-kit-cache`. Not ours, and not in git |
+| `archive/` | the 2025-26 and 2024-25 teams' repos, as they were (in git). Reference only: never build or fix them (`docs/older-code.md`) |
+| `.github/` | the CI workflow (`workflows/test.yml`) and the pull request template |
+
+Each folder's README follows the same shape (Overview, Interface, Invariants, Side
+Effects, Verification), and links down to the next level.
+
+## Global invariants
+
+The rules every part keeps. The full list is in [CLAUDE.md](CLAUDE.md).
+
+| Rule | What it means |
+|---|---|
+| Contracts first | topics: `docs/interfaces.yaml`; CAN: `firmware/can/aav.dbc`; car measurements: `vehicle.yaml`. Change the contract, then the code |
+| One command path | drivers → twist_mux → ego → output mux → **exactly one** backend |
+| Units and frames | REP-103 and REP-105: metres, radians, seconds; x forward, y left; positive steering = left |
+| Topic names | `/<area>/<device or node>/<thing>` |
+| Maths out of ROS | logic modules have no ROS imports and their own tests |
+| Safety | the red button always stops the car; stale commands stop it; nothing clears an e-stop on its own; a person outranks the computer |
+| Firmware owns the hardware | pins, I2C addresses and calibration stay in firmware; ROS never sees a pin |
+| No secrets in git | write down where a secret is and its type, never its value |
+
+## Global side effects
+
+- **On the car**: moves the actuators (steering, brake, throttle) through CAN or the
+  ESP32's UART; opens the sensors' serial, USB, UDP and RTSP ports.
+- **Stand-ins** (turtle, sim, bench): stay on this computer (`tools/ros.sh --local`).
+- **Downloads** go into `vendor/`, `models/`, `maps/` and `car-kit/`, all outside git.
+  `pixi run get-hud-map` also puts `ottawa.db` in `hud/flutter_pi/assets/databases/`
+  (out of git too).
+
+## System verification
+
+- Run: `tools/test.sh` before every commit (no ROS needed).
+- Run: `pixi run test` before every push (adds the build, `colcon test` and the style check).
+- Run: `pixi run check <turtle|sim|road|spine|car|replay|bench>` against a running system.
 
 ## Status
 

@@ -64,6 +64,10 @@ Files, unchanged unless listed under Changes:
     with `'polling'` first it opened a WebSocket on the polling address, and never
     connected (seen on the bench). The back end needs `simple-websocket`; the pixi
     environment has it (1.1.0).
+- `README.md`: Flutter's template text became the app's EGM sections (Overview, Interface,
+  Invariants, Side Effects, Verification); the template's links kept at the end (2026-10-25).
+- `README.md`: corrected against the code: the location service (geolocator), Simulate
+  Trace, and every name in `constants.dart` (2026-10-25).
 
 ## New files (2026-27, not inherited)
 
