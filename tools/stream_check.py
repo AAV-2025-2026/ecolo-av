@@ -326,6 +326,9 @@ def option(args, name, default):
 
 def main():
     args = sys.argv[1:]
+    if '-h' in args or '--help' in args:
+        print(__doc__)
+        return 0
     seconds = float(option(args, '--seconds', '60'))
     encoder = option(args, '--encoder', 'openh264')
     detector = option(args, '--detector', 'rfdetr')

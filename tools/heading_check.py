@@ -226,6 +226,9 @@ def run_once(domain, launch_args, gyro_bias, log_path, wrong_start=0.0, gps_ever
 
 def main():
     args = sys.argv[1:]
+    if '-h' in args or '--help' in args:
+        print(__doc__)
+        return 0
     launch_args = []
     if '--' in args:
         launch_args = args[args.index('--') + 1:]
