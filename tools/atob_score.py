@@ -5,7 +5,7 @@ A-to-B scorer: how well the car sped up, held its speed and stopped on point B.
 Scores Gazebo runs and recorded car runs from the same numbers (docs/a-to-b.md, "Scoring
 a run"). Each input is one run: a bag folder (MCAP, from tools/record.sh) or a CSV file.
 
-    pixi run atob-score bags/2026-11-02_goto                 B from the goto's feedback
+    pixi run atob-score bags/2026-11-02_point                 B from the point driver's feedback
     pixi run atob-score bags/... --b-latlon 45.38630 -75.69580
     pixi run atob-score bags/... --b-xy 30 5 --speed 1.0
     pixi run atob-score bags/... --taped -0.12 0.05          the tape: 12 cm short, 5 cm left
@@ -17,26 +17,27 @@ Where each number comes from:
   speeds        Gazebo's truth /vehicle/gazebo/truth if recorded, else the wheels
                 /vehicle/odom, else the global EKF (twist.linear.x): the rise, hold,
                 overshoot, slowing, jerk, coast and creep numbers
-  set speed     --speed, else the top speed command: /drivers/goto/cmd_vel, else
+  set speed     --speed, else the top speed command: /drivers/point/cmd_vel, else
                 /control/cmd_vel (the same topic says when it was asked to go, and when
-                the command went to 0)
+                the command went to 0). Bags from before 26 Oct have
+                /drivers/goto/cmd_vel instead: read too
   stop, EKF     the last pose on /localization/odom/global (map frame)
   stop, truth   the last pose on /vehicle/gazebo/truth (map frame; Gazebo only)
   stop, tape    --taped ALONG ACROSS: measured by hand from the B mark (the car)
   GPS part      real (the tape, else the truth) minus the EKF's view: localization's
                 error, not control's
-  B             --b-xy / --b-latlon, else the goto's feedback (/goto/_action/feedback)
-  A             --a-xy / --a-latlon, else where the goto lined up (its feedback), else
-                the first EKF pose. Only A's direction to B matters to the stop error
+  B             --b-xy / --b-latlon, else the point driver's feedback
+                (/drive_to_point/_action/feedback; /goto/_action/feedback in bags from
+                before 26 Oct, when the driver was aav_goto)
+  A             --a-xy / --a-latlon, else where the point driver lined up (its feedback),
+                else the first EKF pose. Only A's direction to B matters to the stop error
 
 What each number means: drive_metrics.py (stop_error ... final_metre) and COLUMNS below.
 
-Bags: the run is the last goto goal in the bag (from 1 s before its first feedback to
-2 s after its last), unless --start/--end (s from the bag's first message) cut it. Bag
-times are when each message was recorded. tools/record.sh records the wheels, the EKF
-and /control/cmd_vel; Gazebo's truth, /drivers/goto/cmd_vel and the goto's feedback
-need adding to it (the feedback is a hidden topic: `ros2 bag record
---include-hidden-topics`).
+Bags: the run is the last drive-to-point goal in the bag (from 1 s before its first
+feedback to 2 s after its last), unless --start/--end (s from the bag's first message) cut
+it. Bag times are when each message was recorded. tools/record.sh records every topic
+above, the feedback too (a hidden topic: it passes `--include-hidden-topics`).
 
 CSV (one row per sample, long format; blank where it doesn't apply):
 
@@ -45,7 +46,7 @@ CSV (one row per sample, long format; blank where it doesn't apply):
     truth,12.30,4.50,0.00,1.00,,,
     wheel,12.30,,,1.00,,,               /vehicle/odom: speed only
     cmd,12.30,,,1.00,,,                 the speed command (m/s)
-    feedback,12.30,,,,2,15.4,0.03       goto's phase, distance left (m), cross track (m, + left)
+    feedback,12.30,,,,2,15.4,0.03       point_driver's phase, distance left (m), cross track (m)
     b,,30.0,5.0,,,,                     B in the map frame (optional; a too)
 
 Reading a bag needs ROS (rosbag2_py, our messages: through tools/ros.sh); the scoring and
@@ -67,9 +68,15 @@ import drive_metrics as dm  # noqa: E402
 EKF = '/localization/odom/global'
 TRUTH = '/vehicle/gazebo/truth'
 WHEEL = '/vehicle/odom'
-COMMANDS = ('/drivers/goto/cmd_vel', '/control/cmd_vel')    # the first one recorded
-FEEDBACK = '/goto/_action/feedback'
-TURN = 0                # GoTo feedback phase: turning towards B, no line yet
+# The first one recorded. /drivers/goto/cmd_vel: the point driver's topic before 26 Oct, so
+# bags recorded before the rename still score.
+COMMANDS = ('/drivers/point/cmd_vel', '/drivers/goto/cmd_vel', '/control/cmd_vel')
+# Its action's feedback, the new name first; /goto/... in bags from before 26 Oct.
+FEEDBACKS = ('/drive_to_point/_action/feedback', '/goto/_action/feedback')
+# The old action type's name (GoTo) in those bags: the same fields, read as the new one.
+OLD_TYPES = {'aav_interfaces/action/GoTo_FeedbackMessage':
+             'aav_interfaces/action/DriveToPoint_FeedbackMessage'}
+TURN = 0                # DriveToPoint feedback phase: turning towards B, no line yet
 BEFORE, AFTER = 1.0, 2.0    # s kept before a goal's first feedback and after its last
 NAVSAT = os.path.join(ROOT, 'ros', 'localization', 'aav_localization', 'config',
                       'navsat.yaml')
@@ -84,7 +91,7 @@ def empty_run():
 
     ekf, truth  [(t, x, y, v)]                      map frame, m; forward speed m/s
     wheel, cmd  [(t, v)]                            m/s
-    feedback    [(t, phase, left, cross, goal)]     goto's: m; goal is the goal's id
+    feedback    [(t, phase, left, cross, goal)]     the point driver's: m; goal is the goal's id
     a, b        (x, y) or None                      m, map frame
     """
     return {'ekf': [], 'truth': [], 'wheel': [], 'cmd': [], 'feedback': [],
@@ -148,7 +155,7 @@ def load_datum(path=NAVSAT):
     return float(params['datum'][0]), float(params['datum'][1])
 
 
-# --- B from the goto's feedback ---
+# --- B from the point driver's feedback ---
 
 def nearest(samples, t):
     """Return the sample of [(t, ...)] nearest in time to t (samples sorted by time)."""
@@ -160,7 +167,7 @@ def nearest(samples, t):
 
 def goal_from_feedback(ekf, feedback, baseline=1.0):
     """
-    Return (A, B), each (x, y) on the map, from the goto's feedback; None if it can't.
+    Return (A, B), each (x, y) on the map, from the point driver's feedback; None if it can't.
 
     Each feedback on the line (not while turning) gives the distance left to B along the
     line and the cross track (+ left); with the EKF's pose then, B = p + left u - cross n
@@ -206,7 +213,7 @@ def cut(run, start=None, end=None):
 
 
 def last_goal(run):
-    """Return the run around its last goto goal (BEFORE s before, AFTER s after); as is if none."""
+    """Return the run around its last goal (BEFORE s before, AFTER s after); as is if none."""
     if not run['feedback']:
         return run
     goal = run['feedback'][-1][4]
@@ -235,9 +242,10 @@ def score(run, set_speed=None, a=None, b=None, taped=None):
     elif run.get('b') is not None:
         b, b_from = run['b'], 'the CSV'
     elif found is not None:
-        b, b_from = found[1], "the goto's feedback"
+        b, b_from = found[1], "the point driver's feedback"
     else:
-        raise ValueError('no B: give --b-xy or --b-latlon, or record /goto/_action/feedback')
+        raise ValueError('no B: give --b-xy or --b-latlon, or record '
+                         '/drive_to_point/_action/feedback')
     if a is None:
         a = run.get('a') or (found[0] if found else None)
     if a is None:
@@ -374,6 +382,20 @@ def write_csv(run, path):
                 out.writerow([kind, '', run[kind][0], run[kind][1], '', '', '', ''])
 
 
+def bag_topics(types):
+    """
+    Return (command, feedback, wanted) from a bag's {topic: type}: the topics to read.
+
+    command and feedback are the topic names found (None if not recorded), the new names
+    first, then the ones from before 26 Oct. wanted is {topic: the type to read it as}.
+    """
+    command = next((c for c in COMMANDS if c in types), None)
+    feedback = next((f for f in FEEDBACKS if f in types), None)
+    wanted = {t: OLD_TYPES.get(types[t], types[t])
+              for t in (EKF, TRUTH, WHEEL, command, feedback) if t in types}
+    return command, feedback, wanted
+
+
 def read_bag(path):
     """
     Return a run from a bag folder (needs ROS: rosbag2_py, and our messages built).
@@ -388,10 +410,9 @@ def read_bag(path):
     reader.open(rosbag2_py.StorageOptions(uri=str(path), storage_id=''),
                 rosbag2_py.ConverterOptions('', ''))
     types = {t.name: t.type for t in reader.get_all_topics_and_types()}
-    command = next((c for c in COMMANDS if c in types), None)
-    wanted = [t for t in (EKF, TRUTH, WHEEL, command, FEEDBACK) if t in types]
-    reader.set_filter(rosbag2_py.StorageFilter(topics=wanted))
-    classes = {t: get_message(types[t]) for t in wanted}
+    command, feedback, wanted = bag_topics(types)
+    reader.set_filter(rosbag2_py.StorageFilter(topics=list(wanted)))
+    classes = {t: get_message(kind) for t, kind in wanted.items()}
     run = empty_run()
     while reader.has_next():
         topic, data, stamp = reader.read_next()
@@ -404,7 +425,7 @@ def read_bag(path):
             run['wheel'].append((t, msg.twist.twist.linear.x))
         elif topic == command:
             run['cmd'].append((t, getattr(msg, 'twist', msg).linear.x))
-        elif topic == FEEDBACK:
+        elif topic == feedback:
             f = msg.feedback
             run['feedback'].append((t, int(f.phase), float(f.distance_left),
                                     float(f.cross_track), bytes(msg.goal_id.uuid).hex()))
@@ -439,7 +460,7 @@ def parse(argv):
                     help='the stop error by tape, m: + past B / - short; + left / - right. '
                          'Once per run, in order')
     ap.add_argument('--start', type=float, help='s from the recording start (default: '
-                    'the last goto goal)')
+                    'the last drive-to-point goal)')
     ap.add_argument('--end', type=float, help='s from the recording start')
     ap.add_argument('--json', action='store_true', help='print JSON, not a table')
     ap.add_argument('--save-csv', metavar='FILE', help='write the (cut) run as CSV; one run')

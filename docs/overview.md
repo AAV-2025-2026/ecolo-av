@@ -45,7 +45,7 @@ The main ones. Every package: [Packages](packages.md).
 | `aav_command_mux` | twist_mux's settings: the priorities and the locks | command_mux |
 | `aav_io_mux` | the sensor mux and the output mux: simulated data never drives the real car | io_mux |
 | `aav_scripted` | scripted drives: speed up, hold, slow down | drivers |
-| `aav_goto` | drive to one GPS point and stop there smoothly | drivers |
+| `aav_drive_to_point` | drive to one GPS point and stop there smoothly | drivers |
 | `aav_language` | plain English: a local model plans drive tools, you say yes | drivers |
 | `aav_teleop` | the joystick's settings, and its e-stop button | drivers |
 | `aav_rc` | the RC transmitter as a driver (priority 95, off until the hardware lead confirms the wire) | drivers |

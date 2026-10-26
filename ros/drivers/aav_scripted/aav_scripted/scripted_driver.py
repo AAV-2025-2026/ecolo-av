@@ -34,7 +34,7 @@ from rclpy.node import Node
 from rclpy.task import Future
 from std_msgs.msg import Bool
 
-TAKEOVER_TIME = 0.3     # s of twist_mux passing someone else's command (as aav_goto)
+TAKEOVER_TIME = 0.3     # s of twist_mux passing someone else's command (as aav_drive_to_point)
 
 
 class ScriptedDriver(Node):

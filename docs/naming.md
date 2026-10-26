@@ -45,7 +45,7 @@ actions, `/cmd_vel_nav` and the costmaps' topics.
 | keyboard | `tools/keyboard.sh` runs `teleop_twist_keyboard` in the namespace `/drivers/keyboard` | `/drivers/keyboard/cmd_vel` |
 | tests | `actuator_test` publishes `drivers/tests/cmd_vel` | `/drivers/tests/cmd_vel` |
 | scripted | `scripted_driver` publishes `drivers/scripted/cmd_vel` | `/drivers/scripted/cmd_vel` |
-| go-to | `goto_driver` (`aav_goto`) | `/drivers/goto/cmd_vel` |
+| drive to point | `point_driver` (`aav_drive_to_point`) | `/drivers/point/cmd_vel` |
 | Nav2 | `velocity_smoother` or `collision_monitor`, remapped | `/drivers/nav/cmd_vel` |
 | AI | `control_interface` (lane keeping) | `/drivers/ai/cmd_vel` |
 | replay | `tools/replay_commands.sh` | `/drivers/replay/cmd_vel` |

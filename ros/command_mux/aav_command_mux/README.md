@@ -5,7 +5,7 @@ ego. It is the stock `twist_mux`, set up by our config and launch files: no code
 own.
 
 ```
-/drivers/joy, rc, keyboard, tests, scripted, replay, goto, nav, ai /cmd_vel
+/drivers/joy, rc, keyboard, tests, scripted, replay, point, nav, ai /cmd_vel
         -> twist_mux (highest priority that is fresh, unless a lock holds it)
         -> /control/cmd_vel -> ego
 ```
@@ -34,7 +34,7 @@ Inputs (`config/twist_mux.yaml`), all `TwistStamped`, timeout 0.5 s:
 | tests | `/drivers/tests/cmd_vel` | 60 | `aav_actuator_tests` |
 | scripted | `/drivers/scripted/cmd_vel` | 50 | `aav_scripted` |
 | replay | `/drivers/replay/cmd_vel` | 40 | `tools/replay_commands.sh` |
-| goto | `/drivers/goto/cmd_vel` | 25 | `aav_goto` |
+| point | `/drivers/point/cmd_vel` | 25 | `aav_drive_to_point` |
 | nav | `/drivers/nav/cmd_vel` | 20 | Nav2 (`aav_navigation`) |
 | ai | `/drivers/ai/cmd_vel` | 10 | a learned driver; today the lane keeping |
 
@@ -43,14 +43,14 @@ Locks (`std_msgs/Bool`; a lock holds every input below its priority):
 | Name | Topic | Priority | Timeout | Notes |
 |---|---|---|---|---|
 | estop | `/safety/estop` | 255 | 0 (never on silence) | the backends also brake on it directly |
-| stop_sign | `/perception/stop_sign` | 30 | 0 | `aav_detector`; holds goto, Nav2 and AI |
+| stop_sign | `/perception/stop_sign` | 30 | 0 | `aav_detector`; holds point, Nav2 and AI |
 | sensors | `/safety/sensor_watchdog/lock` | 30 | 1.0 s | `aav_safety`; silence locks too |
 
 Launch arguments:
 
 | Name | Default | Meaning |
 |---|---|---|
-| `sensor_lock` | `true` | `true`: Nav2, goto and AI need the watchdog's heartbeat. `false` (no watchdog, the turtle): loads `config/no_sensor_lock.yaml`, sensors timeout 0 |
+| `sensor_lock` | `true` | `true`: Nav2, the point driver and AI need the watchdog's heartbeat. `false` (no watchdog, the turtle): loads `config/no_sensor_lock.yaml`, sensors timeout 0 |
 | `use_sim_time` | `false` | the simulator's clock |
 
 ## Invariants
@@ -60,7 +60,7 @@ Launch arguments:
 - No fresh input: nothing is published, and ego stops after its own timeout.
 - Locks never hold a person (100, 95, 90) or a test (60, 50, 40); estop holds everyone.
 - `sensors` is fail-safe: the watchdog sends false 10 times a second, so 1 s of silence
-  locks Nav2, goto and AI.
+  locks Nav2, the point driver and AI.
 - `sensor_lock` must be `true` or `false`; anything else raises.
 - The override is a second file, not a dict: a dict in the launch file silently loses
   to `twist_mux.yaml` (seen 15 Oct; `docs/conventions.md`).

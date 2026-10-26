@@ -1,24 +1,24 @@
 """
 Whole drives on the pretend car (ego -> Gazebo's actuator model): stop at B, brake gently.
 
-The same targets as tools/sim_check.py --goto: 10, 30 and 60 m, straight, to the side and
+The same targets as tools/sim_check.py --drive-to-point: 10, 30 and 60 m, straight, to the side and
 behind; at the car's 1 m/s and at Gazebo's sim_speed 3.
 """
 
 import math
 
+from aav_drive_to_point.approach import Approach, planned_deceleration, TURN
+from aav_drive_to_point.drive import Drive, Steering
+from aav_drive_to_point.line import min_radius, Pose
 from aav_ego.ackermann import Limits
 from aav_gazebo.actuator_model import ActuatorConfig
-from aav_goto.approach import Approach, planned_deceleration, TURN
-from aav_goto.drive import Drive, Steering
-from aav_goto.line import min_radius, Pose
 from fake_car import drive_to
 import pytest
 
 CFG = ActuatorConfig()                 # vehicle.yaml's actuators (the GUESSES, 15 Oct)
 DECEL = planned_deceleration(CFG.max_brake)
 R = min_radius(1.57, CFG.max_steering)
-LEAD = 0.8                             # config/goto.yaml's brake_lead
+LEAD = 0.8                             # config/drive_to_point.yaml's brake_lead
 TARGETS = [(10.0, 0.0), (30.0, 45.0), (60.0, -30.0), (30.0, 150.0)]   # m, degrees left
 
 

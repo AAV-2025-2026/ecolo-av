@@ -63,7 +63,7 @@ we are. Details live in the pages linked from each row.
 | 4 | **The missing sensors for closed loop** (below) | today the car is driven **open loop**: we send commands but can't see what the actuators did | yes | 🔧 |
 | 5 | **The safety timeout** in the actuator board: brake if commands stop | today a lost cable keeps the car going | yes | 🔧 must come first |
 | 6 | **Actuator tests**: speed up, brake, steering sweep, circles; numbers into the sim. The script is built and proven in Gazebo (15 Oct: `pixi run actuator-test`) | the sim behaves like the real car; the car knows how hard it can brake | yes | 🔧 |
-| 7 | **GPS-to-GPS movement**: from A to B by GPS in an empty lot, with a smooth stop at B. The driver is built and proven in Gazebo (15 Oct: `aav_goto`, `pixi run goto`, a-to-b.md) | the main goal | yes | 🔧 on the car after the brake test (4.3) |
+| 7 | **GPS-to-GPS movement**: from A to B by GPS in an empty lot, with a smooth stop at B. The driver is built and proven in Gazebo (15 Oct: `aav_drive_to_point`, `pixi run drive-to-point`, a-to-b.md) | the main goal | yes | 🔧 on the car after the brake test (4.3) |
 | 8 | **The spine in the loop** in Gazebo ✅ 15 Oct: `pixi run sim spine:=true`; `sim-check --spine` passes (commands lost: full brake in 0.2 s, latched; both e-stops; disarmed: no motion). Sensor failures on purpose and the lidar into Nav2: done 15 Oct too | test the safety logic without the car | no | ✅ in Gazebo |
 | 9 | **The real lidar driver** (likely a Velodyne) and the real cameras into perception | more of the world seen | yes | 🔧 |
 | 10 | **Newer models**: YOLO26 or RF-DETR for perception; Qwen3.5, Gemma 4 or Granite for plain English, on the Orin too | better and freer models since 2024 | no | 🔧 test, then pick |
@@ -123,7 +123,7 @@ the hardware lead's.
 
 | # | Build | Why | Size | Status |
 |---|---|---|---|---|
-| S1 | **GPS A → B with a smooth stop**: speed by the distance left to B, slowing at half the measured braking g | the main goal (tests.md 5.2), proven in Gazebo first | 1 day | ✅ in Gazebo 15 Oct: `aav_goto`, `pixi run goto`; every stop within 0.4 m of B, at 1 and 3 m/s (`sim-check --goto`). On the car: C9 |
+| S1 | **GPS A → B with a smooth stop**: speed by the distance left to B, slowing at half the measured braking g | the main goal (tests.md 5.2), proven in Gazebo first | 1 day | ✅ in Gazebo 15 Oct: `aav_drive_to_point`, `pixi run drive-to-point`; every stop within 0.4 m of B, at 1 and 3 m/s (`sim-check --drive-to-point`). On the car: C9 |
 | S2 | **The spine in the loop** in Gazebo: ego → CAN → the spine's safety logic → the actuator model → Gazebo | timeouts and e-stops tested the way the car runs them | 1-2 days | ✅ 15 Oct: `pixi run sim spine:=true`, `pixi run sim-check --spine` passes |
 | S3 | **Gazebo steering fix**: full lock turns 0.43 rad, not 0.5 | the sim should steer like the car | small | ✅ done 15 Oct: 0.484 rad at full lock (Gazebo's `steering_limit` from `vehicle.py`; the last 3% is tyre slip) |
 | S4 | **Ghost obstacles**: a pretend person in Nav2's map while the real car drives | test stopping on the car with nothing real to hit | 1 day | ✅ in Gazebo 16 Oct: `aav_ghost`, `pixi run ghost ahead 10`, `sim:=... ghost:=true`; `sim-check --ghost` stopped 0.21 m before it ([docs](ghost-obstacles.md)). On the car: untested |

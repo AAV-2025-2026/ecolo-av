@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_command_mux</name>
   <version>0.1.0</version>
-  <description>Configuration and launch for twist_mux: picks one /control/cmd_vel for ego from the drivers' /drivers/&lt;driver&gt;/cmd_vel inputs by priority (joy, rc, keyboard, tests, scripted, replay, goto, nav, ai: config/twist_mux.yaml), with the /safety/estop, /perception/stop_sign and /safety/sensor_watchdog/lock locks.</description>
+  <description>Configuration and launch for twist_mux: picks one /control/cmd_vel for ego from the drivers' /drivers/&lt;driver&gt;/cmd_vel inputs by priority (joy, rc, keyboard, tests, scripted, replay, point, nav, ai: config/twist_mux.yaml), with the /safety/estop, /perception/stop_sign and /safety/sensor_watchdog/lock locks.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 

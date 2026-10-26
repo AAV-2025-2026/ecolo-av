@@ -9,10 +9,10 @@ from dataclasses import dataclass, field
 import math
 from typing import List, Tuple
 
+from aav_drive_to_point.approach import STOPPING
+from aav_drive_to_point.line import Pose
 from aav_ego.ackermann import EgoModel, Limits
 from aav_gazebo.actuator_model import ActuatorConfig, Actuators
-from aav_goto.approach import STOPPING
-from aav_goto.line import Pose
 
 
 @dataclass

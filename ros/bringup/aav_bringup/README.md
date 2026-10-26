@@ -48,7 +48,7 @@ detector's and camera streams' settings. Arguments win over the file (`gps:=fals
 
 | Machine | Runs |
 |---|---|
-| `orin` | description, mux, ego, scripted, goto, sensors, lidar, camera_stream, stop_signs, localization, navigation, spine, foxglove |
+| `orin` | description, mux, ego, scripted, drive_to_point, sensors, lidar, camera_stream, stop_signs, localization, navigation, spine, foxglove |
 | `motor_pi` | `legacy_uart` only: the Pi wired to the ESP32's UART |
 | `laptop` | teleop and a detector |
 | `all` | everything on one computer |

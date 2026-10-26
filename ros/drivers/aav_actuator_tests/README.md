@@ -55,7 +55,7 @@ Modules (all but the node have no ROS):
 | `reports.py` | one run's rows to a `Report`: `analyse()`, `table()`, `yaml_lines()`; `PATHS` (each fit's from -> to), `signal()` (true arrival times), `shaping()` (what shaped the commands) |
 | `actuator_test.py` | the ROS node and the command line |
 
-`aav_goto` reuses `safety.py` (`source_kind`, `taken_over`, `LOT_CHECKLIST`), so both
+`aav_drive_to_point` reuses `safety.py` (`source_kind`, `taken_over`, `LOT_CHECKLIST`), so both
 agree on what REAL means.
 
 ## Invariants

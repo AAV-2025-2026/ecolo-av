@@ -1,12 +1,14 @@
-# aav_goto
+# aav_drive_to_point
 
-Drive to one point B and stop there smoothly (`docs/a-to-b.md`). `goto_driver` is an
-action server (`/goto`); `goto` is its command-line client (`pixi run goto`). B is a
-GPS point (lat/lon) or a map point (x, y). B is where `base_link`, the ground under the
-rear axle, stops. Forward only.
+Drive to one point B and stop there smoothly (`docs/a-to-b.md`). `point_driver` is an
+action server (`/drive_to_point`); `drive_to_point` is its command-line client
+(`pixi run drive-to-point`). B is a GPS point (lat/lon) or a map point (x, y). B is where
+`base_link`, the ground under the rear axle, stops. Forward only. Called `aav_goto`
+(node `goto_driver`, action `/goto`, slot `goto`) until 26 Oct 2026.
 
 ```
-pixi run goto -> /goto goal -> goto_driver -> /drivers/goto/cmd_vel -> twist_mux (25) -> ego
+pixi run drive-to-point -> /drive_to_point goal -> point_driver
+  -> /drivers/point/cmd_vel -> twist_mux (25) -> ego
 ```
 
 ## Overview
@@ -17,27 +19,27 @@ straight line to it. Priority 25 puts it below every person, test and script, ab
 Nav2. It drives on GPS, so the stop-sign and sensor locks (30) hold it.
 
 ```sh
-pixi run goto --sim --ahead 20                 # Gazebo, 20 m ahead of the car
-pixi run goto --sim --x 30 --y 5               # a map point (x east, y north)
-pixi run goto --lat 45.38630 --lon -75.69580   # the real car: asks you to type "goto"
+pixi run drive-to-point --sim --ahead 20                # Gazebo, 20 m ahead of the car
+pixi run drive-to-point --sim --x 30 --y 5              # a map point (x east, y north)
+pixi run drive-to-point --lat 45.38630 --lon -75.69580  # the real car: asks you to type "drive"
 ```
 
 ## Interface
 
-**`goto_driver`**: `ros2 launch aav_goto goto.launch.py [use_sim_time:=false] [watchdog:=true]`
+**`point_driver`**: `ros2 launch aav_drive_to_point drive_to_point.launch.py [use_sim_time:=false] [watchdog:=true]`
 
 | Item | What |
 |---|---|
-| Action server | `/goto` (`aav_interfaces/action/GoTo`): lat/lon or x/y, `cruise_speed`, `acceleration`, `deceleration` (0 = default), `confirmed` |
+| Action server | `/drive_to_point` (`aav_interfaces/action/DriveToPoint`): lat/lon or x/y, `cruise_speed`, `acceleration`, `deceleration` (0 = default), `confirmed` |
 | Subscribes | `/localization/odom/global` (`nav_msgs/Odometry`), `/sensors/gps/fix` (`sensor_msgs/NavSatFix`, best effort), `/safety/estop` (`std_msgs/Bool`), `/safety/sensor_watchdog/lock` (`std_msgs/Bool`), `/system/source` (`aav_interfaces/DataSource`, latched), `/control/cmd_vel` (`geometry_msgs/TwistStamped`) |
-| Publishes | `/drivers/goto/cmd_vel` (`geometry_msgs/TwistStamped`) at `rate_hz` while a goal runs |
+| Publishes | `/drivers/point/cmd_vel` (`geometry_msgs/TwistStamped`) at `rate_hz` while a goal runs |
 | Calls | `/fromLL` (`robot_localization/srv/FromLL`), for a lat/lon goal; `/ego/get_parameters`, for ego's caps |
 
 Feedback: phase (turn, accelerate, hold, decelerate, stopping), distance left, cross
 track (+ left), commanded and measured speed. Result: success, B in the map frame,
 distance left, tolerance, distance, duration.
 
-Parameters (`config/goto.yaml`; `max_brake`, `wheelbase`, `max_steering_angle` from
+Parameters (`config/drive_to_point.yaml`; `max_brake`, `wheelbase`, `max_steering_angle` from
 `vehicle.yaml`):
 
 | Name | Default | Meaning |
@@ -56,9 +58,9 @@ Parameters (`config/goto.yaml`; `max_brake`, `wheelbase`, `max_steering_angle` f
 | `stuck_time`, `still_speed`, `still_time` | 5.0 s, 0.05 m/s, 1.0 s | stuck; standing still; at B before it reports |
 | `rate_hz` | 50 Hz | command rate |
 
-**`goto`** (`goto_cli.py`; `tools/goto.sh`): `--lat/--lon`, `--x/--y`, or `--ahead [--left]`;
+**`drive_to_point`** (`point_cli.py`; `tools/drive_to_point.sh`): `--lat/--lon`, `--x/--y`, or `--ahead [--left]`;
 `--speed`; `--sim` (this computer only, Gazebo's clock). Reads `/system/source` and
-`/localization/odom/global`; calls `/goto`. Ctrl-C cancels the goal.
+`/localization/odom/global`; calls `/drive_to_point`. Ctrl-C cancels the goal.
 
 Modules (all but the two nodes have no ROS):
 
@@ -68,7 +70,7 @@ Modules (all but the two nodes have no ROS):
 | `line.py` | `Pose`, `Line`, `pursuit_curvature`, `reachable`, `min_radius`, `turn_speed_limit` |
 | `drive.py` | `Drive`, `Steering`, `Command`: speed and steering together, one tick |
 | `rules.py` | `check_numbers`, `refuse_start`, `refuse_target`, `stop_reason`, `not_moving`, `tolerance`, `confirmed` |
-| `goto_driver.py`, `goto_cli.py` | the action server and its client |
+| `point_driver.py`, `point_cli.py` | the action server and its client |
 
 ## Invariants
 
@@ -76,7 +78,7 @@ Modules (all but the two nodes have no ROS):
 - One goal at a time.
 - Refuses B over `max_distance` away, under 0.5 m away (it is there already), or inside
   the car's tightest turn (it would circle B for ever). Refuses REPLAY. On REAL (or nobody announcing) it needs `confirmed`; the client asks the
-  person to type "goto". `/system/source` kinds come from `aav_actuator_tests` `safety.py`,
+  person to type "drive". `/system/source` kinds come from `aav_actuator_tests` `safety.py`,
   so both agree on what REAL means.
 - Stops at once (5 zero commands; ego's own deceleration) on: cancel, e-stop, the
   watchdog's lock or its silence, a stale position or fix, someone else driving
@@ -94,17 +96,17 @@ Modules (all but the two nodes have no ROS):
 
 ## Side Effects
 
-- Publishes `/drivers/goto/cmd_vel` while a goal runs; action feedback and result.
+- Publishes `/drivers/point/cmd_vel` while a goal runs; action feedback and result.
 - Calls `/fromLL` and ego's parameter service. No files, no hardware.
 
 ## Verification
 
 ```sh
-pixi run build && colcon test --packages-select aav_goto && colcon test-result --verbose
+pixi run build && colcon test --packages-select aav_drive_to_point && colcon test-result --verbose
 ```
 
-Quick, without ROS: `cd ros/drivers/aav_goto && python3 -m pytest -q` (`tools/test.sh`
-runs it). `pixi run test` runs everything. In Gazebo: `pixi run sim-check --goto`.
+Quick, without ROS: `cd ros/drivers/aav_drive_to_point && python3 -m pytest -q` (`tools/test.sh`
+runs it). `pixi run test` runs everything. In Gazebo: `pixi run sim-check --drive-to-point`.
 
 | Test | Covers |
 |---|---|

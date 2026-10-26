@@ -19,7 +19,7 @@ commands the car itself, except through the stop-sign lock and the lane follower
 ## Invariants
 
 - Logic modules have no ROS imports and their own tests.
-- The stop-sign lock (twist_mux priority 30) holds Nav2, goto and the AI slot only, never a person.
+- The stop-sign lock (twist_mux priority 30) holds Nav2, the point driver and the AI slot only, never a person.
 - The lane follower drives only the AI slot (priority 10): every other driver outranks it.
 - Camera and lidar positions come from `vehicle.yaml`, through the launch files. Run
   without its launch file, the lane finder falls back to positions written in its code.

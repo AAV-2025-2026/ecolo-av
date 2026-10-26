@@ -65,7 +65,7 @@ The `Task` column is `pixi run <task>`; "-" means run the script itself.
 | `survey_car.sh` | runs that on every machine in a hosts file | `survey` |
 | `keychain_askpass.sh` | ssh's password helper: the login from the Mac's Keychain | (survey_car.sh) |
 | `actuator_test.sh` | the actuator tests, stages 3-4 (`--sim`, `--stands`) | `actuator-test` |
-| `goto.sh` | drive to one point and stop (`--sim`) | `goto` |
+| `drive_to_point.sh` | drive to one point and stop (`--sim`) | `drive-to-point` |
 | `keyboard.sh` | teleop_twist_keyboard into `/drivers/keyboard/cmd_vel` (`--sim`, `--local`) | `keyboard` |
 | `record.sh` | records a drive into `bags/` (MCAP) | - |
 | `replay_commands.sh` | plays a bag's commands into `/drivers/replay/cmd_vel` (no flags, never local) | - |
@@ -155,9 +155,9 @@ Each lands outside git, checksum pinned where the script says.
 
 - **Stand-ins stay local.** turtle, sim, bench, view and their checks run through
   `tools/ros.sh --local`. `test.sh` checks the list; give any new stand-in task the same.
-- `actuator_test.sh`, `goto.sh`: only `--sim` stays local. On the car they ask you to
+- `actuator_test.sh`, `drive_to_point.sh`: only `--sim` stays local. On the car they ask you to
   type a word first. `actuator_test` caps its own speed (1 m/s; 0.3 m/s on `--stands`);
-  `goto` has no cap of its own and relies on ego's `max_speed` (1 m/s by default).
+  `drive_to_point.sh` has no cap of its own and relies on ego's `max_speed` (1 m/s by default).
 - **Portable for Macs**: bash 3.2, no GNU-only flags, no Linux-only serial speeds.
 - **Logic without ROS** (`topic_load.py`, `stalls.py`, `drive_metrics.py`, `mcp_parts.py`)
   has its own tests in `tools/tests/`.
@@ -179,7 +179,7 @@ Each lands outside git, checksum pinned where the script says.
 | Scripts | Touch |
 |---|---|
 | checks, sim, stand-ins | start ROS and Gazebo processes on this computer |
-| `actuator_test.sh`, `goto.sh` without `--sim`; `keyboard.sh` without `--sim` or `--local` | **move the real car** |
+| `actuator_test.sh`, `drive_to_point.sh` without `--sim`; `keyboard.sh` without `--sim` or `--local` | **move the real car** |
 | `replay_commands.sh` (always: it has no `--sim`) | **moves whatever shares the ROS domain**: on the car's network, the car |
 | `get_*.sh`, `vendor.py`, `car_kit.sh` | download into `vendor/` (`car_kit.sh` caches in `vendor/car-kit-cache`), `models/`, `maps/`, `car-kit/` |
 | `car_day_build.sh` | writes `car-day/esp32/` and `docs/html/` |

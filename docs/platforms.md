@@ -74,7 +74,7 @@ the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 
 | Machine file | Runs |
 |---|---|
-| `orin.yaml` | description, mux, ego, scripted, goto, the IMU and GPS drivers, the roof lidar (Velodyne), localization, Nav2, Foxglove; the two front camera streams (`camera_stream`, RF-DETR inside each) and the stop-sign watcher; the CAN bus (`spine_bridge role:=sensors`: the wheels) |
+| `orin.yaml` | description, mux, ego, scripted, drive_to_point, the IMU and GPS drivers, the roof lidar (Velodyne), localization, Nav2, Foxglove; the two front camera streams (`camera_stream`, RF-DETR inside each) and the stop-sign watcher; the CAN bus (`spine_bridge role:=sensors`: the wheels) |
 | `motor_pi.yaml` | `legacy_uart_bridge`: the ESP32 is wired to it. The 2025-26 UDP encoder (`encoder_udp`) is off: the wheels are on CAN now |
 | `laptop.yaml` | the joystick, on the safety driver's laptop, and its own detector (`object_detector_laptop`, RF-DETR Nano) on the compressed pictures: `pixi run -e ml car laptop` |
 | `all.yaml` | everything on one computer, for the bench. Its detector is `object_detector_all` |
@@ -98,7 +98,7 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.
 | `description` | the car's frames: `robot_state_publisher` |
 | `mux`, `ego` | `twist_mux`, then `ego` |
 | `teleop` | the joystick, and its e-stop button |
-| `scripted`, `goto` | the scripted driver; the goto driver ([A to B](a-to-b.md)) |
+| `scripted`, `drive_to_point` | the scripted driver; the point driver ([A to B](a-to-b.md)) |
 | `imu`, `gps`, `radar`, `battery` | the sensor drivers, on the computer each is plugged into |
 | `lidar` | the roof Velodyne VLP-16, through the stock `velodyne` driver (it sends to the Jetson only) |
 | `camera` | the front camera: `usb_cam`, Linux only |

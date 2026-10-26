@@ -30,7 +30,7 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 |---|---|
 | [sources](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `aav_battery_victron`, `aav_radar_ti`; `aav_camera_stream` ([one line](#more-packages-see-their-readmes)) |
 | [bringup, localization](#description-and-localization) | `aav_description`, `aav_localization`, `aav_gps_heading` |
-| [drivers](#drivers) | `aav_teleop`, `aav_actuator_tests`, `aav_scripted`, `aav_goto`, `aav_language`, `aav_navigation`; `aav_rc`, `aav_routes` ([one line](#more-packages-see-their-readmes)) |
+| [drivers](#drivers) | `aav_teleop`, `aav_actuator_tests`, `aav_scripted`, `aav_drive_to_point`, `aav_language`, `aav_navigation`; `aav_rc`, `aav_routes` ([one line](#more-packages-see-their-readmes)) |
 | [command_mux, io_mux, ego](#mux-and-ego) | `aav_command_mux`, `aav_io_mux`, `aav_ego` |
 | [can_bridge, sim](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla`; `aav_spine_bridge` ([one line](#more-packages-see-their-readmes)) |
 | [perception](#perception) | `aav_detector`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry`; `aav_lidar` ([one line](#more-packages-see-their-readmes)) |
@@ -188,19 +188,19 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 | **Test** | `test/test_speed_profile.py` (in `tools/test.sh`) |
 | **Read first** | `aav_scripted/speed_profile.py` |
 
-### aav_goto
+### aav_drive_to_point
 
 | | |
 |---|---|
 | **Does** | an action that drives to one point B (lat/lon or map x/y) and stops there: speed up gently, hold, slow down by the distance left at half the measured braking |
 | **Why** | the main goal (Ben, 15 Oct): GPS A to B with a smooth stop, tests.md 5.2 |
 | **Runs on** | the Orin, next to the mux |
-| **In → out** | the action `/goto`, `/localization/odom/global`, `/sensors/gps/fix` → `/drivers/goto/cmd_vel` (twist_mux priority 25) |
+| **In → out** | the action `/drive_to_point`, `/localization/odom/global`, `/sensors/gps/fix` → `/drivers/point/cmd_vel` (twist_mux priority 25) |
 | **Origin** | ours |
-| **Status** | [[works]] in Gazebo (`pixi run sim-check --goto`, 15 Oct); [[untested]] on the car |
-| **Run alone** | `pixi run sim`, then `pixi run goto --sim --ahead 20` |
+| **Status** | [[works]] in Gazebo (`pixi run sim-check --drive-to-point`, 15 Oct); [[untested]] on the car |
+| **Run alone** | `pixi run sim`, then `pixi run drive-to-point --sim --ahead 20` |
 | **Test** | `test/` (in `tools/test.sh`): the speed plan, the steering, the rules, whole drives on a pretend car |
-| **Read first** | [A to B](a-to-b.md), then `aav_goto/approach.py` and `line.py` |
+| **Read first** | [A to B](a-to-b.md), then `aav_drive_to_point/approach.py` and `line.py` |
 
 ### aav_language
 
@@ -466,7 +466,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 
 | | |
 |---|---|
-| **Does** | our own 9 messages (such as `VehicleStatus`, `DataSource`, `Heartbeat`, `WheelSpeeds`) and 2 actions (`ScriptedDrive`, `GoTo`) |
+| **Does** | our own 9 messages (such as `VehicleStatus`, `DataSource`, `Heartbeat`, `WheelSpeeds`) and 2 actions (`ScriptedDrive`, `DriveToPoint`) |
 | **Why** | the car's state (mode, armed, e-stop, faults) has no stock message |
 | **Runs on** | every computer (it's a build dependency) |
 | **In → out** | none: definitions only |

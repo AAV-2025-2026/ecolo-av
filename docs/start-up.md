@@ -69,7 +69,7 @@ Its **machine file** (`ros/bringup/aav_bringup/config/machines/<name>.yaml`) lis
 
 | Machine | Parts that run there |
 |---|---|
-| `orin` | car model, mux, ego, scripted, goto, IMU, GPS, lidar, the two camera streams (RF-DETR inside), stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove |
+| `orin` | car model, mux, ego, scripted, drive to point, IMU, GPS, lidar, the two camera streams (RF-DETR inside), stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove |
 | `motor_pi` | the legacy backend: UART to the ESP32 |
 | `laptop` | joystick, RF-DETR on the laptop's GPU, compressed camera pictures |
 | `all` | everything on one computer (the bench) |

@@ -1,7 +1,7 @@
 """
-goto_driver: drive to one point B (lat/lon or map x/y) and stop there smoothly.
+point_driver: drive to one point B (lat/lon or map x/y) and stop there smoothly.
 
-Action      goto                       aav_interfaces/action/GoTo
+Action      drive_to_point             aav_interfaces/action/DriveToPoint
 Subscribes  localization/odom/global   nav_msgs/Odometry: where the car is on the map, its speed
             sensors/gps/fix            sensor_msgs/NavSatFix (best effort): fresh? RTK?
             safety/estop               std_msgs/Bool: true stops the drive
@@ -11,7 +11,7 @@ Subscribes  localization/odom/global   nav_msgs/Odometry: where the car is on th
                                        to confirm (the goal's `confirmed`)
             control/cmd_vel            geometry_msgs/TwistStamped: twist_mux's choice, to
                                        stop when someone else takes over
-Publishes   drivers/goto/cmd_vel       geometry_msgs/TwistStamped, at rate_hz while a goal
+Publishes   drivers/point/cmd_vel       geometry_msgs/TwistStamped, at rate_hz while a goal
                                        runs (twist_mux priority 25: below every person,
                                        test and script, above Nav2; the stop-sign and
                                        sensor locks, at 30, hold it)
@@ -19,8 +19,9 @@ Calls       /fromLL                    robot_localization/srv/FromLL (navsat_tra
                                        lat/lon to the map frame, as the EKF sees it
             /ego/get_parameters        rcl_interfaces/GetParameters: ego's caps
 
-Try it (or: pixi run goto --sim --ahead 20):
-  ros2 action send_goal /goto aav_interfaces/action/GoTo "{x: 20.0, y: 0.0}" --feedback
+Try it (or: pixi run drive-to-point --sim --ahead 20):
+  ros2 action send_goal /drive_to_point aav_interfaces/action/DriveToPoint \
+      "{x: 20.0, y: 0.0}" --feedback
 
 It speeds up gently, holds a cruise speed, and slows down by the distance left at half
 the measured braking (vehicle.yaml actuators max_brake), so it stops at B (approach.py).
@@ -37,11 +38,11 @@ import signal
 import time
 
 from aav_actuator_tests.safety import source_kind, taken_over
-from aav_goto import rules
-from aav_goto.approach import Approach, planned_deceleration, STOPPING
-from aav_goto.drive import Drive, Steering
-from aav_goto.line import min_radius, Pose
-from aav_interfaces.action import GoTo
+from aav_drive_to_point import rules
+from aav_drive_to_point.approach import Approach, planned_deceleration, STOPPING
+from aav_drive_to_point.drive import Drive, Steering
+from aav_drive_to_point.line import min_radius, Pose
+from aav_interfaces.action import DriveToPoint
 from aav_interfaces.msg import DataSource
 from geographic_msgs.msg import GeoPoint
 from geometry_msgs.msg import TwistStamped
@@ -67,10 +68,10 @@ def yaw_of(q):
     return math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
 
 
-class GotoDriver(Node):
+class PointDriver(Node):
 
     def __init__(self):
-        super().__init__('goto_driver')
+        super().__init__('point_driver')
         p = {name: self.declare_parameter(name, default).value for name, default in (
             ('rate_hz', 50.0),
             ('cruise_speed', 1.0), ('acceleration', 0.5),
@@ -101,7 +102,7 @@ class GotoDriver(Node):
 
         latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                              durability=DurabilityPolicy.TRANSIENT_LOCAL)
-        self.pub = self.create_publisher(TwistStamped, 'drivers/goto/cmd_vel', 10)
+        self.pub = self.create_publisher(TwistStamped, 'drivers/point/cmd_vel', 10)
         self.create_subscription(Odometry, 'localization/odom/global', self.on_pose, 10)
         self.create_subscription(NavSatFix, 'sensors/gps/fix', self.on_fix,
                                  qos_profile_sensor_data)
@@ -113,7 +114,7 @@ class GotoDriver(Node):
         self.from_ll = self.create_client(FromLL, '/fromLL')
         self.ego = AsyncParameterClient(self, 'ego')
         self.server = ActionServer(
-            self, GoTo, 'goto', execute_callback=self.execute,
+            self, DriveToPoint, 'drive_to_point', execute_callback=self.execute,
             goal_callback=self.on_goal, cancel_callback=lambda _: CancelResponse.ACCEPT)
 
     # --- listening ---------------------------------------------------------------------
@@ -217,7 +218,7 @@ class GotoDriver(Node):
 
     def on_goal(self, goal):
         if self.busy:
-            self.get_logger().warning('rejected a goal: another goto drive is running')
+            self.get_logger().warning('rejected a goal: another drive to a point is running')
             return GoalResponse.REJECT
         self.busy = True      # at once: a second goal, before this one runs, is refused
         return GoalResponse.ACCEPT
@@ -247,17 +248,17 @@ class GotoDriver(Node):
             return await self.drive(handle)
         except Exception as e:  # noqa: B902 - stop the car first, then say what it was
             self.publish(0.0, 0.0)
-            self.get_logger().error(f'goto failed: {e!r}')
+            self.get_logger().error(f'drive to point failed: {e!r}')
             handle.abort()
-            return GoTo.Result(success=False, message=f'error: {e!r}')
+            return DriveToPoint.Result(success=False, message=f'error: {e!r}')
         finally:
             self.busy = False
 
     def refuse(self, handle, why, target=(math.nan, math.nan)):
-        self.get_logger().warning(f'goto refused: {why}')
+        self.get_logger().warning(f'drive to point refused: {why}')
         handle.abort()
-        return GoTo.Result(success=False, message=why, target_x=float(target[0]),
-                           target_y=float(target[1]))
+        return DriveToPoint.Result(success=False, message=why, target_x=float(target[0]),
+                                   target_y=float(target[1]))
 
     async def drive(self, handle):
         goal = handle.request
@@ -287,7 +288,7 @@ class GotoDriver(Node):
         max_path = 2.0 * distance + 2.0 * math.pi * self.radius + 10.0
         max_time = 2.0 * approach.ideal_time(distance + math.pi * self.radius) + 30.0
         self.get_logger().info(
-            f'goto ({target[0]:.2f}, {target[1]:.2f}): {distance:.1f} m; cruise '
+            f'drive to ({target[0]:.2f}, {target[1]:.2f}): {distance:.1f} m; cruise '
             f'{approach.cruise:g} m/s, up {approach.accel:g} m/s^2, down {approach.decel:g} '
             f'm/s^2 (max_brake {p["max_brake"]:g} x {p["brake_fraction"]:g})')
         self.ours.clear()
@@ -297,12 +298,12 @@ class GotoDriver(Node):
         st = {'last': self.seconds(), 't0': self.seconds(), 'tick': 0, 'zeros': 0,
               'still': None, 'stuck': None, 'path': 0.0, 'stop': None,
               'cancel': False, 'cmd': None}
-        feedback = GoTo.Feedback()
+        feedback = DriveToPoint.Feedback()
 
         def stop(reason):
             if st['stop'] is None and not st['cancel']:
                 st['stop'] = reason
-                self.get_logger().warning(f'goto stopping: {reason}')
+                self.get_logger().warning(f'drive to point stopping: {reason}')
 
         def tick():
             if st['stop'] is not None or st['cancel']:
@@ -369,10 +370,10 @@ class GotoDriver(Node):
         left = math.hypot(target[0] - pose.x, target[1] - pose.y)
         tolerance = rules.tolerance(self.fix_status if p['require_gps'] else
                                     rules.STATUS_GBAS_FIX)
-        result = GoTo.Result(target_x=float(target[0]), target_y=float(target[1]),
-                             distance_left=float(left), tolerance=float(tolerance),
-                             distance_travelled=float(st['path']),
-                             duration=float(self.seconds() - st['t0']))
+        result = DriveToPoint.Result(target_x=float(target[0]), target_y=float(target[1]),
+                                     distance_left=float(left), tolerance=float(tolerance),
+                                     distance_travelled=float(st['path']),
+                                     duration=float(self.seconds() - st['t0']))
         if st['cancel']:
             handle.canceled()
             result.message = f'cancelled; stopped {left:.2f} m from B'
@@ -387,13 +388,13 @@ class GotoDriver(Node):
                 handle.succeed()
             else:
                 handle.abort()
-        self.get_logger().info(f'goto: {result.message}')
+        self.get_logger().info(f'drive to point: {result.message}')
         return result
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = GotoDriver()
+    node = PointDriver()
     try:
         rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):

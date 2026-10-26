@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>aav_goto</name>
+  <name>aav_drive_to_point</name>
   <version>0.1.0</version>
-  <description>Goto driver: a GoTo action server that drives to one GPS or map point and stops there, slowing down by the distance left at half the measured braking, publishing /drivers/goto/cmd_vel. And its command line client.</description>
+  <description>Drive-to-point driver: a DriveToPoint action server that drives to one GPS or map point and stops there, slowing down by the distance left at half the measured braking, publishing /drivers/point/cmd_vel. And its command line client.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 

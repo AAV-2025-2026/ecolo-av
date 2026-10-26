@@ -2,7 +2,7 @@ from glob import glob
 
 from setuptools import find_packages, setup
 
-package_name = 'aav_goto'
+package_name = 'aav_drive_to_point'
 
 setup(
     name=package_name,
@@ -18,13 +18,13 @@ setup(
     zip_safe=True,
     maintainer='AAV 2026-27 team',
     maintainer_email='aav-team@todo.invalid',
-    description='Goto driver: drive to one GPS or map point and stop there smoothly.',
+    description='Drive-to-point driver: drive to one GPS or map point and stop there smoothly.',
     license='TODO',
     extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
-            'goto_driver = aav_goto.goto_driver:main',
-            'goto = aav_goto.goto_cli:main',
+            'point_driver = aav_drive_to_point.point_driver:main',
+            'drive_to_point = aav_drive_to_point.point_cli:main',
         ],
     },
 )

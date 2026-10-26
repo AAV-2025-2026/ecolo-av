@@ -54,7 +54,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Keyboard driving (`teleop_twist_keyboard`) | Drive the turtle, Gazebo or the car from any laptop, with no joystick | Ben | 2026-10-09 | sim |
 | Joystick with a deadman (`aav_teleop`) | The joystick can drive with no autonomy running, and letting go stops the car | Ben | 2026-10-09 | built |
 | Scripted drives (`aav_scripted`) | Repeatable speed-up, hold and slow-down runs, for tests and the first drives | Ben | 2026-10-09 | sim |
-| [Goto: GPS A to B](a-to-b.md) (`aav_goto`) | The Gate 4 goal: drive to a GPS point and stop within 1 m; in Gazebo it stopped within 0.4 m | Ben | 2026-10-15 | sim |
+| [Drive to point: GPS A to B](a-to-b.md) (`aav_drive_to_point`) | The Gate 4 goal: drive to a GPS point and stop within 1 m; in Gazebo it stopped within 0.4 m. Called `aav_goto` until 26 Oct: renamed so the name says the job (action `/drive_to_point`, slot `point`, `pixi run drive-to-point`) | Ben | 2026-10-15 | sim |
 | [Plain English](plain-english.md) (`aav_language`) | Say "drive 10 m forward": a local model plans it, and asks before the car moves | Ben | 2026-10-15 | sim |
 | RC via ROS (`rc_driver`) and a three-position mode switch | A person on the RC transmitter outranks every program, but still passes through ROS's safety checks | Ben | 2026-10-24 | built |
 

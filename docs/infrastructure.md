@@ -33,7 +33,7 @@ ecolo-av/
     localization/       the two EKFs and navsat_transform, and the GPS heading
     perception/         the detector (RF-DETR, YOLO), radar clustering, lanes, the lidar
     drivers/            everything that proposes a command: teleop, RC, actuator tests, scripted,
-                        goto, plain English, Nav2, street routes
+                        drive to point, plain English, Nav2, street routes
     command_mux/        twist_mux: picks one command
     io_mux/             the sensor mux and the output mux: real or simulated, never mixed
     ego/                the virtual car: one command into speed and steering
@@ -159,7 +159,7 @@ The car runs one ROS graph across several computers. Each one starts `pixi run c
 
 | Machine | Runs | Today |
 |---|---|---|
-| `orin` (Jetson AGX Orin) | the car's model, mux, ego, scripted and goto drivers, IMU, GPS, the roof lidar, the two camera streams (RF-DETR inside), the stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove | Ubuntu 22.04 and Humble: it must move to Jazzy first (Q24) |
+| `orin` (Jetson AGX Orin) | the car's model, mux, ego, scripted and point drivers, IMU, GPS, the roof lidar, the two camera streams (RF-DETR inside), the stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove | Ubuntu 22.04 and Humble: it must move to Jazzy first (Q24) |
 | `motor_pi` | the legacy bridge to today's ESP32 (UART); the 2025-26 UDP encoder is off since 23 Oct | Humble |
 | `laptop` | the safety driver's joystick, and its own detector (`-e ml`) | any laptop with Pixi |
 | `all` | everything on one computer: for a bench test | |

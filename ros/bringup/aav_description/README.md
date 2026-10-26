@@ -29,7 +29,7 @@ through the Python helper `aav_description.vehicle`.
 | Section | Holds |
 |---|---|
 | `vehicle` | wheelbase, track, wheel size (m), `max_steering_angle` (rad), `max_reverse_speed` (m/s), body outline, mass (kg), centre of mass, tyre grip, encoder counts |
-| `actuators` | the actuator model for Gazebo: accel, brake, lags, steering rate. Also read by ego (`max_accel`, `max_brake`, via `ego_params`), `aav_goto`'s launch (`max_brake`) and `carla_adapter` (`max_accel`). **Every value is a guess** |
+| `actuators` | the actuator model for Gazebo: accel, brake, lags, steering rate. Also read by ego (`max_accel`, `max_brake`, via `ego_params`), `aav_drive_to_point`'s launch (`max_brake`) and `carla_adapter` (`max_accel`). **Every value is a guess** |
 | `sensors` | each sensor's mount (`xyz` m, `rpy` rad) from `base_link`: IMU, GPS, radar, three cameras, lidar |
 
 Many values are still `TODO measure` (docs/car_measurements.md).

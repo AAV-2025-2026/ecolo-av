@@ -150,7 +150,7 @@ def launch_setup(context):
         # only while every source is SIM (aav_io_mux).
         include(context, 'aav_io_mux', 'io_mux.launch.py', target='gazebo', source='sim'),
         include(context, 'aav_scripted', 'scripted.launch.py', use_sim_time='true'),
-        include(context, 'aav_goto', 'goto.launch.py', use_sim_time='true',
+        include(context, 'aav_drive_to_point', 'drive_to_point.launch.py', use_sim_time='true',
                 watchdog=arg('watchdog')),
         # Only the IMU filter: Gazebo stands in for the drivers.
         Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',

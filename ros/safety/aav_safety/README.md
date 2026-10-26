@@ -2,7 +2,7 @@
 
 ## Overview
 
-The sensor watchdog. When a sensor Nav2, goto or the AI slot needs dies, lies or freezes,
+The sensor watchdog. When a sensor Nav2, the point driver or the AI slot needs dies, lies or freezes,
 it stops them, and says why loudly: in the log, on `/diagnostics` and on the HUD. People and
 test scripts can still drive.
 
@@ -67,7 +67,7 @@ each profile passes the inputs it has (sim, bench, car).
 ## Invariants
 
 - `watchdog.py` and `wheel_check.py` have no ROS imports, and their own tests.
-- The lock holds goto (25), Nav2 (20) and the AI slot (10), never a person or a test.
+- The lock holds the point driver (25), Nav2 (20) and the AI slot (10), never a person or a test.
 - Fail-safe: twist_mux treats 1 s without a lock message as locked, so a dead or hung
   watchdog stops them too.
 - Ages are about 5 messages at the sensor's rate, never under ego's 0.5 s command timeout.

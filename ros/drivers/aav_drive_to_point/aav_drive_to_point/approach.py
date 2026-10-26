@@ -1,7 +1,7 @@
 r"""
 The speed for driving to B: speed up gently, hold, then slow down by the distance left.
 
-No ROS here, so the tests run anywhere. goto_driver.py asks `Approach.step` every tick.
+No ROS here, so the tests run anywhere. point_driver.py asks `Approach.step` every tick.
 
 ```text
  speed
@@ -31,7 +31,7 @@ from dataclasses import dataclass
 import math
 from typing import Tuple
 
-# The feedback's phases (aav_interfaces/action/GoTo).
+# The feedback's phases (aav_interfaces/action/DriveToPoint).
 TURN, ACCELERATE, HOLD, DECELERATE, STOPPING = 0, 1, 2, 3, 4
 
 BRAKE_FRACTION = 0.5    # of the measured braking: docs/tests.md 5.2

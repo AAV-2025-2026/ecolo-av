@@ -20,7 +20,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.
 | `aav_rc` | drivers | the RC transmitter, on "RC via ROS", as a driver (priority 95, proposed) | built 24 Oct; off until the hardware lead confirms the wire (H9) | new |
 | `aav_actuator_tests` | drivers | the stage 3-4 tests, as a driver (priority 60) | [[works]] Gazebo; [[untested]] on the car | new |
 | `aav_scripted` | drivers | scripted drives: speed up, hold, slow down | [[works]] turtle and the bench | new |
-| `aav_goto` | drivers | drive to one GPS or map point B, and stop there smoothly | [[works]] in Gazebo (15 Oct); [[untested]] on the car | new |
+| `aav_drive_to_point` | drivers | drive to one GPS or map point B, and stop there smoothly | [[works]] in Gazebo (15 Oct); [[untested]] on the car | new |
 | `aav_language` | drivers | plain English: a local model plans drive tools, you say yes | [[works]] Gazebo and the turtle | new |
 | `aav_navigation` | drivers | Nav2, set up for a car, and the maps | [[works]] goals reached in Gazebo | new |
 | `aav_routes` | drivers | street routes (Valhalla) as GPS waypoints for Nav2 | [[works]] in Gazebo | new |
@@ -37,7 +37,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.
 | `aav_bench` | sim | pretend sensors: IMU, GPS, battery, camera, radar, lidar | [[works]] | new |
 | `aav_safety` | safety | the sensor watchdog: a twist_mux lock (30) when a sensor is stale, NaN, frozen or jumps | [[works]] Gazebo and the bench | new |
 | `aav_ghost` | safety | ghost obstacles: a pretend person only Nav2 sees | [[works]] in Gazebo | new |
-| `aav_interfaces` | ecolo_msgs | our 9 messages (such as `VehicleStatus`, `DataSource`, `Heartbeat`) and 2 actions (`ScriptedDrive`, `GoTo`) | [[works]] builds | new |
+| `aav_interfaces` | ecolo_msgs | our 9 messages (such as `VehicleStatus`, `DataSource`, `Heartbeat`) and 2 actions (`ScriptedDrive`, `DriveToPoint`) | [[works]] builds | new |
 | `aav_bringup` | bringup | the six profiles, `stack.launch.py`, Foxglove, the machine files, the RViz layouts | [[works]] turtle, sim, replay, bench | new |
 | `aav_detector` | perception | RF-DETR (the default) or YOLO on the camera's images, and the stop-sign watcher | [[works]] on the bench | 2024-25 `camera_ros2_ws` |
 | `aav_radar_clusters` | perception | radar clustering (DBSCAN), with a box round each object (Rust) | [[works]] on the bench and in Gazebo | new: a rewrite of the 2025-26 `Nav_Radar` C++ node |
@@ -79,7 +79,7 @@ Flask HUD went to the archive on 25 Oct), and none is parked.
 | keyboard (`tools/keyboard.sh`) | your keys | `/drivers/keyboard/cmd_vel` | `pixi run keyboard` |
 | `aav_actuator_tests` | `/vehicle/odom`, `/vehicle/steering`, `/throttle`, `/brake`, `/wheels`, the IMU, `/localization/odom/local`, GPS, `/safety/estop`, `/control/cmd_vel`, `/system/source` | `/drivers/tests/cmd_vel` | `pixi run actuator-test`: the stage 3-4 tests; prints `vehicle.yaml` lines ([Actuator tests](actuator-tests.md)) |
 | `aav_scripted` | `/localization/odom/local` | `/drivers/scripted/cmd_vel` | the action `/scripted_drive` |
-| `aav_goto` | `/localization/odom/global`, `/sensors/gps/fix`, `/safety/estop`, the watchdog's lock, `/system/source`, `/control/cmd_vel` | `/drivers/goto/cmd_vel` | the action `/goto`; calls `/fromLL` for a lat/lon B. `pixi run goto` ([A to B](a-to-b.md)) |
+| `aav_drive_to_point` | `/localization/odom/global`, `/sensors/gps/fix`, `/safety/estop`, the watchdog's lock, `/system/source`, `/control/cmd_vel` | `/drivers/point/cmd_vel` | the action `/drive_to_point`; calls `/fromLL` for a lat/lon B. `pixi run drive-to-point` ([A to B](a-to-b.md)) |
 | `aav_language` | your words; odometry, GPS, `/diagnostics`, `/vehicle/status` | `/safety/estop` (true only) | calls `/scripted_drive` and `/follow_gps_waypoints`; never publishes a velocity |
 | `aav_navigation` | `/localization/odom/local`, `/map`, `/goal_pose` | `/drivers/nav/cmd_vel`, `/plan` | SmacPlannerHybrid and MPPI (or Regulated Pure Pursuit); GPS waypoints through `/follow_gps_waypoints` |
 | `aav_command_mux` (twist_mux) | every `/drivers/<driver>/cmd_vel`, `/safety/estop` | `/control/cmd_vel` | priorities: [Build a driver](howto-driver.md) |
@@ -124,7 +124,7 @@ Only one runs at a time.
 
 | Package | Holds |
 |---|---|
-| `aav_interfaces` | 9 messages: `VehicleStatus` (mode, armed, e-stop, speed, steering, throttle, brake, fault bits), `ActuatorState`, `DataSource`, `SensorSource`, `SourceCheck`, `Heartbeat`, `RcSticks`, `SpineOutputs`, `WheelSpeeds`; 2 actions: `ScriptedDrive`, `GoTo` |
+| `aav_interfaces` | 9 messages: `VehicleStatus` (mode, armed, e-stop, speed, steering, throttle, brake, fault bits), `ActuatorState`, `DataSource`, `SensorSource`, `SourceCheck`, `Heartbeat`, `RcSticks`, `SpineOutputs`, `WheelSpeeds`; 2 actions: `ScriptedDrive`, `DriveToPoint` |
 | `aav_bringup` | the profiles `turtle`, `sim`, `bench`, `car`, `carla`, `replay`; `stack.launch.py target:=`; `foxglove.launch.py`; the machine files `orin`, `motor_pi`, `laptop`, `all`, which pick the car's parts, perception too; the RViz layouts |
 
 ## Firmware

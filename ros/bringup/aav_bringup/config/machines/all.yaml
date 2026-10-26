@@ -7,7 +7,7 @@ parts:
   ego: true
   teleop: true
   scripted: true
-  goto: true
+  drive_to_point: true
   imu: true
   gps: true
   radar: false

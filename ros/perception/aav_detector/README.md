@@ -70,7 +70,7 @@ is in `docs/model-comparison.md`.
 ## Invariants
 
 - The logic modules have no ROS imports, and their own tests.
-- The stop sign lock is twist_mux priority 30. It holds goto (25), Nav2 (20) and the AI slot
+- The stop sign lock is twist_mux priority 30. It holds the point driver (25), Nav2 (20) and the AI slot
   (10), never a person or a test script. It can only stop the car.
 - The lock never expires on silence: if `stop_sign_watcher` dies while on, the car stays stopped.
 - Stop rule: distance = `focal_px` x `sign_height_m` / box height. Lock on for `hold_s`,

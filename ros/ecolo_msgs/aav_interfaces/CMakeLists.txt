@@ -16,7 +16,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Heartbeat.msg"
   "msg/RcSticks.msg"
   "action/ScriptedDrive.action"
-  "action/GoTo.action"
+  "action/DriveToPoint.action"
   DEPENDENCIES std_msgs
 )
 

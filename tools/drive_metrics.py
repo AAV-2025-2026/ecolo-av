@@ -379,7 +379,7 @@ def svg(bounds, tracks, blocks=(), marks=(), scale=8.0):
 
 SMOOTH = 0.5        # s: the moving average's width, for deceleration and jerk
 REACH = 0.9         # of the set speed: "up to speed" (the 90 % rise time)
-CREEP = 0.15        # m/s: slower than this, short of the stop, the car creeps (goto asks 0.1)
+CREEP = 0.15        # m/s: slower than this, short of the stop, the car creeps (point_driver: 0.1)
 LAST_METRE = 1.0    # m: the final approach the creep is counted over
 
 

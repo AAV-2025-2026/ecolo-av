@@ -2,8 +2,8 @@
 
 import math
 
-from aav_goto.line import (bearing_error, Line, min_radius, Pose, pursuit_curvature,
-                           reachable, to_car, turn_speed_limit, wrap)
+from aav_drive_to_point.line import (bearing_error, Line, min_radius, Pose, pursuit_curvature,
+                                     reachable, to_car, turn_speed_limit, wrap)
 import pytest
 
 R = min_radius(1.57, 0.5)

@@ -69,7 +69,7 @@ Modules:
   goal can never wedge the server.
 - Cancelling slows down at `deceleration` and stops; it never cuts to zero mid-speed.
 - Ends at once (zero, then the 5 zeros below) on an e-stop, or when someone else drives
-  (twist_mux passing another command for 0.3 s, as `aav_goto`). A `hold_distance` goal
+  (twist_mux passing another command for 0.3 s, as `aav_drive_to_point`). A `hold_distance` goal
   whose odometry stops arriving slows down and ends. twist_mux's e-stop lock holds it
   anyway; this makes the goal end instead of waiting.
 - Each goal ends with 5 zero commands, so twist_mux sees the stop.

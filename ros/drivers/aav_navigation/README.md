@@ -84,7 +84,7 @@ Files:
   | forward (or standing) | front bumper to 1 m ahead |
   | reversing | rear bumper to 1 m behind |
 - The ghost only adds obstacles; it never clears or hides a real one.
-- Nav2 is a driver like any other: below every person, test, script and goto in
+- Nav2 is a driver like any other: below every person, test, script and the point driver in
   twist_mux; the stop-sign and sensor locks (30) hold it.
 - Map frame x east, y north; origin = the navsat datum.
 

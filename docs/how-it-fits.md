@@ -51,7 +51,7 @@ topic. None of them knows what kind of vehicle it's driving.
 | Actuator tests: measure the car (stages 3-4) | `/drivers/tests/cmd_vel` | 60 |
 | Scripted: speed up, hold, slow down | `/drivers/scripted/cmd_vel` | 50 |
 | Replay of a recorded drive | `/drivers/replay/cmd_vel` | 40 |
-| Goto: drive to one GPS point and stop | `/drivers/goto/cmd_vel` | 25 |
+| Drive to point: drive to one GPS point and stop | `/drivers/point/cmd_vel` | 25 |
 | Nav2: drive to a point on the map | `/drivers/nav/cmd_vel` | 20 |
 | AI | `/drivers/ai/cmd_vel` | 10, later |
 

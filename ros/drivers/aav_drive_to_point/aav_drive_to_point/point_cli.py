@@ -1,19 +1,20 @@
 """
-goto: drive the car to a point and stop there (a client of goto_driver's /goto action).
+drive_to_point: drive the car to a point and stop there (point_driver's /drive_to_point).
 
-    pixi run goto --sim --ahead 20                  Gazebo: 20 m ahead of the car
-    pixi run goto --sim --ahead 30 --left 10        ... and 10 m to its left
-    pixi run goto --sim --x 30 --y 5                a point on the map (x east, y north, m)
-    pixi run goto --lat 45.38630 --lon -75.69580    the real car: a GPS point
-    pixi run goto --lat ... --lon ... --speed 0.5   slower (ego caps it anyway)
+    pixi run drive-to-point --sim --ahead 20                 Gazebo: 20 m ahead of the car
+    pixi run drive-to-point --sim --ahead 30 --left 10       ... and 10 m to its left
+    pixi run drive-to-point --sim --x 30 --y 5               a map point (x east, y north, m)
+    pixi run drive-to-point --lat 45.38630 --lon -75.69580   the real car: a GPS point
+    pixi run drive-to-point --lat ... --lon ... --speed 0.5  slower (ego caps it anyway)
 
 Ctrl-C stops the car (it cancels the goal: zero commands). On the real car (/system/source
 REAL, or nobody announcing) it shows what it will do and a checklist, and drives only after
-you type "goto". --sim keeps ROS on this computer (tools/goto.sh) and uses Gazebo's clock.
+you type "drive". --sim keeps ROS on this computer (tools/drive_to_point.sh) and uses
+Gazebo's clock.
 
 Subscribes  system/source             aav_interfaces/DataSource, latched
             localization/odom/global  nav_msgs/Odometry: for --ahead/--left, and the distance
-Calls       /goto                     aav_interfaces/action/GoTo
+Calls       /drive_to_point                     aav_interfaces/action/DriveToPoint
 """
 
 import argparse
@@ -23,8 +24,8 @@ import sys
 import time
 
 from aav_actuator_tests.safety import Kind, LOT_CHECKLIST, source_kind
-from aav_goto import rules
-from aav_interfaces.action import GoTo
+from aav_drive_to_point import rules
+from aav_interfaces.action import DriveToPoint
 from aav_interfaces.msg import DataSource
 from nav_msgs.msg import Odometry
 import rclpy
@@ -34,13 +35,14 @@ from rclpy.parameter import Parameter
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
 
-PHASES = {GoTo.Feedback.PHASE_TURN: 'turning', GoTo.Feedback.PHASE_ACCELERATE: 'speeding up',
-          GoTo.Feedback.PHASE_HOLD: 'cruising', GoTo.Feedback.PHASE_DECELERATE: 'slowing',
-          GoTo.Feedback.PHASE_STOPPING: 'stopping'}
+FEEDBACK = DriveToPoint.Feedback
+PHASES = {FEEDBACK.PHASE_TURN: 'turning', FEEDBACK.PHASE_ACCELERATE: 'speeding up',
+          FEEDBACK.PHASE_HOLD: 'cruising', FEEDBACK.PHASE_DECELERATE: 'slowing',
+          FEEDBACK.PHASE_STOPPING: 'stopping'}
 
 
 def parse(argv):
-    ap = argparse.ArgumentParser(prog='goto', description=__doc__.split('\n')[1])
+    ap = argparse.ArgumentParser(prog='drive-to-point', description=__doc__.split('\n')[1])
     ap.add_argument('--lat', type=float, help='degrees north (with --lon)')
     ap.add_argument('--lon', type=float, help='degrees east (with --lat)')
     ap.add_argument('--x', type=float, help='m east of the datum, map frame (with --y)')
@@ -64,7 +66,7 @@ def parse(argv):
 class Client(Node):
 
     def __init__(self, sim):
-        super().__init__('goto_cli', parameter_overrides=[Parameter('use_sim_time', value=sim)])
+        super().__init__('point_cli', parameter_overrides=[Parameter('use_sim_time', value=sim)])
         latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                              durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.sources, self.odom = {}, None
@@ -73,7 +75,7 @@ class Client(Node):
                                      {m.announcer: [s.source for s in m.sensors]}), latched)
         self.create_subscription(Odometry, 'localization/odom/global',
                                  lambda m: setattr(self, 'odom', m), 10)
-        self.action = ActionClient(self, GoTo, 'goto')
+        self.action = ActionClient(self, DriveToPoint, 'drive_to_point')
 
     def spin_for(self, seconds, until=None):
         end = time.monotonic() + seconds
@@ -98,7 +100,7 @@ def say(text=''):
 
 def build_goal(a, pose):
     """Return (the goal, a description of B), or (None, why not)."""
-    goal = GoTo.Goal(cruise_speed=float(a.speed))
+    goal = DriveToPoint.Goal(cruise_speed=float(a.speed))
     if a.lat is not None:
         goal.use_lat_lon, goal.latitude, goal.longitude = True, a.lat, a.lon
         return goal, f'lat {a.lat:.7f}, lon {a.lon:.7f}'
@@ -162,7 +164,8 @@ def run(node, a):
             return 1
         goal.confirmed = True
     if not node.action.wait_for_server(timeout_sec=5.0):
-        say('REFUSED: no /goto action: is goto_driver running? (sim, bench and car start it)')
+        say('REFUSED: no /drive_to_point action: is point_driver running? (sim, bench and car '
+            'start it)')
         return 1
 
     last = {'t': 0.0}
@@ -181,7 +184,7 @@ def run(node, a):
         node.spin_for(10.0, sent.done)
         handle = sent.result() if sent.done() else None
         if handle is None or not handle.accepted:
-            say('REFUSED: goto_driver would not take it (another drive is running?)')
+            say('REFUSED: point_driver would not take it (another drive is running?)')
             return 1
         done = handle.get_result_async()
         while not done.done():

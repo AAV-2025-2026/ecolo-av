@@ -17,9 +17,16 @@ try:
     HAVE_ROS = True
 except ImportError:
     HAVE_ROS = False
+try:
+    from aav_interfaces.action import DriveToPoint     # our messages: through tools/ros.sh
+    HAVE_OURS = HAVE_ROS
+except ImportError:
+    HAVE_OURS = False
 
 # Not importorskip, and not at module level: the CSV tests run everywhere.
 needs_ros = pytest.mark.skipif(not HAVE_ROS, reason='needs rosbag2_py (ROS 2)')
+needs_ours = pytest.mark.skipif(not HAVE_OURS,
+                                reason='needs aav_interfaces: tools/ros.sh python3 -m pytest')
 
 RATE = 100.0
 
@@ -86,7 +93,7 @@ def test_the_datum_comes_from_navsat_yaml():
     assert ab.load_datum() == pytest.approx((45.3860, -75.6960))
 
 
-def test_b_from_the_gotos_feedback():
+def test_b_from_the_point_drivers_feedback():
     b, heading = (20.0, 5.0), math.radians(30.0)
     ux, uy = math.cos(heading), math.sin(heading)
     ekf, feedback = [], []
@@ -227,3 +234,63 @@ def test_a_bag_reads_as_the_csv_does(tmp_path):
     assert row['coast_m'] == pytest.approx(0.5, abs=1e-6)
     # --start/--end count from the bag's first message.
     assert ab.cut(got, 0.0, 2.0)['ekf'][-1][0] - got['ekf'][0][0] == pytest.approx(2.0)
+
+
+NEW = {'cmd': '/drivers/point/cmd_vel', 'feedback': '/drive_to_point/_action/feedback',
+       'type': 'aav_interfaces/action/DriveToPoint_FeedbackMessage'}
+# aav_goto's names, before 26 Oct: bags recorded then must still score.
+OLD = {'cmd': '/drivers/goto/cmd_vel', 'feedback': '/goto/_action/feedback',
+       'type': 'aav_interfaces/action/GoTo_FeedbackMessage'}
+
+
+@pytest.mark.parametrize('names', [NEW, OLD], ids=['new', 'before-26-oct'])
+def test_the_point_drivers_topics_new_names_and_old(names):
+    types = {ab.EKF: 'nav_msgs/msg/Odometry',
+             '/control/cmd_vel': 'geometry_msgs/msg/TwistStamped',
+             names['cmd']: 'geometry_msgs/msg/TwistStamped',
+             names['feedback']: names['type']}
+    command, feedback, wanted = ab.bag_topics(types)
+    assert (command, feedback) == (names['cmd'], names['feedback'])
+    # The old action type reads as the new one: the same fields.
+    assert wanted[feedback] == NEW['type']
+    assert set(wanted) == {ab.EKF, names['cmd'], names['feedback']}
+    # Neither recorded: /control/cmd_vel, and no feedback.
+    command, feedback, _ = ab.bag_topics({ab.EKF: 'nav_msgs/msg/Odometry',
+                                          '/control/cmd_vel': 'geometry_msgs/msg/TwistStamped'})
+    assert (command, feedback) == ('/control/cmd_vel', None)
+
+
+@needs_ours
+@pytest.mark.parametrize('names', [NEW, OLD], ids=['new', 'before-26-oct'])
+def test_a_bag_with_the_point_drivers_feedback_finds_b(tmp_path, names):
+    """A recorded drive to B = (20, 0): B comes from the feedback, under either name."""
+    uri = str(tmp_path / 'bag')
+    writer = rosbag2_py.SequentialWriter()
+    writer.open(rosbag2_py.StorageOptions(uri=uri, storage_id='mcap'),
+                rosbag2_py.ConverterOptions('cdr', 'cdr'))
+    topics = [(ab.EKF, 'nav_msgs/msg/Odometry'),
+              (names['cmd'], 'geometry_msgs/msg/TwistStamped'),
+              (names['feedback'], names['type'])]
+    for i, (name, kind) in enumerate(topics):
+        writer.create_topic(rosbag2_py.TopicMetadata(id=i, name=name, type=kind,
+                                                     serialization_format='cdr'))
+    t0 = 1_700_000_000 * 10 ** 9
+    for i in range(16):
+        stamp = t0 + i * 10 ** 9
+        odom = Odometry()
+        odom.pose.pose.position.x = float(i + 4)
+        odom.twist.twist.linear.x = 1.0
+        writer.write(ab.EKF, serialize_message(odom), stamp)
+        cmd = TwistStamped()
+        cmd.twist.linear.x = 1.0
+        writer.write(names['cmd'], serialize_message(cmd), stamp)
+        fb = DriveToPoint.Impl.FeedbackMessage()
+        fb.goal_id.uuid = [7] * 16
+        fb.feedback.phase = 2
+        fb.feedback.distance_left = 20.0 - (i + 4)
+        writer.write(names['feedback'], serialize_message(fb), stamp)
+    del writer
+    run = ab.read_run(uri)
+    assert len(run['cmd']) == 16 and len(run['feedback']) == 16
+    _, b = ab.goal_from_feedback(run['ekf'], run['feedback'])
+    assert b == (pytest.approx(20.0), pytest.approx(0.0, abs=1e-6))

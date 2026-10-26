@@ -1,7 +1,7 @@
 """
 One drive to B, tick by tick: the speed (approach.py) and the steering (line.py) together.
 
-No ROS here. goto_driver.py gives it the pose and the speed from the global EKF, and
+No ROS here. point_driver.py gives it the pose and the speed from the global EKF, and
 publishes what it returns: a speed and a curvature (TwistStamped: angular.z = v * k).
 """
 
@@ -11,9 +11,9 @@ from dataclasses import dataclass
 import math
 from typing import Optional
 
-from aav_goto.approach import Approach, STOPPING, TURN
-from aav_goto.line import (bearing_error, Line, Point, Pose, pursuit_curvature,
-                           turn_speed_limit)
+from aav_drive_to_point.approach import Approach, STOPPING, TURN
+from aav_drive_to_point.line import (bearing_error, Line, Point, Pose, pursuit_curvature,
+                                     turn_speed_limit)
 
 
 @dataclass(frozen=True)

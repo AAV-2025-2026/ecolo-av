@@ -2,8 +2,8 @@
 
 import math
 
-from aav_goto.approach import (ACCELERATE, Approach, DECELERATE, HOLD, planned_deceleration,
-                               STOPPING, stopping_distance)
+from aav_drive_to_point.approach import (ACCELERATE, Approach, DECELERATE, HOLD,
+                                         planned_deceleration, STOPPING, stopping_distance)
 import pytest
 
 

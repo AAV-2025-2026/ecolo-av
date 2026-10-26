@@ -41,7 +41,7 @@ Every message starts with `std_msgs/Header header`, except `SensorSource` (an en
 | Action | Server | Goal | Result | Feedback |
 |---|---|---|---|---|
 | `ScriptedDrive` | aav_scripted `scripted_driver` | `target_speed` (m/s, − reverse), `acceleration`, `deceleration` (m/s²), `hold_time` (s), `hold_distance` (m, 0 = use time), `curvature` (1/m, + left) | `success`, `message`, `distance_travelled` (m), `duration` (s) | `phase` (`ACCELERATE`, `HOLD`, `DECELERATE`, `STOPPED`), `commanded_speed`, `measured_speed`, `distance_travelled` |
-| `GoTo` | aav_goto `goto_driver` | `use_lat_lon`, `latitude`, `longitude` (deg), `x`, `y` (m, map), `cruise_speed` (m/s), `acceleration`, `deceleration` (m/s², 0 = default), `confirmed` | `success`, `message`, `target_x`, `target_y`, `distance_left`, `tolerance` (m), `distance_travelled` (m), `duration` (s) | `phase` (`TURN`, `ACCELERATE`, `HOLD`, `DECELERATE`, `STOPPING`), `distance_left`, `cross_track` (m, + left), `commanded_speed`, `measured_speed` |
+| `DriveToPoint` | aav_drive_to_point `point_driver` | `use_lat_lon`, `latitude`, `longitude` (deg), `x`, `y` (m, map), `cruise_speed` (m/s), `acceleration`, `deceleration` (m/s², 0 = default), `confirmed` | `success`, `message`, `target_x`, `target_y`, `distance_left`, `tolerance` (m), `distance_travelled` (m), `duration` (s) | `phase` (`TURN`, `ACCELERATE`, `HOLD`, `DECELERATE`, `STOPPING`), `distance_left`, `cross_track` (m, + left), `commanded_speed`, `measured_speed` |
 
 ## Invariants
 
@@ -51,7 +51,7 @@ Every message starts with `std_msgs/Header header`, except `SensorSource` (an en
 - NaN means "not known" in `ActuatorState` and `WheelSpeeds`.
 - `Heartbeat`'s counter only rises while the output mux's gate is open. The ESP32 brakes
   when it hasn't changed for 100 ms.
-- `GoTo` with `/system/source` REAL needs `confirmed` (a person said yes).
+- `DriveToPoint` with `/system/source` REAL needs `confirmed` (a person said yes).
 - A new type goes in `CMakeLists.txt`'s `rosidl_generate_interfaces` list, and in
   `docs/interfaces.yaml` where a topic uses it.
 

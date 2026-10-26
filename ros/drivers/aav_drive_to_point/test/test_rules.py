@@ -1,8 +1,8 @@
 """When a drive to B may start, when it must stop, and how close is close enough."""
 
 from aav_actuator_tests.safety import Kind
-from aav_goto import rules
-from aav_goto.line import min_radius, Pose
+from aav_drive_to_point import rules
+from aav_drive_to_point.line import min_radius, Pose
 
 LIMITS = rules.Limits()
 GOOD = rules.Now(pose_age=0.1, fix_age=0.3, estop=False, locked=False, kind=Kind.SIM)
@@ -74,7 +74,7 @@ def test_tolerance_is_1_m_with_rtk_and_2_m_without():
 
 
 def test_confirmation_is_the_word_exactly():
-    assert rules.confirmed('goto') and rules.confirmed(' goto\n')
+    assert rules.confirmed('drive') and rules.confirmed(' drive\n')
     assert not rules.confirmed('yes') and not rules.confirmed(None) and not rules.confirmed('')
 
 

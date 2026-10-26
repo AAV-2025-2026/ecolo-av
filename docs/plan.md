@@ -222,7 +222,7 @@ For the team to decide; then change one of them.
 | D1 | Topic names such as `/control/cmd`, `/vehicle/ackermann_cmd`, `/odometry/local` (section 3.3) | `/control/cmd_vel`, `/ego/actuator_cmd`, `/localization/odom/local` ([naming](naming.md)) | change the proposal's table: the repo's names are built and tested |
 | D2 | Hall-sensor wheel nodes on Arduino Unos, in Arduino C++ | the rule "Rust for all firmware" (Ben, 10 Oct); the wheel logic in Rust (`wheel-core`) and the Pico 2 wheel encoder | ✅ **decided 23 Oct** by the hardware lead (passed on by Ben): an Arduino reads the sensors and sends CAN frames; the Orin decodes them and publishes. The proposal stands |
 | D3 | A sensor mux and an output mux as nodes; `target:=`, `source:=` | built 23 Oct as nodes (`aav_io_mux`). The sensor mux **checks** where each sensor comes from instead of republishing it (no doubled camera or lidar traffic); the launch picks the source | agree "check, not copy" ([why](sources-and-targets.md#why-check-not-copy)), and change the proposal's wording |
-| D4 | The stop-at-distance planner inside ego (T5.3) | inside the A-to-B driver (`aav_goto`) | either; ego is where the proposal promises it |
+| D4 | The stop-at-distance planner inside ego (T5.3) | inside the A-to-B driver (`aav_drive_to_point`) | either; ego is where the proposal promises it |
 | D5 | MPPI a stretch goal in March (T7.9) | switchable and compared now | put MPPI in the committed plan, in Gazebo; on the car as the stretch |
 | D6 | Ego enforces the lateral acceleration (T5.4) | done 22 Oct, with the car's weight | the proposal can cite it |
 

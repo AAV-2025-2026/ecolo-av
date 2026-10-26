@@ -40,7 +40,8 @@ Parts and what they start:
                   and so the backends, only while every source is REAL
   teleop          joystick -> /drivers/joy/cmd_vel, e-stop button -> /safety/estop
   scripted        /scripted_drive action -> /drivers/scripted/cmd_vel
-  goto            /goto action (drive to a GPS point, stop there) -> /drivers/goto/cmd_vel
+  drive_to_point  /drive_to_point action (drive to a GPS point, stop there)
+                  -> /drivers/point/cmd_vel
   imu, gps,       sensor drivers (on the machine the device is plugged into);
   radar, battery  gps_driver picks the GPS's: ublox (the default), nmea or ublox_dgnss
   lidar           the roof Velodyne VLP-16, through the stock velodyne driver ->
@@ -107,8 +108,8 @@ from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
 import yaml
 
-PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'goto', 'imu', 'gps', 'radar',
-         'lidar', 'battery', 'camera', 'camera_stream', 'detector', 'stop_signs',
+PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'drive_to_point', 'imu', 'gps',
+         'radar', 'lidar', 'battery', 'camera', 'camera_stream', 'detector', 'stop_signs',
          'radar_clusters',
          'camera_obstacles', 'lane', 'localization', 'navigation', 'spine', 'legacy_uart',
          'legacy_encoder', 'foxglove')
@@ -432,8 +433,8 @@ def launch_setup(context):
         actions.append(include('aav_teleop', 'teleop.launch.py'))
     if on('scripted'):
         actions.append(include('aav_scripted', 'scripted.launch.py'))
-    if on('goto'):
-        actions.append(include('aav_goto', 'goto.launch.py'))
+    if on('drive_to_point'):
+        actions.append(include('aav_drive_to_point', 'drive_to_point.launch.py'))
     if any(on(s) for s in ('imu', 'gps', 'radar', 'lidar', 'battery')):
         actions.append(include('aav_sensors', 'sensors.launch.py',
                                imu=on('imu'), gps=on('gps'), radar=on('radar'), lidar=on('lidar'),

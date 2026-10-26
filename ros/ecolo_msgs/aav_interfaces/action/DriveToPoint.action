@@ -1,5 +1,5 @@
 # Drive to one point B and stop there smoothly: speed up, hold, slow down by distance left.
-# Server: aav_goto (goto_driver), publishing /drivers/goto/cmd_vel (twist_mux priority 25).
+# Server: aav_drive_to_point (point_driver), publishing /drivers/point/cmd_vel (twist_mux priority 25).
 # B is where base_link (the ground under the rear axle) stops. Forward only.
 # Cancelling the goal stops the car at once (zero commands; ego's own deceleration).
 

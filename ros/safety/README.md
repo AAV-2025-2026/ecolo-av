@@ -14,7 +14,7 @@ drivers; they never move the car, and they never hold back a person on the joyst
 
 ## Invariants
 
-- The watchdog lock (priority 30) holds Nav2, goto and the AI slot only, never people or tests.
+- The watchdog lock (priority 30) holds Nav2, the point driver and the AI slot only, never people or tests.
 - Fail-safe: 1 s without a lock message counts as locked.
 - JUMP, DISAGREE and LOST latch until a person clears them (`/safety/sensor_watchdog/clear`).
 - A ghost only ever adds an obstacle.

@@ -47,12 +47,12 @@ How twist_mux picks:
 | actuator tests | `/drivers/tests/cmd_vel` | 60 |
 | scripted test | `/drivers/scripted/cmd_vel` | 50 |
 | replay | `/drivers/replay/cmd_vel` | 40 |
-| goto (drive to a GPS point) | `/drivers/goto/cmd_vel` | 25 |
+| point (drive to a GPS point) | `/drivers/point/cmd_vel` | 25 |
 | Nav2 | `/drivers/nav/cmd_vel` | 20 |
 | AI (lane keeping) | `/drivers/ai/cmd_vel` | 10 |
 | **lock:** `/safety/estop` true | blocks everyone below 255 | 255 |
-| **lock:** `/perception/stop_sign` true | blocks goto, Nav2 and AI | 30 |
-| **lock:** `/safety/sensor_watchdog/lock` true, or silent 1 s | blocks goto, Nav2 and AI | 30 |
+| **lock:** `/perception/stop_sign` true | blocks point, Nav2 and AI | 30 |
+| **lock:** `/safety/sensor_watchdog/lock` true, or silent 1 s | blocks point, Nav2 and AI | 30 |
 
 A driver counts while its last message is under 0.5 s old. Let go of the trigger and,
 0.5 s later, twist_mux hands control to the next driver.

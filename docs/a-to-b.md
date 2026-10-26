@@ -5,8 +5,8 @@ A to point B, speeding up, holding a speed, slowing down and stopping. This is t
 request's "accelerate / hold / stop" demo, and the first step to GPS point-to-point.
 
 > **The short version**
-> - There are **three ways**. All three exist now: the third, the goto driver (`aav_goto`), was built on 15 Oct for the main goal.
-> - **`pixi run goto --lat .. --lon ..`** drives to B and stops there, slowing at **half the measured braking**.
+> - There are **three ways**. All three exist now: the third, the point driver (`aav_drive_to_point`), was built on 15 Oct for the main goal. Until 26 Oct it was called `aav_goto` (`pixi run goto`, action `/goto`).
+> - **`pixi run drive-to-point --lat .. --lon ..`** drives to B and stops there, slowing at **half the measured braking**.
 > - A straight drive in an empty lot needs **no costmap and no map**: only "where am I" and "where is B".
 > - The hard part isn't the driving. It's **knowing where the car is and which way it faces** at the start.
 > - Test it on the turtle, then the bench, then Gazebo, then the car on stands, then the car.
@@ -14,7 +14,7 @@ request's "accelerate / hold / stop" demo, and the first step to GPS point-to-po
 
 ## 1. The three ways
 
-| | 1. Scripted drive | 2. Nav2 to a GPS point | 3. The goto driver (`aav_goto`) |
+| | 1. Scripted drive | 2. Nav2 to a GPS point | 3. The point driver (`aav_drive_to_point`) |
 |---|---|---|---|
 | Idea | drive a speed profile: speed up, hold for a distance, stop | give Nav2 point B as latitude/longitude; it plans and steers | drive the straight line from A to B, holding the line, and stop at B |
 | Needs GPS? | no | yes | yes |
@@ -22,8 +22,8 @@ request's "accelerate / hold / stop" demo, and the first step to GPS point-to-po
 | Stops exactly at B? | no: after a distance from the start | yes, within Nav2's goal tolerance | yes |
 | Speed profile you choose? | **yes**: acceleration, speed, deceleration | roughly: Nav2's limits (1 m/s, 1 m/s²) | **yes** |
 | Avoids obstacles? | no | **yes** (costmap, collision_monitor) | no: an open lot, a safety driver |
-| Exists today? | ✅ `aav_scripted` | ✅ Nav2 + `navsat_transform` | ✅ `aav_goto` (15 Oct) |
-| Tested | turtle, bench | Gazebo (goals of 8 m and 9.5 m), bench (40 m) | Gazebo: 10-60 m, any angle, 1 and 3 m/s ([section 4](#4-way-3-the-goto-driver)) |
+| Exists today? | ✅ `aav_scripted` | ✅ Nav2 + `navsat_transform` | ✅ `aav_drive_to_point` (15 Oct) |
+| Tested | turtle, bench | Gazebo (goals of 8 m and 9.5 m), bench (40 m) | Gazebo: 10-60 m, any angle, 1 and 3 m/s ([section 4](#4-way-3-the-point-driver)) |
 | Best for | the first drive on the car | point-to-point with obstacles | **the main goal**: GPS A to B with a smooth stop |
 
 **Recommendation:** start with **1** on the car on stands, then on the ground. Then **3**
@@ -80,12 +80,12 @@ ros2 action send_goal /follow_gps_waypoints nav2_msgs/action/FollowGPSWaypoints 
 - Nav2's speed: up to 1.0 m/s, speeding up at up to 1.0 m/s², slowing near the goal (`nav2.yaml`).
 - The radar and the roof lidar still fill the local costmap, and collision_monitor still stops for something ahead.
 
-## 4. Way 3: the goto driver
+## 4. Way 3: the point driver
 
-`aav_goto` drives to one point B and stops there. B is a GPS point (lat/lon) or a map point.
+`aav_drive_to_point` drives to one point B and stops there. B is a GPS point (lat/lon) or a map point.
 
 ```text
- pixi run goto ──► /goto action ──► goto_driver ──► /drivers/goto/cmd_vel ──► twist_mux (25) ──► ego
+ pixi run drive-to-point ──► /drive_to_point action ──► point_driver ──► /drivers/point/cmd_vel ──► twist_mux (25) ──► ego
    lat/lon ──► /fromLL (navsat_transform) ──► B on the map
    /localization/odom/global (wheels + IMU + GPS) ──► where the car is, how fast
 ```
@@ -114,7 +114,7 @@ late, the distance shrinks faster and the command drops to match.
 
 ### Why a line driver, and not Nav2 or the scripted drive
 
-| Question | Line driver (goto) | Nav2 | Scripted |
+| Question | Line driver (point) | Nav2 | Scripted |
 |---|---|---|---|
 | Stops **at B**, wherever it started? | yes: speed from the distance left | yes, within its goal tolerance | no: after a distance |
 | Slows at **half the measured braking**? | yes: one number from `vehicle.yaml` | no: its controller and smoother have their own limits | yes, but not ending at B |
@@ -134,24 +134,24 @@ wherever it is, so the stop doesn't land on B. `approach.py` explains it at the 
 | Stops at once | Ctrl-C (cancels the goal), the e-stop, the watchdog's lock **or its silence**, a stale position (0.5 s) or GPS fix (2 s), someone else driving, or the car not moving though asked |
 | Refuses | a B over **200 m** away, no position, a B inside the car's tightest turn (it can't reverse) |
 | Obeys ego | asks ego for its caps (1 m/s on the car) and plans with them |
-| Asks first on the real car | `/system/source` REAL (or nobody announcing): a checklist, then you type `goto`, as in the [actuator tests](actuator-tests.md) |
+| Asks first on the real car | `/system/source` REAL (or nobody announcing): a checklist, then you type `drive`, as in the [actuator tests](actuator-tests.md) |
 
 ### Run it
 
 ```bash
-pixi run sim                                     # Gazebo, in one terminal
-pixi run goto --sim --ahead 20                   # 20 m ahead of the car
-pixi run goto --sim --ahead 30 --left 10         # ... and 10 m to its left
-pixi run goto --sim --x 30 --y 5                 # a map point (x east, y north, metres)
-pixi run goto --lat 45.38630 --lon -75.69580     # the real car: a GPS point; it asks first
-pixi run sim-check --goto-only                   # the Gazebo proof below (8 minutes)
+pixi run sim                                               # Gazebo, in one terminal
+pixi run drive-to-point --sim --ahead 20                   # 20 m ahead of the car
+pixi run drive-to-point --sim --ahead 30 --left 10         # ... and 10 m to its left
+pixi run drive-to-point --sim --x 30 --y 5                 # a map point (x east, y north, metres)
+pixi run drive-to-point --lat 45.38630 --lon -75.69580     # the real car: a GPS point; it asks first
+pixi run sim-check --drive-to-point-only                   # the Gazebo proof below (8 minutes)
 ```
 
-Or the action itself: `ros2 action send_goal /goto aav_interfaces/action/GoTo "{x: 20.0, y: 0.0}" --feedback`.
+Or the action itself: `ros2 action send_goal /drive_to_point aav_interfaces/action/DriveToPoint "{x: 20.0, y: 0.0}" --feedback`.
 
 ### Proven in Gazebo (15 Oct)
 
-`pixi run sim-check --goto-only`, Gazebo's truth as the judge:
+`pixi run sim-check --drive-to-point-only`, Gazebo's truth as the judge:
 
 | Check | Result |
 |---|---|
@@ -168,7 +168,7 @@ Untested on the bench and on the car: the car needs the brake test (4.3) for `ma
 its speed, and stopped on B. The same numbers for Gazebo and for the car.
 
 ```bash
-pixi run atob-score bags/<run>                              # B from the goto's feedback
+pixi run atob-score bags/<run>                              # B from the point driver's feedback
 pixi run atob-score bags/<run> --b-latlon 45.38630 -75.69580  # or give B (or --b-xy X Y)
 pixi run atob-score bags/<run> --taped -0.12 0.05           # the car: the tape's stop error
 pixi run atob-score run1.csv run2.csv --json                # CSV runs; JSON out
@@ -217,8 +217,8 @@ splits the two errors. In Gazebo the truth does the tape's job. The B mark is on
 good as the GPS that placed it: average the fix for 30 s (section 5).
 
 To record a run: `tools/record.sh` records the EKF, the wheels and `/control/cmd_vel`.
-For B from the goto's feedback, also record `/goto/_action/feedback` (a hidden topic:
-`ros2 bag record --include-hidden-topics`), `/drivers/goto/cmd_vel`, and in Gazebo
+For B from the point driver's feedback, also record `/drive_to_point/_action/feedback` (a hidden topic:
+`ros2 bag record --include-hidden-topics`), `/drivers/point/cmd_vel`, and in Gazebo
 `/vehicle/gazebo/truth`.
 
 ## 5. "Where am I?" is the hard part
@@ -253,7 +253,7 @@ car moves; then the ZED-F9R's heading if that isn't enough.
 |---|---|
 | Way 1 (scripted) | nothing: no GPS, no map |
 | Way 2 (Nav2) | the empty map (exists) + the datum at the test site + the sensors for obstacles |
-| Way 3 (goto) | the datum, A and B; no costmap. ⚠️ collision_monitor guards only Nav2's commands, not goto's |
+| Way 3 (point driver) | the datum, A and B; no costmap. ⚠️ collision_monitor guards only Nav2's commands, not the point driver's |
 | Later: a route with curbs and lanes | a map of the test site (`tools/make_map.py`), or a lane layer |
 
 To make a map of the test lot: drive the edges, record GPS points, and draw them into a
@@ -265,10 +265,10 @@ map with `tools/make_map.py` (it already makes `empty` and `example_lot`).
 |---|---|---|---|
 | 1 | Turtle | `pixi run turtle`, then the scripted goal above | the speed profile and the action |
 | 2 | Bench | `pixi run bench`, then the scripted goal; `pixi run bench-check` | the same through the real CAN frames and the spine logic |
-| 3 | Gazebo | `pixi run sim`, then the GPS goal above; `pixi run sim-check --goto` | GPS, both EKFs, Nav2, stopping at B; the goto driver's stop |
+| 3 | Gazebo | `pixi run sim`, then the GPS goal above; `pixi run sim-check --drive-to-point` | GPS, both EKFs, Nav2, stopping at B; the point driver's stop |
 | 3b | Gazebo, the whole picture | `pixi run demo`: Gazebo, RViz, the HUD and the map window in one go. Give a goal with RViz's "2D Goal Pose", or the map window's search, then DRIVE HERE and CONFIRM. With a box in the lane and the screens: `pixi run sim obstacle:=true hud:=true map:=true` | Nav2 planning round things, the screens, a goal set by a person |
 | 4 | Car on stands | `pixi run car orin` + `motor_pi`; the scripted goal at 0.3 m/s | the signs, the speed loop, the e-stops |
-| 5 | Car, empty lot | scripted at 0.5 m/s, 10 m; then `pixi run goto --lat .. --lon ..` | the real thing, with a safety driver |
+| 5 | Car, empty lot | scripted at 0.5 m/s, 10 m; then `pixi run drive-to-point --lat .. --lon ..` | the real thing, with a safety driver |
 
 ## 8. What to do first
 
@@ -277,5 +277,5 @@ map with `tools/make_map.py` (it already makes `empty` and `example_lot`).
 | 1 | At the car: find out whether the GPS gives fixes (`ros2 topic hz /sensors/gps/fix`) | the team |
 | 2 | Pick the test lot; measure its datum | the team |
 | 3 | A "mark this spot" tool: average `/sensors/gps/fix` and print lat/lon | small, ours |
-| 4 | The goto driver (way 3) | ✅ built 15 Oct; on the car after the brake test (4.3) gives `max_brake` |
+| 4 | The point driver (way 3) | ✅ built 15 Oct; on the car after the brake test (4.3) gives `max_brake` |
 | 5 | A Gazebo world shaped like the test lot | ours |

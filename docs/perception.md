@@ -42,7 +42,7 @@ The watcher turns the detector's boxes into a lock on twist_mux.
 | Stopping | a stop sign 4.7 m away or closer, with a score of 0.5 or more | on, for 4 s: about 1 s to stop, then a 3 s wait |
 | Passing | after the 4 s | off, and signs are ignored for 10 s, so the car can drive past this one |
 
-- **The lock** has priority 30. It holds goto (25), Nav2 (20) and the AI slot (10), and
+- **The lock** has priority 30. It holds the point driver (25), Nav2 (20) and the AI slot (10), and
   never a person (joystick 100, RC 95, keyboard 90) or a test script (60, 50, 40).
 - **It only stops the car.** It can't make it move.
 - **It never expires on silence.** If the watcher dies while the lock is on, the car stays

@@ -108,7 +108,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `view` | the car's model in RViz |
 | `rviz` | RViz with the driving layout: map, costmaps, path, car |
 | `gz-window` | Gazebo's window again, for a simulator already running |
-| `goto` | drive to one point and stop smoothly: `goto --sim --ahead 20` |
+| `drive-to-point` | drive to one point and stop smoothly: `drive-to-point --sim --ahead 20` |
 | `ghost` | a pretend person in Nav2's view, to test stopping: `ghost ahead 10` |
 | `sim-fault` | make a Gazebo sensor fail on purpose: `sim-fault gps stop`, then `sim-fault gps ok` |
 | `carla-car` | CARLA plays the car: `carla-car host:=<the CARLA computer>` |

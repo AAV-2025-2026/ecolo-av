@@ -1,7 +1,7 @@
 """
-The goto driver's rules: when a drive may start, when it must stop, and how close is close.
+The point driver's rules: when a drive may start, when it must stop, and how close is close.
 
-No ROS here. goto_driver.py asks these on every goal and every tick, and stops the car
+No ROS here. point_driver.py asks these on every goal and every tick, and stops the car
 (zero commands) whenever one gives a reason. Every rule errs towards "this is the real car":
 /system/source's kinds come from the actuator tests' rules (aav_actuator_tests safety.py),
 so the two agree on what REAL means.
@@ -23,19 +23,19 @@ import math
 from typing import Optional
 
 from aav_actuator_tests.safety import Kind
-from aav_goto.line import Point, Pose, reachable
+from aav_drive_to_point.line import Point, Pose, reachable
 
 # sensor_msgs/NavSatStatus.
 STATUS_NO_FIX, STATUS_FIX, STATUS_SBAS_FIX, STATUS_GBAS_FIX = -1, 0, 1, 2
 
 RTK_TOLERANCE = 1.0     # m: docs/tests.md 5.2, with an RTK fix
 GPS_TOLERANCE = 2.0     # m: without
-CONFIRM_WORD = 'goto'   # what a person types to start a drive on the real car
+CONFIRM_WORD = 'drive'   # what a person types to start a drive on the real car
 
 
 @dataclass(frozen=True)
 class Limits:
-    """The driver's own limits (config/goto.yaml)."""
+    """The driver's own limits (config/drive_to_point.yaml)."""
 
     max_distance: float = 200.0   # m: refuse a B further than this
     pose_timeout: float = 0.5     # s without the global EKF: stop
@@ -75,7 +75,7 @@ def refuse_start(now: Now, limits: Limits, confirmed: bool) -> Optional[str]:
     if now.kind in (Kind.REAL, Kind.UNKNOWN) and not confirmed:
         who = ('nobody announced /system/source: treated as the real car'
                if now.kind is Kind.UNKNOWN else '/system/source says REAL')
-        return (f'{who}. A person must confirm: pixi run goto asks you to type '
+        return (f'{who}. A person must confirm: pixi run drive-to-point asks you to type '
                 f'"{CONFIRM_WORD}"')
     return stop_reason(now, limits)
 
@@ -112,7 +112,7 @@ def refuse_target(pose: Pose, target: Point, limits: Limits, radius: float) -> O
     distance = math.hypot(target[0] - pose.x, target[1] - pose.y)
     if distance > limits.max_distance:
         return (f'B is {distance:.0f} m away, over the limit of {limits.max_distance:g} m '
-                '(goto.yaml max_distance)')
+                '(drive_to_point.yaml max_distance)')
     if distance < 0.5:
         return f'the car is at B already ({distance:.2f} m)'
     if not reachable(pose, target, radius):
