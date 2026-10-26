@@ -33,7 +33,7 @@ Each launch file's docstring lists all its arguments. The common ones:
 |---|---|---|
 | `nav`, `teleop`, `rviz`, `foxglove` | sim, bench, carla | Nav2, the joystick, RViz, foxglove_bridge |
 | `perception`, `lane`, `camera_obstacles` | sim, bench | the object detector and the stop-sign watcher; lane keeping; boxes into Nav2's costmap |
-| `hud` | sim, bench | sim: the raylib window (`aav_hud_raylib`); bench: the web back end (`aav_hud`) |
+| `hud` | sim, bench | the HUD window (`aav_hud`, raylib); needs a screen |
 | `bridge:=rust\|python` | sim, bench, car | which `spine_bridge` (`aav_spine.bridges`) |
 | `reversing` | car, sim, bench, carla | may Nav2 back up (at 0.5 m/s at most) |
 | `max_speed`; `sim_speed` | car; sim, carla | the top speed, m/s |

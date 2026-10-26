@@ -153,8 +153,8 @@ From the datum:
 It also:
 - removes the antenna's offset, using TF `base_link → gps_link`: that's why the antenna's
   spot in `vehicle.yaml` matters (and where it is mounted: below);
-- serves `/fromLL` (lat/lon → x, y) and `/toLL` (back). The HUD's route reaches Nav2
-  through `/fromLL`.
+- serves `/fromLL` (lat/lon → x, y) and `/toLL` (back). A street route reaches Nav2
+  through `/fromLL` (`street_router`, [Street routes](routes.md)).
 
 ### Mount the antenna over the rear axle
 

@@ -26,7 +26,7 @@ sources ─▶ localization, perception ─▶ drivers ─▶ command_mux ─▶
 | [can_bridge](./can_bridge/README.md) | the real car's backend: CAN to the spine, or UART to the 2025-26 ESP32 |
 | [sim](./sim/README.md) | stand-in backends: turtlesim, Gazebo, bench mode, CARLA; and `spine_sim` (`aav_spine_sim`), the spine's real logic for bench mode and `sim spine:=true` |
 | [safety](./safety/README.md) | the sensor watchdog and ghost obstacles |
-| [hud](./hud/README.md) | the in-car screens: the new raylib HUD, and the 2025-26 web back end |
+| [hud](./hud/README.md) | the in-car screens: the HUD and the map window (Rust, raylib) |
 | [bringup](./bringup/README.md) | the launch profiles, and `vehicle.yaml`: the only place car measurements live |
 | [ecolo_msgs](./ecolo_msgs/README.md) | the team's own message and action types |
 

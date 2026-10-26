@@ -136,9 +136,9 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 
 | Feature | Why | Who | Date | Status |
 |---|---|---|---|---|
-| HUD back end (`aav_hud`) | Keeps the 2025-26 touchscreen working, on our topics | the 2025-26 team, ported by Ben | 2026-10-10 | sim |
-| Flutter HUD app: e-stop button, Cancel, camera | The app could never reach its back end; now its e-stop stops the bench car in 0.3 s | the 2025-26 team, changed by Ben | 2026-10-11 | sim |
-| [Raylib HUD in Rust](hud.md) (`aav_hud_raylib`), with a SIMULATED banner | One program that is also its ROS node, and nobody mistakes simulated data for the car | Ben | 2026-10-15 | sim |
+| HUD back end (Flask, `hud_server`): **archived 25 Oct** to `archive/2026-27-flutter-hud/` | Kept the 2025-26 touchscreen working, on our topics, until the raylib HUD replaced it (Q29) | the 2025-26 team, ported by Ben | 2026-10-10 | sim |
+| Flutter HUD app: e-stop button, Cancel, camera: **archived 25 Oct** to `archive/2026-27-flutter-hud/` | The app could never reach its back end; then its e-stop stopped the bench car in 0.3 s | the 2025-26 team, changed by Ben | 2026-10-11 | sim |
+| [Raylib HUD in Rust](hud.md) (`aav_hud`), with a SIMULATED banner | One program that is also its ROS node, and nobody mistakes simulated data for the car; it replaced the Flutter app (Q29) | Ben | 2026-10-15 | sim |
 | GO / STOP panel | The safety drivers get one answer at a glance: may the car move, and if not, why | Ben | 2026-10-24 | built |
 | Map window: offline street map and place search | A big-screen map of Nav2's plan over real streets, and a destination picked by name | Ben | 2026-10-15 | sim |
 | Car screens at login | The HUD and the map start on the car's two screens by themselves | Ben | 2026-10-15 | built |

@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">40 min read · 13 sections</div></header>
+<div class="meta">30 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -88,20 +88,41 @@
 <a href="car_measurements.html">Car numbers</a>
 <a class="here" href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-map-window-big-screen">The map window (big screen)</a><a href="#the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</a><a href="#what-the-back-end-reads-and-sends">What the back end reads and sends</a><a href="#the-e-stop-button">The e-stop button</a><a href="#socketio-events-and-web-routes">Socket.IO events and web routes</a><a href="#what-changed-in-the-app-11-october">What changed in the app (11 October)</a><a href="#get-flutter">Get Flutter</a><a href="#test-the-app">Test the app</a><a href="#run-it_2">Run it</a><a href="#on-the-bench-11-october">On the bench (11 October)</a><a href="#the-place-database">The place database</a><a href="#before-running-it-on-the-car">Before running it on the car</a></nav>
-<div class="lead"><p>The 2025-26 team built a touchscreen app for the car. Its back end, <code>aav_hud</code>, is ported
-to our topics (10 October). The app now matches it (11 October): an e-stop button, the
-car's status, and the camera from the back end.</p>
-<p><strong>Decided 11 October (Ben):</strong> the HUD becomes one Rust program, raylib and rclrs, that is
-also its ROS node. Its first screen runs since 15 October:
-<a href="#the-hud-in-rust-raylib">the HUD in Rust</a>. The Flutter app stays until the new one
-matches it. Still open (Q29): which screen, and GPS destinations this year.</p>
+<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-map-window-big-screen">The map window (big screen)</a><a href="#the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</a><a href="#the-place-database">The place database</a></nav>
+<div class="lead"><p>Two raylib programs in one package, <code>ros/hud/aav_hud</code>, each also its own ROS node:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Program</th>
+<th>Node</th>
+<th>Screen</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#the-hud-in-rust-raylib">The HUD</a></td>
+<td><code>hud</code></td>
+<td>the small ~7" touchscreen</td>
+<td>speed, GO / STOP, the e-stop button, the camera, the topics</td>
+</tr>
+<tr>
+<td><a href="#the-map-window-big-screen">The map window</a></td>
+<td><code>map</code></td>
+<td>the big ~15" monitor</td>
+<td>Nav2's map over Ottawa's streets, the plan, place search</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Decided 11 October (Ben):</strong> the HUD is Rust, raylib and rclrs. Its first screen runs
+since 15 October. It replaced the 2025-26 team's Flutter app (Q29), which is now
+<a href="#the-flutter-app-2025-26-archived">archived</a>.</p>
 <p><strong>Two screens (Ben, 15 Oct):</strong> a small ~7" touchscreen is the instrument cluster (the
 HUD), and a big ~15" monitor shows the map: <a href="#the-map-window-big-screen">the map window</a>,
 a second program. Each opens full screen on its own monitor at boot:
 <a href="car-screens.html">The two screens</a>.</p></div>
 <section class="card"><h2 id="the-hud-in-rust-raylib">The HUD in Rust (raylib)</h2>
-<p><code>ros/hud/aav_hud_raylib</code>: one window, which is also the ROS node <code>hud</code>.</p>
+<p><code>ros/hud/aav_hud</code>: one window, which is also the ROS node <code>hud</code>.</p>
 <p><img alt="The driving screen, with pretend data (--demo)" src="../img/hud-raylib.png" /></p>
 <div class="table-wrap"><table>
 <thead>
@@ -282,11 +303,11 @@ one colour:</p>
 </ul>
 <h3 id="run-it">Run it</h3>
 <pre class="highlight"><code class="language-bash">pixi run hud-demo                  # pretend data: no ROS, no car, any Mac
-pixi run build &amp;&amp; pixi run hud     # the real node (ros2 launch aav_hud_raylib hud.launch.py)
+pixi run build &amp;&amp; pixi run hud     # the real node (ros2 launch aav_hud hud.launch.py)
 pixi run hud fullscreen:=true      # full screen; F11 switches too
 pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or number</code></pre>
 <p>Without Pixi: <code>cargo run -p hud-app --no-default-features -- --demo</code>, in
-<code>ros/hud/aav_hud_raylib</code>. The first build compiles raylib (cmake, about a minute).</p>
+<code>ros/hud/aav_hud</code>. The first build compiles raylib (cmake, about a minute).</p>
 <h3 id="how-its-built">How it's built</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -559,7 +580,7 @@ With Gazebo, one command does both: <code>pixi run sim world:=test_lot hud:=true
 nothing publishes that topic there.</p>
 </section>
 <section class="card"><h2 id="the-map-window-big-screen">The map window (big screen)</h2>
-<p><code>ros/hud/aav_hud_raylib</code>, binary <code>map</code>: its own window, which is also the ROS node <code>map</code>.
+<p><code>ros/hud/aav_hud</code>, binary <code>map</code>: its own window, which is also the ROS node <code>map</code>.
 Step 1 (15 October): what Nav2 already knows, drawn north up. Step 2 (15 October): an
 offline street map of Ottawa under it (<a href="#the-street-map-under-it">below</a>). Step 3
 (15 October): <a href="#search-for-a-place-and-drive-there">search for a place</a> and send it to
@@ -656,7 +677,7 @@ Nav2.</p>
 </table></div>
 <h3 id="run-it_1">Run it</h3>
 <pre class="highlight"><code class="language-bash">pixi run map-demo                          # pretend data: no ROS, no car
-pixi run build &amp;&amp; pixi run map             # the real node (ros2 launch aav_hud_raylib map.launch.py)
+pixi run build &amp;&amp; pixi run map             # the real node (ros2 launch aav_hud map.launch.py)
 pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window together
 pixi run map fullscreen:=true monitor:=HDMI-1   # full screen on that monitor</code></pre>
 <h3 id="how-its-built_1">How it's built</h3>
@@ -1136,7 +1157,7 @@ a bug.</p>
 </tbody>
 </table></div>
 <p>Try a search from a terminal: <code>cargo run --release -p map-core --example search -- tim hortons</code>
-(in <code>ros/hud/aav_hud_raylib</code>, with <code>PLACES=</code> the file's path).</p>
+(in <code>ros/hud/aav_hud</code>, with <code>PLACES=</code> the file's path).</p>
 <h4 id="for-tests-and-screenshots">For tests and screenshots</h4>
 <div class="table-wrap"><table>
 <thead>
@@ -1203,243 +1224,7 @@ a bug.</p>
 <p>The sim's datum is the placeholder near Carleton, so in Gazebo "University Drive" lands
 inside the test lot. On the car, the datum is the real test site.</p>
 </section>
-<section class="card"><h2 id="the-flutter-app-2025-26-what-it-is">The Flutter app (2025-26): what it is</h2>
-<p><strong>Decided (Ben, 15 Oct): the raylib HUD replaces it</strong> (Q29). What it looked like, drawn
-from its own code by a Flutter widget test with pretend data (15 Oct). The map tiles are
-blank: they came from a tile server on the car's Pi.</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Dashboard</th>
-<th>Map</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><img alt="The Flutter dashboard" src="../img/flutter-dashboard.png" /></td>
-<td><img alt="The Flutter map" src="../img/flutter-map.png" /></td>
-</tr>
-</tbody>
-</table></div>
-<p>Three programs that run together on the UI Raspberry Pi (Ubuntu 22.04 in 2025-26, two
-800x480 screens):</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Part</th>
-<th>Where</th>
-<th>What it does</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Front end</td>
-<td><code>hud/flutter_pi/</code> (Flutter/Dart)</td>
-<td>Screens: home (e-stop button, status strip, speed, stop-sign alert), map with destination search, camera page. Talks to the back end over Socket.IO and HTTP.</td>
-</tr>
-<tr>
-<td>Back end</td>
-<td><code>ros/hud/aav_hud/</code> (ROS 2 Python node + Flask)</td>
-<td><code>hud_server</code>: reads the car's topics and pushes them to the app (port 5000); sends a locked route to Nav2; publishes the e-stop button's <code>/safety/estop</code>.</td>
-</tr>
-<tr>
-<td>Routing</td>
-<td>OSRM in Docker (<code>hud/scripts/osrm_bootup.sh</code>)</td>
-<td>Offline road routing for Ontario on port 5001. The map data file (<code>ontario-*.osrm</code>) was on the Pi, not in git.</td>
-</tr>
-</tbody>
-</table></div>
-<p>The map page also needs a tile server on port 8080 (<code>/styles/basic-preview/</code>). It isn't
-in git either.</p>
-</section>
-<section class="card"><h2 id="what-the-back-end-reads-and-sends">What the back end reads and sends</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-<th>Use</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>/vehicle/status</code></td>
-<td><code>aav_interfaces/msg/VehicleStatus</code></td>
-<td>reads: speed, mode, armed, e-stop, gear, faults</td>
-</tr>
-<tr>
-<td><code>/localization/gps/fix</code></td>
-<td><code>sensor_msgs/msg/NavSatFix</code></td>
-<td>reads: the car on the map (<code>gps_topic:=/sensors/gps/fix</code> for the raw fix)</td>
-</tr>
-<tr>
-<td><code>/perception/stop_sign</code></td>
-<td><code>std_msgs/msg/Bool</code></td>
-<td>reads: the stop-sign alert</td>
-</tr>
-<tr>
-<td><code>/vehicle/battery</code></td>
-<td><code>sensor_msgs/msg/BatteryState</code></td>
-<td>reads: volts, charge, amps</td>
-</tr>
-<tr>
-<td><code>/sensors/camera/front_left/image_raw</code></td>
-<td><code>sensor_msgs/msg/Image</code></td>
-<td>reads, only while someone watches the camera page</td>
-</tr>
-<tr>
-<td><code>/safety/estop</code></td>
-<td><code>std_msgs/msg/Bool</code></td>
-<td>publishes: only true, when the e-stop button is pressed</td>
-</tr>
-<tr>
-<td><code>/follow_gps_waypoints</code></td>
-<td><code>nav2_msgs/action/FollowGPSWaypoints</code></td>
-<td>sends the locked route as GPS waypoints, and shows Nav2's progress</td>
-</tr>
-</tbody>
-</table></div>
-</section>
-<section class="card"><h2 id="the-e-stop-button">The e-stop button</h2>
-<p>This is the software e-stop. The car's red e-stop button is separate: nothing here
-touches it.</p>
-<ul>
-<li>Big and red, on the home screen. One tap sends <code>POST /estop</code>.</li>
-<li>The back end publishes <code>/safety/estop</code> true at once, then 4 more times, 0.1 s apart.</li>
-<li>Reliable, depth 10: what spine_bridge and legacy_uart_bridge subscribe with. twist_mux
-  takes it too.</li>
-<li>The press also cancels the HUD's route, so clearing the e-stop doesn't restart the trip.</li>
-<li>The HUD never clears it. Clearing stays a person's deliberate act, from a laptop:
-  <code>pixi run estop-clear</code> (Foxglove only on a simulator: the car's bridge only watches).</li>
-<li>No answer, or nothing subscribes to <code>/safety/estop</code>: the app shows a red message, "E-STOP
-  FAILED ... Press the car's red e-stop button."</li>
-</ul>
-</section>
-<section class="card"><h2 id="socketio-events-and-web-routes">Socket.IO events and web routes</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Event</th>
-<th>Carries</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>speed</code></td>
-<td><code>speed</code>: m/s from <code>/vehicle/status</code>, negative in reverse</td>
-</tr>
-<tr>
-<td><code>position</code></td>
-<td><code>latitude</code>, <code>longitude</code></td>
-</tr>
-<tr>
-<td><code>stop_sign</code></td>
-<td><code>detected</code>, <code>message</code>; sent when it changes</td>
-</tr>
-<tr>
-<td><code>nav_state</code></td>
-<td><code>distance</code>, <code>status</code>, the waypoint number and a message</td>
-</tr>
-<tr>
-<td><code>vehicle_status</code></td>
-<td>mode, armed, e-stop, gear, steering, throttle, brake, faults</td>
-</tr>
-<tr>
-<td><code>battery</code></td>
-<td><code>voltage</code> (V), <code>percentage</code> (0-100), <code>current</code> (A); null when not measured</td>
-</tr>
-</tbody>
-</table></div>
-<p>The app's names are in <code>lib/components/sockets/hud_events.dart</code>, the back end's in
-<code>events.py</code>. A test checks that the two lists match.</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Route</th>
-<th>Does</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>POST /receive</code></td>
-<td>takes the app's route, and starts the Nav2 goal. 400 for a bad route, 503 when Nav2 isn't running</td>
-</tr>
-<tr>
-<td><code>POST /cancel</code></td>
-<td>cancels the goal: the map page's Unlock and Clear. 409 when no route is followed</td>
-</tr>
-<tr>
-<td><code>POST /estop</code></td>
-<td>publishes <code>/safety/estop</code> true. It can't clear it. 503 when nothing subscribes</td>
-</tr>
-<tr>
-<td><code>GET /camera/latest.png</code></td>
-<td>the newest camera picture: the camera page. 503 when none is newer than 2 s</td>
-</tr>
-<tr>
-<td><code>GET /camera/stream</code></td>
-<td>the same, as a stream of pictures: open it in a browser</td>
-</tr>
-<tr>
-<td><code>GET /</code></td>
-<td>the latest copy of every event, as JSON</td>
-</tr>
-</tbody>
-</table></div>
-</section>
-<section class="card"><h2 id="what-changed-in-the-app-11-october">What changed in the app (11 October)</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Change</th>
-<th>Where</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>An e-stop button, and a red message when it fails</td>
-<td>home screen</td>
-</tr>
-<tr>
-<td>A strip: e-stop, armed, mode, gear, battery, faults. Empty when the back end is lost</td>
-<td>home screen, top</td>
-</tr>
-<tr>
-<td>Unlock and Clear cancel the route (<code>POST /cancel</code>)</td>
-<td>map page</td>
-</tr>
-<tr>
-<td>Lock Route sends at once: the two 3 s debug delays are gone</td>
-<td>map page</td>
-</tr>
-<tr>
-<td>The camera page shows <code>/camera/latest.png</code>, 5 a second, and says "Not live" when it stops</td>
-<td>camera page</td>
-</tr>
-<tr>
-<td>The events' real names, in the app and the back end together</td>
-<td>both</td>
-</tr>
-<tr>
-<td>"© OpenStreetMap contributors" under the map and the search results</td>
-<td>map page</td>
-</tr>
-<tr>
-<td>Socket.IO over WebSocket only. With polling first, it never connected</td>
-<td>all screens</td>
-</tr>
-<tr>
-<td>No WebRTC package. No package was added</td>
-<td><code>pubspec.yaml</code></td>
-</tr>
-</tbody>
-</table></div>
-<p>Every changed file is listed in <code>hud/flutter_pi/PROVENANCE.md</code>.</p>
-</section>
-<section class="card"><h2 id="get-flutter">Get Flutter</h2>
-<p>conda-forge has no Flutter, so Pixi can't install it. A task downloads it instead:</p>
-<pre class="highlight"><code class="language-bash">pixi run get-flutter      # Flutter 3.35.7 into vendor/flutter/ (about 4.3 GB)
-pixi run get-hud-map      # the place database (below)</code></pre>
+<section class="card"><h2 id="the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1449,121 +1234,31 @@ pixi run get-hud-map      # the place database (below)</code></pre>
 </thead>
 <tbody>
 <tr>
-<td>Version</td>
-<td>3.35.7 (Dart 3.9.2), the last 3.35. <code>pubspec.lock</code> needs Flutter 3.35+ and Dart 3.9+; 3.38 and newer pin other package versions, so they would rewrite it</td>
+<td>What it was</td>
+<td>the 2025-26 team's touchscreen app (Flutter) and its back end, <code>hud_server</code> (a ROS node with Flask), ported to our topics on 10-11 Oct</td>
 </tr>
 <tr>
-<td>Computers</td>
-<td>macOS (Apple silicon, Intel) and Linux x64. Flutter publishes no SDK archive for Linux arm64 (the Pis, the Orin)</td>
+<td>Where it is now</td>
+<td><code>archive/2026-27-flutter-hud/</code>: the app, the back end and their scripts. Nothing builds, tests or starts it</td>
 </tr>
 <tr>
-<td>Checked</td>
-<td>by the SHA-256 in Flutter's releases JSON (pinned in <code>tools/get_flutter.sh</code>), and by its git commit</td>
+<td>Why</td>
+<td>Q29: the raylib HUD replaced it (Ben, 15 Oct); archived on 25 Oct (Ben)</td>
 </tr>
 <tr>
-<td>Analytics</td>
-<td>off, without changing your own settings</td>
-</tr>
-<tr>
-<td>Kept in <code>vendor/flutter</code></td>
-<td>the pub cache, Flutter's settings, the analyzer's state</td>
-</tr>
-<tr>
-<td>Still outside the repo</td>
-<td><code>~/.flutter</code> (an empty file); on a Mac, <code>~/Library/Caches/flutter_engine/</code> (empty folders)</td>
+<td>What stayed</td>
+<td>its place database, <code>ottawa.db</code>: the map window's search reads it (below)</td>
 </tr>
 </tbody>
 </table></div>
-<p><code>pixi run flutter &lt;args&gt;</code> runs any Flutter command in <code>hud/flutter_pi</code>, with the same
-settings.</p>
-</section>
-<section class="card"><h2 id="test-the-app">Test the app</h2>
-<pre class="highlight"><code class="language-bash">pixi run hud-test         # flutter pub get, analyze and test: offline
-pixi run test             # everything; includes hud-test when vendor/flutter exists</code></pre>
-<ul>
-<li>19 tests: the e-stop request, the status strip, the camera page, Clear, the events.</li>
-<li>Then the app's own client code against the back end's real web server, with a fake
-  car behind it (<code>tools/hud_fake_backend.py</code>, no ROS). It must connect, get the car's
-  status and a picture, and see the e-stop it presses.</li>
-<li><code>flutter analyze</code>: no errors, no warnings, 7 infos, all in the 2025-26 map page.</li>
-<li>Without Flutter, <code>pixi run test</code> prints "skipped" for the app.</li>
-<li>The back end has 98 tests of its own; <code>pixi run test</code> runs them too.</li>
-</ul>
-</section>
-<section class="card"><h2 id="run-it_2">Run it</h2>
-<pre class="highlight"><code class="language-bash">pixi run bench hud:=true hud_port:=5123      # the back end, with the bench car
-ros2 launch aav_hud hud.launch.py            # the back end alone, next to a profile</code></pre>
-<ul>
-<li>It listens on 127.0.0.1 only, by default: a locked route moves the car, so only the
-  HUD's own computer can send one. <code>hud_host:=0.0.0.0</code> opens it to the network.</li>
-<li>On a Mac, AirPlay holds port 5000: use another, as above.</li>
-<li>The app talks Socket.IO over WebSocket, so the back end needs <code>simple-websocket</code>.
-  Pixi has it. Ubuntu 24.04's apt has no <code>python3-simple-websocket</code>.</li>
-<li>The app finds the back end at <code>http://127.0.0.1:5000</code>. Another address is set when
-  the app is built or run: <code>--dart-define=HUD_BACKEND=http://127.0.0.1:5123</code>.</li>
-<li>
-<p>The app's own client code against the bench's back end (it presses the e-stop):</p>
-<pre class="highlight"><code class="language-bash">pixi run flutter test test_bench --dart-define=HUD_BACKEND=http://127.0.0.1:5123</code></pre>
-</li>
-<li>
-<p>The app itself, on Linux x64 with GTK: <code>tools/flutter.sh run -d linux</code>, outside Pixi
-  (Pixi's compilers don't see the system's GTK). Untested.</p>
-</li>
-<li>On a Mac: not yet. The app has only a Linux runner. <code>flutter create --platforms=macos</code>
-  makes one, but <code>window_manager</code> 0.5.1 brings <code>screen_retriever_macos</code> 0.2.0, which
-  needs CocoaPods (it has no Swift package). CocoaPods isn't on conda-forge. Tried on
-  11 October in a copy: the build stopped there.</li>
-</ul>
-</section>
-<section class="card"><h2 id="on-the-bench-11-october">On the bench (11 October)</h2>
-<p><code>pixi run bench hud:=true hud_port:=5123</code> on a Mac, on a private ROS domain. The
-scripted driver held 0.90 m/s, then the e-stop was pressed:</p>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th>Pressed by</th>
-<th>Answer</th>
-<th>Spine says e-stop</th>
-<th>Car below 0.05 m/s</th>
-<th>3 s later</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>POST /estop</code>, as the app sends it</td>
-<td>200, in 8 ms</td>
-<td>after 0.12 s</td>
-<td>after 0.24 s</td>
-<td>0.0 m/s</td>
-</tr>
-<tr>
-<td>the app's own client code (<code>test_bench</code>)</td>
-<td>200</td>
-<td>after 0.05 s</td>
-<td>after 0.28 s</td>
-<td>0.0 m/s</td>
-</tr>
-</tbody>
-</table></div>
-<ul>
-<li>Times count from the request (first row), or from the first <code>/safety/estop</code> message (second).</li>
-<li><code>/safety/estop</code> true came 5 times in 0.36 s, and never false. The spine disarmed; clearing
-  the e-stop and arming again, from the "laptop", worked.</li>
-<li>The app's client saw <code>vehicle_status</code> say "e-stop on" 41 ms after its press.</li>
-<li><code>pixi run check bench</code>: 0 failed. <code>/safety/estop</code>: published by <code>hud_server</code>, subscribed by
-  <code>spine_bridge</code> and <code>twist_mux</code>.</li>
-<li><code>/camera/latest.png</code>: a 640x360 picture (11 kB), from the second fetch on. The first
-  answers 503: it starts the camera subscription.</li>
-<li>The battery: 99.7 %, 50.9 V, current null (mock_battery doesn't give one).</li>
-<li>The first run found that the app couldn't connect at all (Socket.IO's polling): fixed,
-  and now tested by <code>pixi run hud-test</code>.</li>
-</ul>
+<p>GPS routes it used to send now come from <code>street_router</code> and the language tools
+(<a href="routes.html">Routes</a>).</p>
 </section>
 <section class="card"><h2 id="the-place-database">The place database</h2>
-<p>The map window's <a href="#search-for-a-place-and-drive-there">place search</a> and the Flutter
-app's destination search read <code>ottawa.db</code>: 51 MB of SQLite, 606,628 named places around
-Ottawa. It's too big for git, so a task downloads it:</p>
-<pre class="highlight"><code class="language-bash">pixi run get-hud-map      # into maps/places/, linked into hud/flutter_pi/assets/databases/</code></pre>
+<p>The map window's <a href="#search-for-a-place-and-drive-there">place search</a> reads <code>ottawa.db</code>:
+51 MB of SQLite, 606,628 named places around Ottawa. It's too big for git, so a task
+downloads it:</p>
+<pre class="highlight"><code class="language-bash">pixi run get-hud-map      # into maps/places/ottawa.db</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1582,23 +1277,12 @@ Ottawa. It's too big for git, so a task downloads it:</p>
 </tr>
 <tr>
 <td>Data</td>
-<td>from OpenStreetMap: © OpenStreetMap contributors, under the ODbL. The app shows that credit</td>
+<td>from OpenStreetMap: © OpenStreetMap contributors, under the ODbL. The map window shows that credit</td>
 </tr>
 </tbody>
 </table></div>
-<p>Keep the Flutter app or not: Q29. Meanwhile, <strong>Foxglove</strong> works as the operator's screen:
-<code>foxglove_bridge</code>, on port 8765, shows speed, the map, paths and costmaps
-(<a href="foxglove.html">Watch from a laptop</a>).</p>
-</section>
-<section class="card"><h2 id="before-running-it-on-the-car">Before running it on the car</h2>
-<ul>
-<li>The Firebase service-account keys and the GitHub token in the 2025-26 User-Interface
-  repository are public. They were not copied here; revoke them (design doc Q34).</li>
-<li><code>hud/scripts/flask_bootup.sh</code> still sources the old <code>/home/aavui</code> workspace.</li>
-<li>The Pi is Linux arm64: Flutter has no SDK archive for it. Build there from Flutter's
-  git repository at tag 3.35.7, or build elsewhere. Untested.</li>
-<li>Waypoints must be inside Nav2's map, and Nav2 slows down at each one.</li>
-</ul></section>
+<p><strong>Foxglove</strong> works as the operator's screen too: <code>foxglove_bridge</code>, on port 8765, shows
+speed, the map, paths and costmaps (<a href="foxglove.html">Watch from a laptop</a>).</p></section>
 <nav class="prevnext"><a class="prev" href="car_measurements.html"><small>Previous</small>← Car numbers</a></nav>
 </main>
 <footer>Source: <code>docs/hud.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

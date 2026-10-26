@@ -142,7 +142,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 </tr>
 <tr>
 <td>Looked at, then dropped (15 Oct)</td>
-<td>Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69, if the HUD's routes ever need it); the HUD's place database (<code>pixi run get-hud-map</code> downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's <code>FinalRev</code> (below); AAV_dashboard (its README is now <code>docs/reference/2025-26-camera-system</code>)</td>
+<td>Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69; <code>street_router</code> does that job now); the HUD's place database (<code>pixi run get-hud-map</code> downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's <code>FinalRev</code> (below); AAV_dashboard (its README is now <code>docs/reference/2025-26-camera-system</code>)</td>
 </tr>
 <tr>
 <td>Empty</td>
@@ -206,7 +206,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>Python ROS 2</td>
 <td>prototype; nothing feeds it</td>
 <td>no</td>
-<td>maybe its OSRM parser, to turn the HUD's route into Nav2 GPS waypoints</td>
+<td>no: <code>street_router</code> turns a street route into Nav2 GPS waypoints (<a href="routes.html">Street routes</a>)</td>
 </tr>
 <tr>
 <td>Navigation-LocalPathGenerator-rf_cpp</td>
@@ -253,8 +253,8 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search</td>
 <td>Dart/Flutter, Python ROS 2; the UI Pi</td>
 <td>a working demo, on mock data</td>
-<td>partly: <code>hud/</code>, <code>ros/hud/maincar</code></td>
-<td><strong>its place database <code>ottawa.db</code> (51 MB)</strong>: the ported app still needs it</td>
+<td>partly: ported, then archived 25 Oct to <code>archive/2026-27-flutter-hud/</code> (the app; <code>maincar</code> as <code>aav_hud</code>); its route maths lives on in <code>aav_routes/route.py</code></td>
+<td><strong>its place database <code>ottawa.db</code> (51 MB)</strong>: the map window's place search reads it</td>
 </tr>
 <tr>
 <td>Wheel_Encoders</td>
@@ -441,7 +441,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>HUD</td>
 <td>real data: it only ever showed mock data</td>
-<td><span class="badge b-untested">untested</span> its port is still to do</td>
+<td><span class="badge b-works">works</span> our raylib HUD and map window read real topics, on a Mac; <span class="badge b-untested">untested</span> on the car. Their app was ported, then archived 25 Oct (Q29)</td>
 </tr>
 <tr>
 <td>Simulation</td>

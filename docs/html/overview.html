@@ -104,7 +104,7 @@ package, one per row: <a href="packages.html">Packages</a>.</p></div>
 <tbody>
 <tr>
 <td>ROS packages that build</td>
-<td>38: 24 in Python, 14 in CMake (some of them Rust)</td>
+<td>37: 23 in Python, 14 in CMake (some of them Rust)</td>
 </tr>
 <tr>
 <td>Rust firmware crates</td>
@@ -128,7 +128,7 @@ package, one per row: <a href="packages.html">Packages</a>.</p></div>
 </tr>
 <tr>
 <td>Tests</td>
-<td><code>pixi run test</code>: 1182 on 25 Oct, 0 failures (<a href="status.html">Status</a>); plus <code>bench-check</code> and <code>sim-check</code></td>
+<td><code>pixi run test</code>: 1110 on 25 Oct, 0 failures (<a href="status.html">Status</a>); plus <code>bench-check</code> and <code>sim-check</code></td>
 </tr>
 <tr>
 <td>Tools</td>
@@ -158,11 +158,6 @@ package, one per row: <a href="packages.html">Packages</a>.</p></div>
 <td><a href="firmware.html">Firmware</a>, <a href="rust-firmware.html">Rust firmware</a></td>
 </tr>
 <tr>
-<td><code>hud/</code></td>
-<td>the 2025-26 touchscreen app (Flutter), changed for our back end, <code>ros/hud/aav_hud</code>. <code>pixi run get-flutter</code> downloads Flutter</td>
-<td><a href="hud.html">HUD</a></td>
-</tr>
-<tr>
 <td><code>tools/</code></td>
 <td>tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server</td>
 <td><a href="infrastructure.html">Infrastructure</a></td>
@@ -181,6 +176,11 @@ package, one per row: <a href="packages.html">Packages</a>.</p></div>
 <td><code>models/</code></td>
 <td>the detector models, RF-DETR Nano (the default) and YOLO: <code>pixi run get-models</code> downloads them (not in git)</td>
 <td><a href="perception.html">Perception</a></td>
+</tr>
+<tr>
+<td><code>archive/</code></td>
+<td>the older teams' repos, as they were, and the 2025-26 Flutter HUD (archived 25 Oct). Reference only: never built</td>
+<td><a href="older-code.html">Older code</a></td>
 </tr>
 <tr>
 <td><code>vendor/</code></td>
@@ -481,7 +481,7 @@ finder).</p>
 <tr>
 <td>Ready, not used yet</td>
 <td><code>rosbridge_server</code></td>
-<td>if the HUD moves off Socket.IO</td>
+<td>a web page could read ROS through it; nothing uses it since the Flutter HUD was archived (25 Oct)</td>
 </tr>
 </tbody>
 </table></div>
@@ -580,16 +580,10 @@ finder).</p>
 <td>used by <code>cameras.launch.py</code></td>
 </tr>
 <tr>
-<td>The HUD's back end (Flask)</td>
+<td>The HUD app (Flutter), its Flask back end and boot scripts</td>
 <td>2025-26 <code>User-Interface</code></td>
-<td><code>ros/hud/aav_hud</code></td>
-<td>ported to our topics; publishes <code>/safety/estop</code>. 98 tests</td>
-</tr>
-<tr>
-<td>The HUD app (Flutter) and its boot scripts</td>
-<td>2025-26 <code>User-Interface</code></td>
-<td><code>hud/</code></td>
-<td>changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen</td>
+<td><code>archive/2026-27-flutter-hud/</code></td>
+<td>ported to our topics (10-11 Oct), then archived 25 Oct: the raylib HUD replaced it (Q29). Its route maths lives on in <code>aav_routes/route.py</code>, its place database in <code>pixi run get-hud-map</code></td>
 </tr>
 <tr>
 <td>The ESP32 actuator firmware (C++)</td>

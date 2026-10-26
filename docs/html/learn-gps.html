@@ -450,8 +450,8 @@ the car: is there any data at all?</p>
 <ul>
 <li>removes the antenna's offset, using TF <code>base_link → gps_link</code>: that's why the antenna's
   spot in <code>vehicle.yaml</code> matters (and where it is mounted: below);</li>
-<li>serves <code>/fromLL</code> (lat/lon → x, y) and <code>/toLL</code> (back). The HUD's route reaches Nav2
-  through <code>/fromLL</code>.</li>
+<li>serves <code>/fromLL</code> (lat/lon → x, y) and <code>/toLL</code> (back). A street route reaches Nav2
+  through <code>/fromLL</code> (<code>street_router</code>, <a href="routes.html">Street routes</a>).</li>
 </ul>
 <h3 id="mount-the-antenna-over-the-rear-axle">Mount the antenna over the rear axle</h3>
 <p>To remove the offset, <code>navsat_transform</code> turns it by the car's heading <strong>as the global EKF

@@ -252,9 +252,8 @@ Gazebo, RViz, Nav2 and the HUD window together. Give goals with RViz's 2D Goal P
 
 | Argument | Opens |
 |---|---|
-| `hud:=true` | the HUD window (`aav_hud_raylib`, the same as `pixi run hud`) |
+| `hud:=true` | the HUD window (`aav_hud`, the same as `pixi run hud`) |
 | `foxglove:=true` | the Foxglove bridge on 127.0.0.1:8765: open Lichtblick, then `ws://localhost:8765` and a layout from `tools/foxglove/` ([Watch from a laptop](foxglove.md)) |
-| `hud_web:=true` | the Flutter app's web server on 127.0.0.1:5000 (this was `hud:=true` before 15 Oct) |
 | Tried, 15 Oct | the parking lot, sim speed 3, the HUD on: a 36 m Nav2 goal reached |
 
 If you reopen Gazebo's window (`pixi run gz-window`), its camera follows the car again.
@@ -344,7 +343,7 @@ angles small depth errors become large range errors.
 | `perception` | `false` | the object detector (RF-DETR Nano; YOLO with `detector:=yolo`) and `stop_sign_watcher`: twist_mux's stop-sign lock. Needs `pixi run -e ml` |
 | `lane` | `false` | `true`: lane keeping (`lane_finder`, and `control_interface` on `/drivers/ai/cmd_vel`). Add `nav:=false`: Nav2 outranks it. `fake`: on a pretend lane, in any world |
 | `camera_obstacles` | `false` | the detectors' boxes into Nav2's local costmap |
-| `hud` | `false` | the HUD window (raylib); `hud_web:=true` for the web server on 127.0.0.1:5000 |
+| `hud` | `false` | the HUD window (raylib) |
 | `obstacle` | `false` | the bench's 1 m box, in the lane 15 m ahead |
 | `ghost` | `false` | a pretend person only Nav2 sees: `pixi run ghost --local ahead 10` ([Ghost obstacles](ghost-obstacles.md)) |
 | `start_y`, `start_yaw` | `0.0` | m and rad: start the car this far left of the centre, and turned this far left. The EKFs still start at the origin, facing east |

@@ -7,7 +7,7 @@
 <!-- Generated from docs/modules.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every module, explained</h1>
-<div class="meta">37 min read · 16 sections</div></header>
+<div class="meta">36 min read · 16 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -92,7 +92,7 @@
 <div class="lead"><p>One card for every ROS package in <code>ros/</code> and every crate and board in <code>firmware/</code>. Each
 card answers the same nine questions. <a href="packages.html">Packages</a> is the short version, in
 tables; this page goes deeper. Written 15 October 2026, checked 25 October, with the
-topic names by area (<a href="naming.html">Topic areas</a>). 38 packages build; seven of the newest have a
+topic names by area (<a href="naming.html">Topic areas</a>). 37 packages build; seven of the newest have a
 one-line entry, pointing at their own README (<a href="#more-packages-see-their-readmes">below</a>).</p>
 <p><img alt="How the stack fits together" src="../img/architecture.svg" /></p></div>
 <section class="card"><h2 id="how-to-read-a-card">How to read a card</h2>
@@ -179,7 +179,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><a href="#hud">hud</a></td>
-<td><code>aav_hud</code>, <code>aav_hud_raylib</code></td>
+<td><code>aav_hud</code></td>
 </tr>
 <tr>
 <td><a href="#bench">sim: bench mode</a></td>
@@ -1415,58 +1415,11 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 <tbody>
 <tr>
 <td><strong>Does</strong></td>
-<td>the Flutter touchscreen app's back end: a ROS node with a web server (Flask, Socket.IO)</td>
+<td>the in-car screens in Rust: the HUD, one raylib window that is also the ROS node <code>hud</code>; and the map window, node <code>map</code></td>
 </tr>
 <tr>
 <td><strong>Why</strong></td>
-<td>the passenger sees speed, map and camera, picks a route, and has an e-stop button</td>
-</tr>
-<tr>
-<td><strong>Runs on</strong></td>
-<td>the DASH-UI Pi (guess)</td>
-</tr>
-<tr>
-<td><strong>In → out</strong></td>
-<td><code>/vehicle/status</code>, <code>/localization/gps/fix</code>, <code>/perception/stop_sign</code>, <code>/vehicle/battery</code>, the camera → app events on 127.0.0.1:5000; the app → <code>/safety/estop</code>, Nav2's <code>/follow_gps_waypoints</code></td>
-</tr>
-<tr>
-<td><strong>Origin</strong></td>
-<td>inherited, rewritten: 2025-26 <code>User-Interface</code> @ e6e6b1e565 (<code>maincar</code>)</td>
-</tr>
-<tr>
-<td><strong>Status</strong></td>
-<td><span class="badge b-works">works</span> on the bench: the app's e-stop stops the car in 0.3 s. <span class="badge b-untested">untested</span> on the car's screen</td>
-</tr>
-<tr>
-<td><strong>Run alone</strong></td>
-<td><code>ros2 launch aav_hud hud.launch.py</code></td>
-</tr>
-<tr>
-<td><strong>Test</strong></td>
-<td><code>test/</code> (in <code>tools/test.sh</code>); <code>pixi run hud-test</code> for the app</td>
-</tr>
-<tr>
-<td><strong>Read first</strong></td>
-<td><code>aav_hud/hud_server.py</code></td>
-</tr>
-</tbody>
-</table></div>
-<h3 id="aav_hud_raylib">aav_hud_raylib</h3>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th></th>
-<th></th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Does</strong></td>
-<td>the in-car screen in Rust: one raylib window that is also the ROS node <code>hud</code></td>
-</tr>
-<tr>
-<td><strong>Why</strong></td>
-<td>to replace the Flutter app and its back end with one program (Ben, 11 Oct)</td>
+<td>the driver sees speed, GO / STOP and the camera, and has an e-stop button. It replaced the 2025-26 Flutter app and its Flask back end (Ben, 11 and 15 Oct; archived 25 Oct, Q29)</td>
 </tr>
 <tr>
 <td><strong>Runs on</strong></td>
@@ -1478,7 +1431,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
-<td>ours. Two crates: <code>hud-core</code> (logic, no ROS) and <code>hud-app</code> (window and node)</td>
+<td>ours. Four crates: <code>hud-core</code> and <code>map-core</code> (logic, no ROS), <code>hud-app</code> and <code>map-app</code> (window and node)</td>
 </tr>
 <tr>
 <td><strong>Status</strong></td>
@@ -1486,11 +1439,11 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>Run alone</strong></td>
-<td><code>pixi run hud-demo</code> (pretend data), <code>pixi run hud</code> (the node)</td>
+<td><code>pixi run hud-demo</code>, <code>pixi run map-demo</code> (pretend data); <code>pixi run hud</code>, <code>pixi run map</code> (the nodes)</td>
 </tr>
 <tr>
 <td><strong>Test</strong></td>
-<td><code>cargo test -p hud-core</code> (in <code>tools/test.sh</code>)</td>
+<td><code>cargo test -p hud-core</code>, <code>-p map-core</code> (in <code>tools/test.sh</code>)</td>
 </tr>
 <tr>
 <td><strong>Read first</strong></td>

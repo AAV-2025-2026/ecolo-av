@@ -114,8 +114,8 @@ Nav2 is just another driver, at priority 20. Its command joins the same path at 
 | 6 | `collision_monitor` (only where the radar runs) | `/drivers/nav/cmd_vel` | `TwistStamped` | 20 Hz | a radar point in the 1 m stop zone, or a silent radar: it sends zero | `ros2 topic echo /safety/collision_monitor/state` |
 | 7 | `twist_mux`, then ego and the backend | as in sections 1 to 3 | | | the joystick, the keyboard or a stop sign outranks Nav2 | `ros2 topic echo /control/cmd_vel` |
 
-The HUD can send a route too: `hud_server` calls the action `/follow_gps_waypoints` with
-GPS points.
+A street route can go in too: `street_router` (and the language tools) call the action
+`/follow_gps_waypoints` with GPS points ([Street routes](routes.md)).
 
 ## 5. The way back: sensors to "where am I"
 

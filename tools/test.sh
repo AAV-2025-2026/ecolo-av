@@ -2,8 +2,7 @@
 # Run every test that doesn't need ROS: our packages' Python unit tests, the Rust spine
 # library, the HUD's and the map window's logic (hud-core, map-core), and the check that docs/interfaces.md matches
 # docs/interfaces.yaml. Where the mcp environment is installed, also the MCP server over
-# stdio (on a private, local domain); where Flutter is (pixi run get-flutter), also the
-# HUD app's tests (tools/hud_test.sh).
+# stdio (on a private, local domain).
 # Needs Python 3 with pytest and PyYAML; Rust (cargo) for the spine. Works on any OS.
 #
 # usage: tools/test.sh
@@ -24,7 +23,7 @@ for pkg in ros/ego/aav_ego ros/io_mux/aav_io_mux ros/can_bridge/aav_spine ros/ca
            ros/perception/aav_detector ros/sources/aav_camera_stream \
            ros/perception/aav_lane_finder ros/perception/aav_lidar \
            ros/safety/aav_safety ros/safety/aav_ghost \
-           ros/sim/aav_bench ros/hud/aav_hud; do
+           ros/sim/aav_bench; do
   echo "== $pkg"
   (cd "$pkg" && python3 -m pytest -q -p no:cacheprovider)
 done
@@ -42,8 +41,8 @@ if command -v cargo >/dev/null; then
   echo "== ros/can_bridge/aav_spine_bridge: the Rust CAN bridge's logic, the shared CAN vectors"
   (cd ros/can_bridge/aav_spine_bridge && cargo test -q --locked -p spine-bridge)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
-  echo "== ros/hud/aav_hud_raylib: the HUD's state, GPS, e-stop and formatting; the map's maths"
-  (cd ros/hud/aav_hud_raylib && cargo test -q --locked -p hud-core -p map-core)
+  echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths"
+  (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core)
   # Every firmware crate must build without the standard library, for the Pico 2's chip.
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"
@@ -131,13 +130,6 @@ if [[ -d .pixi/envs/mcp ]] && command -v pixi >/dev/null; then
   pixi run --frozen -e mcp python3 tools/tests/mcp_smoke.py
 else
   echo "skipped: the mcp environment isn't installed (pixi install -e mcp)"
-fi
-
-echo "== hud/flutter_pi: the HUD app (flutter pub get, analyze, test)"
-if [[ -x vendor/flutter/bin/flutter ]]; then
-  tools/hud_test.sh
-else
-  echo "skipped: no Flutter in vendor/flutter (pixi run get-flutter)"
 fi
 
 echo "== docs/interfaces.md"

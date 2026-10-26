@@ -1,8 +1,8 @@
 # What each package does
 
 Every ROS package in `ros/`, area by area (`ros/<area>/<package>`), with what it reads
-and writes. Then the firmware, the HUD and the examples. 38 packages build today, and
-none is parked.
+and writes. Then the firmware, the HUD and the examples. 37 packages build today (the
+Flask HUD went to the archive on 25 Oct), and none is parked.
 
 ## At a glance
 
@@ -44,8 +44,7 @@ none is parked.
 | `aav_lidar` | perception | `lidar_scan`: the roof lidar's cloud as a 2D scan for Nav2 | [[works]] in Gazebo and the bench | new |
 | `aav_lane_finder` | perception | the lane lines in the camera's pictures, as `/perception/lane/geometry` (OpenCV) | [[works]] on the bench | new |
 | `aav_lane_geometry` | perception | lane keeping: a driver on `/drivers/ai/cmd_vel` | [[works]] on the bench, with `aav_lane_finder` | 2025-26 `Lane_Detection_ROS2` |
-| `aav_hud` | hud | the HUD's web server (Flask, Socket.IO), on our topics | [[works]] on the bench, with the app's e-stop button | 2025-26 `User-Interface` |
-| `aav_hud_raylib` | hud | the in-car screen in Rust: one raylib window that is the ROS node `hud` | [[works]] on a Mac: `--demo`, fed topics, bench mode. [[untested]] on a Pi and on the car | new |
+| `aav_hud` | hud | the in-car screens in Rust (raylib): the HUD (node `hud`) and the map window (node `map`) | [[works]] on a Mac: `--demo`, fed topics, bench mode. [[untested]] on a Pi and on the car | new |
 
 ## Sensors
 
@@ -158,10 +157,8 @@ colcon ignores `firmware/`. It's built with cargo, PlatformIO or the Pico SDK.
 
 | Part | What it is |
 |---|---|
-| `hud/flutter_pi` | the 2025-26 touchscreen app (Flutter): speed, map, camera; since 11 Oct an e-stop button, Cancel and the car's status. `pixi run hud-test` |
-| `hud/scripts` | the old Pi's start-up scripts |
-| `ros/hud/aav_hud` | its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints, and the e-stop. [HUD](hud.md) has what's left |
-| `ros/hud/aav_hud_raylib` | the HUD in Rust (raylib and rclrs), to replace the two above: the driving screen, the e-stop button, GPS and topic health. `pixi run hud-demo` |
+| `ros/hud/aav_hud` | the HUD in Rust (raylib and rclrs): the driving screen, the e-stop button, GPS and topic health (`pixi run hud-demo`); and the map window (`pixi run map-demo`). [HUD](hud.md) |
+| `archive/2026-27-flutter-hud/` | the 2025-26 Flutter app and its Flask back end, archived 25 Oct (Q29). Not built |
 
 ## Examples
 

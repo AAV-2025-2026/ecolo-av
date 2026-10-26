@@ -44,6 +44,6 @@ map and in a Nav2 goal. To draw the real test site: pick the datum (a corner or 
 start spot), measure the drivable area in metres east/north of it (tape, or satellite
 imagery), list the blocked rectangles in a spec, and build it.
 
-A road network (which roads join where) is a different thing: that is the HUD's
-OSRM router (`hud/`). The costmap only says which cells the car may drive on. See
+A road network (which roads join where) is a different thing: that is the street
+router (Valhalla, `aav_routes`). The costmap only says which cells the car may drive on. See
 docs/costmaps.md.

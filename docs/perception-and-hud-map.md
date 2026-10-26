@@ -104,9 +104,9 @@ known.
 
 | Piece | Status |
 |---|---|
-| The 2025-26 Flutter app's map page (`flutter_map`) | written; it needs a tile server on the dash Pi, which isn't in git |
+| The 2025-26 Flutter app's map page (`flutter_map`) | written; it needs a tile server on the dash Pi, which isn't in git (answered: archived 25 Oct, Q29) |
 | `ottawa.db`: 606,628 places for the search box | `pixi run get-hud-map` |
-| OSRM road routes | Docker on the dash Pi; data not in git |
+| OSRM road routes | Docker on the dash Pi; data not in git (answered: [Street routes](routes.md), Valhalla, since) |
 | The raylib HUD (ours) | speed, e-stop, GPS panel, camera, topic health. **No map yet** (answered: [the map window](hud.md#the-map-window-big-screen), built since) |
 
 ### How the raylib HUD would draw one

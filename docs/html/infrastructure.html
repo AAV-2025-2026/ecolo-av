@@ -114,11 +114,6 @@ tests, and how a change goes from an idea to the car.</p></div>
 <td><code>firmware/</code></td>
 </tr>
 <tr>
-<td>The touchscreen app</td>
-<td>the 2025-26 Flutter HUD, changed for our back end</td>
-<td><code>hud/</code></td>
-</tr>
-<tr>
 <td>The environment</td>
 <td>ROS, Gazebo, compilers, Python and Rust, all from Pixi</td>
 <td><code>pixi.toml</code>, <code>pixi.lock</code></td>
@@ -167,17 +162,17 @@ tests, and how a change goes from an idea to the car.</p></div>
     can_bridge/         the real car: the spine bridge (CAN) and today's ESP32 link
     sim/                whatever plays the car instead: Gazebo, turtlesim, CARLA, bench mode
     safety/             the sensor watchdog and the ghost obstacles
-    hud/                the in-car screen: its back end and the raylib HUD and map
+    hud/                the in-car screens: the raylib HUD and the map window
   firmware/           microcontroller code (colcon ignores it)
     can/                aav.dbc, the CAN contract, and its test vectors
     spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers,
                         and boards/pico2, the spine's board program
     legacy/             the 2025-26 ESP32 and Pico code that runs the car today
-  hud/                the 2025-26 Flutter app (colcon ignores it)
   examples/           rust-listener: a first ROS node in Rust
   models/             trained model files, not in git: pixi run get-models
   tools/              scripts: see the table below
-  docs/               these pages; docs/history/ keeps the Q&amp;A, Ben's requests and the audits</code></pre>
+  docs/               these pages; docs/history/ keeps the Q&amp;A, Ben's requests and the audits
+  archive/            reference only, never built: the older teams' repos, the Flutter HUD</code></pre>
 </section>
 <section class="card"><h2 id="the-three-contracts">The three contracts</h2>
 <p>Three files say how the parts must talk. Change the contract first, then the code, and
@@ -459,28 +454,13 @@ Every one, with what it does: README's <a href="../../README.md#every-command">E
 </tr>
 <tr>
 <td><code>get_hud_map.sh</code></td>
-<td>downloads the place database, checksum pinned, once for both users</td>
+<td>downloads the place database into <code>maps/places/</code>, for the map window's search, checksum pinned</td>
 <td><code>pixi run get-hud-map</code></td>
 </tr>
 <tr>
 <td><code>get_street_map.sh</code></td>
 <td>cuts Ottawa out of Protomaps' world street map, checksums pinned</td>
 <td><code>pixi run get-street-map</code></td>
-</tr>
-<tr>
-<td><code>get_flutter.sh</code></td>
-<td>downloads Flutter, checksum pinned</td>
-<td><code>pixi run get-flutter</code></td>
-</tr>
-<tr>
-<td><code>flutter.sh</code></td>
-<td>runs that Flutter, with its analytics off</td>
-<td><code>pixi run flutter &lt;arguments&gt;</code></td>
-</tr>
-<tr>
-<td><code>hud_test.sh</code>, <code>hud_fake_backend.py</code></td>
-<td>the HUD app's checks; its client code against the real back end, with a fake car</td>
-<td><code>pixi run hud-test</code></td>
 </tr>
 <tr>
 <td><code>elf2uf2.py</code></td>
@@ -778,7 +758,7 @@ workflow empties <code>PSModulePath</code>, so colcon uses <code>sh</code>, as o
 <p class="admonition-title">What never goes in git</p>
 <p>Build output (<code>build/</code>, <code>install/</code>, <code>log/</code>, <code>.pixi/</code>, <code>target/</code>), recordings (<code>bags/</code>),
 and secrets. <code>.gitignore</code> lists them. Downloaded third-party source, such as ROS's own
-code and Flutter, lives in <code>vendor/</code>, which git doesn't track: <code>pixi run vendor</code>.</p>
+code, lives in <code>vendor/</code>, which git doesn't track: <code>pixi run vendor</code>.</p>
 </div>
 </section>
 <section class="card"><h2 id="where-to-find-what-happened">Where to find what happened</h2>

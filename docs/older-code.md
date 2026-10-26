@@ -23,7 +23,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 |---|---|
 | Already in `aav` (all or part) | AAV_cortex, Motor_Steering (its numbers), User-Interface, Wheel_Encoders, yahboom-IMU, Lane_Detection_ROS2, Nav_Radar; from 2024-25: Battery-Monitor-ROS, camera_ros2_ws, camera_Yolo_detection, cameras |
 | Replaced by stock ROS packages | Navigation_PathPlanning_ObstacleAvoidance, Navigation-LocalPathGenerator-rf_cpp, Obstacle_Avoidance_logic, Odometry, Real-Time-OS, joy_teleop_ackerman |
-| Looked at, then dropped (15 Oct) | Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69, if the HUD's routes ever need it); the HUD's place database (`pixi run get-hud-map` downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's `FinalRev` (below); AAV_dashboard (its README is now `docs/reference/2025-26-camera-system`) |
+| Looked at, then dropped (15 Oct) | Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69; `street_router` does that job now); the HUD's place database (`pixi run get-hud-map` downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's `FinalRev` (below); AAV_dashboard (its README is now `docs/reference/2025-26-camera-system`) |
 | Empty | Navigation-BehaviorPlanning |
 | Not surveyed yet | three 2025-26 repos and seven 2024-25 repos (the tables below) |
 
@@ -35,13 +35,13 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 | Motor-Control | the 2024-25 micro-ROS motor firmware: a fork | C++, micro-ROS; ESP32 | inactive since 2025 | no | no. What it taught us: branch `FinalRev` (4166ec0) reads the steering's position from the **steering Jrk G2's own feedback**, `jrk_steer.getScaledFeedback()`, 0-4095 mapped to -1..+1 (`src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187`). So the Jrk may already have a position sensor wired (team-todo.md B6, audit D6, D7) |
 | Motor_Steering | a Pi speed controller and UART bridge, an ESP32 add-on, sims, MATLAB steering geometry | Python ROS 2, C++, MATLAB; Pi 5, ESP32 | prototype | partly: its geometry in `docs/reference/` and `vehicle.yaml` | its 250 ms link timeout idea, for today's ESP32 (but braking, not releasing) |
 | Navigation-BehaviorPlanning | a README title | none | empty | no | no |
-| Navigation-LocalPathGenerator | follows an OSRM route from GPS: the current step, a local path, a speed | Python ROS 2 | prototype; nothing feeds it | no | maybe its OSRM parser, to turn the HUD's route into Nav2 GPS waypoints |
+| Navigation-LocalPathGenerator | follows an OSRM route from GPS: the current step, a local path, a speed | Python ROS 2 | prototype; nothing feeds it | no | no: `street_router` turns a street route into Nav2 GPS waypoints ([Street routes](routes.md)) |
 | Navigation-LocalPathGenerator-rf_cpp | a C++ rewrite of the above | C++17 | prototype | no | no: Nav2 does this |
 | Navigation_PathPlanning_ObstacleAvoidance | a GPS-goal grid planner (A*, D* Lite) with lidar obstacles | C++, PCL; Orin | prototype, with a crash bug | no | no: Nav2 does this |
 | Obstacle_Avoidance_logic | a lidar costmap and braking-distance e-stop | one C++ file | can't build: no package files | no | no: Nav2's obstacle layer and collision monitor |
 | Odometry | merges a SLAM pose and the IMU into `/odom` | Python ROS 2 | prototype; nothing publishes its input | no | no: robot_localization does this |
 | Real-Time-OS | a QNX layer: command picking, a SQLite logger, body control, a QNX image for a Pi 4 | C, C++; Pi 4 on QNX 8 | prototype: its own README lists the watchdog, e-stop and CAN as not done | no | no: twist_mux, the spine's watchdog and `ros2 bag` cover it ("No QNX" is Tentative, Q23) |
-| User-Interface | the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search | Dart/Flutter, Python ROS 2; the UI Pi | a working demo, on mock data | partly: `hud/`, `ros/hud/maincar` | **its place database `ottawa.db` (51 MB)**: the ported app still needs it |
+| User-Interface | the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search | Dart/Flutter, Python ROS 2; the UI Pi | a working demo, on mock data | partly: ported, then archived 25 Oct to `archive/2026-27-flutter-hud/` (the app; `maincar` as `aav_hud`); its route maths lives on in `aav_routes/route.py` | **its place database `ottawa.db` (51 MB)**: the map window's place search reads it |
 | Wheel_Encoders | a Pico 2 that counts wheel spokes and sends them over Ethernet | Arduino C++; Pico 2, W5500 | working demo | yes: rewritten in Rust (`firmware/spine/boards/wheel-encoder-pico2`, 15 Oct), and `aav_legacy` | its 3D-printed case files |
 | joy_teleop_ackerman | joystick to Ackermann commands, with deadman buttons | Python ROS 2 | working | no: stock teleop replaced it; its button map lives on in `aav_teleop` | no |
 | yahboom-IMU | the Yahboom IMU driver | C++ ROS 2; Pi 4 | working | yes, rewritten in Rust: `ros/sources/aav_imu_yahboom` (the C++ copy went on 11 Oct) | no |
@@ -84,7 +84,7 @@ The five not cloned here:
 | Drivers | anything beyond RC and the joystick | [[works]] scripted, keyboard; the joystick is [[untested]] |
 | Ego | a command layer with limits and a timeout; calibrations from radians to the actuators' counts | [[works]] ego; the calibrations are TODO |
 | The spine | any CAN code; a watchdog that brakes; feedback frames; the hardware e-stop in code | [[works]] the logic (`spine-core`); the board programs (`boards/pico2`, `boards/esp32-umod`) are [[untested]]: never flashed |
-| HUD | real data: it only ever showed mock data | [[untested]] its port is still to do |
+| HUD | real data: it only ever showed mock data | [[works]] our raylib HUD and map window read real topics, on a Mac; [[untested]] on the car. Their app was ported, then archived 25 Oct (Q29) |
 | Simulation | a whole-car simulator | [[works]] Gazebo |
 
 !!! warning "Back up the car before any reflash"

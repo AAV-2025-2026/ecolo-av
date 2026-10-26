@@ -74,7 +74,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ $list == 1 ]]; then
-  ros2 run aav_hud_raylib hud --list-monitors
+  ros2 run aav_hud hud --list-monitors
 elif [[ -z "$which" ]]; then
   echo "$USAGE" >&2
   exit 2
@@ -110,7 +110,7 @@ else
   fi
 
   export ROS_DOMAIN_ID=$domain
-  cmd=(ros2 launch aav_hud_raylib "$which.launch.py" "${args[@]}")
+  cmd=(ros2 launch aav_hud "$which.launch.py" "${args[@]}")
   if [[ $print == 1 ]]; then
     echo "ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
     printf '%q ' "${cmd[@]}"
