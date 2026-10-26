@@ -6,9 +6,39 @@ No ROS imports, so the tests run anywhere.
 
 from __future__ import annotations
 
+import math
 from typing import Optional
 
 ACCELERATE, HOLD, DECELERATE, STOPPED = 0, 1, 2, 3
+
+
+def goal_problem(target_speed: float, acceleration: float, deceleration: float,
+                 hold_time: float, hold_distance: float, max_speed: float) -> Optional[str]:
+    """Why a goal can't run, or None. Checked before the goal is accepted."""
+    numbers = (target_speed, acceleration, deceleration, hold_time, hold_distance)
+    if not all(math.isfinite(n) for n in numbers):
+        return 'every number in the goal must be finite'
+    if abs(target_speed) > max_speed:
+        return f'|target_speed| above max_speed {max_speed}'
+    if acceleration <= 0 or deceleration <= 0:
+        return 'acceleration and deceleration must be positive'
+    if hold_distance < 0:
+        return 'hold_distance must not be negative'
+    if hold_distance == 0 and hold_time < 0:
+        return 'hold_time must not be negative'
+    return None
+
+
+def stop_reason(estop: bool, taken_over: bool, needs_odom: bool,
+                odom_fresh: bool) -> Optional[str]:
+    """Why a running goal must end now, or None."""
+    if estop:
+        return 'e-stop'
+    if taken_over:
+        return 'someone else is driving'
+    if needs_odom and not odom_fresh:
+        return 'odometry stopped arriving'
+    return None
 
 
 class SpeedProfile:
@@ -33,6 +63,11 @@ class SpeedProfile:
         """Slow down and stop from wherever the profile is."""
         if self.phase != STOPPED:
             self.phase = DECELERATE
+
+    def stop(self):
+        """Stop at once: zero from now on (an e-stop, or someone else driving)."""
+        self.speed = 0.0
+        self.phase = STOPPED
 
     def step(self, dt: float, distance: float = 0.0) -> float:
         """Advance by dt seconds; distance is metres travelled so far. Return the speed."""

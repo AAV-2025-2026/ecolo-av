@@ -89,7 +89,9 @@ server checks it.
 | No word from twist_mux | every move refused: whether the e-stop is on is unknown | `DriveTools._may_move` |
 | Clearing the e-stop | **never**: a person runs `pixi run estop-clear` | it has no such tool |
 | One drive at a time | refused while one runs | `DriveTools._may_move` |
+| A twist_mux lock | refused while a lock holds the driver that would carry the move: the stop-sign and sensor locks (30) hold Nav2 (20), so `go_to_gps`; not the scripted driver (50), so not `drive` or `turn` | `safety.holding_locks` |
 | The real car | refused unless started with `--car` | `safety.allowed_here` |
+| `--car` that can't reach the car | refuses to start: the pixi tasks keep ROS on this computer, so run `AAV_DISCOVERY=SUBNET pixi run -e mcp drive-server --car` (or `talk --car`) | `safety.car_unreachable` |
 | A person driving | the joystick (100) and keyboard (90) outrank the scripted driver (50) in twist_mux | `aav_mux/config/twist_mux.yaml`, checked by `test_safety.py` |
 | A log | every call, with the time, to stderr and `~/.ros/log/aav_language/tool_calls.jsonl` | `DriveTools._record` |
 | A yes | nothing moves until the person types `yes` | `agent.py` |

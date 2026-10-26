@@ -94,14 +94,18 @@ class DriveTools:
 
     backend: the car side. car: True only when started with --car (the real car).
     caps: the server's own limits (tightened further to ego's when ego answers).
+    mux: twist_mux's (inputs, locks) from its configuration, so a move is refused while a
+    lock holds the driver that would carry it out. Empty: only the e-stop lock counts.
     log: a function given each logged line; log_path: also a JSON-lines file (None = off).
     """
 
     def __init__(self, backend: Backend, car: bool = False,
                  caps: Optional[safety.Caps] = None,
                  log: Optional[Callable[[str], None]] = None,
-                 log_path: Optional[Path] = None):
+                 log_path: Optional[Path] = None,
+                 mux: Tuple[Tuple[safety.MuxInput, ...], Tuple[safety.MuxLock, ...]] = ((), ())):
         self.backend = backend
+        self.mux_inputs, self.mux_locks = mux
         self.car = car
         self.server_caps = caps or safety.Caps()
         self.log = log or (lambda line: None)
@@ -135,8 +139,8 @@ class DriveTools:
             result = {'ok': False, 'message': str(e)}
         return self._record(tool, args, result, started)
 
-    def _may_move(self) -> Optional[str]:
-        """Why nothing may move now, or None."""
+    def _may_move(self, driver: str) -> Optional[str]:
+        """Why nothing may move now through this twist_mux input ('scripted', 'nav'), or None."""
         why = safety.allowed_here(self.backend.where(), self.car)
         if why:
             return why
@@ -147,6 +151,10 @@ class DriveTools:
         if s.estop or s.vehicle_estop or s.mux_locks.get('estop'):
             return ('the e-stop is on. A person must clear it (pixi run estop-clear); '
                     'this server never does')
+        held = safety.holding_locks(driver, self.mux_inputs, self.mux_locks, s.mux_locks)
+        if held:
+            return (f"twist_mux's {', '.join(held)} lock holds this drive "
+                    f'({driver}) now; it would not move')
         busy = self.backend.running()
         if busy:
             return f'a drive is already running ({busy[0]}): stop() it or wait for it'
@@ -221,7 +229,7 @@ class DriveTools:
                                  direction == 'reverse')
         if why is None and curvature and c.min_radius and abs(1.0 / curvature) < c.min_radius:
             why = f'the car cannot turn tighter than a {c.min_radius:.1f} m radius'
-        return why or self._may_move()
+        return why or self._may_move('scripted')
 
     def drive(self, distance_m: float, speed_mps: float = 0.5, direction: str = 'forward',
               curvature: float = 0.0, wait: bool = True) -> dict:
@@ -258,7 +266,7 @@ class DriveTools:
         except ValueError as e:
             return str(e)
         return (safety.check_turn(self.caps(), angle, float(radius_m), float(speed_mps))
-                or self._may_move())
+                or self._may_move('scripted'))
 
     def turn(self, angle_deg: float, radius_m: float, direction: Optional[str] = None,
              speed_mps: float = 0.5, wait: bool = True) -> dict:
@@ -300,7 +308,7 @@ class DriveTools:
         if d > self.caps().max_distance:
             return (f'that point is {d:.0f} m away; commands are limited to '
                     f'{self.caps().max_distance:g} m')
-        why = self._may_move()
+        why = self._may_move('nav')
         if why:
             return why
         if not self.backend.nav_ready():

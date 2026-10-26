@@ -13,11 +13,14 @@ Publishes   turtle1/cmd_vel   geometry_msgs/Twist (bicycle model: w = v tan(d) /
             system/source     aav_interfaces/DataSource, latched: all of it is SIM
 
 The fastest way to test the joystick, mux, ego, scripted driver and ekf_local
-together on a laptop. One turtlesim unit counts as one metre.
+together on a laptop. One turtlesim unit counts as one metre. No command for cmd_timeout
+(0.2 s, as gazebo_adapter) stops the turtle, so a closed output mux stops it as it stops
+the other stand-ins.
 """
 
 import math
 import signal
+import time
 
 from aav_interfaces.msg import ActuatorState, DataSource, SensorSource, VehicleStatus
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -39,6 +42,8 @@ class TurtlesimAdapter(Node):
     def __init__(self):
         super().__init__('turtlesim_adapter')
         self.wheelbase = self.declare_parameter('wheelbase', 1.57).value
+        self.cmd_timeout = self.declare_parameter('cmd_timeout', 0.2).value   # s
+        self.cmd_at = None          # time.monotonic() of the last command; None = stopped
         self.cmd_pub = self.create_publisher(Twist, 'turtle1/cmd_vel', 10)
         self.odom_pub = self.create_publisher(Odometry, 'vehicle/odom', 10)
         self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
@@ -47,6 +52,7 @@ class TurtlesimAdapter(Node):
                                  self.on_cmd, 10)
         self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
         self.create_subscription(Pose, 'turtle1/pose', self.on_pose, 10)
+        self.create_timer(0.05, self.check_stale)
 
         # Say once, latched, that this car is a turtle.
         self.source_pub = self.create_publisher(DataSource, 'system/source', LATCHED)
@@ -58,6 +64,7 @@ class TurtlesimAdapter(Node):
         self.source_pub.publish(announcement)
 
     def on_cmd(self, msg):
+        self.cmd_at = time.monotonic()
         self.steering = msg.drive.steering_angle
         steer = ActuatorState(command=self.steering, measured=self.steering)
         steer.header.stamp = msg.header.stamp
@@ -67,6 +74,14 @@ class TurtlesimAdapter(Node):
         t.linear.x = msg.drive.speed
         t.angular.z = msg.drive.speed * math.tan(msg.drive.steering_angle) / self.wheelbase
         self.cmd_pub.publish(t)
+
+    def check_stale(self):
+        # A steady clock: the turtle runs on wall time, whatever use_sim_time says.
+        if self.cmd_at is not None and time.monotonic() - self.cmd_at > self.cmd_timeout:
+            self.cmd_at = None
+            self.cmd_pub.publish(Twist())       # one zero: turtlesim then holds still
+            self.get_logger().warning(
+                f'no command for {self.cmd_timeout} s: stopped the turtle')
 
     def on_pose(self, pose):
         odom = Odometry()

@@ -465,7 +465,9 @@ impl Spine {
             Mode::Computer => {
                 let cmd = match self.last_cmd {
                     Some(Command::Speed(cmd)) => cmd,
-                    Some(Command::Direct(cmd)) => return self.direct(&cmd, dt, &out),
+                    Some(Command::Direct(cmd)) => {
+                        return self.direct(&cmd, i.measured_speed, dt, &out)
+                    }
                     None => DriveCmd {
                         target_speed: 0.0,
                         steering_angle: self.steering_setpoint,
@@ -523,9 +525,14 @@ impl Spine {
 
     /// An open-loop command, in computer mode: steering at the steering rate limit, the
     /// throttle and the brake as asked (never both), inside the firmware's limits.
+    ///
+    /// In reverse the throttle is capped so the car stays under `max_reverse_speed`:
+    /// with no wheel speed, at the throttle that open loop would give that speed; with a
+    /// wheel speed, cut while the car is at or over it.
     fn direct(
         &mut self,
         cmd: &DirectCmd,
+        measured_speed: f32,
         dt: f32,
         out: &impl Fn(f32, f32, bool, f32, &Self) -> Outputs,
     ) -> Outputs {
@@ -551,7 +558,28 @@ impl Spine {
         } else {
             cmd.throttle.clamp(0.0, 1.0)
         };
+        let throttle = if cmd.reverse {
+            throttle.min(self.reverse_throttle_cap(measured_speed))
+        } else {
+            throttle
+        };
         out(throttle, brake, cmd.reverse, self.steering_setpoint, self)
+    }
+
+    /// The most throttle an open-loop command may have in reverse (0..1).
+    fn reverse_throttle_cap(&self, measured_speed: f32) -> f32 {
+        let c = self.cfg;
+        match c.speed_feedback {
+            SpeedFeedback::None {
+                full_throttle_speed,
+            } if full_throttle_speed > 0.0 => {
+                (c.max_reverse_speed / full_throttle_speed).clamp(0.0, 1.0)
+            }
+            // No map from throttle to speed: no throttle in reverse at all.
+            SpeedFeedback::None { .. } => 0.0,
+            SpeedFeedback::Wheel if -measured_speed >= c.max_reverse_speed => 0.0,
+            SpeedFeedback::Wheel => 1.0,
+        }
     }
 
     /// VEHICLE_FEEDBACK frame (send at 50 Hz).
@@ -1176,6 +1204,36 @@ mod tests {
         cmd.reverse = true;
         let out = car.send_direct(cmd, 1);
         assert!(out.reverse && out.throttle == 0.2);
+    }
+
+    #[test]
+    fn direct_reverse_stays_under_the_reverse_speed() {
+        // No wheel speed: capped at the throttle open loop gives MAX_REVERSE_SPEED.
+        let mut car = Car::with_config(SpineConfig {
+            speed_feedback: SpeedFeedback::None {
+                full_throttle_speed: 3.0,
+            },
+            ..SpineConfig::default()
+        });
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        let mut cmd = direct(1.0, 0.0, 0.0);
+        cmd.reverse = true;
+        let out = car.send_direct(cmd, 1);
+        assert!(out.reverse);
+        assert!((out.throttle - MAX_REVERSE_SPEED / 3.0).abs() < 1e-6);
+        // Forward is not capped this way.
+        let out = car.send_direct(direct(1.0, 0.0, 0.0), 1);
+        assert_eq!(out.throttle, 1.0);
+
+        // With a wheel speed: cut once the car reverses at the limit.
+        let mut car = Car::new();
+        car.send_direct(direct(0.0, 1.0, 0.0), 1);
+        let out = car.tick(Inputs {
+            direct_cmd: Some(cmd),
+            measured_speed: -MAX_REVERSE_SPEED,
+            ..Default::default()
+        });
+        assert_eq!(out.throttle, 0.0);
     }
 
     #[test]

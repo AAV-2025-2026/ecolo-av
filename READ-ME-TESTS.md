@@ -130,7 +130,7 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | 5.2 | **Smooth stop at a GPS point** | `pixi run goto --lat .. --lon ..`: speed up, hold, slow down at **half the measured brake g** (`vehicle.yaml` `max_brake`, from 4.3), stop at B ([A to B](READ-ME-A-TO-B.md)) | stops within 1 m of B (2 m without RTK) | 🔧 in Gazebo 15 Oct (`sim-check --goto`): 10-60 m, any angle, 1 and 3 m/s, every stop within 0.4 m of B, braking 1.4-1.6 m/s² for a plan of 1.5. 🔧 the car: needs 4.3 |
 | 5.3 | Nav2 to a GPS point | the GPS goal, empty lot | reaches B, stops | 🔧 in Gazebo, goals of 8 m and 9.5 m; not yet on the car |
 | 5.4 | **Ghost obstacles** | the real car with a **simulated** person in Nav2's costmap | slows and stops for it, with nothing real to hit | ⬜ |
-| 5.5 | Plain-English driving on the car | `talk --car`: "drive 10 m forward" | the same as 5.1, after you type yes | ⬜ last |
+| 5.5 | Plain-English driving on the car | `AAV_DISCOVERY=SUBNET pixi run -e llm talk --car`: "drive 10 m forward" | the same as 5.1, after you type yes | ⬜ last |
 
 ## Friday's checks (not driving)
 
