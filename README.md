@@ -70,7 +70,7 @@ After [Your first day](#your-first-day), add only the parts you need:
 | To use | Run once | More |
 |---|---|---|
 | The object detector (RF-DETR, YOLO) | `pixi run get-models` | [Perception](docs/perception.md) |
-| The map window's street map and place search | `pixi run get-street-map`, `pixi run get-hud-map` | [HUD](docs/hud.md) |
+| The map window's street map and place search | `pixi run get-street-map`, `pixi run get-places` | [HUD](docs/hud.md) |
 | Street routes (Valhalla) | `pixi run -e routes get-routes` | [Street routes](docs/routes.md) |
 | The camera stream check | `pixi run get-mediamtx` | [Camera pipeline](docs/camera-pipeline.md) |
 | CARLA on Carleton's streets | `pixi run get-carla-osm` | [CARLA](docs/carla.md) |

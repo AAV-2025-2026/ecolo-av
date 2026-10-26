@@ -75,7 +75,7 @@ yarn-error.log*
 !/models/README.md
 !/models/CLAUDE.md
 # The map window's street map (40 MB) and the tool that cuts it (`pixi run get-street-map`),
-# and its place database (`pixi run get-hud-map`).
+# and its place database (`pixi run get-places`).
 /maps/
 
 # Secrets: copy the .example file and fill it in locally

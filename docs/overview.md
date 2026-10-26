@@ -125,7 +125,7 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | The TI radar driver | 2025-26 `Nav_Radar` | `ros/sources/aav_radar_ti` | ported; its settings are indoor demos |
 | The battery monitor | 2024-25 `Battery-Monitor-ROS` | `ros/sources/aav_battery_victron` | ported |
 | Camera calibrations | 2024-25 `cameras` | `aav_sensors/config/cameras` | used by `cameras.launch.py` |
-| The HUD app (Flutter), its Flask back end and boot scripts | 2025-26 `User-Interface` | `archive/2026-27-flutter-hud/` | ported to our topics (10-11 Oct), then archived 25 Oct: the raylib HUD replaced it (Q29). Its route maths lives on in `aav_routes/route.py`, its place database in `pixi run get-hud-map` |
+| The HUD app (Flutter), its Flask back end and boot scripts | 2025-26 `User-Interface` | `archive/2026-27-flutter-hud/` | ported to our topics (10-11 Oct), then archived 25 Oct: the raylib HUD replaced it (Q29). Its route maths lives on in `aav_routes/route.py`, its place database in `pixi run get-places` |
 | The ESP32 actuator firmware (C++) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_umod_esp32` | runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers |
 | The status display (Pico 2) | 2025-26 `AAV_cortex` | `firmware/spine/boards/sentinel-pico2`, crates `sentinel`, `hd44780` | rewritten in Rust, 15 Oct; builds, never flashed; not wired in |
 | The wheel encoder (Pico 2) | 2025-26 `Wheel_Encoders` | `firmware/spine/boards/wheel-encoder-pico2`, crate `wheel-encoder` | rewritten in Rust, 15 Oct; builds, never flashed. The car's UDP encoder is off since 23 Oct: wheel speed now comes from the hardware lead's Arduino on CAN |
@@ -151,6 +151,6 @@ avoidance, odometry and QNX layer. [The older code](older-code.md) has every rep
 | The car | every measurement in `vehicle.yaml` (Q1); the steering calibration (Q2); Jazzy on its computers (Q24) | [Car numbers](car_measurements.md) |
 | Navigation | the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount. Reversing is allowed on the car where the lidar sees behind (22 Oct) | [Costmaps](costmaps.md) |
 | Drivers | a first real joystick test; an e-stop message that can't get lost (N2) | [Starting points](team.md) |
-| The HUD | the build for the car's Pi; its tile server and OSRM route data. The map database downloads with `pixi run get-hud-map` | [HUD](hud.md) |
+| The HUD | the build for the car's Pi; its tile server and OSRM route data. The map database downloads with `pixi run get-places` | [HUD](hud.md) |
 | Simulation | CARLA: adapter ready, never run (needs the NVIDIA computer). Bench mode works: [Bench mode](bench.md) | [CARLA](carla.md) |
 | The team | owners (Q33), the leaked secrets changed (Q34), backups before any reflash | [Work](work.md) |

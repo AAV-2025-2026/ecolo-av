@@ -429,7 +429,7 @@ a bug.
 
 | | |
 |---|---|
-| File | `maps/places/ottawa.db` (`places` in `config/map.yaml`, or `--places FILE`): `pixi run get-hud-map` |
+| File | `maps/places/ottawa.db` (`places` in `config/map.yaml`, or `--places FILE`): `pixi run get-places` |
 | Opened | read-only |
 | Matches | a name that starts with the words (any case), an address ("580 rideau"), then names with the words inside |
 | Left out | street lamps, benches, crossings, footways, service roads, link roads... (a deny-list, `NOT_DESTINATIONS` in `places.rs`: over 300 types, so a new one should show up) |
@@ -487,7 +487,7 @@ The map window's [place search](#search-for-a-place-and-drive-there) reads `otta
 downloads it:
 
 ```bash
-pixi run get-hud-map      # into maps/places/ottawa.db
+pixi run get-places      # into maps/places/ottawa.db
 ```
 
 | | |

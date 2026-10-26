@@ -109,7 +109,7 @@ Each lands outside git, checksum pinned where the script says.
 | `vendor.py` | ROS 2 and ros2-rust source into `vendor/` | `vendor` |
 | `get_models.sh` | RF-DETR Nano and YOLO11n into `models/` | `get-models` |
 | `get_mediamtx.sh` | MediaMTX into `vendor/mediamtx` | `get-mediamtx` |
-| `get_hud_map.sh` | `ottawa.db` (places) into `maps/places/`, for the map window's search | `get-hud-map` |
+| `get_places.sh` | `ottawa.db` (places) into `maps/places/`, for the map window's search | `get-places` |
 | `get_street_map.sh` | Ottawa's vector tiles into `maps/streets/` | `get-street-map` |
 | `get_carla_osm.sh` | Carleton's OpenStreetMap data into `maps/carla/` | `get-carla-osm` |
 | `get_routes.sh` | Ottawa's OSM and Valhalla's graph into `maps/routes/` | `-e routes get-routes` |

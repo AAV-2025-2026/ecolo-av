@@ -16,6 +16,6 @@ map:
     # The street map under Nav2's map (pixi run get-street-map). A path relative to the
     # folder the window starts in (pixi starts it in the repo); missing = no streets.
     street_map: maps/streets/ottawa.pmtiles
-    # The place search's database (pixi run get-hud-map): OpenStreetMap's names and
+    # The place search's database (pixi run get-places): OpenStreetMap's names and
     # addresses, SQLite, read-only. Found the same way as street_map; missing = no search.
     places: maps/places/ottawa.db

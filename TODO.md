@@ -304,7 +304,7 @@ Decided ([Decisions](docs/decisions.md)):
          `hud-test`). *Fixed: the app could never connect (Socket.IO tried polling
          first); now WebSocket only. The back end has 98 tests.* *Archived 25 Oct with the
          app (`archive/2026-27-flutter-hud/`): `get-flutter` and `hud-test` are gone.*
-   - [x] **The HUD's place database:** `pixi run get-hud-map` (51 MB, checksum pinned).
+   - [x] **The HUD's place database:** `pixi run get-places` (51 MB, checksum pinned).
    - [x] **The car's launch:** perception as parts of `car.launch.py` (camera, detector,
          stop_signs, radar_clusters), the GPS driver (`gps_driver:=ublox` by default),
          `gps:=false` fixed. *21 launch tests.*

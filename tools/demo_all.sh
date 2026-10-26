@@ -32,7 +32,7 @@ start() { "$@" & pids="$pids $!"; }
 
 # The map window draws Ottawa's streets and searches places from two downloads, kept out
 # of git. Without them it starts anyway, with no streets and no search: say so first.
-for f in maps/streets/ottawa.pmtiles:get-street-map maps/places/ottawa.db:get-hud-map; do
+for f in maps/streets/ottawa.pmtiles:get-street-map maps/places/ottawa.db:get-places; do
   [ -f "${f%%:*}" ] || echo "note: no ${f%%:*}, so the map window misses it: run pixi run ${f##*:} once"
 done
 

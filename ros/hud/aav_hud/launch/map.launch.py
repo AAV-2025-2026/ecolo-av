@@ -14,7 +14,7 @@ vehicle.yaml. Where map (0, 0) is on the Earth: aav_localization's navsat.yaml, 
 datum navsat_transform uses. It needs a screen: on a computer without one, it fails.
 monitor: as in hud.launch.py, by name or number. On the car, tools/car_screen.sh starts
 it at boot (docs/car-screens.md).
-Keys: / search for a place (ottawa.db: pixi run get-hud-map), then DRIVE HERE and
+Keys: / search for a place (ottawa.db: pixi run get-places), then DRIVE HERE and
 CONFIRM publish Nav2's goal on /goal_pose; F follow the car / whole map, S streets
 on / off, + - or the mouse wheel zoom, drag to move.
 """

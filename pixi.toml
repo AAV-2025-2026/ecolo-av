@@ -63,7 +63,7 @@ car-day-build = { cmd = "tools/car_day_build.sh", description = "Before car day:
 vendor = { cmd = "python3 tools/vendor.py", description = "Download the ROS 2 and ros2-rust source into vendor/, to look things up (not ours; about 560 MB)" }
 get-models = { cmd = "tools/get_models.sh", description = "Download the stock RF-DETR Nano and YOLO models into models/ (for pixi run detect)" }
 get-mediamtx = { cmd = "tools/get_mediamtx.sh", description = "Download MediaMTX v1.21.2 (MIT, about 30 MB) into vendor/mediamtx, the camera Pi's RTSP server, for pixi run stream-check" }
-get-hud-map = { cmd = "tools/get_hud_map.sh", description = "Download the place database (51 MB, OpenStreetMap) into maps/places/ for the map window's place search" }
+get-places = { cmd = "tools/get_places.sh", description = "Download the place database (51 MB, OpenStreetMap) into maps/places/ for the map window's place search" }
 get-street-map = { cmd = "tools/get_street_map.sh", description = "Download the map window's offline street map of Ottawa (40 MB of OpenStreetMap vector tiles, from Protomaps) into maps/streets/" }
 get-carla-osm = { cmd = "tools/get_carla_osm.sh", description = "Download Carleton's OpenStreetMap data round our datum into maps/carla/, for a CARLA map of the campus: pixi run get-carla-osm [--roads] (docs/carla.md)" }
 # The HUD in Rust and raylib (docs/hud.md). hud-demo needs no ROS: pretend data.
@@ -72,7 +72,7 @@ hud-demo = { cmd = "cargo run --release -q --locked --manifest-path ros/hud/aav_
 # The big screen's map window, the same way: map-demo needs no ROS.
 map = { cmd = "tools/ros.sh ros2 launch aav_hud map.launch.py", description = "The big screen's map window (raylib), as the ROS node map: pixi run map fullscreen:=true" }
 map-demo = { cmd = "cargo run --release -q --locked --manifest-path ros/hud/aav_hud/Cargo.toml -p map-app --no-default-features -- --demo", description = "The map window with pretend data: no ROS, no car" }
-demo = { cmd = "tools/demo_all.sh", description = "Start the whole simulated car on this computer in one go: Gazebo in the walled test lot, the nav screen (RViz), the HUD and the street-map window (streets and search need pixi run get-street-map and get-hud-map once); localhost-only, never touches the real car. pixi run demo [fullscreen]; Ctrl-C stops all four" }
+demo = { cmd = "tools/demo_all.sh", description = "Start the whole simulated car on this computer in one go: Gazebo in the walled test lot, the nav screen (RViz), the HUD and the street-map window (streets and search need pixi run get-street-map and get-places once); localhost-only, never touches the real car. pixi run demo [fullscreen]; Ctrl-C stops all four" }
 # The spine's board program, for a Pico 2 (docs/rust-firmware.md). spine-uf2 only makes a
 # file; spine-flash writes to a Pico 2, through a debug probe, so run it only on the bench.
 spine-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/spine-pico2 spine-pico2.uf2", cwd = "firmware/spine/boards/pico2", description = "Build the spine's Pico 2 program as firmware/spine/boards/pico2/spine-pico2.uf2: hold BOOTSEL, plug in, drag it on" }

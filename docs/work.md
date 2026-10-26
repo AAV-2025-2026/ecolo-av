@@ -115,7 +115,7 @@ From the design doc's next steps, in order.
 
 - ~~Keep the Flutter app or not (Q29)~~: answered. The raylib HUD replaced it (Ben, 15 Oct); the app, its back end and its boot scripts were archived on 25 Oct (`archive/2026-27-flutter-hud/`).
 - Try the raylib HUD and the map window on the car's screens ([The two screens](car-screens.md)).
-- The map database downloads with `pixi run get-hud-map`; street routes come from Valhalla ([Street routes](routes.md)).
+- The map database downloads with `pixi run get-places`; street routes come from Valhalla ([Street routes](routes.md)).
 
 ### Simulation
 

@@ -132,7 +132,7 @@ Every one, with what it does: README's [Every command](../README.md#every-comman
 | `get_models.sh` | downloads the stock RF-DETR Nano and YOLO models, checksums pinned | `pixi run get-models` |
 | `build_engine.py` | builds the Orin's TensorRT model, RF-DETR Nano by default, on the Orin itself (JetPack's Python) | `python3 tools/build_engine.py` on the Orin |
 | `export_model.py` | exports a detector model to Core ML or ONNX (RF-DETR through rfdetr, YOLO through Ultralytics) | `pixi run -e ml export-coreml` |
-| `get_hud_map.sh` | downloads the place database into `maps/places/`, for the map window's search, checksum pinned | `pixi run get-hud-map` |
+| `get_places.sh` | downloads the place database into `maps/places/`, for the map window's search, checksum pinned | `pixi run get-places` |
 | `get_street_map.sh` | cuts Ottawa out of Protomaps' world street map, checksums pinned | `pixi run get-street-map` |
 | `elf2uf2.py` | turns the Pico 2 program into a UF2 file | `pixi run spine-uf2` |
 | `vendor.py` | downloads the source in `vendor/*.repos` | `pixi run vendor` |
