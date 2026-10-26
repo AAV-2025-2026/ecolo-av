@@ -58,7 +58,7 @@ the turtle. `k` stops it. Let go of a key and it stops by itself. `Ctrl+C` quits
 
     pixi run test
 
-This runs the same checks as CI on every push. All of them should pass.
+This runs the same checks CI runs on every pull request. All of them should pass.
 
 ## Troubleshooting
 
