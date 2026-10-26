@@ -7,7 +7,7 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">39 min read · 13 sections</div></header>
+<div class="meta">40 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -222,9 +222,9 @@ answer.</p>
 <td>Q29</td>
 </tr>
 <tr>
-<td>Flutter 3.35.7, downloaded into <code>vendor/</code> (<code>pixi run get-flutter</code>)</td>
+<td>~~Flutter 3.35.7, downloaded into <code>vendor/</code>~~ <strong>Superseded 25 Oct:</strong> the Flutter app is archived, and its download task is gone</td>
 <td>Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's <code>pubspec.lock</code></td>
-<td>Q29</td>
+<td>Q29 (answered)</td>
 </tr>
 <tr>
 <td>Lane keeping: a classic OpenCV lane finder publishes <code>/perception/lane/geometry</code>; the 2025-26 lane keeping follows it</td>
@@ -450,7 +450,7 @@ answer.</p>
 <td>Ben, 11:38: "No micro-ROS - lets rethink thinks later after we see the hardware"</td>
 </tr>
 <tr>
-<td>The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29</td>
+<td>The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29 (since: the raylib HUD replaced it, 15 Oct; archived 25 Oct)</td>
 <td>Ben, 11:58: "Raylib for the HUD: yes, no, or try it first? yes"</td>
 </tr>
 </tbody>
@@ -638,6 +638,11 @@ answer.</p>
 <td><strong>ROS packages live in <code>ros/&lt;area&gt;/</code></strong>: sources, localization, perception, drivers, command_mux, ego, io_mux, can_bridge, sim, safety, hud, bringup, ecolo_msgs (was <code>src/&lt;layer&gt;/</code>)</td>
 <td>Each folder matches a box in the picture, so you find a package where its data flows</td>
 <td>Arsh, 25 Oct</td>
+</tr>
+<tr>
+<td><strong>The Flutter HUD and its Flask back end are archived</strong> (<code>archive/2026-27-flutter-hud/</code>); the raylib package takes the name <code>aav_hud</code>; the route maths moves to <code>aav_routes</code></td>
+<td>Q29: the raylib HUD replaced the app on 15 Oct. Nothing built, tested or started the old one any more</td>
+<td>Ben, 25 Oct</td>
 </tr>
 <tr>
 <td><strong><a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a> is the git rule</strong>: fork, branch, pull request, one approval and green CI, then the merge queue</td>
@@ -840,7 +845,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q29</td>
 <td>HUD</td>
-<td>Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? Partly answered 11 Oct: a raylib HUD replaces the app once it matches</td>
+<td>Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? <strong>Answered:</strong> the raylib HUD replaced the app (Ben, 15 Oct); the app and its back end were archived on 25 Oct (Ben). Destinations: the map window's place search. Still open: which computer drives the screens (<a href="team-todo.html">Team to-do</a>)</td>
 </tr>
 <tr>
 <td>Q30</td>

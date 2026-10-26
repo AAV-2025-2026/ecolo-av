@@ -11,7 +11,6 @@ tests, and how a change goes from an idea to the car.
 |---|---|---|
 | The car's software | ROS 2 Jazzy packages, one folder per area | `ros/` |
 | The car's firmware | the CAN contract, the Rust spine logic and its Pico 2 program, the 2025-26 boards' code | `firmware/` |
-| The touchscreen app | the 2025-26 Flutter HUD, changed for our back end | `hud/` |
 | The environment | ROS, Gazebo, compilers, Python and Rust, all from Pixi | `pixi.toml`, `pixi.lock` |
 | The tools | tests, the graph check, the network doctor, recording, docs, the mailer, the MCP server | `tools/` |
 | The docs | short markdown pages, built into web pages and one PDF | `docs/` |
@@ -41,17 +40,17 @@ ecolo-av/
     can_bridge/         the real car: the spine bridge (CAN) and today's ESP32 link
     sim/                whatever plays the car instead: Gazebo, turtlesim, CARLA, bench mode
     safety/             the sensor watchdog and the ghost obstacles
-    hud/                the in-car screen: its back end and the raylib HUD and map
+    hud/                the in-car screens: the raylib HUD and the map window
   firmware/           microcontroller code (colcon ignores it)
     can/                aav.dbc, the CAN contract, and its test vectors
     spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers,
                         and boards/pico2, the spine's board program
     legacy/             the 2025-26 ESP32 and Pico code that runs the car today
-  hud/                the 2025-26 Flutter app (colcon ignores it)
   examples/           rust-listener: a first ROS node in Rust
   models/             trained model files, not in git: pixi run get-models
   tools/              scripts: see the table below
   docs/               these pages; docs/history/ keeps the Q&A, Ben's requests and the audits
+  archive/            reference only, never built: the older teams' repos, the Flutter HUD
 ```
 
 ## The three contracts
@@ -134,11 +133,8 @@ Every one, with what it does: README's [Every command](../README.md#every-comman
 | `get_models.sh` | downloads the stock RF-DETR Nano and YOLO models, checksums pinned | `pixi run get-models` |
 | `build_engine.py` | builds the Orin's TensorRT model, RF-DETR Nano by default, on the Orin itself (JetPack's Python) | `python3 tools/build_engine.py` on the Orin |
 | `export_model.py` | exports a detector model to Core ML or ONNX (RF-DETR through rfdetr, YOLO through Ultralytics) | `pixi run -e ml export-coreml` |
-| `get_hud_map.sh` | downloads the place database, checksum pinned, once for both users | `pixi run get-hud-map` |
+| `get_hud_map.sh` | downloads the place database into `maps/places/`, for the map window's search, checksum pinned | `pixi run get-hud-map` |
 | `get_street_map.sh` | cuts Ottawa out of Protomaps' world street map, checksums pinned | `pixi run get-street-map` |
-| `get_flutter.sh` | downloads Flutter, checksum pinned | `pixi run get-flutter` |
-| `flutter.sh` | runs that Flutter, with its analytics off | `pixi run flutter <arguments>` |
-| `hud_test.sh`, `hud_fake_backend.py` | the HUD app's checks; its client code against the real back end, with a fake car | `pixi run hud-test` |
 | `elf2uf2.py` | turns the Pico 2 program into a UF2 file | `pixi run spine-uf2` |
 | `vendor.py` | downloads the source in `vendor/*.repos` | `pixi run vendor` |
 | `udev/99-aav.rules` | stable device names on the car (`/dev/aav/imu`, ...) | install on the car's Linux computers |
@@ -248,7 +244,7 @@ needs a sign-in: on the run's page, or `gh run download <run id> -n sim-logs`.
 !!! warning "What never goes in git"
   Build output (`build/`, `install/`, `log/`, `.pixi/`, `target/`), recordings (`bags/`),
   and secrets. `.gitignore` lists them. Downloaded third-party source, such as ROS's own
-  code and Flutter, lives in `vendor/`, which git doesn't track: `pixi run vendor`.
+  code, lives in `vendor/`, which git doesn't track: `pixi run vendor`.
 
 ## Where to find what happened
 

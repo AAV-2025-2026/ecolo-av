@@ -39,13 +39,13 @@ firmware/**/*.map
 firmware/**/*.hex
 firmware/**/*.bin
 
-# The HUD: Flutter and Dart (hud/flutter_pi/.gitignore has the full list)
+# The archived Flutter HUD, if anyone builds it (archive/2026-27-flutter-hud/hud/flutter_pi/.gitignore)
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 **/flutter/ephemeral/
 **/Flutter/ephemeral/
-hud/**/build/
+archive/2026-27-flutter-hud/hud/**/build/
 
 # Node, for any web or JavaScript UI
 node_modules/
@@ -74,8 +74,6 @@ yarn-error.log*
 /models/*
 !/models/README.md
 !/models/CLAUDE.md
-# The place database (51 MB), the Flutter app's copy: `pixi run get-hud-map` downloads it.
-/hud/flutter_pi/assets/databases/
 # The map window's street map (40 MB) and the tool that cuts it (`pixi run get-street-map`),
 # and its place database (`pixi run get-hud-map`).
 /maps/

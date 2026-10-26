@@ -55,8 +55,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Lane keeping | `aav_lane_finder` + `aav_lane_geometry` | [[works]] on the bench: from 0.3 m off the centre line back to within 5 cm in about 6 s |
 | Radar clustering | `aav_radar_clusters` (Rust) | [[works]] on the bench and in Gazebo's road world (15 Oct); gives the 2025-26 C++ node's answers, bit for bit |
 | Obstacles in Nav2 | the radar in the local costmap; `collision_monitor`'s stop zone; `camera_obstacles` | [[works]] on the bench: the stop zone stops the car 0.3-0.4 m before a box as wide as the lane. Open: the car weaves up to 1.5 m off its line (N7), so it can pass beside a narrow box; the stop zone flickers at its edge. The camera layer is off until the cameras are calibrated (Q22) |
-| HUD back end and app | `aav_hud`, `hud/` | [[works]] on the bench: the app's e-stop button stops the car in 0.3 s. [[untested]] on the car's screen |
-| HUD in Rust (raylib) | `aav_hud_raylib` | [[works]] on a Mac: `--demo`, and as a node fed by `ros2 topic pub`; its e-stop reaches a subscriber as 5 trues. Its heartbeat (23 Oct): the real window beat at 9.3 Hz, and freezing or closing it made the watchdog say `hud STALE` in 1 s. Since 24 Oct a dropout after its first 5 s is latched (`hud LOST`, `pixi run watchdog-clear`), and a GO / STOP panel says whether the car may move (logic tested; not yet seen on screen). [[works]] next to bench mode too. [[untested]] on a Pi and on the car's screen |
+| HUD back end and app (Flask, Flutter) | `archive/2026-27-flutter-hud/` | archived 25 Oct: the raylib HUD replaced it (Q29). Not built, not tested |
+| HUD and map window in Rust (raylib) | `aav_hud` | [[works]] on a Mac: `--demo`, and as a node fed by `ros2 topic pub`; its e-stop reaches a subscriber as 5 trues. Its heartbeat (23 Oct): the real window beat at 9.3 Hz, and freezing or closing it made the watchdog say `hud STALE` in 1 s. Since 24 Oct a dropout after its first 5 s is latched (`hud LOST`, `pixi run watchdog-clear`), and a GO / STOP panel says whether the car may move (logic tested; not yet seen on screen). [[works]] next to bench mode too. [[untested]] on a Pi and on the car's screen |
 | CARLA | `aav_carla` | [[untested]] adapter built and tested without a server; needs the NVIDIA computer ([CARLA](carla.md)) |
 | Heading from the GPS velocity (25 Oct) | `aav_gps_heading` `gps_heading` -> `ekf_global` (yaw only), `pixi run heading-check` | [[works]] in Gazebo: at walking pace the heading's median error fell from 2.2-2.8° to 1.6-2.1°, forward and reversing. [[untested]] on the car: needs `gps_driver:=ublox` for the velocity |
 | RC via ROS (24 Oct) | `aav_rc` `rc_driver`: `/vehicle/rc` -> `/drivers/rc/cmd_vel` (twist_mux 95); the ESP32's uplink (`--features uplink`) | [[works]] in QEMU (all six RC steps) and in a ROS test. Off until the hardware lead answers H9 and H10. [[untested]] on a real ESP32 and the car |
@@ -73,8 +73,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 
 | Check | Result |
 |---|---|
-| `colcon build`, all 38 packages, Jazzy | [[works]] on Linux and the Mac (25 Oct) |
-| `pixi run test`: build, tests, lint, `colcon test` | [[works]] 25 Oct: 1182 tests, 0 failures, 4 skipped, 38 packages. CI runs it on Linux (x86_64 and 64-bit ARM) for every push |
+| `colcon build`, all 37 packages, Jazzy | [[works]] on Linux and the Mac (25 Oct) |
+| `pixi run test`: build, tests, lint, `colcon test` | [[works]] 25 Oct: 1110 tests, 0 failures, 4 skipped, 37 packages (after the Flutter HUD's back end went to the archive). CI runs it on Linux (x86_64 and 64-bit ARM) for every push |
 | Live graph vs `docs/interfaces.yaml`: turtle, sim, road, replay and bench | [[works]] 0 failures each (sim and road again on 15 Oct, after the topic renaming) |
 | `pixi run bench-check` (`--perception`, `--lane`, `--obstacle`) | [[works]] on `main`, 11 Oct: the default checks, the stop sign, lane keeping and the obstacle |
 | Sim, headless: drive commands (the keyboard's topic) and Nav2 goals | [[works]] |

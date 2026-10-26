@@ -112,7 +112,7 @@ def test_hud_runs_full_screen_on_its_monitor(tmp_path):
     assert done.returncode == 0, done.stderr
     env, cmd = done.stdout.splitlines()
     assert env == 'ROS_DOMAIN_ID=42'
-    assert shlex.split(cmd) == ['ros2', 'launch', 'aav_hud_raylib', 'hud.launch.py',
+    assert shlex.split(cmd) == ['ros2', 'launch', 'aav_hud', 'hud.launch.py',
                                 'fullscreen:=true', 'monitor:=HDMI-1']
 
 
@@ -124,7 +124,7 @@ def test_map_gets_its_monitor_and_files(tmp_path):
     env, cmd = done.stdout.splitlines()
     assert env == 'ROS_DOMAIN_ID=7'
     assert shlex.split(cmd) == [
-        'ros2', 'launch', 'aav_hud_raylib', 'map.launch.py', 'fullscreen:=true',
+        'ros2', 'launch', 'aav_hud', 'map.launch.py', 'fullscreen:=true',
         'monitor:=Studio Display',
         f'streets:={tmp_path}/aav/maps/streets/ottawa.pmtiles',
         f'places:={tmp_path}/aav/maps/places/ottawa.db']
@@ -168,10 +168,10 @@ def test_scripts_parse(script):
 def install(home, *args):
     """Run the installer in a made-up home, with a pretend aav-jazzy in it."""
     prefix = home / 'aav-jazzy'
-    (prefix / 'aav' / 'install' / 'aav_hud_raylib' / 'lib' / 'aav_hud_raylib').mkdir(
+    (prefix / 'aav' / 'install' / 'aav_hud' / 'lib' / 'aav_hud').mkdir(
         parents=True, exist_ok=True)
     for exe in ('hud', 'map'):
-        (prefix / 'aav' / 'install' / 'aav_hud_raylib' / 'lib' / 'aav_hud_raylib' / exe
+        (prefix / 'aav' / 'install' / 'aav_hud' / 'lib' / 'aav_hud' / exe
          ).write_text('')
     (prefix / 'aav.sh').write_text('')
     env = {'HOME': str(home), 'PATH': '/usr/bin:/bin'}

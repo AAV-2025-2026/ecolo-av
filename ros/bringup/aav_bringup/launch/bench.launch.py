@@ -199,7 +199,8 @@ def generate_launch_description():
                                           'on /drivers/ai/cmd_vel); fake: the same on a '
                                           'pretend lane'),
         DeclareLaunchArgument('hud', default_value='false',
-                              description="the HUD's web server (aav_hud), on 127.0.0.1:5000"),
+                              description='the HUD window (aav_hud, as pixi run hud); '
+                                          'needs a screen'),
         DeclareLaunchArgument('arm', default_value='true',
                               description='arm the spine after 12 s'),
         DeclareLaunchArgument('foxglove', default_value='false',

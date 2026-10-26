@@ -9,13 +9,13 @@ package, one per row: [Packages](packages.md).
 
 | What | How many |
 |---|---|
-| ROS packages that build | 38: 24 in Python, 14 in CMake (some of them Rust) |
+| ROS packages that build | 37: 23 in Python, 14 in CMake (some of them Rust) |
 | Rust firmware crates | 13 (`spine-core`, `aav-inputs`, device drivers, glue), and 4 board programs: the spine on today's ESP32 and on a Pico 2, the wheel encoder, the status display |
 | The 2025-26 team's firmware boards, in C++ | 3 |
 | Launch profiles | 6: `turtle`, `sim`, `car`, `replay`, `bench`, `carla` |
 | Computers in the machine files | 4: `orin`, `motor_pi`, `laptop`, `all` |
 | Contracts | 3: the topics, the CAN frames, the car's measurements |
-| Tests | `pixi run test`: 1182 on 25 Oct, 0 failures ([Status](status.md)); plus `bench-check` and `sim-check` |
+| Tests | `pixi run test`: 1110 on 25 Oct, 0 failures ([Status](status.md)); plus `bench-check` and `sim-check` |
 | Tools | about 70 scripts and 80 `pixi run` tasks |
 
 ## The folders
@@ -24,11 +24,11 @@ package, one per row: [Packages](packages.md).
 |---|---|---|
 | `ros/` | the ROS 2 packages, one folder per area | [Packages](packages.md) |
 | `firmware/` | the CAN contract, the Rust crates, the spine's Pico 2 program, and the 2025-26 C++ boards | [Firmware](firmware.md), [Rust firmware](rust-firmware.md) |
-| `hud/` | the 2025-26 touchscreen app (Flutter), changed for our back end, `ros/hud/aav_hud`. `pixi run get-flutter` downloads Flutter | [HUD](hud.md) |
 | `tools/` | tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server | [Infrastructure](infrastructure.md) |
 | `examples/` | a first ROS node in Rust | |
 | `docs/` | these pages, the topic contract, and the history | |
 | `models/` | the detector models, RF-DETR Nano (the default) and YOLO: `pixi run get-models` downloads them (not in git) | [Perception](perception.md) |
+| `archive/` | the older teams' repos, as they were, and the 2025-26 Flutter HUD (archived 25 Oct). Reference only: never built | [Older code](older-code.md) |
 | `vendor/` | other people's source, to look things up: ROS 2 Jazzy and rclrs. Not ours, and not in git: `pixi run vendor` downloads it | |
 | `pixi.toml`, `pixi.lock` | the whole environment: ROS 2 Jazzy, Gazebo, Nav2, Rust, compilers | [Infrastructure](infrastructure.md) |
 
@@ -100,7 +100,7 @@ The main ones. Every package: [Packages](packages.md).
 | Watching | `rviz2`, `rqt_graph`, `rqt_tf_tree` | the 3D view, the node graph, the frame tree |
 | Watching | `foxglove_bridge` | Foxglove or Lichtblick on a laptop, on the car |
 | Recording | `rosbag2`, with MCAP files | `tools/record.sh` and replay |
-| Ready, not used yet | `rosbridge_server` | if the HUD moves off Socket.IO |
+| Ready, not used yet | `rosbridge_server` | a web page could read ROS through it; nothing uses it since the Flutter HUD was archived (25 Oct) |
 
 ### The plugins inside Nav2 and Gazebo
 
@@ -126,8 +126,7 @@ Each copy carries a `PROVENANCE.md`: where it came from, and every change since.
 | The TI radar driver | 2025-26 `Nav_Radar` | `ros/sources/ti_ros2_driver` | ported; its settings are indoor demos |
 | The battery monitor | 2024-25 `Battery-Monitor-ROS` | `ros/sources/battery_monitor` | ported |
 | Camera calibrations | 2024-25 `cameras` | `aav_sensors/config/cameras` | used by `cameras.launch.py` |
-| The HUD's back end (Flask) | 2025-26 `User-Interface` | `ros/hud/aav_hud` | ported to our topics; publishes `/safety/estop`. 98 tests |
-| The HUD app (Flutter) and its boot scripts | 2025-26 `User-Interface` | `hud/` | changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen |
+| The HUD app (Flutter), its Flask back end and boot scripts | 2025-26 `User-Interface` | `archive/2026-27-flutter-hud/` | ported to our topics (10-11 Oct), then archived 25 Oct: the raylib HUD replaced it (Q29). Its route maths lives on in `aav_routes/route.py`, its place database in `pixi run get-hud-map` |
 | The ESP32 actuator firmware (C++) | 2025-26 `AAV_cortex` | `firmware/legacy/aav_umod_esp32` | runs today's car; its WiFi password moved out of git. Its device logic is ported to the Rust drivers |
 | The status display (Pico 2) | 2025-26 `AAV_cortex` | `firmware/spine/boards/sentinel-pico2`, crates `sentinel`, `hd44780` | rewritten in Rust, 15 Oct; builds, never flashed; not wired in |
 | The wheel encoder (Pico 2) | 2025-26 `Wheel_Encoders` | `firmware/spine/boards/wheel-encoder-pico2`, crate `wheel-encoder` | rewritten in Rust, 15 Oct; builds, never flashed. The car's UDP encoder is off since 23 Oct: wheel speed now comes from the hardware lead's Arduino on CAN |

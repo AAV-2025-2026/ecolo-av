@@ -83,7 +83,7 @@ bash /media/$USER/<stick>/car-kit/car_install.sh
 | 2 | clones the code, and links the environment in as Pixi's own | `~/aav-jazzy/aav` |
 | 3 | unpacks the Rust crates, and tells cargo to stay offline | `~/aav-jazzy/cargo` |
 | 4 | writes `aav.sh`, which runs a command inside our Jazzy | `~/aav-jazzy/aav.sh` |
-| 5 | `colcon build`, offline. The HUD (`aav_hud_raylib`) only with `--all` | `~/aav-jazzy/aav/install` |
+| 5 | `colcon build`, offline. The HUD (`aav_hud`) only with `--all` | `~/aav-jazzy/aav/install` |
 
 - Run it again any time: it skips what is done. A newer kit updates the code, and the
   environment only if `pixi.lock` changed.

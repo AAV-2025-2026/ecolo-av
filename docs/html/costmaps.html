@@ -555,10 +555,10 @@ in RViz. The datum in the file now is a placeholder near Carleton.</p>
 <p>The global costmap only says which cells may be driven on. Roads, junctions and routing
 across a city are a separate kind of map: a road graph. Two tools handle that:</p>
 <ul>
-<li><strong>OSRM</strong>, which the HUD already uses. It turns a destination into a route of
-  latitude/longitude points. Those points can become a <code>follow_gps_waypoints</code> goal for
-  Nav2 (see <a href="hud.html">hud.md</a>). Our own offline router for that, Valhalla, and the node
-  that turns its routes into waypoints: <a href="routes.html">Street routes</a>.</li>
+<li><strong>A street router</strong> (Valhalla, or OSRM). It turns a destination into a route of
+  latitude/longitude points. Those points become a <code>follow_gps_waypoints</code> goal for
+  Nav2. Our offline router, and the node that turns its routes into waypoints
+  (<code>street_router</code>): <a href="routes.html">Street routes</a>.</li>
 <li><strong>Nav2's Route Server</strong> (<code>nav2_route</code>). It's released for Jazzy, in Nav2 1.3.13 as of
   October 2026, and follows a hand-made graph of lanes or paths. Consider it if the test site becomes a set of fixed lanes.</li>
 </ul>

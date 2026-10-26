@@ -90,8 +90,8 @@
 <main>
 <nav class="toc"><span>On this page:</span><a href="#at-a-glance">At a glance</a><a href="#sensors">Sensors</a><a href="#description-and-localization">Description and localization</a><a href="#drivers-the-mux-and-ego">Drivers, the mux and ego</a><a href="#perception">Perception</a><a href="#backends">Backends</a><a href="#bench-mode">Bench mode</a><a href="#interfaces-and-bringup">Interfaces and bringup</a><a href="#firmware">Firmware</a><a href="#the-hud">The HUD</a><a href="#examples">Examples</a></nav>
 <div class="lead"><p>Every ROS package in <code>ros/</code>, area by area (<code>ros/&lt;area&gt;/&lt;package&gt;</code>), with what it reads
-and writes. Then the firmware, the HUD and the examples. 38 packages build today, and
-none is parked.</p></div>
+and writes. Then the firmware, the HUD and the examples. 37 packages build today (the
+Flask HUD went to the archive on 25 Oct), and none is parked.</p></div>
 <section class="card"><h2 id="at-a-glance">At a glance</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -359,14 +359,7 @@ none is parked.</p></div>
 <tr>
 <td><code>aav_hud</code></td>
 <td>hud</td>
-<td>the HUD's web server (Flask, Socket.IO), on our topics</td>
-<td><span class="badge b-works">works</span> on the bench, with the app's e-stop button</td>
-<td>2025-26 <code>User-Interface</code></td>
-</tr>
-<tr>
-<td><code>aav_hud_raylib</code></td>
-<td>hud</td>
-<td>the in-car screen in Rust: one raylib window that is the ROS node <code>hud</code></td>
+<td>the in-car screens in Rust (raylib): the HUD (node <code>hud</code>) and the map window (node <code>map</code>)</td>
 <td><span class="badge b-works">works</span> on a Mac: <code>--demo</code>, fed topics, bench mode. <span class="badge b-untested">untested</span> on a Pi and on the car</td>
 <td>new</td>
 </tr>
@@ -813,20 +806,12 @@ Only one runs at a time.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>hud/flutter_pi</code></td>
-<td>the 2025-26 touchscreen app (Flutter): speed, map, camera; since 11 Oct an e-stop button, Cancel and the car's status. <code>pixi run hud-test</code></td>
-</tr>
-<tr>
-<td><code>hud/scripts</code></td>
-<td>the old Pi's start-up scripts</td>
-</tr>
-<tr>
 <td><code>ros/hud/aav_hud</code></td>
-<td>its ROS back end, on our topics: speed, mode, GPS, the stop sign and the camera in; a locked route out to Nav2's GPS waypoints, and the e-stop. <a href="hud.html">HUD</a> has what's left</td>
+<td>the HUD in Rust (raylib and rclrs): the driving screen, the e-stop button, GPS and topic health (<code>pixi run hud-demo</code>); and the map window (<code>pixi run map-demo</code>). <a href="hud.html">HUD</a></td>
 </tr>
 <tr>
-<td><code>ros/hud/aav_hud_raylib</code></td>
-<td>the HUD in Rust (raylib and rclrs), to replace the two above: the driving screen, the e-stop button, GPS and topic health. <code>pixi run hud-demo</code></td>
+<td><code>archive/2026-27-flutter-hud/</code></td>
+<td>the 2025-26 Flutter app and its Flask back end, archived 25 Oct (Q29). Not built</td>
 </tr>
 </tbody>
 </table></div>

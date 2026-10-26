@@ -1,4 +1,4 @@
-# hud: the in-car screen (aav_hud_raylib). Every topic name it uses lives here, not in
+# hud: the in-car screen (aav_hud). Every topic name it uses lives here, not in
 # the code: rename a topic here (or with `--ros-args -p gps_topic:=...`), never in Rust.
 # Built into the program as its defaults, so --demo shows the same names.
 hud:

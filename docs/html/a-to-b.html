@@ -222,7 +222,7 @@ for the GPS A-to-B demo (tests.md 5.2). Use <strong>2</strong> where there are o
   "{gps_poses: [{position: {latitude: 45.38612, longitude: -75.69588, altitude: 0.0},
                  orientation: {w: 1.0}}]}" --feedback</code></pre>
 <ul>
-<li>The HUD's route uses this same action.</li>
+<li><code>street_router</code> (<a href="routes.html">Street routes</a>) and the language tools use this same action.</li>
 <li>On an <strong>empty map</strong> (the default, 200 m × 200 m, all free), Nav2's plan is close to a straight line; the planner only respects the car's turning circle.</li>
 <li>Nav2's speed: up to 1.0 m/s, speeding up at up to 1.0 m/s², slowing near the goal (<code>nav2.yaml</code>).</li>
 <li>The radar and the roof lidar still fill the local costmap, and collision_monitor still stops for something ahead.</li>

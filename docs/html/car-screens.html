@@ -126,7 +126,7 @@ are still to read with <code>--list</code>.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Both are in <code>ros/hud/aav_hud_raylib</code> (<a href="hud.html">HUD</a>).</p></div>
+<p>Both are in <code>ros/hud/aav_hud</code> (<a href="hud.html">HUD</a>).</p></div>
 <section class="card"><h2 id="how-it-starts">How it starts</h2>
 <pre class="highlight"><code class="language-text"> power on → desktop login → graphical-session.target ─┬─► aav-hud.service ─► car_screen.sh hud ─► hud --fullscreen --monitor &lt;HUD's&gt;
    (auto-login: a system        (or the autostart     └─► aav-map.service ─► car_screen.sh map ─► map --fullscreen --monitor &lt;map's&gt;
@@ -164,7 +164,7 @@ are still to read with <code>--list</code>.</p>
 <td><code>car_screen.sh</code></td>
 <td><code>tools/</code></td>
 <td>stays in <code>~/aav-jazzy/aav/tools/</code></td>
-<td>reads the settings, checks them, runs <code>ros2 launch aav_hud_raylib hud.launch.py fullscreen:=true monitor:=...</code></td>
+<td>reads the settings, checks them, runs <code>ros2 launch aav_hud hud.launch.py fullscreen:=true monitor:=...</code></td>
 </tr>
 <tr>
 <td><code>car_screens_install.sh</code></td>
@@ -329,7 +329,7 @@ bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --screens             # b
 </tr>
 <tr>
 <td>Try one by hand</td>
-<td><code>~/aav-jazzy/aav.sh ros2 launch aav_hud_raylib map.launch.py fullscreen:=true monitor:=HDMI-1</code></td>
+<td><code>~/aav-jazzy/aav.sh ros2 launch aav_hud map.launch.py fullscreen:=true monitor:=HDMI-1</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -344,10 +344,11 @@ checks the screen, then <code>pixi run watchdog-clear</code>.</p>
 </blockquote>
 </section>
 <section class="card"><h2 id="the-2025-26-way-for-comparison">The 2025-26 way, for comparison</h2>
-<p>Their UI Pi started three scripts from systemd system services (<code>hud/scripts/*_bootup.sh</code>):
-Flask, <code>flutter run</code> (a debug build) and OSRM in Docker, all from <code>/home/aavui/Desktop</code>.
-Ours: two user units, no sudo, no Docker, release builds, a restart on a crash, and the
-monitors named in one file. Theirs stay as they are until the team agrees to switch (A8).</p>
+<p>Their UI Pi started three scripts from systemd system services (<code>hud/scripts/*_bootup.sh</code>,
+now in <code>archive/2026-27-flutter-hud/</code>): Flask, <code>flutter run</code> (a debug build) and OSRM in
+Docker, all from <code>/home/aavui/Desktop</code>. Ours: two user units, no sudo, no Docker, release
+builds, a restart on a crash, and the monitors named in one file. Their app was archived
+on 25 Oct (Q29).</p>
 </section>
 <section class="card"><h2 id="what-was-tested">What was tested</h2>
 <div class="table-wrap"><table>

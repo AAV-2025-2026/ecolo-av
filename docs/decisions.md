@@ -40,7 +40,7 @@ answer.
 | The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32 | Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip. A Pico 2 program exists since 11 Oct (`boards/pico2`). (The chip is the hardware lead's choice: Q10-Q13) | Q10–Q13 |
 | The GPS driver: the stock `ublox_gps` by default; `nmea` and `ublox_dgnss` stay as `gps_driver:=` options | It's in Pixi on every computer. `ublox_dgnss`, the 2024-25 choice, is apt-only, so it runs on the car only | Q18 |
 | The HUD's e-stop button only sets the e-stop. Clearing it stays a person's deliberate act, at the joystick or a laptop | A stray tap on the screen can't restart the car | Q29 |
-| Flutter 3.35.7, downloaded into `vendor/` (`pixi run get-flutter`) | Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's `pubspec.lock` | Q29 |
+| ~~Flutter 3.35.7, downloaded into `vendor/`~~ **Superseded 25 Oct:** the Flutter app is archived, and its download task is gone | Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's `pubspec.lock` | Q29 (answered) |
 | Lane keeping: a classic OpenCV lane finder publishes `/perception/lane/geometry`; the 2025-26 lane keeping follows it | No model to train, and 0.78 ms a picture. A model can replace the finder later: the topic stays the same | Q22 |
 | No micro-ROS for now: each board runs Rust and Embassy, and talks plain CAN, UART or UDP to a ROS node on Linux, which publishes. To think again once we see the car's hardware | Ben, 10 Oct: "hardware with embassy and rust talking to an actual node running ros". 11 Oct: "lets rethink thinks later after we see the hardware" | seeing the hardware: Q10–Q13 |
 
@@ -106,7 +106,7 @@ Rules for people and Claude sessions alike. They live in `CLAUDE.md`.
 |---|---|
 | Work on what we can try at home, in this order: the full graph with the drivers, ego and the simulators; our C++ to Rust (Python later); the Mac on the network with ML on it, and Nav2; the drivers in Rust, ready to try on a board; then the GUI | Ben, 03:00: "We can only do so much from home so lets focus on stuff that makes sence to work on" |
 | micro-ROS goes back from Decided to Tentative: no micro-ROS for now, and we think again once we see the hardware | Ben, 11:38: "No micro-ROS - lets rethink thinks later after we see the hardware" |
-| The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29 | Ben, 11:58: "Raylib for the HUD: yes, no, or try it first? yes" |
+| The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29 (since: the raylib HUD replaced it, 15 Oct; archived 25 Oct) | Ben, 11:58: "Raylib for the HUD: yes, no, or try it first? yes" |
 
 ## Decided on 15 October
 
@@ -156,6 +156,7 @@ What we changed, and why.
 | **Docs live in `docs/`, under plain names**; the root keeps README, CLAUDE.md, CONTRIBUTING.md and TODO.md | Fourteen READ-ME, PLAN, PROPOSAL and TODO pages at the root were hard to find and named oddly. Their information moved into `docs/`; the dated pages (the proposal, the Friday audit) carry a snapshot banner | Ben, 25 Oct |
 | **A features list, `docs/features.md`**: each feature's type, why, who and status, updated in the feature's own commit | The team's report must say what each person built and why; a rule in CLAUDE.md and a checklist on pull requests keep it current | Ben, 25 Oct |
 | **ROS packages live in `ros/<area>/`**: sources, localization, perception, drivers, command_mux, ego, io_mux, can_bridge, sim, safety, hud, bringup, ecolo_msgs (was `src/<layer>/`) | Each folder matches a box in the picture, so you find a package where its data flows | Arsh, 25 Oct |
+| **The Flutter HUD and its Flask back end are archived** (`archive/2026-27-flutter-hud/`); the raylib package takes the name `aav_hud`; the route maths moves to `aav_routes` | Q29: the raylib HUD replaced the app on 15 Oct. Nothing built, tested or started the old one any more | Ben, 25 Oct |
 | **[CONTRIBUTING.md](../CONTRIBUTING.md) is the git rule**: fork, branch, pull request, one approval and green CI, then the merge queue | One way into `main` for everyone, maintainers included | Arsh, 25 Oct |
 
 ## Open questions
@@ -211,7 +212,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 | Q26 | Languages | Python for all our ROS nodes? C++ or Rust for the spine firmware? **Answered: Decided #8 (Ben, 10 Oct)** |
 | Q27 | Steering at standstill | A speed-and-turn-rate command can't steer at zero speed. Should the joystick turn the wheels while stopped? |
 | Q28 | Joystick handover | When the hold-to-drive button is released, go back to the autonomous driver, or stay stopped? |
-| Q29 | HUD | Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? Partly answered 11 Oct: a raylib HUD replaces the app once it matches |
+| Q29 | HUD | Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? **Answered:** the raylib HUD replaced the app (Ben, 15 Oct); the app and its back end were archived on 25 Oct (Ben). Destinations: the map window's place search. Still open: which computer drives the screens ([Team to-do](team-todo.md)) |
 | Q30 | Remote driving | In scope this year? Over which link, with what latency limit? |
 | Q31 | CARLA | **Reopened by Ben 15 Oct: research done, adapter ready, needs the NVIDIA machine.** `carla_adapter` uses CARLA's Python client, so it runs with CARLA 0.10 (Unreal Engine 5) and 0.9.16 alike, without the ROS 2 link that stalls on Jazzy. Town10 on 0.10 for the cameras; Carleton's streets (from OpenStreetMap) only on 0.9.16 for now, as 0.10 can't import maps yet. Never run against a server: no Mac version ([CARLA](carla.md)). Was: parked, 10 Oct |
 | **Q32** | Test rules | Who is the safety driver, what's the speed cap, what's on the pre-drive checklist, who signs it off? |

@@ -109,7 +109,6 @@ Changed from the proposal, once the code showed it:
 | `/spine/arm`, `/scripted_drive`, `/ekf_*/set_pose` | services and actions, not topics: the rule is for topics |
 | `/gazebo/cmd_vel`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat` | Gazebo's own side of `gazebo_adapter` and its sensor nodes, like `/turtle1/...` for turtlesim; not in the contract |
 | `/map`, `/plan`, `/goal_pose`, `/cmd_vel_nav`, the costmaps | Nav2's own, for now |
-| The HUD back end's HTTP routes (`POST /estop`, `/camera/latest.png`) | web addresses, not topics |
 | Bags recorded before 15 Oct | they hold the old names: play them with `--remap` (for example `/cmd_vel:=/control/cmd_vel`) |
 
 ## Why the two EKFs don't talk

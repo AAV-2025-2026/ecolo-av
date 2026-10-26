@@ -113,9 +113,9 @@ From the design doc's next steps, in order.
 
 ### The HUD
 
-- Keep the Flutter app or not (Q29). Its back end, `aav_hud`, is on the new topics, and the app's small changes are done (11 Oct): [HUD](hud.md).
-- Its boot scripts still use the old Humble workspace and `/home/aavui`.
-- Its map database downloads with `pixi run get-hud-map`. The OSRM route data and the tile server still need a download step.
+- ~~Keep the Flutter app or not (Q29)~~: answered. The raylib HUD replaced it (Ben, 15 Oct); the app, its back end and its boot scripts were archived on 25 Oct (`archive/2026-27-flutter-hud/`).
+- Try the raylib HUD and the map window on the car's screens ([The two screens](car-screens.md)).
+- The map database downloads with `pixi run get-hud-map`; street routes come from Valhalla ([Street routes](routes.md)).
 
 ### Simulation
 

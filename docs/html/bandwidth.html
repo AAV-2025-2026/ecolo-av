@@ -413,18 +413,6 @@ pictures <strong>compressed</strong> over the network, and keep the lidar's poin
 <td>measured</td>
 </tr>
 <tr>
-<td>HUD's pictures (Flutter app)</td>
-<td>HTTP <code>/camera/stream</code></td>
-<td style="text-align: right;">5</td>
-<td style="text-align: right;">~1 MB PNG</td>
-<td style="text-align: right;">5</td>
-<td style="text-align: right;">40</td>
-<td>hud_server</td>
-<td>stays, if on the dash</td>
-<td>the app</td>
-<td>guess (<code>hud_server.py</code>)</td>
-</tr>
-<tr>
 <td>Foxglove to a laptop</td>
 <td>WebSocket, port 8765 (8766 while the 2025-26 bridge holds 8765)</td>
 <td style="text-align: right;"></td>
@@ -720,7 +708,7 @@ car). Watching over Foxglove or Lichtblick (port 8765) costs only what you open:
 <tr>
 <td>5</td>
 <td><strong>Give the HUD a small picture</strong></td>
-<td>the raylib HUD and <code>hud_server</code> read the raw front camera. Feed them a 640x360 copy at 5 Hz (3.5 MB/s raw, ~0.15 MB/s JPEG), or teach the HUD JPEG</td>
+<td>the raylib HUD reads the raw front camera. Feed it a 640x360 copy at 5 Hz (3.5 MB/s raw, ~0.15 MB/s JPEG), or teach the HUD JPEG</td>
 </tr>
 <tr>
 <td>6</td>

@@ -244,7 +244,7 @@ own extract (Geofabrik's Ontario, 1 GB, for a bigger area).</p>
 </tr>
 <tr>
 <td>The map window</td>
-<td><code>aav_hud_raylib</code> (Rust)</td>
+<td><code>aav_hud</code> (Rust)</td>
 <td>draws <code>/drivers/nav/route/path</code> in violet, under Nav2's blue plan</td>
 </tr>
 <tr>
@@ -254,8 +254,8 @@ own extract (Geofabrik's Ontario, 1 GB, for a bigger area).</p>
 </tr>
 </tbody>
 </table></div>
-<p>The waypoints reuse the HUD's tested route code (<code>aav_hud/route.py</code>): bends kept,
-headings along the street. Ours adds the gaps Nav2 needs:</p>
+<p>The waypoints reuse the route maths from the 2025-26 HUD's back end, now
+<code>aav_routes/route.py</code> (no ROS, tested): bends kept, headings along the street. Ours adds the gaps Nav2 needs:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>

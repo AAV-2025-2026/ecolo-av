@@ -37,10 +37,10 @@ echo "2/4  nav screen (RViz: map, costmaps, path, car)..."
 start tools/ros.sh --local rviz2 -d ros/bringup/aav_bringup/rviz/drive.rviz
 
 echo "3/4  HUD (in-car screen)..."
-start tools/ros.sh --local ros2 launch aav_hud_raylib hud.launch.py fullscreen:=$full
+start tools/ros.sh --local ros2 launch aav_hud hud.launch.py fullscreen:=$full
 
 echo "4/4  street-map window..."
-start tools/ros.sh --local ros2 launch aav_hud_raylib map.launch.py fullscreen:=$full
+start tools/ros.sh --local ros2 launch aav_hud map.launch.py fullscreen:=$full
 
 echo
 echo "All four started, localhost-only (the real car is untouched)."

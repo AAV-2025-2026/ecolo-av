@@ -41,7 +41,7 @@ None: pure logic. `config/hud.yaml` is compiled in with `include_str!`.
 ## Verification
 
 ```sh
-cd ros/hud/aav_hud_raylib && cargo test --locked -p hud-core
+cd ros/hud/aav_hud && cargo test --locked -p hud-core
 ```
 
 `tools/test.sh` runs it (with `map-core`).

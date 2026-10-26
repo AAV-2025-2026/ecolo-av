@@ -1,4 +1,4 @@
-# aav_hud_raylib
+# aav_hud
 
 ## Overview
 
@@ -9,6 +9,10 @@ node (rclrs):
   throttle and brake, GPS, topic health, the stop-sign alert and the camera;
 - `map`, the big screen's map window: Nav2's map over an offline street map, the car,
   the plan, the goal, the distance left, and a place search.
+
+It was called `aav_hud_raylib` until 25 Oct, when the 2025-26 Flutter app and its Flask
+back end (then `aav_hud`) went to `archive/2026-27-flutter-hud/` and this package took
+the name.
 
 A Cargo workspace that colcon builds through `CMakeLists.txt`. More in docs/hud.md and
 docs/car-screens.md.
@@ -93,7 +97,7 @@ Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s), `arrive_wit
 ## Verification
 
 ```sh
-cd ros/hud/aav_hud_raylib && cargo test --locked -p hud-core -p map-core
+cd ros/hud/aav_hud && cargo test --locked -p hud-core -p map-core
 ```
 
 `tools/test.sh` runs that; `pixi run test` runs everything. `colcon build` needs Rust

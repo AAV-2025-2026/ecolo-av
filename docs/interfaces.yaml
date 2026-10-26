@@ -123,9 +123,9 @@ topics:
     note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
   /safety/estop:
     type: std_msgs/msg/Bool
-    pub: [joy_teleop, hud_server, hud, language_drive]
+    pub: [joy_teleop, hud, language_drive]
     sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive, actuator_test, carla_adapter, goto_driver]
-    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.
+    note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button (hud, aav_hud) only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions; language_drive (aav_language) does the same from its estop() tool. Neither ever publishes false.
   /control/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [twist_mux]
@@ -229,7 +229,7 @@ topics:
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter, legacy_uart_bridge]
-    sub: [hud_server, hud, language_drive]
+    sub: [hud, language_drive]
     live: [turtle, sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. legacy_uart_bridge publishes it, 10 Hz, only with uplink true (the ESP32's uplink frame on TX1, TODO 50 - off until its wire is confirmed) - speed NaN (that ESP32 has no wheel speed), steering_angle the steering Jrk's position or NaN; mode COMPUTER also while the transmitter's switch is on RC via ROS (/vehicle/rc has the switch).
   /vehicle/steering:
@@ -335,7 +335,7 @@ topics:
   /vehicle/battery:
     type: sensor_msgs/msg/BatteryState
     pub: [battery_state_publisher, mock_battery]
-    sub: [hud_server, hud]
+    sub: [hud]
     live: [bench]
     note: battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).
   /vehicle/battery/heartbeat:
@@ -346,7 +346,7 @@ topics:
   /sensors/camera/front_left/image_raw:
     type: sensor_msgs/msg/Image
     pub: [camera_left, mock_camera, test_camera, gz_road_bridge, gazebo_camera, carla_adapter, camera_stream_front_left]
-    sub: [object_detector, object_detector_orin, object_detector_laptop, object_detector_all, hud_server, lane_finder, hud, sensor_watchdog]
+    sub: [object_detector, object_detector_orin, object_detector_laptop, object_detector_all, lane_finder, hud, sensor_watchdog]
     live: [bench, road]
     note: The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop). On the car with the camera stream (aav_camera_stream), camera_stream_front_left publishes it only with publish_image:=true - every undistorted picture, for another node on the same computer; the pictures otherwise stay inside it.
   /sensors/camera/front_left/image_raw/compressed:
@@ -444,7 +444,7 @@ topics:
   /perception/stop_sign:
     type: std_msgs/msg/Bool
     pub: [stop_sign_watcher]
-    sub: [twist_mux, hud_server, hud, language_drive]
+    sub: [twist_mux, hud, language_drive]
     live: [car]
     note: true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.
   /perception/camera_obstacles:
@@ -542,7 +542,7 @@ topics:
     pub: [ekf_global]
     sub: [navsat_transform, map, sensor_watchdog, goto_driver, goto_cli]
     live: [sim, car, replay, bench]
-    note: map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it.
+    note: map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.
   /localization/gps/odom:
     type: nav_msgs/msg/Odometry
     pub: [navsat_transform]
@@ -558,7 +558,7 @@ topics:
   /localization/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [navsat_transform]
-    sub: [hud_server, hud, street_router]
+    sub: [hud, street_router]
     live: [sim, car, replay, bench]
     note: The global EKF's position as lat/lon, for maps in the HUD or Foxglove, and the start of street_router's routes.
 
@@ -568,17 +568,17 @@ topics:
     pub: [map_server]
     sub: [global_costmap, local_costmap, map]
     live: [sim]
-    note: Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud_raylib) draws it north up, for the big screen.
+    note: Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud) draws it north up, for the big screen.
   /goal_pose:
     type: geometry_msgs/msg/PoseStamped
     pub: [rviz2, map]
     sub: [bt_navigator, map]
-    note: RViz "2D Goal Pose", or the map window's place search (map, aav_hud_raylib - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.
+    note: RViz "2D Goal Pose", or the map window's place search (map, aav_hud - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.
   /plan:
     type: nav_msgs/msg/Path
     pub: [planner_server]
     sub: [map]
-    note: The planned path, for RViz/Foxglove, and the map window (map, aav_hud_raylib) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.
+    note: The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.
 
   # --- street routes (aav_routes, docs/routes.md): for real streets later, the lot first ---
   /drivers/nav/route/destination:
@@ -600,7 +600,7 @@ topics:
     type: nav_msgs/msg/Path
     pub: [street_router]
     sub: [map]
-    note: Transient local (latched). The whole route in the map frame (each point through /fromLL). The map window (map, aav_hud_raylib) draws it violet under Nav2's blue plan; RViz and Foxglove can too. Not a plan Nav2 follows.
+    note: Transient local (latched). The whole route in the map frame (each point through /fromLL). The map window (map, aav_hud) draws it violet under Nav2's blue plan; RViz and Foxglove can too. Not a plan Nav2 follows.
   /drivers/nav/route/status:
     type: std_msgs/msg/String
     pub: [street_router]
@@ -696,7 +696,7 @@ actions:
   /follow_gps_waypoints:
     type: nav2_msgs/action/FollowGPSWaypoints
     server: waypoint_follower
-    note: Lat/lon waypoints. The HUD (hud_server) sends its locked route here, and street_router its street route on /drivers/nav/route/follow. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.
+    note: Lat/lon waypoints. street_router sends its street route here (asked on /drivers/nav/route/follow). Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.
 
 frames:
   map: {parent: null, by: "ekf_global (map -> odom)", note: "x east, y north; origin = the navsat datum"}

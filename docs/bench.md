@@ -37,7 +37,7 @@ don't.
 | `teleop` | `false` | the joystick, if one is plugged in |
 | `perception` | `false` | the object detector (RF-DETR Nano; YOLO with `detector:=yolo`) and the stop-sign watcher. Needs `pixi run -e ml` |
 | `lane` | `false` | lane keeping on a pretend straight lane: the car drives itself on `/drivers/ai/cmd_vel` |
-| `hud` | `false` | the HUD's web server, on 127.0.0.1:5000 |
+| `hud` | `false` | the HUD window (raylib, as `pixi run hud`); needs a screen |
 | `arm` | `true` | arms the spine 12 s after start-up |
 | `rviz`, `foxglove` | `false` | RViz; foxglove_bridge on 127.0.0.1:8765, with the camera's preview ([Watch from a laptop](foxglove.md)) |
 | `obstacle` | `false` | a 1 m box in the lane 15 m ahead, which only the pretend radar sees: Nav2 stops for it |
@@ -189,7 +189,7 @@ the centre.
 | The scripted driver stepped its plan by a fixed time; on a busy computer a 6.5 m drive went 22 m | it measures the time that really passed |
 | The scripted driver used a whole CPU core while idle (an rclpy executor bug) | one thread and a timer |
 | On a Mac, best-effort subscribers lost every camera image | the detector subscribes reliably |
-| The HUD listened to a topic called `/true`: included launch files share their arguments | the argument is `gps_topic` now |
+| The HUD's back end (the Flask one, archived since) listened to a topic called `/true`: included launch files share their arguments | the argument is `gps_topic` now |
 | The speed loop lags a ramp by about a second, and overshoots by 12%, with the model's numbers | [[needs-you]] tune `kp` and `ki` on the car |
 
 ## Replacing a stand-in with the real thing

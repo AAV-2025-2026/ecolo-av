@@ -193,7 +193,7 @@ def test_the_road_worlds_full_graph():
     assert sent['detector.launch.py'] == {'labels': 'stop sign', 'use_sim_time': 'true'}
     assert sent['lane_finder.launch.py'] == {}
     assert sent['lane_follower.launch.py'] == {'fake': 'false'}
-    assert sent['hud.launch.py'] == {}   # aav_hud_raylib's window (15 Oct)
+    assert sent['hud.launch.py'] == {}   # aav_hud's window (15 Oct)
     assert sent['navigation.launch.py']['camera_obstacles'] == 'true'
     assert (sent['gazebo.launch.py']['obstacle'], sent['gazebo.launch.py']['start_y']) == (
         'true', '0.3')
@@ -210,7 +210,6 @@ def test_the_cameras_parts_need_a_world_with_a_camera(part):
 def test_the_screens_and_lichtblick():
     sent = included(started(SIM, hud='true', map='true'))
     assert sent['hud.launch.py'] == {} and sent['map.launch.py'] == {}
-    assert included(started(SIM, hud_web='true'))['hud.launch.py'] == {'use_sim_time': 'true'}
     fox = included(started(SIM, foxglove='true'))['foxglove.launch.py']
     assert fox['foxglove_address'] == '127.0.0.1'  # this computer only: test_foxglove_launch
 

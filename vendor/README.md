@@ -12,10 +12,9 @@ PlatformIO keeps its downloads here too, in `vendor/platformio/` (about 1.5 GB):
 compilers and framework for today's C++ boards. `pixi run -e firmware legacy-esp32`
 fills it.
 
-Flutter lives here too, in `vendor/flutter/` (about 4.3 GB): Flutter 3.35.7, the SDK for
-the HUD app (`hud/flutter_pi`). Its engine files are in `bin/cache/` (3.3 GB), and the
-app's packages in `.pub-cache/` (0.24 GB). `pixi run get-flutter` fills it, checked by
-the SHA-256 that Flutter publishes (docs/hud.md).
+A `vendor/flutter/` folder (about 4.3 GB) is left over from the Flutter HUD app, archived
+on 25 Oct (`archive/2026-27-flutter-hud/`). Nothing uses it now: delete it to get the space
+back.
 
 Espressif's QEMU lives here too, in `vendor/qemu/` (about 22 MB): the ESP32 emulator
 (GPL-2.0, a tool only, never linked into our code) and its libgcrypt (LGPL-2.1+, from
@@ -37,7 +36,6 @@ on Apple silicon only so far. `pixi run esp-qemu-check` uses it (docs/esp32-benc
 | Command | Does |
 |---|---|
 | `pixi run vendor` | downloads what's missing, at the pinned commits; leaves the rest alone |
-| `pixi run get-flutter` | downloads Flutter 3.35.7 into `vendor/flutter/`, if it isn't there |
 | `pixi run esp-qemu-tools` | downloads Espressif's QEMU and its libgcrypt into `vendor/qemu/` |
 | `python3 tools/vendor.py --check` | says what's there, what's missing, and what's at another commit |
 | `python3 tools/vendor.py --freeze ros2-src` | pins what's checked out now, to update a list |

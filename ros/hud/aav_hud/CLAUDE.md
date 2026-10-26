@@ -1,3 +1,3 @@
-# ros/hud/aav_hud_raylib/
+# ros/hud/aav_hud/
 
 @README.md

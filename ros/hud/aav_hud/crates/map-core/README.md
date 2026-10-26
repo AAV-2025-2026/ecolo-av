@@ -50,7 +50,7 @@ use its `health`, `origin`, `units` and `watchdog`.
 ## Verification
 
 ```sh
-cd ros/hud/aav_hud_raylib && cargo test --locked -p map-core
+cd ros/hud/aav_hud && cargo test --locked -p map-core
 ```
 
 `tools/test.sh` runs it (with `hud-core`).

@@ -3,7 +3,7 @@
 One card for every ROS package in `ros/` and every crate and board in `firmware/`. Each
 card answers the same nine questions. [Packages](packages.md) is the short version, in
 tables; this page goes deeper. Written 15 October 2026, checked 25 October, with the
-topic names by area ([Topic areas](naming.md)). 38 packages build; seven of the newest have a
+topic names by area ([Topic areas](naming.md)). 37 packages build; seven of the newest have a
 one-line entry, pointing at their own README ([below](#more-packages-see-their-readmes)).
 
 ![How the stack fits together](img/architecture.svg)
@@ -34,7 +34,7 @@ one-line entry, pointing at their own README ([below](#more-packages-see-their-r
 | [command_mux, io_mux, ego](#mux-and-ego) | `aav_mux`, `aav_io_mux`, `aav_ego` |
 | [can_bridge, sim](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla`; `aav_spine_bridge` ([one line](#more-packages-see-their-readmes)) |
 | [perception](#perception) | `aav_detector`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry`; `aav_lidar` ([one line](#more-packages-see-their-readmes)) |
-| [hud](#hud) | `aav_hud`, `aav_hud_raylib` |
+| [hud](#hud) | `aav_hud` |
 | [sim: bench mode](#bench) | `aav_spine_sim`, `aav_bench` |
 | [ecolo_msgs, bringup](#messages-and-bringup) | `aav_interfaces`, `aav_bringup` |
 | [safety](#more-packages-see-their-readmes) | `aav_safety`, `aav_ghost` ([one line](#more-packages-see-their-readmes)) |
@@ -418,28 +418,14 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 
 | | |
 |---|---|
-| **Does** | the Flutter touchscreen app's back end: a ROS node with a web server (Flask, Socket.IO) |
-| **Why** | the passenger sees speed, map and camera, picks a route, and has an e-stop button |
-| **Runs on** | the DASH-UI Pi (guess) |
-| **In → out** | `/vehicle/status`, `/localization/gps/fix`, `/perception/stop_sign`, `/vehicle/battery`, the camera → app events on 127.0.0.1:5000; the app → `/safety/estop`, Nav2's `/follow_gps_waypoints` |
-| **Origin** | inherited, rewritten: 2025-26 `User-Interface` @ e6e6b1e565 (`maincar`) |
-| **Status** | [[works]] on the bench: the app's e-stop stops the car in 0.3 s. [[untested]] on the car's screen |
-| **Run alone** | `ros2 launch aav_hud hud.launch.py` |
-| **Test** | `test/` (in `tools/test.sh`); `pixi run hud-test` for the app |
-| **Read first** | `aav_hud/hud_server.py` |
-
-### aav_hud_raylib
-
-| | |
-|---|---|
-| **Does** | the in-car screen in Rust: one raylib window that is also the ROS node `hud` |
-| **Why** | to replace the Flutter app and its back end with one program (Ben, 11 Oct) |
+| **Does** | the in-car screens in Rust: the HUD, one raylib window that is also the ROS node `hud`; and the map window, node `map` |
+| **Why** | the driver sees speed, GO / STOP and the camera, and has an e-stop button. It replaced the 2025-26 Flutter app and its Flask back end (Ben, 11 and 15 Oct; archived 25 Oct, Q29) |
 | **Runs on** | the dash screen (guess); today a Mac |
 | **In → out** | `/vehicle/status`, `/sensors/gps/fix`, `/localization/gps/fix`, `/perception/stop_sign`, `/vehicle/battery`, the camera → the screen; the button → `/safety/estop` (only true) |
-| **Origin** | ours. Two crates: `hud-core` (logic, no ROS) and `hud-app` (window and node) |
+| **Origin** | ours. Four crates: `hud-core` and `map-core` (logic, no ROS), `hud-app` and `map-app` (window and node) |
 | **Status** | [[works]] on a Mac, alone and next to the bench. [[untested]] on a Pi and the car |
-| **Run alone** | `pixi run hud-demo` (pretend data), `pixi run hud` (the node) |
-| **Test** | `cargo test -p hud-core` (in `tools/test.sh`) |
+| **Run alone** | `pixi run hud-demo`, `pixi run map-demo` (pretend data); `pixi run hud`, `pixi run map` (the nodes) |
+| **Test** | `cargo test -p hud-core`, `-p map-core` (in `tools/test.sh`) |
 | **Read first** | `crates/hud-core/src/lib.rs` |
 
 ## Bench

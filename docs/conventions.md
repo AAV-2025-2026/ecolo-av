@@ -29,7 +29,8 @@ changes their launch files and executables.
 
 | Was | Now | When |
 |---|---|---|
-| `maincar` (the HUD's web server) | `aav_hud` | done, 10 October |
+| `maincar` (the HUD's web server, Flask) | `aav_hud` | done, 10 October; archived 25 October (`archive/2026-27-flutter-hud/aav_hud`) |
+| `aav_hud_raylib` (the raylib HUD and map window) | `aav_hud` | done, 25 October, when the Flask one was archived |
 | `lane_geometry`, `object_detection`, `yolo_ros2` | `aav_lane_geometry`, `aav_object_detection`, `aav_yolo` | done, 10 October, when perception came in. `aav_object_detection` became `aav_radar_clusters` (Rust), 15 October |
 | `aav_yolo`, its node `yolo_detector` | `aav_detector`, `object_detector` | done, 24 October: it runs RF-DETR Nano by default, YOLO only with `detector:=yolo` |
 | `yahboom_imu_cpp` | `aav_imu_yahboom` | done, 11 October: Ben's Rust rewrite replaced it |

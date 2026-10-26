@@ -74,7 +74,6 @@ After [Your first day](#your-first-day), add only the parts you need:
 | Street routes (Valhalla) | `pixi run -e routes get-routes` | [Street routes](docs/routes.md) |
 | The camera stream check | `pixi run get-mediamtx` | [Camera pipeline](docs/camera-pipeline.md) |
 | CARLA on Carleton's streets | `pixi run get-carla-osm` | [CARLA](docs/carla.md) |
-| The Flutter HUD app | `pixi run get-flutter` (4.3 GB) | [HUD](docs/hud.md) |
 | Flashing a Pico 2 with a debug probe | `pixi run spine-tools` | [Rust firmware](docs/rust-firmware.md) |
 | The Rust ESP32 firmware | `pixi run esp-tools`, and `pixi run esp-qemu-tools` for the QEMU check | [ESP32 first flash](docs/esp32-bench.md) |
 | ROS 2 and rclrs source, to look things up | `pixi run vendor` (560 MB) | `vendor/README.md` |
@@ -184,7 +183,6 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `vehicle-model` | the car as a linear model: poles, step responses, Bode margins |
 | `state-space-demo` | the state-space primer's simulator |
 | `rust-listener` | a Rust (rclrs) ROS node that prints ego's commands |
-| `flutter`, `hud-test` | Flutter for the HUD app; its tests (needs `get-flutter`) |
 
 ## What's where
 
@@ -195,10 +193,9 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | [`tools/`](tools/README.md) | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer, the MCP server for AI apps |
 | [`examples/`](examples/README.md) | small runnable examples: a first ROS node in Rust (`rust-listener`) |
 | `docs/` | the docs (markdown sources, the HTML in `docs/html/`), the topic contract, and the history |
-| [`hud/`](hud/README.md) | the 2025-26 touchscreen app. Its back end is ported, as `ros/hud/aav_hud` |
 | [`models/`](models/README.md) | the detector models: RF-DETR Nano (the default) and YOLO11n, downloaded by `pixi run get-models`, and their exports (`.onnx`, `.mlpackage`). Not in git |
-| [`vendor/`](vendor/README.md) | the ROS 2 and ros2-rust source, for looking things up (`pixi run vendor`); also the downloaded tools: Flutter, MediaMTX, PlatformIO, QEMU, `cargo-tools`, `esp`, `car-kit-cache`. Not ours, and not in git |
-| `archive/` | the 2025-26 and 2024-25 teams' repos, as they were (in git). Reference only: never build or fix them (`docs/older-code.md`) |
+| [`vendor/`](vendor/README.md) | the ROS 2 and ros2-rust source, for looking things up (`pixi run vendor`); also the downloaded tools: MediaMTX, PlatformIO, QEMU, `cargo-tools`, `esp`, `car-kit-cache`. Not ours, and not in git |
+| `archive/` | the 2025-26 and 2024-25 teams' repos, as they were (in git), and our port of their Flutter HUD (`2026-27-flutter-hud/`, put away 25 Oct). Reference only: never build or fix them (`docs/older-code.md`) |
 | `.github/` | the CI workflow (`workflows/test.yml`) and the pull request template |
 
 Each folder's README follows the same shape (Overview, Interface, Invariants, Side
@@ -225,8 +222,6 @@ The rules every part keeps. The full list is in [CLAUDE.md](CLAUDE.md).
   ESP32's UART; opens the sensors' serial, USB, UDP and RTSP ports.
 - **Stand-ins** (turtle, sim, bench): stay on this computer (`tools/ros.sh --local`).
 - **Downloads** go into `vendor/`, `models/`, `maps/` and `car-kit/`, all outside git.
-  `pixi run get-hud-map` also puts `ottawa.db` in `hud/flutter_pi/assets/databases/`
-  (out of git too).
 
 ## System verification
 

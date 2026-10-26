@@ -322,7 +322,7 @@ class Probe(Node):
         self.create_subscription(Bool, '/safety/sensor_watchdog/lock', self.on_lock, 10)
         self.create_subscription(String, '/safety/sensor_watchdog/state', self.on_state, 10)
         # The HUD's heartbeat, standing in for its screen (--faults, watch_hud:=true):
-        # 10 Hz with a rising count while hud_beating, the way aav_hud_raylib sends it. On
+        # 10 Hz with a rising count while hud_beating, the way aav_hud sends it. On
         # its own thread, as the HUD's: a check that waits without spinning (a service, an
         # action server) mustn't look like a dropout, which latches the watchdog.
         self.hud_beating, self.hud_frames = False, 0

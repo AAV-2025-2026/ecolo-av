@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 # A Rust package, built like aav_imu_yahboom: CMake only runs cargo and installs the
-# result, so colcon, `ros2 run aav_hud_raylib hud` (or `map`) and launch files treat them
+# result, so colcon, `ros2 run aav_hud hud` (or `map`) and launch files treat them
 # like any node.
-project(aav_hud_raylib NONE)
+project(aav_hud NONE)
 
 find_package(ament_cmake REQUIRED)
 
@@ -18,7 +18,7 @@ if(UNIX AND NOT APPLE)
   find_package(OpenGL)
   if(NOT (X11_FOUND AND X11_Xrandr_FOUND AND X11_Xinerama_FOUND AND X11_Xcursor_FOUND
           AND X11_Xi_FOUND AND OPENGL_FOUND))
-    message(WARNING "aav_hud_raylib: no X11/OpenGL headers here, so the HUD isn't built. "
+    message(WARNING "aav_hud: no X11/OpenGL headers here, so the HUD isn't built. "
       "On Ubuntu: sudo apt install libx11-dev libxrandr-dev libxinerama-dev "
       "libxcursor-dev libxi-dev libgl-dev")
     ament_package()

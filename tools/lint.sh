@@ -9,7 +9,7 @@ OURS=(ros/bringup/aav_bringup ros/bringup/aav_description ros/can_bridge ros/sim
       ros/perception/aav_detector/aav_detector ros/perception/aav_detector/launch
       ros/perception/aav_detector/test ros/perception/aav_detector/setup.py ros/sim/aav_bench
       ros/perception/aav_lane_finder
-      ros/hud/aav_hud ros/hud/aav_hud_raylib/launch ros/perception/aav_radar_clusters/launch
+      ros/hud/aav_hud/launch ros/perception/aav_radar_clusters/launch
       ros/perception/aav_radar_clusters/test)
 ament_flake8 "${OURS[@]}"
 ament_pep257 "${OURS[@]}"

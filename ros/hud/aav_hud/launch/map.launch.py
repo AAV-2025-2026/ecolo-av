@@ -1,9 +1,9 @@
 """
-The big screen's map window (aav_hud_raylib): one window, which is also the ROS node `map`.
+The big screen's map window (aav_hud): one window, which is also the ROS node `map`.
 
-  ros2 launch aav_hud_raylib map.launch.py
-  ros2 launch aav_hud_raylib map.launch.py fullscreen:=true
-  ros2 launch aav_hud_raylib map.launch.py fullscreen:=true monitor:=HDMI-2 \
+  ros2 launch aav_hud map.launch.py
+  ros2 launch aav_hud map.launch.py fullscreen:=true
+  ros2 launch aav_hud map.launch.py fullscreen:=true monitor:=HDMI-2 \
       streets:=/path/ottawa.pmtiles places:=/path/ottawa.db
 
 Nav2's map, the car on it, the plan and the goal, and the distance left, over an
@@ -42,12 +42,12 @@ def map_node(context):
         if value:
             arguments += [option, value]
     return [Node(
-        package='aav_hud_raylib',
+        package='aav_hud',
         executable='map',
         name='map',
         arguments=arguments,
         parameters=[
-            PathJoinSubstitution([FindPackageShare('aav_hud_raylib'), 'config', 'map.yaml']),
+            PathJoinSubstitution([FindPackageShare('aav_hud'), 'config', 'map.yaml']),
         ],
         output='screen',
     )]

@@ -124,7 +124,7 @@ PAGES = [
     ('naming.md', 'Topic areas', 'Topic names by area (Decided), and why the EKFs meet in TF'),
     ('interfaces.md', 'Topics', 'Every topic, service, action and frame'),
     ('car_measurements.md', 'Car numbers', 'vehicle.yaml, and how to measure the car'),
-    ('hud.md', 'HUD', 'The in-car screen: Rust and raylib; the Flutter app'),
+    ('hud.md', 'HUD', 'The in-car screen and the map window: Rust and raylib'),
 ]
 BUILT = {name for name, _, _ in PAGES}
 # The pages kept at the root: their name here -> their file, from the root.

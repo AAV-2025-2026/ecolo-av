@@ -18,6 +18,9 @@ all. Each script's own header or docstring says how to use it.
 computer's own `~/.config/aav/cyclonedds.xml` if it has one (later settings win). `tools/ros.sh --local` keeps ROS discovery on this
 computer.
 
+The Flutter HUD's scripts (`flutter.sh`, `get_flutter.sh`, `hud_test.sh`,
+`hud_fake_backend.py`) went to `archive/2026-27-flutter-hud/tools/` on 25 Oct.
+
 Folders: [foxglove/](./foxglove/README.md) (the Foxglove/Lichtblick layouts),
 [screens/](./screens/README.md) (the car screens' systemd units),
 [udev/](./udev/README.md) (stable device names), `tests/` (the tools' own tests).
@@ -37,8 +40,6 @@ The `Task` column is `pixi run <task>`; "-" means run the script itself.
 | `sim_check.py` | Gazebo's road world headless, the whole graph, a drive | `sim-check` |
 | `gz_crash.py` | did Gazebo itself crash at start-up? (sim-check retries once) | - |
 | `layout_check.py` | is every topic in `foxglove/` served by a bridge? | `layout-check` |
-| `hud_test.sh` | the Flutter HUD app: pub get, analyze, test, test_bench | `hud-test` |
-| `hud_fake_backend.py` | the HUD's real web server with a fake car, no ROS | (hud_test.sh) |
 | `ci_annotate.py` | a failed test log into GitHub annotations | (CI) |
 
 ### Docs
@@ -108,13 +109,11 @@ Each lands outside git, checksum pinned where the script says.
 | `vendor.py` | ROS 2 and ros2-rust source into `vendor/` | `vendor` |
 | `get_models.sh` | RF-DETR Nano and YOLO11n into `models/` | `get-models` |
 | `get_mediamtx.sh` | MediaMTX into `vendor/mediamtx` | `get-mediamtx` |
-| `get_hud_map.sh` | `ottawa.db` (places) into `maps/places/`, linked into `hud/flutter_pi/assets/databases/` | `get-hud-map` |
+| `get_hud_map.sh` | `ottawa.db` (places) into `maps/places/`, for the map window's search | `get-hud-map` |
 | `get_street_map.sh` | Ottawa's vector tiles into `maps/streets/` | `get-street-map` |
 | `get_carla_osm.sh` | Carleton's OpenStreetMap data into `maps/carla/` | `get-carla-osm` |
 | `get_routes.sh` | Ottawa's OSM and Valhalla's graph into `maps/routes/` | `-e routes get-routes` |
 | `router.sh` | starts Valhalla on 127.0.0.1:8002 | `-e routes router` |
-| `get_flutter.sh` | Flutter 3.35.7 into `vendor/flutter` | `get-flutter` |
-| `flutter.sh` | runs that Flutter, analytics off | `flutter <args>` |
 
 ### Firmware helpers
 
@@ -181,7 +180,7 @@ Each lands outside git, checksum pinned where the script says.
 | checks, sim, stand-ins | start ROS and Gazebo processes on this computer |
 | `actuator_test.sh`, `goto.sh` without `--sim`; `keyboard.sh` without `--sim` or `--local` | **move the real car** |
 | `replay_commands.sh` (always: it has no `--sim`) | **moves whatever shares the ROS domain**: on the car's network, the car |
-| `get_*.sh`, `vendor.py`, `car_kit.sh` | download into `vendor/` (`car_kit.sh` caches in `vendor/car-kit-cache`), `models/`, `maps/`, `car-kit/`; `get_hud_map.sh` also writes `hud/flutter_pi/assets/databases/ottawa.db` |
+| `get_*.sh`, `vendor.py`, `car_kit.sh` | download into `vendor/` (`car_kit.sh` caches in `vendor/car-kit-cache`), `models/`, `maps/`, `car-kit/` |
 | `car_day_build.sh` | writes `car-day/esp32/` and `docs/html/` |
 | `build_docs.py`, `graph_picture.py`, `vehicle_model.py`, `state_space_demo.py` | write `docs/html/`, `docs/img/` |
 | `make_stop_sign.py`, `make_map.py` | write the stop sign's files in `ros/sim/aav_gazebo/models/`; a map's PGM and YAML |

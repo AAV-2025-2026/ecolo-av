@@ -71,7 +71,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | GNSS | Global Navigation Satellite System: GPS and its cousins | the roof antenna |
 | GPS | satellite position: latitude and longitude | `/sensors/gps/fix` |
 | Hall sensor | a sensor that notices metal or a magnet passing | the front brake rotors (KEFC) |
-| HUD | Head-Up Display: the in-car screen | [HUD](hud.md) |
+| HUD | Head-Up Display: the in-car screen (and, on the big monitor, the map window) | [HUD](hud.md) |
 | Humble | the ROS 2 version on the car today; support ends May 2027 | the car |
 
 ## I to N
@@ -115,7 +115,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | odometry | how far and how fast the car moved, from its own sensors | `/vehicle/odom` |
 | open loop | sending a command with no measurement back | today's throttle |
 | OSM | OpenStreetMap: a free map of the world | the map window, street routes, CARLA's campus |
-| OSRM | a road router that uses OSM | the 2025-26 HUD's route; `street_router` can ask one too |
+| OSRM | a road router that uses OSM | the 2025-26 HUD's route (archived 25 Oct); `street_router` can ask one too |
 | Pico 2 | a Raspberry Pi microcontroller board (RP2350) | the wheel encoder; a spine program |
 | Pixi | installs ROS 2 and every tool without admin rights | `pixi run ...` |
 | profile | a set of nodes to start: turtle, sim, bench, car, replay, carla | `ros/bringup/aav_bringup/launch/` |
@@ -124,7 +124,7 @@ Can't find a word? Search this page (Ctrl+F or ⌘F). Missing one? Add a row, in
 | QNX | a real-time operating system the 2025-26 team used; replaced by twist_mux | the QNX-Pi |
 | QoS | Quality of Service: how a topic delivers (reliable or best effort) | `docs/interfaces.yaml` |
 | radar | radio waves that find objects ahead | the TI radar, `/sensors/radar/points` |
-| raylib | a small graphics library; our Rust HUD uses it | `ros/hud/aav_hud_raylib` |
+| raylib | a small graphics library; our Rust HUD uses it | `ros/hud/aav_hud` |
 | RC | Radio Control: a hand-held transmitter | the FlySky override |
 | RF-DETR | a neural network that finds objects in a picture; RF-DETR Nano is our default detector | `aav_detector`, `aav_camera_stream` |
 | Regulated Pure Pursuit | a Nav2 controller: steers toward a point ahead on the path. Ours until 22 Oct; `controller:=rpp` | [path followers](controllers.md) |

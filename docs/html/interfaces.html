@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">52 min read · 4 sections</div></header>
+<div class="meta">51 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -260,10 +260,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/safety/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
-<td><code>joy_teleop</code>, <code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
+<td><code>joy_teleop</code>, <code>hud</code>, <code>language_drive</code></td>
 <td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>carla_adapter</code>, <code>goto_driver</code></td>
 <td>-</td>
-<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions - hud_server (the Flutter app's back end) and hud (aav_hud_raylib) alike - and language_drive (aav_language), the same way, from its estop() tool; it never publishes false.</td>
+<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button (hud, aav_hud) only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions; language_drive (aav_language) does the same from its estop() tool. Neither ever publishes false.</td>
 </tr>
 <tr>
 <td><code>/control/cmd_vel</code></td>
@@ -397,7 +397,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/status</code></td>
 <td><code>aav_interfaces/msg/VehicleStatus</code></td>
 <td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>turtlesim_adapter</code>, <code>carla_adapter</code>, <code>legacy_uart_bridge</code></td>
-<td><code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
+<td><code>hud</code>, <code>language_drive</code></td>
 <td>turtle, sim, bench</td>
 <td>Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. legacy_uart_bridge publishes it, 10 Hz, only with uplink true (the ESP32's uplink frame on TX1, TODO 50 - off until its wire is confirmed) - speed NaN (that ESP32 has no wheel speed), steering_angle the steering Jrk's position or NaN; mode COMPUTER also while the transmitter's switch is on RC via ROS (/vehicle/rc has the switch).</td>
 </tr>
@@ -541,7 +541,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/battery</code></td>
 <td><code>sensor_msgs/msg/BatteryState</code></td>
 <td><code>battery_state_publisher</code>, <code>mock_battery</code></td>
-<td><code>hud_server</code>, <code>hud</code></td>
+<td><code>hud</code></td>
 <td>bench</td>
 <td>battery_monitor's node is battery_state_publisher (the Victron VE.Direct cable).</td>
 </tr>
@@ -557,7 +557,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
 <td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_camera</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code></td>
-<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code>, <code>hud_server</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
+<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
 <td>bench, road</td>
 <td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop). On the car with the camera stream (aav_camera_stream), camera_stream_front_left publishes it only with publish_image:=true - every undistorted picture, for another node on the same computer; the pictures otherwise stay inside it.</td>
 </tr>
@@ -693,7 +693,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/perception/stop_sign</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>stop_sign_watcher</code></td>
-<td><code>twist_mux</code>, <code>hud_server</code>, <code>hud</code>, <code>language_drive</code></td>
+<td><code>twist_mux</code>, <code>hud</code>, <code>language_drive</code></td>
 <td>car</td>
 <td>true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.</td>
 </tr>
@@ -823,7 +823,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>ekf_global</code></td>
 <td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code>, <code>goto_driver</code>, <code>goto_cli</code></td>
 <td>sim, car, replay, bench</td>
-<td>map frame. Includes GPS; can jump. The map window (map, aav_hud_raylib) draws the car from it.</td>
+<td>map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.</td>
 </tr>
 <tr>
 <td><code>/localization/gps/odom</code></td>
@@ -845,7 +845,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>navsat_transform</code></td>
-<td><code>hud_server</code>, <code>hud</code>, <code>street_router</code></td>
+<td><code>hud</code>, <code>street_router</code></td>
 <td>sim, car, replay, bench</td>
 <td>The global EKF's position as lat/lon, for maps in the HUD or Foxglove, and the start of street_router's routes.</td>
 </tr>
@@ -855,7 +855,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>map_server</code></td>
 <td><code>global_costmap</code>, <code>local_costmap</code>, <code>map</code></td>
 <td>sim</td>
-<td>Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud_raylib) draws it north up, for the big screen.</td>
+<td>Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud) draws it north up, for the big screen.</td>
 </tr>
 <tr>
 <td><code>/goal_pose</code></td>
@@ -863,7 +863,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>rviz2</code>, <code>map</code></td>
 <td><code>bt_navigator</code>, <code>map</code></td>
 <td>-</td>
-<td>RViz "2D Goal Pose", or the map window's place search (map, aav_hud_raylib - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
+<td>RViz "2D Goal Pose", or the map window's place search (map, aav_hud - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
 </tr>
 <tr>
 <td><code>/plan</code></td>
@@ -871,7 +871,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>planner_server</code></td>
 <td><code>map</code></td>
 <td>-</td>
-<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud_raylib) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.</td>
+<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/destination</code></td>
@@ -903,7 +903,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>street_router</code></td>
 <td><code>map</code></td>
 <td>-</td>
-<td>Transient local (latched). The whole route in the map frame (each point through /fromLL). The map window (map, aav_hud_raylib) draws it violet under Nav2's blue plan; RViz and Foxglove can too. Not a plan Nav2 follows.</td>
+<td>Transient local (latched). The whole route in the map frame (each point through /fromLL). The map window (map, aav_hud) draws it violet under Nav2's blue plan; RViz and Foxglove can too. Not a plan Nav2 follows.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/status</code></td>
@@ -1069,7 +1069,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/follow_gps_waypoints</code></td>
 <td><code>nav2_msgs/action/FollowGPSWaypoints</code></td>
 <td><code>waypoint_follower</code></td>
-<td>Lat/lon waypoints. The HUD (hud_server) sends its locked route here, and street_router its street route on /drivers/nav/route/follow. Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.</td>
+<td>Lat/lon waypoints. street_router sends its street route here (asked on /drivers/nav/route/follow). Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.</td>
 </tr>
 </tbody>
 </table></div>

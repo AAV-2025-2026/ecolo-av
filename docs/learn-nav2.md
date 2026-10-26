@@ -21,7 +21,7 @@ GPS is in [Maps and position](maps-and-position.md).
 
 | Part | Job | Ours |
 |---|---|---|
-| **Goal** | where to go: a pose in the `map` frame | RViz's 2D Goal Pose, an action call, or GPS waypoints from the HUD |
+| **Goal** | where to go: a pose in the `map` frame | RViz's 2D Goal Pose, an action call, or GPS waypoints from `street_router` or the language tools |
 | **bt_navigator** | the boss: runs a behaviour tree that calls the others | `behavior_trees/navigate_to_pose_car.xml` |
 | **Planner** | finds a path from here to the goal | Smac Hybrid-A*, on the global costmap |
 | **Controller** | steers along that path | MPPI (or Regulated Pure Pursuit: `controller:=rpp`), on the local costmap, 20 Hz ([path followers](controllers.md)) |
@@ -178,10 +178,11 @@ try stops at the box. Nothing is hit, but the car rocks until the way is clear.
 ## 6. GPS waypoints
 
 ```text
-HUD route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to map x, y ─► one goal after another
+street route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to map x, y ─► one goal after another
 ```
 
-- `waypoint_follower` serves `/follow_gps_waypoints` (`nav2_msgs/action/FollowGPSWaypoints`).
+- `street_router` and the language tools send the route; `waypoint_follower` serves
+  `/follow_gps_waypoints` (`nav2_msgs/action/FollowGPSWaypoints`).
 - It turns each point into map x, y with navsat_transform's `/fromLL`
   ([Learn: GPS](learn-gps.md)).
 - Nav2 doesn't know where the road is. It plans across its costmap between points.

@@ -1,3 +1,3 @@
-# ros/hud/aav_hud_raylib/crates/map-core/
+# ros/hud/aav_hud/crates/map-core/
 
 @README.md

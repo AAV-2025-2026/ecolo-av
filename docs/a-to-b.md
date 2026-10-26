@@ -74,7 +74,7 @@ ros2 action send_goal /follow_gps_waypoints nav2_msgs/action/FollowGPSWaypoints 
                  orientation: {w: 1.0}}]}" --feedback
 ```
 
-- The HUD's route uses this same action.
+- `street_router` ([Street routes](routes.md)) and the language tools use this same action.
 - On an **empty map** (the default, 200 m × 200 m, all free), Nav2's plan is close to a straight line; the planner only respects the car's turning circle.
 - Nav2's speed: up to 1.0 m/s, speeding up at up to 1.0 m/s², slowing near the goal (`nav2.yaml`).
 - The radar and the roof lidar still fill the local costmap, and collision_monitor still stops for something ahead.

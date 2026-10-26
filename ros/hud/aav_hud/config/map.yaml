@@ -1,4 +1,4 @@
-# map: the big screen's map window (aav_hud_raylib). Every topic name it uses lives here,
+# map: the big screen's map window (aav_hud). Every topic name it uses lives here,
 # not in the code: rename a topic here (or with `--ros-args -p plan_topic:=...`), never in
 # Rust. Built into the program as its defaults, so --demo shows the same names.
 map:

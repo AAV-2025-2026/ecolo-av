@@ -23,7 +23,7 @@ Ben, 24 Oct: "Lets get everything prepared so the only thing left it to get into
 | # | Task | Status |
 |---|---|---|
 | 51 | **The car-day kit**: one runbook, one preflight | ✅ 24 Oct, `wt/car-day`. [docs/car-day.md](docs/car-day.md) (in the docs as "Car day"): sessions 0-10, each with who, how long, what to bring, the commands, what you should see, what to do if not, and 🔒 where the hardware lead must answer first. `pixi run car-day-build` builds the ESP32 firmware (version 2 and `link-v1`) into `car-day/esp32/` (out of git), runs `esp-qemu-check`, builds the C++ way back and the docs PDF; `pixi run car-day-check` (ROS-free, 35 tests) says OK / MISSING with the fix, or REMIND. Built on Ben's Mac: both ELFs, QEMU PASS (111-119 ms), the C++, the PDF, and `models/rf-detr-nano.onnx` (108 MB: the Orin then needs only TensorRT's `trtexec`). Found: on JetPack 6, RF-DETR can't run inside the stream node under Pixi (Python 3.12 vs JetPack 6's 3.10 TensorRT): the streams run, the detector waits for the reflash (Q24). Also fixed: every `!!!` box in the HTML docs showed its text as code (four-space bodies with `tab_length` 2). Seen once: `esp-qemu-check` in `tools/test.sh` failed at load 18 (QEMU starved: the firmware's clock ran 0.82 s per real second, timeouts of 2.3 s); it passed alone a minute later and in the next full run. A flake under load, not the firmware: QEMU has no `-icount` |
-| 53 | **The software on 64-bit ARM Linux, the car's computers, before the car day** (PLAN T9.2) | ✅ 25 Oct, `wt/ci-arm`: two CI jobs on GitHub's free ARM runner (`ubuntu-24.04-arm`, Ubuntu 24.04, 4 cores), on every push to `main` and every pull request. **`arm`** (11-12 min): `pixi run test` passes (1056 tests); the HUD and the map window (`aav_hud_raylib`) are built as aarch64 programs, and each draws its demo once on a virtual screen (125 KB and 106 KB pictures; the artifact `arm-screens`). **`car-kit`** (6-7 min): `pixi run car-kit`, then `car_install.sh --all` with no network at all (a network namespace of its own): every package built offline from the kit, the HUD too, in 4.5 min. Fixed on the way, CI only: under `sudo`, the runner's `PSModulePath` came back and colcon chose PowerShell. Still untested: the Orin's and the Pis' own Ubuntu 22.04 and JetPack |
+| 53 | **The software on 64-bit ARM Linux, the car's computers, before the car day** (PLAN T9.2) | ✅ 25 Oct, `wt/ci-arm`: two CI jobs on GitHub's free ARM runner (`ubuntu-24.04-arm`, Ubuntu 24.04, 4 cores), on every push to `main` and every pull request. **`arm`** (11-12 min): `pixi run test` passes (1056 tests); the HUD and the map window (`aav_hud`) are built as aarch64 programs, and each draws its demo once on a virtual screen (125 KB and 106 KB pictures; the artifact `arm-screens`). **`car-kit`** (6-7 min): `pixi run car-kit`, then `car_install.sh --all` with no network at all (a network namespace of its own): every package built offline from the kit, the HUD too, in 4.5 min. Fixed on the way, CI only: under `sudo`, the runner's `PSModulePath` came back and colcon chose PowerShell. Still untested: the Orin's and the Pis' own Ubuntu 22.04 and JetPack |
 
 **Ready for the car** (the steps are written; each still needs the car):
 
@@ -52,7 +52,7 @@ The reasons for each choice: [decisions](docs/decisions.md#decided-on-22-and-23-
 | 30 | The wheel sensors: an Arduino sends CAN frames, the Orin decodes them (PLAN D2) | ✅ decided by the hardware lead (passed on by Ben, 23 Oct); the frames are `aav.dbc` 0x200, 0x201 |
 | 31 | Fix the nightly Gazebo test (failed on its first night, 23 Oct) | ✅ merged: software graphics on GitHub, and the scripted drive keeps the simulator's time (task 23). First GitHub run: the night of 23 Oct |
 | 32 | The 10-minute timing test (task 11), Fast DDS against Cyclone | ✅ run 23 Oct, 21:00, a quiet Mac. **Cyclone: clean** (worst IMU gap 0.06-0.08 s, nothing over 0.5 s late, 0 stalls, 0 watchdog stops). **Fast DDS:** IMU gaps up to 1 s, camera pictures up to 4.5 s late, 490 moments parked with 3 or more key topics silent at once (the longest 2.4 s), the watchdog stopped Nav2 5 times. The decision holds. Two tool bugs, ✅ fixed 23 Oct: stalls chained overlaps into one (a "236 s stall"): now only topics silent at the same moment count; and the drive, forward only, ended facing a wall after the U-turn and re-sent goals thousands of times: now it reverses, as the car may, and stops after 4 failures in a row. The driving half isn't rerun (Ben agreed: not needed for the decision). Reports: `log/timing-test/` |
-| 33 | The HUD heartbeat to the safety watchdog (PLAN T9.8) | ✅ merged: `/hud/heartbeat` at 10 Hz while the screen draws; silent 1 s, Nav2 and the AI stop (not latched); on the car by default (`watch_hud:=false` without a HUD). Questions for the team: latch it? the Flutter app and map window? Found: `sim-check --faults` `odom freeze` flaky (fixed: task 40) |
+| 33 | The HUD heartbeat to the safety watchdog (PLAN T9.8) | ✅ merged: `/hud/heartbeat` at 10 Hz while the screen draws; silent 1 s, Nav2 and the AI stop (not latched); on the car by default (`watch_hud:=false` without a HUD). Questions for the team: latch it? the Flutter app and map window? (the Flutter app: archived 25 Oct) Found: `sim-check --faults` `odom freeze` flaky (fixed: task 40) |
 | 34 | The sensor mux and output mux (PLAN T1.5, D3, S-4) | ✅ merged: `aav_io_mux`; backends read only `/control/<target>/actuator_cmd`, filled only while every source is REAL ([sources and targets](docs/sources-and-targets.md)). Questions for the team: "check, not copy" (D3); a bench with a real spine and pretend sensors; the HUD showing the gate; `spine_bridge` refusing to arm while it's shut |
 | 35 | The CAN bridge (`aav_spine`) in Rust (PLAN T1.8) | ✅ merged: `aav_spine_bridge`, the default (`bridge:=python` for the old one); reads the output mux's topic, and the guard test runs against both. Untested: the Orin with real SocketCAN |
 | 36 | A bandwidth budget: every sensor's rate and size, each link's load, the CAN bus load (PLAN T1.7) | ✅ merged: [bandwidth](docs/bandwidth.md), `pixi run bandwidth`, `pixi run can-load`. Raw cameras are the only risk; CAN 8.5% |
@@ -214,7 +214,7 @@ Ben sent 32 photos and the KEFC request (CAN bus, wheel speed, steering feedback
 a second Orin). Pages: [car photos](docs/car-photos.md), [CAN plan](docs/can-plan.md),
 [topic areas](docs/naming.md).
 
-- [x] **The raylib HUD** (Ben: "today maybe"). *Started 14 Oct, on `wt/hud-raylib`. Built: `aav_hud_raylib`, works on a Mac.*
+- [x] **The raylib HUD** (Ben: "today maybe"). *Started 14 Oct, on `wt/hud-raylib`. Built: `aav_hud_raylib` (now `aav_hud`), works on a Mac.*
 - [x] **Topic names by area** (`docs/naming.md`). *Done 15 Oct: Decided by Ben, renamed
       everywhere (`wt/topic-areas`), checked by `tools/tests/test_topic_areas.py`.*
 - [x] **DBC v0.2.0** for the KEFC plan: the ESP32 board as the spine, wheel frames 0x200 and
@@ -278,6 +278,8 @@ work on." His order, with the work under way:
       camera); the Flutter app stays until it matches. *Started 15 Oct (branch
       `wt/hud-raylib`): the driving screen, the e-stop, GPS and topic health run on a Mac
       (`pixi run hud-demo`, `pixi run hud`). Next: the bench, a Pi, the map page.*
+      *25 Oct: it matched, so the Flutter app and its back end were archived
+      (`archive/2026-27-flutter-hud/`, Q29); this package took the name `aav_hud`.*
 
 ## Ideas to keep
 
@@ -286,7 +288,7 @@ work on." His order, with the work under way:
       perception; the Orin doing the processing when you sit at the car. *Saved, not
       started. What runs where: `docs/history/conversation.md`, 11 October.* It waits on:
       - the car on Jazzy (Q24): a Jazzy Mac can't join the car's Humble;
-      - the HUD on a Mac: raylib's runs there as it is; the Flutter app needs CocoaPods;
+      - the HUD on a Mac: raylib's runs there as it is; the Flutter app needs CocoaPods (archived 25 Oct);
       - the car's WiFi, measured: how late the pictures arrive, and how often it drops.
 - [ ] **micro-ROS, again** (Ben, 11 Oct): "lets rethink thinks later after we see the
       hardware". No micro-ROS for now (Tentative).
@@ -300,7 +302,8 @@ Decided ([Decisions](docs/decisions.md)):
    - [x] **The HUD app:** an e-stop button, Cancel, the camera page, the car's status, the
          OpenStreetMap credit. Flutter 3.35.7 in `vendor/` (`pixi run get-flutter`,
          `hud-test`). *Fixed: the app could never connect (Socket.IO tried polling
-         first); now WebSocket only. The back end has 98 tests.*
+         first); now WebSocket only. The back end has 98 tests.* *Archived 25 Oct with the
+         app (`archive/2026-27-flutter-hud/`): `get-flutter` and `hud-test` are gone.*
    - [x] **The HUD's place database:** `pixi run get-hud-map` (51 MB, checksum pinned).
    - [x] **The car's launch:** perception as parts of `car.launch.py` (camera, detector,
          stop_signs, radar_clusters), the GPS driver (`gps_driver:=ublox` by default),
@@ -343,8 +346,9 @@ Decided ([Decisions](docs/decisions.md)):
 - [ ] A fresh clone on oirp-spss before anyone works there.
 - [x] Make the repo public? Checked 11 Oct: no secrets in any of its 167 commits. *Waits on Ben's
       yes, and on what to tidy first (the 11 October email). Public since 15 Oct (Ben); now `AAV-2025-2026/ecolo-av`.*
-- [ ] The HUD on the car's Pi: Flutter has no Linux ARM download; the tile server and the
-      OSRM route data.
+- [x] The HUD on the car's Pi: Flutter has no Linux ARM download; the tile server and the
+      OSRM route data. *No longer needed: the Flutter app was archived 25 Oct; the raylib HUD
+      builds on ARM (CI's `arm` job), and street routes come from Valhalla.*
 
 ## On Ben's Mac (10-10)
 
@@ -400,7 +404,7 @@ folder downloaded, and moves into it as a fast-forward.
       `perception.launch.py`, udev placeholders.
 - [x] **Rust drivers for the spine's devices:** jrk-g2, ad5311, pca9555, ibus, spine-board
       (98 tests); all seven firmware crates build no_std for the Pico 2 in `pixi run test`.
-- [x] **The HUD's back end on our topics:** `aav_hud`, 86 tests.
+- [x] **The HUD's back end on our topics:** `aav_hud`, 86 tests. *(The Flask one: archived 25 Oct; `aav_hud` is now the raylib HUD.)*
 - [x] **Docs:** Bench mode and Perception pages; every page brought up to date.
 - [x] **Ben: commit the server work** (`aav_imu_yahboom` and its three edited files). Then
       perception and the bench become parts in `car.launch.py`'s machine files.
@@ -414,7 +418,7 @@ folder downloaded, and moves into it as a fast-forward.
       needed: we wrote our own, 11 Oct.)
       `best.pt` is probably on the team's Linux machine with the NVIDIA card (Ben, 10 Oct).
       No SSH to it today: later, once all the code is in place (Ben, 21:14).
-- [x] **The HUD app's small changes** (docs/hud.md). *Done 11 Oct.*
+- [x] **The HUD app's small changes** (docs/hud.md). *Done 11 Oct. Archived 25 Oct.*
 - [ ] **Tune the speed loop on the car:** on the bench it trails a ramp by about a second.
 - [x] **The first-day steps in `README.md`** (Ben, 17:03).
 - [x] **`~/Code/aav/CLAUDE.md`:** every old folder, and what replaced it in `aav` (Ben, 17:03). *That workspace was retired 25 Oct.*
