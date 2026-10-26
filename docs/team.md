@@ -59,7 +59,7 @@ Phase 0 on the hardware we have now, before the spine exists.
 | | |
 |---|---|
 | Read first | [How it fits](how-it-fits.md) (section 4, ego), [Car numbers](car_measurements.md) |
-| Run first | `pixi run turtle` and `pixi run keyboard --local`; then `pixi run rust-listener` prints what ego sends |
+| Run first | `pixi run turtle` and `pixi run keyboard --local`; then `ros2 topic echo /ego/actuator_cmd` (inside `pixi shell`) prints what ego sends |
 | First tasks | 1. Measure the car (Q1) and replace the guesses in `vehicle.yaml`. 2. Decide steering at standstill (Q27). 3. Agree with the spine owner what ego's output means (Q12): target speed, or raw throttle |
 | Files | `ros/ego/aav_ego/` (`ackermann.py` is the maths), `ros/bringup/aav_description/config/vehicle.yaml` |
 | Open questions | Q1, Q12, Q27 |

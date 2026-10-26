@@ -34,7 +34,6 @@ Every other driver outranks the AI slot, so a person, a test script or Nav2 alwa
 |---|---|---|
 | `control_interface.py` | `/perception/lane/geometry` | `/drivers/ai/cmd_vel` (`TwistStamped`, `base_link`), `/drivers/ai/lane_status` (`String`), `/drivers/ai/lane_state` (`String`) |
 | `fake_lane_geometry_pub.py` | | `/perception/lane/geometry`, at `rate_hz` |
-| `geometry_logger.py` | `/perception/lane/geometry` | a CSV file |
 
 ### control_interface parameters
 
@@ -54,14 +53,13 @@ States: `LANE_KEEP`, `LANE_CHANGING`, `LANE_COMMITTED`, `NO_LANE_STOPPING`, `RES
 
 Fake modes (`mode`): `straight`, `drift_right`, `drift_left`, `sine`, `sharp_curve`,
 `lane_change_right`, `lane_change_left`, `lane_loss`. Fake parameters: `mode`, `rate_hz`
-(10 Hz), `lane_width_m` (3.6 m). Logger: `output_dir` (default `~/lane_logs`).
+(10 Hz), `lane_width_m` (3.6 m).
 
 ### Launch
 
 | File | Starts |
 |---|---|
 | `launch/lane_follower.launch.py` | control_interface; `fake:=true` adds the fake lane |
-| `launch/control_test.launch.py` | control_interface and the fake lane (`mode`, `invert_offset_sign`) |
 
 ## Invariants
 
@@ -72,14 +70,13 @@ Fake modes (`mode`): `straight`, `drift_right`, `drift_left`, `sine`, `sharp_cur
   slow-down.
 - Lane width, offsets and radii are metres; turn rate is rad/s, + = left.
 - The scripts should run through `python3`, not their `#!` line: on a Mac, `/usr/bin/env`
-  drops the library path their messages need (`docs/mac.md`). Both launch files do this
+  drops the library path their messages need (`docs/mac.md`). The launch file does this
   (`prefix='python3'`).
 - Inherited code: record every change in `PROVENANCE.md`.
 
 ## Side Effects
 
 - control_interface commands the car through twist_mux (lowest priority).
-- geometry_logger creates `output_dir` and writes `lane_geometry_<time>.csv` there.
 
 ## Verification
 

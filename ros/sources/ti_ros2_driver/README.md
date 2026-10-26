@@ -33,8 +33,7 @@ targets: x, y, z, velocity_x/y/z, acceleration_x/y/z.
 | Executable | Node | Does |
 |---|---|---|
 | `pcl_pub` | `iwr6843aop` (renamed by launch) | the driver |
-| `obstacle_extractor` | `radar_obstacle_extractor` | clusters a cloud into objects |
-| `mock_radar_publisher` | `mock_radar_publisher` | a pretend radar cloud, for demos |
+| `mock_radar_publisher` | `mock_radar_publisher` | a pretend radar cloud: `aav_radar_clusters`' `mock:=true` starts it |
 
 ### `pcl_pub`
 
@@ -53,13 +52,6 @@ targets: x, y, z, velocity_x/y/z, acceleration_x/y/z.
 | `publish_target_tracker`, `output_RA_heatmap`, `output_RD_heatmap`, `debug_mode` | false |
 | `debug_log_path` | `<cwd>/src/ti_ros2_driver/debug/result.json` |
 
-### `obstacle_extractor`
-
-Subscribes `input_topic` (`/ti_radar_0/ti_mmwave_0`); publishes `output_topic`
-(PointCloud2) and `nav_output_topic` (`/navigation_objects`, PoseArray). Parameters:
-`cluster_tolerance`, `z_tolerance` (m), `min_cluster_size`, `min_distance`,
-`max_distance`, `min_height`, `max_height` (m), `frame_id`.
-
 ### `mock_radar_publisher`
 
 Publishes a pretend cloud on `topic`. Parameters: `topic` (`/ti_radar_0/ti_mmwave_0`),
@@ -71,15 +63,16 @@ Publishes a pretend cloud on `topic`. Parameters: `topic` (`/ti_radar_0/ti_mmwav
 |---|---|
 | `TI.py` | `get_data`: opens the ports, loads the cfg, parses frames (`read`, `close`) |
 | `pc_publisher.py` | `rospublisher`, the `pcl_pub` node: a producer thread reads, a consumer thread publishes |
-| `obstacle_extractor.py` | `ObstacleExtractor` |
 | `mock_radar_publisher.py` | `MockRadarPublisher` |
-| `plotheatmap.py` | `plotHM`: range-azimuth and range-Doppler heat maps (matplotlib) |
+| `plotheatmap.py` | `plotHM`: range-azimuth and range-Doppler heat maps (matplotlib), for `output_RA_heatmap`/`output_RD_heatmap` |
 | `benchmark.py` | `Instrumentor`, `InstrumentationTimer`: timing for debug mode |
 
-### Launch files and configs
+### Configs
 
-- `launch/6843aop_base.launch.py`, `_3d_tracking`, `_HeatMap`, `_with_obstacles`, and
-  `mock_obstacle_demo.launch.py`: the 2025-26 team's demos.
+No launch file of its own: `aav_sensors`' `sensors.launch.py radar:=true` starts it. The
+2025-26 team's five demo launch files and its `obstacle_extractor` were removed on 26 Oct
+(`aav_radar_clusters` clusters the points now).
+
 - `cfg/*.cfg`: TI's radar configs. `base.cfg` gives 8.4 m at 10 Hz (indoor demo
   settings). `cfg/rules.txt`: TI's notes on the commands.
 
@@ -107,12 +100,13 @@ pixi run build && colcon test --packages-select ti_ros2_driver && colcon test-re
 ```
 
 The tests are the stock lint checks (copyright, flake8, pep257). `pixi run test` runs
-everything. Without the radar: `ros2 launch ti_ros2_driver mock_obstacle_demo.launch.py`.
+everything. Without the radar:
+`ros2 launch aav_radar_clusters radar_clusters.launch.py mock:=true minimum_points:=5`.
 
 ## Drift and known gaps
 
-- Its own launch files still use the old names (`ti_mmwave_0` in namespace
-  `ti_radar_0`, `/navigation_objects`), not `/sensors/...` (`docs/naming.md`). Only
-  `aav_sensors`' launch uses the contract's `/sensors/radar/points`.
+- `pcl_pub`'s and `mock_radar_publisher`'s default topics are still the old names
+  (`ti_mmwave_0`, `/ti_radar_0/ti_mmwave_0`), not `/sensors/...` (`docs/naming.md`).
+  Their launchers (`aav_sensors`, `aav_radar_clusters`) set `/sensors/radar/points`.
 - No module docstrings listing topics, and the parsing sits in `TI.py` with no tests.
 - The cfg files are indoor demos (`base.cfg`: 8.4 m range, 10 Hz).

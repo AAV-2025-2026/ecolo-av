@@ -56,7 +56,6 @@ is in `docs/model-comparison.md`.
   `confidence`, `labels`, `extra_images`, `compressed`, plus `image`, `picture`,
   `node_name`, `use_sim_time`. Not `image_size` or `publish_image`: set those as node parameters.
 - `config/camera_obstacles.yaml`: camera_obstacles' settings.
-- `training/`: the 2024-25 team's training script and `data.yaml` (its own `PROVENANCE.md`).
 
 | Module | No ROS? | Holds |
 |---|---|---|

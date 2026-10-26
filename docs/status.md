@@ -81,7 +81,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 | Replay of a recorded drive | [[works]] the EKFs match the recording within 0.03 m |
 | Car, with no hardware attached | comes up; only the missing sensors (IMU, GPS) fail the graph check, as expected. Checked again on 11 Oct, with the perception parts |
 | The same `pixi.toml` on macOS | [[works]] on an Apple Silicon Mac (macOS 27), 10 Oct: build 18 s, `pixi run test` all green after one fix (GNU `coreutils`, see [Your Mac](mac.md)) |
-| On the Mac: the turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, `pixi run doctor`, recording a drive | [[works]] |
+| On the Mac: the turtle, Gazebo headless, a Nav2 goal, the docs, `pixi run doctor`, recording a drive | [[works]] |
 | On the Mac: Gazebo's window | [[works]] `pixi run sim` opens it, and the camera follows the car |
 | On the Mac: RViz, rqt_graph | [[untested]] they open; nobody has looked at them yet |
 | The same `pixi.toml` on 64-bit ARM Linux | [[works]] in CI on Ubuntu 24.04 ARM (25 Oct): `pixi run test`, and the car kit installed with no network. [[untested]] on the car's own computers (Ubuntu 22.04, JetPack 6) |

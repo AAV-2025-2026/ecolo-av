@@ -489,7 +489,8 @@ Ben's messages, word for word: `docs/history/messages-2026-10-09.md`.
       the Pixi environment. Write down what a Rust rewrite would take (ESP32, Pi).
       *Done: `examples/rust-listener` (rclrs 0.8 + ros-env 0.3 from crates.io; the
       message code ships with Jazzy) builds in 18 s and printed ego's commands live.
-      `pixi run rust-listener`. The rewrite trade-offs are in docs/languages.md.*
+      `pixi run rust-listener`. The rewrite trade-offs are in docs/languages.md. Removed
+      26 Oct: four real rclrs nodes show the same.*
 - [x] **Design doc:** fix the ten "last year's", and update the tree, profiles and decisions.
       *Done 10-10 (doc rev 58): all ten now name 2024-25; the tree, the four profiles,
       the mux priorities, the tests, Gazebo before CARLA; Jazzy, one repo and Languages

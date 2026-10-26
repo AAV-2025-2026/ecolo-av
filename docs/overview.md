@@ -25,7 +25,6 @@ package, one per row: [Packages](packages.md).
 | `ros/` | the ROS 2 packages, one folder per area | [Packages](packages.md) |
 | `firmware/` | the CAN contract, the Rust crates, the spine's Pico 2 program, and the 2025-26 C++ boards | [Firmware](firmware.md), [Rust firmware](rust-firmware.md) |
 | `tools/` | tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server | [Infrastructure](infrastructure.md) |
-| `examples/` | a first ROS node in Rust | |
 | `docs/` | these pages, the topic contract, and the history | |
 | `models/` | the detector models, RF-DETR Nano (the default) and YOLO: `pixi run get-models` downloads them (not in git) | [Perception](perception.md) |
 | `archive/` | the older teams' repos, as they were, and the 2025-26 Flutter HUD (archived 25 Oct). Reference only: never built | [Older code](older-code.md) |

@@ -63,7 +63,7 @@ The five not cloned here:
 | GNSS | GNSS code for the car (u-blox, with RTK corrections) | surveyed in depth; replaced by the stock u-blox driver |
 | Battery-Monitor-ROS | battery monitor ROS code | yes: `ros/sources/battery_monitor` |
 | camera_ros2_ws | Python | yes: rewritten as `ros/perception/aav_detector` |
-| camera_Yolo_detection | Python, 72 MB | 2 files: `aav_detector/training`. The trained `best.pt` isn't in it |
+| camera_Yolo_detection | Python, 72 MB | no: its training script and `data.yaml` were in `aav_detector/training` until 26 Oct, unused. The trained `best.pt` isn't in it |
 | cameras | publishes camera feeds to ROS 2 | its 4 calibration files: `aav_sensors/config/cameras`, used by `cameras.launch.py` |
 | AutoCtrl_uRos | C++ | Motor-Control is a fork of it |
 | emergency-stop | a browser e-stop | not surveyed: it may answer Q6 |

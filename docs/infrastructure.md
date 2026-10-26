@@ -46,7 +46,6 @@ ecolo-av/
     spine/              Rust: spine-core (the spine's logic), aav-inputs, the device drivers,
                         and boards/pico2, the spine's board program
     legacy/             the 2025-26 ESP32 and Pico code that runs the car today
-  examples/           rust-listener: a first ROS node in Rust
   models/             trained model files, not in git: pixi run get-models
   tools/              scripts: see the table below
   docs/               these pages; docs/history/ keeps the Q&A, Ben's requests and the audits

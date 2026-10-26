@@ -5,12 +5,10 @@ Copied on 2026-10-09 from github.com/AAV-2025-2026/Lane_Detection_ROS2 @ main (3
 Files, unchanged unless listed under Changes:
 
 - `CMakeLists.txt`
-- `launch/control_test.launch.py`
 - `msg/LaneGeometry.msg`
 - `package.xml`
 - `scripts/control_interface.py`
 - `scripts/fake_lane_geometry_pub.py`
-- `scripts/geometry_logger.py`
 
 ## Changes
 
@@ -22,7 +20,7 @@ Files, unchanged unless listed under Changes:
   - `scripts/control_interface.py` publishes `TwistStamped` on `/cmd_vel/ai`
     (twist_mux's slot for a learned driver), through a new `send()`, instead of `Twist` on
     `/control_cmd`. The lane-keeping logic is unchanged.
-  - `launch/control_test.launch.py`: the package name follows.
+  - `launch/control_test.launch.py` (since removed): the package name follows.
   - New: `launch/lane_follower.launch.py` (the driver, with fake:=true for a pretend lane).
   - `scripts/control_interface.py`, `scripts/fake_lane_geometry_pub.py`: a quiet Ctrl-C.
     They ignore the second Ctrl-C while cleaning up, catch `ExternalShutdownException`, and
@@ -41,10 +39,14 @@ change, never the logic:
   `/cmd_vel/ai` -> `/drivers/ai/cmd_vel`, `/lane_geometry_status` ->
   `/drivers/ai/lane_status`, `/vehicle_state` -> `/drivers/ai/lane_state` (control_interface
   is the AI slot's driver, so what it publishes goes under `/drivers/ai/`).
-- `scripts/fake_lane_geometry_pub.py`, `scripts/geometry_logger.py`,
+- `scripts/fake_lane_geometry_pub.py`, `scripts/geometry_logger.py` (since removed),
   `launch/lane_follower.launch.py`: `/lane_geometry` -> `/perception/lane/geometry`.
 - 25 Oct 2026: `launch/control_test.launch.py` starts both scripts with
   `prefix='python3'`, as `lane_follower.launch.py` does (on a Mac, `/usr/bin/env` drops
   the library path their messages need: `docs/mac.md`). `scripts/geometry_logger.py`
   calls `rclpy.try_shutdown()`, as the other two scripts do, so a second Ctrl-C under
   launch doesn't raise.
+- 26 Oct 2026: removed `launch/control_test.launch.py` and `scripts/geometry_logger.py`
+  (and its line in `CMakeLists.txt`): 2025-26 test aids that nothing started.
+  `lane_follower.launch.py fake:=true` does what the test launch did. The naming and
+  cleanup audit, `docs/designs/2026-10-26_naming-and-cleanup.md`.

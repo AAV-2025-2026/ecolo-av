@@ -14,7 +14,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 install(PROGRAMS
   scripts/control_interface.py
-  scripts/geometry_logger.py
   scripts/fake_lane_geometry_pub.py
   DESTINATION lib/${PROJECT_NAME}
 )

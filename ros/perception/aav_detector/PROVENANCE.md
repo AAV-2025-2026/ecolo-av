@@ -10,7 +10,8 @@ Files, unchanged unless listed under Changes:
 - `yolo_ros2/__init__.py`
 - `yolo_ros2/yolo_inference.py`
 
-`training/` came from a second repo: see `training/PROVENANCE.md`.
+`training/` came from a second repo, `Carleton-AAV-Capstone/camera_Yolo_detection`
+(`data.yaml`, `testing_torch.py`, unchanged). Removed on 2026-10-26: nothing used it.
 
 ## Changes
 

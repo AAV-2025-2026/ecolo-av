@@ -67,7 +67,7 @@ These are the conventions decided so far. They apply to people and to Claude ses
   - no C++ of our own: the inherited C++ moves to Rust (Ben, 10 Oct). The IMU driver
     went to Ben's Rust twin (11 Oct), the radar clustering to a Rust ROS node (15 Oct).
     Stock ROS packages stay as they are;
-  - Rust ROS nodes (rclrs from crates.io: `examples/rust-listener`, `aav_imu_yahboom`)
+  - Rust ROS nodes (rclrs from crates.io: `aav_imu_yahboom`, `aav_spine_bridge`)
     are for those ports, the HUD (raylib, Ben, 11 Oct), and later for a node where Rust
     pays off, such as ego.
 - **Keep the maths out of ROS.** A node's logic lives in a module with no ROS imports

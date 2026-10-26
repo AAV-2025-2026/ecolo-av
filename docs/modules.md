@@ -362,7 +362,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 | **Why** | the car must stop at stop signs, and see people and cars |
 | **Runs on** | the detector: the Orin (TensorRT, after the reflash) or a laptop (Core ML); the watcher: the Orin |
 | **In → out** | `/sensors/camera/front_left/image_raw` → `/perception/detections` → `/perception/stop_sign`, `/perception/camera_obstacles`, `/perception/camera_view` |
-| **Origin** | inherited, rewritten: 2024-25 `camera_ros2_ws` (and `camera_Yolo_detection` for `training/`) |
+| **Origin** | inherited, rewritten: 2024-25 `camera_ros2_ws` |
 | **Status** | [[works]] on the bench and in Gazebo, with the stock RF-DETR Nano. The 2024-25 team's trained model is lost. On the car, the detector runs inside `aav_camera_stream` |
 | **Run alone** | `pixi run get-models`, then `pixi run detect picture:=ros/perception/aav_detector/test/stop_sign.jpg` |
 | **Test** | `test/` (in `tools/test.sh`); `pixi run bench-check --perception` |

@@ -293,7 +293,6 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 | Gazebo's cameras and lidar on a Mac | [[works]] 15 Oct: headless, about 10 Hz each; with YOLO too, `-e ml sim-check --perception` passed 2 of 2 on a quiet Mac, so the lidar is on by default |
 | RViz and rqt_graph on a Mac | [[untested]] they open without errors (RViz logs one shader warning); nobody has looked at them yet |
 | Recording a drive (`tools/record.sh`) | [[works]] on the Mac, after the `tools/ros.sh` fix above |
-| The Rust listener | [[works]] on the Mac: builds in 15 s |
 | Joystick on a Mac | [[untested]] An old macOS joystick bug is fixed in the version we use. |
 | The Mac on the car's network | [[untested]] the car still runs Humble |
 | `pixi run doctor` | [[works]] on Linux and the Mac |

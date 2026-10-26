@@ -21,11 +21,6 @@ Files, unchanged unless listed under Changes:
 - `cfg/RADheatmap.cfg`
 - `cfg/base.cfg`
 - `cfg/rules.txt`
-- `launch/6843aop_3d_tracking.launch.py`
-- `launch/6843aop_HeatMap.launch.py`
-- `launch/6843aop_base.launch.py`
-- `launch/6843aop_with_obstacles.launch.py`
-- `launch/mock_obstacle_demo.launch.py`
 - `package.xml`
 - `resource/ti_ros2_driver`
 - `setup.cfg`
@@ -37,7 +32,6 @@ Files, unchanged unless listed under Changes:
 - `ti_ros2_driver/__init__.py`
 - `ti_ros2_driver/benchmark.py`
 - `ti_ros2_driver/mock_radar_publisher.py`
-- `ti_ros2_driver/obstacle_extractor.py`
 - `ti_ros2_driver/pc_publisher.py`
 - `ti_ros2_driver/plotheatmap.py`
 
@@ -55,9 +49,10 @@ Files, unchanged unless listed under Changes:
   - `pc_publisher.py`: defaults are the installed `cfg/base.cfg` (it was relative to the
     working directory), `/dev/aav/radar_cmd`, `/dev/aav/radar_data` and frame `radar_link`
     (was the typo `ti_mmwaver_0`).
-  - `pc_publisher.py`, `obstacle_extractor.py`, `mock_radar_publisher.py`: a clean exit
+  - `pc_publisher.py`, `obstacle_extractor.py` (since removed), `mock_radar_publisher.py`: a clean exit
     on `ExternalShutdownException` too (Jazzy).
-  - `launch/6843aop_*.launch.py`: the same ports and frame; comments on their own lines.
+  - `launch/6843aop_*.launch.py` (since removed): the same ports and frame; comments on
+    their own lines.
 - `setup.py`: `tests_require` -> `extras_require={'test': ['pytest']}` (setuptools 79
   ignores `tests_require`, so colcon ran no tests and failed).
 - `package.xml`: `ros2launch` -> exec_depend `launch`, `launch_ros`, `ament_index_python`.
@@ -67,3 +62,21 @@ Files, unchanged unless listed under Changes:
   - The cfg files are indoor demos (9 m range, 10 Hz).
 - 25 Oct 2026: added `README.md` (EGM sections: Overview, Interface, Invariants, Side
   Effects, Verification) and `CLAUDE.md`. Docs only: no inherited file changed.
+
+## Changes (2026-10-26)
+
+Removed what nothing outside `archive/` used (the naming and cleanup audit,
+`docs/designs/2026-10-26_naming-and-cleanup.md`):
+
+- `ti_ros2_driver/obstacle_extractor.py` and its `setup.py` entry point: `aav_radar_clusters`
+  (Rust) clusters the radar's points now.
+- The five launch files, `launch/6843aop_3d_tracking.launch.py`, `6843aop_HeatMap`,
+  `6843aop_base`, `6843aop_with_obstacles` and `mock_obstacle_demo`: the 2025-26 team's
+  demos, on the old topic names. `aav_sensors`' `sensors.launch.py` starts the driver.
+  `setup.py` no longer installs `launch/`.
+- `package.xml`: `geometry_msgs` (only the extractor used it), `launch` and `launch_ros`
+  (only the launch files did).
+
+Kept, because something uses them: `pcl_pub` (`pc_publisher.py`), `TI.py`, `cfg/`;
+`benchmark.py` and `plotheatmap.py` (`pc_publisher.py` imports both); and
+`mock_radar_publisher` (`aav_radar_clusters`' `radar_clusters.launch.py mock:=true`).

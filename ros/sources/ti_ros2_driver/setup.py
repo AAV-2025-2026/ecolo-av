@@ -12,7 +12,6 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob('launch/*launch.py')),
         (os.path.join('share', package_name, 'cfg'), glob('cfg/*.cfg')),
         (os.path.join('share', package_name, 'debug'), glob('debug/result.json')),
     ],
@@ -26,7 +25,6 @@ setup(
     entry_points={
         'console_scripts': [
             'pcl_pub = ti_ros2_driver.pc_publisher:main',
-            'obstacle_extractor = ti_ros2_driver.obstacle_extractor:main',
             'mock_radar_publisher = ti_ros2_driver.mock_radar_publisher:main',
         ],
     },

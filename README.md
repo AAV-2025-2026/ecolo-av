@@ -183,7 +183,6 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 |---|---|
 | `vehicle-model` | the car as a linear model: poles, step responses, Bode margins |
 | `state-space-demo` | the state-space primer's simulator |
-| `rust-listener` | a Rust (rclrs) ROS node that prints ego's commands |
 
 ## What's where
 
@@ -192,7 +191,6 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | [`ros/`](ros/README.md) | ROS 2 packages, one folder per area: sources (sensors), localization, perception, drivers, command_mux, io_mux, ego, can_bridge (the real car), sim, safety, hud; bringup has the launch profiles and the car description; ecolo_msgs has the team's own message and action types |
 | [`firmware/`](firmware/README.md) | the CAN contract (`can/aav.dbc`), the wheel encoder's UDP packet vectors (`udp/`), the spine's Rust logic and device drivers (`spine/`), and the inherited C++ firmware (`legacy/`) |
 | [`tools/`](tools/README.md) | tests, keyboard, graph check, the network doctor, recording, the docs builder, the progress mailer, the MCP server for AI apps |
-| [`examples/`](examples/README.md) | small runnable examples: a first ROS node in Rust (`rust-listener`) |
 | `docs/` | the docs (markdown sources, the HTML in `docs/html/`), the topic contract, and the history |
 | [`models/`](models/README.md) | the detector models: RF-DETR Nano (the default) and YOLO11n, downloaded by `pixi run get-models`, and their exports (`.onnx`, `.mlpackage`). Not in git |
 | [`vendor/`](vendor/README.md) | the ROS 2 and ros2-rust source, for looking things up (`pixi run vendor`); also the downloaded tools: MediaMTX, PlatformIO, QEMU, `cargo-tools`, `esp`, `car-kit-cache`. Not ours, and not in git |
