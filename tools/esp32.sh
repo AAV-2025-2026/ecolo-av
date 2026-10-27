@@ -23,7 +23,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT=$PWD
 
-ESPUP_VERSION=0.18.0
+ESPUP_VERSION=0.19.0
 ESPFLASH_VERSION=4.3.0          # 4.4 and later need rustc 1.95
 XTENSA_RUST_VERSION=1.97.0.0
 XTENSA_GCC_VERSION=16.2.0_20260914
