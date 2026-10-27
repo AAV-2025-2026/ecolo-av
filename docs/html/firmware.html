@@ -7,20 +7,26 @@
 <!-- Generated from docs/firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Firmware: the spine and its CAN contract</h1>
-<div class="meta">15 min read · 9 sections</div></header>
+<div class="meta">16 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -75,16 +88,16 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#src-vs-firmware">src/ vs firmware/</a><a href="#how-a-chip-joins-ros-2">How a chip joins ROS 2</a><a href="#one-interface-many-drivers">One interface, many drivers</a><a href="#the-spines-job">The spine&#x27;s job</a><a href="#the-can-contract">The CAN contract</a><a href="#firmwarespine-the-rust-code">firmware/spine: the Rust code</a><a href="#the-cars-two-other-pico-2s-in-rust-15-october">The car&#x27;s two other Pico 2s, in Rust (15 October)</a><a href="#todays-firmware-firmwarelegacy">Today&#x27;s firmware: firmware/legacy/</a><a href="#still-to-decide">Still to decide</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#ros-vs-firmware">ros/ vs firmware/</a><a href="#how-a-chip-joins-ros-2">How a chip joins ROS 2</a><a href="#one-interface-many-drivers">One interface, many drivers</a><a href="#the-spines-job">The spine&#x27;s job</a><a href="#the-can-contract">The CAN contract</a><a href="#firmwarespine-the-rust-code">firmware/spine: the Rust code</a><a href="#the-cars-two-other-pico-2s-in-rust-15-october">The car&#x27;s two other Pico 2s, in Rust (15 October)</a><a href="#todays-firmware-firmwarelegacy">Today&#x27;s firmware: firmware/legacy/</a><a href="#still-to-decide">Still to decide</a></nav>
 <div class="lead"><p>ROS stops at the CAN bus. Below it, a microcontroller called the spine owns the pins, the
 actuators and the watchdog. This page covers what goes where, the CAN contract, and
 what's left to build.</p></div>
-<section class="card"><h2 id="src-vs-firmware">src/ vs firmware/</h2>
+<section class="card"><h2 id="ros-vs-firmware">ros/ vs firmware/</h2>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th></th>
-<th><code>src/</code></th>
+<th><code>ros/</code></th>
 <th><code>firmware/</code></th>
 </tr>
 </thead>
@@ -107,7 +120,7 @@ what's left to build.</p></div>
 <tr>
 <td>Reaches ROS</td>
 <td>directly</td>
-<td>through a bridge node: CAN to <code>aav_spine</code>, or today UART to <code>aav_legacy</code></td>
+<td>through a bridge node: CAN to <code>spine_bridge</code> (<code>aav_spine_bridge</code>), or today UART to <code>aav_legacy</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -305,7 +318,7 @@ from the drive direction.</p>
 </section>
 <section class="card"><h2 id="firmwarespine-the-rust-code">firmware/spine: the Rust code</h2>
 <p><code>crates/spine-core</code> is plain <code>no_std</code> Rust: no allocator, no dependencies, no hardware.
-<code>cargo test</code> runs its 70 tests on any laptop.</p>
+<code>cargo test</code> runs its 84 tests on any laptop.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -355,7 +368,7 @@ and the glue between them and <code>spine-core</code>, are written too (10 Octob
 <tr>
 <td><code>jrk-g2</code></td>
 <td>the two Pololu Jrk G2s (steering, brake) over I2C</td>
-<td>14</td>
+<td>15</td>
 </tr>
 <tr>
 <td><code>ad5311</code></td>
@@ -370,7 +383,7 @@ and the glue between them and <code>spine-core</code>, are written too (10 Octob
 <tr>
 <td><code>ibus</code></td>
 <td>the FlySky RC receiver</td>
-<td>24</td>
+<td>25</td>
 </tr>
 <tr>
 <td><code>mcp2515</code></td>
@@ -380,12 +393,12 @@ and the glue between them and <code>spine-core</code>, are written too (10 Octob
 <tr>
 <td><code>legacy-link</code></td>
 <td>the Motor-Pi's 13-byte UART frames, and the targets the C++ set for them (15 Oct); version 2 with the Orin's heartbeat (24 Oct, TODO 50)</td>
-<td>57</td>
+<td>72</td>
 </tr>
 <tr>
 <td><code>spine-board</code></td>
 <td>all of them, from <code>spine-core</code>'s outputs, in a safe order; their errors become fault bits. Commands through CAN or the UART (<code>CommandLink</code>)</td>
-<td>57</td>
+<td>79</td>
 </tr>
 </tbody>
 </table></div>
@@ -440,7 +453,7 @@ board: <span class="badge b-untested">untested</span>. The car's chip is still Q
 <tr>
 <td>RC receiver: FlySky FS-iA6B</td>
 <td>iBUS on GPIO 32, 115200 baud</td>
-<td>channel 5 override, 2 throttle, 3 steering, 4 mode. Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7)</td>
+<td>channel 5 override, 2 throttle, 3 steering, 4 gear (forward, brake, reverse). Counted from 0: on the transmitter they're CH6, CH3, CH4, CH5 (Q7)</td>
 </tr>
 </tbody>
 </table></div>
@@ -449,6 +462,12 @@ board: <span class="badge b-untested">untested</span>. The car's chip is still Q
 <p>The 2025-26 wheel encoder and status display were C++. Their Rust versions sit next to the
 spine, in <code>firmware/spine/</code>. Both build and pass their tests; neither has been flashed:
 <span class="badge b-untested">untested</span>.</p>
+<div class="admonition note">
+<p class="admonition-title">The UDP wheel encoder is off (23 Oct)</p>
+<p>Today's wheel speed comes from the hardware lead's Arduino on the Orin's CAN bus
+(0x200, 0x201), read by <code>spine_bridge role:=sensors</code>. The 2025-26 UDP encoder is off in
+<code>motor_pi.yaml</code> (<code>legacy_encoder: false</code>), so its Rust version waits too.</p>
+</div>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -514,7 +533,9 @@ WiFi details: fine for a test build, but that board can't join the car's WiFi.</
 <div class="admonition warning">
 <p class="admonition-title">Before driving on the legacy path</p>
 <ol>
-<li><strong>No command timeout.</strong> If frames stop, the last throttle stays on.</li>
+<li><strong>No command timeout.</strong> If frames stop, the last throttle stays on. So the bridge
+   locks every program out (twist_mux's no-timeout lock, priority 60): only people and
+   the actuator tests drive. <code>allow_programs_without_timeout: true</code> lifts it, on stands only.</li>
 <li><strong>The OTA update page has no password.</strong> Anyone on the WiFi can flash the car.</li>
 <li><strong>No feedback.</strong> No speed, steering or faults come back.</li>
 <li><strong>The steering sign is unconfirmed.</strong> Check it with the wheels off the ground.</li>
@@ -548,7 +569,7 @@ car with the RC transmitter's switch in reach.</p>
 <thead>
 <tr>
 <th>Constant</th>
-<th>Today</th>
+<th>In spine-core</th>
 <th>The 2025-26 firmware</th>
 </tr>
 </thead>
@@ -570,7 +591,29 @@ car with the RC transmitter's switch in reach.</p>
 </tr>
 </tbody>
 </table></div>
-<p>⚠️ <code>IDLE_BRAKE</code> matters most: on a slope, a car with its brake off can roll.</p>
+<p>⚠️ <code>IDLE_BRAKE</code> matters most: on a slope, a car with its brake off can roll. It is a team
+choice:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Board program</th>
+<th><code>IDLE_BRAKE</code></th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spine-core</code>'s default, <code>boards/pico2</code>, the bench</td>
+<td><code>0.0</code></td>
+<td>the proposed setting</td>
+</tr>
+<tr>
+<td><code>boards/esp32-umod</code> (the car's board)</td>
+<td><code>1.0</code> (its own constant, <code>src/main.rs</code>)</td>
+<td>keeps the C++'s full brake until the team decides: it has no e-stop input yet</td>
+</tr>
+</tbody>
+</table></div>
 <p>And the design doc's questions Q10–Q17:</p>
 <ul>
 <li>who owns the spine, and which microcontroller;</li>

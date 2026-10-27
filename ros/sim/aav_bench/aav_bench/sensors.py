@@ -27,7 +27,7 @@ Each one also says, once and latched, on /system/source (aav_interfaces/DataSour
 its topic is BENCH: a stand-in, not the real device. The HUD shows a BENCH banner.
 
 spine_sim publishes /vehicle/bench/truth: where the model car really is. The real drivers are
-aav_imu_yahboom, ublox_gps, battery_monitor, usb_cam (aav_sensors), ti_ros2_driver and,
+aav_imu_yahboom, ublox_gps, aav_battery_victron, usb_cam (aav_sensors), aav_radar_ti and,
 for the lidar, the same velodyne driver mock_lidar feeds.
 """
 
@@ -234,7 +234,7 @@ class MockCamera(Node):
             self.jpeg_pub.publish(jpeg)
 
 
-# The fields the TI radar driver publishes (ti_ros2_driver pc_publisher.py).
+# The fields the TI radar driver publishes (aav_radar_ti pc_publisher.py).
 RADAR_FIELDS = [PointField(name=n, offset=4 * i, datatype=PointField.FLOAT32, count=1)
                 for i, n in enumerate(('x', 'y', 'z', 'intensity', 'velocity'))]
 

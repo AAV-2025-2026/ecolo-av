@@ -1,5 +1,5 @@
 """
-A simulated source can't drive the real car's backend (PLAN.md S-4).
+A simulated source can't drive the real car's backend (docs/plan.md S-4).
 
 The real nodes, on a private ROS domain on this computer: sensor_mux (source real),
 output_mux (target car) and spine_bridge (source real: the real car's CAN backend), in

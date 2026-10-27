@@ -7,20 +7,26 @@
 <!-- Generated from docs/car-photos.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The car in photos (14 October)</h1>
-<div class="meta">6 min read · 7 sections</div></header>
+<div class="meta">7 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -75,13 +88,14 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-equipment-bay-behind-the-seat">The equipment bay (behind the seat)</a><a href="#the-control-board-the-motor-pi-board">The control board (the &quot;Motor-Pi&quot; board)</a><a href="#the-roof">The roof</a><a href="#the-ceiling-panel-the-gps-and-two-pis">The ceiling panel: the GPS and two Pis</a><a href="#the-cameras">The cameras</a><a href="#the-dash">The dash</a><a href="#for-fridays-audit">For Friday&#x27;s audit</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-equipment-bay-behind-the-seat">The equipment bay (behind the seat)</a><a href="#the-control-board-the-motor-pi-board">The control board (the &quot;Motor-Pi&quot; board)</a><a href="#the-roof">The roof</a><a href="#the-ceiling-panel-the-gps-and-two-pis">The ceiling panel: the GPS and two Pis</a><a href="#the-cameras">The cameras</a><a href="#the-dash">The dash</a><a href="#what-the-audits-were-to-check">What the audits were to check</a></nav>
 <div class="lead"><p>Ben took 32 photos of the car on 14 October. This page lists what they show, and what
-to check at the audit on Friday 16 Oct (<a href="audit-friday.html">step by step</a>). The full set is not in git (62 MB). It is in
+the audits were to check (<a href="audit-friday.html">step by step</a>). The full set is not in git (62 MB). It is in
 <code>images/</code> on Ben's Mac.</p>
 <div class="admonition warning">
 <p class="admonition-title">Read from photos only</p>
-<p>Nothing here has been logged into or measured yet. Friday's audit confirms it.</p>
+<p>This page is from the photos. The audits of 16 and 21 Oct checked them on the car:
+<a href="../history/audit-2026-10-16-car.md">16 Oct</a>, <a href="../history/audit-2026-10-21-car.md">21 Oct</a>.</p>
 </div></div>
 <section class="card"><h2 id="the-equipment-bay-behind-the-seat">The equipment bay (behind the seat)</h2>
 <p><img alt="The bay: the switch, the Orin, the router, the power" src="../img/car/bay.jpg" /></p>
@@ -217,7 +231,7 @@ to check at the audit on Friday 16 Oct (<a href="audit-friday.html">step by step
 </tr>
 </tbody>
 </table></div>
-<p>The CAN plug is on the board. Friday: is the transceiver (U7) fitted, and does it work?</p>
+<p>The CAN plug is on the board. Still to check: is the transceiver (U7) fitted, and does it work?</p>
 <p><img alt="The e-stop board: TR and ES LEDs" src="../img/car/estop-board.jpg" /></p>
 <p>A second board: 5 V and 3.3 V regulators, two RJ45 jacks, and LEDs for <strong>TR</strong> (e-stop
 trigger) and <strong>ES</strong> (e-stop status). Beside it, an 8-relay module and fuse block G1-G4.</p>
@@ -235,7 +249,7 @@ trigger) and <strong>ES</strong> (e-stop status). Beside it, an 8-relay module a
 <tbody>
 <tr>
 <td><strong>A 3D lidar</strong> on a printed tripod</td>
-<td><strong>our code has no lidar at all yet.</strong> Its model? (Q22)</td>
+<td>a Velodyne VLP-16 (16 Oct audit): the stock <code>velodyne</code> driver since 20 Oct, on by default on the car; untested with the real lidar</td>
 </tr>
 <tr>
 <td>GNSS antenna (black puck)</td>
@@ -319,10 +333,11 @@ lists the rear camera as new: is this one connected?</p>
 </tbody>
 </table></div>
 <p>A 12 V → 5 V converter on the dash's fuse block E1-E4 showed <strong>5.08 V at 3.48 A</strong>. A Pi 5
-wants 5 A for full USB power. Friday: what does it feed, and what is its rating?</p>
+wants 5 A for full USB power. To check: what does it feed, and what is its rating?</p>
 </section>
-<section class="card"><h2 id="for-fridays-audit">For Friday's audit</h2>
-<p>How to do each check, machine by machine: <a href="audit-friday.html">The hardware audit, step by step</a>.</p>
+<section class="card"><h2 id="what-the-audits-were-to-check">What the audits were to check</h2>
+<p>The list for the 16 Oct audit, machine by machine: <a href="audit-friday.html">The hardware audit, step by step</a>.
+What they found: <a href="../history/audit-2026-10-16-car.md">16 Oct</a>, <a href="../history/audit-2026-10-21-car.md">21 Oct</a>.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -339,7 +354,7 @@ wants 5 A for full USB power. Friday: what does it feed, and what is its rating?
 </tr>
 <tr>
 <td>2</td>
-<td>RTK-Pi: is the ZED-F9R on <code>/dev/ttyACM*</code>? Does <code>ros2 topic hz /sensors/gps/fix</code> give anything?</td>
+<td>RTK-Pi: is the ZED-F9R on <code>/dev/ttyACM*</code>? Does <code>ros2 topic hz /aav/gps/fix</code> (the 2025-26 topic) give anything?</td>
 <td>"Is there GPS data?"</td>
 </tr>
 <tr>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Make one of Gazebo's sensors fail on purpose, or mend it (READ-ME-FULL-SIMULATION.md
+# Make one of Gazebo's sensors fail on purpose, or mend it (docs/full-simulation.md
 # step 6). Run it next to `pixi run sim`, on the same ROS domain.
 #
 # usage: pixi run sim-fault <sensor> <mode>

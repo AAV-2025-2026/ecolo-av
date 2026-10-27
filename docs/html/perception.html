@@ -7,20 +7,26 @@
 <!-- Generated from docs/perception.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar</h1>
-<div class="meta">28 min read · 11 sections</div></header>
+<div class="meta">29 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a class="here" href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -77,11 +90,11 @@
 <main>
 <nav class="toc"><span>On this page:</span><a href="#the-chain">The chain</a><a href="#the-packages">The packages</a><a href="#stop-signs">Stop signs</a><a href="#models">Models</a><a href="#better-models-to-try">Better models to try</a><a href="#where-it-runs">Where it runs</a><a href="#lane-keeping">Lane keeping</a><a href="#radar-clustering">Radar clustering</a><a href="#the-roof-lidar">The roof lidar</a><a href="#on-the-car">On the car</a><a href="#still-to-do">Still to do</a></nav>
 <div class="lead"><p>What the car sees, and what it does about it. All of it runs on the bench today. On the
-car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).</p></div>
+car, it waits for the cameras' calibration and the Orin's move to JetPack 7.2 (Q24).</p></div>
 <section class="card"><h2 id="the-chain">The chain</h2>
 <pre class="highlight"><code>camera ─► object_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
                                                                     (a lock on twist_mux)
-lane finder (missing) ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
+lane_finder ─────────► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
 radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/radar/clusters, /perception/radar/cluster_boxes</code></pre>
 <p><img alt="What the bench camera shows YOLO, about 5 m from the stop sign" src="../img/bench-stop-sign.png" /></p>
 <div class="table-wrap"><table>
@@ -131,16 +144,34 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 <td><span class="badge b-works">works</span> on the bench and in Gazebo</td>
 </tr>
 <tr>
+<td><code>aav_camera_stream</code></td>
+<td>ours</td>
+<td>the front cameras: MediaMTX's H.264 stream from the camera Pi in, RF-DETR inside each stream (<a href="camera-pipeline.html">camera pipeline</a>)</td>
+<td><span class="badge b-works">works</span> on a Mac; <span class="badge b-untested">untested</span> on the Orin</td>
+</tr>
+<tr>
+<td><code>aav_lane_finder</code></td>
+<td>ours</td>
+<td>lane keeping's seeing half: finds the lane lines (below)</td>
+<td><span class="badge b-works">works</span> on the bench</td>
+</tr>
+<tr>
 <td><code>aav_lane_geometry</code></td>
 <td>2025-26 <code>Lane_Detection_ROS2</code></td>
 <td>lane keeping's steering half, as a driver on <code>/drivers/ai/cmd_vel</code></td>
-<td><span class="badge b-works">works</span> on a pretend lane. The line finder is <span class="badge b-missing">missing</span></td>
+<td><span class="badge b-works">works</span> on the bench</td>
+</tr>
+<tr>
+<td><code>aav_lidar</code></td>
+<td>ours</td>
+<td>the roof lidar's points into a scan for Nav2 (<a href="#the-roof-lidar">below</a>)</td>
+<td><span class="badge b-works">works</span> against a fake lidar</td>
 </tr>
 <tr>
 <td><code>aav_sensors</code> <code>cameras.launch.py</code></td>
 <td>2024-25 <code>cameras</code> (the calibrations)</td>
-<td><code>usb_cam</code> with <code>left.ini</code> and <code>right.ini</code></td>
-<td><span class="badge b-untested">untested</span> Linux only; the camera models are Q22</td>
+<td><code>usb_cam</code> with <code>left.ini</code> and <code>right.ini</code>: for a USB camera only, not the front ribbon cameras</td>
+<td><span class="badge b-untested">untested</span> Linux only</td>
 </tr>
 </tbody>
 </table></div>
@@ -174,8 +205,8 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 </tbody>
 </table></div>
 <ul>
-<li><strong>The lock</strong> has priority 30. It holds Nav2 (20) and the AI slot (10), and never a
-  person (joystick 100, keyboard 90) or a test script (60, 50, 40).</li>
+<li><strong>The lock</strong> has priority 30. It holds the point driver (25), Nav2 (20) and the AI slot (10), and
+  never a person (joystick 100, RC 95, keyboard 90) or a test script (60, 50, 40).</li>
 <li><strong>It only stops the car.</strong> It can't make it move.</li>
 <li><strong>It never expires on silence.</strong> If the watcher dies while the lock is on, the car stays
   stopped.</li>
@@ -216,7 +247,7 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 <li><strong>Parameters:</strong> <code>stop_distance_m</code> (4.7), <code>sign_height_m</code> (0.75), <code>focal_px</code> (343),
   <code>camera_info_topics</code>, <code>min_score</code>, <code>hold_s</code>, <code>ignore_s</code>.</li>
 </ul>
-<p>Last year, a stop sign set off the real e-stop, and the HUD cleared it every half second.
+<p>On the 2025-26 team's car, a stop sign set off the real e-stop, and the HUD cleared it every half second.
 The lock keeps stop signs away from the e-stop.</p>
 </section>
 <section class="card"><h2 id="models">Models</h2>
@@ -576,7 +607,7 @@ names, passed on as they are.</p>
 </tr>
 <tr>
 <td><code>compressed:=true</code></td>
-<td>reads <code>/sensors/camera/front_left/image_raw/compressed</code>, the JPEG pictures <code>usb_cam</code> already publishes. Raw pictures are too big for WiFi</td>
+<td>reads <code>/sensors/camera/front_left/image_raw/compressed</code>, the JPEG pictures <code>usb_cam</code> publishes for a USB camera. Raw pictures are too big for WiFi. (The front ribbon cameras come by <code>camera_stream</code> instead, with their own detector)</td>
 </tr>
 </tbody>
 </table></div>
@@ -921,7 +952,7 @@ down. So it sees the ground from 6.7 m out, and anything 1 m tall only from 3 m 
 </table></div>
 <p>Close and low is the radar's job (on the bumper, 0.45 m up), and why collision_monitor
 reads both. bench-check's lidar box is therefore 1.5 m tall. Measure the lidar's real
-height (<code>vehicle.yaml</code> <code>lidar_link</code>) at the audit: the numbers move with it.</p>
+height (<code>vehicle.yaml</code> <code>lidar_link</code>) at the car: the numbers move with it.</p>
 <p><span class="badge b-untested">untested</span> with the real lidar: next on the car, <code>pixi run car orin</code>, and the points in
 Lichtblick. <code>ros2 topic hz</code> on a Mac shows the cloud at 0.5 Hz: it listens best effort,
 and big messages lost that way are lost whole. A reliable subscriber sees 10 Hz.</p>
@@ -940,13 +971,18 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
 <tbody>
 <tr>
 <td><code>camera</code></td>
-<td><code>usb_cam</code> → <code>/sensors/camera/front_left/image_raw</code> (Linux only)</td>
-<td>off everywhere until the cameras are known (Q22)</td>
+<td><code>usb_cam</code> → <code>/sensors/camera/front_left/image_raw</code> (Linux only), for a USB camera</td>
+<td>off everywhere: the front cameras come by <code>camera_stream</code></td>
+</tr>
+<tr>
+<td><code>camera_stream</code></td>
+<td>one <code>camera_stream_&lt;camera&gt;</code> per front camera: the Pi's H.264 stream, RF-DETR inside → <code>/perception/detections</code> (<a href="camera-pipeline.html">camera pipeline</a>)</td>
+<td>the Orin, in TensorRT (<code>models/rf-detr-nano.engine</code>: build it there first)</td>
 </tr>
 <tr>
 <td><code>detector</code></td>
 <td>RF-DETR Nano, as <code>object_detector_&lt;machine&gt;</code> → <code>/perception/detections</code></td>
-<td>the Orin, in TensorRT (<code>models/rf-detr-nano.engine</code>: build it there first). The laptop's reads compressed images</td>
+<td>only for a camera that isn't streamed: off on the Orin. The laptop's reads compressed images</td>
 </tr>
 <tr>
 <td><code>stop_signs</code></td>
@@ -965,8 +1001,8 @@ turns them on where they run (<a href="platforms.html#on-the-car-what-runs-where
 </tr>
 <tr>
 <td><code>lane</code></td>
-<td>to do: the lane finder, then lane keeping</td>
-<td>the lane finder is being written</td>
+<td><code>lane_finder</code> → <code>/perception/lane/geometry</code>, and <code>control_interface</code> → <code>/drivers/ai/cmd_vel</code></td>
+<td>off on every machine: it drives whenever it sees a lane</td>
 </tr>
 </tbody>
 </table></div>
@@ -1034,14 +1070,6 @@ read the same way.</p>
 <td>before any reflash</td>
 </tr>
 <tr>
-<td>The line finder</td>
-<td>someone: classic OpenCV, or a model</td>
-</tr>
-<tr>
-<td>The cameras' models and udev names</td>
-<td>Q22</td>
-</tr>
-<tr>
 <td>Calibrate the ribbon cameras, so the stop-sign distance uses their lens: <code>pixi run calibrate-camera</code> (<a href="camera-calibration.html">how</a>)</td>
 <td>the car</td>
 </tr>
@@ -1056,7 +1084,7 @@ read the same way.</p>
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="routes.html"><small>Previous</small>← Street routes</a>
-<a class="next" href="camera-pipeline.html"><small>Next</small>Camera pipeline →</a></nav>
+<a class="next" href="perception-and-hud-map.html"><small>Next</small>Perception options →</a></nav>
 </main>
 <footer>Source: <code>docs/perception.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

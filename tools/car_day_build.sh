@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build, before car day, what the laptop takes to the car (READ-ME-CAR-DAY.md):
+# Build, before car day, what the laptop takes to the car (docs/car-day.md):
 #   car-day/esp32/spine-esp32-umod-v2.elf   the Rust ESP32 firmware, version 2 frames (the
 #                                           Orin's heartbeat): what goes on the board
 #   car-day/esp32/spine-esp32-umod-v1.elf   the same with the 13-byte frames (link-v1), in

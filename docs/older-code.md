@@ -2,8 +2,9 @@
 
 The previous teams left 32 repos in two public GitHub orgs: `AAV-2025-2026` (the 2025-26
 team, 19 repos) and `Carleton-AAV-Capstone` (the 2024-25 team, 13 repos). This page says
-what each one is, what's already in `aav`, what's worth pulling in next, and what no
-repo provides. Surveyed on 10 October 2026, from the 14 clones in `~/Code/aav`.
+what each one is, what's already in this repo ("`aav`" below: ecolo-av since 25 Oct), what's worth
+pulling in next, and what no repo provides. Surveyed on 10 October 2026; since 24 Oct, 27 of
+the repos are in `archive/`, with their history.
 
 ### Earlier teams (found 15 October)
 
@@ -22,7 +23,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 |---|---|
 | Already in `aav` (all or part) | AAV_cortex, Motor_Steering (its numbers), User-Interface, Wheel_Encoders, yahboom-IMU, Lane_Detection_ROS2, Nav_Radar; from 2024-25: Battery-Monitor-ROS, camera_ros2_ws, camera_Yolo_detection, cameras |
 | Replaced by stock ROS packages | Navigation_PathPlanning_ObstacleAvoidance, Navigation-LocalPathGenerator-rf_cpp, Obstacle_Avoidance_logic, Odometry, Real-Time-OS, joy_teleop_ackerman |
-| Looked at, then dropped (15 Oct) | Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69, if the HUD's routes ever need it); the HUD's place database (`pixi run get-hud-map` downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's `FinalRev` (below); AAV_dashboard (its README is now `docs/reference/2025-26-camera-system`) |
+| Looked at, then dropped (15 Oct) | Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69; `street_router` does that job now); the HUD's place database (`pixi run get-places` downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's `FinalRev` (below); AAV_dashboard (its README is now `docs/reference/2025-26-camera-system`) |
 | Empty | Navigation-BehaviorPlanning |
 | Not surveyed yet | three 2025-26 repos and seven 2024-25 repos (the tables below) |
 
@@ -31,16 +32,16 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 | Repo | What it is | Language, hardware | State | In `aav`? | Pull in next? |
 |---|---|---|---|---|---|
 | AAV_cortex | the ESP32 actuator firmware (RC override, the Pi's UART), a Pico 2 status display, a Pi serial bridge | C++ (PlatformIO, Pico SDK), Python ROS 2; ESP32, Pico 2 | working, on branch `6-pico2-aav-firmware` | partly: `firmware/legacy/`, and its UART protocol in `aav_legacy` | the Pi-side display script, if the status display stays |
-| Motor-Control | the 2024-25 micro-ROS motor firmware: a fork | C++, micro-ROS; ESP32 | inactive since 2025 | no | no. What it taught us: branch `FinalRev` (4166ec0) reads the steering's position from the **steering Jrk G2's own feedback**, `jrk_steer.getScaledFeedback()`, 0-4095 mapped to -1..+1 (`src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187`). So the Jrk may already have a position sensor wired (TEAM-TODO B6, audit D6, D7) |
+| Motor-Control | the 2024-25 micro-ROS motor firmware: a fork | C++, micro-ROS; ESP32 | inactive since 2025 | no | no. What it taught us: branch `FinalRev` (4166ec0) reads the steering's position from the **steering Jrk G2's own feedback**, `jrk_steer.getScaledFeedback()`, 0-4095 mapped to -1..+1 (`src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187`). So the Jrk may already have a position sensor wired (team-todo.md B6, audit D6, D7) |
 | Motor_Steering | a Pi speed controller and UART bridge, an ESP32 add-on, sims, MATLAB steering geometry | Python ROS 2, C++, MATLAB; Pi 5, ESP32 | prototype | partly: its geometry in `docs/reference/` and `vehicle.yaml` | its 250 ms link timeout idea, for today's ESP32 (but braking, not releasing) |
 | Navigation-BehaviorPlanning | a README title | none | empty | no | no |
-| Navigation-LocalPathGenerator | follows an OSRM route from GPS: the current step, a local path, a speed | Python ROS 2 | prototype; nothing feeds it | no | maybe its OSRM parser, to turn the HUD's route into Nav2 GPS waypoints |
+| Navigation-LocalPathGenerator | follows an OSRM route from GPS: the current step, a local path, a speed | Python ROS 2 | prototype; nothing feeds it | no | no: `street_router` turns a street route into Nav2 GPS waypoints ([Street routes](routes.md)) |
 | Navigation-LocalPathGenerator-rf_cpp | a C++ rewrite of the above | C++17 | prototype | no | no: Nav2 does this |
 | Navigation_PathPlanning_ObstacleAvoidance | a GPS-goal grid planner (A*, D* Lite) with lidar obstacles | C++, PCL; Orin | prototype, with a crash bug | no | no: Nav2 does this |
 | Obstacle_Avoidance_logic | a lidar costmap and braking-distance e-stop | one C++ file | can't build: no package files | no | no: Nav2's obstacle layer and collision monitor |
 | Odometry | merges a SLAM pose and the IMU into `/odom` | Python ROS 2 | prototype; nothing publishes its input | no | no: robot_localization does this |
 | Real-Time-OS | a QNX layer: command picking, a SQLite logger, body control, a QNX image for a Pi 4 | C, C++; Pi 4 on QNX 8 | prototype: its own README lists the watchdog, e-stop and CAN as not done | no | no: twist_mux, the spine's watchdog and `ros2 bag` cover it ("No QNX" is Tentative, Q23) |
-| User-Interface | the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search | Dart/Flutter, Python ROS 2; the UI Pi | a working demo, on mock data | partly: `hud/`, `ros/hud/maincar` | **its place database `ottawa.db` (51 MB)**: the ported app still needs it |
+| User-Interface | the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search | Dart/Flutter, Python ROS 2; the UI Pi | a working demo, on mock data | partly: ported, then archived 25 Oct to `archive/2026-27-flutter-hud/` (the app; `maincar` as `aav_hud`); its route maths lives on in `aav_routes/route.py` | **its place database `ottawa.db` (51 MB)**: the map window's place search reads it |
 | Wheel_Encoders | a Pico 2 that counts wheel spokes and sends them over Ethernet | Arduino C++; Pico 2, W5500 | working demo | yes: rewritten in Rust (`firmware/spine/boards/wheel-encoder-pico2`, 15 Oct), and `aav_legacy` | its 3D-printed case files |
 | joy_teleop_ackerman | joystick to Ackermann commands, with deadman buttons | Python ROS 2 | working | no: stock teleop replaced it; its button map lives on in `aav_teleop` | no |
 | yahboom-IMU | the Yahboom IMU driver | C++ ROS 2; Pi 4 | working | yes, rewritten in Rust: `ros/sources/aav_imu_yahboom` (the C++ copy went on 11 Oct) | no |
@@ -50,7 +51,7 @@ The five not cloned here:
 | Repo | What GitHub says | Status |
 |---|---|---|
 | Lane_Detection_ROS2 | none | the controller is in `aav`: `ros/perception/aav_lane_geometry`, a driver on `/drivers/ai/cmd_vel`. The lane finder isn't in the repo |
-| Nav_Radar | none | in `aav`: `ti_ros2_driver`; the clustering, rewritten in Rust, as `aav_radar_clusters` |
+| Nav_Radar | none | in `aav`: `aav_radar_ti`; the clustering, rewritten in Rust, as `aav_radar_clusters` |
 | AAV_dashboard | the **camera system's README** (main @ 5a26e15): CSI cameras → MediaMTX RTSP on the camera Pis (port 8554) → the Jetson's `camera_decode` (NVDEC) → `/camera/cam1/image_raw`, `cam2` → YOLOv8 on TensorRT → `/aav/stop_sign_*`; domain 10. The code itself is only on the Jetson, `~/Desktop/aav/Camera`. Plus a small web dashboard (ports 8080, 9090) | the README: `docs/reference/2025-26-camera-system` (15 Oct). The code: copy on Friday |
 | Speed | an older copy of the wheel-encoder Pico program, `Wheel_Encoders.cpp` (master @ a520646) | no: Wheel_Encoders is the newer one, now in Rust |
 | Navigation-GlobalMapRouter---Abandoned--- | none | abandoned |
@@ -60,9 +61,9 @@ The five not cloned here:
 | Repo | What GitHub says | In `aav`? |
 |---|---|---|
 | GNSS | GNSS code for the car (u-blox, with RTK corrections) | surveyed in depth; replaced by the stock u-blox driver |
-| Battery-Monitor-ROS | battery monitor ROS code | yes: `ros/sources/battery_monitor` |
+| Battery-Monitor-ROS | battery monitor ROS code | yes: `ros/sources/aav_battery_victron` |
 | camera_ros2_ws | Python | yes: rewritten as `ros/perception/aav_detector` |
-| camera_Yolo_detection | Python, 72 MB | 2 files: `aav_detector/training`. The trained `best.pt` isn't in it |
+| camera_Yolo_detection | Python, 72 MB | no: its training script and `data.yaml` were in `aav_detector/training` until 26 Oct, unused. The trained `best.pt` isn't in it |
 | cameras | publishes camera feeds to ROS 2 | its 4 calibration files: `aav_sensors/config/cameras`, used by `cameras.launch.py` |
 | AutoCtrl_uRos | C++ | Motor-Control is a fork of it |
 | emergency-stop | a browser e-stop | not surveyed: it may answer Q6 |
@@ -77,13 +78,13 @@ The five not cloned here:
 
 | Area | Missing | Where `aav` stands |
 |---|---|---|
-| Sensors | a GPS driver that anything runs; a lidar driver; camera streaming and the stop-sign detector (both only on the car's Orin); steering feedback (only 2024-25's `FinalRev`); a fine enough wheel speed; magnetometer calibration | GPS: the stock driver, model unknown (Q18). Lidar and cameras: next year |
+| Sensors | a GPS driver that anything runs; a lidar driver; camera streaming and the stop-sign detector (both only on the car's Orin); steering feedback (only 2024-25's `FinalRev`); a fine enough wheel speed; magnetometer calibration | GPS: the stock driver, model unknown (Q18). Lidar: the stock `velodyne` driver (20 Oct). Cameras: `aav_camera_stream` (24 Oct). Both untested on the car |
 | Localization | a URDF, TF, a working estimator | [[works]] the EKFs and `navsat_transform`, in sim |
 | Navigation | any planner whose output reached the motors; the HUD's route into GPS waypoints; lidar or radar costmap inputs | [[works]] Nav2 in Gazebo |
 | Drivers | anything beyond RC and the joystick | [[works]] scripted, keyboard; the joystick is [[untested]] |
 | Ego | a command layer with limits and a timeout; calibrations from radians to the actuators' counts | [[works]] ego; the calibrations are TODO |
-| The spine | any CAN code; a watchdog that brakes; feedback frames; the hardware e-stop in code | [[works]] the logic (`spine-core`); the board code is [[missing]] |
-| HUD | real data: it only ever showed mock data | [[untested]] its port is still to do |
+| The spine | any CAN code; a watchdog that brakes; feedback frames; the hardware e-stop in code | [[works]] the logic (`spine-core`); the board programs (`boards/pico2`, `boards/esp32-umod`) are [[untested]]: never flashed |
+| HUD | real data: it only ever showed mock data | [[works]] our raylib HUD and map window read real topics, on a Mac; [[untested]] on the car. Their app was ported, then archived 25 Oct (Q29) |
 | Simulation | a whole-car simulator | [[works]] Gazebo |
 
 !!! warning "Back up the car before any reflash"
@@ -111,8 +112,9 @@ card is in [Every module](modules.md). To read the originals:
 
 | Do | Why |
 |---|---|
-| Read the clones next to `aav` (`~/Code/aav/` on Ben's Mac, `/home/ben/aav/` on oirp-spss) | they are read-only copies: never build, fix or commit in them |
-| Search only them: `grep -r --exclude-dir=aav --exclude-dir=aav-linux-build-output <word> .` from `~/Code/aav` | so the search skips our own code and the build output |
+| Read them in `archive/<repo>/` | the 27 repos came in with their history (24 Oct). Read-only: never build, fix or commit in them |
+| Search them all: `grep -r <word> archive/` | every old repo at once; colcon skips the folder |
+| Or on GitHub (`AAV-2025-2026`, `Carleton-AAV-Capstone`) | the originals, with every branch |
 | Check the branch first: `git -C <repo> branch -a` | the working code is often not on `main` (AAV_cortex: `6-pico2-aav-firmware`; Motor-Control: `FinalRev`) |
 | Start from the `PROVENANCE.md` of the module that came from it | it names the repo, branch and commit we copied, and every change since |
 | When a search hits a token, key or password, close the file | write down only where it is and what kind (the "Red flags" table). Never paste it into notes, chat or an AI app |

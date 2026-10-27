@@ -88,12 +88,12 @@ def launch_setup(context):
     actions = [
         # The car's own software, as car.launch.py starts it.
         include('aav_description', 'description.launch.py'),
-        include('aav_mux', 'mux.launch.py'),
+        include('aav_command_mux', 'mux.launch.py'),
         include('aav_ego', 'ego.launch.py'),
         # ego's commands go to spine_bridge (source bench) only while everything is BENCH.
         include('aav_io_mux', 'io_mux.launch.py', target='bench', source='bench'),
         include('aav_scripted', 'scripted.launch.py'),
-        include('aav_goto', 'goto.launch.py'),
+        include('aav_drive_to_point', 'drive_to_point.launch.py'),
         Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',
              name='imu_filter_madgwick',
              parameters=[os.path.join(share('aav_sensors'), 'config', 'imu_filter.yaml')],
@@ -144,7 +144,7 @@ def launch_setup(context):
                                reversing=str(flag['reversing']).lower(),
                                plan_around=str(flag['plan_around']).lower()))
     # The sensor watchdog guards Nav2 and the AI slot (lane keeping) as on the car, always:
-    # the mux's sensors lock needs its heartbeat (aav_mux mux.launch.py sensor_lock).
+    # the mux's sensors lock needs its heartbeat (aav_command_mux mux.launch.py sensor_lock).
     actions.append(include('aav_safety', 'watchdog.launch.py',
                            inputs='odom,imu,gps,local,global,radar'))
     if flag['teleop']:
@@ -199,7 +199,8 @@ def generate_launch_description():
                                           'on /drivers/ai/cmd_vel); fake: the same on a '
                                           'pretend lane'),
         DeclareLaunchArgument('hud', default_value='false',
-                              description="the HUD's web server (aav_hud), on 127.0.0.1:5000"),
+                              description='the HUD window (aav_hud, as pixi run hud); '
+                                          'needs a screen'),
         DeclareLaunchArgument('arm', default_value='true',
                               description='arm the spine after 12 s'),
         DeclareLaunchArgument('foxglove', default_value='false',

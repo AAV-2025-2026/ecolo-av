@@ -3,25 +3,29 @@
 <package format="3">
   <name>aav_hud</name>
   <version>0.1.0</version>
-  <description>The HUD's back end: a ROS node with a Flask and Socket.IO server for the in-car Flutter app (hud/flutter_pi). It shows /vehicle/status, /localization/gps/fix, /perception/stop_sign and /sensors/camera/front_left/image_raw, and sends the route the app locks to Nav2 as a follow_gps_waypoints goal.</description>
+  <description>hud: the in-car screen in Rust, one raylib program that is also its ROS node (rclrs). Speed, mode, the e-stop button, steering, throttle and brake, the GPS fix, topic health, the stop-sign alert and the camera. Topic names in config/hud.yaml. Also map: the big screen's map window (Nav2's map, the car, the plan, the distance left), topic names in config/map.yaml.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 
-  <exec_depend>rclpy</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>geometry_msgs</exec_depend>
-  <exec_depend>geographic_msgs</exec_depend>
-  <exec_depend>nav2_msgs</exec_depend>
-  <exec_depend>aav_interfaces</exec_depend>
-  <exec_depend>python3-flask</exec_depend>
-  <exec_depend>python3-flask-socketio</exec_depend>
-  <exec_depend>launch</exec_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- rclrs links rcl; ros-env compiles the Rust message code these packages ship. -->
+  <depend>rcl</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>aav_interfaces</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <!-- map: the car's outline, from vehicle.yaml (a copy built in, the installed one at launch). -->
+  <depend>aav_description</depend>
+  <!-- map: the datum (map 0,0 on the Earth) for the street map, from navsat.yaml (a copy
+       built in, the installed one at launch). -->
+  <exec_depend>aav_localization</exec_depend>
+
   <exec_depend>launch_ros</exec_depend>
 
-  <test_depend>python3-pytest</test_depend>
-
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

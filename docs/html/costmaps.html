@@ -7,20 +7,26 @@
 <!-- Generated from docs/costmaps.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Maps and costmaps</h1>
-<div class="meta">17 min read · 7 sections</div></header>
+<div class="meta">18 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a class="here" href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -150,7 +163,7 @@ car is meant to do this year. Make it larger only if the car gets faster.</p>
 </ul>
 </section>
 <section class="card"><h2 id="obstacles-from-the-sensors">Obstacles from the sensors</h2>
-<p>The local costmap has two sensor layers. Each is a stock Nav2 <code>ObstacleLayer</code>, switched on
+<p>The local costmap has four sensor layers. Each is a stock Nav2 <code>ObstacleLayer</code>, switched on
 by <code>navigation.launch.py</code>.</p>
 <div class="table-wrap"><table>
 <thead>
@@ -177,11 +190,25 @@ by <code>navigation.launch.py</code>.</p>
 <td>where each detected object stands on the road, out to 12 m</td>
 <td>everything the camera sees, out to 12 m, before it marks</td>
 </tr>
+<tr>
+<td><code>lidar_layer</code></td>
+<td><code>/sensors/lidar/scan</code> (from <code>lidar_scan</code>, <code>aav_lidar</code>)</td>
+<td>where the lidar runs: on by default on the car (the Orin) and in Gazebo; <code>lidar:=true</code> on the bench</td>
+<td>points 0.3 m or more above the road (<a href="#body-roll-and-the-lidar-todo-52e">below</a>), out to 12 m</td>
+<td>along each beam, out to 15 m</td>
+</tr>
+<tr>
+<td><code>ghost_layer</code></td>
+<td><code>/safety/ghost/scan</code></td>
+<td><code>ghost:=true</code> only (<a href="ghost-obstacles.html">Ghost obstacles</a>)</td>
+<td>the pretend person</td>
+<td>only old ghosts</td>
+</tr>
 </tbody>
 </table></div>
 <p>Why the radar's numbers:</p>
 <ul>
-<li><strong>8.4 m:</strong> the TI radar's range (<code>ti_ros2_driver</code> <code>cfg/base.cfg</code>).</li>
+<li><strong>8.4 m:</strong> the TI radar's range (<code>aav_radar_ti</code> <code>cfg/base.cfg</code>).</li>
 <li><strong>-0.5 to 2 m high:</strong> a radar sees no ground to reject, and its height is poor, so low
   points stay. Above 2 m is over the car (1.5 m tall).</li>
 <li><strong>Sparse:</strong> a few points per object. Each 5 Hz update uses the last 0.2 s: both radar
@@ -190,8 +217,8 @@ by <code>navigation.launch.py</code>.</p>
 <p>The camera layer is its own, so its clearing never wipes what the radar marked.
 <a href="perception.html">Perception</a> says how a box becomes a point on the road.</p>
 <h3 id="collision_monitor">collision_monitor</h3>
-<p>Where the radar runs, Nav2's command passes through <code>collision_monitor</code> on its way to
-twist_mux:</p>
+<p>Where the radar or the lidar runs, Nav2's command passes through <code>collision_monitor</code> on
+its way to twist_mux:</p>
 <pre class="highlight"><code>controller -&gt; velocity_smoother -&gt; /control/cmd_vel_smoothed -&gt; collision_monitor -&gt; /drivers/nav/cmd_vel -&gt; twist_mux</code></pre>
 <div class="table-wrap"><table>
 <thead>
@@ -211,15 +238,15 @@ twist_mux:</p>
 </tr>
 <tr>
 <td>Stops for</td>
-<td>3 radar points in the zone (one stray point mustn't stop the car)</td>
+<td>3 points in the zone, from the radar or the lidar (one stray point mustn't stop the car)</td>
 </tr>
 <tr>
 <td>Also stops</td>
-<td>when the radar is silent for 1 s, or its TF is late</td>
+<td>when a sensor it reads is silent for 1 s, or its TF is late</td>
 </tr>
 <tr>
 <td>Reads</td>
-<td>the radar's own points, not the costmap: it still works if the costmap goes wrong</td>
+<td>the sensors' own points, not the costmap: it still works if the costmap goes wrong</td>
 </tr>
 </tbody>
 </table></div>
@@ -469,7 +496,8 @@ so the goal fails. It's open work for the navigation team (N7, the lookahead). A
 straight 8 m goal on the empty map succeeds.</p>
 </div>
 <h3 id="n7-why-nav2s-turn-command-flips-11-october">N7: why Nav2's turn command flips (11 October)</h3>
-<p>In Gazebo, on the empty map, each run on a fresh simulator:</p>
+<p>In Gazebo, on the empty map, each run on a fresh simulator. This was Regulated Pure
+Pursuit, before MPPI became the default (22 Oct; <a href="controllers.html">Path followers</a>):</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -480,7 +508,7 @@ straight 8 m goal on the empty map succeeds.</p>
 </thead>
 <tbody>
 <tr>
-<td>Lookahead 1.5 m (as now)</td>
+<td>Lookahead 1.5 m (then)</td>
 <td>0.86-0.99</td>
 <td>0.48-0.71</td>
 </tr>
@@ -492,7 +520,7 @@ straight 8 m goal on the empty map succeeds.</p>
 </tbody>
 </table></div>
 <ul>
-<li><strong>Not the lookahead:</strong> a longer one didn't help on straight drives, so it stays 1.5 m.
+<li><strong>Not the lookahead:</strong> a longer one didn't help on straight drives, so it stayed 1.5 m.
   Both reached every straight goal; each failed the curve once.</li>
 <li><strong>The GPS:</strong> the flips come in steps, five times a second, with the fixes. One step in
   ten turns the global EKF's heading (<code>map -&gt; odom</code>) by more than 4 degrees, and the whole
@@ -527,10 +555,10 @@ in RViz. The datum in the file now is a placeholder near Carleton.</p>
 <p>The global costmap only says which cells may be driven on. Roads, junctions and routing
 across a city are a separate kind of map: a road graph. Two tools handle that:</p>
 <ul>
-<li><strong>OSRM</strong>, which the HUD already uses. It turns a destination into a route of
-  latitude/longitude points. Those points can become a <code>follow_gps_waypoints</code> goal for
-  Nav2 (see <a href="hud.html">hud.md</a>). Our own offline router for that, Valhalla, and the node
-  that turns its routes into waypoints: <a href="routes.html">Street routes</a>.</li>
+<li><strong>A street router</strong> (Valhalla, or OSRM). It turns a destination into a route of
+  latitude/longitude points. Those points become a <code>follow_gps_waypoints</code> goal for
+  Nav2. Our offline router, and the node that turns its routes into waypoints
+  (<code>street_router</code>): <a href="routes.html">Street routes</a>.</li>
 <li><strong>Nav2's Route Server</strong> (<code>nav2_route</code>). It's released for Jazzy, in Nav2 1.3.13 as of
   October 2026, and follows a hand-made graph of lanes or paths. Consider it if the test site becomes a set of fixed lanes.</li>
 </ul>

@@ -7,20 +7,26 @@
 <!-- Generated from docs/ros2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>ROS 2 in ten minutes</h1>
-<div class="meta">4 min read · 7 sections</div></header>
+<div class="meta">5 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a class="here" href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -258,7 +271,7 @@ look inside. We configure the ready-made programs, and write a few of our own.</
 </section>
 <section class="card"><h2 id="adding-a-node-in-five-steps">Adding a node, in five steps</h2>
 <ol>
-<li>Pick the layer's folder, for example <code>ros/drivers/</code>.</li>
+<li>Pick the area's folder, for example <code>ros/drivers/</code>.</li>
 <li>Make a Python package: <code>package.xml</code> for the dependencies, <code>setup.py</code> for the entry
    point.</li>
 <li>Put the logic in a plain module with no ROS imports, and test it. A thin node file
@@ -274,18 +287,21 @@ from geometry_msgs.msg import TwistStamped
 class Circle(Node):
     def __init__(self):
         super().__init__('circle_driver')
-        self.pub = self.create_publisher(TwistStamped, '/drivers/scripted/cmd_vel', 10)
+        self.pub = self.create_publisher(TwistStamped, '/drivers/circle/cmd_vel', 10)
         self.create_timer(0.1, self.tick)        # ten times a second
 
     def tick(self):
         msg = TwistStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'base_link'
         msg.twist.linear.x = 0.5                 # m/s forward
         msg.twist.angular.z = 0.2                # rad/s, left
         self.pub.publish(msg)
 
 rclpy.init()
 rclpy.spin(Circle())</code></pre>
+<p>Its topic needs a twist_mux input and a contract entry before it drives anything:
+<a href="howto-driver.html">Build a driver</a> has the whole recipe.</p>
 </section>
 <section class="card"><h2 id="looking-inside-a-running-system">Looking inside a running system</h2>
 <div class="table-wrap"><table>
@@ -317,8 +333,8 @@ rclpy.spin(Circle())</code></pre>
 <td>the frame tree, and who publishes each link</td>
 </tr>
 <tr>
-<td><code>pixi run view</code> (RViz)</td>
-<td>the 3D view: the car, the map, costmaps, the path</td>
+<td><code>pixi run rviz</code></td>
+<td>the 3D view: the car, the map, costmaps, the path (<code>pixi run view</code>: the car model alone)</td>
 </tr>
 <tr>
 <td>Foxglove</td>

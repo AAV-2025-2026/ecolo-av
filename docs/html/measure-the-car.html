@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measuring the car: the sheet for the team · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/measure-the-car.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Measuring the car: the sheet for the team</h1>
+<div class="meta">9 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a class="here" href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-the-zero-point">1. The zero point</a><a href="#2-directions-and-signs">2. Directions and signs</a><a href="#3-the-car-itself">3. The car itself</a><a href="#4-steering">4. Steering</a><a href="#5-where-each-sensor-is">5. Where each sensor is</a><a href="#6-weight">6. Weight</a><a href="#7-tips">7. Tips</a><a href="#8-hand-back">8. Hand back</a></nav>
+<div class="lead"><p>Written 15 October 2026. <strong>Hand this to whoever measures the car.</strong> Fill in the
+"Measured" column, photograph the filled sheet, and send it back. The numbers go into
+<code>ros/bringup/aav_description/config/vehicle.yaml</code>, the one place the software reads them from.
+Every number there today is a guess.</p>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Everything is measured from one spot: on the floor, under the middle of the rear axle.</strong> We call it the <strong>zero point</strong>.
+- <strong>Forward = +x. Left = +y. Up = +z.</strong> Right of the centre line is a <strong>minus</strong> number.
+- <strong>Write centimetres</strong> (to the nearest 1 cm), and <strong>degrees</strong> for angles. We convert them.
+- Two people, a tape measure, chalk or masking tape, a plumb line (a string with a weight), a phone with a level app.</p>
+</blockquote></div>
+<section class="card"><h2 id="1-the-zero-point">1. The zero point</h2>
+<p><strong>Not the differential itself:</strong> it may sit off-centre, and it's above the floor. The zero
+point is <strong>on the floor</strong>, exactly halfway between the two rear wheels, straight under the
+rear axle's line.</p>
+<pre class="highlight"><code class="language-text"> SIDE VIEW                                        TOP VIEW  (front is up)
+
+                                                        front
+                                                  ┌──────────────┐
+     ┌──────────────────────┐                     │  ○        ○  │ front wheels
+     │                      │                     │              │
+  ───○──────────────────────○─── axle height      │      +x ▲    │
+     │                      │                     │         │    │
+  ═══●══════════════════════════ floor            │  +y ◄───●    │
+     ▲                                            │  ○  zero  ○  │ rear wheels
+   zero point: on the floor,                      └──────────────┘
+   under the rear axle                                   rear</code></pre>
+<p><strong>How to mark it:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Park on <strong>flat, level</strong> ground. Wheels <strong>straight</strong>. Tyres at their normal pressure</td>
+</tr>
+<tr>
+<td>2</td>
+<td>On each rear wheel, find the <strong>centre of the hub</strong> (the middle of the wheel)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Hang the plumb line from each hub centre, and mark where it touches the floor: two marks</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Stretch a string between the two marks. Its <strong>middle</strong> is the zero point. Mark it with an <strong>X</strong> of tape</td>
+</tr>
+<tr>
+<td>5</td>
+<td>From the X, lay a string straight forward, along the car's centre line, to under the front axle. This is the <strong>x line</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Measure every x along the x line, every y square to it, and every z straight up from the floor.</p>
+</section>
+<section class="card"><h2 id="2-directions-and-signs">2. Directions and signs</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Direction</th>
+<th>Positive (+)</th>
+<th>Negative (−)</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>x</strong></td>
+<td>forward of the zero point</td>
+<td>behind it</td>
+<td>the front bumper: about +180 cm; the rear bumper: about −20 cm</td>
+</tr>
+<tr>
+<td><strong>y</strong></td>
+<td>to the <strong>left</strong> (seen sitting in the car)</td>
+<td>to the right</td>
+<td>the left camera: +29 cm; the right camera: −29 cm</td>
+</tr>
+<tr>
+<td><strong>z</strong></td>
+<td>up from the <strong>floor</strong></td>
+<td>(nothing is below the floor)</td>
+<td>the roof: about +150 cm</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Angles</strong> of a sensor, in degrees:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Angle</th>
+<th>Means</th>
+<th>How to measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pointing</strong> (yaw)</td>
+<td>which way it looks, seen from above. 0 = straight forward, +90 = left, 180 = straight back</td>
+<td>by eye, or a protractor on the floor</td>
+</tr>
+<tr>
+<td><strong>Tilt</strong> (pitch)</td>
+<td><strong>+ = tilted down</strong> towards the ground, − = tilted up</td>
+<td>a phone level app held on the sensor's flat face</td>
+</tr>
+<tr>
+<td><strong>Lean</strong> (roll)</td>
+<td>+ = leaning to the right</td>
+<td>the same app, the other way</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="3-the-car-itself">3. The car itself</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>What</th>
+<th>From → to</th>
+<th>Guess today</th>
+<th><strong>Measured</strong> (cm)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td><strong>Wheelbase</strong></td>
+<td>rear hub centre → front hub centre, same side. Do both sides</td>
+<td>157</td>
+<td>L: <strong><em>_ R: </em></strong>_</td>
+</tr>
+<tr>
+<td>M2</td>
+<td><strong>Track, rear</strong></td>
+<td>left rear tyre centre → right rear tyre centre</td>
+<td>77</td>
+<td></td>
+</tr>
+<tr>
+<td>M2b</td>
+<td><strong>Track, front</strong></td>
+<td>the same, at the front</td>
+<td>77</td>
+<td></td>
+</tr>
+<tr>
+<td>M3</td>
+<td><strong>Wheel diameter</strong></td>
+<td>the floor → the top of the tyre, with the car's weight on it</td>
+<td>30</td>
+<td></td>
+</tr>
+<tr>
+<td>M3b</td>
+<td>Tyre width</td>
+<td>across the tread</td>
+<td>10</td>
+<td></td>
+</tr>
+<tr>
+<td>M4</td>
+<td><strong>Length</strong></td>
+<td>rear bumper → front bumper</td>
+<td>200</td>
+<td></td>
+</tr>
+<tr>
+<td>M4b</td>
+<td><strong>Rear overhang</strong></td>
+<td>the zero point → the rear bumper (write it as a plain number)</td>
+<td>20</td>
+<td></td>
+</tr>
+<tr>
+<td>M4c</td>
+<td><strong>Width</strong></td>
+<td>widest point, side to side (mirrors in, if they fold)</td>
+<td>100</td>
+<td></td>
+</tr>
+<tr>
+<td>M4d</td>
+<td><strong>Height</strong></td>
+<td>the floor → the highest point of the roof, <strong>not</strong> counting the lidar</td>
+<td>150</td>
+<td></td>
+</tr>
+<tr>
+<td>M4e</td>
+<td>Ground clearance</td>
+<td>the floor → the lowest point under the car</td>
+<td>(none)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="4-steering">4. Steering</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>What</th>
+<th>How</th>
+<th>Guess today</th>
+<th><strong>Measured</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M5</td>
+<td><strong>Full lock left</strong>: each front wheel's angle</td>
+<td>turn fully left; measure each front wheel's angle from straight. A protractor on the floor against the tyre, or the phone app on the wheel's face</td>
+<td>inside 32°, outside 26°</td>
+<td>inside: <strong><em>_° outside: </em></strong>_°</td>
+</tr>
+<tr>
+<td>M5b</td>
+<td><strong>Full lock right</strong></td>
+<td>the same, fully right</td>
+<td>inside 32°, outside 26°</td>
+<td>inside: <strong><em>_° outside: </em></strong>_°</td>
+</tr>
+<tr>
+<td>M5c</td>
+<td><strong>Turning circle</strong></td>
+<td>at full lock, push or drive one slow full circle; measure the circle the <strong>outside front tyre</strong> draws, across</td>
+<td>(none)</td>
+<td>left: <strong><em>_ cm right: </em></strong>_ cm</td>
+</tr>
+<tr>
+<td>M5d</td>
+<td>Steering wheel turns, lock to lock</td>
+<td>count the turns</td>
+<td>(none)</td>
+<td>____ turns</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Two wheel angles, one number</p>
+<p><code>max_steering_angle</code> in <code>vehicle.yaml</code> is neither wheel: it's the <strong>middle</strong> of the
+front axle (the bicycle model, which ego and Nav2 use). The inside wheel turns
+further, the outside one less. To get it from M5's two angles (in radians):
+<code>vehicle.centre_angle(v, inside, outside)</code> in <code>aav_description/vehicle.py</code>.
+Use the smaller of left and right. Gazebo's own number is worked out from it.</p>
+</div>
+</section>
+<section class="card"><h2 id="5-where-each-sensor-is">5. Where each sensor is</h2>
+<p>For each sensor, measure <strong>its centre</strong>: for a camera, the <strong>middle of the lens</strong>; for the
+GPS, the <strong>middle of the antenna puck</strong> (not the receiver box); for the lidar, the <strong>middle
+of its window</strong> (the band that spins or glows).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Sensor</th>
+<th>Measure its</th>
+<th>Guess today x / y / z (cm)</th>
+<th><strong>x</strong></th>
+<th><strong>y</strong></th>
+<th><strong>z</strong></th>
+<th><strong>Pointing / tilt / lean</strong> (°)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1</td>
+<td><strong>GPS antenna</strong></td>
+<td>puck centre</td>
+<td>0 / 0 / 150</td>
+<td></td>
+<td></td>
+<td></td>
+<td>(not needed). Ben, 23 Oct: it is <strong>over the rear axle</strong> already: check x is about 0, and measure its height (<a href="learn-gps.html#mount-the-antenna-over-the-rear-axle">why it matters</a>)</td>
+</tr>
+<tr>
+<td>S2</td>
+<td><strong>IMU</strong></td>
+<td>board centre</td>
+<td>50 / 0 / 40</td>
+<td></td>
+<td></td>
+<td></td>
+<td>see below</td>
+</tr>
+<tr>
+<td>S3</td>
+<td><strong>Radar</strong> (TI mmWave, on the grill)</td>
+<td>the middle of its flat front face</td>
+<td>180 / 0 / 45</td>
+<td></td>
+<td></td>
+<td></td>
+<td>0 / __ / __</td>
+</tr>
+<tr>
+<td>S4</td>
+<td><strong>Front left camera</strong></td>
+<td>lens centre</td>
+<td>175 / +29 / 155</td>
+<td></td>
+<td></td>
+<td></td>
+<td>0 / __ / __</td>
+</tr>
+<tr>
+<td>S5</td>
+<td><strong>Front right camera</strong></td>
+<td>lens centre</td>
+<td>175 / −29 / 155</td>
+<td></td>
+<td></td>
+<td></td>
+<td>0 / __ / __</td>
+</tr>
+<tr>
+<td>S6</td>
+<td><strong>Rear camera</strong> (orange housing)</td>
+<td>lens centre</td>
+<td>−20 / 0 / 90</td>
+<td></td>
+<td></td>
+<td></td>
+<td>180 / __ / __</td>
+</tr>
+<tr>
+<td>S7</td>
+<td><strong>Lidar</strong> (roof tripod)</td>
+<td>the middle of its window</td>
+<td>90 / 0 / 180</td>
+<td></td>
+<td></td>
+<td></td>
+<td>__ / __ / __</td>
+</tr>
+<tr>
+<td>S8</td>
+<td>Wheel-speed sensors</td>
+<td>the front left and front right wheels (Hall sensors on the brake rotors)</td>
+<td>(front, both)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>S8b</td>
+<td>Brake rotor holes</td>
+<td>count the holes on each front rotor</td>
+<td>(none)</td>
+<td>L: <strong><em>_ R: </em></strong>_</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The IMU's direction matters most.</strong> Find the arrows printed on its board (usually X and
+Y). Write which way each points:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>IMU arrow</th>
+<th>Points to (forward / back / left / right / up / down)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X</td>
+<td></td>
+</tr>
+<tr>
+<td>Y</td>
+<td></td>
+</tr>
+<tr>
+<td>Is the board upside down?</td>
+<td>yes / no</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="6-weight">6. Weight</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>How</th>
+<th>Measured (kg or lb: say which)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M7</td>
+<td>4 bathroom scales, one under each wheel, on the flat. Or one scale, a wheel at a time, the other three on blocks of the same height</td>
+<td>FL: <strong><em>_ FR: </em></strong>_ RL: <strong><em>_ RR: </em></strong>_ total: ____</td>
+</tr>
+<tr>
+<td>M7b</td>
+<td><strong>The rear lifted:</strong> put both rear wheels on blocks of the same height (20-30 cm, chocked, someone holding the car), the front wheels still on their scales. Weigh the two front wheels again, and measure the blocks' height</td>
+<td>FL: <strong><em>_ FR: </em></strong>_ block height: ____ cm</td>
+</tr>
+<tr>
+<td>M7c</td>
+<td>Nobody aboard for M7 and M7b; nothing loose in the car. Write down anything that's usually aboard but wasn't (a battery out, a laptop)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Ben's estimate is about 400 lb (181 kg). The four corners show where the weight sits
+along the car (the <strong>centre of mass</strong>); M7b shows how high it sits. Ego uses both: a
+heavy load slows speeding up and braking, and a high centre of mass on the car's narrow
+track (77 cm) lowers the speed at which it could tip in a turn. The maths:
+<code>vehicle.centre_of_mass()</code> in <code>aav_description/vehicle.py</code> (docs/car_measurements.md).</p>
+</section>
+<section class="card"><h2 id="7-tips">7. Tips</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Tip</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Measure twice</strong>, by two different people</td>
+<td>catches misreads</td>
+</tr>
+<tr>
+<td><strong>Photograph the tape</strong> at each measurement</td>
+<td>we can check later</td>
+</tr>
+<tr>
+<td>Keep the tape <strong>level</strong> for x and y, and <strong>plumb</strong> for z</td>
+<td>a sloped tape reads long</td>
+</tr>
+<tr>
+<td>Use the <strong>x line</strong> string for every x</td>
+<td>so all x are along the car's centre line</td>
+</tr>
+<tr>
+<td>Write "?" rather than guess</td>
+<td>a guess looks like a measurement</td>
+</tr>
+<tr>
+<td>Note anything odd: a sensor loose, bent or taped</td>
+<td>it can move between drives</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="8-hand-back">8. Hand back</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>☐</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>☐</td>
+<td>Fill in every "Measured" box, or write "?"</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>Photograph the sheet, and the IMU's arrows</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>Send it to Ben. The numbers go into <code>vehicle.yaml</code>, then <code>pixi run test</code> and a look in RViz (<code>pixi run view</code>) to check the model matches the photos</td>
+</tr>
+</tbody>
+</table></div>
+<p>Programmer's detail (what reads each number, the maths): <a href="car_measurements.html">docs/car_measurements.md</a>.</p></section>
+<nav class="prevnext"><a class="prev" href="tests.html"><small>Previous</small>← Every test</a>
+<a class="next" href="decisions.html"><small>Next</small>Decisions →</a></nav>
+</main>
+<footer>Source: <code>docs/measure-the-car.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

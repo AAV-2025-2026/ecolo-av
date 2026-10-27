@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -77,7 +90,7 @@
 <main>
 <nav class="toc"><span>On this page:</span><a href="#how-it-fits">How it fits</a><a href="#why-it-cant-hide-a-real-obstacle">Why it can&#x27;t hide a real obstacle</a><a href="#the-commands">The commands</a><a href="#its-settings">Its settings</a><a href="#on-the-real-car">On the real car</a><a href="#the-test-in-gazebo">The test in Gazebo</a></nav>
 <div class="lead"><p>A ghost is a person (or a post) that only Nav2 can see. Use it to test stopping on the
-real car, with nothing real to hit. PLAN.md item S4, built 16 Oct.</p>
+real car, with nothing real to hit. plan.md item S4, built 16 Oct.</p>
 <div class="admonition note">
 <p class="admonition-title">The short version</p>
 <ul>
@@ -230,7 +243,7 @@ stops after 1 s, like a silent radar. That's on purpose: fail-safe.</p>
 </div>
 </section>
 <section class="card"><h2 id="the-test-in-gazebo">The test in Gazebo</h2>
-<p><code>pixi run sim-check --ghost</code> (<code>READ-ME-TESTS.md</code> 1.15): a second Gazebo
+<p><code>pixi run sim-check --ghost</code> (<code>tests.md</code> 1.15): a second Gazebo
 run with <code>ghost:=true</code>. A ghost 15 m ahead; Nav2 drives 30 m.</p>
 <div class="table-wrap"><table>
 <thead>

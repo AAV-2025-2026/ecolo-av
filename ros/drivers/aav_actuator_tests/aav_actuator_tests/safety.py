@@ -21,7 +21,7 @@ import math
 from typing import Iterable, Mapping, Optional, Sequence, Tuple
 
 REAL_CAP = 1.0         # m/s: never faster on the real car (ego.yaml's max_speed, 15 Oct)
-STANDS_CAP = 0.3       # m/s with the wheels off the ground (READ-ME-TESTS.md stage 3)
+STANDS_CAP = 0.3       # m/s with the wheels off the ground (docs/tests.md stage 3)
 SIM_DEFAULT_CAP = 3.0  # m/s in Gazebo, unless --max-speed says otherwise
 SIM_MAX_CAP = 5.0      # m/s: ego's own ceiling for a simulator (sim_max_speed)
 
@@ -71,7 +71,7 @@ class Decision:
 def decide(kind: Kind, sim: bool, stands: bool, stage: int,
            requested_cap: Optional[float] = None) -> Decision:
     """
-    Decide whether this test (stage 3 or 4 of READ-ME-TESTS.md) may run, and its speed cap.
+    Decide whether this test (stage 3 or 4 of docs/tests.md) may run, and its speed cap.
 
     sim: the user said --sim (Gazebo, simulated time). stands: --stands (wheels off the
     ground). requested_cap: --max-speed, or None for the default.
@@ -168,7 +168,7 @@ STANDS_CHECKLIST = (
     'Someone holds the e-stop, and knows to press it',
     "The 2025-26 team's drive software is stopped (only our stack drives)",
     'Nobody near the wheels or the steering linkage',
-    f'This test caps the speed at {STANDS_CAP} m/s (READ-ME-TESTS.md, stage 3)',
+    f'This test caps the speed at {STANDS_CAP} m/s (docs/tests.md, stage 3)',
 )
 
 LOT_CHECKLIST = (
@@ -181,5 +181,5 @@ LOT_CHECKLIST = (
 
 
 def checklist(stands: bool) -> Tuple[str, ...]:
-    """Return what to check before a test on the real car (READ-ME-TESTS.md, Before)."""
+    """Return what to check before a test on the real car (docs/tests.md, Before)."""
     return STANDS_CHECKLIST if stands else LOT_CHECKLIST

@@ -18,8 +18,9 @@ setup(
     zip_safe=True,
     maintainer='AAV 2026-27 team',
     maintainer_email='aav-team@todo.invalid',
-    description='A YOLO detector (camera images in, vision_msgs detections out), a '
-                'stop-sign watcher that holds the autonomous drivers at a stop sign, and '
+    description='The object detector (camera images in, vision_msgs detections out): '
+                'RF-DETR Nano by default, or YOLO with detector:=yolo. Also a stop-sign '
+                'watcher that holds the autonomous drivers at a stop sign, and '
                 "camera_obstacles, which puts the detections on the road for Nav2's costmap.",
     license='TODO',
     extras_require={'test': ['pytest']},

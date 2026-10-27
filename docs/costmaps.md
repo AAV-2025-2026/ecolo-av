@@ -35,16 +35,18 @@ car is meant to do this year. Make it larger only if the car gets faster.
 
 ## Obstacles from the sensors
 
-The local costmap has two sensor layers. Each is a stock Nav2 `ObstacleLayer`, switched on
+The local costmap has four sensor layers. Each is a stock Nav2 `ObstacleLayer`, switched on
 by `navigation.launch.py`.
 
 | Layer | Reads | On | Marks | Clears |
 |---|---|---|---|---|
 | `obstacle_layer` | `/sensors/radar/points` (in `radar_link`) | `radar:=true`: the bench always; the car where the machine file that runs `navigation` also runs `radar`; never Gazebo (its car has no radar) | each point 0.3-8.4 m from the radar, -0.5 to 2 m high | the cells between the radar and each point |
 | `camera_layer` | `/perception/camera_obstacles`, `/perception/camera_view` | `camera_obstacles:=true`: the bench's argument, or the car's `camera_obstacles` part next to `navigation`. Off until the cameras are calibrated (Q22) | where each detected object stands on the road, out to 12 m | everything the camera sees, out to 12 m, before it marks |
+| `lidar_layer` | `/sensors/lidar/scan` (from `lidar_scan`, `aav_lidar`) | where the lidar runs: on by default on the car (the Orin) and in Gazebo; `lidar:=true` on the bench | points 0.3 m or more above the road ([below](#body-roll-and-the-lidar-todo-52e)), out to 12 m | along each beam, out to 15 m |
+| `ghost_layer` | `/safety/ghost/scan` | `ghost:=true` only ([Ghost obstacles](ghost-obstacles.md)) | the pretend person | only old ghosts |
 
 Why the radar's numbers:
-- **8.4 m:** the TI radar's range (`ti_ros2_driver` `cfg/base.cfg`).
+- **8.4 m:** the TI radar's range (`aav_radar_ti` `cfg/base.cfg`).
 - **-0.5 to 2 m high:** a radar sees no ground to reject, and its height is poor, so low
   points stay. Above 2 m is over the car (1.5 m tall).
 - **Sparse:** a few points per object. Each 5 Hz update uses the last 0.2 s: both radar
@@ -55,8 +57,8 @@ The camera layer is its own, so its clearing never wipes what the radar marked.
 
 ### collision_monitor
 
-Where the radar runs, Nav2's command passes through `collision_monitor` on its way to
-twist_mux:
+Where the radar or the lidar runs, Nav2's command passes through `collision_monitor` on
+its way to twist_mux:
 
 ```
 controller -> velocity_smoother -> /control/cmd_vel_smoothed -> collision_monitor -> /drivers/nav/cmd_vel -> twist_mux
@@ -66,9 +68,9 @@ controller -> velocity_smoother -> /control/cmd_vel_smoothed -> collision_monito
 |---|---|
 | Stop zone | from the front bumper to 1 m ahead, 0.2 m wider than the body each side: made from `vehicle.yaml` by the launch file |
 | Why 1 m | at 1 m/s, ego stops the car in 0.25 m; the radar, mux, ego and brakes add about 0.4 m; the rest is for the radar's noise |
-| Stops for | 3 radar points in the zone (one stray point mustn't stop the car) |
-| Also stops | when the radar is silent for 1 s, or its TF is late |
-| Reads | the radar's own points, not the costmap: it still works if the costmap goes wrong |
+| Stops for | 3 points in the zone, from the radar or the lidar (one stray point mustn't stop the car) |
+| Also stops | when a sensor it reads is silent for 1 s, or its TF is late |
+| Reads | the sensors' own points, not the costmap: it still works if the costmap goes wrong |
 
 - It only guards **Nav2**. A person, a test script or the AI slot reach twist_mux without
   it.
@@ -240,14 +242,15 @@ passed at y = 4.4 m, beside a box that ends at y = 3 m.
 
 ### N7: why Nav2's turn command flips (11 October)
 
-In Gazebo, on the empty map, each run on a fresh simulator:
+In Gazebo, on the empty map, each run on a fresh simulator. This was Regulated Pure
+Pursuit, before MPPI became the default (22 Oct; [Path followers](controllers.md)):
 
 | Turn-sign flips a second | Straight goals (8 m, 25 m) | The curve to (15, 8) |
 |---|---|---|
-| Lookahead 1.5 m (as now) | 0.86-0.99 | 0.48-0.71 |
+| Lookahead 1.5 m (then) | 0.86-0.99 | 0.48-0.71 |
 | Lookahead 3 m (tried) | 0.85-1.44 | 0.25-0.52 |
 
-- **Not the lookahead:** a longer one didn't help on straight drives, so it stays 1.5 m.
+- **Not the lookahead:** a longer one didn't help on straight drives, so it stayed 1.5 m.
   Both reached every straight goal; each failed the curve once.
 - **The GPS:** the flips come in steps, five times a second, with the fixes. One step in
   ten turns the global EKF's heading (`map -> odom`) by more than 4 degrees, and the whole
@@ -280,10 +283,10 @@ To draw the real test site:
 
 The global costmap only says which cells may be driven on. Roads, junctions and routing
 across a city are a separate kind of map: a road graph. Two tools handle that:
-- **OSRM**, which the HUD already uses. It turns a destination into a route of
-  latitude/longitude points. Those points can become a `follow_gps_waypoints` goal for
-  Nav2 (see [hud.md](hud.md)). Our own offline router for that, Valhalla, and the node
-  that turns its routes into waypoints: [Street routes](routes.md).
+- **A street router** (Valhalla, or OSRM). It turns a destination into a route of
+  latitude/longitude points. Those points become a `follow_gps_waypoints` goal for
+  Nav2. Our offline router, and the node that turns its routes into waypoints
+  (`street_router`): [Street routes](routes.md).
 - **Nav2's Route Server** (`nav2_route`). It's released for Jazzy, in Nav2 1.3.13 as of
   October 2026, and follows a hand-made graph of lanes or paths. Consider it if the test site becomes a set of fixed lanes.
 

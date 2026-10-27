@@ -5,7 +5,7 @@ Subscribes  /localization/odom/local  nav_msgs/Odometry (speed, odom pose)
             /sensors/gps/fix          sensor_msgs/NavSatFix (best effort; lat/lon, fix kind)
             /safety/estop             std_msgs/Bool (refuse to move while true)
             /vehicle/status           aav_interfaces/VehicleStatus (armed, e-stop)
-            every twist_mux input and lock in aav_mux's twist_mux.yaml (/drivers/*/cmd_vel,
+            every twist_mux input and lock in aav_command_mux's twist_mux.yaml (/drivers/*/cmd_vel,
             /perception/stop_sign): only their arrival times, to tell who drives
             /diagnostics              diagnostic_msgs/DiagnosticArray: twist_mux's own word,
                                       once a second, on each lock (is the e-stop on?). The
@@ -59,10 +59,11 @@ STATUS_NAMES = {GoalStatus.STATUS_SUCCEEDED: 'succeeded', GoalStatus.STATUS_CANC
 
 
 def load_mux_config():
-    """twist_mux's inputs and locks, from the installed aav_mux (empty if it isn't)."""
+    """twist_mux's inputs and locks, from the installed aav_command_mux (empty if it isn't)."""
     try:
         from ament_index_python.packages import get_package_share_directory
-        path = os.path.join(get_package_share_directory('aav_mux'), 'config', 'twist_mux.yaml')
+        path = os.path.join(get_package_share_directory('aav_command_mux'), 'config',
+                            'twist_mux.yaml')
         with open(path, encoding='utf-8') as f:
             return safety.mux_config(yaml.safe_load(f))
     except (LookupError, OSError, KeyError, TypeError):

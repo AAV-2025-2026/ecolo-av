@@ -1,0 +1,95 @@
+# vendor/gazebo/: Gazebo Harmonic, the simulator `pixi run sim` runs, at the releases
+# pixi.lock installs (conda-forge, 26 Oct 2026). 18 repositories, each at an exact commit;
+# the comment above each one names its release tag. The library list is Gazebo's own:
+# gazebo-tooling/gazebodistro, collection-harmonic.yaml. Download with pixi run vendor.
+repositories:
+  # dartsim-cpp 6.19.5: the physics engine gz-physics uses by default (not in the collection)
+  dart:
+    type: git
+    url: https://github.com/dartsim/dart.git
+    version: ce5c6526035ccc9a22d895670b2579052a2b8903
+  # gz-cmake3_3.5.5
+  gz-cmake:
+    type: git
+    url: https://github.com/gazebosim/gz-cmake.git
+    version: 094ef5362675bb5f6a3664f3e6e828b323b3514b
+  # gz-common5_5.7.1
+  gz-common:
+    type: git
+    url: https://github.com/gazebosim/gz-common.git
+    version: 9d775ab82cf8284d9078e0b1b58e22b87c177e61
+  # gz-fuel-tools9_9.1.1
+  gz-fuel-tools:
+    type: git
+    url: https://github.com/gazebosim/gz-fuel-tools.git
+    version: 8bc5aa47ef5604b0ee4414699f9e36d8c8eb1db9
+  # gz-gui8_8.4.0
+  gz-gui:
+    type: git
+    url: https://github.com/gazebosim/gz-gui.git
+    version: 6d6cd72cd9b7d520030c6df43e031ecbe8fa742a
+  # gz-launch7_7.1.2: the newest Harmonic release; not installed (ros_gz_sim launches gz sim)
+  gz-launch:
+    type: git
+    url: https://github.com/gazebosim/gz-launch.git
+    version: 82e0649317e9f845fdb37639cebf4fa44c79af84
+  # gz-math7_7.7.0
+  gz-math:
+    type: git
+    url: https://github.com/gazebosim/gz-math.git
+    version: 19e3603712159403d1ce64af534cd21e14a1ddb7
+  # gz-msgs10_10.3.2
+  gz-msgs:
+    type: git
+    url: https://github.com/gazebosim/gz-msgs.git
+    version: 3c0ca9455a9686d71c4d7819417e434ae1b47ad6
+  # gz-physics7_7.5.0
+  gz-physics:
+    type: git
+    url: https://github.com/gazebosim/gz-physics.git
+    version: 966563e1a403e90bf9a9cbf642dd0f58809f4a36
+  # gz-plugin2_2.0.4
+  gz-plugin:
+    type: git
+    url: https://github.com/gazebosim/gz-plugin.git
+    version: 4fc5ab140242f3126aeb4e2e6fb578d36e04a80f
+  # gz-rendering8_8.2.2
+  gz-rendering:
+    type: git
+    url: https://github.com/gazebosim/gz-rendering.git
+    version: 3feca6130076f8efb3eb704451cadcde40dff165
+  # gz-sensors8_8.2.2
+  gz-sensors:
+    type: git
+    url: https://github.com/gazebosim/gz-sensors.git
+    version: 9348f9fe8a11b9d50381819f51e17e136aedab8a
+  # gz-sim8_8.10.0
+  gz-sim:
+    type: git
+    url: https://github.com/gazebosim/gz-sim.git
+    version: 4684b525e951bfbf12349e119a5ec90a99ae1a04
+  # gz-tools2_2.0.3
+  gz-tools:
+    type: git
+    url: https://github.com/gazebosim/gz-tools.git
+    version: c9ad7217c76ba434e0486842f8864d20c9cdfa32
+  # gz-transport13_13.5.0
+  gz-transport:
+    type: git
+    url: https://github.com/gazebosim/gz-transport.git
+    version: 7232d0b163b08f79dd390ad9913d6ea72efaf209
+  # gz-utils2_2.2.1
+  gz-utils:
+    type: git
+    url: https://github.com/gazebosim/gz-utils.git
+    version: 513b36e6323b4ceb4b49d832dc7d163331e1cd11
+  # ros-jazzy-ros-gz 1.0.24 (tag 1.0.24, on the jazzy branch)
+  ros_gz:
+    type: git
+    url: https://github.com/gazebosim/ros_gz.git
+    version: 5912bfe7976a79d2cc9f373b2d40a8a3a3e33da2
+  # sdformat14_14.8.0
+  sdformat:
+    type: git
+    url: https://github.com/gazebosim/sdformat.git
+    version: d6db8037057478e11962015f31e350a12262fd51

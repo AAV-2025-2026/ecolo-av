@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -400,20 +413,8 @@ pictures <strong>compressed</strong> over the network, and keep the lidar's poin
 <td>measured</td>
 </tr>
 <tr>
-<td>HUD's pictures (Flutter app)</td>
-<td>HTTP <code>/camera/stream</code></td>
-<td style="text-align: right;">5</td>
-<td style="text-align: right;">~1 MB PNG</td>
-<td style="text-align: right;">5</td>
-<td style="text-align: right;">40</td>
-<td>hud_server</td>
-<td>stays, if on the dash</td>
-<td>the app</td>
-<td>guess (<code>hud_server.py</code>)</td>
-</tr>
-<tr>
 <td>Foxglove to a laptop</td>
-<td>WebSocket, port 8765</td>
+<td>WebSocket, port 8765 (8766 while the 2025-26 bridge holds 8765)</td>
 <td style="text-align: right;"></td>
 <td style="text-align: right;"></td>
 <td style="text-align: right;"><strong>what you open</strong></td>
@@ -544,7 +545,7 @@ it out from the DBC, so it stays right when the contract changes:</p>
 </tr>
 <tr>
 <td>The Orin's side</td>
-<td>SocketCAN turns each frame into a ROS message on <code>/can/rx</code>: 260 a second, about 40 B each, 0.01 MB/s. Small, but it costs some CPU in Python (<code>spine_bridge</code>)</td>
+<td>SocketCAN turns each frame into a ROS message on <code>/can/rx</code>: 260 a second with the CAN spine (200 with today's wiring: the wheels only), about 40 B each, 0.01 MB/s. Small: the Rust <code>spine_bridge</code> (the default) decodes them</td>
 </tr>
 </tbody>
 </table></div>
@@ -707,7 +708,7 @@ car). Watching over Foxglove or Lichtblick (port 8765) costs only what you open:
 <tr>
 <td>5</td>
 <td><strong>Give the HUD a small picture</strong></td>
-<td>the raylib HUD and <code>hud_server</code> read the raw front camera. Feed them a 640x360 copy at 5 Hz (3.5 MB/s raw, ~0.15 MB/s JPEG), or teach the HUD JPEG</td>
+<td>the raylib HUD reads the raw front camera. Feed it a 640x360 copy at 5 Hz (3.5 MB/s raw, ~0.15 MB/s JPEG), or teach the HUD JPEG</td>
 </tr>
 <tr>
 <td>6</td>

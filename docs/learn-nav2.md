@@ -13,7 +13,7 @@ turn rate, like the joystick does.
 - our settings, and where they live.
 
 Costmaps have their own page: [Costmaps](costmaps.md). The big picture of maps and
-GPS is in [Maps and position](../READ-ME-MAPS-AND-POSITION.md).
+GPS is in [Maps and position](maps-and-position.md).
 
 ## The picture
 
@@ -21,12 +21,12 @@ GPS is in [Maps and position](../READ-ME-MAPS-AND-POSITION.md).
 
 | Part | Job | Ours |
 |---|---|---|
-| **Goal** | where to go: a pose in the `map` frame | RViz's 2D Goal Pose, an action call, or GPS waypoints from the HUD |
+| **Goal** | where to go: a pose in the `map` frame | RViz's 2D Goal Pose, an action call, or GPS waypoints from `street_router` or the language tools |
 | **bt_navigator** | the boss: runs a behaviour tree that calls the others | `behavior_trees/navigate_to_pose_car.xml` |
 | **Planner** | finds a path from here to the goal | Smac Hybrid-A*, on the global costmap |
 | **Controller** | steers along that path | MPPI (or Regulated Pure Pursuit: `controller:=rpp`), on the local costmap, 20 Hz ([path followers](controllers.md)) |
 | **Velocity smoother** | caps speed and acceleration | 1.0 m/s, 1.0 m/s² up, 2.0 m/s² down |
-| **collision_monitor** | last-moment stop for radar points ahead | only where the radar runs |
+| **collision_monitor** | last-moment stop for radar or lidar points ahead | where the radar or the lidar runs |
 | **Out** | `/drivers/nav/cmd_vel` → `twist_mux` (priority 20) → ego | |
 
 Nav2 never talks to the wheels. ego turns its turn rate into a steering angle ([Learn:
@@ -103,15 +103,10 @@ can tell (22 Oct; tighter, the car looped to fix misses it couldn't see). **Stuc
 
 ## 3. Costmaps, in one line each
 
-| | Global | Local |
-|---|---|---|
-| Used by | the planner | the controller |
-| Frame | `map` | `odom` |
-| Size, cells | the map file's size, 25 cm | 20 m × 20 m around the car, 10 cm |
-| Sees obstacles from | the map file only | the map, the radar, the cameras (when on) |
+- **Global:** for the planner, in `map`, the map file's size.
+- **Local:** for the controller, in `odom`, 20 m × 20 m around the car.
 
-Inflation is 2.0 m: wide enough that a path for the car's centre keeps its corners
-clear. Everything else: [Costmaps](costmaps.md).
+Sizes, layers, sensors and inflation: [Costmaps](costmaps.md#the-two-costmaps).
 
 ## 4. The behaviour tree: the boss
 
@@ -133,12 +128,15 @@ Navigate (up to 6 tries)
 
 ## Reversing
 
-One switch, `reversing:=`, on `navigation.launch.py`. **On everywhere since 22 Oct** (Ben:
-"Yes the car can reverse"), but on the car only where something sees behind it: the roof
-lidar (the radar faces forward; the rear camera, later). Without one, `car.launch.py`
-keeps Nav2 forward only and says why (`vehicle.blind_behind`).
+One switch, `reversing:=`, on `navigation.launch.py`. **On in Gazebo and on the bench;
+off on the car by default since 26 Oct** (design review F2): the wheel sensors can't tell
+direction yet (H5), so a reversing car's speed would read forward. It goes back on once
+H5 is answered. On the car, `reversing:=true` (Ben, 22 Oct: "Yes the car can reverse")
+works only where something sees behind it: the roof lidar (the radar faces forward; the
+rear camera, later). Without one, `car.launch.py` keeps Nav2 forward only and says why
+(`vehicle.blind_behind`).
 
-| | `reversing:=false` | `reversing:=true` (the default: the car, Gazebo, the bench) |
+| | `reversing:=false` (the car's default) | `reversing:=true` (the default: Gazebo, the bench) |
 |---|---|---|
 | Planner (`motion_model_for_search`) | `DUBIN`: forward only | `REEDS_SHEPP`: forward and back; a reverse metre costs 2x (`reverse_penalty`) |
 | Controller (`allow_reversing`) | false | true: follows the backward parts |
@@ -155,7 +153,7 @@ reversing at the same number, whoever drives.
 |---|---|
 | `vehicle.yaml` | `max_reverse_speed: 0.50` |
 | `aav_description/vehicle.py` | `nav2_rewrites(v, reversing)` (planner, controller, MPPI) and `nav2_tuned(...)` (the smoother's list, written into a copy of `nav2.yaml`) |
-| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=true` in all three; the car's needs the lidar running |
+| `car.launch.py`, `sim.launch.py`, `bench.launch.py` | `reversing:=true` by default in sim and bench; `false` on the car until H5 (`reversing:=true` there needs the lidar running) |
 | Gazebo check | `pixi run sim-check --rear-obstacle`: backing up, the car stops for a post behind it (0.75 m short, 22 Oct) |
 | Tests | `test_vehicle.py` (the values, and that each rewrite lands on a real key); `test_behavior_trees.py` (the two trees differ only by BackUp, inside the reverse speed) |
 
@@ -163,15 +161,15 @@ People can always reverse (joystick, keyboard, RC): this switch is Nav2's only.
 
 ## 5. collision_monitor: the last word
 
-It sits between the smoother and `twist_mux`, and reads the **radar's own points**, not
-the costmap. So it still stops the car if the planner, the controller or the costmap goes wrong.
+It sits between the smoother and `twist_mux`, and reads the **radar's and the lidar's own
+points**, not the costmap. So it still stops the car if the planner, the controller or the costmap goes wrong.
 
 | Setting | Ours |
 |---|---|
 | Stop zone | going forward (or standing): a box from the front bumper to 1 m ahead. Reversing: a box from the rear bumper to 1 m behind. Each 0.2 m wider than the car each side. Nav2's `velocity_polygon` picks one by the command's speed |
 | Behind the car | only the lidar sees there (all round), not the radar. The rear camera's obstacles: later (TODO 25) |
-| Points needed | 3 (one stray radar point mustn't stop the car) |
-| Radar silent for | 1.0 s → stop |
+| Points needed | 3 (one stray point mustn't stop the car) |
+| Radar or lidar silent for | 1.0 s → stop |
 | Guards | **only Nav2**. The joystick and keyboard reach `twist_mux` without it |
 
 It runs with the radar or the lidar: on the bench, on the car, and in Gazebo's road and
@@ -183,10 +181,11 @@ try stops at the box. Nothing is hit, but the car rocks until the way is clear.
 ## 6. GPS waypoints
 
 ```text
-HUD route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to map x, y ─► one goal after another
+street route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to map x, y ─► one goal after another
 ```
 
-- `waypoint_follower` serves `/follow_gps_waypoints` (`nav2_msgs/action/FollowGPSWaypoints`).
+- `street_router` and the language tools send the route; `waypoint_follower` serves
+  `/follow_gps_waypoints` (`nav2_msgs/action/FollowGPSWaypoints`).
 - It turns each point into map x, y with navsat_transform's `/fromLL`
   ([Learn: GPS](learn-gps.md)).
 - Nav2 doesn't know where the road is. It plans across its costmap between points.
@@ -199,7 +198,7 @@ HUD route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to m
 | Gazebo | reaches 8 m and 9.5 m goals |
 | Bench | drives 40 m past a stop sign; stops for a box in the road |
 | The car | never run yet |
-| The HUD's GPS route → Nav2 | written; never run with the real OSRM server |
+| A street route → Nav2's GPS waypoints | ✅ in Gazebo (Valhalla, [Street routes](routes.md)); untested on the car |
 
 ## Try it
 
@@ -222,5 +221,5 @@ HUD route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to m
 | The car's behaviour trees | `ros/drivers/aav_navigation/behavior_trees/` |
 | Maps | `ros/drivers/aav_navigation/maps/` (`empty`, `example_lot`) |
 | Footprint, turning radius, stop zone from the car's size | `ros/bringup/aav_description/aav_description/vehicle.py` |
-| Nav2's place among the drivers | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| Nav2's place among the drivers | `ros/command_mux/aav_command_mux/config/twist_mux.yaml` |
 | Costmaps in detail; draw a map | [Costmaps](costmaps.md) |

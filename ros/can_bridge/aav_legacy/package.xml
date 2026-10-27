@@ -25,6 +25,9 @@
   <test_depend>aav_io_mux</test_depend>
   <!-- test_uplink_chain.py runs rc_driver with the bridge. -->
   <test_depend>aav_rc</test_depend>
+  <!-- test_no_timeout_lock.py runs the stock twist_mux with aav_command_mux's config. -->
+  <test_depend>twist_mux</test_depend>
+  <test_depend>aav_command_mux</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

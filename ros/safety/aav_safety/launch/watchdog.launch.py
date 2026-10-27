@@ -6,7 +6,7 @@ The sensor watchdog: stops Nav2 and the AI slot when a sensor they need dies or 
 
 inputs: the names in config/sensor_watchdog.yaml to watch, comma-separated; each profile
 passes the sensors it has (sim.launch.py, bench.launch.py, car.launch.py with Nav2).
-twist_mux's sensors lock (aav_mux config/twist_mux.yaml) reads its
+twist_mux's sensors lock (aav_command_mux config/twist_mux.yaml) reads its
 /safety/sensor_watchdog/lock. docs/simulation.md ("Sensor failures on purpose").
 """
 

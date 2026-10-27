@@ -1,5 +1,7 @@
 # The hardware audit, step by step (Friday 16 October)
 
+> **A snapshot from 16 October 2026.** The audits ran on 16 and 21 Oct: [16 Oct](history/audit-2026-10-16-car.md), [21 Oct](history/audit-2026-10-21-car.md). What's true now: [Status](status.md).
+
 The first time the 2026-27 team logs in to the car's computers. The goal: **know what is
 there, and save a copy, without changing anything.** This page is steps 2 and 3 of
 [Work](work.md) ("Backups", "Inventory the car"), and it covers the checklist at the end of
@@ -11,7 +13,7 @@ there, and save a copy, without changing anything.** This page is steps 2 and 3 
 
 
 **The plan for the whole day** (audit, network, our stack on the car):
-[READ-ME-FRIDAY.md](../READ-ME-FRIDAY.md). **Every question to answer:**
+[Friday 16 Oct](history/friday-2026-10-16.md). **Every question to answer:**
 [Friday's questions](audit-questions.md).
 
 !!! note "After the backups: our stack, from a USB stick"
@@ -93,17 +95,44 @@ Fill in this table as you go. Put the switch port label in the first column.
 
 | Switch label | Hostname | IP | MAC | Answers ssh? |
 |---|---|---|---|---|
-| JETSON | | | | |
-| CAM1-PI | | | | |
-| CAM2-PI | | | | |
-| RTK-PI | | | | |
-| DASH-UI | | | | |
-| ES-PI | | | | |
-| QNX-PI | | | | |
-| LIDAR | | | | no (a sensor) |
-| ROUTER | | | | no (web page) |
-| (not on the switch) Motor-Pi | | | | |
-| (not on the switch) wheel encoder | | | | no |
+| JETSON | `ubuntu` (likely) | 192.168.1.140 | 48:b0:2d:a6:56:86 | yes — and Foxglove bridge on :8765 |
+| CAM1-PI | *(not up / not found)* | | | |
+| CAM2-PI | `aav-cam2` | 192.168.1.118 | 88:a2:9e:20:6c:b5 | yes |
+| RTK-PI | *(candidate: .211)* | 192.168.1.211 | d8:3a:dd:19:44:08 | yes |
+| DASH-UI | *(not yet identified)* | | | |
+| ES-PI | *(not yet identified)* | | | |
+| QNX-PI | *(not yet identified)* | | | |
+| LIDAR | Velodyne VLP-16 | 192.168.1.201 | 60:76:88:38:66:a9 | no — web page on :80 |
+| ROUTER | `cisco00956` (not the guessed Linksys) | 192.168.1.1 | c8:d7:19:3d:51:26 | no — web page on :80 |
+| (not on the switch) Motor-Pi | *(silent; not at .193 now)* | | | |
+| (not on the switch) wheel encoder | *(silent; MAC `54:65:…` not seen)* | | | |
+
+### What the scan actually found (16 Oct, ~14:17, from a Mac: ping sweep + `arp -a` + port probe)
+
+`nmap` wasn't installed; this is a ping sweep, the ARP table, and a probe of common ports.
+
+| IP | Hostname | MAC | OS (SSH banner) | Open | Read as |
+|---|---|---|---|---|---|
+| .1 | cisco00956 | c8:d7:19:3d:51:26 | — | 80 | **Router** (Cisco, not the guessed Linksys) |
+| .118 | **aav-cam2** | 88:a2:9e:20:6c:b5 | Debian 13 (OpenSSH 10.0p2) | 22 | Camera Pi, freshly imaged |
+| .120 | **ubuntu-cortex** | 88:a2:9e:76:0b:f0 | Ubuntu 22.04 | 22 | Pi — the Cortex/actuator host? |
+| .132 | esp32-4cad8c | 34:98:7a:4c:ad:8c | — | — | **ESP32** control board |
+| .140 | ubuntu | 48:b0:2d:a6:56:86 | Ubuntu 22.04 | 22, **8765** | **ROS box** — Foxglove bridge live (likely the Jetson) |
+| .195 | — | d8:3a:dd:2c:0d:49 | Ubuntu 22.04 | 22 | **Same machine as .196** (see note) |
+| .196 | **aav-desktop** | d8:3a:dd:2c:0d:4c | Ubuntu 22.04 | 22 | Desktop, dual-homed |
+| .201 | — | 60:76:88:38:66:a9 | — | 80 | **Velodyne VLP-16 LiDAR** (web UI) |
+| .211 | — | d8:3a:dd:19:44:08 | Ubuntu 22.04 | 22 | A Pi, role TBD |
+
+!!! note "aav-desktop is dual-homed (.195 = .196)"
+    `.195` and `.196` have **byte-for-byte identical SSH host keys** (RSA and ed25519) and
+    consecutive MACs (`…0d:49` / `…0d:4c`): one physical machine with two Ethernet ports
+    on the switch, not two machines. Untangle this — two interfaces on one subnet can make
+    DDS bind oddly.
+
+!!! warning "Not seen on the network at scan time"
+    The **Motor-Pi** (expected .193), the **wheel-encoder Pico** (MAC `54:65:6d:70:65:6c`),
+    and a **CAM1-PI** did not answer. Either powered off, or on a separate wired segment not
+    bridged to this router. Re-check with the car fully powered.
 
 ## Step 3: back up first
 
@@ -149,7 +178,7 @@ sudo dd if=/dev/rdiskN bs=4m | gzip > ~/aav-backup/<machine>.img.gz
     `security add-generic-password -s aav-jetson -a aavjetson -w` (it asks).
 
 !!! note "Now a script: `pixi run survey`"
-    [FRIDAY-TODO.md](../FRIDAY-TODO.md) part 2: `tools/machine_survey.sh` does all of the block
+    [Friday 16 Oct: the to-do list](history/friday-todo-2026-10-16.md) part 2: `tools/machine_survey.sh` does all of the block
     below and more (boot scripts, who holds each device, camera and power errors, code and
     weights found only here), on every machine in `~/aav-audit/hosts.txt`. The block below
     stays as the by-hand version.
@@ -278,7 +307,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5
 | **Answers** | Q22, car-photos #3. Since 20 Oct we run the stock velodyne driver for it |
 | **Photograph** | its label (model, serial) on the roof tripod |
 
-### The router (Linksys EA3500)
+### The router (Cisco `cisco00956`, found 16 Oct; the old code guessed a Linksys EA3500)
 
 | | |
 |---|---|
@@ -310,7 +339,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5
 
 ## Step 5: measure, and the power
 
-The tape-measure list is [Car numbers](car_measurements.md) (Q1-Q5). Also, from car-photos #7:
+The tape-measure list is [Car numbers](car_measurements.md) (Q1-Q9, Q18, Q20, Q22). Also, from car-photos #7:
 read the rating off each 12 V → 5 V converter, and note what each one feeds (the dash one
 showed 3.5 A; a Pi 5 wants 5 A).
 

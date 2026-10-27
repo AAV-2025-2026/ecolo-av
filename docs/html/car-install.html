@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -83,7 +96,8 @@ sudo</strong>, and <strong>without touching</strong> the 2025-26 Humble software
 <p class="admonition-title">Not on the car yet</p>
 <p>The kit is made and checked on a Mac, and installed offline on 64-bit ARM Linux by CI
 on every push (GitHub's ARM runner, Ubuntu 24.04). On the Orin and the Pis it is
-<span class="badge b-untested">untested</span>: Friday is its first run there. Do the <a href="audit-friday.html">audit</a> first: back up, then install.</p>
+<span class="badge b-untested">untested</span>: car day is its first run there (<a href="car-day.html">Car day</a>, session 4). Back
+up first, then install.</p>
 </div></div>
 <section class="card"><h2 id="the-plan-in-one-picture">The plan in one picture</h2>
 <pre class="highlight"><code class="language-text">  Mac (internet)                    USB stick                 car computer (no internet)
@@ -134,7 +148,9 @@ on every push (GitHub's ARM runner, Ubuntu 24.04). On the Orin and the Pis it is
 </section>
 <section class="card"><h2 id="1-make-the-kit-on-a-mac-with-internet">1. Make the kit (on a Mac, with internet)</h2>
 <pre class="highlight"><code class="language-bash">cd ~/ecolo-av
-git checkout main &amp;&amp; git pull       # the kit holds what is committed, nothing else
+git fetch upstream &amp;&amp; git switch main &amp;&amp; git merge --ff-only upstream/main
+                                    # the team's main (CONTRIBUTING.md); the kit holds
+                                    # what is committed, nothing else
 pixi run car-kit                    # writes car-kit/ (git ignores it)</code></pre>
 <p>What it holds (made on Ben's Mac, 15 Oct):</p>
 <div class="table-wrap"><table>
@@ -262,7 +278,7 @@ bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --dry-run</code></pre>
 </tr>
 <tr>
 <td>5</td>
-<td><code>colcon build</code>, offline. The HUD (<code>aav_hud_raylib</code>) only with <code>--all</code></td>
+<td><code>colcon build</code>, offline. The HUD (<code>aav_hud</code>) only with <code>--all</code></td>
 <td><code>~/aav-jazzy/aav/install</code></td>
 </tr>
 </tbody>
@@ -306,7 +322,7 @@ ESP32.</p>
 </tr>
 <tr>
 <td>Can open?</td>
-<td><code>yes</code>, or <code>needs group dialout</code> (an admin adds you later, not Friday)</td>
+<td><code>yes</code>, or <code>needs group dialout</code> (an admin adds you later)</td>
 </tr>
 <tr>
 <td>In use by</td>
@@ -317,7 +333,7 @@ ESP32.</p>
 </section>
 <section class="card"><h2 id="why-ros_domain_id-42">Why ROS_DOMAIN_ID 42</h2>
 <p>A domain is a separate ROS network on the same wires: each one uses its own UDP ports.
-The 2025-26 software uses domain 0 or 10. <code>aav.sh</code> always sets <strong>42</strong>, so our nodes and
+The 2025-26 software runs on domain 0 (the 21 Oct audit; their camera README says 10). <code>aav.sh</code> always sets <strong>42</strong>, so our nodes and
 theirs never see each other: no mixed Humble and Jazzy messages, no topic clashes.</p>
 <ul>
 <li>To watch our nodes from a Mac: <code>export ROS_DOMAIN_ID=42</code> there too.</li>
@@ -358,7 +374,7 @@ terminal set (<code>AMENT_PREFIX_PATH</code>, <code>PYTHONPATH</code>...). Pixi 
 <div class="admonition warning">
 <p class="admonition-title">Before <code>car</code></p>
 <p>Wheels off the ground, the e-stop in a hand, and the 2025-26 software stopped
-(<a href="platforms.html">Platforms</a>, "The first hardware test"). Not on Friday's audit.</p>
+(<a href="platforms.html">Platforms</a>, "The first hardware test"; <a href="car-day.html">Car day</a>, session 9).</p>
 </div>
 </section>
 <section class="card"><h2 id="undo">Undo</h2>
@@ -406,7 +422,7 @@ GitHub, so <code>git pull</code> in <code>~/aav-jazzy/aav</code> works once the 
 </tr>
 <tr>
 <td>the install on the Orin or a Pi</td>
-<td><span class="badge b-untested">untested</span>: Friday</td>
+<td><span class="badge b-untested">untested</span>: car day</td>
 </tr>
 </tbody>
 </table></div></section>

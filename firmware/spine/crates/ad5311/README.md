@@ -1,5 +1,7 @@
 # ad5311
 
+## Overview
+
 The throttle DAC: an Analog Devices AD5311, a 10-bit DAC on I2C. Its output goes to
 the motor controller's throttle input: code 0 is 0 V, code 1023 is almost its supply
 voltage. Plain `no_std` Rust, written against `embedded-hal` 1.0.
@@ -23,7 +25,7 @@ TI's DAC101C081 takes the same two bytes, but it answers at 0x0C only with its A
 pin floating (0x0D when tied to ground). This driver works for either.
 TODO(Q13): read the part number off today's board.
 
-## API
+## Interface
 
 | Call | Does |
 |---|---|
@@ -33,12 +35,29 @@ TODO(Q13): read the part number off today's board.
 | `power_down(mode)` | turns the output off: pulled down through 1 kΩ or 100 kΩ, or floating |
 | `read()` | reads back the code and mode; also checks the DAC answers |
 | `encode(code, mode)`, `decode(bytes)` | the two bytes, without a bus |
+| `address()`, `limit()` | what it was made with |
 | `release()` | gives the bus back |
+| `Mode`, `Register` | the power-down modes; a code and mode read back |
+| `ADDRESS_A0_LOW`, `ADDRESS_A0_HIGH`, `MAX_CODE` | 0x0C, 0x0D, 1023 |
 
 From the *AD5301/AD5311/AD5321* data sheet (Rev. C), sections "Serial interface",
 "Input shift register" (Figure 27), "Read operation" and "Power-down modes" (Table 6).
 
-## Test
+## Invariants
+
+- Never writes a code above its limit, nor above 1023. A limit above 1023 is cut
+  to 1023.
+- `power_down` always writes code 0.
+- Errors come back as the bus's own `Result`; nothing panics.
+- Only the chip: no ramp, no scaling. `spine-board` turns 0..1 into codes.
+
+## Side Effects
+
+- I2C writes and reads to the DAC at its address. A write changes the throttle
+  voltage at once, so the motor may move.
+- Nothing else: no timers, no allocation.
+
+## Verification
 
 ```sh
 cd firmware/spine

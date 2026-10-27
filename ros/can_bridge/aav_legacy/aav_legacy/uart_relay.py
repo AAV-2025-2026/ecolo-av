@@ -11,6 +11,10 @@ counter as it last came, and the e-stop flag. The relay never makes a counter up
 the Orin goes quiet the counter stays where it was, however many frames still go out,
 and the ESP32 brakes 100 ms later (TODO 50). Version 1 is the 2025-26 13-byte frame,
 for the C++ firmware: no counter, no flags.
+
+`programs_locked` decides the no-timeout lock (/safety/legacy_uart_bridge/lock): with
+version 1 the firmware has no command timeout, so twist_mux holds every program below the
+actuator tests, and only people (and the tests they run) drive.
 """
 
 from __future__ import annotations
@@ -21,6 +25,23 @@ from aav_legacy.legacy_protocol import (LegacyMapping, pack_frame, pack_frame_v2
                                         to_legacy)
 
 VERSIONS = (1, 2)
+# Which frame versions go to a firmware that brakes by itself when the frames or the
+# Orin's counter stop: version 2 (the Rust firmware, 100 ms). Version 1 is the 2025-26 C++.
+WITH_TIMEOUT = (2,)
+
+
+def programs_locked(version: int, allow_programs_without_timeout: bool = False) -> bool:
+    """
+    Return True if twist_mux must hold the programs (scripted, replay, point, Nav2, AI).
+
+    True for a frame version whose firmware has no command timeout (1, the C++): if the
+    bridge or the Orin dies mid-drive, the last throttle stays on, so only a person, with
+    the e-stop in reach, drives. `allow_programs_without_timeout` overrides it, for a
+    supervised stand (wheels off the ground) only.
+    """
+    if version not in VERSIONS:
+        raise ValueError(f'frame_version {version}: use 1 (the C++ firmware) or 2')
+    return version not in WITH_TIMEOUT and not allow_programs_without_timeout
 
 
 class Relay:

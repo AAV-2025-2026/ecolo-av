@@ -278,7 +278,7 @@ def circle_length(angle: float, wheelbase: float) -> float:
 @dataclass(frozen=True)
 class Test:
     name: str
-    number: str        # in READ-ME-TESTS.md
+    number: str        # in docs/tests.md
     stage: int         # 3: on stands; 4: in the lot
     title: str
     build: Callable[[Settings], List[Step]]

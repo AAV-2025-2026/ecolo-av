@@ -12,7 +12,7 @@ purpose: `AAV_DISCOVERY=SUBNET pixi run sim`.
 
 | Rung | Runs | Proves |
 |---|---|---|
-| 1. Unit tests: `pixi run test` | the maths and protocols, without ROS | ego's maths, the CAN frames, the spine logic |
+| 1. Unit tests: `tools/test.sh` (`pixi run test` adds the ROS tests) | the maths and protocols, without ROS | ego's maths, the CAN frames, the spine logic |
 | 2. turtlesim: `pixi run turtle` | mux, ego, scripted driver, `ekf_local` | the command path, end to end |
 | 3. Gazebo: `pixi run sim` | the whole stack, on a simulated car with an IMU and GPS; in the road world, its camera and radar too | localization and Nav2; in the road world, the car's whole graph: `pixi run sim-check` |
 | 4. Replay | localization (and Nav2) on a recorded drive | config changes, against real sensor data |
@@ -59,6 +59,10 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 | `faults` | `false` | `true`: the front left picture goes through `gazebo_camera` too, so it can freeze on purpose |
 | `actuator_model` | `true` | the car answers like `vehicle.yaml`'s `actuators:` say ([below](#the-actuator-model)); `false`: the old instant car, to compare |
 
+**Debugging Gazebo itself:** its source is in `vendor/gazebo/` (`pixi run vendor`), at the
+releases we run. `vendor/README.md` says which library does each job: the steering, the
+sensors, the physics, the ROS bridge.
+
 ### What Gazebo simulates
 
 Rates measured on Ben's Mac, 15 Oct, on simulated time (`ros2 topic hz -s`), with the
@@ -98,24 +102,23 @@ nodes, not in the contract.
 
 ![What the three simulated cameras see, at the start of the road world](img/sim-cameras.png)
 
-Where each sensor sits (15 Oct, until Friday's tape measure): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from `vehicle.yaml`. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.
+Where each sensor sits (15 Oct, until the car is measured): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from `vehicle.yaml`. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.
 
 ### What isn't simulated
 
 | Thing | Why not |
 |---|---|
-| The right and rear cameras | only the front left camera is in the URDF's Gazebo sensors |
 | The magnetometer | the EKFs don't use it |
 | The battery | nothing to simulate yet |
 | The real CAN bus | with `spine:=true` the CAN frames travel as ROS topics (`/can/tx`, `/can/rx`), as on the bench; no bus timing or errors |
-| The real actuators' numbers | the [actuator model](#the-actuator-model) has them, but they're guesses until the tests (`READ-ME-TESTS.md` 3.10-3.12, 4.1-4.5) |
-| Wheel slip, slopes, the weight | the model sets the speed; no forces (option B in `READ-ME-FULL-SIMULATION.md`) |
+| The real actuators' numbers | the [actuator model](#the-actuator-model) has them, but they're guesses until the tests (`tests.md` 3.10-3.12, 4.1-4.5) |
+| Wheel slip, slopes, the weight | the model sets the speed; no forces (option B in `full-simulation.md`) |
 | A real radar | the stand-in is a lidar: it sees every surface, and no speeds of its own |
 | Traffic, people, weather | the worlds are empty but for the road, the sign and the box |
 
 ### The actuator model
 
-Added 15 Oct (`READ-ME-FULL-SIMULATION.md`, step 3). Gazebo used to set the speed itself
+Added 15 Oct (`full-simulation.md`, step 3). Gazebo used to set the speed itself
 (+1.5 / -3.0 m/s²) and steer at once. Now `gazebo_adapter` puts a model of the actuators
 in between, 50 times a second, on Gazebo's clock:
 
@@ -202,7 +205,7 @@ To drive it:
 
 ### The spine in the loop: `spine:=true`
 
-Added 15 Oct (`READ-ME-FULL-SIMULATION.md`, step 4). The car's own `spine_bridge` and the
+Added 15 Oct (`full-simulation.md`, step 4). The car's own `spine_bridge` and the
 bench's `spine_sim` (the spine's firmware logic, `spine-core`) go between ego and the
 actuator model:
 
@@ -226,7 +229,7 @@ pixi run sim-check --spine                # tests it (3 more minutes)
 | Arming | always armed | `/spine/arm`, as on the car |
 | `/system/source` | SIM (`gazebo_adapter`) | SIM (`spine_bridge`, `source:=sim`) |
 
-Stop times in full: [READ-ME-FULL-SIMULATION.md](../READ-ME-FULL-SIMULATION.md#stop-times-the-direct-path-vs-the-spine).
+Stop times in full: [Full simulation](full-simulation.md#stop-times-the-direct-path-vs-the-spine).
 
 ### Faster in Gazebo: `sim_speed:=`
 
@@ -253,9 +256,8 @@ Gazebo, RViz, Nav2 and the HUD window together. Give goals with RViz's 2D Goal P
 
 | Argument | Opens |
 |---|---|
-| `hud:=true` | the HUD window (`aav_hud_raylib`, the same as `pixi run hud`) |
+| `hud:=true` | the HUD window (`aav_hud`, the same as `pixi run hud`) |
 | `foxglove:=true` | the Foxglove bridge on 127.0.0.1:8765: open Lichtblick, then `ws://localhost:8765` and a layout from `tools/foxglove/` ([Watch from a laptop](foxglove.md)) |
-| `hud_web:=true` | the Flutter app's web server on 127.0.0.1:5000 (this was `hud:=true` before 15 Oct) |
 | Tried, 15 Oct | the parking lot, sim speed 3, the HUD on: a 36 m Nav2 goal reached |
 
 If you reopen Gazebo's window (`pixi run gz-window`), its camera follows the car again.
@@ -295,9 +297,10 @@ point's speed is the car's own, along the line of sight.
 
 ### The lidar: Gazebo only
 
-The car has a lidar on its roof, but its model is unknown (Q22) and our code has no driver
-yet. So Gazebo has a generic one, to try what a lidar would add. **It's on by default
-(15 Oct)** in the road and test_lot worlds: `pixi run sim world:=road` or `world:=test_lot`.
+The car has a Velodyne VLP-16 on its roof, read by the stock `velodyne` driver (on by
+default on the car; untested with the real lidar). Gazebo has a generic 16-beam one in
+its place. **It's on by default (15 Oct)** in the road and test_lot worlds:
+`pixi run sim world:=road` or `world:=test_lot`.
 
 | | |
 |---|---|
@@ -306,7 +309,7 @@ yet. So Gazebo has a generic one, to try what a lidar would add. **It's on by de
 | Size | 1800 x 16 points, 0.9 MB a cloud, so it's bridged **reliably**: best effort loses big messages (see [Mac](mac.md)) |
 | Who reads it | Nav2, since 15 Oct (below): `lidar_scan` flattens it into a 2D scan for the local costmap and `collision_monitor` |
 | Turn it off | `lidar:=false`: the simulated sensor leaves the URDF (the frame stays), and its bridge doesn't start |
-| On the Mac, alone | stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. `sim-check --lidar` passes |
+| On the Mac, alone | stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. `sim-check` passes with it |
 | On the Mac, with YOLO too, the morning of 15 Oct | **flaky**: `sim-check --perception` failed 3 runs out of 3 with the lidar on (a stuck global EKF twice, a 2.5 s stall once). Without it, it passed (see [sim-check](#sim-check)) |
 | Why it was off | anything that shows the lidar (RViz, a check) pulls 9 MB/s of reliable clouds. Fast DDS's shared memory fails on the Mac (`open_and_lock_file failed`), so they go over loopback UDP, and with YOLO running, other processes start missing messages (one lost `/clock` for 2 minutes) |
 | Now | on by default again: with the Mac quiet, everything together passed twice (below). If a run stalls, check for leftover simulators first (`ps aux \| grep gz`), then try `lidar:=false` |
@@ -324,7 +327,7 @@ yet. So Gazebo has a generic one, to try what a lidar would add. **It's on by de
 | What counts | points from 0.3 m above the road to 0.5 m over the roof (2.0 m): `vehicle.obstacle_heights`, from `vehicle.yaml`. The road, kerbs and overhead branches don't; nor do points on the car itself |
 | The scan | 720 directions (0.5°), each the nearest point, flat from `base_link`; `inf` where nothing is, which clears the costmap |
 | Its own costmap layer | `lidar_layer`, so its clearing never wipes the radar's marks |
-| Switch | `navigation.launch.py lidar:=true`. `sim.launch.py` passes it where the world renders the lidar. **The car: `lidar:=false`**, as no driver publishes its lidar yet (probably a Velodyne: audit N6) |
+| Switch | `navigation.launch.py lidar:=true`. `sim.launch.py` passes it where the world renders the lidar. The car: on by default (the `velodyne` driver; `car.launch.py lidar:=false` turns it off) |
 | CPU | `lidar_scan` about 4% of one core; Nav2's two readers get 3 kB a scan instead of 0.9 MB |
 | Why not the stock `pointcloud_to_laserscan` | tried first: it subscribes best effort, and on a Mac no 0.9 MB cloud ever arrives that way ([Mac](mac.md)). Ours subscribes reliably |
 | Its blind spot | from 1.8 m up, the lowest beam (15° down) meets a 1 m box only 2.1 m ahead of the bumper, and the road only 4.9 m ahead. In the stop zone (bumper to 1 m ahead) it sees only what stands over about 1.3 m: a person, a car, a post. Low things close in front are the radar's |
@@ -341,10 +344,10 @@ angles small depth errors become large range errors.
 | Argument | Default | Starts |
 |---|---|---|
 | (always, in the road world) | | `radar_clusters`, and Nav2's obstacle layer and `collision_monitor`; `lidar_scan` and the lidar layer; the sensor watchdog |
-| `perception` | `false` | YOLO and `stop_sign_watcher`: twist_mux's stop-sign lock. Needs `pixi run -e ml` |
+| `perception` | `false` | the object detector (RF-DETR Nano; YOLO with `detector:=yolo`) and `stop_sign_watcher`: twist_mux's stop-sign lock. Needs `pixi run -e ml` |
 | `lane` | `false` | `true`: lane keeping (`lane_finder`, and `control_interface` on `/drivers/ai/cmd_vel`). Add `nav:=false`: Nav2 outranks it. `fake`: on a pretend lane, in any world |
 | `camera_obstacles` | `false` | the detectors' boxes into Nav2's local costmap |
-| `hud` | `false` | the HUD's web server, on 127.0.0.1:5000 |
+| `hud` | `false` | the HUD window (raylib) |
 | `obstacle` | `false` | the bench's 1 m box, in the lane 15 m ahead |
 | `ghost` | `false` | a pretend person only Nav2 sees: `pixi run ghost --local ahead 10` ([Ghost obstacles](ghost-obstacles.md)) |
 | `start_y`, `start_yaw` | `0.0` | m and rad: start the car this far left of the centre, and turned this far left. The EKFs still start at the origin, facing east |
@@ -364,7 +367,7 @@ pixi run sim world:=road lane:=true nav:=false start_y:=0.3  # lane keeping alon
 | Window | Shows |
 |---|---|
 | Gazebo | the car on the road; the window's camera follows it |
-| RViz (`rviz/road.rviz`) | the map and both costmaps, the plan, the car, the radar's points (magenta) and clusters, the stop zone (red), Gazebo's truth (grey arrows), the camera's picture, and YOLO's boxes with `perception:=true` |
+| RViz (`rviz/road.rviz`) | the map and both costmaps, the plan, the car, the radar's points (magenta) and clusters, the stop zone (red), Gazebo's truth (grey arrows), the camera's picture, and the detector's boxes with `perception:=true` |
 | rqt_graph: `pixi run graph` | every node and topic, as on the bench |
 
 ### On a Mac
@@ -406,7 +409,7 @@ Ran on Ben's Mac, 15 Oct, after the topic renaming:
 | Run | Result |
 |---|---|
 | `pixi run sim-check` | all pass: start-up, the contract (0 failures), sensors, a scripted drive of 6.3-6.5 m (plan 6.5 m), the global EKF within 0.1-0.3 m of the truth |
-| `pixi run sim-check --lidar --obstacle` | all pass: the lidar at 10.0 Hz with 12654 hits; the car stood still 0.79 m before the box; with the box gone, Nav2 reached its goal 29.6 m on |
+| `pixi run sim-check --obstacle` (the lidar on) | all pass: the lidar at 10.0 Hz with 12654 hits; the car stood still 0.79 m before the box; with the box gone, Nav2 reached its goal 29.6 m on |
 | `pixi run -e ml sim-check --perception` | all pass: YOLO saw the sign from 11.2 m, the lock went on at 18.2 m, the car stood with its bumper 4.8 m before the sign, then reached its goal at 39.9 m |
 | The same, with the lidar on | failed 3 times out of 3 that morning (why: [the lidar](#the-lidar-gazebo-only)), so the lidar went off by default |
 | The same, afternoon, a quiet Mac (an orphaned Gazebo and five leftover ROS daemons stopped) | **passed 2 out of 2** with the lidar, three cameras, the radar and YOLO: the sign seen from 9.6 m, the car stood 3.6 m before it, then reached its goal. So the lidar is on by default again |
@@ -426,7 +429,7 @@ say why. So the full graph with YOLO is still a little flaky on a busy Mac.
 
 ## Sensor failures on purpose
 
-READ-ME-FULL-SIMULATION.md step 6 (15 Oct): make a simulated sensor fail, and check the
+full-simulation.md step 6 (15 Oct): make a simulated sensor fail, and check the
 car stops, **safely and loudly**.
 
 ### Make one fail
@@ -489,7 +492,7 @@ source: `LockTopicHandle::isLocked`), so 1 s of silence holds Nav2 too.
 | Profile | Watchdog | Lock |
 |---|---|---|
 | Gazebo, `watchdog:=true` (the default) | runs | fail-safe |
-| Gazebo, `watchdog:=false` | none | timeout 0 (`aav_mux` `no_sensor_lock.yaml`) |
+| Gazebo, `watchdog:=false` | none | timeout 0 (`aav_command_mux` `no_sensor_lock.yaml`) |
 | Bench | always runs | fail-safe |
 | Car | next to the mux, wherever Nav2 runs | fail-safe |
 | Turtle | none | timeout 0 |
@@ -610,7 +613,7 @@ timing jumps with the fixes' stamps, plus 5 m for their noise.
 | The cross check's limits on the car | Gazebo's numbers. Read `worst_*_gap` on `/diagnostics` after a normal drive. A sloping lot, the real IMU's mounting and the real GPS's noise all change them |
 | A frozen wheel at a speed the car keeps | not caught until the speed or turn changes by more than the limits: harmless till then, but the EKF's position drifts if the car is under 0.15 m/s faster or slower than the wheels say (MPPI keeps it near them: [frozen wheels and MPPI](#frozen-wheels-and-mppi)) |
 | ~~`odom freeze` is flaky (23 Oct)~~ | found and fixed 24 Oct: MPPI keeps the car near the frozen speed, under the GPS's old 0.3 m/s ([frozen wheels and MPPI](#frozen-wheels-and-mppi)) |
-| The real car's faults | the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog |
+| The real car's faults | the same checks with the car on stands (tests.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog |
 
 ## Replay a recorded drive
 

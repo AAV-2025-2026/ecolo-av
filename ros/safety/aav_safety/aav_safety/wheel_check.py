@@ -3,7 +3,7 @@ The wheels against the IMU and the GPS: do they tell the same story? No ROS here
 
 A wheel-speed driver stuck in a loop sends its last speed again with fresh stamps. At a
 steady speed that looks exactly like a car at a steady speed, so the watchdog's frozen
-check can't tell (READ-ME-FULL-SIMULATION.md, "What's left", 15 Oct). The IMU can, as soon
+check can't tell (docs/full-simulation.md, "What's left", 15 Oct). The IMU can, as soon
 as the car's speed or turn changes, and the GPS can once the speed is wrong for a while:
 
   speed   over the last `window` s, the change in the wheels' speed against the IMU's

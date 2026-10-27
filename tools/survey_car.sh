@@ -52,4 +52,4 @@ done < "$hosts"
 
 echo
 echo "Next: read each file before sharing it (secrets are cut, but check)."
-echo "Copy anything that exists only on the car (weights, unpushed code): FRIDAY-TODO.md, part 4."
+echo "Copy anything that exists only on the car (weights, unpushed code): docs/history/friday-todo-2026-10-16.md, part 4."

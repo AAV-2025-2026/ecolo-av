@@ -53,7 +53,7 @@
   <xacro:sim_camera link="camera_right_link" name="camera_right" topic="/aav/camera_right"/>
   <xacro:sim_camera link="camera_rear_link" name="camera_rear" topic="/aav/camera_rear"/>
 
-  <!-- A radar stand-in: a lidar shaped like the TI IWR6843AOP with ti_ros2_driver's
+  <!-- A radar stand-in: a lidar shaped like the TI IWR6843AOP with aav_radar_ti's
        cfg/base.cfg, as the bench's mock_radar is: 8.4 m, 120 degrees wide, a ray every
        2 degrees, 10 Hz, 5 cm of range noise. Three rays up and down, from 1 degree down to
        7 up: the lowest meets the ground 23 m away, well past 8.4 m, so like a radar it sees

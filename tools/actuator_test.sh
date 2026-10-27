@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The actuator tests (READ-ME-TESTS.md stages 3-4; docs/actuator-tests.md).
+# The actuator tests (docs/tests.md stages 3-4; docs/actuator-tests.md).
 #
 # usage: tools/actuator_test.sh <test> [--sim] [--stands] [options]   (pixi run actuator-test)
 #   --sim    Gazebo: this computer only (tools/ros.sh --local), on simulated time

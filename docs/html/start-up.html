@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it all fits: bottom-up, and what happens at start-up · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/start-up.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>How it all fits: bottom-up, and what happens at start-up</h1>
+<div class="meta">11 min read · 5 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a class="here" href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-the-layers-bottom-to-top">1. The layers, bottom to top</a><a href="#2-each-part-of-the-car-from-the-device-up">2. Each part of the car, from the device up</a><a href="#3-what-happens-when-the-car-starts-and-joins-the-network">3. What happens when the car starts and joins the network</a><a href="#4-how-to-test-each-layer-cheapest-first">4. How to test each layer, cheapest first</a><a href="#5-the-gaps-in-one-list">5. The gaps, in one list</a></nav>
+<div class="lead"><p>Written 15 October 2026, checked 25 October. Read <a href="sim-and-car.html">Sim and the car</a>
+and <a href="maps-and-position.html">Maps and position</a> first, or after: they go
+deeper on two parts of this page.</p>
+<blockquote>
+<p><strong>The short version</strong>
+- The car is <strong>layers</strong>. Each one only talks to the layer above and the one below.
+- Every layer can be tested on its own: the <strong>turtle</strong>, the <strong>bench</strong>, <strong>Gazebo</strong>, then the <strong>car</strong>.
+- At start-up, each computer runs <strong>one command</strong>. Its machine file says which parts run there. They find each other on the network by themselves.
+- Nothing moves until a <strong>driver</strong> asks, the <strong>mux</strong> allows it, and the <strong>backend</strong> is <strong>armed</strong>.
+- <strong>None of this has run on the real car yet.</strong> The start-up below is the design, tested in simulation and on the bench.</p>
+</blockquote></div>
+<section class="card"><h2 id="1-the-layers-bottom-to-top">1. The layers, bottom to top</h2>
+<pre class="highlight"><code class="language-text"> 8  People      HUD screen, laptop (Foxglove, RViz), e-stop buttons
+ 7  Choose      twist_mux picks ONE driver → ego turns it into speed + steering angle
+ 6  Drivers     keyboard, joystick, scripted drive, Nav2, AI (lane keeping), replay
+ 5  Perception  RF-DETR (cameras), radar clusters, lidar scan, lane finder → costmap, stop sign
+ 4  Where am I  ekf_local, ekf_global, navsat_transform
+ 3  Backend     ONE of: legacy (UART, today), spine (CAN, later), Gazebo, bench, turtle
+ 2  Sensors     drivers for camera, radar, lidar, IMU, GPS, and the wheels (CAN)
+ 1  Boards      ESP32 control board, wheel nodes, Jrk G2s, the GPS and IMU chips
+ 0  Wires       power, Ethernet, CAN, USB, UART</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Layer</th>
+<th>Talks up with</th>
+<th>Runs on (planned)</th>
+<th>Test it with</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Boards</td>
+<td>CAN frames, UART bytes</td>
+<td>the boards</td>
+<td>unit tests on a laptop (<code>spine-core</code>, <code>wheel-core</code>); the bench's spine simulator</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Sensors</td>
+<td><code>/sensors/...</code> topics</td>
+<td>the Pi or Orin the device plugs into</td>
+<td>Gazebo (all sensors); the car</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Backend</td>
+<td><code>/vehicle/status</code> up (and <code>/vehicle/odom</code> in the stand-ins); <code>/control/&lt;target&gt;/actuator_cmd</code> down (from the output mux)</td>
+<td>Motor-Pi (today, UART); Orin #1 (the CAN spine, later)</td>
+<td>turtle, bench, Gazebo</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Where am I</td>
+<td>TF <code>map → odom → base_link</code>, <code>/localization/...</code></td>
+<td>Orin #1</td>
+<td>turtle (local only), bench, Gazebo, replay a bag</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Perception</td>
+<td><code>/perception/...</code></td>
+<td>Orin #2 (later); Orin #1 or a laptop today</td>
+<td>bench (<code>--perception</code>), Gazebo road world</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Drivers</td>
+<td><code>/drivers/&lt;name&gt;/cmd_vel</code></td>
+<td>Orin; laptop for keyboard/joystick</td>
+<td>turtle, bench, Gazebo</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Choose</td>
+<td><code>/control/cmd_vel</code> → <code>/ego/actuator_cmd</code></td>
+<td>Orin #1</td>
+<td>turtle (fastest)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>People</td>
+<td><code>/safety/estop</code>, reads everything</td>
+<td>dash Pi (HUD), laptops</td>
+<td><code>pixi run hud-demo</code>, bench</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="2-each-part-of-the-car-from-the-device-up">2. Each part of the car, from the device up</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Wire</th>
+<th>Driver (ours or stock)</th>
+<th>Topic it makes</th>
+<th>Who reads it</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Front cameras L and R</td>
+<td>ribbon, both on one Pi 5</td>
+<td>MediaMTX on the Pi streams H.264; on the Orin, <code>aav_camera_stream</code> decodes each, with RF-DETR inside</td>
+<td><code>/perception/detections</code> (no raw pictures on the network)</td>
+<td>stop-sign watcher, sensor watchdog</td>
+<td>✅ on a Mac; ❌ car</td>
+</tr>
+<tr>
+<td>mmWave radar (TI)</td>
+<td>USB</td>
+<td><code>aav_radar_ti</code> (inherited)</td>
+<td><code>/sensors/radar/points</code></td>
+<td>radar clusters, Nav2's local costmap, collision_monitor</td>
+<td>✅ bench, Gazebo; ❌ car</td>
+</tr>
+<tr>
+<td>Lidar (roof Velodyne VLP-16)</td>
+<td>Ethernet</td>
+<td>the stock <code>velodyne</code> driver, on by default on the car</td>
+<td><code>/sensors/lidar/points</code></td>
+<td>Nav2's costmap, collision_monitor</td>
+<td>✅ Gazebo, bench, a pretend VLP-16; ❌ the real lidar</td>
+</tr>
+<tr>
+<td>IMU (Yahboom)</td>
+<td>USB</td>
+<td><code>aav_imu_yahboom</code> (Rust) + Madgwick filter</td>
+<td><code>/sensors/imu/data</code></td>
+<td>both EKFs</td>
+<td>✅ Gazebo; ❌ car</td>
+</tr>
+<tr>
+<td>GPS (ZED-F9R)</td>
+<td>USB to the RTK-Pi</td>
+<td><code>ublox_gps</code> (stock)</td>
+<td><code>/sensors/gps/fix</code></td>
+<td>navsat_transform, HUD</td>
+<td>✅ Gazebo; ❌ car</td>
+</tr>
+<tr>
+<td>Wheel speed, today</td>
+<td>the hardware lead's Arduino on the Orin's CAN (0x200/0x201)</td>
+<td><code>spine_bridge role:=sensors</code></td>
+<td><code>/vehicle/wheels</code>, <code>/vehicle/odom</code></td>
+<td>both EKFs</td>
+<td>✅ fed wheel frames by hand; ❌ car. The 2025-26 UDP encoder is off since 23 Oct</td>
+</tr>
+<tr>
+<td>Steering</td>
+<td>Jrk G2 + KTC-100 pot (KEFC)</td>
+<td>the control board</td>
+<td><code>/vehicle/status</code> (angle)</td>
+<td>EKF (later), HUD</td>
+<td>❌ no sensor today (open loop)</td>
+</tr>
+<tr>
+<td>Brake</td>
+<td>Jrk G2</td>
+<td>the control board</td>
+<td><code>/vehicle/status</code> (brake %)</td>
+<td>HUD</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>Throttle</td>
+<td>DAC → motor controller</td>
+<td>the control board</td>
+<td><code>/vehicle/status</code> (throttle %)</td>
+<td>HUD</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table></div>
+<p>The commands go the other way: <code>/ego/actuator_cmd</code> (speed + steering angle) → backend →
+board. The board runs the speed loop; each Jrk G2 runs a position loop.</p>
+</section>
+<section class="card"><h2 id="3-what-happens-when-the-car-starts-and-joins-the-network">3. What happens when the car starts and joins the network</h2>
+<p>This is the design. It runs this way on the bench and in Gazebo, but never on the car yet.</p>
+<h3 id="each-computer-runs-one-command">Each computer runs one command</h3>
+<pre class="highlight"><code class="language-bash">pixi run car orin        # on Orin #1
+pixi run car motor_pi    # on the Motor-Pi (today's drive path)
+pixi run -e ml car laptop   # on a laptop at the car: joystick, RF-DETR on its GPU</code></pre>
+<p>Its <strong>machine file</strong> (<code>ros/bringup/aav_bringup/config/machines/&lt;name&gt;.yaml</code>) lists the parts that run there:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Machine</th>
+<th>Parts that run there</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>orin</code></td>
+<td>car model, mux, ego, scripted, drive to point, IMU, GPS, lidar, the two camera streams (RF-DETR inside), stop-sign watcher, localization, Nav2, the CAN bus (wheels), Foxglove</td>
+</tr>
+<tr>
+<td><code>motor_pi</code></td>
+<td>the legacy backend: UART to the ESP32</td>
+</tr>
+<tr>
+<td><code>laptop</code></td>
+<td>joystick, RF-DETR on the laptop's GPU, compressed camera pictures</td>
+</tr>
+<tr>
+<td><code>all</code></td>
+<td>everything on one computer (the bench)</td>
+</tr>
+</tbody>
+</table></div>
+<p>A part that can't run there (no device, no model file, no PyTorch) is <strong>skipped with a warning</strong>, not a crash.</p>
+<h3 id="the-start-up-step-by-step">The start-up, step by step</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>What happens</th>
+<th>Watch it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Power on. Each Pi and the Orin boot Linux</td>
+<td>ping each one</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Each runs its <code>pixi run car &lt;machine&gt;</code> (by hand today; at boot later)</td>
+<td>its terminal</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Discovery:</strong> every ROS program says "hello" on the network (DDS multicast). Same <code>ROS_DOMAIN_ID</code> = same car. In a few seconds every program knows every other</td>
+<td><code>ros2 node list</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>The car model publishes the fixed frames: <code>base_link → imu_link, gps_link, camera..., lidar_link</code></td>
+<td><code>ros2 run tf2_tools view_frames</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Sensor drivers open their devices and start publishing</td>
+<td><code>ros2 topic hz /sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>ekf_local</code> starts as soon as wheel speed and the IMU arrive. <code>ekf_global</code> waits for GPS and the datum</td>
+<td><code>ros2 topic echo /localization/odom/local</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td>Nav2 starts its servers in order (lifecycle), loads the map, and waits for a goal</td>
+<td><code>ros2 lifecycle get /bt_navigator</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td>twist_mux is <strong>silent</strong>: no driver is talking</td>
+<td><code>ros2 topic hz /control/cmd_vel</code> = nothing</td>
+</tr>
+<tr>
+<td>9</td>
+<td>ego sends "speed 0" 50 times a second, always. The output mux passes it on, with its heartbeat, only once every source is REAL (about 4 s after start)</td>
+<td><code>ros2 topic echo /safety/output_mux/state</code> = OPEN</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Today's car (<code>actuators:=uart</code>) has no arm step: the output mux's OPEN is the gate. The CAN spine (<code>actuators:=can</code>) starts <strong>not armed</strong></td>
+<td><code>/vehicle/status</code> armed = false</td>
+</tr>
+<tr>
+<td>11</td>
+<td>CAN spine only: a person arms it on purpose, once the gate is OPEN: <code>ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"</code></td>
+<td>armed = true</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Now a driver can move the car: hold the joystick trigger, send a scripted drive, or give Nav2 a goal</td>
+<td>the HUD</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="a-laptop-joining">A laptop joining</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Join the car's WiFi</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>pixi run doctor</code></td>
+<td>checks the domain ID, discovery and firewall, and says what to fix</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Make sure <code>ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET</code></td>
+<td><code>pixi run sim</code> and friends use LOCALHOST on purpose, so a laptop's simulator never meets the car</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Watch: Foxglove (port 8765 on the Orin), RViz, <code>pixi run hud</code></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-stops-it">What stops it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stop</th>
+<th>How</th>
+<th>Acts on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Kar-Tech wireless e-stop, kill switch</td>
+<td>hardware</td>
+<td>power: overrides everything</td>
+</tr>
+<tr>
+<td>HUD button, <code>pixi run estop</code></td>
+<td><code>/safety/estop</code> = true</td>
+<td>the mux blocks every driver; the backend stops</td>
+</tr>
+<tr>
+<td>The computer freezes</td>
+<td>ego's 50 Hz stops</td>
+<td>the board's timeout brakes: 100 ms in the Rust firmware (the spine, and the Rust ESP32: proven in QEMU, not yet flashed). Today's C++ ESP32 has none (team-todo.md B2)</td>
+</tr>
+<tr>
+<td>An obstacle</td>
+<td>collision_monitor</td>
+<td>Nav2's command, before the mux</td>
+</tr>
+<tr>
+<td>The person drives</td>
+<td>any higher-priority driver</td>
+<td>the mux picks them over Nav2</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="4-how-to-test-each-layer-cheapest-first">4. How to test each layer, cheapest first</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rung</th>
+<th>Command</th>
+<th>Has</th>
+<th>Good for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Unit tests</td>
+<td><code>tools/test.sh</code> (<code>pixi run test</code> adds the ROS tests)</td>
+<td>no ROS</td>
+<td>maths, CAN frames, firmware logic</td>
+</tr>
+<tr>
+<td>2. Turtle</td>
+<td><code>pixi run turtle</code></td>
+<td>a 2D turtle as the car</td>
+<td>drivers, mux, ego, scripted drive</td>
+</tr>
+<tr>
+<td>3. Bench</td>
+<td><code>pixi run bench</code>, <code>pixi run bench-check</code></td>
+<td>pretend sensors, the real CAN frames, the spine's own logic</td>
+<td>the car's software path, e-stops, Nav2, stop sign</td>
+</tr>
+<tr>
+<td>4. Gazebo</td>
+<td><code>pixi run sim world:=road</code> (or <code>world:=test_lot</code>), every sensor on</td>
+<td>3D physics, every sensor</td>
+<td>localization, Nav2, perception, A to B</td>
+</tr>
+<tr>
+<td>5. Replay</td>
+<td><code>ros2 bag play</code></td>
+<td>a recorded drive</td>
+<td>tuning the EKFs against real data</td>
+</tr>
+<tr>
+<td>6. CARLA</td>
+<td>adapter ready, untested</td>
+<td>photoreal towns, Carleton's streets</td>
+<td>needs the NVIDIA computer (Q31; docs/carla.md)</td>
+</tr>
+<tr>
+<td>7. Car on stands</td>
+<td><code>pixi run car orin</code> + <code>motor_pi</code></td>
+<td>the real boards, wheels in the air</td>
+<td>signs, limits, the drive path</td>
+</tr>
+<tr>
+<td>8. Car</td>
+<td>the same, on the ground</td>
+<td>everything</td>
+<td>with a safety driver</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="top-down-i-want-to">Top-down: "I want to..."</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>I want to</th>
+<th>Start at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>see the whole thing move</td>
+<td><code>pixi run sim world:=road</code>, then <code>pixi run keyboard --sim</code></td>
+</tr>
+<tr>
+<td>check that a change broke nothing</td>
+<td><code>pixi run test</code>, then <code>pixi run bench-check</code></td>
+</tr>
+<tr>
+<td>try a new driver</td>
+<td>the turtle</td>
+</tr>
+<tr>
+<td>try perception</td>
+<td><code>pixi run -e ml sim-check --perception</code></td>
+</tr>
+<tr>
+<td>see what the car sees</td>
+<td><code>pixi run hud</code> next to the bench or Gazebo</td>
+</tr>
+<tr>
+<td>drive A to B</td>
+<td><a href="a-to-b.html">A to B</a></td>
+</tr>
+<tr>
+<td>choose models, or put a map on the HUD</td>
+<td><a href="perception-and-hud-map.html">Perception options</a></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="5-the-gaps-in-one-list">5. The gaps, in one list</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Blocks</th>
+<th>Next step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Our code has never run on the car</td>
+<td>everything on the car</td>
+<td>the audits were 16 and 21 Oct; next, Jazzy or Pixi on the Orin (Q24; <a href="car-day.html">car day</a>)</td>
+</tr>
+<tr>
+<td>The camera streams and the lidar driver are untested on the car</td>
+<td>cameras and lidar on the car</td>
+<td>the car day; RF-DETR on the Orin waits for the reflash (Q24)</td>
+</tr>
+<tr>
+<td>No steering sensor</td>
+<td>closed-loop steering</td>
+<td>the KTC-100 (KEFC)</td>
+</tr>
+<tr>
+<td>Wheel speed: the Arduino's CAN frames never seen yet</td>
+<td>good odometry</td>
+<td>the car day: <code>candump can0</code> on the Orin</td>
+</tr>
+<tr>
+<td>The datum is a placeholder</td>
+<td>GPS goals</td>
+<td>measure it at the test site</td>
+</tr>
+<tr>
+<td>No start-at-boot</td>
+<td>a car that's ready when it's switched on</td>
+<td>systemd services, once the stack runs on the car</td>
+</tr>
+</tbody>
+</table></div>
+<p>More detail: <a href="learn-car.html">Learn: the car, box by box</a>, <a href="learn-journey.html">A command's journey</a>,
+<a href="modules.html">Every module</a>, <a href="status.html">Status</a>.</p></section>
+<nav class="prevnext"><a class="prev" href="how-it-fits.html"><small>Previous</small>← How it fits</a>
+<a class="next" href="team.html"><small>Next</small>Starting points →</a></nav>
+</main>
+<footer>Source: <code>docs/start-up.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

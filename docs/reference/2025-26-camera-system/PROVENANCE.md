@@ -3,7 +3,7 @@
 Copied on 2026-10-15 from github.com/AAV-2025-2026/AAV_dashboard @ main (5a26e15), /README.md.
 Kept as a record of how the 2025-26 team's cameras worked: the code it describes
 (`camera_decode`, `best.pt`, `cameras.yaml`) was never in that repo. It lives on the car's
-Jetson, in `~/Desktop/aav/Camera`: copy it on Friday (FRIDAY-TODO.md, part 4).
+Jetson, in `~/Desktop/aav/Camera`: copy it on Friday (../../history/friday-todo-2026-10-16.md, part 4).
 
 Files, unchanged unless listed under Changes:
 

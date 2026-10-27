@@ -1,0 +1,3 @@
+# firmware/legacy/
+
+@README.md

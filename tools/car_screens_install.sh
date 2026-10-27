@@ -56,7 +56,7 @@ for f in aav-hud.service aav-map.service aav-screens.desktop screens.env; do
 done
 if [[ $action == install ]]; then
   if [[ -f "$PREFIX/aav.sh" ]]; then ok "aav.sh" "$PREFIX/aav.sh"; else bad "aav.sh" "no $PREFIX/aav.sh: run car_install.sh first"; fi
-  built="$PREFIX/aav/install/aav_hud_raylib/lib/aav_hud_raylib"
+  built="$PREFIX/aav/install/aav_hud/lib/aav_hud"
   if [[ -f "$built/hud" && -f "$built/map" ]]; then
     ok "built" "hud and map, in $built"
   else

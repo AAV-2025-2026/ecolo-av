@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -76,7 +89,7 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#what-was-run-and-what-wasnt">What was run, and what wasn&#x27;t</a><a href="#1-seeing-people-and-stop-signs">1. Seeing: people and stop signs</a><a href="#2-plain-english-newer-local-language-models">2. Plain English: newer local language models</a><a href="#3-two-open-source-agents-what-we-could-borrow">3. Two open-source agents: what we could borrow</a><a href="#files">Files</a></nav>
-<div class="lead"><p>PLAN.md item S6, 16 Oct 2026. Two questions:</p>
+<div class="lead"><p>plan.md item S6, 16 Oct 2026. Two questions:</p>
 <ol>
 <li><strong>Seeing</strong>: is YOLO26 or RF-DETR better than our YOLO11 at people and stop signs?</li>
 <li><strong>Plain English</strong>: is a newer local language model better than Qwen3 at turning
@@ -87,7 +100,7 @@
 - <strong>Now: RF-DETR Nano is the car's detector</strong> (Ben, 23 Oct: "I thought we were skipping
   yolo and using the other one"), the detector node's default, in TensorRT on the Orin.
   YOLO stays as <code>detector:=yolo</code> (<a href="perception.html#models">Perception</a>).
-- <strong>Camera: try RF-DETR Nano next, on the Orin.</strong> It saw Gazebo's stop sign from
+- <strong>Why RF-DETR Nano won (16 Oct).</strong> It saw Gazebo's stop sign from
   <strong>20 m</strong> (YOLO11n: 10 m) and found people in 4 of 5 photos (YOLO11n: 3), with no
   false finds. It's <strong>Apache-2.0</strong>, so the AGPL question goes away. On a Mac it is as
   fast as YOLO11n (16-17 ms vs 12-21 ms). Its cost: 12 times the weights (30 M), and
@@ -173,7 +186,7 @@ as rough, within about 20 %.</p>
 </thead>
 <tbody>
 <tr>
-<td>YOLO11n (ours now)</td>
+<td>YOLO11n (<code>detector:=yolo</code>)</td>
 <td>3/5 (0.65)</td>
 <td>6/10 (0.54)</td>
 <td>10 m</td>
@@ -274,8 +287,9 @@ as rough, within about 20 %.</p>
 <li><strong>Core ML's scores are PyTorch's</strong> to within about 0.06, for YOLO and RF-DETR. Once
   that tipped a picture: YOLO11s found 4 of 5 people through Core ML, 5 on the CPU. The
   table's scores are the CPU's; the Metal ones are the same.</li>
-<li>The watcher stops the car only when the box is 72 px tall (about 3.5 m), so every model
-  sees the sign in time today. Seeing it at 20 m would let the car slow down earlier.</li>
+<li>The watcher stops the car 4.7 m before the sign (a box 55 px tall with Gazebo's lens),
+  so every model sees the sign in time today. Seeing it at 20 m would let the car slow
+  down earlier.</li>
 </ul>
 <h3 id="per-picture-best-person-stop-sign-score-cpu">Per picture (best person / stop-sign score, CPU)</h3>
 <div class="table-wrap"><table>

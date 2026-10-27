@@ -26,9 +26,10 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             stops, e-stops and arming, in a second run: 3
                                             more minutes; --python-bridge runs aav_spine's
                                             Python spine_bridge there, not the Rust one)
-    pixi run sim-check --goto             (drives to points and stops there, at 1 and 3 m/s,
+    pixi run sim-check --drive-to-point    (drives to points and stops there, at 1 and 3 m/s,
                                             in the empty world: two more runs, 8 more minutes;
-                                            --goto-only skips the road world's run)
+                                            --drive-to-point-only skips the road world's run;
+                                            --goto and --goto-only, the old names, still work)
     pixi run sim-check --speed-steps       (the speed loop's steps, TODO 27: reverse 0.5,
                                             then 1.0 and 2.0 m/s, in the empty world: one
                                             more run, 3 more minutes; --speed-steps-only
@@ -102,11 +103,12 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    after it is let go, until armed again) and `not armed` (disarmed, a drive must not
    move the car). The first run also measures `command stream lost` and `software
    e-stop` on the direct path, and a last table compares the two.
-12. With --goto: Gazebo's empty world, twice: sim_speed 1 and 3. The goto driver (aav_goto)
-   drives to GOTO_TARGETS (10, 30 and 60 m, ahead, to the side and behind), each from where
+12. With --drive-to-point: Gazebo's empty world, twice: sim_speed 1 and 3. The point driver
+   (aav_drive_to_point)
+   drives to POINT_TARGETS (10, 30 and 60 m, ahead, to the side and behind), each from where
    the last stopped. Each must stop within 2 m of B by Gazebo's truth, no more than
-   GOTO_PAST past it by its own EKF, and slow down at about half max_brake (the hardest
-   0.5 s of its final stop, by the truth; from 1 m/s, only never harder: GOTO_DECEL_FROM).
+   POINT_PAST past it by its own EKF, and slow down at about half max_brake (the hardest
+   0.5 s of its final stop, by the truth; from 1 m/s, only never harder: POINT_DECEL_FROM).
    At 1 m/s also: a lat/lon B (through /toLL and /fromLL), a 250 m B refused, and a drive
    stopped by a cancel (Ctrl-C), the e-stop and a GPS fault (the driver's own timeout and
    the sensor watchdog's lock).
@@ -157,7 +159,7 @@ os.environ['GZ_PARTITION'] = os.environ.get('AAV_SIM_PARTITION', f'sim_check_{DO
 
 from aav_description import vehicle  # noqa: E402
 from aav_gazebo.faults import NODES as FAULT_NODES  # noqa: E402
-from aav_interfaces.action import GoTo, ScriptedDrive  # noqa: E402
+from aav_interfaces.action import DriveToPoint, ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import ActuatorState, SpineOutputs, VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticArray  # noqa: E402
@@ -223,7 +225,8 @@ DRIVING = 0.5           # m/s: the car drives, so a fault can go on
 FROZEN_AT = 0.2         # m/s
 FROZEN_WAIT = 30.0      # s of Gazebo's time for frozen wheels to go wrong (Nav2 slows, turns)
 HELD = 10.0             # s of Gazebo's time the car must stay still with no watchdog at all
-with open(os.path.join(ROOT, 'ros', 'command_mux', 'aav_mux', 'config', 'twist_mux.yaml')) as f:
+with open(os.path.join(ROOT, 'ros', 'command_mux', 'aav_command_mux', 'config',
+                       'twist_mux.yaml')) as f:
     # s of silence from the watchdog before twist_mux's sensors lock holds Nav2 itself
     LOCK_TIMEOUT = yaml.safe_load(f)['twist_mux']['ros__parameters']['locks']['sensors'][
         'timeout']
@@ -305,7 +308,7 @@ class Probe(Node):
         self.create_subscription(PointCloud2, '/sensors/radar/points', self.on_cloud,
                                  qos_profile_sensor_data)
         self.drive = ActionClient(self, ScriptedDrive, '/scripted_drive')
-        self.goto = ActionClient(self, GoTo, '/goto')
+        self.drive_to_point = ActionClient(self, DriveToPoint, '/drive_to_point')
         self.estop = self.create_publisher(Bool, '/safety/estop', 10)
         self.to_ll = self.create_client(ToLL, '/toLL')
         self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
@@ -322,7 +325,7 @@ class Probe(Node):
         self.create_subscription(Bool, '/safety/sensor_watchdog/lock', self.on_lock, 10)
         self.create_subscription(String, '/safety/sensor_watchdog/state', self.on_state, 10)
         # The HUD's heartbeat, standing in for its screen (--faults, watch_hud:=true):
-        # 10 Hz with a rising count while hud_beating, the way aav_hud_raylib sends it. On
+        # 10 Hz with a rising count while hud_beating, the way aav_hud sends it. On
         # its own thread, as the HUD's: a check that waits without spinning (a service, an
         # action server) mustn't look like a dropout, which latches the watchdog.
         self.hud_beating, self.hud_frames = False, 0
@@ -1452,27 +1455,31 @@ def print_stops():
         print(f'| {stop} | {cell((stop, "direct"))} | {cell((stop, "spine"))} |')
 
 
-# --goto: drive to points and stop there (aav_goto). The same targets as test_drive.py:
-# metres away, and degrees to the left of the car's nose, each from where the last stopped.
-GOTO_TARGETS = [(10.0, 0.0), (30.0, 45.0), (60.0, -30.0), (30.0, 150.0)]
-GOTO_SPEEDS = (1.0, 3.0)        # m/s: the car's ego cap, and Gazebo's sim_speed 3
+# The flags' names before 26 Oct, still accepted (aav_goto became aav_drive_to_point).
+OLD_FLAGS = {'--goto': '--drive-to-point', '--goto-only': '--drive-to-point-only'}
+# --drive-to-point: drive to points and stop there (aav_drive_to_point). The same targets
+# as test_drive.py: metres away, and degrees to the left of the car's nose, each from
+# where the last stopped.
+POINT_TARGETS = [(10.0, 0.0), (30.0, 45.0), (60.0, -30.0), (30.0, 150.0)]
+POINT_SPEEDS = (1.0, 3.0)       # m/s: the car's ego cap, and Gazebo's sim_speed 3
 SPEED_STEPS = (-0.5, 1.0, 2.0)  # m/s: TODO 27's steps (reversing is capped at 0.5)
 SPEED_HOLD = 20.0               # s at each step
 SPEED_BAND = 0.05               # the band a step must end, and settle, in (of its target)
 SPEED_TRIES = 3                 # drives of a step, while late commands spoil them
 # Each step's samples (profile, target, try, s, m/s), for a plot: AAV_SIM_SPEED_LOG moves it.
 SPEED_LOG = os.environ.get('AAV_SIM_SPEED_LOG', '/tmp/aav-sim-speed-steps.csv')
-GOTO_TOLERANCE = 2.0            # m from B, by Gazebo's truth: READ-ME-TESTS 5.2 without RTK
-GOTO_PAST = 0.5                 # m past B, along the car's heading, by its own EKF: GPS noise
-GOTO_DECEL = (0.6, 1.25)        # x the planned deceleration (half max_brake): the band
+POINT_TOLERANCE = 2.0           # m from B, by Gazebo's truth: docs/tests.md 5.2 without RTK
+POINT_PAST = 0.5                # m past B, along the car's heading, by its own EKF: GPS noise
+POINT_DECEL = (0.6, 1.25)       # x the planned deceleration (half max_brake): the band
 # m/s: the band's floor counts from this top speed. Slower, the stop lasts under a second
 # (0.7 s from 1 m/s), and the brake's and speed loop's lags smooth it below the plan: only
 # "never harder" counts there.
-GOTO_DECEL_FROM = 2.0
-GOTO_PLAN = 0.5 * float(vehicle.load()['actuators']['max_brake'])   # m/s^2, as goto.yaml
+POINT_DECEL_FROM = 2.0
+# m/s^2, as drive_to_point.yaml
+POINT_PLAN = 0.5 * float(vehicle.load()['actuators']['max_brake'])
 # A drive the watchdog's lock or a stale position stopped (a busy computer stalls every
 # sensor at once) is sent again, from where it stopped, this many times; the table says so.
-GOTO_RESENDS = 2
+POINT_RESENDS = 2
 STALL_WORDS = ("watchdog's lock", 'is stale')
 
 
@@ -1507,11 +1514,11 @@ def slowing(track, t0, window=0.5):
     return top, hardest
 
 
-def send_goto(probe, goal, wait=300.0):
-    """Send /goto a goal; return its result (None if refused or no answer) and its handle."""
-    if not probe.goto.wait_for_server(timeout_sec=20.0):
+def send_point_goal(probe, goal, wait=300.0):
+    """Send /drive_to_point a goal; return its result (None if refused or none) and handle."""
+    if not probe.drive_to_point.wait_for_server(timeout_sec=20.0):
         return None, None
-    sent = probe.goto.send_goal_async(goal)
+    sent = probe.drive_to_point.send_goal_async(goal)
     probe.spin_for(10.0, sent.done)
     if not sent.done() or not sent.result().accepted:
         return None, None
@@ -1521,12 +1528,12 @@ def send_goto(probe, goal, wait=300.0):
     return (done.result() if done.done() else None), handle
 
 
-def goto_drive(probe, speed, distance, degrees, lat_lon=False):
+def point_drive(probe, speed, distance, degrees, lat_lon=False):
     """Drive to one point; check the stop against Gazebo's truth, the braking and overshoot."""
-    name = f'goto {distance:g} m at {degrees:+g} deg, {speed:g} m/s' + (
+    name = f'drive to point {distance:g} m at {degrees:+g} deg, {speed:g} m/s' + (
         ' (lat/lon)' if lat_lon else '')
     bx, by = ahead_of(probe.glob, distance, degrees)
-    goal = GoTo.Goal(x=bx, y=by, cruise_speed=float(speed))
+    goal = DriveToPoint.Goal(x=bx, y=by, cruise_speed=float(speed))
     where = f'B ({bx:.1f}, {by:.1f})'
     if lat_lon:
         if not probe.to_ll.wait_for_service(timeout_sec=10.0):
@@ -1540,13 +1547,13 @@ def goto_drive(probe, speed, distance, degrees, lat_lon=False):
             result(name, False, '/toLL did not answer')
             return
         p = ll.result().ll_point
-        goal = GoTo.Goal(use_lat_lon=True, latitude=p.latitude, longitude=p.longitude,
-                         cruise_speed=float(speed))
+        goal = DriveToPoint.Goal(use_lat_lon=True, latitude=p.latitude, longitude=p.longitude,
+                                 cruise_speed=float(speed))
         where = f'B lat {p.latitude:.7f} lon {p.longitude:.7f}'
     stalls = []
-    for _ in range(1 + GOTO_RESENDS):
+    for _ in range(1 + POINT_RESENDS):
         t0 = probe.now()
-        res, _ = send_goto(probe, goal, wait=60.0 + 6.0 * distance / speed)
+        res, _ = send_point_goal(probe, goal, wait=60.0 + 6.0 * distance / speed)
         probe.spin_for(10.0, lambda: abs(probe.truth.twist.twist.linear.x) < STILL)
         if res is None:
             result(name, False, f'{where}: refused, or no answer')
@@ -1566,27 +1573,27 @@ def goto_drive(probe, speed, distance, degrees, lat_lon=False):
     yaw = yaw_of(probe.truth)
     truly = (tx - r.target_x) * math.cos(yaw) + (ty - r.target_y) * math.sin(yaw)
     top, decel = slowing(probe.track, t0)
-    lo, hi = GOTO_DECEL
-    floor = lo * GOTO_PLAN if top >= GOTO_DECEL_FROM else 0.0
-    ok = (r.success and error <= GOTO_TOLERANCE and past <= GOTO_PAST
-          and floor <= decel <= hi * GOTO_PLAN)
+    lo, hi = POINT_DECEL
+    floor = lo * POINT_PLAN if top >= POINT_DECEL_FROM else 0.0
+    ok = (r.success and error <= POINT_TOLERANCE and past <= POINT_PAST
+          and floor <= decel <= hi * POINT_PLAN)
     again = (f'; sent again after {len(stalls)} stall(s) that stopped it: '
              f'{"; ".join(stalls)}' if stalls else '')
     result(name, ok,
            f'{where}: stopped {error:.2f} m from B by the truth ({r.distance_left:.2f} m by '
            f'its EKF), {past:+.2f} m past it by its EKF ({truly:+.2f} by the truth); top '
            f'{top:.2f} m/s, slowed at {decel:.2f} '
-           f'm/s^2 at most (plan {GOTO_PLAN:g}); {r.distance_travelled:.1f} m in '
+           f'm/s^2 at most (plan {POINT_PLAN:g}); {r.distance_travelled:.1f} m in '
            f'{r.duration:.0f} s; "{r.message}"{again}')
 
 
-def goto_stops(probe, name, stop, mend=None, react=4.0):
+def point_stops(probe, name, stop, mend=None, react=4.0):
     """Start a 40 m drive, then `stop(probe)` once it moves: it must stand still within react s."""
     bx, by = ahead_of(probe.glob, 40.0, 0.0)
-    if not probe.goto.wait_for_server(timeout_sec=20.0):
-        result(name, False, 'no /goto')
+    if not probe.drive_to_point.wait_for_server(timeout_sec=20.0):
+        result(name, False, 'no /drive_to_point')
         return
-    sent = probe.goto.send_goal_async(GoTo.Goal(x=bx, y=by, cruise_speed=1.0))
+    sent = probe.drive_to_point.send_goal_async(DriveToPoint.Goal(x=bx, y=by, cruise_speed=1.0))
     probe.spin_for(10.0, sent.done)
     if not sent.done() or not sent.result().accepted:
         result(name, False, 'refused')
@@ -1634,29 +1641,29 @@ def estop(on):
     return press
 
 
-def check_goto_refusals(probe):
-    """Check it refuses a B over max_distance away (goto.yaml: 200 m)."""
+def check_point_refusals(probe):
+    """Check it refuses a B over max_distance away (drive_to_point.yaml: 200 m)."""
     bx, by = ahead_of(probe.glob, 250.0, 0.0)
-    far, _ = send_goto(probe, GoTo.Goal(x=bx, y=by), wait=20.0)
+    far, _ = send_point_goal(probe, DriveToPoint.Goal(x=bx, y=by), wait=20.0)
     refused = far is not None and not far.result.success and 'over the limit' in \
         far.result.message
-    result('goto refuses 250 m', refused,
+    result('drive to point refuses 250 m', refused,
            f'"{far.result.message}"' if far is not None else 'no answer')
 
 
-def check_goto(probe, speed):
-    """Drive GOTO_TARGETS at this speed (Gazebo's sim_speed); at 1 m/s, its stops too."""
-    for distance, degrees in GOTO_TARGETS:
-        goto_drive(probe, speed, distance, degrees)
-    if speed == GOTO_SPEEDS[0]:
-        goto_drive(probe, speed, 20.0, 0.0, lat_lon=True)
-        check_goto_refusals(probe)
-        goto_stops(probe, 'goto: cancel (Ctrl-C) stops it',
-                   lambda p, handle: handle.cancel_goal_async())
-        goto_stops(probe, 'goto: the e-stop stops it', estop(True), mend=estop(False))
+def check_drive_to_point(probe, speed):
+    """Drive POINT_TARGETS at this speed (Gazebo's sim_speed); at 1 m/s, its stops too."""
+    for distance, degrees in POINT_TARGETS:
+        point_drive(probe, speed, distance, degrees)
+    if speed == POINT_SPEEDS[0]:
+        point_drive(probe, speed, 20.0, 0.0, lat_lon=True)
+        check_point_refusals(probe)
+        point_stops(probe, 'drive to point: cancel (Ctrl-C) stops it',
+                    lambda p, handle: handle.cancel_goal_async())
+        point_stops(probe, 'drive to point: the e-stop stops it', estop(True), mend=estop(False))
         # The GPS stops: the driver's own gps_timeout (2 s) and the watchdog's lock (30).
-        goto_stops(probe, "goto: a GPS fault stops it (watchdog's lock)", gps_fault('stop'),
-                   mend=gps_fault('ok'), react=6.0)
+        point_stops(probe, "drive to point: a GPS fault stops it (watchdog's lock)",
+                    gps_fault('stop'), mend=gps_fault('ok'), react=6.0)
         probe.spin_for(30.0, lambda: not probe.locked())
 
 
@@ -1865,7 +1872,11 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
 
 
 def main():
-    args = sys.argv[1:]
+    # --goto and --goto-only: the old names (before 26 Oct), still accepted.
+    args = [OLD_FLAGS.get(a, a) for a in sys.argv[1:]]
+    if '-h' in args or '--help' in args:
+        print(__doc__)
+        return 0
     perception = '--perception' in args
     if perception and importlib.util.find_spec('rfdetr') is None:   # the detector's default
         print('--perception needs the detector: pixi run -e ml sim-check --perception',
@@ -1894,7 +1905,7 @@ def main():
         EVERY_RUN.append(f'speed_loop:={profile}')
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
-    if '--goto-only' not in args and '--speed-steps-only' not in args:
+    if '--drive-to-point-only' not in args and '--speed-steps-only' not in args:
         # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
         session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
                 + (['plan_around:=false'] if '--obstacle' in args else []),
@@ -1934,15 +1945,15 @@ def main():
         session(['faults:=true', 'lidar:=false', f'watchdog:={str(watchdog).lower()}',
                  f'watch_hud:={str(watchdog).lower()}'],
                 [lambda probe: check_faults(probe, watchdog)], logs[-1], 'faults')
-    if '--goto' in args or '--goto-only' in args:
+    if '--drive-to-point' in args or '--drive-to-point-only' in args:
         # Its own runs, one per speed (sim_speed is ego's cap, set at launch): the empty
         # world, so any angle is open ground. No Nav2, lidar or radar: lighter runs.
         stem, ext = os.path.splitext(log)
-        for speed in GOTO_SPEEDS:
-            logs.append(f'{stem}-goto-{speed:g}{ext}')
+        for speed in POINT_SPEEDS:
+            logs.append(f'{stem}-drive-to-point-{speed:g}{ext}')
             session(['nav:=false', 'lidar:=false', 'radar:=false', f'sim_speed:={speed:g}'],
-                    [lambda probe, v=speed: check_goto(probe, v)], logs[-1],
-                    f'goto {speed:g} m/s', ignore=('/map',), world='empty')
+                    [lambda probe, v=speed: check_drive_to_point(probe, v)], logs[-1],
+                    f'drive to point {speed:g} m/s', ignore=('/map',), world='empty')
     if '--speed-steps' in args or '--speed-steps-only' in args:
         # Its own run: the empty world, nothing else driving (no Nav2), ego's cap at 2 m/s.
         stem, ext = os.path.splitext(log)

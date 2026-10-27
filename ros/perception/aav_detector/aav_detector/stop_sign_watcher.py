@@ -13,7 +13,7 @@ the CameraInfo with the detections' frame_id (stop_sign.py). A camera with no Ca
 yet (not calibrated) gets focal_px (343: Gazebo's and the bench's lens, 640x360), with a
 warning: set focal_px for it, or calibrate it (docs/camera-calibration.md).
 
-twist_mux's stop_sign lock (aav_mux, priority 30) holds every driver below it: Nav2 (20)
+twist_mux's stop_sign lock (aav_command_mux, priority 30) holds every driver below it: Nav2 (20)
 and the AI slot (10). A person (joystick 100, keyboard 90) and test scripts (50, 40) still
 drive. The lock never expires on silence, so if this node dies while it's on, the car stays
 stopped. It only ever stops the car; it can't make it move.

@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_detector</name>
   <version>0.1.0</version>
-  <description>A YOLO detector: camera images in, vision_msgs/Detection2DArray out. Finds stop signs with the stock YOLO11 model, or the team's own. Needs PyTorch and Ultralytics (the Pixi ml environment). Also the stop-sign watcher, and camera_obstacles: the detections as points on the road, for Nav2's local costmap (no PyTorch needed for either).</description>
+  <description>The object detector: camera images in, vision_msgs/Detection2DArray out. RF-DETR Nano by default, or YOLO with detector:=yolo (the stock YOLO11 model, or the team's own). Needs PyTorch, and Ultralytics for YOLO (the Pixi ml environment). Also the stop-sign watcher, which holds the autonomous drivers at a stop sign, and camera_obstacles: the detections as points on the road, for Nav2's local costmap (no PyTorch needed for either).</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 

@@ -70,11 +70,11 @@ own extract (Geofabrik's Ontario, 1 GB, for a bigger area).
 | The logic, no ROS | `ros/drivers/aav_routes/aav_routes/osrm_route.py` | the request (Valhalla or OSRM), the answer (GeoJSON or an encoded polyline), the waypoints |
 | The node | `aav_routes/street_router.py` | the fix, the destination, the router over HTTP, `/fromLL`, `/toLL`, the follow service |
 | Its settings | `config/street_router.yaml` | router URL, spacing, `max_length` |
-| The map window | `aav_hud_raylib` (Rust) | draws `/drivers/nav/route/path` in violet, under Nav2's blue plan |
+| The map window | `aav_hud` (Rust) | draws `/drivers/nav/route/path` in violet, under Nav2's blue plan |
 | The tasks | `tools/get_routes.sh`, `tools/router.sh` | download and build; start the router |
 
-The waypoints reuse the HUD's tested route code (`aav_hud/route.py`): bends kept,
-headings along the street. Ours adds the gaps Nav2 needs:
+The waypoints reuse the route maths from the 2025-26 HUD's back end, now
+`aav_routes/route.py` (no ROS, tested): bends kept, headings along the street. Ours adds the gaps Nav2 needs:
 
 | Setting | Default | Why |
 |---|---|---|

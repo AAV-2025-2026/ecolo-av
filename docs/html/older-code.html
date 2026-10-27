@@ -7,20 +7,26 @@
 <!-- Generated from docs/older-code.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The older code: what we have, and what&#x27;s missing</h1>
-<div class="meta">12 min read · 7 sections</div></header>
+<div class="meta">13 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a class="here" href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -78,8 +91,9 @@
 <nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#the-2025-26-repos-one-by-one">The 2025-26 repos, one by one</a><a href="#the-2024-25-repos">The 2024-25 repos</a><a href="#what-no-repo-provides">What no repo provides</a><a href="#red-flags-in-the-old-repos">Red flags in the old repos</a><a href="#how-to-read-the-older-code-safely">How to read the older code safely</a><a href="#bringing-more-code-in">Bringing more code in</a></nav>
 <div class="lead"><p>The previous teams left 32 repos in two public GitHub orgs: <code>AAV-2025-2026</code> (the 2025-26
 team, 19 repos) and <code>Carleton-AAV-Capstone</code> (the 2024-25 team, 13 repos). This page says
-what each one is, what's already in <code>aav</code>, what's worth pulling in next, and what no
-repo provides. Surveyed on 10 October 2026, from the 14 clones in <code>~/Code/aav</code>.</p>
+what each one is, what's already in this repo ("<code>aav</code>" below: ecolo-av since 25 Oct), what's worth
+pulling in next, and what no repo provides. Surveyed on 10 October 2026; since 24 Oct, 27 of
+the repos are in <code>archive/</code>, with their history.</p>
 <h3 id="earlier-teams-found-15-october">Earlier teams (found 15 October)</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -128,7 +142,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 </tr>
 <tr>
 <td>Looked at, then dropped (15 Oct)</td>
-<td>Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69, if the HUD's routes ever need it); the HUD's place database (<code>pixi run get-hud-map</code> downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's <code>FinalRev</code> (below); AAV_dashboard (its README is now <code>docs/reference/2025-26-camera-system</code>)</td>
+<td>Navigation-LocalPathGenerator's OSRM parser (on GitHub, main @ 1486f69; <code>street_router</code> does that job now); the HUD's place database (<code>pixi run get-places</code> downloads it; back in use from 15 Oct: the map window's place search reads it); Motor-Control's <code>FinalRev</code> (below); AAV_dashboard (its README is now <code>docs/reference/2025-26-camera-system</code>)</td>
 </tr>
 <tr>
 <td>Empty</td>
@@ -168,7 +182,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>C++, micro-ROS; ESP32</td>
 <td>inactive since 2025</td>
 <td>no</td>
-<td>no. What it taught us: branch <code>FinalRev</code> (4166ec0) reads the steering's position from the <strong>steering Jrk G2's own feedback</strong>, <code>jrk_steer.getScaledFeedback()</code>, 0-4095 mapped to -1..+1 (<code>src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187</code>). So the Jrk may already have a position sensor wired (TEAM-TODO B6, audit D6, D7)</td>
+<td>no. What it taught us: branch <code>FinalRev</code> (4166ec0) reads the steering's position from the <strong>steering Jrk G2's own feedback</strong>, <code>jrk_steer.getScaledFeedback()</code>, 0-4095 mapped to -1..+1 (<code>src/esp32_ros_pcb/uRos_fns/uRos_fns.cpp:187</code>). So the Jrk may already have a position sensor wired (team-todo.md B6, audit D6, D7)</td>
 </tr>
 <tr>
 <td>Motor_Steering</td>
@@ -192,7 +206,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>Python ROS 2</td>
 <td>prototype; nothing feeds it</td>
 <td>no</td>
-<td>maybe its OSRM parser, to turn the HUD's route into Nav2 GPS waypoints</td>
+<td>no: <code>street_router</code> turns a street route into Nav2 GPS waypoints (<a href="routes.html">Street routes</a>)</td>
 </tr>
 <tr>
 <td>Navigation-LocalPathGenerator-rf_cpp</td>
@@ -239,8 +253,8 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <td>the in-car HUD: a Flutter app, a Flask ROS node, offline routing and place search</td>
 <td>Dart/Flutter, Python ROS 2; the UI Pi</td>
 <td>a working demo, on mock data</td>
-<td>partly: <code>hud/</code>, <code>ros/hud/maincar</code></td>
-<td><strong>its place database <code>ottawa.db</code> (51 MB)</strong>: the ported app still needs it</td>
+<td>partly: ported, then archived 25 Oct to <code>archive/2026-27-flutter-hud/</code> (the app; <code>maincar</code> as <code>aav_hud</code>); its route maths lives on in <code>aav_routes/route.py</code></td>
+<td><strong>its place database <code>ottawa.db</code> (51 MB)</strong>: the map window's place search reads it</td>
 </tr>
 <tr>
 <td>Wheel_Encoders</td>
@@ -286,7 +300,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Nav_Radar</td>
 <td>none</td>
-<td>in <code>aav</code>: <code>ti_ros2_driver</code>; the clustering, rewritten in Rust, as <code>aav_radar_clusters</code></td>
+<td>in <code>aav</code>: <code>aav_radar_ti</code>; the clustering, rewritten in Rust, as <code>aav_radar_clusters</code></td>
 </tr>
 <tr>
 <td>AAV_dashboard</td>
@@ -324,7 +338,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Battery-Monitor-ROS</td>
 <td>battery monitor ROS code</td>
-<td>yes: <code>ros/sources/battery_monitor</code></td>
+<td>yes: <code>ros/sources/aav_battery_victron</code></td>
 </tr>
 <tr>
 <td>camera_ros2_ws</td>
@@ -334,7 +348,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>camera_Yolo_detection</td>
 <td>Python, 72 MB</td>
-<td>2 files: <code>aav_detector/training</code>. The trained <code>best.pt</code> isn't in it</td>
+<td>no: its training script and <code>data.yaml</code> were in <code>aav_detector/training</code> until 26 Oct, unused. The trained <code>best.pt</code> isn't in it</td>
 </tr>
 <tr>
 <td>cameras</td>
@@ -397,7 +411,7 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>Sensors</td>
 <td>a GPS driver that anything runs; a lidar driver; camera streaming and the stop-sign detector (both only on the car's Orin); steering feedback (only 2024-25's <code>FinalRev</code>); a fine enough wheel speed; magnetometer calibration</td>
-<td>GPS: the stock driver, model unknown (Q18). Lidar and cameras: next year</td>
+<td>GPS: the stock driver, model unknown (Q18). Lidar: the stock <code>velodyne</code> driver (20 Oct). Cameras: <code>aav_camera_stream</code> (24 Oct). Both untested on the car</td>
 </tr>
 <tr>
 <td>Localization</td>
@@ -422,12 +436,12 @@ be private (an org's private repos don't show to non-members), or not on GitHub.
 <tr>
 <td>The spine</td>
 <td>any CAN code; a watchdog that brakes; feedback frames; the hardware e-stop in code</td>
-<td><span class="badge b-works">works</span> the logic (<code>spine-core</code>); the board code is <span class="badge b-missing">missing</span></td>
+<td><span class="badge b-works">works</span> the logic (<code>spine-core</code>); the board programs (<code>boards/pico2</code>, <code>boards/esp32-umod</code>) are <span class="badge b-untested">untested</span>: never flashed</td>
 </tr>
 <tr>
 <td>HUD</td>
 <td>real data: it only ever showed mock data</td>
-<td><span class="badge b-untested">untested</span> its port is still to do</td>
+<td><span class="badge b-works">works</span> our raylib HUD and map window read real topics, on a Mac; <span class="badge b-untested">untested</span> on the car. Their app was ported, then archived 25 Oct (Q29)</td>
 </tr>
 <tr>
 <td>Simulation</td>
@@ -490,12 +504,16 @@ card is in <a href="modules.html">Every module</a>. To read the originals:</p>
 </thead>
 <tbody>
 <tr>
-<td>Read the clones next to <code>aav</code> (<code>~/Code/aav/</code> on Ben's Mac, <code>/home/ben/aav/</code> on oirp-spss)</td>
-<td>they are read-only copies: never build, fix or commit in them</td>
+<td>Read them in <code>archive/&lt;repo&gt;/</code></td>
+<td>the 27 repos came in with their history (24 Oct). Read-only: never build, fix or commit in them</td>
 </tr>
 <tr>
-<td>Search only them: <code>grep -r --exclude-dir=aav --exclude-dir=aav-linux-build-output &lt;word&gt; .</code> from <code>~/Code/aav</code></td>
-<td>so the search skips our own code and the build output</td>
+<td>Search them all: <code>grep -r &lt;word&gt; archive/</code></td>
+<td>every old repo at once; colcon skips the folder</td>
+</tr>
+<tr>
+<td>Or on GitHub (<code>AAV-2025-2026</code>, <code>Carleton-AAV-Capstone</code>)</td>
+<td>the originals, with every branch</td>
 </tr>
 <tr>
 <td>Check the branch first: <code>git -C &lt;repo&gt; branch -a</code></td>
@@ -551,7 +569,7 @@ card is in <a href="modules.html">Every module</a>. To read the originals:</p>
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="camera-calibration.html"><small>Previous</small>← Camera calibration</a>
+<nav class="prevnext"><a class="prev" href="team-todo.html"><small>Previous</small>← Team tasks</a>
 <a class="next" href="ros2.html"><small>Next</small>ROS 2 →</a></nav>
 </main>
 <footer>Source: <code>docs/older-code.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

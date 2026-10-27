@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The full simulation: the whole car in Gazebo · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/full-simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The full simulation: the whole car in Gazebo</h1>
+<div class="meta">16 min read · 9 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a class="here" href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#status-15-oct">Status (15 Oct)</a><a href="#1-the-full-pipeline-in-one-picture">1. The full pipeline, in one picture</a><a href="#2-what-we-have-and-whats-missing">2. What we have, and what&#x27;s missing</a><a href="#3-two-ways-to-model-the-actuators">3. Two ways to model the actuators</a><a href="#4-how-the-measurements-feed-the-simulation">4. How the measurements feed the simulation</a><a href="#5-the-order-to-build-it">5. The order to build it</a><a href="#the-spine-in-the-loop-step-4">The spine in the loop (step 4)</a><a href="#sensor-failures-before-and-after">Sensor failures: before and after</a><a href="#faster-drives-in-gazebo-15-oct">Faster drives in Gazebo (15 Oct)</a></nav>
+<div class="lead"><p>Written 15 October 2026, checked 25 October. The goal (Ben, 15 Oct): "fully simulate the car inside
+Gazebo with all the sensors, and build the full pipeline." This page says what we have,
+what's missing, and how the car's measurements feed in.</p>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Most of it exists.</strong> Gazebo already plays the car: IMU, GPS, wheel speed, three cameras, the radar, the lidar. The same EKFs, Nav2, perception and HUD run on it.
+- <strong>The big gap is the actuators.</strong> Gazebo's car sets its speed directly, with made-up limits. It ignores the weight, the motor and the brakes. So it doesn't yet speed up, brake or steer like the real car.
+- <strong>The fix:</strong> an <strong>actuator model</strong> between our commands and Gazebo, filled with the numbers from the tests (<code>tests.md</code>, stage 4). Then the real firmware logic <strong>in the loop</strong>, as the bench already does. Both built 15 Oct: the model is on by default, the spine with <code>spine:=true</code>.
+- <strong>Measurements come first:</strong> the sheet (<code>measure-the-car.md</code>) for where everything is, the tests for how it moves.</p>
+</blockquote></div>
+<section class="card"><h2 id="status-15-oct">Status (15 Oct)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>/system/source</code> + the SIMULATED banner</td>
+<td>✅ built: Gazebo, turtlesim, the bench, the car's backends and replay announce; the raylib HUD shows the banner and a tag per topic</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>/vehicle/steering</code>, <code>/throttle</code>, <code>/brake</code>, <code>/wheels</code></td>
+<td>✅ built: Gazebo all four; the bench and the car (spine_bridge) steering, throttle, brake; turtlesim steering</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The actuator model (A), guessed numbers</td>
+<td>✅ built: <code>aav_gazebo/actuator_model.py</code>, numbers in <code>vehicle.yaml</code> <code>actuators:</code>, on by default (<code>actuator_model:=false</code> for the old car)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The spine in the loop</td>
+<td>✅ 15 Oct: <code>pixi run sim spine:=true</code>. ego's commands go over the CAN frames to the spine's own firmware logic, then the actuator model. <code>pixi run sim-check --spine</code> passes: its timeout, both e-stops and arming stop the car (<a href="#the-spine-in-the-loop-step-4">below</a>)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The lidar into Nav2</td>
+<td>✅ 15 Oct: <code>lidar_scan</code> (<code>aav_lidar</code>) flattens the roof lidar into a 2D scan; the local costmap's <code>lidar_layer</code> and <code>collision_monitor</code> read it. <code>lidar:=true</code> in Gazebo, and on the car (the stock <code>velodyne</code> driver, since 20 Oct). With the radar off, the lidar alone stopped the car 0.16-0.55 m before a post</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Sensor failures on purpose</td>
+<td>✅ 15 Oct: <code>pixi run sim-fault &lt;sensor&gt; &lt;fault&gt;</code>, and the sensor watchdog (<code>aav_safety</code>): it stops Nav2 and the AI slot, and says why on the HUD and the map window. All 13 faults stopped the car on 15 Oct, the watchdog's own death and frozen wheels too; on 24 Oct, with the HUD's heartbeat added, all 25 checks passed three times (<a href="simulation.html#what-the-car-does-before-and-after">the table</a>)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>The actuator test script (<code>tests.md</code> 1.10)</td>
+<td>✅ 15 Oct: <code>pixi run actuator-test &lt;test&gt; --sim</code>, all 9 tests in Gazebo; they give back the model's numbers (<a href="actuator-tests.html">docs/actuator-tests.md</a>). It found Gazebo's IMU blind to the car's acceleration: fixed in <code>gazebo_adapter</code></td>
+</tr>
+<tr>
+<td>8-10</td>
+<td>the real numbers, the test lot, forces</td>
+<td>not started</td>
+</tr>
+</tbody>
+</table></div>
+<p>Tested (15 Oct, Ben's Mac):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run sim-check --spine</code> (step 4)</td>
+<td>✅ all 21: the direct path, then the spine in the loop: graph vs the spine contract, drive 6.00 m, the EKF 0.03 m from the truth, a Nav2 goal, the command stream lost, both e-stops, not armed (<a href="#stop-times-the-direct-path-vs-the-spine">stop times</a>)</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check</code> (the model on)</td>
+<td>✅ all 6: graph vs contract (the new topics too), drive 6.01 m of 6.5</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --obstacle --lane</code></td>
+<td>✅ all: stood still 0.51 m before the box; lane keeping back within 5 cm in 5.4 s</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --obstacle --lidar-obstacle</code> (steps 5, 6 branch; twice)</td>
+<td>✅ the box: 0.32-0.46 m before it (radar and lidar); the post, radar off: 0.16-0.55 m before it, the costmap 100 of 100 there; both goals reached once they were gone</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --faults</code></td>
+<td>✅ all 10 faults: the car stood still 1.7-4.1 s after each, the watchdog (or <code>collision_monitor</code>, for the radar) said why, and let go once mended</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --faults</code>, with the 3 new faults (later on 15 Oct)</td>
+<td>✅ all 13, twice: frozen wheels caught 3.4-4.8 s after they went wrong; the watchdog hung or killed: stood still 2.6-2.8 s after, through twist_mux's 1 s lock timeout; the global EKF 0.1-0.4 m from the truth through a 20 m GPS jump</td>
+</tr>
+<tr>
+<td><code>pixi run bench-check</code></td>
+<td>✅ all 6, graph vs contract with the bench's new topics</td>
+</tr>
+<tr>
+<td>turtle profile vs contract</td>
+<td>✅ <code>/system/source</code> and <code>/vehicle/steering</code> from <code>turtlesim_adapter</code></td>
+</tr>
+<tr>
+<td>Gazebo with <code>actuator_model:=false</code></td>
+<td>✅ the old car: no throttle or brake (NaN), an instant steer</td>
+</tr>
+<tr>
+<td>The HUD's banner</td>
+<td>✅ its logic (<code>cargo test</code>); ❌ not seen on screen: the window couldn't open from that session</td>
+</tr>
+</tbody>
+</table></div>
+<p>What's where:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The messages</td>
+<td><code>aav_interfaces</code>: <code>DataSource</code> + <code>SensorSource</code> (REAL, SIM, BENCH, REPLAY per sensor), <code>ActuatorState</code> (command + measured), <code>WheelSpeeds</code></td>
+</tr>
+<tr>
+<td>The contract</td>
+<td><code>docs/interfaces.yaml</code>; <code>/system/</code> is a new topic area (<code>docs/naming.md</code>)</td>
+</tr>
+<tr>
+<td>The model and its tests</td>
+<td><code>ros/sim/aav_gazebo/aav_gazebo/actuator_model.py</code>, <code>test/test_actuator_model.py</code></td>
+</tr>
+<tr>
+<td>How it's documented</td>
+<td><code>docs/simulation.md</code>, "The actuator model"; <code>docs/hud.md</code> for the banner</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="1-the-full-pipeline-in-one-picture">1. The full pipeline, in one picture</h2>
+<pre class="highlight"><code class="language-text">  drivers (keyboard, joystick, Nav2, plain English)
+        │
+  twist_mux → ego ──────────── /ego/actuator_cmd (speed + steering)
+        │
+  ┌─────┴─────── spine:=false (default) ─────────────┐   ┌────── spine:=true (15 Oct) ──────┐
+  │ gazebo_adapter → a Python copy of the spine's    │   │ spine_bridge → CAN frames        │
+  │ speed loop → ACTUATOR MODEL: throttle, brake,    │   │   → the spine's real logic       │
+  │ steering, as measured → Gazebo                   │   │     (timeouts, e-stop, limits)   │
+  │ (no CAN, no arming, no e-stop latch; brakes      │   │   → ACTUATOR MODEL: throttle,    │
+  │ 0.2 s after ego goes quiet)                      │   │     brake, steering, as measured │
+  │                                                  │   │   → Gazebo                       │
+  └──────────────────────────────────────────────────┘   └──────────────────────────────────┘
+        │
+  Gazebo's sensors → /sensors/... → EKFs, Nav2, perception, HUD   (the same as the car)</code></pre>
+</section>
+<section class="card"><h2 id="2-what-we-have-and-whats-missing">2. What we have, and what's missing</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Today in Gazebo</th>
+<th>Missing for the full version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IMU, GPS, wheel speed</td>
+<td>✅ with noise</td>
+<td>noise levels from the real devices (the car day)</td>
+</tr>
+<tr>
+<td>3 cameras</td>
+<td>✅ 15 Oct: two front, one rear</td>
+<td>the real lens of each (N4); perception reads only the front left</td>
+</tr>
+<tr>
+<td>Radar (grill)</td>
+<td>✅ a stand-in, shaped like the TI radar</td>
+<td>its real config file, from the car</td>
+</tr>
+<tr>
+<td>Lidar (roof)</td>
+<td>✅ a generic 16-beam one, on by default (15 Oct); ✅ Nav2's costmap and the collision monitor read it (step 5)</td>
+<td>the VLP-16's exact beam pattern; the car's driver is untested with the real lidar</td>
+</tr>
+<tr>
+<td><strong>Throttle and brake</strong></td>
+<td>✅ 15 Oct: the actuator model, with <strong>guessed</strong> numbers</td>
+<td>the real numbers, from tests 4.1-4.4</td>
+</tr>
+<tr>
+<td><strong>Steering</strong></td>
+<td>✅ 15 Oct: speed, lag, centre offset, deadband, with <strong>guessed</strong> numbers</td>
+<td>the real numbers and angles, from tests 3.10-3.12 and 4.5</td>
+</tr>
+<tr>
+<td>Weight</td>
+<td>in the model, but hardly matters (see the box below)</td>
+<td>the real weight (scales, M7)</td>
+</tr>
+<tr>
+<td>The firmware's safety logic</td>
+<td>✅ 15 Oct, with <code>spine:=true</code>: the CAN frames, the spine's timeout, both e-stops, arming (<a href="#the-spine-in-the-loop-step-4">step 4</a>). Off by default</td>
+<td>the real CAN bus and boards: that's the car</td>
+</tr>
+<tr>
+<td>What's real and what's fake</td>
+<td>✅ 15 Oct: <code>/system/source</code>, and the HUD's orange SIMULATED banner</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Per-actuator readings</td>
+<td>✅ 15 Oct: <code>/vehicle/steering</code>, <code>/vehicle/throttle</code>, <code>/vehicle/brake</code>, <code>/vehicle/wheels</code> (and still <code>/vehicle/status</code>)</td>
+<td>the real measured values from the car</td>
+</tr>
+<tr>
+<td>The world</td>
+<td>a test road, an empty lot</td>
+<td><strong>a copy of the real test lot</strong></td>
+</tr>
+<tr>
+<td>Sensor failures</td>
+<td>✅ 15 Oct: <code>pixi run sim-fault</code>, and the sensor watchdog stops Nav2 (step 6)</td>
+<td>the same on the car, on stands: pull a cable</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">Why the weight hardly matters in Gazebo today</p>
+<p>Gazebo's Ackermann system <strong>sets the wheels' speed</strong> (<code>aav.gazebo.xacro</code> allows
+±10 m/s², so the actuator model sets the real limits). A heavier car gets the same numbers. For the
+weight to matter, the model must push with a <strong>force</strong> (from the motor) against the
+<strong>mass</strong>. For driving well, what matters most is the <strong>measured g</strong>: how fast the real
+car speeds up and stops. The tests give that directly.</p>
+</div>
+</section>
+<section class="card"><h2 id="3-two-ways-to-model-the-actuators">3. Two ways to model the actuators</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>A. An actuator model in front of Gazebo (recommended first)</th>
+<th>B. Forces inside Gazebo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>How</td>
+<td>a small node: throttle % → acceleration, brake % → deceleration, steering with its speed and lag; then Gazebo's speed control as today</td>
+<td>the motor's torque on the rear wheels, the brakes' torque, tyre grip, the mass</td>
+</tr>
+<tr>
+<td>Weight matters?</td>
+<td>through the measured g (which includes it)</td>
+<td>directly</td>
+</tr>
+<tr>
+<td>Effort</td>
+<td>about a day</td>
+<td>about a week, and tricky to tune</td>
+</tr>
+<tr>
+<td>Good for</td>
+<td>Nav2, the smooth stop, the actuator tests: everything we drive</td>
+<td>slopes, skids, a heavy load</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Recommendation:</strong> A first, with its numbers in <code>vehicle.yaml</code> (a new <code>actuators:</code> section).
+B only if A isn't close enough to the real car.</p>
+</section>
+<section class="card"><h2 id="4-how-the-measurements-feed-the-simulation">4. How the measurements feed the simulation</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>From</th>
+<th>Measured</th>
+<th>Goes into</th>
+<th>Changes in Gazebo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The sheet (<code>measure-the-car.md</code>)</td>
+<td>wheelbase, track, wheels, body</td>
+<td><code>vehicle.yaml</code> → the model</td>
+<td>how it turns; its outline for Nav2</td>
+</tr>
+<tr>
+<td>The sheet</td>
+<td>each sensor's x, y, z and angles</td>
+<td><code>vehicle.yaml</code> → the sensor frames</td>
+<td>what each camera, the radar and the lidar see</td>
+</tr>
+<tr>
+<td>Scales (M7)</td>
+<td>the weight, per wheel</td>
+<td><code>vehicle.yaml</code></td>
+<td>the model's mass (and B, later)</td>
+</tr>
+<tr>
+<td>Tests 4.1, 4.4</td>
+<td>acceleration per throttle %</td>
+<td><code>vehicle.yaml</code> → the actuator model</td>
+<td>how fast it speeds up</td>
+</tr>
+<tr>
+<td>Test 4.2</td>
+<td>coasting</td>
+<td>the actuator model</td>
+<td>how it slows with no brake</td>
+</tr>
+<tr>
+<td>Test 4.3</td>
+<td>braking g</td>
+<td>the actuator model; the smooth stop</td>
+<td>how fast it stops</td>
+</tr>
+<tr>
+<td>Tests 3.10-3.12, 4.5</td>
+<td>steering: real angles, speed, centre</td>
+<td>the actuator model</td>
+<td>how it steers</td>
+</tr>
+</tbody>
+</table></div>
+<pre class="highlight"><code class="language-text"> measure the car  →  vehicle.yaml  →  Gazebo behaves like the car  →  test in Gazebo  →  trust it on the car</code></pre>
+</section>
+<section class="card"><h2 id="5-the-order-to-build-it">5. The order to build it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Build</th>
+<th>Needs the car?</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>/system/source</code> + the SIMULATED banner ✅ 15 Oct</td>
+<td>no</td>
+<td>small</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Per-actuator readings: <code>/vehicle/steering</code>, <code>/throttle</code>, <code>/brake</code>, <code>/wheels</code> ✅ 15 Oct</td>
+<td>no</td>
+<td>small</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>The actuator model (A)</strong>, with guessed numbers for now, in <code>vehicle.yaml</code> ✅ 15 Oct</td>
+<td>no; the numbers later</td>
+<td>1 day</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>The spine in the loop</strong>: ego → CAN → the spine's logic → the actuator model → Gazebo ✅ 15 Oct</td>
+<td>no</td>
+<td>1-2 days</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The lidar into Nav2's costmap and the collision monitor ✅ 15 Oct</td>
+<td>no</td>
+<td>small</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Sensor failures on purpose, and checks that the car stops ✅ 15 Oct</td>
+<td>no</td>
+<td>1 day</td>
+</tr>
+<tr>
+<td>7</td>
+<td>The actuator test script (<code>tests.md</code> 1.10), run in Gazebo ✅ 15 Oct</td>
+<td>no</td>
+<td>1 day</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Fill in the real numbers: measurements and tests (<code>pixi run actuator-test</code>, on stands then in the lot)</td>
+<td><strong>yes</strong>: on stands, then the lot</td>
+<td>-</td>
+</tr>
+<tr>
+<td>9</td>
+<td>A Gazebo copy of the test lot</td>
+<td>the lot chosen</td>
+<td>1 day</td>
+</tr>
+<tr>
+<td>10</td>
+<td>B, forces in Gazebo, only if needed</td>
+<td>the real numbers</td>
+<td>a week</td>
+</tr>
+</tbody>
+</table></div>
+<p>Steps 1-7 can all be built before the car is measured: they start with today's guesses,
+and step 8 swaps in the real numbers without changing any code.</p>
+</section>
+<section class="card"><h2 id="the-spine-in-the-loop-step-4">The spine in the loop (step 4)</h2>
+<p>Built 15 Oct. Gazebo can now run the spine's <strong>real firmware logic</strong> between ego and the
+car, as the bench does. Off by default; one switch turns it on:</p>
+<pre class="highlight"><code class="language-bash">pixi run sim spine:=true          # Gazebo, with the spine in the loop
+pixi run sim-check --spine        # proves it: the normal checks, then the spine's stops</code></pre>
+<pre class="highlight"><code class="language-text"> ego ──► output_mux ──/control/gazebo/actuator_cmd──► spine_bridge ──CAN frames──► spine_sim: the spine's own logic
+                                                         (arming, 100 ms watchdog, both
+                                                          e-stops, its speed loop)
+                                                              │ throttle, brake, gear, steering
+                                                              ▼
+                                gazebo_adapter: the actuator model ──► Gazebo's car
+                                                              │ Gazebo's wheels and steering
+                                                              ▼
+ /vehicle/* ◄── spine_bridge ◄──CAN frames── spine_sim: VEHICLE_FEEDBACK, STATUS, wheel frames</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One backend</td>
+<td><code>spine_bridge</code> alone reads ego's commands (<code>/control/gazebo/actuator_cmd</code>, from the output mux). <code>gazebo_adapter</code> then only drives the actuator model from the spine's outputs, and no longer publishes <code>/vehicle/*</code></td>
+</tr>
+<tr>
+<td><code>/system/source</code></td>
+<td>still <strong>SIM</strong>: <code>spine_bridge</code> says so (<code>source:=sim</code>)</td>
+</tr>
+<tr>
+<td>The clock</td>
+<td><code>spine_sim</code> ticks every 10 ms of Gazebo's time, so the spine's 100 ms watchdog counts Gazebo's time</td>
+</tr>
+<tr>
+<td>Arming</td>
+<td><code>arm:=true</code> (the default) arms it 12 s after start-up, as the bench does, once the output mux says <code>OPEN</code> (<code>arm_when_open</code> asks each second). After a stop: <code>ros2 service call /spine/arm std_srvs/srv/SetBool "{data: true}"</code>. Refused while the safety gate is shut</td>
+</tr>
+<tr>
+<td>Hardware e-stop</td>
+<td>the bench's: <code>/vehicle/bench/hw_estop</code> (true = pressed)</td>
+</tr>
+<tr>
+<td>The contract</td>
+<td>profile <code>spine</code> in <code>docs/interfaces.yaml</code> (<code>pixi run check spine</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="stop-times-the-direct-path-vs-the-spine">Stop times: the direct path vs the spine</h3>
+<p>Each while driving at 0.8 m/s, Gazebo's road world, Ben's Mac, 15 Oct: three runs of
+<code>pixi run sim-check --spine</code>, the last one all green. Times are Gazebo's.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stop</th>
+<th>Direct path (<code>gazebo_adapter</code>)</th>
+<th>Spine in the loop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command stream lost (ego's process stopped)</td>
+<td>brake 200-220 ms, still 1.24-1.25 s</td>
+<td><strong>full</strong> brake 195-209 ms, still 0.64-0.66 s, and <strong>latched</strong> until armed again</td>
+</tr>
+<tr>
+<td><code>/safety/estop</code></td>
+<td>brake 460 ms (through twist_mux and ego), still 1.70 s</td>
+<td>brake 1-12 ms (ESTOP_CMD straight to the spine), still 0.18-0.48 s, latched</td>
+</tr>
+<tr>
+<td>Hardware e-stop</td>
+<td>(no such thing)</td>
+<td>brake 2-10 ms, still 0.46-0.48 s, latched after it's let go</td>
+</tr>
+<tr>
+<td>Not armed</td>
+<td>(always armed)</td>
+<td>a drive asking 1 m/s for 8 s: no throttle, no motion</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Why the spine stops sooner:</strong> it brakes <strong>fully</strong> (<code>stop_brake</code> 1.0); the direct path's
+  speed loop only slows to a stop.</li>
+<li><strong>Its 195-209 ms</strong> is <code>spine_bridge</code>'s 0.1 s (<code>spine.yaml</code> <code>cmd_timeout</code>) plus the
+  spine's own 0.1 s watchdog: inside the car's 200 ms target (<code>tests.md</code> 3.9).</li>
+<li><strong>Latched:</strong> after any stop, the spine holds the brake, its drive still asking, until
+  someone arms it again. The direct path drives on as soon as commands come back.</li>
+<li><strong>Found:</strong> in two of the three runs, the spine latched once during the first drive: ego's 50 Hz
+  commands stalled for more than 0.1 s (a busy Mac, just after the graph check). That's
+  <code>spine_bridge</code>'s <code>cmd_timeout</code> doing its job, but it is tight for a Python ego on a
+  loaded computer. <code>sim-check</code> arms it and drives again, as <code>bench-check</code> does. Worth
+  watching on the car's computer.</li>
+</ul>
+</section>
+<section class="card"><h2 id="sensor-failures-before-and-after">Sensor failures: before and after</h2>
+<p>Each fault while Nav2 drives, with the watchdog and without it: the whole table, with
+the 24 Oct results, is in <a href="simulation.html#what-the-car-does-before-and-after">Simulation</a>.
+How to make a fault, and what the watchdog watches:
+<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>.</p>
+<p><strong>Later on 15 Oct</strong> (<a href="simulation.html#if-the-watchdog-itself-dies">docs/simulation.md</a>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A watchdog that dies while all is well stopped nothing</td>
+<td>✅ fail-safe: twist_mux holds Nav2 after 1 s of its silence</td>
+</tr>
+<tr>
+<td>Frozen wheel odometry wasn't caught</td>
+<td>✅ the wheels against the IMU and the GPS: DISAGREE</td>
+</tr>
+<tr>
+<td>The EKF took a 20 m GPS jump</td>
+<td>✅ partly: <code>ekf_global</code> refuses it while the watchdog holds the car (0.1-0.5 m, was 19 m); a car that drives on takes it after a few seconds</td>
+</tr>
+<tr>
+<td>The map window didn't show the verdict</td>
+<td>✅ the HUD's banner; not seen on a screen yet</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What's left:</strong> the cross check's limits on the car (Gazebo's numbers today), and the
+same tests on the car, on stands.</p>
+</section>
+<section class="card"><h2 id="faster-drives-in-gazebo-15-oct">Faster drives in Gazebo (15 Oct)</h2>
+<p><code>pixi run sim world:=test_lot sim_speed:=3</code>: ego and Nav2 up to 3 m/s (5 at most), in
+Gazebo only. The real car keeps 1 m/s. Details: <a href="simulation.html">docs/simulation.md</a>.</p></section>
+<nav class="prevnext"><a class="prev" href="sim-and-car.html"><small>Previous</small>← Sim and the car</a>
+<a class="next" href="carla.html"><small>Next</small>CARLA →</a></nav>
+</main>
+<footer>Source: <code>docs/full-simulation.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

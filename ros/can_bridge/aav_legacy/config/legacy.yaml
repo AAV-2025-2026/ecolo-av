@@ -12,6 +12,11 @@ legacy_uart_bridge:
     # (docs/esp32-bench.md): it carries the Orin's counter, and the ESP32 brakes 100 ms
     # after it stops changing. The bridge's own default is 2.
     frame_version: 1
+    # With frame_version 1 (no firmware timeout) the bridge says true on
+    # /safety/legacy_uart_bridge/lock: twist_mux's no_timeout lock (priority 60) holds every
+    # program (scripted, replay, point, Nav2, AI); people and the actuator tests still drive.
+    # true lifts it: ONLY for a supervised stand, wheels off the ground, a person at the e-stop.
+    allow_programs_without_timeout: false
     # The ESP32's uplink frames, back on the same port (TODO 50, 48): /vehicle/status,
     # steering, brake and /vehicle/rc (the RC's mode switch and sticks, for rc_driver).
     # false until the hardware lead confirms the wire from the ESP32's TX1 (GPIO17) to the

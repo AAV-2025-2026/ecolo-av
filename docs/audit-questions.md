@@ -1,11 +1,13 @@
 # Friday's questions: what only the car can tell us
 
+> **Sections 1-7 are a snapshot from 16 October 2026.** The audits ran on 16 and 21 Oct ([16 Oct](history/audit-2026-10-16-car.md), [21 Oct](history/audit-2026-10-21-car.md)). What's true now: [Status](status.md). **Section 8 (H1-H10) is live:** questions for the hardware lead.
+
 Every hardware question the code is waiting on, in one list for Friday 16 October. Each
 row says how to answer it and what the answer unblocks. Write the answers into
 `docs/history/audit-2026-10-16-car.md` (no passwords or keys).
 
 **You'll use it with:** [The hardware audit, step by step](audit-friday.md), and
-[READ-ME-FRIDAY.md](../READ-ME-FRIDAY.md) for the plan of the day.
+[Friday 16 Oct](history/friday-2026-10-16.md) for the plan of the day.
 
 The ⚠️ rows matter most: they change what we buy, or whether it's safe to drive.
 
@@ -24,7 +26,7 @@ The ⚠️ rows matter most: they change what we buy, or whether it's safe to dr
 | # | Question | How to answer | Unblocks |
 |---|---|---|---|
 | D1 | Which commit of the ESP32 firmware is flashed? | the version line on the USB log, or the 2025-26 team | is our `aav_legacy` speaking the same protocol? |
-| D2 | What runs on the Motor-Pi, and how does it start (systemd, cron, by hand)? | `systemctl list-units`, `crontab -l`, `ps aux` | stopping it cleanly, and starting it again |
+| D2 | What runs on the Motor-Pi, and how does it start (systemd, cron, by hand)? (answered 21 Oct: the Pi called CORTEX, .120, runs `aav_serial_bridge` as a service) | `systemctl list-units`, `crontab -l`, `ps aux` | stopping it cleanly, and starting it again |
 | D3 | Which serial port goes to the ESP32? Our bridge assumes `/dev/ttyAMA0` at 115200 | `ls -l /dev/serial*`, the Motor-Pi's own code | `aav_legacy` on the Motor-Pi |
 | D4 | Is the Motor-Pi's IP `192.168.1.193`? The wheel-encoder Pico sends there, port 10111 | `ip -br addr` on the Motor-Pi | wheel speed reaching `aav_legacy` |
 | D5 | Is the Motor-Pi's OS 64-bit? | `uname -m` says `aarch64` | our Pixi environment (needs 64-bit) |
@@ -47,10 +49,10 @@ The ⚠️ rows matter most: they change what we buy, or whether it's safe to dr
 | N1 | GPS: is the ZED-F9R on the RTK-Pi's USB? Does it give fixes now? | `ls /dev/ttyACM*`; the 2025-26 GPS node's topic; `ubxtool` if installed | "is there GPS data?"; our `ublox_gps` driver (Q18) |
 | N2 | Where do RTK corrections come from: an NTRIP account, a base station, or none? | the RTK-Pi's config; ask | centimetre GPS; the KEFC base-station line |
 | N3 | The IMU: which computer is it plugged into? How is it turned on the car? | follow the cable; photograph | `orin.yaml`'s TODO; `vehicle.yaml`'s IMU angles |
-| N4 | The cameras: which model? Which Pi each? CSI ribbon (looks like it) or USB? | the Pis' `libcamera-hello --list-cameras`, `v4l2-ctl --list-devices` | `camera_ros` instead of `usb_cam` (it's in Pixi for the car) |
+| N4 | The cameras: which model? Which Pi each? CSI ribbon (looks like it) or USB? (answered in part 21 Oct: MediaMTX on the camera Pis, no ROS) | the Pis' `libcamera-hello --list-cameras`, `v4l2-ctl --list-devices` | the camera stream: MediaMTX on the Pi, `aav_camera_stream` on the Orin (decided 23 Oct) |
 | N5 | Is the rear camera (orange housing) connected to anything? | follow the ribbon | the KEFC's Cam3 line |
-| N6 ⚠️ | The lidar: make, model, IP, and which computer reads it | the label on its base; the router's client list; `ping` | a driver: Velodyne, Ouster and RoboSense drivers are in Pixi for the car; Hesai's isn't |
-| N7 | The radar: is a TI mmWave radar on the car? Where, and on which USB? | look; `ls /dev/ttyUSB*` | `ti_ros2_driver` |
+| N6 ⚠️ | The lidar: make, model, IP, and which computer reads it (answered 16 Oct: a Velodyne VLP-16 at .201, read by the Jetson; we run the stock `velodyne` driver) | the label on its base; the router's client list; `ping` | a driver: Velodyne, Ouster and RoboSense drivers are in Pixi for the car; Hesai's isn't |
+| N7 | The radar: is a TI mmWave radar on the car? Where, and on which USB? | look; `ls /dev/ttyUSB*` | `aav_radar_ti` |
 | N8 | The battery monitor (KM110F): any wired data port? | look for a port; its manual | drop the KEFC battery lines, or read it in ROS |
 | N9 | The steering's centre: with the wheels straight, what does the Jrk read? | `jrk2cmd --status` | steering offset; drift in the scripted drive |
 
@@ -59,12 +61,12 @@ The ⚠️ rows matter most: they change what we buy, or whether it's safe to dr
 | # | Question | How to answer | Unblocks |
 |---|---|---|---|
 | W1 | The subnet, and each machine's IP and MAC | `pixi run net-map` on a laptop; the router's client list; `ip -br addr` on each | a network map; `vehicle` machine files |
-| W2 | Which `ROS_DOMAIN_ID` does the 2025-26 software use? | `pixi run net-map` (the ROS column); `printenv | grep ROS` on each | picking ours so the two never mix (our kit uses 42) |
+| W2 | Which `ROS_DOMAIN_ID` does the 2025-26 software use? (answered 21 Oct: 0, Humble) | `pixi run net-map` (the ROS column); `printenv | grep ROS` on each | picking ours so the two never mix (our kit uses 42) |
 | W3 ⚠️ | Does multicast pass between the machines? ROS 2 finds its peers with it | `ros2 multicast receive` on one, `ros2 multicast send` on another, both ways, and over WiFi | ROS working across machines at all |
 | W4 | Is IGMP snooping on in the TP-Link switch? It can drop ROS's multicast | the switch's web page | W3 |
 | W5 | Does the car's network reach the internet? | `ping 1.1.1.1` from the Orin | online install, or the offline kit |
 | W6 | Are the clocks in sync? | `date` on each, side by side; `chronyc tracking` | TF and the EKFs reject messages from a wrong clock |
-| W7 | The Orin: JetPack version, module part number, free disk | `cat /etc/nv_tegra_release`; the label; `df -h` | the reflash plan (Q24); the kit (13 GB free to install) |
+| W7 | The Orin: JetPack version, module part number, free disk (answered 21 Oct: AGX Orin dev kit, JetPack 6, L4T R36.4.7) | `cat /etc/nv_tegra_release`; the label; `df -h` | the reflash plan (Q24); the kit (13 GB free to install) |
 | W8 | Free disk and RAM on each Pi | `df -h`, `free -h` | our environment on each one |
 | W9 | What are ES-PI and QNX-PI, and are they in the driving path? | log in; `systemctl list-units`; ask | the network map; the start-up order |
 | W10 | Which computer drives the dash's two screens? Their output names, resolutions, X11 or Wayland? | `xrandr --listmonitors`, `wlr-randr` or `kmsprint`; `echo $XDG_SESSION_TYPE` | the monitors in `screens.env`, for the HUD and the map at boot (docs/car-screens.md) |
@@ -83,7 +85,7 @@ Every number in `ros/bringup/aav_description/config/vehicle.yaml` is a guess. Br
 | M6 | the GPS antenna, IMU, radar, each camera and the lidar: x forward, y left, z up from the ground under the rear axle | see `vehicle.yaml` |
 | M7 | mass: 4 bathroom scales, one under each wheel, add them up (or one scale, a wheel at a time, the others on blocks of the same height) | 181 kg, Ben's estimate (about 400 lb) |
 
-How to measure each, as a sheet to fill in: [READ-ME-MEASURE-THE-CAR.md](../READ-ME-MEASURE-THE-CAR.md).
+How to measure each, as a sheet to fill in: [Measure the car](measure-the-car.md).
 
 ## 7. Power
 

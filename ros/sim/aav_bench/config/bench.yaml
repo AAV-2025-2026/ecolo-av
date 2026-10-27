@@ -28,7 +28,7 @@ mock_radar:
     obstacle: false
     boxes: [15.0, -0.5, 16.0, 0.5]
     box_height: 1.0           # m
-    # The TI IWR6843AOP with ti_ros2_driver's cfg/base.cfg: 8.4 m (cfarFovCfg), 10 Hz.
+    # The TI IWR6843AOP with aav_radar_ti's cfg/base.cfg: 8.4 m (cfarFovCfg), 10 Hz.
     max_range: 8.4            # m
     fov_deg: 120.0            # the antenna's width
     ray_step_deg: 2.0         # between the model's rays

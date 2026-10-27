@@ -7,20 +7,26 @@
 <!-- Generated from docs/status.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Status: what works and what doesn&#x27;t yet</h1>
-<div class="meta">17 min read · 4 sections</div></header>
+<div class="meta">20 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -76,7 +89,7 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#each-box-in-the-picture">Each box in the picture</a><a href="#builds-and-tests">Builds and tests</a><a href="#is-it-all-on-jazzy">Is it all on Jazzy?</a><a href="#next">Next</a></nav>
-<div class="lead"><p>Where things stand early on 11 October 2026. "Works" means it ran under ROS 2
+<div class="lead"><p>Where things stand on 25 October 2026. "Works" means it ran under ROS 2
 Jazzy through Pixi: on oirp-spss (Linux), and since 10 October on Ben's Mac too. "On the
 bench" means <a href="bench.html">Bench mode</a>: the car's own software, with stand-ins for the
 hardware. "Untested" means the
@@ -148,9 +161,9 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> turtle and the bench</td>
 </tr>
 <tr>
-<td>Goto: GPS A to B (15 Oct)</td>
-<td><code>aav_goto</code>: the <code>/goto</code> action, <code>pixi run goto</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --goto</code> drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half <code>max_brake</code>); a cancel, the e-stop and a GPS fault each stopped it. <span class="badge b-untested">untested</span> on the bench and the car (<a href="../../READ-ME-A-TO-B.md">A to B</a>)</td>
+<td>Drive to point: GPS A to B (15 Oct)</td>
+<td><code>aav_drive_to_point</code>: the <code>/drive_to_point</code> action, <code>pixi run drive-to-point</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --drive-to-point</code> drove to 10, 30 and 60 m targets at any angle, at 1 and 3 m/s, every stop within 0.4 m of B by Gazebo's truth, braking at 1.4-1.6 m/s² for a plan of 1.5 (half <code>max_brake</code>); a cancel, the e-stop and a GPS fault each stopped it. <span class="badge b-untested">untested</span> on the bench and the car (<a href="a-to-b.html">A to B</a>)</td>
 </tr>
 <tr>
 <td>Plain English</td>
@@ -160,7 +173,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Nav2</td>
 <td><code>aav_navigation</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (<code>reversing:=true</code>): on in Gazebo, on the bench, and on the car since 22 Oct where the lidar watches behind it, with a stop zone behind the rear bumper (<span class="badge b-works">works</span> in Gazebo: <code>sim-check --rear-obstacle</code> stopped 0.75 m short of a post); its settings are tested; <span class="badge b-works">works</span> in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s</td>
+<td><span class="badge b-works">works</span> in Gazebo: goals of 8 m and 9.5 m reached; on the bench, 40 m past a stop sign. Reversing (<code>reversing:=true</code>): on in Gazebo and on the bench; on the car only with <code>reversing:=true</code> (off by default since 26 Oct: the wheels can't tell direction yet, H5), where the lidar watches behind it, with a stop zone behind the rear bumper (<span class="badge b-works">works</span> in Gazebo: <code>sim-check --rear-obstacle</code> stopped 0.75 m short of a post); its settings are tested; <span class="badge b-works">works</span> in Gazebo, 15 Oct: a goal 5 m behind the car succeeded twice, backing straight up, ego's command never past -0.5 m/s</td>
 </tr>
 <tr>
 <td>Path followers (22 Oct)</td>
@@ -169,7 +182,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </tr>
 <tr>
 <td>twist_mux</td>
-<td><code>aav_mux</code></td>
+<td><code>aav_command_mux</code></td>
 <td><span class="badge b-works">works</span></td>
 </tr>
 <tr>
@@ -208,14 +221,24 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> on the Mac, 15 Oct: the car's camera (10 Hz), radar stand-in (10 Hz) and a roof lidar (10 Hz) render headless; <code>pixi run sim-check</code>, <code>--obstacle</code>, <code>--lidar-obstacle</code>, <code>--faults</code>, <code>--spine</code> and <code>--perception</code> pass. On Linux with no GPU, through <code>tools/software_gl.sh</code>: <span class="badge b-works">works</span> on oirp-spss, 23 Oct (<code>sim-check --obstacle</code>: the sensors and the stop; the nightly CI job uses it) (<a href="simulation.html">Simulation</a>)</td>
 </tr>
 <tr>
-<td>The lidar in Nav2 (15 Oct)</td>
+<td>The lidar in Nav2, in Gazebo (15 Oct)</td>
 <td><code>aav_lidar</code> <code>lidar_scan</code> -&gt; the local costmap's <code>lidar_layer</code> and <code>collision_monitor</code></td>
-<td><span class="badge b-works">works</span> in Gazebo: with the radar off, it stopped the car 0.16-0.55 m before a person-sized post (0.57 m on 20 Oct). <strong>Under load it can be late:</strong> on 20 Oct, run beside other jobs on the Mac, it stopped 0.13 m past the post's face; alone, 0.57 m before. Watch the Orin's load on the car. On the car: the stock velodyne driver since 20 Oct, on in <code>orin.yaml</code> and <code>all.yaml</code>: <span class="badge b-works">works</span> against a pretend VLP-16 (<code>tools/fake_vlp16.py</code>), the chain at 10 Hz. <strong>In bench mode</strong> (<code>bench lidar:=true</code>, <code>mock_lidar</code>, 20 Oct): <code>bench-check --lidar</code> on oirp-spss stopped the car 0.88 m before a box only the lidar saw, and the radar's own check 0.41 m before its box (<span class="badge b-works">works</span>). On the Mac, under Zoom's load, both failed: the spine latched (commands came late). The roof lidar can't see a 1 m box inside the stop zone: the radar's job (<a href="perception.html">Perception</a>). <strong>Open:</strong> with <code>lidar:=true</code>, bench-check's contract check missed the bench IMU's (or camera's) publisher in 3 of 3 runs, while the EKF got its data; probed by hand, nothing was missing. Not yet explained. <span class="badge b-untested">untested</span> with the real lidar</td>
+<td><span class="badge b-works">works</span> with the radar off: it stopped the car 0.16-0.57 m before a person-sized post. <strong>Under load it can be late:</strong> beside other jobs on the Mac it stopped 0.13 m past the post (20 Oct). Watch the Orin's load on the car</td>
+</tr>
+<tr>
+<td>The lidar in Nav2, in bench mode (20 Oct)</td>
+<td><code>bench lidar:=true</code>, <code>mock_lidar</code></td>
+<td><span class="badge b-works">works</span> on oirp-spss: <code>bench-check --lidar</code> stopped 0.88 m before a box only the lidar saw. On a loaded Mac it failed (the spine latched). <strong>Open:</strong> the contract check missed the bench IMU's (or camera's) publisher in 3 of 3 runs, while the EKF got its data. Not yet explained</td>
+</tr>
+<tr>
+<td>The lidar in Nav2, on the car</td>
+<td>the stock velodyne driver, on in <code>orin.yaml</code> and <code>all.yaml</code> (20 Oct)</td>
+<td><span class="badge b-works">works</span> against a pretend VLP-16 (<code>tools/fake_vlp16.py</code>), 10 Hz. The roof lidar can't see a 1 m box inside the stop zone: the radar's job (<a href="perception.html">Perception</a>). <span class="badge b-untested">untested</span> with the real lidar</td>
 </tr>
 <tr>
 <td>Sensor watchdog (15 Oct)</td>
 <td><code>aav_safety</code> <code>sensor_watchdog</code>: a twist_mux lock, the HUD's banner</td>
-<td><span class="badge b-works">works</span> in Gazebo: the faults on purpose (<code>pixi run sim-fault</code>, <code>sim-check --faults</code>) stop Nav2 and say why, 14 now with the HUD's heartbeat (23 Oct: a frozen or dead HUD stops Nav2 on the car, <code>watch_hud</code>; <a href="hud.html#the-heartbeat">HUD</a>), frozen wheels (cross-checked with the IMU and GPS) and the watchdog's own death (a fail-safe lock) too. Frozen wheels were caught in 1 of 4 tries on 23 Oct (flaky, not yet known why). On the bench, <code>bench-check</code> passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. <span class="badge b-untested">untested</span> on the car (<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>)</td>
+<td><span class="badge b-works">works</span> in Gazebo: the faults on purpose (<code>pixi run sim-fault</code>, <code>sim-check --faults</code>) stop Nav2 and say why, 14 now with the HUD's heartbeat (23 Oct: a frozen or dead HUD stops Nav2 on the car, <code>watch_hud</code>; <a href="hud.html#the-heartbeat">HUD</a>), frozen wheels (cross-checked with the IMU and GPS) and the watchdog's own death (a fail-safe lock) too. Frozen wheels: 25 of 25 since 24 Oct (MPPI had hidden them; the GPS check now fits 10 s: <a href="simulation.html#frozen-wheels-and-mppi">frozen wheels and MPPI</a>). On the bench, <code>bench-check</code> passes with it, and it flagged a 2.5 s stall of the whole Mac there, then let go. <span class="badge b-untested">untested</span> on the car (<a href="simulation.html#sensor-failures-on-purpose">Simulation</a>)</td>
 </tr>
 <tr>
 <td>Real car</td>
@@ -235,17 +258,17 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <tr>
 <td>Spine firmware logic</td>
 <td><code>firmware/spine/crates/spine-core</code></td>
-<td><span class="badge b-works">works</span> 70 tests, on the bench, and in Gazebo (<code>spine:=true</code>)</td>
+<td><span class="badge b-works">works</span> 84 tests, on the bench, and in Gazebo (<code>spine:=true</code>)</td>
 </tr>
 <tr>
 <td>Wheel node logic (15 Oct)</td>
 <td><code>firmware/spine/crates/wheel-core</code></td>
-<td><span class="badge b-untested">untested</span> 9 tests; no board crate yet (<code>boards/esp32s3-wheel</code>, <a href="rust-firmware.html">Rust firmware</a>)</td>
+<td><span class="badge b-untested">untested</span> 9 tests; no board uses it: the hardware lead's Arduino sends WHEEL_SPEED (23 Oct, <a href="rust-firmware.html">Rust firmware</a>)</td>
 </tr>
 <tr>
 <td>Spine device drivers and glue</td>
 <td><code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>legacy-link</code>, <code>spine-board</code></td>
-<td><span class="badge b-works">works</span> 176 tests, against mocks; <code>legacy-link</code> also against the 2025-26 C++ itself</td>
+<td><span class="badge b-works">works</span> about 240 tests (<code>spine-board</code> 79), against mocks; <code>legacy-link</code> also against the 2025-26 C++ itself</td>
 </tr>
 <tr>
 <td>ESP32 board program (Rust)</td>
@@ -303,19 +326,64 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> on the bench: the stop zone stops the car 0.3-0.4 m before a box as wide as the lane. Open: the car weaves up to 1.5 m off its line (N7), so it can pass beside a narrow box; the stop zone flickers at its edge. The camera layer is off until the cameras are calibrated (Q22)</td>
 </tr>
 <tr>
-<td>HUD back end and app</td>
-<td><code>aav_hud</code>, <code>hud/</code></td>
-<td><span class="badge b-works">works</span> on the bench: the app's e-stop button stops the car in 0.3 s. <span class="badge b-untested">untested</span> on the car's screen</td>
+<td>HUD back end and app (Flask, Flutter)</td>
+<td><code>archive/2026-27-flutter-hud/</code></td>
+<td>archived 25 Oct: the raylib HUD replaced it (Q29). Not built, not tested</td>
 </tr>
 <tr>
-<td>HUD in Rust (raylib)</td>
-<td><code>aav_hud_raylib</code></td>
+<td>HUD and map window in Rust (raylib)</td>
+<td><code>aav_hud</code></td>
 <td><span class="badge b-works">works</span> on a Mac: <code>--demo</code>, and as a node fed by <code>ros2 topic pub</code>; its e-stop reaches a subscriber as 5 trues. Its heartbeat (23 Oct): the real window beat at 9.3 Hz, and freezing or closing it made the watchdog say <code>hud STALE</code> in 1 s. Since 24 Oct a dropout after its first 5 s is latched (<code>hud LOST</code>, <code>pixi run watchdog-clear</code>), and a GO / STOP panel says whether the car may move (logic tested; not yet seen on screen). <span class="badge b-works">works</span> next to bench mode too. <span class="badge b-untested">untested</span> on a Pi and on the car's screen</td>
 </tr>
 <tr>
 <td>CARLA</td>
 <td><code>aav_carla</code></td>
 <td><span class="badge b-untested">untested</span> adapter built and tested without a server; needs the NVIDIA computer (<a href="carla.html">CARLA</a>)</td>
+</tr>
+<tr>
+<td>Heading from the GPS velocity (25 Oct)</td>
+<td><code>aav_gps_heading</code> <code>gps_heading</code> -&gt; <code>ekf_global</code> (yaw only), <code>pixi run heading-check</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: at walking pace the heading's median error fell from 2.2-2.8° to 1.6-2.1°, forward and reversing. <span class="badge b-untested">untested</span> on the car: needs <code>gps_driver:=ublox</code> for the velocity</td>
+</tr>
+<tr>
+<td>RC via ROS (24 Oct)</td>
+<td><code>aav_rc</code> <code>rc_driver</code>: <code>/vehicle/rc</code> -&gt; <code>/drivers/rc/cmd_vel</code> (twist_mux 95); the ESP32's uplink (<code>--features uplink</code>)</td>
+<td><span class="badge b-works">works</span> in QEMU (all six RC steps) and in a ROS test. Off until the hardware lead answers H9 and H10. <span class="badge b-untested">untested</span> on a real ESP32 and the car</td>
+</tr>
+<tr>
+<td>The ESP32's uplink (24 Oct)</td>
+<td><code>legacy_uart_bridge</code> <code>uplink: true</code> -&gt; <code>/vehicle/status</code>, <code>/vehicle/steering</code>, <code>/vehicle/brake</code>, <code>/vehicle/rc</code></td>
+<td><span class="badge b-works">works</span> in QEMU: 50-51 Hz, 0 frames lost. Off by default. <span class="badge b-untested">untested</span> on a real ESP32 and Pi (<a href="esp32-bench.html">ESP32 bench</a>)</td>
+</tr>
+<tr>
+<td>Street routes (16 Oct)</td>
+<td><code>aav_routes</code> (Valhalla, offline)</td>
+<td><span class="badge b-works">works</span> in Gazebo: a street route drove to 0.5 m of its end through Nav2 (<a href="routes.html">Street routes</a>). <span class="badge b-untested">untested</span> on the car</td>
+</tr>
+<tr>
+<td>Ghost obstacles (16 Oct)</td>
+<td><code>aav_ghost</code>, <code>pixi run ghost</code></td>
+<td><span class="badge b-works">works</span> in Gazebo: <code>sim-check --ghost</code> stopped 0.21 m before it (<a href="ghost-obstacles.html">Ghost obstacles</a>). <span class="badge b-untested">untested</span> on the car</td>
+</tr>
+<tr>
+<td>Actuator tests (15 Oct)</td>
+<td><code>aav_actuator_tests</code>, <code>pixi run actuator-test</code></td>
+<td><span class="badge b-works">works</span> in Gazebo. <span class="badge b-untested">untested</span> on stands (<a href="actuator-tests.html">Actuator tests</a>)</td>
+</tr>
+<tr>
+<td>The speed loop's <code>smooth</code> profile (25 Oct)</td>
+<td>spine-core <code>SpeedLoopProfile</code>, <code>speed_loop:=smooth</code> in sim and bench</td>
+<td><span class="badge b-works">works</span> in the model and Gazebo: overshoot 15% -&gt; 0%. Not the default. <span class="badge b-untested">untested</span> on stands</td>
+</tr>
+<tr>
+<td>Watch from a laptop (24 Oct)</td>
+<td><code>foxglove.launch.py</code>, three layouts in <code>tools/foxglove/</code></td>
+<td><span class="badge b-works">works</span> live with the road sim and the bench: every layout topic served. The layouts not yet opened in the app by hand. <span class="badge b-untested">untested</span> at the car (<a href="foxglove.html">Foxglove</a>)</td>
+</tr>
+<tr>
+<td>Car-day kit (24 Oct)</td>
+<td><code>pixi run car-day-build</code>, <code>pixi run car-day-check</code></td>
+<td><span class="badge b-works">works</span> on Ben's Mac: both ESP32 builds, QEMU passes, the check's 35 tests (<a href="car-day.html">Car day</a>)</td>
 </tr>
 <tr>
 <td>Lidar</td>
@@ -335,12 +403,12 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 </thead>
 <tbody>
 <tr>
-<td><code>colcon build</code>, all 26 packages, Jazzy</td>
-<td><span class="badge b-works">works</span> 11 s on Linux (19 packages, 10 Oct); about 15 s on the Mac (26)</td>
+<td><code>colcon build</code>, all 37 packages, Jazzy</td>
+<td><span class="badge b-works">works</span> on Linux and the Mac (25 Oct)</td>
 </tr>
 <tr>
 <td><code>pixi run test</code>: build, tests, lint, <code>colcon test</code></td>
-<td><span class="badge b-works">works</span> all pass, 11 Oct: Python 230, Rust 208 and a no_std build for the Pico 2; <code>colcon test</code> 291, 0 failures; the HUD app's own tests</td>
+<td><span class="badge b-works">works</span> 25 Oct: 1110 tests, 0 failures, 4 skipped, 37 packages (after the Flutter HUD's back end went to the archive). CI runs it on Linux (x86_64 and 64-bit ARM) for every push</td>
 </tr>
 <tr>
 <td>Live graph vs <code>docs/interfaces.yaml</code>: turtle, sim, road, replay and bench</td>
@@ -367,7 +435,7 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-works">works</span> on an Apple Silicon Mac (macOS 27), 10 Oct: build 18 s, <code>pixi run test</code> all green after one fix (GNU <code>coreutils</code>, see <a href="mac.html">Your Mac</a>)</td>
 </tr>
 <tr>
-<td>On the Mac: the turtle, Gazebo headless, a Nav2 goal, the Rust listener, the docs, <code>pixi run doctor</code>, recording a drive</td>
+<td>On the Mac: the turtle, Gazebo headless, a Nav2 goal, the docs, <code>pixi run doctor</code>, recording a drive</td>
 <td><span class="badge b-works">works</span></td>
 </tr>
 <tr>
@@ -379,8 +447,8 @@ code and its config exist, but it hasn't run yet. The plan and the work left are
 <td><span class="badge b-untested">untested</span> they open; nobody has looked at them yet</td>
 </tr>
 <tr>
-<td>The same <code>pixi.toml</code> on the car's ARM computers, on today's Ubuntu 22.04</td>
-<td>resolves; <span class="badge b-untested">untested</span></td>
+<td>The same <code>pixi.toml</code> on 64-bit ARM Linux</td>
+<td><span class="badge b-works">works</span> in CI on Ubuntu 24.04 ARM (25 Oct): <code>pixi run test</code>, and the car kit installed with no network. <span class="badge b-untested">untested</span> on the car's own computers (Ubuntu 22.04, JetPack 6)</td>
 </tr>
 </tbody>
 </table></div>
@@ -397,7 +465,7 @@ are in <code>docs/history/audit-2026-10-10-*.md</code>.</p>
 <li>Pick the team's <code>ROS_DOMAIN_ID</code> and the GPS driver.</li>
 <li>Drive the turtle with the joystick.</li>
 <li>Measure the car, and replace the guesses in <code>vehicle.yaml</code>.</li>
-<li>Choose the spine's microcontroller (Q10–Q17). The Pico 2 program is ready to try on a spare board.</li>
+<li>Work through the car-day sessions in order (<a href="car-day.html">Car day</a>; TODO.md "Ready for the car").</li>
 </ol></section>
 <nav class="prevnext"><a class="prev" href="learn-can.html"><small>Previous</small>← Learn: CAN</a>
 <a class="next" href="howto-driver.html"><small>Next</small>Build a driver →</a></nav>

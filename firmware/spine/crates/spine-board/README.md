@@ -1,5 +1,7 @@
 # spine-board
 
+## Overview
+
 The glue between `spine-core` and the car's devices, for any board. `spine-core`
 decides; this crate connects it to the hardware without knowing which chip runs it.
 Plain `no_std` Rust.
@@ -19,7 +21,7 @@ things:
 | 2 | iBUS bytes from the serial port, to the RC input |
 | 3 | the hardware e-stop, debounced: trips at once, releases after 50 ms closed |
 | 4 | the wheel counter, to the measured speed |
-| 5 | the steering Jrk's feedback, and both Jrks' errors |
+| 5 | both Jrks' positions (steering and brake), and both Jrks' errors |
 | 6 | `Spine::step` |
 | 7 | the devices, in a safe order (below) |
 | 8 | VEHICLE_FEEDBACK every 20 ms, VEHICLE_STATUS every 100 ms |
@@ -39,29 +41,41 @@ The order of the writes, every tick:
 | Setting | Value |
 |---|---|
 | I2C | 100 kHz, as today. Faster, and the Jrk needs 100 µs of quiet after each read |
-| Bus time | a few ms a tick at 100 kHz: 3 reads, 4 writes, and the Jrks stretch the clock (up to 150 µs a byte) |
+| Bus time | a few ms a tick at 100 kHz: up to 4 reads (each Jrk's errors, and its position when it has analog feedback), 4 writes, and the Jrks stretch the clock (up to 150 µs a byte). Each Jrk's feedback mode is read once, and again after a failed read |
 | iBUS serial port | 115200 baud, 8N1, receive only |
 | CAN | classic, 500 kbit/s, 11-bit IDs (`firmware/can/aav.dbc`) |
 | Tick | about every 10 ms; the ramp and the e-stop use the clock, not the tick count |
 | E-stop pin | `estop_open()` is true when the loop is open, whatever level that is on the pin |
 | Wheel counter | `wheel()` gives the count, and the clock at its latest count |
 
-## API
+## Interface
 
 | Item | Does |
 |---|---|
 | `Board` | the trait a board implements: `now_ms`, `estop_open`, `wheel`, `can_receive`, `can_send` |
 | `CanFrame`, `WheelCount` | what those return |
+| `CanFrame::new(id, data)`, `id()`, `data()`, `MAX_ID` | a classic frame: `None` past 11 bits (`MAX_ID` = 0x7FF) or 8 bytes |
 | `Calibration::TODAY` | today's numbers (below) |
 | `Devices::new(steering, brake, dac, expander, &cal)` | the four I2C devices; share one bus with `embedded-hal-bus` |
 | `SpineBoard::new(board, devices, uart, cal, config)` | the whole spine, with the computer on CAN |
 | `SpineBoard::with_link(board, devices, uart, link, cal, config)` | the same, with the commands through `link` |
 | `CommandLink`, `CanLink`, `LegacyLink` | where the commands come from: CAN through the board (`aav.dbc`), or the Motor-Pi's UART frames (`legacy-link`: version 2 with the Orin's heartbeat counter, or the 13-byte version 1), turned into the same Jrk and DAC targets as the 2025-26 C++. With version 2, a frame whose counter didn't change is no command (`FrameVersion`, `LinkStats`) |
 | `SpineBoard::init()`, `tick()` | power-up, then one pass of the loop |
+| `SpineBoard::board()`, `link()`, `actuators()` | the parts inside, to use or read (LEDs, link stats) |
+| `FEEDBACK_PERIOD_MS`, `STATUS_PERIOD_MS` | 20, 100: how often VEHICLE_FEEDBACK and VEHICLE_STATUS go out |
 | `Actuators::apply(&outputs, now_ms)` | drives the devices; returns fault bits |
-| `Actuators::read()` | the steering angle and the Jrks' faults |
-| `WheelSpeed::update(count, now_ms)` | the speed from the wheel counter |
+| `Actuators::read()` | the steering angle, both Jrks' positions (steering and brake), and their faults |
+| `Actuators::new(devices, cal)`, `init()`, `release()` | the devices with their calibration; power-up (throttle 0, brake on, forward, centre); the devices back |
+| `Actuators::throttle_code()`, `reverse()`, `devices()` | the last DAC code, the last direction, the devices themselves |
+| `WheelSpeed::new(metres_per_count, timeout_ms)`, `update(count, now_ms)` | the speed from the wheel counter |
 | `SpokeSensors::TODAY.update(a, b, now_ms)` | for a board that reads the two spoke sensors itself, every millisecond: the 2025-26 encoder Pico's rule, a count on A's rising edge, backwards if B rose in the 20 ms before. From the `wheel-encoder` crate, re-exported (15 Oct) |
+| `LegacyLink::new(uart, cal, version)`, `with_uplink(uart, tx, cal, version)` | the UART link, without or with the `legacy-link` uplink status frame every `UPLINK_PERIOD_MS` (20 ms) on TX; `NoUplink` sends nothing. `stats()` gives its `LinkStats`; `uplink_frame(&report, seq)` builds one uplink frame |
+| `Report` | one tick as the spine saw it (outputs, RC, positions), handed to the link after each tick |
+| `Positions`, `Readings` | where the Jrks are; what `Actuators::read()` found |
+| `StandInBus`, `DeviceTargets` | stand-in devices on an I2C bus for a board with none wired (the ESP32 in QEMU); not for the car |
+
+It depends on `spine-core`, `aav-inputs`, `wheel-encoder`, `legacy-link`, `jrk-g2`,
+`ad5311`, `pca9555` and `ibus` (all crates beside it), and on `embedded-hal` and `embedded-io`.
 
 Faults found here go to `spine-core`, which stops the car until the computer arms again:
 
@@ -89,10 +103,35 @@ question.
 | Direction | expander P00: high forward, low reverse | Q4 |
 | Other expander pins | outputs, high | Q13 |
 | Wheel | 0.1178 m a count (8 spokes, 0.30 m wheel) | Q5 |
+| Wheel timeout | no count for 1000 ms: the car counts as stopped | |
 | RC | `ibus::RcMap::TODAY`; silent after 100 ms | Q7 |
 | E-stop input | releases after 50 ms closed | Q6 |
 
-## Test
+## Invariants
+
+- `spine-core` decides; this crate never makes a driving decision of its own. It
+  turns `Outputs` into device writes and device reads into `Inputs`.
+- The writes follow the safe order above, every tick: throttle down before the
+  brake, the direction only with the DAC at 0, throttle up last.
+- The throttle is 0 whenever the brake is on.
+- Any device error becomes a fault bit, and `spine-core` stops the car. Nothing is
+  printed and ignored.
+- A tick does bounded work: at most 32 CAN frames and 16 UART reads.
+- With a version 2 link, a frame whose counter didn't change is no command, so the
+  100 ms watchdog stops the car when the Orin stops.
+- The ramp and the e-stop debounce use the clock, not the tick count.
+- Car numbers live in `Calibration`. `StandInBus` is never for the car.
+
+## Side Effects
+
+- I2C writes and reads: the steering and brake Jrks, the throttle DAC, the expander.
+  These move the car.
+- Reads the RC receiver's serial port, and the Motor-Pi's UART with `LegacyLink`;
+  writes the uplink on its TX.
+- CAN through the `Board`: reads DRIVE_CMD and ESTOP_CMD; sends VEHICLE_FEEDBACK
+  every 20 ms and VEHICLE_STATUS every 100 ms (`firmware/can/aav.dbc`).
+
+## Verification
 
 ```sh
 cd firmware/spine

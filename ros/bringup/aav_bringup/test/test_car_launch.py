@@ -189,15 +189,17 @@ def test_the_lidar_runs_where_its_packets_go_and_nav2_reads_it():
     assert 'sensors.launch.py' not in included(started(CAR, machine='laptop'))
 
 
-def test_nav2_reverses_where_the_lidar_sees_behind():
-    # Ben, 22 Oct: "Yes the car can reverse". On the Jetson the roof lidar watches behind.
-    assert included(started(CAR, machine='orin'))['navigation.launch.py']['reversing'] == 'true'
+def test_nav2_reverses_only_when_asked_and_where_the_lidar_sees_behind():
+    # Off by default on the car (26 Oct, F2): the wheels can't tell direction yet (H5).
+    default = included(started(CAR, machine='orin'))['navigation.launch.py']
+    assert default['reversing'] == 'false'
+    # reversing:=true (Ben, 22 Oct: "Yes the car can reverse"): the roof lidar watches behind.
+    on = included(started(CAR, machine='orin', reversing='true'))['navigation.launch.py']
+    assert on['reversing'] == 'true'
     # Without it nothing sees behind (the radar faces forward): forward only.
-    blind = included(started(CAR, machine='orin', lidar='false'))['navigation.launch.py']
+    blind = included(started(CAR, machine='orin', reversing='true',
+                             lidar='false'))['navigation.launch.py']
     assert blind['reversing'] == 'false'
-    # reversing:=false: never, lidar or not.
-    off = included(started(CAR, machine='orin', reversing='false'))['navigation.launch.py']
-    assert off['reversing'] == 'false'
 
 
 def test_the_rear_camera_sees_behind_only_when_its_detector_reads_it_for_people():

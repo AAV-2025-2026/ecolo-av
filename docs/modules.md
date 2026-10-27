@@ -1,9 +1,10 @@
 # Every module, explained
 
-One card for every ROS package in `src/` and every crate and board in `firmware/`. Each
+One card for every ROS package in `ros/` and every crate and board in `firmware/`. Each
 card answers the same nine questions. [Packages](packages.md) is the short version, in
-tables; this page goes deeper. Written on 15 October 2026, with the topic names by area
-([Topic areas](naming.md)).
+tables; this page goes deeper. Written 15 October 2026, checked 25 October, with the
+topic names by area ([Topic areas](naming.md)). 37 packages build; seven of the newest have a
+one-line entry, pointing at their own README ([below](#more-packages-see-their-readmes)).
 
 ![How the stack fits together](img/architecture.svg)
 
@@ -25,17 +26,18 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 
 ## Contents
 
-| Layer | Modules |
+| Area (`ros/<area>/`) | Modules |
 |---|---|
-| [Sensors](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `battery_monitor`, `ti_ros2_driver` |
-| [Description and localization](#description-and-localization) | `aav_description`, `aav_localization`, `aav_gps_heading` |
-| [Drivers](#drivers) | `aav_teleop`, `aav_scripted`, `aav_goto`, `aav_language`, `aav_navigation` |
-| [Mux and ego](#mux-and-ego) | `aav_mux`, `aav_io_mux`, `aav_ego` |
-| [Backends](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla` |
-| [Perception](#perception) | `aav_detector`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry` |
-| [HUD](#hud) | `aav_hud`, `aav_hud_raylib` |
-| [Bench](#bench) | `aav_spine_sim`, `aav_bench` |
-| [Messages and bringup](#messages-and-bringup) | `aav_interfaces`, `aav_bringup` |
+| [sources](#sensors) | `aav_sensors`, `aav_imu_yahboom`, `aav_battery_victron`, `aav_radar_ti`; `aav_camera_stream` ([one line](#more-packages-see-their-readmes)) |
+| [bringup, localization](#description-and-localization) | `aav_description`, `aav_localization`, `aav_gps_heading` |
+| [drivers](#drivers) | `aav_teleop`, `aav_actuator_tests`, `aav_scripted`, `aav_drive_to_point`, `aav_language`, `aav_navigation`; `aav_rc`, `aav_routes` ([one line](#more-packages-see-their-readmes)) |
+| [command_mux, io_mux, ego](#mux-and-ego) | `aav_command_mux`, `aav_io_mux`, `aav_ego` |
+| [can_bridge, sim](#backends) | `aav_spine`, `aav_legacy`, `aav_turtlesim`, `aav_gazebo`, `aav_carla`; `aav_spine_bridge` ([one line](#more-packages-see-their-readmes)) |
+| [perception](#perception) | `aav_detector`, `aav_radar_clusters`, `aav_lane_finder`, `aav_lane_geometry`; `aav_lidar` ([one line](#more-packages-see-their-readmes)) |
+| [hud](#hud) | `aav_hud` |
+| [sim: bench mode](#bench) | `aav_spine_sim`, `aav_bench` |
+| [ecolo_msgs, bringup](#messages-and-bringup) | `aav_interfaces`, `aav_bringup` |
+| [safety](#more-packages-see-their-readmes) | `aav_safety`, `aav_ghost` ([one line](#more-packages-see-their-readmes)) |
 | [Firmware: the spine (Rust)](#firmware-the-spine-rust) | `can/aav.dbc`, `spine-core`, `aav-inputs`, `jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `legacy-link`, `spine-board`, `boards/esp32-umod`, `boards/pico2` |
 | [Firmware: the other Pico 2s (Rust)](#firmware-the-other-pico-2s-rust) | `wheel-encoder`, `boards/wheel-encoder-pico2`, `sentinel`, `hd44780`, `boards/sentinel-pico2` |
 | [Firmware: today's boards (C++)](#firmware-todays-boards-c) | `aav_umod_esp32` |
@@ -46,11 +48,11 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 
 | | |
 |---|---|
-| **Does** | starts the sensor drivers (IMU, GPS, radar, battery, cameras) with the car's settings |
+| **Does** | starts the sensor drivers (IMU, GPS, roof lidar, radar, battery, a USB camera) with the car's settings. The front cameras come by `aav_camera_stream` instead |
 | **Why** | one launch file per computer, so each sensor starts the same way everywhere |
-| **Runs on** | whichever computer the sensor is plugged into: the Orin's file turns on IMU and GPS (both still TODO: which USB?) |
-| **In → out** | `/dev/aav/imu`, `/dev/aav/gps`, `/dev/aav/radar_*`, `/dev/aav/battery`, `/dev/aav/camera_*` → `/sensors/imu/data`, `/sensors/gps/fix`, `/sensors/radar/points`, `/vehicle/battery`, `/sensors/camera/front_left/image_raw` |
-| **Origin** | ours; it starts stock drivers (`ublox_gps`, `nmea_navsat_driver`, `ublox_dgnss`, `imu_filter_madgwick`, `usb_cam`). The camera calibrations are the 2024-25 `cameras` repo's |
+| **Runs on** | whichever computer the sensor is plugged into: the Orin's file turns on IMU and GPS (both still TODO: which USB?) and the lidar |
+| **In → out** | `/dev/aav/imu`, `/dev/aav/gps`, the VLP-16's UDP packets, `/dev/aav/radar_*`, `/dev/aav/battery`, `/dev/aav/camera_*` → `/sensors/imu/data`, `/sensors/gps/fix`, `/sensors/lidar/points`, `/sensors/radar/points`, `/vehicle/battery`, `/sensors/camera/front_left/image_raw` |
+| **Origin** | ours; it starts stock drivers (`ublox_gps`, `nmea_navsat_driver`, `ublox_dgnss`, `imu_filter_madgwick`, `velodyne`, `usb_cam`). The camera calibrations are the 2024-25 `cameras` repo's |
 | **Status** | [[untested]] needs the devices |
 | **Run alone** | `ros2 launch aav_sensors sensors.launch.py imu:=true gps:=true radar:=false battery:=false` |
 | **Test** | on the car: `ros2 topic hz /sensors/gps/fix` and `/sensors/imu/data` |
@@ -70,7 +72,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Test** | `cargo test -p yahboom-protocol` (in `tools/test.sh`) |
 | **Read first** | `crates/yahboom-protocol/src/lib.rs`, then `PROVENANCE.md` |
 
-### battery_monitor
+### aav_battery_victron
 
 | | |
 |---|---|
@@ -80,11 +82,11 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **In → out** | `/dev/aav/battery` → `/vehicle/battery` (BatteryState), `/vehicle/battery/heartbeat` (String) |
 | **Origin** | inherited: 2024-25 `Battery-Monitor-ROS`; two start-up crashes fixed |
 | **Status** | [[untested]] needs the device |
-| **Run alone** | `ros2 run battery_monitor battery_monitor --ros-args -p port:=/dev/ttyUSB0` |
+| **Run alone** | `ros2 run aav_battery_victron battery_monitor --ros-args -p port:=/dev/ttyUSB0` |
 | **Test** | only the stock style tests (`colcon test`) |
-| **Read first** | `battery_monitor/battery_monitor.py` |
+| **Read first** | `aav_battery_victron/battery_monitor.py` |
 
-### ti_ros2_driver
+### aav_radar_ti
 
 | | |
 |---|---|
@@ -95,8 +97,8 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Origin** | inherited: 2025-26 `Nav_Radar` @ 6242631882 |
 | **Status** | [[untested]] on the radar; its configs are indoor demos. Its `mock_radar_publisher` [[works]] |
 | **Run alone** | `ros2 launch aav_sensors sensors.launch.py radar:=true imu:=false gps:=false` |
-| **Test** | `ros2 run ti_ros2_driver mock_radar_publisher` stands in for it |
-| **Read first** | `ti_ros2_driver/pc_publisher.py` |
+| **Test** | `ros2 run aav_radar_ti mock_radar_publisher` stands in for it |
+| **Read first** | `aav_radar_ti/pc_publisher.py` |
 
 ## Description and localization
 
@@ -186,19 +188,19 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **Test** | `test/test_speed_profile.py` (in `tools/test.sh`) |
 | **Read first** | `aav_scripted/speed_profile.py` |
 
-### aav_goto
+### aav_drive_to_point
 
 | | |
 |---|---|
 | **Does** | an action that drives to one point B (lat/lon or map x/y) and stops there: speed up gently, hold, slow down by the distance left at half the measured braking |
-| **Why** | the main goal (Ben, 15 Oct): GPS A to B with a smooth stop, READ-ME-TESTS 5.2 |
+| **Why** | the main goal (Ben, 15 Oct): GPS A to B with a smooth stop, tests.md 5.2 |
 | **Runs on** | the Orin, next to the mux |
-| **In → out** | the action `/goto`, `/localization/odom/global`, `/sensors/gps/fix` → `/drivers/goto/cmd_vel` (twist_mux priority 25) |
+| **In → out** | the action `/drive_to_point`, `/localization/odom/global`, `/sensors/gps/fix` → `/drivers/point/cmd_vel` (twist_mux priority 25) |
 | **Origin** | ours |
-| **Status** | [[works]] in Gazebo (`pixi run sim-check --goto`, 15 Oct); [[untested]] on the car |
-| **Run alone** | `pixi run sim`, then `pixi run goto --sim --ahead 20` |
+| **Status** | [[works]] in Gazebo (`pixi run sim-check --drive-to-point`, 15 Oct); [[untested]] on the car |
+| **Run alone** | `pixi run sim`, then `pixi run drive-to-point --sim --ahead 20` |
 | **Test** | `test/` (in `tools/test.sh`): the speed plan, the steering, the rules, whole drives on a pretend car |
-| **Read first** | [A to B](../READ-ME-A-TO-B.md), then `aav_goto/approach.py` and `line.py` |
+| **Read first** | [A to B](a-to-b.md), then `aav_drive_to_point/approach.py` and `line.py` |
 
 ### aav_language
 
@@ -230,7 +232,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 
 ## Mux and ego
 
-### aav_mux
+### aav_command_mux
 
 | | |
 |---|---|
@@ -240,7 +242,7 @@ tables; this page goes deeper. Written on 15 October 2026, with the topic names 
 | **In → out** | every `/drivers/<driver>/cmd_vel`, `/safety/estop`, `/perception/stop_sign` → `/control/cmd_vel` |
 | **Origin** | stock twist_mux; our settings. Replaces 2025-26 `Real-Time-OS`'s command picking |
 | **Status** | [[works]] |
-| **Run alone** | `ros2 launch aav_mux mux.launch.py` |
+| **Run alone** | `ros2 launch aav_command_mux mux.launch.py` |
 | **Test** | `pixi run estop` while the turtle drives |
 | **Read first** | `config/twist_mux.yaml` (the priorities) |
 
@@ -296,10 +298,10 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 
 | | |
 |---|---|
-| **Does** | drives today's ESP32 with 13-byte UART frames, and turns the wheel encoder's UDP packets into speed |
-| **Why** | it lets our stack drive the car as it is today, before the spine exists |
-| **Runs on** | the Motor Pi (`motor_pi.yaml`): the ESP32 is wired to it, and the encoder sends only to it |
-| **In → out** | `/control/car/actuator_cmd`, `/safety/estop` → serial `/dev/ttyAMA0` (use `/dev/serial0`); UDP port 10111 → `/vehicle/odom` |
+| **Does** | drives today's ESP32 with UART frames (13 bytes, or version 2 with the output mux's heartbeat); can also turn the 2025-26 wheel encoder's UDP packets into speed (off on the car since 23 Oct: the wheels are on CAN) |
+| **Why** | it lets our stack drive the car as it is today (`actuators:=uart`, the default), before the spine exists |
+| **Runs on** | the Motor Pi (`motor_pi.yaml`: `legacy_uart` only): the ESP32 is wired to it |
+| **In → out** | `/control/car/actuator_cmd`, `/control/car/heartbeat`, `/safety/estop` → serial `/dev/ttyAMA0` (use `/dev/serial0`); UDP port 10111 → `/vehicle/odom` (only with `legacy_encoder`) |
 | **Origin** | ours, written for the 2025-26 protocols (`AAV_cortex`, `Wheel_Encoders`) |
 | **Status** | [[untested]] on the car. The ESP32 has no command timeout: wheels off the ground first |
 | **Run alone** | `ros2 launch aav_legacy legacy.launch.py` (on the Motor Pi) |
@@ -356,12 +358,12 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 
 | | |
 |---|---|
-| **Does** | three nodes: `detector` (YOLO on camera pictures), `stop_sign_watcher` (locks the mux at a close stop sign), `camera_obstacles` (boxes as points on the road for Nav2) |
+| **Does** | three nodes: `object_detector` (RF-DETR Nano on camera pictures by default; YOLO with `detector:=yolo`), `stop_sign_watcher` (locks the mux at a close stop sign), `camera_obstacles` (boxes as points on the road for Nav2) |
 | **Why** | the car must stop at stop signs, and see people and cars |
 | **Runs on** | the detector: the Orin (TensorRT, after the reflash) or a laptop (Core ML); the watcher: the Orin |
 | **In → out** | `/sensors/camera/front_left/image_raw` → `/perception/detections` → `/perception/stop_sign`, `/perception/camera_obstacles`, `/perception/camera_view` |
-| **Origin** | inherited, rewritten: 2024-25 `camera_ros2_ws` (and `camera_Yolo_detection` for `training/`) |
-| **Status** | [[works]] on the bench, with the stock YOLO model. The team's trained model is lost |
+| **Origin** | inherited, rewritten: 2024-25 `camera_ros2_ws` |
+| **Status** | [[works]] on the bench and in Gazebo, with the stock RF-DETR Nano. The 2024-25 team's trained model is lost. On the car, the detector runs inside `aav_camera_stream` |
 | **Run alone** | `pixi run get-models`, then `pixi run detect picture:=ros/perception/aav_detector/test/stop_sign.jpg` |
 | **Test** | `test/` (in `tools/test.sh`); `pixi run bench-check --perception` |
 | **Read first** | `aav_detector/stop_sign.py` |
@@ -416,28 +418,14 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 
 | | |
 |---|---|
-| **Does** | the Flutter touchscreen app's back end: a ROS node with a web server (Flask, Socket.IO) |
-| **Why** | the passenger sees speed, map and camera, picks a route, and has an e-stop button |
-| **Runs on** | the DASH-UI Pi (guess) |
-| **In → out** | `/vehicle/status`, `/localization/gps/fix`, `/perception/stop_sign`, `/vehicle/battery`, the camera → app events on 127.0.0.1:5000; the app → `/safety/estop`, Nav2's `/follow_gps_waypoints` |
-| **Origin** | inherited, rewritten: 2025-26 `User-Interface` @ e6e6b1e565 (`maincar`) |
-| **Status** | [[works]] on the bench: the app's e-stop stops the car in 0.3 s. [[untested]] on the car's screen |
-| **Run alone** | `ros2 launch aav_hud hud.launch.py` |
-| **Test** | `test/` (in `tools/test.sh`); `pixi run hud-test` for the app |
-| **Read first** | `aav_hud/hud_server.py` |
-
-### aav_hud_raylib
-
-| | |
-|---|---|
-| **Does** | the in-car screen in Rust: one raylib window that is also the ROS node `hud` |
-| **Why** | to replace the Flutter app and its back end with one program (Ben, 11 Oct) |
+| **Does** | the in-car screens in Rust: the HUD, one raylib window that is also the ROS node `hud`; and the map window, node `map` |
+| **Why** | the driver sees speed, GO / STOP and the camera, and has an e-stop button. It replaced the 2025-26 Flutter app and its Flask back end (Ben, 11 and 15 Oct; archived 25 Oct, Q29) |
 | **Runs on** | the dash screen (guess); today a Mac |
 | **In → out** | `/vehicle/status`, `/sensors/gps/fix`, `/localization/gps/fix`, `/perception/stop_sign`, `/vehicle/battery`, the camera → the screen; the button → `/safety/estop` (only true) |
-| **Origin** | ours. Two crates: `hud-core` (logic, no ROS) and `hud-app` (window and node) |
+| **Origin** | ours. Four crates: `hud-core` and `map-core` (logic, no ROS), `hud-app` and `map-app` (window and node) |
 | **Status** | [[works]] on a Mac, alone and next to the bench. [[untested]] on a Pi and the car |
-| **Run alone** | `pixi run hud-demo` (pretend data), `pixi run hud` (the node) |
-| **Test** | `cargo test -p hud-core` (in `tools/test.sh`) |
+| **Run alone** | `pixi run hud-demo`, `pixi run map-demo` (pretend data); `pixi run hud`, `pixi run map` (the nodes) |
+| **Test** | `cargo test -p hud-core`, `-p map-core` (in `tools/test.sh`) |
 | **Read first** | `crates/hud-core/src/lib.rs` |
 
 ## Bench
@@ -478,7 +466,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 
 | | |
 |---|---|
-| **Does** | our own message and action: `VehicleStatus`, `ScriptedDrive` |
+| **Does** | our own 9 messages (such as `VehicleStatus`, `DataSource`, `Heartbeat`, `WheelSpeeds`) and 2 actions (`ScriptedDrive`, `DriveToPoint`) |
 | **Why** | the car's state (mode, armed, e-stop, faults) has no stock message |
 | **Runs on** | every computer (it's a build dependency) |
 | **In → out** | none: definitions only |
@@ -492,7 +480,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 
 | | |
 |---|---|
-| **Does** | the five profiles (`turtle`, `sim`, `car`, `replay`, `bench`), the machine files, the RViz layouts |
+| **Does** | the six profiles (`turtle`, `sim`, `bench`, `car`, `carla`, `replay`), `stack.launch.py target:=`, `foxglove.launch.py`, the machine files, the RViz layouts |
 | **Why** | one command starts the right parts on each computer |
 | **Runs on** | every computer: `pixi run car <machine>` |
 | **In → out** | starts everything else |
@@ -501,6 +489,22 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 | **Run alone** | `pixi run car all` |
 | **Test** | `test/test_car_launch.py` (`colcon test`); `pixi run check <profile>` |
 | **Read first** | `config/machines/orin.yaml`, then `launch/car.launch.py` |
+
+## More packages: see their READMEs
+
+These have no card here yet. Each package's README answers the same questions.
+
+| Package | Does | Read first |
+|---|---|---|
+| `aav_camera_stream` | one node per front camera: the camera Pi's H.264 stream, decoded, with RF-DETR inside | `ros/sources/aav_camera_stream/README.md`, then [Camera pipeline](camera-pipeline.md) |
+| `aav_rc` | the RC transmitter on "RC via ROS" as a driver (priority 95, proposed) | `ros/drivers/aav_rc/README.md` |
+| `aav_routes` | street routes (Valhalla) as GPS waypoints for Nav2 | `ros/drivers/aav_routes/README.md`, then [Routes](routes.md) |
+| `aav_spine_bridge` | `spine_bridge` in Rust, the default; the same node as `aav_spine`'s Python one | `ros/can_bridge/aav_spine_bridge/README.md` |
+| `aav_lidar` | `lidar_scan`: the roof lidar's cloud as a 2D scan for Nav2 | `ros/perception/aav_lidar/README.md` |
+| `aav_safety` | the sensor watchdog: a twist_mux lock (30) when a sensor fails | `ros/safety/aav_safety/README.md`, then [Simulation](simulation.md#the-sensor-watchdog) |
+| `aav_ghost` | ghost obstacles: a pretend person only Nav2 sees | `ros/safety/aav_ghost/README.md`, then [Ghost obstacles](ghost-obstacles.md) |
+
+`aav_actuator_tests` has its card under [Drivers](#drivers).
 
 ## Firmware: the spine (Rust)
 
@@ -511,7 +515,7 @@ in `firmware/spine` (part of `tools/test.sh`). [Firmware](firmware.md) and
 | Crate or file | Does | Why | Origin | Status | Read first |
 |---|---|---|---|---|---|
 | `can/aav.dbc` | the CAN contract: six frames between the Orin, the spine and the two wheel nodes | both sides must agree on every bit | ours | v0.2.0 (the KEFC plan), merged 15 Oct | `aav.dbc`, then `test_vectors.json` |
-| `spine-core` | the spine's decisions: modes, arming, the 100 ms watchdog, speed loop (closed or open), encoder | the safety rules, testable without hardware | ours | [[works]] 70 tests, and the bench | `src/lib.rs` |
+| `spine-core` | the spine's decisions: modes, arming, the 100 ms watchdog, speed loop (closed or open), encoder | the safety rules, testable without hardware | ours | [[works]] 84 tests, and the bench | `src/lib.rs` |
 | `wheel-core` | a front wheel node's logic: Hall sensor pulses to speed, the WHEEL_SPEED frame | wheel speed for the odometry | ours | [[works]] 9 tests, and the bench | `src/lib.rs` |
 | `aav-inputs` | debounced switches, an instant e-stop, counting with a lockout | clean inputs from noisy pins | ours | [[works]] tests | `src/lib.rs` |
 | `jrk-g2` | the Pololu Jrk G2 (steering 0x05, brake 0x04) over I2C | steering and brake | ours, from Pololu's guide and the 2025-26 bytes | [[works]] against mocks | `src/lib.rs` |
@@ -587,4 +591,4 @@ until the spine replaces it.
 | 1 | Which computer runs the HUD: the DASH-UI Pi, or the Innoview screen's computer? |
 | 2 | Is the IMU on the Orin's USB, or on a Pi? (the `orin.yaml` TODO) |
 | 3 | Is the sentinel display on the car, and what feeds it? |
-| 4 | Is `battery_monitor`'s Victron on the car? |
+| 4 | Is `aav_battery_victron`'s Victron on the car? |

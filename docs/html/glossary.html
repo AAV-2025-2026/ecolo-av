@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -205,7 +218,7 @@
 </tr>
 <tr>
 <td>CI</td>
-<td>Continuous Integration: GitHub runs the tests on every push</td>
+<td>Continuous Integration: GitHub runs the tests on every pull request and push to <code>main</code></td>
 <td><code>.github/workflows/test.yml</code></td>
 </tr>
 <tr>
@@ -324,7 +337,7 @@
 <tr>
 <td>ESP32-CAN-X2</td>
 <td>an ESP32-S3 board with CAN built in</td>
-<td>the two wheel nodes (KEFC)</td>
+<td>proposed for the wheel nodes (KEFC); today the hardware lead's Arduino does that job</td>
 </tr>
 <tr>
 <td>Ethernet</td>
@@ -378,7 +391,7 @@
 </tr>
 <tr>
 <td>HUD</td>
-<td>Head-Up Display: the in-car screen</td>
+<td>Head-Up Display: the in-car screen (and, on the big monitor, the map window)</td>
 <td><a href="hud.html">HUD</a></td>
 </tr>
 <tr>
@@ -457,12 +470,12 @@
 <tr>
 <td>launch file</td>
 <td>a Python file that starts many nodes with their settings</td>
-<td><code>src/*/launch/</code></td>
+<td><code>ros/*/*/launch/</code></td>
 </tr>
 <tr>
 <td>lidar</td>
 <td>a laser scanner: 3D points around the car</td>
-<td>the roof; no driver yet</td>
+<td>the roof Velodyne VLP-16, stock <code>velodyne</code> driver, <code>/sensors/lidar/points</code></td>
 </tr>
 <tr>
 <td>lock (twist_mux)</td>
@@ -570,12 +583,12 @@
 <tr>
 <td>OSM</td>
 <td>OpenStreetMap: a free map of the world</td>
-<td>the HUD only</td>
+<td>the map window, street routes, CARLA's campus</td>
 </tr>
 <tr>
 <td>OSRM</td>
 <td>a road router that uses OSM</td>
-<td>the HUD's route</td>
+<td>the 2025-26 HUD's route (archived 25 Oct); <code>street_router</code> can ask one too</td>
 </tr>
 <tr>
 <td>Pico 2</td>
@@ -589,7 +602,7 @@
 </tr>
 <tr>
 <td>profile</td>
-<td>a set of nodes to start: turtle, sim, bench, car, replay</td>
+<td>a set of nodes to start: turtle, sim, bench, car, replay, carla</td>
 <td><code>ros/bringup/aav_bringup/launch/</code></td>
 </tr>
 <tr>
@@ -620,12 +633,17 @@
 <tr>
 <td>raylib</td>
 <td>a small graphics library; our Rust HUD uses it</td>
-<td><code>ros/hud/aav_hud_raylib</code></td>
+<td><code>ros/hud/aav_hud</code></td>
 </tr>
 <tr>
 <td>RC</td>
 <td>Radio Control: a hand-held transmitter</td>
 <td>the FlySky override</td>
+</tr>
+<tr>
+<td>RF-DETR</td>
+<td>a neural network that finds objects in a picture; RF-DETR Nano is our default detector</td>
+<td><code>aav_detector</code>, <code>aav_camera_stream</code></td>
 </tr>
 <tr>
 <td>Regulated Pure Pursuit</td>
@@ -649,7 +667,7 @@
 </tr>
 <tr>
 <td><code>ROS_DOMAIN_ID</code></td>
-<td>a number; only computers with the same one see each other</td>
+<td>a number, 0–101 (safe on Linux; Fast DDS breaks above 232); only computers with the same one see each other</td>
 <td><code>pixi run doctor</code></td>
 </tr>
 <tr>
@@ -748,7 +766,7 @@
 <tr>
 <td><code>twist_mux</code></td>
 <td>picks one command from all the drivers, by priority</td>
-<td><code>ros/command_mux/aav_mux</code></td>
+<td><code>ros/command_mux/aav_command_mux</code></td>
 </tr>
 <tr>
 <td>UART</td>
@@ -798,7 +816,7 @@
 <tr>
 <td>YOLO</td>
 <td>a fast neural network that finds objects in a picture</td>
-<td><code>aav_detector</code>, stop signs</td>
+<td><code>aav_detector</code> with <code>detector:=yolo</code></td>
 </tr>
 </tbody>
 </table></div>

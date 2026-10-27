@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -100,9 +113,9 @@ in its <code>PROVENANCE.md</code>.</p></div>
 <td><code>aav_imu_yahboom</code></td>
 </tr>
 <tr>
-<td>Folder under <code>src/</code></td>
-<td>the layer of the picture</td>
-<td><code>sensors/</code>, <code>localization/</code>, <code>drivers/</code>, <code>mux/</code>, <code>ego/</code>, <code>backends/</code></td>
+<td>Folder under <code>ros/</code></td>
+<td>the area of the picture</td>
+<td><code>sources/</code>, <code>localization/</code>, <code>drivers/</code>, <code>command_mux/</code>, <code>ego/</code>, <code>can_bridge/</code>, <code>sim/</code></td>
 </tr>
 <tr>
 <td>Node and executable</td>
@@ -116,7 +129,7 @@ in its <code>PROVENANCE.md</code>.</p></div>
 </tr>
 <tr>
 <td>Topic</td>
-<td>absolute: <code>/&lt;area&gt;/&lt;thing&gt;</code></td>
+<td>absolute: <code>/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code> (<a href="naming.html">Topic areas</a>)</td>
 <td><code>/drivers/joy/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/ego/actuator_cmd</code></td>
 </tr>
 <tr>
@@ -170,9 +183,14 @@ changes their launch files and executables.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>maincar</code> (the HUD's web server)</td>
+<td><code>maincar</code> (the HUD's web server, Flask)</td>
 <td><code>aav_hud</code></td>
-<td>done, 10 October</td>
+<td>done, 10 October; archived 25 October (<code>archive/2026-27-flutter-hud/aav_hud</code>)</td>
+</tr>
+<tr>
+<td><code>aav_hud_raylib</code> (the raylib HUD and map window)</td>
+<td><code>aav_hud</code></td>
+<td>done, 25 October, when the Flask one was archived</td>
 </tr>
 <tr>
 <td><code>lane_geometry</code>, <code>object_detection</code>, <code>yolo_ros2</code></td>
@@ -190,20 +208,30 @@ changes their launch files and executables.</p>
 <td>done, 11 October: Ben's Rust rewrite replaced it</td>
 </tr>
 <tr>
+<td><code>aav_goto</code>, its node <code>goto_driver</code>, action <code>/goto</code> (<code>GoTo</code>), slot <code>goto</code></td>
+<td><code>aav_drive_to_point</code>, <code>point_driver</code>, <code>/drive_to_point</code> (<code>DriveToPoint</code>), slot <code>point</code> (<code>/drivers/point/cmd_vel</code>)</td>
+<td>done, 26 October: "goto" named a keyword, not the job. <code>atob-score</code> still reads bags with the old names</td>
+</tr>
+<tr>
+<td><code>aav_mux</code></td>
+<td><code>aav_command_mux</code></td>
+<td>done, 26 October: there are three muxes; this one is twist_mux's, in <code>ros/command_mux</code></td>
+</tr>
+<tr>
 <td><code>ti_ros2_driver</code></td>
 <td><code>aav_radar_ti</code></td>
-<td>proposed <span class="badge b-needs-you">needs you</span></td>
+<td>done, 26 October. The executables <code>pcl_pub</code> and <code>mock_radar_publisher</code> stay</td>
 </tr>
 <tr>
 <td><code>battery_monitor</code></td>
 <td><code>aav_battery_victron</code></td>
-<td>proposed <span class="badge b-needs-you">needs you</span></td>
+<td>done, 26 October. The executable <code>battery_monitor</code> stays</td>
 </tr>
 </tbody>
 </table></div>
 </section>
 <section class="card"><h2 id="how-a-package-is-laid-out">How a package is laid out</h2>
-<pre class="highlight"><code class="language-text">src/&lt;layer&gt;/aav_&lt;what&gt;/
+<pre class="highlight"><code class="language-text">ros/&lt;area&gt;/aav_&lt;what&gt;/
   package.xml              its dependencies
   setup.py, setup.cfg      its executables (Python packages)
   aav_&lt;what&gt;/
@@ -227,7 +255,8 @@ changes their launch files and executables.</p>
    positive steering turns left.</li>
 <li><strong>No pins in ROS.</strong> Pins, I2C addresses and calibration live in the firmware.</li>
 <li><strong>No secrets in git</strong>: only where a secret lives and what kind it is.</li>
-<li><strong>Small commits</strong>, each passing <code>pixi run test</code>, each message saying why.</li>
+<li><strong>Small commits</strong>, each passing <code>tools/test.sh</code>, each message saying why; the full
+   <code>pixi run test</code> before you push (<a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a>).</li>
 <li><strong>Write each language its own way</strong> (Ben, 10 Oct). Ported code is rewritten in the
    new language's style, not copied line by line.</li>
 </ol>
@@ -284,7 +313,7 @@ twist_mux's sensors lock at its 1 s timeout, so Nav2 never drove.</p>
 </thead>
 <tbody>
 <tr>
-<td>Load the YAML yourself and pass it as a dict (<code>ego.launch.py</code>), edit a copy of the file (<code>navigation.launch.py</code>'s <code>faster_copy</code>), or pass a second node-named YAML file after the first (<code>aav_mux</code>'s <code>no_sensor_lock.yaml</code>)</td>
+<td>Load the YAML yourself and pass it as a dict (<code>ego.launch.py</code>), edit a copy of the file (<code>navigation.launch.py</code>'s <code>faster_copy</code>), or pass a second node-named YAML file after the first (<code>aav_command_mux</code>'s <code>no_sensor_lock.yaml</code>)</td>
 <td>put a node-named YAML file first and trust a later dict to override it</td>
 </tr>
 <tr>

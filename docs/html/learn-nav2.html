@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a class="here" href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -89,7 +102,7 @@ turn rate, like the joystick does.</p>
 <li>our settings, and where they live.</li>
 </ul>
 <p>Costmaps have their own page: <a href="costmaps.html">Costmaps</a>. The big picture of maps and
-GPS is in <a href="../../READ-ME-MAPS-AND-POSITION.md">Maps and position</a>.</p></div>
+GPS is in <a href="maps-and-position.html">Maps and position</a>.</p></div>
 <section class="card"><h2 id="the-picture">The picture</h2>
 <p><img alt="Nav2 on our car: plan once a second, steer twenty times a second" src="../img/nav2-flow.svg" /></p>
 <div class="table-wrap"><table>
@@ -104,7 +117,7 @@ GPS is in <a href="../../READ-ME-MAPS-AND-POSITION.md">Maps and position</a>.</p
 <tr>
 <td><strong>Goal</strong></td>
 <td>where to go: a pose in the <code>map</code> frame</td>
-<td>RViz's 2D Goal Pose, an action call, or GPS waypoints from the HUD</td>
+<td>RViz's 2D Goal Pose, an action call, or GPS waypoints from <code>street_router</code> or the language tools</td>
 </tr>
 <tr>
 <td><strong>bt_navigator</strong></td>
@@ -128,8 +141,8 @@ GPS is in <a href="../../READ-ME-MAPS-AND-POSITION.md">Maps and position</a>.</p
 </tr>
 <tr>
 <td><strong>collision_monitor</strong></td>
-<td>last-moment stop for radar points ahead</td>
-<td>only where the radar runs</td>
+<td>last-moment stop for radar or lidar points ahead</td>
+<td>where the radar or the lidar runs</td>
 </tr>
 <tr>
 <td><strong>Out</strong></td>
@@ -307,39 +320,11 @@ can tell (22 Oct; tighter, the car looped to fix misses it couldn't see). <stron
 0.5 m nor turns 0.5 rad (29°): rocking back and forth in a three-point turn still counts.</p>
 </section>
 <section class="card"><h2 id="3-costmaps-in-one-line-each">3. Costmaps, in one line each</h2>
-<div class="table-wrap"><table>
-<thead>
-<tr>
-<th></th>
-<th>Global</th>
-<th>Local</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Used by</td>
-<td>the planner</td>
-<td>the controller</td>
-</tr>
-<tr>
-<td>Frame</td>
-<td><code>map</code></td>
-<td><code>odom</code></td>
-</tr>
-<tr>
-<td>Size, cells</td>
-<td>the map file's size, 25 cm</td>
-<td>20 m × 20 m around the car, 10 cm</td>
-</tr>
-<tr>
-<td>Sees obstacles from</td>
-<td>the map file only</td>
-<td>the map, the radar, the cameras (when on)</td>
-</tr>
-</tbody>
-</table></div>
-<p>Inflation is 2.0 m: wide enough that a path for the car's centre keeps its corners
-clear. Everything else: <a href="costmaps.html">Costmaps</a>.</p>
+<ul>
+<li><strong>Global:</strong> for the planner, in <code>map</code>, the map file's size.</li>
+<li><strong>Local:</strong> for the controller, in <code>odom</code>, 20 m × 20 m around the car.</li>
+</ul>
+<p>Sizes, layers, sensors and inflation: <a href="costmaps.html#the-two-costmaps">Costmaps</a>.</p>
 </section>
 <section class="card"><h2 id="4-the-behaviour-tree-the-boss">4. The behaviour tree: the boss</h2>
 <p>A <strong>behaviour tree</strong> (BT) is a flowchart that runs over and over. Ours is Nav2's
@@ -372,16 +357,19 @@ standard tree, changed for a car.</p>
 </table></div>
 </section>
 <section class="card"><h2 id="reversing">Reversing</h2>
-<p>One switch, <code>reversing:=</code>, on <code>navigation.launch.py</code>. <strong>On everywhere since 22 Oct</strong> (Ben:
-"Yes the car can reverse"), but on the car only where something sees behind it: the roof
-lidar (the radar faces forward; the rear camera, later). Without one, <code>car.launch.py</code>
-keeps Nav2 forward only and says why (<code>vehicle.blind_behind</code>).</p>
+<p>One switch, <code>reversing:=</code>, on <code>navigation.launch.py</code>. <strong>On in Gazebo and on the bench;
+off on the car by default since 26 Oct</strong> (design review F2): the wheel sensors can't tell
+direction yet (H5), so a reversing car's speed would read forward. It goes back on once
+H5 is answered. On the car, <code>reversing:=true</code> (Ben, 22 Oct: "Yes the car can reverse")
+works only where something sees behind it: the roof lidar (the radar faces forward; the
+rear camera, later). Without one, <code>car.launch.py</code> keeps Nav2 forward only and says why
+(<code>vehicle.blind_behind</code>).</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th></th>
-<th><code>reversing:=false</code></th>
-<th><code>reversing:=true</code> (the default: the car, Gazebo, the bench)</th>
+<th><code>reversing:=false</code> (the car's default)</th>
+<th><code>reversing:=true</code> (the default: Gazebo, the bench)</th>
 </tr>
 </thead>
 <tbody>
@@ -438,7 +426,7 @@ reversing at the same number, whoever drives.</p>
 </tr>
 <tr>
 <td><code>car.launch.py</code>, <code>sim.launch.py</code>, <code>bench.launch.py</code></td>
-<td><code>reversing:=true</code> in all three; the car's needs the lidar running</td>
+<td><code>reversing:=true</code> by default in sim and bench; <code>false</code> on the car until H5 (<code>reversing:=true</code> there needs the lidar running)</td>
 </tr>
 <tr>
 <td>Gazebo check</td>
@@ -453,8 +441,8 @@ reversing at the same number, whoever drives.</p>
 <p>People can always reverse (joystick, keyboard, RC): this switch is Nav2's only.</p>
 </section>
 <section class="card"><h2 id="5-collision_monitor-the-last-word">5. collision_monitor: the last word</h2>
-<p>It sits between the smoother and <code>twist_mux</code>, and reads the <strong>radar's own points</strong>, not
-the costmap. So it still stops the car if the planner, the controller or the costmap goes wrong.</p>
+<p>It sits between the smoother and <code>twist_mux</code>, and reads the <strong>radar's and the lidar's own
+points</strong>, not the costmap. So it still stops the car if the planner, the controller or the costmap goes wrong.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -473,10 +461,10 @@ the costmap. So it still stops the car if the planner, the controller or the cos
 </tr>
 <tr>
 <td>Points needed</td>
-<td>3 (one stray radar point mustn't stop the car)</td>
+<td>3 (one stray point mustn't stop the car)</td>
 </tr>
 <tr>
-<td>Radar silent for</td>
+<td>Radar or lidar silent for</td>
 <td>1.0 s → stop</td>
 </tr>
 <tr>
@@ -491,9 +479,10 @@ test_lot worlds.</p>
 try stops at the box. Nothing is hit, but the car rocks until the way is clear.</p>
 </section>
 <section class="card"><h2 id="6-gps-waypoints">6. GPS waypoints</h2>
-<pre class="highlight"><code class="language-text">HUD route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to map x, y ─► one goal after another</code></pre>
+<pre class="highlight"><code class="language-text">street route (lat/lon points) ─► follow_gps_waypoints ─► /fromLL: each to map x, y ─► one goal after another</code></pre>
 <ul>
-<li><code>waypoint_follower</code> serves <code>/follow_gps_waypoints</code> (<code>nav2_msgs/action/FollowGPSWaypoints</code>).</li>
+<li><code>street_router</code> and the language tools send the route; <code>waypoint_follower</code> serves
+  <code>/follow_gps_waypoints</code> (<code>nav2_msgs/action/FollowGPSWaypoints</code>).</li>
 <li>It turns each point into map x, y with navsat_transform's <code>/fromLL</code>
   (<a href="learn-gps.html">Learn: GPS</a>).</li>
 <li>Nav2 doesn't know where the road is. It plans across its costmap between points.
@@ -522,8 +511,8 @@ try stops at the box. Nothing is hit, but the car rocks until the way is clear.<
 <td>never run yet</td>
 </tr>
 <tr>
-<td>The HUD's GPS route → Nav2</td>
-<td>written; never run with the real OSRM server</td>
+<td>A street route → Nav2's GPS waypoints</td>
+<td>✅ in Gazebo (Valhalla, <a href="routes.html">Street routes</a>); untested on the car</td>
 </tr>
 </tbody>
 </table></div>
@@ -599,7 +588,7 @@ try stops at the box. Nothing is hit, but the car rocks until the way is clear.<
 </tr>
 <tr>
 <td>Nav2's place among the drivers</td>
-<td><code>ros/command_mux/aav_mux/config/twist_mux.yaml</code></td>
+<td><code>ros/command_mux/aav_command_mux/config/twist_mux.yaml</code></td>
 </tr>
 <tr>
 <td>Costmaps in detail; draw a map</td>
@@ -607,7 +596,7 @@ try stops at the box. Nothing is hit, but the car rocks until the way is clear.<
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="learn-control.html"><small>Previous</small>← Learn: control</a>
+<nav class="prevnext"><a class="prev" href="maps-and-position.html"><small>Previous</small>← Maps and position</a>
 <a class="next" href="learn-can.html"><small>Next</small>Learn: CAN →</a></nav>
 </main>
 <footer>Source: <code>docs/learn-nav2.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

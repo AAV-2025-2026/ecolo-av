@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git: worktrees, conflicts, handy commands · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/git.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Git: worktrees, conflicts, handy commands</h1>
+<div class="meta">4 min read · 5 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a class="here" href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#conflicts-during-a-rebase">Conflicts during a rebase</a><a href="#branches">Branches</a><a href="#worktrees-two-branches-at-once">Worktrees: two branches at once</a><a href="#handy-commands">Handy commands</a></nav>
+<div class="lead"><p>The help that <a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a> doesn't give.</p>
+<blockquote>
+<p><strong>The flow is in <a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a>:</strong> fork, branch from
+<code>upstream/main</code>, pull request, one approval, then the merge queue (it squashes).
+Keep your branch current with <code>git rebase upstream/main</code>, never a merge.</p>
+</blockquote></div>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<pre class="highlight"><code class="language-text">   AAV-2025-2026/ecolo-av          the team's repo: "upstream"
+      main  ◄──────────────── merge queue (approved, CI green, squashed)
+        │                                ▲ pull request
+        │ git fetch upstream             │
+        ▼                                │
+   your laptop  ── git push origin &lt;branch&gt; ──►  &lt;you&gt;/ecolo-av
+   (branches, worktrees)                         your fork: "origin"</code></pre>
+<p>Already cloned the team's repo, not your fork? Turn it into this setup:</p>
+<pre><code>  git remote rename origin upstream
+  git remote add origin git@github.com:&lt;you&gt;/ecolo-av.git
+</code></pre>
+</section>
+<section class="card"><h2 id="conflicts-during-a-rebase">Conflicts during a rebase</h2>
+<p><code>git rebase upstream/main</code> stops when you and someone else changed the same lines.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do this</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>git status</code> lists the files "both modified"</td>
+</tr>
+<tr>
+<td>2</td>
+<td>In each, keep the right lines between <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code> and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>, and delete the markers</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>git add &lt;file&gt;</code> for each, then <code>git rebase --continue</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>tools/test.sh</code> again: a clean rebase can still break a test</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Push with <code>git push --force-with-lease</code>: your fork's branch only, never <code>main</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">In a rebase, ours and theirs swap</p>
+<p>During a rebase, <code>--ours</code> is <code>upstream/main</code> and <code>--theirs</code> is <strong>your</strong> commit. The
+opposite of a merge.</p>
+</div>
+<ul>
+<li><strong><code>pixi.lock</code> in conflict:</strong> take the team's, then let Pixi redo it:
+  <code>git checkout --ours pixi.lock &amp;&amp; pixi install</code>, then <code>git add pixi.lock</code>.</li>
+<li><strong>Lost?</strong> <code>git rebase --abort</code> puts everything back as it was before the rebase.</li>
+</ul>
+</section>
+<section class="card"><h2 id="branches">Branches</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Do</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>See your branches, and which you're on</td>
+<td><code>git branch</code></td>
+</tr>
+<tr>
+<td>Make one from the team's latest <code>main</code></td>
+<td><code>git switch -c &lt;name&gt; upstream/main</code> (names: CONTRIBUTING.md, section 3)</td>
+</tr>
+<tr>
+<td>Switch</td>
+<td><code>git switch &lt;branch&gt;</code> (commit or <code>git stash</code> your changes first)</td>
+</tr>
+<tr>
+<td>Delete one after its pull request says <strong>Merged</strong></td>
+<td><code>git branch -D &lt;branch&gt;</code> (capital <code>D</code>: the squash hides that it merged)</td>
+</tr>
+<tr>
+<td>See what's on a branch and not on <code>main</code></td>
+<td><code>git log --oneline upstream/main..&lt;branch&gt;</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="worktrees-two-branches-at-once">Worktrees: two branches at once</h2>
+<p>A worktree is a second folder on the same repo, with another branch checked out. Use one
+to test a teammate's pull request, or to keep a long job running while you work on
+something else.</p>
+<pre><code>  git worktree add ../ecolo-av-review -b review upstream/main    # a new folder and branch
+  git worktree list                                              # every worktree
+  git worktree remove ../ecolo-av-review                         # done: remove the folder
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Know this</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Each worktree has its own <code>build/</code>, <code>install/</code> and <code>.pixi/</code></td>
+<td>run <code>pixi install</code> and <code>pixi run build</code> in it once; Pixi reuses its download cache, so it's quick</td>
+</tr>
+<tr>
+<td>A branch can be checked out in only one worktree</td>
+<td>git refuses a second one</td>
+</tr>
+<tr>
+<td>Commits made in any worktree are in the same repo</td>
+<td>push them from wherever you are</td>
+</tr>
+<tr>
+<td>Two runs at once on one computer</td>
+<td>give each its own <code>ROS_DOMAIN_ID</code>, 0–101 (safe on Linux; Fast DDS breaks above 232), or their ROS nodes hear each other</td>
+</tr>
+</tbody>
+</table></div>
+<p>Claude Code's helpers make worktrees under <code>.claude/worktrees/</code>: git ignores that folder.</p>
+</section>
+<section class="card"><h2 id="handy-commands">Handy commands</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Do</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What changed, not yet committed</td>
+<td><code>git status</code>, <code>git diff</code></td>
+</tr>
+<tr>
+<td>The last commits, short</td>
+<td><code>git log --oneline -10</code></td>
+</tr>
+<tr>
+<td>Undo changes to one file (not yet committed)</td>
+<td><code>git restore &lt;file&gt;</code></td>
+</tr>
+<tr>
+<td>Put work aside, and bring it back</td>
+<td><code>git stash</code>, then <code>git stash pop</code></td>
+</tr>
+<tr>
+<td>Fetch everything, change nothing</td>
+<td><code>git fetch upstream</code></td>
+</tr>
+<tr>
+<td>Bring your fork's <code>main</code> up to date</td>
+<td><code>git switch main &amp;&amp; git merge --ff-only upstream/main &amp;&amp; git push origin main</code></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="first-day.html"><small>Previous</small>← Your first day</a>
+<a class="next" href="how-it-fits.html"><small>Next</small>How it fits →</a></nav>
+</main>
+<footer>Source: <code>docs/git.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

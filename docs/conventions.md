@@ -10,10 +10,10 @@ in its `PROVENANCE.md`.
 |---|---|---|
 | Our package | `aav_<what>` | `aav_ego`, `aav_spine`, `aav_teleop` |
 | A device driver package | `aav_<kind>_<maker>`, so drivers of one kind sort together | `aav_imu_yahboom` |
-| Folder under `src/` | the layer of the picture | `sensors/`, `localization/`, `drivers/`, `mux/`, `ego/`, `backends/` |
+| Folder under `ros/` | the area of the picture | `sources/`, `localization/`, `drivers/`, `command_mux/`, `ego/`, `can_bridge/`, `sim/` |
 | Node and executable | what it is, in snake_case; both the same | `ego`, `spine_bridge`, `scripted_driver` |
 | Logic module | a noun, no ROS imports | `ackermann.py`, `can_codec.py`, `vehicle.py` |
-| Topic | absolute: `/<area>/<thing>` | `/drivers/joy/cmd_vel`, `/vehicle/odom`, `/ego/actuator_cmd` |
+| Topic | absolute: `/<area>/<device or node>/<thing>` ([Topic areas](naming.md)) | `/drivers/joy/cmd_vel`, `/vehicle/odom`, `/ego/actuator_cmd` |
 | Frame | `<thing>_link`, plus `map`, `odom`, `base_link` | `imu_link`, `gps_link` |
 | Parameter | snake_case, SI units, the unit in a comment | `max_speed: 1.0  # m/s` |
 | Config file | `config/<node>.yaml`; its top key is the node's name, or ROS ignores it | `config/ego.yaml` starts with `ego:` |
@@ -29,17 +29,20 @@ changes their launch files and executables.
 
 | Was | Now | When |
 |---|---|---|
-| `maincar` (the HUD's web server) | `aav_hud` | done, 10 October |
+| `maincar` (the HUD's web server, Flask) | `aav_hud` | done, 10 October; archived 25 October (`archive/2026-27-flutter-hud/aav_hud`) |
+| `aav_hud_raylib` (the raylib HUD and map window) | `aav_hud` | done, 25 October, when the Flask one was archived |
 | `lane_geometry`, `object_detection`, `yolo_ros2` | `aav_lane_geometry`, `aav_object_detection`, `aav_yolo` | done, 10 October, when perception came in. `aav_object_detection` became `aav_radar_clusters` (Rust), 15 October |
 | `aav_yolo`, its node `yolo_detector` | `aav_detector`, `object_detector` | done, 24 October: it runs RF-DETR Nano by default, YOLO only with `detector:=yolo` |
 | `yahboom_imu_cpp` | `aav_imu_yahboom` | done, 11 October: Ben's Rust rewrite replaced it |
-| `ti_ros2_driver` | `aav_radar_ti` | proposed [[needs-you]] |
-| `battery_monitor` | `aav_battery_victron` | proposed [[needs-you]] |
+| `aav_goto`, its node `goto_driver`, action `/goto` (`GoTo`), slot `goto` | `aav_drive_to_point`, `point_driver`, `/drive_to_point` (`DriveToPoint`), slot `point` (`/drivers/point/cmd_vel`) | done, 26 October: "goto" named a keyword, not the job. `atob-score` still reads bags with the old names |
+| `aav_mux` | `aav_command_mux` | done, 26 October: there are three muxes; this one is twist_mux's, in `ros/command_mux` |
+| `ti_ros2_driver` | `aav_radar_ti` | done, 26 October. The executables `pcl_pub` and `mock_radar_publisher` stay |
+| `battery_monitor` | `aav_battery_victron` | done, 26 October. The executable `battery_monitor` stays |
 
 ## How a package is laid out
 
 ```text
-src/<layer>/aav_<what>/
+ros/<area>/aav_<what>/
   package.xml              its dependencies
   setup.py, setup.cfg      its executables (Python packages)
   aav_<what>/
@@ -64,7 +67,8 @@ src/<layer>/aav_<what>/
    positive steering turns left.
 6. **No pins in ROS.** Pins, I2C addresses and calibration live in the firmware.
 7. **No secrets in git**: only where a secret lives and what kind it is.
-8. **Small commits**, each passing `pixi run test`, each message saying why.
+8. **Small commits**, each passing `tools/test.sh`, each message saying why; the full
+   `pixi run test` before you push ([CONTRIBUTING.md](../CONTRIBUTING.md)).
 9. **Write each language its own way** (Ben, 10 Oct). Ported code is rewritten in the
    new language's style, not copied line by line.
 
@@ -88,7 +92,7 @@ twist_mux's sensors lock at its 1 s timeout, so Nav2 never drove.
 
 | Do | Don't |
 |---|---|
-| Load the YAML yourself and pass it as a dict (`ego.launch.py`), edit a copy of the file (`navigation.launch.py`'s `faster_copy`), or pass a second node-named YAML file after the first (`aav_mux`'s `no_sensor_lock.yaml`) | put a node-named YAML file first and trust a later dict to override it |
+| Load the YAML yourself and pass it as a dict (`ego.launch.py`), edit a copy of the file (`navigation.launch.py`'s `faster_copy`), or pass a second node-named YAML file after the first (`aav_command_mux`'s `no_sensor_lock.yaml`) | put a node-named YAML file first and trust a later dict to override it |
 | Check the live value: `ros2 param get /<node> <name>` | trust the launch file |
 
 ## Style, and what checks it

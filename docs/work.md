@@ -1,5 +1,7 @@
 # Work: what's done, and what needs doing
 
+> **A snapshot from 10 October 2026.** What's true now: [Status](status.md), [The plan](plan.md) and `TODO.md`.
+
 Where the project stands on 10 October 2026: the plan in five phases, the next twelve
 steps, what's done, and the work left in each area. Who owns each area is Q33: see
 [Starting points](team.md).
@@ -28,7 +30,7 @@ From the design doc's next steps, in order.
 | 3 | **Inventory the car:** take a tape measure and Q1–Q9, Q18, Q20 and Q22 to the car. Photograph the labels on the GPS, the IMU, the motor controller and the actuators | [[needs-you]] |
 | 4 | **Team meeting:** accept or change each Proposed decision, and name an owner per area (Q33) | [[needs-you]] |
 | | **Without the car** | |
-| 5 | **Repo:** on GitHub (`AAV-2025-2026/ecolo-av`, private), with CI running `pixi run test` on Linux and a Mac | [[untested]] CI's first run comes with the first push |
+| 5 | **Repo:** on GitHub (`AAV-2025-2026/ecolo-av`, public), with CI running `pixi run test` on Linux and a Mac | [[works]] (answered: CI runs on every pull request) |
 | 6 | **Jazzy everywhere:** every developer installs it, with Pixi | [[works]] on oirp-spss and Ben's Mac |
 | 7 | **ego and the turtle with a real joystick:** the first end-to-end chain | [[works]] with the keyboard; the joystick is [[untested]] |
 | 8 | **Scripted driver:** an action, tested in turtlesim | [[works]] |
@@ -111,9 +113,9 @@ From the design doc's next steps, in order.
 
 ### The HUD
 
-- Keep the Flutter app or not (Q29). Its back end, `aav_hud`, is on the new topics, and the app's small changes are done (11 Oct): [HUD](hud.md).
-- Its boot scripts still use the old Humble workspace and `/home/aavui`.
-- Its map database downloads with `pixi run get-hud-map`. The OSRM route data and the tile server still need a download step.
+- ~~Keep the Flutter app or not (Q29)~~: answered. The raylib HUD replaced it (Ben, 15 Oct); the app, its back end and its boot scripts were archived on 25 Oct (`archive/2026-27-flutter-hud/`).
+- Try the raylib HUD and the map window on the car's screens ([The two screens](car-screens.md)).
+- The map database downloads with `pixi run get-places`; street routes come from Valhalla ([Street routes](routes.md)).
 
 ### Simulation
 

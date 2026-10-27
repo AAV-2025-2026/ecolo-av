@@ -12,7 +12,7 @@ explains how that works, how good it is, and how our car turns it into metres on
 - how to check that GPS data is really arriving;
 - the bench's GPS noise problem (N7 in `TODO.md`).
 
-This page goes deeper than [Maps and position](../READ-ME-MAPS-AND-POSITION.md), which
+This page goes deeper than [Maps and position](maps-and-position.md), which
 shows the big picture. Read that one first if you haven't.
 
 ## 1. GNSS: satellites and clocks
@@ -63,7 +63,7 @@ shows the big picture. Read that one first if you haven't.
 
 !!! note "Where do our corrections come from?"
     Not known yet. The switch has a port labelled **RTK-PI**, so the 2025-26 car probably
-    had a corrections setup. Friday's audit should find out ([Car photos](car-photos.md)).
+    had a corrections setup. Still to find out at the car ([Audit questions](audit-questions.md)).
 
 ## 3. Our receiver: u-blox ZED-F9R
 
@@ -80,8 +80,8 @@ On the car today: a SparkFun ZED-F9R board on the ceiling panel, USB-C into a Pi
 KEFC plan replaces it with a board that has a screw-on antenna connector.
 
 !!! warning "Never tried with our code"
-    Our GPS driver (`ublox_gps`) has **never run** with this receiver. Friday's audit
-    checks the first step: is there any data at all?
+    Our GPS driver (`ublox_gps`) has **never run** with this receiver. The first step at
+    the car: is there any data at all?
 
 ### The driver: three choices
 
@@ -153,8 +153,8 @@ From the datum:
 It also:
 - removes the antenna's offset, using TF `base_link → gps_link`: that's why the antenna's
   spot in `vehicle.yaml` matters (and where it is mounted: below);
-- serves `/fromLL` (lat/lon → x, y) and `/toLL` (back). The HUD's route reaches Nav2
-  through `/fromLL`.
+- serves `/fromLL` (lat/lon → x, y) and `/toLL` (back). A street route reaches Nav2
+  through `/fromLL` (`street_router`, [Street routes](routes.md)).
 
 ### Mount the antenna over the rear axle
 
@@ -167,10 +167,11 @@ Measured in Gazebo (22 Oct; two runs of each; 15 s legs at 0.5 m/s, forward and 
 
 | Antenna | Heading off, reversing (median) | Forward (median) | Worst |
 |---|---:|---:|---:|
-| 0.8 m ahead of the rear axle (today's guess) | 7.5-12.8° | 3.7-6.7° | 39-54° |
+| 0.8 m ahead of the rear axle (the old guess, before 23 Oct) | 7.5-12.8° | 3.7-6.7° | 39-54° |
 | **over the rear axle** | 4.6-6.6° | 5.1-7.5° | 26-31° |
 
-So put the antenna **above the rear axle** if the mount allows (any height). Then the
+So the antenna belongs **above the rear axle** (any height): it is there already
+(`vehicle.yaml`, 23 Oct; measure it to be sure). Then the
 offset doesn't turn with the heading, and reversing is as good as forward. A heading
 source helps too: since 25 Oct the receiver's own velocity gives one while the car moves
 (`gps_heading`, [Learn: localization](learn-localization.md#where-the-heading-comes-from-todo-13)).

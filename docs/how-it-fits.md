@@ -46,10 +46,12 @@ topic. None of them knows what kind of vehicle it's driving.
 | Driver | Topic | Priority |
 |---|---|---|
 | Joystick: the safety driver | `/drivers/joy/cmd_vel` | 100 |
+| RC transmitter, on "RC via ROS" (proposed, TODO 48) | `/drivers/rc/cmd_vel` | 95 |
 | Keyboard, or another remote | `/drivers/keyboard/cmd_vel` | 90 |
 | Actuator tests: measure the car (stages 3-4) | `/drivers/tests/cmd_vel` | 60 |
 | Scripted: speed up, hold, slow down | `/drivers/scripted/cmd_vel` | 50 |
 | Replay of a recorded drive | `/drivers/replay/cmd_vel` | 40 |
+| Drive to point: drive to one GPS point and stop | `/drivers/point/cmd_vel` | 25 |
 | Nav2: drive to a point on the map | `/drivers/nav/cmd_vel` | 20 |
 | AI | `/drivers/ai/cmd_vel` | 10, later |
 
@@ -81,7 +83,7 @@ files hand them to every part that needs them.
 |---|---|
 | ego | the wheelbase and steering limit, for the bicycle model |
 | URDF (`robot_state_publisher`) | where each sensor sits |
-| Nav2 | the footprint, and the tightest turn: wheelbase ÷ tan(max steer) = 2.86 m |
+| Nav2 | the footprint, and the tightest turn: wheelbase ÷ tan(max steer) = 2.87 m |
 | `turtlesim_adapter`, `gazebo_adapter` | the wheelbase, so the turtle and the simulated car turn like the car |
 | `aav_spine`, `aav_legacy` | the wheelbase, track and wheel size |
 
@@ -154,11 +156,14 @@ Two more, for the automatic drivers only (Nav2 and the AI slot; never a person o
 !!! warning "Today's car has no layer 5"
   The 2025-26 ESP32 firmware has no timeout. If the bridge dies, the last throttle stays
   on. Keep the wheels off the ground and the e-stop in hand: see [Firmware](firmware.md).
+  So, with `frame_version: 1`, the bridge locks the programs out: twist_mux's no-timeout
+  lock (60) holds scripted, replay, point, Nav2 and AI. Only people and the actuator
+  tests drive.
 
 ## 8. The real graph, three ways
 
 The same layers, as they really run: `pixi run graph-picture` saved each one from a live
-profile on Ben's Mac (20 Oct). Read them left to right. The middle stays the same in all
+profile on Ben's Mac (saved 20 Oct, before the output mux). Read them left to right. The middle stays the same in all
 three; only the left edge (where the data comes from) and the right edge (who plays the
 car) change.
 

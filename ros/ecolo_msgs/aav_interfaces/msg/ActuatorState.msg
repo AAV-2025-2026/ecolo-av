@@ -1,5 +1,5 @@
 # One actuator: what it was told, and what it did. For plotting command against measured
-# (Foxglove, PlotJuggler) and for the actuator tests (READ-ME-TESTS.md, stage 4).
+# (Foxglove, PlotJuggler) and for the actuator tests (docs/tests.md, stage 4).
 #
 # Published by the backend on /vehicle/steering (rad, positive = left, the virtual centre
 # wheel), /vehicle/throttle (0..1 of full throttle) and /vehicle/brake (0..1 of full

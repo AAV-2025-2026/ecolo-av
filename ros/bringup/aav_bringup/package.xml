@@ -10,12 +10,12 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>aav_description</exec_depend>
-  <exec_depend>aav_mux</exec_depend>
+  <exec_depend>aav_command_mux</exec_depend>
   <exec_depend>aav_io_mux</exec_depend>
   <exec_depend>aav_ego</exec_depend>
   <exec_depend>aav_teleop</exec_depend>
   <exec_depend>aav_scripted</exec_depend>
-  <exec_depend>aav_goto</exec_depend>
+  <exec_depend>aav_drive_to_point</exec_depend>
   <exec_depend>aav_sensors</exec_depend>
   <exec_depend>aav_localization</exec_depend>
   <exec_depend>aav_navigation</exec_depend>
@@ -30,7 +30,6 @@
   <exec_depend>aav_detector</exec_depend>
   <exec_depend>aav_camera_stream</exec_depend>
   <exec_depend>aav_hud</exec_depend>
-  <exec_depend>aav_hud_raylib</exec_depend>
   <exec_depend>aav_lane_geometry</exec_depend>
   <exec_depend>aav_lane_finder</exec_depend>
   <exec_depend>aav_safety</exec_depend>

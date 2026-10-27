@@ -51,16 +51,27 @@ def gazebo_steer_gain(path=GAZEBO_XACRO):
     return float(found.group(1)) if found else 1.0      # gz-sim's own default
 
 
+# s: gazebo_adapter sends the model's angle 50 times a second (rate_hz); holding each for
+# 20 ms delays it by half that, on average. Measured: 1/gain + 11-12 ms
+# (tools/gazebo_steering.py, TODO 52c).
+ADAPTER_HOLD = 0.5 / 50.0
+
+
+def gazebo_extra_lag(gain=None):
+    """Return how much later than the model Gazebo's wheels steer (s): 1/gain + the hold."""
+    return 1.0 / (gain or gazebo_steer_gain()) + ADAPTER_HOLD
+
+
 def gazebo_rows(model):
-    """Gazebo's car against the model: its steering has one more lag, 1 / steer_p_gain."""
+    """Gazebo's car against the model: its steering has one more lag (gazebo_extra_lag)."""
     gain = gazebo_steer_gain()
-    extra = 1.0 / gain
+    extra = gazebo_extra_lag(gain)
     rows = [['v m/s', 'the car (model)', f'Gazebo (+{extra * 1000:.0f} ms lag)',
              'the car: delay left', 'Gazebo: delay left']]
     for v in vm.lateral_speeds():
         ol = model.lateral_open_loop(v)
         gz = vm.series(ol, (np.array([1.0]), np.array([extra, 1.0])))
-        T = model.delays.lateral('typical')
+        T = model.lateral_delay('typical')
         a, b = vm.margins(ol, T), vm.margins(gz, T)
         rows.append([f'{v:g}', f'PM {a.phase_margin_deg:.0f} deg',
                      f'PM {b.phase_margin_deg:.0f} deg',
@@ -120,8 +131,8 @@ def figures(model, out_dir):
     w = np.logspace(-2, 2, 2000)
     fig, axes = plt.subplots(2, 2, figsize=(12, 6), sharex='col')
     loops = (('Speed loop L(s)', model.speed_open_loop(),
-              lambda c: model.delays.speed(c, model.gains.tick)),
-             ('Lateral loop L(s), 1 m/s', model.lateral_open_loop(1.0), model.delays.lateral))
+              model.speed_delay),
+             ('Lateral loop L(s), 1 m/s', model.lateral_open_loop(1.0), model.lateral_delay))
     for col, (title, ol, delay) in enumerate(loops):
         for case, c, ls in (('none', blue, '-'), ('worst', orange, '--')):
             T = delay(case)
@@ -374,8 +385,9 @@ def main(argv=None):
         print(table(title, rows))
         print()
     gain, rows = gazebo_rows(model)
-    print(table(f"Gazebo's car: steer_p_gain {gain:g} adds a {1000 / gain:.0f} ms lag after "
-                'the actuator model (typical delays)', rows))
+    print(table(f"Gazebo's car: steer_p_gain {gain:g} and the adapter's hold add a "
+                f'{1000 * gazebo_extra_lag(gain):.0f} ms lag after the actuator model '
+                '(typical delays)', rows))
     print()
     if args.no_figures:
         return 0

@@ -1,9 +1,9 @@
 """
 Sensor faults on purpose, in Gazebo: what a broken sensor sends instead. No ROS here.
 
-Each of Gazebo's sensor nodes passes its sensor on through a Fault (NODES; READ-ME-FULL-
-SIMULATION.md step 6; docs/simulation.md, "Sensor failures on purpose"). Set one while the
-sim runs:
+Each of Gazebo's sensor nodes passes its sensor on through a Fault (NODES;
+docs/full-simulation.md step 6; docs/simulation.md, "Sensor failures on purpose"). Set one
+while the sim runs:
 
     pixi run sim-fault gps stop        (ros2 param set /gazebo_gps fault.gps stop)
     pixi run sim-fault gps ok          (back to normal)

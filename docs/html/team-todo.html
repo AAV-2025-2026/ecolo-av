@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The team&#x27;s work list, after Friday&#x27;s audit · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/team-todo.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The team&#x27;s work list, after Friday&#x27;s audit</h1>
+<div class="meta">14 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a class="here" href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-order-in-one-picture">The order, in one picture</a><a href="#how-to-use-this-list">How to use this list</a><a href="#a-the-cars-computers">A. The car&#x27;s computers</a><a href="#b-the-drive-path-throttle-steering-brake-e-stop">B. The drive path: throttle, steering, brake, e-stop</a><a href="#c-the-sensors">C. The sensors</a><a href="#d-our-software-on-the-car">D. Our software on the car</a><a href="#e-power-and-wiring">E. Power and wiring</a><a href="#done">Done</a></nav>
+<div class="lead"><blockquote>
+<p><strong>A snapshot from 15 October 2026.</strong> What's true now: <a href="status.html">Status</a>, <a href="plan.html">The plan</a> and <code>TODO.md</code>. The audits ran on 16 and 21 Oct (<code>docs/history/audit-2026-10-16-car.md</code>, <code>audit-2026-10-21-car.md</code>).</p>
+</blockquote>
+<p>Written 15 October 2026, <strong>before</strong> the audit, as a draft. After Friday, update it from
+what the audit found: tick the "Audit says" column, fix each task's size, and put a name
+in each "Who" (Q33). Each task is sized for one or two people.</p>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Five tracks</strong> that people can work on side by side: A the car's computers, B the drive path, C the sensors, D our software on the car, E power and wiring.
+- <strong>Nothing is reflashed or replaced before its backup is checked.</strong> A1 comes first, and A2 (upgrading the Jetson) waits for it.
+- <strong>Safety first in track B:</strong> the ESP32's missing command timeout (B2) is fixed before the car drives on the ground.
+- Each task says what it <strong>needs</strong> first, and when it's <strong>done</strong>. Pick one with nothing left in "Needs".</p>
+</blockquote></div>
+<section class="card"><h2 id="the-order-in-one-picture">The order, in one picture</h2>
+<pre class="highlight"><code class="language-text"> Friday's audit
+      │
+      ▼
+ A1 back up everything ──► A2 Jetson: JetPack 7.2 ──► A3 Jazzy + our stack on the Orin ──► D tasks on the car
+      │                └─► A4 Pis: Ubuntu 24.04  ──┘
+      │
+      ├─► B1 drive on stands (legacy path) ──► B2 ESP32 timeout ──► B5 calibrate ──► first drive on the ground
+      │
+      └─► C sensors, one by one (each needs its device known from the audit)</code></pre>
+</section>
+<section class="card"><h2 id="how-to-use-this-list">How to use this list</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Size</strong></td>
+<td>S = an afternoon; M = a few days; L = a week or more</td>
+</tr>
+<tr>
+<td><strong>Needs</strong></td>
+<td>tasks or audit answers that must come first</td>
+</tr>
+<tr>
+<td><strong>Done when</strong></td>
+<td>the check that proves it, written so anyone can run it</td>
+</tr>
+<tr>
+<td><strong>Audit says</strong></td>
+<td>fill in after Friday: ✅ as planned, ⚠️ changed, ❌ not needed</td>
+</tr>
+<tr>
+<td><strong>Who</strong></td>
+<td>a name (Q33)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Tick a task by moving it to "Done" at the bottom, with the date and the commit.</p>
+</section>
+<section class="card"><h2 id="a-the-cars-computers">A. The car's computers</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Size</th>
+<th>Needs</th>
+<th>Done when</th>
+<th>Audit says</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td><strong>Back up every computer</strong>: home folders and <code>/etc</code> (Friday); SD-card images of each Pi; a <strong>full image of the Orin</strong> with <code>l4t_backup_restore.sh</code></td>
+<td>M</td>
+<td>Friday's audit; an x86 Ubuntu PC for the Orin image; the encrypted drive</td>
+<td>each backup <strong>restored once</strong> onto a spare card or checked by listing it; the files that exist only on the car listed in the audit write-up</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A2</td>
+<td><strong>Upgrade the Jetson (Orin) to JetPack 7.2</strong> (Ubuntu 24.04). It's a reflash, not an upgrade: everything on it is erased</td>
+<td>M</td>
+<td>A1 done and checked; the module's part number (-501 is fine, <strong>-502 has a reported flashing problem</strong>); the team agrees</td>
+<td><code>cat /etc/nv_tegra_release</code> shows the new version; CUDA and TensorRT run (<code>tools/build_engine.py</code> makes an engine)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A3</td>
+<td>Jazzy and our stack on the new Orin, from apt; replace the Pixi kit there</td>
+<td>S</td>
+<td>A2</td>
+<td><code>pixi run test</code> passes there, or <code>colcon test</code>; <code>ros2 launch aav_bringup car.launch.py machine:=orin gps:=false</code> starts</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A4</td>
+<td>The Pis to <strong>Ubuntu 24.04</strong> (or keep their OS and use the Pixi kit), one at a time</td>
+<td>M each</td>
+<td>A1 (that Pi's SD image); which Pis we still need (audit, W9)</td>
+<td>each Pi runs its part of our stack (<code>machine:=motor_pi</code> etc.)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A5</td>
+<td><strong>Rotate the leaked secrets</strong>: revoke the GitHub token, the Firebase keys; change the car's WiFi password; set new logins</td>
+<td>S</td>
+<td>whoever controls the accounts (Q34)</td>
+<td>the old token fails; the old WiFi password fails</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A6</td>
+<td><strong>The network</strong>: fixed IPs for every machine; one ROS domain (42); multicast working (or static peers); a written network map</td>
+<td>S</td>
+<td>audit W1-W5</td>
+<td><code>pixi run doctor</code> OK on a laptop; <code>pixi run net-map</code> matches the network map, written in the audit page</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A7</td>
+<td><strong>Time</strong>: chrony on every machine, the Orin as the server</td>
+<td>S</td>
+<td>A6</td>
+<td><code>chronyc tracking</code> under 10 ms on each</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A8</td>
+<td><strong>Start at boot</strong>: our stack as systemd services on each machine, replacing the 2025-26 ones (kept, disabled, for a way back)</td>
+<td>M</td>
+<td>A3, A4; the boot list from the audit</td>
+<td>power on → <code>pixi run check car</code> passes, with no one logged in</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="a2-in-detail-upgrading-the-jetson">A2 in detail: upgrading the Jetson</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+<th>☐</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>A1 is done: the full Orin image <strong>and</strong> a separate copy of <code>/home/aavjetson</code>, the detector weights, <code>camera_decode</code> and the OSRM data. Restore-test the home copy</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Write down from the audit: the JetPack version, the module part number, the disk (eMMC or NVMe), what was running</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Agree as a team. <strong>Note:</strong> NVIDIA's Isaac ROS is Humble-only on the Orin today, so JetPack 7.2 + Jazzy means no Isaac ROS for now. We don't use it (<code>perception-and-hud-map.md</code>)</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Flash with SDK Manager from an x86 Ubuntu 22.04/24.04 PC, recovery mode, USB-C cable</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>5</td>
+<td>First boot: user, hostname and IP <strong>as in the network map</strong> (A6), so the other machines still find it</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Check CUDA and TensorRT; <code>sudo nvpmodel -m 0</code> (full power) if the team wants it</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Then A3</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>↩</td>
+<td><strong>Way back:</strong> restore the full image with <code>l4t_backup_restore.sh</code></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Details: <a href="platforms.html">docs/platforms.md</a>, "Moving the Orin to JetPack 7.2".</p>
+</section>
+<section class="card"><h2 id="b-the-drive-path-throttle-steering-brake-e-stop">B. The drive path: throttle, steering, brake, e-stop</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Size</th>
+<th>Needs</th>
+<th>Done when</th>
+<th>Audit says</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B1</td>
+<td><strong>Our stack drives the car on stands</strong>, through today's ESP32 (<code>aav_legacy</code> on the Motor-Pi)</td>
+<td>S</td>
+<td>the audit (D2-D5); the 2025-26 Motor-Pi software stopped</td>
+<td>the 8 tests in <code>history/friday-2026-10-16.md</code> part 5 pass</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B2</td>
+<td>⚠️ <strong>A command timeout on the ESP32</strong>: no command for 100 ms → brake. Either flash the Rust ESP32 (<code>boards/esp32-umod</code>, merged 15 Oct) after its bench plan, or add a timeout to today's firmware. Close the open update page</td>
+<td>M</td>
+<td>Ben's go-ahead to flash; a spare ESP32 for the bench (<code>docs/esp32-bench.md</code>)</td>
+<td>unplug the Motor-Pi's UART while driving on stands → the car brakes</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B3</td>
+<td><strong>The e-stop input</strong>: wire the e-stop to the board, so the firmware knows</td>
+<td>S</td>
+<td>audit S1 (what the Kar-Tech and the mushroom cut)</td>
+<td>press each e-stop → <code>/vehicle/status</code> shows it</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B4</td>
+<td><strong>Brake safe state</strong>: what the brake does with power cut, and at boot</td>
+<td>S</td>
+<td>audit S2; the Jrk G2 settings (D6)</td>
+<td>written in <code>vehicle.yaml</code> / the firmware; tested on stands</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B5</td>
+<td><strong>Calibrate</strong> steering (centre, full lock each way), throttle (deadband, top speed), brake (travel). The tests are a script: <code>pixi run actuator-test &lt;test&gt; --stands</code>, then in the lot (<a href="actuator-tests.html">docs/actuator-tests.md</a>)</td>
+<td>M</td>
+<td>B1; the Jrk settings (D6, N9); measurements (M5)</td>
+<td><code>vehicle.yaml</code> has measured numbers; the scripted drive goes straight within 0.5 m over 10 m</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B6</td>
+<td><strong>Steering position feedback</strong>: the actuator's own pot, or the KTC-100. The 2024-25 firmware read it from the steering Jrk G2 (<code>getScaledFeedback()</code>, docs/older-code.md): try that first</td>
+<td>M</td>
+<td>audit D6, D7 (wire count)</td>
+<td>steering angle in <code>/vehicle/status</code>, within 1°</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B7</td>
+<td><strong>CAN (the KEFC plan)</strong>: <strong>the hardware lead decides</strong> (CAN or not, the wheel boards, the 100 ms timeout), then order the parts</td>
+<td>M</td>
+<td>audit C1 (is U7 wired to the ESP32?); the hardware lead's decision. The ROS side is ready: CAN v0.2.0 (wheel speed frames, 100 ms timeout) and <code>spine_bridge</code>'s <code>/vehicle/wheels</code> merged 15 Oct (<code>can-v2-work</code>)</td>
+<td><code>candump</code> shows the spine's frames on the Orin</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B8</td>
+<td><strong>The first drive on the ground</strong>, walking pace, empty lot, safety driver</td>
+<td>S</td>
+<td>B1, B2, B3, B5</td>
+<td><code>a-to-b.md</code> test 5: a scripted 10 m at 0.5 m/s</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="c-the-sensors">C. The sensors</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Size</th>
+<th>Needs</th>
+<th>Done when</th>
+<th>Audit says</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td><strong>GPS</strong> on our driver (<code>ublox_gps</code>), with RTK corrections if there's a source</td>
+<td>S</td>
+<td>audit N1, N2</td>
+<td><code>/sensors/gps/fix</code> at 5-10 Hz; the HUD shows 3D or RTK</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C2</td>
+<td><strong>IMU</strong> on our Rust driver; its mounting angles in <code>vehicle.yaml</code></td>
+<td>S</td>
+<td>audit N3, M6</td>
+<td><code>/sensors/imu/data</code> at 100 Hz; turning left shows +z rotation</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C3</td>
+<td><strong>Cameras</strong>, with their calibration files (now: both front ribbon cameras on one Pi 5, MediaMTX → <code>aav_camera_stream</code> on the Orin)</td>
+<td>M</td>
+<td>audit N4; the backed-up calibration</td>
+<td><code>/sensors/camera/front_left/image_raw</code> steady for 30 min</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C4</td>
+<td><strong>Fix the camera freezes</strong></td>
+<td>M</td>
+<td>Friday's 10-minute watch (<code>history/friday-todo-2026-10-16.md</code> part 5)</td>
+<td>1 hour with no freeze, logged</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C5</td>
+<td><strong>Radar</strong> on <code>aav_radar_ti</code>, its clusters in Nav2</td>
+<td>S</td>
+<td>audit N7</td>
+<td><code>/perception/radar/clusters</code> while someone walks in front</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C6</td>
+<td><strong>Lidar driver</strong> (done: the roof Velodyne VLP-16 on the stock <code>velodyne</code> driver, on by default on the car; untested with the real lidar), its points into Nav2's costmap and the collision monitor</td>
+<td>M</td>
+<td>audit N6 (make, model, IP)</td>
+<td>an obstacle in front shows in RViz's local costmap</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C7</td>
+<td><strong>Wheel encoder</strong> (now: the hardware lead's Arduino on the Orin's CAN, 0x200/0x201; the 2025-26 UDP encoder is off since 23 Oct): alive, clean sensor; finer speed (more spokes, or the KEFC Hall sensors: <code>wheel-core</code> and <code>spine_bridge</code> already read them, 15 Oct)</td>
+<td>M</td>
+<td>audit D4, C2</td>
+<td><code>/vehicle/status</code> speed matches a GPS speed within 10% at 1 m/s</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C8</td>
+<td><strong>Stable device names</strong>: USB serial numbers into <code>tools/udev/99-aav.rules</code></td>
+<td>S</td>
+<td>the survey's "by-id" lists</td>
+<td>unplug and replug everything: same names</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C9</td>
+<td><strong>Battery</strong>: read the KM110F, or drop it from the plan</td>
+<td>S</td>
+<td>audit N8</td>
+<td><code>/vehicle/battery</code> shows the voltage, or a decision written down</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="d-our-software-on-the-car">D. Our software on the car</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Size</th>
+<th>Needs</th>
+<th>Done when</th>
+<th>Audit says</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td><strong>Measure the car</strong>, and replace every guess in <code>vehicle.yaml</code></td>
+<td>S</td>
+<td>Friday's tape measure (M1-M7)</td>
+<td>no "guess" comments left in <code>vehicle.yaml</code>; the URDF matches photos in RViz</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D2</td>
+<td><strong>Bring in what existed only on the car</strong>: code into git with a <code>PROVENANCE.md</code>; weights into <code>models/</code> with checksums</td>
+<td>M</td>
+<td>A1; the audit's list</td>
+<td>each item either in git or written off in <code>docs/older-code.md</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D3</td>
+<td><strong>The detector on TensorRT</strong> on the Orin (RF-DETR Nano by default; YOLO with <code>detector:=yolo</code>); test it against the 2025-26 detector on a recording</td>
+<td>S</td>
+<td>A3; a recording from C3</td>
+<td>ms per frame on the Orin written in <code>docs/perception.md</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D4</td>
+<td><strong>The HUD and the map on the dash's two screens</strong>, full screen, starting at boot. <strong>Ready to install (15 Oct):</strong> <code>car_install.sh --screens</code>, then two monitor names in <code>~/.config/aav/screens.env</code> (<a href="#d4-in-detail-the-two-screens">below</a>)</td>
+<td>S</td>
+<td>audit W10 (which computer, the outputs' names, X11 or Wayland); auto-login (an admin); E1</td>
+<td>power on → the HUD on the small screen, the map on the big one, both full screen; kill one → back in 5 s</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D5</td>
+<td><strong>The HUD's map panel</strong>, with offline tiles of the test area</td>
+<td>M</td>
+<td>the test area chosen</td>
+<td>the car's dot moves on the map in Gazebo, then on the car</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D6</td>
+<td><strong>A-to-B</strong>: the test lot's datum, a start spot, then a GPS goal with <code>pixi run drive-to-point --lat .. --lon ..</code> (the driver, <code>aav_drive_to_point</code>, is built and proven in Gazebo, 15 Oct)</td>
+<td>M</td>
+<td>C1, C2, B8; the brake test (4.3) for <code>max_brake</code></td>
+<td><code>a-to-b.md</code> test 5 with a GPS goal: stops within 1 m of B (2 m without RTK)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D7</td>
+<td><strong>Python to Rust, step 1</strong>: the spine bridge and ego</td>
+<td>L</td>
+<td>Ben's go-ahead</td>
+<td>the same tests pass with the Rust nodes; <code>bench-check</code> 7 of 7</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="d4-in-detail-the-two-screens">D4 in detail: the two screens</h3>
+<p>How it works: <a href="car-screens.html">docs/car-screens.md</a>. Two systemd <em>user</em> units start
+<code>hud</code> and <code>map</code> at login, each with <code>--fullscreen --monitor &lt;name&gt;</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Ready (15 Oct, tested on a Mac)</th>
+<th>The audit must confirm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--monitor NAME\|N</code> and <code>--list-monitors</code> in both programs</td>
+<td><strong>Which computer</strong> drives the screens: the dash Pi (DASH-UI) or the Orin? Both screens on one computer?</td>
+</tr>
+<tr>
+<td><code>aav-hud.service</code>, <code>aav-map.service</code>, an autostart entry</td>
+<td><strong>The outputs' names</strong> (<code>xrandr --listmonitors</code>, or <code>wlr-randr</code>, or <code>kmsprint</code>) and resolutions; which is the small one</td>
+</tr>
+<tr>
+<td><code>~/.config/aav/screens.env</code>: monitors, ROS domain 42, the map's files</td>
+<td><strong>X11 or Wayland</strong> (<code>echo $XDG_SESSION_TYPE</code>): on Wayland the names may read <code>XWAYLAND0</code></td>
+</tr>
+<tr>
+<td><code>car_install.sh --screens</code> and <code>car_screens_install.sh [--dry-run]</code></td>
+<td><strong>The Pi's GPU</strong> copes with two full-screen OpenGL windows (<code>glxinfo -B</code>), and its OS is 64-bit (the kit needs <code>aarch64</code>)</td>
+</tr>
+<tr>
+<td>The kit carries the street map and the place database</td>
+<td><strong>Auto-login</strong> to the desktop: on already? (an admin setting)</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>What starts the 2025-26 app</strong> at boot now (its services), so ours replaces it cleanly (A8)</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>E1: the dash's 5 V</strong> (3.48 A seen): two screens plus a Pi may brown out</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="e-power-and-wiring">E. Power and wiring</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Task</th>
+<th>Size</th>
+<th>Needs</th>
+<th>Done when</th>
+<th>Audit says</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E1</td>
+<td><strong>5 V for the Pis</strong>: converters that give 5 A each (the dash one showed 3.48 A)</td>
+<td>S</td>
+<td>audit P1; C4's findings</td>
+<td><code>vcgencmd get_throttled</code> = <code>0x0</code> after an hour of driving</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>E2</td>
+<td><strong>A wiring diagram</strong>: every computer, sensor, converter and fuse</td>
+<td>M</td>
+<td>the audit photos</td>
+<td>a picture in <code>docs/img/</code>, linked from <code>docs/car-photos.md</code></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>E3</td>
+<td><strong>The Orin's power</strong>: its supply and fuse</td>
+<td>S</td>
+<td>audit P2</td>
+<td>written in E2's diagram</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="done">Done</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Task</th>
+<th>Commit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="proposal.html"><small>Previous</small>← Proposal draft</a>
+<a class="next" href="older-code.html"><small>Next</small>Older code →</a></nav>
+</main>
+<footer>Source: <code>docs/team-todo.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

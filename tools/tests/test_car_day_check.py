@@ -19,15 +19,17 @@ def test_the_same_commit_as_github_is_ok():
     assert 'f5730bef' in line.detail
 
 
-def test_behind_github_says_pull():
+def test_behind_github_says_update_from_upstream():
     line = cdc.repo_line('main', HEAD, 'a' * 40, 'behind', dirty=False)
-    assert (line.status, line.fix) == ('MISSING', 'git pull')
+    assert (line.status, line.fix) == ('MISSING', cdc.UPDATE_MAIN)
+    assert 'upstream/main' in line.fix
 
 
-def test_ahead_of_github_says_test_then_push():
+def test_ahead_of_github_says_test_then_pull_request_never_push_main():
     line = cdc.repo_line('main', HEAD, 'a' * 40, 'ahead', dirty=False)
     assert line.status == 'MISSING'
-    assert 'pixi run test' in line.fix and 'git push' in line.fix
+    assert 'pixi run test' in line.fix and 'pull request' in line.fix
+    assert 'git push' not in line.fix
 
 
 def test_another_branch_or_uncommitted_changes_are_missing():
@@ -43,7 +45,7 @@ def test_no_internet_is_a_reminder_not_a_failure():
 
 
 EVENTS_OK = ("[0.6] (aav_ego) JobEnded: {'identifier': 'aav_ego', 'rc': 0}\n"
-             "[0.7] (aav_mux) JobEnded: {'identifier': 'aav_mux', 'rc': 0}\n")
+             "[0.7] (aav_command_mux) JobEnded: {'identifier': 'aav_command_mux', 'rc': 0}\n")
 
 
 def test_a_build_after_the_last_change_is_ok():
@@ -224,7 +226,7 @@ def test_the_repos_pixi_toml_picks_cyclone():
 
 def test_the_runbooks_cyclone_file_names_a_card_the_check_reads():
     # The runbook's example is what the team copies: the check must understand it.
-    runbook = (ROOT / 'READ-ME-CAR-DAY.md').read_text()
+    runbook = (ROOT / 'docs/car-day.md').read_text()
     xml = re.search(r'(<CycloneDDS.*?</CycloneDDS>)', runbook, re.S).group(1)
     assert cdc.card_named(xml) == 'en7'
     assert cdc.CAR_CYCLONE.replace('~/', '') in runbook

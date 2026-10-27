@@ -14,7 +14,7 @@
 #   rust-crates.tar.gz              every crate our Rust packages use (cargo vendor)
 #   models/                         the YOLO model files in models/, if any
 #   maps/                           the map window's street map and place database, if
-#                                   downloaded (pixi run get-street-map, get-hud-map)
+#                                   downloaded (pixi run get-street-map, get-places)
 #   car_install.sh, README.md, KIT.txt, SHA256SUMS
 #
 # Downloads are cached in vendor/car-kit-cache, so a second run is quick.
@@ -119,7 +119,7 @@ for m in maps/streets/ottawa.pmtiles maps/places/ottawa.db; do
     cp "$m" "$OUT/$m"
     echo "  $m"
   else
-    echo "  no $m (pixi run get-street-map, pixi run get-hud-map): the map works without it"
+    echo "  no $m (pixi run get-street-map, pixi run get-places): the map works without it"
   fi
 done
 

@@ -7,20 +7,26 @@
 <!-- Generated from docs/platforms.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Platforms: Ubuntu, the car&#x27;s computers, networking</h1>
-<div class="meta">9 min read · 7 sections</div></header>
+<div class="meta">10 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -138,7 +151,7 @@ another.</p>
 </section>
 <section class="card"><h2 id="ubuntu-build-this-workspace">Ubuntu: build this workspace</h2>
 <pre class="highlight"><code class="language-bash">source /opt/ros/jazzy/setup.bash
-rosdep install --from-paths src --ignore-src -y    # every stock package we use
+rosdep install --from-paths ros --ignore-src -y    # every stock package we use
 colcon build --symlink-install
 source install/setup.bash                          # in every new terminal</code></pre>
 <ul>
@@ -161,7 +174,7 @@ source install/setup.bash                          # in every new terminal</code
 <tbody>
 <tr>
 <td>1</td>
-<td>The same <code>ROS_DOMAIN_ID</code> (1–101) in every machine's <code>~/.bashrc</code></td>
+<td>The same <code>ROS_DOMAIN_ID</code> in every machine's <code>~/.bashrc</code>: ours is 42 (0–101 is safe on Linux; Fast DDS breaks above 232)</td>
 <td>the 2025-26 dashboard used 10 and its UI used 0, so they never met</td>
 </tr>
 <tr>
@@ -209,7 +222,7 @@ the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 <tbody>
 <tr>
 <td><code>orin.yaml</code></td>
-<td>description, mux, ego, scripted, the IMU and GPS drivers, localization, Nav2, Foxglove; the object detector (<code>object_detector_orin</code>, RF-DETR Nano in TensorRT) and the stop-sign watcher; the CAN bus (<code>spine_bridge role:=sensors</code>: the wheels)</td>
+<td>description, mux, ego, scripted, drive_to_point, the IMU and GPS drivers, the roof lidar (Velodyne), localization, Nav2, Foxglove; the two front camera streams (<code>camera_stream</code>, RF-DETR inside each) and the stop-sign watcher; the CAN bus (<code>spine_bridge role:=sensors</code>: the wheels)</td>
 </tr>
 <tr>
 <td><code>motor_pi.yaml</code></td>
@@ -217,7 +230,7 @@ the ESP32, and the CAN bus goes to the Orin with the wheel sensors on it
 </tr>
 <tr>
 <td><code>laptop.yaml</code></td>
-<td>the joystick, on the safety driver's laptop. Its detector (<code>object_detector_laptop</code>, Core ML) is off until it reads compressed images</td>
+<td>the joystick, on the safety driver's laptop, and its own detector (<code>object_detector_laptop</code>, RF-DETR Nano) on the compressed pictures: <code>pixi run -e ml car laptop</code></td>
 </tr>
 <tr>
 <td><code>all.yaml</code></td>
@@ -258,12 +271,16 @@ hardware: the cameras (Q22), the radar, or which USB port a device is on.</p>
 <td>the joystick, and its e-stop button</td>
 </tr>
 <tr>
-<td><code>scripted</code></td>
-<td>the scripted driver</td>
+<td><code>scripted</code>, <code>drive_to_point</code></td>
+<td>the scripted driver; the point driver (<a href="a-to-b.html">A to B</a>)</td>
 </tr>
 <tr>
 <td><code>imu</code>, <code>gps</code>, <code>radar</code>, <code>battery</code></td>
 <td>the sensor drivers, on the computer each is plugged into</td>
+</tr>
+<tr>
+<td><code>lidar</code></td>
+<td>the roof Velodyne VLP-16, through the stock <code>velodyne</code> driver (it sends to the Jetson only)</td>
 </tr>
 <tr>
 <td><code>camera</code></td>
@@ -331,6 +348,14 @@ skipped with a warning, and the rest starts.</p>
 <tr>
 <td><code>map:=</code>, <code>start_x:=</code>, <code>start_y:=</code>, <code>start_yaw:=</code></td>
 <td>Nav2's map, and where the car starts on it</td>
+</tr>
+<tr>
+<td><code>lidar:=false</code></td>
+<td>no lidar anywhere, whatever the machine file says</td>
+</tr>
+<tr>
+<td><code>actuators:=uart</code></td>
+<td>who drives the actuators: <code>uart</code> (the default: the Motor Pi's <code>legacy_uart_bridge</code>) or <code>can</code> (the CAN spine)</td>
 </tr>
 </tbody>
 </table></div>

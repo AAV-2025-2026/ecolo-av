@@ -7,20 +7,26 @@
 <!-- Generated from docs/decisions.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Decisions and open questions</h1>
-<div class="meta">37 min read · 13 sections</div></header>
+<div class="meta">41 min read · 13 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a class="here" href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -142,7 +155,7 @@ answer.</p>
 </tr>
 <tr>
 <td>5</td>
-<td>A CAN spine replaces the serial link from the Motor Pi to the ESP32</td>
+<td>A CAN spine replaces the serial link from the Motor Pi to the ESP32 (today's car drives over UART: see 23 Oct)</td>
 <td>Which signals cross the bus is still open: Q12</td>
 </tr>
 <tr>
@@ -152,7 +165,7 @@ answer.</p>
 </tr>
 <tr>
 <td>7</td>
-<td>One repo and one workspace, with folders by layer of the picture</td>
+<td>One repo and one workspace, with folders by layer of the picture (since 25 Oct, by area: <code>ros/&lt;area&gt;/</code>, below)</td>
 <td>One place to build, test and document everything</td>
 </tr>
 <tr>
@@ -163,7 +176,7 @@ answer.</p>
 <tr>
 <td>9</td>
 <td>Develop on Macs too, with Pixi and RoboStack</td>
-<td>The same Jazzy on macOS and any Linux. The car's computers stay on Ubuntu 24.04; all use Cyclone DDS (23 Oct, below)</td>
+<td>The same Jazzy on macOS and any Linux. The car's computers move to Ubuntu 24.04 (today 22.04: Q24); all use Cyclone DDS (23 Oct, below)</td>
 </tr>
 </tbody>
 </table></div>
@@ -195,7 +208,7 @@ answer.</p>
 </tr>
 <tr>
 <td>The spine runs on an ARM chip, a Pico 2 or an STM32, not the ESP32</td>
-<td>Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip. A Pico 2 program exists since 11 Oct (<code>boards/pico2</code>)</td>
+<td>Ben, 10 Oct: yes. It keeps the whole toolchain in Pixi. An STM32 has CAN built in; a Pico 2 needs an add-on CAN chip. A Pico 2 program exists since 11 Oct (<code>boards/pico2</code>). (The chip is the hardware lead's choice: Q10-Q13)</td>
 <td>Q10–Q13</td>
 </tr>
 <tr>
@@ -209,9 +222,9 @@ answer.</p>
 <td>Q29</td>
 </tr>
 <tr>
-<td>Flutter 3.35.7, downloaded into <code>vendor/</code> (<code>pixi run get-flutter</code>)</td>
+<td>~~Flutter 3.35.7, downloaded into <code>vendor/</code>~~ <strong>Superseded 25 Oct:</strong> the Flutter app is archived, and its download task is gone</td>
 <td>Pixi has no Flutter. 3.38 and later rewrite the 2025-26 team's <code>pubspec.lock</code></td>
-<td>Q29</td>
+<td>Q29 (answered)</td>
 </tr>
 <tr>
 <td>Lane keeping: a classic OpenCV lane finder publishes <code>/perception/lane/geometry</code>; the 2025-26 lane keeping follows it</td>
@@ -241,7 +254,7 @@ answer.</p>
 </tr>
 <tr>
 <td>A car-safe Nav2: SmacPlannerHybrid with Regulated Pure Pursuit (or MPPI's Ackermann model), and no Spin in the behaviour tree</td>
-<td>A car can't turn on the spot. The config already does this</td>
+<td>A car can't turn on the spot. The config already does this. (MPPI is the default since 22 Oct: see below)</td>
 </tr>
 <tr>
 <td>The RC transmitter stays the top-priority override, in hardware</td>
@@ -266,6 +279,10 @@ answer.</p>
 <tr>
 <td>A linear state-space model of the car, for tuning and the report (24 Oct): speed (first order, the spine's PI around it), steering (second order), the path errors (the bicycle, linearised), the delays; <code>aav_ego</code> <code>vehicle_model.py</code>, <code>pixi run vehicle-model</code></td>
 <td>Ben asked for "a matrix control thing ... maybe second order system" (24 Oct), in SYSC 3600's terms (its professor supervises the capstone). It shows what kinematics can't: the speed loop settles in about 13 s; the delays cost the lateral loop phase margin (52° → 31° at 1 m/s in the worst case); Gazebo steers 0.1 s slower than <code>vehicle.yaml</code>. It never drives the car; it is refit from the actuator tests (<a href="vehicle-model.html">The car as a linear model</a>)</td>
+</tr>
+<tr>
+<td><strong>No program drives through firmware with no command timeout (F1, 26 Oct):</strong> with <code>frame_version: 1</code> (the 2025-26 C++ ESP32), <code>legacy_uart_bridge</code> says true on <code>/safety/legacy_uart_bridge/lock</code>, twist_mux's <code>no_timeout</code> lock at <strong>priority 60</strong>, timeout 0. <code>allow_programs_without_timeout: true</code> lifts it, on a supervised stand only</td>
+<td>If the bridge or the Orin dies, that firmware keeps the last throttle. A person at the controls can react; a program can't. 60 holds scripted, replay, point, Nav2 and AI; people and the actuator tests (60: a person runs them, types a confirmation) still drive. Timeout 0, so the spine, sim, bench and turtle never see it</td>
 </tr>
 </tbody>
 </table></div>
@@ -333,7 +350,7 @@ answer.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>aav/aav</code> is our version of the project. The other folders are the previous teams' code, or downloaded source</td>
+<td><code>aav/aav</code> is our version of the project. The other folders are the previous teams' code, or downloaded source. <em>Since 25 Oct: <code>~/Code/ecolo-av</code>, everything at its root</em></td>
 <td>Ben</td>
 </tr>
 <tr>
@@ -349,7 +366,7 @@ answer.</p>
 <td>Ben: see <a href="rust-firmware.html">Rust on the hardware</a></td>
 </tr>
 <tr>
-<td>Bring perception in now, not next year: the YOLO detector, the camera calibrations, radar clustering, lane keeping</td>
+<td>Bring perception in now, not later: the YOLO detector, the camera calibrations, radar clustering, lane keeping</td>
 <td>Ben: "Lets merge in all of this too"</td>
 </tr>
 <tr>
@@ -437,7 +454,7 @@ answer.</p>
 <td>Ben, 11:38: "No micro-ROS - lets rethink thinks later after we see the hardware"</td>
 </tr>
 <tr>
-<td>The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29</td>
+<td>The HUD becomes one Rust program, raylib and rclrs, that is also its ROS node: the driving screen first (speed, mode, the e-stop button, the camera). The Flutter app stays until the new one matches it; the map and the destination search wait on Q29 (since: the raylib HUD replaced it, 15 Oct; archived 25 Oct)</td>
 <td>Ben, 11:58: "Raylib for the HUD: yes, no, or try it first? yes"</td>
 </tr>
 </tbody>
@@ -453,7 +470,7 @@ answer.</p>
 </thead>
 <tbody>
 <tr>
-<td>Topic names by area: <code>/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code>, with the areas <code>/sensors/</code>, <code>/vehicle/</code>, <code>/can/</code>, <code>/localization/</code>, <code>/perception/</code>, <code>/drivers/</code>, <code>/control/</code>, <code>/ego/</code>, <code>/safety/</code>, <code>/hud/</code> (<a href="naming.html">Topic areas</a>). Each driver gets its own: <code>/drivers/keyboard/cmd_vel</code>, <code>/drivers/joy/cmd_vel</code></td>
+<td>Topic names by area: <code>/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code>, with the areas <code>/sensors/</code>, <code>/vehicle/</code>, <code>/can/</code>, <code>/localization/</code>, <code>/perception/</code>, <code>/drivers/</code>, <code>/control/</code>, <code>/ego/</code>, <code>/safety/</code>, <code>/hud/</code>, <code>/system/</code> (<a href="naming.html">Topic areas</a>). Each driver gets its own: <code>/drivers/keyboard/cmd_vel</code>, <code>/drivers/joy/cmd_vel</code></td>
 <td>Ben, 00:30: "The drivers all need to be in a /drivers/keybaord, etc type stuff as an example."</td>
 </tr>
 </tbody>
@@ -481,7 +498,7 @@ answer.</p>
 <td>Ben, 22 Oct: "I thought we decided to go mppi"</td>
 </tr>
 <tr>
-<td><strong>The car may back up</strong> (0.5 m/s at most), where the lidar watches behind it (the rear camera later); collision_monitor then guards a box behind the rear bumper</td>
+<td><strong>The car may back up</strong> (0.5 m/s at most), where the lidar watches behind it (the rear camera later); collision_monitor then guards a box behind the rear bumper. <strong>Off by default on the car since 26 Oct</strong> (<code>reversing:=true</code> to turn it on): the wheel sensors can't tell direction yet (H5); on again once H5 is answered</td>
 <td>Driving forward only, a U-turn in a narrow lane works about half the time and can leave the car facing a wall. Allowed to reverse, it makes a three-point turn and reaches every goal</td>
 <td>Ben, 22 Oct: "Yes the car can reverse"</td>
 </tr>
@@ -493,7 +510,7 @@ answer.</p>
 <tr>
 <td><strong>The wheel sensors are read by an Arduino</strong>, which sends CAN frames; the Orin reads the bus and publishes them in ROS</td>
 <td>The hardware side's plan. The frames are in <code>aav.dbc</code> already (0x200, 0x201), and the Orin's side decodes them, so the Arduino only has to send them. An exception to "Rust for all firmware": it's the hardware lead's board</td>
-<td>Ben, 23 Oct, for the hardware side</td>
+<td>the hardware lead (passed on by Ben, 23 Oct)</td>
 </tr>
 <tr>
 <td><em>Tentative, until the hardware lead confirms:</em> <strong>today's car is driven through the Motor Pi's UART</strong>, and <strong>the Orin reads its CAN bus for sensors only</strong> (<code>car.launch.py actuators:=uart</code>, the default; <code>spine_bridge role:=sensors</code>). The CAN spine stays one argument away (<code>actuators:=can</code>)</td>
@@ -601,6 +618,41 @@ answer.</p>
 <td>The receiver measures its velocity from the Doppler shift, good to 0.05 m/s while the position wanders by half a metre: its direction is the heading (turned round when reversing). In Gazebo, 4 runs each at walking pace: heading off by a median 1.6-2.1° (was 2.2-2.8), worst 8.5-13.6° (was 11.4-27.1), forward and reversing alike. The magnetometer (motors), lidar matching (not installed, and no north) and robot_localization's own settings (no effect with a datum) were looked at and not taken (<a href="learn-localization.html#where-the-heading-comes-from-todo-13">Learn: localization</a>)</td>
 <td>Ben's go-ahead, 24 Oct (TODO 13)</td>
 </tr>
+<tr>
+<td><strong>Every README has a CLAUDE.md beside it</strong> that reads it in (<code>@README.md</code>); EGM's designs go in <code>docs/designs/</code></td>
+<td>The Elephant-Goldfish plugin (egm.dev) works from each folder's README, and Claude Code only loads a folder's CLAUDE.md. A test keeps them paired</td>
+<td>Ben, 25 Oct</td>
+</tr>
+<tr>
+<td><strong>Only Ben sends email</strong></td>
+<td>The repo is public and students run their own Claude sessions in it; the mailer is Ben's channel</td>
+<td>Ben, 25 Oct</td>
+</tr>
+<tr>
+<td><strong>Docs live in <code>docs/</code>, under plain names</strong>; the root keeps README, CLAUDE.md, CONTRIBUTING.md and TODO.md</td>
+<td>Fourteen READ-ME, PLAN, PROPOSAL and TODO pages at the root were hard to find and named oddly. Their information moved into <code>docs/</code>; the dated pages (the proposal, the Friday audit) carry a snapshot banner</td>
+<td>Ben, 25 Oct</td>
+</tr>
+<tr>
+<td><strong>A features list, <code>docs/features.md</code></strong>: each feature's type, why, who and status, updated in the feature's own commit</td>
+<td>The team's report must say what each person built and why; a rule in CLAUDE.md and a checklist on pull requests keep it current</td>
+<td>Ben, 25 Oct</td>
+</tr>
+<tr>
+<td><strong>ROS packages live in <code>ros/&lt;area&gt;/</code></strong>: sources, localization, perception, drivers, command_mux, ego, io_mux, can_bridge, sim, safety, hud, bringup, ecolo_msgs (was <code>src/&lt;layer&gt;/</code>)</td>
+<td>Each folder matches a box in the picture, so you find a package where its data flows</td>
+<td>Arsh, 25 Oct</td>
+</tr>
+<tr>
+<td><strong>The Flutter HUD and its Flask back end are archived</strong> (<code>archive/2026-27-flutter-hud/</code>); the raylib package takes the name <code>aav_hud</code>; the route maths moves to <code>aav_routes</code></td>
+<td>Q29: the raylib HUD replaced the app on 15 Oct. Nothing built, tested or started the old one any more</td>
+<td>Ben, 25 Oct</td>
+</tr>
+<tr>
+<td><strong><a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a> is the git rule</strong>: fork, branch, pull request, one approval and green CI, then the merge queue</td>
+<td>One way into <code>main</code> for everyone, maintainers included</td>
+<td>Arsh, 25 Oct</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -641,7 +693,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q5</td>
 <td>Wheel encoder</td>
-<td>Which wheel, how many counts per turn, and can it wire straight to the spine?</td>
+<td>Which wheel, how many counts per turn, and can it wire straight to the spine? <strong>Partly answered:</strong> the wheel sensors go through the hardware lead's Arduino, which sends CAN 0x200/0x201 (23 Oct); one board or two is question H4</td>
 </tr>
 <tr>
 <td><strong>Q6</strong></td>
@@ -750,7 +802,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q22</td>
 <td>Lidar and cameras</td>
-<td>Which models are on the car? Not needed until phase 4, but the URDF and the power budget need them</td>
+<td>Which models are on the car? Not needed until phase 4, but the URDF and the power budget need them. <strong>Partly answered:</strong> a Velodyne VLP-16 on the roof (16 Oct audit); both front ribbon cameras on one Pi 5; the camera models still open</td>
 </tr>
 </tbody>
 </table></div>
@@ -782,7 +834,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q26</td>
 <td>Languages</td>
-<td>Python for all our ROS nodes? C++ or Rust for the spine firmware?</td>
+<td>Python for all our ROS nodes? C++ or Rust for the spine firmware? <strong>Answered: Decided #8 (Ben, 10 Oct)</strong></td>
 </tr>
 <tr>
 <td>Q27</td>
@@ -797,7 +849,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tr>
 <td>Q29</td>
 <td>HUD</td>
-<td>Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? Partly answered 11 Oct: a raylib HUD replaces the app once it matches</td>
+<td>Keep the Flutter app? Which screen runs it? Does it send GPS destinations this year? <strong>Answered:</strong> the raylib HUD replaced the app (Ben, 15 Oct); the app and its back end were archived on 25 Oct (Ben). Destinations: the map window's place search. Still open: which computer drives the screens (<a href="team-todo.html">Team to-do</a>)</td>
 </tr>
 <tr>
 <td>Q30</td>
@@ -839,7 +891,7 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <tbody>
 <tr>
 <td><code>ROS_DOMAIN_ID</code></td>
-<td>one number (0–101) for the car and every laptop</td>
+<td>one number for the car and every laptop: 0–101 (safe on Linux; Fast DDS breaks above 232)</td>
 </tr>
 <tr>
 <td>GPS driver</td>
@@ -881,13 +933,9 @@ The design doc's next steps take Q1–Q9, Q18, Q20 and Q22 to the car with a tap
 <td>The RC gear switch's brake position</td>
 <td><code>RC_GEAR_BRAKE = SpeedZero</code>: the speed loop brakes to a stop. <code>RcInput</code> now has a brake field, so the old full brake is one constant away</td>
 </tr>
-<tr>
-<td>The remaining renames</td>
-<td><code>ti_ros2_driver</code>, <code>battery_monitor</code>: <a href="conventions.html">Conventions</a></td>
-</tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="car-day.html"><small>Previous</small>← Car day</a>
+<nav class="prevnext"><a class="prev" href="measure-the-car.html"><small>Previous</small>← Measure the car</a>
 <a class="next" href="infrastructure.html"><small>Next</small>Infrastructure →</a></nav>
 </main>
 <footer>Source: <code>docs/decisions.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

@@ -1,0 +1,37 @@
+# Drive to one point B and stop there smoothly: speed up, hold, slow down by distance left.
+# Server: aav_drive_to_point (point_driver), publishing /drivers/point/cmd_vel (twist_mux priority 25).
+# B is where base_link (the ground under the rear axle) stops. Forward only.
+# Cancelling the goal stops the car at once (zero commands; ego's own deceleration).
+
+# Goal
+bool use_lat_lon         # true: latitude/longitude below; false: x/y in the map frame
+float64 latitude         # degrees north (WGS 84)
+float64 longitude        # degrees east
+float64 x                # m, map frame: x east, y north, origin = the navsat datum
+float64 y
+float32 cruise_speed     # m/s; 0 = the server's default. Ego's max_speed caps it
+float32 acceleration     # m/s^2, > 0; 0 = the server's default (gentle)
+float32 deceleration     # m/s^2; 0 = half the measured braking (vehicle.yaml max_brake)
+bool confirmed           # a person confirmed: needed when /system/source says REAL
+---
+# Result
+bool success             # stopped within the tolerance of B
+string message
+float64 target_x         # m, B in the map frame
+float64 target_y
+float32 distance_left    # m from B where it stopped, by the global EKF
+float32 tolerance        # m: 1 with an RTK fix, 2 without
+float32 distance_travelled  # m
+float32 duration         # s
+---
+# Feedback
+uint8 PHASE_TURN=0         # turning towards B (pure pursuit to the point)
+uint8 PHASE_ACCELERATE=1
+uint8 PHASE_HOLD=2
+uint8 PHASE_DECELERATE=3
+uint8 PHASE_STOPPING=4     # at B: zero commands until the car stands still
+uint8 phase
+float32 distance_left      # m to B, along the line from where the car lined up
+float32 cross_track        # m left (+) or right (-) of that line
+float32 commanded_speed    # m/s
+float32 measured_speed     # m/s, from the global EKF

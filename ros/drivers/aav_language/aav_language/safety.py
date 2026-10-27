@@ -175,7 +175,7 @@ class MuxLock:
 
 
 def mux_config(params: Mapping) -> Tuple[Tuple[MuxInput, ...], Tuple[MuxLock, ...]]:
-    """Read the inputs and locks from twist_mux's YAML (aav_mux/config/twist_mux.yaml)."""
+    """Read the inputs and locks from twist_mux's YAML (aav_command_mux/config/twist_mux.yaml)."""
     p = params.get('twist_mux', params).get('ros__parameters', params)
     inputs = tuple(sorted(
         (MuxInput(name, v['topic'], int(v['priority']), float(v['timeout']))
@@ -227,7 +227,7 @@ def mux_choice(inputs: Iterable[MuxInput], ages: Mapping[str, Optional[float]],
     Which input twist_mux passes on now, worked out from what reaches it.
 
     ages: seconds since each input's last message arrived (None = never). lock_values:
-    each lock's last value and its age. twist_mux's own rules (aav_mux's YAML): an input
+    each lock's last value and its age. twist_mux's own rules (aav_command_mux's YAML): an input
     counts while younger than its timeout, the highest priority wins, and a lock blocks
     every input below its priority while its last value is true, or while it is older
     than its timeout (silence locks, unless the timeout is 0). Returns {'driver',

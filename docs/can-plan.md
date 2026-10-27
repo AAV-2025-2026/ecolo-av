@@ -1,8 +1,8 @@
 # The CAN bus: today's wiring, and the KEFC plan
 
 Ben's KEFC request (October 2026, tab "Bens Mods") puts steering, braking and throttle on
-a CAN bus. Our code already has a CAN contract, `firmware/can/aav.dbc` (v0.1.0). This page
-compares the two, and says what changes.
+a CAN bus. Our code had a CAN contract, `firmware/can/aav.dbc` (v0.1.0). This page
+compares the two. Since 15 Oct, `aav.dbc` v0.2.0 follows the plan.
 
 **Status: built in software, hardware not decided.** DBC v0.2.0, `spine_bridge` and the bench
 use it (merged 15 Oct, so the software is ready). Whether the car gets CAN and the wheel
@@ -100,16 +100,16 @@ Orin #1 ── CAN Pal (40-pin header) ──┬──────────�
 | 5 | Timeout | 100 ms | 200 ms | **100 ms**, from the PDF |
 | 6 | Steering position | from the KTC-100 pot, via the Jrk | `measured_steering_angle` in 0x180 | the same: the board reads it from the Jrk |
 
-## What changes in the code
+## What changed in the code (15 Oct)
 
-| Where | Change |
-|---|---|
-| `aav.dbc` | v0.2.0: add `WHEEL_SPEED_L` 0x200 and `WHEEL_SPEED_R` 0x201, node `WHEEL_L`, `WHEEL_R`; the timeout to 100 ms; the spine node is the ESP32 board |
-| `can_codec.py`, `protocol.rs`, test vectors | the two new frames, as `CLAUDE.md` says |
-| `spine_bridge` | the two wheel speeds into `/vehicle/odom`, and `/vehicle/wheels` (the front two; the same topic Gazebo fills) |
-| `spine-core` | stays: it has no chip in it. A new board crate for the ESP32 (`esp-hal`, Embassy, the TWAI CAN driver) beside the Pico 2 one |
-| Wheel nodes | a small Rust program for the ESP32-CAN-X2 (an ESP32-S3): count pulses, send a frame |
-| Gazebo, bench | the bench's spine simulator sends the two wheel frames too |
+| Where | Change | Status |
+|---|---|---|
+| `aav.dbc` | v0.2.0: add `WHEEL_SPEED_L` 0x200 and `WHEEL_SPEED_R` 0x201, node `WHEEL_L`, `WHEEL_R`; the timeout to 100 ms; the spine node is the ESP32 board | done |
+| `can_codec.py`, `protocol.rs`, test vectors | the two new frames, as `CLAUDE.md` says | done |
+| `spine_bridge` | the two wheel speeds into `/vehicle/odom`, and `/vehicle/wheels` (the front two; the same topic Gazebo fills) | done |
+| `spine-core` | stays: it has no chip in it. A new board crate for the ESP32 (`esp-hal`, Embassy, the TWAI CAN driver) beside the Pico 2 one | done: `boards/esp32-umod --features can`; its CAN pins are unknown |
+| Wheel nodes | a small Rust program for the ESP32-CAN-X2 | not written: the hardware lead's Arduino sends the frames (23 Oct) |
+| Gazebo, bench | the bench's spine simulator sends the two wheel frames too | done |
 
 !!! note "Rust on an ESP32"
     The ESP32 and ESP32-S3 use Xtensa cores. Rust needs Espressif's toolchain

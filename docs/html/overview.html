@@ -1,26 +1,32 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Overview: everything in aav · AAV 2026–27</title>
+<title>Overview: everything in ecolo-av · AAV 2026–27</title>
 <link rel="stylesheet" href="style.css">
 </head><body>
 <!-- Generated from docs/overview.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
-<h1>Overview: everything in aav</h1>
-<div class="meta">12 min read · 6 sections</div></header>
+<h1>Overview: everything in ecolo-av</h1>
+<div class="meta">14 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a class="here" href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -77,8 +90,9 @@
 <main>
 <nav class="toc"><span>On this page:</span><a href="#in-numbers">In numbers</a><a href="#the-folders">The folders</a><a href="#our-own-code">Our own code</a><a href="#stock-ros-packages-and-plugins-we-use">Stock ROS packages and plugins we use</a><a href="#code-from-the-previous-teams">Code from the previous teams</a><a href="#whats-missing">What&#x27;s missing</a></nav>
 <div class="lead"><p>The whole project on one page: what's in the repo, the stock ROS packages and plugins it
-uses, the code it took from the previous teams, and what's still missing. Each section
-links to the page with the details. As of early on 11 October 2026.</p></div>
+uses, the code it took from the 2025-26 and 2024-25 teams, and what's still missing. Each
+section links to the page with the details. Counts checked on 25 October 2026; every
+package, one per row: <a href="packages.html">Packages</a>.</p></div>
 <section class="card"><h2 id="in-numbers">In numbers</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -90,19 +104,19 @@ links to the page with the details. As of early on 11 October 2026.</p></div>
 <tbody>
 <tr>
 <td>ROS packages that build</td>
-<td>26: 13 in Python, 13 in CMake (one of them in Rust). None parked</td>
+<td>37: 23 in Python, 14 in CMake (some of them Rust)</td>
 </tr>
 <tr>
 <td>Rust firmware crates</td>
-<td>8: <code>spine-core</code>, <code>aav-inputs</code>, and six device drivers and glue. Plus the spine's board program for a Pico 2</td>
+<td>13 (<code>spine-core</code>, <code>aav-inputs</code>, device drivers, glue), and 4 board programs: the spine on today's ESP32 and on a Pico 2, the wheel encoder, the status display</td>
 </tr>
 <tr>
-<td>The previous team's firmware boards, in C++</td>
+<td>The 2025-26 team's firmware boards, in C++</td>
 <td>3</td>
 </tr>
 <tr>
 <td>Launch profiles</td>
-<td>5: <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code>, <code>bench</code></td>
+<td>6: <code>turtle</code>, <code>sim</code>, <code>car</code>, <code>replay</code>, <code>bench</code>, <code>carla</code></td>
 </tr>
 <tr>
 <td>Computers in the machine files</td>
@@ -114,11 +128,11 @@ links to the page with the details. As of early on 11 October 2026.</p></div>
 </tr>
 <tr>
 <td>Tests</td>
-<td>230 in Python and 208 in Rust without ROS; 291 in <code>colcon test</code>; the HUD app's own; the bench checks, with <code>--perception</code>, <code>--lane</code> and <code>--obstacle</code></td>
+<td><code>pixi run test</code>: 1110 on 25 Oct, 0 failures (<a href="status.html">Status</a>); plus <code>bench-check</code> and <code>sim-check</code></td>
 </tr>
 <tr>
 <td>Tools</td>
-<td>26 scripts and 34 <code>pixi run</code> tasks</td>
+<td>about 70 scripts and 80 <code>pixi run</code> tasks</td>
 </tr>
 </tbody>
 </table></div>
@@ -134,8 +148,8 @@ links to the page with the details. As of early on 11 October 2026.</p></div>
 </thead>
 <tbody>
 <tr>
-<td><code>src/</code></td>
-<td>the ROS 2 packages, one folder per layer</td>
+<td><code>ros/</code></td>
+<td>the ROS 2 packages, one folder per area</td>
 <td><a href="packages.html">Packages</a></td>
 </tr>
 <tr>
@@ -144,19 +158,9 @@ links to the page with the details. As of early on 11 October 2026.</p></div>
 <td><a href="firmware.html">Firmware</a>, <a href="rust-firmware.html">Rust firmware</a></td>
 </tr>
 <tr>
-<td><code>hud/</code></td>
-<td>the 2025-26 touchscreen app (Flutter), changed for our back end, <code>ros/hud/aav_hud</code>. <code>pixi run get-flutter</code> downloads Flutter</td>
-<td><a href="hud.html">HUD</a></td>
-</tr>
-<tr>
 <td><code>tools/</code></td>
 <td>tests, the graph check, the doctor, recording, maps, the docs, the mailer, the MCP server</td>
 <td><a href="infrastructure.html">Infrastructure</a></td>
-</tr>
-<tr>
-<td><code>examples/</code></td>
-<td>a first ROS node in Rust</td>
-<td></td>
 </tr>
 <tr>
 <td><code>docs/</code></td>
@@ -165,8 +169,13 @@ links to the page with the details. As of early on 11 October 2026.</p></div>
 </tr>
 <tr>
 <td><code>models/</code></td>
-<td>the YOLO models: <code>pixi run get-models</code> downloads them (not in git)</td>
+<td>the detector models, RF-DETR Nano (the default) and YOLO: <code>pixi run get-models</code> downloads them (not in git)</td>
 <td><a href="perception.html">Perception</a></td>
+</tr>
+<tr>
+<td><code>archive/</code></td>
+<td>the older teams' repos, as they were, and the 2025-26 Flutter HUD (archived 25 Oct). Reference only: never built</td>
+<td><a href="older-code.html">Older code</a></td>
 </tr>
 <tr>
 <td><code>vendor/</code></td>
@@ -185,12 +194,13 @@ links to the page with the details. As of early on 11 October 2026.</p></div>
 <p>Written for 2026-27. Most packages are configuration around stock ROS packages; four
 nodes hold real logic of our own (ego, the spine bridge, the scripted driver, the lane
 finder).</p>
+<p>The main ones. Every package: <a href="packages.html">Packages</a>.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>Package</th>
 <th>Does</th>
-<th>Layer</th>
+<th>Area (<code>ros/&lt;area&gt;/</code>)</th>
 </tr>
 </thead>
 <tbody>
@@ -200,14 +210,14 @@ finder).</p>
 <td>ego</td>
 </tr>
 <tr>
-<td><code>aav_mux</code></td>
-<td>twist_mux's settings: the priorities and the e-stop lock</td>
-<td>mux</td>
+<td><code>aav_command_mux</code></td>
+<td>twist_mux's settings: the priorities and the locks</td>
+<td>command_mux</td>
 </tr>
 <tr>
 <td><code>aav_io_mux</code></td>
 <td>the sensor mux and the output mux: simulated data never drives the real car</td>
-<td>mux</td>
+<td>io_mux</td>
 </tr>
 <tr>
 <td><code>aav_scripted</code></td>
@@ -215,7 +225,7 @@ finder).</p>
 <td>drivers</td>
 </tr>
 <tr>
-<td><code>aav_goto</code></td>
+<td><code>aav_drive_to_point</code></td>
 <td>drive to one GPS point and stop there smoothly</td>
 <td>drivers</td>
 </tr>
@@ -230,8 +240,23 @@ finder).</p>
 <td>drivers</td>
 </tr>
 <tr>
+<td><code>aav_rc</code></td>
+<td>the RC transmitter as a driver (priority 95, off until the hardware lead confirms the wire)</td>
+<td>drivers</td>
+</tr>
+<tr>
+<td><code>aav_actuator_tests</code></td>
+<td>the stage 3-4 actuator tests, as a driver (priority 60)</td>
+<td>drivers</td>
+</tr>
+<tr>
 <td><code>aav_navigation</code></td>
 <td>Nav2 set up for a car, and the maps</td>
+<td>drivers</td>
+</tr>
+<tr>
+<td><code>aav_routes</code></td>
+<td>street routes (Valhalla) as GPS waypoints for Nav2</td>
 <td>drivers</td>
 </tr>
 <tr>
@@ -240,49 +265,64 @@ finder).</p>
 <td>localization</td>
 </tr>
 <tr>
+<td><code>aav_gps_heading</code></td>
+<td>the heading from the GPS receiver's velocity, for <code>ekf_global</code></td>
+<td>localization</td>
+</tr>
+<tr>
 <td><code>aav_description</code></td>
 <td>the car's model and <code>vehicle.yaml</code></td>
-<td>description</td>
+<td>bringup</td>
 </tr>
 <tr>
 <td><code>aav_sensors</code></td>
 <td>starts the sensor drivers, with their settings. The GPS: <code>ublox_gps</code> by default</td>
-<td>sensors</td>
+<td>sources</td>
 </tr>
 <tr>
 <td><code>aav_imu_yahboom</code></td>
 <td>the IMU driver, in Rust (Ben's rewrite of the 2025-26 C++ one)</td>
-<td>sensors</td>
+<td>sources</td>
+</tr>
+<tr>
+<td><code>aav_camera_stream</code></td>
+<td>one node per front camera: the camera Pi's stream, decoded, RF-DETR inside</td>
+<td>sources</td>
 </tr>
 <tr>
 <td><code>aav_interfaces</code></td>
 <td>our messages: <code>VehicleStatus</code>, <code>ScriptedDrive</code></td>
-<td>interfaces</td>
+<td>ecolo_msgs</td>
 </tr>
 <tr>
-<td><code>aav_spine</code></td>
-<td>the real car: ego's commands as CAN frames</td>
-<td>backends</td>
+<td><code>aav_spine</code>, <code>aav_spine_bridge</code></td>
+<td>the CAN spine: ego's commands as CAN frames (<code>spine_bridge</code>: Rust by default, Python with <code>bridge:=python</code>)</td>
+<td>can_bridge</td>
 </tr>
 <tr>
 <td><code>aav_legacy</code></td>
-<td>today's car: the 2025-26 ESP32 and wheel encoder</td>
-<td>backends</td>
+<td>today's car: the 2025-26 ESP32 over UART, through the Motor Pi</td>
+<td>can_bridge</td>
+</tr>
+<tr>
+<td><code>aav_safety</code>, <code>aav_ghost</code></td>
+<td>the sensor watchdog (a twist_mux lock, 30); a pretend person only Nav2 sees</td>
+<td>safety</td>
 </tr>
 <tr>
 <td><code>aav_turtlesim</code>, <code>aav_gazebo</code>, <code>aav_carla</code></td>
 <td>the turtle, Gazebo's car, a CARLA car (untested)</td>
-<td>backends</td>
+<td>sim</td>
 </tr>
 <tr>
 <td><code>aav_bringup</code></td>
-<td>the five profiles, the machine files (each picks its parts, perception too), the RViz layout</td>
+<td>the profiles, the machine files (each picks its parts, perception too), the RViz layout</td>
 <td>bringup</td>
 </tr>
 <tr>
 <td><code>aav_spine_sim</code>, <code>aav_bench</code></td>
 <td>bench mode: the spine on a laptop, and pretend sensors</td>
-<td>bench</td>
+<td>sim</td>
 </tr>
 <tr>
 <td><code>firmware/can</code>, <code>spine-core</code>, <code>aav-inputs</code></td>
@@ -307,6 +347,16 @@ finder).</p>
 <tr>
 <td><code>aav_lane_finder</code></td>
 <td>the lane finder: the camera's picture to <code>/perception/lane/geometry</code>, with OpenCV</td>
+<td>perception</td>
+</tr>
+<tr>
+<td><code>aav_detector</code></td>
+<td>RF-DETR Nano (the default) or YOLO (<code>detector:=yolo</code>) on the camera's images, and the stop-sign watcher</td>
+<td>perception</td>
+</tr>
+<tr>
+<td><code>aav_lidar</code></td>
+<td>the roof lidar's cloud as a 2D scan for Nav2</td>
 <td>perception</td>
 </tr>
 </tbody>
@@ -349,13 +399,18 @@ finder).</p>
 <td>the cameras, with the 2024-25 calibrations (Linux only)</td>
 </tr>
 <tr>
+<td>Sensors</td>
+<td><code>velodyne</code></td>
+<td>the roof Velodyne VLP-16, on by default on the car; untested with the real lidar</td>
+</tr>
+<tr>
 <td>Perception</td>
 <td><code>vision_msgs</code>, <code>cv_bridge</code>, <code>image_publisher</code></td>
 <td>detections, pictures, and a picture file as a pretend camera</td>
 </tr>
 <tr>
 <td>Perception</td>
-<td>Ultralytics YOLO and PyTorch (not ROS)</td>
+<td>Roboflow's RF-DETR (the default), Ultralytics YOLO and PyTorch (not ROS)</td>
 <td>the detector, in the <code>ml</code> environment</td>
 </tr>
 <tr>
@@ -421,7 +476,7 @@ finder).</p>
 <tr>
 <td>Ready, not used yet</td>
 <td><code>rosbridge_server</code></td>
-<td>if the HUD moves off Socket.IO</td>
+<td>a web page could read ROS through it; nothing uses it since the Flutter HUD was archived (25 Oct)</td>
 </tr>
 </tbody>
 </table></div>
@@ -504,13 +559,13 @@ finder).</p>
 <tr>
 <td>The TI radar driver</td>
 <td>2025-26 <code>Nav_Radar</code></td>
-<td><code>ros/sources/ti_ros2_driver</code></td>
+<td><code>ros/sources/aav_radar_ti</code></td>
 <td>ported; its settings are indoor demos</td>
 </tr>
 <tr>
 <td>The battery monitor</td>
 <td>2024-25 <code>Battery-Monitor-ROS</code></td>
-<td><code>ros/sources/battery_monitor</code></td>
+<td><code>ros/sources/aav_battery_victron</code></td>
 <td>ported</td>
 </tr>
 <tr>
@@ -520,16 +575,10 @@ finder).</p>
 <td>used by <code>cameras.launch.py</code></td>
 </tr>
 <tr>
-<td>The HUD's back end (Flask)</td>
+<td>The HUD app (Flutter), its Flask back end and boot scripts</td>
 <td>2025-26 <code>User-Interface</code></td>
-<td><code>ros/hud/aav_hud</code></td>
-<td>ported to our topics; publishes <code>/safety/estop</code>. 98 tests</td>
-</tr>
-<tr>
-<td>The HUD app (Flutter) and its boot scripts</td>
-<td>2025-26 <code>User-Interface</code></td>
-<td><code>hud/</code></td>
-<td>changed for our back end: an e-stop button, Cancel, the camera. Untested on a screen</td>
+<td><code>archive/2026-27-flutter-hud/</code></td>
+<td>ported to our topics (10-11 Oct), then archived 25 Oct: the raylib HUD replaced it (Q29). Its route maths lives on in <code>aav_routes/route.py</code>, its place database in <code>pixi run get-places</code></td>
 </tr>
 <tr>
 <td>The ESP32 actuator firmware (C++)</td>
@@ -547,7 +596,7 @@ finder).</p>
 <td>The wheel encoder (Pico 2)</td>
 <td>2025-26 <code>Wheel_Encoders</code></td>
 <td><code>firmware/spine/boards/wheel-encoder-pico2</code>, crate <code>wheel-encoder</code></td>
-<td>rewritten in Rust, 15 Oct; builds, never flashed. The car's board still runs the C++</td>
+<td>rewritten in Rust, 15 Oct; builds, never flashed. The car's UDP encoder is off since 23 Oct: wheel speed now comes from the hardware lead's Arduino on CAN</td>
 </tr>
 <tr>
 <td>Their UART and encoder protocols</td>
@@ -618,7 +667,7 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>Sensors</td>
-<td>the camera and lidar models (Q22); the GPS model (Q18); the magnetometer in real units</td>
+<td>the camera models (Q22); the GPS model (Q18); the magnetometer in real units; a first run with the real lidar</td>
 <td><a href="status.html">Status</a></td>
 </tr>
 <tr>
@@ -633,7 +682,7 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>Navigation</td>
-<td>the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount; a sensor behind the car before it reverses</td>
+<td>the real test site's map (Q21); N7 (the EKF's GPS heading jumps); the radar's real mount. Reversing on the car: off by default until the wheels tell direction (H5, 26 Oct); <code>reversing:=true</code> where the lidar sees behind</td>
 <td><a href="costmaps.html">Costmaps</a></td>
 </tr>
 <tr>
@@ -643,7 +692,7 @@ avoidance, odometry and QNX layer. <a href="older-code.html">The older code</a> 
 </tr>
 <tr>
 <td>The HUD</td>
-<td>the build for the car's Pi; its tile server and OSRM route data. The map database downloads with <code>pixi run get-hud-map</code></td>
+<td>the build for the car's Pi; its tile server and OSRM route data. The map database downloads with <code>pixi run get-places</code></td>
 <td><a href="hud.html">HUD</a></td>
 </tr>
 <tr>

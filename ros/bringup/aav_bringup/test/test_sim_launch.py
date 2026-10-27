@@ -94,7 +94,7 @@ def test_the_defaults_start_what_pixi_run_sim_always_has():
     actions = started(SIM)
     sent = included(actions)
     assert set(sent) == {'gazebo.launch.py', 'mux.launch.py', 'ego.launch.py',
-                         'io_mux.launch.py', 'scripted.launch.py', 'goto.launch.py',
+                         'io_mux.launch.py', 'scripted.launch.py', 'drive_to_point.launch.py',
                          'localization.launch.py', 'navigation.launch.py',
                          'watchdog.launch.py'}
     assert sent['gazebo.launch.py']['world'] == 'empty'
@@ -160,12 +160,13 @@ def test_the_mux_needs_the_watchdogs_heartbeat_only_where_it_runs():
     assert included(started(SIM))['mux.launch.py']['sensor_lock'] == 'true'
     # Without the watchdog, nothing would ever open the fail-safe lock: Nav2 couldn't drive.
     assert included(started(SIM, watchdog='false'))['mux.launch.py']['sensor_lock'] == 'false'
-    # The goto driver stops when the watchdog goes quiet, as the mux holds it: only if one runs.
-    assert included(started(SIM))['goto.launch.py']['watchdog'] == 'true'
-    assert included(started(SIM, watchdog='false'))['goto.launch.py']['watchdog'] == 'false'
+    # The point driver stops when the watchdog goes quiet, as the mux holds it: only if one runs.
+    point = 'drive_to_point.launch.py'
+    assert included(started(SIM))[point]['watchdog'] == 'true'
+    assert included(started(SIM, watchdog='false'))[point]['watchdog'] == 'false'
 
 
-MUX = load('aav_mux', 'mux.launch.py')
+MUX = load('aav_command_mux', 'mux.launch.py')
 
 
 def mux_files(**args):
@@ -193,7 +194,7 @@ def test_the_road_worlds_full_graph():
     assert sent['detector.launch.py'] == {'labels': 'stop sign', 'use_sim_time': 'true'}
     assert sent['lane_finder.launch.py'] == {}
     assert sent['lane_follower.launch.py'] == {'fake': 'false'}
-    assert sent['hud.launch.py'] == {}   # aav_hud_raylib's window (15 Oct)
+    assert sent['hud.launch.py'] == {}   # aav_hud's window (15 Oct)
     assert sent['navigation.launch.py']['camera_obstacles'] == 'true'
     assert (sent['gazebo.launch.py']['obstacle'], sent['gazebo.launch.py']['start_y']) == (
         'true', '0.3')
@@ -210,7 +211,6 @@ def test_the_cameras_parts_need_a_world_with_a_camera(part):
 def test_the_screens_and_lichtblick():
     sent = included(started(SIM, hud='true', map='true'))
     assert sent['hud.launch.py'] == {} and sent['map.launch.py'] == {}
-    assert included(started(SIM, hud_web='true'))['hud.launch.py'] == {'use_sim_time': 'true'}
     fox = included(started(SIM, foxglove='true'))['foxglove.launch.py']
     assert fox['foxglove_address'] == '127.0.0.1'  # this computer only: test_foxglove_launch
 

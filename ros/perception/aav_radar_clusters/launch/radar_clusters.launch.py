@@ -15,7 +15,7 @@ Publishes   /perception/radar/clusters       sensor_msgs/PointCloud2: the cluste
 
 You can set: eps (metres: points this close are neighbours), minimum_points (the
 neighbours a point needs, itself included, to start or grow a cluster), mock (pretend
-radar points, from ti_ros2_driver's mock_radar_publisher: clusters of 10 to 14 points, so
+radar points, from aav_radar_ti's mock_radar_publisher: clusters of 10 to 14 points, so
 give minimum_points:=5 with it), radar_rviz (RViz with these three topics, in radar_link).
 """
 
@@ -38,7 +38,7 @@ def generate_launch_description():
         DeclareLaunchArgument('radar_rviz', default_value='false',
                               description='RViz with the radar points, clusters and boxes'),
         Node(
-            package='ti_ros2_driver', executable='mock_radar_publisher', name='mock_radar',
+            package='aav_radar_ti', executable='mock_radar_publisher', name='mock_radar',
             parameters=[{'topic': '/sensors/radar/points', 'frame_id': 'radar_link',
                          'mode': 'static'}],
             condition=IfCondition(arg('mock')),

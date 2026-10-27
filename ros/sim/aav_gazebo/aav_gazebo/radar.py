@@ -3,7 +3,7 @@ The Gazebo car's radar stand-in, made to look like the TI radar. No ROS imports.
 
 Gazebo's lidar (aav_description's aav.sensors.gazebo.xacro) sends a point for every ray:
 where a ray hit nothing, the point is endless (inf, or NaN where inf meets 0), and its
-fields are Gazebo's own (x, y, z, intensity, ring). The TI driver (ti_ros2_driver) sends
+fields are Gazebo's own (x, y, z, intensity, ring). The TI driver (aav_radar_ti) sends
 only what it saw, with x, y, z, intensity and velocity, the radial speed. These turn the
 first into the second, so radar_clusters, Nav2's costmap and collision_monitor read the
 same kind of cloud in Gazebo as on the car, and PCL finds every field it expects.
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import numpy as np
 
-# The TI driver's fields, in its order (ti_ros2_driver pc_publisher.py), all float32.
+# The TI driver's fields, in its order (aav_radar_ti pc_publisher.py), all float32.
 FIELDS = ('x', 'y', 'z', 'intensity', 'velocity')
 
 

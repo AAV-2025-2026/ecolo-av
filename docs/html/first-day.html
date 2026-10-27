@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a class="here" href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -107,7 +120,7 @@ you should see.</p></div>
 </tr>
 <tr>
 <td>The code</td>
-<td>access to <code>AAV-2025-2026/ecolo-av</code> on GitHub (ask Ben), and an SSH key on your GitHub account</td>
+<td>a GitHub account with an SSH key, and your own fork of <code>AAV-2025-2026/ecolo-av</code> (public)</td>
 </tr>
 </tbody>
 </table></div>
@@ -115,12 +128,15 @@ you should see.</p></div>
 <section class="card"><h2 id="1-install-everything-once-about-20-minutes">1. Install everything (once, about 20 minutes)</h2>
 <pre class="highlight"><code class="language-bash">xcode-select --install                        # Mac only: Apple's git and compiler
 curl -fsSL https://pixi.sh/install.sh | sh    # Pixi; then open a new terminal
-git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av   # the code
+git clone git@github.com:&lt;you&gt;/ecolo-av.git ~/ecolo-av   # your fork
 cd ~/ecolo-av
+git remote add upstream https://github.com/AAV-2025-2026/ecolo-av.git   # the team's repo
 pixi install                                  # ROS 2 Jazzy, about 7 GB
 pixi run build                                # our packages, about 20 s
 pixi run test                                 # every test</code></pre>
-<p><strong>You should see</strong> at the end of the tests: <code>77 tests, 0 errors, 0 failures</code>. Then your
+<p>Fork first: on GitHub, open <code>AAV-2025-2026/ecolo-av</code> and click <strong>Fork</strong>. How changes get
+in: <a href="../../CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+<p><strong>You should see</strong> at the end of the tests: <code>0 errors, 0 failures</code>. Then your
 laptop is set up. If not, see <a href="#when-something-doesnt-work">When something doesn't work</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">What did that install?</p>
@@ -140,7 +156,7 @@ settings so that the <code>pixi</code> command is found.</p>
 <tbody>
 <tr>
 <td><code>pixi run turtle</code></td>
-<td><code>pixi run keyboard</code></td>
+<td><code>pixi run keyboard --local</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -351,12 +367,12 @@ Any keyboard or joystick input overrides Nav2 at once.</p>
 </tr>
 <tr>
 <td>Two laptops see each other's robots</td>
-<td>give each its own <code>ROS_DOMAIN_ID</code> (any number 0–101)</td>
+<td>give each its own <code>ROS_DOMAIN_ID</code>, 0–101 (safe on Linux; Fast DDS breaks above 232)</td>
 </tr>
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="getting-started.html"><small>Previous</small>← Getting started</a>
-<a class="next" href="how-it-fits.html"><small>Next</small>How it fits →</a></nav>
+<a class="next" href="git.html"><small>Next</small>Git →</a></nav>
 </main>
 <footer>Source: <code>docs/first-day.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

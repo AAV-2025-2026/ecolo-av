@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -103,7 +116,7 @@ what's done so far.</p></div>
 </tr>
 <tr>
 <td>The spine is already Rust</td>
-<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (71 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2</td>
+<td><code>spine-core</code>: modes, arming, the watchdog, the speed loop, the CAN frames (84 tests), the drivers for its devices, and board programs for today's ESP32 and a Pico 2</td>
 </tr>
 </tbody>
 </table></div>
@@ -887,7 +900,7 @@ shared vectors (12 uplink cases in <code>legacy-link/vectors.json</code>, checke
 <code>test_uplink_chain.py</code> (the bridge and <code>rc_driver</code> on ROS); <code>pixi run esp-qemu-check</code> (the
 uplink at 50 Hz, its echo, the three modes: <a href="esp32-bench.html#before-the-board-the-emulator">the emulator</a>).</p>
 <h3 id="the-c-beside-the-rust">The C++ beside the Rust</h3>
-<p>Every behaviour of <code>aav_umod_esp32</code>, and where it is now. ⚠️ = different: Ben decides.</p>
+<p>Every behaviour of <code>aav_umod_esp32</code>, and where it is now. ⚠️ = different: the team decides.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -973,7 +986,7 @@ uplink at 50 Hz, its echo, the three modes: <a href="esp32-bench.html#before-the
 <tr>
 <td>RC throttle: stick × 1023, capped at 700 (the top third of the stick does nothing)</td>
 <td><code>rc_handler.cpp</code></td>
-<td>stick × 3.0 m/s, open loop: stick × 700, reverse capped at 1.0 m/s (233)</td>
+<td>stick × 3.0 m/s, open loop: stick × 700, reverse capped at 0.5 m/s (<code>MAX_REVERSE_SPEED</code>, about 117)</td>
 <td>⚠️ the whole stick works; reverse is slower</td>
 </tr>
 <tr>
@@ -1080,7 +1093,8 @@ uplink at 50 Hz, its echo, the three modes: <a href="esp32-bench.html#before-the
 </tr>
 </tbody>
 </table></div>
-<h3 id="for-ben-to-decide">For Ben to decide</h3>
+<h3 id="for-the-team-to-decide">For the team to decide</h3>
+<p>Questions 1 and 2 are wiring: the hardware lead's to answer.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1092,12 +1106,12 @@ uplink at 50 Hz, its echo, the three modes: <a href="esp32-bench.html#before-the
 <tbody>
 <tr>
 <td>1</td>
-<td>Where U7 (the CAN transceiver) reaches the ESP32</td>
+<td>Where U7 (the CAN transceiver) reaches the ESP32 (the hardware lead)</td>
 <td>GPIO 25/26, a guess</td>
 </tr>
 <tr>
 <td>2</td>
-<td>The e-stop's spare contact: which pin, normally closed? (Q6)</td>
+<td>The e-stop's spare contact: which pin, normally closed? (Q6, the hardware lead)</td>
 <td>not read</td>
 </tr>
 <tr>
@@ -1920,15 +1934,15 @@ flashed.</strong> Nothing in our stack writes to it yet: the 2025-26 sender isn'
 </table></div>
 </section>
 <section class="card"><h2 id="the-esp32-boards-of-the-kefc-plan-15-oct">The ESP32 boards of the KEFC plan (15 Oct)</h2>
-<p><a href="can-plan.html">The KEFC CAN plan</a> keeps the car's own control board as the spine, and adds
-a wheel node on each front wheel. Both chips are Xtensa ESP32s.</p>
+<p><a href="can-plan.html">The KEFC CAN plan</a> keeps the car's own control board as the spine. The
+front wheels' sensors are the hardware lead's Arduino (23 Oct), not ESP32 boards.</p>
 <pre class="highlight"><code class="language-text">            CAN bus, 500 kbit/s
-  Orin ───────────┬─────────────────┬─────────────────┐
-                  │                 │                 │
-          control board        wheel node L      wheel node R
-          ESP32 (MicroMod)     ESP32-S3 (X2)     ESP32-S3 (X2)
-          spine-core           wheel-core        wheel-core
-          spine-board          Hall sensor       Hall sensor</code></pre>
+  Orin ───────────┬──────────────────────┐
+                  │                      │
+          control board           wheel sensors
+          ESP32 (MicroMod)        the hardware lead's Arduino
+          spine-core              (Arduino C++), Hall sensors
+          spine-board             on both front wheels</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1946,10 +1960,10 @@ a wheel node on each front wheel. Both chips are Xtensa ESP32s.</p>
 <td>written: <code>boards/esp32-umod --features can</code> (above). Its CAN pins are a placeholder until the schematic shows them</td>
 </tr>
 <tr>
-<td>A wheel node: ESP32-CAN-X2</td>
-<td>ESP32-S3 (Xtensa LX7)</td>
-<td><code>wheel-core</code>: pulses and their times to a speed, the zero-speed timeout, the WHEEL_SPEED frame from <code>spine-core</code>'s protocol</td>
-<td>still to write: <code>boards/esp32s3-wheel</code></td>
+<td>A wheel node</td>
+<td>the hardware lead's Arduino (23 Oct)</td>
+<td><code>wheel-core</code> still pins down a correct WHEEL_SPEED frame: pulses and their times to a speed, the zero-speed timeout</td>
+<td>none: the Arduino sends WHEEL_SPEED in Arduino C++, so <code>boards/esp32s3-wheel</code> won't be written</td>
 </tr>
 </tbody>
 </table></div>
@@ -1989,10 +2003,9 @@ a wheel node on each front wheel. Both chips are Xtensa ESP32s.</p>
 </tbody>
 </table></div>
 <h3 id="the-toolchain">The toolchain</h3>
-<p>The ESP32 and ESP32-S3 are Xtensa, which stock Rust can't build for. <code>pixi run esp-tools</code>
+<p>The ESP32 is Xtensa, which stock Rust can't build for. <code>pixi run esp-tools</code>
 installs Espressif's Rust and <code>espflash</code> for one user, at fixed versions (above, with
-<code>esp-build</code> and <code>esp-flash</code>). The wheel node needs the <code>esp32s3</code> target added to it:
-<code>vendor/cargo-tools/bin/espup install --targets esp32,esp32s3</code>.</p>
+<code>esp-build</code> and <code>esp-flash</code>).</p>
 <p>Like <code>boards/pico2</code>, each board crate is a workspace of its own, outside the default build:
 <code>pixi run test</code> keeps working on a laptop without Espressif's Rust (it says "skipped"). The logic crates need nothing:
 they already build and test with stock Rust.</p>
@@ -2008,16 +2021,11 @@ they already build and test with stock Rust.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td>Write <code>boards/esp32s3-wheel</code> (DBC v0.2.0 is merged, 15 Oct)</td>
-<td>nothing</td>
-</tr>
-<tr>
-<td>2</td>
-<td>Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel</td>
+<td>Count the rotor holes, measure the tyre radius; check the Hall sensor sees steel (for the Arduino's numbers)</td>
 <td>the car</td>
 </tr>
 <tr>
-<td>3</td>
+<td>2</td>
 <td><code>boards/esp32-umod --features can</code>: the real CAN pins, from the control board's schematic</td>
 <td>the schematic</td>
 </tr>
@@ -2026,7 +2034,7 @@ they already build and test with stock Rust.</p>
 </section>
 <section class="card"><h2 id="the-can-bridge-on-the-orin-in-rust-23-oct">The CAN bridge on the Orin, in Rust (23 Oct)</h2>
 <p><code>spine_bridge</code>, the ROS node between ego and the CAN bus, has a Rust twin:
-<code>ros/can_bridge/aav_spine_bridge</code> (PLAN.md T1.8). It packs and unpacks the frames with the
+<code>ros/can_bridge/aav_spine_bridge</code> (plan.md T1.8). It packs and unpacks the frames with the
 firmware's own <code>spine-core</code> code, so both ends of the bus share one implementation of
 <code>aav.dbc</code>.</p>
 <pre class="highlight"><code class="language-text"> /control/car/actuator_cmd, /safety/estop ──&gt; spine_bridge ──&gt; /can/tx ──&gt; ros2_socketcan ──&gt; can0
@@ -2143,9 +2151,10 @@ Rust.</p>
 </tbody>
 </table></div>
 <blockquote>
-<p>An ARM chip (Pico 2 or STM32) keeps the whole toolchain inside Pixi. Ben said yes to
-one on 10 Oct; the team confirms the chip in Q10–Q13. For CAN, an STM32 has a CAN
-controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as above.</p>
+<p>An ARM chip (Pico 2 or STM32) would keep the whole toolchain inside Pixi. The KEFC plan
+proposes the ESP32 control board; the hardware lead and team decide (Q10-Q13). For CAN,
+an STM32 has a CAN controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515
+on SPI, as above.</p>
 </blockquote>
 </section>
 <section class="card"><h2 id="done-so-far">Done so far</h2>
@@ -2160,8 +2169,8 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tbody>
 <tr>
 <td><code>spine-core</code></td>
-<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, <code>MAX_REVERSE_SPEED</code>, from vehicle.yaml. Since 23 Oct, <code>decode_report</code> for the Orin's side (the Rust CAN bridge)</td>
-<td>71</td>
+<td>the spine's logic: modes, arming, watchdog, speed loop, encoder, CAN frames. Since 10 Oct, a stop brakes to a standstill instead of coasting (found on the bench). Since 11 Oct, the three open choices are one constant each. Since 15 Oct, open-loop commands (<code>DirectCmd</code>, for the UART link) and a speed loop with no wheel speed (<code>SpeedFeedback::None</code>). Since 15 Oct too, the 100 ms timeout and the wheel speed frames of CAN v0.2.0; one reverse speed, <code>MAX_REVERSE_SPEED</code>, from vehicle.yaml. Since 23 Oct, <code>decode_report</code> for the Orin's side (the Rust CAN bridge). Since 25 Oct, open-loop reverse is capped at <code>MAX_REVERSE_SPEED</code> too</td>
+<td>84</td>
 </tr>
 <tr>
 <td><code>aav-inputs</code> (10 Oct)</td>
@@ -2171,7 +2180,7 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tr>
 <td><code>jrk-g2</code> (10 Oct)</td>
 <td>the Pololu Jrk G2 over I2C: set target, stop, feedback, error flags. Checked against Pololu's guide</td>
-<td>14</td>
+<td>15</td>
 </tr>
 <tr>
 <td><code>ad5311</code> (10 Oct)</td>
@@ -2186,7 +2195,7 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tr>
 <td><code>ibus</code> (10 Oct)</td>
 <td>the FlySky receiver's iBUS frames, byte by byte; a silence timeout; the map to spine-core's <code>RcInput</code>, with the gear switch's brake position</td>
-<td>24</td>
+<td>25</td>
 </tr>
 <tr>
 <td><code>mcp2515</code> (11 Oct)</td>
@@ -2196,12 +2205,17 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tr>
 <td><code>legacy-link</code> (15 Oct)</td>
 <td>the 2025-26 UART link: the Motor-Pi's 13-byte frames, the C++'s resync, and the Jrk and DAC targets the C++ set, checked against the C++ itself. Since 24 Oct, version 2: the Orin's counter, flags, a CRC-8 (TODO 50)</td>
-<td>57</td>
+<td>72</td>
 </tr>
 <tr>
 <td><code>spine-board</code> (10 Oct)</td>
 <td>the glue: throttle off before the brake, the direction only at zero throttle, I2C errors as fault bits. The <code>Board</code> trait. Since 11 Oct, two spoke sensors counted the 2025-26 way (moved to <code>wheel-encoder</code> on 15 Oct). Since 15 Oct, the <code>CommandLink</code> trait: <code>CanLink</code> or <code>LegacyLink</code>; since 24 Oct, <code>LegacyLink</code> reads version 2 frames and their heartbeat</td>
-<td>72</td>
+<td>79</td>
+</tr>
+<tr>
+<td><code>wheel-core</code> (15 Oct)</td>
+<td>the front wheel nodes' logic: Hall sensor pulses and their times to a speed, the zero-speed timeout, the WHEEL_SPEED frame. No board: the Arduino sends the frames (23 Oct)</td>
+<td>9</td>
 </tr>
 <tr>
 <td><code>wheel-encoder</code> (15 Oct)</td>
@@ -2256,7 +2270,7 @@ controller built in. A Pico 2 needs an add-on CAN chip: the MCP2515 on SPI, as a
 <tr>
 <td>1</td>
 <td>The ESP32 program on the bench: <a href="esp32-bench.html">First flash on the bench</a></td>
-<td>Ben, and the answers in "For Ben to decide"</td>
+<td>Ben, and the answers in "For the team to decide"</td>
 </tr>
 <tr>
 <td>2</td>

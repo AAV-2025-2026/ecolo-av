@@ -92,6 +92,18 @@ def test_a_leg_summary():
     assert row['moving_after_s'] == pytest.approx(0.1)      # 0.1 m at 1 m/s
     assert row['asked_after_s'] == pytest.approx(0.04)
     assert row['off_route_max_m'] == pytest.approx(0.0, abs=1e-9)
+    assert row['route_m'] == pytest.approx(20.0)
+    assert row['detour'] == pytest.approx(0.5)
+    assert math.isnan(row['lingered_s'])         # no EKF recorded
+
+
+def test_a_car_that_circles_a_goal_it_reached():
+    # TODO 17: the EKF has the car at the goal at t = 9 s, but Nav2 answers at 30 s.
+    belief = [(t, t, 0.0, 0.0) for t in range(12)]
+    assert m.lingered(belief, (10.0, 0.0, 0.0), end=30.0) == pytest.approx(21.0)
+    assert m.lingered(belief, (10.0, 0.0, 0.0), end=9.5) == pytest.approx(0.5)
+    assert m.lingered(belief, (50.0, 0.0, 0.0), end=30.0) is None
+    assert m.path_length([(0.0, 0.0), (3.0, 4.0), (3.0, 5.0)]) == pytest.approx(6.0)
 
 
 def test_how_long_the_car_took_to_start():
@@ -169,3 +181,121 @@ def test_a_plan_that_takes_another_route_counts():
     plans = [(0.0, east), (1.0, shorter), (2.0, north), (3.0, north), (4.0, [])]
     assert m.route_switches(plans) == 1
     assert m.route_switches([]) == 0
+
+
+# --- A to B ---
+
+def a_to_b_profile(rate=100.0):
+    """
+    Speeds and commands of a known A-to-B drive, at `rate` Hz.
+
+    Still 1 s; up at 0.5 m/s^2 to 2 m/s (t = 1..5); hold 2 m/s (5..15); down at 1 m/s^2
+    (15..17); still 2 s. Asked: 2 m/s from t = 1, 1 m/s from 15, 0 from 16.
+    """
+    def v(t):
+        if t < 1.0:
+            return 0.0
+        if t < 5.0:
+            return 0.5 * (t - 1.0)
+        if t < 15.0:
+            return 2.0
+        return max(0.0, 2.0 - (t - 15.0))
+
+    def asked(t):
+        return 0.0 if t < 1.0 else 2.0 if t < 15.0 else 1.0 if t < 16.0 else 0.0
+    times = [i / rate for i in range(int(19 * rate) + 1)]
+    return [(t, v(t)) for t in times], [(t, asked(t)) for t in times]
+
+
+def test_the_stop_error_along_and_across_the_line():
+    assert m.stop_error((0.0, 0.0), (10.0, 0.0), (10.3, -0.2)) == pytest.approx((0.3, -0.2))
+    # A line going north: left of it is west.
+    assert m.stop_error((0.0, 0.0), (0.0, 10.0), (-0.5, 9.0)) == pytest.approx((-1.0, 0.5))
+    with pytest.raises(ValueError):
+        m.stop_error((1.0, 1.0), (1.0, 1.0), (0.0, 0.0))
+
+
+def test_overshoot_past_b_counts_the_worst_moment():
+    a, b = (0.0, 0.0), (10.0, 0.0)
+    rolled_back = [(0.0, 0.0, 0.0), (1.0, 10.4, 0.1), (2.0, 10.1, 0.1)]
+    assert m.overshoot_past(a, b, rolled_back) == pytest.approx(0.4)
+    assert m.overshoot_past(a, b, [(0.0, 0.0, 0.0), (1.0, 9.8, 0.0)]) == 0.0
+
+
+def test_speeding_up_and_holding():
+    speeds, commands = a_to_b_profile()
+    # 90 % of 2 m/s is 1.8 m/s, at t = 4.6: 3.6 s after the first command (t = 1).
+    assert m.reach_time(speeds, 2.0, start=1.0) == pytest.approx(3.6, abs=0.011)
+    assert m.reach_time(speeds, 3.0) is None
+    t0, t1 = m.hold_window(speeds, 2.0, commands)
+    assert (t0, t1) == (pytest.approx(4.6, abs=0.011), pytest.approx(15.0))
+    # Without commands: until the last moment at 1.8 m/s (t = 15.2).
+    assert m.hold_window(speeds, 2.0)[1] == pytest.approx(15.2, abs=0.011)
+    assert m.overshoot_percent(speeds, 2.0) == 0.0
+    assert m.hold_window(speeds, 5.0) is None
+    assert math.isnan(m.hold_error(speeds, 5.0, None))
+
+
+def test_hold_error_and_overshoot_on_a_made_up_hold():
+    # 2.1 m/s for 2 s, with one peak of 2.2 m/s: 0.1 m/s fast, 10 % over.
+    held = [(i / 10.0, 2.1) for i in range(21)]
+    assert m.hold_error(held, 2.0, (0.0, 2.0)) == pytest.approx(0.1)
+    assert m.hold_error(held, 2.0, (0.5, 0.5)) == pytest.approx(0.1)    # one sample
+    held[10] = (1.0, 2.2)
+    assert m.overshoot_percent(held, 2.0) == pytest.approx(10.0)
+
+
+def test_smoothing_keeps_a_straight_line_and_drops_the_half_windows():
+    line = [(i / 100.0, 3.0 * i / 100.0) for i in range(101)]        # 1 s
+    out = m.smooth(line, 0.5)
+    assert out[0][0] == pytest.approx(0.25) and out[-1][0] == pytest.approx(0.75)
+    assert all(v == pytest.approx(3.0 * t) for t, v in out)
+    assert m.smooth([], 0.5) == []
+
+
+def test_peak_deceleration_and_jerk():
+    speeds, _ = a_to_b_profile()
+    assert m.peak_deceleration(speeds) == pytest.approx(1.0)
+    # The steps in acceleration (the biggest: 1 m/s^2 at t = 15 and 17) read as about
+    # da / width: 1 / 0.5 s (51 samples of 0.01 s: 1 / 0.51).
+    assert m.peak_jerk(speeds) == pytest.approx(1.0 / 0.51, rel=0.02)
+    # A constant jerk reads exactly: v = 2 - 0.25 t^2, a = -0.5 t, jerk -0.5 m/s^3.
+    curve = [(i / 100.0, 2.0 - 0.25 * (i / 100.0) ** 2) for i in range(201)]
+    assert m.peak_jerk(curve) == pytest.approx(0.5)
+    assert math.isnan(m.peak_deceleration(speeds[:5]))
+    assert math.isnan(m.peak_jerk(speeds[:5]))
+
+
+def test_the_stop_coasting_and_creeping():
+    speeds, commands = a_to_b_profile()
+    # Under 0.05 m/s from t = 16.95 on: stopped then.
+    assert m.stopped_at(speeds) == pytest.approx(16.96, abs=0.011)
+    assert m.stopped_at(speeds[:1000]) is None                       # still driving
+    assert m.stopped_at([(0.0, 0.0), (1.0, 0.0)]) is None             # never moved
+    # Slowing from the last moment at 1.8 m/s (t = 15.2).
+    assert m.slowing_time(speeds, 2.0) == pytest.approx(1.76, abs=0.02)
+    assert m.slowing_time(speeds) == pytest.approx(1.76, abs=0.02)   # the top speed: 2
+    # The command went to 0 at t = 16: from 1 m/s at 1 m/s^2, 0.5 m.
+    assert m.coast_distance(speeds, commands) == pytest.approx(0.5)
+    assert math.isnan(m.coast_distance(speeds, []))
+    assert math.isnan(m.coast_distance(speeds, commands[:1000]))      # still asking
+    # The last metre, from sqrt(2) m/s at 1 m/s^2: sqrt(2) s; under 0.15 m/s for
+    # 0.15^2 / 2 m. A stop counted at exactly 0 m/s, so the numbers come out clean.
+    seconds, crept = m.final_metre(speeds, still=1e-6)
+    assert seconds == pytest.approx(math.sqrt(2.0), abs=0.01)
+    assert crept == pytest.approx(0.15 ** 2 / 2.0, abs=1e-3)
+    assert all(math.isnan(x) for x in m.final_metre(speeds[:1000]))
+    short = [(0.0, 0.0), (1.0, 0.5), (2.0, 0.0)]                      # 0.5 m in all
+    assert all(math.isnan(x) for x in m.final_metre(short))
+
+
+def test_distance_from_speeds_clips_to_the_times():
+    speeds = [(0.0, 1.0), (2.0, 1.0), (4.0, -1.0)]
+    assert m.distance(speeds) == pytest.approx(3.0)       # 2 m; then 1 to -1: 0.5 m each way
+    assert m.distance(speeds, 1.0, 2.0) == pytest.approx(1.0)
+
+
+def test_the_table_takes_other_columns():
+    cols = [('a', 'A (m)', '{:.1f}'), ('b', 'B', '{:d}')]
+    text = m.table([('run', {'a': 1.25})], columns=cols)
+    assert text.splitlines() == ['|  | run |', '|---|---:|', '| A (m) | 1.2 |']

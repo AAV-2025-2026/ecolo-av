@@ -1,0 +1,31 @@
+# point_driver: drives to one point B and stops there (action /drive_to_point; docs/a-to-b.md).
+# max_brake, wheelbase and max_steering_angle come from aav_description's vehicle.yaml (the
+# launch file passes them), so they are not set here. Ego's caps (max_speed: 1 m/s on the
+# car, sim_speed in Gazebo) cut cruise_speed, acceleration and deceleration further.
+point_driver:
+  ros__parameters:
+    rate_hz: 50.0
+    cruise_speed: 1.0       # m/s, when the goal gives 0
+    acceleration: 0.5       # m/s^2: speeding up, gently
+    brake_fraction: 0.5     # slow down at this much of vehicle.yaml's max_brake (docs/tests.md 5.2)
+    deceleration: 0.0       # m/s^2: 0 = max_brake x brake_fraction; a number overrides it
+    # s: start slowing this much sooner, times the speed. The time from the command
+    # dropping to the car braking hard: the brake's lag plus the speed loop's coasting
+    # band. 0.8 s stops within 5 cm in Gazebo's actuator model (test_drive.py); on the
+    # car, measure it with the brake test (docs/tests.md 4.3) and the first drives to a point.
+    brake_lead: 0.8
+    stop_band: 0.05         # m: this close to B, command zero
+    creep: 0.1              # m/s: the least it asks for, short of B
+    lookahead_min: 2.0      # m: pure pursuit's carrot, at least (about the wheelbase)
+    lookahead_time: 1.0     # s of driving: the carrot moves out with speed
+    lateral_accel: 1.5      # m/s^2: slow down in tight turns
+    max_distance: 200.0     # m: refuse a B further than this
+    pose_timeout: 0.5       # s without /localization/odom/global: stop
+    gps_timeout: 2.0        # s without a GPS fix: stop (the watchdog's GPS max_age)
+    require_gps: true       # false only where no GPS runs (x/y goals with no fix at all)
+    # s without the sensor watchdog's heartbeat (its lock): stop. twist_mux's sensors lock
+    # timeout, so it stops when twist_mux holds it. The launch file sets 0 with watchdog:=false.
+    watchdog_timeout: 1.0
+    stuck_time: 5.0         # s standing still though asked to move: stop (something holds it)
+    still_speed: 0.05       # m/s: standing still
+    still_time: 1.0         # s standing still at B before it reports

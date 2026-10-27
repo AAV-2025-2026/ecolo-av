@@ -5,7 +5,7 @@
 #                                                          [--no-verify]
 #
 #   --dry-run    only the checks: says what it would do, changes nothing
-#   --all        also build the HUD (aav_hud_raylib, the in-car screen and the map)
+#   --all        also build the HUD (aav_hud, the in-car screen and the map)
 #   --screens    --all, then the HUD and the map start at login, full screen, each on its
 #                own monitor (tools/car_screens_install.sh: two systemd *user* units).
 #                Only on the computer that drives the dash's screens. docs/car-screens.md
@@ -29,7 +29,7 @@ NEED_GB=13          # the environment unpacked (9.1 GiB, measured) + the build +
 NEED_GB_AGAIN=3     # when the environment is already unpacked
 # Built only with --all or --screens: the screens are DASH-UI's, not the Orin's or the Motor-Pi's.
 # Only a package nothing else depends on can be skipped: colcon then fails its dependents.
-SKIP_PACKAGES="aav_hud_raylib"
+SKIP_PACKAGES="aav_hud"
 
 dry=0 all=0 screens=0 verify=1
 for arg in "$@"; do

@@ -1,14 +1,14 @@
 # Perception: cameras, RF-DETR and YOLO, stop signs, lanes and radar
 
 What the car sees, and what it does about it. All of it runs on the bench today. On the
-car, it waits for the cameras (Q22) and the Orin's move to JetPack 7.2 (Q24).
+car, it waits for the cameras' calibration and the Orin's move to JetPack 7.2 (Q24).
 
 ## The chain
 
 ```
 camera ─► object_detector ─► /perception/detections ─► stop_sign_watcher ─► /perception/stop_sign
                                                                     (a lock on twist_mux)
-lane finder (missing) ─► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
+lane_finder ─────────► /perception/lane/geometry ─► control_interface ─► /drivers/ai/cmd_vel ─► twist_mux
 radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/radar/clusters, /perception/radar/cluster_boxes
 ```
 
@@ -26,8 +26,11 @@ radar ─► /sensors/radar/points ─► radar_clusters ─► /perception/rada
 |---|---|---|---|
 | `aav_detector` | 2024-25 `camera_ros2_ws` (`yolo_ros2`) | the detector (RF-DETR or YOLO): camera images in, `vision_msgs` detections out; and the stop-sign watcher | [[works]] on the bench, with either stock model |
 | `aav_radar_clusters` | ours (Rust): a rewrite of the 2025-26 `Nav_Radar` C++ node | DBSCAN groups the radar's points into objects, with a box round each | [[works]] on the bench and in Gazebo |
-| `aav_lane_geometry` | 2025-26 `Lane_Detection_ROS2` | lane keeping's steering half, as a driver on `/drivers/ai/cmd_vel` | [[works]] on a pretend lane. The line finder is [[missing]] |
-| `aav_sensors` `cameras.launch.py` | 2024-25 `cameras` (the calibrations) | `usb_cam` with `left.ini` and `right.ini` | [[untested]] Linux only; the camera models are Q22 |
+| `aav_camera_stream` | ours | the front cameras: MediaMTX's H.264 stream from the camera Pi in, RF-DETR inside each stream ([camera pipeline](camera-pipeline.md)) | [[works]] on a Mac; [[untested]] on the Orin |
+| `aav_lane_finder` | ours | lane keeping's seeing half: finds the lane lines (below) | [[works]] on the bench |
+| `aav_lane_geometry` | 2025-26 `Lane_Detection_ROS2` | lane keeping's steering half, as a driver on `/drivers/ai/cmd_vel` | [[works]] on the bench |
+| `aav_lidar` | ours | the roof lidar's points into a scan for Nav2 ([below](#the-roof-lidar)) | [[works]] against a fake lidar |
+| `aav_sensors` `cameras.launch.py` | 2024-25 `cameras` (the calibrations) | `usb_cam` with `left.ini` and `right.ini`: for a USB camera only, not the front ribbon cameras | [[untested]] Linux only |
 
 ## Stop signs
 
@@ -39,8 +42,8 @@ The watcher turns the detector's boxes into a lock on twist_mux.
 | Stopping | a stop sign 4.7 m away or closer, with a score of 0.5 or more | on, for 4 s: about 1 s to stop, then a 3 s wait |
 | Passing | after the 4 s | off, and signs are ignored for 10 s, so the car can drive past this one |
 
-- **The lock** has priority 30. It holds Nav2 (20) and the AI slot (10), and never a
-  person (joystick 100, keyboard 90) or a test script (60, 50, 40).
+- **The lock** has priority 30. It holds the point driver (25), Nav2 (20) and the AI slot (10), and
+  never a person (joystick 100, RC 95, keyboard 90) or a test script (60, 50, 40).
 - **It only stops the car.** It can't make it move.
 - **It never expires on silence.** If the watcher dies while the lock is on, the car stays
   stopped.
@@ -68,7 +71,7 @@ The watcher turns the detector's boxes into a lock on twist_mux.
 - **Parameters:** `stop_distance_m` (4.7), `sign_height_m` (0.75), `focal_px` (343),
   `camera_info_topics`, `min_score`, `hold_s`, `ignore_s`.
 
-Last year, a stop sign set off the real e-stop, and the HUD cleared it every half second.
+On the 2025-26 team's car, a stop sign set off the real e-stop, and the HUD cleared it every half second.
 The lock keeps stop signs away from the e-stop.
 
 ## Models
@@ -254,7 +257,7 @@ names, passed on as they are.
 | Setting | Does |
 |---|---|
 | `node_name:=object_detector_macbook` | the node's name. Each computer with a GPU runs its own detector, under its own name: `car.launch.py` calls it `object_detector_<machine>`. All of them publish on `/perception/detections` |
-| `compressed:=true` | reads `/sensors/camera/front_left/image_raw/compressed`, the JPEG pictures `usb_cam` already publishes. Raw pictures are too big for WiFi |
+| `compressed:=true` | reads `/sensors/camera/front_left/image_raw/compressed`, the JPEG pictures `usb_cam` publishes for a USB camera. Raw pictures are too big for WiFi. (The front ribbon cameras come by `camera_stream` instead, with their own detector) |
 
 From a Mac on the car's network, by hand:
 `pixi run detect node_name:=object_detector_macbook compressed:=true`.
@@ -426,7 +429,7 @@ down. So it sees the ground from 6.7 m out, and anything 1 m tall only from 3 m 
 
 Close and low is the radar's job (on the bumper, 0.45 m up), and why collision_monitor
 reads both. bench-check's lidar box is therefore 1.5 m tall. Measure the lidar's real
-height (`vehicle.yaml` `lidar_link`) at the audit: the numbers move with it.
+height (`vehicle.yaml` `lidar_link`) at the car: the numbers move with it.
 
 [[untested]] with the real lidar: next on the car, `pixi run car orin`, and the points in
 Lichtblick. `ros2 topic hz` on a Mac shows the cloud at 0.5 Hz: it listens best effort,
@@ -439,12 +442,13 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 
 | Part | Starts | Where |
 |---|---|---|
-| `camera` | `usb_cam` → `/sensors/camera/front_left/image_raw` (Linux only) | off everywhere until the cameras are known (Q22) |
-| `detector` | RF-DETR Nano, as `object_detector_<machine>` → `/perception/detections` | the Orin, in TensorRT (`models/rf-detr-nano.engine`: build it there first). The laptop's reads compressed images |
+| `camera` | `usb_cam` → `/sensors/camera/front_left/image_raw` (Linux only), for a USB camera | off everywhere: the front cameras come by `camera_stream` |
+| `camera_stream` | one `camera_stream_<camera>` per front camera: the Pi's H.264 stream, RF-DETR inside → `/perception/detections` ([camera pipeline](camera-pipeline.md)) | the Orin, in TensorRT (`models/rf-detr-nano.engine`: build it there first) |
+| `detector` | RF-DETR Nano, as `object_detector_<machine>` → `/perception/detections` | only for a camera that isn't streamed: off on the Orin. The laptop's reads compressed images |
 | `stop_signs` | `stop_sign_watcher` → `/perception/stop_sign` | one per car, next to the mux: the Orin |
 | `radar_clusters` | DBSCAN on `/sensors/radar/points` | off until the radar is on the car |
 | `camera_obstacles` | the boxes as points on the road → `/perception/camera_obstacles`, for Nav2's costmap | off until the cameras are calibrated (Q22); then next to `navigation`: the Orin |
-| `lane` | to do: the lane finder, then lane keeping | the lane finder is being written |
+| `lane` | `lane_finder` → `/perception/lane/geometry`, and `control_interface` → `/drivers/ai/cmd_vel` | off on every machine: it drives whenever it sees a lane |
 
 - Every detector publishes on `/perception/detections`, so the watcher hears them all.
 - A detector needs PyTorch: JetPack's on the Orin, the `ml` environment on a laptop
@@ -482,8 +486,6 @@ turns them on where they run ([Platforms](platforms.md#on-the-car-what-runs-wher
 |---|---|
 | Find `best.pt` and the training pictures: probably on the team's NVIDIA Linux machine | SSH to it: later (Ben, 10 Oct) |
 | Back up the Orin: the 2025-26 detector lives only there | before any reflash |
-| The line finder | someone: classic OpenCV, or a model |
-| The cameras' models and udev names | Q22 |
 | Calibrate the ribbon cameras, so the stop-sign distance uses their lens: `pixi run calibrate-camera` ([how](camera-calibration.md)) | the car |
 | RF-DETR's TensorRT engine on the Orin: `python3 tools/build_engine.py`, then time it | the reflash (Q24) |
 | The radar into the costmap | the ObstacleLayer settings |

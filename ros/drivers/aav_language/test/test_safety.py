@@ -8,7 +8,7 @@ import yaml
 
 EGO = {'max_speed': 1.0, 'max_reverse_speed': 0.5, 'max_acceleration': 1.0,
        'max_deceleration': 2.0, 'wheelbase': 1.57, 'max_steering_angle': 0.5}
-MUX_YAML = (Path(__file__).resolve().parents[3] / 'command_mux' / 'aav_mux' / 'config'
+MUX_YAML = (Path(__file__).resolve().parents[3] / 'command_mux' / 'aav_command_mux' / 'config'
             / 'twist_mux.yaml')
 
 
@@ -74,7 +74,7 @@ def test_mux_config_reads_our_twist_mux_yaml():
     # A person always outranks the scripted driver (and so this server).
     assert prio['joy'] > prio['scripted'] and prio['keyboard'] > prio['scripted']
     assert inputs[0].name == 'joy'
-    assert {lk.name for lk in locks} == {'estop', 'stop_sign', 'sensors'}
+    assert {lk.name for lk in locks} == {'estop', 'no_timeout', 'stop_sign', 'sensors'}
 
 
 def test_mux_choice_follows_twist_mux_rules():
@@ -109,6 +109,22 @@ def test_a_lock_with_a_timeout_locks_on_silence_as_twist_mux_does():
     # A person, a test, still drive.
     assert safety.mux_choice(inputs, {'joy': 0.1}, locks, quiet)['driver'] == 'joy'
     assert safety.mux_choice(inputs, {'scripted': 0.1}, locks, {})['driver'] == 'scripted'
+
+
+def test_the_no_timeout_lock_holds_every_program_but_not_people_or_the_tests():
+    inputs, locks = safety.mux_config(yaml.safe_load(MUX_YAML.read_text()))
+    lock = next(lk for lk in locks if lk.name == 'no_timeout')
+    # Timeout 0: where no legacy bridge runs, its silence never locks.
+    assert lock.timeout == 0.0 and lock.priority == 60
+    heard = {'sensors': (False, 0.1)}
+    for driver in ('scripted', 'replay', 'point', 'nav', 'ai'):
+        assert safety.mux_choice(inputs, {driver: 0.1}, locks, heard)['driver'] == driver
+    on = {**heard, 'no_timeout': (True, 0.1)}
+    for driver in ('scripted', 'replay', 'point', 'nav', 'ai'):
+        assert safety.mux_choice(inputs, {driver: 0.1}, locks, on)['blocked_by'] == 'no_timeout'
+    for driver in ('joy', 'rc', 'keyboard', 'tests'):
+        assert safety.mux_choice(inputs, {driver: 0.1, 'scripted': 0.1}, locks,
+                                 on)['driver'] == driver
 
 
 def test_holding_locks_by_the_driver_that_carries_the_move():

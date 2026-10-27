@@ -20,11 +20,12 @@ process, from a free-body diagram to a simulator, one step at a time.
       the default: it waits for the stands ([Tuning the speed loop](#tuning-the-speed-loop)).
     - **The lateral loop is where delays matter:** 52° of phase margin with none, 45°
       with today's 84 ms, 31° with the worst case (259 ms) at 1 m/s.
-    - **Gazebo's car steers 0.11 s slower than `vehicle.yaml` says** (measured: an extra lag in
-      Gazebo's own steering). Worth fixing before the sim-versus-real report.
+    - **Gazebo's car steers as `vehicle.yaml` says, within 22 ms** (25 Oct; it was 0.11 s
+      late: an extra lag in Gazebo's own steering, now fixed: section 6).
     - **Nothing here drives the car.** It is for tuning, checking, and the report.
 
-[[works]] the maths and its 34 tests (24 Oct, Ben's Mac; the speed loop's 25 Oct). [[needs-you]] the car day's
+[[works]] the maths and its 35 tests: 30 cases in `test_vehicle_model.py`, 5 in
+`tools/tests/test_vehicle_model_tool.py` (24 Oct, Ben's Mac; the speed loop's 25 Oct). [[needs-you]] the car day's
 numbers.
 
 ## The picture
@@ -262,6 +263,9 @@ The test checks A against a finite-difference Jacobian of the nonlinear bicycle.
 
 ### Closing the loop: pure pursuit
 
+These margins are for Regulated Pure Pursuit (`controller:=rpp`). MPPI, the default since
+22 Oct ([Path followers](controllers.md)), isn't modelled here.
+
 Regulated Pure Pursuit steers for the curvature 2 sin α / ld toward a point ld ahead on
 the path. For small errors:
 
@@ -294,15 +298,20 @@ same from 1 to 2.7 m/s: **the car corrects in the same time at any of those spee
 | camera to detections | 26 ms median, 42 worst | [Camera pipeline](camera-pipeline.md), on a Mac |
 | the camera's frame | 67 ms (15 fps): half on average | the picture's age when taken |
 | the controller's cycle | 50 ms (20 Hz): half on average | `nav2.yaml` `controller_frequency` |
-| the heartbeat | up to 100 ms | the most a command may lag before the ESP32 brakes ([HUD](hud.md#the-heartbeat), TODO 50) |
+| the heartbeat | up to 100 ms | the most a command may lag before the ESP32 brakes ([the heartbeat](rust-firmware.md#the-heartbeat-version-2-of-the-serial-frame-24-oct), TODO 50) |
 | the spine's tick | 10 ms | `esp32-umod` `TICK` |
 | the wheel speed's age | 50 ms GUESS | the time between Hall pulses at low speed |
+| each actuator's dead time | 0 until measured | the actuator tests' fit: a dead time, then a lag (`*_dead_time` in `vehicle.yaml`) |
 
 | Case | Lateral loop | Speed loop |
 |---|---|---|
 | none | 0 | 0 |
 | typical | 26 + 33 + 25 = **84 ms** | 5 + 25 = **30 ms** |
 | worst | 42 + 67 + 50 + 100 = **259 ms** | 10 + 100 = **110 ms** |
+
+An actuator's dead time is part of the car, so it adds to **every** case, "none" too:
+`speed_delay(case)` adds `throttle_dead_time`, `lateral_delay(case)` adds
+`steer_dead_time`. Both are 0 until the car day, so the numbers below don't change yet.
 
 The lateral delays are lane keeping's, by camera. Nav2 following a path from the EKF has
 no camera in the loop (its own delay is the EKF's), so its margins sit between "none" and
@@ -375,34 +384,56 @@ numbers), then Gazebo's own Ackermann plugin:
 | | Speed | Steering |
 |---|---|---|
 | the actuator model | `vehicle.yaml`'s lags, a_max, drag | rate limit, then `steer_lag` |
-| Gazebo's plugin, after it | `max_acceleration` ±10 m/s²: no extra lag to speak of | each joint turns at `steer_p_gain` × error: **one more lag, 1/10 = 0.1 s** |
+| Gazebo's plugin, after it | `max_acceleration` ±10 m/s²: no extra lag to speak of | each joint turns at `steer_p_gain` × error: **one more lag, 1/`steer_p_gain`** |
 | the actuator tests in Gazebo (15 Oct) | give back 1.496 m/s², 0.100 s, 0.100 /s | give back 0.817 rad/s, 0.105 s: they read the model's angle, not Gazebo's wheels |
 
-**Measured in Gazebo (24 Oct, Ben's Mac, headless, its own domain):** `actuator-test
-steer-rate --sim` drove the steps (centre → full lock → centre, each way), and a
-recorder logged Gazebo's steering joints (`/joint_states`, made into the centre angle)
-beside the model's angle (`/vehicle/steering`), 57 s:
+### Measured, and fixed (TODO 52c, 24-25 Oct)
 
-| Fit: Gazebo's wheels from the model's angle | Result |
-|---|---|
-| no lag | 16.2 mrad rms off |
-| **a first-order lag** | **0.110 s**, 0.5 mrad rms off |
-| a pure delay instead | 0.110 s, 2.2 mrad rms off |
+How: `actuator-test steer-rate --sim` drives the steps (centre → full lock → centre, each
+way) in the empty world, headless, on a ROS domain of its own, while
+`tools/gazebo_steering.py` records Gazebo's two steering joints (`/joint_states`, made into
+the centre wheel's angle) and the model's angle (`/vehicle/steering`), and fits the lag
+between them (`analysis.fit_follower`).
 
-0.110 s = 1/`steer_p_gain` (0.1 s) + about 10 ms from the adapter's 50 Hz hold. So
-Gazebo's wheels steer 0.11 s later than `vehicle.yaml` says. Its lateral phase margin:
+| Gazebo's settings | Lag behind the model | Left over (rms) | Runs |
+|---|---|---|---|
+| `steer_p_gain` 10 (before) | **0.111 s** | 0.5 mrad | 2 |
+| gain 50, joint speed limit 1.0 rad/s | 0.164 s | 19 mrad: not a lag | 1 |
+| gain 100 or 200, joint speed limit 1.0 | 0.07 s | 3 mrad: not a lag | 2 |
+| gain 50, joint speed limit 5.0 | 0.032 s | 0.4 mrad | 1 |
+| **gain 100, joint speed limit 5.0 (now)** | **0.022 s** | 0.4-0.5 mrad | 2 (a third, on a busy Mac: 0.063 s) |
+| gain 200, joint speed limit 5.0 | 0.017 s | 0.5 mrad | 1 |
 
-| v (m/s) | The model (typical delays) | Gazebo (+0.1 s) |
+What it showed:
+
+| Found | Why | Fix |
 |---|---|---|
-| 1 | 45° | 37° |
-| 3 | 43° | 34° |
+| A higher gain alone made it worse | the URDF's steering joints had a 1.0 rad/s speed limit, which Gazebo enforces: its wheels then turned at only 0.63 rad/s, slower than the model's 0.8 | the limit 1.0 → 5.0 rad/s (`aav.urdf.xacro`), far over `steer_rate`, so the model limits, not Gazebo |
+| The lag is 1/gain + 11-12 ms | the adapter sends the model's angle 50 times a second: holding each for 20 ms delays it by 10 ms on average, plus the messaging | `steer_p_gain` 10 → **100** (`aav.gazebo.xacro`) |
+| A busy computer adds more | gazebo_adapter's ticks stall (up to 0.2 s of Gazebo's time) when other simulators run | none needed: run it twice |
 
-Gazebo is a little harsher than the car the guesses describe: anything that works there
-has margin to spare. **To make them match** (not done: it changes the simulator): raise
-`steer_p_gain` to 50 (a 20 ms lag), or take 0.1 s off the steering lag the adapter uses.
-Then measure Gazebo's wheel angle (its joint states) against the model's, for the
-sim-versus-real report (T2.7). Speed: the 15 Oct runs match (0 to 3 m/s in 6.2 s), except
-that Gazebo's car starts rolling about 0.3 s late.
+**Why gain 100, not the other proposal** (take 0.1 s off the adapter's `steer_lag` and let
+Gazebo's gain-10 lag be the linkage):
+
+| | gain 100 (chosen) | the adapter's lag less 0.1 s |
+|---|---|---|
+| Off the model | 22 ms | 11 ms |
+| `/vehicle/steering` | still the wheels' angle, within 0.5 mrad | the motor's, 0.1 s ahead of the wheels: the actuator tests in Gazebo would fit a lag of 0 |
+| A new `steer_lag` from the car day | nothing to change | the xacro's gain must change with it |
+| Gain 200 | would save 5 ms more, but the joint's catch-up after each 20 ms hold nears the 5 rad/s limit if `steer_rate` grows | |
+
+Lateral phase margin (`pixi run vehicle-model`, typical delays):
+
+| v (m/s) | The model | Gazebo before (+0.11 s) | Gazebo now (+20 ms) |
+|---|---|---|---|
+| 1 | 45° | 37° | 43° |
+| 3 | 43° | 34° | 41° |
+
+`tools/tests/test_vehicle_model_tool.py` keeps it so: Gazebo's extra lag (1/gain + the
+hold) at most a quarter of `vehicle.yaml`'s `steer_lag`, and the joints' speed limit at least
+4 × `steer_rate`. Next: the same step on the car (T2.7), for the sim-versus-real report.
+Speed: the 15 Oct runs match (0 to 3 m/s in 6.2 s), except that Gazebo's car starts
+rolling about 0.3 s late.
 
 ## 7. Which numbers are guesses
 
@@ -417,6 +448,7 @@ that Gazebo's car starts rolling about 0.3 s late.
 | ζ of the steering | from the two lags | 3.11's step, if it overshoots | `steer_overshoot` |
 | `wheelbase` | 1.57 m | the tape measure (M-list) | v/L in A |
 | the wheel speed's age | 50 ms | the Arduino's pulse rate (H-list) | the speed loop's delay |
+| `throttle_dead_time`, `brake_dead_time`, `steer_dead_time` | 0 (not set) | 4.1, 4.3, 3.11: only if the data resolves them | each loop's delay |
 | delays on the Orin | the Mac's 26 ms | car day 4d, 5 | the lateral margins |
 
 At the car, the actuator tests print the numbers; then:
@@ -426,6 +458,16 @@ pixi run vehicle-model --set throttle_lag=0.25 --set drag=0.3 --set steer_lag=0.
 ```
 
 In code, `model.with_measured(report.yaml)` takes the actuator tests' report as it is.
+
+**One key list.** Three readers take `vehicle.yaml`'s `actuators:`: this model, Gazebo's
+actuator model and ego. Each one uses a key or lists it as ignored (`NOT_LINEAR` here,
+`IGNORED` in `actuator_model.py`). `tools/tests/test_vehicle_model_tool.py` fails if a new
+key reaches only one. Gazebo ignores the dead times for now.
+
+**Check the path before you paste.** Each number the tests print says which signal it goes
+from and to ([Trusting the fits](actuator-tests.md#trusting-the-fits)). `throttle_lag` is
+throttle demand → throttle level. Through the wheel speed (today's ESP32) it is the
+throttle **and** the drivetrain together.
 
 ## What it's for
 
@@ -569,8 +611,8 @@ loop keeps 30° or more with the Orin's measured delays.
 
 ### Making Gazebo's car match the real one
 
-Fit the car day's numbers, put them in `vehicle.yaml`, fix Gazebo's extra steering lag
-(section 6), then compare the same step in both: that's the sim-versus-real report.
+Fit the car day's numbers, put them in `vehicle.yaml` (Gazebo's steering follows them:
+section 6), then compare the same step in both: that's the sim-versus-real report.
 
 ### After state space
 
@@ -591,5 +633,5 @@ pixi run vehicle-model --speed-loop     # TODO 27: the speed loop's designs, the
 | File | What |
 |---|---|
 | `ros/ego/aav_ego/aav_ego/vehicle_model.py` | the maths: no ROS, numpy and scipy only |
-| `ros/ego/aav_ego/test/test_vehicle_model.py` | 30 tests: textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight |
+| `ros/ego/aav_ego/test/test_vehicle_model.py` | 30 test cases (25 functions, 2 of them parametrized): textbook cases, the Jacobian, the final value theorem, discrete vs continuous, the gains against the Rust, the setpoint weight |
 | `tools/vehicle_model.py` | the tables and `docs/img/vehicle-model-*.png` |

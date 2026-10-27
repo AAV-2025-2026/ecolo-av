@@ -7,20 +7,26 @@
 <!-- Generated from docs/car-screens.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The car&#x27;s two screens</h1>
-<div class="meta">7 min read · 7 sections</div></header>
+<div class="meta">8 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -80,8 +93,10 @@
 Both start by themselves at login, and come back 5 s after a crash.</p>
 <div class="admonition warning">
 <p class="admonition-title">Built, not yet on the car</p>
-<p>Everything below is ready in the repo (15 Oct) and <span class="badge b-untested">untested</span> on the car. Friday's
-audit tells us which computer drives the screens and what it calls them.</p>
+<p>Everything below is ready in the repo (15 Oct) and <span class="badge b-untested">untested</span> on the car. The 21 Oct
+audit found the dash computer: <code>aav-desktop</code> (.196), a Pi 4 with Ubuntu 22.04 and
+Humble, not Jazzy yet (<a href="../history/audit-2026-10-21-car.md">audit</a>). Its monitors' names
+are still to read with <code>--list</code>.</p>
 </div>
 <p><img alt="The dash: the small touchscreen (left) and the Innoview monitor (right)" src="../img/car/dash-screens.jpg" /></p>
 <div class="table-wrap"><table>
@@ -111,7 +126,7 @@ audit tells us which computer drives the screens and what it calls them.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Both are in <code>ros/hud/aav_hud_raylib</code> (<a href="hud.html">HUD</a>).</p></div>
+<p>Both are in <code>ros/hud/aav_hud</code> (<a href="hud.html">HUD</a>).</p></div>
 <section class="card"><h2 id="how-it-starts">How it starts</h2>
 <pre class="highlight"><code class="language-text"> power on → desktop login → graphical-session.target ─┬─► aav-hud.service ─► car_screen.sh hud ─► hud --fullscreen --monitor &lt;HUD's&gt;
    (auto-login: a system        (or the autostart     └─► aav-map.service ─► car_screen.sh map ─► map --fullscreen --monitor &lt;map's&gt;
@@ -149,7 +164,7 @@ audit tells us which computer drives the screens and what it calls them.</p>
 <td><code>car_screen.sh</code></td>
 <td><code>tools/</code></td>
 <td>stays in <code>~/aav-jazzy/aav/tools/</code></td>
-<td>reads the settings, checks them, runs <code>ros2 launch aav_hud_raylib hud.launch.py fullscreen:=true monitor:=...</code></td>
+<td>reads the settings, checks them, runs <code>ros2 launch aav_hud hud.launch.py fullscreen:=true monitor:=...</code></td>
 </tr>
 <tr>
 <td><code>car_screens_install.sh</code></td>
@@ -239,7 +254,7 @@ audit tells us which computer drives the screens and what it calls them.</p>
 <li>On X11, the names are the same as <code>xrandr --listmonitors</code> shows.</li>
 <li>On a <strong>Wayland</strong> desktop (Ubuntu 22.04's default on some Pis), our windows run through
   XWayland, and the names may read <code>XWAYLAND0</code>, <code>XWAYLAND1</code>. Use <code>--list</code> and the
-  numbers, or log in to "Ubuntu on Xorg". The audit finds out which (W10).</li>
+  numbers, or log in to "Ubuntu on Xorg". Which one the dash Pi runs: check at the car (W10).</li>
 <li>raylib draws through GLFW on X11. A computer with no desktop at all (plain KMS/DRM)
   would need raylib built for DRM, with one screen only: not planned.</li>
 </ul>
@@ -314,7 +329,7 @@ bash /media/$USER/&lt;stick&gt;/car-kit/car_install.sh --screens             # b
 </tr>
 <tr>
 <td>Try one by hand</td>
-<td><code>~/aav-jazzy/aav.sh ros2 launch aav_hud_raylib map.launch.py fullscreen:=true monitor:=HDMI-1</code></td>
+<td><code>~/aav-jazzy/aav.sh ros2 launch aav_hud map.launch.py fullscreen:=true monitor:=HDMI-1</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -329,10 +344,11 @@ checks the screen, then <code>pixi run watchdog-clear</code>.</p>
 </blockquote>
 </section>
 <section class="card"><h2 id="the-2025-26-way-for-comparison">The 2025-26 way, for comparison</h2>
-<p>Their UI Pi started three scripts from systemd system services (<code>hud/scripts/*_bootup.sh</code>):
-Flask, <code>flutter run</code> (a debug build) and OSRM in Docker, all from <code>/home/aavui/Desktop</code>.
-Ours: two user units, no sudo, no Docker, release builds, a restart on a crash, and the
-monitors named in one file. Theirs stay as they are until the team agrees to switch (A8).</p>
+<p>Their UI Pi started three scripts from systemd system services (<code>hud/scripts/*_bootup.sh</code>,
+now in <code>archive/2026-27-flutter-hud/</code>): Flask, <code>flutter run</code> (a debug build) and OSRM in
+Docker, all from <code>/home/aavui/Desktop</code>. Ours: two user units, no sudo, no Docker, release
+builds, a restart on a crash, and the monitors named in one file. Their app was archived
+on 25 Oct (Q29).</p>
 </section>
 <section class="card"><h2 id="what-was-tested">What was tested</h2>
 <div class="table-wrap"><table>
@@ -373,7 +389,7 @@ monitors named in one file. Theirs stay as they are until the team agrees to swi
 </tr>
 <tr>
 <td>systemd starting them at login, on the car</td>
-<td><span class="badge b-untested">untested</span>: after the audit</td>
+<td><span class="badge b-untested">untested</span>: once the dash computer runs our Jazzy</td>
 </tr>
 </tbody>
 </table></div></section>

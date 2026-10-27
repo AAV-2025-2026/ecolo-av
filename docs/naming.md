@@ -9,8 +9,9 @@ Ben, 14 Oct: "Maybe we need more structure like /localization/<command> and
 
 ## The rule
 
-The first part of every name is the **area**: the layer of the picture it comes from. The
-same areas as the folders under `src/`, plus `/system/` for the whole run.
+The first part of every name is the **area**: the layer of the picture it comes from. Most
+match a folder under `ros/` (the `/sensors/` topics come from `ros/sources/`), plus
+`/system/` for the whole run.
 
 ```text
 /<area>/<device or node>/<thing>
@@ -23,12 +24,12 @@ same areas as the folders under `src/`, plus `/system/` for the whole run.
 | `/can/` | raw CAN frames | the socketcan bridge |
 | `/localization/` | where the car is | the EKFs, navsat_transform |
 | `/perception/` | what the car sees | the detectors, the lane finder, radar clusters |
-| `/drivers/` | one command per driver | joystick, keyboard, scripted, Nav2, AI, replay |
+| `/drivers/` | one command per driver | joystick, RC, keyboard, tests, scripted, replay, go-to, Nav2, AI |
 | `/control/` | the chosen command; ego's command for one target, `/control/<target>/actuator_cmd` | twist_mux, the smoother, the output mux (23 Oct) |
 | `/ego/` | the command for the wheels | ego |
-| `/safety/` | e-stop, collision monitor | the HUD button, collision_monitor |
+| `/safety/` | e-stop, collision monitor, the sensor watchdog's lock, the output mux's state, ghost obstacles | the HUD button, collision_monitor, sensor_watchdog, output_mux, ghost_obstacle |
 | `/hud/` | what only the screen needs | the HUD |
-| `/system/` | what kind of run this is: `/system/source` (real, sim, bench, replay); the sensor mux's check, `/system/sensor_mux/state` | the backends, the bench, a replay (added 15 Oct, `READ-ME-FULL-SIMULATION.md`); the sensor mux (23 Oct) |
+| `/system/` | what kind of run this is: `/system/source` (real, sim, bench, replay); the sensor mux's check, `/system/sensor_mux/state` | the backends, the bench, a replay (added 15 Oct, `full-simulation.md`); the sensor mux (23 Oct) |
 
 Global names stay global, because every ROS tool expects them: `/tf`, `/tf_static`,
 `/clock`, `/robot_description`, `/joint_states`, `/diagnostics`, `/rosout`,
@@ -40,9 +41,11 @@ actions, `/cmd_vel_nav` and the costmaps' topics.
 | Driver | How | Topics |
 |---|---|---|
 | joystick | `joy_node`, `teleop_twist_joy_node`, `joy_teleop` run in the namespace `/drivers/joy` | `/drivers/joy/joy`, `/drivers/joy/cmd_vel` |
+| RC | `rc_driver` (`aav_rc`) | `/drivers/rc/cmd_vel` |
 | keyboard | `tools/keyboard.sh` runs `teleop_twist_keyboard` in the namespace `/drivers/keyboard` | `/drivers/keyboard/cmd_vel` |
 | tests | `actuator_test` publishes `drivers/tests/cmd_vel` | `/drivers/tests/cmd_vel` |
 | scripted | `scripted_driver` publishes `drivers/scripted/cmd_vel` | `/drivers/scripted/cmd_vel` |
+| drive to point | `point_driver` (`aav_drive_to_point`) | `/drivers/point/cmd_vel` |
 | Nav2 | `velocity_smoother` or `collision_monitor`, remapped | `/drivers/nav/cmd_vel` |
 | AI | `control_interface` (lane keeping) | `/drivers/ai/cmd_vel` |
 | replay | `tools/replay_commands.sh` | `/drivers/replay/cmd_vel` |
@@ -106,7 +109,6 @@ Changed from the proposal, once the code showed it:
 | `/spine/arm`, `/scripted_drive`, `/ekf_*/set_pose` | services and actions, not topics: the rule is for topics |
 | `/gazebo/cmd_vel`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat` | Gazebo's own side of `gazebo_adapter` and its sensor nodes, like `/turtle1/...` for turtlesim; not in the contract |
 | `/map`, `/plan`, `/goal_pose`, `/cmd_vel_nav`, the costmaps | Nav2's own, for now |
-| The HUD back end's HTTP routes (`POST /estop`, `/camera/latest.png`) | web addresses, not topics |
 | Bags recorded before 15 Oct | they hold the old names: play them with `--remap` (for example `/cmd_vel:=/control/cmd_vel`) |
 
 ## Why the two EKFs don't talk

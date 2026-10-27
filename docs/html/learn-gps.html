@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a class="here" href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -88,7 +101,7 @@ explains how that works, how good it is, and how our car turns it into metres on
 <li>how to check that GPS data is really arriving;</li>
 <li>the bench's GPS noise problem (N7 in <code>TODO.md</code>).</li>
 </ul>
-<p>This page goes deeper than <a href="../../READ-ME-MAPS-AND-POSITION.md">Maps and position</a>, which
+<p>This page goes deeper than <a href="maps-and-position.html">Maps and position</a>, which
 shows the big picture. Read that one first if you haven't.</p></div>
 <section class="card"><h2 id="1-gnss-satellites-and-clocks">1. GNSS: satellites and clocks</h2>
 <div class="table-wrap"><table>
@@ -207,7 +220,7 @@ shows the big picture. Read that one first if you haven't.</p></div>
 <div class="admonition note">
 <p class="admonition-title">Where do our corrections come from?</p>
 <p>Not known yet. The switch has a port labelled <strong>RTK-PI</strong>, so the 2025-26 car probably
-had a corrections setup. Friday's audit should find out (<a href="car-photos.html">Car photos</a>).</p>
+had a corrections setup. Still to find out at the car (<a href="audit-questions.html">Audit questions</a>).</p>
 </div>
 </section>
 <section class="card"><h2 id="3-our-receiver-u-blox-zed-f9r">3. Our receiver: u-blox ZED-F9R</h2>
@@ -249,8 +262,8 @@ had a corrections setup. Friday's audit should find out (<a href="car-photos.htm
 KEFC plan replaces it with a board that has a screw-on antenna connector.</p>
 <div class="admonition warning">
 <p class="admonition-title">Never tried with our code</p>
-<p>Our GPS driver (<code>ublox_gps</code>) has <strong>never run</strong> with this receiver. Friday's audit
-checks the first step: is there any data at all?</p>
+<p>Our GPS driver (<code>ublox_gps</code>) has <strong>never run</strong> with this receiver. The first step at
+the car: is there any data at all?</p>
 </div>
 <h3 id="the-driver-three-choices">The driver: three choices</h3>
 <p><code>sensors.launch.py gps_driver:=...</code> picks one. Each publishes <code>/sensors/gps/fix</code>.</p>
@@ -437,8 +450,8 @@ checks the first step: is there any data at all?</p>
 <ul>
 <li>removes the antenna's offset, using TF <code>base_link → gps_link</code>: that's why the antenna's
   spot in <code>vehicle.yaml</code> matters (and where it is mounted: below);</li>
-<li>serves <code>/fromLL</code> (lat/lon → x, y) and <code>/toLL</code> (back). The HUD's route reaches Nav2
-  through <code>/fromLL</code>.</li>
+<li>serves <code>/fromLL</code> (lat/lon → x, y) and <code>/toLL</code> (back). A street route reaches Nav2
+  through <code>/fromLL</code> (<code>street_router</code>, <a href="routes.html">Street routes</a>).</li>
 </ul>
 <h3 id="mount-the-antenna-over-the-rear-axle">Mount the antenna over the rear axle</h3>
 <p>To remove the offset, <code>navsat_transform</code> turns it by the car's heading <strong>as the global EKF
@@ -457,7 +470,7 @@ they pull the wrong way, and the heading gets worse.</p>
 </thead>
 <tbody>
 <tr>
-<td>0.8 m ahead of the rear axle (today's guess)</td>
+<td>0.8 m ahead of the rear axle (the old guess, before 23 Oct)</td>
 <td style="text-align: right;">7.5-12.8°</td>
 <td style="text-align: right;">3.7-6.7°</td>
 <td style="text-align: right;">39-54°</td>
@@ -470,7 +483,8 @@ they pull the wrong way, and the heading gets worse.</p>
 </tr>
 </tbody>
 </table></div>
-<p>So put the antenna <strong>above the rear axle</strong> if the mount allows (any height). Then the
+<p>So the antenna belongs <strong>above the rear axle</strong> (any height): it is there already
+(<code>vehicle.yaml</code>, 23 Oct; measure it to be sure). Then the
 offset doesn't turn with the heading, and reversing is as good as forward. A heading
 source helps too: since 25 Oct the receiver's own velocity gives one while the car moves
 (<code>gps_heading</code>, <a href="learn-localization.html#where-the-heading-comes-from-todo-13">Learn: localization</a>).</p>

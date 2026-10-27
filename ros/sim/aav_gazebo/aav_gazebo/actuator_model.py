@@ -2,7 +2,7 @@
 The actuator model: how the car answers a command, between ego and Gazebo.
 
 No ROS here. gazebo_adapter steps it at 50 Hz (Gazebo's time) and sends Gazebo the speed
-and steering it gives (READ-ME-FULL-SIMULATION.md, option A):
+and steering it gives (docs/full-simulation.md, option A):
 
     ego's speed ──> SpeedLoop ──> throttle %, brake % ──> Actuators ──> speed  ──> Gazebo
     ego's angle ─────────────────────────────────────> Actuators ──> angle  ──> Gazebo
@@ -13,7 +13,7 @@ and steering it gives (READ-ME-FULL-SIMULATION.md, option A):
   - Actuators: throttle % -> acceleration, brake % -> deceleration, coasting drag; the
     steering motor's speed limit, the linkage's lag, the centre offset and a deadband.
     Its numbers are vehicle.yaml's `actuators:` section (guesses until tests 3.10-3.12
-    and 4.1-4.5 in READ-ME-TESTS.md).
+    and 4.1-4.5 in docs/tests.md).
   - Ideal: the old behaviour, for comparison (actuator_model:=false): the speed follows
     the command within Gazebo's old limits (+1.5 / -3.0 m/s^2), the steering at once.
 
@@ -28,6 +28,13 @@ Units: m/s, m/s^2, rad, s. Throttle and brake are 0..1. Positive steering turns 
 
 from dataclasses import dataclass, fields
 import math
+
+
+# vehicle.yaml actuators: keys this model leaves out on purpose. The dead times are fitted
+# by the actuator tests and used by the linear model (aav_ego vehicle_model.py), not yet
+# here: Gazebo's own pipeline already adds about 20 ms (docs/vehicle-model.md section 6).
+# tools/tests/test_vehicle_model_tool.py checks every key is a field or in here.
+IGNORED = frozenset({'throttle_dead_time', 'brake_dead_time', 'steer_dead_time'})
 
 
 @dataclass(frozen=True)

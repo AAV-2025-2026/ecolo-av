@@ -1,0 +1,21 @@
+# map: the big screen's map window (aav_hud). Every topic name it uses lives here,
+# not in the code: rename a topic here (or with `--ros-args -p plan_topic:=...`), never in
+# Rust. Built into the program as its defaults, so --demo shows the same names.
+map:
+  ros__parameters:
+    map_topic: /map                           # nav_msgs/msg/OccupancyGrid, latched: Nav2's map
+    odom_topic: /localization/odom/global     # nav_msgs/msg/Odometry, map frame: the car
+    plan_topic: /plan                         # nav_msgs/msg/Path: Nav2's planned path
+    goal_topic: /goal_pose                    # geometry_msgs/msg/PoseStamped: RViz's 2D Goal Pose, and ours (the place search)
+    source_topic: /system/source              # aav_interfaces/msg/DataSource, latched: the SIMULATED banner
+    watchdog_topic: /safety/sensor_watchdog/state  # std_msgs/msg/String: the sensor watchdog's verdict, a banner unless OK
+    street_route_topic: /drivers/nav/route/path   # nav_msgs/msg/Path, map frame, latched: street_router's street route (aav_routes), violet under the plan
+    stale_after: 1.0                          # s: the car's position this old shows STALE
+    plan_stale_after: 3.0                     # s: Nav2 replans every 1 s while it drives; older = it stopped
+    arrive_within: 1.0                        # m: the car this close to the goal = ARRIVED (Nav2's own is 0.5)
+    # The street map under Nav2's map (pixi run get-street-map). A path relative to the
+    # folder the window starts in (pixi starts it in the repo); missing = no streets.
+    street_map: maps/streets/ottawa.pmtiles
+    # The place search's database (pixi run get-places): OpenStreetMap's names and
+    # addresses, SQLite, read-only. Found the same way as street_map; missing = no search.
+    places: maps/places/ottawa.db

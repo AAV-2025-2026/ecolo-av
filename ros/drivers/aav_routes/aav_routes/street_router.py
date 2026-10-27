@@ -22,11 +22,16 @@ Publishes   /drivers/nav/route/waypoints     geographic_msgs/GeoPath, latched: t
 Serves      /drivers/nav/route/follow        std_srvs/Trigger: send the waypoints to Nav2
 Calls       the router over HTTP (router_url), /fromLL, /toLL (navsat_transform),
             /follow_gps_waypoints (Nav2's waypoint_follower; only on follow)
+
+One thread: rclpy's MultiThreadedExecutor spins a whole core whenever a subscription gets
+messages (rclpy 7.1.12; docs/mac.md), and this node hears the GPS fix all the time. The
+service calls inside callbacks are awaited (coroutine callbacks, in a reentrant group),
+so the one thread keeps taking the answers. The router's HTTP request still blocks it,
+for up to `timeout`: fixes that arrive meanwhile wait in the queue.
 """
 
 import json
 import math
-import threading
 import urllib.error
 import urllib.request
 
@@ -38,7 +43,7 @@ from nav_msgs.msg import Path
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data, QoSProfile
 from robot_localization.srv import FromLL, ToLL
@@ -72,10 +77,11 @@ class StreetRouter(Node):
         if self.router not in osrm_route.ROUTERS:
             raise ValueError(f'router must be one of {osrm_route.ROUTERS}')
 
-        self.busy = threading.Lock()    # one route at a time
+        self.busy = False               # one route at a time
         self.fix = None                 # (lat, lon, when)
         self.route = None               # the newest waypoints, for follow
-        group = ReentrantCallbackGroup()    # so service calls inside callbacks return
+        # Reentrant, so a callback awaiting a service lets the answer in on the one thread.
+        group = ReentrantCallbackGroup()
 
         self.create_subscription(NavSatFix, fix_topic, self.on_fix, qos_profile_sensor_data,
                                  callback_group=group)
@@ -114,10 +120,10 @@ class StreetRouter(Node):
             return
         self.fix = (msg.latitude, msg.longitude, self.get_clock().now())
 
-    def on_destination(self, msg):
-        self.plan((msg.position.latitude, msg.position.longitude))
+    async def on_destination(self, msg):
+        await self.plan((msg.position.latitude, msg.position.longitude))
 
-    def on_goal(self, msg):
+    async def on_goal(self, msg):
         if msg.header.frame_id not in ('', self.map_frame):
             self.say(f'no route: the goal is in {msg.header.frame_id!r}, not '
                      f'{self.map_frame!r}', error=True)
@@ -128,25 +134,35 @@ class StreetRouter(Node):
             return
         req = ToLL.Request()
         req.map_point = msg.pose.position
-        answer = self.to_ll.call(req, timeout_sec=SERVICE_WAIT)
+        answer = await self.call(self.to_ll, req)
         if answer is None:
             self.say('no route: /toLL did not answer', error=True)
             return
-        self.plan((answer.ll_point.latitude, answer.ll_point.longitude))
+        await self.plan((answer.ll_point.latitude, answer.ll_point.longitude))
+
+    async def call(self, client, request):
+        """Ask a service without blocking the thread; None if no answer in SERVICE_WAIT."""
+        future = client.call_async(request)
+        timer = self.create_timer(SERVICE_WAIT, future.cancel)   # a cancelled call gives None
+        try:
+            return await future
+        finally:
+            self.destroy_timer(timer)
 
     # --- the route ---
 
-    def plan(self, destination):
-        if not self.busy.acquire(blocking=False):
+    async def plan(self, destination):
+        if self.busy:
             self.say('still working on the last destination: this one is ignored',
                      error=True)
             return
+        self.busy = True
         try:
-            self._plan(destination)
+            await self._plan(destination)
         finally:
-            self.busy.release()
+            self.busy = False
 
-    def _plan(self, destination):
+    async def _plan(self, destination):
         start = self.car()
         if start is None:
             self.say('no route: no recent GPS fix for the car', error=True)
@@ -165,7 +181,7 @@ class StreetRouter(Node):
             return
         self.route = waypoints
         self.waypoints_pub.publish(self.geo_path(waypoints))
-        drawn = self.map_path(route.points)
+        drawn = await self.map_path(route.points)
         text = osrm_route.summary(route, len(waypoints))
         if drawn is None:
             text += '; no map-frame path (nobody serves /fromLL)'
@@ -206,7 +222,7 @@ class StreetRouter(Node):
         msg.poses = [GeoPoseStamped(header=msg.header, pose=geo_pose(w)) for w in waypoints]
         return msg
 
-    def map_path(self, points):
+    async def map_path(self, points):
         """Turn the route into the map frame, through /fromLL; None if nobody serves it."""
         if not self.from_ll.wait_for_service(timeout_sec=SERVICE_WAIT):
             return None
@@ -217,7 +233,7 @@ class StreetRouter(Node):
         for (lat, lon), yaw in zip(points, osrm_route.geo.headings(points)):
             req = FromLL.Request()
             req.ll_point.latitude, req.ll_point.longitude = lat, lon
-            answer = self.from_ll.call(req, timeout_sec=SERVICE_WAIT)
+            answer = await self.call(self.from_ll, req)
             if answer is None:
                 return None
             pose = PoseStamped(header=msg.header)
@@ -264,10 +280,8 @@ def geo_pose(waypoint):
 def main(args=None):
     rclpy.init(args=args)
     node = StreetRouter()
-    executor = MultiThreadedExecutor()
-    executor.add_node(node)
     try:
-        executor.spin()
+        rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:

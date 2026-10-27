@@ -10,7 +10,8 @@ Files, unchanged unless listed under Changes:
 - `yolo_ros2/__init__.py`
 - `yolo_ros2/yolo_inference.py`
 
-`training/` came from a second repo: see `training/PROVENANCE.md`.
+`training/` came from a second repo, `Carleton-AAV-Capstone/camera_Yolo_detection`
+(`data.yaml`, `testing_torch.py`, unchanged). Removed on 2026-10-26: nothing used it.
 
 ## Changes
 
@@ -92,3 +93,7 @@ change, never the logic:
   keeps each camera's fy from its CameraInfo (`camera_info_topics`, by frame_id) and
   passes it with the boxes, so the same 4.7 m holds for the 1280x720 ribbon cameras once
   calibrated. Its `min_height_px` parameter is gone. Tests: `test/test_stop_sign.py`.
+- 2026-10-25: the description in `package.xml` and `setup.py` says what the package is
+  now: the object detector (RF-DETR Nano by default, YOLO with `detector:=yolo`), the
+  stop-sign watcher and camera_obstacles. It still said a YOLO detector with the stock
+  YOLO11 model.

@@ -26,15 +26,15 @@ xcode-select --install
 curl -fsSL https://pixi.sh/install.sh | sh
 ```
 
-**3. The code.** Clone it from GitHub. You need access to `AAV-2025-2026/ecolo-av` (ask Ben),
-and an SSH key on your GitHub account:
+**3. The code.** `AAV-2025-2026/ecolo-av` is public. Fork it on GitHub, put an SSH key on
+your account, and clone your fork, as [Contributing](../CONTRIBUTING.md) shows:
 
 ```bash
-git clone git@github.com:AAV-2025-2026/ecolo-av.git ~/ecolo-av
+git clone git@github.com:<your-username>/ecolo-av.git ~/ecolo-av
 cd ~/ecolo-av
 ```
 
-Later, `git pull` in `~/ecolo-av` fetches newer work.
+To take newer work and send yours: [Contributing](../CONTRIBUTING.md).
 
 **4. Install ROS and build:**
 
@@ -60,7 +60,7 @@ Hold `i` to drive.
 | # | Do this | Why |
 |---|---|---|
 | 1 | Join the car's own WiFi router | campus WiFi blocks the traffic ROS uses to find other computers |
-| 2 | `export ROS_DOMAIN_ID=42` in each terminal | ROS only talks within one domain. Ours is 42, so it never mixes with the 2025-26 software (`pixi run net-map` shows which domains theirs uses) |
+| 2 | `export ROS_DOMAIN_ID=42` in each terminal | ROS only talks within one domain (0–101 is safe on Linux; Fast DDS breaks above 232). Ours is 42, so it never mixes with the 2025-26 software (`pixi run net-map` shows which domains theirs uses) |
 | 3 | Leave the middleware alone | Pixi sets Cyclone DDS on every computer, the car's too (Ben, 23 Oct). Mixed middlewares may not talk |
 | 4 | When macOS asks whether `python3` or `rviz2` may accept incoming connections, click Allow | otherwise the firewall blocks the car's replies |
 | 4b | System Settings → Privacy & Security → **Local Network**: turn on your terminal app (Terminal, iTerm, VS Code) | since macOS 15, apps need this to reach other machines on the network. macOS asks once; if you said no, nothing on the car answers |
@@ -115,7 +115,7 @@ clock is off: the car's computers keep the time (the Orin serves it, see
 | Stop everything | `pixi run estop`, then `pixi run estop-clear` when it's safe |
 | The 3D view: map, costmaps, path, the car | `pixi run rviz` |
 | Nodes and topics, live | `pixi run graph` |
-| Be the safety driver's joystick laptop | `pixi run car laptop` |
+| Be the safety driver's joystick laptop | `pixi run -e ml car laptop` (`-e ml` for its detector) |
 
 !!! warning "Driving the real car"
   The keyboard has priority 90. The safety driver's joystick (100) and the hardware
@@ -224,7 +224,7 @@ To go back to Fast DDS for one run, every program that talks to it needs the sam
 
 ```bash
 AAV_RMW=fastdds pixi run sim               # this terminal
-AAV_RMW=fastdds pixi run ros2 topic list   # and every other
+AAV_RMW=fastdds pixi run tools/ros.sh ros2 topic list   # and every other: AAV_RMW works through tools/ros.sh
 ```
 
 ⚠️ **To check at the car:** Cyclone uses one network card, not all of them as Fast DDS
@@ -248,13 +248,13 @@ Two rules follow, for anyone writing scripts:
 - Inside Pixi on a Mac, `ls`, `date`, `stat` and friends are the GNU versions, the same as
   on Linux and the car. Outside Pixi, the Mac's own versions are unchanged.
 
-## Three more things the bench found on a Mac
+## Four more things the bench found on a Mac
 
 | What happens | Why | What we do |
 |---|---|---|
 | A best-effort subscriber gets no camera images at all | an image is too big for one UDP packet, and best effort drops the whole image when one piece is lost | subscribe to images reliably, keeping only the newest frame |
 | `ros2 topic hz` on a camera or lidar shows nothing | Jazzy's `hz` always subscribes best effort, with no option to change it | count them reliably: `ros2 topic echo --qos-reliability reliable --field header.stamp <topic>` |
-| A Python node with `MultiThreadedExecutor` uses a whole CPU core | rclpy 7.1.12's multi-threaded executor spins whenever any subscription gets messages | use the default single-threaded executor; `scripted_driver` now does |
+| A Python node with `MultiThreadedExecutor` uses a whole CPU core | rclpy 7.1.12's multi-threaded executor spins whenever any subscription gets messages | use the default single-threaded executor; `scripted_driver`, `point_driver` and `street_router` now do |
 | A script started through `#!/usr/bin/env python3` can't load our messages | macOS drops `DYLD_LIBRARY_PATH` when `/usr/bin/env` starts | launch such scripts with `prefix='python3'`, as `aav_lane_geometry` does |
 
 ## If the native way fails: Ubuntu in UTM
@@ -293,7 +293,6 @@ Paste these into Claude (or a team chat), and it can usually say what to fix:
 | Gazebo's cameras and lidar on a Mac | [[works]] 15 Oct: headless, about 10 Hz each; with YOLO too, `-e ml sim-check --perception` passed 2 of 2 on a quiet Mac, so the lidar is on by default |
 | RViz and rqt_graph on a Mac | [[untested]] they open without errors (RViz logs one shader warning); nobody has looked at them yet |
 | Recording a drive (`tools/record.sh`) | [[works]] on the Mac, after the `tools/ros.sh` fix above |
-| The Rust listener | [[works]] on the Mac: builds in 15 s |
 | Joystick on a Mac | [[untested]] An old macOS joystick bug is fixed in the version we use. |
 | The Mac on the car's network | [[untested]] the car still runs Humble |
 | `pixi run doctor` | [[works]] on Linux and the Mac |

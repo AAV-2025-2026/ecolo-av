@@ -92,7 +92,12 @@ git rebase upstream/main
 ```
 
 On a conflict, git stops and names the files. Fix them, `git add` them, then
-`git rebase --continue`. Stuck: `git rebase --abort` puts everything back.
+`git rebase --continue`. Stuck: `git rebase --abort` puts everything back. More help:
+[Git](docs/git.md), "Conflicts during a rebase".
+
+A rebase rewrites your branch, so a plain `git push` of an already-pushed branch is
+refused. Push it with `git push --force-with-lease`: to your fork's branch only, never
+to `main`.
 
 ## 4. Commits
 
@@ -133,6 +138,9 @@ Closes #12
 | keep each commit to one change | mix a fix, a rename and a format pass |
 | update `PROVENANCE.md` when you change inherited code | copy old code without saying where from |
 | change `docs/interfaces.yaml` first when a topic changes | change a topic without the contract |
+| give a new or changed feature its row in `docs/features.md`, in the same commit | leave the features table behind |
+| give a new `pixi run` task its row in README.md's "Every command" | add a task nobody can find |
+| changed `docs/*.md`? run `pixi run docs` and commit the HTML | let the web pages drift from the markdown |
 | | commit `build/`, `install/`, `log/`, `target/` or `.pixi/` |
 | | commit keys, passwords, tokens or `.env` files: the repo is public |
 | | commit large data files: add a download step instead |
@@ -142,11 +150,15 @@ Made a mess before pushing? `git commit --amend` fixes the last commit.
 
 ## 5. Push to your fork
 
+First run the full `pixi run test`: it adds the build, the style check and `colcon test`,
+which `tools/test.sh` skips. Then:
+
 ```bash
 git push -u origin t3.6-spine-heartbeat
 ```
 
-After the first push, `git push` is enough. Once someone is reviewing, add new commits
+After the first push, `git push` is enough (after a rebase: `git push --force-with-lease`,
+section 3). Once someone is reviewing, add new commits
 instead of rewriting old ones, so they can see what changed.
 
 ## 6. Pull requests

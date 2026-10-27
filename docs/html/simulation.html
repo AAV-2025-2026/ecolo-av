@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a class="here" href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -93,7 +106,7 @@ purpose: <code>AAV_DISCOVERY=SUBNET pixi run sim</code>.</p></div>
 </thead>
 <tbody>
 <tr>
-<td>1. Unit tests: <code>pixi run test</code></td>
+<td>1. Unit tests: <code>tools/test.sh</code> (<code>pixi run test</code> adds the ROS tests)</td>
 <td>the maths and protocols, without ROS</td>
 <td>ego's maths, the CAN frames, the spine logic</td>
 </tr>
@@ -210,6 +223,9 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 </tr>
 </tbody>
 </table></div>
+<p><strong>Debugging Gazebo itself:</strong> its source is in <code>vendor/gazebo/</code> (<code>pixi run vendor</code>), at the
+releases we run. <code>vendor/README.md</code> says which library does each job: the steering, the
+sensors, the physics, the ROS bridge.</p>
 <h3 id="what-gazebo-simulates">What Gazebo simulates</h3>
 <p>Rates measured on Ben's Mac, 15 Oct, on simulated time (<code>ros2 topic hz -s</code>), with the
 real-time factor at 0.98-0.99.</p>
@@ -374,7 +390,7 @@ circle against the bicycle model's (wheelbase ÷ tan(steer)):</p>
 can't tell. <code>/gazebo/*</code> topics are Gazebo's own side of <code>gazebo_adapter</code> and the sensor
 nodes, not in the contract.</p>
 <p><img alt="What the three simulated cameras see, at the start of the road world" src="../img/sim-cameras.png" /></p>
-<p>Where each sensor sits (15 Oct, until Friday's tape measure): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from <code>vehicle.yaml</code>. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.</p>
+<p>Where each sensor sits (15 Oct, until the car is measured): the two front cameras on top at the roof's front edge, the rear one on the tailgate looking back, the radar on the grill, the lidar on its roof tripod. All from <code>vehicle.yaml</code>. A camera can't go inside the car: Gazebo's car is a solid box, and the camera then sees its walls.</p>
 <h3 id="what-isnt-simulated">What isn't simulated</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -384,10 +400,6 @@ nodes, not in the contract.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>The right and rear cameras</td>
-<td>only the front left camera is in the URDF's Gazebo sensors</td>
-</tr>
 <tr>
 <td>The magnetometer</td>
 <td>the EKFs don't use it</td>
@@ -402,11 +414,11 @@ nodes, not in the contract.</p>
 </tr>
 <tr>
 <td>The real actuators' numbers</td>
-<td>the <a href="#the-actuator-model">actuator model</a> has them, but they're guesses until the tests (<code>READ-ME-TESTS.md</code> 3.10-3.12, 4.1-4.5)</td>
+<td>the <a href="#the-actuator-model">actuator model</a> has them, but they're guesses until the tests (<code>tests.md</code> 3.10-3.12, 4.1-4.5)</td>
 </tr>
 <tr>
 <td>Wheel slip, slopes, the weight</td>
-<td>the model sets the speed; no forces (option B in <code>READ-ME-FULL-SIMULATION.md</code>)</td>
+<td>the model sets the speed; no forces (option B in <code>full-simulation.md</code>)</td>
 </tr>
 <tr>
 <td>A real radar</td>
@@ -419,7 +431,7 @@ nodes, not in the contract.</p>
 </tbody>
 </table></div>
 <h3 id="the-actuator-model">The actuator model</h3>
-<p>Added 15 Oct (<code>READ-ME-FULL-SIMULATION.md</code>, step 3). Gazebo used to set the speed itself
+<p>Added 15 Oct (<code>full-simulation.md</code>, step 3). Gazebo used to set the speed itself
 (+1.5 / -3.0 m/s²) and steer at once. Now <code>gazebo_adapter</code> puts a model of the actuators
 in between, 50 times a second, on Gazebo's clock:</p>
 <pre class="highlight"><code class="language-text">ego's speed ──&gt; speed loop (the spine's, in Python) ──&gt; throttle %, brake %
@@ -560,7 +572,7 @@ each other: they use multicast, and some networks and firewalls block it. Run
 set your own <code>GZ_PARTITION=&lt;any name&gt;</code>, so your simulator doesn't meet someone else's.</p>
 </div>
 <h3 id="the-spine-in-the-loop-spinetrue">The spine in the loop: <code>spine:=true</code></h3>
-<p>Added 15 Oct (<code>READ-ME-FULL-SIMULATION.md</code>, step 4). The car's own <code>spine_bridge</code> and the
+<p>Added 15 Oct (<code>full-simulation.md</code>, step 4). The car's own <code>spine_bridge</code> and the
 bench's <code>spine_sim</code> (the spine's firmware logic, <code>spine-core</code>) go between ego and the
 actuator model:</p>
 <pre class="highlight"><code class="language-text">ego ──&gt; spine_bridge ──CAN frames──&gt; spine_sim ──throttle, brake, gear, steering──&gt; actuator model ──&gt; Gazebo
@@ -613,7 +625,7 @@ pixi run sim-check --spine                # tests it (3 more minutes)</code></pr
 </tr>
 </tbody>
 </table></div>
-<p>Stop times in full: <a href="../../READ-ME-FULL-SIMULATION.md#stop-times-the-direct-path-vs-the-spine">READ-ME-FULL-SIMULATION.md</a>.</p>
+<p>Stop times in full: <a href="full-simulation.html#stop-times-the-direct-path-vs-the-spine">Full simulation</a>.</p>
 <h3 id="faster-in-gazebo-sim_speed">Faster in Gazebo: <code>sim_speed:=</code></h3>
 <p>The car's top speed is 1 m/s (walking pace, <code>ego.yaml</code> and <code>nav2.yaml</code>), for its first
 real drives. In Gazebo, raise it for ego and Nav2 together:</p>
@@ -653,15 +665,11 @@ real drives. In Gazebo, raise it for ego and Nav2 together:</p>
 <tbody>
 <tr>
 <td><code>hud:=true</code></td>
-<td>the HUD window (<code>aav_hud_raylib</code>, the same as <code>pixi run hud</code>)</td>
+<td>the HUD window (<code>aav_hud</code>, the same as <code>pixi run hud</code>)</td>
 </tr>
 <tr>
 <td><code>foxglove:=true</code></td>
 <td>the Foxglove bridge on 127.0.0.1:8765: open Lichtblick, then <code>ws://localhost:8765</code> and a layout from <code>tools/foxglove/</code> (<a href="foxglove.html">Watch from a laptop</a>)</td>
-</tr>
-<tr>
-<td><code>hud_web:=true</code></td>
-<td>the Flutter app's web server on 127.0.0.1:5000 (this was <code>hud:=true</code> before 15 Oct)</td>
 </tr>
 <tr>
 <td>Tried, 15 Oct</td>
@@ -735,9 +743,10 @@ bench's road, built in 3D, so the car's own camera and radar can see it.</p>
 <p>The radar stand-in isn't a radar: it sees every surface (the sign's post too), and each
 point's speed is the car's own, along the line of sight.</p>
 <h3 id="the-lidar-gazebo-only">The lidar: Gazebo only</h3>
-<p>The car has a lidar on its roof, but its model is unknown (Q22) and our code has no driver
-yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on by default
-(15 Oct)</strong> in the road and test_lot worlds: <code>pixi run sim world:=road</code> or <code>world:=test_lot</code>.</p>
+<p>The car has a Velodyne VLP-16 on its roof, read by the stock <code>velodyne</code> driver (on by
+default on the car; untested with the real lidar). Gazebo has a generic 16-beam one in
+its place. <strong>It's on by default (15 Oct)</strong> in the road and test_lot worlds:
+<code>pixi run sim world:=road</code> or <code>world:=test_lot</code>.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -768,7 +777,7 @@ yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on
 </tr>
 <tr>
 <td>On the Mac, alone</td>
-<td>stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. <code>sim-check --lidar</code> passes</td>
+<td>stable: 10.0 Hz, real-time factor 0.99, Gazebo at about 80% of one core with the camera and radar too. <code>sim-check</code> passes with it</td>
 </tr>
 <tr>
 <td>On the Mac, with YOLO too, the morning of 15 Oct</td>
@@ -810,7 +819,7 @@ yet. So Gazebo has a generic one, to try what a lidar would add. <strong>It's on
 </tr>
 <tr>
 <td>Switch</td>
-<td><code>navigation.launch.py lidar:=true</code>. <code>sim.launch.py</code> passes it where the world renders the lidar. <strong>The car: <code>lidar:=false</code></strong>, as no driver publishes its lidar yet (probably a Velodyne: audit N6)</td>
+<td><code>navigation.launch.py lidar:=true</code>. <code>sim.launch.py</code> passes it where the world renders the lidar. The car: on by default (the <code>velodyne</code> driver; <code>car.launch.py lidar:=false</code> turns it off)</td>
 </tr>
 <tr>
 <td>CPU</td>
@@ -852,7 +861,7 @@ angles small depth errors become large range errors.</p>
 <tr>
 <td><code>perception</code></td>
 <td><code>false</code></td>
-<td>YOLO and <code>stop_sign_watcher</code>: twist_mux's stop-sign lock. Needs <code>pixi run -e ml</code></td>
+<td>the object detector (RF-DETR Nano; YOLO with <code>detector:=yolo</code>) and <code>stop_sign_watcher</code>: twist_mux's stop-sign lock. Needs <code>pixi run -e ml</code></td>
 </tr>
 <tr>
 <td><code>lane</code></td>
@@ -867,7 +876,7 @@ angles small depth errors become large range errors.</p>
 <tr>
 <td><code>hud</code></td>
 <td><code>false</code></td>
-<td>the HUD's web server, on 127.0.0.1:5000</td>
+<td>the HUD window (raylib)</td>
 </tr>
 <tr>
 <td><code>obstacle</code></td>
@@ -909,7 +918,7 @@ pixi run sim world:=road lane:=true nav:=false start_y:=0.3  # lane keeping alon
 </tr>
 <tr>
 <td>RViz (<code>rviz/road.rviz</code>)</td>
-<td>the map and both costmaps, the plan, the car, the radar's points (magenta) and clusters, the stop zone (red), Gazebo's truth (grey arrows), the camera's picture, and YOLO's boxes with <code>perception:=true</code></td>
+<td>the map and both costmaps, the plan, the car, the radar's points (magenta) and clusters, the stop zone (red), Gazebo's truth (grey arrows), the camera's picture, and the detector's boxes with <code>perception:=true</code></td>
 </tr>
 <tr>
 <td>rqt_graph: <code>pixi run graph</code></td>
@@ -982,7 +991,7 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 <td>all pass: start-up, the contract (0 failures), sensors, a scripted drive of 6.3-6.5 m (plan 6.5 m), the global EKF within 0.1-0.3 m of the truth</td>
 </tr>
 <tr>
-<td><code>pixi run sim-check --lidar --obstacle</code></td>
+<td><code>pixi run sim-check --obstacle</code> (the lidar on)</td>
 <td>all pass: the lidar at 10.0 Hz with 12654 hits; the car stood still 0.79 m before the box; with the box gone, Nav2 reached its goal 29.6 m on</td>
 </tr>
 <tr>
@@ -1040,7 +1049,7 @@ on this computer only. The launch log goes to <code>/tmp/aav-sim-check.log</code
 say why. So the full graph with YOLO is still a little flaky on a busy Mac.</p>
 </section>
 <section class="card"><h2 id="sensor-failures-on-purpose">Sensor failures on purpose</h2>
-<p>READ-ME-FULL-SIMULATION.md step 6 (15 Oct): make a simulated sensor fail, and check the
+<p>full-simulation.md step 6 (15 Oct): make a simulated sensor fail, and check the
 car stops, <strong>safely and loudly</strong>.</p>
 <h3 id="make-one-fail">Make one fail</h3>
 <pre class="highlight"><code class="language-bash">pixi run sim world:=road faults:=true     # faults:=true only for the camera
@@ -1180,7 +1189,7 @@ source: <code>LockTopicHandle::isLocked</code>), so 1 s of silence holds Nav2 to
 <tr>
 <td>Gazebo, <code>watchdog:=false</code></td>
 <td>none</td>
-<td>timeout 0 (<code>aav_mux</code> <code>no_sensor_lock.yaml</code>)</td>
+<td>timeout 0 (<code>aav_command_mux</code> <code>no_sensor_lock.yaml</code>)</td>
 </tr>
 <tr>
 <td>Bench</td>
@@ -1463,7 +1472,7 @@ timing jumps with the fixes' stamps, plus 5 m for their noise.</p>
 </tr>
 <tr>
 <td>The real car's faults</td>
-<td>the same checks with the car on stands (READ-ME-TESTS.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog</td>
+<td>the same checks with the car on stands (tests.md stage 3): pull the GPS's cable, the IMU's; stop the watchdog</td>
 </tr>
 </tbody>
 </table></div>
@@ -1544,7 +1553,7 @@ as <code>replay</code> (priority 40). It's open loop, so the car drifts from the
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="foxglove.html"><small>Previous</small>← Watch from a laptop</a>
-<a class="next" href="carla.html"><small>Next</small>CARLA →</a></nav>
+<a class="next" href="sim-and-car.html"><small>Next</small>Sim and the car →</a></nav>
 </main>
 <footer>Source: <code>docs/simulation.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

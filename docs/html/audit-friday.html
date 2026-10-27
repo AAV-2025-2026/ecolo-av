@@ -7,20 +7,26 @@
 <!-- Generated from docs/audit-friday.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The hardware audit, step by step (Friday 16 October)</h1>
-<div class="meta">18 min read · 11 sections</div></header>
+<div class="meta">21 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a class="here" href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -76,7 +89,10 @@
 <a href="hud.html">HUD</a></nav>
 <main>
 <nav class="toc"><span>On this page:</span><a href="#the-day-in-one-picture">The day in one picture</a><a href="#remember-the-car-speaks-humble-not-our-names">Remember: the car speaks Humble, not our names</a><a href="#what-to-bring">What to bring</a><a href="#step-1-safe-and-powered">Step 1: safe and powered</a><a href="#step-2-find-each-machine">Step 2: find each machine</a><a href="#step-3-back-up-first">Step 3: back up first</a><a href="#step-4-the-read-only-checks">Step 4: the read-only checks</a><a href="#step-5-measure-and-the-power">Step 5: measure, and the power</a><a href="#step-6-photos">Step 6: photos</a><a href="#step-7-save-the-results">Step 7: save the results</a><a href="#dont">Don&#x27;t</a></nav>
-<div class="lead"><p>The first time the 2026-27 team logs in to the car's computers. The goal: <strong>know what is
+<div class="lead"><blockquote>
+<p><strong>A snapshot from 16 October 2026.</strong> The audits ran on 16 and 21 Oct: <a href="../history/audit-2026-10-16-car.md">16 Oct</a>, <a href="../history/audit-2026-10-21-car.md">21 Oct</a>. What's true now: <a href="status.html">Status</a>.</p>
+</blockquote>
+<p>The first time the 2026-27 team logs in to the car's computers. The goal: <strong>know what is
 there, and save a copy, without changing anything.</strong> This page is steps 2 and 3 of
 <a href="work.html">Work</a> ("Backups", "Inventory the car"), and it covers the checklist at the end of
 <a href="car-photos.html">Car photos</a>.</p>
@@ -86,7 +102,7 @@ there, and save a copy, without changing anything.</strong> This page is steps 2
 the network, or drive. The "don't" list is at the end of this page.</p>
 </div>
 <p><strong>The plan for the whole day</strong> (audit, network, our stack on the car):
-<a href="../../READ-ME-FRIDAY.md">READ-ME-FRIDAY.md</a>. <strong>Every question to answer:</strong>
+<a href="../history/friday-2026-10-16.md">Friday 16 Oct</a>. <strong>Every question to answer:</strong>
 <a href="audit-questions.html">Friday's questions</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">After the backups: our stack, from a USB stick</p>
@@ -280,83 +296,184 @@ machine with its address.</p>
 <tbody>
 <tr>
 <td>JETSON</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td><code>ubuntu</code> (likely)</td>
+<td>192.168.1.140</td>
+<td>48:b0:2d:a6:56:86</td>
+<td>yes — and Foxglove bridge on :8765</td>
 </tr>
 <tr>
 <td>CAM1-PI</td>
-<td></td>
+<td><em>(not up / not found)</em></td>
 <td></td>
 <td></td>
 <td></td>
 </tr>
 <tr>
 <td>CAM2-PI</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td><code>aav-cam2</code></td>
+<td>192.168.1.118</td>
+<td>88:a2:9e:20:6c:b5</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>RTK-PI</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td><em>(candidate: .211)</em></td>
+<td>192.168.1.211</td>
+<td>d8:3a:dd:19:44:08</td>
+<td>yes</td>
 </tr>
 <tr>
 <td>DASH-UI</td>
-<td></td>
+<td><em>(not yet identified)</em></td>
 <td></td>
 <td></td>
 <td></td>
 </tr>
 <tr>
 <td>ES-PI</td>
-<td></td>
+<td><em>(not yet identified)</em></td>
 <td></td>
 <td></td>
 <td></td>
 </tr>
 <tr>
 <td>QNX-PI</td>
-<td></td>
+<td><em>(not yet identified)</em></td>
 <td></td>
 <td></td>
 <td></td>
 </tr>
 <tr>
 <td>LIDAR</td>
-<td></td>
-<td></td>
-<td></td>
-<td>no (a sensor)</td>
+<td>Velodyne VLP-16</td>
+<td>192.168.1.201</td>
+<td>60:76:88:38:66:a9</td>
+<td>no — web page on :80</td>
 </tr>
 <tr>
 <td>ROUTER</td>
-<td></td>
-<td></td>
-<td></td>
-<td>no (web page)</td>
+<td><code>cisco00956</code> (not the guessed Linksys)</td>
+<td>192.168.1.1</td>
+<td>c8:d7:19:3d:51:26</td>
+<td>no — web page on :80</td>
 </tr>
 <tr>
 <td>(not on the switch) Motor-Pi</td>
-<td></td>
+<td><em>(silent; not at .193 now)</em></td>
 <td></td>
 <td></td>
 <td></td>
 </tr>
 <tr>
 <td>(not on the switch) wheel encoder</td>
+<td><em>(silent; MAC <code>54:65:…</code> not seen)</em></td>
 <td></td>
 <td></td>
 <td></td>
-<td>no</td>
 </tr>
 </tbody>
 </table></div>
+<h3 id="what-the-scan-actually-found-16-oct-1417-from-a-mac-ping-sweep-arp-a-port-probe">What the scan actually found (16 Oct, ~14:17, from a Mac: ping sweep + <code>arp -a</code> + port probe)</h3>
+<p><code>nmap</code> wasn't installed; this is a ping sweep, the ARP table, and a probe of common ports.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>IP</th>
+<th>Hostname</th>
+<th>MAC</th>
+<th>OS (SSH banner)</th>
+<th>Open</th>
+<th>Read as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>.1</td>
+<td>cisco00956</td>
+<td>c8:d7:19:3d:51:26</td>
+<td>—</td>
+<td>80</td>
+<td><strong>Router</strong> (Cisco, not the guessed Linksys)</td>
+</tr>
+<tr>
+<td>.118</td>
+<td><strong>aav-cam2</strong></td>
+<td>88:a2:9e:20:6c:b5</td>
+<td>Debian 13 (OpenSSH 10.0p2)</td>
+<td>22</td>
+<td>Camera Pi, freshly imaged</td>
+</tr>
+<tr>
+<td>.120</td>
+<td><strong>ubuntu-cortex</strong></td>
+<td>88:a2:9e:76:0b:f0</td>
+<td>Ubuntu 22.04</td>
+<td>22</td>
+<td>Pi — the Cortex/actuator host?</td>
+</tr>
+<tr>
+<td>.132</td>
+<td>esp32-4cad8c</td>
+<td>34:98:7a:4c:ad:8c</td>
+<td>—</td>
+<td>—</td>
+<td><strong>ESP32</strong> control board</td>
+</tr>
+<tr>
+<td>.140</td>
+<td>ubuntu</td>
+<td>48:b0:2d:a6:56:86</td>
+<td>Ubuntu 22.04</td>
+<td>22, <strong>8765</strong></td>
+<td><strong>ROS box</strong> — Foxglove bridge live (likely the Jetson)</td>
+</tr>
+<tr>
+<td>.195</td>
+<td>—</td>
+<td>d8:3a:dd:2c:0d:49</td>
+<td>Ubuntu 22.04</td>
+<td>22</td>
+<td><strong>Same machine as .196</strong> (see note)</td>
+</tr>
+<tr>
+<td>.196</td>
+<td><strong>aav-desktop</strong></td>
+<td>d8:3a:dd:2c:0d:4c</td>
+<td>Ubuntu 22.04</td>
+<td>22</td>
+<td>Desktop, dual-homed</td>
+</tr>
+<tr>
+<td>.201</td>
+<td>—</td>
+<td>60:76:88:38:66:a9</td>
+<td>—</td>
+<td>80</td>
+<td><strong>Velodyne VLP-16 LiDAR</strong> (web UI)</td>
+</tr>
+<tr>
+<td>.211</td>
+<td>—</td>
+<td>d8:3a:dd:19:44:08</td>
+<td>Ubuntu 22.04</td>
+<td>22</td>
+<td>A Pi, role TBD</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">aav-desktop is dual-homed (.195 = .196)</p>
+<p><code>.195</code> and <code>.196</code> have <strong>byte-for-byte identical SSH host keys</strong> (RSA and ed25519) and
+consecutive MACs (<code>…0d:49</code> / <code>…0d:4c</code>): one physical machine with two Ethernet ports
+on the switch, not two machines. Untangle this — two interfaces on one subnet can make
+DDS bind oddly.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Not seen on the network at scan time</p>
+<p>The <strong>Motor-Pi</strong> (expected .193), the <strong>wheel-encoder Pico</strong> (MAC <code>54:65:6d:70:65:6c</code>),
+and a <strong>CAM1-PI</strong> did not answer. Either powered off, or on a separate wired segment not
+bridged to this router. Re-check with the car fully powered.</p>
+</div>
 </section>
 <section class="card"><h2 id="step-3-back-up-first">Step 3: back up first</h2>
 <p>Before any check, copy each Linux machine to the encrypted drive. Check the sizes first:</p>
@@ -424,7 +541,7 @@ passwords, and none is ever written to a file. Add an entry with
 </div>
 <div class="admonition note">
 <p class="admonition-title">Now a script: <code>pixi run survey</code></p>
-<p><a href="../../FRIDAY-TODO.md">FRIDAY-TODO.md</a> part 2: <code>tools/machine_survey.sh</code> does all of the block
+<p><a href="../history/friday-todo-2026-10-16.md">Friday 16 Oct: the to-do list</a> part 2: <code>tools/machine_survey.sh</code> does all of the block
 below and more (boot scripts, who holds each device, camera and power errors, code and
 weights found only here), on every machine in <code>~/aav-audit/hosts.txt</code>. The block below
 stays as the by-hand version.</p>
@@ -717,7 +834,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5</code></pre>
 </tr>
 </tbody>
 </table></div>
-<h3 id="the-router-linksys-ea3500">The router (Linksys EA3500)</h3>
+<h3 id="the-router-cisco-cisco00956-found-16-oct-the-old-code-guessed-a-linksys-ea3500">The router (Cisco <code>cisco00956</code>, found 16 Oct; the old code guessed a Linksys EA3500)</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -812,7 +929,7 @@ timeout 30 ros2 topic list -t --no-daemon --spin-time 5</code></pre>
 </table></div>
 </section>
 <section class="card"><h2 id="step-5-measure-and-the-power">Step 5: measure, and the power</h2>
-<p>The tape-measure list is <a href="car_measurements.html">Car numbers</a> (Q1-Q5). Also, from car-photos #7:
+<p>The tape-measure list is <a href="car_measurements.html">Car numbers</a> (Q1-Q9, Q18, Q20, Q22). Also, from car-photos #7:
 read the rating off each 12 V → 5 V converter, and note what each one feeds (the dash one
 showed 3.5 A; a Pi 5 wants 5 A).</p>
 </section>
@@ -1026,7 +1143,7 @@ For each hit, write only where the secret is and what kind it is (as
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="work.html"><small>Previous</small>← Work</a>
+<nav class="prevnext"><a class="prev" href="features.html"><small>Previous</small>← Features</a>
 <a class="next" href="audit-questions.html"><small>Next</small>Audit questions →</a></nav>
 </main>
 <footer>Source: <code>docs/audit-friday.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

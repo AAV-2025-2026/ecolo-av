@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a class="here" href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -156,7 +169,7 @@ files you'll work in, and the open questions you own. Everyone starts with
 </tr>
 <tr>
 <td>First tasks</td>
-<td>1. A team meeting: accept or change each Proposed decision, and name an owner per area (Q33). 2. Secrets (Q34) and backups of the Orin and the Pis. 3. A plan for Jazzy on the car (Q24): Pixi on today's Ubuntu 22.04 first. 4. Done 10 Oct: <code>aav</code> is on GitHub (<code>AAV-2025-2026/ecolo-av</code>, private), with CI. 5. One <code>ROS_DOMAIN_ID</code> for everyone</td>
+<td>1. A team meeting: accept or change each Proposed decision, and name an owner per area (Q33). 2. Secrets (Q34) and backups of the Orin and the Pis. 3. A plan for Jazzy on the car (Q24): Pixi on today's Ubuntu 22.04 first. 4. One <code>ROS_DOMAIN_ID</code> for everyone. (Done: <code>ecolo-av</code> is on GitHub, <code>AAV-2025-2026/ecolo-av</code>, public, with CI)</td>
 </tr>
 <tr>
 <td>Files</td>
@@ -184,7 +197,7 @@ files you'll work in, and the open questions you own. Everyone starts with
 </tr>
 <tr>
 <td>Run first</td>
-<td><code>pixi run test</code>: its Rust part is the spine logic's 47 tests</td>
+<td><code>pixi run test</code>: its Rust part includes the spine logic's 84 tests</td>
 </tr>
 <tr>
 <td>First tasks</td>
@@ -254,7 +267,7 @@ the e-stop, until the spine's watchdog exists.</p>
 </tr>
 <tr>
 <td>Run first</td>
-<td><code>pixi run turtle</code> and <code>pixi run keyboard</code>; then <code>pixi run rust-listener</code> prints what ego sends</td>
+<td><code>pixi run turtle</code> and <code>pixi run keyboard --local</code>; then <code>ros2 topic echo /ego/actuator_cmd</code> (inside <code>pixi shell</code>) prints what ego sends</td>
 </tr>
 <tr>
 <td>First tasks</td>
@@ -290,7 +303,7 @@ the e-stop, until the spine's watchdog exists.</p>
 </tr>
 <tr>
 <td>First tasks</td>
-<td>1. Identify the GPS (Q18) and pick its driver. 2. The IMU on the car (Q20); its magnetometer is in raw counts, not tesla. 3. Wheel encoder counts per turn (Q5). 4. Record a drive on the car, then tune the EKFs against it with replay. 5. The Rust IMU driver, <code>aav_imu_yahboom</code> (in progress)</td>
+<td>1. Identify the GPS (Q18) and pick its driver. 2. The IMU on the car (Q20); its magnetometer is in raw counts, not tesla. 3. Wheel encoder counts per turn (Q5). 4. Record a drive on the car, then tune the EKFs against it with replay</td>
 </tr>
 <tr>
 <td>Files</td>
@@ -358,7 +371,7 @@ the e-stop, until the spine's watchdog exists.</p>
 </tr>
 <tr>
 <td>Files</td>
-<td><code>ros/drivers/aav_teleop/</code>, <code>ros/drivers/aav_scripted/</code>, <code>ros/command_mux/aav_mux/config/twist_mux.yaml</code></td>
+<td><code>ros/drivers/aav_teleop/</code>, <code>ros/drivers/aav_scripted/</code>, <code>ros/command_mux/aav_command_mux/config/twist_mux.yaml</code></td>
 </tr>
 <tr>
 <td>Open questions</td>
@@ -386,15 +399,15 @@ the e-stop, until the spine's watchdog exists.</p>
 </tr>
 <tr>
 <td>First tasks</td>
-<td>1. Keep the Flutter app, or not (Q29). 2. If kept: port it to Jazzy's topics, through rosbridge. 3. Its map database (50 MB) needs a download step, not git</td>
+<td>1. Run the HUD and the map window: <code>pixi run hud-demo</code>, <code>pixi run map-demo</code>. 2. Try both on the car's screens (<a href="car-screens.html">The two screens</a>). (Q29 answered: the raylib HUD replaced the Flutter app, archived 25 Oct)</td>
 </tr>
 <tr>
 <td>Files</td>
-<td><code>hud/flutter_pi/</code>, <code>hud/scripts/</code>, <code>ros/hud/maincar/</code></td>
+<td><code>ros/hud/aav_hud/</code></td>
 </tr>
 <tr>
 <td>Open questions</td>
-<td>Q29, Q30</td>
+<td>Q30</td>
 </tr>
 </tbody>
 </table></div>
@@ -418,7 +431,7 @@ the e-stop, until the spine's watchdog exists.</p>
 </tr>
 <tr>
 <td>First tasks</td>
-<td>1. Gazebo's window and RViz on a Mac: confirm what they show. 2. The test lot world against the real site, once Q21 is answered. 3. Recordings from the car, for replay. 4. CARLA, when it supports Jazzy (Q31)</td>
+<td>1. Gazebo's window and RViz on a Mac: confirm what they show. 2. The test lot world against the real site, once Q21 is answered. 3. Recordings from the car, for replay. 4. CARLA on the NVIDIA computer: the adapter, <code>aav_carla</code>, is ready (<a href="carla.html">CARLA</a>, Q31)</td>
 </tr>
 <tr>
 <td>Files</td>
@@ -430,7 +443,7 @@ the e-stop, until the spine's watchdog exists.</p>
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="how-it-fits.html"><small>Previous</small>← How it fits</a>
+<nav class="prevnext"><a class="prev" href="start-up.html"><small>Previous</small>← Bottom-up</a>
 <a class="next" href="packages.html"><small>Next</small>Packages →</a></nav>
 </main>
 <footer>Source: <code>docs/team.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

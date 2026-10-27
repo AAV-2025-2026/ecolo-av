@@ -18,6 +18,11 @@ One leg is one Nav2 goal. It records, on Gazebo's clock:
 
 summary() turns that into one row: see COLUMNS for what each number means. svg() draws the
 drives on the map.
+
+The A-to-B numbers at the end (stop_error ... final_metre) are tools/atob_score.py's: how
+well the car sped up, held its speed and stopped on point B (docs/a-to-b.md, "Scoring a
+run"). They take plain series: speeds [(t, v)] in m/s, + forward; positions [(t, x, y)]
+in the map frame, m; commands [(t, v)], m/s.
 """
 
 import bisect
@@ -28,6 +33,7 @@ STILL = 0.05        # m/s: slower than this is standing still
 STOP_TIME = 1.0     # s: a stand-still at least this long, between moving, is a stop
 SWITCH = 1.5        # m: a new plan this far from the last, on average, took another route
 MOVED = 0.1         # m from where it began: the car has started
+GOAL_TOLERANCE = 1.0  # m: Nav2's xy_goal_tolerance (nav2.yaml general_goal_checker)
 
 
 def segment_distance(p, a, b):
@@ -100,6 +106,23 @@ def speeds(truth):
 def travelled(truth):
     """Return the distance (m) the car covered."""
     return sum(math.hypot(b[1] - a[1], b[2] - a[2]) for a, b in zip(truth, truth[1:]))
+
+
+def path_length(path):
+    """Return a path's length (m): [(x, y)]."""
+    return sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(path, path[1:]))
+
+
+def lingered(belief, goal, end, tolerance=GOAL_TOLERANCE):
+    """
+    Return how long (s) the car drove on after the EKF first put it within tolerance of goal.
+
+    Nav2's goal checker uses the same belief: 0 means it stopped as soon as it got there; a
+    car that circles a goal it reached shows here (TODO 17). None if it never got there.
+    """
+    gx, gy = goal[:2]
+    first = next((t for t, x, y, _ in belief if math.hypot(x - gx, y - gy) <= tolerance), None)
+    return None if first is None else max(0.0, end - first)
 
 
 def moving_after(truth, start, distance=MOVED):
@@ -219,10 +242,15 @@ def summary(leg):
     lost, turned = belief_errors(truth, leg.get('belief', []))
     switched = route_switches(leg['plans'])
     route = leg['plans'][0][1] if leg['plans'] else []
+    driven, planned = travelled(truth), path_length(route)
+    near = lingered(leg.get('belief', []), leg['goal'], leg['end'])
     row = {
         'reached': bool(leg['reached']),
         'time_s': leg['end'] - leg['start'],
-        'driven_m': travelled(truth),
+        'driven_m': driven,
+        'route_m': planned if route else math.nan,
+        'detour': driven / planned if planned > 0.0 else math.nan,
+        'lingered_s': math.nan if near is None else near,
         'asked_after_s': first_command(leg.get('asked', []), leg['start']),
         'moving_after_s': moving_after(truth, leg['start']),
         'off_path_mean_m': sum(gaps) / len(gaps) if gaps else math.nan,
@@ -255,6 +283,9 @@ COLUMNS = [
     ('reached', 'Reached the goal', lambda v: 'yes' if v else '**no**'),
     ('time_s', 'Time (s)', '{:.0f}'),
     ('driven_m', 'Driven (m)', '{:.1f}'),
+    ('route_m', 'The first route (m)', '{:.1f}'),
+    ('detour', 'Driven / the first route', '{:.2f}'),
+    ('lingered_s', 'Drove on after the EKF had it at the goal (s)', '{:.1f}'),
     ('asked_after_s', 'Controller asked to move after (s)', '{:.1f}'),
     ('moving_after_s', 'Car moving after (s)', '{:.1f}'),
     ('off_path_mean_m', 'Off the path, mean (m)', '{:.2f}'),
@@ -279,17 +310,19 @@ def cell(value, fmt):
     return fmt(value) if callable(fmt) else fmt.format(value)
 
 
-def table(rows, first=''):
+def table(rows, first='', columns=None):
     """
     Return a Markdown table: a column for each (label, summary row), a row for each number.
 
-    A number nobody has is left out.
+    columns: [(key, name, format)], COLUMNS by default. A number nobody has is left out.
     """
-    keep = [c for c in COLUMNS if any(cell(r[c[0]], c[2]) != '-' for _, r in rows)]
+    columns = COLUMNS if columns is None else columns
+    keep = [c for c in columns if any(cell(r.get(c[0]), c[2]) != '-' for _, r in rows)]
     lines = ['| ' + ' | '.join([first] + [label for label, _ in rows]) + ' |',
              '|---|' + '---:|' * len(rows)]
     for key, name, fmt in keep:
-        lines.append('| ' + ' | '.join([name] + [cell(r[key], fmt) for _, r in rows]) + ' |')
+        lines.append('| ' + ' | '.join([name] + [cell(r.get(key), fmt) for _, r in rows]) +
+                     ' |')
     return '\n'.join(lines)
 
 
@@ -340,3 +373,241 @@ def svg(bounds, tracks, blocks=(), marks=(), scale=8.0):
             f'y2="{height + 15}" stroke="black" stroke-width="3"/>',
             f'<text x="{width - 10 - bar:.1f}" y="{height + 35}">10 m</text>', '</svg>']
     return '\n'.join(out) + '\n'
+
+
+# --- A to B: how well the car sped up, held its speed and stopped on B (atob_score.py) ---
+
+SMOOTH = 0.5        # s: the moving average's width, for deceleration and jerk
+REACH = 0.9         # of the set speed: "up to speed" (the 90 % rise time)
+CREEP = 0.15        # m/s: slower than this, short of the stop, the car creeps (point_driver: 0.1)
+LAST_METRE = 1.0    # m: the final approach the creep is counted over
+
+
+def stop_error(a, b, p):
+    """
+    Return (along, across) in m: where point p is from B, measured on the line from A to B.
+
+    along   + past B, - short of B (along the direction A -> B)
+    across  + left of the line, - right of it (REP-103: y left)
+    A, B and p are (x, y) in the same frame (the map). A and B must differ.
+    """
+    length = math.hypot(b[0] - a[0], b[1] - a[1])
+    if length == 0.0:
+        raise ValueError('A and B are the same point')
+    ux, uy = (b[0] - a[0]) / length, (b[1] - a[1]) / length
+    dx, dy = p[0] - b[0], p[1] - b[1]
+    return dx * ux + dy * uy, ux * dy - uy * dx
+
+
+def overshoot_past(a, b, track):
+    """
+    Return how far (m) the car ever got past B, along the line A -> B: 0 if it never did.
+
+    track is [(t, x, y)], the map frame. The worst moment counts, not only the end: a car
+    that rolls past B and backs up still shows it.
+    """
+    return max([0.0] + [stop_error(a, b, (x, y))[0] for _, x, y in track])
+
+
+def reach_time(speeds, set_speed, start=None, fraction=REACH):
+    """
+    Return the time (s) from `start` until the speed first reached `fraction` of set_speed.
+
+    The 90 % rise time. start is when the car was asked to go (s; the first sample if None).
+    None if it never got there.
+    """
+    if not speeds or set_speed <= 0.0:
+        return None
+    start = speeds[0][0] if start is None else start
+    return next((t - start for t, v in speeds if t >= start and v >= fraction * set_speed),
+                None)
+
+
+def hold_window(speeds, set_speed, commands=(), fraction=REACH):
+    """
+    Return (t0, t1) in s: the time the car held its speed; None if it never got up to it.
+
+    t0: the speed first reached `fraction` (90 %) of set_speed. t1: the command first fell
+    below 99 % of set_speed after t0 (it started slowing for B); with no commands, the last
+    moment the speed was at 90 % of set_speed.
+    """
+    t0 = next((t for t, v in speeds if v >= fraction * set_speed), None)
+    if t0 is None or set_speed <= 0.0:
+        return None
+    t1 = next((t for t, v in commands if t > t0 and v < 0.99 * set_speed), None)
+    if t1 is None:
+        t1 = max(t for t, v in speeds if v >= fraction * set_speed)
+    return (t0, t1) if t1 > t0 else None
+
+
+def hold_error(speeds, set_speed, window):
+    """
+    Return the mean speed error (m/s) while holding: measured - set, over the window.
+
+    + faster than asked, - slower. window is hold_window()'s (t0, t1); NaN without one.
+    Each sample counts the same (the recordings are at a steady rate).
+    """
+    if window is None:
+        return math.nan
+    errors = [v - set_speed for t, v in speeds if window[0] <= t <= window[1]]
+    return sum(errors) / len(errors) if errors else math.nan
+
+
+def overshoot_percent(speeds, set_speed):
+    """Return how far (%) the top speed went over set_speed: 0 if it never did."""
+    if not speeds or set_speed <= 0.0:
+        return math.nan
+    return max(0.0, 100.0 * (max(v for _, v in speeds) - set_speed) / set_speed)
+
+
+def smooth(series, width=SMOOTH):
+    """
+    Return a moving average of [(t, value)], `width` s wide: [(mean t, mean value)].
+
+    Each output is the mean of the samples within width/2 of one sample, put at their mean
+    time, so a straight line stays exactly straight. Only full windows: the first and the
+    last width/2 s are left out (a half window would bend the ends).
+    """
+    if not series:
+        return []
+    # 1 ns of slack, so samples at i / rate don't drop out of a window by rounding.
+    first, last, half = series[0][0], series[-1][0], width / 2.0 + 1e-9
+    out, lo, hi, n = [], 0, 0, len(series)
+    for t, _ in series:
+        if t - half < first - 2e-9 or t + half > last + 2e-9:
+            continue
+        while series[lo][0] < t - half:
+            lo += 1
+        while hi < n and series[hi][0] <= t + half:
+            hi += 1
+        window = series[lo:hi]
+        out.append((sum(s[0] for s in window) / len(window),
+                    sum(s[1] for s in window) / len(window)))
+    return out
+
+
+def rates(series):
+    """Return [(mid t, d value / dt)]: the rate between each two samples, at their middle."""
+    return [((a[0] + b[0]) / 2.0, (b[1] - a[1]) / (b[0] - a[0]))
+            for a, b in zip(series, series[1:]) if b[0] > a[0]]
+
+
+def accelerations(speeds, width=SMOOTH):
+    """Return [(t, a)] in m/s^2: the speed smoothed (smooth(), `width` s), then differenced."""
+    return rates(smooth(speeds, width))
+
+
+def peak_deceleration(speeds, width=SMOOTH):
+    """
+    Return the hardest slowing (m/s^2, positive) anywhere in the run; 0 if it never slowed.
+
+    The speed is smoothed by a `width` s moving average (smooth()), then differenced: a
+    constant deceleration reads exactly; a bump shorter than `width` reads softer.
+    NaN with too few samples.
+    """
+    acc = accelerations(speeds, width)
+    return max(0.0, max(-a for _, a in acc)) if acc else math.nan
+
+
+def peak_jerk(speeds, width=SMOOTH):
+    """
+    Return the largest jerk (m/s^3, either sign) anywhere in the run.
+
+    The acceleration (accelerations(): speed smoothed by a `width` s moving average, then
+    differenced) is smoothed again by the same moving average and differenced. A constant
+    jerk reads exactly; a step of da in the acceleration reads as about da / width.
+    NaN with too few samples.
+    """
+    jerk = rates(smooth(accelerations(speeds, width), width))
+    return max(abs(j) for _, j in jerk) if jerk else math.nan
+
+
+def stopped_at(speeds, still=STILL):
+    """
+    Return when (s) the car stopped for good: the first sample of its last stand-still.
+
+    None if it never moved (no speed of `still` m/s or more) or was still moving at the end.
+    """
+    if not speeds or abs(speeds[-1][1]) >= still:
+        return None
+    moving = [i for i, (_, v) in enumerate(speeds) if abs(v) >= still]
+    return speeds[moving[-1] + 1][0] if moving else None
+
+
+def slowing_time(speeds, set_speed=None, still=STILL, fraction=REACH):
+    """
+    Return the time (s) from first slowing to stopped.
+
+    First slowing: the last moment the speed was at `fraction` (90 %) of set_speed (of the
+    top speed if None), before the stop. Stopped: stopped_at(). None if it never stopped or
+    never got to that speed.
+    """
+    end = stopped_at(speeds, still)
+    if end is None:
+        return None
+    top = set_speed if set_speed else max(v for _, v in speeds)
+    fast = [t for t, v in speeds if t <= end and v >= fraction * top]
+    return end - fast[-1] if fast else None
+
+
+def distance(speeds, t0=-math.inf, t1=math.inf):
+    """
+    Return how far (m) the car went between t0 and t1 (s): |speed| integrated.
+
+    The speed is taken as straight between samples (trapezoids; through zero, triangles).
+    """
+    total = 0.0
+    for (ta, va), (tb, vb) in zip(speeds, speeds[1:]):
+        lo, hi = max(ta, t0), min(tb, t1)
+        if hi <= lo or tb <= ta:
+            continue
+
+        def at(t, ta=ta, va=va, tb=tb, vb=vb):
+            return va + (vb - va) * (t - ta) / (tb - ta)
+        a, b = at(lo), at(hi)
+        if a * b >= 0.0:
+            total += (abs(a) + abs(b)) / 2.0 * (hi - lo)
+        else:       # through zero (a reversal): two triangles
+            total += (a * a + b * b) / (2.0 * (abs(a) + abs(b))) * (hi - lo)
+    return total
+
+
+def coast_distance(speeds, commands, still=STILL):
+    """
+    Return the distance (m) the car rolled after its speed command went to zero for good.
+
+    From the first command after which every command is under `still` m/s: the brakes'
+    and the speed loop's share of the stop. NaN with no commands, or if the commands never
+    went to zero.
+    """
+    if not commands or abs(commands[-1][1]) >= still:
+        return math.nan
+    asked = [i for i, (_, v) in enumerate(commands) if abs(v) >= still]
+    if not asked:
+        return math.nan
+    return distance(speeds, commands[asked[-1] + 1][0])
+
+
+def final_metre(speeds, still=STILL, creep=CREEP, metre=LAST_METRE):
+    """
+    Return (seconds, creep m) for the car's last `metre` (1 m) before it stopped.
+
+    seconds   how long that last metre took (long: it crept up on B)
+    creep m   how much of it the car covered slower than `creep` m/s
+    Distances come from the speed (distance()). (NaN, NaN) if it never stopped, or drove
+    less than `metre`.
+    """
+    end = stopped_at(speeds, still)
+    if end is None:
+        return math.nan, math.nan
+    run = [s for s in speeds if s[0] <= end]
+    covered, crept = 0.0, 0.0
+    for (ta, va), (tb, vb) in zip(reversed(run[:-1]), reversed(run[1:])):
+        step = (abs(va) + abs(vb)) / 2.0 * (tb - ta)
+        part = 1.0 if covered + step <= metre else (metre - covered) / step
+        if (abs(va) + abs(vb)) / 2.0 < creep:
+            crept += part * step
+        covered += part * step
+        if part < 1.0:
+            return end - (tb - part * (tb - ta)), crept
+    return math.nan, math.nan

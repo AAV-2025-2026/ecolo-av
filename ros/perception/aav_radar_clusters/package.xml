@@ -20,7 +20,7 @@
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <!-- radar_clusters.launch.py: mock:=true starts its pretend radar; radar_rviz:=true, RViz. -->
-  <exec_depend>ti_ros2_driver</exec_depend>
+  <exec_depend>aav_radar_ti</exec_depend>
   <exec_depend>rviz2</exec_depend>
 
   <export>

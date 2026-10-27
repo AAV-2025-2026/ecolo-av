@@ -25,13 +25,14 @@ keyboard = { cmd = "tools/ros.sh tools/keyboard.sh", description = "Drive from t
 actuator-test = { cmd = "tools/actuator_test.sh", description = "The actuator tests, stages 3-4: pixi run actuator-test --list; <test> --sim in Gazebo (this computer only); <test> [--stands] on the car (docs/actuator-tests.md)" }
 vehicle-model = { cmd = "python3 tools/vehicle_model.py", description = "The car's linear model (SYSC 3600 style): poles, step responses, Bode margins with the delays, the discrete loops; figures into docs/img/vehicle-model-*.png. --set throttle_lag=0.25 for the car day's numbers (docs/vehicle-model.md)" }
 state-space-demo = { cmd = "python3 tools/state_space_demo.py", description = "The state-space primer's simulator: A, B, C, D for a mass-spring-damper, the speed loop, the bicycle, a quarter-car and roll; Euler vs RK4 vs exact; poles = eigenvalues; figures into docs/img/learn-ss-*.png (docs/learn-state-space.md)" }
-goto = { cmd = "tools/goto.sh", description = "Drive to one point and stop there smoothly: pixi run goto --sim --ahead 20 (Gazebo, this computer only); --lat L --lon L or --x X --y Y; on the car without --sim, it asks first (READ-ME-A-TO-B.md)" }
+drive-to-point = { cmd = "tools/drive_to_point.sh", description = "Drive to one point and stop there smoothly: pixi run drive-to-point --sim --ahead 20 (Gazebo, this computer only); --lat L --lon L or --x X --y Y; on the car without --sim, it asks first (docs/a-to-b.md)" }
 sim = { cmd = "tools/ros.sh --local ros2 launch aav_bringup sim.launch.py", description = "Gazebo as the car (this computer only)" }
 bench = { cmd = "tools/ros.sh --local ros2 launch aav_bringup bench.launch.py", description = "The real car's software, with stand-ins for the hardware (bench mode, this computer only)" }
 bench-check = { cmd = "tools/ros.sh --local python3 tools/bench_check.py", description = "Start bench mode and test the whole car graph: contract, drive, e-stops (2 min)" }
 sim-check = { cmd = "tools/ros.sh --local python3 tools/sim_check.py", description = "Start Gazebo's road world headless and test the car's whole graph in it: contract, sensors, a drive (2 min); --perception (with -e ml), --obstacle, --lidar-obstacle, --plan-around, --ghost, --faults, --lane add more" }
 controller-compare = { cmd = "tools/ros.sh --local python3 tools/controller_compare.py", description = "Drive Regulated Pure Pursuit and MPPI over the same routes in Gazebo's test lot, headless, and compare them: time, how far off the path, steering work, the box in the lane, CPU (about 15 min; --tours, --controllers, --speed; docs/controllers.md)" }
 heading-check = { cmd = "tools/ros.sh --local python3 tools/heading_check.py", description = "TODO 13: the global EKF's heading against Gazebo's truth at walking pace, forward and reversing (empty world, headless, about 4 min a run; --runs 3, --gyro-bias 0.6 deg/s; after --, sim.launch.py arguments)" }
+atob-score = { cmd = "tools/ros.sh --local python3 tools/atob_score.py", description = "Score A-to-B runs: how well the car sped up, held its speed and stopped on B. pixi run atob-score <bag folder or CSV>... [--b-latlon LAT LON | --b-xy X Y] [--taped ALONG ACROSS] [--json]; B from the point driver's feedback if recorded; Gazebo's truth in sim, the tape on the car (docs/a-to-b.md)" }
 timing-test = { cmd = "tools/ros.sh --local python3 tools/timing_test.py", description = "Are messages on time? Gazebo's test lot headless, 5 min parked then 5 min driving Nav2's lot tour: each key topic's worst gap and late messages, topics quiet together, watchdog STALEs, CPU (AAV_RMW=fastdds to compare; --parked 60 --driving 60; docs/mac.md)" }
 stream-check = { cmd = "tools/ros.sh --local python3 tools/stream_check.py", description = "The camera stream end to end, without the car: Gazebo's camera, H.264 at the Pi's settings, a local MediaMTX, camera_stream and its detector; measures the delay, the bitrate, the CPU (this computer only; pixi run get-mediamtx first; -e ml for RF-DETR, or --detector none; decodes as the node does by default: GStreamer from the gst environment, VideoToolbox on a Mac; --decoder ffmpeg to compare; docs/camera-pipeline.md)" }
 calibrate-camera = { cmd = "tools/ros.sh --local python3 tools/calibrate_camera.py", description = "Calibrate a streamed camera with ROS's camera_calibration at the car: pixi run calibrate-camera board (the checkerboard to print), then calibrate-camera front_left [--host <camera Pi>] [--square <m>]: files config/calibrations/front_left.yaml for aav_camera_stream (docs/camera-calibration.md)" }
@@ -54,27 +55,24 @@ gz-window = { cmd = "tools/ros.sh tools/gz_window.sh", description = "Gazebo's w
 doctor = { cmd = "tools/ros.sh python3 tools/doctor.py", description = "Can this computer join the car's ROS network? Says what to fix" }
 shm-clean = { cmd = "fastdds shm clean", description = "Remove Fast DDS shared-memory files left by ROS programs that died (only with AAV_RMW=fastdds; Cyclone, the default, leaves none): nodes that hang at start-up, or a sim that never spawns the car (docs/run.md)" }
 net-map = { cmd = "bash tools/net_map.sh", description = "Map the network you're on: every machine, its maker (a guess), open ports, and the ROS domains heard. Read-only; no ROS needed" }
-survey = { cmd = "bash tools/survey_car.sh", description = "Survey every car computer in a hosts file over ssh, read-only: pixi run survey ~/aav-audit/hosts.txt (FRIDAY-TODO.md)" }
+survey = { cmd = "bash tools/survey_car.sh", description = "Survey every car computer in a hosts file over ssh, read-only: pixi run survey ~/aav-audit/hosts.txt (docs/history/friday-todo-2026-10-16.md)" }
 layout-check = { cmd = "python3 tools/layout_check.py", description = "Is every topic in our Foxglove/Lichtblick layouts (tools/foxglove/) served by a foxglove_bridge? pixi run layout-check ws://192.168.1.140:8765 (default: the sim on this computer); --data also measures what each sends" }
 car-kit = { cmd = "tools/car_kit.sh", description = "Make car-kit/, to install our Jazzy on the car's ARM computers from a USB stick, offline (docs/car-install.md; about 2 GB)" }
-car-day-check = { cmd = "python3 tools/car_day_check.py", description = "Before car day: is this laptop ready? The code, the build, the car kit, the models, the ESP32 firmware (both frame versions, the C++ way back, QEMU), the layouts, the docs PDF, Cyclone, the Keychain's logins (exist only, never read): OK / MISSING with the fix (READ-ME-CAR-DAY.md)" }
-car-day-build = { cmd = "tools/car_day_build.sh", description = "Before car day: build the ESP32 firmware (v2 and v1 frames) into car-day/esp32/, run esp-qemu-check, build the C++ way back, and the docs PDF (READ-ME-CAR-DAY.md; 3-5 min)" }
+car-day-check = { cmd = "python3 tools/car_day_check.py", description = "Before car day: is this laptop ready? The code, the build, the car kit, the models, the ESP32 firmware (both frame versions, the C++ way back, QEMU), the layouts, the docs PDF, Cyclone, the Keychain's logins (exist only, never read): OK / MISSING with the fix (docs/car-day.md)" }
+car-day-build = { cmd = "tools/car_day_build.sh", description = "Before car day: build the ESP32 firmware (v2 and v1 frames) into car-day/esp32/, run esp-qemu-check, build the C++ way back, and the docs PDF (docs/car-day.md; 3-5 min)" }
 vendor = { cmd = "python3 tools/vendor.py", description = "Download the ROS 2 and ros2-rust source into vendor/, to look things up (not ours; about 560 MB)" }
 get-models = { cmd = "tools/get_models.sh", description = "Download the stock RF-DETR Nano and YOLO models into models/ (for pixi run detect)" }
 get-mediamtx = { cmd = "tools/get_mediamtx.sh", description = "Download MediaMTX v1.21.2 (MIT, about 30 MB) into vendor/mediamtx, the camera Pi's RTSP server, for pixi run stream-check" }
-get-hud-map = { cmd = "tools/get_hud_map.sh", description = "Download the place database (51 MB, OpenStreetMap) into maps/places/ for the map window's place search, linked into hud/flutter_pi/assets/databases/ for the Flutter app" }
+get-places = { cmd = "tools/get_places.sh", description = "Download the place database (51 MB, OpenStreetMap) into maps/places/ for the map window's place search" }
 get-street-map = { cmd = "tools/get_street_map.sh", description = "Download the map window's offline street map of Ottawa (40 MB of OpenStreetMap vector tiles, from Protomaps) into maps/streets/" }
 get-carla-osm = { cmd = "tools/get_carla_osm.sh", description = "Download Carleton's OpenStreetMap data round our datum into maps/carla/, for a CARLA map of the campus: pixi run get-carla-osm [--roads] (docs/carla.md)" }
-get-flutter = { cmd = "tools/get_flutter.sh", description = "Download Flutter 3.35.7 into vendor/flutter (about 4.3 GB), for the HUD app" }
-flutter = { cmd = "../../tools/flutter.sh", cwd = "hud/flutter_pi", description = "Flutter from vendor/flutter, in hud/flutter_pi: pixi run flutter doctor" }
-hud-test = { cmd = "tools/hud_test.sh", description = "The HUD app: flutter pub get, analyze and test (needs pixi run get-flutter)" }
 # The HUD in Rust and raylib (docs/hud.md). hud-demo needs no ROS: pretend data.
-hud = { cmd = "tools/ros.sh ros2 launch aav_hud_raylib hud.launch.py", description = "The in-car screen (raylib), as the ROS node hud: pixi run hud fullscreen:=true" }
-hud-demo = { cmd = "cargo run --release -q --locked --manifest-path ros/hud/aav_hud_raylib/Cargo.toml -p hud-app --no-default-features -- --demo", description = "The in-car screen with pretend data: no ROS, no car" }
+hud = { cmd = "tools/ros.sh ros2 launch aav_hud hud.launch.py", description = "The in-car screen (raylib), as the ROS node hud: pixi run hud fullscreen:=true" }
+hud-demo = { cmd = "cargo run --release -q --locked --manifest-path ros/hud/aav_hud/Cargo.toml -p hud-app --no-default-features -- --demo", description = "The in-car screen with pretend data: no ROS, no car" }
 # The big screen's map window, the same way: map-demo needs no ROS.
-map = { cmd = "tools/ros.sh ros2 launch aav_hud_raylib map.launch.py", description = "The big screen's map window (raylib), as the ROS node map: pixi run map fullscreen:=true" }
-map-demo = { cmd = "cargo run --release -q --locked --manifest-path ros/hud/aav_hud_raylib/Cargo.toml -p map-app --no-default-features -- --demo", description = "The map window with pretend data: no ROS, no car" }
-rust-listener ={ cmd = "tools/ros.sh cargo run -q --manifest-path examples/rust-listener/Cargo.toml", description = "A Rust (rclrs) node: prints ego's commands" }
+map = { cmd = "tools/ros.sh ros2 launch aav_hud map.launch.py", description = "The big screen's map window (raylib), as the ROS node map: pixi run map fullscreen:=true" }
+map-demo = { cmd = "cargo run --release -q --locked --manifest-path ros/hud/aav_hud/Cargo.toml -p map-app --no-default-features -- --demo", description = "The map window with pretend data: no ROS, no car" }
+demo = { cmd = "tools/demo_all.sh", description = "Start the whole simulated car on this computer in one go: Gazebo in the walled test lot, the nav screen (RViz), the HUD and the street-map window (streets and search need pixi run get-street-map and get-places once); localhost-only, never touches the real car. pixi run demo [fullscreen]; Ctrl-C stops all four" }
 # The spine's board program, for a Pico 2 (docs/rust-firmware.md). spine-uf2 only makes a
 # file; spine-flash writes to a Pico 2, through a debug probe, so run it only on the bench.
 spine-uf2 = { cmd = "cargo build --release --locked && python3 ../../../../tools/elf2uf2.py target/thumbv8m.main-none-eabihf/release/spine-pico2 spine-pico2.uf2", cwd = "firmware/spine/boards/pico2", description = "Build the spine's Pico 2 program as firmware/spine/boards/pico2/spine-pico2.uf2: hold BOOTSEL, plug in, drag it on" }
@@ -136,8 +134,6 @@ rust = ">=1.98.1,<1.99"
 # The firmware's microcontroller targets: Pico 2 (RP2350) and STM32-class Cortex-M4F/M7.
 "rust-std-thumbv8m.main-none-eabihf" = ">=1.98.1,<1.99"
 rust-std-thumbv7em-none-eabihf = ">=1.98.1,<1.99"
-flask = ">=3.1.3,<4"
-flask-socketio = ">=5.7.0,<6"
 scipy = ">=1.18.1,<2"
 ros-jazzy-topic-tools = ">=1.3.4,<2"
 # Perception: camera images and detections. The radar's clustering (aav_radar_clusters,

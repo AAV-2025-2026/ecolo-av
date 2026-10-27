@@ -4,8 +4,10 @@ Power on the car → the **HUD** fills the small screen, the **map** fills the b
 Both start by themselves at login, and come back 5 s after a crash.
 
 !!! warning "Built, not yet on the car"
-    Everything below is ready in the repo (15 Oct) and [[untested]] on the car. Friday's
-    audit tells us which computer drives the screens and what it calls them.
+    Everything below is ready in the repo (15 Oct) and [[untested]] on the car. The 21 Oct
+    audit found the dash computer: `aav-desktop` (.196), a Pi 4 with Ubuntu 22.04 and
+    Humble, not Jazzy yet ([audit](history/audit-2026-10-21-car.md)). Its monitors' names
+    are still to read with `--list`.
 
 ![The dash: the small touchscreen (left) and the Innoview monitor (right)](img/car/dash-screens.jpg)
 
@@ -14,7 +16,7 @@ Both start by themselves at login, and come back 5 s after a crash.
 | Small touchscreen, left | ~7" | the instrument cluster: speed, mode, gear, e-stop button, camera, GPS | `hud` | `aav-hud.service` |
 | Innoview monitor, right | ~15" | the map: Nav2's map over Ottawa's streets, place search | `map` | `aav-map.service` |
 
-Both are in `ros/hud/aav_hud_raylib` ([HUD](hud.md)).
+Both are in `ros/hud/aav_hud` ([HUD](hud.md)).
 
 ## How it starts
 
@@ -30,7 +32,7 @@ Both are in `ros/hud/aav_hud_raylib` ([HUD](hud.md)).
 | `aav-hud.service`, `aav-map.service` | `tools/screens/` | `~/.config/systemd/user/` | systemd **user** units: start with the desktop, restart 5 s after any exit, log to the journal |
 | `aav-screens.desktop` | `tools/screens/` | `~/.config/autostart/` | for desktops that don't start `graphical-session.target`: shares `DISPLAY` with systemd, starts both |
 | `screens.env` | `tools/screens/` (template) | `~/.config/aav/screens.env` | the settings (below). Kept when you install again |
-| `car_screen.sh` | `tools/` | stays in `~/aav-jazzy/aav/tools/` | reads the settings, checks them, runs `ros2 launch aav_hud_raylib hud.launch.py fullscreen:=true monitor:=...` |
+| `car_screen.sh` | `tools/` | stays in `~/aav-jazzy/aav/tools/` | reads the settings, checks them, runs `ros2 launch aav_hud hud.launch.py fullscreen:=true monitor:=...` |
 | `car_screens_install.sh` | `tools/` | stays there | copies, enables, removes |
 
 ## The settings: `~/.config/aav/screens.env`
@@ -70,7 +72,7 @@ number  name                      size         at
 - On X11, the names are the same as `xrandr --listmonitors` shows.
 - On a **Wayland** desktop (Ubuntu 22.04's default on some Pis), our windows run through
   XWayland, and the names may read `XWAYLAND0`, `XWAYLAND1`. Use `--list` and the
-  numbers, or log in to "Ubuntu on Xorg". The audit finds out which (W10).
+  numbers, or log in to "Ubuntu on Xorg". Which one the dash Pi runs: check at the car (W10).
 - raylib draws through GLFW on X11. A computer with no desktop at all (plain KMS/DRM)
   would need raylib built for DRM, with one screen only: not planned.
 
@@ -106,7 +108,7 @@ Already installed? Just the screens: `bash ~/aav-jazzy/aav/tools/car_screens_ins
 | Are they running? | `systemctl --user status aav-hud aav-map` |
 | Stop them until the next boot | `systemctl --user stop aav-hud aav-map` |
 | Never start them | `bash ~/aav-jazzy/aav/tools/car_screens_install.sh uninstall` (keeps `screens.env`) |
-| Try one by hand | `~/aav-jazzy/aav.sh ros2 launch aav_hud_raylib map.launch.py fullscreen:=true monitor:=HDMI-1` |
+| Try one by hand | `~/aav-jazzy/aav.sh ros2 launch aav_hud map.launch.py fullscreen:=true monitor:=HDMI-1` |
 
 > **No HUD, no Nav2.** The HUD sends a [heartbeat](hud.md#the-heartbeat). On the car,
 > the sensor watchdog stops Nav2 and the AI slot while it's missing: stopping `aav-hud`
@@ -119,10 +121,11 @@ Already installed? Just the screens: `bash ~/aav-jazzy/aav/tools/car_screens_ins
 
 ## The 2025-26 way, for comparison
 
-Their UI Pi started three scripts from systemd system services (`hud/scripts/*_bootup.sh`):
-Flask, `flutter run` (a debug build) and OSRM in Docker, all from `/home/aavui/Desktop`.
-Ours: two user units, no sudo, no Docker, release builds, a restart on a crash, and the
-monitors named in one file. Theirs stay as they are until the team agrees to switch (A8).
+Their UI Pi started three scripts from systemd system services (`hud/scripts/*_bootup.sh`,
+now in `archive/2026-27-flutter-hud/`): Flask, `flutter run` (a debug build) and OSRM in
+Docker, all from `/home/aavui/Desktop`. Ours: two user units, no sudo, no Docker, release
+builds, a restart on a crash, and the monitors named in one file. Their app was archived
+on 25 Oct (Q29).
 
 ## What was tested
 
@@ -135,4 +138,4 @@ monitors named in one file. Theirs stay as they are until the team agrees to swi
 | `car_screens_install.sh --dry-run`, `car_install.sh --screens --dry-run` | [[works]] on a Mac: shows the plan, refuses (not Linux), writes nothing |
 | `shellcheck`, `bash -n` | [[works]] |
 | A window on a chosen monitor | [[untested]]: no window could open from the session that built it (plain `--demo` failed the same way) |
-| systemd starting them at login, on the car | [[untested]]: after the audit |
+| systemd starting them at login, on the car | [[untested]]: once the dash computer runs our Jazzy |

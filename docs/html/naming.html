@@ -13,14 +13,20 @@
 <a href="release-notes.html">Release notes</a>
 <a href="getting-started.html">Getting started</a>
 <a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
 <a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
 <a href="team.html">Starting points</a>
 <a href="packages.html">Packages</a>
 <a href="modules.html">Every module</a>
 <a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
 <a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
 <a href="infrastructure.html">Infrastructure</a>
@@ -32,6 +38,7 @@
 <a href="learn-gps.html">Learn: GPS</a>
 <a href="learn-localization.html">Learn: localization</a>
 <a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
 <a href="learn-can.html">Learn: CAN</a>
@@ -39,10 +46,14 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
 <a href="camera-pipeline.html">Camera pipeline</a>
 <a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
 <a href="older-code.html">Older code</a>
 <a href="ros2.html">ROS 2</a>
 <a href="languages.html">Languages</a>
@@ -50,6 +61,8 @@
 <a href="mac.html">Your Mac</a>
 <a href="foxglove.html">Watch from a laptop</a>
 <a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -82,8 +95,9 @@
 /drivers/keybaord, etc type stuff as an example."), and renamed everywhere on the branch
 <code>wt/topic-areas</code>, now on <code>main</code>. <code>tools/tests/test_topic_areas.py</code> keeps it that way.</p></div>
 <section class="card"><h2 id="the-rule">The rule</h2>
-<p>The first part of every name is the <strong>area</strong>: the layer of the picture it comes from. The
-same areas as the folders under <code>src/</code>, plus <code>/system/</code> for the whole run.</p>
+<p>The first part of every name is the <strong>area</strong>: the layer of the picture it comes from. Most
+match a folder under <code>ros/</code> (the <code>/sensors/</code> topics come from <code>ros/sources/</code>), plus
+<code>/system/</code> for the whole run.</p>
 <pre class="highlight"><code class="language-text">/&lt;area&gt;/&lt;device or node&gt;/&lt;thing&gt;</code></pre>
 <div class="table-wrap"><table>
 <thead>
@@ -122,7 +136,7 @@ same areas as the folders under <code>src/</code>, plus <code>/system/</code> fo
 <tr>
 <td><code>/drivers/</code></td>
 <td>one command per driver</td>
-<td>joystick, keyboard, scripted, Nav2, AI, replay</td>
+<td>joystick, RC, keyboard, tests, scripted, replay, go-to, Nav2, AI</td>
 </tr>
 <tr>
 <td><code>/control/</code></td>
@@ -136,8 +150,8 @@ same areas as the folders under <code>src/</code>, plus <code>/system/</code> fo
 </tr>
 <tr>
 <td><code>/safety/</code></td>
-<td>e-stop, collision monitor</td>
-<td>the HUD button, collision_monitor</td>
+<td>e-stop, collision monitor, the sensor watchdog's lock, the output mux's state, ghost obstacles</td>
+<td>the HUD button, collision_monitor, sensor_watchdog, output_mux, ghost_obstacle</td>
 </tr>
 <tr>
 <td><code>/hud/</code></td>
@@ -147,7 +161,7 @@ same areas as the folders under <code>src/</code>, plus <code>/system/</code> fo
 <tr>
 <td><code>/system/</code></td>
 <td>what kind of run this is: <code>/system/source</code> (real, sim, bench, replay); the sensor mux's check, <code>/system/sensor_mux/state</code></td>
-<td>the backends, the bench, a replay (added 15 Oct, <code>READ-ME-FULL-SIMULATION.md</code>); the sensor mux (23 Oct)</td>
+<td>the backends, the bench, a replay (added 15 Oct, <code>full-simulation.md</code>); the sensor mux (23 Oct)</td>
 </tr>
 </tbody>
 </table></div>
@@ -172,6 +186,11 @@ actions, <code>/cmd_vel_nav</code> and the costmaps' topics.</p>
 <td><code>/drivers/joy/joy</code>, <code>/drivers/joy/cmd_vel</code></td>
 </tr>
 <tr>
+<td>RC</td>
+<td><code>rc_driver</code> (<code>aav_rc</code>)</td>
+<td><code>/drivers/rc/cmd_vel</code></td>
+</tr>
+<tr>
 <td>keyboard</td>
 <td><code>tools/keyboard.sh</code> runs <code>teleop_twist_keyboard</code> in the namespace <code>/drivers/keyboard</code></td>
 <td><code>/drivers/keyboard/cmd_vel</code></td>
@@ -185,6 +204,11 @@ actions, <code>/cmd_vel_nav</code> and the costmaps' topics.</p>
 <td>scripted</td>
 <td><code>scripted_driver</code> publishes <code>drivers/scripted/cmd_vel</code></td>
 <td><code>/drivers/scripted/cmd_vel</code></td>
+</tr>
+<tr>
+<td>drive to point</td>
+<td><code>point_driver</code> (<code>aav_drive_to_point</code>)</td>
+<td><code>/drivers/point/cmd_vel</code></td>
 </tr>
 <tr>
 <td>Nav2</td>
@@ -390,10 +414,6 @@ config files name their nodes <code>/**/joy_node</code> and so on, so they match
 <tr>
 <td><code>/map</code>, <code>/plan</code>, <code>/goal_pose</code>, <code>/cmd_vel_nav</code>, the costmaps</td>
 <td>Nav2's own, for now</td>
-</tr>
-<tr>
-<td>The HUD back end's HTTP routes (<code>POST /estop</code>, <code>/camera/latest.png</code>)</td>
-<td>web addresses, not topics</td>
 </tr>
 <tr>
 <td>Bags recorded before 15 Oct</td>

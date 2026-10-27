@@ -66,8 +66,7 @@ On the car, as planned (Q22 picks the cameras; the rates are ours or the 21 Oct 
 | Local costmap | `/local_costmap/costmap` | 2 | 40 kB | 0.08 | 0.6 | Orin | only to a viewer | RViz, Foxglove | measured (200 x 200 cells) |
 | Global costmap | `/global_costmap/costmap` | 1 | 640 kB | 0.64 | 5.1 | Orin | only to a viewer | RViz, Foxglove | measured (Gazebo's road map; grows with the map) |
 | Nav2's plan | `/plan` | 1 | 4-7 kB | 0.007 | 0.06 | Orin | to the map screen | map window | measured |
-| HUD's pictures (Flutter app) | HTTP `/camera/stream` | 5 | ~1 MB PNG | 5 | 40 | hud_server | stays, if on the dash | the app | guess (`hud_server.py`) |
-| Foxglove to a laptop | WebSocket, port 8765 | | | **what you open** | | Orin | **WiFi** | Lichtblick, Foxglove | measured (Gazebo, 24 Oct): our three layouts at once, 0.17 MB/s ([Watch from a laptop](foxglove.md)) |
+| Foxglove to a laptop | WebSocket, port 8765 (8766 while the 2025-26 bridge holds 8765) | | | **what you open** | | Orin | **WiFi** | Lichtblick, Foxglove | measured (Gazebo, 24 Oct): our three layouts at once, 0.17 MB/s ([Watch from a laptop](foxglove.md)) |
 
 Without the cameras, the whole car is about **2 MB/s (16 Mbit/s)**, the lidar's packets half
 of it.
@@ -94,7 +93,7 @@ it out from the DBC, so it stays right when the contract changes:
 | The rule of thumb | keep a CAN bus under 30-50%, so low-priority frames don't wait |
 | Room left | about **800 more 8-byte frames a second** before 30% |
 | The wheel sensors | Ben, 23 Oct: an Arduino sends 0x200 and 0x201 to the Orin. Their 200 frames a second are the biggest share (5.4%), and fine. Even 500 Hz each would only reach about 30% |
-| The Orin's side | SocketCAN turns each frame into a ROS message on `/can/rx`: 260 a second, about 40 B each, 0.01 MB/s. Small, but it costs some CPU in Python (`spine_bridge`) |
+| The Orin's side | SocketCAN turns each frame into a ROS message on `/can/rx`: 260 a second with the CAN spine (200 with today's wiring: the wheels only), about 40 B each, 0.01 MB/s. Small: the Rust `spine_bridge` (the default) decodes them |
 
 ## The links, one by one
 
@@ -133,7 +132,7 @@ car). Watching over Foxglove or Lichtblick (port 8765) costs only what you open:
 | 2 | **Or plug the cameras into the Orin** | then raw pictures never touch the network. The Orin decodes JPEG in hardware (NVJPEG) |
 | 3 | **Keep the lidar's points on the Orin** | the packets (0.94 MB/s) come in once; the points (~7 MB/s) and the scan stay there |
 | 4 | **Lower rates for people** | a screen needs 5 Hz, not 15. Foxglove and Lichtblick can subscribe to a throttled copy (`topic_tools throttle`) |
-| 5 | **Give the HUD a small picture** | the raylib HUD and `hud_server` read the raw front camera. Feed them a 640x360 copy at 5 Hz (3.5 MB/s raw, ~0.15 MB/s JPEG), or teach the HUD JPEG |
+| 5 | **Give the HUD a small picture** | the raylib HUD reads the raw front camera. Feed it a 640x360 copy at 5 Hz (3.5 MB/s raw, ~0.15 MB/s JPEG), or teach the HUD JPEG |
 | 6 | **Same computer: one process** | where a camera and its reader share the Orin, run them in one process (composable nodes), so the picture is passed, not copied |
 | 7 | **Viewers subscribe to one costmap**, not every layer | each Nav2 layer is its own 40-640 kB topic. RViz or Foxglove opening all of them is 5 MB/s |
 | 8 | **Measure on the car** with `pixi run bandwidth` | every "guess" above becomes a number |

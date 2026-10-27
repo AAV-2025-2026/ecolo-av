@@ -13,7 +13,7 @@ weak answers into one good one.
 - exactly what our two EKFs read, from their config files;
 - how to look at all of it on your own computer.
 
-[Maps and position](../READ-ME-MAPS-AND-POSITION.md) has the big picture of the two EKFs
+[Maps and position](maps-and-position.md) has the big picture of the two EKFs
 and the map. This page explains **why** it works.
 
 ## 1. Odometry: counting your steps
@@ -26,7 +26,7 @@ start ──► 1.0 m/s for 2 s, turning 0.1 rad/s ──► "I'm about 2 m ahea
 
 | Our odometry source | Measures | Topic |
 |---|---|---|
-| Wheel speed (today: the Pico 2 encoder; KEFC: Hall sensors on two wheels) | forward speed | `/vehicle/odom` |
+| Wheel speed (today: the hardware lead's Arduino, on CAN 0x200/0x201) | forward speed | `/vehicle/odom` |
 | The steering angle (KEFC: the KTC-100 pot, through the Jrk) | turn rate = speed × tan(angle) ÷ wheelbase | `/vehicle/odom` |
 | The IMU's gyro | turn rate | `/sensors/imu/data` |
 
@@ -161,14 +161,14 @@ From `ros/localization/aav_localization/config/`. Both run at 30 Hz, in 2D
 | Used by | Nav2's controller and local costmap | Nav2's planner and global costmap; navsat_transform |
 | Starts at | (0, 0), sure of it | `start_x`, `start_y`, `start_yaw` from the launch file; unsure (yaw ±18°) |
 
-Three choices worth knowing:
+Four choices worth knowing:
 
 | Choice | Why |
 |---|---|
 | **vy = 0 is fused** | a car can't slide sideways. Telling the filter so keeps it honest |
 | **The IMU gives the turn rate, never the heading** | no magnetometer, so the IMU's heading is only relative. The start heading comes from `start_yaw`; once the car moves, the GPS receiver's own velocity says which way it points (below) |
 | **The heading trusts the turn rate** | yaw process noise 0.01, not the stock 0.06: the gyro and wheels give the turn rate well, so the heading follows them and GPS only nudges it. With 0.06 it wandered up to ±25° at walking pace (below) |
-| **Each backend sets its own covariance** | the spine works out the turn rate from the measured steering. Today's encoder can't, so it sends a huge covariance (1e3), and the EKF ignores that part |
+| **Each backend sets its own covariance** | the CAN spine works out the turn rate from the measured steering. Today's wheel sensors can't (no steering angle on the bus), so `spine_bridge role:=sensors` sends a huge covariance (1e3) for it, and the EKF ignores that part |
 
 With `gps:=false`, `ekf_global` doesn't run, and a fixed `map → odom` (zero) stands in.
 

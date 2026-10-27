@@ -37,8 +37,12 @@ The exact commands you ran and what happened. Say what you did NOT test.
 <!-- Tick only what you actually did. -->
 
 - [ ] `tools/test.sh` passes on my laptop
+- [ ] `pixi run test` passes on my laptop (the full run, before I pushed)
 - [ ] Tests cover the change
 - [ ] `docs/interfaces.yaml` updated, if a topic, service or message changed
 - [ ] `PROVENANCE.md` updated, if I changed inherited code
 - [ ] Docs updated, if behaviour or a command changed
+- [ ] A new or changed feature has its row in `docs/features.md`
+- [ ] A new `pixi run` task has its row in README.md's "Every command"
+- [ ] Docs changed? `pixi run docs`, and the HTML committed
 - [ ] No secrets, build output or large data files

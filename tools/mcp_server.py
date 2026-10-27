@@ -122,7 +122,10 @@ def repo_status() -> str:
     lines = [f'branch: {git("branch", "--show-current") or "?"}', '', 'last commits:',
              git('log', '-10', '--format=  %h %ad %s', '--date=format:%d %b %H:%M'),
              '', 'uncommitted:', git('status', '--short') or '  (none)']
-    counts = git('rev-list', '--left-right', '--count', 'origin/main...HEAD').split()
+    # The team's repo is `upstream` in a fork (docs/git.md), else `origin`.
+    has_upstream = git('rev-parse', '--verify', '-q', 'upstream/main')
+    team = 'upstream/main' if has_upstream else 'origin/main'
+    counts = git('rev-list', '--left-right', '--count', f'{team}...HEAD').split()
     if len(counts) == 2:
         lines += ['', f'against GitHub (as last fetched): {counts[1]} ahead, {counts[0]} behind']
     return '\n'.join(lines)

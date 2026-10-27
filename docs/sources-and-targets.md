@@ -1,6 +1,6 @@
 # Sources and targets: the sensor mux and the output mux
 
-Simulated data must never drive the real car (PLAN.md S-4, T1.5, decision D3). Two
+Simulated data must never drive the real car (plan.md S-4, T1.5, decision D3). Two
 nodes at the edges of the stack make sure: the **sensor mux** checks where the data comes
 from, and the **output mux** sends ego's commands to one target, the real car only while
 everything is real. Package `aav_io_mux`, built 23 Oct.

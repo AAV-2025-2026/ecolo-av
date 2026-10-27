@@ -4,7 +4,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
   ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot|road] [nav:=true]
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
-      [hud_web:=false] [map:=false] [foxglove:=false]
+      [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [speed_loop:=default|smooth] [sim_speed:=]
       [reversing:=true] [controller:=mppi]
@@ -34,9 +34,8 @@ bench's argument names:
   lane:=true          lane keeping: lane_finder and control_interface, on /drivers/ai/cmd_vel.
                       lane:=fake: control_interface on a pretend lane, in any world
   camera_obstacles    the detectors' boxes into Nav2's local costmap
-  hud:=true           the HUD window (aav_hud_raylib, as pixi run hud): needs a screen
-  hud_web:=true       the Flutter app's web server (aav_hud), on 127.0.0.1:5000
-  map:=true           the map window (aav_hud_raylib, as pixi run map): Nav2's map, the
+  hud:=true           the HUD window (aav_hud, as pixi run hud): needs a screen
+  map:=true           the map window (aav_hud, as pixi run map): Nav2's map, the
                       car, the plan, the distance left. Needs a screen
   foxglove:=true      foxglove_bridge on 127.0.0.1:8765, for Lichtblick or Foxglove on this
                       computer: open ws://localhost:8765 and a layout from tools/foxglove/
@@ -117,7 +116,7 @@ def launch_setup(context):
         raise ValueError(f'world:={world}: pick one of {sorted(MAPS)}')
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
-                      'hud_web', 'map', 'foxglove', 'reversing', 'watchdog', 'faults',
+                      'map', 'foxglove', 'reversing', 'watchdog', 'faults',
                       'ghost', 'plan_around', 'watch_hud')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
@@ -143,7 +142,7 @@ def launch_setup(context):
                 actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
                 faults=flag['faults'],
                 spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge')),
-        include(context, 'aav_mux', 'mux.launch.py', use_sim_time='true',
+        include(context, 'aav_command_mux', 'mux.launch.py', use_sim_time='true',
                 sensor_lock=flag['watchdog']),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
                 sim_max_speed=arg('sim_speed')),
@@ -151,7 +150,7 @@ def launch_setup(context):
         # only while every source is SIM (aav_io_mux).
         include(context, 'aav_io_mux', 'io_mux.launch.py', target='gazebo', source='sim'),
         include(context, 'aav_scripted', 'scripted.launch.py', use_sim_time='true'),
-        include(context, 'aav_goto', 'goto.launch.py', use_sim_time='true',
+        include(context, 'aav_drive_to_point', 'drive_to_point.launch.py', use_sim_time='true',
                 watchdog=arg('watchdog')),
         # Only the IMU filter: Gazebo stands in for the drivers.
         Node(package='imu_filter_madgwick', executable='imu_filter_madgwick_node',
@@ -211,11 +210,9 @@ def launch_setup(context):
     if lane == 'true':
         actions.append(include(context, 'aav_lane_finder', 'lane_finder.launch.py'))
     if flag['hud']:
-        actions.append(include(context, 'aav_hud_raylib', 'hud.launch.py'))
-    if flag['hud_web']:
-        actions.append(include(context, 'aav_hud', 'hud.launch.py', use_sim_time='true'))
+        actions.append(include(context, 'aav_hud', 'hud.launch.py'))
     if flag['map']:
-        actions.append(include(context, 'aav_hud_raylib', 'map.launch.py'))
+        actions.append(include(context, 'aav_hud', 'map.launch.py'))
     if flag['foxglove']:
         # This computer only, like the rest of the simulator (tools/ros.sh --local), and
         # the front camera's small preview where the world renders cameras, as on the car.
@@ -253,12 +250,9 @@ def generate_launch_description():
                               description="the detectors' boxes into the local costmap "
                                           '(world:=road)'),
         DeclareLaunchArgument('hud', default_value='false',
-                              description='the HUD window (aav_hud_raylib); needs a screen'),
-        DeclareLaunchArgument('hud_web', default_value='false',
-                              description="the Flutter app's web server (aav_hud), on "
-                                          '127.0.0.1:5000'),
+                              description='the HUD window (aav_hud); needs a screen'),
         DeclareLaunchArgument('map', default_value='false',
-                              description="the big screen's map window (aav_hud_raylib); "
+                              description="the big screen's map window (aav_hud); "
                                           'needs a screen'),
         DeclareLaunchArgument('foxglove', default_value='false',
                               description='foxglove_bridge on 127.0.0.1:8765 (Lichtblick)'),

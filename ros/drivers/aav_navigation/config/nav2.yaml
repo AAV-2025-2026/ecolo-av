@@ -231,7 +231,7 @@ local_costmap:
           min_obstacle_height: -0.5   # m. A radar's height is poor, and there's no ground
           max_obstacle_height: 2.0    # to reject: keep low points. Above 2 m is over the car
           obstacle_min_range: 0.3     # m: closer is the radar's own clutter
-          obstacle_max_range: 8.4     # m: the TI radar's range (ti_ros2_driver cfg/base.cfg)
+          obstacle_max_range: 8.4     # m: the TI radar's range (aav_radar_ti cfg/base.cfg)
           raytrace_min_range: 0.0
           raytrace_max_range: 8.4
           observation_persistence: 0.2   # s: both radar frames of each update, not just one
@@ -347,7 +347,7 @@ global_costmap:
       # Wider and gentler than the local costmap's, so the planner's paths keep to the
       # middle of a lane where there's room. With 2.0 m and 3.0 its path passed a corner
       # 0.86 m from base_link, and the collision monitor's stop box (1 m ahead) stopped the
-      # car there (PLAN.md M8, 22 Oct).
+      # car there (docs/plan.md M8, 22 Oct).
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 3.0     # m

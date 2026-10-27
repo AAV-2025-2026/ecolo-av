@@ -11,7 +11,8 @@ what it's good and bad at, which driver reads it, and whether Gazebo can pretend
 
 !!! warning "Nothing here has run on the car yet"
     Our drivers work in Gazebo and on the bench. On the real car, every sensor below is
-    [[untested]] until Friday's audit and after ([Car photos](car-photos.md)).
+    [[untested]]. The audits of 16 and 21 Oct found what's fitted
+    ([16 Oct](history/audit-2026-10-16-car.md), [21 Oct](history/audit-2026-10-21-car.md)).
 
 ## 1. Why so many sensors?
 
@@ -30,13 +31,13 @@ Each sensor fails in its own way. Together they cover each other's gaps
 
 | Sensor | Measures | Rate | Topic | Message | Frame | In Gazebo? |
 |---|---|---|---|---|---|---|
-| Wheel speed | forward speed | 50 Hz (sim); 10 Hz packets today | `/vehicle/odom` | `nav_msgs/Odometry` | `base_link` | **yes**, on `main` |
+| Wheel speed | forward speed | 50 Hz (sim); 100 Hz CAN frames on the car (`aav.dbc`) | `/vehicle/odom` | `nav_msgs/Odometry` | `base_link` | **yes**, on `main` |
 | Steering angle | front wheel angle | 50 Hz (in CAN feedback) | `/vehicle/status`, `/vehicle/joint_states` | `VehicleStatus`, `JointState` | the steering joints | yes (status) |
 | IMU (Yahboom) | turn rate, acceleration | 200 Hz device; 50 Hz sim | `/sensors/imu/data_raw` → `/sensors/imu/data` | `sensor_msgs/Imu` | `imu_link` | **yes**, on `main` |
 | GPS (ZED-F9R) | latitude, longitude | 1 Hz factory; 5 Hz sim | `/sensors/gps/fix` | `sensor_msgs/NavSatFix` | `gps_link` | **yes**, on `main` |
 | Radar (TI mmWave) | points and their speed | 10 Hz | `/sensors/radar/points` | `sensor_msgs/PointCloud2` | `radar_link` | **yes**, in the road world |
-| Front cameras (Pi 5) | pictures | 15 fps, 1920 × 1080 | `/sensors/camera/front_left/image_raw` | `sensor_msgs/Image` | `camera_left_link` | **yes**, in the road world (front left only) |
-| Lidar (roof) | 3D points all round | 10 Hz (sim) | `/sensors/lidar/points` (sim only) | `sensor_msgs/PointCloud2` | `lidar_link` (sim only) | a generic one, road world, `lidar:=true` |
+| Front cameras (one Pi 5) | pictures | 15 fps, 1280 × 720, H.264 | `/perception/detections` (the pictures stay in `camera_stream`; `image_raw` only with the lane part) | `vision_msgs/Detection2DArray` | `camera_left_link`, `camera_right_link` | **yes**, in the road world (front left only) |
+| Lidar (roof, VLP-16) | 3D points all round | 10 Hz | `/sensors/lidar/points` | `sensor_msgs/PointCloud2` | `lidar_link` | a generic 16-beam one, on by default |
 | Battery (Victron) | voltage, charge | 1 Hz (bench) | `/vehicle/battery` | `sensor_msgs/BatteryState` | - | no |
 
 Every frame's position on the car is in `ros/bringup/aav_description/config/vehicle.yaml`.
@@ -97,39 +98,41 @@ All about it: [Learn: GPS](learn-gps.md).
 | | |
 |---|---|
 | **Measures** | points (x, y, z) and each point's speed toward or away from the radar |
-| **Rate, range** | 10 Hz; 8.4 m (`ti_ros2_driver` `cfg/base.cfg`) |
+| **Rate, range** | 10 Hz; 8.4 m (`aav_radar_ti` `cfg/base.cfg`) |
 | **Good at** | works in the dark, rain and fog; measures speed directly |
 | **Bad at** | few points; poor height; clutter close up. Publishes best effort: subscribe best effort |
-| **Driver** | `ti_ros2_driver` (from the 2025-26 `Nav_Radar`), then `radar_clusters` (`aav_radar_clusters`, Rust) groups the points |
+| **Driver** | `aav_radar_ti` (from the 2025-26 `Nav_Radar`), then `radar_clusters` (`aav_radar_clusters`, Rust) groups the points |
 | **Used by** | the local costmap's obstacle layer, and `collision_monitor` |
 | **Gazebo** | yes, in the road world: a lidar shaped like the radar (`/gazebo/radar/points`, turned into ours by `gazebo_radar`) |
 | **Bench** | `mock_radar` draws points on the bench's boxes |
 
-## 8. Cameras: Pi 5s at the windscreen
+## 8. Cameras: one Pi 5 at the windscreen
 
 | | |
 |---|---|
 | **Measures** | colour pictures |
-| **Rate** | 15 fps at 1920 × 1080 (`cameras.launch.py`) |
+| **On the car** | two ribbon cameras on one Pi 5 (no ROS there): MediaMTX streams each as H.264, 15 fps at 1280 × 720 |
 | **Good at** | the only sensor that reads lanes, signs and lights |
-| **Bad at** | no distance by itself; glare, dark; big messages (use the compressed topic over WiFi) |
-| **Driver** | `usb_cam` (Linux only), with the 2024-25 calibration `left.ini` |
+| **Bad at** | no distance by itself; glare, dark; big messages (so the pictures stay inside the Orin) |
+| **Driver** | `aav_camera_stream` on the Orin: decodes, undistorts, runs RF-DETR inside each stream ([Camera pipeline](camera-pipeline.md)). Not calibrated yet ([how](camera-calibration.md)). `usb_cam` (`cameras.launch.py`) is only for a USB camera |
 | **Used by** | `aav_detector` (stop signs, objects), `aav_lane_finder`, the HUD |
 | **Gazebo** | yes, in the road world: 640 x 360, 10 Hz, the bench camera's lens |
 | **Bench** | `mock_camera` draws the bench road |
-| **KEFC** | adds a rear camera (Cam3) |
+| **KEFC** | adds a rear camera (Cam3). The QNX Pi's camera doesn't work today: no rear camera for now |
 
-## 9. Lidar: on the roof, unknown
+## 9. Lidar: Velodyne VLP-16 on the roof
 
 | | |
 |---|---|
 | **Measures** | 3D points all round, from laser pulses |
+| **Rate** | 10 turns a second |
 | **Good at** | exact distances, day or night |
-| **Bad at** | rain and snow; expensive; lots of data |
-| **On the car** | a 3D lidar on a printed tripod. Model unknown (Q22) |
-| **Driver** | **none yet** |
-| **Gazebo** | a generic 16-beam one, with `pixi run sim world:=road lidar:=true`. Off by default: on a Mac it made the full graph flaky ([Simulation](simulation.md#the-lidar-gazebo-only)) |
-| **Next** | find the model and IP at Friday's audit; it will be read on Orin #2 |
+| **Bad at** | rain and snow; expensive; lots of data; blind close to the car, low down ([Perception](perception.md#the-roof-lidar)) |
+| **On the car** | a VLP-16 on a printed tripod, 192.168.1.201, sending UDP to the Jetson (the 16 Oct audit) |
+| **Driver** | the stock `velodyne` package (`aav_sensors lidar:=true`), then `lidar_scan` (`aav_lidar`) for Nav2. On by default on the car. Tested against `tools/fake_vlp16.py`; [[untested]] with the real lidar |
+| **Used by** | the local costmap's lidar layer, and `collision_monitor` |
+| **Gazebo** | a generic 16-beam one, on by default (`lidar:=false` to drop it) |
+| **Bench** | `pixi run bench lidar:=true`: `mock_lidar` sends VLP-16 packets of the bench world |
 
 ## Try it
 
@@ -150,9 +153,11 @@ All about it: [Learn: GPS](learn-gps.md).
 | Starting the drivers | `ros/sources/aav_sensors/launch/sensors.launch.py`, `cameras.launch.py` |
 | Driver settings | `ros/sources/aav_sensors/config/` (`imu.yaml`, `imu_filter.yaml`, `ublox_gps.yaml`, `cameras/`) |
 | IMU driver | `ros/sources/aav_imu_yahboom` |
-| Radar driver | `ros/sources/ti_ros2_driver` |
-| Battery | `ros/sources/battery_monitor` |
-| Wheel speed | `ros/can_bridge/aav_legacy` (today), `ros/can_bridge/aav_spine` (CAN) |
+| Radar driver | `ros/sources/aav_radar_ti` |
+| Battery | `ros/sources/aav_battery_victron` |
+| Wheel speed | `ros/can_bridge/aav_spine_bridge` (Rust, the default) or `aav_spine` (Python): `spine_bridge role:=sensors`; `ros/can_bridge/aav_legacy` (the 2025-26 encoder) |
+| The front cameras | `ros/sources/aav_camera_stream` |
+| The lidar's scan for Nav2 | `ros/perception/aav_lidar` |
 | Sensor positions | `ros/bringup/aav_description/config/vehicle.yaml` |
 | Gazebo's sensors | `ros/bringup/aav_description/urdf/aav.gazebo.xacro`, `ros/sim/aav_gazebo` |
 | The bench's pretend sensors | `ros/sim/aav_bench/aav_bench/sensors.py` |

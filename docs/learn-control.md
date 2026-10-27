@@ -165,8 +165,8 @@ What those mean at 1.0 m/s:
 | `twist_mux` | 0.5 s per driver | ignores that driver; the next one takes over |
 | `ego` | 0.3 s with no `/control/cmd_vel` | slows to a stop at 2.0 m/s² |
 | `spine_bridge` | 0.1 s with no command (`/control/car/actuator_cmd`) | stops sending `DRIVE_CMD` |
-| The spine's watchdog | 200 ms with no fresh `DRIVE_CMD` (KEFC: 100 ms) | throttle off, brake on |
-| `collision_monitor` | 1.0 s with no radar | stops Nav2's commands |
+| The spine's watchdog | 100 ms with no fresh command (`DRIVE_CMD`, or a UART frame) | throttle off, brake on, latched |
+| `collision_monitor` | 1.0 s with no radar or lidar (where it reads one) | stops Nav2's commands |
 
 !!! warning "Today's car has no board timeout"
     On the 2025-26 path the ESP32 firmware never times out: if commands stop, the last
@@ -211,6 +211,6 @@ does. The spine only listens to it ([Firmware](firmware.md)).
 | State space from zero: models, simulators, poles, Bode, shocks and roll | `tools/state_space_demo.py`, `pixi run state-space-demo` ([Learn: state space](learn-state-space.md)) |
 | The loops as transfer functions and state space: poles, margins, delays | `ros/ego/aav_ego/aav_ego/vehicle_model.py`, `pixi run vehicle-model` ([The car as a linear model](vehicle-model.md)) |
 | Nav2's controller and smoother | `ros/drivers/aav_navigation/config/nav2.yaml` |
-| Driver timeouts and priorities | `ros/command_mux/aav_mux/config/twist_mux.yaml` |
+| Driver timeouts and priorities | `ros/command_mux/aav_command_mux/config/twist_mux.yaml` |
 | Wheelbase, track, steering limit | `ros/bringup/aav_description/config/vehicle.yaml` |
 | The safety layers, in one table | [How it fits](how-it-fits.md) |

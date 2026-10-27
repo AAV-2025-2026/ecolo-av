@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The proposal: what we plan to do this year, and what&#x27;s already done · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/proposal.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The proposal: what we plan to do this year, and what&#x27;s already done</h1>
+<div class="meta">17 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a class="here" href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-the-system-in-one-picture">1. The system, in one picture</a><a href="#2-whats-done-by-part">2. What&#x27;s done, by part</a><a href="#3-whats-left-and-how-sure-we-are">3. What&#x27;s left, and how sure we are</a><a href="#4-the-order">4. The order</a><a href="#4b-the-build-plan-15-oct">4b. The build plan (15 Oct)</a><a href="#5-risks">5. Risks</a><a href="#6-ideas-weve-talked-about-not-yet-in-the-plan">6. Ideas we&#x27;ve talked about (not yet in the plan)</a></nav>
+<div class="lead"><blockquote>
+<p><strong>A snapshot from 15 October 2026.</strong> What's true now: <a href="status.html">Status</a> and <a href="plan.html">The plan</a>.</p>
+</blockquote>
+<p>Written 15 October 2026, for the team (Ben: "a file called proposal that lists
+everything we have talked about that we think we can get working"). This is the <strong>draft</strong>
+for the written proposal: every part of the car, what's built, what's left, and how sure
+we are. Details live in the pages linked from each row.</p>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>The goal:</strong> the 2025-26 car drives itself from one GPS point to another, safely, with a person watching on two screens.
+- <strong>Already built and tested in simulation:</strong> the whole software stack on ROS 2 Jazzy. Sensors, position (EKFs), Nav2, ego, the safety path, perception, two screens, plain-English driving. Linux and Mac.
+- <strong>Not yet done:</strong> almost everything <strong>on the real car</strong>. Measuring it, the sensors it's missing for closed-loop control, the Jetson upgrade, and real drives.
+- <strong>Status words:</strong> ✅ done and tested · 🧪 built, tested only in simulation or on the bench · 🔧 to build, confident · 🎯 stretch goal.</p>
+</blockquote></div>
+<section class="card"><h2 id="1-the-system-in-one-picture">1. The system, in one picture</h2>
+<pre class="highlight"><code class="language-text"> SENSORS             POSITION            DECIDE                 ACT                    CAR
+ GPS, IMU,      →   EKF local    →   Nav2 (paths,     →   twist_mux → ego    →   spine (CAN) → throttle,
+ wheel speed,       EKF global       obstacles)            (one command,          steering, brake
+ cameras, radar,    navsat           drivers: keyboard,     Ackermann,            e-stop always wins
+ lidar                               joystick, plain        speed limits)
+                                     English, search box
+        └──────────── everything also runs in Gazebo (the full car) and on a bench ────────────┘
+ SCREENS: the instrument cluster (small) · the map with Ottawa streets and search (big) · Lichtblick</code></pre>
+</section>
+<section class="card"><h2 id="2-whats-done-by-part">2. What's done, by part</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What we have</th>
+<th>Status</th>
+<th>Read</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The graph</strong></td>
+<td>one contract for every topic and node (<code>docs/interfaces.yaml</code>), checked against the running system; topic names by area (<code>/sensors/</code>, <code>/vehicle/</code>, <code>/safety/</code>...)</td>
+<td>✅</td>
+<td><a href="interfaces.html">interfaces</a>, <a href="naming.html">naming</a></td>
+</tr>
+<tr>
+<td><strong>Car model</strong></td>
+<td>the car's shape, sensors and frames from one file (<code>vehicle.yaml</code>); zero point under the rear axle</td>
+<td>✅ the numbers are <strong>guesses</strong> until measured</td>
+<td><a href="measure-the-car.html">measure the car</a></td>
+</tr>
+<tr>
+<td><strong>Ackermann</strong></td>
+<td>the steering maths (speed + turn → wheel angle), with its own tests</td>
+<td>✅</td>
+<td><a href="conventions.html">conventions</a></td>
+</tr>
+<tr>
+<td><strong>ego</strong></td>
+<td>turns every driver's command into one Ackermann command, with speed caps (1 m/s on the car; faster only in sim) and one reverse speed (0.5 m/s)</td>
+<td>✅</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>twist_mux</strong></td>
+<td>picks which driver is in charge (joystick &gt; keyboard &gt; Nav2...) and stops stale ones</td>
+<td>✅</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>EKFs</strong></td>
+<td>robot_localization: local (wheels + IMU) and global (+ GPS)</td>
+<td>🧪 sim: within 0.15 m of the truth; replay: 0.03 m</td>
+<td><a href="maps-and-position.html">maps and position</a></td>
+</tr>
+<tr>
+<td><strong>Maps</strong></td>
+<td>Nav2 maps for an empty world and a test lot; GPS datum ties them to the real world</td>
+<td>🧪</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Nav2</strong></td>
+<td>paths, obstacles (radar, camera, lidar), collision monitor that stops the car; may reverse (on the car with <code>reversing:=true</code>, off by default until the wheels tell direction; only where the lidar sees behind it)</td>
+<td>🧪 sim: goals reached, stops 0.32-0.46 m before a box; with the lidar alone, 0.16-0.55 m before a post; backs up 5 m</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Sensor watchdog</strong></td>
+<td>stops Nav2 when the wheels, IMU, GPS, an EKF or the camera go quiet, NaN or frozen, the GPS jumps, or the wheels disagree with the IMU and GPS; fail-safe if the watchdog itself dies; says why on the HUD and the map window. Faults on purpose in Gazebo (<code>pixi run sim-fault</code>)</td>
+<td>🧪 sim: all 13 faults stop the car</td>
+<td><a href="simulation.html#sensor-failures-on-purpose">sensor failures</a></td>
+</tr>
+<tr>
+<td><strong>Simulation</strong></td>
+<td>Gazebo: the whole car, 3 cameras, radar, lidar, GPS, IMU, wheel speed, an actuator model, a SIMULATED banner; one command opens everything</td>
+<td>🧪</td>
+<td><a href="full-simulation.html">full simulation</a></td>
+</tr>
+<tr>
+<td><strong>Bench</strong></td>
+<td>the real CAN messages, the spine's logic and both e-stops, without the car</td>
+<td>✅ <code>bench-check</code></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Perception</strong></td>
+<td>RF-DETR Nano by default (YOLO11 with <code>detector:=yolo</code>; since 20 Oct), lane keeping, radar clustering (Rust)</td>
+<td>🧪 bench and sim</td>
+<td><a href="perception-and-hud-map.html">perception</a></td>
+</tr>
+<tr>
+<td><strong>Core ML and TensorRT</strong></td>
+<td>the same model (RF-DETR Nano since 24 Oct) exported for the Mac (Core ML) and the Jetson Orin (TensorRT, built on the Orin)</td>
+<td>🧪 Mac done; Orin after its upgrade</td>
+<td><a href="perception.html">perception</a></td>
+</tr>
+<tr>
+<td><strong>Instrument cluster (small screen)</strong></td>
+<td>raylib HUD in Rust: speed, mode, gear, e-stop button, camera, GPS, topic health; full screen on its own monitor at boot (ready to install)</td>
+<td>🧪</td>
+<td><a href="hud.html">HUD</a>, <a href="car-screens.html">two screens</a></td>
+</tr>
+<tr>
+<td><strong>Map (big screen)</strong></td>
+<td>Nav2's map over offline Ottawa streets (OpenStreetMap), the car, the path, distance and time left; <strong>search a place and send the car there</strong>; full screen at boot, like the HUD</td>
+<td>🧪</td>
+<td><a href="hud.html">HUD</a>, <a href="car-screens.html">two screens</a></td>
+</tr>
+<tr>
+<td><strong>Plain-English driving</strong></td>
+<td>a local language model (Qwen3, on the Mac with MLX) plans "drive 10 m forward"; you type yes</td>
+<td>🧪 sim: drove 10.02 m</td>
+<td><a href="plain-english.html">plain English</a></td>
+</tr>
+<tr>
+<td><strong>Rust port</strong></td>
+<td>firmware in Rust: the spine (on today's ESP32 control board too, over its UART or CAN), the wheel encoder, the status display, the CAN wheel nodes' logic; the IMU driver and radar clustering in Rust</td>
+<td>🧪 321 tests in <code>firmware/spine</code>; builds for the Pico 2 and the ESP32; never flashed</td>
+<td><a href="rust-firmware.html">Rust firmware</a></td>
+</tr>
+<tr>
+<td><strong>Linux and Mac</strong></td>
+<td>one <code>pixi.toml</code>: the same commands on Ubuntu, AlmaLinux and macOS, no admin rights; nightly Mac CI</td>
+<td>✅</td>
+<td><a href="mac.html">Mac</a></td>
+</tr>
+<tr>
+<td><strong>Watching</strong></td>
+<td>Lichtblick / Foxglove (<code>sim ... foxglove:=true</code>), RViz, recording and replaying drives</td>
+<td>✅</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Testing</strong></td>
+<td>516 tests (Python, Rust, launch files), graph checks, <code>sim-check</code>, <code>bench-check</code>, the actuator tests; GitHub CI on every push to main</td>
+<td>✅</td>
+<td><a href="tests.html">tests</a></td>
+</tr>
+<tr>
+<td><strong>Simulation stays on the laptop</strong></td>
+<td><code>pixi run sim</code>, <code>turtle</code>, <code>bench</code> never reach a real car on the same network (fixed 15 Oct: they used to)</td>
+<td>✅</td>
+<td><a href="run.html">run</a></td>
+</tr>
+<tr>
+<td><strong>The car audit</strong></td>
+<td>tools to map the car's network and survey every computer, read-only</td>
+<td>✅ ready for 16 Oct</td>
+<td><a href="../history/friday-todo-2026-10-16.md">Friday</a></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="3-whats-left-and-how-sure-we-are">3. What's left, and how sure we are</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Work</th>
+<th>Why</th>
+<th>Needs the car?</th>
+<th>How sure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>The audit</strong>: every computer, what runs, what's plugged in, what exists only there (the stop-sign model, <code>best.pt</code>)</td>
+<td>we can't plan the car without it</td>
+<td>yes</td>
+<td>🔧 16 Oct</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Measure the car</strong>: sensor positions, wheelbase, steering angles, weight (scales)</td>
+<td>the model, Nav2 and the sim all use these</td>
+<td>yes</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Back up and upgrade the Jetson Orin</strong> to a current JetPack, then ROS 2 Jazzy on every car computer</td>
+<td>one ROS version everywhere; TensorRT for YOLO</td>
+<td>yes</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>The missing sensors for closed loop</strong> (below)</td>
+<td>today the car is driven <strong>open loop</strong>: we send commands but can't see what the actuators did</td>
+<td>yes</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>The safety timeout</strong> in the actuator board: brake if commands stop</td>
+<td>today a lost cable keeps the car going</td>
+<td>yes</td>
+<td>🔧 must come first</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Actuator tests</strong>: speed up, brake, steering sweep, circles; numbers into the sim. The script is built and proven in Gazebo (15 Oct: <code>pixi run actuator-test</code>)</td>
+<td>the sim behaves like the real car; the car knows how hard it can brake</td>
+<td>yes</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>GPS-to-GPS movement</strong>: from A to B by GPS in an empty lot, with a smooth stop at B. The driver is built and proven in Gazebo (15 Oct: <code>aav_drive_to_point</code>, <code>pixi run drive-to-point</code>, a-to-b.md)</td>
+<td>the main goal</td>
+<td>yes</td>
+<td>🔧 on the car after the brake test (4.3)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>The spine in the loop</strong> in Gazebo ✅ 15 Oct: <code>pixi run sim spine:=true</code>; <code>sim-check --spine</code> passes (commands lost: full brake in 0.2 s, latched; both e-stops; disarmed: no motion). Sensor failures on purpose and the lidar into Nav2: done 15 Oct too</td>
+<td>test the safety logic without the car</td>
+<td>no</td>
+<td>✅ in Gazebo</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>The real lidar driver</strong> (likely a Velodyne) and the real cameras into perception</td>
+<td>more of the world seen</td>
+<td>yes</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Newer models</strong>: YOLO26 or RF-DETR for perception; Qwen3.5, Gemma 4 or Granite for plain English, on the Orin too</td>
+<td>better and freer models since 2024</td>
+<td>no</td>
+<td>🔧 test, then pick</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Touchscreen keyboard</strong> for the map's search</td>
+<td>type a destination in the car</td>
+<td>no</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>OSRM road routes</strong>: follow real streets, not just a lot</td>
+<td>driving beyond a parking lot</td>
+<td>yes</td>
+<td>🎯</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Flash the Rust firmware</strong> on the real boards, replacing the 2025-26 C++</td>
+<td>one language, tested logic</td>
+<td>yes</td>
+<td>🎯 board by board</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>A Gazebo copy of the real test lot</strong></td>
+<td>practise the exact drive at home</td>
+<td>no</td>
+<td>🎯</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-missing-sensors-for-closed-loop">The missing sensors for closed loop</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Actuator</th>
+<th>We command it</th>
+<th>We need to read back</th>
+<th>Plan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Steering</strong></td>
+<td>yes</td>
+<td>the real wheel angle</td>
+<td>the Jrk motor controller already reports its position (the 2024-25 firmware read it); wire it into <code>/vehicle/steering</code></td>
+</tr>
+<tr>
+<td><strong>Throttle</strong></td>
+<td>yes</td>
+<td>wheel speed: is it moving as asked?</td>
+<td>the wheel encoder exists (one wheel); check it's reliable. Or a Hall sensor on each front wheel (the KEFC plan, <strong>the hardware lead to decide</strong>): CAN v0.2.0 and <code>spine_bridge</code> already read them into <code>/vehicle/wheels</code> and <code>/vehicle/odom</code> (bench, 15 Oct)</td>
+</tr>
+<tr>
+<td><strong>Brake</strong></td>
+<td>yes</td>
+<td>brake position or pressure</td>
+<td>a position sensor on the brake actuator: to choose after the audit</td>
+</tr>
+<tr>
+<td><strong>E-stop</strong></td>
+<td>the red button</td>
+<td>its state</td>
+<td>the spine reads it; never in its path</td>
+</tr>
+</tbody>
+</table></div>
+<p>The topics for all four already exist (<code>/vehicle/steering</code>, <code>/throttle</code>, <code>/brake</code>, <code>/wheels</code>); the simulator fills them today, and the bench fills <code>/wheels</code> from the CAN wheel frames.</p>
+</section>
+<section class="card"><h2 id="4-the-order">4. The order</h2>
+<pre class="highlight"><code class="language-text"> Oct: audit · measure · safety timeout     Nov: Jetson upgrade · Jazzy on the car · actuator tests
+        │                                         │
+        ▼                                         ▼
+ Dec: closed-loop sensors · real numbers into the sim · drives on stands
+        │
+        ▼
+ Winter: empty-lot drives · GPS A to B · smooth stop      Stretch: OSRM streets · Rust firmware on the car</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Done when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Know the car</td>
+<td>the audit is written up; every measurement is in <code>vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>2. Safe to move</td>
+<td>the timeout works (test 3.9); both e-stops stop the car</td>
+</tr>
+<tr>
+<td>3. Closed loop</td>
+<td>steering, speed and brake read back, and match the commands</td>
+</tr>
+<tr>
+<td>4. Drives itself</td>
+<td>A to B by GPS in an empty lot, stopping within 1 m of B, with a safety driver</td>
+</tr>
+</tbody>
+</table></div>
+<p>The tests for each step, in order: <a href="tests.html">Every test</a>.</p>
+</section>
+<section class="card"><h2 id="4b-the-build-plan-15-oct">4b. The build plan (15 Oct)</h2>
+<p>The same plan as <a href="plan.html">The plan</a>, agreed with Ben on 15 Oct: what's left, split into software we
+can build now (S) and work that needs the car or the hardware lead (C). Hardware choices are
+the hardware lead's.</p>
+<h3 id="the-path-to-the-goal">The path to the goal</h3>
+<pre class="highlight"><code class="language-text"> now (software)          Friday           hardware lead        on the car
+ S1 A→B in Gazebo ──┐    C1 audit    ──►  C3 timeout     ──►  C8 stands → lot ──► C9 A→B 🎯
+ S2 spine in loop ──┼──► C2 measure  ──►  C4 sensors
+ S3 steering fix  ──┘                     C5 Jetson, Jazzy, C6 drivers, C7 install</code></pre>
+<h3 id="software-we-can-build-now-no-car">Software we can build now (no car)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Build</th>
+<th>Why</th>
+<th>Size</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1</td>
+<td><strong>GPS A → B with a smooth stop</strong>: speed by the distance left to B, slowing at half the measured braking g</td>
+<td>the main goal (tests.md 5.2), proven in Gazebo first</td>
+<td>1 day</td>
+<td>✅ in Gazebo 15 Oct: <code>aav_drive_to_point</code>, <code>pixi run drive-to-point</code>; every stop within 0.4 m of B, at 1 and 3 m/s (<code>sim-check --drive-to-point</code>). On the car: C9</td>
+</tr>
+<tr>
+<td>S2</td>
+<td><strong>The spine in the loop</strong> in Gazebo: ego → CAN → the spine's safety logic → the actuator model → Gazebo</td>
+<td>timeouts and e-stops tested the way the car runs them</td>
+<td>1-2 days</td>
+<td>✅ 15 Oct: <code>pixi run sim spine:=true</code>, <code>pixi run sim-check --spine</code> passes</td>
+</tr>
+<tr>
+<td>S3</td>
+<td><strong>Gazebo steering fix</strong>: full lock turns 0.43 rad, not 0.5</td>
+<td>the sim should steer like the car</td>
+<td>small</td>
+<td>✅ done 15 Oct: 0.484 rad at full lock (Gazebo's <code>steering_limit</code> from <code>vehicle.py</code>; the last 3% is tyre slip)</td>
+</tr>
+<tr>
+<td>S4</td>
+<td><strong>Ghost obstacles</strong>: a pretend person in Nav2's map while the real car drives</td>
+<td>test stopping on the car with nothing real to hit</td>
+<td>1 day</td>
+<td>✅ in Gazebo 16 Oct: <code>aav_ghost</code>, <code>pixi run ghost ahead 10</code>, <code>sim:=... ghost:=true</code>; <code>sim-check --ghost</code> stopped 0.21 m before it (<a href="ghost-obstacles.html">docs</a>). On the car: untested</td>
+</tr>
+<tr>
+<td>S5</td>
+<td><strong>Touchscreen keyboard</strong> for the map's search</td>
+<td>type a destination in the car</td>
+<td>small</td>
+<td>✅ 16 Oct: tap the search box, a 12 x 5 keyboard with é è à ç, keys 60 px or more (<a href="hud.html">docs</a>). On the car's touchscreen: untested</td>
+</tr>
+<tr>
+<td>S6</td>
+<td><strong>Newer models</strong>, on the same pictures and tasks: YOLO26 / RF-DETR vs YOLO11; Qwen3.5 / Gemma 4 / Granite vs Qwen3</td>
+<td>better or freer models</td>
+<td>medium</td>
+<td>✅ compared on the Mac 16 Oct (<a href="model-comparison.html">docs</a>): RF-DETR Nano (Apache-2.0) saw the stop sign from 20 m, YOLO11n 10 m; YOLO26 = YOLO11. Gemma 4 E4B 23/23 vs Qwen3-4B 21/23. Defaults unchanged: the team decides after an Orin run</td>
+</tr>
+<tr>
+<td>S7</td>
+<td><strong>Python → Rust</strong>: ego and the spine bridge (team-todo.md D7)</td>
+<td>needs Ben's go-ahead</td>
+<td>large</td>
+<td></td>
+</tr>
+<tr>
+<td>S8</td>
+<td><strong>OSRM street routes</strong></td>
+<td>only for driving on real streets</td>
+<td>medium</td>
+<td>✅ in Gazebo 16 Oct: Valhalla (MIT) offline, <code>aav_routes</code> street_router; a street route drove to 0.5 m of its end through Nav2 (<a href="routes.html">docs</a>). For real streets later, the lot first</td>
+</tr>
+<tr>
+<td>S9</td>
+<td><strong>CARLA (the Unreal Engine 5 version)</strong> next to Gazebo: photo-real cameras, traffic, towns</td>
+<td>Ben asked 15 Oct (reopens Q31). No Mac version: needs Linux or Windows with an NVIDIA RTX card (16 GB of video memory or more). <a href="carla.html">CARLA</a>: Town10 on 0.10 (UE5); Carleton's streets from OpenStreetMap on 0.9.16 (UE5 can't import maps yet)</td>
+<td>medium</td>
+<td><strong>research done, adapter built and tested without a server (15 Oct); never run: needs the NVIDIA machine</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="needs-the-car-or-the-hardware-lead">Needs the car, or the hardware lead</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Work</th>
+<th>Who decides</th>
+<th>Blocks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td><strong>The audit</strong> (16 Oct): every computer, <code>best.pt</code>, camera code, the screens (<a href="../history/friday-todo-2026-10-16.md">Friday 16 Oct: the to-do list</a>)</td>
+<td>team</td>
+<td>everything below</td>
+</tr>
+<tr>
+<td>C2</td>
+<td><strong>Measure and weigh</strong> the car → <code>vehicle.yaml</code> (<a href="measure-the-car.html">Measure the car</a>)</td>
+<td>team</td>
+<td>an accurate sim</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>⚠️ <strong>The safety timeout</strong>: flash the Rust ESP32 or patch today's board (team-todo.md B2)</td>
+<td><strong>hardware lead</strong></td>
+<td>any drive on the ground</td>
+</tr>
+<tr>
+<td>C4</td>
+<td><strong>Closed-loop sensors</strong>: steering angle from the Jrk, wheel speed (CAN boards or not), brake position</td>
+<td><strong>hardware lead</strong></td>
+<td>closed-loop control</td>
+</tr>
+<tr>
+<td>C5</td>
+<td><strong>Back up and upgrade the Jetson</strong>, then Jazzy on every car computer</td>
+<td>team</td>
+<td>our software on the car</td>
+</tr>
+<tr>
+<td>C6</td>
+<td><strong>Drivers for the real parts</strong>: the lidar (probably a Velodyne), the cameras from the Pis, the GPS</td>
+<td>after C1</td>
+<td>full perception</td>
+</tr>
+<tr>
+<td>C7</td>
+<td><strong>Install</strong>: the car kit, the two screens at boot (<a href="car-screens.html">docs/car-screens.md</a>)</td>
+<td>after C5</td>
+<td></td>
+</tr>
+<tr>
+<td>C8</td>
+<td><strong>Tests on stands, then in the lot</strong>: <code>pixi run actuator-test</code> (<a href="actuator-tests.html">docs/actuator-tests.md</a>)</td>
+<td>after C3</td>
+<td>real numbers</td>
+</tr>
+<tr>
+<td>C9</td>
+<td><strong>GPS A → B on the car</strong></td>
+<td>after C3-C8</td>
+<td>🎯 the goal</td>
+</tr>
+<tr>
+<td>C10</td>
+<td>A Gazebo copy of the real test lot</td>
+<td>the lot chosen</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="5-risks">5. Risks</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>What we do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The car's hardware isn't what the old repos say</td>
+<td>the audit first; nothing changes until it's written up</td>
+</tr>
+<tr>
+<td>No timeout today: a lost cable keeps the car going</td>
+<td>fixed before any drive (team-todo.md B2)</td>
+</tr>
+<tr>
+<td>Upgrading the Jetson loses the only copy of something</td>
+<td>back up the whole disk first</td>
+</tr>
+<tr>
+<td>Leaked passwords and keys in the old repos</td>
+<td>changed, never copied (Q34)</td>
+</tr>
+<tr>
+<td>Our GitHub repo is <strong>public</strong>, on purpose (Ben, 15 Oct)</td>
+<td>no secrets ever go in it: only where the old ones are (Q34)</td>
+</tr>
+<tr>
+<td>GPS isn't accurate enough near buildings</td>
+<td>an RTK fix, and the EKF with the wheels and IMU</td>
+</tr>
+<tr>
+<td>The sim lies, because its numbers are guesses</td>
+<td>measure, then test on stands before the ground</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="6-ideas-weve-talked-about-not-yet-in-the-plan">6. Ideas we've talked about (not yet in the plan)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ghost obstacles: a simulated person in Nav2 while the real car drives</td>
+<td>safe way to test stopping</td>
+</tr>
+<tr>
+<td>The car's pictures labelled for our own stop-sign model</td>
+<td>only if the stock one fails</td>
+</tr>
+<tr>
+<td>CARLA instead of Gazebo</td>
+<td>no: next to it, for the cameras (S9; Q31 reopened 15 Oct). Adapter ready, needs the NVIDIA machine</td>
+</tr>
+<tr>
+<td>An AI assistant that reads the live graph (MCP, read-only)</td>
+<td>built: <code>docs/mcp.md</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where decisions live:</strong> the design doc (Q1-Q34), <code>docs/decisions.md</code>, and <code>docs/history/</code>.</p></section>
+<nav class="prevnext"><a class="prev" href="camera-calibration.html"><small>Previous</small>← Camera calibration</a>
+<a class="next" href="team-todo.html"><small>Next</small>Team tasks →</a></nav>
+</main>
+<footer>Source: <code>docs/proposal.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

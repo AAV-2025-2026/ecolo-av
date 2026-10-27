@@ -540,6 +540,9 @@ def session(launch_args, checks, log_path, label=''):
 
 def main():
     args = sys.argv[1:]
+    if '-h' in args or '--help' in args:
+        print(__doc__)
+        return 0
     perception = '--perception' in args
     checks = [check_drive,
               lambda probe: check_estop(probe, 'software e-stop', probe.estop),
