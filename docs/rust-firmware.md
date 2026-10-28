@@ -130,7 +130,7 @@ installs Espressif's, for one user, with no admin rights. It needs `rustup`.
 
 | What | Version | Where | Size |
 |---|---|---|---|
-| `espup`, the installer | 0.18.0 | `vendor/cargo-tools/bin` (git ignores it) | 10 MB |
+| `espup`, the installer | 0.19.0 | `vendor/cargo-tools/bin` (git ignores it) | 10 MB |
 | `espflash`, the flasher | 4.3.0 (4.4+ need rustc 1.95) | `vendor/cargo-tools/bin` | 10 MB |
 | Xtensa Rust, toolchain `esp` | 1.97.0.0 | `~/.rustup/toolchains/esp` | 1.4 GB, with the next two |
 | Xtensa GCC (the linker) | 16.2.0_20260914 | `~/.rustup/toolchains/esp/xtensa-esp-elf` | |
