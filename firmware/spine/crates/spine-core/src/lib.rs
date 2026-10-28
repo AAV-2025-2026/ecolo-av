@@ -8,12 +8,17 @@
 #![no_std]
 
 pub mod encoder;
+pub mod fsm;
 pub mod limits;
 pub mod protocol;
 pub mod speed_loop;
 pub mod spine;
 pub mod watchdog;
 
+pub use fsm::{
+    Authority, Confidence, Lifecycle, Motion, Safety, State, TestRequest, TestStage,
+    STANDSTILL_SPEED, TEST_MAX_SPEED, TEST_MAX_THROTTLE,
+};
 pub use spine::{
     faults, DirectCmd, EstopSteering, Inputs, Outputs, RcGearBrake, RcInput, RcSwitch,
     SpeedFeedback, Spine, SpineConfig, ESTOP_STEERING, IDLE_BRAKE, MAX_REVERSE_SPEED,

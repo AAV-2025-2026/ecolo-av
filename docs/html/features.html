@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">20 min read · 14 sections</div></header>
+<div class="meta">21 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -643,6 +643,27 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-09</td>
 <td>sim</td>
+</tr>
+<tr>
+<td>The spine's state machine (<code>spine-core</code> <code>fsm</code>: lifecycle, safety, authority, motion, confidence)</td>
+<td>Each question the spine answers has one small, tested place, so a new safety check adds an event instead of another flag</td>
+<td>Arsh</td>
+<td>2026-10-27</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Spine self-test at boot</td>
+<td>Nothing arms until both Jrks and the DAC answer, so a missing device is never driven blind</td>
+<td>Arsh</td>
+<td>2026-10-27</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Hardware test mode (<code>spine-core</code>, VEHICLE_STATUS mode 3)</td>
+<td>Bring-up moves one actuator at a time from a laptop (proposal 6.5), and the mode can't be left on: a stale request or anything unsafe leaves it, latched</td>
+<td>Arsh</td>
+<td>2026-10-27</td>
+<td>built</td>
 </tr>
 <tr>
 <td>Spine device drivers and glue (<code>jrk-g2</code>, <code>ad5311</code>, <code>pca9555</code>, <code>ibus</code>, <code>mcp2515</code>, <code>spine-board</code>, <code>legacy-link</code>)</td>

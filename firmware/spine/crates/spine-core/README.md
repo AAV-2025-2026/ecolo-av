@@ -21,8 +21,35 @@ Who drives, highest first:
 |---|---|---|
 | 1 | nobody: throttle off, full brake | any e-stop (the hardware input or ESTOP_CMD) |
 | 2 | the RC transmitter | its mode switch is on RC direct |
-| 3 | the computer | armed, and sending fresh commands (RC via ROS counts here) |
-| 4 | nobody: the actuators idle | otherwise (manual) |
+| 3 | the hardware test mode | entered with `Exit`, then `Enter`: one actuator at a time |
+| 4 | the computer | armed, and sending fresh commands (RC via ROS counts here) |
+| 5 | nobody: the actuators idle | otherwise (manual) |
+
+## The state machine (`fsm`)
+
+Five regions, each answering one question, evaluated in this order every tick.
+`Spine::state()` gives all five.
+
+| # | Region | Question | States |
+|---|---|---|---|
+| 1 | `Lifecycle` | Is the spine ready to run? | `Boot`, `SelfTest` (until no driver that stops the car reports a fault), `Running` |
+| 2 | `Safety` | May anything move? | `Ok`, `Estop`, `Faulted`, `Latched` (the computer must disarm, then arm) |
+| 3 | `Authority` | Whose commands count? | `Idle`, `Rc`, `Drive`, `Test` (`Armed`, `Active`) |
+| 4 | `Motion` | Which way may the car move? | `StandstillHold`, `Forward`, `Reverse` (observed) |
+| 5 | `Confidence` | How far do we trust the measurements? | `Full`, `Degraded` (open loop; set by `SpeedFeedback` today) |
+
+`Authority` maps onto the wire's `Mode`: `Idle` is `Manual` (0), `Rc` is 1, `Drive` is
+`Computer` (2), `Test` is 3. Steering, throttle and brake are outputs, not states.
+
+The test mode (proposal 6.5): `Inputs::test_cmd` carries a `TestRequest`:
+`Exit`, `Enter`, `Hold`, `Steering(rad)`, `Brake(0..1)`, `Throttle(0..1)`.
+
+| Rule | |
+|---|---|
+| Enter | `Exit`, then `Enter`; only while running, with no e-stop, no fault, no RC direct, the computer not driving, and the car still |
+| In it | one actuator per request, inside the limits; the throttle forward only, at most `TEST_MAX_THROTTLE` (0.15), with the brake off; otherwise throttle 0 and the stop brake |
+| Leave | on an `Exit`, an e-stop, a fault, a lost RC, RC direct, faster than `TEST_MAX_SPEED` (0.5 m/s), or no request for 100 ms (`CMD_TIMEOUT`). Leaving always latches |
+| Not yet | how a request reaches the spine: a new CAN frame, or a bit in DRIVE_CMD, is the team's choice. Until then only tests send them |
 
 A driver fault (steering, brake, throttle or encoder) stops the car in any mode.
 
@@ -32,7 +59,7 @@ A driver fault (steering, brake, throttle or encoder) stops the car in any mode.
 |---|---|---|
 | `spine` | `Spine::new(cfg)`, `step(&inputs)` | the decisions, one call per tick |
 | | `feedback_frame(...)`, `status_frame(&outputs)` | VEHICLE_FEEDBACK (send at 50 Hz), VEHICLE_STATUS (10 Hz) |
-| | `mode()`, `speed_setpoint()` | who drives; the rate-limited speed the loop chases (m/s) |
+| | `mode()`, `state()`, `speed_setpoint()` | who drives; the five regions; the rate-limited speed the loop chases (m/s) |
 | | `Inputs`, `Outputs` | what the board read; what it writes |
 | | `SpineConfig` (and `default()`) | timeout 100 ms, 3.0 m/s, accel 1.5, decel 2.5 m/s², steering 0.6 rad/s... |
 | | `DirectCmd` | an open-loop command (throttle, brake, steering), from the UART link |
@@ -42,7 +69,9 @@ A driver fault (steering, brake, throttle or encoder) stops the car in any mode.
 | | `faults::*` | the fault bits, as `VehicleStatus.FAULT_*`; `faults::STOP` latches |
 | `protocol` | `DriveCmd`, `EstopCmd`, `VehicleFeedback`, `VehicleStatus`, `WheelSpeed` | the CAN frames of `aav.dbc`: `encode()`, `decode()` |
 | | `decode_incoming`, `decode_report`, `counter_step`, `frame_crc`, `crc8_sae_j1850` | frames by ID; the 4-bit counter; the CRC |
-| | `Mode`, `Wheel` | `Manual`, `Rc`, `Computer`; `Left`, `Right` |
+| | `Mode`, `Wheel` | `Manual`, `Rc`, `Computer`, `Test`; `Left`, `Right` |
+| `fsm` | `Lifecycle`, `Safety`, `Authority`, `TestStage`, `Motion`, `Confidence`, `State` | the five regions above |
+| | `Latch`, `TestRequest`, `TEST_MAX_THROTTLE`, `TEST_MAX_SPEED`, `STANDSTILL_SPEED` | what Safety remembers; a test mode request; its limits |
 | | `Incoming`, `Report` | what `decode_incoming` gives (`Estop`, `Drive`); what `decode_report` gives (`Feedback`, `Status`, `WheelSpeed`) |
 | | `FrameError` | `WrongLength`, `BadChecksum`, `UnknownId` |
 | | `ESTOP_CMD_ID` … `WHEEL_SPEED_R_ID` | the six IDs in the table below |

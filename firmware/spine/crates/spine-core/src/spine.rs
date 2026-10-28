@@ -1,10 +1,11 @@
 //! The spine's decisions, one call per tick (about 100 Hz).
 //!
-//! Priorities, highest first:
+//! Its states are the five regions in [`crate::fsm`]. Priorities, highest first:
 //! 1. Any e-stop (hardware input or ESTOP_CMD): throttle off, full brake.
 //! 2. The RC transmitter, while its mode switch is on RC direct.
-//! 3. The computer, while armed and sending fresh DRIVE_CMD frames.
-//! 4. Otherwise manual: actuators idle.
+//! 3. The hardware test mode, once entered: one actuator at a time.
+//! 4. The computer, while armed and sending fresh DRIVE_CMD frames.
+//! 5. Otherwise idle: actuators idle.
 //!
 //! The transmitter's mode switch ([`RcSwitch`], TODO 48) has a third position, RC via
 //! ROS: the computer drives, from the sticks the board sends up to it. The spine treats
@@ -29,6 +30,10 @@
 //! after the command stream stopped while it was driving. A glitch or a reboot never
 //! restarts the car by itself.
 
+use crate::fsm::{
+    Authority, Confidence, Latch, Lifecycle, Motion, Safety, State, TestRequest, TestStage,
+    TEST_MAX_SPEED, TEST_MAX_THROTTLE,
+};
 use crate::limits::slew;
 use crate::protocol::{counter_step, DriveCmd, EstopCmd, Mode, VehicleFeedback, VehicleStatus};
 use crate::speed_loop::{SpeedLoop, SpeedLoopConfig};
@@ -234,6 +239,9 @@ pub struct Inputs {
     pub direct_cmd: Option<DirectCmd>,
     /// A valid ESTOP_CMD received since the last tick.
     pub estop_cmd: Option<EstopCmd>,
+    /// A hardware test mode request received since the last tick. Each one also keeps
+    /// the test mode fresh: none for `cmd_timeout_ms` leaves it.
+    pub test_cmd: Option<TestRequest>,
     /// A frame for the spine failed its length or checksum since the last tick.
     pub bad_frame: bool,
     /// The hardware e-stop loop is open.
@@ -271,11 +279,16 @@ pub struct Spine {
     last_cmd: Option<Command>,
     last_counter: Option<u8>,
     sw_estop: bool,
-    latched: bool,
-    timeout_latched: bool,
-    fault_latched: bool,
-    seen_disarm: bool,
-    mode: Mode,
+    /// The five regions (`crate::fsm`); `latch` is what Safety remembers.
+    lifecycle: Lifecycle,
+    safety: Safety,
+    latch: Latch,
+    authority: Authority,
+    motion: Motion,
+    /// The test mode's own watchdog, its latest request, and the first half of its entry.
+    test_watchdog: Watchdog,
+    test_request: Option<TestRequest>,
+    seen_test_exit: bool,
     /// The mode switch when the RC was last heard: Computer at boot.
     rc_switch: RcSwitch,
     speed_setpoint: f32,
@@ -295,11 +308,14 @@ impl Spine {
             last_cmd: None,
             last_counter: None,
             sw_estop: false,
-            latched: true, // boot latched: the computer must disarm, then arm
-            timeout_latched: false,
-            fault_latched: false,
-            seen_disarm: false,
-            mode: Mode::Manual,
+            lifecycle: Lifecycle::Boot,
+            safety: Safety::Latched,
+            latch: Latch::default(), // boot latched: the computer must disarm, then arm
+            authority: Authority::Idle,
+            motion: Motion::StandstillHold,
+            test_watchdog: Watchdog::new(cfg.cmd_timeout_ms),
+            test_request: None,
+            seen_test_exit: false,
             rc_switch: RcSwitch::Computer,
             speed_setpoint: 0.0,
             steering_setpoint: 0.0,
@@ -310,7 +326,28 @@ impl Spine {
         }
     }
 
+    /// One tick: decide, then note which way the car moves (the Motion region).
     pub fn step(&mut self, i: &Inputs) -> Outputs {
+        let out = self.decide(i);
+        self.motion = Motion::observe(i.measured_speed, out.throttle, out.reverse);
+        out
+    }
+
+    /// All five regions, as the latest tick left them.
+    pub fn state(&self) -> State {
+        State {
+            lifecycle: self.lifecycle,
+            safety: self.safety,
+            authority: self.authority,
+            motion: self.motion,
+            confidence: match self.cfg.speed_feedback {
+                SpeedFeedback::Wheel => Confidence::Full,
+                SpeedFeedback::None { .. } => Confidence::Degraded,
+            },
+        }
+    }
+
+    fn decide(&mut self, i: &Inputs) -> Outputs {
         let c = self.cfg;
         let dt = match self.last_ms {
             Some(t) => (i.now_ms.wrapping_sub(t) as f32 / 1000.0).min(0.1),
@@ -333,7 +370,7 @@ impl Spine {
                 self.watchdog.feed(i.now_ms);
                 self.last_cmd = Some(Command::Speed(cmd));
                 if !cmd.armed {
-                    self.seen_disarm = true;
+                    self.latch.seen_disarm = true;
                 }
             }
             self.last_counter = Some(cmd.counter);
@@ -343,17 +380,25 @@ impl Spine {
             self.watchdog.feed(i.now_ms);
             self.last_cmd = Some(Command::Direct(cmd));
             if cmd.stop {
-                self.seen_disarm = true;
+                self.latch.seen_disarm = true;
+            }
+        }
+        // The test mode's requests: each one keeps it fresh.
+        if let Some(req) = i.test_cmd {
+            self.test_watchdog.feed(i.now_ms);
+            self.test_request = Some(req);
+            if req == TestRequest::Exit {
+                self.seen_test_exit = true;
             }
         }
         let fresh = !self.watchdog.expired(i.now_ms);
         let armed_request = fresh && self.last_cmd.is_some_and(|cmd| cmd.armed());
+        let test_fresh = self.test_request.is_some() && !self.test_watchdog.expired(i.now_ms);
 
-        // Latches.
+        // [2] Safety: the latches.
         let estop = i.hw_estop || self.sw_estop;
         if estop {
-            self.latched = true;
-            self.seen_disarm = false;
+            self.latch.trip();
         }
         // The RC: lost while its switch was on an RC position (direct or via ROS).
         if let Some(rc) = i.rc {
@@ -361,38 +406,69 @@ impl Spine {
         }
         let rc_lost = i.rc.is_none() && self.rc_switch != RcSwitch::Computer;
         if rc_lost && self.rc_switch == RcSwitch::ViaRos {
-            self.latched = true;
-            self.seen_disarm = false;
+            self.latch.trip();
         }
         let driver_fault = i.driver_faults & faults::STOP != 0;
         if driver_fault {
-            self.latched = true;
-            self.fault_latched = true;
-            self.seen_disarm = false;
+            self.latch.trip_fault();
         }
-        if self.mode == Mode::Computer && !fresh && !estop {
-            self.latched = true;
-            self.timeout_latched = true;
-            self.seen_disarm = false;
-        }
-        if self.latched && !estop && !driver_fault && self.seen_disarm && armed_request {
-            self.latched = false;
-            self.timeout_latched = false;
-            self.fault_latched = false;
+        if self.authority == Authority::Drive && !fresh && !estop {
+            self.latch.trip_timeout();
         }
 
-        // Mode.
+        // [1] Lifecycle: nothing is armed until the self-test passes.
+        self.lifecycle = self.lifecycle.next(!driver_fault);
+        let running = self.lifecycle.is_running();
+        self.latch
+            .try_release(estop, driver_fault, armed_request && running);
+
+        // [3] The test mode. Leave it on anything unsafe, a stale request, or an Exit;
+        // leaving always latches, so the computer must re-arm before it drives.
         let rc_direct = self.rc_switch == RcSwitch::Direct;
-        self.mode = if rc_direct {
-            Mode::Rc
-        } else if armed_request && !self.latched {
-            Mode::Computer
+        let mut in_test = self.authority.in_test();
+        if in_test {
+            let asked_out = self.test_request == Some(TestRequest::Exit);
+            let unsafe_now = estop
+                || driver_fault
+                || rc_lost
+                || rc_direct
+                || i.measured_speed.abs() > TEST_MAX_SPEED;
+            if !test_fresh && !unsafe_now {
+                self.latch.trip_timeout();
+                in_test = false;
+            } else if unsafe_now || asked_out {
+                self.latch.trip();
+                in_test = false;
+            }
+        } else if i.test_cmd == Some(TestRequest::Enter)
+            && self.seen_test_exit
+            && running
+            && !estop
+            && !driver_fault
+            && !rc_lost
+            && !rc_direct
+            && self.authority != Authority::Drive
+            && i.measured_speed.abs() < crate::fsm::STANDSTILL_SPEED
+        {
+            // Exit, then Enter, while nothing stops the car and nobody drives it.
+            in_test = true;
+            self.seen_test_exit = false;
+        }
+
+        // [3] Authority.
+        self.authority = if rc_direct {
+            Authority::Rc
+        } else if in_test {
+            Authority::Test(self.test_request.map_or(TestStage::Armed, |r| r.stage()))
+        } else if armed_request && !self.latch.latched {
+            Authority::Drive
         } else {
-            Mode::Manual
+            Authority::Idle
         };
+        self.safety = Safety::of(estop, driver_fault, &self.latch);
 
         let mut fault_bits = i.driver_faults | self.frame_faults;
-        if self.timeout_latched {
+        if self.latch.timeout {
             fault_bits |= faults::CMD_TIMEOUT;
         }
         if rc_lost {
@@ -415,17 +491,17 @@ impl Spine {
 
         let stop = estop || driver_fault || rc_lost || over > c.overspeed_margin;
         let out = |throttle, brake, reverse, steering, s: &Self| Outputs {
-            mode: s.mode,
+            mode: s.authority.mode(),
             throttle,
             brake,
             reverse,
             steering_target: steering,
-            armed: armed_request && !s.latched,
-            estop_active: estop || s.timeout_latched || s.fault_latched,
+            armed: armed_request && !s.latch.latched,
+            estop_active: estop || s.latch.timeout || s.latch.fault,
             faults: fault_bits,
         };
 
-        if stop || (self.mode == Mode::Manual && (self.timeout_latched || self.fault_latched)) {
+        if stop || (self.authority == Authority::Idle && (self.latch.timeout || self.latch.fault)) {
             self.speed_setpoint = 0.0;
             self.speed_loop.reset();
             if c.estop_steering == EstopSteering::Centre {
@@ -436,13 +512,14 @@ impl Spine {
 
         // Targets for this mode, inside the firmware's own limits.
         let mut full_brake = false;
-        let (target_speed, target_steering, accel, steer_rate) = match self.mode {
-            Mode::Manual => {
+        let (target_speed, target_steering, accel, steer_rate) = match self.authority {
+            Authority::Test(_) => return self.test(dt, &out),
+            Authority::Idle => {
                 self.speed_setpoint = 0.0;
                 self.speed_loop.reset();
                 return out(0.0, c.idle_brake, false, self.steering_setpoint, self);
             }
-            Mode::Rc => {
+            Authority::Rc => {
                 let rc = i.rc.unwrap_or(RcInput {
                     switch: RcSwitch::Direct,
                     throttle: 0.0,
@@ -462,7 +539,7 @@ impl Spine {
                     c.max_steer_rate,
                 )
             }
-            Mode::Computer => {
+            Authority::Drive => {
                 let cmd = match self.last_cmd {
                     Some(Command::Speed(cmd)) => cmd,
                     Some(Command::Direct(cmd)) => {
@@ -566,6 +643,31 @@ impl Spine {
         out(throttle, brake, cmd.reverse, self.steering_setpoint, self)
     }
 
+    /// The hardware test mode: the latest request moves one actuator, inside the limits.
+    /// Otherwise the car holds still: throttle 0, the stop brake, the steering where it is.
+    /// The throttle is forward only, capped at [`TEST_MAX_THROTTLE`], with the brake off.
+    fn test(&mut self, dt: f32, out: &impl Fn(f32, f32, bool, f32, &Self) -> Outputs) -> Outputs {
+        let c = self.cfg;
+        self.speed_setpoint = 0.0;
+        self.speed_loop.reset();
+        let mut throttle = 0.0;
+        let mut brake = c.stop_brake;
+        let mut steering = self.steering_setpoint;
+        match self.test_request {
+            Some(TestRequest::Steering(a)) if !a.is_nan() => {
+                steering = a.clamp(-c.max_steering_angle, c.max_steering_angle);
+            }
+            Some(TestRequest::Brake(b)) if !b.is_nan() => brake = b.clamp(0.0, 1.0),
+            Some(TestRequest::Throttle(t)) if !t.is_nan() && t > 0.0 => {
+                throttle = t.min(TEST_MAX_THROTTLE);
+                brake = 0.0;
+            }
+            _ => {}
+        }
+        self.steering_setpoint = slew(self.steering_setpoint, steering, c.max_steer_rate, dt);
+        out(throttle, brake, false, self.steering_setpoint, self)
+    }
+
     /// The most throttle an open-loop command may have in reverse (0..1).
     fn reverse_throttle_cap(&self, measured_speed: f32) -> f32 {
         let c = self.cfg;
@@ -618,7 +720,7 @@ impl Spine {
     }
 
     pub fn mode(&self) -> Mode {
-        self.mode
+        self.authority.mode()
     }
 
     /// The rate-limited speed the speed loop is chasing (m/s).
@@ -1323,5 +1425,244 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(out.faults & faults::OVERSPEED, 0);
+    }
+
+    // The state machine (`crate::fsm`): the self-test, the test mode, the reported state.
+
+    impl Car {
+        /// One test request a tick, for `ticks` ticks.
+        fn test(&mut self, req: TestRequest, ticks: u32) -> Outputs {
+            let mut last = None;
+            for _ in 0..ticks {
+                last = Some(self.tick(Inputs {
+                    test_cmd: Some(req),
+                    ..Default::default()
+                }));
+            }
+            last.unwrap()
+        }
+
+        /// Exit, then Enter: into the test mode.
+        fn enter_test(&mut self) -> Outputs {
+            self.test(TestRequest::Exit, 2);
+            self.test(TestRequest::Enter, 1)
+        }
+
+        fn state(&self) -> State {
+            self.spine.state()
+        }
+    }
+
+    #[test]
+    fn the_regions_after_boot() {
+        let mut car = Car::new();
+        assert_eq!(car.state().lifecycle, Lifecycle::Boot);
+        car.tick(Inputs::default());
+        let s = car.state();
+        assert_eq!(s.lifecycle, Lifecycle::SelfTest);
+        assert_eq!(s.safety, Safety::Latched);
+        assert_eq!(s.authority, Authority::Idle);
+        assert_eq!(s.motion, Motion::StandstillHold);
+        assert_eq!(s.confidence, Confidence::Full);
+        car.tick(Inputs::default());
+        assert_eq!(car.state().lifecycle, Lifecycle::Running);
+    }
+
+    #[test]
+    fn the_self_test_waits_for_the_devices_and_nothing_arms_before_it() {
+        let mut car = Car::new();
+        let missing = Inputs {
+            driver_faults: faults::STEERING_DRIVER | faults::BRAKE_DRIVER,
+            ..Default::default()
+        };
+        for _ in 0..5 {
+            car.tick(missing);
+        }
+        assert_eq!(car.state().lifecycle, Lifecycle::SelfTest);
+        assert_eq!(car.state().safety, Safety::Faulted);
+        // The devices answer: the self-test passes, then the computer can arm.
+        car.arm();
+        assert_eq!(car.state().lifecycle, Lifecycle::Running);
+        let out = car.drive(1.0, 0.0, true, 5);
+        assert_eq!(out.mode, Mode::Computer);
+        assert_eq!(car.state().safety, Safety::Ok);
+    }
+
+    #[test]
+    fn open_loop_is_reported_as_degraded() {
+        let mut car = Car::with_config(open_loop_config());
+        car.tick(Inputs::default());
+        assert_eq!(car.state().confidence, Confidence::Degraded);
+    }
+
+    #[test]
+    fn motion_follows_the_drive() {
+        let mut car = Car::new();
+        car.arm();
+        car.drive(1.0, 0.0, true, 50);
+        assert_eq!(car.state().motion, Motion::Forward);
+    }
+
+    #[test]
+    fn the_test_mode_needs_exit_then_enter_and_holds_still() {
+        let mut car = Car::new();
+        // Enter alone does nothing.
+        let out = car.test(TestRequest::Enter, 3);
+        assert_eq!(out.mode, Mode::Manual);
+        let out = car.enter_test();
+        assert_eq!(out.mode, Mode::Test);
+        assert_eq!(car.state().authority, Authority::Test(TestStage::Armed));
+        assert_eq!(out.throttle, 0.0);
+        assert_eq!(out.brake, SpineConfig::default().stop_brake);
+        assert!(!out.armed);
+    }
+
+    #[test]
+    fn the_test_mode_moves_one_actuator_at_a_time() {
+        let mut car = Car::new();
+        car.enter_test();
+
+        // Steering: rate limited toward the target, the brake stays on.
+        let out = car.test(TestRequest::Steering(0.3), 100);
+        assert_eq!(car.state().authority, Authority::Test(TestStage::Active));
+        assert!(
+            (out.steering_target - 0.3).abs() < 1e-4,
+            "{}",
+            out.steering_target
+        );
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        // Past the limit: clamped.
+        let out = car.test(TestRequest::Steering(2.0), 100);
+        assert!((out.steering_target - MAX_STEERING_ANGLE).abs() < 1e-4);
+
+        // Brake: to the position asked for, no throttle.
+        let out = car.test(TestRequest::Brake(0.4), 1);
+        assert_eq!((out.throttle, out.brake), (0.0, 0.4));
+
+        // Throttle: capped, forward, brake off.
+        let out = car.test(TestRequest::Throttle(0.9), 1);
+        assert_eq!(out.throttle, TEST_MAX_THROTTLE);
+        assert_eq!(out.brake, 0.0);
+        assert!(!out.reverse);
+
+        // Hold: back to Armed, holding still, the steering where it is.
+        let out = car.test(TestRequest::Hold, 1);
+        assert_eq!(car.state().authority, Authority::Test(TestStage::Armed));
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        assert!((out.steering_target - MAX_STEERING_ANGLE).abs() < 1e-4);
+    }
+
+    #[test]
+    fn a_stale_test_request_leaves_the_test_mode_and_latches() {
+        let mut car = Car::new();
+        car.enter_test();
+        car.test(TestRequest::Throttle(0.1), 5);
+        // 100 ms with no request: out, braked, latched with a command timeout.
+        let mut out = car.tick(Inputs::default());
+        for _ in 0..11 {
+            out = car.tick(Inputs::default());
+        }
+        assert_eq!(out.mode, Mode::Manual);
+        assert_eq!(out.throttle, 0.0);
+        assert_eq!(out.brake, SpineConfig::default().stop_brake);
+        assert_ne!(out.faults & faults::CMD_TIMEOUT, 0);
+        assert_eq!(car.state().safety, Safety::Latched);
+        // The computer must disarm, then arm, as after any timeout.
+        assert_eq!(car.drive(1.0, 0.0, true, 3).mode, Mode::Manual);
+        car.arm();
+        assert_eq!(car.drive(1.0, 0.0, true, 3).mode, Mode::Computer);
+    }
+
+    #[test]
+    fn the_test_mode_leaves_on_an_estop_a_fault_rc_or_speed() {
+        let unsafe_inputs = [
+            Inputs {
+                hw_estop: true,
+                ..Default::default()
+            },
+            Inputs {
+                driver_faults: faults::BRAKE_DRIVER,
+                ..Default::default()
+            },
+            Inputs {
+                measured_speed: TEST_MAX_SPEED + 0.1,
+                ..Default::default()
+            },
+        ];
+        for bad in unsafe_inputs {
+            let mut car = Car::new();
+            car.enter_test();
+            car.test(TestRequest::Throttle(0.1), 3);
+            let out = car.tick(Inputs {
+                test_cmd: Some(TestRequest::Throttle(0.1)),
+                ..bad
+            });
+            assert_ne!(out.mode, Mode::Test, "{bad:?}");
+            assert_eq!(out.throttle, 0.0, "{bad:?}");
+            assert!(car.spine.latch.latched, "{bad:?}");
+        }
+
+        // RC direct: the person on the transmitter takes over at once, and the computer
+        // stays latched for later.
+        let mut car = Car::new();
+        car.enter_test();
+        let out = car.tick(Inputs {
+            test_cmd: Some(TestRequest::Throttle(0.1)),
+            rc: Some(sticks(RcSwitch::Direct)),
+            ..Default::default()
+        });
+        assert_eq!(out.mode, Mode::Rc);
+        assert!(car.spine.latch.latched);
+    }
+
+    #[test]
+    fn an_exit_request_leaves_the_test_mode_latched() {
+        let mut car = Car::new();
+        car.enter_test();
+        let out = car.test(TestRequest::Exit, 1);
+        assert_eq!(out.mode, Mode::Manual);
+        assert_eq!(car.state().safety, Safety::Latched);
+        assert_eq!(out.faults & faults::CMD_TIMEOUT, 0);
+    }
+
+    #[test]
+    fn no_test_mode_while_the_computer_drives_or_the_car_moves() {
+        let mut car = Car::new();
+        car.arm();
+        car.drive(1.0, 0.0, true, 5);
+        car.test(TestRequest::Exit, 1);
+        let cmd = car.cmd(1.0, 0.0, true);
+        let out = car.tick(Inputs {
+            drive_cmd: Some(cmd),
+            test_cmd: Some(TestRequest::Enter),
+            ..Default::default()
+        });
+        assert_eq!(out.mode, Mode::Computer);
+
+        let mut car = Car::new();
+        car.test(TestRequest::Exit, 2);
+        let out = car.tick(Inputs {
+            test_cmd: Some(TestRequest::Enter),
+            measured_speed: 0.3,
+            ..Default::default()
+        });
+        assert_eq!(out.mode, Mode::Manual);
+    }
+
+    #[test]
+    fn drive_commands_do_not_move_the_car_in_the_test_mode() {
+        let mut car = Car::new();
+        car.arm();
+        car.enter_test();
+        for _ in 0..5 {
+            let cmd = car.cmd(2.0, 0.4, true);
+            let out = car.tick(Inputs {
+                drive_cmd: Some(cmd),
+                test_cmd: Some(TestRequest::Hold),
+                ..Default::default()
+            });
+            assert_eq!(out.mode, Mode::Test);
+            assert_eq!(out.throttle, 0.0);
+        }
     }
 }

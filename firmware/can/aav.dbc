@@ -110,4 +110,4 @@ CM_ SG_ 512 direction_known "1 = the sign of wheel_speed is measured. 0 = wheel_
 CM_ SG_ 513 wheel_speed "As WHEEL_SPEED_L.";
 CM_ SG_ 513 pulse_count "As WHEEL_SPEED_L.";
 CM_ SG_ 513 direction_known "As WHEEL_SPEED_L.";
-VAL_ 385 mode 0 "MANUAL" 1 "RC" 2 "COMPUTER" 3 "RESERVED" ;
+VAL_ 385 mode 0 "MANUAL" 1 "RC" 2 "COMPUTER" 3 "TEST" ;

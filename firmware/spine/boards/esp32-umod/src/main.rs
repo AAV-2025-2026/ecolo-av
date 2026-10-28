@@ -470,6 +470,7 @@ async fn main(_spawner: Spawner) -> ! {
         }
         if ticks.is_multiple_of(STATUS_EVERY_TICKS) {
             log_line("STATUS", now, &out, counter);
+            fsm_line(now, &spine.state());
             #[cfg(feature = "legacy-uart")]
             link_line(now, &spine.link().stats());
         }
@@ -504,6 +505,15 @@ fn log_line(kind: &str, now: u32, out: &Outputs, counter: i32) {
         out.steering_target,
         out.faults,
         counter
+    );
+}
+
+/// The five state regions (`spine_core::fsm`), with each status line: which one the
+/// spine is in, in each region.
+fn fsm_line(now: u32, s: &spine_core::State) {
+    info!(
+        "FSM t={} lifecycle={:?} safety={:?} authority={:?} motion={:?} confidence={:?}",
+        now, s.lifecycle, s.safety, s.authority, s.motion, s.confidence
     );
 }
 

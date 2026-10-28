@@ -39,6 +39,8 @@ pub enum Mode {
     Rc = 1,
     /// The computer drives, through DRIVE_CMD.
     Computer = 2,
+    /// The hardware test mode: one actuator at a time, from a laptop (proposal 6.5).
+    Test = 3,
 }
 
 impl Mode {
@@ -46,6 +48,7 @@ impl Mode {
         match raw {
             1 => Mode::Rc,
             2 => Mode::Computer,
+            3 => Mode::Test,
             _ => Mode::Manual,
         }
     }
@@ -482,6 +485,16 @@ mod tests {
         assert_eq!(
             decode_report(VEHICLE_STATUS_ID, &status.encode()),
             Ok(Report::Status(status))
+        );
+        // The test mode is mode 3 on the wire.
+        let test = VehicleStatus {
+            mode: Mode::Test,
+            ..status
+        };
+        assert_eq!(test.encode()[0] & 0x03, 3);
+        assert_eq!(
+            decode_report(VEHICLE_STATUS_ID, &test.encode()),
+            Ok(Report::Status(test))
         );
         // The spine's own frames are not reports, and a report under the wrong ID fails.
         assert_eq!(

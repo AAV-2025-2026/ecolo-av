@@ -141,6 +141,11 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady, L: CommandLink> SpineBoard<B, I2C,
         out
     }
 
+    /// The spine's five state regions after the latest tick (`spine_core::fsm`).
+    pub fn state(&self) -> spine_core::State {
+        self.spine.state()
+    }
+
     /// The board, for whatever else it does (LEDs, say).
     pub fn board(&mut self) -> &mut B {
         &mut self.board
