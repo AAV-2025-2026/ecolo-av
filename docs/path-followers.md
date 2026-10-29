@@ -42,6 +42,7 @@ turning radius, its reverse speed and its top speed from `vehicle.yaml`
 pixi run controller-compare                    # both controllers, both tours
 pixi run controller-compare --tours obstacle   # only the box in the lane
 pixi run controller-compare --controllers mppi --speed 2
+pixi run controller-compare --trackers lqr mpc --runs 3   # the trial trackers (docs/trials.md)
 ```
 
 For each tour and controller the script starts Gazebo's test lot with no windows, on a ROS

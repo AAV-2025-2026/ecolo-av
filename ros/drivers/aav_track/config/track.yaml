@@ -1,0 +1,21 @@
+# aav_track's own settings (docs/trials.md). navigation.launch.py adds the rest from
+# nav2.yaml (the speed, the goal and progress checks: vehicle.track_params) and from
+# vehicle.yaml (wheelbase, full lock, steering rate), so they aren't here.
+track:
+  ros__parameters:
+    lateral_accel: 1.0        # m/s^2 sideways: slow for a bend (line.turn_speed_limit)
+    odom_timeout: 1.0         # s without /localization/odom/local: give up the path
+    stanley:
+      gain: 1.0               # k in atan(k e / (v_soft + v)), 1/s
+      soft_speed: 1.0         # m/s
+      yaw_rate_gain: 0.0      # off: Gazebo's yaw rate is clean, the car's isn't known yet
+    lqr:
+      q: [1.0, 2.0, 0.05]     # weights on e_y (m), e_theta (rad), delta - delta_ff (rad)
+      r: 2.0                  # weight on the steering command (rad)
+      min_speed: 0.5          # m/s: the gain table's first row
+    mpc:
+      horizon: 30             # ticks: 1.5 s at 20 Hz
+      q: [1.0, 2.0, 0.05]     # as LQR's
+      r: 2.0                  # on the command's distance from the bend's own steering
+      r_rate: 1.0             # on each tick's change of command
+      min_speed: 0.5          # m/s

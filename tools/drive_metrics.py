@@ -12,12 +12,16 @@ One leg is one Nav2 goal. It records, on Gazebo's clock:
   start, end                        s: the goal sent, and its result (or the time-out)
   goal      (x, y, yaw)             where it was sent, map frame, rad
   reached   bool                    Nav2 said it succeeded
-  cpu       percent or None         controller_server's share of one core over the leg
+  cpu       percent or None         the follower's share of one core over the leg:
+                                    controller_server's, or aav_track's with a tracker
+  amcl      [(t, x, y, yaw)]        optional: AMCL's pose (/localization/amcl/pose), a trial
+  loops     [(t, loop_ms, loop_ms_max, missed)]  optional: aav_track's status, each tick
   obstacle  (x, y, side) or None    a square box on the road, m
   body      (length, width, rear_overhang)   the car's outline (vehicle.yaml), m
 
-summary() turns that into one row: see COLUMNS for what each number means. svg() draws the
-drives on the map.
+summary() turns that into one row: see COLUMNS for what each number means. combine()
+turns several runs' rows into one: the mean, and the spread of the main numbers. svg()
+draws the drives on the map.
 
 The A-to-B numbers at the end (stop_error ... final_metre) are tools/atob_score.py's: how
 well the car sped up, held its speed and stopped on point B (docs/a-to-b.md, "Scoring a
@@ -268,6 +272,24 @@ def summary(leg):
         'belief_max_m': max(lost) if lost else math.nan,
         'belief_heading_max_deg': math.degrees(max(turned)) if turned else math.nan,
     }
+    if leg.get('amcl') is not None:
+        # The trial localizer, scored as the EKF is. Few samples parked: it updates only
+        # once the car has moved (AMCL's update_min_d).
+        gaps, turns = belief_errors(truth, leg['amcl'])
+        row.update({
+            'amcl_samples': len(gaps),
+            'amcl_mean_m': sum(gaps) / len(gaps) if gaps else math.nan,
+            'amcl_max_m': max(gaps) if gaps else math.nan,
+            'amcl_heading_max_deg': math.degrees(max(turns)) if turns else math.nan,
+            'belief_mean_m': sum(lost) / len(lost) if lost else math.nan,
+        })
+    loops = leg.get('loops')
+    if loops:
+        row.update({
+            'loop_ms_mean': sum(r[1] for r in loops) / len(loops),
+            'loop_ms_max': max(max(r[1], r[2]) for r in loops),
+            'missed_ticks': max(r[3] for r in loops) - min(r[3] for r in loops),
+        })
     if truth:
         _, x, y, yaw = truth[-1]
         gx, gy, gyaw = leg['goal']
@@ -297,11 +319,58 @@ COLUMNS = [
     ('stops', 'Stops', '{:d}'),
     ('reversals', 'Reversals', '{:d}'),
     ('clearance_m', 'Closest to the box (m)', '{:.2f}'),
-    ('cpu_percent', 'controller CPU (%)', '{:.0f}'),
+    ('cpu_percent', 'follower CPU (%): controller_server, or aav_track', '{:.0f}'),
     ('route_switches', 'The planner changed its route (times)', '{:d}'),
     ('belief_max_m', 'Where the EKF put the car: off, worst (m)', '{:.2f}'),
     ('belief_heading_max_deg', "The EKF's heading: off, worst (deg)", '{:.0f}'),
+    ('belief_mean_m', 'Where the EKF put the car: off, mean (m)', '{:.2f}'),
+    ('amcl_mean_m', 'Where AMCL put the car: off, mean (m)', '{:.2f}'),
+    ('amcl_max_m', 'Where AMCL put the car: off, worst (m)', '{:.2f}'),
+    ('amcl_heading_max_deg', "AMCL's heading: off, worst (deg)", '{:.0f}'),
+    ('amcl_samples', 'AMCL poses', '{:d}'),
+    ('loop_ms_mean', "The tracker's tick: mean (ms)", '{:.2f}'),
+    ('loop_ms_max', "The tracker's tick: worst (ms)", '{:.1f}'),
+    ('missed_ticks', 'Missed 20 Hz ticks', '{:d}'),
+    ('runs_reached', 'Runs that reached the goal', '{}'),
+    ('time_s_sd', 'Time: spread (s, SD)', '{:.1f}'),
+    ('off_path_mean_m_sd', 'Off the path, mean: spread (m, SD)', '{:.3f}'),
+    ('end_error_m_sd', 'End: off the goal: spread (m, SD)', '{:.2f}'),
 ]
+
+# The numbers whose spread over runs combine() reports (design: 3 runs, mean and spread).
+SPREAD = ('time_s', 'off_path_mean_m', 'end_error_m')
+
+
+def combine(rows):
+    """
+    Return one row for several runs of the same leg: each number's mean over the runs.
+
+    Counts (stops, missed ticks...) stay whole numbers, rounded. 'reached' is True only if
+    every run reached the goal; 'runs_reached' says how many ("2/3"); '<key>_sd' is the
+    sample standard deviation of each SPREAD number (with two runs or more).
+    """
+    rows = [r for r in rows if r]
+    if not rows:
+        return {}
+    out = {}
+    for key in dict.fromkeys(k for r in rows for k in r):
+        values = [r[key] for r in rows if isinstance(r.get(key), (int, float))
+                  and not isinstance(r.get(key), bool)
+                  and not (isinstance(r[key], float) and math.isnan(r[key]))]
+        if key == 'reached':
+            continue
+        if not values:
+            out[key] = None if all(r.get(key) is None for r in rows) else math.nan
+            continue
+        mean = sum(values) / len(values)
+        out[key] = round(mean) if all(isinstance(v, int) for v in values) else mean
+        if key in SPREAD and len(values) > 1:
+            out[key + '_sd'] = math.sqrt(sum((v - mean) ** 2 for v in values) /
+                                         (len(values) - 1))
+    hits = sum(1 for r in rows if r.get('reached'))
+    out['reached'] = hits == len(rows)
+    out['runs_reached'] = f'{hits}/{len(rows)}'
+    return out
 
 
 def cell(value, fmt):

@@ -1,0 +1,32 @@
+# AMCL as a trial (docs/trials.md): stock nav2_amcl's particle filter on Nav2's 2D map and
+# the flattened roof lidar. navigation.launch.py amcl:=true starts it (with its own
+# lifecycle manager), only beside the lidar (lidar:=true); sim.launch.py only in the test
+# lot (world:=test_lot nav:=true lidar:=true), the one world with a real map.
+#
+# It never drives the car: tf_broadcast is false, so ekf_global keeps map -> odom, and its
+# pose (amcl_pose, renamed /localization/amcl/pose) is only scored, by
+# controller-compare --amcl, against Gazebo's truth. The start pose (set_initial_pose,
+# initial_pose.*) comes from the launch file: the sim's start.
+#
+# Names checked against nav2_amcl's amcl_node.cpp (Jazzy 1.3.13); the rest are its defaults.
+amcl:
+  ros__parameters:
+    tf_broadcast: false               # NOT true: it would fight ekf_global over map -> odom
+    global_frame_id: map
+    odom_frame_id: odom
+    base_frame_id: base_link          # not Nav2's base_footprint
+    scan_topic: /sensors/lidar/scan   # lidar_scan (aav_lidar), 720 ranges in base_link
+    map_topic: /map
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"   # no omni: a car can't slide
+    laser_model_type: likelihood_field
+    laser_min_range: 0.2              # m: lidar_scan's range_min (nav2.yaml)
+    laser_max_range: 30.0             # m: its range_max; further is "nothing there"
+    max_beams: 60
+    min_particles: 500
+    max_particles: 2000
+    update_min_d: 0.25                # m driven before it updates: parked, it publishes little
+    update_min_a: 0.2                 # rad turned
+    resample_interval: 1
+    transform_tolerance: 1.0
+    save_pose_rate: 0.5
+    first_map_only: true              # the map never changes during a run

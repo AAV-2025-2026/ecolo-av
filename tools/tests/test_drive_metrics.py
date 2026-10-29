@@ -142,7 +142,7 @@ def test_the_table_has_a_column_each_and_leaves_out_numbers_nobody_has():
     assert lines[:4] == ['|  | rpp | mppi |', '|---|---:|---:|',
                          '| Reached the goal | **no** | yes |', '| Time (s) | 10 | 10 |']
     assert 'Closest to the box' not in text and 'Off the path' not in text
-    assert '| controller CPU (%) | - | 12 |' in lines
+    assert '| follower CPU (%): controller_server, or aav_track | - | 12 |' in lines
 
 
 def test_the_picture_puts_north_up():
@@ -352,3 +352,43 @@ def test_rms_and_forward_starts():
     assert math.isnan(m.rms([]))
     commands = [(0, 0.0), (1, 0.5), (2, 0.0), (3, -0.3), (4, 0.0), (5, 0.2), (6, 0.4)]
     assert m.starts(commands) == 2       # reversing isn't a forward start
+
+
+def test_amcl_and_the_trackers_tick_are_scored_when_recorded():
+    truth = [(float(t), float(t), 0.0, 0.0) for t in range(11)]
+    leg = {'truth': truth, 'plans': [(0.0, [(0.0, 0.0), (10.0, 0.0)])], 'steering': [],
+           'asked': [], 'start': 0.0, 'end': 10.0, 'goal': (10.0, 0.0, 0.0),
+           'reached': True, 'body': (2.0, 1.0, 0.2),
+           'belief': [(float(t), t + 0.2, 0.0, 0.0) for t in range(11)],
+           'amcl': [(2.0, 2.0, 0.5, 0.0), (6.0, 6.0, 0.1, math.radians(10))],
+           'loops': [(1.0, 0.5, 0.5, 0), (2.0, 1.5, 2.0, 1), (3.0, 1.0, 2.0, 3)]}
+    row = m.summary(leg)
+    assert row['amcl_samples'] == 2
+    assert row['amcl_mean_m'] == pytest.approx(0.3)
+    assert row['amcl_max_m'] == pytest.approx(0.5)
+    assert row['amcl_heading_max_deg'] == pytest.approx(10.0)
+    assert row['belief_mean_m'] == pytest.approx(0.2)
+    assert row['loop_ms_mean'] == pytest.approx(1.0)
+    assert row['loop_ms_max'] == pytest.approx(2.0)
+    assert row['missed_ticks'] == 3
+    # Without them, no such numbers: today's table is unchanged.
+    plain = m.summary({k: v for k, v in leg.items() if k not in ('amcl', 'loops')})
+    assert 'amcl_mean_m' not in plain and 'loop_ms_mean' not in plain
+
+
+def test_runs_combine_into_a_mean_and_a_spread():
+    rows = [{'reached': True, 'time_s': 30.0, 'stops': 1, 'off_path_mean_m': 0.1,
+             'end_error_m': 0.5, 'clearance_m': math.nan, 'cpu_percent': None},
+            {'reached': False, 'time_s': 40.0, 'stops': 2, 'off_path_mean_m': 0.3,
+             'end_error_m': 0.7, 'clearance_m': math.nan, 'cpu_percent': None}]
+    out = m.combine(rows + [None])
+    assert out['reached'] is False and out['runs_reached'] == '1/2'
+    assert out['time_s'] == pytest.approx(35.0)
+    assert out['time_s_sd'] == pytest.approx(math.sqrt(50.0))
+    assert out['off_path_mean_m_sd'] == pytest.approx(math.sqrt(0.02))
+    assert isinstance(out['stops'], int)
+    assert math.isnan(out['clearance_m']) and out['cpu_percent'] is None
+    one = m.combine(rows[:1])
+    assert one['runs_reached'] == '1/1' and 'time_s_sd' not in one
+    assert m.combine([]) == {}
+    assert 'Runs that reached the goal' in m.table([('rpp', out)])

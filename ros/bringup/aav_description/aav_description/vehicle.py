@@ -15,6 +15,7 @@ The launch files use this so the car's measurements live in one file:
     vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar, ghost,  # what
                        controller)                              # RewrittenYaml can't write
     vehicle.ego_params(vehicle.load())          # ego: the whole file (the actuators too)
+    vehicle.track_params(nav2, cfg, ego, max_speed)  # aav_track: a trial tracker (tracker:=)
     vehicle.centre_of_mass(v, front, rear, front_lifted, lift)   # from the scales (M7, M7b)
     vehicle.wheel_angles(v, centre)  # each front wheel's angle for a centre (bicycle) angle
     vehicle.centre_angle(v, inner, outer)       # the reverse: from M5's two measured angles
@@ -226,6 +227,65 @@ PLAN_TURN_MARGIN = 1.25
 # a goal's heading, which Pure Pursuit can't (it aims only at a point).
 CONTROLLERS = ('rpp', 'mppi')
 DEFAULT_CONTROLLER = 'mppi'
+
+
+# The trial path followers (docs/trials.md, aav_track): each stands in for controller_server's
+# FollowPath with tracker:=<name>. 'none' keeps controller_server (CONTROLLERS) following.
+# Apart from CONTROLLERS, not in it: nav2_tuned treats anything not mppi as RPP.
+TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc')
+DEFAULT_TRACKER = 'none'
+
+
+def check_tracker(tracker, reversing=False):
+    """Return the tracker's name (lower case), or raise ValueError saying what to pick."""
+    name = str(tracker).strip().lower()
+    if name not in TRACKERS:
+        raise ValueError(f'tracker:={tracker}: pick one of {", ".join(TRACKERS)}')
+    if name != 'none' and reversing:
+        raise ValueError(f'tracker:={name} drives forwards only: add reversing:=false '
+                         "(the planner would plan reversing it can't follow)")
+    return name
+
+
+def track_params(nav2, cfg, ego=None, max_speed=None):
+    """
+    Return aav_track's parameters: the same speed and "done" as Nav2's controllers.
+
+    nav2: nav2.yaml as loaded (not tuned: nav2_tuned puts MPPI's block under FollowPath);
+    cfg: vehicle.yaml (load()); ego: ego.yaml's ros__parameters, for its steering rate.
+    The cruise speed is RPP's desired_linear_vel, or `max_speed` (sim_speed:=); the goal
+    and progress checks are controller_server's; speeding up is the velocity smoother's.
+    """
+    server = nav2['controller_server']['ros__parameters']
+    goal = server[server['goal_checker_plugins'][0]]
+    progress = server[server['progress_checker_plugins'][0]]
+    rpp = server['FollowPath']
+    smoother = nav2['velocity_smoother']['ros__parameters']
+    v, act = cfg['vehicle'], cfg['actuators']
+    rate = float(act['steer_rate'])
+    if ego and 'max_steering_rate' in ego:
+        # ego's own ramp is the tighter one today (0.6 against the motor's 0.8 rad/s).
+        rate = min(rate, float(ego['max_steering_rate']))
+    return {
+        'rate_hz': float(server['controller_frequency']),
+        'odom_topic': server['odom_topic'],
+        'cruise_speed': float(max_speed) if max_speed else float(rpp['desired_linear_vel']),
+        'acceleration': float(smoother['max_accel'][0]),
+        'max_brake': float(act['max_brake']),
+        'lookahead_min': float(rpp['min_lookahead_dist']),
+        'lookahead_max': float(rpp['max_lookahead_dist']),
+        'lookahead_time': float(rpp['lookahead_time']),
+        'transform_tolerance': float(rpp['transform_tolerance']),
+        'xy_goal_tolerance': float(goal['xy_goal_tolerance']),
+        'yaw_goal_tolerance': float(goal['yaw_goal_tolerance']),
+        'progress_radius': float(progress['required_movement_radius']),
+        'progress_angle': float(progress.get('required_movement_angle', math.inf)),
+        'progress_time': float(progress['movement_time_allowance']),
+        'wheelbase': float(v['wheelbase']),
+        'max_steering_angle': float(v['max_steering_angle']),
+        'max_steering_rate': rate,
+        'stamped': bool(server.get('enable_stamped_cmd_vel', False)),
+    }
 
 
 def nav2_rewrites(v, reversing=False):

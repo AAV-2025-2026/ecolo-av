@@ -34,6 +34,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | GPS outlier gate in `ekf_global` | A fix 10 sigma off is refused, so one bad GPS jump can't throw the car's position | Ben | 2026-10-15 | sim |
 | Heading from the gyro and wheels | At walking pace GPS made the heading jump up to 76°; the gyro and wheels hold it steady | Ben | 2026-10-22 | sim |
 | Heading from the GPS velocity (`aav_gps_heading`) | The receiver's Doppler velocity gives a good heading while moving, with no magnetometer | Ben | 2026-10-25 | sim |
+| [AMCL as a trial](trials.md) (stock `nav2_amcl`, `amcl:=true`) | To score a particle filter on the lidar and the map against the global EKF, without letting it steer the car (`tf_broadcast: false`) | Ben | 2026-10-29 | built |
 
 ## Perception
 
@@ -67,6 +68,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Reversing, with a stop zone behind the car | Backing up allows a three-point turn, instead of getting stuck facing a wall. Off by default on the car (26 Oct) until the wheel sensors tell direction (H5) | Ben | 2026-10-22 | sim |
 | Obstacles in the costmap, and a stop zone (`collision_monitor`) | Radar and lidar points stop Nav2 before it hits something: 0.3-0.4 m short of a box on the bench | Ben | 2026-10-11 | sim |
 | Plan around obstacles (`plan_around:=true`) | The planner sees the radar and lidar too, so it steers round a box instead of only stopping | Ben | 2026-10-22 | sim |
+| [Trial path followers](trials.md) (`aav_track`, `tracker:=`) | To see what Stanley, LQR and MPC gain over pure pursuit on the same routes, beside MPPI and in Nav2's own chain, before any of them replaces the default | Ben | 2026-10-29 | built |
 | [Street routes](routes.md) (`aav_routes`, Valhalla) | Turns a destination into GPS waypoints along real streets, for Nav2 to follow | Ben | 2026-10-16 | sim |
 
 ## Control

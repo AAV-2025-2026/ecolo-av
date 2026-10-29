@@ -28,6 +28,9 @@
   <exec_depend>aav_lidar</exec_depend>
   <exec_depend>aav_ghost</exec_depend>
   <exec_depend>aav_safety</exec_depend>
+  <exec_depend>aav_track</exec_depend>
+  <exec_depend>aav_ego</exec_depend>
+  <exec_depend>nav2_amcl</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 
