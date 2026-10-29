@@ -76,6 +76,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | ego, the virtual car (`aav_ego`), with Ackermann output | Only ego talks to a backend, and every backend takes the same Ackermann message | Ben | 2026-10-09 | sim |
 | Stale-command stop and a speed cap (`max_speed:=`) | The car stops when commands go stale, and stays at 1.0 m/s or less until the tests raise it | Ben | 2026-10-09 | sim |
 | Car model and `vehicle.yaml` (`aav_description`) | One file holds every car measurement, so no number is copied or guessed twice | Ben | 2026-10-09 | sim |
+| [Measuring map](measure-the-car.md#the-measuring-map) (`measure_map.py`) | A tape route from base_link, each step from the last mark, so the team at the car measures every `vehicle.yaml` number in order, in feet or metres (Ben's idea, 29 Oct) | Ben | 2026-10-29 | built |
 | Body model: mass and curve speed | ego knows the car weighs about 181 kg, so it slows for tight turns and heavy loads | Ben | 2026-10-22 | sim |
 | Jerk limit | A smoother start for the people in the car; braking is never softened | Ben | 2026-10-22 | sim |
 | [Linear model of the car](vehicle-model.md) (`vehicle_model.py`) | Transfer functions and state space, to tune the loops and write the report in SYSC 3600's terms | Ben | 2026-10-24 | built |

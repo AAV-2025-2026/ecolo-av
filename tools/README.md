@@ -137,6 +137,7 @@ Each lands outside git, checksum pinned where the script says.
 | `export_model.py` | a detector to Core ML (Mac) or ONNX (Orin) | `-e ml export-coreml` |
 | `vehicle_model.py` | the car's linear model: poles, steps, margins | `vehicle-model` |
 | `state_space_demo.py` | the state-space teaching example | `state-space-demo` |
+| `measure_map.py` | the measuring map: tape route, pictures, readings into `vehicle.yaml` (no ROS) | `measure-map` |
 
 ### MCP server
 
@@ -183,7 +184,7 @@ Each lands outside git, checksum pinned where the script says.
 | `replay_commands.sh` (always: it has no `--sim`) | **moves whatever shares the ROS domain**: on the car's network, the car |
 | `get_*.sh`, `vendor.py`, `car_kit.sh` | download into `vendor/` (`car_kit.sh` caches in `vendor/car-kit-cache`), `models/`, `maps/`, `car-kit/` |
 | `car_day_build.sh` | writes `car-day/esp32/` and `docs/html/` |
-| `build_docs.py`, `graph_picture.py`, `vehicle_model.py`, `state_space_demo.py` | write `docs/html/`, `docs/img/` |
+| `build_docs.py`, `graph_picture.py`, `vehicle_model.py`, `state_space_demo.py`, `measure_map.py` | write `docs/html/`, `docs/img/` (`measure_map.py` also its table in `docs/measure-the-car.md`) |
 | `make_stop_sign.py`, `make_map.py` | write the stop sign's files in `ros/sim/aav_gazebo/models/`; a map's PGM and YAML |
 | `record.sh` | writes `bags/` |
 | `esp32.sh flash`, `legacy_firmware.sh -t upload` | write a board's flash (bench only) |
