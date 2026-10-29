@@ -113,6 +113,10 @@ Change one only with the team.
 - The computer can't drive until it sends `armed = 0`, then `armed = 1`: at power-up,
   after an e-stop, after a driver fault, after a command timeout. A glitch or a
   reboot never restarts the car by itself.
+- Nothing can arm until the boot self-test passes (`Lifecycle::Running`): every
+  device that stops the car answered without a fault.
+- The test mode moves one actuator at a time; its throttle is forward only, at most
+  `TEST_MAX_THROTTLE`, with the brake off. Leaving it always latches.
 - No valid command for 100 ms while driving: stop, full brake, latched
   (`CMD_TIMEOUT`).
 - A repeated counter is a stuck sender: not a fresh command.
