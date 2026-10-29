@@ -16,6 +16,8 @@ weak answers into one good one.
 [Maps and position](maps-and-position.md) has the big picture of the two EKFs
 and the map. This page explains **why** it works.
 
+[How the car knows its speed](learn-speed.md) builds on this page.
+
 ## 1. Odometry: counting your steps
 
 **Odometry** = working out where you are from how you've moved.
@@ -291,6 +293,9 @@ match a scan to a map.
 
 `pixi run ndt-demo` draws both pictures with real NDT and ICP (`tools/ndt_demo.py`,
 numpy only). Each ends within about 2 cm.
+
+From the lidar's points to cubes, the costmap and NDT, step by step:
+[Learn: lidar](learn-lidar.md).
 
 ## Try it
 
