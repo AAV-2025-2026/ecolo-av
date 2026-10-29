@@ -338,6 +338,26 @@ work on." His order, with the work under way:
          ("stop sign, 14 m").
       On the car, 3 and 4 need camera-to-lidar calibration (research pick 4). Nav2's own
       `VoxelLayer` is a separate choice (it changes driving): only if 2D misses something.
+- [ ] **The debug HUD** (Ben, 29 Oct, word for word in `docs/history/messages-2026-10-29.md`):
+      the hardware workbench above, as its own HUD screen. It reads each sensor's and
+      actuator's own node directly (`/sensors/...`, `/vehicle/...`, the spine's status),
+      not what comes out of the muxes, so a fault shows where it starts:
+      - **sensors:** shake the car and watch the IMU; turn a wheel and watch the encoder;
+        GPS, lidar, cameras, battery, the steering pot;
+      - **actuators:** watch the wheels turn, speed up and brake, in the spine's hardware
+        test mode (#15): its caps and the e-stop still apply. Never around the spine;
+      - **what the car thinks:** the lidar's cubes and the NDT match (where the scan sits
+        on the saved map), drawn on the same screen.
+- [ ] **A preflight on stands, before the ground** (Ben, 29 Oct): one scripted run, wheels
+      off the ground: speed up, hold, slow down, brake; steer left, right, centre; and
+      every sensor checked live (rate, values in range) at the same time. PASS or FAIL per
+      line, as `car-day-check` does. Builds on `actuator-test --stands` and bench-check.
+- [ ] **Cubes into objects, with names** (Ben, 29 Oct: "merge cubes that related like a
+      stop sign or a car"): join touching filled cubes into one object (as
+      `radar_clusters` does for the radar); then name it: the RF-DETR box it falls in
+      (needs the camera-to-lidar calibration, research pick 4), or later a small model
+      that reads the cubes' camera crop. Each object: a name, a size, a distance. Shown on
+      the debug HUD first.
 - [ ] **numpy in the `ml` environment** (Ben, 28 Oct: "do we need to upgrade?"): not now.
       The pin (`<=2.3.5`) keeps `export-coreml` working; the everyday environment already
       runs 2.5. Try again when coremltools passes 9.0: newer numpy, run `export-coreml`.
