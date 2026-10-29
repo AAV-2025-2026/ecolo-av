@@ -294,6 +294,9 @@ match a scan to a map.
 `pixi run ndt-demo` draws both pictures with real NDT and ICP (`tools/ndt_demo.py`,
 numpy only). Each ends within about 2 cm.
 
+From the lidar's points to cubes, the costmap and NDT, step by step:
+[Learn: lidar](learn-lidar.md).
+
 ## Try it
 
 | You want to see | Run |

@@ -134,6 +134,8 @@ NDT matches each lidar scan against a saved map of the lot, to a few centimetres
 
 It doesn't slip and doesn't drift. It's a separate check on the wheels.
 
+From the lidar's points to that map: [Learn: lidar](learn-lidar.md).
+
 ## 6. The EKF: what it reads today
 
 From `ros/localization/aav_localization/config/` (more in
