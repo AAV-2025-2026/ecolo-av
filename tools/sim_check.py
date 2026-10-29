@@ -1880,8 +1880,10 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
         result(f'start-up{tag}', nav_up, detail)
         up = nav_up
         if up:
+            # The spine profile is the road world's and more: in the empty world (the
+            # --spine-steps run) only the sim profile's topics can be live.
             check_contract(probe, env, tag, ignore,
-                           'spine' if spine else 'road' if road else 'sim')
+                           'spine' if spine and road else 'road' if road else 'sim')
             for check in checks:
                 check(probe)
     finally:
