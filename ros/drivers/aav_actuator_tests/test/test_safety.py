@@ -91,3 +91,40 @@ def test_taken_over():
 def test_checklists_come_from_the_stage():
     assert any('OFF the ground' in line for line in safety.checklist(stands=True))
     assert any('safety driver' in line for line in safety.checklist(stands=False))
+
+
+def test_bench_needs_bench_and_bench_needs_bench_mode():
+    assert safety.decide(Kind.BENCH, False, True, 3, bench=True).allowed
+    assert not safety.decide(Kind.BENCH, False, True, 3, bench=False).allowed
+    assert not safety.decide(Kind.REAL, False, True, 3, bench=True).allowed
+    assert not safety.decide(Kind.SIM, True, True, 3, bench=True).allowed
+
+
+def test_unseen_speed_stops_after_two_seconds():
+    spinning = [(t / 10, 0.3, 0.0) for t in range(0, 25)]
+    assert safety.unseen(spinning[:15]) is None          # 1.4 s: not yet
+    assert "can't be seen" in safety.unseen(spinning)
+    moving = [(t / 10, 0.3, 0.2) for t in range(0, 25)]
+    assert safety.unseen(moving) is None
+    parked = [(t / 10, 0.0, 0.0) for t in range(0, 25)]
+    assert safety.unseen(parked) is None
+
+
+def test_runaway_speed_rising_while_the_command_falls():
+    stuck = [(t / 10, max(0.0, 0.3 - t / 10), 0.3 + t / 20) for t in range(0, 15)]
+    assert 'stuck throttle' in safety.runaway(stuck)
+    braking = [(t / 10, 0.0, max(0.0, 0.3 - t / 10)) for t in range(0, 15)]
+    assert safety.runaway(braking) is None
+    speeding_up = [(t / 10, 0.3, t / 50) for t in range(0, 15)]
+    assert safety.runaway(speeding_up) is None
+
+
+def test_the_preflight_refuses_the_real_car_without_a_driven_wheel_speed():
+    why = safety.preflight_refusal(Kind.REAL, True, 'front', False, 'open')
+    assert why and '49b' in why and '--no-drive' in why
+    assert safety.preflight_refusal(Kind.UNKNOWN, True, None, None, None)
+    assert safety.preflight_refusal(Kind.REAL, False, 'front', True, 'pi') is None
+    assert safety.preflight_refusal(Kind.SIM, True, 'front', None, None) is None
+    assert 'no-timeout' in safety.preflight_refusal(Kind.REAL, True, 'rear', True, 'open')
+    assert 'pi' in safety.preflight_refusal(Kind.REAL, True, 'rear', False, 'pi')
+    assert safety.preflight_refusal(Kind.REAL, True, 'rear', False, 'open') is None

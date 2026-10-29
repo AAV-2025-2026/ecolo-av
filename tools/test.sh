@@ -108,6 +108,14 @@ for flag in --sim --local; do
         tools/keyboard.sh $flag)
   [[ "$got" == "LOCALHOST no-peers" ]] || { echo "tools/keyboard.sh $flag gave: $got"; exit 1; }
 done
+# The actuator tests and the preflight with --sim or --bench too; without them, the car's.
+for flag in --sim --bench; do
+  got=$(ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET ROS_STATIC_PEERS=192.0.2.1 PATH="$stub:$PATH" \
+        tools/actuator_test.sh preflight --stands $flag)
+  [[ "$got" == "LOCALHOST no-peers" ]] || { echo "tools/actuator_test.sh $flag gave: $got"; exit 1; }
+done
+got=$(ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET PATH="$stub:$PATH" tools/actuator_test.sh preflight --stands)
+[[ "$got" == SUBNET* ]] || { echo "tools/actuator_test.sh (the car) went local: $got"; exit 1; }
 echo "they do"
 
 echo "== the car kit's scripts (docs/car-install.md)"
