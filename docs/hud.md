@@ -556,7 +556,21 @@ own screen.
 |---|---|
 | `cargo test`: debug-core 38, debug-app 11 (with ROS: a cloud placed by the pose at its stamp, map -> odom, a swap's answer, through the real node) | all pass |
 | `live_sim` against headless Gazebo, test lot, `amcl:=true tracker:=pure_pursuit`, driving a Nav2 goal | 10 scans a second, ~6,000-7,000 cubes from ~16,000-19,000 points, none cut; every panel row OK; EKF global 0.02 m, truth 0.24 m, AMCL 0.70 m from EKF local; key 3's swap to lqr accepted mid-path, which then drove 9 mm off the path |
-| The window itself, `pixi run debugdemo`, the 20,000-cube drawing test | **untested**: the Mac's screen was locked all night, and no window can open then |
+| The window itself, `pixi run debugdemo`, the 20,000-cube drawing test | **untested** that night: the Mac's screen was locked |
+
+### Tested (29 October, later: step 5, Ben's Mac, screen unlocked)
+
+| What | Result |
+|---|---|
+| `cargo test`: debug-core 52, debug-app 14 (with ROS) | all pass |
+| `--demo` window, screenshot | kept cubes fading, NDT's purple car and section, particles, the lot as NDT's map, the key legend: all drawn |
+| `--demo --bench-cubes 20000`, release | **358 fps** (pass mark 30) |
+| The node's window against headless Gazebo, test lot, `amcl:=true tracker:=pure_pursuit ndt:=true` (`maps/ndt/test_lot.pcd`), a Nav2 goal at (40, -4) | 58 fps; NDT TRACKING, 3.1-3.2 per point, 1.7-1.8 ms per match, overlap 100%, 0.11-0.12 m from EKF local; AMCL 0.7-1.1 m off with its particles round it; the map's 2,502 cubes sit on the walls; every panel row OK while driving |
+| Kept cubes while driving | they hit `max_cubes` (20,000; 11,000 cut): mostly old ground rings |
+
+**Not yet seen:** NDT's LOST and WAITING on the live window (only in `--demo`); `pixi run
+debugdemo` itself (RViz, the HUD and the map window as well: run here piece by piece);
+the keys pressed by hand (K, M, A, H: their logic is tested, the window wasn't clicked).
 
 ## The Flutter app (2025-26): archived
 
