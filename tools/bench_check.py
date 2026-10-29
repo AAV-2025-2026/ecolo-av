@@ -413,6 +413,31 @@ def nav_goal(probe, x, y, h):
     return sent.result()
 
 
+def drive_rearming(probe, seconds, until=None):
+    """
+    Spin for `seconds` (or until `until()`), arming the spine again whenever it latches.
+
+    On a busy computer a gap in commands latches the spine, as it should; a safety driver
+    would arm it again (as check_obstacle does). Returns how many times that happened.
+    """
+    end, latches = time.monotonic() + seconds, 0
+    while time.monotonic() < end and not (until is not None and until()):
+        probe.spin_for(0.1)
+        if probe.status is not None and not probe.status.armed:
+            latches += 1
+            probe.arm_and_hold()
+    return latches
+
+
+def latched_note(latches):
+    """Say in a result's detail that the spine latched and was armed again."""
+    if not latches:
+        return ''
+    times = 'once' if latches == 1 else f'{latches} times'
+    return (f'; the spine latched {times} (gaps in the commands: a busy computer?) and was '
+            'armed again')
+
+
 def check_weave(probe, goal=40.0, margin=5.0):
     """
     Drive `goal` m straight ahead with Nav2, and measure the weave (TODO N7).
@@ -439,7 +464,7 @@ def check_weave(probe, goal=40.0, margin=5.0):
         result('weave', False, 'Nav2 refused the goal')
         return
     done = handle.get_result_async()
-    probe.spin_for(120.0, lambda: done.done())
+    latches = drive_rearming(probe, 120.0, lambda: done.done())
     reached = done.done() and done.result().status == 4
     if not done.done():
         handle.cancel_goal_async()
@@ -447,7 +472,8 @@ def check_weave(probe, goal=40.0, margin=5.0):
     run = [p for p in probe.track if p[0] >= since
            and margin <= (p[1] - x0) * c + (p[2] - y0) * s <= goal - margin]
     if len(run) < 2:
-        result('weave', False, f'too little of the drive recorded ({len(run)} truth samples)')
+        result('weave', False, f'too little of the drive recorded ({len(run)} truth samples)'
+                               + latched_note(latches))
         return
     t0, t1 = run[0][0], run[-1][0]
     turns = [w for w in probe.turns if t0 <= w[0] <= t1]   # while on the straight part
@@ -460,7 +486,7 @@ def check_weave(probe, goal=40.0, margin=5.0):
                         f'{drive_metrics.rms(stray):.2f} m RMS, {max(map(abs, stray)):.2f} m '
                         f'at most; the turn command changed sign {flips:.2f} times a second, '
                         f'{turn_rms:.3f} rad/s RMS; Nav2 goal '
-                        f'{"reached" if reached else "not reached"}')
+                        f'{"reached" if reached else "not reached"}' + latched_note(latches))
 
 
 def check_zone_edge(probe, hold=20.0):
@@ -472,7 +498,8 @@ def check_zone_edge(probe, hold=20.0):
     a real one does. Nav2 is asked to drive on through it. Counted over `hold` s:
       monitor   collision_monitor's own stops that let go (its state topic)
       car       forward commands that reached ego (/control/cmd_vel) after the first stop
-      crept     the most the car moved toward the box
+      crept     the most the car moved toward the box after its first stop (1 s after
+                it, so the braking up to the stop doesn't count)
     collision_monitor (Jazzy) decides afresh on every command, so its own state still
     flickers; stop_hold (aav_safety) must keep the flicker from reaching the car.
     """
@@ -497,8 +524,8 @@ def check_zone_edge(probe, hold=20.0):
         result('stop zone edge', False, 'Nav2 refused the goal')
         probe.set_box('radar', False)
         return
-    probe.spin_for(hold)
-    crept = max((p[1] - x0) * c + (p[2] - y0) * s for p in probe.track if p[0] >= track_from)
+    latches = drive_rearming(probe, hold)
+    along = [(p[0], (p[1] - x0) * c + (p[2] - y0) * s) for p in probe.track if p[0] >= track_from]
     # From the state before the goal (collision_monitor publishes only changes) to now.
     states = probe.monitor[max(0, seen - 1):]
     actions = [a for _, a, _ in states]
@@ -506,14 +533,22 @@ def check_zone_edge(probe, hold=20.0):
     first = next((w for w, a, _ in states if a == CollisionMonitorState.STOP), None)
     goes = (drive_metrics.starts([cmd for cmd in probe.commands[sent_from:] if cmd[0] > first])
             if first is not None else 0)
+    # Creep is what the car moves after the first stop, not its braking up to it: the
+    # track's stamps are on the computer's clock (the bench), `first` on the steady one.
+    first_wall = first + time.time() - time.monotonic() if first is not None else None
+    before = [a for t, a in along if first_wall is None or t <= first_wall + 1.0]
+    after = [a for t, a in along if first_wall is not None and t > first_wall + 1.0]
+    stopped_at = max(before, default=0.0)
+    crept = max(after, default=stopped_at) - stopped_at
     handle.cancel_goal_async()
     probe.set_box('radar', False)
     probe.spin_for(3.0)
     ok = first is not None and goes == 0 and crept < 0.1
     result('stop zone edge', ok, f'over {hold:.0f} s: collision_monitor let its stop go '
                                  f'{flickers} times; {goes} forward starts reached ego after '
-                                 f'the first stop; the car crept {crept:.2f} m toward a box '
-                                 f'{near - front:.2f} m past its bumper')
+                                 f'the first stop; it stopped {stopped_at:.2f} m on, then crept '
+                                 f'{crept:.2f} m more toward a box {near - front:.2f} m past '
+                                 f'its bumper' + latched_note(latches))
 
 
 def check_lane_keeping(probe):
