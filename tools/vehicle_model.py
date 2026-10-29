@@ -402,7 +402,7 @@ def main(argv=None):
                          'uncertainty, then its figure (about a minute)')
     ap.add_argument('--lqi', action='store_true',
                     help="TODO 3: print the speed LQI's gains for this model, as spine-core's "
-                         'LqiConfig::MODEL and the port\'s LQI_MODEL')
+                         'LqiConfig::MODEL, and as LQI_MODEL for the Python port')
     ap.add_argument('--out', default=str(IMG), help='where the figures go')
     args = ap.parse_args(argv)
 

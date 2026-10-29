@@ -23,9 +23,20 @@ step 1):
     controller that holds a speed per throttle fits the same model: drag = max_accel /
     the speed at full throttle.
   - Never throttle and brake together; a small dead band between them, where it coasts.
-  - A zero target: brake at least `hold_brake` until stopped, then hold it. Never coast to
-    a stop: just above "stopped" the loop alone would ask for a feather of brake, and creep.
+  - The smooth stop (Autoware's design, below). The car runs behind ego, so it still rolls
+    when ego reaches 0: it keeps slowing as hard as it was (no step in the brake), then,
+    once smooth_stop_rate x speed is gentler, the slowing fades with the speed, so the
+    car stops without a jolt. At least weak_stop_decel, so it never creeps; at least
+    strong_stop_decel if it still rolls after weak_stop_time. Stopped, the brake rises
+    gently to stopped_brake (firm) and holds until ego asks to move again.
+  - With smooth_stop_speed 0, today's stop: brake at least `hold_brake` until stopped,
+    then hold it. Never coast to a stop: the loop alone would ask for a feather of brake.
   - Without a wheel speed: feed-forward only.
+
+Credit: the smooth stop follows the design of Autoware's pid_longitudinal_controller
+(the Autoware Foundation, Apache-2.0: its smooth stop, weak then strong deceleration near
+the stop, and a firm brake once stopped), read in its documentation. Our own code, not a
+copy; the numbers are ours (docs/controllers.md, "Where the ideas came from").
 
 Units: m/s, m/s^2, s. Throttle and brake are 0..1. Forward only: a target below zero
 brakes to a stop (reversing is off on the car, and the legacy path keeps it that way).
@@ -55,6 +66,16 @@ class SpeedControlConfig:
     dead_band: float = 0.05      # m/s^2 either side of zero: coast, neither pedal
     stopped_speed: float = 0.05  # m/s: slower counts as stopped
     hold_brake: float = 0.2      # brake (0..1) held while stopped with a zero target
+    # The smooth stop (Autoware's design, above): tried on the bridge -> C++ firmware ->
+    # actuator model chain (test_legacy_chain.py): it halves the deceleration at the moment
+    # the car stops (the jolt), for a few cm more rolling. GUESSES: tune on the car.
+    smooth_stop_speed: float = 0.3    # m/s: ego and the car this slow: slowing fades (0: off)
+    smooth_stop_rate: float = 1.5     # 1/s: slowing at most this x the speed near the stop
+    weak_stop_decel: float = 0.2      # m/s^2: slowing at least this much, so it never creeps
+    weak_stop_time: float = 2.0       # s: ego at 0 and still rolling this long: ...
+    strong_stop_decel: float = 1.0    # m/s^2: ... then at least this much (a slope)
+    stopped_brake: float = 0.5        # brake (0..1) held once stopped, until ego asks again
+    stopped_brake_rate: float = 1.0   # brake (0..1) per s: how fast it rises to stopped_brake
     # The car model: vehicle.yaml actuators:.
     max_accel: float = 1.5       # m/s^2 at full throttle
     max_brake: float = 3.0       # m/s^2 at full brake
@@ -85,6 +106,11 @@ class SpeedControl:
         self.feedforward = 0.0
         self.last_target: Optional[float] = None
         self.expected: Optional[float] = None   # ego's speed, delayed by response_lag
+        self.standstill = False   # stopped on ego's 0: hold stopped_brake until it asks again
+        self.rolling = 0.0        # s since ego's 0, the car still moving
+        self.stop_decel: Optional[float] = None   # m/s^2 the smooth stop started from
+        self.last_accel = 0.0     # m/s^2 asked last tick
+        self.last_brake = 0.0     # brake (0..1) sent last tick
 
     def reset(self) -> None:
         """Forget the past: on a stale command, an e-stop, or a new drive."""
@@ -92,6 +118,10 @@ class SpeedControl:
         self.feedforward = 0.0
         self.last_target = None
         self.expected = None
+        self.standstill = False
+        self.rolling = 0.0
+        self.stop_decel = None
+        self.last_accel = self.last_brake = 0.0
 
     def update(self, target: float, measured: Optional[float], dt: float) -> Pedals:
         """
@@ -124,17 +154,29 @@ class SpeedControl:
             speed = max(0.0, measured)
 
         stopping = target < c.stopped_speed
+        smooth = c.smooth_stop_speed > 0.0 and measured is not None
+        if not stopping:
+            self.standstill = False
+            self.rolling = 0.0
+            self.stop_decel = None
+        if stopping and smooth:
+            self.integral = 0.0
+            self.feedforward = 0.0
+            return self.remember(self.smooth_stop(speed, dt))
         if stopping:
             self.integral = 0.0
             self.feedforward = 0.0
             if speed < c.stopped_speed:
-                return Pedals(0.0, c.hold_brake, 0.0, 0.0, 0.0)
+                return self.remember(Pedals(0.0, c.hold_brake, 0.0, 0.0, 0.0))
 
         error = self.expected - speed if measured is not None else 0.0
         integral = self.integral
         if abs(error) < c.integral_band and not stopping:
             integral = clamp(integral + c.ki * error * dt, -c.integral_limit, c.integral_limit)
         accel = self.feedforward + c.kp * error + integral
+        if smooth and target < c.smooth_stop_speed and speed < c.smooth_stop_speed:
+            # Nearly stopped, ego nearly at 0: slowing fades with the speed already.
+            accel = max(accel, -max(c.weak_stop_decel, c.smooth_stop_rate * speed))
         throttle, brake = self.pedals(accel, speed)
         if stopping:
             throttle, brake = 0.0, max(brake, c.hold_brake)
@@ -142,7 +184,41 @@ class SpeedControl:
         pinned = (throttle >= 1.0 and error > 0.0) or (brake >= 1.0 and error < 0.0)
         if not pinned:
             self.integral = integral
-        return Pedals(throttle, brake, accel, self.feedforward, self.integral)
+        return self.remember(Pedals(throttle, brake, accel, self.feedforward, self.integral))
+
+    def remember(self, p: Pedals) -> Pedals:
+        """Keep this tick's asked acceleration and brake: the smooth stop starts from them."""
+        self.last_accel, self.last_brake = p.accel, p.brake
+        return p
+
+    def smooth_stop(self, speed: float, dt: float) -> Pedals:
+        """
+        Return the pedals once ego says 0 and the car still rolls: the smooth stop.
+
+        The car runs behind ego (the actuators' lag), so it is still moving when ego
+        reaches 0. Keep slowing as hard as it was (no step in the brake), until slowing
+        smooth_stop_rate x speed is gentler: from there the deceleration fades with the
+        speed, and the car stops without a jolt. Never under weak_stop_decel, so it can't
+        creep; and at least strong_stop_decel once it has rolled weak_stop_time (a slope, a
+        weak brake). Stopped, the brake rises to stopped_brake at stopped_brake_rate, and
+        holds there until ego asks to move again.
+        """
+        c = self.cfg
+        if self.standstill or speed < c.stopped_speed:
+            self.standstill = True
+            # Up to stopped_brake gently (a step would jolt the car as it stops); never less.
+            brake = max(self.last_brake,
+                        min(c.stopped_brake, self.last_brake + c.stopped_brake_rate * dt))
+            return Pedals(0.0, brake, 0.0, 0.0, 0.0)
+        if self.stop_decel is None:
+            self.stop_decel = max(c.weak_stop_decel, -self.last_accel)
+        self.rolling += dt
+        weakest = c.weak_stop_decel
+        if self.rolling > c.weak_stop_time:
+            weakest = max(weakest, c.strong_stop_decel)
+        decel = clamp(c.smooth_stop_rate * speed, weakest, max(self.stop_decel, weakest))
+        _, brake = self.pedals(-decel, speed)
+        return Pedals(0.0, brake, -decel, 0.0, 0.0)
 
     def pedals(self, accel: float, speed: float):
         """Invert the model: the throttle or brake that gives `accel` at `speed`."""

@@ -43,6 +43,8 @@ legacy_uart_bridge:
     speed_loop.ki: 0.5              # m/s^2 per (m/s x s). GUESS
     speed_loop.response_lag: 0.3    # s the car runs behind ego (the actuators' lag). GUESS
     speed_loop.hold_brake: 0.2      # brake travel while stopped (about -0.3 as above)
+    speed_loop.smooth_stop_speed: 0.3  # m/s: the smooth stop (Autoware's design); 0: off
+    speed_loop.stopped_brake: 0.5   # brake held once stopped by the smooth stop. GUESS
     speed_loop.odom_timeout: 0.3    # s: an older wheel speed means feed-forward alone
 
 encoder_udp:
