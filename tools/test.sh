@@ -83,7 +83,7 @@ import sys
 tasks = dict(re.findall(r'^([\w-]+) = \{ cmd = "([^"]*)"', open('pixi.toml').read(), re.M))
 bad = [t for t in ('turtle', 'sim', 'bench', 'bench-check', 'view', 'laptop-bench',
                        'sim-check', 'sim-fault', 'carla-car', 'controller-compare',
-                       'timing-test', 'stream-check')
+                       'timing-test', 'stream-check', 'ndt-map')
        if not tasks.get(t, '').startswith('tools/ros.sh --local ')]
 sys.exit(f'these pixi tasks need "tools/ros.sh --local": {bad}' if bad else None)
 PY
