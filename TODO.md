@@ -307,6 +307,24 @@ work on." His order, with the work under way:
       - the car on Jazzy (Q24): a Jazzy Mac can't join the car's Humble;
       - the HUD on a Mac: raylib's runs there as it is; the Flutter app needs CocoaPods (archived 25 Oct);
       - the car's WiFi, measured: how late the pictures arrive, and how often it drops.
+- [ ] **A hardware workbench: every sensor and actuator, one at a time** (Ben, 28 Oct,
+      word for word in `docs/history/messages-2026-10-28.md`). Just for us. One screen on
+      the laptop (the HUD), with the RC or the joystick as well, to isolate the hardware:
+      - **each sensor, live:** is it there, how fast, its values (GPS, IMU, lidar,
+        cameras, wheel speed, steering pot, battery);
+      - **each actuator, by hand:** jog the steering, throttle and brake in small capped
+        steps, and see what came back;
+      - **on stands, find the limits:** steer slowly until the motor meets resistance:
+        the Jrk G2 reports its current and position, so a stall shows as current rising
+        while the position stops. Back off a margin: that's the steering limit;
+      - **work out the numbers:** acceleration, braking and steering rate, into
+        `vehicle.yaml`; then check them by driving in the lot.
+      Builds on what we have: `pixi run actuator-test` (its `--stands` tests already measure
+      the steering sweep and rate), the spine's hardware test mode (#15, capped at
+      `TEST_MAX_THROTTLE`), bench mode and the raylib HUD. New: the live sensor page, the
+      jog controls, and the stall search. Check the 2025-26 team's clamps first
+      (`JRK_STEER_MIN`/`MAX`, `DAC_MAX_CAP` in `hardware_configs.h`). Steering and braking
+      limits on the real car are the hardware lead's to sign off.
 - [ ] **Four research picks** (Ben, 28 Oct; details: `docs/designs/2026-10-28_research-picks.md`):
       1. **Autoware**: borrow its designs (PID + feed-forward speed with a smooth stop,
          MPC steering, NDT + EKF localization), not the whole stack;
