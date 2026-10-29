@@ -138,5 +138,9 @@ pixi run bash -c 'source install/setup.bash && export ROS_DOMAIN_ID=94 \
   && cd ros/hud/aav_hud && cargo test --release -p hud-app -p debug-app'
 ```
 
+The drawing test (the design's pass mark: 20,000 cubes at 30 fps or more, release build,
+a team Mac): `pixi run debug-hud-demo --bench-cubes 20000` prints the frame rate over 10 s.
+Measured: **not yet** (29 Oct: the Mac's screen was locked, so no window could open).
+
 `tools/test.sh` runs the logic's tests; `pixi run test` runs everything else.
 `colcon build` needs Rust 1.88 or newer (`pixi run build`).

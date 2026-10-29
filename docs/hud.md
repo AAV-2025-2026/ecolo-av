@@ -540,6 +540,14 @@ from a terminal: `ros2 param set /track tracker lqr` (sim only, both ways).
 On the car: not yet from a Mac over WiFi (about 9 MB/s of reliable lidar); on the Orin's
 own screen.
 
+### Tested (29 October, a Mac)
+
+| What | Result |
+|---|---|
+| `cargo test`: debug-core 38, debug-app 11 (with ROS: a cloud placed by the pose at its stamp, map -> odom, a swap's answer, through the real node) | all pass |
+| `live_sim` against headless Gazebo, test lot, `amcl:=true tracker:=pure_pursuit`, driving a Nav2 goal | 10 scans a second, ~6,000-7,000 cubes from ~16,000-19,000 points, none cut; every panel row OK; EKF global 0.02 m, truth 0.24 m, AMCL 0.70 m from EKF local; key 3's swap to lqr accepted mid-path, which then drove 9 mm off the path |
+| The window itself, `pixi run debugdemo`, the 20,000-cube drawing test | **untested**: the Mac's screen was locked all night, and no window can open then |
+
 ## The Flutter app (2025-26): archived
 
 | | |
