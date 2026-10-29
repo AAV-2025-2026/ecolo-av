@@ -931,4 +931,99 @@ mod tests {
         assert_eq!(reply.outcome, Err("live_swap is off (lqr)".into()));
         Ok(())
     }
+
+    /// Against a running simulator (not run by default): the node with the built-in
+    /// topics, for `secs` seconds (DEBUG_HUD_LIVE_SECS, 20), printing what the panel and
+    /// the cubes would show, then asking the track node for `lqr` and printing its answer.
+    /// `pixi run debugdemo` without a screen: start the sim headless on a domain, then
+    /// `cargo test --release -p debug-app -- --ignored --nocapture live_sim` on it.
+    #[test]
+    #[ignore]
+    fn live_sim() -> Result<()> {
+        use crate::source::DataSource;
+        use debug_core::state::DebugState;
+
+        let secs: u64 = std::env::var("DEBUG_HUD_LIVE_SECS")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(20);
+        let (mut hud, config) = RosSource::start(vec!["debug_hud".into()], DebugConfig::default())?;
+        let mut state = DebugState::new(&config);
+        let end = Instant::now() + Duration::from_secs(secs);
+        let mut scans = 0;
+        while Instant::now() < end {
+            let now = Instant::now();
+            for u in hud.drain(now) {
+                state.apply(u, now);
+            }
+            if let Some(scan) = hud.take_scan() {
+                scans += 1;
+                state.set_scan(scan, now);
+            }
+            thread::sleep(Duration::from_millis(30));
+        }
+        let now = Instant::now();
+        println!("scans placed: {scans}, rate {:?} Hz", state.scan_rate());
+        if let Some(scan) = &state.scan {
+            let mut bands = std::collections::BTreeMap::new();
+            for c in &scan.cubes {
+                *bands.entry(format!("{:?}", c.band)).or_insert(0) += 1;
+            }
+            println!(
+                "last scan: {} cubes from {} points ({} skipped, {} cut), car at {:?}; bands {bands:?}",
+                scan.cubes.len(), scan.points, scan.skipped, scan.cut, scan.car
+            );
+        }
+        println!(
+            "scan problem: {:?}; frame problem: {:?}",
+            state.scan_problem, state.frame_problem
+        );
+        for source in Source::PANEL {
+            println!(
+                "{:12} {:6} {}",
+                source.label(),
+                state.health(source, now).word(),
+                state.detail(source).unwrap_or("")
+            );
+        }
+        for who in Localizer::ALL {
+            println!(
+                "{:12} in odom {:?}, {:?} m from EKF local",
+                who.label(),
+                state.pose_in_odom(who),
+                state.offset_from_local(who)
+            );
+        }
+        println!(
+            "map -> odom {:?}; plan points {}",
+            state.map_to_odom.odom_in_map,
+            state.plan_in_odom().len()
+        );
+        println!(
+            "banner {:?}; tracker {:?}",
+            state.origins.banner(),
+            state.track
+        );
+        println!(
+            "swap allowed: {:?}",
+            debug_core::swap::allowed(&state.origins)
+        );
+        if hud.swap_tracker(Tracker::Lqr).is_ok() {
+            let end = Instant::now() + Duration::from_secs(5);
+            while Instant::now() < end {
+                if let Some(Update::SwapReply(r)) = hud
+                    .drain(Instant::now())
+                    .into_iter()
+                    .find(|u| matches!(u, Update::SwapReply(_)))
+                {
+                    println!("swap: {}", r.line());
+                    break;
+                }
+                thread::sleep(Duration::from_millis(50));
+            }
+        } else {
+            println!("swap: no track node");
+        }
+        Ok(())
+    }
 }

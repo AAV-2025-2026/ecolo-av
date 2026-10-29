@@ -38,6 +38,10 @@ if $debug; then
   steps=5
 fi
 
+# Gazebo's transport finds its own parts by multicast, which a Mac on some networks (or
+# none) refuses ("No route to host"); on this computer only, it needs none.
+export GZ_IP="${GZ_IP:-127.0.0.1}"
+
 pids=""
 cleanup() {
   echo
