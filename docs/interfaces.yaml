@@ -405,7 +405,7 @@ topics:
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [lidar_cloud, gz_lidar_bridge, carla_adapter]
-    sub: [lidar_scan]
+    sub: [lidar_scan, ndt]
     live: [road, car]
     note: On the car, the roof Velodyne VLP-16 through the stock velodyne_pointcloud (lidar_cloud, its factory calibration VLP16db.yaml), in lidar_link, 10 Hz, 0.9-100 m, unorganised - rays that hit nothing are left out; fields x, y, z, intensity, ring, time. car.launch.py runs it where the machine file has the lidar part (orin, all); lidar:=false turns it off everywhere. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.
   /sensors/lidar/scan:
@@ -552,13 +552,13 @@ topics:
   /localization/odom/local:
     type: nav_msgs/msg/Odometry
     pub: [ekf_local]
-    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test, sensor_watchdog]
+    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test, sensor_watchdog, ndt]
     live: [turtle, sim, car, replay, bench]
     note: odom frame. Smooth; drifts.
   /localization/odom/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
-    sub: [navsat_transform, map, sensor_watchdog, point_driver, point_cli]
+    sub: [navsat_transform, map, sensor_watchdog, point_driver, point_cli, ndt]
     live: [sim, car, replay, bench]
     note: map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.
   /localization/gps/odom:
@@ -588,6 +588,21 @@ topics:
     pub: []
     sub: [amcl]
     note: Starts AMCL again from a pose (its initialpose, renamed; RViz "2D Pose Estimate" publishes /initialpose, so set its topic to this). amcl:=true starts it from the sim's start pose without it (set_initial_pose).
+  /localization/ndt/pose:
+    type: geometry_msgs/msg/PoseWithCovarianceStamped
+    pub: [ndt]
+    sub: []
+    note: A trial (docs/designs/2026-10-29_ndt.md) - where NDT (aav_ndt, Rust) puts base_link on the saved lidar map, map frame, stamped with the cloud's own stamp. Only good fits (score per point above min_score_per_point, converged); x, y and yaw only, height, roll and pitch held at 0. Covariance - the x, y, yaw block k (-H^-1) with a floor, the rest 1e3. Only with ndt:=true (sim.launch.py world:=test_lot lidar:=true, the map file present). Nothing reads it to drive, and it never publishes TF, until it wins the trials.
+  /localization/ndt/status:
+    type: diagnostic_msgs/msg/DiagnosticStatus
+    pub: [ndt]
+    sub: []
+    note: NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw.
+  /localization/ndt/initial_pose:
+    type: geometry_msgs/msg/PoseWithCovarianceStamped
+    pub: []
+    sub: [ndt]
+    note: Starts NDT again from a pose in the map frame (RViz "2D Pose Estimate" set to this topic). ndt:=true in Gazebo starts it from the sim's start pose without it (its start_x, start_y, start_yaw); on the car it would take ekf_global's (start_from_global).
   /localization/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [navsat_transform]
