@@ -180,6 +180,35 @@ LOT_CHECKLIST = (
 )
 
 
+# aav_safety's geofence states (geofence.py) that stop a test on the ground. The tests'
+# slot (60) is above the geofence's lock (51), so the test stops itself.
+GEOFENCE_STOPS = ('NEAR', 'OUTSIDE', 'LOST', 'JUMP')
+GEOFENCE_QUIET = 1.0    # s without /safety/geofence/state: it went quiet
+
+
+def geofence_stop(state: Optional[str], age: Optional[float], stands: bool, real: bool,
+                  starting: bool = False) -> Optional[str]:
+    """
+    Why the geofence stops this test (or keeps it from starting), or None.
+
+    state: the last /safety/geofence/state ("NEAR: why..."), None if never heard; age: s
+    since it arrived. On stands nothing is fenced. On the real car the geofence must be
+    heard, and not be in stands mode. starting: also refuse STARTING (the pose not settled).
+    """
+    if stands:
+        return None
+    if state is None or age is None or age > GEOFENCE_QUIET:
+        return ('no /safety/geofence/state: the geofence must run for a test on the ground'
+                if real else None)
+    name = state.split(':', 1)[0].strip()
+    if name in GEOFENCE_STOPS or (starting and name == 'STARTING'):
+        return f'the geofence says {state}'
+    if name == 'STANDS' and real:
+        return ('the geofence is in stands mode (no fence) but this test is on the ground: '
+                'start the car without stands:=true')
+    return None
+
+
 def checklist(stands: bool) -> Tuple[str, ...]:
     """Return what to check before a test on the real car (docs/tests.md, Before)."""
     return STANDS_CHECKLIST if stands else LOT_CHECKLIST

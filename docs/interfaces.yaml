@@ -108,6 +108,24 @@ topics:
     sub: [twist_mux, language_drive]
     live: [bench, road]
     note: true from collision_monitor's STOP until it has said anything else for 1 s without a break (aav_safety stop_hold, 10 Hz, wherever navigation.launch.py starts collision_monitor). A twist_mux lock at priority 21 - it holds Nav2 (20) and the AI slot (10) only, never the point driver, a person or a test. Timeout 0 - silence locks nothing (profiles without collision_monitor never publish it), and a stop_hold that dies while true keeps the stop. Without it, an obstacle at the stop zone's edge flickered the monitor between stop and go, and each go let the car creep on.
+  /safety/geofence/lock:
+    type: std_msgs/msg/Bool
+    pub: [geofence]
+    sub: [twist_mux, language_drive]
+    live: [sim, car, bench]
+    note: true while a stopping path of the car - forward and back, straight and at full lock, each its RSS stopping distance long (reaction time and braking worked out from ego.yaml, vehicle.yaml and the backend's timeout, aav_safety geofence.py motion_from) - brings a corner within 1 m plus the global pose's spread of the fence's edge (NEAR; at a standstill a person drives it back in); while the car is outside the fence (OUTSIDE) or the global pose jumped (JUMP), both latched until a person calls /safety/geofence/clear; while the global pose is stale over 1 s, over 3 m unsure or NaN, or no GPS position has reached the EKF for 2 s (LOST); before 3 s of good poses (STARTING); and on a backend that coasts (COASTING - legacy_uart_bridge in speed_loop open, until test 4.3 measures its stop). false otherwise, and in stands mode (STANDS - car.launch.py stands:=true, said loudly); a heartbeat at 10 Hz (aav_safety geofence). The fence - a circle of radius m round the marked start spot (start_x, start_y - car 30, Gazebo 200, bench 100), or a site's polygon in the map frame drawn for navsat.yaml's datum (geofence.yaml sites; the machine file's geofence site). A twist_mux lock (geofence) at priority 51 - it holds every program (scripted 50, replay 40, point 25, nav 20, ai 10), never a person (joy, rc, keyboard) or the actuator tests (60, which stop themselves on its state). Fail-safe - the lock's 1 s timeout holds them when the geofence dies or hangs (mux.launch.py geofence_lock, a required argument - true wherever a geofence runs, the car next to the mux, the bench, Gazebo with geofence:=true; false on the turtle and CARLA). Independent of Nav2 (the 26 Oct review's F6). docs/geofence.md.
+  /safety/geofence/state:
+    type: std_msgs/msg/String
+    pub: [geofence]
+    sub: [actuator_test]
+    live: [sim, car, bench]
+    note: One line for people, 10 Hz - the state (STARTING, OK, NEAR, OUTSIDE, JUMP, LOST, COASTING, STANDS), a colon, and why, such as "NEAR - a stopping path (1.4 m ahead, 0.9 m back) comes 0.9 m from the edge (needs 1.2 m) at 1.0 m/s". The actuator tests (aav_actuator_tests) stop a test on the ground on NEAR, OUTSIDE, JUMP or LOST, refuse one in STANDS, and on the real car refuse to start while it is silent.
+  /safety/geofence/fence:
+    type: geometry_msgs/msg/PolygonStamped
+    pub: [geofence]
+    sub: [point_driver, language_drive]
+    live: [sim, car, bench]
+    note: The fence in the map frame (a circle as 36 corners), for RViz and Lichtblick, and so the point driver and the drive server refuse a goal outside it before the car moves. Reliable, transient local, depth 1 - sent once, at start-up.
   /safety/collision_monitor/stop_zone:
     type: geometry_msgs/msg/PolygonStamped
     pub: [collision_monitor]
@@ -558,13 +576,13 @@ topics:
   /localization/odom/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
-    sub: [navsat_transform, map, sensor_watchdog, point_driver, point_cli, debug_hud]
+    sub: [navsat_transform, map, sensor_watchdog, point_driver, point_cli, debug_hud, geofence]
     live: [sim, car, replay, bench]
     note: map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.
   /localization/gps/odom:
     type: nav_msgs/msg/Odometry
     pub: [navsat_transform]
-    sub: [ekf_global]
+    sub: [ekf_global, geofence]
     live: [sim, car, replay, bench]
     note: Each GPS fix as a map-frame position of base_link (antenna offset removed).
   /localization/gps/heading:
@@ -713,6 +731,10 @@ services:
     type: std_srvs/srv/Trigger
     server: sensor_watchdog
     note: A person says all is right again after a fault the watchdog latches - a GPS jump, wheels that disagreed with the IMU and GPS, a HUD that dropped out (LOST). pixi run watchdog-clear (pixi run sim-fault clear in Gazebo).
+  /safety/geofence/clear:
+    type: std_srvs/srv/Trigger
+    server: geofence
+    note: A person drove the car back inside the fence after OUTSIDE, or understood a JUMP (both latch) - pixi run geofence-clear. Refused, with the reason, while the car is still outside or the global pose can't be trusted. NEAR and LOST let go by themselves. Only people call it - never aav_language's drive server or the MCP tools (aav_language test_drive_tools.py checks).
   /drivers/nav/route/follow:
     type: std_srvs/srv/Trigger
     server: street_router

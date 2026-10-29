@@ -140,6 +140,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `estop`, `estop-clear` | block every driver (the car brakes); clear it |
 | `gate-clear` | a person reopens the output mux after it latched STOP |
 | `watchdog-clear` | a person clears the sensor watchdog's latched faults |
+| `geofence-clear` | a person clears the geofence's OUTSIDE or JUMP, once the car is back inside |
 | `hud`, `map`, `debug-hud` | the in-car screen, the map window and the debug HUD, as ROS nodes (`fullscreen:=true`) |
 | `actuator-test` | the actuator tests, on stands and in a lot: `actuator-test --list` |
 | `calibrate-camera` | calibrate a streamed camera: `calibrate-camera board` prints the checkerboard |

@@ -9,7 +9,8 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [actuator_model:=true] [speed_loop:=default|smooth] [sim_speed:=]
       [reversing:=true] [controller:=mppi] [tracker:=none] [amcl:=false]
       [plan_around:=true]
-      [watchdog:=true] [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
+      [watchdog:=true] [geofence:=true] [geofence_radius:=200.0]
+      [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
       [esp32:=false] [esp32_loop:=pi]
       [bridge:=rust|python]
       [ghost:=false]
@@ -66,6 +67,11 @@ bench's argument names:
                       reads it (perception, lane, camera_obstacles, faults). With
                       hud:=true, the HUD too: its /hud/heartbeat stops when its screen
                       freezes or dies
+  geofence:=true      the geofence (aav_safety): twist_mux's geofence lock holds every
+                      program (scripted, point, Nav2, AI; never a person) before its
+                      stopping distance reaches a circle of geofence_radius m (200 here:
+                      past every sim check's drive; the car's is 30) round where the car
+                      starts (0, start_y), or while the global pose can't be trusted
   watch_hud:=true     the watchdog watches /hud/heartbeat without the HUD window: something
                       else beats (sim-check --faults stands in for the screen)
   faults:=true        the front left picture through gazebo_adapter, so its fault.camera
@@ -128,7 +134,7 @@ def launch_setup(context):
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
                       'map', 'foxglove', 'reversing', 'watchdog', 'faults',
-                      'ghost', 'plan_around', 'watch_hud')}
+                      'ghost', 'plan_around', 'watch_hud', 'geofence')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -160,7 +166,7 @@ def launch_setup(context):
                 spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge'),
                 esp32=arg('esp32'), esp32_loop=arg('esp32_loop')),
         include(context, 'aav_command_mux', 'mux.launch.py', use_sim_time='true',
-                sensor_lock=flag['watchdog']),
+                sensor_lock=flag['watchdog'], geofence_lock=flag['geofence']),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
                 sim_max_speed=arg('sim_speed')),
         # ego's commands go to Gazebo (gazebo_adapter, or spine_bridge with spine:=true)
@@ -210,6 +216,14 @@ def launch_setup(context):
                   + (['hud'] if flag['hud'] or flag['watch_hud'] else []))
         actions.append(include(context, 'aav_safety', 'watchdog.launch.py',
                                inputs=','.join(inputs), use_sim_time='true'))
+    if flag['geofence']:
+        actions.append(include(context, 'aav_safety', 'geofence.launch.py',
+                               backend=('spine' if arg('spine').lower() == 'true' else
+                                        'gazebo_esp32' if arg('esp32').lower() == 'true'
+                                        else 'gazebo'),
+                               radius=arg('geofence_radius'), centre_x='0.0',
+                               centre_y=arg('start_y'), max_speed=arg('sim_speed'),
+                               use_sim_time='true'))
     if flag['teleop']:
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
     if flag['perception']:
@@ -316,6 +330,11 @@ def generate_launch_description():
         DeclareLaunchArgument('watchdog', default_value='true',
                               description='the sensor watchdog: stops Nav2 and the AI slot '
                                           'when a sensor they need fails (aav_safety)'),
+        DeclareLaunchArgument('geofence', default_value='true',
+                              description='the geofence: holds every program near the edge of '
+                                          'a circle round the start (aav_safety)'),
+        DeclareLaunchArgument('geofence_radius', default_value='200.0',
+                              description="m: the geofence's circle (the car's: 30)"),
         DeclareLaunchArgument('watch_hud', default_value='false',
                               description="the watchdog also wants the HUD's heartbeat, "
                                           'with no HUD window (hud:=true watches it anyway)'),

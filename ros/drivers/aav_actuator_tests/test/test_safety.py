@@ -88,6 +88,24 @@ def test_taken_over():
     assert safety.taken_over([], (0.5, 0.0))
 
 
+def test_the_geofence_stops_a_test_on_the_ground():
+    stop = safety.geofence_stop
+    for state in ('NEAR: 0.9 m from the edge', 'OUTSIDE: ...', 'LOST: no GPS', 'JUMP: 4 m'):
+        assert stop(state, 0.1, stands=False, real=True)
+        assert stop(state, 0.1, stands=False, real=False)       # Gazebo too
+        assert stop(state, 0.1, stands=True, real=True) is None  # wheels off the ground
+    assert stop('OK: 20 m from the edge', 0.1, stands=False, real=True) is None
+    assert stop('COASTING: ...', 0.1, stands=False, real=True) is None   # a person drives
+    # STARTING only keeps a test from starting.
+    assert stop('STARTING: settling', 0.1, False, True) is None
+    assert stop('STARTING: settling', 0.1, False, True, starting=True)
+    # On the real car the geofence must be heard, and not in stands mode.
+    assert 'geofence must run' in stop(None, None, stands=False, real=True)
+    assert stop('OK: fine', 3.0, stands=False, real=True)
+    assert stop(None, None, stands=False, real=False) is None
+    assert 'stands mode' in stop('STANDS: NO FENCE', 0.1, stands=False, real=True)
+
+
 def test_checklists_come_from_the_stage():
     assert any('OFF the ground' in line for line in safety.checklist(stands=True))
     assert any('safety driver' in line for line in safety.checklist(stands=False))

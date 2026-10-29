@@ -52,6 +52,7 @@ rviz = { cmd = "tools/ros.sh rviz2 -d ros/bringup/aav_bringup/rviz/drive.rviz", 
 estop = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /safety/estop std_msgs/msg/Bool "{data: true}"', description = "E-stop: block every driver (the car brakes)" }
 estop-clear = { cmd = 'tools/ros.sh ros2 topic pub -t 5 -r 10 /safety/estop std_msgs/msg/Bool "{data: false}"', description = "Clear the e-stop" }
 gate-clear = { cmd = "tools/ros.sh ros2 service call /safety/output_mux/clear std_srvs/srv/Trigger", description = "A person reopens the output mux after it latched STOP (refused, with the reason, while the cause remains): docs/sources-and-targets.md" }
+geofence-clear = { cmd = "tools/ros.sh ros2 service call /safety/geofence/clear std_srvs/srv/Trigger", description = "A person drove the car back inside the geofence (or understood a jump): clear its latched OUTSIDE or JUMP. Refused while the car is still outside" }
 watchdog-clear = { cmd = "tools/ros.sh ros2 service call /safety/sensor_watchdog/clear std_srvs/srv/Trigger", description = "A person says all is right again: clear the sensor watchdog's latched faults (a lost HUD, a GPS jump, wheels that disagreed)" }
 gz-window = { cmd = "tools/ros.sh tools/gz_window.sh", description = "Gazebo's window again, following the car, for a simulator already running" }
 doctor = { cmd = "tools/ros.sh python3 tools/doctor.py", description = "Can this computer join the car's ROS network? Says what to fix" }
