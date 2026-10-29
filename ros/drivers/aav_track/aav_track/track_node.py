@@ -61,7 +61,8 @@ import tf2_ros
 TRACKER_PARAMS = {
     'pure_pursuit': {},           # its lookahead comes from nav2.yaml's RPP block
     'stanley': {'gain': 1.0, 'soft_speed': 1.0, 'yaw_rate_gain': 0.0},
-    'lqr': {'q': [1.0, 2.0, 0.05], 'r': 2.0, 'min_speed': 0.5},
+    'lqr': {'q': [1.0, 2.0, 0.05], 'r': 0.2, 'r_rate': 100.0, 'preview': 2.0,
+            'min_speed': 0.5},
     'mpc': {'horizon': 30, 'q': [1.0, 2.0, 0.05], 'r': 2.0, 'r_rate': 1.0, 'min_speed': 0.5},
 }
 Code = FollowPath.Result
@@ -154,7 +155,7 @@ class Track(Node):
         if name == 'pure_pursuit':
             own = {'lookahead_min': p['lookahead_min'], 'lookahead_max': p['lookahead_max'],
                    'lookahead_time': p['lookahead_time']}
-        if name == 'mpc':
+        if name in ('lqr', 'mpc'):
             own['period'] = 1.0 / p['rate_hz']
         model = from_config(vehicle_file.load()) if name in ('lqr', 'mpc') else None
         return trackers.make(name, self.limits, model, **own)

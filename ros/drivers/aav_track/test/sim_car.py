@@ -96,3 +96,40 @@ def arc(radius=8.0, angle=math.pi / 2, lead=5.0, tail=10.0, step=0.1):
     for i in range(1, int(tail / step) + 1):
         pts.append((ex + i * step * math.cos(h), ey + i * step * math.sin(h), h))
     return pts
+
+
+def uturn(radius=3.6, swing=math.pi / 3, lead=6.0, tail=12.0, step=0.05):
+    """
+    Return a forward-only U-turn: Smac's light bulb.
+
+    Right `swing`, left pi + 2 swing, right `swing`, every bend `radius`; it comes back on
+    its own line (y = 0), facing the other way, and spans y = -radius..radius: a 14 m
+    lane's middle is y = 0.
+    """
+    pts = [(0.0, 0.0, 0.0)]
+    x = y = h = 0.0
+    for length, k in ((lead, 0.0), (radius * swing, -1.0 / radius),
+                      (radius * (math.pi + 2 * swing), 1.0 / radius),
+                      (radius * swing, -1.0 / radius), (tail, 0.0)):
+        n = max(1, int(length / step))
+        ds = length / n
+        for _ in range(n):
+            if k == 0.0:
+                x, y = x + ds * math.cos(h), y + ds * math.sin(h)
+            else:
+                h2 = h + k * ds
+                x += (math.sin(h2) - math.sin(h)) / k
+                y -= (math.cos(h2) - math.cos(h)) / k
+                h = h2
+            pts.append((x, y, h))
+    return pts
+
+
+# The car's outline about base_link (vehicle.yaml body: 2 x 1 m, 0.2 m behind the axle).
+BODY = ((1.8, 0.5), (1.8, -0.5), (-0.2, -0.5), (-0.2, 0.5))
+
+
+def widest(run):
+    """Return the largest |y| any corner of the car's body reached, m."""
+    return max(abs(y + bx * math.sin(yaw) + by * math.cos(yaw))
+               for _, _, y, yaw, *_ in run.rows for bx, by in BODY)

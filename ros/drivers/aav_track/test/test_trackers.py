@@ -9,10 +9,11 @@ rate, and (MPC) plan each tick well inside the 50 ms a 20 Hz tick allows.
 import math
 import statistics
 
+from aav_track.path import Path
 from aav_track.trackers import Limits, make, State
 from aav_track.trackers.lqr import LQR
 import pytest
-from sim_car import arc, follow, LIMITS, MODEL, straight, tracker
+from sim_car import arc, follow, LIMITS, MODEL, straight, tracker, uturn, widest
 
 TRACKERS = ['pure_pursuit', 'stanley', 'lqr', 'mpc']
 
@@ -72,6 +73,51 @@ def test_lqr_gains_are_scheduled_by_speed():
     assert not (slow == pytest.approx(fast))
     assert lqr.gains(0.0) == pytest.approx(slow)        # below the table: its first row
     assert lqr.gains(0.625) == pytest.approx((lqr.gains(0.5) + lqr.gains(0.75)) / 2)
+
+
+def test_lqr_gains_are_scheduled_by_the_bend():
+    # About full lock, the steering turns the car 1 / cos^2 faster: other gains, either way.
+    lqr = LQR(LIMITS, MODEL)
+    straight_on, lock = lqr.gains(1.0, 0.0), lqr.gains(1.0, LIMITS.max_steer)
+    assert not (straight_on == pytest.approx(lock, rel=0.01))
+    assert lqr.gains(1.0, -LIMITS.max_steer) == pytest.approx(lock)
+    assert lqr.gains(1.0, 0.05) == pytest.approx((straight_on + lqr.gains(1.0, 0.1)) / 2)
+
+
+def test_lqr_previews_a_bend_ahead():
+    # A left bend 1 m ahead, at 1 m/s: the preview steers left before it arrives.
+    lqr = LQR(LIMITS, MODEL)
+    assert len(lqr.preview_gains(1.0)) == 40
+    lqr.reset(Path(arc(radius=4.0, lead=1.0)))
+    cmd = lqr.step(State(0.0, 0.0, 0.0, 1.0), 0.05)
+    assert cmd.debug['feed_forward_rad'] == pytest.approx(0.0)
+    assert cmd.debug['preview_rad'] > 0 and cmd.steer > 0
+
+
+# The U-turn of the test lot's "turn back" leg (29 Oct): Smac's light bulb, forward only,
+# in a 14 m lane, at 1 m/s. At the planner's radius (full lock x 1.25: 3.6 m) and at full
+# lock itself (2.88 m), where nothing is left to correct with: the worst off the path, m.
+UTURN = {'pure_pursuit': (0.2, 0.35), 'stanley': (0.5, 0.6), 'lqr': (0.1, 0.35),
+         'mpc': (0.1, 0.4)}
+FULL_LOCK = LIMITS.wheelbase / math.tan(LIMITS.max_steer)
+
+
+@pytest.mark.parametrize('name', TRACKERS)
+@pytest.mark.parametrize('lock', [False, True])
+def test_a_u_turn_in_a_14_m_lane(name, lock):
+    radius = FULL_LOCK if lock else 1.25 * FULL_LOCK
+    run = follow(tracker(name), uturn(radius), (0.0, 0.0, 0.0), cruise=1.0)
+    assert run.reached
+    assert max(run.cross()) < UTURN[name][lock]
+    # The body keeps 2 m from both walls (y = +-7 m): room for collision_monitor's zone.
+    assert widest(run) < 5.0
+    check_limits(run)
+
+
+def test_lqr_without_its_preview_swings_wider():
+    worst = {p: max(follow(tracker('lqr', preview=p), uturn(FULL_LOCK), (0, 0, 0)).cross())
+             for p in (0.0, 2.0)}
+    assert worst[2.0] < 0.6 * worst[0.0]
 
 
 def test_mpc_plans_well_inside_a_tick():
