@@ -357,6 +357,12 @@ work on." His order, with the work under way:
       off the ground: speed up, hold, slow down, brake; steer left, right, centre; and
       every sensor checked live (rate, values in range) at the same time. PASS or FAIL per
       line, as `car-day-check` does. Builds on `actuator-test --stands` and bench-check.
+      **Built 29 Oct** (branch `preflight`; [the design](docs/designs/2026-10-29_preflight.md),
+      revised after its EGM review): `pixi run preflight` (`actuator-test preflight
+      --stands`; `--sim`, `--bench`, `--no-drive`, `--skip`). On the car the drive is
+      refused until a rear-wheel speed exists (49b): `--no-drive` checks the sensors only.
+      Every actuator test now also stops on 2 s of driving with no measured speed, and on
+      a speed rising while the command falls. Left: the car itself (car-day session 9, 3.P)
 - [ ] **Cubes into objects, with names** (Ben, 29 Oct: "merge cubes that related like a
       stop sign or a car"): join touching filled cubes into one object (as
       `radar_clusters` does for the radar); then name it: the RF-DETR box it falls in

@@ -122,6 +122,7 @@ NOT_ON_THE_ROUTE = {
     'vehicle.centre_of_mass': 'M7 and M7b: the scales, then the rear lifted',
     'vehicle.tyre_grip': 'test 4.3 (docs/tests.md)',
     'vehicle.encoder_counts_per_rev': 'count the spokes on the encoder wheel',
+    'vehicle.speed_wheels': 'look: which wheels carry the speed sensors (TODO 49b)',
     'actuators': 'tests 3.10-3.12 and 4.1-4.5 (docs/tests.md)',
     'sensors.*.rpy': 'section 5: pointing, tilt, lean',
 }

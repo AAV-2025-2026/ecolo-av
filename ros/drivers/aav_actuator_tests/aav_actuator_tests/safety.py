@@ -217,7 +217,8 @@ def unseen(history: Sequence[Tuple[float, float, float]]) -> Optional[str]:
     if all(abs(c) > UNSEEN_SPEED and abs(m) < UNSEEN_SPEED for _, c, m in window):
         return (f'told to drive for {UNSEEN_TIME:g} s, but the measured speed stays under '
                 f"{UNSEEN_SPEED} m/s: the speed can't be seen (front wheel sensors on "
-                "stands? a dead sensor?), so the speed cap can't work")
+                "stands? a dead sensor?) or the car isn't moving (the spine not armed?), so "
+                "the speed cap can't work")
     return None
 
 
