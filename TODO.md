@@ -11,6 +11,7 @@ controller ... closed loop". The plan: `docs/designs/2026-10-27_control-plan.md`
 | # | Task | Needs |
 |---|---|---|
 | 0 | **The plan's step 1: the bridge uses ego's acceleration**, feed-forward + PI for throttle and brake (`docs/designs/2026-10-27_control-plan.md`); scored with `atob-score` | Gazebo, bench |
+| 0b | **The spine's state machine (Arsh's #15), follow-up:** the board for today's car (`esp32-umod`) has no wheel speed (`SpeedFeedback::None`), so the test mode's "leave above 0.5 m/s" can't fire there. Refuse throttle tests when Confidence is Degraded, or say so in its docs. (Test requests have no transport yet, so nothing can trigger it today.) Also: the self-test is one tick with no fault | Arsh |
 | 1 | **A page that explains it all:** PID, LQR, MPC and MPPI, with pictures; which loop runs where (ESP32, Jrk, Orin); what each knows. The next chapter of `docs/learn-control.md` ("Control from zero") | nothing |
 | 2 | **LQR for steering:** from `vehicle_model.lateral()`, scheduled by speed; follows the planner's path (Smac), in place of pure pursuit; scored with `atob-score` and `controller-compare` | Gazebo |
 | 3 | **LQR for speed and brake (LQI):** one signed acceleration, in `spine-core`; scored against today's PI and P-only brake | bench, Gazebo |
@@ -306,6 +307,13 @@ work on." His order, with the work under way:
       - the car on Jazzy (Q24): a Jazzy Mac can't join the car's Humble;
       - the HUD on a Mac: raylib's runs there as it is; the Flutter app needs CocoaPods (archived 25 Oct);
       - the car's WiFi, measured: how late the pictures arrive, and how often it drops.
+- [ ] **AMCL: a particle filter against a lidar map** (Ben, 28 Oct; not sure yet if we
+      need it): Nav2's stock Adaptive Monte Carlo Localization. Thousands of guesses of
+      where the car is; each lidar scan is matched against a map, and unlikely guesses
+      die off as the car moves. ~5-10 cm where the lidar sees features (curbs, posts,
+      walls), against GPS's 1-3 m: it could matter most for the last metres to B. Needs
+      a map first (`slam_toolbox`), and a test site with things to see: a bare lot gives
+      it little. Would sit beside the GPS + EKF, not replace them.
 - [ ] **One model-based controller instead of many** (Ben, 27 Oct): investigate LQR, and
       collapse today's controllers (pure pursuit, the stopping law in
       `aav_drive_to_point`, the spine's PI and P-only brake) into one controller built
