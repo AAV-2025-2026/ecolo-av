@@ -85,6 +85,7 @@ The `Task` column is `pixi run <task>`; "-" means run the script itself.
 | `fake_vlp16.py` | pretends to be the VLP-16 lidar: its UDP packets | - |
 | `controller_compare.py` | Regulated Pure Pursuit against MPPI, same routes | `controller-compare` |
 | `heading_check.py` | the global EKF's heading against Gazebo's truth | `heading-check` |
+| `gazebo_steering.py` | how much later Gazebo's wheels turn than the actuator model's (run with `tools/ros.sh --local`) | - |
 | `timing_test.py` | every topic's gaps and late messages, parked and driving | `timing-test` |
 | `stream_check.py` | the camera stream end to end, without the car | `stream-check` |
 | `sim_frames.py` | camera pictures of the sim's stop sign, for the detectors | - |
