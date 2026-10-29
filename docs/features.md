@@ -35,6 +35,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Heading from the gyro and wheels | At walking pace GPS made the heading jump up to 76°; the gyro and wheels hold it steady | Ben | 2026-10-22 | sim |
 | Heading from the GPS velocity (`aav_gps_heading`) | The receiver's Doppler velocity gives a good heading while moving, with no magnetometer | Ben | 2026-10-25 | sim |
 | [AMCL as a trial](trials.md) (stock `nav2_amcl`, `amcl:=true`) | To score a particle filter on the lidar and the map against the global EKF, without letting it steer the car (`tf_broadcast: false`) | Ben | 2026-10-29 | built |
+| NDT on a saved lidar map, our own in Rust (`aav_ndt`) | To find the car to centimetres on a map of the lot without RTK, as Autoware does, in code we understand and test on a laptop; scored as a trial before it feeds the EKF | Ben's idea; built by Ben | 2026-10-29 | sim |
 
 ## Perception
 

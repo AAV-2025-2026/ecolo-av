@@ -298,3 +298,21 @@ def test_the_spine_in_the_loop_runs_the_rust_bridge_unless_asked():
     assert sent['bridge'] == 'python'
     with pytest.raises(ValueError, match='bridge:=cpp'):
         bridge(bridge='cpp')
+
+
+def test_ndt_needs_the_test_lot_the_lidar_and_its_map(tmp_path):
+    # A trial, scored only (docs/designs/2026-10-29_ndt.md): off by default.
+    assert 'ndt.launch.py' not in included(started(SIM, world='test_lot'))
+    map_file = tmp_path / 'test_lot.pcd'
+    with pytest.raises(ValueError, match='world:=test_lot'):
+        started(SIM, ndt='true', ndt_map=str(map_file))         # the empty world
+    with pytest.raises(ValueError, match='lidar:=true'):
+        started(SIM, world='test_lot', lidar='false', ndt='true', ndt_map=str(map_file))
+    with pytest.raises(ValueError, match='pixi run ndt-map drive'):
+        started(SIM, world='test_lot', ndt='true', ndt_map=str(map_file))
+    map_file.write_bytes(b'')
+    sent = included(started(SIM, world='test_lot', ndt='true', ndt_map=str(map_file),
+                            start_y='4.0', start_yaw='1.0'))['ndt.launch.py']
+    # The start pose is the car's, as AMCL's; on simulated time.
+    assert sent == {'use_sim_time': 'true', 'ndt_map': str(map_file), 'ndt_x': '0.0',
+                    'ndt_y': '4.0', 'ndt_yaw': '1.0'}
