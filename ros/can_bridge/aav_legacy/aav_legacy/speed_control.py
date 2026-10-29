@@ -13,7 +13,9 @@ step 1):
 
   - Feed-forward: ego already shapes the speed (its acceleration and jerk limits), so the
     slope of its commands is the acceleration it wants. Sent at once, before any error.
-  - Feedback: PI on the wheel speed (/vehicle/odom) cleans up what the model got wrong:
+  - Feedback: PI on the wheel speed (/vehicle/odom) cleans up what the model got wrong.
+    Its reference is ego's speed delayed by the actuators' lag (response_lag), so it
+    corrects only what the model didn't foresee:
     slope, wind, wear. The integral is limited, runs only near the target, and is frozen
     while a pedal is pinned.
   - The model (vehicle.yaml's actuators:, guesses until tests 4.1-4.4): full throttle
@@ -44,6 +46,12 @@ class SpeedControlConfig:
     integral_limit: float = 0.5  # m/s^2: the most the integral may add or take
     integral_band: float = 0.3   # m/s: integrate only this close, so a big step can't wind it up
     accel_filter: float = 0.1    # s: smooths the slope of ego's speed (it steps at 20-50 Hz)
+    # s: how far behind ego the car is expected to run, as the actuators lag (the brake's
+    # 0.2 s in vehicle.yaml, and the firmware's throttle ramp). The PI corrects the speed
+    # against ego's delayed by this (a reference model), so it doesn't brake harder to win
+    # back a lag the feed-forward already allows for. 0: none. 0.3 s held a 3 m/s stop to
+    # its planned 1.5 m/s^2 through the C++ firmware's model; 0 gave 1.85.
+    response_lag: float = 0.3
     dead_band: float = 0.05      # m/s^2 either side of zero: coast, neither pedal
     stopped_speed: float = 0.05  # m/s: slower counts as stopped
     hold_brake: float = 0.2      # brake (0..1) held while stopped with a zero target
@@ -76,12 +84,14 @@ class SpeedControl:
         self.integral = 0.0
         self.feedforward = 0.0
         self.last_target: Optional[float] = None
+        self.expected: Optional[float] = None   # ego's speed, delayed by response_lag
 
     def reset(self) -> None:
         """Forget the past: on a stale command, an e-stop, or a new drive."""
         self.integral = 0.0
         self.feedforward = 0.0
         self.last_target = None
+        self.expected = None
 
     def update(self, target: float, measured: Optional[float], dt: float) -> Pedals:
         """
@@ -99,6 +109,13 @@ class SpeedControl:
         self.feedforward += (slope - self.feedforward) * clamp(dt / max(c.accel_filter, dt),
                                                                0.0, 1.0)
 
+        # The speed the car should have now, given the actuators' lag: the PI's reference.
+        if self.expected is None:
+            self.expected = target
+        else:
+            self.expected += (target - self.expected) * clamp(
+                dt / max(c.response_lag, dt), 0.0, 1.0)
+
         if measured is None:
             # Open loop: assume the car is where ego says, and trust the model alone.
             self.integral = 0.0
@@ -113,7 +130,7 @@ class SpeedControl:
             if speed < c.stopped_speed:
                 return Pedals(0.0, c.hold_brake, 0.0, 0.0, 0.0)
 
-        error = target - speed if measured is not None else 0.0
+        error = self.expected - speed if measured is not None else 0.0
         integral = self.integral
         if abs(error) < c.integral_band and not stopping:
             integral = clamp(integral + c.ki * error * dt, -c.integral_limit, c.integral_limit)

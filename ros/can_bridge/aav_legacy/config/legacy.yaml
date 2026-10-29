@@ -41,6 +41,7 @@ legacy_uart_bridge:
     speed_loop.mode: open
     speed_loop.kp: 2.0              # m/s^2 per m/s. GUESS: tune on stands, then the lot
     speed_loop.ki: 0.5              # m/s^2 per (m/s x s). GUESS
+    speed_loop.response_lag: 0.3    # s the car runs behind ego (the actuators' lag). GUESS
     speed_loop.hold_brake: 0.2      # brake travel while stopped (about -0.3 as above)
     speed_loop.odom_timeout: 0.3    # s: an older wheel speed means feed-forward alone
 

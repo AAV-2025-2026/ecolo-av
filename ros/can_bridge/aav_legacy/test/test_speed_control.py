@@ -63,13 +63,29 @@ def test_open_loop_holds_a_speed_with_the_throttle_that_matches_drag():
 
 
 def test_ego_speeding_up_is_sent_at_once_as_feed_forward():
-    loop = SpeedControl()
+    loop = SpeedControl(SpeedControlConfig(response_lag=0.0))
     v = 0.0
     for _ in range(50):              # 1 s at 0.5 m/s^2, the car keeping up exactly
         v += 0.5 * DT
         p = loop.update(v, v, DT)
     assert p.feedforward == pytest.approx(0.5, abs=0.01)
     assert p.throttle == pytest.approx((0.5 + C.drag * v) / C.max_accel, abs=0.01)
+
+
+def test_a_car_lagging_as_expected_gets_no_extra_brake():
+    lag = SpeedControlConfig().response_lag
+    cases = ((SpeedControlConfig(), False), (SpeedControlConfig(response_lag=0.0), True))
+    for cfg, extra in cases:
+        loop = SpeedControl(cfg)
+        for _ in range(100):
+            loop.update(3.0, 3.0, DT)
+        v, car = 3.0, 3.0
+        for _ in range(40):          # ego slows at 1.5 m/s^2; the car follows response_lag behind
+            v -= 1.5 * DT
+            car += (v - car) * DT / lag
+            p = loop.update(v, car, DT)
+        planned = (1.5 - C.drag * car) / C.max_brake
+        assert (p.brake > planned * 1.2) == extra
 
 
 def test_feedback_reaches_the_speed_when_the_car_is_weaker_than_the_model():
