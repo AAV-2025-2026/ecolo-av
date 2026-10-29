@@ -18,15 +18,40 @@ amcl:
     scan_topic: /sensors/lidar/scan   # lidar_scan (aav_lidar), 720 ranges in base_link
     map_topic: /map
     robot_model_type: "nav2_amcl::DifferentialMotionModel"   # no omni: a car can't slide
-    laser_model_type: likelihood_field
+    laser_model_type: likelihood_field   # not beam: it needs no ray casting, and copes with
+                                         # the scan's gaps (inf = nothing within range)
     laser_min_range: 0.2              # m: lidar_scan's range_min (nav2.yaml)
     laser_max_range: 30.0             # m: its range_max; further is "nothing there"
-    max_beams: 60
+    # Tuned 29 Oct (docs/trials.md "AMCL tuned"): with the defaults below in brackets AMCL
+    # drifted 1-2 m on the first leg and locked onto a turned copy of the lot (90 deg off)
+    # round the building. A bag of that run showed the scan fits the map within a cell at
+    # Gazebo's truth (3 of 83,000 beam ends further than 0.75 m from a wall): the map was
+    # right; the filter trusted the scan too little and the odometry far too little.
+    #
+    # The laser model: how much a scan counts.
+    max_beams: 180                    # [60] every 4th of the 720 directions (2 deg). A third
+                                      # are inf in the open lot, so 60 left about 40 beams
+    z_hit: 0.9                        # [0.5] Gazebo's map is exact: a beam on a wall is
+    z_rand: 0.1                       # [0.5] nearly always right. With 0.5/0.5 a perfect fit
+                                      # scored only ~6x a hopeless one (nav2's p += pz^3)
+    sigma_hit: 0.2                    # m [0.2]: kept; the map's 0.25 m cells
+    laser_likelihood_max_dist: 2.0    # m [2.0]: kept
+    # The motion model: how far odometry may be wrong, per update. Its noise's standard
+    # deviation is sqrt(alpha) times the move: the default 0.2 gave each particle ~9 deg of
+    # heading noise per 0.25 m driven, while ekf_local (wheels + IMU) was within 0.3 % in
+    # distance and 0.5 deg per 4 m against the truth. These still leave ~10x that error,
+    # for the real car's wheels.
+    alpha1: 0.05                      # [0.2] heading from turning: sd 22 % of the turn
+    alpha2: 0.01                      # [0.2] heading from driving: sd 0.1 rad per m
+    alpha3: 0.02                      # [0.2] distance from driving: sd 14 % of the move
+    alpha4: 0.01                      # [0.2] distance from turning
+    alpha5: 0.2                       # [0.2] unused by the differential model
     min_particles: 500
     max_particles: 2000
     update_min_d: 0.25                # m driven before it updates: parked, it publishes little
     update_min_a: 0.2                 # rad turned
-    resample_interval: 1
+    resample_interval: 2              # [1] resample every 2nd scan: with the tighter noise,
+                                      # every scan wore the particles down to a few copies
     transform_tolerance: 1.0
     save_pose_rate: 0.5
     first_map_only: true              # the map never changes during a run
