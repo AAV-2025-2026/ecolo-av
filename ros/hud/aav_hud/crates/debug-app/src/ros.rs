@@ -23,6 +23,11 @@
 //! - `/system/source`: reliable, transient local, depth 1 (latched), as the HUD;
 //! - the plan: reliable, keep last 1, as the map window;
 //! - everything else: best effort (SensorDataQoS), which takes reliable publishers too.
+//!
+//! Keys 1-4 call aav_track's own parameter service (`track_parameters_service`,
+//! `/track/set_parameters`) from the window's thread: the screen has already checked
+//! `/system/source` says SIM, and the track node refuses unless `live_swap` is on. The
+//! answer comes back as an `Update::SwapReply`.
 
 use std::{
     sync::{
@@ -43,6 +48,7 @@ use debug_core::{
     poses::PoseBuffer,
     scan::{self, ScanError},
     state::{Localizer, Source, Update},
+    swap::{Reply, Tracker},
     track::TrackStatus,
 };
 use hud_core::{
@@ -59,6 +65,8 @@ use ros_env::geometry_msgs::msg::{
     Pose as PoseMsg, PoseWithCovarianceStamped, Quaternion as QuaternionMsg,
 };
 use ros_env::nav_msgs::msg::{Odometry, Path};
+use ros_env::rcl_interfaces::msg::{Parameter, ParameterType, ParameterValue};
+use ros_env::rcl_interfaces::srv::{SetParameters, SetParameters_Request, SetParameters_Response};
 use ros_env::sensor_msgs::msg::{Imu, NavSatFix, PointCloud2};
 use ros_env::tf2_msgs::msg::TFMessage;
 
@@ -124,13 +132,16 @@ struct Shared {
 /// The node, seen from the screen.
 pub struct RosSource {
     updates: Receiver<Update>,
+    /// For the swap's answer, which arrives on the ROS thread.
+    tx: SyncSender<Update>,
+    track_parameters: Client<SetParameters>,
     shared: Arc<Shared>,
     executor: Arc<ExecutorCommands>,
     threads: Vec<JoinHandle<()>>,
 }
 
 /// What the ROS thread hands back once the node is up.
-type Ready = Result<(DebugConfig, Arc<ExecutorCommands>)>;
+type Ready = Result<(DebugConfig, Arc<ExecutorCommands>, Client<SetParameters>)>;
 
 impl RosSource {
     /// Starts the node and the cubes thread, and waits until the node is up. `args` is
@@ -162,7 +173,7 @@ impl RosSource {
                 shared.clouds.ready.notify_all();
             })?
         };
-        let (config, executor) = ready_rx
+        let (config, executor, track_parameters) = ready_rx
             .recv()
             .map_err(|_| anyhow!("the ROS thread ended before the node was up"))?
             .context("starting the ROS node (is ROS sourced? try tools/ros.sh, or --demo)")?;
@@ -170,9 +181,10 @@ impl RosSource {
             let shared = Arc::clone(&shared);
             let base = config.frame(Frame::Base).to_owned();
             let settings = config.cube_settings();
+            let tx = update_tx.clone();
             thread::Builder::new()
                 .name("cubes".into())
-                .spawn(move || make_cubes(&shared, &base, &settings, &update_tx))?
+                .spawn(move || make_cubes(&shared, &base, &settings, &tx))?
         };
 
         // Ctrl-C, or launch stopping us: stop spinning; the window sees it and closes.
@@ -186,6 +198,8 @@ impl RosSource {
         }
         let source = Self {
             updates,
+            tx: update_tx,
+            track_parameters,
             shared,
             executor,
             threads: vec![ros, cubes],
@@ -205,6 +219,21 @@ impl crate::source::DataSource for RosSource {
 
     fn take_scan(&mut self) -> Option<CubeScan> {
         self.shared.scans.take()
+    }
+
+    fn swap_tracker(&mut self, tracker: Tracker) -> Result<()> {
+        if !self.track_parameters.service_is_ready()? {
+            anyhow::bail!("no track node (start the sim with tracker:=pure_pursuit)");
+        }
+        let tx = self.tx.clone();
+        let asked = tracker.name();
+        // The promise needn't be kept (rclrs): the callback runs when the answer comes.
+        let promise = self.track_parameters.call_then(
+            &tracker_request(asked),
+            move |response: SetParameters_Response| send(&tx, swap_reply(asked, &response)),
+        )?;
+        drop(promise);
+        Ok(())
     }
 
     fn has_stopped(&self) -> bool {
@@ -475,9 +504,16 @@ fn spin(
         move |m: DataSource| send(&tx, Update::Origin(announcement(&m)))
     })?;
 
+    let track_parameters =
+        node.create_client::<SetParameters>(config.track_parameters_service.as_str())?;
+
     if let Some(r) = ready.take() {
-        r.send(Ok((config, Arc::clone(executor.commands()))))
-            .map_err(|_| anyhow!("the window closed while the node started"))?;
+        r.send(Ok((
+            config,
+            Arc::clone(executor.commands()),
+            track_parameters,
+        )))
+        .map_err(|_| anyhow!("the window closed while the node started"))?;
     }
     executor.spin(SpinOptions::default()).first_error()?;
     Ok(())
@@ -488,6 +524,30 @@ fn send(tx: &SyncSender<Update>, update: Update) {
     match tx.try_send(update) {
         Ok(()) | Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {}
     }
+}
+
+/// `tracker := name`, as `ros2 param set /track tracker <name>` sends it.
+fn tracker_request(name: &str) -> SetParameters_Request {
+    SetParameters_Request {
+        parameters: vec![Parameter {
+            name: "tracker".into(),
+            value: ParameterValue {
+                type_: ParameterType::PARAMETER_STRING,
+                string_value: name.into(),
+                ..Default::default()
+            },
+        }],
+    }
+}
+
+/// The node's answer: its one result, or why there was none.
+fn swap_reply(asked: &'static str, response: &SetParameters_Response) -> Update {
+    let outcome = match response.results.first() {
+        Some(r) if r.successful => Ok(()),
+        Some(r) => Err(r.reason.clone()),
+        None => Err("no answer from the track node".into()),
+    };
+    Update::SwapReply(Reply { asked, outcome })
 }
 
 fn heard(source: Source, detail: String) -> Update {
@@ -605,6 +665,12 @@ impl Params {
             config.set_frame(f, p.get().to_string());
             names.push(p);
         }
+        let service = node
+            .declare_parameter::<Arc<str>>("track_parameters_service")
+            .default(config.track_parameters_service.as_str().into())
+            .read_only()?;
+        config.track_parameters_service = service.get().to_string();
+        names.push(service);
         let mut numbers = Vec::new();
         for n in Number::ALL {
             let p = node
@@ -670,6 +736,29 @@ mod tests {
         let settings = DebugConfig::default().cube_settings();
         let scan = place(&m, "base_link", &statics, &poses, &settings).expect("placed");
         assert_eq!((scan.cubes.len(), scan.skipped), (1, 1));
+    }
+
+    #[test]
+    fn a_swap_asks_for_one_string_and_reads_the_answer() {
+        let r = tracker_request("lqr");
+        assert_eq!(r.parameters[0].name, "tracker");
+        assert_eq!(r.parameters[0].value.string_value, "lqr");
+        assert_eq!(r.parameters[0].value.type_, ParameterType::PARAMETER_STRING);
+        let mut response = SetParameters_Response::default();
+        let Update::SwapReply(none) = swap_reply("lqr", &response) else {
+            panic!("a reply")
+        };
+        assert!(none.outcome.is_err());
+        response
+            .results
+            .push(ros_env::rcl_interfaces::msg::SetParametersResult {
+                successful: false,
+                reason: "live_swap is off".into(),
+            });
+        let Update::SwapReply(no) = swap_reply("lqr", &response) else {
+            panic!("a reply")
+        };
+        assert_eq!(no.outcome, Err("live_swap is off".into()));
     }
 
     #[test]

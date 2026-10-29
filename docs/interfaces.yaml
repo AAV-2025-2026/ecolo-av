@@ -717,6 +717,10 @@ services:
     type: std_srvs/srv/Trigger
     server: street_router
     note: A person sends street_router's newest route to Nav2, as a /follow_gps_waypoints goal. Nothing goes to Nav2 without it (unless follow_at_once is set). Nav2, twist_mux, ego and the spine stay in charge.
+  /track/set_parameters:
+    type: rcl_interfaces/srv/SetParameters
+    server: track
+    note: aav_track's own parameter service (every ROS node has one). Listed for the one change that matters - tracker, swapped live (a trial, docs/trials.md) - refused unless the node runs with live_swap:=true, which only sim.launch.py sets. Called by the debug HUD's keys 1-4 (debug_hud, aav_hud), only while /system/source says SIM, and by `ros2 param set /track tracker lqr`.
 
 actions:
   /scripted_drive:

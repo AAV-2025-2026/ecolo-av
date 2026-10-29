@@ -21,6 +21,8 @@
 //!             track_status_topic    diagnostic_msgs/DiagnosticStatus  the panel: the trial tracker
 //!             source_topic          aav_interfaces/DataSource   latched: the SIMULATED banner
 //! Publishes   nothing. It never touches an actuator (the design's D3).
+//! Calls       track_parameters_service  rcl_interfaces/SetParameters  keys 1-4: aav_track's
+//!                                       tracker, only while /system/source says SIM
 //! Parameters  the topics above; odom_frame, base_frame, map_frame; stale_after (s),
 //!             cube_size (m), max_cubes, pose_window (s), ground_height (m)
 //!
@@ -44,7 +46,12 @@ use std::{
 };
 
 use anyhow::{bail, Context as _, Result};
-use debug_core::{config::DebugConfig, orbit::Orbit, state::DebugState};
+use debug_core::{
+    config::DebugConfig,
+    orbit::Orbit,
+    state::DebugState,
+    swap::{self, Reply, Tracker},
+};
 use hud_app::window;
 use hud_core::screen::Monitor;
 use map_core::car::CarShape;
@@ -73,7 +80,8 @@ usage: debug_hud [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
   --ros-args ...     passed to ROS, e.g. --ros-args -p lidar_topic:=/x
 
 keys: drag turn, right-drag (or shift-drag) move, wheel zoom, C chase / follow / free,
-      R reset the camera, F11 full screen";
+      R reset the camera, 1-4 swap the trial tracker (sim only: pure pursuit, Stanley,
+      LQR, MPC), F11 full screen";
 
 /// The drawing test: settle, then measure for this long.
 const BENCH_SETTLE: Duration = Duration::from_secs(2);
@@ -260,6 +268,29 @@ fn run(
         }
         if rl.is_key_pressed(KeyboardKey::KEY_F11) {
             window::toggle_fullscreen(&mut rl);
+        }
+        // Keys 1-4: swap the trial tracker, only in the simulator (the design's D3).
+        let digits = [
+            KeyboardKey::KEY_ONE,
+            KeyboardKey::KEY_TWO,
+            KeyboardKey::KEY_THREE,
+            KeyboardKey::KEY_FOUR,
+        ];
+        let pressed = (1..=4u8)
+            .zip(digits)
+            .find(|&(_, key)| rl.is_key_pressed(key))
+            .and_then(|(digit, _)| Tracker::on_key(digit));
+        if let Some(tracker) = pressed {
+            let outcome = swap::allowed(&state.origins)
+                .map_err(|why| why.to_string())
+                .and_then(|()| source.swap_tracker(tracker).map_err(|e| format!("{e:#}")));
+            // Asked: the node's own answer follows. Refused here: say why now.
+            if let Err(why) = outcome {
+                state.swap_reply = Some(Reply {
+                    asked: tracker.name(),
+                    outcome: Err(why),
+                });
+            }
         }
         orbit.update(state.car());
 

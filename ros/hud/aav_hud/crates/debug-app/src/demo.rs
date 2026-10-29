@@ -12,6 +12,7 @@ use debug_core::{
     cubes::{self, Cube, CubeScan, CubeSettings},
     frames::{Stamp, Transform3},
     state::{Localizer, Source, Update},
+    swap::{Reply, Tracker},
     track::TrackStatus,
 };
 use hud_core::{
@@ -169,6 +170,8 @@ pub struct Demo {
     last_news: Option<Instant>,
     settings: CubeSettings,
     bench: Option<CubeScan>,
+    tracker: Tracker,
+    replies: Vec<Update>,
 }
 
 impl Demo {
@@ -180,6 +183,8 @@ impl Demo {
             last_news: None,
             settings,
             bench: bench_cubes.map(|n| bench_scan(n, size)),
+            tracker: Tracker::PurePursuit,
+            replies: Vec::new(),
         }
     }
 
@@ -204,7 +209,7 @@ impl DataSource for Demo {
 
     fn drain(&mut self, now: Instant) -> Vec<Update> {
         if !due(&mut self.last_news, now, Duration::from_millis(50)) {
-            return Vec::new();
+            return std::mem::take(&mut self.replies);
         }
         let t = self.t(now);
         let car = car_at(t);
@@ -238,7 +243,8 @@ impl DataSource for Demo {
             source,
             detail: detail.into(),
         };
-        vec![
+        let mut news = std::mem::take(&mut self.replies);
+        news.extend([
             Update::MapToOdom(ODOM_IN_MAP),
             pose(Localizer::Local, car, "odom"),
             pose(Localizer::Global, global, "map"),
@@ -266,14 +272,24 @@ impl DataSource for Demo {
                 faults: Faults(0),
             }),
             Update::Track(TrackStatus {
-                tracker: "pure_pursuit".into(),
+                tracker: self.tracker.name().into(),
                 cross_track: Some(0.04 * (t * 0.7).sin()),
                 loop_ms: Some(0.3),
                 missed_ticks: Some(0),
                 steer: Some(f64::from(steer)),
                 left: None,
             }),
-        ]
+        ]);
+        news
+    }
+
+    fn swap_tracker(&mut self, tracker: Tracker) -> anyhow::Result<()> {
+        self.tracker = tracker;
+        self.replies.push(Update::SwapReply(Reply {
+            asked: tracker.name(),
+            outcome: Ok(()),
+        }));
+        Ok(())
     }
 
     fn take_scan(&mut self) -> Option<CubeScan> {

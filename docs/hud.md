@@ -487,6 +487,9 @@ hud ... should connect directly to the ros node at the sensor". Design:
 | Legend, top left | each localizer's distance from EKF local, in metres | - |
 | Panel: IMU, GPS, lidar, wheels, wheel odom, vehicle, each estimate, map -> odom, tracker | each topic: OK, STALE or NEVER, and what it said | - |
 
+It publishes nothing. Its one call: keys 1-4 ask aav_track's parameter service for
+another tracker, in the simulator only (the design's D3: never an actuator).
+
 ### How the cubes are placed
 
 ```
@@ -510,6 +513,7 @@ cloud (stamp t) --/tf_static--> base_link --EKF local's pose AT t--> odom --> 20
 | wheel | zoom |
 | C | CHASE (behind the car) / FOLLOW (fixed angle) / FREE |
 | R | back to CHASE |
+| 1 2 3 4 | swap the trial tracker: pure pursuit, Stanley, LQR, MPC. **Sim only**: refused unless `/system/source` says SIM, and the track node refuses unless `live_swap` is on (`sim.launch.py`). The answer shows under TRACKER |
 | F11 | full screen |
 
 ### Run it
@@ -521,8 +525,8 @@ pixi run build && pixi run debug-hud    # the node alone, beside a running sim
 ```
 
 `debugdemo` is `demo` with `amcl:=true tracker:=pure_pursuit reversing:=false`, so AMCL
-and the trial tracker have something to show. Swap the tracker live from a terminal
-(sim only): `ros2 param set /track tracker lqr`.
+and the trial tracker have something to show. Swap the tracker live with keys 1-4, or
+from a terminal: `ros2 param set /track tracker lqr` (sim only, both ways).
 
 ### How it's built
 

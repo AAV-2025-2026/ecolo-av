@@ -22,6 +22,8 @@ debug_hud:
     vehicle_status_topic: /vehicle/status         # aav_interfaces/msg/VehicleStatus: mode, armed, steering
     track_status_topic: /drivers/nav/track/status # diagnostic_msgs/msg/DiagnosticStatus: the trial tracker, tracker:= on
     source_topic: /system/source                  # aav_interfaces/msg/DataSource, latched: the SIMULATED banner
+    # --- keys 1-4 (sim only): the trial tracker's parameter service (aav_track, live_swap) ---
+    track_parameters_service: /track/set_parameters   # rcl_interfaces/srv/SetParameters
     # --- frames (REP-105) ---
     odom_frame: odom
     base_frame: base_link

@@ -136,6 +136,7 @@ Check a running system against it with `pixi run check <turtle|sim|road|spine|ca
 | `/safety/output_mux/clear` | `std_srvs/srv/Trigger` | `output_mux` | A person reopens the output mux after it latched STOP. Refused, with the reason, while the evidence remains (a simulated source still announced, the sensor mux still reporting a problem); once accepted, commands flow again after 2 s of all clear. |
 | `/safety/sensor_watchdog/clear` | `std_srvs/srv/Trigger` | `sensor_watchdog` | A person says all is right again after a fault the watchdog latches - a GPS jump, wheels that disagreed with the IMU and GPS, a HUD that dropped out (LOST). pixi run watchdog-clear (pixi run sim-fault clear in Gazebo). |
 | `/drivers/nav/route/follow` | `std_srvs/srv/Trigger` | `street_router` | A person sends street_router's newest route to Nav2, as a /follow_gps_waypoints goal. Nothing goes to Nav2 without it (unless follow_at_once is set). Nav2, twist_mux, ego and the spine stay in charge. |
+| `/track/set_parameters` | `rcl_interfaces/srv/SetParameters` | `track` | aav_track's own parameter service (every ROS node has one). Listed for the one change that matters - tracker, swapped live (a trial, docs/trials.md) - refused unless the node runs with live_swap:=true, which only sim.launch.py sets. Called by the debug HUD's keys 1-4 (debug_hud, aav_hud), only while /system/source says SIM, and by `ros2 param set /track tracker lqr`. |
 
 ## Actions
 

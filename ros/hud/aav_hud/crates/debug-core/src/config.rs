@@ -146,6 +146,8 @@ pub struct DebugConfig {
     pub vehicle_status_topic: String,
     pub track_status_topic: String,
     pub source_topic: String,
+    /// aav_track's parameter service, for keys 1-4 (sim only).
+    pub track_parameters_service: String,
     pub odom_frame: String,
     pub base_frame: String,
     pub map_frame: String,

@@ -26,6 +26,7 @@ map-frame layers (EKF global, AMCL, truth, plan) --latest map -> odom from /tf--
 | `scan` | `place(...)`: a cloud start to finish, or a `ScanError` |
 | `orbit` | `Orbit`: the 3D camera; `Mode` chase / follow / free |
 | `track` | `TrackStatus::from_values`: aav_track's `/drivers/nav/track/status` |
+| `swap` | keys 1-4: `Tracker::on_key`, `allowed(&Origins)` (SIM only), `Reply` |
 | `state` | `DebugState`, `Update`, `Localizer`, `Source` (the panel's rows) |
 
 It builds on (path dependencies): [`hud-core`](../hud-core/README.md) (`health`,

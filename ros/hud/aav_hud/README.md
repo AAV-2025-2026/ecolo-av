@@ -76,6 +76,7 @@ Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s), `arrive_wit
 | sub | `wheels_topic`: `/vehicle/wheels`; `vehicle_status_topic`: `/vehicle/status` | aav_interfaces/WheelSpeeds, VehicleStatus |
 | sub | `track_status_topic`: `/drivers/nav/track/status` | diagnostic_msgs/DiagnosticStatus |
 | sub | `source_topic`: `/system/source` (latched) | aav_interfaces/DataSource |
+| call | `track_parameters_service`: `/track/set_parameters` (keys 1-4: `tracker`; only while `/system/source` says SIM) | rcl_interfaces/SetParameters |
 
 Other parameters: `odom_frame`, `base_frame`, `map_frame`; `stale_after` (1.0 s),
 `cube_size` (0.2 m), `max_cubes` (20,000), `pose_window` (1.0 s), `ground_height` (0.25 m).
@@ -108,7 +109,8 @@ Other parameters: `odom_frame`, `base_frame`, `map_frame`; `stale_after` (1.0 s)
 - `map` publishes a goal only after DRIVE HERE then CONFIRM, and refuses one off Nav2's
   map or with no car position.
 - The logic lives in `hud-core`, `map-core` and `debug-core`, tested without ROS or a screen.
-- `debug_hud` publishes nothing and calls nothing: it never touches an actuator.
+- `debug_hud` publishes nothing and never touches an actuator. Its one call swaps a
+  **simulated** trial tracker (keys 1-4), and only while `/system/source` says SIM.
 - `debug_hud`'s clouds never go through the shared queue: a newest-only slot to the
   `cubes` thread, then a newest-only slot to the screen. Each is placed with the local
   EKF's pose at its own stamp.

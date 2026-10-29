@@ -20,6 +20,8 @@
   <!-- debug_hud: /tf and /tf_static (tf2_msgs), aav_track's status (diagnostic_msgs). -->
   <depend>tf2_msgs</depend>
   <depend>diagnostic_msgs</depend>
+  <!-- debug_hud: keys 1-4 call aav_track's parameter service (sim only). -->
+  <depend>rcl_interfaces</depend>
   <!-- map: the car's outline, from vehicle.yaml (a copy built in, the installed one at launch). -->
   <depend>aav_description</depend>
   <!-- map: the datum (map 0,0 on the Earth) for the street map, from navsat.yaml (a copy

@@ -379,7 +379,7 @@ impl Ui {
         }
 
         // Bottom: the keys.
-        let keys = "drag: turn    right-drag: move    wheel: zoom    C: camera    R: reset    F11: full screen";
+        let keys = "drag: turn    right-drag: move    wheel: zoom    C: camera    R: reset    1-4: tracker (sim)    F11";
         self.text(d, keys, 16.0, h - 34.0, 18.0, DIM);
     }
 
@@ -477,6 +477,12 @@ impl Ui {
                 self.text(d, "none (Nav2's own controller)", x, y, 20.0, DIM);
                 y += 32.0;
             }
+        }
+        if let Some(reply) = &state.swap_reply {
+            let colour = if reply.outcome.is_ok() { GOOD } else { WARN };
+            let s = fit(&self.font, &reply.line(), right - x, 17.0);
+            self.text(d, &s, x, y, 17.0, colour);
+            y += 26.0;
         }
 
         y = self.section(d, "LIDAR CUBES", x0, y + 4.0, w);

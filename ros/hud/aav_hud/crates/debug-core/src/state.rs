@@ -20,6 +20,7 @@ use crate::{
     config::DebugConfig,
     cubes::CubeScan,
     frames::{frame_name, MapToOdom, Stamp},
+    swap::Reply,
     track::TrackStatus,
 };
 
@@ -135,6 +136,8 @@ pub enum Update {
     Origin(Announcement),
     /// Why the last cloud became no cubes.
     ScanProblem(String),
+    /// The answer to a tracker swap (keys 1-4).
+    SwapReply(Reply),
 }
 
 /// The window's state.
@@ -161,6 +164,8 @@ pub struct DebugState {
     pub frame_problem: Option<String>,
     /// The car's path in odom, for the trail.
     trail: VecDeque<Point>,
+    /// The last tracker swap's answer (keys 1-4).
+    pub swap_reply: Option<Reply>,
 }
 
 /// Clouds remembered for the rate.
@@ -189,6 +194,7 @@ impl DebugState {
             scan_times: VecDeque::new(),
             frame_problem: None,
             trail: VecDeque::new(),
+            swap_reply: None,
         }
     }
 
@@ -258,6 +264,7 @@ impl DebugState {
             }
             Update::Origin(a) => self.origins.apply(a),
             Update::ScanProblem(why) => self.scan_problem = Some(why),
+            Update::SwapReply(reply) => self.swap_reply = Some(reply),
         }
     }
 

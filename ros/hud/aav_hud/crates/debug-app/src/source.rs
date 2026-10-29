@@ -3,7 +3,7 @@
 
 use std::time::Instant;
 
-use debug_core::{cubes::CubeScan, state::Update};
+use debug_core::{cubes::CubeScan, state::Update, swap::Tracker};
 
 /// A source of [`Update`]s and scans.
 pub trait DataSource {
@@ -15,6 +15,10 @@ pub trait DataSource {
 
     /// The newest scan's cubes, if a new one is ready (older ones were dropped).
     fn take_scan(&mut self) -> Option<CubeScan>;
+
+    /// Asks the trial tracker to swap to `tracker` (keys 1-4; the caller has checked
+    /// it's the simulator). The answer comes back later as an `Update::SwapReply`.
+    fn swap_tracker(&mut self, tracker: Tracker) -> anyhow::Result<()>;
 
     /// Whether the source has stopped (Ctrl-C, or the ROS node failed): the window closes.
     fn has_stopped(&self) -> bool {
