@@ -100,8 +100,14 @@ topics:
   /safety/collision_monitor/state:
     type: nav2_msgs/msg/CollisionMonitorState
     pub: [collision_monitor]
-    sub: []
-    note: What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar or the lidar is silent or its TF is late.
+    sub: [stop_hold]
+    note: What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar or the lidar is silent or its TF is late. It decides afresh on every command, so it can flicker between the two at the stop zone's edge - stop_hold holds the stop.
+  /safety/stop_hold/lock:
+    type: std_msgs/msg/Bool
+    pub: [stop_hold]
+    sub: [twist_mux]
+    live: [bench, road]
+    note: true from collision_monitor's STOP until it has said anything else for 1 s without a break (aav_safety stop_hold, 10 Hz, wherever navigation.launch.py starts collision_monitor). A twist_mux lock at priority 21 - it holds Nav2 (20) and the AI slot (10) only, never the point driver, a person or a test. Timeout 0 - silence locks nothing (profiles without collision_monitor never publish it), and a stop_hold that dies while true keeps the stop. Without it, an obstacle at the stop zone's edge flickered the monitor between stop and go, and each go let the car creep on.
   /safety/collision_monitor/stop_zone:
     type: geometry_msgs/msg/PolygonStamped
     pub: [collision_monitor]

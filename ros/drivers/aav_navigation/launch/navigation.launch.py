@@ -23,6 +23,9 @@ robot_localization does localization, no docking or route server):
   collision_monitor /control/cmd_vel_smoothed -> /drivers/nav/cmd_vel, stopping for radar
                     or lidar points ahead; its state and stop zone under
                     /safety/collision_monitor/
+  stop_hold         with collision_monitor (aav_safety): holds its stops until the zone
+                    stays clear for 1 s, through twist_mux's stop_zone lock
+                    (/safety/stop_hold/lock), so the zone's edge can't flicker it
   lidar_scan        with lidar:=true (aav_lidar): the roof lidar's
                     cloud -> /sensors/lidar/scan (what stands between the road and just
                     over the roof, all the way round), for the costmap and collision_monitor
@@ -169,6 +172,14 @@ def nodes(context):
              remappings=remaps)
         for pkg, exe, remaps in servers
     ]
+    if collision_monitor:
+        # Holds collision_monitor's stops (aav_safety stop_hold, twist_mux's stop_zone
+        # lock): Jazzy's monitor flickers between stop and go at its zone's edge. Not a
+        # lifecycle node: it locks nothing until the monitor first says STOP.
+        config = FindPackageShare('aav_safety').perform(context) + '/config/stop_hold.yaml'
+        actions.append(Node(package='aav_safety', executable='stop_hold', name='stop_hold',
+                            output='screen',
+                            parameters=[config, {'use_sim_time': use_sim_time}]))
     if lidar:
         # Not a lifecycle node: it runs from the start, Nav2's servers or not.
         actions.append(Node(package='aav_lidar', executable='lidar_scan', name='lidar_scan',

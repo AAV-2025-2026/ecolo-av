@@ -269,7 +269,10 @@ work on." His order, with the work under way:
       - [ ] N7, the weave: the bench's pretend GPS adds fresh noise to every fix, unlike a
             real receiver, whose error drifts slowly. Model it as a slow drift, then tune
             `ekf_global` for the real receiver (Q18);
-      - [ ] collision_monitor flickers between stop and go at the zone's edge.
+      - [ ] collision_monitor flickers between stop and go at the zone's edge. *29 Oct
+            (branch `stop-hold`): `aav_safety`'s `stop_hold` holds each stop until the
+            zone stays clear 1 s (twist_mux `stop_zone`, priority 21); `bench-check
+            --zone-edge` tests it.*
 5. [x] **The board drivers in Rust, ready to try on a board:** the wheel encoder and display
       Picos (Embassy); the spine's Pico 2 program is written. *Done 15 Oct
       (`wt/rust-boards`): all three build; none flashed.*
