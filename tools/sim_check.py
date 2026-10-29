@@ -44,6 +44,10 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run sim-check --spine-steps       (the speed steps again with the spine in the
                                             loop, spine:=true: spine-core's own loop, in
                                             the empty world; one more run, 3 more minutes)
+    pixi run sim-check --spine-points      (the drives to points again with the spine in
+                                            the loop, at 1 and 3 m/s, drives only: two
+                                            more runs; --spine-points-only skips the
+                                            road world's run)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -1680,11 +1684,11 @@ def check_point_refusals(probe):
            f'"{far.result.message}"' if far is not None else 'no answer')
 
 
-def check_drive_to_point(probe, speed):
+def check_drive_to_point(probe, speed, stops=True):
     """Drive POINT_TARGETS at this speed (Gazebo's sim_speed); at 1 m/s, its stops too."""
     for distance, degrees in POINT_TARGETS:
         point_drive(probe, speed, distance, degrees)
-    if speed == POINT_SPEEDS[0]:
+    if stops and speed == POINT_SPEEDS[0]:
         point_drive(probe, speed, 20.0, 0.0, lat_lon=True)
         check_point_refusals(probe)
         point_stops(probe, 'drive to point: cancel (Ctrl-C) stops it',
@@ -1945,7 +1949,7 @@ def main():
         EVERY_RUN.extend(['esp32:=true', f'esp32_loop:={args[at + 1]}'])
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
-    if '--drive-to-point-only' not in args and '--speed-steps-only' not in args:
+    if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only'} & set(args):
         # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
         session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
                 + (['plan_around:=false'] if '--obstacle' in args else []),
@@ -1985,8 +1989,10 @@ def main():
         session(['faults:=true', 'lidar:=false', f'watchdog:={str(watchdog).lower()}',
                  f'watch_hud:={str(watchdog).lower()}'],
                 [lambda probe: check_faults(probe, watchdog)], logs[-1], 'faults')
-    if '--drive-to-point' in args or '--drive-to-point-only' in args:
+    if {'--drive-to-point', '--drive-to-point-only', '--spine-points',
+            '--spine-points-only'} & set(args):
         shutil.rmtree(POINT_LOG, ignore_errors=True)
+    if '--drive-to-point' in args or '--drive-to-point-only' in args:
         # Its own runs, one per speed (sim_speed is ego's cap, set at launch): the empty
         # world, so any angle is open ground. No Nav2, lidar or radar: lighter runs.
         stem, ext = os.path.splitext(log)
@@ -1995,6 +2001,17 @@ def main():
             session(['nav:=false', 'lidar:=false', 'radar:=false', f'sim_speed:={speed:g}'],
                     [lambda probe, v=speed: check_drive_to_point(probe, v)], logs[-1],
                     f'drive to point {speed:g} m/s', ignore=('/map',), world='empty')
+    if '--spine-points' in args or '--spine-points-only' in args:
+        # The same drives with the spine in the loop (spine:=true): spine-core's own speed
+        # loop stops the car. Only the drives: an e-stop would latch the spine.
+        stem, ext = os.path.splitext(log)
+        for speed in POINT_SPEEDS:
+            logs.append(f'{stem}-spine-drive-to-point-{speed:g}{ext}')
+            session(['spine:=true', 'nav:=false', 'lidar:=false', 'radar:=false',
+                     f'sim_speed:={speed:g}'],
+                    [lambda probe, v=speed: check_drive_to_point(probe, v, stops=False)],
+                    logs[-1], f'drive to point, spine, {speed:g} m/s', ignore=('/map',),
+                    spine=True, world='empty')
     if '--speed-steps' in args or '--speed-steps-only' in args:
         # Its own run: the empty world, nothing else driving (no Nav2), ego's cap at 2 m/s.
         stem, ext = os.path.splitext(log)
