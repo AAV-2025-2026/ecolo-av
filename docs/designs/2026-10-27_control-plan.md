@@ -3,6 +3,9 @@
 * **Author:** Ben
 * **Date:** 2026-10-27
 * **Status:** the plan (Ben, 27 Oct: "Lets save this as our plan")
+* **Since:** after reading Autoware (28 Oct), MPC is the choice for steering (later, a
+  Rust crate of our own) and the speed loop gets a smooth stop; LQR stays a comparison.
+  Every controller, side by side: [Controllers](../controllers.md)
 
 ## The idea in one line
 
@@ -75,5 +78,5 @@ tests only the outer one.
 
 ## Related
 
-`docs/designs/brake-path.md` (the options for braking), `docs/designs/concepts_brief.md`
+`docs/controllers.md` (every controller, side by side), `docs/designs/brake-path.md` (the options for braking), `docs/designs/concepts_brief.md`
 (the stages S0-S6), `docs/vehicle-model.md` (the model), `docs/learn-control.md` (the basics).

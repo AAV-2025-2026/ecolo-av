@@ -34,7 +34,7 @@ OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
 READ_FIRST = 20    # PAGES[:20] are the reading list
-LEARN_END = 34     # PAGES[20:34] are the learn pages; the rest are reference
+LEARN_END = 35     # PAGES[20:35] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for). A name in ROOT_PAGES is a page kept at the
 # repository's root instead, built the same way (none since 25 Oct: every page is in docs/).
@@ -70,6 +70,8 @@ PAGES = [
     ('learn-speed.md', 'Learn: speed', 'How fast are we going? Wheels, IMU, GPS, lidar, the EKF'),
     ('learn-lidar.md', 'Learn: lidar', 'Points, cubes, the costmap, named objects, NDT, AMCL'),
     ('learn-control.md', 'Learn: control', 'Feedback loops, PID, Ackermann, limits, timeouts'),
+    ('controllers.md', 'Controllers',
+     'Every controller, side by side: which one, where it runs, and why'),
     ('maps-and-position.md', 'Maps and position',
      'From the wheels to OpenStreetMap: frames, the datum, costmaps'),
     ('learn-nav2.md', 'Learn: Nav2', 'Planner, controller, behaviour tree, collision_monitor'),

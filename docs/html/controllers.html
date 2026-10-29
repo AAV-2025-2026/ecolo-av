@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controllers: which one, where, and why · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/controllers.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Controllers: which one, where, and why</h1>
+<div class="meta">25 min read · 11 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a class="here" href="controllers.html">Controllers</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-the-layers-which-loop-runs-where">1. The layers: which loop runs where</a><a href="#2-speed-and-brake">2. Speed and brake</a><a href="#3-steering-following-a-path">3. Steering: following a path</a><a href="#4-the-steering-motor-the-jrk-g2s-position-pid">4. The steering motor: the Jrk G2&#x27;s position PID</a><a href="#5-all-of-them-side-by-side">5. All of them, side by side</a><a href="#6-what-we-chose-and-why">6. What we chose, and why</a><a href="#7-trials-a-challenger-runs-beside-the-default">7. Trials: a challenger runs beside the default</a><a href="#8-the-other-trial-localization">8. The other trial: localization</a><a href="#9-how-the-car-gets-measured">9. How the car gets measured</a><a href="#papers-and-sources">Papers and sources</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<div class="lead"><p>Every controller we use or are looking at, on one page: what it is, what it's good and
+bad at, what it needs, and where it would run on our car.</p>
+<div class="admonition note">
+<p class="admonition-title">The short version</p>
+<ul>
+<li><strong>Speed and brake:</strong> feed-forward + PI. In the ROS bridge first, then in
+  <code>spine-core</code> on the ESP32.</li>
+<li><strong>Steering, following a path:</strong> MPC is the leading candidate. Pure pursuit until
+  it wins a trial.</li>
+<li><strong>The steering motor:</strong> the Jrk G2's own position PID, underneath everything.</li>
+<li><strong>Obstacle tours (Nav2):</strong> Hybrid-A* plans, MPPI follows. No change.</li>
+<li><strong>Trials:</strong> LQR, Stanley and MPC run <strong>beside</strong> the defaults, picked at launch
+  (<code>tracker:=</code>), and scored on the same routes. Planned, not built yet.</li>
+<li><strong>Localization</strong> has its own trial: AMCL beside today's EKF (section 8).</li>
+<li><strong>Every number here is a guess</strong> until the car is measured
+  (<a href="measure-the-car.html">Measure the car</a>, <a href="actuator-tests.html">Actuator tests</a>).</li>
+</ul>
+</div>
+<p>The basics (feedback, PID, Ackermann) are in <a href="learn-control.html">Learn: control</a>. The maths
+(poles, margins, state space) is in <a href="vehicle-model.html">The car as a linear model</a> and
+<a href="learn-state-space.html">Learn: state space</a>. This page links to them and doesn't repeat them.</p></div>
+<section class="card"><h2 id="1-the-layers-which-loop-runs-where">1. The layers: which loop runs where</h2>
+<pre class="highlight"><code class="language-text"> ORIN #1                                              senses
+ ┌───────────────────────────────────────────────┐
+ │ Nav2 planner: Hybrid-A*         1 Hz          │  the costmap, the goal
+ │      │ a path                                 │
+ │      ▼                                        │
+ │ Nav2 controller: MPPI          20 Hz          │  the pose (EKF), the costmap
+ │   or our path follower (pure pursuit; MPC)    │
+ │      │ speed + turn rate (TwistStamped)       │
+ │      ▼                                        │
+ │ twist_mux ──► ego              50 Hz          │  limits only (no sensor)
+ └──────┼────────────────────────────────────────┘
+        │ speed + acceleration + steering angle
+        ▼
+ SPEED AND BRAKE: feed-forward + PI               wheel speed (+ the IMU)
+   now:   the ROS bridge (aav_legacy)   50 Hz
+   later: the ESP32, spine-core        100 Hz
+        │ throttle (DAC)      │ brake target    │ steering target
+        ▼                     ▼                 ▼
+   throttle motor      brake Jrk G2        STEERING Jrk G2: position PID
+                                           ~1 kHz                          the steering pot</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Loop</th>
+<th>Runs on</th>
+<th>How fast</th>
+<th>Senses</th>
+<th>Today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plan a path</td>
+<td>Orin: Nav2's <code>SmacPlannerHybrid</code></td>
+<td>1 Hz</td>
+<td>costmap, goal</td>
+<td>in use</td>
+</tr>
+<tr>
+<td>Follow the path</td>
+<td>Orin: Nav2's MPPI (<code>nav2.yaml</code>)</td>
+<td>20 Hz</td>
+<td>the EKF's pose, the costmap</td>
+<td>in use</td>
+</tr>
+<tr>
+<td>Turn speed + turn rate into an angle</td>
+<td>Orin: <code>ego</code></td>
+<td>50 Hz</td>
+<td>nothing: it's maths and limits</td>
+<td>in use</td>
+</tr>
+<tr>
+<td>Speed and brake</td>
+<td>the bridge (50 Hz), then the ESP32 (100 Hz: a 10 ms tick)</td>
+<td>50 → 100 Hz</td>
+<td>wheel speed</td>
+<td>open loop today</td>
+</tr>
+<tr>
+<td>Steering angle</td>
+<td>inside the steering Jrk G2</td>
+<td>~1 kHz</td>
+<td>the steering pot</td>
+<td>to confirm (H2)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The rule</strong> (<a href="learn-control.html#3-where-each-loop-closes-on-our-car">Learn: control</a>):
+inner loops are fast and simple, and sit next to the motor. The outer controller can be
+swapped; the loops underneath stay the same, so a comparison tests only the outer one.</p>
+<p>Rates: MPPI's 20 Hz is <code>controller_frequency</code> in <code>nav2.yaml</code>; ego's 50 Hz is <code>rate_hz</code> in
+<code>ego.yaml</code>; the bridge's 50 Hz is <code>legacy_uart_bridge</code>'s <code>rate_hz</code>; the ESP32's 10 ms is
+<code>TICK</code> in <code>boards/esp32-umod</code>. The Jrk's ~1 kHz is the control plan's figure: the Jrk's own
+PID period setting decides it, and nobody has read it yet (D6).</p>
+</section>
+<section class="card"><h2 id="2-speed-and-brake">2. Speed and brake</h2>
+<p>One job: make the car go the speed ego asks for, and stop where it's told.</p>
+<h3 id="pi-and-pid">PI (and PID)</h3>
+<p>What we have today, in <code>spine-core</code>. Push in proportion to the speed error (P), plus
+the error added up over time (I). No D.</p>
+<pre class="highlight"><code class="language-text"> v_set ──►(+)──► kp·e + ki·∫e ──► throttle ──► car ──┬──► v
+           ▲ -                                       │
+           └─────────────── wheel speed ◄────────────┘</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>simple; tiny on a chip; no model needed; the I term cancels a hill or drag</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>waits for an error before it acts, so it's always a little late; today's gains overshoot 15-17 % and take about 13 s to settle; the brake is P only (no I)</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>wheel speed. No model, no solver</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td><code>firmware/spine/crates/spine-core/src/speed_loop.rs</code>: kp 0.3, ki 0.1, brake 0.5 per m/s beyond a 0.2 m/s coast band, hold 0.3 when stopped</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>in use</strong> in Gazebo and the bench. Not on today's car: its ESP32 has no wheel speed, so it runs open loop (speed ÷ 3.0 m/s)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Numbers from the model (<a href="vehicle-model.html#tuning-the-speed-loop">vehicle-model.md</a>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Overshoot</th>
+<th>Settles</th>
+<th>Phase margin, worst delay</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>today: kp 0.3, ki 0.1</td>
+<td>17 %</td>
+<td>13.7 s</td>
+<td>54°</td>
+</tr>
+<tr>
+<td><code>smooth</code>: kp 1.0, ki 0.25, setpoint weight 0.75</td>
+<td>0 %</td>
+<td>5.7 s</td>
+<td>42°</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="feed-forward-pi-with-a-smooth-stop">Feed-forward + PI, with a smooth stop</h3>
+<p>Work out the throttle or brake the wanted acceleration needs, <strong>and send it at once</strong>
+(feed-forward). The PI only cleans up what the model got wrong.</p>
+<pre class="highlight"><code class="language-text"> a_want ──► model: throttle for a_want ──────────────┐
+                                                     ▼
+ v_set ──►(+)──► PI ─────────────────────────────►(+)──► one signed command ──► car
+           ▲ -                                          (+ throttle, − brake)
+           └──────────────── wheel speed ◄──────────────────────────────────────┘</code></pre>
+<p>The <strong>smooth stop</strong> (from Autoware's design, their docs): near the stop, ease the brake
+so the car stops without a jolt, then hold it with a fixed brake. Our <code>aav_drive_to_point</code>
+already slows by the distance left (<code>approach.py</code>: v = √(2·a·d)), and the spine holds
+with <code>hold_brake</code> once stopped.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>acts before the error appears: no lag on a speed change; throttle <strong>and</strong> brake follow what ego wants (today the brake only comes on below 0.05 m/s); the PI stays small and calm; ego already sends the acceleration</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>only as good as the throttle and brake map: on the model, with a throttle 2x stronger than guessed, today's PI plus a feed-forward overshoots 88 % (<a href="vehicle-model.html#the-candidates-on-the-model">vehicle-model.md</a>); needs the car measured first</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>wheel speed (without it: feed-forward alone); the car's numbers (<code>max_accel</code>, <code>drag</code>, <code>max_brake</code> in <code>vehicle.yaml</code>); the IMU's acceleration helps while braking</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>step 1: the ROS bridge, <code>aav_legacy/speed_control.py</code> (no ROS), 50 Hz, chosen by <code>speed_loop.mode: pi</code> in <code>legacy.yaml</code>. Step 3: <code>spine-core</code> on the ESP32, 100 Hz (the hardware lead's call)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>the choice.</strong> Step 1 is written on branch <code>legacy-speed-loop</code> (not on <code>main</code> yet), checked against a model car only; the car stays on <code>mode: open</code> until it's tried on stands. The smooth stop's easing is not written yet: today a zero target brakes at least <code>hold_brake</code> until stopped</td>
+</tr>
+</tbody>
+</table></div>
+<p>On the ESP32 this loop runs inside the spine's state machine
+(<code>spine-core/src/fsm.rs</code>, Arsh's PR #15, on <code>main</code>): only while <strong>Authority</strong> is <code>Drive</code>
+(the computer) or <code>Rc</code> (the transmitter). On an e-stop, a fault or a timeout, the loop is
+reset and the stop brake goes on. In <code>Idle</code> it's reset, with the throttle off. With no
+wheel speed (<strong>Confidence</strong> <code>Degraded</code>) the spine falls back to open loop.</p>
+<h3 id="lqr-with-an-integral-lqi">LQR with an integral (LQI)</h3>
+<p>Write the speed (and its integral) as states, choose how much you hate error against
+effort, and let the maths pick the gains (<code>u = −K x</code>).</p>
+<pre class="highlight"><code class="language-text"> x = [speed error, ∫ speed error]     cost = Σ (x'·Q·x + u'·R·u)
+ Riccati equation (scipy: solve_continuous_are) ──► K ──► u = −K x</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>the best gains for the weights you chose, from the model; one signed command for throttle and brake; cheap to run (one multiply per state)</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>for one state and an integral it <strong>is</strong> a PI, with gains picked another way; blind to limits (throttle 0 to 1, never with the brake); only as good as the model</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>the model (<code>vehicle_model.py</code>); wheel speed</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>would be gains for <code>spine-core</code>'s loop, worked out on a laptop</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>comparison only</strong> (TODO 3): "LQR picks the gains if it beats hand tuning" (the control plan, step 3)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="mpc-for-speed">MPC for speed</h3>
+<p>Each cycle, plan the next few seconds of throttle and brake against a model, with the
+limits written in, send the first step, and plan again.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>knows the limits (acceleration, jerk, brake); sees a stop coming and plans for it</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>a solver every cycle: too heavy for the ESP32 at 100 Hz; many settings; a wrong model gives a confident wrong plan</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>a model, a QP solver, wheel speed</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>the Orin only</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>not chosen.</strong> Feed-forward + PI does the job; part of TODO 4 (MPC for the whole A to B) if it's ever needed</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="3-steering-following-a-path">3. Steering: following a path</h2>
+<p>One job: keep the car on the path. All of these output a steering angle (or a turn rate
+that ego turns into one) and leave the speed to section 2.</p>
+<h3 id="pure-pursuit-and-regulated-pure-pursuit">Pure pursuit (and Regulated Pure Pursuit)</h3>
+<p>Pick a point a set distance ahead on the path (the lookahead), and steer the circle
+that reaches it.</p>
+<pre class="highlight"><code class="language-text">                 lookahead point
+   path  ───────────────●────────────
+                      ╱
+                    ╱  the arc to it
+          car  ▶──╯</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>simple; light; one setting (the lookahead); never needs a model; damping 0.707 at every speed when the lookahead grows with speed</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>aims at a point, not a heading: it often arrives facing the wrong way; cuts corners; can't see an obstacle; the delay hurts it (phase margin 31° at 1 m/s in the worst case)</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>the pose, the path. No model, no solver</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>Orin. Ours: <code>aav_drive_to_point/line.py</code> (A to B). Nav2's Regulated Pure Pursuit: <code>controller:=rpp</code>. In the trials, ours again (<code>tracker:=pure_pursuit</code>): the control every challenger is scored against</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>in use</strong>: ours for A to B; RPP as Nav2's other choice</td>
+</tr>
+</tbody>
+</table></div>
+<p>Numbers (<a href="vehicle-model.html#closing-the-loop-pure-pursuit">vehicle-model.md</a>): lookahead
+1.5 s × speed, from 1.5 to 4 m. Phase margin at 1 m/s: 52° with no delay, 45° typical
+(84 ms), 31° worst (259 ms). The Gazebo comparison with MPPI: <a href="path-followers.html">Path followers</a>.</p>
+<h3 id="stanley">Stanley</h3>
+<p>Steer by two errors at the <strong>front</strong> axle: the heading error, plus a term that grows with
+how far off the path you are.</p>
+<pre class="highlight"><code class="language-text"> δ = heading error + atan(k · sideways error ÷ speed)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>simple; no lookahead to tune; corrects a heading error at once; drove Stanford's car in the 2005 DARPA Grand Challenge</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>jumpy at low speed (÷ speed) unless softened; sensitive to a noisy heading, and our GPS heading is weak at walking pace; no model of the steering lag</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>the pose at the front axle (our <code>base_link</code> is at the rear: a shift by the wheelbase), the path</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>Orin: <code>ros/drivers/aav_track</code>, <code>trackers/stanley.py</code>, <code>tracker:=stanley</code></td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>trial, planned.</strong> Not built yet</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="lqr-scheduled-by-speed">LQR, scheduled by speed</h3>
+<p>The same state space as the model's lateral loop: x = [sideways error, heading error,
+wheel angle]. Choose weights, solve once per speed, steer with u = −K x.</p>
+<pre class="highlight"><code class="language-text"> vehicle_model.lateral(v) ──► A, B ──► Riccati ──► K(v)
+ a table of K by speed ──► each cycle: look up K at today's speed, δ = −K x</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>optimal gains straight from the model; knows the steering lag; 60° phase margin guaranteed (before delays); cheap: three multiplies a cycle</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>blind to limits: it can ask for more angle or angle rate than the car has; the margin shrinks with delay at speed (below); a straight-road linearisation: on a tight curve it needs feed-forward from the curvature</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>the model (<code>vehicle_model.lateral()</code>), the pose, the path</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>Orin: <code>ros/drivers/aav_track</code>, <code>trackers/lqr.py</code>, <code>tracker:=lqr</code> (TODO 2)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>trial, planned.</strong> Not built yet. Also the yardstick for MPC: the same model, without limits</td>
+</tr>
+</tbody>
+</table></div>
+<p>Example, worked out with the model (weights Q = diag(1, 1, 0), R = 1: picked for this
+page, not tuned):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Speed</th>
+<th>K (e_y, e_θ, δ)</th>
+<th>Phase margin: none / typical / worst</th>
+<th>Pure pursuit's</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.5 m/s</td>
+<td>1.0, 2.11, 0.10</td>
+<td>70° / 67° / 60°</td>
+<td>59° / 55° / 48°</td>
+</tr>
+<tr>
+<td>1 m/s</td>
+<td>1.0, 2.19, 0.21</td>
+<td>70° / 63° / 50°</td>
+<td>52° / 45° / 31°</td>
+</tr>
+<tr>
+<td>2 m/s</td>
+<td>1.0, 2.32, 0.40</td>
+<td>69° / 56° / 29°</td>
+<td>52° / 45° / 31°</td>
+</tr>
+<tr>
+<td>3 m/s</td>
+<td>1.0, 2.45, 0.59</td>
+<td>68° / 49° / 9°</td>
+<td>50° / 43° / 27°</td>
+</tr>
+</tbody>
+</table></div>
+<p>What it shows: at our 1 m/s, LQR has about 20° more margin than pure pursuit. With fixed
+weights it gets stiffer as speed rises, so at 3 m/s the worst delay nearly breaks it:
+the weights have to change with speed too. To redo it (from the repo's root, with
+<code>pixi run python</code>; R = 1, so K = Bᵀ P):</p>
+<pre class="highlight"><code class="language-python">import sys; sys.path.insert(0, 'ros/ego/aav_ego')
+import numpy as np
+from scipy import linalg, signal
+from aav_ego import vehicle_model as vm
+m = vm.from_vehicle_yaml('ros/bringup/aav_description/config/vehicle.yaml')
+a, b, _, _ = m.lateral(1.0)                        # 1 m/s
+k = b.T @ linalg.solve_continuous_are(a, b, np.diag([1, 1, 0]), np.eye(1))
+num, den = signal.ss2tf(a, b, k, np.zeros((1, 1)))
+print(k, vm.margins((vm.trim(num[0]), den), delay=m.lateral_delay('typical')))</code></pre>
+<h3 id="mpc-autowares-mpc_lateral_controller-design">MPC (Autoware's <code>mpc_lateral_controller</code> design)</h3>
+<p>Each cycle, predict the next few seconds of the car along the path with the model, find
+the steering that keeps it closest <strong>within the limits</strong>, send the first step, repeat.</p>
+<pre class="highlight"><code class="language-text"> now ──► predict N steps ahead with the bicycle + steering lag
+         minimise  Σ (path error² + steering effort²)
+         subject to  |δ| ≤ 0.5 rad,  |δ'| ≤ 0.6 rad/s
+         ──► a QP ──► solver ──► δ[0] to ego; drop the rest; again next cycle</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>knows the steering's angle and rate limits; sees the curve coming (it uses the path ahead, not just one point); handles the steering lag and delay in its model; the same model as LQR, so the two compare fairly</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>a QP every cycle: needs a solver, and time on the Orin; more settings (horizon, weights); only as good as the model; harder to prove stable than LQR</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>the model (discrete at 20 Hz: <code>lateral_discrete</code>), a solver (scipy for the trial; in Rust, Clarabel: pure Rust, or OSQP: C with Rust bindings; both Apache-2.0), the pose, the path</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>Orin. First the trial: <code>ros/drivers/aav_track</code>, <code>trackers/mpc.py</code> (Python, scipy), <code>tracker:=mpc</code>, horizon about 1.5 s. Only if it wins: our own Rust crate (maths with no ROS, like <code>spine-core</code>)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>the leading candidate for steering; trial planned.</strong> Not built yet</td>
+</tr>
+</tbody>
+</table></div>
+<p>The design follows Autoware's lateral MPC (their docs): a linearised bicycle with a
+steering lag, along the reference path. We write our own (Ben, 28 Oct); we don't copy
+their code.</p>
+<h3 id="mppi-nav2">MPPI (Nav2)</h3>
+<p>Imagine 2000 possible futures, 2.8 s long, through a model of the car; score each against
+the path, the costmap and the goal; blend the best.</p>
+<pre class="highlight"><code class="language-text">       ╱╱╱ ── 2000 noisy futures ──
+  car ▶──────────────────────────  scored: path, obstacles, goal heading...
+       ╲╲╲                         blend the good ones ──► speed + turn rate</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>steers round an obstacle the costmap sees; knows the car's turning radius and outline; turns to a goal's heading; no solver (sampling); it's stock Nav2</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>heavy (21-32 % of a Mac core, two to three times RPP's); many settings (noise, temperature, eight scoring rules); its model assumes the car does exactly what it's told (no lags); forward only, a U-turn in a 14 m lane is a coin toss</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>the pose, the costmap, the path (from Hybrid-A*); a strong CPU</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>Orin #1, Nav2's <code>controller_server</code>, 20 Hz (<code>nav2.yaml</code>: 2000 samples × 56 steps of 0.05 s)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>in use</strong>: Nav2's default since 22 Oct, for the obstacle tours. Stays</td>
+</tr>
+</tbody>
+</table></div>
+<p>Its tuning and the Gazebo runs: <a href="path-followers.html">Path followers</a>.</p>
+</section>
+<section class="card"><h2 id="4-the-steering-motor-the-jrk-g2s-position-pid">4. The steering motor: the Jrk G2's position PID</h2>
+<p>The Jrk G2 is a Pololu motor driver. Tell it "go to position X"; it reads the steering
+pot and runs its own PID to get there.</p>
+<pre class="highlight"><code class="language-text"> target (from the ESP32, I2C) ──►(+)──► PID ──► motor ──► linkage ──┬──► wheel angle
+                                  ▲ -                               │
+                                  └────────── the steering pot ◄────┘</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ Benefits</td>
+<td>fast, next to the motor; nobody else's delays; keeps working if the Orin hiccups; its settings are kept in the Jrk</td>
+</tr>
+<tr>
+<td>❌ Weaknesses</td>
+<td>we can only tune it, not change it; needs feedback wired and set up (unknown today); its gains are unread</td>
+</tr>
+<tr>
+<td>Needs</td>
+<td>the pot's feedback into the Jrk</td>
+</tr>
+<tr>
+<td>On our car</td>
+<td>inside the steering Jrk G2. The model treats it and the linkage as one second-order system: ωn 12.6 rad/s, ζ 1.03 (no overshoot), settles in 0.49 s (<a href="vehicle-model.html#2-steering">vehicle-model.md</a>)</td>
+</tr>
+<tr>
+<td>Status</td>
+<td><strong>in use, to confirm</strong>: today's steering is open loop (no angle comes back); after KEFC a KTC-100 pot. Questions H2 and D6</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Why it matters to the path follower:</strong> the steering is about 10 times faster than the
+path loop (12.6 rad/s against about 1), so the path follower sees it as a small delay,
+0.16 s. Tune it with step tests (control plan, step 4), and match MPPI's steering-rate
+limit to what it really does.</p>
+</section>
+<section class="card"><h2 id="5-all-of-them-side-by-side">5. All of them, side by side</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Controller</th>
+<th>Job</th>
+<th>Model?</th>
+<th>Solver?</th>
+<th>Knows limits?</th>
+<th>Runs on</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PI</td>
+<td>speed, brake</td>
+<td>no</td>
+<td>no</td>
+<td>clamps only</td>
+<td>ESP32 (<code>spine-core</code>)</td>
+<td>in use (sim, bench)</td>
+</tr>
+<tr>
+<td><strong>Feed-forward + PI</strong></td>
+<td>speed, brake</td>
+<td>a map</td>
+<td>no</td>
+<td>clamps only</td>
+<td>bridge, then ESP32</td>
+<td><strong>chosen</strong>: step 1 on a branch</td>
+</tr>
+<tr>
+<td>LQI</td>
+<td>speed, brake</td>
+<td>yes</td>
+<td>once, offline</td>
+<td>no</td>
+<td>ESP32 (gains)</td>
+<td>comparison</td>
+</tr>
+<tr>
+<td>MPC</td>
+<td>speed, brake</td>
+<td>yes</td>
+<td>every cycle</td>
+<td>yes</td>
+<td>Orin</td>
+<td>not chosen</td>
+</tr>
+<tr>
+<td>Pure pursuit / RPP</td>
+<td>steering</td>
+<td>no</td>
+<td>no</td>
+<td>no</td>
+<td>Orin</td>
+<td>in use (A to B; <code>rpp</code>); the trials' control</td>
+</tr>
+<tr>
+<td>Stanley</td>
+<td>steering</td>
+<td>no</td>
+<td>no</td>
+<td>no</td>
+<td>Orin (<code>aav_track</code>)</td>
+<td>trial, planned</td>
+</tr>
+<tr>
+<td>LQR (by speed)</td>
+<td>steering</td>
+<td>yes</td>
+<td>once, offline</td>
+<td>no</td>
+<td>Orin (<code>aav_track</code>)</td>
+<td>trial, planned</td>
+</tr>
+<tr>
+<td><strong>MPC</strong></td>
+<td>steering</td>
+<td>yes</td>
+<td>every cycle</td>
+<td>yes</td>
+<td>Orin (<code>aav_track</code>, then Rust)</td>
+<td><strong>leading candidate</strong>; trial, planned</td>
+</tr>
+<tr>
+<td><strong>MPPI</strong></td>
+<td>path + obstacles</td>
+<td>yes</td>
+<td>no: sampling</td>
+<td>yes</td>
+<td>Orin (Nav2)</td>
+<td><strong>in use: stays</strong></td>
+</tr>
+<tr>
+<td><strong>Jrk G2 PID</strong></td>
+<td>steering motor</td>
+<td>no</td>
+<td>no</td>
+<td>its own</td>
+<td>the Jrk</td>
+<td><strong>in use: stays</strong></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Controller</th>
+<th>Computer</th>
+<th>Settings to tune</th>
+<th>Best at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PI</td>
+<td>tiny</td>
+<td>2-3</td>
+<td>holding a speed</td>
+</tr>
+<tr>
+<td>Feed-forward + PI</td>
+<td>tiny</td>
+<td>the map + 2-3</td>
+<td>following a changing speed, stopping on B</td>
+</tr>
+<tr>
+<td>LQI / LQR</td>
+<td>tiny at run time</td>
+<td>the weights</td>
+<td>the best linear gains from the model</td>
+</tr>
+<tr>
+<td>MPC</td>
+<td>heavy</td>
+<td>horizon, weights</td>
+<td>respecting limits, seeing ahead</td>
+</tr>
+<tr>
+<td>Pure pursuit</td>
+<td>tiny</td>
+<td>1 (lookahead)</td>
+<td>a first path follower</td>
+</tr>
+<tr>
+<td>Stanley</td>
+<td>tiny</td>
+<td>1-2</td>
+<td>heading errors, at speed</td>
+</tr>
+<tr>
+<td>MPPI</td>
+<td>heavy</td>
+<td>many</td>
+<td>obstacles, tight spaces</td>
+</tr>
+<tr>
+<td>Jrk PID</td>
+<td>in the Jrk</td>
+<td>3</td>
+<td>the motor's position</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="6-what-we-chose-and-why">6. What we chose, and why</h2>
+<p>The plan is Autoware-like: their ideas, our own code (Ben, 28 Oct: "lets write our own
+version of it all"), in Rust where it pays off.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Chosen</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plan + obstacles</td>
+<td>Hybrid-A* + MPPI (Nav2)</td>
+<td>works in Gazebo; steers round obstacles; stock</td>
+</tr>
+<tr>
+<td>Follow a path (A to B)</td>
+<td><strong>MPC: the leading candidate.</strong> Pure pursuit until it wins</td>
+<td>knows the steering's limits; sees the curve</td>
+</tr>
+<tr>
+<td>Speed and brake</td>
+<td><strong>feed-forward + PI</strong></td>
+<td>acts at once on ego's acceleration; the PI only cleans up; small enough for the ESP32</td>
+</tr>
+<tr>
+<td>Where</td>
+<td>the bridge first (branch <code>legacy-speed-loop</code>, no firmware change), then <code>spine-core</code> on the ESP32</td>
+<td>start where we can test today; end next to the actuators</td>
+</tr>
+<tr>
+<td>Steering motor</td>
+<td>the Jrk G2's PID</td>
+<td>already there; tune it, don't replace it</td>
+</tr>
+<tr>
+<td>LQR, Stanley</td>
+<td><strong>trials</strong></td>
+<td>cheap; LQR is optimal from the model but blind to limits: the yardstick for MPC</td>
+</tr>
+<tr>
+<td>Speed MPC, LQI</td>
+<td>not chosen / comparison</td>
+<td>nothing they give that feed-forward + PI doesn't</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the ideas came from</strong> (honestly):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Idea</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Feed-forward + PI for speed and brake</td>
+<td><strong>our own plan</strong>, 27 Oct (<a href="../designs/2026-10-27_control-plan.md">control plan</a>), before we read Autoware. Autoware's <code>pid_longitudinal_controller</code> does the same</td>
+</tr>
+<tr>
+<td>The smooth stop</td>
+<td>read in Autoware's design (<code>pid_longitudinal_controller</code>, their docs)</td>
+</tr>
+<tr>
+<td>MPC for steering</td>
+<td>read in Autoware's design (<code>mpc_lateral_controller</code>, their docs)</td>
+</tr>
+<tr>
+<td>Autoware</td>
+<td>the Autoware Foundation's stack, Apache-2.0. We borrow designs, not code: it's large, C++, and on ROS 2 Humble (<a href="../designs/2026-10-28_research-picks.md">research picks</a>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="7-trials-a-challenger-runs-beside-the-default">7. Trials: a challenger runs beside the default</h2>
+<p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
+the main ones if they work." A new follower doesn't replace the default. It runs
+<strong>beside</strong> it, picked at launch, and is scored on the same routes.</p>
+<pre class="highlight"><code class="language-text"> goal ──► Nav2 planner (Hybrid-A*), replans every 1 s
+                 │ FollowPath
+     ┌───────────┴─────────────────────┐
+ tracker:=none (default)        tracker:=stanley | lqr | mpc | pure_pursuit
+ Nav2's MPPI (or RPP)           aav_track
+     └───────────┬─────────────────────┘
+                 ▼
+ the same smoother ──► collision_monitor ──► twist_mux ──► ego</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nothing in the safety path changes</td>
+<td>the same collision_monitor, twist_mux slot and e-stops</td>
+</tr>
+<tr>
+<td>One speed policy for every tracker</td>
+<td>a steering law is compared, not a speed</td>
+</tr>
+<tr>
+<td>Our pure pursuit is the control</td>
+<td>in the same node, so only the steering differs</td>
+</tr>
+<tr>
+<td>3 runs per tour; loop time and missed 20 Hz ticks recorded</td>
+<td>MPPI is random; a slow MPC mustn't look like bad maths</td>
+</tr>
+<tr>
+<td>MPC in Python (scipy) first</td>
+<td>Rust only if it wins</td>
+</tr>
+</tbody>
+</table></div>
+<p>Scored by <code>controller-compare</code> and <code>atob-score</code>. The design: <code>docs/designs/2026-10-29_trials.md</code>,
+on branch <code>trials</code> (Tentative; <code>git show trials:docs/designs/2026-10-29_trials.md</code>).
+<strong>Nothing in it is built yet.</strong></p>
+</section>
+<section class="card"><h2 id="8-the-other-trial-localization">8. The other trial: localization</h2>
+<p>Every controller above is only as good as where it thinks the car is. Localization has
+trials too. The basics: <a href="learn-localization.html">Learn: localization</a>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Way</th>
+<th>What it is</th>
+<th>✅</th>
+<th>❌</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>EKF</strong> (<code>robot_localization</code>)</td>
+<td>a Kalman filter: wheels + IMU + GPS, two of them, 30 Hz</td>
+<td>stock; cheap; works anywhere</td>
+<td>only as good as GPS: 1-3 m without RTK</td>
+<td><strong>in use</strong></td>
+</tr>
+<tr>
+<td><strong>AMCL</strong> (Nav2)</td>
+<td>a particle filter: thousands of guesses, each lidar scan kills the unlikely ones</td>
+<td>about 5-10 cm where the lidar sees posts, curbs, walls</td>
+<td>needs a map first (<code>slam_toolbox</code>); a bare lot gives it little</td>
+<td><strong>trial, planned</strong> (<code>amcl:=true</code>, Gazebo's <code>test_lot</code>)</td>
+</tr>
+<tr>
+<td><strong>NDT</strong></td>
+<td>slide the lidar scan onto a map of blobs (<a href="learn-localization.html#ndt-blobs">how</a>)</td>
+<td>centimetres without RTK; Autoware's way</td>
+<td>needs a lidar map of the lot (KISS-ICP); a stock NDT localizer not picked yet</td>
+<td><strong>planned</strong> (research pick 2)</td>
+</tr>
+</tbody>
+</table></div>
+<p>A localizer feeds <code>ekf_global</code> only once it wins on a bag from the real lot, not just in
+Gazebo (its map is perfect).</p>
+</section>
+<section class="card"><h2 id="9-how-the-car-gets-measured">9. How the car gets measured</h2>
+<p>Every gain on this page comes from guessed numbers in <code>vehicle.yaml</code> (marked GUESS
+there). The real ones come from <a href="measure-the-car.html">Measure the car</a> and the
+<a href="actuator-tests.html">actuator tests</a>, on stands and in a lot; then
+<code>pixi run vehicle-model --set ...</code> redoes the maths.</p>
+<p>The spine's state machine (Arsh, PR #15, <code>spine-core/src/fsm.rs</code>) adds a <strong>hardware test
+mode</strong> for this:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Actuators</td>
+<td>one at a time: steering, brake or throttle</td>
+</tr>
+<tr>
+<td>Throttle</td>
+<td>at most 0.15 (<code>TEST_MAX_THROTTLE</code>), forward only</td>
+</tr>
+<tr>
+<td>Leaves test mode</td>
+<td>above 0.5 m/s (<code>TEST_MAX_SPEED</code>), on an e-stop, or after 100 ms with no request</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two things are left: how a test request reaches the spine (no CAN frame for it yet), and
+today's ESP32 has no wheel speed, so the 0.5 m/s exit can't fire there (TODO 0b).</p>
+</section>
+<section class="card"><h2 id="papers-and-sources">Papers and sources</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Controller</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PID, LQR</td>
+<td>Åström and Murray, <em>Feedback Systems</em> (2nd ed., 2021)</td>
+</tr>
+<tr>
+<td>Pure pursuit</td>
+<td>Coulter, <em>Implementation of the Pure Pursuit Path Tracking Algorithm</em>, CMU-RI-TR-92-01, 1992</td>
+</tr>
+<tr>
+<td>Regulated Pure Pursuit</td>
+<td>Macenski et al., <em>Regulated Pure Pursuit for Robot Path Tracking</em>, Autonomous Robots, 2023</td>
+</tr>
+<tr>
+<td>Stanley</td>
+<td>Hoffmann, Tomlin, Montemerlo and Thrun, <em>Autonomous Automobile Trajectory Tracking for Off-Road Driving</em>, American Control Conference, 2007</td>
+</tr>
+<tr>
+<td>MPPI</td>
+<td>Williams et al., <em>Information Theoretic MPC for Model-Based Reinforcement Learning</em>, ICRA 2017</td>
+</tr>
+<tr>
+<td>OSQP</td>
+<td>Stellato et al., <em>OSQP: an Operator Splitting Solver for Quadratic Programs</em>, Math. Prog. Comp., 2020</td>
+</tr>
+<tr>
+<td>Clarabel</td>
+<td>Goulart and Chen, <em>Clarabel: An Interior-Point Solver for Conic Programs with Quadratic Objectives</em>, 2024</td>
+</tr>
+<tr>
+<td>Autoware's controllers</td>
+<td>the Autoware Universe docs: <code>pid_longitudinal_controller</code>, <code>mpc_lateral_controller</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The speed loop (PI, <code>smooth</code>)</td>
+<td><code>firmware/spine/crates/spine-core/src/speed_loop.rs</code></td>
+</tr>
+<tr>
+<td>The spine's state machine</td>
+<td><code>firmware/spine/crates/spine-core/src/fsm.rs</code> (Arsh, PR #15)</td>
+</tr>
+<tr>
+<td>The bridge's feed-forward + PI</td>
+<td><code>ros/can_bridge/aav_legacy/aav_legacy/speed_control.py</code> (branch <code>legacy-speed-loop</code>)</td>
+</tr>
+<tr>
+<td>The trials' trackers (planned)</td>
+<td><code>ros/drivers/aav_track/</code> (not built yet)</td>
+</tr>
+<tr>
+<td>ego (bicycle model, limits)</td>
+<td><code>ros/ego/aav_ego/aav_ego/ackermann.py</code>, <code>config/ego.yaml</code></td>
+</tr>
+<tr>
+<td>The model (speed, steering, lateral state space)</td>
+<td><code>ros/ego/aav_ego/aav_ego/vehicle_model.py</code></td>
+</tr>
+<tr>
+<td>Our pure pursuit and stopping law</td>
+<td><code>ros/drivers/aav_drive_to_point/aav_drive_to_point/line.py</code>, <code>approach.py</code></td>
+</tr>
+<tr>
+<td>MPPI, RPP, Hybrid-A*</td>
+<td><code>ros/drivers/aav_navigation/config/nav2.yaml</code></td>
+</tr>
+<tr>
+<td>The plan</td>
+<td><a href="../designs/2026-10-27_control-plan.md">Control plan</a></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="learn-control.html"><small>Previous</small>← Learn: control</a>
+<a class="next" href="maps-and-position.html"><small>Next</small>Maps and position →</a></nav>
+</main>
+<footer>Source: <code>docs/controllers.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>
