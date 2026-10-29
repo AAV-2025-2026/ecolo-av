@@ -130,10 +130,13 @@ class GeofenceNode(Node):
         self.lock.publish(Bool(data=locked))
         self.state.publish(String(data=f'{state}: {why}'))
         log = self.get_logger()
-        if state != self.was:
-            (log.info if state == OK else log.error)(
-                f'geofence {state}: {why}' + ('' if not locked else
-                                              ': every program is held; people may drive'))
+        # One severity per call site: rclpy refuses a logger call that changes it.
+        if state != self.was and state == OK:
+            log.info(f'geofence {state}: {why}')
+            self.was = state
+        elif state != self.was:
+            log.error(f'geofence {state}: {why}' + ('' if not locked else
+                                                    ': every program is held; people may drive'))
             self.was = state
         elif state == STANDS and now - self.reminded > LOUD:
             log.error(f'geofence {state}: {why}')
@@ -141,8 +144,10 @@ class GeofenceNode(Node):
 
     def on_clear(self, request, response):
         response.success, response.message = self.fence.clear(time.monotonic())
-        (self.get_logger().warn if response.success else self.get_logger().error)(
-            f'clear: {response.message}')
+        if response.success:
+            self.get_logger().warning(f'clear: {response.message}')
+        else:
+            self.get_logger().error(f'clear refused: {response.message}')
         return response
 
 
