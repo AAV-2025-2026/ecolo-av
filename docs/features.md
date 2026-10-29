@@ -127,6 +127,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | ESP32 actuator firmware in C++ (`aav_umod_esp32`) | It drives today's car, so it stays until its Rust version is proven | the 2025-26 team | 2026-10-09 | car |
 | Wheel encoder and status display Pico 2s in Rust | The 2025-26 C++ boards move to Rust, as decided, sending the same packets | Ben | 2026-10-15 | built |
 | Speed loop's `smooth` profile | Today's gains overshoot about 15%; this one starts smoother, ready to try on stands | Ben | 2026-10-25 | sim |
+| Speed LQI in `spine-core` (`speed_loop:=lqi`, TODO 3) | One signed acceleration for throttle and brake (never both), its gains worked out from the model on a laptop, so it can be scored against today's PI and P-only brake; the PI stays the default | Ben | 2026-10-29 | built |
 
 ## Simulation
 

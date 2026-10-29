@@ -296,8 +296,8 @@ def generate_launch_description():
                               description="the actuators as vehicle.yaml's actuators: say "
                                           "(gazebo_adapter); false: Gazebo's old instant car"),
         DeclareLaunchArgument('speed_loop', default_value='default',
-                              description="the speed loop's profile: default (today's gains) "
-                                          'or smooth (TODO 27, docs/vehicle-model.md); in '
+                              description="the speed loop's profile: default (today's gains)"
+                                          ', smooth (TODO 27) or lqi (TODO 3); in '
                                           'the actuator model, or spine_sim with spine:=true'),
         DeclareLaunchArgument('faults', default_value='false',
                               description='true: the front left picture goes through '

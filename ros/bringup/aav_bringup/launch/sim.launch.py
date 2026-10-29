@@ -6,7 +6,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
-      [actuator_model:=true] [speed_loop:=default|smooth] [sim_speed:=]
+      [actuator_model:=true] [speed_loop:=default|smooth|lqi] [sim_speed:=]
       [reversing:=true] [controller:=mppi] [tracker:=none] [amcl:=false]
       [plan_around:=true]
       [watchdog:=true] [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
@@ -296,8 +296,8 @@ def generate_launch_description():
                               description="the actuators as vehicle.yaml's actuators: say; "
                                           "false: Gazebo's old instant car"),
         DeclareLaunchArgument('speed_loop', default_value='default',
-                              description="the speed loop's profile: default (today's gains) "
-                                          'or smooth (TODO 27, docs/vehicle-model.md)'),
+                              description="the speed loop's profile: default (today's gains)"
+                                          ', smooth (TODO 27) or lqi (TODO 3)'),
         DeclareLaunchArgument('spine', default_value='false',
                               description='the spine in the loop: spine_bridge, CAN frames '
                                           "and spine_sim (the spine's own logic) before the "
