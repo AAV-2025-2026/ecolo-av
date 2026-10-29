@@ -9,7 +9,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **AMCL** (stock `nav2_amcl`): a particle filter on the map and the lidar, scored against the EKF, never steering. `amcl:=true`.
 > - **NDT** (`aav_ndt`, ours in Rust): the lidar matched to a saved lidar map, scored against the EKF, never steering. `ndt:=true`.
 > - **Score:** `pixi run controller-compare --trackers pure_pursuit lqr --runs 3`.
-> - **Results:** not run yet.
+> - **Results:** NDT, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).
 > - The design: `docs/designs/2026-10-29_trials.md`.
 
 ## What is on trial
@@ -64,8 +64,29 @@ pixi run controller-compare --amcl --ndt                        # score NDT besi
 
 ## Results
 
-Not run yet. Each run's results go here, with its date and a link to its folder in
-`log/controller-compare/`.
+Each run's results go here, with its date and its folder in `log/controller-compare/`.
+
+### 29 Oct, 04:00: NDT and AMCL beside the EKF (one run, MPPI, the lot tour)
+
+`controller-compare --tours lot --controllers mppi --amcl --ndt`, on the map
+`ndt-map drive` made at 03:55 (169,121 points, 2,450 clouds). Off = from Gazebo's truth.
+
+| Leg | EKF off, mean (m) | AMCL off, mean (m) | NDT off, mean / worst (m) | NDT: clouds with a pose | NDT match, mean / worst (ms) |
+|---|---|---|---|---|---|
+| a left turn | 0.17 | 0.66 | 0.009 / 0.02 | 100 % | 2.6 / 3.9 |
+| round the building | 0.16 | 7.1 | 0.030 / 0.27 | 98 % | 1.7 / 4.7 |
+| turn back | 0.18 | 17.7 | 0.017 / 0.37 | 98 % | 1.7 / 4.7 |
+| home (Nav2 gave up) | 0.17 | 35.7 | 0.010 / 0.21 | 100 % | 2.2 / 14.0 |
+
+- NDT was never over 1 m off; one LOST and restart from `ekf_global` (turn back).
+  Heading off at most 1.0°.
+- AMCL lost the car round the building and never found it again: a look at its
+  settings is due before it is scored again.
+- The last leg wasn't reached: MPPI and Nav2 gave up, with the EKF 0.17 m off, so that is
+  not the localizers.
+- Match times are this Mac's (M4 Max), not the Orin's. Gazebo's lidar has no sweep; the
+  car's does. One run: no spread yet. `covariance_scale` (k) and the score floor are
+  not fitted yet.
 
 ## Scoring a localizer fairly
 

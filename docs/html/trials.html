@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">3 min read · 7 sections</div></header>
+<div class="meta">5 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -102,7 +102,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 - <strong>AMCL</strong> (stock <code>nav2_amcl</code>): a particle filter on the map and the lidar, scored against the EKF, never steering. <code>amcl:=true</code>.
 - <strong>NDT</strong> (<code>aav_ndt</code>, ours in Rust): the lidar matched to a saved lidar map, scored against the EKF, never steering. <code>ndt:=true</code>.
 - <strong>Score:</strong> <code>pixi run controller-compare --trackers pure_pursuit lqr --runs 3</code>.
-- <strong>Results:</strong> not run yet.
+- <strong>Results:</strong> NDT, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).
 - The design: <code>docs/designs/2026-10-29_trials.md</code>.</p>
 </blockquote></div>
 <section class="card"><h2 id="what-is-on-trial">What is on trial</h2>
@@ -206,8 +206,67 @@ pixi run ndt-map drive                                          # NDT's map, onc
 pixi run controller-compare --amcl --ndt                        # score NDT beside AMCL</code></pre>
 </section>
 <section class="card"><h2 id="results">Results</h2>
-<p>Not run yet. Each run's results go here, with its date and a link to its folder in
-<code>log/controller-compare/</code>.</p>
+<p>Each run's results go here, with its date and its folder in <code>log/controller-compare/</code>.</p>
+<h3 id="29-oct-0400-ndt-and-amcl-beside-the-ekf-one-run-mppi-the-lot-tour">29 Oct, 04:00: NDT and AMCL beside the EKF (one run, MPPI, the lot tour)</h3>
+<p><code>controller-compare --tours lot --controllers mppi --amcl --ndt</code>, on the map
+<code>ndt-map drive</code> made at 03:55 (169,121 points, 2,450 clouds). Off = from Gazebo's truth.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Leg</th>
+<th>EKF off, mean (m)</th>
+<th>AMCL off, mean (m)</th>
+<th>NDT off, mean / worst (m)</th>
+<th>NDT: clouds with a pose</th>
+<th>NDT match, mean / worst (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a left turn</td>
+<td>0.17</td>
+<td>0.66</td>
+<td>0.009 / 0.02</td>
+<td>100 %</td>
+<td>2.6 / 3.9</td>
+</tr>
+<tr>
+<td>round the building</td>
+<td>0.16</td>
+<td>7.1</td>
+<td>0.030 / 0.27</td>
+<td>98 %</td>
+<td>1.7 / 4.7</td>
+</tr>
+<tr>
+<td>turn back</td>
+<td>0.18</td>
+<td>17.7</td>
+<td>0.017 / 0.37</td>
+<td>98 %</td>
+<td>1.7 / 4.7</td>
+</tr>
+<tr>
+<td>home (Nav2 gave up)</td>
+<td>0.17</td>
+<td>35.7</td>
+<td>0.010 / 0.21</td>
+<td>100 %</td>
+<td>2.2 / 14.0</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>NDT was never over 1 m off; one LOST and restart from <code>ekf_global</code> (turn back).
+  Heading off at most 1.0°.</li>
+<li>AMCL lost the car round the building and never found it again: a look at its
+  settings is due before it is scored again.</li>
+<li>The last leg wasn't reached: MPPI and Nav2 gave up, with the EKF 0.17 m off, so that is
+  not the localizers.</li>
+<li>Match times are this Mac's (M4 Max), not the Orin's. Gazebo's lidar has no sweep; the
+  car's does. One run: no spread yet. <code>covariance_scale</code> (k) and the score floor are
+  not fitted yet.</li>
+</ul>
 </section>
 <section class="card"><h2 id="scoring-a-localizer-fairly">Scoring a localizer fairly</h2>
 <div class="table-wrap"><table>
