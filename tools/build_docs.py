@@ -112,6 +112,7 @@ PAGES = [
     ('vehicle-model.md', 'The car as a linear model',
      'Transfer functions, state space, poles and margins (SYSC 3600)'),
     ('ghost-obstacles.md', 'Ghost obstacles', 'A pretend person only Nav2 sees: test stopping'),
+    ('geofence.md', 'The geofence', "An area the computer's drivers may not leave, without Nav2"),
     ('sources-and-targets.md', 'Sources and targets',
      'The sensor mux and the output mux: simulated data never drives the car'),
     ('mcp.md', 'AI apps (MCP)', 'Claude and other AI apps: read the project and the graph'),

@@ -16,7 +16,7 @@ controller ... closed loop". The plan: `docs/designs/2026-10-27_control-plan.md`
 | 2 | **LQR for steering:** from `vehicle_model.lateral()`, scheduled by speed; follows the planner's path (Smac), in place of pure pursuit; scored with `atob-score` and `controller-compare` | Gazebo |
 | 3 | **LQR for speed and brake (LQI):** one signed acceleration, in `spine-core`; scored against today's PI and P-only brake | bench, Gazebo |
 | 4 | **MPC for the whole A-to-B:** speed and steering together, with the brake's and steering's limits; scored against 2 and 3, and MPPI | 2, 3 |
-| 5 | Unfinished from 26 Oct: goal circling (TODO 17, `wt/goals-steering`), the F6 geofence, the QEMU and NaN fixes (`small-fixes`), the bench fixes (`bench-fixes`) | |
+| 5 | Unfinished from 26 Oct: goal circling (TODO 17, `wt/goals-steering`), the QEMU and NaN fixes (`small-fixes`), the bench fixes (`bench-fixes`). The F6 geofence: ✅ 29 Oct, [The geofence](docs/geofence.md) (branch `geofence`). Left for the team: the test lot's polygon once its datum is surveyed (W3); test 4.3's stop with the legacy speed loop `open` (`vehicle.yaml` `open_loop_decel`), until then programs stay held (COASTING); a `sim-check --geofence` in Gazebo | |
 
 Every gain still comes from guessed numbers until the car is measured (`docs/measure-the-car.md`).
 

@@ -97,6 +97,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Orin-to-ESP32 heartbeat (serial frame version 2) | The ESP32 brakes when the Orin stops, even if the Motor Pi still sends: 111-120 ms in QEMU | Ben | 2026-10-24 | built |
 | No-timeout lock (`legacy_uart_bridge`, twist_mux `no_timeout`, priority 60) | Today's ESP32 firmware keeps the last throttle if the Orin or the bridge dies, so on it only people and the actuator tests may drive, never a program | Ben | 2026-10-26 | built |
 | Stop hold (`aav_safety` `stop_hold`, twist_mux `stop_zone`, priority 21) | collision_monitor flickered between stop and go with an obstacle at its zone's edge, and the car crept on; now a stop holds until the zone stays clear for 1 s | Ben | 2026-10-29 | built |
+| [Geofence](geofence.md) (`aav_safety` `geofence`, twist_mux `geofence`, priority 51) | Only the point driver's distance and time limits stopped a runaway route, and nothing at all without Nav2 (F6); now every program stops before its stopping distance reaches the fence, or when the position can't be trusted, and people still drive | Ben | 2026-10-29 | sim |
 | Stand-ins stay local (`tools/ros.sh --local`) | A pretend car in the turtle, Gazebo or bench mode can never reach the real one | Ben | 2026-10-10 | sim |
 
 ## Backends
