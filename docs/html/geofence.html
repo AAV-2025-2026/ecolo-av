@@ -7,7 +7,7 @@
 <!-- Generated from docs/geofence.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The geofence</h1>
-<div class="meta">4 min read · 7 sections</div></header>
+<div class="meta">5 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -93,7 +93,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#who-it-stops">Who it stops</a><a href="#the-stopping-path">The stopping path</a><a href="#the-states">The states</a><a href="#on-the-car">On the car</a><a href="#other-parts-that-know-the-fence">Other parts that know the fence</a><a href="#try-it">Try it</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#who-it-stops">Who it stops</a><a href="#the-stopping-path">The stopping path</a><a href="#the-states">The states</a><a href="#on-the-car">On the car</a><a href="#other-parts-that-know-the-fence">Other parts that know the fence</a><a href="#what-we-measured-bench-29-oct">What we measured (bench, 29 Oct)</a><a href="#try-it">Try it</a></nav>
 <div class="lead"><p>An area the computer's drivers may not leave. It works <strong>without Nav2</strong>: it stops the
 point driver, a script, a replay and the language server the same way it stops Nav2.</p>
 <p>People are never held. The safety driver on the joystick can always drive.</p></div>
@@ -304,6 +304,32 @@ today's firmware anyway.)</p>
 </tr>
 </tbody>
 </table></div>
+</section>
+<section class="card"><h2 id="what-we-measured-bench-29-oct">What we measured (bench, 29 Oct)</h2>
+<p><code>pixi run bench-check --geofence</code>, on the spine's model car, a 12 m fence:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a scripted drive at 1 m/s</td>
+<td>the lock closed at 1.08 m/s; the car stopped <strong>1.06 m</strong> on (the geofence counts on 1.56 m)</td>
+</tr>
+<tr>
+<td>where it stopped</td>
+<td>its furthest corner 9.3 m from the start: inside the 12 m fence, in NEAR</td>
+</tr>
+<tr>
+<td>a person backs it in (keyboard)</td>
+<td>not held: 3.4 m back, then OK</td>
+</tr>
+</tbody>
+</table></div>
+<p>Not yet run: Gazebo with a fence you can reach, and the real car.</p>
 </section>
 <section class="card"><h2 id="try-it">Try it</h2>
 <pre class="highlight"><code class="language-sh">pixi run bench-check --geofence     # a scripted drive at a 12 m fence must stop inside it

@@ -99,6 +99,18 @@ A site drawn on another datum is refused at start-up.
 | the actuator tests | stop on NEAR, OUTSIDE, JUMP or LOST on the ground; refuse STANDS there |
 | RViz, Lichtblick | draw `/safety/geofence/fence` |
 
+## What we measured (bench, 29 Oct)
+
+`pixi run bench-check --geofence`, on the spine's model car, a 12 m fence:
+
+| Check | Result |
+|---|---|
+| a scripted drive at 1 m/s | the lock closed at 1.08 m/s; the car stopped **1.06 m** on (the geofence counts on 1.56 m) |
+| where it stopped | its furthest corner 9.3 m from the start: inside the 12 m fence, in NEAR |
+| a person backs it in (keyboard) | not held: 3.4 m back, then OK |
+
+Not yet run: Gazebo with a fence you can reach, and the real car.
+
 ## Try it
 
 ```sh
