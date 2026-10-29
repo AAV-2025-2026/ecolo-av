@@ -8,6 +8,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [speed_loop:=default|smooth] [sim_speed:=]
       [reversing:=true] [controller:=mppi] [tracker:=none] [amcl:=false]
+      [ndt:=false] [ndt_map:=maps/ndt/test_lot.pcd]
       [plan_around:=true]
       [watchdog:=true] [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
       [esp32:=false] [esp32_loop:=pi]
@@ -58,6 +59,10 @@ bench's argument names:
                       collision_monitor. Forward only: with reversing:=false (docs/trials.md)
   amcl:=true          stock AMCL beside the global EKF, scored only (docs/trials.md): only
                       in world:=test_lot with nav:=true and the lidar, from the start pose
+  ndt:=true           NDT on the saved lidar map (aav_ndt, Rust), scored only, never TF
+                      (docs/designs/2026-10-29_ndt.md): only in world:=test_lot with the
+                      lidar, from the start pose, and only once ndt_map (pixi run ndt-map
+                      drive) is there
   plan_around:=false  Nav2's planner sees only the map, not the radar and lidar: the car
                       stops for an obstacle instead of planning round it (the stop tests)
   watchdog:=true      the sensor watchdog (aav_safety): twist_mux's sensors lock stops Nav2
@@ -137,6 +142,7 @@ def launch_setup(context):
         raise ValueError(f'controller:={controller}: pick one of {", ".join(vehicle.CONTROLLERS)}')
     tracker = vehicle.check_tracker(arg('tracker'), flag['reversing'])
     amcl = arg('amcl').lower() == 'true'
+    ndt = arg('ndt').lower() == 'true'
     gazebo_share = FindPackageShare('aav_gazebo').perform(context)
     sensors = worlds.has_sensors(worlds.world_file(gazebo_share, world))
     # Each only where the world renders it, as gazebo.launch.py decides.
@@ -146,6 +152,12 @@ def launch_setup(context):
     if amcl and not (world == 'test_lot' and flag['nav'] and lidar):
         raise ValueError('amcl:=true needs world:=test_lot nav:=true lidar:=true: the only '
                          'world with a real map, and AMCL reads the lidar')
+    if ndt and not (world == 'test_lot' and lidar):
+        raise ValueError('ndt:=true needs world:=test_lot lidar:=true: the only world with '
+                         'a lidar map (pixi run ndt-map drive), and NDT reads the lidar')
+    if ndt and not os.path.isfile(arg('ndt_map')):
+        raise ValueError(f'ndt:=true: no map at ndt_map:={arg("ndt_map")}. Make it with '
+                         '`pixi run ndt-map drive`')
     if wanted and not sensors:
         raise ValueError(f'{", ".join(wanted)}: world:={world} has no camera. Use world:=road')
     nav_share = FindPackageShare('aav_navigation').perform(context)
@@ -197,6 +209,11 @@ def launch_setup(context):
                                amcl=amcl, amcl_x=0.0, amcl_y=arg('start_y'),
                                amcl_yaw=arg('start_yaw'),
                                plan_around=str(flag['plan_around']).lower()))
+    if ndt:
+        # Scored only (controller-compare --ndt): nothing reads its pose to drive.
+        actions.append(include(context, 'aav_ndt', 'ndt.launch.py', use_sim_time='true',
+                               ndt_map=arg('ndt_map'), ndt_x=0.0, ndt_y=arg('start_y'),
+                               ndt_yaw=arg('start_yaw')))
     if flag['watchdog']:
         # What this world has, and the camera only where something reads it: watching it
         # costs one more stream of pictures.
@@ -339,6 +356,13 @@ def generate_launch_description():
         DeclareLaunchArgument('amcl', default_value='false',
                               description='stock AMCL beside the EKF, scored only '
                                           '(world:=test_lot nav:=true lidar:=true)'),
+        DeclareLaunchArgument('ndt', default_value='false',
+                              description='NDT on the saved lidar map, scored only '
+                                          '(world:=test_lot lidar:=true, ndt_map present)'),
+        DeclareLaunchArgument('ndt_map', default_value=os.path.join('maps', 'ndt',
+                                                                    'test_lot.pcd'),
+                              description="NDT's map (pixi run ndt-map drive); relative to "
+                                          'where the launch starts'),
         DeclareLaunchArgument('plan_around', default_value='true',
                               description="true: Nav2's planner plans round what the radar "
                                           'and lidar see; false: the map only, so the car '
