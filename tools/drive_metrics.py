@@ -611,3 +611,96 @@ def final_metre(speeds, still=STILL, creep=CREEP, metre=LAST_METRE):
         if part < 1.0:
             return end - (tb - part * (tb - ta)), crept
     return math.nan, math.nan
+
+
+# The weave (TODO N7): how much the car swings from side to side on a straight drive,
+# apart from any slow drift off its line. bench_check.py --weave reports these.
+
+WEAVE_WIDTH = 4.0   # s: a swing faster than this is weave; slower is drift
+TURN_DEADBAND = 0.02  # rad/s: a turn command smaller than this counts as straight
+
+
+def lateral(track, a, b):
+    """
+    Return [(t, m left of the line)] for track [(t, x, y, ...)] against the line a -> b.
+
+    a, b: (x, y) on the map. + is left of the way a looks at b (REP-103).
+    """
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length = math.hypot(dx, dy)
+    if length == 0.0:
+        raise ValueError('the line needs two different points')
+    return [(s[0], ((s[2] - a[1]) * dx - (s[1] - a[0]) * dy) / length) for s in track]
+
+
+def value_at(series, t):
+    """Return the value of [(t, value)] at time t, read between its two nearest samples."""
+    times = [s[0] for s in series]
+    i = bisect.bisect_left(times, t)
+    if i == 0:
+        return series[0][1]
+    if i == len(series):
+        return series[-1][1]
+    (ta, va), (tb, vb) = series[i - 1], series[i]
+    return va if tb == ta else va + (vb - va) * (t - ta) / (tb - ta)
+
+
+def weave(series, width=WEAVE_WIDTH):
+    """
+    Return the RMS (the value's own unit) of how far [(t, value)] swings round its average.
+
+    The average is a `width` s moving average (smooth()): a slow drift moves the average
+    with it and counts nothing; a swing faster than `width` counts in full. NaN if the
+    series is shorter than one window.
+    """
+    means = smooth(series, width)
+    if not means:
+        return math.nan
+    swings = [value_at(series, t) - mean for t, mean in means]
+    return math.sqrt(sum(s * s for s in swings) / len(swings))
+
+
+def sign_flips(series, deadband=TURN_DEADBAND):
+    """Count the turns from left to right and back in [(t, value)], ignoring |value| < deadband."""
+    signs = [v > 0.0 for _, v in series if abs(v) >= deadband]
+    return sum(a != b for a, b in zip(signs, signs[1:]))
+
+
+def stop_go(actions, stop):
+    """
+    Count the times a stop let go: in a list of actions, each `stop` followed by another.
+
+    actions: collision_monitor's state, in order (it publishes only when it changes).
+    A clean stop that lets go once, when the obstacle goes, counts 1; a flicker counts more.
+    """
+    return sum(a == stop and b != stop for a, b in zip(actions, actions[1:]))
+
+
+def off_line(points):
+    """
+    Return each (x, y)'s signed distance (m) from the straight line that fits them best.
+
+    The line through their mean, along their main direction (the total least squares line),
+    so a drive that started a little crooked still counts as straight.
+    """
+    n = len(points)
+    if n < 2:
+        return []
+    mx, my = sum(p[0] for p in points) / n, sum(p[1] for p in points) / n
+    sxx = sum((p[0] - mx) ** 2 for p in points)
+    syy = sum((p[1] - my) ** 2 for p in points)
+    sxy = sum((p[0] - mx) * (p[1] - my) for p in points)
+    angle = 0.5 * math.atan2(2.0 * sxy, sxx - syy)
+    c, s = math.cos(angle), math.sin(angle)
+    return [-(p[0] - mx) * s + (p[1] - my) * c for p in points]
+
+
+def rms(values):
+    """Return the root mean square of a list of numbers; NaN for none."""
+    return math.sqrt(sum(v * v for v in values) / len(values)) if values else math.nan
+
+
+def starts(series, least=STILL):
+    """Count the times [(t, v)] went from below `least` to `least` or more: forward starts."""
+    moving = [v >= least for _, v in series]
+    return sum(b and not a for a, b in zip(moving, moving[1:]))

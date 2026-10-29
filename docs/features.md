@@ -134,6 +134,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Bench GPS that drifts (`aav_bench` `models.GpsError`) | A real receiver's error wanders slowly; fresh noise on every fix made Nav2 weave in a way the car never would (N7) | Ben | 2026-10-29 | built |
 | The spine in the loop (`sim spine:=true`) | Gazebo drives through the spine's real logic, so its stops and e-stops get tested | Ben | 2026-10-15 | sim |
 | `sim-check` and `bench-check` | One command proves the whole chain drives, stops and keeps its lane | Ben | 2026-10-10 | sim |
+| `bench-check --weave` and `--zone-edge` | Measure the weave on a straight Nav2 drive (N7), and prove a box at the stop zone's edge can't let the car creep on | Ben | 2026-10-29 | built |
 | Sensor failures on purpose (`pixi run sim-fault`) | Breaks a sensor in Gazebo, to prove the watchdog catches it | Ben | 2026-10-15 | sim |
 | [Ghost obstacles](ghost-obstacles.md) (`aav_ghost`) | A pretend person only Nav2 sees, to test stopping with nothing real to hit | Ben | 2026-10-16 | sim |
 | Record and replay a drive | A recorded drive runs through the EKFs again, to check them; they match within 0.03 m | Ben | 2026-10-09 | sim |

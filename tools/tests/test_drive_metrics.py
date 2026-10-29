@@ -299,3 +299,56 @@ def test_the_table_takes_other_columns():
     cols = [('a', 'A (m)', '{:.1f}'), ('b', 'B', '{:d}')]
     text = m.table([('run', {'a': 1.25})], columns=cols)
     assert text.splitlines() == ['|  | run |', '|---|---:|', '| A (m) | 1.2 |']
+
+
+def test_lateral_is_left_of_the_line():
+    track = [(0.0, 1.0, 2.0), (1.0, 5.0, -1.0)]
+    assert m.lateral(track, (0.0, 0.0), (10.0, 0.0)) == pytest.approx([(0.0, 2.0), (1.0, -1.0)])
+    # A line going north: east of it is right.
+    assert m.lateral([(0.0, 3.0, 4.0)], (0.0, 0.0), (0.0, 1.0)) == pytest.approx([(0.0, -3.0)])
+    with pytest.raises(ValueError):
+        m.lateral(track, (1.0, 1.0), (1.0, 1.0))
+
+
+def test_weave_counts_fast_swings_not_slow_drift():
+    rate, seconds = 20.0, 60.0
+    times = [i / rate for i in range(int(seconds * rate) + 1)]
+    drift = [(t, 0.02 * t) for t in times]                         # 1.2 m off, slowly
+    assert m.weave(drift) == pytest.approx(0.0, abs=1e-9)
+    swing = [(t, 0.3 * math.sin(2.0 * math.pi * t)) for t in times]  # 1 s weave, 0.3 m
+    assert m.weave(swing) == pytest.approx(0.3 / math.sqrt(2.0), rel=0.02)
+    both = [(t, a + b) for (t, a), (_, b) in zip(drift, swing)]
+    assert m.weave(both) == pytest.approx(m.weave(swing), rel=0.01)
+    assert math.isnan(m.weave(swing[:10]))
+
+
+def test_turn_sign_flips_skip_the_deadband():
+    turns = [(0, 0.1), (1, 0.01), (2, -0.1), (3, -0.005), (4, -0.2), (5, 0.3)]
+    assert m.sign_flips(turns) == 2
+    assert m.sign_flips([]) == 0
+
+
+def test_stop_go_counts_each_stop_that_let_go():
+    STOP, GO = 0, 1
+    assert m.stop_go([STOP, GO], STOP) == 1
+    assert m.stop_go([GO, STOP, GO, STOP, GO, STOP], STOP) == 2
+    assert m.stop_go([STOP], STOP) == 0
+
+
+def test_off_line_fits_a_crooked_straight_line():
+    # A straight drive 10 degrees off east, with a 0.2 m bump in the middle.
+    a = math.radians(10.0)
+    points = [(i * math.cos(a), i * math.sin(a)) for i in range(21)]
+    assert max(abs(d) for d in m.off_line(points)) == pytest.approx(0.0, abs=1e-9)
+    bumped = [(x - 0.2 * math.sin(a), y + 0.2 * math.cos(a)) if i == 10 else (x, y)
+              for i, (x, y) in enumerate(points)]
+    offsets = m.off_line(bumped)
+    assert offsets[10] - offsets[0] == pytest.approx(0.2, abs=0.01)
+    assert m.off_line([(0.0, 0.0)]) == []
+
+
+def test_rms_and_forward_starts():
+    assert m.rms([3.0, -4.0]) == pytest.approx(math.sqrt(12.5))
+    assert math.isnan(m.rms([]))
+    commands = [(0, 0.0), (1, 0.5), (2, 0.0), (3, -0.3), (4, 0.0), (5, 0.2), (6, 0.4)]
+    assert m.starts(commands) == 2       # reversing isn't a forward start

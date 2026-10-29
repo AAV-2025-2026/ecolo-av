@@ -7,6 +7,8 @@ Bench check: start bench mode, then test the whole car graph on this computer.
     pixi run bench-check --obstacle            (adds a box for the radar: 3 minutes)
     pixi run bench-check --lidar               (adds a box for the lidar alone: 3 minutes)
     pixi run bench-check --lane   (adds lane keeping, in a second bench run: 1 more minute)
+    pixi run bench-check --weave              (adds a straight 40 m Nav2 drive: 1 more minute)
+    pixi run bench-check --zone-edge          (adds a box at the stop zone's edge: 1 more minute)
     pixi run bench-check --python-bridge       (aav_spine's Python spine_bridge, not the Rust one)
 
 1. Starts bench.launch.py on a private ROS domain, local to this computer.
@@ -24,7 +26,13 @@ Bench check: start bench mode, then test the whole car graph on this computer.
    box; once the box is taken away, the car must go on to the goal.
    With --lidar: bench mode with lidar:=true, and the same again with a box only the
    pretend lidar sees (mock_lidar's VLP-16 packets, read by the stock velodyne driver).
-8. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
+8. With --weave (TODO N7), before the other Nav2 checks: Nav2 drives 40 m straight ahead,
+   with nothing in the way. Says how much the car swung from side to side (the weave),
+   apart from any slow drift off its line, and how often Nav2's turn command changed sign.
+9. With --zone-edge: the car stands still with a box as wide as the lane right at the far
+   edge of collision_monitor's stop zone, and Nav2 asks it to drive on. The stop must hold:
+   no forward command may reach ego after the first stop, and the car must not creep on.
+10. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
    the car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there. Its own start-up and graph checks come first.
 
@@ -58,6 +66,7 @@ from aav_description import vehicle  # noqa: E402
 from aav_interfaces.action import ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
+from geometry_msgs.msg import TwistStamped  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
 from nav_msgs.msg import Odometry  # noqa: E402
@@ -71,6 +80,9 @@ from std_msgs.msg import Bool, String  # noqa: E402
 from std_srvs.srv import SetBool  # noqa: E402
 import yaml  # noqa: E402
 
+sys.path.insert(0, os.path.join(ROOT, 'tools'))
+import drive_metrics  # noqa: E402, I100
+
 RESULTS = []
 
 # Lane keeping (--lane): where the car starts, what counts as back on the centre line,
@@ -78,6 +90,7 @@ RESULTS = []
 LANE_START = 0.3        # m left of the road's centre
 LANE_BAND = 0.05        # m either side of the centre
 LANE_TIME = 30.0        # s of driving, from when the car starts moving
+WEAVE_LIMIT = 0.1       # m RMS: the most the car may swing round its own path (--weave)
 LOOKAHEAD = 3.0         # m: where lane_finder measures the offset (its config, lookahead)
 with open(os.path.join(ROOT, 'ros', 'sim', 'aav_bench', 'config', 'bench.yaml')) as f:
     ROAD = yaml.safe_load(f)['mock_camera']['ros__parameters']
@@ -123,6 +136,17 @@ class Probe(Node):
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  lambda m: self.monitor.append(
                                      (time.monotonic(), m.action_type, m.polygon_name)), 10)
+        # Nav2's controller's turn command (rad/s), on the clock of the truth's stamps (the
+        # bench runs on the computer's clock), for --weave; and the mux's command to ego
+        # (m/s), on the steady clock of `monitor`, for --zone-edge.
+        self.turns, self.commands = [], []
+        self.create_subscription(TwistStamped, '/control/cmd_vel',
+                                 lambda m: self.commands.append(
+                                     (time.monotonic(), m.twist.linear.x)), 10)
+        self.create_subscription(TwistStamped, '/cmd_vel_nav',
+                                 lambda m: self.turns.append(
+                                     (self.get_clock().now().nanoseconds * 1e-9,
+                                      m.twist.angular.z)), 10)
         self.box_params = {s: self.create_client(SetParameters, f'/mock_{s}/set_parameters')
                            for s in ('radar', 'lidar')}
         self.output_mux = ''   # the output mux's state: OPEN, WAIT or STOP (aav_io_mux)
@@ -371,6 +395,125 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, sensor='radar'):
     probe.set_box(sensor, False)
 
 
+def nav_goal(probe, x, y, h):
+    """Send Nav2 a goal on the map; return its goal handle, or None if refused."""
+    target = NavigateToPose.Goal()
+    target.pose.header.frame_id = 'map'
+    target.pose.pose.position.x, target.pose.pose.position.y = x, y
+    orientation = target.pose.pose.orientation
+    orientation.z, orientation.w = math.sin(h / 2.0), math.cos(h / 2.0)
+    if not probe.nav.wait_for_server(timeout_sec=30.0):
+        return None
+    sent = probe.nav.send_goal_async(target)
+    probe.spin_for(10.0, lambda: sent.done())
+    if not sent.done() or not sent.result().accepted:
+        return None
+    return sent.result()
+
+
+def check_weave(probe, goal=40.0, margin=5.0):
+    """
+    Drive `goal` m straight ahead with Nav2, and measure the weave (TODO N7).
+
+    Measured on the truth, over the straight part (`margin` m in from each end, so the
+    start and the stop don't count):
+      weave       how far the car's sideways offset swings round its own 4 s average
+                  (drive_metrics.weave): side to side, faster than a GPS bias drifts
+      off line    the RMS and the most it strays from the straight line that fits its
+                  track best: the weave, and slower wander too
+      turn flips  how often a second the controller's turn command changes sign (N7's
+                  first sign: "flips sign about once a second"), and its RMS
+    Runs first, from the start spot facing along the road, before the other Nav2 checks.
+    """
+    if not probe.arm_and_hold():
+        result('weave', False, 'the spine would not stay armed')
+        return
+    t = probe.truth
+    x0, y0, h = t.pose.pose.position.x, t.pose.pose.position.y, yaw_of(t)
+    c, s = math.cos(h), math.sin(h)
+    since = probe.track[-1][0]
+    handle = nav_goal(probe, x0 + goal * c, y0 + goal * s, h)
+    if handle is None:
+        result('weave', False, 'Nav2 refused the goal')
+        return
+    done = handle.get_result_async()
+    probe.spin_for(120.0, lambda: done.done())
+    reached = done.done() and done.result().status == 4
+    if not done.done():
+        handle.cancel_goal_async()
+        probe.spin_for(2.0)
+    run = [p for p in probe.track if p[0] >= since
+           and margin <= (p[1] - x0) * c + (p[2] - y0) * s <= goal - margin]
+    if len(run) < 2:
+        result('weave', False, f'too little of the drive recorded ({len(run)} truth samples)')
+        return
+    t0, t1 = run[0][0], run[-1][0]
+    turns = [w for w in probe.turns if t0 <= w[0] <= t1]   # while on the straight part
+    swing = drive_metrics.weave(drive_metrics.lateral(run, (x0, y0), (x0 + c, y0 + s)))
+    stray = drive_metrics.off_line([(p[1], p[2]) for p in run])
+    flips = drive_metrics.sign_flips(turns) / max(t1 - t0, 1e-9)
+    turn_rms = drive_metrics.rms([w for _, w in turns])
+    ok = reached and swing < WEAVE_LIMIT
+    result('weave', ok, f'weave {swing:.3f} m RMS (limit {WEAVE_LIMIT}); off its best line '
+                        f'{drive_metrics.rms(stray):.2f} m RMS, {max(map(abs, stray)):.2f} m '
+                        f'at most; the turn command changed sign {flips:.2f} times a second, '
+                        f'{turn_rms:.3f} rad/s RMS; Nav2 goal '
+                        f'{"reached" if reached else "not reached"}')
+
+
+def check_zone_edge(probe, hold=20.0):
+    """
+    Put a box at the stop zone's far edge, the car standing still: the stop must hold.
+
+    The box spans the lane, its near face exactly where the stop zone ends (1 m past the
+    bumper). The pretend radar's range noise puts some of its points inside, some out, as
+    a real one does. Nav2 is asked to drive on through it. Counted over `hold` s:
+      monitor   collision_monitor's own stops that let go (its state topic)
+      car       forward commands that reached ego (/control/cmd_vel) after the first stop
+      crept     the most the car moved toward the box
+    collision_monitor (Jazzy) decides afresh on every command, so its own state still
+    flickers; stop_hold (aav_safety) must keep the flicker from reaching the car.
+    """
+    if not probe.arm_and_hold():
+        result('stop zone edge', False, 'the spine would not stay armed')
+        return
+    car = vehicle.load()['vehicle']
+    front = car['body']['length'] - car['body']['rear_overhang']   # base_link to the bumper
+    near = max(x for x, _ in vehicle.stop_zone_points(car))       # the zone's far edge
+    t = probe.truth
+    x0, y0, h = t.pose.pose.position.x, t.pose.pose.position.y, yaw_of(t)
+    c, s = math.cos(h), math.sin(h)
+    bx, by = x0 + (near + 0.5) * c, y0 + (near + 0.5) * s
+    half = LANE_WIDTH / 2.0
+    if not probe.set_box('radar', True, [bx - 0.5, by - half, bx + 0.5, by + half]):
+        result('stop zone edge', False, 'could not place the box (mock_radar parameters)')
+        return
+    probe.spin_for(2.0)
+    seen, track_from, sent_from = len(probe.monitor), probe.track[-1][0], len(probe.commands)
+    handle = nav_goal(probe, x0 + 30.0 * c, y0 + 30.0 * s, h)
+    if handle is None:
+        result('stop zone edge', False, 'Nav2 refused the goal')
+        probe.set_box('radar', False)
+        return
+    probe.spin_for(hold)
+    crept = max((p[1] - x0) * c + (p[2] - y0) * s for p in probe.track if p[0] >= track_from)
+    # From the state before the goal (collision_monitor publishes only changes) to now.
+    states = probe.monitor[max(0, seen - 1):]
+    actions = [a for _, a, _ in states]
+    flickers = drive_metrics.stop_go(actions, CollisionMonitorState.STOP)
+    first = next((w for w, a, _ in states if a == CollisionMonitorState.STOP), None)
+    goes = (drive_metrics.starts([cmd for cmd in probe.commands[sent_from:] if cmd[0] > first])
+            if first is not None else 0)
+    handle.cancel_goal_async()
+    probe.set_box('radar', False)
+    probe.spin_for(3.0)
+    ok = first is not None and goes == 0 and crept < 0.1
+    result('stop zone edge', ok, f'over {hold:.0f} s: collision_monitor let its stop go '
+                                 f'{flickers} times; {goes} forward starts reached ego after '
+                                 f'the first stop; the car crept {crept:.2f} m toward a box '
+                                 f'{near - front:.2f} m past its bumper')
+
+
 def check_lane_keeping(probe):
     """
     Lane keeping alone: from LANE_START m left of the road's centre, the car must come back.
@@ -500,7 +643,7 @@ def check_drive(probe):
            f'{travelled:.2f} m (plan: 6.5 m; the speed loop trails it by about 1 s){again}')
     gx, gy = probe.xy(probe.glob)
     error = math.hypot(gx - x1, gy - y1)
-    result('global EKF vs truth', error < 1.5, f'{error:.2f} m apart (GPS noise is 0.5 m)')
+    result('global EKF vs truth', error < 1.5, f'{error:.2f} m apart (the GPS drifts 0.5 m)')
 
 
 def session(launch_args, checks, log_path, label=''):
@@ -547,10 +690,14 @@ def main():
     checks = [check_drive,
               lambda probe: check_estop(probe, 'software e-stop', probe.estop),
               lambda probe: check_estop(probe, 'hardware e-stop', probe.hw_estop)]
+    if '--weave' in args:
+        checks.append(check_weave)     # first: from the start spot, along the road
     if perception:
         checks.append(check_stop_sign)
     if '--obstacle' in args:
         checks.append(check_obstacle)
+    if '--zone-edge' in args:
+        checks.append(check_zone_edge)
     lidar = '--lidar' in args
     if lidar:
         checks.append(lambda probe: check_obstacle(probe, sensor='lidar'))
@@ -561,7 +708,8 @@ def main():
     # is empty: it would plan off the road round it), so the stop zone must stop the car.
     bridge = ['bridge:=python'] if '--python-bridge' in args else []
     session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
-            + (['plan_around:=false'] if '--obstacle' in args else []) + bridge,
+            + (['plan_around:=false'] if {'--obstacle', '--zone-edge'} & set(args) else [])
+            + bridge,
             checks, logs[0])
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
