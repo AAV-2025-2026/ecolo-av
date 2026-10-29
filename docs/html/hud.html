@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">34 min read · 5 sections</div></header>
+<div class="meta">35 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1390,6 +1390,29 @@ from a terminal: <code>ros2 param set /track tracker lqr</code> (sim only, both 
 </table></div>
 <p>On the car: not yet from a Mac over WiFi (about 9 MB/s of reliable lidar); on the Orin's
 own screen.</p>
+<h3 id="tested-29-october-a-mac">Tested (29 October, a Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cargo test</code>: debug-core 38, debug-app 11 (with ROS: a cloud placed by the pose at its stamp, map -&gt; odom, a swap's answer, through the real node)</td>
+<td>all pass</td>
+</tr>
+<tr>
+<td><code>live_sim</code> against headless Gazebo, test lot, <code>amcl:=true tracker:=pure_pursuit</code>, driving a Nav2 goal</td>
+<td>10 scans a second, ~6,000-7,000 cubes from ~16,000-19,000 points, none cut; every panel row OK; EKF global 0.02 m, truth 0.24 m, AMCL 0.70 m from EKF local; key 3's swap to lqr accepted mid-path, which then drove 9 mm off the path</td>
+</tr>
+<tr>
+<td>The window itself, <code>pixi run debugdemo</code>, the 20,000-cube drawing test</td>
+<td><strong>untested</strong>: the Mac's screen was locked all night, and no window can open then</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</h2>
 <div class="table-wrap"><table>
