@@ -12,6 +12,9 @@
 //! | [`cloud`] | a PointCloud2's x, y, z (radar-clustering's reader) |
 //! | [`cubes`] | one scan's cubes: snapped to a grid in odom, a height band each, a cap |
 //! | [`scan`] | a cloud start to finish: frames, pose, points, cubes |
+//! | [`persist`] | cubes kept in odom that fade when not seen again (key K) |
+//! | [`ndt`] | NDT's status in plain words; its map's occupied cells (key M) |
+//! | [`keys`] | the keys, the layers they toggle, the on-screen key legend |
 //! | [`orbit`] | the 3D camera: chase, follow, free; turn, tilt, zoom, pan |
 //! | [`track`] | aav_track's status: the tracker, cross track, loop time |
 //! | [`swap`] | keys 1-4: which tracker, and whether a swap may be asked for (sim only) |
@@ -21,7 +24,10 @@ pub mod cloud;
 pub mod config;
 pub mod cubes;
 pub mod frames;
+pub mod keys;
+pub mod ndt;
 pub mod orbit;
+pub mod persist;
 pub mod poses;
 pub mod scan;
 pub mod state;

@@ -48,13 +48,14 @@ const PLAN: Color = Color::new(255, 220, 60, 255);
 const TRAIL: Color = Color::new(120, 125, 140, 255);
 
 /// Each localizer's colour (the design's: local blue, global green, truth white, AMCL
-/// orange).
+/// orange; NDT purple).
 pub fn localizer_colour(who: Localizer) -> Color {
     match who {
         Localizer::Local => Color::new(80, 130, 255, 255),
         Localizer::Global => Color::new(70, 225, 100, 255),
         Localizer::Truth => Color::new(245, 245, 245, 255),
         Localizer::Amcl => Color::new(255, 150, 40, 255),
+        Localizer::Ndt => Color::new(190, 110, 255, 255),
     }
 }
 

@@ -26,6 +26,9 @@ pub enum Topic {
     GlobalOdom,
     Truth,
     Amcl,
+    AmclParticles,
+    NdtPose,
+    NdtStatus,
     Plan,
     Tf,
     TfStatic,
@@ -40,12 +43,15 @@ pub enum Topic {
 
 impl Topic {
     /// Every topic.
-    pub const ALL: [Topic; 15] = [
+    pub const ALL: [Topic; 18] = [
         Topic::Lidar,
         Topic::LocalOdom,
         Topic::GlobalOdom,
         Topic::Truth,
         Topic::Amcl,
+        Topic::AmclParticles,
+        Topic::NdtPose,
+        Topic::NdtStatus,
         Topic::Plan,
         Topic::Tf,
         Topic::TfStatic,
@@ -66,6 +72,9 @@ impl Topic {
             Self::GlobalOdom => "global_odom_topic",
             Self::Truth => "truth_topic",
             Self::Amcl => "amcl_topic",
+            Self::AmclParticles => "amcl_particles_topic",
+            Self::NdtPose => "ndt_pose_topic",
+            Self::NdtStatus => "ndt_status_topic",
             Self::Plan => "plan_topic",
             Self::Tf => "tf_topic",
             Self::TfStatic => "tf_static_topic",
@@ -108,14 +117,18 @@ pub enum Number {
     CubeSize,
     PoseWindow,
     GroundHeight,
+    KeepCubesFor,
+    NdtMapCell,
 }
 
 impl Number {
-    pub const ALL: [Number; 4] = [
+    pub const ALL: [Number; 6] = [
         Number::StaleAfter,
         Number::CubeSize,
         Number::PoseWindow,
         Number::GroundHeight,
+        Number::KeepCubesFor,
+        Number::NdtMapCell,
     ];
 
     pub fn parameter(self) -> &'static str {
@@ -124,6 +137,8 @@ impl Number {
             Self::CubeSize => "cube_size",
             Self::PoseWindow => "pose_window",
             Self::GroundHeight => "ground_height",
+            Self::KeepCubesFor => "keep_cubes_for",
+            Self::NdtMapCell => "ndt_map_cell",
         }
     }
 }
@@ -136,6 +151,9 @@ pub struct DebugConfig {
     pub global_odom_topic: String,
     pub truth_topic: String,
     pub amcl_topic: String,
+    pub amcl_particles_topic: String,
+    pub ndt_pose_topic: String,
+    pub ndt_status_topic: String,
     pub plan_topic: String,
     pub tf_topic: String,
     pub tf_static_topic: String,
@@ -148,6 +166,8 @@ pub struct DebugConfig {
     pub source_topic: String,
     /// aav_track's parameter service, for keys 1-4 (sim only).
     pub track_parameters_service: String,
+    /// NDT's map file (a PCD), for key M; relative to where the program starts.
+    pub ndt_map: String,
     pub odom_frame: String,
     pub base_frame: String,
     pub map_frame: String,
@@ -161,6 +181,10 @@ pub struct DebugConfig {
     pub pose_window: f64,
     /// Metres above base_link: lower cubes are ground.
     pub ground_height: f64,
+    /// Seconds (by the clouds' stamps) a kept cube fades over before it goes.
+    pub keep_cubes_for: f64,
+    /// One NDT map cube's edge, metres.
+    pub ndt_map_cell: f64,
 }
 
 /// Why a settings file can't be used.
@@ -234,6 +258,9 @@ impl DebugConfig {
             Topic::GlobalOdom => &self.global_odom_topic,
             Topic::Truth => &self.truth_topic,
             Topic::Amcl => &self.amcl_topic,
+            Topic::AmclParticles => &self.amcl_particles_topic,
+            Topic::NdtPose => &self.ndt_pose_topic,
+            Topic::NdtStatus => &self.ndt_status_topic,
             Topic::Plan => &self.plan_topic,
             Topic::Tf => &self.tf_topic,
             Topic::TfStatic => &self.tf_static_topic,
@@ -255,6 +282,9 @@ impl DebugConfig {
             Topic::GlobalOdom => &mut self.global_odom_topic,
             Topic::Truth => &mut self.truth_topic,
             Topic::Amcl => &mut self.amcl_topic,
+            Topic::AmclParticles => &mut self.amcl_particles_topic,
+            Topic::NdtPose => &mut self.ndt_pose_topic,
+            Topic::NdtStatus => &mut self.ndt_status_topic,
             Topic::Plan => &mut self.plan_topic,
             Topic::Tf => &mut self.tf_topic,
             Topic::TfStatic => &mut self.tf_static_topic,
@@ -295,6 +325,8 @@ impl DebugConfig {
             Number::CubeSize => self.cube_size,
             Number::PoseWindow => self.pose_window,
             Number::GroundHeight => self.ground_height,
+            Number::KeepCubesFor => self.keep_cubes_for,
+            Number::NdtMapCell => self.ndt_map_cell,
         }
     }
 
@@ -305,6 +337,8 @@ impl DebugConfig {
             Number::CubeSize => &mut self.cube_size,
             Number::PoseWindow => &mut self.pose_window,
             Number::GroundHeight => &mut self.ground_height,
+            Number::KeepCubesFor => &mut self.keep_cubes_for,
+            Number::NdtMapCell => &mut self.ndt_map_cell,
         };
         *slot = value;
     }
@@ -317,6 +351,11 @@ impl DebugConfig {
     /// [`DebugConfig::pose_window`] as a Duration.
     pub fn pose_window(&self) -> Duration {
         Duration::from_secs_f64(self.pose_window)
+    }
+
+    /// [`DebugConfig::keep_cubes_for`] as a Duration.
+    pub fn keep_cubes_for(&self) -> Duration {
+        Duration::from_secs_f64(self.keep_cubes_for)
     }
 
     /// What the cube grid needs.
@@ -350,6 +389,8 @@ mod tests {
         }
         assert_eq!(c.frame(Frame::Base), "base_link");
         assert_eq!(c.cube_settings().max_cubes, 20_000);
+        assert_eq!(c.keep_cubes_for(), Duration::from_secs(2));
+        assert!(c.ndt_map.ends_with(".pcd"));
     }
 
     #[test]

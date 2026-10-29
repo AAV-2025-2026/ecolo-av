@@ -3,6 +3,7 @@
 //!
 //! News comes in as [`Update`]s (the ROS thread or the demo makes them); the cubes come
 //! separately, newest only ([`DebugState::set_scan`]), so a burst of clouds never queues.
+//! Each scan also goes into the kept cubes ([`crate::persist`]), which fade.
 
 use std::{
     collections::{HashMap, VecDeque},
@@ -20,6 +21,9 @@ use crate::{
     config::DebugConfig,
     cubes::CubeScan,
     frames::{frame_name, MapToOdom, Stamp},
+    keys::{CubeView, Layers},
+    ndt::NdtStatus,
+    persist::{FadedCube, KeptCubes},
     swap::Reply,
     track::TrackStatus,
 };
@@ -35,15 +39,18 @@ pub enum Localizer {
     Truth,
     /// AMCL's particle filter (map frame), a trial.
     Amcl,
+    /// NDT on the saved lidar map (map frame), a trial: good fits only.
+    Ndt,
 }
 
 impl Localizer {
     /// The legend's order.
-    pub const ALL: [Localizer; 4] = [
+    pub const ALL: [Localizer; 5] = [
         Localizer::Local,
         Localizer::Global,
         Localizer::Truth,
         Localizer::Amcl,
+        Localizer::Ndt,
     ];
 
     pub fn label(self) -> &'static str {
@@ -52,6 +59,7 @@ impl Localizer {
             Self::Global => "EKF global",
             Self::Truth => "truth (sim)",
             Self::Amcl => "AMCL",
+            Self::Ndt => "NDT",
         }
     }
 
@@ -73,11 +81,15 @@ pub enum Source {
     Track,
     Estimate(Localizer),
     MapToOdom,
+    /// NDT's status (its own panel section, not a row).
+    NdtStatus,
+    /// AMCL's particles (drawn, not a row).
+    Particles,
 }
 
 impl Source {
     /// The panel's rows, top to bottom.
-    pub const PANEL: [Source; 12] = [
+    pub const PANEL: [Source; 13] = [
         Source::Imu,
         Source::Gps,
         Source::Lidar,
@@ -87,6 +99,7 @@ impl Source {
         Source::Estimate(Localizer::Local),
         Source::Estimate(Localizer::Global),
         Source::Estimate(Localizer::Amcl),
+        Source::Estimate(Localizer::Ndt),
         Source::Estimate(Localizer::Truth),
         Source::MapToOdom,
         Source::Track,
@@ -103,6 +116,8 @@ impl Source {
             Self::Track => "tracker",
             Self::Estimate(l) => l.label(),
             Self::MapToOdom => "map > odom",
+            Self::NdtStatus => "NDT status",
+            Self::Particles => "particles",
         }
     }
 }
@@ -138,6 +153,13 @@ pub enum Update {
     ScanProblem(String),
     /// The answer to a tracker swap (keys 1-4).
     SwapReply(Reply),
+    /// `/localization/ndt/status`.
+    Ndt(NdtStatus),
+    /// AMCL's particles, in `frame` (the map).
+    Particles {
+        poses: Vec<Pose>,
+        frame: String,
+    },
 }
 
 /// The window's state.
@@ -166,6 +188,14 @@ pub struct DebugState {
     trail: VecDeque<Point>,
     /// The last tracker swap's answer (keys 1-4).
     pub swap_reply: Option<Reply>,
+    /// NDT's last status.
+    pub ndt: Option<NdtStatus>,
+    /// AMCL's particles, map frame.
+    particles: Vec<Pose>,
+    /// Cubes seen lately, fading (key K).
+    pub kept: KeptCubes,
+    /// What the 3D view draws (the keys).
+    pub layers: Layers,
 }
 
 /// Clouds remembered for the rate.
@@ -173,6 +203,8 @@ const RATE_OVER: usize = 10;
 /// Trail points kept, and how far apart.
 const TRAIL_POINTS: usize = 600;
 const TRAIL_STEP: f64 = 0.25;
+/// The most particles kept (AMCL's own default max_particles is 2000).
+pub const MAX_PARTICLES: usize = 5000;
 
 impl DebugState {
     pub fn new(config: &DebugConfig) -> Self {
@@ -195,6 +227,10 @@ impl DebugState {
             frame_problem: None,
             trail: VecDeque::new(),
             swap_reply: None,
+            ndt: None,
+            particles: Vec::new(),
+            kept: KeptCubes::new(config.keep_cubes_for(), config.cube_settings().max_cubes),
+            layers: Layers::default(),
         }
     }
 
@@ -265,6 +301,22 @@ impl DebugState {
             Update::Origin(a) => self.origins.apply(a),
             Update::ScanProblem(why) => self.scan_problem = Some(why),
             Update::SwapReply(reply) => self.swap_reply = Some(reply),
+            Update::Ndt(status) => {
+                self.ndt = Some(status);
+                self.heard(Source::NdtStatus, now);
+            }
+            Update::Particles { mut poses, frame } => {
+                if !frame.is_empty() && frame_name(&frame) != frame_name(&self.map_frame) {
+                    self.frame_problem = Some(format!(
+                        "AMCL's particles are in {frame}, not {}: not drawn",
+                        self.map_frame
+                    ));
+                    return;
+                }
+                poses.truncate(MAX_PARTICLES);
+                self.particles = poses;
+                self.heard(Source::Particles, now);
+            }
         }
     }
 
@@ -295,16 +347,18 @@ impl DebugState {
             self.scan_times.pop_front();
         }
         self.heard(Source::Lidar, now);
+        self.kept.add(&scan);
         self.details.insert(
             Source::Lidar,
             format!(
-                "{} cubes{}",
+                "{} cubes{}, {} kept",
                 scan.cubes.len(),
                 if scan.cut > 0 {
                     format!(", {} cut", scan.cut)
                 } else {
                     String::new()
-                }
+                },
+                self.kept.cubes().len()
             ),
         );
         self.scan = Some(scan);
@@ -338,6 +392,41 @@ impl DebugState {
             .iter()
             .filter_map(|&p| self.map_to_odom.to_odom(p))
             .collect()
+    }
+
+    /// The cubes to draw, as key K has it: the kept ones fading, or this scan's.
+    pub fn drawn_cubes(&self) -> impl Iterator<Item = FadedCube> + '_ {
+        let scan = (self.layers.cubes == CubeView::Scan)
+            .then(|| {
+                self.scan
+                    .iter()
+                    .flat_map(|s| s.cubes.iter().map(FadedCube::new))
+            })
+            .into_iter()
+            .flatten();
+        let kept = (self.layers.cubes == CubeView::Kept)
+            .then(|| self.kept.cubes().iter().copied())
+            .into_iter()
+            .flatten();
+        scan.chain(kept)
+    }
+
+    /// How many cubes [`DebugState::drawn_cubes`] gives, and how many were cut.
+    pub fn drawn_count(&self) -> (usize, usize) {
+        match self.layers.cubes {
+            CubeView::Kept => (self.kept.cubes().len(), self.kept.cut()),
+            CubeView::Scan => self
+                .scan
+                .as_ref()
+                .map_or((0, 0), |s| (s.cubes.len(), s.cut)),
+        }
+    }
+
+    /// AMCL's particles, in odom (none without map -> odom).
+    pub fn particles_in_odom(&self) -> impl Iterator<Item = Pose> + '_ {
+        self.particles
+            .iter()
+            .filter_map(|&p| self.map_to_odom.pose_to_odom(p))
     }
 
     /// The car's recent path, in odom.
@@ -450,7 +539,65 @@ mod tests {
         let hz = s.scan_rate().expect("five scans");
         assert!((hz - 10.0).abs() < 1e-6);
         assert!(s.health(Source::Lidar, now).is_ok());
-        assert_eq!(s.detail(Source::Lidar), Some("0 cubes"));
+        assert_eq!(s.detail(Source::Lidar), Some("0 cubes, 0 kept"));
+    }
+
+    #[test]
+    fn key_k_swaps_kept_cubes_for_this_scans() {
+        use crate::cubes::{Band, Cube};
+        let now = Instant::now();
+        let mut s = state();
+        let cube = |x: f32| Cube {
+            centre: [x, 0.1, 1.1],
+            band: Band::Waist,
+        };
+        let scan = |ms: i64, cubes: Vec<Cube>| CubeScan {
+            stamp: Stamp(ms * 1_000_000),
+            cubes,
+            size: 0.2,
+            ..CubeScan::default()
+        };
+        s.set_scan(scan(0, vec![cube(1.1), cube(2.1)]), now);
+        s.set_scan(scan(500, vec![cube(1.1)]), now);
+        assert_eq!(s.drawn_cubes().count(), 2);
+        assert_eq!(s.drawn_count(), (2, 0));
+        s.layers.apply(crate::keys::Action::Cubes);
+        assert_eq!(s.drawn_cubes().count(), 1);
+        assert_eq!(s.drawn_count(), (1, 0));
+    }
+
+    #[test]
+    fn ndt_and_particles_are_kept() {
+        let now = Instant::now();
+        let mut s = state();
+        s.apply(Update::Ndt(NdtStatus::from_message(2, "LOST", [])), now);
+        assert_eq!(s.ndt.as_ref().map(NdtStatus::headline), Some("LOST"));
+        assert!(s.health(Source::NdtStatus, now).is_ok());
+        s.apply(pose(Localizer::Ndt, 4.0, "map"), now);
+        s.apply(
+            Update::Particles {
+                poses: vec![Pose::new(4.0, 1.0, 0.0); MAX_PARTICLES + 10],
+                frame: "map".into(),
+            },
+            now,
+        );
+        // Without map -> odom, neither is drawn.
+        assert_eq!(s.particles_in_odom().count(), 0);
+        assert_eq!(s.pose_in_odom(Localizer::Ndt), None);
+        s.apply(Update::MapToOdom(Pose::new(1.0, 0.0, 0.0)), now);
+        assert_eq!(s.particles_in_odom().count(), MAX_PARTICLES);
+        let p = s.particles_in_odom().next().expect("one");
+        assert!((p.position.x - 3.0).abs() < 1e-9);
+        assert!((s.pose_in_odom(Localizer::Ndt).expect("known").position.x - 3.0).abs() < 1e-9);
+        s.apply(
+            Update::Particles {
+                poses: vec![Pose::default()],
+                frame: "odom".into(),
+            },
+            now,
+        );
+        assert!(s.frame_problem.is_some());
+        assert_eq!(s.particles_in_odom().count(), MAX_PARTICLES);
     }
 
     #[test]

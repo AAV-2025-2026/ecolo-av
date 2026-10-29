@@ -13,6 +13,8 @@ map-core = { path = "../map-core" }
 # The PointCloud2 reader (x, y, z by name, endianness, steps): aav_radar_clusters' own,
 # with its tests. No ROS, no dependencies of its own.
 radar-clustering = { path = "../../../../perception/aav_radar_clusters/crates/radar-clustering" }
+# NDT's map file (key M): aav_ndt's own PCD reader, with its tests. Brings nalgebra.
+ndt-core = { path = "../../../../localization/aav_ndt/crates/ndt-core" }
 serde = { version = "1", features = ["derive"] }
 serde_yaml_ng = "0.10"
 thiserror = "2"
