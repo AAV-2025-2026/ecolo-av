@@ -16,6 +16,8 @@ weak answers into one good one.
 [Maps and position](maps-and-position.md) has the big picture of the two EKFs
 and the map. This page explains **why** it works.
 
+[How the car knows its speed](learn-speed.md) builds on this page.
+
 ## 1. Odometry: counting your steps
 
 **Odometry** = working out where you are from how you've moved.
