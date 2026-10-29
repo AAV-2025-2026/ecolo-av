@@ -38,7 +38,7 @@ Launch: `ros2 launch aav_navigation navigation.launch.py [args]`
 | `ghost` | false | a pretend person (`aav_ghost`, `/safety/ghost/scan`) |
 | `reversing` | false | true: Reeds-Shepp paths, reverse to `-max_reverse_speed`, trees back up 1 m |
 | `max_speed` | empty (1.0 m/s) | Nav2's top speed (`sim.launch.py sim_speed:=`) |
-| `controller` | `mppi` | or `rpp` (Regulated Pure Pursuit); `docs/controllers.md` |
+| `controller` | `mppi` | or `rpp` (Regulated Pure Pursuit); `docs/path-followers.md` |
 | `plan_around` | true | false: the planner sees only the map, so the car stops (stop tests) |
 | `use_sim_time`, `autostart` | false, true | |
 

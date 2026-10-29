@@ -52,7 +52,7 @@ bench's argument names:
                       the car's 1.0 m/s cap (ego.yaml, nav2.yaml) is for its first drives.
                       ego refuses it outside a simulator
   controller:=rpp     Nav2 follows the path with Regulated Pure Pursuit, not MPPI (the
-                      default): pixi run controller-compare drives both (docs/controllers.md)
+                      default): pixi run controller-compare drives both (docs/path-followers.md)
   plan_around:=false  Nav2's planner sees only the map, not the radar and lidar: the car
                       stops for an obstacle instead of planning round it (the stop tests)
   watchdog:=true      the sensor watchdog (aav_safety): twist_mux's sensors lock stops Nav2
@@ -319,7 +319,7 @@ def generate_launch_description():
                                           '(docs/learn-nav2.md, Reversing)'),
         DeclareLaunchArgument('controller', default_value=vehicle.DEFAULT_CONTROLLER,
                               description='mppi or rpp (Regulated Pure Pursuit): what '
-                                          "follows Nav2's path (docs/controllers.md)"),
+                                          "follows Nav2's path (docs/path-followers.md)"),
         DeclareLaunchArgument('plan_around', default_value='true',
                               description="true: Nav2's planner plans round what the radar "
                                           'and lidar see; false: the map only, so the car '

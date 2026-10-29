@@ -47,7 +47,7 @@
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
-<a href="controllers.html">Path followers</a>
+<a href="path-followers.html">Path followers</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -134,7 +134,7 @@ GPS is in <a href="maps-and-position.html">Maps and position</a>.</p></div>
 <tr>
 <td><strong>Controller</strong></td>
 <td>steers along that path</td>
-<td>MPPI (or Regulated Pure Pursuit: <code>controller:=rpp</code>), on the local costmap, 20 Hz (<a href="controllers.html">path followers</a>)</td>
+<td>MPPI (or Regulated Pure Pursuit: <code>controller:=rpp</code>), on the local costmap, 20 Hz (<a href="path-followers.html">path followers</a>)</td>
 </tr>
 <tr>
 <td><strong>Velocity smoother</strong></td>
@@ -227,7 +227,7 @@ paths with sharp corners: fine for a robot that spins on the spot, not for a car
 </section>
 <section class="card"><h2 id="2-the-controller-regulated-pure-pursuit">2. The controller: Regulated Pure Pursuit</h2>
 <p>Since 22 Oct the default is MPPI, which tries 2000 futures through a model of the car
-(<a href="controllers.html">path followers</a>). Pure pursuit is still the easiest way in, and
+(<a href="path-followers.html">path followers</a>). Pure pursuit is still the easiest way in, and
 <code>controller:=rpp</code> brings it back.</p>
 <p><strong>Pure pursuit</strong> is how you steer a bike: look at a point on the path a little ahead (the
 <strong>carrot</strong>), and turn so you'd arc through it.</p>

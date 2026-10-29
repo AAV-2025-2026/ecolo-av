@@ -220,7 +220,7 @@ def reverse_limit(v, reversing):
 # turn before a goal, arrived 0.5 m off and facing wrong, and drove round again (22 Oct).
 PLAN_TURN_MARGIN = 1.25
 
-# Nav2's path followers (docs/controllers.md): rpp, Regulated Pure Pursuit, chases a point
+# Nav2's path followers (docs/path-followers.md): rpp, Regulated Pure Pursuit, chases a point
 # ahead on the path; mppi samples thousands of futures through its Ackermann model. MPPI is
 # the default since 22 Oct: in Gazebo it did at least as well in every run, and it turns to
 # a goal's heading, which Pure Pursuit can't (it aims only at a point).

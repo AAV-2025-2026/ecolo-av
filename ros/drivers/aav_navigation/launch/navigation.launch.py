@@ -14,7 +14,7 @@ robot_localization does localization, no docking or route server):
   map_server        the map (default: maps/empty.yaml, everything free)
   planner_server    SmacPlannerHybrid: drivable paths for a car
   controller_server MPPI, with its Ackermann model -> cmd_vel_nav; controller:=rpp for
-                    Regulated Pure Pursuit instead (docs/controllers.md)
+                    Regulated Pure Pursuit instead (docs/path-followers.md)
   behavior_server   wait, backup, drive_on_heading (no spin)
   bt_navigator      navigate_to_pose, navigate_through_poses (behavior_trees/*_car*.xml)
   waypoint_follower follow_waypoints, follow_gps_waypoints (lat/lon via /fromLL)
@@ -231,7 +231,7 @@ def generate_launch_description():
                                           'senses behind the car). docs/learn-nav2.md'),
         DeclareLaunchArgument('controller', default_value=vehicle.DEFAULT_CONTROLLER,
                               description='mppi or rpp (Regulated Pure Pursuit): what '
-                                          'follows the path. docs/controllers.md'),
+                                          'follows the path. docs/path-followers.md'),
         DeclareLaunchArgument('plan_around', default_value='true',
                               description='true: the planner sees the radar and lidar too, '
                                           'and plans round what they see; false: the map '

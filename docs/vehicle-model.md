@@ -264,7 +264,7 @@ The test checks A against a finite-difference Jacobian of the nonlinear bicycle.
 ### Closing the loop: pure pursuit
 
 These margins are for Regulated Pure Pursuit (`controller:=rpp`). MPPI, the default since
-22 Oct ([Path followers](controllers.md)), isn't modelled here.
+22 Oct ([Path followers](path-followers.md)), isn't modelled here.
 
 Regulated Pure Pursuit steers for the curvature 2 sin α / ld toward a point ld ahead on
 the path. For small errors:

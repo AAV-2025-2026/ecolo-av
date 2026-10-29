@@ -47,7 +47,7 @@
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
-<a href="controllers.html">Path followers</a>
+<a href="path-followers.html">Path followers</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -490,7 +490,7 @@ eigenvalues; in reverse, v &lt; 0 flips the signs.</p>
 <p>The test checks A against a finite-difference Jacobian of the nonlinear bicycle.</p>
 <h3 id="closing-the-loop-pure-pursuit">Closing the loop: pure pursuit</h3>
 <p>These margins are for Regulated Pure Pursuit (<code>controller:=rpp</code>). MPPI, the default since
-22 Oct (<a href="controllers.html">Path followers</a>), isn't modelled here.</p>
+22 Oct (<a href="path-followers.html">Path followers</a>), isn't modelled here.</p>
 <p>Regulated Pure Pursuit steers for the curvature 2 sin α / ld toward a point ld ahead on
 the path. For small errors:</p>
 <pre class="highlight"><code class="language-text">δcmd = −(2L / ld²) · e_y − (2L / ld) · e_θ          u = −K x</code></pre>

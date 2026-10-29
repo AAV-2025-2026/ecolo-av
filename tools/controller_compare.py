@@ -21,7 +21,7 @@ For each tour and controller it:
    car really was (/vehicle/gazebo/truth), the planner's paths (/plan), the controller's
    speed (/cmd_vel_nav), ego's steering, the sensor watchdog and collision_monitor;
 4. stops the simulator by its process group, and clears Fast DDS's shared memory
-   (docs/controllers.md).
+   (docs/path-followers.md).
 
 Tours (map frame: the car starts at 0, 0 facing east; the walls, building and parked cars
 are aav_gazebo worlds/test_lot.sdf):

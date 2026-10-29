@@ -127,10 +127,10 @@ controller_server:
       stateful: true
 
     # Alternative controller: controller:=mppi (navigation.launch.py, sim.launch.py) puts a
-    # copy of this block under FollowPath (docs/controllers.md). Its Ackermann model limits
+    # copy of this block under FollowPath (docs/path-followers.md). Its Ackermann model limits
     # curvature to 1 / min_turning_r.
     #
-    # Tuned in Gazebo on 22 Oct (docs/controllers.md, "Making MPPI drive"). With Nav2's
+    # Tuned in Gazebo on 22 Oct (docs/path-followers.md, "Making MPPI drive"). With Nav2's
     # robot settings it crept at 0.2 m/s and drifted off a straight path:
     #   wz_std 0.4 -> 0.1   the car turns at most 0.35 rad/s at 1 m/s (full lock), so 0.4 made
     #                       nearly every fast sample a full-lock swerve, and slow ones won
