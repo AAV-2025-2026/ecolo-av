@@ -83,7 +83,7 @@ The `Task` column is `pixi run <task>`; "-" means run the script itself.
 | `gz_window.sh` | Gazebo's window again, following the car | `gz-window` |
 | `software_gl.sh` | Mesa's software OpenGL, for Gazebo with no GPU | - (put in front) |
 | `fake_vlp16.py` | pretends to be the VLP-16 lidar: its UDP packets | - |
-| `controller_compare.py` | Regulated Pure Pursuit against MPPI, same routes | `controller-compare` |
+| `controller_compare.py` | Regulated Pure Pursuit against MPPI, and the trial trackers and AMCL (`--trackers`, `--runs`, `--amcl`), same routes | `controller-compare` |
 | `heading_check.py` | the global EKF's heading against Gazebo's truth | `heading-check` |
 | `timing_test.py` | every topic's gaps and late messages, parked and driving | `timing-test` |
 | `stream_check.py` | the camera stream end to end, without the car | `stream-check` |

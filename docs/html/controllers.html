@@ -156,7 +156,8 @@ turning radius, its reverse speed and its top speed from <code>vehicle.yaml</cod
 <section class="card"><h2 id="compare-them">Compare them</h2>
 <pre class="highlight"><code class="language-bash">pixi run controller-compare                    # both controllers, both tours
 pixi run controller-compare --tours obstacle   # only the box in the lane
-pixi run controller-compare --controllers mppi --speed 2</code></pre>
+pixi run controller-compare --controllers mppi --speed 2
+pixi run controller-compare --trackers lqr mpc --runs 3   # the trial trackers (docs/trials.md)</code></pre>
 <p>For each tour and controller the script starts Gazebo's test lot with no windows, on a ROS
 domain of its own (this computer only), sends the same goals, and records where the car
 really was (Gazebo's ground truth). Forward only by default; <code>--reversing</code> lets Nav2 back
