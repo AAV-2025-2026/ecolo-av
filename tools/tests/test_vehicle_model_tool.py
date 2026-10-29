@@ -79,7 +79,7 @@ def test_the_speed_loop_study_follows_the_measured_numbers():
 # own list, as vehicle_model.NOT_LINEAR and actuator_model.IGNORED do.
 EGO_PARAMS_IGNORES = {'throttle_deadband', 'throttle_lag', 'throttle_dead_time', 'brake_lag',
                       'brake_dead_time', 'drag', 'steer_rate', 'steer_lag', 'steer_dead_time',
-                      'steer_offset', 'steer_deadband'}
+                      'steer_offset', 'steer_deadband', 'open_loop_decel'}
 
 
 def actuator_keys():

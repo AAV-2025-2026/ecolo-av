@@ -9,6 +9,8 @@ Bench check: start bench mode, then test the whole car graph on this computer.
     pixi run bench-check --lane   (adds lane keeping, in a second bench run: 1 more minute)
     pixi run bench-check --weave              (adds a straight 40 m Nav2 drive: 1 more minute)
     pixi run bench-check --zone-edge          (adds a box at the stop zone's edge: 1 more minute)
+    pixi run bench-check --geofence           (a scripted drive at a 12 m geofence, in a second
+                                               bench run: 2 more minutes)
     pixi run bench-check --python-bridge       (aav_spine's Python spine_bridge, not the Rust one)
 
 1. Starts bench.launch.py on a private ROS domain, local to this computer.
@@ -32,7 +34,13 @@ Bench check: start bench mode, then test the whole car graph on this computer.
 9. With --zone-edge: the car stands still with a box as wide as the lane right at the far
    edge of collision_monitor's stop zone, and Nav2 asks it to drive on. The stop must hold:
    no forward command may reach ego after the first stop, and the car must not creep on.
-10. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
+10. With --geofence: the bench again, its geofence a 12 m circle round the start
+   (geofence_radius:=12). A scripted drive at 1 m/s straight ahead: the geofence's lock
+   must stop it with every corner of the car inside the circle (by the truth), standing
+   in NEAR, and the stop from the lock closing no longer than the stopping distance the
+   geofence counts on (RSS, with the spine's numbers). Then the keyboard, a person, backs
+   the car 4 m: the lock must not hold it, and must open again (OK).
+11. With --lane: the bench again, with lane keeping (lane:=true) and nothing else driving,
    the car 0.3 m left of the road's centre. lane_finder and control_interface must bring it
    back within 5 cm, and keep it there. Its own start-up and graph checks come first.
 
@@ -66,6 +74,7 @@ from aav_description import vehicle  # noqa: E402
 from aav_interfaces.action import ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
+from aav_safety import geofence  # noqa: E402
 from geometry_msgs.msg import TwistStamped  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
@@ -92,6 +101,7 @@ LANE_BAND = 0.05        # m either side of the centre
 LANE_TIME = 30.0        # s of driving, from when the car starts moving
 WEAVE_LIMIT = 0.1       # m RMS: the most the car may swing round its own path (--weave)
 LOOKAHEAD = 3.0         # m: where lane_finder measures the offset (its config, lookahead)
+GEOFENCE_RADIUS = 12.0  # m: --geofence's fence round the start, short of the bench's sign
 with open(os.path.join(ROOT, 'ros', 'sim', 'aav_bench', 'config', 'bench.yaml')) as f:
     ROAD = yaml.safe_load(f)['mock_camera']['ros__parameters']
 ROAD_Y = ROAD['road_y']            # m: the centre
@@ -149,6 +159,13 @@ class Probe(Node):
                                       m.twist.angular.z)), 10)
         self.box_params = {s: self.create_client(SetParameters, f'/mock_{s}/set_parameters')
                            for s in ('radar', 'lidar')}
+        # The geofence: its state's line, and (time, x, y, speed) by the truth when its
+        # lock first closed after fence_on was set to None (--geofence).
+        self.fence_state, self.fence_on, self.fence_locked = '', None, None
+        self.create_subscription(String, '/safety/geofence/state',
+                                 lambda m: setattr(self, 'fence_state', m.data), 10)
+        self.create_subscription(Bool, '/safety/geofence/lock', self.on_fence_lock, 10)
+        self.keyboard = self.create_publisher(TwistStamped, '/drivers/keyboard/cmd_vel', 10)
         self.output_mux = ''   # the output mux's state: OPEN, WAIT or STOP (aav_io_mux)
         self.create_subscription(String, '/safety/output_mux/state',
                                  lambda m: setattr(self, 'output_mux', m.data), 10)
@@ -159,6 +176,12 @@ class Probe(Node):
         self.track.append((seconds(msg.header.stamp), msg.pose.pose.position.x,
                            msg.pose.pose.position.y, 2.0 * math.atan2(q.z, q.w),
                            msg.twist.twist.linear.x))
+
+    def on_fence_lock(self, msg):
+        if msg.data and not self.fence_locked and self.fence_on is None and self.truth:
+            x, y = self.xy(self.truth)
+            self.fence_on = (time.monotonic(), x, y, self.truth.twist.twist.linear.x)
+        self.fence_locked = msg.data
 
     def on_status(self, msg):
         if self.status is not None and self.status.armed and not msg.armed:
@@ -683,6 +706,87 @@ def check_drive(probe):
     result('global EKF vs truth', error < 1.5, f'{error:.2f} m apart (the GPS drifts 0.5 m)')
 
 
+def geofence_motion():
+    """Return the stopping numbers the bench's geofence uses (spine), as its launch does."""
+    def params(package, file, node):
+        path = os.path.join(ROOT, 'ros', *package, 'config', file)
+        with open(path) as f:
+            return yaml.safe_load(f)[node]['ros__parameters']
+    own = params(('safety', 'aav_safety'), 'geofence.yaml', 'geofence')
+    motion, _ = geofence.motion_from(
+        params(('ego', 'aav_ego'), 'ego.yaml', 'ego'), vehicle.load(), 'spine',
+        float(own['rate_hz']), float(own['pose_lag']),
+        spine=params(('can_bridge', 'aav_spine'), 'spine.yaml', 'spine_bridge'))
+    return motion
+
+
+def check_geofence(probe, radius=GEOFENCE_RADIUS):
+    """
+    Drive a script at 1 m/s straight at a 12 m fence: it must stop inside; then a person.
+
+    The geofence's lock (51) holds the scripted driver (50): the car must stop with every
+    corner inside the circle (by the truth), and the stop measured from the lock against
+    the stopping distance the geofence counts on. Then the keyboard (a person, 90) backs
+    the car in, which the lock never holds, and the lock must open again.
+    """
+    corners = vehicle.footprint_points(vehicle.load()['vehicle'])
+    probe.spin_for(30.0, lambda: probe.fence_state.startswith('OK'))
+    if not probe.fence_state.startswith('OK'):
+        result('geofence: ready', False, f'the geofence says {probe.fence_state!r}')
+        return
+    if not probe.status.armed:
+        probe.arm_and_hold()
+    x0, y0 = probe.xy(probe.truth)
+    handle = probe.send_drive(speed=1.0, hold=40.0)
+    if handle is None or not handle.accepted:
+        result('geofence: stops a scripted drive', False, 'the scripted drive was refused')
+        return
+    probe.fence_on = None
+    probe.spin_for(60.0, lambda: probe.fence_on is not None)
+    if probe.fence_on is None:
+        handle.cancel_goal_async()
+        result('geofence: stops a scripted drive', False,
+               f'the lock never closed (the geofence says {probe.fence_state!r})')
+        return
+    t_on, x_on, y_on, v_on = probe.fence_on
+    probe.spin_for(15.0, lambda: abs(probe.truth.twist.twist.linear.x) < 0.02)
+    probe.spin_for(1.0)
+    state = probe.fence_state
+    x1, y1 = probe.xy(probe.truth)
+    q = probe.truth.pose.pose.orientation
+    yaw = 2.0 * math.atan2(q.z, q.w)
+    worst = max(math.hypot(x1 + fx * math.cos(yaw) - fy * math.sin(yaw) - x0,
+                           y1 + fx * math.sin(yaw) + fy * math.cos(yaw) - y0)
+                for fx, fy in corners)
+    stop = math.hypot(x1 - x_on, y1 - y_on)
+    motion = geofence_motion()
+    counted = geofence.stopping_distance(v_on, motion.reaction_time, motion.max_accel,
+                                         motion.braking, motion.max_speed)
+    ok = worst < radius and stop <= counted and state.startswith('NEAR') and \
+        probe.status.armed
+    result('geofence: stops a scripted drive', ok,
+           f'the lock closed at {v_on:.2f} m/s; the car stopped {stop:.2f} m on (the geofence '
+           f'counts on {counted:.2f} m), its furthest corner {worst:.2f} m from the start of a '
+           f'{radius:g} m fence; state {state.split(":")[0]}')
+    handle.cancel_goal_async()
+    probe.spin_for(2.0)
+    # A person backs it in: never held by the lock.
+    xb, yb = probe.xy(probe.truth)
+    end = time.monotonic() + 8.0
+    while time.monotonic() < end:
+        msg = TwistStamped()
+        msg.header.stamp = probe.get_clock().now().to_msg()
+        msg.twist.linear.x = -0.5
+        probe.keyboard.publish(msg)
+        probe.spin_for(0.05)
+    probe.spin_for(5.0, lambda: probe.fence_state.startswith('OK'))
+    back = math.hypot(*(a - b for a, b in zip(probe.xy(probe.truth), (xb, yb))))
+    ok = back > 1.0 and probe.fence_state.startswith('OK')
+    result('geofence: a person drives it back in', ok,
+           f'the keyboard backed it {back:.2f} m; then the geofence says '
+           f'{probe.fence_state.split(":")[0]}')
+
+
 def session(launch_args, checks, log_path, label=''):
     """Start bench.launch.py with these arguments, run the checks on it, and stop it."""
     tag = f' ({label})' if label else ''
@@ -748,13 +852,19 @@ def main():
             + (['plan_around:=false'] if {'--obstacle', '--zone-edge'} & set(args) else [])
             + bridge,
             checks, logs[0])
+    if '--geofence' in args:
+        # Its own run: a 12 m fence would hold the other checks' drives.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-geofence{ext}')
+        session([f'geofence_radius:={GEOFENCE_RADIUS:g}'] + bridge, [check_geofence],
+                logs[-1], 'geofence')
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
         stem, ext = os.path.splitext(log)
         logs.append(f'{stem}-lane{ext}')
         session(['lane:=true', 'nav:=false', f'start_y:={ROAD_Y + LANE_START}'] + bridge,
-                [check_lane_keeping], logs[1], 'lane')
+                [check_lane_keeping], logs[-1], 'lane')
 
     print('\n| Check | Result | Detail |\n|---|---|---|')
     for name, ok, detail in RESULTS:

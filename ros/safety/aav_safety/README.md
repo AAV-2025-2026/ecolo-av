@@ -16,7 +16,12 @@ monitor:  STOP  go  STOP  go  go  go  go ...  (1 s of go)
 lock:    true  true true true true true ...   false
 ```
 
-It works through a twist_mux lock (priority 30, in `aav_command_mux`). Each input's checks:
+And the geofence (`geofence`): an area no program may leave, without Nav2. It holds
+every program (scripted, replay, point, Nav2, AI) before the car's stopping distance
+reaches the fence's edge, and while the global pose can't be trusted. People still drive
+(`docs/geofence.md`).
+
+The watchdog works through a twist_mux lock (priority 30, in `aav_command_mux`). Each input's checks:
 
 | State | Means |
 |---|---|
@@ -54,6 +59,35 @@ A person clears latched faults: `pixi run watchdog-clear`. More in
 Parameters (`config/stop_hold.yaml`): `clear_time` (s, 1.0), `rate_hz` (10).
 `aav_navigation`'s `navigation.launch.py` starts it wherever it starts collision_monitor.
 
+### Node `geofence`
+
+| In / out | Topic | Type |
+|---|---|---|
+| in | `/localization/odom/global` | `nav_msgs/Odometry`: pose, heading, speed, covariance |
+| in | `/localization/gps/odom` | `nav_msgs/Odometry`: only its arrival (silent 2 s: LOST) |
+| out | `/safety/geofence/lock`, at `rate_hz` | `std_msgs/Bool`: twist_mux's `geofence` lock (priority 51, fail-safe 1 s) |
+| out | `/safety/geofence/state`, at `rate_hz` | `std_msgs/String`: `STATE: why` |
+| out | `/safety/geofence/fence` | `geometry_msgs/PolygonStamped`, map frame, transient local |
+| serves | `/safety/geofence/clear` | `std_srvs/Trigger`: a person clears OUTSIDE or JUMP (`pixi run geofence-clear`) |
+
+| State | Lock | Lets go |
+|---|---|---|
+| `OK` | open | |
+| `STARTING` (under `settle_time` of good poses) | on | by itself |
+| `NEAR` (a stopping path within `margin` + σ of the edge) | on | `hysteresis` further in |
+| `LOST` (no pose `max_age`, σ over `max_std`, NaN, no GPS `gps_max_age`) | on | by itself |
+| `OUTSIDE`, `JUMP` | on | latched: a person clears it |
+| `COASTING` (legacy speed loop `open`, stop not measured) | on | `vehicle.yaml` `open_loop_decel` |
+| `STANDS` (`stands:=true`) | open, logged every 5 s | |
+
+`launch/geofence.launch.py backend:=spine|uart|gazebo|gazebo_esp32 [radius:=30]
+[centre_x:=0] [centre_y:=0] [site:=] [max_speed:=] [gps:=true] [stands:=false]`: it works
+out the stopping numbers (`motion_from`) from `ego.yaml`, `vehicle.yaml` and the backend's
+config, and passes them. `config/geofence.yaml`: `margin` 1.0, `hysteresis` 0.5, `max_std`
+3.0, `max_age` 1.0, `gps_max_age` 2.0, `settle_time` 3.0, `jump_margin` 2.0, `pose_lag`
+0.1, `rate_hz` 10, and `sites.<name>.datum`, `.corners`. car.launch.py starts it wherever
+it starts the mux; the bench always; Gazebo with `geofence:=true` (the default).
+
 ### Inputs (`config/sensor_watchdog.yaml`)
 
 | Name | Topic | Kind | max_age | Stops? |
@@ -85,10 +119,17 @@ each profile passes the inputs it has (sim, bench, car).
 | `sensor_watchdog.py` | no | the node |
 | `hold.py` | yes | `StopHold`: locked from a stop until `clear_time` s of no stop |
 | `stop_hold.py` | no | the node |
+| `geofence.py` | yes | `Circle`, `Polygon`, `site_fence`; `Motion`, `reaction_time`, `braking`, `backend_stale`, `coasts`, `motion_from`, `stopping_distance`, `along_arc`; `Settings`, `Pose`, `Geofence` (the states) |
+| `geofence_node.py` | no | the node `geofence` |
 
 ## Invariants
 
-- `watchdog.py`, `wheel_check.py` and `hold.py` have no ROS imports, and their own tests.
+- `watchdog.py`, `wheel_check.py`, `hold.py` and `geofence.py` have no ROS imports, and their own tests.
+- The geofence's lock (51) holds every program, never a person or the actuator tests.
+  Fail-safe: 1 s of silence holds them too. Its fence is fixed (the start spot or a
+  site), so a restarted node finds an outside car outside again.
+- The geofence copies no car number: its stopping numbers come from the configs.
+- Only people call `/safety/geofence/clear`; it refuses while the car is outside.
 - The stop hold's lock holds Nav2 (20) and the AI slot (10) only. Timeout 0: its silence
   locks nothing, and a `stop_hold` that dies while true keeps the stop.
 - The stop hold times on the steady clock, so a jump in sim time can't end it early.

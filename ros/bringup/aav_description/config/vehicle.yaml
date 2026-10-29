@@ -67,6 +67,10 @@ actuators:
   # throttle_dead_time: 0.0   # s. GUESS placeholder: TODO test 4.1
   # brake_dead_time: 0.0      # s. GUESS placeholder: TODO test 4.3
   # steer_dead_time: 0.0      # s. GUESS placeholder: TODO test 3.11
+  # How the car stops with legacy_uart_bridge's speed_loop.mode open (it brakes only below
+  # stop_speed). Not measured, so not set: the geofence holds every program (COASTING)
+  # until it is (aav_safety geofence.py coasts). Example of the form, NOT a value:
+  # open_loop_decel: 0.0      # m/s^2, the average from 1 m/s to a stop. TODO test 4.3
 
 # Sensor mounts, relative to base_link. xyz in metres, rpy in radians.
 sensors:

@@ -20,7 +20,7 @@ the e-stop button, or publish `/safety/estop` true.
 
 | Item | What |
 |---|---|
-| Launch | `ros2 launch aav_command_mux mux.launch.py [use_sim_time:=false] [sensor_lock:=true]` |
+| Launch | `ros2 launch aav_command_mux mux.launch.py geofence_lock:=true\|false [use_sim_time:=false] [sensor_lock:=true]` |
 | Node | `twist_mux` (package twist_mux), output `cmd_vel_out` remapped to `/control/cmd_vel` |
 | Publishes | `/control/cmd_vel` (`geometry_msgs/TwistStamped`) |
 
@@ -43,6 +43,7 @@ Locks (`std_msgs/Bool`; a lock holds every input below its priority):
 | Name | Topic | Priority | Timeout | Notes |
 |---|---|---|---|---|
 | estop | `/safety/estop` | 255 | 0 (never on silence) | the backends also brake on it directly |
+| geofence | `/safety/geofence/lock` | 51 | 1.0 s | `aav_safety`'s `geofence`: holds every program near the fence's edge or with no trusted pose; silence locks too |
 | no_timeout | `/safety/legacy_uart_bridge/lock` | 60 | 0 | `aav_legacy`: true with `frame_version: 1` (firmware with no command timeout); holds every program, not people or the actuator tests |
 | stop_sign | `/perception/stop_sign` | 30 | 0 | `aav_detector`; holds point, Nav2 and AI |
 | sensors | `/safety/sensor_watchdog/lock` | 30 | 1.0 s | `aav_safety`; silence locks too |
@@ -52,6 +53,7 @@ Launch arguments:
 
 | Name | Default | Meaning |
 |---|---|---|
+| `geofence_lock` | **required** | `true`: every program needs the geofence's heartbeat. `false` (no geofence: the turtle, CARLA): loads `config/no_geofence_lock.yaml` after the others, geofence timeout 0 |
 | `sensor_lock` | `true` | `true`: Nav2, the point driver and AI need the watchdog's heartbeat. `false` (no watchdog, the turtle): loads `config/no_sensor_lock.yaml`, sensors timeout 0 |
 | `use_sim_time` | `false` | the simulator's clock |
 
@@ -69,7 +71,9 @@ Launch arguments:
   Timeout 0: profiles without collision_monitor never send it.
 - `sensors` is fail-safe: the watchdog sends false 10 times a second, so 1 s of silence
   locks Nav2, the point driver and AI.
-- `sensor_lock` must be `true` or `false`; anything else raises.
+- `geofence` (51) holds every program, never a person or the actuator tests (60), and
+  is fail-safe like `sensors`. `geofence_lock` has no default, so every profile says it.
+- `sensor_lock` and `geofence_lock` must be `true` or `false`; anything else raises.
 - The override is a second file, not a dict: a dict in the launch file silently loses
   to `twist_mux.yaml` (seen 15 Oct; `docs/conventions.md`).
 - Every input topic must be a `/drivers/` topic in `docs/interfaces.yaml`.

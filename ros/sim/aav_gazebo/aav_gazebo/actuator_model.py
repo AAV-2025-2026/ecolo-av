@@ -34,7 +34,9 @@ import math
 # by the actuator tests and used by the linear model (aav_ego vehicle_model.py), not yet
 # here: Gazebo's own pipeline already adds about 20 ms (docs/vehicle-model.md section 6).
 # tools/tests/test_vehicle_model_tool.py checks every key is a field or in here.
-IGNORED = frozenset({'throttle_dead_time', 'brake_dead_time', 'steer_dead_time'})
+# open_loop_decel is for the geofence only (aav_safety geofence.py coasts).
+IGNORED = frozenset({'throttle_dead_time', 'brake_dead_time', 'steer_dead_time',
+                     'open_loop_decel'})
 
 
 @dataclass(frozen=True)

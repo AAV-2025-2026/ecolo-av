@@ -40,7 +40,7 @@ Executable `actuator_test` (`ros2 run aav_actuator_tests actuator_test`, wrapped
 
 | Item | What |
 |---|---|
-| Subscribes | `/vehicle/odom` (`nav_msgs/Odometry`); `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake` (`aav_interfaces/ActuatorState`); `/vehicle/wheels` (`aav_interfaces/WheelSpeeds`); `/sensors/imu/data_raw` (`sensor_msgs/Imu`); `/localization/odom/local` (`nav_msgs/Odometry`); `/sensors/gps/fix` (`sensor_msgs/NavSatFix`); `/safety/estop` (`std_msgs/Bool`); `/control/cmd_vel` (`geometry_msgs/TwistStamped`); `/ego/actuator_cmd` (`ackermann_msgs/AckermannDriveStamped`: what ego told the backend, logged); `/system/source` (`aav_interfaces/DataSource`, latched) |
+| Subscribes | `/vehicle/odom` (`nav_msgs/Odometry`); `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake` (`aav_interfaces/ActuatorState`); `/vehicle/wheels` (`aav_interfaces/WheelSpeeds`); `/sensors/imu/data_raw` (`sensor_msgs/Imu`); `/localization/odom/local` (`nav_msgs/Odometry`); `/sensors/gps/fix` (`sensor_msgs/NavSatFix`); `/safety/estop` (`std_msgs/Bool`); `/safety/geofence/state` (`std_msgs/String`); `/control/cmd_vel` (`geometry_msgs/TwistStamped`); `/ego/actuator_cmd` (`ackermann_msgs/AckermannDriveStamped`: what ego told the backend, logged); `/system/source` (`aav_interfaces/DataSource`, latched) |
 | Publishes | `/drivers/tests/cmd_vel` (`geometry_msgs/TwistStamped`), 50 Hz while a test runs |
 | Calls | `/ego/get_parameters` (its limits); `/ego/set_parameters` (`max_steering_rate`, lifted for `steer-rate` only, then put back); `get_parameters` of the backend that runs (`legacy_uart_bridge`, `gazebo_adapter`, `spine_sim`, `spine_bridge`: `reports.SHAPING_PARAMS`), for `meta.yaml` |
 | Runs | `ros2 bag record`, with `--bag` |
@@ -67,7 +67,10 @@ agree on what REAL means.
   stands). The person types the test's name to start.
 - Stops (zero commands) on: Ctrl-C, any error, `/safety/estop`, someone else driving
   (twist_mux passing another command for 0.3 s), twist_mux silent for 2 s, the speed,
-  distance or time leaving the test's envelope, `/vehicle/odom` stale for 0.5 s.
+  distance or time leaving the test's envelope, `/vehicle/odom` stale for 0.5 s, and on
+  the ground the geofence saying NEAR, OUTSIDE, JUMP or LOST (`safety.geofence_stop`). Its
+  slot (60) is above the geofence's lock (51), so it stops itself. On the real car, off
+  stands, it refuses to start while the geofence is silent, STARTING or in STANDS mode.
 - Steering only changes while moving (ego holds it below 0.05 m/s), so stage-3 tests creep.
 - It prints `vehicle.yaml` lines; it never writes `vehicle.yaml`. Each line names its
   path (from -> to) and rms; a lag or dead time the data can't resolve gets no line.

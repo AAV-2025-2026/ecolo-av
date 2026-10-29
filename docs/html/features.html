@@ -73,6 +73,7 @@
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
@@ -582,6 +583,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-29</td>
 <td>built</td>
+</tr>
+<tr>
+<td><a href="geofence.html">Geofence</a> (<code>aav_safety</code> <code>geofence</code>, twist_mux <code>geofence</code>, priority 51)</td>
+<td>Only the point driver's distance and time limits stopped a runaway route, and nothing at all without Nav2 (F6); now every program stops before its stopping distance reaches the fence, or when the position can't be trusted, and people still drive</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>sim</td>
 </tr>
 <tr>
 <td>Stand-ins stay local (<code>tools/ros.sh --local</code>)</td>

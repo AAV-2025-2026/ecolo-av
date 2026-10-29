@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">60 min read · 4 sections</div></header>
+<div class="meta">62 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -73,6 +73,7 @@
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
@@ -236,6 +237,30 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>bench, road</td>
 <td>true from collision_monitor's STOP until it has said anything else for 1 s without a break (aav_safety stop_hold, 10 Hz, wherever navigation.launch.py starts collision_monitor). A twist_mux lock at priority 21 - it holds Nav2 (20) and the AI slot (10) only, never the point driver, a person or a test. Timeout 0 - silence locks nothing (profiles without collision_monitor never publish it), and a stop_hold that dies while true keeps the stop. Without it, an obstacle at the stop zone's edge flickered the monitor between stop and go, and each go let the car creep on.</td>
+</tr>
+<tr>
+<td><code>/safety/geofence/lock</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>geofence</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td>sim, car, bench</td>
+<td>true while a stopping path of the car - forward and back, straight and at full lock, each its RSS stopping distance long (reaction time and braking worked out from ego.yaml, vehicle.yaml and the backend's timeout, aav_safety geofence.py motion_from) - brings a corner within 1 m plus the global pose's spread of the fence's edge (NEAR; at a standstill a person drives it back in); while the car is outside the fence (OUTSIDE) or the global pose jumped (JUMP), both latched until a person calls /safety/geofence/clear; while the global pose is stale over 1 s, over 3 m unsure or NaN, or no GPS position has reached the EKF for 2 s (LOST); before 3 s of good poses (STARTING); and on a backend that coasts (COASTING - legacy_uart_bridge in speed_loop open, until test 4.3 measures its stop). false otherwise, and in stands mode (STANDS - car.launch.py stands:=true, said loudly); a heartbeat at 10 Hz (aav_safety geofence). The fence - a circle of radius m round the marked start spot (start_x, start_y - car 30, Gazebo 200, bench 100), or a site's polygon in the map frame drawn for navsat.yaml's datum (geofence.yaml sites; the machine file's geofence site). A twist_mux lock (geofence) at priority 51 - it holds every program (scripted 50, replay 40, point 25, nav 20, ai 10), never a person (joy, rc, keyboard) or the actuator tests (60, which stop themselves on its state). Fail-safe - the lock's 1 s timeout holds them when the geofence dies or hangs (mux.launch.py geofence_lock, a required argument - true wherever a geofence runs, the car next to the mux, the bench, Gazebo with geofence:=true; false on the turtle and CARLA). Independent of Nav2 (the 26 Oct review's F6). docs/geofence.md.</td>
+</tr>
+<tr>
+<td><code>/safety/geofence/state</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>geofence</code></td>
+<td><code>actuator_test</code></td>
+<td>sim, car, bench</td>
+<td>One line for people, 10 Hz - the state (STARTING, OK, NEAR, OUTSIDE, JUMP, LOST, COASTING, STANDS), a colon, and why, such as "NEAR - a stopping path (1.4 m ahead, 0.9 m back) comes 0.9 m from the edge (needs 1.2 m) at 1.0 m/s". The actuator tests (aav_actuator_tests) stop a test on the ground on NEAR, OUTSIDE, JUMP or LOST, refuse one in STANDS, and on the real car refuse to start while it is silent.</td>
+</tr>
+<tr>
+<td><code>/safety/geofence/fence</code></td>
+<td><code>geometry_msgs/msg/PolygonStamped</code></td>
+<td><code>geofence</code></td>
+<td><code>point_driver</code>, <code>language_drive</code></td>
+<td>sim, car, bench</td>
+<td>The fence in the map frame (a circle as 36 corners), for RViz and Lichtblick, and so the point driver and the drive server refuse a goal outside it before the car moves. Reliable, transient local, depth 1 - sent once, at start-up.</td>
 </tr>
 <tr>
 <td><code>/safety/collision_monitor/stop_zone</code></td>
@@ -641,7 +666,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/lidar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>lidar_cloud</code>, <code>gz_lidar_bridge</code>, <code>carla_adapter</code></td>
-<td><code>lidar_scan</code>, <code>debug_hud</code>, <code>ndt</code></td>
+<td><code>lidar_scan</code>, <code>debug_hud</code></td>
 <td>road, car</td>
 <td>On the car, the roof Velodyne VLP-16 through the stock velodyne_pointcloud (lidar_cloud, its factory calibration VLP16db.yaml), in lidar_link, 10 Hz, 0.9-100 m, unorganised - rays that hit nothing are left out; fields x, y, z, intensity, ring, time. car.launch.py runs it where the machine file has the lidar part (orin, all); lidar:=false turns it off everywhere. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.</td>
 </tr>
@@ -841,7 +866,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/local</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_local</code></td>
-<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>debug_hud</code>, <code>ndt</code></td>
+<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>debug_hud</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>odom frame. Smooth; drifts.</td>
 </tr>
@@ -849,7 +874,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/global</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_global</code></td>
-<td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code>, <code>point_driver</code>, <code>point_cli</code>, <code>debug_hud</code>, <code>ndt</code></td>
+<td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code>, <code>point_driver</code>, <code>point_cli</code>, <code>debug_hud</code>, <code>geofence</code></td>
 <td>sim, car, replay, bench</td>
 <td>map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.</td>
 </tr>
@@ -857,7 +882,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/gps/odom</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>navsat_transform</code></td>
-<td><code>ekf_global</code></td>
+<td><code>ekf_global</code>, <code>geofence</code></td>
 <td>sim, car, replay, bench</td>
 <td>Each GPS fix as a map-frame position of base_link (antenna offset removed).</td>
 </tr>
@@ -892,30 +917,6 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>amcl</code></td>
 <td>-</td>
 <td>Starts AMCL again from a pose (its initialpose, renamed; RViz "2D Pose Estimate" publishes /initialpose, so set its topic to this). amcl:=true starts it from the sim's start pose without it (set_initial_pose).</td>
-</tr>
-<tr>
-<td><code>/localization/ndt/pose</code></td>
-<td><code>geometry_msgs/msg/PoseWithCovarianceStamped</code></td>
-<td><code>ndt</code></td>
-<td>-</td>
-<td>-</td>
-<td>A trial (docs/designs/2026-10-29_ndt.md) - where NDT (aav_ndt, Rust) puts base_link on the saved lidar map, map frame, stamped with the cloud's own stamp. Only good fits (score per point above min_score_per_point, converged); x, y and yaw only, height, roll and pitch held at 0. Covariance - the x, y, yaw block k (-H^-1) with a floor, the rest 1e3. Only with ndt:=true (sim.launch.py world:=test_lot lidar:=true, the map file present). Nothing reads it to drive, and it never publishes TF, until it wins the trials.</td>
-</tr>
-<tr>
-<td><code>/localization/ndt/status</code></td>
-<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
-<td><code>ndt</code></td>
-<td>-</td>
-<td>-</td>
-<td>NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw.</td>
-</tr>
-<tr>
-<td><code>/localization/ndt/initial_pose</code></td>
-<td><code>geometry_msgs/msg/PoseWithCovarianceStamped</code></td>
-<td>-</td>
-<td><code>ndt</code></td>
-<td>-</td>
-<td>Starts NDT again from a pose in the map frame (RViz "2D Pose Estimate" set to this topic). ndt:=true in Gazebo starts it from the sim's start pose without it (its start_x, start_y, start_yaw); on the car it would take ekf_global's (start_from_global).</td>
 </tr>
 <tr>
 <td><code>/localization/gps/fix</code></td>
@@ -1106,6 +1107,12 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>std_srvs/srv/Trigger</code></td>
 <td><code>sensor_watchdog</code></td>
 <td>A person says all is right again after a fault the watchdog latches - a GPS jump, wheels that disagreed with the IMU and GPS, a HUD that dropped out (LOST). pixi run watchdog-clear (pixi run sim-fault clear in Gazebo).</td>
+</tr>
+<tr>
+<td><code>/safety/geofence/clear</code></td>
+<td><code>std_srvs/srv/Trigger</code></td>
+<td><code>geofence</code></td>
+<td>A person drove the car back inside the fence after OUTSIDE, or understood a JUMP (both latch) - pixi run geofence-clear. Refused, with the reason, while the car is still outside or the global pose can't be trusted. NEAR and LOST let go by themselves. Only people call it - never aav_language's drive server or the MCP tools (aav_language test_drive_tools.py checks).</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/follow</code></td>

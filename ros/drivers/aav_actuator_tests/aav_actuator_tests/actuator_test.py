@@ -26,6 +26,9 @@ Subscribes  vehicle/odom             nav_msgs/Odometry: the measured speed
             localization/odom/local  nav_msgs/Odometry: the pose (circles, straight)
             sensors/gps/fix          sensor_msgs/NavSatFix
             safety/estop             std_msgs/Bool: true stops the test
+            safety/geofence/state    std_msgs/String: NEAR, OUTSIDE, LOST or JUMP stops a
+                                     test on the ground (its slot, 60, is above the
+                                     geofence's lock); silent refuses one on the real car
             control/cmd_vel          geometry_msgs/TwistStamped: twist_mux's choice
             ego/actuator_cmd         ackermann_msgs/AckermannDriveStamped: what ego told the
                                      backend (logged: the fits' plant boundary)
@@ -70,7 +73,7 @@ from rclpy.parameter_client import AsyncParameterClient
 from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
 from sensor_msgs.msg import Imu, NavSatFix, NavSatStatus
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, String
 import yaml
 
 NAN = float('nan')
@@ -103,6 +106,7 @@ class ActuatorTest(Node):
         self.arrived = {}                              # t_* column -> arrival (s, clock)
         self.odom_time = None
         self.estop = False
+        self.geofence = None          # (arrival s on the steady clock, the state's line)
         self.sources = {}
         self.mux = collections.deque(maxlen=200)       # (arrival s, v, w) from twist_mux
         self.sent = collections.deque(maxlen=50)       # our last commands (v, w)
@@ -121,6 +125,7 @@ class ActuatorTest(Node):
         self.create_subscription(Odometry, 'localization/odom/local', self.on_pose, sensor)
         self.create_subscription(NavSatFix, 'sensors/gps/fix', self.on_fix, sensor)
         self.create_subscription(Bool, 'safety/estop', self.on_estop, 10)
+        self.create_subscription(String, 'safety/geofence/state', self.on_geofence, 10)
         self.create_subscription(TwistStamped, 'control/cmd_vel', self.on_mux, 10)
         self.create_subscription(DataSource, 'system/source', self.on_source, latched)
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_ego, sensor)
@@ -178,6 +183,15 @@ class ActuatorTest(Node):
 
     def on_estop(self, msg):
         self.estop = bool(msg.data)
+
+    def on_geofence(self, msg):
+        self.geofence = (time.monotonic(), msg.data)
+
+    def geofence_says(self):
+        """Return (state, age) of the geofence's last line, (None, None) if never heard."""
+        if self.geofence is None:
+            return None, None
+        return self.geofence[1], time.monotonic() - self.geofence[0]
 
     def on_mux(self, msg):
         self.mux.append((time.monotonic(), msg.twist.linear.x, msg.twist.angular.z))
@@ -341,6 +355,11 @@ class Run:
         if node.estop:
             self.say('REFUSED: /safety/estop is true. Clear it first (pixi run estop-clear)')
             return 1
+        why = safety.geofence_stop(*node.geofence_says(), self.args.stands, self.decision.real,
+                                   starting=True)
+        if why:
+            self.say(f'REFUSED: {why}')
+            return 1
         if not math.isfinite(node.v['ax']):
             self.say('WARNING: no IMU (/sensors/imu/data_raw): no g figures from it')
         if self.test.stage == 3 and not node.has_steering:
@@ -405,6 +424,9 @@ class Run:
         grace = time.monotonic() < last['grace']
         if node.estop:
             raise Aborted('/safety/estop is true')
+        why = safety.geofence_stop(*node.geofence_says(), self.args.stands, self.decision.real)
+        if why:
+            raise Aborted(why)
         if not grace and not self.fresh_odom():
             raise Aborted(f'no /vehicle/odom for {ODOM_STALE} s: the speed is unknown')
         why = self.envelope.breach(speed, last['distance'], elapsed)
