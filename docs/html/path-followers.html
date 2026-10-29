@@ -49,6 +49,7 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a class="here" href="path-followers.html">Path followers</a>
+<a href="trials.html">Trials</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -158,7 +159,8 @@ turning radius, its reverse speed and its top speed from <code>vehicle.yaml</cod
 <section class="card"><h2 id="compare-them">Compare them</h2>
 <pre class="highlight"><code class="language-bash">pixi run controller-compare                    # both controllers, both tours
 pixi run controller-compare --tours obstacle   # only the box in the lane
-pixi run controller-compare --controllers mppi --speed 2</code></pre>
+pixi run controller-compare --controllers mppi --speed 2
+pixi run controller-compare --trackers lqr mpc --runs 3   # the trial trackers (docs/trials.md)</code></pre>
 <p>For each tour and controller the script starts Gazebo's test lot with no windows, on a ROS
 domain of its own (this computer only), sends the same goals, and records where the car
 really was (Gazebo's ground truth). Forward only by default; <code>--reversing</code> lets Nav2 back
@@ -656,7 +658,7 @@ path. The settings and their reasons are in <code>nav2.yaml</code>, above the <c
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="costmaps.html"><small>Previous</small>← Costmaps</a>
-<a class="next" href="a-to-b.html"><small>Next</small>A to B →</a></nav>
+<a class="next" href="trials.html"><small>Next</small>Trials →</a></nav>
 </main>
 <footer>Source: <code>docs/path-followers.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>
