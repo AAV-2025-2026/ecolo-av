@@ -566,8 +566,16 @@ in <strong>0.5 m</strong> (distance = speed² ÷ (2 × braking) = 1 ÷ 2).</p>
 tests 4.1 and 4.3 run in a lot.</p>
 </section>
 <section class="card"><h2 id="9-on-stands-disagreeing-on-purpose">9. On stands: disagreeing on purpose</h2>
-<p>The preflight on stands (TODO, 29 Oct; <strong>planned</strong>) lifts the car, so the wheels spin
-in the air. On stands, <code>actuator-test</code> caps the speed at 0.3 m/s.</p>
+<p>The preflight on stands (<code>pixi run preflight</code>, 29 Oct; <a href="actuator-tests.html#the-preflight-on-stands">Actuator tests</a>)
+lifts the car, so the wheels spin in the air. On stands, <code>actuator-test</code> caps the speed
+at 0.3 m/s.</p>
+<div class="admonition warning">
+<p class="admonition-title">Today nothing measures the spinning wheels</p>
+<p>The motor drives the <strong>rear</strong> wheels; the sensors are on the <strong>front</strong> ones. On
+stands the front wheels stand still, so <code>/vehicle/odom</code> says 0 (TODO 49b). The table
+below needs a rear-wheel speed; until then the preflight only checks the sensors
+(<code>--no-drive</code>).</p>
+</div>
 <pre class="highlight"><code class="language-text">   wheels:  0.3 m/s  ──►  "we're moving"
    IMU:     0         ──►  "nothing pushed me"
    GPS:     still     ──►  "same place"</code></pre>
@@ -593,7 +601,7 @@ in the air. On stands, <code>actuator-test</code> caps the speed at 0.3 m/s.</p>
 </tr>
 <tr>
 <td>The preflight's check</td>
-<td>wheels follow the command; the IMU and GPS say "still": that's a <strong>pass</strong></td>
+<td>wheels follow the command; the IMU's speed change stays under 0.4 x the wheels', the GPS's Doppler under 0.1 m/s: that's a <strong>pass</strong>. While it runs, an IMU that says the car moves stops it</td>
 </tr>
 </tbody>
 </table></div>

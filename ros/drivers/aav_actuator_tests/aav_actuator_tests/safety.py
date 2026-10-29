@@ -194,9 +194,10 @@ def checklist(stands: bool) -> Tuple[str, ...]:
 
 # --- live checks while driving (every test) ----------------------------------------
 
-UNSEEN_TIME = 4.0      # s of a command above 0 with the measured speed under UNSEEN_SPEED:
-                       # not less: 8 Hall clicks a turn say nothing until 2 clicks (0.24 m),
-                       # 2-3 s of a slow start (the bench, 29 Oct)
+# UNSEEN_TIME: s of a command above 0 with the measured speed under UNSEEN_SPEED. Not
+# less: 8 Hall clicks a turn say nothing until 2 clicks (0.24 m), 2-3 s of a slow start
+# (the bench, 29 Oct).
+UNSEEN_TIME = 4.0
 UNSEEN_SPEED = 0.05    # m/s: the spine's own standstill threshold
 RUNAWAY_WINDOW = 1.0   # s: the speed rose this long while the command didn't
 RUNAWAY_RISE = 0.1     # m/s

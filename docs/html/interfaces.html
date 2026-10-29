@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">58 min read · 4 sections</div></header>
+<div class="meta">59 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -147,7 +147,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>actuator_test</code></td>
 <td><code>twist_mux</code>, <code>language_drive</code></td>
 <td>-</td>
-<td>Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; docs/tests.md stages 3-4). It also reads /control/cmd_vel, to stop when someone else takes over.</td>
+<td>Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; docs/tests.md stages 3-4), or the preflight on stands (pixi run preflight, that is actuator-test preflight, which also counts every sensor topic it subscribes to). It also reads /control/cmd_vel, to stop when someone else takes over.</td>
 </tr>
 <tr>
 <td><code>/drivers/scripted/cmd_vel</code></td>
@@ -201,7 +201,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/legacy_uart_bridge/lock</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>legacy_uart_bridge</code></td>
-<td><code>twist_mux</code></td>
+<td><code>twist_mux</code>, <code>actuator_test</code></td>
 <td>car</td>
 <td>Latched (reliable, transient local, depth 1), and sent again at 5 Hz, as twist_mux's lock subscription is volatile and would miss a latched message sent before it started. true while legacy_uart_bridge runs frame_version 1 - the 2025-26 C++ firmware, which has no command timeout, so a dead bridge or Orin leaves the last throttle on; false with frame_version 2 (the Rust firmware brakes 100 ms after the Orin's counter stops). A twist_mux lock (no_timeout) at priority 60 with timeout 0 - it holds every program below the actuator tests (scripted 50, replay 40, point 25, nav 20, ai 10), never a person (joy, rc, keyboard) or the actuator tests (60, run by a person who types a confirmation). Timeout 0, so where no legacy bridge runs (spine, sim, bench, turtle) it never locks. Once true it stays true in twist_mux until the bridge says false or twist_mux restarts. The bridge's allow_programs_without_timeout (default false, for a supervised stand only) makes it false.</td>
 </tr>
@@ -280,10 +280,10 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/safety/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
-<td><code>joy_teleop</code>, <code>hud</code>, <code>language_drive</code></td>
+<td><code>joy_teleop</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code></td>
 <td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>carla_adapter</code>, <code>point_driver</code></td>
 <td>-</td>
-<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button (hud, aav_hud) only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions; language_drive (aav_language) does the same from its estop() tool. Neither ever publishes false.</td>
+<td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button (hud, aav_hud) only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions; language_drive (aav_language) does the same from its estop() tool; actuator_test's preflight sets it when the car is still moving 5 s after its stop. None of them ever publishes false.</td>
 </tr>
 <tr>
 <td><code>/control/cmd_vel</code></td>
@@ -513,7 +513,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/imu/data</code></td>
 <td><code>sensor_msgs/msg/Imu</code></td>
 <td><code>imu_filter_madgwick</code></td>
-<td><code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code>, <code>navsat_transform</code>, <code>debug_hud</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>sensor_watchdog</code>, <code>navsat_transform</code>, <code>debug_hud</code>, <code>actuator_test</code></td>
 <td>sim, car, replay, bench</td>
 <td>Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.</td>
 </tr>
@@ -529,7 +529,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/gps/fix_velocity</code></td>
 <td><code>geometry_msgs/msg/TwistWithCovarianceStamped</code></td>
 <td><code>ublox_gps</code>, <code>gazebo_gps</code></td>
-<td><code>gps_heading</code></td>
+<td><code>gps_heading</code>, <code>actuator_test</code></td>
 <td>sim</td>
 <td>The receiver's velocity, east, north and up (m/s), from the satellites' Doppler (good to about 0.05 m/s), with its variance. gps_heading turns it into a heading. In Gazebo, gazebo_gps works it out from the car's true motion with that noise on top (the bridge drops the NavSat sensor's own). ublox_gps only - gps_driver:=nmea sends /sensors/gps/vel instead, which nothing reads.</td>
 </tr>
@@ -553,7 +553,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/radar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>radar</code>, <code>mock_radar</code>, <code>gazebo_radar</code>, <code>carla_adapter</code></td>
-<td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code>, <code>sensor_watchdog</code></td>
+<td><code>radar_clusters</code>, <code>local_costmap</code>, <code>collision_monitor</code>, <code>sensor_watchdog</code>, <code>actuator_test</code></td>
 <td>bench, road</td>
 <td>The TI radar's points, in radar_link, 10 Hz, an empty cloud when it sees nothing. Best effort - subscribe best effort, or nothing matches. Clustered by radar_clusters (aav_radar_clusters, Rust); read by the local costmap's obstacle layer and collision_monitor where it runs (navigation.launch.py radar:=true). In Gazebo's road world, gazebo_radar makes them from a lidar shaped like the radar - the rays that hit something, with the TI driver's fields.</td>
 </tr>
@@ -561,7 +561,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/battery</code></td>
 <td><code>sensor_msgs/msg/BatteryState</code></td>
 <td><code>battery_state_publisher</code>, <code>mock_battery</code></td>
-<td><code>hud</code></td>
+<td><code>hud</code>, <code>actuator_test</code></td>
 <td>bench</td>
 <td>aav_battery_victron's node is battery_state_publisher (the Victron VE.Direct cable).</td>
 </tr>
@@ -577,7 +577,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/camera/front_left/image_raw</code></td>
 <td><code>sensor_msgs/msg/Image</code></td>
 <td><code>camera_left</code>, <code>mock_camera</code>, <code>test_camera</code>, <code>gz_road_bridge</code>, <code>gazebo_camera</code>, <code>carla_adapter</code>, <code>camera_stream_front_left</code></td>
-<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code></td>
+<td><code>object_detector</code>, <code>object_detector_orin</code>, <code>object_detector_laptop</code>, <code>object_detector_all</code>, <code>lane_finder</code>, <code>hud</code>, <code>sensor_watchdog</code>, <code>actuator_test</code></td>
 <td>bench, road</td>
 <td>The front camera (camera_left_link). Big messages - subscribe reliably, as best effort loses them over UDP. camera_left is usb_cam (car.launch.py's camera part, Linux only); mock_camera draws the bench world; test_camera publishes a file; gz_road_bridge brings Gazebo's camera, in the road world (the bench camera's picture and lens). With faults:=true, Gazebo's picture goes to gazebo_camera first (Gazebo's own /gazebo/camera/front_left/image_raw), which passes it on through its fault (freeze, stop). On the car with the camera stream (aav_camera_stream), camera_stream_front_left publishes it only with publish_image:=true - every undistorted picture, for another node on the same computer; the pictures otherwise stay inside it.</td>
 </tr>
@@ -641,7 +641,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/lidar/points</code></td>
 <td><code>sensor_msgs/msg/PointCloud2</code></td>
 <td><code>lidar_cloud</code>, <code>gz_lidar_bridge</code>, <code>carla_adapter</code></td>
-<td><code>lidar_scan</code>, <code>debug_hud</code></td>
+<td><code>lidar_scan</code>, <code>debug_hud</code>, <code>actuator_test</code></td>
 <td>road, car</td>
 <td>On the car, the roof Velodyne VLP-16 through the stock velodyne_pointcloud (lidar_cloud, its factory calibration VLP16db.yaml), in lidar_link, 10 Hz, 0.9-100 m, unorganised - rays that hit nothing are left out; fields x, y, z, intensity, ring, time. car.launch.py runs it where the machine file has the lidar part (orin, all); lidar:=false turns it off everywhere. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.</td>
 </tr>
