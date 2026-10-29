@@ -87,7 +87,7 @@ sensors:
     xyz: [1.75, 0.29, 1.55]   # TODO measure (stereo baseline about 0.58 m, cameras/right.ini:25)
     rpy: [0.0, 0.0, 0.0]
   camera_right_link:          # front right, the same. Not lower or further back: Gazebo's
-    xyz: [1.75, -0.29, 1.55]  # car is a solid box, and a camera inside it sees its walls
+    xyz: [1.75, -0.29, 1.55]  # car is a solid box, and a camera inside it sees its walls. TODO measure
     rpy: [0.0, 0.0, 0.0]
   camera_rear_link:           # the orange housing on the tailgate's DIN rail, looking back
     xyz: [-0.20, 0.00, 0.90]  # TODO measure
