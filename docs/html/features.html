@@ -415,7 +415,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="trials.html">Trial path followers</a> (<code>aav_track</code>, <code>tracker:=</code>; in sim, swapped live: <code>ros2 param set /track tracker lqr</code>)</td>
-<td>To see what Stanley, LQR and MPC gain over pure pursuit on the same routes, beside MPPI and in Nav2's own chain, before any of them replaces the default; the live swap compares them on the same drive, watched in the debug HUD</td>
+<td>To see what Stanley, LQR and MPC gain over pure pursuit on the same routes, beside MPPI and in Nav2's own chain, before any of them replaces the default; the live swap compares them on the same drive, watched in the debug HUD. LQR now linearised about the bend with a preview of the bends ahead (it lost the forward U-turn); <code>mpc_full</code> plans speed and steering together within the throttle, brake and steering limits, to drive the whole A-to-B itself</td>
 <td>Ben</td>
 <td>2026-10-29</td>
 <td>built</td>
