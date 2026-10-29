@@ -96,7 +96,8 @@ NEIGHBOURS = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
 
 
 def ndt_score(pose, scan, blobs, cell):
-    """How well the moved scan lands on the blobs: higher is better.
+    """
+    How well the moved scan lands on the blobs: higher is better.
 
     Each point is scored against its own square and the eight around it, so a point
     just over an edge still feels the blob next door (as Autoware's ndt_omp does).
@@ -114,7 +115,8 @@ def ndt_score(pose, scan, blobs, cell):
 
 
 def ndt_match(scan, map_points, cells=(6.0, 4.0, CELL)):
-    """Find the pose that best lays the scan on the blobs: big squares first, then small.
+    """
+    Find the pose that best lays the scan on the blobs: big squares first, then small.
 
     Big squares see far, small ones are precise; each stage starts where the last ended.
     """
