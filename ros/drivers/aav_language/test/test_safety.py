@@ -74,7 +74,18 @@ def test_mux_config_reads_our_twist_mux_yaml():
     # A person always outranks the scripted driver (and so this server).
     assert prio['joy'] > prio['scripted'] and prio['keyboard'] > prio['scripted']
     assert inputs[0].name == 'joy'
-    assert {lk.name for lk in locks} == {'estop', 'no_timeout', 'stop_sign', 'sensors'}
+    assert {lk.name for lk in locks} == {'estop', 'no_timeout', 'stop_sign', 'sensors',
+                                         'stop_zone'}
+
+
+def test_the_stop_hold_holds_nav2_not_the_point_driver():
+    inputs, locks = safety.mux_config(yaml.safe_load(MUX_YAML.read_text()))
+    held = {'sensors': (False, 0.1), 'stop_zone': (True, 0.1)}
+    assert safety.mux_choice(inputs, {'nav': 0.1}, locks, held)['blocked_by'] == 'stop_zone'
+    assert safety.mux_choice(inputs, {'point': 0.1}, locks, held)['driver'] == 'point'
+    # Timeout 0: never heard (no collision_monitor in this profile) locks nothing.
+    quiet = {'sensors': (False, 0.1)}
+    assert safety.mux_choice(inputs, {'nav': 0.1}, locks, quiet)['driver'] == 'nav'
 
 
 def test_mux_choice_follows_twist_mux_rules():
