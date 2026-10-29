@@ -46,6 +46,7 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="trials.html">Trials</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -231,6 +232,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>2026-10-25</td>
 <td>sim</td>
 </tr>
+<tr>
+<td><a href="trials.html">AMCL as a trial</a> (stock <code>nav2_amcl</code>, <code>amcl:=true</code>)</td>
+<td>To score a particle filter on the lidar and the map against the global EKF, without letting it steer the car (<code>tf_broadcast: false</code>)</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>built</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -401,6 +409,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-22</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="trials.html">Trial path followers</a> (<code>aav_track</code>, <code>tracker:=</code>)</td>
+<td>To see what Stanley, LQR and MPC gain over pure pursuit on the same routes, beside MPPI and in Nav2's own chain, before any of them replaces the default</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>built</td>
 </tr>
 <tr>
 <td><a href="routes.html">Street routes</a> (<code>aav_routes</code>, Valhalla)</td>

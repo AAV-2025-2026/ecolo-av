@@ -391,3 +391,38 @@ def test_gazebos_urdf_gets_the_derived_limit_and_refuses_none():
     assert missing.returncode != 0
     car = subprocess.run(['xacro', str(urdf)], capture_output=True, text=True, check=True)
     assert 'steering_limit' not in car.stdout
+
+
+EGO_YAML = ROOT / 'ros/ego/aav_ego/config/ego.yaml'
+
+
+def test_trackers_sit_beside_the_controllers_and_none_is_the_default():
+    assert vehicle.DEFAULT_TRACKER == 'none' and 'none' in vehicle.TRACKERS
+    # Not in CONTROLLERS: nav2_tuned would take a tracker's name for RPP.
+    assert not set(vehicle.TRACKERS) & set(vehicle.CONTROLLERS)
+    assert vehicle.check_tracker(' LQR ') == 'lqr'
+    assert vehicle.check_tracker('none', reversing=True) == 'none'
+    with pytest.raises(ValueError, match='pick one of'):
+        vehicle.check_tracker('mppi')
+    with pytest.raises(ValueError, match='reversing:=false'):
+        vehicle.check_tracker('stanley', reversing=True)
+
+
+def test_track_params_are_nav2s_own_checks_and_speeds():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    cfg = vehicle.load(CONFIG)
+    ego = yaml.safe_load(EGO_YAML.read_text())['ego']['ros__parameters']
+    p = vehicle.track_params(nav2, cfg, ego)
+    server = nav2['controller_server']['ros__parameters']
+    assert p['xy_goal_tolerance'] == server['general_goal_checker']['xy_goal_tolerance']
+    assert p['yaw_goal_tolerance'] == server['general_goal_checker']['yaw_goal_tolerance']
+    assert p['progress_time'] == server['progress_checker']['movement_time_allowance']
+    assert p['cruise_speed'] == server['FollowPath']['desired_linear_vel']
+    assert p['rate_hz'] == server['controller_frequency']
+    assert p['odom_topic'] == '/localization/odom/local'
+    assert p['stamped'] is True
+    assert p['wheelbase'] == cfg['vehicle']['wheelbase']
+    # The tighter of ego's ramp and the steering motor.
+    assert p['max_steering_rate'] == min(cfg['actuators']['steer_rate'],
+                                         ego['max_steering_rate'])
+    assert vehicle.track_params(nav2, cfg, ego, max_speed=3.0)['cruise_speed'] == 3.0

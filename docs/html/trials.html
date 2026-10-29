@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trials: new path followers and localizers beside the main ones · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Trials: new path followers and localizers beside the main ones</h1>
+<div class="meta">3 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="tests.html">Every test</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="controllers.html">Path followers</a>
+<a class="here" href="trials.html">Trials</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a></nav>
+<div class="lead"><p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
+the main ones if they work." Each trial runs <strong>beside</strong> today's default, chosen at launch,
+and is <strong>scored on the same routes</strong>. It becomes the default only once it wins.</p>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>Trackers</strong> (<code>aav_track</code>): pure pursuit, Stanley, LQR, MPC, in Nav2's own chain, in controller_server's place. <code>tracker:=lqr</code>.
+- <strong>AMCL</strong> (stock <code>nav2_amcl</code>): a particle filter on the map and the lidar, scored against the EKF, never steering. <code>amcl:=true</code>.
+- <strong>Score:</strong> <code>pixi run controller-compare --trackers pure_pursuit lqr --runs 3</code>.
+- <strong>Results:</strong> not run yet.
+- The design: <code>docs/designs/2026-10-29_trials.md</code>.</p>
+</blockquote></div>
+<section class="card"><h2 id="what-is-on-trial">What is on trial</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Trial</th>
+<th>Scored against</th>
+<th>Switch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stanley steering</td>
+<td>our pure pursuit</td>
+<td><code>tracker:=stanley</code></td>
+</tr>
+<tr>
+<td>LQR steering, gains by speed</td>
+<td>our pure pursuit</td>
+<td><code>tracker:=lqr</code></td>
+</tr>
+<tr>
+<td>MPC steering, within the steering's limits</td>
+<td>our pure pursuit</td>
+<td><code>tracker:=mpc</code></td>
+</tr>
+<tr>
+<td>our pure pursuit (the control)</td>
+<td>Nav2's RPP and MPPI</td>
+<td><code>tracker:=pure_pursuit</code></td>
+</tr>
+<tr>
+<td>AMCL</td>
+<td>the global EKF</td>
+<td><code>amcl:=true</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="where-a-tracker-sits">Where a tracker sits</h2>
+<pre class="highlight"><code>goal ─► bt_navigator ─► planner_server (Smac Hybrid-A*, replans every 1 s)
+              │ FollowPath ("follow_path")
+              ▼
+   tracker:=none (default)          tracker:=stanley | lqr | mpc | pure_pursuit
+   controller_server (MPPI, RPP)    aav_track's track node; controller_server's own
+                                    action is renamed follow_path_unused
+              └──────► cmd_vel_nav ◄──────┘
+                            │
+        velocity_smoother → collision_monitor → /drivers/nav/cmd_vel (twist_mux 20) → ego</code></pre>
+<p>Nothing after <code>cmd_vel_nav</code> changes: the same smoother, stop zone, mux slot, locks and
+e-stops.</p>
+</section>
+<section class="card"><h2 id="fair-rules">Fair rules</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One speed policy for every tracker: RPP's cruise speed, slower in bends, stop by distance</td>
+<td>off-path error grows with speed</td>
+</tr>
+<tr>
+<td>Nav2's own goal and progress checks (nav2.yaml: 1.0 m, 0.75 rad)</td>
+<td>the same "done" for all</td>
+</tr>
+<tr>
+<td>Track in <code>odom</code>; each path moved there once</td>
+<td>the map pose jumps with GPS</td>
+</tr>
+<tr>
+<td>Forward only (<code>reversing:=false</code>: a tracker is refused otherwise)</td>
+<td>the trackers drive forwards only</td>
+</tr>
+<tr>
+<td>3 runs each, mean and spread (<code>--runs 3</code>)</td>
+<td>MPPI is random; one run names no winner</td>
+</tr>
+<tr>
+<td>Loop time and missed ticks recorded</td>
+<td>a slow MPC mustn't look like bad maths</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="run-it">Run it</h2>
+<pre class="highlight"><code class="language-bash">pixi run sim world:=test_lot reversing:=false tracker:=mpc      # watch one
+pixi run sim world:=test_lot amcl:=true                         # AMCL beside the EKF
+pixi run controller-compare --trackers pure_pursuit stanley lqr mpc --runs 3
+pixi run controller-compare --amcl                              # score AMCL too</code></pre>
+</section>
+<section class="card"><h2 id="results">Results</h2>
+<p>Not run yet. Each run's results go here, with its date and a link to its folder in
+<code>log/controller-compare/</code>.</p>
+</section>
+<section class="card"><h2 id="before-a-winner-goes-on-the-car">Before a winner goes on the car</h2>
+<ul>
+<li>Gazebo's map is perfect and its GPS noise simple: <strong>AMCL feeds the EKF only after it
+  also wins on a bag from the real lot.</strong> On the car, slam_toolbox's map needs aligning
+  to the GPS <code>map</code> frame first.</li>
+<li>AMCL publishes only after the car moves (<code>update_min_d</code>): parked, few samples.</li>
+<li>The trackers don't read the costmap: MPPI stays for the obstacle tours (design T3).</li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="controllers.html"><small>Previous</small>← Path followers</a>
+<a class="next" href="a-to-b.html"><small>Next</small>A to B →</a></nav>
+</main>
+<footer>Source: <code>docs/trials.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

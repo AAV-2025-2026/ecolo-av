@@ -7,7 +7,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [speed_loop:=default|smooth] [sim_speed:=]
-      [reversing:=true] [controller:=mppi]
+      [reversing:=true] [controller:=mppi] [tracker:=none] [amcl:=false]
       [plan_around:=true]
       [watchdog:=true] [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
       [bridge:=rust|python]
@@ -52,6 +52,11 @@ bench's argument names:
                       ego refuses it outside a simulator
   controller:=rpp     Nav2 follows the path with Regulated Pure Pursuit, not MPPI (the
                       default): pixi run controller-compare drives both (docs/controllers.md)
+  tracker:=lqr        a trial path follower (aav_track: pure_pursuit, stanley, lqr or mpc)
+                      in controller_server's place, on Nav2's same planner, smoother and
+                      collision_monitor. Forward only: with reversing:=false (docs/trials.md)
+  amcl:=true          stock AMCL beside the global EKF, scored only (docs/trials.md): only
+                      in world:=test_lot with nav:=true and the lidar, from the start pose
   plan_around:=false  Nav2's planner sees only the map, not the radar and lidar: the car
                       stops for an obstacle instead of planning round it (the stop tests)
   watchdog:=true      the sensor watchdog (aav_safety): twist_mux's sensors lock stops Nav2
@@ -124,12 +129,17 @@ def launch_setup(context):
     controller = arg('controller').lower()
     if controller not in vehicle.CONTROLLERS:
         raise ValueError(f'controller:={controller}: pick one of {", ".join(vehicle.CONTROLLERS)}')
+    tracker = vehicle.check_tracker(arg('tracker'), flag['reversing'])
+    amcl = arg('amcl').lower() == 'true'
     gazebo_share = FindPackageShare('aav_gazebo').perform(context)
     sensors = worlds.has_sensors(worlds.world_file(gazebo_share, world))
     # Each only where the world renders it, as gazebo.launch.py decides.
     radar = sensors and arg('radar').lower() == 'true'
     lidar = sensors and arg('lidar').lower() == 'true'
     wanted = [n for n in CAMERA_PARTS if flag[n]] + (['lane'] if lane == 'true' else [])
+    if amcl and not (world == 'test_lot' and flag['nav'] and lidar):
+        raise ValueError('amcl:=true needs world:=test_lot nav:=true lidar:=true: the only '
+                         'world with a real map, and AMCL reads the lidar')
     if wanted and not sensors:
         raise ValueError(f'{", ".join(wanted)}: world:={world} has no camera. Use world:=road')
     nav_share = FindPackageShare('aav_navigation').perform(context)
@@ -176,7 +186,9 @@ def launch_setup(context):
                                camera_obstacles=flag['camera_obstacles'],
                                max_speed=arg('sim_speed'),
                                reversing=str(flag['reversing']).lower(),
-                               controller=controller,
+                               controller=controller, tracker=tracker,
+                               amcl=amcl, amcl_x=0.0, amcl_y=arg('start_y'),
+                               amcl_yaw=arg('start_yaw'),
                                plan_around=str(flag['plan_around']).lower()))
     if flag['watchdog']:
         # What this world has, and the camera only where something reads it: watching it
@@ -307,6 +319,13 @@ def generate_launch_description():
         DeclareLaunchArgument('controller', default_value=vehicle.DEFAULT_CONTROLLER,
                               description='mppi or rpp (Regulated Pure Pursuit): what '
                                           "follows Nav2's path (docs/controllers.md)"),
+        DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
+                              description="a trial path follower in controller_server's "
+                                          'place: ' + ', '.join(vehicle.TRACKERS) +
+                                          ' (with reversing:=false; docs/trials.md)'),
+        DeclareLaunchArgument('amcl', default_value='false',
+                              description='stock AMCL beside the EKF, scored only '
+                                          '(world:=test_lot nav:=true lidar:=true)'),
         DeclareLaunchArgument('plan_around', default_value='true',
                               description="true: Nav2's planner plans round what the radar "
                                           'and lidar see; false: the map only, so the car '

@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">53 min read · 4 sections</div></header>
+<div class="meta">56 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -46,6 +46,7 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="controllers.html">Path followers</a>
+<a href="trials.html">Trials</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -637,7 +638,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/lidar/scan</code></td>
 <td><code>sensor_msgs/msg/LaserScan</code></td>
 <td><code>lidar_scan</code></td>
-<td><code>local_costmap</code>, <code>collision_monitor</code></td>
+<td><code>local_costmap</code>, <code>collision_monitor</code>, <code>amcl</code></td>
 <td>road, car</td>
 <td>The roof lidar flattened (aav_lidar lidar_scan - navigation.launch.py lidar:=true) - in base_link, 720 ranges all the way round, each the nearest point between 0.3 m and the roof plus 0.5 m (vehicle.obstacle_heights), inf where there is none. Best effort, 10 Hz. Read by the local costmap's lidar_layer and collision_monitor's stop zone. From the roof, the lowest beam (15 degrees down from 1.8 m) meets a 1 m box only 3 m away, so low things close in front are the radar's.</td>
 </tr>
@@ -850,6 +851,30 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>The car's heading from the GPS receiver's velocity (aav_gps_heading, TODO 13) - only an orientation (yaw from east), in base_link, with its variance; turn rate and acceleration covariance -1. Only while the car moves faster than 0.3 m/s and the GPS's speed matches the wheels'; turned round when reversing. The global EKF fuses its yaw. Silent where nothing publishes /sensors/gps/fix_velocity (the bench, gps_driver:=nmea).</td>
 </tr>
 <tr>
+<td><code>/localization/amcl/pose</code></td>
+<td><code>geometry_msgs/msg/PoseWithCovarianceStamped</code></td>
+<td><code>amcl</code></td>
+<td><code>controller_compare</code></td>
+<td>-</td>
+<td>A trial (docs/trials.md) - stock nav2_amcl's particle filter on the 2D map and the lidar scan, map frame (its amcl_pose, renamed). Only with amcl:=true (sim.launch.py world:=test_lot nav:=true lidar:=true). Its tf_broadcast is false - ekf_global keeps map -&gt; odom - so nothing drives by it; controller-compare --amcl scores it against Gazebo's truth. Published only once the car has moved (update_min_d, update_min_a).</td>
+</tr>
+<tr>
+<td><code>/localization/amcl/particles</code></td>
+<td><code>nav2_msgs/msg/ParticleCloud</code></td>
+<td><code>amcl</code></td>
+<td>-</td>
+<td>-</td>
+<td>AMCL's particles, for RViz or Foxglove (its particle_cloud, renamed). Best effort. amcl:=true only.</td>
+</tr>
+<tr>
+<td><code>/localization/amcl/initial_pose</code></td>
+<td><code>geometry_msgs/msg/PoseWithCovarianceStamped</code></td>
+<td>-</td>
+<td><code>amcl</code></td>
+<td>-</td>
+<td>Starts AMCL again from a pose (its initialpose, renamed; RViz "2D Pose Estimate" publishes /initialpose, so set its topic to this). amcl:=true starts it from the sim's start pose without it (set_initial_pose).</td>
+</tr>
+<tr>
 <td><code>/localization/gps/fix</code></td>
 <td><code>sensor_msgs/msg/NavSatFix</code></td>
 <td><code>navsat_transform</code></td>
@@ -861,7 +886,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/map</code></td>
 <td><code>nav_msgs/msg/OccupancyGrid</code></td>
 <td><code>map_server</code></td>
-<td><code>global_costmap</code>, <code>local_costmap</code>, <code>map</code></td>
+<td><code>global_costmap</code>, <code>local_costmap</code>, <code>map</code>, <code>amcl</code></td>
 <td>sim</td>
 <td>Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud) draws it north up, for the big screen.</td>
 </tr>
@@ -880,6 +905,22 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>map</code></td>
 <td>-</td>
 <td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.</td>
+</tr>
+<tr>
+<td><code>/cmd_vel_nav</code></td>
+<td><code>geometry_msgs/msg/TwistStamped</code></td>
+<td><code>controller_server</code>, <code>behavior_server</code>, <code>track</code></td>
+<td><code>velocity_smoother</code></td>
+<td>-</td>
+<td>Nav2's own name, inside Nav2 - the path follower's command, before the velocity smoother, collision_monitor and /drivers/nav/cmd_vel. controller_server publishes it (tracker:=none, the default), or aav_track's track node with a trial tracker on (tracker:=pure_pursuit</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/track/status</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
+<td><code>track</code></td>
+<td><code>controller_compare</code></td>
+<td>-</td>
+<td>aav_track's debug, every tick while it follows a path (20 Hz) - name track, message the tracker's name; values tracker, loop_ms (this tick's work), loop_ms_max, missed_ticks (since the path came, by the node's clock), cross_track_m (+ left of the path), heading_error_rad, steer_rad, speed_mps, left_m (along the path to its end). Only with tracker:= on.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/destination</code></td>
@@ -1054,6 +1095,12 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>aav_interfaces/action/DriveToPoint</code></td>
 <td><code>point_driver</code></td>
 <td>Drive to one point B (lat/lon through /fromLL, or map x/y) and stop there - speed up gently, hold, slow down by the distance left at half vehicle.yaml's max_brake. Pure pursuit, turning towards B first. Refuses B over 200 m away or inside the tightest turn; on REAL only with confirmed (pixi run drive-to-point asks). Sent by point_cli (pixi run drive-to-point) and tools/sim_check.py --drive-to-point.</td>
+</tr>
+<tr>
+<td><code>/follow_path</code></td>
+<td><code>nav2_msgs/action/FollowPath</code></td>
+<td><code>controller_server</code></td>
+<td>bt_navigator's FollowPath - follow one planned path (replaced every second as the planner replans). Served by controller_server (MPPI or RPP) with tracker:=none, the default; with tracker:=pure_pursuit</td>
 </tr>
 <tr>
 <td><code>/navigate_to_pose</code></td>

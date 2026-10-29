@@ -48,12 +48,15 @@ Many values are still `TODO measure` (docs/car_measurements.md).
 | `blind_behind(reversing, **sensors)`, `reverse_limit(v, reversing)` | may Nav2 back up, and how fast |
 | `nav2_rewrites(v, reversing)`, `nav2_tuned(...)` | Nav2's settings from the car |
 | `ego_params(cfg)`, `spine_params(v)` | ego's and `spine_bridge`'s parameters |
+| `check_tracker(name, reversing)`, `track_params(nav2, cfg, ego, max_speed)` | a trial tracker's name, checked; `aav_track`'s parameters from nav2.yaml, vehicle.yaml and ego.yaml |
 | `obstacle_heights(v)`, `centre_of_mass(...)` | the lidar's height band; centre of mass from the scales |
 
 Constants: `STOP_ZONE_AHEAD`, `STOP_ZONE_BEHIND`, `STOP_ZONE_MARGIN` (m),
 `SEES_BEHIND`, `PLAN_TURN_MARGIN`, `GROUND_CLEARANCE`, `OVERHEAD_MARGIN` (m), and
 `CONTROLLERS = ('rpp', 'mppi')` with `DEFAULT_CONTROLLER = 'mppi'` (the default of
-`sim.launch.py`'s `controller`).
+`sim.launch.py`'s `controller`); `TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr',
+'mpc')` with `DEFAULT_TRACKER = 'none'` (`tracker:=`, `docs/trials.md`), kept apart from
+`CONTROLLERS`.
 
 ### URDF (`urdf/`)
 

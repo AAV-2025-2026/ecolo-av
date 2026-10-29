@@ -5,11 +5,13 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
       [camera_obstacles:=false] [ghost:=false]
       [reversing:=false] [max_speed:=] [controller:=mppi] [plan_around:=true]
+      [tracker:=none] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0] [amcl_yaw:=0.0]
       [use_sim_time:=false]
       [autostart:=true]
 
-Starts only the Nav2 servers a car needs (not nav2_bringup's full list: no AMCL, since
-robot_localization does localization, no docking or route server):
+Starts only the Nav2 servers a car needs (not nav2_bringup's full list: no docking or
+route server, and AMCL only as a trial, amcl:=true, since robot_localization does
+localization):
 
   map_server        the map (default: maps/empty.yaml, everything free)
   planner_server    SmacPlannerHybrid: drivable paths for a car
@@ -27,6 +29,19 @@ robot_localization does localization, no docking or route server):
                     cloud -> /sensors/lidar/scan (what stands between the road and just
                     over the roof, all the way round), for the costmap and collision_monitor
   lifecycle_manager brings them all up
+
+Trials (docs/trials.md), each beside the default and scored by pixi run controller-compare:
+  tracker:=pure_pursuit|stanley|lqr|mpc  aav_track's track node follows the path instead
+                          of controller_server: it serves follow_path (bt_navigator's
+                          FollowPath) and publishes cmd_vel_nav; controller_server keeps
+                          running (its costmaps, the trees' clear calls) with its own action
+                          renamed follow_path_unused. The same planner, smoother,
+                          collision_monitor and twist_mux slot. Forward only: refused with
+                          reversing:=true. tracker:=none (the default): controller_server
+  amcl:=true              stock nav2_amcl on the map and /sensors/lidar/scan (so only with
+                          lidar:=true), from amcl_x, amcl_y, amcl_yaw (map frame), with its
+                          own lifecycle manager. tf_broadcast false: ekf_global keeps
+                          map -> odom; AMCL's pose, /localization/amcl/pose, is only scored
 
 Obstacles, from where the sensors are:
   radar:=true             where a radar publishes /sensors/radar/points (the bench; the car
@@ -117,8 +132,13 @@ def nodes(context):
     collision_monitor = ((radar or lidar or ghost or guard) if monitor == ''
                          else monitor == 'true')
     reversing = flag(context, 'reversing')
+    tracker = vehicle.check_tracker(LaunchConfiguration('tracker').perform(context), reversing)
+    amcl = flag(context, 'amcl')
+    if amcl and not lidar:
+        raise ValueError('amcl:=true needs lidar:=true: AMCL reads /sensors/lidar/scan')
 
-    v = vehicle.load()['vehicle']
+    cfg = vehicle.load()
+    v = cfg['vehicle']
     trees = '_car_reversing.xml' if reversing else '_car.xml'
     rewrites = vehicle.nav2_rewrites(v, reversing)
     rewrites.update({
@@ -147,7 +167,10 @@ def nodes(context):
     servers = [
         ('nav2_map_server', 'map_server', []),
         ('nav2_planner', 'planner_server', []),
-        ('nav2_controller', 'controller_server', [('cmd_vel', 'cmd_vel_nav')]),
+        # With a trial tracker, it keeps running but its FollowPath goes unused: rcl_action
+        # resolves action names with the node's remappings, as topics are.
+        ('nav2_controller', 'controller_server', [('cmd_vel', 'cmd_vel_nav')] + (
+            [('follow_path', 'follow_path_unused')] if tracker != 'none' else [])),
         ('nav2_behaviors', 'behavior_server', [('cmd_vel', 'cmd_vel_nav')]),
         ('nav2_bt_navigator', 'bt_navigator', []),
         ('nav2_waypoint_follower', 'waypoint_follower', []),
@@ -181,6 +204,40 @@ def nodes(context):
         actions.append(Node(package='aav_ghost', executable='ghost_obstacle',
                             name='ghost_obstacle', output='screen',
                             parameters=[config, {'use_sim_time': use_sim_time}]))
+    if tracker != 'none':
+        # Not a lifecycle node: it serves follow_path from the start. Nav2's own numbers
+        # (the speed, the checks), so every follower is held to the same.
+        with open(f'{share}/config/nav2.yaml') as f:
+            nav2 = yaml.safe_load(f)
+        ego_file = FindPackageShare('aav_ego').perform(context) + '/config/ego.yaml'
+        with open(ego_file) as f:
+            ego = yaml.safe_load(f)['ego']['ros__parameters']
+        own = FindPackageShare('aav_track').perform(context) + '/config/track.yaml'
+        actions.append(Node(
+            package='aav_track', executable='track', name='track', output='screen',
+            parameters=[own, vehicle.track_params(nav2, cfg, ego,
+                                                  float(speed) if speed else None),
+                        {'tracker': tracker, 'use_sim_time': use_sim_time}]))
+    if amcl:
+        config = f'{share}/config/amcl.yaml'
+        start = {'set_initial_pose': True, 'use_sim_time': use_sim_time}
+        for axis in ('x', 'y', 'yaw'):
+            start[f'initial_pose.{axis}'] = float(
+                LaunchConfiguration(f'amcl_{axis}').perform(context))
+        actions += [
+            Node(package='nav2_amcl', executable='amcl', name='amcl', output='screen',
+                 parameters=[config, start],
+                 remappings=[('amcl_pose', '/localization/amcl/pose'),
+                             ('particle_cloud', '/localization/amcl/particles'),
+                             ('initialpose', '/localization/amcl/initial_pose')]),
+            # Its own: Nav2's manager lists only its servers, and a trial that fails to
+            # come up mustn't hold Nav2 down.
+            Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',
+                 name='lifecycle_manager_localization', output='screen',
+                 parameters=[{'use_sim_time': use_sim_time,
+                              'autostart': flag(context, 'autostart'),
+                              'node_names': ['amcl']}]),
+        ]
     actions.append(Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -236,6 +293,19 @@ def generate_launch_description():
                               description='true: the planner sees the radar and lidar too, '
                                           'and plans round what they see; false: the map '
                                           'only, so the car stops for it (the stop tests)'),
+        DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
+                              description="a trial path follower in controller_server's "
+                                          'place (aav_track): ' + ', '.join(vehicle.TRACKERS) +
+                                          '. docs/trials.md'),
+        DeclareLaunchArgument('amcl', default_value='false',
+                              description='true (with lidar:=true): stock AMCL as a trial, '
+                                          'scored only: /localization/amcl/pose'),
+        DeclareLaunchArgument('amcl_x', default_value='0.0',
+                              description="m, map frame: AMCL's start"),
+        DeclareLaunchArgument('amcl_y', default_value='0.0',
+                              description="m, map frame: AMCL's start"),
+        DeclareLaunchArgument('amcl_yaw', default_value='0.0',
+                              description="rad from east: AMCL's start heading"),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('autostart', default_value='true'),
         OpaqueFunction(function=nodes),
