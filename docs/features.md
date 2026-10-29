@@ -58,7 +58,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | [Drive to point: GPS A to B](a-to-b.md) (`aav_drive_to_point`) | The Gate 4 goal: drive to a GPS point and stop within 1 m; in Gazebo it stopped within 0.4 m. Called `aav_goto` until 26 Oct: renamed so the name says the job (action `/drive_to_point`, slot `point`, `pixi run drive-to-point`) | Ben | 2026-10-15 | sim |
 | [Plain English](plain-english.md) (`aav_language`) | Say "drive 10 m forward": a local model plans it, and asks before the car moves | Ben | 2026-10-15 | sim |
 | RC via ROS (`rc_driver`) and a three-position mode switch | A person on the RC transmitter outranks every program, but still passes through ROS's safety checks | Ben | 2026-10-24 | built |
-| [Preflight on stands](actuator-tests.md#the-preflight-on-stands) (`pixi run preflight`, `actuator-test preflight`) | One run before the car goes on the ground: it speeds up, holds, slows, brakes and steers while every sensor is checked, and says PASS or FAIL per line. Refused on the real car until a rear-wheel speed exists (TODO 49b); `--no-drive` checks the sensors alone | Ben | 2026-10-29 | built |
+| [Preflight on stands](actuator-tests.md#the-preflight-on-stands) (`pixi run preflight`, `actuator-test preflight`) | One run before the car goes on the ground: it speeds up, holds, slows, brakes and steers while every sensor is checked, and says PASS or FAIL per line. Refused on the real car until a rear-wheel speed exists (TODO 49b); `--no-drive` checks the sensors alone | Ben | 2026-10-29 | sim |
 
 ## Navigation
 

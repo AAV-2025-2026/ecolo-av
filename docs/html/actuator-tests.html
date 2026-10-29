@@ -7,7 +7,7 @@
 <!-- Generated from docs/actuator-tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Actuator tests: measure how the car moves</h1>
-<div class="meta">21 min read · 10 sections</div></header>
+<div class="meta">22 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -467,6 +467,29 @@ the <strong>e-stop person</strong> (they are the stop), someone watching the <st
 tachometer app, the laptop person; run it on the Orin (ssh + tmux) or a wired laptop.
 The word to type: <code>preflight</code>. If the car is still moving 5 s after the stop, it prints
 <strong>NOT STOPPED: E-STOP NOW</strong> and sets <code>/safety/estop</code>.</p>
+<h3 id="tested-29-oct">Tested, 29 Oct</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gazebo, empty world (<code>--sim --skip camera radar battery</code>)</td>
+<td>every drive and sensor line PASS: 0.34 m/s held for 0.30, still 0.5 s after the brake, steering +0.50 / -0.50 / 0.000 rad, IMU 0.25 vs wheels 0.25 m/s, Doppler 0.36 vs 0.34. Lidar FAIL: the empty world has none (name it with <code>--skip lidar</code>)</td>
+</tr>
+<tr>
+<td>Bench (<code>--bench</code>), spine armed</td>
+<td>every sensor line PASS (IMU 50 Hz, |a| 9.78; GPS 5 Hz; camera 640x360 10 Hz; battery 50.9 V). The drive stopped itself: the front wheels read 0 for over 2 s of a slow start (8 Hall clicks a turn), so the "speed nobody sees" stop, then at 2 s, fired; now 4 s. The run again at 4 s: not yet done</td>
+</tr>
+<tr>
+<td><code>--no-drive</code>, the real car</td>
+<td>untested: no car</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="trusting-the-fits">Trusting the fits</h2>
 <p>Each lag fit is now a <strong>dead time, then a lag</strong> (FOPDT). The old fit (a lag alone)

@@ -177,6 +177,14 @@ tachometer app, the laptop person; run it on the Orin (ssh + tmux) or a wired la
 The word to type: `preflight`. If the car is still moving 5 s after the stop, it prints
 **NOT STOPPED: E-STOP NOW** and sets `/safety/estop`.
 
+### Tested, 29 Oct
+
+| Where | Result |
+|---|---|
+| Gazebo, empty world (`--sim --skip camera radar battery`) | every drive and sensor line PASS: 0.34 m/s held for 0.30, still 0.5 s after the brake, steering +0.50 / -0.50 / 0.000 rad, IMU 0.25 vs wheels 0.25 m/s, Doppler 0.36 vs 0.34. Lidar FAIL: the empty world has none (name it with `--skip lidar`) |
+| Bench (`--bench`), spine armed | every sensor line PASS (IMU 50 Hz, \|a\| 9.78; GPS 5 Hz; camera 640x360 10 Hz; battery 50.9 V). The drive stopped itself: the front wheels read 0 for over 2 s of a slow start (8 Hall clicks a turn), so the "speed nobody sees" stop, then at 2 s, fired; now 4 s. The run again at 4 s: not yet done |
+| `--no-drive`, the real car | untested: no car |
+
 ## Trusting the fits
 
 Each lag fit is now a **dead time, then a lag** (FOPDT). The old fit (a lag alone)
