@@ -307,6 +307,15 @@ work on." His order, with the work under way:
       - the car on Jazzy (Q24): a Jazzy Mac can't join the car's Humble;
       - the HUD on a Mac: raylib's runs there as it is; the Flutter app needs CocoaPods (archived 25 Oct);
       - the car's WiFi, measured: how late the pictures arrive, and how often it drops.
+- [ ] **Four research picks** (Ben, 28 Oct; details: `docs/designs/2026-10-28_research-picks.md`):
+      1. **Autoware**: borrow its designs (PID + feed-forward speed with a smooth stop,
+         MPC steering, NDT + EKF localization), not the whole stack;
+      2. **lidar localization**: map the lot with KISS-ICP from a VLP-16 bag, then locate
+         by NDT or ICP; no RTK on this car, so this is where centimetres come from;
+      3. **a safety argument**: Simplex (we have most parts) and RSS (stopping distance
+         from measured braking), for the final report;
+      4. **seeing from above**: inverse perspective mapping (an AprilTag or a mark at B
+         for the last metre) and camera-to-lidar calibration (distances for RF-DETR's boxes).
 - [ ] **AMCL: a particle filter against a lidar map** (Ben, 28 Oct; not sure yet if we
       need it): Nav2's stock Adaptive Monte Carlo Localization. Thousands of guesses of
       where the car is; each lidar scan is matched against a map, and unlikely guesses
@@ -584,3 +593,15 @@ Ben's messages, word for word: `docs/history/messages-2026-10-09.md`.
 - Measure the car and replace every guessed number in `vehicle.yaml`.
 - Rotate the leaked secrets, and back up the Orin and Pis before any reflash.
 - Answer Q1–Q34 with the team.
+
+## For the 2027-28 team
+
+Learned models: worth knowing, but each needs training data and GPUs we don't have this
+year (Ben, 28 Oct):
+
+- [ ] **Learned BEV** (BEVFusion, BEVFormer): all cameras and the lidar into one top-down view.
+- [ ] **One network for perception, prediction and planning** (UniAD).
+- [ ] **World models** (Wayve's GAIA-1) and **vision-language driving** (Waymo's EMMA).
+- [ ] **Predicting others' paths** (MTR, Wayformer); at 1 m/s, constant velocity is enough today.
+- [ ] **Learned planners** (diffusion planners).
+- [ ] **State-space models** (Mamba): see "Ideas to keep".
