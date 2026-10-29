@@ -61,6 +61,7 @@ The order of the writes, every tick:
 | `SpineBoard::with_link(board, devices, uart, link, cal, config)` | the same, with the commands through `link` |
 | `CommandLink`, `CanLink`, `LegacyLink` | where the commands come from: CAN through the board (`aav.dbc`), or the Motor-Pi's UART frames (`legacy-link`: version 2 with the Orin's heartbeat counter, or the 13-byte version 1), turned into the same Jrk and DAC targets as the 2025-26 C++. With version 2, a frame whose counter didn't change is no command (`FrameVersion`, `LinkStats`) |
 | `SpineBoard::init()`, `tick()` | power-up, then one pass of the loop |
+| `SpineBoard::state()` | the spine's five state regions after the latest tick (`spine_core::fsm`) |
 | `SpineBoard::board()`, `link()`, `actuators()` | the parts inside, to use or read (LEDs, link stats) |
 | `FEEDBACK_PERIOD_MS`, `STATUS_PERIOD_MS` | 20, 100: how often VEHICLE_FEEDBACK and VEHICLE_STATUS go out |
 | `Actuators::apply(&outputs, now_ms)` | drives the devices; returns fault bits |

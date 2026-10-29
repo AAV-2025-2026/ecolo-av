@@ -12,6 +12,7 @@ std_msgs/Header header
 uint8 MODE_MANUAL=0      # a person drives; the actuators are idle
 uint8 MODE_RC=1          # the RC transmitter overrides the computer
 uint8 MODE_COMPUTER=2    # the spine follows /ego/actuator_cmd
+uint8 MODE_TEST=3        # the hardware test mode: one actuator at a time, from a laptop
 uint8 mode
 
 bool armed               # the spine accepts computer commands

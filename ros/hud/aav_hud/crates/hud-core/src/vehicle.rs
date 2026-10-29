@@ -20,6 +20,8 @@ pub enum Mode {
     Rc,
     /// The spine follows the computer's commands.
     Computer,
+    /// The hardware test mode: one actuator at a time, from a laptop.
+    Test,
     /// A number this HUD doesn't know: a newer message, or a bug.
     Unknown(u8),
 }
@@ -30,6 +32,7 @@ impl From<u8> for Mode {
             0 => Self::Manual,
             1 => Self::Rc,
             2 => Self::Computer,
+            3 => Self::Test,
             other => Self::Unknown(other),
         }
     }
@@ -41,6 +44,7 @@ impl fmt::Display for Mode {
             Self::Manual => f.write_str("MANUAL"),
             Self::Rc => f.write_str("RC"),
             Self::Computer => f.write_str("COMPUTER"),
+            Self::Test => f.write_str("TEST"),
             Self::Unknown(code) => write!(f, "MODE {code}?"),
         }
     }
@@ -200,6 +204,7 @@ mod tests {
         assert_eq!(Mode::from(0), Mode::Manual);
         assert_eq!(Mode::from(1), Mode::Rc);
         assert_eq!(Mode::from(2), Mode::Computer);
+        assert_eq!(Mode::from(3), Mode::Test);
         assert_eq!(Mode::from(9), Mode::Unknown(9));
         assert_eq!(Mode::Unknown(9).to_string(), "MODE 9?");
     }

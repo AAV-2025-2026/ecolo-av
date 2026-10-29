@@ -16,7 +16,7 @@ Every message starts with `std_msgs/Header header`, except `SensorSource` (an en
 
 | Message | Topic, publisher | Fields |
 |---|---|---|
-| `VehicleStatus` | `/vehicle/status`, every backend (spine_bridge: 10 Hz, CAN 0x181 with 0x180) | `mode` (`MODE_MANUAL` 0, `MODE_RC` 1, `MODE_COMPUTER` 2), `armed`, `estop_active`, `speed` (m/s, − in reverse), `steering_angle` (rad, + left), `throttle`, `brake` (0..1), `faults` (uint16 bits, below) |
+| `VehicleStatus` | `/vehicle/status`, every backend (spine_bridge: 10 Hz, CAN 0x181 with 0x180) | `mode` (`MODE_MANUAL` 0, `MODE_RC` 1, `MODE_COMPUTER` 2, `MODE_TEST` 3), `armed`, `estop_active`, `speed` (m/s, − in reverse), `steering_angle` (rad, + left), `throttle`, `brake` (0..1), `faults` (uint16 bits, below) |
 | `ActuatorState` | `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`, the backend | `command`, `measured`; NaN = not known |
 | `WheelSpeeds` | `/vehicle/wheels`, the backend | `front_left`, `front_right`, `rear_left`, `rear_right` (m/s, NaN = not measured), `direction_measured` |
 | `SpineOutputs` | `/vehicle/gazebo/spine_outputs`, spine_sim, 100 Hz (simulation only) | `throttle`, `brake` (0..1), `reverse`, `steering` (rad, + left) |

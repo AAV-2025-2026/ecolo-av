@@ -75,7 +75,7 @@ RUST_TYPES = {
 WHEELS = {codec.WHEEL_SPEED_L_ID: 'Wheel::Left', codec.WHEEL_SPEED_R_ID: 'Wheel::Right'}
 BOOL_FIELDS = {'estop_request', 'armed', 'estop_active', 'direction_known'}
 INT_FIELDS = {'counter': 'u8', 'wheel_ticks': 'u16', 'faults': 'u16', 'pulse_count': 'u16'}
-MODES = {0: 'Mode::Manual', 1: 'Mode::Rc', 2: 'Mode::Computer'}
+MODES = {0: 'Mode::Manual', 1: 'Mode::Rc', 2: 'Mode::Computer', 3: 'Mode::Test'}
 
 
 def rust_value(name, value):

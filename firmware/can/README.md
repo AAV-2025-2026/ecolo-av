@@ -24,7 +24,7 @@ Classic CAN at 500 kbit/s, 11-bit IDs, little-endian signals.
 | 0x010 (16) | `ESTOP_CMD` | ORIN | on change and 10 Hz | `estop_request` (1 = stop now) |
 | 0x100 (256) | `DRIVE_CMD` | ORIN | 50 Hz | `target_speed` (m/s, 0.001), `steering_angle` (rad, 0.0001, + left), `accel_limit` (m/s², 0 = default), `steer_rate_limit` (rad/s, 0 = default), `armed` |
 | 0x180 (384) | `VEHICLE_FEEDBACK` | SPINE | 50 Hz | `measured_speed` (m/s), `measured_steering_angle` (rad, + left), `wheel_ticks` (wraps at 65536) |
-| 0x181 (385) | `VEHICLE_STATUS` | SPINE | 10 Hz | `mode` (0 MANUAL, 1 RC, 2 COMPUTER), `armed`, `estop_active`, `throttle` (%), `brake` (%), `faults` (bit field) |
+| 0x181 (385) | `VEHICLE_STATUS` | SPINE | 10 Hz | `mode` (0 MANUAL, 1 RC, 2 COMPUTER, 3 TEST), `armed`, `estop_active`, `throttle` (%), `brake` (%), `faults` (bit field) |
 | 0x200 (512) | `WHEEL_SPEED_L` | WHEEL_L | 100 Hz | `wheel_speed` (m/s), `pulse_count` (wraps at 65536), `direction_known` |
 | 0x201 (513) | `WHEEL_SPEED_R` | WHEEL_R | 100 Hz | the same, for the right front wheel |
 

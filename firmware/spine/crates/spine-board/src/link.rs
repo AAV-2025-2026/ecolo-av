@@ -231,6 +231,8 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
             Mode::Manual => DriveMode::Stopped,
             Mode::Rc => DriveMode::RcDirect,
             Mode::Computer => DriveMode::Computer,
+            // The 2025-26 uplink has no test mode: to the Motor-Pi the computer isn't driving.
+            Mode::Test => DriveMode::Stopped,
         };
         let (switch, sticks) = match report.rc {
             None => (ModeSwitch::NoSignal, Sticks::default()),

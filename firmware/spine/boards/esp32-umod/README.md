@@ -21,7 +21,7 @@ It only moves pins: the deciding is in `spine-core`, the devices in `spine-board
 | RC override | iBUS on GPIO32 |
 | Speed | none on this board: open loop |
 | Watchdog | TIMG1, 100 ms |
-| Log | the USB cable: a `STATUS` line every 200 ms, an event line at each change, a `LINK` line with the frame counts |
+| Log | the USB cable: a `STATUS` line every 200 ms, an event line at each change, an `FSM` line with the five state regions (`spine_core::fsm`) and a `LINK` line with the frame counts, with each `STATUS` |
 
 The pin map is `src/pins.rs` (and `docs/rust-firmware.md`).
 
