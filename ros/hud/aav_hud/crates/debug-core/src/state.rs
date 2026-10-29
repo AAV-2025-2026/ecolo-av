@@ -210,7 +210,10 @@ impl DebugState {
                 } else {
                     &self.odom_frame
                 };
-                if frame_name(&frame) != frame_name(want) && !frame.is_empty() {
+                // Gazebo's truth comes in Gazebo's own frame name: the world, which is
+                // map (the datum) by construction, so it isn't checked.
+                let checked = who != Localizer::Truth && !frame.is_empty();
+                if checked && frame_name(&frame) != frame_name(want) {
                     self.frame_problem = Some(format!(
                         "{} is in {frame}, not {want}: not drawn",
                         who.label()

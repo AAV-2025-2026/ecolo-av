@@ -104,6 +104,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `keyboard` | drive from the keyboard, in a second terminal: `keyboard --local` with `turtle` or `bench`, `keyboard --sim` with `sim`. With no flag it drives whatever shares the ROS domain: on the car's network, the car |
 | `sim` | Gazebo plays the car (`world:=road`, `hud:=true`, `sim_speed:=3`...) |
 | `demo` | the whole simulated car at once: Gazebo, RViz, the HUD and the map window (`demo fullscreen`) |
+| `debugdemo` | `demo` plus the debug HUD: the lidar's cubes, where each localizer puts the car, every sensor |
 | `bench` | the real car's software, with stand-ins for the hardware |
 | `view` | the car's model in RViz |
 | `rviz` | RViz with the driving layout: map, costmaps, path, car |
@@ -112,7 +113,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `ghost` | a pretend person in Nav2's view, to test stopping: `ghost ahead 10` |
 | `sim-fault` | make a Gazebo sensor fail on purpose: `sim-fault gps stop`, then `sim-fault gps ok` |
 | `carla-car` | CARLA plays the car: `carla-car host:=<the CARLA computer>` |
-| `hud-demo`, `map-demo` | the in-car screen and the map window, with pretend data: no ROS |
+| `hud-demo`, `map-demo`, `debug-hud-demo` | the in-car screen, the map window and the debug HUD, with pretend data: no ROS |
 
 ### Check that it works
 
@@ -139,7 +140,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `estop`, `estop-clear` | block every driver (the car brakes); clear it |
 | `gate-clear` | a person reopens the output mux after it latched STOP |
 | `watchdog-clear` | a person clears the sensor watchdog's latched faults |
-| `hud`, `map` | the in-car screen and the map window, as ROS nodes (`fullscreen:=true`) |
+| `hud`, `map`, `debug-hud` | the in-car screen, the map window and the debug HUD, as ROS nodes (`fullscreen:=true`) |
 | `actuator-test` | the actuator tests, on stands and in a lot: `actuator-test --list` |
 | `calibrate-camera` | calibrate a streamed camera: `calibrate-camera board` prints the checkerboard |
 | `doctor` | can this computer join the car's ROS network? Says what to fix |

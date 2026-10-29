@@ -221,7 +221,7 @@ topics:
   /system/source:
     type: aav_interfaces/msg/DataSource
     pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, mock_lidar, replay_source, carla_adapter, camera_stream_front_left, camera_stream_front_right]
-    sub: [hud, map, actuator_test, point_driver, point_cli, sensor_mux, output_mux]
+    sub: [hud, map, actuator_test, point_driver, point_cli, sensor_mux, output_mux, debug_hud]
     live: [turtle, sim, car, replay, bench]
     note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in - with role:=sensors (today's wiring, the Orin's CAN bus with only the wheel sensors) only odometry and wheels, never an actuator; legacy_uart_bridge REAL; replay.launch.py REPLAY; each camera_stream_<camera> its camera (camera_front_left...) as its source parameter says, REAL on the car. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.
   /system/sensor_mux/state:
@@ -235,13 +235,13 @@ topics:
   /vehicle/odom:
     type: nav_msgs/msg/Odometry
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
-    sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog, gps_heading, legacy_uart_bridge]
+    sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog, gps_heading, legacy_uart_bridge, debug_hud]
     live: [turtle, sim, car, replay, bench]
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise. legacy_uart_bridge reads it only with speed_loop.mode pi, to close its speed loop on vx.
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter, legacy_uart_bridge]
-    sub: [hud, language_drive]
+    sub: [hud, language_drive, debug_hud]
     live: [turtle, sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. legacy_uart_bridge publishes it, 10 Hz, only with uplink true (the ESP32's uplink frame on TX1, TODO 50 - off until its wire is confirmed) - speed NaN (that ESP32 has no wheel speed), steering_angle the steering Jrk's position or NaN; mode COMPUTER also while the transmitter's switch is on RC via ROS (/vehicle/rc has the switch).
   /vehicle/steering:
@@ -270,7 +270,7 @@ topics:
   /vehicle/wheels:
     type: aav_interfaces/msg/WheelSpeeds
     pub: [gazebo_adapter, spine_bridge, carla_adapter]
-    sub: [actuator_test]
+    sub: [actuator_test, debug_hud]
     live: [sim, bench]
     note: Each wheel's ground speed (m/s, signed), NaN where not measured or stale. Gazebo gives all four (its wheel joints). spine_bridge gives the front two, from the CAN wheel nodes (0x200, 0x201) at about 100 Hz; their mean, when fresh, is the speed in /vehicle/odom. With today's wiring the front two come from the wheel sensors' Arduino on the Orin's CAN bus (spine_bridge role:=sensors). The 2025-26 car's UDP encoder (aav_legacy encoder_udp, off since 23 Oct) is read only as /vehicle/odom.
   /vehicle/joint_states:
@@ -313,13 +313,13 @@ topics:
   /sensors/imu/data:
     type: sensor_msgs/msg/Imu
     pub: [imu_filter_madgwick]
-    sub: [ekf_local, ekf_global, sensor_watchdog, navsat_transform]
+    sub: [ekf_local, ekf_global, sensor_watchdog, navsat_transform, debug_hud]
     live: [sim, car, replay, bench]
     note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
   /sensors/gps/fix:
     type: sensor_msgs/msg/NavSatFix
     pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_gps, mock_gps, carla_adapter]
-    sub: [navsat_transform, hud, language_drive, actuator_test, sensor_watchdog, point_driver]
+    sub: [navsat_transform, hud, language_drive, actuator_test, sensor_watchdog, point_driver, debug_hud]
     live: [sim, car, replay, bench]
     note: Lat/lon of the antenna (gps_link). On the car, from the driver gps_driver:= picks - ublox_gps (ublox, the default; Tentative, Q18), gps_nmea (nmea) or ublox_nav_sat_fix_hp (ublox_dgnss). ublox_gps publishes it reliable (depth 1), ublox_dgnss best-effort (SensorDataQoS), so subscribe best effort.
   /sensors/gps/fix_velocity:
@@ -405,7 +405,7 @@ topics:
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
     pub: [lidar_cloud, gz_lidar_bridge, carla_adapter]
-    sub: [lidar_scan]
+    sub: [lidar_scan, debug_hud]
     live: [road, car]
     note: On the car, the roof Velodyne VLP-16 through the stock velodyne_pointcloud (lidar_cloud, its factory calibration VLP16db.yaml), in lidar_link, 10 Hz, 0.9-100 m, unorganised - rays that hit nothing are left out; fields x, y, z, intensity, ring, time. car.launch.py runs it where the machine file has the lidar part (orin, all); lidar:=false turns it off everywhere. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan.
   /sensors/lidar/scan:
@@ -513,7 +513,7 @@ topics:
   /vehicle/gazebo/truth:
     type: nav_msgs/msg/Odometry
     pub: [gz_bridge]
-    sub: [gazebo_gps]
+    sub: [gazebo_gps, debug_hud]
     live: [sim]
     note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Only the stand-ins read it - gazebo_gps, for the receiver's velocity (/sensors/gps/fix_velocity), never for a position; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).
   /vehicle/gazebo/spine_outputs:
@@ -552,13 +552,13 @@ topics:
   /localization/odom/local:
     type: nav_msgs/msg/Odometry
     pub: [ekf_local]
-    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test, sensor_watchdog]
+    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test, sensor_watchdog, debug_hud]
     live: [turtle, sim, car, replay, bench]
     note: odom frame. Smooth; drifts.
   /localization/odom/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
-    sub: [navsat_transform, map, sensor_watchdog, point_driver, point_cli]
+    sub: [navsat_transform, map, sensor_watchdog, point_driver, point_cli, debug_hud]
     live: [sim, car, replay, bench]
     note: map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.
   /localization/gps/odom:
@@ -576,7 +576,7 @@ topics:
   /localization/amcl/pose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     pub: [amcl]
-    sub: [controller_compare]
+    sub: [controller_compare, debug_hud]
     note: A trial (docs/trials.md) - stock nav2_amcl's particle filter on the 2D map and the lidar scan, map frame (its amcl_pose, renamed). Only with amcl:=true (sim.launch.py world:=test_lot nav:=true lidar:=true). Its tf_broadcast is false - ekf_global keeps map -> odom - so nothing drives by it; controller-compare --amcl scores it against Gazebo's truth. Published only once the car has moved (update_min_d, update_min_a).
   /localization/amcl/particles:
     type: nav2_msgs/msg/ParticleCloud
@@ -610,7 +610,7 @@ topics:
   /plan:
     type: nav_msgs/msg/Path
     pub: [planner_server]
-    sub: [map]
+    sub: [map, debug_hud]
     note: The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.
 
   /cmd_vel_nav:
@@ -621,7 +621,7 @@ topics:
   /drivers/nav/track/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [track]
-    sub: [controller_compare]
+    sub: [controller_compare, debug_hud]
     note: aav_track's debug, every tick while it follows a path (20 Hz) - name track, message the tracker's name; values tracker, loop_ms (this tick's work), loop_ms_max, missed_ticks (since the path came, by the node's clock), cross_track_m (+ left of the path), heading_error_rad, steer_rad, speed_mps, left_m (along the path to its end). Only with tracker:= on.
 
   # --- street routes (aav_routes, docs/routes.md): for real streets later, the lot first ---
@@ -655,13 +655,13 @@ topics:
   /tf:
     type: tf2_msgs/msg/TFMessage
     pub: [ekf_local, ekf_global, robot_state_publisher]
-    sub: []
+    sub: [debug_hud]
     live: [turtle, sim, car, replay, bench]
     note: map -> odom (ekf_global), odom -> base_link (ekf_local), moving joints (robot_state_publisher).
   /tf_static:
     type: tf2_msgs/msg/TFMessage
     pub: [robot_state_publisher, map_to_odom_no_gps]
-    sub: []
+    sub: [debug_hud]
     live: [turtle, sim, car, replay, bench]
     note: base_link -> chassis and every sensor frame, from vehicle.yaml through the URDF. With gps:=false, map_to_odom_no_gps adds a fixed map -> odom.
   /robot_description:

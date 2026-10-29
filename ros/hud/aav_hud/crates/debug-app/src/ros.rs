@@ -1,0 +1,696 @@
+//! The ROS side of the debug window: the node `debug_hud`, spun by rclrs on its own
+//! thread, and a second thread that turns clouds into cubes.
+//!
+//! As the HUD's: raylib must own the main thread, so the node lives on a thread called
+//! "ros", and its callbacks turn each message into a debug_core `Update`, sent over a
+//! channel. The lidar's clouds never go through that channel:
+//!
+//! ```text
+//! lidar callback --newest-only slot--> "cubes" thread --newest-only slot--> the screen
+//!                 (one cloud at most)  (frames, pose at   (one scan at most)
+//!                                       the stamp, cubes)
+//! ```
+//!
+//! The local EKF's callback fills the pose buffer the cubes thread reads; `/tf_static`
+//! fills the static frames. Both are small and cloned under their lock, so the cubes
+//! thread never holds a lock while it parses a cloud.
+//!
+//! QoS:
+//! - the lidar: reliable, keep last 1 (as Gazebo's bridge and velodyne send it; a slow
+//!   window gets the newest cloud, not a backlog);
+//! - `/tf`: reliable, depth 100; `/tf_static`: reliable, transient local, depth 100, so
+//!   a late window still gets robot_state_publisher's frames;
+//! - `/system/source`: reliable, transient local, depth 1 (latched), as the HUD;
+//! - the plan: reliable, keep last 1, as the map window;
+//! - everything else: best effort (SensorDataQoS), which takes reliable publishers too.
+
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver, SyncSender, TrySendError},
+        Arc, Condvar, Mutex, PoisonError,
+    },
+    thread::{self, JoinHandle},
+    time::{Duration, Instant},
+};
+
+use anyhow::{anyhow, Context as _, Result};
+use debug_core::{
+    cloud::{CloudView, Field},
+    config::{DebugConfig, Frame, Number, Topic, NODE_NAME},
+    cubes::{CubeScan, CubeSettings},
+    frames::{frame_name, Stamp, StaticFrames, Transform3},
+    poses::PoseBuffer,
+    scan::{self, ScanError},
+    state::{Localizer, Source, Update},
+    track::TrackStatus,
+};
+use hud_core::{
+    origin::{Announcement, Entry, Origin},
+    units::{Fraction, MetresPerSecond, Radians},
+    vehicle::{Faults, Mode, VehicleStatus},
+};
+use map_core::geom::{Point, Pose, Quaternion};
+use rclrs::*;
+use ros_env::aav_interfaces::msg::{DataSource, VehicleStatus as VehicleStatusMsg, WheelSpeeds};
+use ros_env::builtin_interfaces::msg::Time;
+use ros_env::diagnostic_msgs::msg::DiagnosticStatus;
+use ros_env::geometry_msgs::msg::{
+    Pose as PoseMsg, PoseWithCovarianceStamped, Quaternion as QuaternionMsg,
+};
+use ros_env::nav_msgs::msg::{Odometry, Path};
+use ros_env::sensor_msgs::msg::{Imu, NavSatFix, PointCloud2};
+use ros_env::tf2_msgs::msg::TFMessage;
+
+/// How many updates may wait for the screen. More are dropped: the screen is stuck.
+const QUEUE: usize = 512;
+/// How long the cubes thread waits for the pose at a cloud's stamp to arrive.
+const POSE_WAIT: Duration = Duration::from_millis(300);
+const POSE_RETRY: Duration = Duration::from_millis(10);
+
+/// A newest-only slot: putting replaces what is there.
+struct Slot<T> {
+    value: Mutex<Option<T>>,
+    ready: Condvar,
+}
+
+impl<T> Slot<T> {
+    fn new() -> Self {
+        Self {
+            value: Mutex::new(None),
+            ready: Condvar::new(),
+        }
+    }
+
+    fn put(&self, v: T) {
+        *self.value.lock().unwrap_or_else(PoisonError::into_inner) = Some(v);
+        self.ready.notify_one();
+    }
+
+    fn take(&self) -> Option<T> {
+        self.value
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.value
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .is_none()
+    }
+
+    /// Waits up to `timeout` for a value, then takes it.
+    fn wait(&self, timeout: Duration) -> Option<T> {
+        let guard = self.value.lock().unwrap_or_else(PoisonError::into_inner);
+        let (mut guard, _) = self
+            .ready
+            .wait_timeout_while(guard, timeout, |v| v.is_none())
+            .unwrap_or_else(PoisonError::into_inner);
+        guard.take()
+    }
+}
+
+/// What the cubes thread shares with the node.
+struct Shared {
+    clouds: Slot<PointCloud2>,
+    scans: Slot<CubeScan>,
+    poses: Mutex<PoseBuffer>,
+    statics: Mutex<StaticFrames>,
+    stopped: AtomicBool,
+}
+
+/// The node, seen from the screen.
+pub struct RosSource {
+    updates: Receiver<Update>,
+    shared: Arc<Shared>,
+    executor: Arc<ExecutorCommands>,
+    threads: Vec<JoinHandle<()>>,
+}
+
+/// What the ROS thread hands back once the node is up.
+type Ready = Result<(DebugConfig, Arc<ExecutorCommands>)>;
+
+impl RosSource {
+    /// Starts the node and the cubes thread, and waits until the node is up. `args` is
+    /// the whole command line: ROS reads what follows `--ros-args`.
+    pub fn start(args: Vec<String>, config: DebugConfig) -> Result<(Self, DebugConfig)> {
+        let (ready_tx, ready_rx) = mpsc::channel::<Ready>();
+        let (update_tx, updates) = mpsc::sync_channel(QUEUE);
+        let shared = Arc::new(Shared {
+            clouds: Slot::new(),
+            scans: Slot::new(),
+            poses: Mutex::new(PoseBuffer::new(config.pose_window())),
+            statics: Mutex::new(StaticFrames::default()),
+            stopped: AtomicBool::new(false),
+        });
+        let ros = {
+            let shared = Arc::clone(&shared);
+            let tx = update_tx.clone();
+            thread::Builder::new().name("ros".into()).spawn(move || {
+                let mut ready = Some(ready_tx);
+                if let Err(e) = spin(args, config, tx, &shared, &mut ready) {
+                    match ready.take() {
+                        Some(r) => {
+                            let _ = r.send(Err(e));
+                        }
+                        None => eprintln!("debug_hud: the ROS node stopped: {e:#}"),
+                    }
+                }
+                shared.stopped.store(true, Ordering::SeqCst);
+                shared.clouds.ready.notify_all();
+            })?
+        };
+        let (config, executor) = ready_rx
+            .recv()
+            .map_err(|_| anyhow!("the ROS thread ended before the node was up"))?
+            .context("starting the ROS node (is ROS sourced? try tools/ros.sh, or --demo)")?;
+        let cubes = {
+            let shared = Arc::clone(&shared);
+            let base = config.frame(Frame::Base).to_owned();
+            let settings = config.cube_settings();
+            thread::Builder::new()
+                .name("cubes".into())
+                .spawn(move || make_cubes(&shared, &base, &settings, &update_tx))?
+        };
+
+        // Ctrl-C, or launch stopping us: stop spinning; the window sees it and closes.
+        {
+            let shared = Arc::clone(&shared);
+            let executor = Arc::clone(&executor);
+            ctrlc::set_handler(move || {
+                shared.stopped.store(true, Ordering::SeqCst);
+                executor.halt_spinning();
+            })?;
+        }
+        let source = Self {
+            updates,
+            shared,
+            executor,
+            threads: vec![ros, cubes],
+        };
+        Ok((source, config))
+    }
+}
+
+impl crate::source::DataSource for RosSource {
+    fn label(&self) -> &'static str {
+        "ROS"
+    }
+
+    fn drain(&mut self, _now: Instant) -> Vec<Update> {
+        self.updates.try_iter().collect()
+    }
+
+    fn take_scan(&mut self) -> Option<CubeScan> {
+        self.shared.scans.take()
+    }
+
+    fn has_stopped(&self) -> bool {
+        self.shared.stopped.load(Ordering::SeqCst)
+    }
+}
+
+impl Drop for RosSource {
+    fn drop(&mut self) {
+        self.shared.stopped.store(true, Ordering::SeqCst);
+        self.shared.clouds.ready.notify_all();
+        self.executor.halt_spinning();
+        for t in self.threads.drain(..) {
+            let _ = t.join();
+        }
+    }
+}
+
+/// The cubes thread: the newest cloud, placed with the pose at its stamp, into cubes.
+fn make_cubes(shared: &Shared, base: &str, settings: &CubeSettings, tx: &SyncSender<Update>) {
+    while !shared.stopped.load(Ordering::SeqCst) {
+        let Some(cloud) = shared.clouds.wait(Duration::from_millis(100)) else {
+            continue;
+        };
+        let waited = Instant::now();
+        loop {
+            // Small copies, so no lock is held while the cloud is read.
+            let statics = shared
+                .statics
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .clone();
+            let poses = shared
+                .poses
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .clone();
+            match place(&cloud, base, &statics, &poses, settings) {
+                Ok(scan) => {
+                    shared.scans.put(scan);
+                    break;
+                }
+                // The pose at its stamp may still be on its way; a newer cloud wins.
+                Err(e)
+                    if e.is_too_new()
+                        && waited.elapsed() < POSE_WAIT
+                        && shared.clouds.is_empty()
+                        && !shared.stopped.load(Ordering::SeqCst) =>
+                {
+                    thread::sleep(POSE_RETRY);
+                }
+                Err(e) => {
+                    send(tx, Update::ScanProblem(e.to_string()));
+                    break;
+                }
+            }
+        }
+    }
+}
+
+fn place(
+    m: &PointCloud2,
+    base: &str,
+    statics: &StaticFrames,
+    poses: &PoseBuffer,
+    settings: &CubeSettings,
+) -> Result<CubeScan, ScanError> {
+    let view = CloudView {
+        fields: m
+            .fields
+            .iter()
+            .map(|f| Field {
+                name: &f.name,
+                offset: f.offset,
+                datatype: f.datatype,
+                count: f.count,
+            })
+            .collect(),
+        width: m.width,
+        height: m.height,
+        point_step: m.point_step,
+        row_step: m.row_step,
+        is_bigendian: m.is_bigendian,
+        data: &m.data,
+    };
+    scan::place(
+        &view,
+        &m.header.frame_id,
+        stamp(&m.header.stamp),
+        base,
+        statics,
+        poses,
+        settings,
+    )
+}
+
+/// The ROS thread: makes the node, says it's ready, then spins until halted.
+fn spin(
+    args: Vec<String>,
+    config: DebugConfig,
+    tx: SyncSender<Update>,
+    shared: &Arc<Shared>,
+    ready: &mut Option<mpsc::Sender<Ready>>,
+) -> Result<()> {
+    let context = Context::new(args, InitOptions::default())?;
+    let mut executor = context.create_basic_executor();
+    let node = executor.create_node(NODE_NAME)?;
+    // Keep the parameters alive with the node: rclrs undeclares one when it's dropped.
+    let (_params, config) = Params::declare(&node, config)?;
+    let topic = |t: Topic| config.topic(t).to_owned();
+
+    let lidar_qos = QoSProfile::topics_default().reliable().keep_last(1);
+    let _lidar = node.create_subscription(topic(Topic::Lidar).as_str().qos(lidar_qos), {
+        let shared = Arc::clone(shared);
+        move |m: PointCloud2| shared.clouds.put(m)
+    })?;
+
+    // The local EKF: the car, and the poses the cubes are placed with.
+    let _local = node.create_subscription(topic(Topic::LocalOdom).as_str().sensor_data_qos(), {
+        let tx = tx.clone();
+        let shared = Arc::clone(shared);
+        move |m: Odometry| {
+            let p = pose(&m.pose.pose);
+            shared
+                .poses
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push(stamp(&m.header.stamp), p);
+            send(&tx, odometry(Localizer::Local, &m));
+        }
+    })?;
+    let _global =
+        node.create_subscription(topic(Topic::GlobalOdom).as_str().sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: Odometry| send(&tx, odometry(Localizer::Global, &m))
+        })?;
+    let _truth = node.create_subscription(topic(Topic::Truth).as_str().sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: Odometry| send(&tx, odometry(Localizer::Truth, &m))
+    })?;
+    let _amcl = node.create_subscription(topic(Topic::Amcl).as_str().reliable(), {
+        let tx = tx.clone();
+        move |m: PoseWithCovarianceStamped| {
+            send(
+                &tx,
+                Update::Pose {
+                    who: Localizer::Amcl,
+                    pose: pose(&m.pose.pose),
+                    frame: m.header.frame_id,
+                    speed: None,
+                },
+            )
+        }
+    })?;
+    let plans = QoSProfile::topics_default().reliable().keep_last(1);
+    let _plan = node.create_subscription(topic(Topic::Plan).as_str().qos(plans), {
+        let tx = tx.clone();
+        move |m: Path| {
+            let points = m
+                .poses
+                .iter()
+                .map(|p| Point::new(p.pose.position.x, p.pose.position.y))
+                .collect();
+            send(
+                &tx,
+                Update::Plan {
+                    points,
+                    frame: m.header.frame_id,
+                },
+            )
+        }
+    })?;
+
+    // Frames.
+    let (map, odom) = (
+        config.frame(Frame::Map).to_owned(),
+        config.frame(Frame::Odom).to_owned(),
+    );
+    let tf_qos = QoSProfile::topics_default().reliable().keep_last(100);
+    let _tf = node.create_subscription(topic(Topic::Tf).as_str().qos(tf_qos), {
+        let tx = tx.clone();
+        move |m: TFMessage| {
+            for t in &m.transforms {
+                if frame_name(&t.header.frame_id) == frame_name(&map)
+                    && frame_name(&t.child_frame_id) == frame_name(&odom)
+                {
+                    let tr = &t.transform;
+                    let q = quaternion(&tr.rotation);
+                    let odom_in_map = Pose::from_ros(tr.translation.x, tr.translation.y, q);
+                    send(&tx, Update::MapToOdom(odom_in_map));
+                }
+            }
+        }
+    })?;
+    let static_qos = QoSProfile::topics_default()
+        .reliable()
+        .transient_local()
+        .keep_last(100);
+    let _tf_static =
+        node.create_subscription(topic(Topic::TfStatic).as_str().qos(static_qos), {
+            let shared = Arc::clone(shared);
+            move |m: TFMessage| {
+                let mut statics = shared
+                    .statics
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner);
+                for t in &m.transforms {
+                    let tr = &t.transform;
+                    let at = [tr.translation.x, tr.translation.y, tr.translation.z];
+                    let transform = Transform3::from_ros(at, quaternion(&tr.rotation));
+                    statics.insert(&t.header.frame_id, &t.child_frame_id, transform);
+                }
+            }
+        })?;
+
+    // The panel: each sensor from its own topic.
+    let _imu = node.create_subscription(topic(Topic::Imu).as_str().sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: Imu| {
+            let rate = m.angular_velocity.z.to_degrees();
+            send(
+                &tx,
+                heard(Source::Imu, format!("yaw rate {rate:+.1} deg/s")),
+            )
+        }
+    })?;
+    let _gps = node.create_subscription(topic(Topic::Gps).as_str().sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: NavSatFix| send(&tx, heard(Source::Gps, gps_detail(&m)))
+    })?;
+    let _wheels = node.create_subscription(topic(Topic::Wheels).as_str().sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: WheelSpeeds| send(&tx, heard(Source::Wheels, wheels_detail(&m)))
+    })?;
+    let _wheel_odom =
+        node.create_subscription(topic(Topic::WheelOdom).as_str().sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: Odometry| {
+                let v = m.twist.twist.linear.x;
+                send(&tx, heard(Source::WheelOdom, format!("{v:+.2} m/s")))
+            }
+        })?;
+    let _vehicle =
+        node.create_subscription(topic(Topic::VehicleStatus).as_str().sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: VehicleStatusMsg| send(&tx, Update::Vehicle(vehicle(&m)))
+        })?;
+    let _track =
+        node.create_subscription(topic(Topic::TrackStatus).as_str().sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: DiagnosticStatus| {
+                let values = m
+                    .values
+                    .iter()
+                    .map(|kv| (kv.key.as_str(), kv.value.as_str()));
+                send(
+                    &tx,
+                    Update::Track(TrackStatus::from_values(&m.message, values)),
+                )
+            }
+        })?;
+    let latched = QoSProfile::topics_default()
+        .reliable()
+        .transient_local()
+        .keep_last(1);
+    let _source = node.create_subscription(topic(Topic::Source).as_str().qos(latched), {
+        let tx = tx.clone();
+        move |m: DataSource| send(&tx, Update::Origin(announcement(&m)))
+    })?;
+
+    if let Some(r) = ready.take() {
+        r.send(Ok((config, Arc::clone(executor.commands()))))
+            .map_err(|_| anyhow!("the window closed while the node started"))?;
+    }
+    executor.spin(SpinOptions::default()).first_error()?;
+    Ok(())
+}
+
+/// Sends one update to the screen; drops it if the screen is far behind.
+fn send(tx: &SyncSender<Update>, update: Update) {
+    match tx.try_send(update) {
+        Ok(()) | Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {}
+    }
+}
+
+fn heard(source: Source, detail: String) -> Update {
+    Update::Heard { source, detail }
+}
+
+fn stamp(t: &Time) -> Stamp {
+    Stamp::new(t.sec, t.nanosec)
+}
+
+fn quaternion(q: &QuaternionMsg) -> Quaternion {
+    Quaternion {
+        x: q.x,
+        y: q.y,
+        z: q.z,
+        w: q.w,
+    }
+}
+
+fn pose(p: &PoseMsg) -> Pose {
+    Pose::from_ros(p.position.x, p.position.y, quaternion(&p.orientation))
+}
+
+fn odometry(who: Localizer, m: &Odometry) -> Update {
+    Update::Pose {
+        who,
+        pose: pose(&m.pose.pose),
+        frame: m.header.frame_id.clone(),
+        speed: Some(m.twist.twist.linear.x),
+    }
+}
+
+/// The fix's kind (sensor_msgs/NavSatStatus) and its horizontal spread.
+fn gps_detail(m: &NavSatFix) -> String {
+    let kind = match m.status.status {
+        s if s < 0 => "no fix",
+        0 => "fix",
+        1 => "SBAS fix",
+        _ => "RTK / GBAS fix",
+    };
+    let spread = m.position_covariance[0].max(m.position_covariance[4]);
+    if spread.is_finite() && spread > 0.0 {
+        format!("{kind}, {:.1} m", spread.sqrt())
+    } else {
+        kind.to_owned()
+    }
+}
+
+/// The measured wheels' mean speed.
+fn wheels_detail(m: &WheelSpeeds) -> String {
+    let measured: Vec<f32> = [m.front_left, m.front_right, m.rear_left, m.rear_right]
+        .into_iter()
+        .filter(|v| v.is_finite())
+        .collect();
+    if measured.is_empty() {
+        return "none measured".to_owned();
+    }
+    let mean = measured.iter().sum::<f32>() / measured.len() as f32;
+    format!("{mean:+.2} m/s ({} wheels)", measured.len())
+}
+
+fn vehicle(m: &VehicleStatusMsg) -> VehicleStatus {
+    VehicleStatus {
+        mode: Mode::from(m.mode),
+        armed: m.armed,
+        estop_active: m.estop_active,
+        speed: MetresPerSecond(m.speed),
+        steering_angle: Radians(m.steering_angle),
+        throttle: Fraction::new(m.throttle),
+        brake: Fraction::new(m.brake),
+        faults: Faults(m.faults),
+    }
+}
+
+fn announcement(m: &DataSource) -> Announcement {
+    Announcement {
+        announcer: m.announcer.clone(),
+        entries: m
+            .sensors
+            .iter()
+            .map(|e| Entry {
+                name: e.name.clone(),
+                topic: e.topic.clone(),
+                origin: Origin::from(e.source),
+            })
+            .collect(),
+    }
+}
+
+/// The node's parameters: each topic and frame's name, and the numbers. Read once.
+struct Params {
+    _names: Vec<ReadOnlyParameter<Arc<str>>>,
+    _numbers: Vec<ReadOnlyParameter<f64>>,
+    _max_cubes: ReadOnlyParameter<i64>,
+}
+
+impl Params {
+    /// Declares them, with `config` (config/debug_hud.yaml) as the defaults, and returns
+    /// the settings as ROS has them (a --params-file or -p wins).
+    fn declare(node: &Node, mut config: DebugConfig) -> Result<(Self, DebugConfig)> {
+        let mut names = Vec::new();
+        for t in Topic::ALL {
+            let p = node
+                .declare_parameter::<Arc<str>>(t.parameter())
+                .default(config.topic(t).into())
+                .read_only()?;
+            config.set_topic(t, p.get().to_string());
+            names.push(p);
+        }
+        for f in Frame::ALL {
+            let p = node
+                .declare_parameter::<Arc<str>>(f.parameter())
+                .default(config.frame(f).into())
+                .read_only()?;
+            config.set_frame(f, p.get().to_string());
+            names.push(p);
+        }
+        let mut numbers = Vec::new();
+        for n in Number::ALL {
+            let p = node
+                .declare_parameter(n.parameter())
+                .default(config.number(n))
+                .read_only()?;
+            config.set_number(n, p.get());
+            numbers.push(p);
+        }
+        let max_cubes = node
+            .declare_parameter("max_cubes")
+            .default(i64::from(config.max_cubes))
+            .read_only()?;
+        config.max_cubes =
+            u32::try_from(max_cubes.get()).context("max_cubes must be a positive whole number")?;
+        config.validate()?;
+        let params = Self {
+            _names: names,
+            _numbers: numbers,
+            _max_cubes: max_cubes,
+        };
+        Ok((params, config))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_gazebo_like_cloud_becomes_cubes() {
+        let mut m = PointCloud2::default();
+        m.header.frame_id = "lidar_link".into();
+        m.header.stamp.sec = 1;
+        for (i, name) in ["x", "y", "z"].iter().enumerate() {
+            m.fields.push(ros_env::sensor_msgs::msg::PointField {
+                name: (*name).into(),
+                offset: 4 * i as u32,
+                datatype: 7,
+                count: 1,
+            });
+        }
+        m.width = 2;
+        m.height = 1;
+        m.point_step = 12;
+        m.row_step = 24;
+        m.data = [5.0_f32, 0.0, -1.0, f32::INFINITY, 0.0, 0.0]
+            .iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect();
+        let mut statics = StaticFrames::default();
+        statics.insert(
+            "base_link",
+            "lidar_link",
+            Transform3 {
+                translation: [0.0, 0.0, 1.8],
+                ..Transform3::IDENTITY
+            },
+        );
+        let mut poses = PoseBuffer::new(Duration::from_secs(1));
+        poses.push(Stamp::new(0, 900_000_000), Pose::new(0.0, 0.0, 0.0));
+        poses.push(Stamp::new(1, 100_000_000), Pose::new(0.0, 0.0, 0.0));
+        let settings = DebugConfig::default().cube_settings();
+        let scan = place(&m, "base_link", &statics, &poses, &settings).expect("placed");
+        assert_eq!((scan.cubes.len(), scan.skipped), (1, 1));
+    }
+
+    #[test]
+    fn a_fix_says_its_kind() {
+        let mut m = NavSatFix::default();
+        m.status.status = -1;
+        assert_eq!(gps_detail(&m), "no fix");
+        m.status.status = 0;
+        m.position_covariance[0] = 4.0;
+        assert_eq!(gps_detail(&m), "fix, 2.0 m");
+    }
+
+    #[test]
+    fn unmeasured_wheels_are_left_out() {
+        let m = WheelSpeeds {
+            front_left: 1.0,
+            front_right: 2.0,
+            rear_left: f32::NAN,
+            rear_right: f32::NAN,
+            ..Default::default()
+        };
+        assert_eq!(wheels_detail(&m), "+1.50 m/s (2 wheels)");
+    }
+}
