@@ -115,7 +115,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | `spine-core`: the spine's logic | Boots latched, arms only on request and brakes on a command gap, so a glitch never restarts the car | Ben | 2026-10-09 | sim |
 | The spine's state machine (`spine-core` `fsm`: lifecycle, safety, authority, motion, confidence) | Each question the spine answers has one small, tested place, so a new safety check adds an event instead of another flag | Arsh | 2026-10-27 | built |
 | Spine self-test at boot | Nothing arms until both Jrks and the DAC answer, so a missing device is never driven blind | Arsh | 2026-10-27 | built |
-| Hardware test mode (`spine-core`, VEHICLE_STATUS mode 3) | Bring-up moves one actuator at a time from a laptop (proposal 6.5), and the mode can't be left on: a stale request or anything unsafe leaves it, latched | Arsh | 2026-10-27 | built |
+| Hardware test mode (`spine-core`, VEHICLE_STATUS mode 3) | Bring-up moves one actuator at a time from a laptop (proposal 6.5), and the mode can't be left on: a stale request or anything unsafe leaves it, latched; no throttle test without a wheel speed, where its speed exit can't fire | Arsh; Ben (throttle rule) | 2026-10-27 | built |
 | Spine device drivers and glue (`jrk-g2`, `ad5311`, `pca9555`, `ibus`, `mcp2515`, `spine-board`, `legacy-link`) | Each device the spine drives, tested against mocks before any board exists | Ben | 2026-10-10 | built |
 | Pico 2 spine program (`boards/pico2`) | A spine on an ARM chip, with a 100 ms hardware watchdog and a fail-safe e-stop input | Ben | 2026-10-11 | built |
 | ESP32 spine in Rust (`boards/esp32-umod`) | Replaces the C++ on today's control board with no new hardware; tested in QEMU | Ben | 2026-10-15 | built |

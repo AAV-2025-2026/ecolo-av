@@ -340,11 +340,29 @@ impl Spine {
             safety: self.safety,
             authority: self.authority,
             motion: self.motion,
-            confidence: match self.cfg.speed_feedback {
-                SpeedFeedback::Wheel => Confidence::Full,
-                SpeedFeedback::None { .. } => Confidence::Degraded,
-            },
+            confidence: self.confidence(),
         }
+    }
+
+    /// [5] Confidence: set by the configuration today.
+    fn confidence(&self) -> Confidence {
+        match self.cfg.speed_feedback {
+            SpeedFeedback::Wheel => Confidence::Full,
+            SpeedFeedback::None { .. } => Confidence::Degraded,
+        }
+    }
+
+    /// The test request the spine carries out: the latest, unless this confidence refuses
+    /// it ([`TestRequest::allowed`]), when it holds still instead.
+    fn allowed_test_request(&self) -> Option<TestRequest> {
+        let confidence = self.confidence();
+        self.test_request.map(|r| {
+            if r.allowed(confidence) {
+                r
+            } else {
+                TestRequest::Hold
+            }
+        })
     }
 
     fn decide(&mut self, i: &Inputs) -> Outputs {
@@ -470,7 +488,10 @@ impl Spine {
         self.authority = if rc_direct {
             Authority::Rc
         } else if in_test {
-            Authority::Test(self.test_request.map_or(TestStage::Armed, |r| r.stage()))
+            Authority::Test(
+                self.allowed_test_request()
+                    .map_or(TestStage::Armed, |r| r.stage()),
+            )
         } else if armed_request && !self.latch.latched {
             Authority::Drive
         } else {
@@ -656,7 +677,8 @@ impl Spine {
 
     /// The hardware test mode: the latest request moves one actuator, inside the limits.
     /// Otherwise the car holds still: throttle 0, the stop brake, the steering where it is.
-    /// The throttle is forward only, capped at [`TEST_MAX_THROTTLE`], with the brake off.
+    /// The throttle is forward only, capped at [`TEST_MAX_THROTTLE`], with the brake off,
+    /// and only with a wheel speed ([`Confidence::Full`]).
     fn test(&mut self, dt: f32, out: &impl Fn(f32, f32, bool, f32, &Self) -> Outputs) -> Outputs {
         let c = self.cfg;
         self.speed_setpoint = 0.0;
@@ -664,7 +686,7 @@ impl Spine {
         let mut throttle = 0.0;
         let mut brake = c.stop_brake;
         let mut steering = self.steering_setpoint;
-        match self.test_request {
+        match self.allowed_test_request() {
             Some(TestRequest::Steering(a)) if !a.is_nan() => {
                 steering = a.clamp(-c.max_steering_angle, c.max_steering_angle);
             }
@@ -1782,6 +1804,25 @@ mod tests {
         assert_eq!((out.throttle, out.brake), (0.0, 1.0));
         assert_eq!(car.state().lifecycle, Lifecycle::Running);
         assert_eq!(car.state().safety, Safety::Faulted);
+    }
+
+    #[test]
+    fn without_a_wheel_speed_the_test_mode_refuses_the_throttle() {
+        // Today's board (esp32-umod) has no wheel speed: the "faster than
+        // TEST_MAX_SPEED" exit can never fire there, so no throttle test either.
+        let mut car = Car::with_config(open_loop_config());
+        car.tick(Inputs::default());
+        car.enter_test();
+        let out = car.test(TestRequest::Throttle(0.1), 5);
+        assert_eq!(out.mode, Mode::Test);
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        assert_eq!(car.state().authority, Authority::Test(TestStage::Armed));
+        // The brake and the steering still work.
+        let out = car.test(TestRequest::Brake(0.4), 1);
+        assert_eq!((out.throttle, out.brake), (0.0, 0.4));
+        let out = car.test(TestRequest::Steering(0.3), 100);
+        assert!((out.steering_target - 0.3).abs() < 1e-4);
+        assert_eq!(car.state().authority, Authority::Test(TestStage::Active));
     }
 
     // Bugs found in review of the state machine, each with the test that showed it.
