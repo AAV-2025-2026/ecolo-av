@@ -10,7 +10,8 @@
 #   pixi run demo fullscreen      # HUD and map full-screen
 #   pixi run debugdemo            # the same, plus the debug HUD (tools/demo_all.sh debug):
 #                                 # the lidar's cubes, the localizers, every sensor; with
-#                                 # AMCL and a trial tracker on (docs/hud.md)
+#                                 # AMCL, a trial tracker, and NDT (if maps/ndt/test_lot.pcd
+#                                 # is there: pixi run ndt-map drive) on (docs/hud.md)
 #   Ctrl-C                        # stops them all
 #
 # Portable: bash 3.2 (a Mac), no GNU-only flags.
@@ -36,6 +37,14 @@ steps=4
 if $debug; then
   sim_args="$sim_args amcl:=true tracker:=pure_pursuit reversing:=false"
   steps=5
+  # NDT too, when its map of the test lot has been made (it isn't in git).
+  ndt_map=maps/ndt/test_lot.pcd
+  if [ -f "$ndt_map" ]; then
+    sim_args="$sim_args ndt:=true ndt_map:=$ndt_map"
+    echo "NDT: on, with $ndt_map (the purple car and the panel's NDT section)"
+  else
+    echo "NDT: off: no $ndt_map yet. Make it once with: pixi run ndt-map drive (about 6 min, headless)"
+  fi
 fi
 
 # Gazebo's transport finds its own parts by multicast, which a Mac on some networks (or

@@ -11,7 +11,10 @@ each localizer puts the car, and the panel. Design: `docs/designs/2026-10-29_deb
 cloud (lidar_link) --static tf--> base_link --local EKF at the cloud's stamp--> odom
                                                                   |
                                                        cubes (20 cm), a height band each
-map-frame layers (EKF global, AMCL, truth, plan) --latest map -> odom from /tf--> odom
+                                                                  |
+                                     kept by cell, fading over 2 s (by stamps), nearest kept
+map-frame layers (EKF global, AMCL, NDT, truth, plan, particles, NDT's map)
+                                        --latest map -> odom from /tf--> odom
 ```
 
 ## Interface
@@ -24,14 +27,18 @@ map-frame layers (EKF global, AMCL, truth, plan) --latest map -> odom from /tf--
 | `cloud` | `positions(&CloudView)`: x, y, z from a PointCloud2's bytes |
 | `cubes` | `build(points, cloud_to_base, car, stamp, settings)` -> `CubeScan`; `Band` (ground ... higher) |
 | `scan` | `place(...)`: a cloud start to finish, or a `ScanError` |
+| `persist` | `KeptCubes`: each scan's cubes kept by cell; `Fade` (four steps over `keep_cubes_for`); `FadedCube` |
+| `ndt` | `NdtStatus::from_message` (TRACKING / WAITING / LOST, score per point, ms per match); `MapFile::read` (a PCD, with ndt-core's reader) into `MapCells` (1 m, 3 points or more) |
+| `keys` | `Layers` (K cubes kept or this scan's, M NDT's map, A particles, H the legend), `Action`, `KeyLine` for the on-screen legend |
 | `orbit` | `Orbit`: the 3D camera; `Mode` chase / follow / free |
 | `track` | `TrackStatus::from_values`: aav_track's `/drivers/nav/track/status` |
 | `swap` | keys 1-4: `Tracker::on_key`, `allowed(&Origins)` (SIM only), `Reply` |
-| `state` | `DebugState`, `Update`, `Localizer`, `Source` (the panel's rows) |
+| `state` | `DebugState`, `Update`, `Localizer` (EKF local, global, truth, AMCL, NDT), `Source` (the panel's rows); `drawn_cubes()`, `particles_in_odom()` |
 
 It builds on (path dependencies): [`hud-core`](../hud-core/README.md) (`health`,
-`origin`, `vehicle`), [`map-core`](../map-core/README.md) (`geom`, `car`) and
-`aav_radar_clusters`' `radar-clustering` (its PointCloud2 reader, with its tests).
+`origin`, `vehicle`), [`map-core`](../map-core/README.md) (`geom`, `car`),
+`aav_radar_clusters`' `radar-clustering` (its PointCloud2 reader, with its tests) and
+`aav_ndt`'s `ndt-core` (its PCD reader; it brings nalgebra).
 
 ## Invariants
 
@@ -44,10 +51,12 @@ It builds on (path dependencies): [`hud-core`](../hud-core/README.md) (`health`,
 - Map-frame layers need `map -> odom`; without it they are not drawn.
 - Over `max_cubes`, the nearest cubes stay and the scan counts the rest (`cut`).
 - Rays that hit nothing (inf, NaN) are skipped and counted.
+- Kept cubes age by the clouds' stamps; a clock that goes back (a restart, a looped bag)
+  or a new cube size starts them again.
 
 ## Side Effects
 
-- None: pure logic on what the caller passes in.
+- None, except `ndt::MapFile::read`, which reads the map file it is given.
 
 ## Verification
 
